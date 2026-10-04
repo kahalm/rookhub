@@ -271,6 +271,10 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
         e.Property(g => g.MovesHash).HasMaxLength(64);
         e.Property(g => g.UploadShareHash).HasMaxLength(64);
+        e.Property(g => g.WhiteRealName).HasMaxLength(120);
+        e.Property(g => g.BlackRealName).HasMaxLength(120);
+        e.Property(g => g.WhiteRealFide).HasMaxLength(16);
+        e.Property(g => g.BlackRealFide).HasMaxLength(16);
         e.HasIndex(g => g.MovesHash);
         e.HasIndex(g => g.WhiteFide);
         e.HasIndex(g => g.BlackFide);

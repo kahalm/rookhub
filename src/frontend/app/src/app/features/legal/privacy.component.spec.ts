@@ -227,6 +227,8 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['leagueRetention']).not.toMatch(/nach der Korrektur gelöscht|deleted after the correction|brišu se nakon ispravka|javítás után töröljük/);
       // „Schwaz“ ist nur die Vorgabe je Seite, abwaehlbar (LeagueClubService: anonymized = w.Replace || b.Replace).
       expect(p['leagueSources']).toMatch(/standardmäßig|by default|prema zadanim postavkama|alapértelmezés szerint/);
+      // Der echte Name hinter „Schwaz“ bleibt intern (LeagueClubGame.WhiteRealName/BlackRealName, 0.648.0) — offen genannt.
+      expect(p['leagueSources']).toMatch(/intern|internally|interno|belsőleg/);
       // Abruf der Online-Partien schickt Benutzernamen an chess.com (USA).
       expect(p['leagueSources']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
       // Teilen-Link: gespielte Runde 7 Tage ab Teilen, ohne Datum 30 Tage (LeagueService.ExpiresFor).

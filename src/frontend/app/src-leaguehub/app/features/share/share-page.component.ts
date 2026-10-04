@@ -35,7 +35,7 @@ import { GameSourcesComponent } from '../../shared/game-sources.component';
       <section class="cta" aria-labelledby="cta-title">
         <h2 id="cta-title">Hast du gegen Spieler aus der Liga gespielt? Lade deine Partien hoch.</h2>
         <p>Ein Foto vom Partieformular oder eine PGN-Datei genügt — ohne Anmeldung. Jede Partie hilft der Vorbereitung;
-          Spieler von Schwaz werden durch „Schwaz“ ersetzt, und es wird nicht gespeichert, wer hochgeladen hat.</p>
+          Spieler von Schwaz werden nach außen durch „Schwaz“ ersetzt, und es wird nicht gespeichert, wer hochgeladen hat.</p>
         <div class="cta-actions">
           <a class="btn-pri" [routerLink]="['/s', token, 'hochladen']" [queryParams]="{ art: 'formular' }">Partieformular fotografieren</a>
           <a class="btn-sec" [routerLink]="['/s', token, 'hochladen']">PGN hochladen</a>

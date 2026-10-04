@@ -334,10 +334,12 @@ public class LeagueView
 /// Eine Partie aus der VEREINS-Datenbank (von Mitgliedern hochgeladen: PGN oder Partieformular). Mindestens eine Seite
 /// ist ein Ligaspieler, sonst wird sie gar nicht angenommen. Datum nur als JAHR.
 ///
-/// <para><b>Anonymisiert</b> (<see cref="Anonymized"/>, Häkchen „Meinen Namen durch Schwaz ersetzen"): die Seite des
-/// Hochladenden heißt „Schwaz", ohne Elo und FIDE-ID, und es wird WEDER gespeichert, wer dahinter steht, NOCH wer
-/// hochgeladen hat (<see cref="UploadedByUserId"/> und <see cref="CreatedAt"/> bleiben leer, Veranstaltung fällt weg) —
-/// Wunsch des Nutzers, damit man nicht gegen die eigenen Spieler vorbereiten kann.</para>
+/// <para><b>Anonymisiert</b> (<see cref="Anonymized"/>, Häkchen „Meinen Namen durch Schwaz ersetzen"): die Seite heißt
+/// „Schwaz", ohne Elo und FIDE-ID, Veranstaltung fällt weg, und es wird NICHT gespeichert, wer hochgeladen hat
+/// (<see cref="UploadedByUserId"/> und <see cref="CreatedAt"/> bleiben leer) — damit man nicht gegen die eigenen Spieler
+/// vorbereiten kann. Wer hinter „Schwaz" SPIELT, steht seit 0.648.0 intern in <see cref="WhiteRealName"/> /
+/// <see cref="BlackRealName"/> (Wunsch 2026-10-04: „für spätere Auswertungen, niemals in der GUI ausgeben") — kein DTO,
+/// kein PGN, keine Analyse und kein Teilen-Link trägt diese Spalten.</para>
 ///
 /// <para><b>Über einen Teilen-Link</b> (ohne Konto) trägt die Zeile den Link als SHA-256 (<see cref="UploadShareHash"/>) —
 /// auch bei anonymisierten Partien: der Link ist der Weg, nicht die Person, und nur so entfernt ein Verwalter alles, was
@@ -367,6 +369,14 @@ public class LeagueClubGame
     /// <summary>Über welchen Teilen-Link hochgeladen (SHA-256 hex des Tokens, <c>LeagueClubService.ShareHashOf</c>) —
     /// <c>null</c> = angemeldet hochgeladen. Der Link selbst steht nirgends.</summary>
     public string? UploadShareHash { get; set; }
+
+    /// <summary>Wer hinter „Schwaz" auf Weiß spielt — NUR intern für Auswertungen, nie ausgeben (Klassenkommentar).
+    /// <c>null</c> = Seite nicht ersetzt oder vor 0.648.0 ersetzt.</summary>
+    public string? WhiteRealName { get; set; }
+    public string? WhiteRealFide { get; set; }
+    /// <summary>Wie <see cref="WhiteRealName"/>, für Schwarz.</summary>
+    public string? BlackRealName { get; set; }
+    public string? BlackRealFide { get; set; }
 }
 
 /// <summary>

@@ -1679,7 +1679,12 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   ist — `Person.OwnClub`; wer weggegangen ist, ist jetzt ein Gegner —, dazu der Hochladende laut Profil; je Seite
   umschaltbar): ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es wird **weder gespeichert, wer dahinter steht,
   noch wer hochgeladen hat oder wann** (`UploadedByUserId`/`CreatedAt` leer, auch nicht versteckt). Ohne Konto
-  (Teilen-Link) wird der Hochladende nie gespeichert.
+  (Teilen-Link) wird der Hochladende nie gespeichert. **Seit 0.648.0 steht der ECHTE Spieler hinter „Schwaz" intern**
+  (`LeagueClubGame.WhiteRealName/WhiteRealFide/BlackRealName/BlackRealFide`, Wunsch 2026-10-04: „für spätere
+  Auswertungen, niemals in der GUI ausgeben") — gesetzt in `Build` und beim Korrigieren (eine unveränderte Seite behält
+  ihn). Diese Spalten gehen in KEIN DTO, kein PGN, keine Analyse, keine Spielerkarte, keinen Teilen-Link, keine Suche
+  (`Import_Replaced_KeepsTheRealNameInternally_ButNoOutputCarriesIt`); Häkchen-Text und Datenschutzerklärung nennen es.
+  Partien von vor 0.648.0 haben sie leer.
 * **Über einen Teilen-Link hochgeladen** (Codereview 2026-09-29, A2-009 — vorher 500 Partien je Aufruf ohne jede Herkunft):
   jede Partie trägt den Link als SHA-256 (`UploadShareHash`, `LeagueClubService.ShareHashOf`; der Link selbst steht
   nirgends) — AUCH eine „Schwaz"-Partie: der Link ist der Weg, nicht die Person, und nur so entfernt der Rückbau alles.

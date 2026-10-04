@@ -284,6 +284,32 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Contains("[BlackFideId \"222\"]", g.Pgn);
     }
 
+    /// <summary>Wunsch 2026-10-04: „merk dir im Hintergrund den echten Namen der Schwazer Spieler, damit ich später
+    /// Auswertungen fahren kann — niemals in der GUI ausgeben". Gespeichert in eigenen Spalten, in KEINER Ausgabe.</summary>
+    [Fact]
+    public async Task Import_Replaced_KeepsTheRealNameInternally_ButNoOutputCarriesIt()
+    {
+        var me = await SeedAsync();
+        await Club().ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+
+        var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
+        Assert.Equal(("Oberschmid, Patrik", "900"), (g.WhiteRealName, g.WhiteRealFide));
+        Assert.Equal(((string?)null, (string?)null), (g.BlackRealName, g.BlackRealFide));   // nicht ersetzt → nichts doppelt
+
+        var outputs = new[]
+        {
+            System.Text.Json.JsonSerializer.Serialize((await Club().ListAsync(me, true, null, null, 1, default)).Items),
+            System.Text.Json.JsonSerializer.Serialize(await Club().GetAsync(me, true, g.Id)),
+            System.Text.Json.JsonSerializer.Serialize(LeagueClubService.ToDto(g, me, true)),
+            await Club().ExportAsync(null, null, default),
+        };
+        foreach (var o in outputs)
+        {
+            Assert.DoesNotContain("Oberschmid", o);
+            Assert.DoesNotContain("\"900\"", o);
+        }
+    }
+
     [Fact]
     public async Task Import_WithoutSchwazPlayers_KeepsNamesAndTheUploader()
     {
@@ -900,6 +926,9 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Null(game.Event);
         Assert.DoesNotContain("Oberschmid", game.Pgn);
         Assert.DoesNotContain("Vereinsmeisterschaft", game.Pgn);
+        Assert.Equal(("Oberschmid, Patrik", "900"), (game.WhiteRealName, game.WhiteRealFide));   // intern gemerkt
+        var (again, _) = await club.UpdateAsync(me, true, g0.Id, new LeagueClubGameUpdateRequest { Result = "0-1" });
+        Assert.Equal("Oberschmid, Patrik", again!.WhiteRealName);                                // unveränderte Seite behält ihn
 
         var item = (await club.ListAsync(me, true, null, null, 1, default)).Items.Single();
         Assert.StartsWith("e2e4 c7c5 g1f3 d7d6 d2d4 c5d4", item.Uci);

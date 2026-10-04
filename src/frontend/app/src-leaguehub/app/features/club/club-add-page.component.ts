@@ -91,8 +91,9 @@ const SAVE_DEBOUNCE_MS = 1500;
             <label class="anon-toggle">
               <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
               <span><b>Spieler von Schwaz durch „{{ anon }}“ ersetzen</b>
-                <span class="muted">Jeder, der in seiner jüngsten Saison für Schwaz gemeldet ist@if (!share) {, und du selbst}. Dann wird
-                  weder gespeichert, wer dahinter steht, noch wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten.
+                <span class="muted">Jeder, der in seiner jüngsten Saison für Schwaz gemeldet ist@if (!share) {, und du selbst}. Dann zeigt
+                  LeagueHub nirgends, wer dahinter steht (der echte Name bleibt nur intern für Auswertungen des Vereins), und es wird
+                  nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten.
                   In der Übersicht lässt sich das je Partie ändern.</span></span>
             </label>
             <label class="field">PGN-Datei

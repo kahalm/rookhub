@@ -302,11 +302,18 @@ public sealed class LeagueClubService
     {
         if (!w.Known && !b.Known) return (null, "noLeaguePlayer");
         if (!(w.Known && !w.Replace) && !(b.Known && !b.Replace)) return (null, "onlyOwnClub");
+        (string Name, string? Fide) Real(Side s) =>
+            (Clip(s.Hit.Person?.Name ?? s.Mega?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?",
+                s.Hit.Person?.Fide ?? s.Fide ?? s.Mega?.Fide);
         (string Name, string? Fide, int? Elo) Out(Side s) => s.Replace ? (AnonymousName, null, null)
-            : (Clip(s.Hit.Person?.Name ?? s.Mega?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?",
-                s.Hit.Person?.Fide ?? s.Fide ?? s.Mega?.Fide, Elo(s.Elo));
+            : (Real(s).Name, Real(s).Fide, Elo(s.Elo));
+        // Wer hinter „Schwaz" spielt, bleibt intern (Klassenkommentar von LeagueClubGame) — nur, wenn es jemand ist.
+        (string? Name, string? Fide) Hidden(Side s) =>
+            s.Replace && Real(s) is var (n, f) && (n != "?" && n != AnonymousName || f != null) ? (n, f) : (null, null);
         var (wn, wf, we) = Out(w);
         var (bn, bf, be) = Out(b);
+        var (wrn, wrf) = Hidden(w);
+        var (brn, brf) = Hidden(b);
         var anonymized = w.Replace || b.Replace;
         var game = new LeagueClubGame
         {
@@ -317,6 +324,7 @@ public sealed class LeagueClubService
             Plies = sans.Count,
             MovesHash = HashOf(sans),
             Anonymized = anonymized,
+            WhiteRealName = wrn, WhiteRealFide = wrf, BlackRealName = brn, BlackRealFide = brf,
         };
         game.Pgn = PgnOf(game, sans);
         return (game, null);
@@ -806,6 +814,9 @@ public sealed class LeagueClubService
         if (req.Black != null && g.BlackFide == null && b.Identity is { } ib) remember.Add((g.Black, ib));
         (g.White, g.Black, g.WhiteFide, g.BlackFide, g.WhiteElo, g.BlackElo, g.Result, g.Event, g.Pgn) =
             (built.White, built.Black, built.WhiteFide, built.BlackFide, built.WhiteElo, built.BlackElo, built.Result, built.Event, built.Pgn);
+        // Der echte Name hinter „Schwaz": eine geänderte Seite bringt ihn mit; eine unveränderte behält den bisherigen.
+        if (req.White != null) (g.WhiteRealName, g.WhiteRealFide) = (built.WhiteRealName, built.WhiteRealFide);
+        if (req.Black != null) (g.BlackRealName, g.BlackRealFide) = (built.BlackRealName, built.BlackRealFide);
         if (built.Anonymized && !g.Anonymized)
         {
             // Jetzt mit „Schwaz": weder wer hochgeladen hat noch wann (Klassenkommentar).
