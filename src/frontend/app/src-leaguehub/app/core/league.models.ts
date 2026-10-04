@@ -26,7 +26,8 @@ export interface PlayerSources {
   online: Record<string, { games: number; accounts: number }>; onlineTotal: number; onlineAccounts: number;
 }
 
-export interface Candidate { n: string; elo: number | null; rb: number | null; p: number; fide: string | null }
+/** `g`: Partien im Bestand (0.649.0), wie „Partien" in der Meldeliste. */
+export interface Candidate { n: string; elo: number | null; rb: number | null; p: number; fide: string | null; g?: number }
 
 export interface ActualBoard {
   n: string; elo: number | null; rank: number | null; score: string | null; own: string | null; vs: string; vs_elo: number | null;

@@ -24,7 +24,7 @@ public class LeagueViewConcurrencyTests
         .UseInMemoryDatabase(_name, _root).AddInterceptors(interceptors).Options);
 
     private const string OldView = "{\"fixtures\":{\"A\":{\"2\":{\"roster\":[{\"fide\":\"B1\",\"g\":0,\"acc\":[]}]}}}}";
-    private const string RebuiltView = "{\"fixtures\":{\"A\":{\"2\":{\"roster\":[{\"fide\":\"B1\",\"g\":0,\"acc\":[]}]}}},\"prognose\":\"neu\"}";
+    private const string RebuiltView = "{\"fixtures\":{\"A\":{\"2\":{\"roster\":[{\"fide\":\"B1\",\"g\":0,\"acc\":[]}],\"boards\":[{\"cand\":[{\"fide\":\"B1\",\"g\":0}]}]}}},\"prognose\":\"neu\"}";
 
     private void SeedView()
     {
@@ -58,6 +58,7 @@ public class LeagueViewConcurrencyTests
         var root = JsonNode.Parse(view.Json)!;
         Assert.Equal("neu", root["prognose"]?.GetValue<string>());                       // Rebuild-Stand erhalten
         Assert.Equal(3, root["fixtures"]!["A"]!["2"]!["roster"]![0]!["g"]!.GetValue<int>());   // Patch neu angewandt
+        Assert.Equal(3, root["fixtures"]!["A"]!["2"]!["boards"]![0]!["cand"]![0]!["g"]!.GetValue<int>());   // auch im Brett-Vorschlag (0.649.0)
         Assert.Equal(rebuiltAt, view.GeneratedAt);
     }
 

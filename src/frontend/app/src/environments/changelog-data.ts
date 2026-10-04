@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.649.0", date: "2026-10-04", changes: [
+    { en: "LeagueHub line-up forecast: each suggested player now shows the number of their games in parentheses after the name, like the “Games” column of the roster.", de: "LeagueHub-Aufstellungsprognose: Hinter jedem vorgeschlagenen Spieler steht jetzt in Klammer, wie viele Partien von ihm im Bestand sind — wie die Spalte „Partien“ der Meldeliste." },
+  ] },
   { version: "0.648.0", date: "2026-10-04", changes: [
     { en: "LeagueHub club database: when a player of SK Schwaz is replaced by “Schwaz”, the real name (and FIDE ID) is now stored internally for the club’s own later analyses. It never appears anywhere — not in the list, the game, the PGN download, the player cards, the analysis or via share links. The checkbox text and the LeagueHub privacy section say so openly.", de: "LeagueHub-Vereins-Datenbank: wird ein Spieler von SK Schwaz durch „Schwaz“ ersetzt, bleibt sein echter Name (samt FIDE-ID) jetzt intern für spätere Auswertungen des Vereins gespeichert. Angezeigt wird er nirgends — nicht in der Liste, der Partie, dem PGN-Download, den Spielerkarten, der Analyse oder über Teilen-Links. Der Text beim Häkchen und der LeagueHub-Abschnitt der Datenschutzerklärung sagen das offen." },
   ] },

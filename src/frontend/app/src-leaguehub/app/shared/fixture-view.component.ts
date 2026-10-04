@@ -92,6 +92,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                         <span class="name">
                           @if (c.fide) { <button type="button" class="pl" (click)="openCard(c.fide, b.opp_color, b.board)">{{ c.n }}</button> }
                           @else { {{ c.n }} }
+                          @if (c.g) { <span class="g muted" [attr.title]="c.g + ' Partien im Bestand'">({{ c.g }})</span> }
                           @if (b.actual?.n === c.n) { <span class="hit">gespielt</span> }
                         </span>
                         <span class="elo">{{ c.elo ?? '–' }}</span>

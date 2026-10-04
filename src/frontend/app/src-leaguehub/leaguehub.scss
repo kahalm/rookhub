@@ -138,6 +138,7 @@ body {
 .cand .bar { grid-area: bar; height: 5px; background: var(--track); border-radius: 3px; overflow: hidden; }
 .cand .bar i { display: block; height: 100%; background: var(--bar); border-radius: 3px; }
 .cand.first .name { font-weight: 600; }
+.cand .name .g { font-weight: 400; font-size: 13px; margin-left: 2px; }
 .cand.first .pct { font-size: 20px; }
 .cand.first .bar { height: 8px; }
 .cand.first .bar i { background: var(--red); }

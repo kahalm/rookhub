@@ -195,17 +195,23 @@ public sealed class LeagueProfileStore
             var root = System.Text.Json.Nodes.JsonNode.Parse(json) as System.Text.Json.Nodes.JsonObject;
             if (root?["fixtures"] is not System.Text.Json.Nodes.JsonObject teams) return null;
             var changed = false;
+            void Patch(System.Text.Json.Nodes.JsonNode? r)
+            {
+                var f = r?["fide"]?.GetValue<string>();
+                if (f is null || !ids.Contains(f)) return;
+                var g = counts.GetValueOrDefault(f);
+                if (r!["g"]?.GetValue<int>() == g) return;
+                r["g"] = g;
+                changed = true;
+            }
             foreach (var (_, rounds) in teams)
                 foreach (var (_, fx) in rounds?.AsObject() ?? new System.Text.Json.Nodes.JsonObject())
-                    foreach (var r in fx?["roster"] as System.Text.Json.Nodes.JsonArray ?? new System.Text.Json.Nodes.JsonArray())
-                    {
-                        var f = r?["fide"]?.GetValue<string>();
-                        if (f is null || !ids.Contains(f)) continue;
-                        var g = counts.GetValueOrDefault(f);
-                        if (r!["g"]?.GetValue<int>() == g) continue;
-                        r["g"] = g;
-                        changed = true;
-                    }
+                {
+                    foreach (var r in fx?["roster"] as System.Text.Json.Nodes.JsonArray ?? new System.Text.Json.Nodes.JsonArray()) Patch(r);
+                    // die Vorschläge je Brett tragen die Zahl seit 0.649.0 ebenfalls
+                    foreach (var bo in fx?["boards"] as System.Text.Json.Nodes.JsonArray ?? new System.Text.Json.Nodes.JsonArray())
+                        foreach (var c in bo?["cand"] as System.Text.Json.Nodes.JsonArray ?? new System.Text.Json.Nodes.JsonArray()) Patch(c);
+                }
             return changed ? root.ToJsonString() : null;
         }, ct);
     }

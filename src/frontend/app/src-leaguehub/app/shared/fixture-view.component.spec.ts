@@ -9,7 +9,7 @@ const OPEN: Fixture = {
   status: 'open', phase: 'R2+', hit: 5.2,
   boards: [
     { board: 1, opp_color: 's', other: 0.05, cand: [
-      { n: 'Polterauer, Chiara', elo: 2112, rb: 1, p: 0.7, fide: '111' },
+      { n: 'Polterauer, Chiara', elo: 2112, rb: 1, p: 0.7, fide: '111', g: 12 },
       { n: 'Kleissl, Helmut', elo: 2238, rb: 2, p: 0.2, fide: '222' },
       { n: 'Tabernig, Bernhard', elo: null, rb: 3, p: 0.05, fide: null }] },
     { board: 2, opp_color: 'w', other: 0, cand: [{ n: 'Kleissl, Helmut', elo: 2238, rb: 2, p: 0.6, fide: '222' }] },
@@ -59,6 +59,9 @@ describe('FixtureViewComponent', () => {
     // ohne FIDE-ID kein Knopf zur Spielerkarte
     expect(boards[0].querySelectorAll('button.pl').length).toBe(2);
     expect(el.querySelector('.note')?.textContent).toContain('5,2 von 2');
+    // Partien im Bestand in Klammer hinter dem Namen (0.649.0); ohne Partien nichts
+    expect(first.querySelector('.name .g')?.textContent?.trim()).toBe('(12)');
+    expect(boards[0].querySelectorAll('.name .g').length).toBe(1);
   });
 
   it('gesperrte Runde nennt, wann die Prognose kommt, und zeigt keine Bretter', () => {

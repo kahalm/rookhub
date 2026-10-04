@@ -193,6 +193,8 @@ public sealed class LeagueViewBuilder
                     {
                         ["n"] = rows[i].Name, ["elo"] = rows[i].Elo > 0 ? rows[i].Elo : null, ["rb"] = rows[i].Rb,
                         ["p"] = R3(bp[i, k]), ["fide"] = rows[i].Fide,
+                        // Partien im Bestand (0.649.0) — wie die Spalte „Partien" der Meldeliste
+                        ["g"] = rows[i].Fide is { } cf ? _gameCounts.GetValueOrDefault(cf) : 0,
                     }).ToArray());
                     var sumTop = cand.Sum(c => c!["p"]!.GetValue<double>());
                     var oppWhite = (k % 2 == 0) != s.Home;   // Heimteam hat an ungeraden Brettern Weiß
