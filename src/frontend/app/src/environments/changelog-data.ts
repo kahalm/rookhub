@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.650.0", date: "2026-10-04", changes: [
+    { en: "LeagueHub match view (also on share links): the text at the top is now behind two (i) — “Games” shows the number of games of the opponent’s roster, its (i) the table per source; “Forecast” shows how often the forecast has been right so far, its (i) the explanation and the hit rate per round, per league and in total, over all matches of all leagues.", de: "LeagueHub-Begegnung (auch über den Teilen-Link): Der Text am Anfang steht jetzt hinter zwei (i) — „Partien“ zeigt, wie viele Partien der Meldeliste des Gegners im Bestand sind, das (i) die Tabelle je Quelle; „Prognose“ zeigt, wie oft die Prognose bisher richtig lag, das (i) die Erklärung und die Treffer je Runde, je Liga und gesamt, über alle Begegnungen aller Ligen." },
+  ] },
   { version: "0.649.0", date: "2026-10-04", changes: [
     { en: "LeagueHub line-up forecast: each suggested player now shows the number of their games in parentheses after the name, like the “Games” column of the roster.", de: "LeagueHub-Aufstellungsprognose: Hinter jedem vorgeschlagenen Spieler steht jetzt in Klammer, wie viele Partien von ihm im Bestand sind — wie die Spalte „Partien“ der Meldeliste." },
   ] },

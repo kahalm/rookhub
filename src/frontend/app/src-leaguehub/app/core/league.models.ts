@@ -132,6 +132,19 @@ export interface Fixture {
   roster?: RosterEntry[];
   phase?: Phase;
   hit?: number | null;
+  /** Nur gespielt (0.650.0): wie gut die Prognose lag — `players` der `of` Aufgestellten unter den wahrscheinlichsten,
+   *  `boards` = erster Vorschlag genau am Brett. */
+  eval?: ForecastHits;
+}
+
+export interface ForecastHits { players: number; boards: number; of: number }
+/** Treffer der Prognose über alle Begegnungen der Saison (0.650.0, `GET /api/league/forecast-stats`). */
+export interface ForecastTally extends ForecastHits { fixtures: number }
+export interface ForecastStats {
+  season: string | null;
+  total: ForecastTally;
+  rounds: (ForecastTally & { round: number })[];
+  leagues: (ForecastTally & { tnr: number; name: string; rounds: (ForecastTally & { round: number })[] })[];
 }
 
 export interface LeagueRound { round: number; date: string | null; played: boolean; open: boolean }

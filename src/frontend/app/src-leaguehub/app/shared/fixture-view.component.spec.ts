@@ -36,7 +36,16 @@ describe('FixtureViewComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats']);
+    api.forecastStats.and.resolveTo({
+      season: '2026/27', total: { fixtures: 4, players: 22, boards: 10, of: 30 },
+      rounds: [{ round: 1, fixtures: 3, players: 15, boards: 6, of: 22 }, { round: 2, fixtures: 1, players: 7, boards: 4, of: 8 }],
+      leagues: [
+        { tnr: 10, name: 'Landesliga', fixtures: 3, players: 18, boards: 9, of: 24,
+          rounds: [{ round: 1, fixtures: 2, players: 11, boards: 5, of: 16 }, { round: 2, fixtures: 1, players: 7, boards: 4, of: 8 }] },
+        { tnr: 11, name: '1. Klasse Ost', fixtures: 1, players: 4, boards: 1, of: 6, rounds: [{ round: 1, fixtures: 1, players: 4, boards: 1, of: 6 }] },
+      ],
+    });
     TestBed.configureTestingModule({
       imports: [FixtureViewComponent],
       providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: () => false } }],
@@ -58,10 +67,50 @@ describe('FixtureViewComponent', () => {
     expect(boards[1].querySelector('.sq.w')).not.toBeNull();
     // ohne FIDE-ID kein Knopf zur Spielerkarte
     expect(boards[0].querySelectorAll('button.pl').length).toBe(2);
-    expect(el.querySelector('.note')?.textContent).toContain('5,2 von 2');
+    // der Erklärtext steht hinter dem (i) „Prognose" (0.650.0)
+    expect(el.querySelector('.note')).toBeNull();
+    (el.querySelector('button[aria-label="Wie die Prognose zustande kommt"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.info-panel .note')?.textContent).toContain('5,2 von 2');
     // Partien im Bestand in Klammer hinter dem Namen (0.649.0); ohne Partien nichts
     expect(first.querySelector('.name .g')?.textContent?.trim()).toBe('(12)');
     expect(boards[0].querySelectorAll('.name .g').length).toBe(1);
+  });
+
+  it('zwei (i) am Anfang: Partien der Begegnung und Prognose mit Treffern je Runde, Liga, gesamt (0.650.0)', async () => {
+    fixture.componentRef.setInput('sources', {
+      board: [{ key: 'Lumbra', label: 'Lumbra', games: 900 }], boardTotal: 900, online: [], onlineTotal: 300, countedAt: '',
+      opponent: { players: 8, board: { Lumbra: 120 }, boardTotal: 120, online: { lichess: { games: 1500, accounts: 2 } }, onlineTotal: 1500, onlineAccounts: 2 },
+    });
+    let el = render(OPEN);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const lines = Array.from(el.querySelectorAll('.info-line')).map(x => x.textContent!.replace(/\s+/g, ' ').trim());
+    expect(lines[0]).toContain('Partien Spg Kufstein/Wörgl: 1.620');
+    expect(lines[1]).toContain('bisher 73 % der Aufgestellten richtig');
+    expect(el.querySelector('lh-game-sources')).toBeNull();                                  // Tabelle erst hinter dem (i)
+    (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.info-panel lh-game-sources')).not.toBeNull();
+    (el.querySelector('button[aria-label="Wie die Prognose zustande kommt"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('lh-game-sources')).toBeNull();                                  // immer nur ein (i) offen
+    const rows = Array.from(el.querySelectorAll('.stats-tbl tbody tr'))
+      .map(r => Array.from(r.children).map(c => c.textContent!.replace(/\s+/g, ' ').trim()).join(' '));
+    expect(rows).toContain('Runde 1 3 68 % 27 %');
+    expect(rows.find(r => r.startsWith('Landesliga'))).toBe('LandesligaR1 69 % · R2 88 % 3 75 % 38 %');
+    expect(rows[rows.length - 1]).toBe('Gesamt 4 73 % 33 %');
+    expect(el.querySelector('.stats-tbl tr.mine')?.textContent).toContain('Landesliga');   // eigene Liga hervorgehoben
+    expect(api.forecastStats).toHaveBeenCalledOnceWith(null);
+    // gespielt: diese Begegnung mit ihren Treffern
+    el = render({ ...OPEN, status: 'played', eval: { players: 6, boards: 3, of: 8 } });
+    expect(el.querySelector('.infos')!.textContent).toContain('hier 6 von 8');
+  });
+
+  it('über den Teilen-Link holt die Statistik über den Link', async () => {
+    render(OPEN, { token: 'TOK' });
+    await fixture.whenStable();
+    expect(api.forecastStats).toHaveBeenCalledWith('TOK');
   });
 
   it('gesperrte Runde nennt, wann die Prognose kommt, und zeigt keine Bretter', () => {

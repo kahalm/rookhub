@@ -196,6 +196,51 @@ public class LeagueEngineTests
         Assert.Equal(2.0, sum, 2);                                              // Summe der Einsätze = Bretter
     }
 
+    [Fact]
+    public void View_PlayedFixture_CarriesItsHits_ConsistentWithTheBoards()
+    {
+        var w = TinyWorld();
+        var v = new LeagueViewBuilder(w, LeagueModel.FromEmbedded(), new Dictionary<string, int>(), new Dictionary<string, List<LeagueOnlineAccount>>())
+            .Build(1, w.Games);
+        var fx = v["fixtures"]!["A"]!.AsObject();
+        var ev = fx["1"]!["eval"]!;
+        Assert.Equal(2, ev["of"]!.GetValue<int>());                                         // zwei besetzte Bretter
+        Assert.InRange(ev["players"]!.GetValue<int>(), 0, 2);
+        var firstPlace = fx["1"]!["boards"]!.AsArray().Count(b => b!["actual"]?["rank"]?.GetValue<int>() == 1);
+        Assert.Equal(firstPlace, ev["boards"]!.GetValue<int>());                            // „genau am Brett" = Platz 1 der Anzeige
+        Assert.Null(fx["2"]!["eval"]);                                                      // offen: noch nichts zu zählen
+    }
+
+    [Fact]
+    public async Task ForecastStats_PerRoundLeagueAndTotal_OverAllFixtures_OnlyCurrentSeason()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" },
+            new LeagueTournament { Tnr = 2, Season = "2026/27", Level = 2, League = "1. Klasse", Grp = "Ost", Stage = "Liga" },
+            new LeagueTournament { Tnr = 9, Season = "2025/26", Level = 1, League = "Landesliga", Stage = "Liga" });
+        static string Ev(int p, int b, int of) => $"{{\"eval\":{{\"players\":{p},\"boards\":{b},\"of\":{of}}}}}";
+        db.LeagueViews.AddRange(
+            new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(6, 3, 8)},\"2\":{Ev(7, 4, 8)},\"3\":{{\"status\":\"open\"}}}},\"B\":{{\"1\":{Ev(5, 2, 8)}}}}}}}" },
+            new LeagueView { Tnr = 2, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"C\":{{\"1\":{Ev(4, 1, 6)},\"2\":{{\"status\":\"played\"}}}}}}}}" },
+            new LeagueView { Tnr = 9, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(8, 8, 8)}}}}}}}" });
+        await db.SaveChangesAsync();
+
+        var s = await new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance).ForecastStatsAsync(default);
+
+        Assert.Equal("2026/27", s["season"]!.GetValue<string>());
+        Assert.Equal("{\"fixtures\":4,\"players\":22,\"boards\":10,\"of\":30}", s["total"]!.ToJsonString());   // ohne Vorsaison, ohne „ohne eval"
+        var r = s["rounds"]!.AsArray();
+        Assert.Equal(new[] { 1, 2 }, r.Select(x => x!["round"]!.GetValue<int>()));
+        Assert.Equal(3, r[0]!["fixtures"]!.GetValue<int>());                                  // Runde 1 über beide Ligen
+        Assert.Equal(15, r[0]!["players"]!.GetValue<int>());
+        var l = s["leagues"]!.AsArray();
+        Assert.Equal(new[] { "Landesliga", "1. Klasse Ost" }, l.Select(x => x!["name"]!.GetValue<string>()));
+        Assert.Equal(18, l[0]!["players"]!.GetValue<int>());
+        Assert.Equal(2, l[0]!["rounds"]!.AsArray().Count);
+        Assert.Single(l[1]!["rounds"]!.AsArray());
+    }
+
     // ---- Teilen-Links -----------------------------------------------------------------------------
 
     private static (AppDbContext Db, LeagueService Svc) ShareFixture(IMemoryCache? cache = null)

@@ -238,6 +238,7 @@ public sealed class LeagueViewBuilder
                         ["prev"] = prevN, ["cur"] = curN, ["fide"] = f, ["g"] = g, ["acc"] = AccShort(f),
                     });
                 }
+                if (isPlayed && act.Count > 0) e["eval"] = Evaluate(rows, p, bp, b, act);
                 e["boards"] = boards;
                 e["roster"] = roster;
                 e["phase"] = phase;
@@ -261,6 +262,31 @@ public sealed class LeagueViewBuilder
     }
 
     private sealed record ActualBoard(string? Name, int? Elo, string? Fide, double? Score, double? Own, string? Vs, int? VsElo);
+
+    /// <summary>
+    /// Wie gut die Prognose einer GESPIELTEN Begegnung lag (0.650.0, Treffer-Statistik je Runde/Liga/gesamt):
+    /// <c>players</c> = wie viele der tatsächlich Aufgestellten unter den <paramref name="b"/> wahrscheinlichsten Spielern waren
+    /// (dieselbe Größe wie der Backtest in <see cref="Hits"/>), <c>boards</c> = an wie vielen Brettern der erste Vorschlag
+    /// genau dort saß, <c>of</c> = besetzte Bretter (ohne „nicht besetzt").
+    /// </summary>
+    private static JsonObject Evaluate(List<FeatureRow> rows, double[] p, double[,] bp, int b, Dictionary<int, ActualBoard> act)
+    {
+        var top = Enumerable.Range(0, rows.Count).OrderByDescending(i => p[i]).Take(b).ToHashSet();
+        int players = 0, boards = 0, of = 0;
+        foreach (var (board, ab) in act)
+        {
+            if (ab.Name is null) continue;
+            of++;
+            var pid = LeagueNames.Pid(ab.Fide, LeagueNames.NameKey(ab.Name));
+            var idx = rows.FindIndex(x => x.Pid == pid);
+            if (idx < 0) continue;
+            if (top.Contains(idx)) players++;
+            var k = board - 1;
+            // wie Platz 1 in der Anzeige (gleiche, stabile Reihenfolge)
+            if (k >= 0 && k < bp.GetLength(1) && Enumerable.Range(0, rows.Count).OrderByDescending(i => bp[i, k]).First() == idx) boards++;
+        }
+        return new JsonObject { ["players"] = players, ["boards"] = boards, ["of"] = of };
+    }
 
     private static Dictionary<int, ActualBoard> ActualBoards(List<LeagueGame> games, int rnd, string team)
     {

@@ -23,7 +23,8 @@ describe('SharePageComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats']);
+    api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, players: 0, boards: 0, of: 0 }, rounds: [], leagues: [] });
     api.sources.and.resolveTo({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }], boardTotal: 34838,
       online: [{ key: 'chess.com', label: 'chess.com', games: 29522 }], onlineTotal: 29522, countedAt: '2026-10-01T14:30:00Z',
@@ -57,6 +58,9 @@ describe('SharePageComponent', () => {
     await f.whenStable();
     f.detectChanges();
     expect(api.sources).toHaveBeenCalledWith('TOKEN123');
+    // seit 0.650.0 hinter dem (i) „Partien"
+    (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
+    f.detectChanges();
     // Liga und Gegner bestimmt über den Link der Server — die Seite schickt nichts mit.
     const rows = Array.from(el.querySelectorAll('.src-tbl tbody tr')).map(r => Array.from(r.children).map(c => c.textContent!.trim()));
     expect(rows).toEqual([['Brett', '34.838', '12.106', '187'], ['Lumbra', '34.838', '12.106', '187'],

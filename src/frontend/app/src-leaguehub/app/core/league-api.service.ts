@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountChecks, AccountInput, Broadcast, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountChecks, AccountInput, Broadcast, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -15,6 +15,19 @@ export class LeagueApiService {
 
   /** Partien im Bestand je Quelle (0.626.0; über einen Teilen-Link seit 0.627.0) — der Server zählt höchstens alle 30 min neu.
    *  `tnr` = Liga, `fides` = Meldeliste des Gegners (0.628.0, nur angemeldet; über den Link bestimmt der Server beides selbst). */
+  /** Treffer der Prognose je Runde/Liga/gesamt (0.650.0) — für alle Ansichten derselbe Stand, deshalb je Link einmal geholt. */
+  forecastStats(token: string | null = null): Promise<ForecastStats> {
+    const key = token ?? '';
+    let p = this.statsCache.get(key);
+    if (!p) {
+      p = firstValueFrom(this.http.get<ForecastStats>(`${this.base(token)}/forecast-stats`));
+      p.catch(() => this.statsCache.delete(key));
+      this.statsCache.set(key, p);
+    }
+    return p;
+  }
+  private readonly statsCache = new Map<string, Promise<ForecastStats>>();
+
   sources(token: string | null = null, fides: string[] = [], tnr: number | null = null): Promise<GameSources> {
     const q = token ? [] : [
       ...(tnr ? [`tnr=${tnr}`] : []),

@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { PHASE_TEXT, pct, shareText, shortTeam, tn } from '../core/league-format';
-import { Board, Fixture } from '../core/league.models';
+import { Board, Fixture, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
+import { GameSourcesComponent } from './game-sources.component';
+import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 
 /**
@@ -16,7 +18,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent],
+  imports: [PlayerCardComponent, GameSourcesComponent],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -42,12 +44,65 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             <p class="note">Für {{ tn(e.opp) }} gibt es noch keine Meldeliste.</p>
           }
           @default {
-            <p class="note">
-              @if (e.status === 'played') { Pro Brett oben, wer tatsächlich gespielt hat, darunter die Prognose, die vor der Runde galt. }
-              @else { Prognose für {{ tn(e.opp) }}: pro Brett die drei wahrscheinlichsten Spieler. }
-              @if (e.hit) { In alten Saisonen lagen in dieser Lage ({{ phaseText() }}) im Schnitt {{ hitText() }} von {{ e.boards?.length }} vorhergesagten Spielern richtig. }
-              Das Quadrat zeigt die Farbe des Gegners.
-            </p>
+            <!-- Wunsch 2026-10-04: der Text am Anfang hinter zwei (i) — Partien der Begegnung und die Prognose samt Treffern. -->
+            <div class="infos">
+              @if (sources(); as s) {
+                <p class="info-line">
+                  <span>Partien {{ tn(e.opp) }}: <b>{{ gamesCount(s) }}</b></span>
+                  <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'games'" aria-label="Partien je Quelle"
+                          title="Partien je Quelle" (click)="toggleInfo('games')">i</button>
+                </p>
+              }
+              <p class="info-line">
+                <span>Prognose@if (stats(); as st) {@if (st.total.of) { · bisher <b>{{ share(st.total.players, st.total.of) }}</b> der Aufgestellten richtig}}@if (e.eval; as v) { · hier {{ v.players }} von {{ v.of }}}</span>
+                <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'forecast'" aria-label="Wie die Prognose zustande kommt"
+                        title="Wie die Prognose zustande kommt" (click)="toggleInfo('forecast')">i</button>
+              </p>
+            </div>
+            @if (openInfo() === 'games' && sources(); as s) {
+              <div class="info-panel"><lh-game-sources [sources]="s" [league]="leagueName()" [opponent]="e.opp" /></div>
+            }
+            @if (openInfo() === 'forecast') {
+              <div class="info-panel">
+                <p class="note">
+                  @if (e.status === 'played') { Pro Brett oben, wer tatsächlich gespielt hat, darunter die Prognose, die vor der Runde galt. }
+                  @else { Prognose für {{ tn(e.opp) }}: pro Brett die drei wahrscheinlichsten Spieler. }
+                  @if (e.hit) { In alten Saisonen lagen in dieser Lage ({{ phaseText() }}) im Schnitt {{ hitText() }} von {{ e.boards?.length }} vorhergesagten Spielern richtig. }
+                  Das Quadrat zeigt die Farbe des Gegners. In Klammer hinter dem Namen: Partien im Bestand.
+                </p>
+                @if (e.eval; as v) {
+                  <p class="note">In dieser Begegnung: {{ v.players }} von {{ v.of }} Aufgestellten waren unter den {{ e.boards?.length }} wahrscheinlichsten,
+                    an {{ v.boards }} Brettern saß genau der erste Vorschlag.</p>
+                }
+                @if (stats(); as st) {
+                  @if (st.total.fixtures) {
+                    <p class="note">Bisher in der Saison {{ st.season }}, über alle Begegnungen aller Ligen (jede Begegnung zweimal: je eine Prognose
+                      für jede Mannschaft). „Spieler" = Aufgestellte unter den wahrscheinlichsten, „Brett" = erster Vorschlag genau am Brett.</p>
+                    <div class="src-scroll"><table class="src-tbl stats-tbl">
+                      <thead><tr><th scope="col"></th><th scope="col" class="num">Prognosen</th><th scope="col" class="num">Spieler</th><th scope="col" class="num">Brett</th></tr></thead>
+                      <tbody>
+                        <tr class="src-group"><th scope="rowgroup" colspan="4">Je Runde</th></tr>
+                        @for (r of st.rounds; track r.round) {
+                          <tr><td>Runde {{ r.round }}</td><td class="num">{{ r.fixtures }}</td>
+                            <td class="num">{{ share(r.players, r.of) }}</td><td class="num">{{ share(r.boards, r.of) }}</td></tr>
+                        }
+                        <tr class="src-group"><th scope="rowgroup" colspan="4">Je Liga</th></tr>
+                        @for (l of st.leagues; track l.tnr) {
+                          <tr [class.mine]="l.name === leagueName()">
+                            <td>{{ l.name }}<span class="src-sub">{{ roundsText(l.rounds) }}</span></td><td class="num">{{ l.fixtures }}</td>
+                            <td class="num">{{ share(l.players, l.of) }}</td><td class="num">{{ share(l.boards, l.of) }}</td>
+                          </tr>
+                        }
+                        <tr class="src-group total"><th scope="row">Gesamt</th><td class="num">{{ st.total.fixtures }}</td>
+                          <td class="num">{{ share(st.total.players, st.total.of) }}</td><td class="num">{{ share(st.total.boards, st.total.of) }}</td></tr>
+                      </tbody>
+                    </table></div>
+                  } @else {
+                    <p class="note">Noch keine gespielte Runde mit Prognose in dieser Saison.</p>
+                  }
+                }
+              </div>
+            }
             <div class="share">
               <div class="actions">
                 @if (e.status === 'open') { <button type="button" class="btn-sec" (click)="shareWhatsApp()">Auf WhatsApp teilen</button> }
@@ -149,6 +204,13 @@ export class FixtureViewComponent {
   readonly fixture = input<Fixture | undefined>(undefined);
   /** Gesetzt = geteilte Ansicht: Karten/PGN über den Link, kein „Link teilen". */
   readonly shareToken = input<string | null>(null);
+  /** Partien je Quelle (Gesamt | Liga | Begegnung) — steht seit 0.650.0 hinter dem (i) „Partien". */
+  readonly sources = input<GameSources | null>(null);
+
+  /** Welches (i) offen ist: Partien je Quelle oder Prognose samt Treffer-Statistik. */
+  readonly openInfo = signal<'games' | 'forecast' | null>(null);
+  readonly stats = signal<ForecastStats | null>(null);
+  private statsFor: string | null | undefined = undefined;
 
   /** Ergebnis von „Auf WhatsApp teilen"/„Link teilen" — gehört zu DIESER Begegnung: wechselt Runde, Verein oder
    *  Liga, verschwindet es (sonst stünde der Link der vorigen Begegnung unter der neuen, und „In WhatsApp öffnen"
@@ -166,6 +228,35 @@ export class FixtureViewComponent {
   readonly canShareLink = computed(() => !this.shareToken() && this.tnr() !== null);
   readonly phaseText = computed(() => PHASE_TEXT[this.fixture()?.phase ?? 'R1'] ?? this.fixture()?.phase);
   readonly hitText = computed(() => String(this.fixture()?.hit ?? '').replace('.', ','));
+
+  constructor() {
+    effect(() => {
+      const token = this.shareToken();
+      if (this.statsFor === token) return;
+      this.statsFor = token;
+      this.api.forecastStats(token).then(s => { if (this.statsFor === token) this.stats.set(s); }, () => this.stats.set(null));
+    });
+  }
+
+  toggleInfo(which: 'games' | 'forecast'): void {
+    this.openInfo.update(o => (o === which ? null : which));
+  }
+
+  /** Partien der Begegnung = Brett + online der Meldeliste des Gegners; ohne diesen Block alle. */
+  gamesCount(s: GameSources): string {
+    const n = s.opponent ? s.opponent.boardTotal + s.opponent.onlineTotal : s.boardTotal + s.onlineTotal;
+    return thousands(n);
+  }
+
+  /** „64 %" — ohne Nenner „–". */
+  share(n: number, of: number): string {
+    return of ? `${Math.round((n / of) * 100)} %` : '–';
+  }
+
+  /** „R1 71 % · R2 58 %" — die Runden einer Liga (Spieler). */
+  roundsText(rounds: (ForecastTally & { round: number })[]): string {
+    return rounds.map(r => `R${r.round} ${this.share(r.players, r.of)}`).join(' · ');
+  }
 
   colorName(b: Board): string {
     return b.opp_color === 'w' ? 'Gegner hat Weiß' : 'Gegner hat Schwarz';

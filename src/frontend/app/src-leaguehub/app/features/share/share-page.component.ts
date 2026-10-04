@@ -6,7 +6,6 @@ import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
 import { GameSources, SharedFixture } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
-import { GameSourcesComponent } from '../../shared/game-sources.component';
 
 /**
  * Geteilte Begegnung (`/s/:token`) — OHNE Anmeldung. Zeigt genau die geteilte Begegnung samt Meldeliste
@@ -17,7 +16,7 @@ import { GameSourcesComponent } from '../../shared/game-sources.component';
   selector: 'lh-share-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, GameSourcesComponent, RouterLink],
+  imports: [FixtureViewComponent, RouterLink],
   template: `
     @if (invalid()) {
       <section class="gate">
@@ -42,8 +41,7 @@ import { GameSourcesComponent } from '../../shared/game-sources.component';
         </div>
       </section>
       <p class="stand">Geteilte Begegnung, nur zum Ansehen. Stand der Daten: {{ d.generated }}, Link gültig bis {{ until(d.expires) }}.</p>
-      @if (sources(); as s) { <lh-game-sources [sources]="s" [league]="d.league" [opponent]="d.fixture.opp" /> }
-      <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" />
+      <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" [sources]="sources()" />
       <div class="foot-note">
         <p>Quelle: Paarungen und Meldelisten von chess-results.com; Partien aus Lumbra's GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien von SK Schwaz.</p>
         <p>Die Prozente kommen aus einem Modell, das an früheren Saisonen gelernt hat, wer aufgestellt wird. Die Bretter folgen der Meldeliste.</p>

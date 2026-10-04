@@ -150,6 +150,68 @@ public sealed class LeagueService
     public async Task<string?> LeagueJsonAsync(int tnr, CancellationToken ct) =>
         (await _db.LeagueViews.AsNoTracking().FirstOrDefaultAsync(v => v.Tnr == tnr, ct))?.Json;
 
+    /// <summary>
+    /// Wie oft die Prognose in den bisherigen Runden der laufenden Saison getroffen hat (0.650.0, Wunsch 2026-10-04: „Statistik
+    /// auf Runden aufdröseln und auf Ligen und gesamt — nicht nur für Schwaz, sondern für alle Begegnungen"). Zählt jede
+    /// gespielte Begegnung aus Sicht beider Teams (je eine Prognose für die Aufstellung des Gegners) aus dem Feld <c>eval</c>
+    /// der fertig gerechneten Ansichten → <c>{ season, total, rounds[], leagues[{ tnr, name, rounds[], … }] }</c>, je Eintrag
+    /// <c>fixtures, players, boards, of</c>. Ansichten aus der Zeit vor 0.650.0 haben kein <c>eval</c> — die zählen erst nach
+    /// „Daten aktualisieren". Gemerkt, bis eine Ansicht neu gerechnet wird.
+    /// </summary>
+    public async Task<JsonObject> ForecastStatsAsync(CancellationToken ct)
+    {
+        var season = await CurrentSeasonAsync(ct);
+        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga")
+            .OrderBy(t => t.Level).ThenBy(t => t.Grp).ToListAsync(ct);
+        var tnrs = ts.Select(t => t.Tnr).ToList();
+        var stamp = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).Select(v => v.GeneratedAt).ToListAsync(ct);
+        var key = $"league-forecast-stats:{season}:{stamp.Count}:{(stamp.Count > 0 ? stamp.Max().Ticks : 0)}";
+        if (_cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+
+        var views = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).ToDictionaryAsync(v => v.Tnr, v => v.Json, ct);
+        var total = new Tally();
+        var byRound = new SortedDictionary<int, Tally>();
+        var leagues = new JsonArray();
+        foreach (var t in ts)
+        {
+            if (!views.TryGetValue(t.Tnr, out var json) || JsonNode.Parse(json)?["fixtures"] is not JsonObject teams) continue;
+            var lt = new Tally();
+            var lr = new SortedDictionary<int, Tally>();
+            foreach (var (_, rounds) in teams)
+                foreach (var (rnd, fx) in rounds?.AsObject() ?? new JsonObject())
+                {
+                    if (fx?["eval"] is not JsonObject ev || !int.TryParse(rnd, out var r)) continue;
+                    int P(string k) => ev[k]?.GetValue<int>() ?? 0;
+                    var (pl, bo, of) = (P("players"), P("boards"), P("of"));
+                    foreach (var x in new[] { total, lt, Get(byRound, r), Get(lr, r) }) x.Add(pl, bo, of);
+                }
+            if (lt.Fixtures == 0) continue;
+            var lo = lt.ToJson();
+            lo["tnr"] = t.Tnr;
+            lo["name"] = t.League + (string.IsNullOrEmpty(t.Grp) ? "" : $" {t.Grp}");
+            lo["rounds"] = Rounds(lr);
+            leagues.Add(lo);
+        }
+        var res = new JsonObject { ["season"] = season, ["total"] = total.ToJson(), ["rounds"] = Rounds(byRound), ["leagues"] = leagues };
+        _cache?.Set(key, res, TimeSpan.FromHours(6));
+        return (JsonObject)res.DeepClone();
+
+        static Tally Get(SortedDictionary<int, Tally> d, int r) => d.TryGetValue(r, out var x) ? x : d[r] = new Tally();
+        static JsonArray Rounds(SortedDictionary<int, Tally> d) => new(d.Select(kv =>
+        {
+            var o = kv.Value.ToJson();
+            o["round"] = kv.Key;
+            return (JsonNode)o;
+        }).ToArray());
+    }
+
+    private sealed class Tally
+    {
+        public int Fixtures, Players, Boards, Of;
+        public void Add(int players, int boards, int of) { Fixtures++; Players += players; Boards += boards; Of += of; }
+        public JsonObject ToJson() => new() { ["fixtures"] = Fixtures, ["players"] = Players, ["boards"] = Boards, ["of"] = Of };
+    }
+
     /// <summary>Spielerkarte: Eröffnungsprofil + Online-Konten (<paramref name="onlySure"/>: nur „sicher" — für Teilen-Links).
     /// <paramref name="reveal"/> = ein Admin fragt: Konten Minderjähriger vollständig (0.625.0) — nie zusammen mit <paramref name="onlySure"/>.
     /// <paramref name="prep"/>: die Spielervorbereitung fragt (0.638.0) — nur dann trägt ein Spieler ohne Meldeliste und Liga-Karte allein

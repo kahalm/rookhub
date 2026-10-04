@@ -51,6 +51,11 @@ public class LeagueController : BaseApiController
         Ok(await sources.GetAsync(ct, fides?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             leagueTnr: tnr));
 
+    /// <summary>Treffer der Prognose in den bisherigen Runden (0.650.0): je Runde, je Liga, gesamt — über alle Begegnungen.</summary>
+    [HttpGet("forecast-stats")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> ForecastStats(CancellationToken ct) => Ok(await _league.ForecastStatsAsync(ct));
+
     [HttpGet("player/{fide}")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> Player(string fide, CancellationToken ct) =>
@@ -383,6 +388,11 @@ public class LeagueShareController : ControllerBase
         var fides = (share["fixture"]?["roster"] as JsonArray ?? []).Select(r => (string?)r?["fide"]);
         return Ok(await sources.GetAsync(ct, fides, onlySure: true, leagueTnr: tnr));
     }
+
+    /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen.</summary>
+    [HttpGet("{token}/forecast-stats")]
+    public async Task<IActionResult> ForecastStats(string token, CancellationToken ct) =>
+        await _league.ShareValidAsync(token, ct) ? Ok(await _league.ForecastStatsAsync(ct)) : NotFound();
 
     [HttpGet("{token}/player/{fide}")]
     public async Task<IActionResult> Player(string token, string fide, CancellationToken ct)

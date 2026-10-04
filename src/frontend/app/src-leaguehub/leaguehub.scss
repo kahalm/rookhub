@@ -195,7 +195,16 @@ lh-root .wrap .legal-links { display: none; }
 
 .foot-note { color: var(--muted); font-size: 14px; padding-top: 20px; }
 /* Partien je Quelle unter „Stand der Daten" (0.626.0; als Tabelle seit 0.628.0, Fassung B des Entwurfs) */
-lh-game-sources { display: block; margin: -2px 0 14px; }
+lh-game-sources { display: block; }
+/* Zwei (i) am Anfang einer Begegnung (0.650.0): Partien der Begegnung und Prognose samt Treffern */
+.infos { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 8px 0 10px; }
+.info-line { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; color: var(--muted); }
+.info-line b { color: var(--ink); }
+.info-panel { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; max-width: 760px; }
+.info-panel .note { margin: 0 0 8px; }
+.stats-tbl .src-sub { margin-left: 0; max-width: none; }
+.stats-tbl tr.mine td { font-weight: 600; }
+.stats-tbl .total th { text-align: left; }
 .src-scroll { overflow-x: auto; max-width: 720px; }
 .src-tbl { width: 100%; min-width: 440px; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
 .src-tbl caption { text-align: left; font: 600 13px/1.3 var(--cond); letter-spacing: .03em; text-transform: uppercase; color: var(--muted); padding-bottom: 4px; }

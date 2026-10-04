@@ -1589,6 +1589,17 @@ Rollenverwaltung an).
   verworfen); über den Link nimmt der SERVER Liga und Meldeliste der geteilten Begegnung (`LeagueService.ShareTnrAsync`) und
   zählt online nur gesicherte Konten. „–" = auf dieser Seite hat keiner der Spieler ein Konto (≠ 0 Partien). Prod 01.10.:
   Landesliga 177 Spieler / 46.058 Brett, 1. Klasse 226 / 18.783.
+  **Seit 0.650.0 hinter zwei (i) in der Begegnung** (Wunsch 2026-10-04: „versteck den Text am Anfang hinter 2 (i) …"):
+  `fixture-view.component.ts` bekommt `[sources]` von Startseite/Teilen-Seite und zeigt „Partien {Gegner}: N (i)" (N = Brett +
+  online des Blocks `opponent`) — das (i) klappt die Tabelle auf — und „Prognose · bisher x % der Aufgestellten richtig · hier
+  a von b (i)": das (i) hat den früheren Erklärtext plus die **Treffer-Statistik** `GET /api/league/forecast-stats` (league.view)
+  bzw. `GET /api/league/s/{token}/forecast-stats` (anonym, gültiger Token; nur Zahlen + Liga-Namen) aus
+  `LeagueService.ForecastStatsAsync`: je Runde (alle Ligen), je Liga (mit Runden), gesamt — `{ fixtures, players, boards, of }`,
+  über ALLE Begegnungen der laufenden Saison, jede aus Sicht beider Teams. Quelle ist das Feld `eval` einer gespielten Begegnung
+  in der Ansicht (`LeagueViewBuilder.Evaluate`): `players` = Aufgestellte unter den B wahrscheinlichsten (dieselbe Größe wie
+  der Backtest `Hits`), `boards` = erster Vorschlag genau am Brett (= „gespielt" auf Platz 1), `of` = besetzte Bretter. Ältere
+  Ansichten haben kein `eval` → zählen erst nach „Daten aktualisieren". Gemerkt je Saison + Stand der Ansichten (6 h).
+  Hinter jedem Prognose-Vorschlag seit 0.649.0 „(n)" = Partien im Bestand (`cand[].g`, nachgezogen wie `roster[].g`).
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

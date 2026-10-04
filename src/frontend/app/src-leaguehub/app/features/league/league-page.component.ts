@@ -8,7 +8,6 @@ import { roundLabel, tn } from '../../core/league-format';
 import { loadErrorText } from '../../core/club-format';
 import { GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
-import { GameSourcesComponent } from '../../shared/game-sources.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 
 const PICK_KEY = 'leaguehub';
@@ -25,7 +24,7 @@ interface Pick { liga?: number; verein?: string }
   selector: 'lh-league-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, GameSourcesComponent, AccessGateComponent],
+  imports: [FixtureViewComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
       <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz." />
@@ -67,11 +66,10 @@ interface Pick { liga?: number; verein?: string }
           }
           <span class="update-msg" [class.err]="updateErr()" role="status" aria-live="polite">{{ updateMsg() }}</span>
         </div>
-        @if (sources(); as s) { <lh-game-sources [sources]="s" [league]="league()?.name" [opponent]="fixture()?.opp" /> }
 
         @if (league(); as L) {
           <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [round]="round()" [team]="team()"
-                      [fixture]="fixture()" />
+                      [fixture]="fixture()" [sources]="sources()" />
         } @else if (leagueError(); as e) {
           <!-- F7-010: eine Liga, die nicht kommt, nimmt nicht die ganze Seite mit — Auswahl bleibt, andere Liga geht. -->
           <section class="gate">

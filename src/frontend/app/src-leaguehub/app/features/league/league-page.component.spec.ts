@@ -38,7 +38,8 @@ describe('LeaguePageComponent', () => {
     localStorage.removeItem('leaguehub');
     perms = new Set(['league.view', 'league.manage']);
     query = {};
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources', 'forecastStats']);
+    api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, players: 0, boards: 0, of: 0 }, rounds: [], leagues: [] });
     api.index.and.resolveTo(INDEX);
     api.sources.and.callFake(async (_token: string | null = null, fides: string[] = [], tnr: number | null = null) => ({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }, { key: 'Mega', label: 'ChessBase-Megabase', games: 18839 }], boardTotal: 53677,
@@ -99,6 +100,9 @@ describe('LeaguePageComponent', () => {
     expect(el.textContent).toContain('Stand der Daten: 27.09.2026 21:00');
     // Partien je Quelle (0.626.0) als Tabelle mit Liga und Begegnung (0.628.0): die Liga + die Meldeliste des Gegners, ohne leere FIDE-IDs.
     expect(api.sources).toHaveBeenCalledWith(null, ['Schwaz-1'], 10);
+    // seit 0.650.0 hinter dem (i) „Partien"
+    (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
     const rows = Array.from(el.querySelectorAll('.src-tbl tbody tr')).map(r => Array.from(r.children).map(c => c.textContent!.trim()));
     expect(rows).toEqual([
       ['Brett', '53.677', '42.293', '187'], ['Lumbra', '34.838', '29.982', '187'], ['ChessBase-Megabase', '18.839', '12.311', '0'],
