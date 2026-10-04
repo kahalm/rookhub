@@ -52,7 +52,10 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     {
         var analyses = await db.GameAnalyses
             .Where(a => a.Status == GameAnalysisStatus.Done && a.TacticsScannedAt == null && Sources.Contains(a.Origin))
-            .OrderBy(a => a.Id).Take(ScanBatch).ToListAsync(ct);
+            // Vereinspartien zuerst, die neuesten vorneweg (0.657.1: die Partien vom Liga-Wochenende sollen nicht hinter
+            // 3.600 älteren Meisterpartien warten), dann eigene Partien, dann der Rest
+            .OrderBy(a => a.Origin == GameAnalysisOrigin.Club ? 0 : a.Origin == GameAnalysisOrigin.SavedGame ? 1 : 2)
+            .ThenByDescending(a => a.Id).Take(ScanBatch).ToListAsync(ct);
         if (analyses.Count == 0) return 0;
         var ids = analyses.Select(a => a.Id).ToList();
         var positions = (await db.GameAnalysisPositions.AsNoTracking().Where(p => ids.Contains(p.GameAnalysisId))

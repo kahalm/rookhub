@@ -194,4 +194,20 @@ public class TacticHarvestTests : IDisposable
         Assert.Equal(0, await Svc().ScanAsync(default));                                      // einmal je Analyse
         Assert.Null((await _db.GameAnalyses.SingleAsync(x => x.Id == 2)).TacticsScannedAt);
     }
+
+    [Fact]
+    public async Task Scan_ClubGamesFirst_NewestFirst()
+    {
+        for (var i = 1; i <= TacticHarvestService.ScanBatch + 2; i++)
+            _db.GameAnalyses.Add(new GameAnalysis { Id = i, UserId = 1, Origin = GameAnalysisOrigin.Library, Pgn = "", StartFen = "x", Status = GameAnalysisStatus.Done });
+        _db.GameAnalyses.Add(new GameAnalysis { Id = 500, UserId = 1, Origin = GameAnalysisOrigin.Club, Pgn = "", StartFen = "x", Status = GameAnalysisStatus.Done });
+        _db.GameAnalyses.Add(new GameAnalysis { Id = 600, UserId = 1, Origin = GameAnalysisOrigin.Club, Pgn = "", StartFen = "x", Status = GameAnalysisStatus.Done });
+        await _db.SaveChangesAsync();
+        await Svc().ScanAsync(default);
+        var scanned = await _db.GameAnalyses.Where(a => a.TacticsScannedAt != null).Select(a => a.Id).ToListAsync();
+        Assert.Contains(500, scanned);
+        Assert.Contains(600, scanned);
+        Assert.DoesNotContain(1, scanned);                       // die ältesten Meisterpartien warten
+        Assert.Equal(TacticHarvestService.ScanBatch, scanned.Count);
+    }
 }

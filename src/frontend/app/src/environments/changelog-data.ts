@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.657.1", date: "2026-10-04", changes: [
+    { en: "Tactics harvest: club games are searched first, newest first — the games of the league weekend no longer wait behind thousands of older master games.", de: "Taktik-Ernte: Vereinspartien werden zuerst durchsucht, die neuesten vorneweg — die Partien vom Liga-Wochenende warten nicht mehr hinter Tausenden älteren Meisterpartien." },
+  ] },
   { version: "0.657.0", date: "2026-10-04", changes: [
     { en: "Tactics harvested from games: RookHub now searches every finished analysis of club games, master games and your saved games for positions where the opponent had just blundered and exactly one move punishes it (rules of the Lichess puzzle generator), extends the solution with the engine as long as the best move stays unique, and adds them as puzzles to courses — “Tactics from club games” (one chapter per league round, for the club group), “Tactics from master games” (admins for now) and “Tactics from my games”. Each puzzle says whether it was found or missed in the game and carries simple themes (mate in n, fork, hanging piece, promotion, check).", de: "Taktiken aus Partien ernten: RookHub durchsucht jetzt jede fertige Analyse von Vereinspartien, Meisterpartien und deinen gespeicherten Partien nach Stellungen, in denen der Gegner eben gepatzt hat und genau ein Zug das bestraft (Regeln des Lichess-Puzzle-Generators), verlängert die Lösung mit der Engine, solange der beste Zug eindeutig bleibt, und legt sie als Aufgaben in Kurse — „Taktiken aus Vereinspartien“ (je Ligarunde ein Kapitel, für die Vereinsgruppe), „Taktiken aus Meisterpartien“ (vorerst nur Admins) und „Taktiken aus meinen Partien“. Jede Aufgabe sagt, ob sie in der Partie gefunden oder verpasst wurde, und trägt einfache Themen (Matt in n, Gabel, hängende Figur, Umwandlung, Schach)." },
   ] },
