@@ -66,15 +66,13 @@ describe('ClubGamesPageComponent', () => {
     expect(api.list).toHaveBeenCalledWith(null, null, 1, false);
   }));
 
-  it('„Analyse" gibt das ganze PGN mit (?pgn=), eine überlange Partie nur die Züge (0.592.0)', fakeAsync(() => {
+  it('„Analyse" springt auf RookHubs Partieseite der Vereinspartie (0.653.0)', fakeAsync(() => {
     create();
     flushMicrotasks();
     const c = fixture.componentInstance as any;
-    c.rookHub = 'https://rookhub.example';
-    const g = G(1, { uci: 'e2e4 e7e5', pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n\n1. e4 e5 *\n' });
-    expect(c.analysisUrl(g)).toBe('https://rookhub.example/analysis?pgn=' + encodeURIComponent(g.pgn!));
-    expect(c.analysisUrl(G(2, { uci: 'e2e4', pgn: 'x'.repeat(7000) }))).toBe('https://rookhub.example/analysis?moves=e2e4');
-    expect(c.analysisUrl(G(3, { uci: 'd2d4' }))).toBe('https://rookhub.example/analysis?moves=d2d4');   // ältere API ohne PGN
+    const jump = spyOn(c.handoff, 'jumpToRookHub').and.resolveTo();
+    c.openInRookHub(G(7));
+    expect(jump).toHaveBeenCalledWith('club-games/7');
   }));
 
   it('Ligaspieler ohne FIDE-ID: kein Bleistift, sondern „ohne FIDE-ID"; unbekannte Namen behalten ihn (0.594.0)', fakeAsync(() => {

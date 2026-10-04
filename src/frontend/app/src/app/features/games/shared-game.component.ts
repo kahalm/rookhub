@@ -92,7 +92,11 @@ const RECAP_RETRY_MS = 15_000;
               <span class="meta">
                 @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
                 <span>{{ game.source === 'scoresheet' ? ('games.source.scoresheet' | translate) : game.source }}</span>
-                <span class="date">{{ (game.playedAt || game.createdAt) | date:'mediumDate' }}</span>
+                @if (club) {
+                  @if (game.year) { <span class="date">{{ game.year }}</span> }
+                } @else {
+                  <span class="date">{{ (game.playedAt || game.createdAt) | date:'mediumDate' }}</span>
+                }
               </span>
             </div>
             <!-- Am PC in die Kopfzeile: als eigene Zeile unter Brett und Zugliste war der Knopf so breit wie
@@ -102,7 +106,7 @@ const RECAP_RETRY_MS = 15_000;
                    darauf unter dem Brett. Ohne Anmeldung führt der Klick zur Anmeldung und wieder hierher zurück —
                    der Knopf bleibt sichtbar, damit man weiß, dass es den Weg gibt. Ist die Kurve fertig, entfällt
                    er; solange sie rechnet, ist er gesperrt und sagt es. -->
-              @if (reviewStatus() !== 'done') {
+              @if (!club && reviewStatus() !== 'done') {
                 <button mat-flat-button color="primary" class="analyze" (click)="analyze()"
                         [disabled]="analyzing() || analysisRunning() || uploadStatus()?.engineAvailable === false"
                         [matTooltip]="analyzeTooltip() | translate">
@@ -236,7 +240,7 @@ const RECAP_RETRY_MS = 15_000;
               }
               }
               @if (service.currentGame; as g) {
-                <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
+                <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [withExplanations]="!club" [fens]="g.fens" [moves]="g.moves"
                                  [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training() || !!live()"
                                  (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)"
                                  (moveClicked)="service.goToMove($event)"
@@ -365,10 +369,13 @@ export class SharedGameComponent implements OnInit, DoCheck {
   flipped = false;
   /** Eigene Partie (`/games/:id`) statt Teilen-Link — entscheidet Datenquelle, Adressen und Kopfzeile. */
   own = false;
+  /** Vereinspartie aus LeagueHub (`/club-games/:id`, 0.653.0): Bewertungen aus der Hintergrund-Analyse des Vereins,
+   *  kein „Partie analysieren" (die rechnet von selbst), keine Erklärungen (die gibt es dort nicht). */
+  club = false;
   /** Teilen-Token der eigenen Partie (für „Teilen-Link kopieren"). */
   shareToken: string | null = null;
 
-  get notFoundKey(): string { return this.own ? 'games.loadError' : 'games.shared.notFound'; }
+  get notFoundKey(): string { return this.own || this.club ? 'games.loadError' : 'games.shared.notFound'; }
   /** `GET …/evals` dieser Partie — anonym die Kurve des Teilenden, angemeldet ersatzweise die eigene. */
   evalsUrl: string | null = null;
   /** `GET …/similar` — ähnliche Meisterpartien (0.544.0). */
@@ -632,6 +639,16 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   ngOnInit(): void {
     this.own = this.route.snapshot.data?.['mode'] === 'own';
+    this.club = this.route.snapshot.data?.['mode'] === 'club';
+    if (this.club) {
+      const id = Number(this.route.snapshot.paramMap.get('id'));
+      this.evalsUrl = this.games.clubEvalsUrl(id);
+      this.games.clubGame(id).subscribe({
+        next: g => this.show(g),
+        error: () => { this.notFound = true; this.loading = false; },
+      });
+      return;
+    }
     if (this.own) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
       this.gameId = id;

@@ -56,6 +56,37 @@ describe('SharedGameComponent', () => {
     expect(again.fixture.componentInstance.clubImport).toBeFalse();
   });
 
+  // Wunsch 2026-10-04: „Analyse" in LeagueHub öffnet die Vereinspartie wie eine aus „Meine Partien" — mit den
+  // vorberechneten Bewertungen, ohne „Partie analysieren" (der Hintergrund rechnet sie von selbst).
+  it('shows a club game from LeagueHub with the club analysis and without the analyze button', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SharedGameComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: true, has: () => false } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '12' }), data: { mode: 'club' } } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedGameComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/league/club/games/12').flush({
+      id: 12, year: 2025, white: 'Schwaz', black: 'Hengl, Philip', whiteElo: null, blackElo: 1850, result: '1-0',
+      event: 'Landesliga', pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n\n1. e4 c5 1-0',
+    });
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.club).toBeTrue();
+    expect(c.evalsUrl).toBe('/api/league/club/games/12/evals');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.players')!.textContent).toContain('Hengl, Philip');
+    expect(el.querySelector('.meta')!.textContent).toContain('2025');
+    expect(el.querySelector('.meta')!.textContent).toContain('Landesliga');
+    expect(el.querySelector('button.analyze')).toBeNull();
+    expect(fixture.debugElement.query(By.directive(GameReviewComponent)).componentInstance.withExplanations()).toBeFalse();
+  });
+
   it('creates (template AOT-compiles + DI resolves)', async () => {
     const { fixture } = await setup();
     expect(fixture.componentInstance).toBeTruthy();

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { LibraryGame } from '../guess/library.service';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { GameEvals } from './game-review.util';
@@ -93,6 +93,14 @@ export interface SharedGame {
   ownGameId?: number | null;
   /** „Kurz erzählt" (0.541.0): die Partie in zwei, drei Sätzen — dieselbe Zeile steht in der Link-Vorschau. */
   recap?: string | null;
+  /** Vereinspartie (0.653.0): nur das Jahr ist bekannt, kein Datum. */
+  year?: number | null;
+}
+
+/** Eine Partie der LeagueHub-Vereins-Datenbank, wie `GET /api/league/club/games/{id}` sie liefert (nur, was die Seite braucht). */
+interface ClubGameDto {
+  id: number; year: number | null; white: string; black: string; whiteElo: number | null; blackElo: number | null;
+  result: string; event: string | null; pgn: string;
 }
 
 /** Antwort auf „Partie analysieren" (`POST …/analyze`): neu eingereiht oder wiederverwendet. */
@@ -226,6 +234,17 @@ export class GamesService {
   }
   /** Bewertungen einer eigenen Partie (Nachspiel-Dialog). */
   evalsUrl(id: number): string { return `/api/games/${id}/evals`; }
+
+  /** Vereinspartie aus LeagueHub (0.653.0) in der Form der Partieseite — braucht `league.view`, sonst 403/404. */
+  clubGame(id: number): Observable<SharedGame> {
+    return this.http.get<ClubGameDto>(`/api/league/club/games/${id}`).pipe(map(g => ({
+      source: g.event || 'LeagueHub', white: g.white, black: g.black, result: g.result, pgn: g.pgn,
+      whiteElo: g.whiteElo, blackElo: g.blackElo, year: g.year, createdAt: '', playedAt: null,
+    })));
+  }
+
+  /** Bewertungen der Hintergrund-Analyse einer Vereinspartie (dieselbe Form wie bei der eigenen Partie). */
+  clubEvalsUrl(id: number): string { return `/api/league/club/games/${id}/evals`; }
   /** „Partie analysieren" auf der geteilten Partie — jeder Angemeldete. */
   sharedAnalyzeUrl(token: string): string { return `/api/games/shared/${encodeURIComponent(token)}/analyze`; }
   /** Bewertungen der geteilten Partie — auch ohne Anmeldung (dann nur die des Teilenden). */

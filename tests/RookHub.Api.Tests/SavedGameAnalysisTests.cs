@@ -119,6 +119,71 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(analysis.Id, (await RowAsync(game.Id)).GameAnalysisId);
     }
 
+    // ----- Aus der Vereins-Datenbank kopiert (0.653.0): deren Analyse statt einer zweiten Rechnung -----
+
+    /// <summary>Eine Vereinspartie mit den Zügen 1.e4 c5 2.Nf3 d6 samt ihrer Hintergrund-Analyse.</summary>
+    private async Task<GameAnalysis> ClubAnalysisAsync(GameAnalysisStatus status = GameAnalysisStatus.Done)
+    {
+        var club = new LeagueClubGame
+        {
+            White = "Schwaz", Black = "Gegner", Pgn = "1. e4 c5 2. Nf3 d6 *", Plies = 4, Year = 2026,
+            MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(new[] { "e4", "c5", "Nf3", "d6" }),
+        };
+        _db.LeagueClubGames.Add(club);
+        var house = await UserAsync("house");
+        await _db.SaveChangesAsync();
+        var analysis = new GameAnalysis
+        {
+            UserId = house.Id, Title = "Schwaz – Gegner", Pgn = club.Pgn, Origin = GameAnalysisOrigin.Club,
+            LeagueClubGameId = club.Id, Status = status, PlyCount = 4,
+        };
+        _db.GameAnalyses.Add(analysis);
+        await _db.SaveChangesAsync();
+        return analysis;
+    }
+
+    [Fact]
+    public async Task Analyze_kopierteVereinspartie_nimmtDieVereinsanalyse_stattNeuZuRechnen()
+    {
+        var club = await ClubAnalysisAsync();
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);   // dieselben Züge, andere Kopfdaten
+
+        var result = await _svc.AnalyzeAsync(owner.Id, game.Id);
+
+        Assert.True(result!.Reused);
+        Assert.Equal(club.Id, result.Analysis!.Id);
+        Assert.Equal(club.Id, (await RowAsync(game.Id)).GameAnalysisId);
+        Assert.Equal(1, await _db.GameAnalyses.CountAsync());
+    }
+
+    [Fact]
+    public async Task Analyze_gescheiterteVereinsanalyse_zaehltNicht()
+    {
+        await ClubAnalysisAsync(GameAnalysisStatus.Failed);
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+
+        var result = await _svc.AnalyzeAsync(owner.Id, game.Id);
+
+        Assert.False(result!.Reused);
+        Assert.Equal(GameAnalysisOrigin.SavedGame, (await _db.GameAnalyses.AsNoTracking().SingleAsync(a => a.Id == result.Analysis!.Id)).Origin);
+    }
+
+    [Fact]
+    public async Task Import_kopierteVereinspartie_hatSofortDieVereinsanalyse_andereZuegeNicht()
+    {
+        var club = await ClubAnalysisAsync();
+        var owner = await UserAsync("owner");
+
+        var res = await _svc.ImportPgnAsync(owner.Id,
+            "[White \"Schwaz\"]\n[Black \"Gegner\"]\n\n1. e4 c5 2. Nf3 d6 *\n\n[White \"A\"]\n[Black \"B\"]\n\n1. e4 c5 2. Nf3 Nc6 *");
+
+        Assert.Equal(2, res.Imported);
+        Assert.Equal(club.Id, (await RowAsync(res.Ids[0])).GameAnalysisId);
+        Assert.Null((await RowAsync(res.Ids[1])).GameAnalysisId);
+    }
+
     /// <summary>Zweimal klicken = einmal rechnen. Der zweite Aufruf bekommt dieselbe Analyse zurück.</summary>
     [Fact]
     public async Task Analyze_zweiAufrufeNacheinander_ergebenEINEAnalyse()

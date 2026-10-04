@@ -430,6 +430,9 @@ public class SavedGameService
     /// <item>Eine EIGENE Analyse des Aufrufers mit demselben PGN (etwa ueber die Punktepartie-Seite
     /// eingeworfen) — exakter Textvergleich, die Seiten schicken genau diesen Text. Ist er der
     /// Besitzer, wird sie verknuepft.</item>
+    /// <item>Die Analyse einer VEREINSPARTIE mit genau denselben Zügen (0.653.0, Wunsch 2026-10-04: „wenn jemand das Game
+    /// lokal kopiert, soll es nur einmal analysiert werden") — sie rechnet der Hintergrund ohnehin
+    /// (<see cref="ClubAnalysisForMovesAsync"/>).</item>
     /// <item>Erst dann neu einwerfen.</item>
     /// </list>
     /// <para>Verknuepft wird NUR beim Besitzer: die oeffentliche Kurve ist die des Teilenden — er hat
@@ -475,6 +478,17 @@ public class SavedGameService
             return new GameAnalyzeResultDto { Analysis = await _analyses.GetHeadUncheckedAsync(id, ct), Reused = true };
         }
 
+        if (GamePlies.Parse(game.Pgn, maxPlies: 600) is { } parsed && IsStandardStart(parsed.Header.StartFen)
+            && await ClubAnalysisForMovesAsync(parsed.Plies.Select(p => p.San).ToList(), ct) is int clubId)
+        {
+            if (isOwner && game.GameAnalysisId != clubId)
+            {
+                game.GameAnalysisId = clubId;
+                await _db.SaveChangesAsync(ct);
+            }
+            return new GameAnalyzeResultDto { Analysis = await _analyses.GetHeadUncheckedAsync(clubId, ct), Reused = true };
+        }
+
         var created = await _analyses.CreateForGuessAsync(userId,
             new CreateGuessGameRequest { Pgn = game.Pgn, Title = AnalysisTitleOf(game) },
             ct, origin: GameAnalysisOrigin.SavedGame);
@@ -489,6 +503,29 @@ public class SavedGameService
         created.Analysis.Positions = null;
         return new GameAnalyzeResultDto { Analysis = created.Analysis };
     }
+
+    /// <summary>
+    /// Die Analyse einer Vereinspartie (LeagueHub) mit GENAU diesen Zügen ab der Grundstellung — die nicht gescheiterte,
+    /// fertige zuerst, sonst die jüngste. Eine aus der Vereins-Datenbank kopierte Partie (Knopf „Zu meinen Partien", PGN
+    /// heruntergeladen und wieder hochgeladen) wird daran gehängt, statt ein zweites Mal durch die Engine zu laufen. Wer die
+    /// Züge hat, erfährt aus ihren Bewertungen nichts über den Verein; Namen und Kopfdaten der Vereinspartie liest der
+    /// Bewertungsweg nicht. Vergleich über <see cref="League.LeagueClubService.HashOf"/> (dieselben SAN wie beim Upload).
+    /// </summary>
+    internal async Task<int?> ClubAnalysisForMovesAsync(IReadOnlyList<string> sans, CancellationToken ct)
+    {
+        if (sans.Count == 0) return null;
+        var hash = League.LeagueClubService.HashOf(sans);
+        var clubIds = _db.LeagueClubGames.Where(g => g.MovesHash == hash).Select(g => (int?)g.Id);
+        return await _db.GameAnalyses.AsNoTracking()
+            .Where(a => a.Origin == GameAnalysisOrigin.Club && a.Status != GameAnalysisStatus.Failed && clubIds.Contains(a.LeagueClubGameId))
+            .OrderByDescending(a => a.Status == GameAnalysisStatus.Done).ThenByDescending(a => a.Id)
+            .Select(a => (int?)a.Id)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private static bool IsStandardStart(string fen)
+        => string.Join(' ', fen.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(4))
+           == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
 
     /// <summary>„Weiß – Schwarz" wie der Titel, den die Seiten frueher selbst mitschickten; ohne beide
     /// Namen keiner (dann baut die Analyse ihn aus den PGN-Kopfdaten).</summary>
@@ -696,6 +733,8 @@ public class SavedGameService
                 OwnerSide = side,
                 ShareToken = await GenerateUniqueTokenAsync(),
                 CreatedAt = DateTime.UtcNow,
+                // Aus der Vereins-Datenbank kopiert: deren Analyse gleich mitnehmen (0.653.0).
+                GameAnalysisId = startFen is null || IsStandardStart(startFen) ? await ClubAnalysisForMovesAsync(sans, ct) : null,
             };
             _db.SavedGames.Add(entity);
             await _db.SaveChangesAsync(ct);

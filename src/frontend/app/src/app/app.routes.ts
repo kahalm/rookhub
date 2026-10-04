@@ -71,6 +71,9 @@ export const routes: Routes = [
   { path: 'games/:id/edit', loadComponent: () => import('./features/games/game-edit.component').then(m => m.GameEditComponent), canActivate: [authGuard, menuGuard('games')], canDeactivate: [unsavedChangesGuard] },
   // Eigene Partie als SEITE (statt Dialog, gemeldet 2026-09-23): dieselbe Komponente wie der Teilen-Link, im Modus „own".
   { path: 'games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard, menuGuard('games')], data: { mode: 'own' } },
+  // Vereinspartie aus LeagueHub (0.653.0): dieselbe Partieseite, Bewertungen aus der Hintergrund-Analyse des Vereins.
+  // Kein menuGuard — das Recht prüft der Server (`league.view`, sonst 404 → „konnte nicht geladen werden").
+  { path: 'club-games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard], data: { mode: 'club' } },
   { path: 'reconstruct', loadComponent: () => import('./features/reconstruct/reconstruct-list.component').then(m => m.ReconstructListComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'reconstruct/:id', loadComponent: () => import('./features/reconstruct/reconstruct-detail.component').then(m => m.ReconstructDetailComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'remembered', loadComponent: () => import('./features/remembered/remembered-lines.component').then(m => m.RememberedLinesComponent), canActivate: [authGuard, menuGuard('remembered')] },

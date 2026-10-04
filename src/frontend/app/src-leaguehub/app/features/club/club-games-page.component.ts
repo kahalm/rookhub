@@ -8,6 +8,7 @@ import { ClubApiService } from '../../core/club-api.service';
 import { ClubGame, ClubGameDetail, RosterPerson, SideDecision } from '../../core/club.models';
 import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
+import { HandoffService } from '@rh/core/handoff.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
@@ -168,9 +169,9 @@ type Side = 'white' | 'black';
     <ng-template #rowActs let-g>
       <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
               [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' nachspielen'">Nachspielen</button>
-      @if (rookHub && g.uci) {
-        <a class="btn-link" [href]="analysisUrl(g)" target="_blank" rel="noopener"
-           [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' im Analysebrett von RookHub öffnen'">Analyse</a>
+      @if (rookHub) {
+        <button type="button" class="btn-link" (click)="openInRookHub(g)"
+                [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' in RookHub mit Analyse öffnen'">Analyse</button>
       }
       @if (g.canDelete) {
       <button type="button" class="btn-link" (click)="edit(g)"
@@ -202,6 +203,7 @@ export class ClubGamesPageComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly sides: Side[] = ['white', 'black'];
   readonly rookHub = rookHubUrlForLeagueHub();
+  private readonly handoff = inject(HandoffService);
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
   /** Die Partie, die gerade korrigiert wird — je Seite die Festlegung (fehlt = unverändert) und das Ergebnis. */
   readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string } | null>(null);
@@ -325,16 +327,12 @@ export class ClubGamesPageComponent implements OnInit {
     }
   }
 
-  /** RookHubs Analysebrett mit der Partie (öffentlich, neuer Tab) — mit dem GANZEN PGN (`?pgn=`, 0.592.0: Namen, Jahr,
-   *  Turnier stehen dort im PGN-Feld). Wird die Adresse zu lang für Proxys (8 KB Kopfzeilen sind üblich), nur die Züge. */
-  analysisUrl(g: ClubGame): string {
-    if (g.pgn) {
-      const url = `${this.rookHub}/analysis?pgn=${encodeURIComponent(g.pgn)}`;
-      if (url.length <= ClubGamesPageComponent.MaxUrl) return url;
-    }
-    return `${this.rookHub}/analysis?moves=${encodeURIComponent(g.uci ?? '')}`;
+  /** Die Partie auf RookHubs Partieseite (0.653.0, Wunsch 2026-10-04: „wie aus Meine Partien, mit unten den vorberechneten
+   *  Werten zum schnellen Durchgehen") — Brett, Bewertungskurve, Zug-Klassen und Computer-Linien aus der Hintergrund-Analyse
+   *  des Vereins. Sprung mit Einmal-Code, damit man drüben gleich angemeldet ist. Vorher: das Analysebrett mit dem PGN. */
+  openInRookHub(g: ClubGame): void {
+    void this.handoff.jumpToRookHub(`club-games/${g.id}`);
   }
-  static readonly MaxUrl = 6000;
 
   setResult(r: string): void {
     const e = this.editing();

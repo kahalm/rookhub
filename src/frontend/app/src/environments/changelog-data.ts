@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.653.0", date: "2026-10-04", changes: [
+    { en: "LeagueHub: “Analyse” on a club game now opens it in RookHub like a game from “My games” — board, move list, evaluation curve, move classes and computer lines from the club’s background analysis, ready to click through. Before, it opened the empty analysis board.", de: "LeagueHub: „Analyse“ bei einer Vereinspartie öffnet sie jetzt in RookHub wie eine Partie aus „Meine Partien“ — Brett, Zugliste, Bewertungskurve, Zug-Klassen und Computer-Linien aus der Hintergrund-Analyse des Vereins, gleich zum Durchklicken. Vorher öffnete sich das leere Analysebrett." },
+    { en: "A club game copied into “My games” (via “To my games” or as a downloaded and re-uploaded PGN) takes over the club’s analysis instead of being calculated a second time — the curve is there right away.", de: "Eine in „Meine Partien“ kopierte Vereinspartie (über „Zu meinen Partien“ oder als heruntergeladenes und wieder hochgeladenes PGN) übernimmt die Analyse des Vereins, statt ein zweites Mal gerechnet zu werden — die Kurve steht sofort da." },
+  ] },
   { version: "0.652.0", date: "2026-10-04", changes: [
     { en: "LeagueHub: new tab “My games” for members who upload — the games you uploaded with your account, to edit (names, result) or delete at any time. Games uploaded as “Schwaz” are not listed there, since it is deliberately not stored who uploaded them.", de: "LeagueHub: neue Lasche „Meine Partien“ für Mitglieder, die hochladen — die Partien, die du mit deinem Konto hochgeladen hast, jederzeit zum Bearbeiten (Namen, Ergebnis) oder Löschen. Als „Schwaz“ hochgeladene stehen dort nicht, weil absichtlich nicht gespeichert ist, von wem sie stammen." },
   ] },
