@@ -1631,6 +1631,19 @@ Rollenverwaltung an).
 - **Lasche „Meine Partien" (0.652.0)**: Route `verein/meine` (Daten `mine: true`, dieselbe `club-games-page.component.ts`,
   braucht nur league.contribute) → `GET /api/league/club/games?mine=true` = `UploadedByUserId == ich`; Bearbeiten (Namen,
   Ergebnis) und Löschen wie in der Vereinsliste. Als „Schwaz" hochgeladene fehlen absichtlich (kein Hochladender gespeichert).
+- **Taktik-Ernte (0.657.0**, Wunsch 2026-10-04 „Taktiken aus den Partien automatisch ernten … plan und bau", Kapitel je
+  Ligarunde): `Services/Tactics/` — `TacticHarvest` (rein: Lichess-Puzzler-Schwellen ohne AGPL-Code: Gewinnchance −1..1,
+  Fehler des Gegners > 0,6, nicht schon > +3, Matt ≤ 15 oder ≥ +2, eindeutig > 0,7 bzw. bei Matt kein zweites Matt; Themen
+  mateInN/oneMove/short/long/promotion/check/hangingPiece/fork), `TacticHarvestService` (Scan: fertige Analysen Origin
+  Club/Library/SavedGame — NICHT Guess/Manual, privat — einmal je Analyse `GameAnalyses.TacticsScannedAt`; Pump: je
+  Löserzug ein Auftrag MultiPv 2, Tiefe 22, `background`, nicht in der Ruhezeit, höchstens 8 offen, Gegnerzug aus der
+  Hauptvariante, Engine-Besitzer `TacticHarvest:OwnerUserId` → `MasterAnalysis:OwnerUserId` → Haus-Engine eines Admins;
+  Publish: Bücher `tactics-club.pgn` „Taktiken aus Vereinspartien" (Gruppen mit league.view, Kapitel
+  `LeagueRoundChapterAsync` „2026/27 · Landesliga · Runde 1" über Spieler + Farben + Saison, Schwaz-Seite = eigener
+  Verein; sonst „Andere Partien"), `tactics-masters.pgn` (nur Admins), `tactics-u{id}.pgn` (Besitzer); Aufgabe = Fehler
+  des Gegners + Lösung, StartPly 0, Tags gefunden/verpasst + Themen; verschwundene Taktik → `Retired`),
+  `TacticHarvestScheduler` (60 s, `TacticHarvest:Enabled`). Tabelle `TacticCandidates` (Cascade an der Analyse), Aufträge
+  aus der Job-Liste ausgeblendet. Messung 04.10. (nur erster Zug): ~700 Kandidaten, Verein 0,22/Partie, Meister 0,12.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

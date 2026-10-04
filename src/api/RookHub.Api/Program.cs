@@ -264,6 +264,9 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
+    // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen
+    builder.Services.AddScoped<RookHub.Api.Services.Tactics.TacticHarvestService>();
+    builder.Services.AddHostedService<RookHub.Api.Services.Tactics.TacticHarvestScheduler>();
     // ClubHub (Kartei der Kinder und Jugendlichen): Regeln + Sichtbarkeit, Lernstand aus dem verknüpften Konto
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubService>();
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubProgressService>();

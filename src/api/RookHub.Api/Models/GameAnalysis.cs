@@ -151,6 +151,9 @@ public class GameAnalysis
     /// </summary>
     public int? LeagueClubGameId { get; set; }
 
+    /// <summary>Taktiken geerntet (0.657.0, <c>TacticHarvestService</c>) — eine fertige Analyse wird genau einmal durchsucht.</summary>
+    public DateTime? TacticsScannedAt { get; set; }
+
     /// <summary>
     /// Ab welchem Halbzug das Raten sinnvoll beginnt — einmal ermittelt und gemerkt, weil die
     /// Antwort an der Partie haengt und nicht am Durchlauf (siehe <c>GuessStartPly</c>).

@@ -46,6 +46,29 @@ internal sealed class SavedGameConfiguration : IEntityTypeConfiguration<SavedGam
     }
 }
 
+internal sealed class TacticCandidateConfiguration : IEntityTypeConfiguration<TacticCandidate>
+{
+    public void Configure(EntityTypeBuilder<TacticCandidate> e)
+    {
+        e.HasOne(t => t.GameAnalysis).WithMany().HasForeignKey(t => t.GameAnalysisId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(t => t.PrevFen).HasMaxLength(120);
+        e.Property(t => t.Fen).HasMaxLength(120);
+        e.Property(t => t.NextFen).HasMaxLength(120);
+        e.Property(t => t.BlunderUci).HasMaxLength(10);
+        e.Property(t => t.GameMoveUci).HasMaxLength(10);
+        e.Property(t => t.PendingReplyUci).HasMaxLength(10);
+        e.Property(t => t.Kind).HasMaxLength(16);
+        e.Property(t => t.Moves).HasMaxLength(300);
+        e.Property(t => t.RejectReason).HasMaxLength(40);
+        e.Property(t => t.Themes).HasMaxLength(200);
+        e.Property(t => t.EvalText).HasMaxLength(16);
+        e.Property(t => t.LineId).HasMaxLength(300);
+        e.HasIndex(t => new { t.GameAnalysisId, t.Ply }).IsUnique();
+        e.HasIndex(t => new { t.Status, t.UpdatedAt });
+        e.HasIndex(t => t.AnalysisJobId);
+    }
+}
+
 internal sealed class ScoresheetScanArchiveConfiguration : IEntityTypeConfiguration<ScoresheetScanArchive>
 {
     public void Configure(EntityTypeBuilder<ScoresheetScanArchive> e)

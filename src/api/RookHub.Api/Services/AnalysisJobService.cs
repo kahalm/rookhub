@@ -64,7 +64,8 @@ public class AnalysisJobService
                 && !_db.GameAnalyses.Any(g => g.UserId == userId
                     && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
                     && g.Positions.Any(p => p.AnalysisJobId == j.Id))
-                && !_db.MoveComparisonLines.Any(l => l.AnalysisJobId == j.Id))
+                && !_db.MoveComparisonLines.Any(l => l.AnalysisJobId == j.Id)
+                && !_db.TacticCandidates.Any(t => t.AnalysisJobId == j.Id))   // Taktik-Ernte (0.657.0)
             .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
         return jobs.Select(ToDto).ToList();
     }
