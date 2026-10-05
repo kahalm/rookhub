@@ -423,21 +423,21 @@ public class EngineControllerTests : IDisposable
     private static List<string> BackgroundIds(int count) =>
         [.. Enumerable.Range(1, count).Select(BackgroundId)];
 
-    /// <summary>Sechzehn muessen durchgehen: eine 40-Kern-Maschine meldet eine Live- und zwoelf
-    /// Hintergrund-Engines an, daneben stehen noch die einer zweiten Maschine in der Liste.</summary>
+    /// <summary>Zweiunddreissig muessen durchgehen (0.669.2): zwoelf Hintergrund-Engines der grossen
+    /// Maschine, sechzehn eines zweiten Rechners und vier von Lichess.</summary>
     [Fact]
-    public async Task SetBackgroundEngine_SixteenEngines_AreStored()
+    public async Task SetBackgroundEngine_ThirtyTwoEngines_AreStored()
     {
         await CreateUserAsync();
         await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
-        _handler.ListJson = EnginesJsonWith(16);
+        _handler.ListJson = EnginesJsonWith(32);
 
         var result = await _controller.SetBackgroundEngine(
-            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(16) }, CancellationToken.None);
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(32) }, CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
         var stored = _db.LichessEngineCredentials.Single();
-        Assert.Equal(16, stored.BackgroundEngines.Count);
+        Assert.Equal(32, stored.BackgroundEngines.Count);
         // Die Spalte fasst 600 Zeichen — der Deckel MUSS darunter bleiben, sonst scheitert erst das
         // Speichern, und zwar mit einer Meldung, die nichts mit Engines zu tun hat.
         Assert.True(stored.BackgroundEngineIds!.Length <= 600, $"CSV zu lang: {stored.BackgroundEngineIds.Length}");
@@ -448,10 +448,10 @@ public class EngineControllerTests : IDisposable
     {
         await CreateUserAsync();
         await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
-        _handler.ListJson = EnginesJsonWith(17);
+        _handler.ListJson = EnginesJsonWith(33);
 
         var result = await _controller.SetBackgroundEngine(
-            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(17) }, CancellationToken.None);
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(33) }, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Null(_db.LichessEngineCredentials.Single().BackgroundEngineIds);

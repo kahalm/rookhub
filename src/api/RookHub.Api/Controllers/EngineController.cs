@@ -169,8 +169,13 @@ public class EngineController : BaseApiController
     /// passen in die Spalte: <see cref="LichessEngineCredential.BackgroundEngineIds"/> fasst 600
     /// Zeichen, eine Kennung ist rund 17 lang (<c>eei_</c> + 12 + Komma) — 16 belegen also etwa
     /// 272. Der Worker rechnet je Engine EINEN Auftrag; der Deckel von vier gleichzeitigen Stroemen
-    /// (<see cref="MaxConcurrentStreamsPerUser"/>) gilt nur dem Live-Proxy, nicht ihm.</para></summary>
-    private const int MaxBackgroundEngines = 16;
+    /// (<see cref="MaxConcurrentStreamsPerUser"/>) gilt nur dem Live-Proxy, nicht ihm.</para>
+    ///
+    /// <para>Seit 2026-10-05 zweiunddreissig: ein zweiter Rechner („RookHub PC") meldet sechzehn
+    /// Hintergrund-Engines an, neben den zwoelf der grossen Maschine und den vier von Lichess — mit
+    /// sechzehn blieb er ganz aussen vor. 32 Kennungen belegen rund 32 × 17 − 1 = 543 der 600 Zeichen,
+    /// mehr passt ohne breitere Spalte nicht.</para></summary>
+    internal const int MaxBackgroundEngines = 32;
 
     /// <summary>
     /// Hintergrund-Engines fuer Analyseauftraege festlegen (leere Liste = keine). Jede muss eine der

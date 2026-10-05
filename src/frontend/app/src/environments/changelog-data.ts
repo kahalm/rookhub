@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.669.2", date: "2026-10-05", changes: [
+    { en: "Up to 32 background engines can now be selected instead of sixteen. A second machine with sixteen background engines joined the twelve of the big machine and the four from Lichess — with sixteen it was left out entirely and never got any work.", de: "Bis zu 32 Hintergrund-Engines lassen sich jetzt auswählen statt sechzehn. Ein zweiter Rechner mit sechzehn Hintergrund-Engines kam zu den zwölf der großen Maschine und den vier von Lichess dazu — mit sechzehn blieb er ganz außen vor und bekam nie Arbeit." },
+  ] },
   { version: "0.669.1", date: "2026-10-05", changes: [
     { en: "Two display faults in the new-token dialog. The note explaining what a scope is runs three lines, the field below it was drawn on top of the last two. And the expiry field looked empty even though it stands at never, because a dropdown never shows an option whose value is nothing — now never is a value of its own.", de: "Zwei Anzeigefehler im Dialog fuer einen neuen Token. Der Hinweis, was ein Bereich ist, laeuft ueber drei Zeilen, und das Feld darunter wurde ueber die letzten beiden gezeichnet. Und das Ablauf-Feld sah leer aus, obwohl Nie darin steht: eine Auswahl zeigt keine Option an, deren Wert nichts ist — jetzt ist Nie ein eigener Wert." },
   ] },
