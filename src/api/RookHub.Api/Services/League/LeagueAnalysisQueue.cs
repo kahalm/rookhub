@@ -14,9 +14,10 @@ namespace RookHub.Api.Services.League;
 /// <item>Quelle: die Profile (<see cref="LeaguePlayerProfile.Pgn"/>: Lumbra, Megabase, chess-results, Übertragungen) aller
 /// Spieler mit FIDE-ID auf einer Meldeliste der laufenden Saison; nur Partien der letzten <see cref="Years"/> Jahre
 /// (Datum im Kopf, ein Jahr allein reicht), nur aus der Grundstellung.</item>
-/// <item>Die gebaute Liste haelt je Partie ihr PGN im Speicher. Mit dem 50-Jahre-Fenster sind das beim
-/// heutigen Bestand rund 56 000 Partien statt 3500 — gemessen am 2026-10-05 etwa 45 MB in einem Prozess,
-/// der 6 GB darf. Waechst der Bestand um Groessenordnungen, muss die Liste Zeiger statt Text halten.</item>
+/// <item>Die gebaute Liste haelt je Partie ihr PGN im Speicher. Mit dem 5-Jahre-Fenster sind das beim
+/// heutigen Bestand rund 13 000 Partien statt 3500 — gemessen am 2026-10-05 etwa 10 MB in einem Prozess,
+/// der 6 GB darf. Wird das Fenster weit aufgemacht (der ganze Bestand waeren 56 000 Partien) oder waechst
+/// der Bestand um Groessenordnungen, muss die Liste Zeiger statt Text halten.</item>
 /// <item>Reihenfolge: erst die Spieler der Gegner von Schwaz in der nächsten noch nicht gespielten Runde (je Schwazer
 /// Mannschaft), dann alle übrigen — jeweils die neueste Partie zuerst.</item>
 /// <item>Dieselbe Partie in zwei Profilen (zwei Ligaspieler gegeneinander) zählt einmal; eine schon gerechnete (eigene
@@ -27,11 +28,11 @@ namespace RookHub.Api.Services.League;
 /// </summary>
 public sealed class LeagueAnalysisQueue
 {
-    /// <summary>Wie weit zurueck Partien aus den Profilen genommen werden. Seit 2026-10-05 fuenfzig
-    /// statt zwei Jahre (Wunsch: „mach mal die letzten 50 Jahre der Ligaspieler") — damit ist praktisch
-    /// der ganze Profilbestand drin, nicht mehr nur die juengsten Partien. Der Preis steht im
-    /// Klassenkommentar: die Liste im Speicher wird entsprechend lang.</summary>
-    public const int Years = 50;
+    /// <summary>Wie weit zurueck Partien aus den Profilen genommen werden. Seit 2026-10-05 fuenf statt
+    /// zwei Jahre (Wunsch: „mach mal die letzten 5 Jahre der Ligaspieler") — gemessen am selben Tag rund
+    /// 13 000 Partien statt 3500, waehrend die Profile insgesamt 56 000 tragen. Der Preis steht im
+    /// Klassenkommentar: die Liste im Speicher waechst mit dem Fenster.</summary>
+    public const int Years = 5;
     public static readonly TimeSpan Refresh = TimeSpan.FromHours(1);
 
     public sealed record Item(string Pgn, string Key, bool Opponent, DateOnly Date);
