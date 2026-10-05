@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.672.2", date: "2026-10-05", changes: [
+    { en: "Harvested tactics: the comment calls a position a win from +3.0 on (was +3.5); below that it is a clear advantage, below +1.5 a slight one.", de: "Geerntete Taktiken: der Kommentar spricht ab +3,0 von einer Gewinnstellung (vorher +3,5); darunter ist es ein klarer Vorteil, unter +1,5 ein leichter." },
+  ] },
   { version: "0.672.1", date: "2026-10-05", changes: [
     { en: "Harvested tactics no longer quote the engine evaluation in their comment: instead of \"The solution brings +5.3.\" it says \"The solution leads to a winning position.\" (slight advantage under +1.5, clear advantage under +3.5, mate in n moves). Existing comments are reworded.", de: "Geerntete Taktiken nennen im Kommentar nicht mehr die genaue Bewertung: statt „Die Lösung bringt +5.3.“ steht dort „Die Lösung führt zur Gewinnstellung.“ (leichter Vorteil bis +1,5, klarer Vorteil bis +3,5, Matt in n Zügen). Bestehende Kommentare werden umformuliert." },
   ] },

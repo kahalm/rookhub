@@ -9,6 +9,8 @@ public class TacticHarvestSourceGameTests
     [Theory]
     [InlineData("+1.2", "Die Lösung bringt einen leichten Vorteil.")]
     [InlineData("+2.4", "Die Lösung bringt einen klaren Vorteil.")]
+    [InlineData("+2.9", "Die Lösung bringt einen klaren Vorteil.")]
+    [InlineData("+3.0", "Die Lösung führt zur Gewinnstellung.")]
     [InlineData("+5.3", "Die Lösung führt zur Gewinnstellung.")]
     [InlineData("#3", "Die Lösung setzt in 3 Zügen matt.")]
     [InlineData("#1", "Die Lösung setzt matt.")]

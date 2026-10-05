@@ -287,7 +287,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         if (!double.TryParse(eval, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pawns))
             return "Die Lösung bringt einen Vorteil.";
         return pawns < 1.5 ? "Die Lösung bringt einen leichten Vorteil."
-            : pawns < 3.5 ? "Die Lösung bringt einen klaren Vorteil."
+            : pawns < 3 ? "Die Lösung bringt einen klaren Vorteil."
             : "Die Lösung führt zur Gewinnstellung.";
     }
 
