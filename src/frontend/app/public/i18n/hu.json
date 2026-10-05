@@ -1772,7 +1772,8 @@
     },
     "variation": {
       "previewing": "Egy változatot mutat a kommentárból"
-    }
+    },
+    "sourceGame": "Játszma megnyitása"
   },
   "admin": {
     "title": "Admin",
