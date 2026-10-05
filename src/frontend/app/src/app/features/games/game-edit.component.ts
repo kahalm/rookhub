@@ -31,6 +31,9 @@ import { distinctClassifiers, seasonOf } from './classifier.util';
 import { addTag, distinctTags, MAX_TAG_LENGTH, MAX_TAGS } from './tags.util';
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
+import { GameReviewComponent } from './game-review.component';
+import { PlayedMove } from './mistakes.util';
+import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 
@@ -50,7 +53,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatTooltipModule,
-    MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent,
+    MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent, GameReviewComponent,
   ],
   template: `
     <div class="edit-page">
@@ -170,7 +173,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 
           <mat-card class="board-card">
             <div class="board-wrap">
-              <app-chess-board [fen]="cursorFen()" [lastMove]="lastMove()" [arrows]="arrows()" [flipped]="flipped()"
+              <app-chess-board [fen]="cursorFen()" [lastMove]="lastMove()" [arrows]="boardArrows()" [flipped]="flipped()"
                                [playable]="!busy()" (userMove)="onBoardMove($event)"
                                [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
             </div>
@@ -190,6 +193,15 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
               <mat-button-toggle value="replace">{{ 'games.edit.modeReplace' | translate }}</mat-button-toggle>
               <mat-button-toggle value="insert">{{ 'games.edit.modeInsert' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
+            <!-- Bewertungskurve + Computer-Linien der schon gerechneten Analyse (0.672.5, Wunsch: „um etwaige Fehler zu
+                 sehen"). Nur solange die Züge die gespeicherten sind — die Analyse gehört zu ihnen, und nach dem Speichern
+                 geänderter Züge fällt sie ohnehin weg. Ohne Analyse zeigt der Block nichts. -->
+            @if (reviewUrl(); as url) {
+              <app-game-review [evalsUrl]="url" [fens]="session.fens()" [moves]="playedMoves()" [currentIndex]="cursor() - 1"
+                               [expanded]="true" (moveClicked)="go($event + 1)" (arrowsChange)="reviewArrows.set($event)" />
+            } @else if (movesChanged()) {
+              <p class="tip">{{ 'games.edit.reviewStale' | translate }}</p>
+            }
 
           </mat-card>
 
@@ -435,6 +447,19 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   readonly crop = this.session.crop;
   readonly uncertainLeft = this.session.uncertainLeft;
   readonly rows = this.session.rows;
+  /** Die Züge, wie sie gespeichert sind — nur zu ihnen passt die Analyse der Partie. */
+  private readonly savedSans = signal<string[] | null>(null);
+  readonly movesChanged = computed(() => {
+    const saved = this.savedSans();
+    const now = this.plies();
+    return !!saved && (saved.length !== now.length || now.some((p, i) => p.illegal || p.san !== saved[i]));
+  });
+  readonly reviewUrl = computed(() => this.savedSans() && !this.movesChanged() ? this.games.evalsUrl(this.gameId) : null);
+  readonly playedMoves = computed<PlayedMove[]>(() => this.plies().map(p =>
+    ({ san: p.san, from: p.uci.slice(0, 2), to: p.uci.slice(2, 4), promotion: p.uci.length > 4 ? p.uci[4] : null })));
+  /** Pfeil für den besten Zug der Analyse — neben dem gelben des gelesenen Zugs. */
+  readonly reviewArrows = signal<BoardArrow[]>([]);
+  readonly boardArrows = computed(() => this.reviewUrl() ? [...this.arrows(), ...this.reviewArrows()] : this.arrows());
 
   header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '', classifier1: '', classifier2: '' };
 
@@ -551,6 +576,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
     // RepCheck-Partien tragen „RepCheck saved game" als Veranstaltung — das ist keine Angabe des Nutzers.
     if (this.header.event === 'RepCheck saved game') this.header.event = '';
     const fromPgn = pliesOfPgn(game.pgn);
+    this.savedSans.set(fromPgn.map(p => p.san));
     this.session.startFen.set(startFenOf(game.pgn));   // Stellungspartie (FEN-Kopf): Brett und Legalität ab dort
     this.flipped.set(game.ownerSide === 'black');
 

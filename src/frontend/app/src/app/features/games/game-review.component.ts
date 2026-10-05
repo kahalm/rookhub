@@ -1,5 +1,5 @@
 import { BoardBadge, MOVE_CLASS_SYMBOLS, moveBadgeSvg } from './move-badge.util';
-import {
+import { linkedSignal,
   ChangeDetectionStrategy, Component, DestroyRef, LOCALE_ID, computed, effect, inject, input, output, signal,
   untracked,
 } from '@angular/core';
@@ -235,6 +235,9 @@ export class GameReviewComponent {
    */
   moves = input<readonly PlayedMove[]>([]);
 
+  /** Kurve und Computer-Linien gleich offen (Korrekturseite, 0.672.5: dort sucht man gerade nach Fehlern). */
+  expanded = input<boolean>(false);
+
   /** Im Fehler-Training: keine Computer-Linien und kein Pfeil — sie verrieten die Lösung. */
   engineHidden = input<boolean>(false);
 
@@ -283,9 +286,9 @@ export class GameReviewComponent {
   readonly ucis = computed(() => this.moves().map(uciOf));
   readonly review = computed(() => reviewGame(this.evals(), this.fens(), this.ucis()));
   /** Die Kurve ist standardmäßig ZU und klappt nur auf Wunsch auf — bewusst nicht gemerkt: „standardmäßig". */
-  readonly graphOpen = signal(false);
-  /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe). */
-  readonly showLines = signal(readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
+  readonly graphOpen = linkedSignal(() => this.expanded());
+  /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe); mit `expanded` von Anfang an an. */
+  readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
   readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
   readonly lines = computed(() => this.showLines() && !this.engineHidden()
     ? computerLinesAt(this.evals(), this.fens(), this.currentIndex()) : []);

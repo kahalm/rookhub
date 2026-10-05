@@ -2815,6 +2815,7 @@
       "engineReplaced": "von der Engine korrigiert",
       "engineSuggested": "Engine zweifelt",
       "engineCheckHint": "Nach diesem Zug sprang die Bewertung hin und her — meist ein falsch gelesener Zug. Die Lesart ohne das Zickzack steht bei den Lesarten.",
+      "reviewStale": "Bewertungskurve und Computer-Linien gelten für die gespeicherten Züge — nach Änderungen ausgeblendet.",
       "confirmed": "bestätigt",
       "illegal": "nicht legal",
       "options": "Wahrscheinlichste Lesarten:",

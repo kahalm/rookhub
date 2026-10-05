@@ -3131,6 +3131,7 @@
       "engineReplaced": "a motor javította",
       "engineSuggested": "a motor kételkedik",
       "engineCheckHint": "E lépés után az értékelés ide-oda ugrált — ez többnyire rosszul olvasott lépés. Az ugrálás nélküli olvasat az olvasatok között szerepel.",
+      "reviewStale": "Az értékelési görbe és a gépi változatok a mentett lépésekhez tartoznak — módosított lépéseknél rejtve.",
       "confirmed": "megerősítve",
       "illegal": "szabálytalan",
       "options": "Legvalószínűbb olvasatok:",

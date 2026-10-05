@@ -2815,6 +2815,7 @@
       "engineReplaced": "ispravio engine",
       "engineSuggested": "engine sumnja u ovaj potez",
       "engineCheckHint": "Nakon ovog poteza procjena je skakala amo-tamo — obično je to pogrešno pročitan potez. Čitanje bez tih skokova navedeno je među čitanjima.",
+      "reviewStale": "Krivulja procjene i računalne linije vrijede za spremljene poteze — skrivene dok su potezi promijenjeni.",
       "confirmed": "potvrđeno",
       "illegal": "nije legalno",
       "options": "Najvjerojatnija čitanja:",

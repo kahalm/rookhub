@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.672.5", date: "2026-10-05", changes: [
+    { en: "Correcting a game: if the game has already been analysed, the evaluation graph and the computer lines now appear right under the board (graph and lines open from the start, the best move as an arrow) — jumps in the graph often point to a misread move. Clicking the graph moves to that half-move. Once you change moves, the block is hidden: the analysis belongs to the saved moves.", de: "Partie korrigieren: ist die Partie schon analysiert, stehen Bewertungskurve und Computer-Linien jetzt direkt unter dem Brett (Kurve und Linien gleich offen, der beste Zug als Pfeil) — Sprünge in der Kurve zeigen oft einen falsch gelesenen Zug. Ein Klick in die Kurve springt zum Halbzug. Sobald Züge geändert werden, verschwindet der Block: die Analyse gehört zu den gespeicherten Zügen." },
+  ] },
   { version: "0.672.4", date: "2026-10-05", changes: [
     { en: "LeagueHub, checking a scoresheet: the player search for White and Black now starts with league players only — the box “Search all players of the Mega Database” is no longer ticked there. Ticking it still searches the whole Mega Database; elsewhere nothing changes.", de: "LeagueHub, Partieformular prüfen: die Spielersuche für Weiß und Schwarz sucht jetzt zuerst nur unter den Ligaspielern — das Häkchen „Alle Spieler der Megabase durchsuchen“ ist dort nicht mehr vorgesetzt. Mit Häkchen wird weiter die ganze Megabase durchsucht; anderswo ändert sich nichts." },
   ] },

@@ -2815,6 +2815,7 @@
       "engineReplaced": "corrected by engine",
       "engineSuggested": "engine doubts this move",
       "engineCheckHint": "The evaluation swung back and forth after this move — usually a misread move. The reading without the swings is listed among the readings.",
+      "reviewStale": "The evaluation graph and computer lines belong to the saved moves — hidden while moves are changed.",
       "confirmed": "confirmed",
       "illegal": "not legal",
       "options": "Most likely readings:",

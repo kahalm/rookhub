@@ -59,6 +59,22 @@ describe('GameEditComponent', () => {
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Bc4', 'Nc6', 'Nf3']);
   });
 
+  it('shows the analysis (graph + computer lines) of the saved moves, and hides it once moves change', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    expect(c.reviewUrl()).toBe('/api/games/5/evals');
+    http.match(r => r.url.startsWith('/api/games/5/evals')).forEach(r => r.flush({ status: 'none', plies: [], total: 0, analyzed: 0 }));
+    expect(c.playedMoves()[0]).toEqual({ san: 'e4', from: 'e2', to: 'e4', promotion: null });
+
+    c.go(2);
+    c.onBoardMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: '' });
+    fixture.detectChanges();
+    expect(c.movesChanged()).toBeTrue();
+    expect(c.reviewUrl()).toBeNull();
+  });
+
   // UX-070: „Zug löschen" ist von „Stimmt" abgesetzt (Textknopf in Warnfarbe) und lässt sich zurücknehmen.
   it('after deleting a move, “Undo” brings it back', async () => {
     const { fixture, c, http } = await setup();
