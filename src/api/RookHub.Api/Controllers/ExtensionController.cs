@@ -267,15 +267,14 @@ public class ExtensionController : BaseApiController
         try
         {
             var saved = await _savedGameService.SaveAsync(GetUserId(), dto);
-            // „Gleich analysieren" (Uebersicht): scheitert es (keine Engine, Deckel), bleibt die Partie
-            // trotzdem gespeichert — die Uebersicht zeigt dann den Analysieren-Knopf in RookHub.
-            if (dto.Analyze)
+            // Jede über die Erweiterung gespeicherte Partie wird gleich analysiert (0.667.0, Wunsch 2026-10-05; vorher nur mit
+            // <c>analyze</c> aus der Übersicht, das Flag bleibt der Verträglichkeit halber). Wiederholtes Speichern rechnet nichts
+            // doppelt (<see cref="SavedGameService.AnalyzeAsync"/> nutzt eine vorhandene Analyse). Scheitert es (keine Engine,
+            // Deckel), bleibt die Partie trotzdem gespeichert — die Seite zeigt dann den Analysieren-Knopf.
+            try { await _savedGameService.AnalyzeAsync(GetUserId(), saved.Id, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                try { await _savedGameService.AnalyzeAsync(GetUserId(), saved.Id, ct); }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    _logger.LogWarning(ex, "Analyse nach dem Speichern von Partie {Id} nicht gestartet", saved.Id);
-                }
+                _logger.LogWarning(ex, "Analyse nach dem Speichern von Partie {Id} nicht gestartet", saved.Id);
             }
             return Ok(saved);
         }

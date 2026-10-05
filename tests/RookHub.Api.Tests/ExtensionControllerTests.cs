@@ -414,6 +414,25 @@ public class ExtensionControllerTests : IDisposable
         Assert.Equal("12345", row.ExternalId);
     }
 
+    /// <summary>0.667.0: jede über die Erweiterung gespeicherte Partie wird gleich analysiert — auch ohne das Flag
+    /// <c>analyze</c>; fehlt die Engine, bleibt sie trotzdem gespeichert.</summary>
+    [Fact]
+    public async Task SaveGame_AnalysiertGleich_AuchOhneFlag_UndSpeichertAuchOhneEngine()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        SavedGameDetailDto Saved(ActionResult<SavedGameDetailDto> r) => (SavedGameDetailDto)Assert.IsType<OkObjectResult>(r.Result).Value!;
+        SaveGameInputDto Input(string id) => new() { Source = "lichess", Moves = new() { "e4", "e5" }, ExternalId = id };
+
+        var noEngine = Saved(await _controller.SaveGame(Input("a")));
+        Assert.Null((await _db.SavedGames.AsNoTracking().SingleAsync(g => g.Id == noEngine.Id)).GameAnalysisId);   // gespeichert, nicht gerechnet
+
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = user.Id, EncryptedToken = "enc", BackgroundEngineIds = "eei_t" });
+        await _db.SaveChangesAsync();
+        var withEngine = Saved(await _controller.SaveGame(Input("b")));
+        Assert.NotNull((await _db.SavedGames.AsNoTracking().SingleAsync(g => g.Id == withEngine.Id)).GameAnalysisId);
+    }
+
     [Fact]
     public async Task SaveGame_DedupsBySourceAndExternalId()
     {

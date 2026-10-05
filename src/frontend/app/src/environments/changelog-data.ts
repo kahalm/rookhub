@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.669.0", date: "2026-10-05", changes: [
+    { en: "RepCheck: a game saved through the extension is now analysed straight away — no need to press “Analyse” afterwards. Saving the same game again does not calculate it twice; without an available engine the game is still saved and shows the usual Analyse button.", de: "RepCheck: Eine über die Erweiterung gespeicherte Partie wird jetzt gleich analysiert — du musst danach nicht mehr „Analysieren“ drücken. Dieselbe Partie noch einmal zu speichern rechnet nichts doppelt; ohne verfügbare Engine wird die Partie trotzdem gespeichert und zeigt den gewohnten Analysieren-Knopf." },
+  ] },
   { version: "0.668.0", date: "2026-10-05", changes: [
     { en: "The Windows provider now starts a whole fleet from one script: one live engine plus up to sixteen background engines, each its own process with its own log, each restarted on its own when it dies. It points straight at RookHub instead of going through Lichess, and the settings are laid out for a 64-core machine.", de: "Der Windows-Provider startet jetzt einen ganzen Verband aus einem Skript: eine Live-Engine und bis zu sechzehn Hintergrund-Engines, je Engine ein eigener Prozess mit eigenem Log, und jeder wird einzeln neu gestartet, wenn er stirbt. Er haengt direkt an RookHub statt am Weg ueber Lichess, und die Einstellungen sind auf eine 64-Kern-Maschine ausgelegt." },
   ] },
