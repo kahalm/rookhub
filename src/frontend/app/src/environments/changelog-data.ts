@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.659.3", date: "2026-10-05", changes: [
+    { en: "LeagueHub “Your scoresheets” (and the managers’ list of open scoresheets): a scoresheet that has been read now shows the names it read instead of “? – ?”.", de: "LeagueHub „Deine Formulare“ (und die Liste offener Formulare für Verwalter): Ein gelesenes Formular zeigt jetzt die gelesenen Namen statt „? – ?“." },
+  ] },
   { version: "0.659.2", date: "2026-10-05", changes: [
     { en: "LeagueHub “Your scoresheets”: a scoresheet that has been read can now also be discarded (after a confirmation), not only reviewed and accepted.", de: "LeagueHub „Deine Formulare“: Ein fertig gelesenes Formular lässt sich jetzt auch verwerfen (mit Rückfrage), nicht nur prüfen und übernehmen." },
   ] },

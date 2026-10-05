@@ -812,14 +812,38 @@ public class ScoresheetScanService
     /// <summary>Die offenen Liga-Einlesungen (neueste zuerst) — eines Kontos bzw. OHNE Konto die, deren Schlüssel der
     /// Browser mitbringt. Verworfene/übernommene tragen kein Foto mehr und fehlen.</summary>
     public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId) =>
-        (await LeagueOwned(ScanHeads(), ScanActor.User(userId)).Where(s => s.FileName != DiscardedMark)
-            .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync()).Select(ToDto).ToList();
+        await WithNamesAsync((await LeagueOwned(ScanHeads(), ScanActor.User(userId)).Where(s => s.FileName != DiscardedMark)
+            .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync()).Select(ToDto).ToList());
+
+    /// <summary>
+    /// Namen der gelesenen Partie in die Liste (0.659.3, gemeldet 2026-10-05: „Deine Formulare" zeigte „? – ?", obwohl die
+    /// Prüfseite die Namen kannte). <see cref="ScanHeads"/> lässt die Antwort des Modells absichtlich weg; für die fertigen
+    /// Einlesungen der Liste werden nur deren Weiß/Schwarz nachgelesen.
+    /// </summary>
+    private async Task<List<ScoresheetScanDto>> WithNamesAsync(List<ScoresheetScanDto> dtos, CancellationToken ct = default)
+    {
+        var ids = dtos.Where(d => d.Status == "done" && d.White == null && d.Black == null).Select(d => d.Id).ToList();
+        if (ids.Count == 0) return dtos;
+        var json = await _db.ScoresheetScans.AsNoTracking().Where(s => ids.Contains(s.Id))
+            .Select(s => new { s.Id, s.TranscriptionJson }).ToDictionaryAsync(s => s.Id, s => s.TranscriptionJson, ct);
+        foreach (var d in dtos)
+        {
+            if (!json.TryGetValue(d.Id, out var j) || ScoresheetTranscription.Parse(j) is not { } t) continue;
+            d.White = Blank(t.White);
+            d.Black = Blank(t.Black);
+        }
+        return dtos;
+    }
 
     /// <summary>Alle offenen Liga-Einlesungen (auch ohne Konto über einen Teilen-Link) — für die Verwalter, jüngste zuerst.</summary>
-    public async Task<List<LeagueOpenScanDto>> LeagueOpenScansAsync(int viewerId, CancellationToken ct = default) =>
-        (await ScanHeads().Where(s => s.Purpose == ScoresheetScan.PurposeLeague && s.FileName != DiscardedMark)
-            .OrderByDescending(s => s.CreatedAt).Take(50).ToListAsync(ct))
-        .Select(s => new LeagueOpenScanDto { Scan = ToDto(s), ViaShareLink = s.UserId == null, Mine = s.UserId == viewerId }).ToList();
+    public async Task<List<LeagueOpenScanDto>> LeagueOpenScansAsync(int viewerId, CancellationToken ct = default)
+    {
+        var rows = (await ScanHeads().Where(s => s.Purpose == ScoresheetScan.PurposeLeague && s.FileName != DiscardedMark)
+                .OrderByDescending(s => s.CreatedAt).Take(50).ToListAsync(ct))
+            .Select(s => new LeagueOpenScanDto { Scan = ToDto(s), ViaShareLink = s.UserId == null, Mine = s.UserId == viewerId }).ToList();
+        await WithNamesAsync(rows.Select(r => r.Scan).ToList(), ct);
+        return rows;
+    }
 
     public async Task<List<(string Key, ScoresheetScanDto Scan)>> LeagueScansByKeysAsync(IEnumerable<string> keys)
     {
@@ -827,7 +851,9 @@ public class ScoresheetScanService
         var scans = await ScanHeads().Where(s => s.UserId == null && s.Purpose == ScoresheetScan.PurposeLeague
                 && s.AccessKey != null && list.Contains(s.AccessKey) && s.FileName != DiscardedMark)
             .OrderByDescending(s => s.CreatedAt).ToListAsync();
-        return scans.Select(s => (s.AccessKey!, ToDto(s))).ToList();
+        var pairs = scans.Select(s => (s.AccessKey!, ToDto(s))).ToList();
+        await WithNamesAsync(pairs.Select(p => p.Item2).ToList());
+        return pairs;
     }
 
     /// <summary>Vermerk im Dateinamen einer übernommenen/verworfenen Liga-Einlesung (das Foto ist dann leer).</summary>

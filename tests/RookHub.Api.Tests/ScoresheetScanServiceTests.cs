@@ -1044,7 +1044,9 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Empty(_db.SavedGames);                                    // nicht in „Meine Partien"
         Assert.Empty(_db.Notifications);                                 // keine Glocke — LeagueHub fragt selbst nach
         Assert.Empty(await _service.ListAsync(u.Id));                    // nicht in RookHubs Liste
-        Assert.Equal(scan.Id, (await _service.LeagueScansAsync(u.Id)).Single().Id);
+        var listed = (await _service.LeagueScansAsync(u.Id)).Single();
+        Assert.Equal(scan.Id, listed.Id);
+        Assert.Equal(("Didi", "Patrick"), (listed.White, listed.Black));   // Namen auch in der Liste (0.659.3), nicht „? – ?"
 
         var state = await _service.LeagueScanStateAsync(As(u.Id), scan.Id);
         Assert.Equal("done", state!.Scan.Status);
