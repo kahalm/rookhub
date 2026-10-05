@@ -419,12 +419,16 @@ Uploads: ohne ihn stirbt ein Teil davon im ersten Byte, und RookHub bekommt nach
 (Abschnitt „Ein Eingriff bleibt" oben). `run_provider.ps1` (unten) prüft beim Start, ob der Patch
 drin ist, und holt ihn mit dem daneben liegenden `patch_force_close.py` nach.
 
-**4. Starten:**
+**4. Starten** — direkt mit RookHub (der Token ist der rkh_-Token aus dem Profil, Bereich
+„Engine"; die Umgebungsvariable heisst trotzdem `LICHESS_API_TOKEN`, weil der Provider nur diesen
+Namen kennt):
 
 ```powershell
-$env:LICHESS_API_TOKEN = "lip_dein_token"
-python example-provider.py --engine "C:\stockfish\stockfish-windows-x86-64-bmi2.exe" --name "RookHub PC" --max-threads 6 --max-hash 2048
+$env:LICHESS_API_TOKEN = "rkh_dein_token"
+python example-provider.py --engine "C:\stockfish\stockfish-windows-x86-64-bmi2.exe" --name "RookHub PC" --max-threads 6 --max-hash 2048 --keep-alive 86400 --lichess https://rookhub.oberschmid.homes --broker https://rookhub.oberschmid.homes
 ```
+
+Über Lichess statt direkt: dieselbe Zeile ohne `--lichess`/`--broker`, mit einem `lip_`-Token.
 
 (Bewusst eine lange Zeile: PowerShell bricht Zeilen mit einem Backtick um, der beim Kopieren
 kaputtgeht, sobald ein Leerzeichen dahinter steht.)
@@ -449,9 +453,38 @@ Rechner, der wirklich dauerhaft laufen soll, siehe den nächsten Abschnitt.
 
 ### Robuster Dauerbetrieb (Auto-Restart + Aufräumen)
 
-Fertige Skripte dafür liegen unter [`windows/`](windows/) — `run_provider.ps1` (Auto-Restart-Loop)
-und `reap_orphans.ps1` (Zombie-Reaper). Beide Variablen am Kopf der Datei vor dem ersten Start
-anpassen.
+Fertige Skripte dafür liegen unter [`windows/`](windows/) — `run_provider.ps1` (startet die
+Engines und hält sie am Leben) und `reap_orphans.ps1` (Zombie-Reaper). Beide Variablen am Kopf der
+Datei vor dem ersten Start anpassen.
+
+`run_provider.ps1` startet **eine Live-Engine und mehrere Hintergrund-Engines** aus einem Skript:
+je Engine ein eigener Provider-Prozess mit eigenen Log-Dateien unter `C:\stockfish\logs\`, jeder
+einzeln überwacht. Stirbt eine von siebzehn, startet genau diese neu und nicht der ganze Verband.
+Das Ziel steht in `$rookhubUrl` (gesetzt = direkt mit RookHub, leer = über Lichess).
+
+#### Wie viele Engines, wie viele Threads
+
+Dieselbe Aufteilung wie im Container, und aus demselben Grund: vorne EINE Live-Engine mit vielen
+Threads, weil dort ein Mensch auf eine Stellung wartet, dahinter viele Hintergrund-Engines mit
+wenigen, weil dort der Durchsatz zählt und in unabhängige Stellungen zerfällt. Die Hintergrund-
+Engines pausieren, solange live gerechnet wird — die Threadzahlen dürfen sich also überlappen.
+
+| Kerne | `$liveThreads` | `$bgCount` | `$bgThreads` | Hash-Bedarf (`$bgCount × $bgHash + $liveHash`) |
+|---|---|---|---|---|
+| 8 | 8 | 4 | 2 | 4 × 1024 + 4096 = 8 GiB |
+| 16 | 12 | 8 | 2 | 8 × 1024 + 4096 = 12 GiB |
+| 32 | 16 | 8 | 4 | 8 × 1024 + 4096 = 12 GiB |
+| 64 | 24 | 16 | 4 | 16 × 1024 + 4096 = 20 GiB |
+
+**Mehr als 16 Hintergrund-Engines lohnen nicht**: so viele nimmt RookHub als Hintergrund-Liste an
+(Profil → *Externe Engine*). Stehen dort auch die Engines eines Servers, bleiben entsprechend
+weniger Plätze für den PC. Und bleib beim Arbeitsspeicher unter dem, was der Rechner wirklich hat:
+eine Hashtabelle, die Windows auslagert, macht die Engine langsamer als eine kleine.
+
+Nach dem ersten Start die neuen Engines im Profil unter *Externe Engine* als Hintergrund-Engines
+anhaken. Das bleibt über Neustarts hinweg gültig: die Registrierung hängt am NAMEN, eine Engine
+behält damit ihre Kennung — anders als bei einem umbenannten Namen, der eine neue Engine anlegt
+und die Auswahl ins Leere zeigen lässt.
 
 > **In einer VM zuerst die CPU-Features prüfen, nicht die des Hosts.** Ein virtueller Rechner
 > gibt AVX2/BMI2 des physischen Hosts nicht zwangsläufig an den Gast durch — je nach

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.668.0", date: "2026-10-05", changes: [
+    { en: "The Windows provider now starts a whole fleet from one script: one live engine plus up to sixteen background engines, each its own process with its own log, each restarted on its own when it dies. It points straight at RookHub instead of going through Lichess, and the settings are laid out for a 64-core machine.", de: "Der Windows-Provider startet jetzt einen ganzen Verband aus einem Skript: eine Live-Engine und bis zu sechzehn Hintergrund-Engines, je Engine ein eigener Prozess mit eigenem Log, und jeder wird einzeln neu gestartet, wenn er stirbt. Er haengt direkt an RookHub statt am Weg ueber Lichess, und die Einstellungen sind auf eine 64-Kern-Maschine ausgelegt." },
+  ] },
   { version: "0.667.0", date: "2026-10-05", changes: [
     { en: "Game page: in your own variation (live engine) the buttons below the board — and the arrow keys and taps on the board — now step through the variation: back and forward one move, to its start (the moves are kept) and to its end. The panel keeps only “Back to the game”; “Move back/forward” there is gone.", de: "Partieseite: In deiner eigenen Variante (Live-Engine) laufen die Knöpfe unter dem Brett — ebenso Pfeiltasten und Tippen aufs Brett — jetzt durch die Variante: einen Zug zurück und vor, an ihren Anfang (die Züge bleiben) und an ihr Ende. Die Leiste behält nur „Zurück zur Partie“; „Zug zurück/vor“ dort entfällt." },
     { en: "Game page and shared games: back/forward are now big buttons in the middle, start and end set apart from them — also on the PC, where they used to sit right next to each other and were easy to mix up.", de: "Partieseite und geteilte Partien: Zurück/Vor sind jetzt große Knöpfe in der Mitte, Anfang und Ende mit Abstand daneben — auch am PC, wo sie vorher dicht nebeneinander lagen und man sich leicht verklickte." },
