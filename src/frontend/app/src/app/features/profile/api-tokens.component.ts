@@ -48,7 +48,9 @@ export type ApiTokenScope = 'extension' | 'engine';
           <input matInput [(ngModel)]="name" name="name" required maxlength="100">
           <mat-hint>{{ 'profile.tokens.dialog.nameHint' | translate }}</mat-hint>
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <!-- subscriptSizing="dynamic": der Hinweis darunter ist dreizeilig, die Vorgabe reserviert
+             EINE Zeile — das Feld "Ablauf" wurde sonst darueber gezeichnet. -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ 'profile.tokens.dialog.scope' | translate }}</mat-label>
           <mat-select [(ngModel)]="scope" name="scope">
             <mat-option value="extension">{{ 'profile.tokens.dialog.scopeExtension' | translate }}</mat-option>
@@ -58,8 +60,12 @@ export type ApiTokenScope = 'extension' | 'engine';
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'profile.tokens.dialog.expires' | translate }}</mat-label>
-          <mat-select [(ngModel)]="expiresInDays" name="expiresInDays">
-            <mat-option [value]="null">{{ 'profile.tokens.dialog.never' | translate }}</mat-option>
+          <!-- 0 statt null fuer "Nie": MatSelect uebergeht beim Abgleich jede Option mit dem Wert
+               null (option.value != null in _selectOptionByValue), das Feld blieb deshalb leer —
+               auch nachdem man "Nie" ausdruecklich angeklickt hatte. submit() macht daraus wieder
+               null, denn so heisst "kein Ablauf" in der API. -->
+          <mat-select [(ngModel)]="expiresIn" name="expiresIn">
+            <mat-option [value]="0">{{ 'profile.tokens.dialog.never' | translate }}</mat-option>
             <mat-option [value]="30">30 {{ 'common.days' | translate }}</mat-option>
             <mat-option [value]="90">90 {{ 'common.days' | translate }}</mat-option>
             <mat-option [value]="365">365 {{ 'common.days' | translate }}</mat-option>
@@ -69,7 +75,7 @@ export type ApiTokenScope = 'extension' | 'engine';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, expiresInDays, scope })">
+      <button mat-raised-button color="primary" [disabled]="!name" (click)="submit()">
         {{ 'profile.tokens.dialog.create' | translate }}
       </button>
     </mat-dialog-actions>
@@ -78,9 +84,14 @@ export type ApiTokenScope = 'extension' | 'engine';
 })
 export class CreateTokenDialogComponent {
   name = '';
-  expiresInDays: number | null = null;
+  /** Tage bis zum Ablauf, 0 = nie (siehe Kommentar im Formular). */
+  expiresIn = 0;
   scope: ApiTokenScope = 'extension';
   constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>) {}
+
+  submit(): void {
+    this.dialogRef.close({ name: this.name, expiresInDays: this.expiresIn || null, scope: this.scope });
+  }
 }
 
 @Component({

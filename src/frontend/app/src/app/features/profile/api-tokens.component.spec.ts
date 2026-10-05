@@ -82,4 +82,33 @@ describe('ApiTokensComponent', () => {
     http.expectOne(r => r.url === '/api/profile/tokens' && r.method === 'GET').flush([]);
     http.verify();
   });
+
+  // Die Ablauf-Auswahl trug fuer "Nie" den Wert null — und ein MatSelect zeigt eine Option mit dem
+  // Wert null nie als gewaehlt an (`option.value != null` in _selectOptionByValue). Das Feld stand
+  // deshalb leer da, auch nachdem man "Nie" angeklickt hatte. Jetzt ist "Nie" die 0; nach aussen
+  // muss trotzdem null gehen, denn so heisst "kein Ablauf" in der API.
+  it('closes with expiresInDays null for "never" and with the number otherwise', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CreateTokenDialogComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: MAT_DIALOG_DATA, useValue: {} },
+      ],
+    }).compileComponents();
+    const dialog = TestBed.createComponent(CreateTokenDialogComponent).componentInstance;
+    const closed: unknown[] = [];
+    spyOn(dialog.dialogRef, 'close').and.callFake((r?: unknown) => { closed.push(r); });
+
+    expect(dialog.expiresIn).toBe(0);            // Vorgabe "Nie" — und sie ist waehlbar, nicht null
+    dialog.name = 'devrechner';
+    dialog.scope = 'engine';
+    dialog.submit();
+    expect(closed[0]).toEqual({ name: 'devrechner', expiresInDays: null, scope: 'engine' });
+
+    dialog.expiresIn = 30;
+    dialog.submit();
+    expect(closed[1]).toEqual({ name: 'devrechner', expiresInDays: 30, scope: 'engine' });
+  });
 });

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.669.1", date: "2026-10-05", changes: [
+    { en: "Two display faults in the new-token dialog. The note explaining what a scope is runs three lines, the field below it was drawn on top of the last two. And the expiry field looked empty even though it stands at never, because a dropdown never shows an option whose value is nothing — now never is a value of its own.", de: "Zwei Anzeigefehler im Dialog fuer einen neuen Token. Der Hinweis, was ein Bereich ist, laeuft ueber drei Zeilen, und das Feld darunter wurde ueber die letzten beiden gezeichnet. Und das Ablauf-Feld sah leer aus, obwohl Nie darin steht: eine Auswahl zeigt keine Option an, deren Wert nichts ist — jetzt ist Nie ein eigener Wert." },
+  ] },
   { version: "0.669.0", date: "2026-10-05", changes: [
     { en: "RepCheck: a game saved through the extension is now analysed straight away — no need to press “Analyse” afterwards. Saving the same game again does not calculate it twice; without an available engine the game is still saved and shows the usual Analyse button.", de: "RepCheck: Eine über die Erweiterung gespeicherte Partie wird jetzt gleich analysiert — du musst danach nicht mehr „Analysieren“ drücken. Dieselbe Partie noch einmal zu speichern rechnet nichts doppelt; ohne verfügbare Engine wird die Partie trotzdem gespeichert und zeigt den gewohnten Analysieren-Knopf." },
   ] },
