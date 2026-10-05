@@ -1,0 +1,30 @@
+# Lc0 (Leela Chess Zero) als RookHub-Engine auf einer NVIDIA-GPU — gedacht für den DGX Spark.
+#
+#   cp .env.example .env      # ROOKHUB_URL + Token eintragen
+#   docker compose up -d --build
+#
+# Anleitung: README.md in diesem Ordner. Kein `ports:` — der Provider verbindet sich ausgehend.
+services:
+  engine-provider-lc0:
+    build:
+      context: ..                 # engine-provider/: dort liegen entrypoint.sh, preflight.py, requirements.txt
+      dockerfile: lc0/Dockerfile
+      args:
+        LC0_VERSION: v0.32.1
+        CUDA_CC: "121"            # GB10 / DGX Spark. Andere GPU: siehe Dockerfile
+    image: rookhub-engine-provider:lc0
+    container_name: rookhub-engine-provider-lc0
+    env_file: .env
+    restart: unless-stopped
+    init: true
+    # Die GPU in den Container reichen (braucht das NVIDIA Container Toolkit; auf dem Spark vorinstalliert).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    labels:
+      # Lokal gebaut, liegt in keiner Registry — Watchtower soll es nicht anfassen.
+      - com.centurylinklabs.watchtower.enable=false
