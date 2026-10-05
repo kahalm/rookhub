@@ -109,6 +109,9 @@ export interface GameUpdate {
   date?: string | null;
   /** Meine Seite: `white`/`black`; leer = zurücknehmen; weglassen = unverändert. */
   ownerSide?: string | null;
+  /** Klassifizierer 1/2 der Partienliste: leer = zurücknehmen (Online-Partien: wieder abgeleitet), weglassen = unverändert. */
+  classifier1?: string | null;
+  classifier2?: string | null;
   scoresheetPlies?: ScoresheetPly[] | null;
 }
 

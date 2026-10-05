@@ -36,6 +36,8 @@ internal sealed class SavedGameConfiguration : IEntityTypeConfiguration<SavedGam
         e.Property(g => g.ShareToken).HasMaxLength(32);
         e.Property(g => g.TimeControl).HasMaxLength(32);
         e.Property(g => g.OwnerSide).HasMaxLength(5);
+        e.Property(g => g.Classifier1).HasMaxLength(80);
+        e.Property(g => g.Classifier2).HasMaxLength(80);
         e.HasIndex(g => g.ShareToken).IsUnique();
         // Auflistung je User (neueste zuerst).
         e.HasIndex(g => new { g.UserId, g.CreatedAt });

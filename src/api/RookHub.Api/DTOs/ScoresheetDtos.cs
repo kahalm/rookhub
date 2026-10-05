@@ -34,6 +34,11 @@ public class GameUpdateDto
     /// <summary>Meine Seite: <c>white</c>/<c>black</c>; leer = Festlegung zurücknehmen; <c>null</c> = unverändert.</summary>
     [MaxLength(8)] public string? OwnerSide { get; set; }
 
+    /// <summary>Klassifizierer 1/2 der Partienliste (0.661.0): <c>null</c> = unverändert, leer = zurücknehmen (bei Online-Partien
+    /// gilt dann wieder der abgeleitete Wert), sonst der neue Wert.</summary>
+    [MaxLength(80)] public string? Classifier1 { get; set; }
+    [MaxLength(80)] public string? Classifier2 { get; set; }
+
     /// <summary>Nur bei eingelesenen Partien: der Stand der Korrekturseite je Halbzug (Formular-Eintrag,
     /// bestätigt, unsicher, Lesarten) — damit die Seite beim nächsten Öffnen dort weitermacht. Für den Server
     /// Anzeige-Zustand; die Züge selbst kommen aus <see cref="Moves"/>.</summary>

@@ -240,7 +240,7 @@ public class SavedGameService
             {
                 g.Id, g.Source, g.White, g.Black, g.Result, g.PlayedAt,
                 g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt, g.GameAnalysisId,
-                g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned,
+                g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned, g.Classifier1, g.Classifier2,
                 PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
                 ScanId = _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefault(),
             })
@@ -290,6 +290,10 @@ public class SavedGameService
             TimeControl = r.TimeControl,
             Analysis = r.GameAnalysisId is int aid && analyses.TryGetValue(aid, out var state) ? state : null,
             ScanId = r.ScanId,
+            Classifier1 = GameClassifier.Effective(r.Source, r.TimeControl, r.Classifier1, r.Classifier2).First,
+            Classifier2 = GameClassifier.Effective(r.Source, r.TimeControl, r.Classifier1, r.Classifier2).Second,
+            Classifier1Set = GameClassifier.Clean(r.Classifier1),
+            Classifier2Set = GameClassifier.Clean(r.Classifier2),
         }).ToList();
     }
 
@@ -894,6 +898,9 @@ public class SavedGameService
         g.MoveCount = sans.Count;
         // null = unverändert; "" oder etwas anderes = Festlegung zurücknehmen.
         if (dto.OwnerSide != null) g.OwnerSide = dto.OwnerSide is "white" or "black" ? dto.OwnerSide : null;
+        // null = unverändert, leer = zurücknehmen (Online-Partien fallen auf den abgeleiteten Wert zurück).
+        if (dto.Classifier1 != null) g.Classifier1 = GameClassifier.Clean(dto.Classifier1);
+        if (dto.Classifier2 != null) g.Classifier2 = GameClassifier.Clean(dto.Classifier2);
         if (movesChanged) await OnMovesChangedAsync(g);
         await _db.SaveChangesAsync();
         var dtoOut = MapDetail(g);
@@ -1151,6 +1158,10 @@ public class SavedGameService
         WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
         BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
         TimeControl = g.TimeControl,
+        Classifier1 = GameClassifier.Effective(g.Source, g.TimeControl, g.Classifier1, g.Classifier2).First,
+        Classifier2 = GameClassifier.Effective(g.Source, g.TimeControl, g.Classifier1, g.Classifier2).Second,
+        Classifier1Set = GameClassifier.Clean(g.Classifier1),
+        Classifier2Set = GameClassifier.Clean(g.Classifier2),
     };
 }
 

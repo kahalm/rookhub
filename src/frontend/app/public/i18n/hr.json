@@ -2761,6 +2761,12 @@
       "moves": "Potezi",
       "date": "Datum"
     },
+    "classifier": {
+      "first": "Stranica / liga",
+      "second": "Način / sezona",
+      "all": "Sve",
+      "none": "Bez oznake"
+    },
     "tc": {
       "plus": "{{main}} + {{inc}}",
       "plusSec": "{{main}} s + {{inc}}",
@@ -2826,6 +2832,10 @@
       "notOnSheet": "nije na zapisniku",
       "ownerSide": "Moja strana",
       "sideNone": "nije postavljeno",
+      "classifier1": "Klasifikator 1 (stranica ili liga)",
+      "classifier1Hint": "Online: stranica · ligaške partije: npr. „Landesliga“",
+      "classifier2": "Klasifikator 2 (način ili sezona)",
+      "classifier2Hint": "Online: način · ligaške partije: npr. „2026/27“",
       "clubLinked": "Ova partija je kopija iz klupske baze. Ako ispraviš poteze, a ti si je prenio (ili si upravitelj), ispravak vrijedi i tamo i u svim kopijama — inače tvoja kopija postaje zasebna verzija."
     },
     "pgnCopy": "Kopiraj PGN",

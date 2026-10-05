@@ -27,6 +27,7 @@ import { GamesService, SavedGameDetail } from './games.service';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
+import { distinctClassifiers, seasonOf } from './classifier.util';
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
@@ -89,7 +90,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.round' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.round" name="round" maxlength="40" (ngModelChange)="dirty.set(true)" /></mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.date' | translate }}</mat-label>
-            <input matInput type="date" [(ngModel)]="header.date" name="date" (ngModelChange)="dirty.set(true)" /></mat-form-field>
+            <input matInput type="date" [(ngModel)]="header.date" name="date" (ngModelChange)="dirty.set(true); headerDate.set($event)" /></mat-form-field>
           <!-- Meine Seite: dreht Partieseite, Teilen-Link und Vorschaubild — und hier gleich das Brett. -->
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.ownerSide' | translate }}</mat-label>
             <mat-select [(ngModel)]="header.ownerSide" name="ownerSide" (ngModelChange)="onSide($event)">
@@ -97,6 +98,18 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
               <mat-option value="white">{{ 'scoresheet.sideWhite' | translate }}</mat-option>
               <mat-option value="black">{{ 'scoresheet.sideBlack' | translate }}</mat-option>
             </mat-select></mat-form-field>
+          <!-- Klassifizierer der Partienliste (0.661.0): Seite/Liga und Modus/Jahrgang. Bei Online-Partien steht der
+               abgeleitete Wert als Platzhalter da; leer lassen = er gilt weiter. Vorschläge aus den eigenen Partien. -->
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.classifier1' | translate }}</mat-label>
+            <input matInput [(ngModel)]="header.classifier1" name="classifier1" maxlength="80" list="cls1-options"
+                   [placeholder]="derived1()" (ngModelChange)="dirty.set(true)" />
+            <mat-hint>{{ 'games.edit.classifier1Hint' | translate }}</mat-hint></mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.classifier2' | translate }}</mat-label>
+            <input matInput [(ngModel)]="header.classifier2" name="classifier2" maxlength="80" list="cls2-options"
+                   [placeholder]="derived2()" (ngModelChange)="dirty.set(true)" />
+            <mat-hint>{{ 'games.edit.classifier2Hint' | translate }}</mat-hint></mat-form-field>
+          <datalist id="cls1-options">@for (v of options1(); track v) { <option [value]="v"></option> }</datalist>
+          <datalist id="cls2-options">@for (v of options2(); track v) { <option [value]="v"></option> }</datalist>
         </mat-card>
 
         <div class="layout" [class.with-photo]="!!photoUrl()">
@@ -403,7 +416,21 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   readonly uncertainLeft = this.session.uncertainLeft;
   readonly rows = this.session.rows;
 
-  header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '' };
+  header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '', classifier1: '', classifier2: '' };
+
+  /** Der abgeleitete Wert (nur Online-Partien) — Platzhalter, solange der Nutzer nichts einträgt. */
+  readonly derived1 = signal('');
+  readonly derived2 = signal('');
+  /** Vorschläge: Werte der eigenen Partien; beim Jahrgang zusätzlich die Saison zum Spieldatum. */
+  private readonly known1 = signal<string[]>([]);
+  private readonly known2 = signal<string[]>([]);
+  readonly options1 = computed(() => this.known1());
+  readonly options2 = computed(() => {
+    const season = seasonOf(this.headerDate());
+    const all = this.known2();
+    return season && !all.includes(season) ? [season, ...all] : all;
+  });
+  readonly headerDate = signal('');
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
@@ -463,7 +490,16 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       white: game.white ?? '', black: game.black ?? '', result: game.result || '*',
       event: h['Event'] ?? '', site: h['Site'] ?? '', round: h['Round'] ?? '', date: isoDateOf(h['Date']),
       ownerSide: game.ownerSide ?? '',
+      classifier1: game.classifier1Set ?? '', classifier2: game.classifier2Set ?? '',
     };
+    this.headerDate.set(this.header.date);
+    // Abgeleitet = geltender Wert, solange nichts gesetzt ist (der Server liefert nur den geltenden).
+    this.derived1.set(game.classifier1Set ? '' : game.classifier1 ?? '');
+    this.derived2.set(game.classifier2Set ? '' : game.classifier2 ?? '');
+    this.games.list(500).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => { this.known1.set(distinctClassifiers(list, 1)); this.known2.set(distinctClassifiers(list, 2)); },
+      error: () => { /* Vorschläge sind Zugabe */ },
+    });
     // RepCheck-Partien tragen „RepCheck saved game" als Veranstaltung — das ist keine Angabe des Nutzers.
     if (this.header.event === 'RepCheck saved game') this.header.event = '';
     const fromPgn = pliesOfPgn(game.pgn);
@@ -598,6 +634,8 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       round: this.header.round || null,
       date: this.header.date || null,
       ownerSide: this.header.ownerSide,
+      classifier1: this.header.classifier1.trim(),
+      classifier2: this.header.classifier2.trim(),
       scoresheetPlies: this.isScoresheet() ? toServer(legal) : null,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {

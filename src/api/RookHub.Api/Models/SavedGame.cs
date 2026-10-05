@@ -112,5 +112,15 @@ public class SavedGame
     /// </summary>
     public string? ReviewLanguage { get; set; }
 
+    /// <summary>
+    /// Erster Klassifizierer der Partienliste (0.661.0), vom Nutzer gesetzt. Online-Partien: die Seite (chess.com, lichess);
+    /// Ligapartien: die Liga („Landesliga"). <c>null</c> = nicht gesetzt — dann gilt bei Online-Partien der abgeleitete Wert
+    /// (<see cref="Services.GameClassifier"/>), sonst bleibt er leer.
+    /// </summary>
+    public string? Classifier1 { get; set; }
+
+    /// <summary>Zweiter Klassifizierer: bei Online-Partien der Modus (Blitz, Rapid, …), bei Ligapartien der Jahrgang („2026/27").</summary>
+    public string? Classifier2 { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

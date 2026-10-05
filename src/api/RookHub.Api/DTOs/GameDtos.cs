@@ -91,6 +91,18 @@ public class SavedGameDto
 
     /// <summary>Stand des Fehler-Trainings zu dieser Partie; <c>null</c> = noch nie trainiert.</summary>
     public GameMistakeProgressDto? Mistakes { get; set; }
+
+    /// <summary>Klassifizierer 1 (0.661.0): bei Online-Partien die Seite, bei Ligapartien die Liga. Gesetzter Wert, sonst der
+    /// abgeleitete (<see cref="Services.GameClassifier"/>); <c>null</c> = keiner bekannt.</summary>
+    public string? Classifier1 { get; set; }
+
+    /// <summary>Klassifizierer 2: bei Online-Partien der Modus, bei Ligapartien der Jahrgang.</summary>
+    public string? Classifier2 { get; set; }
+
+    /// <summary>Die vom Nutzer GESETZTEN Werte (ohne Ableitung) — der Editor zeigt nur diese als Eingabe, den abgeleiteten
+    /// Wert als Platzhalter.</summary>
+    public string? Classifier1Set { get; set; }
+    public string? Classifier2Set { get; set; }
 }
 
 /// <summary>Fortschritt im Fehler-Training einer Partie („4 von 7 · 3 offen").</summary>

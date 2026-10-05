@@ -16,6 +16,7 @@ import { switchMap } from 'rxjs/operators';
 import { GamesService, PgnImportResult, SavedGame } from './games.service';
 import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
+import { distinctClassifiers, filterByClassifiers, hasUnclassified, NO_CLASSIFIER } from './classifier.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -56,6 +57,30 @@ export type AnalysisState = 'none' | 'running' | 'done';
             {{ 'games.mistakes.onlyOpen' | translate: { count: withOpenMistakes() } }}
           </mat-checkbox>
         }
+        <!-- Zwei Klassifizierer (0.661.0): Online-Partien Seite + Modus, Ligapartien Liga + Jahrgang. Ein Filter je
+             Klassifizierer, erst wenn es überhaupt Werte gibt — sonst stünde ein Schalter da, der nichts tut. -->
+        @if (firstOptions().length > 0 || secondOptions().length > 0) {
+          <div class="classifier-filters">
+            @if (firstOptions().length > 0) {
+              <label>{{ 'games.classifier.first' | translate }}
+                <select [(ngModel)]="filter1" name="filter1" [attr.aria-label]="'games.classifier.first' | translate">
+                  <option value="">{{ 'games.classifier.all' | translate }}</option>
+                  @for (v of firstOptions(); track v) { <option [value]="v">{{ v }}</option> }
+                  @if (unclassified1()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
+                </select>
+              </label>
+            }
+            @if (secondOptions().length > 0) {
+              <label>{{ 'games.classifier.second' | translate }}
+                <select [(ngModel)]="filter2" name="filter2" [attr.aria-label]="'games.classifier.second' | translate">
+                  <option value="">{{ 'games.classifier.all' | translate }}</option>
+                  @for (v of secondOptions(); track v) { <option [value]="v">{{ v }}</option> }
+                  @if (unclassified2()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
+                </select>
+              </label>
+            }
+          </div>
+        }
       </div>
 
       @if (loading) {
@@ -89,6 +114,12 @@ export type AnalysisState = 'none' | 'running' | 'done';
               <a class="players" [routerLink]="['/games', g.id]">
                 <span class="p"><i class="dot white"></i><span class="name">{{ g.white || '?' }}</span>@if (g.whiteElo) { <span class="elo">({{ g.whiteElo }})</span> }</span>
                 <span class="p"><i class="dot black"></i><span class="name">{{ g.black || '?' }}</span>@if (g.blackElo) { <span class="elo">({{ g.blackElo }})</span> }</span>
+                @if (g.classifier1 || g.classifier2) {
+                  <span class="classifiers">
+                    @if (g.classifier1) { <span class="chip">{{ g.classifier1 }}</span> }
+                    @if (g.classifier2) { <span class="chip">{{ g.classifier2 }}</span> }
+                  </span>
+                }
               </a>
               <!-- Punkte wie auf chess.com untereinander, die Gewinnerseite hervorgehoben. -->
               <div class="score">
@@ -188,6 +219,14 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .only-open { margin-top: 4px; }
+    .classifier-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 0.9rem; }
+    .classifier-filters label { display: inline-flex; align-items: center; gap: 6px; }
+    .classifier-filters select { font: inherit; color: inherit; background: transparent; padding: 4px 8px;
+      border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 6px; max-width: 60vw; }
+    .classifier-filters option { color: initial; }
+    .classifiers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+    .chip { font-size: 0.72rem; line-height: 1; padding: 3px 7px; border-radius: 10px;
+      background: color-mix(in srgb, currentColor 10%, transparent); color: color-mix(in srgb, currentColor 75%, transparent); }
 
     /* Eine Zeile = ein Raster; die Kopfzeile benutzt dasselbe, damit die Spalten stehen. */
     .table { display: flex; flex-direction: column; }
@@ -284,9 +323,26 @@ export class GamesListComponent implements OnInit {
     return this.games.filter(g => (g.mistakes?.open ?? 0) > 0).length;
   }
 
-  /** Die angezeigte Liste — ungefiltert, oder nur die mit offenen Fehlern. */
+  /** Filter der Klassifizierer (leer = alle) — wie `onlyOpen` bewusst nicht gemerkt. */
+  filter1 = '';
+  filter2 = '';
+  readonly none = NO_CLASSIFIER;
+
+  firstOptions(): string[] { return distinctClassifiers(this.games, 1); }
+  secondOptions(): string[] { return distinctClassifiers(this.games, 2); }
+  unclassified1(): boolean { return hasUnclassified(this.games, 1); }
+  unclassified2(): boolean { return hasUnclassified(this.games, 2); }
+
+  /** Die angezeigte Liste — ungefiltert, oder nur die mit offenen Fehlern bzw. dem gewählten Klassifizierer. */
   shownGames(): SavedGame[] {
-    return this.onlyOpen ? this.games.filter(g => (g.mistakes?.open ?? 0) > 0) : this.games;
+    const open = this.onlyOpen ? this.games.filter(g => (g.mistakes?.open ?? 0) > 0) : this.games;
+    // Ein Wert, den es nach dem Löschen/Neuladen nicht mehr gibt, filtert nicht mehr: sonst stünde eine leere Liste
+    // da, und die Auswahl hätte keinen Eintrag mehr, mit dem man den Filter zurücknehmen könnte.
+    const known = (value: string, options: string[], hasNone: boolean): string =>
+      value === NO_CLASSIFIER ? (hasNone ? value : '') : options.includes(value) ? value : '';
+    return filterByClassifiers(open,
+      known(this.filter1, this.firstOptions(), this.unclassified1()),
+      known(this.filter2, this.secondOptions(), this.unclassified2()));
   }
 
   /** Die beiden Punkte untereinander, wie in chess.coms Ergebnis-Spalte. Offen/unbekannt = leer. */

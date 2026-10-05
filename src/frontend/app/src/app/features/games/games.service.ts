@@ -28,6 +28,12 @@ export interface SavedGame {
   mistakes?: GameMistakeProgress | null;
   /** Die Formular-Einlesung, aus der die Partie stammt (0.529.0); `null` = kein Foto. */
   scanId?: number | null;
+  /** Klassifizierer der Liste (0.661.0): Online-Partien Seite + Modus, Ligapartien Liga + Jahrgang. Geltender Wert (gesetzt, sonst abgeleitet); `null` = keiner. */
+  classifier1?: string | null;
+  classifier2?: string | null;
+  /** Nur die vom Nutzer GESETZTEN Werte — der Editor zeigt den abgeleiteten als Platzhalter, nicht als Eingabe. */
+  classifier1Set?: string | null;
+  classifier2Set?: string | null;
 }
 
 /** Kopf der verknüpften Analyse für die Partienliste: Fortschritt, und wenn fertig die Genauigkeit je Seite. */
