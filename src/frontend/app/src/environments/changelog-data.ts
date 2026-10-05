@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.663.0", date: "2026-10-05", changes: [
+    { en: "LeagueHub player card: when replaying a game there is now an “Analyse” button — it puts the game into “My games”, starts the analysis (an existing one, e.g. of the club game, is reused) and opens it on RookHub’s game page with evaluation curve, mistakes and move classes.", de: "LeagueHub-Spielerkarte: Beim Nachspielen einer Partie gibt es jetzt den Knopf „Analyse“ — er legt die Partie in „Meine Partien“, stößt die Analyse an (eine vorhandene, etwa die der Vereinspartie, wird wiederverwendet) und öffnet sie auf RookHubs Partieseite mit Bewertungskurve, Fehlern und Zugklassen." },
+  ] },
   { version: "0.662.0", date: "2026-10-05", changes: [
     { en: "My games: tags. Give each game free-text tags in the game editor (Enter or a comma adds one, up to 10 per game); the field suggests the tags you have already used. The list shows them as chips and has a drop-down that filters by tag. For now they are visible only to you.", de: "Meine Partien: Tags. Im Partie-Editor kannst du jeder Partie Tags als Freitext geben (Enter oder Komma fügt einen hinzu, bis zu 10 je Partie); das Feld schlägt die schon vergebenen Tags vor. Die Liste zeigt sie als Chips und hat ein Auswahlfeld, das nach Tag filtert. Vorerst sind sie nur für dich sichtbar." },
   ] },

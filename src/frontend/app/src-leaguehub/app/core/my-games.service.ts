@@ -32,6 +32,12 @@ export class MyGamesService {
     return `${this.rookHubUrl}/g/${g.shareToken}`;
   }
 
+  /** Für die Partie die Analyse anstoßen (vorhandene wird wiederverwendet). Scheitert das, geht es trotzdem weiter —
+   *  auf RookHubs Partieseite gibt es „Partie analysieren" auch noch. */
+  async analyze(id: number): Promise<void> {
+    try { await this.club.analyzeMyGame(id); } catch { /* s. o. */ }
+  }
+
   /** Nach RookHub auf die Partie springen — angemeldet über einen Einmal-Code. */
   open(id: number): Promise<void> {
     return this.handoff.jumpToRookHub(`games/${id}`);

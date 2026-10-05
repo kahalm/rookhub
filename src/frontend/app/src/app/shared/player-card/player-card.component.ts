@@ -49,6 +49,9 @@ type Show = 'w' | 's' | 'b';
             <div class="actions">
               <button type="button" class="btn-sec" (click)="replay.set(null)">← Zurück zur Karte</button>
               @if (myGames.available) {
+                <!-- Wunsch 2026-10-05 (0.663.0): die Partie gleich analysiert ansehen, wie auf RookHubs Partieseite -->
+                <button type="button" class="btn-pri" [disabled]="gameBusy()" (click)="analyzeGame(r.pgn)"
+                        title="Legt die Partie in deinen Partien ab, lässt sie analysieren und öffnet sie in RookHub mit Bewertungskurve">Analyse</button>
                 <button type="button" class="btn-sec" [disabled]="gameBusy()" (click)="toMyGames(r.pgn)"
                         title="Legt die Partie in deinen Partien in RookHub ab und öffnet sie dort">Zu meinen Partien</button>
                 <button type="button" class="btn-sec" [disabled]="gameBusy()" (click)="shareGame(r.pgn)"
@@ -385,6 +388,21 @@ export class PlayerCardComponent {
     this.gameBusy.set(true);
     this.gameNote.set({ text: 'Liegt in deinen Partien — RookHub wird geöffnet …', err: false });
     try {
+      await this.myGames.open(id);
+    } finally {
+      this.gameBusy.set(false);
+    }
+  }
+
+  /** Ablegen, Analyse anstoßen (eine vorhandene — etwa die der Vereinspartie — wird wiederverwendet) und auf RookHubs
+   *  Partieseite springen: Bewertungskurve, Fehler, Zugklassen (Wunsch 2026-10-05). */
+  async analyzeGame(pgn: string): Promise<void> {
+    const id = await this.saveGame(pgn);
+    if (id === null) return;
+    this.gameBusy.set(true);
+    this.gameNote.set({ text: 'Analyse wird angestoßen — RookHub wird geöffnet …', err: false });
+    try {
+      await this.myGames.analyze(id);
       await this.myGames.open(id);
     } finally {
       this.gameBusy.set(false);

@@ -270,6 +270,12 @@ export class ClubApiService {
   }
 
   /** Eine eigene Partie aus RookHub (⋮ → „In die Vereins-Datenbank" auf der Partieseite) — dieselbe API, dasselbe Konto. */
+  /** „Partie analysieren" einer eigenen Partie in RookHub (0.663.0) — eine vorhandene Analyse (auch die der Vereinspartie)
+   *  wird wiederverwendet, sonst eingereiht. */
+  analyzeMyGame(id: number): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/games/${id}/analyze`, { lang: 'de' }));
+  }
+
   savedGame(id: number): Promise<SavedGameRef> {
     return firstValueFrom(this.http.get<SavedGameRef>(`/api/games/${id}`));
   }

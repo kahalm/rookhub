@@ -33,7 +33,7 @@ describe('PlayerCardComponent', () => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree', 'profile', 'playerSuggestions']);
     api.playerSuggestions.and.resolveTo({ items: [] });
     api.card.and.resolveTo(CARD);
-    myGames = Object.assign(jasmine.createSpyObj<MyGamesService>('MyGamesService', ['save', 'shareUrl', 'open']),
+    myGames = Object.assign(jasmine.createSpyObj<MyGamesService>('MyGamesService', ['save', 'shareUrl', 'open', 'analyze']),
       { available: false, rookHubUrl: null as string | null });
     TestBed.configureTestingModule({ imports: [PlayerCardComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api },
@@ -111,6 +111,21 @@ describe('PlayerCardComponent', () => {
     expect(myGames.save).toHaveBeenCalledWith(PGN);
     expect(myGames.open).toHaveBeenCalledWith(41);
     expect(el().querySelector('.game-note')?.textContent).toContain('Liegt in deinen Partien');
+  });
+
+  it('„Analyse" legt ab, stößt die Analyse an und springt auf RookHubs Partieseite (0.663.0)', async () => {
+    await replayOpen();
+    myGames.save.and.resolveTo(41);
+    const order: string[] = [];
+    myGames.analyze.and.callFake(async () => { order.push('analyze'); });
+    myGames.open.and.callFake(async () => { order.push('open'); });
+    buttonText('Analyse')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(myGames.save).toHaveBeenCalledWith(PGN);
+    expect(myGames.analyze).toHaveBeenCalledWith(41);
+    expect(myGames.open).toHaveBeenCalledWith(41);
+    expect(order).toEqual(['analyze', 'open']);                                        // erst anstoßen, dann springen
   });
 
   it('„Partie teilen" legt einmal ab und kopiert den öffentlichen RookHub-Link', async () => {
