@@ -52,9 +52,12 @@ public class MasterAnalysisScheduler : BackgroundService
     private readonly HashSet<int> _unplayable = [];
     private readonly HashSet<int> _unplayableClub = [];
 
+    private readonly League.LeagueAnalysisQueue _league;
+
     public MasterAnalysisScheduler(IServiceScopeFactory scopes, QuietHours quiet, IConfiguration config,
-        ILogger<MasterAnalysisScheduler> logger)
+        ILogger<MasterAnalysisScheduler> logger, League.LeagueAnalysisQueue? league = null)
     {
+        _league = league ?? new League.LeagueAnalysisQueue();
         _scopes = scopes;
         _quiet = quiet;
         _logger = logger;
@@ -102,7 +105,7 @@ public class MasterAnalysisScheduler : BackgroundService
         var slots = Math.Max(1, owner.BackgroundEngines.Count);
 
         var open = await db.GameAnalyses
-            .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
+            .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
         if (open >= slots) return null;
@@ -121,6 +124,24 @@ public class MasterAnalysisScheduler : BackgroundService
             {
                 _unplayableClub.Add(club.Id);
                 _logger.LogWarning("Vereinspartie {LeagueClubGameId} übersprungen: {Reason}", club.Id, ex.Message);
+                return null;
+            }
+        }
+
+        // Liga-Partien aktueller Ligaspieler (0.665.0): nach den Vereinspartien, vor den Meisterpartien
+        if (await _league.NextAsync(db, DateTime.UtcNow, ct) is { } next)
+        {
+            try
+            {
+                var dto = await analyses.CreateLeagueBatchAsync(owner.UserId, next.Item.Pgn, next.MovesHash, ct);
+                _logger.LogInformation("Liga-Partie eingereiht (Analyse {AnalysisId}, {Plies} Halbzüge, Gegner nächste Runde: {Opponent})",
+                    dto.Id, dto.PlyCount, next.Item.Opponent);
+                return dto.Id;
+            }
+            catch (ArgumentException ex)
+            {
+                _league.Skip(next.Item.Key);
+                _logger.LogWarning("Liga-Partie übersprungen: {Reason}", ex.Message);
                 return null;
             }
         }

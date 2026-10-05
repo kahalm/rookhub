@@ -52,7 +52,7 @@ public class GameAnalysisService
 
     public async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
         GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null,
-        int? libraryGameId = null, int? leagueClubGameId = null)
+        int? libraryGameId = null, int? leagueClubGameId = null, string? movesHash = null)
     {
         var depth = req.TargetDepth ?? GameAnalysisDefaults.TargetDepth;
         if (depth is < 1 or > AnalysisJobService.MaxDepth)
@@ -86,6 +86,7 @@ public class GameAnalysisService
             Origin = origin,
             LibraryGameId = libraryGameId,
             LeagueClubGameId = leagueClubGameId,
+            MovesHash = movesHash,
             // Nur aus der Grundstellung — sonst stuende der erste Zug der Partie als Fortsetzung
             // an der Wurzel des Eroeffnungsbaums, wo es ihn gar nicht gibt (siehe LibraryGameReader).
             OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen)
@@ -169,6 +170,16 @@ public class GameAnalysisService
             TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
             MultiPv = GameAnalysisDefaults.MultiPv,
         }, ct, GameAnalysisOrigin.Club, engineOwnerUserId: ownerUserId, leagueClubGameId: leagueClubGameId);
+
+    /// <summary>Eine Liga-Partie aus einem Spielerprofil für den Stapel anlegen (<see cref="GameAnalysisOrigin.League"/>,
+    /// 0.665.0) — wie <see cref="CreateClubBatchAsync"/>, erkannt über den Zug-Schlüssel.</summary>
+    public Task<GameAnalysisDto> CreateLeagueBatchAsync(int ownerUserId, string pgn, string movesHash, CancellationToken ct = default)
+        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
+        {
+            Pgn = pgn,
+            TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
+            MultiPv = GameAnalysisDefaults.MultiPv,
+        }, ct, GameAnalysisOrigin.League, engineOwnerUserId: ownerUserId, movesHash: movesHash);
 
     /// <summary>
     /// Den Kopf der Analysen einer Vereinspartie nachziehen, nachdem sie korrigiert wurde (<c>LeagueClubService.UpdateAsync</c>):
@@ -320,7 +331,7 @@ public class GameAnalysisService
     /// </summary>
     public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default, bool includeSavedGames = false) =>
         ProjectAsync(_db.GameAnalyses.AsNoTracking()
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
                 && (includeSavedGames || g.Origin != GameAnalysisOrigin.SavedGame)), ct);
 
     /// <summary>
@@ -753,7 +764,7 @@ public class GameAnalysisService
     private Task<int> OpenPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
         => _db.GameAnalyses
             .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
-                && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club
+                && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
                 && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
@@ -761,7 +772,7 @@ public class GameAnalysisService
     /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
     private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
         => _db.GameAnalyses
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
 

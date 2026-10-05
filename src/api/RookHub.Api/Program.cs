@@ -409,6 +409,7 @@ try
     builder.Services.AddHostedService<MoveComparisonPumpService>();
     // Meisterpartien im Hintergrund analysieren — zu den Zeiten der Uebersetzung (QuietHours), auf den Engines der
     // Haus-Engine, jeder andere Auftrag hat Vorrang (MasterAnalysis:Enabled=false schaltet ab).
+    builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueAnalysisQueue>();   // Liga-Partien für den Stapel (0.665.0)
     builder.Services.AddHostedService<MasterAnalysisScheduler>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();

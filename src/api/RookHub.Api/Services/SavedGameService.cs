@@ -528,8 +528,11 @@ public class SavedGameService
         if (sans.Count == 0) return null;
         var hash = League.LeagueClubService.HashOf(sans);
         var clubIds = _db.LeagueClubGames.Where(g => g.MovesHash == hash).Select(g => (int?)g.Id);
+        // dazu die Liga-Partien des Stapels (0.665.0) mit denselben Zügen
         return await _db.GameAnalyses.AsNoTracking()
-            .Where(a => a.Origin == GameAnalysisOrigin.Club && a.Status != GameAnalysisStatus.Failed && clubIds.Contains(a.LeagueClubGameId))
+            .Where(a => a.Status != GameAnalysisStatus.Failed
+                && ((a.Origin == GameAnalysisOrigin.Club && clubIds.Contains(a.LeagueClubGameId))
+                    || (a.Origin == GameAnalysisOrigin.League && a.MovesHash == hash)))
             .OrderByDescending(a => a.Status == GameAnalysisStatus.Done).ThenByDescending(a => a.Id)
             .Select(a => (int?)a.Id)
             .FirstOrDefaultAsync(ct);

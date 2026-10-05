@@ -646,6 +646,43 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     }
 
     /// <summary>
+    /// Liga-Partien (0.665.0): die Warteschlange liest Saison, Meldelisten, offene Begegnungen (StartsWith) und Profile und
+    /// fragt je Partie, ob eine Analyse mit demselben Zug-Schlüssel oder eine Club-Analyse derselben Züge (korrelierte
+    /// Unterabfrage) schon da ist; der Takt legt sie mit <c>MovesHash</c> an.
+    /// </summary>
+    [MySqlFact]
+    public async Task LigaPartien_WarteschlangeUndTakt_uebersetzenSichNachMariaDb()
+    {
+        var owner = await SeedUserAsync("haus");
+        (await Db.AppUsers.FindAsync(owner))!.IsAdmin = true;
+        var cred = new LichessEngineCredential { UserId = owner, EncryptedToken = "", ShareAsHouseEngine = true };
+        cred.SetBackgroundEngines(["rhe_a", "rhe_b"]);
+        Db.LichessEngineCredentials.Add(cred);
+        Db.LeagueTournaments.Add(new LeagueTournament { Tnr = 77, Season = "2026/27", League = "Landesliga", Stage = "Liga" });
+        Db.LeagueMatches.Add(new LeagueMatch { Tnr = 77, Round = 2, Home = "Kufstein 1", Away = "Schwaz 1" });
+        Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 77, Team = "Kufstein 1", Name = "Gegner, Kurt", NameKey = "gegner kurt", FideId = "100" });
+        var date = DateTime.UtcNow.AddMonths(-1).ToString("yyyy.MM.dd");
+        Db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "100", Name = "Gegner, Kurt",
+            Pgn = $"[Date \"{date}\"]\n[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. d4 d5 2. c4 e6 *\n\n"
+                + $"[Date \"{date}\"]\n[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 *\n" });
+        var club = new LeagueClubGame { White = "Schwaz", Black = "Gegner", Year = 2026, Plies = 4,
+            MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(["d4", "d5", "c4", "e6"]), Pgn = "1. d4 d5 2. c4 e6 *" };
+        Db.LeagueClubGames.Add(club);
+        await Db.SaveChangesAsync();
+        Db.GameAnalyses.Add(new GameAnalysis { UserId = owner, Pgn = club.Pgn, Origin = GameAnalysisOrigin.Club,
+            LeagueClubGameId = club.Id, Status = GameAnalysisStatus.Done, PlyCount = 4 });
+        await Db.SaveChangesAsync();
+
+        var scheduler = new MasterAnalysisScheduler(null!, new QuietHours(""), new ConfigurationBuilder().Build(),
+            NullLogger<MasterAnalysisScheduler>.Instance, new RookHub.Api.Services.League.LeagueAnalysisQueue());
+        var id = await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default);
+        var analysis = await Db.GameAnalyses.AsNoTracking().SingleAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisOrigin.League, analysis.Origin);
+        Assert.Equal(RookHub.Api.Services.League.LeagueClubService.HashOf(["e4", "e5", "Nf3", "Nc6"]), analysis.MovesHash);
+        Assert.Empty(await Get<AnalysisJobService>().ListAsync(owner));
+    }
+
+    /// <summary>
     /// Vereinspartien (2026-09-28): der Takt nimmt sie VOR den Meisterpartien — NOT EXISTS ueber
     /// <c>GameAnalysis.LeagueClubGameId</c> (neue Spalte), die Zaehlung der offenen Stellungen ueber beide Etiketten —,
     /// und das Loeschen der Vereinspartie raeumt ihre Analyse mit ab.

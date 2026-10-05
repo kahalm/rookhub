@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.665.0", date: "2026-10-05", changes: [
+    { en: "LeagueHub: the games of the current league players are now analysed in the background as well — the games of the last two years from their player cards, the players of Schwaz’s next opponents first, newest game first. They come after the club games and before the master games, at the same times and on the same engines. When such a game is copied to “My games” or analysed from the player card, the existing analysis is reused.", de: "LeagueHub: Die Partien der aktuellen Ligaspieler werden jetzt ebenfalls im Hintergrund analysiert — die Partien der letzten zwei Jahre aus ihren Spielerkarten, zuerst die Spieler der nächsten Gegner von Schwaz, jeweils die neueste Partie zuerst. Sie kommen nach den Vereinspartien und vor den Meisterpartien dran, zu denselben Zeiten und auf denselben Engines. Wird so eine Partie in „Meine Partien“ kopiert oder von der Spielerkarte aus analysiert, wird die vorhandene Analyse wiederverwendet." },
+  ] },
   { version: "0.664.0", date: "2026-10-05", changes: [
     { en: "Game page: the evaluation (graph, accuracy, move classes) now appears at once instead of after a few seconds. The “book moves” from your repertoires used to hold the whole answer up whenever the repertoire lookup had gone cold (after five idle minutes it is rebuilt, 2–4 s with a large repertoire); they are now fetched separately and filled in a moment later.", de: "Partie-Seite: Die Auswertung (Kurve, Genauigkeit, Zug-Klassen) steht jetzt sofort da statt erst nach einigen Sekunden. Die „Buchzüge“ aus deinen Repertoires hielten die ganze Antwort auf, sobald der Repertoire-Zwischenspeicher kalt war (nach fünf Minuten Leerlauf wird er neu aufgebaut, bei großem Repertoire 2–4 s); sie werden jetzt getrennt geholt und einen Moment später eingetragen." },
   ] },

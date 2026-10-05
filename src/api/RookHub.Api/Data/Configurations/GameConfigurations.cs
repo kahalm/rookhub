@@ -273,6 +273,8 @@ internal sealed class GameAnalysisConfiguration : IEntityTypeConfiguration<GameA
          .HasForeignKey(g => g.UserId)
          .OnDelete(DeleteBehavior.Cascade);
         e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+        e.Property(g => g.MovesHash).HasMaxLength(64);
+        e.HasIndex(g => g.MovesHash);   // Liga-Partien des Stapels (0.665.0)
     }
 }
 

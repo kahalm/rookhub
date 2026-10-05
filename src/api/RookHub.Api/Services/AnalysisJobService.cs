@@ -62,7 +62,7 @@ public class AnalysisJobService
         // auch fuer Nutzer ohne eine einzige; mit ihr traegt der Index (UserId, CreatedAt) auf GameAnalyses.
         var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
                 && !_db.GameAnalyses.Any(g => g.UserId == userId
-                    && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
+                    && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
                     && g.Positions.Any(p => p.AnalysisJobId == j.Id))
                 && !_db.MoveComparisonLines.Any(l => l.AnalysisJobId == j.Id)
                 && !_db.TacticCandidates.Any(t => t.AnalysisJobId == j.Id))   // Taktik-Ernte (0.657.0)

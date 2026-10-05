@@ -49,6 +49,15 @@ public enum GameAnalysisOrigin
     /// (Namen, „Schwaz"), zieht der Kopf der Analyse nach.
     /// </summary>
     Club = 4,
+    /// <summary>
+    /// Partie eines aktuellen Ligaspielers aus seinem LeagueHub-Profil (Lumbra, Megabase, chess-results, Übertragungen —
+    /// 0.665.0, Wunsch 2026-10-05: „analysier im Hintergrund auch alle Partien für LeagueHub, zumindest von Spielern, die
+    /// aktuell in der Liga mitspielen; erst die neuesten (2 Jahre zurück), dann bevorzugt die Gegner von Schwaz nächste Runde,
+    /// dann der Rest, und erst danach wieder die Meisterpartien"). Derselbe Stapel wie <see cref="Club"/>, nach ihm und vor
+    /// <see cref="Library"/> (<c>LeagueAnalysisQueue</c>). Erkannt über <see cref="GameAnalysis.MovesHash"/> — dieselbe
+    /// Partie in zwei Profilen wird einmal gerechnet; eine Kopie in „Meine Partien" übernimmt die Analyse.
+    /// </summary>
+    League = 5,
 }
 
 /// <summary>Die Etiketten des Stapels (<c>MasterAnalysisScheduler</c>).</summary>
@@ -58,7 +67,7 @@ public static class GameAnalysisOrigins
     /// Besitzers und nicht in der Reihenfolge seiner eigenen Partien. In Abfragen steht dieselbe Bedingung
     /// ausgeschrieben (<c>Origin != Library &amp;&amp; Origin != Club</c>) — ein Methodenaufruf ließe sich nicht übersetzen.</summary>
     public static bool IsBatch(GameAnalysisOrigin origin) =>
-        origin is GameAnalysisOrigin.Library or GameAnalysisOrigin.Club;
+        origin is GameAnalysisOrigin.Library or GameAnalysisOrigin.Club or GameAnalysisOrigin.League;
 }
 
 /// <summary>
@@ -150,6 +159,10 @@ public class GameAnalysis
     /// Löschen der Partie die Analyse mit ab (<c>LeagueClubService.DeleteAsync</c>): sie trägt die Namen der Partie.
     /// </summary>
     public int? LeagueClubGameId { get; set; }
+
+    /// <summary>Nur <see cref="GameAnalysisOrigin.League"/> (0.665.0): Schlüssel der Zugfolge
+    /// (<c>LeagueClubService.HashOf</c> der SAN ab der Grundstellung) — erkennt eine schon gerechnete Liga-Partie.</summary>
+    public string? MovesHash { get; set; }
 
     /// <summary>Taktiken geerntet (0.657.0, <c>TacticHarvestService</c>) — eine fertige Analyse wird genau einmal durchsucht.</summary>
     public DateTime? TacticsScannedAt { get; set; }

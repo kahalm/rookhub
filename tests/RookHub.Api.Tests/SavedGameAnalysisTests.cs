@@ -184,6 +184,28 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Null((await RowAsync(res.Ids[1])).GameAnalysisId);
     }
 
+    /// <summary>0.665.0: eine Liga-Partie aus dem Hintergrund-Stapel (über ihren Zug-Schlüssel) zählt genauso.</summary>
+    [Fact]
+    public async Task Analyze_LigaPartieDesStapels_nimmtDeren_Analyse()
+    {
+        var house = await UserAsync("house");
+        var league = new GameAnalysis
+        {
+            UserId = house.Id, Title = "Liga", Pgn = "1. e4 c5 2. Nf3 d6 *", Origin = GameAnalysisOrigin.League,
+            MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(new[] { "e4", "c5", "Nf3", "d6" }),
+            Status = GameAnalysisStatus.Done, PlyCount = 4,
+        };
+        _db.GameAnalyses.Add(league);
+        await _db.SaveChangesAsync();
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+
+        var result = await _svc.AnalyzeAsync(owner.Id, game.Id);
+
+        Assert.True(result!.Reused);
+        Assert.Equal(league.Id, result.Analysis!.Id);
+    }
+
     /// <summary>Zweimal klicken = einmal rechnen. Der zweite Aufruf bekommt dieselbe Analyse zurück.</summary>
     [Fact]
     public async Task Analyze_zweiAufrufeNacheinander_ergebenEINEAnalyse()

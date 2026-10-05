@@ -3218,6 +3218,18 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   LeagueHub) verknüpft sie gleich beim Anlegen, „Partie analysieren" nimmt sie als dritte Stufe vor dem Neu-Einwerfen.
   Preis: die Kopie bekommt die Vereins-Analyse (Tiefe 20, keine Vertiefung auf 30). Die umgekehrte Richtung (eine schon
   analysierte eigene Partie wird in die Vereins-Datenbank hochgeladen) rechnet weiterhin neu.
+- **Liga-Partien danach** (0.665.0, Wunsch „analysier im Hintergrund auch alle Partien für LeagueHub — zumindest von
+  Spielern, die aktuell in der Liga mitspielen; erst die neuesten (2 Jahre zurück), dann bevorzugt die Gegner von Schwaz
+  nächste Runde, dann der Rest, und erst dann wieder die Meisterpartien"): `Services/League/LeagueAnalysisQueue.cs`
+  (Singleton, im Takt NACH den Vereinspartien, VOR den Meisterpartien). Quelle sind die Profile
+  (`LeaguePlayerProfile.Pgn`) aller Spieler mit FIDE-ID auf einer Meldeliste der laufenden Saison, nur Partien der letzten
+  `Years` (2) Jahre ab der Grundstellung; zuerst die Meldeliste des Gegners jeder Schwazer Mannschaft in ihrer kleinsten
+  Runde ohne Ergebnis, dann alle übrigen, je neueste zuerst. Dieselbe Partie in zwei Profilen zählt einmal. Die Liste lebt
+  im Speicher und wird stündlich neu gebaut. Angelegt mit `GameAnalysisOrigin.League = 5` (`CreateLeagueBatchAsync`,
+  `IsBatch`, dieselben Ausschlüsse wie Library/Club — nicht für alle lesbar, in keiner Liste) und dem Zug-Schlüssel
+  `GameAnalysis.MovesHash` (= `LeagueClubService.HashOf` der kanonischen SAN, Index). Übersprungen wird, was schon eine
+  nicht gescheiterte Analyse mit diesem Schlüssel oder eine Club-Analyse derselben Züge hat; `ClubAnalysisForMovesAsync`
+  nimmt Liga-Analysen über `MovesHash` mit (Kopie nach „Meine Partien", „Analyse" auf der Spielerkarte).
 
 ### Punktepartie (`/guess`) — eine Meisterpartie Zug fuer Zug erraten
 
