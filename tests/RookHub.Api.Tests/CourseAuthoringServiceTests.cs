@@ -635,6 +635,90 @@ public class CourseAuthoringServiceTests : IDisposable
         Assert.Equal(900, (await _db.CourseAttempts.SingleAsync()).TimeSeconds);   // gemessene Zeit bleibt
     }
 
+    private CourseService NewCourseService()
+    {
+        var notifications = new NotificationService(_db);
+        return new CourseService(_db, Microsoft.Extensions.Logging.Abstractions.NullLogger<CourseService>.Instance,
+            new PgnImportService(_db), new BookAdminService(_db), new FriendService(_db, notifications), notifications);
+    }
+
+    private async Task<(AppUser User, Book Book, BookPuzzle A, BookPuzzle B)> SeedPlayedChapterAsync()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id);
+        var a = await SeedLineAsync(book, "1", "K", infoOnly: false, fen: Fen1);
+        var b = await SeedLineAsync(book, "2", "K", infoOnly: false, fen: Fen2);
+        foreach (var line in new[] { a, b })
+        {
+            _db.CoursePuzzleResults.Add(new CoursePuzzleResult
+            {
+                UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id, SolvedAt = DateTime.UtcNow.AddMinutes(-5),
+            });
+            _db.CourseAttempts.Add(new CourseAttempt
+            {
+                UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id, Solved = true,
+                TimeSeconds = 30, AttemptedAt = DateTime.UtcNow.AddMinutes(-5),
+            });
+        }
+        await _db.SaveChangesAsync();
+        return (user, book, a, b);
+    }
+
+    [Theory]
+    [InlineData("sequential")]
+    [InlineData("random")]
+    public async Task ResetChapterProgress_ChapterIsPlayableAgain(string mode)
+    {
+        // Gemeldet 2026-10-05 (Kurs 434): Kapitel durchgespielt, Kapitel zurückgesetzt → „Kurs abgeschlossen".
+        // Die Versuche bleiben als Zeit-Log stehen, und der Pool schloss jede Linie mit einem Versuch seit dem
+        // BUCHWEITEN Reset aus — den es nie gab.
+        var (user, book, a, _) = await SeedPlayedChapterAsync();
+        var courses = NewCourseService();
+        Assert.True((await courses.GetNextAsync(user.Id, book.Id, mode, null, null, isAdmin: false)).Completed);
+
+        await _svc.ResetChapterProgressAsync(user.Id, book.Id, "K", isAdmin: false);
+
+        var next = await courses.GetNextAsync(user.Id, book.Id, mode, null, null, isAdmin: false);
+        Assert.False(next.Completed);
+        Assert.NotNull(next.Puzzle);
+        if (mode == "sequential") Assert.Equal(a.Id, next.Puzzle!.Id);
+        Assert.Equal(2, await _db.CourseAttempts.CountAsync());   // Zeit-Log unverändert
+    }
+
+    [Fact]
+    public async Task ResetChapterProgress_LinesNoLongerShowAsFailed_NewAttemptsCountAgain()
+    {
+        var (user, book, a, b) = await SeedPlayedChapterAsync();
+        var courses = NewCourseService();
+        await _svc.ResetChapterProgressAsync(user.Id, book.Id, "K", isAdmin: false);
+
+        var status = await courses.GetLineStatusAsync(user.Id, book.Id, isAdmin: false);
+        Assert.Empty(status.SolvedIds);
+        Assert.Empty(status.FailedIds);   // vor dem Reset gespielt ≠ gescheitert
+
+        // Ein Fehlversuch NACH dem Reset zählt wieder: die Linie fällt aus dem Pool, die andere bleibt.
+        _db.CourseAttempts.Add(new CourseAttempt
+        {
+            UserId = user.Id, BookId = book.Id, BookPuzzleId = a.Id, Solved = false,
+            TimeSeconds = 10, AttemptedAt = DateTime.UtcNow.AddSeconds(1),
+        });
+        await _db.SaveChangesAsync();
+        Assert.Equal(new[] { a.Id }, (await courses.GetLineStatusAsync(user.Id, book.Id, false)).FailedIds);
+        Assert.Equal(b.Id, (await courses.GetNextAsync(user.Id, book.Id, "sequential", null, null, false)).Puzzle!.Id);
+    }
+
+    [Fact]
+    public async Task ResetChapterProgress_TwiceUpdatesMarker_BookResetRemovesMarkers()
+    {
+        var (user, book, _, _) = await SeedPlayedChapterAsync();
+        await _svc.ResetChapterProgressAsync(user.Id, book.Id, "K", isAdmin: false);
+        await _svc.ResetChapterProgressAsync(user.Id, book.Id, "K", isAdmin: false);
+        Assert.Equal(2, await _db.CourseLineResets.CountAsync());   // eine Zeile je Linie, nicht je Reset
+
+        await NewCourseService().ResetAsync(user.Id, book.Id, isAdmin: false);
+        Assert.Empty(_db.CourseLineResets);   // der buchweite Reset überholt sie
+    }
+
     [Fact]
     public async Task ResetChapterProgress_KeepsMyCalculationTrees()
     {

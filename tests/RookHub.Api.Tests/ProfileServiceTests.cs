@@ -49,6 +49,7 @@ public class ProfileServiceTests : IDisposable
         ["CourseAttempts"] = "anonymes Zeit-Log des Trainingsziel-Trackers",
         ["CoursePuzzleResults"] = "anonymer Kursfortschritt",
         ["CourseInfoViews"] = "anonymer Kursfortschritt",
+        ["CourseLineResets"] = "anonymer Kursfortschritt (Kapitel-Reset je Linie)",
         ["CourseProgresses"] = "anonymer Kursfortschritt",
         ["WeeklyPostAttempts"] = "anonyme Löse-Statistik",
         ["ChessableActivities"] = "anonymes Zeit-Log (Chessable-Kategorie)",

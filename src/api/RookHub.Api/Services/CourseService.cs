@@ -187,8 +187,13 @@ public class CourseService
             .Where(cr => cr.UserId == userId && cr.BookId == bookId)
             .Select(cr => cr.BookPuzzleId)
             .ToListAsync()).ToHashSet();
-        var attempted = (await _db.CourseAttempts
-            .Where(ca => ca.UserId == userId && ca.BookId == bookId)
+        var resetAt = await _db.CourseProgresses
+            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
+            .Select(cp => cp.ResetAt)
+            .FirstOrDefaultAsync() ?? DateTime.MinValue;
+        // Nur Versuche seit dem letzten Reset (Kurs oder Kapitel) — sonst stünde nach einem Reset jede
+        // vorher gespielte Linie als „gescheitert" da.
+        var attempted = (await AttemptsSinceReset(userId, bookId, resetAt)
             .Select(ca => ca.BookPuzzleId)
             .Distinct()
             .ToListAsync()).ToHashSet();
@@ -929,7 +934,7 @@ public class CourseService
             // Random-Pool: bis zum Reset jedes Puzzle nur EINMAL. Gelöste sind über CoursePuzzleResults
             // ohnehin raus; zusätzlich auch GESCHEITERTE seit dem letzten Reset ausschließen (resetAt oben).
             var fresh = unsolved.Where(bp =>
-                !_db.CourseAttempts.Any(a => a.UserId == userId && a.BookPuzzleId == bp.Id && a.AttemptedAt >= resetAt));
+                !AttemptsSinceReset(userId, bookId, resetAt).Any(a => a.BookPuzzleId == bp.Id));
 
             var pool = exclude.HasValue ? fresh.Where(bp => bp.Id != exclude.Value) : fresh;
             var count = await pool.CountAsync();
@@ -962,7 +967,7 @@ public class CourseService
                     // Quiz-Linien: gelöste UND seit dem letzten Reset gescheiterte (aufgegebene) raus, damit
                     // ein aufgegebenes Puzzle beim Neustart/Wiedereinstieg nicht sofort wieder erscheint.
                     : (!_db.CoursePuzzleResults.Any(cr => cr.UserId == userId && cr.BookPuzzleId == bp.Id)
-                       && !_db.CourseAttempts.Any(a => a.UserId == userId && a.BookPuzzleId == bp.Id && a.AttemptedAt >= resetAt)));
+                       && !AttemptsSinceReset(userId, bookId, resetAt).Any(a => a.BookPuzzleId == bp.Id)));
             // Lesereihenfolge = Round (Chessable-Zeilennummer), dann Id. Der „Weiter"-Cursor (after)
             // ist die zuletzt gezeigte Puzzle-Id; sie kann selbst schon aus dem Pool raus sein (gelöst/
             // gesehen), daher wird ihr (Round, Id) separat aufgelöst und die erste Pool-Linie danach
@@ -1121,6 +1126,9 @@ public class CourseService
         // von vorn durchgespielt (inkl. der Erklärlinien).
         _db.CourseInfoViews.RemoveRange(
             _db.CourseInfoViews.Where(iv => iv.UserId == userId && iv.BookId == bookId));
+        // Kapitel-Resets dieses Buchs sind vom buchweiten Reset überholt (er liegt später).
+        _db.CourseLineResets.RemoveRange(
+            _db.CourseLineResets.Where(r => r.UserId == userId && r.BookId == bookId));
         await _db.SaveChangesAsync();
 
         // Reset-Marker setzen: ab jetzt gilt jedes Puzzle wieder als „erster Versuch" — die im Kurs
@@ -1193,6 +1201,17 @@ public class CourseService
         };
     }
 
+    /// <summary>
+    /// Die Versuche eines Users in einem Buch, die seit dem letzten Reset zählen: nach dem buchweiten
+    /// <see cref="CourseProgress.ResetAt"/> (<paramref name="bookResetAt"/>, <see cref="DateTime.MinValue"/> = nie)
+    /// UND nach dem Kapitel-Reset der jeweiligen Linie (<see cref="CourseLineReset"/>). Die EINE Regel für den
+    /// Aufgaben-Pool, die Statistik und den ✓/✗-Stand — der Kapitel-Reset lässt die Versuche als Zeit-Log stehen,
+    /// ohne diesen Filter blieben die zurückgesetzten Linien aus dem Pool ausgeschlossen.
+    /// </summary>
+    private IQueryable<CourseAttempt> AttemptsSinceReset(int userId, int bookId, DateTime bookResetAt)
+        => _db.CourseAttempts.Where(a => a.UserId == userId && a.BookId == bookId && a.AttemptedAt >= bookResetAt
+            && !_db.CourseLineResets.Any(r => r.UserId == userId && r.BookPuzzleId == a.BookPuzzleId && r.ResetAt > a.AttemptedAt));
+
     private sealed record CourseStatsBundle(CourseScopeStatsDto Book, CourseScopeStatsDto? Chapter, string? ChapterName);
 
     /// <summary>
@@ -1239,8 +1258,7 @@ public class CourseService
             .Select(cr => cr.BookPuzzleId)
             .ToListAsync()).ToHashSet();
 
-        var attemptsQuery = _db.CourseAttempts.Where(a => a.UserId == userId && a.BookId == bookId);
-        if (resetAt.HasValue) attemptsQuery = attemptsQuery.Where(a => a.AttemptedAt >= resetAt.Value);
+        var attemptsQuery = AttemptsSinceReset(userId, bookId, resetAt ?? DateTime.MinValue);
         // EINE Zeile je PUZZLE statt je VERSUCH. Vorher wurde jeder einzelne Versuch des Users in
         // diesem Buch geladen — bei jedem /next und /results, und wachsend mit der Historie. Der
         // „erste Versuch" kommt jetzt aus einer korrelierten Unterabfrage

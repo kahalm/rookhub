@@ -372,3 +372,29 @@ internal sealed class CommentTextConfiguration : IEntityTypeConfiguration<Commen
          .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class CourseLineResetConfiguration : IEntityTypeConfiguration<CourseLineReset>
+{
+    public void Configure(EntityTypeBuilder<CourseLineReset> e)
+    {
+        e.HasOne(r => r.User)
+         .WithMany()
+         .HasForeignKey(r => r.UserId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+        e.HasOne(r => r.Book)
+         .WithMany()
+         .HasForeignKey(r => r.BookId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+        // Wie CourseInfoView: kein zweiter Cascade-Pfad über BookPuzzle → Restrict, abgeräumt über
+        // BookPuzzleDependents.
+        e.HasOne(r => r.BookPuzzle)
+         .WithMany()
+         .HasForeignKey(r => r.BookPuzzleId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+        e.HasIndex(r => new { r.UserId, r.BookPuzzleId }).IsUnique();
+        e.HasIndex(r => new { r.UserId, r.BookId });
+    }
+}

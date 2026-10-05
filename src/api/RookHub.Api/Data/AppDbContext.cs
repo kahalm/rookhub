@@ -110,6 +110,7 @@ public partial class AppDbContext : DbContext
     public DbSet<CourseShare> CourseShares => Set<CourseShare>();
     public DbSet<CourseLink> CourseLinks => Set<CourseLink>();
     public DbSet<CourseInfoView> CourseInfoViews => Set<CourseInfoView>();
+    public DbSet<CourseLineReset> CourseLineResets => Set<CourseLineReset>();
     public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();

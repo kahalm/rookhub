@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.672.3", date: "2026-10-05", changes: [
+    { en: "Courses: after resetting a single chapter, its lines can be played again. Until now the course said \"completed\" — the chapter reset kept the attempts as the training-goal time log, and the course still counted every line with an attempt as done. The chapter reset now remembers when each line was reset; attempts before that no longer count (time log and training goals stay unchanged).", de: "Kurse: nach dem Zurücksetzen eines einzelnen Kapitels lassen sich seine Linien wieder spielen. Bisher meldete der Kurs „abgeschlossen“ — der Kapitel-Reset ließ die Versuche als Zeit-Log der Trainingsziele stehen, und der Kurs zählte jede Linie mit Versuch weiter als erledigt. Jetzt merkt sich der Kapitel-Reset je Linie, wann zurückgesetzt wurde; Versuche davor zählen nicht mehr (Zeit-Log und Trainingsziele bleiben unverändert)." },
+  ] },
   { version: "0.672.2", date: "2026-10-05", changes: [
     { en: "Harvested tactics: the comment calls a position a win from +3.0 on (was +3.5); below that it is a clear advantage, below +1.5 a slight one.", de: "Geerntete Taktiken: der Kommentar spricht ab +3,0 von einer Gewinnstellung (vorher +3,5); darunter ist es ein klarer Vorteil, unter +1,5 ein leichter." },
   ] },

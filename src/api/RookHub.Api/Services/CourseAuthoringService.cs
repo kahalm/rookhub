@@ -488,7 +488,7 @@ public class CourseAuthoringService
 
     /// <summary>
     /// Setzt den EIGENEN Fortschritt eines Kapitels zurück: gelöste Linien und gesehene Info-Linien
-    /// dieses Kapitels. <c>Book</c>-weites <c>CourseProgress.ResetAt</c> bleibt unangetastet (das ist
+    /// dieses Kapitels, dazu je Linie ein Reset-Zeitpunkt (<see cref="CourseLineReset"/>), ab dem Versuche wieder zählen. <c>Book</c>-weites <c>CourseProgress.ResetAt</c> bleibt unangetastet (das ist
     /// buchweit), ebenso die eigenen Analysebäume des Kalkulations-Modus (Arbeit des Nutzers) UND das
     /// Zeit-Log <c>CourseAttempts</c> — sonst schrumpfte die Trainingsziel-Historie rückwirkend,
     /// genau wie der buchweite Reset es begründet.
@@ -519,6 +519,19 @@ public class CourseAuthoringService
         // „teilweise", die Wochen-Tage sanken). Für die Kurs-/Kapitelanzeige bringt das Löschen
         // nichts: die Statistik filtert ohnehin über `ResetAt` bzw. die gelösten Linien.
         _db.CourseInfoViews.RemoveRange(views);
+
+        // Statt die Versuche zu löschen: je Linie den Reset-Zeitpunkt merken. Der Kurs zählt einen Versuch
+        // nur, wenn er danach liegt (CourseService.AttemptsSinceReset) — sonst blieben die eben gespielten
+        // Linien aus dem Pool ausgeschlossen und der Kurs meldete „abgeschlossen" (gemeldet 2026-10-05).
+        var now = DateTime.UtcNow;
+        var resets = await _db.CourseLineResets
+            .Where(r => r.UserId == userId && ids.Contains(r.BookPuzzleId)).ToListAsync(ct);
+        var known = resets.ToDictionary(r => r.BookPuzzleId);
+        foreach (var id in ids)
+        {
+            if (known.TryGetValue(id, out var r)) r.ResetAt = now;
+            else _db.CourseLineResets.Add(new CourseLineReset { UserId = userId, BookId = bookId, BookPuzzleId = id, ResetAt = now });
+        }
         await _db.SaveChangesAsync(ct);
         return results.Count;
     }
