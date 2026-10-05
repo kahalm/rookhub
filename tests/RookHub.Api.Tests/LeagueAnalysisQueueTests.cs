@@ -136,4 +136,63 @@ public class LeagueAnalysisQueueTests : IDisposable
         Assert.All(await _db.AnalysisJobs.ToListAsync(), j => Assert.True(j.Background));
         Assert.DoesNotContain(await Analyses().ListAsync(Owner, includeSavedGames: true), a => a.Id == id);
     }
+
+    private void Online(string fide, string speed, DateTime playedAt, string moves, bool white = true,
+        string confidence = "sicher", string opponent = "Gegner_Online")
+    {
+        var account = new LeagueOnlineAccount
+        {
+            FideId = fide, Site = "lichess", UserName = $"user{fide}", Url = "u", Confidence = confidence,
+        };
+        _db.LeagueOnlineAccounts.Add(account);
+        _db.SaveChanges();
+        _db.LeagueOnlineGames.Add(new LeagueOnlineGame
+        {
+            AccountId = account.Id, FideId = fide, ExternalId = Guid.NewGuid().ToString("N"), PlayedAt = playedAt,
+            Speed = speed, Rated = true, White = white, Result = "1-0", Opponent = opponent,
+            Line = moves, Moves = moves, Plies = moves.Split(' ').Length,
+        });
+        _db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Zweite Quelle (2026-10-05): Online-Partien derselben Spieler, aber NUR langsamer als Blitz.
+    /// Bullet und Blitz sind die grosse Mehrheit des Bestands — kaemen sie mit, rechnete der Stapel
+    /// monatelang an Partien, die in Minuten gespielt wurden.
+    /// </summary>
+    [Fact]
+    public async Task Build_OnlinePartien_nurLangsamerAlsBlitz_undEntdoppelt()
+    {
+        Profile("100", Game("2026.09.01", "1. e4 e5 2. Nf3 Nc6"));
+        Online("100", "classical", Now.AddDays(-10), "d4 Nf6 c4 g6");
+        Online("100", "correspondence", Now.AddDays(-20), "c4 e5 Nc3 Nf6");
+        Online("100", "blitz", Now.AddDays(-5), "e4 c5 Nf3 d6");            // zu schnell
+        Online("100", "bullet", Now.AddDays(-5), "b3 d5 Bb2 Nf6");          // zu schnell
+        Online("100", "rapid", Now.AddYears(-6), "g3 d5 Bg2 Nf6");          // ausserhalb des Fensters
+        Online("100", "rapid", Now.AddDays(-30), "e4 e5 Nf3 Nc6");          // dieselbe Partie wie im Profil
+
+        var items = await LeagueAnalysisQueue.BuildAsync(_db, Now, default);
+
+        // Profilpartie + zwei langsame Online-Partien; die doppelte zaehlt einmal, die schnellen und die alte gar nicht.
+        Assert.Equal(3, items.Count);
+        Assert.Contains(items, i => i.Pgn.Contains("d4 Nf6") && i.Pgn.Contains("[Event \"lichess classical\"]"));
+        Assert.Contains(items, i => i.Pgn.Contains("c4 e5") && i.Pgn.Contains("correspondence"));
+        Assert.DoesNotContain(items, i => i.Pgn.Contains("e4 c5") || i.Pgn.Contains("b3 d5") || i.Pgn.Contains("g3 d5"));
+        Assert.All(items, i => Assert.True(i.Opponent));   // Spieler 100 ist Gegner der naechsten Runde
+    }
+
+    /// <summary>Farben und Nummern: der Provider bekommt ein PGN, das ein Parser auch als Partie liest.</summary>
+    [Fact]
+    public async Task Build_OnlinePartie_traegtFarbenUndZugnummern()
+    {
+        Online("200", "rapid", Now.AddDays(-3), "e4 e5 Nf3 Nc6 Bb5", white: false, opponent: "Weisser");
+
+        var items = await LeagueAnalysisQueue.BuildAsync(_db, Now, default);
+
+        var pgn = Assert.Single(items).Pgn;
+        Assert.Contains("[White \"Weisser\"]", pgn);
+        Assert.Contains("[Black \"user200\"]", pgn);
+        Assert.Contains("1. e4 e5 2. Nf3 Nc6 3. Bb5", pgn);
+        Assert.Equal("1. e4 e5 2. Nf3", LeagueAnalysisQueue.Numbered(["e4", "e5", "Nf3"]));
+    }
 }

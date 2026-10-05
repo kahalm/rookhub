@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.671.0", date: "2026-10-05", changes: [
+    { en: "The games league players play online now go into the background analysis too — but only those slower than blitz: rapid, classical and correspondence. That is some 28600 games beside the 13000 from the profiles. Bullet and blitz stay out, where a deep search says little about how someone plays. A game held by both sources is still computed once.", de: "Auch die online gespielten Partien der Ligaspieler gehen jetzt in die Hintergrund-Analyse — aber nur die langsamer als Blitz: Schnellschach, klassisch und Fernschach. Das sind rund 28 600 Partien neben den 13 000 aus den Profilen. Bullet und Blitz bleiben draussen, dort sagt eine tiefe Suche wenig ueber die Spielweise. Eine Partie, die in beiden Quellen steht, wird weiterhin einmal gerechnet." },
+  ] },
   { version: "0.670.1", date: "2026-10-05", changes: [
     { en: "The background analysis of league players now reaches five years back instead of two. The queue grows from some 3500 games to about 13000 — the profiles themselves carry 56000, so the window still decides what gets computed.", de: "Die Hintergrund-Analyse der Ligaspieler reicht jetzt fuenf Jahre zurueck statt zwei. Die Warteschlange waechst damit von rund 3500 auf etwa 13 000 Partien — die Profile tragen 56 000, das Fenster entscheidet also weiter, was gerechnet wird." },
   ] },

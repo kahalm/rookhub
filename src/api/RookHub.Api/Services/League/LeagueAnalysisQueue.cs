@@ -14,10 +14,13 @@ namespace RookHub.Api.Services.League;
 /// <item>Quelle: die Profile (<see cref="LeaguePlayerProfile.Pgn"/>: Lumbra, Megabase, chess-results, Übertragungen) aller
 /// Spieler mit FIDE-ID auf einer Meldeliste der laufenden Saison; nur Partien der letzten <see cref="Years"/> Jahre
 /// (Datum im Kopf, ein Jahr allein reicht), nur aus der Grundstellung.</item>
-/// <item>Die gebaute Liste haelt je Partie ihr PGN im Speicher. Mit dem 5-Jahre-Fenster sind das beim
-/// heutigen Bestand rund 13 000 Partien statt 3500 — gemessen am 2026-10-05 etwa 10 MB in einem Prozess,
-/// der 6 GB darf. Wird das Fenster weit aufgemacht (der ganze Bestand waeren 56 000 Partien) oder waechst
-/// der Bestand um Groessenordnungen, muss die Liste Zeiger statt Text halten.</item>
+/// <item>Zweite Quelle (2026-10-05): die Online-Partien derselben Spieler, aber nur langsamer als Blitz
+/// (<see cref="SlowSpeeds"/>) — rund 28 600 Partien neben den 13 000 aus den Profilen. Dieselbe Entdopplung
+/// ueber den Zug-Schluessel: wer dieselbe Partie in beiden Quellen hat, bekommt sie einmal.</item>
+/// <item>Die gebaute Liste haelt je Partie ihr PGN im Speicher. Mit dem 5-Jahre-Fenster und beiden Quellen
+/// sind das beim heutigen Bestand rund 42 000 Partien statt 3500 — gemessen am 2026-10-05 etwa 30 MB in
+/// einem Prozess, der 6 GB darf. Waechst der Bestand um Groessenordnungen, muss die Liste Zeiger statt
+/// Text halten.</item>
 /// <item>Reihenfolge: erst die Spieler der Gegner von Schwaz in der nächsten noch nicht gespielten Runde (je Schwazer
 /// Mannschaft), dann alle übrigen — jeweils die neueste Partie zuerst.</item>
 /// <item>Dieselbe Partie in zwei Profilen (zwei Ligaspieler gegeneinander) zählt einmal; eine schon gerechnete (eigene
@@ -33,6 +36,12 @@ public sealed class LeagueAnalysisQueue
     /// 13 000 Partien statt 3500, waehrend die Profile insgesamt 56 000 tragen. Der Preis steht im
     /// Klassenkommentar: die Liste im Speicher waechst mit dem Fenster.</summary>
     public const int Years = 5;
+
+    /// <summary>Welche Online-Partien ueberhaupt in Frage kommen: alles LANGSAMER als Blitz (Wunsch
+    /// 2026-10-05). Bullet und Blitz bleiben draussen — es sind mit Abstand die meisten (704 000 von
+    /// 752 000), und eine Suche bis Tiefe 30 sagt ueber eine Partie, die in Minuten gespielt wurde,
+    /// wenig ueber die Spielweise ihres Spielers. Fernschach ist ausdruecklich dabei.</summary>
+    public static readonly string[] SlowSpeeds = ["rapid", "classical", "correspondence"];
     public static readonly TimeSpan Refresh = TimeSpan.FromHours(1);
 
     public sealed record Item(string Pgn, string Key, bool Opponent, DateOnly Date);
@@ -103,7 +112,73 @@ public sealed class LeagueAnalysisQueue
                     items.Add(new Item(PgnOf(headers, moveText), key, opponents.Contains(prof.FideId), date));
                 }
         }
+        await AddOnlineGamesAsync(db, fides, opponents, cutoff, seen, items, ct);
         return items.OrderByDescending(i => i.Opponent).ThenByDescending(i => i.Date).ToList();
+    }
+
+    /// <summary>
+    /// Zweite Quelle (2026-10-05): die Online-Partien derselben Spieler (lichess, chess.com), aber nur die
+    /// langsamen (<see cref="SlowSpeeds"/>). Gemessen an diesem Tag kommen damit rund 28 600 Partien dazu,
+    /// waehrend die Profile 13 000 beisteuern.
+    ///
+    /// <para>Konten BEIDER Sicherheitsstufen zaehlen mit („sicher" und „wahrscheinlich", 23 300 zu 5300) —
+    /// dieselbe Menge, die der Eroeffnungsbaum im Profil zeigt. Eine falsch zugeordnete Partie kostet hier
+    /// Rechenzeit, aber nichts Bleibendes: die Analyse haengt an der PARTIE, nicht am Spieler.</para>
+    ///
+    /// <para>Entdoppelt wird ueber denselben Zug-Schluessel wie die Profilpartien: dieselbe Partie aus zwei
+    /// Quellen steht einmal in der Liste. Die Zuege liegen als blankes SAN in einer Spalte, die Nummern
+    /// kommen hier dazu — ohne sie liest kein PGN-Parser den Text als Partie.</para>
+    /// </summary>
+    private static async Task AddOnlineGamesAsync(AppDbContext db, List<string> fides, HashSet<string> opponents,
+        DateOnly cutoff, HashSet<string> seen, List<Item> items, CancellationToken ct)
+    {
+        var since = cutoff.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        foreach (var chunk in fides.Chunk(100))
+        {
+            var games = await db.LeagueOnlineGames.AsNoTracking()
+                .Where(g => chunk.Contains(g.FideId) && g.PlayedAt >= since && SlowSpeeds.Contains(g.Speed) && g.Plies >= 2)
+                .Select(g => new
+                {
+                    g.FideId, g.PlayedAt, g.Speed, g.White, g.Result, g.Opponent, g.Moves,
+                    Site = g.Account.Site, User = g.Account.UserName,
+                })
+                .ToListAsync(ct);
+
+            foreach (var g in games)
+            {
+                var sans = g.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                if (sans.Count < 2) continue;
+                var key = LeagueClubService.HashOf(sans);
+                if (!seen.Add(key)) continue;
+
+                var date = DateOnly.FromDateTime(g.PlayedAt);
+                var me = string.IsNullOrWhiteSpace(g.User) ? g.FideId : g.User;
+                var other = string.IsNullOrWhiteSpace(g.Opponent) ? "?" : g.Opponent!;
+                var headers = new Dictionary<string, string>
+                {
+                    ["Event"] = $"{g.Site} {g.Speed}",
+                    ["Site"] = g.Site,
+                    ["Date"] = date.ToString("yyyy.MM.dd"),
+                    ["White"] = g.White ? me : other,
+                    ["Black"] = g.White ? other : me,
+                    ["Result"] = g.Result,
+                };
+                items.Add(new Item(PgnOf(headers, Numbered(sans)), key, opponents.Contains(g.FideId), date));
+            }
+        }
+    }
+
+    /// <summary>„e4 e5 Nf3" → „1. e4 e5 2. Nf3".</summary>
+    internal static string Numbered(IReadOnlyList<string> sans)
+    {
+        var sb = new StringBuilder();
+        for (var i = 0; i < sans.Count; i++)
+        {
+            if (i % 2 == 0) sb.Append(i / 2 + 1).Append(". ");
+            sb.Append(sans[i]);
+            if (i < sans.Count - 1) sb.Append(' ');
+        }
+        return sb.ToString();
     }
 
     /// <summary>
