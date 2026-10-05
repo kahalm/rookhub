@@ -400,38 +400,78 @@ public class ScoresheetScanService
         var jpegs = photos.Select(p => ScoresheetImage.Prepare(p, ModelEdge)).ToList();
         if (jpegs.Any(j => j == null)) { await FailAsync(scan, "unreadable", ct); return; }
 
-        ScoresheetReader.ReadOutcome outcome;
-        try
+        // Ein Lesedurchgang; null = am Laufzeit-Deckel abgebrochen (die Einlesung ist dann schon gescheitert).
+        async Task<ScoresheetReader.ReadOutcome?> ReadAsync(IReadOnlyList<byte[]> pages)
         {
-            outcome = await _reader.ReadPagesAsync(jpegs!, scan.NotationLanguage, ct,
-                beforeCall: token => AllowanceAsync(scan.UserId, token),
-                afterCall: async (input, output, token) =>
-                {
-                    // SOFORT verbuchen: stürzt der Worker danach ab, ist das Geld trotzdem ausgegeben.
-                    scan.InputTokens += input;
-                    scan.OutputTokens += output;
-                    scan.CostMicroUsd += _budget.CostMicroUsd(input, output);
-                    await _db.SaveChangesAsync(token);
-                },
-                startMode: _startMode);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested && !shutdown.IsCancellationRequested)
-        {
-            // Laufzeit-Deckel mitten in einem Aufruf: was er gekostet hat, meldet die API nicht mehr. Verbucht wird
-            // der ungünstigste Fall — lieber zu viel als eine Kostenbremse, die abgebrochene Aufrufe übersieht.
-            if (_reader.InFlightMaxTokens is int max)
+            try
             {
-                scan.InputTokens += ScoresheetBudget.ReserveInputTokens;
-                scan.OutputTokens += max;
-                scan.CostMicroUsd += _budget.WorstCaseMicroUsd(max);
+                return await _reader.ReadPagesAsync(pages, scan.NotationLanguage, ct,
+                    beforeCall: token => AllowanceAsync(scan.UserId, token),
+                    afterCall: async (input, output, token) =>
+                    {
+                        // SOFORT verbuchen: stürzt der Worker danach ab, ist das Geld trotzdem ausgegeben.
+                        scan.InputTokens += input;
+                        scan.OutputTokens += output;
+                        scan.CostMicroUsd += _budget.CostMicroUsd(input, output);
+                        await _db.SaveChangesAsync(token);
+                    },
+                    startMode: _startMode);
             }
-            scan.Model = _vision.Model;
-            await FailAsync(scan, "timeout", CancellationToken.None);
-            return;
+            catch (OperationCanceledException) when (ct.IsCancellationRequested && !shutdown.IsCancellationRequested)
+            {
+                // Laufzeit-Deckel mitten in einem Aufruf: was er gekostet hat, meldet die API nicht mehr. Verbucht wird
+                // der ungünstigste Fall — lieber zu viel als eine Kostenbremse, die abgebrochene Aufrufe übersieht.
+                if (_reader.InFlightMaxTokens is int max)
+                {
+                    scan.InputTokens += ScoresheetBudget.ReserveInputTokens;
+                    scan.OutputTokens += max;
+                    scan.CostMicroUsd += _budget.WorstCaseMicroUsd(max);
+                }
+                scan.Model = _vision.Model;
+                await FailAsync(scan, "timeout", CancellationToken.None);
+                return null;
+            }
         }
+
+        if (await ReadAsync(jpegs!) is not { } outcome) return;
         scan.Model = _vision.Model;
         scan.Rounds = outcome.Rounds;
         if (outcome.Error != null) { await FailAsync(scan, outcome.Error, ct, outcome.Json); return; }
+
+        // Quer oder kopfüber fotografiert (ScoresheetOrientation, 0.672.6)? Dann die Fotos aufrecht drehen und noch einmal
+        // lesen — aufrecht liest das Modell sicherer, und der Ausschnitt je Zug liegt nicht mehr quer. Übernommen wird die
+        // zweite Lesung nur, wenn sie aufgeht; sonst bleiben erste Lesung und Fotos, wie sie waren.
+        var turns = Enumerable.Range(1, photos.Count).Select(p => ScoresheetOrientation.Detect(outcome.Transcription!, p)).ToList();
+        if (turns.Any(d => d != 0))
+        {
+            var upright = photos.Select((p, i) => turns[i] == 0 ? p : ScoresheetImage.Rotate(p, turns[i])).ToList();
+            var uprightJpegs = upright.Select(p => p == null ? null : ScoresheetImage.Prepare(p, ModelEdge)).ToList();
+            if (uprightJpegs.All(j => j != null))
+            {
+                _logger.LogInformation("Formular-Einlesung {ScanId}: Foto gedreht ({Turns}°) — lese aufrecht neu",
+                    scan.Id, string.Join("/", turns));
+                if (await ReadAsync(uprightJpegs!) is not { } second) return;
+                if (second.Error == null && second.Resolution!.Plies.Count > 0)
+                {
+                    outcome = second;
+                    scan.Rounds += second.Rounds;
+                    scan.Photo = upright[0]!;
+                    scan.ContentType = "image/jpeg";
+                    if (photos.Count > 1)
+                    {
+                        var pages = await _db.ScoresheetScanPages.Where(p => p.ScoresheetScanId == scan.Id)
+                            .OrderBy(p => p.Page).ToListAsync(ct);
+                        for (var i = 0; i < pages.Count && i + 1 < upright.Count; i++)
+                            if (turns[i + 1] != 0) { pages[i].Photo = upright[i + 1]!; pages[i].ContentType = "image/jpeg"; }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Formular-Einlesung {ScanId}: aufrechte Lesung ging nicht auf ({Error}) — erste bleibt",
+                        scan.Id, second.Error ?? "noMoves");
+                }
+            }
+        }
 
         var t = outcome.Transcription!;
         var r = outcome.Resolution!;

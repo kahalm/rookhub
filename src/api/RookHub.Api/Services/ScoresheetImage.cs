@@ -113,6 +113,43 @@ public static class ScoresheetImage
     }
 
     /// <summary>
+    /// Das Bild aufrecht (EXIF) und dann um <paramref name="degreesClockwise"/> (90/180/270) im Uhrzeigersinn gedreht, in
+    /// voller Größe als JPEG — für ein quer fotografiertes Formular (<see cref="ScoresheetOrientation"/>). <c>null</c>, wenn
+    /// sich das Bild nicht lesen lässt oder der Winkel keiner davon ist.
+    /// </summary>
+    public static byte[]? Rotate(byte[] data, int degreesClockwise, int quality = 90)
+    {
+        var origin = degreesClockwise switch
+        {
+            90 => SKEncodedOrigin.RightTop,
+            180 => SKEncodedOrigin.BottomRight,
+            270 => SKEncodedOrigin.LeftBottom,
+            _ => (SKEncodedOrigin?)null,
+        };
+        if (origin == null) return null;
+        try
+        {
+            using var codec = SKCodec.Create(new SKMemoryStream(data));
+            if (codec == null) return null;
+            if (DecodeInfo(codec, MaxPixels, MaxDecodePixels) is not { } target) return null;
+            using var decoded = target.Width == codec.Info.Width && target.Height == codec.Info.Height
+                ? SKBitmap.Decode(codec)
+                : DecodeScaled(codec, target);
+            if (decoded == null) return null;
+            using var upright = Orient(decoded, codec.EncodedOrigin);
+            using var turned = Orient(upright ?? decoded, origin.Value);
+            if (turned == null) return null;
+            using var image = SKImage.FromBitmap(turned);
+            using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+            return encoded?.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Ein QUADRAT aus einem (schon aufrechten) Bild schneiden, auf höchstens <paramref name="maxEdge"/> verkleinern, JPEG.
     /// Das Quadrat wird ins Bild geholt, falls es übersteht. <c>null</c>, wenn sich das Bild nicht lesen lässt.
     /// Gedacht für das von <see cref="Prepare"/> erzeugte JPEG — die EXIF-Drehung wird hier NICHT noch einmal angewandt.

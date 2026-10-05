@@ -4109,6 +4109,14 @@ genannten Umgebungsvariable, `--list-models` prüft die Verbindung. Eigene Hardw
 Kontextfenster des Servers, nicht das Budget. Abgelegt wird zusätzlich die Rohantwort (`NN.raw.txt` bzw.
 `NN.dots.txt`).
 
+**Quer fotografiert** (0.672.6, `Services/ScoresheetOrientation.cs`, gemeldet 2026-10-05 an LeagueHub-Formular 24): aus den
+Kästen der ersten Lesung — auf einem aufrechten Formular steigen die Zugnummern nach UNTEN und Schwarz steht RECHTS neben
+Weiß (Mediane der Schritte n→n+1 und Weiß→Schwarz; mindestens 6 bzw. 4 Paare, beide Richtungen eindeutig, sonst 0) — folgt
+je Seite die Drehung 0/90/180/270 im Uhrzeigersinn. Ist eine nötig, dreht `ScoresheetImage.Rotate` die gespeicherten Fotos
+aufrecht (volle Größe, JPEG), und die Einlesung liest NOCH EINMAL (zweiter Aufruf, gleiche Kostenbremse). Übernommen wird die
+zweite Lesung samt gedrehter Fotos nur, wenn sie aufgeht; sonst bleiben erste Lesung und Fotos. Kein eigener Modell-Aufruf
+und keine Schemaänderung — die Referenz-Lesungen bleiben wörtlich.
+
 **Mehrere Seiten** (0.600.0, Wunsch 2026-09-29: „2. Bild für 2. Seite von Partieformular (+ 3. Seite)"): eine lange Partie
 geht über mehrere Blätter — bis `ScoresheetScanService.MaxPages` (3) Fotos in Seitenreihenfolge, hochgeladen als mehrere
 Teile `file` in EINER Anfrage, gespeichert als Seite 1 = `ScoresheetScan.Photo` (bestehende Einlesungen bleiben, wie sie

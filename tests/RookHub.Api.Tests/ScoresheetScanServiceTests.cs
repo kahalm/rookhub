@@ -354,6 +354,42 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(30, (int)stored["imageHeight"]!);
     }
 
+    /// <summary>Gemeldet 2026-10-05 (LeagueHub-Formular 24): quer fotografiert. Die Kästen der ersten Lesung verraten es —
+    /// das Foto wird aufrecht gedreht, noch einmal gelesen, und das GESPEICHERTE Foto ist danach das aufrechte.</summary>
+    [Fact]
+    public async Task Process_SidewaysPhoto_IsTurnedUpright_AndReadAgain()
+    {
+        var u = await UserAsync();
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        for (var i = 0; i < moves.Count; i++)
+        {
+            // Aufrecht stünde Zug n in Zeile n, Weiß links (x 100, Schwarz x 400); quer gedreht wie Formular 24: (x, y) → (2000 − y, x).
+            // Die Erkennung braucht nur die Richtungen, nicht die Maße des Test-Fotos.
+            var (x, y) = (100 + (i % 2) * 300, 100 + (i / 2) * 40);
+            var (px, py) = (2000 - y, x);
+            moves[i]!["box"] = new JsonArray(px - 10, py - 10, px + 10, py + 10);
+        }
+        _vision.Answers.Enqueue(new(json.ToJsonString(), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));             // die aufrechte Lesung
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(2, _vision.PageCounts.Count);                        // zweimal gelesen
+        var stored = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((30, 40), ScoresheetImage.Size(stored.Photo));        // aufrecht gespeichert
+    }
+
+    [Fact]
+    public async Task Process_UprightPhoto_IsReadOnce()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        await UploadAndProcessAsync(u.Id);
+        Assert.Single(_vision.PageCounts);
+    }
+
     // ── Mehrere Seiten (0.600.0, Wunsch 2026-09-29: „2. Bild für 2. Seite von Partieformular (+ 3. Seite)") ──────────
 
     /// <summary>Beide Fotos gehen in EINEN Aufruf, jeder Eintrag kennt seine Seite, und jeder Kasten wird in den Pixeln

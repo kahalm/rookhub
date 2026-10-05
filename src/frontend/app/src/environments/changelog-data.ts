@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.672.6", date: "2026-10-05", changes: [
+    { en: "Reading a scoresheet: a sheet photographed sideways or upside down is now detected from the positions of the moves (move numbers running sideways instead of downwards), the photo is turned upright and read once more. Upright, the model reads more reliably, and on the correction page both the photo and the crop for each move are upright. The second read is used only if it works out; otherwise the first one stays.", de: "Partieformular einlesen: ein quer oder kopfüber fotografiertes Formular wird jetzt an der Lage der Züge erkannt (Zugnummern laufen seitwärts statt nach unten), das Foto aufrecht gedreht und noch einmal gelesen. Aufrecht liest das Modell sicherer, und auf der Korrekturseite stehen Foto und Ausschnitt je Zug aufrecht. Die zweite Lesung zählt nur, wenn sie aufgeht — sonst bleibt die erste." },
+  ] },
   { version: "0.672.5", date: "2026-10-05", changes: [
     { en: "Correcting a game: if the game has already been analysed, the evaluation graph and the computer lines now appear right under the board (graph and lines open from the start, the best move as an arrow) — jumps in the graph often point to a misread move. Clicking the graph moves to that half-move. Once you change moves, the block is hidden: the analysis belongs to the saved moves.", de: "Partie korrigieren: ist die Partie schon analysiert, stehen Bewertungskurve und Computer-Linien jetzt direkt unter dem Brett (Kurve und Linien gleich offen, der beste Zug als Pfeil) — Sprünge in der Kurve zeigen oft einen falsch gelesenen Zug. Ein Klick in die Kurve springt zum Halbzug. Sobald Züge geändert werden, verschwindet der Block: die Analyse gehört zu den gespeicherten Zügen." },
   ] },
