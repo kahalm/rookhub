@@ -43,6 +43,7 @@ internal sealed class SavedGameConfiguration : IEntityTypeConfiguration<SavedGam
         // nicht doppelt gespeichert werden, auch nicht bei parallelem Doppel-Klick. MySQL behandelt
         // NULL-ExternalId als verschieden → mehrere Saves OHNE externe Id (manuell) bleiben erlaubt.
         e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId }).IsUnique();
+        e.HasIndex(g => g.LeagueClubGameId);   // Kopien einer Vereinspartie (0.660.0)
     }
 }
 
@@ -84,6 +85,7 @@ internal sealed class ScoresheetScanArchiveConfiguration : IEntityTypeConfigurat
         e.Property(a => a.NotationLanguage).HasMaxLength(8);
         e.HasIndex(a => a.ExpiresAt);
         e.HasIndex(a => new { a.ScoresheetScanId, a.Page }).IsUnique();
+        e.HasIndex(a => a.LeagueClubGameId);
     }
 }
 

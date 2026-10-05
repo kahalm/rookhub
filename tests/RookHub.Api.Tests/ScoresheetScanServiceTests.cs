@@ -1065,7 +1065,7 @@ public class ScoresheetScanServiceTests : IDisposable
         _db.ScoresheetScanArchives.Add(new ScoresheetScanArchive { ScoresheetScanId = old.Id, Page = 1, ExpiresAt = DateTime.UtcNow.AddDays(-1) });
         await _db.SaveChangesAsync();
 
-        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id, "[White \"Didi\"]\n\n1. Nf3 d5 0-1"));
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id, "[White \"Didi\"]\n\n1. Nf3 d5 0-1", clubGameId: 42));
         Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
         Assert.Null(await _service.LeagueScanStateAsync(As(u.Id), scan.Id));
         Assert.Empty(await _service.LeagueScansAsync(u.Id));
@@ -1080,6 +1080,13 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.NotNull(kept.TranscriptionJson);
         Assert.Contains("1. Nf3 d5", kept.FinalPgn);
         Assert.InRange(kept.ExpiresAt - kept.ArchivedAt, TimeSpan.FromDays(364.9), TimeSpan.FromDays(365.1));
+        // „Korrigieren" (0.660.0): das aufbewahrte Formular hängt an der Vereinspartie 42 und öffnet sich wie ein eigenes
+        Assert.Equal(42, kept.LeagueClubGameId);
+        var sheet = await _service.ClubEditStateAsync(42);
+        Assert.Equal(Written.Length, sheet!.Written.Count);
+        Assert.NotNull(await _service.ClubPhotoAsync(42, 1));
+        Assert.NotNull(await _service.ResolveClubRestAsync(42, new[] { "Nf3", "d5" }, 2));
+        Assert.Null(await _service.ClubEditStateAsync(43));
         // ein zweiter Abschluss legt nichts doppelt ab
         await _service.CloseLeagueScanAsync(As(u.Id), scan.Id);
         Assert.Equal(1, await _db.ScoresheetScanArchives.CountAsync());

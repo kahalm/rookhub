@@ -924,13 +924,13 @@ public class ScoresheetScanService
     /// Danach verbindet nichts mehr die Einlesung mit der Partie, die daraus wurde (auch der Schlüssel geht).
     /// <c>false</c> = fremd/unbekannt.
     /// </summary>
-    public async Task<bool> CloseLeagueScanAsync(ScanActor actor, int? scanId, string? finalPgn = null)
+    public async Task<bool> CloseLeagueScanAsync(ScanActor actor, int? scanId, string? finalPgn = null, int? clubGameId = null)
     {
         var q = LeagueOwned(_db.ScoresheetScans, actor);
         if (scanId is int id) q = q.Where(s => s.Id == id);
         var key = await q.Select(s => new { s.Id, s.UserId, s.SavedGameId }).FirstOrDefaultAsync();
         if (key == null) return false;
-        await ArchiveAsync(key.Id, finalPgn);
+        await ArchiveAsync(key.Id, finalPgn, clubGameId);
         DetachWithoutLoading(_db, new[] { (key.Id, key.UserId, key.SavedGameId) });
         RemovePagesWithoutLoading(_db, await PageKeysAsync(_db, new[] { key.Id }));
         var scan = _db.ScoresheetScans.Local.First(s => s.Id == key.Id);
@@ -949,7 +949,7 @@ public class ScoresheetScanService
     /// <see cref="CloseLeagueScanAsync"/> sie an der Einlesung leert (0.655.0) — einmal je Einlesung (ein zweiter Abschluss
     /// findet nichts mehr). Räumt dabei Abgelaufenes weg. Speichert nicht selbst.
     /// </summary>
-    private async Task ArchiveAsync(int scanId, string? finalPgn)
+    private async Task ArchiveAsync(int scanId, string? finalPgn, int? clubGameId = null)
     {
         var now = DateTime.UtcNow;
         await PurgeExpiredArchiveAsync(now);
@@ -963,6 +963,7 @@ public class ScoresheetScanService
         {
             ScoresheetScanId = scanId, Page = 1, Photo = s.Photo, ContentType = s.ContentType,
             TranscriptionJson = s.TranscriptionJson, ResolutionJson = s.ResolutionJson, FinalPgn = finalPgn, Outcome = outcome,
+            LeagueClubGameId = finalPgn != null ? clubGameId : null,
             Model = s.Model, NotationLanguage = s.NotationLanguage, ArchivedAt = now, ExpiresAt = now + ArchiveRetention,
         });
         var pages = await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scanId)
@@ -973,6 +974,87 @@ public class ScoresheetScanService
                 ScoresheetScanId = scanId, Page = p.Page, Photo = p.Photo, ContentType = p.ContentType, Outcome = outcome,
                 Model = s.Model, NotationLanguage = s.NotationLanguage, ArchivedAt = now, ExpiresAt = now + ArchiveRetention,
             });
+    }
+
+    // ── Formular einer Vereinspartie wieder öffnen (0.660.0, „Korrigieren" wie beim ersten Beheben) ──
+
+    private IQueryable<ScoresheetScanArchive> ClubArchive(int clubGameId)
+    {
+        var now = DateTime.UtcNow;
+        var scanIds = _db.ScoresheetScanArchives.Where(a => a.LeagueClubGameId == clubGameId && a.Page == 1 && a.ExpiresAt > now)
+            .Select(a => a.ScoresheetScanId);
+        return _db.ScoresheetScanArchives.Where(a => scanIds.Contains(a.ScoresheetScanId));
+    }
+
+    /// <summary>Gibt es zur Vereinspartie noch das aufbewahrte Formular (Foto + Lesung)?</summary>
+    public Task<bool> HasClubSheetAsync(int clubGameId, CancellationToken ct = default) =>
+        ClubArchive(clubGameId).AnyAsync(ct);
+
+    /// <summary>
+    /// Formular-Einträge + Stand je Halbzug der Vereinspartie aus dem Archiv — dieselbe Form wie bei einer eigenen Partie
+    /// (<see cref="EditStateAsync"/>), damit dieselbe Korrektur-Oberfläche sie öffnet. <c>null</c> = nichts aufbewahrt.
+    /// </summary>
+    public async Task<ScoresheetEditStateDto?> ClubEditStateAsync(int clubGameId, CancellationToken ct = default)
+    {
+        var rows = await ClubArchive(clubGameId).AsNoTracking()
+            .Select(a => new { a.Page, a.ScoresheetScanId, a.NotationLanguage, a.TranscriptionJson, a.ResolutionJson }).ToListAsync(ct);
+        var first = rows.FirstOrDefault(r => r.Page == 1);
+        if (first == null) return null;
+        var stored = Deserialize(first.ResolutionJson);
+        var t = ScoresheetTranscription.Parse(first.TranscriptionJson);
+        return new ScoresheetEditStateDto
+        {
+            ScanId = first.ScoresheetScanId,
+            NotationLanguage = stored?.Language ?? first.NotationLanguage ?? "auto",
+            Written = t?.Moves.Select(m => m.Written).ToList() ?? new(),
+            Boxes = t?.NormalizedBoxes() ?? new(),
+            PageCount = Math.Max(1, rows.Count),
+            Pages = t?.EntryPages() ?? new(),
+            Plies = stored?.Plies ?? new(),
+            Unresolved = stored?.Unresolved ?? new(),
+            UnresolvedFrom = stored?.UnresolvedFrom,
+        };
+    }
+
+    /// <summary>Foto einer Seite (ab 1) des aufbewahrten Formulars der Vereinspartie.</summary>
+    public async Task<(byte[] Data, string ContentType, int PageCount)?> ClubPhotoAsync(int clubGameId, int page, CancellationToken ct = default)
+    {
+        var count = await ClubArchive(clubGameId).CountAsync(ct);
+        if (count == 0) return null;
+        var p = await ClubArchive(clubGameId).AsNoTracking().Where(a => a.Page == Math.Max(1, page))
+            .Select(a => new { a.Photo, a.ContentType }).FirstOrDefaultAsync(ct);
+        return p == null || p.Photo.Length == 0 ? null : (p.Photo, p.ContentType, count);
+    }
+
+    /// <summary>Wie <see cref="ResolveRestAsync"/>, über das aufbewahrte Formular der Vereinspartie.</summary>
+    public async Task<ScoresheetResolveResultDto?> ResolveClubRestAsync(int clubGameId, IReadOnlyList<string> prefix, int writtenFrom,
+        CancellationToken ct = default)
+    {
+        CheckPrefix(prefix);
+        var a = await ClubArchive(clubGameId).AsNoTracking().Where(x => x.Page == 1)
+            .Select(x => new { x.NotationLanguage, x.TranscriptionJson, x.ResolutionJson }).FirstOrDefaultAsync(ct);
+        var t = ScoresheetTranscription.Parse(a?.TranscriptionJson);
+        if (a == null || t == null) return null;
+        var scanned = t.Scanned();
+        var language = Deserialize(a.ResolutionJson)?.Language ?? a.NotationLanguage;
+        var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
+            SavedGameService.LegalSans(prefix), Math.Clamp(writtenFrom, 0, scanned.Count));
+        return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
+    }
+
+    /// <summary>Nach einer Korrektur den Stand je Halbzug und die PGN im Archiv nachziehen (die Lesung selbst bleibt).</summary>
+    public async Task SaveClubEditStateAsync(int clubGameId, List<ScoresheetPly>? plies, string finalPgn, CancellationToken ct = default)
+    {
+        var a = await ClubArchive(clubGameId).Where(x => x.Page == 1).FirstOrDefaultAsync(ct);
+        if (a == null) return;
+        a.FinalPgn = finalPgn;
+        if (plies != null)
+        {
+            var stored = Deserialize(a.ResolutionJson) ?? new StoredResolution { Language = a.NotationLanguage };
+            stored.Plies = plies.Take(600).ToList();
+            a.ResolutionJson = JsonSerializer.Serialize(stored, Json);
+        }
+        await _db.SaveChangesAsync(ct);
     }
 
     /// <summary>Abgelaufene Archiv-Einträge löschen (ohne die Fotos zu laden).</summary>

@@ -51,6 +51,52 @@ public class LeagueClubController : BaseApiController
         [FromQuery] int page = 1, [FromQuery] bool mine = false, CancellationToken ct = default) =>
         Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct, mine));
 
+    // ── Korrigieren (0.660.0): Züge einer Vereinspartie nachbessern, mit dem aufbewahrten Formular, falls es noch da ist ──
+
+    public sealed record ClubMovesRequest(List<string>? Moves, List<ScoresheetPly>? Plies);
+
+    private async Task<IActionResult?> CorrectableAsync(int id, CancellationToken ct) =>
+        await _club.CanCorrectAsync(GetUserId(), await CanManageAsync(), id, ct) ? null : NotFound();
+
+    /// <summary>Formular-Einträge + Stand je Halbzug aus dem Archiv (wie <c>GET /api/games/{id}/scoresheet</c>); 404, wenn
+    /// nichts mehr aufbewahrt ist oder die Partie nicht korrigiert werden darf (Hochladender/Verwalter).</summary>
+    [HttpGet("games/{id:int}/sheet")]
+    public async Task<IActionResult> Sheet(int id, CancellationToken ct) =>
+        await CorrectableAsync(id, ct) ?? (await _scans.ClubEditStateAsync(id, ct) is { } s ? Ok(s) : NotFound());
+
+    [HttpGet("games/{id:int}/sheet/photo")]
+    public async Task<IActionResult> SheetPhoto(int id, [FromQuery] int page = 1, CancellationToken ct = default)
+    {
+        if (await CorrectableAsync(id, ct) is { } denied) return denied;
+        if (await _scans.ClubPhotoAsync(id, page, ct) is not { } p) return NotFound();
+        Response.Headers.CacheControl = "private, max-age=3600";
+        Response.Headers["X-Page-Count"] = p.PageCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return File(p.Data, p.ContentType);
+    }
+
+    [HttpPost("games/{id:int}/sheet/resolve")]
+    public async Task<IActionResult> SheetResolve(int id, [FromBody] ScoresheetResolveRequestDto dto, CancellationToken ct)
+    {
+        if (await CorrectableAsync(id, ct) is { } denied) return denied;
+        try { return await _scans.ResolveClubRestAsync(id, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0, ct) is { } r ? Ok(r) : NotFound(); }
+        catch (ArgumentException ex) { return BadRequest(new { reason = "illegalMove", message = ex.Message }); }
+    }
+
+    /// <summary>Züge korrigieren → die Partie; geht in alle verbundenen Kopien. 400 <c>noMoves</c>/<c>tooLong</c>/<c>illegal</c>.</summary>
+    [HttpPut("games/{id:int}/moves")]
+    public async Task<IActionResult> CorrectMoves(int id, [FromBody] ClubMovesRequest req, [FromServices] ClubGameCorrectionService corrections,
+        CancellationToken ct)
+    {
+        var manage = await CanManageAsync();
+        var (game, reason) = await corrections.CorrectClubAsync(GetUserId(), manage, id, req?.Moves ?? new(), req?.Plies, null, ct);
+        return reason switch
+        {
+            null => Ok(LeagueClubService.ToDto(game!, GetUserId(), manage)),
+            "notFound" or "forbidden" => NotFound(),
+            _ => BadRequest(new { reason }),
+        };
+    }
+
     /// <summary>„Meine Partien" (0.656.0): die eigenen — dafür reicht die Anmeldung (auch wer nur über einen Teilen-Link
     /// hochgeladen und sie sich nach dem Anmelden zugeordnet hat).</summary>
     [HttpGet("games/mine")]
@@ -174,7 +220,7 @@ public class LeagueClubController : BaseApiController
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         var (game, reason, message) = await _club.AddGameAsync(GetUserId(), req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId, game.Pgn);
+        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId, game.Pgn, game.Id);
         return Ok(new { id = game.Id, anonymized = game.Anonymized });
     }
 
@@ -385,7 +431,7 @@ public class LeagueShareClubController : ControllerBase
         var claimKey = LeagueClubService.NewClaimKey();
         var (game, reason, message) = await _club.AddGameViaShareAsync(link, req, ct, claimKey);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null, game.Pgn);
+        if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null, game.Pgn, game.Id);
         return Ok(new { id = game.Id, anonymized = game.Anonymized, claimKey });
     }
 

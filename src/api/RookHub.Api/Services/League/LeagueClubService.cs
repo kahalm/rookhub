@@ -846,6 +846,44 @@ public sealed class LeagueClubService
         return (g, null);
     }
 
+    /// <summary>Darf <paramref name="userId"/> diese Vereinspartie korrigieren? (Hochladender oder Verwalter)</summary>
+    public async Task<bool> CanCorrectAsync(int userId, bool canManage, int id, CancellationToken ct = default) =>
+        await _db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id, ct) is { } g && CanDelete(g, userId, canManage);
+
+    /// <summary>
+    /// Die ZÜGE einer Vereinspartie korrigieren (0.660.0, Wunsch 2026-10-05: „einen Korrigieren-Knopf, der wie beim
+    /// initialen Beheben von Unsicherheiten das Interface öffnet"). Gleiche Rechte wie <see cref="UpdateAsync"/>. Neu
+    /// geschrieben werden PGN, Halbzüge und der Dubletten-Schlüssel; die Analyse der alten Zugfolge geht (die
+    /// Meisterpartien-Pumpe rechnet die neue — samt Taktik-Ernte), die Spielerkarten werden neu gebaut. Die verbundenen Kopien
+    /// zieht der Aufrufer nach (<c>ClubGameCorrectionService</c>). → (Partie, neue SAN) oder ein Grund: <c>notFound</c>,
+    /// <c>forbidden</c>, <c>noMoves</c>, <c>tooLong</c>, <c>illegal</c>.
+    /// </summary>
+    public async Task<(LeagueClubGame? Game, IReadOnlyList<string>? Sans, string? Reason)> CorrectMovesAsync(int userId, bool canManage,
+        int id, IReadOnlyList<string> moves, CancellationToken ct = default)
+    {
+        var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g == null) return (null, null, "notFound");
+        if (!CanDelete(g, userId, canManage)) return (null, null, "forbidden");
+        var clean = moves.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
+        if (clean.Count == 0) return (null, null, "noMoves");
+        if (clean.Count > MaxPlies) return (null, null, "tooLong");
+        List<string> sans;
+        try { sans = SavedGameService.LegalSans(clean); }
+        catch (ArgumentException) { return (null, null, "illegal"); }
+        var old = PgnParser.ExtractMainlineSans(PgnParser.SplitGames(g.Pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty);
+        if (old.SequenceEqual(sans)) return (g, sans, null);
+        g.Pgn = PgnOf(g, sans);
+        g.Plies = sans.Count;
+        g.MovesHash = HashOf(sans);
+        await _db.SaveChangesAsync(ct);
+        // Die alte Analyse rechnete eine andere Zugfolge (Kurve, Fehler, geerntete Taktiken) — weg damit; die Pumpe nimmt
+        // Vereinspartien ohne Analyse als Nächstes.
+        if (_analyses != null) await _analyses.DeleteForClubGameAsync(g.Id, ct);
+        await RefreshCardsAsync(new[] { g.WhiteFide, g.BlackFide }, ct);
+        _log.LogInformation("Vereins-Datenbank: Züge von Partie {Id} korrigiert ({Old} → {New} Halbzüge)", g.Id, old.Count, sans.Count);
+        return (g, sans, null);
+    }
+
     /// <summary>Eigene Partien darf man bearbeiten und löschen — seit 0.656.0 auch eine „Schwaz"-Partie, wenn sie einem selbst
     /// gehört: einen Hochladenden trägt eine solche nur nach der Zuordnung mit Zustimmung (<see cref="ClaimAsync"/>).</summary>
     private static bool CanDelete(LeagueClubGame g, int userId, bool canManage) =>

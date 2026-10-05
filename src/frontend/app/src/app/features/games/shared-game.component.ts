@@ -1,3 +1,4 @@
+import { leagueHubUrl } from '../../core/partner-site';
 import {
   Component, DoCheck, OnInit, HostListener, inject, ChangeDetectionStrategy, computed, effect, signal, viewChild,
   untracked, DestroyRef,
@@ -151,6 +152,12 @@ const TAP_MAX_MS = 500;
                   <button mat-menu-item (click)="downloadPgn()">
                     <mat-icon>file_download</mat-icon><span>{{ 'common.downloadPgn' | translate }}</span>
                   </button>
+                  @if (club && game.clubCanCorrect && leagueHub) {
+                    <!-- Vereinspartie korrigieren (0.660.0): in LeagueHub, mit dem aufbewahrten Formular -->
+                    <a mat-menu-item [href]="leagueHub + '/verein/partie/' + game.clubId + '/korrigieren'">
+                      <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                    </a>
+                  }
                   @if (own && gameId) {
                     <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
                       <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
@@ -413,6 +420,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   }
   /** Formular-Einlesung der eigenen Partie (0.529.0) — `null` = kein Foto. */
   scanId: number | null = null;
+  /** LeagueHub-Adresse für „Korrigieren" einer Vereinspartie (0.660.0); `null` außerhalb der Partner-Domains. */
+  readonly leagueHub = leagueHubUrl();
   /** Schon gemeldete Halbzüge und Aufgabenzahl: verhindert, dass jeder Zug dieselbe Meldung wiederholt. */
   private readonly reportedPlies = new Set<number>();
   private reportedTotal = -1;

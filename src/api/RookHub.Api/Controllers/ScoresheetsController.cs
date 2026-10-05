@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
@@ -89,11 +90,32 @@ public class GameCorrectionController : BaseApiController
 {
     private readonly SavedGameService _games;
     private readonly ScoresheetScanService _scans;
+    private readonly ClubGameCorrectionService? _clubCorrections;
+    private readonly Data.AppDbContext? _db;
+    private readonly PermissionResolver? _permissions;
 
-    public GameCorrectionController(SavedGameService games, ScoresheetScanService scans)
+    public GameCorrectionController(SavedGameService games, ScoresheetScanService scans,
+        ClubGameCorrectionService? clubCorrections = null, Data.AppDbContext? db = null, PermissionResolver? permissions = null)
     {
         _games = games;
         _scans = scans;
+        _clubCorrections = clubCorrections;
+        _db = db;
+        _permissions = permissions;
+    }
+
+    private async Task<bool> CanManageLeagueAsync() =>
+        User.IsInRole("Admin") || (_permissions != null && (await _permissions.GetAsync(GetUserId())).Has(Models.Permissions.LeagueManage));
+
+    /// <summary>Die Vereinspartie, deren Kopie diese Partie ist — nur wenn der Nutzer sie korrigieren darf (0.660.0): dann
+    /// öffnet die Korrekturseite deren aufbewahrtes Formular.</summary>
+    private async Task<int?> CorrectableClubGameAsync(int id)
+    {
+        if (_db == null) return null;
+        var clubId = await _db.SavedGames.Where(g => g.Id == id && g.UserId == GetUserId()).Select(g => g.LeagueClubGameId).FirstOrDefaultAsync();
+        if (clubId is not { } c) return null;
+        var club = await _db.LeagueClubGames.AsNoTracking().Where(g => g.Id == c).Select(g => new { g.UploadedByUserId }).FirstOrDefaultAsync();
+        return club != null && (club.UploadedByUserId == GetUserId() || await CanManageLeagueAsync()) ? c : null;
     }
 
     /// <summary>Partie korrigieren (Züge, Kommentare, Kopfdaten). 400 bei einem illegalen Zug; ändern sich die
@@ -108,6 +130,8 @@ public class GameCorrectionController : BaseApiController
             var game = await _games.UpdateAsync(GetUserId(), id, dto);
             if (game == null) return NotFound();
             if (dto.ScoresheetPlies != null) await _scans.SaveEditStateAsync(GetUserId(), id, dto.ScoresheetPlies);
+            // Kopie einer Vereinspartie (0.660.0): die Korrektur geht dorthin und in alle Kopien — oder die Kopie löst sich
+            if (_clubCorrections != null) await _clubCorrections.FromCopyAsync(GetUserId(), await CanManageLeagueAsync(), id, dto.ScoresheetPlies);
             return Ok(game);
         }
         catch (SavedGameQuotaException ex)
@@ -126,6 +150,8 @@ public class GameCorrectionController : BaseApiController
     public async Task<IActionResult> Photo(int id, [FromQuery] bool download = false, [FromQuery] int page = 1)
     {
         var photo = await _scans.PhotoForGameAsync(GetUserId(), id, page);
+        if (photo is null && await CorrectableClubGameAsync(id) is { } clubId && await _scans.ClubPhotoAsync(clubId, page) is { } cp)
+            photo = (cp.Data, cp.ContentType, "formular.jpg", cp.PageCount);   // Formular der Vereinspartie (0.660.0)
         if (photo is not { } p) return NotFound();
         Response.Headers.CacheControl = "private, max-age=3600";
         // Wie viele Seiten es gibt — der Foto-Dialog blättert damit, ohne die Einlesung abzufragen.
@@ -138,6 +164,7 @@ public class GameCorrectionController : BaseApiController
     public async Task<ActionResult<ScoresheetEditStateDto>> Scoresheet(int id)
     {
         var state = await _scans.EditStateAsync(GetUserId(), id);
+        if (state == null && await CorrectableClubGameAsync(id) is { } clubId) state = await _scans.ClubEditStateAsync(clubId);
         return state == null ? NotFound() : Ok(state);
     }
 
@@ -149,6 +176,8 @@ public class GameCorrectionController : BaseApiController
         try
         {
             var result = await _scans.ResolveRestAsync(GetUserId(), id, dto.Prefix ?? new(), dto.WrittenFrom);
+            if (result == null && await CorrectableClubGameAsync(id) is { } clubId)
+                result = await _scans.ResolveClubRestAsync(clubId, dto.Prefix ?? new(), dto.WrittenFrom);
             return result == null ? NotFound() : Ok(result);
         }
         catch (ArgumentException ex)

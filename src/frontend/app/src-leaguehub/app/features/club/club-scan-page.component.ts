@@ -12,7 +12,8 @@ import { isBoardHotkey } from '@rh/shared/keyboard.util';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
+import { ClubGameDetail, ClubSheetState, LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
+import { pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
@@ -51,6 +52,10 @@ const SILENT_FAILURES = 3;
       } @else {
         <lh-access-gate text="Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz." />
       }
+    } @else if (notFound() && gameId != null) {
+      <section class="gate"><h2>Partie nicht gefunden</h2>
+        <p>Sie ist gelöscht oder du darfst sie nicht korrigieren (das dürfen, wer sie hochgeladen hat, und die Verwalter).
+          <a routerLink="/verein/meine">Zu deinen Partien</a></p></section>
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>
         <p>Es wurde schon übernommen oder verworfen. <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
@@ -64,8 +69,14 @@ const SILENT_FAILURES = 3;
         </div></section>
     } @else if (state(); as st) {
       <section class="club-intro">
-        <p><a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
-        <h2>Partieformular prüfen</h2>
+        @if (gameId != null) {
+          <p><a class="back-link" routerLink="/verein/meine">← Meine Partien</a></p>
+          <h2>Vereinspartie korrigieren</h2>
+          <p class="muted">{{ gameTitle() }}@if (!photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
+        } @else {
+          <p><a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
+          <h2>Partieformular prüfen</h2>
+        }
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
           @else {
@@ -76,7 +87,7 @@ const SILENT_FAILURES = 3;
           <p class="muted">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den Zug am Brett spielen
             — danach wird der Rest neu gelesen. Pfeiltasten blättern.</p>
           <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
-          <p class="small"><button type="button" class="btn-link to-save" (click)="toSave()">Weiter zu Namen &amp; Übernehmen ↓</button></p>
+          <p class="small"><button type="button" class="btn-link to-save" (click)="toSave()">{{ gameId != null ? 'Weiter zum Speichern ↓' : 'Weiter zu Namen & Übernehmen ↓' }}</button></p>
         }
       </section>
 
@@ -200,6 +211,23 @@ const SILENT_FAILURES = 3;
           </section>
         </div></div>
 
+        @if (gameId != null) {
+          <section class="panel save-panel" #savePanel>
+            <h3 class="club-h3">Korrektur speichern</h3>
+            <p>{{ gameTitle() }}</p>
+            <p class="muted small">Die Züge werden in der Vereins-Datenbank ersetzt — und in jeder Kopie in „Meine Partien“. Die
+              Analyse wird danach neu gerechnet. Namen und Ergebnis änderst du in der Liste unter „Bearbeiten“.</p>
+            @if (saved()) {
+              <p class="ok-text" role="status"><b>Korrektur gespeichert.</b> <a routerLink="/verein/meine">Zu deinen Partien</a></p>
+            } @else {
+              <div class="actions">
+                <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
+                  {{ saving() ? 'Speichere …' : 'Korrektur speichern' }}</button>
+                <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
+              </div>
+            }
+          </section>
+        } @else {
         <section class="panel save-panel" #savePanel>
           <h3 class="club-h3">Partie</h3>
           <div class="save-grid">
@@ -251,7 +279,7 @@ const SILENT_FAILURES = 3;
           @if (problem(); as pr) { <p class="err small">{{ pr }}</p> }
 
           @if (saved()) {
-            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Das Foto ist aus der Einlesung entfernt; eine Kopie samt Erkennung behalten wir 365 Tage, um das Einlesen zu verbessern.
+            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
               <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p>
           } @else {
             <div class="actions">
@@ -275,6 +303,7 @@ const SILENT_FAILURES = 3;
             <span class="update-msg" [class.err]="pgnMsg()?.err" role="status">{{ pgnMsg()?.text ?? '' }}</span>
           </div>
         </section>
+        }
 
         <!-- Wunsch 2026-09-28: nach der letzten unsicheren Stelle darauf hinweisen und gleich Speichern anbieten. -->
         <dialog #doneDlg class="card done-dlg" aria-labelledby="done-title">
@@ -287,9 +316,9 @@ const SILENT_FAILURES = 3;
                 <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
               </div>
             } @else {
-              <p>Gespeichert wird: <b>{{ preview() }}</b></p>
+              <p>Gespeichert wird: <b>{{ gameId != null ? gameTitle() : preview() }}</b></p>
               <div class="actions">
-                <button type="button" class="btn-pri" [disabled]="saving()" (click)="closeDone(); save()">In die Vereins-Datenbank übernehmen</button>
+                <button type="button" class="btn-pri" [disabled]="saving()" (click)="closeDone(); save()">{{ gameId != null ? 'Korrektur speichern' : 'In die Vereins-Datenbank übernehmen' }}</button>
                 <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
               </div>
             }
@@ -325,6 +354,10 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   /** Nummer (angemeldet) bzw. geheimer Schlüssel (ohne Konto) der Einlesung. */
   scanRef = '';
+  /** Korrektur einer schon übernommenen Vereinspartie (Route `verein/partie/:id/korrigieren`, 0.660.0) — sonst `null`. */
+  readonly gameId: number | null = this.route.snapshot.data['game'] ? Number(this.route.snapshot.paramMap.get('id')) : null;
+  /** „Weiß – Schwarz (Jahr) · Ergebnis" der Vereinspartie (Korrektur-Modus). */
+  readonly gameTitle = signal('');
   readonly state = signal<LeagueScanState | null>(null);
   readonly perMove = SECONDS_PER_MOVE;
   /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
@@ -382,7 +415,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly anyReplaced = computed(() => this.replace('white')() || this.replace('black')());
 
   readonly s = new SheetEditSession({
-    resolve: (prefix, writtenFrom) => this.api.resolve(this.scanRef, prefix, writtenFrom),
+    resolve: (prefix, writtenFrom) => this.gameId != null
+      ? this.api.clubResolve(this.gameId, prefix, writtenFrom)
+      : this.api.resolve(this.scanRef, prefix, writtenFrom),
     moved: () => this.revealCursor(),
     resolveFailed: () => this.saveError.set('Den Rest neu zu lesen hat nicht geklappt — der bisherige Stand bleibt.'),
     bind: o => o.pipe(takeUntilDestroyed(this.destroyRef)),
@@ -421,7 +456,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!this.allowed) return;
     this.scanRef = this.route.snapshot.paramMap.get('id') ?? this.route.snapshot.paramMap.get('key') ?? '';
-    void this.load();
+    void (this.gameId != null ? this.loadGame() : this.load());
   }
 
   /** Zurück auf der Seite (Handy): ein wartendes Nachfragen gleich ausführen. */
@@ -495,6 +530,41 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       const blob = await this.api.photo(this.scanRef);
       if (!this.destroyed && my === this.loadSeq) this.photoUrl.set(URL.createObjectURL(blob));
     } catch { /* ohne Foto geht die Korrektur trotzdem */ }
+  }
+
+  /**
+   * Korrektur-Modus (0.660.0): die Vereinspartie laden und — solange aufbewahrt — ihr Formular mit Foto und Lesung, wie beim
+   * ersten Prüfen. Der gespeicherte Stand je Halbzug gilt nur, wenn er zu den Zügen der Partie passt; sonst die Züge der
+   * Partie mit den Formular-Einträgen daneben. Ohne Formular: nur Brett und Zugliste.
+   */
+  private async loadGame(): Promise<void> {
+    const id = this.gameId!;
+    let game: ClubGameDetail;
+    try {
+      game = await this.api.game(id);
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && err.status === 404) this.notFound.set(true);
+      else this.loadError.set(loadErrorText(err));
+      return;
+    }
+    if (!game.canDelete) { this.notFound.set(true); return; }
+    this.gameTitle.set(`${game.white} – ${game.black}${game.year ? ` (${game.year})` : ''} · ${game.result === '*' ? 'Ergebnis offen' : game.result}`);
+    const fromPgn = pliesOfPgn(game.pgn);
+    let sheet: ClubSheetState | null = null;
+    try { sheet = await this.api.clubSheet(id); } catch { /* nichts aufbewahrt — Korrektur am Brett */ }
+    const matches = !!sheet && sheet.plies.length === fromPgn.length && sheet.plies.every((p, i) => p.san === fromPgn[i].san);
+    if (sheet && matches) {
+      this.s.loadSheet(sheet);
+    } else {
+      this.s.loadSheet({ plies: toServer(fromPgn), boxes: sheet?.boxes ?? [], written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
+    }
+    this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
+    if (sheet) {
+      try {
+        const blob = await this.api.clubSheetPhoto(id);
+        if (!this.destroyed) this.photoUrl.set(URL.createObjectURL(blob));
+      } catch { /* ohne Foto geht die Korrektur trotzdem */ }
+    }
   }
 
   /** Vorgabe „ersetzen": Spieler von Schwaz und die eigene Seite — bis der Nutzer das Häkchen selbst anfasst. */
@@ -598,6 +668,18 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       && !(await firstValueFrom(this.confirm.ask(`${this.s.illegalCount()} Züge am Ende sind nicht legal und fallen weg. Trotzdem übernehmen?`)))) return;
     this.saving.set(true);
     this.saveError.set(null);
+    if (this.gameId != null) {
+      try {
+        await this.api.correctMoves(this.gameId, legal.map(p => p.san), toServer(legal));
+        this.saved.set(true);
+      } catch (err) {
+        const e = err instanceof HttpErrorResponse ? err : null;
+        this.saveError.set(e?.error?.reason ? reasonText(e.error.reason) : 'Speichern hat nicht geklappt.');
+      } finally {
+        this.saving.set(false);
+      }
+      return;
+    }
     try {
       await this.api.addGame({
         moves: legal.map(p => p.san),

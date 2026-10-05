@@ -40,11 +40,14 @@ describe('ClubScanPageComponent', () => {
   let clubApi: { client: () => ClubClient; addToMyGames: jasmine.Spy };
   let loggedIn: boolean;
   let perms: string[] | null;
+  let routeData: Record<string, unknown>;
 
   beforeEach(() => {
     perms = null;   // null = alle Rechte
     params = { id: '7' };
-    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard']);
+    routeData = {};
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard',
+      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves']);
     api.scan.and.resolveTo(structuredClone(STATE));
     api.photo.and.rejectWith(new Error('kein Foto'));
     api.match.and.resolveTo(MATCH(true));
@@ -60,7 +63,7 @@ describe('ClubScanPageComponent', () => {
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }),
         { provide: ClubApiService, useValue: clubApi },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: routeData } } },
         { provide: AuthService, useValue: { has: (p: string) => !perms || perms.includes(p), currentUser: { username: 'patrik' }, get isLoggedIn() { return loggedIn; } } },
       ],
     });
@@ -68,6 +71,41 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  it('Korrigieren einer Vereinspartie (0.660.0): ohne aufbewahrtes Formular am Brett, Speichern ersetzt die Züge', fakeAsync(() => {
+    params = { id: '12' };
+    routeData = { game: true };
+    api.game.and.resolveTo({ id: 12, year: 2026, white: 'Moser, Axel', black: 'Schwaz', result: '1/2-1/2', canDelete: true,
+      pgn: '[White "Moser, Axel"]\n[Black "Schwaz"]\n\n1. d4 Nf6 2. c4 e6 1/2-1/2\n' } as never);
+    api.clubSheet.and.rejectWith(new Error('404'));
+    api.correctMoves.and.resolveTo({} as never);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(el.querySelector('h2')?.textContent).toContain('Vereinspartie korrigieren');
+    expect(el.textContent).toContain('Moser, Axel – Schwaz (2026)');
+    expect(el.textContent).toContain('korrigiert wird am Brett');
+    expect(c.s.plies().map(p => p.san)).toEqual(['d4', 'Nf6', 'c4', 'e6']);
+    expect(api.scan).not.toHaveBeenCalled();
+    expect(el.querySelector('lh-player-search')).toBeNull();                       // Namen ändert man unter „Bearbeiten"
+    void c.save();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.correctMoves).toHaveBeenCalledWith(12, ['d4', 'Nf6', 'c4', 'e6'], jasmine.any(Array));
+    expect(api.addGame).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('Korrektur gespeichert.');
+  }));
+
+  it('Korrigieren: fremde Partie (kein Recht) → „Partie nicht gefunden"', fakeAsync(() => {
+    params = { id: '12' };
+    routeData = { game: true };
+    api.game.and.resolveTo({ id: 12, white: 'A', black: 'B', result: '*', canDelete: false, pgn: '1. e4 *' } as never);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Partie nicht gefunden');
+  }));
 
   it('übernimmt Kopfdaten und springt auf die unsichere Stelle; die Vorschau zeigt „Schwaz" statt meines Namens', fakeAsync(() => {
     const el = create();

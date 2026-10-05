@@ -1647,6 +1647,19 @@ Rollenverwaltung an).
   des Gegners + Lösung, StartPly 0, Tags gefunden/verpasst + Themen; verschwundene Taktik → `Retired`),
   `TacticHarvestScheduler` (60 s, `TacticHarvest:Enabled`). Tabelle `TacticCandidates` (Cascade an der Analyse), Aufträge
   aus der Job-Liste ausgeblendet. Messung 04.10. (nur erster Zug): ~700 Kandidaten, Verein 0,22/Partie, Meister 0,12.
+- **Vereinspartien korrigieren + verbundene Kopien (0.660.0**, Wunsch 2026-10-05: „Ligagame aus Scoresheet in meine Partien
+  kopiert — verbunden bleiben, Korrektur korrigiert alles; überall ein Korrigieren-Knopf wie beim initialen Beheben";
+  Entscheidung: alle Kopien ziehen mit). `SavedGames.LeagueClubGameId` (beim Kopieren über `ClubGameForMovesAsync`, alte Kopien
+  `ClubCopyLinkScheduler` täglich über den Dubletten-Schlüssel) und `ScoresheetScanArchives.LeagueClubGameId` (beim Übernehmen,
+  `CloseLeagueScanAsync(…, clubGameId)`). `LeagueClubService.CorrectMovesAsync` (Hochladender/Verwalter; PGN, Plies, MovesHash
+  neu; Analyse gelöscht → Pumpe rechnet neu, Taktiken mit; Karten neu) + `ClubGameCorrectionService` (Kopien via
+  `SavedGameService.ApplyClubMovesAsync` — Kopfdaten/Datum der Kopie bleiben, Zugkommentare gehen; `FromCopyAsync` nach
+  `PUT /api/games/{id}`: darf korrigieren → Vereinspartie + alle Kopien, sonst Kopie gelöst). Endpunkte `/api/league/club/games/
+  {id}/sheet` (+`/photo`, `/resolve`, aus dem Archiv) und `PUT …/{id}/moves`; RookHubs `/api/games/{id}/scoresheet|photo|resolve`
+  fallen für eine Kopie auf das Archiv der Vereinspartie zurück (`SavedGameDetailDto.ClubGameId/ClubSheet`). Oberfläche: LeagueHub
+  Route `verein/partie/:id/korrigieren` = `club-scan-page` im Modus `gameId` (Namen bleiben bei „Bearbeiten"), Knopf „Korrigieren"
+  in der Vereinsliste/„Meine Partien"; RookHub ⋮ der Vereinspartie → LeagueHub, `/games/:id/edit` öffnet das Formular der
+  Vereinspartie und zeigt einen Hinweis zur Verbindung. Datenschutz: aufbewahrtes Foto sehen jetzt auch Hochladender/Verwalter.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

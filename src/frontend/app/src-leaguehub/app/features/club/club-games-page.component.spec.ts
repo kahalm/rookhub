@@ -158,7 +158,7 @@ describe('ClubGamesPageComponent', () => {
     expect(visible(game.querySelector('td.acts'))).toBeFalse();
     expect(visible(acts)).toBeTrue();
     const labels = Array.from(acts.querySelectorAll('.btn-link')).map(b => b.textContent?.trim());
-    expect(labels).toEqual(['Nachspielen', 'Bearbeiten', 'Löschen']);
+    expect(labels).toEqual(['Nachspielen', 'Bearbeiten', 'Korrigieren', 'Löschen']);
     expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
     // breit wie bisher: Aktionen in der Spalte, keine eigene Zeile
     el.style.width = '900px';

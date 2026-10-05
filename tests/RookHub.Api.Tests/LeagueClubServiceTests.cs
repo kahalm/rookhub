@@ -1,3 +1,4 @@
+using RookHub.Api.Services;
 using System.Linq.Expressions;
 using System.Net;
 using System.Text.Json.Nodes;
@@ -282,6 +283,42 @@ public class LeagueClubServiceTests : IDisposable
         Assert.DoesNotContain("1850", g.Pgn);
         Assert.DoesNotContain("Vereinsmeisterschaft", g.Pgn);
         Assert.Contains("[BlackFideId \"222\"]", g.Pgn);
+    }
+
+    /// <summary>Korrigieren (0.660.0): Züge der Vereinspartie neu — nur Hochladender/Verwalter, legal, neuer Dubletten-Schlüssel;
+    /// die verbundenen Kopien ziehen mit (Kopfdaten und Datum der Kopie bleiben), Analyse-Verweis und Training der Kopie fallen.</summary>
+    [Fact]
+    public async Task CorrectMoves_RewritesTheClubGame_AndEveryLinkedCopy()
+    {
+        var me = await SeedAsync();
+        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas Dr."), null);
+        var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
+        Assert.Equal(me, g.UploadedByUserId);
+        var sans = PgnParser.ExtractMainlineSans(PgnParser.SplitGames(g.Pgn).First().MoveText);
+        var shorter = sans.Take(sans.Count - 2).ToList();
+
+        var other = new AppUser { Username = "x", Email = "x@test", PasswordHash = "x" };
+        _db.AppUsers.Add(other);
+        await _db.SaveChangesAsync();
+        Assert.Equal("forbidden", (await Club().CorrectMovesAsync(other.Id, false, g.Id, shorter)).Reason);
+        Assert.Equal("illegal", (await Club().CorrectMovesAsync(me, false, g.Id, new[] { "e4", "Ke2", "Ke7", "Kxe7" })).Reason);
+
+        var copy = new SavedGame { UserId = other.Id, Source = "pgn", Pgn = "[Event \"Kopie\"]\n[Date \"2024.??.??\"]\n[White \"Hengl\"]\n[Black \"Schnabl\"]\n[Result \"1-0\"]\n\n1. e4 1-0\n",
+            White = "Hengl", Black = "Schnabl", Result = "1-0", LeagueClubGameId = g.Id, GameAnalysisId = 77, CreatedAt = Now };
+        _db.SavedGames.Add(copy);
+        await _db.SaveChangesAsync();
+
+        var (game, newSans, reason) = await Club().CorrectMovesAsync(me, false, g.Id, shorter);
+        Assert.Null(reason);
+        Assert.Equal(shorter.Count, game!.Plies);
+        Assert.Equal(LeagueClubService.HashOf(shorter), game.MovesHash);
+        Assert.Equal(1, await SavedGameService.ApplyClubMovesAsync(_db, g.Id, newSans!, null));
+        var c = await _db.SavedGames.AsNoTracking().SingleAsync();
+        Assert.Equal(PgnParser.ExtractMainlineSans(PgnParser.SplitGames(c.Pgn).First().MoveText), shorter);
+        Assert.Contains("[Event \"Kopie\"]", c.Pgn);                // Kopfdaten der Kopie bleiben
+        Assert.Contains("[Date \"2024.??.??\"]", c.Pgn);             // auch das Datum mit nur dem Jahr
+        Assert.Null(c.GameAnalysisId);                                  // Analyse der alten Zugfolge fällt
+        Assert.Equal(shorter.Count, c.MoveCount);
     }
 
     /// <summary>Wunsch 2026-10-04: über den Teilen-Link hochgeladen → der Browser merkt sich einen Schlüssel; nach dem Anmelden

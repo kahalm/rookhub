@@ -19,6 +19,9 @@ export const routes: Routes = [
     loadComponent: () => import('./features/club/club-games-page.component').then(m => m.ClubGamesPageComponent) },
   { path: 'verein/neu', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },
+  // Vereinspartie korrigieren (0.660.0): dieselbe Seite wie beim ersten Prüfen eines Formulars, mit dem aufbewahrten Foto
+  { path: 'verein/partie/:id/korrigieren', canActivate: [authGuard], data: { game: true },
+    loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
   { path: 'verein/formular/:id', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
   { path: 'konten', canActivate: [authGuard],

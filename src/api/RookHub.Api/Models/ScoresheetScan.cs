@@ -154,6 +154,9 @@ public class ScoresheetScanArchive
     public string? ResolutionJson { get; set; }
     /// <summary>Nur Seite 1 und nur übernommen: die PGN, wie sie in die Vereins-Datenbank ging.</summary>
     public string? FinalPgn { get; set; }
+    /// <summary>Die Vereinspartie, die daraus wurde (0.660.0) — damit „Korrigieren" Foto und Lesung wieder zeigt, solange
+    /// der Eintrag aufbewahrt wird. Nur Seite 1 und nur übernommen.</summary>
+    public int? LeagueClubGameId { get; set; }
     /// <summary><c>saved</c> oder <c>discarded</c>.</summary>
     public string Outcome { get; set; } = "saved";
     public string? Model { get; set; }

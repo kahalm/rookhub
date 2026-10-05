@@ -1,7 +1,9 @@
 // Vereins-Datenbank (`/api/league/club/*`) — Formen wie in DTOs/LeagueClubDtos.cs (camelCase).
-import { ScoresheetLanguage, ScoresheetPly, ScoresheetScan, ScoresheetStatus } from '@rh/features/games/scoresheet.service';
+import { ScoresheetEditState, ScoresheetLanguage, ScoresheetPly, ScoresheetScan, ScoresheetStatus } from '@rh/features/games/scoresheet.service';
 
 export type { ScoresheetLanguage, ScoresheetPly, ScoresheetScan, ScoresheetStatus };
+/** Aufbewahrtes Formular einer Vereinspartie (0.660.0) — dieselbe Form wie bei einer eigenen Partie in RookHub. */
+export type ClubSheetState = ScoresheetEditState;
 
 export interface ClubGame {
   id: number;

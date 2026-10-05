@@ -52,6 +52,10 @@ export interface GameMistakeProgress {
 /** Detail inkl. PGN (zum Nachspielen/Analysieren). */
 export interface SavedGameDetail extends SavedGame {
   pgn: string;
+  /** Kopie dieser Vereinspartie (0.660.0) — eine Korrektur geht dorthin (Hochladender/Verwalter) bzw. löst die Kopie. */
+  clubGameId?: number | null;
+  /** Das Formular der Vereinspartie ist noch aufbewahrt — die Korrekturseite zeigt es wie ein eigenes (0.660.0). */
+  clubSheet?: boolean;
   /** "white"/"black", wenn der Besitzer einer Seite zuordenbar ist — initiale Brett-Orientierung. */
   ownerSide?: 'white' | 'black' | null;
 }
@@ -89,6 +93,9 @@ export interface SharedGame {
   blackElo?: number | null;
   /** "white"/"black", wenn der Teilende einer Seite zuordenbar ist — initiale Brett-Orientierung. */
   ownerSide?: 'white' | 'black' | null;
+  /** Nur Vereinspartie (0.660.0): Id und ob der Betrachter sie korrigieren darf (Hochladender/Verwalter). */
+  clubId?: number;
+  clubCanCorrect?: boolean;
   /** Nur für den angemeldeten BESITZER: die Id seiner Partie — die Seite wechselt dann auf `/games/{id}`. */
   ownGameId?: number | null;
   /** „Kurz erzählt" (0.541.0): die Partie in zwei, drei Sätzen — dieselbe Zeile steht in der Link-Vorschau. */
@@ -100,7 +107,7 @@ export interface SharedGame {
 /** Eine Partie der LeagueHub-Vereins-Datenbank, wie `GET /api/league/club/games/{id}` sie liefert (nur, was die Seite braucht). */
 interface ClubGameDto {
   id: number; year: number | null; white: string; black: string; whiteElo: number | null; blackElo: number | null;
-  result: string; event: string | null; pgn: string;
+  result: string; event: string | null; pgn: string; canDelete?: boolean;
 }
 
 /** Antwort auf „Partie analysieren" (`POST …/analyze`): neu eingereiht oder wiederverwendet. */
@@ -239,6 +246,7 @@ export class GamesService {
   clubGame(id: number): Observable<SharedGame> {
     return this.http.get<ClubGameDto>(`/api/league/club/games/${id}`).pipe(map(g => ({
       source: g.event || 'LeagueHub', white: g.white, black: g.black, result: g.result, pgn: g.pgn,
+      clubId: g.id, clubCanCorrect: !!g.canDelete,
       whiteElo: g.whiteElo, blackElo: g.blackElo, year: g.year, createdAt: '', playedAt: null,
     })));
   }

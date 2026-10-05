@@ -77,6 +77,13 @@ public class SavedGameDto
     /// bietet damit „Foto anzeigen/herunterladen", die Korrekturseite die Formular-Einträge.</summary>
     public int? ScanId { get; set; }
 
+    /// <summary>Kopie dieser Vereinspartie (0.660.0) — Korrekturen der Vereinspartie kommen hier an.</summary>
+    public int? ClubGameId { get; set; }
+
+    /// <summary>Zur verbundenen Vereinspartie ist das Formular (Foto + Lesung) noch aufbewahrt und gehört dem Besitzer dieser
+    /// Kopie — die Korrekturseite öffnet es dann wie ein eigenes (0.660.0).</summary>
+    public bool ClubSheet { get; set; }
+
     /// <summary>Stand der VERKNUEPFTEN Analyse (<see cref="Models.SavedGame.GameAnalysisId"/>); <c>null</c> =
     /// keine verknuepft oder die Analyse gibt es nicht mehr. Die Liste zeigt damit statt des Analysieren-Knopfs
     /// den Fortschritt und, wenn fertig, die Genauigkeit beider Seiten.</summary>

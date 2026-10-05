@@ -350,6 +350,13 @@ public class SavedGameService
         var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
         dto.OwnerSide = DetermineOwnerSide(g, profile);
         dto.ScanId = await _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefaultAsync();
+        dto.ClubGameId = g.LeagueClubGameId;
+        if (dto.ScanId == null && g.LeagueClubGameId is { } clubId)
+        {
+            var now = DateTime.UtcNow;
+            dto.ClubSheet = await _db.LeagueClubGames.AnyAsync(c => c.Id == clubId && c.UploadedByUserId == g.UserId)
+                && await _db.ScoresheetScanArchives.AnyAsync(a => a.LeagueClubGameId == clubId && a.Page == 1 && a.ExpiresAt > now);
+        }
         return dto;
     }
 
@@ -521,6 +528,68 @@ public class SavedGameService
             .OrderByDescending(a => a.Status == GameAnalysisStatus.Done).ThenByDescending(a => a.Id)
             .Select(a => (int?)a.Id)
             .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>Die Vereinspartie mit GENAU diesen Zügen (jüngste zuerst) — die Quelle einer Kopie (0.660.0).</summary>
+    internal async Task<int?> ClubGameForMovesAsync(IReadOnlyList<string> sans, CancellationToken ct)
+    {
+        if (sans.Count == 0) return null;
+        var hash = League.LeagueClubService.HashOf(sans);
+        return await _db.LeagueClubGames.AsNoTracking().Where(g => g.MovesHash == hash).OrderByDescending(g => g.Id)
+            .Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// Eine korrigierte Vereinspartie in alle verbundenen Kopien tragen (0.660.0): je Kopie neue Züge (Kopfdaten der Kopie
+    /// bleiben, Kommentare zu Zügen gehen — sie gehörten zur alten Zugfolge), und wie bei jeder Zugänderung fallen Analyse,
+    /// Fehler-Training und Nacherzählung. <paramref name="except"/> = die Kopie, von der die Korrektur kam. → Zahl der Kopien.
+    /// </summary>
+    public static async Task<int> ApplyClubMovesAsync(AppDbContext db, int clubGameId, IReadOnlyList<string> sans, int? except,
+        CancellationToken ct = default)
+    {
+        var copies = await db.SavedGames.Where(g => g.LeagueClubGameId == clubGameId && g.Id != except).ToListAsync(ct);
+        foreach (var g in copies)
+        {
+            var old = PgnParser.SplitGames(g.Pgn).FirstOrDefault();
+            var tags = old.Headers ?? new Dictionary<string, string>();
+            string? T(string k) => tags.TryGetValue(k, out var v) && !string.IsNullOrWhiteSpace(v) && !v.StartsWith('?') ? v : null;
+            var result = T("Result") ?? g.Result ?? "*";
+            var pgn = BuildHeaderedPgn(tags, new GameHeaderInput(T("Event"), T("Site"), null, T("Round"),
+                T("White") ?? g.White, T("Black") ?? g.Black, result), result, sans, null, null);
+            // Das Datum bleibt, wie es war (auch nur das Jahr, „2026.??.??") — der Kopfdaten-Weg kennt nur ganze Daten.
+            if (tags.TryGetValue("Date", out var date) && !string.IsNullOrWhiteSpace(date))
+                pgn = pgn.Replace("[Date \"????.??.??\"]", $"[Date \"{date.Replace("\"", "")}\"]");
+            g.Pgn = pgn;
+            g.MoveCount = sans.Count;
+            await MovesChangedAsync(db, g, ct);
+        }
+        await db.SaveChangesAsync(ct);
+        return copies.Count;
+    }
+
+    /// <summary>
+    /// Kopien von Vereinspartien von vor 0.660.0 nachträglich verbinden: gleiche Züge ab der Grundstellung (über den
+    /// Dubletten-Schlüssel der Vereins-Datenbank). Höchstens <paramref name="take"/> Kopien je Lauf. → Zahl der verbundenen.
+    /// </summary>
+    public async Task<int> LinkClubCopiesAsync(int take = 500, CancellationToken ct = default)
+    {
+        var hashes = (await _db.LeagueClubGames.AsNoTracking().Select(g => new { g.Id, g.MovesHash }).ToListAsync(ct))
+            .GroupBy(g => g.MovesHash).ToDictionary(x => x.Key, x => x.Max(g => g.Id));
+        if (hashes.Count == 0) return 0;
+        var candidates = await _db.SavedGames.Where(g => g.LeagueClubGameId == null && g.Source == "pgn")
+            .OrderBy(g => g.Id).Take(take).ToListAsync(ct);
+        var linked = 0;
+        foreach (var g in candidates)
+        {
+            var parsed = PgnParser.SplitGames(g.Pgn).FirstOrDefault();
+            if (parsed.Headers is { } h && h.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen) && !IsStandardStart(fen)) continue;
+            var sans = PgnParser.ExtractMainlineSans(parsed.MoveText ?? string.Empty);
+            if (sans.Count == 0 || !hashes.TryGetValue(League.LeagueClubService.HashOf(sans), out var clubId)) continue;
+            g.LeagueClubGameId = clubId;
+            linked++;
+        }
+        if (linked > 0) await _db.SaveChangesAsync(ct);
+        return linked;
     }
 
     private static bool IsStandardStart(string fen)
@@ -733,8 +802,10 @@ public class SavedGameService
                 OwnerSide = side,
                 ShareToken = await GenerateUniqueTokenAsync(),
                 CreatedAt = DateTime.UtcNow,
-                // Aus der Vereins-Datenbank kopiert: deren Analyse gleich mitnehmen (0.653.0).
+                // Aus der Vereins-Datenbank kopiert: deren Analyse gleich mitnehmen (0.653.0) — und seit 0.660.0 mit ihr
+                // verbunden bleiben, damit eine Korrektur der Vereinspartie hier ankommt.
                 GameAnalysisId = startFen is null || IsStandardStart(startFen) ? await ClubAnalysisForMovesAsync(sans, ct) : null,
+                LeagueClubGameId = startFen is null || IsStandardStart(startFen) ? await ClubGameForMovesAsync(sans, ct) : null,
             };
             _db.SavedGames.Add(entity);
             await _db.SaveChangesAsync(ct);
@@ -838,11 +909,13 @@ public class SavedGameService
     /// Training und Nacherzählung werden gelöscht — „Analysieren" rechnet danach die neue Fassung, und nach der Analyse
     /// entsteht die Nacherzählung neu. Speichert nicht selbst.
     /// </summary>
-    private async Task OnMovesChangedAsync(SavedGame g)
+    private Task OnMovesChangedAsync(SavedGame g) => MovesChangedAsync(_db, g, default);
+
+    private static async Task MovesChangedAsync(AppDbContext db, SavedGame g, CancellationToken ct)
     {
         g.GameAnalysisId = null;
-        _db.GameMistakeProgresses.RemoveRange(await _db.GameMistakeProgresses.Where(p => p.SavedGameId == g.Id).ToListAsync());
-        _db.GameRecaps.RemoveRange(await _db.GameRecaps.Where(r => r.SavedGameId == g.Id).ToListAsync());
+        db.GameMistakeProgresses.RemoveRange(await db.GameMistakeProgresses.Where(p => p.SavedGameId == g.Id).ToListAsync(ct));
+        db.GameRecaps.RemoveRange(await db.GameRecaps.Where(r => r.SavedGameId == g.Id).ToListAsync(ct));
     }
 
     /// <summary>Spielt die Züge nach und gibt sie in der Schreibweise des Bretts zurück; wirft beim ersten

@@ -88,6 +88,15 @@ public class SavedGame
     public int? GameAnalysisId { get; set; }
 
     /// <summary>
+    /// Kopie einer Vereinspartie (0.660.0, Wunsch 2026-10-05: „aus einem Scoresheet ein Ligagame gemacht und in meine Partien
+    /// kopiert — die sollen verbunden bleiben, damit eine Korrektur alles korrigiert"). Die Vereinspartie ist die Quelle: ihre
+    /// Zugkorrektur geht in jede verbundene Kopie; korrigiert der Hochladende oder ein Verwalter die Kopie, geht es in die
+    /// Vereinspartie und alle Kopien, korrigiert jemand anderes, löst sich seine Kopie. Kein Fremdschlüssel (wie
+    /// <see cref="GameAnalysisId"/>).
+    /// </summary>
+    public int? LeagueClubGameId { get; set; }
+
+    /// <summary>
     /// Die Seite des Besitzers, von ihm selbst festgelegt (<c>white</c>/<c>black</c>, 0.531.0) — <c>null</c> = nicht
     /// festgelegt, dann gilt die Zuordnung über den Plattform-Namen. Dreht die eigene Partieseite, den Teilen-Link und
     /// das Link-Vorschaubild. Gebraucht bei eingelesenen Formularen (dort gibt es keinen Plattform-Namen), setzbar für

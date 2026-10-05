@@ -176,6 +176,9 @@ type Side = 'white' | 'black';
       @if (g.canDelete) {
       <button type="button" class="btn-link" (click)="edit(g)"
               [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' bearbeiten'">Bearbeiten</button>
+      <!-- 0.660.0: Züge nachbessern wie beim ersten Prüfen (mit dem aufbewahrten Formular) — gilt auch für alle Kopien -->
+      <a class="btn-link" [routerLink]="['/verein/partie', g.id, 'korrigieren']"
+         [attr.aria-label]="'Züge der Partie ' + g.white + ' – ' + g.black + ' korrigieren'">Korrigieren</a>
       <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
               [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' löschen'">Löschen</button> }
     </ng-template>

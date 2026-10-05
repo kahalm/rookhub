@@ -264,6 +264,8 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
+    builder.Services.AddScoped<RookHub.Api.Services.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)
+    builder.Services.AddHostedService<RookHub.Api.Services.ClubCopyLinkScheduler>();
     // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen
     builder.Services.AddScoped<RookHub.Api.Services.Tactics.TacticHarvestService>();
     builder.Services.AddHostedService<RookHub.Api.Services.Tactics.TacticHarvestScheduler>();

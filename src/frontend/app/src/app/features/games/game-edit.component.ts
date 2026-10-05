@@ -68,6 +68,10 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
             <mat-icon>{{ saving() ? 'hourglass_top' : 'save' }}</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>
+        @if (clubGameId()) {
+          <!-- Kopie einer Vereinspartie (0.660.0) -->
+          <p class="club-linked">{{ 'games.edit.clubLinked' | translate }}</p>
+        }
 
         <mat-card class="headers">
           <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.white' | translate }}</mat-label>
@@ -247,6 +251,8 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     </div>
   `,
   styles: [`
+    .club-linked { margin: 0 0 12px; padding: 8px 12px; border-radius: 6px; font-size: 14px;
+      background: color-mix(in srgb, var(--rh-info, #1976d2) 10%, transparent); }
     /* Werkbank-Seite: am PC mehr Breite als die üblichen 1240 px (Foto + Brett + Zugliste nebeneinander). */
     .edit-page { max-width: min(1800px, 98vw); margin: 0 auto; padding: 12px 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
@@ -383,6 +389,8 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   readonly mode = this.session.mode;
   readonly unresolved = this.session.unresolved;
   readonly isScoresheet = this.session.isScoresheet;
+  /** Kopie einer Vereinspartie (0.660.0) — Hinweis, dass eine Zugkorrektur dorthin geht oder die Kopie löst. */
+  readonly clubGameId = signal<number | null>(null);
   readonly photoSize = this.session.photoSize;
   readonly busy = this.session.busy;
   readonly legalCount = this.session.legalCount;
@@ -462,7 +470,9 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
     this.session.startFen.set(startFenOf(game.pgn));   // Stellungspartie (FEN-Kopf): Brett und Legalität ab dort
     this.flipped.set(game.ownerSide === 'black');
 
-    if (!game.scanId) {
+    this.clubGameId.set(game.clubGameId ?? null);
+    // Kopie einer Vereinspartie, deren Formular noch aufbewahrt ist (0.660.0): wie eine eingelesene Partie korrigieren
+    if (!game.scanId && !game.clubSheet) {
       this.plies.set(fromPgn);
       this.loading.set(false);
       return;

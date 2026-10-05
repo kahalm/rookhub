@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
+import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus, ClubSheetState, ScoresheetPly } from './club.models';
 
 import { rememberClaimKey } from './claim-keys';
 
@@ -214,6 +214,26 @@ export class ClubClient {
   /** Als Observable: die geteilte Korrektur-Sitzung hängt es an die Lebensdauer der Seite. */
   resolve(ref: string, prefix: string[], writtenFrom: number): Observable<ScoresheetResolveResult> {
     return this.http.post<ScoresheetResolveResult>(`${this.base}/scans/${encodeURIComponent(ref)}/resolve`, { prefix, writtenFrom });
+  }
+
+  // ── Vereinspartie korrigieren (0.660.0): das aufbewahrte Formular (falls noch da) und die Zugkorrektur ──
+
+  /** Formular-Einträge + Stand je Halbzug der Vereinspartie (404 = nichts aufbewahrt oder nicht deine Partie). */
+  clubSheet(id: number): Promise<ClubSheetState> {
+    return firstValueFrom(this.http.get<ClubSheetState>(`${this.base}/games/${id}/sheet`));
+  }
+
+  clubSheetPhoto(id: number, page = 1): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.base}/games/${id}/sheet/photo`, { params: { page }, responseType: 'blob' }));
+  }
+
+  clubResolve(id: number, prefix: string[], writtenFrom: number): Observable<ScoresheetResolveResult> {
+    return this.http.post<ScoresheetResolveResult>(`${this.base}/games/${id}/sheet/resolve`, { prefix, writtenFrom });
+  }
+
+  /** Züge korrigieren — gilt auch für alle Kopien in „Meine Partien". */
+  correctMoves(id: number, moves: string[], plies: ScoresheetPly[] | null): Promise<ClubGame> {
+    return firstValueFrom(this.http.put<ClubGame>(`${this.base}/games/${id}/moves`, { moves, plies }));
   }
 
   discard(ref: string): Promise<unknown> {
