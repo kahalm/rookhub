@@ -4,7 +4,8 @@ import {
   MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA,
 } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { map, Observable } from 'rxjs';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { finalize, map, Observable } from 'rxjs';
 
 /** Was die Rückfrage zeigt. `message` ist bereits übersetzter Text. */
 export interface ConfirmData {
@@ -58,12 +59,29 @@ export class ConfirmDialogComponent {
   readonly ref = inject<MatDialogRef<ConfirmDialogComponent, boolean>>(MatDialogRef);
 }
 
-/** Eine Zeile Rückfrage: `ask('…')` liefert genau ein `true`/`false`. */
+/** Der oberste offene MODALE `<dialog>` (mit `showModal()` geöffnet), sonst `null`. */
+export function topModalDialog(doc: Document = document): HTMLDialogElement | null {
+  const open = Array.from(doc.querySelectorAll('dialog[open]')) as HTMLDialogElement[];
+  for (let i = open.length - 1; i >= 0; i--) {
+    try { if (open[i].matches(':modal')) return open[i]; } catch { /* Browser ohne :modal */ }
+  }
+  return null;
+}
+
+/**
+ * Eine Zeile Rückfrage: `ask('…')` liefert genau ein `true`/`false`.
+ *
+ * <p><b>Aus einem modalen `&lt;dialog&gt;` heraus</b> (0.659.1, gemeldet 2026-10-05: auf LeagueHubs Spielerkarte „Konto
+ * entfernen" lag die Rückfrage unklickbar hinter der Karte): ein mit `showModal()` geöffneter Dialog macht ALLES außerhalb
+ * inert — auch den Overlay-Container am `&lt;body&gt;`. Für die Dauer der Rückfrage hängt der Container deshalb IN den
+ * obersten modalen Dialog und danach zurück; Esc schließt in der Zeit nur die Rückfrage, nicht den Dialog dahinter.</p>
+ */
 @Injectable({ providedIn: 'root' })
 export class ConfirmService {
   private dialog = inject(MatDialog);
   private translate = inject(TranslateService);
   private labels = inject(CONFIRM_LABELS, { optional: true });
+  private overlays = inject(OverlayContainer);
 
   /** `messageKey` ist ein i18n-Schlüssel; ein bereits übersetzter Text geht genauso durch. */
   ask(messageKey: string, params?: Record<string, unknown>): Observable<boolean> {
@@ -72,8 +90,26 @@ export class ConfirmService {
       confirmLabel: this.labels?.confirm,
       cancelLabel: this.labels?.cancel,
     };
+    const restore = this.intoModalDialog();
     return this.dialog.open(ConfirmDialogComponent, { data, maxWidth: '32rem' })
       .afterClosed()
-      .pipe(map(result => result === true));
+      .pipe(map(result => result === true), finalize(restore));
+  }
+
+  /** Overlay-Container in den obersten modalen Dialog hängen → Funktion, die ihn zurückholt (no-op ohne Dialog). */
+  private intoModalDialog(): () => void {
+    const host = topModalDialog();
+    if (!host) return () => {};
+    let container: HTMLElement;
+    try { container = this.overlays.getContainerElement(); } catch { return () => {}; }
+    const prev = container.parentElement;
+    if (prev === host) return () => {};
+    host.appendChild(container);
+    const keepOpen = (e: Event) => e.preventDefault();   // Esc: native „cancel" des Dialogs dahinter unterdrücken
+    host.addEventListener('cancel', keepOpen);
+    return () => {
+      host.removeEventListener('cancel', keepOpen);
+      if (container.parentElement === host) (prev?.isConnected ? prev : document.body).appendChild(container);
+    };
   }
 }

@@ -11,6 +11,7 @@ import { routes } from './app.routes';
 import { provideRhHttpClient } from '@rh/core/http-chain';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 import { CONFIRM_LABELS } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { provideFullscreenSafeOverlays } from '@rh/shared/fullscreen/fullscreen-overlay.service';
 
 registerLocaleData(localeDe);
 
@@ -36,6 +37,9 @@ export const leaguehubConfig: ApplicationConfig = {
     { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), kind: 'leaguehub', accountHome: 'rookhub' }) },
     // Rueckfragen (ConfirmService) mit deutschen Knoepfen — die Seite stellt keine Sprache ein, sonst kaeme „Cancel“.
     { provide: CONFIRM_LABELS, useValue: { confirm: 'OK', cancel: 'Abbrechen' } },
+    // Klassische Overlays statt Popover (wie RookHub): nur so lässt sich eine Rückfrage in den modalen <dialog> der
+    // Spielerkarte umhängen (ConfirmService, 0.659.1) — ein Popover am <body> bleibt hinter dem modalen Dialog inert.
+    provideFullscreenSafeOverlays(),
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.659.1", date: "2026-10-05", changes: [
+    { en: "Confirmations opened from a modal window (e.g. “remove account” on the LeagueHub player card) were stuck behind it and could not be clicked — they now appear inside the window, and Esc only closes the question.", de: "Rückfragen aus einem modalen Fenster heraus (z. B. „Konto entfernen“ auf der LeagueHub-Spielerkarte) lagen unklickbar dahinter — sie erscheinen jetzt im Fenster, und Esc schließt nur die Frage." },
+  ] },
   { version: "0.659.0", date: "2026-10-05", changes: [
     { en: "LeagueHub forecast: the line at the top now says how correct the percentages are, e.g. “Forecast (98.7 % correct)” — 100 minus the average gap between stated and happened, weighted by the stated probability. The (i) adds what the forecast gave the player who actually came (on average) against guessing evenly over the roster.", de: "LeagueHub-Prognose: Die Zeile oben sagt jetzt, wie korrekt die Prozente sind, z. B. „Prognose (98,7 % korrekt)“ — 100 minus die mittlere Abweichung zwischen angesagt und eingetroffen, gewichtet nach der angesagten Wahrscheinlichkeit. Im (i) dazu, was die Prognose dem Spieler gab, der wirklich kam (im Schnitt), gegen gleichmäßiges Raten über die Meldeliste." },
   ] },

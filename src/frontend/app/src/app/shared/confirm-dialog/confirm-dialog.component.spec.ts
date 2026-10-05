@@ -2,7 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { of, Subject } from 'rxjs';
 import { CONFIRM_LABELS, ConfirmData, ConfirmDialogComponent, ConfirmService } from './confirm-dialog.component';
 
 /**
@@ -34,6 +35,35 @@ describe('ConfirmService', () => {
     expect(data.message).toBe('Dieses Foto löschen?');
     expect(data.confirmLabel).toBeUndefined();
     expect(data.cancelLabel).toBeUndefined();
+  });
+
+  it('aus einem modalen <dialog> heraus: Rückfrage hängt im Dialog (klickbar), Esc schließt den Dialog nicht, danach zurück (0.659.1)', () => {
+    TestBed.configureTestingModule({ providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })] });
+    const closed = new Subject<boolean>();
+    spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({ afterClosed: () => closed } as unknown as MatDialogRef<unknown>);
+    const container = TestBed.inject(OverlayContainer).getContainerElement();
+    const before = container.parentElement;
+    const dlg = document.createElement('dialog');
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    try {
+      let answer: boolean | undefined;
+      TestBed.inject(ConfirmService).ask('Konto entfernen?').subscribe(ok => answer = ok);
+      expect(container.parentElement).toBe(dlg);
+      const cancel = new Event('cancel', { cancelable: true });
+      dlg.dispatchEvent(cancel);
+      expect(cancel.defaultPrevented).toBeTrue();
+      closed.next(true);
+      closed.complete();
+      expect(answer).toBeTrue();
+      expect(container.parentElement).toBe(before);
+      const later = new Event('cancel', { cancelable: true });
+      dlg.dispatchEvent(later);
+      expect(later.defaultPrevented).toBeFalse();
+    } finally {
+      dlg.close();
+      dlg.remove();
+    }
   });
 
   it('mit CONFIRM_LABELS: die festen Knöpfe der Oberfläche', () => {
