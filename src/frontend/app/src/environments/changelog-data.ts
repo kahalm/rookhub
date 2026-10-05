@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.659.2", date: "2026-10-05", changes: [
+    { en: "LeagueHub “Your scoresheets”: a scoresheet that has been read can now also be discarded (after a confirmation), not only reviewed and accepted.", de: "LeagueHub „Deine Formulare“: Ein fertig gelesenes Formular lässt sich jetzt auch verwerfen (mit Rückfrage), nicht nur prüfen und übernehmen." },
+  ] },
   { version: "0.659.1", date: "2026-10-05", changes: [
     { en: "Confirmations opened from a modal window (e.g. “remove account” on the LeagueHub player card) were stuck behind it and could not be clicked — they now appear inside the window, and Esc only closes the question.", de: "Rückfragen aus einem modalen Fenster heraus (z. B. „Konto entfernen“ auf der LeagueHub-Spielerkarte) lagen unklickbar dahinter — sie erscheinen jetzt im Fenster, und Esc schließt nur die Frage." },
   ] },

@@ -527,6 +527,30 @@ describe('ClubAddPageComponent', () => {
     expect(el.textContent).not.toContain('Fremd – Hengl');
   }));
 
+  it('„Deine Formulare": ein fertig gelesenes lässt sich verwerfen — erst nach Rückfrage (0.659.2)', fakeAsync(() => {
+    query = { art: 'formular' };
+    const scan = { id: 4, status: 'done', notationLanguage: 'de', createdAt: '2026-10-05T08:00:00', rounds: 1,
+      moveCount: 40, uncertainCount: 0, unresolvedCount: 0, white: 'Oberschmid', black: 'Hengl' };
+    api.scans.and.resolveTo([{ ref: '4', scan }] as never);
+    api.discard.and.resolveTo();
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const btn = () => el.querySelector('button[aria-label="Formular Oberschmid – Hengl verwerfen"]') as HTMLButtonElement | null;
+    expect(el.querySelector('a[href="/verein/formular/4"]')).not.toBeNull();       // Prüfen und übernehmen bleibt
+    confirmAsk.and.returnValue(of(false));
+    btn()!.click();
+    flushMicrotasks();
+    expect(api.discard).not.toHaveBeenCalled();                                      // Nein → bleibt
+    confirmAsk.and.returnValue(of(true));
+    btn()!.click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(confirmAsk.calls.mostRecent().args[0]).toContain('Formular Oberschmid – Hengl verwerfen?');
+    expect(api.discard).toHaveBeenCalledWith('4');
+    expect(btn()).toBeNull();
+  }));
+
   // Gemeldet 2026-09-28: nach einem Abruf, der nicht durchkam, fragte die Seite nie wieder nach — „wird gelesen" blieb stehen.
   it('ein Abruf, der nicht durchkommt, beendet das Nachfragen nicht', fakeAsync(() => {
     query = { art: 'formular' };

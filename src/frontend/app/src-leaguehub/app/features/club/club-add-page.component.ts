@@ -225,7 +225,11 @@ const SAVE_DEBOUNCE_MS = 1500;
                   <span class="muted">{{ stateText(sc.scan) }}@if (isOpen(sc.scan)) {
                     <span class="scan-clock" [attr.aria-label]="'läuft seit ' + clockOf(sc.scan)"> · {{ clockOf(sc.scan) }}</span> }</span>
                   @if (sc.scan.status === 'done') { <a class="btn-sec" [routerLink]="scanLink(sc)">Prüfen und übernehmen</a> }
-                  @if (sc.scan.status === 'failed') { <button type="button" class="btn-link" (click)="discard(sc)">Verwerfen</button> }
+                  <!-- 0.659.2: auch ein fertig gelesenes Formular lässt sich verwerfen (mit Rückfrage), nicht nur ein gescheitertes -->
+                  @if (sc.scan.status === 'done' || sc.scan.status === 'failed') {
+                    <button type="button" class="btn-link" (click)="discard(sc)"
+                            [attr.aria-label]="'Formular ' + (sc.scan.white || '?') + ' – ' + (sc.scan.black || '?') + ' verwerfen'">Verwerfen</button>
+                  }
                 </li>
               }
             </ul>
@@ -753,6 +757,9 @@ export class ClubAddPageComponent implements OnInit {
   }
 
   async discard(sc: ScanRef): Promise<void> {
+    // Ein gelesenes Formular kostet Arbeit — erst nachfragen; ein gescheitertes geht ohne Frage
+    if (sc.scan.status === 'done'
+      && !(await firstValueFrom(this.confirm.ask(`Formular ${sc.scan.white || '?'} – ${sc.scan.black || '?'} verwerfen? Foto und Lesung werden gelöscht.`)))) return;
     try {
       await this.client.discard(sc.ref);
       if (this.share) rememberAnonKey(this.share, sc.ref, false);
