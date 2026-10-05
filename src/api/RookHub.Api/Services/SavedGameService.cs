@@ -538,6 +538,16 @@ public class SavedGameService
             .FirstOrDefaultAsync(ct);
     }
 
+    /// <summary>Liga + Jahrgang der Vereinspartie für die Kopie (0.666.0); beide <c>null</c>, wenn es keine Verbindung gibt oder
+    /// sie nichts hergibt.</summary>
+    internal async Task<(string? First, string? Second)> ClubClassifiersAsync(int? clubGameId, CancellationToken ct)
+    {
+        if (clubGameId is not int id) return (null, null);
+        var c = await _db.LeagueClubGames.AsNoTracking().Where(g => g.Id == id)
+            .Select(g => new { g.Classifier1, g.Classifier2 }).FirstOrDefaultAsync(ct);
+        return (GameClassifier.Clean(c?.Classifier1), GameClassifier.Clean(c?.Classifier2));
+    }
+
     /// <summary>Die Vereinspartie mit GENAU diesen Zügen (jüngste zuerst) — die Quelle einer Kopie (0.660.0).</summary>
     internal async Task<int?> ClubGameForMovesAsync(IReadOnlyList<string> sans, CancellationToken ct)
     {
@@ -594,6 +604,10 @@ public class SavedGameService
             var sans = PgnParser.ExtractMainlineSans(parsed.MoveText ?? string.Empty);
             if (sans.Count == 0 || !hashes.TryGetValue(League.LeagueClubService.HashOf(sans), out var clubId)) continue;
             g.LeagueClubGameId = clubId;
+            // Liga + Jahrgang nachtragen, soweit der Nutzer nichts eingetragen hat (0.666.0).
+            var (c1, c2) = await ClubClassifiersAsync(clubId, ct);
+            g.Classifier1 ??= c1;
+            g.Classifier2 ??= c2;
             linked++;
         }
         if (linked > 0) await _db.SaveChangesAsync(ct);
@@ -794,6 +808,8 @@ public class SavedGameService
                 result.Failed.Add(Fail("quota"));
                 continue;
             }
+            var clubGameId = startFen is null || IsStandardStart(startFen) ? await ClubGameForMovesAsync(sans, ct) : null;
+            var (clubClass1, clubClass2) = await ClubClassifiersAsync(clubGameId, ct);
             var entity = new SavedGame
             {
                 UserId = userId,
@@ -815,7 +831,9 @@ public class SavedGameService
                 // Aus der Vereins-Datenbank kopiert: deren Analyse gleich mitnehmen (0.653.0) — und seit 0.660.0 mit ihr
                 // verbunden bleiben, damit eine Korrektur der Vereinspartie hier ankommt.
                 GameAnalysisId = startFen is null || IsStandardStart(startFen) ? await ClubAnalysisForMovesAsync(sans, ct) : null,
-                LeagueClubGameId = startFen is null || IsStandardStart(startFen) ? await ClubGameForMovesAsync(sans, ct) : null,
+                LeagueClubGameId = clubGameId,
+                Classifier1 = clubClass1,   // Liga + Jahrgang aus der Vereinspartie (0.666.0)
+                Classifier2 = clubClass2,
             };
             _db.SavedGames.Add(entity);
             await _db.SaveChangesAsync(ct);

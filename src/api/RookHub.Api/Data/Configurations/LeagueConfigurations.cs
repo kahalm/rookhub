@@ -294,6 +294,8 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.Property(g => g.BlackFide).HasMaxLength(16);
         e.Property(g => g.Result).HasMaxLength(12);
         e.Property(g => g.Event).HasMaxLength(200);
+        e.Property(g => g.Classifier1).HasMaxLength(80);
+        e.Property(g => g.Classifier2).HasMaxLength(80);
         e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
         e.Property(g => g.MovesHash).HasMaxLength(64);
         e.Property(g => g.UploadShareHash).HasMaxLength(64);

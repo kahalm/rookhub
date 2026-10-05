@@ -381,6 +381,15 @@ public class LeagueClubGame
     /// <summary>Wie <see cref="WhiteRealName"/>, für Schwarz.</summary>
     public string? BlackRealName { get; set; }
     public string? BlackRealFide { get; set; }
+
+    /// <summary>Liga der Partie („Landesliga") — 0.666.0, aus dem Abgleich der Paarungen (Gegner-FIDE-ID gegen die Spielpläne);
+    /// <c>null</c> = nicht bestimmbar. Wird NICHT in der Vereins-Datenbank gezeigt, sondern geht nur in die Kopie in „Meine
+    /// Partien" (<see cref="SavedGame.Classifier1"/>): Liga + Saison + Gegner machten die „Schwaz"-Seite im öffentlichen Spielplan
+    /// wieder auffindbar.</summary>
+    public string? Classifier1 { get; set; }
+
+    /// <summary>Jahrgang der Partie („2026/27"), wie <see cref="Classifier1"/>.</summary>
+    public string? Classifier2 { get; set; }
 }
 
 /// <summary>

@@ -119,6 +119,38 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(analysis.Id, (await RowAsync(game.Id)).GameAnalysisId);
     }
 
+    /// <summary>0.666.0: Liga + Jahrgang der Vereinspartie gehen in die Kopie — und ein später verbundenes Altstück bekommt sie
+    /// nachgetragen, ohne etwas zu überschreiben, das der Nutzer selbst eingetragen hat.</summary>
+    [Fact]
+    public async Task Kopie_aus_der_Vereinsdb_uebernimmt_Liga_und_Jahrgang()
+    {
+        var club = new LeagueClubGame
+        {
+            White = "Schwaz", Black = "Gegner", Pgn = "1. e4 c5 2. Nf3 d6 *", Plies = 4, Year = 2025,
+            Classifier1 = "Landesliga", Classifier2 = "2025/26",
+            MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(new[] { "e4", "c5", "Nf3", "d6" }),
+        };
+        _db.LeagueClubGames.Add(club);
+        var owner = await UserAsync("owner");
+        await _db.SaveChangesAsync();
+
+        var res = await _svc.ImportPgnAsync(owner.Id, "[White \"Schwaz\"]\n[Black \"Gegner\"]\n\n1. e4 c5 2. Nf3 d6 *");
+
+        var copy = await RowAsync(res.Ids[0]);
+        Assert.Equal(club.Id, copy.LeagueClubGameId);
+        Assert.Equal(("Landesliga", "2025/26"), (copy.Classifier1, copy.Classifier2));
+        var listed = Assert.Single(await _svc.ListAsync(owner.Id));
+        Assert.Equal(("Landesliga", "2025/26"), (listed.Classifier1, listed.Classifier2));
+
+        // Altstück: unverbunden, Liga vom Nutzer gesetzt → Verbinden trägt nur den Jahrgang nach.
+        var tracked = await _db.SavedGames.SingleAsync(g => g.Id == copy.Id);   // RowAsync liefert Abgetrenntes
+        tracked.LeagueClubGameId = null; tracked.Classifier1 = "Eigene Liga"; tracked.Classifier2 = null;
+        await _db.SaveChangesAsync();
+        await _svc.LinkClubCopiesAsync();
+        var healed = await RowAsync(res.Ids[0]);
+        Assert.Equal(("Eigene Liga", "2025/26"), (healed.Classifier1, healed.Classifier2));
+    }
+
     // ----- Aus der Vereins-Datenbank kopiert (0.653.0): deren Analyse statt einer zweiten Rechnung -----
 
     /// <summary>Eine Vereinspartie mit den Zügen 1.e4 c5 2.Nf3 d6 samt ihrer Hintergrund-Analyse.</summary>
