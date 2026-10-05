@@ -193,7 +193,9 @@ public sealed class LeagueService
             leagues.Add(lo);
         }
         var res = new JsonObject { ["season"] = season, ["total"] = total.ToJson(), ["rounds"] = Rounds(byRound), ["leagues"] = leagues };
-        _cache?.Set(key, res, TimeSpan.FromHours(6));
+        // Der Cache hat eine Größengrenze (SizeLimit, Codereview N4-003): ohne Size wirft Set — bis 0.657.2 antwortete der
+        // Endpunkt deshalb mit jedem Aufruf 500 (log-watcher HIGH 05.10.).
+        _cache?.Set(key, res, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6) });
         return (JsonObject)res.DeepClone();
 
         static Tally Get(SortedDictionary<int, Tally> d, int r) => d.TryGetValue(r, out var x) ? x : d[r] = new Tally();

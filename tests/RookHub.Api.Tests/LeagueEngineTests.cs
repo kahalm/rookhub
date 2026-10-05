@@ -211,6 +211,28 @@ public class LeagueEngineTests
         Assert.Null(fx["2"]!["eval"]);                                                      // offen: noch nichts zu zählen
     }
 
+    /// <summary>Mit dem echten Cache der LeagueHub-Karten (Größengrenze, wie in Program.cs): bis 0.657.2 warf Set ohne Size
+    /// „Cache entry must specify a value for Size when SizeLimit is set", der Endpunkt antwortete immer 500. Der zweite Aufruf
+    /// kommt aus dem Cache.</summary>
+    [Fact]
+    public async Task ForecastStats_WithTheSizeLimitedLeagueCache_StoresAndServesFromCache()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        db.LeagueViews.Add(new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow,
+            Json = "{\"fixtures\":{\"A\":{\"1\":{\"eval\":{\"players\":6,\"boards\":3,\"of\":8}}}}}" });
+        await db.SaveChangesAsync();
+        using var cache = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+            { SizeLimit = LeagueProfileStore.CacheSizeLimit });
+        var svc = new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance, cache);
+
+        var first = await svc.ForecastStatsAsync(default);
+        Assert.Equal(1, cache.Count);
+        var second = await svc.ForecastStatsAsync(default);
+        Assert.Equal(first.ToJsonString(), second.ToJsonString());
+        Assert.Equal(6, second["total"]!["players"]!.GetValue<int>());
+    }
+
     [Fact]
     public async Task ForecastStats_PerRoundLeagueAndTotal_OverAllFixtures_OnlyCurrentSeason()
     {

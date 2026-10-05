@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.657.3", date: "2026-10-05", changes: [
+    { en: "LeagueHub: the forecast statistics (hit rate per round, league and overall) failed with an error on every call — the result was written to a size-limited cache without a size. Fixed; the statistics load again, also via share links.", de: "LeagueHub: Die Prognose-Statistik (Trefferquote je Runde, Liga und gesamt) scheiterte bei jedem Aufruf mit einem Fehler — das Ergebnis wurde ohne Größenangabe in einen größenbegrenzten Zwischenspeicher geschrieben. Behoben; die Statistik lädt wieder, auch über Teilen-Links." },
+  ] },
   { version: "0.657.2", date: "2026-10-04", changes: [
     { en: "Course “Tactics from club games”: instead of “Schwaz” the title now names the club player from the league pairing (only when the game matches a league round; the course is visible to the club only). Also for puzzles already published. The hint at “replace with Schwaz” says so.", de: "Kurs „Taktiken aus Vereinspartien“: Statt „Schwaz“ nennt der Titel jetzt den Schwazer Spieler aus der Paarung der Ligarunde (nur wenn die Partie einer Ligarunde zugeordnet ist; den Kurs sieht nur der Verein). Gilt auch für schon veröffentlichte Aufgaben. Der Hinweis bei „durch Schwaz ersetzen“ sagt das jetzt." },
   ] },
