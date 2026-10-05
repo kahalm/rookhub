@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.670.0", date: "2026-10-05", changes: [
+    { en: "The background analysis of league players now reaches fifty years back instead of two. The queue grows from some 3500 games to about 56000 — everything the profiles carry, rather than only the recent ones.", de: "Die Hintergrund-Analyse der Ligaspieler reicht jetzt fuenfzig Jahre zurueck statt zwei. Die Warteschlange waechst damit von rund 3500 auf etwa 56 000 Partien — alles, was die Profile tragen, statt nur der juengsten." },
+  ] },
   { version: "0.669.2", date: "2026-10-05", changes: [
     { en: "Up to 32 background engines can now be selected instead of sixteen. A second machine with sixteen background engines joined the twelve of the big machine and the four from Lichess — with sixteen it was left out entirely and never got any work.", de: "Bis zu 32 Hintergrund-Engines lassen sich jetzt auswählen statt sechzehn. Ein zweiter Rechner mit sechzehn Hintergrund-Engines kam zu den zwölf der großen Maschine und den vier von Lichess dazu — mit sechzehn blieb er ganz außen vor und bekam nie Arbeit." },
   ] },

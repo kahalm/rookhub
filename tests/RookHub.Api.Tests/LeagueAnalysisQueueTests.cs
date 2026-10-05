@@ -9,7 +9,7 @@ using RookHub.Api.Services.League;
 namespace RookHub.Api.Tests;
 
 /// <summary>
-/// Liga-Partien im Hintergrund analysieren (0.665.0): „erst die neuesten Partien (2 Jahre zurück), dann immer bevorzugt
+/// Liga-Partien im Hintergrund analysieren (0.665.0): „erst die neuesten Partien (Fenster: LeagueAnalysisQueue.Years), dann immer bevorzugt
 /// die Gegner von Schwaz nächste Runde, dann der Rest, und wenn das alles fertig ist erst wieder die Meisterpartien".
 /// </summary>
 public class LeagueAnalysisQueueTests : IDisposable
@@ -53,11 +53,11 @@ public class LeagueAnalysisQueueTests : IDisposable
     }
 
     [Fact]
-    public async Task Build_gegnerDerNaechstenRundeZuerst_jeweilsNeuesteZuerst_nurZweiJahre()
+    public async Task Build_gegnerDerNaechstenRundeZuerst_jeweilsNeuesteZuerst_nurImFenster()
     {
         Profile("200", Game("2026.09.01", "1. e4 e5 2. Nf3 Nc6"), Game("2026.??.??", "1. c4 e5 2. Nc3 Nf6"));
         Profile("100", Game("2025.05.03", "1. d4 d5 2. c4 e6"), Game("2026.03.01", "1. d4 Nf6 2. c4 g6"),
-            Game("2023.01.01", "1. e4 c5 2. Nf3 d6"));   // älter als zwei Jahre
+            Game("1970.01.01", "1. e4 c5 2. Nf3 d6"));   // aelter als das Fenster (LeagueAnalysisQueue.Years)
         Profile("300", Game("2026.08.01", "1. b3 e5 2. Bb2 Nc6"));   // nur in einer alten Saison
 
         var items = await LeagueAnalysisQueue.BuildAsync(_db, Now, default);
