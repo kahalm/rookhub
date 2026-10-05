@@ -3078,6 +3078,11 @@
       "moves": "Lépések",
       "date": "Dátum"
     },
+    "tags": {
+      "label": "Címkék",
+      "hint": "Enter vagy vessző hozzáad egy címkét (legfeljebb {{max}}). Csak te látod.",
+      "remove": "{{tag}} címke eltávolítása"
+    },
     "classifier": {
       "first": "Oldal / bajnokság",
       "second": "Mód / szezon",

@@ -39,6 +39,9 @@ public class GameUpdateDto
     [MaxLength(80)] public string? Classifier1 { get; set; }
     [MaxLength(80)] public string? Classifier2 { get; set; }
 
+    /// <summary>Eigene Tags (0.662.0): <c>null</c> = unverändert, sonst die vollständige neue Liste (leer = alle entfernt).</summary>
+    public List<string>? Tags { get; set; }
+
     /// <summary>Nur bei eingelesenen Partien: der Stand der Korrekturseite je Halbzug (Formular-Eintrag,
     /// bestätigt, unsicher, Lesarten) — damit die Seite beim nächsten Öffnen dort weitermacht. Für den Server
     /// Anzeige-Zustand; die Züge selbst kommen aus <see cref="Moves"/>.</summary>

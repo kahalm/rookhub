@@ -2761,6 +2761,11 @@
       "moves": "Züge",
       "date": "Datum"
     },
+    "tags": {
+      "label": "Tags",
+      "hint": "Enter oder Komma fügt einen Tag hinzu (bis zu {{max}}). Nur für dich sichtbar.",
+      "remove": "Tag {{tag}} entfernen"
+    },
     "classifier": {
       "first": "Seite / Liga",
       "second": "Modus / Jahrgang",

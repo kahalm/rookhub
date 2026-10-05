@@ -2761,6 +2761,11 @@
       "moves": "Potezi",
       "date": "Datum"
     },
+    "tags": {
+      "label": "Oznake",
+      "hint": "Enter ili zarez dodaje oznaku (do {{max}}). Vidljivo samo tebi.",
+      "remove": "Ukloni oznaku {{tag}}"
+    },
     "classifier": {
       "first": "Stranica / liga",
       "second": "Način / sezona",

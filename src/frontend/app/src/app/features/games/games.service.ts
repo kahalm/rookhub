@@ -34,6 +34,8 @@ export interface SavedGame {
   /** Nur die vom Nutzer GESETZTEN Werte — der Editor zeigt den abgeleiteten als Platzhalter, nicht als Eingabe. */
   classifier1Set?: string | null;
   classifier2Set?: string | null;
+  /** Eigene Tags (0.662.0), nur für den Besitzer. */
+  tags?: string[];
 }
 
 /** Kopf der verknüpften Analyse für die Partienliste: Fortschritt, und wenn fertig die Genauigkeit je Seite. */

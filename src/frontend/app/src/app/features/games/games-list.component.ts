@@ -16,6 +16,7 @@ import { switchMap } from 'rxjs/operators';
 import { GamesService, PgnImportResult, SavedGame } from './games.service';
 import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
+import { distinctTags, filterByTag } from './tags.util';
 import { distinctClassifiers, filterByClassifiers, hasUnclassified, NO_CLASSIFIER } from './classifier.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
@@ -59,7 +60,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
         }
         <!-- Zwei Klassifizierer (0.661.0): Online-Partien Seite + Modus, Ligapartien Liga + Jahrgang. Ein Filter je
              Klassifizierer, erst wenn es überhaupt Werte gibt — sonst stünde ein Schalter da, der nichts tut. -->
-        @if (firstOptions().length > 0 || secondOptions().length > 0) {
+        @if (firstOptions().length > 0 || secondOptions().length > 0 || tagOptions().length > 0) {
           <div class="classifier-filters">
             @if (firstOptions().length > 0) {
               <label>{{ 'games.classifier.first' | translate }}
@@ -76,6 +77,14 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   <option value="">{{ 'games.classifier.all' | translate }}</option>
                   @for (v of secondOptions(); track v) { <option [value]="v">{{ v }}</option> }
                   @if (unclassified2()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
+                </select>
+              </label>
+            }
+            @if (tagOptions().length > 0) {
+              <label>{{ 'games.tags.label' | translate }}
+                <select [(ngModel)]="filterTag" name="filterTag" [attr.aria-label]="'games.tags.label' | translate">
+                  <option value="">{{ 'games.classifier.all' | translate }}</option>
+                  @for (v of tagOptions(); track v) { <option [value]="v">{{ v }}</option> }
                 </select>
               </label>
             }
@@ -114,10 +123,11 @@ export type AnalysisState = 'none' | 'running' | 'done';
               <a class="players" [routerLink]="['/games', g.id]">
                 <span class="p"><i class="dot white"></i><span class="name">{{ g.white || '?' }}</span>@if (g.whiteElo) { <span class="elo">({{ g.whiteElo }})</span> }</span>
                 <span class="p"><i class="dot black"></i><span class="name">{{ g.black || '?' }}</span>@if (g.blackElo) { <span class="elo">({{ g.blackElo }})</span> }</span>
-                @if (g.classifier1 || g.classifier2) {
+                @if (g.classifier1 || g.classifier2 || g.tags?.length) {
                   <span class="classifiers">
                     @if (g.classifier1) { <span class="chip">{{ g.classifier1 }}</span> }
                     @if (g.classifier2) { <span class="chip">{{ g.classifier2 }}</span> }
+                    @for (t of g.tags ?? []; track t) { <span class="chip tag">#{{ t }}</span> }
                   </span>
                 }
               </a>
@@ -225,6 +235,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 6px; max-width: 60vw; }
     .classifier-filters option { color: initial; }
     .classifiers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+    .chip.tag { background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
     .chip { font-size: 0.72rem; line-height: 1; padding: 3px 7px; border-radius: 10px;
       background: color-mix(in srgb, currentColor 10%, transparent); color: color-mix(in srgb, currentColor 75%, transparent); }
 
@@ -326,6 +337,9 @@ export class GamesListComponent implements OnInit {
   /** Filter der Klassifizierer (leer = alle) — wie `onlyOpen` bewusst nicht gemerkt. */
   filter1 = '';
   filter2 = '';
+  /** Tag-Filter (leer = alle). */
+  filterTag = '';
+  tagOptions(): string[] { return distinctTags(this.games); }
   readonly none = NO_CLASSIFIER;
 
   firstOptions(): string[] { return distinctClassifiers(this.games, 1); }
@@ -340,9 +354,10 @@ export class GamesListComponent implements OnInit {
     // da, und die Auswahl hätte keinen Eintrag mehr, mit dem man den Filter zurücknehmen könnte.
     const known = (value: string, options: string[], hasNone: boolean): string =>
       value === NO_CLASSIFIER ? (hasNone ? value : '') : options.includes(value) ? value : '';
-    return filterByClassifiers(open,
+    const tag = this.tagOptions().some(t => t.toLowerCase() === this.filterTag.toLowerCase()) ? this.filterTag : '';
+    return filterByTag(filterByClassifiers(open,
       known(this.filter1, this.firstOptions(), this.unclassified1()),
-      known(this.filter2, this.secondOptions(), this.unclassified2()));
+      known(this.filter2, this.secondOptions(), this.unclassified2())), tag);
   }
 
   /** Die beiden Punkte untereinander, wie in chess.coms Ergebnis-Spalte. Offen/unbekannt = leer. */

@@ -122,5 +122,9 @@ public class SavedGame
     /// <summary>Zweiter Klassifizierer: bei Online-Partien der Modus (Blitz, Rapid, …), bei Ligapartien der Jahrgang („2026/27").</summary>
     public string? Classifier2 { get; set; }
 
+    /// <summary>Eigene Tags des Besitzers (0.662.0), durch Zeilenumbruch getrennt — Freitext, vorerst nur für ihn
+    /// (<see cref="Services.GameTags"/>). <c>null</c> = keine.</summary>
+    public string? Tags { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

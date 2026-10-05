@@ -28,6 +28,7 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { distinctClassifiers, seasonOf } from './classifier.util';
+import { addTag, distinctTags, MAX_TAG_LENGTH, MAX_TAGS } from './tags.util';
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
@@ -108,6 +109,20 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
             <input matInput [(ngModel)]="header.classifier2" name="classifier2" maxlength="80" list="cls2-options"
                    [placeholder]="derived2()" (ngModelChange)="dirty.set(true)" />
             <mat-hint>{{ 'games.edit.classifier2Hint' | translate }}</mat-hint></mat-form-field>
+          <!-- Eigene Tags (0.662.0): Freitext, Enter oder Komma fügt hinzu; die Vorschläge sind die schon vergebenen. -->
+          <div class="tags-field">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.tags.label' | translate }}</mat-label>
+              <input matInput [(ngModel)]="tagInput" name="tagInput" [maxlength]="maxTagLength" list="tag-options"
+                     [disabled]="tags().length >= maxTags" (keydown.enter)="$event.preventDefault(); commitTag()"
+                     (input)="onTagInput()" (change)="commitTag()" />
+              <mat-hint>{{ 'games.tags.hint' | translate: { max: maxTags } }}</mat-hint></mat-form-field>
+            <span class="tag-chips">
+              @for (t of tags(); track t) {
+                <span class="tag-chip">#{{ t }}<button type="button" (click)="removeTag(t)" [attr.aria-label]="'games.tags.remove' | translate: { tag: t }">×</button></span>
+              }
+            </span>
+          </div>
+          <datalist id="tag-options">@for (v of tagSuggestions(); track v) { <option [value]="v"></option> }</datalist>
           <datalist id="cls1-options">@for (v of options1(); track v) { <option [value]="v"></option> }</datalist>
           <datalist id="cls2-options">@for (v of options2(); track v) { <option [value]="v"></option> }</datalist>
         </mat-card>
@@ -282,6 +297,11 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     @media (max-width: 1100px) { .layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .photo { grid-column: 1 / -1; } }
     @media (max-width: 720px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
     .photo { padding: 8px; }
+    .tags-field { display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1; }
+    .tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 14px; font-size: 0.85rem;
+      background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
+    .tag-chip button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0 6px; }
     .photo-bar { display: flex; align-items: center; gap: 4px; padding: 0 4px 4px; }
     .pager { margin-left: 8px; }
     .pager .mat-button-toggle { font-size: 0.85rem; }
@@ -432,6 +452,33 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   });
   readonly headerDate = signal('');
 
+  /** Eigene Tags der Partie + das Eingabefeld; Vorschläge sind die schon vergebenen, soweit noch nicht an dieser Partie. */
+  readonly tags = signal<string[]>([]);
+  tagInput = '';
+  readonly maxTags = MAX_TAGS;
+  readonly maxTagLength = MAX_TAG_LENGTH;
+  private readonly knownTags = signal<string[]>([]);
+  readonly tagSuggestions = computed(() => {
+    const own = this.tags().map(t => t.toLowerCase());
+    return this.knownTags().filter(t => !own.includes(t.toLowerCase()));
+  });
+
+  commitTag(): void {
+    const next = addTag(this.tags(), this.tagInput);
+    if (next) { this.tags.set(next); this.dirty.set(true); }
+    this.tagInput = '';
+  }
+
+  /** Ein Komma schließt den Tag ab, wie Enter. */
+  onTagInput(): void {
+    if (this.tagInput.includes(',')) this.commitTag();
+  }
+
+  removeTag(tag: string): void {
+    this.tags.set(this.tags().filter(t => t !== tag));
+    this.dirty.set(true);
+  }
+
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
     this.games.get(this.gameId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -493,11 +540,12 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       classifier1: game.classifier1Set ?? '', classifier2: game.classifier2Set ?? '',
     };
     this.headerDate.set(this.header.date);
+    this.tags.set(game.tags ?? []);
     // Abgeleitet = geltender Wert, solange nichts gesetzt ist (der Server liefert nur den geltenden).
     this.derived1.set(game.classifier1Set ? '' : game.classifier1 ?? '');
     this.derived2.set(game.classifier2Set ? '' : game.classifier2 ?? '');
     this.games.list(500).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: list => { this.known1.set(distinctClassifiers(list, 1)); this.known2.set(distinctClassifiers(list, 2)); },
+      next: list => { this.known1.set(distinctClassifiers(list, 1)); this.known2.set(distinctClassifiers(list, 2)); this.knownTags.set(distinctTags(list)); },
       error: () => { /* Vorschläge sind Zugabe */ },
     });
     // RepCheck-Partien tragen „RepCheck saved game" als Veranstaltung — das ist keine Angabe des Nutzers.
@@ -619,6 +667,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   }
 
   private doSave(): void {
+    this.commitTag();   // ein noch nicht bestätigter Tag geht beim Speichern nicht verloren
     const legal = this.plies().filter(p => !p.illegal);
     const comments = this.isScoresheet()
       ? commentsForSave(legal, this.unresolved())
@@ -636,6 +685,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       ownerSide: this.header.ownerSide,
       classifier1: this.header.classifier1.trim(),
       classifier2: this.header.classifier2.trim(),
+      tags: this.tags(),
       scoresheetPlies: this.isScoresheet() ? toServer(legal) : null,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {

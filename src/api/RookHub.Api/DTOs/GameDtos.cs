@@ -103,6 +103,9 @@ public class SavedGameDto
     /// Wert als Platzhalter.</summary>
     public string? Classifier1Set { get; set; }
     public string? Classifier2Set { get; set; }
+
+    /// <summary>Eigene Tags der Partie (0.662.0) — nur für den Besitzer sichtbar.</summary>
+    public List<string> Tags { get; set; } = new();
 }
 
 /// <summary>Fortschritt im Fehler-Training einer Partie („4 von 7 · 3 offen").</summary>

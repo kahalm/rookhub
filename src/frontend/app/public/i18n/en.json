@@ -2761,6 +2761,11 @@
       "moves": "Moves",
       "date": "Date"
     },
+    "tags": {
+      "label": "Tags",
+      "hint": "Enter or comma adds a tag (up to {{max}}). Only visible to you.",
+      "remove": "Remove tag {{tag}}"
+    },
     "classifier": {
       "first": "Site / league",
       "second": "Mode / season",

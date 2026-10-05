@@ -137,3 +137,44 @@ public class GameClassifierTests : IDisposable
         Assert.Equal(GameClassifier.MaxLength, dto!.Classifier1Set!.Length);
     }
 }
+
+/// <summary>Eigene Tags einer Partie (0.662.0).</summary>
+public class GameTagsTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly SavedGameService _svc;
+
+    public GameTagsTests()
+    {
+        _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        _svc = TestServices.SavedGames(_db, TestServices.GameAnalyses(_db));
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public void Clean_trimmtKuerztEntdoppeltUndDeckelt()
+    {
+        Assert.Equal(new[] { "Endspiel", "neu angelegt" }, GameTags.Clean(new[] { "  Endspiel ", "endspiel", "", "neu,\nangelegt" }));
+        Assert.Equal(GameTags.MaxTagLength, GameTags.Clean(new[] { new string('x', 99) })[0].Length);
+        Assert.Equal(GameTags.MaxTags, GameTags.Clean(Enumerable.Range(0, 50).Select(i => "t" + i)).Count);
+        Assert.Null(GameTags.Join(new[] { " ", "," }));
+    }
+
+    [Fact]
+    public async Task Update_setztTags_nullLaesstUnveraendert_leereListeLoescht()
+    {
+        var u = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(u);
+        await _db.SaveChangesAsync();
+        var saved = await _svc.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4" }, ExternalId = "t1" });
+        GameUpdateDto Dto(List<string>? tags) => new() { Moves = new() { new() { San = "e4" } }, Result = "*", Tags = tags };
+
+        var set = await _svc.UpdateAsync(u.Id, saved.Id, Dto(new() { "Endspiel", "lehrreich", "endspiel" }));
+        Assert.Equal(new[] { "Endspiel", "lehrreich" }, set!.Tags);
+        Assert.Equal(new[] { "Endspiel", "lehrreich" }, Assert.Single(await _svc.ListAsync(u.Id)).Tags);
+
+        Assert.Equal(2, (await _svc.UpdateAsync(u.Id, saved.Id, Dto(null)))!.Tags.Count);
+        Assert.Empty((await _svc.UpdateAsync(u.Id, saved.Id, Dto(new())))!.Tags);
+    }
+}

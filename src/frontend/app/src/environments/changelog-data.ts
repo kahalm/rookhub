@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.662.0", date: "2026-10-05", changes: [
+    { en: "My games: tags. Give each game free-text tags in the game editor (Enter or a comma adds one, up to 10 per game); the field suggests the tags you have already used. The list shows them as chips and has a drop-down that filters by tag. For now they are visible only to you.", de: "Meine Partien: Tags. Im Partie-Editor kannst du jeder Partie Tags als Freitext geben (Enter oder Komma fügt einen hinzu, bis zu 10 je Partie); das Feld schlägt die schon vergebenen Tags vor. Die Liste zeigt sie als Chips und hat ein Auswahlfeld, das nach Tag filtert. Vorerst sind sie nur für dich sichtbar." },
+  ] },
   { version: "0.661.0", date: "2026-10-05", changes: [
     { en: "My games: two classifiers per game. Online games show the site and the mode (“chess.com – Blitz”, worked out from the time control), league games the league and the season (“Landesliga – 2026/27”). Both appear as chips in the list and can be filtered with one drop-down each. For league games you enter them in the game editor (suggestions come from your own games, the season from the date); leave a field empty and online games fall back to the worked-out value.", de: "Meine Partien: zwei Klassifizierer je Partie. Online-Partien zeigen die Seite und den Modus („chess.com – Blitz“, aus der Bedenkzeit errechnet), Ligapartien die Liga und den Jahrgang („Landesliga – 2026/27“). Beide stehen als Chips in der Liste und lassen sich mit je einem Auswahlfeld filtern. Bei Ligapartien trägst du sie im Partie-Editor ein (Vorschläge aus den eigenen Partien, der Jahrgang aus dem Datum); lässt du ein Feld leer, gilt bei Online-Partien wieder der errechnete Wert." },
   ] },

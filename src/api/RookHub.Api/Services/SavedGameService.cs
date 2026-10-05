@@ -240,7 +240,7 @@ public class SavedGameService
             {
                 g.Id, g.Source, g.White, g.Black, g.Result, g.PlayedAt,
                 g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt, g.GameAnalysisId,
-                g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned, g.Classifier1, g.Classifier2,
+                g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned, g.Classifier1, g.Classifier2, g.Tags,
                 PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
                 ScanId = _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefault(),
             })
@@ -294,6 +294,7 @@ public class SavedGameService
             Classifier2 = GameClassifier.Effective(r.Source, r.TimeControl, r.Classifier1, r.Classifier2).Second,
             Classifier1Set = GameClassifier.Clean(r.Classifier1),
             Classifier2Set = GameClassifier.Clean(r.Classifier2),
+            Tags = GameTags.Parse(r.Tags),
         }).ToList();
     }
 
@@ -901,6 +902,7 @@ public class SavedGameService
         // null = unverändert, leer = zurücknehmen (Online-Partien fallen auf den abgeleiteten Wert zurück).
         if (dto.Classifier1 != null) g.Classifier1 = GameClassifier.Clean(dto.Classifier1);
         if (dto.Classifier2 != null) g.Classifier2 = GameClassifier.Clean(dto.Classifier2);
+        if (dto.Tags != null) g.Tags = GameTags.Join(dto.Tags);
         if (movesChanged) await OnMovesChangedAsync(g);
         await _db.SaveChangesAsync();
         var dtoOut = MapDetail(g);
@@ -1162,6 +1164,7 @@ public class SavedGameService
         Classifier2 = GameClassifier.Effective(g.Source, g.TimeControl, g.Classifier1, g.Classifier2).Second,
         Classifier1Set = GameClassifier.Clean(g.Classifier1),
         Classifier2Set = GameClassifier.Clean(g.Classifier2),
+        Tags = GameTags.Parse(g.Tags),
     };
 }
 

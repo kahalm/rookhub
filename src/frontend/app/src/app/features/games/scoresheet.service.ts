@@ -112,6 +112,8 @@ export interface GameUpdate {
   /** Klassifizierer 1/2 der Partienliste: leer = zurücknehmen (Online-Partien: wieder abgeleitet), weglassen = unverändert. */
   classifier1?: string | null;
   classifier2?: string | null;
+  /** Eigene Tags: die vollständige neue Liste; weglassen = unverändert. */
+  tags?: string[];
   scoresheetPlies?: ScoresheetPly[] | null;
 }
 
