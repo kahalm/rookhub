@@ -81,11 +81,19 @@ public static partial class StaleContentRule
     /// <param name="chessableEnabled">Läuft der RookHub-EIGENE Chessable-Weg (<c>Chessable:Enabled</c>)?
     /// Ist er aus, wird KEIN Auftrag je abgearbeitet — dann gibt es kein <see cref="StaleAction.Refetch"/>.
     /// Den Cache-Weg sperrt der Schalter NICHT: der piratechess-Proxy läuft für die Extension-Wege ohnehin.</param>
-    public static StaleAction ActionForBook(bool hasSource, bool sourceModern, string? tags, string fileName, bool chessableEnabled)
-        => chessableEnabled && CanRefetch(tags, fileName) && !sourceModern ? StaleAction.Refetch
+    /// <param name="cacheMissed">Fand der letzte Lauf KEINE Linie dieses Buchs im Cache (<see cref="Models.Book.CacheMissAt"/> nicht älter als <c>UpdatedAt</c>)?
+    /// Dann wird aus <see cref="StaleAction.Cache"/> für ANZEIGE und Liste ein <see cref="StaleAction.Manual"/>. Der
+    /// Lauf selbst fragt ohne diesen Schalter und versucht den Cache weiter — füllt ihn später ein anderer Nutzer,
+    /// wird das Buch dann doch erneuert.</param>
+    public static StaleAction ActionForBook(bool hasSource, bool sourceModern, string? tags, string fileName, bool chessableEnabled,
+        bool cacheMissed = false)
+    {
+        var action = chessableEnabled && CanRefetch(tags, fileName) && !sourceModern ? StaleAction.Refetch
             : sourceModern && IsChessable(tags, fileName) ? StaleAction.Cache
             : hasSource ? StaleAction.Local
             : StaleAction.Manual;
+        return action == StaleAction.Cache && cacheMissed ? StaleAction.Manual : action;
+    }
 
     /// <summary>
     /// Was mit einem veralteten REPERTOIRE geschieht — die erste zutreffende Zeile gewinnt. Es gibt keine getrennte

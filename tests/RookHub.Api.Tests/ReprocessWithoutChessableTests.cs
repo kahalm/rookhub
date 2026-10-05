@@ -164,6 +164,53 @@ public class ReprocessWithoutChessableTests : IDisposable
         Assert.Equal(0, after.Stale);   // Anzeige = Ausführung: das Banner ist danach leer
     }
 
+    [Fact]
+    public async Task Reprocess_NoLineInTheCache_MarksTheBook_SoTheBannerStopsOfferingIt()
+    {
+        // Gemeldet 2026-10-05: 19 Chessable-Kurse aus der Zeit vor dem Linien-Cache (14.09.) tragen oids,
+        // der Status bot sie bei jedem Aufruf als „aus dem Cache aktualisierbar" an, und jeder Lauf meldete
+        // „keine der N Linien im Linien-Cache" — das Banner blieb für immer stehen.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        var book = await AddStaleChessableBookAsync(
+            $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 Nc6 *\n");
+        var lines = new StubCachedLineSource();   // leer: kein einziger Treffer
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        Assert.Equal(1, (await svc.GetCourseStatusAsync(5, isAdmin: true)).FromCache);
+        var res = await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, res.Skipped);
+
+        var after = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, after.Stale);
+        Assert.Equal(0, after.ReprocessableLocally + after.Refetchable);   // kein Banner mehr
+        Assert.Equal(1, after.NeedsReimport);
+        var courses = await TestServices.Course(_db, configuration: TestServices.ChessableSwitch(false))
+            .GetCoursesAsync(5, isAdmin: true);
+        Assert.True(courses.Single(c => c.BookId == book.Id).NeedsReimport);   // (!) am Kurs statt im Banner
+
+        // Füllt jemand den Cache später, erneuert der Lauf das Buch trotzdem (er fragt weiter).
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 {{new}} Nc6 *";
+        Assert.Equal(1, (await svc.ReprocessCoursesAsync(5, isAdmin: true)).RebuiltFromCache);
+        Assert.Equal(0, (await svc.GetCourseStatusAsync(5, isAdmin: true)).Stale);
+    }
+
+    [Fact]
+    public async Task CacheMissMarker_IsLiftedByANewImport()
+    {
+        var book = await AddStaleChessableBookAsync("[Event \"K\"]\n[ChessableOid \"77\"]\n\n1. e4 *\n");
+        var svc = Service(new StubReimporter(), chessableEnabled: false, new StubCachedLineSource());
+        await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, (await svc.GetCourseStatusAsync(5, isAdmin: true)).NeedsReimport);
+
+        // Ein neuer Import (RepCheck hängt Linien an) setzt UpdatedAt → wieder ein Cache-Kandidat.
+        var tracked = await _db.Books.SingleAsync(b => b.Id == book.Id);
+        tracked.UpdatedAt = tracked.CacheMissAt!.Value.AddSeconds(1);
+        await _db.SaveChangesAsync();
+        var status = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, status.FromCache);
+        Assert.Equal(0, status.NeedsReimport);
+    }
+
     /// <summary>Kurs anlegen, den die Liste zeigt (Besitzer = User 5).</summary>
     private async Task<Book> AddOwnedBookAsync(string fileName, string? tags, string? sourcePgn, int importVersion)
     {

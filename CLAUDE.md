@@ -474,6 +474,15 @@ bestehende Kurse — der Re-Fetch-Weg ist auf PROD seit 2026-09-09 aus. Regeln:
   uebernommen, bleibt es veraltet. Hat sich `Book.UpdatedAt` seit dem Laden geaendert (ein Browser-Import
   hat waehrend der Abfragen Linien angehaengt), wird ebenfalls nichts geschrieben — sonst ueberschriebe der
   umgeschriebene Text die angehaengten Linien.
+* **Kein einziger Treffer im Cache → Markierung `Book.CacheMissAt`** (0.674.1): Kurse aus der Zeit VOR dem Linien-Cache
+  (14.09.) tragen oids, aber keine ihrer Linien liegt dort — der Status bot sie bei jedem Aufruf als aktualisierbar an,
+  jeder Lauf übersprang sie („keine der N Linien im Linien-Cache"), das Banner blieb für immer (gemeldet 2026-10-05,
+  19 Kurse auf Prod). Findet der Lauf keine einzige Linie, setzt er `CacheMissAt`; solange es nicht älter als
+  `UpdatedAt` ist, zählen Status und Kursliste das Buch als `Manual` (`ActionForBook(…, cacheMissed)`, (!) „braucht
+  Re-Import"). Ein neuer Import setzt `UpdatedAt` und hebt die Markierung auf. Der LAUF fragt ohne den Schalter und
+  versucht den Cache weiter — die einzige gewollte Abweichung zwischen Anzeige und Ausführung: der Lauf kann mehr,
+  als das Banner verspricht, nie weniger. Ein piratechess-Ausfall liefert ebenfalls „nichts gecacht" und markiert
+  damit zu Unrecht — der nächste Lauf heilt das.
 * **Nicht hinter `Chessable:Enabled`**, und `localOnly` („Aus Cache") schliesst den Weg ein — beides meint
   „ohne Chessable-Abruf". Status: `ReprocessableLocally` zaehlt `Cache` mit (Banner unveraendert),
   `FromCache` weist ihn gesondert aus; Ergebnis: `RebuiltFromCache`, `CacheLinesReplaced`.

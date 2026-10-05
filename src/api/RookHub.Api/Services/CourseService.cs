@@ -391,9 +391,11 @@ public class CourseService
                 b.Id, b.Tags, b.FileName,
                 HasSource = b.Source.SourcePgn != null && b.Source.SourcePgn != "",
                 SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains(StaleContentRule.ModernMarker),
+                CacheMissed = b.CacheMissAt != null && b.CacheMissAt >= b.UpdatedAt,   // Book.CacheMissAt gilt, solange nicht älter als UpdatedAt
             })
             .ToListAsync())
-            .Where(b => StaleContentRule.ActionForBook(b.HasSource, b.SourceModern, b.Tags, b.FileName, _chessableEnabled)
+            .Where(b => StaleContentRule.ActionForBook(b.HasSource, b.SourceModern, b.Tags, b.FileName, _chessableEnabled,
+                    b.CacheMissed)
                 == StaleAction.Manual)
             .Select(b => b.Id)
             .ToHashSet();

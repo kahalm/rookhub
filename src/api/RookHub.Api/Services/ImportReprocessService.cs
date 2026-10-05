@@ -132,6 +132,7 @@ public partial class ImportReprocessService
                 // die oids (Grundlage der Fortschritts-Overlays) reinkommen.
                 SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains("[ChessableOid"),
                 b.Tags, b.FileName,
+                CacheMissed = b.CacheMissAt != null && b.CacheMissAt >= b.UpdatedAt,   // Book.CacheMissAt gilt, solange nicht älter als UpdatedAt
             })
             .ToListAsync(ct);
 
@@ -140,7 +141,10 @@ public partial class ImportReprocessService
         // Nicht-Chessable mit Quelle LOKAL aus dem gespeicherten PGN (beides ohne Chessable-Kontakt).
         // EINE Regel für Anzeige und Ausführung (ActionFor) — laufen sie auseinander, verspricht das
         // Banner eine Aktion, die der Lauf dann überspringt, und es bleibt für immer stehen.
-        var actions = stale.Select(b => ActionFor(b.HasSource, b.SourceModern, b.Tags, b.FileName)).ToList();
+        // Ausnahme: ein Buch, dessen Linien der letzte Lauf NICHT im Cache fand, zählt als „braucht Re-Import"
+        // (CacheMissed) — der Lauf versucht es weiter, verspricht im Banner aber nichts mehr.
+        var actions = stale.Select(b => StaleContentRule.ActionForBook(b.HasSource, b.SourceModern, b.Tags, b.FileName,
+            _chessableEnabled, b.CacheMissed)).ToList();
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
@@ -327,6 +331,15 @@ public partial class ImportReprocessService
             _logger.LogInformation(
                 "Course-Reprocess: Buch {FileName} (Id {BookId}) — keine der {Total} Linien im Linien-Cache, bleibt veraltet",
                 book.FileName, bookId, oids.Count);
+            // Merken, damit Banner und Liste das Buch als „braucht Re-Import" führen statt es bei jedem Aufruf als
+            // aktualisierbar anzubieten (Book.CacheMissAt). UpdatedAt bleibt unberührt — ein neuer Import hebt die
+            // Markierung über genau dieses Feld wieder auf.
+            var tracked = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId, CancellationToken.None);
+            if (tracked != null)
+            {
+                tracked.CacheMissAt = DateTime.UtcNow > tracked.UpdatedAt ? DateTime.UtcNow : tracked.UpdatedAt;
+                await _db.SaveChangesAsync(CancellationToken.None);
+            }
             return null;
         }
 
