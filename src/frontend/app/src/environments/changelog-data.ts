@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.658.2", date: "2026-10-05", changes: [
+    { en: "LeagueHub match view: the forecast line at the top just says “Forecast” again — the hit rates are in its (i).", de: "LeagueHub-Begegnung: Die Prognose-Zeile oben heißt wieder nur „Prognose“ — die Trefferzahlen stehen in ihrem (i)." },
+  ] },
   { version: "0.658.1", date: "2026-10-05", changes: [
     { en: "Repertoires: a line that ends with Chessable’s “no move” marker was silently missing from the line view and the move list — in the test data 85 of 1715 lines. Those lines are read again, with their text.", de: "Repertoires: Eine Linie, die mit Chessables Marker für „kein Zug“ endet, fehlte unbemerkt in Linienansicht und Zugliste — in den Testdaten 85 von 1715 Linien. Diese Linien werden wieder gelesen, mit ihrem Text." },
   ] },

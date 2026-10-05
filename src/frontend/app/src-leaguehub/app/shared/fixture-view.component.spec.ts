@@ -92,7 +92,7 @@ describe('FixtureViewComponent', () => {
     fixture.detectChanges();
     const lines = Array.from(el.querySelectorAll('.info-line')).map(x => x.textContent!.replace(/\s+/g, ' ').trim());
     expect(lines[0]).toContain('Partien Spg Kufstein/Wörgl: 1.620');
-    expect(lines[1]).toContain('bisher Platz 1 33 %, Top 3 73 %');
+    expect(lines[1]).toBe('Prognosei');                                                    // nur „Prognose" + (i) (0.658.2)
     expect(el.querySelector('lh-game-sources')).toBeNull();                                  // Tabelle erst hinter dem (i)
     (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -114,7 +114,9 @@ describe('FixtureViewComponent', () => {
     expect(api.forecastStats).toHaveBeenCalledOnceWith(null);
     // gespielt: diese Begegnung mit ihren Treffern
     el = render({ ...OPEN, status: 'played', eval: { top1: 3, top2: 5, top3: 6, of: 8 } });
-    expect(el.querySelector('.infos')!.textContent).toContain('hier 3 / 6 von 8');
+    fixture.componentInstance.openInfo.set('forecast');                                   // (i) ist schon offen bzw. bleibt offen
+    fixture.detectChanges();
+    expect(el.querySelector('.info-panel')!.textContent).toContain('an 3 von 8 Brettern genau der erste Vorschlag');
   });
 
   it('über den Teilen-Link holt die Statistik über den Link', async () => {

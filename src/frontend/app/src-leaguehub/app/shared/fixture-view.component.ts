@@ -54,7 +54,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 </p>
               }
               <p class="info-line">
-                <span>Prognose@if (stats(); as st) {@if (st.total.of) { · bisher Platz 1 <b>{{ share(st.total.top1, st.total.of) }}</b>, Top 3 <b>{{ share(st.total.top3, st.total.of) }}</b>}}@if (e.eval; as v) {@if (v.top1 != null) { · hier {{ v.top1 }} / {{ v.top3 }} von {{ v.of }}}}</span>
+                <span>Prognose</span>   <!-- Wunsch 2026-10-05 (0.658.2): „schreib hier nur Prognose" — die Treffer stehen im (i) -->
                 <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'forecast'" aria-label="Wie die Prognose zustande kommt"
                         title="Wie die Prognose zustande kommt" (click)="toggleInfo('forecast')">i</button>
               </p>
