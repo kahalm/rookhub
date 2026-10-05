@@ -264,29 +264,62 @@ public sealed class LeagueViewBuilder
     private sealed record ActualBoard(string? Name, int? Elo, string? Fide, double? Score, double? Own, string? Vs, int? VsElo);
 
     /// <summary>
-    /// Wie gut die Prognose einer GESPIELTEN Begegnung lag (0.650.0, Treffer-Statistik je Runde/Liga/gesamt):
-    /// <c>players</c> = wie viele der tatsächlich Aufgestellten unter den <paramref name="b"/> wahrscheinlichsten Spielern waren
-    /// (dieselbe Größe wie der Backtest in <see cref="Hits"/>), <c>boards</c> = an wie vielen Brettern der erste Vorschlag
-    /// genau dort saß, <c>of</c> = besetzte Bretter (ohne „nicht besetzt").
+    /// Wie gut die Prognose einer GESPIELTEN Begegnung lag (Treffer-Statistik je Runde/Liga/gesamt; seit 0.658.0 nach Wunsch
+    /// 2026-10-05 „an wie vielen Brettern saß genau der Erste, der Erste oder Zweite, einer der ersten drei"): je besetztem
+    /// Brett der Platz des tatsächlichen Spielers in der Vorschlagsliste dieses Bretts (dieselbe stabile Reihenfolge wie die
+    /// Anzeige) → <c>top1</c>, <c>top2</c>, <c>top3</c> (kumulativ) und <c>of</c> = besetzte Bretter (ohne „nicht besetzt").
+    /// Ein Spieler, der in der Meldeliste nicht gefunden wird, zählt als Fehlschuss.
+    /// <para><b>Wie gut passen die Prozente?</b> (Wunsch 2026-10-05: „50 % für Spieler A ist nicht falsch, wenn B kommt — kannst
+    /// du ausrechnen, wie genau die Prozentangaben passen?") <c>e1</c>/<c>e2</c>/<c>e3</c> = Summe der angesagten
+    /// Wahrscheinlichkeiten der ersten 1/2/3 Vorschläge (Tausendstel) — so oft HÄTTE es treffen sollen; <c>cal</c> = je Stufe
+    /// 0–10 %, 10–20 % … 90–100 % <c>[Fälle, Summe der Angaben in Tausendsteln, eingetroffen]</c> über jeden Spieler eines
+    /// besetzten Bretts mit mindestens <see cref="CalibrationMinP"/>.</para>
     /// </summary>
     private static JsonObject Evaluate(List<FeatureRow> rows, double[] p, double[,] bp, int b, Dictionary<int, ActualBoard> act)
     {
-        var top = Enumerable.Range(0, rows.Count).OrderByDescending(i => p[i]).Take(b).ToHashSet();
-        int players = 0, boards = 0, of = 0;
+        int top1 = 0, top2 = 0, top3 = 0, of = 0;
+        double e1 = 0, e2 = 0, e3 = 0;
+        var cal = new long[10, 3];
         foreach (var (board, ab) in act)
         {
             if (ab.Name is null) continue;
+            var k = board - 1;
+            if (k < 0 || k >= bp.GetLength(1)) { of++; continue; }
             of++;
+            var order = Enumerable.Range(0, rows.Count).OrderByDescending(i => bp[i, k]).ToList();
+            e1 += order.Take(1).Sum(i => bp[i, k]);
+            e2 += order.Take(2).Sum(i => bp[i, k]);
+            e3 += order.Take(3).Sum(i => bp[i, k]);
             var pid = LeagueNames.Pid(ab.Fide, LeagueNames.NameKey(ab.Name));
             var idx = rows.FindIndex(x => x.Pid == pid);
+            foreach (var i in order)
+            {
+                var pr = bp[i, k];
+                if (pr < CalibrationMinP) break;
+                var bin = Math.Min(9, (int)(pr * 10));
+                cal[bin, 0]++;
+                cal[bin, 1] += (long)Math.Round(pr * 1000);
+                if (i == idx) cal[bin, 2]++;
+            }
             if (idx < 0) continue;
-            if (top.Contains(idx)) players++;
-            var k = board - 1;
-            // wie Platz 1 in der Anzeige (gleiche, stabile Reihenfolge)
-            if (k >= 0 && k < bp.GetLength(1) && Enumerable.Range(0, rows.Count).OrderByDescending(i => bp[i, k]).First() == idx) boards++;
+            var rank = 1 + order.IndexOf(idx);
+            if (rank == 1) top1++;
+            if (rank <= 2) top2++;
+            if (rank <= 3) top3++;
         }
-        return new JsonObject { ["players"] = players, ["boards"] = boards, ["of"] = of };
+        var calJson = new JsonArray();
+        for (var i = 0; i < 10; i++) calJson.Add(new JsonArray(cal[i, 0], cal[i, 1], cal[i, 2]));
+        return new JsonObject
+        {
+            ["top1"] = top1, ["top2"] = top2, ["top3"] = top3, ["of"] = of,
+            ["e1"] = (int)Math.Round(e1 * 1000), ["e2"] = (int)Math.Round(e2 * 1000), ["e3"] = (int)Math.Round(e3 * 1000),
+            ["cal"] = calJson,
+        };
     }
+
+    /// <summary>Kleinere Angaben zählen in der Kalibrierung nicht — sonst bestünde die unterste Stufe aus Tausenden
+    /// Ersatzspielern mit 0 %, die nichts über die angezeigten Prozente sagen.</summary>
+    public const double CalibrationMinP = 0.02;
 
     private static Dictionary<int, ActualBoard> ActualBoards(List<LeagueGame> games, int rnd, string team)
     {

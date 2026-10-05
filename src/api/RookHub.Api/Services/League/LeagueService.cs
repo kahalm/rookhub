@@ -155,8 +155,8 @@ public sealed class LeagueService
     /// auf Runden aufdröseln und auf Ligen und gesamt — nicht nur für Schwaz, sondern für alle Begegnungen"). Zählt jede
     /// gespielte Begegnung aus Sicht beider Teams (je eine Prognose für die Aufstellung des Gegners) aus dem Feld <c>eval</c>
     /// der fertig gerechneten Ansichten → <c>{ season, total, rounds[], leagues[{ tnr, name, rounds[], … }] }</c>, je Eintrag
-    /// <c>fixtures, players, boards, of</c>. Ansichten aus der Zeit vor 0.650.0 haben kein <c>eval</c> — die zählen erst nach
-    /// „Daten aktualisieren". Gemerkt, bis eine Ansicht neu gerechnet wird.
+    /// <c>fixtures, top1, top2, top3, of</c> (seit 0.658.0; Plätze am Brett, siehe <c>LeagueViewBuilder.Evaluate</c>). Ansichten
+    /// ohne diese Felder (vor 0.658.0 gerechnet) zählen erst nach dem nächsten Neurechnen. Gemerkt, bis eine Ansicht neu gerechnet wird.
     /// </summary>
     public async Task<JsonObject> ForecastStatsAsync(CancellationToken ct)
     {
@@ -170,6 +170,7 @@ public sealed class LeagueService
 
         var views = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).ToDictionaryAsync(v => v.Tnr, v => v.Json, ct);
         var total = new Tally();
+        var calibration = new long[10, 3];
         var byRound = new SortedDictionary<int, Tally>();
         var leagues = new JsonArray();
         foreach (var t in ts)
@@ -180,10 +181,15 @@ public sealed class LeagueService
             foreach (var (_, rounds) in teams)
                 foreach (var (rnd, fx) in rounds?.AsObject() ?? new JsonObject())
                 {
-                    if (fx?["eval"] is not JsonObject ev || !int.TryParse(rnd, out var r)) continue;
+                    if (fx?["eval"] is not JsonObject ev || ev["top1"] is null || !int.TryParse(rnd, out var r)) continue;
                     int P(string k) => ev[k]?.GetValue<int>() ?? 0;
-                    var (pl, bo, of) = (P("players"), P("boards"), P("of"));
-                    foreach (var x in new[] { total, lt, Get(byRound, r), Get(lr, r) }) x.Add(pl, bo, of);
+                    var (t1, t2, t3, of) = (P("top1"), P("top2"), P("top3"), P("of"));
+                    var (e1, e2, e3) = (P("e1"), P("e2"), P("e3"));
+                    foreach (var x in new[] { total, lt, Get(byRound, r), Get(lr, r) }) x.Add(t1, t2, t3, of, e1, e2, e3);
+                    if (ev["cal"] is JsonArray cal)
+                        for (var i = 0; i < Math.Min(10, cal.Count); i++)
+                            if (cal[i] is JsonArray c && c.Count == 3)
+                                for (var j = 0; j < 3; j++) calibration[i, j] += c[j]!.GetValue<long>();
                 }
             if (lt.Fixtures == 0) continue;
             var lo = lt.ToJson();
@@ -192,7 +198,15 @@ public sealed class LeagueService
             lo["rounds"] = Rounds(lr);
             leagues.Add(lo);
         }
-        var res = new JsonObject { ["season"] = season, ["total"] = total.ToJson(), ["rounds"] = Rounds(byRound), ["leagues"] = leagues };
+        var calJson = new JsonArray();
+        for (var i = 0; i < 10; i++)
+            calJson.Add(new JsonObject { ["from"] = i * 10, ["n"] = calibration[i, 0], ["p"] = calibration[i, 1], ["hits"] = calibration[i, 2] });
+        var res = new JsonObject
+        {
+            ["season"] = season, ["total"] = total.ToJson(), ["rounds"] = Rounds(byRound), ["leagues"] = leagues,
+            // Kalibrierung (0.658.0): je Stufe Fälle, Summe der Angaben (Tausendstel), eingetroffen
+            ["calibration"] = calJson,
+        };
         // Der Cache hat eine Größengrenze (SizeLimit, Codereview N4-003): ohne Size wirft Set — bis 0.657.2 antwortete der
         // Endpunkt deshalb mit jedem Aufruf 500 (log-watcher HIGH 05.10.).
         _cache?.Set(key, res, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6) });
@@ -209,9 +223,18 @@ public sealed class LeagueService
 
     private sealed class Tally
     {
-        public int Fixtures, Players, Boards, Of;
-        public void Add(int players, int boards, int of) { Fixtures++; Players += players; Boards += boards; Of += of; }
-        public JsonObject ToJson() => new() { ["fixtures"] = Fixtures, ["players"] = Players, ["boards"] = Boards, ["of"] = Of };
+        public int Fixtures, Top1, Top2, Top3, Of;
+        /// <summary>Erwartete Treffer (Tausendstel): Summe der angesagten Wahrscheinlichkeiten der ersten 1/2/3.</summary>
+        public long E1, E2, E3;
+        public void Add(int top1, int top2, int top3, int of, int e1, int e2, int e3)
+        {
+            Fixtures++; Top1 += top1; Top2 += top2; Top3 += top3; Of += of; E1 += e1; E2 += e2; E3 += e3;
+        }
+        public JsonObject ToJson() => new()
+        {
+            ["fixtures"] = Fixtures, ["top1"] = Top1, ["top2"] = Top2, ["top3"] = Top3, ["of"] = Of,
+            ["e1"] = E1, ["e2"] = E2, ["e3"] = E3,
+        };
     }
 
     /// <summary>Spielerkarte: Eröffnungsprofil + Online-Konten (<paramref name="onlySure"/>: nur „sicher" — für Teilen-Links).

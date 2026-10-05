@@ -38,12 +38,17 @@ describe('FixtureViewComponent', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats']);
     api.forecastStats.and.resolveTo({
-      season: '2026/27', total: { fixtures: 4, players: 22, boards: 10, of: 30 },
-      rounds: [{ round: 1, fixtures: 3, players: 15, boards: 6, of: 22 }, { round: 2, fixtures: 1, players: 7, boards: 4, of: 8 }],
+      season: '2026/27', total: { fixtures: 4, top1: 10, top2: 18, top3: 22, of: 30, e1: 9000, e2: 16500, e3: 21000 },
+      rounds: [{ round: 1, fixtures: 3, top1: 6, top2: 13, top3: 15, of: 22, e1: 6600, e2: 12000, e3: 15400 },
+        { round: 2, fixtures: 1, top1: 4, top2: 5, top3: 7, of: 8, e1: 2400, e2: 4500, e3: 5600 }],
       leagues: [
-        { tnr: 10, name: 'Landesliga', fixtures: 3, players: 18, boards: 9, of: 24,
-          rounds: [{ round: 1, fixtures: 2, players: 11, boards: 5, of: 16 }, { round: 2, fixtures: 1, players: 7, boards: 4, of: 8 }] },
-        { tnr: 11, name: '1. Klasse Ost', fixtures: 1, players: 4, boards: 1, of: 6, rounds: [{ round: 1, fixtures: 1, players: 4, boards: 1, of: 6 }] },
+        { tnr: 10, name: 'Landesliga', fixtures: 3, top1: 9, top2: 15, top3: 18, of: 24, e1: 7200, e2: 13000, e3: 17000,
+          rounds: [{ round: 1, fixtures: 2, top1: 5, top2: 10, top3: 11, of: 16 }, { round: 2, fixtures: 1, top1: 4, top2: 5, top3: 7, of: 8 }] },
+        { tnr: 11, name: '1. Klasse Ost', fixtures: 1, top1: 1, top2: 3, top3: 4, of: 6, rounds: [{ round: 1, fixtures: 1, top1: 1, top2: 3, top3: 4, of: 6 }] },
+      ],
+      calibration: [
+        { from: 0, n: 100, p: 5000, hits: 6 }, { from: 10, n: 0, p: 0, hits: 0 }, { from: 50, n: 20, p: 11000, hits: 10 },
+        { from: 80, n: 10, p: 8500, hits: 9 },
       ],
     });
     TestBed.configureTestingModule({
@@ -87,7 +92,7 @@ describe('FixtureViewComponent', () => {
     fixture.detectChanges();
     const lines = Array.from(el.querySelectorAll('.info-line')).map(x => x.textContent!.replace(/\s+/g, ' ').trim());
     expect(lines[0]).toContain('Partien Spg Kufstein/Wörgl: 1.620');
-    expect(lines[1]).toContain('bisher 73 % der Aufgestellten richtig');
+    expect(lines[1]).toContain('bisher Platz 1 33 %, Top 3 73 %');
     expect(el.querySelector('lh-game-sources')).toBeNull();                                  // Tabelle erst hinter dem (i)
     (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -95,16 +100,21 @@ describe('FixtureViewComponent', () => {
     (el.querySelector('button[aria-label="Wie die Prognose zustande kommt"]') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('lh-game-sources')).toBeNull();                                  // immer nur ein (i) offen
-    const rows = Array.from(el.querySelectorAll('.stats-tbl tbody tr'))
+    const rows = Array.from(el.querySelectorAll('.stats-tbl:not(.cal-tbl) tbody tr'))
       .map(r => Array.from(r.children).map(c => c.textContent!.replace(/\s+/g, ' ').trim()).join(' '));
-    expect(rows).toContain('Runde 1 3 68 % 27 %');
-    expect(rows.find(r => r.startsWith('Landesliga'))).toBe('LandesligaR1 69 % · R2 88 % 3 75 % 38 %');
-    expect(rows[rows.length - 1]).toBe('Gesamt 4 73 % 33 %');
+    expect(rows).toContain('Runde 1 3 27 %erw. 30 % 59 %erw. 55 % 68 %erw. 70 %');
+    expect(rows.find(r => r.startsWith('Landesliga'))).toBe('LandesligaR1 31 % · R2 50 % 3 38 %erw. 30 % 63 %erw. 54 % 75 %erw. 71 %');
+    expect(rows[rows.length - 1]).toBe('Gesamt 4 33 %erw. 30 % 60 %erw. 55 % 73 %erw. 70 %');
+    // Kalibrierung: angesagt gegen eingetroffen je Stufe, leere Stufen fallen weg, mittlere Abweichung nach Fällen gewichtet
+    const cal = Array.from(el.querySelectorAll('.cal-tbl tbody tr'))
+      .map(r => Array.from(r.children).map(c => c.textContent!.trim()).join(' '));
+    expect(cal).toEqual(['0–10 % 100 5 % 6 %', '50–60 % 20 55 % 50 %', '80–90 % 10 85 % 90 %']);
+    expect(el.querySelector('.cal-h')?.textContent).toContain('im Schnitt 1,9 Prozentpunkte daneben');
     expect(el.querySelector('.stats-tbl tr.mine')?.textContent).toContain('Landesliga');   // eigene Liga hervorgehoben
     expect(api.forecastStats).toHaveBeenCalledOnceWith(null);
     // gespielt: diese Begegnung mit ihren Treffern
-    el = render({ ...OPEN, status: 'played', eval: { players: 6, boards: 3, of: 8 } });
-    expect(el.querySelector('.infos')!.textContent).toContain('hier 6 von 8');
+    el = render({ ...OPEN, status: 'played', eval: { top1: 3, top2: 5, top3: 6, of: 8 } });
+    expect(el.querySelector('.infos')!.textContent).toContain('hier 3 / 6 von 8');
   });
 
   it('über den Teilen-Link holt die Statistik über den Link', async () => {

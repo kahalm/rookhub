@@ -1594,7 +1594,10 @@ Rollenverwaltung an).
   online des Blocks `opponent`) — das (i) klappt die Tabelle auf — und „Prognose · bisher x % der Aufgestellten richtig · hier
   a von b (i)": das (i) hat den früheren Erklärtext plus die **Treffer-Statistik** `GET /api/league/forecast-stats` (league.view)
   bzw. `GET /api/league/s/{token}/forecast-stats` (anonym, gültiger Token; nur Zahlen + Liga-Namen) aus
-  `LeagueService.ForecastStatsAsync`: je Runde (alle Ligen), je Liga (mit Runden), gesamt — `{ fixtures, players, boards, of }`,
+  `LeagueService.ForecastStatsAsync`: je Runde (alle Ligen), je Liga (mit Runden), gesamt — seit 0.658.0 `{ fixtures, top1, top2,
+  top3, of, e1, e2, e3 }` (Platz des echten Spielers in der Vorschlagsliste des Bretts; `e*` = erwartete Treffer aus den
+  angesagten Prozenten, Tausendstel) plus `calibration` (10 Stufen `{from, n, p, hits}` über alle Angaben ≥ 2 %, Wunsch 05.10.
+  „wie genau passen die Prozentangaben"); vor 0.658.0 `{ fixtures, players, boards, of }` (alte `eval` zählen nicht mehr),
   über ALLE Begegnungen der laufenden Saison, jede aus Sicht beider Teams. Quelle ist das Feld `eval` einer gespielten Begegnung
   in der Ansicht (`LeagueViewBuilder.Evaluate`): `players` = Aufgestellte unter den B wahrscheinlichsten (dieselbe Größe wie
   der Backtest `Hits`), `boards` = erster Vorschlag genau am Brett (= „gespielt" auf Platz 1), `of` = besetzte Bretter. Ältere

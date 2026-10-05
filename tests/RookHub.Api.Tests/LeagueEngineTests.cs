@@ -205,9 +205,16 @@ public class LeagueEngineTests
         var fx = v["fixtures"]!["A"]!.AsObject();
         var ev = fx["1"]!["eval"]!;
         Assert.Equal(2, ev["of"]!.GetValue<int>());                                         // zwei besetzte Bretter
-        Assert.InRange(ev["players"]!.GetValue<int>(), 0, 2);
-        var firstPlace = fx["1"]!["boards"]!.AsArray().Count(b => b!["actual"]?["rank"]?.GetValue<int>() == 1);
-        Assert.Equal(firstPlace, ev["boards"]!.GetValue<int>());                            // „genau am Brett" = Platz 1 der Anzeige
+        int Ranked(int max) => fx["1"]!["boards"]!.AsArray().Count(b => b!["actual"]?["rank"]?.GetValue<int>() is { } r && r <= max);
+        Assert.Equal(Ranked(1), ev["top1"]!.GetValue<int>());                               // Platz 1 der Anzeige (0.658.0)
+        Assert.Equal(Ranked(2), ev["top2"]!.GetValue<int>());
+        Assert.Equal(Ranked(3), ev["top3"]!.GetValue<int>());
+        // erwartet: Summe der Angaben der ersten 1/2/3 je Brett (Tausendstel), höchstens ein Treffer je Brett
+        var (e1, e2, e3) = (ev["e1"]!.GetValue<int>(), ev["e2"]!.GetValue<int>(), ev["e3"]!.GetValue<int>());
+        Assert.True(e1 <= e2 && e2 <= e3 && e3 <= 2000);
+        var cal = ev["cal"]!.AsArray();
+        Assert.Equal(10, cal.Count);
+        Assert.True(cal.Sum(c => c![2]!.GetValue<long>()) <= 2);                            // je Brett höchstens ein Eintreffen
         Assert.Null(fx["2"]!["eval"]);                                                      // offen: noch nichts zu zählen
     }
 
@@ -220,7 +227,7 @@ public class LeagueEngineTests
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
         db.LeagueViews.Add(new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow,
-            Json = "{\"fixtures\":{\"A\":{\"1\":{\"eval\":{\"players\":6,\"boards\":3,\"of\":8}}}}}" });
+            Json = "{\"fixtures\":{\"A\":{\"1\":{\"eval\":{\"top1\":3,\"top2\":5,\"top3\":6,\"of\":8}}}}}" });
         await db.SaveChangesAsync();
         using var cache = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
             { SizeLimit = LeagueProfileStore.CacheSizeLimit });
@@ -230,7 +237,7 @@ public class LeagueEngineTests
         Assert.Equal(1, cache.Count);
         var second = await svc.ForecastStatsAsync(default);
         Assert.Equal(first.ToJsonString(), second.ToJsonString());
-        Assert.Equal(6, second["total"]!["players"]!.GetValue<int>());
+        Assert.Equal(6, second["total"]!["top3"]!.GetValue<int>());
     }
 
     [Fact]
@@ -241,24 +248,25 @@ public class LeagueEngineTests
             new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" },
             new LeagueTournament { Tnr = 2, Season = "2026/27", Level = 2, League = "1. Klasse", Grp = "Ost", Stage = "Liga" },
             new LeagueTournament { Tnr = 9, Season = "2025/26", Level = 1, League = "Landesliga", Stage = "Liga" });
-        static string Ev(int p, int b, int of) => $"{{\"eval\":{{\"players\":{p},\"boards\":{b},\"of\":{of}}}}}";
+        static string Ev(int t1, int t2, int t3, int of) => $"{{\"eval\":{{\"top1\":{t1},\"top2\":{t2},\"top3\":{t3},\"of\":{of}}}}}";
         db.LeagueViews.AddRange(
-            new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(6, 3, 8)},\"2\":{Ev(7, 4, 8)},\"3\":{{\"status\":\"open\"}}}},\"B\":{{\"1\":{Ev(5, 2, 8)}}}}}}}" },
-            new LeagueView { Tnr = 2, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"C\":{{\"1\":{Ev(4, 1, 6)},\"2\":{{\"status\":\"played\"}}}}}}}}" },
-            new LeagueView { Tnr = 9, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(8, 8, 8)}}}}}}}" });
+            new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(3, 5, 6, 8)},\"2\":{Ev(4, 6, 7, 8)},\"3\":{{\"status\":\"open\"}}}},\"B\":{{\"1\":{Ev(2, 4, 5, 8)}}}}}}}" },
+            new LeagueView { Tnr = 2, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"C\":{{\"1\":{Ev(1, 3, 4, 6)},\"2\":{{\"status\":\"played\",\"eval\":{{\"players\":5,\"boards\":2,\"of\":6}}}}}}}}}}" },
+            new LeagueView { Tnr = 9, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(8, 8, 8, 8)}}}}}}}" });
         await db.SaveChangesAsync();
 
         var s = await new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance).ForecastStatsAsync(default);
 
         Assert.Equal("2026/27", s["season"]!.GetValue<string>());
-        Assert.Equal("{\"fixtures\":4,\"players\":22,\"boards\":10,\"of\":30}", s["total"]!.ToJsonString());   // ohne Vorsaison, ohne „ohne eval"
+        Assert.Equal("{\"fixtures\":4,\"top1\":10,\"top2\":18,\"top3\":22,\"of\":30,\"e1\":0,\"e2\":0,\"e3\":0}", s["total"]!.ToJsonString());   // ohne Vorsaison, ohne eval der alten Form
+        Assert.Equal(10, s["calibration"]!.AsArray().Count);
         var r = s["rounds"]!.AsArray();
         Assert.Equal(new[] { 1, 2 }, r.Select(x => x!["round"]!.GetValue<int>()));
         Assert.Equal(3, r[0]!["fixtures"]!.GetValue<int>());                                  // Runde 1 über beide Ligen
-        Assert.Equal(15, r[0]!["players"]!.GetValue<int>());
+        Assert.Equal(15, r[0]!["top3"]!.GetValue<int>());
         var l = s["leagues"]!.AsArray();
         Assert.Equal(new[] { "Landesliga", "1. Klasse Ost" }, l.Select(x => x!["name"]!.GetValue<string>()));
-        Assert.Equal(18, l[0]!["players"]!.GetValue<int>());
+        Assert.Equal(18, l[0]!["top3"]!.GetValue<int>());
         Assert.Equal(2, l[0]!["rounds"]!.AsArray().Count);
         Assert.Single(l[1]!["rounds"]!.AsArray());
     }

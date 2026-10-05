@@ -137,7 +137,9 @@ export interface Fixture {
   eval?: ForecastHits;
 }
 
-export interface ForecastHits { players: number; boards: number; of: number }
+/** Seit 0.658.0: an wie vielen besetzten Brettern (`of`) der Spieler Platz 1, unter den ersten 2 bzw. 3 der Vorschläge war;
+ *  `e1..e3` = so oft hätte es nach den angesagten Prozenten treffen sollen (Tausendstel, Summe über die Bretter). */
+export interface ForecastHits { top1: number; top2: number; top3: number; of: number; e1?: number; e2?: number; e3?: number }
 /** Treffer der Prognose über alle Begegnungen der Saison (0.650.0, `GET /api/league/forecast-stats`). */
 export interface ForecastTally extends ForecastHits { fixtures: number }
 export interface ForecastStats {
@@ -145,6 +147,8 @@ export interface ForecastStats {
   total: ForecastTally;
   rounds: (ForecastTally & { round: number })[];
   leagues: (ForecastTally & { tnr: number; name: string; rounds: (ForecastTally & { round: number })[] })[];
+  /** Kalibrierung (0.658.0): je Stufe ab `from` % Fälle `n`, Summe der Angaben `p` (Tausendstel), eingetroffen `hits`. */
+  calibration?: { from: number; n: number; p: number; hits: number }[];
 }
 
 export interface LeagueRound { round: number; date: string | null; played: boolean; open: boolean }

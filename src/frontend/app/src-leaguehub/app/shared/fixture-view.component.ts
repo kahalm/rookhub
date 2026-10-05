@@ -54,7 +54,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 </p>
               }
               <p class="info-line">
-                <span>Prognose@if (stats(); as st) {@if (st.total.of) { · bisher <b>{{ share(st.total.players, st.total.of) }}</b> der Aufgestellten richtig}}@if (e.eval; as v) { · hier {{ v.players }} von {{ v.of }}}</span>
+                <span>Prognose@if (stats(); as st) {@if (st.total.of) { · bisher Platz 1 <b>{{ share(st.total.top1, st.total.of) }}</b>, Top 3 <b>{{ share(st.total.top3, st.total.of) }}</b>}}@if (e.eval; as v) {@if (v.top1 != null) { · hier {{ v.top1 }} / {{ v.top3 }} von {{ v.of }}}}</span>
                 <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'forecast'" aria-label="Wie die Prognose zustande kommt"
                         title="Wie die Prognose zustande kommt" (click)="toggleInfo('forecast')">i</button>
               </p>
@@ -71,32 +71,57 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   Das Quadrat zeigt die Farbe des Gegners. In Klammer hinter dem Namen: Partien im Bestand.
                 </p>
                 @if (e.eval; as v) {
-                  <p class="note">In dieser Begegnung: {{ v.players }} von {{ v.of }} Aufgestellten waren unter den {{ e.boards?.length }} wahrscheinlichsten,
-                    an {{ v.boards }} Brettern saß genau der erste Vorschlag.</p>
+                  @if (v.top1 != null) {
+                    <p class="note">In dieser Begegnung saß an {{ v.top1 }} von {{ v.of }} Brettern genau der erste Vorschlag, an {{ v.top2 }} der erste
+                      oder zweite, an {{ v.top3 }} einer der drei.</p>
+                  }
                 }
                 @if (stats(); as st) {
                   @if (st.total.fixtures) {
                     <p class="note">Bisher in der Saison {{ st.season }}, über alle Begegnungen aller Ligen (jede Begegnung zweimal: je eine Prognose
-                      für jede Mannschaft). „Spieler" = Aufgestellte unter den wahrscheinlichsten, „Brett" = erster Vorschlag genau am Brett.</p>
+                      für jede Mannschaft): an wie vielen besetzten Brettern der tatsächliche Spieler der erste Vorschlag war (Platz 1), unter den
+                      ersten beiden (Top 2) oder unter den dreien (Top 3). Klein darunter, wie oft es nach den angesagten Prozenten hätte
+                      treffen sollen.</p>
                     <div class="src-scroll"><table class="src-tbl stats-tbl">
-                      <thead><tr><th scope="col"></th><th scope="col" class="num">Prognosen</th><th scope="col" class="num">Spieler</th><th scope="col" class="num">Brett</th></tr></thead>
+                      <thead><tr><th scope="col"></th><th scope="col" class="num">Prognosen</th><th scope="col" class="num">Platz 1</th>
+                        <th scope="col" class="num">Top 2</th><th scope="col" class="num">Top 3</th></tr></thead>
                       <tbody>
-                        <tr class="src-group"><th scope="rowgroup" colspan="4">Je Runde</th></tr>
+                        <tr class="src-group"><th scope="rowgroup" colspan="5">Je Runde</th></tr>
                         @for (r of st.rounds; track r.round) {
                           <tr><td>Runde {{ r.round }}</td><td class="num">{{ r.fixtures }}</td>
-                            <td class="num">{{ share(r.players, r.of) }}</td><td class="num">{{ share(r.boards, r.of) }}</td></tr>
+                            <td class="num">{{ share(r.top1, r.of) }}<span class="exp">{{ exp(r.e1, r.of) }}</span></td>
+                            <td class="num">{{ share(r.top2, r.of) }}<span class="exp">{{ exp(r.e2, r.of) }}</span></td>
+                            <td class="num">{{ share(r.top3, r.of) }}<span class="exp">{{ exp(r.e3, r.of) }}</span></td></tr>
                         }
-                        <tr class="src-group"><th scope="rowgroup" colspan="4">Je Liga</th></tr>
+                        <tr class="src-group"><th scope="rowgroup" colspan="5">Je Liga</th></tr>
                         @for (l of st.leagues; track l.tnr) {
                           <tr [class.mine]="l.name === leagueName()">
                             <td>{{ l.name }}<span class="src-sub">{{ roundsText(l.rounds) }}</span></td><td class="num">{{ l.fixtures }}</td>
-                            <td class="num">{{ share(l.players, l.of) }}</td><td class="num">{{ share(l.boards, l.of) }}</td>
+                            <td class="num">{{ share(l.top1, l.of) }}<span class="exp">{{ exp(l.e1, l.of) }}</span></td>
+                            <td class="num">{{ share(l.top2, l.of) }}<span class="exp">{{ exp(l.e2, l.of) }}</span></td>
+                            <td class="num">{{ share(l.top3, l.of) }}<span class="exp">{{ exp(l.e3, l.of) }}</span></td>
                           </tr>
                         }
                         <tr class="src-group total"><th scope="row">Gesamt</th><td class="num">{{ st.total.fixtures }}</td>
-                          <td class="num">{{ share(st.total.players, st.total.of) }}</td><td class="num">{{ share(st.total.boards, st.total.of) }}</td></tr>
+                          <td class="num">{{ share(st.total.top1, st.total.of) }}<span class="exp">{{ exp(st.total.e1, st.total.of) }}</span></td>
+                            <td class="num">{{ share(st.total.top2, st.total.of) }}<span class="exp">{{ exp(st.total.e2, st.total.of) }}</span></td>
+                            <td class="num">{{ share(st.total.top3, st.total.of) }}<span class="exp">{{ exp(st.total.e3, st.total.of) }}</span></td></tr>
                       </tbody>
                     </table></div>
+                    @if (calibration(); as cal) {
+                      <p class="note cal-h"><b>Wie gut passen die Prozente?</b> Alle Angaben ab 2 % über alle Bretter, nach Höhe gruppiert: angesagt
+                        gegen eingetroffen. Bei guten Prozenten liegen beide nah beisammen — im Schnitt {{ cal.gap }} Prozentpunkte daneben.</p>
+                      <div class="src-scroll"><table class="src-tbl stats-tbl cal-tbl">
+                        <thead><tr><th scope="col">Angabe</th><th scope="col" class="num">Fälle</th><th scope="col" class="num">angesagt</th>
+                          <th scope="col" class="num">eingetroffen</th></tr></thead>
+                        <tbody>
+                          @for (b of cal.rows; track b.from) {
+                            <tr><td>{{ b.from }}–{{ b.from + 10 }} %</td><td class="num">{{ b.n }}</td><td class="num">{{ b.said }} %</td>
+                              <td class="num"><b>{{ b.came }} %</b></td></tr>
+                          }
+                        </tbody>
+                      </table></div>
+                    }
                   } @else {
                     <p class="note">Noch keine gespielte Runde mit Prognose in dieser Saison.</p>
                   }
@@ -254,8 +279,24 @@ export class FixtureViewComponent {
   }
 
   /** „R1 71 % · R2 58 %" — die Runden einer Liga (Spieler). */
+  /** „erw. 31 %" — wie oft es nach den angesagten Prozenten hätte treffen sollen (`e*` in Tausendsteln je Brett). */
+  exp(e: number | undefined, of: number): string {
+    return of && e != null ? `erw. ${Math.round(e / of / 10)} %` : '';
+  }
+
+  /** Kalibrierung (0.658.0): je Stufe angesagt Ø und eingetroffen in %, dazu die mittlere Abweichung (nach Fällen gewichtet). */
+  readonly calibration = computed(() => {
+    const cal = this.stats()?.calibration?.filter(b => b.n > 0);
+    if (!cal?.length) return null;
+    const rows = cal.map(b => ({ from: b.from, n: b.n, said: Math.round(b.p / b.n / 10), came: Math.round((b.hits / b.n) * 100) }));
+    const n = cal.reduce((s, b) => s + b.n, 0);
+    const gap = cal.reduce((s, b) => s + Math.abs(b.p / b.n / 10 - (b.hits / b.n) * 100) * b.n, 0) / n;
+    return { rows, gap: (Math.round(gap * 10) / 10).toString().replace('.', ',') };
+  });
+
+  /** „R1 31 % · R2 44 %" — Platz 1 je Runde einer Liga. */
   roundsText(rounds: (ForecastTally & { round: number })[]): string {
-    return rounds.map(r => `R${r.round} ${this.share(r.players, r.of)}`).join(' · ');
+    return rounds.map(r => `R${r.round} ${this.share(r.top1, r.of)}`).join(' · ');
   }
 
   colorName(b: Board): string {

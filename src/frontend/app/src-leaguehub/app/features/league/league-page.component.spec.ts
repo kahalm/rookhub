@@ -39,7 +39,7 @@ describe('LeaguePageComponent', () => {
     perms = new Set(['league.view', 'league.manage']);
     query = {};
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources', 'forecastStats']);
-    api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, players: 0, boards: 0, of: 0 }, rounds: [], leagues: [] });
+    api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, top1: 0, top2: 0, top3: 0, of: 0 }, rounds: [], leagues: [] });
     api.index.and.resolveTo(INDEX);
     api.sources.and.callFake(async (_token: string | null = null, fides: string[] = [], tnr: number | null = null) => ({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }, { key: 'Mega', label: 'ChessBase-Megabase', games: 18839 }], boardTotal: 53677,

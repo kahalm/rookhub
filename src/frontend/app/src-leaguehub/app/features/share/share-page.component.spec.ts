@@ -24,7 +24,7 @@ describe('SharePageComponent', () => {
 
   beforeEach(() => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats']);
-    api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, players: 0, boards: 0, of: 0 }, rounds: [], leagues: [] });
+    api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, top1: 0, top2: 0, top3: 0, of: 0 }, rounds: [], leagues: [] });
     api.sources.and.resolveTo({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }], boardTotal: 34838,
       online: [{ key: 'chess.com', label: 'chess.com', games: 29522 }], onlineTotal: 29522, countedAt: '2026-10-01T14:30:00Z',
