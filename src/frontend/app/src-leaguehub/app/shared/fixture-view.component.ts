@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { PHASE_TEXT, pct, shareText, shortTeam, tn } from '../core/league-format';
-import { Board, Fixture, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
+import { Board, Fixture, FixturePairing, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
 import { GameSourcesComponent } from './game-sources.component';
 import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
+import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
@@ -18,7 +19,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent, GameSourcesComponent],
+  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -35,6 +36,34 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
           <span [class.me]="e.home">{{ tn(home()) }}</span><span class="vs">–</span><span [class.me]="!e.home">{{ tn(away()) }}</span>
           @if (e.score) { <span class="score">{{ e.score }}</span> }
         </h2>
+        <!-- 0.673.0, Wunsch 2026-10-05: bei gespielten Runden die Paarungen gleich unter dem Ergebnis, mit Partie, wo es eine gibt. -->
+        @if (e.status === 'played' && pairings().length) {
+          <table class="pairings">
+            <caption class="sr-only">Brettpaarungen</caption>
+            <tbody>
+              @for (p of pairings(); track p.board) {
+                <tr>
+                  <td class="num">{{ p.board }}</td>
+                  <td class="pw">{{ p.white ?? 'nicht besetzt' }}@if (p.whiteElo) { <span class="muted"> {{ p.whiteElo }}</span>}</td>
+                  <td class="pr">{{ p.result }}</td>
+                  <td class="pb">{{ p.black ?? 'nicht besetzt' }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
+                  <td class="pg">
+                    @if (p.pgn) {
+                      <button type="button" class="btn-link" [attr.aria-expanded]="openBoard() === p.board"
+                              (click)="openBoard.set(openBoard() === p.board ? null : p.board)">{{ openBoard() === p.board ? 'Schließen' : 'Partie' }}</button>
+                    }
+                  </td>
+                </tr>
+                @if (openBoard() === p.board && p.pgn) {
+                  <tr class="replay-row"><td colspan="5">
+                    <lh-game-replay [pgn]="p.pgn" [flipped]="ownIsBlack(p)"
+                                    [evalsUrl]="p.clubGameId && !shareToken() ? '/api/league/club/games/' + p.clubGameId + '/evals' : null" />
+                  </td></tr>
+                }
+              }
+            </tbody>
+          </table>
+        }
         @switch (e.status) {
           @case ('locked') {
             <p class="note">Die Prognose für diese Runde erscheint, sobald Runde {{ e.unlock_after }} gespielt ist.
@@ -233,6 +262,8 @@ export class FixtureViewComponent {
   readonly round = input.required<number>();
   readonly team = input.required<string>();
   readonly fixture = input<Fixture | undefined>(undefined);
+  /** Turniernummer der Liga — für die Paarungen gespielter Runden (immer gesetzt, anders als `tnr`). */
+  readonly leagueTnr = input<number | null>(null);
   /** Gesetzt = geteilte Ansicht: Karten/PGN über den Link, kein „Link teilen". */
   readonly shareToken = input<string | null>(null);
   /** Partien je Quelle (Gesamt | Liga | Begegnung) — steht seit 0.650.0 hinter dem (i) „Partien". */
@@ -260,7 +291,24 @@ export class FixtureViewComponent {
   readonly phaseText = computed(() => PHASE_TEXT[this.fixture()?.phase ?? 'R1'] ?? this.fixture()?.phase);
   readonly hitText = computed(() => String(this.fixture()?.hit ?? '').replace('.', ','));
 
+  /** Brettpaarungen samt Partien der gespielten Begegnung (0.673.0); späte Antworten einer anderen Begegnung fallen weg. */
+  readonly pairings = signal<FixturePairing[]>([]);
+  readonly openBoard = signal<number | null>(null);
+  private pairingsFor = '';
+
   constructor() {
+    effect(() => {
+      const f = this.fixture(), round = this.round(), team = this.team(), token = this.shareToken(), tnr = this.leagueTnr();
+      const key = `${token ?? tnr}|${round}|${team}|${f?.status}`;
+      if (key === this.pairingsFor) return;
+      this.pairingsFor = key;
+      this.pairings.set([]);
+      this.openBoard.set(null);
+      if (f?.status !== 'played' || (!token && tnr == null)) return;
+      this.api.fixtureGames(tnr, round, team, token).then(
+        p => { if (this.pairingsFor === key) this.pairings.set(p); },
+        () => { if (this.pairingsFor === key) this.pairings.set([]); });
+    });
     effect(() => {
       const token = this.shareToken();
       if (this.statsFor === token) return;
@@ -317,6 +365,12 @@ export class FixtureViewComponent {
   /** „R1 31 % · R2 44 %" — Platz 1 je Runde einer Liga. */
   roundsText(rounds: (ForecastTally & { round: number })[]): string {
     return rounds.map(r => `R${r.round} ${this.share(r.top1, r.of)}`).join(' · ');
+  }
+
+  /** Brett aus Sicht des eigenen Vereins: Schwarz unten, wenn er an diesem Brett Schwarz hatte. */
+  ownIsBlack(p: FixturePairing): boolean {
+    const b = this.fixture()?.boards?.find(x => x.board === p.board);
+    return b?.opp_color === 'w';
   }
 
   colorName(b: Board): string {

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountChecks, AccountInput, Broadcast, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountChecks, AccountInput, Broadcast, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -47,6 +47,13 @@ export class LeagueApiService {
 
   private base(token: string | null): string {
     return token ? `/api/league/s/${encodeURIComponent(token)}` : '/api/league';
+  }
+
+  /** Brettpaarungen einer gespielten Begegnung samt Partien (0.673.0); über den Link bestimmt der Server die Begegnung. */
+  fixtureGames(tnr: number | null, round: number, team: string, token: string | null): Promise<FixturePairing[]> {
+    const url = token ? `${this.base(token)}/games`
+      : `/api/league/${tnr}/round/${round}/games?team=${encodeURIComponent(team)}`;
+    return firstValueFrom(this.http.get<FixturePairing[]>(url));
   }
 
   card(fide: string, token: string | null): Promise<PlayerCard> {

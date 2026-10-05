@@ -1663,6 +1663,15 @@ Rollenverwaltung an).
   Route `verein/partie/:id/korrigieren` = `club-scan-page` im Modus `gameId` (Namen bleiben bei „Bearbeiten"), Knopf „Korrigieren"
   in der Vereinsliste/„Meine Partien"; RookHub ⋮ der Vereinspartie → LeagueHub, `/games/:id/edit` öffnet das Formular der
   Vereinspartie und zeigt einen Hinweis zur Verbindung. Datenschutz: aufbewahrtes Foto sehen jetzt auch Hochladender/Verwalter.
+- **Paarungen gespielter Runden** (0.673.0, Wunsch 2026-10-05: „bei vergangenen Runden oben unter dem Ergebnis auch die Paarungen
+  direkt anzeigen, inkl. Link zu Partien"): `GET /api/league/{tnr}/round/{round}/games?team=` (league.view) bzw.
+  `GET /api/league/s/{token}/games` (Begegnung des Links) → je Brett `{ board, white, whiteElo, black, blackElo, result, forfeit,
+  pgn, source (club|profile), clubGameId }` aus `LeagueGames` (`Services/League/LeagueFixtureGames.cs`). Partie zuerst aus der
+  Vereins-Datenbank (Jahr der Runde, Farben passen, je Seite FIDE-ID — auch intern hinter „Schwaz" — oder Nachname oder „Schwaz"
+  für den eigenen Verein, mindestens eine Seite über ID/Namen; mehrere: die jüngste), sonst aus den Spielerkarten (Datum ±3 Tage
+  um den Rundentermin, beide Nachnamen auf ihrer Farbe). Ausgegeben wird nur das PGN der Quelle. Oberfläche: Tabelle unter dem
+  Ergebnis in `fixture-view.component.ts` (Eingabe `leagueTnr`), „Partie" klappt `lh-game-replay` auf (Vereinspartie mit Kurve,
+  nur angemeldet).
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

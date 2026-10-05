@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.673.0", date: "2026-10-05", changes: [
+    { en: "LeagueHub: for a round already played, the board pairings now appear right under the match result — board, White and Black with rating, result. Where the game is known (club database or the players’ cards), “Game” opens it for replay right there; a club game also shows its evaluation curve.", de: "LeagueHub: Bei einer schon gespielten Runde stehen die Brettpaarungen jetzt direkt unter dem Ergebnis — Brett, Weiß und Schwarz mit Elo, Ergebnis. Wo die Partie bekannt ist (Vereins-Datenbank oder Spielerkarten), öffnet „Partie“ sie gleich dort zum Nachspielen; eine Vereinspartie zeigt dazu ihre Bewertungskurve." },
+  ] },
   { version: "0.672.6", date: "2026-10-05", changes: [
     { en: "Reading a scoresheet: a sheet photographed sideways or upside down is now detected from the positions of the moves (move numbers running sideways instead of downwards), the photo is turned upright and read once more. Upright, the model reads more reliably, and on the correction page both the photo and the crop for each move are upright. The second read is used only if it works out; otherwise the first one stays.", de: "Partieformular einlesen: ein quer oder kopfüber fotografiertes Formular wird jetzt an der Lage der Züge erkannt (Zugnummern laufen seitwärts statt nach unten), das Foto aufrecht gedreht und noch einmal gelesen. Aufrecht liest das Modell sicherer, und auf der Korrekturseite stehen Foto und Ausschnitt je Zug aufrecht. Die zweite Lesung zählt nur, wenn sie aufgeht — sonst bleibt die erste." },
   ] },

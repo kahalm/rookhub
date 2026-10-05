@@ -68,7 +68,7 @@ interface Pick { liga?: number; verein?: string }
         </div>
 
         @if (league(); as L) {
-          <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [round]="round()" [team]="team()"
+          <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [leagueTnr]="L.tnr" [round]="round()" [team]="team()"
                       [fixture]="fixture()" [sources]="sources()" />
         } @else if (leagueError(); as e) {
           <!-- F7-010: eine Liga, die nicht kommt, nimmt nicht die ganze Seite mit — Auswahl bleibt, andere Liga geht. -->

@@ -41,6 +41,13 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> League(int tnr, CancellationToken ct) =>
         await _league.LeagueJsonAsync(tnr, ct) is { } json ? Content(json, "application/json") : NotFound();
 
+    /// <summary>Brettpaarungen einer gespielten Begegnung samt Partie, wo es eine gibt (0.673.0, <see cref="LeagueFixtureGames"/>).</summary>
+    [HttpGet("{tnr:int}/round/{round:int}/games")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> FixtureGames(int tnr, int round, [FromQuery] string? team, [FromServices] LeagueFixtureGames games,
+        CancellationToken ct) =>
+        string.IsNullOrWhiteSpace(team) ? BadRequest() : Ok(await games.ForFixtureAsync(tnr, round, team, ct));
+
     /// <summary>Partien im Bestand je Quelle (0.626.0) → <c>{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }</c>;
     /// 30 min im Speicher. Seit 0.628.0: <c>?tnr=</c> fügt <c>league</c> hinzu (alle Meldelisten dieser Liga), <c>?fides=1,2,…</c>
     /// (die Meldeliste des Gegners, höchstens 40) <c>opponent</c>.</summary>
@@ -388,6 +395,11 @@ public class LeagueShareController : ControllerBase
         var fides = (share["fixture"]?["roster"] as JsonArray ?? []).Select(r => (string?)r?["fide"]);
         return Ok(await sources.GetAsync(ct, fides, onlySure: true, leagueTnr: tnr));
     }
+
+    /// <summary>Brettpaarungen der GETEILTEN Begegnung samt Partie (0.673.0) — Liga, Runde und Verein bestimmt der Link.</summary>
+    [HttpGet("{token}/games")]
+    public async Task<IActionResult> FixtureGames(string token, [FromServices] LeagueFixtureGames games, CancellationToken ct) =>
+        await _league.ShareFixtureAsync(token, ct) is { } s ? Ok(await games.ForFixtureAsync(s.Tnr, s.Round, s.Team, ct)) : NotFound();
 
     /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen.</summary>
     [HttpGet("{token}/forecast-stats")]

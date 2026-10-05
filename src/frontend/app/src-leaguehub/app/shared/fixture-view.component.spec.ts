@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthService } from '@rh/core/auth.service';
+import { provideTranslateService } from '@ngx-translate/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { Fixture } from '../core/league.models';
 import { FixtureViewComponent } from './fixture-view.component';
@@ -36,7 +37,8 @@ describe('FixtureViewComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats', 'fixtureGames']);
+    api.fixtureGames.and.resolveTo([]);
     api.forecastStats.and.resolveTo({
       season: '2026/27', total: { fixtures: 4, top1: 10, top2: 18, top3: 22, of: 30, e1: 9000, e2: 16500, e3: 21000, pa: 6300, pb: 1800 },
       rounds: [{ round: 1, fixtures: 3, top1: 6, top2: 13, top3: 15, of: 22, e1: 6600, e2: 12000, e3: 15400 },
@@ -53,9 +55,41 @@ describe('FixtureViewComponent', () => {
     });
     TestBed.configureTestingModule({
       imports: [FixtureViewComponent],
-      providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: () => false } }],
+      providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: () => false } },
+        provideTranslateService({ fallbackLang: 'de' })],
     });
     fixture = TestBed.createComponent(FixtureViewComponent);
+  });
+
+  it('gespielte Runde: Paarungen unter dem Ergebnis, „Partie" nur mit PGN, klappt das Nachspielen auf (0.673.0)', async () => {
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Hess, Max', whiteElo: 2040, black: 'Binder, Moriz', blackElo: 2100, result: '½ - ½', forfeit: false,
+        pgn: '[White "Hess, Max"]\n[Black "Schwaz"]\n\n1. e4 e5 1/2-1/2', source: 'club', clubGameId: 10 },
+      { board: 2, white: 'Gruber, Michael', whiteElo: null, black: 'Ciolek, Andreas', blackElo: 1900, result: '0 - 1', forfeit: false,
+        pgn: null, source: null, clubGameId: null },
+    ]);
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render({ ...OPEN, status: 'played', score: '3 : 3' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(api.fixtureGames).toHaveBeenCalledWith(1479345, 1, 'Schwaz', null);
+    const rows = el.querySelectorAll('.pairings tbody tr');
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('Hess, Max');
+    expect(rows[0].textContent).toContain('½ - ½');
+    expect(rows[1].querySelector('.pg button')).toBeNull();
+    (rows[0].querySelector('.pg button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.pairings lh-game-replay')).not.toBeNull();
+  });
+
+  it('offene Runde: keine Paarungen, keine Abfrage', () => {
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    const el = render(OPEN);
+    expect(api.fixtureGames).not.toHaveBeenCalled();
+    expect(el.querySelector('.pairings')).toBeNull();
   });
 
   it('zeigt je Brett die Kandidaten, den ersten hervorgehoben, Balken nach Prozent', () => {

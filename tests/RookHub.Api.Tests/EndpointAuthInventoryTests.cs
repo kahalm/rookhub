@@ -55,6 +55,7 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s/{token}",                                 // LeagueShareController.Get (Teilen-Link: EINE Begegnung, Token 144 Bit)
         "GET /api/league/s/{token}/sources",                         // LeagueShareController.Sources (nur Zahlen: Partien je Quelle, 0.627.0)
         "GET /api/league/s/{token}/forecast-stats",                  // LeagueShareController.ForecastStats (nur Zahlen + Liga-Namen, 0.650.0)
+        "GET /api/league/s/{token}/games",                           // LeagueShareController.FixtureGames (Paarungen der geteilten Begegnung, 0.673.0)
         "POST /api/league/s/{token}/club/batches",                   // LeagueShareClubController.BatchStart (Stapel-Upload, 0.651.0)
         "POST /api/league/s/{token}/club/batches/{key}/files",       // LeagueShareClubController.BatchFile (ein Bild, Tagesdeckel je IP)
         "POST /api/league/s/{token}/club/batches/{key}/finish",      // LeagueShareClubController.BatchFinish (Glocke an Admins)

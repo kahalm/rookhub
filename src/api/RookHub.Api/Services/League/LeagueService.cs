@@ -349,6 +349,10 @@ public sealed class LeagueService
     /// <summary>Gilt dieser Teilen-Link noch? (Die Upload-Wege ohne Anmeldung hängen daran.)</summary>
     public async Task<bool> ShareValidAsync(string token, CancellationToken ct) => await ValidShareAsync(token, ct) != null;
 
+    /// <summary>Liga, Runde und Verein eines gültigen Teilen-Links, sonst <c>null</c> (0.673.0, Paarungen der Begegnung).</summary>
+    public async Task<(int Tnr, int Round, string Team)?> ShareFixtureAsync(string token, CancellationToken ct) =>
+        await ValidShareAsync(token, ct) is { } s ? (s.Tnr, s.Round, s.Team) : null;
+
     /// <summary>Die Liga (Turnier-Nr.) eines gültigen Teilen-Links, sonst <c>null</c> (0.628.0, Spalte „Liga" der Quellen-Tabelle).</summary>
     public async Task<int?> ShareTnrAsync(string token, CancellationToken ct) => (await ValidShareAsync(token, ct))?.Tnr;
 

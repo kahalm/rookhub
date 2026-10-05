@@ -33,6 +33,12 @@ export interface ActualBoard {
   n: string; elo: number | null; rank: number | null; score: string | null; own: string | null; vs: string; vs_elo: number | null;
 }
 
+/** Brettpaarung einer gespielten Begegnung samt Partie, wo es eine gibt (0.673.0, `GET /api/league/{tnr}/round/{r}/games`). */
+export interface FixturePairing {
+  board: number; white: string | null; whiteElo: number | null; black: string | null; blackElo: number | null;
+  result: string; forfeit: boolean; pgn: string | null; source: 'club' | 'profile' | null; clubGameId: number | null;
+}
+
 export interface Board {
   board: number;
   /** Farbe des GEGNERS an diesem Brett ("w" | "s"). */
