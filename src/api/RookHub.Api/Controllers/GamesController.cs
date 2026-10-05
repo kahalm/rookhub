@@ -92,9 +92,9 @@ public class GamesController : BaseApiController
     /// </summary>
     [HttpGet("shared/{token}/evals")]
     [AllowAnonymous]
-    public async Task<ActionResult<GameEvalsDto>> SharedEvals(string token, CancellationToken ct, [FromQuery] bool book = true)
+    public async Task<ActionResult<GameEvalsDto>> SharedEvals(string token, CancellationToken ct, [FromQuery] string? book = null)
     {
-        var evals = await _service.GetSharedEvalsAsync(token, GetUserIdOrNull(), ct, book);
+        var evals = await _service.GetSharedEvalsAsync(token, GetUserIdOrNull(), ct, WithBook(book));
         return evals == null ? NotFound() : Ok(evals);
     }
 
@@ -116,9 +116,9 @@ public class GamesController : BaseApiController
     /// <summary>Bewertungen einer eigenen Partie (Nachspiel-Dialog in <c>/games</c>). <c>?book=0</c> lässt die Buchzüge weg
     /// (schnell); ohne den Parameter wie bisher mit.</summary>
     [HttpGet("{id:int}/evals")]
-    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct, [FromQuery] bool book = true)
+    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct, [FromQuery] string? book = null)
     {
-        var evals = await _service.GetEvalsAsync(GetUserId(), id, ct, book);
+        var evals = await _service.GetEvalsAsync(GetUserId(), id, ct, WithBook(book));
         return evals == null ? NotFound() : Ok(evals);
     }
 
@@ -132,6 +132,14 @@ public class GamesController : BaseApiController
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
         => await _service.DeleteAsync(GetUserId(), id) ? NoContent() : NotFound();
+
+    /// <summary>
+    /// <c>?book=</c> der Bewertungen: <c>0</c>/<c>false</c>/<c>no</c>/<c>off</c> lassen die Buchzüge weg, alles andere (auch
+    /// fehlend) lässt sie drin. Bewusst ein String und kein <c>bool</c>: ASP.NET bindet <c>bool</c> nur aus „true"/„false", und
+    /// die Seite schickt <c>0</c> — das gab in 0.664.0 ein 400 und damit gar keine Auswertung.
+    /// </summary>
+    internal static bool WithBook(string? book)
+        => book is null || !(book.Trim().ToLowerInvariant() is "0" or "false" or "no" or "off");
 
     /// <summary>Dieselbe Antwortform wie <c>POST /api/game-analyses/guess</c>: die Seite formuliert den
     /// Grund in der Sprache des Nutzers, der Server kennt sie nicht.</summary>

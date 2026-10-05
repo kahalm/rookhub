@@ -504,6 +504,28 @@ public class GamesControllerTests : IDisposable
         Assert.IsType<NotFoundResult>((await _controller.SharedEvals("gibt-es-nicht", CancellationToken.None)).Result);
     }
 
+    /// <summary>0.666.1: die Seite schickt <c>?book=0</c> — ein <c>bool</c>-Parameter hätte das mit 400 abgewiesen (die Partie-Seite
+    /// zeigte weder Kurve noch Analyse). Der Parameter ist deshalb ein String und nimmt auch 0/1.</summary>
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    [InlineData("1", true)]
+    [InlineData("true", true)]
+    [InlineData("0", false)]
+    [InlineData("false", false)]
+    [InlineData(" FALSE ", false)]
+    [InlineData("no", false)]
+    public void WithBook_nimmtAuch0Und1(string? raw, bool expected)
+        => Assert.Equal(expected, GamesController.WithBook(raw));
+
+    [Fact]
+    public void Evals_Book_ist_ein_String_damit_0_nicht_mit_400_endet()
+    {
+        foreach (var name in new[] { nameof(GamesController.Evals), nameof(GamesController.SharedEvals) })
+            Assert.Equal(typeof(string),
+                typeof(GamesController).GetMethod(name)!.GetParameters().Single(p => p.Name == "book").ParameterType);
+    }
+
     [Fact]
     public async Task Evals_fremdePartie_404()
     {

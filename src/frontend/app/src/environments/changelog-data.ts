@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.666.1", date: "2026-10-05", changes: [
+    { en: "Fix: on the game page the evaluation (graph, accuracy, move classes) was missing altogether since 0.664.0 — the server rejected the faster request with an error. It is accepted again, the page shows the graph at once and fills in the book moves a moment later.", de: "Fix: Auf der Partie-Seite fehlte seit 0.664.0 die gesamte Auswertung (Kurve, Genauigkeit, Zug-Klassen) — der Server wies die schnellere Anfrage mit einem Fehler ab. Sie wird wieder angenommen, die Seite zeigt die Kurve sofort und trägt die Buchzüge einen Moment später nach." },
+  ] },
   { version: "0.666.0", date: "2026-10-05", changes: [
     { en: "Club database: league and season are now worked out for the games where the pairings allow it (opponent’s FIDE ID against the league schedules — 30 of 162 games unambiguously). They are not shown in the club database itself, but when you copy a game into “My games” it arrives with its league and season as classifiers (and an older, later-linked copy gets them filled in, without overwriting what you entered).", de: "Vereins-Datenbank: Liga und Jahrgang werden jetzt dort bestimmt, wo die Paarungen es hergeben (FIDE-ID des Gegners gegen die Spielpläne — 30 von 162 Partien eindeutig). In der Vereins-Datenbank selbst werden sie nicht angezeigt, aber wenn du dir eine Partie in „Meine Partien“ kopierst, kommt sie mit Liga und Jahrgang als Klassifizierer an (eine ältere, später verbundene Kopie bekommt sie nachgetragen, ohne zu überschreiben, was du selbst eingetragen hast)." },
   ] },
