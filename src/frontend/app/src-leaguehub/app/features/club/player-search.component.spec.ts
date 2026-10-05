@@ -54,6 +54,19 @@ describe('PlayerSearchComponent', () => {
     expect((fixture.nativeElement.querySelector('.psearch-all input') as HTMLInputElement).checked).toBeTrue();
   });
 
+  it('beim Partieformular (searchMega=false) sucht es zuerst nur in der Liga', fakeAsync(() => {
+    const f = TestBed.createComponent(PlayerSearchComponent);
+    f.componentRef.setInput('client', client);
+    f.componentRef.setInput('searchMega', false);
+    f.detectChanges();
+    expect((f.nativeElement.querySelector('.psearch-all input') as HTMLInputElement).checked).toBeFalse();
+    client.players.and.resolveTo([LIGA]);
+    f.componentInstance.onInput('heng');
+    tick(300);
+    flushMicrotasks();
+    expect(client.players).toHaveBeenCalledWith('heng', false);
+  }));
+
   it('Hineinklicken sucht gleich mit dem Namen, der schon dasteht', fakeAsync(() => {
     client.players.and.resolveTo([LIGA]);
     fixture.componentInstance.text = 'Hengl';

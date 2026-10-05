@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.672.4", date: "2026-10-05", changes: [
+    { en: "LeagueHub, checking a scoresheet: the player search for White and Black now starts with league players only — the box “Search all players of the Mega Database” is no longer ticked there. Ticking it still searches the whole Mega Database; elsewhere nothing changes.", de: "LeagueHub, Partieformular prüfen: die Spielersuche für Weiß und Schwarz sucht jetzt zuerst nur unter den Ligaspielern — das Häkchen „Alle Spieler der Megabase durchsuchen“ ist dort nicht mehr vorgesetzt. Mit Häkchen wird weiter die ganze Megabase durchsucht; anderswo ändert sich nichts." },
+  ] },
   { version: "0.672.3", date: "2026-10-05", changes: [
     { en: "Courses: after resetting a single chapter, its lines can be played again. Until now the course said \"completed\" — the chapter reset kept the attempts as the training-goal time log, and the course still counted every line with an attempt as done. The chapter reset now remembers when each line was reset; attempts before that no longer count (time log and training goals stay unchanged).", de: "Kurse: nach dem Zurücksetzen eines einzelnen Kapitels lassen sich seine Linien wieder spielen. Bisher meldete der Kurs „abgeschlossen“ — der Kapitel-Reset ließ die Versuche als Zeit-Log der Trainingsziele stehen, und der Kurs zählte jede Linie mit Versuch weiter als erledigt. Jetzt merkt sich der Kapitel-Reset je Linie, wann zurückgesetzt wurde; Versuche davor zählen nicht mehr (Zeit-Log und Trainingsziele bleiben unverändert)." },
   ] },

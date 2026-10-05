@@ -1919,7 +1919,8 @@ Spielers). Die ganze Megabase liegt NICHT in RookHub.
 
 **Spieler korrigieren über die Megabase** (0.575.0): beim Korrigieren eines Namens (Übersicht und Formular-Korrektur,
 `features/club/player-search.component.ts`) sucht LeagueHub unter den Personen der Liga und — Häkchen, seit 0.576.0
-standardmäßig an — im Spielerverzeichnis der GANZEN Megabase (`LeagueMegaPlayers`, Tabelle `LeagueMegaPlayers`: Name, `NameKey` klein ohne
+standardmäßig an, auf der Seite des Partieformulars seit 0.672.4 aus (`searchMega`, Wunsch 2026-10-05 „nimm
+standardmäßig nur Namen aus der Liga") — im Spielerverzeichnis der GANZEN Megabase (`LeagueMegaPlayers`, Tabelle `LeagueMegaPlayers`: Name, `NameKey` klein ohne
 Akzente mit Index, FIDE-ID, Partien, jüngstes Jahr, höchste Elo). `GET …/club/players?q=&all=true` hängt die Treffer
 (`source: "mega"`) an die Ligaspieler an; trägt ein Treffer die FIDE-ID eines Ligaspielers, gilt er als dieser. Gesucht
 wird seit 0.576.0 wie mit `LIKE` („bert rud" findet „Bertl, Rudolf"): jedes getippte Wort (ab zwei Zeichen, höchstens

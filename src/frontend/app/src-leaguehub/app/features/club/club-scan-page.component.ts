@@ -233,7 +233,7 @@ const SILENT_FAILURES = 3;
           <div class="save-grid">
             @for (k of sides; track k) {
               <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
-                <lh-player-search [client]="client" [text]="name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'"
+                <lh-player-search [client]="client" [text]="name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'" [searchMega]="false"
                                   (textChange)="setName(k, $event)" (picked)="pickPerson(k, $event)" />
                 <span class="match" [class.ok]="(match(k)()?.league || match(k)()?.mega) && !replace(k)()">{{ matchText(k) }}</span>
                 @if (similarOf(k).length) {

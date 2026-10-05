@@ -4,7 +4,8 @@ import { RosterPerson } from '../../core/club.models';
 
 /**
  * Spieler suchen beim Korrigieren eines Namens (Wunsch 2026-09-28): unter den Personen der Liga (Meldelisten aller
- * Saisonen) und — Häkchen, standardmäßig an („Megabase-Suche an") — über alle Spieler der Megabase. Ein Treffer bringt Namen und FIDE-ID mit
+ * Saisonen) und — Häkchen, standardmäßig an („Megabase-Suche an"), beim Partieformular aus (`searchMega`, Wunsch
+ * 2026-10-05: „nimm standardmäßig nur Namen aus der Liga") — über alle Spieler der Megabase. Ein Treffer bringt Namen und FIDE-ID mit
  * (`picked`); der getippte Text geht laufend nach außen (`textChange`), damit die Seite ihn selbst abgleichen kann.
  */
 @Component({
@@ -41,6 +42,8 @@ export class PlayerSearchComponent implements OnInit, OnDestroy {
   @Input() placeholder = 'Name oder FIDE-ID';
   /** Gleich beim Öffnen suchen (und ins Feld springen) — in der Übersicht öffnet das Feld erst ein Klick auf den Namen. */
   @Input() autoSearch = false;
+  /** Häkchen „Alle Spieler der Megabase" zu Beginn gesetzt — beim Partieformular aus (nur Ligaspieler). */
+  @Input() searchMega = true;
   @Output() textChange = new EventEmitter<string>();
   @Output() picked = new EventEmitter<RosterPerson>();
   @Output() enter = new EventEmitter<void>();
@@ -55,6 +58,7 @@ export class PlayerSearchComponent implements OnInit, OnDestroy {
   private readonly box = viewChild<ElementRef<HTMLInputElement>>('box');
 
   ngOnInit(): void {
+    this.all.set(this.searchMega);
     if (!this.autoSearch) return;
     this.open.set(true);
     this.schedule(0);
