@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { ClubApiService } from '../core/club-api.service';
 import { claimKeys, clearClaimKeys } from '../core/claim-keys';
 
@@ -13,7 +12,7 @@ import { claimKeys, clearClaimKeys } from '../core/claim-keys';
   selector: 'lh-claim-prompt',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [],
   template: `
     @if (offer(); as o) {
       <section class="claim" role="region" aria-label="Partien zuordnen">
@@ -28,7 +27,7 @@ import { claimKeys, clearClaimKeys } from '../core/claim-keys';
         @if (error()) { <p class="small err" role="status">{{ error() }}</p> }
       </section>
     } @else if (done(); as d) {
-      <p class="claim-done" role="status">{{ d }} <a routerLink="/verein/meine">Meine Partien</a></p>
+      <p class="claim-done" role="status">{{ d }}</p>
     }
   `,
 })

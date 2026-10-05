@@ -14,9 +14,7 @@ export const routes: Routes = [
     loadComponent: () => import('./features/league/league-page.component').then(m => m.LeaguePageComponent) },
   { path: 'verein', pathMatch: 'full', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-games-page.component').then(m => m.ClubGamesPageComponent) },
-  // „Meine Partien" (0.652.0): dieselbe Liste, nur die eigenen — dort jederzeit bearbeiten oder löschen.
-  { path: 'verein/meine', canActivate: [authGuard], data: { mine: true },
-    loadComponent: () => import('./features/club/club-games-page.component').then(m => m.ClubGamesPageComponent) },
+  // „Meine Partien" (/verein/meine, 0.652.0) ist seit 0.672.7 weg (Wunsch 2026-10-05: „entferne").
   { path: 'verein/neu', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },
   // Vereinspartie korrigieren (0.660.0): dieselbe Seite wie beim ersten Prüfen eines Formulars, mit dem aufbewahrten Foto

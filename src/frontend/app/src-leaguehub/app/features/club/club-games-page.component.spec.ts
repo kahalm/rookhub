@@ -49,21 +49,10 @@ describe('ClubGamesPageComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('„Meine Partien" (0.652.0): fragt nur die eigenen ab, eigener Titel; dafür reicht beitragen', fakeAsync(() => {
-    perms = new Set(['league.contribute']);
-    const el = create({ mine: true });
-    flushMicrotasks();
-    fixture.detectChanges();
-    expect(api.list).toHaveBeenCalledWith(null, null, 1, true);
-    expect(el.querySelector('.club-intro h2')?.textContent).toBe('Meine Partien');
-    expect(el.textContent).toContain('jederzeit bearbeiten');
-    expect(el.querySelector('lh-access-gate')).toBeNull();
-  }));
-
   it('die Vereinspartien fragen alle ab', fakeAsync(() => {
     create();
     flushMicrotasks();
-    expect(api.list).toHaveBeenCalledWith(null, null, 1, false);
+    expect(api.list).toHaveBeenCalledWith(null, null, 1);
   }));
 
   it('„Analyse" springt auf RookHubs Partieseite der Vereinspartie (0.653.0)', fakeAsync(() => {
@@ -186,7 +175,7 @@ describe('ClubGamesPageComponent', () => {
     fixture.componentInstance.search(' Hengl ');
     flushMicrotasks();
     fixture.detectChanges();
-    expect(api.list).toHaveBeenCalledWith(null, 'Hengl', 1, false);
+    expect(api.list).toHaveBeenCalledWith(null, 'Hengl', 1);
     expect(el.textContent).toContain('Nichts gefunden');
   }));
 

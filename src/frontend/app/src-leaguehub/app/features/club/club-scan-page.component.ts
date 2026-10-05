@@ -38,6 +38,12 @@ const SILENT_FAILURES = 3;
  * unter `/verein/formular/:id`, ohne Konto über einen Teilen-Link unter `/s/:token/formular/:key`. Übernehmen oder
  * Verwerfen schließt die Einlesung — das Foto verschwindet.
  */
+/** Gemerkte Abwahl von „Automatisch zu meinen Partien hinzufügen" (je Gerät). */
+export const AUTO_MINE_KEY = 'lh-auto-my-games';
+function readAutoMine(): boolean {
+  try { return localStorage.getItem(AUTO_MINE_KEY) !== '0'; } catch { return true; }
+}
+
 @Component({
   selector: 'lh-club-scan-page',
   standalone: true,
@@ -55,7 +61,7 @@ const SILENT_FAILURES = 3;
     } @else if (notFound() && gameId != null) {
       <section class="gate"><h2>Partie nicht gefunden</h2>
         <p>Sie ist gelöscht oder du darfst sie nicht korrigieren (das dürfen, wer sie hochgeladen hat, und die Verwalter).
-          <a routerLink="/verein/meine">Zu deinen Partien</a></p></section>
+          <a routerLink="/verein">Zu den Vereinspartien</a></p></section>
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>
         <p>Es wurde schon übernommen oder verworfen. <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
@@ -70,7 +76,7 @@ const SILENT_FAILURES = 3;
     } @else if (state(); as st) {
       <section class="club-intro">
         @if (gameId != null) {
-          <p><a class="back-link" routerLink="/verein/meine">← Meine Partien</a></p>
+          <p><a class="back-link" routerLink="/verein">← Vereinspartien</a></p>
           <h2>Vereinspartie korrigieren</h2>
           <p class="muted">{{ gameTitle() }}@if (!photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
         } @else {
@@ -218,7 +224,7 @@ const SILENT_FAILURES = 3;
             <p class="muted small">Die Züge werden in der Vereins-Datenbank ersetzt — und in jeder Kopie in „Meine Partien“. Die
               Analyse wird danach neu gerechnet. Namen und Ergebnis änderst du in der Liste unter „Bearbeiten“.</p>
             @if (saved()) {
-              <p class="ok-text" role="status"><b>Korrektur gespeichert.</b> <a routerLink="/verein/meine">Zu deinen Partien</a></p>
+              <p class="ok-text" role="status"><b>Korrektur gespeichert.</b> <a routerLink="/verein">Zu den Vereinspartien</a></p>
             } @else {
               <div class="actions">
                 <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
@@ -248,7 +254,7 @@ const SILENT_FAILURES = 3;
                   <input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
                   durch „{{ anon }}“ ersetzen</label>
               </div>
-              <label class="field narrow">Elo<input type="number" inputmode="numeric" min="500" max="3000" [value]="elo(k)() ?? ''"
+              <label class="field narrow">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="elo(k)() ?? ''"
                                                (input)="elo(k).set(num($any($event.target).value))" [disabled]="replace(k)()" /></label>
             }
             <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="year() ?? ''"
@@ -282,6 +288,11 @@ const SILENT_FAILURES = 3;
             <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
               <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p>
           } @else {
+            @if (loggedIn && gameId == null) {
+              <!-- 0.672.7, Wunsch 2026-10-05: standardmäßig an, ein Abwählen merkt sich das Gerät. -->
+              <label class="auto-mine small"><input type="checkbox" [checked]="autoMine()" (change)="setAutoMine($any($event.target).checked)" />
+                Automatisch zu meinen Partien hinzufügen</label>
+            }
             <div class="actions">
               <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
                 {{ saving() ? 'Übernehme …' : 'In die Vereins-Datenbank übernehmen' }}</button>
@@ -394,6 +405,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly myGameId = signal<number | null>(null);
   readonly pgnMsg = signal<{ text: string; err: boolean } | null>(null);
   get loggedIn(): boolean { return this.auth.isLoggedIn; }
+  /** „Automatisch zu meinen Partien hinzufügen": an, solange auf diesem Gerät nicht abgewählt. */
+  readonly autoMine = signal(readAutoMine());
+  setAutoMine(on: boolean): void {
+    this.autoMine.set(on);
+    try { if (on) localStorage.removeItem(AUTO_MINE_KEY); else localStorage.setItem(AUTO_MINE_KEY, '0'); } catch { /* nur Bequemlichkeit */ }
+  }
   readonly rookHub = rookHubUrlForLeagueHub();
 
   private readonly sideState = {
@@ -598,6 +615,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (this.matchTimer) clearTimeout(this.matchTimer);
     st.name.set(p.name);
     st.fide.set(p.fide);
+    // Die Elo des gewählten Spielers gleich mit (Wunsch 2026-10-05) — aus der jüngsten Meldeliste, sonst bleibt sie.
+    if (p.elo) st.elo.set(p.elo);
     const league = p.league ?? true;
     st.match.set({ league, ambiguous: false, name: p.name, fide: p.fide, club: p.club, candidates: [], mega: !league });
     this.applyDefault(k);
@@ -698,6 +717,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       }, this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
       this.saved.set(true);
+      if (this.loggedIn && this.autoMine() && !this.myGameId()) void this.addToMyGames();
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.saveError.set(e?.error?.reason === 'illegal' ? `Ein Zug ist nicht legal: ${e.error.message}`

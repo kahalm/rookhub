@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.673.1", date: "2026-10-05", changes: [
+    { en: "LeagueHub, checking a scoresheet: picking a player now fills in his Elo (from the latest league roster), and the Elo field is a plain number field without the odd up/down arrows. New box “Add to my games automatically” (only when logged in, ticked by default): after taking a game over, it also lands in your RookHub games; if you untick it, this device remembers that.", de: "LeagueHub, Partieformular prüfen: wer einen Spieler auswählt, bekommt jetzt seine Elo gleich eingetragen (aus der jüngsten Meldeliste), und das Elo-Feld ist ein schlichtes Zahlenfeld ohne die seltsamen Pfeile. Neues Häkchen „Automatisch zu meinen Partien hinzufügen“ (nur angemeldet, standardmäßig gesetzt): nach dem Übernehmen landet die Partie auch in deinen RookHub-Partien; wer es abwählt, dem merkt es sich das Gerät." },
+    { en: "LeagueHub: the “My games” page (/verein/meine) has been removed.", de: "LeagueHub: die Seite „Meine Partien“ (/verein/meine) ist entfernt." },
+  ] },
   { version: "0.673.0", date: "2026-10-05", changes: [
     { en: "LeagueHub: for a round already played, the board pairings now appear right under the match result — board, White and Black with rating, result. Where the game is known (club database or the players’ cards), “Game” opens it for replay right there; a club game also shows its evaluation curve.", de: "LeagueHub: Bei einer schon gespielten Runde stehen die Brettpaarungen jetzt direkt unter dem Ergebnis — Brett, Weiß und Schwarz mit Elo, Ergebnis. Wo die Partie bekannt ist (Vereins-Datenbank oder Spielerkarten), öffnet „Partie“ sie gleich dort zum Nachspielen; eine Vereinspartie zeigt dazu ihre Bewertungskurve." },
   ] },

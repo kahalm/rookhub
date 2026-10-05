@@ -40,8 +40,6 @@ import { ClaimPromptComponent } from './shared/claim-prompt.component';
             <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
             <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
           }
-          <!-- „Meine Partien" für jeden Angemeldeten (0.656.0) — auch wer nur über einen Teilen-Link hochgeladen hat. -->
-          <a routerLink="/verein/meine" routerLinkActive="on">Meine Partien</a>
           @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
           @if (nav().manage) {
             <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a>

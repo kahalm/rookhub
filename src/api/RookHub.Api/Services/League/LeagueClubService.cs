@@ -970,9 +970,26 @@ public sealed class LeagueClubService
     {
         var roster = await RosterAsync(ct);
         var list = roster.Suggest(q, 15).Select(PersonDto).ToList();
-        if (!all) return list;
+        if (all) AddMega(list, roster, await new LeagueMegaPlayers(_db).SearchAsync(q, 25, ct));
+        // Die Elo zum Vorbelegen (Wunsch 2026-10-05: „warum wird die nicht ausgefüllt, wenn ich den Spieler auswähle?"):
+        // die der jüngsten Meldeliste (international, sonst national).
+        var fides = list.Where(p => p.League && p.Fide != null).Select(p => p.Fide!).Distinct().ToList();
+        if (fides.Count > 0)
+        {
+            var rows = await _db.LeaguePlayers.AsNoTracking().Where(p => p.FideId != null && fides.Contains(p.FideId))
+                .Select(p => new { p.FideId, p.Tnr, Elo = p.EloI ?? p.EloN }).ToListAsync(ct);
+            var latest = rows.Where(r => r.Elo is > 0).GroupBy(r => r.FideId!)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Tnr).First().Elo);
+            foreach (var p in list)
+                if (p.Fide != null && latest.TryGetValue(p.Fide, out var elo)) p.Elo = elo;
+        }
+        return list;
+    }
+
+    private static void AddMega(List<LeagueRosterPersonDto> list, LeagueRosterIndex roster, IEnumerable<LeagueMegaPlayer> mega)
+    {
         var seen = list.Where(p => p.Fide != null).Select(p => p.Fide!).ToHashSet(StringComparer.Ordinal);
-        foreach (var m in await new LeagueMegaPlayers(_db).SearchAsync(q, 25, ct))
+        foreach (var m in mega)
         {
             if (m.FideId != null && !seen.Add(m.FideId)) continue;
             var league = roster.ByFide(m.FideId);
@@ -983,7 +1000,6 @@ public sealed class LeagueClubService
                 Games = m.Games, LastYear = m.LastYear, MaxElo = m.MaxElo,
             });
         }
-        return list;
     }
 
     public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)

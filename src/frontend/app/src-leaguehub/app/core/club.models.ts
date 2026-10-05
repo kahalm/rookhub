@@ -73,6 +73,8 @@ export interface RosterPerson {
   games?: number | null;
   lastYear?: number | null;
   maxElo?: number | null;
+  /** Elo laut jüngster Meldeliste — belegt beim Auswählen das Elo-Feld vor (0.672.7). */
+  elo?: number | null;
 }
 
 /** Abgleich eines Namens mit den Meldelisten. `club` = spielt (jüngste Saison) für Schwaz. */

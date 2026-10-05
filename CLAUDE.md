@@ -1632,11 +1632,13 @@ Rollenverwaltung an).
   claims/preview` `{keys}` → `{games, anonymized}`; JA → `…/claims` setzt `UploadedByUserId` (auch bei „Schwaz" — nur mit
   dieser Zustimmung), NEIN → `…/claims/forget`; beides leert den Hash und die Schlüssel im Browser. `CanDelete` = Verwalter
   ODER `UploadedByUserId == ich` (ohne die frühere Schwaz-Sperre — einen Hochladenden trägt eine Schwaz-Partie nur nach
-  Zuordnung). „Meine Partien" (`GET …/club/games/mine`), Bearbeiten und Löschen brauchen seit 0.656.0 nur die Anmeldung
-  (Regel im Dienst); der Reiter steht für jeden Angemeldeten.
-- **Lasche „Meine Partien" (0.652.0)**: Route `verein/meine` (Daten `mine: true`, dieselbe `club-games-page.component.ts`,
-  braucht nur league.contribute) → `GET /api/league/club/games?mine=true` = `UploadedByUserId == ich`; Bearbeiten (Namen,
-  Ergebnis) und Löschen wie in der Vereinsliste. Als „Schwaz" hochgeladene fehlen absichtlich (kein Hochladender gespeichert).
+  Zuordnung). Bearbeiten und Löschen brauchen seit 0.656.0 nur die Anmeldung (Regel im Dienst).
+- **Lasche „Meine Partien" (0.652.0–0.673.0) ist ENTFERNT** (0.673.1, Wunsch 2026-10-05: „entferne /verein/meine"): keine
+  Route, kein Reiter, Links führen auf `/verein`. Der Endpunkt `GET …/club/games/mine` steht noch (ohne Oberfläche).
+- **Formular prüfen (0.673.1)**: ein ausgewählter Spieler belegt die Elo vor (`LeagueRosterPersonDto.Elo` = jüngste
+  Meldeliste nach `Tnr`, `EloI ?? EloN`, nur Ligaspieler); das Elo-Feld ist ein Textfeld mit `inputmode="numeric"` (kein
+  Zahlenfeld mit Pfeilen). Häkchen „Automatisch zu meinen Partien hinzufügen" (nur angemeldet, standardmäßig an, Abwahl im
+  localStorage `lh-auto-my-games` = `'0'`): nach dem Übernehmen ruft die Seite `addToMyGames` selbst.
 - **Taktik-Ernte (0.657.0**, Wunsch 2026-10-04 „Taktiken aus den Partien automatisch ernten … plan und bau", Kapitel je
   Ligarunde): `Services/Tactics/` — `TacticHarvest` (rein: Lichess-Puzzler-Schwellen ohne AGPL-Code: Gewinnchance −1..1,
   Fehler des Gegners > 0,6, nicht schon > +3, Matt ≤ 15 oder ≥ +2, eindeutig > 0,7 bzw. bei Matt kein zweites Matt; Themen

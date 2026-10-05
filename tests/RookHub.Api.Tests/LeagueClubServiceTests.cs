@@ -683,6 +683,21 @@ public class LeagueClubServiceTests : IDisposable
     /// <summary>Codereview 2026-09-29, F7-007: Suche und Namensabgleich lasen bei JEDEM Aufruf (jede Tipp-Pause, auch über
     /// den Teilen-Link) alle Meldelisten-Zeilen und bauten den Index neu. Jetzt aus dem Cache, solange sich Anzahl und
     /// höchste Id der Zeilen nicht ändern — Meldelisten werden nur gelöscht und neu angelegt, das trifft den Schlüssel.</summary>
+    /// <summary>Wunsch 2026-10-05: beim Auswählen eines Spielers die Elo mit vorbelegen — aus der JÜNGSTEN Meldeliste,
+    /// international vor national.</summary>
+    [Fact]
+    public async Task Suggest_CarriesTheEloOfTheLatestRoster()
+    {
+        await SeedAsync();
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 3, Team = "Absam", Name = "Hengl, Philip", NameKey = LeagueNames.NameKey("Hengl, Philip"), FideId = "222", EloI = 2000 });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 9, Team = "Absam", Name = "Hengl, Philip", NameKey = LeagueNames.NameKey("Hengl, Philip"), FideId = "222", EloN = 2150 });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 11, Team = "Absam", Name = "Hengl, Philip", NameKey = LeagueNames.NameKey("Hengl, Philip"), FideId = "222", EloI = 2172, EloN = 2100 });
+        await _db.SaveChangesAsync();
+
+        var hit = (await Club().SuggestAsync("hengl", false, default)).Single(p => p.Fide == "222");
+        Assert.Equal(2172, hit.Elo);
+    }
+
     [Fact]
     public async Task Roster_CachedAcrossRequests_RebuiltWhenTheRostersAreReplaced()
     {

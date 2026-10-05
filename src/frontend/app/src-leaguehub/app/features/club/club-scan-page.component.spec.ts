@@ -6,7 +6,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubMatch, LeagueScanState } from '../../core/club.models';
-import { ClubScanPageComponent } from './club-scan-page.component';
+import { AUTO_MINE_KEY, ClubScanPageComponent } from './club-scan-page.component';
 
 const PLY = (w: number, written: string, san: string, uci: string, extra = {}) =>
   ({ w, written, san, uci, match: 'exact', uncertain: false, ...extra });
@@ -34,6 +34,7 @@ const MATCH = (blackLeague: boolean): ClubMatch => ({
 });
 
 describe('ClubScanPageComponent', () => {
+  afterEach(() => localStorage.removeItem(AUTO_MINE_KEY));
   let fixture: ComponentFixture<ClubScanPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
   let params: Record<string, string>;
@@ -312,6 +313,7 @@ describe('ClubScanPageComponent', () => {
   }));
 
   it('Übernehmen schickt Züge, Seiten und Einlesung; danach bleibt die Seite mit PGN und „Meine Partien" stehen', fakeAsync(() => {
+    localStorage.setItem(AUTO_MINE_KEY, '0');                       // hier von Hand — die Automatik prüft der nächste Test
     const el = create();
     flushMicrotasks();
     const router = TestBed.inject(Router);
@@ -342,6 +344,37 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     expect(clubApi.addToMyGames).toHaveBeenCalledWith(jasmine.stringContaining('[Black "Hengl"]'));
     expect(el.textContent).toContain('In deinen Partien gespeichert.');
+    tick(1000);
+  }));
+
+  it('„Automatisch zu meinen Partien": standardmäßig an, legt nach dem Übernehmen die Kopie an; Abwählen merkt sich das Gerät', fakeAsync(() => {
+    localStorage.removeItem(AUTO_MINE_KEY);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const box = el.querySelector('.auto-mine input') as HTMLInputElement;
+    expect(box.checked).toBeTrue();
+    api.addGame.and.resolveTo({ id: 11, anonymized: true });
+    clubApi.addToMyGames.and.resolveTo({ imported: 1, duplicates: 0, ids: [42] });
+    void fixture.componentInstance.save();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(clubApi.addToMyGames).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.myGameId()).toBe(42);
+
+    fixture.componentInstance.setAutoMine(false);
+    expect(localStorage.getItem(AUTO_MINE_KEY)).toBe('0');
+    fixture.componentInstance.setAutoMine(true);
+    expect(localStorage.getItem(AUTO_MINE_KEY)).toBeNull();
+    tick(1000);
+  }));
+
+  it('ein ausgewählter Ligaspieler bringt seine Elo mit', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    const c = fixture.componentInstance;
+    c.pickPerson('black', { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false, league: true, elo: 2172 });
+    expect(c.elo('black')()).toBe(2172);
     tick(1000);
   }));
 

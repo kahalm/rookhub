@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { PlayerSearchComponent } from './player-search.component';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
@@ -39,16 +39,9 @@ type Side = 'white' | 'black';
       <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppe von SK Schwaz." />
     } @else {
       <section class="club-intro">
-        @if (mine) {
-          <h2>Meine Partien</h2>
-          <p class="muted">Die Partien, die du mit deinem Konto hochgeladen oder dir nach dem Anmelden zugeordnet hast — du kannst
-            sie jederzeit bearbeiten (Namen, Ergebnis) oder löschen. Partien, die du angemeldet als „Schwaz" hochgeladen hast,
-            stehen nicht hier: bei denen ist absichtlich nicht gespeichert, von wem sie stammen.</p>
-        } @else {
-          <h2>Vereinspartien</h2>
-          <p class="muted">Partien, die Mitglieder von SK Schwaz hochgeladen haben — sie stehen auch auf den Spielerkarten der
-            Gegner. Vom Datum bleibt nur das Jahr; „Schwaz" steht für ein Mitglied, das seinen Namen nicht zeigt.</p>
-        }
+        <h2>Vereinspartien</h2>
+        <p class="muted">Partien, die Mitglieder von SK Schwaz hochgeladen haben — sie stehen auch auf den Spielerkarten der
+          Gegner. Vom Datum bleibt nur das Jahr; „Schwaz" steht für ein Mitglied, das seinen Namen nicht zeigt.</p>
       </section>
 
       <form class="club-search" role="search" (submit)="$event.preventDefault(); search(q.value)">
@@ -73,7 +66,7 @@ type Side = 'white' | 'black';
         </section>
       } @else if (total() === 0) {
         <section class="empty">
-          <h2>{{ query() ? 'Nichts gefunden' : mine ? 'Du hast noch keine Partien hochgeladen' : 'Noch keine Vereinspartien' }}</h2>
+          <h2>{{ query() ? 'Nichts gefunden' : 'Noch keine Vereinspartien' }}</h2>
           @if (!query() && canContribute) {
             <p>Lade eine PGN-Datei hoch oder lies ein Partieformular ein — jede Partie mit einem Ligaspieler hilft der Vorbereitung.</p>
           }
@@ -190,9 +183,7 @@ export class ClubGamesPageComponent implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly card = viewChild(PlayerCardComponent);
 
-  /** Lasche „Meine Partien" (Route `verein/meine`, 0.652.0): nur die eigenen; dafür reicht beitragen. */
-  readonly mine = inject(ActivatedRoute).snapshot.data['mine'] === true;
-  readonly allowed = this.mine || this.auth.has('league.view');   // „Meine Partien": angemeldet reicht (0.656.0)
+  readonly allowed = this.auth.has('league.view');
   readonly canContribute = this.auth.has('league.contribute');
   readonly anon = 'Schwaz';
   readonly de = de;
@@ -239,7 +230,7 @@ export class ClubGamesPageComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const r = await this.api.list(null, this.query() || null, page, this.mine);
+      const r = await this.api.list(null, this.query() || null, page);
       if (my !== this.seq) return;
       this.page = r.page;
       this.items.set(page === 1 ? r.items : [...this.items(), ...r.items]);

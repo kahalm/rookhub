@@ -181,6 +181,8 @@ public class LeagueRosterPersonDto
     public int? Games { get; set; }
     public int? LastYear { get; set; }
     public int? MaxElo { get; set; }
+    /// <summary>Elo laut jüngster Meldeliste (international, sonst national) — zum Vorbelegen beim Auswählen.</summary>
+    public int? Elo { get; set; }
 }
 
 /// <summary><c>POST …/games/lichess</c> — eine öffentliche Lichess-Studie (Adresse der Studie oder eines Kapitels).</summary>
