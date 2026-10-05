@@ -43,13 +43,20 @@ public class AnalysisJobService
     private readonly AppDbContext _db;
     private readonly IAnalysisJobControl? _control;
     private readonly EngineRegistry? _registry;
+    private readonly IReadOnlySet<string> _explicitOnly;
 
-    public AnalysisJobService(AppDbContext db, IAnalysisJobControl? control = null, EngineRegistry? registry = null)
+    public AnalysisJobService(AppDbContext db, IAnalysisJobControl? control = null, EngineRegistry? registry = null,
+        IConfiguration? config = null)
     {
         _db = db;
         _control = control;
         _registry = registry;
+        _explicitOnly = ExplicitOnlyEngines.From(config);
     }
+
+    /// <summary>Knotenziel eines Auftrags: Bereich, damit weder ein Tippfehler (3 Knoten) noch ein Dauerläufer ankommt.</summary>
+    public const long MinTargetNodes = 1_000;
+    public const long MaxTargetNodes = 50_000_000;
 
     public async Task<List<AnalysisJobDto>> ListAsync(int userId, CancellationToken ct = default)
     {
@@ -65,7 +72,7 @@ public class AnalysisJobService
                     && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
                     && g.Positions.Any(p => p.AnalysisJobId == j.Id))
                 && !_db.MoveComparisonLines.Any(l => l.AnalysisJobId == j.Id)
-                && !_db.TacticCandidates.Any(t => t.AnalysisJobId == j.Id))   // Taktik-Ernte (0.657.0)
+                && !_db.TacticCandidates.Any(t => t.AnalysisJobId == j.Id || t.SecondJobId == j.Id))   // Taktik-Ernte (0.657.0, Zweitprüfung 2. Phase)
             .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
         return jobs.Select(ToDto).ToList();
     }
@@ -97,7 +104,8 @@ public class AnalysisJobService
     private async Task<string> PickBackgroundEngineAsync(int ownerId, CancellationToken ct)
     {
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
-        var engines = cred?.BackgroundEngines ?? [];
+        // Engines, die nur auf ausdrückliche Anforderung rechnen (AnalysisJobs:ExplicitOnlyEngineIds), fallen hier heraus.
+        var engines = ExplicitOnlyEngines.Automatic(cred?.BackgroundEngines ?? [], _explicitOnly);
         if (engines.Count == 0)
             throw new InvalidOperationException("No background engine configured");
         if (engines.Count == 1) return engines[0];
@@ -148,6 +156,14 @@ public class AnalysisJobService
         return true;
     }
 
+    /// <summary>Prüft eine ausdrücklich genannte Engine vorab (A4-003) — für Aufrufer, die erst später Aufträge anlegen
+    /// (Partie-Analyse mit Knotenziel). Fremd/unbekannt → <see cref="ArgumentException"/>; Lichess gerade stumm → still durch.</summary>
+    public async Task VerifyEngineAsync(int ownerId, string engineId, CancellationToken ct = default)
+    {
+        if (engineId.Length > 64) throw new ArgumentException("Invalid engine id");
+        await VerifyOwnersEngineAsync(ownerId, engineId, ct);
+    }
+
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
         bool remember = true, int? engineOwnerUserId = null, bool background = false)
     {
@@ -158,6 +174,8 @@ public class AnalysisJobService
             throw new ArgumentException($"Depth must be 1..{MaxDepth}");
         if (req.MultiPv is < 1 or > MaxMultiPv)
             throw new ArgumentException($"Lines must be 1..{MaxMultiPv}");
+        if (req.TargetNodes is < MinTargetNodes or > MaxTargetNodes)
+            throw new ArgumentException($"Nodes must be {MinTargetNodes}..{MaxTargetNodes}");
         var title = string.IsNullOrWhiteSpace(req.Title) ? null : req.Title.Trim();
         if (title is { Length: > 200 })
             throw new ArgumentException("Title too long");
@@ -187,7 +205,7 @@ public class AnalysisJobService
         {
             UserId = userId, Fen = fen, Title = title, EngineId = engineId,
             EngineOwnerUserId = engineOwner,
-            TargetDepth = req.TargetDepth, MultiPv = req.MultiPv,
+            TargetDepth = req.TargetDepth, TargetNodes = req.TargetNodes, MultiPv = req.MultiPv,
             Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
             Background = background,
         };
@@ -396,7 +414,7 @@ public class AnalysisJobService
             job.FruitlessAttempts = 0;
             job.FinishedAt = null;
         }
-        else if (job.ReachedDepth >= job.TargetDepth)
+        else if (job.TargetNodes is null && job.ReachedDepth >= job.TargetDepth)
         {
             if (job.Status is AnalysisJobStatus.Queued or AnalysisJobStatus.Paused or AnalysisJobStatus.Running)
             {
@@ -405,7 +423,7 @@ public class AnalysisJobService
                 job.FinishedAt ??= DateTime.UtcNow;
             }
         }
-        else if (job.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed)
+        else if (job.TargetNodes is null && job.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed)
         {
             // Zieltiefe erhöht → weiterrechnen. Auch aus Failed heraus (Engine war weg, Token neu hinterlegt,
             // Stellung deterministisch beendet): dieselbe Regel für beide Endzustände, sonst wäre „Tiefe ↑"
@@ -428,7 +446,8 @@ public class AnalysisJobService
     {
         var job = await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId, ct);
         if (job is null) return null;
-        if (job.ReachedDepth < job.TargetDepth)
+        // Knotenauftrag: fertig ist, was Status Done trägt (die Tiefe sagt dort nichts).
+        if (job.TargetNodes is null ? job.ReachedDepth < job.TargetDepth : job.Status != AnalysisJobStatus.Done)
         {
             _control?.Interrupt(job.Id);
             job.Status = AnalysisJobStatus.Queued;
@@ -529,5 +548,5 @@ public class AnalysisJobService
     public static AnalysisJobDto ToDto(AnalysisJob j) => new(
         j.Id, j.Fen, j.Title, j.EngineId, j.TargetDepth, j.MultiPv, j.Status.ToString().ToLowerInvariant(),
         j.ReachedDepth, j.ResultJson, j.SecondsSpent, j.LastError, j.CreatedAt, j.UpdatedAt, j.LastRunAt, j.FinishedAt,
-        j.EvalText, j.CurrentDepth, j.CurrentNps, HouseEngine: j.EngineOwnerUserId is not null);
+        j.EvalText, j.CurrentDepth, j.CurrentNps, HouseEngine: j.EngineOwnerUserId is not null, TargetNodes: j.TargetNodes);
 }

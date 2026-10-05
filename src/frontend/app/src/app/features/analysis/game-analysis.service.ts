@@ -29,6 +29,8 @@ export interface GameAnalysis {
   targetDepth: number;
   multiPv: number;
   engineId: string | null;
+  /** Knotenziel je Stellung (lc0 & Co.); `null`/fehlt = Tiefe gilt. */
+  targetNodes?: number | null;
   status: GameAnalysisStatus;
   plyCount: number;
   /** Wie viele Stellungen schon fertig sind — der Fortschritt der Partie. */
@@ -46,11 +48,42 @@ export interface GameAnalysis {
   positions?: GameAnalysisPosition[];
 }
 
+/** Eine Zeile der Konvergenz-Auswertung: wie weit der Stand bei `threshold` Knoten noch vom Ergebnis am Ziel entfernt ist. */
+export interface ConvergenceRow {
+  threshold: number;
+  positions: number;
+  /** Anteil (0..100), dessen bester Zug schon der des Ziels ist. */
+  sameMovePercent: number;
+  /** Median / 90. Perzentil des Bewertungsunterschieds zum Ziel in Centibauern (Matt = ±1000) … */
+  medianCp: number;
+  p90Cp: number;
+  /** … und in Gewinnchance-Prozentpunkten. */
+  medianWinPct: number;
+  p90WinPct: number;
+  /** Wie oft der beste Zug gegenüber der Vorstufe wechselte. */
+  moveChanges: number;
+  mateMismatch: number;
+  /** Mittlere tatsächlich erreichte Knotenzahl. */
+  meanNodes: number;
+}
+
+/** Auswertung „wann zahlt sich tieferes Rechnen aus" einer Knotenanalyse. */
+export interface GameConvergence {
+  targetNodes: number | null;
+  /** Stellungen mit mindestens zwei Zwischenständen. */
+  positions: number;
+  rows: ConvergenceRow[];
+}
+
 export interface CreateGameAnalysisRequest {
   pgn: string;
   title?: string;
   targetDepth?: number;
   multiPv?: number;
+  /** Nur Admin; zusammen mit `targetNodes` Pflicht. */
+  engineId?: string;
+  /** Knoten je Stellung statt Tiefe (lc0). */
+  targetNodes?: number;
 }
 
 /** Warum ein Einwurf auf der Punktepartie-Seite abgelehnt wurde (Server-Grund, hier lokalisiert). */
@@ -115,6 +148,11 @@ export class GameAnalysisService {
 
   get(id: number): Observable<GameAnalysis> {
     return this.http.get<GameAnalysis>(`/api/game-analyses/${id}`);
+  }
+
+  /** Zwischenstände einer Knotenanalyse gegen das Ziel (nur die eigene Analyse). */
+  convergence(id: number): Observable<GameConvergence> {
+    return this.http.get<GameConvergence>(`/api/game-analyses/${id}/convergence`);
   }
 
   create(req: CreateGameAnalysisRequest): Observable<GameAnalysis> {

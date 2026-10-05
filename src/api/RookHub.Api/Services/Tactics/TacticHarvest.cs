@@ -90,6 +90,38 @@ public static class TacticHarvest
         return WinChance(cands[0]) > WinChance(cands[1]) + UniqueGap;
     }
 
+    // ── Zweitprüfung (Phase 2, z. B. lc0) ──
+
+    /// <summary>Derselbe Zug in der Stellung <paramref name="fen"/>? Verglichen wird die ENTSTEHENDE Stellung, nicht der Text —
+    /// der Broker schreibt Rochaden als „König schlägt Turm" (<c>e1h1</c>), die Lösung steht als <c>e1g1</c>.</summary>
+    public static bool SameMove(string fen, string a, string b)
+    {
+        if (a == b) return true;
+        var pa = Play(fen, a); var pb = Play(fen, b);
+        return pa is not null && pb is not null && pa.Value.Fen == pb.Value.Fen;
+    }
+
+    /// <summary>Bestätigt die Zweitprüfung den Löserzug <paramref name="expectedUci"/> in <paramref name="fen"/>? Ihr bester Zug
+    /// ist derselbe UND bei ihr gilt dieselbe Eindeutigkeit (<see cref="IsUnique"/>, Schwellen wie bei der Erstprüfung).</summary>
+    public static bool Agree(string fen, IReadOnlyList<Cand> second, string expectedUci, bool mate) =>
+        second.Count > 0 && SameMove(fen, second[0].Uci, expectedUci) && IsUnique(second, mate);
+
+    private sealed record CandDump(string U, int? C, int? M);
+
+    /// <summary>Kandidaten ohne Hauptvarianten als kurzer JSON-Text (für <c>TacticCandidate.SecondHereJson</c>).</summary>
+    public static string Dump(IReadOnlyList<Cand> cands) =>
+        JsonSerializer.Serialize(cands.Take(5).Select(c => new CandDump(c.Uci, c.Cp, c.Mate)));
+
+    public static List<Cand> LoadDump(string? json)
+    {
+        try
+        {
+            return (JsonSerializer.Deserialize<List<CandDump>>(json ?? "[]") ?? new())
+                .Select(d => new Cand(d.U, d.C, d.M, new[] { d.U })).ToList();
+        }
+        catch (JsonException) { return new(); }
+    }
+
     /// <summary>Text der Bewertung aus Sicht des Lösers (<c>+5.7</c> / <c>#3</c>).</summary>
     public static string EvalText(Cand c) =>
         c.Mate is { } m ? $"#{m}" : ((c.Cp ?? 0) / 100.0).ToString("+0.0;-0.0;0.0", System.Globalization.CultureInfo.InvariantCulture);

@@ -67,9 +67,13 @@ internal sealed class TacticCandidateConfiguration : IEntityTypeConfiguration<Ta
         e.Property(t => t.Themes).HasMaxLength(200);
         e.Property(t => t.EvalText).HasMaxLength(16);
         e.Property(t => t.LineId).HasMaxLength(300);
+        e.Property(t => t.SecondBest).HasMaxLength(10);
+        e.Property(t => t.SecondEval).HasMaxLength(16);
+        e.Property(t => t.SecondHereJson).HasMaxLength(2000);
         e.HasIndex(t => new { t.GameAnalysisId, t.Ply }).IsUnique();
         e.HasIndex(t => new { t.Status, t.UpdatedAt });
         e.HasIndex(t => t.AnalysisJobId);
+        e.HasIndex(t => t.SecondJobId);
     }
 }
 

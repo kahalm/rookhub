@@ -10,6 +10,9 @@ public enum TacticCandidateStatus
     Published = 2,
     /// <summary>Verworfen (<see cref="TacticCandidate.RejectReason"/>).</summary>
     Rejected = 3,
+    /// <summary>Die Zweitprüfung (<c>TacticHarvest:SecondEngineId</c>, z. B. lc0) sieht es anders als die Erstprüfung — nicht
+    /// in den Kursen, nur zum Ansehen (<see cref="TacticCandidate.RejectReason"/> nennt den Grund).</summary>
+    Disputed = 4,
 }
 
 /// <summary>
@@ -52,6 +55,20 @@ public class TacticCandidate
     public string? Themes { get; set; }
     /// <summary>Bewertung nach dem ersten Lösungszug aus Sicht des Lösers (<c>+5.7</c> / <c>#3</c>).</summary>
     public string? EvalText { get; set; }
+    /// <summary>Zweitprüfung (Phase 2, lc0): <c>null</c> = noch nicht entschieden (oder aus), <c>true</c> = bestätigt.
+    /// Uneinig → <see cref="TacticCandidateStatus.Disputed"/>.</summary>
+    public bool? SecondAgrees { get; set; }
+    /// <summary>Bester Zug der Zweitprüfung in der Aufgabenstellung (UCI).</summary>
+    public string? SecondBest { get; set; }
+    /// <summary>Bewertung der Zweitprüfung nach dem ersten Lösungszug (<c>+5.7</c> / <c>#3</c>).</summary>
+    public string? SecondEval { get; set; }
+    /// <summary>Nächste zu prüfende Stellung der Zweitprüfung: 0 = Aufgabenstellung, 1 = Stellung vor dem Fehler, ab 2 die
+    /// späteren Löserzüge.</summary>
+    public int SecondStage { get; set; }
+    public int? SecondJobId { get; set; }
+    public int SecondAttempts { get; set; }
+    /// <summary>Kandidaten der Zweitprüfung in der Aufgabenstellung (JSON) — die Stellung davor braucht sie zum Vergleich.</summary>
+    public string? SecondHereJson { get; set; }
     /// <summary>Im Kurs: <see cref="BookPuzzle.LineId"/>.</summary>
     public string? LineId { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005195504_AnalysisNodeSteps")]
+    partial class AnalysisNodeSteps
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -611,10 +614,6 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("Source")
                         .HasMaxLength(16)
                         .HasColumnType("varchar(16)");
-
-                    b.Property<string>("SourceGame")
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)");
 
                     b.Property<int>("StartPly")
                         .HasColumnType("int");
@@ -1895,40 +1894,6 @@ namespace RookHub.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("CourseInfoViews");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.CourseLineReset", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BookId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("BookPuzzleId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ResetAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookId");
-
-                    b.HasIndex("BookPuzzleId");
-
-                    b.HasIndex("UserId", "BookId");
-
-                    b.HasIndex("UserId", "BookPuzzleId")
-                        .IsUnique();
-
-                    b.ToTable("CourseLineResets");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.CourseLink", b =>
@@ -7966,33 +7931,6 @@ namespace RookHub.Api.Migrations
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.CourseInfoView", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.Book", "Book")
-                        .WithMany()
-                        .HasForeignKey("BookId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RookHub.Api.Models.BookPuzzle", "BookPuzzle")
-                        .WithMany()
-                        .HasForeignKey("BookPuzzleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("RookHub.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("BookPuzzle");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.CourseLineReset", b =>
                 {
                     b.HasOne("RookHub.Api.Models.Book", "Book")
                         .WithMany()

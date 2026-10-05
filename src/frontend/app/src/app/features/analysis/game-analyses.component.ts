@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRe
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,7 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { formatEta } from '../../shared/eta.util';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -20,6 +21,10 @@ import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-an
 import { AuthService } from '../../core/auth.service';
 import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
 import { formatKiloNps } from './engine-lines.util';
+import { ExternalEngineService } from './external-engine.service';
+import {
+  GameAnalysisNodesDialogComponent, GameAnalysisNodesDialogData, GameAnalysisNodesDialogResult,
+} from './game-analysis-nodes-dialog.component';
 
 /**
  * Seite „Partie-Analysen" (`/analysis/games`): eine ganze Partie einwerfen und von der
@@ -106,6 +111,12 @@ import { formatKiloNps } from './engine-lines.util';
             <button mat-flat-button color="primary" [disabled]="creating || !pgn.trim()" (click)="create()">
               <mat-icon>play_arrow</mat-icon> {{ 'gameAnalysis.start' | translate }}
             </button>
+            @if (isAdmin) {
+              <button mat-stroked-button class="nodes-btn" [disabled]="creating || !pgn.trim()" (click)="openNodesDialog()"
+                      [matTooltip]="'gameAnalysis.nodes.buttonHint' | translate">
+                <mat-icon>memory</mat-icon> {{ 'gameAnalysis.nodes.button' | translate }}
+              </button>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -124,7 +135,14 @@ import { formatKiloNps } from './engine-lines.util';
                 <a class="ga-title" [routerLink]="['/analysis/games', a.id]">{{ a.title || ('gameAnalysis.untitled' | translate) }}</a>
                 <span class="chip" [class]="'st-' + a.status">{{ 'gameAnalysis.status.' + a.status | translate }}</span>
                 <span class="spacer"></span>
-                <span class="muted small">{{ 'gameAnalysis.depthLines' | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
+                @if (a.targetNodes) {
+                  <span class="muted small">
+                    @if (engineName(a.engineId); as en) { {{ en }} · }
+                    {{ 'gameAnalysis.nodesLines' | translate:{ nodes: (a.targetNodes | number), lines: a.multiPv } }}
+                  </span>
+                } @else {
+                  <span class="muted small">{{ 'gameAnalysis.depthLines' | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
+                }
                 <button mat-icon-button [disabled]="restarting === a.id"
                         [attr.aria-label]="'gameAnalysis.restart' | translate"
                         [matTooltip]="'gameAnalysis.restartHint' | translate" (click)="restart(a)">
@@ -160,6 +178,7 @@ import { formatKiloNps } from './engine-lines.util';
     .new-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .depth { width: 120px; }
     .hint { flex: 1 1 220px; }
+    .nodes-btn { white-space: nowrap; }
     .ga { margin-bottom: 10px; }
     .ga-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
     .ga-title { font-weight: 600; text-decoration: none; color: inherit; }
@@ -182,6 +201,8 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
   private locale = inject(LOCALE_ID);
+  private dialog = inject(MatDialog);
+  private externalEngines = inject(ExternalEngineService);
 
   analyses: GameAnalysis[] = [];
   loading = true;
@@ -198,6 +219,10 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   pgn = '';
   depth = GameAnalysisService.DefaultDepth;
   readonly depthOptions = JOB_DEPTH_OPTIONS;
+
+  /** Anzeigenamen der Engines (Kennung → Name), nur für Knoten-Analysen in der Liste; erst bei Bedarf geladen. */
+  private engineNames: Record<string, string> = {};
+  private engineNamesRequested = false;
 
   private poll?: Subscription;
 
@@ -307,6 +332,21 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     });
   }
 
+  engineName(id: string | null): string | null { return (id && this.engineNames[id]) || null; }
+
+  /** Namen der Engines holen — nur wenn die Liste eine Knoten-Analyse zeigt und der Nutzer sie anlegen darf. */
+  private ensureEngineNames(): void {
+    if (this.engineNamesRequested || !this.isAdmin || !this.analyses.some(a => !!a.targetNodes)) return;
+    this.engineNamesRequested = true;
+    this.externalEngines.listEngines().subscribe({
+      next: r => {
+        this.engineNames = Object.fromEntries(r.engines.map(e => [e.id, e.name]));
+        this.cdr.markForCheck();
+      },
+      error: () => { /* Beiwerk: ohne Namen steht nur die Knotenzahl da */ },
+    });
+  }
+
   percent(a: GameAnalysis): number {
     return a.plyCount > 0 ? Math.round((100 * a.analyzedPlies) / a.plyCount) : 0;
   }
@@ -317,6 +357,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       next: list => {
         this.analyses = list;
         this.loading = false;
+        this.ensureEngineNames();
         this.loadThroughput();
         this.cdr.markForCheck();
       },
@@ -324,6 +365,56 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       error: () => {
         this.loading = false;
         if (!silent) this.snackbar.warn(this.translate.instant('gameAnalysis.loadFailed'));
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /**
+   * „Mit lc0 …": Engine und Knoten je Stellung wählen und die Partie von dieser Engine rechnen lassen, auf Wunsch
+   * zusätzlich zur Tiefen-Analyse. Zur Wahl stehen die Hintergrund-Engines des Nutzers — nur sie nimmt der Server an.
+   */
+  openNodesDialog(): void {
+    const pgn = this.pgn.trim();
+    if (!pgn || this.creating) return;
+    this.externalEngines.listEngines().subscribe({
+      next: r => {
+        const background = new Set(r.backgroundEngineIds ?? []);
+        const engines = r.engines.filter(e => background.has(e.id)).map(e => ({ id: e.id, name: e.name }));
+        this.engineNames = { ...this.engineNames, ...Object.fromEntries(engines.map(e => [e.id, e.name])) };
+        const data: GameAnalysisNodesDialogData = { engines, depth: this.depth, lines: 3 };
+        this.dialog.open(GameAnalysisNodesDialogComponent, { data, width: '460px', maxWidth: '95vw' })
+          .afterClosed().subscribe((res: GameAnalysisNodesDialogResult | null | undefined) => {
+            if (res) this.createWithNodes(pgn, res);
+          });
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.snackbar.warn(this.translate.instant('gameAnalysis.nodes.enginesFailed'));
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /** Die Knoten-Analyse anlegen, danach (wenn gewünscht) die Tiefen-Analyse derselben Partie. */
+  private createWithNodes(pgn: string, res: GameAnalysisNodesDialogResult): void {
+    this.creating = true;
+    this.service.create({ pgn, engineId: res.engineId, targetNodes: res.nodes, multiPv: res.multiPv }).pipe(
+      switchMap(first => {
+        this.analyses = [first, ...this.analyses];
+        return res.alsoDepth ? this.service.create({ pgn, targetDepth: this.depth }) : of(null);
+      }),
+    ).subscribe({
+      next: second => {
+        this.creating = false;
+        this.pgn = '';
+        if (second) this.analyses = [second, ...this.analyses];
+        this.snackbar.success(this.translate.instant('gameAnalysis.started'));
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.creating = false;
+        this.snackbar.warn(err?.error?.message || this.translate.instant('gameAnalysis.startFailed'));
         this.cdr.markForCheck();
       },
     });

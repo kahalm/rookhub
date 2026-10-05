@@ -61,6 +61,20 @@ public class GameAnalysisService
         if (multiPv is < 1 or > AnalysisJobService.MaxMultiPv)
             throw new ArgumentException($"Lines must be 1..{AnalysisJobService.MaxMultiPv}");
 
+        var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
+        if (req.TargetNodes is not null)
+        {
+            // Knotenziel nur mit ausdrücklich gewählter Engine (sonst rechnete eine Tiefen-Engine mit Knotenlimit) und nur
+            // von Hand angelegt; die Engine muss dem Engine-Besitzer gehören (A4-003) — VOR dem Anlegen, nicht erst beim
+            // ersten Stellungs-Auftrag, damit der Nutzer die Absage liest.
+            if (engineId is null) throw new ArgumentException("Nodes need an engine");
+            if (origin != GameAnalysisOrigin.Manual) throw new ArgumentException("Nodes only for manual analyses");
+            if (req.TargetNodes is < AnalysisJobService.MinTargetNodes or > AnalysisJobService.MaxTargetNodes)
+                throw new ArgumentException(
+                    $"Nodes must be {AnalysisJobService.MinTargetNodes}..{AnalysisJobService.MaxTargetNodes}");
+            await _jobs.VerifyEngineAsync(engineOwnerUserId ?? userId, engineId, ct);
+        }
+
         var parsed = GamePlies.Parse(req.Pgn, GameAnalysisDefaults.MaxPlies)
             ?? throw new ArgumentException("PGN enthält keine spielbare Partie");
         var (header, plies) = parsed;
@@ -68,11 +82,15 @@ public class GameAnalysisService
         var title = string.IsNullOrWhiteSpace(req.Title)
             ? BuildTitle(header)
             : req.Title.Trim();
+        // Zwei Analysen DERSELBEN Partie (Tiefe auf Stockfish, Knoten auf lc0) sollen in der Liste unterscheidbar sein.
+        var suffix = req.TargetNodes is { } nodes ? $" ({NodesLabel(nodes)} nodes)" : string.Empty;
+        if (title.Length + suffix.Length > 200) title = title[..(200 - suffix.Length)];
+        title += suffix;
 
         var analysis = new GameAnalysis
         {
             UserId = userId,
-            Title = title.Length > 200 ? title[..200] : title,
+            Title = title,
             Pgn = req.Pgn!,
             White = header.White,
             Black = header.Black,
@@ -81,7 +99,8 @@ public class GameAnalysisService
             StartFen = header.StartFen,
             TargetDepth = depth,
             MultiPv = multiPv,
-            EngineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim(),
+            EngineId = engineId,
+            TargetNodes = req.TargetNodes,
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,
             LibraryGameId = libraryGameId,
@@ -113,6 +132,15 @@ public class GameAnalysisService
         // Sofort die erste Fuhre einreihen, damit der Nutzer nicht auf den nächsten Pump-Lauf wartet.
         await PumpOneAsync(analysis.Id, ct);
         return await GetAsync(userId, analysis.Id, ct) ?? ToDto(analysis, 0);
+    }
+
+    /// <summary>Knotenzahl kurz für den Titel: 50000 → „50k", 1500000 → „1.5M", sonst die Zahl.</summary>
+    internal static string NodesLabel(long nodes)
+    {
+        string Trim(double v) => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+        return nodes >= 1_000_000 ? Trim(nodes / 1_000_000.0) + "M"
+            : nodes >= 1_000 ? Trim(nodes / 1_000.0) + "k"
+            : nodes.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -445,7 +473,7 @@ public class GameAnalysisService
             .Select(g => new
             {
                 g.Id, g.Title, g.White, g.Black, g.Result, g.Event, g.TargetDepth, g.MultiPv,
-                g.EngineId, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt, g.IsPublic,
+                g.EngineId, g.TargetNodes, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt, g.IsPublic,
                 Annotated = g.Pgn.Contains("{"),
                 Analyzed = g.Positions.Count(p => p.CandidatesJson != null),
             })
@@ -453,7 +481,7 @@ public class GameAnalysisService
         return rows.Select(r => new GameAnalysisDto
         {
             Id = r.Id, Title = r.Title, White = r.White, Black = r.Black, Result = r.Result,
-            Event = r.Event, TargetDepth = r.TargetDepth, MultiPv = r.MultiPv, EngineId = r.EngineId,
+            Event = r.Event, TargetDepth = r.TargetDepth, MultiPv = r.MultiPv, EngineId = r.EngineId, TargetNodes = r.TargetNodes,
             Status = r.Status.ToString().ToLowerInvariant(), PlyCount = r.PlyCount,
             AnalyzedPlies = r.Analyzed, LastError = r.LastError, IsPublic = r.IsPublic,
             Annotated = r.Annotated,
@@ -519,6 +547,34 @@ public class GameAnalysisService
             _db.GameAnalyses.AsNoTracking().Where(g => g.Id == id
                 && (g.UserId == userId || g.IsPublic || g.Origin == GameAnalysisOrigin.Library)), ct);
         return rows.FirstOrDefault();
+    }
+
+    /// <summary>Konvergenz einer Knotenanalyse: wie schnell der beste Zug und die Bewertung gegen das Ziel konvergieren (nur eigene Analyse;
+    /// <c>null</c> = nicht gefunden). Ohne Zwischenstände (Tiefenanalyse, Altbestand) eine leere Auswertung.</summary>
+    public async Task<ConvergenceDto?> ConvergenceAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var analysis = await _db.GameAnalyses.AsNoTracking()
+            .Where(g => g.Id == id && g.UserId == userId)
+            .Select(g => new { g.TargetNodes })
+            .FirstOrDefaultAsync(ct);
+        if (analysis is null) return null;
+
+        var raw = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == id && p.NodeStepsJson != null)
+            .Select(p => p.NodeStepsJson!)
+            .ToListAsync(ct);
+        var report = Convergence.Evaluate(raw.Select(NodeSteps.Parse).Where(l => l.Count > 0).Select(l => (IReadOnlyList<NodeStep>)l));
+        return new ConvergenceDto
+        {
+            TargetNodes = analysis.TargetNodes,
+            Positions = report.Positions,
+            Rows = report.Rows.Select(r => new ConvergenceRowDto
+            {
+                Threshold = r.Threshold, Positions = r.Positions, SameMovePercent = Math.Round(r.SameMoveShare * 100, 1),
+                MedianCp = r.MedianCp, P90Cp = r.P90Cp, MedianWinPct = Math.Round(r.MedianWinPct, 2), P90WinPct = Math.Round(r.P90WinPct, 2),
+                MoveChanges = r.MoveChanges, MateMismatch = r.MateMismatch, MeanNodes = Math.Round(r.MeanNodes),
+            }).ToList(),
+        };
     }
 
     public async Task<GameAnalysisDto?> GetAsync(int userId, int id, CancellationToken ct = default)
@@ -760,14 +816,20 @@ public class GameAnalysisService
     }
 
     /// <summary>Offene (ungerechnete) Stellungen aller unfertigen Partien dieses Nutzers, die VOR
-    /// <paramref name="analysis"/> an der Reihe sind (aelter nach CreatedAt, dann Id).</summary>
+    /// <paramref name="analysis"/> an der Reihe sind (aelter nach CreatedAt, dann Id). Knoten-Analysen (lc0 & Co.) laufen
+    /// auf ihrer eigenen Engine und bilden eine eigene Spur: sie warten nicht auf Tiefen-Partien und halten sie nicht auf —
+    /// sonst stuende die Stockfish-Analyse derselben Partie stundenlang hinter der langsamen lc0-Rechnung.</summary>
     private Task<int> OpenPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
-        => _db.GameAnalyses
+    {
+        var nodesLane = analysis.TargetNodes != null;
+        return _db.GameAnalyses
             .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
+                && (g.TargetNodes != null) == nodesLane
                 && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
                 && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
+    }
 
     /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
     private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
@@ -831,6 +893,7 @@ public class GameAnalysisService
                         pos.EvalText = BrokerCandidates.EvalTextOf(refined);
                         pos.Depth = job.ReachedDepth;
                         pos.AnalyzedAt = DateTime.UtcNow;
+                        if (job.NodeStepsJson is not null) pos.NodeStepsJson = job.NodeStepsJson;
                     }
                     pos.Refined = true;
                     pos.AnalysisJobId = null;
@@ -877,6 +940,7 @@ public class GameAnalysisService
                     pos.EvalText = BrokerCandidates.EvalTextOf(candidates);
                     pos.Depth = job.ReachedDepth;
                     pos.AnalyzedAt = DateTime.UtcNow;
+                    pos.NodeStepsJson = job.NodeStepsJson;   // Zwischenstände der Knotenanalyse, bevor der Auftrag gelöscht wird
                     changed = true;
                 }
                 else
@@ -1071,6 +1135,7 @@ public class GameAnalysisService
                     Fen = pos.Fen,
                     Title = JobTitle(analysis, pos),
                     TargetDepth = analysis.TargetDepth,
+                    TargetNodes = analysis.TargetNodes,   // lc0-Analyse: Knoten statt Tiefe, auch nach Neustart
                     MultiPv = analysis.MultiPv,
                     EngineId = analysis.EngineId,
                     // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
@@ -1131,6 +1196,7 @@ public class GameAnalysisService
         TargetDepth = g.TargetDepth,
         MultiPv = g.MultiPv,
         EngineId = g.EngineId,
+        TargetNodes = g.TargetNodes,
         Status = g.Status.ToString().ToLowerInvariant(),
         PlyCount = g.PlyCount,
         AnalyzedPlies = analyzed,

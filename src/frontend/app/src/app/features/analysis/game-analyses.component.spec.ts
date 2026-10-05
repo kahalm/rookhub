@@ -93,6 +93,80 @@ describe('GameAnalysesComponent', () => {
     expect(fixture.componentInstance.pgn).toBe('');
   });
 
+  /** „Mit lc0 …": Knoten-Analyse anlegen, auf Wunsch danach die Tiefen-Analyse derselben Partie. */
+  function openWith(result: unknown, fixture: ReturnType<typeof TestBed.createComponent<GameAnalysesComponent>>) {
+    const c = fixture.componentInstance as any;
+    c.dialog = { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(result) }) };
+    c.pgn = '1. e4 e5';
+    c.openNodesDialog();
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['rhe_lc'],
+      engines: [{ id: 'rhe_lc', name: 'Lc0' }, { id: 'eei_other', name: 'Nicht im Hintergrund' }],
+    });
+    return c.dialog.open as jasmine.Spy;
+  }
+
+  it('lc0-Dialog bietet nur die Hintergrund-Engines an', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    const open = openWith(null, fixture);
+    expect(open.calls.mostRecent().args[1].data.engines).toEqual([{ id: 'rhe_lc', name: 'Lc0' }]);
+    expect(open.calls.mostRecent().args[1].data.depth).toBe(30);
+  });
+
+  it('lc0-Dialog: legt Knoten- und Tiefen-Analyse an, die Knoten-Analyse zuerst', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    openWith({ engineId: 'rhe_lc', nodes: 50_000, multiPv: 3, alsoDepth: true }, fixture);
+
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/game-analyses'
+      && r.body.engineId === 'rhe_lc' && r.body.targetNodes === 50_000 && r.body.multiPv === 3 && r.body.targetDepth === undefined)
+      .flush(analysis({ id: 11, engineId: 'rhe_lc', targetNodes: 50_000, status: 'pending' }));
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/game-analyses'
+      && r.body.targetDepth === 30 && r.body.engineId === undefined && r.body.targetNodes === undefined)
+      .flush(analysis({ id: 12, status: 'pending' }));
+
+    expect(fixture.componentInstance.analyses.map(a => a.id)).toEqual([12, 11]);
+    expect(fixture.componentInstance.pgn).toBe('');
+    expect(fixture.componentInstance.creating).toBeFalse();
+  });
+
+  it('lc0-Dialog ohne Stockfish-Haken: nur die Knoten-Analyse', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    openWith({ engineId: 'rhe_lc', nodes: 25_000, multiPv: 2, alsoDepth: false }, fixture);
+
+    http.expectOne({ method: 'POST', url: '/api/game-analyses' })
+      .flush(analysis({ id: 11, engineId: 'rhe_lc', targetNodes: 25_000, status: 'pending' }));
+    http.expectNone(r => r.method === 'POST' && r.url === '/api/game-analyses');
+    expect(fixture.componentInstance.analyses.length).toBe(1);
+  });
+
+  it('lc0-Dialog abgebrochen: nichts wird angelegt', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    openWith(null, fixture);
+    http.expectNone(r => r.method === 'POST');
+    expect(fixture.componentInstance.pgn).toBe('1. e4 e5');
+  });
+
+  it('zeigt bei einer Knoten-Analyse den Engine-Namen und die Knoten statt der Tiefe', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    (fixture.componentInstance as any).isAdmin = true;
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true')
+      .flush([analysis({ engineId: 'rhe_lc', targetNodes: 50_000 })]);
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['rhe_lc'], engines: [{ id: 'rhe_lc', name: 'Lc0' }],
+    });
+    expect(fixture.componentInstance.engineName('rhe_lc')).toBe('Lc0');
+    expect(fixture.componentInstance.engineName(null)).toBeNull();
+  });
+
   /**
    * Eine gescheiterte (bzw. zurueckgestellte) Analyse kommt nie voran. Zaehlte sie im
    * Gesamtbalken mit, stuende der still, obwohl die Engine arbeitet — genau so gemeldet

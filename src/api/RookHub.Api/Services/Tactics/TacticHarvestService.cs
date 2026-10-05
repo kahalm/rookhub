@@ -29,6 +29,9 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     public const int MaxOpenJobs = 8;
     public const int Depth = 22;
     public const int MaxAttempts = 3;
+    public const int SecondMaxOpenJobs = 4;
+    public const int DefaultSecondNodes = 50_000;
+    public const int SecondMultiPv = 3;
     public const string JobTitle = "Taktik-Ernte";
     public const string ClubBook = "tactics-club.pgn";
     public const string MasterBook = "tactics-masters.pgn";
@@ -165,7 +168,17 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         return admin is { } a ? await EngineOwnerResolver.ResolveAsync(db, a, ct) : null;
     }
 
+    /// <summary><c>TacticHarvest:SecondEngineId</c>: die Engine der Zweitprüfung (Phase 2, lc0); leer = aus, alles wie vorher.</summary>
+    public string? SecondEngineId => config["TacticHarvest:SecondEngineId"] is { Length: > 0 } id && !string.IsNullOrWhiteSpace(id) ? id.Trim() : null;
+    public int SecondNodes => Math.Max(1000, config.GetValue<int?>("TacticHarvest:SecondEngineNodes") ?? DefaultSecondNodes);
+
     public async Task PumpAsync(int engineOwner, CancellationToken ct)
+    {
+        await PumpFirstAsync(engineOwner, ct);
+        await PumpSecondAsync(engineOwner, ct);
+    }
+
+    private async Task PumpFirstAsync(int engineOwner, CancellationToken ct)
     {
         // Ergebnisse einsammeln
         var waiting = await db.TacticCandidates
@@ -226,6 +239,148 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         await db.SaveChangesAsync(ct);
     }
 
+    // ── 2b. Zweitprüfung (lc0) ──
+
+    /// <summary>Stellung der Zweitprüfung in Stufe <paramref name="stage"/>: 0 = Aufgabenstellung, 1 = vor dem Fehler, ab 2 die
+    /// Stellung vor dem späteren Löserzug (nach den Zügen davor samt Antworten). <c>null</c> = nicht spielbar.</summary>
+    internal static string? SecondFen(TacticCandidate c, int stage)
+    {
+        if (stage == 0) return c.Fen;
+        if (stage == 1) return c.PrevFen;
+        var fen = c.Fen;
+        var tokens = c.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < 2 * (stage - 1); i++)
+        {
+            if (i >= tokens.Length || TacticHarvest.Play(fen, tokens[i]) is not { } p) return null;
+            fen = p.Fen;
+        }
+        return fen;
+    }
+
+    private static void Dispute(TacticCandidate c, string reason)
+    {
+        c.Status = TacticCandidateStatus.Disputed;
+        c.SecondAgrees = false;
+        c.SecondJobId = null;
+        c.RejectReason = reason;
+        c.UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Ergebnis der Zweitprüfung für <see cref="TacticCandidate.SecondStage"/>. Stufe 0: bester Zug und Eindeutigkeit wie die
+    /// Erstprüfung. Stufe 1: ist der Zug des Gegners auch für die Zweitprüfung ein Fehler (sonst Kompensation, keine Taktik)?
+    /// Ab Stufe 2: die späteren Löserzüge — stimmt einer nicht, endet die Lösung davor (bei Matt-Aufgaben stattdessen
+    /// <c>Disputed</c>, sie wären abgeschnitten keine Matt-Aufgabe mehr). Alle Stufen durch → <see cref="TacticCandidate.SecondAgrees"/>.
+    /// </summary>
+    internal static void SecondStep(TacticCandidate c, IReadOnlyList<TacticHarvest.Cand> cands)
+    {
+        var tokens = c.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var solverMoves = (tokens.Length + 1) / 2;
+        var mate = c.Kind == "mate";
+        c.SecondJobId = null;
+        c.SecondAttempts = 0;
+        c.UpdatedAt = DateTime.UtcNow;
+        if (c.SecondStage == 0)
+        {
+            if (!TacticHarvest.Agree(c.Fen, cands, tokens[0], mate)) { Dispute(c, "lc0Move"); return; }
+            c.SecondBest = cands[0].Uci;
+            c.SecondEval = TacticHarvest.EvalText(cands[0]);
+            c.SecondHereJson = TacticHarvest.Dump(cands);
+        }
+        else if (c.SecondStage == 1)
+        {
+            if (TacticHarvest.Detect(cands, TacticHarvest.LoadDump(c.SecondHereJson)) is null) { Dispute(c, "lc0NoBlunder"); return; }
+        }
+        else
+        {
+            var j = c.SecondStage - 1;   // Index des Löserzugs (0-basiert), Halbzug-Index 2*j
+            var fen = SecondFen(c, c.SecondStage);
+            if (fen is null) { Dispute(c, "lc0Fen"); return; }
+            if (!TacticHarvest.Agree(fen, cands, tokens[2 * j], mate))
+            {
+                if (mate) { Dispute(c, "lc0Line"); return; }
+                c.Moves = string.Join(' ', tokens.Take(2 * j - 1));
+                c.Themes = string.Join(',', TacticHarvest.Themes(c.Fen, c.Moves.Split(' '), c.Kind));
+                c.SecondStage = solverMoves + 1;
+                c.SecondAgrees = true;
+                return;
+            }
+        }
+        c.SecondStage++;
+        if (c.SecondStage > solverMoves) c.SecondAgrees = true;
+    }
+
+    private async Task PumpSecondAsync(int engineOwner, CancellationToken ct)
+    {
+        if (SecondEngineId is not { } engineId) return;
+
+        var waiting = await db.TacticCandidates
+            .Where(c => c.Status == TacticCandidateStatus.Done && c.SecondAgrees == null && c.SecondJobId != null).ToListAsync(ct);
+        if (waiting.Count > 0)
+        {
+            var jobIds = waiting.Select(c => c.SecondJobId!.Value).ToList();
+            var byId = await db.AnalysisJobs.Where(j => jobIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, ct);
+            foreach (var c in waiting)
+            {
+                if (!byId.TryGetValue(c.SecondJobId!.Value, out var job)) { c.SecondJobId = null; continue; }
+                if (job.Status == AnalysisJobStatus.Done)
+                {
+                    var fen = SecondFen(c, c.SecondStage);
+                    var parsed = fen is null ? new() : BrokerCandidates.Parse(job.ResultJson, fen) ?? new();
+                    SecondStep(c, parsed.Select(p => new TacticHarvest.Cand(p.Uci, p.Cp, p.Mate, p.Pv ?? Array.Empty<string>())).ToList());
+                    db.AnalysisJobs.Remove(job);
+                }
+                else if (job.Status == AnalysisJobStatus.Failed)
+                {
+                    db.AnalysisJobs.Remove(job);
+                    c.SecondJobId = null;
+                    if (++c.SecondAttempts >= MaxAttempts) Dispute(c, "lc0Failed");
+                }
+            }
+            await db.SaveChangesAsync(ct);
+        }
+
+        if (quiet.IsQuietNow()) return;
+        // Die Engine muss in der Hintergrund-Liste des Besitzers stehen (A4-003) — sonst wartet die Prüfung, statt zu werfen.
+        var cred = await db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == engineOwner, ct);
+        if (cred is null || !cred.BackgroundEngines.Contains(engineId))
+        {
+            log.LogWarning("Taktik-Ernte: Zweitprüfungs-Engine {EngineId} steht nicht in der Hintergrund-Liste des Engine-Besitzers {Owner} — Zweitprüfung wartet",
+                engineId, engineOwner);
+            return;
+        }
+        var open = await db.TacticCandidates.CountAsync(c => c.Status == TacticCandidateStatus.Done && c.SecondAgrees == null && c.SecondJobId != null, ct);
+        var free = SecondMaxOpenJobs - open;
+        if (free <= 0) return;
+        var next = await db.TacticCandidates
+            .Where(c => c.Status == TacticCandidateStatus.Done && c.SecondAgrees == null && c.SecondJobId == null)
+            .OrderBy(c => c.Origin == GameAnalysisOrigin.Club ? 0 : c.Origin == GameAnalysisOrigin.SavedGame ? 1 : 2).ThenBy(c => c.Id)
+            .Take(free).ToListAsync(ct);
+        foreach (var c in next)
+        {
+            var fen = SecondFen(c, c.SecondStage);
+            if (fen is null) { Dispute(c, "lc0Fen"); continue; }
+            try
+            {
+                var job = await jobs.CreateAsync(engineOwner,
+                    new CreateAnalysisJobRequest { Fen = fen, Title = JobTitle, TargetDepth = Depth, MultiPv = SecondMultiPv, EngineId = engineId, TargetNodes = SecondNodes },
+                    ct, remember: false, engineOwnerUserId: engineOwner, background: true);
+                c.SecondJobId = job.Id;
+                c.UpdatedAt = DateTime.UtcNow;
+            }
+            catch (ArgumentException)
+            {
+                Dispute(c, "illegalFen");
+            }
+            catch (InvalidOperationException ex)
+            {
+                log.LogInformation("Taktik-Ernte: keine Zweitprüfungs-Aufträge gerade ({Reason})", ex.Message);
+                break;
+            }
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
     // ── 3. Veröffentlichen ──
 
     public async Task<int> PublishAsync(CancellationToken ct)
@@ -233,8 +388,11 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         await RetireOrphansAsync(ct);
         await RetitleClubAsync(ct);
         await LinkGamesAsync(ct);
+        // Mit Zweitprüfung nur, was sie bestätigt hat (Disputed hat einen eigenen Status, Unentschiedene warten).
+        var secondOn = SecondEngineId is not null;
         var done = await db.TacticCandidates.Include(c => c.GameAnalysis)
-            .Where(c => c.Status == TacticCandidateStatus.Done).OrderBy(c => c.Id).Take(200).ToListAsync(ct);
+            .Where(c => c.Status == TacticCandidateStatus.Done && (!secondOn || c.SecondAgrees == true))
+            .OrderBy(c => c.Id).Take(200).ToListAsync(ct);
         if (done.Count == 0) return 0;
         var books = new Dictionary<string, Book>();
         var rounds = new Dictionary<string, int>();

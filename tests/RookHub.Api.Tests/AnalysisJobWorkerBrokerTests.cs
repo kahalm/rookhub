@@ -137,13 +137,123 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         return (user.Id, [.. ids]);
     }
 
-    private async Task<int> JobAsync(int userId, int depth = 12, bool background = false)
+    private async Task<int> JobAsync(int userId, int depth = 12, bool background = false, long? nodes = null)
     {
         using var scope = _sp.CreateScope();
         var dto = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>()
-            .CreateAsync(userId, new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = depth, MultiPv = 2 }, remember: false,
+            .CreateAsync(userId, new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = depth, MultiPv = 2, TargetNodes = nodes }, remember: false,
                 background: background);
         return dto.Id;
+    }
+
+    // ── Knotenziel (Phase 1 der Lc0-Zweitprüfung): `nodes` statt `depth`, fertig bei erreichtem Ziel ──────────────
+
+    private static string Line(int depth, long nodes, bool best = false) =>
+        $"{{\"time\":9,\"depth\":{depth},\"nodes\":{nodes},\"pvs\":[{{\"moves\":[\"e7e5\"],\"cp\":-25,\"depth\":{depth}}}]"
+        + (best ? ",\"bestmove\":\"e7e5\"" : "") + "}\n";
+
+    [Fact]
+    public async Task NodeJob_sendsNodesInsteadOfDepth_andIsDoneWhenTheGoalIsReached()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(6, 2_000) + Line(9, 50_000, best: true));
+        var jobId = await JobAsync(userId, depth: 30, nodes: 50_000);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);       // Tiefe 9 < 30, und trotzdem fertig: das Knotenziel zählt
+        Assert.Equal(9, job.ReachedDepth);
+        Assert.Contains("\"nodes\":50000", job.ResultJson);
+        var (_, work) = Assert.Single(_broker.Calls);
+        Assert.Equal(50_000, work.Nodes);
+        Assert.Null(work.Depth);                                 // genau EIN Limit (WorkSanitizer)
+    }
+
+    [Fact]
+    public async Task NodeJob_stopsItselfAtTheGoal_evenIfTheEngineKeepsGoing()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(6, 2_000) + Line(8, 6_000) + Line(10, 9_000, best: true));
+        var jobId = await JobAsync(userId, nodes: 5_000);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);
+        Assert.True(job.ReachedDepth >= 8);
+    }
+
+    [Fact]
+    public async Task NodeJob_streamEndsJustBelowTheGoal_countsAsDone_butFarBelowIsNot()
+    {
+        var (userId, engines) = await SetupAsync(engines: 2);
+        _broker.Answers[engines[0]] = (200, Line(9, 98_000, best: true));   // 98 % — Lc0 hört gern ein paar Knoten früher auf
+        _broker.Answers[engines[1]] = (200, Line(4, 40_000, best: true));   // 40 % — kein Ergebnis
+        var near = await JobAsync(userId, nodes: 100_000);
+        var far = await JobAsync(userId, nodes: 100_000);
+        // Beide Aufträge auf je ihre Engine festlegen (die automatische Wahl verteilt sie sonst nach Schlangenlänge).
+        using (var scope = _sp.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.AnalysisJobs.SingleAsync(j => j.Id == near)).EngineId = engines[0];
+            (await db.AnalysisJobs.SingleAsync(j => j.Id == far)).EngineId = engines[1];
+            await db.SaveChangesAsync();
+        }
+
+        await _worker.StartAsync(CancellationToken.None);
+        Assert.Equal(AnalysisJobStatus.Done, (await WaitForAsync(near, j => j.Status != AnalysisJobStatus.Queued && j.Status != AnalysisJobStatus.Running)).Status);
+        Assert.Equal(AnalysisJobStatus.Paused, (await WaitForAsync(far, j => j.Status != AnalysisJobStatus.Queued && j.Status != AnalysisJobStatus.Running)).Status);
+    }
+
+    [Fact]
+    public async Task NodeJob_recordsStepsPerThreshold_missingStepsAreNotInvented()
+    {
+        var (userId, engines) = await SetupAsync();
+        // Schweigen zwischen 31k und 50k ist kein Problem (40k hat die Zeile bei 31k), zwischen 12k und 31k fehlt 30k:
+        // die Zeile bei 12k läge 18k darunter — mehr als eine Schrittweite.
+        _broker.Answers[engines[0]] = (200, Line(5, 4_000) + Line(7, 12_000) + Line(8, 31_000) + Line(9, 50_000, best: true));
+        var jobId = await JobAsync(userId, nodes: 50_000);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);
+        var steps = NodeSteps.Parse(job.NodeStepsJson);
+        Assert.Equal(new[] { 10_000L, 20_000L, 40_000L, 50_000L }, steps.Select(s => s.Threshold));
+        Assert.Equal(new[] { 4_000L, 12_000L, 31_000L, 50_000L }, steps.Select(s => s.Nodes));
+        Assert.All(steps, s => { Assert.Equal("e7e5", s.Uci); Assert.Equal(25, s.Cp); });     // Schwarz am Zug: -25 (Weiß) → +25
+    }
+
+    [Fact]
+    public async Task DepthJob_hasNoSteps()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(8, 10_000) + Line(12, 90_000, best: true));
+        var jobId = await JobAsync(userId, depth: 12);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed);
+
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);
+        Assert.Null(job.NodeStepsJson);
+    }
+
+    [Fact]
+    public async Task DepthJob_staysUnchanged_depthGoesToTheEngine_noNodes()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(8, 10) + Line(12, 90, best: true));
+        var jobId = await JobAsync(userId, depth: 12);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed);
+
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);
+        Assert.Null(job.TargetNodes);
+        var (_, work) = Assert.Single(_broker.Calls);
+        Assert.Equal(12, work.Depth);
+        Assert.Null(work.Nodes);
     }
 
     // ── Vorrang (2026-09-28): ein normaler Auftrag verdraengt einen LAUFENDEN Hintergrundauftrag ───────────────

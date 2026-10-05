@@ -52,4 +52,8 @@ public class GameAnalysisPosition
     /// <summary>Im zweiten Durchgang (<see cref="GameAnalysis.RefineDepth"/>) neu gerechnet — oder dort aufgegeben
     /// (dann bleibt das Ergebnis des ersten Durchgangs stehen). Ohne zweiten Durchgang bedeutungslos.</summary>
     public bool Refined { get; set; }
+
+    /// <summary>Zwischenstände der Knotenanalyse (Bewertung/bester Zug je 10k, 20k, … Knoten), <see cref="Services.NodeSteps"/>;
+    /// <c>null</c> bei Tiefenanalysen. Aus dem Auftrag mitgenommen, bevor er gelöscht wird.</summary>
+    public string? NodeStepsJson { get; set; }
 }

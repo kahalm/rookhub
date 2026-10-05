@@ -78,6 +78,14 @@ public class GameAnalysisController : BaseApiController
         return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
     }
 
+    /// <summary>Konvergenz einer Knotenanalyse (Zwischenstände je Schwelle gegen das Ziel) — nur die eigene Analyse.</summary>
+    [HttpGet("{id:int}/convergence")]
+    public async Task<ActionResult<ConvergenceDto>> Convergence(int id, CancellationToken ct)
+    {
+        var dto = await _service.ConvergenceAsync(GetUserId(), id, ct);
+        return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
+    }
+
     /// <summary>
     /// Eine Partie von Hand einreihen. Tiefe, Linienzahl und Engine darf dabei NUR ein Admin
     /// waehlen — bei allen anderen setzt der Server die Vorgaben.
@@ -95,6 +103,7 @@ public class GameAnalysisController : BaseApiController
             req.TargetDepth = null;
             req.MultiPv = null;
             req.EngineId = null;
+            req.TargetNodes = null;
         }
 
         try

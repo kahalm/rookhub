@@ -8,6 +8,8 @@ public class CreateAnalysisJobRequest
     public int MultiPv { get; set; } = 3;
     /// <summary>Engine-ID; fehlend = die im Profil hinterlegte Hintergrund-Engine.</summary>
     public string? EngineId { get; set; }
+    /// <summary>Knotenziel statt Tiefe (1 000 .. 50 000 000); gesetzt, zählt <see cref="TargetDepth"/> nicht.</summary>
+    public long? TargetNodes { get; set; }
 }
 
 public class UpdateAnalysisJobRequest
@@ -29,7 +31,7 @@ public record AnalysisJobDto(
     int Id, string Fen, string? Title, string EngineId, int TargetDepth, int MultiPv, string Status,
     int ReachedDepth, string? ResultJson, int SecondsSpent, string? LastError,
     DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt, string? EvalText = null,
-    int CurrentDepth = 0, int CurrentNps = 0, bool HouseEngine = false);
+    int CurrentDepth = 0, int CurrentNps = 0, bool HouseEngine = false, long? TargetNodes = null);
 
 /// <summary>Laufender Stand EINES rechnenden Auftrags (Arbeitsspeicher, sekündlich abfragbar) —
 /// bewusst winzig, weil die Auftragsliste ihn im Sekundentakt holt.</summary>

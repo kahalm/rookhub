@@ -42,6 +42,24 @@ public static class AnalysisJobStream
         catch (JsonException) { return null; }
     }
 
+    /// <summary>Knotenzahl einer ndjson-Zeile; null, wenn sie fehlt.</summary>
+    public static long? NodesOf(string line)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(line);
+            var r = doc.RootElement;
+            return r.ValueKind == JsonValueKind.Object && r.TryGetProperty("nodes", out var n) && n.ValueKind == JsonValueKind.Number
+                ? n.GetInt64() : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    /// <summary>Knotenziel erreicht? Meldet die Engine selbst das Ende (<paramref name="streamEnded"/>), genügt knapp
+    /// darunter (Lc0 hört bei <c>go nodes N</c> teils ein paar Knoten früher auf); sonst muss das Ziel voll da sein.</summary>
+    public static bool NodeGoalMet(long target, long nodes, bool streamEnded) =>
+        nodes >= target || (streamEnded && nodes >= target - target / 20);
+
     /// <summary>Eine Fortsetzung (und ein Neustart mit mehr Linien) liefert die flachen Iterationen erneut —
     /// übernommen wird nur, was mindestens so tief ist wie das gespeicherte Ergebnis.</summary>
     public static bool ShouldPersist(int lineDepth, int reachedDepth) => lineDepth >= reachedDepth;
@@ -165,6 +183,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// <summary>Weckt die Schleife, sobald ein Lauf endet — die Engine soll nicht bis zum nächsten Tick warten.</summary>
     private readonly WakeSignal _wake = new();
 
+    private readonly IReadOnlySet<string> _explicitOnly;
+    /// <summary>Schrittweite der Zwischenstände einer Knotenanalyse (<c>AnalysisJobs:SnapshotStepNodes</c>, Vorgabe 10 000, 0 = aus).</summary>
+    private readonly long _snapshotStep;
+
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
         IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live)
     {
@@ -180,6 +202,9 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         _stallTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:StallTimeoutSeconds") ?? 1800, 300, 86400));
         _engineSwitchBackoff = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:EngineSwitchBackoffSeconds") ?? 15, 5, 600));
         _fruitlessMinRuntime = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FruitlessMinRuntimeSeconds") ?? 60, 5, 3600));
+        _explicitOnly = ExplicitOnlyEngines.From(config);
+        var step = config.GetValue<long?>("AnalysisJobs:SnapshotStepNodes") ?? 10_000;
+        _snapshotStep = step <= 0 ? 0 : Math.Clamp(step, 1_000, 1_000_000);
         _tracker.LiveStarted += PauseEngine;
     }
 
@@ -335,7 +360,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 // Das Protokoll erlaubt 1..5; ein größerer Wert würde vom Broker abgewiesen und der Auftrag
                 // liefe endlos in die Wiederholung. Zweiter Riegel neben AnalysisJobService.MaxMultiPv.
                 MultiPv: Math.Clamp(job.MultiPv, 1, EngineProtocol.MaxMultiPv),
-                InitialFen: job.Fen, Moves: [], Depth: job.TargetDepth);
+                // Knotenauftrag: `nodes` statt `depth` — GENAU EINES der drei Limits geht an die Engine
+                // (EngineWork.ToJson/WorkSanitizer). Eine Tiefe obendrauf liefe bei Lc0 ins Leere.
+                InitialFen: job.Fen, Moves: [],
+                Depth: job.TargetNodes is null ? job.TargetDepth : null, Nodes: job.TargetNodes);
 
             EngineAnalysisSession upstream;
             // Frist NUR für die Antwort-KOPFZEILEN: der HttpClient des Brokers ist bewusst timeout-los
@@ -407,7 +435,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 // Anzeige-Stand ohne Datenbank: die Zeit läuft ab HIER, auch wenn die Engine noch schweigt.
                 _live.Start(job.Id, job.UserId, job.SecondsSpent, runStart);
                 var lastPersist = runStart;
+                // Knotenauftrag: die Suche beginnt bei Tiefe 1 von vorn, ein Rest-Stand aus einem früheren Lauf
+                // (andere Zählung, kalte Hashtabelle) würde sonst alle flacheren Zeilen verwerfen.
+                if (job.TargetNodes is not null) job.ReachedDepth = 0;
                 var depthAtStart = job.ReachedDepth;
+                long currentNodes = 0; var nodeGoalReached = false;
+                // Knotenauftrag: Zwischenstände je Schwelle mitschreiben — dieselben Zeilen, keine Mehrrechnung.
+                var recorder = job.TargetNodes is not null && _snapshotStep > 0
+                    ? new NodeStepRecorder(_snapshotStep, NodeSteps.Parse(job.NodeStepsJson)) : null;
                 string? pendingLine = null; var pendingDepth = job.ReachedDepth;
                 var currentDepth = 0; var currentNps = 0;
                 var gotData = false;
@@ -435,19 +470,30 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         // die Anzeige minutenlang still (keine Tiefe, kein Tempo, nicht einmal die Zeit lief mit).
                         currentDepth = depth;
                         currentNps = AnalysisJobStream.NpsOf(line) ?? currentNps;
+                        currentNodes = AnalysisJobStream.NodesOf(line) ?? currentNodes;
+                        if (recorder is not null) ObserveStep(recorder, line, job.Fen);
                         _live.Update(job.Id, currentDepth, currentNps);
                         var keep = AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth);
                         if (keep) { pendingLine = line; pendingDepth = depth; }
                         var now = DateTime.UtcNow;
                         if ((keep && depth > job.ReachedDepth) || now - lastPersist >= _persistInterval)
                         {
+                            if (recorder is { Dirty: true }) job.NodeStepsJson = NodeSteps.ToJson(recorder.Snapshot());
                             var rest = await PersistProgressAsync(db, job, pendingLine, pendingDepth, now - lastPersist,
                                                                   currentDepth, currentNps);
                             lastPersist = now - rest; pendingLine = null;   // angebrochene Sekunde mitnehmen
                             // Ziel/Linien können sich unterdessen geändert haben (Service in eigenem Scope).
                             await db.Entry(job).ReloadAsync(CancellationToken.None);
                         }
-                        // BEWUSST kein Selbst-Abbruch bei erreichter Zieltiefe: die Engine bekommt `depth` als
+                        // Knotenauftrag: Selbst-Abbruch, sobald das Ziel da ist — die Zeile steht oben schon als
+                        // pendingLine und wird nach dem Stream gesichert. (Die Engine bekommt `nodes` mit und endet
+                        // meist selbst; das hier ist der Riegel für eine, die das Limit überzieht.)
+                        if (job.TargetNodes is { } nodeTarget && currentNodes >= nodeTarget)
+                        {
+                            nodeGoalReached = true;
+                            streamCts.Cancel();
+                        }
+                        // BEWUSST kein Selbst-Abbruch bei erreichter Zieltiefe (gilt für TIEFENaufträge): die Engine bekommt `depth` als
                         // Limit mitgeschickt und beendet den Stream selbst. Bräche der Worker schon bei der
                         // ERSTEN Zeile der Zieltiefe ab, trüge nur die Hauptvariante diese Tiefe — die Linien
                         // 2..K blieben eine Iteration flacher (jede pv hat ihre eigene Tiefe).
@@ -508,17 +554,25 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                     job.Id, (endedAt - runStart).TotalSeconds, tally.DataLines, tally.Heartbeats, tally.OtherLines,
                     Fmt(tally.DataGapSeconds(endedAt)), run.EngineId, currentDepth, job.TargetDepth);
 
+                if (recorder is not null)
+                {
+                    recorder.Finish(job.TargetNodes);
+                    if (recorder.Dirty) job.NodeStepsJson = NodeSteps.ToJson(recorder.Snapshot());
+                }
                 await PersistProgressAsync(db, job, pendingLine, pendingLine is null ? job.ReachedDepth : pendingDepth,
                                            DateTime.UtcNow - lastPersist, currentDepth, currentNps);
 
                 await db.Entry(job).ReloadAsync(CancellationToken.None);
-                if (job.ReachedDepth >= job.TargetDepth)
+                var goalMet = job.TargetNodes is { } goalNodes
+                    ? nodeGoalReached || (!ct.IsCancellationRequested && gotData && AnalysisJobStream.NodeGoalMet(goalNodes, currentNodes, streamEnded: true))
+                    : job.ReachedDepth >= job.TargetDepth;
+                if (goalMet)
                 {
                     job.Status = AnalysisJobStatus.Done; job.FinishedAt = DateTime.UtcNow; job.UpdatedAt = job.FinishedAt.Value;
                     job.FruitlessAttempts = 0;
                     job.CurrentDepth = 0; job.CurrentNps = 0;   // es rechnet nichts mehr
                     await db.SaveChangesAsync(CancellationToken.None);
-                    _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth}", job.Id, job.ReachedDepth);
+                    _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth} ({Nodes} Knoten)", job.Id, job.ReachedDepth, currentNodes);
                 }
                 else if (ct.IsCancellationRequested)
                 {
@@ -599,6 +653,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// <summary>Ergebnis + Rechenzeit sichern. Gibt zurück, wie viel Zeit NICHT verbucht wurde (der Bruchteil
     /// unter einer Sekunde) — der Aufrufer schiebt ihn ins nächste Intervall, sonst summierte sich bei jedem
     /// Persist ein verlorener Rest, und in der ersten Sekunden-Salve flacher Tiefen ginge fast alles verloren.</summary>
+    /// <summary>Eine Datenzeile in den Zwischenstand-Schreiber geben: bester Zug (MultiPV 1) mit Bewertung aus Sicht der Seite am Zug.</summary>
+    internal static void ObserveStep(NodeStepRecorder recorder, string line, string fen)
+    {
+        if (AnalysisJobStream.NodesOf(line) is not { } nodes) return;
+        if (BrokerCandidates.Parse(line, fen) is not { Count: > 0 } cands) return;
+        recorder.Observe(nodes, cands[0].Uci, cands[0].Cp, cands[0].Mate);
+    }
+
     private static async Task<TimeSpan> PersistProgressAsync(AppDbContext db, AnalysisJob job, string? line, int depth,
         TimeSpan elapsed, int currentDepth = 0, int currentNps = 0)
     {
@@ -624,10 +686,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// nichts zu tun und gewaenne jeden Schlangenvergleich — der Auftrag liefe ihr sofort wieder in die
     /// Arme. Bewusst nur, wenn die aktuelle Engine ueberhaupt in der Liste steht: eine von Hand
     /// festgelegte Engine ist eine Entscheidung des Nutzers und bleibt.</para></summary>
-    private static async Task<bool> SwitchEngineAsync(AppDbContext db, AnalysisJob job, int engineOwnerId, CancellationToken ct)
+    private async Task<bool> SwitchEngineAsync(AppDbContext db, AnalysisJob job, int engineOwnerId, CancellationToken ct)
     {
         var cred = await db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == engineOwnerId, ct);
-        if (NextEngineAfter(cred?.BackgroundEngines ?? [], job.EngineId) is not { } next) return false;
+        if (NextEngineAfter(cred?.BackgroundEngines ?? [], job.EngineId, _explicitOnly) is not { } next) return false;
         job.EngineId = next;
         return true;
     }
@@ -635,8 +697,16 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// <summary>Die naechste Engine REIHUM nach <paramref name="current"/>; <c>null</c>, wenn es keinen
     /// Wechsel gibt — weil nur eine hinterlegt ist oder weil die aktuelle gar nicht in der Liste steht
     /// (dann hat der Nutzer sie von Hand gewaehlt, und das bleibt seine Entscheidung).</summary>
-    internal static string? NextEngineAfter(IReadOnlyList<string> engines, string current)
+    internal static string? NextEngineAfter(IReadOnlyList<string> engines, string current,
+        IReadOnlySet<string>? explicitOnly = null)
     {
+        // Eine Nur-auf-Anforderung-Engine rotiert weder hinein noch heraus: ein Auftrag, der sie nannte, bleibt dort,
+        // und ein Stockfish-Auftrag landet nicht bei Lc0.
+        if (explicitOnly is { Count: > 0 })
+        {
+            if (explicitOnly.Contains(current)) return null;
+            engines = ExplicitOnlyEngines.Automatic(engines, explicitOnly);
+        }
         if (engines.Count < 2) return null;
         for (var i = 0; i < engines.Count; i++)
             if (engines[i] == current) return engines[(i + 1) % engines.Count];

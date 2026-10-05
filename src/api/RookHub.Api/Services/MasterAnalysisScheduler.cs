@@ -53,6 +53,7 @@ public class MasterAnalysisScheduler : BackgroundService
     private readonly HashSet<int> _unplayableClub = [];
 
     private readonly League.LeagueAnalysisQueue _league;
+    private readonly IReadOnlySet<string> _explicitOnly;
 
     public MasterAnalysisScheduler(IServiceScopeFactory scopes, QuietHours quiet, IConfiguration config,
         ILogger<MasterAnalysisScheduler> logger, League.LeagueAnalysisQueue? league = null)
@@ -63,6 +64,7 @@ public class MasterAnalysisScheduler : BackgroundService
         _logger = logger;
         _enabled = config.GetValue<bool?>("MasterAnalysis:Enabled") ?? true;
         _configuredOwner = config.GetValue<int?>("MasterAnalysis:OwnerUserId");
+        _explicitOnly = ExplicitOnlyEngines.From(config);
         _tick = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("MasterAnalysis:TickSeconds") ?? 30, 5, 600));
         _initialDelay = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("MasterAnalysis:InitialDelaySeconds") ?? 180, 0, 3600));
     }
@@ -102,7 +104,7 @@ public class MasterAnalysisScheduler : BackgroundService
 
         var owner = await OwnerAsync(db, ct);
         if (owner is null) return null;
-        var slots = Math.Max(1, owner.BackgroundEngines.Count);
+        var slots = Math.Max(1, ExplicitOnlyEngines.Automatic(owner.BackgroundEngines, _explicitOnly).Count);
 
         var open = await db.GameAnalyses
             .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)

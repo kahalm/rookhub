@@ -126,4 +126,62 @@ describe('GameAnalysisDetailComponent', () => {
     press(document.body);
     expect(c.index).toBe(0);
   });
+
+  // ── Konvergenz (Knotenanalyse) ──
+
+  function loadNodes(): ComponentFixtureLike {
+    const fixture = TestBed.createComponent(GameAnalysisDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses/5').flush({
+      id: 5, title: 'A – B (50k nodes)', white: 'A', black: 'B', result: '1-0', event: null,
+      targetDepth: 30, targetNodes: 50000, multiPv: 3, engineId: 'eei_lc0', status: 'done',
+      plyCount: 3, analyzedPlies: 3, lastError: null,
+      createdAt: '2026-09-05T10:00:00Z', finishedAt: null, positions: POSITIONS,
+    });
+    return fixture;
+  }
+  type ComponentFixtureLike = ReturnType<typeof TestBed.createComponent<GameAnalysisDetailComponent>>;
+
+  it('holt die Konvergenz NUR bei einer Knotenanalyse (die Tiefenanalyse oben fragt sie nie)', () => {
+    load();
+    http.expectNone('/api/game-analyses/5/convergence');   // load() ist eine Tiefenanalyse
+  });
+
+  it('zeigt die Konvergenz-Tabelle: Zeile je Stufe, Abstand in cp und Prozentpunkten', () => {
+    const fixture = loadNodes();
+    http.expectOne('/api/game-analyses/5/convergence').flush({
+      targetNodes: 50000, positions: 12,
+      rows: [
+        { threshold: 10000, positions: 12, sameMovePercent: 58.3, medianCp: 18, p90Cp: 140, medianWinPct: 1.4, p90WinPct: 9.8,
+          moveChanges: 0, mateMismatch: 1, meanNodes: 9120 },
+        { threshold: 50000, positions: 12, sameMovePercent: 100, medianCp: 0, p90Cp: 0, medianWinPct: 0, p90WinPct: 0,
+          moveChanges: 2, mateMismatch: 0, meanNodes: 49800 },
+      ],
+    });
+    fixture.detectChanges();
+
+    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.conv-table tbody tr');
+    expect(rows.length).toBe(2);
+    const first = rows[0].textContent!.replace(/\s+/g, ' ');
+    expect(first).toContain('58');         // gleicher Zug in %
+    expect(first).toContain('140');        // 90 %-Abstand in cp
+    expect(fixture.componentInstance.mateMismatches).toBe(1);
+  });
+
+  it('sagt es, wenn es noch keine Zwischenstaende gibt', () => {
+    const fixture = loadNodes();
+    http.expectOne('/api/game-analyses/5/convergence').flush({ targetNodes: 50000, positions: 0, rows: [] });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.conv-table')).toBeNull();
+    expect(el.querySelector('.conv')).not.toBeNull();
+  });
+
+  it('bleibt ohne Tabelle, wenn der Abruf der Konvergenz scheitert (die Partie steht trotzdem da)', () => {
+    const fixture = loadNodes();
+    http.expectOne('/api/game-analyses/5/convergence').flush('x', { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.convergence).toBeNull();
+    expect(fixture.componentInstance.positions.length).toBe(3);
+  });
 });

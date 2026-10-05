@@ -13,7 +13,7 @@ import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { GameAnalysis, GameAnalysisPosition, GameAnalysisService } from './game-analysis.service';
+import { GameAnalysis, GameAnalysisPosition, GameAnalysisService, GameConvergence } from './game-analysis.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
@@ -44,7 +44,11 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
           <div>
             <h1>{{ analysis.title || ('gameAnalysis.untitled' | translate) }}</h1>
             <p class="muted small">
-              {{ 'gameAnalysis.depthLines' | translate:{ depth: analysis.targetDepth, lines: analysis.multiPv } }}
+              @if (analysis.targetNodes) {
+                {{ 'gameAnalysis.nodesLines' | translate:{ nodes: (analysis.targetNodes | number), lines: analysis.multiPv } }}
+              } @else {
+                {{ 'gameAnalysis.depthLines' | translate:{ depth: analysis.targetDepth, lines: analysis.multiPv } }}
+              }
               @if (analysis.result) { <span>· {{ analysis.result }}</span> }
             </p>
           </div>
@@ -94,6 +98,54 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
             </mat-card-content>
           </mat-card>
         </div>
+
+        @if (analysis.targetNodes && convergence) {
+          <mat-card class="conv">
+            <mat-card-content>
+              <h2>{{ 'gameAnalysis.convergence.title' | translate }}</h2>
+              @if (convergence.rows.length === 0) {
+                <p class="muted small">{{ 'gameAnalysis.convergence.empty' | translate }}</p>
+              } @else {
+                <p class="muted small">
+                  {{ 'gameAnalysis.convergence.hint' | translate }}
+                  {{ 'gameAnalysis.convergence.positions' | translate:{ count: convergence.positions } }}
+                </p>
+                <div class="conv-scroll">
+                  <table class="conv-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'gameAnalysis.convergence.nodes' | translate }}</th>
+                        <th>{{ 'gameAnalysis.convergence.count' | translate }}</th>
+                        <th>{{ 'gameAnalysis.convergence.same' | translate }}</th>
+                        <th>{{ 'gameAnalysis.convergence.median' | translate }}</th>
+                        <th>{{ 'gameAnalysis.convergence.p90' | translate }}</th>
+                        <th>{{ 'gameAnalysis.convergence.changes' | translate }}</th>
+                        <th>{{ 'gameAnalysis.convergence.reached' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (r of convergence.rows; track r.threshold) {
+                        <tr>
+                          <td>{{ r.threshold | number }}</td>
+                          <td>{{ r.positions }}</td>
+                          <td>{{ r.sameMovePercent | number:'1.0-0' }} %</td>
+                          <td>{{ r.medianCp | number:'1.0-0' }} cp · {{ r.medianWinPct | number:'1.0-1' }} %</td>
+                          <td>{{ r.p90Cp | number:'1.0-0' }} cp · {{ r.p90WinPct | number:'1.0-1' }} %</td>
+                          <td>{{ r.moveChanges }}</td>
+                          <td>{{ r.meanNodes | number:'1.0-0' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <p class="muted small">
+                  {{ 'gameAnalysis.convergence.note' | translate }}
+                  @if (mateMismatches > 0) { {{ 'gameAnalysis.convergence.mate' | translate:{ n: mateMismatches } }} }
+                </p>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
       }
     </div>
   `,
@@ -123,6 +175,13 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
           color: color-mix(in srgb, currentColor 70%, transparent); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
+    .conv { margin-top: 16px; }
+    .conv h2 { margin: 0 0 4px; font-size: 1.1rem; }
+    .conv-scroll { overflow-x: auto; margin: 8px 0; }
+    .conv-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .conv-table th, .conv-table td { padding: 4px 10px; text-align: right; white-space: nowrap;
+                                     border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+    .conv-table th { font-weight: 600; font-size: .8rem; }
   `],
 })
 export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
@@ -134,6 +193,8 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
 
   analysis: GameAnalysis | null = null;
+  /** Konvergenz der Zwischenstände — nur bei Knotenanalysen geladen. */
+  convergence: GameConvergence | null = null;
   positions: GameAnalysisPosition[] = [];
   loading = true;
   flipped = false;
@@ -144,6 +205,11 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
 
   get boardTheme(): string { return this.prefs.boardTheme; }
   get pieceSet(): string { return this.prefs.pieceSet; }
+
+  /** Wie oft Matt gegen „kein Matt" über alle Stufen auseinanderlag (nur als Fußnote). */
+  get mateMismatches(): number {
+    return (this.convergence?.rows ?? []).reduce((n, r) => n + r.mateMismatch, 0);
+  }
 
   get percent(): number {
     const a = this.analysis;
@@ -214,12 +280,21 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
         this.endFen = last ? fenAfterUci(last.fen, last.uci) : null;
         this.loading = false;
         this.cdr.markForCheck();
+        if (a.targetNodes) this.loadConvergence(id);
       },
       error: () => {
         this.loading = false;
         if (!silent) this.snackbar.warn(this.translate.instant('gameAnalysis.loadFailed'));
         this.cdr.markForCheck();
       },
+    });
+  }
+
+  /** Fehler hier sind still: die Tabelle ist eine Zugabe, die Partie selbst steht schon da. */
+  private loadConvergence(id: number): void {
+    this.service.convergence(id).subscribe({
+      next: c => { this.convergence = c; this.cdr.markForCheck(); },
+      error: () => { this.cdr.markForCheck(); },
     });
   }
 }

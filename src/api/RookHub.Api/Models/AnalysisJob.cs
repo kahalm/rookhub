@@ -58,6 +58,17 @@ public class AnalysisJob
     public string EngineId { get; set; } = string.Empty;
 
     public int TargetDepth { get; set; }
+
+    /// <summary>Knotenziel statt Tiefenziel (<c>null</c> = Tiefe gilt). Für Engines, deren „Tiefe" nichts über den
+    /// Aufwand sagt (Lc0: wenige Iterationen, aber Millionen Knoten): der Auftrag geht mit <c>nodes</c> statt
+    /// <c>depth</c> an die Engine und gilt als fertig, sobald die Engine das Ziel meldet. <see cref="TargetDepth"/>
+    /// bleibt dann nur gespeichert und zählt nicht.</summary>
+    public long? TargetNodes { get; set; }
+
+    /// <summary>Zwischenstände einer Knotenanalyse je Schwelle (10k, 20k, …), siehe <see cref="Services.NodeSteps"/>; <c>null</c> = keine
+    /// (Tiefenauftrag oder <c>AnalysisJobs:SnapshotStepNodes</c> = 0). Wandert mit dem Ergebnis in <see cref="GameAnalysisPosition.NodeStepsJson"/>.</summary>
+    public string? NodeStepsJson { get; set; }
+
     public int MultiPv { get; set; }
 
     public AnalysisJobStatus Status { get; set; } = AnalysisJobStatus.Queued;

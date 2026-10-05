@@ -106,6 +106,13 @@ public class GameAnalysis
 
     public int TargetDepth { get; set; } = GameAnalysisDefaults.TargetDepth;
 
+    /// <summary>
+    /// Knotenziel je Stellung (lc0 & Co., deren „Tiefe" nichts aussagt) — gesetzt nur zusammen mit <see cref="EngineId"/>.
+    /// Dann gilt es statt <see cref="TargetDepth"/>, das nur noch als Platzhalter steht; Neustart und Nachfüttern geben es
+    /// an jeden Stellungs-Auftrag weiter (<c>AnalysisJob.TargetNodes</c>).
+    /// </summary>
+    public long? TargetNodes { get; set; }
+
     /// <summary>Linien je Stellung — höchstens <c>AnalysisJobService.MaxMultiPv</c> (Protokoll-Limit 5).</summary>
     public int MultiPv { get; set; } = GameAnalysisDefaults.MultiPv;
 

@@ -11,6 +11,8 @@ public class CreateGameAnalysisRequest
     public int? MultiPv { get; set; }
     /// <summary>Leer = Hintergrund-Engine aus dem Profil.</summary>
     public string? EngineId { get; set; }
+    /// <summary>Knotenziel je Stellung statt Tiefe — nur mit <see cref="EngineId"/> (Bereich wie bei den Aufträgen).</summary>
+    public long? TargetNodes { get; set; }
 }
 
 public class GameAnalysisDto
@@ -24,6 +26,8 @@ public class GameAnalysisDto
     public int TargetDepth { get; set; }
     public int MultiPv { get; set; }
     public string? EngineId { get; set; }
+    /// <summary>Knotenziel je Stellung (lc0-Analyse); sonst <c>null</c> und die Tiefe gilt.</summary>
+    public long? TargetNodes { get; set; }
     /// <summary>pending · running · done · failed</summary>
     public string Status { get; set; } = "pending";
     public int PlyCount { get; set; }
@@ -141,4 +145,36 @@ public class AnalysisThroughputDto
     public int MaxRunningEngines24h { get; set; }
     /// <summary>Hoechstes Gesamttempo (Knoten/s ueber alle Laeufe) in den letzten 24 Stunden; 0 = keine Aufzeichnung.</summary>
     public long MaxNodesPerSecond24h { get; set; }
+}
+
+/// <summary>Auswertung „wann zahlt sich tieferes Rechnen aus" einer Knotenanalyse (Zwischenstände je 10k, 20k, … Knoten gegen das Ziel;
+/// <see cref="Services.Convergence"/>). Nur Stellungen mit mindestens zwei Stufen zählen.</summary>
+public class ConvergenceDto
+{
+    public long? TargetNodes { get; set; }
+    /// <summary>Stellungen mit Zwischenständen (mindestens zwei Stufen).</summary>
+    public int Positions { get; set; }
+    public List<ConvergenceRowDto> Rows { get; set; } = [];
+}
+
+public class ConvergenceRowDto
+{
+    /// <summary>Schwelle in Knoten.</summary>
+    public long Threshold { get; set; }
+    /// <summary>Stellungen, die für diese Schwelle einen Stand haben.</summary>
+    public int Positions { get; set; }
+    /// <summary>Anteil (0..100), dessen bester Zug schon der des Ziels ist.</summary>
+    public double SameMovePercent { get; set; }
+    /// <summary>Median / 90. Perzentil des Bewertungsunterschieds zum Ziel in Centibauern (Matt = ±1000, gedeckelt).</summary>
+    public double MedianCp { get; set; }
+    public double P90Cp { get; set; }
+    /// <summary>Dasselbe in Gewinnchance-Prozentpunkten.</summary>
+    public double MedianWinPct { get; set; }
+    public double P90WinPct { get; set; }
+    /// <summary>Wie oft der beste Zug gegenüber der Vorstufe wechselte.</summary>
+    public int MoveChanges { get; set; }
+    /// <summary>Wie oft hier Matt vs. keine Mattbewertung gegenüber dem Ziel auseinanderlagen.</summary>
+    public int MateMismatch { get; set; }
+    /// <summary>Mittlere tatsächlich erreichte Knotenzahl (die Engine meldet nicht genau auf die Schwelle).</summary>
+    public double MeanNodes { get; set; }
 }
