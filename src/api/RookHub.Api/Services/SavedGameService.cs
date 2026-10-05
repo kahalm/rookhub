@@ -609,25 +609,25 @@ public class SavedGameService
             : $"{g.White.Trim()} – {g.Black.Trim()}";
 
     /// <summary>Bewertungen einer EIGENEN Partie; <c>null</c>, wenn es sie nicht gibt oder sie fremd ist.</summary>
-    public async Task<GameEvalsDto?> GetEvalsAsync(int userId, int savedGameId, CancellationToken ct = default)
+    public async Task<GameEvalsDto?> GetEvalsAsync(int userId, int savedGameId, CancellationToken ct = default, bool withBook = true)
     {
         var head = await _db.SavedGames.AsNoTracking()
             .Where(g => g.Id == savedGameId && g.UserId == userId)
             .Select(g => new { g.Id, g.GameAnalysisId })
             .FirstOrDefaultAsync(ct);
-        return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, userId, ct);
+        return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, userId, ct, withBook);
     }
 
     /// <summary>Bewertungen der geteilten Partie; <c>null</c> bei unbekanntem Token.
     /// <paramref name="callerUserId"/> = <c>null</c> (anonym): NUR die verknuepfte Analyse.</summary>
-    public async Task<GameEvalsDto?> GetSharedEvalsAsync(string token, int? callerUserId, CancellationToken ct = default)
+    public async Task<GameEvalsDto?> GetSharedEvalsAsync(string token, int? callerUserId, CancellationToken ct = default, bool withBook = true)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var head = await _db.SavedGames.AsNoTracking()
             .Where(g => g.ShareToken == token)
             .Select(g => new { g.Id, g.GameAnalysisId })
             .FirstOrDefaultAsync(ct);
-        return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, callerUserId, ct);
+        return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, callerUserId, ct, withBook);
     }
 
 
@@ -641,7 +641,7 @@ public class SavedGameService
     /// fragt waehrend der Rechnung alle zehn Sekunden). Der Textvergleich fuer (b) laeuft als
     /// Unterabfrage in SQL.</para>
     /// </summary>
-    private async Task<GameEvalsDto> EvalsAsync(int savedGameId, int? linkedId, int? callerUserId, CancellationToken ct)
+    private async Task<GameEvalsDto> EvalsAsync(int savedGameId, int? linkedId, int? callerUserId, CancellationToken ct, bool withBook = true)
     {
         GameEvalsStore.Head? analysis = null;
         if (linkedId is int id)
@@ -659,7 +659,9 @@ public class SavedGameService
 
         // Buchzüge nur für einen angemeldeten Aufrufer und aus SEINEN Repertoires: anonym gibt es keine, und die des
         // Teilenden bekäme ein Gast nie zu sehen — sonst verriete ein Teilen-Link, was jemand vorbereitet hat.
-        Func<List<string>, Task<List<int>>>? book = callerUserId is int viewer
+        // withBook=false (0.664.0): das Mengen-Set der Repertoires wird nach fünf Minuten Leerlauf neu aufgebaut (2–4 s bei
+        // 13 MB PGN) und hielt die ganze Antwort auf — die Seite holt Kurve und Buchzüge jetzt getrennt.
+        Func<List<string>, Task<List<int>>>? book = withBook && callerUserId is int viewer
             ? fens => _repertoires.BookPliesAsync(viewer, fens)
             : null;
         return await GameEvalsStore.ReadAsync(_db, analysis, book, ct);

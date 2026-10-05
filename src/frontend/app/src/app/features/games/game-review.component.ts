@@ -376,6 +376,7 @@ export class GameReviewComponent {
     });
     inject(DestroyRef).onDestroy(() => {
       this.stop();
+      this.bookSub?.unsubscribe();
       this.explainSub?.unsubscribe();
       this.explainPoll?.unsubscribe();
     });
@@ -430,15 +431,31 @@ export class GameReviewComponent {
       this.apply(null);
       return;
     }
-    this.loadSub = this.games.evals(url).subscribe({
+    // Kurve und Buchzüge getrennt (0.664.0): die Buchzüge brauchen das Stellungs-Set der Repertoires, und das baut der
+    // Server nach fünf Minuten Leerlauf neu auf (2–4 s) — die Auswertung wartete darauf. Erst die schnelle Antwort,
+    // dann EINMAL je Adresse die volle; deren Buchzüge werden nachgetragen. Die Vereins-Adresse kennt keine.
+    const split = !url.includes('/league/club/');
+    this.loadSub = this.games.evals(split ? `${url}?book=0` : url).subscribe({
       next: evals => {
-        this.apply(evals);
+        this.apply({ ...evals, bookPlies: evals.bookPlies?.length ? evals.bookPlies : this.evals()?.bookPlies ?? [] });
         this.scheduleIfBusy();
+        if (split && this.bookLoadedFor !== url) {
+          this.bookLoadedFor = url;
+          this.bookSub?.unsubscribe();
+          this.bookSub = this.games.evals(url).subscribe({
+            next: full => this.evals.update(e => e ? { ...e, bookPlies: full.bookPlies ?? [] } : e),
+            error: () => { this.bookLoadedFor = null; },   // der nächste Takt versucht es noch einmal
+          });
+        }
       },
       // Still: ein Aussetzer beim Nachfragen heilt der nächste Takt. Lief die Analyse, bleibt der Takt.
       error: () => this.scheduleIfBusy(),
     });
   }
+
+  /** Für welche Adresse die Buchzüge schon geholt sind — einmal genügt, die Stellungen ändern sich nicht. */
+  private bookLoadedFor: string | null = null;
+  private bookSub?: Subscription;
 
   toggleGraph(): void { this.graphOpen.update(v => !v); }
 

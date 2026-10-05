@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.664.0", date: "2026-10-05", changes: [
+    { en: "Game page: the evaluation (graph, accuracy, move classes) now appears at once instead of after a few seconds. The “book moves” from your repertoires used to hold the whole answer up whenever the repertoire lookup had gone cold (after five idle minutes it is rebuilt, 2–4 s with a large repertoire); they are now fetched separately and filled in a moment later.", de: "Partie-Seite: Die Auswertung (Kurve, Genauigkeit, Zug-Klassen) steht jetzt sofort da statt erst nach einigen Sekunden. Die „Buchzüge“ aus deinen Repertoires hielten die ganze Antwort auf, sobald der Repertoire-Zwischenspeicher kalt war (nach fünf Minuten Leerlauf wird er neu aufgebaut, bei großem Repertoire 2–4 s); sie werden jetzt getrennt geholt und einen Moment später eingetragen." },
+  ] },
   { version: "0.663.0", date: "2026-10-05", changes: [
     { en: "LeagueHub player card: when replaying a game there is now an “Analyse” button — it puts the game into “My games”, starts the analysis (an existing one, e.g. of the club game, is reused) and opens it on RookHub’s game page with evaluation curve, mistakes and move classes.", de: "LeagueHub-Spielerkarte: Beim Nachspielen einer Partie gibt es jetzt den Knopf „Analyse“ — er legt die Partie in „Meine Partien“, stößt die Analyse an (eine vorhandene, etwa die der Vereinspartie, wird wiederverwendet) und öffnet sie auf RookHubs Partieseite mit Bewertungskurve, Fehlern und Zugklassen." },
   ] },

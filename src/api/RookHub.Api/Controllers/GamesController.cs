@@ -92,9 +92,9 @@ public class GamesController : BaseApiController
     /// </summary>
     [HttpGet("shared/{token}/evals")]
     [AllowAnonymous]
-    public async Task<ActionResult<GameEvalsDto>> SharedEvals(string token, CancellationToken ct)
+    public async Task<ActionResult<GameEvalsDto>> SharedEvals(string token, CancellationToken ct, [FromQuery] bool book = true)
     {
-        var evals = await _service.GetSharedEvalsAsync(token, GetUserIdOrNull(), ct);
+        var evals = await _service.GetSharedEvalsAsync(token, GetUserIdOrNull(), ct, book);
         return evals == null ? NotFound() : Ok(evals);
     }
 
@@ -113,11 +113,12 @@ public class GamesController : BaseApiController
         return game == null ? NotFound() : Ok(game);
     }
 
-    /// <summary>Bewertungen einer eigenen Partie (Nachspiel-Dialog in <c>/games</c>).</summary>
+    /// <summary>Bewertungen einer eigenen Partie (Nachspiel-Dialog in <c>/games</c>). <c>?book=0</c> lässt die Buchzüge weg
+    /// (schnell); ohne den Parameter wie bisher mit.</summary>
     [HttpGet("{id:int}/evals")]
-    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct)
+    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct, [FromQuery] bool book = true)
     {
-        var evals = await _service.GetEvalsAsync(GetUserId(), id, ct);
+        var evals = await _service.GetEvalsAsync(GetUserId(), id, ct, book);
         return evals == null ? NotFound() : Ok(evals);
     }
 

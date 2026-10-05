@@ -16,6 +16,12 @@ describe('GameReviewComponent', () => {
     'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
     'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2',
   ];
+  /** Die Seite fragt zweimal: schnell ohne Buchzüge (`?book=0`), danach einmal voll (0.664.0). Beide bekommen dieselbe Antwort. */
+  function flushEvals(http: HttpTestingController, body: object | string, opts?: { status: number; statusText: string }): void {
+    http.expectOne(`${url}?book=0`).flush(body, opts);
+    http.match(url).forEach(r => r.flush(body, opts));
+  }
+
   const evals = (status: GameEvalsStatus, withSecond = true): GameEvals => ({
     status, analyzed: withSecond ? 2 : 1, total: 2, targetDepth: 20, analysisId: 9,
     plies: [
@@ -47,7 +53,7 @@ describe('GameReviewComponent', () => {
 
   it('lädt die Bewertungen und zeigt bei „none" NICHTS (die Seite zeigt ihren Knopf)', () => {
     const { fixture, http, statuses, el } = setup();
-    http.expectOne(url).flush({ status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
+    flushEvals(http, { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
     fixture.detectChanges();
 
     expect(el.querySelector('.review')).toBeNull();
@@ -56,7 +62,7 @@ describe('GameReviewComponent', () => {
 
   it('läuft die Analyse: Kurve soweit da, Fortschritt, und alle 10 s nachfragen — bis sie fertig ist', fakeAsync(() => {
     const { fixture, http, statuses, el } = setup();
-    http.expectOne(url).flush(evals('running', false));
+    flushEvals(http, evals('running', false));
     fixture.detectChanges();
 
     expect(el.querySelector('app-eval-graph')).not.toBeNull();
@@ -66,7 +72,7 @@ describe('GameReviewComponent', () => {
     tick(GameReviewComponent.PollMs - 1);
     http.expectNone(url);
     tick(1);
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     expect(statuses).toEqual(['running', 'done']);
     expect(el.querySelector('.progress')).toBeNull();
@@ -78,11 +84,11 @@ describe('GameReviewComponent', () => {
 
   it('ein Aussetzer beim Nachfragen bricht das Nachfragen nicht ab', fakeAsync(() => {
     const { http } = setup();
-    http.expectOne(url).flush(evals('running', false));
+    flushEvals(http, evals('running', false));
     tick(GameReviewComponent.PollMs);
-    http.expectOne(url).flush('boom', { status: 502, statusText: 'Bad Gateway' });
+    flushEvals(http, 'boom', { status: 502, statusText: 'Bad Gateway' });
     tick(GameReviewComponent.PollMs);
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     tick(GameReviewComponent.PollMs);
     http.expectNone(url);
   }));
@@ -91,19 +97,19 @@ describe('GameReviewComponent', () => {
     const { fixture, http, el } = setup();
     TestBed.inject(TranslateService).setTranslation('en', { gameAnalysis: { eta: 'about {{eta}} left' } });
     TestBed.inject(TranslateService).use('en');
-    http.expectOne(url).flush({ ...evals('running', false), etaMinutes: 11 });
+    flushEvals(http, { ...evals('running', false), etaMinutes: 11 });
     fixture.detectChanges();
     expect(el.querySelector('.progress')!.textContent).toContain('about 11 min left');
 
     fixture.componentInstance.reload();
-    http.expectOne(url).flush({ ...evals('running', false), etaMinutes: null });
+    flushEvals(http, { ...evals('running', false), etaMinutes: null });
     fixture.detectChanges();
     expect(el.querySelector('.progress')!.textContent).not.toContain('left');
   });
 
   it('fertig = keine Restdauer, auch wenn der Server noch eine mitschickte', () => {
     const { fixture, http } = setup();
-    http.expectOne(url).flush({ ...evals('done'), etaMinutes: 3 });
+    flushEvals(http, { ...evals('done'), etaMinutes: 3 });
     fixture.detectChanges();
 
     expect(fixture.componentInstance.eta()).toBeNull();
@@ -133,7 +139,7 @@ describe('GameReviewComponent', () => {
 
     it('aus bis zum Klick; an: die Linien der Stellung auf dem Brett, gemerkt je Gerät', () => {
       const { fixture, http, el } = setup();
-      http.expectOne(url).flush(withCandidates());
+      flushEvals(http, withCandidates());
       fixture.detectChanges();
       expect(el.querySelector('.lines')).toBeNull();
 
@@ -153,7 +159,7 @@ describe('GameReviewComponent', () => {
       const { fixture, http, el } = setup();
       const arrows: unknown[] = [];
       fixture.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
-      http.expectOne(url).flush(withCandidates());
+      flushEvals(http, withCandidates());
       fixture.detectChanges();
 
       (el.querySelector('button.arrow-toggle') as HTMLButtonElement).click();
@@ -171,7 +177,7 @@ describe('GameReviewComponent', () => {
       const { fixture, http, el } = setup();
       const arrows: unknown[] = [];
       fixture.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
-      http.expectOne(url).flush(withCandidates());
+      flushEvals(http, withCandidates());
       fixture.detectChanges();
       expect(el.querySelector('.lines')).not.toBeNull();
 
@@ -188,7 +194,7 @@ describe('GameReviewComponent', () => {
     const { fixture, http } = setup({ moves: [{ from: 'e2', to: 'e4' }, { from: 'c7', to: 'c5' }] });
     const badges: ({ square: string; svg: string } | null)[] = [];
     fixture.componentInstance.badgeChange.subscribe(b => badges.push(b));
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     expect(badges.filter(b => b !== null)).toEqual([]);          // Startstellung: kein Zug, kein Symbol
 
@@ -206,7 +212,7 @@ describe('GameReviewComponent', () => {
   // Gewünscht 2026-09-24: die Kurve standardmäßig eingeklappt, auf Wunsch aufklappen.
   it('die Kurve ist zu, bis man auf die Überschrift klickt — Zähler und Genauigkeit stehen trotzdem da', () => {
     const { fixture, http, el } = setup({ graphClosed: true });
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     expect(el.querySelector('app-eval-graph')).toBeNull();
     expect(el.querySelector('table.summary')).not.toBeNull();
@@ -228,7 +234,7 @@ describe('GameReviewComponent', () => {
     TestBed.inject(TranslateService).setTranslation('en', { games: { review: { bookHint: 'In your repertoire' } } });
     TestBed.inject(TranslateService).use('en');
     // Zug 1 (…c5) ist ein Patzer — steht er im Repertoire, heißt er trotzdem „Buch".
-    http.expectOne(url).flush({ ...evals('done'), bookPlies: [0, 1] });
+    flushEvals(http, { ...evals('done'), bookPlies: [0, 1] });
     fixture.componentRef.setInput('currentIndex', 1);
     fixture.detectChanges();
 
@@ -239,12 +245,28 @@ describe('GameReviewComponent', () => {
     expect(el.querySelectorAll('app-eval-graph .dot').length).toBe(0);
   });
 
+  // 0.664.0: die Kurve kommt sofort, die Buchzüge später — und ein späterer schneller Takt löscht sie nicht wieder.
+  it('Buchzüge: erst schnell ohne, dann einmal voll nachgetragen; spätere Takte behalten sie', fakeAsync(() => {
+    const { fixture, http, el } = setup();
+    http.expectOne(`${url}?book=0`).flush({ ...evals('running'), bookPlies: [] });
+    fixture.detectChanges();
+    expect(el.querySelector('.review')).not.toBeNull();   // die Auswertung steht, bevor die Buchzüge da sind
+
+    http.expectOne(url).flush({ ...evals('running'), bookPlies: [0, 1] });   // die volle Antwort
+    tick(GameReviewComponent.PollMs);
+    http.expectOne(`${url}?book=0`).flush({ ...evals('done'), bookPlies: [] });
+    http.expectNone(url);                                  // nur EINMAL je Adresse voll
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.evals()!.bookPlies).toEqual([0, 1]);
+  }));
+
   // Zwei Durchgänge (0.523.0): nach dem schnellen ist die Analyse „done", die Vertiefung läuft im Hintergrund.
   it('Vertiefung: Text statt Knopf-Sperre, gemächlich alle 60 s nachfragen — und Ruhe, sobald sie fertig ist', fakeAsync(() => {
     const { fixture, http, el, statuses } = setup();
     TestBed.inject(TranslateService).setTranslation('en', { games: { review: { refining: 'Deeper {{done}}/{{total}}' } } });
     TestBed.inject(TranslateService).use('en');
-    http.expectOne(url).flush({ ...evals('done'), refining: true, refined: 1 });
+    flushEvals(http, { ...evals('done'), refining: true, refined: 1 });
     fixture.detectChanges();
 
     expect(statuses).toEqual(['done']);                       // die Seite blendet ihren Knopf aus
@@ -253,7 +275,7 @@ describe('GameReviewComponent', () => {
     tick(GameReviewComponent.PollMs);
     http.expectNone(url);                                     // nicht im 10-s-Takt
     tick(GameReviewComponent.RefinePollMs - GameReviewComponent.PollMs);
-    http.expectOne(url).flush({ ...evals('done'), refining: false, refined: 2 });
+    flushEvals(http, { ...evals('done'), refining: false, refined: 2 });
     fixture.detectChanges();
     expect(el.querySelector('.progress')).toBeNull();
 
@@ -263,7 +285,7 @@ describe('GameReviewComponent', () => {
 
   it('geschlossen = kein Nachfragen mehr', fakeAsync(() => {
     const { fixture, http } = setup();
-    http.expectOne(url).flush(evals('pending', false));
+    flushEvals(http, evals('pending', false));
     fixture.destroy();
     tick(GameReviewComponent.PollMs * 2);
     http.expectNone(url);
@@ -271,7 +293,7 @@ describe('GameReviewComponent', () => {
 
   it('fertig: Zähler je Seite, Genauigkeit, und die Klasse des AKTUELLEN Zugs', () => {
     const { fixture, http, el } = setup();
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
 
     expect(el.querySelector('tr.row-white td.count.best')!.textContent!.trim()).toBe('1');
@@ -289,7 +311,7 @@ describe('GameReviewComponent', () => {
 
   it('Fehler-Erklärungen (0.534.0): Knopf beim Besitzer, danach nachfragen, Text beim aktuellen Zug, im Training aus', fakeAsync(() => {
     const { fixture, http, el } = setup();
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     const ex = '/api/games/4/explanations';
     http.expectOne(r => r.url === ex && r.method === 'GET' && r.params.get('lang') === 'en')
@@ -326,7 +348,7 @@ describe('GameReviewComponent', () => {
 
   it('Meisterkommentar (0.542.0): Quelle unter der Erklärung, Wortlaut zum Aufklappen; ohne Kommentar keine Zeile', () => {
     const { fixture, http, el } = setup();
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     http.expectOne(r => r.url === '/api/games/4/explanations').flush({
       available: true, canGenerate: false, running: false, language: 'en',
@@ -359,7 +381,7 @@ describe('GameReviewComponent', () => {
 
   it('Fehler-Erklärungen: fremde Partie (kein Erzeugen) und ohne Modell — kein Knopf', () => {
     const { fixture, http, el } = setup();
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     http.expectOne(r => r.url === '/api/games/4/explanations')
       .flush({ available: false, canGenerate: false, running: false, language: 'en', items: [] });
@@ -370,14 +392,14 @@ describe('GameReviewComponent', () => {
 
   it('Fehler und grobe Fehler gehen als Punkte in die Kurve', () => {
     const { fixture, http, el } = setup();
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     expect(el.querySelectorAll('app-eval-graph .dot.blunder').length).toBe(1);
   });
 
   it('ein Klick in die Kurve geht als Zug-Index nach außen', () => {
     const { fixture, http, el } = setup();
-    http.expectOne(url).flush(evals('done'));
+    flushEvals(http, evals('done'));
     fixture.detectChanges();
     const clicked: number[] = [];
     fixture.componentInstance.moveClicked.subscribe(i => clicked.push(i));
@@ -422,7 +444,7 @@ describe('GameReviewComponent', () => {
 
     it('zehn Spalten (mit Buch); Zähler je Seite und Punkte in der Kurve auch für Great und Miss, in der Farbe der Tabelle', () => {
       const { fixture, http, el } = setup({ fens: sicilian, moves: sicilianMoves });
-      http.expectOne(url).flush(sicilianEvals);
+      flushEvals(http, sicilianEvals);
       fixture.detectChanges();
 
       expect(el.querySelectorAll('thead .sym').length).toBe(10);
@@ -446,7 +468,7 @@ describe('GameReviewComponent', () => {
         greatGap: 'next best {{gap}} pawns worse', missHint: 'did not punish',
       } } });
       TestBed.inject(TranslateService).use('en');
-      http.expectOne(url).flush(sicilianEvals);
+      flushEvals(http, sicilianEvals);
       fixture.componentRef.setInput('currentIndex', 2);
       fixture.detectChanges();
       expect(badgeTooltip(fixture)).toBe('next best 2.0 pawns worse');
@@ -469,7 +491,7 @@ describe('GameReviewComponent', () => {
         sacrifice: 'Sacrifice: {{piece}} on {{square}}', piece: { b: 'bishop' },
       } } });
       TestBed.inject(TranslateService).use('en');
-      http.expectOne(url).flush({
+      flushEvals(http, {
         status: 'done', analyzed: 1, total: 1, targetDepth: 20,
         plies: [{ ply: 0, cp: 150, depth: 20, bestUci: 'd3h7', playedUci: 'd3h7', secondCp: 50 }],
         final: { cp: 150 },
@@ -485,7 +507,7 @@ describe('GameReviewComponent', () => {
 
     it('ohne Züge (die Seite reicht keine herein) bleibt es bei den Grundklassen', () => {
       const { fixture, http, el } = setup({ fens: sicilian });
-      http.expectOne(url).flush(sicilianEvals);
+      flushEvals(http, sicilianEvals);
       fixture.detectChanges();
       expect(count(el, 'white', 'great')).toBe('0');
       expect(count(el, 'white', 'miss')).toBe('0');
@@ -496,9 +518,9 @@ describe('GameReviewComponent', () => {
 
   it('reload() fragt sofort neu (nach „Partie analysieren")', () => {
     const { fixture, http, statuses } = setup();
-    http.expectOne(url).flush({ status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [] });
+    flushEvals(http, { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [] });
     fixture.componentInstance.reload();
-    http.expectOne(url).flush(evals('pending', false));
+    flushEvals(http, evals('pending', false));
     expect(statuses).toEqual(['none', 'pending']);
   });
 });

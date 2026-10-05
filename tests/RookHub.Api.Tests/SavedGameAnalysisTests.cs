@@ -629,6 +629,12 @@ public class SavedGameAnalysisTests : IDisposable
 
         Assert.Equal(new[] { 0, 1, 2 }, mine!.BookPlies);            // 2…d6 steht nicht im Repertoire
         Assert.Empty(anonymous!.BookPlies);
+
+        // 0.664.0: ohne Buchzüge (der schnelle Weg der Seite) bleibt alles andere gleich, nur die Liste ist leer.
+        var fast = await _svc.GetEvalsAsync(owner.Id, game.Id, withBook: false);
+        Assert.Empty(fast!.BookPlies);
+        Assert.Equal(mine.Plies.Count, fast.Plies.Count);
+        Assert.Equal(mine.Status, fast.Status);
     }
 
     /// <summary>Anonym gibt es NUR die verknuepfte Analyse — ohne Verknuepfung nichts, auch wenn

@@ -17,6 +17,12 @@ import { By } from '@angular/platform-browser';
 import { GameReviewComponent } from './game-review.component';
 import { SharedGameComponent } from './shared-game.component';
 
+/** Die Auswertung fragt zweimal: schnell ohne Buchzüge (`?book=0`), danach einmal voll (0.664.0) — beide bekommen dieselbe Antwort. */
+function flushEvals(http: HttpTestingController, url: string, body: object): void {
+  http.expectOne(`${url}?book=0`).flush(body);
+  http.match(url).forEach(r => r.flush(body));
+}
+
 describe('SharedGameComponent', () => {
   async function setup(loggedIn = false, own = false, extra: unknown[] = [], perms: string[] = []) {
     const snapshot = own
@@ -469,7 +475,7 @@ describe('SharedGameComponent', () => {
     // Angemeldet fragt die Seite vorab, ob eine Engine da ist (wie die Punktepartie-Seite).
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
     fixture.detectChanges();
-    http.expectOne('/api/games/shared/tok/evals').flush(noEvals);
+    flushEvals(http, '/api/games/shared/tok/evals', noEvals);
     fixture.detectChanges();
 
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
@@ -479,7 +485,7 @@ describe('SharedGameComponent', () => {
     expect(post.request.body).toEqual({ lang: 'en' });
     post.flush({ analysis: { id: 7 }, reused: false });
     expect(navigate).not.toHaveBeenCalled();
-    http.expectOne('/api/games/shared/tok/evals').flush(runningEvals);
+    flushEvals(http, '/api/games/shared/tok/evals', runningEvals);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-game-review .review')).not.toBeNull();
   });
@@ -490,7 +496,7 @@ describe('SharedGameComponent', () => {
     http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
     fixture.detectChanges();
-    http.expectOne('/api/games/shared/tok/evals').flush(noEvals);
+    flushEvals(http, '/api/games/shared/tok/evals', noEvals);
     fixture.detectChanges();
 
     fixture.componentInstance.analyze();
@@ -504,7 +510,7 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
     http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
     fixture.detectChanges();
-    http.expectOne('/api/games/shared/tok/evals').flush({ ...runningEvals, status: 'done' });
+    flushEvals(http, '/api/games/shared/tok/evals', { ...runningEvals, status: 'done' });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-game-review .review')).not.toBeNull();
@@ -516,7 +522,7 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
     http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
     fixture.detectChanges();
-    http.expectOne('/api/games/shared/tok/evals').flush({ ...runningEvals, status: 'done' });
+    flushEvals(http, '/api/games/shared/tok/evals', { ...runningEvals, status: 'done' });
     fixture.detectChanges();
     const review = fixture.debugElement.query(By.directive(GameReviewComponent)).componentInstance as GameReviewComponent;
     expect(review.ucis()).toEqual(['e2e4', 'c7c5']);
@@ -528,7 +534,7 @@ describe('SharedGameComponent', () => {
     http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
     fixture.detectChanges();
-    http.expectOne('/api/games/shared/tok/evals').flush(runningEvals);
+    flushEvals(http, '/api/games/shared/tok/evals', runningEvals);
     fixture.detectChanges();
 
     expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
@@ -554,7 +560,7 @@ describe('SharedGameComponent', () => {
     });
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
     fixture.detectChanges();   // erst jetzt entsteht die Kurven-Komponente und fragt die Bewertungen ab
-    http.expectOne('/api/games/4/evals').flush({ status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
+    flushEvals(http, '/api/games/4/evals', { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
@@ -565,7 +571,7 @@ describe('SharedGameComponent', () => {
 
     (el.querySelector('button.analyze') as HTMLButtonElement).click();
     http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 9 }, reused: false });
-    http.expectOne('/api/games/4/evals').flush({ status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
+    flushEvals(http, '/api/games/4/evals', { status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
   });
 
   it('own mode: a missing game shows the load error, not the „shared link" text', async () => {
