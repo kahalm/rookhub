@@ -276,3 +276,37 @@ describe('Varianten als Kommentartext (foldVariations)', () => {
     expect(game.comments[6]).toBeUndefined();
   });
 });
+
+describe('Chessables Null-Zug („--")', () => {
+  // Einleitungs-/Erklärlinien enden bei Chessable mit einem Null-Zug. chess.js kennt ihn nicht und
+  // verwarf früher die GANZE Partie — die Linie fehlte in Repertoire-Ansicht und Zugliste.
+  const INTRO = '[Event "The Gold Standard 1.e4"]\n[Round "002.002"]\n[White "Introduction"]\n'
+    + `[FEN "${START_FEN}"]\n[Result "*"]\n\n`
+    + '1. e4 {Hallo und willkommen zum Kurs.} 1... -- {Hier geht es weiter mit 1.d4 als Vergleich.} *\n';
+
+  it('die Linie wird gelesen, der Kommentar dahinter bleibt erhalten', () => {
+    const [game] = parsePgnText(INTRO);
+    expect(game).toBeTruthy();
+    expect(game.moves.map(m => m.san)).toEqual(['e4']);
+    expect(game.comments[0]).toBe('Hallo und willkommen zum Kurs. Hier geht es weiter mit 1.d4 als Vergleich.');
+  });
+
+  it('auch mit eingefalteten Varianten und ohne Zugnummer vor dem Null-Zug', () => {
+    const pgn = '[Event "x"]\n[Result "*"]\n\n1. e4 {Intro} -- ({Vergleich} 1.d4 d5) {Schluss} *\n';
+    const [game] = parsePgnText(pgn, { foldVariations: true });
+    expect(game.moves.map(m => m.san)).toEqual(['e4']);
+    expect(game.comments[0]).toContain('Vergleich 1.d4 d5');
+    expect(game.comments[0]).toContain('Schluss');
+  });
+
+  it('ein Gedankenstrich im Kommentar bleibt stehen', () => {
+    const [game] = parsePgnText('[Event "x"]\n[Result "*"]\n\n1. e4 {kurz -- und knapp} e5 *\n');
+    expect(game.moves.map(m => m.san)).toEqual(['e4', 'e5']);
+    expect(game.comments[0]).toBe('kurz -- und knapp');
+  });
+
+  it('Rochaden und Ergebnisse werden nicht angetastet', () => {
+    const [game] = parsePgnText('[Event "x"]\n[Result "1/2-1/2"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. O-O Nf6 5. d3 O-O 1/2-1/2\n');
+    expect(game.moves.map(m => m.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'O-O', 'Nf6', 'd3', 'O-O']);
+  });
+});

@@ -97,6 +97,33 @@ export function foldVariationsIntoComments(moveText: string): string {
   return out;
 }
 
+/**
+ * Entfernt Chessables NULL-ZUG („--", samt seiner Zugnummer) aus dem Zugtext. Chessable schreibt ihn in
+ * Einleitungs-/Erklärlinien, wo kein Zug folgt; chess.js kennt ihn nicht und verwirft damit die GANZE
+ * Partie (stillschweigend — die Linie fehlte in der Repertoire-Ansicht; auf Dev 85 von 1715 Partien).
+ * Kommentare bleiben unberührt: Der Scanner überspringt `{…}`, sonst träfe die Regel auch einen
+ * Gedankenstrich in der Prosa. Muss VOR `extractComments` laufen, damit die Zug-Zählung dort zu der
+ * Zugliste von chess.js passt.
+ */
+function stripNullMoves(moveText: string): string {
+  let out = '';
+  let inComment = false;
+  for (let i = 0; i < moveText.length; i++) {
+    const c = moveText[i];
+    if (inComment) { out += c; if (c === '}') inComment = false; continue; }
+    if (c === '{') { inComment = true; out += c; continue; }
+    if (c === '-' && moveText[i + 1] === '-' && !/[-\w]/.test(moveText[i + 2] ?? '')) {
+      // Die Zugnummer davor („1..." / „12.") gehört zu diesem Zug und muss mit weg.
+      out = out.replace(/(?:^|\s)\d+\.(?:\.\.|\u2026)?\s*$/, ' ');
+      out += ' ';
+      i++;
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
 function stripNags(moveText: string): string {
   return moveText
     .replace(/\$\d+/g, '')
@@ -208,6 +235,7 @@ export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions):
       if (opts?.foldVariations) moveText = foldVariationsIntoComments(moveText);
       moveText = stripVariations(moveText);
       moveText = stripNags(moveText);
+      moveText = stripNullMoves(moveText);
       // Direkt aufeinanderfolgende Kommentare zu EINEM zusammenfassen: chess.js lehnt „{a} {b}" ab und das
       // ganze Spiel fiele weg. Sie entstehen beim Einfalten und stehen auch so in manchen Quellen
       // („{[%cal …]} {Text}"); extractComments hätte sie ohnehin mit Leerzeichen verbunden.

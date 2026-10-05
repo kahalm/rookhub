@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.658.1", date: "2026-10-05", changes: [
+    { en: "Repertoires: a line that ends with Chessable’s “no move” marker was silently missing from the line view and the move list — in the test data 85 of 1715 lines. Those lines are read again, with their text.", de: "Repertoires: Eine Linie, die mit Chessables Marker für „kein Zug“ endet, fehlte unbemerkt in Linienansicht und Zugliste — in den Testdaten 85 von 1715 Linien. Diese Linien werden wieder gelesen, mit ihrem Text." },
+  ] },
   { version: "0.658.0", date: "2026-10-05", changes: [
     { en: "LeagueHub forecast statistics: instead of “players”/“board”, now per occupied board whether the actual player was the first suggestion (place 1), among the first two (top 2) or among the three (top 3) — each with how often it should have hit according to the stated percentages. New: “How well do the percentages fit?” — all percentages from 2 % grouped by size, stated against happened, with the average deviation.", de: "LeagueHub-Prognose-Statistik: statt „Spieler“/„Brett“ jetzt je besetztem Brett, ob der tatsächliche Spieler der erste Vorschlag war (Platz 1), unter den ersten beiden (Top 2) oder unter den dreien (Top 3) — je mit dem Wert, wie oft es nach den angesagten Prozenten hätte treffen sollen. Neu: „Wie gut passen die Prozente?“ — alle Angaben ab 2 % nach Höhe gruppiert, angesagt gegen eingetroffen, mit der mittleren Abweichung." },
   ] },
