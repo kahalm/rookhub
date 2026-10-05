@@ -212,6 +212,8 @@ public class LeagueEngineTests
         // erwartet: Summe der Angaben der ersten 1/2/3 je Brett (Tausendstel), höchstens ein Treffer je Brett
         var (e1, e2, e3) = (ev["e1"]!.GetValue<int>(), ev["e2"]!.GetValue<int>(), ev["e3"]!.GetValue<int>());
         Assert.True(e1 <= e2 && e2 <= e3 && e3 <= 2000);
+        Assert.InRange(ev["pa"]!.GetValue<int>(), 0, 2000);                                // Wahrscheinlichkeit für den, der kam
+        Assert.Equal(2 * 1000 / fx["1"]!["roster"]!.AsArray().Count, ev["pb"]!.GetValue<int>());   // Raten: 1/Meldeliste je Brett
         var cal = ev["cal"]!.AsArray();
         Assert.Equal(10, cal.Count);
         Assert.True(cal.Sum(c => c![2]!.GetValue<long>()) <= 2);                            // je Brett höchstens ein Eintreffen
@@ -258,7 +260,7 @@ public class LeagueEngineTests
         var s = await new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance).ForecastStatsAsync(default);
 
         Assert.Equal("2026/27", s["season"]!.GetValue<string>());
-        Assert.Equal("{\"fixtures\":4,\"top1\":10,\"top2\":18,\"top3\":22,\"of\":30,\"e1\":0,\"e2\":0,\"e3\":0}", s["total"]!.ToJsonString());   // ohne Vorsaison, ohne eval der alten Form
+        Assert.Equal("{\"fixtures\":4,\"top1\":10,\"top2\":18,\"top3\":22,\"of\":30,\"e1\":0,\"e2\":0,\"e3\":0,\"pa\":0,\"pb\":0}", s["total"]!.ToJsonString());   // ohne Vorsaison, ohne eval der alten Form
         Assert.Equal(10, s["calibration"]!.AsArray().Count);
         var r = s["rounds"]!.AsArray();
         Assert.Equal(new[] { 1, 2 }, r.Select(x => x!["round"]!.GetValue<int>()));

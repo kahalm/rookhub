@@ -54,7 +54,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 </p>
               }
               <p class="info-line">
-                <span>Prognose</span>   <!-- Wunsch 2026-10-05 (0.658.2): „schreib hier nur Prognose" — die Treffer stehen im (i) -->
+                <span>Prognose@if (calibration(); as cal) { ({{ cal.score }} % korrekt)}</span>   <!-- 0.659.0: „dahinter (98,7 % korrekt)" -->
                 <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'forecast'" aria-label="Wie die Prognose zustande kommt"
                         title="Wie die Prognose zustande kommt" (click)="toggleInfo('forecast')">i</button>
               </p>
@@ -109,8 +109,11 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                       </tbody>
                     </table></div>
                     @if (calibration(); as cal) {
-                      <p class="note cal-h"><b>Wie gut passen die Prozente?</b> Alle Angaben ab 2 % über alle Bretter, nach Höhe gruppiert: angesagt
-                        gegen eingetroffen. Bei guten Prozenten liegen beide nah beisammen — im Schnitt {{ cal.gap }} Prozentpunkte daneben.</p>
+                      <p class="note cal-h"><b>Die Prozente stimmen zu {{ cal.score }} %</b> — im Schnitt {{ cal.gap }} Prozentpunkte daneben.
+                        @if (cal.said) { Dem Spieler, der wirklich kam, gab die Prognose im Schnitt {{ cal.said }} %; Raten über die Meldeliste gäbe {{ cal.guess }} %. }</p>
+                      <p class="note">Gemessen über alle Angaben ab 2 % aller Bretter, nach Höhe gruppiert: angesagt gegen eingetroffen. Sagt die
+                        Prognose 30 % und der Spieler kommt in 30 % der Fälle, stimmt sie — auch wenn er oft nicht kommt. Gewichtet nach der
+                        angesagten Wahrscheinlichkeit.</p>
                       <div class="src-scroll"><table class="src-tbl stats-tbl cal-tbl">
                         <thead><tr><th scope="col">Angabe</th><th scope="col" class="num">Fälle</th><th scope="col" class="num">angesagt</th>
                           <th scope="col" class="num">eingetroffen</th></tr></thead>
@@ -284,14 +287,28 @@ export class FixtureViewComponent {
     return of && e != null ? `erw. ${Math.round(e / of / 10)} %` : '';
   }
 
-  /** Kalibrierung (0.658.0): je Stufe angesagt Ø und eingetroffen in %, dazu die mittlere Abweichung (nach Fällen gewichtet). */
+  /**
+   * Kalibrierung: je Stufe angesagt Ø und eingetroffen in %, dazu die mittlere Abweichung — seit 0.659.0 gewichtet nach der
+   * angesagten Wahrscheinlichkeit (eine 50-%-Angabe zählt mehr als eine 3-%-Angabe; nach Fällen gewichtet dominierten die
+   * vielen kleinen Angaben) — und „korrekt" = 100 − Abweichung (Wunsch 2026-10-05). `said`/`guess`: was die Prognose dem gab,
+   * der wirklich kam, und was gleichmäßiges Raten über die Meldeliste gäbe — ohne diese zweite Zahl wäre auch „jeder gleich"
+   * perfekt kalibriert.
+   */
   readonly calibration = computed(() => {
-    const cal = this.stats()?.calibration?.filter(b => b.n > 0);
+    const st = this.stats();
+    const cal = st?.calibration?.filter(b => b.n > 0);
     if (!cal?.length) return null;
     const rows = cal.map(b => ({ from: b.from, n: b.n, said: Math.round(b.p / b.n / 10), came: Math.round((b.hits / b.n) * 100) }));
-    const n = cal.reduce((s, b) => s + b.n, 0);
-    const gap = cal.reduce((s, b) => s + Math.abs(b.p / b.n / 10 - (b.hits / b.n) * 100) * b.n, 0) / n;
-    return { rows, gap: (Math.round(gap * 10) / 10).toString().replace('.', ',') };
+    const mass = cal.reduce((s, b) => s + b.p, 0);
+    if (!mass) return null;
+    const gap = cal.reduce((s, b) => s + Math.abs(b.p / b.n / 10 - (b.hits / b.n) * 100) * b.p, 0) / mass;
+    const de = (x: number) => (Math.round(x * 10) / 10).toString().replace('.', ',');
+    const t = st!.total;
+    return {
+      rows, gap: de(gap), score: de(Math.max(0, 100 - gap)),
+      said: t.of && t.pa != null ? Math.round(t.pa / t.of / 10) : null,
+      guess: t.of && t.pb != null ? Math.round(t.pb / t.of / 10) : null,
+    };
   });
 
   /** „R1 31 % · R2 44 %" — Platz 1 je Runde einer Liga. */

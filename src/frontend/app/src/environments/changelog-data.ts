@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.659.0", date: "2026-10-05", changes: [
+    { en: "LeagueHub forecast: the line at the top now says how correct the percentages are, e.g. “Forecast (98.7 % correct)” — 100 minus the average gap between stated and happened, weighted by the stated probability. The (i) adds what the forecast gave the player who actually came (on average) against guessing evenly over the roster.", de: "LeagueHub-Prognose: Die Zeile oben sagt jetzt, wie korrekt die Prozente sind, z. B. „Prognose (98,7 % korrekt)“ — 100 minus die mittlere Abweichung zwischen angesagt und eingetroffen, gewichtet nach der angesagten Wahrscheinlichkeit. Im (i) dazu, was die Prognose dem Spieler gab, der wirklich kam (im Schnitt), gegen gleichmäßiges Raten über die Meldeliste." },
+  ] },
   { version: "0.658.2", date: "2026-10-05", changes: [
     { en: "LeagueHub match view: the forecast line at the top just says “Forecast” again — the hit rates are in its (i).", de: "LeagueHub-Begegnung: Die Prognose-Zeile oben heißt wieder nur „Prognose“ — die Trefferzahlen stehen in ihrem (i)." },
   ] },

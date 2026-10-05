@@ -278,7 +278,7 @@ public sealed class LeagueViewBuilder
     private static JsonObject Evaluate(List<FeatureRow> rows, double[] p, double[,] bp, int b, Dictionary<int, ActualBoard> act)
     {
         int top1 = 0, top2 = 0, top3 = 0, of = 0;
-        double e1 = 0, e2 = 0, e3 = 0;
+        double e1 = 0, e2 = 0, e3 = 0, pa = 0, pb = 0;
         var cal = new long[10, 3];
         foreach (var (board, ab) in act)
         {
@@ -292,6 +292,10 @@ public sealed class LeagueViewBuilder
             e3 += order.Take(3).Sum(i => bp[i, k]);
             var pid = LeagueNames.Pid(ab.Fide, LeagueNames.NameKey(ab.Name));
             var idx = rows.FindIndex(x => x.Pid == pid);
+            // Mehrwert gegenüber Raten (0.659.0): was die Prognose dem gab, der wirklich kam — gegen gleichmäßiges Raten
+            // über die Meldeliste (1 / Zahl der Gemeldeten)
+            if (idx >= 0) pa += bp[idx, k];
+            if (rows.Count > 0) pb += 1.0 / rows.Count;
             foreach (var i in order)
             {
                 var pr = bp[i, k];
@@ -313,6 +317,7 @@ public sealed class LeagueViewBuilder
         {
             ["top1"] = top1, ["top2"] = top2, ["top3"] = top3, ["of"] = of,
             ["e1"] = (int)Math.Round(e1 * 1000), ["e2"] = (int)Math.Round(e2 * 1000), ["e3"] = (int)Math.Round(e3 * 1000),
+            ["pa"] = (int)Math.Round(pa * 1000), ["pb"] = (int)Math.Round(pb * 1000),
             ["cal"] = calJson,
         };
     }

@@ -185,7 +185,8 @@ public sealed class LeagueService
                     int P(string k) => ev[k]?.GetValue<int>() ?? 0;
                     var (t1, t2, t3, of) = (P("top1"), P("top2"), P("top3"), P("of"));
                     var (e1, e2, e3) = (P("e1"), P("e2"), P("e3"));
-                    foreach (var x in new[] { total, lt, Get(byRound, r), Get(lr, r) }) x.Add(t1, t2, t3, of, e1, e2, e3);
+                    var (pa, pb) = (P("pa"), P("pb"));
+                    foreach (var x in new[] { total, lt, Get(byRound, r), Get(lr, r) }) x.Add(t1, t2, t3, of, e1, e2, e3, pa, pb);
                     if (ev["cal"] is JsonArray cal)
                         for (var i = 0; i < Math.Min(10, cal.Count); i++)
                             if (cal[i] is JsonArray c && c.Count == 3)
@@ -226,14 +227,17 @@ public sealed class LeagueService
         public int Fixtures, Top1, Top2, Top3, Of;
         /// <summary>Erwartete Treffer (Tausendstel): Summe der angesagten Wahrscheinlichkeiten der ersten 1/2/3.</summary>
         public long E1, E2, E3;
-        public void Add(int top1, int top2, int top3, int of, int e1, int e2, int e3)
+        /// <summary>Summe der Wahrscheinlichkeit, die die Prognose dem gab, der wirklich kam (<c>pa</c>), und die gleichmäßiges
+        /// Raten über die Meldeliste ergäbe (<c>pb</c>) — Tausendstel (0.659.0).</summary>
+        public long Pa, Pb;
+        public void Add(int top1, int top2, int top3, int of, int e1, int e2, int e3, int pa, int pb)
         {
-            Fixtures++; Top1 += top1; Top2 += top2; Top3 += top3; Of += of; E1 += e1; E2 += e2; E3 += e3;
+            Fixtures++; Top1 += top1; Top2 += top2; Top3 += top3; Of += of; E1 += e1; E2 += e2; E3 += e3; Pa += pa; Pb += pb;
         }
         public JsonObject ToJson() => new()
         {
             ["fixtures"] = Fixtures, ["top1"] = Top1, ["top2"] = Top2, ["top3"] = Top3, ["of"] = Of,
-            ["e1"] = E1, ["e2"] = E2, ["e3"] = E3,
+            ["e1"] = E1, ["e2"] = E2, ["e3"] = E3, ["pa"] = Pa, ["pb"] = Pb,
         };
     }
 

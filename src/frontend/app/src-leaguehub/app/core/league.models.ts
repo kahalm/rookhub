@@ -139,7 +139,9 @@ export interface Fixture {
 
 /** Seit 0.658.0: an wie vielen besetzten Brettern (`of`) der Spieler Platz 1, unter den ersten 2 bzw. 3 der Vorschläge war;
  *  `e1..e3` = so oft hätte es nach den angesagten Prozenten treffen sollen (Tausendstel, Summe über die Bretter). */
-export interface ForecastHits { top1: number; top2: number; top3: number; of: number; e1?: number; e2?: number; e3?: number }
+export interface ForecastHits { top1: number; top2: number; top3: number; of: number; e1?: number; e2?: number; e3?: number;
+  /** 0.659.0: Wahrscheinlichkeit für den, der wirklich kam (`pa`) bzw. bei gleichmäßigem Raten über die Meldeliste (`pb`), Tausendstel. */
+  pa?: number; pb?: number }
 /** Treffer der Prognose über alle Begegnungen der Saison (0.650.0, `GET /api/league/forecast-stats`). */
 export interface ForecastTally extends ForecastHits { fixtures: number }
 export interface ForecastStats {
