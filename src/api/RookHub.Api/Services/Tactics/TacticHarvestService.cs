@@ -278,11 +278,18 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         return published;
     }
 
-    /// <summary>Was die Lösung bringt: „Die Lösung bringt +5.3." bzw. „Die Lösung setzt in 3 Zügen matt."</summary>
-    internal static string Outcome(string? eval) =>
-        eval is { Length: > 1 } && eval[0] == '#' && int.TryParse(eval[1..], out var n)
-            ? (n == 1 ? "Die Lösung setzt matt." : $"Die Lösung setzt in {n} Zügen matt.")
-            : $"Die Lösung bringt {eval ?? "?"}.";
+    /// <summary>Was die Lösung bringt, in Worten statt Zahl (Wunsch 2026-10-05): „Die Lösung bringt einen Vorteil." /
+    /// „… führt zur Gewinnstellung." / „… setzt in 3 Zügen matt." Aus der Bewertung des Lösers (<c>+5.3</c> / <c>#3</c>).</summary>
+    internal static string Outcome(string? eval)
+    {
+        if (eval is { Length: > 1 } && eval[0] == '#' && int.TryParse(eval[1..], out var n))
+            return n == 1 ? "Die Lösung setzt matt." : $"Die Lösung setzt in {n} Zügen matt.";
+        if (!double.TryParse(eval, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pawns))
+            return "Die Lösung bringt einen Vorteil.";
+        return pawns < 1.5 ? "Die Lösung bringt einen leichten Vorteil."
+            : pawns < 3.5 ? "Die Lösung bringt einen klaren Vorteil."
+            : "Die Lösung führt zur Gewinnstellung.";
+    }
 
     private async Task<Book> EnsureBookAsync(string file, string name, int? owner, bool club, CancellationToken ct)
     {
@@ -388,17 +395,20 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         return null;
     }
 
-    /// <summary>Alte Kommentare „… Nach dem ersten Zug: +5.3." auf die Formulierung von <see cref="Outcome"/> umstellen.</summary>
+    private static readonly System.Text.RegularExpressions.Regex OldOutcome =
+        new(@" (?:Nach dem ersten Zug: |Die Lösung bringt )([+-]?\d+(?:\.\d+)?|#\d+)\.$");
+
+    /// <summary>Alte Kommentare mit Zahl („… Nach dem ersten Zug: +5.3." bzw. „Die Lösung bringt +5.3.") auf die Worte von
+    /// <see cref="Outcome"/> umstellen (Matt-Texte „#3" der ersten Fassung ebenso).</summary>
     private async Task RewordCommentsAsync(CancellationToken ct)
     {
-        const string old = " Nach dem ersten Zug: ";
-        var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.Comment != null && p.Comment.Contains(old))
+        var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.Comment != null
+                && (p.Comment.Contains("Nach dem ersten Zug: ") || p.Comment.Contains("Die Lösung bringt +") || p.Comment.Contains("Die Lösung bringt -")))
             .Take(200).ToListAsync(ct);
         foreach (var p in puzzles)
         {
-            var i = p.Comment!.LastIndexOf(old, StringComparison.Ordinal);
-            var eval = p.Comment[(i + old.Length)..].TrimEnd('.');
-            p.Comment = p.Comment[..i] + " " + Outcome(eval);
+            var m = OldOutcome.Match(p.Comment!);
+            if (m.Success) p.Comment = p.Comment![..m.Index] + " " + Outcome(m.Groups[1].Value);
         }
         if (puzzles.Count > 0) await db.SaveChangesAsync(ct);
     }
