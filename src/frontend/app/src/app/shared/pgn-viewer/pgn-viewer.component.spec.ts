@@ -9,6 +9,12 @@ import { By } from '@angular/platform-browser';
 import { GameReviewComponent } from '../../features/games/game-review.component';
 import { PgnViewerComponent } from './pgn-viewer.component';
 
+/** Die Auswertung fragt zweimal: schnell ohne Buchzüge (`?book=0`), danach einmal voll (0.664.0) — beide bekommen dieselbe Antwort. */
+function flushEvals(http: HttpTestingController, url: string, body: object): void {
+  http.expectOne(`${url}?book=0`).flush(body);
+  http.match(url).forEach(r => r.flush(body));
+}
+
 describe('PgnViewerComponent', () => {
   async function setup(data: object = {}) {
     await TestBed.configureTestingModule({
@@ -75,14 +81,14 @@ describe('PgnViewerComponent', () => {
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
-    http.expectOne('/api/games/4/evals').flush({ status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
+    flushEvals(http, '/api/games/4/evals', { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
     fixture.detectChanges();
 
     const button = fixture.nativeElement.querySelector('.viewer-header button.analyze') as HTMLButtonElement;
     expect(button).not.toBeNull();
     button.click();
     http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 3 }, reused: false });
-    http.expectOne('/api/games/4/evals').flush(running);
+    flushEvals(http, '/api/games/4/evals', running);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.board-section app-game-review .review')).not.toBeNull();
@@ -93,7 +99,7 @@ describe('PgnViewerComponent', () => {
   it('hands the moves to the review as UCI — the basis for Brilliant, Great and Miss', async () => {
     const fixture = await setup({ pgn, evalsUrl: '/api/games/4/evals' });
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne('/api/games/4/evals').flush(running);
+    flushEvals(TestBed.inject(HttpTestingController), '/api/games/4/evals', running);
     fixture.detectChanges();
     const review = fixture.debugElement.query(By.directive(GameReviewComponent)).componentInstance as GameReviewComponent;
     expect(review.ucis()).toEqual(['e2e4', 'e7e5', 'g1f3', 'b8c6']);
@@ -111,7 +117,7 @@ describe('PgnViewerComponent', () => {
   it('with a graph the board makes room for it, so the column still fits the 90-vh dialog', async () => {
     const fixture = await setup({ pgn, evalsUrl: '/api/games/4/evals' });
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne('/api/games/4/evals').flush(running);
+    flushEvals(TestBed.inject(HttpTestingController), '/api/games/4/evals', running);
     fixture.detectChanges();
 
     const body = fixture.nativeElement.querySelector('.viewer-body') as HTMLElement;
