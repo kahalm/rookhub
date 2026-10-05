@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { PlayerSearchComponent } from './player-search.component';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
@@ -198,6 +198,7 @@ export class ClubGamesPageComponent implements OnInit {
   readonly sides: Side[] = ['white', 'black'];
   readonly rookHub = rookHubUrlForLeagueHub();
   private readonly handoff = inject(HandoffService);
+  private readonly route = inject(ActivatedRoute);
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
   /** Die Partie, die gerade korrigiert wird — je Seite die Festlegung (fehlt = unverändert) und das Ergebnis. */
   readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string } | null>(null);
@@ -213,7 +214,21 @@ export class ClubGamesPageComponent implements OnInit {
   private seq = 0;
 
   ngOnInit(): void {
-    if (this.allowed) void this.load(1);
+    if (!this.allowed) return;
+    // `?bearbeiten=<id>` (0.675.0): aus den Paarungen einer gespielten Runde gleich diese Partie zum Bearbeiten öffnen
+    const target = Number(this.route.snapshot.queryParamMap?.get('bearbeiten'));
+    void this.load(1).then(() => { if (Number.isInteger(target) && target > 0) void this.openForEdit(target); });
+  }
+
+  /** Eine Partie zum Bearbeiten aufklappen — steht sie nicht auf der ersten Seite, wird sie vorn eingereiht. */
+  private async openForEdit(id: number): Promise<void> {
+    let g = this.items().find(x => x.id === id);
+    if (!g) {
+      try { g = await this.api.game(id); } catch { this.error.set('Die Partie konnte nicht geladen werden.'); return; }
+      this.items.set([g, ...this.items()]);
+    }
+    if (g.canDelete) this.edit(g);
+    else this.error.set('Diese Partie darfst du nicht ändern.');
   }
 
   search(q: string): void {

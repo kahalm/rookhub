@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthService } from '@rh/core/auth.service';
 import { provideTranslateService } from '@ngx-translate/core';
+import { provideRouter } from '@angular/router';
 import { LeagueApiService } from '../core/league-api.service';
 import { Fixture } from '../core/league.models';
 import { FixtureViewComponent } from './fixture-view.component';
@@ -56,7 +57,7 @@ describe('FixtureViewComponent', () => {
     TestBed.configureTestingModule({
       imports: [FixtureViewComponent],
       providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: () => false } },
-        provideTranslateService({ fallbackLang: 'de' })],
+        provideTranslateService({ fallbackLang: 'de' }), provideRouter([])],
     });
     fixture = TestBed.createComponent(FixtureViewComponent);
   });
@@ -64,7 +65,7 @@ describe('FixtureViewComponent', () => {
   it('gespielte Runde: Paarungen unter dem Ergebnis, „Partie" nur mit PGN, klappt das Nachspielen auf (0.673.0)', async () => {
     api.fixtureGames.and.resolveTo([
       { board: 1, white: 'Hess, Max', whiteElo: 2040, black: 'Binder, Moriz', blackElo: 2100, result: '½ - ½', forfeit: false,
-        pgn: '[White "Hess, Max"]\n[Black "Schwaz"]\n\n1. e4 e5 1/2-1/2', source: 'club', clubGameId: 10 },
+        pgn: '[White "Hess, Max"]\n[Black "Schwaz"]\n\n1. e4 e5 1/2-1/2', source: 'club', clubGameId: 10, canEdit: true },
       { board: 2, white: 'Gruber, Michael', whiteElo: null, black: 'Ciolek, Andreas', blackElo: 1900, result: '0 - 1', forfeit: false,
         pgn: null, source: null, clubGameId: null },
     ]);
@@ -80,6 +81,9 @@ describe('FixtureViewComponent', () => {
     expect(rows[0].textContent).toContain('Hess, Max');
     expect(rows[0].textContent).toContain('½ - ½');
     expect(rows[1].querySelector('.pg button')).toBeNull();
+    const links = Array.from(rows[0].querySelectorAll('.pg a')).map(a => a.getAttribute('href'));
+    expect(links).toEqual(['/verein?bearbeiten=10', '/verein/partie/10/korrigieren']);
+    expect(rows[1].querySelectorAll('.pg a').length).toBe(0);
     (rows[0].querySelector('.pg button') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.pairings lh-game-replay')).not.toBeNull();

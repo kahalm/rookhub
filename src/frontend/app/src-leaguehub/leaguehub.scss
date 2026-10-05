@@ -118,7 +118,8 @@ body {
 .pairings .num { width: 1.8em; color: var(--muted); text-align: right; }
 .pairings .pr { white-space: nowrap; text-align: center; font-weight: 700; }
 .pairings .pb { text-align: right; }
-.pairings .pg { width: 1%; white-space: nowrap; text-align: right; }
+.pairings .pg { text-align: right; }
+.pairings .pg .btn-link { margin-left: 6px; white-space: nowrap; }
 .pairings .replay-row td { padding: 8px 0 14px; }
 .pairings .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .boards { list-style: none; margin: 0; padding: 0; }

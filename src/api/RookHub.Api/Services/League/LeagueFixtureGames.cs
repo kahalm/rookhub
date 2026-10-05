@@ -22,9 +22,12 @@ public sealed class LeagueFixtureGames(AppDbContext db)
     public const int DayTolerance = 3;
 
     public sealed record Pairing(int Board, string? White, int? WhiteElo, string? Black, int? BlackElo, string Result,
-        bool Forfeit, string? Pgn, string? Source, int? ClubGameId);
+        bool Forfeit, string? Pgn, string? Source, int? ClubGameId, bool CanEdit = false);
 
-    public async Task<List<Pairing>> ForFixtureAsync(int tnr, int round, string team, CancellationToken ct)
+    /// <param name="userId">Der Angemeldete (über einen Teilen-Link <c>null</c>) — entscheidet mit <paramref name="canManage"/>,
+    /// ob er eine Vereinspartie bearbeiten darf (0.675.0, dieselbe Regel wie die Vereinsliste: Verwalter oder Hochladender).</param>
+    public async Task<List<Pairing>> ForFixtureAsync(int tnr, int round, string team, CancellationToken ct,
+        int? userId = null, bool canManage = false)
     {
         var games = await db.LeagueGames.AsNoTracking()
             .Where(g => g.Tnr == tnr && g.Round == round && (g.HomeTeam == team || g.AwayTeam == team))
@@ -50,17 +53,22 @@ public sealed class LeagueFixtureGames(AppDbContext db)
             var forfeit = g.Forfeit != 0 || w.Item1 is null || b.Item1 is null;
             string? pgn = null, source = null;
             int? clubId = null;
+            var canEdit = false;
             if (!forfeit)
             {
                 var hit = club.FirstOrDefault(c => SideMatches(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
                     && SideMatches(c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2, b.Item4)
                     && (Strong(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
                         || Strong(c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)));
-                if (hit is not null) (pgn, source, clubId) = (hit.Pgn, "club", hit.Id);
+                if (hit is not null)
+                {
+                    (pgn, source, clubId) = (hit.Pgn, "club", hit.Id);
+                    canEdit = userId is { } me && (canManage || hit.UploadedByUserId == me);
+                }
                 else if (date is { } d && FromProfiles(profiles, d, w.Item1!, w.Item2, b.Item1!, b.Item2) is { } raw)
                     (pgn, source) = (raw, "profile");
             }
-            result.Add(new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, g.Result, forfeit, pgn, source, clubId));
+            result.Add(new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, g.Result, forfeit, pgn, source, clubId, canEdit));
         }
         return result;
     }

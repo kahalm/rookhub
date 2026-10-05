@@ -24,7 +24,7 @@ public class LeagueFixtureGamesTests : IDisposable
             new LeagueGame { Tnr = 1, Round = 2, Board = 1, HomeTeam = "Andere", AwayTeam = "Fremde", HomePlayer = "X", AwayPlayer = "Y",
                 HomeColor = "w", Result = "1 - 0" });
         _db.LeagueClubGames.AddRange(
-            new LeagueClubGame { Id = 10, Year = 2026, White = "Hess, Max", WhiteFide = "24656666", Black = "Schwaz",
+            new LeagueClubGame { Id = 10, Year = 2026, White = "Hess, Max", WhiteFide = "24656666", Black = "Schwaz", UploadedByUserId = 7,
                 Pgn = "[White \"Hess, Max\"]\n[Black \"Schwaz\"]\n\n1. e4 e5 1/2-1/2", MovesHash = "a" },
             new LeagueClubGame { Id = 11, Year = 2025, White = "Ciolek, Andreas", WhiteFide = "12906727", Black = "Schwaz",
                 Pgn = "alt", MovesHash = "b" },   // anderes Jahr
@@ -55,6 +55,17 @@ public class LeagueFixtureGamesTests : IDisposable
         Assert.Null(list[2].Pgn);   // falsches Jahr bzw. falsche Farbe
         Assert.True(list[3].Forfeit);
         Assert.Null(list[3].Pgn);
+    }
+
+    [Fact]
+    public async Task ForFixture_bearbeitenDarfDerHochladendeUndDerVerwalter_nieUeberDenLink()
+    {
+        var svc = new LeagueFixtureGames(_db);
+        Assert.True((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 7))[0].CanEdit);
+        Assert.False((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 8))[0].CanEdit);
+        Assert.True((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 8, canManage: true))[0].CanEdit);
+        Assert.False((await svc.ForFixtureAsync(1, 2, "Schwaz", default))[0].CanEdit);   // Teilen-Link
+        Assert.False((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 8, canManage: true))[1].CanEdit);   // keine Vereinspartie
     }
 
     [Fact]

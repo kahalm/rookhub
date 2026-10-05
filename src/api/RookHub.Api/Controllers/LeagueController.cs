@@ -45,8 +45,14 @@ public class LeagueController : BaseApiController
     [HttpGet("{tnr:int}/round/{round:int}/games")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> FixtureGames(int tnr, int round, [FromQuery] string? team, [FromServices] LeagueFixtureGames games,
-        CancellationToken ct) =>
-        string.IsNullOrWhiteSpace(team) ? BadRequest() : Ok(await games.ForFixtureAsync(tnr, round, team, ct));
+        [FromServices] PermissionResolver permissions, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(team)) return BadRequest();
+        var me = GetUserId();
+        // Verwalter LIVE wie in LeagueClubController (0.589.0) — eine eben vergebene Rolle gilt sofort
+        var manage = User.IsInRole("Admin") || (await permissions.GetAsync(me)).Has(Permissions.LeagueManage);
+        return Ok(await games.ForFixtureAsync(tnr, round, team, ct, me, manage));
+    }
 
     /// <summary>Partien im Bestand je Quelle (0.626.0) → <c>{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }</c>;
     /// 30 min im Speicher. Seit 0.628.0: <c>?tnr=</c> fügt <c>league</c> hinzu (alle Meldelisten dieser Liga), <c>?fides=1,2,…</c>

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -32,7 +32,7 @@ describe('ClubGamesPageComponent', () => {
     api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [G(1), G(2, { white: 'Oberschmid, Patrik', whiteFide: '900', anonymized: false, canDelete: true })] });
   });
 
-  function create(routeData: Record<string, unknown> = {}): HTMLElement {
+  function create(routeData: Record<string, unknown> = {}, query: Record<string, string> = {}): HTMLElement {
     TestBed.configureTestingModule({
       imports: [ClubGamesPageComponent],
       providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
@@ -41,13 +41,37 @@ describe('ClubGamesPageComponent', () => {
         { provide: ClubApiService, useValue: { client: () => api } },
         { provide: LeagueApiService, useValue: jasmine.createSpyObj('LeagueApiService', ['card', 'pgn']) },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
-        { provide: ActivatedRoute, useValue: { snapshot: { data: routeData } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: routeData, queryParamMap: convertToParamMap(query) } } },
       ],
     });
     fixture = TestBed.createComponent(ClubGamesPageComponent);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  it('?bearbeiten=<id> öffnet diese Partie gleich zum Bearbeiten (0.675.0)', fakeAsync(() => {
+    create({}, { bearbeiten: '2' });
+    flushMicrotasks();
+    expect((fixture.componentInstance as any).editing()?.id).toBe(2);
+  }));
+
+  it('?bearbeiten=<id> einer Partie außerhalb der ersten Seite holt sie nach und reiht sie vorn ein', fakeAsync(() => {
+    api.game.and.resolveTo({ ...G(99, { canDelete: true }), pgn: '1. e4 *' });
+    create({}, { bearbeiten: '99' });
+    flushMicrotasks();
+    const c = fixture.componentInstance as any;
+    expect(api.game).toHaveBeenCalledWith(99);
+    expect(c.items()[0].id).toBe(99);
+    expect(c.editing()?.id).toBe(99);
+  }));
+
+  it('?bearbeiten=<id> ohne Recht: nichts aufgeklappt, Hinweis', fakeAsync(() => {
+    create({}, { bearbeiten: '1' });
+    flushMicrotasks();
+    const c = fixture.componentInstance as any;
+    expect(c.editing()).toBeNull();
+    expect(c.error()).toContain('nicht ändern');
+  }));
 
   it('die Vereinspartien fragen alle ab', fakeAsync(() => {
     create();

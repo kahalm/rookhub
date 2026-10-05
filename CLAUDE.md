@@ -1681,8 +1681,10 @@ Rollenverwaltung an).
   Vereins-Datenbank (Jahr der Runde, Farben passen, je Seite FIDE-ID — auch intern hinter „Schwaz" — oder Nachname oder „Schwaz"
   für den eigenen Verein, mindestens eine Seite über ID/Namen; mehrere: die jüngste), sonst aus den Spielerkarten (Datum ±3 Tage
   um den Rundentermin, beide Nachnamen auf ihrer Farbe). Ausgegeben wird nur das PGN der Quelle. Oberfläche: Tabelle unter dem
-  Ergebnis in `fixture-view.component.ts` (Eingabe `leagueTnr`), „Partie" klappt `lh-game-replay` auf (Vereinspartie mit Kurve,
-  nur angemeldet).
+  Ergebnis in `fixture-view.component.ts` (Eingabe `leagueTnr`), „Nachspielen" klappt `lh-game-replay` auf (Vereinspartie mit Kurve,
+  nur angemeldet). Seit 0.675.0 an einer Vereinspartie (angemeldet, nicht über den Link) dazu „Analyse" (RookHub `club-games/{id}`)
+  und mit `canEdit` (Verwalter oder Hochladender, Regel wie `CanDelete`) „Bearbeiten" → `/verein?bearbeiten={id}` (die Liste klappt
+  die Partie auf, holt sie nach, wenn sie nicht auf Seite 1 steht) und „Korrigieren" → `/verein/partie/{id}/korrigieren`.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

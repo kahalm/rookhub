@@ -37,6 +37,8 @@ export interface ActualBoard {
 export interface FixturePairing {
   board: number; white: string | null; whiteElo: number | null; black: string | null; blackElo: number | null;
   result: string; forfeit: boolean; pgn: string | null; source: 'club' | 'profile' | null; clubGameId: number | null;
+  /** 0.675.0: der Angemeldete darf die Vereinspartie bearbeiten/korrigieren (Hochladender oder Verwalter). */
+  canEdit?: boolean;
 }
 
 export interface Board {

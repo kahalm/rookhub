@@ -6,6 +6,9 @@ import { GameSourcesComponent } from './game-sources.component';
 import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
+import { RouterLink } from '@angular/router';
+import { HandoffService } from '@rh/core/handoff.service';
+import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
@@ -19,7 +22,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent],
+  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -50,7 +53,18 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   <td class="pg">
                     @if (p.pgn) {
                       <button type="button" class="btn-link" [attr.aria-expanded]="openBoard() === p.board"
-                              (click)="openBoard.set(openBoard() === p.board ? null : p.board)">{{ openBoard() === p.board ? 'Schließen' : 'Partie' }}</button>
+                              (click)="openBoard.set(openBoard() === p.board ? null : p.board)">Nachspielen</button>
+                    }
+                    <!-- 0.675.0: an einer Vereinspartie dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link nicht -->
+                    @if (p.clubGameId && !shareToken()) {
+                      @if (rookHub) { <button type="button" class="btn-link" (click)="openInRookHub(p.clubGameId)"
+                                              title="Auf RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen">Analyse</button> }
+                      @if (p.canEdit) {
+                        <a class="btn-link" [routerLink]="['/verein']" [queryParams]="{ bearbeiten: p.clubGameId }"
+                           title="Namen und Ergebnis ändern">Bearbeiten</a>
+                        <a class="btn-link" [routerLink]="['/verein/partie', p.clubGameId, 'korrigieren']"
+                           title="Züge nachbessern, wie beim ersten Prüfen des Formulars">Korrigieren</a>
+                      }
                     }
                   </td>
                 </tr>
@@ -371,6 +385,14 @@ export class FixtureViewComponent {
   ownIsBlack(p: FixturePairing): boolean {
     const b = this.fixture()?.boards?.find(x => x.board === p.board);
     return b?.opp_color === 'w';
+  }
+
+  readonly rookHub = rookHubUrlForLeagueHub();
+  private readonly handoff = inject(HandoffService);
+
+  /** Die Vereinspartie auf RookHubs Partieseite (wie „Analyse" in der Vereinsliste), mit Einmal-Code angemeldet. */
+  openInRookHub(id: number): void {
+    void this.handoff.jumpToRookHub(`club-games/${id}`);
   }
 
   colorName(b: Board): string {
