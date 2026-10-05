@@ -202,6 +202,9 @@ public class BookPuzzleDto
     /// sequenziellen Kurs-Modus auf reines Durchspielen statt Lösen-Logik.</summary>
     public bool IsInfoOnly { get; set; }
 
+    /// <summary>Die Partie, aus der die Aufgabe geerntet wurde (siehe <c>BookPuzzle.SourceGame</c>); <c>null</c> = keine.</summary>
+    public BookPuzzleSourceGameDto? SourceGame { get; set; }
+
     // --- Kurs-Übersetzung (0.547.0, nur mit ?lang= an den Kurs-Endpunkten, siehe CourseCommentLocalizer) ---
 
     /// <summary>Übersetzter Linien-Titel; <c>null</c> = keine (aktuelle) Übersetzung. <see cref="Title"/> bleibt
@@ -218,6 +221,15 @@ public class BookPuzzleDto
     public List<string>? CommentLanguages { get; set; }
     /// <summary>Mindestens eine ausgelieferte Stelle ist maschinell übersetzt — die Oberfläche kennzeichnet das.</summary>
     public bool CommentMachine { get; set; }
+}
+
+/// <summary>Verweis von einer geernteten Aufgabe auf ihre Partie: <c>Kind</c> = <c>club</c> (<c>/club-games/{id}</c>) oder
+/// <c>own</c> (<c>/games/{id}</c>), <c>Ply</c> = Halbzug, auf den die Partie springt.</summary>
+public class BookPuzzleSourceGameDto
+{
+    public string Kind { get; set; } = string.Empty;
+    public int Id { get; set; }
+    public int Ply { get; set; }
 }
 
 /// <summary>Body für das Admin-Tipp-Flag (POST /api/admin/book-puzzles/{id}/flag-hints).</summary>

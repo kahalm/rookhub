@@ -115,6 +115,7 @@
     .meta-title { font-weight: bold; font-size: 1.05em; margin: 0; }
     .meta-chapter { color: color-mix(in srgb, currentColor 70%, transparent); margin: 0; font-size: 0.95em; }
     /* Theme-Rolle statt 45 % der Textfarbe (UX-008: 3,3:1 hell, 4,46:1 dunkel auf der Karte). */
+    .source-game { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82em; margin-left: 8px; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
     .book-name { font-size: 0.82em; color: var(--mat-sys-on-surface-variant); }
     .difficulty-badge {
       font-size: 0.8em; padding: 2px 8px; border-radius: 12px; font-weight: 500;

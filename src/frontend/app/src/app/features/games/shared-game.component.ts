@@ -740,6 +740,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
     // Aus der Sicht des Besitzers: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
     this.flipped = g.ownerSide === 'black';
     this.service.loadPgn(g.pgn);
+    // `?ply=n`: aus einer geernteten Aufgabe hierher — auf die Stellung nach n Halbzügen springen
+    const ply = Number(this.route.snapshot.queryParamMap.get('ply'));
+    if (Number.isInteger(ply) && ply > 0) this.service.goToMove(ply - 1);
     this.loading = false;
     if (this.auth.isLoggedIn) {
       this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));

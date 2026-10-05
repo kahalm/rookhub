@@ -232,6 +232,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     {
         await RetireOrphansAsync(ct);
         await RetitleClubAsync(ct);
+        await LinkGamesAsync(ct);
         var done = await db.TacticCandidates.Include(c => c.GameAnalysis)
             .Where(c => c.Status == TacticCandidateStatus.Done).OrderBy(c => c.Id).Take(200).ToListAsync(ct);
         if (done.Count == 0) return 0;
@@ -256,7 +257,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             var (title, chapter) = await DescribeAsync(c, a, ct);
             var san = c.Found ? null : MoveComparisonService.SanOf(c.Fen, c.GameMoveUci);
             var comment = (c.Found ? "In der Partie gefunden." : $"In der Partie verpasst — gespielt wurde {san ?? c.GameMoveUci}.")
-                + $" Nach dem ersten Zug: {c.EvalText}.";
+                + " " + Outcome(c.EvalText);
             var round = rounds[file] = rounds[file] + 1;
             var lineId = $"{file}:t{c.Id}";
             db.BookPuzzles.Add(new BookPuzzle
@@ -264,7 +265,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
                 LineId = lineId, BookFileName = file, BookId = book.Id, Round = round.ToString(), Fen = c.PrevFen,
                 Moves = $"{c.BlunderUci} {c.Moves}", StartPly = 0, Title = title, Chapter = chapter, Comment = comment,
                 Tags = string.Join(',', new[] { c.Found ? "gefunden" : "verpasst" }.Concat((c.Themes ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))),
-                Source = "tactic-harvest",
+                Source = "tactic-harvest", SourceGame = await SourceGameAsync(c, a, ct),
             });
             c.Status = TacticCandidateStatus.Published;
             c.LineId = lineId;
@@ -276,6 +277,12 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         log.LogInformation("Taktik-Ernte: {Count} Aufgaben in die Kurse gelegt", published);
         return published;
     }
+
+    /// <summary>Was die Lösung bringt: „Die Lösung bringt +5.3." bzw. „Die Lösung setzt in 3 Zügen matt."</summary>
+    internal static string Outcome(string? eval) =>
+        eval is { Length: > 1 } && eval[0] == '#' && int.TryParse(eval[1..], out var n)
+            ? (n == 1 ? "Die Lösung setzt matt." : $"Die Lösung setzt in {n} Zügen matt.")
+            : $"Die Lösung bringt {eval ?? "?"}.";
 
     private async Task<Book> EnsureBookAsync(string file, string name, int? owner, bool club, CancellationToken ct)
     {
@@ -366,6 +373,56 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         var homeWhite = best.lg.HomeColor == "w";
         return new LeagueRound($"{best.Season} · {league} · Runde {best.lg.Round}",
             homeWhite ? best.lg.HomePlayer : best.lg.AwayPlayer, homeWhite ? best.lg.AwayPlayer : best.lg.HomePlayer);
+    }
+
+    /// <summary>Verweis auf die Partie (<see cref="BookPuzzle.SourceGame"/>): Vereinspartie → <c>club</c>, eigene gespeicherte
+    /// Partie → <c>own</c>; Meisterpartien und Handanalysen haben keine Partie-Seite → <c>null</c>. Der Halbzug ist die
+    /// Stellung nach dem Fehler, also die, in der der Löser am Zug ist.</summary>
+    private async Task<string?> SourceGameAsync(TacticCandidate c, GameAnalysis a, CancellationToken ct)
+    {
+        var ply = c.Ply;   // Zahl der gespielten Halbzüge bis zur Stellung nach dem Fehler
+        if (a.Origin == GameAnalysisOrigin.Club && a.LeagueClubGameId is { } gid) return $"club:{gid}:{ply}";
+        if (a.Origin == GameAnalysisOrigin.SavedGame
+            && await db.SavedGames.AsNoTracking().Where(g => g.GameAnalysisId == a.Id).Select(g => (int?)g.Id).FirstOrDefaultAsync(ct) is { } sid)
+            return $"own:{sid}:{ply}";
+        return null;
+    }
+
+    /// <summary>Alte Kommentare „… Nach dem ersten Zug: +5.3." auf die Formulierung von <see cref="Outcome"/> umstellen.</summary>
+    private async Task RewordCommentsAsync(CancellationToken ct)
+    {
+        const string old = " Nach dem ersten Zug: ";
+        var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.Comment != null && p.Comment.Contains(old))
+            .Take(200).ToListAsync(ct);
+        foreach (var p in puzzles)
+        {
+            var i = p.Comment!.LastIndexOf(old, StringComparison.Ordinal);
+            var eval = p.Comment[(i + old.Length)..].TrimEnd('.');
+            p.Comment = p.Comment[..i] + " " + Outcome(eval);
+        }
+        if (puzzles.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Schon veröffentlichte Aufgaben ohne Partie-Verweis nachtragen (0.672.0) — je Takt höchstens 200; was keinen
+    /// Verweis bekommen kann, bleibt <c>null</c> und wird jedes Mal wieder angesehen, bleibt aber billig (nur Meisterpartien).</summary>
+    private async Task LinkGamesAsync(CancellationToken ct)
+    {
+        await RewordCommentsAsync(ct);
+        var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.SourceGame == null && !p.Retired
+                && (p.BookFileName == ClubBook || p.BookFileName != MasterBook)).OrderBy(p => p.Id).Take(200).ToListAsync(ct);
+        if (puzzles.Count == 0) return;
+        var lineIds = puzzles.Select(p => p.LineId).ToList();
+        var cands = await db.TacticCandidates.Include(c => c.GameAnalysis).Where(c => c.LineId != null && lineIds.Contains(c.LineId))
+            .ToDictionaryAsync(c => c.LineId!, ct);
+        var changed = 0;
+        foreach (var p in puzzles)
+        {
+            if (!cands.TryGetValue(p.LineId, out var c) || c.GameAnalysis is null) continue;
+            if (await SourceGameAsync(c, c.GameAnalysis, ct) is not { } link) continue;
+            p.SourceGame = link;
+            changed++;
+        }
+        if (changed > 0) await db.SaveChangesAsync(ct);
     }
 
     /// <summary>Schon veröffentlichte Aufgaben des Vereinskurses, die noch „Schwaz" im Titel tragen, nach der Regel von

@@ -2072,6 +2072,7 @@
     "loadFailed": "Es konnten gerade keine neuen Puzzles geladen werden. Bitte später erneut versuchen."
   },
   "book": {
+    "sourceGame": "Zur Partie",
     "alternativeMove": "Auch ein guter Zug — spiel aber den Zug der Hauptvariante.",
     "hints": {
       "show": "Tipp",

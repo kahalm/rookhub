@@ -2072,6 +2072,7 @@
     "loadFailed": "No new puzzles could be loaded right now. Please try again later."
   },
   "book": {
+    "sourceGame": "Open the game",
     "alternativeMove": "Also a good move — but play the main line's move.",
     "hints": {
       "show": "Hint",

@@ -133,4 +133,13 @@ public class BookPuzzle
     /// </summary>
     [MaxLength(16)]
     public string? Source { get; set; }
+
+    /// <summary>
+    /// Die Partie, aus der die Aufgabe geerntet wurde (Taktik-Ernte, Wunsch 2026-10-05: „vom Puzzle zur Partie
+    /// springen"): <c>"club:{LeagueClubGame.Id}:{Halbzug}"</c> oder <c>"own:{SavedGame.Id}:{Halbzug}"</c>; der Halbzug
+    /// ist die Stellung nach dem Fehler (Löser am Zug). <c>null</c> = keine Partie (Chessable-Linien) oder keine Seite
+    /// dafür (Meisterpartien haben keine eigene Partie-Seite).
+    /// </summary>
+    [MaxLength(40)]
+    public string? SourceGame { get; set; }
 }

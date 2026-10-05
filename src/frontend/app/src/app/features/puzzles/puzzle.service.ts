@@ -96,6 +96,8 @@ export interface BookPuzzleDto {
   /** „Info-/Erklärlinie" (Chessable IsInfo): kein Quiz, nur Durchklicken — im Kurs sequenziell als
    *  schreibgeschützte Erklärlinie, nie in Random/Tagespuzzle, zählt nicht zum Kurs-Fortschritt. */
   isInfoOnly?: boolean;
+  /** Geerntete Taktik: die Partie, aus der sie stammt (`club` → /club-games/id, `own` → /games/id), `ply` = Halbzug. */
+  sourceGame?: { kind: 'club' | 'own'; id: number; ply: number } | null;
 
   // --- Kurs-Übersetzung (0.547.0/0.549.0) — nur mit `?lang=` an den Kurs-/Buch-Endpunkten ---
   /** Übersetzter Linien-Titel; `null` = keine. `title` bleibt das Original — angezeigt wird

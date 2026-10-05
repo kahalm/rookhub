@@ -362,6 +362,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** Angezeigter Titel/Kapitel der Linie: die Übersetzung, sonst das Original (Schlüssel bleiben). */
+  /** Router-Ziel der Partie, aus der die Aufgabe geerntet wurde (Taktik-Ernte); `null` = keine. */
+  get sourceGameLink(): unknown[] | null {
+    const g = this.puzzle?.sourceGame;
+    return g ? [g.kind === 'club' ? '/club-games' : '/games', g.id] : null;
+  }
   get titleDisplay(): string | null { return labelOr(this.puzzle?.titleLabel, this.puzzle?.title); }
   get chapterDisplay(): string | null { return labelOr(this.puzzle?.chapterLabel, this.puzzle?.chapter); }
 

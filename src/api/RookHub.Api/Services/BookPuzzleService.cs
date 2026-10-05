@@ -870,8 +870,18 @@ public class BookPuzzleService
         Tags = bp.Book?.Tags ?? bp.Tags,
         Hints = ParseHints(bp.HintsJson),
         HintsFlagged = bp.HintsFlagged,
-        IsInfoOnly = bp.IsInfoOnly
+        IsInfoOnly = bp.IsInfoOnly,
+        SourceGame = ParseSourceGame(bp.SourceGame),
     };
+
+    /// <summary>Liest <see cref="BookPuzzle.SourceGame"/> (<c>kind:id:ply</c>); Defektes → <c>null</c>.</summary>
+    public static BookPuzzleSourceGameDto? ParseSourceGame(string? value)
+    {
+        var parts = value?.Split(':');
+        return parts is { Length: 3 } && parts[0] is "club" or "own" && int.TryParse(parts[1], out var id) && int.TryParse(parts[2], out var ply)
+            ? new BookPuzzleSourceGameDto { Kind = parts[0], Id = id, Ply = ply }
+            : null;
+    }
 
     /// <summary>Deserialisiert <see cref="BookPuzzle.HintsJson"/> (sprach-keyed Tipp-Listen).
     /// Defekte/leere Werte → <c>null</c> (nie werfen).</summary>
