@@ -93,6 +93,19 @@ describe('LiveEngineSession', () => {
     expect(engine.destroyed).toBe(1);
   });
 
+  it('an den Anfang der Variante und wieder ans Ende, ohne Züge zu verlieren', () => {
+    const { session } = setup();
+    session.sync(-1, start);
+    session.play({ from: 'e2', to: 'e4', san: 'e4', fen: afterE4 }, start);
+    session.play({ from: 'e7', to: 'e5', san: 'e5', fen: afterE4E5 }, start);
+    session.toStart(start);
+    expect(session.fen(start)).toBe(start);
+    expect(session.canRedo()).toBeTrue();
+    session.toEnd(start);
+    expect(session.fen(start)).toBe(afterE4E5);
+    expect(session.canRedo()).toBeFalse();
+  });
+
   it('← nimmt zurück, → holt wieder vor; ein neuer Zug nach ← ersetzt, was dahinter lag', () => {
     const { session } = setup();
     session.sync(-1, start);

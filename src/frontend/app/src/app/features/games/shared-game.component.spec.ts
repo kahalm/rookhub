@@ -185,7 +185,7 @@ describe('SharedGameComponent', () => {
     (el.querySelector('button.live-toggle') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(board().playable).toBeTrue();
-    expect(el.querySelector('app-chess-board.board-tapnav')).toBeNull();
+    expect(el.querySelectorAll('app-chess-board.board-tapnav').length).toBe(1);   // auch das Live-Brett blättert per Tipp (0.667.0)
     expect(el.querySelector('app-live-engine-panel')).not.toBeNull();
     expect(analyzed.length).toBeGreaterThan(0);
 
@@ -238,6 +238,40 @@ describe('SharedGameComponent', () => {
     page.stopLive();
     key('ArrowRight');                               // ohne Live-Engine: wieder die Partie
     expect(page.service.currentMoveIndex).toBe(0);
+  });
+
+  // Wunsch 2026-10-05: in der eigenen Variante navigieren die Knöpfe unter dem Brett durch SIE; „Zurück zur Partie" bleibt,
+  // „Zug zurück/vor" in der Leiste entfällt.
+  it('live side line: the buttons below the board walk through it, the panel keeps only “back to the game”', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    spyOn(page as never, 'createLiveSession' as never).and.callFake(fakeLive as never);
+    page.service.goToStart();
+    page.toggleLive();
+    const l = page.live()!;
+    l.play({ from: 'e2', to: 'e4', san: 'e4', fen: AFTER_E4 }, START);
+    l.play({ from: 'e7', to: 'e5', san: 'e5', fen: AFTER_E4_E5 }, START);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const btn = (c: string) => el.querySelector(`.nav .${c}`) as HTMLButtonElement;
+    expect(el.querySelector('app-live-engine-panel .undo')).toBeNull();
+    expect(el.querySelector('app-live-engine-panel .redo')).toBeNull();
+    expect(el.querySelector('app-live-engine-panel .back')).not.toBeNull();
+
+    expect(btn('nav-next').disabled).toBeTrue();     // Variantenende: nicht in die Partie weiter
+    btn('nav-prev').click(); fixture.detectChanges();
+    expect(l.fen(START)).toBe(AFTER_E4);
+    expect(btn('nav-next').disabled).toBeFalse();
+    btn('nav-start').click(); fixture.detectChanges();
+    expect(l.variation().length).toBe(0);
+    expect(l.canRedo()).toBeTrue();                  // die Züge bleiben gemerkt
+    btn('nav-end').click(); fixture.detectChanges();
+    expect(l.fen(START)).toBe(AFTER_E4_E5);
+    expect(page.service.currentMoveIndex).toBe(-1);  // die Partie blieb, wo sie war
+    page.stopLive();
   });
 
   it('training: “Analyse” after a wrong try starts AFTER the tried move (no way back to the task = no spoiler); after the solution ← walks back; Space goes on', async () => {

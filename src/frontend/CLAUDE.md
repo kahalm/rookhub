@@ -743,6 +743,13 @@ Tipp auf eine Figur „auswählen" statt „blättern". Pointer-Ereignisse komme
 `touchstart` an (deshalb vorher die Overlays: ein `click` entsteht dort nicht). pgn-viewer, shared-line und das
 Analysebrett behalten ihre Zonen (dort liegen sie neben dem Brett bzw. das Brett ist nicht spielbar).
 
+**Partieseite: Knöpfe unter dem Brett in der eigenen Variante** (0.667.0, Wunsch 2026-10-05): steht man in einer Variante der
+Live-Engine, laufen ⏮ ◀ ▶ ⏭ (und ← →, Tipp aufs Brett) durch SIE (`navPrev`/`navNext`/`navStart`/`navEnd`, eine Stelle für
+Knöpfe, Tasten und Tipp): ⏮ an ihren Anfang (`LiveEngineSession.toStart`, die Züge bleiben), ⏭ an ihr Ende, am Variantenende
+ist ▶ gesperrt statt in die Partie zu springen. Die Live-Leiste zeigt dort nur „Zurück zur Partie" (`[steps]="false"`); im
+Fehler-Training behält sie „Zug zurück/vor" (dort gibt es keine Knöpfe unter dem Brett). Anordnung jetzt auch am PC wie am
+Handy: Drehen · ⏮ ‖ ◀ ▶ ‖ ⏭ · Live · ⋮, ◀ ▶ groß, ⏮/⏭ mit 20 px Abstand — dicht daneben verklickte man sich.
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

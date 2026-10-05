@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.667.0", date: "2026-10-05", changes: [
+    { en: "Game page: in your own variation (live engine) the buttons below the board — and the arrow keys and taps on the board — now step through the variation: back and forward one move, to its start (the moves are kept) and to its end. The panel keeps only “Back to the game”; “Move back/forward” there is gone.", de: "Partieseite: In deiner eigenen Variante (Live-Engine) laufen die Knöpfe unter dem Brett — ebenso Pfeiltasten und Tippen aufs Brett — jetzt durch die Variante: einen Zug zurück und vor, an ihren Anfang (die Züge bleiben) und an ihr Ende. Die Leiste behält nur „Zurück zur Partie“; „Zug zurück/vor“ dort entfällt." },
+    { en: "Game page and shared games: back/forward are now big buttons in the middle, start and end set apart from them — also on the PC, where they used to sit right next to each other and were easy to mix up.", de: "Partieseite und geteilte Partien: Zurück/Vor sind jetzt große Knöpfe in der Mitte, Anfang und Ende mit Abstand daneben — auch am PC, wo sie vorher dicht nebeneinander lagen und man sich leicht verklickte." },
+  ] },
   { version: "0.666.1", date: "2026-10-05", changes: [
     { en: "Fix: on the game page the evaluation (graph, accuracy, move classes) was missing altogether since 0.664.0 — the server rejected the faster request with an error. It is accepted again, the page shows the graph at once and fills in the book moves a moment later.", de: "Fix: Auf der Partie-Seite fehlte seit 0.664.0 die gesamte Auswertung (Kurve, Genauigkeit, Zug-Klassen) — der Server wies die schnellere Anfrage mit einem Fehler ab. Sie wird wieder angenommen, die Seite zeigt die Kurve sofort und trägt die Buchzüge einen Moment später nach." },
   ] },

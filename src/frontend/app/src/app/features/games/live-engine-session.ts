@@ -115,6 +115,20 @@ export class LiveEngineSession {
     this.analyze(this.fen(gameFen));
   }
 
+  /** An den Anfang der Nebenvariante (Abzweig) — die Züge bleiben gemerkt, → holt sie wieder. */
+  toStart(gameFen: string): void {
+    if (this.cursor() === 0) return;
+    this.cursor.set(0);
+    this.analyze(this.fen(gameFen));
+  }
+
+  /** Ans Ende der gemerkten Nebenvariante. */
+  toEnd(gameFen: string): void {
+    if (!this.canRedo()) return;
+    this.cursor.set(this.moves().length);
+    this.analyze(this.fen(gameFen));
+  }
+
   /** Zurück zur Partie. */
   reset(gameFen: string): void {
     this.moves.set([]);

@@ -31,13 +31,15 @@ import { LiveEngineSession } from './live-engine-session';
       @if (s.variation().length || s.canRedo()) {
         <div class="variation">
           <span class="variation-san">{{ s.variationSan() }}</span>
-          <button mat-stroked-button type="button" class="undo" (click)="s.undo(gameFen())">
-            <mat-icon>undo</mat-icon> {{ 'games.live.undo' | translate }}
-          </button>
-          @if (s.canRedo()) {
-            <button mat-stroked-button type="button" class="redo" (click)="s.redo(gameFen())">
-              <mat-icon>redo</mat-icon> {{ 'games.live.redo' | translate }}
+          @if (steps()) {
+            <button mat-stroked-button type="button" class="undo" (click)="s.undo(gameFen())">
+              <mat-icon>undo</mat-icon> {{ 'games.live.undo' | translate }}
             </button>
+            @if (s.canRedo()) {
+              <button mat-stroked-button type="button" class="redo" (click)="s.redo(gameFen())">
+                <mat-icon>redo</mat-icon> {{ 'games.live.redo' | translate }}
+              </button>
+            }
           }
           <button mat-stroked-button type="button" class="back" (click)="s.reset(gameFen())">
             <mat-icon>replay</mat-icon> {{ 'games.live.backToGame' | translate }}
@@ -87,4 +89,7 @@ export class LiveEnginePanelComponent {
   /** Stellung der Partie am aktuellen Zug — dorthin führen „Zug zurück" (am Anfang) und „Zurück zur Partie". */
   gameFen = input.required<string>();
   closed = output<void>();
+  /** Eigene Knöpfe „Zug zurück/vor". Auf der Partieseite aus (0.667.0): dort laufen die Knöpfe unter dem Brett durch die
+   *  Variante. Im Fehler-Training an — dort gibt es unter dem Brett keine. */
+  steps = input(true);
 }

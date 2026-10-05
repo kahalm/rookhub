@@ -209,8 +209,11 @@ const TAP_MAX_MS = 500;
                 } @else if (live(); as l) {
                   <!-- Live-Engine: das Brett ist spielbar (eigene Nebenvariante), die Tippzonen fallen weg — sie lägen
                        über dem Brett und schluckten jeden Zug. Der blaue Pfeil ist der beste Zug der Live-Engine. -->
-                  <app-chess-board [fen]="l.fen(service.currentFen)" [lastMove]="l.lastMove() ?? service.lastMove"
-                                   [flipped]="flipped" [playable]="true" (userMove)="l.play($event, service.currentFen)"
+                  <app-chess-board class="board-tapnav" [fen]="l.fen(service.currentFen)" [lastMove]="l.lastMove() ?? service.lastMove"
+                                   [flipped]="flipped" [playable]="true" [clickToMove]="!coarsePointer"
+                                   (userMove)="l.play($event, service.currentFen)"
+                                   (pointerdown)="onBoardPointerDown($event)" (pointerup)="onBoardTap($event)"
+                                   (pointercancel)="tapStart = null"
                                    [arrows]="l.arrows()"
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 } @else {
@@ -237,10 +240,17 @@ const TAP_MAX_MS = 500;
               <div class="nav">
                 <!-- Am Handy (siehe @media): Zurück/Vor breit in der Mitte, Anfang/Ende mit Abstand an den Rand —
                      dicht nebeneinander traf man statt „einen Zug" oft „ganz an den Anfang/das Ende" (2026-09-24). -->
-                <button mat-icon-button class="nav-start" (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"><mat-icon>skip_previous</mat-icon></button>
-                <button mat-icon-button class="nav-prev" (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"><mat-icon>navigate_before</mat-icon></button>
-                <button mat-icon-button class="nav-next" (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>navigate_next</mat-icon></button>
-                <button mat-icon-button class="nav-end" (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
+                <!-- In einer eigenen Variante (Live-Engine) laufen alle vier durch SIE (0.667.0): ◀ ▶ einen Zug, ⏮ an ihren
+                     Anfang (die Züge bleiben, ▶ holt sie wieder), ⏭ an ihr Ende. Erst am Anfang der Variante geht es in der
+                     Partie weiter. Zurück zur Partie: Knopf in der Live-Leiste. -->
+                <button mat-icon-button class="nav-start" (click)="navStart()" [disabled]="!canNavBack()"
+                        [attr.aria-label]="'pgnViewer.nav.first' | translate"><mat-icon>skip_previous</mat-icon></button>
+                <button mat-icon-button class="nav-prev" (click)="navPrev()" [disabled]="!canNavBack()"
+                        [attr.aria-label]="'pgnViewer.nav.previous' | translate"><mat-icon>navigate_before</mat-icon></button>
+                <button mat-icon-button class="nav-next" (click)="navNext()" [disabled]="!canNavForward()"
+                        [attr.aria-label]="'pgnViewer.nav.next' | translate"><mat-icon>navigate_next</mat-icon></button>
+                <button mat-icon-button class="nav-end" (click)="navEnd()" [disabled]="!canNavForward()"
+                        [attr.aria-label]="'pgnViewer.nav.last' | translate"><mat-icon>skip_next</mat-icon></button>
                 <button mat-icon-button class="nav-flip" (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
                 <button mat-icon-button class="live-toggle" [class.on]="!!live()" (click)="toggleLive()"
                         [attr.aria-pressed]="!!live()"
@@ -251,7 +261,7 @@ const TAP_MAX_MS = 500;
                 <app-position-menu class="nav-menu" [fen]="positionFen()" [orientation]="flipped ? 'black' : 'white'" />
               </div>
               @if (live(); as l) {
-                <app-live-engine-panel class="live-slot" [session]="l" [gameFen]="service.currentFen" (closed)="stopLive()" />
+                <app-live-engine-panel class="live-slot" [session]="l" [gameFen]="service.currentFen" [steps]="false" (closed)="stopLive()" />
               }
               }
               @if (service.currentGame; as g) {
@@ -311,7 +321,22 @@ const TAP_MAX_MS = 500;
     .board-wrap { position: relative; width: var(--board-size); }
     .board-wrap app-chess-board { display: block; width: var(--board-size); }
     .board-tapnav { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-    .nav { display: flex; gap: 4px; }
+    /* Reihenfolge überall (seit 0.667.0 auch am PC, vorher nur am Handy): Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live · ⋮ —
+       die häufigen Knöpfe groß in der Mitte, die Sprünge mit Abstand daneben: dicht nebeneinander traf man statt
+       „einen Zug" oft „ganz an den Anfang/das Ende" (gemeldet 2026-09-24 am Handy, 2026-10-05 am PC). */
+    .nav { display: flex; align-items: center; gap: 4px; }
+    .nav .nav-flip { order: 0; }
+    .nav .nav-start { order: 1; margin-right: 20px; opacity: 0.7; }
+    .nav .nav-prev { order: 2; }
+    .nav .nav-next { order: 3; }
+    .nav .nav-end { order: 4; margin-left: 20px; opacity: 0.7; }
+    .nav .live-toggle { order: 5; }
+    .nav .nav-menu { order: 6; }
+    .nav .nav-prev, .nav .nav-next {
+      width: 64px; height: 44px; border-radius: 10px; overflow: hidden;
+      background: color-mix(in srgb, currentColor 8%, transparent);
+    }
+    .nav .nav-prev mat-icon, .nav .nav-next mat-icon { font-size: 30px; width: 30px; height: 30px; }
     .pr-slot, .review-slot, .trainer-slot, .live-slot, .similar-slot { display: block; width: 100%; }
     .live-toggle.on { color: #42a5f5; }
     /* Die Zugliste ist so hoch wie das Brett und scrollt in sich; eine feste Breite, damit die zwei Zugspalten
@@ -333,18 +358,10 @@ const TAP_MAX_MS = 500;
       .board-wrap app-chess-board { width: 100%; }
       /* Reihenfolge am Handy: Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live — die häufigen Knöpfe groß in der Mitte, die
          Sprünge an den Rand mit Abstand, damit ein daneben getroffener Tipp nicht die ganze Partie überspringt. */
-      .nav { width: 100%; box-sizing: border-box; align-items: center; gap: 4px; padding: 6px 8px; }
-      .nav .nav-flip { order: 0; }
-      .nav .nav-start { order: 1; margin-right: 14px; opacity: 0.7; }
-      .nav .nav-prev { order: 2; }
-      .nav .nav-next { order: 3; }
-      .nav .nav-end { order: 4; margin-left: 14px; opacity: 0.7; }
-      .nav .live-toggle { order: 5; }
-      .nav .nav-menu { order: 6; }
-      .nav .nav-prev, .nav .nav-next {
-        flex: 1 1 0; width: auto; height: 48px; border-radius: 10px; overflow: hidden;
-        background: color-mix(in srgb, currentColor 8%, transparent);
-      }
+      .nav { width: 100%; box-sizing: border-box; padding: 6px 8px; }
+      .nav .nav-start { margin-right: 14px; }
+      .nav .nav-end { margin-left: 14px; }
+      .nav .nav-prev, .nav .nav-next { flex: 1 1 0; width: auto; height: 48px; }
       .nav .nav-prev mat-icon, .nav .nav-next mat-icon { font-size: 32px; width: 32px; height: 32px; }
       .moves-section {
         width: 100%; height: auto; max-height: 40vh;
@@ -504,8 +521,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     if (r.width <= 0) return;
     const rel = (e.clientX - r.left) / r.width;
-    if (rel < 0.4) this.service.goBack();
-    else if (rel > 0.6) this.service.goForward();
+    if (rel < 0.4) this.navPrev();
+    else if (rel > 0.6) this.navNext();
   }
 
   /** Eine Figur auf dem Partie-Brett gezogen: wie auf Lichess eine eigene Variante ab hier — dafür gibt es die Live-Engine
@@ -802,6 +819,51 @@ export class SharedGameComponent implements OnInit, DoCheck {
     });
   }
 
+  // ----- Knöpfe unter dem Brett, Tipp aufs Brett, ← → (0.667.0): in einer eigenen Variante durch SIE -----
+
+  /** Steht man in einer eigenen Variante (Live-Engine, mindestens ein eigener Zug auf dem Brett oder dahinter)? */
+  private inVariation(): LiveEngineSession | null {
+    const l = this.live();
+    return l && (l.variation().length > 0 || l.canRedo()) ? l : null;
+  }
+
+  canNavBack(): boolean {
+    return !!this.inVariation()?.variation().length || this.service.currentMoveIndex >= 0;
+  }
+
+  canNavForward(): boolean {
+    const v = this.inVariation();
+    if (v && v.variation().length) return v.canRedo();   // am Variantenende geht es nicht in der Partie weiter
+    const g = this.service.currentGame;
+    return !!v?.canRedo() || (!!g && this.service.currentMoveIndex < g.moves.length - 1);
+  }
+
+  navPrev(): void {
+    const v = this.inVariation();
+    if (v && v.variation().length) { v.undo(this.service.currentFen); return; }
+    this.service.goBack();
+  }
+
+  navNext(): void {
+    const v = this.inVariation();
+    if (v) { if (v.canRedo()) v.redo(this.service.currentFen); return; }
+    this.service.goForward();
+  }
+
+  /** ⏮: in einer Variante an ihren Anfang (Abzweig, die Züge bleiben), sonst an den Partieanfang. */
+  navStart(): void {
+    const v = this.inVariation();
+    if (v && v.variation().length) { v.toStart(this.service.currentFen); return; }
+    this.service.goToStart();
+  }
+
+  /** ⏭: in einer Variante an ihr Ende, sonst ans Partieende. */
+  navEnd(): void {
+    const v = this.inVariation();
+    if (v) { v.toEnd(this.service.currentFen); return; }
+    this.service.goToEnd();
+  }
+
   /** ← / → in einer eigenen Variante; `true`, wenn die Taste dort etwas getan hat (oder am Variantenende nichts tun darf). */
   private stepVariation(event: KeyboardEvent, session: LiveEngineSession, baseFen: string): boolean {
     if (event.key === 'ArrowLeft' && session.variation().length) {
@@ -836,9 +898,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     }
     // In der eigenen Nebenvariante laufen ← und → durch sie (← zurück, → wieder vor); an ihrem Anfang blättert ←
     // wie gewohnt in der Partie.
-    const l = this.live();
-    if (l && this.stepVariation(event, l, this.service.currentFen)) return;
-    if (event.key === 'ArrowLeft') { event.preventDefault(); this.service.goBack(); }
-    else if (event.key === 'ArrowRight') { event.preventDefault(); this.service.goForward(); }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); this.navPrev(); }
+    else if (event.key === 'ArrowRight') { event.preventDefault(); this.navNext(); }
   }
 }
