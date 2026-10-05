@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.659.4", date: "2026-10-05", changes: [
+    { en: "LeagueHub forecast: the line at the top now shows how often the actual player was among the three suggestions, e.g. “Forecast (Top 3: 61 %)”. The former “% correct” was too flattering — it only measures whether the percentages are honest, which even guessing evenly would be; the (i) now says so.", de: "LeagueHub-Prognose: Die Zeile oben zeigt jetzt, wie oft der tatsächliche Spieler unter den drei Vorschlägen war, z. B. „Prognose (Top 3: 61 %)“. Das frühere „% korrekt“ war zu schmeichelhaft — es misst nur, ob die Prozente ehrlich sind, und das wäre auch gleichmäßiges Raten; das (i) sagt das jetzt dazu." },
+  ] },
   { version: "0.659.3", date: "2026-10-05", changes: [
     { en: "LeagueHub “Your scoresheets” (and the managers’ list of open scoresheets): a scoresheet that has been read now shows the names it read instead of “? – ?”.", de: "LeagueHub „Deine Formulare“ (und die Liste offener Formulare für Verwalter): Ein gelesenes Formular zeigt jetzt die gelesenen Namen statt „? – ?“." },
   ] },

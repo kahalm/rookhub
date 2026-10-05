@@ -54,7 +54,9 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 </p>
               }
               <p class="info-line">
-                <span>Prognose@if (calibration(); as cal) { ({{ cal.score }} % korrekt)}</span>   <!-- 0.659.0: „dahinter (98,7 % korrekt)" -->
+                <!-- 0.659.4: „(Top 3: 61 %)" — die frühere „% korrekt" (Kalibrierung) war zu schmeichelhaft: auch gleichmäßiges
+                     Raten wäre fast perfekt kalibriert. Top 3 = an wie vielen Brettern der Spieler unter den drei Vorschlägen war. -->
+                <span>Prognose@if (stats(); as st) {@if (st.total.of) { (Top 3: {{ share(st.total.top3, st.total.of) }})}}</span>
                 <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'forecast'" aria-label="Wie die Prognose zustande kommt"
                         title="Wie die Prognose zustande kommt" (click)="toggleInfo('forecast')">i</button>
               </p>
@@ -109,11 +111,12 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                       </tbody>
                     </table></div>
                     @if (calibration(); as cal) {
-                      <p class="note cal-h"><b>Die Prozente stimmen zu {{ cal.score }} %</b> — im Schnitt {{ cal.gap }} Prozentpunkte daneben.
-                        @if (cal.said) { Dem Spieler, der wirklich kam, gab die Prognose im Schnitt {{ cal.said }} %; Raten über die Meldeliste gäbe {{ cal.guess }} %. }</p>
-                      <p class="note">Gemessen über alle Angaben ab 2 % aller Bretter, nach Höhe gruppiert: angesagt gegen eingetroffen. Sagt die
-                        Prognose 30 % und der Spieler kommt in 30 % der Fälle, stimmt sie — auch wenn er oft nicht kommt. Gewichtet nach der
-                        angesagten Wahrscheinlichkeit.</p>
+                      <p class="note cal-h"><b>Sind die Prozente ehrlich?</b> Im Schnitt liegen angesagt und eingetroffen {{ cal.gap }} Prozentpunkte
+                        auseinander. @if (cal.said) { Dem Spieler, der wirklich kam, gab die Prognose im Schnitt {{ cal.said }} %; Raten über die Meldeliste gäbe {{ cal.guess }} %. }</p>
+                      <p class="note">Gemessen über alle Angaben ab 2 % aller Bretter, nach Höhe gruppiert, gewichtet nach der angesagten
+                        Wahrscheinlichkeit. Sagt die Prognose 30 % und der Spieler kommt in 30 % der Fälle, stimmt sie — auch wenn er oft nicht
+                        kommt. Das misst nur, ob die Prozente ehrlich sind, nicht wie scharf die Prognose ist: auch gleichmäßiges Raten wäre
+                        fast perfekt ehrlich. Wie oft sie trifft, steht oben (Platz 1, Top 2, Top 3).</p>
                       <div class="src-scroll"><table class="src-tbl stats-tbl cal-tbl">
                         <thead><tr><th scope="col">Angabe</th><th scope="col" class="num">Fälle</th><th scope="col" class="num">angesagt</th>
                           <th scope="col" class="num">eingetroffen</th></tr></thead>

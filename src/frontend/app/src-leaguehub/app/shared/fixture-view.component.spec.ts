@@ -92,7 +92,7 @@ describe('FixtureViewComponent', () => {
     fixture.detectChanges();
     const lines = Array.from(el.querySelectorAll('.info-line')).map(x => x.textContent!.replace(/\s+/g, ' ').trim());
     expect(lines[0]).toContain('Partien Spg Kufstein/Wörgl: 1.620');
-    expect(lines[1]).toBe('Prognose (95,8 % korrekt)i');                                  // „dahinter (… % korrekt)" (0.659.0)
+    expect(lines[1]).toBe('Prognose (Top 3: 73 %)i');                                    // 0.659.4: Top 3 statt „% korrekt"
     expect(el.querySelector('lh-game-sources')).toBeNull();                                  // Tabelle erst hinter dem (i)
     (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -109,9 +109,8 @@ describe('FixtureViewComponent', () => {
     const cal = Array.from(el.querySelectorAll('.cal-tbl tbody tr'))
       .map(r => Array.from(r.children).map(c => c.textContent!.trim()).join(' '));
     expect(cal).toEqual(['0–10 % 100 5 % 6 %', '50–60 % 20 55 % 50 %', '80–90 % 10 85 % 90 %']);
-    // nach angesagter Wahrscheinlichkeit gewichtet: (1·5000 + 5·11000 + 5·8500) / 24500 = 4,2 → 95,8 % korrekt
-    expect(el.querySelector('.cal-h')?.textContent).toContain('Die Prozente stimmen zu 95,8 %');
-    expect(el.querySelector('.cal-h')?.textContent).toContain('im Schnitt 4,2 Prozentpunkte daneben');
+    // nach angesagter Wahrscheinlichkeit gewichtet: (1·5000 + 5·11000 + 5·8500) / 24500 = 4,2 Prozentpunkte
+    expect(el.querySelector('.cal-h')?.textContent).toContain('Im Schnitt liegen angesagt und eingetroffen 4,2 Prozentpunkte');
     expect(el.querySelector('.cal-h')?.textContent).toContain('gab die Prognose im Schnitt 21 %; Raten über die Meldeliste gäbe 6 %');
     expect(el.querySelector('.stats-tbl tr.mine')?.textContent).toContain('Landesliga');   // eigene Liga hervorgehoben
     expect(api.forecastStats).toHaveBeenCalledOnceWith(null);
