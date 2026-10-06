@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
-import { EngineAnalyseLine, EngineAnalyseWork } from './external-engine.service';
+import { EngineAnalyseLine, EngineAnalyseWork, isLc0Engine } from './external-engine.service';
 import { mapBrokerLine } from './engine-lines.util';
 
 /** Vom User gewählte External Engine (Lichess-Anbindung); Maxima kommen von der Registrierung. */
@@ -120,6 +120,8 @@ export class AnalysisEngineService implements OnDestroy {
 
   // ---- External Engine (Lichess-Anbindung): Analyse läuft remote statt im WASM-Worker ----
 
+  /** Knotenziel der Live-Analyse mit Lc0 (0.693.0) — wie die „Tiefe Analyse". */
+  static readonly Lc0LiveNodes = 500_000;
   private remoteEngine: RemoteEngine | null = null;
   private remoteTransport?: RemoteAnalyseTransport;
   private remoteSub?: Subscription;
@@ -385,10 +387,16 @@ export class AnalysisEngineService implements OnDestroy {
     };
     this.remoteFirstLineGuard = setTimeout(failBeforeData, 12000);
 
+    // Lc0 rechnet live nach KNOTEN (0.693.0, gemeldet 2026-10-06: „Lc0 hat wieder bei Tiefe 12 aufgehört"): seine
+    // „Tiefe" ist die durchschnittliche Baumtiefe und erreicht die eingestellte Zieltiefe schon nach wenigen tausend
+    // Knoten — `go depth 12` war nach ein, zwei Sekunden fertig. Mit dem Knotenziel hört Lc0 auf, wenn das Ziel
+    // erreicht ist oder sein Zug feststeht (Smart Pruning) — ein Ende des Streams ist dann immer das Ende der Suche.
+    const nodeGoal = isLc0Engine(engine.name) ? AnalysisEngineService.Lc0LiveNodes : null;
+
     // Stream zu Ende (complete ODER error), nachdem Daten kamen.
     const ended = (errored: boolean) => {
       const silence = this.nowFn() - lastLineAt;
-      const cut = reached < this.depthCap && (errored || silence >= this.remoteCutSilenceMs);
+      const cut = nodeGoal === null && reached < this.depthCap && (errored || silence >= this.remoteCutSilenceMs);
       if (!cut) {
         const s = this.state$.value;
         if (s.running) this.state$.next({ ...s, running: false });
@@ -411,7 +419,7 @@ export class AnalysisEngineService implements OnDestroy {
       initialFen: fen,
       moves: [],
       multiPv: this.multiPv,
-      depth: this.depthCap,
+      ...(nodeGoal !== null ? { nodes: nodeGoal } : { depth: this.depthCap }),
       threads: engine.maxThreads,
       // Hash gedeckelt: die REGISTRIERUNGS-Grenze sagt nur, was Lichess zulässt (bis 1 TiB) — nicht,
       // was der Provider-Rechner für eine Brett-Analyse hergeben soll. Der Deckel bleibt deshalb,

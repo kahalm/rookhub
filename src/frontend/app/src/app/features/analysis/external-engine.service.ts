@@ -73,7 +73,9 @@ export interface EngineAnalyseWork {
   initialFen: string;
   moves: string[];
   multiPv: number;
-  depth: number;
+  /** Genau EINES von `depth` und `nodes` (Lc0 rechnet live nach Knoten, 0.693.0). */
+  depth?: number;
+  nodes?: number;
   threads?: number;
   hash?: number;
 }

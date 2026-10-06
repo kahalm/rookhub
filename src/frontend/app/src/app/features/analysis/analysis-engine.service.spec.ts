@@ -227,6 +227,28 @@ describe('AnalysisEngineService external engine (remote)', () => {
     expect(state.lines[0].pvUci).toEqual(['e2e4', 'e7e5']);
   });
 
+  // 0.693.0: Lc0 rechnet live nach Knoten — `go depth 12` war nach wenigen tausend Knoten fertig.
+  it('asks Lc0 for nodes instead of depth, and its end of stream is the end of the search', async () => {
+    const eng = new TestEngine();
+    (eng as any).remoteCutSilenceMs = 0;
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 };
+    eng.analysis$.subscribe(s => state = s);
+    const works: any[] = [];
+    const subjects: Subject<any>[] = [];
+    eng.setRemoteEngine({ id: 'rhe_lc0', name: 'RookHub Spark Lc0', maxThreads: 2, maxHash: 64 }, (_id, work) => {
+      works.push(work); const s = new Subject<any>(); subjects.push(s); return s.asObservable();
+    });
+    eng.setDepth(12);
+    await eng.analyze(FEN);
+
+    expect(works[0].nodes).toBe(500_000);
+    expect(works[0].depth).toBeUndefined();
+    subjects[0].next(line(9, 30, ['e2e4']));
+    subjects[0].complete();                      // Smart Pruning: Zug steht fest → kein „Abriss", keine Fortsetzung
+    expect(works.length).toBe(1);
+    expect(state.running).toBeFalse();
+  });
+
   it('requests up to the cap of the hash a strong engine offers', async () => {
     // Eine Server-Engine meldet gern mehrere GB; frueher wurden davon nur 1024 MB angefordert und
     // tiefe Suchen rechneten unnoetig viel neu. Ueber dem Deckel wird weiterhin geklemmt.

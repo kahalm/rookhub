@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.693.0", date: "2026-10-06", changes: [
+    { en: "Live analysis with Lc0 (game page and analysis board) now searches up to 500,000 nodes instead of the set depth. Lc0 measures depth differently (average depth of its search tree) and reached a depth like 12 after a few thousand nodes, so the search ended after one or two seconds. Now it keeps going until the node target or until its move is settled.", de: "Die Live-Analyse mit Lc0 (Partieseite und Analysebrett) rechnet jetzt bis 500 000 Knoten statt bis zur eingestellten Tiefe. Lc0 misst Tiefe anders (durchschnittliche Tiefe seines Suchbaums) und erreichte z. B. Tiefe 12 schon nach wenigen tausend Knoten, die Suche war nach ein, zwei Sekunden fertig. Jetzt rechnet es bis zum Knotenziel oder bis sein Zug feststeht." },
+  ] },
   { version: "0.692.0", date: "2026-10-06", changes: [
     { en: "Club members can now analyse any game with Lc0: \u22ee \u2192 \u201cAnalyse with Lc0\u201d on a game page (for example one of your own games). Lc0 computes every position with 100,000 nodes, like the club games; the switch Stockfish | Lc0 | Both appears above the evaluation and fills in as Lc0 progresses. Clicking again reuses the same analysis.", de: "Vereinsmitglieder k\u00f6nnen jetzt jede Partie mit Lc0 analysieren: \u22ee \u2192 \u201eMit Lc0 analysieren\u201c auf der Partieseite (z. B. einer eigenen Partie). Lc0 rechnet jede Stellung mit 100 000 Knoten wie bei den Vereinspartien; der Umschalter Stockfish | Lc0 | Beide erscheint \u00fcber der Auswertung und f\u00fcllt sich, w\u00e4hrend Lc0 rechnet. Ein zweiter Klick nimmt dieselbe Analyse." },
   ] },
