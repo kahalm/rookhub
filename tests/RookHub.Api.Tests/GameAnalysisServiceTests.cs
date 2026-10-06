@@ -1601,4 +1601,53 @@ public class GameAnalysisServiceTests : IDisposable
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
         Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(20, p.Depth); });
     }
+
+    // ── Dieselbe Partie in mehreren Analysen (0.682.0): Umschalter „Stockfish | Lc0 | beide" auf der Partieseite ──
+
+    /// <summary>Die Züge von <see cref="Game"/> als UCI — so schickt sie die Partieseite.</summary>
+    private static readonly string[] GameUcis =
+        ["e2e4", "e7e5", "f2f4", "e5f4", "f1c4", "d8h4", "e1f1", "b7b5", "c4b5", "g8f6", "g1f3", "h4h6", "d2d3", "f6h5"];
+
+    [Fact]
+    public async Task SameGame_findetDieEigenenAnalysenDerselbenZugfolge_neuesteZuerst_nichtFremdeOderAndere()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game.Replace("Testpartie", "Zweitanalyse") });
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = LongGame });            // andere Partie
+        var other = await CreateUserAsync("fremd");
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = other.Id, EncryptedToken = "enc", BackgroundEngineIds = "eei_fremd" });
+        await _db.SaveChangesAsync();
+        await _svc.CreateAsync(other.Id, new CreateGameAnalysisRequest { Pgn = Game });               // fremdes Konto
+
+        var found = await _svc.SameGameAsync(user.Id, GameUcis);
+
+        Assert.Equal([second.Id, first.Id], found.Select(f => f.Id));
+        Assert.All(found, f => Assert.Equal(GameUcis.Length, f.PlyCount));
+    }
+
+    [Fact]
+    public async Task SameGame_andereReihenfolgeOderLaengeIstNichtDieselbePartie()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Empty(await _svc.SameGameAsync(user.Id, GameUcis[..^1]));                 // ein Zug weniger
+        var swapped = (string[])GameUcis.Clone(); swapped[^1] = "h6h5";
+        Assert.Empty(await _svc.SameGameAsync(user.Id, swapped));                         // letzter Zug anders
+        Assert.Empty(await _svc.SameGameAsync(user.Id, []));
+        Assert.Single(await _svc.SameGameAsync(user.Id, GameUcis.Select(u => u.ToUpperInvariant()).ToList()));   // Schreibweise egal
+    }
+
+    [Fact]
+    public async Task EvalsOf_nurDieEigeneAnalyse()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var other = await CreateUserAsync("fremd");
+
+        Assert.NotNull(await _svc.EvalsOfAsync(user.Id, dto.Id));
+        Assert.Null(await _svc.EvalsOfAsync(other.Id, dto.Id));
+        Assert.Null(await _svc.EvalsOfAsync(user.Id, 999_999));
+    }
 }

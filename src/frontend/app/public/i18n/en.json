@@ -2677,6 +2677,8 @@
     },
     "review": {
       "title": "Game review",
+      "engineBoth": "Both",
+      "engineView": "Engine",
       "accuracy": "Accuracy",
       "pending": "Analysis running — {{done}} of {{total}} positions",
       "started": "The game is being analysed. The evaluation graph appears below the board and fills in as the positions are done.",

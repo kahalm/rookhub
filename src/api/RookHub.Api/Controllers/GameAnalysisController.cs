@@ -79,6 +79,20 @@ public class GameAnalysisController : BaseApiController
     }
 
     /// <summary>Konvergenz einer Knotenanalyse (Zwischenstände je Schwelle gegen das Ziel) — nur die eigene Analyse.</summary>
+    /// <summary>Weitere eigene Analysen derselben Partie (gleiche Zugfolge) — für den Umschalter „Stockfish | Lc0 | beide"
+    /// auf der Partieseite (0.682.0).</summary>
+    [HttpPost("same-game")]
+    public async Task<ActionResult<List<GameAnalysisAlternativeDto>>> SameGame([FromBody] SameGameRequest? req, CancellationToken ct)
+        => Ok(await _service.SameGameAsync(GetUserId(), req?.Ucis, ct));
+
+    /// <summary>Bewertungen einer eigenen Analyse im Format der Partiekurve — nur die eigene.</summary>
+    [HttpGet("{id:int}/evals")]
+    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct)
+    {
+        var dto = await _service.EvalsOfAsync(GetUserId(), id, ct);
+        return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
+    }
+
     [HttpGet("{id:int}/convergence")]
     public async Task<ActionResult<ConvergenceDto>> Convergence(int id, CancellationToken ct)
     {

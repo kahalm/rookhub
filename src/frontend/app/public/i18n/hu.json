@@ -2994,6 +2994,8 @@
     },
     "review": {
       "title": "Játszmaértékelés",
+      "engineBoth": "Mindkettő",
+      "engineView": "Motor",
       "accuracy": "Pontosság",
       "pending": "Elemzés folyamatban — {{done}} / {{total}} állás",
       "started": "A játszma elemzése folyik. Az értékelési görbe a tábla alatt jelenik meg, és az állások elkészültével telik meg.",

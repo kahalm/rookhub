@@ -60,6 +60,11 @@ interface Pt { x: number; y: number; }
         @for (s of segments(); track $index) {
           <polyline class="line" [attr.points]="s.line" vector-effect="non-scaling-stroke" />
         }
+        <!-- Zweite Analyse derselben Partie (0.682.0, Umschalter „beide"): nur als Linie, ohne Flächen — die Flächen
+             gehören der ersten, zwei übereinander wären nicht mehr zu lesen. -->
+        @for (line of overlayLines(); track $index) {
+          <polyline class="overlay" [attr.points]="line" vector-effect="non-scaling-stroke" />
+        }
         @if (cursorX() !== null) {
           <line class="cursor" [attr.x1]="cursorX()" y1="0" [attr.x2]="cursorX()" y2="100" vector-effect="non-scaling-stroke" />
         }
@@ -85,6 +90,7 @@ interface Pt { x: number; y: number; }
     .area-black { fill: #161616; }
     .mid { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
     .line { fill: none; stroke: #9e9e9e; stroke-width: 1.5; stroke-linejoin: round; }
+    .overlay { fill: none; stroke: #ff9800; stroke-width: 2; stroke-linejoin: round; }
     .cursor { stroke: #42a5f5; stroke-width: 2; }
     .dot {
       position: absolute; width: 8px; height: 8px; border-radius: 50%;
@@ -99,6 +105,8 @@ export class EvalGraphComponent {
 
   /** Gewinnchance Weiß je Stellung (0..100), `null` = nicht gerechnet; Länge = Züge + 1. */
   series = input<(number | null)[]>([]);
+  /** Zweite Kurve (z. B. Lc0 neben Stockfish), gleiche Einheit und Länge wie `series`; `null` = keine. */
+  overlay = input<(number | null)[] | null>(null);
   /** Auffällige Züge (Brilliant, Great, Miss, Fehler, grobe Fehler) — als Punkt auf der Stellung nach dem Zug. */
   marks = input<EvalGraphMark[]>([]);
   /** Aktueller Zug wie `PgnViewerService.currentMoveIndex` (−1 = Startstellung). */
@@ -150,6 +158,24 @@ export class EvalGraphComponent {
       black: polygon(y => Math.max(y, MID)),
     };
   }));
+
+  /** Linien der zweiten Kurve — dieselben Läufe und dieselbe Glättung wie die erste, auf derselben x-Achse. */
+  readonly overlayLines = computed(() => {
+    const overlay = this.overlay();
+    if (!overlay?.length) return [];
+    const runs: Pt[][] = [];
+    let current: Pt[] = [];
+    overlay.forEach((v, j) => {
+      if (v == null) {
+        if (current.length) runs.push(current);
+        current = [];
+      } else {
+        current.push({ x: this.x(j), y: 100 - v });
+      }
+    });
+    if (current.length) runs.push(current);
+    return runs.filter(r => r.length > 1).map(r => EvalGraphComponent.smooth(r).map(EvalGraphComponent.fmt).join(' '));
+  });
 
   readonly lonePoints = computed(() => this.runs().filter(r => r.length === 1)
     .map(([p]) => ({ left: (p.x / W) * 100, top: p.y })));

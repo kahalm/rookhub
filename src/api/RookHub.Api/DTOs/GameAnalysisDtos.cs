@@ -178,3 +178,15 @@ public class ConvergenceRowDto
     /// <summary>Mittlere tatsächlich erreichte Knotenzahl (die Engine meldet nicht genau auf die Schwelle).</summary>
     public double MeanNodes { get; set; }
 }
+
+/// <summary>Eine weitere Analyse DESSELBEN Spiels im eigenen Konto (0.682.0) — die Partieseite bietet sie als Umschalter
+/// neben ihrer eigenen Kurve an, z. B. Lc0 neben Stockfish. <see cref="EngineId"/> <c>null</c> = die Hintergrund-Engines
+/// (Stockfish), sonst eine ausdrücklich gewählte Engine samt Namen.</summary>
+public record GameAnalysisAlternativeDto(int Id, string? Title, string? EngineId, string? EngineName, long? TargetNodes,
+    int TargetDepth, int MultiPv, string Status, int AnalyzedPlies, int PlyCount);
+
+/// <summary>Die Züge der Partie als UCI (<c>e2e4</c>, Umwandlung klein: <c>e7e8q</c>) — Kennung „dasselbe Spiel".</summary>
+public class SameGameRequest
+{
+    public List<string>? Ucis { get; set; }
+}

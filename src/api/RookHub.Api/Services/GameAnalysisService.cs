@@ -870,6 +870,58 @@ public class GameAnalysisService
             _quiet, _quiet?.Now ?? DateTimeOffset.UtcNow, ct);
     }
 
+    /// <summary>Höchstzahl Halbzüge, die als „dieselbe Partie" verglichen werden — wie die längste Analyse.</summary>
+    public const int MaxSameGamePlies = 600;
+
+    /// <summary>
+    /// Alle eigenen Analysen DESSELBEN Spiels (0.682.0, gewünscht 2026-10-06: Lc0 neben Stockfish auf der Partieseite).
+    /// Erkannt an der Zugfolge: gleiche Länge, gleiche UCI-Züge in derselben Reihenfolge. Eine Spalte mit fertigem
+    /// Zug-Schlüssel gibt es nur für Liga-Partien; deshalb hier zuerst billig nach Länge vorgefiltert und erst für die
+    /// wenigen Kandidaten die Züge verglichen. Gescheiterte bleiben draußen, neueste zuerst.
+    /// </summary>
+    public async Task<List<GameAnalysisAlternativeDto>> SameGameAsync(int userId, IReadOnlyList<string>? ucis, CancellationToken ct = default)
+    {
+        if (ucis is null || ucis.Count == 0 || ucis.Count > MaxSameGamePlies) return [];
+        var wanted = ucis.Select(u => (u ?? string.Empty).Trim().ToLowerInvariant()).ToList();
+        var candidates = await _db.GameAnalyses.AsNoTracking()
+            .Where(a => a.UserId == userId && a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
+            .Select(a => new { a.Id, a.Title, a.EngineId, a.TargetNodes, a.TargetDepth, a.MultiPv, a.Status, a.PlyCount, a.CreatedAt })
+            .ToListAsync(ct);
+        if (candidates.Count == 0) return [];
+
+        var ids = candidates.Select(c => c.Id).ToList();
+        var positions = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => ids.Contains(p.GameAnalysisId))
+            .Select(p => new { p.GameAnalysisId, p.Ply, p.GameMoveUci, Done = p.CandidatesJson != null })
+            .ToListAsync(ct);
+        var byAnalysis = positions.GroupBy(p => p.GameAnalysisId).ToDictionary(g => g.Key, g => g.OrderBy(p => p.Ply).ToList());
+
+        var matches = candidates.Where(c => byAnalysis.TryGetValue(c.Id, out var rows)
+            && rows.Where(r => r.GameMoveUci != null).Select(r => r.GameMoveUci!.ToLowerInvariant()).SequenceEqual(wanted)).ToList();
+        if (matches.Count == 0) return [];
+
+        var engineIds = matches.Select(m => m.EngineId).OfType<string>().Distinct().ToList();
+        var names = engineIds.Count == 0 ? new Dictionary<string, string>()
+            : await _db.ExternalEngineRegistrations.AsNoTracking().Where(r => engineIds.Contains(r.Id))
+                .ToDictionaryAsync(r => r.Id, r => r.Name, ct);
+
+        return matches.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
+            .Select(m => new GameAnalysisAlternativeDto(m.Id, m.Title, m.EngineId,
+                m.EngineId is { } e && names.TryGetValue(e, out var n) ? n : null,
+                m.TargetNodes, m.TargetDepth, m.MultiPv, m.Status.ToString().ToLowerInvariant(),
+                byAnalysis[m.Id].Count(r => r.Done), m.PlyCount))
+            .ToList();
+    }
+
+    /// <summary>Die Bewertungen einer EIGENEN Analyse im Format der Partiekurve (Weiß-Sicht) — für den Umschalter auf
+    /// der Partieseite. Ohne Buchzüge: die markiert schon die Kurve der Seite. <c>null</c> = gibt es nicht oder fremd.</summary>
+    public async Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == id && a.UserId == userId))
+            .FirstOrDefaultAsync(ct);
+        return head is null ? null : await GameEvalsStore.ReadAsync(_db, head, null, ct);
+    }
+
     /// <summary>Fertige Aufträge in die Stellungen kopieren.</summary>
     private async Task<bool> IngestFinishedAsync(GameAnalysis analysis, CancellationToken ct)
     {

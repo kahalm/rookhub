@@ -7,6 +7,7 @@ import { DecimalPipe, formatNumber } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
@@ -15,6 +16,8 @@ import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { bestMoveArrowAt, computerLinesAt } from './computer-lines.util';
 import { GameExplanationMaster, GameExplanations, GamesService } from './games.service';
+import { GameAnalysisAlternative, GameAnalysisService } from '../analysis/game-analysis.service';
+import { isLc0Engine } from '../analysis/external-engine.service';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
   reviewGame,
@@ -24,6 +27,14 @@ import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
+
+/** Umschalter der Partieseite: die eigene Kurve, die zweite Analyse oder beide übereinander (0.682.0). */
+export type EngineView = 'primary' | 'alt' | 'both';
+
+function readView(): EngineView {
+  const v = readRaw(localStore(), 'rookhub_game_engine_view');
+  return v === 'alt' || v === 'both' ? v : 'primary';
+}
 
 /** Diese Klassen bekommen einen Punkt in der Kurve — die Züge, bei denen man hinsehen will. */
 const MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>(['brilliant', 'great', 'miss', 'mistake', 'blunder']);
@@ -50,7 +61,7 @@ const MATE_GAP_PAWNS = 100;
   selector: 'app-game-review',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, DecimalPipe],
+  imports: [EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe],
   template: `
     @if (status() !== 'none') {
       <section class="review">
@@ -72,6 +83,16 @@ const MATE_GAP_PAWNS = 100;
           } @else if (status() === 'failed') {
             <span class="progress failed">{{ 'games.review.failed' | translate }}</span>
           }
+          @if (alternative() && altEvals() && !engineHidden()) {
+            <!-- Umschalter (0.682.0): dieselbe Partie hat eine zweite eigene Analyse, z. B. Lc0 neben Stockfish. „Beide"
+                 legt ihre Kurve über die erste und zeigt beide Linienblöcke. Je Gerät gemerkt. -->
+            <mat-button-toggle-group class="engine-view" [value]="view()" (change)="setView($event.value)"
+                                     hideSingleSelectionIndicator [attr.aria-label]="'games.review.engineView' | translate">
+              <mat-button-toggle value="primary">Stockfish</mat-button-toggle>
+              <mat-button-toggle value="alt">{{ altLabel() }}</mat-button-toggle>
+              <mat-button-toggle value="both">{{ 'games.review.engineBoth' | translate }}</mat-button-toggle>
+            </mat-button-toggle-group>
+          }
           @if (!engineHidden()) {
             <!-- Computer-Linien + Pfeil für den besten Zug: je Gerät gemerkt, im Fehler-Training aus (verriete die Lösung). -->
             <span class="toggles">
@@ -91,6 +112,7 @@ const MATE_GAP_PAWNS = 100;
           }
         </div>
         @if (lines().length) {
+          @if (view() === 'both') { <div class="lines-label">Stockfish</div> }
           <ol class="lines">
             @for (l of lines(); track $index) {
               <li [class.played]="l.played">
@@ -100,8 +122,19 @@ const MATE_GAP_PAWNS = 100;
             }
           </ol>
         }
+        @if (altLines().length) {
+          <div class="lines-label alt">{{ altLabel() }}</div>
+          <ol class="lines alt">
+            @for (l of altLines(); track $index) {
+              <li [class.played]="l.played">
+                <span class="line-eval" [class.white]="l.whiteBetter">{{ l.evalText }}</span>
+                <span class="line-san">{{ l.san }}</span>
+              </li>
+            }
+          </ol>
+        }
         @if (graphOpen()) {
-          <app-eval-graph [series]="review().curve" [marks]="marks()" [currentIndex]="currentIndex()"
+          <app-eval-graph [series]="review().curve" [overlay]="overlay()" [marks]="marks()" [currentIndex]="currentIndex()"
                           (moveClicked)="moveClicked.emit($event)" />
         }
         @if (current(); as m) {
@@ -178,6 +211,11 @@ const MATE_GAP_PAWNS = 100;
     .progress { font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress.failed { color: #e53935; }
     .toggles { display: inline-flex; margin-left: auto; }
+    /* Umschalter Stockfish | Lc0 | beide: klein, damit er neben Überschrift und Schaltern in eine Zeile passt. */
+    .engine-view { --mat-button-toggle-height: 28px; font-size: 0.78rem; margin-left: auto; }
+    .engine-view + .toggles { margin-left: 0; }
+    .lines-label { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin: 4px 0 1px; }
+    .lines-label.alt { color: #ff9800; opacity: 1; }
     .toggle { opacity: 0.45; --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .toggle.on { opacity: 1; color: #81b64c; }
@@ -222,6 +260,7 @@ const MATE_GAP_PAWNS = 100;
 })
 export class GameReviewComponent {
   private games = inject(GamesService);
+  private analyses = inject(GameAnalysisService);
   private translate = inject(TranslateService);
   private locale = inject(LOCALE_ID);
 
@@ -251,6 +290,10 @@ export class GameReviewComponent {
   /** Das Brett zeigt gerade eine eigene Nebenvariante — die Linien des Partiezugs passen dann nicht zur Stellung
    *  und bleiben weg, bis man zur Partie zurückkehrt. */
   offGame = input<boolean>(false);
+
+  /** Weitere eigene Analysen derselben Partie suchen und als Umschalter anbieten (0.682.0) — nur mit Anmeldung, die
+   *  Suche fragt das eigene Konto. Gewünscht 2026-10-06: Lc0 neben Stockfish, auch beide zugleich. */
+  withAlternatives = input<boolean>(false);
 
   /** Pfeil, Zugsymbol und Erklärung: weg im Training (verrieten die Lösung) und neben der Live-Engine. */
   private readonly boardMarksHidden = computed(() => this.engineHidden() || this.liveEngine());
@@ -285,6 +328,8 @@ export class GameReviewComponent {
   static readonly ExplainPollMs = 5_000;
   static readonly LinesKey = 'rookhub_game_lines';
   static readonly ArrowKey = 'rookhub_game_arrow';
+  /** Gemerkte Ansicht des Umschalters (`primary` | `alt` | `both`), je Gerät. */
+  static readonly ViewKey = 'rookhub_game_engine_view';
 
   readonly classes = MOVE_CLASSES;
   readonly evals = signal<GameEvals | null>(null);
@@ -298,17 +343,42 @@ export class GameReviewComponent {
     return this.running() && minutes ? formatEta(minutes, this.translate) : null;
   });
   readonly ucis = computed(() => this.moves().map(uciOf));
-  readonly review = computed(() => reviewGame(this.evals(), this.fens(), this.ucis()));
+
+  /** Die zweite Analyse derselben Partie (z. B. Lc0) und ihre Bewertungen — `null`, solange es keine gibt. */
+  readonly alternative = signal<GameAnalysisAlternative | null>(null);
+  readonly altEvals = signal<GameEvals | null>(null);
+  private readonly engineView = signal<EngineView>(readView());
+  /** Was gezeigt wird: ohne zweite Analyse immer die eigene Kurve der Seite. */
+  readonly view = computed<EngineView>(() => this.alternative() && this.altEvals() ? this.engineView() : 'primary');
+  /** Bewertungen für Klassen, Kurve, Linien und Pfeil: bei „Lc0" die der zweiten Analyse — die Buchzüge kommen
+   *  weiter aus der eigenen, sie hängen am Repertoire des Betrachters und nicht an der Engine. */
+  readonly shown = computed<GameEvals | null>(() => {
+    const primary = this.evals();
+    const alt = this.altEvals();
+    return this.view() === 'alt' && alt ? { ...alt, bookPlies: primary?.bookPlies ?? [] } : primary;
+  });
+  readonly altLabel = computed(() => {
+    const a = this.alternative();
+    if (!a) return '';
+    return isLc0Engine(a.engineName) ? 'Lc0' : (a.engineName ?? 'Engine');
+  });
+  /** Bei „Beide": die Kurve der zweiten Analyse über der ersten. */
+  readonly overlay = computed(() => this.view() === 'both'
+    ? reviewGame(this.altEvals(), this.fens(), this.ucis()).curve : null);
+  readonly review = computed(() => reviewGame(this.shown(), this.fens(), this.ucis()));
   /** Die Kurve ist standardmäßig ZU und klappt nur auf Wunsch auf — bewusst nicht gemerkt: „standardmäßig". */
   readonly graphOpen = linkedSignal(() => this.expanded());
   /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe); mit `expanded` von Anfang an an. */
   readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
   readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
   readonly lines = computed(() => this.showLines() && !this.engineHidden() && !this.offGame()
-    ? computerLinesAt(this.evals(), this.fens(), this.currentIndex()) : []);
+    ? computerLinesAt(this.shown(), this.fens(), this.currentIndex()) : []);
+  /** Bei „Beide" die Linien der zweiten Analyse als eigener Block. */
+  readonly altLines = computed(() => this.view() === 'both' && this.showLines() && !this.engineHidden() && !this.offGame()
+    ? computerLinesAt(this.altEvals(), this.fens(), this.currentIndex()) : []);
   readonly arrows = computed<BoardArrow[]>(() => {
     if (!this.showArrow() || this.boardMarksHidden()) return [];
-    const best = bestMoveArrowAt(this.evals(), this.currentIndex());
+    const best = bestMoveArrowAt(this.shown(), this.currentIndex());
     return best ? [best] : [];
   });
   readonly badge = computed<BoardBadge | null>(() => {
@@ -324,7 +394,7 @@ export class GameReviewComponent {
   readonly marks = computed<EvalGraphMark[]>(() => this.review().moves
     .filter((m): m is ReviewedMove => !!m && MARKED.has(m.cls))
     .map(m => ({ ply: m.ply, kind: m.cls, color: MOVE_CLASS_COLORS[m.cls] })));
-  readonly mistakes = computed(() => collectMistakes(this.review(), this.evals(), this.fens(), this.moves()));
+  readonly mistakes = computed(() => collectMistakes(this.review(), this.shown(), this.fens(), this.moves()));
   readonly current = computed(() => {
     const i = this.currentIndex();
     return i >= 0 ? this.review().moves[i] ?? null : null;
@@ -370,6 +440,12 @@ export class GameReviewComponent {
       this.evalsUrl();
       untracked(() => this.reload());
     });
+    // Zweite Analyse derselben Partie suchen (0.682.0) — einmal je Zugfolge, nur mit Anmeldung.
+    effect(() => {
+      const enabled = this.withAlternatives();
+      const ucis = this.ucis();
+      untracked(() => this.findAlternative(enabled, ucis));
+    });
     // Der Pfeil folgt Stellung, Schalter und Analyse — die Seite legt ihn auf ihr Brett.
     effect(() => {
       const a = this.arrows();
@@ -393,10 +469,58 @@ export class GameReviewComponent {
     });
     inject(DestroyRef).onDestroy(() => {
       this.stop();
+      this.altSub?.unsubscribe();
+      this.altPoll?.unsubscribe();
       this.bookSub?.unsubscribe();
       this.explainSub?.unsubscribe();
       this.explainPoll?.unsubscribe();
     });
+  }
+
+  private altSub?: Subscription;
+  private altPoll?: Subscription;
+  private altKey: string | null = null;
+
+  /**
+   * Die zweite Analyse: unter den eigenen Analysen derselben Zugfolge die neueste mit AUSDRÜCKLICH gewählter Engine
+   * (Lc0 bevorzugt) — eine ohne Engine-Angabe rechnete auf den Hintergrund-Engines und ist dasselbe wie die Kurve der
+   * Seite. Ihre Bewertungen werden gleich mitgeladen; solange sie noch rechnet, alle zehn Sekunden neu.
+   */
+  private findAlternative(enabled: boolean, ucis: string[]): void {
+    const key = enabled && ucis.length ? ucis.join(' ') : null;
+    if (key === this.altKey) return;
+    this.altKey = key;
+    this.altSub?.unsubscribe();
+    this.altPoll?.unsubscribe();
+    this.alternative.set(null);
+    this.altEvals.set(null);
+    if (!key) return;
+    this.altSub = this.analyses.sameGame(ucis).subscribe({
+      next: list => {
+        const explicit = list.filter(a => a.engineId);
+        const pick = explicit.find(a => isLc0Engine(a.engineName)) ?? explicit[0] ?? null;
+        this.alternative.set(pick);
+        if (pick) this.loadAltEvals(pick.id);
+      },
+      error: () => { /* still: ohne zweite Analyse bleibt es bei der Kurve der Seite */ },
+    });
+  }
+
+  private loadAltEvals(id: number): void {
+    this.altPoll?.unsubscribe();
+    this.altSub = this.games.evals(this.analyses.evalsUrl(id)).subscribe({
+      next: e => {
+        this.altEvals.set(e);
+        if (e.status === 'pending' || e.status === 'running')
+          this.altPoll = timer(GameReviewComponent.PollMs).subscribe(() => this.loadAltEvals(id));
+      },
+      error: () => this.altEvals.set(null),
+    });
+  }
+
+  setView(view: EngineView): void {
+    this.engineView.set(view);
+    writeRaw(localStore(), GameReviewComponent.ViewKey, view);
   }
 
   private language(): string {

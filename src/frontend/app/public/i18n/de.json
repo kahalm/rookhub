@@ -2677,6 +2677,8 @@
     },
     "review": {
       "title": "Auswertung",
+      "engineBoth": "Beide",
+      "engineView": "Engine",
       "accuracy": "Genauigkeit",
       "pending": "Analyse läuft — {{done}} von {{total}} Stellungen",
       "started": "Die Partie wird gerechnet. Die Bewertungskurve erscheint unter dem Brett und füllt sich, sobald die Stellungen fertig sind.",

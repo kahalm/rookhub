@@ -75,6 +75,21 @@ export interface GameConvergence {
   rows: ConvergenceRow[];
 }
 
+/** Eine weitere eigene Analyse derselben Partie — Umschalter „Stockfish | Lc0 | beide" auf der Partieseite (0.682.0).
+ *  `engineId` null = die Hintergrund-Engines (Stockfish), sonst eine ausdrücklich gewählte Engine. */
+export interface GameAnalysisAlternative {
+  id: number;
+  title: string | null;
+  engineId: string | null;
+  engineName: string | null;
+  targetNodes: number | null;
+  targetDepth: number;
+  multiPv: number;
+  status: string;
+  analyzedPlies: number;
+  plyCount: number;
+}
+
 export interface CreateGameAnalysisRequest {
   pgn: string;
   title?: string;
@@ -148,6 +163,16 @@ export class GameAnalysisService {
 
   get(id: number): Observable<GameAnalysis> {
     return this.http.get<GameAnalysis>(`/api/game-analyses/${id}`);
+  }
+
+  /** Weitere eigene Analysen derselben Partie (gleiche Zugfolge, UCI) — neueste zuerst (0.682.0). */
+  sameGame(ucis: string[]): Observable<GameAnalysisAlternative[]> {
+    return this.http.post<GameAnalysisAlternative[]>('/api/game-analyses/same-game', { ucis });
+  }
+
+  /** Bewertungen einer eigenen Analyse im Format der Partiekurve. */
+  evalsUrl(id: number): string {
+    return `/api/game-analyses/${id}/evals`;
   }
 
   /** Zwischenstände einer Knotenanalyse gegen das Ziel (nur die eigene Analyse). */

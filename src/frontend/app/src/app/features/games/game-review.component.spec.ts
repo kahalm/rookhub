@@ -553,4 +553,98 @@ describe('GameReviewComponent', () => {
     flushEvals(http, evals('pending', false));
     expect(statuses).toEqual(['none', 'pending']);
   });
+
+  // 0.682.0: Umschalter „Stockfish | Lc0 | beide" — gewünscht 2026-10-06, „auch beide gleichzeitig anzeigen".
+  describe('zweite Analyse derselben Partie', () => {
+    const moves = [{ from: 'e2', to: 'e4', san: 'e4' }, { from: 'c7', to: 'c5', san: 'c5' }];
+    const lc0 = (): GameEvals => ({
+      ...evals('done'),
+      plies: [
+        { ply: 0, cp: 11, depth: 8, bestUci: 'd2d4', playedUci: 'e2e4', playedCp: 5, candidates: [{ uci: 'd2d4', cp: 11, pv: ['d2d4'] }] },
+        { ply: 1, cp: 20, depth: 8, bestUci: 'e7e5', playedUci: 'c7c5', playedCp: 250, candidates: [{ uci: 'e7e5', cp: 20, pv: ['e7e5'] }] },
+      ],
+    });
+    const stockfish = (): GameEvals => ({
+      ...evals('done'),
+      plies: [
+        { ply: 0, cp: 30, depth: 20, bestUci: 'e2e4', playedUci: 'e2e4', playedCp: 30, candidates: [{ uci: 'e2e4', cp: 30, pv: ['e2e4'] }] },
+        { ply: 1, cp: 25, depth: 20, bestUci: 'e7e5', playedUci: 'c7c5', playedCp: 300, candidates: [{ uci: 'e7e5', cp: 25, pv: ['e7e5'] }] },
+      ],
+    });
+    beforeEach(() => {
+      localStorage.removeItem(GameReviewComponent.ViewKey);
+      localStorage.setItem(GameReviewComponent.LinesKey, '1');
+    });
+    afterEach(() => {
+      localStorage.removeItem(GameReviewComponent.ViewKey);
+      localStorage.removeItem(GameReviewComponent.LinesKey);
+    });
+
+    function withAlternative() {
+      const ctx = setup({ moves });
+      ctx.fixture.componentRef.setInput('withAlternatives', true);
+      ctx.fixture.detectChanges();
+      flushEvals(ctx.http, stockfish());
+      const same = ctx.http.expectOne('/api/game-analyses/same-game');
+      expect(same.request.body).toEqual({ ucis: ['e2e4', 'c7c5'] });
+      same.flush([
+        { id: 7, title: 'x', engineId: null, engineName: null, targetNodes: null, targetDepth: 30, multiPv: 3, status: 'done', analyzedPlies: 2, plyCount: 2 },
+        { id: 8, title: 'x (lc0)', engineId: 'rhe_lc0', engineName: 'RookHub Spark Lc0', targetNodes: 50000, targetDepth: 30, multiPv: 3, status: 'done', analyzedPlies: 2, plyCount: 2 },
+      ]);
+      ctx.http.expectOne('/api/game-analyses/8/evals').flush(lc0());   // die mit ausdrücklicher Engine, Lc0
+      ctx.fixture.detectChanges();
+      return ctx;
+    }
+    const lineSans = (el: HTMLElement, sel = '.lines:not(.alt) .line-san') =>
+      Array.from(el.querySelectorAll(sel)).map(e => e.textContent!.trim());
+
+    it('findet die Lc0-Analyse derselben Partie und bietet den Umschalter an — Vorgabe Stockfish', () => {
+      const { el, fixture } = withAlternative();
+      const toggles = Array.from(el.querySelectorAll('.engine-view mat-button-toggle')).map(t => t.textContent!.trim());
+      expect(toggles).toEqual(['Stockfish', 'Lc0', 'games.review.engineBoth']);
+      expect(fixture.componentInstance.view()).toBe('primary');
+      expect(lineSans(el)).toEqual(['1. e4']);
+    });
+
+    it('„Lc0": Linien und Kurve aus der zweiten Analyse; gemerkt je Gerät', () => {
+      const { el, fixture } = withAlternative();
+      fixture.componentInstance.setView('alt');
+      fixture.detectChanges();
+      expect(lineSans(el)).toEqual(['1. d4']);
+      expect(el.querySelector('.lines.alt')).toBeNull();
+      expect(localStorage.getItem(GameReviewComponent.ViewKey)).toBe('alt');
+    });
+
+    it('„Beide": zwei Linienblöcke mit Etikett und die zweite Kurve über der ersten', () => {
+      const { el, fixture } = withAlternative();
+      fixture.componentInstance.setView('both');
+      fixture.detectChanges();
+      expect(lineSans(el)).toEqual(['1. e4']);
+      expect(lineSans(el, '.lines.alt .line-san')).toEqual(['1. d4']);
+      expect(Array.from(el.querySelectorAll('.lines-label')).map(e => e.textContent!.trim())).toEqual(['Stockfish', 'Lc0']);
+      expect(fixture.componentInstance.overlay()?.length).toBe(3);   // Start + zwei Züge
+      expect(el.querySelectorAll('app-eval-graph polyline.overlay').length).toBeGreaterThan(0);
+    });
+
+    it('ohne Anmeldung (withAlternatives aus) wird gar nicht erst gesucht', () => {
+      const { http, el } = setup({ moves });
+      flushEvals(http, stockfish());
+      http.expectNone('/api/game-analyses/same-game');
+      expect(el.querySelector('.engine-view')).toBeNull();
+    });
+
+    it('nur Analysen ohne ausdrückliche Engine: kein Umschalter (dasselbe wie die Kurve der Seite)', () => {
+      const ctx = setup({ moves });
+      ctx.fixture.componentRef.setInput('withAlternatives', true);
+      ctx.fixture.detectChanges();
+      flushEvals(ctx.http, stockfish());
+      ctx.http.expectOne('/api/game-analyses/same-game').flush([
+        { id: 7, title: 'x', engineId: null, engineName: null, targetNodes: null, targetDepth: 30, multiPv: 3, status: 'done', analyzedPlies: 2, plyCount: 2 },
+      ]);
+      ctx.fixture.detectChanges();
+      ctx.http.expectNone('/api/game-analyses/7/evals');
+      expect(ctx.el.querySelector('.engine-view')).toBeNull();
+    });
+  });
 });
+

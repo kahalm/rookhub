@@ -2677,6 +2677,8 @@
     },
     "review": {
       "title": "Pregled partije",
+      "engineBoth": "Oba",
+      "engineView": "Motor",
       "accuracy": "Preciznost",
       "pending": "Analiza u tijeku — {{done}} od {{total}} pozicija",
       "started": "Partija se analizira. Graf procjene pojavljuje se ispod ploče i popunjava se kako pozicije budu gotove.",

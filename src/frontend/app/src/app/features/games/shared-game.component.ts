@@ -284,7 +284,7 @@ const TAP_MAX_MS = 500;
               }
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [withExplanations]="!club" [fens]="g.fens" [moves]="g.moves"
-                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()" [liveEngine]="!!live()" [offGame]="!!live()?.variation()?.length"
+                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()" [liveEngine]="!!live()" [offGame]="!!live()?.variation()?.length" [withAlternatives]="loggedIn"
                                  (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)"
