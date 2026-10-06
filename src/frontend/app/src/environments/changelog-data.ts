@@ -8,6 +8,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.690.1',
+    date: '2026-10-06',
+    changes: [
+      { en: "LeagueHub score sheets over several sheets: after the first photo a '+ page 2' (and 3) button adds the next sheet, all photos go into ONE reading (also via a share link). The review page switches between the pages and follows the selected move; the crop shows the entry from its own page.", de: "LeagueHub-Partieformulare über mehrere Blätter: nach dem ersten Foto fügt „+ Seite 2“ (und 3) das nächste Blatt hinzu, alle Fotos gehen in EINE Einlesung (auch über einen Teilen-Link). Die Prüfseite blättert zwischen den Seiten und folgt dem gewählten Zug; der Ausschnitt zeigt den Eintrag von seiner eigenen Seite." },
+    ],
+  },
   { version: "0.690.0", date: "2026-10-06", changes: [
     { en: "Deep analysis now also shows up under the game: once your deep analysis of the position on the board has gone further than the stored game analysis, its lines replace the stored ones (marked \u201cDeep analysis \u00b7 depth 34\u201d or \u201c\u2026 312,000 nodes\u201d) and keep updating while it runs \u2014 also after you closed the window. Stockfish and Lc0 are replaced separately.", de: "Die tiefe Analyse erscheint jetzt auch unter der Partie: ist deine tiefe Analyse der Stellung auf dem Brett weiter als die hinterlegte Partie-Analyse, ersetzen ihre Linien die hinterlegten (markiert \u201eTiefe Analyse \u00b7 Tiefe 34\u201c bzw. \u201e\u2026 312 000 Knoten\u201c) und laufen mit, solange sie rechnet \u2014 auch nachdem du das Fenster geschlossen hast. Stockfish und Lc0 werden getrennt ersetzt." },
   ] },

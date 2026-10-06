@@ -48,6 +48,7 @@ export function uploadErrorText(err: unknown): string {
     case 'notConfigured': return 'Das Einlesen ist gerade nicht eingerichtet.';
     case 'unsupportedImage': return 'Das Bild lässt sich nicht lesen (JPG, PNG oder WebP).';
     case 'tooLarge': return 'Das Foto ist zu groß.';
+    case 'tooManyPages': return 'Höchstens drei Fotos je Formular.';
     case 'dailyLimit': return 'Das Tageslimit für Formulare ist erreicht (siehe oben, ab wann es wieder geht).';
     case 'anonDailyLimit': return 'Über Links wurden heute schon so viele Formulare eingelesen, wie am Tag gehen — bitte morgen wieder.';
     case 'tooManyOpen': return 'Es werden gerade noch andere Formulare gelesen.';

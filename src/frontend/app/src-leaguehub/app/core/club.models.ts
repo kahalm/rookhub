@@ -170,6 +170,9 @@ export interface LeagueScanState {
   date: string | null;
   result: string | null;
   ownerSide: 'white' | 'black' | null;
+  /** Formular über mehrere Blätter (0.690.1): Zahl der Fotos und je Eintrag seine Seite (ab 1). */
+  pageCount?: number;
+  pages?: number[];
 }
 
 export interface ClubGameRequest {

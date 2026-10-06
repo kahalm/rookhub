@@ -182,9 +182,22 @@ const SAVE_DEBOUNCE_MS = 1500;
               es dorthin übertragen (<a routerLink="/privacy">Datenschutz</a>). Das dauert meist ein paar
               Minuten; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
-              <label class="field">Foto des Formulars
+              <label class="field">Foto des Formulars{{ extraPhotos().length ? ' (Seite 1)' : '' }}
                 <input #photoInput type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
               </label>
+              <!-- Wunsch 2026-10-06: eine lange Partie geht über zwei oder drei Blätter — EINE Einlesung mit allen Seiten. -->
+              @for (p of extraPhotos(); track $index; let i = $index) {
+                <div class="field-row extra-page">
+                  <label class="field">Seite {{ i + 2 }}
+                    <input class="extra-photo" type="file" accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
+                  </label>
+                  <button type="button" class="btn-sec" (click)="removeExtra(i)" [attr.aria-label]="'Seite ' + (i + 2) + ' entfernen'">✕</button>
+                </div>
+              }
+              @if (photo() && extraPhotos().length < maxPages - 1 && !extraPhotos().includes(null)) {
+                <div class="actions"><button type="button" class="btn-sec add-page" (click)="addExtra()">
+                  + Seite {{ extraPhotos().length + 2 }} (Formular geht weiter)</button></div>
+              }
               <div class="field-row">
                 <label class="field">Notation
                   <select (change)="language.set($any($event.target).value)">
@@ -315,6 +328,9 @@ export class ClubAddPageComponent implements OnInit {
   readonly language = signal('auto');
   readonly side = signal<'auto' | 'white' | 'black'>('auto');
   readonly photo = signal<File | null>(null);
+  /** Weitere Blätter desselben Formulars (Seite 2 und 3), `null` = Feld da, noch kein Foto gewählt. */
+  readonly extraPhotos = signal<(File | null)[]>([]);
+  readonly maxPages = 3;
   private readonly photoInput = viewChild<ElementRef<HTMLInputElement>>('photoInput');
   readonly uploading = signal(false);
   readonly scanError = signal<string | null>(null);
@@ -734,16 +750,32 @@ export class ClubAddPageComponent implements OnInit {
     this.photo.set((ev.target as HTMLInputElement).files?.[0] ?? null);
   }
 
+  addExtra(): void {
+    if (this.extraPhotos().length < this.maxPages - 1) this.extraPhotos.set([...this.extraPhotos(), null]);
+  }
+
+  pickExtra(i: number, ev: Event): void {
+    const list = [...this.extraPhotos()];
+    list[i] = (ev.target as HTMLInputElement).files?.[0] ?? null;
+    this.extraPhotos.set(list);
+  }
+
+  removeExtra(i: number): void {
+    this.extraPhotos.set(this.extraPhotos().filter((_, j) => j !== i));
+  }
+
   async upload(): Promise<void> {
     const file = this.photo();
     if (!file) return;
+    const files = [file, ...this.extraPhotos().filter((f): f is File => f != null)];
     this.uploading.set(true);
     this.scanError.set(null);
     try {
-      const sc = await this.client.upload(file, this.language(), this.side());
+      const sc = await this.client.upload(files, this.language(), this.side());
       if (this.share) rememberAnonKey(this.share, sc.ref);
       this.scans.set([sc, ...this.scans().filter(s => s.ref !== sc.ref)]);
       this.photo.set(null);
+      this.extraPhotos.set([]);
       // UX-037: das Feld zeigte sonst weiter den Dateinamen, während „Formular einlesen" gesperrt blieb.
       const input = this.photoInput()?.nativeElement;
       if (input) input.value = '';

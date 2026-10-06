@@ -395,6 +395,9 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .scan-check .option { padding: 6px 10px; }
   .scan-check .crop-frame { max-width: none; }
 }
+.scan-photo .pager { margin: 0 0 8px; }
+.extra-page { align-items: flex-end; }
+
 /* Am Handy steht das ganze Foto erst nach einem Tipp (UX-036): der Ausschnitt der Zeile steht schon im Prüfteil, und das ganze
    Foto (bis 70vh, bei einem Hochformat-Foto ≈ 1 000 px) schob „Partie" mit Namen und Übernehmen-Knopf weit nach unten. */
 .scan-photo .photo-toggle { display: none; margin: 0; }

@@ -317,16 +317,18 @@ public class LeagueClubController : BaseApiController
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<ActionResult<List<ScoresheetScanDto>>> Scans() => Ok(await _scans.LeagueScansAsync(GetUserId()));
 
-    /// <summary>Foto hochladen (multipart <c>file</c>, <c>language</c>, <c>side</c>) — Absagen wie <c>POST /api/scoresheets</c>.</summary>
+    /// <summary>Foto hochladen (multipart <c>file</c>, <c>language</c>, <c>side</c>) — Absagen wie <c>POST /api/scoresheets</c>.
+    /// Ein Formular über mehrere Blätter: mehrere Teile <c>file</c> in Seitenreihenfolge (höchstens
+    /// <see cref="ScoresheetScanService.MaxPages"/>, 0.690.1) — EINE Einlesung.</summary>
     [HttpPost("scans")]
     [HasPermission(Permissions.LeagueContribute)]
-    [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    public async Task<IActionResult> Upload(IFormFile? file, [FromForm] string? language, [FromForm] string? side)
+    [RequestSizeLimit(ScoresheetScanService.MaxUploadRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadRequestBytes)]
+    public async Task<IActionResult> Upload([FromForm] List<IFormFile>? file, [FromForm] string? language, [FromForm] string? side)
     {
-        if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
-        var (scan, reason) = await _scans.CreateAsync(GetUserId(), data, file!.ContentType, file.FileName, language, side,
-            ScoresheetScan.PurposeLeague);
+        var (pages, error) = await ClubUpload.ReadPagesAsync(file);
+        if (error != null) return BadRequest(error);
+        var (scan, reason) = await _scans.CreateAsync(GetUserId(), pages!, language, side, ScoresheetScan.PurposeLeague);
         if (ClubUpload.Refusal(reason) is { } refused) return refused;
         _signal.Wake();
         return Accepted(scan);
@@ -370,7 +372,8 @@ public class LeagueClubController : BaseApiController
 
     [HttpGet("scans/{id:int}/photo")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> Photo(int id) => ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(), id));
+    public async Task<IActionResult> Photo(int id, [FromQuery] int page = 1) =>
+        ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(), id, page));
 
     [HttpPost("scans/{id:int}/resolve")]
     [HasPermission(Permissions.LeagueContribute)]
@@ -553,14 +556,15 @@ public class LeagueShareClubController : ControllerBase
 
     /// <summary>Foto OHNE Konto hochladen → <c>{ key, scan }</c>. Absagen wie angemeldet, dazu <c>anonDailyLimit</c>.</summary>
     [HttpPost("scans")]
-    [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    public async Task<IActionResult> Upload(string token, IFormFile? file, [FromForm] string? language, [FromForm] string? side,
-        CancellationToken ct)
+    [RequestSizeLimit(ScoresheetScanService.MaxUploadRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadRequestBytes)]
+    public async Task<IActionResult> Upload(string token, [FromForm] List<IFormFile>? file, [FromForm] string? language,
+        [FromForm] string? side, CancellationToken ct)
     {
         if (!await ValidAsync(token, ct)) return NotFound();
-        if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
-        var (scan, key, reason) = await _scans.CreateAnonymousAsync(data, file!.ContentType, file.FileName, language, side, IpHash);
+        var (pages, error) = await ClubUpload.ReadPagesAsync(file);
+        if (error != null) return BadRequest(error);
+        var (scan, key, reason) = await _scans.CreateAnonymousAsync(pages!, language, side, IpHash);
         if (ClubUpload.Refusal(reason) is { } refused) return refused;
         _signal.Wake();
         return Accepted(new { key, scan });
@@ -601,10 +605,10 @@ public class LeagueShareClubController : ControllerBase
     }
 
     [HttpGet("scans/{key}/photo")]
-    public async Task<IActionResult> Photo(string token, string key, CancellationToken ct)
+    public async Task<IActionResult> Photo(string token, string key, [FromQuery] int page = 1, CancellationToken ct = default)
     {
         if (!await ValidAsync(token, ct)) return NotFound();
-        return ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(Actor.Anonymous(key), null));
+        return ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(Actor.Anonymous(key), null, page));
     }
 
     [HttpPost("scans/{key}/resolve")]
@@ -639,6 +643,26 @@ internal static class ClubUpload
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
         return ms.ToArray();
+    }
+
+    /// <summary>Die Fotos EINES Formulars (1 bis <see cref="ScoresheetScanService.MaxPages"/> Teile <c>file</c>, in
+    /// Seitenreihenfolge) — sonst die Absage (<c>noFile</c>/<c>tooManyPages</c>/<c>tooLarge</c>).</summary>
+    public static async Task<(List<ScoresheetUpload>? Pages, object? Error)> ReadPagesAsync(List<IFormFile>? file)
+    {
+        var files = (file ?? new()).Where(f => f.Length > 0).ToList();
+        if (files.Count == 0) return (null, new { reason = "noFile", message = "No file." });
+        if (files.Count > ScoresheetScanService.MaxPages)
+            return (null, new { reason = "tooManyPages", message = $"At most {ScoresheetScanService.MaxPages} photos." });
+        if (files.Any(f => f.Length > ScoresheetScanService.MaxUploadBytes))
+            return (null, new { reason = "tooLarge", message = "File too large." });
+        var pages = new List<ScoresheetUpload>();
+        foreach (var f in files)
+        {
+            using var ms = new MemoryStream();
+            await f.CopyToAsync(ms);
+            pages.Add(new ScoresheetUpload(ms.ToArray(), f.ContentType, f.FileName));
+        }
+        return (pages, null);
     }
 
     public static async Task<IReadOnlyCollection<IFormFile>?> FormFilesAsync(HttpRequest request, CancellationToken ct) =>

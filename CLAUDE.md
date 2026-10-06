@@ -4263,7 +4263,10 @@ mit (`SheetEditSession.currentPage`), der Ausschnitt kommt aus der Seite des Ein
 gemessen, `setPageSize`). Löschen: Partie löschen räumt die Seiten ohne Laden ab (`RemovePagesWithoutLoading`, die
 Einlesung bleibt fürs Kontingent), das Konto ebenso. **Frontend-nginx**: eigene `location ^~ /api/scoresheets` mit 64 MB
 (die generische /api/-Regel deckelt auf 15 MB, drei Handyfotos kämen nicht durch; `DeploymentConfigTests` hält sie über dem
-`[RequestSizeLimit]` des Uploads). LeagueHub liest weiter ein Foto (API-seitig vorbereitet: `LeagueScanStateDto.Pages`).
+`[RequestSizeLimit]` des Uploads). **LeagueHub seit 0.690.1** (Wunsch 2026-10-06): `POST …/club/scans` und
+`POST /api/league/s/{token}/club/scans` nehmen ebenfalls bis zu drei Teile `file` (`ClubUpload.ReadPagesAsync`, 64 MB, die
+verschachtelte nginx-Location dafür auf 64M), `GET …/scans/{id|key}/photo?page=n`; die Seite bietet nach dem ersten Foto
+„+ Seite 2/3“, die Prüfseite blättert zwischen den Seiten (folgt dem gewählten Zug).
 
 **Glocke** (0.531.0): fertig gelesen → `scoresheet_read` (Daten white/black/moves/uncertain/unresolved, Link auf
 `/games/{id}/edit`), gescheitert → `scoresheet_failed` (Daten reason, die Glocke übersetzt den Code über

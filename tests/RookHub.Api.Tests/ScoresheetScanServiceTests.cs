@@ -523,6 +523,26 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal("notPending", await _service.FailExternalAsync(scan.Id, "failed"));
     }
 
+    /// <summary>Wunsch 2026-10-06: auch über einen LeagueHub-Teilen-Link geht ein Formular über mehrere Blätter.</summary>
+    [Fact]
+    public async Task CreateAnonymous_SeveralPhotos_AreOneScanWithPages()
+    {
+        var (scan, key, reason) = await _service.CreateAnonymousAsync(
+            new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "s1.jpg"), new ScoresheetUpload(Jpeg(), "image/jpeg", "s2.jpg") },
+            "auto", null, "iphash");
+
+        Assert.Null(reason);
+        Assert.NotNull(key);
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((2, ScoresheetScan.PurposeLeague), (row.PageCount, row.Purpose));
+        Assert.Equal(2, (await _db.ScoresheetScanPages.SingleAsync()).Page);
+        Assert.Equal(2, scan!.PageCount);
+        var anon = ScoresheetScanService.ScanActor.Anonymous(key!);
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(anon, null, 2));
+        Assert.Null(await _service.LeagueScanPhotoAsync(anon, null, 3));
+        Assert.Null(await _service.LeagueScanPhotoAsync(ScoresheetScanService.ScanActor.Anonymous("fremd"), null, 2));
+    }
+
     [Fact]
     public async Task Process_UprightPhoto_IsReadOnce()
     {

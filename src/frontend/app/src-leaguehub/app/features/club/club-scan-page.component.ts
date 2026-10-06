@@ -104,13 +104,20 @@ function readAutoMine(): boolean {
             <section class="panel scan-photo" [class.open]="photoOpen()">
               <p class="photo-toggle"><button type="button" class="btn-link" [attr.aria-expanded]="photoOpen()" (click)="photoOpen.set(!photoOpen())">
                 {{ photoOpen() ? 'Ganzes Foto ausblenden' : 'Ganzes Foto zeigen' }}</button></p>
+              @if (pageCount() > 1) {
+                <div class="seg pager" role="group" aria-label="Seite des Formulars">
+                  @for (n of pageNumbers(); track n) {
+                    <button type="button" [attr.aria-pressed]="shownPage() === n" (click)="shownPage.set(n)">Seite {{ n }}</button>
+                  }
+                </div>
+              }
               <div class="photo-scroll" [class.zoom]="zoom()">
                 <div class="photo-frame">
-                  <img [src]="src" alt="Foto des Partieformulars" (load)="s.onPhotoLoad($event)" />
-                  @if (s.mark(); as m) {
+                  <img [src]="src" alt="Foto des Partieformulars" (load)="onPhotoLoad($event)" />
+                  @if (s.mark(); as m) { @if (m.page === shownPage()) {
                     <div class="photo-mark" [class.uncertain]="m.uncertain" [style.left.%]="m.left" [style.top.%]="m.top"
                          [style.width.%]="m.width" [style.height.%]="m.height" aria-hidden="true"></div>
-                  }
+                  } }
                 </div>
               </div>
               <p class="photo-zoom"><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ zoom() ? 'Kleiner' : 'Größer' }}</button></p>
@@ -145,7 +152,7 @@ function readAutoMine(): boolean {
                 @if (s.crop(); as c) {
                   <div class="crop">
                     <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
-                      <img [src]="src" alt="Ausschnitt des Formulars" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
+                      <img [src]="pageUrl(c.page) ?? src" alt="Ausschnitt des Formulars" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
                            [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
                       <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
                            [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
@@ -389,7 +396,17 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   /** Der Abruf scheitert (anderer Code als 404, oder vorübergehend mehrmals hintereinander) — Klartext statt „Lade …". */
   readonly loadError = signal<string | null>(null);
   private failures = 0;
-  readonly photoUrl = signal<string | null>(null);
+  /** Die Fotos des Formulars je Seite (Objekt-Adressen); ein Formular kann über bis zu drei Blätter gehen (0.690.1). */
+  readonly photoUrls = signal<(string | null)[]>([]);
+  readonly pageCount = signal(1);
+  readonly pageNumbers = computed(() => Array.from({ length: this.pageCount() }, (_, i) => i + 1));
+  /** Welche Seite im großen Foto steht — folgt dem gewählten Zug, lässt sich mit den Knöpfen wechseln. */
+  readonly shownPage = signal(1);
+  readonly photoUrl = computed(() => this.photoUrls()[this.shownPage() - 1] ?? this.photoUrls()[0] ?? null);
+  private readonly followPage = effect(() => {
+    const page = this.s.currentPage();
+    if (page) untracked(() => this.shownPage.set(Math.min(page, this.pageCount())));
+  });
   readonly zoom = signal(false);
   /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
   readonly photoOpen = signal(false);
@@ -512,8 +529,35 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.ticker.stop();
     this.destroyed = true;
     for (const t of [this.pollTimer, this.matchTimer, this.pairingTimer]) if (t) clearTimeout(t);
-    const url = this.photoUrl();
-    if (url) URL.revokeObjectURL(url);
+    for (const url of this.photoUrls()) if (url) URL.revokeObjectURL(url);
+  }
+
+  pageUrl(page: number): string | null {
+    return this.photoUrls()[page - 1] ?? null;
+  }
+
+  onPhotoLoad(e: Event): void {
+    const img = e.target as HTMLImageElement;
+    if (this.shownPage() === 1) this.s.onPhotoLoad(e);
+    else this.s.setPageSize(this.shownPage(), img.naturalWidth, img.naturalHeight);
+  }
+
+  /** Alle Seiten holen; die Maße jeder Seite braucht der Ausschnitt, auch wenn sie gerade nicht groß angezeigt wird. */
+  private async loadPhotos(count: number, fetch: (page: number) => Promise<Blob>, still: () => boolean): Promise<void> {
+    this.pageCount.set(Math.max(1, count));
+    for (let page = 1; page <= Math.max(1, count); page++) {
+      try {
+        const blob = await fetch(page);
+        if (!still()) return;
+        const url = URL.createObjectURL(blob);
+        this.photoUrls.update(list => { const next = [...list]; next[page - 1] = url; return next; });
+        if (page > 1) {
+          const img = new Image();
+          img.onload = () => this.s.setPageSize(page, img.naturalWidth, img.naturalHeight);
+          img.src = url;
+        }
+      } catch { /* ohne Foto geht die Korrektur trotzdem */ }
+    }
   }
 
   /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt, ein laufender Abruf ist überholt. */
@@ -556,7 +600,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       return;
     }
     if (st.scan.status !== 'done') return;
-    this.s.loadSheet({ plies: st.plies, unresolved: st.unresolved, unresolvedFrom: st.unresolvedFrom, boxes: st.boxes, written: st.written });
+    this.s.loadSheet({ plies: st.plies, unresolved: st.unresolved, unresolvedFrom: st.unresolvedFrom, boxes: st.boxes, written: st.written,
+      pages: st.pages ?? [] });
     this.name('white').set(st.white ?? '');
     this.name('black').set(st.black ?? '');
     const preset = presetYear(st.date);
@@ -567,10 +612,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.event.set(st.event ?? '');
     this.ownerSide.set(st.ownerSide);
     void this.runMatch();
-    try {
-      const blob = await this.api.photo(this.scanRef);
-      if (!this.destroyed && my === this.loadSeq) this.photoUrl.set(URL.createObjectURL(blob));
-    } catch { /* ohne Foto geht die Korrektur trotzdem */ }
+    await this.loadPhotos(st.pageCount ?? 1, page => this.api.photo(this.scanRef, page), () => !this.destroyed && my === this.loadSeq);
   }
 
   /**
@@ -600,12 +642,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       this.s.loadSheet({ plies: toServer(fromPgn), boxes: sheet?.boxes ?? [], written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
     }
     this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
-    if (sheet) {
-      try {
-        const blob = await this.api.clubSheetPhoto(id);
-        if (!this.destroyed) this.photoUrl.set(URL.createObjectURL(blob));
-      } catch { /* ohne Foto geht die Korrektur trotzdem */ }
-    }
+    if (sheet) await this.loadPhotos(sheet.pageCount ?? 1, page => this.api.clubSheetPhoto(id, page), () => !this.destroyed);
   }
 
   /** Vorgabe „ersetzen": Spieler von Schwaz und die eigene Seite — bis der Nutzer das Häkchen selbst anfasst. */

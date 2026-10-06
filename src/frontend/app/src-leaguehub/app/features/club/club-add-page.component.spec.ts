@@ -206,7 +206,7 @@ describe('ClubAddPageComponent', () => {
     fixture.componentInstance.side.set('white');
     void fixture.componentInstance.upload();
     flushMicrotasks();
-    expect(api.upload).toHaveBeenCalledWith(file, 'auto', 'white');
+    expect(api.upload).toHaveBeenCalledWith([file], 'auto', 'white');
     tick(3000);
     flushMicrotasks();
     fixture.detectChanges();
@@ -235,6 +235,37 @@ describe('ClubAddPageComponent', () => {
     expect(el.textContent).toContain('10 je 24 Stunden (heute: 0 von 10)');
     expect(el.textContent).not.toContain('ließ sich nicht prüfen');
     expect(el.querySelector('input[type="file"]')).not.toBeNull();
+  }));
+
+  it('Formular über mehrere Blätter: „+ Seite 2/3“ und alle Fotos in einer Einlesung', fakeAsync(() => {
+    query = { art: 'formular' };
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.add-page')).toBeNull();                       // erst nach dem ersten Foto
+    const c = fixture.componentInstance;
+    const p1 = new File(['1'], 's1.jpg', { type: 'image/jpeg' });
+    const p2 = new File(['2'], 's2.jpg', { type: 'image/jpeg' });
+    const p3 = new File(['3'], 's3.jpg', { type: 'image/jpeg' });
+    c.photo.set(p1);
+    fixture.detectChanges();
+    (el.querySelector('.add-page') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.extra-photo').length).toBe(1);
+    expect(el.querySelector('.add-page')).toBeNull();                       // erst wenn Seite 2 ein Foto hat
+    c.extraPhotos.set([p2]);
+    fixture.detectChanges();
+    expect(el.querySelector('.add-page')?.textContent).toContain('Seite 3');
+    c.addExtra();
+    c.extraPhotos.set([p2, p3]);
+    fixture.detectChanges();
+    expect(el.querySelector('.add-page')).toBeNull();                       // höchstens drei
+    api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
+    void c.upload();
+    flushMicrotasks();
+    expect(api.upload).toHaveBeenCalledWith([p1, p2, p3], 'auto', 'auto');
+    expect(c.extraPhotos()).toEqual([]);
+    flush();
   }));
 
   it('über einen Teilen-Link: ohne Anmeldung, Schlüssel gemerkt, Korrektur unter /s/…', fakeAsync(() => {

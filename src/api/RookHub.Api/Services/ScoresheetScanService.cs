@@ -963,7 +963,12 @@ public class ScoresheetScanService
     /// wiederfindet — sonst niemand.
     /// </summary>
     public async Task<(ScoresheetScanDto? Scan, string? Key, string? Reason)> CreateAnonymousAsync(byte[] data, string? contentType,
-        string? fileName, string? language, string? ownerSide, string ipHash)
+        string? fileName, string? language, string? ownerSide, string ipHash) =>
+        await CreateAnonymousAsync(new[] { new ScoresheetUpload(data, contentType, fileName) }, language, ownerSide, ipHash);
+
+    /// <summary>Wie oben, ein Formular über mehrere Fotos (Seitenreihenfolge, höchstens <see cref="MaxPages"/>, 0.690.1).</summary>
+    public async Task<(ScoresheetScanDto? Scan, string? Key, string? Reason)> CreateAnonymousAsync(IReadOnlyList<ScoresheetUpload> pages,
+        string? language, string? ownerSide, string ipHash)
     {
         ScoresheetScanDto? scan;
         string? reason;
@@ -981,8 +986,7 @@ public class ScoresheetScanService
                         && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
                     return (null, null, "tooManyOpen");
             }
-            (scan, reason) = await CreateCoreAsync(null, new[] { new ScoresheetUpload(data, contentType, fileName) },
-                language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash);
+            (scan, reason) = await CreateCoreAsync(null, pages, language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash);
         }
         finally
         {
@@ -1097,10 +1101,19 @@ public class ScoresheetScanService
     }
 
     /// <summary>Das Foto einer Liga-Einlesung.</summary>
-    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(ScanActor actor, int? scanId)
+    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(ScanActor actor, int? scanId, int page = 1)
     {
         var q = LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor);
         if (scanId is int id) q = q.Where(s => s.Id == id);
+        if (page > 1)
+        {
+            // Seite 2+ (0.690.1): erst die Einlesung über die Eigentumsregel finden, dann ihr Blatt
+            var owned = await q.Select(s => (int?)s.Id).FirstOrDefaultAsync();
+            if (owned is not int sid) return null;
+            var extra = await _db.ScoresheetScanPages.AsNoTracking().Where(x => x.ScoresheetScanId == sid && x.Page == page)
+                .Select(x => new { x.Photo, x.ContentType }).FirstOrDefaultAsync();
+            return extra == null || extra.Photo.Length == 0 ? null : (extra.Photo, extra.ContentType);
+        }
         var p = await q.Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync();
         return p == null || p.Photo.Length == 0 ? null : (p.Photo, p.ContentType);
     }

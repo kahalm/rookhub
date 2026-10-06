@@ -200,9 +200,10 @@ export class ClubClient {
     return firstValueFrom(this.http.post<BatchState>(`${this.base}/batches/${encodeURIComponent(key)}/finish`, {}));
   }
 
-  async upload(file: File, language: string, side: 'white' | 'black' | 'auto'): Promise<ScanRef> {
+  /** Ein Formular, auch über mehrere Blätter: die Fotos in Seitenreihenfolge (höchstens drei, 0.690.1) — EINE Einlesung. */
+  async upload(files: File[], language: string, side: 'white' | 'black' | 'auto'): Promise<ScanRef> {
     const form = new FormData();
-    form.append('file', file, file.name);
+    for (const file of files) form.append('file', file, file.name);
     form.append('language', language);
     form.append('side', side);
     if (this.anonymous) {
@@ -217,8 +218,8 @@ export class ClubClient {
     return firstValueFrom(this.http.get<LeagueScanState>(`${this.base}/scans/${encodeURIComponent(ref)}`));
   }
 
-  photo(ref: string): Promise<Blob> {
-    return firstValueFrom(this.http.get(`${this.base}/scans/${encodeURIComponent(ref)}/photo`, { responseType: 'blob' }));
+  photo(ref: string, page = 1): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.base}/scans/${encodeURIComponent(ref)}/photo`, { params: { page }, responseType: 'blob' }));
   }
 
   /** Als Observable: die geteilte Korrektur-Sitzung hängt es an die Lebensdauer der Seite. */
