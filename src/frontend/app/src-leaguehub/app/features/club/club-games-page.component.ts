@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { MatMenuModule } from '@angular/material/menu';
 import { PlayerSearchComponent } from './player-search.component';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
-import { ClubGame, ClubGameDetail, RosterPerson, SideDecision } from '../../core/club.models';
+import { ClubGame, ClubGameDetail, ClubPairing, RosterPerson, SideDecision } from '../../core/club.models';
+import { pairingText } from './import-review';
 import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { HandoffService } from '@rh/core/handoff.service';
@@ -33,7 +35,7 @@ type Side = 'white' | 'black';
   selector: 'lh-club-games-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgTemplateOutlet, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent],
+  imports: [RouterLink, NgTemplateOutlet, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent, MatMenuModule],
   template: `
     @if (!allowed) {
       <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppe von SK Schwaz." />
@@ -137,6 +139,16 @@ type Side = 'white' | 'black';
                               @for (r of results; track r) { <option [value]="r" [selected]="e.result === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
                             </select>
                           </label>
+                          @if (e.pairings?.length) {
+                            <label class="field wide">Ligapartie <span class="muted small">(Brett einer Ligarunde — das Jahr kommt dann aus dem Spielplan)</span>
+                              <select class="pairing-pick" (change)="setPairing($any($event.target).value)">
+                                <option value="" [selected]="e.pairingId == null">keine Ligapartie</option>
+                                @for (p of e.pairings; track p.id) {
+                                  <option [value]="p.id" [selected]="e.pairingId === p.id">{{ pairingText(p) }}</option>
+                                }
+                              </select>
+                            </label>
+                          }
                         </div>
                         <div class="actions">
                           <button type="button" class="btn-pri" [disabled]="saving()" (click)="save()">{{ saving() ? 'Speichere …' : 'Speichern' }}</button>
@@ -160,21 +172,25 @@ type Side = 'white' | 'black';
     <!-- Die Aktionen einer Partie — in der Spalte (breit) bzw. in der eigenen Zeile darunter (Handy); die jeweils andere
          Stelle blendet das CSS aus (display: none, also weder sichtbar noch für Vorleser oder Tab erreichbar). -->
     <ng-template #rowActs let-g>
+      <!-- Nachspielen bleibt sichtbar, der Rest steckt im ⋮ (Wunsch 2026-10-06: die Spalte machte die Tabelle zu breit). -->
       <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
               [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' nachspielen'">Nachspielen</button>
-      @if (rookHub) {
-        <button type="button" class="btn-link" (click)="openInRookHub(g)"
-                [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' in RookHub mit Analyse öffnen'">Analyse</button>
+      @if (rookHub || g.canDelete) {
+        <button type="button" class="btn-link more-btn" [matMenuTriggerFor]="moreMenu" [matMenuTriggerData]="{ g: g }"
+                [attr.aria-label]="'Weitere Aktionen für ' + g.white + ' – ' + g.black" title="Weitere Aktionen">⋮</button>
       }
-      @if (g.canDelete) {
-      <button type="button" class="btn-link" (click)="edit(g)"
-              [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' bearbeiten'">Bearbeiten</button>
-      <!-- 0.660.0: Züge nachbessern wie beim ersten Prüfen (mit dem aufbewahrten Formular) — gilt auch für alle Kopien -->
-      <a class="btn-link" [routerLink]="['/verein/partie', g.id, 'korrigieren']"
-         [attr.aria-label]="'Züge der Partie ' + g.white + ' – ' + g.black + ' korrigieren'">Korrigieren</a>
-      <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
-              [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' löschen'">Löschen</button> }
     </ng-template>
+    <mat-menu #moreMenu="matMenu" xPosition="before">
+      <ng-template matMenuContent let-g="g">
+        @if (rookHub) { <button mat-menu-item type="button" (click)="openInRookHub(g)">Analyse</button> }
+        @if (g.canDelete) {
+          <button mat-menu-item type="button" (click)="edit(g)">Bearbeiten</button>
+          <!-- 0.660.0: Züge nachbessern wie beim ersten Prüfen (mit dem aufbewahrten Formular) — gilt auch für alle Kopien -->
+          <a mat-menu-item [routerLink]="['/verein/partie', g.id, 'korrigieren']">Korrigieren</a>
+          <button mat-menu-item type="button" [disabled]="deleting() === g.id" (click)="remove(g)">Löschen</button>
+        }
+      </ng-template>
+    </mat-menu>
   `,
 })
 export class ClubGamesPageComponent implements OnInit {
@@ -201,7 +217,10 @@ export class ClubGamesPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
   /** Die Partie, die gerade korrigiert wird — je Seite die Festlegung (fehlt = unverändert) und das Ergebnis. */
-  readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string } | null>(null);
+  /** `pairings` = Brettpaarungen zur Auswahl (0.678.0), `null` solange sie laden oder nicht zu holen waren. */
+  readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string;
+    pairingId: number | null; pairings: ClubPairing[] | null } | null>(null);
+  readonly pairingText = pairingText;
   readonly saving = signal(false);
   readonly editError = signal<string | null>(null);
   /** Die Partie, die gerade nachgespielt wird (aufgeklappt unter ihrer Zeile). */
@@ -281,8 +300,23 @@ export class ClubGamesPageComponent implements OnInit {
   edit(g: ClubGame): void {
     const cur = this.editing();
     if (cur?.id === g.id) { this.editing.set(null); return; }
-    this.editing.set({ id: g.id, white: null, black: null, result: g.result });
+    this.editing.set({ id: g.id, white: null, black: null, result: g.result, pairingId: g.leagueGameId ?? null, pairings: null });
     this.editError.set(null);
+    void this.loadPairings(g.id);
+  }
+
+  /** Die Brettpaarungen, die diese Partie sein könnten — die aktuelle Zuordnung ist immer dabei. */
+  private async loadPairings(id: number): Promise<void> {
+    try {
+      const list = await this.api.gamePairings(id);
+      const e = this.editing();
+      if (e?.id === id) this.editing.set({ ...e, pairings: list });
+    } catch { /* ohne Auswahl bleibt die Zuordnung, wie sie ist */ }
+  }
+
+  setPairing(value: string): void {
+    const e = this.editing();
+    if (e) this.editing.set({ ...e, pairingId: value ? Number(value) : null });
   }
 
   typed(k: Side, text: string): void {
@@ -354,7 +388,9 @@ export class ClubGamesPageComponent implements OnInit {
     this.saving.set(true);
     this.editError.set(null);
     try {
-      const g = await this.api.updateGame(e.id, { white: e.white, black: e.black, result: e.result });
+      // Die Paarung geht nur mit, wenn es eine Auswahl gab (sonst bliebe sie unverändert); 0 = keine Ligapartie.
+      const g = await this.api.updateGame(e.id, { white: e.white, black: e.black, result: e.result,
+        ...(e.pairings ? { leagueGameId: e.pairingId ?? 0 } : {}) });
       this.items.set(this.items().map(x => x.id === g.id ? g : x));
       this.editing.set(null);
     } catch (err) {

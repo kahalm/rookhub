@@ -128,8 +128,8 @@ describe('ClubImportReviewComponent', () => {
     (el.querySelector('.actions .btn-pri') as HTMLButtonElement).click();
     flushMicrotasks();
     expect(client.importPgn).toHaveBeenCalledWith('PGN', [
-      { index: 1, white: { name: null, fide: '111', replace: true }, black: { name: null, fide: '222', replace: false } },
-      { index: 2, white: { name: 'Huber, Franz', fide: '1', replace: false }, black: { name: null, fide: null, replace: false } },
+      { index: 1, white: { name: null, fide: '111', replace: true }, black: { name: null, fide: '222', replace: false }, leagueGameId: 0 },
+      { index: 2, white: { name: 'Huber, Franz', fide: '1', replace: false }, black: { name: null, fide: null, replace: false }, leagueGameId: 0 },
     ]);
     expect(done).toBeTrue();
     flush();

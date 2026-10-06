@@ -28,6 +28,44 @@ public class LeagueClubImportGameDecision
     public int Index { get; set; }
     public LeagueClubSideDecision White { get; set; } = new();
     public LeagueClubSideDecision Black { get; set; } = new();
+    /// <summary>Die Brettpaarung dieser Partie (0.678.0): <c>0</c> = keine, fehlt = die eindeutig erkannte.</summary>
+    public int? LeagueGameId { get; set; }
+}
+
+/// <summary>Eine Brettpaarung, die eine Vereinspartie sein könnte (0.678.0, <c>LeaguePairingFinder</c>).</summary>
+public class LeagueClubPairingDto
+{
+    public int Id { get; set; }
+    /// <summary>„2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026)".</summary>
+    public string Label { get; set; } = string.Empty;
+    public string White { get; set; } = string.Empty;
+    public string? WhiteFide { get; set; }
+    public string Black { get; set; } = string.Empty;
+    public string? BlackFide { get; set; }
+    public string Result { get; set; } = string.Empty;
+    /// <summary>Die Seite spielte für den eigenen Verein (wird beim Übernehmen zu „Schwaz").</summary>
+    public bool WhiteOwnClub { get; set; }
+    public bool BlackOwnClub { get; set; }
+    /// <summary>Beide Spieler in ihren Farben und der Tag passen.</summary>
+    public bool Exact { get; set; }
+
+    public static LeagueClubPairingDto Of(RookHub.Api.Services.League.LeaguePairingFinder.Option o) => new()
+    {
+        Id = o.Id, Label = o.Label, White = o.White, WhiteFide = o.WhiteFide, Black = o.Black, BlackFide = o.BlackFide,
+        Result = o.Result, WhiteOwnClub = o.WhiteOwnClub, BlackOwnClub = o.BlackOwnClub, Exact = o.Exact,
+    };
+}
+
+/// <summary><c>POST …/club/pairings</c> — Vorschläge für eine Partie, die noch nicht gespeichert ist (Formular).</summary>
+public class LeagueClubPairingQuery
+{
+    public string? White { get; set; }
+    public string? WhiteFide { get; set; }
+    public string? Black { get; set; }
+    public string? BlackFide { get; set; }
+    /// <summary>JJJJ.MM.TT bzw. JJJJ-MM-TT — fehlt der Tag, gilt <see cref="Year"/>.</summary>
+    public string? Date { get; set; }
+    public int? Year { get; set; }
 }
 
 /// <summary><c>POST /api/league/club/games/import</c> — derselbe PGN-Text wie bei der Übersicht und je Partie, die
@@ -60,6 +98,10 @@ public class LeagueClubGameRequest
     public string? Event { get; set; }
     /// <summary>Nur das Jahr wird gespeichert.</summary>
     public int? Year { get; set; }
+    /// <summary>Die Brettpaarung (0.678.0): <c>0</c> = keine, fehlt = die eindeutig erkannte.</summary>
+    public int? LeagueGameId { get; set; }
+    /// <summary>Der Tag der Partie, wenn bekannt (JJJJ.MM.TT) — nur für die Erkennung der Paarung.</summary>
+    public string? Date { get; set; }
     /// <summary>Die Liga-Einlesung, aus der die Partie stammt — wird nach dem Übernehmen geschlossen (Foto weg).</summary>
     public int? ScanId { get; set; }
 }
@@ -94,6 +136,9 @@ public class LeagueClubPreviewGameDto
     public string? Pgn { get; set; }
     public LeagueClubPreviewSideDto White { get; set; } = new();
     public LeagueClubPreviewSideDto Black { get; set; } = new();
+    /// <summary>Brettpaarungen, die diese Partie sein könnten (0.678.0), und die vorgewählte (genau eine passt genau).</summary>
+    public List<LeagueClubPairingDto> Pairings { get; set; } = new();
+    public int? PairingId { get; set; }
 }
 
 public class LeagueClubPreviewDto
@@ -145,6 +190,10 @@ public class LeagueClubGameDto
     public bool Anonymized { get; set; }
     /// <summary>Darf der Aufrufer sie löschen (Verwalter, oder eigene NICHT anonymisierte).</summary>
     public bool CanDelete { get; set; }
+    /// <summary>Die zugeordnete Brettpaarung (0.678.0) — NUR für wer bearbeiten darf: Liga + Runde + Brett machten eine
+    /// „Schwaz"-Seite für jeden Leser der Vereinsliste wieder auffindbar (wie <c>Classifier1</c>).</summary>
+    public int? LeagueGameId { get; set; }
+    public string? LeagueGameLabel { get; set; }
     /// <summary>Die Züge als UCI mit Leerzeichen — für „Analyse" (RookHubs Analysebrett, <c>?moves=</c>).</summary>
     public string Uci { get; set; } = string.Empty;
     /// <summary>Die Partie als PGN, wie gespeichert (Hauptvariante, Kopfdaten; „Schwaz" statt des Namens) — „Analyse"
@@ -273,6 +322,8 @@ public class LeagueClubGameUpdateRequest
     public LeagueClubSideDecision? Black { get; set; }
     /// <summary><c>1-0</c>, <c>0-1</c>, <c>1/2-1/2</c>, <c>*</c>; fehlt = unverändert.</summary>
     public string? Result { get; set; }
+    /// <summary>Die Brettpaarung (0.678.0): fehlt = unverändert, <c>0</c> = keine.</summary>
+    public int? LeagueGameId { get; set; }
 }
 
 /// <summary><c>POST …/club/drafts</c> — eine Partieliste als Entwurf ablegen (0.595.0).</summary>

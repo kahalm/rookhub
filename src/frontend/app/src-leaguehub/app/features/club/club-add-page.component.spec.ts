@@ -84,7 +84,7 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.importPgn).toHaveBeenCalledWith('[White "x"]\n1. e4 *',
-      [{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false } }], 7);
+      [{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false }, leagueGameId: 0 }], 7);
     expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen (1 mit „Schwaz“).');
     expect(api.deleteDraft).toHaveBeenCalledWith('7');                  // fertig importiert → Entwurf samt Rohtext weg
   }));

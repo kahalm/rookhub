@@ -74,6 +74,7 @@ public class EndpointAuthInventoryTests
         "POST /api/league/s/{token}/club/games/chessbase",   // ChessBase-Datenbank → PGN (nur Umwandlung, speichert nichts)
         "GET /api/league/s/{token}/club/players",
         "POST /api/league/s/{token}/club/match",
+        "POST /api/league/s/{token}/club/pairings",                  // LeagueClubShareController.Pairings (Vorschläge Ligapaarung, 0.678.0)
         "GET /api/league/s/{token}/club/scoresheet/status",
         "POST /api/league/s/{token}/club/scans",
         "POST /api/league/s/{token}/club/scans/lookup",

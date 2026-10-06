@@ -1,5 +1,5 @@
 import { ClubPreview, PreviewSide, SideMatch } from '../../core/club.models';
-import { ImportReview, included, needsLook, optionalGame, quickPicks, reviewStatus } from './import-review';
+import { ImportReview, included, needsLook, optionalGame, pairingText, quickPicks, reviewStatus } from './import-review';
 
 const M = (x: Partial<SideMatch> = {}): SideMatch =>
   ({ league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [], ...x });
@@ -56,7 +56,7 @@ describe('ImportReview', () => {
     expect(reviewStatus(r.games()[0]).reason).toBe('onlyOwnClub');
     expect(r.decisions()).toEqual([]);
     r.setReplace(1, 'black', false);
-    expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false } }]);
+    expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false }, leagueGameId: 0 }]);
   });
 
   it('Gegner nur in der Megabase: „nicht in Liga", übernehmbar, aber nicht vorgewählt; anhaken nimmt sie auf', () => {
@@ -73,7 +73,7 @@ describe('ImportReview', () => {
     expect(needsLook(g.black)).toBeFalse();                              // erkannt, nur eben nicht in der Liga
     expect(r.counts()).toEqual(jasmine.objectContaining({ take: 0, unknown: 0, optional: 1 }));
     r.toggleInclude(1);
-    expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '14131781', replace: false } }]);
+    expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '14131781', replace: false }, leagueGameId: 0 }]);
   });
 
   it('einen Spieler aus der Megabase wählen macht die Partie übernehmbar UND wählt sie aus', () => {
@@ -180,5 +180,48 @@ describe('ImportReview', () => {
     const r = ImportReview.restore(now, state, true).games()[0];
     expect(r.white).toEqual(jasmine.objectContaining({ ambiguous: false, fide: '24652091', replace: true }));  // frisch erkannt, Wahl bleibt
     expect(r.black).toEqual(jasmine.objectContaining({ name: 'Lenk, Markus', changed: true }));                // eigene Korrektur bleibt
+  });
+});
+
+describe('ImportReview — Ligapaarung (0.678.0)', () => {
+  const PAIR = { id: 42, label: '2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026)', white: 'Hengl, Philip', whiteFide: '222',
+    black: 'Oberschmid, Patrik', blackFide: '900', result: '1 - 0', whiteOwnClub: false, blackOwnClub: true, exact: true };
+  const OTHER = { ...PAIR, id: 43, label: '2025/26 · Landesliga · Runde 7 · Brett 2 (01.03.2026)', exact: false };
+  const P = (pairingId: number | null): ClubPreview => ({ truncated: false, games: [
+    { index: 1, year: 2026, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false,
+      white: S('Hengl', M()), black: S('Oberschmid', M({ league: true, name: 'Oberschmid, Patrik', fide: '900', club: true })),
+      pairings: [PAIR, OTHER], pairingId },
+  ] });
+
+  it('die vorgewählte Paarung des Servers geht mit, „keine" als 0', () => {
+    expect(new ImportReview(P(42), true).decisions()).toEqual([]);   // Weiß unbekannt, Schwarz ersetzt → nicht importierbar
+    const r = new ImportReview(P(42), true);
+    r.choosePerson(1, 'white', { name: 'Hengl, Philip', fide: '222', teams: [], club: false });
+    expect(r.decisions()[0].leagueGameId).toBe(42);
+    r.setPairing(1, null);
+    expect(r.decisions()[0].leagueGameId).toBe(0);
+  });
+
+  it('eine gewählte Paarung setzt die nicht angefassten Spieler — Schwaz wird ersetzt — und nimmt die Partie auf', () => {
+    const r = new ImportReview(P(null), true);
+    r.setPairing(1, 42);
+    const g = r.games()[0];
+    expect(g.white).toEqual(jasmine.objectContaining({ name: 'Hengl, Philip', fide: '222', league: true, replace: false, changed: true }));
+    expect(g.black).toEqual(jasmine.objectContaining({ fide: '900', club: true, replace: true }));
+    expect(included(g)).toBeTrue();
+    expect(r.decisions()[0]).toEqual(jasmine.objectContaining({ leagueGameId: 42 }));
+  });
+
+  it('der Entwurf merkt die Wahl; eine verschwundene Paarung fällt auf die Vorgabe zurück', () => {
+    const r = new ImportReview(P(42), true);
+    r.setPairing(1, 43);
+    expect(ImportReview.restore(P(42), r.snapshot(), true).games()[0].pairingId).toBe(43);
+    const gone: ClubPreview = { ...P(42), games: [{ ...P(42).games[0], pairings: [PAIR] }] };
+    expect(ImportReview.restore(gone, r.snapshot(), true).games()[0].pairingId).toBe(42);
+  });
+
+  it('Text der Auswahl: Spielplan-Namen, unsichere mit (?)', () => {
+    expect(pairingText(PAIR)).toBe('2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026) — Hengl, Philip – Oberschmid, Patrik');
+    expect(pairingText(OTHER)).toContain('(?)');
   });
 });

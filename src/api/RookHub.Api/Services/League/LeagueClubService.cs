@@ -71,6 +71,67 @@ public sealed class LeagueClubService
         _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow); _analyses = analyses;
         _shareQuota = shareQuota ?? new LeagueShareUploadQuota();
         _cache = cache;
+        _pairings = new LeaguePairingFinder(db);
+    }
+
+    private readonly LeaguePairingFinder _pairings;
+
+    /// <summary>Der Tag einer Partie nur, wenn er ganz dasteht („2026.10.04", auch mit Bindestrichen) — „2026.??.??" ist kein Tag.</summary>
+    internal static DateOnly? FullDateOf(string? date)
+    {
+        if (string.IsNullOrWhiteSpace(date)) return null;
+        var t = date.Trim().Replace('-', '.');
+        return DateOnly.TryParseExact(t, "yyyy.MM.dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var d) ? d : null;
+    }
+
+    /// <summary>Vorschläge für eine Partie, die noch nicht gespeichert ist (Formular, 0.678.0) — Namen werden abgeglichen wie beim
+    /// Hochladen, eine Seite „Schwaz" zählt als eigener Verein.</summary>
+    public async Task<List<LeagueClubPairingDto>> SuggestPairingsAsync(LeagueClubPairingQuery q, CancellationToken ct)
+    {
+        var lk = await LookupsAsync(await RosterAsync(ct), new[] { q.White, q.Black }, new[] { q.WhiteFide, q.BlackFide }, ct);
+        (string Name, string? Fide) One(string? name, string? fide)
+        {
+            if (!string.IsNullOrWhiteSpace(fide)) return (name ?? "", fide.Trim());
+            if (string.IsNullOrWhiteSpace(name)) return ("", null);
+            var (hit, mega, _) = Resolve(name, null, lk);
+            return (name.Trim(), hit.Person?.Fide ?? mega?.Fide);
+        }
+        var (wn, wf) = One(q.White, q.WhiteFide);
+        var (bn, bf) = One(q.Black, q.BlackFide);
+        var date = FullDateOf(q.Date);
+        var options = await _pairings.ForAsync(new LeaguePairingFinder.Query(wn, wf, bn, bf, date, date?.Year ?? q.Year), ct);
+        return options.Select(LeagueClubPairingDto.Of).ToList();
+    }
+
+    /// <summary>Vorschläge für eine gespeicherte Partie (Bearbeiten) — nur wer sie bearbeiten darf; sonst <c>null</c>.</summary>
+    public async Task<List<LeagueClubPairingDto>?> PairingsForGameAsync(int userId, bool canManage, int id, CancellationToken ct)
+    {
+        var g = await _db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g == null || !CanDelete(g, userId, canManage)) return null;
+        var options = await _pairings.ForAsync(LeaguePairingFinder.QueryOf(g, null), ct);
+        // die schon zugeordnete steht immer drin, auch wenn sie nicht mehr unter den Vorschlägen wäre
+        if (g.LeagueGameId is { } cur && options.All(o => o.Id != cur) && await _pairings.ByIdAsync(cur, ct) is { } o0) options.Insert(0, o0);
+        return options.Select(LeagueClubPairingDto.Of).ToList();
+    }
+
+    /// <summary>Die Wahl der Paarung an die Partie: gewählt (<c>&gt; 0</c>), ausdrücklich keine (<c>0</c>) oder — fehlt die
+    /// Angabe — die eindeutig erkannte. Ändert sich dabei das Jahr, wird das PGN neu geschrieben.</summary>
+    private async Task ApplyPairingsAsync(IReadOnlyList<(LeagueClubGame Game, int? Choice, DateOnly? Date, IReadOnlyList<string> Sans)> items,
+        CancellationToken ct)
+    {
+        var auto = items.Where(x => x.Choice is null).ToList();
+        var picks = auto.Count == 0 ? new List<List<LeaguePairingFinder.Option>>()
+            : await _pairings.ForManyAsync(auto.Select(x => LeaguePairingFinder.QueryOf(x.Game, x.Date)).ToList(), ct);
+        var autoIds = auto.Select((x, i) => (x.Game, LeaguePairingFinder.AutoPick(picks[i]))).ToDictionary(t => t.Game, t => t.Item2);
+        foreach (var (game, choice, _, sans) in items)
+        {
+            var id = choice ?? autoIds.GetValueOrDefault(game);
+            if (id is null) continue;
+            var year = game.Year;
+            await _pairings.ApplyAsync(game, id.Value, ct);
+            if (game.Year != year) game.Pgn = PgnOf(game, sans);
+        }
     }
 
     /// <summary>Der Vermerk eines Teilen-Links an seinen Partien: SHA-256 (hex) des Tokens — der Link selbst (144 Bit
@@ -450,6 +511,15 @@ public sealed class LeagueClubService
             g.Duplicate = IsDuplicate(built, pending, stored);
             pending.Add(built);
         }
+        // Brettpaarungen (0.678.0): EINE Abfrage für die ganze Übersicht
+        var dates = parsed.ToDictionary(p => p.Index, p => FullDateOf(p.H("Date")));
+        var options = await _pairings.ForManyAsync(
+            candidates.Select(c => LeaguePairingFinder.QueryOf(c.Game, dates.GetValueOrDefault(c.Dto.Index))).ToList(), ct);
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            candidates[i].Dto.Pairings = options[i].Select(LeagueClubPairingDto.Of).ToList();
+            candidates[i].Dto.PairingId = LeaguePairingFinder.AutoPick(options[i]);
+        }
         return dto;
     }
 
@@ -506,6 +576,7 @@ public sealed class LeagueClubService
         var pending = new List<LeagueClubGame>();
         // Erst alle Partien bauen, dann die Dubletten aller zusammen nachschlagen (N4-004), dann in Reihenfolge entscheiden.
         var built = new List<(int Index, Parsed? P, LeagueClubGame? Game, string? Reason)>();
+        var choices = new Dictionary<int, int?>();
         foreach (var (index, decision) in work)
         {
             if (!byIndex.TryGetValue(index, out var p))
@@ -529,6 +600,7 @@ public sealed class LeagueClubService
             }
             var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             built.Add((index, p, game, reason));
+            choices[index] = decision?.LeagueGameId;
         }
         var stored = await StoredByHashAsync(built.Where(x => x.Game != null).Select(x => x.Game!), ct);
         foreach (var (index, p, game, reason) in built)
@@ -540,6 +612,10 @@ public sealed class LeagueClubService
             pending.Add(game);
         }
         if (lease != null) lease.Kept = pending.Count;
+        var kept = pending.ToHashSet();
+        await ApplyPairingsAsync(built.Where(x => x.Game != null && kept.Contains(x.Game))
+            .Select(x => (x.Game!, choices.GetValueOrDefault(x.Index), FullDateOf(x.P!.H("Date")), (IReadOnlyList<string>)x.P!.Sans!))
+            .ToList(), ct);
         await SaveAsync(pending, ct);
         if (shareHash != null && result.Failed.Count(f => f.Reason == ShareLimitReason) is > 0 and var refused)
             _log.LogWarning("Vereins-Datenbank: Teilen-Link {Link} am Deckel — {Refused} Partien nicht übernommen",
@@ -634,6 +710,7 @@ public sealed class LeagueClubService
         }
         if (lease != null) lease.Kept = 1;
         Stamp(game, userId, now, shareHash, claimHash);
+        await ApplyPairingsAsync(new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
         _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon}{Via})",
             game.Anonymized ? "mit „Schwaz“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
@@ -703,6 +780,7 @@ public sealed class LeagueClubService
         var items = rows.Select(g => ToDto(g, userId, canManage)).ToList();
         await FillAnalysisAsync(items, ct);
         await FillRosterAsync(items, ct);
+        await FillPairingLabelsAsync(items, ct);
         return new LeagueClubListDto { Total = total, Page = page, PageSize = PageSize, Items = items };
     }
 
@@ -754,6 +832,7 @@ public sealed class LeagueClubService
         if (g == null) return null;
         var dto = ToDto(g, userId, canManage);
         await FillAnalysisAsync(new List<LeagueClubGameDto> { dto }, ct);
+        await FillPairingLabelsAsync(new List<LeagueClubGameDto> { dto }, ct);
         return dto;
     }
 
@@ -772,7 +851,16 @@ public sealed class LeagueClubService
         Id = g.Id, Year = g.Year, White = g.White, Black = g.Black, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide,
         WhiteElo = g.WhiteElo, BlackElo = g.BlackElo, Result = g.Result, Event = g.Event, Plies = g.Plies,
         Opening = OpeningOf(g.Pgn), Anonymized = g.Anonymized, CanDelete = CanDelete(g, userId, canManage), Uci = UciOf(g.Pgn), Pgn = g.Pgn,
+        LeagueGameId = CanDelete(g, userId, canManage) ? g.LeagueGameId : null,
     };
+
+    /// <summary>Die Bezeichnung der zugeordneten Paarung („2026/27 · Landesliga · Runde 2 · Brett 4") — nur wo sie gezeigt werden
+    /// darf (<see cref="LeagueClubGameDto.LeagueGameId"/> ist dann gesetzt).</summary>
+    private async Task FillPairingLabelsAsync(List<LeagueClubGameDto> items, CancellationToken ct)
+    {
+        foreach (var i in items.Where(i => i.LeagueGameId != null))
+            i.LeagueGameLabel = (await _pairings.ByIdAsync(i.LeagueGameId!.Value, ct))?.Label;
+    }
 
     /// <summary>Die Hauptvariante als UCI („e2e4 e7e5 …") — für den Knopf „Analyse", der RookHubs Analysebrett mit
     /// <c>?moves=</c> öffnet (Wunsch 2026-09-28). Gespeichert wird nur ab der Grundstellung.</summary>
@@ -830,6 +918,13 @@ public sealed class LeagueClubService
         // Der echte Name hinter „Schwaz": eine geänderte Seite bringt ihn mit; eine unveränderte behält den bisherigen.
         if (req.White != null) (g.WhiteRealName, g.WhiteRealFide) = (built.WhiteRealName, built.WhiteRealFide);
         if (req.Black != null) (g.BlackRealName, g.BlackRealFide) = (built.BlackRealName, built.BlackRealFide);
+        // Brettpaarung (0.678.0): fehlt = unverändert
+        if (req.LeagueGameId is { } pairing)
+        {
+            var year = g.Year;
+            await _pairings.ApplyAsync(g, pairing, ct);
+            if (g.Year != year) g.Pgn = PgnOf(g, sans);
+        }
         if (built.Anonymized && !g.Anonymized)
         {
             // Jetzt mit „Schwaz": weder wer hochgeladen hat noch wann (Klassenkommentar).

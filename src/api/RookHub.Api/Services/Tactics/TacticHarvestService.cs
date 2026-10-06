@@ -514,6 +514,21 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     /// </summary>
     internal static async Task<LeagueRound?> LeagueRoundAsync(AppDbContext db, LeagueClubGame g, CancellationToken ct)
     {
+        // fest zugeordnet (0.678.0): genau diese Paarung
+        if (g.LeagueGameId is { } linkedId)
+        {
+            var l = await (from lg in db.LeagueGames.AsNoTracking()
+                           join t in db.LeagueTournaments.AsNoTracking() on lg.Tnr equals t.Tnr
+                           where lg.Id == linkedId
+                           select new { lg, t.Season, t.League, t.Grp }).FirstOrDefaultAsync(ct);
+            if (l != null)
+            {
+                var lname = string.IsNullOrEmpty(l.Grp) ? l.League : $"{l.League} {l.Grp}";
+                var lw = l.lg.HomeColor == "w";
+                return new LeagueRound($"{l.Season} · {lname} · Runde {l.lg.Round}",
+                    lw ? l.lg.HomePlayer : l.lg.AwayPlayer, lw ? l.lg.AwayPlayer : l.lg.HomePlayer);
+            }
+        }
         var fides = new[] { g.WhiteFide, g.BlackFide }.Where(f => !string.IsNullOrEmpty(f)).ToList();
         if (fides.Count == 0) return null;
         var rows = await (from lg in db.LeagueGames.AsNoTracking()

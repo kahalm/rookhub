@@ -12,7 +12,7 @@ import { isBoardHotkey } from '@rh/shared/keyboard.util';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { ClubGameDetail, ClubSheetState, LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
+import { ClubGameDetail, ClubPairing, ClubSheetState, LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
 import { pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
@@ -21,6 +21,7 @@ import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
+import { pairingText } from './import-review';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 import { de } from '../../core/league-format';
 
@@ -258,7 +259,7 @@ function readAutoMine(): boolean {
                                                (input)="elo(k).set(num($any($event.target).value))" [disabled]="replace(k)()" /></label>
             }
             <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="year() ?? ''"
-                                              (input)="year.set(num($any($event.target).value)); yearRead.set(null)" />
+                                              (input)="year.set(num($any($event.target).value)); yearRead.set(null); schedulePairings()" />
               @if (yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
             </label>
             <label class="field narrow">Ergebnis
@@ -269,6 +270,16 @@ function readAutoMine(): boolean {
             <label class="field wide">Veranstaltung <span class="muted small">(fällt weg, sobald jemand „{{ anon }}“ heißt)</span>
               <input [value]="event()" (input)="event.set($any($event.target).value)" maxlength="200" [disabled]="anyReplaced()" />
             </label>
+            @if (pairings().length) {
+              <label class="field wide">Ligapartie <span class="muted small">(Brett einer Ligarunde — Spieler und Jahr kommen dann aus dem Spielplan)</span>
+                <select class="pairing-pick" (change)="choosePairing($any($event.target).value)">
+                  <option value="" [selected]="pairingId() == null">keine Ligapartie</option>
+                  @for (p of pairings(); track p.id) {
+                    <option [value]="p.id" [selected]="pairingId() === p.id">{{ pairingText(p) }}</option>
+                  }
+                </select>
+              </label>
+            }
           </div>
 
           <div class="field-row">
@@ -430,6 +441,18 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly event = signal('');
   readonly ownerSide = signal<Side | null>(null);
   readonly anyReplaced = computed(() => this.replace('white')() || this.replace('black')());
+  /** Der Tag laut Formular — nur für die Erkennung der Ligapaarung (gespeichert wird nur das Jahr). */
+  private sheetDate: string | null = null;
+  /** Brettpaarungen, die diese Partie sein könnten (0.678.0); `pairingId` = die gewählte. */
+  readonly pairings = signal<ClubPairing[]>([]);
+  readonly pairingId = signal<number | null>(null);
+  readonly pairingText = pairingText;
+  /** Der Nutzer hat selbst gewählt — dann ändert ein neuer Vorschlag die Wahl nicht mehr. */
+  private pairingTouched = false;
+  /** Vorschläge wurden geholt — erst dann heißt „keine" auch keine (sonst entscheidet der Server). */
+  private pairingsLoaded = false;
+  private pairingTimer: ReturnType<typeof setTimeout> | null = null;
+  private pairingSeq = 0;
 
   readonly s = new SheetEditSession({
     resolve: (prefix, writtenFrom) => this.gameId != null
@@ -488,7 +511,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.ticker.stop();
     this.destroyed = true;
-    for (const t of [this.pollTimer, this.matchTimer]) if (t) clearTimeout(t);
+    for (const t of [this.pollTimer, this.matchTimer, this.pairingTimer]) if (t) clearTimeout(t);
     const url = this.photoUrl();
     if (url) URL.revokeObjectURL(url);
   }
@@ -537,6 +560,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.name('white').set(st.white ?? '');
     this.name('black').set(st.black ?? '');
     const preset = presetYear(st.date);
+    this.sheetDate = st.date;
     this.year.set(preset.year);
     this.yearRead.set(preset.read);
     this.result.set(normalizeResult(st.result));
@@ -620,6 +644,48 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     const league = p.league ?? true;
     st.match.set({ league, ambiguous: false, name: p.name, fide: p.fide, club: p.club, candidates: [], mega: !league });
     this.applyDefault(k);
+    this.schedulePairings();
+  }
+
+  /** Vorschläge für die Ligapaarung neu holen (gedrosselt) — nach jedem Abgleich der Namen und jedem Jahr. */
+  schedulePairings(): void {
+    if (this.gameId != null) return;
+    if (this.pairingTimer) clearTimeout(this.pairingTimer);
+    this.pairingTimer = setTimeout(() => void this.loadPairings(), MATCH_DEBOUNCE_MS);
+  }
+
+  private async loadPairings(): Promise<void> {
+    const my = ++this.pairingSeq;
+    const fide = (k: Side) => this.sideState[k].fide() ?? (this.match(k)()?.ambiguous ? null : this.match(k)()?.fide ?? null);
+    try {
+      const list = await this.api.pairings({
+        white: this.name('white')().trim() || null, whiteFide: fide('white'),
+        black: this.name('black')().trim() || null, blackFide: fide('black'),
+        date: this.sheetDate, year: this.year(),
+      });
+      if (my !== this.pairingSeq || this.destroyed) return;
+      // Eine schon gewählte Paarung bleibt in der Auswahl, auch wenn sie nach einer Namensänderung nicht mehr vorkäme.
+      const chosen = this.pairings().find(p => p.id === this.pairingId());
+      this.pairings.set(chosen && !list.some(p => p.id === chosen.id) ? [chosen, ...list] : list);
+      this.pairingsLoaded = true;
+      if (!this.pairingTouched) {
+        const exact = list.filter(p => p.exact);
+        this.pairingId.set(exact.length === 1 ? exact[0].id : null);
+      }
+    } catch { /* ohne Vorschläge entscheidet der Server beim Übernehmen selbst */ }
+  }
+
+  /** Eine Paarung gewählt: die Spieler kommen aus dem Spielplan (eine Seite von Schwaz wird wie sonst ersetzt). */
+  choosePairing(value: string): void {
+    this.pairingTouched = true;
+    const p = value ? this.pairings().find(x => x.id === Number(value)) : undefined;
+    this.pairingId.set(p?.id ?? null);
+    if (!p) return;
+    const person = (name: string, fide: string | null, club: boolean): RosterPerson => ({ name, fide, teams: [], club, league: true });
+    this.pickPerson('white', person(p.white, p.whiteFide, p.whiteOwnClub));
+    this.pickPerson('black', person(p.black, p.blackFide, p.blackOwnClub));
+    const year = Number(p.label.match(/\((\d\d)\.(\d\d)\.(\d{4})\)$/)?.[3]);
+    if (year) { this.year.set(year); this.yearRead.set(null); }
   }
 
   private async runMatch(): Promise<void> {
@@ -632,6 +698,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         this.sideState[k].match.set(m[k]);
         this.applyDefault(k);
       }
+      this.schedulePairings();
     } catch { /* die Prüfung macht der Server beim Übernehmen ohnehin */ }
   }
 
@@ -714,6 +781,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         event: this.event().trim() || null,
         year: this.year(),
         scanId: null,
+        // Vorschläge geholt: die Wahl gilt (0 = keine); sonst entscheidet der Server über den eindeutigen Treffer.
+        leagueGameId: this.pairingsLoaded ? this.pairingId() ?? 0 : null,
+        date: this.sheetDate,
       }, this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
       this.saved.set(true);

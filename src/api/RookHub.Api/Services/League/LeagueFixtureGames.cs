@@ -40,7 +40,11 @@ public sealed class LeagueFixtureGames(AppDbContext db)
             .Distinct().ToList();
         var year = date?.Year;
         var club = year is null ? new List<LeagueClubGame>() : await db.LeagueClubGames.AsNoTracking()
-            .Where(c => c.Year == year).OrderByDescending(c => c.Id).ToListAsync(ct);
+            .Where(c => c.Year == year && c.LeagueGameId == null).OrderByDescending(c => c.Id).ToListAsync(ct);
+        // fest zugeordnete Partien (0.678.0) schlagen jede Raterei — und werden nie einer ANDEREN Paarung zugeraten
+        var gameIds = games.Select(g => g.Id).ToList();
+        var linked = (await db.LeagueClubGames.AsNoTracking().Where(c => c.LeagueGameId != null && gameIds.Contains(c.LeagueGameId.Value))
+            .OrderByDescending(c => c.Id).ToListAsync(ct)).GroupBy(c => c.LeagueGameId!.Value).ToDictionary(x => x.Key, x => x.First());
         var profiles = date is null || fides.Count == 0 ? new Dictionary<string, string>() : await db.LeaguePlayerProfiles.AsNoTracking()
             .Where(p => fides.Contains(p.FideId)).ToDictionaryAsync(p => p.FideId, p => p.Pgn, ct);
 
@@ -56,7 +60,7 @@ public sealed class LeagueFixtureGames(AppDbContext db)
             var canEdit = false;
             if (!forfeit)
             {
-                var hit = club.FirstOrDefault(c => SideMatches(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
+                var hit = linked.GetValueOrDefault(g.Id) ?? club.FirstOrDefault(c => SideMatches(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
                     && SideMatches(c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2, b.Item4)
                     && (Strong(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
                         || Strong(c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)));

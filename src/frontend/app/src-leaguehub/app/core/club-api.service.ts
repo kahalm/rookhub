@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus, ClubSheetState, ScoresheetPly } from './club.models';
+import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPairing, ClubPreview, PairingQuery, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus, ClubSheetState, ScoresheetPly } from './club.models';
 
 import { rememberClaimKey } from './claim-keys';
 
@@ -153,6 +153,16 @@ export class ClubClient {
     const form = new FormData();
     for (const f of files) form.append('files', f.blob, f.name);
     return firstValueFrom(this.http.post<ChessBaseResult>(`${this.base}/games/chessbase`, form));
+  }
+
+  /** Brettpaarungen für eine noch nicht gespeicherte Partie (0.678.0, auch über den Teilen-Link). */
+  pairings(q: PairingQuery): Promise<ClubPairing[]> {
+    return firstValueFrom(this.http.post<ClubPairing[]>(`${this.base}/pairings`, q));
+  }
+
+  /** Brettpaarungen einer gespeicherten Partie — nur für wer sie bearbeiten darf (sonst 404). */
+  gamePairings(id: number): Promise<ClubPairing[]> {
+    return firstValueFrom(this.http.get<ClubPairing[]>(`${this.base}/games/${id}/pairings`));
   }
 
   match(white: string, black: string): Promise<ClubMatch> {

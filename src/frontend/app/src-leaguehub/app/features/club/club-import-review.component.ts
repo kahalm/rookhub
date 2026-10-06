@@ -4,7 +4,7 @@ import { ClubClient } from '../../core/club-api.service';
 import { ClubImportResult, ImportGameDecision, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
-import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, quickPicks, reviewStatus } from './import-review';
+import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, pairingText, quickPicks, reviewStatus } from './import-review';
 import { PlayerSearchComponent } from './player-search.component';
 
 interface Editing { index: number; side: SideKey; text: string }
@@ -47,7 +47,16 @@ interface Editing { index: number; side: SideKey; text: string }
                          [attr.aria-label]="'Partie ' + r.game.index + ' importieren'" (change)="review.toggleInclude(r.game.index)" /></td>
               <td class="num nr">{{ r.game.index }}</td>
               <td class="num yr">{{ r.game.year ?? '–' }}</td>
-              <td class="small event" [attr.title]="r.game.event">{{ r.game.event ?? '' }}</td>
+              <td class="small event" [attr.title]="r.game.event">{{ r.game.event ?? '' }}
+                @if (!r.game.error && r.game.pairings?.length) {
+                  <select class="pairing-pick" [attr.aria-label]="'Ligapaarung von Partie ' + r.game.index"
+                          [class.set]="r.pairingId != null" (change)="pairing(r, $any($event.target).value)">
+                    <option value="" [selected]="r.pairingId == null">keine Ligapartie</option>
+                    @for (p of r.game.pairings; track p.id) {
+                      <option [value]="p.id" [selected]="r.pairingId === p.id">{{ pairingText(p) }}</option>
+                    }
+                  </select>
+                }</td>
               @for (k of sides; track k) {
                 <td class="side" [class.white]="k === 'white'" [class.black]="k === 'black'" [attr.data-label]="k === 'white' ? 'Weiß' : 'Schwarz'">
                   <button type="button" class="side-btn" [disabled]="!!r.game.error" (click)="edit(r, k)"
@@ -207,6 +216,12 @@ export class ClubImportReviewComponent {
   }
 
   readonly quickPicks = quickPicks;
+  readonly pairingText = pairingText;
+
+  /** Ligapaarung gewählt (0.678.0) — setzt die noch nicht angefassten Spieler aus der Paarung. */
+  pairing(r: ReviewGame, value: string): void {
+    this.review.setPairing(r.game.index, value ? Number(value) : null);
+  }
 
   /** „Meintest du …" in der Zeile: denselben Weg wie ein gewählter Ligaspieler, ohne das Feld zu öffnen (0.596.0). */
   quick(r: ReviewGame, side: SideKey, p: RosterPerson): void {

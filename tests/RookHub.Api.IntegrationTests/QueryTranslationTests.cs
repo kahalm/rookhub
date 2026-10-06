@@ -1068,4 +1068,33 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.False(await Db.ClubNotes.AnyAsync());
         Assert.Equal("Šarić", (await Db.ClubMembers.SingleAsync()).LastName);
     }
+
+    /// <summary>Ligapaarung einer Vereinspartie (0.678.0): Vorschläge über einen Join samt Left-Join auf den Rundentermin und
+    /// eine IN-Liste der FIDE-IDs, die feste Zuordnung über eine IN-Liste der Brettpartien — beides nur gegen SQL prüfbar.</summary>
+    [MySqlFact]
+    public async Task LigaPaarung_VorschlaegeUndFesteZuordnung_LassenSichUebersetzen()
+    {
+        Db.LeagueTournaments.Add(new LeagueTournament { Tnr = 88, Season = "2026/27", League = "Landesliga", Stage = "Liga" });
+        Db.LeagueRounds.Add(new LeagueRound { Tnr = 88, Round = 2, Date = new DateOnly(2026, 10, 4) });
+        var lg = new LeagueGame { Tnr = 88, Round = 2, Board = 4, HomeTeam = "Absam", AwayTeam = "Schwaz", HomePlayer = "Hengl, Philip",
+            AwayPlayer = "Oberschmid, Patrik", HomeColor = "w", Result = "1 - 0", HomeFide = "222", AwayFide = "900" };
+        // ohne Rundentermin (Left-Join liefert null)
+        var other = new LeagueGame { Tnr = 88, Round = 3, Board = 1, HomeTeam = "Schwaz", AwayTeam = "Hall", HomePlayer = "Muster, Max",
+            AwayPlayer = "Hengl, Philip", HomeColor = "s", Result = "0 - 1", HomeFide = "333", AwayFide = "222" };
+        Db.LeagueGames.AddRange(lg, other);
+        await Db.SaveChangesAsync();
+
+        var finder = new RookHub.Api.Services.League.LeaguePairingFinder(Db);
+        var options = await finder.ForAsync(new("Hengl, Philip", "222", "Schwaz", null, new DateOnly(2026, 10, 5), null), default);
+        Assert.Equal(lg.Id, options[0].Id);
+        Assert.True(options[0].Exact);
+        Assert.Contains(options, o => o.Id == other.Id && o.Date == null);
+        Assert.Equal("2026/27", (await finder.ByIdAsync(other.Id, default))!.Season);
+
+        Db.LeagueClubGames.Add(new LeagueClubGame { Year = 2026, White = "Hengl, Philip", WhiteFide = "222", Black = "Schwaz",
+            Pgn = "x", MovesHash = "h", LeagueGameId = lg.Id });
+        await Db.SaveChangesAsync();
+        var pairings = await new RookHub.Api.Services.League.LeagueFixtureGames(Db).ForFixtureAsync(88, 2, "Schwaz", default);
+        Assert.Equal("club", Assert.Single(pairings).Source);
+    }
 }

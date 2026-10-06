@@ -112,8 +112,8 @@ describe('ClubGamesPageComponent', () => {
     expect(rows[0].querySelector('.anon')?.textContent).toBe('Schwaz');
     expect(rows[0].querySelector('button.pl')?.textContent).toContain('Hengl, Philip');
     expect(rows[0].textContent).toContain('1.e4 c5 2.Sf3 d6');
-    expect(rows[0].textContent).not.toContain('Löschen');
-    expect(rows[1].textContent).toContain('Löschen');
+    expect(rows[0].querySelector('.more-btn')).toBeNull();            // nichts zu bearbeiten, kein RookHub in Tests
+    expect(rows[1].querySelector('.more-btn')).not.toBeNull();
     expect(el.textContent).toContain('2 Partien');
     expect(el.querySelector('a.btn-pri')?.textContent).toContain('Partien hinzufügen');
   }));
@@ -171,7 +171,7 @@ describe('ClubGamesPageComponent', () => {
     expect(visible(game.querySelector('td.acts'))).toBeFalse();
     expect(visible(acts)).toBeTrue();
     const labels = Array.from(acts.querySelectorAll('.btn-link')).map(b => b.textContent?.trim());
-    expect(labels).toEqual(['Nachspielen', 'Bearbeiten', 'Korrigieren', 'Löschen']);
+    expect(labels).toEqual(['Nachspielen', '⋮']);                         // der Rest steckt im Menü (0.678.0)
     expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
     // breit wie bisher: Aktionen in der Spalte, keine eigene Zeile
     el.style.width = '900px';
@@ -184,7 +184,9 @@ describe('ClubGamesPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     api.deleteGame.and.resolveTo({});
-    (Array.from(el.querySelectorAll('tbody tr.game')[1].querySelectorAll('.btn-link')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
+    (el.querySelectorAll('tbody tr.game')[1].querySelector('.more-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (Array.from(document.querySelectorAll('.mat-mdc-menu-item')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.deleteGame).toHaveBeenCalledWith(2);

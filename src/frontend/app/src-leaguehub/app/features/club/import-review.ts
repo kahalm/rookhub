@@ -1,5 +1,5 @@
 import { computed, signal } from '@angular/core';
-import { ClubPreview, ImportGameDecision, PreviewGame, PreviewSide, RosterPerson, SideMatch } from '../../core/club.models';
+import { ClubPairing, ClubPreview, ImportGameDecision, PreviewGame, PreviewSide, RosterPerson, SideMatch } from '../../core/club.models';
 
 /** Eine Seite in der Übersicht, so wie der Nutzer sie gerade festgelegt hat. */
 export interface ReviewSide {
@@ -37,6 +37,8 @@ export interface ReviewGame {
   excluded: boolean;
   /** Das Häkchen hat der Nutzer selbst angefasst — dann ändert eine übernommene Korrektur es nicht mehr. */
   touched?: boolean;
+  /** Die gewählte Brettpaarung (0.678.0): `null` = keine. Vorgabe = die eindeutig erkannte des Servers. */
+  pairingId: number | null;
 }
 
 export type SideKey = 'white' | 'black';
@@ -123,7 +125,8 @@ export class ImportReview {
   constructor(preview: ClubPreview, readonly replaceClub: boolean) {
     this.truncated = preview.truncated;
     this.games.set(preview.games.map(g => {
-      const r: ReviewGame = { game: g, white: sideOf(g.white, replaceClub), black: sideOf(g.black, replaceClub), excluded: false };
+      const r: ReviewGame = { game: g, white: sideOf(g.white, replaceClub), black: sideOf(g.black, replaceClub), excluded: false,
+        pairingId: g.pairingId ?? null };
       return { ...r, excluded: optionalGame(r) };
     }));
   }
@@ -193,6 +196,27 @@ export class ImportReview {
     return n;
   }
 
+  /**
+   * Die Partie einer Brettpaarung zuordnen (0.678.0, Wunsch 2026-10-05: „einer Ligarunde zuweisen"). `null` = keine. Die
+   * Paarung legt die Spieler fest: jede Seite, die der Nutzer nicht selbst gesetzt hat, bekommt Name und FIDE-ID aus der
+   * Paarung — eine Seite von Schwaz wird dabei wie sonst ersetzt (Vorgabe). Die Partie wird damit importiert.
+   */
+  setPairing(index: number, id: number | null): void {
+    this.update(index, r => {
+      const p = id == null ? undefined : r.game.pairings?.find(x => x.id === id);
+      if (!p) return { ...r, pairingId: null };
+      const from = (s: ReviewSide, name: string, fide: string | null, own: boolean): ReviewSide => s.changed ? s : {
+        ...s, name, fide, league: true, ambiguous: false, club: own, candidates: [], replace: this.defaultReplace(own, s.owner),
+        changed: true, lastNameOnly: false, mega: false, alias: false, similar: [],
+      };
+      return {
+        ...r, pairingId: p.id, excluded: false,
+        white: from(r.white, p.white, p.whiteFide, p.whiteOwnClub),
+        black: from(r.black, p.black, p.blackFide, p.blackOwnClub),
+      };
+    });
+  }
+
   setReplace(index: number, side: SideKey, replace: boolean): void {
     this.withSide(index, side, s => ({ ...s, replace }));
   }
@@ -207,7 +231,7 @@ export class ImportReview {
     const snap: ReviewSnapshot = {
       v: 1, replaceClub: this.replaceClub,
       games: this.games().map(r => ({ i: r.game.index, raw: [r.white.raw, r.black.raw], white: r.white, black: r.black,
-        excluded: r.excluded, touched: r.touched })),
+        excluded: r.excluded, touched: r.touched, p: r.pairingId })),
     };
     return JSON.stringify(snap);
   }
@@ -222,7 +246,10 @@ export class ImportReview {
     review.games.update(list => list.map(r => {
       const s = byIndex.get(r.game.index);
       if (!s || s.raw[0] !== r.white.raw || s.raw[1] !== r.black.raw) return r;
-      const next = { ...r, white: restoreSide(r.white, s.white), black: restoreSide(r.black, s.black), touched: s.touched };
+      // Eine gewählte Paarung kommt nur zurück, wenn es sie noch gibt (ein Stand von vor 0.678.0 kennt keine).
+      const pairingId = s.p === undefined ? r.pairingId
+        : s.p === null || r.game.pairings?.some(x => x.id === s.p) ? s.p : r.pairingId;
+      const next = { ...r, white: restoreSide(r.white, s.white), black: restoreSide(r.black, s.black), touched: s.touched, pairingId };
       return { ...next, excluded: s.touched ? s.excluded : optionalGame(next) };
     }));
     return review;
@@ -232,11 +259,11 @@ export class ImportReview {
   decisions(): ImportGameDecision[] {
     // Die FIDE-ID geht mit, sobald der Spieler eindeutig ist — auch ohne Liga (aus dem Megabase-Verzeichnis gewählt).
     const side = (s: ReviewSide) => ({ name: s.changed ? s.name : null, fide: !s.ambiguous ? s.fide : null, replace: s.replace });
-    return this.games().filter(included).map(r => ({ index: r.game.index, white: side(r.white), black: side(r.black) }));
+    return this.games().filter(included).map(r => ({ index: r.game.index, white: side(r.white), black: side(r.black),
+      leagueGameId: r.pairingId ?? 0 }));
   }
 }
 
-/** Gespeicherter Stand einer Übersicht (JSON im Entwurf). */
 /** Eine Seite aus dem Entwurf (0.597.0): was der Nutzer selbst gesetzt hat, bleibt; eine NICHT angefasste Seite nimmt den
  * frischen Abgleich — sonst käme eine Seite, die der Server inzwischen erkennt (neue Regel, gemerkte Zuordnung), als
  * „mehrdeutig" zurück (gemeldet 2026-09-29 an „Forster, Stephan"). „Ersetzen" bleibt, solange die Seite gleich erkannt
@@ -251,5 +278,13 @@ function restoreSide(fresh: ReviewSide, saved: ReviewSide): ReviewSide {
 interface ReviewSnapshot {
   v: 1;
   replaceClub: boolean;
-  games: { i: number; raw: [string | null, string | null]; white: ReviewSide; black: ReviewSide; excluded: boolean; touched?: boolean }[];
+  games: { i: number; raw: [string | null, string | null]; white: ReviewSide; black: ReviewSide; excluded: boolean; touched?: boolean;
+    /** Gewählte Brettpaarung (0.678.0); fehlt in älteren Ständen. */
+    p?: number | null }[];
+}
+
+/** Wie eine Paarung in der Auswahl steht: „2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026) — Hengl – Muster". Die
+ *  Namen sind die des öffentlichen Spielplans; „(?)" = Spieler oder Tag passen nicht ganz. */
+export function pairingText(p: ClubPairing): string {
+  return `${p.label} — ${p.white} – ${p.black}${p.exact ? '' : ' (?)'}`;
 }

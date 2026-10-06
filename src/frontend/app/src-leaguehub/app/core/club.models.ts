@@ -29,6 +29,26 @@ export interface ClubGame {
   blackInRoster?: boolean;
   /** Stand der Hintergrund-Analyse (0.593.0); fehlt/`null` = noch keine. */
   analysis?: ClubGameAnalysis | null;
+  /** Fest zugeordnete Brettpaarung (0.678.0) — nur für wer bearbeiten darf, sonst fehlt sie. */
+  leagueGameId?: number | null;
+  /** „2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026)". */
+  leagueGameLabel?: string | null;
+}
+
+/** Eine Brettpaarung, die eine Vereinspartie sein könnte (0.678.0, `LeagueClubPairingDto`). */
+export interface ClubPairing {
+  id: number;
+  label: string;
+  white: string;
+  whiteFide: string | null;
+  black: string;
+  blackFide: string | null;
+  result: string;
+  /** Die Seite spielte für Schwaz — wird beim Übernehmen zu „Schwaz". */
+  whiteOwnClub: boolean;
+  blackOwnClub: boolean;
+  /** Beide Spieler in ihren Farben und der Tag passen. */
+  exact: boolean;
 }
 
 /** Stand der Analyse einer Vereinspartie — dieselbe Form wie `analysis` in RookHubs Partienliste. */
@@ -120,13 +140,18 @@ export interface PreviewGame {
   black: PreviewSide;
   /** Die Partie als eigener PGN-Text (0.590.0, fehlt bei harten Fehlern) — damit importiert die Seite portionsweise. */
   pgn?: string | null;
+  /** Brettpaarungen, die diese Partie sein könnten (0.678.0), genaue zuerst. */
+  pairings?: ClubPairing[];
+  /** Die vorgewählte: genau EIN genauer Vorschlag, sonst keine. */
+  pairingId?: number | null;
 }
 
 export interface ClubPreview { games: PreviewGame[]; truncated: boolean }
 
 export interface SideDecision { name: string | null; fide: string | null; replace: boolean }
 
-export interface ImportGameDecision { index: number; white: SideDecision; black: SideDecision }
+/** `leagueGameId`: die Brettpaarung (0.678.0) — `0` = keine, fehlt = die eindeutig erkannte. */
+export interface ImportGameDecision { index: number; white: SideDecision; black: SideDecision; leagueGameId?: number | null }
 
 export interface ClubMatch { white: SideMatch; black: SideMatch }
 
@@ -161,6 +186,20 @@ export interface ClubGameRequest {
   event: string | null;
   year: number | null;
   scanId: number | null;
+  /** Die Brettpaarung (0.678.0): `0` = keine, fehlt = die eindeutig erkannte. */
+  leagueGameId?: number | null;
+  /** Der Tag (JJJJ.MM.TT), wenn bekannt — nur für die Erkennung der Paarung. */
+  date?: string | null;
+}
+
+/** `POST …/club/pairings` — Vorschläge für eine noch nicht gespeicherte Partie (Formular). */
+export interface PairingQuery {
+  white: string | null;
+  whiteFide: string | null;
+  black: string | null;
+  blackFide: string | null;
+  date: string | null;
+  year: number | null;
 }
 
 /** Eine eigene Einlesung: angemeldet über die Nummer, ohne Konto über den geheimen Schlüssel. */
@@ -170,7 +209,10 @@ export interface ScanRef { ref: string; scan: ScoresheetScan }
 export interface OpenScan { scan: ScoresheetScan; viaShareLink: boolean; mine: boolean }
 
 /** `PUT …/games/{id}` — eine Seite ohne Angabe bleibt, wie sie ist; „Schwaz" lässt sich nicht ändern. */
-export interface ClubGameUpdate { white?: SideDecision | null; black?: SideDecision | null; result?: string | null }
+/** `leagueGameId`: fehlt = unverändert, `0` = keine Ligapartie (0.678.0). */
+export interface ClubGameUpdate {
+  white?: SideDecision | null; black?: SideDecision | null; result?: string | null; leagueGameId?: number | null;
+}
 
 /** Ein Entwurf eines PGN-Imports (0.595.0): liegt online, bis alles importiert oder verworfen ist. `ref` = Nummer
  *  (angemeldet) bzw. geheimer Schlüssel (ohne Konto). */

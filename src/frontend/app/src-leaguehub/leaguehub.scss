@@ -357,6 +357,7 @@ button.pl:hover { text-decoration-color: var(--ink); }
    Tabelle wirklich hat (und der Test kann sie setzen). */
 .club-scroll { container-type: inline-size; }
 .club-table td.acts, .club-table th.acts { text-align: right; white-space: nowrap; }
+.more-btn { font-size: 1.2rem; line-height: 1; padding: 0 6px; text-decoration: none; }
 .club-table tr.acts-row { display: none; }
 .row-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 @container (max-width: 640px) {
@@ -470,6 +471,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .review-table tr.off td { color: var(--muted); }
 .review-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ink); }
 .review-table td.event { min-width: 8rem; max-width: 15rem; overflow-wrap: anywhere; color: var(--muted); }
+.review-table select.pairing-pick { display: block; margin-top: .25rem; max-width: 15rem; font-size: .8rem; color: var(--muted); }
+.review-table select.pairing-pick.set { color: var(--ink); font-weight: 600; }
 .side-btn {
   display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; text-align: left; font: inherit; color: inherit;
   background: none; border: 0; padding: 0; cursor: pointer;

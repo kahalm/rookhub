@@ -277,6 +277,18 @@ public class LeagueClubController : BaseApiController
     public async Task<ActionResult<LeagueClubMatchDto>> Match([FromBody] LeagueClubMatchRequest req, CancellationToken ct) =>
         Ok(await _club.MatchAsync(req?.White, req?.Black, ct));
 
+    /// <summary>Welche Brettpaarung könnte diese (noch nicht gespeicherte) Partie sein? (0.678.0)</summary>
+    [HttpPost("pairings")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<ActionResult<List<LeagueClubPairingDto>>> Pairings([FromBody] LeagueClubPairingQuery req, CancellationToken ct) =>
+        Ok(await _club.SuggestPairingsAsync(req ?? new LeagueClubPairingQuery(), ct));
+
+    /// <summary>Brettpaarungen für eine gespeicherte Partie (Bearbeiten, 0.678.0) — nur wer sie bearbeiten darf, sonst 404.</summary>
+    [HttpGet("games/{id:int}/pairings")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<ActionResult<List<LeagueClubPairingDto>>> GamePairings(int id, CancellationToken ct) =>
+        await _club.PairingsForGameAsync(GetUserId(), await CanManageAsync(), id, ct) is { } list ? Ok(list) : NotFound();
+
     // ── Partieformular (dieselbe Einlesung wie in RookHub, aber ohne „Meine Partien") ─────────────
 
     /// <summary>Tageszahl dieses Wegs: <see cref="ScoresheetScanService.DefaultLeagueDailyLimit"/> je Nutzer.</summary>
@@ -466,6 +478,14 @@ public class LeagueShareClubController : ControllerBase
     {
         if (!await ValidAsync(token, ct)) return NotFound();
         return Ok(await _club.MatchAsync(req?.White, req?.Black, ct));
+    }
+
+    /// <summary>Brettpaarungen für das Formular über den Teilen-Link (0.678.0) — die Paarungen sind öffentlich (chess-results).</summary>
+    [HttpPost("pairings")]
+    public async Task<ActionResult<List<LeagueClubPairingDto>>> Pairings(string token, [FromBody] LeagueClubPairingQuery req, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return Ok(await _club.SuggestPairingsAsync(req ?? new LeagueClubPairingQuery(), ct));
     }
 
     [HttpGet("scoresheet/status")]

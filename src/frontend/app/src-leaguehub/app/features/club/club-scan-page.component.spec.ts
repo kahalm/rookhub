@@ -48,7 +48,8 @@ describe('ClubScanPageComponent', () => {
     params = { id: '7' };
     routeData = {};
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard',
-      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves']);
+      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves', 'pairings']);
+    api.pairings.and.resolveTo([]);
     api.scan.and.resolveTo(structuredClone(STATE));
     api.photo.and.rejectWith(new Error('kein Foto'));
     api.match.and.resolveTo(MATCH(true));
@@ -344,6 +345,36 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     expect(clubApi.addToMyGames).toHaveBeenCalledWith(jasmine.stringContaining('[Black "Hengl"]'));
     expect(el.textContent).toContain('In deinen Partien gespeichert.');
+    tick(1000);
+  }));
+
+  it('Ligapaarung (0.678.0): der eindeutige Vorschlag ist vorgewählt, eine Wahl setzt Spieler und Jahr und geht beim Übernehmen mit', fakeAsync(() => {
+    localStorage.setItem(AUTO_MINE_KEY, '0');
+    const exact = { id: 42, label: '2025/26 · Landesliga · Runde 2 · Brett 4 (04.10.2025)', white: 'Oberschmid, Patrik', whiteFide: '900',
+      black: 'Hengl, Philip', blackFide: '222', result: '0 - 1', whiteOwnClub: true, blackOwnClub: false, exact: true };
+    api.pairings.and.resolveTo([exact]);
+    const el = create();
+    flushMicrotasks();
+    tick(1000); flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.pairings).toHaveBeenCalledWith(jasmine.objectContaining({ whiteFide: '900', blackFide: '222', date: '5.6.26', year: 2026 }));
+    const sel = el.querySelector('select.pairing-pick') as HTMLSelectElement;
+    expect(sel.value).toBe('42');
+
+    sel.value = '';
+    sel.dispatchEvent(new Event('change'));
+    sel.value = '42';
+    sel.dispatchEvent(new Event('change'));
+    expect(fixture.componentInstance.year()).toBe(2025);              // Jahr aus dem Rundentermin
+    tick(1000); flushMicrotasks();
+
+    api.addGame.and.resolveTo({ id: 11, anonymized: true });
+    void fixture.componentInstance.save();
+    flushMicrotasks();
+    expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({ leagueGameId: 42, whiteFide: '900', blackFide: '222', whiteReplace: true }), '7');
+
+    fixture.componentInstance.choosePairing('');
+    expect(fixture.componentInstance.pairingId()).toBeNull();
     tick(1000);
   }));
 

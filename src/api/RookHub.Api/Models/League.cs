@@ -382,6 +382,12 @@ public class LeagueClubGame
     public string? BlackRealName { get; set; }
     public string? BlackRealFide { get; set; }
 
+    /// <summary>Die Brettpaarung (<see cref="LeagueGame"/>), die diese Partie ist — vom Nutzer gewählt bzw. beim Hinzufügen
+    /// eindeutig erkannt (0.678.0, <see cref="Services.League.LeaguePairingFinder"/>); <c>null</c> = keine bzw. nicht
+    /// zugeordnet. Kein Fremdschlüssel: ein Aktualisieren ersetzt die Zeilen einer Liga. Schlägt jede Raterei über
+    /// Spieler und Jahr (Paarungen der Runde, Taktik-Kapitel).</summary>
+    public int? LeagueGameId { get; set; }
+
     /// <summary>Liga der Partie („Landesliga") — 0.666.0, aus dem Abgleich der Paarungen (Gegner-FIDE-ID gegen die Spielpläne);
     /// <c>null</c> = nicht bestimmbar. Wird NICHT in der Vereins-Datenbank gezeigt, sondern geht nur in die Kopie in „Meine
     /// Partien" (<see cref="SavedGame.Classifier1"/>): Liga + Saison + Gegner machten die „Schwaz"-Seite im öffentlichen Spielplan
