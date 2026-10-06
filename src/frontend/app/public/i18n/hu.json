@@ -4399,7 +4399,7 @@
   },
   "scoresheet": {
     "title": "Játszmalap beolvasása",
-    "hint": "Egy fénykép a játszmalapról — a játszmát beolvassuk, lépésenként ellenőrizzük és elmentjük a játszmáid közé. Az olvasás lépésenként körülbelül 1–2 másodperc.",
+    "hint": "Egy fénykép a játszmalapról — a játszmát beolvassuk, lépésenként ellenőrizzük és elmentjük a játszmáid közé. Az olvasás általában néhány percig tart.",
     "help": "Claude, az Anthropic (USA) MI-modellje olvassa el a fényképet — ehhez a fénykép oda kerül (lásd az adatvédelmi nyilatkozatot); a RookHub ezután minden lépést táblán ellenőriz, és a későbbi lépések alapján dönti el a korábbi bizonytalanokat. Ahol egy lépés bizonytalan marad, a javító oldal a legvalószínűbb olvasatokat mutatja.\n\nA fénykép a játszmánál marad (⋮ menü: megjelenítés / letöltés). Minden szokásos lejegyzési nyelv működik (K V B F H, K Q R B N, K D T L S …).",
     "notConfigured": "A játszmalapok beolvasása ezen a szerveren nincs beállítva (nincs MI-kulcs).",
     "takePhoto": "Fénykép készítése",
@@ -4411,7 +4411,7 @@
     "quota": "ma {{used}} / {{limit}}",
     "pending": "Beolvasásra vár …",
     "running": "A játszmalap olvasása folyik …",
-    "runningHint": "Lépésenként körülbelül {{perMove}} másodperc — {{time}} óta olvassuk. Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
+    "runningHint": "Általában néhány percig tart — {{time}} óta olvassuk. Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
     "doneTitle": "Beolvasva: {{moves}} féllépés",
     "uncertain": "{{count}} bizonytalan",
     "unresolved": "{{count}} nincs hozzárendelve",

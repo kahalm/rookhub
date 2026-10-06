@@ -8,6 +8,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.688.1',
+    date: '2026-10-06',
+    changes: [
+      { en: "Scoresheets (RookHub and LeagueHub): the upload and waiting pages now say reading usually takes a few minutes instead of 1–2 seconds per move — since 0.687.0 the reader on the server picks up uploads every 5 minutes.", de: "Partieformulare (RookHub und LeagueHub): Upload- und Warteseite sagen jetzt, dass das Lesen meist ein paar Minuten dauert, statt 1–2 Sekunden pro Zug — seit 0.687.0 holt der Leser auf dem Server Uploads alle 5 Minuten ab." },
+    ],
+  },
   { version: "0.688.0", date: "2026-10-06", changes: [
     { en: "Game review table: click a move class (!!, ?, ✓ …) to jump to the next move of that class after the current position; click the number below it to jump only to moves of that colour. After the last one it starts again from the beginning, so repeated clicks walk through all of them.", de: "Rückblick-Tabelle: Ein Klick auf eine Zug-Klasse (!!, ?, ✓ …) springt zum nächsten Zug dieser Klasse nach der aktuellen Stellung, ein Klick auf die Zahl darunter nur zu Zügen dieser Farbe. Nach dem letzten geht es von vorn weiter — wiederholtes Klicken läuft alle der Reihe nach durch." },
   ] },

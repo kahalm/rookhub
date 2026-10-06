@@ -4399,7 +4399,7 @@
   },
   "scoresheet": {
     "title": "Read a scoresheet",
-    "hint": "Take a photo of a scoresheet — the game is read, checked move by move and stored in your games. Reading takes about 1–2 seconds per move.",
+    "hint": "Take a photo of a scoresheet — the game is read, checked move by move and stored in your games. Reading usually takes a few minutes.",
     "help": "Claude, an AI model by Anthropic (USA), reads the photo — it is sent there for this (see the privacy policy). RookHub then checks every move on a board and uses later moves to settle unclear earlier ones. Where a move stays uncertain, the correction page shows the most likely readings.\n\nThe photo is kept with the game (⋮ menu: show / download). All common notation languages work (K Q R B N, K D T L S, R D T F C …).",
     "notConfigured": "Reading scoresheets is not set up on this server (no AI key).",
     "takePhoto": "Take photo",
@@ -4411,7 +4411,7 @@
     "quota": "{{used}} of {{limit}} today",
     "pending": "Waiting to be read …",
     "running": "Reading the scoresheet …",
-    "runningHint": "Takes about {{perMove}} seconds per move — reading for {{time}}. You can leave the page — the game will appear in your games.",
+    "runningHint": "Usually takes a few minutes — reading for {{time}}. You can leave the page — the game will appear in your games.",
     "doneTitle": "Read: {{moves}} half-moves",
     "uncertain": "{{count}} uncertain",
     "unresolved": "{{count}} not matched",

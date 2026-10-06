@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
  * Wie lange das Einlesen eines Partieformulars dauert — für den Hinweis und die mitlaufende Uhr (Wunsch 2026-09-28: „ca.
  * 1–2 Sekunden pro Zug und ein Timer, der raufzählt, damit man eine Vorstellung hat"). Gemessen auf Prod (Claude Opus 5.5
  * „nur abschreiben", 26.–28.09.2026): 43 Einträge 22 s, 59 Einträge 31 s, 104 Einträge 73 s — rund 1–1,5 s je Zug.
+ * Seit 0.687.0 liest der Watcher auf dem Server (alle 5 min), die Seiten sagen deshalb „ein paar Minuten" (0.688.1).
  */
 export const SECONDS_PER_MOVE = '1–2';
 

@@ -4399,7 +4399,7 @@
   },
   "scoresheet": {
     "title": "Partieformular einlesen",
-    "hint": "Ein Foto vom Partieformular — die Partie wird gelesen, Zug für Zug geprüft und in deinen Partien abgelegt. Das Lesen dauert etwa 1–2 Sekunden pro Zug.",
+    "hint": "Ein Foto vom Partieformular — die Partie wird gelesen, Zug für Zug geprüft und in deinen Partien abgelegt. Das Lesen dauert meist ein paar Minuten.",
     "help": "Claude, ein KI-Modell von Anthropic (USA), liest das Foto — dafür wird es dorthin übertragen (siehe Datenschutzerklärung). RookHub prüft danach jeden Zug am Brett und entscheidet unklare frühere Züge anhand der späteren. Wo ein Zug unsicher bleibt, zeigt die Korrekturseite die wahrscheinlichsten Lesarten.\n\nDas Foto bleibt bei der Partie (⋮-Menü: anzeigen / herunterladen). Alle gängigen Notationssprachen gehen (K D T L S, K Q R B N, R D T F C …).",
     "notConfigured": "Das Einlesen von Partieformularen ist auf diesem Server nicht eingerichtet (kein KI-Schlüssel).",
     "takePhoto": "Foto aufnehmen",
@@ -4411,7 +4411,7 @@
     "quota": "{{used}} von {{limit}} heute",
     "pending": "Wartet aufs Einlesen …",
     "running": "Das Formular wird gelesen …",
-    "runningHint": "Dauert etwa {{perMove}} Sekunden pro Zug — läuft seit {{time}}. Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
+    "runningHint": "Dauert meist ein paar Minuten — läuft seit {{time}}. Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
     "doneTitle": "Eingelesen: {{moves}} Halbzüge",
     "uncertain": "{{count}} unsicher",
     "unresolved": "{{count}} nicht zugeordnet",

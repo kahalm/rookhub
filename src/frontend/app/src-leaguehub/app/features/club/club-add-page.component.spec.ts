@@ -491,7 +491,7 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(el.querySelector('.scan-clock')?.textContent).toContain('0:30');
-    expect(el.textContent).toContain('Sekunden pro Zug');
+    expect(el.textContent).toContain('ein paar Minuten');
     tick(2000);
     fixture.detectChanges();
     expect(el.querySelector('.scan-clock')?.textContent).toContain('0:32');

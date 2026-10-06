@@ -179,8 +179,8 @@ const SAVE_DEBOUNCE_MS = 1500;
           @if (status(); as s) {
             <!-- Anbieter und Übermittlung nennen: das Foto (Namen, Unterschriften) geht an Anthropic in den USA (A6-008). -->
             <p class="muted">{{ availability()!.text }} Das Foto liest Claude, ein KI-Modell von Anthropic (USA) — dafür wird
-              es dorthin übertragen (<a routerLink="/privacy">Datenschutz</a>). Das dauert etwa {{ perMove }} Sekunden pro
-              Zug; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
+              es dorthin übertragen (<a routerLink="/privacy">Datenschutz</a>). Das dauert meist ein paar
+              Minuten; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
               <label class="field">Foto des Formulars
                 <input #photoInput type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
