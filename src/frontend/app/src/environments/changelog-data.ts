@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.693.1", date: "2026-10-06", changes: [
+    { en: "The course \"Tactics from club games\" now orders its chapters by season: newest season first, within a season by league and ascending rounds, \"Other games\" last. The order is re-applied after every harvest run, so new rounds slot in at the right place.", de: "Der Kurs „Taktiken aus Vereinspartien“ ordnet seine Kapitel jetzt nach Jahrgang: neueste Saison zuerst, innerhalb einer Saison nach Liga und aufsteigenden Runden, „Andere Partien“ zuletzt. Die Reihenfolge wird nach jedem Ernte-Lauf neu hergestellt, neue Runden landen also an der richtigen Stelle." },
+  ] },
   { version: "0.693.0", date: "2026-10-06", changes: [
     { en: "Live analysis with Lc0 (game page and analysis board) now searches up to 500,000 nodes instead of the set depth. Lc0 measures depth differently (average depth of its search tree) and reached a depth like 12 after a few thousand nodes, so the search ended after one or two seconds. Now it keeps going until the node target or until its move is settled.", de: "Die Live-Analyse mit Lc0 (Partieseite und Analysebrett) rechnet jetzt bis 500 000 Knoten statt bis zur eingestellten Tiefe. Lc0 misst Tiefe anders (durchschnittliche Tiefe seines Suchbaums) und erreichte z. B. Tiefe 12 schon nach wenigen tausend Knoten, die Suche war nach ein, zwei Sekunden fertig. Jetzt rechnet es bis zum Knotenziel oder bis sein Zug feststeht." },
   ] },

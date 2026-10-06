@@ -433,6 +433,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             published++;
         }
         await db.SaveChangesAsync(ct);
+        await SortClubChaptersAsync(ct);
         log.LogInformation("Taktik-Ernte: {Count} Aufgaben in die Kurse gelegt", published);
         return published;
     }
@@ -554,6 +555,47 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         var homeWhite = best.lg.HomeColor == "w";
         return new LeagueRound($"{best.Season} · {league} · Runde {best.lg.Round}",
             homeWhite ? best.lg.HomePlayer : best.lg.AwayPlayer, homeWhite ? best.lg.AwayPlayer : best.lg.HomePlayer);
+    }
+
+    /// <summary>
+    /// Die Kapitel des Vereinskurses nach Jahrgang ordnen (Wunsch 2026-10-06): neueste Saison oben, darin Liga alphabetisch,
+    /// Runden aufsteigend, „Andere Partien" zuletzt. Die Lesereihenfolge hängt an <see cref="BookPuzzle.Round"/>
+    /// (<see cref="ChapterOrder"/>), die hier fortlaufend NEU vergeben wird — über alle Zeilen des Buchs, auch stillgelegte, damit die
+    /// nächste Aufgabe (Anzahl + 1) hinten anschließt. Innerhalb eines Kapitels bleibt die bisherige Reihenfolge. Ändert sich
+    /// nichts, wird nicht geschrieben.
+    /// </summary>
+    internal async Task SortClubChaptersAsync(CancellationToken ct)
+    {
+        var rows = await db.BookPuzzles.Where(p => p.BookFileName == ClubBook).ToListAsync(ct);
+        if (rows.Count < 2) return;
+        var ordered = rows.OrderBy(p => p, Comparer<BookPuzzle>.Create(CompareClubRows)).ToList();
+        var changed = 0;
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var round = (i + 1).ToString();
+            if (ordered[i].Round == round) continue;
+            ordered[i].Round = round;
+            changed++;
+        }
+        if (changed > 0) await db.SaveChangesAsync(ct);
+    }
+
+    private static int CompareClubRows(BookPuzzle a, BookPuzzle b)
+    {
+        var (ga, sa, la, ra) = ClubChapterKey(a.Chapter);
+        var (gb, sb, lb, rb) = ClubChapterKey(b.Chapter);
+        var c = ga.CompareTo(gb);
+        if (c == 0) c = sb.CompareTo(sa);                          // neueste Saison zuerst
+        if (c == 0) c = string.Compare(la, lb, StringComparison.CurrentCultureIgnoreCase);
+        if (c == 0) c = ra.CompareTo(rb);
+        return c != 0 ? c : ChapterOrder.Compare(a.Round, a.Id, b.Round, b.Id);
+    }
+
+    /// <summary>„2026/27 · Landesliga · Runde 1" → (0, 2026, „Landesliga", 1); „Andere Partien" und alles Unlesbare → Gruppe 1 (hinten).</summary>
+    internal static (int Group, int Season, string League, int Round) ClubChapterKey(string? chapter)
+    {
+        var m = chapter is null ? null : System.Text.RegularExpressions.Regex.Match(chapter, @"^(\d{4})/\d{2} · (.+?) · Runde (\d+)$");
+        return m is { Success: true } ? (0, int.Parse(m.Groups[1].Value), m.Groups[2].Value, int.Parse(m.Groups[3].Value)) : (1, 0, chapter ?? "", 0);
     }
 
     /// <summary>Verweis auf die Partie (<see cref="BookPuzzle.SourceGame"/>): Vereinspartie → <c>club</c>, eigene gespeicherte
