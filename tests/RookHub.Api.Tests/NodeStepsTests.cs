@@ -258,7 +258,7 @@ public class NodeStepsTests : IDisposable
         foreach (var pos in positions)
         {
             var job = await _db.AnalysisJobs.SingleAsync(j => j.Id == pos.AnalysisJobId);
-            var uci = pos.GameMoveUci;           // der Partiezug ist in der Stellung legal
+            var uci = TestMoves.MoveOf(pos);     // der Partiezug (Endstellung: irgendein legaler)
             job.Status = AnalysisJobStatus.Done;
             job.ResultJson = JsonSerializer.Serialize(new { depth = 9, nodes = 30_000, pvs = new[] { new { moves = new[] { uci }, cp = 20 } } });
             job.ReachedDepth = 9;

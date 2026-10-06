@@ -45,6 +45,18 @@ public static class GameMistakes
         public double Loss => WinBefore - WinAfter;
     }
 
+    /// <summary>Bewertung nach dem letzten Zug: die Endstellung (0.689.0, Zeile <c>Ply == plyCount</c>), wenn gerechnet und
+    /// die Partie vollständig vorliegt — sonst wie bisher der gespielte Kandidat der letzten Zeile.</summary>
+    public static DTOs.GameEvalScoreDto? FinalWithEnd(IReadOnlyList<GameAnalysisPosition> ordered, DTOs.GameEvalPlyDto? lastRow,
+        int n, int plyCount)
+    {
+        if (n == plyCount && ordered.FirstOrDefault(p => p.Ply == plyCount) is { } end
+            && GameEvals.PlyOf(end.Ply, end.Fen, end.GameMoveUci, end.CandidatesJson, end.Depth) is { } e
+            && (e.Cp is not null || e.Mate is not null))
+            return new DTOs.GameEvalScoreDto { Cp = e.Cp, Mate = e.Mate };
+        return GameEvals.FinalOf(lastRow, n);
+    }
+
     /// <summary>
     /// Alle Fehler der Partie in Halbzug-Reihenfolge. Bewertbar ist ein Zug nur mit gerechneter Stellung davor UND einer
     /// Bewertung danach (nächste Stellung, sonst der gespielte Kandidat) — dieselbe Regel wie im Client.
@@ -57,7 +69,7 @@ public static class GameMistakes
         var rows = new Dictionary<int, DTOs.GameEvalPlyDto>();
         foreach (var p in byPly.Values)
             if (GameEvals.PlyOf(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth) is { } dto) rows[p.Ply] = dto;
-        var final = GameEvals.FinalOf(rows.Count > 0 ? rows[rows.Keys.Max()] : null, n);
+        var final = FinalWithEnd(ordered, rows.Count > 0 ? rows[rows.Keys.Max()] : null, n, plyCount);
 
         bool WhiteAt(int j) => byPly.TryGetValue(j, out var p) ? FenFields.WhiteToMove(p.Fen)
             : j > 0 && byPly.TryGetValue(j - 1, out var q) && !FenFields.WhiteToMove(q.Fen);

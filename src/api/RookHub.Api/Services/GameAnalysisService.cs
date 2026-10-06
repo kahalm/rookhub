@@ -122,6 +122,11 @@ public class GameAnalysisService
             {
                 Ply = p.Index, Fen = p.Fen, GameMoveUci = p.Uci, GameMoveSan = p.San,
             });
+        // Die Endstellung (0.689.0, Wunsch 2026-10-06: „die letzte Stellung hat keine Linien"): eine Zeile mehr mit
+        // Ply = PlyCount und OHNE Partiezug — nur wenn dort noch gezogen werden kann (Aufgabe, Remis-Angebot, Zeit).
+        // Leser, die je Zeile einen Partiezug brauchen, lassen sie weg (`GameMoveUci != ""` bzw. `Ply < PlyCount`).
+        if (plies.Count > 0 && FinalPositionOf(plies[^1]) is { } finalFen)
+            analysis.Positions.Add(new GameAnalysisPosition { Ply = plies.Count, Fen = finalFen });
 
         _db.GameAnalyses.Add(analysis);
         await _db.SaveChangesAsync(ct);
@@ -479,7 +484,7 @@ public class GameAnalysisService
                 g.Id, g.Title, g.White, g.Black, g.Result, g.Event, g.TargetDepth, g.MultiPv,
                 g.EngineId, g.TargetNodes, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt, g.IsPublic,
                 Annotated = g.Pgn.Contains("{"),
-                Analyzed = g.Positions.Count(p => p.CandidatesJson != null),
+                Analyzed = g.Positions.Count(p => p.CandidatesJson != null && p.GameMoveUci != ""),
             })
             .ToListAsync(ct);
         return rows.Select(r => new GameAnalysisDto
@@ -588,7 +593,7 @@ public class GameAnalysisService
         if (analysis is null) return null;
 
         var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == id)
+            .Where(p => p.GameAnalysisId == id && p.GameMoveUci != "")   // Endstellung (0.689.0) hat keinen Zug
             .OrderBy(p => p.Ply)
             .Select(p => new GameAnalysisPositionDto
             {
@@ -904,7 +909,7 @@ public class GameAnalysisService
         var byAnalysis = positions.GroupBy(p => p.GameAnalysisId).ToDictionary(g => g.Key, g => g.OrderBy(p => p.Ply).ToList());
 
         var matches = candidates.Where(c => byAnalysis.TryGetValue(c.Id, out var rows)
-            && rows.Where(r => r.GameMoveUci != null).Select(r => r.GameMoveUci!.ToLowerInvariant()).SequenceEqual(wanted)).ToList();
+            && rows.Where(r => !string.IsNullOrEmpty(r.GameMoveUci)).Select(r => r.GameMoveUci!.ToLowerInvariant()).SequenceEqual(wanted)).ToList();
         if (matches.Count == 0) return [];
 
         var engineIds = matches.Select(m => m.EngineId).OfType<string>().Distinct().ToList();
@@ -916,7 +921,7 @@ public class GameAnalysisService
             .Select(m => new GameAnalysisAlternativeDto(m.Id, m.Title, m.EngineId,
                 m.EngineId is { } e && names.TryGetValue(e, out var n) ? n : null,
                 m.TargetNodes, m.TargetDepth, m.MultiPv, m.Status.ToString().ToLowerInvariant(),
-                byAnalysis[m.Id].Count(r => r.Done), m.PlyCount))
+                Math.Min(m.PlyCount, byAnalysis[m.Id].Count(r => r.Done)), m.PlyCount))
             .ToList();
     }
 
@@ -1257,6 +1262,15 @@ public class GameAnalysisService
     private async Task<bool> HouseEngineWithdrawnAsync(GameAnalysis analysis, CancellationToken ct)
         => analysis.EngineOwnerUserId is int owner
            && !await EngineOwnerResolver.IsHouseEngineSharedAsync(_db, owner, ct);
+
+    /// <summary>Die Stellung nach dem letzten Zug — <c>null</c> bei Matt/Patt oder wenn sich der Zug nicht spielen lässt.</summary>
+    internal static string? FinalPositionOf(GamePlies.Ply last)
+    {
+        var fen = MoveComparisonService.PlayUci(last.Fen, last.Uci);
+        if (fen is null) return null;
+        try { return Chess.ChessBoard.LoadFromFen(fen).Moves().Length > 0 ? fen : null; }
+        catch { return null; }
+    }
 
     private static string JobTitle(GameAnalysis analysis, GameAnalysisPosition pos)
     {

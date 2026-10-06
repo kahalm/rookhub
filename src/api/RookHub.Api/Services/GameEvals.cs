@@ -74,6 +74,16 @@ public static class GameEvals
     /// LETZTEN Zeile. <c>null</c>, wenn <paramref name="last"/> nicht die letzte Zeile ist (sie ist
     /// noch nicht gerechnet) oder der Partiezug nicht unter den Kandidaten steht.
     /// </summary>
+    /// <summary>Bewertung NACH dem letzten Zug: aus der Endstellung (0.689.0, Zeile mit <c>Ply == plyCount</c>), sonst wie
+    /// bisher der gespielte Kandidat der letzten Zugzeile.</summary>
+    public static GameEvalScoreDto? FinalOfPlies(IReadOnlyList<GameEvalPlyDto> plies, int plyCount)
+    {
+        var end = plies.FirstOrDefault(p => p.Ply == plyCount);
+        if (end is not null && (end.Cp is not null || end.Mate is not null))
+            return new GameEvalScoreDto { Cp = end.Cp, Mate = end.Mate };
+        return FinalOf(plies.LastOrDefault(p => p.Ply < plyCount), plyCount);
+    }
+
     public static GameEvalScoreDto? FinalOf(GameEvalPlyDto? last, int plyCount)
     {
         if (last is null || last.Ply != plyCount - 1) return null;

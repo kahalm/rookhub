@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.689.0", date: "2026-10-06", changes: [
+    { en: "Game analyses now also compute the final position (after the last move), unless the game ended in mate or stalemate \u2014 so after a resignation you see the computer lines of the position that was given up, from Stockfish and from Lc0. The last move is then rated from that position as well. Applies to analyses started from now on; existing ones stay as they are.", de: "Partie-Analysen rechnen jetzt auch die Endstellung (nach dem letzten Zug), au\u00dfer die Partie endete mit Matt oder Patt \u2014 nach einer Aufgabe siehst du also die Computer-Linien der aufgegebenen Stellung, von Stockfish und von Lc0. Der letzte Zug wird dann ebenfalls daraus bewertet. Gilt f\u00fcr Analysen ab jetzt; bestehende bleiben, wie sie sind." },
+  ] },
   {
     version: '0.688.1',
     date: '2026-10-06',

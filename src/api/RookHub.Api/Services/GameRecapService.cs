@@ -116,7 +116,7 @@ public sealed class GameRecapService
             : null;
         if (analysis == null) return new(null, "noAnalysis");
 
-        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysis.Id)
+        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysis.Id && p.GameMoveUci != "")
             .OrderBy(p => p.Ply).ToListAsync(ct);
         var flaws = GameMistakes.Find(positions, analysis.PlyCount);
         var facts = Facts(detail, analysis, positions, flaws);
@@ -229,7 +229,7 @@ public sealed class GameRecapService
         var rows = new Dictionary<int, GameEvalPlyDto>();
         foreach (var p in byPly.Values)
             if (GameEvals.PlyOf(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth) is { } dto) rows[p.Ply] = dto;
-        var final = GameEvals.FinalOf(rows.TryGetValue(n - 1, out var lastRow) ? lastRow : null, n);
+        var final = GameMistakes.FinalWithEnd(ordered, rows.TryGetValue(n - 1, out var lastRow) ? lastRow : null, n, plyCount);
 
         var runs = new List<(int Start, int Standing, int Length)>();
         int? previous = null;

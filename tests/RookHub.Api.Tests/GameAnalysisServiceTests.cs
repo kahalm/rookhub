@@ -99,7 +99,7 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(GameAnalysisDefaults.MultiPv, dto.MultiPv);
 
         var positions = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync();
-        Assert.Equal(110, positions.Count);
+        Assert.Equal(111, positions.Count);
 
         // NICHT alle 110 auf einmal: offene Aufträge sind je Nutzer gedeckelt, also blockweise.
         var enqueued = positions.Count(p => p.AnalysisJobId != null);
@@ -130,7 +130,7 @@ public class GameAnalysisServiceTests : IDisposable
             var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
             job.Status = AnalysisJobStatus.Done;
             job.ReachedDepth = 30;
-            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
         }
         await _db.SaveChangesAsync();
 
@@ -297,7 +297,7 @@ public class GameAnalysisServiceTests : IDisposable
         var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == jobId);
         job.Status = AnalysisJobStatus.Done;
         job.ReachedDepth = 30;
-        job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+        job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
         await _db.SaveChangesAsync();
 
         await _svc.PumpOneAsync(dto.Id);
@@ -585,7 +585,7 @@ public class GameAnalysisServiceTests : IDisposable
         // Gemessen ab dem ERSTEN Zeitstempel (vor 10 min), nicht ueber die Fensterlaenge von 60.
         Assert.InRange(t.WindowMinutes, 9, 11);
         Assert.InRange(t.PerMinute, 0.8, 1.2);
-        Assert.Equal(4, t.Remaining);              // 14 Halbzuege minus 10 fertige
+        Assert.Equal(5, t.Remaining);              // 14 Halbzuege + Endstellung minus 10 fertige
         Assert.InRange(t.EtaMinutes!.Value, 3, 5);
     }
 
@@ -613,7 +613,7 @@ public class GameAnalysisServiceTests : IDisposable
 
         Assert.Equal(5, t.AnalyzedInWindow);
         Assert.InRange(t.PerMinute, 0.9, 1.1);     // vorher: 10 in 55 min = 0,18/min
-        Assert.Equal(4, t.Remaining);
+        Assert.Equal(5, t.Remaining);
         Assert.InRange(t.EtaMinutes!.Value, 3, 5);
     }
 
@@ -653,7 +653,7 @@ public class GameAnalysisServiceTests : IDisposable
 
         Assert.Equal(0, t.PerMinute);
         Assert.Null(t.EtaMinutes);
-        Assert.Equal(14, t.Remaining);
+        Assert.Equal(15, t.Remaining);
     }
 
     // ===== Eine Partie nach der anderen =======================================
@@ -671,7 +671,7 @@ public class GameAnalysisServiceTests : IDisposable
         var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
         var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
 
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(first.Id));
         Assert.Equal(0, await OpenJobsAsync(second.Id));
 
         // Auch ein Pump-Lauf aendert daran nichts, solange die erste nicht durch ist.
@@ -697,7 +697,7 @@ public class GameAnalysisServiceTests : IDisposable
 
         await _svc.PumpAllAsync();
 
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(second.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(second.Id));
         Assert.Equal(GameAnalysisStatus.Done,
             (await _db.GameAnalyses.FirstAsync(g => g.Id == first.Id)).Status);
     }
@@ -713,8 +713,8 @@ public class GameAnalysisServiceTests : IDisposable
         var a = await _svc.CreateAsync(one.Id, new CreateGameAnalysisRequest { Pgn = Game });
         var b = await _svc.CreateAsync(two.Id, new CreateGameAnalysisRequest { Pgn = Game });
 
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(a.Id));
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(b.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(a.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(b.Id));
     }
 
     /// <summary>Eine gescheiterte Partie blockiert die Schlange nicht — die Pumpe fasst sie gar
@@ -745,12 +745,12 @@ public class GameAnalysisServiceTests : IDisposable
     {
         var user = await CreateUserWithEngineAsync();
         await SetEnginesAsync(user, 16);
-        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });   // 14 Halbzuege
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });   // 14 Halbzuege + Endstellung
         var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
 
-        // 14 offene Stellungen < 16 Engines: die zweite darf sofort mit — die erste bleibt vorn in der Schlange.
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(first.Id));
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(second.Id));
+        // 15 offene Stellungen < 16 Engines: die zweite darf sofort mit — die erste bleibt vorn in der Schlange.
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(second.Id));
     }
 
     [Fact]
@@ -764,10 +764,10 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(0, await OpenJobsAsync(second.Id));
 
         // Erst wenn von der ersten weniger als vier offen sind, rueckt die zweite nach.
-        await MarkAnalyzedAsync(first.Id, 11);
+        await MarkAnalyzedAsync(first.Id, 12);   // 15 Stellungen (14 + Endstellung) − 12 = 3 offen
         await _svc.PumpAllAsync();
         Assert.Equal(3, await OpenJobsAsync(first.Id));
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(second.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(second.Id));
     }
 
     /// <summary>Die offenen Stellungen ALLER aelteren Partien zaehlen zusammen — drei kleine Reste
@@ -780,16 +780,16 @@ public class GameAnalysisServiceTests : IDisposable
         var a = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
         var b = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "B" });
         var c = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "C" });
-        await MarkAnalyzedAsync(a.Id, 10);   // 4 offen
-        await MarkAnalyzedAsync(b.Id, 14);   // b hat noch keine Auftraege — alle 14 markieren = fertig
+        await MarkAnalyzedAsync(a.Id, 11);   // 4 offen (14 Halbzuege + Endstellung)
+        await MarkAnalyzedAsync(b.Id, 15);   // b hat noch keine Auftraege — alle 15 markieren = fertig
         await _svc.PumpAllAsync();
 
         Assert.Equal(4, await OpenJobsAsync(a.Id));
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(c.Id));   // 4 + 0 < 6
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(c.Id));   // 4 + 0 < 6
 
         // Waeren es a: 4 und b: 3 offen (= 7 ≥ 6), muesste c warten.
         var d = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "D" });
-        Assert.Equal(0, await OpenJobsAsync(d.Id));   // a 4 + c 14 = 18 ≥ 6
+        Assert.Equal(0, await OpenJobsAsync(d.Id));   // a 4 + c 15 = 19 ≥ 6
     }
 
     /// <summary>Eine fest gewaehlte Engine ist EINE Schlange: da hilft Nachruecken nichts.</summary>
@@ -801,7 +801,7 @@ public class GameAnalysisServiceTests : IDisposable
         var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, EngineId = "eei_test" });
         var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite", EngineId = "eei_test" });
 
-        Assert.Equal(BlockFor(14), await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(first.Id));
         Assert.Equal(0, await OpenJobsAsync(second.Id));
     }
 
@@ -1143,7 +1143,7 @@ public class GameAnalysisServiceTests : IDisposable
             var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
             job.Status = AnalysisJobStatus.Done;
             job.ReachedDepth = depth;
-            job.ResultJson = "{\"depth\":" + depth + ",\"pvs\":[{\"depth\":" + depth + ",\"cp\":" + cp + ",\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+            job.ResultJson = "{\"depth\":" + depth + ",\"pvs\":[{\"depth\":" + depth + ",\"cp\":" + cp + ",\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
         }
         await _db.SaveChangesAsync();
     }
@@ -1270,7 +1270,7 @@ public class GameAnalysisServiceTests : IDisposable
         await _svc.PumpOneAsync(a);
         _db.ChangeTracker.Clear();
         var refineA = await OpenJobsOfAsync(a);
-        Assert.Equal(14, refineA.Count);                         // die ganze Partie auf einmal (16 Engines)
+        Assert.Equal(15, refineA.Count);                         // die ganze Partie auf einmal (16 Engines)
 
         // A hat nur noch 14 unvertiefte Stellungen, 16 Engines sind da: B faengt schon an.
         await _svc.PumpOneAsync(b);
@@ -1321,13 +1321,13 @@ public class GameAnalysisServiceTests : IDisposable
             var job = jobs.First(j => j.Id == pos.AnalysisJobId);
             job.Status = AnalysisJobStatus.Done;
             job.ReachedDepth = 30;
-            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":77,\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":77,\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
         }
         slow.Status = AnalysisJobStatus.Running;
         slow.ReachedDepth = reached;
         slow.SecondsSpent = seconds;
         slow.ResultJson = "{\"depth\":" + reached + ",\"pvs\":[{\"depth\":" + reached + ",\"cp\":" + cp
-            + ",\"moves\":[\"" + slowPos.GameMoveUci + "\"]}]}";
+            + ",\"moves\":[\"" + TestMoves.MoveOf(slowPos) + "\"]}]}";
         await _db.SaveChangesAsync();
         return (slow, slowPos.Ply);
     }
@@ -1600,6 +1600,49 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.NotNull(head.RefinedAt);                          // und haengt nicht ewig auf „wird vertieft"
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
         Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(20, p.Depth); });
+    }
+
+    // ── Endstellung (0.689.0): „die letzte Stellung hat keine Linien" ──
+
+    [Fact]
+    public async Task Create_legtDieEndstellungOhnePartiezugAn()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "1. e4 e5 2. Nf3 *" });
+
+        var rows = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+        Assert.Equal(3, dto.PlyCount);
+        Assert.Equal(new[] { 0, 1, 2, 3 }, rows.Select(r => r.Ply));
+        Assert.Equal(("", ""), (rows[3].GameMoveUci, rows[3].GameMoveSan));
+        Assert.StartsWith("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b", rows[3].Fen);
+    }
+
+    [Fact]
+    public async Task Create_nachMatt_keineEndstellung()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "1. f3 e5 2. g4 Qh4# 0-1" });
+        Assert.Equal(4, await _db.GameAnalysisPositions.CountAsync(p => p.GameAnalysisId == dto.Id));
+    }
+
+    [Fact]
+    public async Task Evals_dieEndstellungTraegtLinienUndDieBewertungNachDemLetztenZug_zaehltAberNichtMit()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "1. e4 e5 2. Nf3 *" });
+        foreach (var p in await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync())
+        {
+            p.CandidatesJson = $"[{{\"uci\":\"{TestMoves.MoveOf(p)}\",\"cp\":{(p.Ply == 3 ? -40 : 10)}}}]";
+            p.Depth = 20;
+        }
+        await _db.SaveChangesAsync();
+
+        var evals = await _svc.EvalsOfAsync(user.Id, dto.Id);
+
+        Assert.Equal((3, 3), (evals!.Analyzed, evals.Total));
+        Assert.Contains(evals.Plies, p => p.Ply == 3);
+        // Schwarz am Zug, −0,40 aus seiner Sicht = +0,40 für Weiß
+        Assert.Equal(40, evals.Final!.Cp);
     }
 
     // ── Dieselbe Partie in mehreren Analysen (0.682.0): Umschalter „Stockfish | Lc0 | beide" auf der Partieseite ──

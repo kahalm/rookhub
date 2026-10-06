@@ -167,7 +167,8 @@ public sealed class GameMoveExplanationService
         var (analysisId, viewpoint) = (game.AnalysisId, game.Viewpoint);
         var analysis = await _db.GameAnalyses.AsNoTracking().FirstOrDefaultAsync(a => a.Id == analysisId, ct);
         if (analysis == null || analysis.Status != GameAnalysisStatus.Done) return 0;
-        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysisId).ToListAsync(ct);
+        var positions = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == analysisId && p.GameMoveUci != "").ToListAsync(ct);   // ohne Endstellung (0.689.0)
         var existing = await _db.GameMoveExplanations.Where(e => e.GameAnalysisId == analysisId && e.Language == lang).ToListAsync(ct);
         // Aus einer anderen Sicht geschrieben: weg damit, sonst stünde der neue Text dem eindeutigen Index im Weg.
         var stale = existing.Where(e => e.Viewpoint != viewpoint || e.Revision != CurrentRevision).ToList();

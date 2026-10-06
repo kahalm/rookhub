@@ -97,7 +97,7 @@ public sealed class GameRoastService
         else if (await _db.GameRoasts.AnyAsync(r => r.SavedGameId == gameId && r.Language == language && r.Style == style, ct))
             return new(null, "exists");
 
-        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysis.Id)
+        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysis.Id && p.GameMoveUci != "")
             .OrderBy(p => p.Ply).ToListAsync(ct);
         var flaws = GameMistakes.Find(positions, analysis.PlyCount);
         var facts = Facts(detail, analysis, positions, flaws);

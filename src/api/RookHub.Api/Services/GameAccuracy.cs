@@ -183,7 +183,7 @@ public static class GameAccuracy
             .Select(p => GameEvals.PlyOf(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth))
             .OfType<GameEvalPlyDto>()
             .ToList();
-        var final = GameEvals.FinalOf(plies.LastOrDefault(), plyCount);
+        var final = GameEvals.FinalOfPlies(plies, plyCount);
         return (plies, final, fens);
     }
 

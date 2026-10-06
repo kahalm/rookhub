@@ -154,7 +154,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
         var own = await svc.CreateAsync(Owner, new() { Pgn = Short, TargetDepth = 20, MultiPv = 1 });
 
         var jobs = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == own.Id && p.AnalysisJobId != null).CountAsync();
-        Assert.Equal(10, jobs);   // sofort eingereiht, nicht hinter der aelteren Meisterpartie
+        Assert.Equal(11, jobs);   // sofort eingereiht, nicht hinter der aelteren Meisterpartie
         Assert.All(await _db.AnalysisJobs.Where(j => _db.GameAnalysisPositions.Any(p => p.GameAnalysisId == own.Id && p.AnalysisJobId == j.Id)).ToListAsync(),
             j => Assert.False(j.Background));
     }

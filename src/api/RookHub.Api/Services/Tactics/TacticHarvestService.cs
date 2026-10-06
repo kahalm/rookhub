@@ -62,7 +62,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             .ThenByDescending(a => a.Id).Take(ScanBatch).ToListAsync(ct);
         if (analyses.Count == 0) return 0;
         var ids = analyses.Select(a => a.Id).ToList();
-        var positions = (await db.GameAnalysisPositions.AsNoTracking().Where(p => ids.Contains(p.GameAnalysisId))
+        var positions = (await db.GameAnalysisPositions.AsNoTracking().Where(p => ids.Contains(p.GameAnalysisId) && p.GameMoveUci != "")
                 .Select(p => new { p.GameAnalysisId, p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson }).ToListAsync(ct))
             .GroupBy(p => p.GameAnalysisId).ToDictionary(g => g.Key, g => g.OrderBy(p => p.Ply).ToList());
         var now = DateTime.UtcNow;

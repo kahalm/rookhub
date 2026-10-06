@@ -445,7 +445,7 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(3, analysis.PlyCount);
         var positions = await _db.GameAnalysisPositions.AsNoTracking()
             .Where(p => p.GameAnalysisId == analysis.Id).OrderBy(p => p.Ply).ToListAsync();
-        Assert.Equal(new[] { 0, 1, 2 }, positions.Select(p => p.Ply));
+        Assert.Equal(new[] { 0, 1, 2, 3 }, positions.Select(p => p.Ply));
         Assert.Equal(fen, positions[0].Fen);
         Assert.Equal(("f8c5", "Bc5"), (positions[0].GameMoveUci, positions[0].GameMoveSan));
         Assert.Equal("r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 5 5", positions[1].Fen);
@@ -795,7 +795,7 @@ public class SavedGameAnalysisTests : IDisposable
         var created = await _svc.AnalyzeAsync(owner.Id, game.Id);
         var analysis = await _db.GameAnalyses.Include(a => a.Positions).SingleAsync(a => a.Id == created!.Analysis!.Id);
         // Wie eine Analyse von vor 0.515.0: fertig, alle Stellungen gerechnet, aber keine Genauigkeit abgelegt.
-        foreach (var p in analysis.Positions) p.CandidatesJson = $"[{{\"uci\":\"{p.GameMoveUci}\",\"cp\":0}}]";
+        foreach (var p in analysis.Positions) p.CandidatesJson = $"[{{\"uci\":\"{TestMoves.MoveOf(p)}\",\"cp\":0}}]";
         analysis.Status = GameAnalysisStatus.Done;
         analysis.AccuracyWhite = null;
         analysis.AccuracyBlack = null;

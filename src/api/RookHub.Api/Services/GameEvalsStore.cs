@@ -63,19 +63,19 @@ public static class GameEvalsStore
         return new GameEvalsDto
         {
             Status = analysis.Status.ToString().ToLowerInvariant(),
-            Analyzed = rows.Count,
+            Analyzed = rows.Count(r => r.Ply < analysis.PlyCount),
             Total = analysis.PlyCount,
             TargetDepth = analysis.TargetDepth,
             AnalysisId = analysis.Id,
             Plies = plies,
-            Final = GameEvals.FinalOf(plies.LastOrDefault(), analysis.PlyCount),
+            Final = GameEvals.FinalOfPlies(plies, analysis.PlyCount),
             BookPlies = book,
             Refining = analysis.Status == GameAnalysisStatus.Done && analysis.RefineDepth != null && analysis.RefinedAt == null,
             Refined = analysis.RefineDepth != null ? rows.Count(r => r.Refined) : 0,
             EtaMinutes = running
                 ? GameEvals.EtaMinutes(
                     rows.Where(r => r.AnalyzedAt != null).Select(r => r.AnalyzedAt!.Value),
-                    analysis.PlyCount - rows.Count, DateTime.UtcNow)
+                    Math.Max(0, analysis.PlyCount - rows.Count(r => r.Ply < analysis.PlyCount)), DateTime.UtcNow)
                 : null,
         };
     }
@@ -108,7 +108,7 @@ public static class GameEvalsStore
             var state = new SavedGameAnalysisDto
             {
                 Status = h.Status.ToString().ToLowerInvariant(),
-                Analyzed = analyzed.TryGetValue(h.Id, out var n) ? n : 0,
+                Analyzed = Math.Min(h.PlyCount, analyzed.TryGetValue(h.Id, out var n) ? n : 0),
                 Total = h.PlyCount,
                 AccuracyWhite = h.AccuracyWhite,
                 AccuracyBlack = h.AccuracyBlack,

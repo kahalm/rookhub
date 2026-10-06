@@ -132,7 +132,7 @@ public class GuessSessionService
             .Select(g => new { g.Id, Head = new AnalysisHead(g.Title, g.White, g.Black) })
             .ToDictionaryAsync(x => x.Id, x => x.Head, ct);
         var pliesByAnalysis = (await _db.GameAnalysisPositions.AsNoTracking()
-                .Where(p => analysisIds.Contains(p.GameAnalysisId))
+                .Where(p => analysisIds.Contains(p.GameAnalysisId) && p.GameMoveUci != "")
                 .Select(p => new { p.GameAnalysisId, p.Ply })
                 .ToListAsync(ct))
             .GroupBy(x => x.GameAnalysisId)
@@ -161,7 +161,7 @@ public class GuessSessionService
             throw new DomainValidationException("Diese Punktepartie ist bereits beendet.");
 
         var position = await _db.GameAnalysisPositions.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == session.CurrentPly, ct)
+            .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply == session.CurrentPly, ct)
             ?? throw new DomainValidationException("Zu dieser Sitzung gibt es keine Stellung mehr.");
 
         // Die Sitzung darf einer Partie davonlaufen, die noch gerechnet wird (spielbar ist sie ab der
@@ -225,7 +225,7 @@ public class GuessSessionService
 
         // Partiezug + Antwort des Gegners nachspielen.
         var reply = await _db.GameAnalysisPositions.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == position.Ply + 1, ct);
+            .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply == position.Ply + 1, ct);
 
         session.CurrentPly = position.Ply + 2;   // eigener Zug + Gegenzug
         await AdvanceToPlayableAsync(session, ct);
@@ -268,7 +268,7 @@ public class GuessSessionService
 
         var plies = session.Moves.Select(m => m.Ply).ToList();
         var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == session.GameAnalysisId && plies.Contains(p.Ply))
+            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && plies.Contains(p.Ply))
             .ToDictionaryAsync(p => p.Ply, ct);
 
         var rows = new List<GuessReviewMoveDto>();
@@ -541,7 +541,7 @@ public class GuessSessionService
         // bei jedem Rateversuch fuer den ganzen Partierest mit dabei). Die Gegenseite wird gebraucht,
         // weil die Bewertung eines nicht gelisteten Partiezuges aus der FOLGESTELLUNG kommt.
         var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply >= session.CurrentPly)
+            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply >= session.CurrentPly)
             .OrderBy(p => p.Ply)
             .Select(p => new { p.Ply, p.CandidatesJson, p.GameMoveUci })
             .ToListAsync(ct);
@@ -574,7 +574,7 @@ public class GuessSessionService
 
         // Nichts Wertbares mehr: fertig, wenn hinter dem letzten Halbzug; sonst wartet die Analyse.
         var lastPly = await _db.GameAnalysisPositions
-            .Where(p => p.GameAnalysisId == session.GameAnalysisId)
+            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "")
             .MaxAsync(p => (int?)p.Ply, ct) ?? -1;
         if (session.CurrentPly > lastPly)
         {
@@ -622,11 +622,11 @@ public class GuessSessionService
         if (withPosition && session.Status == GuessSessionStatus.Running)
         {
             var pos = await _db.GameAnalysisPositions.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == session.CurrentPly, ct);
+                .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply == session.CurrentPly, ct);
             if (pos is not null)
             {
                 var previous = await _db.GameAnalysisPositions.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == pos.Ply - 1, ct);
+                    .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply == pos.Ply - 1, ct);
                 dto.Position = new GuessPositionDto
                 {
                     Ply = pos.Ply,
@@ -644,7 +644,7 @@ public class GuessSessionService
             if (session.CurrentPly > 0)
             {
                 var played = await _db.GameAnalysisPositions.AsNoTracking()
-                    .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply <= session.CurrentPly)
+                    .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply <= session.CurrentPly)
                     .OrderBy(p => p.Ply)
                     // `Analyzed` statt der Kandidatenliste selbst: die ist LONGTEXT und wuerde hier
                     // fuer JEDEN gespielten Halbzug mitgelesen, nur um ein Ja/Nein zu bekommen.
@@ -680,7 +680,7 @@ public class GuessSessionService
 
     private Task<int> CountGuessablePliesAsync(GuessSession session, CancellationToken ct) =>
         _db.GameAnalysisPositions
-            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply >= session.StartPly)
+            .Where(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply >= session.StartPly)
             .CountAsync(p => (p.Ply % 2 == 0) == session.GuessWhite, ct);
 
     /// <summary>Bewertung nach dem Partiezug, aus Sicht der geratenen Seite (die Stellung danach
@@ -688,7 +688,7 @@ public class GuessSessionService
     private async Task<string?> EvalTextAfterAsync(GuessSession session, int ply, CancellationToken ct)
     {
         var next = await _db.GameAnalysisPositions.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == ply, ct);
+            .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.GameMoveUci != "" && p.Ply == ply, ct);
         var candidates = BrokerCandidates.FromJson(next?.CandidatesJson);
         if (candidates.Count == 0) return null;
         // Sicht drehen (dort ist der Gegner am Zug) und ueber den gemeinsamen Formatierer ausgeben —
