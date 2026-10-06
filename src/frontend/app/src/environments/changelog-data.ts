@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.692.0", date: "2026-10-06", changes: [
+    { en: "Club members can now analyse any game with Lc0: \u22ee \u2192 \u201cAnalyse with Lc0\u201d on a game page (for example one of your own games). Lc0 computes every position with 100,000 nodes, like the club games; the switch Stockfish | Lc0 | Both appears above the evaluation and fills in as Lc0 progresses. Clicking again reuses the same analysis.", de: "Vereinsmitglieder k\u00f6nnen jetzt jede Partie mit Lc0 analysieren: \u22ee \u2192 \u201eMit Lc0 analysieren\u201c auf der Partieseite (z. B. einer eigenen Partie). Lc0 rechnet jede Stellung mit 100 000 Knoten wie bei den Vereinspartien; der Umschalter Stockfish | Lc0 | Beide erscheint \u00fcber der Auswertung und f\u00fcllt sich, w\u00e4hrend Lc0 rechnet. Ein zweiter Klick nimmt dieselbe Analyse." },
+  ] },
   { version: "0.691.1", date: "2026-10-06", changes: [
     { en: "Game page with the engine switched on: stepping through the game with the arrow keys no longer makes the screen jump. The engine lines were cleared on every move and filled again, so the page got shorter for a moment — when scrolled down, everything moved. The list now always keeps its three rows.", de: "Partieseite mit eingeschalteter Engine: beim Blättern mit den Pfeiltasten springt der Bildschirm nicht mehr. Die Engine-Linien wurden bei jedem Zug geleert und neu gefüllt, die Seite war kurz kürzer — weiter unten gerollt rutschte alles. Die Liste behält jetzt immer ihre drei Zeilen." },
   ] },

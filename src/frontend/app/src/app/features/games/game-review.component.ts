@@ -702,6 +702,15 @@ export class GameReviewComponent {
    * (Lc0 bevorzugt) — eine ohne Engine-Angabe rechnete auf den Hintergrund-Engines und ist dasselbe wie die Kurve der
    * Seite. Ihre Bewertungen werden gleich mitgeladen; solange sie noch rechnet, alle zehn Sekunden neu.
    */
+  /** Hat die Partie schon eine Lc0-Analyse (auch eine, die noch rechnet)? */
+  readonly hasLc0 = computed(() => isLc0Engine(this.alternative()?.engineName ?? null));
+
+  /** Nach „Mit Lc0 analysieren" (0.692.0): neu suchen, damit der Umschalter mit dem Fortschritt gleich erscheint. */
+  refreshAlternatives(): void {
+    this.altKey = null;
+    this.findAlternative(this.withAlternatives(), this.ucis());
+  }
+
   private findAlternative(enabled: boolean, ucis: string[]): void {
     const key = enabled && ucis.length ? ucis.join(' ') : null;
     if (key === this.altKey) return;

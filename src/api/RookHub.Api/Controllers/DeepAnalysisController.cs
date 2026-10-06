@@ -23,6 +23,19 @@ public class DeepAnalysisController(DeepAnalysisService service, PermissionResol
     public async Task<ActionResult<List<AnalysisJobDto>>> List(CancellationToken ct)
         => await AllowedAsync(ct) ? Ok(await service.ListAsync(GetUserId(), ct)) : Ok(new List<AnalysisJobDto>());
 
+    /// <summary>Ganze Partie auf Lc0 (0.692.0) — `{ pgn }` → die Analyse (vorhandene wird wiederverwendet).</summary>
+    [HttpPost("game")]
+    public async Task<ActionResult<GameAnalysisDto>> StartGame([FromBody] DeepAnalysisGameRequest? req, CancellationToken ct)
+    {
+        if (!await AllowedAsync(ct)) return Forbid();
+        try
+        {
+            return Ok(await service.StartLc0GameAsync(GetUserId(), req?.Pgn, ct));
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     [HttpPost]
     public async Task<ActionResult<DeepAnalysisDto>> Start([FromBody] DeepAnalysisRequest? req, CancellationToken ct)
     {

@@ -20,7 +20,7 @@ import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
-import { GuessUploadStatus } from '../analysis/game-analysis.service';
+import { GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
@@ -151,6 +151,12 @@ const TAP_MAX_MS = 500;
                     <!-- Live-Engine waehlen (0.681.0): dieselbe Wahl wie am Analysebrett, hier ohne Umweg dorthin. -->
                     <button mat-menu-item class="live-engine-menu" [matMenuTriggerFor]="engineMenu">
                       <mat-icon>memory</mat-icon><span>{{ 'games.live.engineMenu' | translate }}</span>
+                    </button>
+                  }
+                  @if (canLc0()) {
+                    <!-- Ganze Partie auf Lc0 (0.692.0): nur Vereinsmitglieder, nur solange es keine Lc0-Analyse gibt. -->
+                    <button mat-menu-item class="lc0-game" (click)="analyzeLc0()">
+                      <mat-icon>psychology</mat-icon><span>{{ 'games.lc0.menu' | translate }}</span>
                     </button>
                   }
                   <button mat-menu-item (click)="copyPgn()">
@@ -392,6 +398,7 @@ const TAP_MAX_MS = 500;
 })
 export class SharedGameComponent implements OnInit, DoCheck {
   private auth = inject(AuthService);
+  private gameAnalyses = inject(GameAnalysisService);
   private handoff = inject(HandoffService);
   /** „In die Vereins-Datenbank" (LeagueHub, Wunsch 2026-09-28): nur mit dem Recht dazu und wenn es ein LeagueHub zu diesem
    * RookHub gibt. Die Partie wird drüben geladen und läuft durch dieselbe Übersicht wie ein PGN-Upload. */
@@ -847,6 +854,23 @@ export class SharedGameComponent implements OnInit, DoCheck {
   }
 
   /** Das PGN der Partie in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */
+  /** „Mit Lc0 analysieren" — angemeldet, Vereinsmitglied, und die Partie hat noch keine Lc0-Analyse. */
+  canLc0(): boolean {
+    return this.loggedIn && this.auth.has('league.view') && !!this.game?.pgn && !this.review()?.hasLc0();
+  }
+
+  analyzeLc0(): void {
+    const pgn = this.game?.pgn;
+    if (!pgn) return;
+    this.gameAnalyses.startLc0(pgn).subscribe({
+      next: () => {
+        this.snackbar.success(this.translate.instant('games.lc0.started'));
+        this.review()?.refreshAlternatives();
+      },
+      error: () => this.snackbar.warn(this.translate.instant('games.lc0.failed')),
+    });
+  }
+
   copyPgn(): void {
     const pgn = this.game?.pgn;
     if (!pgn) return;

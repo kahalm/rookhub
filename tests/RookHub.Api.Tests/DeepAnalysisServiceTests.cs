@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -34,8 +35,12 @@ public class DeepAnalysisServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private DeepAnalysisService Service() =>
-        new(_db, new AnalysisJobService(_db), new ConfigurationBuilder().Build());
+    private DeepAnalysisService Service()
+    {
+        var jobs = new AnalysisJobService(_db);
+        return new(_db, jobs, new ConfigurationBuilder().Build(), new GameAnalysisService(_db, jobs,
+            new CommentSetService(_db, NullLogger<CommentSetService>.Instance), NullLogger<GameAnalysisService>.Instance));
+    }
 
     [Fact]
     public async Task Start_legtStockfishTiefe40UndLc0MitKnotenzielAn()
@@ -82,5 +87,18 @@ public class DeepAnalysisServiceTests : IDisposable
         Assert.Equal(2, list.Count);
         Assert.All(list, j => Assert.Equal(Fen1, j.Fen));
         Assert.Empty(await Service().ListAsync(House));
+    }
+
+    [Fact]
+    public async Task Lc0Partie_legtEineEigeneKnotenanalyseAn_undNimmtBeimZweitenMalDieselbe()
+    {
+        const string pgn = "[White \"A\"]\n[Black \"B\"]\n\n1. e4 e5 2. Nf3 Nc6 *";
+        var first = await Service().StartLc0GameAsync(Member, pgn);
+        var again = await Service().StartLc0GameAsync(Member, pgn);
+
+        Assert.Equal(first.Id, again.Id);
+        var a = await _db.GameAnalyses.SingleAsync();
+        Assert.Equal((Member, Lc0, (long?)100_000, GameAnalysisOrigin.Manual, (int?)House),
+            (a.UserId, a.EngineId, a.TargetNodes, a.Origin, a.EngineOwnerUserId));
     }
 }

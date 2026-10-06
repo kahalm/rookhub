@@ -62,6 +62,22 @@ describe('SharedGameComponent', () => {
     expect(again.fixture.componentInstance.clubImport).toBeFalse();
   });
 
+  // 0.692.0: ⋮ → „Mit Lc0 analysieren" — nur Vereinsmitglieder, schickt das PGN und lässt den Rückblick neu suchen.
+  it('offers Lc0 analysis to club members only and posts the game', async () => {
+    const { fixture, http } = await setup(true, true, [], ['league.view']);
+    const cmp = fixture.componentInstance;
+    cmp.game = sharedGame('white') as never;
+    expect(cmp.canLc0()).toBeTrue();
+    cmp.analyzeLc0();
+    const req = http.expectOne('/api/deep-analysis/game');
+    expect(req.request.body).toEqual({ pgn: sharedGame('white').pgn });
+    req.flush({ id: 9 });
+    TestBed.resetTestingModule();
+    const other = await setup(true, true, [], []);
+    other.fixture.componentInstance.game = sharedGame('white') as never;
+    expect(other.fixture.componentInstance.canLc0()).toBeFalse();
+  });
+
   // Wunsch 2026-10-04: „Analyse" in LeagueHub öffnet die Vereinspartie wie eine aus „Meine Partien" — mit den
   // vorberechneten Bewertungen, ohne „Partie analysieren" (der Hintergrund rechnet sie von selbst).
   it('shows a club game from LeagueHub with the club analysis and without the analyze button', async () => {

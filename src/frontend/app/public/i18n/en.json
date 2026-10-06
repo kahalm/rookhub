@@ -2694,6 +2694,11 @@
       "reviewRunning": "running",
       "startFailed": "The deep analysis could not be started."
     },
+    "lc0": {
+      "menu": "Analyse with Lc0",
+      "started": "Lc0 is analysing the game — the Stockfish | Lc0 | Both switch appears above the evaluation.",
+      "failed": "Lc0 analysis could not be started."
+    },
     "review": {
       "title": "Game review",
       "engineBoth": "Both",

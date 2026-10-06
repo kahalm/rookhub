@@ -70,3 +70,9 @@ public class DeepAnalysisRequest
 
 /// <summary>Die beiden Aufträge der tiefen Analyse; <c>Lc0</c> fehlt, wenn keine Lc0-Engine angemeldet ist.</summary>
 public record DeepAnalysisDto(AnalysisJobDto? Stockfish, AnalysisJobDto? Lc0, int StockfishDepth, long Lc0Nodes);
+
+/// <summary>Ganze Partie auf Lc0 analysieren (0.692.0).</summary>
+public class DeepAnalysisGameRequest
+{
+    public string? Pgn { get; set; }
+}

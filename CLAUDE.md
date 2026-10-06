@@ -3274,6 +3274,10 @@ Seite `[deep]` an `app-position-menu` reicht (Partieseite) und das Konto `league
 (`GameReviewComponent.deepJobs`, mit `withAlternatives`) holt sie beim Start, alle 5 s solange einer offen ist, sonst alle 30 s;
 passt einer zur Stellung auf dem Brett (`deepJobFor`, erste vier FEN-Felder, Lc0 am Knotenziel) und ist weiter als das
 Hinterlegte (`deepAhead`), ersetzen seine Linien den Stockfish- bzw. Lc0-Block, mit Etikett „Tiefe Analyse · Tiefe n".
+**Ganze Partie auf Lc0 (0.692.0):** `POST /api/deep-analysis/game { pgn }` (ebenfalls `league.view`) → eigene Analyse
+(`Origin.Manual`) auf der Lc0-Registrierung mit `ClubSecondEngine:TargetNodes`; dasselbe PGN noch einmal = dieselbe Analyse.
+Partieseite: ⋮ → „Mit Lc0 analysieren", solange der Rückblick keine Lc0-Alternative hat (`GameReviewComponent.hasLc0`), danach
+`refreshAlternatives()`.
 
 ### Vereinspartien zusätzlich auf Lc0 (0.685.0) — `ClubSecondEngineScheduler`
 Wunsch 2026-10-06: „alle Ligapartien, die neu dazukommen, automatisch mit 100k rechnen, und einmalig alle alten nachrechnen".

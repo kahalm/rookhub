@@ -2694,6 +2694,11 @@
       "reviewRunning": "läuft",
       "startFailed": "Die tiefe Analyse ließ sich nicht starten."
     },
+    "lc0": {
+      "menu": "Mit Lc0 analysieren",
+      "started": "Lc0 analysiert die Partie — der Umschalter Stockfish | Lc0 | Beide erscheint über der Auswertung.",
+      "failed": "Die Lc0-Analyse ließ sich nicht starten."
+    },
     "review": {
       "title": "Auswertung",
       "engineBoth": "Beide",

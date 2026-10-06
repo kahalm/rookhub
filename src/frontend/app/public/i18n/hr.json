@@ -2694,6 +2694,11 @@
       "reviewRunning": "u tijeku",
       "startFailed": "Duboku analizu nije bilo moguće pokrenuti."
     },
+    "lc0": {
+      "menu": "Analiziraj s Lc0",
+      "started": "Lc0 analizira partiju — prekidač Stockfish | Lc0 | Oba pojavljuje se iznad ocjene.",
+      "failed": "Lc0 analizu nije bilo moguće pokrenuti."
+    },
     "review": {
       "title": "Pregled partije",
       "engineBoth": "Oba",

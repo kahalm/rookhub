@@ -3011,6 +3011,11 @@
       "reviewRunning": "fut",
       "startFailed": "A mély elemzést nem sikerült elindítani."
     },
+    "lc0": {
+      "menu": "Elemzés Lc0-val",
+      "started": "Az Lc0 elemzi a játszmát — a Stockfish | Lc0 | Mindkettő kapcsoló az értékelés fölött jelenik meg.",
+      "failed": "Az Lc0 elemzést nem sikerült elindítani."
+    },
     "review": {
       "title": "Játszmaértékelés",
       "engineBoth": "Mindkettő",

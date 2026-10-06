@@ -166,6 +166,11 @@ export class GameAnalysisService {
   }
 
   /** Weitere eigene Analysen derselben Partie (gleiche Zugfolge, UCI) — neueste zuerst (0.682.0). */
+  /** Ganze Partie auf Lc0 analysieren (0.692.0, Vereinsmitglieder) — eine vorhandene wird wiederverwendet. */
+  startLc0(pgn: string): Observable<{ id: number }> {
+    return this.http.post<{ id: number }>('/api/deep-analysis/game', { pgn });
+  }
+
   sameGame(ucis: string[]): Observable<GameAnalysisAlternative[]> {
     return this.http.post<GameAnalysisAlternative[]>('/api/game-analyses/same-game', { ucis });
   }
