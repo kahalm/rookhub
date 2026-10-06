@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.693.2", date: "2026-10-06", changes: [
+    { en: "The course list opens much faster: counting the lines of each course now runs from an index instead of reading every line with its moves, and the check for outdated courses reads only their sources instead of those of all courses. On the server that was about 3 seconds per visit for an admin, now well under half a second.", de: "Die Kursliste öffnet deutlich schneller: das Zählen der Linien je Kurs läuft jetzt über einen Index, statt jede Linie samt Zügen zu lesen, und die Prüfung auf veraltete Kurse liest nur noch deren Quellen statt die aller Kurse. Auf dem Server waren das für einen Admin rund 3 Sekunden je Aufruf, jetzt deutlich unter einer halben." },
+  ] },
   { version: "0.693.1", date: "2026-10-06", changes: [
     { en: "The course \"Tactics from club games\" now orders its chapters by season: newest season first, within a season by league and ascending rounds, \"Other games\" last. The order is re-applied after every harvest run, so new rounds slot in at the right place.", de: "Der Kurs „Taktiken aus Vereinspartien“ ordnet seine Kapitel jetzt nach Jahrgang: neueste Saison zuerst, innerhalb einer Saison nach Liga und aufsteigenden Runden, „Andere Partien“ zuletzt. Die Reihenfolge wird nach jedem Ernte-Lauf neu hergestellt, neue Runden landen also an der richtigen Stelle." },
   ] },

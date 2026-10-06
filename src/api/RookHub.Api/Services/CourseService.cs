@@ -384,8 +384,14 @@ public class CourseService
         // auf die VERALTETEN eingeschränkte Abfrage — das LIKE läuft damit nicht über das (große)
         // SourcePgn jedes sichtbaren Buchs. Dieselbe Regel wie der Aktualisieren-Lauf (StaleContentRule),
         // sonst markiert die Liste etwas, das der Knopf längst erledigen würde.
-        var needsReimportBookIds = (await _db.Books
+        // ZWEI Schritte, nicht einer (gemessen 2026-10-06 auf Prod): filtert MariaDB über `ImportVersion` und liest
+        // in DERSELBEN Abfrage `SourcePgn`, holt es die ausgelagerten Quelltexte JEDES durchsuchten Buchs (390 Bücher,
+        // 190 MB) — 1,1 s, auch für ein bloßes `IS NOT NULL`. Erst die Ids, dann gezielt per Primärschlüssel: 0,1 s.
+        var staleIds = await _db.Books
             .Where(b => bookIds.Contains(b.Id) && b.ImportVersion < ImportPipeline.CurrentVersion)
+            .Select(b => b.Id).ToListAsync();
+        var needsReimportBookIds = (await _db.Books
+            .Where(b => staleIds.Contains(b.Id))
             .Select(b => new
             {
                 b.Id, b.Tags, b.FileName,

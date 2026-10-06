@@ -82,6 +82,9 @@ internal sealed class BookPuzzleConfiguration : IEntityTypeConfiguration<BookPuz
         e.HasIndex(bp => bp.LineId).IsUnique();
         e.HasIndex(bp => bp.BookFileName);
         e.HasIndex(bp => bp.BookId);
+        // Deckt die Linienzählung der Kursliste („Quiz-Linien je Buch") allein aus dem Index: ohne ihn liest
+        // MariaDB für `IsInfoOnly` jede der ~140 000 Zeilen samt Zugtexten — 1,8 s je Aufruf (Prod, 2026-10-06).
+        e.HasIndex(bp => new { bp.BookId, bp.IsInfoOnly });
         e.Property(bp => bp.Source).HasMaxLength(16);
         // Pool-Filterung (Daily/Random/Blind) schließt ausgemusterte Puzzles aus.
         e.HasIndex(bp => bp.Retired);

@@ -120,8 +120,12 @@ public partial class ImportReprocessService
         var books = ManageableBooks(userId, isAdmin);
         var total = await books.CountAsync(ct);
         // Nur die nötigen Felder der veralteten Bücher laden.
-        var stale = await books
-            .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
+        // ZWEI Schritte, nicht einer (gemessen 2026-10-06 auf Prod): filtert MariaDB über `ImportVersion` und liest
+        // in DERSELBEN Abfrage `SourcePgn`, holt es die ausgelagerten Quelltexte JEDES durchsuchten Buchs (390 Bücher,
+        // 190 MB) — 1,1 s, auch für ein bloßes `IS NOT NULL`. Erst die Ids, dann gezielt per Primärschlüssel: 0,1 s.
+        var staleIds = await books.Where(b => b.ImportVersion < ImportPipeline.CurrentVersion).Select(b => b.Id).ToListAsync(ct);
+        var stale = await _db.Books
+            .Where(b => staleIds.Contains(b.Id))
             .Select(b => new
             {
                 HasSource = b.Source.SourcePgn != null && b.Source.SourcePgn != "",
@@ -171,8 +175,14 @@ public partial class ImportReprocessService
         // dann im Import), und beide geben ihn nach dem Buch wieder frei (ChangeTracker.Clear). Vorher hingen
         // die Texte ALLER veralteten Bücher (je bis zu mehrere MB) gleichzeitig im Speicher und blieben bis
         // zum Ende des Laufs getrackt.
-        var stale = await ManageableBooks(userId, isAdmin)
-            .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
+        // ZWEI Schritte, nicht einer (gemessen 2026-10-06 auf Prod): filtert MariaDB über `ImportVersion` und liest
+        // in DERSELBEN Abfrage `SourcePgn`, holt es die ausgelagerten Quelltexte JEDES durchsuchten Buchs (390 Bücher,
+        // 190 MB) — 1,1 s, auch für ein bloßes `IS NOT NULL`. Erst die Ids, dann gezielt per Primärschlüssel: 0,1 s.
+        var staleIds = await ManageableBooks(userId, isAdmin)
+            .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion).Select(b => b.Id).ToListAsync(ct);
+        var stale = await _db.Books
+            .Where(b => staleIds.Contains(b.Id))
+            .OrderBy(b => b.Id)
             .Select(b => new
             {
                 b.Id, b.FileName, b.DisplayName, b.Tags, b.OwnerUserId,
