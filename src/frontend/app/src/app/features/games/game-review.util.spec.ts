@@ -1,5 +1,5 @@
 import {
-  GameEvalPly, GameEvals, MOVE_CLASSES, classify, formatEval, graphHeight, moveAccuracy, reviewGame, sideAccuracy,
+  GameEvalPly, GameEvals, MOVE_CLASSES, ReviewedMove, classify, nextOfClass, formatEval, graphHeight, moveAccuracy, reviewGame, sideAccuracy,
   volatilityWeights, whiteToMove, windowSizeFor, winPercent,
 } from './game-review.util';
 import { sacrificedPiece } from './move-tactics.util';
@@ -536,5 +536,21 @@ describe('game-review.util', () => {
     expect(formatEval({ mate: 3 })).toBe('#3');
     expect(formatEval({ mate: -2 })).toBe('#-2');
     expect(formatEval(null)).toBe('');
+  });
+
+  // 0.688.0: Klick auf eine Klasse in der Tabelle
+  it('nextOfClass: nächster danach, sonst von vorn; mit Farbe nur deren Züge', () => {
+    const m = (ply: number, cls: string) => ({ ply, white: ply % 2 === 0, cls } as unknown as ReviewedMove);
+    const moves = [m(0, 'best'), m(1, 'blunder'), m(2, 'brilliant'), null, m(4, 'blunder'), m(5, 'blunder'), m(6, 'brilliant')];
+    expect(nextOfClass(moves, 'blunder', -1)).toBe(1);
+    expect(nextOfClass(moves, 'blunder', 1)).toBe(4);
+    expect(nextOfClass(moves, 'blunder', 5)).toBe(1);             // keiner mehr danach → von vorn
+    expect(nextOfClass(moves, 'blunder', 1, true)).toBe(4);       // nur Weiß
+    expect(nextOfClass(moves, 'blunder', 1, false)).toBe(5);      // nur Schwarz
+    expect(nextOfClass(moves, 'blunder', 5, false)).toBe(1);
+    expect(nextOfClass(moves, 'brilliant', 2)).toBe(6);
+    expect(nextOfClass(moves, 'brilliant', 6)).toBe(2);           // einziger anderer ist davor
+    expect(nextOfClass(moves, 'brilliant', 2, false)).toBeNull(); // Schwarz hat keinen
+    expect(nextOfClass(moves, 'miss', 0)).toBeNull();
   });
 });

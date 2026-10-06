@@ -321,6 +321,25 @@ describe('GameReviewComponent', () => {
     http.expectNone(url);
   }));
 
+  it('Klick aufs Klassen-Symbol bzw. auf die Zahl springt zum nächsten Zug dieser Klasse (0.688.0)', () => {
+    const { fixture, http, el } = setup();
+    flushEvals(http, evals('done'));
+    fixture.detectChanges();
+    const clicked: number[] = [];
+    fixture.componentInstance.moveClicked.subscribe(p => clicked.push(p));
+
+    (el.querySelector('tr.row-black td.count.blunder button') as HTMLButtonElement).click();
+    expect(clicked.length).toBe(1);
+    const blunderPly = clicked[0];
+    expect(fixture.componentInstance.review().moves[blunderPly]!.cls).toBe('blunder');
+    expect(fixture.componentInstance.review().moves[blunderPly]!.white).toBeFalse();
+
+    (el.querySelector('thead button.jump.blunder') as HTMLButtonElement).click();
+    expect(clicked[1]).toBe(blunderPly);
+    // Ohne Treffer kein Knopf
+    expect(el.querySelector('tr.row-white td.count.blunder button')).toBeNull();
+  });
+
   it('fertig: Zähler je Seite, Genauigkeit, und die Klasse des AKTUELLEN Zugs', () => {
     const { fixture, http, el } = setup();
     flushEvals(http, evals('done'));

@@ -496,3 +496,17 @@ export function formatEval(score: EvalScore | null | undefined): string {
   const v = score.cp / 100;
   return (v > 0 ? '+' : '') + v.toFixed(2);
 }
+
+/**
+ * Klick auf eine Zug-Klasse in der Rückblick-Tabelle (0.688.0, Wunsch 2026-10-06): der nächste Halbzug NACH `current` mit
+ * dieser Klasse — mit `white` nur die Züge dieser Farbe (Klick auf die Zahl), ohne beide (Klick aufs Symbol). Gibt es danach
+ * keinen mehr, geht es von vorn weiter (der erste der Partie), sodass wiederholtes Klicken alle der Reihe nach durchläuft.
+ * `null`, wenn es keinen gibt. Dieselbe Regel wie die Zählung (`m.cls`), damit Zahl und Sprünge übereinstimmen.
+ */
+export function nextOfClass(moves: readonly (ReviewedMove | null)[], cls: MoveClass, current: number,
+  white?: boolean): number | null {
+  const hits = moves.filter((m): m is ReviewedMove => !!m && m.cls === cls && (white === undefined || m.white === white))
+    .map(m => m.ply);
+  if (hits.length === 0) return null;
+  return hits.find(p => p > current) ?? hits[0];
+}

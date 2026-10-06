@@ -760,6 +760,12 @@ ist ▶ gesperrt statt in die Partie zu springen. Die Live-Leiste zeigt dort nur
 Fehler-Training behält sie „Zug zurück/vor" (dort gibt es keine Knöpfe unter dem Brett). Anordnung jetzt auch am PC wie am
 Handy: Drehen · ⏮ ‖ ◀ ▶ ‖ ⏭ · Live · ⋮, ◀ ▶ groß, ⏮/⏭ mit 20 px Abstand — dicht daneben verklickte man sich.
 
+**Rückblick-Tabelle: Klasse anklicken = hinspringen** (0.688.0, Wunsch 2026-10-06): das Symbol im Tabellenkopf (!!, ?, ✓ …)
+springt zum nächsten Zug dieser Klasse NACH dem aktuellen (beide Farben), die Zahl darunter nur zu Zügen dieser Farbe; danach
+keiner mehr → von vorn (wiederholtes Klicken läuft alle durch). Regel `nextOfClass` in `game-review.util.ts`, dieselbe Zuordnung
+wie die Zählung (`m.cls`). Ohne Treffer bleibt Symbol/Zahl ein Text, kein Knopf. Geht über `moveClicked` — wirkt also überall,
+wo der Rückblick hängt (Partieseite, geteilte Partie, LeagueHub-Nachspielen).
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

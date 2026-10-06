@@ -20,7 +20,7 @@ import { GameAnalysisAlternative, GameAnalysisService } from '../analysis/game-a
 import { isLc0Engine } from '../analysis/external-engine.service';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
-  reviewGame,
+  nextOfClass, reviewGame,
 } from './game-review.util';
 import { uciOf } from './move-tactics.util';
 import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
@@ -218,10 +218,20 @@ const MATE_GAP_PAWNS = 100;
                 <th></th>
                 <th class="acc-h">{{ 'games.review.accuracy' | translate }}</th>
                 @if (altReview()) { <th class="acc-h alt">{{ altLabel() }}</th> }
+                <!-- Klick aufs Symbol: zum nächsten Zug dieser Klasse (beide Farben); auf die Zahl darunter: nur diese Farbe
+                     (0.688.0). Ohne Treffer kein Knopf. -->
                 @for (c of classes; track c) {
-                  <th><span [class]="'sym ' + c" [style.background]="color(c)"
+                  <th>
+                    @if (review().white.counts[c] + review().black.counts[c] > 0) {
+                      <button type="button" [class]="'sym jump ' + c" [style.background]="color(c)" (click)="jumpTo(c)"
+                              [matTooltip]="('games.review.class.' + c) | translate"
+                              [attr.aria-label]="('games.review.class.' + c) | translate">{{ symbol(c) }}</button>
+                    } @else {
+                      <span [class]="'sym ' + c" [style.background]="color(c)"
                             [matTooltip]="('games.review.class.' + c) | translate"
-                            [attr.aria-label]="('games.review.class.' + c) | translate">{{ symbol(c) }}</span></th>
+                            [attr.aria-label]="('games.review.class.' + c) | translate">{{ symbol(c) }}</span>
+                    }
+                  </th>
                 }
               </tr>
             </thead>
@@ -238,7 +248,12 @@ const MATE_GAP_PAWNS = 100;
                     </td>
                   }
                   @for (c of classes; track c) {
-                    <td [class]="'count ' + c" [class.zero]="row.summary.counts[c] === 0">{{ row.summary.counts[c] }}</td>
+                    <td [class]="'count ' + c" [class.zero]="row.summary.counts[c] === 0">
+                      @if (row.summary.counts[c] > 0) {
+                        <button type="button" class="count-jump" (click)="jumpTo(c, row.key === 'white')"
+                                [attr.aria-label]="(('games.review.' + row.key) | translate) + ': ' + (('games.review.class.' + c) | translate)">{{ row.summary.counts[c] }}</button>
+                      } @else { {{ row.summary.counts[c] }} }
+                    </td>
                   }
                 </tr>
               }
@@ -318,6 +333,11 @@ const MATE_GAP_PAWNS = 100;
     .dis-move { font-weight: 600; }
     .dis-vs { opacity: 0.6; font-size: 0.7rem; }
     .summary .count { font-variant-numeric: tabular-nums; }
+    .summary button.jump { border: 0; cursor: pointer; font: inherit; }
+    .summary button.jump:hover, .summary button.jump:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+    .summary .count-jump { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0 4px;
+      border-radius: 4px; min-width: 1.6em; text-decoration: underline dotted; text-underline-offset: 2px; }
+    .summary .count-jump:hover, .summary .count-jump:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); }
     .summary .count.zero { color: color-mix(in srgb, currentColor 35%, transparent); }
     .sym {
       display: inline-block; min-width: 20px; padding: 0 3px; border-radius: 9px; box-sizing: border-box;
@@ -500,6 +520,12 @@ export class GameReviewComponent {
 
   /** Farbe der zweiten Analyse (Kurve, Linien, Spalte, uneinige Züge). */
   static readonly AltColor = '#ff9800';
+
+  /** Zum nächsten Zug der Klasse `cls` (nach dem aktuellen, sonst von vorn); `white` = nur diese Farbe. */
+  jumpTo(cls: MoveClass, white?: boolean): void {
+    const ply = nextOfClass(this.review().moves, cls, this.currentIndex(), white);
+    if (ply !== null) this.moveClicked.emit(ply);
+  }
 
   /** „17... Qe7" für die Knöpfe der uneinigen Züge. */
   disagreeLabel(ply: number): string {
