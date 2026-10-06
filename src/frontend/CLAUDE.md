@@ -526,6 +526,16 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   `shared/eta.util.ts` `formatEta` — derselben Funktion wie auf „Partie-Analysen", Text-Key `gameAnalysis.eta`);
   nur solange die Analyse läuft, ohne Tempo gar nicht.
 
+## Zweite Analyse: Lc0-Spalte + uneinige Züge (0.683.0)
+
+Im Rückblick bei „Beide" (Umschalter seit 0.682.0) bekommt die Genauigkeitstabelle eine eigene Spalte der zweiten
+Analyse (`rows()[].altAccuracy`, orange); die Zugklassen bleiben die der ersten. Darunter „Uneinig bei n Zügen":
+`features/games/engine-disagreement.util.ts` (rein, Vektoren-Spec) vergleicht die GRUNDklassen — uneinig nur, wenn die
+eine Fehler/groben Fehler sieht und die andere höchstens „gut", oder nur eine einen groben Fehler bei ≥ 2 Stufen Abstand.
+Bewusst streng: an sechs Prod-Partien (488 Züge) war die Klasse bei 164 verschieden, fast alle an einer Bandgrenze; mit der
+Regel blieben 5. Knöpfe/◀ ▶ springen über `moveClicked`, die Kurve trägt dort einen orangen Punkt (`kind: 'disagree'`)
+statt des Klassen-Punkts. Im Fehler-Training aus.
+
 ## „Warum war das ein Fehler?" (0.534.0)
 
 Unter dem Abzeichen des aktuellen Zugs steht bei Fehlern ein, zwei Sätze Erklärung (💬), geschrieben vom Sprachmodell auf

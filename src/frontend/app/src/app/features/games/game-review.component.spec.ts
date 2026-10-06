@@ -626,6 +626,40 @@ describe('GameReviewComponent', () => {
       expect(el.querySelectorAll('app-eval-graph polyline.overlay').length).toBeGreaterThan(0);
     });
 
+    it('„Beide": Lc0-Genauigkeit als eigene Spalte; uneinige Züge anspringbar (0.683.0)', () => {
+      const { el, fixture } = withAlternative();
+      const cmp = fixture.componentInstance;
+      cmp.setView('both');
+      fixture.detectChanges();
+      expect(el.querySelector('th.acc-h.alt')?.textContent?.trim()).toBe('Lc0');
+      expect(el.querySelectorAll('td.acc.alt').length).toBe(2);
+      // 1.e4: beide finden ihn in Ordnung — keine Meinungsverschiedenheit
+      expect(cmp.disagreements()).toEqual([]);
+      expect(el.querySelector('.disagree')).toBeNull();
+
+      // Lc0 sieht nach 1.e4 Schwarz klar vorn → für Lc0 ein grober Fehler, für Stockfish der beste Zug
+      const harsh = lc0();
+      harsh.plies[1] = { ...harsh.plies[1], cp: -400, candidates: [{ uci: 'e7e5', cp: -400, pv: ['e7e5'] }] };
+      cmp.altEvals.set(harsh);
+      fixture.detectChanges();
+      expect(cmp.disagreements().map(d => d.ply)).toEqual([0]);
+      expect(el.querySelector('.dis-title')?.textContent).toContain('games.review.disagree');
+      expect(el.querySelector('.dis-move')?.textContent?.trim()).toBe('1. e4');
+      expect(cmp.marks().find(m => m.ply === 0)?.kind).toBe('disagree');
+
+      const jumped: number[] = [];
+      cmp.moveClicked.subscribe(i => jumped.push(i));
+      (el.querySelector('.dis-chip') as HTMLButtonElement).click();
+      cmp.stepDisagree(1);
+      expect(jumped).toEqual([0, 0]);
+    });
+
+    it('nur „Stockfish": keine Lc0-Spalte, keine uneinigen Züge', () => {
+      const { el, fixture } = withAlternative();
+      expect(el.querySelector('th.acc-h.alt')).toBeNull();
+      expect(fixture.componentInstance.disagreements()).toEqual([]);
+    });
+
     it('ohne Anmeldung (withAlternatives aus) wird gar nicht erst gesucht', () => {
       const { http, el } = setup({ moves });
       flushEvals(http, stockfish());

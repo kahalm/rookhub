@@ -2678,6 +2678,9 @@
     "review": {
       "title": "Auswertung",
       "engineBoth": "Beide",
+      "disagree": "Uneinig bei {{n}} Zügen",
+      "disagreePrev": "Voriger uneiniger Zug",
+      "disagreeNext": "Nächster uneiniger Zug",
       "engineView": "Engine",
       "accuracy": "Genauigkeit",
       "pending": "Analyse läuft — {{done}} von {{total}} Stellungen",

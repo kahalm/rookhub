@@ -2678,6 +2678,9 @@
     "review": {
       "title": "Pregled partije",
       "engineBoth": "Oba",
+      "disagree": "Motori se ne slažu kod {{n}} poteza",
+      "disagreePrev": "Prethodno neslaganje",
+      "disagreeNext": "Sljedeće neslaganje",
       "engineView": "Motor",
       "accuracy": "Preciznost",
       "pending": "Analiza u tijeku — {{done}} od {{total}} pozicija",

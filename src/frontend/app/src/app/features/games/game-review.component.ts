@@ -24,6 +24,7 @@ import {
 } from './game-review.util';
 import { uciOf } from './move-tactics.util';
 import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
+import { engineDisagreements, moveNumberLabel, stepDisagreement } from './engine-disagreement.util';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
@@ -168,12 +169,49 @@ const MATE_GAP_PAWNS = 100;
         } @else if (explainState() === 'running') {
           <span class="progress explaining">{{ 'games.review.explaining' | translate }}</span>
         }
+        @if (disagreements().length) {
+          <!-- Uneinige Züge (0.683.0): nur bei „Beide", nur wenn es welche gibt. Klick springt hin. -->
+          <div class="disagree">
+            <div class="dis-head">
+              <span class="dis-title">{{ 'games.review.disagree' | translate: { n: disagreements().length } }}</span>
+              <span class="dis-nav">
+                <button mat-icon-button type="button" (click)="stepDisagree(-1)"
+                        [attr.aria-label]="'games.review.disagreePrev' | translate"><mat-icon>chevron_left</mat-icon></button>
+                <span class="dis-pos">{{ disagreePosition() }}</span>
+                <button mat-icon-button type="button" (click)="stepDisagree(1)"
+                        [attr.aria-label]="'games.review.disagreeNext' | translate"><mat-icon>chevron_right</mat-icon></button>
+              </span>
+            </div>
+            @if (currentDisagreement(); as d) {
+              <div class="dis-current">
+                <span>Stockfish</span>
+                <span class="sym" [style.background]="color(d.primary)">{{ symbol(d.primary) }}</span>
+                {{ ('games.review.class.' + d.primary) | translate }}
+                <span class="dis-sep">·</span>
+                <span class="alt-name">{{ altLabel() }}</span>
+                <span class="sym" [style.background]="color(d.alt)">{{ symbol(d.alt) }}</span>
+                {{ ('games.review.class.' + d.alt) | translate }}
+              </div>
+            }
+            <div class="dis-list">
+              @for (d of disagreements(); track d.ply) {
+                <button type="button" class="dis-chip" [class.on]="d.ply === currentIndex()" (click)="moveClicked.emit(d.ply)">
+                  <span class="dis-move">{{ disagreeLabel(d.ply) }}</span>
+                  <span class="sym" [style.background]="color(d.primary)">{{ symbol(d.primary) }}</span>
+                  <span class="dis-vs">vs</span>
+                  <span class="sym" [style.background]="color(d.alt)">{{ symbol(d.alt) }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
         <div class="table-wrap">
           <table class="summary">
             <thead>
               <tr>
                 <th></th>
                 <th class="acc-h">{{ 'games.review.accuracy' | translate }}</th>
+                @if (altReview()) { <th class="acc-h alt">{{ altLabel() }}</th> }
                 @for (c of classes; track c) {
                   <th><span [class]="'sym ' + c" [style.background]="color(c)"
                             [matTooltip]="('games.review.class.' + c) | translate"
@@ -188,6 +226,11 @@ const MATE_GAP_PAWNS = 100;
                   <td class="acc">
                     @if (row.summary.accuracy !== null) { {{ row.summary.accuracy | number:'1.1-1' }} % } @else { – }
                   </td>
+                  @if (altReview()) {
+                    <td class="acc alt">
+                      @if (row.altAccuracy != null) { {{ row.altAccuracy | number:'1.1-1' }} % } @else { – }
+                    </td>
+                  }
                   @for (c of classes; track c) {
                     <td [class]="'count ' + c" [class.zero]="row.summary.counts[c] === 0">{{ row.summary.counts[c] }}</td>
                   }
@@ -249,6 +292,24 @@ const MATE_GAP_PAWNS = 100;
     .summary tbody th { text-align: left; font-weight: 500; }
     .summary .acc-h, .summary .acc { text-align: right; font-variant-numeric: tabular-nums; }
     .summary .acc { font-weight: 600; }
+    .summary .alt { color: #ff9800; }
+    .disagree { display: flex; flex-direction: column; gap: 4px; }
+    .dis-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .dis-title { font-size: 0.82rem; font-weight: 600; }
+    .dis-nav { display: inline-flex; align-items: center; margin-left: auto; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+    .dis-nav button { --mat-icon-button-state-layer-size: 28px; width: 28px; height: 28px; padding: 2px; }
+    .dis-current { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8rem; }
+    .dis-current .alt-name { color: #ff9800; font-weight: 600; }
+    .dis-sep { opacity: 0.5; }
+    .dis-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .dis-chip {
+      display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; cursor: pointer;
+      border: 1px solid color-mix(in srgb, currentColor 20%, transparent); background: none; color: inherit; font: inherit;
+      font-size: 0.78rem;
+    }
+    .dis-chip.on { border-color: #ff9800; box-shadow: 0 0 0 1px #ff9800; }
+    .dis-move { font-weight: 600; }
+    .dis-vs { opacity: 0.6; font-size: 0.7rem; }
     .summary .count { font-variant-numeric: tabular-nums; }
     .summary .count.zero { color: color-mix(in srgb, currentColor 35%, transparent); }
     .sym {
@@ -363,8 +424,16 @@ export class GameReviewComponent {
     return isLc0Engine(a.engineName) ? 'Lc0' : (a.engineName ?? 'Engine');
   });
   /** Bei „Beide": die Kurve der zweiten Analyse über der ersten. */
-  readonly overlay = computed(() => this.view() === 'both'
-    ? reviewGame(this.altEvals(), this.fens(), this.ucis()).curve : null);
+  readonly altReview = computed(() => this.view() === 'both'
+    ? reviewGame(this.altEvals(), this.fens(), this.ucis()) : null);
+  readonly overlay = computed(() => this.altReview()?.curve ?? null);
+  /** Bei „Beide" (0.683.0): Züge, die die beiden Analysen wirklich verschieden sehen — anspringbar. */
+  readonly disagreements = computed(() => {
+    const alt = this.altReview();
+    return alt && !this.engineHidden() ? engineDisagreements(this.review(), alt) : [];
+  });
+  readonly currentDisagreement = computed(() =>
+    this.disagreements().find(d => d.ply === this.currentIndex()) ?? null);
   readonly review = computed(() => reviewGame(this.shown(), this.fens(), this.ucis()));
   /** Die Kurve ist standardmäßig ZU und klappt nur auf Wunsch auf — bewusst nicht gemerkt: „standardmäßig". */
   readonly graphOpen = linkedSignal(() => this.expanded());
@@ -387,13 +456,36 @@ export class GameReviewComponent {
     const move = this.moves()[this.currentIndex()];
     return m && move?.to ? { square: move.to, svg: moveBadgeSvg(m.cls) } : null;
   });
+  /** `altAccuracy` nur bei „Beide": die Genauigkeit der zweiten Analyse als eigene Spalte (Variante A, 0.683.0). */
   readonly rows = computed(() => [
-    { key: 'white', summary: this.review().white },
-    { key: 'black', summary: this.review().black },
+    { key: 'white', summary: this.review().white, altAccuracy: this.altReview()?.white.accuracy },
+    { key: 'black', summary: this.review().black, altAccuracy: this.altReview()?.black.accuracy },
   ]);
-  readonly marks = computed<EvalGraphMark[]>(() => this.review().moves
-    .filter((m): m is ReviewedMove => !!m && MARKED.has(m.cls))
-    .map(m => ({ ply: m.ply, kind: m.cls, color: MOVE_CLASS_COLORS[m.cls] })));
+  /** Bei „Beide" tragen die uneinigen Züge einen orangen Punkt statt ihres Klassen-Punkts. */
+  readonly marks = computed<EvalGraphMark[]>(() => {
+    const dis = new Set(this.disagreements().map(d => d.ply));
+    const own = this.review().moves
+      .filter((m): m is ReviewedMove => !!m && MARKED.has(m.cls) && !dis.has(m.ply))
+      .map(m => ({ ply: m.ply, kind: m.cls, color: MOVE_CLASS_COLORS[m.cls] }));
+    return [...own, ...[...dis].map(ply => ({ ply, kind: 'disagree', color: GameReviewComponent.AltColor }))];
+  });
+
+  /** Farbe der zweiten Analyse (Kurve, Linien, Spalte, uneinige Züge). */
+  static readonly AltColor = '#ff9800';
+
+  /** „17... Qe7" für die Knöpfe der uneinigen Züge. */
+  disagreeLabel(ply: number): string {
+    return `${moveNumberLabel(this.fens()[ply], ply)} ${this.moves()[ply]?.san ?? ''}`.trim();
+  }
+  stepDisagree(dir: 1 | -1): void {
+    const ply = stepDisagreement(this.disagreements(), this.currentIndex(), dir);
+    if (ply !== null) this.moveClicked.emit(ply);
+  }
+  disagreePosition(): string {
+    const list = this.disagreements();
+    const i = list.findIndex(d => d.ply === this.currentIndex());
+    return i >= 0 ? `${i + 1} / ${list.length}` : `– / ${list.length}`;
+  }
   readonly mistakes = computed(() => collectMistakes(this.review(), this.shown(), this.fens(), this.moves()));
   readonly current = computed(() => {
     const i = this.currentIndex();

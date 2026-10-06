@@ -2995,6 +2995,9 @@
     "review": {
       "title": "Játszmaértékelés",
       "engineBoth": "Mindkettő",
+      "disagree": "A motorok {{n}} lépésnél nem értenek egyet",
+      "disagreePrev": "Előző eltérés",
+      "disagreeNext": "Következő eltérés",
       "engineView": "Motor",
       "accuracy": "Pontosság",
       "pending": "Elemzés folyamatban — {{done}} / {{total}} állás",
