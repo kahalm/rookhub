@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LiveEngineSession } from './live-engine-session';
+import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
 
 /**
  * Leiste der Live-Engine unter dem Brett der Partieseite: welche Engine rechnet und wie tief, die eigene
@@ -60,11 +60,18 @@ import { LiveEngineSession } from './live-engine-session';
         <div class="hint">{{ 'games.live.hint' | translate }}</div>
       }
       <ol class="lines">
-        @for (l of s.lines(); track $index) {
-          <li>
-            <span class="line-eval" [class.white]="l.positive">{{ l.evalText }}</span>
-            <span class="line-san">{{ l.san }}</span>
-          </li>
+        <!-- Immer LIVE_LINES Zeilen (leere als Platzhalter): beim Zugwechsel leert die Sitzung die Linien und füllt sie neu —
+             ohne feste Höhe schrumpfte die Seite jedes Mal, und weiter unten gerollt sprang der ganze Bildschirm (gemeldet
+             2026-10-06, „ruckelt bei den Pfeiltasten"). -->
+        @for (i of slots; track i) {
+          @if (s.lines()[i]; as l) {
+            <li>
+              <span class="line-eval" [class.white]="l.positive">{{ l.evalText }}</span>
+              <span class="line-san">{{ l.san }}</span>
+            </li>
+          } @else {
+            <li class="empty" aria-hidden="true"><span class="line-eval">&nbsp;</span><span class="line-san">&nbsp;</span></li>
+          }
         }
       </ol>
     </section>
@@ -94,6 +101,7 @@ import { LiveEngineSession } from './live-engine-session';
     }
     .line-eval.white { background: #fff; color: #262421; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2); }
     .line-san { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lines li.empty .line-eval { background: transparent; }
   `],
 })
 export class LiveEnginePanelComponent {
@@ -104,4 +112,6 @@ export class LiveEnginePanelComponent {
   /** Eigene Knöpfe „Zug zurück/vor". Auf der Partieseite aus (0.667.0): dort laufen die Knöpfe unter dem Brett durch die
    *  Variante. Im Fehler-Training an — dort gibt es unter dem Brett keine. */
   steps = input(true);
+  /** Feste Zeilenzahl der Linienliste (siehe Template). */
+  readonly slots = Array.from({ length: LIVE_LINES }, (_, i) => i);
 }

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.691.1", date: "2026-10-06", changes: [
+    { en: "Game page with the engine switched on: stepping through the game with the arrow keys no longer makes the screen jump. The engine lines were cleared on every move and filled again, so the page got shorter for a moment — when scrolled down, everything moved. The list now always keeps its three rows.", de: "Partieseite mit eingeschalteter Engine: beim Blättern mit den Pfeiltasten springt der Bildschirm nicht mehr. Die Engine-Linien wurden bei jedem Zug geleert und neu gefüllt, die Seite war kurz kürzer — weiter unten gerollt rutschte alles. Die Liste behält jetzt immer ihre drei Zeilen." },
+  ] },
   { version: "0.691.0", date: "2026-10-06", changes: [
     { en: "LeagueHub club database: when a game is added from a scoresheet that is already in the database (same league pairing, or same year, same players and the same first moves), the older version is archived and no longer appears — not in the list, the player cards or the pairings. Its analysis is removed; the new version gets analysed.", de: "LeagueHub-Vereins-Datenbank: Kommt über ein Partieformular eine Partie dazu, die schon in der Datenbank steht (dieselbe Ligapaarung, oder dasselbe Jahr, dieselben Spieler und dieselben ersten Züge), wird die ältere Fassung archiviert und erscheint nicht mehr — weder in der Liste noch auf den Spielerkarten oder bei den Paarungen. Ihre Analyse wird entfernt; die neue Fassung wird gerechnet." },
   ] },
