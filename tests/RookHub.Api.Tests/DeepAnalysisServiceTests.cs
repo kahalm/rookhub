@@ -69,4 +69,18 @@ public class DeepAnalysisServiceTests : IDisposable
     [Fact]
     public async Task Start_ungueltigeStellung_wirft()
         => await Assert.ThrowsAnyAsync<ArgumentException>(() => Service().StartAsync(Member, "kein fen"));
+
+    [Fact]
+    public async Task List_liefertNurDieEigenenTiefenAnalysen()
+    {
+        await Service().StartAsync(Member, Fen1);
+        _db.AnalysisJobs.Add(new AnalysisJob { UserId = Member, Fen = Fen2, Title = "anderer Auftrag", EngineId = "rhe_sf1",
+            TargetDepth = 20, MultiPv = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var list = await Service().ListAsync(Member);
+        Assert.Equal(2, list.Count);
+        Assert.All(list, j => Assert.Equal(Fen1, j.Fen));
+        Assert.Empty(await Service().ListAsync(House));
+    }
 }

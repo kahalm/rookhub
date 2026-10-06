@@ -2689,6 +2689,9 @@
       "noLc0": "Lc0 motor nije prijavljen.",
       "pruned": "Lc0 je sam stao na {{nodes}} čvorova — njegov potez je siguran.",
       "keeps": "Nastavlja raditi kad zatvoriš prozor (popis analiza).",
+      "reviewDepth": "Duboka analiza · dubina {{depth}}",
+      "reviewNodes": "Duboka analiza · {{nodes}} čvorova",
+      "reviewRunning": "u tijeku",
       "startFailed": "Duboku analizu nije bilo moguće pokrenuti."
     },
     "review": {

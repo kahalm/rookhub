@@ -2689,6 +2689,9 @@
       "noLc0": "Keine Lc0-Engine angemeldet.",
       "pruned": "Lc0 hat bei {{nodes}} Knoten von selbst aufgehört — sein Zug steht fest.",
       "keeps": "Läuft weiter, wenn du das Fenster schließt (Liste der Analyseaufträge).",
+      "reviewDepth": "Tiefe Analyse · Tiefe {{depth}}",
+      "reviewNodes": "Tiefe Analyse · {{nodes}} Knoten",
+      "reviewRunning": "läuft",
       "startFailed": "Die tiefe Analyse ließ sich nicht starten."
     },
     "review": {

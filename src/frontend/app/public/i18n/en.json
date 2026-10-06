@@ -2689,6 +2689,9 @@
       "noLc0": "No Lc0 engine is connected.",
       "pruned": "Lc0 stopped by itself at {{nodes}} nodes — its move is settled.",
       "keeps": "Keeps running when you close this window (list of analysis jobs).",
+      "reviewDepth": "Deep analysis · depth {{depth}}",
+      "reviewNodes": "Deep analysis · {{nodes}} nodes",
+      "reviewRunning": "running",
       "startFailed": "The deep analysis could not be started."
     },
     "review": {

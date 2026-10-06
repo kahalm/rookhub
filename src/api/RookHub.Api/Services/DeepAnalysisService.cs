@@ -31,6 +31,17 @@ public class DeepAnalysisService(AppDbContext db, AnalysisJobService jobs, IConf
     private string? Lc0EngineName =>
         (config["ClubSecondEngine:EngineName"] ?? ClubSecondEngineScheduler.DefaultEngineName).Trim() is { Length: > 0 } n ? n : null;
 
+    /// <summary>Die eigenen tiefen Analysen (höchstens eine Stellung, zwei Aufträge, ohne gescheiterte) — die Partieseite
+    /// zeigt ihre Linien unter der Partie, sobald sie weiter sind als die hinterlegten (0.690.0).</summary>
+    public async Task<List<AnalysisJobDto>> ListAsync(int userId, CancellationToken ct = default)
+    {
+        var jobs = await db.AnalysisJobs.AsNoTracking()
+            .Where(j => j.UserId == userId && (j.Title == StockfishTitle || j.Title == Lc0Title)
+                && j.Status != AnalysisJobStatus.Failed)
+            .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
+        return jobs.Select(AnalysisJobService.ToDto).ToList();
+    }
+
     public async Task<DeepAnalysisDto> StartAsync(int userId, string? fen, CancellationToken ct = default)
     {
         fen = (fen ?? string.Empty).Trim();

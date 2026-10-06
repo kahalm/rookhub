@@ -104,6 +104,11 @@ export class AnalysisJobsService {
   }
 
   /** „Tiefe Analyse" der Stellung starten (nur Vereinsmitglieder) — dieselbe Stellung noch einmal = dieselben Aufträge. */
+  /** Die eigenen tiefen Analysen (0.690.0) — die Partieseite zeigt sie unter der Partie. */
+  listDeep(): Observable<AnalysisJob[]> {
+    return this.http.get<AnalysisJob[]>('/api/deep-analysis');
+  }
+
   startDeep(fen: string): Observable<DeepAnalysis> {
     return this.http.post<DeepAnalysis>('/api/deep-analysis', { fen });
   }

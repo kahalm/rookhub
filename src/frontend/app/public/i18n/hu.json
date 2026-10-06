@@ -3006,6 +3006,9 @@
       "noLc0": "Nincs bejelentkezett Lc0 motor.",
       "pruned": "Az Lc0 magától megállt {{nodes}} csomópontnál — a lépése biztos.",
       "keeps": "Tovább fut, ha bezárod az ablakot (elemzési feladatok listája).",
+      "reviewDepth": "Mély elemzés · mélység {{depth}}",
+      "reviewNodes": "Mély elemzés · {{nodes}} csomópont",
+      "reviewRunning": "fut",
       "startFailed": "A mély elemzést nem sikerült elindítani."
     },
     "review": {

@@ -3263,6 +3263,10 @@ tiefe Analyse je Nutzer. `/api/analysis-jobs/live` trägt dafür `nodes`. Oberfl
 (Regeln rein in `deep-analysis.util.ts`): je Engine ein Balken (Tiefe bzw. Knoten), Linien = die HINTERLEGTEN der Partie-Analyse
 (`GameReviewComponent.storedChange`), bis der Auftrag weiter ist (`deepAhead`), dann seine; der Menüpunkt erscheint nur, wo die
 Seite `[deep]` an `app-position-menu` reicht (Partieseite) und das Konto `league.view` hat.
+**Unter der Partie (0.690.0):** `GET /api/deep-analysis` = die eigenen tiefen Aufträge (ohne Recht leer). Der Rückblick
+(`GameReviewComponent.deepJobs`, mit `withAlternatives`) holt sie beim Start, alle 5 s solange einer offen ist, sonst alle 30 s;
+passt einer zur Stellung auf dem Brett (`deepJobFor`, erste vier FEN-Felder, Lc0 am Knotenziel) und ist weiter als das
+Hinterlegte (`deepAhead`), ersetzen seine Linien den Stockfish- bzw. Lc0-Block, mit Etikett „Tiefe Analyse · Tiefe n".
 
 ### Vereinspartien zusätzlich auf Lc0 (0.685.0) — `ClubSecondEngineScheduler`
 Wunsch 2026-10-06: „alle Ligapartien, die neu dazukommen, automatisch mit 100k rechnen, und einmalig alle alten nachrechnen".

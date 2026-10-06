@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.690.0", date: "2026-10-06", changes: [
+    { en: "Deep analysis now also shows up under the game: once your deep analysis of the position on the board has gone further than the stored game analysis, its lines replace the stored ones (marked \u201cDeep analysis \u00b7 depth 34\u201d or \u201c\u2026 312,000 nodes\u201d) and keep updating while it runs \u2014 also after you closed the window. Stockfish and Lc0 are replaced separately.", de: "Die tiefe Analyse erscheint jetzt auch unter der Partie: ist deine tiefe Analyse der Stellung auf dem Brett weiter als die hinterlegte Partie-Analyse, ersetzen ihre Linien die hinterlegten (markiert \u201eTiefe Analyse \u00b7 Tiefe 34\u201c bzw. \u201e\u2026 312 000 Knoten\u201c) und laufen mit, solange sie rechnet \u2014 auch nachdem du das Fenster geschlossen hast. Stockfish und Lc0 werden getrennt ersetzt." },
+  ] },
   { version: "0.689.0", date: "2026-10-06", changes: [
     { en: "Game analyses now also compute the final position (after the last move), unless the game ended in mate or stalemate \u2014 so after a resignation you see the computer lines of the position that was given up, from Stockfish and from Lc0. The last move is then rated from that position as well. Applies to analyses started from now on; existing ones stay as they are.", de: "Partie-Analysen rechnen jetzt auch die Endstellung (nach dem letzten Zug), au\u00dfer die Partie endete mit Matt oder Patt \u2014 nach einer Aufgabe siehst du also die Computer-Linien der aufgegebenen Stellung, von Stockfish und von Lc0. Der letzte Zug wird dann ebenfalls daraus bewertet. Gilt f\u00fcr Analysen ab jetzt; bestehende bleiben, wie sie sind." },
   ] },

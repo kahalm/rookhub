@@ -9,7 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, timer } from 'rxjs';
+import { Subscription, interval, timer } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
 import { formatEta } from '../../shared/eta.util';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
@@ -25,7 +26,11 @@ import {
 import { uciOf } from './move-tactics.util';
 import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
 import { engineDisagreements, moveNumberLabel, stepDisagreement } from './engine-disagreement.util';
-import { DeepStored } from './deep-analysis.util';
+import { DeepKind, DeepStored, deepAhead, deepJobFor, deepOpen, resultNodes } from './deep-analysis.util';
+import { AnalysisJob, AnalysisJobsService } from '../analysis/analysis-jobs.service';
+import { mapBrokerLine, toDisplayLines } from '../analysis/engine-lines.util';
+import type { EngineAnalyseLine } from '../analysis/external-engine.service';
+import type { ComputerLine } from './computer-lines.util';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
@@ -120,6 +125,7 @@ const MATE_GAP_PAWNS = 100;
         </div>
         @if (lines().length) {
           @if (view() === 'both') { <div class="lines-label">Stockfish</div> }
+          @if (linesDeep(); as d) { <div class="lines-label deep">{{ deepLabel(d) }}</div> }
           <ol class="lines">
             @for (l of lines(); track $index) {
               <li [class.played]="l.played">
@@ -131,6 +137,7 @@ const MATE_GAP_PAWNS = 100;
         }
         @if (altLines().length) {
           <div class="lines-label alt">{{ altLabel() }}</div>
+          @if (altLinesDeep(); as d) { <div class="lines-label deep">{{ deepLabel(d) }}</div> }
           <ol class="lines alt">
             @for (l of altLines(); track $index) {
               <li [class.played]="l.played">
@@ -280,6 +287,7 @@ const MATE_GAP_PAWNS = 100;
     .engine-view + .toggles { margin-left: 0; }
     .lines-label { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin: 4px 0 1px; }
     .lines-label.alt { color: #ff9800; opacity: 1; }
+    .lines-label.deep { font-weight: 500; font-style: italic; margin-top: 0; }
     .alt-nodes { font-size: 0.75rem; color: #ff9800; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .toggle { opacity: 0.45; --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -349,6 +357,7 @@ const MATE_GAP_PAWNS = 100;
 export class GameReviewComponent {
   private games = inject(GamesService);
   private analyses = inject(GameAnalysisService);
+  private jobsApi = inject(AnalysisJobsService);
   private translate = inject(TranslateService);
   private locale = inject(LOCALE_ID);
 
@@ -488,11 +497,63 @@ export class GameReviewComponent {
   /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe); mit `expanded` von Anfang an an. */
   readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
   readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
-  readonly lines = computed(() => this.showLines() && !this.engineHidden() && !this.offGame()
-    ? computerLinesAt(this.shown(), this.fens(), this.currentIndex()) : []);
+  readonly lines = computed(() => {
+    if (!this.showLines() || this.engineHidden() || this.offGame()) return [];
+    const deep = this.view() === 'alt' ? this.deepLc0() : this.deepSf();
+    return deep?.lines ?? computerLinesAt(this.shown(), this.fens(), this.currentIndex());
+  });
   /** Bei „Beide" die Linien der zweiten Analyse als eigener Block. */
   readonly altLines = computed(() => this.view() === 'both' && this.showLines() && !this.engineHidden() && !this.offGame()
-    ? computerLinesAt(this.altEvals(), this.fens(), this.currentIndex()) : []);
+    ? this.deepLc0()?.lines ?? computerLinesAt(this.altEvals(), this.fens(), this.currentIndex()) : []);
+  /** Etikett über dem ersten bzw. zweiten Linienblock, wenn dort die tiefe Analyse steht. */
+  readonly linesDeep = computed(() => this.view() === 'alt' ? this.deepLc0() : this.deepSf());
+  readonly altLinesDeep = computed(() => this.view() === 'both' ? this.deepLc0() : null);
+
+  // ── Tiefe Analyse unter der Partie (0.690.0, Wunsch 2026-10-06: „zeigt er unter der Partie dann auch live die neuen
+  //    Infos an?") — die eigenen tiefen Aufträge; ist einer zur Stellung auf dem Brett weiter als das Hinterlegte,
+  //    ersetzen seine Linien die hinterlegten, und solange er rechnet, laufen sie mit. ──
+  readonly deepJobs = signal<AnalysisJob[]>([]);
+  private deepTick = 0;
+  private deepLoading = false;
+  static readonly DeepPollMs = 5_000;
+  /** Ohne offenen Auftrag nur jeder sechste Takt (30 s) — eine neue tiefe Analyse soll trotzdem bald erscheinen. */
+  static readonly DeepIdleTicks = 6;
+
+  readonly deepSf = computed(() => this.deepFor('sf'));
+  readonly deepLc0 = computed(() => this.deepFor('lc0'));
+
+  private deepFor(kind: DeepKind): { lines: ComputerLine[]; job: AnalysisJob; running: boolean; reach: number } | null {
+    const fen = this.fens()[this.currentIndex() + 1];
+    const job = deepJobFor(this.deepJobs(), fen, kind);
+    if (!job?.resultJson || !deepAhead(kind, job, this.storedHere())) return null;
+    let raw: EngineAnalyseLine;
+    try { raw = JSON.parse(job.resultJson) as EngineAnalyseLine; } catch { return null; }
+    const lines = toDisplayLines(job.fen, mapBrokerLine(job.fen, raw, job.multiPv), 10)
+      .map(l => ({ evalText: l.evalText, san: l.san, whiteBetter: l.positive, played: false }) as ComputerLine);
+    return { lines, job, running: deepOpen(job), reach: kind === 'sf' ? job.reachedDepth : resultNodes(job) };
+  }
+
+  /** „Tiefe Analyse · Tiefe 34 · läuft" bzw. „… · 312 000 Knoten". */
+  deepLabel(d: { job: AnalysisJob; running: boolean; reach: number }): string {
+    const reach = d.job.targetNodes != null
+      ? this.translate.instant('games.deep.reviewNodes', { nodes: formatNumber(d.reach, this.locale) })
+      : this.translate.instant('games.deep.reviewDepth', { depth: d.reach });
+    return d.running ? `${reach} · ${this.translate.instant('games.deep.reviewRunning')}` : reach;
+  }
+
+  private loadDeep(): void {
+    if (this.deepLoading || !this.withAlternatives()) return;
+    this.deepLoading = true;
+    this.jobsApi.listDeep().subscribe({
+      next: jobs => { this.deepLoading = false; this.deepJobs.set(jobs); },
+      error: () => { this.deepLoading = false; },
+    });
+  }
+
+  private onDeepTick(): void {
+    this.deepTick++;
+    if (this.deepJobs().some(deepOpen) || this.deepTick % GameReviewComponent.DeepIdleTicks === 0) this.loadDeep();
+  }
   readonly arrows = computed<BoardArrow[]>(() => {
     if (!this.showArrow() || this.boardMarksHidden()) return [];
     const best = bestMoveArrowAt(this.shown(), this.currentIndex());
@@ -617,6 +678,11 @@ export class GameReviewComponent {
       const lang = this.language();
       untracked(() => this.loadExplanations(url, done, lang));
     });
+    // Tiefe Analyse (0.690.0): einmal beim Start, dann im 5-s-Takt solange einer rechnet, sonst alle 30 s.
+    effect(() => {
+      if (this.withAlternatives()) untracked(() => this.loadDeep());
+    });
+    interval(GameReviewComponent.DeepPollMs).pipe(takeUntilDestroyed()).subscribe(() => this.onDeepTick());
     inject(DestroyRef).onDestroy(() => {
       this.stop();
       this.altSub?.unsubscribe();

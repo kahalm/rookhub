@@ -13,13 +13,20 @@ namespace RookHub.Api.Controllers;
 [Authorize]
 public class DeepAnalysisController(DeepAnalysisService service, PermissionResolver? permissions = null) : BaseApiController
 {
+    private async Task<bool> AllowedAsync(CancellationToken ct) =>
+        User.IsInRole("Admin") || (permissions != null
+            ? (await permissions.GetAsync(GetUserId(), ct)).Has(Permissions.LeagueView)
+            : User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueView));
+
+    /// <summary>Die eigenen tiefen Analysen (0.690.0) — ohne Recht eine leere Liste, die Partieseite fragt jeden.</summary>
+    [HttpGet]
+    public async Task<ActionResult<List<AnalysisJobDto>>> List(CancellationToken ct)
+        => await AllowedAsync(ct) ? Ok(await service.ListAsync(GetUserId(), ct)) : Ok(new List<AnalysisJobDto>());
+
     [HttpPost]
     public async Task<ActionResult<DeepAnalysisDto>> Start([FromBody] DeepAnalysisRequest? req, CancellationToken ct)
     {
-        var allowed = User.IsInRole("Admin") || (permissions != null
-            ? (await permissions.GetAsync(GetUserId(), ct)).Has(Permissions.LeagueView)
-            : User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueView));
-        if (!allowed) return Forbid();
+        if (!await AllowedAsync(ct)) return Forbid();
         try
         {
             return Ok(await service.StartAsync(GetUserId(), req?.Fen, ct));

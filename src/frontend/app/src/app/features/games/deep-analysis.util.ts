@@ -50,3 +50,19 @@ export function deepAhead(kind: DeepKind, job: AnalysisJob | null, stored: DeepS
 export function prunedEarly(job: AnalysisJob | null, target: number): boolean {
   return job?.status === 'done' && resultNodes(job) > 0 && resultNodes(job) < target;
 }
+
+/** Gleiche Stellung? Die ersten vier FEN-Felder (Halbzug- und Zugzähler weg). */
+export function sameFen(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  return a.split(' ').slice(0, 4).join(' ') === b.split(' ').slice(0, 4).join(' ');
+}
+
+/** Der tiefe Auftrag dieser Engine zu dieser Stellung — Lc0 erkennt man am Knotenziel. */
+export function deepJobFor(jobs: readonly AnalysisJob[], fen: string | null | undefined, kind: DeepKind): AnalysisJob | null {
+  return jobs.find(j => sameFen(j.fen, fen) && (kind === 'lc0') === (j.targetNodes != null)) ?? null;
+}
+
+/** Noch offen (wartet, rechnet, pausiert)? */
+export function deepOpen(job: AnalysisJob | null | undefined): boolean {
+  return !!job && job.status !== 'done' && job.status !== 'failed';
+}

@@ -689,6 +689,24 @@ describe('GameReviewComponent', () => {
       expect(el.querySelector('.alt-nodes')?.textContent).toContain('Lc0');
     });
 
+    it('Tiefe Analyse: ist sie tiefer als das Hinterlegte, stehen ihre Linien unter der Partie (0.690.0)', () => {
+      const { el, fixture } = withAlternative();
+      const cmp = fixture.componentInstance;
+      const start = cmp.fens()[0];
+      const deep = (depth: number) => ({ id: 77, fen: start, title: 'Tiefe Analyse · Stockfish', engineId: 'rhe_sf', targetDepth: 40,
+        multiPv: 3, status: 'running' as const, reachedDepth: depth, secondsSpent: 0, lastError: null, createdAt: '', updatedAt: '',
+        lastRunAt: null, finishedAt: null, resultJson: JSON.stringify({ depth, pvs: [{ moves: ['g1f3'], cp: 40, depth }] }) });
+      cmp.deepJobs.set([deep(12)]);   // flacher als die hinterlegten 20
+      fixture.detectChanges();
+      expect(lineSans(el)).toEqual(['1. e4']);
+      expect(el.querySelector('.lines-label.deep')).toBeNull();
+
+      cmp.deepJobs.set([deep(25)]);
+      fixture.detectChanges();
+      expect(lineSans(el)[0]).toContain('Nf3');
+      expect(el.querySelector('.lines-label.deep')?.textContent).toContain('games.deep.reviewDepth');
+    });
+
     it('nur „Stockfish": keine Lc0-Spalte, keine uneinigen Züge', () => {
       const { el, fixture } = withAlternative();
       expect(el.querySelector('th.acc-h.alt')).toBeNull();

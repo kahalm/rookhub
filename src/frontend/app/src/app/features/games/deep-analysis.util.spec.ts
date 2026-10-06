@@ -1,5 +1,5 @@
 import { AnalysisJob } from '../analysis/analysis-jobs.service';
-import { DeepStored, deepAhead, deepProgress, prunedEarly, resultNodes } from './deep-analysis.util';
+import { DeepStored, deepAhead, deepJobFor, deepOpen, deepProgress, prunedEarly, resultNodes, sameFen } from './deep-analysis.util';
 
 function job(p: Partial<AnalysisJob>): AnalysisJob {
   return { id: 1, fen: 'x', title: null, engineId: 'e', targetDepth: 40, multiPv: 3, status: 'running', reachedDepth: 0,
@@ -36,5 +36,17 @@ describe('deep-analysis.util', () => {
     expect(prunedEarly(job({ status: 'done', resultJson: '{"nodes":88000}' }), 500000)).toBeTrue();
     expect(prunedEarly(job({ status: 'running', resultJson: '{"nodes":88000}' }), 500000)).toBeFalse();
     expect(prunedEarly(job({ status: 'done', resultJson: '{"nodes":500000}' }), 500000)).toBeFalse();
+  });
+
+  it('findet den Auftrag zur Stellung — Zugzähler egal, Lc0 am Knotenziel', () => {
+    const fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+    const sf = job({ id: 1, fen }), lc = job({ id: 2, fen, targetNodes: 500000 });
+    expect(sameFen(fen, fen.replace(' 0 1', ' 3 7'))).toBeTrue();
+    expect(sameFen(fen, fen.replace(' b ', ' w '))).toBeFalse();
+    expect(deepJobFor([sf, lc], fen.replace(' 0 1', ' 0 9'), 'sf')?.id).toBe(1);
+    expect(deepJobFor([sf, lc], fen, 'lc0')?.id).toBe(2);
+    expect(deepJobFor([sf], 'x', 'sf')).toBeNull();
+    expect(deepOpen(job({ status: 'paused' }))).toBeTrue();
+    expect(deepOpen(job({ status: 'done' }))).toBeFalse();
   });
 });
