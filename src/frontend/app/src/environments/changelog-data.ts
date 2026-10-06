@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.677.1", date: "2026-10-06", changes: [
+    { en: "The engine timetable now says whom its percentage is aimed at. By default it throttles only the background engines and leaves the live engine up, so the machine always answers a position. Set to all, the share covers every engine together and the live engine steps back too. Zero percent still stops everything either way.", de: "Der Engine-Zeitplan sagt jetzt, wem sein Prozentsatz gilt. Vorgabe ist, nur die Hintergrund-Engines zu drosseln und die Live-Engine anzulassen, damit die Maschine jederzeit auf eine Stellung antwortet. Auf all gestellt, gilt der Anteil allen Engines zusammen, und auch die Live-Engine steckt zurueck. Null Prozent haelt in beiden Faellen alles an." },
+  ] },
   { version: "0.677.0", date: "2026-10-06", changes: [
     { en: "The engine clients learned a timetable. Rules say which days and hours run at which share of the machine: zero percent stops every engine, a hundred runs them all, and anything between keeps the live engine up while the background engines take the share. Same rules for the Docker container, the Windows script and the Lc0 client, and a broken rule is refused at startup instead of quietly running at full power.", de: "Die Engine-Clients haben jetzt einen Zeitplan. Regeln sagen, welche Tage und Stunden mit welchem Anteil der Maschine laufen: null Prozent haelt jede Engine an, hundert laesst alle rechnen, und dazwischen bleibt die Live-Engine an, waehrend der Anteil den Hintergrund-Engines gilt. Dieselben Regeln fuer den Docker-Container, das Windows-Skript und den Lc0-Client, und eine kaputte Regel wird beim Start abgelehnt statt stillschweigend mit voller Kraft gefahren." },
   ] },

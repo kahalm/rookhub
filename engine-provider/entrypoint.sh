@@ -184,13 +184,28 @@ fi
 #
 # Was der Prozentsatz bedeutet: 0 = alle Provider aus — die Engines verschwinden aus RookHub wie
 # bei einem ausgeschalteten Rechner, laufende Aufträge brechen ab und werden neu vergeben.
-# 100 = alle an. Dazwischen bleibt die LIVE-Engine (Engine 1) an und der Anteil gilt den
-# HINTERGRUND-Engines: dort wartet kein Mensch auf das Ergebnis, und dort liegt die Dauerlast.
-# Gerundet wird kaufmännisch, bei mehr als 0 % bleibt mindestens eine Hintergrund-Engine übrig.
+# 100 = alle an. Dazwischen entscheidet ENGINE_SCHEDULE_SCOPE (siehe unten), ob die Live-Engine
+# verschont bleibt oder mitgedrosselt wird. Gerundet wird kaufmännisch, bei mehr als 0 % läuft
+# mindestens eine Engine.
 #
 # Prüfen, ohne etwas zu starten (zeigt Prozent und Zahl der Engines zu diesem Zeitpunkt):
 #     docker compose run --rm -e ENGINE_SCHEDULE_AT="Mo 09:00" engine-provider
 SCHEDULE_TICK="${SCHEDULE_TICK:-20}"
+
+# Worauf sich der Prozentsatz bezieht:
+#   background (Vorgabe) — die LIVE-Engine bleibt an, solange ueberhaupt gerechnet wird, und der
+#                          Anteil gilt nur den Hintergrund-Engines. Dort wartet ein Mensch auf eine
+#                          Stellung, und genau dafuer soll die Maschine jederzeit ansprechbar sein.
+#   all                  — der Anteil gilt ALLEN Engines zusammen, die Live-Engine eingeschlossen.
+#                          Bei 50 % von 16 laufen also 8 Prozesse statt 1 + 8. Gedacht fuer einen
+#                          Rechner, der jemand anderem gehoert: dort soll auch die Live-Engine
+#                          mitgedrosselt werden.
+# 0 % haelt in beiden Faellen ALLES an.
+ENGINE_SCHEDULE_SCOPE="${ENGINE_SCHEDULE_SCOPE:-background}"
+case "$ENGINE_SCHEDULE_SCOPE" in
+    background|all) ;;
+    *) echo "FEHLER: ENGINE_SCHEDULE_SCOPE muss 'background' oder 'all' sein (ist '$ENGINE_SCHEDULE_SCOPE')." >&2; exit 1 ;;
+esac
 
 # "mo"/"mon"/"montag" → 1 … "so"/"sun" → 7, wie `date +%u`. Unbekannt → leere Ausgabe.
 schedule_day_number() {
@@ -313,12 +328,20 @@ schedule_percent_at() {
     echo 100
 }
 
-# Wie viele Engines laufen bei $1 Prozent? 0 = keine; sonst immer die Live-Engine plus den
-# Anteil der Hintergrund-Engines.
+# Wie viele Engines laufen bei $1 Prozent? 0 Prozent = keine. Sonst entscheidet
+# ENGINE_SCHEDULE_SCOPE, ob der Anteil nur den Hintergrund-Engines gilt (Vorgabe: die Live-Engine
+# bleibt an) oder allen zusammen. Gerundet wird kaufmaennisch, und solange ueberhaupt gerechnet
+# wird, laeuft mindestens eine Engine.
 schedule_target_count() {
     local pct="$1" bg n
     if [ "$pct" -le 0 ]; then echo 0; return; fi
     if [ "$pct" -ge 100 ]; then echo "$ENGINE_COUNT"; return; fi
+    if [ "$ENGINE_SCHEDULE_SCOPE" = all ]; then
+        n=$(( (ENGINE_COUNT * pct + 50) / 100 ))
+        [ "$n" -lt 1 ] && n=1
+        echo "$n"
+        return
+    fi
     bg=$((ENGINE_COUNT - 1))
     n=$(( (bg * pct + 50) / 100 ))
     if [ "$n" -lt 1 ] && [ "$bg" -gt 0 ]; then n=1; fi

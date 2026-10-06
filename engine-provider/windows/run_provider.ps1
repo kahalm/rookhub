@@ -100,6 +100,16 @@ $startDelay = 2
 $schedule = ""
 $scheduleTick = 20     # Sekunden zwischen zwei Blicken auf die Uhr
 
+# Worauf sich der Prozentsatz bezieht:
+#   "background" (Vorgabe) - die LIVE-Engine bleibt an, solange ueberhaupt gerechnet wird, und der
+#                            Anteil gilt nur den Hintergrund-Engines. Dort wartet ein Mensch auf
+#                            eine Stellung, dafuer soll der Rechner jederzeit ansprechbar sein.
+#   "all"                  - der Anteil gilt ALLEN Engines zusammen, die Live-Engine eingeschlossen.
+#                            Bei 50 % von 17 laufen also 9 Prozesse statt 1 + 8. Gedacht fuer einen
+#                            Rechner, auf dem auch die Live-Engine zurueckstecken soll.
+# 0 % haelt in beiden Faellen alles an.
+$scheduleScope = "background"
+
 # ===========================================================================
 
 $wrapperLog = Join-Path $logDir "wrapper.log"
@@ -190,11 +200,17 @@ function Get-SchedulePercent([int]$day, [int]$minute) {
     return 100
 }
 
-# Wie viele Engines laufen bei diesem Prozentsatz? 0 = keine; sonst die Live-Engine plus den
-# Anteil der Hintergrund-Engines (kaufmaennisch gerundet, mindestens eine).
+# Wie viele Engines laufen bei diesem Prozentsatz? 0 = keine. Sonst entscheidet $scheduleScope, ob
+# der Anteil nur den Hintergrund-Engines gilt (Vorgabe: die Live-Engine bleibt an) oder allen
+# zusammen. Kaufmaennisch gerundet, und solange ueberhaupt gerechnet wird, laeuft mindestens eine.
 function Get-TargetCount([int]$pct, [int]$total) {
     if ($pct -le 0) { return 0 }
     if ($pct -ge 100) { return $total }
+    if ($scheduleScope -eq 'all') {
+        $n = [math]::Floor(($total * $pct + 50) / 100)
+        if ($n -lt 1) { $n = 1 }
+        return $n
+    }
     $bg = $total - 1
     $n = [math]::Floor(($bg * $pct + 50) / 100)
     if ($n -lt 1 -and $bg -gt 0) { $n = 1 }
@@ -237,6 +253,10 @@ for ($i = 1; $i -le $bgCount; $i++) {
 }
 
 # Kaputter Zeitplan: lieber hier stehenbleiben als stillschweigend immer 100 % fahren.
+if ($scheduleScope -ne 'background' -and $scheduleScope -ne 'all') {
+    Write-Host "FEHLER: `$scheduleScope muss 'background' oder 'all' sein (ist '$scheduleScope')."
+    exit 1
+}
 $scheduleError = Test-Schedule $schedule
 if ($scheduleError) {
     Write-WrapperLog "FEHLER im Zeitplan: $scheduleError"

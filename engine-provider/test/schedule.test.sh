@@ -34,6 +34,17 @@ expect "englische Tagesnamen"              "ZEITPLAN Mo 09:00: 50% — 9 von 16 
 expect "eine Engine, 50 % laesst sie an"   "ZEITPLAN Mo 09:00: 50% — 1 von 1 Engine(s)"    "$(at "* 08:00-17:00 50%" "Mo 09:00" 0)"
 expect "eine Engine, 0 % schaltet sie ab"  "ZEITPLAN Mo 09:00: 0% — 0 von 1 Engine(s)"     "$(at "* 08:00-17:00 0%" "Mo 09:00" 0)"
 
+# Scope: gilt der Anteil nur dem Hintergrund (Live bleibt an) oder allen zusammen?
+at_scope() {   # at_scope <scope> "<Zeitplan>" "<Tag HH:MM>"
+    env -i PATH="$PATH" LICHESS_API_TOKEN=x ENGINE_PATH="$fake_engine" ENGINE_BACKGROUND_COUNT=15 \
+        ENGINE_SCHEDULE_SCOPE="$1" ENGINE_SCHEDULE="$2" ENGINE_SCHEDULE_AT="$3" bash "$ROOT/entrypoint.sh" 2>&1 | tail -1
+}
+expect "Scope background: Live + Anteil"   "ZEITPLAN Mo 09:00: 25% — 5 von 16 Engine(s)"  "$(at_scope background "* 25%" "Mo 09:00")"
+expect "Scope all: Anteil von allen"       "ZEITPLAN Mo 09:00: 25% — 4 von 16 Engine(s)"  "$(at_scope all "* 25%" "Mo 09:00")"
+expect "Scope all: 1 % laesst eine laufen" "ZEITPLAN Mo 09:00: 1% — 1 von 16 Engine(s)"   "$(at_scope all "* 1%" "Mo 09:00")"
+expect "Scope all: 0 % haelt alles an"     "ZEITPLAN Mo 09:00: 0% — 0 von 16 Engine(s)"   "$(at_scope all "* 0%" "Mo 09:00")"
+at_scope sonstwas "* 25%" "Mo 09:00" | grep -q '^FEHLER:' && ok "Scope: Unsinn abgelehnt" || fail "Scope: Unsinn durchgelassen"
+
 # Kaputte Regeln muessen BEIM START auffallen, nicht erst, wenn sie nachts greifen wuerden.
 bad() { at "$1" "Mo 09:00" | grep -q '^FEHLER:' && ok "abgelehnt: $1" || fail "durchgelassen: $1"; }
 bad "Mo-Do 08:00-17:00"

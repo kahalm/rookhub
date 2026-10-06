@@ -152,6 +152,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `ENGINE_<i>_NAME` / `_MAX_THREADS` / `_MAX_HASH` | Einstellungen der i-ten Engine; schlagen die Werte oben |
 | `PROVIDER_START_DELAY` | Sekunden Pause zwischen den Provider-Starts bei mehreren Engines (leer = 3, 0 = aus) — siehe unten |
 | `ENGINE_SCHEDULE` | Zeitplan: wann wie viel gerechnet wird (leer = immer alles) — siehe unten |
+| `ENGINE_SCHEDULE_SCOPE` | Worauf der Prozentsatz zielt: `background` (Vorgabe, Live-Engine bleibt an) oder `all` |
 | `SCHEDULE_TICK` | Sekunden zwischen zwei Blicken auf die Uhr (leer = 20) |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
@@ -241,10 +242,17 @@ Was der Prozentsatz bedeutet:
 |---|---|
 | `0%` | **Nichts.** Alle Provider werden beendet, die Engines verschwinden aus RookHub wie bei einem ausgeschalteten Rechner |
 | `100%` | Alle Engines |
-| dazwischen | Die **Live-Engine bleibt an** — dort wartet ein Mensch auf eine Stellung —, der Anteil gilt den **Hintergrund-Engines**, wo die Dauerlast liegt |
+| dazwischen | Siehe `ENGINE_SCHEDULE_SCOPE` |
 
-Gerundet wird kaufmännisch, und solange überhaupt gerechnet wird, bleibt mindestens eine
-Hintergrund-Engine übrig: bei 15 Hintergrund-Engines sind 25 % also die Live-Engine plus vier.
+**Worauf der Anteil zielt** (`ENGINE_SCHEDULE_SCOPE`, Vorgabe `background`):
+
+| Scope | Bei 25 % und 1 + 15 Engines | Wofür |
+|---|---|---|
+| `background` | Live-Engine **plus vier** Hintergrund-Engines (5 Prozesse) | Der Rechner soll jederzeit auf eine Stellung antworten können, gedrosselt wird nur die Dauerlast |
+| `all` | **Vier** Engines insgesamt, die Live-Engine zählt mit | Der Rechner gehört nebenbei jemand anderem — auch die Live-Engine soll zurückstecken |
+
+Gerundet wird kaufmännisch, und solange überhaupt gerechnet wird, läuft mindestens eine Engine.
+`0%` hält in beiden Fällen alles an.
 
 Eine frisch geschriebene Regel lässt sich nachrechnen, ohne sie eine Nacht lang zu beobachten:
 
@@ -503,8 +511,8 @@ Fertige Skripte dafür liegen unter [`windows/`](windows/) — `run_provider.ps1
 Engines und hält sie am Leben) und `reap_orphans.ps1` (Zombie-Reaper). Beide Variablen am Kopf der
 Datei vor dem ersten Start anpassen.
 
-Auch unter Windows gibt es den **Zeitplan**: `$schedule` am Kopf von `run_provider.ps1` nimmt
-dieselben Regeln wie `ENGINE_SCHEDULE` oben (`"Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%"`).
+Auch unter Windows gibt es den **Zeitplan**: `$schedule` und `$scheduleScope` am Kopf von
+`run_provider.ps1` nehmen dieselben Regeln und Werte wie `ENGINE_SCHEDULE`/`ENGINE_SCHEDULE_SCOPE` oben (`"Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%"`).
 Nachrechnen ohne Start:
 
 ```powershell
