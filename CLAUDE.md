@@ -1629,6 +1629,12 @@ Rollenverwaltung an).
   Stapel, anonym 1 GB je IP und 3 GB gesamt je Tag. Admin: `GET/DELETE /api/admin/league-uploads[/{id}]`,
   `GET …/{id}/zip` (über Zwischendatei, DeleteOnClose), Tab „Uploads" (`admin-league-uploads.component.ts`, Key `uploads`).
   Oberfläche: `shared/batch-upload.component.ts` im Bereich „Partieformular" der Upload-Seite.
+  **Lesen ohne Modell** (0.684.0, Wunsch 2026-10-06, Skill `/formulare` in `~/.claude/skills/formulare/`): `POST
+  /api/admin/league-uploads/manual-scan` `{ userId, fileIds[] (Seitenreihenfolge), transcription (Form der Modell-Antwort,
+  Kästen in Pixeln des aufrechten, auf 2000 px verkleinerten Fotos), clubGameId? }` → `ScoresheetScanService.CreateManualAsync`:
+  Liga-Einlesung des Besitzers mit `Model = "claude-manual"`, danach Auflösung + Engine-Prüfung wie gelesen, offen zum Prüfen
+  in LeagueHub. Mit `clubGameId` sofort archiviert und an die schon übernommene Vereinspartie gehängt (`CloseLeagueScanAsync`) —
+  „Korrigieren" zeigt dann Foto und Lesarten. Keine Tageszahl, keine Kostenbremse.
 - **Formular-Archiv + Datums-Bias (0.655.0**, Wunsch 2026-10-04: „merk dir Bild und Erkennung für Optimierungen, vorerst
   365 Tage" / „beim Datum heavily bias zu heuer"): `ScoresheetScanService.CloseLeagueScanAsync(actor, id, finalPgn)` kopiert
   vor dem Leeren je Seite Foto + (Seite 1) TranscriptionJson/ResolutionJson/FinalPgn in `ScoresheetScanArchives`

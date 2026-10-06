@@ -381,6 +381,45 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal((30, 40), ScoresheetImage.Size(stored.Photo));        // aufrecht gespeichert
     }
 
+    /// <summary>Wunsch 2026-10-06: die OCR macht Claude in der Sitzung statt des Modells (Skill /formulare). Die fertige
+    /// Lesung geht denselben Weg wie eine gelesene — offene Liga-Einlesung des Besitzers, ohne Modell-Aufruf.</summary>
+    [Fact]
+    public async Task CreateManual_UsesTheGivenReading_WithoutCallingTheModel()
+    {
+        var u = await UserAsync();
+        var (scan, reason) = await _service.CreateManualAsync(u.Id,
+            new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg"), new ScoresheetUpload(Jpeg(), "image/jpeg", "b.jpg") },
+            Answer(Written), null);
+
+        Assert.Null(reason);
+        Assert.Equal("done", scan!.Status);
+        Assert.Empty(_vision.PageCounts);
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((ScoresheetScan.PurposeLeague, ScoresheetScanService.ManualModel, 2), (row.Purpose, row.Model, row.PageCount));
+        var state = (await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.User(u.Id), row.Id))!;
+        Assert.Equal(Written.Length, state.Plies.Count);
+    }
+
+    [Fact]
+    public async Task CreateManual_ForAClubGame_IsArchivedSoCorrectingShowsTheSheet()
+    {
+        var u = await UserAsync();
+        var game = new LeagueClubGame { White = "A", Black = "B", Pgn = "1. Nf3 d5 *", MovesHash = "x", Result = "*" };
+        _db.LeagueClubGames.Add(game);
+        await _db.SaveChangesAsync();
+
+        var (_, reason) = await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") },
+            Answer(Written), game.Id);
+
+        Assert.Null(reason);
+        Assert.True(await _service.HasClubSheetAsync(game.Id));
+        var state = (await _service.ClubEditStateAsync(game.Id))!;
+        Assert.Equal("Sf3", state.Written[0]);
+        Assert.Equal(("clubGameNotFound", "invalidTranscription"),
+            ((await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "{}", 9999)).Reason,
+             (await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "{}", null)).Reason));
+    }
+
     [Fact]
     public async Task Process_UprightPhoto_IsReadOnce()
     {

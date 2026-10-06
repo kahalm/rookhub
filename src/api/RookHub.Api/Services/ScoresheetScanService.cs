@@ -288,6 +288,82 @@ public class ScoresheetScanService
         return (ToDto(scan), null);
     }
 
+    /// <summary>Kennung des „Lesers", wenn die Lesung nicht vom Modell kommt, sondern von Claude in einer Sitzung
+    /// (Skill <c>/formulare</c>, 0.684.0) — steht an der Einlesung und im Archiv.</summary>
+    public const string ManualModel = "claude-manual";
+
+    /// <summary>
+    /// Eine Liga-Einlesung aus einer FERTIGEN Lesung anlegen, ohne Modell-Aufruf (Wunsch 2026-10-06: „mach die OCR für die
+    /// hochgeladenen Formulare anstelle von mit Key"). <paramref name="transcriptionJson"/> hat die Form der Modell-Antwort
+    /// (<see cref="ScoresheetPrompt.Schema"/>); Kästen in Pixeln des aufrechten, auf <see cref="ModelEdge"/> verkleinerten
+    /// Fotos — so, wie das Modell es sähe. Danach derselbe Weg wie eine gelesene Einlesung: Auflösung, Engine-Prüfung,
+    /// Stand je Halbzug — die Einlesung steht dem Besitzer in LeagueHub zum Prüfen offen wie eine selbst hochgeladene.
+    /// Mit <paramref name="clubGameId"/> wird sie gleich als zu dieser (schon übernommenen) Vereinspartie gehörig
+    /// archiviert — „Korrigieren" zeigt dann Foto und Lesarten. Keine Tageszahl, keine Kostenbremse (kein Modell).
+    /// </summary>
+    public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateManualAsync(int ownerUserId, IReadOnlyList<ScoresheetUpload> pages,
+        string transcriptionJson, int? clubGameId, CancellationToken ct = default)
+    {
+        if (pages.Count == 0) return (null, "noFile");
+        if (pages.Count > MaxPages) return (null, "tooManyPages");
+        if (pages.Any(p => p.Data.Length == 0 || !ScoresheetImage.CanDecode(p.Data))) return (null, "unsupportedImage");
+        string? finalPgn = null;
+        if (clubGameId is int cg)
+        {
+            finalPgn = await _db.LeagueClubGames.Where(g => g.Id == cg).Select(g => g.Pgn).FirstOrDefaultAsync(ct);
+            if (finalPgn == null) return (null, "clubGameNotFound");
+        }
+
+        var sizes = pages.Select(p => ScoresheetImage.Prepare(p.Data, ModelEdge) is { } j ? ScoresheetImage.Size(j) : null).ToList();
+        var json = ScoresheetTranscription.WithImageSize(transcriptionJson,
+            sizes.All(x => x != null) ? sizes.Select(x => x!.Value).ToList() : new List<(int Width, int Height)>());
+        var t = ScoresheetTranscription.Parse(json);
+        if (t == null || t.Moves.Count == 0) return (null, "invalidTranscription");
+        var language = ScoresheetReader.EffectiveLanguage("auto", t.NotationLanguage);
+        var r = ScoresheetResolver.Resolve(t.Scanned(), new ScoresheetResolver.Options(ScoresheetNotation.Find(language)));
+        if (r.Plies.Count == 0) return (null, "noMoves");
+
+        var stored = pages.Select(p => p.Data.Length > MaxStoredBytes
+            ? (Photo: ScoresheetImage.Prepare(p.Data, StoredEdge, 90) ?? p.Data, Type: "image/jpeg")
+            : (Photo: p.Data, Type: p.ContentType ?? "image/jpeg")).ToList();
+        var now = DateTime.UtcNow;
+        var scan = new ScoresheetScan
+        {
+            UserId = ownerUserId,
+            Photo = stored[0].Photo,
+            ContentType = stored[0].Type,
+            FileName = CleanFileName(pages[0].FileName),
+            PageCount = pages.Count,
+            Pages = stored.Skip(1).Select((p, i) => new ScoresheetScanPage
+            {
+                Page = i + 2, Photo = p.Photo, ContentType = p.Type, FileName = CleanFileName(pages[i + 1].FileName),
+            }).ToList(),
+            NotationLanguage = "auto",
+            OwnerSide = "auto",
+            Purpose = ScoresheetScan.PurposeLeague,
+            Status = ScoresheetScanStatus.Running,
+            Model = ManualModel,
+            CreatedAt = now,
+            StartedAt = now,
+        };
+        _db.ScoresheetScans.Add(scan);
+        await _db.SaveChangesAsync(ct);
+
+        r = await CheckWithEngineAsync(scan.Id, t, r, language, ct);
+        scan.TranscriptionJson = json;
+        scan.ResolutionJson = JsonSerializer.Serialize(new StoredResolution
+        {
+            Language = language, Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt,
+        }, Json);
+        scan.Status = ScoresheetScanStatus.Done;
+        scan.FinishedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("Formular-Einlesung {ScanId} (ohne Modell, für User {UserId}) angelegt: {Plies} Halbzüge, {Uncertain} unsicher",
+            scan.Id, ownerUserId, r.Plies.Count, r.Plies.Count(p => p.Uncertain));
+        if (finalPgn != null) await CloseLeagueScanAsync(ScanActor.ManagerOf(ownerUserId), scan.Id, finalPgn, clubGameId);
+        return (ToDto(scan), null);
+    }
+
     public async Task<ScoresheetScanDto?> GetAsync(int userId, int id)
     {
         var scan = await ScanHeads().FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);

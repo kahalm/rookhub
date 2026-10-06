@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.Services;
 using RookHub.Api.Authorization;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
@@ -35,6 +38,29 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
             throw;
         }
     }
+
+    /// <summary>
+    /// Bilder eines Stapels OHNE Modell als Liga-Einlesung anlegen (0.684.0, Skill <c>/formulare</c>): die Lesung kommt im
+    /// Rumpf (Form der Modell-Antwort), <c>fileIds</c> in Seitenreihenfolge. Die Einlesung gehört <c>userId</c> und steht
+    /// dort in LeagueHub zum Prüfen offen; mit <c>clubGameId</c> wird sie gleich an diese Vereinspartie gehängt.
+    /// 400 <c>reason</c> ∈ noFile/tooManyPages/unsupportedImage/invalidTranscription/noMoves/clubGameNotFound/unknownUser.
+    /// </summary>
+    [HttpPost("manual-scan")]
+    public async Task<IActionResult> ManualScan([FromBody] ManualScanRequest req, [FromServices] AppDbContext db,
+        [FromServices] ScoresheetScanService scans, CancellationToken ct)
+    {
+        if (req.FileIds is not { Count: > 0 } ids) return BadRequest(new { reason = "noFile" });
+        if (!await db.AppUsers.AnyAsync(u => u.Id == req.UserId, ct)) return BadRequest(new { reason = "unknownUser" });
+        var files = await db.LeagueBatchUploadFiles.AsNoTracking().Where(f => ids.Contains(f.Id))
+            .Select(f => new { f.Id, f.Data, f.ContentType, f.FileName }).ToListAsync(ct);
+        if (files.Count != ids.Distinct().Count()) return BadRequest(new { reason = "noFile" });
+        var pages = ids.Select(id => files.First(f => f.Id == id))
+            .Select(f => new ScoresheetUpload(f.Data, f.ContentType, f.FileName)).ToList();
+        var (scan, reason) = await scans.CreateManualAsync(req.UserId, pages, req.Transcription.GetRawText(), req.ClubGameId, ct);
+        return scan == null ? BadRequest(new { reason }) : Ok(scan);
+    }
+
+    public sealed record ManualScanRequest(int UserId, List<int>? FileIds, System.Text.Json.JsonElement Transcription, int? ClubGameId);
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) => await batches.DeleteAsync(id, ct) ? NoContent() : NotFound();
