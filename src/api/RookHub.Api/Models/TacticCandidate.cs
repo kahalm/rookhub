@@ -73,4 +73,10 @@ public class TacticCandidate
     public string? LineId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    /// <summary>Suchstufe (0.694.0): <c>null</c> = streng (Lichess-Puzzler-Schwellen, Stockfish), <c>relaxed</c> = lockere Schwellen
+    /// (<see cref="Services.Tactics.TacticHarvest.Relaxed"/>), <c>lc0</c> = von der Lc0-Analyse einer Vereinspartie gefunden (ebenfalls
+    /// locker; die Lösung ist dann der eine erste Zug).</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string? Variant { get; set; }
 }

@@ -216,4 +216,43 @@ public class TacticHarvestTests : IDisposable
         Assert.DoesNotContain(1, scanned);                       // die ältesten Meisterpartien warten
         Assert.Equal(TacticHarvestService.ScanBatch, scanned.Count);
     }
+
+    [Fact]
+    public void Detect_RelaxedAcceptsWhatStrictRejects()
+    {
+        var before = new[] { C("g8f8", cp: -20) };
+        var here = new[] { C("b2b7", cp: 250), C("g1g2", cp: 20) };
+        Assert.Null(TacticHarvest.Detect(before, here));
+        var found = TacticHarvest.Detect(before, here, TacticHarvest.Relaxed);
+        Assert.Equal("material", found!.Kind);
+        Assert.True(TacticHarvest.IsUnique(here, false, TacticHarvest.Relaxed));
+        Assert.False(TacticHarvest.IsUnique(here, false));
+    }
+
+    [Fact]
+    public async Task Scan_RelaxedAndLc0Variants_NoDuplicateForTheSameSpot()
+    {
+        void Analysis(int id, int gameId, string? engine)
+        {
+            _db.GameAnalyses.Add(new GameAnalysis { Id = id, UserId = 1, Origin = GameAnalysisOrigin.Club, LeagueClubGameId = gameId, EngineId = engine,
+                Pgn = "", StartFen = "x", Status = GameAnalysisStatus.Done });
+            _db.GameAnalysisPositions.AddRange(
+                new GameAnalysisPosition { GameAnalysisId = id, Ply = 0, Fen = "6k1/8/8/8/8/8/1R6/R5K1 b - - 0 1", GameMoveUci = "g8h8", GameMoveSan = "Kh8",
+                    CandidatesJson = "[{\"uci\":\"g8f8\",\"cp\":-20}]" },
+                new GameAnalysisPosition { GameAnalysisId = id, Ply = 1, Fen = "7k/8/8/8/8/8/1R6/R5K1 w - - 0 1", GameMoveUci = "b2b7", GameMoveSan = "Rb7",
+                    CandidatesJson = "[{\"uci\":\"b2b7\",\"cp\":250,\"pv\":[\"b2b7\",\"h8g8\"]},{\"uci\":\"g1g2\",\"cp\":20}]" });
+        }
+        Analysis(1, 10, null);          // Stockfish: nur locker → "relaxed"
+        Analysis(2, 10, "rhe_lc0");     // Lc0 derselben Partie, dieselbe Stelle → nicht noch einmal
+        Analysis(3, 11, "rhe_lc0");     // Lc0 einer anderen Partie → "lc0", Lösung = der eine erste Zug, gleich fertig
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(2, await Svc().ScanAsync(default));
+        var all = await _db.TacticCandidates.OrderBy(c => c.GameAnalysisId).ToListAsync();
+        Assert.Equal(new[] { 1, 3 }, all.Select(c => c.GameAnalysisId));
+        Assert.Equal("relaxed", all[0].Variant);
+        Assert.Equal(TacticCandidateStatus.Verifying, all[0].Status);
+        Assert.Equal("lc0", all[1].Variant);
+        Assert.Equal((TacticCandidateStatus.Done, "b2b7"), (all[1].Status, all[1].Moves));
+    }
 }

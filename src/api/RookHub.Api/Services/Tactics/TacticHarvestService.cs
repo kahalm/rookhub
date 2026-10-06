@@ -55,30 +55,46 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     {
         var analyses = await db.GameAnalyses
             .Where(a => a.Status == GameAnalysisStatus.Done && a.TacticsScannedAt == null && Sources.Contains(a.Origin)
-                && a.EngineId == null)   // die zweite Engine der Vereinspartien (0.684.0) nicht ein zweites Mal ernten
+                // die zweite Engine der Vereinspartien (0.684.0, Lc0) wird eigens geerntet (Variante "lc0"), nicht als zweites Mal dasselbe
+                && (a.EngineId == null || a.Origin == GameAnalysisOrigin.Club))
             // Vereinspartien zuerst, die neuesten vorneweg (0.657.1: die Partien vom Liga-Wochenende sollen nicht hinter
             // 3.600 älteren Meisterpartien warten), dann eigene Partien, dann der Rest
             .OrderBy(a => a.Origin == GameAnalysisOrigin.Club ? 0 : a.Origin == GameAnalysisOrigin.SavedGame ? 1 : 2)
-            .ThenByDescending(a => a.Id).Take(ScanBatch).ToListAsync(ct);
+            .ThenBy(a => a.EngineId == null ? 0 : 1).ThenByDescending(a => a.Id).Take(ScanBatch).ToListAsync(ct);
         if (analyses.Count == 0) return 0;
         var ids = analyses.Select(a => a.Id).ToList();
         var positions = (await db.GameAnalysisPositions.AsNoTracking().Where(p => ids.Contains(p.GameAnalysisId) && p.GameMoveUci != "")
                 .Select(p => new { p.GameAnalysisId, p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson }).ToListAsync(ct))
             .GroupBy(p => p.GameAnalysisId).ToDictionary(g => g.Key, g => g.OrderBy(p => p.Ply).ToList());
+        // Stellen, die für eine Vereinspartie schon einen Kandidaten haben (andere Analyse/Engine/Stufe) — nicht doppelt ernten
+        var gameIds = analyses.Where(a => a.LeagueClubGameId != null).Select(a => a.LeagueClubGameId!.Value).Distinct().ToList();
+        var seen = (await (from c in db.TacticCandidates.AsNoTracking()
+                           join g in db.GameAnalyses.AsNoTracking() on c.GameAnalysisId equals g.Id
+                           where g.LeagueClubGameId != null && gameIds.Contains(g.LeagueClubGameId.Value)
+                           select new { Game = g.LeagueClubGameId!.Value, c.Ply }).ToListAsync(ct))
+            .Select(x => (x.Game, x.Ply)).ToHashSet();
         var now = DateTime.UtcNow;
         var added = 0;
         foreach (var a in analyses)
         {
             a.TacticsScannedAt = now;
             if (!positions.TryGetValue(a.Id, out var ps)) continue;
+            var lc0 = a.EngineId != null;
             for (var i = 1; i < ps.Count; i++)
             {
                 if (ps[i].Ply != ps[i - 1].Ply + 1) continue;
-                var found = TacticHarvest.Detect(TacticHarvest.Parse(ps[i - 1].CandidatesJson), TacticHarvest.Parse(ps[i].CandidatesJson));
+                var before = TacticHarvest.Parse(ps[i - 1].CandidatesJson);
+                var here = TacticHarvest.Parse(ps[i].CandidatesJson);
+                // Stockfish: erst streng, dann locker; Lc0 (nur Vereinspartien): gleich die lockeren Schwellen
+                string? variant = lc0 ? "lc0" : null;
+                var found = lc0 ? TacticHarvest.Detect(before, here, TacticHarvest.Relaxed) : TacticHarvest.Detect(before, here);
+                if (found is null && !lc0) { found = TacticHarvest.Detect(before, here, TacticHarvest.Relaxed); variant = "relaxed"; }
                 if (found is null) continue;
-                var c = Start(a, ps[i - 1].Fen, ps[i - 1].GameMoveUci, ps[i].Ply, ps[i].Fen, ps[i].GameMoveUci, found, now);
+                if (a.LeagueClubGameId is { } gid && seen.Contains((gid, ps[i].Ply))) continue;
+                var c = Start(a, ps[i - 1].Fen, ps[i - 1].GameMoveUci, ps[i].Ply, ps[i].Fen, ps[i].GameMoveUci, found, now, variant);
                 if (c is null) continue;
                 db.TacticCandidates.Add(c);
+                if (a.LeagueClubGameId is { } g2) seen.Add((g2, ps[i].Ply));
                 added++;
             }
         }
@@ -89,7 +105,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
 
     /// <summary>Kandidat anlegen: erster Zug (normiert), gefunden ja/nein, nächster Schritt aus der Hauptvariante.</summary>
     internal static TacticCandidate? Start(GameAnalysis a, string prevFen, string blunderUci, int ply, string fen, string gameUci,
-        TacticHarvest.Found found, DateTime now)
+        TacticHarvest.Found found, DateTime now, string? variant = null)
     {
         var first = TacticHarvest.Play(fen, found.Best.Uci);
         if (first is null || TacticHarvest.Play(prevFen, blunderUci) is null) return null;
@@ -101,8 +117,12 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             SolverWhite = fen.Split(' ').ElementAtOrDefault(1) == "w", GameMoveUci = gameUci,
             Found = played is not null && played.Value.Fen == first.Value.Fen, Kind = found.Kind, Moves = bestUci,
             EvalText = TacticHarvest.EvalText(found.Best), Status = TacticCandidateStatus.Verifying, CreatedAt = now, UpdatedAt = now,
+            Variant = variant,
         };
-        Continue(c, first.Value.Fen, first.Value.Over, found.Best.Pv);
+        // Lc0-Fund: Stockfish sieht den Vorteil oft nicht (das ist der Punkt) — die Lösung bleibt der eine erste Zug, die Zweitprüfung
+        // (wieder Lc0) bestätigt ihn
+        if (variant == "lc0") Finish(c);
+        else Continue(c, first.Value.Fen, first.Value.Over, found.Best.Pv);
         return c;
     }
 
@@ -138,9 +158,9 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     internal static void Step(TacticCandidate c, IReadOnlyList<TacticHarvest.Cand> cands)
     {
         var mate = c.Kind == "mate";
-        if (cands.Count == 0 || c.NextFen is null || c.PendingReplyUci is null || !TacticHarvest.IsUnique(cands, mate)
+        if (cands.Count == 0 || c.NextFen is null || c.PendingReplyUci is null || !TacticHarvest.IsUnique(cands, mate, TacticHarvest.RulesFor(c.Variant))
             || (mate && cands[0].Mate is not > 0)
-            || (!mate && cands[0].Mate is null && (cands[0].Cp ?? 0) < TacticHarvest.MinAdvantageCp))
+            || (!mate && cands[0].Mate is null && (cands[0].Cp ?? 0) < TacticHarvest.RulesFor(c.Variant).MinAdvantageCp))
         {
             Finish(c);
             return;
@@ -283,21 +303,21 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         c.UpdatedAt = DateTime.UtcNow;
         if (c.SecondStage == 0)
         {
-            if (!TacticHarvest.Agree(c.Fen, cands, tokens[0], mate)) { Dispute(c, "lc0Move"); return; }
+            if (!TacticHarvest.Agree(c.Fen, cands, tokens[0], mate, TacticHarvest.RulesFor(c.Variant))) { Dispute(c, "lc0Move"); return; }
             c.SecondBest = cands[0].Uci;
             c.SecondEval = TacticHarvest.EvalText(cands[0]);
             c.SecondHereJson = TacticHarvest.Dump(cands);
         }
         else if (c.SecondStage == 1)
         {
-            if (TacticHarvest.Detect(cands, TacticHarvest.LoadDump(c.SecondHereJson)) is null) { Dispute(c, "lc0NoBlunder"); return; }
+            if (TacticHarvest.Detect(cands, TacticHarvest.LoadDump(c.SecondHereJson), TacticHarvest.RulesFor(c.Variant)) is null) { Dispute(c, "lc0NoBlunder"); return; }
         }
         else
         {
             var j = c.SecondStage - 1;   // Index des Löserzugs (0-basiert), Halbzug-Index 2*j
             var fen = SecondFen(c, c.SecondStage);
             if (fen is null) { Dispute(c, "lc0Fen"); return; }
-            if (!TacticHarvest.Agree(fen, cands, tokens[2 * j], mate))
+            if (!TacticHarvest.Agree(fen, cands, tokens[2 * j], mate, TacticHarvest.RulesFor(c.Variant)))
             {
                 if (mate) { Dispute(c, "lc0Line"); return; }
                 c.Moves = string.Join(' ', tokens.Take(2 * j - 1));
@@ -416,14 +436,14 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             var (title, chapter) = await DescribeAsync(c, a, ct);
             var san = c.Found ? null : MoveComparisonService.SanOf(c.Fen, c.GameMoveUci);
             var comment = (c.Found ? "In der Partie gefunden." : $"In der Partie verpasst — gespielt wurde {san ?? c.GameMoveUci}.")
-                + " " + Outcome(c.EvalText);
+                + " " + Outcome(c.EvalText) + (c.Variant == "lc0" ? " Von Lc0 entdeckt." : "");
             var round = rounds[file] = rounds[file] + 1;
             var lineId = $"{file}:t{c.Id}";
             db.BookPuzzles.Add(new BookPuzzle
             {
                 LineId = lineId, BookFileName = file, BookId = book.Id, Round = round.ToString(), Fen = c.PrevFen,
                 Moves = $"{c.BlunderUci} {c.Moves}", StartPly = 0, Title = title, Chapter = chapter, Comment = comment,
-                Tags = string.Join(',', new[] { c.Found ? "gefunden" : "verpasst" }.Concat((c.Themes ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))),
+                Tags = string.Join(',', new[] { c.Found ? "gefunden" : "verpasst" }.Concat(c.Variant is null ? Array.Empty<string>() : new[] { c.Variant }).Concat((c.Themes ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))),
                 Source = "tactic-harvest", SourceGame = await SourceGameAsync(c, a, ct),
             });
             c.Status = TacticCandidateStatus.Published;

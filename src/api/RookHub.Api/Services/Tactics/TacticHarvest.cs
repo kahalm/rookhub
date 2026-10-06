@@ -27,6 +27,18 @@ public static class TacticHarvest
     /// <summary>Höchstens so viele Züge des Lösers.</summary>
     public const int MaxSolverMoves = 6;
 
+    /// <summary>Schwellen einer Suchstufe. <see cref="Strict"/> = Lichess-Puzzler; <see cref="Relaxed"/> (Wunsch 2026-10-06, zu wenige
+    /// Kandidaten) = die Fehler-Schwelle von Lichess' „Aus Fehlern lernen" (Gewinnchance −0,3 = „Patzer"), ab +1,0 und ein zweitbester
+    /// Zug, der um mehr als 0,35 zurückliegt. Die lockere Stufe liefert mehr, aber unschärfere Aufgaben — sie wird in
+    /// <see cref="Models.TacticCandidate.Variant"/> vermerkt und als Tag mitgegeben.</summary>
+    public sealed record Rules(double BlunderGain, double UniqueGap, int MinAdvantageCp);
+
+    public static readonly Rules Strict = new(BlunderGain, UniqueGap, MinAdvantageCp);
+    public static readonly Rules Relaxed = new(0.3, 0.35, 100);
+
+    /// <summary>Die Schwellen zur <see cref="Models.TacticCandidate.Variant"/>: <c>null</c> = streng, sonst (<c>relaxed</c>, <c>lc0</c>) locker.</summary>
+    public static Rules RulesFor(string? variant) => variant is null ? Strict : Relaxed;
+
     public sealed record Cand(string Uci, int? Cp, int? Mate, IReadOnlyList<string> Pv);
 
     /// <summary>Gewinnchance -1..1 aus Sicht der Seite am Zug (Lichess-Kurve; Matt = ±1).</summary>
@@ -64,30 +76,31 @@ public static class TacticHarvest
     /// Ist die Stellung (<paramref name="here"/>, Seite am Zug) eine Aufgabe, nachdem der Gegner in <paramref name="before"/>
     /// (er am Zug) gezogen hat? → Art und bester Zug, sonst <c>null</c>.
     /// </summary>
-    public static Found? Detect(IReadOnlyList<Cand> before, IReadOnlyList<Cand> here)
+    public static Found? Detect(IReadOnlyList<Cand> before, IReadOnlyList<Cand> here, Rules? rules = null)
     {
+        var r = rules ?? Strict;
         if (before.Count == 0 || here.Count < 2) return null;
         var best = here[0];
         if (best.Mate is < 0) return null;
         var prevForMe = -WinChance(before[0]);                 // vor dem Fehler, aus meiner Sicht
-        if (!(WinChance(best) > prevForMe + BlunderGain)) return null;
+        if (!(WinChance(best) > prevForMe + r.BlunderGain)) return null;
         var mateSoon = best.Mate is > 0 and <= MateSoon;
         var prevCp = before[0].Mate is null ? -(before[0].Cp ?? 0) : (int?)null;
         if (prevCp > AlreadyWinningCp && !mateSoon) return null;
         if (prevCp is null && before[0].Mate < 0 && !mateSoon) return null;   // ich hatte schon Matt
-        if (!mateSoon && (best.Mate is not null || (best.Cp ?? 0) < MinAdvantageCp)) return null;
-        if (!IsUnique(here, mateSoon)) return null;
+        if (!mateSoon && (best.Mate is not null || (best.Cp ?? 0) < r.MinAdvantageCp)) return null;
+        if (!IsUnique(here, mateSoon, r)) return null;
         return new Found(mateSoon ? "mate" : "material", mateSoon ? best.Mate : null, best);
     }
 
     /// <summary>Genau ein guter Zug? Bei Matt-Aufgaben ist ein zweites Matt gleich gut.</summary>
-    public static bool IsUnique(IReadOnlyList<Cand> cands, bool mate)
+    public static bool IsUnique(IReadOnlyList<Cand> cands, bool mate, Rules? rules = null)
     {
         if (cands.Count == 0) return false;
         if (cands.Count == 1) return true;              // nur ein Kandidat geliefert: die Engine sah keinen zweiten
         // Matt-Aufgabe: eindeutig, solange kein zweiter Zug ebenfalls mattsetzt (ein großer Vorteil ist dort keine Lösung)
         if (mate) return cands[1].Mate is not > 0;
-        return WinChance(cands[0]) > WinChance(cands[1]) + UniqueGap;
+        return WinChance(cands[0]) > WinChance(cands[1]) + (rules ?? Strict).UniqueGap;
     }
 
     // ── Zweitprüfung (Phase 2, z. B. lc0) ──
@@ -103,8 +116,8 @@ public static class TacticHarvest
 
     /// <summary>Bestätigt die Zweitprüfung den Löserzug <paramref name="expectedUci"/> in <paramref name="fen"/>? Ihr bester Zug
     /// ist derselbe UND bei ihr gilt dieselbe Eindeutigkeit (<see cref="IsUnique"/>, Schwellen wie bei der Erstprüfung).</summary>
-    public static bool Agree(string fen, IReadOnlyList<Cand> second, string expectedUci, bool mate) =>
-        second.Count > 0 && SameMove(fen, second[0].Uci, expectedUci) && IsUnique(second, mate);
+    public static bool Agree(string fen, IReadOnlyList<Cand> second, string expectedUci, bool mate, Rules? rules = null) =>
+        second.Count > 0 && SameMove(fen, second[0].Uci, expectedUci) && IsUnique(second, mate, rules);
 
     private sealed record CandDump(string U, int? C, int? M);
 

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.694.0", date: "2026-10-06", changes: [
+    { en: "Tactics harvest finds more: besides the strict Lichess-puzzler rules there is now a relaxed stage (win chance drops by 0.3 like Lichess' \"Learn from your mistakes\" blunders, from +1.0, runner-up move at least 0.35 behind) — such tactics carry the tag \"relaxed\". And the Lc0 analyses of club games are harvested too: where Lc0 sees a clear gain that the Stockfish pass did not flag (quiet, positional moves), the tactic gets the tag \"lc0\" and a one-move solution, confirmed by the Lc0 second check. A spot that already has a tactic is never harvested twice. New column TacticCandidates.Variant.", de: "Die Taktik-Ernte findet mehr: neben den strengen Lichess-Puzzler-Regeln gibt es jetzt eine lockere Stufe (Gewinnchance fällt um 0,3 wie bei den „Patzern“ in Lichess’ „Aus Fehlern lernen“, ab +1,0, der zweitbeste Zug mindestens 0,35 dahinter) — solche Taktiken tragen das Tag „relaxed“. Außerdem werden die Lc0-Analysen der Vereinspartien mitgeerntet: wo Lc0 einen klaren Gewinn sieht, den der Stockfish-Durchgang nicht markiert hat (ruhige, positionelle Züge), bekommt die Taktik das Tag „lc0“ und eine Ein-Zug-Lösung, bestätigt von der Lc0-Zweitprüfung. Eine Stelle, zu der es schon eine Taktik gibt, wird nie doppelt geerntet. Neue Spalte TacticCandidates.Variant." },
+  ] },
   {
     version: '0.693.4',
     date: '2026-10-06',
