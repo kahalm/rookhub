@@ -8,6 +8,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.694.1',
+    date: '2026-10-06',
+    changes: [
+      { en: "Correcting the moves of a club game no longer recomputes the whole analysis: the existing analysis is rebuilt on the corrected moves, every position that was already computed (same position, also via transposition) keeps its result, and only the changed positions are queued again. Copies in 'My games' stay linked to the same analysis; mistake explanations and harvested tactics of the old move order are dropped.", de: "Eine Zugkorrektur an einer Vereinspartie rechnet die Analyse nicht mehr ganz neu: die vorhandene Analyse wird auf die korrigierten Züge umgebaut, jede schon gerechnete Stellung (gleiche Stellung, auch über Zugumstellung) behält ihr Ergebnis, und nur die geänderten Stellungen werden neu eingereiht. Kopien in „Meine Partien“ bleiben mit derselben Analyse verknüpft; Fehler-Erklärungen und geerntete Taktiken der alten Zugfolge fallen weg." },
+    ],
+  },
   { version: "0.694.0", date: "2026-10-06", changes: [
     { en: "Tactics harvest finds more: besides the strict Lichess-puzzler rules there is now a relaxed stage (win chance drops by 0.3 like Lichess' \"Learn from your mistakes\" blunders, from +1.0, runner-up move at least 0.35 behind) — such tactics carry the tag \"relaxed\". And the Lc0 analyses of club games are harvested too: where Lc0 sees a clear gain that the Stockfish pass did not flag (quiet, positional moves), the tactic gets the tag \"lc0\" and a one-move solution, confirmed by the Lc0 second check. A spot that already has a tactic is never harvested twice. New column TacticCandidates.Variant.", de: "Die Taktik-Ernte findet mehr: neben den strengen Lichess-Puzzler-Regeln gibt es jetzt eine lockere Stufe (Gewinnchance fällt um 0,3 wie bei den „Patzern“ in Lichess’ „Aus Fehlern lernen“, ab +1,0, der zweitbeste Zug mindestens 0,35 dahinter) — solche Taktiken tragen das Tag „relaxed“. Außerdem werden die Lc0-Analysen der Vereinspartien mitgeerntet: wo Lc0 einen klaren Gewinn sieht, den der Stockfish-Durchgang nicht markiert hat (ruhige, positionelle Züge), bekommt die Taktik das Tag „lc0“ und eine Ein-Zug-Lösung, bestätigt von der Lc0-Zweitprüfung. Eine Stelle, zu der es schon eine Taktik gibt, wird nie doppelt geerntet. Neue Spalte TacticCandidates.Variant." },
   ] },

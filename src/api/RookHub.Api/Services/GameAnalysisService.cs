@@ -242,6 +242,68 @@ public class GameAnalysisService
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Die Analysen einer Vereinspartie auf KORRIGIERTE Züge umbauen (0.694.1, Wunsch 2026-10-06: „er sollte nur die
+    /// geänderten Stellungen neu analysieren"). Vorher wurde jede Analyse gelöscht und die ganze Partie neu gerechnet —
+    /// auch die Stellungen vor der ersten Korrektur, die gleich geblieben sind. Jetzt bleibt die Analyse (gleiche Id, die
+    /// Kopien in „Meine Partien" bleiben verknüpft), ihre Stellungen werden durch die der neuen Zugfolge ersetzt, und jede
+    /// neue Stellung, die schon gerechnet ist (gleiche Stellung, ohne Zugzähler — auch durch Zugumstellung), übernimmt das
+    /// Ergebnis samt Vertiefung und Knotenstufen. Nur der Rest wird neu eingereiht (Status Pending, die Pumpe macht weiter).
+    /// Was an Halbzügen hängt, gilt nicht mehr: offene Aufträge, Fehler-Erklärungen, geerntete Taktiken, Genauigkeit.
+    /// → Zahl der übernommenen Stellungen über alle Analysen.
+    /// </summary>
+    public async Task<int> RebaseClubGameAsync(LeagueClubGame game, CancellationToken ct = default)
+    {
+        var parsed = GamePlies.Parse(game.Pgn, GameAnalysisDefaults.MaxPlies);
+        if (parsed is not { } ok) { await DeleteForClubGameAsync(game.Id, ct); return 0; }
+        var (header, plies) = ok;
+        var analyses = await _db.GameAnalyses.Include(g => g.Positions)
+            .Where(g => g.LeagueClubGameId == game.Id).ToListAsync(ct);
+        static string Key(string fen) => string.Join(' ', fen.Split(' ').Take(4));
+        var reused = 0;
+        foreach (var a in analyses)
+        {
+            foreach (var jobId in a.Positions.Where(p => p.AnalysisJobId != null).Select(p => p.AnalysisJobId!.Value).ToList())
+            {
+                try { await _jobs.DeleteAsync(a.UserId, jobId, ct); }
+                catch (Exception ex) { _logger.LogDebug(ex, "GameAnalysis: Auftrag {JobId} liess sich nicht loeschen", jobId); }
+            }
+            var done = a.Positions
+                .Where(p => p.CandidatesJson != null && p.CandidatesJson != "[]" && p.AnalysisJobId == null)
+                .GroupBy(p => Key(p.Fen)).ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Depth).First());
+            var fresh = plies.Select(p => new GameAnalysisPosition { Ply = p.Index, Fen = p.Fen, GameMoveUci = p.Uci, GameMoveSan = p.San })
+                .ToList();
+            if (plies.Count > 0 && FinalPositionOf(plies[^1]) is { } finalFen)
+                fresh.Add(new GameAnalysisPosition { Ply = plies.Count, Fen = finalFen });
+            foreach (var n in fresh)
+            {
+                if (!done.TryGetValue(Key(n.Fen), out var o)) continue;
+                n.CandidatesJson = o.CandidatesJson; n.Depth = o.Depth; n.EvalText = o.EvalText; n.AnalyzedAt = o.AnalyzedAt;
+                n.Refined = o.Refined; n.NodeStepsJson = o.NodeStepsJson;
+                reused++;
+            }
+            _db.GameAnalysisPositions.RemoveRange(a.Positions);
+            a.Positions = fresh;
+            a.PlyCount = plies.Count;
+            a.OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen) ? OpeningLineOf(plies) : null;
+            if (a.MovesHash != null) a.MovesHash = game.MovesHash;
+            a.Status = GameAnalysisStatus.Pending;
+            a.FinishedAt = null;
+            a.AccuracyWhite = null;
+            a.AccuracyBlack = null;
+            a.LastError = null;
+            a.TacticsScannedAt = null;
+            if (a.RefineDepth != null && fresh.Any(p => !p.Refined)) a.RefinedAt = null;
+            _db.GameMoveExplanations.RemoveRange(await _db.GameMoveExplanations.Where(x => x.GameAnalysisId == a.Id).ToListAsync(ct));
+            _db.TacticCandidates.RemoveRange(await _db.TacticCandidates.Where(x => x.GameAnalysisId == a.Id).ToListAsync(ct));
+            _logger.LogInformation("GameAnalysis {Id}: auf korrigierte Vereinspartie {ClubGameId} umgebaut — {Reused} von {Total} Stellungen übernommen",
+                a.Id, game.Id, fresh.Count(p => p.CandidatesJson != null), fresh.Count);
+        }
+        await _db.SaveChangesAsync(ct);
+        await SyncClubGameAsync(game, ct);
+        return reused;
+    }
+
     /// <summary>Die Analysen einer geloeschten Vereinspartie mitloeschen, samt ihrer offenen Auftraege
     /// (<see cref="DeleteAsync"/>) — sie tragen die Namen der Partie.</summary>
     public async Task<int> DeleteForClubGameAsync(int leagueClubGameId, CancellationToken ct = default)

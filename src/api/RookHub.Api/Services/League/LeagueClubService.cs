@@ -1006,8 +1006,8 @@ public sealed class LeagueClubService
     /// <summary>
     /// Die ZÜGE einer Vereinspartie korrigieren (0.660.0, Wunsch 2026-10-05: „einen Korrigieren-Knopf, der wie beim
     /// initialen Beheben von Unsicherheiten das Interface öffnet"). Gleiche Rechte wie <see cref="UpdateAsync"/>. Neu
-    /// geschrieben werden PGN, Halbzüge und der Dubletten-Schlüssel; die Analyse der alten Zugfolge geht (die
-    /// Meisterpartien-Pumpe rechnet die neue — samt Taktik-Ernte), die Spielerkarten werden neu gebaut. Die verbundenen Kopien
+    /// geschrieben werden PGN, Halbzüge und der Dubletten-Schlüssel; die Analyse wird auf die neue Zugfolge umgebaut
+    /// (gleiche Stellungen bleiben gerechnet, die Pumpe rechnet nur die geänderten — samt Taktik-Ernte), die Spielerkarten werden neu gebaut. Die verbundenen Kopien
     /// zieht der Aufrufer nach (<c>ClubGameCorrectionService</c>). → (Partie, neue SAN) oder ein Grund: <c>notFound</c>,
     /// <c>forbidden</c>, <c>noMoves</c>, <c>tooLong</c>, <c>illegal</c>.
     /// </summary>
@@ -1029,9 +1029,9 @@ public sealed class LeagueClubService
         g.Plies = sans.Count;
         g.MovesHash = HashOf(sans);
         await _db.SaveChangesAsync(ct);
-        // Die alte Analyse rechnete eine andere Zugfolge (Kurve, Fehler, geerntete Taktiken) — weg damit; die Pumpe nimmt
-        // Vereinspartien ohne Analyse als Nächstes.
-        if (_analyses != null) await _analyses.DeleteForClubGameAsync(g.Id, ct);
+        // Die Analyse rechnete eine andere Zugfolge: auf die neuen Züge umbauen — gleiche Stellungen behalten ihr Ergebnis,
+        // nur die geänderten rechnet die Pumpe neu (0.694.1; vorher wurde alles gelöscht und ganz neu gerechnet).
+        if (_analyses != null) await _analyses.RebaseClubGameAsync(g, ct);
         await RefreshCardsAsync(new[] { g.WhiteFide, g.BlackFide }, ct);
         _log.LogInformation("Vereins-Datenbank: Züge von Partie {Id} korrigiert ({Old} → {New} Halbzüge)", g.Id, old.Count, sans.Count);
         return (g, sans, null);

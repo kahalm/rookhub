@@ -256,6 +256,41 @@ public class MasterAnalysisSchedulerTests : IDisposable
         Assert.Empty(await new AnalysisJobService(_db).ListAsync(Owner));
     }
 
+    /// <summary>Wunsch 2026-10-06: nach einer Zugkorrektur nur die geänderten Stellungen neu rechnen (0.694.1).</summary>
+    [Fact]
+    public async Task VereinspartieKorrigiert_behaeltGleicheStellungen_undRechnetNurDieGeaenderten()
+    {
+        var svc = Analyses();
+        var game = ClubGame();
+        game.UploadedByUserId = Owner;
+        _db.SaveChanges();
+        var dto = await svc.CreateClubBatchAsync(Owner, game.Id, Short);
+        var a = await _db.GameAnalyses.Include(g => g.Positions).SingleAsync(g => g.Id == dto.Id);
+        foreach (var p in a.Positions) { p.AnalysisJobId = null; p.CandidatesJson = "[{\"uci\":\"a2a3\",\"cp\":10}]"; p.Depth = 20; }
+        a.Status = GameAnalysisStatus.Done;
+        a.AccuracyWhite = 90;
+        _db.GameMoveExplanations.Add(new GameMoveExplanation { GameAnalysisId = a.Id, Ply = 3, Language = "de", Class = "mistake", Text = "x" });
+        _db.SaveChanges();
+        var total = a.Positions.Count;
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: svc);
+
+        // 5...Be7 wird zu 5...b5: nur der letzte Halbzug ändert sich
+        var (_, _, reason) = await club.CorrectMovesAsync(Owner, false, game.Id,
+            new[] { "e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5" });
+
+        Assert.Null(reason);
+        var after = await _db.GameAnalyses.Include(g => g.Positions).SingleAsync();
+        Assert.Equal(dto.Id, after.Id);                                       // dieselbe Analyse
+        Assert.Equal(GameAnalysisStatus.Pending, after.Status);
+        Assert.Null(after.AccuracyWhite);
+        var byPly = after.Positions.OrderBy(p => p.Ply).ToList();
+        Assert.Equal(total, byPly.Count);
+        Assert.All(byPly.Take(10), p => Assert.Equal(20, p.Depth));             // vor jedem Halbzug dieselbe Stellung
+        Assert.Equal("b7b5", byPly[9].GameMoveUci);                            // aber der neue Partiezug
+        Assert.Null(byPly[^1].CandidatesJson);                                 // die Endstellung ist neu
+        Assert.Empty(_db.GameMoveExplanations);
+    }
+
     [Fact]
     public async Task VereinspartieGeloescht_nimmtIhreAnalyseSamtAuftraegenMit()
     {

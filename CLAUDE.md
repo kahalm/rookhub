@@ -1680,7 +1680,8 @@ Rollenverwaltung an).
   Entscheidung: alle Kopien ziehen mit). `SavedGames.LeagueClubGameId` (beim Kopieren über `ClubGameForMovesAsync`, alte Kopien
   `ClubCopyLinkScheduler` täglich über den Dubletten-Schlüssel) und `ScoresheetScanArchives.LeagueClubGameId` (beim Übernehmen,
   `CloseLeagueScanAsync(…, clubGameId)`). `LeagueClubService.CorrectMovesAsync` (Hochladender/Verwalter; PGN, Plies, MovesHash
-  neu; Analyse gelöscht → Pumpe rechnet neu, Taktiken mit; Karten neu) + `ClubGameCorrectionService` (Kopien via
+  neu; seit 0.694.1 wird die Analyse auf die neuen Züge umgebaut — `GameAnalysisService.RebaseClubGameAsync`: gleiche Stellungen
+  behalten ihr Ergebnis, nur geänderte rechnet die Pumpe, Erklärungen/Taktiken der alten Zugfolge fallen weg; Karten neu) + `ClubGameCorrectionService` (Kopien via
   `SavedGameService.ApplyClubMovesAsync` — Kopfdaten/Datum der Kopie bleiben, Zugkommentare gehen; `FromCopyAsync` nach
   `PUT /api/games/{id}`: darf korrigieren → Vereinspartie + alle Kopien, sonst Kopie gelöst). Endpunkte `/api/league/club/games/
   {id}/sheet` (+`/photo`, `/resolve`, aus dem Archiv) und `PUT …/{id}/moves`; RookHubs `/api/games/{id}/scoresheet|photo|resolve`
