@@ -97,6 +97,11 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             <p class="note">Für {{ tn(e.opp) }} gibt es noch keine Meldeliste.</p>
           }
           @default {
+            @if (e.provisional) {
+              <!-- 2026-10-06: spätere Runden mit vorläufiger Prognose statt gesperrt -->
+              <p class="note provisional">Vorläufige Prognose — mit dem Stand von heute gerechnet. Genauer wird sie, sobald
+                Runde {{ e.unlock_after }} gespielt ist; jedes Aktualisieren rechnet sie neu.</p>
+            }
             <!-- Wunsch 2026-10-04: der Text am Anfang hinter zwei (i) — Partien der Begegnung und die Prognose samt Treffern. -->
             <div class="infos">
               @if (sources(); as s) {

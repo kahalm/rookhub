@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.680.0", date: "2026-10-06", changes: [
+    { en: "LeagueHub forecasts: later rounds are no longer locked. They get a provisional forecast computed with today's knowledge, marked as such, and every data update recomputes it — it becomes more precise once the round before has been played.", de: "LeagueHub-Prognosen: spätere Runden sind nicht mehr gesperrt. Sie bekommen eine vorläufige Prognose mit dem Stand von heute, als solche gekennzeichnet, und jedes Aktualisieren rechnet sie neu — genauer wird sie, sobald die Runde davor gespielt ist." },
+  ] },
   { version: "0.679.2", date: "2026-10-06", changes: [
     { en: "LeagueHub forecasts: the chosen round is remembered while the browser tab stays open — switching to “Club games” and back no longer jumps to the first open round.", de: "LeagueHub-Prognosen: die gewählte Runde bleibt gemerkt, solange der Browser-Tab offen ist — wer zu „Vereinspartien“ wechselt und zurückkommt, landet nicht mehr bei der ersten offenen Runde." },
     { en: "LeagueHub pairings of a played round: “Analyse” is now a chart icon, “Replay”, “Edit” and “Correct” sit in the ⋮ menu behind it.", de: "LeagueHub-Paarungen einer gespielten Runde: „Analyse“ ist jetzt ein Kurven-Symbol, „Nachspielen“, „Bearbeiten“ und „Korrigieren“ stecken im ⋮-Menü dahinter." },

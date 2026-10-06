@@ -177,7 +177,7 @@ public class LeagueEngineTests
     }
 
     [Fact]
-    public void View_OpensSaturdayAndSundayTogether_AndLocksLater()
+    public void View_OpensSaturdayAndSundayTogether_LaterRoundsProvisional()
     {
         var w = TinyWorld();
         var v = new LeagueViewBuilder(w, LeagueModel.FromEmbedded(), new Dictionary<string, int>(), new Dictionary<string, List<LeagueOnlineAccount>>())
@@ -185,8 +185,13 @@ public class LeagueEngineTests
         var fx = v["fixtures"]!["A"]!.AsObject();
         Assert.Equal("played", fx["1"]!["status"]!.GetValue<string>());
         Assert.Equal("open", fx["2"]!["status"]!.GetValue<string>());
-        Assert.Equal("locked", fx["3"]!["status"]!.GetValue<string>());
+        // spätere Runden: vorläufige Prognose statt gesperrt (2026-10-06)
+        Assert.Equal("open", fx["3"]!["status"]!.GetValue<string>());
+        Assert.True(fx["3"]!["provisional"]!.GetValue<bool>());
         Assert.Equal(2, fx["3"]!["unlock_after"]!.GetValue<int>());
+        Assert.NotEmpty(fx["3"]!["boards"]!.AsArray());
+        Assert.Null(fx["2"]!["provisional"]);
+        Assert.False(v["rounds"]!.AsArray().Single(r => r!["round"]!.GetValue<int>() == 3)!["open"]!.GetValue<bool>());
         Assert.Equal("So nach Sa", fx["2"]!["phase"]!.GetValue<string>());   // Samstag gespielt → Sonntag mit Samstag
         // Heim hat an ungeraden Brettern Weiß: A spielt Runde 3 heim → Gegner an Brett 1 mit Schwarz
         var boards = fx["2"]!["boards"]!.AsArray();
@@ -462,10 +467,10 @@ public class LeagueEngineTests
     }
 
     [Fact]
-    public async Task Share_LockedRound_IsNotShareable_AndRevokedLinkIsGone()
+    public async Task Share_ProvisionalRound_IsShareable_AndRevokedLinkIsGone()
     {
         var (db, svc) = ShareFixture();
-        Assert.Null(await svc.CreateShareAsync(1, 3, "A", null, default));   // gesperrte Runde
+        Assert.NotNull(await svc.CreateShareAsync(1, 3, "A", null, default));   // spätere Runde: vorläufige Prognose (2026-10-06)
         var s = await svc.CreateShareAsync(1, 2, "A", null, default);
         Assert.NotNull(s);
         Assert.True(await svc.DeleteShareAsync(s!.Token, default));

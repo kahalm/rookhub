@@ -169,6 +169,12 @@ describe('FixtureViewComponent', () => {
     expect(api.forecastStats).toHaveBeenCalledWith('TOK');
   });
 
+  it('spätere Runde: vorläufige Prognose mit Hinweis und Brettern (2026-10-06)', () => {
+    const el = render({ ...OPEN, provisional: true, unlock_after: 3 });
+    expect(el.querySelector('.note.provisional')?.textContent).toContain('sobald Runde 3 gespielt ist');
+    expect(el.querySelectorAll('.board').length).toBe(2);
+  });
+
   it('gesperrte Runde nennt, wann die Prognose kommt, und zeigt keine Bretter', () => {
     const el = render({ opp: 'Wörgl', home: false, status: 'locked', unlock_after: 3 });
     expect(el.querySelector('.note')?.textContent).toContain('sobald Runde 3 gespielt ist');

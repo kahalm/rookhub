@@ -170,10 +170,12 @@ public sealed class LeagueViewBuilder
                 }
                 else
                 {
-                    e["status"] = "locked";
+                    // Spätere Runden (Wunsch 2026-10-06: „lass mich auch zukünftige Runden sehen — Prognosen kannst du machen
+                    // und dann anpassen"): dieselbe Rechnung mit dem Wissen von heute, als VORLÄUFIG markiert. Genauer wird
+                    // sie, sobald `unlock_after` gespielt ist — jedes „Daten aktualisieren" rechnet sie neu.
+                    e["status"] = "open";
+                    e["provisional"] = true;
                     e["unlock_after"] = UnlockAfter(r);
-                    fx[r.ToString()] = e;
-                    continue;
                 }
                 var (rows, p, phase) = Forecast(tnr, s.Opp, r, level);
                 if (rows.Count == 0)

@@ -136,6 +136,8 @@ export interface Fixture {
   status?: 'played' | 'open' | 'locked' | 'nodata';
   score?: string;
   unlock_after?: number;
+  /** Spätere Runde: Prognose mit dem Stand von heute, wird nach jeder gespielten Runde neu gerechnet (2026-10-06). */
+  provisional?: boolean;
   boards?: Board[];
   roster?: RosterEntry[];
   phase?: Phase;

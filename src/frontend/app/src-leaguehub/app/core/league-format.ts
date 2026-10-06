@@ -41,7 +41,7 @@ export const PHASE_TEXT: Record<Phase, string> = {
 export const SPEED = /blitz|rapid|schnell|bullet|armageddon/i;
 
 export function roundLabel(r: LeagueRound): string {
-  const tag = r.played ? 'gespielt' : r.open ? 'Prognose' : 'gesperrt';
+  const tag = r.played ? 'gespielt' : r.open ? 'Prognose' : 'vorläufig';
   const d = r.date ? `, ${r.date.replace(/\d{4}$/, '')}` : '';
   return `Runde ${r.round}${d} (${tag})`;
 }

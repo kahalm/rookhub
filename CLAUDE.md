@@ -1577,8 +1577,11 @@ Rollenverwaltung an).
   Sonntag vorab = Mischung aus „Samstag gespielt ja/nein". **Tor**: `LeaguePythonParityTests` gegen den
   echten Bestand (`LEAGUE_BUNDLE`, `LEAGUE_PY_DATA`, sonst übersprungen) — 0.569.0: 88 Begegnungen,
   1 676 Wahrscheinlichkeiten, größte Abweichung 0,000.
-- **Freigabe-Regel** (Wunsch des Nutzers): Prognose nur für die NÄCHSTE Runde einer Liga; Landesliga
-  Samstag + Sonntag gemeinsam; spätere Runden „gesperrt" bis die vorige gespielt ist. JSON-Feldnamen der
+- **Freigabe-Regel** (Wunsch des Nutzers): die NÄCHSTE Runde einer Liga ist „offen" (`rounds[].open`, Vorauswahl; Landesliga
+  Samstag + Sonntag gemeinsam). Spätere Runden sind seit 2026-10-06 nicht mehr „gesperrt" (Wunsch: „lass mich auch zukünftige
+  Runden sehen — Prognosen kannst du machen und dann anpassen"): `status: "open"` + `provisional: true` + `unlock_after`, dieselbe
+  Rechnung mit dem Wissen von heute (`LeagueFeatures.RowsFor` zählt nur gespielte Runden), neu gerechnet bei jedem Aktualisieren.
+  Ansichten von vorher tragen noch `locked`, bis „Daten aktualisieren"/`admin/rebuild` läuft. JSON-Feldnamen der
   Ansicht bewusst wie in Python (snake_case), damit die Parität direkt prüfbar ist.
 - **Partien je Quelle** (0.626.0, Wunsch „auf der Hauptseite ausweisen: x Spiele aus Lumbra, y aus ChessBase, z aus Lichess,
   w aus chess.com"): `GET /api/league/sources` (league.view, `Services/League/LeagueGameSources.cs`) →
