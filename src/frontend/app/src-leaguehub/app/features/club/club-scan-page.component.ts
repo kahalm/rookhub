@@ -303,7 +303,7 @@ function readAutoMine(): boolean {
           @if (problem(); as pr) { <p class="err small">{{ pr }}</p> }
 
           @if (saved()) {
-            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
+            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b>@if (replacedOld()) { Die schon vorhandene Fassung dieser Partie ist archiviert und erscheint nicht mehr. } Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
               <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p>
           } @else {
             @if (loggedIn && gameId == null) {
@@ -412,6 +412,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly photoOpen = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+  /** Wie viele ältere Fassungen derselben Partie das Übernehmen archiviert hat (2026-10-06). */
+  readonly replacedOld = signal(0);
   private readonly doneDlg = viewChild<ElementRef<HTMLDialogElement>>('doneDlg');
   private readonly savePanel = viewChild<ElementRef<HTMLElement>>('savePanel');
   /** Wie viele unsichere Stellen es vorher gab — geht die Zahl von >0 auf 0, kommt der Hinweis. */
@@ -804,7 +806,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       return;
     }
     try {
-      await this.api.addGame({
+      const added = await this.api.addGame({
         moves: legal.map(p => p.san),
         white: this.name('white')().trim() || null,
         black: this.name('black')().trim() || null,
@@ -823,6 +825,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         date: this.sheetDate,
       }, this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
+      this.replacedOld.set(added?.replaced ?? 0);
       this.saved.set(true);
       if (this.loggedIn && this.autoMine() && !this.myGameId()) void this.addToMyGames();
     } catch (err) {

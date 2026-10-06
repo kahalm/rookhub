@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.691.0", date: "2026-10-06", changes: [
+    { en: "LeagueHub club database: when a game is added from a scoresheet that is already in the database (same league pairing, or same year, same players and the same first moves), the older version is archived and no longer appears — not in the list, the player cards or the pairings. Its analysis is removed; the new version gets analysed.", de: "LeagueHub-Vereins-Datenbank: Kommt über ein Partieformular eine Partie dazu, die schon in der Datenbank steht (dieselbe Ligapaarung, oder dasselbe Jahr, dieselben Spieler und dieselben ersten Züge), wird die ältere Fassung archiviert und erscheint nicht mehr — weder in der Liste noch auf den Spielerkarten oder bei den Paarungen. Ihre Analyse wird entfernt; die neue Fassung wird gerechnet." },
+  ] },
   {
     version: '0.690.1',
     date: '2026-10-06',

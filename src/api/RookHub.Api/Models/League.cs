@@ -388,6 +388,17 @@ public class LeagueClubGame
     /// Spieler und Jahr (Paarungen der Runde, Taktik-Kapitel).</summary>
     public int? LeagueGameId { get; set; }
 
+    /// <summary>Archiviert (2026-10-06, Wunsch: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon eingegeben
+    /// ist, das alte archivieren, damit es nicht mehr aufscheint"): eine neuere Fassung derselben Partie hat sie ersetzt.
+    /// Ein globaler Filter blendet archivierte Partien überall aus (<c>IgnoreQueryFilters</c> nur für Konto löschen,
+    /// Rückbau eines Teilen-Links und Zuordnen nach dem Anmelden). <c>null</c> = aktiv.</summary>
+    public DateTime? ArchivedAt { get; set; }
+    /// <summary>Die Partie, die diese ersetzt hat (kein Fremdschlüssel).</summary>
+    public int? ReplacedById { get; set; }
+    /// <summary>Nur in der Antwort des Hinzufügens: wie viele ältere Fassungen diese Partie gerade archiviert hat.</summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int Replaced { get; set; }
+
     /// <summary>Liga der Partie („Landesliga") — 0.666.0, aus dem Abgleich der Paarungen (Gegner-FIDE-ID gegen die Spielpläne);
     /// <c>null</c> = nicht bestimmbar. Wird NICHT in der Vereins-Datenbank gezeigt, sondern geht nur in die Kopie in „Meine
     /// Partien" (<see cref="SavedGame.Classifier1"/>): Liga + Saison + Gegner machten die „Schwaz"-Seite im öffentlichen Spielplan

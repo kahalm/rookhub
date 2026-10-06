@@ -1708,6 +1708,13 @@ Rollenverwaltung an).
   Klassifizierer: `leagueGameId`/`leagueGameLabel` im DTO nur mit `CanDelete` (Hochladender/Verwalter). Oberfläche: Auswahl
   „Ligapartie" in `club-import-review` (unter dem Turnier), `club-scan-page` und dem Bearbeiten-Feld von `club-games-page`;
   eine gewählte Paarung setzt die noch nicht angefassten Spieler aus dem Spielplan (`ImportReview.setPairing`).
+- **Ältere Fassungen archivieren** (0.691.0, Wunsch 2026-10-06: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon
+  eingegeben ist, das alte archivieren"): `LeagueClubGames.ArchivedAt`/`ReplacedById`, gesetzt in `LeagueClubService.ArchiveOlderVersionsAsync`
+  nach jedem Formular-Add (`AddAsync`, nicht beim PGN-Import). Dieselbe Partie = dieselbe feste Ligapaarung, oder (ohne zwei verschiedene
+  Paarungen) dasselbe Jahr + dieselben Spieler (FIDE-ID inkl. der internen hinter „Schwaz", sonst Name) + dieselben ersten
+  `SameGamePrefixPlies` (16) Halbzüge. Die Analyse der alten geht. **Globaler Query-Filter** `ArchivedAt == null` auf `LeagueClubGame`:
+  archivierte sind überall unsichtbar; `IgnoreQueryFilters()` nur in Konto löschen (`ProfileService`), Rückbau eines Teilen-Links
+  (`DeleteByShareAsync`) und Zuordnen nach dem Anmelden (Claims). Antwort von `POST …/club/games`: `replaced` = Zahl archivierter.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

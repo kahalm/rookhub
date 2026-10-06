@@ -712,9 +712,67 @@ public sealed class LeagueClubService
         Stamp(game, userId, now, shareHash, claimHash);
         await ApplyPairingsAsync(new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
+        game.Replaced = await ArchiveOlderVersionsAsync(game, sans, now, ct);
         _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon}{Via})",
             game.Anonymized ? "mit „Schwaz“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
         return (game, null, null);
+    }
+
+    /// <summary>Wie viele Halbzüge vom Anfang zwei Fassungen gemeinsam haben müssen, um als dieselbe Partie zu gelten
+    /// (höchstens so viele, wie die kürzere hat).</summary>
+    public const int SameGamePrefixPlies = 16;
+
+    /// <summary>
+    /// Ältere Fassungen DIESER Partie archivieren (2026-10-06, Wunsch: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird,
+    /// die schon eingegeben ist, das alte archivieren, damit es nicht mehr aufscheint" — Anlass: Gruber–Schöler zweimal
+    /// eingelesen, Partien 153 und 164). Dieselbe Partie heißt: dieselbe feste Ligapaarung, oder dasselbe Jahr, dieselben
+    /// Spieler (FIDE-ID, auch die interne hinter „Schwaz", sonst der Name) und dieselben ersten
+    /// <see cref="SameGamePrefixPlies"/> Halbzüge. Die Analyse der alten Fassung geht (die neue wird gerechnet). Liefert die
+    /// Zahl der archivierten.
+    /// </summary>
+    internal async Task<int> ArchiveOlderVersionsAsync(LeagueClubGame game, IReadOnlyList<string> sans, DateTime now, CancellationToken ct)
+    {
+        var cands = await _db.LeagueClubGames
+            .Where(c => c.Id != game.Id && (game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
+                || c.Year == game.Year && (c.White == game.White || game.WhiteFide != null && c.WhiteFide == game.WhiteFide)
+                                       && (c.Black == game.Black || game.BlackFide != null && c.BlackFide == game.BlackFide)))
+            .ToListAsync(ct);
+        var old = cands.Where(c => game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
+            || !(game.LeagueGameId != null && c.LeagueGameId != null)   // zwei verschiedene feste Paarungen: zwei Partien
+               && SamePlayers(c, game) && SamePrefix(SansOf(c.Pgn), sans)).ToList();
+        if (old.Count == 0) return 0;
+        foreach (var c in old)
+        {
+            c.ArchivedAt = now;
+            c.ReplacedById = game.Id;
+        }
+        await _db.SaveChangesAsync(ct);
+        if (_analyses != null) foreach (var c in old) await _analyses.DeleteForClubGameAsync(c.Id, ct);
+        await RefreshCardsAsync(old.SelectMany(c => new[] { c.WhiteFide, c.BlackFide }), ct);
+        _log.LogInformation("Vereins-Datenbank: Partie {Id} ersetzt ältere Fassung(en) {Old} — archiviert", game.Id,
+            string.Join(",", old.Select(c => c.Id)));
+        return old.Count;
+    }
+
+    private static IReadOnlyList<string> SansOf(string pgn) =>
+        PgnParser.SplitGames(pgn).FirstOrDefault() is { } g ? PgnParser.ExtractMainlineSans(g.MoveText) : Array.Empty<string>();
+
+    private static bool SamePlayers(LeagueClubGame a, LeagueClubGame b)
+    {
+        static bool Side(string an, string? af, string bn, string? bf) =>
+            af is not null && bf is not null ? af == bf : string.Equals(an.Trim(), bn.Trim(), StringComparison.OrdinalIgnoreCase);
+        return a.Year == b.Year
+            && Side(a.White, a.WhiteFide ?? a.WhiteRealFide, b.White, b.WhiteFide ?? b.WhiteRealFide)
+            && Side(a.Black, a.BlackFide ?? a.BlackRealFide, b.Black, b.BlackFide ?? b.BlackRealFide);
+    }
+
+    private static bool SamePrefix(IReadOnlyList<string> a, IReadOnlyList<string> b)
+    {
+        var n = Math.Min(SameGamePrefixPlies, Math.Min(a.Count, b.Count));
+        if (n == 0) return false;
+        for (var i = 0; i < n; i++)
+            if (!string.Equals(a[i].TrimEnd('+', '#'), b[i].TrimEnd('+', '#'), StringComparison.Ordinal)) return false;
+        return true;
     }
 
     /// <summary>Grund für Partien über dem Deckel der Teilen-Link-Uploads (<see cref="LeagueShareUploadQuota"/>).</summary>
@@ -999,7 +1057,7 @@ public sealed class LeagueClubService
     {
         var hashes = (keys ?? Array.Empty<string>()).Where(k => !string.IsNullOrWhiteSpace(k) && k.Trim().Length == 32)
             .Take(MaxClaimKeys).Select(ClaimHashOf).Distinct().ToList();
-        return _db.LeagueClubGames.Where(g => g.ClaimKeyHash != null && hashes.Contains(g.ClaimKeyHash) && g.UploadedByUserId == null);
+        return _db.LeagueClubGames.IgnoreQueryFilters().Where(g => g.ClaimKeyHash != null && hashes.Contains(g.ClaimKeyHash) && g.UploadedByUserId == null);
     }
 
     /// <summary>Was mit diesen Schlüsseln zuzuordnen wäre → (Partien, davon „Schwaz") — für die Rückfrage.</summary>
@@ -1142,8 +1200,8 @@ public sealed class LeagueClubService
         var link = await _db.LeagueShares.AsNoTracking().Where(s => s.Token == given).Select(s => s.Token)
             .FirstOrDefaultAsync(ct) ?? given;
         var hash = ShareHashOf(link);
-        if (dryRun) return await _db.LeagueClubGames.CountAsync(g => g.UploadShareHash == hash, ct);
-        var games = await _db.LeagueClubGames.Where(g => g.UploadShareHash == hash).ToListAsync(ct);
+        if (dryRun) return await _db.LeagueClubGames.IgnoreQueryFilters().CountAsync(g => g.UploadShareHash == hash, ct);
+        var games = await _db.LeagueClubGames.IgnoreQueryFilters().Where(g => g.UploadShareHash == hash).ToListAsync(ct);
         if (games.Count == 0) return 0;
         if (_analyses != null)
             foreach (var g in games) await _analyses.DeleteForClubGameAsync(g.Id, ct);

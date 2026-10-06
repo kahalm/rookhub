@@ -388,7 +388,7 @@ public class ProfileService
         _db.UserViewStates.RemoveRange(await _db.UserViewStates.Where(v => v.UserId == userId).ToListAsync());
         // Vereins-Datenbank (LeagueHub): die Partien bleiben (sie gehören zur Liga, nicht zum Konto), nur der Vermerk,
         // wer sie hochgeladen hat, geht — bei anonymisierten gibt es ihn ohnehin nicht.
-        foreach (var g in await _db.LeagueClubGames.Where(g => g.UploadedByUserId == userId).ToListAsync())
+        foreach (var g in await _db.LeagueClubGames.IgnoreQueryFilters().Where(g => g.UploadedByUserId == userId).ToListAsync())
             g.UploadedByUserId = null;
         // Offene Entwürfe von PGN-Importen (0.595.0) gehen ganz — sie tragen den Rohtext samt Klarnamen.
         _db.LeagueClubDrafts.RemoveRange(await _db.LeagueClubDrafts.Where(d => d.UserId == userId).ToListAsync());

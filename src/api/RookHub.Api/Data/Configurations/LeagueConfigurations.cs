@@ -305,6 +305,9 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.Property(g => g.BlackRealFide).HasMaxLength(16);
         e.HasIndex(g => g.LeagueGameId);
         e.HasIndex(g => g.MovesHash);
+        e.HasIndex(g => g.ArchivedAt);
+        // Archivierte Fassungen (ersetzt durch ein neueres Formular) sind überall unsichtbar.
+        e.HasQueryFilter(g => g.ArchivedAt == null);
         e.HasIndex(g => g.WhiteFide);
         e.HasIndex(g => g.BlackFide);
         e.HasIndex(g => g.UploadShareHash);

@@ -221,7 +221,7 @@ public class LeagueClubController : BaseApiController
         var (game, reason, message) = await _club.AddGameAsync(GetUserId(), req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
         if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId, game.Pgn, game.Id);
-        return Ok(new { id = game.Id, anonymized = game.Anonymized });
+        return Ok(new { id = game.Id, anonymized = game.Anonymized, replaced = game.Replaced });
     }
 
     /// <summary>Löschen: eigene (seit 0.656.0 nur mit Anmeldung — die Regel steht im Dienst) oder als Verwalter jede.</summary>
@@ -447,7 +447,7 @@ public class LeagueShareClubController : ControllerBase
         var (game, reason, message) = await _club.AddGameViaShareAsync(link, req, ct, claimKey);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
         if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null, game.Pgn, game.Id);
-        return Ok(new { id = game.Id, anonymized = game.Anonymized, claimKey });
+        return Ok(new { id = game.Id, anonymized = game.Anonymized, claimKey, replaced = game.Replaced });
     }
 
     [HttpGet("players")]

@@ -115,15 +115,15 @@ export class ClubClient {
   }
 
   /** Eine Partie aus einem Partieformular; `scanRef` wird danach geschlossen. */
-  async addGame(body: ClubGameRequest, scanRef: string | null): Promise<{ id: number; anonymized: boolean }> {
+  async addGame(body: ClubGameRequest, scanRef: string | null): Promise<{ id: number; anonymized: boolean; replaced?: number }> {
     if (this.anonymous) {
       const params = scanRef ? new HttpParams().set('scanKey', scanRef) : undefined;
-      const r = await firstValueFrom(this.http.post<{ id: number; anonymized: boolean; claimKey?: string }>(`${this.base}/games`,
+      const r = await firstValueFrom(this.http.post<{ id: number; anonymized: boolean; claimKey?: string; replaced?: number }>(`${this.base}/games`,
         { ...body, scanId: null }, { params }));
       rememberClaimKey(r.claimKey);   // für eine Zuordnung nach dem Anmelden (0.656.0)
       return r;
     }
-    return firstValueFrom(this.http.post<{ id: number; anonymized: boolean }>(`${this.base}/games`,
+    return firstValueFrom(this.http.post<{ id: number; anonymized: boolean; replaced?: number }>(`${this.base}/games`,
       { ...body, scanId: scanRef ? Number(scanRef) : null }));
   }
 

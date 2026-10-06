@@ -142,4 +142,69 @@ public class LeagueClubPairingTests : IDisposable
         var pairing = Assert.Single(await new LeagueFixtureGames(_db).ForFixtureAsync(7, 2, "Schwaz", default));
         Assert.Equal(("fest", "club"), (pairing.Pgn, pairing.Source));
     }
+
+    // ── Archivieren älterer Fassungen (2026-10-06) ────────────────────
+
+    private static readonly string[] Long = Moves.Replace(" 1-0", "").Split(' ').Where(t => !t.EndsWith('.')).ToArray();
+
+    private LeagueClubGameRequest Sheet(params string[] tail) => new()
+    {
+        Moves = Long.Concat(tail).ToList(), White = "Hengl, Philip", WhiteFide = "222", Black = "Oberschmid, Patrik", BlackFide = "900",
+        BlackReplace = true, Result = "1-0", Year = 2026,
+    };
+
+    [Fact]
+    public async Task Formular_zweiteFassungDerselbenPartie_archiviertDieAlte()
+    {
+        await SeedAsync();
+        var (first, r1, _) = await Club().AddGameAsync(_user, Sheet());
+        Assert.Null(r1);
+        var (second, r2, _) = await Club().AddGameAsync(_user, Sheet("Kb1"));   // dieselbe Partie, ein Zug mehr gelesen
+        Assert.Null(r2);
+        Assert.Equal(1, second!.Replaced);
+
+        var old = await _db.LeagueClubGames.IgnoreQueryFilters().SingleAsync(g => g.Id == first!.Id);
+        Assert.NotNull(old.ArchivedAt);
+        Assert.Equal(second.Id, old.ReplacedById);
+        Assert.Equal(new[] { second.Id }, (await Club().ListAsync(_user, true, null, null, 1, default)).Items.Select(g => g.Id));
+        Assert.Null(await Club().GetAsync(_user, true, first!.Id));
+    }
+
+    [Fact]
+    public async Task Formular_andereEroeffnungOderAndereFesteBrettpaarung_bleibtStehen()
+    {
+        var id = await SeedAsync();
+        // ohne Ligapaarung (2025 liegt vor der Saison 2026/27): andere Eröffnung = andere Partie
+        var y = Sheet(); y.Year = 2025;
+        var (a0, _, _) = await Club().AddGameAsync(_user, y);
+        var other = Sheet(); other.Year = 2025;
+        other.Moves = new() { "d4", "d5", "c4", "e6", "Nc3", "Nf6" };
+        var (b, _, _) = await Club().AddGameAsync(_user, other);
+        Assert.Equal(0, b!.Replaced);
+        Assert.Null(a0!.ArchivedAt);
+        var (a, _, _) = await Club().AddGameAsync(_user, Sheet());
+
+        // feste, verschiedene Ligapaarungen: zwei Partien, auch bei gleichem Anfang
+        _db.LeagueGames.Add(new LeagueGame { Tnr = 7, Round = 3, Board = 4, HomeTeam = "Absam", AwayTeam = "Schwaz", HomePlayer = "Hengl, Philip",
+            AwayPlayer = "Oberschmid, Patrik", HomeColor = "w", Result = "1 - 0", HomeFide = "222", AwayFide = "900" });
+        await _db.SaveChangesAsync();
+        var other2 = _db.LeagueGames.Single(g => g.Round == 3).Id;
+        await Club().UpdateAsync(_user, true, a!.Id, new LeagueClubGameUpdateRequest { LeagueGameId = id });
+        var third = Sheet("Kb1");
+        third.LeagueGameId = other2;
+        var (c, _, _) = await Club().AddGameAsync(_user, third);
+        Assert.Equal(0, c!.Replaced);
+        Assert.Equal(4, await _db.LeagueClubGames.CountAsync());
+    }
+
+    [Fact]
+    public async Task Archivierte_bleibenFuerDenRueckbauEinesTeilenLinksErreichbar()
+    {
+        await SeedAsync();
+        _db.LeagueClubGames.Add(new LeagueClubGame { Year = 2026, White = "x", Black = "y", Pgn = "p", MovesHash = "h",
+            UploadShareHash = LeagueClubService.ShareHashOf("tok"), ArchivedAt = Now });
+        await _db.SaveChangesAsync();
+        Assert.Equal(0, await _db.LeagueClubGames.CountAsync());
+        Assert.Equal(1, await _db.LeagueClubGames.IgnoreQueryFilters().CountAsync());
+    }
 }
