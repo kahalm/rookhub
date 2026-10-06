@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { BoardArrow, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { AnalysisEngineService, RemoteAnalyseTransport, RemoteEngine } from '../analysis/analysis-engine.service';
 import { EngineDisplayLine, toDisplayLines, uciLineToSan } from '../analysis/engine-lines.util';
+import { isLc0Engine } from '../analysis/external-engine.service';
 
 /** Ein eigener Zug in der Nebenvariante: SAN fürs Lesen, UCI für die Zugnummern-Kette, FEN für Brett und Engine. */
 export interface LiveMove { san: string; uci: string; fen: string; from: string; to: string; }
@@ -26,6 +27,8 @@ export const LIVE_LINE_PLIES = 10;
 export class LiveEngineSession {
   private readonly engine: AnalysisEngineService;
   private readonly sub: Subscription;
+  /** Fehlt bei Test-Engines ohne externe Anbindung — daher optional. */
+  private readonly fallbackSub?: Subscription;
   private analyzedFen = '';
   /** Stellung, an der die Nebenvariante abzweigt (Partie-FEN beim ersten eigenen Zug). */
   private baseFen = '';
@@ -46,6 +49,17 @@ export class LiveEngineSession {
   private readonly bestUci = signal<string | null>(null);
   /** Name der externen Engine; `null` = Stockfish im Browser. */
   readonly engineName = signal<string | null>(null);
+  /** Kennung der externen Engine; `null` = Stockfish im Browser — fuer das Haekchen in der Engine-Wahl. */
+  readonly engineId = signal<string | null>(null);
+  /** Knoten der gerechneten Stellung. Bei Lc0 das eigentliche Mass: seine „Tiefe" ist ein Mittelwert ueber den
+   *  Suchbaum und waechst kaum, waehrend die Knoten zeigen, wie viel er schon gerechnet hat. */
+  readonly nodes = signal(0);
+  /** Die gewaehlte externe Engine antwortet nicht, gerechnet wird ersatzweise im Browser. Ohne dieses Signal stand in
+   *  der Leiste weiter der Name der externen Engine ueber Linien, die in Wahrheit Stockfish im Browser lieferte —
+   *  am 2026-10-06 als „Lc0 kommt nie ueber Tiefe 12" gemeldet, waehrend die Spark gar nicht lief. */
+  readonly fallback = signal(false);
+  /** Rechnet Lc0? Dann zeigt die Leiste die Knoten neben der Tiefe — aber nur, solange er wirklich rechnet. */
+  readonly isLc0 = computed(() => !this.fallback() && isLc0Engine(this.engineName()));
 
   readonly lastMove = computed<[string, string] | undefined>(() => {
     const v = this.variation();
@@ -68,9 +82,11 @@ export class LiveEngineSession {
     this.sub = this.engine.analysis$.subscribe(s => {
       if (!s.fen || s.fen !== this.analyzedFen) return;
       this.depth.set(s.depth);
+      this.nodes.set(s.nodes ?? 0);
       this.lines.set(toDisplayLines(s.fen, s.lines, LIVE_LINE_PLIES));
       this.bestUci.set(s.lines[0]?.pvUci[0] ?? null);
     });
+    this.fallbackSub = this.engine.remoteFallback$?.subscribe(f => this.fallback.set(f));
   }
 
   /** Stellung auf dem Brett: das Ende der Nebenvariante, sonst die Partie. */
@@ -140,6 +156,20 @@ export class LiveEngineSession {
   useRemote(info: RemoteEngine, transport: RemoteAnalyseTransport): void {
     this.engine.setRemoteEngine(info, transport);
     this.engineName.set(info.name);
+    this.engineId.set(info.id);
+    this.restart();
+  }
+
+  /** Zurueck zu Stockfish im Browser (Engine-Wahl im ⋮ der Partieseite); die laufende Stellung rechnet neu. */
+  useBrowser(): void {
+    this.engine.setRemoteEngine(null);
+    this.engineName.set(null);
+    this.engineId.set(null);
+    this.restart();
+  }
+
+  /** Dieselbe Stellung mit der neuen Engine noch einmal — ohne das hiesse ein Wechsel „erst beim naechsten Zug". */
+  private restart(): void {
     const fen = this.analyzedFen;
     this.analyzedFen = '';
     if (fen) this.analyze(fen);
@@ -147,6 +177,7 @@ export class LiveEngineSession {
 
   destroy(): void {
     this.sub.unsubscribe();
+    this.fallbackSub?.unsubscribe();
     this.engine.stop();
     this.engine.destroy();
   }
@@ -156,6 +187,7 @@ export class LiveEngineSession {
     this.analyzedFen = fen;
     this.lines.set([]);
     this.depth.set(0);
+    this.nodes.set(0);
     this.bestUci.set(null);
     void this.engine.analyze(fen);
   }

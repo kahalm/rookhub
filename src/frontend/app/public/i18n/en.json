@@ -2753,7 +2753,10 @@
       "hint": "Move on the board to try your own ideas.",
       "undo": "Take back",
       "backToGame": "Back to the game",
-      "redo": "Forward"
+      "redo": "Forward",
+      "engineMenu": "Live engine",
+      "nodes": "{{nodes}} nodes",
+      "unreachable": "{{name}} is not answering — running in the browser"
     },
     "col": {
       "players": "Players",

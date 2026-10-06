@@ -80,11 +80,13 @@ const MATE_GAP_PAWNS = 100;
                       [matTooltip]="'games.review.lines' | translate" [attr.aria-label]="'games.review.lines' | translate">
                 <mat-icon>format_list_numbered</mat-icon>
               </button>
-              <button mat-icon-button type="button" class="toggle arrow-toggle" [class.on]="showArrow()"
-                      [attr.aria-pressed]="showArrow()" (click)="toggleArrow()"
-                      [matTooltip]="'games.review.arrow' | translate" [attr.aria-label]="'games.review.arrow' | translate">
-                <mat-icon>north_east</mat-icon>
-              </button>
+              @if (!liveEngine()) {
+                <button mat-icon-button type="button" class="toggle arrow-toggle" [class.on]="showArrow()"
+                        [attr.aria-pressed]="showArrow()" (click)="toggleArrow()"
+                        [matTooltip]="'games.review.arrow' | translate" [attr.aria-label]="'games.review.arrow' | translate">
+                  <mat-icon>north_east</mat-icon>
+                </button>
+              }
             </span>
           }
         </div>
@@ -241,6 +243,18 @@ export class GameReviewComponent {
   /** Im Fehler-Training: keine Computer-Linien und kein Pfeil — sie verrieten die Lösung. */
   engineHidden = input<boolean>(false);
 
+  /** Die Live-Engine läuft (0.681.0): die vorberechneten Linien des Partiezugs bleiben sichtbar — gewünscht 2026-10-06,
+   *  „die vorberechneten stockfishlines … wenn die für den aktuellen zug existieren einblenden". Pfeil, Zugsymbol und
+   *  Erklärung bleiben weg: das Brett gehört dann der Live-Engine und trägt deren Pfeil. */
+  liveEngine = input<boolean>(false);
+
+  /** Das Brett zeigt gerade eine eigene Nebenvariante — die Linien des Partiezugs passen dann nicht zur Stellung
+   *  und bleiben weg, bis man zur Partie zurückkehrt. */
+  offGame = input<boolean>(false);
+
+  /** Pfeil, Zugsymbol und Erklärung: weg im Training (verrieten die Lösung) und neben der Live-Engine. */
+  private readonly boardMarksHidden = computed(() => this.engineHidden() || this.liveEngine());
+
   /** „Warum war das ein Fehler?" nachfragen (`…/explanations` neben `…/evals`). Aus, wo es den Endpunkt nicht gibt
    *  (Vereinspartien in LeagueHub, 0.593.0) — sonst fragte jede Partie ins Leere, und jede Antwort wäre ein 404. */
   withExplanations = input<boolean>(true);
@@ -290,15 +304,15 @@ export class GameReviewComponent {
   /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe); mit `expanded` von Anfang an an. */
   readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
   readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
-  readonly lines = computed(() => this.showLines() && !this.engineHidden()
+  readonly lines = computed(() => this.showLines() && !this.engineHidden() && !this.offGame()
     ? computerLinesAt(this.evals(), this.fens(), this.currentIndex()) : []);
   readonly arrows = computed<BoardArrow[]>(() => {
-    if (!this.showArrow() || this.engineHidden()) return [];
+    if (!this.showArrow() || this.boardMarksHidden()) return [];
     const best = bestMoveArrowAt(this.evals(), this.currentIndex());
     return best ? [best] : [];
   });
   readonly badge = computed<BoardBadge | null>(() => {
-    if (this.engineHidden()) return null;
+    if (this.boardMarksHidden()) return null;
     const m = this.current();
     const move = this.moves()[this.currentIndex()];
     return m && move?.to ? { square: move.to, svg: moveBadgeSvg(m.cls) } : null;
@@ -322,7 +336,7 @@ export class GameReviewComponent {
   readonly explanationFor = computed(() => {
     const m = this.current();
     const e = this.explanations();
-    if (!m || !e || this.engineHidden()) return null;
+    if (!m || !e || this.boardMarksHidden()) return null;
     return e.items.find(x => x.ply === m.ply) ?? null;
   });
 
@@ -336,7 +350,7 @@ export class GameReviewComponent {
    *  — ein Auftrag auf Zuruf, dafür steht die Spark auch tagsüber bereit (0.585.0). */
   readonly explainState = computed<'can' | 'running' | null>(() => {
     const e = this.explanations();
-    if (!e || this.engineHidden() || this.status() !== 'done') return null;
+    if (!e || this.boardMarksHidden() || this.status() !== 'done') return null;
     if (e.running) return 'running';
     const hasErrors = this.review().moves.some(m => !!m && ERROR_CLASSES.has(m.base));
     if (!hasErrors || e.items.length > 0) return null;

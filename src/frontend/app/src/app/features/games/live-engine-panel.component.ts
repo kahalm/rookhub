@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -14,14 +15,24 @@ import { LiveEngineSession } from './live-engine-session';
   selector: 'app-live-engine-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
+  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
   template: `
     @let s = session();
     <section class="live">
       <div class="head">
         <mat-icon class="engine-icon">memory</mat-icon>
-        <span class="engine">{{ s.engineName() ?? ('games.live.browser' | translate) }}</span>
+        @if (s.fallback()) {
+          <!-- Die gewaehlte Engine antwortet nicht: ehrlich sagen, wer gerade rechnet. -->
+          <span class="engine">{{ 'games.live.browser' | translate }}</span>
+          <span class="fallback">{{ 'games.live.unreachable' | translate: { name: s.engineName() } }}</span>
+        } @else {
+          <span class="engine">{{ s.engineName() ?? ('games.live.browser' | translate) }}</span>
+        }
         @if (s.depth() > 0) { <span class="depth">{{ 'games.live.depth' | translate: { depth: s.depth() } }}</span> }
+        <!-- Lc0: Knoten daneben — seine Tiefe allein sagt wenig, die Knoten zeigen, wie weit er ist. -->
+        @if (s.isLc0() && s.nodes() > 0) {
+          <span class="nodes">{{ 'games.live.nodes' | translate: { nodes: (s.nodes() | number:'1.0-0') } }}</span>
+        }
         <span class="spacer"></span>
         <button mat-icon-button type="button" class="close" (click)="closed.emit()"
                 [matTooltip]="'common.close' | translate" [attr.aria-label]="'common.close' | translate">
@@ -67,7 +78,8 @@ import { LiveEngineSession } from './live-engine-session';
     .head { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
     .engine-icon { font-size: 18px; width: 18px; height: 18px; color: #42a5f5; }
     .engine { font-weight: 600; }
-    .depth { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
+    .depth, .nodes { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
+    .fallback { color: #e65100; font-size: 0.8rem; }
     .spacer { flex: 1 1 auto; }
     .close { --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .close mat-icon { font-size: 20px; width: 20px; height: 20px; }

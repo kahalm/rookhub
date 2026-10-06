@@ -2753,7 +2753,10 @@
       "hint": "Zieh auf dem Brett, um eigene Ideen durchzurechnen.",
       "undo": "Zug zurück",
       "backToGame": "Zurück zur Partie",
-      "redo": "Zug vor"
+      "redo": "Zug vor",
+      "engineMenu": "Live-Engine",
+      "nodes": "{{nodes}} Knoten",
+      "unreachable": "{{name}} antwortet nicht — gerechnet wird im Browser"
     },
     "col": {
       "players": "Spieler",

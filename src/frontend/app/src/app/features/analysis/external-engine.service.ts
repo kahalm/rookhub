@@ -25,6 +25,13 @@ export function engineSourceOf(e: Pick<ExternalEngineInfo, 'id' | 'source'>): Ex
 
 /** Direkt angemeldete Engine, deren Provider gerade nicht abfragt (Rechner aus). Bei Lichess wissen wir
  *  es nicht — dort nie „offline". */
+/** Rechnet hier Lc0 (Leela)? Erkannt am Namen, wie im Dialog „Mit lc0 …" — eine eigene Kennzeichnung der Engine-Art
+ *  gibt das Protokoll nicht her. Lc0 sucht anders als Stockfish (Monte-Carlo-Baum): seine „Tiefe" ist ein Mittelwert
+ *  über den Baum und allein wenig aussagekräftig, das eigentliche Maß sind die Knoten. */
+export function isLc0Engine(name: string | null | undefined): boolean {
+  return !!name && /lc0|leela/i.test(name);
+}
+
 export function isEngineOffline(e: Pick<ExternalEngineInfo, 'id' | 'source' | 'online'>): boolean {
   return engineSourceOf(e) === 'rookhub' && e.online === false;
 }

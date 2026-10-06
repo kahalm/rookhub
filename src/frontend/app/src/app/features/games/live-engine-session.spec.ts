@@ -13,6 +13,7 @@ function fakeEngine() {
     setMultiPv(n: number) { this.multiPv = n; },
     setDepth(d: number) { this.depth = d; },
     setRemoteEngine(info: unknown) { this.remote = info; },
+    remoteFallback$: new BehaviorSubject<boolean>(false),
     stop() { this.stopped++; },
     destroy() { this.destroyed++; },
   };
@@ -122,5 +123,40 @@ describe('LiveEngineSession', () => {
     session.play({ from: 'c7', to: 'c5', san: 'c5', fen: 'nach c5' }, start);
     expect(session.variationSan()).toBe('1. e4 c5');
     expect(session.canRedo()).toBeFalse();
+  });
+
+  // 0.681.0: Knoten fuer Lc0, Wechsel zurueck zum Browser, und ein ehrlicher Rueckfall.
+  it('Lc0: Knoten werden uebernommen und nur fuer Lc0 als solches erkannt', () => {
+    const { session, state$ } = setup();
+    session.sync(-1, start);
+    session.useRemote({ id: 'rhe_lc0', name: 'RookHub Spark Lc0', maxThreads: 2, maxHash: 1 }, () => null as never);
+    expect(session.isLc0()).toBeTrue();
+    expect(session.engineId()).toBe('rhe_lc0');
+    state$.next({ fen: start, depth: 12, lines: [], running: true, nodes: 48213, nps: 0 });
+    expect(session.nodes()).toBe(48213);
+
+    session.useRemote({ id: 'rhe_sf', name: 'RookHub Gross', maxThreads: 16, maxHash: 1 }, () => null as never);
+    expect(session.isLc0()).toBeFalse();
+  });
+
+  it('useBrowser: externe Engine weg, Name und Kennung leer, die Stellung rechnet neu', () => {
+    const { session, engine } = setup();
+    session.sync(-1, start);
+    session.useRemote({ id: 'rhe_lc0', name: 'RookHub Spark Lc0', maxThreads: 2, maxHash: 1 }, () => null as never);
+    const before = engine.analyzed.length;
+    session.useBrowser();
+    expect(engine.remote).toBeNull();
+    expect(session.engineName()).toBeNull();
+    expect(session.engineId()).toBeNull();
+    expect(engine.analyzed.length).toBe(before + 1);
+  });
+
+  it('Rueckfall: antwortet die externe Engine nicht, gilt sie nicht mehr als Lc0', () => {
+    const { session, engine } = setup();
+    session.useRemote({ id: 'rhe_lc0', name: 'RookHub Spark Lc0', maxThreads: 2, maxHash: 1 }, () => null as never);
+    expect(session.fallback()).toBeFalse();
+    (engine.remoteFallback$ as BehaviorSubject<boolean>).next(true);
+    expect(session.fallback()).toBeTrue();
+    expect(session.isLc0()).toBeFalse();
   });
 });

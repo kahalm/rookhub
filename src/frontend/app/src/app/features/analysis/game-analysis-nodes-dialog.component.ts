@@ -1,3 +1,4 @@
+import { isLc0Engine } from './external-engine.service';
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -122,7 +123,7 @@ export class GameAnalysisNodesDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: GameAnalysisNodesDialogData,
   ) {
     // lc0 vorwählen, wenn es so heißt — sonst die erste Engine.
-    this.engineId = (data.engines.find(e => /lc0|leela/i.test(e.name)) ?? data.engines[0])?.id ?? '';
+    this.engineId = (data.engines.find(e => isLc0Engine(e.name)) ?? data.engines[0])?.id ?? '';
     this.lines = JOB_LINE_OPTIONS.includes(data.lines) ? data.lines : 3;
   }
 

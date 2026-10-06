@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.681.0", date: "2026-10-06", changes: [
+    { en: "The live engine on a game page can now be chosen in the ⋮ menu — browser or any of your external engines, the same choice as on the analysis board. With Lc0 the bar shows the nodes next to the depth, because Lc0\u2019s depth barely moves while the nodes show how far it has searched. If the chosen engine does not answer, the bar now says so and names the browser as the one computing — before, the lines of the browser fallback ran under the external engine\u2019s name. And the precomputed Stockfish lines of the move stay visible next to the live engine, as long as the board shows the game.", de: "Die Live-Engine einer Partieseite laesst sich jetzt im ⋮-Menue waehlen — Browser oder eine deiner externen Engines, dieselbe Wahl wie am Analysebrett. Bei Lc0 zeigt die Leiste die Knoten neben der Tiefe, denn seine Tiefe bewegt sich kaum, waehrend die Knoten zeigen, wie weit er schon gesucht hat. Antwortet die gewaehlte Engine nicht, sagt die Leiste das jetzt und nennt den Browser als den, der rechnet — bisher liefen die Linien des Rueckfalls unter dem Namen der externen Engine. Und die vorberechneten Stockfish-Linien des Zugs bleiben neben der Live-Engine sichtbar, solange das Brett die Partie zeigt." },
+  ] },
   { version: "0.680.0", date: "2026-10-06", changes: [
     { en: "LeagueHub forecasts: later rounds are no longer locked. They get a provisional forecast computed with today's knowledge, marked as such, and every data update recomputes it — it becomes more precise once the round before has been played.", de: "LeagueHub-Prognosen: spätere Runden sind nicht mehr gesperrt. Sie bekommen eine vorläufige Prognose mit dem Stand von heute, als solche gekennzeichnet, und jedes Aktualisieren rechnet sie neu — genauer wird sie, sobald die Runde davor gespielt ist." },
   ] },

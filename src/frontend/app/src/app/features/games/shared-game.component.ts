@@ -30,7 +30,7 @@ import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
 import { MistakeJudgeService } from './mistake-judge.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
-import { ExternalEngineService } from '../analysis/external-engine.service';
+import { ExternalEngineInfo, ExternalEngineService, engineTagKey, isEngineOffline } from '../analysis/external-engine.service';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
 import { LiveEngineSession } from './live-engine-session';
 import { LiveEnginePanelComponent } from './live-engine-panel.component';
@@ -138,7 +138,7 @@ const TAP_MAX_MS = 500;
               <!-- ⋮: PGN kopieren/herunterladen für JEDEN Betrachter (das PGN liegt ohnehin im Browser, 0.553.0);
                    für die eigene Partie dazu korrigieren, Roast und — bei einer eingelesenen — das Formular-Foto. -->
               @if (game) {
-                <button mat-icon-button class="game-menu" [matMenuTriggerFor]="gameMenu"
+                <button mat-icon-button class="game-menu" [matMenuTriggerFor]="gameMenu" (menuOpened)="loadLiveEngines()"
                         [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
                   <mat-icon>more_vert</mat-icon>
                 </button>
@@ -146,6 +146,12 @@ const TAP_MAX_MS = 500;
                   <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
                     <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
                   </button>
+                  @if (loggedIn) {
+                    <!-- Live-Engine waehlen (0.681.0): dieselbe Wahl wie am Analysebrett, hier ohne Umweg dorthin. -->
+                    <button mat-menu-item class="live-engine-menu" [matMenuTriggerFor]="engineMenu">
+                      <mat-icon>memory</mat-icon><span>{{ 'games.live.engineMenu' | translate }}</span>
+                    </button>
+                  }
                   <button mat-menu-item (click)="copyPgn()">
                     <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
                   </button>
@@ -178,6 +184,18 @@ const TAP_MAX_MS = 500;
                         <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
                       </button>
                     }
+                  }
+                </mat-menu>
+                <mat-menu #engineMenu="matMenu">
+                  <button mat-menu-item class="engine-choice" (click)="chooseLiveEngine(null)">
+                    <mat-icon>{{ currentEngineId() === null ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                    <span>{{ 'games.live.browser' | translate }}</span>
+                  </button>
+                  @for (e of liveEngines(); track e.id) {
+                    <button mat-menu-item class="engine-choice" [disabled]="engineOffline(e)" (click)="chooseLiveEngine(e)">
+                      <mat-icon>{{ currentEngineId() === e.id ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                      <span>{{ e.name }}@if (engineTag(e); as t) { · {{ t | translate }} }</span>
+                    </button>
                   }
                 </mat-menu>
               }
@@ -266,7 +284,7 @@ const TAP_MAX_MS = 500;
               }
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [withExplanations]="!club" [fens]="g.fens" [moves]="g.moves"
-                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training() || !!live()"
+                                 [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()" [liveEngine]="!!live()" [offGame]="!!live()?.variation()?.length"
                                  (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)"
@@ -553,6 +571,48 @@ export class SharedGameComponent implements OnInit, DoCheck {
   stopLive(): void {
     this.live()?.destroy();
     this.live.set(null);
+  }
+
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
+
+  /** Externe Engines fuer die Live-Wahl im ⋮ (0.681.0) — ohne die Hintergrund-Engines, die gehoeren den Auftraegen
+   *  (dieselbe Regel wie beim Uebernehmen der gemerkten Wahl). */
+  readonly liveEngines = signal<ExternalEngineInfo[]>([]);
+
+  loadLiveEngines(): void {
+    if (!this.auth.isLoggedIn) return;
+    this.externalEngines.listEngines().subscribe({
+      next: r => {
+        const background = r.backgroundEngineIds ?? [];
+        this.liveEngines.set(r.engines.filter(e => !background.includes(e.id)));
+      },
+      error: () => this.liveEngines.set([]),
+    });
+  }
+
+  /** Die gerade gewaehlte Live-Engine: die der laufenden Sitzung, sonst die gemerkte Wahl; `null` = Browser. */
+  currentEngineId(): string | null {
+    const session = this.live();
+    if (session) return session.engineId();
+    try {
+      const stored = localStorage.getItem(ANALYSIS_PROVIDER_KEY);
+      return stored && stored !== 'wasm' ? stored : null;
+    } catch { return null; }
+  }
+
+  engineOffline(e: ExternalEngineInfo): boolean { return isEngineOffline(e); }
+  engineTag(e: ExternalEngineInfo): string | null { return engineTagKey(e); }
+
+  /**
+   * Live-Engine waehlen (⋮ → Live-Engine). Gemerkt wird sie unter DEMSELBEN Schluessel wie am Analysebrett, die Wahl
+   * gilt also auf beiden Seiten. Laeuft die Live-Engine schon, wechselt sie sofort; sonst startet sie mit der Wahl.
+   */
+  chooseLiveEngine(e: ExternalEngineInfo | null): void {
+    try { localStorage.setItem(ANALYSIS_PROVIDER_KEY, e?.id ?? 'wasm'); } catch { /* kein Speicher: gilt nur jetzt */ }
+    const session = this.live();
+    if (!session) { this.toggleLive(); return; }
+    if (e) session.useRemote(e, (id, work) => this.externalEngines.analyse(id, work));
+    else session.useBrowser();
   }
 
   /**

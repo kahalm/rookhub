@@ -3070,7 +3070,10 @@
       "hint": "Lépj a táblán, és próbáld ki a saját ötleteidet.",
       "undo": "Lépés vissza",
       "backToGame": "Vissza a játszmához",
-      "redo": "Előre"
+      "redo": "Előre",
+      "engineMenu": "Élő motor",
+      "nodes": "{{nodes}} csomópont",
+      "unreachable": "{{name}} nem válaszol — a böngésző számol"
     },
     "col": {
       "players": "Játékosok",

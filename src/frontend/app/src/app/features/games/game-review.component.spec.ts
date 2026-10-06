@@ -187,6 +187,31 @@ describe('GameReviewComponent', () => {
       expect(el.querySelector('button.lines-toggle')).toBeNull();
       expect(arrows[arrows.length - 1]).toEqual([]);
     });
+
+    // Gewünscht 2026-10-06: „die vorberechneten stockfishlines … wenn die für den aktuellen zug existieren einblenden".
+    it('neben der Live-Engine: Linien des Partiezugs bleiben, Pfeil und Pfeil-Schalter nicht; in einer Nebenvariante keine Linien', () => {
+      localStorage.setItem(GameReviewComponent.LinesKey, '1');
+      localStorage.setItem(GameReviewComponent.ArrowKey, '1');
+      const { fixture, http, el } = setup();
+      const arrows: unknown[] = [];
+      fixture.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
+      flushEvals(http, withCandidates());
+      fixture.componentRef.setInput('liveEngine', true);
+      fixture.detectChanges();
+
+      expect(Array.from(el.querySelectorAll('.lines .line-san')).map(e => e.textContent!.trim())).toEqual(['1. e4 e5', '1. d4']);
+      expect(el.querySelector('button.lines-toggle')).not.toBeNull();
+      expect(el.querySelector('button.arrow-toggle')).toBeNull();     // das Brett trägt den Pfeil der Live-Engine
+      expect(arrows[arrows.length - 1]).toEqual([]);
+
+      fixture.componentRef.setInput('offGame', true);                 // eigener Zug auf dem Brett
+      fixture.detectChanges();
+      expect(el.querySelector('.lines')).toBeNull();
+
+      fixture.componentRef.setInput('offGame', false);                // zurück zur Partie
+      fixture.detectChanges();
+      expect(el.querySelector('.lines')).not.toBeNull();
+    });
   });
 
   // Gewünscht 2026-09-27 (chess.com-Screenshot): die Klasse des aktuellen Zugs sitzt als Symbol an der Figur.
@@ -204,7 +229,12 @@ describe('GameReviewComponent', () => {
     expect(b.square).toBe('c5');
     expect(b.svg).toContain('#ca3431');                          // c5 verliert fast drei Bauern: grober Fehler
 
-    fixture.componentRef.setInput('engineHidden', true);         // Training / Live-Engine: das Brett zeigt anderes
+    fixture.componentRef.setInput('engineHidden', true);         // Training: das Brett zeigt anderes
+    fixture.detectChanges();
+    expect(badges[badges.length - 1]).toBeNull();
+
+    fixture.componentRef.setInput('engineHidden', false);
+    fixture.componentRef.setInput('liveEngine', true);           // Live-Engine: ebenso kein Symbol
     fixture.detectChanges();
     expect(badges[badges.length - 1]).toBeNull();
   });

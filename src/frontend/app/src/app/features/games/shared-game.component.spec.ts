@@ -204,6 +204,7 @@ describe('SharedGameComponent', () => {
     const engine = {
       analysis$: new BehaviorSubject<AnalysisState>({ fen: '', depth: 0, lines: [], running: false, nodes: 0, nps: 0 }),
       analyze: () => Promise.resolve(), setMultiPv: () => {}, setDepth: () => {}, stop: () => {}, destroy: () => {},
+      setRemoteEngine: () => {},   // Engine-Wahl im ⋮ (0.681.0) wechselt zwischen externer Engine und Browser
     };
     return new LiveEngineSession(() => engine as unknown as AnalysisEngineService);
   }
@@ -362,6 +363,54 @@ describe('SharedGameComponent', () => {
       expect(page.live()).toBeNull();
       expect(useRemote).toHaveBeenCalledTimes(1);
       expect(useRemote.calls.mostRecent().args[0].id).toBe('cloud-1');
+    } finally {
+      try { if (stored === null) localStorage.removeItem(ANALYSIS_PROVIDER_KEY); else localStorage.setItem(ANALYSIS_PROVIDER_KEY, stored); } catch { /* */ }
+    }
+  });
+
+  // 0.681.0: Live-Engine im ⋮ wählen — gewünscht 2026-10-06, „die möglichkeit die engine zu wählen auch in dem modus".
+  it('⋮ live engine: lists the engines without background ones, switches a running session and remembers the choice', async () => {
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(ANALYSIS_PROVIDER_KEY); localStorage.removeItem(ANALYSIS_PROVIDER_KEY); } catch { /* */ }
+    try {
+      const { fixture, http } = await setup(true);
+      fixture.detectChanges();
+      http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+      fixture.detectChanges();
+      const page = fixture.componentInstance;
+      spyOn(page as never, 'createLiveSession' as never).and.callFake(fakeLive as never);
+
+      page.loadLiveEngines();
+      http.expectOne('/api/engine/external').flush({
+        hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['rhe_bg'],
+        engines: [
+          { id: 'rhe_lc0', name: 'RookHub Spark Lc0', maxThreads: 2, maxHash: 1, source: 'rookhub', online: true },
+          { id: 'rhe_bg', name: 'PC Hintergrund', maxThreads: 4, maxHash: 1, source: 'rookhub', online: true },
+          { id: 'rhe_off', name: 'Server', maxThreads: 8, maxHash: 1, source: 'rookhub', online: false },
+        ],
+      });
+      expect(page.liveEngines().map(e => e.id)).toEqual(['rhe_lc0', 'rhe_off']);   // Hintergrund-Engine fehlt
+      expect(page.engineOffline(page.liveEngines()[1])).toBeTrue();
+      expect(page.currentEngineId()).toBeNull();                                     // nichts gemerkt = Browser
+
+      // Ohne laufende Live-Engine: die Wahl startet sie.
+      page.chooseLiveEngine(page.liveEngines()[0]);
+      expect(localStorage.getItem(ANALYSIS_PROVIDER_KEY)).toBe('rhe_lc0');
+      expect(page.live()).not.toBeNull();
+      http.expectOne('/api/engine/external').flush({        // die neue Sitzung übernimmt die gemerkte Wahl
+        hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['rhe_bg'],
+        engines: [{ id: 'rhe_lc0', name: 'RookHub Spark Lc0', maxThreads: 2, maxHash: 1 }],
+      });
+      expect(page.currentEngineId()).toBe('rhe_lc0');
+
+      // Läuft sie schon: zurück zum Browser wechselt sofort, ohne Neustart der Seite.
+      const session = page.live()!;
+      const useBrowser = spyOn(session, 'useBrowser').and.callThrough();
+      page.chooseLiveEngine(null);
+      expect(useBrowser).toHaveBeenCalled();
+      expect(page.live()).toBe(session);
+      expect(localStorage.getItem(ANALYSIS_PROVIDER_KEY)).toBe('wasm');
+      expect(page.currentEngineId()).toBeNull();
     } finally {
       try { if (stored === null) localStorage.removeItem(ANALYSIS_PROVIDER_KEY); else localStorage.setItem(ANALYSIS_PROVIDER_KEY, stored); } catch { /* */ }
     }
