@@ -8,6 +8,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.693.4',
+    date: '2026-10-06',
+    changes: [
+      { en: "LeagueHub 'Correct' on a club game from a score sheet now looks like the first review again: taking over a sheet stores the per-move state (which sheet entry each move belongs to, readings), and for games saved before, the stored reading is laid onto the corrected moves (common moves keep their state, a corrected move keeps its entry). Before, any change made while taking over dropped the link completely — no crop, no box in the photo, no readings.", de: "LeagueHub „Korrigieren“ einer Vereinspartie aus einem Formular sieht wieder aus wie beim ersten Prüfen: Beim Übernehmen wird der Stand je Zug mitgespeichert (welcher Formular-Eintrag zu welchem Zug gehört, Lesarten), und bei schon gespeicherten Partien wird die gespeicherte Lesung auf die korrigierten Züge gelegt (gleiche Züge behalten ihren Stand, ein korrigierter Zug seinen Eintrag). Vorher ging bei jeder Änderung beim Übernehmen die Zuordnung ganz verloren — kein Ausschnitt, kein Kasten im Foto, keine Lesarten." },
+    ],
+  },
   { version: "0.693.3", date: "2026-10-06", changes: [
     { en: "Repertoires: the \"Update\" banner no longer keeps offering Chessable repertoires it cannot update – the same fix as for courses in 0.674.1. Repertoires whose lines are not in the shared line cache (or whose Chessable course cannot be determined) were skipped by every update, so the banner stayed after updating. When an update cannot take over anything from the cache, the repertoire is now marked: it leaves the banner and shows the (!) \"needs a re-import via RepCheck\" in the list. A new import lifts the mark, and later updates still try the cache.", de: "Repertoires: das „Aktualisieren“-Banner bietet keine Chessable-Repertoires mehr an, die es gar nicht aktualisieren kann – dieselbe Korrektur wie bei Kursen in 0.674.1. Repertoires, deren Linien nicht im gemeinsamen Linien-Cache liegen (oder deren Chessable-Kurs sich nicht bestimmen lässt), übersprang jedes Aktualisieren, und das Banner stand danach weiter da. Kann ein Aktualisieren nichts aus dem Cache übernehmen, wird das Repertoire jetzt markiert: es verschwindet aus dem Banner und zeigt in der Liste das (!) „braucht einen neuen Import über RepCheck“. Ein neuer Import hebt die Markierung auf, und spätere Läufe versuchen den Cache trotzdem weiter." },
   ] },

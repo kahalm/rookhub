@@ -1,7 +1,8 @@
 import {
-  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, START_FEN, commentsForSave, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
+  EditPly, alignSheetPlies, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, START_FEN, commentsForSave, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
   resolveRequest, revalidate, startFenOf, stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
+import { ScoresheetPly } from './scoresheet.service';
 
 function ply(san: string, w: number | null = null, extra: Partial<EditPly> = {}): EditPly {
   return { san, uci: '', w, written: '', match: 'written', uncertain: false, confirmed: false, options: null,
@@ -164,5 +165,28 @@ describe('game-edit.util', () => {
     expect(nextUncertainFrom(list, 2)).toBe(4);
     expect(nextUncertainFrom(list, 5)).toBe(1);        // über das Ende hinweg
     expect(nextUncertainFrom([ply('e4'), ply('e5')], 0)).toBeNull();
+  });
+});
+
+describe('alignSheetPlies (Formular-Stand auf korrigierte Züge legen, 0.693.4)', () => {
+  const p = (w: number | null, written: string, uci: string, uncertain = false): ScoresheetPly =>
+    ({ w, written, san: written, uci, match: 'written', uncertain, confirmed: false, options: null, check: null });
+
+  it('gleiche Züge behalten ihren Stand, ein ersetzter Zug den Eintrag an seiner Stelle', () => {
+    const sheet = [p(0, 'Sf3', 'g1f3'), p(1, 'e6', 'e7e6', true), p(2, 'g3', 'g2g3'), p(3, 'Le7', 'f8e7')];
+    const game = [p(null, 'Nf3', 'g1f3'), p(null, 'g6', 'g7g6'), p(null, 'g3', 'g2g3'), p(null, 'Bg7', 'f8g7')];
+    const out = alignSheetPlies(sheet, game);
+    expect(out.map(x => x.w)).toEqual([0, 1, 2, 3]);
+    expect(out.map(x => x.uci)).toEqual(['g1f3', 'g7g6', 'g2g3', 'f8g7']);
+    expect(out[1]).toEqual(jasmine.objectContaining({ written: 'e6', match: 'user', confirmed: true, uncertain: false }));
+    expect(out[0].san).toBe('Nf3');
+  });
+
+  it('eingefügte Züge stehen ohne Eintrag da, gestrichene fallen weg', () => {
+    const sheet = [p(0, 'e4', 'e2e4'), p(1, 'x', 'a7a6'), p(2, 'Sf3', 'g1f3')];
+    const game = [p(null, 'e4', 'e2e4'), p(null, 'e5', 'e7e5'), p(null, 'Nf3', 'g1f3'), p(null, 'Nc6', 'b8c6')];
+    expect(alignSheetPlies(sheet, game).map(x => x.w)).toEqual([0, 1, 2, null]);
+    expect(alignSheetPlies([p(0, 'e4', 'e2e4'), p(1, 'd5', 'd7d5'), p(2, 'Sf3', 'g1f3')], [p(null, 'e4', 'e2e4'), p(null, 'Nf3', 'g1f3')])
+      .map(x => x.w)).toEqual([0, 2]);
   });
 });

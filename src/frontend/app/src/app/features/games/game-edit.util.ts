@@ -275,3 +275,40 @@ export function nextUncertainFrom(plies: readonly EditPly[], from: number): numb
   }
   return null;
 }
+
+/**
+ * Den gespeicherten Formular-Stand einer Partie auf ihre (inzwischen korrigierten) Züge legen (0.693.4, gemeldet an
+ * LeagueHub-Partie 167): passen die Züge nicht mehr zum Stand, ging sonst die Zuordnung Zug ↔ Formular-Eintrag ganz verloren
+ * — kein Ausschnitt, keine Markierung im Foto, keine Lesarten. Zugeordnet wird über die längste gemeinsame Zugfolge (UCI);
+ * ein gleicher Zug behält seinen ganzen Stand, ein Zug in einer Lücke gleicher Länge bekommt den Eintrag an seiner Stelle
+ * (vom Nutzer korrigiert, also bestätigt), übrige Züge stehen ohne Eintrag da (eingefügt).
+ */
+export function alignSheetPlies(sheet: readonly ScoresheetPly[], game: readonly ScoresheetPly[]): ScoresheetPly[] {
+  const n = sheet.length, m = game.length;
+  const key = (p: ScoresheetPly) => p.uci;
+  const L: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      L[i][j] = key(sheet[i]) === key(game[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out: ScoresheetPly[] = [];
+  let i = 0, j = 0;
+  const gapS: ScoresheetPly[] = [], gapG: ScoresheetPly[] = [];
+  const flush = () => {
+    gapG.forEach((g, k) => {
+      const s = gapS[k];
+      out.push(s ? { ...g, w: s.w ?? null, written: s.written, match: 'user', uncertain: false, confirmed: true, options: s.options ?? null }
+        : { ...g, w: null });
+    });
+    gapS.length = 0; gapG.length = 0;
+  };
+  while (i < n || j < m) {
+    if (i < n && j < m && key(sheet[i]) === key(game[j])) {
+      flush();
+      out.push({ ...sheet[i], san: game[j].san, uci: game[j].uci });
+      i++; j++;
+    } else if (j < m && (i >= n || L[i][j + 1] >= L[i + 1][j])) gapG.push(game[j++]);
+    else gapS.push(sheet[i++]);
+  }
+  flush();
+  return out;
+}

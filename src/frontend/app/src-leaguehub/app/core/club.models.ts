@@ -193,6 +193,8 @@ export interface ClubGameRequest {
   leagueGameId?: number | null;
   /** Der Tag (JJJJ.MM.TT), wenn bekannt — nur für die Erkennung der Paarung. */
   date?: string | null;
+  /** Stand je Zug beim Übernehmen eines Formulars (0.693.4) — fürs Archiv. */
+  plies?: ScoresheetPly[];
 }
 
 /** `POST …/club/pairings` — Vorschläge für eine noch nicht gespeicherte Partie (Formular). */

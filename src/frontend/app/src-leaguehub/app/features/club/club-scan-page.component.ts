@@ -13,7 +13,7 @@ import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubGameDetail, ClubPairing, ClubSheetState, LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
-import { pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
+import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
@@ -641,7 +641,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (sheet && matches) {
       this.s.loadSheet(sheet);
     } else {
-      this.s.loadSheet({ plies: toServer(fromPgn), boxes: sheet?.boxes ?? [], written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
+      this.s.loadSheet({ plies: sheet ? alignSheetPlies(sheet.plies, toServer(fromPgn)) : toServer(fromPgn), boxes: sheet?.boxes ?? [],
+        written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
     }
     this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
     if (sheet) await this.loadPhotos(sheet.pageCount ?? 1, page => this.api.clubSheetPhoto(id, page), () => !this.destroyed);
@@ -823,6 +824,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         // Vorschläge geholt: die Wahl gilt (0 = keine); sonst entscheidet der Server über den eindeutigen Treffer.
         leagueGameId: this.pairingsLoaded ? this.pairingId() ?? 0 : null,
         date: this.sheetDate,
+        // Der Stand je Zug (Zuordnung zum Formular, Lesarten) geht ins Archiv — „Korrigieren" zeigt ihn wie beim ersten Mal.
+        plies: toServer(legal),
       }, this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
       this.replacedOld.set(added?.replaced ?? 0);

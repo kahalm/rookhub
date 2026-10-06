@@ -104,6 +104,10 @@ public class LeagueClubGameRequest
     public string? Date { get; set; }
     /// <summary>Die Liga-Einlesung, aus der die Partie stammt — wird nach dem Übernehmen geschlossen (Foto weg).</summary>
     public int? ScanId { get; set; }
+    /// <summary>Stand je Zug beim Übernehmen eines Formulars (0.693.4): Zuordnung zum Formular-Eintrag, Lesarten — geht ins
+    /// Archiv, damit „Korrigieren" ihn wie beim ersten Prüfen zeigt (vorher stand dort die erste Lesung, und nach einer
+    /// Korrektur beim Übernehmen fehlte jede Zuordnung).</summary>
+    public List<RookHub.Api.Services.ScoresheetPly>? Plies { get; set; }
 }
 
 public class LeagueClubPreviewSideDto
