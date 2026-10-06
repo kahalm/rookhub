@@ -2839,10 +2839,7 @@
       "notOnSheet": "not on the sheet",
       "ownerSide": "My side",
       "sideNone": "not set",
-      "classifier1": "Classifier 1 (site or league)",
-      "classifier1Hint": "Online: site · league games: e.g. “Landesliga”",
-      "classifier2": "Classifier 2 (mode or season)",
-      "classifier2Hint": "Online: mode · league games: e.g. “2026/27”",
+      "classifierHint": "Online: site + mode are filled in automatically · league games: e.g. “Landesliga” + “2026/27”",
       "clubLinked": "This game is a copy from the club database. If you correct moves and uploaded it (or are a manager), the correction also applies there and to all copies — otherwise your copy becomes a version of its own."
     },
     "pgnCopy": "Copy PGN",

@@ -3156,10 +3156,7 @@
       "notOnSheet": "nincs a lapon",
       "ownerSide": "Az én oldalam",
       "sideNone": "nincs megadva",
-      "classifier1": "1. osztályozó (oldal vagy bajnokság)",
-      "classifier1Hint": "Online: oldal · bajnoki partik: pl. „Landesliga”",
-      "classifier2": "2. osztályozó (mód vagy szezon)",
-      "classifier2Hint": "Online: mód · bajnoki partik: pl. „2026/27”",
+      "classifierHint": "Online: az oldal és a mód automatikusan kitöltődik · bajnoki partik: pl. „Landesliga” + „2026/27”",
       "clubLinked": "Ez a játszma másolat a klub adatbázisából. Ha lépéseket javítasz és te töltötted fel (vagy kezelő vagy), a javítás ott és minden másolatban is érvényes — különben a másolatod önálló változat lesz."
     },
     "pgnCopy": "PGN másolása",

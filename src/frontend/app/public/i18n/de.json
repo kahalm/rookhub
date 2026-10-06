@@ -2839,10 +2839,7 @@
       "notOnSheet": "steht nicht auf dem Formular",
       "ownerSide": "Meine Seite",
       "sideNone": "nicht festgelegt",
-      "classifier1": "Klassifizierer 1 (Seite oder Liga)",
-      "classifier1Hint": "Online: Seite · Ligaspiele: z. B. „Landesliga“",
-      "classifier2": "Klassifizierer 2 (Modus oder Jahrgang)",
-      "classifier2Hint": "Online: Modus · Ligaspiele: z. B. „2026/27“",
+      "classifierHint": "Online: Seite + Modus werden automatisch gesetzt · Ligapartien: z. B. „Landesliga“ + „2026/27“",
       "clubLinked": "Diese Partie ist eine Kopie aus der Vereins-Datenbank. Korrigierst du Züge und hast sie hochgeladen (oder bist Verwalter), gilt das auch dort und in allen Kopien — sonst wird deine Kopie zu einer eigenen Fassung."
     },
     "pgnCopy": "PGN kopieren",

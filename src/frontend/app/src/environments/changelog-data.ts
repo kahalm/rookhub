@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.675.1", date: "2026-10-06", changes: [
+    { en: "Game editor: “Site / league”, “Mode / season” and the tags now have a row of their own below the game details, with one short note underneath. Before, the cut-off labels and three-line hints stretched every field of the top row.", de: "Partie-Editor: „Seite / Liga“, „Modus / Jahrgang“ und die Tags stehen jetzt in einer eigenen Zeile unter den Partiedaten, mit einem kurzen Hinweis darunter. Vorher zogen die abgeschnittenen Beschriftungen und dreizeiligen Hinweise jedes Feld der oberen Zeile in die Länge." },
+  ] },
   { version: "0.675.0", date: "2026-10-05", changes: [
     { en: "LeagueHub pairings of a played round: a club game now offers the same actions as the club games list — “Replay”, “Analyse” (RookHub’s game page with evaluation curve) and, for the uploader or a manager, “Edit” (names and result) and “Correct” (the moves, as when first checking the scoresheet).", de: "LeagueHub-Paarungen einer gespielten Runde: Eine Vereinspartie bietet jetzt dieselben Aktionen wie die Vereinsliste — „Nachspielen“, „Analyse“ (RookHubs Partieseite mit Bewertungskurve) und für den Hochladenden oder einen Verwalter „Bearbeiten“ (Namen und Ergebnis) und „Korrigieren“ (die Züge, wie beim ersten Prüfen des Formulars)." },
   ] },

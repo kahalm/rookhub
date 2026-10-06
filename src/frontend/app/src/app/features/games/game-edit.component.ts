@@ -102,28 +102,29 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
               <mat-option value="white">{{ 'scoresheet.sideWhite' | translate }}</mat-option>
               <mat-option value="black">{{ 'scoresheet.sideBlack' | translate }}</mat-option>
             </mat-select></mat-form-field>
-          <!-- Klassifizierer der Partienliste (0.661.0): Seite/Liga und Modus/Jahrgang. Bei Online-Partien steht der
-               abgeleitete Wert als Platzhalter da; leer lassen = er gilt weiter. Vorschläge aus den eigenen Partien. -->
-          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.classifier1' | translate }}</mat-label>
-            <input matInput [(ngModel)]="header.classifier1" name="classifier1" maxlength="80" list="cls1-options"
-                   [placeholder]="derived1()" (ngModelChange)="dirty.set(true)" />
-            <mat-hint>{{ 'games.edit.classifier1Hint' | translate }}</mat-hint></mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.classifier2' | translate }}</mat-label>
-            <input matInput [(ngModel)]="header.classifier2" name="classifier2" maxlength="80" list="cls2-options"
-                   [placeholder]="derived2()" (ngModelChange)="dirty.set(true)" />
-            <mat-hint>{{ 'games.edit.classifier2Hint' | translate }}</mat-hint></mat-form-field>
-          <!-- Eigene Tags (0.662.0): Freitext, Enter oder Komma fügt hinzu; die Vorschläge sind die schon vergebenen. -->
-          <div class="tags-field">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.tags.label' | translate }}</mat-label>
+          <!-- Eigene Zeile (0.673.x, Screenshot 06.10.): Klassifizierer + Tags. In der Kopfzeile mit den Pflichtfeldern wurden die
+               Beschriftungen abgeschnitten und die Hinweise zogen jedes Feld der Zeile auf drei Zeilen Höhe. Bei Online-Partien steht
+               der abgeleitete Wert als Platzhalter da; leer lassen = er gilt weiter. Vorschläge aus den eigenen Partien. -->
+          <div class="class-row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.classifier.first' | translate }}</mat-label>
+              <input matInput [(ngModel)]="header.classifier1" name="classifier1" maxlength="80" list="cls1-options"
+                     [placeholder]="derived1()" (ngModelChange)="dirty.set(true)" /></mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.classifier.second' | translate }}</mat-label>
+              <input matInput [(ngModel)]="header.classifier2" name="classifier2" maxlength="80" list="cls2-options"
+                     [placeholder]="derived2()" (ngModelChange)="dirty.set(true)" /></mat-form-field>
+            <!-- Eigene Tags (0.662.0): Freitext, Enter oder Komma fügt hinzu; die Vorschläge sind die schon vergebenen. -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tags-input"><mat-label>{{ 'games.tags.label' | translate }}</mat-label>
               <input matInput [(ngModel)]="tagInput" name="tagInput" [maxlength]="maxTagLength" list="tag-options"
                      [disabled]="tags().length >= maxTags" (keydown.enter)="$event.preventDefault(); commitTag()"
-                     (input)="onTagInput()" (change)="commitTag()" />
-              <mat-hint>{{ 'games.tags.hint' | translate: { max: maxTags } }}</mat-hint></mat-form-field>
-            <span class="tag-chips">
-              @for (t of tags(); track t) {
-                <span class="tag-chip">#{{ t }}<button type="button" (click)="removeTag(t)" [attr.aria-label]="'games.tags.remove' | translate: { tag: t }">×</button></span>
-              }
-            </span>
+                     (input)="onTagInput()" (change)="commitTag()" /></mat-form-field>
+            @if (tags().length) {
+              <span class="tag-chips">
+                @for (t of tags(); track t) {
+                  <span class="tag-chip">#{{ t }}<button type="button" (click)="removeTag(t)" [attr.aria-label]="'games.tags.remove' | translate: { tag: t }">×</button></span>
+                }
+              </span>
+            }
+            <p class="class-hint">{{ 'games.edit.classifierHint' | translate }} · {{ 'games.tags.hint' | translate: { max: maxTags } }}</p>
           </div>
           <datalist id="tag-options">@for (v of tagSuggestions(); track v) { <option [value]="v"></option> }</datalist>
           <datalist id="cls1-options">@for (v of options1(); track v) { <option [value]="v"></option> }</datalist>
@@ -301,7 +302,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .head h1 { margin: 0; font-size: 1.4rem; }
     .spacer { flex: 1; }
     /* Kopfdaten: kompakt, am PC in EINER Zeile (vorher zwei, die den Arbeitsbereich unter den Rand schoben). */
-    .headers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; padding: 10px 12px;
+    .headers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; padding: 10px 12px; align-items: start;
       margin-bottom: 12px; --mat-form-field-container-height: 44px; --mat-form-field-container-vertical-padding: 10px; }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
     .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }
@@ -309,7 +310,12 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     @media (max-width: 1100px) { .layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .photo { grid-column: 1 / -1; } }
     @media (max-width: 720px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
     .photo { padding: 8px; }
-    .tags-field { display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1; }
+    /* Zweite Zeile: Seite/Liga, Modus/Jahrgang, Tags — ein gemeinsamer Hinweis darunter statt drei umbrechender. */
+    .class-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) minmax(180px, 1fr);
+      gap: 8px 12px; align-items: center; }
+    .class-row .tag-chips { grid-column: 1 / -1; }
+    .class-hint { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    @media (max-width: 720px) { .class-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .class-row .tags-input { grid-column: 1 / -1; } }
     .tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 14px; font-size: 0.85rem;
       background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
