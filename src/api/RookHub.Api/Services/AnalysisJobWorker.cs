@@ -519,7 +519,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         currentNodes = AnalysisJobStream.NodesOf(line) ?? currentNodes;
                         if (AnalysisJobStream.HasBestMove(line)) engineFinished = true;
                         if (recorder is not null) ObserveStep(recorder, line, job.Fen);
-                        _live.Update(job.Id, currentDepth, currentNps);
+                        _live.Update(job.Id, currentDepth, currentNps, nodes: currentNodes);
                         var keep = AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth);
                         if (keep) { pendingLine = line; pendingDepth = depth; }
                         var now = DateTime.UtcNow;

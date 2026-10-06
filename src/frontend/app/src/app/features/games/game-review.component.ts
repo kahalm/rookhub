@@ -25,6 +25,7 @@ import {
 import { uciOf } from './move-tactics.util';
 import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
 import { engineDisagreements, moveNumberLabel, stepDisagreement } from './engine-disagreement.util';
+import { DeepStored } from './deep-analysis.util';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
@@ -387,6 +388,8 @@ export class GameReviewComponent {
   /** Die Klasse des aktuellen Zugs als Symbol am Zielfeld (seit 0.557.0, wie chess.com beim Durchsehen) — die Seite
    *  legt es auf ihr Brett. Leer im Fehler-Training und mit der Live-Engine: dort zeigt das Brett etwas anderes. */
   badgeChange = output<BoardBadge | null>();
+  /** Was die Analysen zur Stellung auf dem Brett hinterlegt haben — Ausgangspunkt der „Tiefen Analyse" (0.686.0). */
+  storedChange = output<DeepStored>();
 
   static readonly PollMs = 10_000;
   /** Während der Vertiefung (zweiter Durchgang, 0.523.0) gemächlicher — die Analyse ist schon nutzbar. */
@@ -423,6 +426,19 @@ export class GameReviewComponent {
     const primary = this.evals();
     const alt = this.altEvals();
     return this.view() === 'alt' && alt ? { ...alt, bookPlies: primary?.bookPlies ?? [] } : primary;
+  });
+  /** Stockfish (eigene Analyse) und Lc0 (zweite) zur Stellung auf dem Brett: Tiefe/Knoten und Linien. */
+  readonly storedHere = computed<DeepStored>(() => {
+    const idx = this.currentIndex();
+    const ply = idx + 1;
+    const toLine = (l: { evalText: string; san: string; whiteBetter: boolean }) => ({ evalText: l.evalText, san: l.san, positive: l.whiteBetter });
+    const sfRow = this.evals()?.plies?.find(p => p.ply === ply);
+    const alt = this.alternative() && isLc0Engine(this.alternative()!.engineName) ? this.altEvals() : null;
+    const lcRow = alt?.plies?.find(p => p.ply === ply);
+    return {
+      sf: sfRow ? { depth: sfRow.depth, lines: computerLinesAt(this.evals(), this.fens(), idx).map(toLine) } : null,
+      lc0: lcRow ? { nodes: lcRow.nodes ?? 0, lines: computerLinesAt(alt, this.fens(), idx).map(toLine) } : null,
+    };
   });
   /** Erreichte Knoten der zweiten Analyse in der Stellung auf dem Brett — nur in „Lc0" und „Beide". */
   readonly altNodes = computed(() => {
@@ -558,6 +574,10 @@ export class GameReviewComponent {
     effect(() => {
       const b = this.badge();
       untracked(() => this.badgeChange.emit(b));
+    });
+    effect(() => {
+      const s = this.storedHere();
+      untracked(() => this.storedChange.emit(s));
     });
     // Jede neue Analyse-Antwort kann Aufgaben bringen — die Seite erfährt es über die Ausgabe.
     effect(() => {

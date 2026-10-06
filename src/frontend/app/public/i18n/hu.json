@@ -2992,6 +2992,22 @@
         "notFound": "A játszma nem található."
       }
     },
+    "deep": {
+      "menu": "Mély elemzés",
+      "title": "Mély elemzés",
+      "depth": "Mélység {{now}} / {{target}}",
+      "nodes": "{{now}} / {{target}} csomópont",
+      "starting": "indul",
+      "none": "nincs motor",
+      "storedDepth": "Tárolt · mélység {{depth}} — az új vonalak mélyebben jelennek meg",
+      "storedNodes": "Tárolt · {{nodes}} csomópont — az új vonalak később jelennek meg",
+      "live": "Élő",
+      "noLines": "Még nincsenek vonalak",
+      "noLc0": "Nincs bejelentkezett Lc0 motor.",
+      "pruned": "Az Lc0 magától megállt {{nodes}} csomópontnál — a lépése biztos.",
+      "keeps": "Tovább fut, ha bezárod az ablakot (elemzési feladatok listája).",
+      "startFailed": "A mély elemzést nem sikerült elindítani."
+    },
     "review": {
       "title": "Játszmaértékelés",
       "engineBoth": "Mindkettő",

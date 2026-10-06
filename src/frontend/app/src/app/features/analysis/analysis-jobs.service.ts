@@ -12,6 +12,8 @@ export interface AnalysisJob {
   title: string | null;
   engineId: string;
   targetDepth: number;
+  /** Knotenziel statt Tiefe (Lc0); fehlt bei Tiefenaufträgen. */
+  targetNodes?: number | null;
   multiPv: number;
   status: AnalysisJobStatus;
   reachedDepth: number;
@@ -42,6 +44,16 @@ export interface AnalysisJobLive {
   depth: number;
   nps: number;
   seconds: number;
+  /** Knoten der zuletzt empfangenen Zeile (0.686.0). */
+  nodes?: number;
+}
+
+/** „Tiefe Analyse" (0.686.0): Stockfish bis Tiefe 40, Lc0 bis 500 000 Knoten. */
+export interface DeepAnalysis {
+  stockfish: AnalysisJob | null;
+  lc0: AnalysisJob | null;
+  stockfishDepth: number;
+  lc0Nodes: number;
 }
 
 export interface CreateAnalysisJobRequest {
@@ -89,6 +101,11 @@ export class AnalysisJobsService {
   /** Nur Tiefe/Tempo/Zeit der gerade rechnenden Aufträge (winzige Antwort, für den Sekundentakt). */
   live(): Observable<AnalysisJobLive[]> {
     return this.http.get<AnalysisJobLive[]>('/api/analysis-jobs/live');
+  }
+
+  /** „Tiefe Analyse" der Stellung starten (nur Vereinsmitglieder) — dieselbe Stellung noch einmal = dieselben Aufträge. */
+  startDeep(fen: string): Observable<DeepAnalysis> {
+    return this.http.post<DeepAnalysis>('/api/deep-analysis', { fen });
   }
 
   create(req: CreateAnalysisJobRequest): Observable<AnalysisJob> {

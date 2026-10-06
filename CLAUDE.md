@@ -3240,6 +3240,18 @@ wiederholte es). `test/supervisor.test.sh` misst den Abstand der echten Starts.
   `PublishAsync` nimmt bei eingeschalteter Zweitprüfung nur `SecondAgrees == true`. Steht die Engine nicht in der Hintergrund-Liste des
   Besitzers, wartet die Zweitprüfung (Warnung im Log). Zähler: `SELECT Status, COUNT(*) FROM TacticCandidates GROUP BY Status`.
 
+### „Tiefe Analyse" einer Stellung (0.686.0) — `DeepAnalysisService`, `POST /api/deep-analysis`
+Wunsch 2026-10-06: Vereinsmitglieder (`league.view`, live; sonst 403) rechnen über das ⋮-Menü der Partieseite die
+Stellung auf dem Brett tiefer: `{ fen }` → `{ stockfish, lc0, stockfishDepth: 40, lc0Nodes: 500000 }` = zwei gewöhnliche
+Aufträge DES NUTZERS (`AnalysisJobService.CreateAsync`, `remember: false`, MultiPv 3): Stockfish auf der Engine aus
+`EngineOwnerResolver` (eigene, sonst Haus-Engine), Lc0 auf der Registrierung namens `ClubSecondEngine:EngineName` (fehlt sie:
+`lc0: null`). Normale Aufträge → verdrängen die Stapelarbeit ihrer Engine. Erkannt am Titel (`DeepAnalysisService.StockfishTitle`
+/`Lc0Title`): dieselbe Stellung = dieselben Aufträge (auch fertige), eine andere löscht die noch offenen der vorigen — eine
+tiefe Analyse je Nutzer. `/api/analysis-jobs/live` trägt dafür `nodes`. Oberfläche: `features/games/deep-analysis-dialog.component.ts`
+(Regeln rein in `deep-analysis.util.ts`): je Engine ein Balken (Tiefe bzw. Knoten), Linien = die HINTERLEGTEN der Partie-Analyse
+(`GameReviewComponent.storedChange`), bis der Auftrag weiter ist (`deepAhead`), dann seine; der Menüpunkt erscheint nur, wo die
+Seite `[deep]` an `app-position-menu` reicht (Partieseite) und das Konto `league.view` hat.
+
 ### Vereinspartien zusätzlich auf Lc0 (0.685.0) — `ClubSecondEngineScheduler`
 Wunsch 2026-10-06: „alle Ligapartien, die neu dazukommen, automatisch mit 100k rechnen, und einmalig alle alten nachrechnen".
 Jede `LeagueClubGame` bekommt eine ZWEITE Analyse: `Origin = Club` MIT `EngineId` (Registrierung namens

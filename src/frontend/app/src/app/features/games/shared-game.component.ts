@@ -25,6 +25,7 @@ import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
+import { DeepStored } from './deep-analysis.util';
 import { MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide } from './mistakes.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
@@ -276,7 +277,7 @@ const TAP_MAX_MS = 500;
                   <mat-icon>memory</mat-icon>
                 </button>
                 <!-- ⋮ für die Stellung auf dem Brett (0.527.0) — auch die einer eigenen Nebenvariante der Live-Engine. -->
-                <app-position-menu class="nav-menu" [fen]="positionFen()" [orientation]="flipped ? 'black' : 'white'" />
+                <app-position-menu class="nav-menu" [fen]="positionFen()" [orientation]="flipped ? 'black' : 'white'" [deep]="deepStored()" />
               </div>
               @if (live(); as l) {
                 <app-live-engine-panel class="live-slot" [session]="l" [gameFen]="service.currentFen" [steps]="false" (closed)="stopLive()" />
@@ -288,7 +289,8 @@ const TAP_MAX_MS = 500;
                                  (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)"
-                                 (mistakesChange)="mistakes.set($event)" />
+                                 (mistakesChange)="mistakes.set($event)"
+                                 (storedChange)="reviewStored.set($event)" />
               }
               <app-position-repertoires class="pr-slot" [fen]="service.currentFen" />
               <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
@@ -574,6 +576,14 @@ export class SharedGameComponent implements OnInit, DoCheck {
   }
 
   get loggedIn(): boolean { return this.auth.isLoggedIn; }
+
+  /** Hinterlegtes der Partie-Analyse zur Stellung auf dem Brett (aus dem Rückblick). */
+  readonly reviewStored = signal<DeepStored>({ sf: null, lc0: null });
+  /** „Tiefe Analyse" im ⋮-Menü (0.686.0): nur angemeldet; in einer eigenen Nebenvariante gibt es nichts Hinterlegtes. */
+  deepStored(): DeepStored | null {
+    if (!this.loggedIn) return null;
+    return this.live()?.variation()?.length ? { sf: null, lc0: null } : this.reviewStored();
+  }
 
   /** Externe Engines fuer die Live-Wahl im ⋮ (0.681.0) — ohne die Hintergrund-Engines, die gehoeren den Auftraegen
    *  (dieselbe Regel wie beim Uebernehmen der gemerkten Wahl). */

@@ -17,6 +17,7 @@ describe('PositionMenuComponent', () => {
   let snackbar: jasmine.SpyObj<SnackbarService>;
   let dialog: jasmine.SpyObj<MatDialog>;
   let loggedIn = true;
+  let perms: string[] = [];
 
   function setup(inputs: Record<string, unknown> = {}): void {
     engines = jasmine.createSpyObj<ExternalEngineService>('ExternalEngineService', ['listEngines']);
@@ -28,7 +29,7 @@ describe('PositionMenuComponent', () => {
       imports: [PositionMenuComponent],
       providers: [
         provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { get isLoggedIn() { return loggedIn; } } },
+        { provide: AuthService, useValue: { get isLoggedIn() { return loggedIn; }, has: (p: string) => perms.includes(p) } },
         { provide: ExternalEngineService, useValue: engines },
         { provide: SnackbarService, useValue: snackbar },
         { provide: MatDialog, useValue: dialog },
@@ -46,7 +47,7 @@ describe('PositionMenuComponent', () => {
   }
   const item = (cls: string) => document.querySelector(`.cdk-overlay-container .${cls}`) as HTMLElement | null;
 
-  beforeEach(() => { loggedIn = true; });
+  beforeEach(() => { loggedIn = true; perms = []; });
   afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach(c => c.innerHTML = ''));
 
   it('der Chessable-Eintrag öffnet Chessables FEN-Suche für die Stellung in einem neuen Tab', () => {
@@ -121,5 +122,34 @@ describe('PositionMenuComponent', () => {
     item('pm-background')!.click();
     const data = dialog.open.calls.mostRecent().args[1]!.data;
     expect(data).toEqual({ fen: FEN, depth: 30, lines: 2, hasBackgroundEngine: true });
+  });
+
+  // „Tiefe Analyse" (0.686.0): nur Vereinsmitglieder, nur wo die Seite das Hinterlegte reicht (Partieseite).
+  describe('Tiefe Analyse', () => {
+    const stored = { sf: { depth: 20, lines: [] }, lc0: null };
+
+    it('ohne hereingereichtes Hinterlegtes (Analysebrett) gibt es den Eintrag nicht', () => {
+      perms = ['league.view'];
+      setup();
+      open();
+      expect(item('pm-deep')).toBeNull();
+    });
+
+    it('ohne league.view gibt es den Eintrag nicht', () => {
+      setup({ deep: stored });
+      open();
+      expect(item('pm-deep')).toBeNull();
+    });
+
+    it('Vereinsmitglieder öffnen das Fenster mit Stellung und Hinterlegtem', async () => {
+      perms = ['league.view'];
+      setup({ deep: stored });
+      open();
+      item('pm-deep')!.click();
+      await fixture.whenStable();
+      await new Promise(r => setTimeout(r));
+      expect(dialog.open).toHaveBeenCalled();
+      expect(dialog.open.calls.mostRecent().args[1]?.data).toEqual({ fen: FEN, stored });
+    });
   });
 });

@@ -35,7 +35,8 @@ public record AnalysisJobDto(
 
 /// <summary>Laufender Stand EINES rechnenden Auftrags (Arbeitsspeicher, sekündlich abfragbar) —
 /// bewusst winzig, weil die Auftragsliste ihn im Sekundentakt holt.</summary>
-public record AnalysisJobLiveDto(int Id, int Depth, int Nps, int Seconds);
+/// <summary><c>Nodes</c> = Knoten der zuletzt empfangenen Zeile (0.686.0, Fortschritt der Knotenaufträge).</summary>
+public record AnalysisJobLiveDto(int Id, int Depth, int Nps, int Seconds, long Nodes = 0);
 
 public class SetBackgroundEngineRequest
 {
@@ -60,3 +61,12 @@ public class CreateAnalysisJobsBatchRequest
 /// zu dieser Stellung, <c>limit</c> = Deckel offener Aufträge erreicht).</summary>
 public record AnalysisJobBatchResult(List<AnalysisJobDto> Created, List<AnalysisJobBatchSkipped> Skipped);
 public record AnalysisJobBatchSkipped(string Fen, string Reason);
+
+/// <summary>„Tiefe Analyse" (0.686.0): die Stellung auf dem Brett.</summary>
+public class DeepAnalysisRequest
+{
+    public string? Fen { get; set; }
+}
+
+/// <summary>Die beiden Aufträge der tiefen Analyse; <c>Lc0</c> fehlt, wenn keine Lc0-Engine angemeldet ist.</summary>
+public record DeepAnalysisDto(AnalysisJobDto? Stockfish, AnalysisJobDto? Lc0, int StockfishDepth, long Lc0Nodes);

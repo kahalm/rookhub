@@ -2675,6 +2675,22 @@
         "notFound": "Game not found."
       }
     },
+    "deep": {
+      "menu": "Deep analysis",
+      "title": "Deep analysis",
+      "depth": "Depth {{now}} / {{target}}",
+      "nodes": "{{now}} / {{target}} nodes",
+      "starting": "starting",
+      "none": "no engine",
+      "storedDepth": "Stored · depth {{depth}} — new lines appear once deeper",
+      "storedNodes": "Stored · {{nodes}} nodes — new lines appear once further",
+      "live": "Live",
+      "noLines": "No lines yet",
+      "noLc0": "No Lc0 engine is connected.",
+      "pruned": "Lc0 stopped by itself at {{nodes}} nodes — its move is settled.",
+      "keeps": "Keeps running when you close this window (list of analysis jobs).",
+      "startFailed": "The deep analysis could not be started."
+    },
     "review": {
       "title": "Game review",
       "engineBoth": "Both",

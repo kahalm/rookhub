@@ -23,6 +23,7 @@ public sealed class AnalysisJobLive
         public required DateTime StartedUtc { get; init; }
         public int Depth;
         public int Nps;
+        public long Nodes;
     }
 
     private readonly ConcurrentDictionary<int, Run> _runs = new();   // key = JobId
@@ -48,10 +49,11 @@ public sealed class AnalysisJobLive
     /// <summary>Tiefe/Tempo der zuletzt empfangenen Zeile. 0 heißt „unbekannt" und lässt den alten Wert stehen
     /// (die ersten Zeilen eines Laufs tragen oft time=0, daraus lässt sich kein Tempo rechnen).
     /// <paramref name="nowUtc"/> nur für Tests — der Worker lässt es weg.</summary>
-    public void Update(int jobId, int depth, int nps, DateTime? nowUtc = null)
+    public void Update(int jobId, int depth, int nps, DateTime? nowUtc = null, long nodes = 0)
     {
         if (!_runs.TryGetValue(jobId, out var r)) return;
         if (depth > 0) r.Depth = depth;
+        if (nodes > 0) r.Nodes = nodes;
         if (nps > 0)
         {
             r.Nps = nps;
@@ -102,7 +104,7 @@ public sealed class AnalysisJobLive
     /// <summary>Laufende Aufträge dieses Nutzers mit ihrem aktuellen Stand.</summary>
     public List<AnalysisJobLiveDto> ForUser(int userId, DateTime nowUtc)
         => _runs.Where(kv => kv.Value.UserId == userId)
-                .Select(kv => new AnalysisJobLiveDto(kv.Key, kv.Value.Depth, kv.Value.Nps, SecondsOf(kv.Value, nowUtc)))
+                .Select(kv => new AnalysisJobLiveDto(kv.Key, kv.Value.Depth, kv.Value.Nps, SecondsOf(kv.Value, nowUtc), kv.Value.Nodes))
                 .OrderBy(d => d.Id)
                 .ToList();
 

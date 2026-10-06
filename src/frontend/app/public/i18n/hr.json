@@ -2675,6 +2675,22 @@
         "notFound": "Partija nije pronađena."
       }
     },
+    "deep": {
+      "menu": "Duboka analiza",
+      "title": "Duboka analiza",
+      "depth": "Dubina {{now}} / {{target}}",
+      "nodes": "{{now}} / {{target}} čvorova",
+      "starting": "pokreće se",
+      "none": "nema motora",
+      "storedDepth": "Spremljeno · dubina {{depth}} — nove linije pojavljuju se kad bude dublje",
+      "storedNodes": "Spremljeno · {{nodes}} čvorova — nove linije pojavljuju se kad bude dalje",
+      "live": "Uživo",
+      "noLines": "Još nema linija",
+      "noLc0": "Lc0 motor nije prijavljen.",
+      "pruned": "Lc0 je sam stao na {{nodes}} čvorova — njegov potez je siguran.",
+      "keeps": "Nastavlja raditi kad zatvoriš prozor (popis analiza).",
+      "startFailed": "Duboku analizu nije bilo moguće pokrenuti."
+    },
     "review": {
       "title": "Pregled partije",
       "engineBoth": "Oba",

@@ -14,6 +14,7 @@ import { MoveCompareCandidate, MoveCompareDialogComponent, MoveCompareDialogData
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY } from './analysis-settings';
 import { ExternalEngineService } from './external-engine.service';
 import { chessableFenSearchUrl, positionShareUrl } from './position-links.util';
+import type { DeepStored } from '../games/deep-analysis.util';
 
 /** Was an externen Engines da ist — entscheidet, ob „Im Hintergrund analysieren" angeboten wird. */
 export interface PositionMenuEngines {
@@ -54,6 +55,12 @@ export interface PositionMenuEngines {
       </button>
       @if (auth.isLoggedIn) {
         <mat-divider />
+        @if (deep() && auth.has('league.view')) {
+          <!-- „Tiefe Analyse" (0.686.0): nur Vereinsmitglieder, nur auf der Partieseite. -->
+          <button mat-menu-item type="button" class="pm-deep" (click)="deepAnalysis()">
+            <mat-icon>biotech</mat-icon> {{ 'games.deep.menu' | translate }}
+          </button>
+        }
         <button mat-menu-item type="button" class="pm-compare" (click)="compareMoves()">
           <mat-icon>compare_arrows</mat-icon> {{ 'moveCompare.menu' | translate }}
         </button>
@@ -87,6 +94,8 @@ export class PositionMenuComponent {
   readonly lines = input<number | undefined>(undefined);
   /** Die ersten Züge der Engine-Linien (vom Analysebrett) — „Züge vergleichen" wählt sie vor. */
   readonly candidates = input<MoveCompareCandidate[]>([]);
+  /** Partieseite (0.686.0): was die Partie-Analyse zur Stellung hinterlegt hat — schaltet „Tiefe Analyse" ein. */
+  readonly deep = input<DeepStored | null>(null);
 
   private readonly loaded = signal<PositionMenuEngines | null>(null);
   private loading = false;
@@ -121,6 +130,14 @@ export class PositionMenuComponent {
       return;
     }
     this.copyLink(url);
+  }
+
+  /** Das Fenster wird erst beim Klick geladen — es braucht niemand, der den Menüpunkt nie benutzt. */
+  async deepAnalysis(): Promise<void> {
+    const stored = this.deep();
+    if (!stored) return;
+    const { DeepAnalysisDialogComponent } = await import('../games/deep-analysis-dialog.component');
+    this.dialog.open(DeepAnalysisDialogComponent, { width: '600px', maxWidth: '96vw', data: { fen: this.fen(), stored } });
   }
 
   copyFen(): void {

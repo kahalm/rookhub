@@ -2675,6 +2675,22 @@
         "notFound": "Partie nicht gefunden."
       }
     },
+    "deep": {
+      "menu": "Tiefe Analyse",
+      "title": "Tiefe Analyse",
+      "depth": "Tiefe {{now}} / {{target}}",
+      "nodes": "{{now}} / {{target}} Knoten",
+      "starting": "startet",
+      "none": "keine Engine",
+      "storedDepth": "Hinterlegt · Tiefe {{depth}} — neue Linien erscheinen, sobald tiefer",
+      "storedNodes": "Hinterlegt · {{nodes}} Knoten — neue Linien erscheinen, sobald weiter",
+      "live": "Live",
+      "noLines": "Noch keine Linien",
+      "noLc0": "Keine Lc0-Engine angemeldet.",
+      "pruned": "Lc0 hat bei {{nodes}} Knoten von selbst aufgehört — sein Zug steht fest.",
+      "keeps": "Läuft weiter, wenn du das Fenster schließt (Liste der Analyseaufträge).",
+      "startFailed": "Die tiefe Analyse ließ sich nicht starten."
+    },
     "review": {
       "title": "Auswertung",
       "engineBoth": "Beide",

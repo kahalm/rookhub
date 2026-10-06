@@ -387,6 +387,7 @@ try
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddScoped<AnalysisJobService>();
+    builder.Services.AddScoped<DeepAnalysisService>();
     builder.Services.AddScoped<GameAnalysisService>();
     builder.Services.AddScoped<LibraryGameService>();
     builder.Services.AddScoped<GuessStartPly>();
