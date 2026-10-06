@@ -81,4 +81,23 @@ public class LeagueFixtureGamesTests : IDisposable
         Assert.False(LeagueFixtureGames.SideMatches("Schwaz", null, "Hess, Max", "24656666", "Schach Ohne Grenzen"));
         Assert.False(LeagueFixtureGames.SideMatches("Hess, Max", "999", "Hess, Max", "24656666", "X"));   // FIDE-ID schlägt den Namen
     }
+
+    [Fact]
+    public void WhiteBlackResult_HeimMitSchwarz_wirdGedreht()
+    {
+        // chess-results schreibt Heim – Gast; Ranner (Gast, Weiß) gewann gegen Haselsberger (Heim, Schwarz): „0 - 1"
+        Assert.Equal("1 - 0", LeagueFixtureGames.WhiteBlackResult("0 - 1", homeWhite: false));
+        Assert.Equal("0 - 1", LeagueFixtureGames.WhiteBlackResult("0 - 1", homeWhite: true));
+        Assert.Equal("½ - ½", LeagueFixtureGames.WhiteBlackResult("½ - ½", homeWhite: false));
+        Assert.Equal("- - +", LeagueFixtureGames.WhiteBlackResult("+ - -", homeWhite: false));
+    }
+
+    [Fact]
+    public async Task ForFixture_ErgebnisAusSichtWeiss()
+    {
+        _db.LeagueGames.Add(Board(5, "Haselsberger, Armin", "1", "Ranner, Stefan", "2", "s", "0 - 1"));
+        _db.SaveChanges();
+        var p = (await new LeagueFixtureGames(_db).ForFixtureAsync(1, 2, "Schwaz", default)).Single(x => x.Board == 5);
+        Assert.Equal(("Ranner, Stefan", "Haselsberger, Armin", "1 - 0"), (p.White, p.Black, p.Result));
+    }
 }

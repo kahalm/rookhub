@@ -72,9 +72,21 @@ public sealed class LeagueFixtureGames(AppDbContext db)
                 else if (date is { } d && FromProfiles(profiles, d, w.Item1!, w.Item2, b.Item1!, b.Item2) is { } raw)
                     (pgn, source) = (raw, "profile");
             }
-            result.Add(new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, g.Result, forfeit, pgn, source, clubId, canEdit));
+            result.Add(new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, clubId, canEdit));
         }
         return result;
+    }
+
+    /// <summary>
+    /// Das Ergebnis aus Sicht Weiß – Schwarz. chess-results schreibt es in der Brettpaarung aus Sicht HEIM – GAST
+    /// („1 - 0" = der Heimspieler gewinnt); hat der Heimspieler Schwarz, ist es zu drehen (gemeldet 2026-10-06: Runde 1 der
+    /// 1. Klasse zeigte „Ranner – Haselsberger 0 – 1", gewonnen hatte Ranner mit Weiß).
+    /// </summary>
+    public static string WhiteBlackResult(string result, bool homeWhite)
+    {
+        if (homeWhite) return result;
+        var parts = result.Split(" - ");
+        return parts.Length == 2 ? $"{parts[1]} - {parts[0]}" : result;
     }
 
     /// <summary>Passt eine Seite der Vereinspartie zum Spieler am Brett? FIDE-ID, Nachname oder „Schwaz" für den eigenen Verein.</summary>

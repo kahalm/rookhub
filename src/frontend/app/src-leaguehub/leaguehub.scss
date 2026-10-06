@@ -489,6 +489,12 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .edit-row td { background: var(--paper); }
 .side-edit { display: grid; gap: 8px; padding: 6px 2px; }
 .side-edit p { margin: 0; }
+/* Bearbeiten-Feld der Vereinsliste (0.679.1): Felder oben bündig statt mittig, „Speichern“ und „Abbrechen“ mit Abstand,
+   die Ligapartie in voller Breite in einer eigenen Zeile. */
+.side-edit .field-row { align-items: flex-start; }
+.side-edit .field-row > .field.wide { flex-basis: 100%; }
+.side-edit .field .anon { font: italic 400 15px/1.4 var(--body); color: var(--muted); padding-top: 6px; }
+.side-edit .actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .cands-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 /* „Meintest du …" direkt in der Zeile (0.596.0): klein genug, dass die Tabelle nicht aufbläht, groß genug für den Daumen. */
 .quick-pick { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 3px; }

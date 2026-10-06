@@ -548,7 +548,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         }).ToList();
         if (hits.Count == 0) return null;
         string Norm(string r) => r.Replace(" ", "").Replace("½", "1/2");
-        var best = hits.OrderByDescending(r => Norm(r.lg.Result) == Norm(g.Result) ? 1 : 0).ThenByDescending(r => r.Season).First();
+        var best = hits.OrderByDescending(r => Norm(LeagueFixtureGames.WhiteBlackResult(r.lg.Result, r.lg.HomeColor != "s")) == Norm(g.Result) ? 1 : 0).ThenByDescending(r => r.Season).First();
         var league = string.IsNullOrEmpty(best.Grp) ? best.League : $"{best.League} {best.Grp}";
         var homeWhite = best.lg.HomeColor == "w";
         return new LeagueRound($"{best.Season} · {league} · Runde {best.lg.Round}",

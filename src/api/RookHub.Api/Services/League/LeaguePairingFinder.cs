@@ -138,7 +138,7 @@ public sealed class LeaguePairingFinder(AppDbContext db)
         var (wName, wFide, wTeam, bName, bFide, bTeam) = Colors(r.G);
         var date = r.Date?.ToString("dd.MM.yyyy");
         var label = $"{r.Season} · {r.League} · Runde {r.G.Round} · Brett {r.G.Board}" + (date is null ? "" : $" ({date})");
-        return new Option(r.G.Id, label, date, wName ?? "?", wFide, bName ?? "?", bFide, r.G.Result,
+        return new Option(r.G.Id, label, date, wName ?? "?", wFide, bName ?? "?", bFide, LeagueFixtureGames.WhiteBlackResult(r.G.Result, r.G.HomeColor != "s"),
             wTeam.StartsWith(LeagueRefresh.OwnTeam), bTeam.StartsWith(LeagueRefresh.OwnTeam), exact, r.League, r.Season);
     }
 }
