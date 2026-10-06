@@ -185,11 +185,13 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task NodeJob_streamEndsJustBelowTheGoal_countsAsDone_butFarBelowIsNot()
+    public async Task NodeJob_streamEndsJustBelowTheGoal_countsAsDone_butFarBelowWithoutBestmoveIsNot()
     {
         var (userId, engines) = await SetupAsync(engines: 2);
         _broker.Answers[engines[0]] = (200, Line(9, 98_000, best: true));   // 98 % — Lc0 hört gern ein paar Knoten früher auf
-        _broker.Answers[engines[1]] = (200, Line(4, 40_000, best: true));   // 40 % — kein Ergebnis
+        // 40 % OHNE bestmove: die Suche wurde abgeschnitten, nicht beendet — kein Ergebnis. (MIT bestmove hätte die
+        // Engine selbst aufgehört, siehe NodeJob_directEngineStopsEarlyOnItsOwn_isDoneAfterOneRun.)
+        _broker.Answers[engines[1]] = (200, Line(4, 40_000));
         var near = await JobAsync(userId, nodes: 100_000);
         var far = await JobAsync(userId, nodes: 100_000);
         // Beide Aufträge auf je ihre Engine festlegen (die automatische Wahl verteilt sie sonst nach Schlangenlänge).
@@ -204,6 +206,55 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         await _worker.StartAsync(CancellationToken.None);
         Assert.Equal(AnalysisJobStatus.Done, (await WaitForAsync(near, j => j.Status != AnalysisJobStatus.Queued && j.Status != AnalysisJobStatus.Running)).Status);
         Assert.Equal(AnalysisJobStatus.Paused, (await WaitForAsync(far, j => j.Status != AnalysisJobStatus.Queued && j.Status != AnalysisJobStatus.Running)).Status);
+    }
+
+    // 2026-10-06: Lc0 beendet eine Suche mit Knotenlimit vor dem Ziel, sobald der beste Zug feststeht (Smart Pruning) —
+    // 39 000 von 50 000. Vorher lief so ein Auftrag alle 30 s neu und wurde nie fertig. Bei einer direkt angebundenen
+    // Engine reicht EIN Lauf: jeden Stopp von aussen saehe RookHub selbst (eigener Abbruch oder Live-Analyse).
+    [Fact]
+    public async Task NodeJob_directEngineStopsEarlyOnItsOwn_isDoneAfterOneRun()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(6, 4_000) + Line(15, 39_367, best: true));
+        var jobId = await JobAsync(userId, depth: 30, nodes: 50_000);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Paused or AnalysisJobStatus.Failed);
+
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);
+        Assert.Equal(15, job.ReachedDepth);
+        Assert.Contains("\"nodes\":39367", job.ResultJson);
+        Assert.Single(_broker.Calls);                         // nichts doppelt gerechnet
+    }
+
+    [Theory]
+    [InlineData(null, 39_000L, false)]      // erster Lauf: kein Vergleich
+    [InlineData(39_367L, 39_000L, true)]    // gleiche Stelle
+    [InlineData(39_000L, 42_900L, true)]    // bis 10 % mehr gilt als dieselbe Stelle
+    [InlineData(20_000L, 39_000L, false)]   // deutlich weiter: der vorige Lauf war gestoppt
+    [InlineData(39_000L, 0L, false)]        // keine Knoten gemeldet
+    public void StoppedEarlyAgain_vergleichtMitDemVorigenLauf(long? previous, long nodes, bool expected)
+        => Assert.Equal(expected, AnalysisJobStream.StoppedEarlyAgain(previous, nodes));
+
+    [Theory]
+    //          direkt  bestmove abbruch live   vorher    jetzt    erwartet
+    [InlineData(true,  true,  false, false, null,    39_000L, true)]    // direkt: ein sauberes Ende genuegt
+    [InlineData(true,  false, false, false, null,    39_000L, false)]   // ohne bestmove: abgeschnitten
+    [InlineData(true,  true,  true,  false, null,    39_000L, false)]   // wir selbst haben abgebrochen
+    [InlineData(true,  true,  false, true,  null,    39_000L, false)]   // Live-Analyse auf der Engine
+    [InlineData(false, true,  false, false, null,    39_000L, false)]   // Lichess, erster Lauf: koennte gestoppt sein
+    [InlineData(false, true,  false, false, 39_367L, 39_000L, true)]    // Lichess, zweimal gleich: eigenes Ende
+    [InlineData(false, true,  false, false, 20_000L, 39_000L, false)]   // Lichess, deutlich weiter: vorher gestoppt
+    public void EngineEndedOwnSearch_entscheidetNachAnbindung(bool direct, bool best, bool cancelled, bool live,
+        long? previous, long nodes, bool expected)
+        => Assert.Equal(expected, AnalysisJobStream.EngineEndedOwnSearch(direct, best, cancelled, live, previous, nodes));
+
+    [Fact]
+    public void HasBestMove_nurMitBestmoveFeld()
+    {
+        Assert.True(AnalysisJobStream.HasBestMove(Line(9, 10, best: true).Trim()));
+        Assert.False(AnalysisJobStream.HasBestMove(Line(9, 10).Trim()));
+        Assert.False(AnalysisJobStream.HasBestMove("kein json"));
     }
 
     [Fact]

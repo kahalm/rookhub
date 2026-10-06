@@ -60,6 +60,49 @@ public static class AnalysisJobStream
     public static bool NodeGoalMet(long target, long nodes, bool streamEnded) =>
         nodes >= target || (streamEnded && nodes >= target - target / 20);
 
+    /// <summary>Trägt die Zeile ein <c>bestmove</c>? So endet eine Suche, die die Engine SELBST beendet hat — aber
+    /// ebenso eine, die von außen gestoppt wurde (UCI antwortet auf <c>stop</c> mit <c>bestmove</c>).</summary>
+    public static bool HasBestMove(string line)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(line);
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("bestmove", out var b) && b.ValueKind == JsonValueKind.String;
+        }
+        catch (JsonException) { return false; }
+    }
+
+    /// <summary>
+    /// Hat die Engine einen Knotenauftrag VOR dem Ziel aus eigenem Ermessen beendet (0.681.1, gemeldet 2026-10-06: Lc0
+    /// rechnete dieselben Stellungen alle 30 s neu, ohne je fertig zu werden)? Dann ist das Ergebnis endgültig.
+    ///
+    /// <para>Lc0 bricht eine Suche mit Knotenlimit ab, sobald der beste Zug mit dem Restbudget nicht mehr kippen kann
+    /// (Smart Pruning, ab Werk an): bei 50 000 Knoten oft schon bei 39 000. Ein neuer Lauf hört an derselben Stelle
+    /// wieder auf. Ein <c>bestmove</c> unter dem Ziel kommt aber AUCH, wenn jemand die Suche von außen stoppt (UCI
+    /// antwortet auf <c>stop</c> mit <c>bestmove</c>) — die Frage ist also, ob wir einen solchen Stopp sehen würden:</para>
+    /// <list type="bullet">
+    /// <item><b>Direkt angebunden</b> (<c>rhe_…</c>): jede Arbeit für diese Engine läuft über UNSEREN Broker. Ein Stopp von
+    /// außen wäre unser eigener — der Worker hat abgebrochen (<paramref name="cancelledByUs"/>) oder eine Live-Analyse
+    /// rechnet auf der Engine (<paramref name="liveOnEngine"/>). Ist beides nicht der Fall, hat die Engine selbst
+    /// aufgehört: EIN Lauf genügt, nichts wird doppelt gerechnet.</item>
+    /// <item><b>Über Lichess</b> (<c>eei_…</c>): dort kann jemand die Engine im Analysebrett von lichess.org benutzen, und
+    /// davon erfahren wir nichts. Erst ein zweiter Lauf, der wieder sauber endet und nicht spürbar weiter kommt (höchstens
+    /// 10 % mehr Knoten), beweist das eigene Ende — eine gestoppte Suche käme beim nächsten Versuch weiter.</item>
+    /// </list>
+    /// </summary>
+    public static bool EngineEndedOwnSearch(bool directEngine, bool sawBestMove, bool cancelledByUs, bool liveOnEngine,
+        long? previousNodes, long nodes)
+    {
+        if (!sawBestMove || cancelledByUs || liveOnEngine || nodes <= 0) return false;
+        return directEngine || StoppedEarlyAgain(previousNodes, nodes);
+    }
+
+    /// <summary>Zweiter Lauf an derselben Stelle: höchstens 10 % mehr Knoten als der vorige (siehe
+    /// <see cref="EngineEndedOwnSearch"/>, Fall Lichess).</summary>
+    public static bool StoppedEarlyAgain(long? previousNodes, long nodes)
+        => previousNodes is long prev && prev > 0 && nodes > 0 && nodes <= prev + prev / 10;
+
     /// <summary>Eine Fortsetzung (und ein Neustart mit mehr Linien) liefert die flachen Iterationen erneut —
     /// übernommen wird nur, was mindestens so tief ist wie das gespeicherte Ergebnis.</summary>
     public static bool ShouldPersist(int lineDepth, int reachedDepth) => lineDepth >= reachedDepth;
@@ -437,9 +480,12 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 var lastPersist = runStart;
                 // Knotenauftrag: die Suche beginnt bei Tiefe 1 von vorn, ein Rest-Stand aus einem früheren Lauf
                 // (andere Zählung, kalte Hashtabelle) würde sonst alle flacheren Zeilen verwerfen.
+                // Knoten des VORIGEN Laufs (seine letzte Zeile steht noch im Ergebnis) — siehe StoppedEarlyAgain.
+                var previousNodes = job.TargetNodes is not null && job.ResultJson is { } previous
+                    ? AnalysisJobStream.NodesOf(previous) : null;
                 if (job.TargetNodes is not null) job.ReachedDepth = 0;
                 var depthAtStart = job.ReachedDepth;
-                long currentNodes = 0; var nodeGoalReached = false;
+                long currentNodes = 0; var nodeGoalReached = false; var engineFinished = false;
                 // Knotenauftrag: Zwischenstände je Schwelle mitschreiben — dieselben Zeilen, keine Mehrrechnung.
                 var recorder = job.TargetNodes is not null && _snapshotStep > 0
                     ? new NodeStepRecorder(_snapshotStep, NodeSteps.Parse(job.NodeStepsJson)) : null;
@@ -471,6 +517,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         currentDepth = depth;
                         currentNps = AnalysisJobStream.NpsOf(line) ?? currentNps;
                         currentNodes = AnalysisJobStream.NodesOf(line) ?? currentNodes;
+                        if (AnalysisJobStream.HasBestMove(line)) engineFinished = true;
                         if (recorder is not null) ObserveStep(recorder, line, job.Fen);
                         _live.Update(job.Id, currentDepth, currentNps);
                         var keep = AnalysisJobStream.ShouldPersist(depth, job.ReachedDepth);
@@ -563,9 +610,19 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                                            DateTime.UtcNow - lastPersist, currentDepth, currentNps);
 
                 await db.Entry(job).ReloadAsync(CancellationToken.None);
+                var directEngine = run.EngineId.StartsWith(ExternalEngineRegistration.IdPrefix, StringComparison.Ordinal);
+                var endedOwnSearch = job.TargetNodes is { } earlyGoal && !nodeGoalReached
+                    && !AnalysisJobStream.NodeGoalMet(earlyGoal, currentNodes, streamEnded: true)
+                    && AnalysisJobStream.EngineEndedOwnSearch(directEngine, engineFinished, ct.IsCancellationRequested,
+                        _tracker.IsEngineBusy(run.EngineId), previousNodes, currentNodes);
                 var goalMet = job.TargetNodes is { } goalNodes
-                    ? nodeGoalReached || (!ct.IsCancellationRequested && gotData && AnalysisJobStream.NodeGoalMet(goalNodes, currentNodes, streamEnded: true))
+                    ? nodeGoalReached || endedOwnSearch
+                      || (!ct.IsCancellationRequested && gotData && AnalysisJobStream.NodeGoalMet(goalNodes, currentNodes, streamEnded: true))
                     : job.ReachedDepth >= job.TargetDepth;
+                if (endedOwnSearch)
+                    _logger.LogInformation(
+                        "AnalysisJob {JobId}: Engine beendet die Suche selbst vor dem Ziel ({Nodes} von {Target} Knoten, z. B. Lc0 "
+                        + "Smart Pruning) — Ergebnis gilt", job.Id, currentNodes, job.TargetNodes);
                 if (goalMet)
                 {
                     job.Status = AnalysisJobStatus.Done; job.FinishedAt = DateTime.UtcNow; job.UpdatedAt = job.FinishedAt.Value;
