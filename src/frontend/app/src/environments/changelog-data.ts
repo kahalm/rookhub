@@ -9,6 +9,13 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.695.0',
+    date: '2026-10-06',
+    changes: [
+      { en: "Catalog: users are no longer picked from a long dropdown. Like on the Friends page you now search them (name, display name, chess.com, lichess, FIDE or Chess-Results ID — while typing or with Enter), add them with one click, and see everyone with access as chips you can remove. Don't forget to save.", de: "Katalog: User werden nicht mehr aus einer langen Auswahlliste gesucht. Wie bei „Freunde“ sucht man sie jetzt (Name, Anzeigename, chess.com, lichess, FIDE- oder Chess-Results-ID — beim Tippen oder mit Enter), gibt sie mit einem Klick frei und sieht alle Freigegebenen als Chips, die man wieder entfernen kann. Danach speichern." },
+    ],
+  },
+  {
     version: '0.694.1',
     date: '2026-10-06',
     changes: [

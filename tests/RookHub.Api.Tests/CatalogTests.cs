@@ -66,6 +66,9 @@ public class CatalogTests : IDisposable
         var got = await _svc.GetGrantsAsync(Owner);
         Assert.Equal(new List<int> { Viewer }, got.UserIds);
         Assert.Equal(new List<int> { 7 }, got.GroupIds);
+        // Namen kommen mit, damit die Oberfläche keine Nutzerliste laden muss.
+        Assert.Equal("viewer", Assert.Single(got.Users).Username);
+        Assert.Equal("viewer", Assert.Single(res.Users).Username);
     }
 
     [Fact]

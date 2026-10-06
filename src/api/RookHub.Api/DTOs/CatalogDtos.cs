@@ -7,6 +7,17 @@ public class CatalogGrantsDto
 {
     public List<int> UserIds { get; set; } = new();
     public List<int> GroupIds { get; set; } = new();
+    /// <summary>Nur in Antworten: Namen zu <see cref="UserIds"/>, damit die Oberfläche die Freigegebenen
+    /// anzeigen kann, ohne die ganze Nutzerliste zu laden. Beim Speichern ignoriert.</summary>
+    public List<CatalogGrantUserDto> Users { get; set; } = new();
+}
+
+/// <summary>Ein freigegebener Nutzer mit Namen (Antwort von GET/PUT /api/catalog/grants).</summary>
+public class CatalogGrantUserDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
 }
 
 /// <summary>Ein Item im Katalog (aus Viewer-Sicht) inkl. eigenem Status.</summary>

@@ -2583,7 +2583,11 @@
     "admin": {
       "grantsTitle": "Ki láthatja a katalógusomat?",
       "grantsHint": "A kiválasztott felhasználók és csoporttagok látják a tanfolyamaid és repertoárjaid listáját, és egyesével kérhetnek belőlük.",
-      "users": "Felhasználók",
+      "grantedUsers": "Hozzáféréssel rendelkező felhasználók",
+      "searchUsers": "Felhasználók keresése (név, chess.com, lichess, FIDE …)",
+      "noGrantedUsers": "Még nincs egyéni felhasználó.",
+      "noResults": "Nincs találat.",
+      "add": "Hozzáférés megadása",
       "groups": "Csoportok",
       "grantsSaved": "A hozzáférés elmentve.",
       "requestsTitle": "Nyitott kérések",

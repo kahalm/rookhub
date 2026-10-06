@@ -201,7 +201,11 @@
     "admin": {
       "grantsTitle": "Wer darf meinen Katalog sehen?",
       "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
-      "users": "User",
+      "grantedUsers": "Freigegebene User",
+      "searchUsers": "User suchen (Name, chess.com, lichess, FIDE …)",
+      "noGrantedUsers": "Noch keine einzelnen User freigegeben.",
+      "noResults": "Keine Treffer.",
+      "add": "Freigeben",
       "groups": "Gruppen",
       "grantsSaved": "Freigabe gespeichert.",
       "requestsTitle": "Offene Anforderungen",

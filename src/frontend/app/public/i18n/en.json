@@ -201,7 +201,11 @@
     "admin": {
       "grantsTitle": "Who can see my catalog?",
       "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
-      "users": "Users",
+      "grantedUsers": "Users with access",
+      "searchUsers": "Search users (name, chess.com, lichess, FIDE …)",
+      "noGrantedUsers": "No individual users yet.",
+      "noResults": "No matches.",
+      "add": "Grant access",
       "groups": "Groups",
       "grantsSaved": "Access saved.",
       "requestsTitle": "Open requests",

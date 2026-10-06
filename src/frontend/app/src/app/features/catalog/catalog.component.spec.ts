@@ -10,6 +10,7 @@ import { CatalogService } from './catalog.service';
 import { AuthService } from '../../core/auth.service';
 import { AdminService } from '../../core/admin.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { FriendsService } from '../../core/friends.service';
 
 describe('CatalogComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -30,7 +31,8 @@ describe('CatalogComponent', () => {
   // W3 F5-003: setGrants ERSETZT alle Freigaben — nach einem Ladefehler darf Speichern nichts entziehen.
   describe('Freigaben', () => {
     // Codereview F5-005: Besitzer ist, wer catalog.manage hat — hier bewusst KEIN Admin.
-    function setup(getGrants: any, has: (p: string) => boolean = p => p === 'catalog.manage') {
+    function setup(getGrants: any, has: (p: string) => boolean = p => p === 'catalog.manage',
+                   search = jasmine.createSpy('search').and.returnValue(of([]))) {
       const svc = {
         list: jasmine.createSpy('list').and.returnValue(of([])),
         getGrants,
@@ -49,11 +51,12 @@ describe('CatalogComponent', () => {
           { provide: AdminService, useValue: {
             getUsers: () => of({ items: [], totalCount: 0 }), getGroups: () => of([]) } },
           { provide: SnackbarService, useValue: snackbar },
+          { provide: FriendsService, useValue: { search } },
         ],
       });
       const fixture = TestBed.createComponent(CatalogComponent);
       fixture.detectChanges();
-      return { fixture, c: fixture.componentInstance, svc, snackbar };
+      return { fixture, c: fixture.componentInstance, svc, snackbar, search };
     }
 
     it('Ladefehler → Hinweis, Speichern-Knopf gesperrt, kein setGrants', () => {
@@ -74,6 +77,33 @@ describe('CatalogComponent', () => {
       expect(btn.disabled).toBeFalse();
       c.saveGrants();
       expect(svc.setGrants).toHaveBeenCalledWith({ userIds: [3], groupIds: [1] });
+    });
+
+    it('User per Suche (wie bei Freunden) freigeben und wieder entfernen', () => {
+      const search = jasmine.createSpy('search').and.returnValue(of([
+        { userId: 5, username: 'anna', displayName: 'Anna A', chessComUsername: 'annaC', lichessUsername: null, fideId: null, chessResultsId: null },
+        { userId: 3, username: 'bert', displayName: null, chessComUsername: null, lichessUsername: null, fideId: null, chessResultsId: null },
+      ]));
+      const { fixture, c, svc } = setup(jasmine.createSpy('getGrants').and.returnValue(of({
+        userIds: [3], groupIds: [], users: [{ userId: 3, username: 'bert', displayName: null }] })), undefined, search);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.granted-users')?.textContent).toContain('bert');
+
+      c.searchQuery = 'a'; c.search();
+      expect(search).not.toHaveBeenCalled();   // < 2 Zeichen
+      c.searchQuery = 'an'; c.search();
+      expect(search).toHaveBeenCalledWith('an');
+      fixture.detectChanges();
+      const rows = el.querySelectorAll('.search-row');
+      expect(rows.length).toBe(2);
+      expect(rows[0].textContent).toContain('chess.com: annaC');
+      expect(rows[1].querySelector('.granted-mark')).not.toBeNull();   // bert schon freigegeben
+
+      (rows[0].querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      c.removeUser(3);
+      c.saveGrants();
+      expect(svc.setGrants).toHaveBeenCalledWith({ userIds: [5], groupIds: [] });
     });
 
     it('ohne catalog.manage: keine Besitzer-Karte, keine Besitzer-Abfragen', () => {

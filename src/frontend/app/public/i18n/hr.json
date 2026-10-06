@@ -201,7 +201,11 @@
     "admin": {
       "grantsTitle": "Tko smije vidjeti moj katalog?",
       "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
-      "users": "Korisnici",
+      "grantedUsers": "Korisnici s pristupom",
+      "searchUsers": "Traži korisnike (ime, chess.com, lichess, FIDE …)",
+      "noGrantedUsers": "Još nema pojedinačnih korisnika.",
+      "noResults": "Nema rezultata.",
+      "add": "Odobri pristup",
       "groups": "Grupe",
       "grantsSaved": "Pristup spremljen.",
       "requestsTitle": "Otvoreni zahtjevi",

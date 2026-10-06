@@ -11,9 +11,17 @@ export interface CatalogItem {
   status: 'none' | 'pending' | 'shared';
 }
 
+export interface CatalogGrantUser {
+  userId: number;
+  username: string;
+  displayName: string | null;
+}
+
 export interface CatalogGrants {
   userIds: number[];
   groupIds: number[];
+  /** Nur in Antworten: Namen zu userIds (beim Speichern ignoriert). */
+  users?: CatalogGrantUser[];
 }
 
 export interface CatalogRequest {

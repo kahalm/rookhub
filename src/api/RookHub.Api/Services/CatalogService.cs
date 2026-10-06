@@ -31,12 +31,26 @@ public class CatalogService
     public async Task<CatalogGrantsDto> GetGrantsAsync(int ownerId)
     {
         var grants = await _db.CatalogGrants.Where(g => g.OwnerUserId == ownerId).ToListAsync();
+        var userIds = grants.Where(g => g.SubjectUserId != null).Select(g => g.SubjectUserId!.Value).ToList();
         return new CatalogGrantsDto
         {
-            UserIds = grants.Where(g => g.SubjectUserId != null).Select(g => g.SubjectUserId!.Value).ToList(),
+            UserIds = userIds,
             GroupIds = grants.Where(g => g.SubjectGroupId != null).Select(g => g.SubjectGroupId!.Value).ToList(),
+            Users = await GrantUsersAsync(userIds),
         };
     }
+
+    private Task<List<CatalogGrantUserDto>> GrantUsersAsync(List<int> userIds)
+        => _db.AppUsers
+            .Where(u => userIds.Contains(u.Id))
+            .OrderBy(u => u.Username)
+            .Select(u => new CatalogGrantUserDto
+            {
+                UserId = u.Id,
+                Username = u.Username,
+                DisplayName = u.Profile != null ? u.Profile.DisplayName : null,
+            })
+            .ToListAsync();
 
     /// <summary>Ersetzt die komplette Freigabe-Liste eines Besitzers (nur existierende User/Gruppen).</summary>
     public async Task<CatalogGrantsDto> SetGrantsAsync(int ownerId, List<int> userIds, List<int> groupIds)
@@ -53,7 +67,7 @@ public class CatalogService
             _db.CatalogGrants.Add(new CatalogGrant { OwnerUserId = ownerId, SubjectGroupId = gid, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
-        return new CatalogGrantsDto { UserIds = validUsers, GroupIds = validGroups };
+        return new CatalogGrantsDto { UserIds = validUsers, GroupIds = validGroups, Users = await GrantUsersAsync(validUsers) };
     }
 
     // ---- Viewer-Sicht ----
