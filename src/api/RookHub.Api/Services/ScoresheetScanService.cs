@@ -104,7 +104,17 @@ public class ScoresheetScanService
         _reader = new ScoresheetReader(vision);
         // Scoresheet:Plausibility — Engine-Prüfung nach dem Lesen (0.646.0, ScoresheetPlausibility), Vorgabe an.
         _engine = bool.TryParse(config?["Scoresheet:Plausibility"], out var plausible) && !plausible ? null : engine;
+        External = string.Equals(config?["Scoresheet:Reader"], "external", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Wer liest (<c>Scoresheet:Reader</c>, 0.687.0, Wunsch 2026-10-06: „der Watcher soll das bisherige Verarbeiten via Key
+    /// ersetzen — Key ganz abschalten"): <c>external</c> (gesetzt in <c>appsettings.json</c>) = VON AUSSEN — die Einlesung bleibt <c>pending</c>, der Worker rührt sie nicht an, und der Watcher auf
+    /// dem Server (Claude in einer eingeschränkten Sitzung) liest die Fotos über <c>/api/admin/scoresheets</c> und gibt
+    /// die Lesung mit <see cref="ProcessReadingAsync"/> zurück. Kein Schlüssel, keine Kosten, keine Kostenbremse. Alles andere
+    /// (auch ohne Konfiguration, so laufen die Unit-Tests) = wie bisher das Modell über den Anthropic-Schlüssel.
+    /// </summary>
+    public bool External { get; }
 
     /// <summary>Die Kostenbremse (für Tests und die Statusanzeige).</summary>
     public ScoresheetBudget Budget => _budget;
@@ -190,7 +200,7 @@ public class ScoresheetScanService
         }
         return new ScoresheetStatusDto
         {
-            Available = _vision.IsConfigured,
+            Available = External || _vision.IsConfigured,
             DailyLimit = limit,
             UsedToday = used,
             NextAllowedAt = next,
@@ -222,7 +232,7 @@ public class ScoresheetScanService
     private async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateCoreAsync(int? userId, IReadOnlyList<ScoresheetUpload> pages,
         string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash)
     {
-        if (!_vision.IsConfigured) return (null, "notConfigured");
+        if (!External && !_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
         if (!ScoresheetNotation.IsKnown(lang)) return (null, "invalidLanguage");
         if (pages.Count == 0) return (null, "noFile");
@@ -246,7 +256,7 @@ public class ScoresheetScanService
                     && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
                 return (null, "tooManyOpen");
         }
-        if (AllowanceFor(userId, spent).Blocked is { } blocked) return (null, blocked);
+        if (!External && AllowanceFor(userId, spent).Blocked is { } blocked) return (null, blocked);   // von außen: keine Kosten
 
         var stored = new List<(byte[] Photo, string Type)>();
         foreach (var page in pages)
@@ -286,6 +296,76 @@ public class ScoresheetScanService
         _logger.LogInformation("Formular-Einlesung {ScanId} von User {UserId} angenommen ({Pages} Seite(n), {Bytes} Bytes, Sprache {Language})",
             scan.Id, userId?.ToString() ?? "ohne Konto", pages.Count, stored.Sum(p => p.Photo.Length), lang);
         return (ToDto(scan), null);
+    }
+
+    /// <summary>Wartende Einlesungen für den Leser von außen (<see cref="External"/>), älteste zuerst — ohne Fotos.</summary>
+    public async Task<List<ExternalPendingScanDto>> PendingForExternalAsync(CancellationToken ct = default) =>
+        await _db.ScoresheetScans.AsNoTracking()
+            .Where(s => s.Status == ScoresheetScanStatus.Pending && s.Photo.Length > 0)
+            .OrderBy(s => s.CreatedAt)
+            .Select(s => new ExternalPendingScanDto
+            {
+                Id = s.Id, Purpose = s.Purpose ?? "own", UserId = s.UserId, Anonymous = s.UserId == null,
+                PageCount = s.PageCount, NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, CreatedAt = s.CreatedAt,
+            }).ToListAsync(ct);
+
+    /// <summary>Foto einer Seite (ab 1) einer Einlesung — für den Leser von außen.</summary>
+    public async Task<(byte[] Data, string ContentType)?> PhotoForExternalAsync(int scanId, int page, CancellationToken ct = default)
+    {
+        if (page <= 1)
+            return await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scanId && s.Photo.Length > 0)
+                .Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync(ct) is { } p ? (p.Photo, p.ContentType) : null;
+        return await _db.ScoresheetScanPages.AsNoTracking().Where(x => x.ScoresheetScanId == scanId && x.Page == page)
+            .Select(x => new { x.Photo, x.ContentType }).FirstOrDefaultAsync(ct) is { } q ? (q.Photo, q.ContentType) : null;
+    }
+
+    /// <summary>
+    /// Die Lesung einer WARTENDEN Einlesung von außen übernehmen (<see cref="External"/>): <paramref name="transcriptionJson"/>
+    /// in der Form der Modell-Antwort, Kästen in Pixeln des aufrechten, auf <see cref="ModelEdge"/> verkleinerten Fotos.
+    /// Danach genau der Weg wie nach dem Lesen durch das Modell (<see cref="FinishAsync"/>). Reasons: <c>notFound</c>,
+    /// <c>notPending</c>, <c>invalidTranscription</c>.
+    /// </summary>
+    public async Task<(ScoresheetScanDto? Scan, string? Reason)> ProcessReadingAsync(int scanId, string transcriptionJson,
+        CancellationToken ct = default)
+    {
+        var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.Id == scanId, ct);
+        if (scan == null) return (null, "notFound");
+        if (scan.Status is not (ScoresheetScanStatus.Pending or ScoresheetScanStatus.Running)) return (null, "notPending");
+        var photos = new List<byte[]> { scan.Photo };
+        if (scan.PageCount > 1)
+            photos.AddRange(await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scan.Id)
+                .OrderBy(p => p.Page).Select(p => p.Photo).ToListAsync(ct));
+        var sizes = photos.Select(p => ScoresheetImage.Prepare(p, ModelEdge) is { } j ? ScoresheetImage.Size(j) : null).ToList();
+        var json = ScoresheetTranscription.WithImageSize(transcriptionJson,
+            sizes.All(x => x != null) ? sizes.Select(x => x!.Value).ToList() : new List<(int Width, int Height)>());
+        var t = ScoresheetTranscription.Parse(json);
+        if (t == null) return (null, "invalidTranscription");
+
+        scan.Status = ScoresheetScanStatus.Running;
+        scan.StartedAt ??= DateTime.UtcNow;
+        scan.Attempts++;
+        scan.Model = ManualModel;
+        scan.Rounds = 1;
+        if (t.Moves.Count == 0) { await FailAsync(scan, "noMoves", ct, json); return (ToDto(scan), null); }
+        var language = ScoresheetReader.EffectiveLanguage(scan.NotationLanguage, t.NotationLanguage);
+        var r = ScoresheetResolver.Resolve(t.Scanned(), new ScoresheetResolver.Options(ScoresheetNotation.Find(language)));
+        await FinishAsync(scan, new ScoresheetReader.ReadOutcome(t, r, json, language, 1, null), ct);
+        _logger.LogInformation("Formular-Einlesung {ScanId}: Lesung von außen übernommen", scan.Id);
+        return (ToDto(scan), null);
+    }
+
+    /// <summary>Eine wartende Einlesung von außen als gescheitert abschließen (Foto unbrauchbar, keine Partie darauf,
+    /// verdächtiger Inhalt) — mit Glocke wie ein gescheitertes Lesen. Erlaubte Gründe: <c>unreadable</c>, <c>noMoves</c>,
+    /// <c>failed</c>.</summary>
+    public async Task<string?> FailExternalAsync(int scanId, string? reason, CancellationToken ct = default)
+    {
+        if (reason is not ("unreadable" or "noMoves" or "failed")) return "invalidReason";
+        var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.Id == scanId, ct);
+        if (scan == null) return "notFound";
+        if (scan.Status is not (ScoresheetScanStatus.Pending or ScoresheetScanStatus.Running)) return "notPending";
+        scan.Model = ManualModel;
+        await FailAsync(scan, reason, ct);
+        return null;
     }
 
     /// <summary>Kennung des „Lesers", wenn die Lesung nicht vom Modell kommt, sondern von Claude in einer Sitzung
@@ -549,6 +629,14 @@ public class ScoresheetScanService
             }
         }
 
+        await FinishAsync(scan, outcome, ct);
+    }
+
+    /// <summary>Nach dem Lesen — gleich, ob das Modell gelesen hat (<see cref="ProcessAsync"/>) oder die Lesung von außen
+    /// kam (<see cref="ProcessReadingAsync"/>): Engine-Prüfung, dann Liga-Einlesung fertig bzw. Partie in „Meine Partien"
+    /// samt Glocke.</summary>
+    private async Task FinishAsync(ScoresheetScan scan, ScoresheetReader.ReadOutcome outcome, CancellationToken ct)
+    {
         var t = outcome.Transcription!;
         var r = outcome.Resolution!;
         if (r.Plies.Count == 0) { await FailAsync(scan, "noMoves", ct, outcome.Json); return; }
@@ -850,7 +938,7 @@ public class ScoresheetScanService
         var all = await AnonCountingSince(since).CountAsync();
         return new ScoresheetStatusDto
         {
-            Available = _vision.IsConfigured,
+            Available = External || _vision.IsConfigured,
             DailyLimit = AnonPerIpDailyLimit,
             UsedToday = used,
             NextAllowedAt = next,
@@ -884,7 +972,7 @@ public class ScoresheetScanService
         try
         {
             var since = DateTime.UtcNow.AddDays(-1);
-            if (_vision.IsConfigured)
+            if (External || _vision.IsConfigured)
             {
                 if (await AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash) >= AnonPerIpDailyLimit)
                     return (null, null, "dailyLimit");
@@ -1328,3 +1416,17 @@ public class ScoresheetScanService
 
 /// <summary>Ein hochgeladenes Foto (eine Seite des Formulars).</summary>
 public sealed record ScoresheetUpload(byte[] Data, string? ContentType, string? FileName);
+
+/// <summary>Eine wartende Einlesung für den Leser von außen (<c>GET /api/admin/scoresheets/pending</c>).</summary>
+public sealed class ExternalPendingScanDto
+{
+    public int Id { get; set; }
+    /// <summary><c>own</c> (RookHub, legt eine Partie in „Meine Partien" an) oder <c>league</c> (LeagueHub).</summary>
+    public string Purpose { get; set; } = "own";
+    public int? UserId { get; set; }
+    public bool Anonymous { get; set; }
+    public int PageCount { get; set; }
+    public string NotationLanguage { get; set; } = "auto";
+    public string? OwnerSide { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

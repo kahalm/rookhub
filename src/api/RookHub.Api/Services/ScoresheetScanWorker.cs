@@ -66,7 +66,8 @@ public class ScoresheetScanWorker : BackgroundService
             {
                 using var scope = _scopes.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<ScoresheetScanService>();
-                id = await service.ClaimNextAsync(stoppingToken);
+                // Von außen gelesen (Scoresheet:Reader ≠ model, 0.686.0): nichts anfassen — der Watcher holt die Einlesungen.
+                id = service.External ? null : await service.ClaimNextAsync(stoppingToken);
                 if (id is int scanId)
                 {
                     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);

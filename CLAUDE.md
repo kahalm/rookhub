@@ -4120,6 +4120,17 @@ keinen Aufräumlauf — das Foto geht nur beim Übernehmen oder Verwerfen.
   unordentlichen Formularen). Diese Konfiguration ist die REFERENZ für künftige Vergleiche; zurück zu Opus 5 mit
   Nachdenken: `Anthropic:ScoresheetModel=claude-opus-5`, `Scoresheet:Thinking=true`, Preise 5 / 25.
 
+**Lesen von außen statt über den Schlüssel** (0.687.0, Wunsch 2026-10-06: „der Watcher soll das bisherige Verarbeiten via
+Key ersetzen — Key ganz abschalten"; `Scoresheet:Reader`, in `appsettings.json` auf `external`, Rückfall ohne Angabe =
+`model` wie bisher — so laufen die Unit-Tests). Mit `external` liest der `ScoresheetScanWorker` nichts mehr: jede
+Einlesung (RookHub UND LeagueHub, mit Konto oder über einen Teilen-Link) bleibt `pending`, bis der Watcher auf dem Server
+(`~/claude/formulare-bot/watch.sh`, Claude in einer eingeschränkten Sitzung) sie über `/api/admin/scoresheets` liest und
+die Lesung zurückgibt. `ProcessReadingAsync` nimmt sie in der Form der Modell-Antwort (Kästen in Pixeln des aufrechten,
+auf 2000 px verkleinerten Fotos) und geht danach denselben Weg wie eine gelesene (`FinishAsync`: Auflösung,
+Engine-Prüfung, Liga → offen zum Prüfen, eigene → Partie + Glocke); `Model = "claude-manual"`. Der Schlüssel ist
+dabei nicht nötig (`Available` gilt auch ohne), und Tageszahl/Anzahl offener gelten weiter, die Kostenbremse nicht
+(keine Kosten). Die Seite „etwa 1–2 Sekunden pro Zug" stimmt in diesem Modus nicht — der Watcher schaut alle 5 min.
+
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT
 die Tokens, die die API meldet (`InputTokens`/`OutputTokens`/`CostMicroUsd` an der Einlesung; Nachdenken zählt als
@@ -4293,6 +4304,10 @@ Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt
 | GET | `/api/games/{id}/photo?download=&page=` | Das Formular-Foto, Seite `page` (ab 1; 404 ohne) — Header `X-Page-Count` = Zahl der Seiten |
 | GET | `/api/games/{id}/scoresheet` | Formular-Einträge + Stand je Halbzug für die Korrekturseite; `pageCount` + `pages` (Seite je Eintrag) |
 | POST | `/api/games/{id}/scoresheet/resolve` | Rest neu aufbereiten `{ prefix[], writtenFrom }` → `{ plies, unresolved, unresolvedFrom }` |
+| GET | `/api/admin/scoresheets/pending` | messages.admin: wartende Einlesungen für den Leser von außen (0.687.0) `[{ id, purpose (own/league), userId, anonymous, pageCount, notationLanguage, ownerSide, createdAt }]`, älteste zuerst |
+| GET | `/api/admin/scoresheets/{id}/photo?page=` | messages.admin: Foto einer Seite |
+| POST | `/api/admin/scoresheets/{id}/reading` | messages.admin: Lesung übernehmen `{ transcription }` → die Einlesung; 400 `reason` ∈ notPending/invalidTranscription, 404 |
+| POST | `/api/admin/scoresheets/{id}/fail` | messages.admin: als gescheitert schließen `{ reason }` (unreadable/noMoves/failed, Glocke wie sonst) → 204 |
 
 ### Partie rekonstruieren (auth)
 

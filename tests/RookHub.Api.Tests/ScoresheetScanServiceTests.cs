@@ -420,6 +420,109 @@ public class ScoresheetScanServiceTests : IDisposable
              (await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "{}", null)).Reason));
     }
 
+    /// <summary>Dienst im Modus „von außen" (<c>Scoresheet:Reader=external</c>, 0.687.0): der Watcher liest statt des
+    /// Modells — kein Schlüssel nötig.</summary>
+    private void WithExternalReader()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Reader"] = "external",
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
+    [Fact]
+    public void Reader_DefaultsToTheModel_ExternalOnlyWhenSet()
+    {
+        Assert.False(_service.External);
+        WithExternalReader();
+        Assert.True(_service.External);
+    }
+
+    /// <summary>Wunsch 2026-10-06 „Key ganz abschalten": ohne Schlüssel nimmt der Dienst Fotos trotzdem an, und eine
+    /// Einlesung mit Konto bleibt wartend für den Watcher.</summary>
+    [Fact]
+    public async Task External_AcceptsUploadsWithoutKey_AndListsThemAsPending()
+    {
+        WithExternalReader();
+        _vision.IsConfigured = false;
+        var u = await UserAsync();
+
+        var (scan, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Null(reason);
+        Assert.True((await _service.StatusAsync(u.Id)).Available);
+        var pending = Assert.Single(await _service.PendingForExternalAsync());
+        Assert.Equal((scan!.Id, "own", u.Id, false, 1), (pending.Id, pending.Purpose, pending.UserId, pending.Anonymous, pending.PageCount));
+        Assert.NotNull(await _service.PhotoForExternalAsync(scan.Id, 1));
+        Assert.Null(await _service.PhotoForExternalAsync(scan.Id, 2));
+    }
+
+    [Fact]
+    public async Task ProcessReading_OwnScan_CreatesTheGameAndRingsTheBell_WithoutTheModel()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        Assert.Empty(_vision.PageCounts);
+        var game = await _db.SavedGames.SingleAsync();
+        Assert.Equal(game.Id, done.SavedGameId);
+        Assert.Equal(NotificationType.ScoresheetRead, (await _db.Notifications.SingleAsync()).Type);
+        Assert.Equal(ScoresheetScanService.ManualModel, (await _db.ScoresheetScans.SingleAsync()).Model);
+        Assert.Empty(await _service.PendingForExternalAsync());
+        Assert.Equal("notPending", (await _service.ProcessReadingAsync(scan.Id, Answer(Written))).Reason);
+    }
+
+    [Fact]
+    public async Task ProcessReading_LeagueScan_IsOpenForReview_WithoutASavedGame()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto", purpose: ScoresheetScan.PurposeLeague);
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        Assert.Empty(await _db.SavedGames.ToListAsync());
+        var state = (await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.User(u.Id), scan.Id))!;
+        Assert.Equal(Written.Length, state.Plies.Count);
+    }
+
+    [Fact]
+    public async Task ProcessReading_BadInput_IsRejected_AndTheScanStaysPending()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Equal("invalidTranscription", (await _service.ProcessReadingAsync(scan!.Id, "nicht json")).Reason);
+        Assert.Equal("notFound", (await _service.ProcessReadingAsync(9999, Answer(Written))).Reason);
+        Assert.Single(await _service.PendingForExternalAsync());
+    }
+
+    [Fact]
+    public async Task FailExternal_EndsTheScanWithTheBell_OnlyForKnownReasons()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Equal("invalidReason", await _service.FailExternalAsync(scan!.Id, "irgendwas"));
+        Assert.Null(await _service.FailExternalAsync(scan.Id, "unreadable"));
+
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((ScoresheetScanStatus.Failed, "unreadable"), (row.Status, row.Error));
+        Assert.Equal(NotificationType.ScoresheetFailed, (await _db.Notifications.SingleAsync()).Type);
+        Assert.Equal("notPending", await _service.FailExternalAsync(scan.Id, "failed"));
+    }
+
     [Fact]
     public async Task Process_UprightPhoto_IsReadOnce()
     {

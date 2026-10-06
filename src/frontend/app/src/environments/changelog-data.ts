@@ -8,6 +8,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.687.0',
+    date: '2026-10-06',
+    changes: [
+      { en: "Score sheets without the Anthropic key: a reader on the server (Claude in a restricted session, every 5 minutes) now reads every uploaded score sheet — RookHub 'My games' and LeagueHub, with or without an account — instead of the model via the API key. New setting Scoresheet:Reader (external in appsettings.json; without it the model reads as before), admin endpoints /api/admin/scoresheets (pending, photo, reading, fail). The reading then takes exactly the same path as a model reading: resolving, engine check, LeagueHub review or game + bell. No key and no cost limit needed; daily limit and open uploads still apply.", de: "Partieformulare ohne Anthropic-Schlüssel: jedes hochgeladene Formular — RookHub „Meine Partien“ und LeagueHub, mit oder ohne Konto — liest jetzt ein Leser auf dem Server (Claude in einer eingeschränkten Sitzung, alle 5 Minuten) statt des Modells über den API-Schlüssel. Neue Einstellung Scoresheet:Reader (in appsettings.json external; ohne sie liest wie bisher das Modell), Admin-Endpunkte /api/admin/scoresheets (wartende, Foto, Lesung, gescheitert). Die Lesung geht danach genau denselben Weg wie eine des Modells: Auflösung, Engine-Prüfung, Prüfen in LeagueHub bzw. Partie + Glocke. Kein Schlüssel und keine Kostenbremse nötig; Tageszahl und offene Einlesungen gelten weiter." },
+    ],
+  },
   { version: "0.686.0", date: "2026-10-06", changes: [
     { en: "Club members get a new entry in the \u22ee menu of a game page: \u201cDeep analysis\u201d. It computes the position on the board with Stockfish to depth 40 and with Lc0 to 500,000 nodes (or until Lc0 stops by itself because its move is settled). A window shows the progress of both engines; the lines stay the stored ones of the game analysis until the new search has gone further, then they update live. The search keeps running when you close the window and appears in your list of analysis jobs.", de: "Vereinsmitglieder bekommen im \u22ee-Men\u00fc der Partieseite den Eintrag \u201eTiefe Analyse\u201c. Er rechnet die Stellung auf dem Brett mit Stockfish bis Tiefe 40 und mit Lc0 bis 500 000 Knoten (oder bis Lc0 von selbst aufh\u00f6rt, weil sein Zug feststeht). Ein Fenster zeigt den Fortschritt beider Engines; die Linien bleiben die hinterlegten der Partie-Analyse, bis die neue Suche weiter ist, dann laufen sie live mit. Die Suche rechnet weiter, wenn du das Fenster schlie\u00dft, und steht in deiner Liste der Analyseauftr\u00e4ge." },
   ] },
