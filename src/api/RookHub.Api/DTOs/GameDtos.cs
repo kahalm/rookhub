@@ -266,6 +266,8 @@ public class GameEvalPlyDto
     public int? Cp { get; set; }
     public int? Mate { get; set; }
     public int Depth { get; set; }
+    /// <summary>Erreichte Knoten einer Knotenanalyse (Lc0, 0.684.0); <c>null</c> bei Tiefenanalysen.</summary>
+    public long? Nodes { get; set; }
     public string? BestUci { get; set; }
     /// <summary>Der in der Partie gespielte Zug (Standard-UCI) — damit der Client „bester Zug"
     /// erkennt, ohne die Zugliste selbst in UCI umzurechnen. Kein Geheimnis: er steht im PGN.</summary>

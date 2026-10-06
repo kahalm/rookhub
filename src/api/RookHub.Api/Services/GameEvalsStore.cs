@@ -33,10 +33,17 @@ public static class GameEvalsStore
         var rows = await db.GameAnalysisPositions.AsNoTracking()
             .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
             .OrderBy(p => p.Ply)
-            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth, p.AnalyzedAt, p.Refined })
+            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth, p.AnalyzedAt, p.Refined, p.NodeStepsJson })
             .ToListAsync(ct);
         var plies = rows
-            .Select(r => GameEvals.PlyOf(r.Ply, r.Fen, r.GameMoveUci, r.CandidatesJson, r.Depth))
+            .Select(r =>
+            {
+                var ply = GameEvals.PlyOf(r.Ply, r.Fen, r.GameMoveUci, r.CandidatesJson, r.Depth);
+                // Knotenanalyse (Lc0): wie weit gerechnet wurde — die letzte Stufe trägt die erreichten Knoten (0.684.0).
+                if (ply is not null && r.NodeStepsJson is not null && NodeSteps.Parse(r.NodeStepsJson) is { Count: > 0 } steps)
+                    ply.Nodes = steps[^1].Nodes;
+                return ply;
+            })
             .OfType<GameEvalPlyDto>()
             .ToList();
         var running = analysis.Status is GameAnalysisStatus.Pending or GameAnalysisStatus.Running;

@@ -73,7 +73,7 @@ public sealed class LeagueAnalysisQueue
             if (plies is not { } p || p.Plies.Count == 0) { Skip(it.Key); continue; }
             var hash = LeagueClubService.HashOf(p.Plies.Select(x => x.San).ToList());
             var analyzed = await db.GameAnalyses.AnyAsync(a => a.MovesHash == hash && a.Status != GameAnalysisStatus.Failed, ct)
-                || await db.GameAnalyses.AnyAsync(a => a.Origin == GameAnalysisOrigin.Club && a.Status != GameAnalysisStatus.Failed
+                || await db.GameAnalyses.AnyAsync(a => a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && a.Status != GameAnalysisStatus.Failed
                     && db.LeagueClubGames.Any(c => c.Id == a.LeagueClubGameId && c.MovesHash == hash), ct);
             Skip(it.Key);   // so oder so erledigt: gleich eingereiht oder schon gerechnet
             if (!analyzed) return (it, hash);

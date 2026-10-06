@@ -805,7 +805,7 @@ public sealed class LeagueClubService
     /// Vereinspartien sieht (<c>league.view</c>) — die Analyse gehört dem Haus-Engine-Konto, der Zugang hängt an der Partie.</summary>
     private IQueryable<GameAnalysis> ClubAnalyses(int clubGameId) =>
         _db.GameAnalyses.AsNoTracking()
-            .Where(a => a.LeagueClubGameId == clubGameId && a.Origin == GameAnalysisOrigin.Club)
+            .Where(a => a.LeagueClubGameId == clubGameId && a.Origin == GameAnalysisOrigin.Club && a.EngineId == null)
             .OrderByDescending(a => a.Id);
 
     /// <summary>Stand der Analyse je Zeile (Fortschritt, Genauigkeit) — zwei Abfragen für die ganze Seite.</summary>
@@ -815,7 +815,7 @@ public sealed class LeagueClubService
         var ids = items.Select(i => i.Id).ToList();
         var links = await _db.GameAnalyses.AsNoTracking()
             .Where(a => a.LeagueClubGameId != null && ids.Contains(a.LeagueClubGameId.Value)
-                && a.Origin == GameAnalysisOrigin.Club)
+                && a.Origin == GameAnalysisOrigin.Club && a.EngineId == null)
             .Select(a => new { Game = a.LeagueClubGameId!.Value, a.Id })
             .ToListAsync(ct);
         var latest = links.GroupBy(l => l.Game).ToDictionary(g => g.Key, g => g.Max(l => l.Id));

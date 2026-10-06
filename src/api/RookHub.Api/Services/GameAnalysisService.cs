@@ -69,7 +69,9 @@ public class GameAnalysisService
             // von Hand angelegt; die Engine muss dem Engine-Besitzer gehören (A4-003) — VOR dem Anlegen, nicht erst beim
             // ersten Stellungs-Auftrag, damit der Nutzer die Absage liest.
             if (engineId is null) throw new ArgumentException("Nodes need an engine");
-            if (origin != GameAnalysisOrigin.Manual) throw new ArgumentException("Nodes only for manual analyses");
+            // Vereinspartien bekommen ihre zweite Engine automatisch (ClubSecondEngineScheduler, 0.684.0).
+            if (origin is not (GameAnalysisOrigin.Manual or GameAnalysisOrigin.Club))
+                throw new ArgumentException("Nodes only for manual or club analyses");
             if (req.TargetNodes is < AnalysisJobService.MinTargetNodes or > AnalysisJobService.MaxTargetNodes)
                 throw new ArgumentException(
                     $"Nodes must be {AnalysisJobService.MinTargetNodes}..{AnalysisJobService.MaxTargetNodes}");
@@ -228,6 +230,7 @@ public class GameAnalysisService
             a.Result = header?.Result ?? game.Result;
             a.Event = header?.Event;
             var title = header is { } h ? BuildTitle(h) : $"{game.White} – {game.Black}";
+            if (a.TargetNodes is { } nodes) title += $" ({NodesLabel(nodes)} nodes)";
             a.Title = title.Length > 200 ? title[..200] : title;
             a.UpdatedAt = DateTime.UtcNow;
         }
@@ -879,12 +882,16 @@ public class GameAnalysisService
     /// Zug-Schlüssel gibt es nur für Liga-Partien; deshalb hier zuerst billig nach Länge vorgefiltert und erst für die
     /// wenigen Kandidaten die Züge verglichen. Gescheiterte bleiben draußen, neueste zuerst.
     /// </summary>
-    public async Task<List<GameAnalysisAlternativeDto>> SameGameAsync(int userId, IReadOnlyList<string>? ucis, CancellationToken ct = default)
+    public async Task<List<GameAnalysisAlternativeDto>> SameGameAsync(int userId, IReadOnlyList<string>? ucis, CancellationToken ct = default,
+        bool clubReader = false)
     {
         if (ucis is null || ucis.Count == 0 || ucis.Count > MaxSameGamePlies) return [];
         var wanted = ucis.Select(u => (u ?? string.Empty).Trim().ToLowerInvariant()).ToList();
         var candidates = await _db.GameAnalyses.AsNoTracking()
-            .Where(a => a.UserId == userId && a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
+            // Dazu die zweite Engine der Vereinspartien (0.684.0) für alle, die Vereinspartien sehen — sie gehört dem
+            // Engine-Konto, gezeigt wird sie wie die Stockfish-Analyse der Partie allen im Verein.
+            .Where(a => (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))
+                && a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
             .Select(a => new { a.Id, a.Title, a.EngineId, a.TargetNodes, a.TargetDepth, a.MultiPv, a.Status, a.PlyCount, a.CreatedAt })
             .ToListAsync(ct);
         if (candidates.Count == 0) return [];
@@ -915,9 +922,10 @@ public class GameAnalysisService
 
     /// <summary>Die Bewertungen einer EIGENEN Analyse im Format der Partiekurve (Weiß-Sicht) — für den Umschalter auf
     /// der Partieseite. Ohne Buchzüge: die markiert schon die Kurve der Seite. <c>null</c> = gibt es nicht oder fremd.</summary>
-    public async Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default)
+    public async Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default, bool clubReader = false)
     {
-        var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == id && a.UserId == userId))
+        var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == id
+                && (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))))
             .FirstOrDefaultAsync(ct);
         return head is null ? null : await GameEvalsStore.ReadAsync(_db, head, null, ct);
     }

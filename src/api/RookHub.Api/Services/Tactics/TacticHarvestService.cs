@@ -54,7 +54,8 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     public async Task<int> ScanAsync(CancellationToken ct)
     {
         var analyses = await db.GameAnalyses
-            .Where(a => a.Status == GameAnalysisStatus.Done && a.TacticsScannedAt == null && Sources.Contains(a.Origin))
+            .Where(a => a.Status == GameAnalysisStatus.Done && a.TacticsScannedAt == null && Sources.Contains(a.Origin)
+                && a.EngineId == null)   // die zweite Engine der Vereinspartien (0.684.0) nicht ein zweites Mal ernten
             // Vereinspartien zuerst, die neuesten vorneweg (0.657.1: die Partien vom Liga-Wochenende sollen nicht hinter
             // 3.600 älteren Meisterpartien warten), dann eigene Partien, dann der Rest
             .OrderBy(a => a.Origin == GameAnalysisOrigin.Club ? 0 : a.Origin == GameAnalysisOrigin.SavedGame ? 1 : 2)

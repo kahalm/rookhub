@@ -93,6 +93,11 @@ const MATE_GAP_PAWNS = 100;
               <mat-button-toggle value="alt">{{ altLabel() }}</mat-button-toggle>
               <mat-button-toggle value="both">{{ 'games.review.engineBoth' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
+            @if (altNodes(); as n) {
+              <!-- Wie weit die zweite Engine an DIESER Stellung gerechnet hat (0.684.0, gewünscht 2026-10-06) — Lc0 hört
+                   per Smart Pruning oft vor dem Knotenziel auf. -->
+              <span class="alt-nodes">{{ altLabel() }} · {{ 'games.live.nodes' | translate: { nodes: (n | number) } }}</span>
+            }
           }
           @if (!engineHidden()) {
             <!-- Computer-Linien + Pfeil für den besten Zug: je Gerät gemerkt, im Fehler-Training aus (verriete die Lösung). -->
@@ -259,6 +264,7 @@ const MATE_GAP_PAWNS = 100;
     .engine-view + .toggles { margin-left: 0; }
     .lines-label { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin: 4px 0 1px; }
     .lines-label.alt { color: #ff9800; opacity: 1; }
+    .alt-nodes { font-size: 0.75rem; color: #ff9800; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .toggle { opacity: 0.45; --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .toggle.on { opacity: 1; color: #81b64c; }
@@ -417,6 +423,12 @@ export class GameReviewComponent {
     const primary = this.evals();
     const alt = this.altEvals();
     return this.view() === 'alt' && alt ? { ...alt, bookPlies: primary?.bookPlies ?? [] } : primary;
+  });
+  /** Erreichte Knoten der zweiten Analyse in der Stellung auf dem Brett — nur in „Lc0" und „Beide". */
+  readonly altNodes = computed(() => {
+    if (this.view() === 'primary') return null;
+    const ply = this.currentIndex() + 1;
+    return this.altEvals()?.plies?.find(p => p.ply === ply)?.nodes ?? null;
   });
   readonly altLabel = computed(() => {
     const a = this.alternative();

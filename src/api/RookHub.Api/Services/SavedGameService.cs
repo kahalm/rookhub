@@ -531,7 +531,7 @@ public class SavedGameService
         // dazu die Liga-Partien des Stapels (0.665.0) mit denselben Zügen
         return await _db.GameAnalyses.AsNoTracking()
             .Where(a => a.Status != GameAnalysisStatus.Failed
-                && ((a.Origin == GameAnalysisOrigin.Club && clubIds.Contains(a.LeagueClubGameId))
+                && ((a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && clubIds.Contains(a.LeagueClubGameId))
                     || (a.Origin == GameAnalysisOrigin.League && a.MovesHash == hash)))
             .OrderByDescending(a => a.Status == GameAnalysisStatus.Done).ThenByDescending(a => a.Id)
             .Select(a => (int?)a.Id)

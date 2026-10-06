@@ -3240,6 +3240,20 @@ wiederholte es). `test/supervisor.test.sh` misst den Abstand der echten Starts.
   `PublishAsync` nimmt bei eingeschalteter Zweitprüfung nur `SecondAgrees == true`. Steht die Engine nicht in der Hintergrund-Liste des
   Besitzers, wartet die Zweitprüfung (Warnung im Log). Zähler: `SELECT Status, COUNT(*) FROM TacticCandidates GROUP BY Status`.
 
+### Vereinspartien zusätzlich auf Lc0 (0.684.0) — `ClubSecondEngineScheduler`
+Wunsch 2026-10-06: „alle Ligapartien, die neu dazukommen, automatisch mit 100k rechnen, und einmalig alle alten nachrechnen".
+Jede `LeagueClubGame` bekommt eine ZWEITE Analyse: `Origin = Club` MIT `EngineId` (Registrierung namens
+`ClubSecondEngine:EngineName`, Vorgabe „RookHub Spark Lc0" — per Name, die `rhe_`-Kennung wechselt beim Neuanmelden; leer
+= aus) und `TargetNodes` (`ClubSecondEngine:TargetNodes`, Vorgabe 100 000 — gemessen 06.10. an 2 Partien: Lc0 stoppt per
+Smart Pruning im Median bei ~88k, ab 50k bewegt sich die Bewertung nur um Hundertstel), MultiPv 3, höchstens
+`ClubSecondEngine:MaxOpen` (1) offen, neueste Partie zuerst, minütlicher Takt. **Die Stockfish-Analyse bleibt die der
+Partie**: jeder Leser der Club-Analyse fragt `EngineId == null` (LeagueClubService.ClubAnalyses/FillAnalysis,
+SavedGameService.ClubAnalysisForMovesAsync, LeagueAnalysisQueue, MasterAnalysisScheduler.NextClubGameAsync + Zählung offener
+Stellungen, Taktik-Ernte) — wer eine neue Club-Abfrage baut, nimmt die Bedingung mit. Sichtbar wird sie über
+`POST /api/game-analyses/same-game` und `GET /api/game-analyses/{id}/evals`: Nutzer mit `league.view` sehen dort zusätzlich
+Club-Analysen mit `EngineId` (`clubReader`). `GameEvalPlyDto.Nodes` = erreichte Knoten (letzte Stufe aus `NodeStepsJson`),
+die Partieseite zeigt sie in den Ansichten Lc0/Beide.
+
 ### Meisterpartien im Hintergrund analysieren (2026-09-28) — `MasterAnalysisScheduler`
 Wunsch: „zu den gleichen Zeiten wie die Übersetzung auch Analyse der Meisterpartien — auf allen 16 Direktengines, aber
 wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:

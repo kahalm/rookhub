@@ -623,6 +623,7 @@ describe('GameReviewComponent', () => {
       expect(lineSans(el, '.lines.alt .line-san')).toEqual(['1. d4']);
       expect(Array.from(el.querySelectorAll('.lines-label')).map(e => e.textContent!.trim())).toEqual(['Stockfish', 'Lc0']);
       expect(fixture.componentInstance.overlay()?.length).toBe(3);   // Start + zwei Züge
+      expect(el.querySelector('.alt-nodes')).toBeNull();   // keine Knoten gemeldet
       expect(el.querySelectorAll('app-eval-graph polyline.overlay').length).toBeGreaterThan(0);
     });
 
@@ -652,6 +653,21 @@ describe('GameReviewComponent', () => {
       (el.querySelector('.dis-chip') as HTMLButtonElement).click();
       cmp.stepDisagree(1);
       expect(jumped).toEqual([0, 0]);
+    });
+
+    it('zeigt je Stellung die erreichten Knoten der zweiten Analyse (0.684.0)', () => {
+      const { el, fixture } = withAlternative();
+      const cmp = fixture.componentInstance;
+      const withNodes = lc0();
+      withNodes.plies[1] = { ...withNodes.plies[1], nodes: 89133 };
+      cmp.altEvals.set(withNodes);
+      fixture.componentRef.setInput('currentIndex', 0);   // Brett nach 1.e4 = Stellung von Halbzug 1
+      fixture.detectChanges();
+      expect(el.querySelector('.alt-nodes')).toBeNull();   // Ansicht „Stockfish"
+      cmp.setView('alt');
+      fixture.detectChanges();
+      expect(cmp.altNodes()).toBe(89133);
+      expect(el.querySelector('.alt-nodes')?.textContent).toContain('Lc0');
     });
 
     it('nur „Stockfish": keine Lc0-Spalte, keine uneinigen Züge', () => {

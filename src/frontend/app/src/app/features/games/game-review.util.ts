@@ -31,6 +31,8 @@ export interface EvalScore {
 export interface GameEvalPly extends EvalScore {
   ply: number;
   depth: number;
+  /** Erreichte Knoten einer Knotenanalyse (Lc0, 0.684.0); fehlt bei Tiefenanalysen. */
+  nodes?: number | null;
   bestUci?: string | null;
   playedUci: string;
   playedCp?: number | null;

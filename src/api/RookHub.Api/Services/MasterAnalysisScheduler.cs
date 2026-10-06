@@ -112,7 +112,9 @@ public class MasterAnalysisScheduler : BackgroundService
         var slots = usable.Count;
 
         var open = await db.GameAnalyses
+            // Die zweite Engine der Vereinspartien (EngineId gesetzt, 0.684.0) rechnet auf eigener Hardware — zählt hier nicht.
             .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
+                && g.EngineId == null
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
         if (open >= slots) return null;
@@ -188,7 +190,7 @@ public class MasterAnalysisScheduler : BackgroundService
     /// hochgeladene ändert den Bestand jederzeit — der Index auf <see cref="GameAnalysis.LeagueClubGameId"/> trägt das.</summary>
     private Task<LeagueClubGame?> NextClubGameAsync(AppDbContext db, CancellationToken ct)
     {
-        var q = db.LeagueClubGames.AsNoTracking().Where(c => !db.GameAnalyses.Any(a => a.LeagueClubGameId == c.Id));
+        var q = db.LeagueClubGames.AsNoTracking().Where(c => !db.GameAnalyses.Any(a => a.LeagueClubGameId == c.Id && a.EngineId == null));
         if (_unplayableClub.Count > 0) q = q.Where(c => !_unplayableClub.Contains(c.Id));
         return q.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
     }

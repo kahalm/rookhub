@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Models;
+using RookHub.Api.Authorization;
 
 namespace RookHub.Api.Controllers;
 
@@ -18,12 +20,20 @@ public class GameAnalysisController : BaseApiController
 {
     private readonly GameAnalysisService _service;
     private readonly AnalysisJobLive _live;
+    private readonly PermissionResolver? _permissions;
 
-    public GameAnalysisController(GameAnalysisService service, AnalysisJobLive live)
+    public GameAnalysisController(GameAnalysisService service, AnalysisJobLive live, PermissionResolver? permissions = null)
     {
         _service = service;
         _live = live;
+        _permissions = permissions;
     }
+
+    /// <summary>Darf die Vereinspartien sehen (<c>league.view</c>, live) — dann auch deren zweite Engine (0.684.0).</summary>
+    private async Task<bool> ClubReaderAsync(CancellationToken ct) =>
+        User.IsInRole("Admin") || (_permissions != null
+            ? (await _permissions.GetAsync(GetUserId(), ct)).Has(Permissions.LeagueView)
+            : User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueView));
 
     /// <summary>Eigene Analysen. <c>includeSavedGames=true</c> (die Seite „Partie-Analysen") nimmt die ueber
     /// eine gespeicherte Partie angestossenen mit — dort steht ihr Fortschritt; die Punktepartie-Seite laesst
@@ -83,13 +93,13 @@ public class GameAnalysisController : BaseApiController
     /// auf der Partieseite (0.682.0).</summary>
     [HttpPost("same-game")]
     public async Task<ActionResult<List<GameAnalysisAlternativeDto>>> SameGame([FromBody] SameGameRequest? req, CancellationToken ct)
-        => Ok(await _service.SameGameAsync(GetUserId(), req?.Ucis, ct));
+        => Ok(await _service.SameGameAsync(GetUserId(), req?.Ucis, ct, await ClubReaderAsync(ct)));
 
     /// <summary>Bewertungen einer eigenen Analyse im Format der Partiekurve — nur die eigene.</summary>
     [HttpGet("{id:int}/evals")]
     public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct)
     {
-        var dto = await _service.EvalsOfAsync(GetUserId(), id, ct);
+        var dto = await _service.EvalsOfAsync(GetUserId(), id, ct, await ClubReaderAsync(ct));
         return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
     }
 
