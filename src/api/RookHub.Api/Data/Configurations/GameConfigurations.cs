@@ -205,6 +205,19 @@ internal sealed class ExternalEngineRegistrationConfiguration : IEntityTypeConfi
     }
 }
 
+internal sealed class EngineClientScheduleConfiguration : IEntityTypeConfiguration<EngineClientSchedule>
+{
+    public void Configure(EntityTypeBuilder<EngineClientSchedule> e)
+    {
+        // Je Konto und Engine-NAME genau ein Zeitplan — derselbe Schluessel wie bei der Registrierung.
+        e.HasIndex(s => new { s.UserId, s.EngineName }).IsUnique();
+        e.HasOne<AppUser>()
+         .WithMany()
+         .HasForeignKey(s => s.UserId)
+         .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class LichessExplorerCacheEntryConfiguration : IEntityTypeConfiguration<LichessExplorerCacheEntry>
 {
     public void Configure(EntityTypeBuilder<LichessExplorerCacheEntry> e)

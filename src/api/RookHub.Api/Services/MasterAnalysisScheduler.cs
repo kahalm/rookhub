@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.EngineBroker;
 
 namespace RookHub.Api.Services;
 
@@ -100,11 +101,15 @@ public class MasterAnalysisScheduler : BackgroundService
     /// Analyse-Id (sonst <c>null</c>).</summary>
     internal async Task<int?> TickOnceAsync(AppDbContext db, GameAnalysisService analyses, CancellationToken ct)
     {
-        if (_quiet.IsQuietNow()) return null;
-
         var owner = await OwnerAsync(db, ct);
         if (owner is null) return null;
-        var slots = Math.Max(1, ExplicitOnlyEngines.Automatic(owner.BackgroundEngines, _explicitOnly).Count);
+        // Nicht mehr pauschal „Sperrzeit = Stillstand" (0.679.0): eine Engine, deren Client einen Zeitplan meldet,
+        // rechnet nach DIESEM; nur Engines ohne Meldung halten sich an die Sperrzeiten von RookHub. Steht gerade
+        // keine einzige zur Verfuegung, legt der Takt nichts an — genau das alte Verhalten in der Sperrzeit.
+        var usable = await EngineAvailability.UsableAsync(db, owner.UserId,
+            ExplicitOnlyEngines.Automatic(owner.BackgroundEngines, _explicitOnly), batch: true, _quiet, _quiet.Now, ct);
+        if (usable.Count == 0) return null;
+        var slots = usable.Count;
 
         var open = await db.GameAnalyses
             .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)

@@ -85,6 +85,23 @@ public class ExternalEngineController : BaseApiController
         return ToResult(await _registrations.SaveAsync(GetUserId(), null, request, ct));
     }
 
+    /// <summary>
+    /// Zeitplan-Meldung eines Engine-Clients (0.679.0): „wenn der client betriebszeiten meldet halte ich mich an die,
+    /// wenn nicht nehm ich die voreingestellten von rookhub". Der Client schickt seinen Zeitplan samt Platz jeder Engine;
+    /// eine leere Regel loescht die Meldung wieder. Literal-Route VOR <c>{id}</c>.
+    /// </summary>
+    [HttpPut("schedule")]
+    [RequireTokenScope(ApiTokenService.EngineScope, AllowJwt = false, Message = ProviderOnly)]
+    public async Task<IActionResult> ReportSchedule([FromBody] EngineScheduleReport report,
+        [FromServices] EngineClientScheduleService schedules, CancellationToken ct)
+    {
+        if (!_options.Enabled) return NotFound();
+        var result = await schedules.ReportAsync(GetUserId(), report, ct);
+        return result.Error is { } error
+            ? BadRequest(new { message = error })
+            : Ok(new { stored = result.Stored, cleared = result.Cleared });
+    }
+
     [HttpPut("{id}")]
     [RequireTokenScope(ApiTokenService.EngineScope, AllowJwt = false, Message = ProviderOnly)]
     public async Task<IActionResult> Update(string id, [FromBody] ExternalEngineRegistrationRequest request, CancellationToken ct)

@@ -207,6 +207,19 @@ case "$ENGINE_SCHEDULE_SCOPE" in
     *) echo "FEHLER: ENGINE_SCHEDULE_SCOPE muss 'background' oder 'all' sein (ist '$ENGINE_SCHEDULE_SCOPE')." >&2; exit 1 ;;
 esac
 
+# ZEITZONE des Zeitplans. FALLE: ein Container laeuft ab Werk in UTC — „08:00" hiesse dort im Sommer
+# 10:00 Wiener Zeit. Deshalb gilt TZ aus der .env, und ohne Angabe Europe/Vienna, dieselbe Vorgabe wie
+# die Sperrzeiten von RookHub. Gesetzt wird sie nur, wenn es einen Zeitplan gibt: ohne ihn bleiben
+# Uhr und Logzeilen des Containers, wie sie immer waren.
+ENGINE_SCHEDULE_TZ="${TZ:-Europe/Vienna}"
+if [ -n "${ENGINE_SCHEDULE:-}" ]; then
+    if [ ! -e "/usr/share/zoneinfo/$ENGINE_SCHEDULE_TZ" ]; then
+        echo "FEHLER: Zeitzone '$ENGINE_SCHEDULE_TZ' (TZ) gibt es in diesem Abbild nicht — z. B. TZ=Europe/Vienna." >&2
+        exit 1
+    fi
+    export TZ="$ENGINE_SCHEDULE_TZ"
+fi
+
 # "mo"/"mon"/"montag" → 1 … "so"/"sun" → 7, wie `date +%u`. Unbekannt → leere Ausgabe.
 schedule_day_number() {
     case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
@@ -408,6 +421,56 @@ build_args() {
     if [ -n "${BROKER_URL:-}" ];  then ARGS+=(--broker "$BROKER_URL"); fi
 }
 
+# ZEITPLAN AN ROOKHUB MELDEN (nur auf dem direkten Weg): „wenn der client betriebszeiten meldet halte
+# ich mich an die, wenn nicht nehm ich die voreingestellten von rookhub". RookHub rechnet damit fuer jede
+# Engine nach, ob sie gerade laeuft, und schickt einer abgeschalteten keine Arbeit mehr — statt sie
+# anzuschreiben und nach 15 Sekunden einen 503 zu kassieren. OHNE Zeitplan geht eine LEERE Regel raus:
+# eine fruehere Meldung dieser Engines faellt dann weg, und RookHub rechnet wieder nach seinen eigenen
+# Sperrzeiten. Ueber Lichess gibt es keinen Ort fuer diese Meldung — dort bleibt es bei RookHubs Sperrzeiten.
+schedule_report_body() {
+    local names="" i
+    for ((i = 1; i <= ENGINE_COUNT; i++)); do names+="$(engine_name "$i")"$'\n'; done
+    # `python` im Abbild; `python3` als Rueckfall fuer die Tests auf einem Rechner ohne `python`.
+    local py; py=$(command -v python || command -v python3)
+    RULE="${ENGINE_SCHEDULE:-}" SCOPE="$ENGINE_SCHEDULE_SCOPE" ZONE="$ENGINE_SCHEDULE_TZ" NAMES="$names" "$py" -c '
+import json, os
+names = [n for n in os.environ["NAMES"].split("\n") if n]
+print(json.dumps({"timeZone": os.environ["ZONE"], "scope": os.environ["SCOPE"], "rule": os.environ["RULE"],
+                  "engines": [{"name": n, "slot": i + 1} for i, n in enumerate(names)]}, ensure_ascii=False))'
+}
+
+# Meldet im Hintergrund, mit Wiederholung: ein RookHub, das gerade neu startet, soll den Zeitplan nicht
+# verpassen. Ein Fehlschlag haelt NIE eine Engine auf — RookHub rechnet dann einfach nach seinen Sperrzeiten.
+report_schedule() {
+    [ -n "${ROOKHUB_URL:-}" ] || return 0
+    local body out code attempt
+    body=$(schedule_report_body) || return 0
+    out=$(mktemp)
+    for attempt in 1 2 3 4 5; do
+        code=$(curl -s -o "$out" -w '%{http_code}' -m 20 -X PUT \
+            -H "Authorization: Bearer $LICHESS_API_TOKEN" -H 'Content-Type: application/json' \
+            --data "$body" "$ROOKHUB_URL/api/external-engine/schedule" 2>/dev/null) || code=000
+        case "$code" in
+            200)
+                if [ -n "${ENGINE_SCHEDULE:-}" ]; then
+                    echo "Zeitplan an RookHub gemeldet ($ENGINE_COUNT Engine(s), $ENGINE_SCHEDULE_SCOPE, $ENGINE_SCHEDULE_TZ)."
+                fi
+                rm -f "$out"; return 0 ;;
+            400)
+                echo "WARNUNG: RookHub lehnt die Zeitplan-Meldung ab: $(head -c 300 "$out")" >&2
+                rm -f "$out"; return 0 ;;
+            404)
+                if [ -n "${ENGINE_SCHEDULE:-}" ]; then
+                    echo "Hinweis: dieses RookHub kennt die Zeitplan-Meldung noch nicht (aelter als 0.679.0) — es rechnet nach seinen eigenen Sperrzeiten." >&2
+                fi
+                rm -f "$out"; return 0 ;;
+        esac
+        sleep 60
+    done
+    echo "WARNUNG: Zeitplan konnte RookHub nicht gemeldet werden (zuletzt HTTP $code) — RookHub rechnet nach seinen eigenen Sperrzeiten." >&2
+    rm -f "$out"
+}
+
 # Testmodus: nur die Aufrufe zeigen (eine Zeile je Engine), kein Preflight, kein Start.
 if [ -n "${ENTRYPOINT_DRY_RUN:-}" ]; then
     for ((i = 1; i <= ENGINE_COUNT; i++)); do
@@ -417,6 +480,8 @@ if [ -n "${ENTRYPOINT_DRY_RUN:-}" ]; then
     if [ "$ENGINE_COUNT" -gt 1 ]; then
         printf 'DRY-RUN Staffelung: %s s zwischen den Provider-Starts\n' "$PROVIDER_START_DELAY"
     fi
+    # Was RookHub als Zeitplan gemeldet bekaeme — nur auf dem direkten Weg, sonst bleibt die Ausgabe wie bisher.
+    if [ -n "${ROOKHUB_URL:-}" ]; then printf 'ZEITPLAN-MELDUNG: %s\n' "$(schedule_report_body)"; fi
     # Woher der Token kam — NIE der Token selbst; nur beim Alias, sonst bleibt die Ausgabe wie bisher.
     if [ "$TOKEN_SOURCE" != LICHESS_API_TOKEN ]; then printf 'TOKEN-QUELLE: %s\n' "$TOKEN_SOURCE"; fi
     exit 0
@@ -459,7 +524,9 @@ if [ -n "${ENGINE_SCHEDULE:-}" ]; then
     stop_all() { local i; for ((i = 1; i <= ENGINE_COUNT; i++)); do stop_engine "$i"; done; }
     trap 'stop_all; exit 143' TERM INT
 
-    echo "Zeitplan aktiv: $ENGINE_SCHEDULE"
+    echo "Zeitplan aktiv ($ENGINE_SCHEDULE_TZ): $ENGINE_SCHEDULE"
+    report_schedule &
+    reported_at=$(date +%s)
     last=-1
     while :; do
         pct=$(schedule_percent_now)
@@ -501,11 +568,20 @@ if [ -n "${ENGINE_SCHEDULE:-}" ]; then
             started=$((started + 1))
         done
 
+        # Alle sechs Stunden erneut melden: ein RookHub, das neu aufgesetzt wurde, kennt den Plan sonst nicht.
+        if [ $(( $(date +%s) - reported_at )) -ge 21600 ]; then
+            report_schedule &
+            reported_at=$(date +%s)
+        fi
+
         # Im Hintergrund schlafen und darauf warten: so kommt ein TERM waehrend der Pause sofort
         # beim Trap an, statt bis zum Ende des Taktes zu liegen.
         sleep "$SCHEDULE_TICK" & wait $! 2>/dev/null || true
     done
 fi
+
+# Ohne Zeitplan: eine fruehere Meldung dieser Engines bei RookHub zuruecknehmen (leere Regel).
+report_schedule &
 
 if [ "$ENGINE_COUNT" -eq 1 ]; then
     build_args 1
@@ -520,7 +596,7 @@ PIDS=()
 # `|| true` hinter kill/wait: unter `set -e` beendete ein fehlgeschlagenes kill (Prozess schon weg)
 # bzw. ein wait auf einen mit Exit≠0 gestorbenen Kindprozess die Shell SOFORT — der Trap wäre
 # mitten im Aufräumen abgebrochen und der Container mit dem falschen Code beendet.
-trap 'kill "${PIDS[@]}" 2>/dev/null || true; wait || true; exit 143' TERM INT
+trap 'kill "${PIDS[@]}" 2>/dev/null || true; wait "${PIDS[@]}" 2>/dev/null || true; exit 143' TERM INT
 for ((i = 1; i <= ENGINE_COUNT; i++)); do
     # Pause VOR jedem weiteren Provider (nicht vor dem ersten, nicht nach dem letzten): die
     # Registrierungen sollen nacheinander bei lichess.org ankommen, siehe PROVIDER_START_DELAY oben.
@@ -541,7 +617,8 @@ code=0
 wait -n "${PIDS[@]}" || code=$?
 echo "FEHLER: Ein Engine-Provider hat sich beendet (Exit $code) — alle Engines werden neu gestartet." >&2
 kill "${PIDS[@]}" 2>/dev/null || true
-wait || true
+# Nur auf die Provider warten — die Zeitplan-Meldung im Hintergrund darf den Neustart nicht aufhalten.
+wait "${PIDS[@]}" 2>/dev/null || true
 # Exit 0 wäre hier gelogen: der Container SOLL neu starten (restart: unless-stopped greift nur bei ≠0).
 [ "$code" -eq 0 ] && code=70
 exit "$code"

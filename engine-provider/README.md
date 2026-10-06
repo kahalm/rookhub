@@ -153,6 +153,7 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `PROVIDER_START_DELAY` | Sekunden Pause zwischen den Provider-Starts bei mehreren Engines (leer = 3, 0 = aus) — siehe unten |
 | `ENGINE_SCHEDULE` | Zeitplan: wann wie viel gerechnet wird (leer = immer alles) — siehe unten |
 | `ENGINE_SCHEDULE_SCOPE` | Worauf der Prozentsatz zielt: `background` (Vorgabe, Live-Engine bleibt an) oder `all` |
+| `TZ` | Zeitzone des Zeitplans (Vorgabe `Europe/Vienna`; der Container selbst liefe sonst in UTC) |
 | `SCHEDULE_TICK` | Sekunden zwischen zwei Blicken auf die Uhr (leer = 20) |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
@@ -263,6 +264,23 @@ docker compose run --rm -e ENGINE_SCHEDULE_AT="Mo 09:00" engine-provider
 
 Eine kaputte Regel beendet den Container beim Start mit einem Satz, der sagt, welches Stück nicht
 stimmt — lieber das als ein Zeitplan, der stillschweigend immer 100 % fährt.
+
+**Zeitzone.** Ein Container läuft ab Werk in UTC — „08:00" läge dort im Sommer zwei Stunden daneben.
+Gerechnet wird deshalb in `TZ` aus der `.env`, ohne Angabe in `Europe/Vienna` (dieselbe Vorgabe wie die
+Sperrzeiten von RookHub). Unter Windows gilt die Uhr des Rechners.
+
+**RookHub erfährt den Zeitplan.** Auf dem direkten Weg (`ROOKHUB_URL`) meldet der Client seinen Zeitplan
+beim Start und danach alle sechs Stunden an RookHub, samt Platz jeder Engine. RookHub rechnet damit für
+jede Engine dasselbe nach wie der Client und schickt einer abgeschalteten keine Arbeit mehr, statt sie
+anzuschreiben und erst nach 15 Sekunden auszuweichen. Die Regel dahinter:
+
+| Client | RookHub richtet sich nach |
+|---|---|
+| meldet einen Zeitplan | **diesem Zeitplan** — auch in RookHubs eigenen Sperrzeiten, wenn der Client dann rechnet |
+| meldet keinen (kein `ENGINE_SCHEDULE`, über Lichess, ältere Fassung) | **RookHubs Sperrzeiten** für den Stapel (Meister-, Vereins-, Ligapartien); normale Aufträge jederzeit |
+
+Wird `ENGINE_SCHEDULE` wieder geleert, meldet der Client beim nächsten Start eine leere Regel, und RookHub
+fällt für diese Engines auf seine Sperrzeiten zurück.
 
 > **Was beim Abschalten mit laufenden Aufträgen passiert:** Der Provider wird beendet, RookHub
 > bekommt für diese Engine nach 15 Sekunden einen 503 und gibt den Auftrag einer anderen Engine aus

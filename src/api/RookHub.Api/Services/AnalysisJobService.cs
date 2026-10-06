@@ -46,13 +46,18 @@ public class AnalysisJobService
     private readonly IReadOnlySet<string> _explicitOnly;
 
     public AnalysisJobService(AppDbContext db, IAnalysisJobControl? control = null, EngineRegistry? registry = null,
-        IConfiguration? config = null)
+        IConfiguration? config = null, QuietHours? quiet = null)
     {
         _db = db;
         _control = control;
         _registry = registry;
         _explicitOnly = ExplicitOnlyEngines.From(config);
+        _quiet = quiet;
     }
+
+    /// <summary>Sperrzeiten von RookHub — gelten fuer Hintergrund-Auftraege auf Engines, deren Client keinen eigenen
+    /// Zeitplan meldet (<see cref="EngineAvailability"/>).</summary>
+    private readonly QuietHours? _quiet;
 
     /// <summary>Knotenziel eines Auftrags: Bereich, damit weder ein Tippfehler (3 Knoten) noch ein Dauerläufer ankommt.</summary>
     public const long MinTargetNodes = 1_000;
@@ -101,13 +106,20 @@ public class AnalysisJobService
     /// (auf Dev erlebt: ein Auftrag rechnete eine halbe Stunde, alle anderen warteten). Die
     /// kuerzeste Schlange gewinnt deshalb, bei Gleichstand die zuerst hinterlegte.</para>
     /// </summary>
-    private async Task<string> PickBackgroundEngineAsync(int ownerId, CancellationToken ct)
+    private async Task<string> PickBackgroundEngineAsync(int ownerId, CancellationToken ct, bool background = false)
     {
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
         // Engines, die nur auf ausdrückliche Anforderung rechnen (AnalysisJobs:ExplicitOnlyEngineIds), fallen hier heraus.
         var engines = ExplicitOnlyEngines.Automatic(cred?.BackgroundEngines ?? [], _explicitOnly);
         if (engines.Count == 0)
             throw new InvalidOperationException("No background engine configured");
+
+        // Nur Engines, die gerade Arbeit nehmen (0.679.0): eine, die ihr Client nach Zeitplan abgeschaltet hat, bekaeme
+        // den Auftrag sonst erst nach einem 503 los. Steht gerade KEINE zur Verfuegung, bleibt es bei der ganzen Liste —
+        // der Auftrag wartet dann auf seiner Engine, bis sie wieder laeuft, statt mit „keine Engine" abzulehnen.
+        var usable = await EngineAvailability.UsableAsync(_db, ownerId, engines, background, _quiet,
+            _quiet?.Now ?? DateTimeOffset.UtcNow, ct);
+        if (usable.Count > 0) engines = usable;
         if (engines.Count == 1) return engines[0];
 
         // Gezaehlt wird nach ENGINE-BESITZER, nicht nach Auftraggeber: auf der Haus-Engine stehen
@@ -188,7 +200,7 @@ public class AnalysisJobService
         var explicitEngine = engineId is not null;
         if (engineId is null)
         {
-            engineId = await PickBackgroundEngineAsync(engineOwner ?? userId, ct);
+            engineId = await PickBackgroundEngineAsync(engineOwner ?? userId, ct, background);
         }
         if (engineId.Length > 64)
             throw new ArgumentException("Invalid engine id");

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services.EngineBroker;
 
 namespace RookHub.Api.Services;
 
@@ -844,9 +845,29 @@ public class GameAnalysisService
     private async Task<int> EngineSlotsAsync(GameAnalysis analysis, CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(analysis.EngineId)) return 1;
+        // Nur die Engines, die gerade Arbeit nehmen (0.679.0): bei Teillast eines Clients stehen einige still, und
+        // Suchen fuer sie oeffneten Auftraege, die erst nach einem 503 woanders landen.
+        return Math.Max(1, (await UsableEnginesAsync(analysis, ct)).Count);
+    }
+
+    /// <summary>Die Hintergrund-Engines, die fuer diese Analyse JETZT Arbeit bekommen duerfen — nach dem Zeitplan, den
+    /// ihr Client meldet, sonst nach den Sperrzeiten von RookHub (nur fuer den Stapel). Siehe
+    /// <see cref="EngineAvailability"/>.</summary>
+    private async Task<List<string>> UsableEnginesAsync(GameAnalysis analysis, CancellationToken ct)
+    {
         var ownerId = analysis.EngineOwnerUserId ?? analysis.UserId;
-        var cred = await _db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
-        return Math.Max(1, cred?.BackgroundEngines.Count ?? 0);
+        IReadOnlyList<string> engines;
+        if (!string.IsNullOrWhiteSpace(analysis.EngineId))
+        {
+            engines = [analysis.EngineId];
+        }
+        else
+        {
+            var cred = await _db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
+            engines = cred?.BackgroundEngines ?? [];
+        }
+        return await EngineAvailability.UsableAsync(_db, ownerId, engines, GameAnalysisOrigins.IsBatch(analysis.Origin),
+            _quiet, _quiet?.Now ?? DateTimeOffset.UtcNow, ct);
     }
 
     /// <summary>Fertige Aufträge in die Stellungen kopieren.</summary>
@@ -1106,7 +1127,9 @@ public class GameAnalysisService
         var batch = GameAnalysisOrigins.IsBatch(analysis.Origin);
         // In der Sperrzeit steht der Stapel still: schon eingereihte Stellungen laufen noch zu Ende (hoechstens
         // ein Block), neue kommen erst, wenn das Fenster wieder offen ist.
-        if (batch && _quiet?.IsQuietNow() == true) return false;
+        // Seit 0.679.0 nicht mehr pauschal an den Sperrzeiten: eine Engine, deren Client einen Zeitplan meldet,
+        // rechnet nach diesem, nur Engines ohne Meldung halten sich an die Sperrzeiten von RookHub.
+        if (batch && (await UsableEnginesAsync(analysis, ct)).Count == 0) return false;
         var open = analysis.Positions.Count(p => p.CandidatesJson == null && p.AnalysisJobId != null);
         var room = GameAnalysisDefaults.MaxOpenJobsPerGame - open;
         if (room <= 0) return false;

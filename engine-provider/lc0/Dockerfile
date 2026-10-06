@@ -35,8 +35,11 @@ RUN meson setup build --buildtype=release \
  && ./build/lc0 --help >/dev/null
 
 FROM nvidia/cuda:${CUDA_VERSION}-runtime-${UBUNTU}
+# tzdata: der Zeitplan (ENGINE_SCHEDULE) rechnet in TZ, Vorgabe Europe/Vienna — ohne die Zonendateien
+# kennt das Abbild nur UTC, und „08:00" laege im Sommer zwei Stunden daneben. DEBIAN_FRONTEND, weil
+# tzdata sonst beim Bau interaktiv nach der Zone fragt.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl python3 python3-venv libopenblas0 \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl python3 python3-venv libopenblas0 tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /src/lc0/build/lc0 /opt/lc0/lc0

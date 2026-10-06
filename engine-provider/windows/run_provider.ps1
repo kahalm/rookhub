@@ -316,12 +316,57 @@ function Stop-Provider($proc) {
     try { if (-not $proc.HasExited) { $proc.Kill() } } catch { }
 }
 
+# ZEITPLAN AN ROOKHUB MELDEN (nur direkt): „wenn der client betriebszeiten meldet halte ich mich an die,
+# wenn nicht nehm ich die voreingestellten von rookhub". RookHub rechnet damit fuer jede Engine nach, ob
+# sie gerade laeuft, und schickt einer abgeschalteten keine Arbeit mehr. Ohne Zeitplan geht eine LEERE
+# Regel raus: eine fruehere Meldung faellt weg, und RookHub rechnet wieder nach seinen Sperrzeiten.
+# Liefert $true, wenn nichts mehr zu tun ist (gemeldet, abgelehnt oder vom Server nicht gekannt).
+function Send-ScheduleReport {
+    if (-not $rookhubUrl -or -not $env:LICHESS_API_TOKEN) { return $true }
+    $body = @{
+        # Windows-Kennung („W. Europe Standard Time") — RookHub uebersetzt sie selbst in die IANA-Zone.
+        timeZone = [TimeZoneInfo]::Local.Id
+        scope    = $scheduleScope
+        rule     = $schedule
+        engines  = @($engines | ForEach-Object { @{ name = $_.Name; slot = $_.Slot } })
+    } | ConvertTo-Json -Depth 4
+    try {
+        Invoke-RestMethod -Method Put -Uri "$($rookhubUrl.TrimEnd('/'))/api/external-engine/schedule" `
+            -Headers @{ Authorization = "Bearer $($env:LICHESS_API_TOKEN)" } -ContentType 'application/json; charset=utf-8' `
+            -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 20 | Out-Null
+        if ($schedule) { Write-WrapperLog "Zeitplan an RookHub gemeldet ($($engines.Count) Engine(s), $scheduleScope, $([TimeZoneInfo]::Local.Id))" }
+        return $true
+    } catch {
+        $status = 0
+        try { $status = [int]$_.Exception.Response.StatusCode } catch { }
+        if ($status -eq 400) {
+            Write-WrapperLog "WARNUNG: RookHub lehnt die Zeitplan-Meldung ab: $($_.ErrorDetails.Message)"
+            return $true
+        }
+        if ($status -eq 404) {
+            if ($schedule) { Write-WrapperLog "Hinweis: dieses RookHub kennt die Zeitplan-Meldung noch nicht (aelter als 0.679.0) - es rechnet nach seinen eigenen Sperrzeiten" }
+            return $true
+        }
+        Write-WrapperLog "WARNUNG: Zeitplan-Meldung fehlgeschlagen ($($_.Exception.Message)) - neuer Versuch in einer Minute"
+        return $false
+    }
+}
+
+# Windows PowerShell 5.1 spricht ab Werk nicht zwingend TLS 1.2 — ohne das scheitert die Meldung an jedem
+# aktuellen Server mit „Die zugrunde liegende Verbindung wurde geschlossen".
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+
 # Ein Prozess je Engine, einzeln ueberwacht, und im Takt der Uhr so viele, wie der Zeitplan
 # vorsieht. Ein gemeinsamer Loop mit -Wait wie im Einzel-Engine-Skript geht hier nicht: stirbt
 # eine von siebzehn Engines, soll genau die neu starten und nicht der ganze Verband.
 $running = @{}
 $lastTarget = -1
+$nextReport = Get-Date          # sofort beim Start melden, danach alle sechs Stunden
 while ($true) {
+    if ((Get-Date) -ge $nextReport) {
+        $nextReport = if (Send-ScheduleReport) { (Get-Date).AddHours(6) } else { (Get-Date).AddMinutes(1) }
+    }
+
     $now = Get-Date
     $day = [int]$now.DayOfWeek; if ($day -eq 0) { $day = 7 }   # .NET zaehlt Sonntag als 0
     $pct = Get-SchedulePercent $day ($now.Hour * 60 + $now.Minute)

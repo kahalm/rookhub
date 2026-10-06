@@ -374,6 +374,7 @@ try
         RookHub.Api.Services.EngineBroker.UnknownSelectorThrottle.DefaultPermitPerMinute
         * RookHub.Api.Services.RateLimitScale.FromConfig(builder.Configuration)));
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.ExternalEngineRegistrationService>();
+    builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.EngineClientScheduleService>();
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.EngineRegistry>();
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineHub>();
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.LocalEngineBroker>();

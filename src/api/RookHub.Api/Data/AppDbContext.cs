@@ -126,6 +126,7 @@ public partial class AppDbContext : DbContext
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<LichessEngineCredential> LichessEngineCredentials => Set<LichessEngineCredential>();
     public DbSet<ExternalEngineRegistration> ExternalEngineRegistrations => Set<ExternalEngineRegistration>();
+    public DbSet<EngineClientSchedule> EngineClientSchedules => Set<EngineClientSchedule>();
     public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<AnalysisHistoryEntry> AnalysisHistoryEntries => Set<AnalysisHistoryEntry>();

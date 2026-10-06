@@ -53,6 +53,31 @@ bad "Mo 8-17 50%"
 bad "Mo 08:00-17:00 150%"
 bad "Mo 25:00-26:00 50%"
 
+# ---------------------------------------------------------------- Meldung an RookHub (Dry-Run)
+dry() {   # dry <Zeitplan> [weitere VAR=Wert …] — gibt die Zeile ZEITPLAN-MELDUNG aus
+    local plan="$1"; shift
+    env -i PATH="$PATH" ROOKHUB_URL=https://rh.example ROOKHUB_API_TOKEN=rkh_x ENGINE_PATH="$fake_engine" \
+        ENTRYPOINT_DRY_RUN=1 ENGINE_PRIMARY_NAME="PC" ENGINE_BACKGROUND_NAME="PC Hintergrund" ENGINE_BACKGROUND_COUNT=2 \
+        ENGINE_SCHEDULE="$plan" "$@" bash "$ROOT/entrypoint.sh" 2>&1 | grep '^ZEITPLAN-MELDUNG: ' | sed 's/^ZEITPLAN-MELDUNG: //'
+}
+json=$(dry "Mo-Do 08:00-17:00 0%" ENGINE_SCHEDULE_SCOPE=all)
+check_json() {   # check_json "<Beschreibung>" "<Python-Ausdruck ueber d>"
+    if printf '%s' "$json" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if ($2) else 1)" 2>/dev/null
+    then ok "$1"; else fail "$1 — Meldung war: $json"; fi
+}
+check_json "Meldung: Regel, Scope, Zone"        'd["rule"]=="Mo-Do 08:00-17:00 0%" and d["scope"]=="all" and d["timeZone"]=="Europe/Vienna"'
+check_json "Meldung: Engines mit Platz"         '[(e["name"],e["slot"]) for e in d["engines"]]==[("PC",1),("PC Hintergrund",2),("PC Hintergrund 2",3)]'
+json=$(dry "")
+check_json "ohne Zeitplan: leere Regel (zuruecknehmen)" 'd["rule"]==""'
+json=$(dry "* 50%" TZ=America/New_York)
+check_json "TZ aus der .env geht mit"            'd["timeZone"]=="America/New_York"'
+env -i PATH="$PATH" LICHESS_API_TOKEN=x ENGINE_PATH="$fake_engine" ENGINE_SCHEDULE="* 50%" TZ=Mond/Krater \
+    ENGINE_SCHEDULE_AT="Mo 09:00" bash "$ROOT/entrypoint.sh" 2>&1 | grep -q '^FEHLER: Zeitzone' \
+    && ok "unbekannte Zeitzone abgelehnt" || fail "unbekannte Zeitzone durchgelassen"
+lichess_out=$(env -i PATH="$PATH" LICHESS_API_TOKEN=lip_x ENGINE_PATH="$fake_engine" ENTRYPOINT_DRY_RUN=1 \
+    ENGINE_SCHEDULE="* 50%" bash "$ROOT/entrypoint.sh" 2>&1)
+printf '%s' "$lichess_out" | grep -q '^ZEITPLAN-MELDUNG' && fail "ueber Lichess darf nichts gemeldet werden" || ok "ueber Lichess keine Meldung"
+
 # ---------------------------------------------------------------- Aufsicht mit Stub-Providern
 # Stub-„python": provider.py meldet seinen Start und bleibt dann liegen.
 cat > "$work/python" << 'PY'
@@ -63,6 +88,8 @@ case "$1" in
       name=""; while [ $# -gt 0 ]; do [ "$1" = "--name" ] && name="$2"; shift; done
       echo "$name" >> __STARTS__
       exec sleep 60 ;;
+  # Alles andere (z. B. `python -c` fuer die Zeitplan-Meldung) an das echte Python weiterreichen.
+  *) exec python3 "$@" ;;
 esac
 PY
 sed -i "s#__STARTS__#$work/starts#" "$work/python"
@@ -87,6 +114,28 @@ run_plan() {   # run_plan "<Prozentregel>" "<Sekunden>"; Ausgabe: Zahl der gesta
     wait "$sup" 2>/dev/null
     wc -l < "$work/starts" | tr -d ' '
 }
+
+# Stub-„curl": haelt Methode, Adresse und Rumpf fest und antwortet 200.
+cat > "$work/curl" << 'CURL'
+#!/bin/bash
+method=""; url=""; data=""
+while [ $# -gt 0 ]; do
+  case "$1" in -X) method="$2"; shift ;; --data) data="$2"; shift ;; -o|-w|-m|-H) shift ;; http*) url="$1" ;; esac
+  shift
+done
+printf '%s %s %s\n' "$method" "$url" "$data" >> __REPORTS__
+printf '200'
+CURL
+sed -i "s#__REPORTS__#$work/reports#" "$work/curl"; chmod +x "$work/curl"; : > "$work/reports"
+( cd "$work" && exec setsid env -i PATH="$work:$PATH" ROOKHUB_URL=https://rh.example ROOKHUB_API_TOKEN=rkh_x \
+    ENGINE_PATH="$fake_engine" ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=1 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 \
+    ENGINE_SCHEDULE="$d 00:00-24:00 100%" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
+sup=$!; sleep 3; kill -TERM -"$sup" 2>/dev/null || kill -TERM "$sup" 2>/dev/null; wait "$sup" 2>/dev/null
+if grep -q '^PUT https://rh.example/api/external-engine/schedule {' "$work/reports"; then ok "Zeitplan per PUT an RookHub gemeldet"
+else fail "keine Meldung an RookHub — gesehen: $(cat "$work/reports")"; fi
+grep -q 'Zeitplan aktiv (Europe/Vienna)' "$work/log" && ok "Container rechnet in Europe/Vienna statt UTC" \
+    || fail "Zeitzone nicht gesetzt — Log: $(head -3 "$work/log")"
+rm -f "$work/curl"
 
 expect "100 %: alle vier Engines laufen" "4" "$(run_plan "100%" 3)"
 expect "0 %: keine einzige laeuft"       "0" "$(run_plan "0%" 3)"

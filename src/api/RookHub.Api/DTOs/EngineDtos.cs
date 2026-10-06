@@ -106,3 +106,22 @@ public class EngineAcquireRequest
 
 /// <summary>Antwort des Long-Polls: der abgeholte Auftrag (lila-engine <c>AcquireResponse</c>).</summary>
 public record EngineAcquireResponse(string Id, System.Text.Json.Nodes.JsonObject Work, System.Text.Json.Nodes.JsonObject Engine);
+
+/// <summary>Zeitplan-Meldung eines Engine-Clients (0.679.0, <c>PUT /api/external-engine/schedule</c>): EIN Zeitplan für
+/// alle seine Engines, dazu jede Engine mit ihrem Platz (1 = Live-Engine). Leere <see cref="Rule"/> = „kein Zeitplan",
+/// RookHub löscht dann die Meldung dieser Engines und rechnet wieder nach den eigenen Sperrzeiten.</summary>
+public class EngineScheduleReport
+{
+    /// <summary>Zeitzone der Uhrzeiten (IANA oder Windows-Kennung). Leer = Europe/Vienna, wie die Sperrzeiten.</summary>
+    public string? TimeZone { get; set; }
+    /// <summary><c>background</c> (Vorgabe) oder <c>all</c>.</summary>
+    public string? Scope { get; set; }
+    public string? Rule { get; set; }
+    public List<EngineScheduleReportEngine>? Engines { get; set; }
+}
+
+public class EngineScheduleReportEngine
+{
+    public string? Name { get; set; }
+    public int Slot { get; set; }
+}

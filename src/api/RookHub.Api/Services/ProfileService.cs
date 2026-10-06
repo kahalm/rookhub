@@ -420,6 +420,8 @@ public class ProfileService
         // Engines „RookHub direkt": ihr Selector nimmt sonst weiter Arbeit an (der Provider pollt ja weiter),
         // und die Zeile trüge den Namen der Maschine eines gelöschten Kontos.
         _db.ExternalEngineRegistrations.RemoveRange(await _db.ExternalEngineRegistrations.Where(r => r.UserId == userId).ToListAsync());
+        // Gemeldete Zeitplaene der Engine-Clients (0.679.0) — haengen am Konto wie die Registrierungen.
+        _db.EngineClientSchedules.RemoveRange(await _db.EngineClientSchedules.Where(s => s.UserId == userId).ToListAsync());
         _db.PasswordResetTokens.RemoveRange(await _db.PasswordResetTokens.Where(t => t.UserId == userId).ToListAsync());
         // Ein noch offener Uebergabe-Code wuerde sonst nach der Loeschung noch Sekunden lang
         // eine Anmeldung erzeugen (der Einloeser prueft zwar DeletedAt — die Zeile hat hier aber
