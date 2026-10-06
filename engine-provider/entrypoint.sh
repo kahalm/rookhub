@@ -170,6 +170,169 @@ if ! [[ "$PROVIDER_START_DELAY" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
     exit 1
 fi
 
+# ===========================================================================
+# ZEITPLAN (ENGINE_SCHEDULE) — wann wie viel gerechnet wird
+# ===========================================================================
+# Leer = immer alles, also genau das bisherige Verhalten. Sonst Regeln, mit ";" getrennt:
+#
+#     ENGINE_SCHEDULE="Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%"
+#
+# Je Regel "<Tage> <von>-<bis> <Prozent>". Tage als mo di mi do fr sa so (oder mon tue wed thu
+# fri sat sun), als Bereich (mo-do), als Liste (sa,so) oder "*" für jeden Tag. Zeiten HH:MM; die
+# Spanne darf über Mitternacht gehen (22:00-06:00). Ohne Uhrzeit meint eine Regel den ganzen Tag
+# ("Sa,So 100%"). Die ERSTE passende Regel gilt, passt keine, wird mit 100 % gerechnet.
+#
+# Was der Prozentsatz bedeutet: 0 = alle Provider aus — die Engines verschwinden aus RookHub wie
+# bei einem ausgeschalteten Rechner, laufende Aufträge brechen ab und werden neu vergeben.
+# 100 = alle an. Dazwischen bleibt die LIVE-Engine (Engine 1) an und der Anteil gilt den
+# HINTERGRUND-Engines: dort wartet kein Mensch auf das Ergebnis, und dort liegt die Dauerlast.
+# Gerundet wird kaufmännisch, bei mehr als 0 % bleibt mindestens eine Hintergrund-Engine übrig.
+#
+# Prüfen, ohne etwas zu starten (zeigt Prozent und Zahl der Engines zu diesem Zeitpunkt):
+#     docker compose run --rm -e ENGINE_SCHEDULE_AT="Mo 09:00" engine-provider
+SCHEDULE_TICK="${SCHEDULE_TICK:-20}"
+
+# "mo"/"mon"/"montag" → 1 … "so"/"sun" → 7, wie `date +%u`. Unbekannt → leere Ausgabe.
+schedule_day_number() {
+    case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+        mo|mon|montag|monday)         echo 1 ;;
+        di|die|tue|tuesday|dienstag)  echo 2 ;;
+        mi|mit|wed|wednesday|mittwoch) echo 3 ;;
+        do|don|thu|thursday|donnerstag) echo 4 ;;
+        fr|fre|fri|friday|freitag)    echo 5 ;;
+        sa|sam|sat|saturday|samstag)  echo 6 ;;
+        so|son|sun|sunday|sonntag)    echo 7 ;;
+        *) echo "" ;;
+    esac
+}
+
+# "08:00" → Minuten seit Mitternacht. Ungültig → leere Ausgabe. 24:00 ist als ENDE erlaubt.
+schedule_minutes() {
+    local h m
+    [[ "$1" =~ ^([0-9]{1,2}):([0-9]{2})$ ]] || { echo ""; return; }
+    h=$((10#${BASH_REMATCH[1]})); m=$((10#${BASH_REMATCH[2]}))
+    if [ "$h" -gt 24 ] || [ "$m" -gt 59 ] || { [ "$h" -eq 24 ] && [ "$m" -ne 0 ]; }; then echo ""; return; fi
+    echo $((h * 60 + m))
+}
+
+# Passt der Wochentag $2 (1..7) auf die Tage-Angabe $1? 0 = ja, 1 = nein, 2 = Angabe kaputt.
+schedule_days_match() {
+    local spec="$1" day="$2" part a b lower
+    lower=$(printf '%s' "$spec" | tr '[:upper:]' '[:lower:]')
+    case "$lower" in
+        '*'|daily|all|taeglich|täglich|immer) return 0 ;;
+    esac
+    local parts=()
+    IFS=',' read -ra parts <<< "$spec"
+    for part in "${parts[@]}"; do
+        [ -z "$part" ] && continue
+        if [[ "$part" == *-* ]]; then
+            a=$(schedule_day_number "${part%%-*}")
+            b=$(schedule_day_number "${part##*-}")
+            if [ -z "$a" ] || [ -z "$b" ]; then return 2; fi
+            if [ "$a" -le "$b" ]; then
+                if [ "$day" -ge "$a" ] && [ "$day" -le "$b" ]; then return 0; fi
+            # Bereich über das Wochenende hinweg, z. B. fr-mo
+            elif [ "$day" -ge "$a" ] || [ "$day" -le "$b" ]; then
+                return 0
+            fi
+        else
+            a=$(schedule_day_number "$part")
+            if [ -z "$a" ]; then return 2; fi
+            if [ "$day" -eq "$a" ]; then return 0; fi
+        fi
+    done
+    return 1
+}
+
+# Liegt Minute $3 in der Spanne "$1-$2" (beide schon in Minuten)? Ende ausschliesslich,
+# damit "08:00-17:00" und "17:00-22:00" sich nicht überlappen.
+schedule_time_match() {
+    local from="$1" to="$2" min="$3"
+    if [ "$from" -eq "$to" ]; then return 0; fi                      # "00:00-00:00" = ganzer Tag
+    if [ "$from" -lt "$to" ]; then
+        if [ "$min" -ge "$from" ] && [ "$min" -lt "$to" ]; then return 0; fi
+        return 1
+    fi
+    # über Mitternacht
+    if [ "$min" -ge "$from" ] || [ "$min" -lt "$to" ]; then return 0; fi
+    return 1
+}
+
+# Jede Regel einmal zerlegen und meckern, wenn etwas nicht stimmt — beim START, nicht erst
+# nachts um drei, wenn die Regel zum ersten Mal greifen würde.
+schedule_validate() {
+    local rule days span pct rest from to ok=0 rules=()
+    # IFS gilt sonst auch fuer `read` unten und zerlegte die Regel an ';' statt an Leerzeichen.
+    IFS=';' read -ra rules <<< "$ENGINE_SCHEDULE"
+    for rule in "${rules[@]}"; do
+        read -r days span pct rest <<< "$rule"
+        [ -z "${days:-}" ] && continue
+        # Kurzform ohne Uhrzeit: "Sa,So 100%" meint den ganzen Tag.
+        if [ -z "${pct:-}" ] && [[ "${span:-}" =~ ^[0-9]+%?$ ]]; then pct="$span"; span="00:00-24:00"; fi
+        if [ -z "${span:-}" ] || [ -z "${pct:-}" ] || [ -n "${rest:-}" ]; then
+            echo "FEHLER: ENGINE_SCHEDULE-Regel '$rule' muss '<Tage> <von>-<bis> <Prozent>' sein, z. B. 'Mo-Do 08:00-17:00 0%'." >&2
+            return 1
+        fi
+        schedule_days_match "$days" 1; [ $? -eq 2 ] && { echo "FEHLER: ENGINE_SCHEDULE: '$days' ist keine Tagesangabe (mo di mi do fr sa so, Bereiche mo-do, Listen sa,so, * für jeden Tag)." >&2; return 1; }
+        from=$(schedule_minutes "${span%%-*}"); to=$(schedule_minutes "${span##*-}")
+        if [ "$span" = "${span#*-}" ] || [ -z "$from" ] || [ -z "$to" ]; then
+            echo "FEHLER: ENGINE_SCHEDULE: '$span' ist keine Zeitspanne HH:MM-HH:MM." >&2
+            return 1
+        fi
+        pct="${pct%\%}"
+        if ! [[ "$pct" =~ ^[0-9]+$ ]] || [ "$pct" -gt 100 ]; then
+            echo "FEHLER: ENGINE_SCHEDULE: '$pct' ist kein Prozentwert von 0 bis 100." >&2
+            return 1
+        fi
+        ok=$((ok + 1))
+    done
+    if [ "$ok" -eq 0 ]; then
+        echo "FEHLER: ENGINE_SCHEDULE ist gesetzt, enthält aber keine Regel." >&2
+        return 1
+    fi
+    return 0
+}
+
+# Prozentsatz für Wochentag $1 (1..7) und Minute $2 — die erste passende Regel gewinnt.
+schedule_percent_at() {
+    local day="$1" min="$2" rule days span pct from to rules=()
+    if [ -z "${ENGINE_SCHEDULE:-}" ]; then echo 100; return; fi
+    IFS=';' read -ra rules <<< "$ENGINE_SCHEDULE"
+    for rule in "${rules[@]}"; do
+        read -r days span pct <<< "$rule"
+        [ -z "${days:-}" ] && continue
+        # Kurzform ohne Uhrzeit: "Sa,So 100%" meint den ganzen Tag.
+        if [ -z "${pct:-}" ] && [[ "${span:-}" =~ ^[0-9]+%?$ ]]; then pct="$span"; span="00:00-24:00"; fi
+        schedule_days_match "$days" "$day" || continue
+        from=$(schedule_minutes "${span%%-*}"); to=$(schedule_minutes "${span##*-}")
+        schedule_time_match "$from" "$to" "$min" || continue
+        printf '%s\n' "${pct%\%}"
+        return
+    done
+    echo 100
+}
+
+# Wie viele Engines laufen bei $1 Prozent? 0 = keine; sonst immer die Live-Engine plus den
+# Anteil der Hintergrund-Engines.
+schedule_target_count() {
+    local pct="$1" bg n
+    if [ "$pct" -le 0 ]; then echo 0; return; fi
+    if [ "$pct" -ge 100 ]; then echo "$ENGINE_COUNT"; return; fi
+    bg=$((ENGINE_COUNT - 1))
+    n=$(( (bg * pct + 50) / 100 ))
+    if [ "$n" -lt 1 ] && [ "$bg" -gt 0 ]; then n=1; fi
+    echo $((1 + n))
+}
+
+schedule_percent_now() {
+    schedule_percent_at "$(date +%u)" "$((10#$(date +%H) * 60 + 10#$(date +%M)))"
+}
+
+if [ -n "${ENGINE_SCHEDULE:-}" ]; then
+    schedule_validate || exit 1
+fi
+
 # `--engine` ist für den Provider eine SHELL-Zeile (er startet sie mit `sh -c`), nicht ein
 # fertiges Argument. Ein Pfad mit Leerzeichen („/engine/my stockfish") würde dort zerlegt.
 # Deshalb hier in einfache Anführungszeichen fassen (enthaltene ' korrekt maskiert) — dass es
@@ -236,9 +399,90 @@ if [ -n "${ENTRYPOINT_DRY_RUN:-}" ]; then
     exit 0
 fi
 
+# Zeitplan nachrechnen statt starten: ENGINE_SCHEDULE_AT="<Tag> <HH:MM>" sagt, was zu diesem
+# Zeitpunkt liefe. Gedacht zum Prüfen einer frisch geschriebenen Regel, bevor man sie nachts wirken
+# lässt — und für die Tests in test/entrypoint.test.sh.
+if [ -n "${ENGINE_SCHEDULE_AT:-}" ]; then
+    read -r at_day at_time <<< "$ENGINE_SCHEDULE_AT"
+    at_dn=$(schedule_day_number "${at_day:-}")
+    at_min=$(schedule_minutes "${at_time:-}")
+    if [ -z "$at_dn" ] || [ -z "$at_min" ]; then
+        echo "FEHLER: ENGINE_SCHEDULE_AT erwartet '<Tag> <HH:MM>', z. B. 'Mo 09:00' (ist '$ENGINE_SCHEDULE_AT')." >&2
+        exit 1
+    fi
+    at_pct=$(schedule_percent_at "$at_dn" "$at_min")
+    printf 'ZEITPLAN %s: %s%% — %s von %s Engine(s)\n' "$ENGINE_SCHEDULE_AT" "$at_pct" "$(schedule_target_count "$at_pct")" "$ENGINE_COUNT"
+    exit 0
+fi
+
 # Token vorab prüfen, damit ein fehlender Scope als Klartext-Satz erscheint statt als
 # 401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt.
 python /opt/preflight.py
+
+# MIT ZEITPLAN: nicht einmal starten und warten, sondern im Takt nachsehen, wie viele Engines
+# gerade laufen SOLLEN, und die Differenz herstellen. Deshalb hier auch kein `exec` bei einer
+# einzelnen Engine — die Aufsicht muss am Leben bleiben, um sie später wieder anzuwerfen.
+if [ -n "${ENGINE_SCHEDULE:-}" ]; then
+    declare -a PID=()
+    for ((i = 1; i <= ENGINE_COUNT; i++)); do PID[i]=""; done
+
+    stop_engine() {
+        local i="$1"
+        [ -n "${PID[i]}" ] || return 0
+        kill "${PID[i]}" 2>/dev/null || true
+        wait "${PID[i]}" 2>/dev/null || true
+        PID[i]=""
+    }
+    stop_all() { local i; for ((i = 1; i <= ENGINE_COUNT; i++)); do stop_engine "$i"; done; }
+    trap 'stop_all; exit 143' TERM INT
+
+    echo "Zeitplan aktiv: $ENGINE_SCHEDULE"
+    last=-1
+    while :; do
+        pct=$(schedule_percent_now)
+        target=$(schedule_target_count "$pct")
+        if [ "$target" -ne "$last" ]; then
+            echo "Zeitplan: $pct % — $target von $ENGINE_COUNT Engine(s)"
+            last="$target"
+        fi
+
+        # Zu viele: von hinten abschalten, die Live-Engine (1) geht als letzte.
+        for ((i = ENGINE_COUNT; i > target; i--)); do
+            if [ -n "${PID[i]}" ]; then
+                echo "Zeitplan: beende '$(engine_name "$i")'"
+                stop_engine "$i"
+            fi
+        done
+
+        # Zu wenige: anwerfen. Ein Provider, der laufen SOLL und trotzdem weg ist, ist ein echter
+        # Fehler — dann endet der Container wie bisher, und `restart: unless-stopped` holt alles
+        # sauber zurueck.
+        started=0
+        for ((i = 1; i <= target; i++)); do
+            if [ -n "${PID[i]}" ]; then
+                if kill -0 "${PID[i]}" 2>/dev/null; then continue; fi
+                code=0; wait "${PID[i]}" 2>/dev/null || code=$?
+                echo "FEHLER: Engine-Provider '$(engine_name "$i")' hat sich beendet (Exit $code) — alle Engines werden neu gestartet." >&2
+                PID[i]=""
+                stop_all
+                [ "$code" -eq 0 ] && code=70
+                exit "$code"
+            fi
+            if [ "$started" -gt 0 ] && awk "BEGIN { exit !($PROVIDER_START_DELAY > 0) }"; then
+                sleep "$PROVIDER_START_DELAY"
+            fi
+            build_args "$i"
+            echo "Zeitplan: starte '$(engine_name "$i")'"
+            python /opt/provider.py "${ARGS[@]}" &
+            PID[i]=$!
+            started=$((started + 1))
+        done
+
+        # Im Hintergrund schlafen und darauf warten: so kommt ein TERM waehrend der Pause sofort
+        # beim Trap an, statt bis zum Ende des Taktes zu liegen.
+        sleep "$SCHEDULE_TICK" & wait $! 2>/dev/null || true
+    done
+fi
 
 if [ "$ENGINE_COUNT" -eq 1 ]; then
     build_args 1

@@ -48,6 +48,7 @@ Zeigt Knoten pro Sekunde. Ohne GPU geht dasselbe mit `--backend=blas`, nur sehr 
 | `LC0_MAX_THREADS` | Such-Threads von Lc0, Vorgabe 2. Mehr bringt auf einer GPU kaum etwas. |
 | `LC0_WEIGHTS` | Pfad zum Netz im Container. Eigenes Netz per Volume einhängen. |
 | `LC0_ARGS` | weitere Lc0-Schalter, z. B. `--nncache=2000000 --minibatch-size=256`. |
+| `ENGINE_SCHEDULE` | Zeitplan: wann wie viel gerechnet wird, z. B. `Mo-Fr 08:00-18:00 0%`. Leer = immer alles. Gleiche Regeln wie beim Stockfish-Container (`../README.md`, Abschnitt „Zeitplan"); auf einer GPU spart das nicht nur Kerne, sondern Strom und Wärme. Prüfen: `docker compose run --rm -e ENGINE_SCHEDULE_AT="Mo 09:00" engine-provider-lc0`. |
 
 Netze (Bau-Argument `LC0_NET_URL` / `LC0_NET_SHA256` im Dockerfile):
 

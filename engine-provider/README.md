@@ -151,6 +151,8 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `ENGINE_COUNT` | Älteres Schema: Engines von Hand durchnummerieren (max. 16) |
 | `ENGINE_<i>_NAME` / `_MAX_THREADS` / `_MAX_HASH` | Einstellungen der i-ten Engine; schlagen die Werte oben |
 | `PROVIDER_START_DELAY` | Sekunden Pause zwischen den Provider-Starts bei mehreren Engines (leer = 3, 0 = aus) — siehe unten |
+| `ENGINE_SCHEDULE` | Zeitplan: wann wie viel gerechnet wird (leer = immer alles) — siehe unten |
+| `SCHEDULE_TICK` | Sekunden zwischen zwei Blicken auf die Uhr (leer = 20) |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
 
@@ -215,6 +217,50 @@ Provider mit `requests.post` ohnehin. Die Poll-Sitzung bleibt im Pool (die Abfra
 TLS-Handshake kosten). Der Patch wird NACH der Prüfsummen-Kontrolle angewandt und bricht den Build ab, wenn
 die Textstelle fehlt; `test/provider.test.py` prüft, dass drei Uploads auf drei Verbindungen kommen. Behebt
 upstream das Problem, fliegen Skript und Dockerfile-Zeilen wieder raus.
+
+### Zeitplan (`ENGINE_SCHEDULE`)
+
+Ohne Zeitplan rechnen alle Engines rund um die Uhr. Oft soll das nicht sein: tagsüber gehört der
+Rechner jemand anderem, abends darf er voll laufen, und an Tagen dazwischen reicht die halbe Kraft.
+Dafür gibt es Regeln, mit `;` getrennt, je Regel **`<Tage> <von>-<bis> <Prozent>`**:
+
+```dotenv
+ENGINE_SCHEDULE=Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%
+```
+
+- **Tage**: `mo di mi do fr sa so` (auch `mon tue wed thu fri sat sun`), Bereiche (`mo-do`, auch über
+  das Wochenende: `fr-mo`), Listen (`sa,so`) oder `*` für jeden Tag.
+- **Zeiten**: `HH:MM-HH:MM`. Das Ende zählt nicht mehr dazu, `08:00-17:00` und `17:00-22:00`
+  überschneiden sich also nicht. Die Spanne darf über Mitternacht gehen (`22:00-06:00`). Ohne
+  Uhrzeit gilt die Regel den ganzen Tag (`Sa,So 100%`).
+- **Prozent**: 0 bis 100. Die **erste passende** Regel gilt; passt keine, wird mit 100 % gerechnet.
+
+Was der Prozentsatz bedeutet:
+
+| Wert | Was läuft |
+|---|---|
+| `0%` | **Nichts.** Alle Provider werden beendet, die Engines verschwinden aus RookHub wie bei einem ausgeschalteten Rechner |
+| `100%` | Alle Engines |
+| dazwischen | Die **Live-Engine bleibt an** — dort wartet ein Mensch auf eine Stellung —, der Anteil gilt den **Hintergrund-Engines**, wo die Dauerlast liegt |
+
+Gerundet wird kaufmännisch, und solange überhaupt gerechnet wird, bleibt mindestens eine
+Hintergrund-Engine übrig: bei 15 Hintergrund-Engines sind 25 % also die Live-Engine plus vier.
+
+Eine frisch geschriebene Regel lässt sich nachrechnen, ohne sie eine Nacht lang zu beobachten:
+
+```bash
+docker compose run --rm -e ENGINE_SCHEDULE_AT="Mo 09:00" engine-provider
+# ZEITPLAN Mo 09:00: 0% — 0 von 16 Engine(s)
+```
+
+Eine kaputte Regel beendet den Container beim Start mit einem Satz, der sagt, welches Stück nicht
+stimmt — lieber das als ein Zeitplan, der stillschweigend immer 100 % fährt.
+
+> **Was beim Abschalten mit laufenden Aufträgen passiert:** Der Provider wird beendet, RookHub
+> bekommt für diese Engine nach 15 Sekunden einen 503 und gibt den Auftrag einer anderen Engine aus
+> der Hintergrund-Liste. Die bis dahin erreichte Tiefe bleibt erhalten, die Suche setzt dort wieder
+> an. Steht die abgeschaltete Engine als EINZIGE in der Liste, wartet der Auftrag, bis sie
+> wiederkommt.
 
 ### Gestaffelte Starts (`PROVIDER_START_DELAY`)
 
@@ -456,6 +502,14 @@ Rechner, der wirklich dauerhaft laufen soll, siehe den nächsten Abschnitt.
 Fertige Skripte dafür liegen unter [`windows/`](windows/) — `run_provider.ps1` (startet die
 Engines und hält sie am Leben) und `reap_orphans.ps1` (Zombie-Reaper). Beide Variablen am Kopf der
 Datei vor dem ersten Start anpassen.
+
+Auch unter Windows gibt es den **Zeitplan**: `$schedule` am Kopf von `run_provider.ps1` nimmt
+dieselben Regeln wie `ENGINE_SCHEDULE` oben (`"Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%"`).
+Nachrechnen ohne Start:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\stockfish\run_provider.ps1 -At "Mo 09:00"
+```
 
 `run_provider.ps1` startet **eine Live-Engine und mehrere Hintergrund-Engines** aus einem Skript:
 je Engine ein eigener Provider-Prozess mit eigenen Log-Dateien unter `C:\stockfish\logs\`, jeder

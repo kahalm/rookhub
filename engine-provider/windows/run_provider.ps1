@@ -10,6 +10,11 @@
 # Konsolen, wenn mehrere solche Prozesse dieselbe Konsolensitzung teilen. Per AttachConsole +
 # GenerateConsoleCtrlEvent reproduzierbar, per SetConsoleCtrlHandler(NULL, true) zuverlaessig
 # behoben - das ist die dokumentierte Win32-Standardtechnik dafuer.
+# -At "Mo 09:00" rechnet nur nach, was der Zeitplan zu diesem Zeitpunkt vorsieht, und startet
+# nichts. Gedacht zum Pruefen einer frisch geschriebenen Regel:
+#     powershell -NoProfile -ExecutionPolicy Bypass -File run_provider.ps1 -At "Mo 09:00"
+param([string]$At)
+
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -78,10 +83,123 @@ $logLevel  = "info"
 # im selben Augenblick = 429 und zeitweise IP-Sperre); direkt mit RookHub nur Hoeflichkeit.
 $startDelay = 2
 
+# --- ZEITPLAN: wann wie viel gerechnet wird --------------------------------
+# Leer = immer alles. Sonst Regeln, mit ";" getrennt, je Regel "<Tage> <von>-<bis> <Prozent>":
+#
+#   $schedule = "Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%"
+#
+# Tage als mo di mi do fr sa so (oder mon tue wed thu fri sat sun), als Bereich (mo-do), als Liste
+# (sa,so) oder "*" fuer jeden Tag. Zeiten HH:MM, die Spanne darf ueber Mitternacht gehen
+# (22:00-06:00); ohne Uhrzeit meint eine Regel den ganzen Tag ("Sa,So 100%"). Die ERSTE passende
+# Regel gilt, passt keine, wird mit 100 % gerechnet.
+#
+# Was der Prozentsatz bedeutet: 0 = alle Provider aus. Die Engines verschwinden dann aus RookHub
+# wie bei einem ausgeschalteten Rechner, laufende Auftraege brechen ab und werden neu vergeben.
+# 100 = alle an. Dazwischen bleibt die LIVE-Engine an, und der Anteil gilt den Hintergrund-Engines:
+# dort wartet kein Mensch auf das Ergebnis, und dort liegt die Dauerlast.
+$schedule = ""
+$scheduleTick = 20     # Sekunden zwischen zwei Blicken auf die Uhr
+
 # ===========================================================================
 
 $wrapperLog = Join-Path $logDir "wrapper.log"
 New-Item -ItemType Directory -Path $logDir -Force -ErrorAction SilentlyContinue | Out-Null
+
+function Get-DayNumber([string]$name) {
+    switch -Regex ($name.ToLower()) {
+        '^(mo|mon|montag|monday)$'            { return 1 }
+        '^(di|die|tue|tuesday|dienstag)$'     { return 2 }
+        '^(mi|mit|wed|wednesday|mittwoch)$'   { return 3 }
+        '^(do|don|thu|thursday|donnerstag)$'  { return 4 }
+        '^(fr|fre|fri|friday|freitag)$'       { return 5 }
+        '^(sa|sam|sat|saturday|samstag)$'     { return 6 }
+        '^(so|son|sun|sunday|sonntag)$'       { return 7 }
+        default                               { return 0 }
+    }
+}
+
+# "08:00" -> Minuten seit Mitternacht, -1 bei Unsinn. 24:00 ist als ENDE erlaubt.
+function Get-Minutes([string]$t) {
+    if ($t -notmatch '^(\d{1,2}):(\d{2})$') { return -1 }
+    $h = [int]$Matches[1]; $m = [int]$Matches[2]
+    if ($h -gt 24 -or $m -gt 59 -or ($h -eq 24 -and $m -ne 0)) { return -1 }
+    return $h * 60 + $m
+}
+
+# Passt der Wochentag auf die Tage-Angabe? $null = die Angabe ist kaputt.
+function Test-DayMatch([string]$spec, [int]$day) {
+    if ($spec -match '^\*$|^(daily|all|taeglich|täglich|immer)$') { return $true }
+    foreach ($part in $spec.Split(',')) {
+        if (-not $part) { continue }
+        if ($part.Contains('-')) {
+            $a = Get-DayNumber $part.Split('-')[0]
+            $b = Get-DayNumber $part.Split('-')[1]
+            if ($a -eq 0 -or $b -eq 0) { return $null }
+            if ($a -le $b) { if ($day -ge $a -and $day -le $b) { return $true } }
+            # Bereich ueber das Wochenende, z. B. fr-mo
+            elseif ($day -ge $a -or $day -le $b) { return $true }
+        } else {
+            $a = Get-DayNumber $part
+            if ($a -eq 0) { return $null }
+            if ($day -eq $a) { return $true }
+        }
+    }
+    return $false
+}
+
+# Jede Regel einmal zerlegen. Gibt die Fehlermeldung zurueck oder $null, wenn alles passt —
+# geprueft wird BEIM START, nicht erst nachts, wenn die Regel zum ersten Mal greifen wuerde.
+function Test-Schedule([string]$plan) {
+    if (-not $plan) { return $null }
+    $seen = 0
+    foreach ($rule in $plan.Split(';')) {
+        $r = $rule.Trim()
+        if (-not $r) { continue }
+        $f = $r -split '\s+'
+        # Kurzform ohne Uhrzeit: "Sa,So 100%" meint den ganzen Tag.
+        if ($f.Count -eq 2 -and $f[1] -match '^\d+%?$') { $f = @($f[0], '00:00-24:00', $f[1]) }
+        if ($f.Count -ne 3) { return "Regel '$r' muss '<Tage> <von>-<bis> <Prozent>' sein, z. B. 'Mo-Do 08:00-17:00 0%'." }
+        if ($null -eq (Test-DayMatch $f[0] 1)) { return "'$($f[0])' ist keine Tagesangabe (mo di mi do fr sa so, Bereiche mo-do, Listen sa,so, * fuer jeden Tag)." }
+        $span = $f[1].Split('-')
+        if ($span.Count -ne 2 -or (Get-Minutes $span[0]) -lt 0 -or (Get-Minutes $span[1]) -lt 0) { return "'$($f[1])' ist keine Zeitspanne HH:MM-HH:MM." }
+        $pct = $f[2].TrimEnd('%')
+        if ($pct -notmatch '^\d+$' -or [int]$pct -gt 100) { return "'$($f[2])' ist kein Prozentwert von 0 bis 100." }
+        $seen++
+    }
+    if ($seen -eq 0) { return "Der Zeitplan enthaelt keine Regel." }
+    return $null
+}
+
+# Prozentsatz zu einem Zeitpunkt — die erste passende Regel gewinnt, sonst 100.
+function Get-SchedulePercent([int]$day, [int]$minute) {
+    if (-not $schedule) { return 100 }
+    foreach ($rule in $schedule.Split(';')) {
+        $r = $rule.Trim()
+        if (-not $r) { continue }
+        $f = $r -split '\s+'
+        if ($f.Count -eq 2 -and $f[1] -match '^\d+%?$') { $f = @($f[0], '00:00-24:00', $f[1]) }
+        if ($f.Count -ne 3) { continue }
+        if ((Test-DayMatch $f[0] $day) -ne $true) { continue }
+        $span = $f[1].Split('-')
+        $from = Get-Minutes $span[0]; $to = Get-Minutes $span[1]
+        $hit = if ($from -eq $to) { $true }                                  # ganzer Tag
+               elseif ($from -lt $to) { $minute -ge $from -and $minute -lt $to }
+               else { $minute -ge $from -or $minute -lt $to }                # ueber Mitternacht
+        if ($hit) { return [int]($f[2].TrimEnd('%')) }
+    }
+    return 100
+}
+
+# Wie viele Engines laufen bei diesem Prozentsatz? 0 = keine; sonst die Live-Engine plus den
+# Anteil der Hintergrund-Engines (kaufmaennisch gerundet, mindestens eine).
+function Get-TargetCount([int]$pct, [int]$total) {
+    if ($pct -le 0) { return 0 }
+    if ($pct -ge 100) { return $total }
+    $bg = $total - 1
+    $n = [math]::Floor(($bg * $pct + 50) / 100)
+    if ($n -lt 1 -and $bg -gt 0) { $n = 1 }
+    return 1 + $n
+}
 
 function Write-WrapperLog([string]$message) {
     # Ohne Rotation waechst die Datei bei 17 Prozessen und jahrelangem Lauf endlos.
@@ -118,7 +236,29 @@ for ($i = 1; $i -le $bgCount; $i++) {
     $engines += [pscustomobject]@{ Slot = $i + 1; Name = $name; Threads = $bgThreads; Hash = $bgHash }
 }
 
-Write-WrapperLog "Start: $($engines.Count) Engine(s) - live $liveThreads Threads, $bgCount x $bgThreads Threads im Hintergrund; Ziel $(if ($rookhubUrl) { $rookhubUrl } else { 'lichess.org' })"
+# Kaputter Zeitplan: lieber hier stehenbleiben als stillschweigend immer 100 % fahren.
+$scheduleError = Test-Schedule $schedule
+if ($scheduleError) {
+    Write-WrapperLog "FEHLER im Zeitplan: $scheduleError"
+    Write-Host "FEHLER im Zeitplan (`$schedule): $scheduleError"
+    exit 1
+}
+
+# Nur nachrechnen, nichts starten.
+if ($At) {
+    $f = $At.Trim() -split '\s+'
+    $day = if ($f.Count -ge 1) { Get-DayNumber $f[0] } else { 0 }
+    $min = if ($f.Count -ge 2) { Get-Minutes $f[1] } else { -1 }
+    if ($day -eq 0 -or $min -lt 0) {
+        Write-Host "FEHLER: -At erwartet '<Tag> <HH:MM>', z. B. 'Mo 09:00' (ist '$At')."
+        exit 1
+    }
+    $pct = Get-SchedulePercent $day $min
+    Write-Host "ZEITPLAN $At`: $pct% - $(Get-TargetCount $pct $engines.Count) von $($engines.Count) Engine(s)"
+    exit 0
+}
+
+Write-WrapperLog "Start: $($engines.Count) Engine(s) - live $liveThreads Threads, $bgCount x $bgThreads Threads im Hintergrund; Ziel $(if ($rookhubUrl) { $rookhubUrl } else { 'lichess.org' })$(if ($schedule) { "; Zeitplan: $schedule" } else { '' })"
 
 function Start-Provider($engineDef) {
     $argList = @(
@@ -147,24 +287,52 @@ function Start-Provider($engineDef) {
         -NoNewWindow -PassThru
 }
 
-# Ein Prozess je Engine, einzeln ueberwacht. Ein gemeinsamer Loop mit -Wait wie im
-# Einzel-Engine-Skript geht hier nicht: stirbt eine von siebzehn Engines, soll genau die neu
-# starten und nicht der ganze Verband.
-$running = @{}
-foreach ($e in $engines) {
-    if ($running.Count -gt 0 -and $startDelay -gt 0) { Start-Sleep -Seconds $startDelay }
-    $running[$e.Slot] = Start-Provider $e
-    Write-WrapperLog "gestartet: '$($e.Name)' ($($e.Threads) Threads, $($e.Hash) MiB) PID $($running[$e.Slot].Id)"
+# Der Provider startet Stockfish ueber eine Shell; ein blosses Kill des Python-Prozesses liesse
+# die Engine als Waise mit belegtem Arbeitsspeicher zurueck (siehe reap_orphans.ps1). taskkill /T
+# nimmt den ganzen Baum mit; faellt es aus, bleibt der Reaper die zweite Verteidigungslinie.
+function Stop-Provider($proc) {
+    if ($null -eq $proc) { return }
+    try { & taskkill.exe /PID $proc.Id /T /F 2>&1 | Out-Null } catch { }
+    try { if (-not $proc.HasExited) { $proc.Kill() } } catch { }
 }
 
+# Ein Prozess je Engine, einzeln ueberwacht, und im Takt der Uhr so viele, wie der Zeitplan
+# vorsieht. Ein gemeinsamer Loop mit -Wait wie im Einzel-Engine-Skript geht hier nicht: stirbt
+# eine von siebzehn Engines, soll genau die neu starten und nicht der ganze Verband.
+$running = @{}
+$lastTarget = -1
 while ($true) {
-    Start-Sleep -Seconds 10
-    foreach ($e in $engines) {
-        $proc = $running[$e.Slot]
-        if ($null -eq $proc -or $proc.HasExited) {
-            $code = if ($null -eq $proc) { "n/a" } else { $proc.ExitCode }
-            Write-WrapperLog "'$($e.Name)' beendet (Exit $code) - Neustart"
-            $running[$e.Slot] = Start-Provider $e
+    $now = Get-Date
+    $day = [int]$now.DayOfWeek; if ($day -eq 0) { $day = 7 }   # .NET zaehlt Sonntag als 0
+    $pct = Get-SchedulePercent $day ($now.Hour * 60 + $now.Minute)
+    $target = Get-TargetCount $pct $engines.Count
+    if ($target -ne $lastTarget) {
+        Write-WrapperLog "Zeitplan: $pct % - $target von $($engines.Count) Engine(s)"
+        $lastTarget = $target
+    }
+
+    # Zu viele: von hinten abschalten, die Live-Engine (Platz 1) geht als letzte.
+    foreach ($e in ($engines | Sort-Object Slot -Descending)) {
+        if ($e.Slot -le $target) { continue }
+        if ($running.ContainsKey($e.Slot) -and $null -ne $running[$e.Slot]) {
+            Write-WrapperLog "Zeitplan: beende '$($e.Name)'"
+            Stop-Provider $running[$e.Slot]
+            $running.Remove($e.Slot)
         }
     }
+
+    # Zu wenige: starten. Gestorbene, die laufen sollen, kommen hier ebenfalls wieder hoch.
+    $startedNow = 0
+    foreach ($e in $engines) {
+        if ($e.Slot -gt $target) { continue }
+        $proc = if ($running.ContainsKey($e.Slot)) { $running[$e.Slot] } else { $null }
+        if ($null -ne $proc -and -not $proc.HasExited) { continue }
+        if ($null -ne $proc) { Write-WrapperLog "'$($e.Name)' beendet (Exit $($proc.ExitCode)) - Neustart" }
+        if ($startedNow -gt 0 -and $startDelay -gt 0) { Start-Sleep -Seconds $startDelay }
+        $running[$e.Slot] = Start-Provider $e
+        $startedNow++
+        Write-WrapperLog "gestartet: '$($e.Name)' ($($e.Threads) Threads, $($e.Hash) MiB) PID $($running[$e.Slot].Id)"
+    }
+
+    Start-Sleep -Seconds $scheduleTick
 }

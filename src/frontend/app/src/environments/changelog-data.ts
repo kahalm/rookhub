@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.677.0", date: "2026-10-06", changes: [
+    { en: "The engine clients learned a timetable. Rules say which days and hours run at which share of the machine: zero percent stops every engine, a hundred runs them all, and anything between keeps the live engine up while the background engines take the share. Same rules for the Docker container, the Windows script and the Lc0 client, and a broken rule is refused at startup instead of quietly running at full power.", de: "Die Engine-Clients haben jetzt einen Zeitplan. Regeln sagen, welche Tage und Stunden mit welchem Anteil der Maschine laufen: null Prozent haelt jede Engine an, hundert laesst alle rechnen, und dazwischen bleibt die Live-Engine an, waehrend der Anteil den Hintergrund-Engines gilt. Dieselben Regeln fuer den Docker-Container, das Windows-Skript und den Lc0-Client, und eine kaputte Regel wird beim Start abgelehnt statt stillschweigend mit voller Kraft gefahren." },
+  ] },
   { version: "0.675.1", date: "2026-10-06", changes: [
     { en: "Game editor: “Site / league”, “Mode / season” and the tags now have a row of their own below the game details, with one short note underneath. Before, the cut-off labels and three-line hints stretched every field of the top row.", de: "Partie-Editor: „Seite / Liga“, „Modus / Jahrgang“ und die Tags stehen jetzt in einer eigenen Zeile unter den Partiedaten, mit einem kurzen Hinweis darunter. Vorher zogen die abgeschnittenen Beschriftungen und dreizeiligen Hinweise jedes Feld der oberen Zeile in die Länge." },
   ] },

@@ -192,6 +192,9 @@ jobs:
       # … der ECHTE Fehlerpfad des Multi-Engine-Supervisors …
       - run: bash test/supervisor.test.sh
         working-directory: engine-provider
+      # … der Zeitplan: Regel-Auswertung ohne Prozesse und die Aufsicht mit Stub-Providern …
+      - run: bash test/schedule.test.sh
+        working-directory: engine-provider
       # … und der Vertrag, auf den RookHub beim gepinnten Provider baut: bestmove am Ende jeder Suche,
       # Lebenszeichen, kein Warten nach einer beendeten Suche — gegen einen nachgebauten Broker (~20 s).
       # Ein fehlender Pfad lässt den Test scheitern statt sich zu überspringen.
