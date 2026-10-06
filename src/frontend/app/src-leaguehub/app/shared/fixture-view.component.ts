@@ -6,6 +6,7 @@ import { GameSourcesComponent } from './game-sources.component';
 import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
+import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
@@ -22,7 +23,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink],
+  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -51,20 +52,19 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   <td class="pr">{{ p.result }}</td>
                   <td class="pb">{{ p.black ?? 'nicht besetzt' }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
                   <td class="pg">
-                    @if (p.pgn) {
-                      <button type="button" class="btn-link" [attr.aria-expanded]="openBoard() === p.board"
-                              (click)="openBoard.set(openBoard() === p.board ? null : p.board)">Nachspielen</button>
+                    <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
+                         dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link nur „Nachspielen". -->
+                    @if (p.clubGameId && !shareToken() && rookHub) {
+                      <button type="button" class="icon-btn" (click)="openInRookHub(p.clubGameId)"
+                              title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen"
+                              [attr.aria-label]="'Analyse Brett ' + p.board">
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg>
+                      </button>
                     }
-                    <!-- 0.675.0: an einer Vereinspartie dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link nicht -->
-                    @if (p.clubGameId && !shareToken()) {
-                      @if (rookHub) { <button type="button" class="btn-link" (click)="openInRookHub(p.clubGameId)"
-                                              title="Auf RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen">Analyse</button> }
-                      @if (p.canEdit) {
-                        <a class="btn-link" [routerLink]="['/verein']" [queryParams]="{ bearbeiten: p.clubGameId }"
-                           title="Namen und Ergebnis ändern">Bearbeiten</a>
-                        <a class="btn-link" [routerLink]="['/verein/partie', p.clubGameId, 'korrigieren']"
-                           title="Züge nachbessern, wie beim ersten Prüfen des Formulars">Korrigieren</a>
-                      }
+                    @if (p.pgn) {
+                      <button type="button" class="btn-link more-btn" [matMenuTriggerFor]="pairMenu" [matMenuTriggerData]="{ p: p }"
+                              [attr.aria-label]="'Weitere Aktionen Brett ' + p.board" title="Weitere Aktionen">⋮</button>
                     }
                   </td>
                 </tr>
@@ -77,6 +77,16 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               }
             </tbody>
           </table>
+          <mat-menu #pairMenu="matMenu" xPosition="before">
+            <ng-template matMenuContent let-p="p">
+              <button mat-menu-item type="button" (click)="openBoard.set(openBoard() === p.board ? null : p.board)">
+                {{ openBoard() === p.board ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
+              @if (p.clubGameId && !shareToken() && p.canEdit) {
+                <a mat-menu-item [routerLink]="['/verein']" [queryParams]="{ bearbeiten: p.clubGameId }">Bearbeiten (Namen, Ergebnis)</a>
+                <a mat-menu-item [routerLink]="['/verein/partie', p.clubGameId, 'korrigieren']">Korrigieren (Züge)</a>
+              }
+            </ng-template>
+          </mat-menu>
         }
         @switch (e.status) {
           @case ('locked') {

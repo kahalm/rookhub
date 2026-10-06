@@ -36,9 +36,11 @@ describe('LeaguePageComponent', () => {
 
   beforeEach(() => {
     localStorage.removeItem('leaguehub');
+    sessionStorage.removeItem('leaguehub-round');
     perms = new Set(['league.view', 'league.manage']);
     query = {};
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources', 'forecastStats']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources', 'forecastStats', 'fixtureGames']);
+    api.fixtureGames.and.resolveTo([]);
     api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, top1: 0, top2: 0, top3: 0, of: 0 }, rounds: [], leagues: [] });
     api.index.and.resolveTo(INDEX);
     api.sources.and.callFake(async (_token: string | null = null, fides: string[] = [], tnr: number | null = null) => ({
@@ -116,6 +118,24 @@ describe('LeaguePageComponent', () => {
     await settle();
     expect(api.sources).toHaveBeenCalledWith(null, ['Wörgl-1'], 10);
     expect(el.querySelector('.src-tbl thead')!.textContent).toContain('Gegner von Wörgl');
+  });
+
+  it('die gewählte Runde bleibt beim Zurückkommen ohne Adresse (Reiterwechsel), aber nur für dieselbe Liga', async () => {
+    create();
+    await settle();
+    fixture.componentInstance.pickRound(1);
+    expect(JSON.parse(sessionStorage.getItem('leaguehub-round')!)).toEqual({ liga: 10, runde: 1 });
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    create();                                   // „Prognosen" ohne ?runde= wieder geöffnet
+    await settle();
+    expect(fixture.componentInstance.round()).toBe(1);
+    sessionStorage.setItem('leaguehub-round', JSON.stringify({ liga: 20, runde: 3 }));
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    create();
+    await settle();
+    expect(fixture.componentInstance.round()).toBe(2);   // andere Liga: erste offene Runde
   });
 
   it('ohne Zählung (Fehler) fehlt nur die Tabelle', async () => {

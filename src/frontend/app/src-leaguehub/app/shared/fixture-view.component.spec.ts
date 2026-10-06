@@ -81,10 +81,14 @@ describe('FixtureViewComponent', () => {
     expect(rows[0].textContent).toContain('Hess, Max');
     expect(rows[0].textContent).toContain('½ - ½');
     expect(rows[1].querySelector('.pg button')).toBeNull();
-    const links = Array.from(rows[0].querySelectorAll('.pg a')).map(a => a.getAttribute('href'));
-    expect(links).toEqual(['/verein?bearbeiten=10', '/verein/partie/10/korrigieren']);
-    expect(rows[1].querySelectorAll('.pg a').length).toBe(0);
-    (rows[0].querySelector('.pg button') as HTMLButtonElement).click();
+    // 0.679.2: „Analyse" nur als Symbol (ohne RookHub-Adresse in Tests nicht da), alles andere im ⋮
+    expect(rows[0].querySelectorAll('.pg .icon-btn').length).toBe(0);
+    (rows[0].querySelector('.pg .more-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item'));
+    expect(items.map(i => i.textContent?.trim())).toEqual(['Nachspielen', 'Bearbeiten (Namen, Ergebnis)', 'Korrigieren (Züge)']);
+    expect(items.slice(1).map(a => a.getAttribute('href'))).toEqual(['/verein?bearbeiten=10', '/verein/partie/10/korrigieren']);
+    (items[0] as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.pairings lh-game-replay')).not.toBeNull();
   });

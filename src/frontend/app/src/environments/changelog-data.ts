@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.679.2", date: "2026-10-06", changes: [
+    { en: "LeagueHub forecasts: the chosen round is remembered while the browser tab stays open — switching to “Club games” and back no longer jumps to the first open round.", de: "LeagueHub-Prognosen: die gewählte Runde bleibt gemerkt, solange der Browser-Tab offen ist — wer zu „Vereinspartien“ wechselt und zurückkommt, landet nicht mehr bei der ersten offenen Runde." },
+    { en: "LeagueHub pairings of a played round: “Analyse” is now a chart icon, “Replay”, “Edit” and “Correct” sit in the ⋮ menu behind it.", de: "LeagueHub-Paarungen einer gespielten Runde: „Analyse“ ist jetzt ein Kurven-Symbol, „Nachspielen“, „Bearbeiten“ und „Korrigieren“ stecken im ⋮-Menü dahinter." },
+  ] },
   { version: "0.679.1", date: "2026-10-06", changes: [
     { en: "LeagueHub pairings of a played round: the result is now shown from White's point of view. chess-results gives it from the home team's view, so on boards where the home player had Black the winner was swapped (e.g. “Ranner – Haselsberger 0–1”, although Ranner won with White). The same mix-up affected the pairing suggestions and the choice of chapter in the tactics course.", de: "LeagueHub-Paarungen einer gespielten Runde: das Ergebnis steht jetzt aus Sicht von Weiß. chess-results gibt es aus Sicht der Heimmannschaft an, deshalb war auf Brettern, an denen der Heimspieler Schwarz hatte, der Sieger vertauscht (z. B. „Ranner – Haselsberger 0–1“, obwohl Ranner mit Weiß gewann). Derselbe Dreher betraf die Paarungs-Vorschläge und die Kapitelwahl im Taktik-Kurs." },
     { en: "LeagueHub club games, “Edit”: the fields line up at the top, the league-game choice has its own full-width row, and “Save” and “Cancel” no longer touch.", de: "LeagueHub-Vereinspartien, „Bearbeiten“: die Felder stehen oben bündig, die Auswahl der Ligapartie hat eine eigene Zeile in voller Breite, und „Speichern“ und „Abbrechen“ kleben nicht mehr aneinander." },

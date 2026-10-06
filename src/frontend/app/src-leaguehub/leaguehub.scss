@@ -120,6 +120,9 @@ body {
 .pairings .pb { text-align: right; }
 .pairings .pg { text-align: right; }
 .pairings .pg .btn-link { margin-left: 6px; white-space: nowrap; }
+.pairings .pg { white-space: nowrap; width: 1%; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--ink); cursor: pointer; vertical-align: middle; }
+.icon-btn:hover, .icon-btn:focus-visible { background: var(--line); }
 .pairings .replay-row td { padding: 8px 0 14px; }
 .pairings .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .boards { list-style: none; margin: 0; padding: 0; }

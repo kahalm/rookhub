@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effec
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
-import { readJson, writeJson, localStore } from '@rh/core/local-json-store';
+import { readJson, writeJson, localStore, sessionStore } from '@rh/core/local-json-store';
 import { LeagueApiService } from '../../core/league-api.service';
 import { roundLabel, tn } from '../../core/league-format';
 import { loadErrorText } from '../../core/club-format';
@@ -11,6 +11,9 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 
 const PICK_KEY = 'leaguehub';
+/** Die gewählte Runde je Browser-Tab (Wunsch 2026-10-06: „Runde ändern, Reiter wechseln, zurück — soll er sich merken").
+ *  Bewusst nur im sessionStorage: ein neuer Tab oder Tag beginnt wieder bei der ersten offenen Runde. */
+const ROUND_KEY = 'leaguehub-round';
 const POLL_MS = 4000;
 
 interface Pick { liga?: number; verein?: string }
@@ -183,7 +186,8 @@ export class LeaguePageComponent implements OnInit {
       this.index.set(ix);
       if (!ix.leagues.length) return;
       const tnr = ix.leagues.some(l => l.tnr === pref.liga) ? pref.liga : ix.leagues[0].tnr;
-      await this.showLeague(tnr, pref.runde, pref.verein);
+      const lastRound = readJson<{ liga: number; runde: number }>(sessionStore(), ROUND_KEY);
+      await this.showLeague(tnr, pref.runde || (lastRound?.liga === tnr ? lastRound.runde : 0), pref.verein);
     } catch (err) {
       this.loadError.set(this.errorText(err));
     }
@@ -236,6 +240,7 @@ export class LeaguePageComponent implements OnInit {
       replaceUrl: true,
     });
     writeJson(localStore(), PICK_KEY, { liga: this.tnr(), verein: this.team() } satisfies Pick);
+    writeJson(sessionStore(), ROUND_KEY, { liga: this.tnr(), runde: this.round() });
   }
 
   async startUpdate(): Promise<void> {
