@@ -117,10 +117,18 @@ public static partial class StaleContentRule
     /// den Versions-Mark — der setzte es auf die aktuelle Version, ohne dass Änderungen an der PGN-Erzeugung in
     /// piratechess hineinkämen, und danach wäre es für den Cache-Weg verbrannt. Den Cache-Weg sperrt
     /// <paramref name="chessableEnabled"/> nicht.
+    /// <para><paramref name="cacheMissed"/> wie bei <see cref="ActionForBook"/>: konnte der letzte Lauf nichts aus dem
+    /// Cache übernehmen (<see cref="Models.Repertoire.CacheMissAt"/> nicht älter als <c>UpdatedAt</c>), wird aus
+    /// <see cref="StaleAction.Cache"/> für ANZEIGE und Liste ein <see cref="StaleAction.Manual"/>; der Lauf fragt
+    /// ohne den Schalter und versucht den Cache weiter.</para>
     /// </summary>
-    public static StaleAction ActionForRepertoire(bool isChessable, bool sourceModern, bool chessableEnabled)
-        => !isChessable ? StaleAction.Local
+    public static StaleAction ActionForRepertoire(bool isChessable, bool sourceModern, bool chessableEnabled,
+        bool cacheMissed = false)
+    {
+        var action = !isChessable ? StaleAction.Local
             : sourceModern ? StaleAction.Cache
             : chessableEnabled ? StaleAction.Refetch
             : StaleAction.Manual;
+        return action == StaleAction.Cache && cacheMissed ? StaleAction.Manual : action;
+    }
 }

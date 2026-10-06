@@ -452,7 +452,7 @@ public partial class ImportReprocessService
     /// stehen nur die mit <c>chessable-</c> dabei (Herkunft + bid); ob eine Datei oids trägt, kommt fertig aus SQL.
     /// </summary>
     private sealed record StaleRepertoire(int Id, int UserId, string Name, string? ChessableCourseId,
-        IReadOnlyList<string> ChessableFileNames, bool SourceModern)
+        IReadOnlyList<string> ChessableFileNames, bool SourceModern, bool CacheMissed)
     {
         /// <summary>Chessable-Herkunft: die hinterlegte Kurs-Id ODER ein Dateiname aus dem Chessable-Import —
         /// dieselbe Regel wie die (!)-Markierung der Liste (<c>RepertoireService.MarkNeedsReimportAsync</c>).</summary>
@@ -482,15 +482,19 @@ public partial class ImportReprocessService
                 r.Id, r.UserId, r.Name, r.ChessableCourseId,
                 ChessableFileNames = r.Files.Where(f => f.FileName.StartsWith("chessable-")).Select(f => f.FileName).ToList(),
                 SourceModern = r.Files.Any(f => f.PgnContent.Contains(StaleContentRule.ModernMarker)),
+                CacheMissed = r.CacheMissAt != null && r.CacheMissAt >= r.UpdatedAt,   // Repertoire.CacheMissAt gilt, solange nicht älter als UpdatedAt
             })
             .ToListAsync(ct);
-        return rows.Select(r => new StaleRepertoire(r.Id, r.UserId, r.Name, r.ChessableCourseId, r.ChessableFileNames, r.SourceModern))
+        return rows.Select(r => new StaleRepertoire(r.Id, r.UserId, r.Name, r.ChessableCourseId, r.ChessableFileNames, r.SourceModern,
+                r.CacheMissed))
             .ToList();
     }
 
-    /// <summary>Dieselbe Regel für Status, Lauf und die (!)-Markierung der Liste (<see cref="StaleContentRule.ActionForRepertoire"/>).</summary>
-    private StaleAction ActionFor(StaleRepertoire r) =>
-        StaleContentRule.ActionForRepertoire(r.IsChessable, r.SourceModern, _chessableEnabled);
+    /// <summary>Dieselbe Regel für Status, Lauf und die (!)-Markierung der Liste (<see cref="StaleContentRule.ActionForRepertoire"/>).
+    /// <paramref name="forDisplay"/> = Status: ein Repertoire, aus dem der letzte Lauf nichts aus dem Cache übernehmen konnte
+    /// (<see cref="Repertoire.CacheMissAt"/>), zählt als „braucht Re-Import". Der LAUF fragt ohne und versucht es weiter.</summary>
+    private StaleAction ActionFor(StaleRepertoire r, bool forDisplay = false) =>
+        StaleContentRule.ActionForRepertoire(r.IsChessable, r.SourceModern, _chessableEnabled, forDisplay && r.CacheMissed);
 
     public async Task<ReprocessStatusDto> GetRepertoireStatusAsync(int userId, bool isAdmin = false, CancellationToken ct = default)
     {
@@ -499,7 +503,9 @@ public partial class ImportReprocessService
         var stale = await LoadStaleRepertoiresAsync(repertoires, ct);
         // Dieselbe Vierteilung wie bei den Kursen — „Manual" ist der Showstopper, der in der LISTE als (!) am
         // Repertoire steht statt als anonyme Zahl im Banner. Anzeige = Ausführung: der Lauf nimmt dieselbe Regel.
-        var actions = stale.Select(ActionFor).ToList();
+        // Ausnahme wie bei Kursen: woraus der letzte Lauf nichts aus dem Cache übernehmen konnte, zählt als „braucht
+        // Re-Import" (CacheMissed) — der Lauf versucht es weiter, verspricht im Banner aber nichts mehr.
+        var actions = stale.Select(r => ActionFor(r, forDisplay: true)).ToList();
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
@@ -656,6 +662,7 @@ public partial class ImportReprocessService
             _logger.LogInformation(
                 "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) — keine Kurs-Id, bleibt veraltet",
                 name, repertoireId);
+            await MarkRepertoireCacheMissAsync(repertoireId);
             return null;
         }
 
@@ -683,7 +690,11 @@ public partial class ImportReprocessService
             files.Add((file, CachedSourceRebuild.ModeFor(file.PgnContent), CachedSourceRebuild.OidsOf(file.PgnContent)));
         }
         var oids = files.SelectMany(f => f.Oids).Distinct(StringComparer.Ordinal).ToList();
-        if (oids.Count == 0) return null;
+        if (oids.Count == 0)
+        {
+            await MarkRepertoireCacheMissAsync(repertoireId);
+            return null;
+        }
 
         // EIN billiger Existenz-Aufruf fürs ganze Repertoire: ein Server ohne (diesen) Cache soll nicht Dutzende teure
         // PGN-Abfragen absetzen, um am Ende nichts zu haben. Weich — piratechess weg liefert hier „nichts".
@@ -693,6 +704,7 @@ public partial class ImportReprocessService
             _logger.LogInformation(
                 "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) — keine der {Total} Linien im Linien-Cache, bleibt veraltet",
                 name, repertoireId, oids.Count);
+            await MarkRepertoireCacheMissAsync(repertoireId);
             return null;
         }
 
@@ -717,7 +729,11 @@ public partial class ImportReprocessService
             rebuilt.Sum(f => f.Result.Hidden));
         // Keine Linie übernommen (etwa alle im falschen Modus): nicht als erneuert ausgeben — sonst stünde das
         // Repertoire auf der aktuellen Version, ohne dass sich etwas geändert hat, und käme nie wieder dran.
-        if (replaced == 0) return null;
+        if (replaced == 0)
+        {
+            await MarkRepertoireCacheMissAsync(repertoireId);
+            return null;
+        }
 
         // Ein großes Repertoire braucht Dutzende Cache-Abfragen, also Minuten. Hat in der Zeit ein anderer Weg
         // geschrieben (die Extension hängt live Linien an), fehlten dessen Linien im umgeschriebenen Text, und dieser
@@ -743,6 +759,22 @@ public partial class ImportReprocessService
         repertoire.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(CancellationToken.None);
         return replaced;
+    }
+
+    /// <summary>
+    /// Merkt sich, dass der Cache-Weg für dieses Repertoire nichts übernehmen konnte (<see cref="Repertoire.CacheMissAt"/>),
+    /// damit Banner und Liste es als „braucht Re-Import" führen statt es bei jedem Aufruf als aktualisierbar anzubieten.
+    /// UpdatedAt bleibt unberührt — ein neuer Import hebt die Markierung über genau dieses Feld wieder auf. Nicht bei
+    /// vorübergehenden Gründen (währenddessen geändert, Portion geworfen); ein piratechess-Ausfall liefert allerdings
+    /// ebenfalls „nichts gecacht" und markiert damit zu Unrecht — der nächste Lauf heilt das.
+    /// </summary>
+    private async Task MarkRepertoireCacheMissAsync(int repertoireId)
+    {
+        var tracked = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId, CancellationToken.None);
+        if (tracked is null) return;
+        var now = DateTime.UtcNow;
+        tracked.CacheMissAt = now > tracked.UpdatedAt ? now : tracked.UpdatedAt;
+        await _db.SaveChangesAsync(CancellationToken.None);
     }
 
     private Task<DateTime?> RepertoireUpdatedAtAsync(int repertoireId) =>

@@ -137,10 +137,11 @@ public class RepertoireService
                 IsChessable = r.ChessableCourseId != null && r.ChessableCourseId != ""
                     || r.Files.Any(f => f.FileName.StartsWith("chessable-")),
                 SourceModern = r.Files.Any(f => f.PgnContent.Contains(StaleContentRule.ModernMarker)),
+                CacheMissed = r.CacheMissAt != null && r.CacheMissAt >= r.UpdatedAt,   // Repertoire.CacheMissAt gilt, solange nicht älter als UpdatedAt
             })
             .ToListAsync();
         var flagged = stale
-            .Where(r => StaleContentRule.ActionForRepertoire(r.IsChessable, r.SourceModern, _chessableEnabled)
+            .Where(r => StaleContentRule.ActionForRepertoire(r.IsChessable, r.SourceModern, _chessableEnabled, r.CacheMissed)
                 == StaleAction.Manual)
             .Select(r => r.Id)
             .ToHashSet();

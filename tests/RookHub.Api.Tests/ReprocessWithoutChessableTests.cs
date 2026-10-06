@@ -364,4 +364,70 @@ public class ReprocessWithoutChessableTests : IDisposable
         Assert.Equal(ImportPipeline.CurrentVersion - 1, (await _db.Repertoires.SingleAsync(r => r.Id == stuck.Id)).ImportVersion);
         Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.SingleAsync(r => r.Id == handmade.Id)).ImportVersion);
     }
+    [Fact]
+    public async Task RepertoireReprocess_NoLineInTheCache_MarksTheRepertoire_SoTheBannerStopsOfferingIt()
+    {
+        // Gegenstück zu Reprocess_NoLineInTheCache_MarksTheBook_… — gemeldet 2026-10-06: 5 Chessable-Repertoires mit
+        // oids (4 ohne Treffer im Cache, 1 ohne Kurs-Id), jeder Lauf übersprang sie, das Banner blieb stehen.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var missed = new Repertoire
+        {
+            UserId = 5, Name = "Grünfeld", ChessableCourseId = "252508",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-252508.pgn",
+                PgnContent = $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 Nc6 *\n" } },
+        };
+        var noBid = new Repertoire
+        {
+            // Chessable-Herkunft nur über einen Dateinamen, aus dem sich keine Kurs-Id lösen lässt.
+            UserId = 5, Name = "Tarrasch", ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-tarrasch-en.pgn",
+                PgnContent = "[Event \"K\"]\n[ChessableOid \"88\"]\n\n1. e4 *\n" } },
+        };
+        _db.Repertoires.AddRange(missed, noBid);
+        await _db.SaveChangesAsync();
+        var lines = new StubCachedLineSource();   // leer: kein einziger Treffer
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        Assert.Equal(2, (await svc.GetRepertoireStatusAsync(5, isAdmin: true)).FromCache);
+        Assert.Equal(2, (await svc.ReprocessRepertoiresAsync(5, isAdmin: true)).Skipped);
+
+        var after = await svc.GetRepertoireStatusAsync(5, isAdmin: true);
+        Assert.Equal(2, after.Stale);
+        Assert.Equal(0, after.ReprocessableLocally + after.Refetchable);   // kein Banner mehr
+        Assert.Equal(2, after.NeedsReimport);
+        var list = await TestServices.Repertoire(_db, configuration: TestServices.ChessableSwitch(false)).GetAllAsync(5);
+        Assert.True(list.Single(r => r.Id == missed.Id).NeedsReimport);   // (!) am Repertoire statt im Banner
+        Assert.True(list.Single(r => r.Id == noBid.Id).NeedsReimport);
+
+        // Füllt jemand den Cache später, erneuert der Lauf das Repertoire trotzdem (er fragt weiter).
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 {{new}} Nc6 *";
+        Assert.Equal(1, (await svc.ReprocessRepertoiresAsync(5, isAdmin: true)).RebuiltFromCache);
+        Assert.Equal(1, (await svc.GetRepertoireStatusAsync(5, isAdmin: true)).Stale);
+    }
+
+    [Fact]
+    public async Task RepertoireCacheMissMarker_IsLiftedByANewImport()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var rep = new Repertoire
+        {
+            UserId = 5, Name = "So", ChessableCourseId = "59857", ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-59857.pgn", PgnContent = "[Event \"K\"]\n[ChessableOid \"77\"]\n\n1. e4 *\n" } },
+        };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        var svc = Service(new StubReimporter(), chessableEnabled: false, new StubCachedLineSource());
+        await svc.ReprocessRepertoiresAsync(5);
+        Assert.Equal(1, (await svc.GetRepertoireStatusAsync(5)).NeedsReimport);
+
+        // Ein neuer Import (die Extension hängt Linien an) setzt UpdatedAt → wieder ein Cache-Kandidat.
+        var tracked = await _db.Repertoires.SingleAsync(r => r.Id == rep.Id);
+        tracked.UpdatedAt = tracked.CacheMissAt!.Value.AddSeconds(1);
+        await _db.SaveChangesAsync();
+        var status = await svc.GetRepertoireStatusAsync(5);
+        Assert.Equal(1, status.FromCache);
+        Assert.Equal(0, status.NeedsReimport);
+    }
 }

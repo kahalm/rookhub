@@ -483,6 +483,11 @@ bestehende Kurse — der Re-Fetch-Weg ist auf PROD seit 2026-09-09 aus. Regeln:
   versucht den Cache weiter — die einzige gewollte Abweichung zwischen Anzeige und Ausführung: der Lauf kann mehr,
   als das Banner verspricht, nie weniger. Ein piratechess-Ausfall liefert ebenfalls „nichts gecacht" und markiert
   damit zu Unrecht — der nächste Lauf heilt das.
+* **Dasselbe für Repertoires: `Repertoire.CacheMissAt`** (0.693.3, gemeldet 2026-10-06: 5 Repertoires auf Prod, 4× „keine
+  der N Linien im Linien-Cache", 1× „keine Kurs-Id"). `RebuildRepertoireFromCacheAsync` markiert bei jedem
+  DAUERHAFTEN Nichts — keine Kurs-Id, keine oids, kein Cache-Treffer, keine Linie übernehmbar —, nicht aber, wenn das
+  Repertoire währenddessen geändert wurde oder eine Portion warf. Status (`ActionFor(r, forDisplay: true)`) und
+  `RepertoireService.MarkNeedsReimportAsync` reichen `cacheMissed` an `ActionForRepertoire`; der Lauf fragt ohne.
 * **Nicht hinter `Chessable:Enabled`**, und `localOnly` („Aus Cache") schliesst den Weg ein — beides meint
   „ohne Chessable-Abruf". Status: `ReprocessableLocally` zaehlt `Cache` mit (Banner unveraendert),
   `FromCache` weist ihn gesondert aus; Ergebnis: `RebuiltFromCache`, `CacheLinesReplaced`.
