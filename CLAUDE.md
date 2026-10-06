@@ -3240,7 +3240,7 @@ wiederholte es). `test/supervisor.test.sh` misst den Abstand der echten Starts.
   `PublishAsync` nimmt bei eingeschalteter Zweitprüfung nur `SecondAgrees == true`. Steht die Engine nicht in der Hintergrund-Liste des
   Besitzers, wartet die Zweitprüfung (Warnung im Log). Zähler: `SELECT Status, COUNT(*) FROM TacticCandidates GROUP BY Status`.
 
-### Vereinspartien zusätzlich auf Lc0 (0.684.0) — `ClubSecondEngineScheduler`
+### Vereinspartien zusätzlich auf Lc0 (0.685.0) — `ClubSecondEngineScheduler`
 Wunsch 2026-10-06: „alle Ligapartien, die neu dazukommen, automatisch mit 100k rechnen, und einmalig alle alten nachrechnen".
 Jede `LeagueClubGame` bekommt eine ZWEITE Analyse: `Origin = Club` MIT `EngineId` (Registrierung namens
 `ClubSecondEngine:EngineName`, Vorgabe „RookHub Spark Lc0" — per Name, die `rhe_`-Kennung wechselt beim Neuanmelden; leer

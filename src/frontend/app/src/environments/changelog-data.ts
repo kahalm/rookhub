@@ -8,7 +8,7 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: "0.684.0", date: "2026-10-06", changes: [
+  { version: "0.685.0", date: "2026-10-06", changes: [
     { en: "Every game in the club database now automatically gets a second analysis on Lc0 (100,000 nodes per position), newest games first; the existing games are worked off once in the background. Stockfish stays the game\u2019s main analysis. Anyone who can see the club games gets the switch Stockfish | Lc0 | Both on the game page, and in the Lc0 and Both views it shows how many nodes Lc0 actually searched in the position on the board \u2014 Lc0 often stops before the target once its move is settled.", de: "Jede Partie der Vereins-Datenbank bekommt jetzt automatisch eine zweite Analyse auf Lc0 (100 000 Knoten je Stellung), neueste Partien zuerst; der Bestand wird einmal im Hintergrund nachgerechnet. Stockfish bleibt die Hauptanalyse der Partie. Wer die Vereinspartien sieht, bekommt auf der Partieseite den Umschalter Stockfish | Lc0 | Beide, und in den Ansichten Lc0 und Beide steht, wie viele Knoten Lc0 an der Stellung auf dem Brett tats\u00e4chlich gerechnet hat \u2014 Lc0 h\u00f6rt oft vor dem Ziel auf, sobald sein Zug feststeht." },
   ] },
   { version: "0.684.0", date: "2026-10-06", changes: [
