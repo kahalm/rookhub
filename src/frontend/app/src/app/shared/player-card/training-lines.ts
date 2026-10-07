@@ -37,7 +37,11 @@ export interface TrainingLine {
   prefixReached: number;
   /** Woher die Wahrscheinlichkeit kommt (2026-10-07): seine Partien, gemischt, nur Lichess-Explorer, oder keine Quelle
    *  (dann Auffüllregel). */
-  source: 'own' | 'mixed' | 'lichess' | 'none';
+  source: 'own' | 'mixed' | 'lichess' | 'deviates' | 'none';
+  /** Widerspricht seinen Partien (`deviates`): Halbzug, an dem er stattdessen `deviationSan` spielt (`deviationGames` Partien). */
+  deviationPly?: number | null;
+  deviationSan?: string | null;
+  deviationGames?: number;
   ownMoves: number;
   lichessMoves: number;
   /** Halbzug (Index in `moves`) des ersten geschätzten Gegnerzugs. */
@@ -190,4 +194,12 @@ export function plyLabel(moves: string[], start: string | null, index: number): 
     black = !black;
   }
   return '';
+}
+
+/** „2…c5": sein Zug an der Stelle, an der die Linie ihm widerspricht. */
+export function deviationLabel(l: { moves: string[]; start: string | null; deviationPly?: number | null; deviationSan?: string | null }): string {
+  if (l.deviationPly == null || !l.deviationSan) return '';
+  const moves = [...l.moves];
+  moves[l.deviationPly] = l.deviationSan;
+  return plyLabel(moves, l.start, l.deviationPly);
 }

@@ -4562,7 +4562,10 @@
       "headerFew": "Od {{who}} samo {{n}} odgovarajućih partija — praznine procijenjene iz Lichess partija igrača rejtinga {{band}}.",
       "headerNone": "Od {{who}} nema odgovarajućih partija — procijenjeno iz Lichess partija igrača rejtinga {{band}} (tipičan igrač njegove jačine).",
       "headerGaps": "Gdje {{who}} ima premalo partija, linije su procijenjene iz Lichess partija igrača rejtinga {{band}}.",
-      "incomplete": "Lichess explorer nije na vrijeme isporučio sve pozicije — procjena je nepotpuna. Otvori ponovno kasnije."
+      "incomplete": "Lichess explorer nije na vrijeme isporučio sve pozicije — procjena je nepotpuna. Otvori ponovno kasnije.",
+      "deviatesOne": "odstupa: on ovdje igra {{move}} ({{n}} partija)",
+      "deviatesMany": "odstupa: on ovdje igra {{move}} ({{n}} partija)",
+      "deviatesTip": "Proturječi njegovim partijama — procijenjeno kao da je ovdje nastavio kao tipičan igrač njegove jačine"
     },
     "title": "Priprema za protivnika",
     "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",

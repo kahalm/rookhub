@@ -324,6 +324,8 @@ describe('TrainingLinesComponent', () => {
           probability: 0.62, reached: 0 },
         { ...DATA.lines[1], key: 'm2', source: 'lichess', ownMoves: 0, lichessMoves: 2, lichessFrom: 1, probability: 0.2 },
         { ...DATA.lines[2], key: 'm3', source: 'none', pending: true },
+        { ...DATA.lines[1], key: 'm4', moves: ['e4', 'e5', 'Nf3', 'Nc6'], source: 'deviates', ownMoves: 0, lichessMoves: 2, lichessFrom: 1,
+          probability: 0.36, deviationPly: 1, deviationSan: 'c5', deviationGames: 1 },
       ],
     };
 
@@ -339,6 +341,9 @@ describe('TrainingLinesComponent', () => {
       expect(items[1].querySelector('.tl-tag')?.textContent?.trim()).toBe('geschätzt');
       expect(items[2].querySelector('.tl-tag-warn')?.textContent).toContain('Schätzung unvollständig');
       expect(items[2].textContent).toContain('bis 3…cxd4 dabei');            // ohne Quelle: Auffüllregel wie bisher
+      // widerspricht ihm: „weicht ab: er spielt hier 1…c5 (1 Partie)" mit der Schätzung ab dort
+      expect(items[3].querySelector('.tl-deviates')?.textContent).toContain('weicht ab: er spielt hier 1…c5 (1 Partie)');
+      expect(items[3].textContent).toContain('≈ 36 %');
     });
 
     it('ganz ohne passende Partien: „ein typischer Spieler seiner Stärke"', async () => {

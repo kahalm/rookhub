@@ -4562,7 +4562,10 @@
       "headerFew": "{{who}} csak {{n}} megfelelő játszmája van — a hiányokat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
       "headerNone": "{{who}} nincs megfelelő játszmája — becslés {{band}} értékszámú játékosok Lichess-játszmái alapján (egy hasonló erősségű tipikus játékos).",
       "headerGaps": "Ahol {{who}} túl kevés játszmát játszott, a vonalakat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
-      "incomplete": "A Lichess-explorer nem adott vissza időben minden állást — a becslés hiányos. Nyisd meg később újra."
+      "incomplete": "A Lichess-explorer nem adott vissza időben minden állást — a becslés hiányos. Nyisd meg később újra.",
+      "deviatesOne": "eltér: ő itt {{move}} lépést játszik ({{n}} játszma)",
+      "deviatesMany": "eltér: ő itt {{move}} lépést játszik ({{n}} játszma)",
+      "deviatesTip": "Ellentmond a játszmáinak — úgy becsülve, mintha itt egy hasonló erősségű tipikus játékosként folytatta volna"
     },
     "title": "Felkészülés ellenfélre",
     "intro": "Keressen meg bármely játékost a játszmaadatbázisban (ChessBase Megabase és Lumbra GigaBase): megnyitási profil, megnyitásfa és a legutóbbi játszmák visszajátszásra.",

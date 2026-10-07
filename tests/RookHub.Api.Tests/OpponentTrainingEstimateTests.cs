@@ -41,6 +41,68 @@ public class OpponentTrainingEstimateTests
         return OpponentTrainingLines.Rank(g, Enumerable.Repeat("K", g.Mainlines.Count).ToList(), a, est);
     }
 
+    [Fact]
+    public void DefaultThreshold_IsOne_HisMovesHavePriority()
+    {
+        Assert.Equal(1, TrainingLinesService.DefaultMinOwn);
+        var g = Graph('w', "1. e4 c5 2. Nf3");
+        var explorer = new Dictionary<string, ExplorerPositionStats> { [KeyAfter("e4")] = Stats(("e5", 70), ("c5", 30)) };
+        var line = Assert.Single(Rank(g, Times(1, "e4 c5 Nf3", false), explorer, minOwn: 1).Lines);
+        Assert.Equal("own", line.Source);                          // EINE Partie reicht: seine Züge, nicht der Explorer
+        Assert.Equal(1.0, line.Probability, 6);
+    }
+
+    [Fact]
+    public void UsersExample_OneGame_DeviatingLineGoesBehind_LineHeFollowsIsEstimatedWhereHisGameEnds()
+    {
+        // „wenn es nur eine partie gibt und die nicht so tief geht": er hat einmal 1.e4 c5 2.Sf3 gespielt (als Schwarz)
+        var g = Graph('w', "1. e4 e5 2. Nf3 Nc6 3. Bb5", "1. e4 c5 2. Nf3 d6 3. d4");
+        var explorer = new Dictionary<string, ExplorerPositionStats>
+        {
+            [KeyAfter("e4")] = Stats(("e5", 45), ("c5", 35), ("e6", 20)),
+            [KeyAfter("e4", "e5", "Nf3")] = Stats(("Nc6", 80), ("d6", 20)),
+            [KeyAfter("e4", "c5", "Nf3")] = Stats(("d6", 40), ("Nc6", 35), ("e6", 25)),
+        };
+
+        var r = OpponentTrainingLines.Rank(g, ["K", "K"], OpponentTrainingLines.Analyze(g, Times(1, "e4 c5 Nf3", false)),
+            new OpponentTrainingLines.Estimate(n => explorer.GetValueOrDefault(n.Key), 1, new HashSet<string>()));
+
+        var najdorf = r.Lines[0];                                  // folgt seiner Partie: Hauptreihung
+        Assert.Equal("c5", najdorf.Sans[1]);
+        Assert.Equal("mixed", najdorf.Source);
+        Assert.Equal(3, najdorf.LichessFrom);                      // ab 2...d6 geschätzt
+        Assert.Equal(1.0 * 0.4, najdorf.Probability, 6);
+        var open = r.Lines[1];                                     // widerspricht ihm (er spielt 1...c5): eigene Stufe dahinter
+        Assert.Equal("deviates", open.Source);
+        Assert.Equal(1, open.DeviationPly);
+        Assert.Equal("c5", open.DeviationSan);
+        Assert.Equal(1, open.DeviationGames);
+        Assert.Equal(0.45 * 0.8, open.Probability, 6);              // Schätzung ab dem Widerspruch
+    }
+
+    [Fact]
+    public void Tiers_NotContradicting_ThenContradicting_ByMatchedMovesThenEstimate_ThenNoSource()
+    {
+        var g = Graph('w',
+            "1. c4 e5 2. Nc3",                       // 0: keine Quelle (nach 1.c4 war er nie, der Explorer gibt nichts)
+            "1. d4 d5 2. c4",                        // 1: nach 1.d4 war er nie — reine Explorer-Linie, widerspricht ihm nicht
+            "1. e4 e5 2. Nf3",                       // 2: widerspricht bei 1...e5 (0 übereinstimmende Züge)
+            "1. e4 c5 2. Nf3 Nc6 3. d4",             // 3: widerspricht bei 2...Sc6 (1 übereinstimmender Zug)
+            "1. e4 c5 2. Nf3 d6 3. d4");             // 4: folgt ihm — Hauptreihung
+        var explorer = new Dictionary<string, ExplorerPositionStats>
+        {
+            [KeyAfter("e4")] = Stats(("c5", 50), ("e5", 50)),
+            [KeyAfter("d4")] = Stats(("d5", 60), ("Nf6", 40)),
+            [KeyAfter("e4", "c5", "Nf3")] = Stats(("d6", 50), ("Nc6", 50)),
+        };
+        var r = Rank(g, Times(2, "e4 c5 Nf3 d6 d4", false), explorer, minOwn: 1);
+        Assert.Equal(new[] { 4, 1, 3, 2, 0 }, r.Lines.Select(l => l.Index));
+        Assert.Equal(new[] { "own", "lichess", "deviates", "deviates", "none" }, r.Lines.Select(l => l.Source));
+        Assert.Equal(1, r.Lines[2].OwnMoves);                      // 1...c5 stimmte noch
+        Assert.Equal("d6", r.Lines[2].DeviationSan);
+        Assert.Equal(2, r.Lines[2].DeviationGames);
+    }
+
     [Theory]
     [InlineData(4, "lichess", 0.3)]     // unter der Schwelle: der Explorer (1...c5 in 30 % der Partien)
     [InlineData(5, "own", 1.0)]         // ab 5 weitergespielten Partien: seine (immer 1...c5)
@@ -128,8 +190,9 @@ public class OpponentTrainingEstimateTests
         var g = Graph('w', "1. e4 c5 2. Nf3 d6 3. d4", "1. e4 c5 2. Nf3 Nc6 3. d4");
         var a = OpponentTrainingLines.Analyze(g, Times(5, "e4 c5 Nf3 d6", false));
         var need = OpponentTrainingLines.NeedsExplorer(g, a, 5).Select(n => n.Key).ToList();
-        // nach 1.e4 hat er 5× weitergespielt (eigene Daten), nach 2.Sf3 auch — nichts zu schätzen
-        Assert.Empty(need);
+        // nach 1.e4 und 2.Sf3 hat er 5× weitergespielt (eigene Daten) — zu schätzen ist nur, wo er der Linie widerspricht:
+        // nach 2.Sf3 spielt er nie 2...Sc6 (Linie 2), dort springt der Explorer ein
+        Assert.Equal(new[] { KeyAfter("e4", "c5", "Nf3") }, need);
         var few = OpponentTrainingLines.NeedsExplorer(g, OpponentTrainingLines.Analyze(g, Times(2, "e4 c5 Nf3 d6", false)), 5).Select(n => n.Key).ToList();
         Assert.Equal(new[] { KeyAfter("e4"), KeyAfter("e4", "c5", "Nf3") }, few);
     }

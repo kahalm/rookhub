@@ -146,7 +146,9 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
         Assert.Equal("e5", lines[0]!["moves"]![1]!.GetValue<string>());
         Assert.Equal(1.0, lines[0]!["probability"]!.GetValue<double>(), 4);
         Assert.Equal(2025, lines[0]!["lastYear"]!.GetValue<int>());
-        Assert.True(lines[1]!["neverReached"]!.GetValue<bool>());
+        // seine Partie geht 1...e5 — die Sizilianisch-Linie widerspricht ihm (eigene Stufe, „er spielt hier 1...e5")
+        Assert.Equal("deviates", lines[1]!["source"]!.GetValue<string>());
+        Assert.Equal("e5", lines[1]!["deviationSan"]!.GetValue<string>());
     }
 
     [MySqlFact]

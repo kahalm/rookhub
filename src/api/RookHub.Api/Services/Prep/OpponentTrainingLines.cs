@@ -50,9 +50,12 @@ public static class OpponentTrainingLines
     /// <param name="LichessMoves">Gegnerzüge der Linie aus dem Lichess-Explorer (geschätzt).</param>
     /// <param name="LichessFrom">Halbzug (Index in <paramref name="Sans"/>) des ersten geschätzten Gegnerzugs.</param>
     /// <param name="Pending">Eine benötigte Explorer-Stellung kam im Zeitbudget nicht an.</param>
+    /// <param name="DeviationPly">Widerspruch zu seinen Partien (<see cref="Source"/> = <c>deviates</c>): Halbzug, an dem er
+    /// stattdessen <paramref name="DeviationSan"/> gespielt hat (<paramref name="DeviationGames"/> Partien, der häufigste).</param>
     public sealed record Line(string Key, string End, string? StartFen, string Chapter, IReadOnlyList<string> Sans, double Probability,
         int Reached, int? LastYear, bool NeverReached, int Index, int Matched = 0, int Missing = 0, double PrefixProbability = 0,
-        int PrefixReached = 0, string Source = "own", int OwnMoves = 0, int LichessMoves = 0, int? LichessFrom = null, bool Pending = false)
+        int PrefixReached = 0, string Source = "own", int OwnMoves = 0, int LichessMoves = 0, int? LichessFrom = null, bool Pending = false,
+        int? DeviationPly = null, string? DeviationSan = null, int DeviationGames = 0)
     {
         /// <summary>Stufe der Reihung: 0 = voll getroffen, n = n Gegnerzüge fehlen, ganz hinten = gar nicht getroffen.</summary>
         internal int Tier => NeverReached ? int.MaxValue : Missing;
@@ -92,7 +95,9 @@ public static class OpponentTrainingLines
             {
                 var at = nodes[k];
                 if (at.UserToMove || need.ContainsKey(at.Key)) continue;
-                if ((a.Stats.GetValueOrDefault(at.Key)?.Continued ?? 0) < Math.Max(1, minOwn)) need[at.Key] = at;
+                var st = a.Stats.GetValueOrDefault(at.Key);
+                // zu wenig eigene Daten — ODER er hat dort nie den Zug der Linie gespielt (Widerspruch: ab hier schätzt der Explorer)
+                if ((st?.Continued ?? 0) < Math.Max(1, minOwn) || st!.Next.GetValueOrDefault(nodes[k + 1].Key) == 0) need[at.Key] = at;
             }
         return need.Values.ToList();
     }
@@ -131,6 +136,8 @@ public static class OpponentTrainingLines
         public int? LastYear;
         /// <summary>Folgestellung (Schlüssel) → Partien.</summary>
         public readonly Dictionary<string, int> Next = new(StringComparer.Ordinal);
+        /// <summary>Folgestellung → der Zug dorthin (wie er in einer seiner Partien steht) — für „er spielt hier …".</summary>
+        public readonly Dictionary<string, string> NextSan = new(StringComparer.Ordinal);
     }
 
     private sealed class Trie
@@ -212,18 +219,32 @@ public static class OpponentTrainingLines
             .ThenBy(l => l.Index);
 
         if (estimate is null) return new Result(analysis.Games, FillRule(lines).ToList());
-        var sourced = lines.Where(l => l.Source != "none").OrderByDescending(l => l.Probability).ThenByDescending(l => l.OwnMoves)
-            .ThenByDescending(l => l.Reached).ThenBy(l => l.Index);
-        return new Result(analysis.Games, sourced.Concat(FillRule(lines.Where(l => l.Source == "none"))).ToList());
+        // Stufe 1: widerspricht seinen Partien nicht (eigene, gemischte, reine Explorer-Linien) — nach Wahrscheinlichkeit
+        var sourced = lines.Where(l => l.Source is "own" or "mixed" or "lichess").OrderByDescending(l => l.Probability)
+            .ThenByDescending(l => l.OwnMoves).ThenByDescending(l => l.Reached).ThenBy(l => l.Index);
+        // Stufe 2: widerspricht ihm — mehr übereinstimmende Gegnerzüge zuerst, dann die Schätzung ab dem Widerspruch
+        var deviates = lines.Where(l => l.Source == "deviates").OrderByDescending(l => l.OwnMoves)
+            .ThenByDescending(l => l.Probability).ThenBy(l => l.Index);
+        // Stufe 3: weder er noch der Explorer geben etwas her — Auffüllregel wie bisher
+        return new Result(analysis.Games, sourced.Concat(deviates).Concat(FillRule(lines.Where(l => l.Source == "none"))).ToList());
     }
 
-    /// <summary>Die kombinierte Wahrscheinlichkeit einer Linie (siehe <see cref="Rank(RepertoireReach.Graph, IReadOnlyList{string}, Analysis, Estimate?)"/>).</summary>
+    /// <summary>
+    /// Die kombinierte Wahrscheinlichkeit einer Linie — SEINE Züge haben Vorrang (Wunsch 2026-10-07: „mach seine züge immer oberste
+    /// priorität - geschätzt nur wenn seine nicht reichen"): Hat er in einer Stellung mindestens <see cref="Estimate.MinOwn"/>-mal
+    /// weitergespielt (Vorgabe 1), zählen seine Züge; nur wo er nie hinkam, schätzt der Explorer. Hat er dort weitergespielt, aber
+    /// NIE den Zug der Linie, widerspricht die Linie seinen Partien (<c>deviates</c>): ab dieser Stellung schätzt der Explorer weiter
+    /// (Präfix aus seinen Partien × Explorer-Anteile), die Linie reiht sich aber in eine eigene Stufe hinter alle, die ihm nicht
+    /// widersprechen; dazu der Zug, den er stattdessen spielt.
+    /// </summary>
     private static Line Combine(Line line, List<RepertoireReach.Node> nodes, List<string> sans, Dictionary<string, PositionStats> stats,
         Estimate estimate)
     {
         var p = 1.0;
         int own = 0, lichess = 0;
-        int? from = null;
+        int? from = null, deviationPly = null;
+        string? deviationSan = null;
+        var deviationGames = 0;
         bool gap = false, pending = false;
         var minOwn = Math.Max(1, estimate.MinOwn);
         for (var k = 0; k + 1 < nodes.Count; k++)
@@ -232,11 +253,20 @@ public static class OpponentTrainingLines
             if (at.UserToMove) continue;
             var after = nodes[k + 1];
             var st = stats.GetValueOrDefault(at.Key);
-            if (st is not null && st.Continued >= minOwn)
+            if (deviationPly is null && st is not null && st.Continued >= minOwn)
             {
-                p = p * st.Next.GetValueOrDefault(after.Key) / st.Continued;
-                own++;
-                continue;
+                var n = st.Next.GetValueOrDefault(after.Key);
+                if (n > 0)
+                {
+                    p = p * n / st.Continued;
+                    own++;
+                    continue;
+                }
+                // Widerspruch: er spielt hier etwas anderes — der häufigste seiner Züge, ab hier schätzt der Explorer
+                deviationPly = k;
+                var top = st.Next.OrderByDescending(x => x.Value).First();
+                deviationSan = st.NextSan.GetValueOrDefault(top.Key);
+                deviationGames = top.Value;
             }
             if (estimate.Explorer(at) is { } e && e.Total >= RepertoireReach.MinGames)
             {
@@ -248,6 +278,13 @@ public static class OpponentTrainingLines
             gap = true;
             if (estimate.Pending.Contains(at.Key)) pending = true;
         }
+        if (deviationPly is not null)
+            return line with
+            {
+                Probability = gap ? 0 : p, Source = "deviates", OwnMoves = own, LichessMoves = lichess, LichessFrom = from,
+                Pending = pending, NeverReached = false, DeviationPly = deviationPly, DeviationSan = deviationSan,
+                DeviationGames = deviationGames,
+            };
         if (gap) return line with { Source = "none", OwnMoves = own, LichessMoves = lichess, LichessFrom = from, Pending = pending };
         var source = lichess == 0 ? "own" : own == 0 && lichess > 0 ? "lichess" : "mixed";
         return line with
@@ -316,6 +353,7 @@ public static class OpponentTrainingLines
                 {
                     st.Continued += child.Count;
                     st.Next[next] = st.Next.GetValueOrDefault(next) + child.Count;
+                    st.NextSan.TryAdd(next, san);
                 }
                 Walk(child, next);
                 board.Cancel();

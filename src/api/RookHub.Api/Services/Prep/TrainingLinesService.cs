@@ -21,9 +21,10 @@ namespace RookHub.Api.Services.Prep;
 public sealed class TrainingLinesService(AppDbContext db, RepertoireService repertoires, IConfiguration config,
     ITrainingExplorer? explorer = null)
 {
-    /// <summary>Ab so vielen weitergespielten Partien in einer Stellung zählen SEINE Züge; darunter schätzt der Lichess-Explorer
-    /// (Wunsch 2026-10-07). Einstellbar über <see cref="MinOwnKey"/>.</summary>
-    public const int DefaultMinOwn = 5;
+    /// <summary>Ab so vielen weitergespielten Partien in einer Stellung zählen SEINE Züge; darunter schätzt der Lichess-Explorer.
+    /// Vorgabe 1 — seine Züge haben Vorrang (Wunsch 2026-10-07: „mach seine züge immer oberste priorität - geschätzt nur wenn seine
+    /// nicht reichen"). Einstellbar über <see cref="MinOwnKey"/>.</summary>
+    public const int DefaultMinOwn = 1;
     public const string MinOwnKey = "Prep:TrainingMinOwnGames";
     private int MinOwn => int.TryParse(config[MinOwnKey], out var n) ? Math.Clamp(n, 1, 1000) : DefaultMinOwn;
 
@@ -189,6 +190,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             ["lichessMoves"] = l.LichessMoves,
             ["lichessFrom"] = l.LichessFrom,
             ["pending"] = l.Pending,
+            ["deviationPly"] = l.DeviationPly,
+            ["deviationSan"] = l.DeviationSan,
+            ["deviationGames"] = l.DeviationGames,
         }).ToArray());
         o["more"] = Math.Max(0, lines.Count - n);
         return o;

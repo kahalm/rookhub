@@ -4562,7 +4562,10 @@
       "headerFew": "Only {{n}} matching games of {{who}} — gaps estimated from Lichess games of players rated {{band}}.",
       "headerNone": "No matching games of {{who}} — estimated from Lichess games of players rated {{band}} (a typical player of his strength).",
       "headerGaps": "Where {{who}} has too few games, the lines are estimated from Lichess games of players rated {{band}}.",
-      "incomplete": "The Lichess explorer did not deliver every position in time — the estimate is incomplete. Open it again later."
+      "incomplete": "The Lichess explorer did not deliver every position in time — the estimate is incomplete. Open it again later.",
+      "deviatesOne": "deviates: he plays {{move}} here ({{n}} game)",
+      "deviatesMany": "deviates: he plays {{move}} here ({{n}} games)",
+      "deviatesTip": "Contradicts his games — estimated as if he had continued here like a typical player of his strength"
     },
     "title": "Prepare for an opponent",
     "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",

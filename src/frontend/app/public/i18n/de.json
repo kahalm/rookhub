@@ -4562,7 +4562,10 @@
       "headerFew": "Von {{who}} nur {{n}} passende Partien — Lücken mit Lichess-Partien der Stufe {{band}} geschätzt.",
       "headerNone": "Von {{who}} keine passenden Partien — geschätzt mit Lichess-Partien der Stufe {{band}} (ein typischer Spieler seiner Stärke).",
       "headerGaps": "Wo {{who}} zu wenige Partien hat, sind die Linien mit Lichess-Partien der Stufe {{band}} geschätzt.",
-      "incomplete": "Der Lichess-Explorer hat nicht alle Stellungen rechtzeitig geliefert — die Schätzung ist unvollständig. Später noch einmal öffnen."
+      "incomplete": "Der Lichess-Explorer hat nicht alle Stellungen rechtzeitig geliefert — die Schätzung ist unvollständig. Später noch einmal öffnen.",
+      "deviatesOne": "weicht ab: er spielt hier {{move}} ({{n}} Partie)",
+      "deviatesMany": "weicht ab: er spielt hier {{move}} ({{n}} Partien)",
+      "deviatesTip": "Widerspricht seinen Partien — geschätzt, als wäre er hier wie ein typischer Spieler seiner Stärke weitergegangen"
     },
     "title": "Gegner vorbereiten",
     "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",

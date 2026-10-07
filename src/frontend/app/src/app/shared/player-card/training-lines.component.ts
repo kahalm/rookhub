@@ -8,7 +8,7 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
-import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
 interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
@@ -85,12 +85,17 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                         <span class="tl-tag" [title]="t('estimatedTip', { band: d.lichessBand })">{{ t('estimated') }}</span>
                       } @else if (l.source === 'mixed' && l.lichessFrom !== null) {
                         <span class="tl-tag">{{ t('estimatedFrom', { move: from(l), band: d.lichessBand }) }}</span>
+                      } @else if (l.source === 'deviates') {
+                        <span class="tl-tag tl-tag-warn tl-deviates">{{ t(l.deviationGames === 1 ? 'deviatesOne' : 'deviatesMany',
+                          { move: deviation(l), n: l.deviationGames }) }}</span>
                       } @else if (l.pending) {
                         <span class="tl-tag tl-tag-warn">{{ t('pending') }}</span>
                       }
                     </div>
                     <div class="tl-stats">
-                      @if (l.source !== 'none') {
+                      @if (l.source === 'deviates') {
+                        <span class="tl-p tl-partial" [title]="t('deviatesTip')">{{ l.probability ? '≈ ' + pct(l.probability) : '–' }}</span>
+                      } @else if (l.source !== 'none') {
                         <span class="tl-p" [title]="'Wahrscheinlichkeit, dass ' + who() + ' diese Linie spielt'">{{ pct(l.probability) }}</span>
                         @if (l.ownMoves) {
                           <span class="muted small">{{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}@if (l.lastYear) {, zuletzt {{ l.lastYear }}}</span>
@@ -179,6 +184,7 @@ export class TrainingLinesComponent {
   readonly until = (d: TrainingLines, l: TrainingLine) => matchedUntil(l, d.color ?? 'w') ?? '?';
   /** Gibt es geschätzte Linien? */
   readonly estimated = (d: TrainingLines) => !!d.lichessBand && d.lines.some(l => l.source === 'lichess' || l.source === 'mixed');
+  readonly deviation = (l: TrainingLine) => deviationLabel(l);
   readonly from = (l: TrainingLine) => l.lichessFrom === null ? '' : plyLabel(l.moves, l.start, l.lichessFrom);
 
   /** Woher die Linie stammt: bei „Alle markierten" Repertoire · Kapitel, sonst das Kapitel. */
@@ -343,6 +349,9 @@ const GERMAN: Record<string, string> = {
   sameRepertoire: 'Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um.',
   allMarked: 'Alle markierten',
   estimated: 'geschätzt',
+  deviatesOne: 'weicht ab: er spielt hier {{move}} ({{n}} Partie)',
+  deviatesMany: 'weicht ab: er spielt hier {{move}} ({{n}} Partien)',
+  deviatesTip: 'Widerspricht seinen Partien — geschätzt, als wäre er hier wie ein typischer Spieler seiner Stärke weitergegangen',
   estimatedTip: 'Geschätzt mit Lichess-Partien von Spielern der Stufe {{band}}',
   estimatedFrom: 'ab {{move}} geschätzt (Lichess {{band}})',
   pending: 'Schätzung unvollständig',
