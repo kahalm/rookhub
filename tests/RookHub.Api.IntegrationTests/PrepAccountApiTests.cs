@@ -60,6 +60,9 @@ public class PrepAccountApiTests(PrepAccountFixture fixture) : IAsyncLifetime, I
     {
         await using var db = fixture.Schema.NewContext();
         await new PrepImportService(db).ImportChunkAsync(PrepSources.Mega, 0, 0, Game("Erwachsen, Anton", "990801") + Game("Kind, Klara", "990802"), default);
+        // ein Verein (Mandanten-Schritt 2026-10-07): die vereinsgebundenen LeagueHub-Endpunkte (/sources) brauchen einen —
+        // ResetAsync leert auch LeagueClubs; ein Admin ohne Gruppe nimmt dann den einzigen
+        db.LeagueClubs.Add(new LeagueClub { Name = "SK Testdorf", TeamPrefix = "Testdorf", AnonName = "Testdorf", CreatedAt = DateTime.UtcNow });
         db.LeagueTournaments.Add(new LeagueTournament { Tnr = 9901, Name = "Landesliga", Season = "2026/27", League = "LL", Stage = "Liga" });
         db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 9901, Team = "Kufstein 1", Name = "Liga, Lena", NameKey = "liga, lena", FideId = "990803", Fed = "AUT", EloI = 1900 });
         db.LeagueAccountScans.AddRange(

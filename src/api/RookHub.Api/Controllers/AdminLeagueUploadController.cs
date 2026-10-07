@@ -43,7 +43,8 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
     /// Bilder eines Stapels OHNE Modell als Liga-Einlesung anlegen (0.684.0, Skill <c>/formulare</c>): die Lesung kommt im
     /// Rumpf (Form der Modell-Antwort), <c>fileIds</c> in Seitenreihenfolge. Die Einlesung gehört <c>userId</c> und steht
     /// dort in LeagueHub zum Prüfen offen; mit <c>clubGameId</c> wird sie gleich an diese Vereinspartie gehängt.
-    /// 400 <c>reason</c> ∈ noFile/tooManyPages/unsupportedImage/invalidTranscription/noMoves/clubGameNotFound/unknownUser.
+    /// 400 <c>reason</c> ∈ noFile/tooManyPages/unsupportedImage/invalidTranscription/noMoves/clubGameNotFound/unknownUser/mixedClubs.
+    /// Die Einlesung gehört dem Verein des Stapels (Mandanten-Schritt 2026-10-07).
     /// </summary>
     [HttpPost("manual-scan")]
     public async Task<IActionResult> ManualScan([FromBody] ManualScanRequest req, [FromServices] AppDbContext db,
@@ -52,11 +53,15 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
         if (req.FileIds is not { Count: > 0 } ids) return BadRequest(new { reason = "noFile" });
         if (!await db.AppUsers.AnyAsync(u => u.Id == req.UserId, ct)) return BadRequest(new { reason = "unknownUser" });
         var files = await db.LeagueBatchUploadFiles.AsNoTracking().Where(f => ids.Contains(f.Id))
-            .Select(f => new { f.Id, f.Data, f.ContentType, f.FileName }).ToListAsync(ct);
+            .Select(f => new { f.Id, f.Data, f.ContentType, f.FileName, f.Batch.ClubId }).ToListAsync(ct);
         if (files.Count != ids.Distinct().Count()) return BadRequest(new { reason = "noFile" });
+        // Die Einlesung gehört dem Verein des Stapels (Mandanten-Schritt 2026-10-07) — Bilder aus Stapeln zweier Vereine
+        // ergeben keine Einlesung.
+        if (files.Select(f => f.ClubId).Distinct().Count() != 1) return BadRequest(new { reason = "mixedClubs" });
         var pages = ids.Select(id => files.First(f => f.Id == id))
             .Select(f => new ScoresheetUpload(f.Data, f.ContentType, f.FileName)).ToList();
-        var (scan, reason) = await scans.CreateManualAsync(req.UserId, pages, req.Transcription.GetRawText(), req.ClubGameId, ct);
+        var (scan, reason) = await scans.CreateManualAsync(req.UserId, pages, req.Transcription.GetRawText(), req.ClubGameId, ct,
+            files[0].ClubId);
         return scan == null ? BadRequest(new { reason }) : Ok(scan);
     }
 

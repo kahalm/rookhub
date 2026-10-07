@@ -203,7 +203,9 @@ internal sealed class LeagueShareConfiguration : IEntityTypeConfiguration<League
         e.HasKey(s => s.Token);
         e.Property(s => s.Token).HasMaxLength(40);
         e.Property(s => s.Team).HasMaxLength(80);
-        e.HasIndex(s => new { s.Tnr, s.Round, s.Team }).IsUnique();
+        // je Verein ein Link je Begegnung (Mandanten-Schritt 2026-10-07)
+        e.HasIndex(s => new { s.ClubId, s.Tnr, s.Round, s.Team }).IsUnique();
+        e.HasOne<LeagueClub>().WithMany().HasForeignKey(s => s.ClubId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -246,6 +248,8 @@ internal sealed class LeagueClubDraftConfiguration : IEntityTypeConfiguration<Le
         e.Property(d => d.Imported).HasColumnType("text");
         e.HasIndex(d => d.AccessKey).IsUnique();
         e.HasIndex(d => new { d.UserId, d.UpdatedAt });
+        e.HasIndex(d => d.ClubId);
+        e.HasOne<LeagueClub>().WithMany().HasForeignKey(d => d.ClubId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -260,6 +264,8 @@ internal sealed class LeagueBatchUploadConfiguration : IEntityTypeConfiguration<
         e.Property(b => b.Comment).HasMaxLength(1000);
         e.HasIndex(b => new { b.AnonIpHash, b.CreatedAt });
         e.HasIndex(b => b.CreatedAt);
+        e.HasIndex(b => b.ClubId);
+        e.HasOne<LeagueClub>().WithMany().HasForeignKey(b => b.ClubId).OnDelete(DeleteBehavior.Restrict);
         e.HasMany(b => b.Files).WithOne(f => f.Batch).HasForeignKey(f => f.BatchId).OnDelete(DeleteBehavior.Cascade);
     }
 }
@@ -310,10 +316,42 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.HasIndex(g => g.ArchivedAt);
         // Archivierte Fassungen (ersetzt durch ein neueres Formular) sind überall unsichtbar.
         e.HasQueryFilter(g => g.ArchivedAt == null);
+        // Der Verein (Mandanten-Schritt 2026-10-07) bekommt BEWUSST keinen zweiten globalen Filter: EF Core kennt je Typ nur
+        // EINEN Filter-Ausdruck, ein Filter auf einen Wert der Anfrage hinge am DbContext (Hintergrund-Dienste wie
+        // MasterAnalysisScheduler, TacticHarvestService und LeagueProfileStore lesen ALLE Vereine), und ein vergessenes
+        // IgnoreQueryFilters würde den Archiv-Filter gleich mit abschalten. Jeder Weg aus dem LeagueHub filtert deshalb
+        // ausdrücklich nach dem Verein aus LeagueClubResolver; die Trennung prüfen LeagueClubTenancyTests.
+        e.HasIndex(g => new { g.ClubId, g.Year });
+        e.HasOne<LeagueClub>().WithMany().HasForeignKey(g => g.ClubId).OnDelete(DeleteBehavior.Restrict);
         e.HasIndex(g => g.WhiteFide);
         e.HasIndex(g => g.BlackFide);
         e.HasIndex(g => g.UploadShareHash);
         e.Property(g => g.ClaimKeyHash).HasMaxLength(64);   // 0.656.0: Zuordnen nach dem Anmelden
         e.HasIndex(g => g.ClaimKeyHash);
+    }
+}
+
+internal sealed class LeagueClubConfiguration : IEntityTypeConfiguration<LeagueClub>
+{
+    public void Configure(EntityTypeBuilder<LeagueClub> e)
+    {
+        e.Property(c => c.Name).HasMaxLength(120);
+        e.Property(c => c.TeamPrefix).HasMaxLength(80);
+        e.Property(c => c.AnonName).HasMaxLength(60);
+        e.Property(c => c.Source).HasMaxLength(20);
+        e.HasIndex(c => c.Name).IsUnique();
+    }
+}
+
+internal sealed class LeagueClubMemberConfiguration : IEntityTypeConfiguration<LeagueClubMember>
+{
+    public void Configure(EntityTypeBuilder<LeagueClubMember> e)
+    {
+        e.HasKey(m => new { m.ClubId, m.GroupId });
+        // eine Gruppe gehört zu höchstens einem Verein
+        e.HasIndex(m => m.GroupId).IsUnique();
+        e.HasOne(m => m.Club).WithMany().HasForeignKey(m => m.ClubId).OnDelete(DeleteBehavior.Restrict);
+        // wird die Gruppe gelöscht, geht ihre Zugehörigkeit mit
+        e.HasOne(m => m.Group).WithMany().HasForeignKey(m => m.GroupId).OnDelete(DeleteBehavior.Cascade);
     }
 }

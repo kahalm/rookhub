@@ -491,7 +491,7 @@ public class SavedGameService
         }
 
         if (GamePlies.Parse(game.Pgn, maxPlies: 600) is { } parsed && IsStandardStart(parsed.Header.StartFen)
-            && await ClubAnalysisForMovesAsync(parsed.Plies.Select(p => p.San).ToList(), ct) is int clubId)
+            && await ClubAnalysisForMovesAsync(parsed.Plies.Select(p => p.San).ToList(), userId, ct) is int clubId)
         {
             if (isOwner && game.GameAnalysisId != clubId)
             {
@@ -522,12 +522,15 @@ public class SavedGameService
     /// heruntergeladen und wieder hochgeladen) wird daran gehängt, statt ein zweites Mal durch die Engine zu laufen. Wer die
     /// Züge hat, erfährt aus ihren Bewertungen nichts über den Verein; Namen und Kopfdaten der Vereinspartie liest der
     /// Bewertungsweg nicht. Vergleich über <see cref="League.LeagueClubService.HashOf"/> (dieselben SAN wie beim Upload).
+    /// <para>Nur Vereinspartien der Vereine von <paramref name="userId"/> (Mandanten-Schritt 2026-10-07): die Analyse trägt
+    /// die Namen der Vereinspartie, und ein Verein sieht nie die Partien eines anderen. Liga-Partien des Stapels sind öffentlich.</para>
     /// </summary>
-    internal async Task<int?> ClubAnalysisForMovesAsync(IReadOnlyList<string> sans, CancellationToken ct)
+    internal async Task<int?> ClubAnalysisForMovesAsync(IReadOnlyList<string> sans, int userId, CancellationToken ct)
     {
         if (sans.Count == 0) return null;
         var hash = League.LeagueClubService.HashOf(sans);
-        var clubIds = _db.LeagueClubGames.Where(g => g.MovesHash == hash).Select(g => (int?)g.Id);
+        var mine = (await League.LeagueClubResolver.ClubIdsOfAsync(_db, userId, ct)).ToList();
+        var clubIds = _db.LeagueClubGames.Where(g => g.MovesHash == hash && mine.Contains(g.ClubId)).Select(g => (int?)g.Id);
         // dazu die Liga-Partien des Stapels (0.665.0) mit denselben Zügen
         return await _db.GameAnalyses.AsNoTracking()
             .Where(a => a.Status != GameAnalysisStatus.Failed
@@ -548,12 +551,14 @@ public class SavedGameService
         return (GameClassifier.Clean(c?.Classifier1), GameClassifier.Clean(c?.Classifier2));
     }
 
-    /// <summary>Die Vereinspartie mit GENAU diesen Zügen (jüngste zuerst) — die Quelle einer Kopie (0.660.0).</summary>
-    internal async Task<int?> ClubGameForMovesAsync(IReadOnlyList<string> sans, CancellationToken ct)
+    /// <summary>Die Vereinspartie mit GENAU diesen Zügen (jüngste zuerst) — die Quelle einer Kopie (0.660.0); nur aus den
+    /// Vereinen von <paramref name="userId"/> (Mandanten-Schritt 2026-10-07).</summary>
+    internal async Task<int?> ClubGameForMovesAsync(IReadOnlyList<string> sans, int userId, CancellationToken ct)
     {
         if (sans.Count == 0) return null;
         var hash = League.LeagueClubService.HashOf(sans);
-        return await _db.LeagueClubGames.AsNoTracking().Where(g => g.MovesHash == hash).OrderByDescending(g => g.Id)
+        var mine = (await League.LeagueClubResolver.ClubIdsOfAsync(_db, userId, ct)).ToList();
+        return await _db.LeagueClubGames.AsNoTracking().Where(g => g.MovesHash == hash && mine.Contains(g.ClubId)).OrderByDescending(g => g.Id)
             .Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
     }
 
@@ -591,9 +596,12 @@ public class SavedGameService
     /// </summary>
     public async Task<int> LinkClubCopiesAsync(int take = 500, CancellationToken ct = default)
     {
-        var hashes = (await _db.LeagueClubGames.AsNoTracking().Select(g => new { g.Id, g.MovesHash }).ToListAsync(ct))
-            .GroupBy(g => g.MovesHash).ToDictionary(x => x.Key, x => x.Max(g => g.Id));
+        // je Vereinspartie ihr Verein — eine Kopie wird nur mit einer Partie aus einem Verein ihres Besitzers verbunden
+        // (Mandanten-Schritt 2026-10-07)
+        var hashes = (await _db.LeagueClubGames.AsNoTracking().Select(g => new { g.Id, g.MovesHash, g.ClubId }).ToListAsync(ct))
+            .GroupBy(g => g.MovesHash).ToDictionary(x => x.Key, x => x.OrderByDescending(g => g.Id).Select(g => (g.Id, g.ClubId)).ToList());
         if (hashes.Count == 0) return 0;
+        var memberships = new Dictionary<int, HashSet<int>>();
         var candidates = await _db.SavedGames.Where(g => g.LeagueClubGameId == null && g.Source == "pgn")
             .OrderBy(g => g.Id).Take(take).ToListAsync(ct);
         var linked = 0;
@@ -602,7 +610,11 @@ public class SavedGameService
             var parsed = PgnParser.SplitGames(g.Pgn).FirstOrDefault();
             if (parsed.Headers is { } h && h.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen) && !IsStandardStart(fen)) continue;
             var sans = PgnParser.ExtractMainlineSans(parsed.MoveText ?? string.Empty);
-            if (sans.Count == 0 || !hashes.TryGetValue(League.LeagueClubService.HashOf(sans), out var clubId)) continue;
+            if (sans.Count == 0 || !hashes.TryGetValue(League.LeagueClubService.HashOf(sans), out var sources)) continue;
+            if (!memberships.TryGetValue(g.UserId, out var mine))
+                memberships[g.UserId] = mine = await League.LeagueClubResolver.ClubIdsOfAsync(_db, g.UserId, ct);
+            var (clubId, _) = sources.FirstOrDefault(x => mine.Contains(x.ClubId));
+            if (clubId == 0) continue;
             g.LeagueClubGameId = clubId;
             // Liga + Jahrgang nachtragen, soweit der Nutzer nichts eingetragen hat (0.666.0).
             var (c1, c2) = await ClubClassifiersAsync(clubId, ct);
@@ -808,7 +820,7 @@ public class SavedGameService
                 result.Failed.Add(Fail("quota"));
                 continue;
             }
-            var clubGameId = startFen is null || IsStandardStart(startFen) ? await ClubGameForMovesAsync(sans, ct) : null;
+            var clubGameId = startFen is null || IsStandardStart(startFen) ? await ClubGameForMovesAsync(sans, userId, ct) : null;
             var (clubClass1, clubClass2) = await ClubClassifiersAsync(clubGameId, ct);
             var entity = new SavedGame
             {
@@ -830,7 +842,7 @@ public class SavedGameService
                 CreatedAt = DateTime.UtcNow,
                 // Aus der Vereins-Datenbank kopiert: deren Analyse gleich mitnehmen (0.653.0) — und seit 0.660.0 mit ihr
                 // verbunden bleiben, damit eine Korrektur der Vereinspartie hier ankommt.
-                GameAnalysisId = startFen is null || IsStandardStart(startFen) ? await ClubAnalysisForMovesAsync(sans, ct) : null,
+                GameAnalysisId = startFen is null || IsStandardStart(startFen) ? await ClubAnalysisForMovesAsync(sans, userId, ct) : null,
                 LeagueClubGameId = clubGameId,
                 Classifier1 = clubClass1,   // Liga + Jahrgang aus der Vereinspartie (0.666.0)
                 Classifier2 = clubClass2,

@@ -189,7 +189,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
 
     private LeagueClubGame ClubGame(string pgn = Short)
     {
-        var g = new LeagueClubGame { White = "Morphy", Black = "Duke", Pgn = pgn, Plies = 10, Year = 2025,
+        var g = new LeagueClubGame { ClubId = TestClubs.HomeId, White = "Morphy", Black = "Duke", Pgn = pgn, Plies = 10, Year = 2025,
             MovesHash = Guid.NewGuid().ToString("N") };
         _db.LeagueClubGames.Add(g);
         _db.SaveChanges();
@@ -275,7 +275,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: svc);
 
         // 5...Be7 wird zu 5...b5: nur der letzte Halbzug ändert sich
-        var (_, _, reason) = await club.CorrectMovesAsync(Owner, false, game.Id,
+        var (_, _, reason) = await club.CorrectMovesAsync(TestClubs.Home, Owner, false, game.Id,
             new[] { "e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5" });
 
         Assert.Null(reason);
@@ -300,7 +300,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
         var own = await svc.CreateAsync(Owner, new() { Pgn = Longer, TargetDepth = 20, MultiPv = 1 });   // bleibt
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: svc);
 
-        Assert.Equal(LeagueClubService.DeleteResult.Deleted, await club.DeleteAsync(Owner, true, game.Id));
+        Assert.Equal(LeagueClubService.DeleteResult.Deleted, await club.DeleteAsync(TestClubs.Home, Owner, true, game.Id));
 
         Assert.Equal(own.Id, (await _db.GameAnalyses.SingleAsync()).Id);
         var jobs = await _db.AnalysisJobs.ToListAsync();
@@ -314,25 +314,25 @@ public class MasterAnalysisSchedulerTests : IDisposable
     [Fact]
     public async Task VereinspartieKorrigiert_aufEinenSchwazer_dieAnalyseVerliertDenNamenAuch()
     {
-        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "Oberschmid, Patrik",
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Testdorf", Name = "Oberschmid, Patrik",
             NameKey = LeagueNames.NameKey("Oberschmid, Patrik"), FideId = "900" });
         _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Absam", Name = "Hengl, Philip",
             NameKey = LeagueNames.NameKey("Hengl, Philip"), FideId = "222" });
         await _db.SaveChangesAsync();
         var svc = Analyses();
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: svc);
-        await club.ImportPgnAsync(Viewer, "[Event \"Vereinsmeisterschaft\"]\n[Date \"2024.05.12\"]\n[White \"Unbekannt, Wer\"]\n"
+        await club.ImportPgnAsync(TestClubs.Home, Viewer, "[Event \"Vereinsmeisterschaft\"]\n[Date \"2024.05.12\"]\n[White \"Unbekannt, Wer\"]\n"
             + "[Black \"Hengl, Philip\"]\n[Result \"1-0\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 1-0\n", null);
         var game = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
         var id = await Scheduler(Never).TickOnceAsync(_db, svc, default);
         Assert.Equal("Unbekannt, Wer – Hengl, Philip", (await _db.GameAnalyses.AsNoTracking().SingleAsync(g => g.Id == id)).Title);
 
-        var (_, reason) = await club.UpdateAsync(Viewer, true, game.Id,
+        var (_, reason) = await club.UpdateAsync(TestClubs.Home, Viewer, true, game.Id,
             new LeagueClubGameUpdateRequest { White = new() { Fide = "900" } });
 
         Assert.Null(reason);
         var analysis = await _db.GameAnalyses.AsNoTracking().SingleAsync(g => g.Id == id);
-        Assert.Equal(("Schwaz", "Schwaz – Hengl, Philip"), (analysis.White, analysis.Title));
+        Assert.Equal(("Testdorf", "Testdorf – Hengl, Philip"), (analysis.White, analysis.Title));
         Assert.NotEqual("Vereinsmeisterschaft", analysis.Event);   // die Veranstaltung fällt weg („?" im PGN)
         Assert.DoesNotContain("Unbekannt", analysis.Pgn);
         Assert.DoesNotContain("Vereinsmeisterschaft", analysis.Pgn);
@@ -354,23 +354,23 @@ public class MasterAnalysisSchedulerTests : IDisposable
         await _db.SaveChangesAsync();
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: svc);
 
-        var list = await club.ListAsync(Viewer, false, null, null, 1, default);
+        var list = await club.ListAsync(TestClubs.Home, Viewer, false, null, null, 1, default);
         var row = list.Items.Single(i => i.Id == analysed.Id).Analysis;
         Assert.NotNull(row);
         Assert.Equal((1, 10), (row!.Analyzed, row.Total));
         Assert.Null(list.Items.Single(i => i.Id == other.Id).Analysis);
 
-        var evals = await club.EvalsAsync(analysed.Id);
+        var evals = await club.EvalsAsync(TestClubs.Home, analysed.Id);
         Assert.Equal(dto.Id, evals!.AnalysisId);
         Assert.Equal(0, Assert.Single(evals.Plies).Ply);
         Assert.Empty(evals.BookPlies);                                   // keine Repertoires des Betrachters
-        Assert.Equal("none", (await club.EvalsAsync(other.Id))!.Status);  // Partie da, Analyse noch nicht
-        Assert.Null(await club.EvalsAsync(99999));
+        Assert.Equal("none", (await club.EvalsAsync(TestClubs.Home, other.Id))!.Status);  // Partie da, Analyse noch nicht
+        Assert.Null(await club.EvalsAsync(TestClubs.Home, 99999));
 
-        var detail = await club.GetAsync(Viewer, false, analysed.Id);
+        var detail = await club.GetAsync(TestClubs.Home, Viewer, false, analysed.Id);
         Assert.Equal(analysed.Pgn, detail!.Pgn);
         Assert.Equal(1, detail.Analysis!.Analyzed);
-        Assert.Null(await club.GetAsync(Viewer, false, 99999));
+        Assert.Null(await club.GetAsync(TestClubs.Home, Viewer, false, 99999));
     }
 
     /// <summary>Nur das Etikett <see cref="GameAnalysisOrigin.Club"/> zählt: eine Analyse, die zufällig dieselbe Nummer
@@ -384,7 +384,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
         await _db.SaveChangesAsync();
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: Analyses());
 
-        Assert.Null((await club.ListAsync(Viewer, false, null, null, 1, default)).Items.Single().Analysis);
-        Assert.Equal("none", (await club.EvalsAsync(game.Id))!.Status);
+        Assert.Null((await club.ListAsync(TestClubs.Home, Viewer, false, null, null, 1, default)).Items.Single().Analysis);
+        Assert.Equal("none", (await club.EvalsAsync(TestClubs.Home, game.Id))!.Status);
     }
 }

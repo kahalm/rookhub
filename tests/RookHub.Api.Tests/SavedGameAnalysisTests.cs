@@ -126,6 +126,7 @@ public class SavedGameAnalysisTests : IDisposable
     {
         var club = new LeagueClubGame
         {
+            ClubId = TestClubs.HomeId,
             White = "Schwaz", Black = "Gegner", Pgn = "1. e4 c5 2. Nf3 d6 *", Plies = 4, Year = 2025,
             Classifier1 = "Landesliga", Classifier2 = "2025/26",
             MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(new[] { "e4", "c5", "Nf3", "d6" }),
@@ -133,6 +134,7 @@ public class SavedGameAnalysisTests : IDisposable
         _db.LeagueClubGames.Add(club);
         var owner = await UserAsync("owner");
         await _db.SaveChangesAsync();
+        await MemberAsync(owner.Id);
 
         var res = await _svc.ImportPgnAsync(owner.Id, "[White \"Schwaz\"]\n[Black \"Gegner\"]\n\n1. e4 c5 2. Nf3 d6 *");
 
@@ -153,11 +155,44 @@ public class SavedGameAnalysisTests : IDisposable
 
     // ----- Aus der Vereins-Datenbank kopiert (0.653.0): deren Analyse statt einer zweiten Rechnung -----
 
+    /// <summary>Das Konto gehört über eine Gruppe zum Testverein (Mandanten-Schritt 2026-10-07: Kopie und Analyse einer
+    /// Vereinspartie nur für Mitglieder ihres Vereins).</summary>
+    private async Task MemberAsync(int userId)
+    {
+        if (!await _db.LeagueClubs.AnyAsync()) await TestClubs.SeedAsync(_db);
+        if (!await _db.Groups.AnyAsync(g => g.Id == 77))
+        {
+            _db.Groups.Add(new Group { Id = 77, Name = "Testdorf" });
+            _db.LeagueClubMembers.Add(new LeagueClubMember { ClubId = TestClubs.HomeId, GroupId = 77 });
+        }
+        _db.UserGroups.Add(new UserGroup { UserId = userId, GroupId = 77 });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Wer NICHT zum Verein der Partie gehört, bekommt weder deren Analyse noch die Verbindung zur Vereinspartie —
+    /// auch nicht, wenn er dieselben Züge hochlädt (Mandanten-Schritt 2026-10-07).</summary>
+    [Fact]
+    public async Task Import_kopierteVereinspartie_einesFremdenVereins_bleibtUnverbunden()
+    {
+        await ClubAnalysisAsync();
+        await TestClubs.SeedAsync(_db);
+        var stranger = await UserAsync("stranger");
+
+        var res = await _svc.ImportPgnAsync(stranger.Id, "[White \"X\"]\n[Black \"Y\"]\n\n1. e4 c5 2. Nf3 d6 *");
+
+        var copy = await RowAsync(res.Ids[0]);
+        Assert.Null(copy.GameAnalysisId);
+        Assert.Null(copy.LeagueClubGameId);
+        await _svc.LinkClubCopiesAsync();
+        Assert.Null((await RowAsync(res.Ids[0])).LeagueClubGameId);
+    }
+
     /// <summary>Eine Vereinspartie mit den Zügen 1.e4 c5 2.Nf3 d6 samt ihrer Hintergrund-Analyse.</summary>
     private async Task<GameAnalysis> ClubAnalysisAsync(GameAnalysisStatus status = GameAnalysisStatus.Done)
     {
         var club = new LeagueClubGame
         {
+            ClubId = TestClubs.HomeId,
             White = "Schwaz", Black = "Gegner", Pgn = "1. e4 c5 2. Nf3 d6 *", Plies = 4, Year = 2026,
             MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(new[] { "e4", "c5", "Nf3", "d6" }),
         };
@@ -179,6 +214,7 @@ public class SavedGameAnalysisTests : IDisposable
     {
         var club = await ClubAnalysisAsync();
         var owner = await UserAsync("owner");
+        await MemberAsync(owner.Id);
         var game = await SaveAsync(owner.Id);   // dieselben Züge, andere Kopfdaten
 
         var result = await _svc.AnalyzeAsync(owner.Id, game.Id);
@@ -207,6 +243,7 @@ public class SavedGameAnalysisTests : IDisposable
     {
         var club = await ClubAnalysisAsync();
         var owner = await UserAsync("owner");
+        await MemberAsync(owner.Id);
 
         var res = await _svc.ImportPgnAsync(owner.Id,
             "[White \"Schwaz\"]\n[Black \"Gegner\"]\n\n1. e4 c5 2. Nf3 d6 *\n\n[White \"A\"]\n[Black \"B\"]\n\n1. e4 c5 2. Nf3 Nc6 *");

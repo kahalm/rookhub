@@ -121,6 +121,9 @@ internal sealed class ScoresheetScanConfiguration : IEntityTypeConfiguration<Sco
         e.HasIndex(s => new { s.Status, s.CreatedAt });
         e.HasIndex(s => new { s.UserId, s.CreatedAt });
         e.HasIndex(s => s.SavedGameId);
+        // Liga-Einlesungen gehören einem Verein (Mandanten-Schritt 2026-10-07); RookHubs eigene haben keinen.
+        e.HasIndex(s => s.ClubId);
+        e.HasOne<LeagueClub>().WithMany().HasForeignKey(s => s.ClubId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

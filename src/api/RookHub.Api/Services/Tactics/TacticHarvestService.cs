@@ -16,8 +16,9 @@ namespace RookHub.Api.Services.Tactics;
 /// <item><see cref="PumpAsync"/>: je Kandidat die Lösung verlängern. Die Antwort des Gegners kommt aus der Hauptvariante,
 /// danach rechnet ein Auftrag (zwei Linien, Hintergrund, nicht in der Ruhezeit) die Stellung des Lösers; ist der beste Zug
 /// wieder eindeutig, geht es weiter, sonst endet die Lösung beim letzten eindeutigen Zug.</item>
-/// <item><see cref="PublishAsync"/>: fertige Taktiken als Aufgaben in einen Kurs — Vereinspartien in „Taktiken aus
-/// Vereinspartien" (Kapitel je Ligarunde, Wunsch 2026-10-04; sichtbar für die Gruppen mit LeagueHub-Leserecht),
+/// <item><see cref="PublishAsync"/>: fertige Taktiken als Aufgaben in einen Kurs — Vereinspartien je VEREIN in „Taktiken aus
+/// Vereinspartien – {Verein}" (<see cref="ClubBookOf"/>, Mandanten-Schritt 2026-10-07; Kapitel je Ligarunde, Wunsch
+/// 2026-10-04; sichtbar für die Gruppen des Vereins, <see cref="LeagueClubMember"/>),
 /// Meisterpartien in „Taktiken aus Meisterpartien" (vorerst nur Admins), eigene Partien in „Taktiken aus meinen Partien"
 /// des Besitzers. Verschwindet eine Partie, wird ihre Aufgabe stillgelegt (<see cref="BookPuzzle.Retired"/>).</item>
 /// </list>
@@ -33,7 +34,14 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     public const int DefaultSecondNodes = 50_000;
     public const int SecondMultiPv = 3;
     public const string JobTitle = "Taktik-Ernte";
-    public const string ClubBook = "tactics-club.pgn";
+    /// <summary>Der Taktik-Kurs EINES Vereins (Mandanten-Schritt 2026-10-07): <c>tactics-club-{id}.pgn</c>. Das frühere
+    /// gemeinsame Buch <c>tactics-club.pgn</c> hat die Migration <c>LeagueClubs</c> zu dem von Verein 1 (SK Schwaz) umbenannt
+    /// (Datei + Aufgaben; die <see cref="BookPuzzle.LineId"/> der alten Aufgaben behält ihr „tactics-club.pgn:"-Präfix —
+    /// die Kennung ist nur eindeutig, nicht lesbar, und Fortschritt hängt an Buch- und Aufgaben-Id).</summary>
+    public static string ClubBookOf(int clubId) => $"tactics-club-{clubId}.pgn";
+    /// <summary>Gemeinsamer Anfang aller Vereinskurse.</summary>
+    public const string ClubBookPrefix = "tactics-club-";
+    public static string ClubBookName(LeagueClub club) => $"Taktiken aus Vereinspartien – {club.Name}";
     public const string MasterBook = "tactics-masters.pgn";
     public static string OwnBook(int userId) => $"tactics-u{userId}.pgn";
     public const string BookPrefix = "tactics-";
@@ -418,22 +426,31 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         var books = new Dictionary<string, Book>();
         var rounds = new Dictionary<string, int>();
         var published = 0;
+        // Vereinspartien: der Kurs des Vereins der Partie (Mandanten-Schritt 2026-10-07)
+        var clubGameIds = done.Where(c => c.GameAnalysis!.Origin == GameAnalysisOrigin.Club && c.GameAnalysis.LeagueClubGameId != null)
+            .Select(c => c.GameAnalysis!.LeagueClubGameId!.Value).Distinct().ToList();
+        var clubOfGame = await db.LeagueClubGames.AsNoTracking().IgnoreQueryFilters().Where(g => clubGameIds.Contains(g.Id))
+            .ToDictionaryAsync(g => g.Id, g => g.ClubId, ct);
+        var clubs = await db.LeagueClubs.AsNoTracking().ToDictionaryAsync(x => x.Id, ct);
         foreach (var c in done)
         {
             var a = c.GameAnalysis!;
+            var club = a.Origin == GameAnalysisOrigin.Club && a.LeagueClubGameId is { } gid && clubOfGame.TryGetValue(gid, out var cid)
+                ? clubs.GetValueOrDefault(cid) : null;
+            if (a.Origin == GameAnalysisOrigin.Club && club is null) continue;   // Partie (samt Verein) weg — die Taktik bleibt liegen
             var (file, name, owner) = a.Origin switch
             {
-                GameAnalysisOrigin.Club => (ClubBook, "Taktiken aus Vereinspartien", (int?)null),
+                GameAnalysisOrigin.Club => (ClubBookOf(club!.Id), ClubBookName(club), (int?)null),
                 GameAnalysisOrigin.Library => (MasterBook, "Taktiken aus Meisterpartien", (int?)null),
                 _ => (OwnBook(a.UserId), "Taktiken aus meinen Partien", (int?)a.UserId),
             };
             if (!books.TryGetValue(file, out var book))
             {
-                book = await EnsureBookAsync(file, name, owner, a.Origin == GameAnalysisOrigin.Club, ct);
+                book = await EnsureBookAsync(file, name, owner, club?.Id, ct);
                 books[file] = book;
                 rounds[file] = await db.BookPuzzles.CountAsync(p => p.BookFileName == file, ct);
             }
-            var (title, chapter) = await DescribeAsync(c, a, ct);
+            var (title, chapter) = await DescribeAsync(c, a, club, ct);
             var san = c.Found ? null : MoveComparisonService.SanOf(c.Fen, c.GameMoveUci);
             var comment = (c.Found ? "In der Partie gefunden." : $"In der Partie verpasst — gespielt wurde {san ?? c.GameMoveUci}.")
                 + " " + Outcome(c.EvalText) + (c.Variant == "lc0" ? " Von Lc0 entdeckt." : "");
@@ -453,7 +470,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             published++;
         }
         await db.SaveChangesAsync(ct);
-        await SortClubChaptersAsync(ct);
+        foreach (var file in books.Keys.Where(f => f.StartsWith(ClubBookPrefix, StringComparison.Ordinal))) await SortClubChaptersAsync(file, ct);
         log.LogInformation("Taktik-Ernte: {Count} Aufgaben in die Kurse gelegt", published);
         return published;
     }
@@ -471,8 +488,10 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             : "Die Lösung führt zur Gewinnstellung.";
     }
 
-    private async Task<Book> EnsureBookAsync(string file, string name, int? owner, bool club, CancellationToken ct)
+    /// <param name="clubId">Ein Vereinskurs: Beschreibung und Freigabe an die Gruppen dieses Vereins.</param>
+    private async Task<Book> EnsureBookAsync(string file, string name, int? owner, int? clubId, CancellationToken ct)
     {
+        var club = clubId is not null;
         var book = await db.Books.FirstOrDefaultAsync(b => b.FileName == file, ct);
         if (book is not null) return book;
         var now = DateTime.UtcNow;
@@ -487,54 +506,55 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         book.Source = new BookSource();
         db.Books.Add(book);
         await db.SaveChangesAsync(ct);
-        if (club)
+        if (clubId is int cid)
         {
-            // sichtbar für die Gruppen, deren Rollen LeagueHub lesen dürfen (die Vereinsgruppe)
-            var roleIds = await db.RolePermissions.Where(r => r.Permission == Permissions.LeagueView).Select(r => r.RoleId).ToListAsync(ct);
-            var groupIds = await db.GroupRoles.Where(g => roleIds.Contains(g.RoleId)).Select(g => g.GroupId).Distinct().ToListAsync(ct);
-            foreach (var g in groupIds) db.BookGroupAccesses.Add(new BookGroupAccess { BookId = book.Id, GroupId = g });
+            // sichtbar für die Gruppen DES VEREINS (Mandanten-Schritt 2026-10-07; vorher: alle Gruppen mit league.view) —
+            // eine später zugeordnete Gruppe bekommt die Freigabe über LeagueClubAdminService.AddGroupAsync
+            foreach (var g in await LeagueClubResolver.GroupIdsOfAsync(db, cid, ct))
+                db.BookGroupAccesses.Add(new BookGroupAccess { BookId = book.Id, GroupId = g });
             await db.SaveChangesAsync(ct);
         }
         return book;
     }
 
     /// <summary>Titel „Weiß – Schwarz (Jahr), Zug n" und Kapitel: bei Vereinspartien die Ligarunde, sonst gefunden/verpasst.</summary>
-    private async Task<(string Title, string Chapter)> DescribeAsync(TacticCandidate c, GameAnalysis a, CancellationToken ct)
+    private async Task<(string Title, string Chapter)> DescribeAsync(TacticCandidate c, GameAnalysis a, LeagueClub? club, CancellationToken ct)
     {
         var moveNo = c.Ply / 2 + 1;
         var tail = $", Zug {moveNo}";
-        if (a.Origin == GameAnalysisOrigin.Club && a.LeagueClubGameId is { } gid
+        if (a.Origin == GameAnalysisOrigin.Club && club is not null && a.LeagueClubGameId is { } gid
             && await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gid, ct) is { } g)
         {
-            var round = await LeagueRoundAsync(db, g, ct);
-            return (ClubTitle(g, round) + tail, round?.Chapter ?? OtherGamesChapter);
+            var round = await LeagueRoundAsync(db, g, club, ct);
+            return (ClubTitle(g, round, club) + tail, round?.Chapter ?? OtherGamesChapter);
         }
         return ($"{a.White ?? "?"} – {a.Black ?? "?"}{tail}", c.Found ? "Gefunden" : "Verpasst");
     }
 
-    /// <summary>„Weiß – Schwarz (Jahr)". Eine „Schwaz"-Seite heißt im Vereinskurs wie in der Paarung der Ligarunde (Wunsch
-    /// 2026-10-04, Variante 2: „den Schwazer Gegner nennen") — aus den ÖFFENTLICHEN Paarungen, nie aus den internen
-    /// <c>*RealName</c>-Spalten; der Kurs ist nur für die Vereinsgruppe sichtbar. Ohne Ligarunde bleibt „Schwaz".</summary>
-    internal static string ClubTitle(LeagueClubGame g, LeagueRound? round)
+    /// <summary>„Weiß – Schwarz (Jahr)". Eine anonymisierte Seite (<see cref="LeagueClub.AnonName"/>) heißt im Vereinskurs wie in
+    /// der Paarung der Ligarunde (Wunsch 2026-10-04, Variante 2: „den Schwazer Gegner nennen") — aus den ÖFFENTLICHEN Paarungen,
+    /// nie aus den internen <c>*RealName</c>-Spalten; der Kurs ist nur für die Gruppen des Vereins sichtbar. Ohne Ligarunde bleibt
+    /// der Vereinsname.</summary>
+    internal static string ClubTitle(LeagueClubGame g, LeagueRound? round, LeagueClub club)
     {
         string Name(string name, string? fide, string? league) =>
-            fide == null && name == LeagueClubService.AnonymousName && !string.IsNullOrWhiteSpace(league) ? league! : name;
+            club.IsAnon(name, fide) && !string.IsNullOrWhiteSpace(league) ? league! : name;
         return $"{Name(g.White, g.WhiteFide, round?.WhitePlayer)} – {Name(g.Black, g.BlackFide, round?.BlackPlayer)}"
             + (g.Year is { } y ? $" ({y})" : "");
     }
 
     public sealed record LeagueRound(string Chapter, string? WhitePlayer, string? BlackPlayer);
 
-    internal static async Task<string?> LeagueRoundChapterAsync(AppDbContext db, LeagueClubGame g, CancellationToken ct) =>
-        (await LeagueRoundAsync(db, g, ct))?.Chapter;
+    internal static async Task<string?> LeagueRoundChapterAsync(AppDbContext db, LeagueClubGame g, LeagueClub club, CancellationToken ct) =>
+        (await LeagueRoundAsync(db, g, club, ct))?.Chapter;
 
     /// <summary>
     /// Die Ligarunde einer Vereinspartie (Wunsch 2026-10-04: „pro Liga-Runde ein Kapitel"): eine Liga-Partie mit denselben
-    /// Spielern in denselben Farben — die „Schwaz"-Seite einer anonymisierten Partie passt zu jedem Spieler des eigenen
-    /// Vereins —, in der Saison des Jahres; bei mehreren gewinnt die mit gleichem Ergebnis. → „2026/27 · Landesliga ·
+    /// Spielern in denselben Farben — die anonymisierte Seite (<see cref="LeagueClub.AnonName"/>) passt zu jedem Spieler des
+    /// Vereins der Partie —, in der Saison des Jahres; bei mehreren gewinnt die mit gleichem Ergebnis. → „2026/27 · Landesliga ·
     /// Runde 1" samt den Spielern der Paarung, sonst <c>null</c>.
     /// </summary>
-    internal static async Task<LeagueRound?> LeagueRoundAsync(AppDbContext db, LeagueClubGame g, CancellationToken ct)
+    internal static async Task<LeagueRound?> LeagueRoundAsync(AppDbContext db, LeagueClubGame g, LeagueClub club, CancellationToken ct)
     {
         // fest zugeordnet (0.678.0): genau diese Paarung
         if (g.LeagueGameId is { } linkedId)
@@ -558,7 +578,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
                           where fides.Contains(lg.HomeFide!) || fides.Contains(lg.AwayFide!)
                           select new { lg, t.Season, t.League, t.Grp }).ToListAsync(ct);
         bool Side(string? clubFide, string clubName, string? fide, string team) =>
-            clubFide != null ? clubFide == fide : clubName == LeagueClubService.AnonymousName && team.StartsWith(LeagueRefresh.OwnTeam);
+            clubFide != null ? clubFide == fide : club.IsAnon(clubName) && club.OwnsTeam(team);
         bool InSeason(string season) => g.Year is not { } y || (int.TryParse(season.Split('/')[0], out var s) && (s == y || s + 1 == y));
         var hits = rows.Where(r =>
         {
@@ -584,9 +604,9 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     /// nächste Aufgabe (Anzahl + 1) hinten anschließt. Innerhalb eines Kapitels bleibt die bisherige Reihenfolge. Ändert sich
     /// nichts, wird nicht geschrieben.
     /// </summary>
-    internal async Task SortClubChaptersAsync(CancellationToken ct)
+    internal async Task SortClubChaptersAsync(string bookFile, CancellationToken ct)
     {
-        var rows = await db.BookPuzzles.Where(p => p.BookFileName == ClubBook).ToListAsync(ct);
+        var rows = await db.BookPuzzles.Where(p => p.BookFileName == bookFile).ToListAsync(ct);
         if (rows.Count < 2) return;
         var ordered = rows.OrderBy(p => p, Comparer<BookPuzzle>.Create(CompareClubRows)).ToList();
         var changed = 0;
@@ -655,7 +675,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     {
         await RewordCommentsAsync(ct);
         var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.SourceGame == null && !p.Retired
-                && (p.BookFileName == ClubBook || p.BookFileName != MasterBook)).OrderBy(p => p.Id).Take(200).ToListAsync(ct);
+                && p.BookFileName != MasterBook).OrderBy(p => p.Id).Take(200).ToListAsync(ct);
         if (puzzles.Count == 0) return;
         var lineIds = puzzles.Select(p => p.LineId).ToList();
         var cands = await db.TacticCandidates.Include(c => c.GameAnalysis).Where(c => c.LineId != null && lineIds.Contains(c.LineId))
@@ -671,12 +691,19 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         if (changed > 0) await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Schon veröffentlichte Aufgaben des Vereinskurses, die noch „Schwaz" im Titel tragen, nach der Regel von
-    /// <see cref="ClubTitle"/> umbenennen (0.657.2) — einmal je Aufgabe, solange eine Ligarunde passt.</summary>
+    /// <summary>Schon veröffentlichte Aufgaben der Vereinskurse, die noch den Vereinsnamen (<see cref="LeagueClub.AnonName"/>)
+    /// im Titel tragen, nach der Regel von <see cref="ClubTitle"/> umbenennen (0.657.2) — einmal je Aufgabe, solange eine
+    /// Ligarunde passt; je Verein sein Kurs und sein Name.</summary>
     private async Task RetitleClubAsync(CancellationToken ct)
     {
-        var anon = LeagueClubService.AnonymousName;
-        var puzzles = await db.BookPuzzles.Where(p => p.BookFileName == ClubBook && p.Source == "tactic-harvest" && !p.Retired
+        foreach (var club in await db.LeagueClubs.AsNoTracking().ToListAsync(ct)) await RetitleClubAsync(club, ct);
+    }
+
+    private async Task RetitleClubAsync(LeagueClub club, CancellationToken ct)
+    {
+        var anon = club.AnonName;
+        var file = ClubBookOf(club.Id);
+        var puzzles = await db.BookPuzzles.Where(p => p.BookFileName == file && p.Source == "tactic-harvest" && !p.Retired
                 && p.Title != null && (p.Title.StartsWith(anon + " –") || p.Title.Contains("– " + anon)))
             .Take(100).ToListAsync(ct);
         if (puzzles.Count == 0) return;
@@ -687,9 +714,9 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         foreach (var p in puzzles)
         {
             if (!cands.TryGetValue(p.LineId, out var c) || c.GameAnalysis?.LeagueClubGameId is not { } gid) continue;
-            var g = await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid, ct);
-            if (g is null || await LeagueRoundAsync(db, g, ct) is not { } round) continue;
-            var title = ClubTitle(g, round) + $", Zug {c.Ply / 2 + 1}";
+            var g = await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid && x.ClubId == club.Id, ct);
+            if (g is null || await LeagueRoundAsync(db, g, club, ct) is not { } round) continue;
+            var title = ClubTitle(g, round, club) + $", Zug {c.Ply / 2 + 1}";
             if (title == p.Title) continue;
             p.Title = title;
             changed++;

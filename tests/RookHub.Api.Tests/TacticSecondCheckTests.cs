@@ -143,7 +143,11 @@ public class TacticSecondCheckTests : IDisposable
 
     private async Task SeedCandidateAsync()
     {
-        _db.GameAnalyses.Add(new GameAnalysis { Id = 1, UserId = 1, Origin = GameAnalysisOrigin.Club, Pgn = "", StartFen = "x", Status = GameAnalysisStatus.Done });
+        // eine Vereinspartie des Testvereins — veröffentlicht wird in dessen Kurs (Mandanten-Schritt 2026-10-07)
+        _db.LeagueClubs.Add(TestClubs.Home);
+        _db.LeagueClubGames.Add(new LeagueClubGame { Id = 5, ClubId = TestClubs.HomeId, White = "A", Black = "B", Pgn = "", MovesHash = "h" });
+        _db.GameAnalyses.Add(new GameAnalysis { Id = 1, UserId = 1, Origin = GameAnalysisOrigin.Club, LeagueClubGameId = 5, Pgn = "", StartFen = "x",
+            Status = GameAnalysisStatus.Done });
         var c = Cand1();
         c.Id = 0;
         _db.TacticCandidates.Add(c);

@@ -21,9 +21,6 @@ public sealed class LeagueRefresh
     public const int MaxPlayersPerRun = 40;
     public const double StaleDays = 14;
     public const double MinPlayProbability = 0.15;
-    /// <summary>Der eigene Verein (der Nutzer spielt für SK Schwaz): dessen Gegner bekommen die Plätze zuerst —
-    /// stale_players.py sortierte genauso („Gegner von Schwaz zuerst, dann nach Einsatzchance").</summary>
-    public const string OwnTeam = "Schwaz";
     private static readonly HashSet<string> Empty = new(StringComparer.Ordinal) { "Brett nicht besetzt", "spielfrei", "" };
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -200,9 +197,11 @@ public sealed class LeagueRefresh
     }
 
     /// <summary>FIDE-IDs der wahrscheinlichen Gegner in offenen Runden, deren chess-results-Partien veraltet sind —
-    /// Gegner des eigenen Vereins zuerst, dann nach Einsatzchance.</summary>
+    /// Gegner der eigenen Vereine zuerst (stale_players.py: „Gegner von Schwaz zuerst"; seit dem Mandanten-Schritt
+    /// 2026-10-07 die Gegner JEDES Vereins in <see cref="LeagueClub"/>), dann nach Einsatzchance.</summary>
     public async Task<List<string>> StalePlayersAsync(string season, CancellationToken ct)
     {
+        var clubs = await _db.LeagueClubs.AsNoTracking().ToListAsync(ct);
         var tnrs = await _db.LeagueTournaments.Where(t => t.Season == season).Select(t => t.Tnr).ToListAsync(ct);
         // Rang je Spieler: (0 = Gegner des eigenen Vereins, sonst 1; dann höchste Einsatzchance) — der kleinste zählt.
         var best = new Dictionary<string, (int Own, double P)>();
@@ -214,7 +213,7 @@ public sealed class LeagueRefresh
                 foreach (var (_, e) in fx!.AsObject())
                 {
                     if (e?["status"]?.GetValue<string>() != "open" || e["roster"] is not JsonArray roster) continue;
-                    var own = team == OwnTeam ? 0 : 1;
+                    var own = clubs.Any(c => c.OwnsTeam(team)) ? 0 : 1;
                     foreach (var r in roster)
                     {
                         var fide = r?["fide"]?.GetValue<string>();

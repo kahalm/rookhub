@@ -225,12 +225,14 @@ public class ScoresheetScanService
 
     /// <summary>Ein Formular über mehrere Fotos (in Seitenreihenfolge, höchstens <see cref="MaxPages"/>) — EINE Einlesung.
     /// Zusätzlicher Absagegrund <c>tooManyPages</c>.</summary>
+    /// <param name="clubId">Bei <see cref="ScoresheetScan.PurposeLeague"/>: der Verein, für den eingelesen wird (Mandanten-Schritt
+    /// 2026-10-07) — sonst ohne Wirkung.</param>
     public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateAsync(int userId, IReadOnlyList<ScoresheetUpload> pages,
-        string? language, string? ownerSide = null, string? purpose = null) =>
-        await CreateCoreAsync(userId, pages, language, ownerSide, purpose, null, null);
+        string? language, string? ownerSide = null, string? purpose = null, int? clubId = null) =>
+        await CreateCoreAsync(userId, pages, language, ownerSide, purpose, null, null, clubId);
 
     private async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateCoreAsync(int? userId, IReadOnlyList<ScoresheetUpload> pages,
-        string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash)
+        string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash, int? clubId = null)
     {
         if (!External && !_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
@@ -288,6 +290,7 @@ public class ScoresheetScanService
             NotationLanguage = lang,
             OwnerSide = ownerSide is "white" or "black" ? ownerSide : "auto",
             Purpose = purpose,
+            ClubId = purpose == ScoresheetScan.PurposeLeague ? clubId : null,
             Status = ScoresheetScanStatus.Pending,
             CreatedAt = DateTime.UtcNow,
         };
@@ -381,8 +384,10 @@ public class ScoresheetScanService
     /// Mit <paramref name="clubGameId"/> wird sie gleich als zu dieser (schon übernommenen) Vereinspartie gehörig
     /// archiviert — „Korrigieren" zeigt dann Foto und Lesarten. Keine Tageszahl, keine Kostenbremse (kein Modell).
     /// </summary>
+    /// <param name="clubId">Der Verein, in dessen LeagueHub die Einlesung zum Prüfen liegt (der Verein des Stapels); mit
+    /// <paramref name="clubGameId"/> zählt der Verein der Partie.</param>
     public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateManualAsync(int ownerUserId, IReadOnlyList<ScoresheetUpload> pages,
-        string transcriptionJson, int? clubGameId, CancellationToken ct = default)
+        string transcriptionJson, int? clubGameId, CancellationToken ct = default, int? clubId = null)
     {
         if (pages.Count == 0) return (null, "noFile");
         if (pages.Count > MaxPages) return (null, "tooManyPages");
@@ -390,8 +395,10 @@ public class ScoresheetScanService
         string? finalPgn = null;
         if (clubGameId is int cg)
         {
-            finalPgn = await _db.LeagueClubGames.Where(g => g.Id == cg).Select(g => g.Pgn).FirstOrDefaultAsync(ct);
-            if (finalPgn == null) return (null, "clubGameNotFound");
+            var game = await _db.LeagueClubGames.Where(g => g.Id == cg).Select(g => new { g.Pgn, g.ClubId }).FirstOrDefaultAsync(ct);
+            if (game == null) return (null, "clubGameNotFound");
+            finalPgn = game.Pgn;
+            clubId = game.ClubId;
         }
 
         var sizes = pages.Select(p => ScoresheetImage.Prepare(p.Data, ModelEdge) is { } j ? ScoresheetImage.Size(j) : null).ToList();
@@ -421,6 +428,7 @@ public class ScoresheetScanService
             NotationLanguage = "auto",
             OwnerSide = "auto",
             Purpose = ScoresheetScan.PurposeLeague,
+            ClubId = clubId,
             Status = ScoresheetScanStatus.Running,
             Model = ManualModel,
             CreatedAt = now,
@@ -440,7 +448,7 @@ public class ScoresheetScanService
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("Formular-Einlesung {ScanId} (ohne Modell, für User {UserId}) angelegt: {Plies} Halbzüge, {Uncertain} unsicher",
             scan.Id, ownerUserId, r.Plies.Count, r.Plies.Count(p => p.Uncertain));
-        if (finalPgn != null) await CloseLeagueScanAsync(ScanActor.ManagerOf(ownerUserId), scan.Id, finalPgn, clubGameId);
+        if (finalPgn != null) await CloseLeagueScanAsync(ScanActor.ManagerOf(ownerUserId) with { ClubId = clubId }, scan.Id, finalPgn, clubGameId);
         return (ToDto(scan), null);
     }
 
@@ -474,7 +482,7 @@ public class ScoresheetScanService
         Id = s.Id, UserId = s.UserId, AccessKey = s.AccessKey, SavedGameId = s.SavedGameId, ContentType = s.ContentType, FileName = s.FileName,
         NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, Purpose = s.Purpose, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
         Model = s.Model, Attempts = s.Attempts, Rounds = s.Rounds, CreatedAt = s.CreatedAt, StartedAt = s.StartedAt,
-        FinishedAt = s.FinishedAt, PageCount = s.PageCount,
+        FinishedAt = s.FinishedAt, PageCount = s.PageCount, ClubId = s.ClubId,
     });
 
     /// <summary>Das Foto einer eigenen Partie (Seite <paramref name="page"/>, ab 1); <c>null</c>, wenn es keins gibt, die
@@ -875,8 +883,10 @@ public class ScoresheetScanService
 
     /// <summary>Wem eine Liga-Einlesung gehört: einem Konto ODER (ohne Anmeldung, Teilen-Link) dem Browser, der den
     /// geheimen Schlüssel hat. <see cref="Manager"/> = Verwalter der Vereins-Datenbank: darf JEDE Liga-Einlesung prüfen,
-    /// übernehmen oder verwerfen (Wunsch 2026-09-28: was hochgeladen, aber nie geprüft wurde, soll nicht im Limbo hängen).</summary>
-    public readonly record struct ScanActor(int? UserId, string? Key, bool Manager = false)
+    /// übernehmen oder verwerfen (Wunsch 2026-09-28: was hochgeladen, aber nie geprüft wurde, soll nicht im Limbo hängen).
+    /// <see cref="ClubId"/> (Mandanten-Schritt 2026-10-07): nur Einlesungen dieses Vereins — LeagueHub setzt ihn immer
+    /// (<c>actor with { ClubId = … }</c>); ohne gilt kein Vereinsfilter (nur RookHub-interne Wege).</summary>
+    public readonly record struct ScanActor(int? UserId, string? Key, bool Manager = false, int? ClubId = null)
     {
         public static ScanActor User(int userId) => new(userId, null);
         public static ScanActor Anonymous(string key) => new(null, key);
@@ -886,6 +896,7 @@ public class ScoresheetScanService
     private IQueryable<ScoresheetScan> LeagueOwned(IQueryable<ScoresheetScan> q, ScanActor a)
     {
         q = q.Where(s => s.Purpose == ScoresheetScan.PurposeLeague);
+        if (a.ClubId is int club) q = q.Where(s => s.ClubId == club);
         if (a.Manager) return q;
         if (a.UserId is int uid) return q.Where(s => s.UserId == uid);
         var key = a.Key ?? "";
@@ -968,7 +979,7 @@ public class ScoresheetScanService
 
     /// <summary>Wie oben, ein Formular über mehrere Fotos (Seitenreihenfolge, höchstens <see cref="MaxPages"/>, 0.690.1).</summary>
     public async Task<(ScoresheetScanDto? Scan, string? Key, string? Reason)> CreateAnonymousAsync(IReadOnlyList<ScoresheetUpload> pages,
-        string? language, string? ownerSide, string ipHash)
+        string? language, string? ownerSide, string ipHash, int? clubId = null)
     {
         ScoresheetScanDto? scan;
         string? reason;
@@ -986,7 +997,7 @@ public class ScoresheetScanService
                         && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
                     return (null, null, "tooManyOpen");
             }
-            (scan, reason) = await CreateCoreAsync(null, pages, language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash);
+            (scan, reason) = await CreateCoreAsync(null, pages, language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash, clubId);
         }
         finally
         {
@@ -1019,8 +1030,8 @@ public class ScoresheetScanService
 
     /// <summary>Die offenen Liga-Einlesungen (neueste zuerst) — eines Kontos bzw. OHNE Konto die, deren Schlüssel der
     /// Browser mitbringt. Verworfene/übernommene tragen kein Foto mehr und fehlen.</summary>
-    public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId) =>
-        await WithNamesAsync((await LeagueOwned(ScanHeads(), ScanActor.User(userId)).Where(s => s.FileName != DiscardedMark)
+    public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId, int? clubId = null) =>
+        await WithNamesAsync((await LeagueOwned(ScanHeads(), ScanActor.User(userId) with { ClubId = clubId }).Where(s => s.FileName != DiscardedMark)
             .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync()).Select(ToDto).ToList());
 
     /// <summary>
@@ -1044,19 +1055,20 @@ public class ScoresheetScanService
     }
 
     /// <summary>Alle offenen Liga-Einlesungen (auch ohne Konto über einen Teilen-Link) — für die Verwalter, jüngste zuerst.</summary>
-    public async Task<List<LeagueOpenScanDto>> LeagueOpenScansAsync(int viewerId, CancellationToken ct = default)
+    public async Task<List<LeagueOpenScanDto>> LeagueOpenScansAsync(int viewerId, int? clubId = null, CancellationToken ct = default)
     {
-        var rows = (await ScanHeads().Where(s => s.Purpose == ScoresheetScan.PurposeLeague && s.FileName != DiscardedMark)
+        var rows = (await LeagueOwned(ScanHeads(), ScanActor.ManagerOf(viewerId) with { ClubId = clubId }).Where(s => s.FileName != DiscardedMark)
                 .OrderByDescending(s => s.CreatedAt).Take(50).ToListAsync(ct))
             .Select(s => new LeagueOpenScanDto { Scan = ToDto(s), ViaShareLink = s.UserId == null, Mine = s.UserId == viewerId }).ToList();
         await WithNamesAsync(rows.Select(r => r.Scan).ToList(), ct);
         return rows;
     }
 
-    public async Task<List<(string Key, ScoresheetScanDto Scan)>> LeagueScansByKeysAsync(IEnumerable<string> keys)
+    public async Task<List<(string Key, ScoresheetScanDto Scan)>> LeagueScansByKeysAsync(IEnumerable<string> keys, int? clubId = null)
     {
         var list = keys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().Take(20).ToList();
         var scans = await ScanHeads().Where(s => s.UserId == null && s.Purpose == ScoresheetScan.PurposeLeague
+                && (clubId == null || s.ClubId == clubId)
                 && s.AccessKey != null && list.Contains(s.AccessKey) && s.FileName != DiscardedMark)
             .OrderByDescending(s => s.CreatedAt).ToListAsync();
         var pairs = scans.Select(s => (s.AccessKey!, ToDto(s))).ToList();

@@ -375,7 +375,7 @@ public class LeagueOnlineTests : IDisposable
         foreach (var a in _db.LeagueOnlineAccounts) a.GameCount = a.Confidence == "sicher" ? 4 : 1;
         await _db.SaveChangesAsync();
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
-        var ctl = new LeagueController(league, null!, null!);
+        var ctl = new LeagueController(league, null!, null!, null!);
         static JsonObject Body(IActionResult r) => (JsonObject)((OkObjectResult)r).Value!;
 
         Assert.Equal((3, 0, 3, "e4:3"), Summary(Body(await ctl.Tree("222", "w", null, "online", null, null, null, default))));
@@ -424,7 +424,7 @@ public class LeagueOnlineTests : IDisposable
     {
         await TreeSeedAsync();
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
-        var ctl = new LeagueController(league, null!, null!);
+        var ctl = new LeagueController(league, null!, null!, null!);
         async Task<JsonObject> P(string? source, string? speeds = null, int? years = null, bool? unsure = null) =>
             (JsonObject)((OkObjectResult)await ctl.Profile("222", source, speeds, years, unsure, default)).Value!;
         static string First(JsonObject o, string section) => string.Join(" ", o[section]!["first"]!.AsArray()

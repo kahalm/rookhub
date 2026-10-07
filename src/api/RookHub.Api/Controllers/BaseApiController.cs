@@ -39,6 +39,26 @@ public abstract class BaseApiController : ControllerBase
     /// die einen Forbid-Zweig selbst führen. Admin-Rolle erfüllt alles; sonst der Live-Stand des
     /// <see cref="Services.PermissionResolver"/>, ohne ihn (Tests) der <c>perm</c>-Claim (F5-005: vorher hing das am
     /// Admin-Flag, eine Rolle mit dem Recht wirkte dort nicht).</summary>
+    /// <summary>
+    /// Der Verein dieser LeagueHub-Anfrage (Mandanten-Schritt 2026-10-07) — über die EINE Stelle
+    /// <see cref="Services.League.LeagueClubResolver"/>: <c>?club=</c>, sonst der einzige Verein des Kontos
+    /// (<paramref name="preferred"/>: bei mehreren dieser, falls das Konto dazugehört). Kein Verein → die Absage
+    /// (400 <c>clubRequired</c>/<c>invalidClub</c>, 403 <c>forbidden</c>/<c>noClub</c>, 404 <c>unknownClub</c>).
+    /// </summary>
+    protected async Task<(Models.LeagueClub? Club, IActionResult? Error)> LeagueClubAsync(Services.League.LeagueClubResolver clubs,
+        CancellationToken ct, int? preferred = null)
+    {
+        var raw = HttpContext?.Request.Query[Services.League.LeagueClubResolver.QueryKey].ToString();
+        int? requested = null;
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            if (!int.TryParse(raw, out var id)) return (null, BadRequest(new { reason = "invalidClub" }));
+            requested = id;
+        }
+        var r = await clubs.ResolveAsync(GetUserId(), IsAdmin, requested, ct, preferred);
+        return r.Club != null ? (r.Club, null) : (null, new ObjectResult(new { reason = r.Reason }) { StatusCode = r.Status });
+    }
+
     protected async Task<bool> HasPermissionAsync(Services.PermissionResolver? resolver, string permission)
     {
         if (User?.IsInRole("Admin") == true) return true;

@@ -326,6 +326,10 @@ public class LeagueSelfReport
 public class LeagueShare
 {
     public string Token { get; set; } = string.Empty;
+    /// <summary>Der Verein, der den Link erzeugt hat (Mandanten-Schritt 2026-10-07) — alles, was über den Link hereinkommt
+    /// (Partien, Formulare, Entwürfe, Stapel), gehört diesem Verein, und die Seite des Links ersetzt mit dessen
+    /// <see cref="LeagueClub.AnonName"/>.</summary>
+    public int ClubId { get; set; }
     public int Tnr { get; set; }
     public int Round { get; set; }
     public string Team { get; set; } = string.Empty;
@@ -347,7 +351,7 @@ public class LeagueView
 /// ist ein Ligaspieler, sonst wird sie gar nicht angenommen. Datum nur als JAHR.
 ///
 /// <para><b>Anonymisiert</b> (<see cref="Anonymized"/>, Häkchen „Meinen Namen durch Schwaz ersetzen"): die Seite heißt
-/// „Schwaz", ohne Elo und FIDE-ID, Veranstaltung fällt weg, und es wird NICHT gespeichert, wer hochgeladen hat
+/// wie der Verein (<see cref="LeagueClub.AnonName"/>, „Schwaz" bzw. „Weilheim"), ohne Elo und FIDE-ID, Veranstaltung fällt weg, und es wird NICHT gespeichert, wer hochgeladen hat
 /// (<see cref="UploadedByUserId"/> und <see cref="CreatedAt"/> bleiben leer) — damit man nicht gegen die eigenen Spieler
 /// vorbereiten kann. Wer hinter „Schwaz" SPIELT, steht seit 0.648.0 intern in <see cref="WhiteRealName"/> /
 /// <see cref="BlackRealName"/> (Wunsch 2026-10-04: „für spätere Auswertungen, niemals in der GUI ausgeben") — kein DTO,
@@ -360,6 +364,11 @@ public class LeagueView
 public class LeagueClubGame
 {
     public int Id { get; set; }
+    /// <summary>Der Verein, in dessen Vereins-Datenbank die Partie liegt (Mandanten-Schritt 2026-10-07). Ein Verein sieht NIE
+    /// die Partien eines anderen — jeder Lese- und Schreibweg filtert AUSDRÜCKLICH nach <see cref="LeagueClub"/> aus dem
+    /// Kontext der Anfrage (<c>LeagueClubResolver</c>), bewusst ohne zweiten globalen Query-Filter (siehe
+    /// <c>LeagueClubGameConfiguration</c>).</summary>
+    public int ClubId { get; set; }
     public int? Year { get; set; }
     public string White { get; set; } = string.Empty;
     public string Black { get; set; } = string.Empty;
@@ -467,6 +476,8 @@ public class LeagueMegaPlayer
 public class LeagueClubDraft
 {
     public int Id { get; set; }
+    /// <summary>Der Verein, in dessen Vereins-Datenbank die Liste gehen soll (Mandanten-Schritt 2026-10-07).</summary>
+    public int ClubId { get; set; }
     /// <summary>Wer eingereicht hat; <c>null</c> = über einen Teilen-Link ohne Konto (dann gehört er dem <see cref="AccessKey"/>).</summary>
     public int? UserId { get; set; }
     /// <summary>Geheimer Schlüssel des Browsers (32 Hex) — nur ohne Konto.</summary>
@@ -496,6 +507,8 @@ public class LeagueClubDraft
 public class LeagueBatchUpload
 {
     public int Id { get; set; }
+    /// <summary>Der Verein, für den hochgeladen wurde (Mandanten-Schritt 2026-10-07; über einen Teilen-Link der Verein des Links).</summary>
+    public int ClubId { get; set; }
     /// <summary>Geheimer Schlüssel des Stapels (32 Hex) — damit lädt die Seite weitere Bilder dazu.</summary>
     public string Key { get; set; } = string.Empty;
     /// <summary>Wer hochgeladen hat; <c>null</c> = über einen Teilen-Link ohne Konto.</summary>
@@ -526,4 +539,50 @@ public class LeagueBatchUploadFile
     public byte[] Data { get; set; } = Array.Empty<byte>();
     public int Size { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Ein Verein als MANDANT von LeagueHub (2026-10-07, Wunsch: „LeagueHub für mehrere Vereine — SK Weilheim bekommt dieselbe
+/// Funktionalität, streng getrennt von Schwaz"). Es bleibt EIN LeagueHub, EINE API, EINE Datenbank, EIN Konto; alles, was
+/// „wir" heißt — die Vereins-Datenbank, Entwürfe, Formulare, Stapel-Uploads, Teilen-Links, die Anonymisierung, der
+/// Taktik-Kurs —, hängt am Verein. Die öffentlichen Liga-Daten (Spielpläne, Meldelisten, Spielerkarten, Online-Konten) sind
+/// geteilt. Wer zu einem Verein gehört, sagt <see cref="LeagueClubMember"/> (Gruppe → Verein); Admins gehören zu allen.
+/// </summary>
+public class LeagueClub
+{
+    public int Id { get; set; }
+    /// <summary>„SK Schwaz", „SK Weilheim".</summary>
+    public string Name { get; set; } = string.Empty;
+    /// <summary>Wie die Mannschaften des Vereins in Spielplänen und Meldelisten beginnen („Schwaz", „SK Weilheim" — dort
+    /// heißen sie „SK Weilheim 1"); verglichen über <see cref="OwnsTeam"/>.</summary>
+    public string TeamPrefix { get; set; } = string.Empty;
+    /// <summary>Der Name, unter dem ein anonymisierter Spieler des Vereins erscheint („Schwaz", „Weilheim").</summary>
+    public string AnonName { get; set; } = string.Empty;
+    /// <summary>Welche Liga-Quelle der Verein spielt (<see cref="LeagueTournament.Source"/>): <c>null</c> = chess-results
+    /// (Tirol), <c>"ligamanager"</c> = Bayern. Die Startseite zeigt nur Ligen dieser Quelle.</summary>
+    public string? Source { get; set; }
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>Gehört diese Mannschaft dem Verein? „Schwaz" = „Schwaz"; „SK Weilheim 1" beginnt mit „SK Weilheim " —
+    /// verglichen ohne Groß/klein, an einer Wortgrenze (ein „SK Weilheimer" wäre ein anderer Verein).</summary>
+    public bool OwnsTeam(string? team)
+    {
+        var t = Services.League.LeagueNames.Clean(team).TrimEnd('/', '-', ' ');
+        var p = Services.League.LeagueNames.Clean(TeamPrefix);
+        return p.Length > 0 && (t.Equals(p, StringComparison.OrdinalIgnoreCase)
+            || t.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase) || t.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Eine anonymisierte Seite dieses Vereins: Name = <see cref="AnonName"/> und keine FIDE-ID.</summary>
+    public bool IsAnon(string? name, string? fide = null) => string.IsNullOrEmpty(fide) && name?.Trim() == AnonName;
+}
+
+/// <summary>Eine Gruppe gehört zu einem Verein (Mandanten-Schritt 2026-10-07): wer in der Gruppe ist und
+/// <c>league.view/contribute/manage</c> hat, wirkt in diesem Verein. Eine Gruppe gehört zu höchstens EINEM Verein.</summary>
+public class LeagueClubMember
+{
+    public int ClubId { get; set; }
+    public LeagueClub? Club { get; set; }
+    public int GroupId { get; set; }
+    public Group? Group { get; set; }
 }

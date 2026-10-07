@@ -92,30 +92,30 @@ public class GameCorrectionController : BaseApiController
     private readonly ScoresheetScanService _scans;
     private readonly ClubGameCorrectionService? _clubCorrections;
     private readonly Data.AppDbContext? _db;
-    private readonly PermissionResolver? _permissions;
+    private readonly Services.League.LeagueClubResolver? _clubs;
 
     public GameCorrectionController(SavedGameService games, ScoresheetScanService scans,
-        ClubGameCorrectionService? clubCorrections = null, Data.AppDbContext? db = null, PermissionResolver? permissions = null)
+        ClubGameCorrectionService? clubCorrections = null, Data.AppDbContext? db = null, Services.League.LeagueClubResolver? clubs = null)
     {
         _games = games;
         _scans = scans;
         _clubCorrections = clubCorrections;
         _db = db;
-        _permissions = permissions;
+        _clubs = clubs;
     }
 
-    private async Task<bool> CanManageLeagueAsync() =>
-        User.IsInRole("Admin") || (_permissions != null && (await _permissions.GetAsync(GetUserId())).Has(Models.Permissions.LeagueManage));
-
     /// <summary>Die Vereinspartie, deren Kopie diese Partie ist — nur wenn der Nutzer sie korrigieren darf (0.660.0): dann
-    /// öffnet die Korrekturseite deren aufbewahrtes Formular.</summary>
+    /// öffnet die Korrekturseite deren aufbewahrtes Formular. Darf: der Hochladende, oder ein Verwalter DES VEREINS der Partie
+    /// (Mandanten-Schritt 2026-10-07).</summary>
     private async Task<int?> CorrectableClubGameAsync(int id)
     {
         if (_db == null) return null;
         var clubId = await _db.SavedGames.Where(g => g.Id == id && g.UserId == GetUserId()).Select(g => g.LeagueClubGameId).FirstOrDefaultAsync();
         if (clubId is not { } c) return null;
-        var club = await _db.LeagueClubGames.AsNoTracking().Where(g => g.Id == c).Select(g => new { g.UploadedByUserId }).FirstOrDefaultAsync();
-        return club != null && (club.UploadedByUserId == GetUserId() || await CanManageLeagueAsync()) ? c : null;
+        var club = await _db.LeagueClubGames.AsNoTracking().Where(g => g.Id == c).Select(g => new { g.UploadedByUserId, g.ClubId }).FirstOrDefaultAsync();
+        if (club == null) return null;
+        if (club.UploadedByUserId == GetUserId()) return c;
+        return _clubs != null && await _clubs.CanManageAsync(GetUserId(), IsAdmin, club.ClubId) ? c : null;
     }
 
     /// <summary>Partie korrigieren (Züge, Kommentare, Kopfdaten). 400 bei einem illegalen Zug; ändern sich die
@@ -131,7 +131,7 @@ public class GameCorrectionController : BaseApiController
             if (game == null) return NotFound();
             if (dto.ScoresheetPlies != null) await _scans.SaveEditStateAsync(GetUserId(), id, dto.ScoresheetPlies);
             // Kopie einer Vereinspartie (0.660.0): die Korrektur geht dorthin und in alle Kopien — oder die Kopie löst sich
-            if (_clubCorrections != null) await _clubCorrections.FromCopyAsync(GetUserId(), await CanManageLeagueAsync(), id, dto.ScoresheetPlies);
+            if (_clubCorrections != null) await _clubCorrections.FromCopyAsync(GetUserId(), IsAdmin, id, dto.ScoresheetPlies);
             return Ok(game);
         }
         catch (SavedGameQuotaException ex)

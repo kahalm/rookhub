@@ -42,6 +42,18 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     private T Get<T>() where T : notnull => _scope.ServiceProvider.GetRequiredService<T>();
     private AppDbContext Db => Get<AppDbContext>();
 
+    /// <summary>Ein Verein (Mandanten-Schritt 2026-10-07) — <c>ResetAsync</c> leert auch <c>LeagueClubs</c>, die Migration hat
+    /// ihre beiden Vereine also nicht mehr; Vereinspartien brauchen ihren Fremdschlüssel.</summary>
+    private async Task<LeagueClub> ClubAsync(int id = 1, string name = "SK Schwaz", string prefix = "Schwaz", string anon = "Schwaz",
+        string? source = null)
+    {
+        if (await Db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id) is { } known) return known;
+        var c = new LeagueClub { Id = id, Name = name, TeamPrefix = prefix, AnonName = anon, Source = source, CreatedAt = DateTime.UtcNow };
+        Db.LeagueClubs.Add(c);
+        await Db.SaveChangesAsync();
+        return c;
+    }
+
     private async Task<int> SeedUserAsync(string name)
     {
         var u = new AppUser { Username = name, Email = $"{name}@t.local", PasswordHash = "x" };
@@ -80,7 +92,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "Huber, Franz", NameKey = "huber, franz", FideId = "333" },
             new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "Ohne, Fide", NameKey = "ohne, fide" });
         await Db.SaveChangesAsync();
-        var r = await new RookHub.Api.Services.League.LeagueGameSources(Db).GetAsync(default, new[] { "222", "333" }, onlySure: true, leagueTnr: 7);
+        var r = await new RookHub.Api.Services.League.LeagueGameSources(Db).GetAsync(1, default, new[] { "222", "333" }, onlySure: true, leagueTnr: 7);
         // Liga-Block: die verschiedenen FIDE-IDs der Meldelisten, dann dieselbe Zählung.
         Assert.Equal((2, 3), (r["league"]!["players"]!.GetValue<int>(), r["league"]!["onlineTotal"]!.GetValue<int>()));
         Assert.Equal(3, r["onlineTotal"]!.GetValue<int>());
@@ -99,11 +111,12 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     [MySqlFact]
     public async Task LeagueHub_LigamanagerImport_LaeuftInDerTransaktionUndErgaenztFideIds()
     {
+        // Ligamanager-Ligen liegen seit 0.697.1 unter 900 000 000 + Liga-Id (LigamanagerSource.TnrOf) — auch die Vorsaison
         const string src = RookHub.Api.Services.League.LigamanagerSource.Source;
-        Db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4600, Name = "Vorsaison", Season = "2025/26", Level = 3, League = "Landesliga Test",
+        Db.LeagueTournaments.Add(new LeagueTournament { Tnr = 900_004_600, Name = "Vorsaison", Season = "2025/26", Level = 3, League = "Landesliga Test",
             Source = src, SourceRef = "bsb/2025-2026/landesliga-test-4600" });
-        Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 4600, Team = "SK Muster 1", Name = "Muster, Max", NameKey = "muster, max" });
-        Db.LeagueGames.Add(new LeagueGame { Tnr = 4600, Round = 1, MatchNo = 1, Board = 6, HomeTeam = "SK Muster 1", AwayTeam = "SC Probe 1",
+        Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 900_004_600, Team = "SK Muster 1", Name = "Muster, Max", NameKey = "muster, max" });
+        Db.LeagueGames.Add(new LeagueGame { Tnr = 900_004_600, Round = 1, MatchNo = 1, Board = 6, HomeTeam = "SK Muster 1", AwayTeam = "SC Probe 1",
             HomePlayer = "Muster, Max", AwayPlayer = "Probe, Paul", Result = "1 - 0", HomeScore = 1, AwayScore = 0 });
         await Db.SaveChangesAsync();
         const string plan = """
@@ -131,10 +144,10 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
 
         Assert.Equal(1, res.FideFilled);
         Db.ChangeTracker.Clear();
-        Assert.Equal(6, (await Db.LeagueTournaments.SingleAsync(t => t.Tnr == 4711)).Boards);      // aus der Vorsaison
-        Assert.Equal("90000001", (await Db.LeaguePlayers.SingleAsync(p => p.Tnr == 4600)).FideId);
-        Assert.Equal("90000001", (await Db.LeagueGames.SingleAsync(g => g.Tnr == 4600)).HomeFide);
-        Assert.Equal(2, await Db.LeaguePlayers.CountAsync(p => p.Tnr == 4711));
+        Assert.Equal(6, (await Db.LeagueTournaments.SingleAsync(t => t.Tnr == 900_004_711)).Boards);      // aus der Vorsaison
+        Assert.Equal("90000001", (await Db.LeaguePlayers.SingleAsync(p => p.Tnr == 900_004_600)).FideId);
+        Assert.Equal("90000001", (await Db.LeagueGames.SingleAsync(g => g.Tnr == 900_004_600)).HomeFide);
+        Assert.Equal(2, await Db.LeaguePlayers.CountAsync(p => p.Tnr == 900_004_711));
     }
 
     private sealed class LigamanagerHttp(Func<string, string?> page) : IHttpClientFactory
@@ -724,7 +737,8 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "100", Name = "Gegner, Kurt",
             Pgn = $"[Date \"{date}\"]\n[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. d4 d5 2. c4 e6 *\n\n"
                 + $"[Date \"{date}\"]\n[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 *\n" });
-        var club = new LeagueClubGame { White = "Schwaz", Black = "Gegner", Year = 2026, Plies = 4,
+        await ClubAsync();
+        var club = new LeagueClubGame { ClubId = 1, White = "Schwaz", Black = "Gegner", Year = 2026, Plies = 4,
             MovesHash = RookHub.Api.Services.League.LeagueClubService.HashOf(["d4", "d5", "c4", "e6"]), Pgn = "1. d4 d5 2. c4 e6 *" };
         Db.LeagueClubGames.Add(club);
         await Db.SaveChangesAsync();
@@ -756,7 +770,8 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Db.LichessEngineCredentials.Add(cred);
         Db.LibraryGames.Add(new LibraryGame { SourceFile = "t.pgn", MovesHash = "mh1", CommentedPlies = 2,
             Pgn = "[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *" });
-        var club = new LeagueClubGame { White = "Schwaz", Black = "Hengl, Philip", Year = 2025, Plies = 6, MovesHash = "c1",
+        var home = await ClubAsync();
+        var club = new LeagueClubGame { ClubId = home.Id, White = "Schwaz", Black = "Hengl, Philip", Year = 2025, Plies = 6, MovesHash = "c1",
             Pgn = "[White \"Schwaz\"]\n[Black \"Hengl, Philip\"]\n[Result \"1-0\"]\n\n1. d4 d5 2. c4 e6 3. Nc3 Nf6 1-0" };
         Db.LeagueClubGames.Add(club);
         await Db.SaveChangesAsync();
@@ -771,13 +786,18 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         // Für alle im Verein (0.589.0): Stand in der Liste (IN über die nullbare Verknüpfung + gruppierte Zählung),
         // Bewertungen und Detail.
         var clubService = Get<RookHub.Api.Services.League.LeagueClubService>();
-        var row = Assert.Single((await clubService.ListAsync(owner, false, null, null, 1, default)).Items);
+        var row = Assert.Single((await clubService.ListAsync(home, owner, false, null, null, 1, default)).Items);
         Assert.Equal(6, row.Analysis!.Total);
-        Assert.Equal(id, (await clubService.EvalsAsync(club.Id))!.AnalysisId);
-        Assert.Equal(club.Pgn, (await clubService.GetAsync(owner, false, club.Id))!.Pgn);
+        Assert.Equal(id, (await clubService.EvalsAsync(home, club.Id))!.AnalysisId);
+        Assert.Equal(club.Pgn, (await clubService.GetAsync(home, owner, false, club.Id))!.Pgn);
+        // ein anderer Verein sieht sie nicht (Mandanten-Schritt 2026-10-07)
+        var other = await ClubAsync(2, "SK Weilheim", "SK Weilheim", "Weilheim", "ligamanager");
+        Assert.Empty((await clubService.ListAsync(other, owner, true, null, null, 1, default)).Items);
+        Assert.Null(await clubService.GetAsync(other, owner, true, club.Id));
+        Assert.Equal(home.Id, await clubService.ClubOfGameAsync(club.Id));
 
         Assert.Equal(RookHub.Api.Services.League.LeagueClubService.DeleteResult.Deleted,
-            await Get<RookHub.Api.Services.League.LeagueClubService>().DeleteAsync(owner, true, club.Id));
+            await Get<RookHub.Api.Services.League.LeagueClubService>().DeleteAsync(home, owner, true, club.Id));
         Assert.False(await Db.GameAnalyses.AnyAsync(g => g.Id == id));
         Assert.False(await Db.GameAnalysisPositions.AnyAsync(p => p.GameAnalysisId == id));
     }
@@ -904,17 +924,18 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
                 NameKey = RookHub.Api.Services.League.LeagueNames.NameKey(name), FideId = fide });
         await Db.SaveChangesAsync();
         var club = Get<RookHub.Api.Services.League.LeagueClubService>();
+        var home = await ClubAsync();
 
-        var result = await club.ImportViaShareAsync("tokA",
+        var result = await club.ImportViaShareAsync(home, "tokA",
             "[White \"Hengl, Philip\"]\n[Black \"Schnabl, Andreas\"]\n[Date \"2024.05.12\"]\n[Result \"1-0\"]\n\n"
             + "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0\n", null);
 
         Assert.Equal(1, result.Added);
         Assert.Equal(RookHub.Api.Services.League.LeagueClubService.ShareHashOf("tokA"),
             (await Db.LeagueClubGames.AsNoTracking().SingleAsync()).UploadShareHash);
-        Assert.Equal(1, await club.DeleteByShareAsync("tokA", dryRun: true));
-        Assert.Equal(0, await club.DeleteByShareAsync("tokB", dryRun: false));
-        Assert.Equal(1, await club.DeleteByShareAsync("tokA", dryRun: false));
+        Assert.Equal(1, await club.DeleteByShareAsync(home, "tokA", dryRun: true));
+        Assert.Equal(0, await club.DeleteByShareAsync(home, "tokB", dryRun: false));
+        Assert.Equal(1, await club.DeleteByShareAsync(home, "tokA", dryRun: false));
         Assert.False(await Db.LeagueClubGames.AnyAsync());
         Assert.Same(Get<RookHub.Api.Services.League.LeagueShareUploadQuota>(),
             fixture.Factory.Services.GetRequiredService<RookHub.Api.Services.League.LeagueShareUploadQuota>());
@@ -934,7 +955,8 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Absam", Name = name,
                 NameKey = RookHub.Api.Services.League.LeagueNames.NameKey(name), FideId = fide });
         const string link = "AbCdEfGhIjKlMnOpQrStUvWx";                 // wie LeagueService.NewToken: base64url, gemischt
-        Db.LeagueShares.Add(new LeagueShare { Token = link, Tnr = 7, Round = 1, Team = "Absam",
+        var home = await ClubAsync();
+        Db.LeagueShares.Add(new LeagueShare { Token = link, ClubId = home.Id, Tnr = 7, Round = 1, Team = "Absam",
             Expires = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(7), CreatedAt = DateTime.UtcNow });
         await Db.SaveChangesAsync();
         var league = Get<RookHub.Api.Services.League.LeagueService>();
@@ -946,6 +968,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         // Die Voraussetzung: beide Schreibweisen sind in MariaDB gültig — und liefern das Token der Zeile.
         Assert.Equal(link, await league.ValidShareTokenAsync(lower, default));
         Assert.Equal(link, await league.ValidShareTokenAsync(accented, default));
+        Assert.Equal((link, home.Id), (await league.ShareContextAsync(accented, default)) is { } ctx ? (ctx.Token, ctx.Club.Id) : default);
 
         var controller = new RookHub.Api.Controllers.LeagueShareClubController(league, club, Get<ScoresheetScanService>(),
             Get<ScoresheetScanSignal>());
@@ -955,7 +978,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
                 + "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0\n",
         }, default);
         var result = Assert.IsType<RookHub.Api.DTOs.LeagueClubImportResultDto>(
-            Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(imported.Result).Value);
+            Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(imported).Value);
         Assert.Equal(1, result.Added);
         Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Add(accented, new RookHub.Api.DTOs.LeagueClubGameRequest
         {
@@ -972,8 +995,8 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             using (var own = quota.Reserve(RookHub.Api.Services.League.LeagueClubService.ShareHashOf(variant), 500))
                 Assert.Equal(RookHub.Api.Services.League.LeagueShareUploadQuota.PerLinkPerDay, own.Granted);
         // … und der Rückbau trifft beide Partien, per Original wie per Schreibweise.
-        Assert.Equal(2, await club.DeleteByShareAsync(link.ToUpperInvariant(), dryRun: true));
-        Assert.Equal(2, await club.DeleteByShareAsync(link, dryRun: false));
+        Assert.Equal(2, await club.DeleteByShareAsync(home, link.ToUpperInvariant(), dryRun: true));
+        Assert.Equal(2, await club.DeleteByShareAsync(home, link, dryRun: false));
         Assert.False(await Db.LeagueClubGames.AnyAsync());
     }
 
@@ -1128,6 +1151,60 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal("Šarić", (await Db.ClubMembers.SingleAsync()).LastName);
     }
 
+    /// <summary>
+    /// Vereine als Mandanten (Mandanten-Schritt 2026-10-07): die Zugehörigkeit über einen Join Gruppe → Verein, die Vereine eines
+    /// Kontos ohne Dienst (Admin-Flag), die Startseite und die Treffer-Statistik mit `Source == null` als Parameter (EF muss daraus
+    /// `IS NULL` machen), die Dubletten-Suche und das Archivieren je Verein — alles gegen MariaDB.
+    /// </summary>
+    [MySqlFact]
+    public async Task Mandanten_ZugehoerigkeitStartseiteUndTrennung_uebersetzenSichNachMariaDb()
+    {
+        var home = await ClubAsync();
+        var other = await ClubAsync(2, "SK Weilheim", "SK Weilheim", "Weilheim", "ligamanager");
+        var member = await SeedUserAsync("mitglied");
+        var admin = await SeedUserAsync("chef");
+        (await Db.AppUsers.FindAsync(admin))!.IsAdmin = true;
+        Db.Groups.Add(new Group { Id = 501, Name = "Weilheim", CreatedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+        Db.LeagueClubMembers.Add(new LeagueClubMember { ClubId = other.Id, GroupId = 501 });
+        Db.UserGroups.Add(new UserGroup { UserId = member, GroupId = 501 });
+        Db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = 4101, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" },
+            new LeagueTournament { Tnr = 900_002_573, Season = "2026/27", Level = 3, League = "Landesliga Süd", Stage = "Liga", Source = "ligamanager" });
+        Db.LeagueViews.AddRange(new LeagueView { Tnr = 4101, Json = "{}", GeneratedAt = DateTime.UtcNow },
+            new LeagueView { Tnr = 900_002_573, Json = "{}", GeneratedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+
+        var resolver = Get<RookHub.Api.Services.League.LeagueClubResolver>();
+        Assert.Equal(other.Id, (await resolver.ResolveAsync(member, false, null)).Club?.Id);
+        Assert.Equal(403, (await resolver.ResolveAsync(member, false, home.Id)).Status);
+        Assert.True(await resolver.IsMemberAsync(member, false, other.Id));
+        Assert.Equal(new HashSet<int> { other.Id }, await RookHub.Api.Services.League.LeagueClubResolver.ClubIdsOfAsync(Db, member));
+        Assert.Equal(new HashSet<int> { home.Id, other.Id }, await RookHub.Api.Services.League.LeagueClubResolver.ClubIdsOfAsync(Db, admin));
+
+        var league = Get<RookHub.Api.Services.League.LeagueService>();
+        var tirol = await league.IndexAsync(home, default);
+        Assert.Equal(new[] { 4101 }, tirol["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
+        var bayern = await league.IndexAsync(other, default);
+        Assert.Equal(new[] { 900_002_573 }, bayern["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
+        Assert.Equal("2026/27", (await league.ForecastStatsAsync(null, default))["season"]!.GetValue<string>());
+
+        // dieselbe Partie in beiden Vereinen: keine Dublette über die Vereinsgrenze
+        foreach (var (name, fide) in new[] { ("Hengl, Philip", "222"), ("Schnabl, Andreas", "333") })
+            Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 4101, Team = "Absam", Name = name, NameKey = RookHub.Api.Services.League.LeagueNames.NameKey(name), FideId = fide });
+        await Db.SaveChangesAsync();
+        var club = Get<RookHub.Api.Services.League.LeagueClubService>();
+        const string pgn = "[White \"Hengl, Philip\"]\n[Black \"Schnabl, Andreas\"]\n[Date \"2024.05.12\"]\n[Result \"1-0\"]\n\n"
+            + "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0\n";
+        Assert.Equal(1, (await club.ImportPgnAsync(home, admin, pgn, null)).Added);
+        Assert.Equal(1, (await club.ImportPgnAsync(other, admin, pgn, null)).Added);
+        Assert.Equal(1, (await club.ImportPgnAsync(other, admin, pgn, null)).Duplicates);
+        Assert.Equal(1, (await club.ListAsync(home, admin, true, null, null, 1, default)).Total);
+        var otherGame = (await club.ListAsync(other, admin, true, null, null, 1, default)).Items.Single();
+        Assert.Null(await club.GetAsync(home, admin, true, otherGame.Id));
+        Assert.Equal(other.Id, await club.ClubOfGameAsync(otherGame.Id));
+    }
+
     /// <summary>Ligapaarung einer Vereinspartie (0.678.0): Vorschläge über einen Join samt Left-Join auf den Rundentermin und
     /// eine IN-Liste der FIDE-IDs, die feste Zuordnung über eine IN-Liste der Brettpartien — beides nur gegen SQL prüfbar.</summary>
     [MySqlFact]
@@ -1143,17 +1220,18 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Db.LeagueGames.AddRange(lg, other);
         await Db.SaveChangesAsync();
 
+        var home = await ClubAsync();
         var finder = new RookHub.Api.Services.League.LeaguePairingFinder(Db);
-        var options = await finder.ForAsync(new("Hengl, Philip", "222", "Schwaz", null, new DateOnly(2026, 10, 5), null), default);
+        var options = await finder.ForAsync(new("Hengl, Philip", "222", "Schwaz", null, new DateOnly(2026, 10, 5), null), home, default);
         Assert.Equal(lg.Id, options[0].Id);
         Assert.True(options[0].Exact);
         Assert.Contains(options, o => o.Id == other.Id && o.Date == null);
         Assert.Equal("2026/27", (await finder.ByIdAsync(other.Id, default))!.Season);
 
-        Db.LeagueClubGames.Add(new LeagueClubGame { Year = 2026, White = "Hengl, Philip", WhiteFide = "222", Black = "Schwaz",
+        Db.LeagueClubGames.Add(new LeagueClubGame { ClubId = home.Id, Year = 2026, White = "Hengl, Philip", WhiteFide = "222", Black = "Schwaz",
             Pgn = "x", MovesHash = "h", LeagueGameId = lg.Id });
         await Db.SaveChangesAsync();
-        var pairings = await new RookHub.Api.Services.League.LeagueFixtureGames(Db).ForFixtureAsync(88, 2, "Schwaz", default);
+        var pairings = await new RookHub.Api.Services.League.LeagueFixtureGames(Db).ForFixtureAsync(home, 88, 2, "Schwaz", default);
         Assert.Equal("club", Assert.Single(pairings).Source);
     }
 }

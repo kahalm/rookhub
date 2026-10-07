@@ -28,9 +28,9 @@ public class LeagueClubPairingTests : IDisposable
     {
         _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", League = "Landesliga", Stage = "Liga" });
         _db.LeagueRounds.Add(new LeagueRound { Tnr = 7, Round = 2, Date = new DateOnly(2026, 10, 4) });
-        foreach (var (team, name, fide) in new[] { ("Schwaz", "Oberschmid, Patrik", "900"), ("Absam", "Hengl, Philip", "222") })
+        foreach (var (team, name, fide) in new[] { ("Testdorf", "Oberschmid, Patrik", "900"), ("Absam", "Hengl, Philip", "222") })
             _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = team, Name = name, NameKey = LeagueNames.NameKey(name), FideId = fide });
-        var lg = new LeagueGame { Tnr = 7, Round = 2, Board = 4, HomeTeam = "Absam", AwayTeam = "Schwaz", HomePlayer = "Hengl, Philip",
+        var lg = new LeagueGame { Tnr = 7, Round = 2, Board = 4, HomeTeam = "Absam", AwayTeam = "Testdorf", HomePlayer = "Hengl, Philip",
             AwayPlayer = "Oberschmid, Patrik", HomeColor = "w", Result = "1 - 0", HomeFide = "222", AwayFide = "900" };
         _db.LeagueGames.Add(lg);
         var u = new AppUser { Username = "patrik", Email = "p@test", PasswordHash = "x" };
@@ -46,7 +46,7 @@ public class LeagueClubPairingTests : IDisposable
     public async Task Preview_genauerTreffer_istVorgewaehlt_samtLabel()
     {
         var id = await SeedAsync();
-        var g = Assert.Single((await Club().PreviewAsync(_user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.10.04"))).Games);
+        var g = Assert.Single((await Club().PreviewAsync(TestClubs.Home, _user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.10.04"))).Games);
 
         Assert.Equal(id, g.PairingId);
         var p = Assert.Single(g.Pairings);
@@ -59,7 +59,7 @@ public class LeagueClubPairingTests : IDisposable
     public async Task Preview_falscherTag_wirdVorgeschlagen_aberNichtVorgewaehlt()
     {
         await SeedAsync();
-        var g = Assert.Single((await Club().PreviewAsync(_user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.12.01"))).Games);
+        var g = Assert.Single((await Club().PreviewAsync(TestClubs.Home, _user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.12.01"))).Games);
 
         Assert.Null(g.PairingId);
         Assert.False(Assert.Single(g.Pairings).Exact);
@@ -69,7 +69,7 @@ public class LeagueClubPairingTests : IDisposable
     public async Task Import_ohneAngabe_nimmtDenGenauenTreffer_JahrUndKlassifiziererFolgen()
     {
         var id = await SeedAsync();
-        var r = await Club().ImportPgnAsync(_user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.10.04"), null);
+        var r = await Club().ImportPgnAsync(TestClubs.Home, _user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.10.04"), null);
 
         var game = await _db.LeagueClubGames.SingleAsync(x => x.Id == r.Ids[0]);
         Assert.Equal((id, 2026, "Landesliga", "2026/27"), (game.LeagueGameId!.Value, game.Year!.Value, game.Classifier1, game.Classifier2));
@@ -80,7 +80,7 @@ public class LeagueClubPairingTests : IDisposable
     {
         var id = await SeedAsync();
         var pgn = Pgn("Hengl, Philip", "Oberschmid, Patrik", "2025.03.01");
-        var chosen = await Club().ImportPgnAsync(_user, pgn,
+        var chosen = await Club().ImportPgnAsync(TestClubs.Home, _user, pgn,
             new[] { new LeagueClubImportGameDecision { Index = 1, LeagueGameId = id } });
         var game = await _db.LeagueClubGames.SingleAsync(x => x.Id == chosen.Ids[0]);
         Assert.Equal((id, 2026), (game.LeagueGameId!.Value, game.Year!.Value));   // Jahr aus dem Rundentermin
@@ -88,7 +88,7 @@ public class LeagueClubPairingTests : IDisposable
 
         _db.LeagueClubGames.RemoveRange(_db.LeagueClubGames);
         await _db.SaveChangesAsync();
-        var none = await Club().ImportPgnAsync(_user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.10.04"),
+        var none = await Club().ImportPgnAsync(TestClubs.Home, _user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.10.04"),
             new[] { new LeagueClubImportGameDecision { Index = 1, LeagueGameId = 0 } });
         Assert.Null((await _db.LeagueClubGames.SingleAsync(x => x.Id == none.Ids[0])).LeagueGameId);
     }
@@ -98,23 +98,23 @@ public class LeagueClubPairingTests : IDisposable
     {
         // Oberschmid spielt für Schwaz → die Partie ist anonymisiert, ohne Hochladenden: bearbeiten darf nur die Verwaltung
         var id = await SeedAsync();
-        var r = await Club().ImportPgnAsync(_user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.12.01"), null);
+        var r = await Club().ImportPgnAsync(TestClubs.Home, _user, Pgn("Hengl, Philip", "Oberschmid, Patrik", "2026.12.01"), null);
         var gameId = r.Ids[0];
         Assert.Null((await _db.LeagueClubGames.SingleAsync(x => x.Id == gameId)).LeagueGameId);
 
-        var (game, reason) = await Club().UpdateAsync(_user, true, gameId, new LeagueClubGameUpdateRequest { LeagueGameId = id });
+        var (game, reason) = await Club().UpdateAsync(TestClubs.Home, _user, true, gameId, new LeagueClubGameUpdateRequest { LeagueGameId = id });
         Assert.Null(reason);
         Assert.Equal(id, game!.LeagueGameId);
 
-        var manager = await Club().GetAsync(_user, true, gameId);
+        var manager = await Club().GetAsync(TestClubs.Home, _user, true, gameId);
         Assert.Equal((id, "2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026)"), (manager!.LeagueGameId!.Value, manager.LeagueGameLabel));
-        var reader = await Club().GetAsync(_user, false, gameId);
+        var reader = await Club().GetAsync(TestClubs.Home, _user, false, gameId);
         Assert.Null(reader!.LeagueGameId);
         Assert.Null(reader.LeagueGameLabel);
-        Assert.Contains(await Club().PairingsForGameAsync(_user, true, gameId, default) ?? new(), p => p.Id == id);
-        Assert.Null(await Club().PairingsForGameAsync(_user, false, gameId, default));
+        Assert.Contains(await Club().PairingsForGameAsync(TestClubs.Home, _user, true, gameId, default) ?? new(), p => p.Id == id);
+        Assert.Null(await Club().PairingsForGameAsync(TestClubs.Home, _user, false, gameId, default));
 
-        await Club().UpdateAsync(_user, true, gameId, new LeagueClubGameUpdateRequest { LeagueGameId = 0 });
+        await Club().UpdateAsync(TestClubs.Home, _user, true, gameId, new LeagueClubGameUpdateRequest { LeagueGameId = 0 });
         Assert.Null((await _db.LeagueClubGames.SingleAsync(x => x.Id == gameId)).LeagueGameId);
     }
 
@@ -122,8 +122,8 @@ public class LeagueClubPairingTests : IDisposable
     public async Task Formular_VorschlaegeUeberDieNamen()
     {
         var id = await SeedAsync();
-        var list = await Club().SuggestPairingsAsync(new LeagueClubPairingQuery
-            { White = "Philip Hengl", Black = "Schwaz", Date = "2026-10-04" }, default);
+        var list = await Club().SuggestPairingsAsync(TestClubs.Home, new LeagueClubPairingQuery
+            { White = "Philip Hengl", Black = "Testdorf", Date = "2026-10-04" }, default);
 
         var p = Assert.Single(list);
         Assert.Equal(id, p.Id);
@@ -135,11 +135,11 @@ public class LeagueClubPairingTests : IDisposable
     {
         var id = await SeedAsync();
         // anderes Jahr im Kopf — geraten fände sie nicht; fest zugeordnet schon
-        _db.LeagueClubGames.Add(new LeagueClubGame { Year = 2019, White = "Hengl, Philip", WhiteFide = "222", Black = "Schwaz",
+        _db.LeagueClubGames.Add(new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2019, White = "Hengl, Philip", WhiteFide = "222", Black = "Testdorf",
             Pgn = "fest", MovesHash = "x", LeagueGameId = id });
         await _db.SaveChangesAsync();
 
-        var pairing = Assert.Single(await new LeagueFixtureGames(_db).ForFixtureAsync(7, 2, "Schwaz", default));
+        var pairing = Assert.Single(await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 7, 2, "Testdorf", default));
         Assert.Equal(("fest", "club"), (pairing.Pgn, pairing.Source));
     }
 
@@ -157,17 +157,17 @@ public class LeagueClubPairingTests : IDisposable
     public async Task Formular_zweiteFassungDerselbenPartie_archiviertDieAlte()
     {
         await SeedAsync();
-        var (first, r1, _) = await Club().AddGameAsync(_user, Sheet());
+        var (first, r1, _) = await Club().AddGameAsync(TestClubs.Home, _user, Sheet());
         Assert.Null(r1);
-        var (second, r2, _) = await Club().AddGameAsync(_user, Sheet("Kb1"));   // dieselbe Partie, ein Zug mehr gelesen
+        var (second, r2, _) = await Club().AddGameAsync(TestClubs.Home, _user, Sheet("Kb1"));   // dieselbe Partie, ein Zug mehr gelesen
         Assert.Null(r2);
         Assert.Equal(1, second!.Replaced);
 
         var old = await _db.LeagueClubGames.IgnoreQueryFilters().SingleAsync(g => g.Id == first!.Id);
         Assert.NotNull(old.ArchivedAt);
         Assert.Equal(second.Id, old.ReplacedById);
-        Assert.Equal(new[] { second.Id }, (await Club().ListAsync(_user, true, null, null, 1, default)).Items.Select(g => g.Id));
-        Assert.Null(await Club().GetAsync(_user, true, first!.Id));
+        Assert.Equal(new[] { second.Id }, (await Club().ListAsync(TestClubs.Home, _user, true, null, null, 1, default)).Items.Select(g => g.Id));
+        Assert.Null(await Club().GetAsync(TestClubs.Home, _user, true, first!.Id));
     }
 
     [Fact]
@@ -176,23 +176,23 @@ public class LeagueClubPairingTests : IDisposable
         var id = await SeedAsync();
         // ohne Ligapaarung (2025 liegt vor der Saison 2026/27): andere Eröffnung = andere Partie
         var y = Sheet(); y.Year = 2025;
-        var (a0, _, _) = await Club().AddGameAsync(_user, y);
+        var (a0, _, _) = await Club().AddGameAsync(TestClubs.Home, _user, y);
         var other = Sheet(); other.Year = 2025;
         other.Moves = new() { "d4", "d5", "c4", "e6", "Nc3", "Nf6" };
-        var (b, _, _) = await Club().AddGameAsync(_user, other);
+        var (b, _, _) = await Club().AddGameAsync(TestClubs.Home, _user, other);
         Assert.Equal(0, b!.Replaced);
         Assert.Null(a0!.ArchivedAt);
-        var (a, _, _) = await Club().AddGameAsync(_user, Sheet());
+        var (a, _, _) = await Club().AddGameAsync(TestClubs.Home, _user, Sheet());
 
         // feste, verschiedene Ligapaarungen: zwei Partien, auch bei gleichem Anfang
-        _db.LeagueGames.Add(new LeagueGame { Tnr = 7, Round = 3, Board = 4, HomeTeam = "Absam", AwayTeam = "Schwaz", HomePlayer = "Hengl, Philip",
+        _db.LeagueGames.Add(new LeagueGame { Tnr = 7, Round = 3, Board = 4, HomeTeam = "Absam", AwayTeam = "Testdorf", HomePlayer = "Hengl, Philip",
             AwayPlayer = "Oberschmid, Patrik", HomeColor = "w", Result = "1 - 0", HomeFide = "222", AwayFide = "900" });
         await _db.SaveChangesAsync();
         var other2 = _db.LeagueGames.Single(g => g.Round == 3).Id;
-        await Club().UpdateAsync(_user, true, a!.Id, new LeagueClubGameUpdateRequest { LeagueGameId = id });
+        await Club().UpdateAsync(TestClubs.Home, _user, true, a!.Id, new LeagueClubGameUpdateRequest { LeagueGameId = id });
         var third = Sheet("Kb1");
         third.LeagueGameId = other2;
-        var (c, _, _) = await Club().AddGameAsync(_user, third);
+        var (c, _, _) = await Club().AddGameAsync(TestClubs.Home, _user, third);
         Assert.Equal(0, c!.Replaced);
         Assert.Equal(4, await _db.LeagueClubGames.CountAsync());
     }
@@ -201,7 +201,7 @@ public class LeagueClubPairingTests : IDisposable
     public async Task Archivierte_bleibenFuerDenRueckbauEinesTeilenLinksErreichbar()
     {
         await SeedAsync();
-        _db.LeagueClubGames.Add(new LeagueClubGame { Year = 2026, White = "x", Black = "y", Pgn = "p", MovesHash = "h",
+        _db.LeagueClubGames.Add(new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "x", Black = "y", Pgn = "p", MovesHash = "h",
             UploadShareHash = LeagueClubService.ShareHashOf("tok"), ArchivedAt = Now });
         await _db.SaveChangesAsync();
         Assert.Equal(0, await _db.LeagueClubGames.CountAsync());

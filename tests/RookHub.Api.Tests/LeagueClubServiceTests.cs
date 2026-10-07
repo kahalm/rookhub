@@ -31,8 +31,8 @@ public class LeagueClubServiceTests : IDisposable
     /// <summary>Der Hochladende und ein zweiter Spieler von Schwaz, zwei Gegner aus der Liga.</summary>
     private async Task<int> SeedAsync()
     {
-        Player(7, "Schwaz", "Oberschmid, Patrik", "900");
-        Player(7, "Schwaz", "Binder, Moriz", "111");
+        Player(7, "Testdorf", "Oberschmid, Patrik", "900");
+        Player(7, "Testdorf", "Binder, Moriz", "111");
         Player(7, "Absam", "Hengl, Philip", "222");
         Player(7, "Absam", "Schnabl, Andreas Dr.", "333");
         var u = new AppUser { Username = "patrik", Email = "p@test", PasswordHash = "x" };
@@ -103,11 +103,11 @@ public class LeagueClubServiceTests : IDisposable
     {
         var roster = new LeagueRosterIndex(new[]
         {
-            new LeagueRosterIndex.Row(1, "Schwaz", "Weg, Gegangen", "weg, gegangen", "10", "2025/26"),
+            new LeagueRosterIndex.Row(1, "Testdorf", "Weg, Gegangen", "weg, gegangen", "10", "2025/26"),
             new LeagueRosterIndex.Row(2, "Absam", "Weg, Gegangen", "weg, gegangen", "10", "2026/27"),
             new LeagueRosterIndex.Row(3, "Absam", "Neu, Dazu", "neu, dazu", "20", "2025/26"),
-            new LeagueRosterIndex.Row(4, "Schwaz", "Neu, Dazu", "neu, dazu", "20", "2026/27"),
-        });
+            new LeagueRosterIndex.Row(4, "Testdorf", "Neu, Dazu", "neu, dazu", "20", "2026/27"),
+        }, TestClubs.Home.OwnsTeam);
         Assert.False(roster.Match("Weg, Gegangen", null).OwnClub);           // jetzt ein Gegner
         Assert.True(roster.Match("Neu, Dazu", null).OwnClub);                // jetzt einer von uns
     }
@@ -210,7 +210,7 @@ public class LeagueClubServiceTests : IDisposable
             Pgn("Nobody, Else", "Someone, Other", "1. c4 e5 1-0"),               // 3: kein Ligaspieler
             Pgn("Hengl, Philip", "Schnabl, Andreas", "1. e4 e5 2. Ke3 1-0"),     // 4: illegal
             Pgn("Oberschmid, Patrik", "Hengl, Philip"));                         // 5: wie 1 → doppelt
-        var p = await Club().PreviewAsync(me, pgn);
+        var p = await Club().PreviewAsync(TestClubs.Home, me, pgn);
 
         Assert.Equal(5, p.Games.Count);
         Assert.Empty(_db.LeagueClubGames);                                        // die Übersicht speichert nichts
@@ -238,9 +238,9 @@ public class LeagueClubServiceTests : IDisposable
             Pgn("Hengl Philip", "Schnabl, Andreas", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0"),
             Pgn("Hengl, Philip", "Schnabl, Andreas", "1. e4 e5 2. Ke3 1-0"),      // illegal → kein eigener Text
             Pgn("Oberschmid, Patrik", "Hengl, Philip"));                         // wie 1 → doppelt
-        var p = await Club().PreviewAsync(me, pgn);
+        var p = await Club().PreviewAsync(TestClubs.Home, me, pgn);
         Assert.Null(p.Games[2].Pgn);
-        var one = await Club().PreviewAsync(me, p.Games[0].Pgn!);                  // der Text allein liest sich gleich
+        var one = await Club().PreviewAsync(TestClubs.Home, me, p.Games[0].Pgn!);                  // der Text allein liest sich gleich
         Assert.Equal((p.Games[0].Opening, p.Games[0].Year, p.Games[0].Black.Match.Fide),
             (one.Games[0].Opening, one.Games[0].Year, one.Games[0].Black.Match.Fide));
 
@@ -250,11 +250,11 @@ public class LeagueClubServiceTests : IDisposable
         {
             Index = n, White = new() { Replace = p.Games[i].White.Replace }, Black = new() { Replace = p.Games[i].Black.Replace },
         };
-        var first = await Club().ImportPgnAsync(me, p.Games[0].Pgn + "\n" + p.Games[1].Pgn, [As(0, 1), As(1, 2)]);
+        var first = await Club().ImportPgnAsync(TestClubs.Home, me, p.Games[0].Pgn + "\n" + p.Games[1].Pgn, [As(0, 1), As(1, 2)]);
         Assert.Equal((2, 1), (first.Added, first.Anonymized));
-        var second = await Club().ImportPgnAsync(me, p.Games[3].Pgn!, [As(3, 1)]);
+        var second = await Club().ImportPgnAsync(TestClubs.Home, me, p.Games[3].Pgn!, [As(3, 1)]);
         Assert.Equal((0, 1), (second.Added, second.Duplicates));                  // in Portion 1 schon gespeichert
-        var again = await Club().ImportPgnAsync(me, p.Games[0].Pgn + "\n" + p.Games[1].Pgn, [As(0, 1), As(1, 2)]);  // Antwort verloren → nochmal
+        var again = await Club().ImportPgnAsync(TestClubs.Home, me, p.Games[0].Pgn + "\n" + p.Games[1].Pgn, [As(0, 1), As(1, 2)]);  // Antwort verloren → nochmal
         Assert.Equal((0, 2), (again.Added, again.Duplicates));
         Assert.Equal(2, await _db.LeagueClubGames.CountAsync());
     }
@@ -265,11 +265,11 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Import_Defaults_ReplacesSchwazPlayers_AndStoresNeitherThemNorTheUploader()
     {
         var me = await SeedAsync();
-        var r = await Club().ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip", extra: "[WhiteElo \"1850\"]\n[BlackElo \"2172\"]"), null);
+        var r = await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip", extra: "[WhiteElo \"1850\"]\n[BlackElo \"2172\"]"), null);
 
         Assert.Equal((1, 1, 0), (r.Added, r.Anonymized, r.Failed.Count));
         var g = await _db.LeagueClubGames.SingleAsync();
-        Assert.Equal(("Schwaz", "Hengl, Philip"), (g.White, g.Black));
+        Assert.Equal(("Testdorf", "Hengl, Philip"), (g.White, g.Black));
         Assert.Equal((null, "222"), (g.WhiteFide, g.BlackFide));
         Assert.Null(g.WhiteElo);                                                   // die Wertung verriete den Spieler
         Assert.Equal(2172, g.BlackElo);
@@ -291,7 +291,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task CorrectMoves_RewritesTheClubGame_AndEveryLinkedCopy()
     {
         var me = await SeedAsync();
-        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas Dr."), null);
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Schnabl, Andreas Dr."), null);
         var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
         Assert.Equal(me, g.UploadedByUserId);
         var sans = PgnParser.ExtractMainlineSans(PgnParser.SplitGames(g.Pgn).First().MoveText);
@@ -300,15 +300,15 @@ public class LeagueClubServiceTests : IDisposable
         var other = new AppUser { Username = "x", Email = "x@test", PasswordHash = "x" };
         _db.AppUsers.Add(other);
         await _db.SaveChangesAsync();
-        Assert.Equal("forbidden", (await Club().CorrectMovesAsync(other.Id, false, g.Id, shorter)).Reason);
-        Assert.Equal("illegal", (await Club().CorrectMovesAsync(me, false, g.Id, new[] { "e4", "Ke2", "Ke7", "Kxe7" })).Reason);
+        Assert.Equal("forbidden", (await Club().CorrectMovesAsync(TestClubs.Home, other.Id, false, g.Id, shorter)).Reason);
+        Assert.Equal("illegal", (await Club().CorrectMovesAsync(TestClubs.Home, me, false, g.Id, new[] { "e4", "Ke2", "Ke7", "Kxe7" })).Reason);
 
         var copy = new SavedGame { UserId = other.Id, Source = "pgn", Pgn = "[Event \"Kopie\"]\n[Date \"2024.??.??\"]\n[White \"Hengl\"]\n[Black \"Schnabl\"]\n[Result \"1-0\"]\n\n1. e4 1-0\n",
             White = "Hengl", Black = "Schnabl", Result = "1-0", LeagueClubGameId = g.Id, GameAnalysisId = 77, CreatedAt = Now };
         _db.SavedGames.Add(copy);
         await _db.SaveChangesAsync();
 
-        var (game, newSans, reason) = await Club().CorrectMovesAsync(me, false, g.Id, shorter);
+        var (game, newSans, reason) = await Club().CorrectMovesAsync(TestClubs.Home, me, false, g.Id, shorter);
         Assert.Null(reason);
         Assert.Equal(shorter.Count, game!.Plies);
         Assert.Equal(LeagueClubService.HashOf(shorter), game.MovesHash);
@@ -327,7 +327,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Claim_AfterLogin_AssignsAnonymousShareUploads_OnlyWithTheBrowsersKey()
     {
         var me = await SeedAsync();
-        var r = await Club().ImportViaShareAsync("TOKEN-1", Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        var r = await Club().ImportViaShareAsync(TestClubs.Home, "TOKEN-1", Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
         Assert.Single(r.Ids);
         Assert.Equal(32, r.ClaimKey!.Length);
         var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
@@ -344,7 +344,7 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(me, claimed.UploadedByUserId);
         Assert.Null(claimed.ClaimKeyHash);                                                // Schlüssel verfällt
         Assert.Equal(0, await Club().ClaimAsync(me + 1, new[] { r.ClaimKey }));          // kein zweites Mal
-        var mine = Assert.Single((await Club().ListAsync(me, false, null, null, 1, default, mine: true)).Items);
+        var mine = Assert.Single((await Club().ListAsync(TestClubs.Home, me, false, null, null, 1, default, mine: true)).Items);
         Assert.True(mine.CanDelete);                                                      // bearbeitbar, auch als „Schwaz"
     }
 
@@ -352,7 +352,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Claim_No_ForgetsTheKey_GameStaysWithoutUploader()
     {
         await SeedAsync();
-        var r = await Club().ImportViaShareAsync("TOKEN-1", Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        var r = await Club().ImportViaShareAsync(TestClubs.Home, "TOKEN-1", Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
         Assert.Equal(1, await Club().ForgetClaimsAsync(new[] { r.ClaimKey! }));
         var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
         Assert.Null(g.ClaimKeyHash);
@@ -367,16 +367,16 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         _db.LeagueClubGames.AddRange(
-            new LeagueClubGame { White = "A", Black = "B", Pgn = "1. e4 *", MovesHash = "h1", UploadedByUserId = me },
-            new LeagueClubGame { White = "C", Black = "D", Pgn = "1. d4 *", MovesHash = "h2", UploadedByUserId = me + 1 },
-            new LeagueClubGame { White = "Schwaz", Black = "E", Pgn = "1. c4 *", MovesHash = "h3", Anonymized = true });
+            new LeagueClubGame { ClubId = TestClubs.HomeId, White = "A", Black = "B", Pgn = "1. e4 *", MovesHash = "h1", UploadedByUserId = me },
+            new LeagueClubGame { ClubId = TestClubs.HomeId, White = "C", Black = "D", Pgn = "1. d4 *", MovesHash = "h2", UploadedByUserId = me + 1 },
+            new LeagueClubGame { ClubId = TestClubs.HomeId, White = "Testdorf", Black = "E", Pgn = "1. c4 *", MovesHash = "h3", Anonymized = true });
         await _db.SaveChangesAsync();
 
-        var mine = await Club().ListAsync(me, false, null, null, 1, default, mine: true);
+        var mine = await Club().ListAsync(TestClubs.Home, me, false, null, null, 1, default, mine: true);
         var g = Assert.Single(mine.Items);
         Assert.Equal("A", g.White);
         Assert.True(g.CanDelete);
-        Assert.Equal(3, (await Club().ListAsync(me, false, null, null, 1, default)).Total);
+        Assert.Equal(3, (await Club().ListAsync(TestClubs.Home, me, false, null, null, 1, default)).Total);
     }
 
     /// <summary>Wunsch 2026-10-04: „merk dir im Hintergrund den echten Namen der Schwazer Spieler, damit ich später
@@ -385,7 +385,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Import_Replaced_KeepsTheRealNameInternally_ButNoOutputCarriesIt()
     {
         var me = await SeedAsync();
-        await Club().ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
 
         var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
         Assert.Equal(("Oberschmid, Patrik", "900"), (g.WhiteRealName, g.WhiteRealFide));
@@ -393,10 +393,10 @@ public class LeagueClubServiceTests : IDisposable
 
         var outputs = new[]
         {
-            System.Text.Json.JsonSerializer.Serialize((await Club().ListAsync(me, true, null, null, 1, default)).Items),
-            System.Text.Json.JsonSerializer.Serialize(await Club().GetAsync(me, true, g.Id)),
+            System.Text.Json.JsonSerializer.Serialize((await Club().ListAsync(TestClubs.Home, me, true, null, null, 1, default)).Items),
+            System.Text.Json.JsonSerializer.Serialize(await Club().GetAsync(TestClubs.Home, me, true, g.Id)),
             System.Text.Json.JsonSerializer.Serialize(LeagueClubService.ToDto(g, me, true)),
-            await Club().ExportAsync(null, null, default),
+            await Club().ExportAsync(TestClubs.Home, null, null, default),
         };
         foreach (var o in outputs)
         {
@@ -409,7 +409,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Import_WithoutSchwazPlayers_KeepsNamesAndTheUploader()
     {
         var me = await SeedAsync();
-        await Club().ImportPgnAsync(me, Pgn("Hengl Philip", "Schnabl, Andreas"), null);
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl Philip", "Schnabl, Andreas"), null);
 
         var g = await _db.LeagueClubGames.SingleAsync();
         Assert.Equal(("Hengl, Philip", "Schnabl, Andreas Dr."), (g.White, g.Black));   // Schreibweise der Meldeliste
@@ -428,7 +428,7 @@ public class LeagueClubServiceTests : IDisposable
             Pgn("Hengl, Philip", "Binder, Moriz", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0"),
             Pgn("Binder, Moriz", "Oberschmid, Patrik", "1. c4 e5 2. Nc3 Nf6 3. g3 d5 4. cxd5 Nxd5 5. Bg2 Nb6 6. Nf3 Nc6 7. O-O Be7 8. d3 O-O 9. a3 Be6 10. b4 f6 1-0"),
             Pgn("Nobody, Else", "Someone, Other", "1. b3 e5 1-0"));
-        var r = await Club().ImportPgnAsync(me, pgn, new List<LeagueClubImportGameDecision>
+        var r = await Club().ImportPgnAsync(TestClubs.Home, me, pgn, new List<LeagueClubImportGameDecision>
         {
             new() { Index = 1, White = new() { Fide = "333" }, Black = new() { Replace = true } },
             new() { Index = 2, White = new(), Black = new() { Replace = false } },                    // Binder bleibt stehen
@@ -440,7 +440,7 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(3, r.Added);
         Assert.Equal(new[] { (3, "onlyOwnClub"), (99, "notFound") }, r.Failed.Select(f => (f.Index, f.Reason)));
         var games = await _db.LeagueClubGames.OrderBy(g => g.Id).ToListAsync();
-        Assert.Equal(("Schnabl, Andreas Dr.", "Schwaz", "333"), (games[0].White, games[0].Black, games[0].WhiteFide));
+        Assert.Equal(("Schnabl, Andreas Dr.", "Testdorf", "333"), (games[0].White, games[0].Black, games[0].WhiteFide));
         Assert.Equal(("Hengl, Philip", "Binder, Moriz", false), (games[1].White, games[1].Black, games[1].Anonymized));
         Assert.Equal(("Hengl, Philip", "Someone, Other"), (games[2].White, games[2].Black));
     }
@@ -455,9 +455,9 @@ public class LeagueClubServiceTests : IDisposable
         var pgn = Pgn("Oberschmid, Patrik", "Hengl P.");                     // „Hengl P." erkennt der Abgleich (Anfangsbuchstabe)
         var pgn2 = Pgn("Oberschmid, Patrik", "Dr. Andi S.",
             "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0");
-        Assert.False((await club.PreviewAsync(me, pgn2)).Games[0].Black.Match.League);   // „Andi S." kennt niemand
+        Assert.False((await club.PreviewAsync(TestClubs.Home, me, pgn2)).Games[0].Black.Match.League);   // „Andi S." kennt niemand
 
-        var result = await club.ImportPgnAsync(me, pgn2, new[]
+        var result = await club.ImportPgnAsync(TestClubs.Home, me, pgn2, new[]
         {
             new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "333" } },
         });
@@ -466,28 +466,28 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(("andi s.", "333", "Schnabl, Andreas Dr."), (alias.NameKey, alias.Fide, alias.Name));   // Titel weg, ohne Partie/Person
 
         // Nächstes Mal (auch über einen Teilen-Link, ohne Konto): von selbst Schnabl, als „gemerkt" markiert.
-        var next = await club.PreviewAsync(null, Pgn("Hengl, Philip", "Andi S.", "1. c4 e5 2. Nc3 Nf6 3. g3 d5 4. cxd5 Nxd5 5. Bg2 Nb6 6. Nf3 Nc6 7. O-O Be7 8. d3 O-O 9. a3 Be6 10. b4 f6 1-0"));
+        var next = await club.PreviewAsync(TestClubs.Home, null, Pgn("Hengl, Philip", "Andi S.", "1. c4 e5 2. Nc3 Nf6 3. g3 d5 4. cxd5 Nxd5 5. Bg2 Nb6 6. Nf3 Nc6 7. O-O Be7 8. d3 O-O 9. a3 Be6 10. b4 f6 1-0"));
         var b = next.Games[0].Black.Match;
         Assert.Equal((true, true, "333"), (b.League, b.Alias, b.Fide));
-        Assert.True((await club.MatchAsync("andi s.", null, default)).White.Alias);
+        Assert.True((await club.MatchAsync(TestClubs.Home, "andi s.", null, default)).White.Alias);
 
         // Eine FIDE-ID aus der Partie, die ein Ligaspieler trägt, schlägt die Zuordnung.
-        var withId = await club.PreviewAsync(null, Pgn("Hengl, Philip", "Andi S.", extra: "[BlackFideId \"111\"]"));
+        var withId = await club.PreviewAsync(TestClubs.Home, null, Pgn("Hengl, Philip", "Andi S.", extra: "[BlackFideId \"111\"]"));
         Assert.Equal(("111", false), (withId.Games[0].Black.Match.Fide, withId.Games[0].Black.Match.Alias));
 
         // Unveränderte Seiten (der Client schickt die FIDE-ID der Vorgabe mit) und Teilen-Links merken nichts.
-        var same = await club.ImportPgnAsync(me, pgn, new[]
+        var same = await club.ImportPgnAsync(TestClubs.Home, me, pgn, new[]
         {
             new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "222" } },
         });
         Assert.Equal(0, same.Remembered);
-        var anon = await club.ImportPgnAsync(null, Pgn("Oberschmid, Patrik", "Irgendwer", "1. e4 e6 2. d4 d5 3. Nc3 Bb4 4. e5 c5 5. a3 Bxc3+ 6. bxc3 Ne7 7. Qg4 Qc7 8. Qxg7 Rg8 9. Qxh7 cxd4 10. Ne2 Nbc6 1-0"),
+        var anon = await club.ImportPgnAsync(TestClubs.Home, null, Pgn("Oberschmid, Patrik", "Irgendwer", "1. e4 e6 2. d4 d5 3. Nc3 Bb4 4. e5 c5 5. a3 Bxc3+ 6. bxc3 Ne7 7. Qg4 Qc7 8. Qxg7 Rg8 9. Qxh7 cxd4 10. Ne2 Nbc6 1-0"),
             new[] { new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "222" } } });
         Assert.Equal((1, 0), (anon.Added, anon.Remembered));
         Assert.Single(_db.LeagueNameAliases);
 
         // Eine neue Korrektur desselben Namens überschreibt die alte.
-        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Andi S.", "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"),
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Andi S.", "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"),
             new[] { new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "222" } } });
         Assert.Equal("222", _db.LeagueNameAliases.AsNoTracking().Single().Fide);
     }
@@ -496,11 +496,11 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Import_ViaShareLink_StoresNoUploader_EvenWithNames()
     {
         await SeedAsync();
-        var r = await Club().ImportPgnAsync(null, Pgn("Hengl, Philip", "Schnabl, Andreas") + Pgn("Oberschmid, Patrik", "Hengl, Philip",
+        var r = await Club().ImportPgnAsync(TestClubs.Home, null, Pgn("Hengl, Philip", "Schnabl, Andreas") + Pgn("Oberschmid, Patrik", "Hengl, Philip",
             "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0"), null);
         Assert.Equal((2, 1), (r.Added, r.Anonymized));
         Assert.All(_db.LeagueClubGames, g => Assert.Null(g.UploadedByUserId));
-        Assert.Equal("Schwaz", _db.LeagueClubGames.Single(g => g.Anonymized).White);   // ohne Konto: Schwaz-Spieler, nicht „ich"
+        Assert.Equal("Testdorf", _db.LeagueClubGames.Single(g => g.Anonymized).White);   // ohne Konto: Schwaz-Spieler, nicht „ich"
     }
 
     [Fact]
@@ -512,7 +512,7 @@ public class LeagueClubServiceTests : IDisposable
             Pgn("Oberschmid, Patrik", "Nobody, Else", "1. d4 d5 2. c4 e6 1-0"),
             Pgn("Hengl, Philip", "Oberschmid, Patrik", "1. e4 e5 2. Ke3 1-0"),
             Pgn("Hengl, Philip", "Oberschmid, Patrik", "1. e4 1-0", extra: "[FEN \"8/8/8/4k3/8/8/4P3/4K3 w - - 0 1\"]\n[SetUp \"1\"]"));
-        var r = await Club().ImportPgnAsync(me, pgn, null);
+        var r = await Club().ImportPgnAsync(TestClubs.Home, me, pgn, null);
 
         Assert.Equal(0, r.Added);
         Assert.Equal(new[] { (1, "noLeaguePlayer"), (2, "onlyOwnClub"), (3, "illegal"), (4, "fromPosition") },
@@ -550,7 +550,7 @@ public class LeagueClubServiceTests : IDisposable
             Pgn("Oberschmid, Patrik", "Hengl, Philip", Pendulum(20_000, tail: "Ke3")));             // riesig, am Ende illegal
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var p = await Club().PreviewAsync(me, pgn);
+        var p = await Club().PreviewAsync(TestClubs.Home, me, pgn);
         sw.Stop();
 
         Assert.Equal(new string?[] { null, "tooLong", "tooLong" }, p.Games.Select(g => g.Error));
@@ -563,7 +563,7 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var pgn = "\uFEFF" + Pgn("Hengl, Philip", "Schnabl, Andreas") + Pgn("Oberschmid, Patrik", "Hengl, Philip", " *");
-        var p = await Club().PreviewAsync(me, pgn);
+        var p = await Club().PreviewAsync(TestClubs.Home, me, pgn);
         Assert.Equal(2, p.Games.Count);
         Assert.Equal((null, "Hengl, Philip"), (p.Games[0].Error, p.Games[0].White.Match.Name));
         Assert.Equal("noMoves", p.Games[1].Error);
@@ -573,7 +573,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Preview_UnknownName_OffersSimilarLeaguePlayers_KnownNameDoesNot()
     {
         var me = await SeedAsync();
-        var p = await Club().PreviewAsync(me, Pgn("Hengl, Phillip", "Schnabl, Andreas") + Pgn("Hengl, Phillip", "Niemand, Kennt"));
+        var p = await Club().PreviewAsync(TestClubs.Home, me, Pgn("Hengl, Phillip", "Schnabl, Andreas") + Pgn("Hengl, Phillip", "Niemand, Kennt"));
         var typo = p.Games[0].White.Match;
         Assert.False(typo.League);                                               // nicht erkannt …
         Assert.Equal("222", Assert.Single(typo.Similar).Fide);                   // … aber „Hengl, Philip" zur Schnellauswahl
@@ -586,7 +586,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Match_UnknownName_OffersSimilarLeaguePlayers()
     {
         await SeedAsync();
-        var m = await Club().MatchAsync("Schnabel, Andreas", "Hengl, Philip", default);
+        var m = await Club().MatchAsync(TestClubs.Home, "Schnabel, Andreas", "Hengl, Philip", default);
         Assert.Equal("333", Assert.Single(m.White.Similar).Fide);
         Assert.Empty(m.Black.Similar);
     }
@@ -599,7 +599,7 @@ public class LeagueClubServiceTests : IDisposable
         (await _db.UserProfiles.SingleAsync()).LastName = null;
         (await _db.UserProfiles.SingleAsync()).FirstName = null;
         await _db.SaveChangesAsync();
-        var p = await Club().PreviewAsync(me, Pgn("Hengl, Philip", "Fremder, Name", extra: "[BlackFideId \"999\"]"));
+        var p = await Club().PreviewAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Fremder, Name", extra: "[BlackFideId \"999\"]"));
         Assert.True(p.Games[0].Black.Owner);
         Assert.True(p.Games[0].Black.Replace);                                   // ich — auch ohne Meldeliste
     }
@@ -609,15 +609,15 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        var r1 = await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip") + Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
-        var r2 = await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas", date: "2024.10.01"), null);  // gleiche Züge
+        var r1 = await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip") + Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        var r2 = await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Schnabl, Andreas", date: "2024.10.01"), null);  // gleiche Züge
         Assert.Equal((1, 1), (r1.Added, r1.Duplicates));
         Assert.Equal((0, 1), (r2.Added, r2.Duplicates));
 
         const string shortGame = "1. e4 e5 2. Nf3 Nc6 1-0";
-        var r3 = await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip", shortGame), null);
-        var r4 = await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", shortGame), null);
-        var r5 = await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", shortGame, date: "2025.01.01"), null);
+        var r3 = await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip", shortGame), null);
+        var r4 = await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", shortGame), null);
+        var r5 = await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", shortGame, date: "2025.01.01"), null);
         Assert.Equal((1, 1, 1), (r3.Added, r4.Added, r5.Added));
         Assert.Equal(4, _db.LeagueClubGames.Count());
     }
@@ -666,18 +666,18 @@ public class LeagueClubServiceTests : IDisposable
             return counter.Count - before;
         }
 
-        await club.ImportPgnAsync(null, Games(1, 1900), null);                        // Karten anlegen, damit beide Läufe gleich beginnen
-        var previewFew = await Queries(() => club.PreviewAsync(null, Games(2, 1950)));
-        var previewMany = await Queries(() => club.PreviewAsync(null, Games(40, 1950)));
-        var importFew = await Queries(() => club.ImportPgnAsync(null, Games(2, 1910), null));
-        var importMany = await Queries(() => club.ImportPgnAsync(null, Games(40, 1950), null));
+        await club.ImportPgnAsync(TestClubs.Home, null, Games(1, 1900), null);                        // Karten anlegen, damit beide Läufe gleich beginnen
+        var previewFew = await Queries(() => club.PreviewAsync(TestClubs.Home, null, Games(2, 1950)));
+        var previewMany = await Queries(() => club.PreviewAsync(TestClubs.Home, null, Games(40, 1950)));
+        var importFew = await Queries(() => club.ImportPgnAsync(TestClubs.Home, null, Games(2, 1910), null));
+        var importMany = await Queries(() => club.ImportPgnAsync(TestClubs.Home, null, Games(40, 1950), null));
 
         Assert.True(previewFew > 0);                                                   // der Zähler sieht die Abfragen
         Assert.Equal(previewFew, previewMany);
         Assert.Equal(importFew, importMany);
         Assert.Equal(43, await db.LeagueClubGames.CountAsync());
-        Assert.Equal((0, 40), ((await club.ImportPgnAsync(null, Games(40, 1950), null)).Added,
-            (await club.PreviewAsync(null, Games(40, 1950))).Games.Count(g => g.Duplicate)));   // die Dubletten stimmen weiter
+        Assert.Equal((0, 40), ((await club.ImportPgnAsync(TestClubs.Home, null, Games(40, 1950), null)).Added,
+            (await club.PreviewAsync(TestClubs.Home, null, Games(40, 1950))).Games.Count(g => g.Duplicate)));   // die Dubletten stimmen weiter
     }
 
     /// <summary>Codereview 2026-09-29, F7-007: Suche und Namensabgleich lasen bei JEDEM Aufruf (jede Tipp-Pause, auch über
@@ -694,7 +694,7 @@ public class LeagueClubServiceTests : IDisposable
         _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 11, Team = "Absam", Name = "Hengl, Philip", NameKey = LeagueNames.NameKey("Hengl, Philip"), FideId = "222", EloI = 2172, EloN = 2100 });
         await _db.SaveChangesAsync();
 
-        var hit = (await Club().SuggestAsync("hengl", false, default)).Single(p => p.Fide == "222");
+        var hit = (await Club().SuggestAsync(TestClubs.Home, "hengl", false, default)).Single(p => p.Fide == "222");
         Assert.Equal(2172, hit.Elo);
     }
 
@@ -706,7 +706,7 @@ public class LeagueClubServiceTests : IDisposable
         LeagueClubService Request() => new(_db, NullLogger<LeagueClubService>.Instance, () => Now, cache: cache);   // je Anfrage ein Dienst
         static string Names(List<LeagueRosterPersonDto> l) => string.Join(" | ", l.Select(p => p.Name));
 
-        Assert.Equal("Hengl, Philip", Names(await Request().SuggestAsync("hengl", false, default)));
+        Assert.Equal("Hengl, Philip", Names(await Request().SuggestAsync(TestClubs.Home, "hengl", false, default)));
         Assert.Equal(1, cache.Count);
 
         // An Ort und Stelle geändert (das tut kein Schreibweg): nicht neu gelesen — der Index kommt aus dem Cache.
@@ -714,8 +714,8 @@ public class LeagueClubServiceTests : IDisposable
         hengl.Name = "Hengl, Philipp";
         hengl.NameKey = LeagueNames.NameKey(hengl.Name);
         await _db.SaveChangesAsync();
-        Assert.Equal("Hengl, Philip", Names(await Request().SuggestAsync("hengl", false, default)));
-        Assert.True((await Request().MatchAsync("Hengl, Philip", null, default)).White.League);
+        Assert.Equal("Hengl, Philip", Names(await Request().SuggestAsync(TestClubs.Home, "hengl", false, default)));
+        Assert.True((await Request().MatchAsync(TestClubs.Home, "Hengl, Philip", null, default)).White.League);
 
         // Wie LeagueRefresh.ReplaceAsync: Zeilen der Liga gelöscht und neu angelegt — neue Ids, neuer Index.
         var old = await _db.LeaguePlayers.Where(p => p.Tnr == 7 && p.Team == "Absam").ToListAsync();
@@ -723,9 +723,9 @@ public class LeagueClubServiceTests : IDisposable
         Player(7, "Absam", "Hengl, Philipp", "222");
         Player(7, "Absam", "Schnabl, Andreas Dr.", "333");
         await _db.SaveChangesAsync();
-        Assert.Equal("Hengl, Philipp", Names(await Request().SuggestAsync("hengl", false, default)));
-        Assert.Equal(("Hengl, Philipp", "222"), ((await Request().MatchAsync("Hengl, Philipp", null, default)).White.Name,
-            (await Request().MatchAsync("Hengl, Philipp", null, default)).White.Fide));
+        Assert.Equal("Hengl, Philipp", Names(await Request().SuggestAsync(TestClubs.Home, "hengl", false, default)));
+        Assert.Equal(("Hengl, Philipp", "222"), ((await Request().MatchAsync(TestClubs.Home, "Hengl, Philipp", null, default)).White.Name,
+            (await Request().MatchAsync(TestClubs.Home, "Hengl, Philipp", null, default)).White.Fide));
     }
 
     /// <summary>Die API baut <see cref="LeagueClubService"/> mit dem allgemeinen Cache (DI) — sonst wäre der Cache wirkungslos.</summary>
@@ -747,7 +747,7 @@ public class LeagueClubServiceTests : IDisposable
         }
 
         using var scope = provider.CreateScope();
-        Assert.Single(await scope.ServiceProvider.GetRequiredService<LeagueClubService>().SuggestAsync("hengl", false, default));
+        Assert.Single(await scope.ServiceProvider.GetRequiredService<LeagueClubService>().SuggestAsync(TestClubs.Home, "hengl", false, default));
         Assert.Equal(1, ((MemoryCache)provider.GetRequiredService<IMemoryCache>()).Count);
     }
 
@@ -769,8 +769,8 @@ public class LeagueClubServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
         var club = Club();
-        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);            // = die chess-results-Partie
-        await club.ImportPgnAsync(me, Pgn("Schnabl, Andreas", "Oberschmid, Patrik", "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 1-0"), null);
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);            // = die chess-results-Partie
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Schnabl, Andreas", "Oberschmid, Patrik", "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 1-0"), null);
 
         var hengl = await _db.LeaguePlayerProfiles.AsNoTracking().SingleAsync(p => p.FideId == "222");
         Assert.Equal(1, hengl.GameCount);                                  // dieselbe Partie nur einmal
@@ -784,7 +784,7 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(1, roster[1]!["g"]!.GetValue<int>());                 // Partienzahl in der Ansicht nachgezogen
 
         var pgn = await new LeagueProfileStore(_db).PgnAsync("333", default);
-        Assert.Contains("Schwaz", pgn!.Value.Pgn);                         // Download = fremde + Vereinspartien
+        Assert.Contains("Testdorf", pgn!.Value.Pgn);                         // Download = fremde + Vereinspartien
     }
 
     /// <summary>Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar sein" — dieselbe Auswahl wie auf der Karte,
@@ -795,14 +795,14 @@ public class LeagueClubServiceTests : IDisposable
         var me = await SeedAsync();
         _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "222", Name = "Hengl, Philip", Pgn = ExternalSameGame, GameCount = 1 });
         await _db.SaveChangesAsync();
-        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Binder, Moriz",
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Binder, Moriz",
             "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0", "2025.03.01"), null);
 
         var card = JsonNode.Parse((await _db.LeaguePlayerProfiles.AsNoTracking().SingleAsync(p => p.FideId == "222")).ProfileJson)!["recent"]!.AsArray();
         var recent = (await new LeagueProfileStore(_db).RecentAsync("222", default))!["games"]!.AsArray();
         Assert.Equal(card.Select(g => (g!["date"]!.GetValue<string>(), g["vs"]!.GetValue<string>(), g["color"]!.GetValue<string>())),
             recent.Select(g => (g!["date"]!.GetValue<string>(), g["vs"]!.GetValue<string>(), g["color"]!.GetValue<string>())));
-        Assert.Equal(("2025.??.??", "Schwaz", "w"), (recent[0]!["date"]!.GetValue<string>(), recent[0]!["vs"]!.GetValue<string>(),
+        Assert.Equal(("2025.??.??", "Testdorf", "w"), (recent[0]!["date"]!.GetValue<string>(), recent[0]!["vs"]!.GetValue<string>(),
             recent[0]!["color"]!.GetValue<string>()));                                     // die Vereinspartie, neueste zuerst
         Assert.Contains("10. Nxd5 exd5", recent[0]!["pgn"]!.GetValue<string>());
         Assert.Contains("[Event \"TMM Landesliga\"]", recent[1]!["pgn"]!.GetValue<string>());
@@ -817,7 +817,7 @@ public class LeagueClubServiceTests : IDisposable
         var me = await SeedAsync();
         _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "222", Name = "Hengl, Philip", Pgn = ExternalSameGame, GameCount = 1 });
         await _db.SaveChangesAsync();
-        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Binder, Moriz",
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Binder, Moriz",
             "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0", "2025.03.01"), null);
         var store = new LeagueProfileStore(_db);
         var all = (await store.RecentAsync("222", default))!["games"]!.AsArray();
@@ -835,7 +835,7 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Refresh_MergingChessResults_KeepsTheClubGamesInTheCard()
     {
         var me = await SeedAsync();
-        await Club().ImportPgnAsync(me, Pgn("Schnabl, Andreas", "Oberschmid, Patrik", "1. d4 Nf6 2. c4 e6 1-0"), null);
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Schnabl, Andreas", "Oberschmid, Patrik", "1. d4 Nf6 2. c4 e6 1-0"), null);
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
         var refresh = new LeagueRefresh(_db, league, new NoClients(), NullLogger<LeagueRefresh>.Instance, () => Now);
 
@@ -843,7 +843,7 @@ public class LeagueClubServiceTests : IDisposable
 
         var row = await _db.LeaguePlayerProfiles.AsNoTracking().SingleAsync(p => p.FideId == "333");
         Assert.Equal(2, row.GameCount);
-        Assert.DoesNotContain("Schwaz", row.Pgn);
+        Assert.DoesNotContain("Testdorf", row.Pgn);
         Assert.Equal(Now, row.CrFetchedAt);
     }
 
@@ -891,7 +891,7 @@ public class LeagueClubServiceTests : IDisposable
             MegaGame("Hengl, Philip", "222", "B, B", null, "1. e4 e5 2. Nf3 Nc6", "2023.03.01", "0-1"),
             MegaGame("Hengl, Philip", "222", "C, C", null, "1. d4 d5", "2021.03.01", "1/2-1/2"),
             MegaGame("D, D", null, "Hengl, Philip", "222", "1. e4 c6", "2022.03.01", "0-1")), "Mega", default);
-        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Oberschmid, Patrik"), null);        // Vereinspartie zählt mit
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Oberschmid, Patrik"), null);        // Vereinspartie zählt mit
 
         var root = (await store.TreeAsync("222", "w", null, default))!;
         Assert.Equal(4, root["total"]!.GetValue<int>());
@@ -941,7 +941,7 @@ public class LeagueClubServiceTests : IDisposable
         // Eine Vereinspartie (RefreshCardsAsync → RebuildAsync setzt UpdatedAt): neuer Stand, neu gelesen — samt Vereinspartie.
         row.Pgn = stored;
         await _db.SaveChangesAsync();
-        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Oberschmid, Patrik"), null);
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Oberschmid, Patrik"), null);
         Assert.Equal("d4:1 e4:2", Moves((await Store().TreeAsync("222", "w", null, default))!));
 
         row.Pgn = MegaGame("Hengl, Philip", "222", "B, B", null, "1. c4 e5", "2024.03.01");
@@ -958,25 +958,25 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        var (bad, reason, message) = await club.AddGameAsync(me, new LeagueClubGameRequest { Moves = new() { "e4", "e5", "Ke3" }, White = "x", Black = "y" });
+        var (bad, reason, message) = await club.AddGameAsync(TestClubs.Home, me, new LeagueClubGameRequest { Moves = new() { "e4", "e5", "Ke3" }, White = "x", Black = "y" });
         Assert.Null(bad);
         Assert.Equal("illegal", reason);
         Assert.Contains("ply 3", message);
 
-        var (game, r, _) = await club.AddGameAsync(me, new LeagueClubGameRequest
+        var (game, r, _) = await club.AddGameAsync(TestClubs.Home, me, new LeagueClubGameRequest
         {
             Moves = new() { "e4", "c5", "Nf3" }, White = "Didi", Black = "irgendwie falsch geschrieben", BlackFide = "222",
             WhiteReplace = true, Year = 2026, Result = "0-1", Event = "Simultan",
         });
         Assert.Null(r);
-        Assert.Equal(("Schwaz", "Hengl, Philip", "222", 2026, "0-1"), (game!.White, game.Black, game.BlackFide, game.Year, game.Result));
+        Assert.Equal(("Testdorf", "Hengl, Philip", "222", 2026, "0-1"), (game!.White, game.Black, game.BlackFide, game.Year, game.Result));
         Assert.Null(game.Event);
         Assert.Contains("1. e4 c5 2. Nf3", game.Pgn);
-        Assert.Equal("duplicate", (await club.AddGameAsync(me, new LeagueClubGameRequest
+        Assert.Equal("duplicate", (await club.AddGameAsync(TestClubs.Home, me, new LeagueClubGameRequest
         {
             Moves = new() { "e4", "c5", "Nf3" }, White = "Didi", Black = "Hengl, Philip", Year = 2026, WhiteReplace = true,
         })).Reason);
-        Assert.Equal("onlyOwnClub", (await club.AddGameAsync(me, new LeagueClubGameRequest
+        Assert.Equal("onlyOwnClub", (await club.AddGameAsync(TestClubs.Home, me, new LeagueClubGameRequest
         {
             Moves = new() { "d4" }, White = "Binder, Moriz", Black = "Hengl, Philip", WhiteReplace = true, BlackReplace = true,
         })).Reason);
@@ -988,13 +988,13 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Kinsiz, Atlas"), null);                    // Schwarz unbekannt
-        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0"), null);
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Kinsiz, Atlas"), null);                    // Schwarz unbekannt
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0"), null);
         var named = _db.LeagueClubGames.AsNoTracking().Single(g => !g.Anonymized);
         var anon = _db.LeagueClubGames.AsNoTracking().Single(g => g.Anonymized);
         Assert.Equal(("Kinsiz, Atlas", (string?)null), (named.Black, named.BlackFide));
 
-        var (game, reason) = await club.UpdateAsync(me, false, named.Id,
+        var (game, reason) = await club.UpdateAsync(TestClubs.Home, me, false, named.Id,
             new LeagueClubGameUpdateRequest { Black = new() { Fide = "333" }, Result = "0-1" });
         Assert.Null(reason);
         Assert.Equal(("Schnabl, Andreas Dr.", "333", "0-1"), (game!.Black, game.BlackFide, game.Result));
@@ -1004,16 +1004,16 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(("kinsiz, atlas", "333"), (_db.LeagueNameAliases.Single().NameKey, _db.LeagueNameAliases.Single().Fide));
         Assert.Equal(1, _db.LeaguePlayerProfiles.Single(p => p.FideId == "333").GameCount);          // Karte nachgezogen
 
-        Assert.Equal("anonymous", (await club.UpdateAsync(me, true, anon.Id,
+        Assert.Equal("anonymous", (await club.UpdateAsync(TestClubs.Home, me, true, anon.Id,
             new LeagueClubGameUpdateRequest { White = new() { Name = "Wer auch immer" } })).Reason);
-        Assert.Equal("forbidden", (await club.UpdateAsync(me, false, anon.Id, new LeagueClubGameUpdateRequest { Result = "*" })).Reason);
-        Assert.Null((await club.UpdateAsync(me + 1, true, anon.Id, new LeagueClubGameUpdateRequest { Result = "1/2-1/2" })).Reason);
-        Assert.Equal("Schwaz", _db.LeagueClubGames.AsNoTracking().Single(g => g.Id == anon.Id).White);   // bleibt anonym
-        Assert.Equal("forbidden", (await club.UpdateAsync(me + 1, false, named.Id, new LeagueClubGameUpdateRequest { Result = "*" })).Reason);
-        Assert.Equal("invalidResult", (await club.UpdateAsync(me, false, named.Id, new LeagueClubGameUpdateRequest { Result = "2-0" })).Reason);
-        Assert.Equal("noLeaguePlayer", (await club.UpdateAsync(me, false, named.Id, new LeagueClubGameUpdateRequest
+        Assert.Equal("forbidden", (await club.UpdateAsync(TestClubs.Home, me, false, anon.Id, new LeagueClubGameUpdateRequest { Result = "*" })).Reason);
+        Assert.Null((await club.UpdateAsync(TestClubs.Home, me + 1, true, anon.Id, new LeagueClubGameUpdateRequest { Result = "1/2-1/2" })).Reason);
+        Assert.Equal("Testdorf", _db.LeagueClubGames.AsNoTracking().Single(g => g.Id == anon.Id).White);   // bleibt anonym
+        Assert.Equal("forbidden", (await club.UpdateAsync(TestClubs.Home, me + 1, false, named.Id, new LeagueClubGameUpdateRequest { Result = "*" })).Reason);
+        Assert.Equal("invalidResult", (await club.UpdateAsync(TestClubs.Home, me, false, named.Id, new LeagueClubGameUpdateRequest { Result = "2-0" })).Reason);
+        Assert.Equal("noLeaguePlayer", (await club.UpdateAsync(TestClubs.Home, me, false, named.Id, new LeagueClubGameUpdateRequest
             { White = new() { Name = "Niemand, Bekannt" }, Black = new() { Name = "Auch, Niemand" } })).Reason);
-        Assert.Equal("notFound", (await club.UpdateAsync(me, true, 99999, new LeagueClubGameUpdateRequest())).Reason);
+        Assert.Equal("notFound", (await club.UpdateAsync(TestClubs.Home, me, true, 99999, new LeagueClubGameUpdateRequest())).Reason);
     }
 
     /// <summary>Gemeldet 2026-09-28: auf „Oberschmid, Patrik" korrigiert — „der soll dann natürlich auch durch Schwaz ersetzt
@@ -1023,13 +1023,13 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        await club.ImportPgnAsync(me, Pgn("Unbekannt, Wer", "Hengl, Philip"), null);          // mit Namen: Hochladender gespeichert
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Unbekannt, Wer", "Hengl, Philip"), null);          // mit Namen: Hochladender gespeichert
         var g0 = _db.LeagueClubGames.AsNoTracking().Single();
         Assert.Equal((false, (int?)me, "Vereinsmeisterschaft"), (g0.Anonymized, g0.UploadedByUserId, g0.Event));
 
-        var (game, reason) = await club.UpdateAsync(me, false, g0.Id, new LeagueClubGameUpdateRequest { White = new() { Fide = "900" } });
+        var (game, reason) = await club.UpdateAsync(TestClubs.Home, me, false, g0.Id, new LeagueClubGameUpdateRequest { White = new() { Fide = "900" } });
         Assert.Null(reason);
-        Assert.Equal(("Schwaz", (string?)null, (int?)null), (game!.White, game.WhiteFide, game.WhiteElo));
+        Assert.Equal(("Testdorf", (string?)null, (int?)null), (game!.White, game.WhiteFide, game.WhiteElo));
         Assert.True(game.Anonymized);
         Assert.Null(game.UploadedByUserId);
         Assert.Null(game.CreatedAt);
@@ -1037,10 +1037,10 @@ public class LeagueClubServiceTests : IDisposable
         Assert.DoesNotContain("Oberschmid", game.Pgn);
         Assert.DoesNotContain("Vereinsmeisterschaft", game.Pgn);
         Assert.Equal(("Oberschmid, Patrik", "900"), (game.WhiteRealName, game.WhiteRealFide));   // intern gemerkt
-        var (again, _) = await club.UpdateAsync(me, true, g0.Id, new LeagueClubGameUpdateRequest { Result = "0-1" });
+        var (again, _) = await club.UpdateAsync(TestClubs.Home, me, true, g0.Id, new LeagueClubGameUpdateRequest { Result = "0-1" });
         Assert.Equal("Oberschmid, Patrik", again!.WhiteRealName);                                // unveränderte Seite behält ihn
 
-        var item = (await club.ListAsync(me, true, null, null, 1, default)).Items.Single();
+        var item = (await club.ListAsync(TestClubs.Home, me, true, null, null, 1, default)).Items.Single();
         Assert.StartsWith("e2e4 c7c5 g1f3 d7d6 d2d4 c5d4", item.Uci);
     }
 
@@ -1050,9 +1050,9 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
 
-        var list = await club.ListAsync(me, true, null, null, int.MaxValue, default);
+        var list = await club.ListAsync(TestClubs.Home, me, true, null, null, int.MaxValue, default);
 
         Assert.Empty(list.Items);
         Assert.Equal(1, list.Total);
@@ -1067,11 +1067,11 @@ public class LeagueClubServiceTests : IDisposable
         Player(7, "Absam", "Kinsiz, Atlas", null);
         await _db.SaveChangesAsync();
         var club = Club();
-        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Kinsiz, Atlas"), null);          // Schwaz – Ligaspieler ohne ID
-        await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Niemand, Kennt", "1. d4 d5 1-0"),
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Kinsiz, Atlas"), null);          // Schwaz – Ligaspieler ohne ID
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Niemand, Kennt", "1. d4 d5 1-0"),
             [new() { Index = 1, Black = new() { Name = "Niemand, Kennt" } }]);                   // Name, den keiner kennt
 
-        var items = (await club.ListAsync(me, true, null, null, 1, default)).Items;
+        var items = (await club.ListAsync(TestClubs.Home, me, true, null, null, 1, default)).Items;
         var kinsiz = items.Single(i => i.Black == "Kinsiz, Atlas");
         Assert.Null(kinsiz.BlackFide);
         Assert.True(kinsiz.BlackInRoster);
@@ -1086,23 +1086,23 @@ public class LeagueClubServiceTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas"), null);
-        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", "1. d4 d5 1-0"), null);
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Schnabl, Andreas"), null);
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", "1. d4 d5 1-0"), null);
 
-        var list = await club.ListAsync(me, false, null, null, 1, default);
+        var list = await club.ListAsync(TestClubs.Home, me, false, null, null, 1, default);
         Assert.Equal(2, list.Total);
         var named = list.Items.Single(i => !i.Anonymized);
         var anon = list.Items.Single(i => i.Anonymized);
         Assert.Equal("1.e4 c5 2.Nf3 d6 3.d4 cxd4", named.Opening);
         Assert.True(named.CanDelete);
         Assert.False(anon.CanDelete);
-        Assert.Equal(2, (await club.ListAsync(me, false, "333", null, 1, default)).Items.Count);
-        Assert.Single((await club.ListAsync(me, false, null, "Hengl", 1, default)).Items);
+        Assert.Equal(2, (await club.ListAsync(TestClubs.Home, me, false, "333", null, 1, default)).Items.Count);
+        Assert.Single((await club.ListAsync(TestClubs.Home, me, false, null, "Hengl", 1, default)).Items);
 
-        Assert.Equal(LeagueClubService.DeleteResult.Forbidden, await club.DeleteAsync(me + 1, false, named.Id));
-        Assert.Equal(LeagueClubService.DeleteResult.Forbidden, await club.DeleteAsync(me, false, anon.Id));
-        Assert.Equal(LeagueClubService.DeleteResult.Deleted, await club.DeleteAsync(me, false, named.Id));
-        Assert.Equal(LeagueClubService.DeleteResult.Deleted, await club.DeleteAsync(me + 1, true, anon.Id));
+        Assert.Equal(LeagueClubService.DeleteResult.Forbidden, await club.DeleteAsync(TestClubs.Home, me + 1, false, named.Id));
+        Assert.Equal(LeagueClubService.DeleteResult.Forbidden, await club.DeleteAsync(TestClubs.Home, me, false, anon.Id));
+        Assert.Equal(LeagueClubService.DeleteResult.Deleted, await club.DeleteAsync(TestClubs.Home, me, false, named.Id));
+        Assert.Equal(LeagueClubService.DeleteResult.Deleted, await club.DeleteAsync(TestClubs.Home, me + 1, true, anon.Id));
         Assert.Empty(_db.LeagueClubGames);
         Assert.Equal(0, _db.LeaguePlayerProfiles.Single(p => p.FideId == "333").GameCount);   // Karte ohne die Partie
     }
@@ -1111,8 +1111,8 @@ public class LeagueClubServiceTests : IDisposable
     public async Task Export_IsAllGamesAsPgn()
     {
         var me = await SeedAsync();
-        await Club().ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip") + Pgn("Oberschmid, Patrik", "Schnabl, Andreas", "1. d4 d5 1-0"), null);
-        var pgn = await Club().ExportAsync(null, null, default);
+        await Club().ImportPgnAsync(TestClubs.Home, me, Pgn("Oberschmid, Patrik", "Hengl, Philip") + Pgn("Oberschmid, Patrik", "Schnabl, Andreas", "1. d4 d5 1-0"), null);
+        var pgn = await Club().ExportAsync(TestClubs.Home, null, null, default);
         Assert.Equal(2, RookHub.Api.Services.PgnParser.SplitGames(pgn).Count());
     }
 }
@@ -1149,8 +1149,8 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
     {
         await SeedAsync();
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
-        Assert.Single(await club.SuggestAsync("hengl", false, default));
-        var all = await club.SuggestAsync("hengl", true, default);
+        Assert.Single(await club.SuggestAsync(TestClubs.Home, "hengl", false, default));
+        var all = await club.SuggestAsync(TestClubs.Home, "hengl", true, default);
         Assert.Equal(new[] { ("Hengl, Philip", "liga", true), ("Hengl, Peter", "mega", false) },
             all.Select(p => (p.Name, p.Source, p.League)));                           // Philip nur einmal: als Ligaspieler
     }
@@ -1223,7 +1223,7 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
     [Fact]
     public async Task NotInTheLeague_ButInTheMegabase_IsKnown_AndCanBeImported()
     {
-        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Schwaz", Name = "Oberschmid, Patrik", NameKey = "oberschmid, patrik", FideId = "900" });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Testdorf", Name = "Oberschmid, Patrik", NameKey = "oberschmid, patrik", FideId = "900" });
         await _db.SaveChangesAsync();
         await new LeagueMegaPlayers(_db).ReplaceAsync(new StringReader(
             "Bodrov, Timofey\t14131781\t27\t2025\t2128\nSchett, Franz\t1611135\t189\t2019\t2029\n"), default);
@@ -1231,7 +1231,7 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
         var pgn = Game("Oberschmid, Patrik", "Bodrov, Timofey") + "\n" + Game("Oberschmid, Patrik", "Unbekannt, Wer") + "\n"
             + Game("Oberschmid, Patrik", "Irgendwer", "[BlackFideId \"1611135\"]", "2019.03.01");   // anderes Jahr: keine Dublette
 
-        var preview = await club.PreviewAsync(null, pgn);
+        var preview = await club.PreviewAsync(TestClubs.Home, null, pgn);
         var b1 = preview.Games[0].Black.Match;
         Assert.Equal((false, true, "Bodrov, Timofey", "14131781"), (b1.League, b1.Mega, b1.Name, b1.Fide));
         Assert.False(preview.Games[1].Black.Match.Mega);
@@ -1242,25 +1242,25 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
             Index = i, White = new() { Fide = "900", Replace = true },
             Black = new() { Fide = preview.Games[i - 1].Black.Match.Fide },
         }).ToList();
-        var result = await club.ImportPgnAsync(null, pgn, decisions);
+        var result = await club.ImportPgnAsync(TestClubs.Home, null, pgn, decisions);
         Assert.Equal(2, result.Added);
         Assert.Equal(("onlyOwnClub", 2), (result.Failed.Single().Reason, result.Failed.Single().Index));   // nur Schwaz bleibt
         var stored = _db.LeagueClubGames.OrderBy(g => g.Id).ToList();
-        Assert.Equal(new (string, string, string?)[] { ("Schwaz", "Bodrov, Timofey", "14131781"), ("Schwaz", "Schett, Franz", "1611135") },
+        Assert.Equal(new (string, string, string?)[] { ("Testdorf", "Bodrov, Timofey", "14131781"), ("Testdorf", "Schett, Franz", "1611135") },
             stored.Select(g => (g.White, g.Black, g.BlackFide)));
 
         // Ein getippter Name, den nur die Megabase kennt, geht auch — und der Abgleich sagt „nicht in Liga".
-        var typed = await club.ImportPgnAsync(null, Game("Oberschmid, Patrik", "X", date: "2021.01.01"),
+        var typed = await club.ImportPgnAsync(TestClubs.Home, null, Game("Oberschmid, Patrik", "X", date: "2021.01.01"),
             new[] { new LeagueClubImportGameDecision { Index = 1, White = new() { Replace = true }, Black = new() { Name = "Timofey Bodrov" } } });
         Assert.Equal(1, typed.Added);
-        Assert.True((await club.MatchAsync("Timofey Bodrov", "Unbekannt", default)).White.Mega);
+        Assert.True((await club.MatchAsync(TestClubs.Home, "Timofey Bodrov", "Unbekannt", default)).White.Mega);
     }
 
     [Fact]
     public async Task NeitherLeagueNorMegabase_StaysUnknown()
     {
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
-        var (_, reason, _) = await club.AddGameAsync(null, new LeagueClubGameRequest
+        var (_, reason, _) = await club.AddGameAsync(TestClubs.Home, null, new LeagueClubGameRequest
         {
             Moves = new() { "e4", "e5" }, White = "Nobody, Else", Black = "Someone, Other",
         });
@@ -1272,7 +1272,7 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
     {
         await SeedAsync();
         var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
-        var (game, reason, _) = await club.AddGameAsync(null, new LeagueClubGameRequest
+        var (game, reason, _) = await club.AddGameAsync(TestClubs.Home, null, new LeagueClubGameRequest
         {
             Moves = new() { "e4", "e5" }, White = "Hengl, Philip", Black = "Hengl, Peter", BlackFide = "777",
         });

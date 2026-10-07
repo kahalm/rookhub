@@ -122,10 +122,18 @@ public sealed class LeagueService
         foreach (var e in db.ChangeTracker.Entries<LeagueView>().ToList()) e.State = EntityState.Detached;
     }
 
-    public async Task<JsonObject> IndexAsync(CancellationToken ct)
+    /// <summary>Die laufende Saison einer Liga-Quelle (<c>null</c> = chess-results).</summary>
+    private async Task<string?> CurrentSeasonAsync(string? source, CancellationToken ct) =>
+        await _db.LeagueTournaments.Where(t => t.Source == source).MaxAsync(t => (string?)t.Season, ct);
+
+    /// <summary>Startseite: die Ligen der laufenden Saison — seit dem Mandanten-Schritt (2026-10-07) nur die der Quelle des
+    /// Vereins (<see cref="LeagueClub.Source"/>: Schwaz sieht Tirol, Weilheim Bayern); dazu der Verein selbst (Name,
+    /// Mannschafts-Anfang für die Vorauswahl, Anonymisierungs-Name).</summary>
+    public async Task<JsonObject> IndexAsync(LeagueClub club, CancellationToken ct)
     {
-        var season = await CurrentSeasonAsync(ct);
-        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga")
+        var source = club.Source;
+        var season = await CurrentSeasonAsync(source, ct);
+        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga" && t.Source == source)
             .OrderBy(t => t.Level).ThenBy(t => t.Grp).ToListAsync(ct);
         var views = await _db.LeagueViews.AsNoTracking().Where(v => ts.Select(t => t.Tnr).Contains(v.Tnr))
             .Select(v => new { v.Tnr, v.GeneratedAt }).ToListAsync(ct);
@@ -133,6 +141,7 @@ public sealed class LeagueService
         return new JsonObject
         {
             ["season"] = season,
+            ["club"] = ClubJson(club),
             ["generated"] = generated is null ? null : ToLocal(generated.Value).ToString("dd.MM.yyyy HH:mm"),
             ["leagues"] = new JsonArray(ts.Where(t => views.Any(v => v.Tnr == t.Tnr)).Select(t => (JsonNode)new JsonObject
             {
@@ -140,6 +149,12 @@ public sealed class LeagueService
             }).ToArray()),
         };
     }
+
+    /// <summary>Was die Oberfläche vom Verein wissen darf (kein Mitglied, keine Gruppe).</summary>
+    public static JsonObject ClubJson(LeagueClub c) => new()
+    {
+        ["id"] = c.Id, ["name"] = c.Name, ["anonName"] = c.AnonName, ["teamPrefix"] = c.TeamPrefix, ["source"] = c.Source,
+    };
 
     private static DateTime ToLocal(DateTime utc)
     {
@@ -158,14 +173,15 @@ public sealed class LeagueService
     /// <c>fixtures, top1, top2, top3, of</c> (seit 0.658.0; Plätze am Brett, siehe <c>LeagueViewBuilder.Evaluate</c>). Ansichten
     /// ohne diese Felder (vor 0.658.0 gerechnet) zählen erst nach dem nächsten Neurechnen. Gemerkt, bis eine Ansicht neu gerechnet wird.
     /// </summary>
-    public async Task<JsonObject> ForecastStatsAsync(CancellationToken ct)
+    /// <param name="source">Die Liga-Quelle des Vereins (Mandanten-Schritt 2026-10-07): gezählt werden nur deren Ligen.</param>
+    public async Task<JsonObject> ForecastStatsAsync(string? source, CancellationToken ct)
     {
-        var season = await CurrentSeasonAsync(ct);
-        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga")
+        var season = await CurrentSeasonAsync(source, ct);
+        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga" && t.Source == source)
             .OrderBy(t => t.Level).ThenBy(t => t.Grp).ToListAsync(ct);
         var tnrs = ts.Select(t => t.Tnr).ToList();
         var stamp = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).Select(v => v.GeneratedAt).ToListAsync(ct);
-        var key = $"league-forecast-stats:{season}:{stamp.Count}:{(stamp.Count > 0 ? stamp.Max().Ticks : 0)}";
+        var key = $"league-forecast-stats:{source ?? "cr"}:{season}:{stamp.Count}:{(stamp.Count > 0 ? stamp.Max().Ticks : 0)}";
         if (_cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
 
         var views = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).ToDictionaryAsync(v => v.Tnr, v => v.Json, ct);
@@ -313,13 +329,14 @@ public sealed class LeagueService
         return day.AddDays(ShareKeepDays);
     }
 
-    /// <summary>Link anlegen (gleiche Begegnung = gleicher Link, solange er gilt). null = nicht teilbar.</summary>
-    public async Task<LeagueShare?> CreateShareAsync(int tnr, int round, string team, int? userId, CancellationToken ct)
+    /// <summary>Link anlegen (gleiche Begegnung = gleicher Link, solange er gilt — je Verein). null = nicht teilbar. Der Link
+    /// gehört dem Verein <paramref name="club"/>: was darüber hochgeladen wird, landet in SEINER Vereins-Datenbank.</summary>
+    public async Task<LeagueShare?> CreateShareAsync(LeagueClub club, int tnr, int round, string team, int? userId, CancellationToken ct)
     {
         var f = await FixtureAsync(tnr, round, team, ct);
         if (f is null || !Shareable(f.Value.Fixture)) return null;
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var existing = await _db.LeagueShares.FirstOrDefaultAsync(s => s.Tnr == tnr && s.Round == round && s.Team == team, ct);
+        var existing = await _db.LeagueShares.FirstOrDefaultAsync(s => s.ClubId == club.Id && s.Tnr == tnr && s.Round == round && s.Team == team, ct);
         if (existing is not null)
         {
             if (existing.Expires >= today) return existing;
@@ -329,7 +346,7 @@ public sealed class LeagueService
         }
         var share = new LeagueShare
         {
-            Token = NewToken(), Tnr = tnr, Round = round, Team = team, CreatedByUserId = userId, CreatedAt = DateTime.UtcNow,
+            Token = NewToken(), ClubId = club.Id, Tnr = tnr, Round = round, Team = team, CreatedByUserId = userId, CreatedAt = DateTime.UtcNow,
             Expires = ExpiresFor(f.Value.Fixture["date"]?.GetValue<string>(), today),
         };
         _db.LeagueShares.Add(share);
@@ -337,10 +354,11 @@ public sealed class LeagueService
         return share;
     }
 
-    public async Task<bool> DeleteShareAsync(string token, CancellationToken ct)
+    /// <summary>Einen Link des Vereins löschen (der eines anderen Vereins ist „nicht gefunden").</summary>
+    public async Task<bool> DeleteShareAsync(LeagueClub club, string token, CancellationToken ct)
     {
         var s = await _db.LeagueShares.FindAsync(new object[] { token }, ct);
-        if (s is null) return false;
+        if (s is null || s.ClubId != club.Id) return false;
         _db.LeagueShares.Remove(s);
         await _db.SaveChangesAsync(ct);
         return true;
@@ -363,6 +381,16 @@ public sealed class LeagueService
     /// fände ihre Partien nicht (Codereview 2026-09-29, A2-009).</summary>
     public async Task<string?> ValidShareTokenAsync(string token, CancellationToken ct) => (await ValidShareAsync(token, ct))?.Token;
 
+    /// <summary>Token (in der Schreibweise seiner Zeile, siehe <see cref="ValidShareTokenAsync"/>) und VEREIN eines gültigen
+    /// Links (Mandanten-Schritt 2026-10-07: der Verein kommt bei <c>/api/league/s/{token}/…</c> aus <see cref="LeagueShare.ClubId"/>,
+    /// nie aus der Anfrage) — <c>null</c> = kein gültiger Link.</summary>
+    public async Task<(string Token, LeagueClub Club)?> ShareContextAsync(string token, CancellationToken ct)
+    {
+        if (await ValidShareAsync(token, ct) is not { } s) return null;
+        var club = await _db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == s.ClubId, ct);
+        return club is null ? null : (s.Token, club);
+    }
+
     private async Task<LeagueShare?> ValidShareAsync(string token, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -384,8 +412,11 @@ public sealed class LeagueService
             r!["acc"] = new JsonArray(acc.Where(a => a?["conf"]?.GetValue<string>() == "sicher").Select(a => a!.DeepClone()).ToArray());
         }
         var gen = await _db.LeagueViews.AsNoTracking().Where(v => v.Tnr == s.Tnr).Select(v => v.GeneratedAt).FirstOrDefaultAsync(ct);
+        var club = await _db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == s.ClubId, ct);
         return new JsonObject
         {
+            // der Verein des Links (Name + Anonymisierungs-Name) — die Seite des Links ersetzt mit SEINEM Namen
+            ["club"] = club is null ? null : new JsonObject { ["id"] = club.Id, ["name"] = club.Name, ["anonName"] = club.AnonName },
             ["league"] = f.Value.League["name"]?.DeepClone(), ["season"] = f.Value.League["season"]?.DeepClone(),
             ["round"] = s.Round, ["team"] = s.Team, ["fixture"] = fx,
             ["generated"] = ToLocal(gen).ToString("dd.MM.yyyy HH:mm"), ["expires"] = s.Expires.ToString("yyyy-MM-dd"),

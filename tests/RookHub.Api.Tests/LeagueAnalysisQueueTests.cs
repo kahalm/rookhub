@@ -25,13 +25,14 @@ public class LeagueAnalysisQueueTests : IDisposable
         var cred = new LichessEngineCredential { UserId = Owner, EncryptedToken = "enc", ShareAsHouseEngine = true };
         cred.SetBackgroundEngines(Enumerable.Range(1, 16).Select(i => $"rhe_t{i}"));
         _db.LichessEngineCredentials.Add(cred);
-        // Laufende Saison: Schwaz spielt Runde 2 gegen Kufstein (Runde 1 gespielt gegen Wörgl), Hall spielt woanders.
+        _db.LeagueClubs.Add(TestClubs.Home);   // der eigene Verein: „Testdorf" (Mandanten-Schritt 2026-10-07)
+        // Laufende Saison: Testdorf spielt Runde 2 gegen Kufstein (Runde 1 gespielt gegen Wörgl), Hall spielt woanders.
         _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", League = "Landesliga", Stage = "Liga" });
         _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 9, Season = "2025/26", League = "Landesliga", Stage = "Liga" });
         _db.LeagueMatches.AddRange(
-            new LeagueMatch { Tnr = 1, Round = 1, Home = "Schwaz 1", Away = "Wörgl 1", HomePts = 3, AwayPts = 3 },
-            new LeagueMatch { Tnr = 1, Round = 2, Home = "Kufstein 1", Away = "Schwaz 1" },
-            new LeagueMatch { Tnr = 1, Round = 3, Home = "Schwaz 1", Away = "Hall 1" });
+            new LeagueMatch { Tnr = 1, Round = 1, Home = "Testdorf 1", Away = "Wörgl 1", HomePts = 3, AwayPts = 3 },
+            new LeagueMatch { Tnr = 1, Round = 2, Home = "Kufstein 1", Away = "Testdorf 1" },
+            new LeagueMatch { Tnr = 1, Round = 3, Home = "Testdorf 1", Away = "Hall 1" });
         _db.LeaguePlayers.AddRange(
             new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Gegner, Kurt", FideId = "100" },
             new LeaguePlayer { Tnr = 1, Team = "Hall 1", Name = "Rest, Hans", FideId = "200" },

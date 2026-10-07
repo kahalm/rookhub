@@ -107,16 +107,18 @@ public class LeagueRefreshTests : IDisposable
     public async Task StalePlayers_OpponentsOfOwnClubFirst_ThenByProbability()
     {
         _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga" });
-        // „A" ist ein fremder Verein, Schwaz der eigene: dessen Gegner (Spieler 5, nur 20 %) kommt vor den 90 % von A.
+        // „A" ist ein fremder Verein, Testdorf der eigene (ein Verein in LeagueClubs): dessen Gegner (Spieler 5, nur 20 %)
+        // kommt vor den 90 % von A.
+        _db.LeagueClubs.Add(TestClubs.Home);
         _db.LeagueViews.Add(new LeagueView
         {
             Tnr = 1,
             Json = "{\"fixtures\":{\"A\":{\"1\":{\"status\":\"open\",\"roster\":[{\"fide\":\"4\",\"p\":0.9},{\"fide\":\"6\",\"p\":0.7}]}},"
-                 + "\"Schwaz\":{\"1\":{\"status\":\"open\",\"roster\":[{\"fide\":\"5\",\"p\":0.2},{\"fide\":\"6\",\"p\":0.3}]}}}}",
+                 + "\"Testdorf\":{\"1\":{\"status\":\"open\",\"roster\":[{\"fide\":\"5\",\"p\":0.2},{\"fide\":\"6\",\"p\":0.3}]}}}}",
         });
         await _db.SaveChangesAsync();
         var stale = await Refresh().StalePlayersAsync("2026/27", default);
-        // 6 steht bei A (70 %) UND gegen Schwaz (30 %): der Schwaz-Rang zählt
+        // 6 steht bei A (70 %) UND gegen Testdorf (30 %): der Rang des eigenen Vereins zählt
         Assert.Equal(new[] { "6", "5", "4" }, stale);
     }
 

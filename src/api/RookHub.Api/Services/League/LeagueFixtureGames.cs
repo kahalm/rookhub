@@ -9,13 +9,14 @@ namespace RookHub.Api.Services.League;
 /// oben unter dem Ergebnis auch die Paarungen direkt anzeigen, inkl. Link zu Partien, wenn vorhanden").
 /// <list type="bullet">
 /// <item>Paarungen aus <see cref="LeagueGame"/> (chess-results, öffentlich): Brett, Weiß/Schwarz samt Elo, Ergebnis.</item>
-/// <item>Partie zuerst aus der Vereins-Datenbank: Jahr der Runde, Farben passen, jede Seite über die FIDE-ID (an der Partie bzw.
-/// intern hinter „Schwaz"), über den Nachnamen oder als „Schwaz" für einen Spieler des eigenen Vereins — mindestens eine Seite
-/// muss über FIDE-ID oder Namen passen. Mehrere Treffer: die jüngste Partie.</item>
+/// <item>Partie zuerst aus der Vereins-Datenbank DES VEREINS DER ANFRAGE (Mandanten-Schritt 2026-10-07; über einen Teilen-Link
+/// der Verein des Links): Jahr der Runde, Farben passen, jede Seite über die FIDE-ID (an der Partie bzw. intern hinter der
+/// anonymisierten Seite), über den Nachnamen oder als <see cref="LeagueClub.AnonName"/> für einen Spieler des eigenen Vereins —
+/// mindestens eine Seite muss über FIDE-ID oder Namen passen. Mehrere Treffer: die jüngste Partie.</item>
 /// <item>Sonst aus den Spielerkarten (<see cref="LeaguePlayerProfile.Pgn"/>: chess-results, Übertragungen …): Datum höchstens
 /// <see cref="DayTolerance"/> Tage neben dem Rundentermin, Nachname des Gegners auf der anderen Farbe.</item>
 /// </list>
-/// Ausgegeben wird nur das PGN der Partie, wie es in der jeweiligen Quelle steht (eine Vereinspartie also mit „Schwaz").
+/// Ausgegeben wird nur das PGN der Partie, wie es in der jeweiligen Quelle steht (eine Vereinspartie also mit dem Vereinsnamen).
 /// </summary>
 public sealed class LeagueFixtureGames(AppDbContext db)
 {
@@ -26,7 +27,7 @@ public sealed class LeagueFixtureGames(AppDbContext db)
 
     /// <param name="userId">Der Angemeldete (über einen Teilen-Link <c>null</c>) — entscheidet mit <paramref name="canManage"/>,
     /// ob er eine Vereinspartie bearbeiten darf (0.675.0, dieselbe Regel wie die Vereinsliste: Verwalter oder Hochladender).</param>
-    public async Task<List<Pairing>> ForFixtureAsync(int tnr, int round, string team, CancellationToken ct,
+    public async Task<List<Pairing>> ForFixtureAsync(LeagueClub club, int tnr, int round, string team, CancellationToken ct,
         int? userId = null, bool canManage = false)
     {
         var games = await db.LeagueGames.AsNoTracking()
@@ -39,11 +40,12 @@ public sealed class LeagueFixtureGames(AppDbContext db)
         var fides = games.SelectMany(g => new[] { g.HomeFide, g.AwayFide }).Where(f => !string.IsNullOrEmpty(f)).Select(f => f!)
             .Distinct().ToList();
         var year = date?.Year;
-        var club = year is null ? new List<LeagueClubGame>() : await db.LeagueClubGames.AsNoTracking()
-            .Where(c => c.Year == year && c.LeagueGameId == null).OrderByDescending(c => c.Id).ToListAsync(ct);
+        var clubGames = year is null ? new List<LeagueClubGame>() : await db.LeagueClubGames.AsNoTracking()
+            .Where(c => c.ClubId == club.Id && c.Year == year && c.LeagueGameId == null).OrderByDescending(c => c.Id).ToListAsync(ct);
         // fest zugeordnete Partien (0.678.0) schlagen jede Raterei — und werden nie einer ANDEREN Paarung zugeraten
         var gameIds = games.Select(g => g.Id).ToList();
-        var linked = (await db.LeagueClubGames.AsNoTracking().Where(c => c.LeagueGameId != null && gameIds.Contains(c.LeagueGameId.Value))
+        var linked = (await db.LeagueClubGames.AsNoTracking()
+                .Where(c => c.ClubId == club.Id && c.LeagueGameId != null && gameIds.Contains(c.LeagueGameId.Value))
             .OrderByDescending(c => c.Id).ToListAsync(ct)).GroupBy(c => c.LeagueGameId!.Value).ToDictionary(x => x.Key, x => x.First());
         var profiles = date is null || fides.Count == 0 ? new Dictionary<string, string>() : await db.LeaguePlayerProfiles.AsNoTracking()
             .Where(p => fides.Contains(p.FideId)).ToDictionaryAsync(p => p.FideId, p => p.Pgn, ct);
@@ -60,10 +62,10 @@ public sealed class LeagueFixtureGames(AppDbContext db)
             var canEdit = false;
             if (!forfeit)
             {
-                var hit = linked.GetValueOrDefault(g.Id) ?? club.FirstOrDefault(c => SideMatches(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
-                    && SideMatches(c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2, b.Item4)
-                    && (Strong(c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
-                        || Strong(c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)));
+                var hit = linked.GetValueOrDefault(g.Id) ?? clubGames.FirstOrDefault(c => SideMatches(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
+                    && SideMatches(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2, b.Item4)
+                    && (Strong(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
+                        || Strong(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)));
                 if (hit is not null)
                 {
                     (pgn, source, clubId) = (hit.Pgn, "club", hit.Id);
@@ -89,15 +91,16 @@ public sealed class LeagueFixtureGames(AppDbContext db)
         return parts.Length == 2 ? $"{parts[1]} - {parts[0]}" : result;
     }
 
-    /// <summary>Passt eine Seite der Vereinspartie zum Spieler am Brett? FIDE-ID, Nachname oder „Schwaz" für den eigenen Verein.</summary>
-    internal static bool SideMatches(string name, string? fide, string? player, string? playerFide, string playerTeam) =>
-        Strong(name, fide, player, playerFide)
-        || (string.IsNullOrEmpty(fide) && name.Trim() == LeagueRefresh.OwnTeam && playerTeam.StartsWith(LeagueRefresh.OwnTeam));
+    /// <summary>Passt eine Seite der Vereinspartie zum Spieler am Brett? FIDE-ID, Nachname oder die anonymisierte Seite des
+    /// Vereins (<see cref="LeagueClub.AnonName"/>) für einen seiner Spieler.</summary>
+    internal static bool SideMatches(LeagueClub club, string name, string? fide, string? player, string? playerFide, string playerTeam) =>
+        Strong(club, name, fide, player, playerFide)
+        || (club.IsAnon(name, fide) && club.OwnsTeam(playerTeam));
 
-    private static bool Strong(string name, string? fide, string? player, string? playerFide) =>
+    private static bool Strong(LeagueClub club, string name, string? fide, string? player, string? playerFide) =>
         !string.IsNullOrEmpty(fide) && !string.IsNullOrEmpty(playerFide)
             ? fide == playerFide
-            : player is not null && name.Trim() != LeagueRefresh.OwnTeam
+            : player is not null && name.Trim() != club.AnonName
               && LeagueProfileBuilder.LastName(name) == LeagueProfileBuilder.LastName(player);
 
     /// <summary>Die Partie aus der Karte eines der beiden Spieler: Datum nahe am Rundentermin, Gegner auf der anderen Farbe.</summary>

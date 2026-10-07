@@ -263,6 +263,10 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
+    // Vereine als Mandanten (2026-10-07): die EINE Stelle, die den Verein einer Anfrage bestimmt, und die Verwaltung der Vereine.
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubResolver(
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<RookHub.Api.Services.PermissionResolver>()));
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubAdminService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
     builder.Services.AddScoped<RookHub.Api.Services.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)
     builder.Services.AddHostedService<RookHub.Api.Services.ClubCopyLinkScheduler>();

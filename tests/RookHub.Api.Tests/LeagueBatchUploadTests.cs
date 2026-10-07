@@ -31,7 +31,7 @@ public class LeagueBatchUploadTests : IDisposable
     [Fact]
     public async Task LoggedIn_StoresUnprocessed_AndWritesAnAdminMessageOnce()
     {
-        var me = Uploader.User(7);
+        var me = Uploader.User(7, TestClubs.HomeId);
         var b = await _svc.StartAsync(me, "  Runde 3 gegen Wörgl  ", default);
         Assert.Equal(32, b.Key.Length);
         Assert.NotNull((await _svc.AddFileAsync(me, b.Key, Bytes(100), "image/jpeg", "a.jpg", default)).State);
@@ -53,11 +53,11 @@ public class LeagueBatchUploadTests : IDisposable
     [Fact]
     public async Task Anonymous_RingsTheAdmins_WithoutAMessage_AndOnlyTheSameLinkMayAdd()
     {
-        var anon = Uploader.Share("TOKEN-A", "ip1");
+        var anon = Uploader.Share("TOKEN-A", "ip1", TestClubs.HomeId);
         var b = await _svc.StartAsync(anon, null, default);
         await _svc.AddFileAsync(anon, b.Key, Bytes(10), "image/heic", "x.heic", default);
-        Assert.Equal("notFound", (await _svc.AddFileAsync(Uploader.Share("TOKEN-B", "ip1"), b.Key, Bytes(10), "image/png", "y", default)).Reason);
-        Assert.Equal("notFound", (await _svc.AddFileAsync(Uploader.User(7), b.Key, Bytes(10), "image/png", "y", default)).Reason);
+        Assert.Equal("notFound", (await _svc.AddFileAsync(Uploader.Share("TOKEN-B", "ip1", TestClubs.HomeId), b.Key, Bytes(10), "image/png", "y", default)).Reason);
+        Assert.Equal("notFound", (await _svc.AddFileAsync(Uploader.User(7, TestClubs.HomeId), b.Key, Bytes(10), "image/png", "y", default)).Reason);
         await _svc.FinishAsync(anon, b.Key, default);
         Assert.Empty(_db.AdminMessages);
         var n = await _db.Notifications.SingleAsync();
@@ -70,7 +70,7 @@ public class LeagueBatchUploadTests : IDisposable
     [Fact]
     public async Task Refuses_NonImages_EmptyBatches()
     {
-        var me = Uploader.User(7);
+        var me = Uploader.User(7, TestClubs.HomeId);
         var b = await _svc.StartAsync(me, null, default);
         Assert.Equal("type", (await _svc.AddFileAsync(me, b.Key, Bytes(10), "text/plain", "a.txt", default)).Reason);
         Assert.Equal("empty", (await _svc.FinishAsync(me, b.Key, default)).Reason);
@@ -81,7 +81,7 @@ public class LeagueBatchUploadTests : IDisposable
     [Fact]
     public async Task Zip_HasEveryFile_DuplicateNamesNumbered_DeleteRemovesAll()
     {
-        var me = Uploader.User(7);
+        var me = Uploader.User(7, TestClubs.HomeId);
         var b = await _svc.StartAsync(me, null, default);
         await _svc.AddFileAsync(me, b.Key, Bytes(3, 1), "image/jpeg", "foto.jpg", default);
         await _svc.AddFileAsync(me, b.Key, Bytes(4, 2), "image/jpeg", "foto.jpg", default);
@@ -113,10 +113,10 @@ public class LeagueBatchUploadTests : IDisposable
             TotalBytes = LeagueBatchUploadService.AnonPerIpDailyBytes, FileCount = 1,
         });
         await _db.SaveChangesAsync();
-        var anon = Uploader.Share("T", "ip9");
+        var anon = Uploader.Share("T", "ip9", TestClubs.HomeId);
         var b = await _svc.StartAsync(anon, null, default);
         Assert.Equal("dailyLimit", (await _svc.AddFileAsync(anon, b.Key, Bytes(10), "image/jpeg", "a.jpg", default)).Reason);
-        var other = Uploader.Share("T", "ip10");
+        var other = Uploader.Share("T", "ip10", TestClubs.HomeId);
         var b2 = await _svc.StartAsync(other, null, default);
         Assert.Null((await _svc.AddFileAsync(other, b2.Key, Bytes(10), "image/jpeg", "a.jpg", default)).Reason);
     }

@@ -76,6 +76,9 @@ public class ScoresheetScan
     /// dort, danach werden Foto und Lesung verworfen).</summary>
     public string? Purpose { get; set; }
     public const string PurposeLeague = "league";
+    /// <summary>Nur bei <see cref="PurposeLeague"/>: der Verein, für dessen Vereins-Datenbank das Formular eingelesen wird
+    /// (Mandanten-Schritt 2026-10-07); RookHubs eigene Einlesungen haben keinen.</summary>
+    public int? ClubId { get; set; }
 
     /// <summary>Grund des Scheiterns als Code (<c>notConfigured</c>, <c>unreadable</c>, <c>noMoves</c>,
     /// <c>refused</c>, <c>failed</c>) — die Seite formuliert ihn in der Sprache des Nutzers.</summary>

@@ -60,14 +60,14 @@ public class TacticHarvestChapterOrderTests
         for (var i = 0; i < chapters.Length; i++)
             db.BookPuzzles.Add(new RookHub.Api.Models.BookPuzzle
             {
-                LineId = $"tactics-club.pgn:t{i}", BookFileName = TacticHarvestService.ClubBook, Round = (i + 1).ToString(),
+                LineId = $"tactics-club.pgn:t{i}", BookFileName = TacticHarvestService.ClubBookOf(1), Round = (i + 1).ToString(),
                 Fen = "x", Moves = "e2e4", Chapter = chapters[i],
             });
         await db.SaveChangesAsync();
         var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
         var svc = new TacticHarvestService(db, new AnalysisJobService(db, config: config), new QuietHours("", "UTC"), config,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<TacticHarvestService>.Instance);
-        await svc.SortClubChaptersAsync(default);
+        await svc.SortClubChaptersAsync(TacticHarvestService.ClubBookOf(1), default);
         var order = db.BookPuzzles.AsEnumerable().OrderBy(p => p.Round.Length).ThenBy(p => p.Round).Select(p => p.Chapter).ToList();
         Assert.Equal(new[]
         {

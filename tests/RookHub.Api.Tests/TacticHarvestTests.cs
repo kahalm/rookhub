@@ -107,21 +107,27 @@ public class TacticHarvestTests : IDisposable
         _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
         _db.LeagueGames.Add(new LeagueGame
         {
-            Tnr = 7, Round = 1, MatchNo = 1, Board = 4, HomeTeam = "Schwaz", AwayTeam = "Spg Fügen-Zillertal/Rattenberg",
+            Tnr = 7, Round = 1, MatchNo = 1, Board = 4, HomeTeam = "Testdorf", AwayTeam = "Spg Fügen-Zillertal/Rattenberg",
             HomePlayer = "Streiter, Gerhard", AwayPlayer = "Moser, Axel", HomeFide = "1621530", AwayFide = "24602094",
             HomeColor = "s", Result = "½ - ½",
         });
-        var g = new LeagueClubGame { Id = 158, Year = 2026, White = "Moser, Axel", WhiteFide = "24602094", Black = "Schwaz",
-            Result = "1/2-1/2", Anonymized = true, Pgn = "", MovesHash = "h" };
+        var g = new LeagueClubGame { Id = 158, Year = 2026, White = "Moser, Axel", WhiteFide = "24602094", Black = "Testdorf",
+            ClubId = TestClubs.HomeId, Result = "1/2-1/2", Anonymized = true, Pgn = "", MovesHash = "h" };
         _db.LeagueClubGames.Add(g);
         var a = new GameAnalysis { Id = 5, UserId = 1, Origin = GameAnalysisOrigin.Club, LeagueClubGameId = 158, Pgn = "", StartFen = "x",
-            Status = GameAnalysisStatus.Done, White = "Moser, Axel", Black = "Schwaz" };
+            Status = GameAnalysisStatus.Done, White = "Moser, Axel", Black = "Testdorf" };
         _db.GameAnalyses.Add(a);
         var role = new Role { Id = 3, Key = "verein" };
         _db.Roles.Add(role);
         _db.RolePermissions.Add(new RolePermission { RoleId = 3, Permission = Permissions.LeagueView });
-        _db.Groups.Add(new Group { Id = 9, Name = "SK Schwaz" });
+        _db.Groups.Add(new Group { Id = 9, Name = "SK Testdorf" });
         _db.GroupRoles.Add(new GroupRole { GroupId = 9, RoleId = 3 });
+        // Gruppe 9 gehört dem Verein; Gruppe 10 (auch league.view) einem anderen — sie sieht den Kurs nicht
+        _db.Groups.Add(new Group { Id = 10, Name = "SK Weiler" });
+        _db.GroupRoles.Add(new GroupRole { GroupId = 10, RoleId = 3 });
+        _db.LeagueClubs.AddRange(TestClubs.Home, TestClubs.Other);
+        _db.LeagueClubMembers.AddRange(new LeagueClubMember { ClubId = TestClubs.HomeId, GroupId = 9 },
+            new LeagueClubMember { ClubId = TestClubs.OtherId, GroupId = 10 });
         await _db.SaveChangesAsync();
         return (a, g);
     }
@@ -130,11 +136,11 @@ public class TacticHarvestTests : IDisposable
     public async Task LeagueRound_FromPlayersColoursAndSeason_AnonymousSideMatchesOwnClub()
     {
         var (_, g) = await SeedClubAsync();
-        Assert.Equal("2026/27 · Landesliga · Runde 1", await TacticHarvestService.LeagueRoundChapterAsync(_db, g, default));
+        Assert.Equal("2026/27 · Landesliga · Runde 1", await TacticHarvestService.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
         g.Year = 2019;   // andere Saison
-        Assert.Null(await TacticHarvestService.LeagueRoundChapterAsync(_db, g, default));
-        g.Year = 2026; g.White = "Schwaz"; g.WhiteFide = null; g.Black = "Moser, Axel"; g.BlackFide = "24602094";   // Farben vertauscht
-        Assert.Null(await TacticHarvestService.LeagueRoundChapterAsync(_db, g, default));
+        Assert.Null(await TacticHarvestService.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
+        g.Year = 2026; g.White = "Testdorf"; g.WhiteFide = null; g.Black = "Moser, Axel"; g.BlackFide = "24602094";   // Farben vertauscht
+        Assert.Null(await TacticHarvestService.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
     }
 
     private TacticHarvestService Svc() => new(_db, new AnalysisJobService(_db), new QuietHours("", "UTC"),
@@ -155,7 +161,7 @@ public class TacticHarvestTests : IDisposable
 
         Assert.Equal(1, await Svc().PublishAsync(default));
         var book = await _db.Books.SingleAsync();
-        Assert.Equal((TacticHarvestService.ClubBook, "Taktiken aus Vereinspartien", (int?)null), (book.FileName, book.DisplayName, book.OwnerUserId));
+        Assert.Equal(("tactics-club-1.pgn", "Taktiken aus Vereinspartien – SK Testdorf", (int?)null), (book.FileName, book.DisplayName, book.OwnerUserId));
         Assert.Equal(9, (await _db.BookGroupAccesses.SingleAsync()).GroupId);
         var p = await _db.BookPuzzles.SingleAsync();
         Assert.Equal("2026/27 · Landesliga · Runde 1", p.Chapter);
@@ -165,8 +171,8 @@ public class TacticHarvestTests : IDisposable
         Assert.Contains("verpasst", p.Tags);
         Assert.Equal(TacticCandidateStatus.Published, (await _db.TacticCandidates.SingleAsync()).Status);
 
-        // schon veröffentlicht mit „Schwaz" (vor 0.657.2) → beim nächsten Lauf umbenannt
-        p.Title = "Moser, Axel – Schwaz (2026), Zug 21";
+        // schon veröffentlicht mit dem Vereinsnamen (vor 0.657.2) → beim nächsten Lauf umbenannt
+        p.Title = "Moser, Axel – Testdorf (2026), Zug 21";
         await _db.SaveChangesAsync();
         await Svc().PublishAsync(default);
         Assert.Equal("Moser, Axel – Streiter, Gerhard (2026), Zug 21", (await _db.BookPuzzles.SingleAsync()).Title);

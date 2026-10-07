@@ -237,6 +237,60 @@ public class MigrationsTests
     }
 
     /// <summary>
+    /// <c>LeagueClubs</c> (Mandanten-Schritt 2026-10-07): ALLE Bestandszeilen der vereinsgebundenen Tabellen gehören danach
+    /// Verein 1 (SK Schwaz), nur Liga-Einlesungen bekommen einen Verein, jede Gruppe mit <c>league.view</c> (außer „Everyone")
+    /// gehört Verein 1, und der gemeinsame Taktik-Kurs heißt jetzt wie der von Verein 1.
+    /// </summary>
+    [MySqlFact]
+    public async Task LeagueClubs_FuelltClubIdUndOrdnetDieVereinsgruppeZu()
+    {
+        await using var schema = await MariaDbSchema.CreateAsync("clubs");
+        await using var db = schema.NewContext();
+
+        var alle = db.Database.GetMigrations().ToList();
+        var index = alle.FindIndex(m => m.EndsWith("_LeagueClubs", StringComparison.Ordinal));
+        Assert.True(index > 0, "Migration LeagueClubs nicht gefunden");
+        await db.GetService<IMigrator>().MigrateAsync(alle[index - 1]);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO Roles (Id, `Key`, Name, IsSystem) VALUES (30, 'verein', 'Verein', 0), (31, 'andere', 'Andere', 0);
+            INSERT INTO RolePermissions (RoleId, Permission) VALUES (30, 'league.view'), (30, 'league.contribute'), (31, 'courses.view');
+            INSERT INTO `Groups` (Id, Name, IsEveryone, CreatedAt) VALUES (40, 'Schwaz', 0, NOW()), (41, 'Friends', 0, NOW()), (42, 'Everyone', 1, NOW());
+            INSERT INTO GroupRoles (GroupId, RoleId) VALUES (40, 30), (41, 31), (42, 30);
+            INSERT INTO LeagueClubGames (Year, White, Black, Result, Plies, Pgn, MovesHash, Anonymized)
+                VALUES (2025, 'Schwaz', 'Hengl, Philip', '1-0', 2, '1. e4 e5 1-0', 'h1', 1), (2024, 'A', 'B', '*', 2, '1. d4 d5 *', 'h2', 0);
+            INSERT INTO LeagueClubDrafts (Pgn, GameCount, CreatedAt, UpdatedAt) VALUES ('1. e4 *', 1, NOW(), NOW());
+            INSERT INTO LeagueBatchUploads (`Key`, FileCount, TotalBytes, CreatedAt) VALUES ('0123456789abcdef0123456789abcdef', 0, 0, NOW());
+            INSERT INTO LeagueShares (Token, Tnr, Round, Team, Expires, CreatedAt) VALUES ('tok', 7, 1, 'Schwaz', '2026-12-31', NOW());
+            INSERT INTO ScoresheetScans (Photo, ContentType, NotationLanguage, OwnerSide, Status, CreatedAt, Purpose, PageCount,
+                    Attempts, CostMicroUsd, InputTokens, OutputTokens, Rounds)
+                VALUES (x'01', 'image/jpeg', 'auto', 'auto', 2, NOW(), 'league', 1, 0, 0, 0, 0, 0),
+                       (x'01', 'image/jpeg', 'auto', 'auto', 2, NOW(), NULL, 1, 0, 0, 0, 0, 0);
+            INSERT INTO Books (Id, FileName, DisplayName, Kind, CreatedAt, UpdatedAt, ImportVersion,
+                    ForBlind, ForDaily, ForKids, ForRandom, IsCalculation, IsPublic)
+                VALUES (50, 'tactics-club.pgn', 'Taktiken aus Vereinspartien', 1, NOW(), NOW(), 1, 0, 0, 0, 0, 0, 0);
+            INSERT INTO BookPuzzles (LineId, BookFileName, BookId, Round, Fen, Moves, StartPly, HintsFlagged, HintsVersion, IsInfoOnly, Retired)
+                VALUES ('tactics-club.pgn:t1', 'tactics-club.pgn', 50, '1', 'x', 'e2e4', 0, 0, 0, 0, 0);
+            """);
+
+        await db.Database.MigrateAsync();
+
+        var clubs = await db.LeagueClubs.AsNoTracking().OrderBy(c => c.Id).ToListAsync();
+        Assert.Equal(new[] { ("SK Schwaz", "Schwaz", "Schwaz", (string?)null), ("SK Weilheim", "SK Weilheim", "Weilheim", (string?)"ligamanager") },
+            clubs.Select(c => (c.Name, c.TeamPrefix, c.AnonName, c.Source)));
+        Assert.Equal(new[] { 1, 1 }, await db.LeagueClubGames.IgnoreQueryFilters().Select(g => g.ClubId).ToListAsync());
+        Assert.Equal(1, await db.LeagueClubDrafts.Select(d => d.ClubId).SingleAsync());
+        Assert.Equal(1, await db.LeagueBatchUploads.Select(b => b.ClubId).SingleAsync());
+        Assert.Equal(1, await db.LeagueShares.Select(x => x.ClubId).SingleAsync());
+        Assert.Equal(new int?[] { 1, null }, await db.ScoresheetScans.OrderBy(x => x.Id).Select(x => x.ClubId).ToListAsync());
+        Assert.Equal(new[] { (1, 40) }, (await db.LeagueClubMembers.ToListAsync()).Select(m => (m.ClubId, m.GroupId)));
+        Assert.Equal(("tactics-club-1.pgn", "Taktiken aus Vereinspartien – SK Schwaz"),
+            await db.Books.Where(b => b.Id == 50).Select(b => new ValueTuple<string, string>(b.FileName, b.DisplayName)).SingleAsync());
+        Assert.Equal("tactics-club-1.pgn", await db.BookPuzzles.Select(p => p.BookFileName).SingleAsync());
+        Assert.Equal("tactics-club.pgn:t1", await db.BookPuzzles.Select(p => p.LineId).SingleAsync());   // Kennung bleibt
+    }
+
+    /// <summary>
     /// Faengt den Fall ab, dass jemand eine Entitaet aendert und die Migration vergisst: das
     /// Modell traegt dann Aenderungen, die in keiner Migration stehen, und Prod liefe mit einem
     /// Schema, das nicht zum Code passt.

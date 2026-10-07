@@ -429,7 +429,7 @@ public class PrepAccountSearchTests : IDisposable
         // Auch je Spieler sieht LeagueHub ihn nicht (0.638.0) — die Spielervorbereitung schon.
         Assert.Empty((await new LeagueOnlineAccountService(_db).SuggestionsAsync(Fide, default))["items"]!.AsArray());
         Assert.Single((await new LeagueOnlineAccountService(_db).SuggestionsAsync(Fide, default, prep: true))["items"]!.AsArray());
-        var sources = await new LeagueGameSources(_db, null).GetAsync(default, new[] { Fide, "990222" });
+        var sources = await new LeagueGameSources(_db, null).GetAsync(TestClubs.HomeId, default, new[] { Fide, "990222" });
         Assert.Equal(1, sources["onlineTotal"]!.GetValue<int>());                      // nur die Partie des Ligaspielers
         Assert.Equal(1, sources["opponent"]!["onlineTotal"]!.GetValue<int>());         // auch mit seiner FIDE-ID in der Gegner-Liste
         Assert.Equal(1, sources["opponent"]!["onlineAccounts"]!.GetValue<int>());

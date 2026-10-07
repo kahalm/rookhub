@@ -31,12 +31,12 @@ public class LeagueClubDraftServiceTests : IDisposable
     public async Task Lifecycle_Create_List_Save_Resume_Delete()
     {
         var (me, _, _) = await UsersAsync();
-        var (d, reason) = await Svc().CreateAsync(me, null, Two, "datei", "liga.pgn");
+        var (d, reason) = await Svc().CreateAsync(TestClubs.HomeId, me, null, Two, "datei", "liga.pgn");
         Assert.Null(reason);
         Assert.Equal((2, 0, "datei", "liga.pgn"), (d!.GameCount, d.ImportedCount, d.Source, d.Label));
         Assert.Null(d.Key);                                                       // mit Konto kein Schlüssel
 
-        var actor = DraftActor.User(me, false);
+        var actor = DraftActor.User(me, false, TestClubs.HomeId);
         await Svc().SaveAsync(actor, d.Id, new LeagueClubDraftSaveRequest { State = "{\"x\":1}", Imported = [1, 1, 0, 999] });
         var mine = Assert.Single(await Svc().ListAsync(actor));
         Assert.Equal(1, mine.ImportedCount);
@@ -52,47 +52,47 @@ public class LeagueClubDraftServiceTests : IDisposable
     public async Task Access_OwnerAndManagers_NotOthers_ManagersSeeAll_WithTheOwner()
     {
         var (me, other, manager) = await UsersAsync();
-        var d = (await Svc().CreateAsync(me, null, Two, "text", null)).Draft!;
-        Assert.Null(await Svc().GetAsync(DraftActor.User(other, false), d.Id));
-        Assert.False(await Svc().DeleteAsync(DraftActor.User(other, false), d.Id));
-        Assert.NotNull(await Svc().GetAsync(DraftActor.User(manager, true), d.Id));
-        var all = Assert.Single(await Svc().ListAllAsync(manager));
+        var d = (await Svc().CreateAsync(TestClubs.HomeId, me, null, Two, "text", null)).Draft!;
+        Assert.Null(await Svc().GetAsync(DraftActor.User(other, false, TestClubs.HomeId), d.Id));
+        Assert.False(await Svc().DeleteAsync(DraftActor.User(other, false, TestClubs.HomeId), d.Id));
+        Assert.NotNull(await Svc().GetAsync(DraftActor.User(manager, true, TestClubs.HomeId), d.Id));
+        var all = Assert.Single(await Svc().ListAllAsync(TestClubs.HomeId, manager));
         Assert.Equal(("patrik", false, false), (all.Owner, all.ViaShareLink, all.Mine));
-        Assert.Empty(await Svc().ListAsync(DraftActor.User(manager, true)));      // „eigene" sind nur die eigenen
+        Assert.Empty(await Svc().ListAsync(DraftActor.User(manager, true, TestClubs.HomeId)));      // „eigene" sind nur die eigenen
 
         // Wer fertigstellt, handelt für den Einreicher — Übersicht und Import rechnen mit SEINEM Profil.
-        Assert.Equal((true, (int?)me), await Svc().ActingUserAsync(DraftActor.User(manager, true), d.Id));
-        Assert.Equal((false, (int?)null), await Svc().ActingUserAsync(DraftActor.User(other, false), d.Id));
+        Assert.Equal((true, (int?)me), await Svc().ActingUserAsync(DraftActor.User(manager, true, TestClubs.HomeId), d.Id));
+        Assert.Equal((false, (int?)null), await Svc().ActingUserAsync(DraftActor.User(other, false, TestClubs.HomeId), d.Id));
     }
 
     [Fact]
     public async Task WithoutAccount_TheKeyIsTheAccess_CappedPerAddress_AndManagersFinishForNobody()
     {
         var (_, _, manager) = await UsersAsync();
-        var (d, _) = await Svc().CreateAsync(null, "ip-1", Two, "lichess", "https://lichess.org/study/abcdefgh");
+        var (d, _) = await Svc().CreateAsync(TestClubs.HomeId, null, "ip-1", Two, "lichess", "https://lichess.org/study/abcdefgh");
         Assert.Matches("^[0-9a-f]{32}$", d!.Key!);
-        Assert.NotNull(await Svc().GetAsync(DraftActor.Anonymous(d.Key), null));
-        Assert.Null(await Svc().GetAsync(DraftActor.Anonymous("0000"), null));
-        Assert.Single(await Svc().ListAsync(DraftActor.Anonymous(null), [d.Key!, "nix"]));
-        Assert.True((await Svc().ListAllAsync(manager)).Single().ViaShareLink);
-        Assert.Equal((true, (int?)null), await Svc().ActingUserAsync(DraftActor.User(manager, true), d.Id));
+        Assert.NotNull(await Svc().GetAsync(DraftActor.Anonymous(d.Key, TestClubs.HomeId), null));
+        Assert.Null(await Svc().GetAsync(DraftActor.Anonymous("0000", TestClubs.HomeId), null));
+        Assert.Single(await Svc().ListAsync(DraftActor.Anonymous(null, TestClubs.HomeId), [d.Key!, "nix"]));
+        Assert.True((await Svc().ListAllAsync(TestClubs.HomeId, manager)).Single().ViaShareLink);
+        Assert.Equal((true, (int?)null), await Svc().ActingUserAsync(DraftActor.User(manager, true, TestClubs.HomeId), d.Id));
 
-        for (var i = 1; i < LeagueClubDraftService.MaxOpenPerIp; i++) Assert.Null((await Svc().CreateAsync(null, "ip-1", Two, null, null)).Reason);
-        Assert.Equal("tooManyDrafts", (await Svc().CreateAsync(null, "ip-1", Two, null, null)).Reason);
-        Assert.Null((await Svc().CreateAsync(null, "ip-2", Two, null, null)).Reason);   // andere Adresse
+        for (var i = 1; i < LeagueClubDraftService.MaxOpenPerIp; i++) Assert.Null((await Svc().CreateAsync(TestClubs.HomeId, null, "ip-1", Two, null, null)).Reason);
+        Assert.Equal("tooManyDrafts", (await Svc().CreateAsync(TestClubs.HomeId, null, "ip-1", Two, null, null)).Reason);
+        Assert.Null((await Svc().CreateAsync(TestClubs.HomeId, null, "ip-2", Two, null, null)).Reason);   // andere Adresse
     }
 
     [Fact]
     public async Task Untouched_ForTheRetention_IsGone()
     {
         var (me, _, _) = await UsersAsync();
-        var d = (await Svc().CreateAsync(me, null, Two, null, null)).Draft!;
+        var d = (await Svc().CreateAsync(TestClubs.HomeId, me, null, Two, null, null)).Draft!;
         _now += LeagueClubDraftService.Retention - TimeSpan.FromHours(1);
-        await Svc().SaveAsync(DraftActor.User(me, false), d.Id, new LeagueClubDraftSaveRequest { Imported = [2] });   // Bewegung
+        await Svc().SaveAsync(DraftActor.User(me, false, TestClubs.HomeId), d.Id, new LeagueClubDraftSaveRequest { Imported = [2] });   // Bewegung
         _now += TimeSpan.FromDays(2);
-        Assert.Single(await Svc().ListAsync(DraftActor.User(me, false)));
+        Assert.Single(await Svc().ListAsync(DraftActor.User(me, false, TestClubs.HomeId)));
         _now += LeagueClubDraftService.Retention;
-        Assert.Empty(await Svc().ListAsync(DraftActor.User(me, false)));
+        Assert.Empty(await Svc().ListAsync(DraftActor.User(me, false, TestClubs.HomeId)));
         Assert.Empty(_db.LeagueClubDrafts);
     }
 }

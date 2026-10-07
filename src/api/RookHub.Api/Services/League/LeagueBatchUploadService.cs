@@ -30,11 +30,12 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
     public const int MaxCommentLength = 1000;
     public const string AdminLink = "/admin?tab=uploads";
 
-    /// <summary>Wer hochlädt: ein Konto oder ein Teilen-Link (Hash) samt IP-Hash.</summary>
-    public sealed record Uploader(int? UserId, string? ShareHash, string? IpHash)
+    /// <summary>Wer hochlädt: ein Konto oder ein Teilen-Link (Hash) samt IP-Hash — und für welchen Verein (Mandanten-Schritt
+    /// 2026-10-07: angemeldet der Verein der Anfrage, über einen Link dessen Verein). Ein Stapel gehört genau einem Verein.</summary>
+    public sealed record Uploader(int? UserId, string? ShareHash, string? IpHash, int ClubId)
     {
-        public static Uploader User(int id) => new(id, null, null);
-        public static Uploader Share(string token, string ipHash) => new(null, LeagueClubService.ShareHashOf(token), ipHash);
+        public static Uploader User(int id, int clubId) => new(id, null, null, clubId);
+        public static Uploader Share(string token, string ipHash, int clubId) => new(null, LeagueClubService.ShareHashOf(token), ipHash, clubId);
     }
 
     public sealed record BatchState(string Key, int Files, long Bytes, bool Finished);
@@ -46,7 +47,7 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
         var b = new LeagueBatchUpload
         {
             Key = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant(),
-            UserId = who.UserId, ShareHash = who.ShareHash, AnonIpHash = who.IpHash, Comment = c, CreatedAt = DateTime.UtcNow,
+            ClubId = who.ClubId, UserId = who.UserId, ShareHash = who.ShareHash, AnonIpHash = who.IpHash, Comment = c, CreatedAt = DateTime.UtcNow,
         };
         db.LeagueBatchUploads.Add(b);
         await db.SaveChangesAsync(ct);
@@ -110,19 +111,20 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
         }
         b.FinishedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        if (b.UserId is { } uid) await messages.SendFromUserAsync(uid, MessageBody(b));
+        var clubName = await db.LeagueClubs.AsNoTracking().Where(c => c.Id == b.ClubId).Select(c => c.Name).FirstOrDefaultAsync(ct);
+        if (b.UserId is { } uid) await messages.SendFromUserAsync(uid, MessageBody(b, clubName));
         else
         {
             var admins = await PermissionResolver.UserIdsWithPermissionAsync(db, Permissions.MessagesAdmin);
             await notifications.CreateManyAsync(admins, NotificationType.LeagueBatchUploaded,
-                new Dictionary<string, string> { ["count"] = b.FileCount.ToString() }, AdminLink);
+                new Dictionary<string, string> { ["count"] = b.FileCount.ToString(), ["club"] = clubName ?? "" }, AdminLink);
         }
         return (new BatchState(b.Key, b.FileCount, b.TotalBytes, true), null);
     }
 
-    internal static string MessageBody(LeagueBatchUpload b)
+    internal static string MessageBody(LeagueBatchUpload b, string? clubName = null)
     {
-        var text = $"LeagueHub-Stapel-Upload: {b.FileCount} {(b.FileCount == 1 ? "Bild" : "Bilder")} ({Mb(b.TotalBytes)}) abgelegt, "
+        var text = $"LeagueHub-Stapel-Upload{(clubName is null ? "" : $" ({clubName})")}: {b.FileCount} {(b.FileCount == 1 ? "Bild" : "Bilder")} ({Mb(b.TotalBytes)}) abgelegt, "
             + $"nicht eingelesen. Herunterladen im Admin-Bereich unter „Uploads“ ({AdminLink}), Stapel #{b.Id}.";
         return b.Comment is { } c ? $"{text}\n\nKommentar: {c}" : text;
     }
@@ -131,23 +133,25 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
 
     private Task<LeagueBatchUpload?> FindAsync(Uploader who, string key, CancellationToken ct) =>
         string.IsNullOrEmpty(key) || key.Length != 32 ? Task.FromResult<LeagueBatchUpload?>(null)
-        : db.LeagueBatchUploads.FirstOrDefaultAsync(b => b.Key == key
+        : db.LeagueBatchUploads.FirstOrDefaultAsync(b => b.Key == key && b.ClubId == who.ClubId
             && (who.UserId != null ? b.UserId == who.UserId : b.UserId == null && b.ShareHash == who.ShareHash), ct);
 
     // ── Admin ──
 
+    /// <param name="Club">Name des Vereins, für den hochgeladen wurde (Mandanten-Schritt 2026-10-07).</param>
     public sealed record AdminRow(int Id, DateTime CreatedAt, DateTime? FinishedAt, string? User, bool ViaShare, int Files, long Bytes,
-        string? Comment);
+        string? Comment, int ClubId = 0, string? Club = null);
 
     public async Task<List<AdminRow>> ListAsync(CancellationToken ct)
     {
         var rows = await db.LeagueBatchUploads.AsNoTracking().OrderByDescending(b => b.CreatedAt)
-            .Select(b => new { b.Id, b.CreatedAt, b.FinishedAt, b.UserId, b.ShareHash, b.FileCount, b.TotalBytes, b.Comment })
+            .Select(b => new { b.Id, b.CreatedAt, b.FinishedAt, b.UserId, b.ShareHash, b.FileCount, b.TotalBytes, b.Comment, b.ClubId })
             .ToListAsync(ct);
         var ids = rows.Where(r => r.UserId != null).Select(r => r.UserId!.Value).Distinct().ToList();
         var names = await db.AppUsers.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
+        var clubs = await db.LeagueClubs.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, ct);
         return rows.Select(r => new AdminRow(r.Id, r.CreatedAt, r.FinishedAt, r.UserId is { } u ? names.GetValueOrDefault(u) : null,
-            r.UserId is null, r.FileCount, r.TotalBytes, r.Comment)).ToList();
+            r.UserId is null, r.FileCount, r.TotalBytes, r.Comment, r.ClubId, clubs.GetValueOrDefault(r.ClubId))).ToList();
     }
 
     /// <summary>Den Stapel als ZIP in <paramref name="output"/> schreiben (Bild für Bild aus der Datenbank, nicht alles auf

@@ -8,7 +8,8 @@ namespace RookHub.Api.Services.League;
 /// <summary>
 /// Welche Liga-Partie der Stapel als Nächstes rechnet (0.665.0, Wunsch 2026-10-05: „analysier im Hintergrund auch alle
 /// Partien für LeagueHub — zumindest von Spielern, die aktuell in der Liga mitspielen. Erst die neuesten Partien (2 Jahre
-/// zurück), dann immer bevorzugt die Gegner von Schwaz nächste Runde, dann der Rest, und wenn das alles fertig ist erst
+/// zurück), dann immer bevorzugt die Gegner von Schwaz nächste Runde (seit dem Mandanten-Schritt 2026-10-07: die Gegner JEDES
+/// Vereins in <see cref="LeagueClub"/>), dann der Rest, und wenn das alles fertig ist erst
 /// wieder die Meisterpartien").
 /// <list type="bullet">
 /// <item>Quelle: die Profile (<see cref="LeaguePlayerProfile.Pgn"/>: Lumbra, Megabase, chess-results, Übertragungen) aller
@@ -21,8 +22,8 @@ namespace RookHub.Api.Services.League;
 /// sind das beim heutigen Bestand rund 42 000 Partien statt 3500 — gemessen am 2026-10-05 etwa 30 MB in
 /// einem Prozess, der 6 GB darf. Waechst der Bestand um Groessenordnungen, muss die Liste Zeiger statt
 /// Text halten.</item>
-/// <item>Reihenfolge: erst die Spieler der Gegner von Schwaz in der nächsten noch nicht gespielten Runde (je Schwazer
-/// Mannschaft), dann alle übrigen — jeweils die neueste Partie zuerst.</item>
+/// <item>Reihenfolge: erst die Spieler der Gegner der Vereine in der nächsten noch nicht gespielten Runde (je Mannschaft eines
+/// Vereins), dann alle übrigen — jeweils die neueste Partie zuerst.</item>
 /// <item>Dieselbe Partie in zwei Profilen (zwei Ligaspieler gegeneinander) zählt einmal; eine schon gerechnete (eigene
 /// Liga-Analyse oder die Analyse einer Vereinspartie mit denselben Zügen) wird übersprungen.</item>
 /// </list>
@@ -182,21 +183,27 @@ public sealed class LeagueAnalysisQueue
     }
 
     /// <summary>
-    /// Die FIDE-IDs der Gegner von Schwaz in der nächsten Runde: je Schwazer Mannschaft die kleinste Runde ihrer Begegnungen
-    /// ohne Ergebnis, dort der Gegner und dessen Meldeliste.
+    /// Die FIDE-IDs der Gegner der Vereine in der nächsten Runde: je Mannschaft eines Vereins (<see cref="LeagueClub.OwnsTeam"/>,
+    /// alle Vereine — ein Verein ist dem anderen kein Vorrang schuldig) die kleinste Runde ihrer Begegnungen ohne Ergebnis, dort
+    /// der Gegner und dessen Meldeliste.
     /// </summary>
     internal static async Task<HashSet<string>> NextRoundOpponentFidesAsync(AppDbContext db, List<int> tnrs,
         List<(int Tnr, string Team, string Fide)> players, CancellationToken ct)
     {
-        var own = LeagueRefresh.OwnTeam;
-        var open = await db.LeagueMatches.AsNoTracking()
-            .Where(m => tnrs.Contains(m.Tnr) && m.HomePts == null && m.AwayPts == null
-                && (m.Home.StartsWith(own) || m.Away.StartsWith(own)))
-            .Select(m => new { m.Tnr, m.Round, m.Home, m.Away }).ToListAsync(ct);
+        var clubs = await db.LeagueClubs.AsNoTracking().ToListAsync(ct);
+        bool Own(string team) => clubs.Any(c => c.OwnsTeam(team));
+        // offene Begegnungen der laufenden Ligen (eine Saison, ein paar hundert Zeilen) — die Vereinsregel prüft der Speicher
+        var open = (await db.LeagueMatches.AsNoTracking()
+                .Where(m => tnrs.Contains(m.Tnr) && m.HomePts == null && m.AwayPts == null)
+                .Select(m => new { m.Tnr, m.Round, m.Home, m.Away }).ToListAsync(ct))
+            .Where(m => Own(m.Home) || Own(m.Away)).ToList();
+        // eine Begegnung zweier Vereine zählt für beide: jede eigene Mannschaft hat ihren Gegner
         var opponentTeams = open
-            .GroupBy(m => (m.Tnr, Team: m.Home.StartsWith(own) ? m.Home : m.Away))
-            .Select(g => g.OrderBy(m => m.Round).First())
-            .Select(m => (m.Tnr, Opp: m.Home.StartsWith(own) ? m.Away : m.Home))
+            .SelectMany(m => new[] { (m.Tnr, m.Round, Team: m.Home, Opp: m.Away), (m.Tnr, m.Round, Team: m.Away, Opp: m.Home) })
+            .Where(x => Own(x.Team))
+            .GroupBy(x => (x.Tnr, x.Team))
+            .Select(g => g.OrderBy(x => x.Round).First())
+            .Select(x => (x.Tnr, x.Opp))
             .ToHashSet();
         return players.Where(p => opponentTeams.Contains((p.Tnr, p.Team))).Select(p => p.Fide).ToHashSet(StringComparer.Ordinal);
     }

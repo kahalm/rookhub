@@ -40,7 +40,7 @@ public class LeagueAdminUnpackLimitTests : IDisposable
         var http = new DefaultHttpContext();
         http.Request.Body = new MemoryStream(body);
         if (gzip) http.Request.Headers.ContentEncoding = "gzip";
-        return new LeagueController(league, null!, null!)
+        return new LeagueController(league, null!, null!, null!)
         {
             ImportUnpackedLimit = SmallLimit,
             CollectionUnpackedLimit = SmallLimit,

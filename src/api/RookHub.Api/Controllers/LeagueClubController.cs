@@ -16,7 +16,8 @@ namespace RookHub.Api.Controllers;
 /// LeagueHub — Vereins-Datenbank (Wunsch 2026-09-28): lesen mit <see cref="Permissions.LeagueView"/>, beitragen (PGN
 /// hochladen, Partieformular einlesen, eigene Partien löschen) mit <see cref="Permissions.LeagueContribute"/>. Beides
 /// bekommt die Rolle der Vereinsmitglieder; löschen darf jeder Verwalter (<see cref="Permissions.LeagueManage"/>) alles,
-/// sonst nur eigene Partien ohne „Schwaz" — bei den anderen ist nicht gespeichert, von wem sie stammen. Derselbe Weg
+/// sonst nur eigene Partien. Jede Aktion läuft im Verein der Anfrage (<see cref="LeagueClubResolver"/>, Mandanten-Schritt
+/// 2026-10-07): eine Partie, ein Entwurf oder ein Formular eines anderen Vereins ist hier „nicht gefunden". Derselbe Weg
 /// OHNE Anmeldung über einen Teilen-Link: <see cref="LeagueShareClubController"/>. Regeln: <see cref="LeagueClubService"/>.
 /// </summary>
 [ApiController]
@@ -27,83 +28,96 @@ public class LeagueClubController : BaseApiController
     private readonly LeagueClubService _club;
     private readonly ScoresheetScanService _scans;
     private readonly ScoresheetScanSignal _signal;
+    private readonly LeagueClubResolver _clubs;
     private readonly PermissionResolver? _permissions;
 
     public LeagueClubController(LeagueClubService club, ScoresheetScanService scans, ScoresheetScanSignal signal,
-        PermissionResolver? permissions = null)
+        LeagueClubResolver clubs, PermissionResolver? permissions = null)
     {
-        _club = club; _scans = scans; _signal = signal; _permissions = permissions;
+        _club = club; _scans = scans; _signal = signal; _clubs = clubs; _permissions = permissions;
     }
 
     /// <summary>Verwalter (<c>league.manage</c>) — LIVE, wie <c>[HasPermission]</c> (0.589.0): eine eben vergebene oder
-    /// entzogene Rolle gilt sofort, nicht erst nach dem nächsten Anmelden.</summary>
+    /// entzogene Rolle gilt sofort, nicht erst nach dem nächsten Anmelden. Gilt im Verein der Anfrage — zu dem gehört das
+    /// Konto, sonst wäre die Anfrage schon an <see cref="WithClubAsync"/> gescheitert.</summary>
     private async Task<bool> CanManageAsync() =>
         User.IsInRole("Admin") || (_permissions != null
             ? (await _permissions.GetAsync(GetUserId())).Has(Permissions.LeagueManage)
             : User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueManage));
 
-    /// <summary>Verwalter dürfen JEDE Liga-Einlesung öffnen, übernehmen und verwerfen — sonst nur die eigenen.</summary>
-    private async Task<Actor> MeAsync() => await CanManageAsync() ? Actor.ManagerOf(GetUserId()) : Actor.User(GetUserId());
+    /// <summary>Verwalter dürfen JEDE Liga-Einlesung ihres Vereins öffnen, übernehmen und verwerfen — sonst nur die eigenen.</summary>
+    private async Task<Actor> MeAsync(LeagueClub club) =>
+        (await CanManageAsync() ? Actor.ManagerOf(GetUserId()) : Actor.User(GetUserId())) with { ClubId = club.Id };
+
+    /// <summary>Jede Aktion läuft im Verein der Anfrage (<see cref="BaseApiController.LeagueClubAsync"/>); ohne Verein die Absage.</summary>
+    private async Task<IActionResult> WithClubAsync(CancellationToken ct, Func<LeagueClub, Task<IActionResult>> run, int? preferred = null)
+    {
+        var (club, error) = await LeagueClubAsync(_clubs, ct, preferred);
+        return club is null ? error! : await run(club);
+    }
 
     [HttpGet("games")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<ActionResult<LeagueClubListDto>> List([FromQuery] string? fide, [FromQuery] string? q,
+    public Task<IActionResult> List([FromQuery] string? fide, [FromQuery] string? q,
         [FromQuery] int page = 1, [FromQuery] bool mine = false, CancellationToken ct = default) =>
-        Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct, mine));
+        WithClubAsync(ct, async club => Ok(await _club.ListAsync(club, GetUserId(), await CanManageAsync(), fide, q, page, ct, mine)));
 
     // ── Korrigieren (0.660.0): Züge einer Vereinspartie nachbessern, mit dem aufbewahrten Formular, falls es noch da ist ──
 
     public sealed record ClubMovesRequest(List<string>? Moves, List<ScoresheetPly>? Plies);
 
-    private async Task<IActionResult?> CorrectableAsync(int id, CancellationToken ct) =>
-        await _club.CanCorrectAsync(GetUserId(), await CanManageAsync(), id, ct) ? null : NotFound();
+    private async Task<IActionResult?> CorrectableAsync(LeagueClub club, int id, CancellationToken ct) =>
+        await _club.CanCorrectAsync(club, GetUserId(), await CanManageAsync(), id, ct) ? null : NotFound();
 
     /// <summary>Formular-Einträge + Stand je Halbzug aus dem Archiv (wie <c>GET /api/games/{id}/scoresheet</c>); 404, wenn
     /// nichts mehr aufbewahrt ist oder die Partie nicht korrigiert werden darf (Hochladender/Verwalter).</summary>
     [HttpGet("games/{id:int}/sheet")]
-    public async Task<IActionResult> Sheet(int id, CancellationToken ct) =>
-        await CorrectableAsync(id, ct) ?? (await _scans.ClubEditStateAsync(id, ct) is { } s ? Ok(s) : NotFound());
+    public Task<IActionResult> Sheet(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await CorrectableAsync(club, id, ct) ?? (await _scans.ClubEditStateAsync(id, ct) is { } s ? Ok(s) : NotFound()));
 
     [HttpGet("games/{id:int}/sheet/photo")]
-    public async Task<IActionResult> SheetPhoto(int id, [FromQuery] int page = 1, CancellationToken ct = default)
+    public Task<IActionResult> SheetPhoto(int id, [FromQuery] int page = 1, CancellationToken ct = default) => WithClubAsync(ct, async club =>
     {
-        if (await CorrectableAsync(id, ct) is { } denied) return denied;
+        if (await CorrectableAsync(club, id, ct) is { } denied) return denied;
         if (await _scans.ClubPhotoAsync(id, page, ct) is not { } p) return NotFound();
         Response.Headers.CacheControl = "private, max-age=3600";
         Response.Headers["X-Page-Count"] = p.PageCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
         return File(p.Data, p.ContentType);
-    }
+    });
 
     [HttpPost("games/{id:int}/sheet/resolve")]
-    public async Task<IActionResult> SheetResolve(int id, [FromBody] ScoresheetResolveRequestDto dto, CancellationToken ct)
+    public Task<IActionResult> SheetResolve(int id, [FromBody] ScoresheetResolveRequestDto dto, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
-        if (await CorrectableAsync(id, ct) is { } denied) return denied;
+        if (await CorrectableAsync(club, id, ct) is { } denied) return denied;
         try { return await _scans.ResolveClubRestAsync(id, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0, ct) is { } r ? Ok(r) : NotFound(); }
         catch (ArgumentException ex) { return BadRequest(new { reason = "illegalMove", message = ex.Message }); }
-    }
+    });
 
     /// <summary>Züge korrigieren → die Partie; geht in alle verbundenen Kopien. 400 <c>noMoves</c>/<c>tooLong</c>/<c>illegal</c>.</summary>
     [HttpPut("games/{id:int}/moves")]
-    public async Task<IActionResult> CorrectMoves(int id, [FromBody] ClubMovesRequest req, [FromServices] ClubGameCorrectionService corrections,
-        CancellationToken ct)
+    public Task<IActionResult> CorrectMoves(int id, [FromBody] ClubMovesRequest req, [FromServices] ClubGameCorrectionService corrections,
+        CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         var manage = await CanManageAsync();
-        var (game, reason) = await corrections.CorrectClubAsync(GetUserId(), manage, id, req?.Moves ?? new(), req?.Plies, null, ct);
+        var (game, reason) = await corrections.CorrectClubAsync(club, GetUserId(), manage, id, req?.Moves ?? new(), req?.Plies, null, ct);
         return reason switch
         {
             null => Ok(LeagueClubService.ToDto(game!, GetUserId(), manage)),
             "notFound" or "forbidden" => NotFound(),
             _ => BadRequest(new { reason }),
         };
-    }
+    });
 
-    /// <summary>„Meine Partien" (0.656.0): die eigenen — dafür reicht die Anmeldung (auch wer nur über einen Teilen-Link
-    /// hochgeladen und sie sich nach dem Anmelden zugeordnet hat).</summary>
+    /// <summary>„Meine Partien" (0.656.0): die eigenen im Verein der Anfrage.</summary>
     [HttpGet("games/mine")]
-    public async Task<ActionResult<LeagueClubListDto>> Mine([FromQuery] string? q, [FromQuery] int page = 1, CancellationToken ct = default) =>
-        Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), null, q, page, ct, mine: true));
+    public Task<IActionResult> Mine([FromQuery] string? q, [FromQuery] int page = 1, CancellationToken ct = default) =>
+        WithClubAsync(ct, async club => Ok(await _club.ListAsync(club, GetUserId(), await CanManageAsync(), null, q, page, ct, mine: true)));
 
     public sealed record ClaimRequest(List<string>? Keys);
+
+    // Zuordnen nach dem Anmelden (0.656.0) bleibt OHNE Verein: die Schlüssel (128 Bit) kennt nur der Browser, der hochgeladen
+    // hat — er sagt, was ER hochgeladen hat, gleich über welchen Verein. Bearbeiten kann er die Partien danach nur im Verein
+    // der Partie (alle anderen Wege laufen über den Verein der Anfrage).
 
     /// <summary>Was die Zuordnungs-Schlüssel dieses Browsers zuordnen würden → <c>{ games, anonymized }</c> (für die Rückfrage).</summary>
     [HttpPost("games/claims/preview")]
@@ -123,38 +137,41 @@ public class LeagueClubController : BaseApiController
     public async Task<IActionResult> ForgetClaims([FromBody] ClaimRequest? req, CancellationToken ct) =>
         Ok(new { forgotten = await _club.ForgetClaimsAsync(req?.Keys, ct) });
 
-    /// <summary>Eine Vereinspartie zum Nachspielen (PGN + Stand der Analyse); 404 unbekannt.</summary>
+    /// <summary>Eine Vereinspartie zum Nachspielen (PGN + Stand der Analyse); 404 unbekannt oder aus einem anderen Verein. Ohne
+    /// <c>?club=</c> (RookHubs Partie-Seite <c>/club-games/{id}</c> kennt keinen) gilt bei mehreren Vereinen der der Partie.</summary>
     [HttpGet("games/{id:int}")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<ActionResult<LeagueClubGameDto>> Get(int id, CancellationToken ct) =>
-        await _club.GetAsync(GetUserId(), await CanManageAsync(), id, ct) is { } g ? Ok(g) : NotFound();
+    public async Task<IActionResult> Get(int id, CancellationToken ct) =>
+        await WithClubAsync(ct, async club => await _club.GetAsync(club, GetUserId(), await CanManageAsync(), id, ct) is { } g ? Ok(g) : NotFound(),
+            await _club.ClubOfGameAsync(id, ct));
 
     /// <summary>Bewertungen aus der Hintergrund-Analyse (0.593.0) — für jeden, der die Vereinspartien sieht; 404 unbekannt.</summary>
     [HttpGet("games/{id:int}/evals")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct) =>
-        await _club.EvalsAsync(id, ct) is { } e ? Ok(e) : NotFound();
+    public async Task<IActionResult> Evals(int id, CancellationToken ct) =>
+        await WithClubAsync(ct, async club => await _club.EvalsAsync(club, id, ct) is { } e ? Ok(e) : NotFound(),
+            await _club.ClubOfGameAsync(id, ct));
 
     [HttpGet("games/pgn")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> Export([FromQuery] string? fide, [FromQuery] string? q, CancellationToken ct) =>
-        File(Encoding.UTF8.GetBytes(await _club.ExportAsync(fide, q, ct)), "application/x-chess-pgn", "vereinspartien.pgn");
+    public Task<IActionResult> Export([FromQuery] string? fide, [FromQuery] string? q, CancellationToken ct) => WithClubAsync(ct, async club =>
+        File(Encoding.UTF8.GetBytes(await _club.ExportAsync(club, fide, q, ct)), "application/x-chess-pgn", "vereinspartien.pgn"));
 
     /// <summary>PGN lesen und zuordnen, NICHTS speichern → Übersicht; 400 <c>empty</c>/<c>tooLarge</c>.</summary>
     [HttpPost("games/preview")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<ActionResult<LeagueClubPreviewDto>> Preview([FromBody] LeagueClubPreviewRequest req,
-        [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+    public Task<IActionResult> Preview([FromBody] LeagueClubPreviewRequest req,
+        [FromServices] LeagueClubDraftService drafts, CancellationToken ct) => WithClubAsync(ct, async club =>
         ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad)
-            : Ok(await _club.PreviewAsync(await ActingUserAsync(req!.DraftId, drafts, ct), req.Pgn, ct));
+            : Ok(await _club.PreviewAsync(club, await ActingUserAsync(club, req!.DraftId, drafts, ct), req.Pgn, ct)));
 
     /// <summary>Für wen gerechnet wird: ohne Entwurf der Aufrufer; mit Entwurf (auf den er Zugriff hat) der Einreicher — ein
     /// Verwalter, der fertigstellt, handelt für ihn (ohne Konto eingereicht: für niemanden).</summary>
-    private async Task<int?> ActingUserAsync(int? draftId, LeagueClubDraftService drafts, CancellationToken ct)
+    private async Task<int?> ActingUserAsync(LeagueClub club, int? draftId, LeagueClubDraftService drafts, CancellationToken ct)
     {
         if (draftId is not int id) return GetUserId();
-        var (found, owner) = await drafts.ActingUserAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, ct);
+        var (found, owner) = await drafts.ActingUserAsync(DraftActor.User(GetUserId(), await CanManageAsync(), club.Id), id, ct);
         return found ? owner : GetUserId();
     }
 
@@ -163,96 +180,97 @@ public class LeagueClubController : BaseApiController
     [HttpPost("drafts")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<IActionResult> CreateDraft([FromBody] LeagueClubDraftCreateRequest req, [FromServices] LeagueClubDraftService drafts,
-        CancellationToken ct)
+    public Task<IActionResult> CreateDraft([FromBody] LeagueClubDraftCreateRequest req, [FromServices] LeagueClubDraftService drafts,
+        CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         if (ClubUpload.CheckPgn(req?.Pgn) is { } bad) return BadRequest(bad);
-        var (draft, reason) = await drafts.CreateAsync(GetUserId(), null, req!.Pgn, req.Source, req.Label, ct);
+        var (draft, reason) = await drafts.CreateAsync(club.Id, GetUserId(), null, req!.Pgn, req.Source, req.Label, ct);
         return draft == null ? BadRequest(new { reason, message = "Too many open lists." }) : Ok(draft);
-    }
+    });
 
     [HttpGet("drafts")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<List<LeagueClubDraftDto>>> Drafts([FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
-        Ok(await drafts.ListAsync(DraftActor.User(GetUserId(), false), null, ct));
+    public Task<IActionResult> Drafts([FromServices] LeagueClubDraftService drafts, CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await drafts.ListAsync(DraftActor.User(GetUserId(), false, club.Id), null, ct)));
 
     [HttpGet("drafts/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<LeagueClubDraftDetailDto>> Draft(int id, [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
-        await drafts.GetAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, ct) is { } d ? Ok(d) : NotFound();
+    public Task<IActionResult> Draft(int id, [FromServices] LeagueClubDraftService drafts, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await drafts.GetAsync(DraftActor.User(GetUserId(), await CanManageAsync(), club.Id), id, ct) is { } d ? Ok(d) : NotFound());
 
     [HttpPut("drafts/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<IActionResult> SaveDraft(int id, [FromBody] LeagueClubDraftSaveRequest req, [FromServices] LeagueClubDraftService drafts,
-        CancellationToken ct)
+    public Task<IActionResult> SaveDraft(int id, [FromBody] LeagueClubDraftSaveRequest req, [FromServices] LeagueClubDraftService drafts,
+        CancellationToken ct) => WithClubAsync(ct, async club =>
     {
-        var (found, reason) = await drafts.SaveAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, req ?? new(), ct);
+        var (found, reason) = await drafts.SaveAsync(DraftActor.User(GetUserId(), await CanManageAsync(), club.Id), id, req ?? new(), ct);
         return !found ? NotFound() : reason != null ? BadRequest(new { reason }) : NoContent();
-    }
+    });
 
     [HttpDelete("drafts/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> DeleteDraft(int id, [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
-        await drafts.DeleteAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, ct) ? NoContent() : NotFound();
+    public Task<IActionResult> DeleteDraft(int id, [FromServices] LeagueClubDraftService drafts, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await drafts.DeleteAsync(DraftActor.User(GetUserId(), await CanManageAsync(), club.Id), id, ct) ? NoContent() : NotFound());
 
-    /// <summary>Alle offenen Entwürfe (Verwalter) — auch über Teilen-Links, damit nichts liegen bleibt.</summary>
+    /// <summary>Alle offenen Entwürfe des Vereins (Verwalter) — auch über Teilen-Links, damit nichts liegen bleibt.</summary>
     [HttpGet("admin/drafts")]
     [HasPermission(Permissions.LeagueManage)]
-    public async Task<ActionResult<List<LeagueClubDraftDto>>> AllDrafts([FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
-        Ok(await drafts.ListAllAsync(GetUserId(), ct));
+    public Task<IActionResult> AllDrafts([FromServices] LeagueClubDraftService drafts, CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await drafts.ListAllAsync(club.Id, GetUserId(), ct)));
 
     /// <summary>PGN übernehmen, je Partie mit den Entscheidungen aus der Übersicht → <see cref="LeagueClubImportResultDto"/>.</summary>
     [HttpPost("games/import")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<ActionResult<LeagueClubImportResultDto>> Import([FromBody] LeagueClubImportRequest req,
-        [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+    public Task<IActionResult> Import([FromBody] LeagueClubImportRequest req,
+        [FromServices] LeagueClubDraftService drafts, CancellationToken ct) => WithClubAsync(ct, async club =>
         ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad)
-            : Ok(await _club.ImportPgnAsync(await ActingUserAsync(req!.DraftId, drafts, ct), req.Pgn, req.Games, ct));
+            : Ok(await _club.ImportPgnAsync(club, await ActingUserAsync(club, req!.DraftId, drafts, ct), req.Pgn, req.Games, ct)));
 
     /// <summary>Eine Partie (aus einem Partieformular). 400 mit <c>reason</c> wie beim Import, dazu <c>duplicate</c>;
     /// die Einlesung (<c>scanId</c>) wird danach geschlossen — ihr Foto verschwindet.</summary>
     [HttpPost("games")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> Add([FromBody] LeagueClubGameRequest req, CancellationToken ct)
+    public Task<IActionResult> Add([FromBody] LeagueClubGameRequest req, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
-        var (game, reason, message) = await _club.AddGameAsync(GetUserId(), req, ct);
+        var (game, reason, message) = await _club.AddGameAsync(club, GetUserId(), req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId, game.Pgn, game.Id);
+        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(club), scanId, game.Pgn, game.Id);
         if (req.ScanId != null && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct);
         return Ok(new { id = game.Id, anonymized = game.Anonymized, replaced = game.Replaced });
-    }
+    });
 
-    /// <summary>Löschen: eigene (seit 0.656.0 nur mit Anmeldung — die Regel steht im Dienst) oder als Verwalter jede.</summary>
+    /// <summary>Löschen: eigene (seit 0.656.0 nur mit Anmeldung — die Regel steht im Dienst) oder als Verwalter jede des Vereins.</summary>
     [HttpDelete("games/{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct) =>
-        await _club.DeleteAsync(GetUserId(), await CanManageAsync(), id, ct) switch
+    public Task<IActionResult> Delete(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _club.DeleteAsync(club, GetUserId(), await CanManageAsync(), id, ct) switch
         {
             LeagueClubService.DeleteResult.Deleted => NoContent(),
             LeagueClubService.DeleteResult.Forbidden => Forbid(),
             _ => NotFound(),
-        };
+        });
 
     /// <summary>„Alle Partien dieses Links entfernen" (Verwalter, Codereview 2026-09-29): alles, was über den Teilen-Link
     /// hochgeladen wurde — auch nach seinem Ablauf, in jeder Schreibweise, solange die Link-Zeile noch steht (sonst zählt
-    /// der Wert, wie er kommt). <c>dryRun=true</c> zählt nur → <c>{ count, dryRun }</c>.</summary>
+    /// der Wert, wie er kommt); nur Partien des eigenen Vereins. <c>dryRun=true</c> zählt nur → <c>{ count, dryRun }</c>.</summary>
     [HttpDelete("admin/shares/{token}/games")]
     [HasPermission(Permissions.LeagueManage)]
-    public async Task<IActionResult> DeleteShareGames(string token, [FromQuery] bool dryRun = false, CancellationToken ct = default) =>
-        string.IsNullOrWhiteSpace(token) || token.Length > 64 ? BadRequest(new { reason = "invalidToken", message = "Invalid link." })
-            : Ok(new { count = await _club.DeleteByShareAsync(token, dryRun, ct), dryRun });
+    public Task<IActionResult> DeleteShareGames(string token, [FromQuery] bool dryRun = false, CancellationToken ct = default) =>
+        WithClubAsync(ct, async club =>
+            string.IsNullOrWhiteSpace(token) || token.Length > 64 ? BadRequest(new { reason = "invalidToken", message = "Invalid link." })
+                : Ok(new { count = await _club.DeleteByShareAsync(club, token, dryRun, ct), dryRun }));
 
     /// <summary>Ligaspieler zum Eintippen der Namen (ab zwei Buchstaben).</summary>
     [HttpGet("players")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<List<LeagueRosterPersonDto>>> Players([FromQuery] string? q, [FromQuery] bool all = false,
-        CancellationToken ct = default) =>
-        Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(q, all, ct));
+    public Task<IActionResult> Players([FromQuery] string? q, [FromQuery] bool all = false,
+        CancellationToken ct = default) => WithClubAsync(ct, async club =>
+        Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(club, q, all, ct)));
 
     /// <summary>PGN einer öffentlichen Lichess-Studie holen → <c>{ pgn }</c> (danach wie ein Upload: Übersicht, Import).
-    /// 400 <c>invalidUrl</c>/<c>lichessNotFound</c>/<c>lichessFailed</c>/<c>tooLarge</c>.</summary>
+    /// 400 <c>invalidUrl</c>/<c>lichessNotFound</c>/<c>lichessFailed</c>/<c>tooLarge</c>. Speichert nichts — ohne Verein.</summary>
     [HttpPost("games/lichess")]
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<IActionResult> Lichess([FromBody] LeagueClubLichessRequest req, [FromServices] LichessStudySource lichess,
@@ -264,7 +282,7 @@ public class LeagueClubController : BaseApiController
 
     /// <summary>Eine ChessBase-Datenbank (multipart <c>files</c>: die Dateien, einzeln gepackt als <c>.gz</c>, oder ein ZIP)
     /// → PGN der Hauptvarianten samt Kopfdaten (0.598.0); danach wie ein Upload. 400 mit Grund-Code (siehe
-    /// <see cref="ChessBaseImportService.ConvertAsync"/>), 429 <c>busy</c>.</summary>
+    /// <see cref="ChessBaseImportService.ConvertAsync"/>), 429 <c>busy</c>. Speichert nichts — ohne Verein.</summary>
     [HttpPost("games/chessbase")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ChessBaseImportService.MaxBodyBytes + 1024 * 1024)]
@@ -272,27 +290,27 @@ public class LeagueClubController : BaseApiController
     public async Task<IActionResult> ChessBaseUpload([FromServices] ChessBaseImportService chessBase, CancellationToken ct) =>
         ClubUpload.ChessBaseResult(this, await chessBase.ConvertAsync(await ClubUpload.FormFilesAsync(Request, ct), ct));
 
-    /// <summary>Stehen diese Namen in einer Meldeliste? Spieler von Schwaz?</summary>
+    /// <summary>Stehen diese Namen in einer Meldeliste? Spieler des eigenen Vereins?</summary>
     [HttpPost("match")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<LeagueClubMatchDto>> Match([FromBody] LeagueClubMatchRequest req, CancellationToken ct) =>
-        Ok(await _club.MatchAsync(req?.White, req?.Black, ct));
+    public Task<IActionResult> Match([FromBody] LeagueClubMatchRequest req, CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await _club.MatchAsync(club, req?.White, req?.Black, ct)));
 
     /// <summary>Welche Brettpaarung könnte diese (noch nicht gespeicherte) Partie sein? (0.678.0)</summary>
     [HttpPost("pairings")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<List<LeagueClubPairingDto>>> Pairings([FromBody] LeagueClubPairingQuery req, CancellationToken ct) =>
-        Ok(await _club.SuggestPairingsAsync(req ?? new LeagueClubPairingQuery(), ct));
+    public Task<IActionResult> Pairings([FromBody] LeagueClubPairingQuery req, CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await _club.SuggestPairingsAsync(club, req ?? new LeagueClubPairingQuery(), ct)));
 
     /// <summary>Brettpaarungen für eine gespeicherte Partie (Bearbeiten, 0.678.0) — nur wer sie bearbeiten darf, sonst 404.</summary>
     [HttpGet("games/{id:int}/pairings")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<ActionResult<List<LeagueClubPairingDto>>> GamePairings(int id, CancellationToken ct) =>
-        await _club.PairingsForGameAsync(GetUserId(), await CanManageAsync(), id, ct) is { } list ? Ok(list) : NotFound();
+    public Task<IActionResult> GamePairings(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _club.PairingsForGameAsync(club, GetUserId(), await CanManageAsync(), id, ct) is { } list ? Ok(list) : NotFound());
 
     // ── Partieformular (dieselbe Einlesung wie in RookHub, aber ohne „Meine Partien") ─────────────
 
-    /// <summary>Tageszahl dieses Wegs: <see cref="ScoresheetScanService.DefaultLeagueDailyLimit"/> je Nutzer.</summary>
+    /// <summary>Tageszahl dieses Wegs: <see cref="ScoresheetScanService.DefaultLeagueDailyLimit"/> je Nutzer (über alle Vereine).</summary>
     [HttpGet("scoresheet/status")]
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<ActionResult<ScoresheetStatusDto>> ScoresheetStatus() =>
@@ -301,10 +319,10 @@ public class LeagueClubController : BaseApiController
     /// <summary>Namen und Ergebnis korrigieren → die Partie; 400 <c>reason</c> (<c>anonymous</c>, <c>noLeaguePlayer</c>,
     /// <c>onlyOwnClub</c>, <c>invalidResult</c>), 403 fremde, 404 unbekannt.</summary>
     [HttpPut("games/{id:int}")]   // eigene oder als Verwalter (Regel im Dienst) — seit 0.656.0 ohne league.contribute
-    public async Task<ActionResult<LeagueClubGameDto>> Update(int id, [FromBody] LeagueClubGameUpdateRequest req, CancellationToken ct)
+    public Task<IActionResult> Update(int id, [FromBody] LeagueClubGameUpdateRequest req, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         var manage = await CanManageAsync();
-        var (game, reason) = await _club.UpdateAsync(GetUserId(), manage, id, req ?? new(), ct);
+        var (game, reason) = await _club.UpdateAsync(club, GetUserId(), manage, id, req ?? new(), ct);
         return reason switch
         {
             null => Ok(LeagueClubService.ToDto(game!, GetUserId(), manage)),
@@ -312,11 +330,12 @@ public class LeagueClubController : BaseApiController
             "forbidden" => Forbid(),
             _ => BadRequest(new { reason }),
         };
-    }
+    });
 
     [HttpGet("scans")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<List<ScoresheetScanDto>>> Scans() => Ok(await _scans.LeagueScansAsync(GetUserId()));
+    public Task<IActionResult> Scans(CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await _scans.LeagueScansAsync(GetUserId(), club.Id)));
 
     /// <summary>Foto hochladen (multipart <c>file</c>, <c>language</c>, <c>side</c>) — Absagen wie <c>POST /api/scoresheets</c>.
     /// Ein Formular über mehrere Blätter: mehrere Teile <c>file</c> in Seitenreihenfolge (höchstens
@@ -325,15 +344,16 @@ public class LeagueClubController : BaseApiController
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ScoresheetScanService.MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadRequestBytes)]
-    public async Task<IActionResult> Upload([FromForm] List<IFormFile>? file, [FromForm] string? language, [FromForm] string? side)
+    public Task<IActionResult> Upload([FromForm] List<IFormFile>? file, [FromForm] string? language, [FromForm] string? side,
+        CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         var (pages, error) = await ClubUpload.ReadPagesAsync(file);
         if (error != null) return BadRequest(error);
-        var (scan, reason) = await _scans.CreateAsync(GetUserId(), pages!, language, side, ScoresheetScan.PurposeLeague);
+        var (scan, reason) = await _scans.CreateAsync(GetUserId(), pages!, language, side, ScoresheetScan.PurposeLeague, club.Id);
         if (ClubUpload.Refusal(reason) is { } refused) return refused;
         _signal.Wake();
         return Accepted(scan);
-    }
+    });
 
     // ── Stapel-Upload (0.651.0): Bilder nur ablegen, nicht einlesen — die Admins bekommen eine Nachricht ──
 
@@ -341,53 +361,57 @@ public class LeagueClubController : BaseApiController
 
     [HttpPost("batches")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> BatchStart([FromBody] BatchStartRequest? req, [FromServices] LeagueBatchUploadService batches,
-        CancellationToken ct) => Ok(await batches.StartAsync(LeagueBatchUploadService.Uploader.User(GetUserId()), req?.Comment, ct));
+    public Task<IActionResult> BatchStart([FromBody] BatchStartRequest? req, [FromServices] LeagueBatchUploadService batches,
+        CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await batches.StartAsync(LeagueBatchUploadService.Uploader.User(GetUserId(), club.Id), req?.Comment, ct)));
 
     [HttpPost("batches/{key}/files")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    public async Task<IActionResult> BatchFile(string key, IFormFile? file, [FromServices] LeagueBatchUploadService batches, CancellationToken ct)
-    {
-        if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
-        return ClubUpload.BatchResult(this, await batches.AddFileAsync(LeagueBatchUploadService.Uploader.User(GetUserId()), key, data,
-            file!.ContentType, file.FileName, ct));
-    }
+    public Task<IActionResult> BatchFile(string key, IFormFile? file, [FromServices] LeagueBatchUploadService batches, CancellationToken ct) =>
+        WithClubAsync(ct, async club =>
+        {
+            if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
+            return ClubUpload.BatchResult(this, await batches.AddFileAsync(LeagueBatchUploadService.Uploader.User(GetUserId(), club.Id), key, data,
+                file!.ContentType, file.FileName, ct));
+        });
 
     [HttpPost("batches/{key}/finish")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> BatchFinish(string key, [FromServices] LeagueBatchUploadService batches, CancellationToken ct) =>
-        ClubUpload.BatchResult(this, await batches.FinishAsync(LeagueBatchUploadService.Uploader.User(GetUserId()), key, ct));
+    public Task<IActionResult> BatchFinish(string key, [FromServices] LeagueBatchUploadService batches, CancellationToken ct) =>
+        WithClubAsync(ct, async club =>
+            ClubUpload.BatchResult(this, await batches.FinishAsync(LeagueBatchUploadService.Uploader.User(GetUserId(), club.Id), key, ct)));
 
-    /// <summary>Alle offenen Liga-Einlesungen, auch fremde und über Teilen-Links (Verwalter).</summary>
+    /// <summary>Alle offenen Liga-Einlesungen des Vereins, auch fremde und über Teilen-Links (Verwalter).</summary>
     [HttpGet("admin/scans")]
     [HasPermission(Permissions.LeagueManage)]
-    public async Task<ActionResult<List<LeagueOpenScanDto>>> OpenScans(CancellationToken ct) =>
-        Ok(await _scans.LeagueOpenScansAsync(GetUserId(), ct));
+    public Task<IActionResult> OpenScans(CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await _scans.LeagueOpenScansAsync(GetUserId(), club.Id, ct)));
 
     [HttpGet("scans/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<LeagueScanStateDto>> Scan(int id, CancellationToken ct) =>
-        await _scans.LeagueScanStateAsync(await MeAsync(), id, ct) is { } s ? Ok(s) : NotFound();
+    public Task<IActionResult> Scan(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _scans.LeagueScanStateAsync(await MeAsync(club), id, ct) is { } s ? Ok(s) : NotFound());
 
     [HttpGet("scans/{id:int}/photo")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> Photo(int id, [FromQuery] int page = 1) =>
-        ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(), id, page));
+    public Task<IActionResult> Photo(int id, [FromQuery] int page = 1, CancellationToken ct = default) => WithClubAsync(ct, async club =>
+        ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(club), id, page)));
 
     [HttpPost("scans/{id:int}/resolve")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<ScoresheetResolveResultDto>> Resolve(int id, [FromBody] ScoresheetResolveRequestDto dto)
+    public Task<IActionResult> Resolve(int id, [FromBody] ScoresheetResolveRequestDto dto, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
-        var me = await MeAsync();
+        var me = await MeAsync(club);
         return await ClubUpload.ResolveAsync(this, () => _scans.ResolveLeagueRestAsync(me, id, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0));
-    }
+    });
 
     /// <summary>Einlesung verwerfen: Foto und Lesung weg, die Zeile bleibt fürs Tageskontingent.</summary>
     [HttpDelete("scans/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> Discard(int id) => await _scans.CloseLeagueScanAsync(await MeAsync(), id) ? NoContent() : NotFound();
+    public Task<IActionResult> Discard(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _scans.CloseLeagueScanAsync(await MeAsync(club), id) ? NoContent() : NotFound());
 }
 
 /// <summary>
@@ -415,56 +439,60 @@ public class LeagueShareClubController : ControllerBase
         _league = league; _club = club; _scans = scans; _signal = signal;
     }
 
-    private Task<bool> ValidAsync(string token, CancellationToken ct) => _league.ShareValidAsync(token, ct);
+    /// <summary>Der gültige Link samt SEINEM Verein (<see cref="LeagueShare.ClubId"/>, Mandanten-Schritt 2026-10-07) — alles,
+    /// was über den Link hereinkommt, gehört diesem Verein. <c>null</c> = kein gültiger Link (404).</summary>
+    private Task<(string Token, LeagueClub Club)?> LinkAsync(string token, CancellationToken ct) => _league.ShareContextAsync(token, ct);
     private string IpHash => _scans.AnonIpHash(HttpContext.Connection.RemoteIpAddress);
 
     [HttpPost("games/preview")]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<ActionResult<LeagueClubPreviewDto>> Preview(string token, [FromBody] LeagueClubPreviewRequest req, CancellationToken ct)
+    public async Task<IActionResult> Preview(string token, [FromBody] LeagueClubPreviewRequest req, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.PreviewAsync(null, req!.Pgn, ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.PreviewAsync(link.Club, null, req!.Pgn, ct));
     }
 
     [HttpPost("games/import")]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<ActionResult<LeagueClubImportResultDto>> Import(string token, [FromBody] LeagueClubImportRequest req, CancellationToken ct)
+    public async Task<IActionResult> Import(string token, [FromBody] LeagueClubImportRequest req, CancellationToken ct)
     {
         // Das Token der Link-Zeile, nicht der Routen-Wert: dieselbe Datenbank-Zeile findet sich auch mit anderer
         // Groß/Kleinschreibung (siehe LeagueService.ValidShareTokenAsync) — Vermerk und Deckel hängen am Link, nicht an
         // seiner Schreibweise.
-        if (await _league.ValidShareTokenAsync(token, ct) is not { } link) return NotFound();
-        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.ImportViaShareAsync(link, req!.Pgn, req.Games, ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad)
+            : Ok(await _club.ImportViaShareAsync(link.Club, link.Token, req!.Pgn, req.Games, ct));
     }
 
     /// <summary>Eine Partie aus einem Partieformular; <c>scanKey</c> = der Schlüssel der Einlesung (wird geschlossen).</summary>
     [HttpPost("games")]
     public async Task<IActionResult> Add(string token, [FromBody] LeagueClubGameRequest req, [FromQuery] string? scanKey, CancellationToken ct)
     {
-        if (await _league.ValidShareTokenAsync(token, ct) is not { } link) return NotFound();   // wie beim Import
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();   // wie beim Import
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         req.ScanId = null;
         var claimKey = LeagueClubService.NewClaimKey();
-        var (game, reason, message) = await _club.AddGameViaShareAsync(link, req, ct, claimKey);
+        var (game, reason, message) = await _club.AddGameViaShareAsync(link.Club, link.Token, req, ct, claimKey);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null, game.Pgn, game.Id);
+        if (!string.IsNullOrWhiteSpace(scanKey))
+            await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey) with { ClubId = link.Club.Id }, null, game.Pgn, game.Id);
         if (!string.IsNullOrWhiteSpace(scanKey) && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct);
         return Ok(new { id = game.Id, anonymized = game.Anonymized, claimKey, replaced = game.Replaced });
     }
 
     [HttpGet("players")]
-    public async Task<ActionResult<List<LeagueRosterPersonDto>>> Players(string token, [FromQuery] string? q, [FromQuery] bool all,
+    public async Task<IActionResult> Players(string token, [FromQuery] string? q, [FromQuery] bool all,
         CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(q, all, ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(link.Club, q, all, ct));
     }
 
     [HttpPost("games/lichess")]
     public async Task<IActionResult> Lichess(string token, [FromBody] LeagueClubLichessRequest req, [FromServices] LichessStudySource lichess,
         CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is null) return NotFound();
         var (pgn, reason) = await lichess.FetchAsync(req?.Url, ct);
         return pgn == null ? BadRequest(new { reason, message = "Study not loaded." }) : Ok(new { pgn });
     }
@@ -474,29 +502,29 @@ public class LeagueShareClubController : ControllerBase
     [RequestFormLimits(MultipartBodyLengthLimit = ChessBaseImportService.MaxBodyBytes + 1024 * 1024)]
     public async Task<IActionResult> ChessBaseUpload(string token, [FromServices] ChessBaseImportService chessBase, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is null) return NotFound();
         return ClubUpload.ChessBaseResult(this, await chessBase.ConvertAsync(await ClubUpload.FormFilesAsync(Request, ct), ct));
     }
 
     [HttpPost("match")]
-    public async Task<ActionResult<LeagueClubMatchDto>> Match(string token, [FromBody] LeagueClubMatchRequest req, CancellationToken ct)
+    public async Task<IActionResult> Match(string token, [FromBody] LeagueClubMatchRequest req, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return Ok(await _club.MatchAsync(req?.White, req?.Black, ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return Ok(await _club.MatchAsync(link.Club, req?.White, req?.Black, ct));
     }
 
     /// <summary>Brettpaarungen für das Formular über den Teilen-Link (0.678.0) — die Paarungen sind öffentlich (chess-results).</summary>
     [HttpPost("pairings")]
-    public async Task<ActionResult<List<LeagueClubPairingDto>>> Pairings(string token, [FromBody] LeagueClubPairingQuery req, CancellationToken ct)
+    public async Task<IActionResult> Pairings(string token, [FromBody] LeagueClubPairingQuery req, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return Ok(await _club.SuggestPairingsAsync(req ?? new LeagueClubPairingQuery(), ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return Ok(await _club.SuggestPairingsAsync(link.Club, req ?? new LeagueClubPairingQuery(), ct));
     }
 
     [HttpGet("scoresheet/status")]
-    public async Task<ActionResult<ScoresheetStatusDto>> ScoresheetStatus(string token, CancellationToken ct)
+    public async Task<IActionResult> ScoresheetStatus(string token, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is null) return NotFound();
         return Ok(await _scans.AnonStatusAsync(IpHash));
     }
 
@@ -509,9 +537,9 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> CreateDraft(string token, [FromBody] LeagueClubDraftCreateRequest req,
         [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
         if (ClubUpload.CheckPgn(req?.Pgn) is { } bad) return BadRequest(bad);
-        var (draft, reason) = await drafts.CreateAsync(null, IpHash, req!.Pgn, req.Source, req.Label, ct);
+        var (draft, reason) = await drafts.CreateAsync(link.Club.Id, null, IpHash, req!.Pgn, req.Source, req.Label, ct);
         return draft == null ? BadRequest(new { reason, message = "Too many open lists." }) : Ok(draft);
     }
 
@@ -519,15 +547,15 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> DraftLookup(string token, [FromBody] KeysRequest req, [FromServices] LeagueClubDraftService drafts,
         CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return Ok(await drafts.ListAsync(DraftActor.Anonymous(null), req?.Keys ?? new(), ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return Ok(await drafts.ListAsync(DraftActor.Anonymous(null, link.Club.Id), req?.Keys ?? new(), ct));
     }
 
     [HttpGet("drafts/{key}")]
     public async Task<IActionResult> Draft(string token, string key, [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return await drafts.GetAsync(DraftActor.Anonymous(key), null, ct) is { } d ? Ok(d) : NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return await drafts.GetAsync(DraftActor.Anonymous(key, link.Club.Id), null, ct) is { } d ? Ok(d) : NotFound();
     }
 
     [HttpPut("drafts/{key}")]
@@ -535,24 +563,24 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> SaveDraft(string token, string key, [FromBody] LeagueClubDraftSaveRequest req,
         [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        var (found, reason) = await drafts.SaveAsync(DraftActor.Anonymous(key), null, req ?? new(), ct);
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        var (found, reason) = await drafts.SaveAsync(DraftActor.Anonymous(key, link.Club.Id), null, req ?? new(), ct);
         return !found ? NotFound() : reason != null ? BadRequest(new { reason }) : NoContent();
     }
 
     [HttpDelete("drafts/{key}")]
     public async Task<IActionResult> DeleteDraft(string token, string key, [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return await drafts.DeleteAsync(DraftActor.Anonymous(key), null, ct) ? NoContent() : NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return await drafts.DeleteAsync(DraftActor.Anonymous(key, link.Club.Id), null, ct) ? NoContent() : NotFound();
     }
 
-    /// <summary>Die offenen Einlesungen zu den Schlüsseln, die der Browser sich gemerkt hat.</summary>
+    /// <summary>Die offenen Einlesungen zu den Schlüsseln, die der Browser sich gemerkt hat (nur die des Vereins des Links).</summary>
     [HttpPost("scans/lookup")]
     public async Task<IActionResult> Lookup(string token, [FromBody] KeysRequest req, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        var found = await _scans.LeagueScansByKeysAsync(req?.Keys ?? new());
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        var found = await _scans.LeagueScansByKeysAsync(req?.Keys ?? new(), link.Club.Id);
         return Ok(found.Select(f => new { key = f.Key, scan = f.Scan }));
     }
 
@@ -563,10 +591,10 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> Upload(string token, [FromForm] List<IFormFile>? file, [FromForm] string? language,
         [FromForm] string? side, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
         var (pages, error) = await ClubUpload.ReadPagesAsync(file);
         if (error != null) return BadRequest(error);
-        var (scan, key, reason) = await _scans.CreateAnonymousAsync(pages!, language, side, IpHash);
+        var (scan, key, reason) = await _scans.CreateAnonymousAsync(pages!, language, side, IpHash, link.Club.Id);
         if (ClubUpload.Refusal(reason) is { } refused) return refused;
         _signal.Wake();
         return Accepted(new { key, scan });
@@ -576,8 +604,8 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> BatchStart(string token, [FromBody] LeagueClubController.BatchStartRequest? req,
         [FromServices] LeagueBatchUploadService batches, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return Ok(await batches.StartAsync(LeagueBatchUploadService.Uploader.Share(token, IpHash), req?.Comment, ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return Ok(await batches.StartAsync(LeagueBatchUploadService.Uploader.Share(link.Token, IpHash, link.Club.Id), req?.Comment, ct));
     }
 
     [HttpPost("batches/{key}/files")]
@@ -586,47 +614,47 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> BatchFile(string token, string key, IFormFile? file, [FromServices] LeagueBatchUploadService batches,
         CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
         if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
-        return ClubUpload.BatchResult(this, await batches.AddFileAsync(LeagueBatchUploadService.Uploader.Share(token, IpHash), key, data,
+        return ClubUpload.BatchResult(this, await batches.AddFileAsync(LeagueBatchUploadService.Uploader.Share(link.Token, IpHash, link.Club.Id), key, data,
             file!.ContentType, file.FileName, ct));
     }
 
     [HttpPost("batches/{key}/finish")]
     public async Task<IActionResult> BatchFinish(string token, string key, [FromServices] LeagueBatchUploadService batches, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return ClubUpload.BatchResult(this, await batches.FinishAsync(LeagueBatchUploadService.Uploader.Share(token, IpHash), key, ct));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return ClubUpload.BatchResult(this, await batches.FinishAsync(LeagueBatchUploadService.Uploader.Share(link.Token, IpHash, link.Club.Id), key, ct));
     }
 
     [HttpGet("scans/{key}")]
-    public async Task<ActionResult<LeagueScanStateDto>> Scan(string token, string key, CancellationToken ct)
+    public async Task<IActionResult> Scan(string token, string key, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return await _scans.LeagueScanStateAsync(Actor.Anonymous(key), null, ct) is { } s ? Ok(s) : NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return await _scans.LeagueScanStateAsync(Actor.Anonymous(key) with { ClubId = link.Club.Id }, null, ct) is { } s ? Ok(s) : NotFound();
     }
 
     [HttpGet("scans/{key}/photo")]
     public async Task<IActionResult> Photo(string token, string key, [FromQuery] int page = 1, CancellationToken ct = default)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(Actor.Anonymous(key), null, page));
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(Actor.Anonymous(key) with { ClubId = link.Club.Id }, null, page));
     }
 
     [HttpPost("scans/{key}/resolve")]
-    public async Task<ActionResult<ScoresheetResolveResultDto>> Resolve(string token, string key, [FromBody] ScoresheetResolveRequestDto dto,
+    public async Task<IActionResult> Resolve(string token, string key, [FromBody] ScoresheetResolveRequestDto dto,
         CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
         return await ClubUpload.ResolveAsync(this,
-            () => _scans.ResolveLeagueRestAsync(Actor.Anonymous(key), null, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0));
+            () => _scans.ResolveLeagueRestAsync(Actor.Anonymous(key) with { ClubId = link.Club.Id }, null, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0));
     }
 
     [HttpDelete("scans/{key}")]
     public async Task<IActionResult> Discard(string token, string key, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return await _scans.CloseLeagueScanAsync(Actor.Anonymous(key), null) ? NoContent() : NotFound();
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        return await _scans.CloseLeagueScanAsync(Actor.Anonymous(key) with { ClubId = link.Club.Id }, null) ? NoContent() : NotFound();
     }
 }
 
@@ -699,7 +727,7 @@ internal static class ClubUpload
         return c.File(photo.Data, photo.ContentType);
     }
 
-    public static async Task<ActionResult<ScoresheetResolveResultDto>> ResolveAsync(ControllerBase c,
+    public static async Task<IActionResult> ResolveAsync(ControllerBase c,
         Func<Task<ScoresheetResolveResultDto?>> run)
     {
         try

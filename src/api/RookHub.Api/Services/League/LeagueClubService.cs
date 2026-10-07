@@ -9,7 +9,9 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services.League;
 
 /// <summary>
-/// Vereins-Datenbank in LeagueHub (Wunsch 2026-09-28): Mitglieder von SK Schwaz laden Partien hoch — viele auf einmal als
+/// Vereins-Datenbank in LeagueHub (Wunsch 2026-09-28): Mitglieder eines Vereins (zuerst SK Schwaz, seit dem Mandanten-Schritt
+/// 2026-10-07 je <see cref="LeagueClub"/> getrennt — jede Methode bekommt den Verein der Anfrage und sieht nur dessen
+/// Partien) laden Partien hoch — viele auf einmal als
 /// PGN oder einzeln aus einem eingelesenen Partieformular, angemeldet ODER ohne Konto über einen Teilen-Link — und die
 /// Spielerkarten der Gegner zeigen sie mit.
 ///
@@ -20,8 +22,9 @@ namespace RookHub.Api.Services.League;
 /// 2026-09-28: „standardmäßig auf Megabase matchen, wenn in Tirol kein Treffer"). Ist keine Seite bekannt, wird die
 /// Partie abgelehnt (<c>noLeaguePlayer</c>); bleibt nach dem Ersetzen keine bekannte übrig, ebenso (<c>onlyOwnClub</c>).
 /// Eine Partie, deren Gegner nur die Megabase kennt, ist übernehmbar, die Übersicht wählt sie aber nicht vor.</item>
-/// <item><b>Spieler von Schwaz werden durch „Schwaz" ersetzt</b> (Vorgabe: jeder, der in seiner jüngsten Saison für
-/// Schwaz gemeldet ist, dazu der Hochladende laut Profil) — ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es
+/// <item><b>Spieler des Vereins werden durch seinen Namen ersetzt</b> (<see cref="LeagueClub.AnonName"/>, „Schwaz" bzw.
+/// „Weilheim"; Vorgabe: jeder, der in seiner jüngsten Saison für den Verein gemeldet ist (<see cref="LeagueClub.OwnsTeam"/>),
+/// dazu der Hochladende laut Profil) — ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es
 /// wird WEDER gespeichert, wer dahinter steht, NOCH wer hochgeladen hat oder wann (auch nicht versteckt). Beim PGN-Import
 /// zeigt eine Übersicht (<see cref="PreviewAsync"/>) je Partie wer gegen wen, die Vorgaben und ob sie übernommen würde;
 /// der Nutzer korrigiert Spieler und Ersetzen, übernommen wird mit seinen Entscheidungen (<see cref="ImportPgnAsync"/>).</item>
@@ -39,7 +42,6 @@ namespace RookHub.Api.Services.League;
 /// </summary>
 public sealed class LeagueClubService
 {
-    public const string AnonymousName = LeagueRefresh.OwnTeam;
     public const int MaxImportGames = 500;
     public const int MaxImportChars = 5_000_000;
     public const int MaxPlies = 600;
@@ -87,9 +89,9 @@ public sealed class LeagueClubService
 
     /// <summary>Vorschläge für eine Partie, die noch nicht gespeichert ist (Formular, 0.678.0) — Namen werden abgeglichen wie beim
     /// Hochladen, eine Seite „Schwaz" zählt als eigener Verein.</summary>
-    public async Task<List<LeagueClubPairingDto>> SuggestPairingsAsync(LeagueClubPairingQuery q, CancellationToken ct)
+    public async Task<List<LeagueClubPairingDto>> SuggestPairingsAsync(LeagueClub club, LeagueClubPairingQuery q, CancellationToken ct)
     {
-        var lk = await LookupsAsync(await RosterAsync(ct), new[] { q.White, q.Black }, new[] { q.WhiteFide, q.BlackFide }, ct);
+        var lk = await LookupsAsync(await RosterAsync(club, ct), new[] { q.White, q.Black }, new[] { q.WhiteFide, q.BlackFide }, ct);
         (string Name, string? Fide) One(string? name, string? fide)
         {
             if (!string.IsNullOrWhiteSpace(fide)) return (name ?? "", fide.Trim());
@@ -100,29 +102,29 @@ public sealed class LeagueClubService
         var (wn, wf) = One(q.White, q.WhiteFide);
         var (bn, bf) = One(q.Black, q.BlackFide);
         var date = FullDateOf(q.Date);
-        var options = await _pairings.ForAsync(new LeaguePairingFinder.Query(wn, wf, bn, bf, date, date?.Year ?? q.Year), ct);
+        var options = await _pairings.ForAsync(new LeaguePairingFinder.Query(wn, wf, bn, bf, date, date?.Year ?? q.Year), club, ct);
         return options.Select(LeagueClubPairingDto.Of).ToList();
     }
 
     /// <summary>Vorschläge für eine gespeicherte Partie (Bearbeiten) — nur wer sie bearbeiten darf; sonst <c>null</c>.</summary>
-    public async Task<List<LeagueClubPairingDto>?> PairingsForGameAsync(int userId, bool canManage, int id, CancellationToken ct)
+    public async Task<List<LeagueClubPairingDto>?> PairingsForGameAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct)
     {
-        var g = await _db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        var g = await Games(club).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null || !CanDelete(g, userId, canManage)) return null;
-        var options = await _pairings.ForAsync(LeaguePairingFinder.QueryOf(g, null), ct);
+        var options = await _pairings.ForAsync(LeaguePairingFinder.QueryOf(g, null), club, ct);
         // die schon zugeordnete steht immer drin, auch wenn sie nicht mehr unter den Vorschlägen wäre
-        if (g.LeagueGameId is { } cur && options.All(o => o.Id != cur) && await _pairings.ByIdAsync(cur, ct) is { } o0) options.Insert(0, o0);
+        if (g.LeagueGameId is { } cur && options.All(o => o.Id != cur) && await _pairings.ByIdAsync(cur, ct, club) is { } o0) options.Insert(0, o0);
         return options.Select(LeagueClubPairingDto.Of).ToList();
     }
 
     /// <summary>Die Wahl der Paarung an die Partie: gewählt (<c>&gt; 0</c>), ausdrücklich keine (<c>0</c>) oder — fehlt die
     /// Angabe — die eindeutig erkannte. Ändert sich dabei das Jahr, wird das PGN neu geschrieben.</summary>
-    private async Task ApplyPairingsAsync(IReadOnlyList<(LeagueClubGame Game, int? Choice, DateOnly? Date, IReadOnlyList<string> Sans)> items,
-        CancellationToken ct)
+    private async Task ApplyPairingsAsync(LeagueClub club,
+        IReadOnlyList<(LeagueClubGame Game, int? Choice, DateOnly? Date, IReadOnlyList<string> Sans)> items, CancellationToken ct)
     {
         var auto = items.Where(x => x.Choice is null).ToList();
         var picks = auto.Count == 0 ? new List<List<LeaguePairingFinder.Option>>()
-            : await _pairings.ForManyAsync(auto.Select(x => LeaguePairingFinder.QueryOf(x.Game, x.Date)).ToList(), ct);
+            : await _pairings.ForManyAsync(auto.Select(x => LeaguePairingFinder.QueryOf(x.Game, x.Date)).ToList(), ct, club);
         var autoIds = auto.Select((x, i) => (x.Game, LeaguePairingFinder.AutoPick(picks[i]))).ToDictionary(t => t.Game, t => t.Item2);
         foreach (var (game, choice, _, sans) in items)
         {
@@ -139,7 +141,7 @@ public sealed class LeagueClubService
     public static string ShareHashOf(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim()))).ToLowerInvariant();
 
-    private sealed record RosterKey(int Players, int? MaxPlayerId, int Tournaments);
+    private sealed record RosterKey(int Club, string Prefix, int Players, int? MaxPlayerId, int Tournaments);
 
     /// <summary>
     /// Die Meldelisten aller Saisonen als Abgleich-Index. Gecacht (Codereview 2026-09-29, F7-007): Suche und Namensabgleich
@@ -147,13 +149,15 @@ public sealed class LeagueClubService
     /// und baute den Index neu. Schlüssel: Anzahl und höchste Id der Meldelisten-Zeilen und Anzahl der Ligen. Meldelisten
     /// werden nie an Ort und Stelle geändert, nur gelöscht und neu angelegt (<see cref="LeagueRefresh.ReplaceAsync"/>, die
     /// Übernahme in <see cref="LeagueImportService"/>) — jede Änderung bringt neue Ids, der Index wird neu gebaut.
+    /// <para>Je VEREIN (Mandanten-Schritt 2026-10-07): wer „einer von uns" ist (<see cref="LeagueRosterIndex.Person.OwnClub"/>),
+    /// sagt <see cref="LeagueClub.OwnsTeam"/> — der Index gilt für alle Ligen und Saisonen, aber je Verein.</para>
     /// </summary>
-    public async Task<LeagueRosterIndex> RosterAsync(CancellationToken ct)
+    public async Task<LeagueRosterIndex> RosterAsync(LeagueClub club, CancellationToken ct)
     {
         RosterKey? key = null;
         if (_cache != null)
         {
-            key = new RosterKey(await _db.LeaguePlayers.CountAsync(ct), await _db.LeaguePlayers.MaxAsync(p => (int?)p.Id, ct),
+            key = new RosterKey(club.Id, club.TeamPrefix, await _db.LeaguePlayers.CountAsync(ct), await _db.LeaguePlayers.MaxAsync(p => (int?)p.Id, ct),
                 await _db.LeagueTournaments.CountAsync(ct));
             if (_cache.TryGetValue(key, out LeagueRosterIndex? hit) && hit != null) return hit;
         }
@@ -161,7 +165,7 @@ public sealed class LeagueClubService
             .ToDictionaryAsync(t => t.Tnr, t => t.Season, ct);
         var rows = await _db.LeaguePlayers.AsNoTracking().Select(p => new { p.Tnr, p.Team, p.Name, p.NameKey, p.FideId }).ToListAsync(ct);
         var roster = new LeagueRosterIndex(rows.Select(r => new LeagueRosterIndex.Row(r.Tnr, r.Team, r.Name, r.NameKey, r.FideId,
-            seasons.GetValueOrDefault(r.Tnr) ?? "")));
+            seasons.GetValueOrDefault(r.Tnr) ?? "")), club.OwnsTeam);
         if (key != null) _cache!.Set(key, roster, RosterCacheTime);
         return roster;
     }
@@ -358,19 +362,20 @@ public sealed class LeagueClubService
     }
 
     /// <summary>Aus einer geprüften Zugfolge + den Seiten die zu speichernde Zeile (oder den Ablehnungsgrund).</summary>
-    private static (LeagueClubGame? Game, string? Reason) Build(Side w, Side b, IReadOnlyList<string> sans, int? year,
+    private static (LeagueClubGame? Game, string? Reason) Build(LeagueClub club, Side w, Side b, IReadOnlyList<string> sans, int? year,
         string? result, string? evt)
     {
+        var anon = club.AnonName;
         if (!w.Known && !b.Known) return (null, "noLeaguePlayer");
         if (!(w.Known && !w.Replace) && !(b.Known && !b.Replace)) return (null, "onlyOwnClub");
         (string Name, string? Fide) Real(Side s) =>
             (Clip(s.Hit.Person?.Name ?? s.Mega?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?",
                 s.Hit.Person?.Fide ?? s.Fide ?? s.Mega?.Fide);
-        (string Name, string? Fide, int? Elo) Out(Side s) => s.Replace ? (AnonymousName, null, null)
+        (string Name, string? Fide, int? Elo) Out(Side s) => s.Replace ? (anon, null, null)
             : (Real(s).Name, Real(s).Fide, Elo(s.Elo));
         // Wer hinter „Schwaz" spielt, bleibt intern (Klassenkommentar von LeagueClubGame) — nur, wenn es jemand ist.
         (string? Name, string? Fide) Hidden(Side s) =>
-            s.Replace && Real(s) is var (n, f) && (n != "?" && n != AnonymousName || f != null) ? (n, f) : (null, null);
+            s.Replace && Real(s) is var (n, f) && (n != "?" && n != anon || f != null) ? (n, f) : (null, null);
         var (wn, wf, we) = Out(w);
         var (bn, bf, be) = Out(b);
         var (wrn, wrf) = Hidden(w);
@@ -378,6 +383,7 @@ public sealed class LeagueClubService
         var anonymized = w.Replace || b.Replace;
         var game = new LeagueClubGame
         {
+            ClubId = club.Id,
             Year = year,
             White = wn, Black = bn, WhiteFide = wf, BlackFide = bf, WhiteElo = we, BlackElo = be,
             Result = result is { } r && Results.Contains(r) ? r : "*",
@@ -424,12 +430,12 @@ public sealed class LeagueClubService
     /// <summary>Die schon gespeicherten Partien mit den Zügen dieser Partien (Hash, Jahr, Namen) — für alle Partien eines
     /// Aufrufs zusammen, je 500 Hashes eine Abfrage. Vorher fragte jede Partie einzeln (bis 500 Rundreisen je Übersicht
     /// oder Import, auch anonym über den Teilen-Link; Codereview 2026-09-29, N4-004).</summary>
-    private async Task<ILookup<string, LeagueClubGame>> StoredByHashAsync(IEnumerable<LeagueClubGame> games, CancellationToken ct)
+    private async Task<ILookup<string, LeagueClubGame>> StoredByHashAsync(LeagueClub club, IEnumerable<LeagueClubGame> games, CancellationToken ct)
     {
         var hashes = games.Select(g => g.MovesHash).Distinct(StringComparer.Ordinal).ToList();
         var rows = new List<LeagueClubGame>();
         foreach (var chunk in hashes.Chunk(500))
-            rows.AddRange(await _db.LeagueClubGames.AsNoTracking().Where(x => chunk.Contains(x.MovesHash))
+            rows.AddRange(await Games(club).AsNoTracking().Where(x => chunk.Contains(x.MovesHash))
                 .Select(x => new LeagueClubGame { MovesHash = x.MovesHash, Year = x.Year, White = x.White, Black = x.Black })
                 .ToListAsync(ct));
         return rows.ToLookup(x => x.MovesHash, StringComparer.Ordinal);
@@ -478,10 +484,10 @@ public sealed class LeagueClubService
     /// Seiten mit Abgleich und der Vorgabe „ersetzen", ob sie schon da ist, und was sie unübernehmbar macht. Ob eine
     /// Partie übernommen wird, entscheidet die Seite danach aus den Seiten (dieselbe Regel wie <see cref="Build"/>).
     /// </summary>
-    public async Task<LeagueClubPreviewDto> PreviewAsync(int? userId, string pgn, CancellationToken ct = default)
+    public async Task<LeagueClubPreviewDto> PreviewAsync(LeagueClub club, int? userId, string pgn, CancellationToken ct = default)
     {
         var parsed = ParseAll(pgn, out var truncated);
-        var lk = await LookupsAsync(await RosterAsync(ct), parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }),
+        var lk = await LookupsAsync(await RosterAsync(club, ct), parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }),
             parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }), ct);
         var owner = await OwnerAsync(userId, ct);
         var now = _now();
@@ -501,11 +507,11 @@ public sealed class LeagueClubService
             };
             AddSimilar(g.White.Match, g.White.Raw, lk.Roster, similar);
             AddSimilar(g.Black.Match, g.Black.Raw, lk.Roster, similar);
-            if (p.Sans != null && Build(w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
+            if (p.Sans != null && Build(club, w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
                 candidates.Add((g, built));
             dto.Games.Add(g);
         }
-        var stored = await StoredByHashAsync(candidates.Select(c => c.Game), ct);
+        var stored = await StoredByHashAsync(club, candidates.Select(c => c.Game), ct);
         foreach (var (g, built) in candidates)
         {
             g.Duplicate = IsDuplicate(built, pending, stored);
@@ -514,7 +520,7 @@ public sealed class LeagueClubService
         // Brettpaarungen (0.678.0): EINE Abfrage für die ganze Übersicht
         var dates = parsed.ToDictionary(p => p.Index, p => FullDateOf(p.H("Date")));
         var options = await _pairings.ForManyAsync(
-            candidates.Select(c => LeaguePairingFinder.QueryOf(c.Game, dates.GetValueOrDefault(c.Dto.Index))).ToList(), ct);
+            candidates.Select(c => LeaguePairingFinder.QueryOf(c.Game, dates.GetValueOrDefault(c.Dto.Index))).ToList(), ct, club);
         for (var i = 0; i < candidates.Count; i++)
         {
             candidates[i].Dto.Pairings = options[i].Select(LeagueClubPairingDto.Of).ToList();
@@ -526,9 +532,9 @@ public sealed class LeagueClubService
     /// <summary>PGN-Import nach der Übersicht: je Partie in <paramref name="decisions"/> die festgelegten Seiten
     /// (<c>null</c> = alle Partien mit den Vorgaben der Übersicht). Wirft nicht bei einzelnen Partien — die stehen mit
     /// Grund in <c>Failed</c>.</summary>
-    public Task<LeagueClubImportResultDto> ImportPgnAsync(int? userId, string pgn,
+    public Task<LeagueClubImportResultDto> ImportPgnAsync(LeagueClub club, int? userId, string pgn,
         IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default) =>
-        ImportAsync(userId, null, pgn, decisions, ct);
+        ImportAsync(club, userId, null, pgn, decisions, ct);
 
     /// <summary>Derselbe Import OHNE Konto über den Teilen-Link <paramref name="shareToken"/>: jede Partie trägt den Link
     /// (<see cref="ShareHashOf"/>), und gespeichert werden höchstens <see cref="LeagueShareUploadQuota.PerCall"/> je
@@ -537,16 +543,16 @@ public sealed class LeagueClubService
     /// <param name="shareToken">Das Token der Link-ZEILE (<see cref="LeagueService.ValidShareTokenAsync"/>), nicht der Wert
     /// aus der Route: MariaDB findet den Link auch in anderer Groß/Kleinschreibung, und jede Schreibweise bekäme sonst
     /// ihren eigenen Hash und Deckel.</param>
-    public async Task<LeagueClubImportResultDto> ImportViaShareAsync(string shareToken, string pgn,
+    public async Task<LeagueClubImportResultDto> ImportViaShareAsync(LeagueClub club, string shareToken, string pgn,
         IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default)
     {
         var claimKey = NewClaimKey();
-        var r = await ImportAsync(null, ShareHashOf(shareToken), pgn, decisions, ct, ClaimHashOf(claimKey));
+        var r = await ImportAsync(club, null, ShareHashOf(shareToken), pgn, decisions, ct, ClaimHashOf(claimKey));
         if (r.Ids.Count > 0) r.ClaimKey = claimKey;
         return r;
     }
 
-    private async Task<LeagueClubImportResultDto> ImportAsync(int? userId, string? shareHash, string pgn,
+    private async Task<LeagueClubImportResultDto> ImportAsync(LeagueClub club, int? userId, string? shareHash, string pgn,
         IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct, string? claimHash = null)
     {
         var result = new LeagueClubImportResultDto();
@@ -567,7 +573,7 @@ public sealed class LeagueClubService
         var byIndex = parsed.ToDictionary(p => p.Index);
         var chosen = (decisions ?? Array.Empty<LeagueClubImportGameDecision>()).Where(d => d != null)
             .SelectMany(d => new[] { d.White, d.Black }).Where(s => s != null).ToList();
-        var lk = await LookupsAsync(await RosterAsync(ct),
+        var lk = await LookupsAsync(await RosterAsync(club, ct),
             parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }).Concat(chosen.Select(s => s.Name)),
             parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }).Concat(chosen.Select(s => s.Fide)), ct);
         var owner = await OwnerAsync(userId, ct);
@@ -598,11 +604,11 @@ public sealed class LeagueClubService
                     Remember(p.H("Black"), decision.Black, b, db);
                 }
             }
-            var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
+            var (game, reason) = Build(club, w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             built.Add((index, p, game, reason));
             choices[index] = decision?.LeagueGameId;
         }
-        var stored = await StoredByHashAsync(built.Where(x => x.Game != null).Select(x => x.Game!), ct);
+        var stored = await StoredByHashAsync(club, built.Where(x => x.Game != null).Select(x => x.Game!), ct);
         foreach (var (index, p, game, reason) in built)
         {
             if (game == null) { result.Failed.Add(FailureOf(index, p, reason!)); continue; }
@@ -613,7 +619,7 @@ public sealed class LeagueClubService
         }
         if (lease != null) lease.Kept = pending.Count;
         var kept = pending.ToHashSet();
-        await ApplyPairingsAsync(built.Where(x => x.Game != null && kept.Contains(x.Game))
+        await ApplyPairingsAsync(club, built.Where(x => x.Game != null && kept.Contains(x.Game))
             .Select(x => (x.Game!, choices.GetValueOrDefault(x.Index), FullDateOf(x.P!.H("Date")), (IReadOnlyList<string>)x.P!.Sans!))
             .ToList(), ct);
         await SaveAsync(pending, ct);
@@ -624,8 +630,8 @@ public sealed class LeagueClubService
         result.Added = pending.Count;
         result.Anonymized = pending.Count(g => g.Anonymized);
         result.Ids = pending.Select(g => g.Id).ToList();
-        _log.LogInformation("Vereins-Datenbank: {Added} Partien hochgeladen ({Anon} mit „Schwaz“), {Dup} doppelt, {Failed} abgelehnt, {Remembered} Zuordnungen gemerkt{Via}",
-            result.Added, result.Anonymized, result.Duplicates, result.Failed.Count, result.Remembered, userId == null ? " (Teilen-Link)" : "");
+        _log.LogInformation("Vereins-Datenbank {Club}: {Added} Partien hochgeladen ({Anon} mit „{AnonName}“), {Dup} doppelt, {Failed} abgelehnt, {Remembered} Zuordnungen gemerkt{Via}",
+            club.Id, result.Added, result.Anonymized, club.AnonName, result.Duplicates, result.Failed.Count, result.Remembered, userId == null ? " (Teilen-Link)" : "");
         return result;
 
         // Eine Korrektur (Spieler gewählt oder Name getippt), die bei jemand ANDEREM landet als die Vorgabe: merken.
@@ -673,19 +679,19 @@ public sealed class LeagueClubService
 
     /// <summary>Eine Partie aus der Korrektur eines Partieformulars. <c>Reason</c> ≠ null = abgelehnt
     /// (<c>illegal</c> samt Meldung, sonst wie beim Import, dazu <c>duplicate</c>).</summary>
-    public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(int? userId, LeagueClubGameRequest req,
-        CancellationToken ct = default) => AddAsync(userId, null, req, ct);
+    public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(LeagueClub club, int? userId, LeagueClubGameRequest req,
+        CancellationToken ct = default) => AddAsync(club, userId, null, req, ct);
 
     /// <summary>Dasselbe ohne Konto über den Teilen-Link <paramref name="shareToken"/> (das Token der Link-Zeile, wie bei
     /// <see cref="ImportViaShareAsync"/>) — zählt gegen denselben Deckel wie der PGN-Import (dieser Weg braucht kein Foto),
     /// darüber <c>shareLimit</c>.</summary>
     /// <param name="claimKey">Zuordnungs-Schlüssel für den Browser (0.656.0, <see cref="NewClaimKey"/>) — die Partie trägt
     /// seinen Hash.</param>
-    public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameViaShareAsync(string shareToken,
+    public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameViaShareAsync(LeagueClub club, string shareToken,
         LeagueClubGameRequest req, CancellationToken ct = default, string? claimKey = null) =>
-        AddAsync(null, ShareHashOf(shareToken), req, ct, claimKey is null ? null : ClaimHashOf(claimKey));
+        AddAsync(club, null, ShareHashOf(shareToken), req, ct, claimKey is null ? null : ClaimHashOf(claimKey));
 
-    private async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddAsync(int? userId, string? shareHash,
+    private async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddAsync(LeagueClub club, int? userId, string? shareHash,
         LeagueClubGameRequest req, CancellationToken ct, string? claimHash = null)
     {
         var moves = (req.Moves ?? new()).Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
@@ -696,12 +702,12 @@ public sealed class LeagueClubService
         catch (ArgumentException ex) { return (null, "illegal", ex.Message); }
         var now = _now();
         var year = req.Year is { } y && y >= 1900 && y <= now.Year + 1 ? y : (int?)null;
-        var lk = await LookupsAsync(await RosterAsync(ct), new[] { req.White, req.Black }, new[] { req.WhiteFide, req.BlackFide }, ct);
+        var lk = await LookupsAsync(await RosterAsync(club, ct), new[] { req.White, req.Black }, new[] { req.WhiteFide, req.BlackFide }, ct);
         var w = Decided(new LeagueClubSideDecision { Name = req.White, Fide = req.WhiteFide, Replace = req.WhiteReplace }, req.White, null, req.WhiteElo, lk);
         var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, lk);
-        var (game, reason) = Build(w, b, sans, year, req.Result, req.Event);
+        var (game, reason) = Build(club, w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
-        if (IsDuplicate(game, new(), await StoredByHashAsync(new[] { game }, ct))) return (null, "duplicate", null);
+        if (IsDuplicate(game, new(), await StoredByHashAsync(club, new[] { game }, ct))) return (null, "duplicate", null);
         using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, 1);
         if (lease is { Granted: 0 })
         {
@@ -710,11 +716,11 @@ public sealed class LeagueClubService
         }
         if (lease != null) lease.Kept = 1;
         Stamp(game, userId, now, shareHash, claimHash);
-        await ApplyPairingsAsync(new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
+        await ApplyPairingsAsync(club, new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
         game.Replaced = await ArchiveOlderVersionsAsync(game, sans, now, ct);
-        _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon}{Via})",
-            game.Anonymized ? "mit „Schwaz“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
+        _log.LogInformation("Vereins-Datenbank {Club}: eine Partie aus einem Partieformular ({Anon}{Via})",
+            club.Id, game.Anonymized ? $"mit „{club.AnonName}“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
         return (game, null, null);
     }
 
@@ -733,6 +739,7 @@ public sealed class LeagueClubService
     internal async Task<int> ArchiveOlderVersionsAsync(LeagueClubGame game, IReadOnlyList<string> sans, DateTime now, CancellationToken ct)
     {
         var cands = await _db.LeagueClubGames
+            .Where(c => c.ClubId == game.ClubId)   // nur im eigenen Verein
             .Where(c => c.Id != game.Id && (game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
                 || c.Year == game.Year && (c.White == game.White || game.WhiteFide != null && c.WhiteFide == game.WhiteFide)
                                        && (c.Black == game.Black || game.BlackFide != null && c.BlackFide == game.BlackFide)))
@@ -812,9 +819,18 @@ public sealed class LeagueClubService
 
     // ── Lesen ───────────────────────────────────────────────────────
 
-    private IQueryable<LeagueClubGame> Filter(string? fide, string? q)
+    /// <summary>Die Partien EINES Vereins — jeder Lese- und Schreibweg der Vereins-Datenbank beginnt hier (Mandanten-Schritt
+    /// 2026-10-07; bewusst kein globaler Filter, siehe <c>LeagueClubGameConfiguration</c>).</summary>
+    private IQueryable<LeagueClubGame> Games(LeagueClub club) => _db.LeagueClubGames.Where(g => g.ClubId == club.Id);
+
+    /// <summary>Der Verein einer Partie (<c>null</c> = gibt es nicht) — nur, damit RookHubs Partie-Seite ohne Vereinswahl den
+    /// richtigen Verein vorschlagen kann (<see cref="LeagueClubResolver.ResolveAsync"/> prüft die Zugehörigkeit).</summary>
+    public Task<int?> ClubOfGameAsync(int id, CancellationToken ct = default) =>
+        _db.LeagueClubGames.AsNoTracking().Where(g => g.Id == id).Select(g => (int?)g.ClubId).FirstOrDefaultAsync(ct);
+
+    private IQueryable<LeagueClubGame> Filter(LeagueClub club, string? fide, string? q)
     {
-        var query = _db.LeagueClubGames.AsNoTracking();
+        var query = Games(club).AsNoTracking();
         if (!string.IsNullOrWhiteSpace(fide)) query = query.Where(g => g.WhiteFide == fide || g.BlackFide == fide);
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -826,10 +842,10 @@ public sealed class LeagueClubService
 
     /// <param name="mine">Nur die eigenen (0.652.0, Lasche „Meine Partien"): mit Konto hochgeladen. Mit „Schwaz" hochgeladene
     /// stehen nicht dabei — bei denen ist absichtlich nicht gespeichert, von wem sie stammen.</param>
-    public async Task<LeagueClubListDto> ListAsync(int userId, bool canManage, string? fide, string? q, int page, CancellationToken ct,
+    public async Task<LeagueClubListDto> ListAsync(LeagueClub club, int userId, bool canManage, string? fide, string? q, int page, CancellationToken ct,
         bool mine = false)
     {
-        var query = Filter(fide, q);
+        var query = Filter(club, fide, q);
         if (mine) query = query.Where(g => g.UploadedByUserId == userId);
         var total = await query.CountAsync(ct);
         (page, _) = Paging.Normalize(page, PageSize, PageSize);
@@ -837,19 +853,19 @@ public sealed class LeagueClubService
             .Skip((page - 1) * PageSize).Take(PageSize).ToListAsync(ct);
         var items = rows.Select(g => ToDto(g, userId, canManage)).ToList();
         await FillAnalysisAsync(items, ct);
-        await FillRosterAsync(items, ct);
-        await FillPairingLabelsAsync(items, ct);
+        await FillRosterAsync(club, items, ct);
+        await FillPairingLabelsAsync(club, items, ct);
         return new LeagueClubListDto { Total = total, Page = page, PageSize = PageSize, Items = items };
     }
 
     /// <summary>Seiten OHNE FIDE-ID, deren Name in einer Meldeliste steht (0.594.0): ein Ligaspieler, der selbst keine
     /// FIDE-ID hat (Kinsiz, Atlas bei Schach ohne Grenzen) — da gibt es nichts zuzuordnen, die Seite zeigt den Bleistift
     /// nur bei Namen, die niemand kennt. Die Meldelisten werden nur geladen, wenn die Seite so eine Zeile hat.</summary>
-    private async Task FillRosterAsync(List<LeagueClubGameDto> items, CancellationToken ct)
+    private async Task FillRosterAsync(LeagueClub club, List<LeagueClubGameDto> items, CancellationToken ct)
     {
-        bool Open(string name, string? fide, bool anonymized) => fide == null && !(anonymized && name == AnonymousName);
+        bool Open(string name, string? fide, bool anonymized) => fide == null && !(anonymized && club.IsAnon(name));
         if (!items.Any(i => Open(i.White, i.WhiteFide, i.Anonymized) || Open(i.Black, i.BlackFide, i.Anonymized))) return;
-        var roster = await RosterAsync(ct);
+        var roster = await RosterAsync(club, ct);
         foreach (var i in items)
         {
             i.WhiteInRoster = Open(i.White, i.WhiteFide, i.Anonymized) && roster.Match(i.White, null).League;
@@ -884,22 +900,22 @@ public sealed class LeagueClubService
     }
 
     /// <summary>Eine Vereinspartie (samt PGN) mit frischem Stand der Analyse; <c>null</c> = gibt es nicht.</summary>
-    public async Task<LeagueClubGameDto?> GetAsync(int userId, bool canManage, int id, CancellationToken ct = default)
+    public async Task<LeagueClubGameDto?> GetAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct = default)
     {
-        var g = await _db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        var g = await Games(club).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return null;
         var dto = ToDto(g, userId, canManage);
         await FillAnalysisAsync(new List<LeagueClubGameDto> { dto }, ct);
-        await FillPairingLabelsAsync(new List<LeagueClubGameDto> { dto }, ct);
+        await FillPairingLabelsAsync(club, new List<LeagueClubGameDto> { dto }, ct);
         return dto;
     }
 
     /// <summary>Bewertungen der Vereinspartie für Kurve, Genauigkeit und Zug-Klassen (dieselben wie in „Meine Partien",
     /// <see cref="GameEvalsStore"/>) — ohne Buchzüge: die hingen an den Repertoires des Betrachters. <c>null</c> = Partie
     /// unbekannt; eine Partie ohne Analyse bekommt ein leeres Ergebnis (Status <c>none</c>).</summary>
-    public async Task<GameEvalsDto?> EvalsAsync(int id, CancellationToken ct = default)
+    public async Task<GameEvalsDto?> EvalsAsync(LeagueClub club, int id, CancellationToken ct = default)
     {
-        if (!await _db.LeagueClubGames.AnyAsync(g => g.Id == id, ct)) return null;
+        if (!await Games(club).AnyAsync(g => g.Id == id, ct)) return null;
         var head = await GameEvalsStore.Heads(ClubAnalyses(id)).FirstOrDefaultAsync(ct);
         return head is null ? new GameEvalsDto() : await GameEvalsStore.ReadAsync(_db, head, null, ct);
     }
@@ -914,10 +930,10 @@ public sealed class LeagueClubService
 
     /// <summary>Die Bezeichnung der zugeordneten Paarung („2026/27 · Landesliga · Runde 2 · Brett 4") — nur wo sie gezeigt werden
     /// darf (<see cref="LeagueClubGameDto.LeagueGameId"/> ist dann gesetzt).</summary>
-    private async Task FillPairingLabelsAsync(List<LeagueClubGameDto> items, CancellationToken ct)
+    private async Task FillPairingLabelsAsync(LeagueClub club, List<LeagueClubGameDto> items, CancellationToken ct)
     {
         foreach (var i in items.Where(i => i.LeagueGameId != null))
-            i.LeagueGameLabel = (await _pairings.ByIdAsync(i.LeagueGameId!.Value, ct))?.Label;
+            i.LeagueGameLabel = (await _pairings.ByIdAsync(i.LeagueGameId!.Value, ct, club))?.Label;
     }
 
     /// <summary>Die Hauptvariante als UCI („e2e4 e7e5 …") — für den Knopf „Analyse", der RookHubs Analysebrett mit
@@ -941,17 +957,17 @@ public sealed class LeagueClubService
     /// Hochladen, und dann fällt auch der Hochladende weg (gemeldet 2026-09-28: korrigiert auf „Oberschmid, Patrik", der
     /// Name blieb stehen). Eine Korrektur kann nur anonymisieren, nie einen Namen zurückholen.
     /// </summary>
-    public async Task<(LeagueClubGame? Game, string? Reason)> UpdateAsync(int userId, bool canManage, int id,
+    public async Task<(LeagueClubGame? Game, string? Reason)> UpdateAsync(LeagueClub club, int userId, bool canManage, int id,
         LeagueClubGameUpdateRequest req, CancellationToken ct = default)
     {
-        var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var g = await Games(club).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return (null, "notFound");
         if (!CanDelete(g, userId, canManage)) return (null, "forbidden");
-        bool Anon(string name, string? fide) => g.Anonymized && fide == null && name == AnonymousName;
+        bool Anon(string name, string? fide) => g.Anonymized && club.IsAnon(name, fide);
         if ((req.White != null && Anon(g.White, g.WhiteFide)) || (req.Black != null && Anon(g.Black, g.BlackFide)))
             return (null, "anonymous");
         if (req.Result is { } r0 && !Results.Contains(r0)) return (null, "invalidResult");
-        var lk = await LookupsAsync(await RosterAsync(ct), new[] { g.White, g.Black, req.White?.Name, req.Black?.Name },
+        var lk = await LookupsAsync(await RosterAsync(club, ct), new[] { g.White, g.Black, req.White?.Name, req.Black?.Name },
             new[] { g.WhiteFide, g.BlackFide, req.White?.Fide, req.Black?.Fide }, ct);
         Side Current(string name, string? fide, int? elo) => Anon(name, fide)
             ? new Side(name, LeagueRosterIndex.None, null, true)
@@ -965,7 +981,7 @@ public sealed class LeagueClubService
         var b = req.Black is { } db ? Changed(db, g.Black, g.BlackFide, g.BlackElo) : Current(g.Black, g.BlackFide, g.BlackElo);
         var moveText = PgnParser.SplitGames(g.Pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty;
         var sans = PgnParser.ExtractMainlineSans(moveText);
-        var (built, reason) = Build(w, b, sans, g.Year, req.Result ?? g.Result, g.Event);
+        var (built, reason) = Build(club, w, b, sans, g.Year, req.Result ?? g.Result, g.Event);
         if (built == null) return (null, reason);
         var before = new[] { g.WhiteFide, g.BlackFide };
         var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
@@ -1000,8 +1016,8 @@ public sealed class LeagueClubService
     }
 
     /// <summary>Darf <paramref name="userId"/> diese Vereinspartie korrigieren? (Hochladender oder Verwalter)</summary>
-    public async Task<bool> CanCorrectAsync(int userId, bool canManage, int id, CancellationToken ct = default) =>
-        await _db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id, ct) is { } g && CanDelete(g, userId, canManage);
+    public async Task<bool> CanCorrectAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct = default) =>
+        await Games(club).AsNoTracking().FirstOrDefaultAsync(g => g.Id == id, ct) is { } g && CanDelete(g, userId, canManage);
 
     /// <summary>
     /// Die ZÜGE einer Vereinspartie korrigieren (0.660.0, Wunsch 2026-10-05: „einen Korrigieren-Knopf, der wie beim
@@ -1011,10 +1027,10 @@ public sealed class LeagueClubService
     /// zieht der Aufrufer nach (<c>ClubGameCorrectionService</c>). → (Partie, neue SAN) oder ein Grund: <c>notFound</c>,
     /// <c>forbidden</c>, <c>noMoves</c>, <c>tooLong</c>, <c>illegal</c>.
     /// </summary>
-    public async Task<(LeagueClubGame? Game, IReadOnlyList<string>? Sans, string? Reason)> CorrectMovesAsync(int userId, bool canManage,
-        int id, IReadOnlyList<string> moves, CancellationToken ct = default)
+    public async Task<(LeagueClubGame? Game, IReadOnlyList<string>? Sans, string? Reason)> CorrectMovesAsync(LeagueClub club, int userId,
+        bool canManage, int id, IReadOnlyList<string> moves, CancellationToken ct = default)
     {
-        var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var g = await Games(club).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return (null, null, "notFound");
         if (!CanDelete(g, userId, canManage)) return (null, null, "forbidden");
         var clean = moves.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
@@ -1110,18 +1126,18 @@ public sealed class LeagueClubService
         return sb.ToString();
     }
 
-    public async Task<string> ExportAsync(string? fide, string? q, CancellationToken ct)
+    public async Task<string> ExportAsync(LeagueClub club, string? fide, string? q, CancellationToken ct)
     {
-        var pgns = await Filter(fide, q).OrderByDescending(g => g.Year ?? 0).ThenByDescending(g => g.Id)
+        var pgns = await Filter(club, fide, q).OrderByDescending(g => g.Year ?? 0).ThenByDescending(g => g.Id)
             .Select(g => g.Pgn).ToListAsync(ct);
         return string.Join("\n", pgns.Select(p => p.TrimEnd() + "\n"));
     }
 
     /// <summary>Spieler zum Korrigieren eines Namens: die Ligaspieler, mit <paramref name="all"/> dazu das
     /// Spielerverzeichnis der ganzen Megabase (Treffer mit der FIDE-ID eines Ligaspielers gelten als dieser).</summary>
-    public async Task<List<LeagueRosterPersonDto>> SuggestAsync(string q, bool all, CancellationToken ct)
+    public async Task<List<LeagueRosterPersonDto>> SuggestAsync(LeagueClub club, string q, bool all, CancellationToken ct)
     {
-        var roster = await RosterAsync(ct);
+        var roster = await RosterAsync(club, ct);
         var list = roster.Suggest(q, 15).Select(PersonDto).ToList();
         if (all) AddMega(list, roster, await new LeagueMegaPlayers(_db).SearchAsync(q, 25, ct));
         // Die Elo zum Vorbelegen (Wunsch 2026-10-05: „warum wird die nicht ausgefüllt, wenn ich den Spieler auswähle?"):
@@ -1155,9 +1171,9 @@ public sealed class LeagueClubService
         }
     }
 
-    public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)
+    public async Task<LeagueClubMatchDto> MatchAsync(LeagueClub club, string? white, string? black, CancellationToken ct)
     {
-        var lk = await LookupsAsync(await RosterAsync(ct), new[] { white, black }, Array.Empty<string?>(), ct);
+        var lk = await LookupsAsync(await RosterAsync(club, ct), new[] { white, black }, Array.Empty<string?>(), ct);
         var similar = new Dictionary<string, List<LeagueRosterPersonDto>>();
         LeagueClubSideMatchDto One(string? name)
         {
@@ -1173,9 +1189,9 @@ public sealed class LeagueClubService
 
     public enum DeleteResult { Deleted, NotFound, Forbidden }
 
-    public async Task<DeleteResult> DeleteAsync(int userId, bool canManage, int id, CancellationToken ct = default)
+    public async Task<DeleteResult> DeleteAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct = default)
     {
-        var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var g = await Games(club).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return DeleteResult.NotFound;
         if (!CanDelete(g, userId, canManage)) return DeleteResult.Forbidden;
         // Erst die Analyse (sie trägt die Namen der Partie und hat vielleicht noch Aufträge offen), dann die Partie.
@@ -1194,14 +1210,15 @@ public sealed class LeagueClubService
     /// Spalte vergleicht groß/klein- und akzent-blind, jede Schreibweise des Links trifft also dieselben Partien. Ohne
     /// Ablauf-Filter; ist die Zeile schon aufgeräumt, zählt der Wert, wie er kommt.</para>
     /// </summary>
-    public async Task<int> DeleteByShareAsync(string shareToken, bool dryRun, CancellationToken ct = default)
+    public async Task<int> DeleteByShareAsync(LeagueClub club, string shareToken, bool dryRun, CancellationToken ct = default)
     {
         var given = shareToken.Trim();
         var link = await _db.LeagueShares.AsNoTracking().Where(s => s.Token == given).Select(s => s.Token)
             .FirstOrDefaultAsync(ct) ?? given;
         var hash = ShareHashOf(link);
-        if (dryRun) return await _db.LeagueClubGames.IgnoreQueryFilters().CountAsync(g => g.UploadShareHash == hash, ct);
-        var games = await _db.LeagueClubGames.IgnoreQueryFilters().Where(g => g.UploadShareHash == hash).ToListAsync(ct);
+        // IgnoreQueryFilters nimmt nur den Archiv-Filter weg — der Verein bleibt ausdrücklich in der Bedingung.
+        if (dryRun) return await _db.LeagueClubGames.IgnoreQueryFilters().CountAsync(g => g.ClubId == club.Id && g.UploadShareHash == hash, ct);
+        var games = await _db.LeagueClubGames.IgnoreQueryFilters().Where(g => g.ClubId == club.Id && g.UploadShareHash == hash).ToListAsync(ct);
         if (games.Count == 0) return 0;
         if (_analyses != null)
             foreach (var g in games) await _analyses.DeleteForClubGameAsync(g.Id, ct);

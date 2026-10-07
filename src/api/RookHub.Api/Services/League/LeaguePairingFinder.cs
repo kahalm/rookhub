@@ -9,7 +9,8 @@ namespace RookHub.Api.Services.League;
 /// eine Partie von meinen Spielen in die Vereins-DB kopiere, kann ich sie keiner Ligarunde zuweisen — überleg dir da was".)
 /// <list type="bullet">
 /// <item>Vorgeschlagen werden Paarungen, an denen mindestens einer der beiden Spieler (FIDE-ID — auch die intern hinter
-/// „Schwaz") saß; die „Schwaz"-Seite passt zu jedem Spieler des eigenen Vereins.</item>
+/// „Schwaz") saß; die anonymisierte Seite (<see cref="LeagueClub.AnonName"/> des Vereins der Anfrage) passt zu jedem Spieler
+/// des eigenen Vereins (<see cref="LeagueClub.OwnsTeam"/>).</item>
 /// <item><see cref="Option.Exact"/>: beide Seiten passen in ihren Farben, und der Tag liegt höchstens <see cref="DayTolerance"/>
 /// Tage neben dem Rundentermin (ohne Tag: die Saison passt zum Jahr). Genau EIN solcher Vorschlag wird vorgewählt.</item>
 /// <item>Reihenfolge: genaue zuerst, dann die mit mehr passenden Seiten, dann die zeitlich nächste (ohne Tag: die jüngste).</item>
@@ -31,7 +32,8 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     private sealed record Row(LeagueGame G, string Season, string League, DateOnly? Date);
 
     /// <summary>Vorschläge für viele Partien auf einmal (Übersicht eines PGN-Imports) — EINE Abfrage für alle.</summary>
-    public async Task<List<List<Option>>> ForManyAsync(IReadOnlyList<Query> queries, CancellationToken ct)
+    /// <param name="club">Der Verein der Anfrage — wer „der eigene" ist (ohne: keiner).</param>
+    public async Task<List<List<Option>>> ForManyAsync(IReadOnlyList<Query> queries, CancellationToken ct, LeagueClub? club = null)
     {
         var fides = queries.SelectMany(q => new[] { q.WhiteFide, q.BlackFide }).Where(f => !string.IsNullOrEmpty(f))
             .Select(f => f!).Distinct().ToList();
@@ -47,13 +49,13 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             rows.AddRange(part.Select(x => new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date)));
         }
         rows = rows.DistinctBy(r => r.G.Id).ToList();
-        return queries.Select(q => Options(q, rows)).ToList();
+        return queries.Select(q => Options(q, rows, club)).ToList();
     }
 
-    public async Task<List<Option>> ForAsync(Query q, CancellationToken ct) => (await ForManyAsync(new[] { q }, ct))[0];
+    public async Task<List<Option>> ForAsync(Query q, LeagueClub? club, CancellationToken ct) => (await ForManyAsync(new[] { q }, ct, club))[0];
 
     /// <summary>Eine Paarung nachschlagen (beim Speichern einer Wahl) — <c>null</c>, wenn es sie nicht (mehr) gibt.</summary>
-    public async Task<Option?> ByIdAsync(int id, CancellationToken ct)
+    public async Task<Option?> ByIdAsync(int id, CancellationToken ct, LeagueClub? club = null)
     {
         var x = await (from g in db.LeagueGames.AsNoTracking()
                        join t in db.LeagueTournaments.AsNoTracking() on g.Tnr equals t.Tnr
@@ -62,7 +64,7 @@ public sealed class LeaguePairingFinder(AppDbContext db)
                        where g.Id == id
                        select new { g, t.Season, t.League, t.Grp, Date = r == null ? null : r.Date }).FirstOrDefaultAsync(ct);
         return x is null ? null
-            : ToOption(new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date), false);
+            : ToOption(new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date), false, club);
     }
 
     /// <summary>Die vorgewählte Paarung: genau EIN genauer Vorschlag, sonst keine.</summary>
@@ -89,14 +91,14 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     public static Query QueryOf(LeagueClubGame g, DateOnly? date) =>
         new(g.White, g.WhiteFide ?? g.WhiteRealFide, g.Black, g.BlackFide ?? g.BlackRealFide, date, g.Year);
 
-    private static List<Option> Options(Query q, List<Row> rows)
+    private static List<Option> Options(Query q, List<Row> rows, LeagueClub? club)
     {
         var scored = new List<(Option O, int Sides, int Distance, Row R)>();
         foreach (var r in rows)
         {
             var (wName, wFide, wTeam, bName, bFide, bTeam) = Colors(r.G);
-            var ws = SideScore(q.White, q.WhiteFide, wFide, wTeam);
-            var bs = SideScore(q.Black, q.BlackFide, bFide, bTeam);
+            var ws = SideScore(q.White, q.WhiteFide, wFide, wTeam, club);
+            var bs = SideScore(q.Black, q.BlackFide, bFide, bTeam, club);
             // mindestens eine Seite über die FIDE-ID — in den richtigen Farben oder vertauscht (dann nie genau)
             var crossed = Same(q.WhiteFide, bFide) || Same(q.BlackFide, wFide);
             if (ws < 2 && bs < 2 && !crossed) continue;
@@ -104,7 +106,7 @@ public sealed class LeaguePairingFinder(AppDbContext db)
                 : q.Year is { } y && InSeason(r.Season, y);
             var exact = ws > 0 && bs > 0 && inTime;
             var distance = q.Date is { } qd && r.Date is { } rdd ? Math.Abs(rdd.DayNumber - qd.DayNumber) : int.MaxValue;
-            scored.Add((ToOption(r, exact), (ws > 0 ? 1 : 0) + (bs > 0 ? 1 : 0), distance, r));
+            scored.Add((ToOption(r, exact, club), (ws > 0 ? 1 : 0) + (bs > 0 ? 1 : 0), distance, r));
         }
         return scored
             .OrderByDescending(s => s.O.Exact)
@@ -115,11 +117,11 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             .Take(MaxOptions).Select(s => s.O).ToList();
     }
 
-    /// <summary>2 = FIDE-ID gleich, 1 = „Schwaz"-Seite gegen einen Spieler des eigenen Vereins, 0 = passt nicht.</summary>
-    internal static int SideScore(string name, string? fide, string? pairingFide, string pairingTeam)
+    /// <summary>2 = FIDE-ID gleich, 1 = anonymisierte Seite des Vereins gegen einen seiner Spieler, 0 = passt nicht.</summary>
+    internal static int SideScore(string name, string? fide, string? pairingFide, string pairingTeam, LeagueClub? club)
     {
         if (!string.IsNullOrEmpty(fide)) return fide == pairingFide ? 2 : 0;
-        return name.Trim() == LeagueClubService.AnonymousName && pairingTeam.StartsWith(LeagueRefresh.OwnTeam) ? 1 : 0;
+        return club is not null && club.IsAnon(name) && club.OwnsTeam(pairingTeam) ? 1 : 0;
     }
 
     private static bool Same(string? a, string? b) => !string.IsNullOrEmpty(a) && a == b;
@@ -133,12 +135,12 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             ? (g.HomePlayer, g.HomeFide, g.HomeTeam, g.AwayPlayer, g.AwayFide, g.AwayTeam)
             : (g.AwayPlayer, g.AwayFide, g.AwayTeam, g.HomePlayer, g.HomeFide, g.HomeTeam);
 
-    private static Option ToOption(Row r, bool exact)
+    private static Option ToOption(Row r, bool exact, LeagueClub? club)
     {
         var (wName, wFide, wTeam, bName, bFide, bTeam) = Colors(r.G);
         var date = r.Date?.ToString("dd.MM.yyyy");
         var label = $"{r.Season} · {r.League} · Runde {r.G.Round} · Brett {r.G.Board}" + (date is null ? "" : $" ({date})");
         return new Option(r.G.Id, label, date, wName ?? "?", wFide, bName ?? "?", bFide, LeagueFixtureGames.WhiteBlackResult(r.G.Result, r.G.HomeColor != "s"),
-            wTeam.StartsWith(LeagueRefresh.OwnTeam), bTeam.StartsWith(LeagueRefresh.OwnTeam), exact, r.League, r.Season);
+            club?.OwnsTeam(wTeam) == true, club?.OwnsTeam(bTeam) == true, exact, r.League, r.Season);
     }
 }

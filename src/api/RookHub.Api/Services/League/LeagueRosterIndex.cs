@@ -25,8 +25,8 @@ public sealed class LeagueRosterIndex
     public sealed record Row(int Tnr, string Team, string Name, string NameKey, string? Fide, string Season = "");
 
     /// <summary>Ein Ligaspieler; <see cref="Name"/> in der jüngsten Schreibweise der Meldelisten. <see cref="OwnClub"/>:
-    /// in seiner jüngsten Saison für den eigenen Verein gemeldet (<see cref="LeagueRefresh.OwnTeam"/>) — wer von Schwaz
-    /// weggegangen ist, ist jetzt ein Gegner, wer dazugekommen ist, einer von uns.</summary>
+    /// in seiner jüngsten Saison für den eigenen Verein gemeldet (die Regel <c>ownTeam</c> des Index, je Verein
+    /// <see cref="Models.LeagueClub.OwnsTeam"/>) — wer weggegangen ist, ist jetzt ein Gegner, wer dazugekommen ist, einer von uns.</summary>
     public sealed record Person(string Key, string? Fide, string Name, IReadOnlyList<string> Teams, bool OwnClub = false);
 
     /// <summary>Ergebnis des Abgleichs. <see cref="Candidates"/> = alle gleich gut passenden Ligaspieler (bei einem
@@ -47,7 +47,9 @@ public sealed class LeagueRosterIndex
 
     public IReadOnlyList<Person> People { get; }
 
-    public LeagueRosterIndex(IEnumerable<Row> rows)
+    /// <param name="ownTeam">Gehört diese Mannschaft dem eigenen Verein? (Mandanten-Schritt 2026-10-07: je Verein, z. B.
+    /// <see cref="Models.LeagueClub.OwnsTeam"/>.) Ohne: niemand ist „einer von uns".</param>
+    public LeagueRosterIndex(IEnumerable<Row> rows, Func<string, bool>? ownTeam = null)
     {
         static string? Norm(string? f) => string.IsNullOrWhiteSpace(f) ? null : f.Trim();
         var list = rows.ToList();
@@ -90,8 +92,7 @@ public sealed class LeagueRosterIndex
             var ordered = g.OrderByDescending(r => r.Season, StringComparer.Ordinal).ThenByDescending(r => r.Tnr).ToList();
             var fide = ordered.Select(Fide).FirstOrDefault(f => f != null);
             var latest = ordered[0].Season;
-            var own = ordered.Where(r => r.Season == latest)
-                .Any(r => string.Equals(LeagueNames.Clean(r.Team).TrimEnd('/', '-', ' '), LeagueRefresh.OwnTeam, StringComparison.OrdinalIgnoreCase));
+            var own = ownTeam != null && ordered.Where(r => r.Season == latest).Any(r => ownTeam(r.Team));
             // Anzeige in der jüngsten Schreibweise MIT Komma („Nachname, Vorname"), sonst der jüngsten überhaupt.
             var shown = (ordered.FirstOrDefault(r => r.Name.Contains(',')) ?? ordered[0]).Name;
             var p = new Person(g.Key, fide, LeagueNames.Clean(shown),

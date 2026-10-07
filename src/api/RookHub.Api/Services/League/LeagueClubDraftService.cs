@@ -7,17 +7,19 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services.League;
 
 /// <summary>Wer auf einen Entwurf zugreift: ein Konto (Verwalter dürfen alle), oder ohne Konto der Schlüssel des Browsers.</summary>
-public sealed record DraftActor(int? UserId, string? Key, bool Manager)
+/// <summary>Wer auf Entwürfe zugreift — und in welchem Verein (Mandanten-Schritt 2026-10-07: ein Entwurf gehört dem Verein, für
+/// den er eingereicht wurde; die anderen Vereine sehen ihn nicht, auch ihre Verwalter nicht).</summary>
+public sealed record DraftActor(int? UserId, string? Key, bool Manager, int ClubId)
 {
-    public static DraftActor User(int userId, bool manager) => new(userId, null, manager);
-    public static DraftActor Anonymous(string? key) => new(null, key, false);
+    public static DraftActor User(int userId, bool manager, int clubId) => new(userId, null, manager, clubId);
+    public static DraftActor Anonymous(string? key, int clubId) => new(null, key, false, clubId);
 }
 
 /// <summary>
 /// Entwürfe von PGN-Importen (<see cref="LeagueClubDraft"/>, 0.595.0) — analog zu den offenen Partieformularen: jede
 /// eingereichte Partieliste liegt sofort online, mit dem Stand der Übersicht und den schon importierten Partien. Wer
 /// abbricht, macht später weiter; ein Verwalter (<c>league.manage</c>) sieht alle und kann den Import fertigstellen.
-/// Abgeschlossen oder verworfen wird die Zeile gelöscht (der Rohtext nennt die Spieler von Schwaz noch mit Namen).
+/// Abgeschlossen oder verworfen wird die Zeile gelöscht (der Rohtext nennt die Spieler des Vereins noch mit Namen).
 /// </summary>
 public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
 {
@@ -30,7 +32,7 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
 
     private DateTime Now => (now ?? (() => DateTime.UtcNow))();
 
-    public async Task<(LeagueClubDraftDto? Draft, string? Reason)> CreateAsync(int? userId, string? ipHash, string pgn,
+    public async Task<(LeagueClubDraftDto? Draft, string? Reason)> CreateAsync(int clubId, int? userId, string? ipHash, string pgn,
         string? source, string? label, CancellationToken ct = default)
     {
         await PurgeAsync(ct);
@@ -40,6 +42,7 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
         if (open >= (userId is null ? MaxOpenPerIp : MaxOpenPerUser)) return (null, "tooManyDrafts");
         var d = new LeagueClubDraft
         {
+            ClubId = clubId,
             UserId = userId,
             AccessKey = userId is null ? Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant() : null,
             AnonIpHash = userId is null ? ipHash : null,
@@ -59,7 +62,7 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
     public async Task<List<LeagueClubDraftDto>> ListAsync(DraftActor a, IReadOnlyCollection<string>? keys = null, CancellationToken ct = default)
     {
         await PurgeAsync(ct);
-        var q = db.LeagueClubDrafts.AsNoTracking();
+        var q = db.LeagueClubDrafts.AsNoTracking().Where(d => d.ClubId == a.ClubId);
         if (a.UserId is int u) q = q.Where(d => d.UserId == u);
         else
         {
@@ -71,11 +74,12 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
         return rows.Select(d => { var dto = ToDto(d, null); if (a.UserId is null) dto.Key = d.AccessKey; return dto; }).ToList();
     }
 
-    /// <summary>Alle offenen Entwürfe — für Verwalter, damit nichts liegen bleibt (auch über Teilen-Links).</summary>
-    public async Task<List<LeagueClubDraftDto>> ListAllAsync(int managerId, CancellationToken ct = default)
+    /// <summary>Alle offenen Entwürfe des Vereins — für Verwalter, damit nichts liegen bleibt (auch über Teilen-Links).</summary>
+    public async Task<List<LeagueClubDraftDto>> ListAllAsync(int clubId, int managerId, CancellationToken ct = default)
     {
         await PurgeAsync(ct);
-        var rows = await db.LeagueClubDrafts.AsNoTracking().OrderByDescending(d => d.UpdatedAt).Take(100).Select(Light).ToListAsync(ct);
+        var rows = await db.LeagueClubDrafts.AsNoTracking().Where(d => d.ClubId == clubId).OrderByDescending(d => d.UpdatedAt).Take(100)
+            .Select(Light).ToListAsync(ct);
         var ids = rows.Where(d => d.UserId != null).Select(d => d.UserId!.Value).Distinct().ToList();
         var names = await db.AppUsers.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
         return rows.Select(d =>
@@ -135,7 +139,7 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
 
     private IQueryable<LeagueClubDraft> Find(DraftActor a, int? id)
     {
-        var q = db.LeagueClubDrafts.AsQueryable();
+        var q = db.LeagueClubDrafts.Where(d => d.ClubId == a.ClubId);
         if (a.UserId is int u)
             return id is int i ? q.Where(d => d.Id == i && (a.Manager || d.UserId == u)) : q.Where(_ => false);
         var key = a.Key ?? "";
@@ -154,7 +158,7 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
     // Für Listen OHNE Rohtext und Stand — die können Megabytes groß sein.
     private static readonly System.Linq.Expressions.Expression<Func<LeagueClubDraft, LeagueClubDraft>> Light = d => new LeagueClubDraft
     {
-        Id = d.Id, UserId = d.UserId, AccessKey = d.AccessKey, Source = d.Source, Label = d.Label, GameCount = d.GameCount,
+        Id = d.Id, ClubId = d.ClubId, UserId = d.UserId, AccessKey = d.AccessKey, Source = d.Source, Label = d.Label, GameCount = d.GameCount,
         Imported = d.Imported, CreatedAt = d.CreatedAt, UpdatedAt = d.UpdatedAt,
     };
 

@@ -44,26 +44,28 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     /// <summary>Gesamt (30 min gemerkt); mit <paramref name="leagueTnr"/> der Block <c>league</c> (alle Meldelisten dieser Liga), mit
     /// <paramref name="opponentFides"/> der Block <c>opponent</c>. <paramref name="onlySure"/> = Teilen-Link: online nur „gesicherte"
     /// Konten (wie die Karte dort).</summary>
-    public async Task<JsonObject> GetAsync(CancellationToken ct, IEnumerable<string?>? opponentFides = null, bool onlySure = false,
+    /// <param name="clubId">Der Verein der Anfrage (Mandanten-Schritt 2026-10-07): die Zeile „Vereins-Datenbank" zählt nur
+    /// SEINE Partien; alles andere ist für alle Vereine gleich.</param>
+    public async Task<JsonObject> GetAsync(int clubId, CancellationToken ct, IEnumerable<string?>? opponentFides = null, bool onlySure = false,
         int? leagueTnr = null)
     {
-        var res = await TotalsAsync(ct);
-        if (leagueTnr is { } tnr) res["league"] = await LeagueAsync(tnr, onlySure, ct);
+        var res = await TotalsAsync(clubId, ct);
+        if (leagueTnr is { } tnr) res["league"] = await LeagueAsync(clubId, tnr, onlySure, ct);
         var fides = (opponentFides ?? []).Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => f!.Trim()).Distinct()
             .Take(MaxOpponentPlayers).ToList();
-        if (fides.Count > 0) res["opponent"] = await PlayersAsync(fides, onlySure, ct);
+        if (fides.Count > 0) res["opponent"] = await PlayersAsync(clubId, fides, onlySure, ct);
         return res;
     }
 
     /// <summary>Alle Spieler der Meldelisten dieser Liga (<see cref="Models.LeaguePlayer"/> mit FIDE-ID) — 30 min gemerkt; eine
     /// unbekannte Liga zählt 0 Spieler.</summary>
-    private async Task<JsonObject> LeagueAsync(int tnr, bool onlySure, CancellationToken ct)
+    private async Task<JsonObject> LeagueAsync(int clubId, int tnr, bool onlySure, CancellationToken ct)
     {
-        var key = $"{CacheKey}:league:{tnr}:{onlySure}";
+        var key = $"{CacheKey}:{clubId}:league:{tnr}:{onlySure}";
         if (cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
         var fides = await db.LeaguePlayers.AsNoTracking().Where(p => p.Tnr == tnr && p.FideId != null && p.FideId != "")
             .Select(p => p.FideId!).Distinct().ToListAsync(ct);
-        var r = await PlayersAsync(fides, onlySure, ct);
+        var r = await PlayersAsync(clubId, fides, onlySure, ct);
         cache?.Set(key, r, CacheFor);
         return (JsonObject)r.DeepClone();
     }
@@ -72,14 +74,14 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     /// Partien der Spieler <paramref name="fides"/> je Quelle → <c>{ players, board{ Quelle: n }, boardTotal, online{ Seite: { games,
     /// accounts } }, onlineTotal, onlineAccounts }</c>. Eine Partie zweier dieser Spieler zählt einmal.
     /// </summary>
-    public async Task<JsonObject> PlayersAsync(IReadOnlyCollection<string> fides, bool onlySure, CancellationToken ct)
+    public async Task<JsonObject> PlayersAsync(int clubId, IReadOnlyCollection<string> fides, bool onlySure, CancellationToken ct)
     {
         var board = new Dictionary<string, int>(StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Where(p => fides.Contains(p.FideId)).Select(p => p.Pgn)
                            .AsAsyncEnumerable().WithCancellation(ct))
             CountBoard(pgn, seen, board);
-        var club = await db.LeagueClubGames.AsNoTracking()
+        var club = await db.LeagueClubGames.AsNoTracking().Where(g => g.ClubId == clubId)
             .CountAsync(g => (g.WhiteFide != null && fides.Contains(g.WhiteFide)) || (g.BlackFide != null && fides.Contains(g.BlackFide)), ct);
         if (club > 0) board[LeagueProfileStore.ClubSource] = club;
         var accounts = await db.LeagueOnlineAccounts.AsNoTracking()
@@ -106,14 +108,15 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         };
     }
 
-    private async Task<JsonObject> TotalsAsync(CancellationToken ct)
+    private async Task<JsonObject> TotalsAsync(int clubId, CancellationToken ct)
     {
-        if (cache?.TryGetValue(CacheKey, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+        var key = $"{CacheKey}:{clubId}";
+        if (cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
         var board = new Dictionary<string, int>(StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Select(p => p.Pgn).AsAsyncEnumerable().WithCancellation(ct))
             CountBoard(pgn, seen, board);
-        var club = await db.LeagueClubGames.AsNoTracking().CountAsync(ct);
+        var club = await db.LeagueClubGames.AsNoTracking().CountAsync(g => g.ClubId == clubId, ct);
         if (club > 0) board[LeagueProfileStore.ClubSource] = club;
         var online = (await db.LeagueOnlineGames.AsNoTracking()
                 // nur Spieler von LeagueHub — Konten aus der Spielervorbereitung zählen hier nicht mit (0.637.0)
@@ -128,7 +131,7 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
             ["online"] = Rows(online), ["onlineTotal"] = online.Values.Sum(),
             ["countedAt"] = DateTime.UtcNow.ToString("O"),
         };
-        cache?.Set(CacheKey, res, CacheFor);
+        cache?.Set(key, res, CacheFor);
         return (JsonObject)res.DeepClone();
     }
 

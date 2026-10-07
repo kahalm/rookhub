@@ -25,15 +25,41 @@ public class LeagueController : BaseApiController
     private readonly LeagueService _league;
     private readonly LeagueImportService _import;
     private readonly LeagueUpdateService _update;
+    private readonly LeagueClubResolver _clubs;
 
-    public LeagueController(LeagueService league, LeagueImportService import, LeagueUpdateService update)
+    public LeagueController(LeagueService league, LeagueImportService import, LeagueUpdateService update, LeagueClubResolver clubs)
     {
-        _league = league; _import = import; _update = update;
+        _league = league; _import = import; _update = update; _clubs = clubs;
+    }
+
+    /// <summary>Im Verein der Anfrage (<c>?club=</c>, <see cref="LeagueClubResolver"/>), sonst die Absage.</summary>
+    private async Task<IActionResult> WithClubAsync(CancellationToken ct, Func<LeagueClub, Task<IActionResult>> run)
+    {
+        var (club, error) = await LeagueClubAsync(_clubs, ct);
+        return club is null ? error! : await run(club);
+    }
+
+    /// <summary>
+    /// Die Vereine des Kontos (Mandanten-Schritt 2026-10-07) → <c>{ clubs[{ id, name, anonName, teamPrefix, source }], current }</c>
+    /// — <c>current</c> = der Verein ohne <c>?club=</c> (bei mehreren und ohne Vorgabe <c>null</c>; die Seite nimmt dann den
+    /// gemerkten bzw. ersten). Nur angemeldet; ohne Verein eine leere Liste. LeagueHub schickt die Id danach als <c>?club=</c>
+    /// an jeden Aufruf.
+    /// </summary>
+    [HttpGet("me")]
+    public async Task<IActionResult> Me(CancellationToken ct)
+    {
+        var mine = await _clubs.ClubsOfAsync(GetUserId(), IsAdmin, ct);
+        var current = await _clubs.ResolveAsync(GetUserId(), IsAdmin, null, ct);
+        return Ok(new JsonObject
+        {
+            ["clubs"] = new JsonArray(mine.Select(c => (JsonNode)LeagueService.ClubJson(c)).ToArray()),
+            ["current"] = current.Club?.Id,
+        });
     }
 
     [HttpGet("index")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> Index(CancellationToken ct) => Ok(await _league.IndexAsync(ct));
+    public Task<IActionResult> Index(CancellationToken ct) => WithClubAsync(ct, async club => Ok(await _league.IndexAsync(club, ct)));
 
     /// <summary>Fertig gerechnete Liga (alle Teams, alle Runden) — Feldnamen wie in der Python-Fassung.</summary>
     [HttpGet("{tnr:int}")]
@@ -44,30 +70,32 @@ public class LeagueController : BaseApiController
     /// <summary>Brettpaarungen einer gespielten Begegnung samt Partie, wo es eine gibt (0.673.0, <see cref="LeagueFixtureGames"/>).</summary>
     [HttpGet("{tnr:int}/round/{round:int}/games")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> FixtureGames(int tnr, int round, [FromQuery] string? team, [FromServices] LeagueFixtureGames games,
-        [FromServices] PermissionResolver permissions, CancellationToken ct)
+    public Task<IActionResult> FixtureGames(int tnr, int round, [FromQuery] string? team, [FromServices] LeagueFixtureGames games,
+        [FromServices] PermissionResolver permissions, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         if (string.IsNullOrWhiteSpace(team)) return BadRequest();
         var me = GetUserId();
         // Verwalter LIVE wie in LeagueClubController (0.589.0) — eine eben vergebene Rolle gilt sofort
         var manage = User.IsInRole("Admin") || (await permissions.GetAsync(me)).Has(Permissions.LeagueManage);
-        return Ok(await games.ForFixtureAsync(tnr, round, team, ct, me, manage));
-    }
+        // Vereinspartien nur aus der Vereins-Datenbank des Vereins der Anfrage
+        return Ok(await games.ForFixtureAsync(club, tnr, round, team, ct, me, manage));
+    });
 
     /// <summary>Partien im Bestand je Quelle (0.626.0) → <c>{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }</c>;
     /// 30 min im Speicher. Seit 0.628.0: <c>?tnr=</c> fügt <c>league</c> hinzu (alle Meldelisten dieser Liga), <c>?fides=1,2,…</c>
     /// (die Meldeliste des Gegners, höchstens 40) <c>opponent</c>.</summary>
     [HttpGet("sources")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> Sources([FromQuery] int? tnr, [FromQuery] string? fides, [FromServices] LeagueGameSources sources,
-        CancellationToken ct) =>
-        Ok(await sources.GetAsync(ct, fides?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            leagueTnr: tnr));
+    public Task<IActionResult> Sources([FromQuery] int? tnr, [FromQuery] string? fides, [FromServices] LeagueGameSources sources,
+        CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await sources.GetAsync(club.Id, ct, fides?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            leagueTnr: tnr)));
 
     /// <summary>Treffer der Prognose in den bisherigen Runden (0.650.0): je Runde, je Liga, gesamt — über alle Begegnungen.</summary>
     [HttpGet("forecast-stats")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> ForecastStats(CancellationToken ct) => Ok(await _league.ForecastStatsAsync(ct));
+    public Task<IActionResult> ForecastStats(CancellationToken ct) => WithClubAsync(ct, async club =>
+        Ok(await _league.ForecastStatsAsync(club.Source, ct)));
 
     [HttpGet("player/{fide}")]
     [HasPermission(Permissions.LeagueView)]
@@ -231,20 +259,84 @@ public class LeagueController : BaseApiController
 
     public sealed record ShareRequest(int Tnr, int Round, string Team);
 
+    /// <summary>Teilen-Link anlegen — er gehört dem Verein der Anfrage (Uploads darüber landen in dessen Vereins-Datenbank).</summary>
     [HttpPost("share")]
     [HasPermission(Permissions.LeagueManage)]
-    public async Task<IActionResult> CreateShare([FromBody] ShareRequest req, CancellationToken ct)
+    public Task<IActionResult> CreateShare([FromBody] ShareRequest req, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
-        var s = await _league.CreateShareAsync(req.Tnr, req.Round, req.Team, GetUserIdOrNull(), ct);
+        var s = await _league.CreateShareAsync(club, req.Tnr, req.Round, req.Team, GetUserIdOrNull(), ct);
         return s is null
             ? BadRequest(new { message = "Diese Runde hat keine Prognose zum Teilen." })
             : Ok(new { token = s.Token, expires = s.Expires.ToString("yyyy-MM-dd") });
-    }
+    });
 
     [HttpDelete("share/{token}")]
     [HasPermission(Permissions.LeagueManage)]
-    public async Task<IActionResult> DeleteShare(string token, CancellationToken ct) =>
-        await _league.DeleteShareAsync(token, ct) ? NoContent() : NotFound();
+    public Task<IActionResult> DeleteShare(string token, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _league.DeleteShareAsync(club, token, ct) ? NoContent() : NotFound());
+
+    // ---- Vereine (Mandanten-Schritt 2026-10-07): nur Admins mit league.manage ------------------------------
+
+    public sealed record ClubRequest(string? Name, string? TeamPrefix, string? AnonName, string? Source);
+
+    /// <summary>Alle Vereine samt ihrer Gruppen → <c>[{ id, name, anonName, teamPrefix, source, groups[{ id, name }] }]</c>.</summary>
+    [HttpGet("admin/clubs")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> Clubs([FromServices] LeagueClubAdminService admin, CancellationToken ct) =>
+        IsAdmin ? Ok(await admin.ListAsync(ct)) : Forbid();
+
+    /// <summary>Verein anlegen <c>{ name, teamPrefix, anonName, source }</c> → der Verein; 400 <c>reason</c> ∈
+    /// <c>invalidName</c>/<c>invalidTeamPrefix</c>/<c>invalidAnonName</c>/<c>invalidSource</c>, 409 <c>duplicate</c>.</summary>
+    [HttpPost("admin/clubs")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> CreateClub([FromBody] ClubRequest? req, [FromServices] LeagueClubAdminService admin, CancellationToken ct)
+    {
+        if (!IsAdmin) return Forbid();
+        var (club, reason) = await admin.CreateAsync(req?.Name, req?.TeamPrefix, req?.AnonName, req?.Source, ct);
+        return ClubResult(club, reason);
+    }
+
+    /// <summary>Verein ändern (fehlende Felder bleiben; <c>source</c> leer = chess-results) → der Verein; 404 unbekannt.</summary>
+    [HttpPut("admin/clubs/{id:int}")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> UpdateClub(int id, [FromBody] ClubRequest? req, [FromServices] LeagueClubAdminService admin, CancellationToken ct)
+    {
+        if (!IsAdmin) return Forbid();
+        var (club, reason) = await admin.UpdateAsync(id, req?.Name, req?.TeamPrefix, req?.AnonName, req?.Source, ct);
+        return ClubResult(club, reason);
+    }
+
+    /// <summary>Gruppe dem Verein zuordnen (eine Gruppe gehört zu höchstens einem Verein — eine andere Zuordnung wird ersetzt);
+    /// der Taktik-Kurs des Vereins wird für die Gruppe freigegeben. 404 Verein/Gruppe unbekannt, 400 <c>everyone</c>.</summary>
+    [HttpPost("admin/clubs/{id:int}/groups/{groupId:int}")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> AddClubGroup(int id, int groupId, [FromServices] LeagueClubAdminService admin, CancellationToken ct)
+    {
+        if (!IsAdmin) return Forbid();
+        return await admin.AddGroupAsync(id, groupId, ct) switch
+        {
+            null => NoContent(),
+            "everyone" => BadRequest(new { reason = "everyone" }),
+            var r => NotFound(new { reason = r }),
+        };
+    }
+
+    /// <summary>Gruppe vom Verein lösen → 204; 404, wenn sie nicht dazugehört.</summary>
+    [HttpDelete("admin/clubs/{id:int}/groups/{groupId:int}")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> RemoveClubGroup(int id, int groupId, [FromServices] LeagueClubAdminService admin, CancellationToken ct)
+    {
+        if (!IsAdmin) return Forbid();
+        return await admin.RemoveGroupAsync(id, groupId, ct) ? NoContent() : NotFound();
+    }
+
+    private IActionResult ClubResult(LeagueClub? club, string? reason) => (club, reason) switch
+    {
+        ({ } c, _) => Ok(LeagueService.ClubJson(c)),
+        (_, "notFound") => NotFound(new { reason }),
+        (_, "duplicate") => Conflict(new { reason }),
+        _ => BadRequest(new { reason }),
+    };
 
     // ---- Aktualisieren (Knopf, kein Zeitplan — Wunsch des Nutzers) ------------------------------------
 
@@ -426,20 +518,23 @@ public class LeagueShareController : ControllerBase
     [HttpGet("{token}/sources")]
     public async Task<IActionResult> Sources(string token, [FromServices] LeagueGameSources sources, CancellationToken ct)
     {
-        if (await _league.PublicShareAsync(token, ct) is not { } share || await _league.ShareTnrAsync(token, ct) is not { } tnr) return NotFound();
+        if (await _league.PublicShareAsync(token, ct) is not { } share || await _league.ShareTnrAsync(token, ct) is not { } tnr
+            || await _league.ShareContextAsync(token, ct) is not { } link) return NotFound();
         var fides = (share["fixture"]?["roster"] as JsonArray ?? []).Select(r => (string?)r?["fide"]);
-        return Ok(await sources.GetAsync(ct, fides, onlySure: true, leagueTnr: tnr));
+        return Ok(await sources.GetAsync(link.Club.Id, ct, fides, onlySure: true, leagueTnr: tnr));
     }
 
-    /// <summary>Brettpaarungen der GETEILTEN Begegnung samt Partie (0.673.0) — Liga, Runde und Verein bestimmt der Link.</summary>
+    /// <summary>Brettpaarungen der GETEILTEN Begegnung samt Partie (0.673.0) — Liga, Runde und Mannschaft bestimmt der Link,
+    /// die Vereinspartien kommen aus der Vereins-Datenbank SEINES Vereins.</summary>
     [HttpGet("{token}/games")]
     public async Task<IActionResult> FixtureGames(string token, [FromServices] LeagueFixtureGames games, CancellationToken ct) =>
-        await _league.ShareFixtureAsync(token, ct) is { } s ? Ok(await games.ForFixtureAsync(s.Tnr, s.Round, s.Team, ct)) : NotFound();
+        await _league.ShareFixtureAsync(token, ct) is { } s && await _league.ShareContextAsync(token, ct) is { } link
+            ? Ok(await games.ForFixtureAsync(link.Club, s.Tnr, s.Round, s.Team, ct)) : NotFound();
 
-    /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen.</summary>
+    /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen der Quelle seines Vereins.</summary>
     [HttpGet("{token}/forecast-stats")]
     public async Task<IActionResult> ForecastStats(string token, CancellationToken ct) =>
-        await _league.ShareValidAsync(token, ct) ? Ok(await _league.ForecastStatsAsync(ct)) : NotFound();
+        await _league.ShareContextAsync(token, ct) is { } link ? Ok(await _league.ForecastStatsAsync(link.Club.Source, ct)) : NotFound();
 
     [HttpGet("{token}/player/{fide}")]
     public async Task<IActionResult> Player(string token, string fide, CancellationToken ct)

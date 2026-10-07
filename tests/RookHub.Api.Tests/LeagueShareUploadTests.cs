@@ -43,15 +43,16 @@ public class LeagueShareUploadTests : IDisposable
     {
         void Player(string team, string name, string fide) =>
             _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = team, Name = name, NameKey = LeagueNames.NameKey(name), FideId = fide });
-        Player("Schwaz", "Oberschmid, Patrik", "900");
+        Player("Testdorf", "Oberschmid, Patrik", "900");
         Player("Absam", "Hengl, Philip", "222");
         Player("Absam", "Schnabl, Andreas Dr.", "333");
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         foreach (var token in new[] { "tokA", "tokB" })
-            _db.LeagueShares.Add(new LeagueShare { Token = token, Tnr = 7, Round = 1, Team = "Schwaz", Expires = today.AddDays(7), CreatedAt = DateTime.UtcNow });
+            _db.LeagueShares.Add(new LeagueShare { Token = token, ClubId = TestClubs.HomeId, Tnr = 7, Round = 1, Team = "Testdorf", Expires = today.AddDays(7), CreatedAt = DateTime.UtcNow });
         var u = new AppUser { Username = "patrik", Email = "p@test", PasswordHash = "x" };
         _db.AppUsers.Add(u);
         await _db.SaveChangesAsync();
+        await TestClubs.SeedAsync(_db);
         return u.Id;
     }
 
@@ -68,7 +69,7 @@ public class LeagueShareUploadTests : IDisposable
 
         var response = await ShareController(Club()).Import("tokA", new LeagueClubImportRequest { Pgn = pgn }, default);
 
-        var result = Assert.IsType<LeagueClubImportResultDto>(Assert.IsType<OkObjectResult>(response.Result).Value);
+        var result = Assert.IsType<LeagueClubImportResultDto>(Assert.IsType<OkObjectResult>(response).Value);
         Assert.Equal((2, 1), (result.Added, result.Anonymized));
         var games = _db.LeagueClubGames.AsNoTracking().ToList();
         Assert.All(games, g => Assert.Equal(LeagueClubService.ShareHashOf("tokA"), g.UploadShareHash));
@@ -96,10 +97,10 @@ public class LeagueShareUploadTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        await club.ImportViaShareAsync("tokA", Pgn("Hengl, Philip", "Schnabl, Andreas") + Pgn("Oberschmid, Patrik", "Hengl, Philip", 2023), null);
-        await club.ImportViaShareAsync("tokB", Pgn("Schnabl, Andreas", "Hengl, Philip", 2022), null);
-        await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas", 2021), null);
-        var controller = new LeagueClubController(club, null!, new ScoresheetScanSignal());
+        await club.ImportViaShareAsync(TestClubs.Home, "tokA", Pgn("Hengl, Philip", "Schnabl, Andreas") + Pgn("Oberschmid, Patrik", "Hengl, Philip", 2023), null);
+        await club.ImportViaShareAsync(TestClubs.Home, "tokB", Pgn("Schnabl, Andreas", "Hengl, Philip", 2022), null);
+        await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Schnabl, Andreas", 2021), null);
+        var controller = new LeagueClubController(club, null!, new ScoresheetScanSignal(), new LeagueClubResolver(_db)).As(me, admin: true, club: TestClubs.HomeId);
 
         var dry = Assert.IsType<OkObjectResult>(await controller.DeleteShareGames("tokA", dryRun: true));
         Assert.Equal(2, (int)dry.Value!.GetType().GetProperty("count")!.GetValue(dry.Value)!);
@@ -110,7 +111,7 @@ public class LeagueShareUploadTests : IDisposable
         var left = _db.LeagueClubGames.AsNoTracking().OrderBy(g => g.Year).ToList();
         Assert.Equal(new int?[] { 2021, 2022 }, left.Select(g => g.Year));                // Link B und der angemeldete Upload bleiben
         Assert.Equal(new string?[] { null, LeagueClubService.ShareHashOf("tokB") }, left.Select(g => g.UploadShareHash));
-        Assert.Equal(0, await club.DeleteByShareAsync("tokA", dryRun: false));           // zweimal = nichts mehr da
+        Assert.Equal(0, await club.DeleteByShareAsync(TestClubs.Home, "tokA", dryRun: false));           // zweimal = nichts mehr da
         Assert.IsType<BadRequestObjectResult>(await controller.DeleteShareGames(new string('x', 65)));
     }
 
@@ -118,7 +119,7 @@ public class LeagueShareUploadTests : IDisposable
     public async Task ShareImport_AtMost50PerCall_RestIsShareLimit()
     {
         await SeedAsync();
-        var result = await Club().ImportViaShareAsync("tokA", Games(60), null);
+        var result = await Club().ImportViaShareAsync(TestClubs.Home, "tokA", Games(60), null);
 
         Assert.Equal(LeagueShareUploadQuota.PerCall, result.Added);
         Assert.Equal(10, result.Failed.Count);
@@ -133,19 +134,19 @@ public class LeagueShareUploadTests : IDisposable
         var club = Club();
         using (var earlier = _quota.Reserve(LeagueClubService.ShareHashOf("tokA"), 195)) earlier.Kept = 195;
 
-        var a = await club.ImportViaShareAsync("tokA", Games(10), null);
+        var a = await club.ImportViaShareAsync(TestClubs.Home, "tokA", Games(10), null);
         Assert.Equal((5, 5), (a.Added, a.Failed.Count(f => f.Reason == LeagueClubService.ShareLimitReason)));
-        var (single, reason, _) = await club.AddGameViaShareAsync("tokA", new LeagueClubGameRequest
+        var (single, reason, _) = await club.AddGameViaShareAsync(TestClubs.Home, "tokA", new LeagueClubGameRequest
         {
             Moves = new() { "e4", "e5" }, White = "Hengl, Philip", Black = "Schnabl, Andreas", Year = 2024,
         });
         Assert.Equal((null, LeagueClubService.ShareLimitReason), (single, reason));   // das Formular-Add ohne Foto zählt mit
 
-        Assert.Equal(3, (await club.ImportViaShareAsync("tokB", Games(3, 1990), null)).Added);   // anderer Link: eigener Deckel
-        Assert.Equal(60, (await club.ImportPgnAsync(me, Games(60, 1900, OtherGame), null)).Added);   // angemeldet: kein Deckel
+        Assert.Equal(3, (await club.ImportViaShareAsync(TestClubs.Home, "tokB", Games(3, 1990), null)).Added);   // anderer Link: eigener Deckel
+        Assert.Equal(60, (await club.ImportPgnAsync(TestClubs.Home, me, Games(60, 1900, OtherGame), null)).Added);   // angemeldet: kein Deckel
 
         _time.Now = _time.Now.AddDays(1);
-        Assert.Equal(5, (await club.ImportViaShareAsync("tokA", Games(5, 2010), null)).Added);
+        Assert.Equal(5, (await club.ImportViaShareAsync(TestClubs.Home, "tokA", Games(5, 2010), null)).Added);
     }
 
     /// <summary>Codereview 2026-09-29, N4-004: am vollen Deckel lief die ganze Arbeit (nachspielen, abgleichen, je Partie eine
@@ -156,15 +157,15 @@ public class LeagueShareUploadTests : IDisposable
     {
         var me = await SeedAsync();
         var club = Club();
-        Assert.Equal(1, (await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas"), null)).Added);
+        Assert.Equal(1, (await club.ImportPgnAsync(TestClubs.Home, me, Pgn("Hengl, Philip", "Schnabl, Andreas"), null)).Added);
         using (var earlier = _quota.Reserve(LeagueClubService.ShareHashOf("tokA"), LeagueShareUploadQuota.PerLinkPerDay))
             earlier.Kept = LeagueShareUploadQuota.PerLinkPerDay;
         var pgn = Pgn("Hengl, Philip", "Schnabl, Andreas")                                    // 1: schon gespeichert
             + Pgn("Hengl, Philip", "Schnabl, Andreas", 2023, "1. e4 e5 2. Ke3 1-0")           // 2: illegal
             + Pgn("Schnabl, Andreas", "Hengl, Philip", 2022);                                 // 3: neu
 
-        var all = await club.ImportViaShareAsync("tokA", pgn, null);
-        var picked = await club.ImportViaShareAsync("tokA", pgn, [new() { Index = 3 }, new() { Index = 9 }]);
+        var all = await club.ImportViaShareAsync(TestClubs.Home, "tokA", pgn, null);
+        var picked = await club.ImportViaShareAsync(TestClubs.Home, "tokA", pgn, [new() { Index = 3 }, new() { Index = 9 }]);
 
         Assert.Equal((0, 0), (all.Added, all.Duplicates));
         Assert.Equal(new[] { (1, "Hengl, Philip"), (2, "Hengl, Philip"), (3, "Schnabl, Andreas") },

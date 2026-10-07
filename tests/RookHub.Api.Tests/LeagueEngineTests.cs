@@ -269,9 +269,9 @@ public class LeagueEngineTests
             { SizeLimit = LeagueProfileStore.CacheSizeLimit });
         var svc = new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance, cache);
 
-        var first = await svc.ForecastStatsAsync(default);
+        var first = await svc.ForecastStatsAsync(null, default);
         Assert.Equal(1, cache.Count);
-        var second = await svc.ForecastStatsAsync(default);
+        var second = await svc.ForecastStatsAsync(null, default);
         Assert.Equal(first.ToJsonString(), second.ToJsonString());
         Assert.Equal(6, second["total"]!["top3"]!.GetValue<int>());
     }
@@ -291,7 +291,7 @@ public class LeagueEngineTests
             new LeagueView { Tnr = 9, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(8, 8, 8, 8)}}}}}}}" });
         await db.SaveChangesAsync();
 
-        var s = await new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance).ForecastStatsAsync(default);
+        var s = await new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance).ForecastStatsAsync(null, default);
 
         Assert.Equal("2026/27", s["season"]!.GetValue<string>());
         Assert.Equal("{\"fixtures\":4,\"top1\":10,\"top2\":18,\"top3\":22,\"of\":30,\"e1\":0,\"e2\":0,\"e3\":0,\"pa\":0,\"pb\":0}", s["total"]!.ToJsonString());   // ohne Vorsaison, ohne eval der alten Form
@@ -321,6 +321,7 @@ public class LeagueEngineTests
                 ["B2"] = new() { new() { FideId = "B2", Site = "chess.com", UserName = "vielleicht", Url = "u", Confidence = "wahrscheinlich" } },
             }).Build(1, w.Games);
         db.LeagueViews.Add(new LeagueView { Tnr = 1, Json = v.ToJsonString(), GeneratedAt = DateTime.UtcNow });
+        db.LeagueClubs.AddRange(TestClubs.Home, TestClubs.Other);   // ein Link gehört einem Verein (Mandanten-Schritt)
         db.SaveChanges();
         return (db, svc);
     }
@@ -329,8 +330,8 @@ public class LeagueEngineTests
     public async Task Share_IsIdempotent_AndHidesUnsureAccounts()
     {
         var (db, svc) = ShareFixture();
-        var s1 = await svc.CreateShareAsync(1, 1, "A", 7, default);
-        var s2 = await svc.CreateShareAsync(1, 1, "A", 7, default);
+        var s1 = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
+        var s2 = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
         Assert.NotNull(s1);
         Assert.Equal(s1!.Token, s2!.Token);
         var pub = await svc.PublicShareAsync(s1.Token, default);
@@ -351,7 +352,7 @@ public class LeagueEngineTests
     {
         using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = LeagueProfileStore.CacheSizeLimit });
         var (db, svc) = ShareFixture(cache);
-        var s = await svc.CreateShareAsync(1, 1, "A", 7, default);
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
         Assert.True(await svc.ShareCoversAsync(s!.Token, "B3", default));
         Assert.False(await svc.ShareCoversAsync(s.Token, "C1", default));
 
@@ -369,7 +370,7 @@ public class LeagueEngineTests
         db.SaveChanges();
         Assert.True(await svc.ShareCoversAsync(s.Token, "B3", default));
 
-        Assert.True(await svc.DeleteShareAsync(s.Token, default));
+        Assert.True(await svc.DeleteShareAsync(TestClubs.Home, s.Token, default));
         Assert.False(await svc.ShareCoversAsync(s.Token, "B3", default));  // Link weg: der Cache hilft ihm nicht
         db.Dispose();
     }
@@ -434,7 +435,7 @@ public class LeagueEngineTests
             new LeaguePlayer { Tnr = 1, Team = "B", Name = "B1, B", NameKey = "b1, b", FideId = "B1" },
             new LeaguePlayer { Tnr = 2, Team = "Z", Name = "Z1, Z", NameKey = "z1, z", FideId = "Z1" });   // andere Liga
         await db.SaveChangesAsync();
-        var s = await svc.CreateShareAsync(1, 1, "A", null, default);
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", null, default);
         var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
         var sources = new LeagueGameSources(db);
         var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Sources(s!.Token, sources, default));
@@ -450,7 +451,7 @@ public class LeagueEngineTests
         Assert.Equal(2, leagueFides);
         Assert.Equal(leagueFides, body["league"]!["players"]!.GetValue<int>());
         Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.Sources("falsch", sources, default));
-        Assert.True(await svc.DeleteShareAsync(s.Token, default));
+        Assert.True(await svc.DeleteShareAsync(TestClubs.Home, s.Token, default));
         Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.Sources(s.Token, sources, default));
         db.Dispose();
     }
@@ -467,7 +468,7 @@ public class LeagueEngineTests
             new LeaguePlayer { Tnr = 1, Team = "C", Name = "C1, C", NameKey = "c1, c", FideId = "C1" });
         db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "B1", Site = "lichess", UserName = "sicher1", Url = "u", Confidence = "sicher" });
         await db.SaveChangesAsync();
-        var s = (await svc.CreateShareAsync(1, 1, "A", null, default))!;
+        var s = (await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", null, default))!;
         var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
         var accounts = new LeagueOnlineAccountService(db);
         var req = new RookHub.Api.Controllers.LeagueShareController.ShareAccountRequest("lichess", "https://lichess.org/@/NeuerB3", " vom Gegner selbst ");
@@ -499,10 +500,10 @@ public class LeagueEngineTests
     public async Task Share_ProvisionalRound_IsShareable_AndRevokedLinkIsGone()
     {
         var (db, svc) = ShareFixture();
-        Assert.NotNull(await svc.CreateShareAsync(1, 3, "A", null, default));   // spätere Runde: vorläufige Prognose (2026-10-06)
-        var s = await svc.CreateShareAsync(1, 2, "A", null, default);
+        Assert.NotNull(await svc.CreateShareAsync(TestClubs.Home, 1, 3, "A", null, default));   // spätere Runde: vorläufige Prognose (2026-10-06)
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 2, "A", null, default);
         Assert.NotNull(s);
-        Assert.True(await svc.DeleteShareAsync(s!.Token, default));
+        Assert.True(await svc.DeleteShareAsync(TestClubs.Home, s!.Token, default));
         Assert.Null(await svc.PublicShareAsync(s.Token, default));
         db.Dispose();
     }
@@ -511,9 +512,9 @@ public class LeagueEngineTests
     public async Task Share_ExpiredButNotCleanedUp_IsReplacedByAFreshLink()
     {
         var (db, svc) = ShareFixture();
-        db.LeagueShares.Add(new LeagueShare { Token = "abgelaufenabgelaufen1234", Tnr = 1, Round = 1, Team = "A", Expires = new DateOnly(2020, 1, 1) });
+        db.LeagueShares.Add(new LeagueShare { ClubId = TestClubs.HomeId, Token = "abgelaufenabgelaufen1234", Tnr = 1, Round = 1, Team = "A", Expires = new DateOnly(2020, 1, 1) });
         db.SaveChanges();
-        var s = await svc.CreateShareAsync(1, 1, "A", 7, default);
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
         Assert.NotNull(s);
         Assert.NotEqual("abgelaufenabgelaufen1234", s!.Token);
         Assert.True(s.Expires >= DateOnly.FromDateTime(DateTime.UtcNow).AddDays(LeagueService.ShareKeepDays));
@@ -526,7 +527,7 @@ public class LeagueEngineTests
     public async Task Share_Expired_IsHidden()
     {
         var (db, svc) = ShareFixture();
-        db.LeagueShares.Add(new LeagueShare { Token = "abcdefghijklmnopqrstuvwx", Tnr = 1, Round = 1, Team = "A", Expires = new DateOnly(2020, 1, 1) });
+        db.LeagueShares.Add(new LeagueShare { ClubId = TestClubs.HomeId, Token = "abcdefghijklmnopqrstuvwx", Tnr = 1, Round = 1, Team = "A", Expires = new DateOnly(2020, 1, 1) });
         db.SaveChanges();
         Assert.Null(await svc.PublicShareAsync("abcdefghijklmnopqrstuvwx", default));
         db.Dispose();

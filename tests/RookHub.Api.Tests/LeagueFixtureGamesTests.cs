@@ -24,11 +24,11 @@ public class LeagueFixtureGamesTests : IDisposable
             new LeagueGame { Tnr = 1, Round = 2, Board = 1, HomeTeam = "Andere", AwayTeam = "Fremde", HomePlayer = "X", AwayPlayer = "Y",
                 HomeColor = "w", Result = "1 - 0" });
         _db.LeagueClubGames.AddRange(
-            new LeagueClubGame { Id = 10, Year = 2026, White = "Hess, Max", WhiteFide = "24656666", Black = "Schwaz", UploadedByUserId = 7,
+            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 10, Year = 2026, White = "Hess, Max", WhiteFide = "24656666", Black = "Testdorf", UploadedByUserId = 7,
                 Pgn = "[White \"Hess, Max\"]\n[Black \"Schwaz\"]\n\n1. e4 e5 1/2-1/2", MovesHash = "a" },
-            new LeagueClubGame { Id = 11, Year = 2025, White = "Ciolek, Andreas", WhiteFide = "12906727", Black = "Schwaz",
+            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 11, Year = 2025, White = "Ciolek, Andreas", WhiteFide = "12906727", Black = "Testdorf",
                 Pgn = "alt", MovesHash = "b" },   // anderes Jahr
-            new LeagueClubGame { Id = 12, Year = 2026, White = "Schwaz", Black = "Ciolek, Andreas", BlackFide = "12906727",
+            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 12, Year = 2026, White = "Testdorf", Black = "Ciolek, Andreas", BlackFide = "12906727",
                 Pgn = "falsche Farbe", MovesHash = "c" });
         _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "1270012", Name = "Tafertshofer, Matthias",
             Pgn = "[Event \"TMM\"]\n[Date \"2026.10.04\"]\n[White \"Tafertshofer, Matthias\"]\n[Black \"Kruckenhauser, Arthur\"]\n[Result \"1/2-1/2\"]\n\n1. d4 d5 1/2-1/2\n\n"
@@ -37,7 +37,7 @@ public class LeagueFixtureGamesTests : IDisposable
     }
 
     private static LeagueGame Board(int b, string home, string? hf, string? away, string? af, string color, string result, int forfeit = 0) =>
-        new() { Tnr = 1, Round = 2, Board = b, HomeTeam = "Schach Ohne Grenzen", AwayTeam = "Schwaz", HomePlayer = home, HomeFide = hf,
+        new() { Tnr = 1, Round = 2, Board = b, HomeTeam = "Schach Ohne Grenzen", AwayTeam = "Testdorf", HomePlayer = home, HomeFide = hf,
             AwayPlayer = away, AwayFide = af, HomeColor = color, Result = result, Forfeit = forfeit, HomeElo = 1800 + b };
 
     public void Dispose() => _db.Dispose();
@@ -45,7 +45,7 @@ public class LeagueFixtureGamesTests : IDisposable
     [Fact]
     public async Task ForFixture_paarungenMitFarbenUndPartien()
     {
-        var list = await new LeagueFixtureGames(_db).ForFixtureAsync(1, 2, "Schwaz", default);
+        var list = await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default);
 
         Assert.Equal(new[] { 1, 2, 3, 4 }, list.Select(p => p.Board));
         Assert.Equal(("Hess, Max", "Binder, Moriz", "club", (int?)10), (list[0].White, list[0].Black, list[0].Source, list[0].ClubGameId));
@@ -61,25 +61,25 @@ public class LeagueFixtureGamesTests : IDisposable
     public async Task ForFixture_bearbeitenDarfDerHochladendeUndDerVerwalter_nieUeberDenLink()
     {
         var svc = new LeagueFixtureGames(_db);
-        Assert.True((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 7))[0].CanEdit);
-        Assert.False((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 8))[0].CanEdit);
-        Assert.True((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 8, canManage: true))[0].CanEdit);
-        Assert.False((await svc.ForFixtureAsync(1, 2, "Schwaz", default))[0].CanEdit);   // Teilen-Link
-        Assert.False((await svc.ForFixtureAsync(1, 2, "Schwaz", default, userId: 8, canManage: true))[1].CanEdit);   // keine Vereinspartie
+        Assert.True((await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default, userId: 7))[0].CanEdit);
+        Assert.False((await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default, userId: 8))[0].CanEdit);
+        Assert.True((await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default, userId: 8, canManage: true))[0].CanEdit);
+        Assert.False((await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default))[0].CanEdit);   // Teilen-Link
+        Assert.False((await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default, userId: 8, canManage: true))[1].CanEdit);   // keine Vereinspartie
     }
 
     [Fact]
     public async Task ForFixture_ungespielteRunde_leer()
     {
-        Assert.Empty(await new LeagueFixtureGames(_db).ForFixtureAsync(1, 3, "Schwaz", default));
+        Assert.Empty(await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 1, 3, "Testdorf", default));
     }
 
     [Fact]
     public void SideMatches_SchwazNurFuerDenEigenenVerein()
     {
-        Assert.True(LeagueFixtureGames.SideMatches("Schwaz", null, "Binder, Moriz", "1616951", "Schwaz 1"));
-        Assert.False(LeagueFixtureGames.SideMatches("Schwaz", null, "Hess, Max", "24656666", "Schach Ohne Grenzen"));
-        Assert.False(LeagueFixtureGames.SideMatches("Hess, Max", "999", "Hess, Max", "24656666", "X"));   // FIDE-ID schlägt den Namen
+        Assert.True(LeagueFixtureGames.SideMatches(TestClubs.Home, "Testdorf", null, "Binder, Moriz", "1616951", "Testdorf 1"));
+        Assert.False(LeagueFixtureGames.SideMatches(TestClubs.Home, "Testdorf", null, "Hess, Max", "24656666", "Schach Ohne Grenzen"));
+        Assert.False(LeagueFixtureGames.SideMatches(TestClubs.Home, "Hess, Max", "999", "Hess, Max", "24656666", "X"));   // FIDE-ID schlägt den Namen
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class LeagueFixtureGamesTests : IDisposable
     {
         _db.LeagueGames.Add(Board(5, "Haselsberger, Armin", "1", "Ranner, Stefan", "2", "s", "0 - 1"));
         _db.SaveChanges();
-        var p = (await new LeagueFixtureGames(_db).ForFixtureAsync(1, 2, "Schwaz", default)).Single(x => x.Board == 5);
+        var p = (await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default)).Single(x => x.Board == 5);
         Assert.Equal(("Ranner, Stefan", "Haselsberger, Armin", "1 - 0"), (p.White, p.Black, p.Result));
     }
 }
