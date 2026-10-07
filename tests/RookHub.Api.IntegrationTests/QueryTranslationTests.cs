@@ -45,10 +45,10 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     /// <summary>Ein Verein (Mandanten-Schritt 2026-10-07) — <c>ResetAsync</c> leert auch <c>LeagueClubs</c>, die Migration hat
     /// ihre beiden Vereine also nicht mehr; Vereinspartien brauchen ihren Fremdschlüssel.</summary>
     private async Task<LeagueClub> ClubAsync(int id = 1, string name = "SK Schwaz", string prefix = "Schwaz", string anon = "Schwaz",
-        string? source = null)
+        string region = "tirol")
     {
         if (await Db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id) is { } known) return known;
-        var c = new LeagueClub { Id = id, Name = name, TeamPrefix = prefix, AnonName = anon, Source = source, CreatedAt = DateTime.UtcNow };
+        var c = new LeagueClub { Id = id, Name = name, TeamPrefix = prefix, AnonName = anon, Region = region, CreatedAt = DateTime.UtcNow };
         Db.LeagueClubs.Add(c);
         await Db.SaveChangesAsync();
         return c;
@@ -791,7 +791,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(id, (await clubService.EvalsAsync(home, club.Id))!.AnalysisId);
         Assert.Equal(club.Pgn, (await clubService.GetAsync(home, owner, false, club.Id))!.Pgn);
         // ein anderer Verein sieht sie nicht (Mandanten-Schritt 2026-10-07)
-        var other = await ClubAsync(2, "SK Weilheim", "SK Weilheim", "Weilheim", "ligamanager");
+        var other = await ClubAsync(2, "SK Weilheim", "SK Weilheim", "Weilheim", "bayern");
         Assert.Empty((await clubService.ListAsync(other, owner, true, null, null, 1, default)).Items);
         Assert.Null(await clubService.GetAsync(other, owner, true, club.Id));
         Assert.Equal(home.Id, await clubService.ClubOfGameAsync(club.Id));
@@ -1160,7 +1160,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     public async Task Mandanten_ZugehoerigkeitStartseiteUndTrennung_uebersetzenSichNachMariaDb()
     {
         var home = await ClubAsync();
-        var other = await ClubAsync(2, "SK Weilheim", "SK Weilheim", "Weilheim", "ligamanager");
+        var other = await ClubAsync(2, "SK Weilheim", "SK Weilheim", "Weilheim", "bayern");
         var member = await SeedUserAsync("mitglied");
         var admin = await SeedUserAsync("chef");
         (await Db.AppUsers.FindAsync(admin))!.IsAdmin = true;

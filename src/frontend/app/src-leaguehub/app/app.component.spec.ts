@@ -81,7 +81,7 @@ describe('LeagueHubAppComponent Werbesatz auf „Formular prüfen" (UX-036)', ()
 
 /** Vereine als Mandanten (0.698.0): bei mehreren Vereinen ein Umschalter im Kopf (gemerkt, Seite neu), sonst keiner. */
 describe('LeagueHubAppComponent Umschalter zwischen Vereinen', () => {
-  const OTHER = { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', source: 'ligamanager' };
+  const OTHER = { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', region: 'bayern' };
 
   async function create(clubs: typeof TEST_CLUB[]) {
     const user = { userId: 7, username: 'patrik' };

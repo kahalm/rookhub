@@ -17,8 +17,8 @@ export interface LeagueClubInfo {
   anonName: string;
   /** Wie die Mannschaften des Vereins beginnen („Schwaz", „SK Weilheim"). */
   teamPrefix?: string;
-  /** `null` = chess-results (Tirol), `ligamanager` = Bayern. */
-  source?: string | null;
+  /** `tirol` = chess-results, `bayern` = Ligamanager + Schachkreis Zugspitze (seit 0.704.0; vorher `source`). */
+  region?: string | null;
 }
 
 /** `GET /api/league/me`. */

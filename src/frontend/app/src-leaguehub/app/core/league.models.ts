@@ -6,7 +6,7 @@ export interface LeagueIndex {
   generated: string | null;
   leagues: { tnr: number; name: string }[];
   /** Der Verein der Anfrage (0.698.0) — nur Ligen seiner Quelle stehen in `leagues`. */
-  club?: { id: number; name: string; anonName: string; teamPrefix: string; source: string | null };
+  club?: { id: number; name: string; anonName: string; teamPrefix: string; region: string | null };
 }
 
 /** Partien im Bestand je Quelle (0.626.0, `GET /api/league/sources`). `key`: Lumbra, Mega, chess-results, Lichess-Übertragung,
@@ -112,17 +112,17 @@ export interface Broadcast {
   error: string | null;
 }
 
-/** Ein Verein in der Verwaltung (`GET /api/league/admin/clubs`, 0.700.0). `source`: `null` = chess-results (Tirol),
- *  `ligamanager` = Bayern. `clubGames` ohne archivierte Partien. */
+/** Ein Verein in der Verwaltung (`GET /api/league/admin/clubs`, 0.700.0). `region` (0.704.0): `tirol` = chess-results,
+ *  `bayern` = Ligamanager + Schachkreis Zugspitze. `clubGames` ohne archivierte Partien. */
 export interface AdminClub {
-  id: number; name: string; anonName: string; teamPrefix: string; source: string | null;
+  id: number; name: string; anonName: string; teamPrefix: string; region: string | null;
   createdAt: string | null;
   clubGames: number;
   groups: { id: number; name: string; members: number }[];
 }
 
-/** Eingabe für Anlegen/Ändern eines Vereins (`source: ""` = chess-results). */
-export interface ClubInput { name: string; teamPrefix: string; anonName: string; source: string }
+/** Eingabe für Anlegen/Ändern eines Vereins (`region`: `tirol` | `bayern`). */
+export interface ClubInput { name: string; teamPrefix: string; anonName: string; region: string }
 
 /** Eine Gruppe aus RookHubs Gruppenverwaltung (`GET /api/admin/groups`, `GroupDto`). */
 export interface RhGroup { id: number; name: string; description?: string | null; memberCount: number; isEveryone: boolean }

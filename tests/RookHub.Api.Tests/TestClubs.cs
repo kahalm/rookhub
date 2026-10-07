@@ -23,7 +23,7 @@ internal static class TestClubs
     /// <summary>Ein zweiter Verein (Bayern): Mannschaften „SK Weiler 1", anonymisiert „Weiler".</summary>
     public static LeagueClub Other => new()
     {
-        Id = OtherId, Name = "SK Weiler", TeamPrefix = "SK Weiler", AnonName = "Weiler", Source = LigamanagerSource.Source,
+        Id = OtherId, Name = "SK Weiler", TeamPrefix = "SK Weiler", AnonName = "Weiler", Region = LeagueRegions.Bayern,
     };
 
     /// <summary>Beide Vereine in die Datenbank (für Wege, die den Verein selbst nachschlagen: Teilen-Link, Taktik-Kurs, Resolver).</summary>

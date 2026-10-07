@@ -18,11 +18,9 @@ public sealed class LeagueClubAdminService(AppDbContext db, ILogger<LeagueClubAd
     public const int MaxTeamPrefix = 80;
     public const int MaxAnonName = 60;
 
-    /// <summary>Die erlaubten Liga-Quellen eines Vereins: <c>null</c> = chess-results (Tirol), <c>ligamanager</c> = Bayern.</summary>
-    public static bool ValidSource(string? source) => source is null || source == LigamanagerSource.Source;
 
     /// <summary>Alle Vereine für die Verwaltung (LeagueHub `/vereine`, 0.700.0) →
-    /// <c>[{ id, name, anonName, teamPrefix, source, createdAt, clubGames, groups[{ id, name, members }] }]</c>.
+    /// <c>[{ id, name, anonName, teamPrefix, region, createdAt, clubGames, groups[{ id, name, members }] }]</c>.
     /// <c>clubGames</c> zählt die Vereinspartien ohne archivierte (Query-Filter), <c>members</c> die Konten der Gruppe.</summary>
     public async Task<JsonArray> ListAsync(CancellationToken ct)
     {
@@ -43,27 +41,32 @@ public sealed class LeagueClubAdminService(AppDbContext db, ILogger<LeagueClubAd
         }).ToArray());
     }
 
-    public async Task<(LeagueClub? Club, string? Reason)> CreateAsync(string? name, string? teamPrefix, string? anonName, string? source,
+    /// <summary>Region eines Vereins: leer = Tirol (die Vorgabe); sonst eine aus <see cref="LeagueRegions.All"/>.</summary>
+    private static string? RegionOf(string? region) =>
+        string.IsNullOrWhiteSpace(region) ? LeagueRegions.Tirol
+        : LeagueRegions.Valid(region.Trim().ToLowerInvariant()) ? region.Trim().ToLowerInvariant() : null;
+
+    public async Task<(LeagueClub? Club, string? Reason)> CreateAsync(string? name, string? teamPrefix, string? anonName, string? region,
         CancellationToken ct)
     {
         var n = Clean(name, MaxName);
         var p = Clean(teamPrefix, MaxTeamPrefix);
         var a = Clean(anonName, MaxAnonName);
-        var src = string.IsNullOrWhiteSpace(source) ? null : source.Trim();
+        var reg = RegionOf(region);
         if (n is null) return (null, "invalidName");
         if (p is null) return (null, "invalidTeamPrefix");
         if (a is null) return (null, "invalidAnonName");
-        if (!ValidSource(src)) return (null, "invalidSource");
+        if (reg is null) return (null, "invalidRegion");
         if (await db.LeagueClubs.AnyAsync(c => c.Name == n, ct)) return (null, "duplicate");
-        var club = new LeagueClub { Name = n, TeamPrefix = p, AnonName = a, Source = src, CreatedAt = DateTime.UtcNow };
+        var club = new LeagueClub { Name = n, TeamPrefix = p, AnonName = a, Region = reg, CreatedAt = DateTime.UtcNow };
         db.LeagueClubs.Add(club);
         await db.SaveChangesAsync(ct);
-        log.LogInformation("LeagueHub: Verein {Id} „{Name}“ angelegt (Quelle {Source})", club.Id, club.Name, club.Source ?? "chess-results");
+        log.LogInformation("LeagueHub: Verein {Id} „{Name}“ angelegt (Region {Region})", club.Id, club.Name, club.Region);
         return (club, null);
     }
 
-    /// <summary>Fehlende Felder bleiben; <paramref name="source"/> = „" setzt chess-results.</summary>
-    public async Task<(LeagueClub? Club, string? Reason)> UpdateAsync(int id, string? name, string? teamPrefix, string? anonName, string? source,
+    /// <summary>Fehlende Felder bleiben; <paramref name="region"/> = „" setzt Tirol.</summary>
+    public async Task<(LeagueClub? Club, string? Reason)> UpdateAsync(int id, string? name, string? teamPrefix, string? anonName, string? region,
         CancellationToken ct)
     {
         var club = await db.LeagueClubs.FirstOrDefaultAsync(c => c.Id == id, ct);
@@ -84,11 +87,10 @@ public sealed class LeagueClubAdminService(AppDbContext db, ILogger<LeagueClubAd
             if (Clean(anonName, MaxAnonName) is not { } a) return (null, "invalidAnonName");
             club.AnonName = a;
         }
-        if (source is not null)
+        if (region is not null)
         {
-            var src = string.IsNullOrWhiteSpace(source) ? null : source.Trim();
-            if (!ValidSource(src)) return (null, "invalidSource");
-            club.Source = src;
+            if (RegionOf(region) is not { } reg) return (null, "invalidRegion");
+            club.Region = reg;
         }
         await db.SaveChangesAsync(ct);
         // Der Name des Taktik-Kurses folgt dem Verein.

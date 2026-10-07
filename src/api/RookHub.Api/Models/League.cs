@@ -558,9 +558,10 @@ public class LeagueClub
     public string TeamPrefix { get; set; } = string.Empty;
     /// <summary>Der Name, unter dem ein anonymisierter Spieler des Vereins erscheint („Schwaz", „Weilheim").</summary>
     public string AnonName { get; set; } = string.Empty;
-    /// <summary>Welche Liga-Quelle der Verein spielt (<see cref="LeagueTournament.Source"/>): <c>null</c> = chess-results
-    /// (Tirol), <c>"ligamanager"</c> = Bayern. Die Startseite zeigt nur Ligen dieser Quelle.</summary>
-    public string? Source { get; set; }
+    /// <summary>In welcher Region der Verein spielt (2026-10-07, vorher <c>Source</c>): <c>"tirol"</c> = chess-results,
+    /// <c>"bayern"</c> = SBV-Ligamanager + Schachkreis Zugspitze (<see cref="Services.League.LeagueRegions"/> bildet die Region auf
+    /// ihre Quellen ab). Die Startseite und die Treffer-Statistik zeigen die Ligen aller Quellen dieser Region.</summary>
+    public string Region { get; set; } = Services.League.LeagueRegions.Tirol;
     public DateTime CreatedAt { get; set; }
 
     /// <summary>Gehört diese Mannschaft dem Verein? „Schwaz" = „Schwaz"; „SK Weilheim 1" beginnt mit „SK Weilheim " —

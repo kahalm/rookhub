@@ -8,7 +8,7 @@ import { LeaguePageComponent } from './league-page.component';
 import { TEST_CLUB, provideTestClub } from '../../core/club-context.testing';
 
 const INDEX: LeagueIndex = { season: '2026/27', generated: '27.09.2026 21:00', leagues: [{ tnr: 10, name: 'Landesliga' }, { tnr: 20, name: '1. Klasse Ost' }],
-  club: { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', source: null } };
+  club: { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', region: 'tirol' } };
 
 function league(tnr: number, teams: string[]): League {
   return {
@@ -91,14 +91,15 @@ describe('LeaguePageComponent', () => {
     expect(api.index).not.toHaveBeenCalled();
   });
 
-  it('ein bayerischer Verein: Vorauswahl über den Mannschafts-Anfang („SK Weiler 1"), Quelle Ligamanager (0.698.0)', async () => {
+  it('ein bayerischer Verein: Vorauswahl über den Mannschafts-Anfang („SK Weiler 1"), Quelle Ligamanager + Schachkreis (0.698.0/0.704.0)', async () => {
     api.index.and.resolveTo({ ...INDEX, leagues: [{ tnr: 30, name: 'Landesliga Süd' }],
-      club: { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', source: 'ligamanager' } });
+      club: { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', region: 'bayern' } });
     api.league.and.callFake(async (tnr: number) => league(tnr, ['SC Rum 1', 'SK Weiler 1', 'SK Weilerbach 1']));
     const el = create();
     await settle();
     expect(fixture.componentInstance.team()).toBe('SK Weiler 1');
     expect(el.textContent).toContain('Ligamanager des Bayerischen Schachbunds');
+    expect(el.textContent).toContain('Schachkreis');
   });
 
   it('wählt ohne Vorgabe die erste Liga, die erste offene Runde und den eigenen Verein', async () => {

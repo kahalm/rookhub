@@ -256,6 +256,30 @@ public class LeagueClubTenancyTests : IDisposable
     }
 
     [Fact]
+    public async Task Index_BavarianClubSeesLigamanagerAndZugspitze_TyroleanClubNeither()
+    {
+        // Region statt Quelle (Schachkreis Zugspitze, 2026-10-07): SK Weiler spielt mit der Ersten im Ligamanager, mit der Zweiten
+        // im Schachkreis — beide Ligen auf SEINER Startseite, keine auf der von Testdorf; die Vorsaison des Kreises zählt nicht.
+        await SeedAsync();
+        var zg = ZugspitzeSource.TnrOf(2026, 1);
+        var zgOld = ZugspitzeSource.TnrOf(2025, 1);
+        _db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = zg, Season = "2026/27", Level = 5, League = "Zugspitzliga", Stage = "Liga", Source = ZugspitzeSource.Source },
+            new LeagueTournament { Tnr = zgOld, Season = "2025/26", Level = 5, League = "Zugspitzliga", Stage = "Liga", Source = ZugspitzeSource.Source });
+        _db.LeagueViews.AddRange(new LeagueView { Tnr = 1, Json = "{}", GeneratedAt = Now }, new LeagueView { Tnr = 900_000_001, Json = "{}", GeneratedAt = Now },
+            new LeagueView { Tnr = zg, Json = "{}", GeneratedAt = Now }, new LeagueView { Tnr = zgOld, Json = "{}", GeneratedAt = Now });
+        await _db.SaveChangesAsync();
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var tirol = await league.IndexAsync(TestClubs.Home, default);
+        var bayern = await league.IndexAsync(TestClubs.Other, default);
+        Assert.Equal(new[] { 1 }, tirol["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
+        Assert.Equal(new[] { 900_000_001, zg }, bayern["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));   // nach Stufe
+        Assert.Equal(("2026/27", "bayern"), (bayern["season"]!.GetValue<string>(), bayern["club"]!["region"]!.GetValue<string>()));
+        Assert.Equal("tirol", tirol["club"]!["region"]!.GetValue<string>());
+        Assert.Equal("2026/27", (await league.ForecastStatsAsync(LeagueRegions.Bayern, default))["season"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task FixtureGames_TakeClubGamesOnlyFromTheClubOfTheRequest()
     {
         await SeedAsync();
@@ -321,10 +345,11 @@ public class LeagueClubTenancyTests : IDisposable
     {
         await SeedAsync();
         var admin = new LeagueClubAdminService(_db, NullLogger<LeagueClubAdminService>.Instance);
-        Assert.Equal("invalidSource", (await admin.CreateAsync("SK Neu", "Neu", "Neu", "irgendwas", default)).Reason);
+        Assert.Equal("invalidRegion", (await admin.CreateAsync("SK Neu", "Neu", "Neu", "irgendwas", default)).Reason);
+        Assert.Equal("invalidRegion", (await admin.CreateAsync("SK Neu", "Neu", "Neu", LigamanagerSource.Source, default)).Reason);   // Quelle ≠ Region
         Assert.Equal("duplicate", (await admin.CreateAsync("SK Weiler", "X", "X", null, default)).Reason);
         var (club, _) = await admin.CreateAsync("  SK Neu ", "Neu", "Neu", "", default);
-        Assert.Equal(("SK Neu", (string?)null), (club!.Name, club.Source));
+        Assert.Equal(("SK Neu", "tirol"), (club!.Name, club.Region));                        // leer = Tirol
         _db.Books.Add(new Book { FileName = TacticHarvestService.ClubBookOf(club.Id), DisplayName = "x", Kind = BookKind.Puzzle, Source = new BookSource() });
         _db.Groups.Add(new Group { Id = 12, Name = "Neue Gruppe" });
         await _db.SaveChangesAsync();
@@ -342,7 +367,9 @@ public class LeagueClubTenancyTests : IDisposable
         Assert.Equal("everyone", await admin.AddGroupAsync(club.Id, 13, default));
 
         var (renamed, _) = await admin.UpdateAsync(club.Id, "SK Neustadt", null, "Neustadt", null, default);
-        Assert.Equal(("SK Neustadt", "Neu", "Neustadt"), (renamed!.Name, renamed.TeamPrefix, renamed.AnonName));
+        Assert.Equal(("SK Neustadt", "Neu", "Neustadt", "tirol"), (renamed!.Name, renamed.TeamPrefix, renamed.AnonName, renamed.Region));
+        Assert.Equal("bayern", (await admin.UpdateAsync(club.Id, null, null, null, " Bayern ", default)).Club!.Region);
+        Assert.Equal("invalidRegion", (await admin.UpdateAsync(club.Id, null, null, null, "mars", default)).Reason);
         Assert.Equal("Taktiken aus Vereinspartien – SK Neustadt", (await _db.Books.SingleAsync(b => b.FileName == TacticHarvestService.ClubBookOf(club.Id))).DisplayName);
     }
 

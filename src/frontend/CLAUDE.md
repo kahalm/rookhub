@@ -209,6 +209,10 @@ von `LeagueClub.OwnsTeam`). Datenschutz: `LEGAL_SITE.leagueClub` nennt den Verei
 die Vereinsverwaltung `/vereine` (`features/clubs/clubs-page.component.ts`, Admin + `league.manage`) ruft es nach Anlegen,
 Ändern, Zuordnen und Lösen, damit der Umschalter im Kopf den neuen Verein kennt. Deren 390-px-Spec misst wie
 `touch-targets.spec` in einem iframe mit den globalen Styles (die Handy-Regeln greifen im 1400-px-Karma-Browser sonst nie).
+**Region statt Quelle (0.704.0):** `LeagueClubInfo.region`/`AdminClub.region`/`ClubInput.region` (`tirol` | `bayern`) ersetzen
+`source`. `/vereine` hat die Auswahl „Region" (`clubRegionText`: „Tirol (chess-results)", „Bayern (Ligamanager + Schachkreis
+Zugspitze)", Rückfrage beim Umstellen, Absage `invalidRegion`); Kopf-Text (`app.component.region`) und Fußzeile der Startseite
+(„Quelle: … Ligamanager … und vom Schachkreis Zugspitze") fragen `region === 'bayern'`.
 
 LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: ohne `share` angemeldet
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort

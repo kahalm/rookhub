@@ -276,8 +276,9 @@ public class MigrationsTests
         await db.Database.MigrateAsync();
 
         var clubs = await db.LeagueClubs.AsNoTracking().OrderBy(c => c.Id).ToListAsync();
-        Assert.Equal(new[] { ("SK Schwaz", "Schwaz", "Schwaz", (string?)null), ("SK Weilheim", "SK Weilheim", "Weilheim", (string?)"ligamanager") },
-            clubs.Select(c => (c.Name, c.TeamPrefix, c.AnonName, c.Source)));
+        // Seit LeagueClubRegion (2026-10-07) als Region: chess-results → tirol, Ligamanager → bayern
+        Assert.Equal(new[] { ("SK Schwaz", "Schwaz", "Schwaz", "tirol"), ("SK Weilheim", "SK Weilheim", "Weilheim", "bayern") },
+            clubs.Select(c => (c.Name, c.TeamPrefix, c.AnonName, c.Region)));
         Assert.Equal(new[] { 1, 1 }, await db.LeagueClubGames.IgnoreQueryFilters().Select(g => g.ClubId).ToListAsync());
         Assert.Equal(1, await db.LeagueClubDrafts.Select(d => d.ClubId).SingleAsync());
         Assert.Equal(1, await db.LeagueBatchUploads.Select(b => b.ClubId).SingleAsync());
@@ -288,6 +289,35 @@ public class MigrationsTests
             await db.Books.Where(b => b.Id == 50).Select(b => new ValueTuple<string, string>(b.FileName, b.DisplayName)).SingleAsync());
         Assert.Equal("tactics-club-1.pgn", await db.BookPuzzles.Select(p => p.BookFileName).SingleAsync());
         Assert.Equal("tactics-club.pgn:t1", await db.BookPuzzles.Select(p => p.LineId).SingleAsync());   // Kennung bleibt
+    }
+
+    /// <summary>
+    /// <c>LeagueClubRegion</c> (Schachkreis Zugspitze, 2026-10-07): <c>LeagueClubs.Source</c> wird zu <c>Region</c> umbenannt
+    /// (nicht gelöscht) — <c>NULL</c> → <c>tirol</c>, <c>ligamanager</c> → <c>bayern</c> — und ist danach NOT NULL; der
+    /// Rückweg stellt die Quelle wieder her.
+    /// </summary>
+    [MySqlFact]
+    public async Task LeagueClubRegion_MachtAusDerQuelleDieRegion()
+    {
+        await using var schema = await MariaDbSchema.CreateAsync("clubregion");
+        await using var db = schema.NewContext();
+
+        var alle = db.Database.GetMigrations().ToList();
+        var index = alle.FindIndex(m => m.EndsWith("_LeagueClubRegion", StringComparison.Ordinal));
+        Assert.True(index > 0, "Migration LeagueClubRegion nicht gefunden");
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(alle[index - 1]);
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO LeagueClubs (Id, Name, TeamPrefix, AnonName, Source, CreatedAt) VALUES (7, 'SK Neu', 'Neu', 'Neu', NULL, NOW())
+            """);
+
+        await migrator.MigrateAsync(alle[index]);
+        Assert.Equal(new[] { (1, "tirol"), (2, "bayern"), (7, "tirol") },
+            (await db.LeagueClubs.AsNoTracking().OrderBy(c => c.Id).ToListAsync()).Select(c => (c.Id, c.Region)));
+
+        await migrator.MigrateAsync(alle[index - 1]);
+        var back = await db.Database.SqlQueryRaw<string>("SELECT COALESCE(Source, '-') AS Value FROM LeagueClubs ORDER BY Id").ToListAsync();
+        Assert.Equal(new[] { "-", "ligamanager", "-" }, back);
     }
 
     /// <summary>

@@ -91,8 +91,9 @@ interface Pick { liga?: number; verein?: string }
 
     @if (index(); as ix) {
       <div class="foot-note">
-        @if (ix.club?.source === 'ligamanager') {
-          <p>Quelle: Spielpläne, Paarungen und Meldelisten aus dem Ligamanager des Bayerischen Schachbunds, bis {{ ix.season }}.</p>
+        @if (ix.club?.region === 'bayern') {
+          <p>Quelle: Spielpläne, Paarungen und Meldelisten aus dem Ligamanager des Bayerischen Schachbunds und vom Schachkreis
+            Zugspitze (schachkreis-zugspitze.de), bis {{ ix.season }}.</p>
         } @else {
           <p>Quelle: Paarungen und Meldelisten von chess-results.com, Saisonen 2017/18 bis {{ ix.season }}.</p>
         }

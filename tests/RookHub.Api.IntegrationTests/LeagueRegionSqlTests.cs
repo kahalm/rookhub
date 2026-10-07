@@ -45,6 +45,28 @@ public class LeagueRegionSqlTests(LeagueRegionSqlFixture fixture) : IAsyncLifeti
     }
 
     [MySqlFact]
+    public async Task IndexAndForecastStats_FilterByRegionInSql()
+    {
+        await SeedAsync();
+        await using (var db = fixture.Schema.NewContext())
+        {
+            db.LeagueViews.AddRange(new LeagueView { Tnr = Lm, Json = "{}", GeneratedAt = DateTime.UtcNow },
+                new LeagueView { Tnr = Zg, Json = "{}", GeneratedAt = DateTime.UtcNow }, new LeagueView { Tnr = Cr, Json = "{}", GeneratedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var league = new LeagueService(db, LeagueModel.FromEmbedded(), Microsoft.Extensions.Logging.Abstractions.NullLogger<LeagueService>.Instance);
+            var bayern = await league.IndexAsync(new LeagueClub { Id = 2, Name = "SK Weilheim", TeamPrefix = "SK Weilheim", AnonName = "Weilheim",
+                Region = LeagueRegions.Bayern }, default);
+            Assert.Equal(new[] { Lm, Zg }, bayern["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
+            var tirol = await league.IndexAsync(new LeagueClub { Id = 1, Name = "SK Schwaz", TeamPrefix = "Schwaz", AnonName = "Schwaz" }, default);
+            Assert.Equal(new[] { Cr }, tirol["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
+            Assert.Equal("2026/27", (await league.ForecastStatsAsync(LeagueRegions.Bayern, default))["season"]!.GetValue<string>());
+        }
+    }
+
+    [MySqlFact]
     public async Task FillMissingFide_CarriesTheLigamanagerIdIntoZugspitzeOnly()
     {
         await SeedAsync();

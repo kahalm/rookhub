@@ -95,7 +95,7 @@ public class LeagueController : BaseApiController
     [HttpGet("forecast-stats")]
     [HasPermission(Permissions.LeagueView)]
     public Task<IActionResult> ForecastStats(CancellationToken ct) => WithClubAsync(ct, async club =>
-        Ok(await _league.ForecastStatsAsync(club.Source, ct)));
+        Ok(await _league.ForecastStatsAsync(club.Region, ct)));
 
     [HttpGet("player/{fide}")]
     [HasPermission(Permissions.LeagueView)]
@@ -277,7 +277,7 @@ public class LeagueController : BaseApiController
 
     // ---- Vereine (Mandanten-Schritt 2026-10-07): nur Admins mit league.manage ------------------------------
 
-    public sealed record ClubRequest(string? Name, string? TeamPrefix, string? AnonName, string? Source);
+    public sealed record ClubRequest(string? Name, string? TeamPrefix, string? AnonName, string? Region);
 
     /// <summary>Alle Vereine samt Gruppen und Partienzahl → <c>[{ id, name, anonName, teamPrefix, source, createdAt, clubGames,
     /// groups[{ id, name, members }] }]</c> (<see cref="LeagueClubAdminService.ListAsync"/>).</summary>
@@ -287,13 +287,13 @@ public class LeagueController : BaseApiController
         IsAdmin ? Ok(await admin.ListAsync(ct)) : Forbid();
 
     /// <summary>Verein anlegen <c>{ name, teamPrefix, anonName, source }</c> → der Verein; 400 <c>reason</c> ∈
-    /// <c>invalidName</c>/<c>invalidTeamPrefix</c>/<c>invalidAnonName</c>/<c>invalidSource</c>, 409 <c>duplicate</c>.</summary>
+    /// <c>invalidName</c>/<c>invalidTeamPrefix</c>/<c>invalidAnonName</c>/<c>invalidRegion</c>, 409 <c>duplicate</c>.</summary>
     [HttpPost("admin/clubs")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> CreateClub([FromBody] ClubRequest? req, [FromServices] LeagueClubAdminService admin, CancellationToken ct)
     {
         if (!IsAdmin) return Forbid();
-        var (club, reason) = await admin.CreateAsync(req?.Name, req?.TeamPrefix, req?.AnonName, req?.Source, ct);
+        var (club, reason) = await admin.CreateAsync(req?.Name, req?.TeamPrefix, req?.AnonName, req?.Region, ct);
         return ClubResult(club, reason);
     }
 
@@ -303,7 +303,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> UpdateClub(int id, [FromBody] ClubRequest? req, [FromServices] LeagueClubAdminService admin, CancellationToken ct)
     {
         if (!IsAdmin) return Forbid();
-        var (club, reason) = await admin.UpdateAsync(id, req?.Name, req?.TeamPrefix, req?.AnonName, req?.Source, ct);
+        var (club, reason) = await admin.UpdateAsync(id, req?.Name, req?.TeamPrefix, req?.AnonName, req?.Region, ct);
         return ClubResult(club, reason);
     }
 
@@ -566,7 +566,7 @@ public class LeagueShareController : ControllerBase
     /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen der Quelle seines Vereins.</summary>
     [HttpGet("{token}/forecast-stats")]
     public async Task<IActionResult> ForecastStats(string token, CancellationToken ct) =>
-        await _league.ShareContextAsync(token, ct) is { } link ? Ok(await _league.ForecastStatsAsync(link.Club.Source, ct)) : NotFound();
+        await _league.ShareContextAsync(token, ct) is { } link ? Ok(await _league.ForecastStatsAsync(link.Club.Region, ct)) : NotFound();
 
     [HttpGet("{token}/player/{fide}")]
     public async Task<IActionResult> Player(string token, string fide, CancellationToken ct)

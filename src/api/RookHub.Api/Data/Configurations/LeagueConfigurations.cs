@@ -338,7 +338,7 @@ internal sealed class LeagueClubConfiguration : IEntityTypeConfiguration<LeagueC
         e.Property(c => c.Name).HasMaxLength(120);
         e.Property(c => c.TeamPrefix).HasMaxLength(80);
         e.Property(c => c.AnonName).HasMaxLength(60);
-        e.Property(c => c.Source).HasMaxLength(20);
+        e.Property(c => c.Region).HasMaxLength(20);
         e.HasIndex(c => c.Name).IsUnique();
     }
 }

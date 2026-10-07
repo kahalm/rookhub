@@ -7,14 +7,14 @@ import { LeagueApiService } from '../../core/league-api.service';
 import { ClubContextService } from '../../core/club-context.service';
 import { provideTestClub } from '../../core/club-context.testing';
 import { AdminClub, RhGroup } from '../../core/league.models';
-import { ClubsPageComponent, clubDate, clubErrorText, clubSourceText } from './clubs-page.component';
+import { ClubsPageComponent, clubDate, clubErrorText, clubRegionText } from './clubs-page.component';
 
 const HOME: AdminClub = {
-  id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', source: null, createdAt: '2026-10-07T12:00:00Z',
+  id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', region: 'tirol', createdAt: '2026-10-07T12:00:00Z',
   clubGames: 42, groups: [{ id: 10, name: 'Testdorf', members: 7 }],
 };
 const OTHER: AdminClub = {
-  id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', source: 'ligamanager', createdAt: '2026-10-07T12:00:00Z',
+  id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', region: 'bayern', createdAt: '2026-10-07T12:00:00Z',
   clubGames: 0, groups: [{ id: 11, name: 'Weiler Mannschaft', members: 1 }],
 };
 const GROUPS: RhGroup[] = [
@@ -77,9 +77,11 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     api.groups.and.resolveTo(GROUPS);
   });
 
-  it('Hilfen: Quelle, Datum, Absagen als Klartext', () => {
-    expect(clubSourceText(null)).toBe('chess-results (Tirol)');
-    expect(clubSourceText('ligamanager')).toBe('Ligamanager (Bayern)');
+  it('Hilfen: Region, Datum, Absagen als Klartext', () => {
+    expect(clubRegionText(null)).toBe('Tirol (chess-results)');
+    expect(clubRegionText('tirol')).toBe('Tirol (chess-results)');
+    expect(clubRegionText('bayern')).toBe('Bayern (Ligamanager + Schachkreis Zugspitze)');
+    expect(clubErrorText('invalidRegion')).toContain('Region');
     expect(clubDate('2026-10-07T12:00:00Z')).toBe('07.10.2026');
     expect(clubDate(null)).toBe('—');
     expect(clubErrorText('invalidTeamPrefix')).toContain('Mannschafts-Präfix');
@@ -96,21 +98,21 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     expect(el().querySelector('.clubs-tbl')).toBeNull();
   });
 
-  it('listet die Vereine mit Quelle, Gruppen, Partien und Datum', async () => {
+  it('listet die Vereine mit Region, Gruppen, Partien und Datum', async () => {
     await create();
     const rows = el().querySelectorAll('.clubs-tbl tbody tr');
     expect(rows.length).toBe(2);
     const first = rows[0].textContent!;
     expect(first).toContain('SK Testdorf');
-    expect(first).toContain('chess-results (Tirol)');
+    expect(first).toContain('Tirol (chess-results)');
     expect(first).toContain('42');
     expect(first).toContain('07.10.2026');
-    expect(rows[1].textContent).toContain('Ligamanager (Bayern)');
+    expect(rows[1].textContent).toContain('Bayern (Ligamanager + Schachkreis Zugspitze)');
     expect(el().querySelector('.clubs-help')!.textContent).toContain('keiner Vereinsgruppe');
   });
 
   it('Anlegen schickt den richtigen Rumpf und frischt den Vereins-Kontext auf', async () => {
-    const created: AdminClub = { id: 3, name: 'SK Neu', anonName: 'Neu', teamPrefix: 'SK Neu', source: 'ligamanager', createdAt: null, clubGames: 0, groups: [] };
+    const created: AdminClub = { id: 3, name: 'SK Neu', anonName: 'Neu', teamPrefix: 'SK Neu', region: 'bayern', createdAt: null, clubGames: 0, groups: [] };
     api.createClub.and.resolveTo(created);
     await create();
     button('Neuer Verein').click();
@@ -119,11 +121,11 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     input('name', '  SK Neu ');
     input('teamPrefix', 'SK Neu');
     input('anonName', 'Neu');
-    input('source', 'ligamanager');
+    input('region', 'bayern');
     api.adminClubs.and.resolveTo([HOME, OTHER, created]);
     button('Verein anlegen').click();
     await settle();
-    expect(api.createClub).toHaveBeenCalledWith({ name: 'SK Neu', teamPrefix: 'SK Neu', anonName: 'Neu', source: 'ligamanager' });
+    expect(api.createClub).toHaveBeenCalledWith({ name: 'SK Neu', teamPrefix: 'SK Neu', anonName: 'Neu', region: 'bayern' });
     expect(reload).toHaveBeenCalled();
     expect(el().querySelector('.update-msg')!.textContent).toContain('„SK Neu" angelegt');
     // gleich danach: der neue Verein ist offen, mit dem Gruppen-Teil
@@ -145,12 +147,12 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('Quelle ändern fragt nach; „nein" schickt nichts, sonst PUT mit allen Feldern', async () => {
-    api.updateClub.and.resolveTo({ ...HOME, source: 'ligamanager' });
+  it('Region ändern fragt nach; „nein" schickt nichts, sonst PUT mit allen Feldern', async () => {
+    api.updateClub.and.resolveTo({ ...HOME, region: 'bayern' });
     await create();
     button('Bearbeiten', el().querySelectorAll('.clubs-tbl tbody tr')[0]).click();
     fixture.detectChanges();
-    input('source', 'ligamanager');
+    input('region', 'bayern');
     confirmAsk.and.returnValue(of(false));
     button('Speichern').click();
     await settle();
@@ -159,10 +161,10 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     confirmAsk.and.returnValue(of(true));
     button('Speichern').click();
     await settle();
-    expect(api.updateClub).toHaveBeenCalledWith(1, { name: 'SK Testdorf', teamPrefix: 'Testdorf', anonName: 'Testdorf', source: 'ligamanager' });
+    expect(api.updateClub).toHaveBeenCalledWith(1, { name: 'SK Testdorf', teamPrefix: 'Testdorf', anonName: 'Testdorf', region: 'bayern' });
   });
 
-  it('Name ändern ohne Quellwechsel: keine Rückfrage', async () => {
+  it('Name ändern ohne Regionswechsel: keine Rückfrage', async () => {
     api.updateClub.and.resolveTo({ ...HOME, name: 'SK Testdorf 1920' });
     await create();
     button('Bearbeiten', el().querySelectorAll('.clubs-tbl tbody tr')[0]).click();
@@ -171,7 +173,7 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     button('Speichern').click();
     await settle();
     expect(confirmAsk).not.toHaveBeenCalled();
-    expect(api.updateClub).toHaveBeenCalledWith(1, jasmine.objectContaining({ name: 'SK Testdorf 1920', source: '' }));
+    expect(api.updateClub).toHaveBeenCalledWith(1, jasmine.objectContaining({ name: 'SK Testdorf 1920', region: 'tirol' }));
   });
 
   it('Gruppe zuordnen: Everyone und eigene fehlen, Gruppen fremder Vereine sind gesperrt', async () => {

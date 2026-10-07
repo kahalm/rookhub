@@ -10,9 +10,9 @@ import { AdminClub, ClubInput, RhGroup } from '../../core/league.models';
 /** Höchstlängen wie der Server (`LeagueClubAdminService.MaxName/MaxTeamPrefix/MaxAnonName`). */
 export const CLUB_LIMITS = { name: 120, teamPrefix: 80, anonName: 60 } as const;
 
-/** Die Liga-Quelle in Worten. */
-export function clubSourceText(source: string | null | undefined): string {
-  return source === 'ligamanager' ? 'Ligamanager (Bayern)' : 'chess-results (Tirol)';
+/** Die Region in Worten (0.704.0; vorher die Liga-Quelle). */
+export function clubRegionText(region: string | null | undefined): string {
+  return region === 'bayern' ? 'Bayern (Ligamanager + Schachkreis Zugspitze)' : 'Tirol (chess-results)';
 }
 
 /** Absage des Servers (`reason`) als Satz. */
@@ -21,7 +21,7 @@ export function clubErrorText(reason: string | undefined, status = 400): string 
     case 'invalidName': return `Der Name fehlt oder ist zu lang (höchstens ${CLUB_LIMITS.name} Zeichen).`;
     case 'invalidTeamPrefix': return `Der Mannschafts-Präfix fehlt oder ist zu lang (höchstens ${CLUB_LIMITS.teamPrefix} Zeichen).`;
     case 'invalidAnonName': return `Der Anzeigename anonymisierter Spieler fehlt oder ist zu lang (höchstens ${CLUB_LIMITS.anonName} Zeichen).`;
-    case 'invalidSource': return 'Diese Liga-Quelle kennt LeagueHub nicht.';
+    case 'invalidRegion': return 'Diese Region kennt LeagueHub nicht.';
     case 'duplicate': return 'Einen Verein mit diesem Namen gibt es schon.';
     case 'notFound': case 'clubNotFound': return 'Diesen Verein gibt es nicht mehr — die Liste ist neu geladen.';
     case 'groupNotFound': return 'Diese Gruppe gibt es nicht mehr — die Liste ist neu geladen.';
@@ -35,7 +35,7 @@ export function clubDate(iso: string | null | undefined): string {
   return iso && iso.length >= 10 ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '—';
 }
 
-const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', source: '' };
+const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', region: 'tirol' };
 
 /**
  * Vereine verwalten (0.700.0, Wunsch 2026-10-07): die Mandanten von LeagueHub anlegen, ändern und ihnen Gruppen zuordnen —
@@ -75,7 +75,7 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', source: '' };
                 <th>Verein</th>
                 <th class="hide-s">Anonym als</th>
                 <th class="hide-s">Mannschaften</th>
-                <th class="hide-s">Quelle</th>
+                <th class="hide-s">Region</th>
                 <th class="num">Gruppen</th>
                 <th class="num">Partien</th>
                 <th class="hide-s">Angelegt</th>
@@ -86,11 +86,11 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', source: '' };
               @for (c of clubs(); track c.id) {
                 <tr [class.sel]="editing() === c.id">
                   <td class="club-name">{{ c.name }}
-                    <span class="small show-s">{{ source(c.source) }} · anonym „{{ c.anonName }}"</span>
+                    <span class="small show-s">{{ regionText(c.region) }} · anonym „{{ c.anonName }}"</span>
                   </td>
                   <td class="hide-s">{{ c.anonName }}</td>
                   <td class="hide-s">{{ c.teamPrefix }}</td>
-                  <td class="hide-s">{{ source(c.source) }}</td>
+                  <td class="hide-s">{{ regionText(c.region) }}</td>
                   <td class="num">{{ c.groups.length }}</td>
                   <td class="num">{{ c.clubGames }}</td>
                   <td class="hide-s">{{ date(c.createdAt) }}</td>
@@ -122,12 +122,12 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', source: '' };
                        (input)="set('anonName', $any($event.target).value)" placeholder="Weilheim" />
                 <span class="field-hint">Unter diesem Namen erscheinen Spieler des Vereins, deren Partien anonym hochgeladen wurden.</span>
               </label>
-              <label class="field">Liga-Quelle
-                <select name="source" (change)="set('source', $any($event.target).value)">
-                  <option value="" [selected]="form().source === ''">chess-results (Tirol)</option>
-                  <option value="ligamanager" [selected]="form().source === 'ligamanager'">Ligamanager (Bayern)</option>
+              <label class="field">Region
+                <select name="region" (change)="set('region', $any($event.target).value)">
+                  <option value="tirol" [selected]="form().region === 'tirol'">Tirol (chess-results)</option>
+                  <option value="bayern" [selected]="form().region === 'bayern'">Bayern (Ligamanager + Schachkreis Zugspitze)</option>
                 </select>
-                <span class="field-hint">Die Startseite zeigt nur Ligen dieser Quelle.</span>
+                <span class="field-hint">Die Startseite zeigt die Ligen aller Quellen dieser Region.</span>
               </label>
               @if (formError()) { <p class="err" role="alert">{{ formError() }}</p> }
               <div class="actions">
@@ -186,7 +186,7 @@ export class ClubsPageComponent implements OnInit {
   /** Der Server verlangt Admin UND `league.manage`. */
   readonly allowed = !!this.auth.isAdmin && this.auth.has('league.manage');
   readonly limits = CLUB_LIMITS;
-  readonly source = clubSourceText;
+  readonly regionText = clubRegionText;
   readonly date = clubDate;
 
   readonly clubs = signal<AdminClub[]>([]);
@@ -262,7 +262,7 @@ export class ClubsPageComponent implements OnInit {
 
   edit(c: AdminClub): void {
     this.editing.set(c.id);
-    this.form.set({ name: c.name, teamPrefix: c.teamPrefix, anonName: c.anonName, source: c.source ?? '' });
+    this.form.set({ name: c.name, teamPrefix: c.teamPrefix, anonName: c.anonName, region: c.region || 'tirol' });
     this.formError.set(null);
     this.query.set('');
     this.msg.set(null);
@@ -281,12 +281,12 @@ export class ClubsPageComponent implements OnInit {
     if (!this.canSave() || this.saving()) return;
     const id = this.editing();
     const f = this.form();
-    const input: ClubInput = { name: f.name.trim(), teamPrefix: f.teamPrefix.trim(), anonName: f.anonName.trim(), source: f.source };
+    const input: ClubInput = { name: f.name.trim(), teamPrefix: f.teamPrefix.trim(), anonName: f.anonName.trim(), region: f.region };
     const old = this.selected();
-    // Die Quelle nachträglich ändern: die Startseite des Vereins zeigt danach die Ligen der anderen Quelle.
-    if (old && (old.source ?? '') !== input.source && !(await firstValueFrom(this.confirm.ask(
-      `Liga-Quelle von „${old.name}" auf ${clubSourceText(input.source || null)} umstellen? Die Startseite des Vereins zeigt dann ` +
-      `nur noch Ligen dieser Quelle, und „einer von uns" wird dort gesucht. Vereinspartien und Formulare bleiben.`)))) return;
+    // Die Region nachträglich ändern: die Startseite des Vereins zeigt danach die Ligen der anderen Region.
+    if (old && (old.region || 'tirol') !== input.region && !(await firstValueFrom(this.confirm.ask(
+      `Region von „${old.name}" auf ${clubRegionText(input.region)} umstellen? Die Startseite des Vereins zeigt dann ` +
+      `nur noch Ligen dieser Region, und „einer von uns" wird dort gesucht. Vereinspartien und Formulare bleiben.`)))) return;
     this.saving.set(true);
     this.formError.set(null);
     try {

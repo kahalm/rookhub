@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 import { ClubContextService, LeagueClubInfo } from './club-context.service';
 
 /** Der Verein der Specs (0.698.0): bewusst nicht Schwaz — die Seiten sollen nichts mehr an einem festen Namen festmachen. */
-export const TEST_CLUB: LeagueClubInfo = { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', source: null };
+export const TEST_CLUB: LeagueClubInfo = { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', region: 'tirol' };
 
 /** Ein {@link ClubContextService} ohne Server: ein fester Verein (oder mehrere), `ensure()` sofort. */
 export function provideTestClub(club: LeagueClubInfo | null = TEST_CLUB, clubs: LeagueClubInfo[] = club ? [club] : []): Provider {

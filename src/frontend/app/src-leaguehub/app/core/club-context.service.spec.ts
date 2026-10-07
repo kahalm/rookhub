@@ -5,8 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
 import { CLUB_STORAGE_KEY, ClubContextService, LeagueMe, leagueClubInterceptor, needsClub, ownsTeam, pickClub } from './club-context.service';
 
-const SCHWAZ = { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', source: null };
-const WEILER = { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', source: 'ligamanager' };
+const SCHWAZ = { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', region: 'tirol' };
+const WEILER = { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', region: 'bayern' };
 
 describe('club-context (Vereine als Mandanten, 0.698.0)', () => {
   it('ownsTeam: Anfang an einer Wortgrenze, ohne Groß/klein (Spiegel von LeagueClub.OwnsTeam)', () => {
@@ -92,7 +92,7 @@ describe('club-context (Vereine als Mandanten, 0.698.0)', () => {
       expect(await first).toBe(2);
       const again = firstValueFrom(ctx.ensure());                     // ohne reload: kein zweites /me
       expect(await again).toBe(2);
-      const NEU = { id: 3, name: 'SK Neu', anonName: 'Neu', teamPrefix: 'Neu', source: null };
+      const NEU = { id: 3, name: 'SK Neu', anonName: 'Neu', teamPrefix: 'Neu', region: 'tirol' };
       const r = firstValueFrom(ctx.reload());
       http.expectOne('/api/league/me').flush({ clubs: [SCHWAZ, WEILER, NEU], current: null } satisfies LeagueMe);
       expect(await r).toBe(2);

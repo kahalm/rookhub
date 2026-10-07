@@ -122,19 +122,21 @@ public sealed class LeagueService
         foreach (var e in db.ChangeTracker.Entries<LeagueView>().ToList()) e.State = EntityState.Detached;
     }
 
-    /// <summary>Die laufende Saison einer Liga-Quelle (<c>null</c> = chess-results).</summary>
-    private async Task<string?> CurrentSeasonAsync(string? source, CancellationToken ct) =>
-        await _db.LeagueTournaments.Where(t => t.Source == source).MaxAsync(t => (string?)t.Season, ct);
+    /// <summary>Die laufende Saison einer Region (<see cref="LeagueRegions"/>; <c>null</c> = Tirol) — die jüngste Saison über
+    /// alle Quellen der Region (Bayern: Ligamanager + Zugspitze).</summary>
+    private async Task<string?> CurrentSeasonAsync(string? region, CancellationToken ct) =>
+        await _db.LeagueTournaments.InRegion(region ?? LeagueRegions.Tirol).MaxAsync(t => (string?)t.Season, ct);
 
-    /// <summary>Startseite: die Ligen der laufenden Saison — seit dem Mandanten-Schritt (2026-10-07) nur die der Quelle des
-    /// Vereins (<see cref="LeagueClub.Source"/>: Schwaz sieht Tirol, Weilheim Bayern); dazu der Verein selbst (Name,
+    /// <summary>Startseite: die Ligen der laufenden Saison — seit dem Mandanten-Schritt (2026-10-07) nur die der Region des
+    /// Vereins (<see cref="LeagueClub.Region"/>: Schwaz sieht Tirol, Weilheim Bayern = Ligamanager UND Schachkreis Zugspitze;
+    /// gleiche Stufe → erst die Ligamanager-Liga, dann nach Gruppe); dazu der Verein selbst (Name,
     /// Mannschafts-Anfang für die Vorauswahl, Anonymisierungs-Name).</summary>
     public async Task<JsonObject> IndexAsync(LeagueClub club, CancellationToken ct)
     {
-        var source = club.Source;
-        var season = await CurrentSeasonAsync(source, ct);
-        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga" && t.Source == source)
-            .OrderBy(t => t.Level).ThenBy(t => t.Grp).ToListAsync(ct);
+        var region = club.Region;
+        var season = await CurrentSeasonAsync(region, ct);
+        var ts = await _db.LeagueTournaments.AsNoTracking().InRegion(region).Where(t => t.Season == season && t.Stage == "Liga")
+            .OrderBy(t => t.Level).ThenBy(t => t.Source).ThenBy(t => t.Grp).ToListAsync(ct);
         var views = await _db.LeagueViews.AsNoTracking().Where(v => ts.Select(t => t.Tnr).Contains(v.Tnr))
             .Select(v => new { v.Tnr, v.GeneratedAt }).ToListAsync(ct);
         var generated = views.Count > 0 ? views.Max(v => v.GeneratedAt) : (DateTime?)null;
@@ -153,7 +155,7 @@ public sealed class LeagueService
     /// <summary>Was die Oberfläche vom Verein wissen darf (kein Mitglied, keine Gruppe).</summary>
     public static JsonObject ClubJson(LeagueClub c) => new()
     {
-        ["id"] = c.Id, ["name"] = c.Name, ["anonName"] = c.AnonName, ["teamPrefix"] = c.TeamPrefix, ["source"] = c.Source,
+        ["id"] = c.Id, ["name"] = c.Name, ["anonName"] = c.AnonName, ["teamPrefix"] = c.TeamPrefix, ["region"] = c.Region,
     };
 
     private static DateTime ToLocal(DateTime utc)
@@ -173,15 +175,17 @@ public sealed class LeagueService
     /// <c>fixtures, top1, top2, top3, of</c> (seit 0.658.0; Plätze am Brett, siehe <c>LeagueViewBuilder.Evaluate</c>). Ansichten
     /// ohne diese Felder (vor 0.658.0 gerechnet) zählen erst nach dem nächsten Neurechnen. Gemerkt, bis eine Ansicht neu gerechnet wird.
     /// </summary>
-    /// <param name="source">Die Liga-Quelle des Vereins (Mandanten-Schritt 2026-10-07): gezählt werden nur deren Ligen.</param>
-    public async Task<JsonObject> ForecastStatsAsync(string? source, CancellationToken ct)
+    /// <param name="region">Die Region des Vereins (<see cref="LeagueClub.Region"/>, <c>null</c> = Tirol): gezählt werden nur
+    /// die Ligen ihrer Quellen.</param>
+    public async Task<JsonObject> ForecastStatsAsync(string? region, CancellationToken ct)
     {
-        var season = await CurrentSeasonAsync(source, ct);
-        var ts = await _db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga" && t.Source == source)
-            .OrderBy(t => t.Level).ThenBy(t => t.Grp).ToListAsync(ct);
+        region ??= LeagueRegions.Tirol;
+        var season = await CurrentSeasonAsync(region, ct);
+        var ts = await _db.LeagueTournaments.AsNoTracking().InRegion(region).Where(t => t.Season == season && t.Stage == "Liga")
+            .OrderBy(t => t.Level).ThenBy(t => t.Source).ThenBy(t => t.Grp).ToListAsync(ct);
         var tnrs = ts.Select(t => t.Tnr).ToList();
         var stamp = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).Select(v => v.GeneratedAt).ToListAsync(ct);
-        var key = $"league-forecast-stats:{source ?? "cr"}:{season}:{stamp.Count}:{(stamp.Count > 0 ? stamp.Max().Ticks : 0)}";
+        var key = $"league-forecast-stats:{region}:{season}:{stamp.Count}:{(stamp.Count > 0 ? stamp.Max().Ticks : 0)}";
         if (_cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
 
         var views = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr)).ToDictionaryAsync(v => v.Tnr, v => v.Json, ct);

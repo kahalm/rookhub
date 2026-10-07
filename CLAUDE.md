@@ -1863,7 +1863,7 @@ Funktionalität, streng getrennt von Schwaz." Es bleibt EIN LeagueHub, EINE API,
 hängt am Verein; die öffentlichen Liga-Daten (Spielpläne, Meldelisten, Spielerkarten samt der Vereinspartien darin,
 Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
 
-* **Tabellen** `LeagueClubs` (Id, Name, TeamPrefix, AnonName, Source, CreatedAt) und `LeagueClubMembers` (ClubId, GroupId; eine
+* **Tabellen** `LeagueClubs` (Id, Name, TeamPrefix, AnonName, Region — bis 0.703.0 `Source`, siehe unten —, CreatedAt) und `LeagueClubMembers` (ClubId, GroupId; eine
   Gruppe gehört zu höchstens einem Verein). Migration `LeagueClubs`: 1 = SK Schwaz (`Schwaz`/`Schwaz`, chess-results), 2 = SK
   Weilheim (`SK Weilheim`/`Weilheim`, `ligamanager`); **alle Bestandszeilen** von `LeagueClubGames`, `LeagueClubDrafts`,
   `LeagueBatchUploads`, `LeagueShares` und die Liga-Einlesungen in `ScoresheetScans` bekommen `ClubId = 1`; **jede Gruppe, deren
@@ -1912,6 +1912,15 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   `src/frontend/CLAUDE.md`): `GET /api/league/me` einmal je Konto, `?club=` an jeden Aufruf, Umschalter im Kopf bei mehreren
   Vereinen (gemerkt in `lh-club`, Wechsel lädt neu), alle Texte mit „Schwaz" lesen Name/`AnonName` des Vereins, Teilen-Seiten
   den Verein des Links.
+* **Region statt Quelle (0.704.0)**, Wunsch 2026-10-07 („Weilheim muss Ligamanager UND Zugspitze sehen"): `LeagueClub.Region`
+  (`tirol` | `bayern`, NOT NULL, Vorgabe `tirol`) ersetzt `Source`; Migration `LeagueClubRegion` benennt die Spalte um (kein
+  Drop+Add) und schreibt null → `tirol`, `ligamanager` → `bayern`. Welche Quellen eine Region hat, steht NUR in
+  `Services/League/LeagueRegions.cs` (`SourcesOf`, `InRegion` als SQL-Bedingung — Tirol `Source IS NULL`, Bayern `IN (…)`).
+  Startseite (`IndexAsync`: laufende Saison = jüngste der Region, Ligen nach Stufe, dann Quelle, dann Gruppe) und
+  Treffer-Statistik (`ForecastStatsAsync(region)`) filtern nach der Region; `ClubJson` trägt `region`. Verwaltung: Auswahl
+  „Region" statt „Liga-Quelle", 400 `invalidRegion` (eine Quelle wie `ligamanager` ist KEINE Region). Geprüft in
+  `LeagueClubTenancyTests.Index_BavarianClubSeesLigamanagerAndZugspitze_TyroleanClubNeither`, gegen MariaDB in
+  `LeagueRegionSqlTests` und `MigrationsTests.LeagueClubRegion_MachtAusDerQuelleDieRegion`.
 * **Vereinsverwaltung `/vereine` (0.700.0)**: Reiter „Vereine" in LeagueHub, nur Admins mit `league.manage` (sonst
   Sperrkarte; der Server verlangt beides). Liste (Name, `anonName`, `teamPrefix`, Quelle, Gruppen, Vereinspartien, angelegt),
   Anlegen/Ändern (400/409 `reason` → Klartext; Quelle umstellen mit Rückfrage — `PUT` darf alle vier Felder ändern, die
@@ -1922,10 +1931,10 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
-| GET | `/api/league/me` | angemeldet | `{ clubs[{ id, name, anonName, teamPrefix, source }], current }` — `current` = Verein ohne `?club=` (`null` bei mehreren ohne Vorgabe) |
-| GET | `/api/league/admin/clubs` | Admin + manage | Alle Vereine `[{ id, name, anonName, teamPrefix, source, createdAt, clubGames, groups[{ id, name, members }] }]` — `clubGames` ohne archivierte, `members` = Konten der Gruppe (0.700.0) |
-| POST | `/api/league/admin/clubs` | Admin + manage | `{ name, teamPrefix, anonName, source }` → Verein; 400 `invalidName`/`invalidTeamPrefix`/`invalidAnonName`/`invalidSource`, 409 `duplicate` |
-| PUT | `/api/league/admin/clubs/{id}` | Admin + manage | Ändern (fehlende Felder bleiben, `source: ""` = chess-results); 404 |
+| GET | `/api/league/me` | angemeldet | `{ clubs[{ id, name, anonName, teamPrefix, region }], current }` (`region` seit 0.704.0, vorher `source`) — `current` = Verein ohne `?club=` (`null` bei mehreren ohne Vorgabe) |
+| GET | `/api/league/admin/clubs` | Admin + manage | Alle Vereine `[{ id, name, anonName, teamPrefix, region, createdAt, clubGames, groups[{ id, name, members }] }]` — `clubGames` ohne archivierte, `members` = Konten der Gruppe (0.700.0) |
+| POST | `/api/league/admin/clubs` | Admin + manage | `{ name, teamPrefix, anonName, region }` (`tirol`/`bayern`, leer = `tirol`) → Verein; 400 `invalidName`/`invalidTeamPrefix`/`invalidAnonName`/`invalidRegion`, 409 `duplicate` |
+| PUT | `/api/league/admin/clubs/{id}` | Admin + manage | Ändern (fehlende Felder bleiben, `region: ""` = `tirol`); 404 |
 | POST | `/api/league/admin/clubs/{id}/groups/{groupId}` | Admin + manage | Gruppe zuordnen → 204; 404 `clubNotFound`/`groupNotFound`, 400 `everyone` |
 | DELETE | `/api/league/admin/clubs/{id}/groups/{groupId}` | Admin + manage | Gruppe lösen → 204 / 404 |
 
@@ -4815,7 +4824,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ClubSessionPhotos | Fotos einer Einheit (0.620.0) | SessionId (Cascade), Image (LONGBLOB, JPEG ≤ 1600 px), Thumb (MEDIUMBLOB, JPEG ≤ 320 px), Width, Height, CreatedByUserId? (kein FK), CreatedAt; Index SessionId |
 | ClubAttendances | Anwesenheit je Einheit und Kind (oder Trainer) | PK (SessionId, MemberId), beide Cascade; Status (1 Present, 3 Absent — 2 „entschuldigt" gab es nur in 0.613.0, `ClubAttendanceTwoStates` hat sie auf 3 gesetzt) |
 | ClubNotes | Datierte Trainer-Notiz zum Lernstand | MemberId (Cascade), AuthorUserId? (kein FK — bleibt ohne Namen, wenn das Konto geht), CreatedAt, Text (TEXT ≤2000); Index (MemberId, CreatedAt) |
-| LeagueClubs | Vereine als Mandanten von LeagueHub (0.698.0, siehe „LeagueHub — Vereine als Mandanten") | Id, Name (≤120, UNIQUE), TeamPrefix (≤80, Anfang der Mannschaftsnamen), AnonName (≤60), Source? (≤20; null = chess-results, `ligamanager`), CreatedAt — Migration legt 1 = SK Schwaz, 2 = SK Weilheim an |
+| LeagueClubs | Vereine als Mandanten von LeagueHub (0.698.0, siehe „LeagueHub — Vereine als Mandanten") | Id, Name (≤120, UNIQUE), TeamPrefix (≤80, Anfang der Mannschaftsnamen), AnonName (≤60), Region (≤20; `tirol` | `bayern` — Migration `LeagueClubRegion` hat `Source` umbenannt: null → tirol, ligamanager → bayern), CreatedAt — Migration legt 1 = SK Schwaz, 2 = SK Weilheim an |
 | LeagueClubMembers | Gruppe → Verein (0.698.0) | PK (ClubId, GroupId), **GroupId UNIQUE** (eine Gruppe gehört zu höchstens einem Verein); FK Club Restrict, Group Cascade |
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite mit dem `AnonName` des Vereins) | **ClubId (FK LeagueClubs Restrict, Index (ClubId, Year); 0.698.0)**, Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)**, **LeagueGameId? (Index, kein FK; fest zugeordnete Brettpaarung, 0.678.0)** |
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount, **AddedBy? (≤60, 0.630.0: Nutzername bzw. „anonym" über einen Teilen-Link) + AddedShareHash? (≤64, SHA-256 des Links)** |

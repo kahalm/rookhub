@@ -81,8 +81,8 @@ export class LeagueHubAppComponent implements OnInit {
   readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
   /** Der Verein des Kontos (0.698.0) — Umschalter im Kopf, wenn es mehrere sind. */
   readonly clubs = inject(ClubContextService);
-  /** Wofür die Prognosen sind — nach der Liga-Quelle des Vereins (ohne Verein die Tiroler wie bisher). */
-  readonly region = computed(() => this.clubs.club()?.source === 'ligamanager'
+  /** Wofür die Prognosen sind — nach der Region des Vereins (ohne Verein die Tiroler wie bisher). */
+  readonly region = computed(() => this.clubs.club()?.region === 'bayern'
     ? 'die bayerischen Mannschaftsligen' : 'die Tiroler Mannschaftsmeisterschaft');
   readonly version = environment.version;
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
