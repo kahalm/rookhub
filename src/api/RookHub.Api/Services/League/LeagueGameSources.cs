@@ -34,6 +34,7 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         "Mega" => "ChessBase-Megabase",
         "chess-results" => "chess-results",
         LeagueBroadcastImport.Source => "Lichess-Übertragungen",
+        LigamanagerSource.PgnSource => "SBV-Ligamanager",
         LeagueProfileStore.ClubSource => "Vereins-Datenbank",
         LeagueOnlineSites.Lichess => "Lichess",
         LeagueOnlineSites.ChessCom => "chess.com",

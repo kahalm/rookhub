@@ -374,6 +374,35 @@ public class LeagueController : BaseApiController
     [HttpPost("admin/rebuild")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> Rebuild(CancellationToken ct) => Ok(new { views = await _league.RebuildViewsAsync(ct) });
+
+    /// <summary>Eine Liga des bayerischen Ligamanagers: Adresse ODER Region + Saison + Slug (mit Id); <c>Boards</c> = Bretter je
+    /// Begegnung, solange noch keine Runde gespielt ist und keine frühere Saison derselben Liga eingespielt ist.</summary>
+    public sealed record LigamanagerImportRequest(string? Url, string? Region, string? Season, string? Slug, int? Boards);
+
+    /// <summary>
+    /// Eine Liga aus dem SBV-Ligamanager einspielen (2026-10-07, <see cref="LigamanagerSource"/>) — Runden, Begegnungen,
+    /// Brettpartien, Meldelisten und die Partien in die Spielerkarten; danach die Ansichten. <c>?dryRun=true</c> liest und zählt
+    /// nur. 400 <c>invalidLeague</c>, 404 <c>notFound</c>, 409 <c>conflict</c> (Nummer gehört einer chess-results-Liga),
+    /// 503 <c>unreachable</c>.
+    /// </summary>
+    [HttpPost("admin/ligamanager/import")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> LigamanagerImport([FromBody] LigamanagerImportRequest? req, [FromQuery] bool dryRun,
+        [FromServices] LigamanagerSource ligamanager, CancellationToken ct)
+    {
+        var lref = LigamanagerSource.LeagueRef.Parse(req?.Url) ?? LigamanagerSource.LeagueRef.Of(req?.Region, req?.Season, req?.Slug);
+        if (lref is null) return BadRequest(new { reason = "invalidLeague" });
+        try
+        {
+            return Ok(await ligamanager.ImportAsync(lref, dryRun, ct, req?.Boards));
+        }
+        catch (LigamanagerSource.NotFoundException e) { return NotFound(new { reason = "notFound", message = e.Message }); }
+        catch (LigamanagerSource.ConflictException e) { return Conflict(new { reason = "conflict", message = e.Message }); }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return StatusCode(503, new { reason = "unreachable" });
+        }
+    }
 }
 
 /// <summary>Öffentliche Ansicht eines Teilen-Links: genau EINE Begegnung, ohne Anmeldung, Token = Geheimnis.</summary>

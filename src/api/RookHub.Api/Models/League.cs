@@ -15,7 +15,8 @@ public class LeagueTournament
     public string Name { get; set; } = string.Empty;
     /// <summary>„2026/27".</summary>
     public string Season { get; set; } = string.Empty;
-    /// <summary>1 = Landesliga, 2 = 1. Klasse, 3 = 2. Klasse, 4 = Gebietsklasse.</summary>
+    /// <summary>Tirol: 1 = Landesliga, 2 = 1. Klasse, 3 = 2. Klasse, 4 = Gebietsklasse. Bayern (Ligamanager):
+    /// <see cref="Services.League.LigamanagerSource.LevelOf"/> — 1 = Oberliga … 8 = C-Klasse.</summary>
     public int Level { get; set; }
     public string League { get; set; } = string.Empty;
     /// <summary>„Ost", „West", „Aufstiegs-Playoff" … oder leer.</summary>
@@ -28,6 +29,17 @@ public class LeagueTournament
     public string? End { get; set; }
     public int? Rounds { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>
+    /// Herkunft der Liga (2026-10-07): <c>null</c> = chess-results (dann ist <see cref="Tnr"/> die chess-results-Nummer),
+    /// <c>"ligamanager"</c> = SBV-Ligamanager (Bayern, <see cref="Services.League.LigamanagerSource"/>; <see cref="Tnr"/> ist dann
+    /// die Liga-Id des Ligamanagers, 4-stellig). „Daten aktualisieren" holt jede Liga aus ihrer Quelle.
+    /// </summary>
+    public string? Source { get; set; }
+    /// <summary>Wo die Liga in der Quelle liegt — beim Ligamanager „bsb/2026-2027/landesliga-sued-2573" (Region/Saison/Slug-Id).</summary>
+    public string? SourceRef { get; set; }
+    /// <summary>Bretter je Begegnung, wenn die Quelle sie vor der ersten gespielten Runde kennt (chess-results: <c>null</c> —
+    /// dort kommen sie aus den Brettpaarungen, sonst aus <see cref="Level"/>).</summary>
+    public int? Boards { get; set; }
 }
 
 /// <summary>Datum einer Runde (aus der Brettpaarungs-Seite, „1. Runde am 03.10.2026").</summary>

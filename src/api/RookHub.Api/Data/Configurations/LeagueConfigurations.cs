@@ -19,6 +19,8 @@ internal sealed class LeagueTournamentConfiguration : IEntityTypeConfiguration<L
         e.Property(t => t.Stage).HasMaxLength(20);
         e.Property(t => t.Start).HasMaxLength(12);
         e.Property(t => t.End).HasMaxLength(12);
+        e.Property(t => t.Source).HasMaxLength(20);
+        e.Property(t => t.SourceRef).HasMaxLength(200);
         e.HasIndex(t => t.Season);
     }
 }

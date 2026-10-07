@@ -220,8 +220,12 @@ public sealed class LeagueWorld
     public int Apps(string? season, int level, string pid) =>
         season is null ? 0 : AppsLvl.GetValueOrDefault((season, level, pid));
 
+    /// <summary>Bretter je Begegnung: aus den Brettpaarungen, sonst aus der Quelle (<see cref="LeagueTournament.Boards"/>,
+    /// Ligamanager), sonst nach der Tiroler Stufe.</summary>
     public int BoardsOf(int tnr) =>
-        Boards.GetValueOrDefault(tnr) is > 0 and var b ? b : T[tnr].Level switch { 1 => 6, 2 => 6, 3 => 5, 4 => 4, _ => 6 };
+        Boards.GetValueOrDefault(tnr) is > 0 and var b ? b
+        : T[tnr].Boards is > 0 and var tb ? tb
+        : T[tnr].Level switch { 1 => 6, 2 => 6, 3 => 5, 4 => 4, _ => 6 };
 }
 
 /// <summary>Merkmale eines gemeldeten Spielers für eine Runde (Python: features.rows_for).</summary>
@@ -303,11 +307,12 @@ public static class LeagueFeatures
             if (ps is not null)
             {
                 for (var l = 1; l < level; l++) qHigher += w.Apps(ps, l, p) / MptOr1(ps, l);
-                for (var l = level + 1; l < 5; l++) qLower += w.Apps(ps, l, p) / MptOr1(ps, l);
+                // Bis LeagueLevels.Max statt bis 4 (Bayern hat mehr Stufen); in Tirol sind die Einsätze darüber 0 → gleiche Zahlen.
+                for (var l = level + 1; l <= LeagueLevels.Max; l++) qLower += w.Apps(ps, l, p) / MptOr1(ps, l);
             }
             var knownPrev = qSame + qHigher + qLower > 0;
             var knownEver = w.Seasons.Where(s => string.CompareOrdinal(s, season) < 0)
-                .Any(s => Enumerable.Range(1, 4).Any(l => w.Apps(s, l, p) > 0));
+                .Any(s => Enumerable.Range(1, LeagueLevels.Max).Any(l => w.Apps(s, l, p) > 0));
             double cHi = 0, cLo = 0;
             foreach (var (tnr2, team2, r2) in sameDay)
             {
@@ -504,6 +509,31 @@ public sealed class LeagueModel
         b = Math.Min(b, p.Count);
         return BoardMatrix(FittedOdds(p, b), b);
     }
+}
+
+/// <summary>
+/// Ligastufen über beide Quellen (2026-10-07). Tirol (chess-results) kennt 1–4, Bayern (Ligamanager) 1–8
+/// (<see cref="LigamanagerSource.LevelOf"/>). Die Merkmale QHigher/QLower/NewEver zählen Einsätze aller Stufen bis
+/// <see cref="Max"/> — für Tirol ändert das nichts (über 4 gibt es dort keine Einsätze). Die Stufen beider Länder liegen auf
+/// derselben Zahlenachse; ein Spieler spielt aber nur in einem Land, daher mischen sich die Einsätze nicht. Was sich mischt,
+/// ist <see cref="LeagueWorld.Mpt"/> (Mannschaftskämpfe je Saison + Stufe, das Maximum über beide Länder) — der Nenner der
+/// Einsatzquote früherer Stufen; bei 9 (Tirol) gegen 9 (Bayern, 10er-Liga) Runden ohne Wirkung.
+/// </summary>
+public static class LeagueLevels
+{
+    public const int Max = 8;
+    private static readonly Dictionary<int, string> Tirol = new() { [1] = "LL", [2] = "1.Kl", [3] = "2.Kl", [4] = "GK" };
+    private static readonly Dictionary<int, string> Bayern = new()
+    {
+        [1] = "OL", [2] = "RL", [3] = "LL", [4] = "BL", [5] = "KL", [6] = "KK", [7] = "B-Kl", [8] = "C-Kl",
+    };
+
+    /// <summary>Kurzname einer Stufe in der Quelle der Liga (Notizen der Prognose: „LL 7/9").</summary>
+    public static string? Short(string? source, int level) =>
+        (source == LigamanagerSource.Source ? Bayern : Tirol).GetValueOrDefault(level);
+
+    /// <summary>Die Stufen, die in einer Quelle vorkommen (für die Notizen über die Vorsaison).</summary>
+    public static IEnumerable<int> Of(string? source) => source == LigamanagerSource.Source ? Bayern.Keys : Tirol.Keys;
 }
 
 internal static class LeagueDates

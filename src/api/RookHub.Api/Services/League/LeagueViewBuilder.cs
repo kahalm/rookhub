@@ -15,8 +15,6 @@ namespace RookHub.Api.Services.League;
 public sealed class LeagueViewBuilder
 {
     private static readonly string[] Weekday = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
-    private static readonly Dictionary<int, string> Short = new() { [1] = "LL", [2] = "1.Kl", [3] = "2.Kl", [4] = "GK" };
-
     /// <summary>Backtest (Saison-Holdout 2020/21–2025/26): Anteil der Aufgestellten unter den Top-B der Prognose.</summary>
     private static readonly Dictionary<(int, string), double> Hits = new()
     {
@@ -53,8 +51,9 @@ public sealed class LeagueViewBuilder
         var t = _w.T[tnr];
         var ps = _w.PrevSeason(t.Season);
         var prev = new List<string>();
-        foreach (var (lvl, lg) in new[] { (1, "LL"), (2, "1.Kl"), (3, "2.Kl"), (4, "GK") })
+        foreach (var lvl in LeagueLevels.Of(t.Source))
         {
+            var lg = LeagueLevels.Short(t.Source, lvl);
             var n = _w.Apps(ps, lvl, pid);
             if (ps is not null && n > 0) prev.Add($"{lg} {n}/{_w.Mpt.GetValueOrDefault((ps, lvl))}");
         }
@@ -67,7 +66,7 @@ public sealed class LeagueViewBuilder
                                                          && _w.LineupOf(tnr2, s.Round, team2).ContainsKey(pid));
                 if (n == 0) continue;
                 var same = teams.Count(x => x.Item1 == tnr2) > 1;
-                var lg = Short.GetValueOrDefault(_w.T[tnr2].Level, "?");
+                var lg = LeagueLevels.Short(_w.T[tnr2].Source, _w.T[tnr2].Level) ?? "?";
                 cur.Add($"{lg}{(same ? $" ({team2.Split(' ')[^1]})" : "")} {n}×");
             }
         }
@@ -244,7 +243,8 @@ public sealed class LeagueViewBuilder
                 e["boards"] = boards;
                 e["roster"] = roster;
                 e["phase"] = phase;
-                e["hit"] = Hits.TryGetValue((level, phase), out var hit) ? Math.Round(hit * b, 1) : null;
+                // Der Backtest ist an Tirol gerechnet — für Ligen anderer Quellen gibt es (noch) keinen.
+                e["hit"] = t.Source is null && Hits.TryGetValue((level, phase), out var hit) ? Math.Round(hit * b, 1) : null;
                 fx[r.ToString()] = e;
             }
             fixtures[team] = fx;
@@ -259,7 +259,9 @@ public sealed class LeagueViewBuilder
                 ["round"] = r, ["date"] = FmtDate(_w.RDate.GetValueOrDefault((tnr, r))), ["played"] = played[r], ["open"] = open.Contains(r),
             }).ToArray()),
             ["fixtures"] = fixtures,
-            ["source"] = $"https://chess-results.com/tnr{tnr}.aspx?lan=0",
+            ["source"] = t.Source == LigamanagerSource.Source && t.SourceRef is { } sr
+                ? $"{LigamanagerSource.SiteUrl}/{sr}/spielplan"
+                : $"https://chess-results.com/tnr{tnr}.aspx?lan=0",
         };
     }
 

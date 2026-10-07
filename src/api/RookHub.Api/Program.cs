@@ -334,6 +334,14 @@ try
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
     });
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueUpdateService>();
+    // Zweite Liga-Quelle: SBV-Ligamanager (Bayern, 2026-10-07) — direkt, höflich, ohne Crawler/VPN.
+    builder.Services.AddHttpClient(RookHub.Api.Services.League.LigamanagerSource.ClientName, client =>
+    {
+        client.BaseAddress = new Uri(RookHub.Api.Services.League.LigamanagerSource.SiteUrl + "/");
+        client.Timeout = TimeSpan.FromSeconds(60);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
+    });
+    builder.Services.AddScoped<RookHub.Api.Services.League.LigamanagerSource>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();
     builder.Services.AddHttpClient(nameof(IpCountryService));

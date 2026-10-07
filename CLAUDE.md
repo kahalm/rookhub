@@ -1565,7 +1565,8 @@ Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag
 alles; die Vereinsgruppe bekommt eine Rolle mit `league.view` + `league.contribute` (legt der Admin in der
 Rollenverwaltung an).
 
-- **Tabellen** (`Models/League.cs`): `LeagueTournaments` (PK = chess-results-tnr, Season/Level/League/Grp/Stage),
+- **Tabellen** (`Models/League.cs`): `LeagueTournaments` (PK = chess-results-tnr bzw. Ligamanager-Id, Season/Level/League/Grp/Stage,
+  Source/SourceRef/Boards — siehe „Ligamanager"),
   `LeagueRounds` (Datum je Runde), `LeagueMatches`, `LeagueGames` (Brettpartien, Spieler null = „Brett nicht
   besetzt", Forfeit 0/1/2 — 2 = „- - -", z. B. Corona-Abbruch 2019/20), `LeaguePlayers` (Meldeliste;
   `NameKey` ohne akad. Titel = Schlüssel zu den Brettpaarungen), `LeaguePlayerProfiles` (PK FIDE-ID:
@@ -1725,7 +1726,7 @@ Rollenverwaltung an).
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/import` (Bestand aus `export_bundle.py`, gzip, `?rebuild=true`),
-  `POST /api/league/admin/rebuild`. Öffentlich (Rate-Limit `anonymous-tournament`):
+  `POST /api/league/admin/rebuild`, `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten). Öffentlich (Rate-Limit `anonymous-tournament`):
   `GET /api/league/s/{token}` (+`/player/{fide}`, `/pgn`) — nur Spieler der geteilten Meldeliste, Online-Konten
   nur „sicher".
 - **Aktualisieren** (0.570.0, `Services/League/LeagueRefresh.cs`): je Liga der laufenden Saison
@@ -1743,6 +1744,46 @@ Rollenverwaltung an).
   holt die vier nacheinander und meldet eine Drosselseite als leere Liste, dann bleibt die Liga und steht unter „nicht
   aktualisiert“. Leer bleiben darf eine Seite nur, wenn auch der Bestand dafür leer ist (Saisonbeginn). Der
   Import (`admin/import`) ersetzt in EINER Transaktion (Execution-Strategy-Muster).
+- **Ligamanager (Bayern) als zweite Liga-Quelle** (2026-10-07, Schritt 1 von „LeagueHub für SK Weilheim"):
+  `Services/League/LigamanagerSource.cs` liest EINE Liga des SBV-Ligamanagers (`https://ligamanager.schachbund-bayern.de`,
+  keine API, HTML per Regex; Muster am Ende der Klasse) direkt aus RookHub.Api — kein Crawler, kein VPN, eigener HttpClient
+  `Ligamanager` (User-Agent, 1 s Pause zwischen den drei Abrufen). Adresse `/{region}/{saison}/{slug}-{id}/…` (`LeagueRef`,
+  nur dieser Host). Seiten: `spielplan` (Runden mit Termin/Uhrzeit, Begegnungen, Mannschaftsergebnis, Spiellokal, je
+  gespielter Begegnung Brett + Melde-Nr. beider Spieler + Ergebnis aus HEIM-Sicht), `mannschaften` (Nr., Name, Titel, DWZ =
+  `EloN`, ELO = `EloI`, FIDE-ID aus dem Link `ratings.fide.com/profile/…` — **nur die laufende Saison verlinkt**, ältere haben
+  keine IDs), `partien/download/alle.pgn` (Windows-1252, 404 solange leer; `[Round "r.b"]` = Runde.Brett). Daraus dieselben
+  `LeagueRefresh.Pages` wie vom Crawler, geschrieben über das statische `LeagueRefresh.ReplaceAsync(db, pages, now)`
+  (Verknüpfung über (Team, NameKey); Namen „Pieper, Thomas, Dr." → „Pieper, Thomas Dr."; Spieler am Brett über die Melde-Nr.).
+  Statistik (Punkte/Partien) aus den Brettergebnissen, `EloPerf` leer. **Farben**: der Spielplan nennt keine — aus dem PGN
+  (WhiteTeam), sonst die bayerische Regel **Heim hat an GERADEN Brettern Weiß** (`HomeWhiteByRule`; geprüft an 2025/26:
+  360/360). **Turnier-Zeile**: `Tnr` = Liga-Id des Ligamanagers (4-stellig, chess-results ist 7-stellig; eine Nummer, die
+  schon einer Liga anderer Quelle gehört, → `ConflictException`/409), neue Spalten `Source` (`null` = chess-results,
+  `"ligamanager"`), `SourceRef` („bsb/2026-2027/landesliga-sued-2573"), `Boards` (Bretter je Begegnung, solange keine Runde
+  gespielt ist: Anfrage `boards`, sonst die Vorsaison derselben Region+Slug; `LeagueWorld.BoardsOf` nimmt sie vor der
+  Tiroler Stufen-Vorgabe). Season „2026/27", League = Überschrift („Landesliga Süd"), Grp leer. **Stufen**
+  (`LigamanagerSource.LevelOf`): Oberliga 1, Regionalliga 2, Landesliga 3, Bezirks(ober)liga/Oberpfalz-/Schwaben-/
+  Unterfrankenliga 4, Kreis(ober)liga 5, Kreisklasse/A-Klasse 6, B 7, C 8; `LeagueLevels.Max` = 8 — die Merkmalsschleifen
+  (QHigher/QLower/NewEver) laufen bis dahin (für Tirol ohne Wirkung, dort gibt es über 4 keine Einsätze), Kurznamen der
+  Notizen je Quelle (`LeagueLevels.Short`), der Tiroler Backtest (`hit`) nur für chess-results-Ligen, Ansicht `source` =
+  Spielplan-Link. **FIDE-IDs älterer Saisonen**: `FillMissingFideAsync` ergänzt nach jedem Import in ALLEN Ligamanager-Ligen
+  fehlende IDs (Meldeliste + Brettpaarungen) bei gleichem Verein (`LeagueNames.Club`) + NameKey, wenn dort genau eine ID
+  steht — deshalb ERST die laufende Saison einspielen, dann ältere (sonst fehlen deren Partien in den Karten; erneutes
+  Einspielen holt es nach). **Partien → Spielerkarten**: echte Partien (Ergebnis + Züge) mit FIDE-ID aus der Meldeliste im
+  Kopf über `LeagueProfileStore.ImportGamesAsync(…, "Ligamanager", skipSameMoves: true)`, Kopf `[LeagueSource "Ligamanager"]`
+  (Startseiten-Zählung „SBV-Ligamanager"). Turnier-Zeile + Ersetzen + FIDE-Ergänzung in EINER Transaktion
+  (Execution-Strategy), dann Karten, dann `RebuildViewsAsync`. **Endpunkt** `POST /api/league/admin/ligamanager/import`
+  (league.manage) `{ url }` oder `{ region, season, slug }` (+ `boards`), `?dryRun=true` liest + zählt nur → `{ tnr, name,
+  season, level, dryRun, counts{ rounds, matches, boardGames, boardGamesPlayed, boardPlayersUnmatched, players,
+  playersWithFide, pgnGames, pgnGamesWithMoves, pgnGamesUnmatched, colorFromPgn, colorRuleMismatches, boards },
+  profileGames, profileGamesWithFide, profilesTouched, fideFilled, views }`; 400 `invalidLeague`, 404 `notFound`, 409
+  `conflict`, 503 `unreachable`. **Aktualisieren**: `LeagueRefresh.RunAsync` holt Ligen mit `Source = ligamanager` über
+  `LigamanagerSource.ImportAsync` statt über den Crawler (nie `api/league/{tnr}` für sie); Ligen ohne Source bleiben
+  chess-results. Noch offen (Mandanten-Schritt): `OwnTeam = "Schwaz"`, Startseite mischt Tirol + Bayern einer Saison
+  (sortiert nach Stufe), `LeagueNames.Club`-Regeln sind Tiroler Regex („hall" träfe „Bad Reichenhall").
+  Gemessen 07.10.2026 (Probelauf gegen die echten Seiten): Landesliga Süd 2026/27 — 9 Runden, 45 Begegnungen, 0
+  Brettpartien, 218 Spieler (196 mit FIDE-ID), kein PGN; 2025/26 — 9 Runden, 45 Begegnungen, 360 Brettpartien (alle mit
+  Farbe aus dem PGN, 0 gegen die Regel), 218 Spieler (0 mit FIDE-ID; 100 bekommen sie aus 2026/27), 360 PGN-Partien
+  (354 mit Zügen, 280 davon nach der Ergänzung mit FIDE-ID).
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,

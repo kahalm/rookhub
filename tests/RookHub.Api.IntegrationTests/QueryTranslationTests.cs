@@ -91,6 +91,65 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(1, o["boardTotal"]!.GetValue<int>());
     }
 
+    /// <summary>
+    /// Ligamanager (Bayern, 2026-10-07): Import in EINER selbst geöffneten Transaktion in der Execution-Strategy, Bretter aus der
+    /// Vorsaison (<c>MAX(Board)</c>), fehlende FIDE-IDs über die Ligamanager-Ligen ergänzen (Contains über die Nummern + die
+    /// ODER-Bedingung auf den Brettpaarungen) — alles nur gegen echtes SQL prüfbar.
+    /// </summary>
+    [MySqlFact]
+    public async Task LeagueHub_LigamanagerImport_LaeuftInDerTransaktionUndErgaenztFideIds()
+    {
+        const string src = RookHub.Api.Services.League.LigamanagerSource.Source;
+        Db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4600, Name = "Vorsaison", Season = "2025/26", Level = 3, League = "Landesliga Test",
+            Source = src, SourceRef = "bsb/2025-2026/landesliga-test-4600" });
+        Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 4600, Team = "SK Muster 1", Name = "Muster, Max", NameKey = "muster, max" });
+        Db.LeagueGames.Add(new LeagueGame { Tnr = 4600, Round = 1, MatchNo = 1, Board = 6, HomeTeam = "SK Muster 1", AwayTeam = "SC Probe 1",
+            HomePlayer = "Muster, Max", AwayPlayer = "Probe, Paul", Result = "1 - 0", HomeScore = 1, AwayScore = 0 });
+        await Db.SaveChangesAsync();
+        const string plan = """
+            <h1 class="h2 mb-1">Landesliga Test - Spielplan</h1>
+            <div class="w-100 bg-white rounded-4 p-0 overflow-hidden spielplan-runde-card mb-4" data-round="1">
+            <span class="fw-normal ms-2 spielplan-runde-datum">11.10.2026 10:00 Uhr</span>
+            <div class="match-row border-bottom" id="match-1"> <span class="fw-bold team-name text-end" title="SK Muster 1">SK Muster 1</span>
+            <span class="result-box-empty"><span class="erg-heim"></span><span class="erg-gast"></span></span>
+            <span class="fw-bold team-name" title="SC Probe 1">SC Probe 1</span> </div> </div>
+            """;
+        const string teams = """
+            <div class="mannschaft-section mb-5" id="mannschaft-1"> <h2 class="fs-4 fw-bold mb-0">SK Muster 1</h2>
+            <tr class="mannschaft-aufstellung-brett" id="m-1"> <td class="text-muted fw-bold ps-3">1</td> <td> <span class="fw-semibold text-nowrap">Muster, Max</span> </td>
+            <td class="text-end"> <div class="tabular-nums"> 2000 </div> </td> <td class="text-end"> <a href="https://ratings.fide.com/profile/90000001">2050</a> </td> </tr> </div>
+            <div class="mannschaft-section mb-5" id="mannschaft-2"> <h2 class="fs-4 fw-bold mb-0">SC Probe 1</h2>
+            <tr class="mannschaft-aufstellung-brett" id="m-2"> <td class="text-muted fw-bold ps-3">1</td> <td> <span class="fw-semibold text-nowrap">Probe, Paul</span> </td>
+            <td class="text-end"> <div class="tabular-nums"> 1900 </div> </td> <td class="text-end"> - </td> </tr> </div>
+            """;
+        var http = new LigamanagerHttp(path => path.EndsWith("/spielplan") ? plan : path.EndsWith("/mannschaften") ? teams : null);
+        var lm = new RookHub.Api.Services.League.LigamanagerSource(Db, http, Get<RookHub.Api.Services.League.LeagueService>(),
+            NullLogger<RookHub.Api.Services.League.LigamanagerSource>.Instance) { Pause = TimeSpan.Zero };
+
+        var res = await lm.ImportAsync(RookHub.Api.Services.League.LigamanagerSource.LeagueRef.Parse("bsb/2026-2027/landesliga-test-4711")!,
+            dryRun: false, default);
+
+        Assert.Equal(1, res.FideFilled);
+        Db.ChangeTracker.Clear();
+        Assert.Equal(6, (await Db.LeagueTournaments.SingleAsync(t => t.Tnr == 4711)).Boards);      // aus der Vorsaison
+        Assert.Equal("90000001", (await Db.LeaguePlayers.SingleAsync(p => p.Tnr == 4600)).FideId);
+        Assert.Equal("90000001", (await Db.LeagueGames.SingleAsync(g => g.Tnr == 4600)).HomeFide);
+        Assert.Equal(2, await Db.LeaguePlayers.CountAsync(p => p.Tnr == 4711));
+    }
+
+    private sealed class LigamanagerHttp(Func<string, string?> page) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(new Handler(page)) { BaseAddress = new Uri("https://ligamanager.test/") };
+
+        private sealed class Handler(Func<string, string?> page) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct) =>
+                Task.FromResult(page(r.RequestUri!.AbsolutePath) is { } html
+                    ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(html) }
+                    : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
+    }
+
     [MySqlFact]
     public async Task Partieformular_ListeTraegtScanId_UndLoeschenLaedtDasFotoNicht()
     {
