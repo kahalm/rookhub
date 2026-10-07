@@ -747,7 +747,7 @@ public class CourseService
             _db.BookPuzzles.RemoveRange(_db.BookPuzzles.Where(bp => bp.BookId == book.Id));
             _db.Books.Remove(book);
             await _db.SaveChangesAsync(ct);
-            throw new DomainValidationException("No playable lines found in the PGN.");
+            throw new DomainValidationException("No playable lines found in the PGN.") { Code = ApiErrorCodes.CourseNoLines };
         }
 
         var name = string.IsNullOrWhiteSpace(displayName)

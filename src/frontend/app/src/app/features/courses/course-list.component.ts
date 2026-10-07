@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -533,8 +534,14 @@ export class CourseListComponent implements OnInit {
       },
       error: err => {
         this.creating = false;
-        const msg = err?.error?.message || this.translate.instant('courses.create.failed');
-        this.snackbar.info(msg, { action: 'common.ok', duration: 4000 });
+        const msg = apiErrorText(err, this.translate, 'courses.create.failed');
+        // Eröffnungsrepertoire statt Kurs-PGN: den Weg dorthin gleich anbieten (gemeldet 2026-10-07).
+        if (err?.error?.code === 'course_pgn_is_repertoire') {
+          this.snackbar.info(msg, { action: 'courses.create.toRepertoires', duration: 15000 })
+            .onAction().subscribe(() => this.router.navigate(['/repertoires']));
+          return;
+        }
+        this.snackbar.info(msg, { action: 'common.ok', duration: 6000 });
       }
     });
   }

@@ -93,7 +93,9 @@
     "group_name_taken": "A group with this name already exists.",
     "book_alias_invalid": "Invalid alias: only lowercase letters, digits and hyphens, 2–40 characters, starting with a letter.",
     "book_alias_reserved": "This alias is reserved.",
-    "book_alias_taken": "This alias is already taken."
+    "book_alias_taken": "This alias is already taken.",
+    "course_pgn_is_repertoire": "This file is an opening repertoire (games from the starting position), not a course with puzzles. Upload it under “Repertoires”.",
+    "course_no_lines": "This PGN contains no playable course line. A course needs puzzles in Chessable style (position + solution)."
   },
   "common": {
     "moreActions": "More actions",
@@ -1424,7 +1426,8 @@
       "button": "Create course",
       "creating": "Creating…",
       "success": "“{{name}}” created ({{count}} puzzles)",
-      "failed": "The course could not be created."
+      "failed": "The course could not be created.",
+      "toRepertoires": "Go to Repertoires"
     },
     "deleteTooltip": "Delete course",
     "convertToRepertoireTooltip": "Convert to repertoire",

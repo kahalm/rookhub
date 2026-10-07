@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -203,6 +204,13 @@ public class CourseController : BaseApiController
 
         using var reader = new StreamReader(file.OpenReadStream());
         var pgn = await reader.ReadToEndAsync();
+        // Ein Kurs braucht Linien im Chessable-Stil: jede Partie mit eigener Ausgangsstellung ([FEN]) und
+        // Nummer ([Round]). Fehlt das bei JEDER Partie, ist es ein Eröffnungsrepertoire (gemeldet 2026-10-07:
+        // ChessBase-Export „Jobava London“, viermal „No playable lines found“) — dann sagen, wohin es gehört.
+        if (RepertoireService.LooksLikePgn(pgn) && !PgnImportService.HasCourseLineHeaders(pgn))
+            throw new DomainValidationException(
+                "This file is an opening repertoire (games from the starting position), not a course with puzzle lines. Upload it under Repertoires instead.")
+            { Code = ApiErrorCodes.CoursePgnIsRepertoire };
         var course = await _service.UploadPersonalCourseAsync(GetUserId(), file.FileName, pgn, name);
         return Ok(course);
     }

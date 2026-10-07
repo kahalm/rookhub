@@ -16,7 +16,9 @@
     "group_name_taken": "Már létezik csoport ezzel a névvel.",
     "book_alias_invalid": "Érvénytelen alias: csak kisbetűk, számjegyek és kötőjelek, 2–40 karakter, betűvel kezdődik.",
     "book_alias_reserved": "Ez az alias fenntartott.",
-    "book_alias_taken": "Ez az alias már foglalt."
+    "book_alias_taken": "Ez az alias már foglalt.",
+    "course_pgn_is_repertoire": "Ez a fájl egy megnyitási repertoár (játszmák a kezdőállásból), nem feladatokat tartalmazó kurzus. Töltsd fel a „Repertoárok” alatt.",
+    "course_no_lines": "Ez a PGN nem tartalmaz játszható kurzusvonalat. Egy kurzushoz Chessable-stílusú feladatok kellenek (állás + megoldás)."
   },
   "common": {
     "moreActions": "További műveletek",
@@ -1385,7 +1387,8 @@
       "button": "Tanfolyam létrehozása",
       "creating": "Létrehozás…",
       "success": "„{{name}}” létrehozva ({{count}} feladvány)",
-      "failed": "A tanfolyamot nem sikerült létrehozni."
+      "failed": "A tanfolyamot nem sikerült létrehozni.",
+      "toRepertoires": "Repertoárokhoz"
     },
     "deleteTooltip": "Tanfolyam törlése",
     "convertToRepertoireTooltip": "Átalakítás repertoárrá",

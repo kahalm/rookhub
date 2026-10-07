@@ -963,4 +963,30 @@ public class CourseControllerTests : IDisposable
         var (raw, _) = await new CoursePgnExportService(_db).GetBookPgnAsync(UserId, book.Id, isAdmin: true);
         Assert.Contains("[%alt c5 e5]", raw);
     }
+    [Fact]
+    public async Task Create_WithOpeningRepertoirePgn_SaysUploadItAsRepertoire_AndCreatesNoBook()
+    {
+        // Gemeldet 2026-10-07: ein ChessBase-Export „Jobava London" (Partien ab der Grundstellung, alle Varianten
+        // darin, kein [FEN]/[Round]) ging viermal mit „No playable lines found" zurück — ohne Hinweis, wohin er gehört.
+        SetUser(_controller, 7, isAdmin: false);
+        const string pgn = "\uFEFF[Event \"?\"]\r\n[Round \"?\"]\r\n[White \"Jobava London\"]\r\n[Black \"3...c5\"]\r\n\r\n"
+            + "1. d4 Nf6 (1... d5 2. Nc3 Bf5) 2. Nc3 d5 3. Bf4 c5 *\r\n";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(pgn);
+        var file = new FormFile(new MemoryStream(bytes), 0, bytes.Length, "file", "Jobava London.pgn");
+
+        var ex = await Assert.ThrowsAsync<RookHub.Api.Exceptions.DomainValidationException>(
+            () => _controller.Create(file, null));
+
+        Assert.Equal(RookHub.Api.Exceptions.ApiErrorCodes.CoursePgnIsRepertoire, ex.Code);
+        Assert.Contains("Repertoires", ex.Message);
+        Assert.Empty(_db.Books);
+    }
+
+    [Theory]
+    [InlineData("[Event \"T\"]\n[Round \"1\"]\n[FEN \"8/8/8/8/8/8/8/K6k w - - 0 1\"]\n\n1. Kb1 *\n", true)]
+    [InlineData("[Event \"T\"]\n[Round \"?\"]\n[FEN \"8/8/8/8/8/8/8/K6k w - - 0 1\"]\n\n1. Kb1 *\n", false)]
+    [InlineData("[Event \"T\"]\n[Round \"1\"]\n\n1. e4 e5 *\n", false)]
+    [InlineData("[Event \"A\"]\n\n1. e4 *\n\n[Event \"B\"]\n[Round \"2\"]\n[FEN \"8/8/8/8/8/8/8/K6k w - - 0 1\"]\n\n1. Kb1 *\n", true)]
+    public void HasCourseLineHeaders_NeedsFenAndRoundInAtLeastOneGame(string pgn, bool expected)
+        => Assert.Equal(expected, PgnImportService.HasCourseLineHeaders(pgn));
 }

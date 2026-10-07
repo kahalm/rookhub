@@ -87,6 +87,15 @@ public class PgnImportService
     /// sich dann aus der Seite, der das Repertoire gehört (siehe <see cref="StartPlyForRepertoire"/>).
     /// Default false: fuer die globalen Puzzle-Buecher bleibt eine ganze Partie ohne Aufgabe
     /// weiterhin kein Puzzle.</param>
+    /// <summary>Trägt mindestens eine Partie der PGN die Kopfzeilen einer Kurs-Linie ([FEN] UND [Round], beide
+    /// nicht leer und nicht „?“)? Ohne das verwirft <see cref="ParsePgn"/> jede Partie — so lässt sich ein
+    /// Eröffnungsrepertoire erkennen, bevor ein Buch angelegt wird.</summary>
+    public static bool HasCourseLineHeaders(string pgnText)
+        => PgnParser.SplitGames(pgnText).Any(g =>
+            Filled(g.Headers.GetValueOrDefault("FEN")) && Filled(g.Headers.GetValueOrDefault("Round")));
+
+    private static bool Filled(string? value) => !string.IsNullOrWhiteSpace(value) && value.Trim() != "?";
+
     public static ParseResult ParsePgn(string fileName, string pgnText, bool keepCommentOnlyAsInfo = false,
         bool playFromStartPosition = false)
     {

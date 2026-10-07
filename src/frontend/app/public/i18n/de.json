@@ -93,7 +93,9 @@
     "group_name_taken": "Eine Gruppe mit diesem Namen existiert bereits.",
     "book_alias_invalid": "Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.",
     "book_alias_reserved": "Dieser Alias ist reserviert.",
-    "book_alias_taken": "Dieser Alias ist bereits vergeben."
+    "book_alias_taken": "Dieser Alias ist bereits vergeben.",
+    "course_pgn_is_repertoire": "Diese Datei ist ein Eröffnungsrepertoire (Partien ab der Grundstellung), kein Kurs mit Aufgaben. Lade sie unter „Repertoires“ hoch.",
+    "course_no_lines": "In dieser PGN steckt keine spielbare Kurs-Linie. Ein Kurs braucht Aufgaben im Chessable-Stil (Stellung + Lösung)."
   },
   "common": {
     "moreActions": "Weitere Aktionen",
@@ -1424,7 +1426,8 @@
       "button": "Kurs erstellen",
       "creating": "Wird erstellt…",
       "success": "„{{name}}“ angelegt ({{count}} Puzzles)",
-      "failed": "Kurs konnte nicht erstellt werden."
+      "failed": "Kurs konnte nicht erstellt werden.",
+      "toRepertoires": "Zu Repertoires"
     },
     "deleteTooltip": "Kurs löschen",
     "convertToRepertoireTooltip": "In Repertoire umwandeln",

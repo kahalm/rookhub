@@ -438,8 +438,9 @@ public class RepertoireControllerTests : IDisposable
 
         var result = await DomainHttp.ResultAsync(async () => await _controller.ConvertToCourse(rep.Id));
 
-        DomainHttp.AssertError(result, 400, "No playable lines found in the PGN.");
-        Assert.Null(CodeOf(result));                                              // NICHT der Leer-Fall
+        DomainHttp.AssertError(result, 400);
+        Assert.Contains("No playable lines found in the PGN.", System.Text.Json.JsonSerializer.Serialize(((ObjectResult)result).Value));
+        Assert.Equal("course_no_lines", CodeOf(result));                         // NICHT der Leer-Fall
         Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt bei Fehlschlag
     }
 

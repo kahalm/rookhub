@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.714.1", date: "2026-10-07", changes: [
+    { en: "Courses: uploading an opening repertoire under „Create course“ (games from the starting position, e.g. a ChessBase export) now says what is going on — the file is a repertoire, not a course with puzzles — and offers a button to the repertoires, where it belongs. Before, the upload just failed with „No playable lines found in the PGN.“. The other course upload errors now show in the language of the page as well.", de: "Kurse: wer ein Eröffnungsrepertoire unter „Kurs erstellen“ hochlädt (Partien ab der Grundstellung, z. B. ein ChessBase-Export), bekommt jetzt gesagt, woran es liegt — die Datei ist ein Repertoire, kein Kurs mit Aufgaben — und einen Knopf zu den Repertoires, wo sie hingehört. Vorher scheiterte der Upload nur mit „No playable lines found in the PGN.“. Die übrigen Fehler beim Kurs-Upload erscheinen außerdem in der Sprache der Seite." },
+  ] },
   { version: "0.714.0", date: "2026-10-07", changes: [
     { en: "Game page on a wide screen: board, move list and evaluation now stand side by side, and the board grows with the window (up to 760 px). Before, the evaluation sat below the board, which kept the board small while a third of the page stayed empty. On the phone nothing changes.", de: "Partieseite am breiten Bildschirm: Brett, Zugliste und Auswertung stehen jetzt nebeneinander, und das Brett wächst mit dem Fenster (bis 760 px). Vorher lag die Auswertung unter dem Brett — das hielt das Brett klein, während ein Drittel der Seite leer blieb. Am Handy ändert sich nichts." },
   ] },

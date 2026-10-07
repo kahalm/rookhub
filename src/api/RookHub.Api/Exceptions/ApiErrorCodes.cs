@@ -38,4 +38,10 @@ public static class ApiErrorCodes
     public const string BookAliasInvalid = "book_alias_invalid";
     public const string BookAliasReserved = "book_alias_reserved";
     public const string BookAliasTaken = "book_alias_taken";
+
+    /// <summary>Kurs-Upload mit einer PGN ohne eine einzige Kurs-Linie (keine Partie mit [FEN] UND [Round]) —
+    /// meist ein Eröffnungsrepertoire aus ChessBase/Lichess, das unter „Repertoires“ hingehört.</summary>
+    public const string CoursePgnIsRepertoire = "course_pgn_is_repertoire";
+    /// <summary>Kurs-Upload, aus dem keine einzige spielbare Linie entstand (Linien da, aber alle unbrauchbar).</summary>
+    public const string CourseNoLines = "course_no_lines";
 }

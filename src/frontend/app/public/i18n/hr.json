@@ -93,7 +93,9 @@
     "group_name_taken": "Grupa s tim imenom već postoji.",
     "book_alias_invalid": "Neispravan alias: samo mala slova, znamenke i crtice, 2–40 znakova, na početku slovo.",
     "book_alias_reserved": "Ovaj alias je rezerviran.",
-    "book_alias_taken": "Ovaj alias je već zauzet."
+    "book_alias_taken": "Ovaj alias je već zauzet.",
+    "course_pgn_is_repertoire": "Ova datoteka je repertoar otvaranja (partije od početnog položaja), a ne tečaj sa zadacima. Učitaj je pod „Repertoari“.",
+    "course_no_lines": "Ovaj PGN ne sadrži nijednu igrivu liniju tečaja. Tečaj treba zadatke u Chessable stilu (pozicija + rješenje)."
   },
   "common": {
     "moreActions": "Više radnji",
@@ -1424,7 +1426,8 @@
       "button": "Stvori tečaj",
       "creating": "Stvara se…",
       "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
-      "failed": "Tečaj nije bilo moguće stvoriti."
+      "failed": "Tečaj nije bilo moguće stvoriti.",
+      "toRepertoires": "Na repertoare"
     },
     "deleteTooltip": "Izbriši tečaj",
     "convertToRepertoireTooltip": "Pretvori u repertoar",
