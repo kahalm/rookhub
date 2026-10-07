@@ -979,6 +979,7 @@
       "offlineFailed": "Repertoire konnte nicht offline gespeichert werden"
     },
     "detail": {
+      "parsing": "Repertoire wird gelesen … {{done}} von {{total}} Linien",
       "noDescription": "Keine Beschreibung",
       "modeLines": "Linien",
       "modeTree": "Baum",

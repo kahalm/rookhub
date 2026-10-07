@@ -979,6 +979,7 @@
       "offlineFailed": "Spremanje repertoara offline nije uspjelo"
     },
     "detail": {
+      "parsing": "Repertoar se učitava … {{done}} od {{total}} linija",
       "noDescription": "Nema opisa",
       "modeLines": "Linije",
       "modeTree": "Stablo",

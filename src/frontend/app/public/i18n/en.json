@@ -979,6 +979,7 @@
       "offlineFailed": "Could not save repertoire offline"
     },
     "detail": {
+      "parsing": "Reading the repertoire … {{done}} of {{total}} lines",
       "noDescription": "No description",
       "modeLines": "Lines",
       "modeTree": "Tree",

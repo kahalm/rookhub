@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.713.0", date: "2026-10-07", changes: [
+    { en: "Large repertoires (e.g. a Chessable course with 1,220 lines) are now read completely: line list, move tree and trainer used to stop after about 500 lines or 2 MB. Reading happens in portions with a progress line, so the page stays usable. “View” from “Position in my repertoires” now also opens lines further back in such a repertoire.", de: "Große Repertoires (z. B. ein Chessable-Kurs mit 1.220 Linien) werden jetzt ganz gelesen: Linienliste, Zugbaum und Trainer endeten bisher nach rund 500 Linien bzw. 2 MB. Gelesen wird in Portionen mit Fortschrittsanzeige, die Seite bleibt bedienbar. „Ansehen“ aus „Stellung in meinen Repertoires“ öffnet jetzt auch Linien weiter hinten in so einem Repertoire." },
+  ] },
   { version: "0.712.0", date: "2026-10-07", changes: [
     { en: "LeagueHub online accounts per region: the account search and the check (i) now judge a Bavarian player (SK Weilheim, Schachkreis Zugspitze) by Bavarian rules — a German profile fits, Bavarian towns in the profile count (also “Gautinger”, “Münchner”), and the labels read “Bavarian Lichess teams” / “Online league Zugspitze/Oberbayern”. Tyrol stays as before (a German profile still fails for a Schwaz player without German federation). The search runs again once for everyone.",
       de: "LeagueHub Online-Konten je Region: Konto-Suche und Prüfung (i) beurteilen einen bayerischen Spieler (SK Weilheim, Schachkreis Zugspitze) jetzt nach bayerischen Regeln — ein deutsches Profil passt, bayerische Orte im Profil zählen (auch „Gautinger“, „Münchner“), und die Zeilen heißen „Bayerische Lichess-Teams“ / „Online-Liga Zugspitze/Oberbayern“. Tirol bleibt wie bisher (ein deutsches Profil scheitert bei einem Schwazer ohne deutsche Föderation weiter). Die Suche läuft dafür einmal für alle neu." },

@@ -1,4 +1,4 @@
-import { Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
@@ -26,6 +26,7 @@ import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.ser
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
 import { MoveTreeService } from './move-tree.service';
+import { exceedsSyncLimits } from '../../shared/pgn-viewer/pgn-parser';
 import { findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
 import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
@@ -51,6 +52,12 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       <app-loading-spinner />
     } @else if (repertoire) {
       <div class="detail-container">
+        @if (parseProgress; as p) {
+          <div class="parse-progress" role="status">
+            <mat-icon>hourglass_top</mat-icon>
+            {{ 'repertoire.detail.parsing' | translate: { done: p.done, total: p.total || '…' } }}
+          </div>
+        }
         <div class="detail-header">
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
@@ -183,6 +190,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     }
   `,
   styles: [`
+    .parse-progress { display: flex; align-items: center; gap: 6px; font-size: .85rem; margin-bottom: 8px;
+      color: color-mix(in srgb, currentColor 65%, transparent); }
+    .parse-progress mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .detail-container { padding: 1rem; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
     .detail-header {
       display: flex;
@@ -253,6 +263,9 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   mode: ViewMode = 'lines';
   /** Deep-Link-Ziel aus der Stellungssuche („Ansehen"): lineKey + Halbzug, einmalig nach dem Laden angewandt. */
   private focusLineKey: string | null = null;
+  private readonly cdr = inject(ChangeDetectorRef);
+  /** Lesestand eines großen Repertoires (Portionen, 0.712.0); `null` = fertig. */
+  parseProgress: { done: number; total: number } | null = null;
   private focusPly: number | null = null;
   id!: number;
 
@@ -517,9 +530,22 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   private loadCombinedPgn(): void {
     this.repertoireService.getPgnText(this.id).subscribe({
-      next: (pgn) => {
-        this.viewerService.loadPgn(pgn);
-        this.treeService.buildTree(pgn);
+      next: async (pgn) => {
+        // In Portionen (0.712.0): ein großes Chessable-Repertoire braucht am Stück Sekunden; die Seite bleibt bedienbar
+        // und zeigt den Fortschritt. Vorher las der Browser nur die ersten 2 MB/500 Partien.
+        if (exceedsSyncLimits(pgn)) {
+          this.parseProgress = { done: 0, total: 0 };
+          this.cdr.markForCheck();
+          await this.viewerService.loadPgnAsync(pgn, (done, total) => {
+            this.parseProgress = { done, total };
+            this.cdr.markForCheck();
+          });
+          this.parseProgress = null;
+        } else {
+          this.viewerService.loadPgn(pgn);
+        }
+        this.treeService.buildTreeFromGames(this.viewerService.games);
+        this.cdr.markForCheck();
         this.trainableGames = this.viewerService.games.filter((_, i) => !isInfoLineGame(this.viewerService.rawGames[i]));
         this.applyTrainColor();
         this.loadTreePopularity();   // direkt im Baum geöffnet (?mode=tree)

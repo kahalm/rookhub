@@ -59,7 +59,11 @@ export class MoveTreeService {
   }
 
   buildTree(pgnText: string): void {
-    const games = parsePgnText(pgnText);
+    this.buildTreeFromGames(parsePgnText(pgnText));
+  }
+
+  /** Aus schon gelesenen Partien (die Repertoire-Seite liest das PGN nur EINMAL, 0.712.0). */
+  buildTreeFromGames(games: ParsedGame[]): void {
     this.root = this.createRoot();
     this.root.count = games.length;
 

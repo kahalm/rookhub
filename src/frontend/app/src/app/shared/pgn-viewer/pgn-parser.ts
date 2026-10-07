@@ -173,6 +173,10 @@ export interface ParsePgnOptions {
   /** Varianten nicht verwerfen, sondern als Text in den Kommentar ihres Zugs falten (siehe
    *  {@link foldVariationsIntoComments}). Nur für Ansichten, die Kommentar-Züge klickbar machen. */
   foldVariations?: boolean;
+  /** Ganzes Repertoire lesen statt der Vorgabe-Deckel (2 MB / 500 Partien) — 0.712.0. Chessable-Repertoires sind bis
+   *  ~10 MB groß (gemessen: 6 MB, 1220 Linien); mit dem Deckel sah der Browser nur die ersten 274, Linienliste, Trainer
+   *  und „Stellung in meinen Repertoires" endeten dort, während der Server (Suche, gameIndex) alle kannte. */
+  unbounded?: boolean;
 }
 
 export function parsePgnText(pgnText: string, opts?: ParsePgnOptions): ParsedGame[] {
@@ -203,15 +207,25 @@ export interface ParsedGameWithSource { game: ParsedGame; raw: string; }
  * der LETZTEN Partie las, während der Server (Stellungssuche, Baum, `gameIndex`) alle Linien sah.
  */
 export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions): ParsedGameWithSource[] {
-  if (pgnText.length > MAX_PGN_CHARS) {
+  if (!opts?.unbounded && pgnText.length > MAX_PGN_CHARS) {
     pgnText = pgnText.slice(0, MAX_PGN_CHARS);
   }
-  const rawGames = splitPgnGames(pgnText).slice(0, MAX_GAMES);
+  const all = splitPgnGames(pgnText);
+  const rawGames = opts?.unbounded ? all : all.slice(0, MAX_GAMES);
   const parsed: ParsedGameWithSource[] = [];
 
   for (const raw of rawGames) {
+    const one = parseOneGame(raw, opts);
+    if (one) parsed.push(one);
+  }
+
+  return parsed;
+}
+
+/** Eine Partie (Abschnitt aus {@link splitPgnGames}) lesen; `null` = leer, zu groß oder unlesbar. */
+function parseOneGame(raw: string, opts?: ParsePgnOptions): ParsedGameWithSource | null {
     const trimmed = raw.trim();
-    if (!trimmed || trimmed.length > MAX_GAME_CHARS) continue;
+    if (!trimmed || trimmed.length > MAX_GAME_CHARS) return null;
 
     try {
       // Separate headers from move text
@@ -260,13 +274,47 @@ export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions):
         fens.push(move.after);
       }
 
-      parsed.push({ game: { headers: gameHeaders, moves, fens, comments }, raw: trimmed });
+      return { game: { headers: gameHeaders, moves, fens, comments }, raw: trimmed };
     } catch (err) {
       // Unparsebares Spiel ueberspringen, aber fuer Diagnose sichtbar machen
       // statt es voellig stumm zu verwerfen.
       console.warn('pgn-parser: skipping unparseable game', err);
+      return null;
+    }
+}
+
+/**
+ * Wie {@link parsePgnTextWithSource} mit `unbounded`, aber in Portionen (0.712.0): nach jeweils {@link SLICE_MS} gibt
+ * der Parser den Browser frei. Ein großes Chessable-Repertoire (6 MB, 1220 Linien) braucht am Stück rund 7 s — in einem
+ * Zug fror die Seite so lange ein, mit dem alten Deckel fehlten dafür vier Fünftel der Linien.
+ * `onProgress(gelesen, gesamt)` meldet den Stand für eine Anzeige.
+ */
+export async function parsePgnTextWithSourceAsync(pgnText: string, opts?: ParsePgnOptions,
+  onProgress?: (done: number, total: number) => void): Promise<ParsedGameWithSource[]> {
+  const rawGames = splitPgnGames(pgnText);
+  const parsed: ParsedGameWithSource[] = [];
+  let sliceStart = Date.now();
+  for (let i = 0; i < rawGames.length; i++) {
+    const one = parseOneGame(rawGames[i], opts);
+    if (one) parsed.push(one);
+    if (Date.now() - sliceStart >= SLICE_MS && i < rawGames.length - 1) {
+      onProgress?.(i + 1, rawGames.length);
+      await new Promise<void>(r => setTimeout(r, 0));
+      sliceStart = Date.now();
     }
   }
-
+  onProgress?.(rawGames.length, rawGames.length);
   return parsed;
 }
+
+/** Sprengt der Text die Vorgabe-Deckel (2 MB / 500 Partien)? Dann lohnt das Lesen in Portionen — darunter bleibt es
+ *  beim gewohnten Lesen am Stück (schnell, und Aufrufer bleiben synchron). */
+export function exceedsSyncLimits(pgnText: string): boolean {
+  if (pgnText.length > MAX_PGN_CHARS) return true;
+  let n = 0;
+  for (let i = pgnText.indexOf('[Event'); i >= 0; i = pgnText.indexOf('[Event', i + 6)) if (++n > MAX_GAMES) return true;
+  return false;
+}
+
+/** So lange liest {@link parsePgnTextWithSourceAsync} am Stück, bevor es den Browser freigibt. */
+const SLICE_MS = 30;

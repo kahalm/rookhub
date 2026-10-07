@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Move } from 'chess.js';
-import { ParsedGame, START_FEN, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, ParsedGameWithSource, START_FEN, parsePgnTextWithSource, parsePgnTextWithSourceAsync } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { isInfoLineGame } from './repertoire-info-line.util';
@@ -64,7 +64,15 @@ export class RepertoireViewerService {
 
   loadPgn(pgnText: string): void {
     // Varianten als Kommentartext behalten: die Linienansicht macht ihre Züge klickbar.
-    const parsed = parsePgnTextWithSource(pgnText, { foldVariations: true });
+    this.loadParsed(parsePgnTextWithSource(pgnText, { foldVariations: true }));
+  }
+
+  /** Das GANZE Repertoire in Portionen lesen (0.712.0) — vorher endete die Linienliste nach 2 MB/500 Partien. */
+  async loadPgnAsync(pgnText: string, onProgress?: (done: number, total: number) => void): Promise<void> {
+    this.loadParsed(await parsePgnTextWithSourceAsync(pgnText, { foldVariations: true }, onProgress));
+  }
+
+  private loadParsed(parsed: ParsedGameWithSource[]): void {
     this.games = parsed.map(p => p.game);
     this.rawGames = parsed.map(p => p.raw);
     this.lines = this.games.map((game, i) => this.buildLine(game, i, isInfoLineGame(this.rawGames[i])));

@@ -1,5 +1,5 @@
 import { Observable, of, throwError } from 'rxjs';
-import { PositionRepertoiresComponent } from './position-repertoires.component';
+import { PositionRepertoiresComponent, findSection } from './position-repertoires.component';
 import { PositionLookupResult, PositionTreeResult, SimilarPositionsResult } from '../../core/repertoire.service';
 
 describe('PositionRepertoiresComponent', () => {
@@ -565,3 +565,16 @@ describe('PositionRepertoiresComponent', () => {
     expect(c.truncated).toBeFalse();                // die Listen-Sicht kennt kein Zeitbudget
   });
 });
+
+// 0.712.0: der Link „Ansehen" fand Linien hinter Partie 500 / 2 MB nicht (line= leer) — jetzt nur der eine Abschnitt.
+describe('findSection', () => {
+  const sec = (ch: string, name: string) => `[Event "R"]\n[White "${name}"]\n[Black "${ch}"]\n\n1. e4 *\n`;
+  const sections = [sec('A', 'eins'), sec('A', 'zwei'), sec('B', 'drei')];
+  it('nimmt den gemeldeten Index, wenn die Namen passen, sonst sucht er nach ihnen', () => {
+    expect(findSection(sections, { chapter: 'A', lineName: 'zwei', gameIndex: 1 })).toBe(sections[1]);
+    expect(findSection(sections, { chapter: 'B', lineName: 'drei', gameIndex: 0 })).toBe(sections[2]);
+    expect(findSection(sections, { chapter: 'X', lineName: 'y', gameIndex: 2 })).toBe(sections[2]);
+    expect(findSection(sections, { chapter: 'X', lineName: 'y', gameIndex: 9 })).toBeNull();
+  });
+});
+

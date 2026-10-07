@@ -23,7 +23,7 @@ import { buildRepertoireGraph, normFen, RepertoireGraph } from './repertoire-tre
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { chapterColorsOf, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
-import { ParsedGame, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource, parsePgnTextWithSourceAsync } from '../../shared/pgn-viewer/pgn-parser';
 import { isInfoLineGame } from './repertoire-info-line.util';
 import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
 import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineStates } from './repertoire-offline.util';
@@ -230,7 +230,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       next: ({ pgn, states }) => {
         // Eine vorhandene Offline-Kopie beim Online-Öffnen aktuell halten (No-op ohne Kopie).
         refreshRepertoireOffline(this.repertoireId, pgn, states);
-        this.initSession(pgn, states);
+        void this.initSession(pgn, states);
       },
       error: () => {
         // Server unerreichbar → heruntergeladene Kopie verwenden (Offline-Training); ohne Kopie
@@ -239,7 +239,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         if (cached) {
           this.offlineSession = true;
           this.srLevels = cached.config;
-          this.initSession(cached.pgn, cached.states);
+          void this.initSession(cached.pgn, cached.states);
         } else {
           this.phase = 'EMPTY';
           this.cdr.markForCheck();
@@ -249,11 +249,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   /** Session aus PGN + SR-Zuständen aufbauen (frisch vom Server oder aus der Offline-Kopie). */
-  private initSession(pgn: string, states: LineStateDto[]): void {
+  private async initSession(pgn: string, states: LineStateDto[]): Promise<void> {
     this.graph = buildRepertoireGraph(pgn);
     // Info-Linien (Erklärungen, siehe isInfoLineGame) werden nicht abgefragt — weder im Quiz noch im
     // Lern-Modus, und „Alle in den Pool" nimmt sie nicht auf. Ansehen kann man sie in der Linienliste.
-    this.allLines = parsePgnTextWithSource(pgn).filter(p => !isInfoLineGame(p.raw)).map(p => p.game);
+    // Das GANZE Repertoire, in Portionen (0.712.0) — vorher fragte der Trainer nur die ersten 2 MB/500 Partien ab.
+    const parsed = exceedsSyncLimits(pgn) ? await parsePgnTextWithSourceAsync(pgn) : parsePgnTextWithSource(pgn);
+    this.allLines = parsed.filter(p => !isInfoLineGame(p.raw)).map(p => p.game);
     // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
     // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
     // Farben mischt.

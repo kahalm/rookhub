@@ -14,7 +14,7 @@ import {
   RepertoirePositionTree, PositionTreeNode,
   SimilarPositionMatch, SimilarityPreset, SimilarMoveInput, SimilarPositionsRequest,
 } from '../../core/repertoire.service';
-import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, parsePgnText, splitPgnGames } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { moveKey, parseMoveInput } from './similar-move.util';
 import { PositionTreeComponent } from './position-tree.component';
@@ -278,7 +278,7 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   private reqId = 0;
   /** Die laufende Anfrage — eine neue Stellung bestellt sie ab (siehe Klassen-Doku). */
   private pending: Subscription | null = null;
-  private pgnCache = new Map<number, ParsedGame[]>();
+  private pgnCache = new Map<number, string[]>();   // die Abschnitte des PGN (splitPgnGames), nicht geparst
   private simOptionsLoaded = false;
   /** Sobald der Nutzer die Auswahl angefasst hat, wird sie nicht mehr auf „alle" zurückgesetzt. */
   private simSelectionTouched = false;
@@ -606,28 +606,40 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
     });
   }
 
-  /** Lädt (gecacht) das Repertoire-PGN, findet die passende Linie und berechnet deren lineKey. */
+  /**
+   * Lädt (gecacht) das Repertoire-PGN, findet die passende Linie und berechnet deren lineKey. Gelesen wird nur DIESE
+   * Partie (0.712.0): vorher wurde das ganze PGN mit dem Vorgabe-Deckel (2 MB/500 Partien) geparst — in einem großen
+   * Chessable-Repertoire (6 MB, 1220 Linien) fehlten damit alle Linien ab Nr. 275, der Link trug `line=` leer und die
+   * Repertoire-Seite öffnete keine Linie. Getrennt wird wie beim Server (`splitPgnGames` ↔ `ParseSections`), also passt
+   * der gemeldete `gameIndex`; Kapitel/Name bestätigen ihn, sonst wird nach ihnen gesucht.
+   */
   private resolveLineKey(repId: number, line: RepertoireLineMatch): Observable<string> {
     const cached = this.pgnCache.get(repId);
-    const games$ = cached
+    const sections$ = cached
       ? of(cached)
       : this.repertoireService.getPgnText(repId).pipe(
-          map(pgn => parsePgnText(pgn)),
-          tap(games => this.pgnCache.set(repId, games)),
+          map(pgn => splitPgnGames(pgn)),
+          tap(sections => this.pgnCache.set(repId, sections)),
         );
-    return games$.pipe(map(games => {
-      const g = this.findGame(games, line);
+    return sections$.pipe(map(sections => {
+      const raw = findSection(sections, line);
+      const g = raw ? parsePgnText(raw)[0] : undefined;
       return g ? lineKeyFromSans(g.moves.map(m => m.san)) : '';
     }));
   }
+}
 
-  private findGame(games: ParsedGame[], line: RepertoireLineMatch): ParsedGame | null {
-    const matches = (g: ParsedGame) =>
-      (g.headers['Black'] || '').trim() === line.chapter && (g.headers['White'] || '').trim() === line.lineName;
-    // Bevorzugt exakt am gemeldeten Index (falls Kapitel/Name dort passen),
-    // sonst der erste Treffer nach (Kapitel, Linienname), sonst der Index als Fallback.
-    const atIndex = games[line.gameIndex];
-    if (atIndex && matches(atIndex)) return atIndex;
-    return games.find(matches) ?? atIndex ?? null;
-  }
+/** Kopfzeile `[Tag "Wert"]` eines PGN-Abschnitts (ohne zu parsen). */
+function headerOf(raw: string, tag: string): string {
+  const m = new RegExp('^\\[' + tag + '\\s+"((?:[^"\\\\]|\\\\.)*)"\\]', 'm').exec(raw);
+  return m ? m[1].replace(/\\(.)/g, '$1').trim() : '';
+}
+
+/** Der Abschnitt einer gemeldeten Linie: am gemeldeten Index, wenn Kapitel ([Black]) und Linienname ([White]) passen,
+ *  sonst der erste mit diesen Namen, sonst der Index. */
+export function findSection(sections: string[], line: { chapter: string | null; lineName: string | null; gameIndex: number }): string | null {
+  const matches = (raw: string) => headerOf(raw, 'Black') === (line.chapter ?? '') && headerOf(raw, 'White') === (line.lineName ?? '');
+  const atIndex = sections[line.gameIndex];
+  if (atIndex && matches(atIndex)) return atIndex;
+  return sections.find(matches) ?? atIndex ?? null;
 }

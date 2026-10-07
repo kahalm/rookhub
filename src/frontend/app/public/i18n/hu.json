@@ -729,6 +729,7 @@
       "offlineFailed": "A repertoárt nem sikerült offline menteni"
     },
     "detail": {
+      "parsing": "Repertoár beolvasása … {{done}} / {{total}} sor",
       "noDescription": "Nincs leírás",
       "modeLines": "Vonalak",
       "modeTree": "Fa",

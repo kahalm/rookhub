@@ -820,6 +820,14 @@ keiner mehr → von vorn (wiederholtes Klicken läuft alle durch). Regel `nextOf
 wie die Zählung (`m.cls`). Ohne Treffer bleibt Symbol/Zahl ein Text, kein Knopf. Geht über `moveClicked` — wirkt also überall,
 wo der Rückblick hängt (Partieseite, geteilte Partie, LeagueHub-Nachspielen).
 
+**Große Repertoires ganz lesen** (0.712.0, gemeldet 2026-10-07 an /repertoires/7): `parsePgnText` deckelt seit 0.40.15 bei
+2 MB / 500 Partien (gegen ein einfrierendes Tab). Ein Chessable-Repertoire hat bis ~10 MB — gemessen 6 MB, 1220 Linien, davon
+sah der Browser 274: Linienliste, Zugbaum und Trainer endeten dort, der Server (Stellungssuche, `gameIndex`) kannte alle, und
+„Ansehen" aus „Stellung in meinen Repertoires" trug `line=` leer. Jetzt: `exceedsSyncLimits` → `parsePgnTextWithSourceAsync`
+(ganzes PGN, gibt den Browser alle 30 ms frei; am Stück wären es ~7 s), sonst wie bisher synchron (Aufrufer/Specs bleiben
+synchron — eine async-Funktion läuft bis zum ersten `await` synchron). Repertoire-Seite (mit Fortschrittszeile, Zugbaum aus
+denselben Partien statt zweitem Parse) und Trainer; der Link sucht nur den EINEN Abschnitt (`splitPgnGames` + `findSection`).
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

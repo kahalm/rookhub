@@ -1,4 +1,4 @@
-import { foldVariationsIntoComments, parsePgnText, parsePgnTextWithSource, ParsedGame, splitPgnGames, START_FEN } from './pgn-parser';
+import { exceedsSyncLimits, foldVariationsIntoComments, parsePgnText, parsePgnTextWithSource, parsePgnTextWithSourceAsync, ParsedGame, splitPgnGames, START_FEN } from './pgn-parser';
 
 const SINGLE_GAME = `[Event "Test"]
 [White "Kasparov"]
@@ -310,3 +310,26 @@ describe('Chessables Null-Zug („--")', () => {
     expect(game.moves.map(m => m.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'O-O', 'Nf6', 'd3', 'O-O']);
   });
 });
+
+// 0.712.0: große Chessable-Repertoire (6 MB, 1220 Linien) — vorher endete der Browser nach 2 MB/500 Partien.
+describe('pgn-parser: großes Repertoire in Portionen', () => {
+  const game = (i: number) => `[Event "R"]\n[Round "${i}"]\n[White "Linie ${i}"]\n[Black "Kapitel"]\n\n1. e4 e5 2. Nf3 *\n`;
+  const many = Array.from({ length: 620 }, (_, i) => game(i)).join('\n');
+
+  it('exceedsSyncLimits erkennt mehr als 500 Partien bzw. mehr als 2 MB', () => {
+    expect(exceedsSyncLimits(game(1))).toBeFalse();
+    expect(exceedsSyncLimits(many)).toBeTrue();
+    expect(exceedsSyncLimits('x'.repeat(2_000_001))).toBeTrue();
+  });
+
+  it('der Vorgabe-Weg deckelt bei 500, unbounded und async lesen alle', async () => {
+    expect(parsePgnText(many).length).toBe(500);
+    expect(parsePgnText(many, { unbounded: true }).length).toBe(620);
+    const progress: number[] = [];
+    const parsed = await parsePgnTextWithSourceAsync(many, undefined, done => progress.push(done));
+    expect(parsed.length).toBe(620);
+    expect(parsed[619].game.headers['White']).toBe('Linie 619');
+    expect(progress[progress.length - 1]).toBe(620);
+  });
+});
+
