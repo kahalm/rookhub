@@ -39,11 +39,13 @@ public sealed class LeagueRefresh
     private readonly ILogger<LeagueRefresh> _log;
     private readonly Func<DateTime> _now;
     private readonly LigamanagerSource? _ligamanager;
+    private readonly ZugspitzeSource? _zugspitze;
 
     public LeagueRefresh(AppDbContext db, LeagueService league, IHttpClientFactory http, ILogger<LeagueRefresh> log, Func<DateTime>? now = null,
-        LigamanagerSource? ligamanager = null)
+        LigamanagerSource? ligamanager = null, ZugspitzeSource? zugspitze = null)
     {
         _db = db; _league = league; _http = http; _log = log; _now = now ?? (() => DateTime.UtcNow); _ligamanager = ligamanager;
+        _zugspitze = zugspitze;
     }
 
     public async Task<string> RunAsync(CancellationToken ct)
@@ -74,6 +76,18 @@ public sealed class LeagueRefresh
                         throw new InvalidOperationException($"Liga {tnr}: Nummer passt nicht zur Quelle „{sourceRef}“ "
                             + $"(erwartet {LigamanagerSource.TnrOf(lref.Id)}) — neu einspielen und die alte Zeile löschen");
                     await _ligamanager.ImportAsync(lref, dryRun: false, ct, rebuildViews: false);
+                    continue;
+                }
+                // Ligen des Schachkreises Zugspitze (2026-10-07) ebenso über ihren eigenen Leser; die Nummer muss zu
+                // (Saison, Liga-Id) der Quelle passen (Tnr = TnrOffset + Saison·1000 + Liga-Id).
+                if (source == ZugspitzeSource.Source)
+                {
+                    if (_zugspitze is null || ZugspitzeSource.LeagueRef.Parse(sourceRef) is not { Season: { } zs } zref)
+                        throw new InvalidOperationException($"Liga {tnr}: Zugspitze-Leser fehlt oder Quelle „{sourceRef}“ unlesbar");
+                    if (ZugspitzeSource.TnrOf(zs, zref.LigaId) != tnr)
+                        throw new InvalidOperationException($"Liga {tnr}: Nummer passt nicht zur Quelle „{sourceRef}“ "
+                            + $"(erwartet {ZugspitzeSource.TnrOf(zs, zref.LigaId)})");
+                    await _zugspitze.ImportAsync(zref, dryRun: false, ct, rebuildViews: false);
                     continue;
                 }
                 var pages = await client.GetFromJsonAsync<Pages>($"api/league/{tnr}", Web, ct)

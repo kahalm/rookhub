@@ -348,6 +348,14 @@ try
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
     });
     builder.Services.AddScoped<RookHub.Api.Services.League.LigamanagerSource>();
+    // Dritte Liga-Quelle: Schachkreis Zugspitze (Bayern, 2026-10-07) — ebenso direkt und höflich.
+    builder.Services.AddHttpClient(RookHub.Api.Services.League.ZugspitzeSource.ClientName, client =>
+    {
+        client.BaseAddress = new Uri(RookHub.Api.Services.League.ZugspitzeSource.SiteUrl + "/");
+        client.Timeout = TimeSpan.FromSeconds(60);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
+    });
+    builder.Services.AddScoped<RookHub.Api.Services.League.ZugspitzeSource>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();
     builder.Services.AddHttpClient(nameof(IpCountryService));

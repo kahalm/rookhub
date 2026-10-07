@@ -47,21 +47,22 @@ public sealed partial class LigamanagerSource
     /// (<see cref="TnrOf"/>), nicht unter der nackten Id. <see cref="LeagueTournament.Tnr"/> ist der Primärschlüssel aller
     /// LeagueHub-Tabellen und bei chess-results die Turniernummer (heute 7-stellig, wächst weiter) — die 4-stelligen
     /// Ligamanager-Ids lägen im selben Zahlenraum und könnten mit einem (alten oder künftigen) chess-results-Turnier
-    /// zusammenstoßen. Ab 900 000 000 liegt nichts von chess-results; dazu passt jede Ligamanager-Id bis
-    /// <see cref="MaxLigamanagerId"/> noch in <c>int</c> (<see cref="int.MaxValue"/> = 2 147 483 647).
+    /// zusammenstoßen. Ab 900 000 000 liegt nichts von chess-results. Der Bereich endet bei 909 999 999 (die Adresse lässt
+    /// höchstens 7-stellige Ids zu, <see cref="MaxLigamanagerId"/>) — ab 910 000 000 liegt der Schachkreis Zugspitze
+    /// (<see cref="ZugspitzeSource.TnrOffset"/>).
     /// </summary>
     public const int TnrOffset = 900_000_000;
-    /// <summary>Größte Ligamanager-Id, die über <see cref="TnrOffset"/> noch eine gültige <c>int</c>-Tnr ergibt
-    /// (weit über den heutigen 4-stelligen Ids).</summary>
-    public const int MaxLigamanagerId = int.MaxValue - TnrOffset;
+    /// <summary>Größte Ligamanager-Id (7-stellig wie in der Adresse, weit über den heutigen 4-stelligen Ids) — darüber beginnt
+    /// der Bereich des Schachkreises Zugspitze.</summary>
+    public const int MaxLigamanagerId = 9_999_999;
 
     /// <summary>Tnr einer Ligamanager-Liga: <see cref="TnrOffset"/> + Liga-Id.</summary>
     public static int TnrOf(int ligamanagerId) =>
         ligamanagerId is > 0 and <= MaxLigamanagerId ? TnrOffset + ligamanagerId
             : throw new ArgumentOutOfRangeException(nameof(ligamanagerId), ligamanagerId, "Ligamanager-Id außerhalb des Bereichs");
 
-    /// <summary>Liegt die Tnr im Bereich der Ligamanager-Ligen (über <see cref="TnrOffset"/>)?</summary>
-    public static bool IsLigamanagerTnr(int tnr) => tnr > TnrOffset;
+    /// <summary>Liegt die Tnr im Bereich der Ligamanager-Ligen (über <see cref="TnrOffset"/>, bis <see cref="MaxLigamanagerId"/>)?</summary>
+    public static bool IsLigamanagerTnr(int tnr) => tnr > TnrOffset && tnr <= TnrOffset + MaxLigamanagerId;
 
     /// <summary>Liga-Id des Ligamanagers aus der Tnr; <c>null</c>, wenn die Tnr keine Ligamanager-Tnr ist.</summary>
     public static int? LigamanagerIdOf(int tnr) => IsLigamanagerTnr(tnr) ? tnr - TnrOffset : null;
@@ -642,35 +643,11 @@ public sealed partial class LigamanagerSource
     }
 
     /// <summary>
-    /// Fehlende FIDE-IDs in ALLEN Ligamanager-Ligen ergänzen (Meldeliste + Brettpaarungen): gleicher Verein
-    /// (<see cref="LeagueNames.Club"/>, „SK Weilheim 1" → „SK Weilheim") und gleicher <see cref="LeaguePlayer.NameKey"/>, und
-    /// dazu steht in den anderen Ligamanager-Ligen genau EINE ID. Speichert selbst. → ergänzte Meldelisten-Zeilen.
+    /// Fehlende FIDE-IDs ergänzen — seit der Zugspitze-Quelle (2026-10-07) über die ganze Region Bayern
+    /// (<see cref="LeagueRegions.FillMissingFideAsync"/>: Ligamanager + Schachkreis Zugspitze, gleicher Verein + NameKey, genau
+    /// eine ID). Speichert selbst. → ergänzte Meldelisten-Zeilen.
     /// </summary>
-    public async Task<int> FillMissingFideAsync(CancellationToken ct)
-    {
-        var tnrs = await _db.LeagueTournaments.Where(t => t.Source == Source).Select(t => t.Tnr).ToListAsync(ct);
-        if (tnrs.Count == 0) return 0;
-        var players = await _db.LeaguePlayers.Where(p => tnrs.Contains(p.Tnr)).ToListAsync(ct);
-        var known = players.Where(p => !string.IsNullOrEmpty(p.FideId))
-            .GroupBy(p => (LeagueNames.Club(p.Team, Source), p.NameKey))
-            .Select(g => (g.Key, Ids: g.Select(p => p.FideId!).Distinct().ToList()))
-            .Where(x => x.Ids.Count == 1).ToDictionary(x => x.Key, x => x.Ids[0]);
-        var filled = 0;
-        foreach (var p in players.Where(p => string.IsNullOrEmpty(p.FideId)))
-            if (known.TryGetValue((LeagueNames.Club(p.Team, Source), p.NameKey), out var f)) { p.FideId = f; filled++; }
-        if (filled == 0) return 0;
-        var roster = players.Where(p => !string.IsNullOrEmpty(p.FideId))
-            .GroupBy(p => (p.Tnr, p.Team, p.NameKey)).ToDictionary(g => g.Key, g => g.First().FideId);
-        var games = await _db.LeagueGames.Where(g => tnrs.Contains(g.Tnr)
-            && ((g.HomePlayer != null && g.HomeFide == null) || (g.AwayPlayer != null && g.AwayFide == null))).ToListAsync(ct);
-        foreach (var g in games)
-        {
-            if (g.HomePlayer is { } hp && g.HomeFide is null) g.HomeFide = roster.GetValueOrDefault((g.Tnr, g.HomeTeam, LeagueNames.NameKey(hp)));
-            if (g.AwayPlayer is { } ap && g.AwayFide is null) g.AwayFide = roster.GetValueOrDefault((g.Tnr, g.AwayTeam, LeagueNames.NameKey(ap)));
-        }
-        await _db.SaveChangesAsync(ct);
-        return filled;
-    }
+    public Task<int> FillMissingFideAsync(CancellationToken ct) => LeagueRegions.FillMissingFideAsync(_db, LeagueRegions.Bayern, ct);
 
     /// <summary>Selbst geöffnete Transaktion IN der Execution-Strategy (CLAUDE.md); InMemory kennt keine Transaktionen.</summary>
     private async Task InTransactionAsync(Func<Task> work, CancellationToken ct)

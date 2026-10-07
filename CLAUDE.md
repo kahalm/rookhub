@@ -1731,7 +1731,8 @@ Rollenverwaltung an).
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/import` (Bestand aus `export_bundle.py`, gzip, `?rebuild=true`),
-  `POST /api/league/admin/rebuild`, `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten). Öffentlich (Rate-Limit `anonymous-tournament`):
+  `POST /api/league/admin/rebuild`, `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten),
+  `POST /api/league/admin/zugspitze/import` (Schachkreis Zugspitze, siehe unten). Öffentlich (Rate-Limit `anonymous-tournament`):
   `GET /api/league/s/{token}` (+`/player/{fide}`, `/pgn`) — nur Spieler der geteilten Meldeliste, Online-Konten
   nur „sicher".
 - **Aktualisieren** (0.570.0, `Services/League/LeagueRefresh.cs`): je Liga der laufenden Saison
@@ -1798,6 +1799,47 @@ Rollenverwaltung an).
   Brettpartien, 218 Spieler (196 mit FIDE-ID), kein PGN; 2025/26 — 9 Runden, 45 Begegnungen, 360 Brettpartien (alle mit
   Farbe aus dem PGN, 0 gegen die Regel), 218 Spieler (0 mit FIDE-ID; 100 bekommen sie aus 2026/27), 360 PGN-Partien
   (354 mit Zügen, 280 davon nach der Ergänzung mit FIDE-ID).
+- **Schachkreis Zugspitze als dritte Liga-Quelle** (2026-10-07, Schritt 2 von „LeagueHub für SK Weilheim"): die unteren
+  Mannschaften von SK Weilheim (II Zugspitzliga, III A-Klasse, IV B-Klasse) spielen im Schachkreis Zugspitze
+  (`https://schachkreis-zugspitze.de`, WordPress, kein Ligamanager, kein chess-results). `Services/League/ZugspitzeSource.cs`
+  nach dem Muster des Ligamanager-Lesers (HttpClient `Zugspitze`, User-Agent, 1 s Pause, nur dieser Host, Pfade aus Zahlen).
+  Seiten je Liga + Saison: `ergebnisse/?Saison=Y&Liga=N` (Liga-Name aus dem zweiten `<title>`, Runden „1.Runde am Sonntag,
+  11.10.2026, 10:00 Uhr", Begegnungen mit Mannschaftsergebnis, „6:0 kl" = kampflos, „spielfrei" auch als HEIM → wird zum Gast
+  gedreht), `…&Runde=r` NUR für gespielte Runden (Bretter: Pos = Ranglisten-Nr., „Nachname,Vorname", Titel als Präfix „IM …",
+  DWZ, Ergebnis Heim-Sicht „1:0"/„½"/„+:-"/„0:0kl"; **Farbe = Feldfarbe am Namen**, `#d47844` dunkel = Schwarz), `ligadaten/?Liga=N`
+  NUR laufende Saison (der Parameter Saison wirkt dort nicht; Aufstellung + Spiellokal — die ersten zwei Zeilen, kein
+  Telefon/Kontakt; nie anmelden). Ältere Saisonen: Meldeliste aus den Brettern (wer gespielt hat, Nr. = Pos, DWZ der Seite).
+  Ersatzspieler der laufenden Saison, die nicht in der Aufstellung stehen, bleiben ohne Meldebrett (`boardPlayersUnmatched`).
+  DWZ → `EloN`; **keine FIDE-IDs, kein PGN** (keine Partien in den Spielerkarten). **Tnr** = `ZugspitzeSource.TnrOffset`
+  (910 000 000) + Saisonjahr·1000 + Liga-Id (`TnrOf`/`IsZugspitzeTnr`/`RefOf`; Saison 1990–2199, Liga-Id 1–999 → 911 990 001 …
+  912 199 999; Zugspitzliga 2026/27 = 912 026 001 — die Liga-Ids des Kreises gelten über die Saisonen, eine Saison braucht die
+  Jahreszahl im Schlüssel). Dafür endet der Ligamanager-Bereich jetzt bei 909 999 999 (`MaxLigamanagerId` = 9 999 999, so viel
+  lässt seine Adresse ohnehin zu; `IsLigamanagerTnr` prüft beide Grenzen). `SourceRef` „zugspitze/2026-27/1", Ansicht `source` =
+  Ergebnis-Seite. **Stufen** (`ZugspitzeSource.LevelOf`, nach dem Liga-Namen): Zugspitzliga (früher „Kreisliga") 5, Kreisklasse 6,
+  A-Klasse 7, B-Klasse 8, C-Klasse 9 (Vorrunde Nord/Süd, Endrunde A/B → `League` „C-Klasse", `Grp` „Vorrunde Nord") — anders als im
+  Ligamanager sind Kreisklasse und A-Klasse zwei Stufen (ein Verein hat Mannschaften in beiden); `LeagueLevels.Max` = 9, Kurznamen
+  ZL/KK/A-Kl/B-Kl/C-Kl, darüber die Ligamanager-Namen. **Nicht eingespielt** (400 `unsupportedLeague`): Senioren-Kreisliga, U12/U16,
+  4er-Pokal und die vom Kreis nur gespiegelten Verbandsligen (Oberliga … Bezirksliga, kommen aus dem Ligamanager) — keine Stufe
+  in der Liga-Leiter, ihre Einsätze verfälschten QHigher/QLower, das Modell ist an Erwachsenen-Ligen gerechnet. **Farbregel**:
+  am echten Bestand (2025/26 + 2026/27, Ligen 1/2/3/5, 946 Bretter) 0 Abweichungen von „Heim hat an GERADEN Brettern Weiß"
+  (Ligamanager-Regel); gelesen wird die Feldfarbe, die Regel gilt nur ohne sie. **Endpunkt** `POST /api/league/admin/zugspitze/import`
+  (league.manage) `{ url }` oder `{ ligaId, season? }` (leer = laufende Saison) `+ boards`, `?dryRun=true` → `{ tnr, name, season,
+  level, dryRun, counts{ rounds, roundsPlayed, matches, boardGames, boardGamesPlayed, boardPlayersUnmatched, players, rosterFrom
+  (ligadaten|boards), colorFromPage, colorRuleMismatches, boards }, fideFilled, playersWithFide, views }`; 400
+  `invalidLeague`/`unsupportedLeague`, 404 `notFound` (auch: der Kreis zeigt eine andere Saison), 409 `conflict`, 503
+  `unreachable`. `LeagueRefresh` holt Ligen mit `Source = zugspitze` über diesen Leser (Tnr muss zu `SourceRef` passen).
+  **Region statt Quelle** (`Services/League/LeagueRegions.cs`, die EINE Abbildung Quelle → Region: `null` → `tirol`,
+  `ligamanager`/`zugspitze` → `bayern`): `LeagueWorld.Mpt`/`ClubTeams` sind je (Region, Saison, …) geschlüsselt — SK Weilheim 1
+  (Ligamanager) und SK Weilheim II (Zugspitze) sind EIN Verein, `sameDay`-Konflikte und Einsätze höher/tiefer sehen beide
+  Quellen (die Einsätze `AppsLvl` hingen schon immer nur an Pid). `LeagueNames.Club` streicht in Bayern arabische UND römische
+  Mannschaftsnummern („SK Weilheim II" → „SK Weilheim"; „SK Weilheim II S" bleibt). **FIDE-IDs**: `LeagueRegions.FillMissingFideAsync`
+  (vorher `LigamanagerSource.FillMissingFideAsync`, das jetzt dorthin weiterreicht) füllt in ALLEN Ligen der Region nach —
+  gleicher Verein + NameKey, genau eine ID; daher zuerst die Ligamanager-Ligen der Vereine einspielen. Probelauf 07.10.2026
+  gegen die echten Seiten (mit Landesliga Süd 2026/27 aus dem Ligamanager davor): Zugspitzliga 2026/27 (Liga 1) — 9 Runden, 0
+  gespielt, 45 Begegnungen, 194 Spieler (25 mit FIDE-ID, Weilheim II 12 von 20); A-Klasse (3) — 1 gespielt, 18 Brettpartien,
+  198 Spieler (5; Weilheim III 4/18); B-Klasse (5) — 6 Runden, 1 gespielt, 12 Brettpartien, 101 Spieler (9; Weilheim IV 3/28);
+  Vorsaison 2025/26: Zugspitzliga 352 Brettpartien/150 Spieler (25 FIDE), A-Klasse 252/128 (7), B-Klasse 114/70 (3),
+  Kreisklasse 168/84 (0); 0 Ersatzspieler ohne Meldeliste, 0 Farben gegen die Regel.
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,

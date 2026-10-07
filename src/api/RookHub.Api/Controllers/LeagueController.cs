@@ -496,6 +496,37 @@ public class LeagueController : BaseApiController
             return StatusCode(503, new { reason = "unreachable" });
         }
     }
+
+    /// <summary>Eine Liga des Schachkreises Zugspitze: Adresse (<c>https://schachkreis-zugspitze.de/ergebnisse/?Saison=2026&amp;Liga=1</c>)
+    /// ODER Liga-Id + Saison („2026/27", leer = laufende); <c>Boards</c> wie beim Ligamanager.</summary>
+    public sealed record ZugspitzeImportRequest(string? Url, int? LigaId, string? Season, int? Boards);
+
+    /// <summary>
+    /// Eine Liga des Schachkreises Zugspitze einspielen (2026-10-07, <see cref="ZugspitzeSource"/>) — Runden, Begegnungen,
+    /// Brettpartien (ohne Züge, die Quelle hat kein PGN), Meldelisten; FIDE-IDs aus der Region Bayern nachgefüllt; danach die
+    /// Ansichten. <c>?dryRun=true</c> liest und zählt nur. 400 <c>invalidLeague</c> / <c>unsupportedLeague</c> (Senioren,
+    /// Jugend, Pokal, Verbandsliga), 404 <c>notFound</c>, 409 <c>conflict</c>, 503 <c>unreachable</c>.
+    /// </summary>
+    [HttpPost("admin/zugspitze/import")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> ZugspitzeImport([FromBody] ZugspitzeImportRequest? req, [FromQuery] bool dryRun,
+        [FromServices] ZugspitzeSource zugspitze, CancellationToken ct)
+    {
+        var lref = !string.IsNullOrWhiteSpace(req?.Url) ? ZugspitzeSource.LeagueRef.Parse(req.Url)
+            : ZugspitzeSource.LeagueRef.Of(req?.LigaId, req?.Season);
+        if (lref is null) return BadRequest(new { reason = "invalidLeague" });
+        try
+        {
+            return Ok(await zugspitze.ImportAsync(lref, dryRun, ct, req?.Boards));
+        }
+        catch (ZugspitzeSource.NotFoundException e) { return NotFound(new { reason = "notFound", message = e.Message }); }
+        catch (ZugspitzeSource.UnsupportedException e) { return BadRequest(new { reason = "unsupportedLeague", message = e.Message }); }
+        catch (ZugspitzeSource.ConflictException e) { return Conflict(new { reason = "conflict", message = e.Message }); }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return StatusCode(503, new { reason = "unreachable" });
+        }
+    }
 }
 
 /// <summary>Öffentliche Ansicht eines Teilen-Links: genau EINE Begegnung, ohne Anmeldung, Token = Geheimnis.</summary>

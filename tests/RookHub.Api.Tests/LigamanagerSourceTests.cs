@@ -296,7 +296,10 @@ public class LigamanagerSourceTests : IDisposable
         Assert.False(LigamanagerSource.IsLigamanagerTnr(4711));
         Assert.False(LigamanagerSource.IsLigamanagerTnr(1206271));                         // chess-results
         Assert.Null(LigamanagerSource.LigamanagerIdOf(1206271));
-        Assert.Equal(int.MaxValue, LigamanagerSource.TnrOf(LigamanagerSource.MaxLigamanagerId));   // int-Grenze hält
+        // Der Bereich endet bei 909 999 999 — darüber liegt der Schachkreis Zugspitze (ZugspitzeSource.TnrOffset).
+        Assert.Equal(909_999_999, LigamanagerSource.TnrOf(LigamanagerSource.MaxLigamanagerId));
+        Assert.True(LigamanagerSource.TnrOf(LigamanagerSource.MaxLigamanagerId) < ZugspitzeSource.TnrOffset);
+        Assert.False(LigamanagerSource.IsLigamanagerTnr(ZugspitzeSource.TnrOf(2026, 1)));
         Assert.Throws<ArgumentOutOfRangeException>(() => LigamanagerSource.TnrOf(LigamanagerSource.MaxLigamanagerId + 1));
         Assert.Throws<ArgumentOutOfRangeException>(() => LigamanagerSource.TnrOf(0));
         // Die Adresse lässt höchstens 7-stellige Ids zu — die größte passt mit Versatz weit in int.

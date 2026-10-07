@@ -263,6 +263,10 @@ public sealed class LeagueViewBuilder
             // (LigamanagerSource.TnrOffset) und taugt NIE für eine chess-results-Adresse.
             ["source"] = t.Source == LigamanagerSource.Source || LigamanagerSource.IsLigamanagerTnr(tnr)
                 ? (t.SourceRef is { } sr ? $"{LigamanagerSource.SiteUrl}/{sr}/spielplan" : LigamanagerSource.SiteUrl)
+                // Schachkreis Zugspitze (2026-10-07): die Ergebnis-Seite der Liga in ihrer Saison.
+                : t.Source == ZugspitzeSource.Source || ZugspitzeSource.IsZugspitzeTnr(tnr)
+                ? (ZugspitzeSource.LeagueRef.Parse(t.SourceRef) is { } zr ? zr.Url
+                    : ZugspitzeSource.RefOf(tnr) is { } zt ? new ZugspitzeSource.LeagueRef(zt.LigaId, zt.Season).Url : ZugspitzeSource.SiteUrl)
                 : $"https://chess-results.com/tnr{tnr}.aspx?lan=0",
         };
     }
