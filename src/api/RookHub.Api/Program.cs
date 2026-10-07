@@ -933,6 +933,9 @@ try
         db.Database.Migrate();
         await AdminSeeder.SeedAsync(db, app.Configuration);
         await RoleSeeder.SeedAsync(db);   // RBAC-Grundgerüst (System-Rollen + IsAdmin→admin-Rolle spiegeln)
+        // Ligamanager-Ligen ohne Tnr-Versatz (Altbestand vor dem Versatz; erwartet: keine) nur melden, nicht umschreiben.
+        await RookHub.Api.Services.League.LigamanagerSource.WarnLegacyTnrsAsync(db,
+            app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
     }
 
     // H-5: Global exception handler. Domänen-Ausnahmen kommen hier nicht an (DomainExceptionFilter);

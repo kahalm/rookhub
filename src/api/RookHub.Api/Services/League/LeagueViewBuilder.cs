@@ -259,8 +259,10 @@ public sealed class LeagueViewBuilder
                 ["round"] = r, ["date"] = FmtDate(_w.RDate.GetValueOrDefault((tnr, r))), ["played"] = played[r], ["open"] = open.Contains(r),
             }).ToArray()),
             ["fixtures"] = fixtures,
-            ["source"] = t.Source == LigamanagerSource.Source && t.SourceRef is { } sr
-                ? $"{LigamanagerSource.SiteUrl}/{sr}/spielplan"
+            // Ligamanager: Spielplan aus der Quelle (Region/Saison/Slug-Id) — die Tnr ist dort versetzt
+            // (LigamanagerSource.TnrOffset) und taugt NIE für eine chess-results-Adresse.
+            ["source"] = t.Source == LigamanagerSource.Source || LigamanagerSource.IsLigamanagerTnr(tnr)
+                ? (t.SourceRef is { } sr ? $"{LigamanagerSource.SiteUrl}/{sr}/spielplan" : LigamanagerSource.SiteUrl)
                 : $"https://chess-results.com/tnr{tnr}.aspx?lan=0",
         };
     }

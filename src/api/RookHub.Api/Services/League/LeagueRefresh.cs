@@ -71,6 +71,11 @@ public sealed class LeagueRefresh
                 {
                     if (_ligamanager is null || LigamanagerSource.LeagueRef.Parse(sourceRef) is not { } lref)
                         throw new InvalidOperationException($"Liga {tnr}: Ligamanager-Leser fehlt oder Quelle „{sourceRef}“ unlesbar");
+                    // Nummer und Quelle müssen zusammenpassen (Tnr = TnrOffset + Liga-Id) — sonst schriebe der Import unter
+                    // einer ANDEREN Nummer und die Liga stünde doppelt da (Altbestand ohne Versatz, siehe LegacyTnrsAsync).
+                    if (LigamanagerSource.LigamanagerIdOf(tnr) != lref.Id)
+                        throw new InvalidOperationException($"Liga {tnr}: Nummer passt nicht zur Quelle „{sourceRef}“ "
+                            + $"(erwartet {LigamanagerSource.TnrOf(lref.Id)}) — neu einspielen und die alte Zeile löschen");
                     await _ligamanager.ImportAsync(lref, dryRun: false, ct, rebuildViews: false);
                     continue;
                 }

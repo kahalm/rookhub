@@ -42,6 +42,30 @@ public sealed partial class LigamanagerSource
     public const string ClientName = "Ligamanager";
     public const string SiteUrl = "https://ligamanager.schachbund-bayern.de";
 
+    /// <summary>
+    /// Versatz der Turniernummer (2026-10-07): eine Ligamanager-Liga liegt unter <c>Tnr = TnrOffset + Liga-Id</c>
+    /// (<see cref="TnrOf"/>), nicht unter der nackten Id. <see cref="LeagueTournament.Tnr"/> ist der Primärschlüssel aller
+    /// LeagueHub-Tabellen und bei chess-results die Turniernummer (heute 7-stellig, wächst weiter) — die 4-stelligen
+    /// Ligamanager-Ids lägen im selben Zahlenraum und könnten mit einem (alten oder künftigen) chess-results-Turnier
+    /// zusammenstoßen. Ab 900 000 000 liegt nichts von chess-results; dazu passt jede Ligamanager-Id bis
+    /// <see cref="MaxLigamanagerId"/> noch in <c>int</c> (<see cref="int.MaxValue"/> = 2 147 483 647).
+    /// </summary>
+    public const int TnrOffset = 900_000_000;
+    /// <summary>Größte Ligamanager-Id, die über <see cref="TnrOffset"/> noch eine gültige <c>int</c>-Tnr ergibt
+    /// (weit über den heutigen 4-stelligen Ids).</summary>
+    public const int MaxLigamanagerId = int.MaxValue - TnrOffset;
+
+    /// <summary>Tnr einer Ligamanager-Liga: <see cref="TnrOffset"/> + Liga-Id.</summary>
+    public static int TnrOf(int ligamanagerId) =>
+        ligamanagerId is > 0 and <= MaxLigamanagerId ? TnrOffset + ligamanagerId
+            : throw new ArgumentOutOfRangeException(nameof(ligamanagerId), ligamanagerId, "Ligamanager-Id außerhalb des Bereichs");
+
+    /// <summary>Liegt die Tnr im Bereich der Ligamanager-Ligen (über <see cref="TnrOffset"/>)?</summary>
+    public static bool IsLigamanagerTnr(int tnr) => tnr > TnrOffset;
+
+    /// <summary>Liga-Id des Ligamanagers aus der Tnr; <c>null</c>, wenn die Tnr keine Ligamanager-Tnr ist.</summary>
+    public static int? LigamanagerIdOf(int tnr) => IsLigamanagerTnr(tnr) ? tnr - TnrOffset : null;
+
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _http;
     private readonly LeagueService _league;
@@ -98,7 +122,7 @@ public sealed partial class LigamanagerSource
         private static LeagueRef? Make(string region, string y1, string y2, string slug, string id)
         {
             if (!int.TryParse(y1, out var a) || !int.TryParse(y2, out var b) || b != a + 1) return null;
-            if (!int.TryParse(id, out var n) || n <= 0) return null;
+            if (!int.TryParse(id, out var n) || n is <= 0 or > MaxLigamanagerId) return null;   // muss über TnrOffset in int passen
             return new LeagueRef(region.ToLowerInvariant(), $"{y1}-{y2}", slug.ToLowerInvariant(), n);
         }
     }
@@ -410,14 +434,15 @@ public sealed partial class LigamanagerSource
         var rosterRows = roster.Select(r => new LeagueRefresh.RosterRow(null, r.Title, r.Name, r.Fide, r.Elo, r.Dwz, null, r.Team, r.Nr)).ToList();
         var statRows = stats.Select(kv => new LeagueRefresh.StatsRow(kv.Key.Team, kv.Value.Rb, kv.Key.Name, kv.Value.Pts, kv.Value.N, null)).ToList();
         var roundDates = schedule.Rounds.ToDictionary(r => r.Round, r => r.Date);
-        var pages = new LeagueRefresh.Pages(lref.Id, matches, games, roundDates, rosterRows, statRows);
+        var tnr = TnrOf(lref.Id);
+        var pages = new LeagueRefresh.Pages(tnr, matches, games, roundDates, rosterRows, statRows);
 
         var dated = schedule.Rounds.Select(r => LeagueDates.Parse(r.Date)).Where(d => d is not null).Select(d => d!.Value).ToList();
         int? boards = games.Count > 0 ? games.Max(g => g.Board) : null;
         var title = schedule.Title.Length > 0 ? schedule.Title : lref.Slug;
         var tournament = new LeagueTournament
         {
-            Tnr = lref.Id,
+            Tnr = tnr,
             Name = Cut($"{title} {lref.Season.Replace('-', '/')}", 200),
             Season = lref.SeasonLabel,
             Level = LevelOf(lref.Slug),
@@ -488,7 +513,8 @@ public sealed partial class LigamanagerSource
 
     /// <summary>Die Liga gibt es beim Ligamanager nicht (404 auf dem Spielplan).</summary>
     public sealed class NotFoundException(string message) : Exception(message);
-    /// <summary>Die Nummer gehört schon einer Liga aus einer anderen Quelle (chess-results).</summary>
+    /// <summary>Die Nummer gehört schon einer Liga aus einer anderen Quelle (chess-results). Seit dem <see cref="TnrOffset"/>
+    /// nur noch ein Sicherheitsnetz — chess-results-Nummern reichen nicht bis dorthin.</summary>
     public sealed class ConflictException(string message) : Exception(message);
 
     private async Task<(byte[] Body, string? Charset)?> GetAsync(HttpClient client, string path, CancellationToken ct)
@@ -536,6 +562,8 @@ public sealed partial class LigamanagerSource
         if (dryRun)
             return new ImportResult(t.Tnr, t.Name, t.Season, t.Level, true, parsed.Counts, 0, 0, 0, 0, null);
 
+        // Sicherheitsnetz: unter der (versetzten) Nummer steht eine Liga FREMDER Quelle — dann nichts überschreiben.
+        // Dieselbe Liga (Source = ligamanager) wird ersetzt wie gehabt.
         var existing = await _db.LeagueTournaments.AsNoTracking().FirstOrDefaultAsync(x => x.Tnr == t.Tnr, ct);
         if (existing is not null && existing.Source != Source)
             throw new ConflictException($"Nummer {t.Tnr} gehört schon der Liga „{existing.Name}“ ({existing.Source ?? "chess-results"})");
@@ -566,6 +594,35 @@ public sealed partial class LigamanagerSource
         _log.LogInformation("LeagueHub: Ligamanager-Liga {Path} eingespielt — {Matches} Begegnungen, {Boards} Bretter, {Games} Partien in {Profiles} Karten",
             lref.Path, parsed.Counts.Matches, parsed.Counts.BoardGames, imported, profiles);
         return new ImportResult(t.Tnr, t.Name, t.Season, t.Level, false, parsed.Counts, n, withFide, profiles, fideFilled, views);
+    }
+
+    /// <summary>
+    /// Ligamanager-Ligen unter einer UNversetzten Nummer (<c>Source = ligamanager</c>, <c>Tnr ≤ TnrOffset</c>) — so hätte sie der
+    /// Import bis 0.697.0 angelegt. <b>Bewusst keine Umschreibe-Migration</b>: der Endpunkt lief bis zum Versatz gegen keine
+    /// Datenbank (Dev und Prod ohne Ligamanager-Ligen), und ein Umschlüsseln über sieben Tabellen (Turnier, Runden, Begegnungen,
+    /// Bretter, Meldelisten, Ansichten, Teilen-Links; die Vereinspartien hängen an <c>LeagueGames.Id</c>, nicht an der Tnr) wäre
+    /// viel Code für einen Fall, den es nicht gibt. Stattdessen meldet der Start solche Zeilen als Warnung, und das Aktualisieren
+    /// lässt sie aus (sonst entstünde dieselbe Liga ein zweites Mal unter der neuen Nummer). Abhilfe, falls doch eine auftaucht:
+    /// die Liga neu einspielen (landet unter der versetzten Nummer) und die alte Zeile samt Abhängigen löschen.
+    /// </summary>
+    public static async Task<List<(int Tnr, string? SourceRef)>> LegacyTnrsAsync(AppDbContext db, CancellationToken ct = default) =>
+        (await db.LeagueTournaments.AsNoTracking().Where(t => t.Source == Source && t.Tnr <= TnrOffset)
+            .Select(t => new { t.Tnr, t.SourceRef }).ToListAsync(ct))
+        .Select(t => (t.Tnr, t.SourceRef)).ToList();
+
+    /// <summary>Beim Start: <see cref="LegacyTnrsAsync"/> als Warnung ins Log. Wirft nie — ein Prüffehler darf den Start nicht kippen.</summary>
+    public static async Task WarnLegacyTnrsAsync(AppDbContext db, ILogger log, CancellationToken ct = default)
+    {
+        try
+        {
+            foreach (var (tnr, sourceRef) in await LegacyTnrsAsync(db, ct))
+                log.LogWarning("LeagueHub: Ligamanager-Liga {Tnr} ({SourceRef}) liegt unter einer Nummer ohne Versatz {Offset} — "
+                    + "wird nicht aktualisiert; neu einspielen und die alte Zeile löschen", tnr, sourceRef, TnrOffset);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            log.LogWarning(ex, "LeagueHub: Prüfung auf Ligamanager-Ligen ohne Versatz gescheitert");
+        }
     }
 
     /// <summary>Bretter derselben Liga einer früheren Saison (gleiche Region + Slug) — vor der ersten Runde steht die Zahl

@@ -23,6 +23,8 @@ public class LigamanagerSourceTests : IDisposable
     private static string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ligamanager", name);
     private static string Html(string name) => File.ReadAllText(Fixture(name), Encoding.UTF8);
     private static readonly LigamanagerSource.LeagueRef Ref = LigamanagerSource.LeagueRef.Parse("bsb/2026-2027/landesliga-testgau-4711")!;
+    /// <summary>Tnr der Test-Liga (Ligamanager-Id 4711) bzw. ihrer Vorsaison (4600) — versetzt um <see cref="LigamanagerSource.TnrOffset"/>.</summary>
+    private const int T = LigamanagerSource.TnrOffset + 4711, TPrev = LigamanagerSource.TnrOffset + 4600;
 
     // ── Adresse + Stufe ─────────────────────────────────────────────────────────────────────────
 
@@ -131,7 +133,7 @@ public class LigamanagerSourceTests : IDisposable
         Assert.Equal((1, 1.0, 0.0), (forfeit.Forfeit, forfeit.HomeScore!.Value, forfeit.AwayScore!.Value));
         Assert.Equal("Beispiel, Bernd Dr.", g.Single(x => x.MatchNo == 1 && x.Board == 2).HomePlayer);   // Name aus der Meldeliste
         var t = p.Tournament;
-        Assert.Equal((4711, "Landesliga Testgau 2026/2027", "2026/27", 3, "Landesliga Testgau", "ligamanager", "bsb/2026-2027/landesliga-testgau-4711"),
+        Assert.Equal((T, "Landesliga Testgau 2026/2027", "2026/27", 3, "Landesliga Testgau", "ligamanager", "bsb/2026-2027/landesliga-testgau-4711"),
             (t.Tnr, t.Name, t.Season, t.Level, t.League, t.Source!, t.SourceRef!));
         Assert.Equal(("11.10.2026", "25.10.2026", 2), (t.Start!, t.End!, t.Rounds!.Value));
         var stat = p.Pages.Stats.Single(s => s.Name == "Örtel, Ömer");
@@ -205,7 +207,7 @@ public class LigamanagerSourceTests : IDisposable
         var res = await Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default);
 
         Assert.False(res.DryRun);
-        Assert.Equal((4711, "2026/27", 3), (res.Tnr, res.Season, res.Level));
+        Assert.Equal((T, "2026/27", 3), (res.Tnr, res.Season, res.Level));
         Assert.Equal((7, 5), (res.ProfileGames, res.ProfileGamesWithFide));
         Assert.Equal(1, res.Views);
         var t = _db.LeagueTournaments.Single();
@@ -229,7 +231,9 @@ public class LigamanagerSourceTests : IDisposable
         Assert.Equal(1, card.GameCount);
         // Ansicht gerechnet, Link auf den Ligamanager
         var view = _db.LeagueViews.Single();
-        Assert.Contains("https://ligamanager.schachbund-bayern.de/bsb/2026-2027/landesliga-testgau-4711/spielplan", view.Json);
+        Assert.Equal(T, view.Tnr);
+        Assert.Contains("\"source\":\"https://ligamanager.schachbund-bayern.de/bsb/2026-2027/landesliga-testgau-4711/spielplan\"", view.Json);
+        Assert.DoesNotContain("chess-results.com/tnr", view.Json);      // die versetzte Tnr taugt nie für chess-results
         Assert.Contains("\"boards\":4", view.Json);
     }
 
@@ -258,11 +262,59 @@ public class LigamanagerSourceTests : IDisposable
     [Fact]
     public async Task Import_RefusesANumberThatBelongsToAChessResultsLeague()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4711, Name = "TMM", Season = "2026/27", Level = 1, League = "Landesliga" });
+        // Sicherheitsnetz: unter der VERSETZTEN Nummer steht (künstlich) eine Liga fremder Quelle → 409, nichts geschrieben.
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = T, Name = "TMM", Season = "2026/27", Level = 1, League = "Landesliga" });
         await _db.SaveChangesAsync();
         await Assert.ThrowsAsync<LigamanagerSource.ConflictException>(() =>
             Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default));
         Assert.Empty(_db.LeagueGames);
+        Assert.Equal("TMM", _db.LeagueTournaments.Single().Name);
+    }
+
+    [Fact]
+    public async Task Import_ChessResultsLeagueWithTheBareLigamanagerId_NoLongerCollides()
+    {
+        // Vor dem Versatz brach das mit 409 ab; jetzt liegen beide nebeneinander.
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4711, Name = "TMM", Season = "2026/27", Level = 1, League = "Landesliga" });
+        await _db.SaveChangesAsync();
+        var res = await Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default);
+        Assert.Equal(T, res.Tnr);
+        Assert.Equal(new[] { 4711, T }, _db.LeagueTournaments.OrderBy(t => t.Tnr).Select(t => t.Tnr).ToArray());
+        Assert.Null(_db.LeagueTournaments.Single(t => t.Tnr == 4711).Source);
+        Assert.All(_db.LeagueGames, g => Assert.Equal(T, g.Tnr));
+        Assert.All(_db.LeaguePlayers, p => Assert.Equal(T, p.Tnr));
+        Assert.All(_db.LeagueMatches, m => Assert.Equal(T, m.Tnr));
+        Assert.All(_db.LeagueRounds, r => Assert.Equal(T, r.Tnr));
+    }
+
+    [Fact]
+    public void Tnr_IsOffsetAndRoundTrips()
+    {
+        Assert.Equal(900_004_711, LigamanagerSource.TnrOf(4711));
+        Assert.True(LigamanagerSource.IsLigamanagerTnr(T));
+        Assert.Equal(4711, LigamanagerSource.LigamanagerIdOf(T));
+        Assert.False(LigamanagerSource.IsLigamanagerTnr(4711));
+        Assert.False(LigamanagerSource.IsLigamanagerTnr(1206271));                         // chess-results
+        Assert.Null(LigamanagerSource.LigamanagerIdOf(1206271));
+        Assert.Equal(int.MaxValue, LigamanagerSource.TnrOf(LigamanagerSource.MaxLigamanagerId));   // int-Grenze hält
+        Assert.Throws<ArgumentOutOfRangeException>(() => LigamanagerSource.TnrOf(LigamanagerSource.MaxLigamanagerId + 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LigamanagerSource.TnrOf(0));
+        // Die Adresse lässt höchstens 7-stellige Ids zu — die größte passt mit Versatz weit in int.
+        var big = LigamanagerSource.LeagueRef.Parse("bsb/2026-2027/xx-9999999")!;
+        Assert.Equal(909_999_999, LigamanagerSource.TnrOf(big.Id));
+        Assert.Null(LigamanagerSource.LeagueRef.Parse("bsb/2026-2027/xx-12345678"));
+    }
+
+    [Fact]
+    public async Task LegacyTnrs_FindsLigamanagerLeaguesWithoutTheOffsetOnly()
+    {
+        _db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = 4711, Season = "2026/27", Level = 3, Source = LigamanagerSource.Source, SourceRef = Ref.Path },  // alt
+            new LeagueTournament { Tnr = TPrev, Season = "2025/26", Level = 3, Source = LigamanagerSource.Source },                     // neu
+            new LeagueTournament { Tnr = 1206271, Season = "2025/26", Level = 1 });                                                       // chess-results
+        await _db.SaveChangesAsync();
+        Assert.Equal(new[] { (4711, (string?)Ref.Path) }, (await LigamanagerSource.LegacyTnrsAsync(_db)).ToArray());
+        await LigamanagerSource.WarnLegacyTnrsAsync(_db, NullLogger.Instance);    // wirft nicht
     }
 
     [Fact]
@@ -276,9 +328,9 @@ public class LigamanagerSourceTests : IDisposable
     public async Task Import_BeforeTheFirstRound_TakesTheBoardsFromThePreviousSeason()
     {
         // Vorsaison derselben Liga mit 4 Brettern
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4600, Season = "2025/26", Level = 3, League = "Landesliga Testgau",
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = TPrev, Season = "2025/26", Level = 3, League = "Landesliga Testgau",
             Source = LigamanagerSource.Source, SourceRef = "bsb/2025-2026/landesliga-testgau-4600" });
-        _db.LeagueGames.Add(new LeagueGame { Tnr = 4600, Round = 1, MatchNo = 1, Board = 4, HomeTeam = "a", AwayTeam = "b" });
+        _db.LeagueGames.Add(new LeagueGame { Tnr = TPrev, Round = 1, MatchNo = 1, Board = 4, HomeTeam = "a", AwayTeam = "b" });
         await _db.SaveChangesAsync();
         var noBoards = Html("spielplan.html");
         noBoards = System.Text.RegularExpressions.Regex.Replace(noBoards, @"<tr class=""text-center""> <th class=""brett-nr.*?</tr>", "",
@@ -288,30 +340,30 @@ public class LigamanagerSourceTests : IDisposable
             : Site(r, pgn: false));
         var res = await Source(http).ImportAsync(Ref, dryRun: false, default);
         Assert.Equal(0, res.Counts.BoardGames);
-        Assert.Equal(4, _db.LeagueTournaments.Single(t => t.Tnr == 4711).Boards);
-        Assert.Contains("\"boards\":4", _db.LeagueViews.Single(v => v.Tnr == 4711).Json);
+        Assert.Equal(4, _db.LeagueTournaments.Single(t => t.Tnr == T).Boards);
+        Assert.Contains("\"boards\":4", _db.LeagueViews.Single(v => v.Tnr == T).Json);
     }
 
     [Fact]
     public async Task FillMissingFide_CarriesIdsToOlderSeasonsOfTheSameClub()
     {
         _db.LeagueTournaments.AddRange(
-            new LeagueTournament { Tnr = 4600, Season = "2025/26", Level = 3, Source = LigamanagerSource.Source },
+            new LeagueTournament { Tnr = TPrev, Season = "2025/26", Level = 3, Source = LigamanagerSource.Source },
             new LeagueTournament { Tnr = 1206271, Season = "2025/26", Level = 1 });                       // chess-results: bleibt
         _db.LeaguePlayers.AddRange(
-            new LeaguePlayer { Tnr = 4600, Team = "SK Musterstadt 2", Name = "Muster, Max", NameKey = "muster, max" },
-            new LeaguePlayer { Tnr = 4600, Team = "SC Anderswo 1", Name = "Probe, Paula", NameKey = "probe, paula" },
+            new LeaguePlayer { Tnr = TPrev, Team = "SK Musterstadt 2", Name = "Muster, Max", NameKey = "muster, max" },
+            new LeaguePlayer { Tnr = TPrev, Team = "SC Anderswo 1", Name = "Probe, Paula", NameKey = "probe, paula" },
             new LeaguePlayer { Tnr = 1206271, Team = "Schwaz", Name = "Muster, Max", NameKey = "muster, max" });
-        _db.LeagueGames.Add(new LeagueGame { Tnr = 4600, Round = 1, MatchNo = 1, Board = 1, HomeTeam = "SK Musterstadt 2", AwayTeam = "x",
+        _db.LeagueGames.Add(new LeagueGame { Tnr = TPrev, Round = 1, MatchNo = 1, Board = 1, HomeTeam = "SK Musterstadt 2", AwayTeam = "x",
             HomePlayer = "Muster, Max", AwayPlayer = "Unbekannt, U" });
         await _db.SaveChangesAsync();
 
         await Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default);
 
-        Assert.Equal("90000001", _db.LeaguePlayers.Single(p => p.Tnr == 4600 && p.NameKey == "muster, max").FideId);   // gleicher Verein
-        Assert.Null(_db.LeaguePlayers.Single(p => p.Tnr == 4600 && p.NameKey == "probe, paula").FideId);              // anderer Verein
+        Assert.Equal("90000001", _db.LeaguePlayers.Single(p => p.Tnr == TPrev && p.NameKey == "muster, max").FideId);   // gleicher Verein
+        Assert.Null(_db.LeaguePlayers.Single(p => p.Tnr == TPrev && p.NameKey == "probe, paula").FideId);              // anderer Verein
         Assert.Null(_db.LeaguePlayers.Single(p => p.Tnr == 1206271).FideId);                                          // nicht Ligamanager
-        var g = _db.LeagueGames.Single(x => x.Tnr == 4600);
+        var g = _db.LeagueGames.Single(x => x.Tnr == TPrev);
         Assert.Equal(("90000001", (string?)null), (g.HomeFide!, g.AwayFide));
     }
 
@@ -320,7 +372,7 @@ public class LigamanagerSourceTests : IDisposable
     [Fact]
     public async Task Refresh_FetchesLigamanagerLeaguesFromTheirSourceNotFromTheCrawler()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4711, Season = "2026/27", Level = 3, League = "Landesliga Testgau",
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = T, Season = "2026/27", Level = 3, League = "Landesliga Testgau",
             Source = LigamanagerSource.Source, SourceRef = Ref.Path });
         await _db.SaveChangesAsync();
         var http = new Factory((name, r) => name == LigamanagerSource.ClientName ? Site(r) : new HttpResponseMessage(HttpStatusCode.NotFound));
@@ -330,9 +382,9 @@ public class LigamanagerSourceTests : IDisposable
         var msg = await refresh.RunAsync(default);
 
         Assert.StartsWith("1 Ligen neu geholt", msg);
-        Assert.DoesNotContain(http.Calls, c => c.Contains("api/league/4711"));      // nicht über chess-results
+        Assert.DoesNotContain(http.Calls, c => c.Contains($"api/league/{T}"));      // nicht über chess-results
         Assert.Contains(http.Calls, c => c.EndsWith("/bsb/2026-2027/landesliga-testgau-4711/spielplan"));
-        Assert.Equal(8, _db.LeagueGames.Count(g => g.Tnr == 4711));
+        Assert.Equal(8, _db.LeagueGames.Count(g => g.Tnr == T));
         Assert.Single(_db.LeagueViews);
     }
 
@@ -340,12 +392,28 @@ public class LigamanagerSourceTests : IDisposable
     public async Task Refresh_WithoutTheReader_ReportsTheLeagueAsNotUpdated()
     {
         _db.LeagueTournaments.AddRange(
-            new LeagueTournament { Tnr = 4711, Season = "2026/27", Level = 3, Source = LigamanagerSource.Source, SourceRef = Ref.Path });
+            new LeagueTournament { Tnr = T, Season = "2026/27", Level = 3, Source = LigamanagerSource.Source, SourceRef = Ref.Path });
         await _db.SaveChangesAsync();
         var http = new Factory((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound));
         var refresh = new LeagueRefresh(_db, League(), http, NullLogger<LeagueRefresh>.Instance, () => Now);
         await Assert.ThrowsAsync<InvalidOperationException>(() => refresh.RunAsync(default));   // die einzige Liga scheitert
-        Assert.DoesNotContain(http.Calls, c => c.Contains("api/league/4711"));
+        Assert.DoesNotContain(http.Calls, c => c.Contains($"api/league/{T}"));
+    }
+
+    [Fact]
+    public async Task Refresh_LeavesALegacyRowWithoutOffsetAlone()
+    {
+        // Altbestand (Import vor dem Versatz): Nummer 4711 passt nicht zur Quelle → nicht holen, sonst stünde die Liga doppelt da.
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4711, Season = "2026/27", Level = 3, League = "Landesliga Testgau",
+            Source = LigamanagerSource.Source, SourceRef = Ref.Path });
+        await _db.SaveChangesAsync();
+        var http = new Factory((name, r) => name == LigamanagerSource.ClientName ? Site(r) : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var refresh = new LeagueRefresh(_db, League(), http, NullLogger<LeagueRefresh>.Instance, () => Now, Source(http));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => refresh.RunAsync(default));   // die einzige Liga scheitert
+        Assert.Contains("4711", ex.Message);
+        Assert.Empty(http.Calls);
+        Assert.Single(_db.LeagueTournaments);
+        Assert.Empty(_db.LeagueGames);
     }
 
     // ── Endpunkt ────────────────────────────────────────────────────────────────────────────────

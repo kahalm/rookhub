@@ -32,7 +32,7 @@ public class LeagueTournament
     /// <summary>
     /// Herkunft der Liga (2026-10-07): <c>null</c> = chess-results (dann ist <see cref="Tnr"/> die chess-results-Nummer),
     /// <c>"ligamanager"</c> = SBV-Ligamanager (Bayern, <see cref="Services.League.LigamanagerSource"/>; <see cref="Tnr"/> ist dann
-    /// die Liga-Id des Ligamanagers, 4-stellig). „Daten aktualisieren" holt jede Liga aus ihrer Quelle.
+    /// <see cref="Services.League.LigamanagerSource.TnrOffset"/> + Liga-Id des Ligamanagers, z. B. 900 002 573). „Daten aktualisieren" holt jede Liga aus ihrer Quelle.
     /// </summary>
     public string? Source { get; set; }
     /// <summary>Wo die Liga in der Quelle liegt — beim Ligamanager „bsb/2026-2027/landesliga-sued-2573" (Region/Saison/Slug-Id).</summary>

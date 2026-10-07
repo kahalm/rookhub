@@ -1565,7 +1565,7 @@ Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag
 alles; die Vereinsgruppe bekommt eine Rolle mit `league.view` + `league.contribute` (legt der Admin in der
 Rollenverwaltung an).
 
-- **Tabellen** (`Models/League.cs`): `LeagueTournaments` (PK = chess-results-tnr bzw. Ligamanager-Id, Season/Level/League/Grp/Stage,
+- **Tabellen** (`Models/League.cs`): `LeagueTournaments` (PK = chess-results-tnr bzw. 900 000 000 + Ligamanager-Id, Season/Level/League/Grp/Stage,
   Source/SourceRef/Boards — siehe „Ligamanager"),
   `LeagueRounds` (Datum je Runde), `LeagueMatches`, `LeagueGames` (Brettpartien, Spieler null = „Brett nicht
   besetzt", Forfeit 0/1/2 — 2 = „- - -", z. B. Corona-Abbruch 2019/20), `LeaguePlayers` (Meldeliste;
@@ -1756,8 +1756,14 @@ Rollenverwaltung an).
   (Verknüpfung über (Team, NameKey); Namen „Pieper, Thomas, Dr." → „Pieper, Thomas Dr."; Spieler am Brett über die Melde-Nr.).
   Statistik (Punkte/Partien) aus den Brettergebnissen, `EloPerf` leer. **Farben**: der Spielplan nennt keine — aus dem PGN
   (WhiteTeam), sonst die bayerische Regel **Heim hat an GERADEN Brettern Weiß** (`HomeWhiteByRule`; geprüft an 2025/26:
-  360/360). **Turnier-Zeile**: `Tnr` = Liga-Id des Ligamanagers (4-stellig, chess-results ist 7-stellig; eine Nummer, die
-  schon einer Liga anderer Quelle gehört, → `ConflictException`/409), neue Spalten `Source` (`null` = chess-results,
+  360/360). **Turnier-Zeile**: `Tnr` = `LigamanagerSource.TnrOffset` (900 000 000) + Liga-Id des Ligamanagers
+  (`TnrOf`/`IsLigamanagerTnr`/`LigamanagerIdOf`, seit 0.697.1; z. B. 900 002 573 — chess-results ist 7-stellig und reicht
+  nie dorthin; die Adresse lässt max. 7-stellige Ids zu, das passt weit in `int`). Hält eine Liga FREMDER Quelle schon
+  dieselbe Nummer → `ConflictException`/409 (nur noch Sicherheitsnetz). **Altbestand ohne Versatz** (`Source = ligamanager`,
+  `Tnr ≤ TnrOffset`; gab es nie — Dev/Prod hatten beim Umstellen keine Ligamanager-Ligen): bewusst KEINE
+  Umschreibe-Migration; `LegacyTnrsAsync` meldet sie beim Start als Warnung, `LeagueRefresh` lässt sie aus (Tnr passt nicht
+  zur Id in `SourceRef` → Liga gescheitert, sonst entstünde sie doppelt). Abhilfe: neu einspielen, alte Zeile samt
+  Abhängigen löschen (`LeagueClubGames` hängt an `LeagueGames.Id`, nicht an der Tnr). Neue Spalten `Source` (`null` = chess-results,
   `"ligamanager"`), `SourceRef` („bsb/2026-2027/landesliga-sued-2573"), `Boards` (Bretter je Begegnung, solange keine Runde
   gespielt ist: Anfrage `boards`, sonst die Vorsaison derselben Region+Slug; `LeagueWorld.BoardsOf` nimmt sie vor der
   Tiroler Stufen-Vorgabe). Season „2026/27", League = Überschrift („Landesliga Süd"), Grp leer. **Stufen**
