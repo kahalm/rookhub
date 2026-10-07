@@ -2753,7 +2753,7 @@
       "master": "Napisano uz komentar majstora o ovoj poziciji: {{game}}",
       "masterBy": "komentirao {{name}}",
       "explaining": "Objašnjenja se pišu …",
-      "bookHint": "U tvom repertoaru (označenom za proširenje)",
+      "bookHint": "U tvom repertoaru (označenom za ekstenziju i pripremu)",
       "lines": "Računalne varijante",
       "arrow": "Strelica za najbolji potez",
       "refining": "Dublja analiza — {{done}} od {{total}} pozicija"

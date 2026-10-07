@@ -2753,7 +2753,7 @@
       "master": "Written with a master's comment on this position: {{game}}",
       "masterBy": "annotated by {{name}}",
       "explaining": "Writing explanations …",
-      "bookHint": "In your repertoire (marked for the extension)",
+      "bookHint": "In your repertoire (marked for extension and preparation)",
       "lines": "Computer lines",
       "arrow": "Best-move arrow",
       "refining": "Deeper analysis — {{done}} of {{total}} positions"

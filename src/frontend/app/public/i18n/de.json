@@ -2753,7 +2753,7 @@
       "master": "Mit einem Meisterkommentar zu dieser Stellung: {{game}}",
       "masterBy": "kommentiert von {{name}}",
       "explaining": "Erklärungen werden geschrieben …",
-      "bookHint": "In deinem Repertoire (für die Erweiterung markiert)",
+      "bookHint": "In deinem Repertoire (für Extension und Vorbereitung markiert)",
       "lines": "Computer-Linien",
       "arrow": "Pfeil für den besten Zug",
       "refining": "Vertiefung läuft — {{done}} von {{total}} Stellungen"

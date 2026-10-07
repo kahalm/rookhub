@@ -3070,7 +3070,7 @@
       "master": "Egy mester erről az állásról írt kommentárjával: {{game}}",
       "masterBy": "kommentálta: {{name}}",
       "explaining": "A magyarázatok készülnek …",
-      "bookHint": "A repertoárodban (a bővítményhez megjelölve)",
+      "bookHint": "A repertoárodban (a bővítményhez és a felkészüléshez megjelölve)",
       "lines": "Gépi változatok",
       "arrow": "Nyíl a legjobb lépéshez",
       "refining": "Mélyebb elemzés — {{done}} / {{total}} állás"
