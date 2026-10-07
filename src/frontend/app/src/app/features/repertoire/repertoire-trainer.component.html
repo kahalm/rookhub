@@ -39,7 +39,10 @@
     }
   </div>
 
-  @if (freqOrder && freqNotice && !freqRunning) {
+  @if (opponentNotice) {
+    <!-- Reihenfolge nach einem Gegner (Spielerkarte → „Alle in dieser Reihenfolge trainieren") -->
+    <p class="freq-notice opponent-notice">{{ opponentNotice | translate }}</p>
+  } @else if (freqOrder && freqNotice && !freqRunning) {
     <p class="freq-notice">{{ freqNotice | translate }}</p>
   }
 

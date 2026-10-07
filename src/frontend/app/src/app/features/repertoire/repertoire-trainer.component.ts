@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, Optional } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -37,6 +38,7 @@ import { normalizeFen } from './position-filter.util';
 import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -182,6 +184,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   freqNotice: string | null = null;
   private freqSub: Subscription | null = null;
 
+  /** Reihenfolge nach einem Gegner (`?opponent=prep:<id>|league:<fide>`, „Alle in dieser Reihenfolge trainieren" der
+   *  Spielerkarte, 2026-10-07): dieselben Trainingslinien wie dort, wahrscheinlichste zuerst; nur die Kapitel der Farbe
+   *  (`?color=`). Ohne den Parameter bleibt der Trainer, wie er war. */
+  opponent: string | null = null;
+  private opponentColor: TrainColor | null = null;
+  /** Linien-Schlüssel → Platz in der Reihenfolge des Gegners; null = (noch) keine. */
+  private opponentRank: Map<string, number> | null = null;
+  /** Hinweis zur Gegner-Reihenfolge (i18n-Key). */
+  opponentNotice: string | null = null;
+  /** Einmal in den anderen Modus gewechselt, weil im gewählten nichts zu tun war. */
+  private opponentSwitched = false;
+  private opponentSub: Subscription | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private training: RepertoireTrainingService,
@@ -194,6 +209,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private explorer: RepertoireExplorerService,
     private snackbar: SnackbarService,
     private confirm: ConfirmService,
+    /** Nur für die Reihenfolge nach einem Gegner (`?opponent=`); optional, damit die Specs ohne HTTP bauen. */
+    @Optional() private http: HttpClient | null = null,
   ) {}
 
   ngOnInit(): void {
@@ -201,6 +218,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.chapterFilter = this.route.snapshot.queryParamMap.get('chapter');
     this.mode = this.route.snapshot.queryParamMap.get('mode') === 'learn' ? 'learn' : 'quiz';
     this.singleLineKey = this.route.snapshot.queryParamMap.get('line');
+    this.opponent = trainingLinesUrl(this.route.snapshot.queryParamMap.get('opponent')) ? this.route.snapshot.queryParamMap.get('opponent') : null;
+    const oc = this.route.snapshot.queryParamMap.get('color');
+    this.opponentColor = oc === 'w' || oc === 'b' ? oc : null;
     this.stockfish.init().catch(() => {});
 
     forkJoin({
@@ -239,11 +259,52 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     // Farben mischt.
     this.chapterColors = chapterColorsOf(this.repertoireId, this.allLines);
     this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
-    if (this.freqOrder && !this.offlineSession) this.loadFrequencies();
+    if (this.opponent && !this.offlineSession) this.loadOpponentOrder();
+    else if (this.freqOrder && !this.offlineSession) this.loadFrequencies();
     else this.buildQueue();
   }
 
-  ngOnDestroy(): void { this.clearLineTimers(); this.freqSub?.unsubscribe(); }
+  ngOnDestroy(): void { this.clearLineTimers(); this.freqSub?.unsubscribe(); this.opponentSub?.unsubscribe(); }
+
+  /** Die Trainingslinien gegen den Gegner holen (alle, nicht nur die ersten 50) und danach die Sitzung aufbauen. */
+  private loadOpponentOrder(): void {
+    const url = trainingLinesUrl(this.opponent);
+    if (!url || !this.http) { this.opponent = null; this.buildQueue(); return; }
+    this.phase = 'LOADING';
+    let params = new HttpParams().set('repertoire', this.repertoireId).set('take', TRAINING_LINES_ALL)
+      .set('chapterColors', JSON.stringify(Object.fromEntries(this.chapterColors)));
+    if (this.opponentColor) params = params.set('color', this.opponentColor);
+    for (const k of TRAINER_PASS_THROUGH) {
+      const v = this.route.snapshot.queryParamMap.get(k);
+      if (v) params = params.set(k, v);
+    }
+    this.opponentSub = this.http.get<TrainingLines>(url, { params }).subscribe({
+      next: r => {
+        this.opponentRank = new Map(r.lines.map((l, i) => [l.key, i]));
+        if (r.color === 'w' || r.color === 'b') this.opponentColor = r.color;
+        this.opponentNotice = 'repertoireTrainer.opponentOrder';
+        this.buildQueue();
+      },
+      error: () => {
+        // ohne die Reihenfolge wie gewohnt weiter — aber nicht still
+        this.opponentRank = null;
+        this.opponentNotice = 'repertoireTrainer.opponentFailed';
+        this.buildQueue();
+      },
+    });
+  }
+
+  /** In der Reihenfolge des Gegners; Linien, die er nicht kennt (Schlüssel nicht in der Antwort), dahinter wie gehabt. */
+  private byOpponent(lines: ParsedGame[]): ParsedGame[] {
+    const rank = this.opponentRank!;
+    const at = (l: ParsedGame) => rank.get(this.lineKeyOf(l)) ?? Number.MAX_SAFE_INTEGER;
+    return [...lines].sort((a, b) => at(a) - at(b));
+  }
+
+  /** Reihenfolge der Warteschlange: nach dem Gegner, sonst „Häufigste zuerst" (wenn an). */
+  private ordered(lines: ParsedGame[]): ParsedGame[] {
+    return this.opponentRank ? this.byOpponent(lines) : this.byFrequency(lines);
+  }
 
   /** „Häufigste zuerst" an/aus. Baut die Sitzung neu auf (wie ein Moduswechsel). */
   toggleFreqOrder(): void {
@@ -356,10 +417,20 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const now = Date.now();
     let filtered = linesInChapter(this.allLines, this.chapterFilter);
     if (this.singleLineKey) filtered = filtered.filter(l => this.lineKeyOf(l) === this.singleLineKey);
+    // gegen einen Gegner: nur die Kapitel der Farbe, die man gegen ihn spielt
+    if (this.opponentRank && this.opponentColor) filtered = filtered.filter(l => this.colorOf(l) === this.opponentColor);
     const usable = filtered.filter(l => this.hasUserMove(l));
     this.queue = this.mode === 'learn'
-      ? this.byFrequency(usable.filter(l => this.isLearnable(l)))   // sonst PGN-Reihenfolge
-      : this.byFrequency(shuffle(usable.filter(l => this.isDue(l, now))));
+      ? this.ordered(usable.filter(l => this.isLearnable(l)))   // sonst PGN-Reihenfolge
+      : this.ordered(shuffle(usable.filter(l => this.isDue(l, now))));
+    // Aus der Spielerkarte: im gewählten Modus nichts zu tun (nichts fällig bzw. alles schon gelernt) → EINMAL in den anderen.
+    if (this.queue.length === 0 && this.opponentRank && !this.opponentSwitched && usable.length > 0) {
+      this.opponentSwitched = true;
+      this.mode = this.mode === 'learn' ? 'quiz' : 'learn';
+      this.opponentNotice = this.mode === 'learn' ? 'repertoireTrainer.opponentToLearn' : 'repertoireTrainer.opponentToQuiz';
+      this.buildQueue();
+      return;
+    }
     this.qIndex = 0;
     this.learnPass = 0;
     this.correct = 0;

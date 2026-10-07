@@ -57,6 +57,10 @@
     "freqToken": "Für „Häufigste zuerst“ fehlt ein Lichess-Token im Profil – die Reihenfolge bleibt wie gewohnt.",
     "freqFailed": "Die Häufigkeiten konnten nicht geladen werden – die Reihenfolge bleibt wie gewohnt.",
     "freqIncomplete": "Die Häufigkeiten sind noch unvollständig – Linien ohne Wert kommen zuletzt.",
+    "opponentOrder": "Reihenfolge nach Gegner: zuerst die Linien, die dieser Gegner am wahrscheinlichsten spielt (aus der Spielerkarte); nur die Kapitel deiner Farbe gegen ihn.",
+    "opponentFailed": "Die Reihenfolge nach dem Gegner ließ sich nicht laden — die Linien kommen in der gewohnten Reihenfolge.",
+    "opponentToLearn": "Gegen diesen Gegner ist gerade nichts fällig — auf „Lernen“ umgeschaltet, in der Reihenfolge nach dem Gegner.",
+    "opponentToQuiz": "Gegen diesen Gegner ist schon alles gelernt — auf „Abfragen“ umgeschaltet, in der Reihenfolge nach dem Gegner.",
     "freqLineTip": "Wie oft du diese Linie in echten Partien erreichst (Lichess-Explorer, Auswahl wie im Lochfinder)"
   },
   "srConfig": {

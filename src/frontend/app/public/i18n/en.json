@@ -57,6 +57,10 @@
     "freqToken": "“Most frequent first” needs a Lichess token in your profile – the usual order is used.",
     "freqFailed": "The frequencies could not be loaded – the usual order is used.",
     "freqIncomplete": "The frequencies are still incomplete – lines without a value come last.",
+    "opponentOrder": "Order by opponent: the lines this opponent is most likely to play come first (from the player card); only the chapters of your colour against him.",
+    "opponentFailed": "The opponent's order could not be loaded — the lines come in the usual order.",
+    "opponentToLearn": "Nothing is due against this opponent right now — switched to “Learn”, in the opponent's order.",
+    "opponentToQuiz": "All lines against this opponent are already learned — switched to “Review”, in the opponent's order.",
     "freqLineTip": "How often you reach this line in real games (Lichess explorer, same selection as in the hole finder)"
   },
   "srConfig": {

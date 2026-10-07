@@ -57,6 +57,10 @@
     "freqToken": "Za „Najčešće prve“ nedostaje Lichess token u profilu – koristi se uobičajeni redoslijed.",
     "freqFailed": "Učestalosti se nisu mogle učitati – koristi se uobičajeni redoslijed.",
     "freqIncomplete": "Učestalosti još nisu potpune – varijante bez vrijednosti dolaze zadnje.",
+    "opponentOrder": "Redoslijed prema protivniku: najprije linije koje će ovaj protivnik najvjerojatnije igrati (iz kartice igrača); samo poglavlja tvoje boje protiv njega.",
+    "opponentFailed": "Redoslijed prema protivniku nije se mogao učitati — linije dolaze uobičajenim redom.",
+    "opponentToLearn": "Protiv ovog protivnika trenutno ništa nije na redu — prebačeno na „Uči“, redoslijedom prema protivniku.",
+    "opponentToQuiz": "Protiv ovog protivnika sve je već naučeno — prebačeno na „Provjera“, redoslijedom prema protivniku.",
     "freqLineTip": "Koliko često dosegneš ovu varijantu u stvarnim partijama (Lichess explorer, isti odabir kao kod traženja rupa)"
   },
   "srConfig": {

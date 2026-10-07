@@ -37,6 +37,22 @@ describe('PrepCardApi (Schnittstelle der Spielerkarte für die Spielervorbereitu
     expect(toPlayerCard({ ...CARD, fide: '1503014' }).fide).toBe('1503014');
   });
 
+  it('Trainingslinien: über /api/prep mit Grenze/Zwilling der Seite; der Trainer bekommt prep:<Id> samt all/twin', async () => {
+    api.options.set({ all: true, twin: false });
+    const p = api.trainingLines('42', { repertoire: 7, color: 'w', filter: { source: 'board', speeds: [], years: null, withUnsure: false } });
+    const req = http.expectOne(r => r.url === '/api/prep/player/42/training-lines');
+    expect(req.request.params.get('repertoire')).toBe('7');
+    expect(req.request.params.get('color')).toBe('w');
+    expect(req.request.params.get('source')).toBe('board');
+    expect(req.request.params.get('all')).toBe('true');
+    expect(req.request.params.has('twin')).toBeFalse();
+    req.flush({ repertoires: [], repertoire: 7, color: 'w', colors: ['w'], games: 0, total: 0, lines: [], more: 0 });
+    expect((await p).repertoire).toBe(7);
+    expect(api.trainerParams('42')).toEqual({ opponent: 'prep:42', all: 'true' });
+    api.options.set({ all: false, twin: true });
+    expect(api.trainerParams('42')).toEqual({ opponent: 'prep:42', twin: 'true' });
+  });
+
   it('fragt mit den Schaltern der Seite und merkt sich, was geladen ist', async () => {
     api.options.set({ all: true, twin: true });
     const p = api.card('42');

@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { filterParams } from '@lh/core/league-api.service';
+import { TrainingLines, TrainingLinesQuery, trainingLinesParams } from '@rh/shared/player-card/training-lines';
 import { Account, AccountChecks, OpeningTree, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
 import { PrepCardJson, PrepHit, PrepOptions, PrepSuggestionList } from './prep.models';
 
@@ -32,6 +33,11 @@ export class PrepApiService {
     let params = opts(new HttpParams(), o);
     if (color) params = params.set('color', color);
     return firstValueFrom(this.http.get<RecentGames>(`/api/prep/player/${id}/recent`, { params }));
+  }
+
+  /** Trainingslinien gegen diesen Spieler (2026-10-07) — Grenze/Zwilling wie die Karte. */
+  trainingLines(id: number, o: PrepOptions, q: TrainingLinesQuery): Promise<TrainingLines> {
+    return firstValueFrom(this.http.get<TrainingLines>(`/api/prep/player/${id}/training-lines`, { params: opts(trainingLinesParams(q), o) }));
   }
 
   tree(id: number, o: PrepOptions, color: 'w' | 's', line: string[], filter?: TreeFilter): Promise<OpeningTree> {

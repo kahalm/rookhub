@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from '@rh/core/auth.service';
 import { OpeningTree, PlayerCard, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
 import { PlayerCardApi } from '@rh/shared/player-card/player-card-api';
+import { TrainingLines, TrainingLinesQuery } from '@rh/shared/player-card/training-lines';
 import { PrepApiService } from './prep-api.service';
 import { PrepCardJson, PrepOptions, PrepScope } from './prep.models';
 
@@ -53,6 +54,16 @@ export class PrepCardApi implements PlayerCardApi {
 
   tree(key: string, color: 'w' | 's', line: string[], _token: string | null, filter?: TreeFilter): Promise<OpeningTree> {
     return this.api.tree(Number(key), this.options(), color, line, filter);
+  }
+
+  trainingLines(key: string, q: TrainingLinesQuery): Promise<TrainingLines> {
+    return this.api.trainingLines(Number(key), this.options(), q);
+  }
+
+  /** Der Trainer holt dieselben Linien über `/api/prep/…` — mit derselben Grenze und demselben Zwilling wie die Karte. */
+  trainerParams(key: string): Record<string, string> {
+    const o = this.options();
+    return { opponent: `prep:${Number(key)}`, ...(o.all ? { all: 'true' } : {}), ...(o.twin ? { twin: 'true' } : {}) };
   }
 
   pgn(key: string): Promise<Blob> {

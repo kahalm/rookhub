@@ -960,3 +960,79 @@ describe('RepertoireTrainerComponent „Häufigste zuerst"', () => {
     expect(c.currentLineFrequency).toBeNull();
   });
 });
+
+describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=, 2026-10-07)', () => {
+  /** Drei Linien: zwei Weiß-Kapitel, ein Schwarz-Kapitel. */
+  const PGN3 = [
+    '[Event "Rep"]', '[White "1.e4 e5"]', '[Black "Chapter A"]', '', '1. e4 e5 2. Nf3 Nc6 *', '',
+    '[Event "Rep"]', '[White "1.d4 d5"]', '[Black "Chapter B"]', '', '1. d4 d5 2. c4 e6 *', '',
+    '[Event "Rep"]', '[White "1.e4 c5"]', '[Black "Chapter S"]', '', '1. e4 c5 2. Nf3 d6 *', '',
+  ].join('\n');
+  const KEY_S = lineKeyFromSans(['e4', 'c5', 'Nf3', 'd6']);
+
+  function makeOpp(query: Record<string, string>, http: any, states: LineStateDto[] = [state(KEY_A, PAST()), state(KEY_B, PAST())]) {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w', 'Chapter S': 'b' }));
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => query[k] ?? null } } };
+    const training: any = {
+      getPgn: () => of(PGN3), getLineStates: () => of(states), reviewLine: () => of(state(KEY_A, FUTURE())),
+      promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
+    };
+    const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any, { enqueue: () => {} } as any,
+      NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, http);
+    c.ngOnInit();
+    return c;
+  }
+
+  const answer = (keys: string[], color: 'w' | 'b' = 'w') => ({
+    repertoires: [], repertoire: 1, color, colors: ['w', 'b'], games: 9, total: keys.length, more: 0,
+    lines: keys.map(key => ({ key, end: '', start: null, chapter: '', moves: [], probability: 0.5, reached: 1, lastYear: 2024, neverReached: false })),
+  });
+
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_1'));
+
+  it('holt ALLE Trainingslinien gegen den Gegner (mit Filter, Kapitelfarben) und fragt in dieser Reihenfolge ab — nur die eigene Farbe', () => {
+    const get = jasmine.createSpy('get').and.returnValue(of(answer([KEY_B, KEY_A])));
+    const c = makeOpp({ opponent: 'prep:42', color: 'w', source: 'both', all: 'true', evil: 'x' }, { get });
+
+    const [url, opts] = get.calls.mostRecent().args;
+    expect(url).toBe('/api/prep/player/42/training-lines');
+    expect(opts.params.get('repertoire')).toBe('1');
+    expect(opts.params.get('take')).toBe('5000');
+    expect(opts.params.get('color')).toBe('w');
+    expect(opts.params.get('source')).toBe('both');
+    expect(opts.params.get('all')).toBe('true');
+    expect(opts.params.get('evil')).toBeNull();
+    expect(JSON.parse(opts.params.get('chapterColors'))).toEqual({ 'Chapter A': 'w', 'Chapter B': 'w', 'Chapter S': 'b' });
+    // gemischt wäre Zufall — hier stur in der Reihenfolge des Gegners, das Schwarz-Kapitel fällt weg
+    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.d4 d5', '1.e4 e5']);
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentOrder');
+  });
+
+  it('?line= aus der Karte: nichts fällig → einmal in den Lern-Modus, die Linie bleibt', () => {
+    const get = jasmine.createSpy('get').and.returnValue(of(answer([KEY_S], 'b')));
+    const c = makeOpp({ opponent: 'league:1606921', color: 'b', line: KEY_S }, { get });
+
+    expect(get.calls.mostRecent().args[0]).toBe('/api/league/player/1606921/training-lines');
+    expect(c.mode).toBe('learn');
+    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.e4 c5']);
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentToLearn');
+  });
+
+  it('Fehler beim Holen: wie gewohnt weiter, aber mit Hinweis', () => {
+    const c = makeOpp({ opponent: 'prep:42', color: 'w' }, { get: () => throwError(() => new Error('500')) });
+    expect(c.phase).toBe('PLAYING');
+    expect(c.queue.length).toBe(2);
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentFailed');
+  });
+
+  it('ohne ?opponent= (oder mit unbrauchbarem) bleibt alles wie bisher — kein Aufruf', () => {
+    const get = jasmine.createSpy('get');
+    const c = makeOpp({ opponent: 'evil:1' }, { get });
+    expect(get).not.toHaveBeenCalled();
+    expect(c.opponent).toBeNull();
+    expect(c.opponentNotice).toBeNull();
+    expect(c.queue.length).toBe(2);
+  });
+});

@@ -12,6 +12,7 @@ import { GameReplayComponent } from './game-replay.component';
 import { OnlineAccountsComponent } from './online-accounts.component';
 import { OpeningTreeComponent } from './opening-tree.component';
 import { TreeFilterBarComponent } from './tree-filter-bar.component';
+import { TrainingLinesComponent } from './training-lines.component';
 
 type Show = 'w' | 's' | 'b';
 
@@ -89,6 +90,10 @@ type Show = 'w' | 's' | 'b';
             }
             @if (treeOpen()) {
               <lh-opening-tree [fide]="key(c)" [token]="token" [startColor]="show() === 's' ? 's' : 'w'" [filter]="active()" />
+            }
+            @if (training()) {
+              <!-- Trainingslinien gegen diesen Spieler (2026-10-07): nur angemeldet, nie über einen Teilen-Link -->
+              <lh-training-lines [key]="key(c)" [name]="c.name ?? ''" [filter]="active()" />
             }
           }
           @if (sections(); as sec) {
@@ -170,7 +175,7 @@ type Show = 'w' | 's' | 'b';
       }
     </ng-template>
   `,
-  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent, TreeFilterBarComponent],
+  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent, TreeFilterBarComponent, TrainingLinesComponent],
 })
 export class PlayerCardComponent {
   private readonly api = inject(PLAYER_CARD_API);
@@ -178,6 +183,8 @@ export class PlayerCardComponent {
   readonly myGames = inject(MyGamesService);
   /** Online-Konten pflegen: Verwalter, nie über einen Teilen-Link. */
   readonly canEdit = signal(false);
+  /** Abschnitt „Trainingslinien": die API bietet ihn an, jemand ist angemeldet, kein Teilen-Link. */
+  readonly training = signal(false);
   /** Als Teil einer Seite statt als Dialog darüber (Spielervorbereitung): ohne Abdunkeln, schließt nicht beim Klick daneben. */
   readonly inline = input(false);
   /** Eigener Hinweis zu den Quellen statt des LeagueHub-Textes. */
@@ -295,6 +302,7 @@ export class PlayerCardComponent {
   async open(fide: string, color: 'w' | 's' | null, board: number | null, token: string | null): Promise<void> {
     this.token = token;
     this.canEdit.set(!token && this.api.accountsEditable !== false && this.auth.has('league.manage'));
+    this.training.set(!token && !!this.api.trainingLines && this.auth.isLoggedIn);
     this.color.set(color);
     this.board.set(board);
     this.show.set(color ?? 'b');

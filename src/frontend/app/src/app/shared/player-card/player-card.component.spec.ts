@@ -26,9 +26,11 @@ describe('PlayerCardComponent', () => {
   const headings = () => Array.from(el().querySelectorAll('h3')).map(h => h.textContent ?? '');
 
   let perms: Set<string>;
+  let auth: { has: (p: string) => boolean; isLoggedIn: boolean };
 
   beforeEach(() => {
     perms = new Set();
+    auth = { has: (p: string) => perms.has(p), isLoggedIn: false };
     localStorage.removeItem(TREE_FILTER_KEY);
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree', 'profile', 'playerSuggestions']);
     api.playerSuggestions.and.resolveTo({ items: [] });
@@ -37,7 +39,7 @@ describe('PlayerCardComponent', () => {
       { available: false, rookHubUrl: null as string | null });
     TestBed.configureTestingModule({ imports: [PlayerCardComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api },
-        { provide: MyGamesService, useValue: myGames }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } }] });
+        { provide: MyGamesService, useValue: myGames }, { provide: AuthService, useValue: auth }] });
     fixture = TestBed.createComponent(PlayerCardComponent);
     fixture.detectChanges();
   });
@@ -329,5 +331,38 @@ describe('PlayerCardComponent', () => {
 
   it('LeagueHub: das Token liefert ohne eigenen Eintrag den LeagueApiService', () => {
     expect(TestBed.inject(PLAYER_CARD_API)).toBe(api as unknown as PlayerCardApi);
+  });
+
+  describe('Trainingslinien (2026-10-07)', () => {
+    const toggle = () => Array.from(el().querySelectorAll<HTMLButtonElement>('button.tl-toggle'));
+    const offer = () => { (api as unknown as { trainingLines?: unknown }).trainingLines = jasmine.createSpy('trainingLines'); };
+
+    it('angemeldet und mit einer API, die sie anbietet: der Abschnitt ist da', async () => {
+      auth.isLoggedIn = true;
+      offer();
+      await fixture.componentInstance.open('1606921', null, null, null);
+      fixture.detectChanges();
+      expect(toggle().length).toBe(1);
+      expect(toggle()[0].textContent).toContain('Trainingslinien gegen Oberschmid');
+    });
+
+    it('über einen Teilen-Link nie, ohne Anmeldung nie, ohne Methode nie', async () => {
+      offer();
+      auth.isLoggedIn = true;
+      await fixture.componentInstance.open('1606921', null, null, 'TOKEN');
+      fixture.detectChanges();
+      expect(toggle().length).withContext('Teilen-Link').toBe(0);
+
+      auth.isLoggedIn = false;
+      await fixture.componentInstance.open('1606921', null, null, null);
+      fixture.detectChanges();
+      expect(toggle().length).withContext('abgemeldet').toBe(0);
+
+      auth.isLoggedIn = true;
+      delete (api as unknown as { trainingLines?: unknown }).trainingLines;
+      await fixture.componentInstance.open('1606921', null, null, null);
+      fixture.detectChanges();
+      expect(toggle().length).withContext('API ohne Trainingslinien').toBe(0);
+    });
   });
 });
