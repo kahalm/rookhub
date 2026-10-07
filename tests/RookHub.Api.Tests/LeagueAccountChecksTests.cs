@@ -94,6 +94,55 @@ public class LeagueAccountChecksTests : IDisposable
     }
 
     [Fact]
+    public void Country_ByRegion_GermanyForAWeilheimer_FailForASchwazer()
+    {
+        var weilheimer = new LeagueAccountFinder.Player("777", "Muster, Max", null, 1900, "SK Weilheim II", Region: LeagueRegions.Bayern);
+        Assert.Equal((LeagueAccountChecks.Ok, "Deutschland"), (LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "DE"), null).Status,
+            LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "DE"), null).Text));
+        Assert.Equal(LeagueAccountChecks.Fail, LeagueAccountChecks.CountryCheck(Max, Prof(flag: "DE"), null).Status);       // Schwazer: wie bisher
+        Assert.Equal("AT — weder Deutschland noch seine Föderation", LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "AT"), null).Text);
+        Assert.Equal(LeagueAccountChecks.Ok, LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "AT"), "AUT").Status);  // Föderation laut FIDE
+    }
+
+    [Fact]
+    public void Place_ByRegion()
+    {
+        Assert.Equal(("Tiroler Ort im Profil", LeagueAccountChecks.Ok, "„Kufstein“"),
+            (LeagueAccountChecks.PlaceCheck(Prof(loc: "Kufstein")).Label, LeagueAccountChecks.PlaceCheck(Prof(loc: "Kufstein")).Status,
+             LeagueAccountChecks.PlaceCheck(Prof(loc: "Kufstein")).Text));
+        var by = LeagueOnlineRegions.Bayern;
+        Assert.Equal(("Bayerischer Ort im Profil", LeagueAccountChecks.Ok, "„Weilheim“"),
+            (LeagueAccountChecks.PlaceCheck(Prof(loc: "Weilheim i.OB"), by).Label, LeagueAccountChecks.PlaceCheck(Prof(loc: "Weilheim i.OB"), by).Status,
+             LeagueAccountChecks.PlaceCheck(Prof(loc: "Weilheim i.OB"), by).Text));
+        Assert.Equal(LeagueAccountChecks.Ok, LeagueAccountChecks.PlaceCheck(Prof(loc: "Muenchen"), by).Status);       // Umlaut als ue
+        Assert.Equal(LeagueAccountChecks.Ok, LeagueAccountChecks.PlaceCheck(Prof(loc: "Münchner Schachfan"), by).Status);
+        Assert.Equal((LeagueAccountChecks.None, "„Kufstein“ — kein Bayerischer Ort"),
+            (LeagueAccountChecks.PlaceCheck(Prof(loc: "Kufstein"), by).Status, LeagueAccountChecks.PlaceCheck(Prof(loc: "Kufstein"), by).Text));
+    }
+
+    [Fact]
+    public void OnlineLeagueAndTeams_Bavaria_AreaTeamIsNotHisClub()
+    {
+        var checks = new LeagueAccountChecks(_db, new HttpClient(), null);
+        var by = LeagueOnlineRegions.Bayern;
+        var mine = new[] { "SK Weilheim II", "SK Weilheim 1" };
+        var forClub = new LeagueScoutAccount { UserName = "x", DisplayName = "x", Teams = "Schachkreis Zugspitze", PlayedFor = "SK Weilheim und Freunde",
+            Events = "ZugLiga; Kreis Vergleichskampf OBB" };
+        var r = checks.Tmm2021Check("lichess", forClub, mine, by);
+        Assert.Equal(("Online-Liga Zugspitze/Oberbayern", LeagueAccountChecks.Ok), (r.Label, r.Status));
+        Assert.Equal("spielte in der Online-Liga Zugspitze/Oberbayern, für „SK Weilheim und Freunde“ — seinen Verein", r.Text);
+        var forArea = new LeagueScoutAccount { UserName = "y", DisplayName = "y", Teams = "Schachkreis Zugspitze", PlayedFor = "Schachkreis Zugspitze", Events = "ZugLiga" };
+        Assert.Equal(LeagueAccountChecks.Warn, checks.Tmm2021Check("lichess", forArea, mine, by).Status);      // Kreis ≠ Verein
+        var t = checks.TeamsCheck(forClub, mine, by);
+        Assert.Equal(("Bayerische Lichess-Teams", LeagueAccountChecks.Ok), (t.Label, t.Status));
+        Assert.Contains("Team-Battles: Kreis Vergleichskampf OBB", t.Text);                                     // die Liga steht oben
+        Assert.Equal(LeagueAccountChecks.Info, checks.TeamsCheck(forArea, mine, by).Status);
+        Assert.Equal(LeagueAccountChecks.None, checks.TeamsCheck(null, mine, by).Status);
+        // Ohne Region wie bisher Tirol.
+        Assert.Equal("Online-TMM 2021", checks.Tmm2021Check("lichess", null, mine).Label);
+    }
+
+    [Fact]
     public void Repertoire_ShareOfGamesFollowingThreeOwnMoves()
     {
         var r = new LeagueFingerprint.Repertoire();
@@ -115,6 +164,22 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal("58 % seiner letzten 100 Online-Partien folgen mindestens 3 eigene Züge weit einer Stellung aus seinen 40 Brettpartien "
                      + "(gemeinsam im Schnitt bis Halbzug 7,2)", LeagueAccountChecks.RepertoireItem((100, 58, 7.2), 40).Text);
     }
+
+    [Theory]
+    [InlineData("1-ZugLiga 1-21 7+3 Team Battle", "ZugLiga")]
+    [InlineData("1-ZugLiga 5-0 Team Battle", "ZugLiga")]
+    [InlineData("3-ZugLiga 15-0 Team Battle", "ZugLiga")]
+    [InlineData("2-ObbLiga 2-21 Team Battle", "ObbLiga")]
+    [InlineData("1-ZugJugendLiga 1-21 7+3 Team Battle", "ZugJugendLiga")]
+    [InlineData("ZugspitzProbeLiga 5-0 Team Battle", "ZugspitzProbeLiga")]
+    [InlineData("KEM2022 7+3 Team Battle", "KEM")]
+    [InlineData("KEM21 10-0 Team Battle", "KEM")]
+    [InlineData("Kreis Vergleichskampf OBB 1-22 Team Battle", "Kreis Vergleichskampf OBB")]
+    [InlineData("Kreis-Vergleichskampf-OBB 2-21 Team Battle", "Kreis Vergleichskampf OBB")]
+    [InlineData("Kreis-Vergleichskampf-OBB Team Battle", "Kreis Vergleichskampf OBB")]
+    [InlineData("Jugend U16 Team Battle", "Jugend U16")]
+    public void EventSeries_ZugspitzeAndOberbayern(string name, string series) =>
+        Assert.Equal(series, LeagueTeamScout.EventSeries(name));
 
     [Fact]
     public void EventSeries_DropsRoundAndTeamBattle()
@@ -235,7 +300,7 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal(LeagueAccountChecks.None, Of(r, "rating:Lichess Bullet").Status);          // vorläufig
         Assert.Equal(LeagueAccountChecks.Ok, Of(r, "rating:Lichess Blitz").Status);            // +200
         Assert.DoesNotContain(r.Items, i => i.Key == "rating:Lichess Schnell");                // nie gespielt
-        Assert.Equal((LeagueAccountChecks.Ok, "„Kufstein“"), (Of(r, "tirol").Status, Of(r, "tirol").Text));
+        Assert.Equal((LeagueAccountChecks.Ok, "„Kufstein“"), (Of(r, "place").Status, Of(r, "place").Text));
         Assert.Equal(LeagueAccountChecks.Ok, Of(r, "teams").Status);
         Assert.Contains("Lichess Quarantäne-Liga 7C", Of(r, "teams").Text);
         Assert.Equal(LeagueAccountChecks.Ok, Of(r, "closed").Status);

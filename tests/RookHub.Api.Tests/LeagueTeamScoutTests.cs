@@ -90,6 +90,47 @@ public class LeagueTeamScoutTests : IDisposable
     }
 
     [Fact]
+    public void ClubKeys_Bavaria_AdjectivesSpellingsAndAreaTeams()
+    {
+        var by = LeagueOnlineRegions.Bayern;
+        Assert.Equal(new[] { "gauting" }, by.ClubKeys("Gautinger SC"));
+        Assert.Equal(new[] { "windach" }, by.ClubKeys("Windacher Chess Academy"));
+        Assert.Equal(new[] { "toelz" }, by.ClubKeys("Tölzer Schachtiger"));
+        Assert.Equal(new[] { "toelz" }, by.ClubKeys("Schachfreunde Bad Tolz"));                    // ohne Umlaut
+        Assert.Equal(new[] { "muenchen" }, by.ClubKeys("Münchner SC 1836"));
+        Assert.Equal(new[] { "muenchen" }, by.ClubKeys("FC Bayern München Schachabteilung"));
+        Assert.Equal(new[] { "weilheim" }, by.ClubKeys("SK Weilheim II"));
+        Assert.Equal(new[] { "weilheim" }, by.ClubKeys("SK Weilheim und Freunde"));
+        Assert.Empty(by.ClubKeys("Grobes Schach"));                                                 // kommt über die festen Teams
+        // Kreis/Bezirk: in der Suche ja, als Verein nie
+        Assert.True(by.IsLocalTeam("Schachkreis Zugspitze"));
+        Assert.Empty(by.ClubKeys("Schachkreis Zugspitze"));
+        Assert.Empty(by.ClubKeys("Schachbezirk Oberbayern"));
+        Assert.Empty(by.ClubKeys("Schachkreis Ingolstadt-Freising"));
+        Assert.False(by.IsLocalTeam("FC Bayern Fans"));                                              // „Bayern" allein nicht
+        // Tirol bleibt beim Ortsnamen ohne „…er"
+        Assert.Empty(LeagueOnlineRegions.Tirol.ClubKeys("Schwazer Schachfreunde"));
+        Assert.Equal(new[] { "schwaz" }, LeagueOnlineRegions.Tirol.ClubKeys("SK Schwaz 2"));
+        Assert.Contains("schachkreis-zugspitze", LeagueOnlineRegions.BayernTeams);
+        Assert.DoesNotContain(LeagueOnlineRegions.BayernTeams, t => t.Contains("jugend"));
+    }
+
+    [Fact]
+    public void Regions_FromConfiguration()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["LeagueOnline:TeamPlaces"] = "Kufstein", ["LeagueOnline:TeamPlaces:bayern"] = "Weilheim, Zugspitze", ["LeagueOnline:Teams:bayern"] = "a,b",
+        }).Build();
+        var regions = LeagueOnlineRegions.Configured(config);
+        Assert.Equal(new[] { "Kufstein" }, regions[0].Places);
+        Assert.Equal(new[] { "Weilheim", "Zugspitze" }, regions[1].Places);
+        Assert.Equal(new[] { "a", "b" }, regions[1].FixedTeams);
+        Assert.Equal(new[] { "Weilheim" }, regions[1].ClubPlaces);
+        Assert.Same(LeagueOnlineRegions.Bayern, LeagueOnlineRegions.Configured(null)[1]);
+    }
+
+    [Fact]
     public void Parse_TeamSearchMembersBattlesAndResults()
     {
         Assert.Equal(new[] { ("sk-kufstein", "SK Kufstein") },
@@ -187,6 +228,94 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.DoesNotContain(http.Urls, x => x.Contains("/api/team/ccb/"));                 // nicht Tirol
         Assert.DoesNotContain(http.Urls, x => x.Contains("/api/tournament/ar2"));            // kein Team-Battle
         Assert.Equal(0, await Scout(World()).RefreshPoolAsync(default));                      // derselbe Stand: nichts Neues
+    }
+
+    /// <summary>Lichess in Oberbayern: die Suche findet „SK Weilheim und Freunde" (und dessen Jugend-Team), die festen Teams bringen
+    /// den Kreis und „grobes-schach" (SC Gröbenzell), ein ZugLiga-Battle und ein Jugend-Battle.</summary>
+    private static FakeHttp Bavaria() => new(req =>
+    {
+        var u = req.RequestUri!.ToString();
+        if (u.Contains("/api/team/search"))
+            return u.Contains("text=Weilheim")
+                ? Ok("""{"currentPageResults":[{"id":"sk-weilheim-und-freunde","name":"SK Weilheim und Freunde"},{"id":"sk-weilheim-jugend","name":"SK Weilheim Jugend"},{"id":"x","name":"Chess Club Berlin"}]}""")
+                : Ok("""{"currentPageResults":[]}""");
+        if (u.EndsWith("/api/team/schachkreis-zugspitze")) return Ok("""{"id":"schachkreis-zugspitze","name":"Schachkreis Zugspitze"}""");
+        if (u.EndsWith("/api/team/grobes-schach")) return Ok("""{"id":"grobes-schach","name":"Grobes Schach"}""");
+        if (u.Contains("/api/team/sk-weilheim-und-freunde/users")) return Ok("{\"username\":\"Weilheimer\"}\n");
+        if (u.Contains("/api/team/schachkreis-zugspitze/users")) return Ok("{\"username\":\"Kreisler\"}\n");
+        if (u.Contains("/api/team/grobes-schach/users")) return Ok("{\"username\":\"Groebi\"}\n");
+        if (u.Contains("/api/team/sk-weilheim-jugend/")) return Ok("{\"username\":\"Kind\"}\n");
+        if (u.Contains("/api/team/schachkreis-zugspitze/arena"))
+            return Ok("{\"id\":\"zl1\",\"teamBattle\":{}}\n{\"id\":\"jl1\",\"teamBattle\":{}}\n");
+        if (u.EndsWith("/api/tournament/zl1"))
+            return Ok("""{"id":"zl1","fullName":"1-ZugLiga 1-21 7+3 Team Battle","teamBattle":{"teams":{"sk-weilheim-und-freunde":["SK Weilheim und Freunde",null],"grobes-schach":["Grobes Schach",null]}}}""");
+        if (u.EndsWith("/api/tournament/jl1"))
+            return Ok("""{"id":"jl1","fullName":"1-ZugJugendLiga 1-21 7+3 Team Battle","teamBattle":{"teams":{"sk-weilheim-und-freunde":["SK Weilheim und Freunde",null]}}}""");
+        if (u.Contains("/api/tournament/zl1/results"))
+            return Ok("{\"username\":\"Spieler1\",\"team\":\"sk-weilheim-und-freunde\"}\n{\"username\":\"Groebi\",\"team\":\"grobes-schach\"}\n");
+        if (u.Contains("/api/tournament/jl1/results")) return Ok("{\"username\":\"Kind2\",\"team\":\"sk-weilheim-und-freunde\"}\n");
+        return Status(HttpStatusCode.NotFound);
+    });
+
+    [Fact]
+    public async Task Pool_Bavaria_SearchPlusFixedTeams_NoYouth_OnlyRegionsWithLeagues()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 912_026_001, Name = "Zugspitzliga", Season = "2026/27", League = "ZL", Stage = "Liga", Source = ZugspitzeSource.Source });
+        await _db.SaveChangesAsync();
+        var http = Bavaria();
+        var scout = new LeagueTeamScout(_db, new HttpClient(http), NullLogger<LeagueTeamScout>.Instance,
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["LeagueOnline:TeamPlaces:bayern"] = "Weilheim,Zugspitze", ["LeagueOnline:Teams:bayern"] = "schachkreis-zugspitze,grobes-schach,sk-foo-jugend",
+            }).Build())
+        { Pause = TimeSpan.Zero, RetryPause = TimeSpan.Zero, PoolPause = TimeSpan.Zero, RateLimitCooldown = TimeSpan.Zero };
+        Assert.Equal(4, await scout.RefreshPoolAsync(default));
+        var pool = await _db.LeagueScoutAccounts.OrderBy(a => a.UserName).ToDictionaryAsync(a => a.UserName);
+        Assert.Equal(new[] { "groebi", "kreisler", "spieler1", "weilheimer" }, pool.Keys);                // keine Jugend
+        Assert.Equal(("Schachkreis Zugspitze", (string?)null), (pool["kreisler"].Teams, pool["kreisler"].PlayedFor));
+        Assert.Equal(("SK Weilheim und Freunde", (string?)"ZugLiga"), (pool["spieler1"].PlayedFor, pool["spieler1"].Events));
+        Assert.Equal("Grobes Schach", pool["groebi"].PlayedFor);
+        Assert.DoesNotContain(http.Urls, x => x.Contains("jugend"));                                       // Jugend-Teams nie gelesen
+        Assert.DoesNotContain(http.Urls, x => x.Contains("/api/tournament/jl1/results"));                  // Jugend-Battle übersprungen
+        Assert.DoesNotContain(http.Urls, x => x.Contains("text=Kufstein") || x.Contains("text=Tirol"));    // keine Tiroler Ligen → kein Tirol
+    }
+
+    [Fact]
+    public async Task CurrentSeason_PerRegion_TyroleanPlayersStayWithBavarianLeaguesAhead()
+    {
+        // Bis 0.710.0 galt die jüngste Saison ÜBERHAUPT — mit Zugspitze 2026/27 vor Tirol 2025/26 fielen die Tiroler heraus.
+        _db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = 1, Name = "LL alt", Season = "2024/25", League = "LL", Stage = "Liga" },
+            new LeagueTournament { Tnr = 2, Name = "LL", Season = "2025/26", League = "LL", Stage = "Liga" },
+            new LeagueTournament { Tnr = 912_026_001, Name = "ZL", Season = "2026/27", League = "ZL", Stage = "Liga", Source = ZugspitzeSource.Source },
+            new LeagueTournament { Tnr = 912_025_001, Name = "ZL alt", Season = "2025/26", League = "ZL", Stage = "Liga", Source = ZugspitzeSource.Source });
+        await _db.SaveChangesAsync();
+        Assert.Equal(new[] { 2, 912_026_001 }, (await LeagueOnlineRegions.CurrentSeasonTnrsAsync(_db, default)).OrderBy(x => x));
+        var seasons = await LeagueOnlineRegions.CurrentSeasonsAsync(_db, default);
+        Assert.Equal(("2025/26", "2026/27"), (seasons["tirol"], seasons["bayern"]));
+    }
+
+    [Fact]
+    public async Task Check_BavarianRealName_GermanProfile_BecomesASuggestion()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 912_026_001, Name = "ZL", Season = "2026/27", League = "ZL", Stage = "Liga", Source = ZugspitzeSource.Source });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 912_026_001, Team = "SK Weilheim II", Name = "Mustermann, Hans", NameKey = "mustermann, hans", FideId = "777", EloN = 1900 });
+        _db.LeagueScoutAccounts.Add(new LeagueScoutAccount { UserName = "isarwolf", DisplayName = "Isarwolf", Teams = "Schachkreis Zugspitze", FoundAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        var http = new FakeHttp(req =>
+        {
+            var u = req.RequestUri!.ToString();
+            if (u.EndsWith("/api/users"))
+                return Ok("""[{"id":"isarwolf","username":"Isarwolf","profile":{"flag":"DE","realName":"Hans Mustermann","location":"Weilheim"},"perfs":{"blitz":{"games":200,"rating":2050}}}]""");
+            if (u.Contains("/api/fide/player/")) return Ok("{\"id\":777,\"federation\":\"GER\",\"year\":1970}");
+            return Status(HttpStatusCode.NotFound);
+        });
+        Assert.False(await Scout(http).RunOnceAsync(TimeSpan.FromMinutes(1), refreshPool: false, default));
+        var sugg = Assert.Single(await _db.LeagueAccountSuggestions.ToListAsync());
+        Assert.Equal(("777", "Isarwolf", LeagueTeamScout.Source), (sugg.FideId, sugg.UserName, sugg.Source));
+        Assert.Contains("Land Deutschland", sugg.Evidence);
+        Assert.Contains("Bayerischer Ort im Profil", sugg.Evidence);
+        Assert.StartsWith("Mitglied im Lichess-Team „Schachkreis Zugspitze“", sugg.Evidence);
     }
 
     [Fact]

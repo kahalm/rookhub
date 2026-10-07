@@ -36,8 +36,6 @@ public sealed class LeagueAccountChecks
     public const double RepertoireGood = 0.35, RepertoireLow = 0.10;
     /// <summary>Wer so lange nicht mehr online war, ist wohl ein altes Konto.</summary>
     public const int InactiveYears = 2;
-    /// <summary>Selbstmeldungen und Turnierserien der Online-TMM 2021 („Online TMM 2021", „TOMM 2021").</summary>
-    private static readonly Regex Tmm2021 = new(@"\bT\s*O?\s*M\s*M\b.*2021|2021.*\bT\s*O?\s*M\s*M\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public sealed record Item(string Key, string Label, string Status, string Text);
 
@@ -51,7 +49,7 @@ public sealed class LeagueAccountChecks
     private readonly HttpClient _http;
     private readonly IMemoryCache? _cache;
     private readonly string _lichess;
-    private readonly string[] _places;
+    private readonly IReadOnlyList<LeagueOnlineRegion> _regions;
 
     public LeagueAccountChecks(AppDbContext db, HttpClient http, IMemoryCache? cache = null, IConfiguration? config = null)
     {
@@ -59,10 +57,12 @@ public sealed class LeagueAccountChecks
         _http = http;
         _cache = cache;
         _lichess = (config?["Lichess:SiteUrl"] ?? "https://lichess.org").TrimEnd('/');
-        var p = config?["LeagueOnline:TeamPlaces"];
-        _places = string.IsNullOrWhiteSpace(p) ? LeagueTeamScout.DefaultPlaces
-            : p.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        _regions = LeagueOnlineRegions.Configured(config);
     }
+
+    /// <summary>Die Region des Spielers mit den Abweichungen aus der Konfiguration (Orte).</summary>
+    private LeagueOnlineRegion RegionOf(LeagueAccountFinder.Player p) =>
+        _regions.FirstOrDefault(r => r.Id == p.OnlineRegion.Id) ?? p.OnlineRegion;
 
     /// <summary>Prüfung eines eingetragenen Kontos; <c>null</c> = unbekannt oder verborgen (Minderjähriger — außer für einen Admin,
     /// <paramref name="reveal"/>, 0.625.0).</summary>
@@ -113,7 +113,8 @@ public sealed class LeagueAccountChecks
             ? await _db.LeagueScoutAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.UserName == user.ToLower(), ct)
             : null;
         var playerTeams = await _db.LeaguePlayers.AsNoTracking().Where(p => p.FideId == fide).Select(p => p.Team).Distinct().ToListAsync(ct);
-        items.Add(Tmm2021Check(site, scout, playerTeams));
+        var region = RegionOf(player);
+        items.Add(Tmm2021Check(site, scout, playerTeams, region));
         items.Add(prof is null ? NotLoaded("name", "Name im Profil", profError) : NameCheck(player, prof));
         items.Add(UserNameCheck(player, user, await LeagueTeamScout.FirstNamesAsync(_db, ct)));
         items.Add(prof is null ? NotLoaded("country", "Land", profError) : CountryCheck(player, prof, fideFed));
@@ -123,9 +124,9 @@ public sealed class LeagueAccountChecks
         if (prof is not null)
         {
             items.Add(FideRatingCheck(prof, player.Elo));
-            if (player.Local) items.Add(TirolCheck(prof));                // ohne Liga-Bezug zählt Tirol nicht
+            if (player.Local) items.Add(PlaceCheck(prof, region));        // ohne Liga-Bezug zählt kein Ort
         }
-        items.Add(TeamsCheck(scout, playerTeams));
+        items.Add(TeamsCheck(scout, playerTeams, region));
         if (prof is not null)
         {
             items.Add(ActivityCheck(prof));
@@ -256,44 +257,52 @@ public sealed class LeagueAccountChecks
         await HiddenAsync(fide, ct) ? "einem anderen Spieler"
             : (await LeagueAccountFinder.PlayerAsync(_db, fide, ct))?.Name ?? "einem anderen Spieler";
 
-    /// <summary>Hat das Konto in der Online-TMM 2021 (Lichess-Team-Battles, Liste der Team-Suche) gespielt — und für seinen Verein?</summary>
-    public Item Tmm2021Check(string site, LeagueScoutAccount? scout, IReadOnlyList<string> playerTeams)
+    /// <summary>Hat das Konto in der Online-Liga seiner Region (Tirol: Online-TMM 2021; Bayern: ZugLiga/ObbLiga, 0.712.0) gespielt —
+    /// und für seinen Verein? Ein Kreis-/Bezirks-Team ist kein Verein (→ warn). <paramref name="region"/> fehlt = Tirol.</summary>
+    public Item Tmm2021Check(string site, LeagueScoutAccount? scout, IReadOnlyList<string> playerTeams, LeagueOnlineRegion? region = null)
     {
-        const string key = "tmm2021", label = "Online-TMM 2021";
+        region ??= _regions.FirstOrDefault(r => r.Id == LeagueRegions.Tirol) ?? LeagueOnlineRegions.Tirol;
+        const string key = "tmm2021";
+        var label = region.OnlineLeague;
+        var league = region.OnlineLeague;
         if (site != LeagueOnlineSites.Lichess) return new Item(key, label, None, "wurde auf Lichess gespielt — hier nicht zu prüfen");
-        if (scout is null) return new Item(key, label, None, "nicht unter den Konten der Tiroler Lichess-Teams");
+        if (scout is null) return new Item(key, label, None, $"nicht unter den Konten der {region.Teams}");
         var playedFor = Split(scout.PlayedFor);
         if (scout.Events is null)
             return playedFor.Count > 0
-                ? new Item(key, label, Info, $"spielte in Tiroler Team-Battles (für „{playedFor[0]}“) — welche Turniere, trägt die Team-Suche beim nächsten Durchlauf nach")
-                : new Item(key, label, None, "nur Mitglied eines Tiroler Lichess-Teams, in keinem Team-Battle gefunden");
-        if (!Split(scout.Events).Any(e => Tmm2021.IsMatch(e))) return new Item(key, label, None, "nicht in der Online-TMM 2021");
-        var own = playedFor.FirstOrDefault(t => SameClub(t, playerTeams));
-        if (own is not null) return new Item(key, label, Ok, $"spielte in der Online-TMM 2021, für „{own}“ — seinen Verein");
+                ? new Item(key, label, Info, $"spielte in Team-Battles (für „{playedFor[0]}“) — welche Turniere, trägt die Team-Suche beim nächsten Durchlauf nach")
+                : new Item(key, label, None, $"nur Mitglied eines Lichess-Teams der Region, in keinem Team-Battle gefunden");
+        if (!Split(scout.Events).Any(e => region.OnlineLeagueSeries.IsMatch(e))) return new Item(key, label, None, $"nicht in der {league}");
+        var own = playedFor.FirstOrDefault(t => SameClub(t, playerTeams, region));
+        if (own is not null) return new Item(key, label, Ok, $"spielte in der {league}, für „{own}“ — seinen Verein");
         return new Item(key, label, Warn, playedFor.Count > 0
-            ? $"spielte in der Online-TMM 2021, aber für „{playedFor[0]}“ — nicht sein Verein"
-            : "spielte in der Online-TMM 2021");
+            ? $"spielte in der {league}, aber für „{playedFor[0]}“ — nicht sein Verein"
+            : $"spielte in der {league}");
     }
 
-    /// <summary>Tiroler Lichess-Teams und Team-Battles außer der TMM 2021.</summary>
-    public Item TeamsCheck(LeagueScoutAccount? scout, IReadOnlyList<string> playerTeams)
+    /// <summary>Lichess-Teams der Region und Team-Battles außer der Online-Liga. <paramref name="region"/> fehlt = Tirol.</summary>
+    public Item TeamsCheck(LeagueScoutAccount? scout, IReadOnlyList<string> playerTeams, LeagueOnlineRegion? region = null)
     {
-        const string key = "teams", label = "Tiroler Lichess-Teams";
-        if (scout is null) return new Item(key, label, None, "in keinem Tiroler Lichess-Team gefunden");
+        region ??= _regions.FirstOrDefault(r => r.Id == LeagueRegions.Tirol) ?? LeagueOnlineRegions.Tirol;
+        const string key = "teams";
+        var label = region.Teams;
+        var none = $"in keinem Lichess-Team der Region gefunden";
+        if (scout is null) return new Item(key, label, None, none);
         var teams = Split(scout.Teams).Concat(Split(scout.PlayedFor)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var battles = Split(scout.Events).Where(e => !Tmm2021.IsMatch(e)).ToList();
+        var battles = Split(scout.Events).Where(e => !region.OnlineLeagueSeries.IsMatch(e)).ToList();
         var parts = new List<string>();
         if (teams.Count > 0) parts.Add("Teams: " + string.Join(", ", teams.Take(5)) + (teams.Count > 5 ? " …" : ""));
         if (battles.Count > 0) parts.Add("Team-Battles: " + string.Join(", ", battles.Take(5)) + (battles.Count > 5 ? " …" : ""));
-        if (parts.Count == 0) return new Item(key, label, None, "in keinem Tiroler Lichess-Team gefunden");
-        return new Item(key, label, teams.Any(t => SameClub(t, playerTeams)) ? Ok : Info, string.Join("; ", parts));
+        if (parts.Count == 0) return new Item(key, label, None, none);
+        return new Item(key, label, teams.Any(t => SameClub(t, playerTeams, region)) ? Ok : Info, string.Join("; ", parts));
     }
 
-    /// <summary>Steht im Lichess-Team derselbe Ort wie in einer seiner Mannschaften („SK Schwaz 2" ↔ „Schach Schwaz")?</summary>
-    private bool SameClub(string team, IReadOnlyList<string> playerTeams)
+    /// <summary>Steht im Lichess-Team derselbe Ort wie in einer seiner Mannschaften („SK Schwaz 2" ↔ „Schach Schwaz", „SK Weilheim II"
+    /// ↔ „SK Weilheim und Freunde")? Kreis-/Bezirks-Teams („Schachkreis Zugspitze") sind keiner.</summary>
+    private static bool SameClub(string team, IReadOnlyList<string> playerTeams, LeagueOnlineRegion region)
     {
-        var keys = LeagueTeamScout.ClubKeys(team, _places);
-        return keys.Count > 0 && playerTeams.Any(pt => LeagueTeamScout.ClubKeys(pt, _places).Any(keys.Contains));
+        var keys = region.ClubKeys(team);
+        return keys.Count > 0 && playerTeams.Any(pt => region.ClubKeys(pt).Any(keys.Contains));
     }
 
     private static List<string> Split(string? s) =>
@@ -338,18 +347,19 @@ public sealed class LeagueAccountChecks
         return new Item(key, label, None, $"„{user}“ — kein Bezug zum Namen erkennbar");
     }
 
-    /// <summary>Land im Profil: Österreich oder seine Föderation (Meldeliste bzw. FIDE).</summary>
+    /// <summary>Land im Profil: das Land seiner Region (Österreich bzw. Deutschland, 0.712.0) oder seine Föderation (Meldeliste bzw. FIDE).</summary>
     public static Item CountryCheck(LeagueAccountFinder.Player player, LeagueAccountFinder.Profile prof, string? fideFed)
     {
         const string key = "country", label = "Land";
+        var region = player.OnlineRegion;
         var flag = (prof.Flag ?? "").Trim();
         if (flag.Length < 2) return new Item(key, label, None, "kein Land im Profil");
         var code = flag[..2].ToUpperInvariant();
-        if (code == "AT" && player.Local) return new Item(key, label, Ok, "Österreich");
-        if (LeagueAccountFinder.AllowedCountries(player.Fed, fideFed, player.Local).Contains(code))
+        if (code == region.Country && player.Local) return new Item(key, label, Ok, region.CountryName);
+        if (LeagueAccountFinder.AllowedCountries(player.Fed, fideFed, player.Local, player.Region).Contains(code))
             return new Item(key, label, Ok, $"{code} — seine Föderation ({fideFed ?? player.Fed})");
         var fed = fideFed ?? player.Fed;
-        return new Item(key, label, Fail, $"{code} — {(player.Local ? "weder Österreich noch seine Föderation" : "nicht seine Föderation")}" + (fed is null ? "" : $" ({fed})"));
+        return new Item(key, label, Fail, $"{code} — {(player.Local ? $"weder {region.CountryName} noch seine Föderation" : "nicht seine Föderation")}" + (fed is null ? "" : $" ({fed})"));
     }
 
     /// <summary>
@@ -395,12 +405,16 @@ public sealed class LeagueAccountChecks
             : new Item(key, label, Warn, $"{fr} — weicht von der Elo {e} um {Math.Abs(fr - e)} ab");
     }
 
-    public static Item TirolCheck(LeagueAccountFinder.Profile prof)
+    /// <summary>Ein Ort seiner Region im Profil (Tirol: „Tiroler Ort", Bayern: „Bayerischer Ort", 0.712.0; Schlüssel <c>place</c>,
+    /// bis 0.710.0 <c>tirol</c>).</summary>
+    public static Item PlaceCheck(LeagueAccountFinder.Profile prof, LeagueOnlineRegion? region = null)
     {
-        const string key = "tirol", label = "Tiroler Ort im Profil";
-        var place = LeagueAccountFinder.TirolPlace($"{prof.Location} {prof.Bio}");
+        region ??= LeagueOnlineRegions.Tirol;
+        const string key = "place";
+        var label = $"{region.PlaceLabel} im Profil";
+        var place = region.PlaceIn($"{prof.Location} {prof.Bio}");
         if (place is not null) return new Item(key, label, Ok, $"„{place}“");
-        return new Item(key, label, None, string.IsNullOrWhiteSpace(prof.Location) ? "kein Ort im Profil" : $"„{prof.Location}“ — kein Tiroler Ort");
+        return new Item(key, label, None, string.IsNullOrWhiteSpace(prof.Location) ? "kein Ort im Profil" : $"„{prof.Location}“ — kein {region.PlaceLabel}");
     }
 
     public static Item ActivityCheck(LeagueAccountFinder.Profile prof, DateTime? now = null)

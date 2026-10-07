@@ -355,7 +355,7 @@ public class PrepAccountSearchTests : IDisposable
         Assert.Null(why);
         Assert.NotNull(checks);
         Assert.Equal("Prepmann, Paul", checks!.Player);                                   // der Spieler aus dem Bestand, nicht die FIDE-ID
-        Assert.DoesNotContain(checks.Items, i => i.Key == "tirol");                       // ohne Liga-Bezug keine Tirol-Prüfung
+        Assert.DoesNotContain(checks.Items, i => i.Key == "place");                       // ohne Liga-Bezug keine Orts-Prüfung
         Assert.Equal(LeagueAccountChecks.Ok, checks.Items.Single(i => i.Key == "country").Status);
 
         var (acc, reason) = await search.AcceptAsync(s.Id, true, "verwalter", default);

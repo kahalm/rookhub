@@ -27,7 +27,10 @@ namespace RookHub.Api.Services.League;
 public sealed partial class LeagueBroadcastImport
 {
     public const string Source = "Lichess-Übertragung";
-    public static readonly string[] DefaultQueries = { "Austria", "Österreich", "Tirol", "Tyrol", "Südtirol", "Innsbruck" };
+    /// <summary>Tirol/Österreich, seit 0.712.0 auch Bayern (Bayerische Einzelmeisterschaften, Bavarian Open, Tegernsee Masters,
+    /// Munich Chess Festival — Recherche 07.10.2026; „Bayern", „Oberbayern", „Landesliga Süd" bringen nichts).</summary>
+    public static readonly string[] DefaultQueries =
+        { "Austria", "Österreich", "Tirol", "Tyrol", "Südtirol", "Innsbruck", "Bavarian", "Bayerische", "Tegernsee", "Munich", "München" };
     public const int MaxPages = 10;
     public static readonly TimeSpan DiscoverEvery = TimeSpan.FromHours(20);
     public static readonly TimeSpan RefreshOngoing = TimeSpan.FromHours(6);

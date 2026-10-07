@@ -277,11 +277,10 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         var res = new JsonObject { ["items"] = new JsonArray(list.Select(x => (JsonNode)SuggestionJson(x, names, hidden.Contains(x.FideId), reveal)).ToArray()) };
         if (string.IsNullOrEmpty(fide))
         {
-            var season = await db.LeagueTournaments.AsNoTracking().MaxAsync(t => (string?)t.Season, ct);
-            var current = await (from p in db.LeaguePlayers.AsNoTracking()
-                                 join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
-                                 where t.Season == season && p.FideId != null && p.FideId != ""
-                                 select p.FideId!).Distinct().ToListAsync(ct);
+            var tnrs = await LeagueOnlineRegions.CurrentSeasonTnrsAsync(db, ct);           // je Region die laufende Saison (0.712.0)
+            var current = await db.LeaguePlayers.AsNoTracking()
+                .Where(p => tnrs.Contains(p.Tnr) && p.FideId != null && p.FideId != "")
+                .Select(p => p.FideId!).Distinct().ToListAsync(ct);
             var due = DateTime.UtcNow.AddDays(-LeagueAccountFinder.RescanDays);
             res["total"] = current.Count;
             res["scanned"] = await db.LeagueAccountScans.AsNoTracking().CountAsync(x => current.Contains(x.FideId) && x.ScannedAt >= due, ct);

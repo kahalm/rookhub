@@ -17,9 +17,9 @@ namespace RookHub.Api.Services.League;
 /// <list type="bullet">
 /// <item>Kandidaten: Nutzernamen aus dem Namen (<see cref="Variants"/>) auf beiden Seiten, dazu auf Lichess die Nutzernamen,
 ///   die mit dem Nachnamen beginnen (Suchvorschläge, ab 5 Buchstaben).</item>
-/// <item>Ausgeschlossen: gesperrte/geschlossene Konten, ein Profil mit einem ANDEREN Namen, ein Land, das weder Österreich
+/// <item>Ausgeschlossen: gesperrte/geschlossene Konten, ein Profil mit einem ANDEREN Namen, ein Land, das weder das Land seiner Region (Österreich/Deutschland)
 ///   noch die Föderation des Spielers ist.</item>
-/// <item>Hinweise (<see cref="Judge"/>): Klarname im Profil, FIDE-Wertung im Profil nahe der Liste, Tiroler Ort, Land. Ein
+/// <item>Hinweise (<see cref="Judge"/>): Klarname im Profil, FIDE-Wertung im Profil nahe der Liste, Ort der Region, Land. Ein
 ///   Nutzername aus dem Namen braucht mindestens EINEN Hinweis, einer aus der Suche einen starken.</item>
 /// <item>Minderjährige (Jahrgang laut FIDE, über Lichess nachgeschlagen) werden seit 0.610.0 auch gesucht, ihre Konten bleiben
 ///   aber verborgen (<see cref="LeagueHiddenAccounts"/>).</item>
@@ -33,9 +33,9 @@ public sealed partial class LeagueAccountFinder
     /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0),
     /// 5 = Online-Wertungsband 100–300 über der Elo (0.619.0), 6 = das Band ist der OPTIMALE Treffer, jede andere Wertung bis 400 unter
     /// der Elo ein schwächerer, dazu derselbe Nutzername auf der anderen Seite (0.621.0), 7 = Lichess-„vorläufig" mit genug Partien
-    /// zählt (0.622.0).
+    /// zählt (0.622.0), 8 = Land und Orte nach der Region des Spielers (Bayern: Deutschland, bayerische Orte; 0.712.0).
     /// </summary>
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
     /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
@@ -80,9 +80,15 @@ public sealed partial class LeagueAccountFinder
             : (ScoreRatingWeak, $"{text} (Treffer, aber schwächer — optimal wären {FitMin}–{FitMax} darüber)");
     }
 
-    /// <param name="Local">Spieler einer Tiroler Liga (Vorgabe): Österreich ist als Land immer erlaubt, ein Tiroler Ort zählt. <c>false</c> =
-    /// ein Spieler nur aus dem Partiebestand der Spielervorbereitung (0.637.0) — dann gilt nur seine Föderation, Tirol zählt nicht.</param>
-    public sealed record Player(string Fide, string Name, string? Fed, int? Elo, string? Team, bool Local = true);
+    /// <param name="Local">Spieler einer Liga (Vorgabe): das Land seiner Region ist als Land immer erlaubt, ein Ort der Region zählt.
+    /// <c>false</c> = ein Spieler nur aus dem Partiebestand der Spielervorbereitung (0.637.0) — dann gilt nur seine Föderation, kein Ort.</param>
+    /// <param name="Region">Liga-Region seiner jüngsten Meldeliste (0.712.0; <c>null</c> = Tirol wie bisher) — bestimmt Land (Österreich bzw.
+    /// Deutschland) und Orte (<see cref="LeagueOnlineRegions"/>).</param>
+    public sealed record Player(string Fide, string Name, string? Fed, int? Elo, string? Team, bool Local = true, string? Region = null)
+    {
+        /// <summary>Was die Region des Spielers für die Prüfung bedeutet.</summary>
+        public LeagueOnlineRegion OnlineRegion => LeagueOnlineRegions.Of(Region);
+    }
 
     /// <summary>Ein Profil auf einer Seite, so weit es für die Entscheidung zählt.</summary>
     /// <param name="Rating">Beste belastbare Online-Wertung (<see cref="MinRatedGames"/>, nicht vorläufig) — <c>null</c> = keine.</param>
@@ -172,11 +178,12 @@ public sealed partial class LeagueAccountFinder
     /// <summary>Der Tiroler Ort im Text (Wortgrenzen — „Hallo" ist nicht Hall), sonst <c>null</c>.</summary>
     public static string? TirolPlace(string? text) => TirolRe.Match(text ?? "") is { Success: true } m ? m.Value : null;
 
-    /// <summary>Die Länder, die ein Profil nennen darf: Österreich, dazu die Föderation laut Meldeliste und laut FIDE.</summary>
-    public static HashSet<string> AllowedCountries(string? fed, string? fideFed, bool local = true)
+    /// <summary>Die Länder, die ein Profil nennen darf: das Land der Region (Österreich bzw. Deutschland, 0.712.0), dazu die Föderation
+    /// laut Meldeliste und laut FIDE.</summary>
+    public static HashSet<string> AllowedCountries(string? fed, string? fideFed, bool local = true, string? region = null)
     {
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (local) allowed.Add("AT");                                // Tiroler Liga; sonst nur die Föderation
+        if (local) allowed.Add(LeagueOnlineRegions.Of(region).Country);   // Liga der Region; sonst nur die Föderation
         IReadOnlyDictionary<string, string> map = local ? Fed2 : Prep.PrepFederations.Iso;   // ohne Liga alle Föderationen (0.637.0)
         if (fed is { } f1 && map.TryGetValue(f1, out var c1)) allowed.Add(c1);
         if (fideFed is { } f2 && map.TryGetValue(f2, out var c2)) allowed.Add(c2);
@@ -220,14 +227,15 @@ public sealed partial class LeagueAccountFinder
                 default: return null;                                  // anderer Vorname — ein anderer Mensch (0.611.0)
             }
         }
-        var allowed = AllowedCountries(p.Fed, fideFed, p.Local);
+        var region = p.OnlineRegion;
+        var allowed = AllowedCountries(p.Fed, fideFed, p.Local, p.Region);
         var flag = (prof.Flag ?? "").Trim();
         if (flag.Length >= 2)
         {
             var code = flag[..2].ToUpperInvariant();
             if (!allowed.Contains(code)) return null;                // anderes Land — vermutlich ein Namensvetter
             score += ScoreCountry;
-            ev.Add(code == "AT" ? "Land Österreich" : $"Land {code}");
+            ev.Add(code == region.Country ? $"Land {region.CountryName}" : code == "AT" ? "Land Österreich" : $"Land {code}");
         }
         if (!RatingPlausible(prof, p.Elo)) return null;                   // 500 online bei 2000 Elo — ein anderer (höher ist ok)
         if (RatingEvidence(prof.RatingLabel, prof.Rating, p.Elo) is { } re)
@@ -240,10 +248,10 @@ public sealed partial class LeagueAccountFinder
             score += ScoreFide;
             ev.Add($"FIDE-Wertung im Profil {fr} (Liste {elo})");
         }
-        if (p.Local && TirolPlace($"{prof.Location} {prof.Bio}") is not null)
+        if (p.Local && region.PlaceIn($"{prof.Location} {prof.Bio}") is not null)
         {
             score += ScoreTirol;
-            ev.Add("Tiroler Ort im Profil");
+            ev.Add($"{region.PlaceLabel} im Profil");
         }
         if (score < (derived ? NeedDerived : NeedSearched)) return null;
         if (lead is not null) ev.Insert(0, lead);
@@ -439,8 +447,9 @@ public sealed partial class LeagueAccountFinder
                          join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
                          where p.FideId == fide
                          orderby t.Season descending, p.Id descending
-                         select new { p.Name, p.Fed, p.EloI, p.EloN, p.Team }).FirstOrDefaultAsync(ct);
-        if (row is not null) return new Player(fide, row.Name, row.Fed, row.EloI is > 0 ? row.EloI : row.EloN, row.Team);
+                         select new { p.Name, p.Fed, p.EloI, p.EloN, p.Team, t.Source }).FirstOrDefaultAsync(ct);
+        if (row is not null)
+            return new Player(fide, row.Name, row.Fed, row.EloI is > 0 ? row.EloI : row.EloN, row.Team, Region: LeagueRegions.Of(row.Source));
         var name = await db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => p.Name).FirstOrDefaultAsync(ct);
         return name is null ? null : new Player(fide, name, null, null, null);
     }
@@ -639,14 +648,16 @@ public sealed partial class LeagueAccountFinder
     /// </summary>
     public async Task<bool> RunOnceAsync(TimeSpan budget, CancellationToken ct)
     {
-        var season = await _db.LeagueTournaments.AsNoTracking().MaxAsync(t => (string?)t.Season, ct);
-        if (season is null) return false;
+        // Je Region die laufende Saison (0.712.0) — die jüngste überhaupt ließ mit den bayerischen Ligen die Tiroler weg.
+        var tnrs = await LeagueOnlineRegions.CurrentSeasonTnrsAsync(_db, ct);
+        if (tnrs.Count == 0) return false;
         var rows = await (from p in _db.LeaguePlayers.AsNoTracking()
                           join t in _db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
-                          where t.Season == season && p.FideId != null && p.FideId != ""
-                          select new { p.FideId, p.Name, p.Fed, p.EloI, p.EloN, p.Team }).ToListAsync(ct);
+                          where tnrs.Contains(t.Tnr) && p.FideId != null && p.FideId != ""
+                          orderby t.Season descending, t.Tnr descending
+                          select new { p.FideId, p.Name, p.Fed, p.EloI, p.EloN, p.Team, t.Source }).ToListAsync(ct);
         var players = rows.GroupBy(r => r.FideId!).Select(g => g.First())
-            .Select(r => new Player(r.FideId!, r.Name, r.Fed, r.EloI is > 0 ? r.EloI : r.EloN, r.Team)).ToList();
+            .Select(r => new Player(r.FideId!, r.Name, r.Fed, r.EloI is > 0 ? r.EloI : r.EloN, r.Team, Region: LeagueRegions.Of(r.Source))).ToList();
         var due = DateTime.UtcNow.AddDays(-RescanDays);
         var scans = await _db.LeagueAccountScans.AsNoTracking()
             .ToDictionaryAsync(s => s.FideId, s => (s.ScannedAt, s.Version), ct);

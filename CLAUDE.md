@@ -2310,8 +2310,9 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   zum Nachnamen (`/api/player/autocomplete`, erst ab 5 Buchstaben, höchstens 12 Treffer). Lichess-Profile gesammelt über
   `POST /api/users`, chess.com einzeln `/pub/player/{name}` (300 ms Pause).
 * **Urteil** (`Judge`, rein): raus bei gesperrtem/geschlossenem Konto, einem Profilnamen OHNE den Nachnamen (jemand anderes) und
-  einem Land, das weder AT noch die Föderation des Spielers (Meldeliste oder FIDE) ist. Hinweise: Klarname 3, nur Nachname 1,
-  FIDE-Wertung im Profil ±250 zur Liste 2, Tiroler Ort in Ort/Bio 2 (Wortgrenzen — „Hallo" ist nicht Hall), Land 1. Ein Name
+  einem Land, das weder das Land seiner REGION (Tirol AT, Bayern DE — seit 0.712.0, siehe „Je Region" unter Team-Suche) noch die
+  Föderation des Spielers (Meldeliste oder FIDE) ist. Hinweise: Klarname 3, nur Nachname 1,
+  FIDE-Wertung im Profil ±250 zur Liste 2, Ort der Region in Ort/Bio 2 (Wortgrenzen — „Hallo" ist nicht Hall; Bayern auch „Gautinger"), Land 1. Ein Name
   aus dem Namen braucht ≥ 1 (plus 1 Punkt), einer aus der Suche ≥ 3.
 * **Anderer Vorname = anderer Mensch** (0.611.0, `FirstNameMatch`, gesehen in der ersten vollen Suche: „Andreas Berchtold" für Axel,
   „Galin Georgiev" für Georgi): steht im Profil neben dem Nachnamen ein Vorname, muss es einer des Spielers sein (irgendeiner, auch
@@ -2331,7 +2332,7 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   Lichess-Konto …", +`ScoreTwin` 1). Die Team-Suche tut dasselbe für jeden ihrer Vorschläge (Source `team`). Hakt die andere Seite,
   bleibt der Treffer selbst stehen; ein 429 beendet den Durchgang wie sonst. Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
   mehr je gefundenem Konto (dort steht auch die selbst angegebene FIDE-Wertung).
-* **Fassung** `LeagueAccountFinder.CurrentVersion` (7 seit 0.622.0 — Lichess-„vorläufig" mit genug Partien zählt; 6 = Wertungsband
+* **Fassung** `LeagueAccountFinder.CurrentVersion` (8 seit 0.712.0 — Land/Orte nach der Region; 7 seit 0.622.0 — Lichess-„vorläufig" mit genug Partien zählt; 6 = Wertungsband
   optimal/schwächer, gleicher Name auf der anderen Seite) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
   fällig, und eine neue Suche entfernt OFFENE Vorschläge, die sie nicht mehr bestätigt (verworfene bleiben). Wer Kandidaten oder
   Urteil ändert, erhöht die Zahl.
@@ -2353,7 +2354,8 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
 * **Nicht wieder vorschlagen**: verworfene Vorschläge bleiben als `Rejected` stehen; ein ENTFERNTES Konto wird als verworfener
   Vorschlag gemerkt; ein angelegtes Konto erledigt den passenden Vorschlag (Vergleich ohne Groß/klein).
 * **Takt**: im `LeagueOnlineSyncScheduler` nach jedem Abruf-Durchgang, je Runde höchstens 5 min (`SearchBudget`), 1 s Pause je
-  Spieler; Spieler der laufenden Saison mit FIDE-ID, nie gesuchte zuerst, dann alle 90 Tage (`RescanDays`); ein Fehler versucht es
+  Spieler; Spieler der laufenden Saison JE REGION (`LeagueOnlineRegions.CurrentSeasonTnrsAsync`, seit 0.712.0 — vorher die jüngste
+  Saison überhaupt, mit Zugspitze 2026/27 vor Tirol 2025/26 fielen die Tiroler heraus) mit FIDE-ID, nie gesuchte zuerst, dann alle 90 Tage (`RescanDays`); ein Fehler versucht es
   am nächsten Tag. `LeagueOnline:Suggestions=false` schaltet die Suche ab. Ein 429 beendet den Durchgang.
 * Oberfläche: auf der Spielerkarte unter den Konten „Vorschläge der Konto-Suche" mit „Jetzt suchen" (nur Verwalter), und der Reiter
   „Konto-Vorschläge" (`/konten`, `features/accounts/`) mit allen offenen Vorschlägen je Spieler und dem Stand der Suche.
@@ -2437,6 +2439,29 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
   auch Spieler, die die Namenssuche noch nicht (oder als Spieler früherer Saisonen nie) abgesucht hat.
 * **Takt**: im `LeagueOnlineSyncScheduler` nach der Namenssuche, je Runde höchstens `SearchBudget`; `LeagueOnline:TeamScout=false`
   schaltet sie ab.
+* **Je Region** (0.712.0, Wunsch 2026-10-07 „Online-Konten-Zuordnung für die Region Bayern (SK Weilheim, Schachkreis Zugspitze,
+  Bezirk Oberbayern)"; `Services/League/LeagueOnlineRegions.cs`, `LeagueOnlineRegion`): Tirol und Bayern haben je Orte der
+  Team-Suche (`Places`; Tirol wie bisher, Bayern = Weilheim, Starnberg, Gräfelfing, Germering, Gröbenzell, Gauting, Gilching, Ammersee,
+  Windach, Fürstenfeldbruck, Tölz, Tegernsee, Miesbach, Penzberg, Geretsried, Wolfratshausen, Garching, Dachau, Augsburg, Haunstetten,
+  Kriegshaber, Landsberg, Kaufbeuren, Rosenheim, Freising, Ingolstadt, „München|Münchner|Münchener" — „|" = weitere Schreibweisen,
+  Schlüssel ist die erste —, Zugspitze, Oberbayern; „Bayern" allein NICHT, 110 Fremdtreffer), feste Lichess-Teams (`FixedTeams`,
+  Bayern 39 aus der Recherche 07.10.2026: Kreis/Bezirk `schachkreis-zugspitze`, `schachbezirk-oberbayern`, `…-lounge`,
+  `schachkreis-ingolstadt-freising`, `schachkreis-inn-chiemgau` und die Vereins-Teams, deren Ort nicht im Namen steht wie
+  `grobes-schach` = SC Gröbenzell, `windacher-chess-academy`), Land (AT/DE), Orts-Regex fürs Profil (Tirol `TirolPlace`, Bayern aus
+  den Orten, ä/ae/a), Beschriftungen („Tiroler/Bayerische Lichess-Teams", „Tiroler/Bayerischer Ort im Profil") und Online-Liga
+  (Tirol „Online-TMM 2021", Bayern „Online-Liga Zugspitze/Oberbayern" = Serien `ZugLiga`/`ObbLiga`/`ZugspitzProbeLiga`).
+  Konfig je Region `LeagueOnline:TeamPlaces:{region}` (Tirol weiter auch `LeagueOnline:TeamPlaces`) und `LeagueOnline:Teams:{region}`
+  (Komma-Listen). **Vereins-Schlüssel** (`LeagueOnlineRegion.ClubKeys`): in Bayern zählt auch das Adjektiv („Gautinger SC" → gauting,
+  „Tölzer Schachtiger" → toelz), Tirol bleibt beim Ortsnamen; **Kreis-/Bezirks-Teams** („Schachkreis …", „Schachbezirk …",
+  `LeagueOnlineRegions.IsAreaTeam`) und die Such-Orte Zugspitze/Oberbayern (`AreaPlaces`) sind NIE „sein Verein" — wer für den Kreis
+  spielte, steht im (i) mit „warn" bzw. „info". **Jugend**: Teams und Team-Battles mit „Jugend" im Namen/der Kennung kommen nicht in
+  den Bestand (alle Regionen; Minderjährige). **Pool-Lauf** (`RefreshPoolAsync(ct, region?)`) je Region, aber nur für Regionen mit
+  Ligen im Bestand (ganz ohne Ligen alle); feste Teams nur mit `GET /api/team/{id}` für den Namen, wenn die Suche sie nicht fand.
+  **Prüfung** (`RunOnceAsync`): Klarnamen gegen die Spieler der laufenden Saison JEDER Region, das Urteil nach der Region des
+  Spielers; die Stellungs-Prüfung vergleicht mit den Vereinsspielern derselben Region (Schlüssel einmal je Durchgang gerechnet).
+  **`EventSeries`** kennt die Kreis-Schreibweise: „1-ZugLiga 1-21 7+3 Team Battle" → „ZugLiga", „KEM2022 7+3" → „KEM",
+  „Kreis-Vergleichskampf-OBB 2-21" → „Kreis Vergleichskampf OBB" (Runde vorn, Bedenkzeit/Saison-Teil hinten, Bindestrich-Ketten ab
+  drei Wörtern, angehängte Jahreszahl); Tests mit den Literalen in `LeagueAccountChecksTests.EventSeries_ZugspitzeAndOberbayern`.
 
 **Konto-Prüfung (i)** (0.619.0, Wunsch 2026-09-30: „mach bei den Konten immer ein (i) und zeig an, was alles geprüft wurde:
 Selbstmeldung, TMM 2021, Name, Land, % Übereinstimmung Repertoire, Elo passend"; `Services/League/LeagueAccountChecks.cs`): je
@@ -2446,12 +2471,15 @@ wie im Wunsch:
 * **Selbstmeldung** (`LeagueSelfReports`, eingespielt je QUELLE über `POST /api/league/admin/self-reports`, z. B. die Meldeliste der
   Online-TMM 2021): dieses Konto von ihm gemeldet → ok; von einem ANDEREN Spieler → fail (Name nur, wenn dessen Konten nicht verborgen
   sind); er hat ein anderes Konto derselben Seite gemeldet → warn.
-* **Online-TMM 2021**: das Konto steht im Bestand der Team-Suche und `LeagueScoutAccount.Events` nennt die Serie (der Scout merkt sich
+* **Online-TMM 2021** (seit 0.712.0 die Online-Liga der REGION des Spielers: Bayern „Online-Liga Zugspitze/Oberbayern", Serien
+  ZugLiga/ObbLiga; Schlüssel bleibt `tmm2021`): das Konto steht im Bestand der Team-Suche und `LeagueScoutAccount.Events` nennt die Serie (der Scout merkt sich
   seit 0.619.0 je Team-Battle die Serie ohne Runde, `EventSeries`: „Online TMM 2021 Runde 3 Team Battle" → „Online TMM 2021"); für
   seinen Verein (`ClubKeys` des Teams gegen die Orte seiner Mannschaften) → ok, sonst warn. Bestand von vor 0.619.0 hat noch keine
   Serien — bis zum nächsten Pool-Durchlauf steht dort „info".
 * **Name im Profil** (`FirstNameMatch` wie die Suche; nur Initiale oder Nachname = weak), **Nutzername** (aus dem Namen gebildet /
-  anderer Vorname aus den Meldelisten = fail / enthält den Nachnamen = weak), **Land** (Österreich oder Föderation laut Meldeliste bzw. FIDE).
+  anderer Vorname aus den Meldelisten = fail / enthält den Nachnamen = weak), **Land** (Land der Region — Österreich bzw. seit 0.712.0
+  Deutschland für Bayern — oder Föderation laut Meldeliste bzw. FIDE; ein deutsches Profil ist bei einem Weilheimer ok, bei einem Schwazer
+  ohne GER-Föderation fail).
 * **Übereinstimmung Repertoire** (`LeagueFingerprint.Coverage`): Anteil der letzten 100 Online-Partien (ohne Bullet, wenn genug
   andere), die mindestens `RepertoireOwnMoves` (3) EIGENE Züge weit einer Stellung aus seinen Brettpartien folgen (nach einem eigenen
   Zug ist fast jede Partie „im Repertoire"); ab 35 % ok, 10–35 % weak, unter 10 % warn — online spielt man oft anderes, deshalb nie fail. Ein
@@ -2461,7 +2489,8 @@ wie im Wunsch:
   Partien, nicht vorläufig); 100–300 über der Elo ok (optimal), jede andere bis 400 darunter weak, mehr als 400 darunter fail.
 * **Gleicher Name auf der anderen Seite** (0.621.0): schon als sein Konto eingetragen → ok; gibt es und passt nach den Regeln der Suche
   → ok (mit den Hinweisen); gibt es, passt aber nicht → info; gibt es nicht / gesperrt → none.
-* Dazu FIDE-Wertung und Tiroler Ort im Profil, Tiroler Lichess-Teams und andere Team-Battles, zuletzt aktiv, gesperrt, bei einem anderen
+* Dazu FIDE-Wertung und Ort der Region im Profil (Schlüssel `place`, bis 0.711.0 `tirol`; „Tiroler/Bayerischer Ort im Profil"),
+  Lichess-Teams der Region („Tiroler/Bayerische Lichess-Teams") und andere Team-Battles, zuletzt aktiv, gesperrt, bei einem anderen
   Spieler eingetragen, das Ergebnis der Team-Suche und (Vorschlag) ihre Hinweise.
 Das Profil wird dafür FRISCH geholt (dieselben Abrufe wie die Suche); ist die Seite nicht erreichbar, stehen die Profil-Prüfungen auf
 „nicht geprüft — …" und das Ergebnis wird nur eine Minute gemerkt (ebenso, wenn die Partien eines Vorschlags gerade nicht kamen),
@@ -2484,7 +2513,9 @@ Partien aus Lichess-Broadcasts von Turnieren am Brett kommen in die Spielerkarte
 Übertragungen 406 Partien mit Ligaspielern, davon fehlten 43 (21 aus der Bundesliga) — der Rest steht über chess-results schon
 da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da sind. Regeln:
 * **Finden**: Lichess-Suche (`/api/broadcast/search`) nach `LeagueBroadcasts:Queries` (Komma-Liste, Vorgabe Austria, Österreich,
-  Tirol, Tyrol, Südtirol, Innsbruck; höchstens 10 Seiten je Wort), nur bis `LeagueBroadcasts:MaxYears` (5) zurück; am 30.09. 62
+  Tirol, Tyrol, Südtirol, Innsbruck, seit 0.712.0 auch Bavarian, Bayerische, Tegernsee, Munich, München — Bayerische
+  Einzelmeisterschaften, Bavarian Open, Tegernsee Masters, Munich Chess Festival; „Bayern"/„Oberbayern"/„Landesliga Süd" bringen
+  nichts, eine Lichess-Übertragung der Landesliga Süd/Oberliga/Zugspitzliga gibt es nicht; höchstens 10 Seiten je Wort), nur bis `LeagueBroadcasts:MaxYears` (5) zurück; am 30.09. 62
   Übertragungen. Der Takt sucht höchstens alle 20 h (merkt es sich selbst, ein Neustart sucht sofort). Turniere im Ausland per Link
   (`AddAsync`, Turnier- ODER Runden-Link — der Runden-Link wird über `/api/broadcast/-/-/{roundId}` aufgelöst).
 * **Einspielen** (`CleanPgn`): nur fertige Partien (kein `*`), Standard ab der Grundstellung, mit mindestens einer FIDE-ID; Datum mit

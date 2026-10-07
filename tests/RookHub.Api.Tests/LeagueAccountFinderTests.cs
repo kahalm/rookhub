@@ -60,6 +60,26 @@ public class LeagueAccountFinderTests : IDisposable
     }
 
     [Fact]
+    public void Judge_ByRegion_GermanProfileFitsAWeilheimer_NotASchwazer()
+    {
+        // 0.712.0: Land und Orte nach der Region des Spielers — ein Weilheimer (Bayern) mit deutschem Profil passt, ein Schwazer nicht.
+        var weilheimer = new LeagueAccountFinder.Player("777", "Mustermann, Hans", null, 1900, "SK Weilheim II", Region: LeagueRegions.Bayern);
+        var schwazer = new LeagueAccountFinder.Player("888", "Mustermann, Hans", "AUT", 1900, "Schwaz 1");
+        var v = LeagueAccountFinder.Judge(weilheimer, Prof("HansMustermann", "Hans Mustermann", "DE", "Weilheim i.OB"), derived: true)!;
+        Assert.Equal(new[] { "Nutzername aus dem Namen", "Klarname im Profil („Hans Mustermann“)", "Land Deutschland", "Bayerischer Ort im Profil" },
+            v.Evidence);
+        Assert.Equal(1 + 3 + 1 + 2, v.Score);
+        Assert.Null(LeagueAccountFinder.Judge(schwazer, Prof("HansMustermann", "Hans Mustermann", "DE"), derived: true));   // wie bisher
+        Assert.Null(LeagueAccountFinder.Judge(weilheimer, Prof("HansMustermann", "Hans Mustermann", "AT"), derived: true));   // Österreich nicht
+        Assert.NotNull(LeagueAccountFinder.Judge(weilheimer, Prof("HansMustermann", "Hans Mustermann", "AT"), derived: true, fideFed: "AUT"));
+        // Ein Tiroler Ort hilft dem Weilheimer nicht, „Gautinger" (Adjektiv) dagegen schon.
+        Assert.DoesNotContain("Bayerischer Ort im Profil", LeagueAccountFinder.Judge(weilheimer, Prof("HansMustermann", "Hans Mustermann", loc: "Kufstein"), derived: true)!.Evidence);
+        Assert.Contains("Bayerischer Ort im Profil", LeagueAccountFinder.Judge(weilheimer, Prof("HansMustermann", "Hans Mustermann", loc: "Gautinger SC"), derived: true)!.Evidence);
+        Assert.Equal(new[] { "DE" }, LeagueAccountFinder.AllowedCountries(null, null, local: true, LeagueRegions.Bayern));
+        Assert.Equal(new[] { "AT" }, LeagueAccountFinder.AllowedCountries(null, null));
+    }
+
+    [Fact]
     public void Judge_RejectsStrangersAndWeakHits()
     {
         Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Mustermann"), derived: true));   // anderer Name
