@@ -121,6 +121,25 @@ public class PrepController : BaseApiController
         return LeagueController.PgnFile(l.Player.FideId ?? $"p{l.Player.Id}", l.Player.Name, await cards.PgnAsync(l, ct));
     }
 
+    /// <summary>Trainingslinien gegen diesen Spieler (<see cref="TrainingLinesService"/>): die Linien des eigenen Repertoires
+    /// (<c>repertoire</c>, nur eigene mit „Für Extension und Vorbereitung verwenden"; fremd → 404) von wahrscheinlich nach unwahrscheinlich,
+    /// gemessen an den Partien der Karte (Grenze/Zwilling wie dort) — <c>source</c> Vorgabe <c>both</c>, sonst Filter wie das Profil
+    /// (<c>unsure=true</c> nur mit <c>prep.manage</c>). <c>color</c> w/b, <c>chapterColors</c> = eigene Farb-Festlegungen (JSON),
+    /// <c>take</c> = so viele Linien.</summary>
+    [HttpGet("player/{id:int}/training-lines")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> TrainingLines(int id, [FromQuery] int? repertoire, [FromQuery] string? color,
+        [FromQuery] string? chapterColors, [FromQuery] int? take, [FromQuery] string? source, [FromQuery] string? speeds,
+        [FromQuery] int? years, [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin,
+        [FromServices] PrepCardService cards, [FromServices] TrainingLinesService lines, CancellationToken ct)
+    {
+        if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
+        var filter = await FilterAsync(source ?? "both", speeds, years, unsure);
+        var r = await lines.LinesAsync(GetUserId(), repertoire, color, chapterColors, take,
+            () => cards.TrainingGamesAsync(l, filter, ct), ct);
+        return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
+    }
+
     // ---- Online-Konten suchen (Phase 4) -------------------------------------------------------------
     // Nur mit prep.manage UND dem Schalter Prep:AccountSearch (Vorgabe aus) — ohne Schalter 404 „disabled". Gesucht wird mit der
     // Konto-Suche von LeagueHub; Vorschläge eines Minderjährigen kommen hier nie heraus.

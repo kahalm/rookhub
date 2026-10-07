@@ -283,6 +283,20 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
 
     private static DateTime? Cutoff(LeagueProfileStore.TreeFilter f) => f.Years is { } y ? DateTime.UtcNow.AddYears(-y) : null;
 
+    /// <summary>Die Partien der Karte als Zugfolgen für die Trainingslinien (<see cref="OpponentTrainingLines"/>): die geladenen
+    /// Brettpartien (ohne eigene Startstellung) und — nach <paramref name="filter"/> — die Online-Partien; Filter wie Profil und Baum.</summary>
+    public async Task<List<OpponentTrainingLines.Game>> TrainingGamesAsync(Loaded l, LeagueProfileStore.TreeFilter filter, CancellationToken ct)
+    {
+        var cutoff = Cutoff(filter);
+        var games = Board(l, filter, cutoff)
+            .Select(g => new OpponentTrainingLines.Game(g.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries), g.Color == "w",
+                g.PlayedOn is { } d ? d / 10000 : null))
+            .ToList();
+        foreach (var g in await OnlineAsync(l, filter, cutoff, null, ct))
+            games.Add(new(g.Line.Split(' ', StringSplitOptions.RemoveEmptyEntries), g.White, g.PlayedAt.Year));
+        return games;
+    }
+
     /// <summary>Eröffnungsprofil — Form wie <see cref="LeagueProfileStore.ProfileAsync"/>.</summary>
     public async Task<JsonObject> ProfileAsync(Loaded l, LeagueProfileStore.TreeFilter filter, CancellationToken ct)
     {

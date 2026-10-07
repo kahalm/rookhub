@@ -293,6 +293,8 @@ try
     builder.Services.AddScoped(sp => new RookHub.Api.Services.Prep.PrepCardService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
         sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<RookHub.Api.Services.League.LeagueService>(),
         RookHub.Api.Services.Prep.PrepCardService.LimitFrom(builder.Configuration), RookHub.Api.Services.Prep.PrepCardService.MaxFrom(builder.Configuration)));
+    // Trainingslinien gegen einen Gegner — ein Dienst für Spielervorbereitung und LeagueHub (0.701.0).
+    builder.Services.AddScoped<RookHub.Api.Services.Prep.TrainingLinesService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueFixtureGames>();   // Paarungen samt Partien (0.673.0)
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
