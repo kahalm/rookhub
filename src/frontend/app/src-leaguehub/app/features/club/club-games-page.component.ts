@@ -8,6 +8,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
 import { ClubGame, ClubGameDetail, ClubPairing, RosterPerson, SideDecision } from '../../core/club.models';
 import { pairingText } from './import-review';
+import { ClubContextService } from '../../core/club-context.service';
 import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { HandoffService } from '@rh/core/handoff.service';
@@ -38,12 +39,12 @@ type Side = 'white' | 'black';
   imports: [RouterLink, NgTemplateOutlet, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent, MatMenuModule],
   template: `
     @if (!allowed) {
-      <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppe von SK Schwaz." />
+      <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
     } @else {
       <section class="club-intro">
         <h2>Vereinspartien</h2>
-        <p class="muted">Partien, die Mitglieder von SK Schwaz hochgeladen haben — sie stehen auch auf den Spielerkarten der
-          Gegner. Vom Datum bleibt nur das Jahr; „Schwaz" steht für ein Mitglied, das seinen Namen nicht zeigt.</p>
+        <p class="muted">Partien, die Mitglieder von {{ clubName() }} hochgeladen haben — sie stehen auch auf den Spielerkarten der
+          Gegner. Vom Datum bleibt nur das Jahr; „{{ anon }}“ steht für ein Mitglied, das seinen Namen nicht zeigt.</p>
       </section>
 
       <form class="club-search" role="search" (submit)="$event.preventDefault(); search(q.value)">
@@ -201,7 +202,10 @@ export class ClubGamesPageComponent implements OnInit {
 
   readonly allowed = this.auth.has('league.view');
   readonly canContribute = this.auth.has('league.contribute');
-  readonly anon = 'Schwaz';
+  private readonly clubCtx = inject(ClubContextService);
+  /** Name anonymisierter Spieler und des Vereins (0.698.0, vorher fest „Schwaz"). */
+  get anon(): string { return this.clubCtx.anonName(); }
+  readonly clubName = this.clubCtx.clubName;
   readonly de = de;
 
   readonly items = signal<ClubGame[]>([]);
@@ -395,7 +399,7 @@ export class ClubGamesPageComponent implements OnInit {
       this.editing.set(null);
     } catch (err) {
       const reason = err instanceof HttpErrorResponse ? err.error?.reason : null;
-      this.editError.set(reason === 'anonymous' ? '„Schwaz" bleibt anonym.' : reason ? reasonText(reason)
+      this.editError.set(reason === 'anonymous' ? `„${this.anon}“ bleibt anonym.` : reason ? reasonText(reason)
         : err instanceof HttpErrorResponse && err.status === 403 ? 'Diese Partie darfst du nicht ändern.' : 'Speichern hat nicht geklappt.');
     } finally {
       this.saving.set(false);

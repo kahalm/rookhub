@@ -1,3 +1,4 @@
+import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -62,6 +63,7 @@ describe('ClubScanPageComponent', () => {
     TestBed.configureTestingModule({
       imports: [ClubScanPageComponent],
       providers: [
+        provideTestClub(),
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }),
         { provide: ClubApiService, useValue: clubApi },
@@ -77,8 +79,8 @@ describe('ClubScanPageComponent', () => {
   it('Korrigieren einer Vereinspartie (0.660.0): ohne aufbewahrtes Formular am Brett, Speichern ersetzt die Züge', fakeAsync(() => {
     params = { id: '12' };
     routeData = { game: true };
-    api.game.and.resolveTo({ id: 12, year: 2026, white: 'Moser, Axel', black: 'Schwaz', result: '1/2-1/2', canDelete: true,
-      pgn: '[White "Moser, Axel"]\n[Black "Schwaz"]\n\n1. d4 Nf6 2. c4 e6 1/2-1/2\n' } as never);
+    api.game.and.resolveTo({ id: 12, year: 2026, white: 'Moser, Axel', black: 'Testdorf', result: '1/2-1/2', canDelete: true,
+      pgn: '[White "Moser, Axel"]\n[Black "Testdorf"]\n\n1. d4 Nf6 2. c4 e6 1/2-1/2\n' } as never);
     api.clubSheet.and.rejectWith(new Error('404'));
     api.correctMoves.and.resolveTo({} as never);
     const el = create();
@@ -86,7 +88,7 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     const c = fixture.componentInstance;
     expect(el.querySelector('h2')?.textContent).toContain('Vereinspartie korrigieren');
-    expect(el.textContent).toContain('Moser, Axel – Schwaz (2026)');
+    expect(el.textContent).toContain('Moser, Axel – Testdorf (2026)');
     expect(el.textContent).toContain('korrigiert wird am Brett');
     expect(c.s.plies().map(p => p.san)).toEqual(['d4', 'Nf6', 'c4', 'e6']);
     expect(api.scan).not.toHaveBeenCalled();
@@ -109,7 +111,7 @@ describe('ClubScanPageComponent', () => {
     expect(el.textContent).toContain('Partie nicht gefunden');
   }));
 
-  it('übernimmt Kopfdaten und springt auf die unsichere Stelle; die Vorschau zeigt „Schwaz" statt meines Namens', fakeAsync(() => {
+  it('übernimmt Kopfdaten und springt auf die unsichere Stelle; die Vorschau zeigt „Testdorf" statt meines Namens', fakeAsync(() => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
@@ -118,7 +120,7 @@ describe('ClubScanPageComponent', () => {
     expect(c.year()).toBe(2026);
     expect(c.result()).toBe('0-1');
     expect(el.querySelector('.where')?.textContent).toContain('Sf3');       // deutsche Figuren
-    expect(el.querySelector('.preview')?.textContent).toContain('2026 · Schwaz – Hengl, Philip · 0-1');
+    expect(el.querySelector('.preview')?.textContent).toContain('2026 · Testdorf – Hengl, Philip · 0-1');
     expect(el.textContent).toContain('Ligaspieler: Hengl, Philip');
     expect(el.textContent).not.toContain('Kein Ligaspieler erkannt');
   }));
@@ -261,13 +263,13 @@ describe('ClubScanPageComponent', () => {
     expect(el.querySelector('.undo-line')).toBeNull();
   }));
 
-  it('ersetzt standardmäßig Schwaz-Spieler und die eigene Seite; eingreifen geht', fakeAsync(() => {
+  it('ersetzt standardmäßig Testdorf-Spieler und die eigene Seite; eingreifen geht', fakeAsync(() => {
     api.match.and.resolveTo(MATCH(false));
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
     const c = fixture.componentInstance;
-    expect(c.replace('white')()).toBeTrue();                             // Oberschmid: Schwaz UND ich
+    expect(c.replace('white')()).toBeTrue();                             // Oberschmid: Testdorf UND ich
     expect(el.textContent).toContain('bleibt kein bekannter Gegner übrig');
     c.setReplace('white', false);                                         // dann bleibe ich als Ligaspieler stehen
     fixture.detectChanges();
@@ -331,7 +333,7 @@ describe('ClubScanPageComponent', () => {
     expect(el.textContent).toContain('In die Vereins-Datenbank übernommen.');
     expect(el.querySelector('.save-panel .btn-pri')).toBeNull();                          // kein zweites Mal
 
-    // PGN mit den Namen wie im Formular (nicht „Schwaz"), als Text kopieren
+    // PGN mit den Namen wie im Formular (nicht „Testdorf"), als Text kopieren
     const written: string[] = [];
     spyOn(navigator.clipboard, 'writeText').and.callFake(async (t: string) => { written.push(t); });
     (Array.from(el.querySelectorAll('button')).find(b => b.textContent?.trim() === 'PGN kopieren') as HTMLButtonElement).click();
@@ -544,7 +546,7 @@ describe('ClubScanPageComponent', () => {
     perms = [];
     const el = create();
     const gate = el.querySelector('lh-access-gate')!;
-    expect(gate.textContent).toContain('Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz.');
+    expect(gate.textContent).toContain('Partieformulare einlesen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine.');
     expect(gate.textContent).toContain('Angemeldet als patrik.');
     expect(gate.textContent).not.toContain('Zu den Vereinspartien');
   });

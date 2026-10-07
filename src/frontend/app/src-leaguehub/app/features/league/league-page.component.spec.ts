@@ -5,8 +5,10 @@ import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { League, LeagueIndex } from '../../core/league.models';
 import { LeaguePageComponent } from './league-page.component';
+import { TEST_CLUB, provideTestClub } from '../../core/club-context.testing';
 
-const INDEX: LeagueIndex = { season: '2026/27', generated: '27.09.2026 21:00', leagues: [{ tnr: 10, name: 'Landesliga' }, { tnr: 20, name: '1. Klasse Ost' }] };
+const INDEX: LeagueIndex = { season: '2026/27', generated: '27.09.2026 21:00', leagues: [{ tnr: 10, name: 'Landesliga' }, { tnr: 20, name: '1. Klasse Ost' }],
+  club: { id: 1, name: 'SK Testdorf', anonName: 'Testdorf', teamPrefix: 'Testdorf', source: null } };
 
 function league(tnr: number, teams: string[]): League {
   return {
@@ -51,7 +53,7 @@ describe('LeaguePageComponent', () => {
         online: { lichess: { games: 345890, accounts: 54 } }, onlineTotal: 345890, onlineAccounts: 54 } : undefined,
       opponent: fides.length ? { players: fides.length, board: { Lumbra: 187 }, boardTotal: 187, online: {}, onlineTotal: 0, onlineAccounts: 0 } : undefined,
     }));
-    api.league.and.callFake(async (tnr: number) => league(tnr, tnr === 10 ? ['Kufstein', 'Schwaz', 'Wörgl'] : ['Absam', 'Hall']));
+    api.league.and.callFake(async (tnr: number) => league(tnr, tnr === 10 ? ['Kufstein', 'Testdorf', 'Wörgl'] : ['Absam', 'Hall']));
     api.updateStatus.and.resolveTo({ running: false, started: null, finished: null, ok: null, message: null });
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
@@ -65,6 +67,7 @@ describe('LeaguePageComponent', () => {
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
+        provideTestClub(TEST_CLUB),
       ],
     });
     fixture = TestBed.createComponent(LeaguePageComponent);
@@ -82,26 +85,36 @@ describe('LeaguePageComponent', () => {
     expect(el.textContent).toContain('patrik');
     // UX-033: früher eine Sackgasse (auch direkt nach der Registrierung) — jetzt Anfrage und Kontowechsel.
     const gate = el.querySelector('lh-access-gate')!;
-    expect(gate.textContent).toContain('LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz.');
+    expect(gate.textContent).toContain('LeagueHub sehen Admins und die Vereinsgruppen der teilnehmenden Vereine.');
     expect(gate.textContent).toContain('Freischaltung anfragen');
     expect(gate.textContent).toContain('Mit anderem Konto anmelden');
     expect(api.index).not.toHaveBeenCalled();
   });
 
-  it('wählt ohne Vorgabe die erste Liga, die erste offene Runde und Schwaz', async () => {
+  it('ein bayerischer Verein: Vorauswahl über den Mannschafts-Anfang („SK Weiler 1"), Quelle Ligamanager (0.698.0)', async () => {
+    api.index.and.resolveTo({ ...INDEX, leagues: [{ tnr: 30, name: 'Landesliga Süd' }],
+      club: { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', source: 'ligamanager' } });
+    api.league.and.callFake(async (tnr: number) => league(tnr, ['SC Rum 1', 'SK Weiler 1', 'SK Weilerbach 1']));
+    const el = create();
+    await settle();
+    expect(fixture.componentInstance.team()).toBe('SK Weiler 1');
+    expect(el.textContent).toContain('Ligamanager des Bayerischen Schachbunds');
+  });
+
+  it('wählt ohne Vorgabe die erste Liga, die erste offene Runde und den eigenen Verein', async () => {
     const el = create();
     await settle();
     const c = fixture.componentInstance;
     expect(c.tnr()).toBe(10);
     expect(c.round()).toBe(2);
-    expect(c.team()).toBe('Schwaz');
-    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Schwaz');
+    expect(c.team()).toBe('Testdorf');
+    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Testdorf');
     expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({
-      queryParams: { liga: 10, runde: 2, verein: 'Schwaz' }, replaceUrl: true }));
-    expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Schwaz' });
+      queryParams: { liga: 10, runde: 2, verein: 'Testdorf' }, replaceUrl: true }));
+    expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Testdorf' });
     expect(el.textContent).toContain('Stand der Daten: 27.09.2026 21:00');
     // Partien je Quelle (0.626.0) als Tabelle mit Liga und Begegnung (0.628.0): die Liga + die Meldeliste des Gegners, ohne leere FIDE-IDs.
-    expect(api.sources).toHaveBeenCalledWith(null, ['Schwaz-1'], 10);
+    expect(api.sources).toHaveBeenCalledWith(null, ['Testdorf-1'], 10);
     // seit 0.650.0 hinter dem (i) „Partien"
     (el.querySelector('button[aria-label="Partien je Quelle"]') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -112,7 +125,7 @@ describe('LeaguePageComponent', () => {
     ]);
     const head = el.querySelector('.src-tbl thead')!.textContent!;
     expect(head).toContain('Landesliga · 177 Spieler');
-    expect(head).toContain('Gegner von Schwaz · 1 Spieler');
+    expect(head).toContain('Gegner von Testdorf · 1 Spieler');
     // Anderer Verein → andere Meldeliste → neu geholt.
     c.pickTeam('Wörgl');
     await settle();
@@ -153,9 +166,9 @@ describe('LeaguePageComponent', () => {
     const c = fixture.componentInstance;
     expect([c.tnr(), c.round(), c.team()]).toEqual([20, 3, 'Hall']);
 
-    await c.pickLeague(10);   // Hall gibt es in der Landesliga nicht, Schwaz schon
+    await c.pickLeague(10);   // Hall gibt es in der Landesliga nicht, Testdorf schon
     await settle();
-    expect([c.tnr(), c.round(), c.team()]).toEqual([10, 2, 'Schwaz']);
+    expect([c.tnr(), c.round(), c.team()]).toEqual([10, 2, 'Testdorf']);
   });
 
   // F7-010: Funkloch beim Ligawechsel — früher ersetzte „Daten nicht geladen" die ganze Seite bis zum Browser-Reload.
@@ -166,7 +179,7 @@ describe('LeaguePageComponent', () => {
     let fail = true;
     api.league.and.callFake(async (tnr: number) => {
       if (tnr === 20 && fail) throw new HttpErrorResponse({ status: 0 });
-      return league(tnr, tnr === 10 ? ['Kufstein', 'Schwaz', 'Wörgl'] : ['Absam', 'Hall']);
+      return league(tnr, tnr === 10 ? ['Kufstein', 'Testdorf', 'Wörgl'] : ['Absam', 'Hall']);
     });
 
     await c.pickLeague(20);
@@ -192,7 +205,7 @@ describe('LeaguePageComponent', () => {
     const c = fixture.componentInstance;
     api.league.and.callFake(async (tnr: number) => {
       if (tnr === 20) throw new HttpErrorResponse({ status: 500 });
-      return league(tnr, ['Kufstein', 'Schwaz', 'Wörgl']);
+      return league(tnr, ['Kufstein', 'Testdorf', 'Wörgl']);
     });
     await c.pickLeague(20);
     await settle();
@@ -200,7 +213,7 @@ describe('LeaguePageComponent', () => {
     await c.pickLeague(10);
     await settle();
     expect(el.textContent).not.toContain('Liga nicht geladen');
-    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Schwaz');
+    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Testdorf');
   });
 
   // UX-034 (d): kam der Bestand nicht, stand nur „Fehler 500." da — ohne Knopf, bis zum Browser-Reload.
@@ -218,7 +231,7 @@ describe('LeaguePageComponent', () => {
     expect(api.index).toHaveBeenCalledTimes(2);
     expect(el.textContent).not.toContain('Daten nicht geladen');
     expect(el.querySelectorAll('form.pick select').length).toBe(3);
-    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Schwaz');
+    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Testdorf');
   });
 
   it('ohne league.manage kein Knopf „Daten aktualisieren" und kein Teilen-Link', async () => {

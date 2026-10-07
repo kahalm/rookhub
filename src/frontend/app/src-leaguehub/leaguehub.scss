@@ -69,6 +69,9 @@ body {
 }
 .account { display: flex; align-items: center; gap: 10px; font-size: 15px; }
 .account .who { color: var(--muted); }
+/* Umschalter zwischen Vereinen (0.698.0) — nur bei mehreren sichtbar */
+.account .club-switch { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.account .club-switch select { font: inherit; min-height: 36px; max-width: 12em; }
 .lede { margin: 6px auto 0; color: var(--muted); }
 
 /* Auswahl */

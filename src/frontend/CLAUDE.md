@@ -191,6 +191,21 @@ Seit 0.646.0 trägt ein Halbzug den Befund der Engine-Prüfung beim Einlesen (`E
 „unsicher" („von der Engine korrigiert" / „Engine zweifelt", Erklärung im `title`), solange der Zug nicht bestätigt ist;
 ein vom Nutzer gesetzter Zug (`userPly`) hat keinen. `fromServer`/`toServer` reichen ihn durch.
 
+**LeagueHub für mehrere Vereine (0.699.0, Server 0.698.0) — `src-leaguehub/app/core/club-context.service.ts`.** Der Server kennt den
+Verein einer Anfrage über `?club=` (Haupt-CLAUDE.md „LeagueHub — Vereine als Mandanten"). `ClubContextService` holt die
+Vereine des Kontos EINMAL je Konto (`GET /api/league/me` → `{ clubs, current }`), wählt gemerkt (localStorage `lh-club`) vor
+Server-Vorgabe vor dem ersten (`pickClub`) und stellt `club()`, `anonName()` (Ersatzname anonymisierter Spieler, früher fest
+`ANON_NAME = 'Schwaz'` — die Konstante ist weg) und `clubName()` als Signale bereit. `leagueClubInterceptor` (nur in
+`leaguehub`, über `provideRhHttpClient([leagueClubInterceptor])`) wartet bei jedem `/api/league/…`-Aufruf außer `/me` und
+`/s/…` auf `ensure()` und hängt `club=<id>` an — die Dienste (`LeagueApiService`, `ClubApiService`) bleiben unverändert.
+Mehrere Vereine: Umschalter im Kopf (`app.component`), der Wechsel merkt sich den Verein und lädt die Seite neu. Teilen-Seiten
+(`/s/:token…`) nehmen den Verein des LINKS: `share-page` aus der Antwort (`useShareClub`), Hochladen/Formular holen ihn mit
+`useShare(token)`; `shareClub` schlägt den angemeldeten. Texte, die früher „SK Schwaz"/„Schwaz" sagten, lesen jetzt
+`clubName()`/`anonName()` (Zugangs-Sperrkarten sprechen allgemein von den Vereinsgruppen der teilnehmenden Vereine);
+`importSummary(r, anon)` bekommt den Namen mit. Startseite: Vorauswahl der Mannschaft über `ownsTeam(teamPrefix, team)` (SPIEGEL
+von `LeagueClub.OwnsTeam`). Datenschutz: `LEGAL_SITE.leagueClub` nennt den Verein (`legal.privacy.leagueClub`). Specs:
+`provideTestClub()` aus `core/club-context.testing.ts` (Verein „SK Testdorf"/„Testdorf" — bewusst nicht Schwaz).
+
 LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: ohne `share` angemeldet
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort
 `ref` — angemeldet die Nummer, ohne Konto der geheime Schlüssel. Die Übersicht vor dem PGN-Import rechnet

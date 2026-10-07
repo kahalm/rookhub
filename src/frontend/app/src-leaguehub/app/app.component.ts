@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
@@ -9,6 +9,7 @@ import { LocaleService } from '@rh/core/locale.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { environment } from '../../src/environments/environment';
 import { ClaimPromptComponent } from './shared/claim-prompt.component';
+import { ClubContextService } from './core/club-context.service';
 
 /**
  * Hülle von LeagueHub: Wortmarke, rechts Anmelden bzw. Name + Abmelden, unten Version und Datenschutz.
@@ -25,6 +26,16 @@ import { ClaimPromptComponent } from './shared/claim-prompt.component';
       <div class="wrap top-row">
         <a class="brand" routerLink="/">LeagueHub</a>
         <nav class="account">
+          @if (user() && clubs.clubs().length > 1) {
+            <!-- mehrere Vereine (0.698.0): Umschalter, gemerkt im Gerät; ein Verein → unsichtbar -->
+            <label class="club-switch">Verein
+              <select (change)="switchClub(+$any($event.target).value)" aria-label="Verein wählen">
+                @for (c of clubs.clubs(); track c.id) {
+                  <option [value]="c.id" [selected]="c.id === clubs.current()?.id">{{ c.name }}</option>
+                }
+              </select>
+            </label>
+          }
           @if (user(); as u) {
             <span class="who">{{ u.username }}</span>
             <button type="button" class="btn-sec" (click)="logout()">Abmelden</button>
@@ -33,7 +44,7 @@ import { ClaimPromptComponent } from './shared/claim-prompt.component';
           }
         </nav>
       </div>
-      <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für die Tiroler Mannschaftsmeisterschaft.</p>
+      <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für {{ region() }}.</p>
       @if (user()) {
         <nav class="wrap tabs" aria-label="Bereiche">
           @if (nav().view) {
@@ -67,6 +78,11 @@ export class LeagueHubAppComponent implements OnInit {
   /** Nur injizieren genügt: hell/dunkel wie in RookHub (geteilter Design-Modus, setzt html.dark-theme). */
   private readonly theme = inject(ThemeService);
   readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
+  /** Der Verein des Kontos (0.698.0) — Umschalter im Kopf, wenn es mehrere sind. */
+  readonly clubs = inject(ClubContextService);
+  /** Wofür die Prognosen sind — nach der Liga-Quelle des Vereins (ohne Verein die Tiroler wie bisher). */
+  readonly region = computed(() => this.clubs.club()?.source === 'ligamanager'
+    ? 'die bayerischen Mannschaftsligen' : 'die Tiroler Mannschaftsmeisterschaft');
   readonly version = environment.version;
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
   readonly nav = computed(() => {
@@ -82,6 +98,25 @@ export class LeagueHubAppComponent implements OnInit {
   /** „Anmelden“ fuehrt hierher zurueck (UX-020) — bisher fest „/“, auch von /verein/neu, /s/<token> oder der
    *  Registrierung mit eigenem Ziel. Rueckfall „/“: LeagueHub hat kein /dashboard. */
   readonly authQuery = computed(() => authLinkQuery(this.url(), '/'));
+
+  constructor() {
+    // Angemeldet: die Vereine des Kontos holen (Umschalter, Texte); die Aufrufe selbst warten ohnehin darauf.
+    effect(() => {
+      if (this.user()) this.clubs.ensure().subscribe();
+    });
+  }
+
+  /** Verein wechseln: gemerkt, dann die Seite neu — nichts vom alten Verein (Listen, Entwürfe, Formulare) bleibt stehen. */
+  switchClub(id: number): void {
+    if (id === this.clubs.current()?.id) return;
+    this.clubs.select(id);
+    this.reload();
+  }
+
+  /** Eigene Methode, damit die Specs sie ersetzen können. */
+  reload(): void {
+    window.location.reload();
+  }
 
   ngOnInit(): void {
     // Die Seite ist deutsch (Tiroler Ligen); die geteilten Masken (Anmelden, Datenschutz) zeigen es ebenso —

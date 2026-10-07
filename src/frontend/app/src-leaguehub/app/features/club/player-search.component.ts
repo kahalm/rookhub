@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, inject, signal, viewChild } from '@angular/core';
+import { ClubContextService } from '../../core/club-context.service';
 import { ClubClient } from '../../core/club-api.service';
 import { RosterPerson } from '../../core/club.models';
 
@@ -107,8 +108,10 @@ export class PlayerSearchComponent implements OnInit, OnDestroy {
     return parts.join(' · ');
   }
 
+  private readonly clubCtx = inject(ClubContextService);
+
   tag(p: RosterPerson): string {
-    if (p.club) return 'Schwaz';
+    if (p.club) return this.clubCtx.anonName();   // spielt für den eigenen Verein (0.698.0: dessen Name)
     return p.league === false ? 'Megabase' : 'Ligaspieler';
   }
 

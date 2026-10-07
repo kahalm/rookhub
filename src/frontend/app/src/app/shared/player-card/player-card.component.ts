@@ -144,7 +144,7 @@ type Show = 'w' | 's' | 'b';
               wählbar.</p>
           }
           }
-          <p class="muted small-note spaced">@if (note(); as n) { {{ n }} } @else {Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt. }
+          <p class="muted small-note spaced">@if (note(); as n) { {{ n }} } @else {Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien der LeagueHub-Vereine (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt. }
             @if (c.online) { Online-Partien der eingetragenen Konten zählen im Eröffnungsprofil und im Baum, wenn oben „Brett + online" oder „Online" gewählt ist (unsichere Konten nur mit dem Schalter). }</p>
         }
       </div>

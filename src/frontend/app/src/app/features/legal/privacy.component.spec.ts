@@ -74,6 +74,14 @@ describe('PrivacyComponent', () => {
     expect(kid.textContent).not.toContain('legal.privacy.leagueTitle');
   });
 
+  it('LeagueHub: nennt den Verein, für den das Konto LeagueHub gerade nutzt — nur, wenn er bekannt ist (0.698.0)', () => {
+    const known = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub', leagueClub: () => 'SK Testdorf' });
+    expect(known.textContent).toContain('legal.privacy.leagueClub');
+    TestBed.resetTestingModule();
+    const unknown = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub', leagueClub: () => null });
+    expect(unknown.textContent).not.toContain('legal.privacy.leagueClub');
+  });
+
   it('beschreibt, was der Discord-Bot speichert (Codereview S4-008)', () => {
     const text = render().textContent ?? '';
     for (const k of ['botTitle', 'botIntro', 'botDmLog', 'botActivity', 'botLogs'])

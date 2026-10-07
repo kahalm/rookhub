@@ -3,9 +3,9 @@ import { importSummary, isTransientError, loadErrorText, normalizeResult, reason
 import { ScoresheetStatus } from './club.models';
 
 describe('club-format', () => {
-  it('Zusammenfassung des Imports: übernommen, als Schwaz, schon da, abgelehnt, abgeschnitten', () => {
-    expect(importSummary({ added: 3, anonymized: 2, duplicates: 1, truncated: false, ids: [], failed: [{ index: 4, white: null, black: null, reason: 'illegal' }] }))
-      .toBe('3 Partien übernommen (2 mit „Schwaz“), 1 schon da, 1 nicht übernommen.');
+  it('Zusammenfassung des Imports: übernommen, mit dem Vereinsnamen, schon da, abgelehnt, abgeschnitten', () => {
+    expect(importSummary({ added: 3, anonymized: 2, duplicates: 1, truncated: false, ids: [], failed: [{ index: 4, white: null, black: null, reason: 'illegal' }] }, 'Testdorf'))
+      .toBe('3 Partien übernommen (2 mit „Testdorf“), 1 schon da, 1 nicht übernommen.');
     expect(importSummary({ added: 1, anonymized: 0, duplicates: 0, truncated: true, ids: [1], failed: [] }))
       .toContain('1 Partie übernommen. Es wurden nur die ersten 500');
   });
@@ -14,7 +14,7 @@ describe('club-format', () => {
     for (const r of ['noLeaguePlayer', 'onlyOwnClub', 'notFound', 'fromPosition', 'illegal', 'noMoves', 'tooLong', 'duplicate', 'empty', 'tooLarge', 'shareLimit']) {
       expect(reasonText(r)).not.toBe('Nicht übernommen.');
     }
-    expect(reasonText('onlyOwnClub')).toContain('Schwaz');
+    expect(reasonText('onlyOwnClub')).toContain('eigenen Vereins');   // kein fester Vereinsname mehr (0.698.0)
     expect(importSummary({ added: 2, duplicates: 0, anonymized: 2, truncated: false, ids: [], failed: [], remembered: 1 }))
       .toContain('1 Namens-Zuordnung gemerkt');
   });

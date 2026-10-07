@@ -12,6 +12,7 @@ import { provideRhHttpClient } from '@rh/core/http-chain';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 import { CONFIRM_LABELS } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { provideFullscreenSafeOverlays } from '@rh/shared/fullscreen/fullscreen-overlay.service';
+import { ClubContextService, leagueClubInterceptor } from './core/club-context.service';
 
 registerLocaleData(localeDe);
 
@@ -29,12 +30,17 @@ export const leaguehubConfig: ApplicationConfig = {
     // (hr, hu …) als LOCALE_ID ließe jede Datums-/Zahlen-Pipe mit „Missing locale data" scheitern.
     { provide: LOCALE_ID, useValue: 'de' },
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
-    provideRhHttpClient(),
+    // Vereine als Mandanten (0.698.0): jeder LeagueHub-Aufruf trägt den gewählten Verein als `?club=`.
+    provideRhHttpClient([leagueClubInterceptor]),
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub (Impressum, Kontakt aus OPERATOR), die Datenschutzerklaerung dazu mit dem
     // LeagueHub-Abschnitt: Ligaspieler ohne Konto, Online-Konten, Prognosen, Teilen-Links (Codereview F7-006).
     // Konto loeschen geht nur in RookHub — die Loeschseite verweist dorthin (Codereview UX-023).
-    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), kind: 'leaguehub', accountHome: 'rookhub' }) },
+    // Seit 0.698.0 mit dem Verein, für den das Konto LeagueHub gerade nutzt (ClubContextService).
+    { provide: LEGAL_SITE, useFactory: (): LegalSite => {
+      const clubs = inject(ClubContextService);
+      return { ...defaultLegalSite(), kind: 'leaguehub', accountHome: 'rookhub', leagueClub: () => clubs.club()?.name ?? null };
+    } },
     // Rueckfragen (ConfirmService) mit deutschen Knoepfen — die Seite stellt keine Sprache ein, sonst kaeme „Cancel“.
     { provide: CONFIRM_LABELS, useValue: { confirm: 'OK', cancel: 'Abbrechen' } },
     // Klassische Overlays statt Popover (wie RookHub): nur so lässt sich eine Rückfrage in den modalen <dialog> der

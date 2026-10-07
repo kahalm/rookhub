@@ -1,3 +1,5 @@
+import { TestBed } from '@angular/core/testing';
+import { TEST_CLUB, provideTestClub } from './core/club-context.testing';
 import { authGuard } from '@rh/core/auth.guard';
 import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
 import { OPERATOR } from '../../src/environments/operator';
@@ -32,7 +34,12 @@ describe('LeagueHub-Routen', () => {
     expect(routes.map(r => r.path)).toContain('privacy');
     const legal = leaguehubConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
       { useFactory: () => LegalSite } | undefined;
-    expect(legal?.useFactory()).toEqual({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub', accountHome: 'rookhub' });
+    // seit 0.698.0 mit dem Verein des Kontos (ClubContextService) — die Fabrik braucht dafür einen Injektor
+    TestBed.configureTestingModule({ providers: [provideTestClub(TEST_CLUB)] });
+    const site = TestBed.runInInjectionContext(() => legal!.useFactory());
+    expect({ ...site, leagueClub: undefined }).toEqual({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub', accountHome: 'rookhub',
+      leagueClub: undefined });
+    expect(site.leagueClub?.()).toBe('SK Testdorf');
   });
 
   it('unbekannte Adressen zeigen „Seite nicht gefunden“ ohne Guard, statt auf „/“ umzuleiten (UX-026)', async () => {

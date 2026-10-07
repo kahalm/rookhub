@@ -330,7 +330,7 @@
       "requiredFor": "Bitte logge dich ein oder registriere dich – danach geht es direkt weiter zu „{{area}}“.",
       "freeNote": "Ein Konto ist kostenlos, die E-Mail-Adresse freiwillig.",
       "forgotLink": "Passwort vergessen?",
-      "leaguehubNote": "LeagueHub ist für Admins und die Vereinsgruppe von SK Schwaz. Melde dich mit deinem RookHub-Konto an."
+      "leaguehubNote": "LeagueHub ist für Admins und die Vereinsgruppen der teilnehmenden Vereine. Melde dich mit deinem RookHub-Konto an."
     },
     "register": {
       "title": "Registrieren",
@@ -351,7 +351,7 @@
       "passwordRejected": "Dieses Passwort geht nicht. Nimm mindestens {{min}} Zeichen und kein allzu bekanntes Passwort wie „12345678“.",
       "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht.",
       "privacyNote": "Für dein Konto gilt unsere Datenschutzerklärung.",
-      "leaguehubNote": "Damit legst du ein RookHub-Konto an. LeagueHub sehen nur Admins und die Vereinsgruppe von SK Schwaz – danach muss dich ein Admin freischalten.",
+      "leaguehubNote": "Damit legst du ein RookHub-Konto an. LeagueHub sehen nur Admins und die Vereinsgruppen der teilnehmenden Vereine – danach muss dich ein Admin freischalten.",
       "kids": {
         "parentsTitle": "Für Eltern",
         "parentsText": "Spielen geht auch ohne Konto. Ein Konto bitte gemeinsam mit einem Elternteil anlegen.",
@@ -786,8 +786,9 @@
       "controller": "Verantwortlich für die Datenverarbeitung ist der im Impressum genannte Betreiber",
       "controllerNamed": "Verantwortlich für die Datenverarbeitung ist:",
       "leagueTitle": "LeagueHub (Mannschaftsvorbereitung)",
-      "leagueIntro": "LeagueHub hilft Mitgliedern eines Schachvereins (SK Schwaz), sich auf Mannschaftskämpfe der Tiroler Ligen vorzubereiten. Dafür verarbeiten wir auch Daten von Spielerinnen und Spielern, die selbst kein Konto bei uns haben und deren Daten wir nicht bei ihnen selbst erheben (Art. 14 DSGVO).",
-      "leagueSources": "Quellen: Paarungen, Ergebnisse und Meldelisten von chess-results.com; Partien aus Lumbra’s GigaBase, der ChessBase-Megabase und der Partiedatenbank von chess-results.com; Vereinspartien, die Mitglieder hochladen oder die ohne Anmeldung über einen Teilen-Link eingereicht werden (auch als Foto eines Partieformulars, siehe „KI-Dienste“) — Spieler von SK Schwaz erscheinen darin standardmäßig nur als „Schwaz“; ihr echter Name wird dabei intern für Auswertungen des Vereins gespeichert und nirgends angezeigt oder weitergegeben (wird das Ersetzen beim Hochladen für eine Seite abgewählt, bleibt der echte Name sichtbar gespeichert); öffentliche Partien von Online-Konten auf Lichess und chess.com. Für diesen Abruf überträgt unser Server die Benutzernamen dieser Konten an die jeweilige Plattform; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Anders als beim Wochenziel „Partien“ werden hier die Partien selbst gespeichert.",
+      "leagueIntro": "LeagueHub hilft Mitgliedern teilnehmender Schachvereine, sich auf Mannschaftskämpfe ihrer Ligen vorzubereiten (Tirol, Bayern). Jeder Verein hat seine eigene Vereins-Datenbank, die kein anderer Verein sieht. Dafür verarbeiten wir auch Daten von Spielerinnen und Spielern, die selbst kein Konto bei uns haben und deren Daten wir nicht bei ihnen selbst erheben (Art. 14 DSGVO).",
+      "leagueClub": "Du nutzt LeagueHub gerade für {{club}}.",
+      "leagueSources": "Quellen: Paarungen, Ergebnisse und Meldelisten von chess-results.com und aus dem Ligamanager des Bayerischen Schachbunds; Partien aus Lumbra’s GigaBase, der ChessBase-Megabase und der Partiedatenbank von chess-results.com; Vereinspartien, die Mitglieder hochladen oder die ohne Anmeldung über einen Teilen-Link eingereicht werden (auch als Foto eines Partieformulars, siehe „KI-Dienste“) — Spieler des hochladenden Vereins erscheinen darin standardmäßig nur unter dem Namen des Vereins; ihr echter Name wird dabei intern für Auswertungen dieses Vereins gespeichert und nirgends angezeigt oder weitergegeben (wird das Ersetzen beim Hochladen für eine Seite abgewählt, bleibt der echte Name sichtbar gespeichert); öffentliche Partien von Online-Konten auf Lichess und chess.com. Für diesen Abruf überträgt unser Server die Benutzernamen dieser Konten an die jeweilige Plattform; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Anders als beim Wochenziel „Partien“ werden hier die Partien selbst gespeichert.",
       "leagueData": "Kategorien: Name, FIDE-ID, Verein, Wertungszahl und Einsätze laut Meldelisten; Partien und daraus berechnete Eröffnungsprofile; eine berechnete Wahrscheinlichkeit, in einer Runde aufgestellt zu werden (ein Modell, das aus früheren Saisonen gelernt hat); Online-Konten auf Lichess und chess.com, die wir einem Spieler zuordnen — aus öffentlichen Profilangaben (etwa Klarname und Land) oder von Vereinsverantwortlichen eingetragen, als „gesichert“ oder nur vermutet —, samt Kommentar zur Zuordnung und den öffentlichen Partien dieser Konten.",
       "leagueBasis": "Zweck und Rechtsgrundlage: Vorbereitung auf Mannschaftskämpfe; berechtigtes Interesse des Vereins und seiner Mitglieder (Art. 6 Abs. 1 lit. f DSGVO). Die Daten stammen überwiegend aus öffentlich zugänglichen Quellen.",
       "leagueRecipients": "Empfänger: angemeldete Konten mit LeagueHub-Freischaltung (die Vereinsgruppe und Administratoren). Über einen Teilen-Link sieht jeder, der den Link hat, ohne Anmeldung die geteilte Begegnung: Meldeliste mit Prognosen, Spielerkarten, Eröffnungsbäume und Partien der dort gemeldeten Spieler — Online-Konten nur, wenn sie als „gesichert“ gelten. Ein Teilen-Link gilt bis sieben Tage nach der Runde (bei einer schon gespielten Runde sieben Tage ab dem Teilen, ohne bekanntes Rundendatum 30 Tage) und kann vorher widerrufen werden.",

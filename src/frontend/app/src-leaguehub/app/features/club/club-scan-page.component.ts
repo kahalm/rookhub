@@ -14,7 +14,8 @@ import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@r
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubGameDetail, ClubPairing, ClubSheetState, LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
-import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
+import { ClubContextService } from '../../core/club-context.service';
+import { SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
@@ -57,7 +58,7 @@ function readAutoMine(): boolean {
         <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Einlesen von Partieformularen fehlt dir noch die Freigabe — frag einen Verwalter."
                         purpose="das Einlesen von Partieformularen" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
       } @else {
-        <lh-access-gate text="Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz." />
+        <lh-access-gate text="Partieformulare einlesen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
       }
     } @else if (notFound() && gameId != null) {
       <section class="gate"><h2>Partie nicht gefunden</h2>
@@ -258,7 +259,7 @@ function readAutoMine(): boolean {
                     }
                   </span>
                 }
-                <label class="replace-row" title="Nach außen steht dann „Schwaz“. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der Name aus der öffentlichen Paarung der Ligarunde.">
+                <label class="replace-row" [attr.title]="'Nach außen steht dann „' + anon + '“. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der Name aus der öffentlichen Paarung der Ligarunde.'">
                   <input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
                   durch „{{ anon }}“ ersetzen</label>
               </div>
@@ -295,7 +296,7 @@ function readAutoMine(): boolean {
               <button type="button" [attr.aria-pressed]="ownerSide() === 'white'" (click)="setOwner('white')">Weiß</button>
               <button type="button" [attr.aria-pressed]="ownerSide() === 'black'" (click)="setOwner('black')">Schwarz</button>
             </div>
-            <span class="muted small">Spieler von Schwaz und deine Seite werden standardmäßig durch „{{ anon }}“ ersetzt — dann wird weder
+            <span class="muted small">Spieler von {{ clubName() }} und deine Seite werden standardmäßig durch „{{ anon }}“ ersetzt — dann wird weder
               gespeichert, wer dahinter steht, noch wer hochgeladen hat.</span>
           </div>
 
@@ -378,7 +379,10 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
   readonly sides: Side[] = ['white', 'black'];
   readonly maxYear = new Date().getFullYear() + 1;
-  readonly anon = ANON_NAME;
+  private readonly clubCtx = inject(ClubContextService);
+  /** Name anonymisierter Spieler und des Vereins — der angemeldete bzw. der des Teilen-Links (0.698.0). */
+  get anon(): string { return this.clubCtx.anonName(); }
+  readonly clubName = this.clubCtx.clubName;
   readonly de = de;
 
   /** Nummer (angemeldet) bzw. geheimer Schlüssel (ohne Konto) der Einlesung. */
@@ -484,7 +488,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   /** Wie die Partie in der Datenbank steht (Jahr · Weiß – Schwarz · Ergebnis). */
   readonly preview = computed(() => {
-    const shown = (k: Side) => this.replace(k)() ? ANON_NAME : this.match(k)()?.name || this.name(k)().trim() || '?';
+    const shown = (k: Side) => this.replace(k)() ? this.anon : this.match(k)()?.name || this.name(k)().trim() || '?';
     return [this.year() ?? 'ohne Jahr', `${shown('white')} – ${shown('black')}`, this.result() === '*' ? 'Ergebnis offen' : this.result()]
       .join(' · ');
   });
@@ -514,6 +518,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (!this.allowed) return;
+    if (this.share) this.clubCtx.useShare(this.share);   // ohne Konto: der Verein des Links (0.698.0)
     this.scanRef = this.route.snapshot.paramMap.get('id') ?? this.route.snapshot.paramMap.get('key') ?? '';
     void (this.gameId != null ? this.loadGame() : this.load());
   }
@@ -750,12 +755,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   matchText(k: Side): string {
     const m = this.match(k)();
-    if (this.replace(k)()) return m?.club ? `Spieler von Schwaz — wird „${ANON_NAME}“` : `wird „${ANON_NAME}“`;
+    if (this.replace(k)()) return m?.club ? `Spieler von ${this.clubName()} — wird „${this.anon}“` : `wird „${this.anon}“`;
     if (!m) return '';
     if (m.ambiguous) return 'Ligaspieler (mehrere dieses Namens — bitte aus den Vorschlägen wählen)';
     if (m.league && m.lastNameOnly) return `nur über den Nachnamen: ${m.name} — bitte prüfen`;
     const kept = m.alias ? ' (gemerkt)' : '';
-    if (m.league) return `Ligaspieler: ${m.name}${m.fide ? '' : ' (ohne FIDE-ID)'}${m.club ? ' — Schwaz, nicht ersetzt' : ''}${kept}`;
+    if (m.league) return `Ligaspieler: ${m.name}${m.fide ? '' : ' (ohne FIDE-ID)'}${m.club ? ` — ${this.anon}, nicht ersetzt` : ''}${kept}`;
     if (m.mega) return `nicht in Liga — aus der Megabase: ${m.name}${m.fide ? ` (FIDE ${m.fide})` : ''}${kept}`;
     return 'nicht erkannt';
   }

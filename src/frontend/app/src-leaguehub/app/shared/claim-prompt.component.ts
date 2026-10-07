@@ -4,7 +4,7 @@ import { claimKeys, clearClaimKeys } from '../core/claim-keys';
 
 /**
  * Rückfrage nach dem Anmelden (0.656.0): liegen in diesem Browser Schlüssel anonym hochgeladener Partien, fragt LeagueHub,
- * ob sie dem Konto zugeordnet werden sollen. Erst bei JA wird gespeichert, wer sie hochgeladen hat — bei „Schwaz"-Partien
+ * ob sie dem Konto zugeordnet werden sollen. Erst bei JA wird gespeichert, wer sie hochgeladen hat — bei anonymisierten Partien
  * ist das genau die Zustimmung, die das Häkchen beim Hochladen verspricht. NEIN lässt sie ohne Hochladenden; beide
  * Antworten verbrauchen die Schlüssel.
  */
@@ -17,9 +17,9 @@ import { claimKeys, clearClaimKeys } from '../core/claim-keys';
     @if (offer(); as o) {
       <section class="claim" role="region" aria-label="Partien zuordnen">
         <p>In diesem Browser hast du ohne Anmeldung <b>{{ o.games }} {{ o.games === 1 ? 'Partie' : 'Partien' }}</b> hochgeladen@if (o.anonymized) {
-          (davon {{ o.anonymized }} als „Schwaz“)}. Sollen sie deinem Konto zugeordnet werden? Dann findest du sie unter
-          „Meine Partien“ und kannst sie jederzeit bearbeiten.@if (o.anonymized) {
-          Bei den „Schwaz“-Partien wird damit gespeichert, dass sie von dir sind — angezeigt wird weiter „Schwaz“.}</p>
+          (davon {{ o.anonymized }} anonymisiert, mit dem Vereinsnamen statt des Spielers)}. Sollen sie deinem Konto zugeordnet werden?
+          Dann findest du sie unter „Meine Partien“ und kannst sie jederzeit bearbeiten.@if (o.anonymized) {
+          Bei den anonymisierten Partien wird damit gespeichert, dass sie von dir sind — angezeigt wird weiter der Vereinsname.}</p>
         <div class="actions">
           <button type="button" class="btn-pri" [disabled]="busy()" (click)="answer(true)">Ja, zuordnen</button>
           <button type="button" class="btn-sec" [disabled]="busy()" (click)="answer(false)">Nein</button>

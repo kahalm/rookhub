@@ -7,6 +7,8 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { LocaleService } from '@rh/core/locale.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { LeagueHubAppComponent } from './app.component';
+import { ClubContextService } from './core/club-context.service';
+import { TEST_CLUB, provideTestClub } from './core/club-context.testing';
 
 @Component({ standalone: true, template: '' })
 class StubPageComponent {}
@@ -22,6 +24,7 @@ describe('LeagueHubAppComponent „Anmelden“ behält das Ziel (UX-020)', () =>
         { provide: HandoffService, useValue: { consumeIncoming: () => Promise.resolve(false) } },
         { provide: LocaleService, useValue: { init: () => {}, applyUnsaved: () => {} } },
         { provide: ThemeService, useValue: {} },
+        provideTestClub(null),
       ],
     });
     const fixture = TestBed.createComponent(LeagueHubAppComponent);
@@ -54,6 +57,7 @@ describe('LeagueHubAppComponent Werbesatz auf „Formular prüfen" (UX-036)', ()
         { provide: HandoffService, useValue: { consumeIncoming: () => Promise.resolve(false) } },
         { provide: LocaleService, useValue: { init: () => {}, applyUnsaved: () => {} } },
         { provide: ThemeService, useValue: {} },
+        provideTestClub(null),
       ],
     });
     const fixture = TestBed.createComponent(LeagueHubAppComponent);
@@ -72,5 +76,53 @@ describe('LeagueHubAppComponent Werbesatz auf „Formular prüfen" (UX-036)', ()
     expect((await ledeAt('/verein')).classList).not.toContain('work');
     TestBed.resetTestingModule();
     expect((await ledeAt('/s/abc123')).classList).not.toContain('work');
+  });
+});
+
+/** Vereine als Mandanten (0.698.0): bei mehreren Vereinen ein Umschalter im Kopf (gemerkt, Seite neu), sonst keiner. */
+describe('LeagueHubAppComponent Umschalter zwischen Vereinen', () => {
+  const OTHER = { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', source: 'ligamanager' };
+
+  async function create(clubs: typeof TEST_CLUB[]) {
+    const user = { userId: 7, username: 'patrik' };
+    TestBed.configureTestingModule({
+      imports: [LeagueHubAppComponent],
+      providers: [
+        provideRouter([{ path: '**', component: StubPageComponent }]),
+        { provide: AuthService, useValue: { currentUser$: of(user), currentUser: user, has: () => true, logout: () => {} } },
+        { provide: HandoffService, useValue: { consumeIncoming: () => Promise.resolve(false) } },
+        { provide: LocaleService, useValue: { init: () => {}, applyUnsaved: () => {} } },
+        { provide: ThemeService, useValue: {} },
+        provideTestClub(clubs[0] ?? null, clubs),
+      ],
+    });
+    const fixture = TestBed.createComponent(LeagueHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('ein Verein: kein Umschalter; die Zeile nennt die Tiroler Liga', async () => {
+    const f = await create([TEST_CLUB]);
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.club-switch')).toBeNull();
+    expect(el.querySelector('.lede')!.textContent).toContain('Tiroler Mannschaftsmeisterschaft');
+  });
+
+  it('zwei Vereine: Umschalter; Wechsel merkt den Verein und lädt neu', async () => {
+    const f = await create([TEST_CLUB, OTHER]);
+    const el = f.nativeElement as HTMLElement;
+    const select = el.querySelector('.club-switch select') as HTMLSelectElement;
+    expect(Array.from(select.options).map(o => o.textContent!.trim())).toEqual(['SK Testdorf', 'SK Weiler']);
+    const reload = spyOn(f.componentInstance, 'reload');
+    f.componentInstance.switchClub(1);              // derselbe: nichts
+    expect(reload).not.toHaveBeenCalled();
+    f.componentInstance.switchClub(2);
+    expect(reload).toHaveBeenCalled();
+    expect(TestBed.inject(ClubContextService).current()?.id).toBe(2);
+    f.detectChanges();
+    expect(el.querySelector('.lede')!.textContent).toContain('bayerischen Mannschaftsligen');
   });
 });

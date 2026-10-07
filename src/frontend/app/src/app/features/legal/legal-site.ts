@@ -25,6 +25,9 @@ export interface LegalSite {
    *  „Konto loeschen" — es ist dasselbe RookHub-Konto, geloescht wird es in RookHubs Profil. Die Loeschseite sagt das
    *  und verlinkt dorthin (Codereview UX-023). Fehlt = hier: RookHub selbst, Knopf auf {@link ACCOUNT_DELETE_ROUTE}. */
   accountHome?: 'rookhub';
+  /** Nur LeagueHub (0.698.0): der Verein, für den das Konto LeagueHub gerade nutzt — die Datenschutzerklärung nennt ihn;
+   *  `null` = unbekannt (abgemeldet, kein Verein). */
+  leagueClub?: () => string | null;
 }
 
 /** Wo RookHub die Karte „Konto loeschen" hat: im Profil, per `?section=delete` aufgeklappt und angesprungen

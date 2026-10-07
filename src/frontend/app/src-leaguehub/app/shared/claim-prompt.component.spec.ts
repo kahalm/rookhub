@@ -37,7 +37,7 @@ describe('ClaimPromptComponent (0.656.0)', () => {
     const el = await login();
     expect(api.claimPreview).toHaveBeenCalledWith([K1, K2]);
     expect(el.textContent).toContain('3 Partien');
-    expect(el.textContent).toContain('davon 2 als „Schwaz“');
+    expect(el.textContent).toContain('davon 2 anonymisiert');
     expect(api.claim).not.toHaveBeenCalled();
     await fixture.componentInstance.answer(true);
     fixture.detectChanges();

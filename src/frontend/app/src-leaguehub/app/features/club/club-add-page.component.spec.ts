@@ -1,3 +1,4 @@
+import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, fakeAsync, flush, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -50,7 +51,7 @@ describe('ClubAddPageComponent', () => {
     const has = (p: string) => Array.isArray(perms) ? perms.includes(p) : perms;
     TestBed.configureTestingModule({
       imports: [ClubAddPageComponent],
-      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
+      providers: [provideTestClub(), { provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
         provideRouter([]),
         { provide: ClubApiService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query), paramMap: convertToParamMap(params) } } },
@@ -85,7 +86,7 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     expect(api.importPgn).toHaveBeenCalledWith('[White "x"]\n1. e4 *',
       [{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false }, leagueGameId: 0 }], 7);
-    expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen (1 mit „Schwaz“).');
+    expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen (1 mit „Testdorf“).');
     expect(api.deleteDraft).toHaveBeenCalledWith('7');                  // fertig importiert → Entwurf samt Rohtext weg
   }));
 
@@ -611,7 +612,7 @@ describe('ClubAddPageComponent', () => {
   it('angemeldet ohne Recht: nicht freigeschaltet', () => {
     const el = create(false);
     expect(el.textContent).toContain('Nicht freigeschaltet');
-    expect(el.textContent).toContain('Partien hinzufügen dürfen Admins und die Vereinsgruppe von SK Schwaz.');
+    expect(el.textContent).toContain('Partien hinzufügen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine.');
     expect(el.textContent).toContain('Freischaltung anfragen');
   });
 

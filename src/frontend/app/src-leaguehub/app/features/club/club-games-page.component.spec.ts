@@ -1,3 +1,4 @@
+import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
@@ -12,7 +13,7 @@ import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const G = (id: number, extra: Partial<ClubGame> = {}): ClubGame => ({
-  id, year: 2024, white: 'Schwaz', black: 'Hengl, Philip', whiteFide: null, blackFide: '222', whiteElo: null, blackElo: 2172,
+  id, year: 2024, white: 'Testdorf', black: 'Hengl, Philip', whiteFide: null, blackFide: '222', whiteElo: null, blackElo: 2172,
   result: '1-0', event: null, plies: 22, opening: '1.e4 c5 2.Nf3 d6', anonymized: true, canDelete: false, ...extra,
 });
 
@@ -35,7 +36,7 @@ describe('ClubGamesPageComponent', () => {
   function create(routeData: Record<string, unknown> = {}, query: Record<string, string> = {}): HTMLElement {
     TestBed.configureTestingModule({
       imports: [ClubGamesPageComponent],
-      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
+      providers: [provideTestClub(), { provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting(),
         { provide: ClubApiService, useValue: { client: () => api } },
@@ -109,7 +110,7 @@ describe('ClubGamesPageComponent', () => {
     const rows = el.querySelectorAll('tbody tr.game');
     expect(rows.length).toBe(2);
     expect(rows[0].textContent).toContain('2024');
-    expect(rows[0].querySelector('.anon')?.textContent).toBe('Schwaz');
+    expect(rows[0].querySelector('.anon')?.textContent).toBe('Testdorf');
     expect(rows[0].querySelector('button.pl')?.textContent).toContain('Hengl, Philip');
     expect(rows[0].textContent).toContain('1.e4 c5 2.Sf3 d6');
     expect(rows[0].querySelector('.more-btn')).toBeNull();            // nichts zu bearbeiten, kein RookHub in Tests
@@ -119,7 +120,7 @@ describe('ClubGamesPageComponent', () => {
   }));
 
   // Wunsch 2026-09-28: „die Spieler sollen alle klickbar sein (Kinsiz, Atlas ist nicht klickbar), Ergebnis anpassbar".
-  it('ein Name ohne FIDE-ID öffnet die Korrektur; Spieler wählen und Ergebnis ändern speichert, „Schwaz" bleibt', fakeAsync(() => {
+  it('ein Name ohne FIDE-ID öffnet die Korrektur; Spieler wählen und Ergebnis ändern speichert, „Testdorf" bleibt', fakeAsync(() => {
     api.list.and.resolveTo({ total: 1, page: 1, pageSize: 50,
       items: [G(53, { black: 'Kinsiz, Atlas', blackFide: null, blackElo: null, canDelete: true })] });
     const el = create();
@@ -130,7 +131,7 @@ describe('ClubGamesPageComponent', () => {
     unknown.click();
     fixture.detectChanges();
     const editRow = el.querySelector('tr.edit-row') as HTMLElement;
-    expect(editRow.textContent).toContain('bleibt anonym');                        // Weiß = Schwaz: kein Suchfeld
+    expect(editRow.textContent).toContain('bleibt anonym');                        // Weiß = Testdorf: kein Suchfeld
     expect(editRow.querySelectorAll('lh-player-search').length).toBe(1);
     const c = fixture.componentInstance;
     c.picked('black', { name: 'Kinsiz, Onur', fide: '6301517', teams: [], club: false, league: false, source: 'mega' });
@@ -140,9 +141,9 @@ describe('ClubGamesPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.updateGame).toHaveBeenCalledWith(53, { white: null, black: { name: 'Kinsiz, Onur', fide: '6301517', replace: false }, result: '0-1' });
-    // ein Spieler von Schwaz: „ersetzen" ist vorgewählt
+    // ein Spieler von Testdorf: „ersetzen" ist vorgewählt
     c.edit(G(53, { black: 'Kinsiz, Atlas', blackFide: null, canDelete: true }));
-    c.picked('black', { name: 'Oberschmid, Patrik', fide: '1693034', teams: ['Schwaz'], club: true });
+    c.picked('black', { name: 'Oberschmid, Patrik', fide: '1693034', teams: ['Testdorf'], club: true });
     expect(c.editing()?.black?.replace).toBeTrue();
     c.editing.set(null);
     const row = el.querySelector('tbody tr') as HTMLElement;
@@ -260,7 +261,7 @@ describe('ClubGamesPageComponent', () => {
       G(2, { analysis: { status: 'running', analyzed: 5, total: 22, accuracyWhite: null, accuracyBlack: null } }),
       G(3)] });
     api.game.and.resolveTo({ ...G(1, { analysis: done }),
-      pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n[Result "1-0"]\n\n1. e4 c5 2. Nf3 d6 1-0\n' });
+      pgn: '[White "Testdorf"]\n[Black "Hengl, Philip"]\n[Result "1-0"]\n\n1. e4 c5 2. Nf3 d6 1-0\n' });
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();

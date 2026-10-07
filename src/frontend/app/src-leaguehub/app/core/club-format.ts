@@ -4,13 +4,14 @@ import { ClubImportResult, ScoresheetScan, ScoresheetStatus } from './club.model
 
 // Reine Texte und Regeln der Vereins-Datenbank (ohne Angular-Komponenten) — die Seite ist deutsch.
 
-export const ANON_NAME = 'Schwaz';
+// Den Namen anonymisierter Spieler (früher fest ANON_NAME = 'Schwaz') liefert seit 0.698.0 der Verein:
+// ClubContextService.anonName() — LeagueHub kennt mehrere Vereine.
 
 /** Warum eine Partie nicht übernommen wurde (Gründe aus LeagueClubService). */
 export function reasonText(reason: string): string {
   switch (reason) {
     case 'noLeaguePlayer': return 'Kein Spieler erkannt (weder in der Liga noch in der Megabase) — Namen korrigieren.';
-    case 'onlyOwnClub': return 'Nur Spieler von Schwaz — nach dem Ersetzen bleibt kein Gegner übrig.';
+    case 'onlyOwnClub': return 'Nur Spieler des eigenen Vereins — nach dem Ersetzen bleibt kein Gegner übrig.';
     case 'notFound': return 'Diese Partie steht nicht (mehr) in der Datei.';
     case 'invalidUrl': return 'Das ist keine Adresse einer Lichess-Studie (lichess.org/study/…).';
     case 'lichessNotFound': return 'Diese Studie gibt es nicht oder sie ist nicht öffentlich.';
@@ -28,11 +29,11 @@ export function reasonText(reason: string): string {
   }
 }
 
-/** „3 Partien übernommen (2 mit „Schwaz"), 1 schon da, 2 nicht übernommen." */
-export function importSummary(r: ClubImportResult): string {
+/** „3 Partien übernommen (2 mit „Schwaz"), 1 schon da, 2 nicht übernommen." — `anon` = Name des Vereins für anonymisierte Spieler. */
+export function importSummary(r: ClubImportResult, anon = 'Verein'): string {
   const parts: string[] = [];
   const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
-  parts.push(n(r.added, 'Partie übernommen', 'Partien übernommen') + (r.anonymized ? ` (${r.anonymized} mit „${ANON_NAME}“)` : ''));
+  parts.push(n(r.added, 'Partie übernommen', 'Partien übernommen') + (r.anonymized ? ` (${r.anonymized} mit „${anon}“)` : ''));
   if (r.duplicates) parts.push(`${r.duplicates} schon da`);
   if (r.failed.length) parts.push(`${r.failed.length} nicht übernommen`);
   let s = parts.join(', ') + '.';

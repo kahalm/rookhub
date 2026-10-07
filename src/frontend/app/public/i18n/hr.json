@@ -330,7 +330,7 @@
       "requiredFor": "Prijavi se ili se registriraj – nakon toga ideš izravno na „{{area}}“.",
       "freeNote": "Račun je besplatan, a e-adresa nije obavezna.",
       "forgotLink": "Zaboravljena lozinka?",
-      "leaguehubNote": "LeagueHub je za administratore i klupsku grupu SK Schwaz. Prijavi se svojim RookHub računom."
+      "leaguehubNote": "LeagueHub je za administratore i klupske grupe klubova sudionika. Prijavi se svojim RookHub računom."
     },
     "register": {
       "title": "Registracija",
@@ -351,7 +351,7 @@
       "passwordRejected": "Ta lozinka ne može. Uzmi najmanje {{min}} znakova i ništa previše poznato poput „12345678“.",
       "invalid": "Provjeri svoje podatke – nešto još nije u redu.",
       "privacyNote": "Za tvoj račun vrijede naša pravila o privatnosti.",
-      "leaguehubNote": "Time stvaraš RookHub račun. LeagueHub vide samo administratori i klupska grupa SK Schwaz – nakon toga te administrator mora otključati.",
+      "leaguehubNote": "Time stvaraš RookHub račun. LeagueHub vide samo administratori i klupske grupe klubova sudionika – nakon toga te administrator mora otključati.",
       "kids": {
         "parentsTitle": "Za roditelje",
         "parentsText": "Igrati se može i bez računa. Račun molimo otvorite zajedno s roditeljem.",
@@ -786,8 +786,9 @@
       "controller": "Voditelj obrade podataka je operator naveden u impresumu",
       "controllerNamed": "Voditelj obrade podataka je:",
       "leagueTitle": "LeagueHub (priprema ekipe)",
-      "leagueIntro": "LeagueHub pomaže članovima šahovskog kluba (SK Schwaz) da se pripreme za ekipne mečeve tirolskih liga. Za to obrađujemo i podatke igrača koji kod nas nemaju račun i čije podatke ne prikupljamo izravno od njih (čl. 14 GDPR-a).",
-      "leagueSources": "Izvori: parovi, rezultati i prijavne liste s chess-results.com; partije iz Lumbra’s GigaBase, ChessBase Megabase i baze partija chess-results.com; klupske partije koje učitaju članovi ili koje se predaju bez prijave putem poveznice za dijeljenje (i kao fotografija zapisnika partije, vidi „AI usluge“) — igrači SK Schwaz u njima se prema zadanim postavkama pojavljuju samo kao „Schwaz“; njihovo pravo ime pritom se interno sprema za analize kluba i nigdje se ne prikazuje niti prosljeđuje (ako se zamjena pri učitavanju isključi za neku stranu, pravo ime sprema se vidljivo); javne partije online računa na Lichessu i chess.comu. Za taj dohvat naš poslužitelj šalje korisnička imena tih računa odgovarajućoj platformi; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Za razliku od tjednog cilja „partije“, ovdje se spremaju same partije.",
+      "leagueIntro": "LeagueHub pomaže članovima šahovskih klubova sudionika da se pripreme za ekipne mečeve svojih liga (Tirol, Bavarska). Svaki klub ima vlastitu klupsku bazu koju nijedan drugi klub ne vidi. Za to obrađujemo i podatke igrača koji kod nas nemaju račun i čije podatke ne prikupljamo izravno od njih (čl. 14 GDPR-a).",
+      "leagueClub": "Trenutačno koristiš LeagueHub za {{club}}.",
+      "leagueSources": "Izvori: parovi, rezultati i prijavne liste s chess-results.com i iz ligaškog sustava Bavarskog šahovskog saveza; partije iz Lumbra’s GigaBase, ChessBase Megabase i baze partija chess-results.com; klupske partije koje učitaju članovi ili koje se predaju bez prijave putem poveznice za dijeljenje (i kao fotografija zapisnika partije, vidi „AI usluge“) — igrači kluba koji učitava u njima se prema zadanim postavkama pojavljuju samo pod imenom kluba; njihovo pravo ime pritom se interno sprema za analize tog kluba i nigdje se ne prikazuje niti prosljeđuje (ako se zamjena pri učitavanju isključi za neku stranu, pravo ime sprema se vidljivo); javne partije online računa na Lichessu i chess.comu. Za taj dohvat naš poslužitelj šalje korisnička imena tih računa odgovarajućoj platformi; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Za razliku od tjednog cilja „partije“, ovdje se spremaju same partije.",
       "leagueData": "Kategorije: ime, FIDE ID, klub, rejting i nastupi prema prijavnim listama; partije i iz njih izračunati profili otvaranja; izračunata vjerojatnost da igrač bude postavljen u nekom kolu (model naučen na prethodnim sezonama); online računi na Lichessu i chess.comu koje pripisujemo igraču — na temelju javnih podataka profila (npr. pravo ime i zemlja) ili ih unose odgovorne osobe kluba, označeni kao „potvrđeni“ ili samo pretpostavljeni — zajedno s komentarom o pripisivanju i javnim partijama tih računa.",
       "leagueBasis": "Svrha i pravna osnova: priprema za ekipne mečeve; legitimni interes kluba i njegovih članova (čl. 6(1)(f) GDPR-a). Podaci uglavnom potječu iz javno dostupnih izvora.",
       "leagueRecipients": "Primatelji: prijavljeni računi s pristupom LeagueHubu (klupska grupa i administratori). Putem poveznice za dijeljenje svatko tko ima poveznicu bez prijave vidi podijeljeni meč: prijavnu listu s prognozama, kartice igrača, stabla otvaranja i partije igrača navedenih ondje — online račune samo ako se smatraju „potvrđenima“. Poveznica za dijeljenje vrijedi do sedam dana nakon kola (za već odigrano kolo sedam dana od dijeljenja, bez poznatog datuma kola 30 dana) i može se ranije opozvati.",

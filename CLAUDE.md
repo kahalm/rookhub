@@ -1863,6 +1863,10 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
 * **Verwaltung** (`Services/League/LeagueClubAdminService.cs`, nur Admins mit `league.manage`): Verein anlegen/ändern, Gruppe
   zuordnen (eine andere Zuordnung derselben Gruppe wird ersetzt; der Taktik-Kurs wird freigegeben bzw. beim Lösen entzogen),
   Kursname folgt dem Vereinsnamen.
+* **Oberfläche (0.699.0)**: `ClubContextService` + `leagueClubInterceptor` in `src-leaguehub` (Details in
+  `src/frontend/CLAUDE.md`): `GET /api/league/me` einmal je Konto, `?club=` an jeden Aufruf, Umschalter im Kopf bei mehreren
+  Vereinen (gemerkt in `lh-club`, Wechsel lädt neu), alle Texte mit „Schwaz" lesen Name/`AnonName` des Vereins, Teilen-Seiten
+  den Verein des Links. Eine Verwaltungs-Oberfläche für Vereine gibt es noch nicht (Admin-Endpunkte per API).
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|

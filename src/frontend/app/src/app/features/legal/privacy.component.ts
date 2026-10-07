@@ -63,6 +63,7 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
                  Informationspflicht nach Art. 14 DSGVO (Codereview F7-006). -->
             <h2 id="privacy-league" tabindex="-1">{{ 'legal.privacy.leagueTitle' | translate }}</h2>
             <p>{{ 'legal.privacy.leagueIntro' | translate }}</p>
+            @if (site.leagueClub?.(); as club) { <p>{{ 'legal.privacy.leagueClub' | translate: { club } }}</p> }
             <ul>
               <li>{{ 'legal.privacy.leagueSources' | translate }}</li>
               <li>{{ 'legal.privacy.leagueData' | translate }}</li>

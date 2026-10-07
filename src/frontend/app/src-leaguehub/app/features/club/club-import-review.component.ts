@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
 import { ClubImportResult, ImportGameDecision, RosterPerson } from '../../core/club.models';
-import { ANON_NAME, reasonText } from '../../core/club-format';
+import { reasonText } from '../../core/club-format';
+import { ClubContextService } from '../../core/club-context.service';
 import { de } from '../../core/league-format';
 import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, pairingText, quickPicks, reviewStatus } from './import-review';
 import { PlayerSearchComponent } from './player-search.component';
@@ -158,7 +159,9 @@ export class ClubImportReviewComponent {
     { key: 'new', label: 'Noch nicht vorhanden' },
     { key: 'unknown', label: 'Nicht erkannt' },
   ];
-  readonly anon = ANON_NAME;
+  private readonly clubCtx = inject(ClubContextService);
+  /** Der Name anonymisierter Spieler — der des Vereins (bzw. des Teilen-Links), 0.698.0. */
+  get anon(): string { return this.clubCtx.anonName(); }
   readonly de = de;
   readonly reason = reasonText;
   readonly status = reviewStatus;
@@ -186,15 +189,15 @@ export class ClubImportReviewComponent {
   throttleDelay = 20_000;
 
   shown(s: ReviewSide): string {
-    return s.replace ? ANON_NAME : s.name || s.raw || '?';
+    return s.replace ? this.anon : s.name || s.raw || '?';
   }
 
   badge(s: ReviewSide): { text: string; ok: boolean; warn: boolean } {
-    if (s.replace) return { text: s.club ? 'Schwaz-Spieler' : s.owner ? 'du' : 'ersetzt', ok: false, warn: false };
+    if (s.replace) return { text: s.club ? `${this.anon}-Spieler` : s.owner ? 'du' : 'ersetzt', ok: false, warn: false };
     if (s.ambiguous) return { text: 'mehrdeutig', ok: false, warn: true };
     const kept = s.alias && !s.changed ? ' · gemerkt' : '';
     if (s.league && s.lastNameOnly) return { text: 'nur Nachname — prüfen', ok: false, warn: true };
-    if (s.league) return { text: (s.club ? 'Schwaz, nicht ersetzt' : 'Ligaspieler') + kept, ok: !s.club, warn: s.club };
+    if (s.league) return { text: (s.club ? `${this.anon}, nicht ersetzt` : 'Ligaspieler') + kept, ok: !s.club, warn: s.club };
     if (s.mega) return { text: 'nicht in Liga' + kept, ok: false, warn: false };
     return { text: needsLook(s) ? 'nicht erkannt' : '', ok: false, warn: true };
   }

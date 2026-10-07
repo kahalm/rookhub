@@ -9,6 +9,7 @@ import { loadErrorText } from '../../core/club-format';
 import { GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
+import { ClubContextService, ownsTeam } from '../../core/club-context.service';
 
 const PICK_KEY = 'leaguehub';
 /** Die gewählte Runde je Browser-Tab (Wunsch 2026-10-06: „Runde ändern, Reiter wechseln, zurück — soll er sich merken").
@@ -30,7 +31,7 @@ interface Pick { liga?: number; verein?: string }
   imports: [FixtureViewComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
-      <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz." />
+      <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
     } @else if (loadError()) {
       <section class="gate">
         <h2>Daten nicht geladen</h2>
@@ -90,7 +91,11 @@ interface Pick { liga?: number; verein?: string }
 
     @if (index(); as ix) {
       <div class="foot-note">
-        <p>Quelle: Paarungen und Meldelisten von chess-results.com, Saisonen 2017/18 bis {{ ix.season }}.</p>
+        @if (ix.club?.source === 'ligamanager') {
+          <p>Quelle: Spielpläne, Paarungen und Meldelisten aus dem Ligamanager des Bayerischen Schachbunds, bis {{ ix.season }}.</p>
+        } @else {
+          <p>Quelle: Paarungen und Meldelisten von chess-results.com, Saisonen 2017/18 bis {{ ix.season }}.</p>
+        }
         <p>Die Prozente kommen aus einem Modell, das an rund 50 000 Einsätzen früherer Saisonen gelernt hat, wer aufgestellt wird:
           zuletzt gespielt, Einsätze in der Vorsaison, Meldeplatz, Termine anderer Vereinsteams am selben Tag. Die Bretter folgen der Meldeliste.</p>
       </div>
@@ -103,6 +108,7 @@ export class LeaguePageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly clubs = inject(ClubContextService);
 
   readonly allowed = this.auth.has('league.view');
   readonly canManage = this.auth.has('league.manage');
@@ -227,7 +233,9 @@ export class LeaguePageComponent implements OnInit {
     if (this.tnr() !== tnr) return;   // inzwischen eine andere Liga gewählt
     const firstOpen = L.rounds.find(r => r.open) ?? L.rounds[L.rounds.length - 1];
     const round = L.rounds.some(r => r.round === wantRound) ? wantRound : firstOpen?.round ?? 1;
-    const team = L.teams.includes(wantTeam) ? wantTeam : L.teams.includes('Schwaz') ? 'Schwaz' : L.teams[0] ?? '';
+    // Vorauswahl: die gemerkte Mannschaft, sonst die erste des eigenen Vereins (0.698.0: TeamPrefix statt fest „Schwaz")
+    const prefix = this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix;
+    const team = L.teams.includes(wantTeam) ? wantTeam : L.teams.find(t => ownsTeam(prefix, t)) ?? L.teams[0] ?? '';
     this.round.set(round);
     this.team.set(team);
     this.league.set(L);
@@ -294,8 +302,10 @@ export class LeaguePageComponent implements OnInit {
   }
 
   private errorText(err: unknown): string {
+    if (err instanceof HttpErrorResponse && err.status === 403 && err.error?.reason === 'noClub')
+      return 'Dein Konto gehört noch zu keinem Verein — ein Admin muss deine Gruppe einem Verein zuordnen.';
     if (err instanceof HttpErrorResponse && err.status === 403)
-      return 'LeagueHub ist für dein Konto nicht freigeschaltet (Admins und die Vereinsgruppe von SK Schwaz).';
+      return 'LeagueHub ist für dein Konto nicht freigeschaltet (Admins und die Vereinsgruppen der teilnehmenden Vereine).';
     return loadErrorText(err);
   }
 }

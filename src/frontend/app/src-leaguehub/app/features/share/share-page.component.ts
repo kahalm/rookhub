@@ -6,6 +6,7 @@ import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
 import { GameSources, SharedFixture } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
+import { ClubContextService } from '../../core/club-context.service';
 
 /**
  * Geteilte Begegnung (`/s/:token`) — OHNE Anmeldung. Zeigt genau die geteilte Begegnung samt Meldeliste
@@ -34,7 +35,8 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
       <section class="cta" aria-labelledby="cta-title">
         <h2 id="cta-title">Hast du gegen Spieler aus der Liga gespielt? Lade deine Partien hoch.</h2>
         <p>Ein Foto vom Partieformular oder eine PGN-Datei genügt — ohne Anmeldung. Jede Partie hilft der Vorbereitung;
-          Spieler von Schwaz werden nach außen durch „Schwaz“ ersetzt, und es wird nicht gespeichert, wer hochgeladen hat.</p>
+          Spieler von {{ d.club?.name ?? 'unserem Verein' }} werden nach außen durch „{{ d.club?.anonName ?? 'Verein' }}“ ersetzt, und es wird
+          nicht gespeichert, wer hochgeladen hat.</p>
         <div class="cta-actions">
           <a class="btn-pri" [routerLink]="['/s', token, 'hochladen']" [queryParams]="{ art: 'formular' }">Partieformular fotografieren</a>
           <a class="btn-sec" [routerLink]="['/s', token, 'hochladen']">PGN hochladen</a>
@@ -43,7 +45,8 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
       <p class="stand">Geteilte Begegnung, nur zum Ansehen. Stand der Daten: {{ d.generated }}, Link gültig bis {{ until(d.expires) }}.</p>
       <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" [sources]="sources()" />
       <div class="foot-note">
-        <p>Quelle: Paarungen und Meldelisten von chess-results.com; Partien aus Lumbra's GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien von SK Schwaz.</p>
+        <p>Quelle: Paarungen und Meldelisten von chess-results.com bzw. dem Ligamanager des Bayerischen Schachbunds; Partien aus Lumbra's
+          GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien{{ d.club ? ' von ' + d.club.name : '' }}.</p>
         <p>Die Prozente kommen aus einem Modell, das an früheren Saisonen gelernt hat, wer aufgestellt wird. Die Bretter folgen der Meldeliste.</p>
       </div>
     } @else {
@@ -54,6 +57,8 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
 export class SharePageComponent implements OnInit {
   private readonly api = inject(LeagueApiService);
   private readonly title = inject(Title);
+  /** Der Verein des Links gilt auf dieser Seite (Karten, Paarungen): 0.698.0. */
+  private readonly clubs = inject(ClubContextService);
   readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
   readonly data = signal<SharedFixture | null>(null);
   readonly invalid = signal(false);
@@ -71,6 +76,7 @@ export class SharePageComponent implements OnInit {
     try {
       const d = await this.api.shared(this.token);
       this.data.set(d);
+      this.clubs.useShareClub(d.club ?? null);
       this.title.setTitle(`${tn(d.team)} – Runde ${d.round} | LeagueHub`);
     } catch (err) {
       const status = err instanceof HttpErrorResponse ? err.status : null;

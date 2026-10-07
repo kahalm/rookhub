@@ -1,3 +1,4 @@
+import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
@@ -27,7 +28,7 @@ describe('ClubImportReviewComponent', () => {
   function create(preview: ClubPreview = PREVIEW): HTMLElement {
     client = jasmine.createSpyObj<ClubClient>('ClubClient', ['importPgn', 'players', 'match']);
     client.players.and.resolveTo([]);
-    TestBed.configureTestingModule({ imports: [ClubImportReviewComponent] });
+    TestBed.configureTestingModule({ imports: [ClubImportReviewComponent], providers: [provideTestClub()] });
     fixture = TestBed.createComponent(ClubImportReviewComponent);
     fixture.componentRef.setInput('review', new ImportReview(preview, true));
     fixture.componentRef.setInput('client', client);
@@ -58,11 +59,11 @@ describe('ClubImportReviewComponent', () => {
     expect(el.textContent).toContain('1 weitere Seite mit „Hengl, Phillip“ ebenso zugeordnet.');
   });
 
-  it('zeigt wer gegen wen, Schwaz ersetzt, was importiert wird', () => {
+  it('zeigt wer gegen wen, Testdorf ersetzt, was importiert wird', () => {
     const el = create();
     const rows = el.querySelectorAll('tbody tr');
-    expect(rows[0].textContent).toContain('Schwaz');
-    expect(rows[0].textContent).toContain('Schwaz-Spieler');
+    expect(rows[0].textContent).toContain('Testdorf');
+    expect(rows[0].textContent).toContain('Testdorf-Spieler');
     expect(rows[0].textContent).toContain('Hengl, Philip');
     expect(rows[0].textContent).toContain('im PGN: Hengl P');
     expect(rows[0].textContent).toContain('wird importiert');
@@ -141,7 +142,7 @@ describe('ClubImportReviewComponent', () => {
     const games = Array.from({ length: 12 }, (_, i) => ({ ...g, index: i + 1, pgn: `P${i + 1}` }));
     client = jasmine.createSpyObj<ClubClient>('ClubClient', ['importPgn', 'players', 'match']);
     client.players.and.resolveTo([]);
-    TestBed.configureTestingModule({ imports: [ClubImportReviewComponent] });
+    TestBed.configureTestingModule({ imports: [ClubImportReviewComponent], providers: [provideTestClub()] });
     fixture = TestBed.createComponent(ClubImportReviewComponent);
     fixture.componentRef.setInput('review', new ImportReview({ truncated: false, games }, true));
     fixture.componentRef.setInput('client', client);

@@ -5,6 +5,8 @@ export interface LeagueIndex {
   season: string;
   generated: string | null;
   leagues: { tnr: number; name: string }[];
+  /** Der Verein der Anfrage (0.698.0) — nur Ligen seiner Quelle stehen in `leagues`. */
+  club?: { id: number; name: string; anonName: string; teamPrefix: string; source: string | null };
 }
 
 /** Partien im Bestand je Quelle (0.626.0, `GET /api/league/sources`). `key`: Lumbra, Mega, chess-results, Lichess-Übertragung,
@@ -225,6 +227,8 @@ export interface RecentGames { fide: string; games: RecentGame[] }
 
 export interface SharedFixture {
   league: string; season: string; round: number; team: string; fixture: Fixture; generated: string; expires: string;
+  /** Der Verein des Links (0.698.0) — die Seite ersetzt mit SEINEM Namen; fehlt bei älteren Servern. */
+  club?: { id: number; name: string; anonName: string } | null;
 }
 
 export interface UpdateStatus { running: boolean; started: string | null; finished: string | null; ok: boolean | null; message: string | null }

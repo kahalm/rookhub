@@ -13,6 +13,8 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.co
 export interface LeagueUploadBatch {
   id: number; createdAt: string; finishedAt: string | null; user: string | null; viaShare: boolean; files: number; bytes: number;
   comment: string | null;
+  /** Der Verein, für den hochgeladen wurde (LeagueHub mit mehreren Vereinen, 0.698.0). */
+  clubId?: number; club?: string | null;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface LeagueUploadBatch {
                 <tr>
                   <td>{{ b.id }}</td>
                   <td>{{ b.createdAt | date: 'dd.MM.yyyy HH:mm' }}@if (!b.finishedAt) { <span class="muted"> · {{ 'admin.uploads.open' | translate }}</span> }</td>
-                  <td>{{ b.viaShare ? ('admin.uploads.viaShare' | translate) : b.user }}</td>
+                  <td>{{ b.viaShare ? ('admin.uploads.viaShare' | translate) : b.user }}@if (b.club) { <span class="muted club"> · {{ b.club }}</span> }</td>
                   <td class="num">{{ b.files }}</td>
                   <td class="num">{{ mb(b.bytes) }}</td>
                   <td class="comment">{{ b.comment }}</td>

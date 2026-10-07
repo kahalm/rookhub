@@ -330,7 +330,7 @@
       "requiredFor": "Please sign in or register – afterwards you’ll go straight to “{{area}}”.",
       "freeNote": "An account is free, and your email address is optional.",
       "forgotLink": "Forgot password?",
-      "leaguehubNote": "LeagueHub is for admins and the SK Schwaz club group. Sign in with your RookHub account."
+      "leaguehubNote": "LeagueHub is for admins and the club groups of the participating clubs. Sign in with your RookHub account."
     },
     "register": {
       "title": "Register",
@@ -351,7 +351,7 @@
       "passwordRejected": "That password can’t be used. Use at least {{min}} characters and nothing too common like “12345678”.",
       "invalid": "Please check your details – something isn’t right yet.",
       "privacyNote": "Your account is covered by our privacy policy.",
-      "leaguehubNote": "This creates a RookHub account. Only admins and the SK Schwaz club group can see LeagueHub – an admin has to unlock your account afterwards.",
+      "leaguehubNote": "This creates a RookHub account. Only admins and the club groups of the participating clubs can see LeagueHub – an admin has to unlock your account afterwards.",
       "kids": {
         "parentsTitle": "For parents",
         "parentsText": "You can play without an account. Please create an account together with a parent.",
@@ -786,8 +786,9 @@
       "controller": "The controller for data processing is the operator named in the imprint",
       "controllerNamed": "The controller responsible for data processing is:",
       "leagueTitle": "LeagueHub (team preparation)",
-      "leagueIntro": "LeagueHub helps members of a chess club (SK Schwaz) prepare for team matches in the Tyrolean leagues. For this we also process data of players who have no account with us and whose data we do not collect from them directly (Art. 14 GDPR).",
-      "leagueSources": "Sources: pairings, results and team rosters from chess-results.com; games from Lumbra’s GigaBase, the ChessBase Mega Database and the chess-results.com game database; club games uploaded by members or submitted without logging in via a share link (also as a scoresheet photo, see “AI services”) — players of SK Schwaz appear in them only as “Schwaz” by default; their real name is stored internally for the club’s own analyses and is never displayed or passed on (if the replacement is deselected for a side when uploading, the real name is stored visibly); public games of online accounts on Lichess and chess.com. To fetch these, our server sends the usernames of these accounts to the respective platform; chess.com is operated by a US provider (transfer to a third country). Unlike for the weekly “games” goal, the games themselves are stored here.",
+      "leagueIntro": "LeagueHub helps members of participating chess clubs prepare for team matches in their leagues (Tyrol, Bavaria). Each club has its own club database that no other club can see. For this we also process data of players who have no account with us and whose data we do not collect from them directly (Art. 14 GDPR).",
+      "leagueClub": "You are currently using LeagueHub for {{club}}.",
+      "leagueSources": "Sources: pairings, results and team rosters from chess-results.com and from the league manager of the Bavarian Chess Federation; games from Lumbra’s GigaBase, the ChessBase Mega Database and the chess-results.com game database; club games uploaded by members or submitted without logging in via a share link (also as a scoresheet photo, see “AI services”) — players of the uploading club appear in them only under the club’s name by default; their real name is stored internally for that club’s own analyses and is never displayed or passed on (if the replacement is deselected for a side when uploading, the real name is stored visibly); public games of online accounts on Lichess and chess.com. To fetch these, our server sends the usernames of these accounts to the respective platform; chess.com is operated by a US provider (transfer to a third country). Unlike for the weekly “games” goal, the games themselves are stored here.",
       "leagueData": "Categories: name, FIDE ID, club, rating and appearances according to the rosters; games and opening profiles calculated from them; a calculated probability of being lined up in a round (a model trained on previous seasons); online accounts on Lichess and chess.com that we assign to a player — from public profile information (such as real name and country) or entered by club officials, marked as “confirmed” or only presumed — together with a comment on the assignment and the public games of these accounts.",
       "leagueBasis": "Purpose and legal basis: preparing for team matches; legitimate interest of the club and its members (Art. 6(1)(f) GDPR). The data comes mostly from publicly accessible sources.",
       "leagueRecipients": "Recipients: logged-in accounts with LeagueHub access (the club group and administrators). Via a share link, anyone who has the link sees the shared match without logging in: the roster with predictions, player cards, opening trees and games of the players listed there — online accounts only if they are considered “confirmed”. A share link is valid until seven days after the round (for a round already played, seven days from sharing; without a known round date, 30 days) and can be revoked earlier.",

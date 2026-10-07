@@ -6,8 +6,9 @@ import { AuthService } from '@rh/core/auth.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
-import { ANON_NAME, importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
+import { importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { ClubContextService } from '../../core/club-context.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload } from '../../core/chessbase-upload';
@@ -46,7 +47,7 @@ const SAVE_DEBOUNCE_MS = 1500;
  * Partien hinzufügen — angemeldet (`/verein/neu`, Vereinsgruppe) ODER ohne Konto über einen Teilen-Link
  * (`/s/:token/hochladen`). Viele auf einmal als PGN (erst die Übersicht „wer gegen wen", Spieler korrigieren, dann
  * importieren) — oder EIN Partieformular fotografieren, lesen lassen und auf der Korrekturseite prüfen.
- * Spieler von Schwaz werden standardmäßig durch „Schwaz" ersetzt (Wunsch des Nutzers).
+ * Spieler des Vereins werden standardmäßig durch seinen Namen ersetzt (Wunsch des Nutzers; „Schwaz", „Weilheim" … — 0.698.0).
  */
 @Component({
   selector: 'lh-club-add-page',
@@ -60,7 +61,7 @@ const SAVE_DEBOUNCE_MS = 1500;
         <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Hinzufügen fehlt dir noch die Freigabe — frag einen Verwalter."
                         purpose="das Hinzufügen von Vereinspartien" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
       } @else {
-        <lh-access-gate text="Partien hinzufügen dürfen Admins und die Vereinsgruppe von SK Schwaz." />
+        <lh-access-gate text="Partien hinzufügen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
       }
     } @else {
       <section class="club-intro">
@@ -91,11 +92,11 @@ const SAVE_DEBOUNCE_MS = 1500;
           } @else {
             <label class="anon-toggle">
               <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
-              <span><b>Spieler von Schwaz durch „{{ anon }}“ ersetzen</b>
-                <span class="muted">Jeder, der in seiner jüngsten Saison für Schwaz gemeldet ist@if (!share) {, und du selbst}. Dann zeigt
+              <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
+                <span class="muted">Jeder, der in seiner jüngsten Saison für {{ clubName() }} gemeldet ist@if (!share) {, und du selbst}. Dann zeigt
                   LeagueHub nach außen nirgends, wer dahinter steht (der echte Name bleibt nur intern für Auswertungen des Vereins), und es
                   wird nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten. Nur im Kurs „Taktiken aus
-                  Vereinspartien“ (sieht nur der Verein) steht der Schwazer Spieler mit Namen, wenn die Partie einer Ligarunde zugeordnet
+                  Vereinspartien“ (sieht nur der Verein) steht der eigene Spieler mit Namen, wenn die Partie einer Ligarunde zugeordnet
                   ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je Partie ändern.</span></span>
             </label>
             <label class="field">PGN-Datei
@@ -284,7 +285,10 @@ export class ClubAddPageComponent implements OnInit {
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   /** Ohne Beitragsrecht, aber mit Leserecht: die Sperrkarte nennt das fehlende Recht und führt zu den Vereinspartien. */
   readonly canRead = this.auth.has('league.view');
-  readonly anon = ANON_NAME;
+  private readonly clubCtx = inject(ClubContextService);
+  /** Name anonymisierter Spieler und des Vereins — der angemeldete bzw. der des Teilen-Links (0.698.0). */
+  get anon(): string { return this.clubCtx.anonName(); }
+  readonly clubName = this.clubCtx.clubName;
 
   readonly kind = signal<Kind>('pgn');
   readonly replaceClub = signal(true);
@@ -337,7 +341,7 @@ export class ClubAddPageComponent implements OnInit {
   readonly scans = signal<ScanRef[]>([]);
 
   readonly reason = reasonText;
-  readonly summary = importSummary;
+  summary(r: ClubImportResult): string { return importSummary(r, this.anon); }
   readonly stateText = scanStateText;
   readonly when = shortDateTime;
   /** Verwalter sehen zusätzlich die offenen Formulare ALLER (Wunsch 2026-09-28: „damit die nicht im Limbo sind"). */
@@ -380,6 +384,7 @@ export class ClubAddPageComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.allowed) return;
+    if (this.share) this.clubCtx.useShare(this.share);   // ohne Konto: der Verein des Links (0.698.0)
     if (this.route.snapshot.queryParamMap.get('art') === 'formular') this.kind.set('formular');
     const game = Number(this.route.snapshot.queryParamMap.get('partie'));
     if (!this.share && Number.isInteger(game) && game > 0) void this.loadSavedGame(game);
