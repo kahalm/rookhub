@@ -4554,7 +4554,15 @@
       "yourColor": "A színed",
       "iHaveWhite": "Világossal vagyok",
       "iHaveBlack": "Sötéttel vagyok",
-      "trainAllHint": "Az „Összes edzése ebben a sorrendben” egyetlen repertoárnál érhető el. Az összes megjelölt együtt: „Edzésrepertoár létrehozása” — ez egy repertoárba gyűjti a legfontosabb vonalakat, amelyet aztán edzel."
+      "trainAllHint": "Az „Összes edzése ebben a sorrendben” egyetlen repertoárnál érhető el. Az összes megjelölt együtt: „Edzésrepertoár létrehozása” — ez egy repertoárba gyűjti a legfontosabb vonalakat, amelyet aztán edzel.",
+      "estimated": "becsült",
+      "estimatedTip": "Becsülve {{band}} értékszámú játékosok Lichess-játszmáiból",
+      "estimatedFrom": "{{move}}-tól becsült (Lichess {{band}})",
+      "pending": "a becslés hiányos",
+      "headerFew": "{{who}} csak {{n}} megfelelő játszmája van — a hiányokat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
+      "headerNone": "{{who}} nincs megfelelő játszmája — becslés {{band}} értékszámú játékosok Lichess-játszmái alapján (egy hasonló erősségű tipikus játékos).",
+      "headerGaps": "Ahol {{who}} túl kevés játszmát játszott, a vonalakat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
+      "incomplete": "A Lichess-explorer nem adott vissza időben minden állást — a becslés hiányos. Nyisd meg később újra."
     },
     "title": "Felkészülés ellenfélre",
     "intro": "Keressen meg bármely játékost a játszmaadatbázisban (ChessBase Megabase és Lumbra GigaBase): megnyitási profil, megnyitásfa és a legutóbbi játszmák visszajátszásra.",

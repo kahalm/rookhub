@@ -28,7 +28,8 @@ public class LeagueTrainingController : BaseApiController
     {
         var filter = LeagueProfileStore.TreeFilter.Parse(source ?? "both", speeds, years, onlySure: unsure != true);
         var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
-        var r = await lines.LinesAsync(GetUserId(), q, async () => (await lines.LeagueGamesAsync(fide, filter, ct)).Games, ct);
+        var r = await lines.LinesAsync(GetUserId(), q, async () => (await lines.LeagueGamesAsync(fide, filter, ct)).Games, ct,
+            () => lines.LeagueEloAsync(fide, ct));
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
     }
 
@@ -47,7 +48,7 @@ public class LeagueTrainingController : BaseApiController
         try
         {
             r = await lines.CreateRepertoireAsync(GetUserId(), string.IsNullOrWhiteSpace(n) ? fide : n, req.ToQuery(),
-                () => Task.FromResult(games), ct);
+                () => Task.FromResult(games), ct, () => lines.LeagueEloAsync(fide, ct));
         }
         catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(new { id = r.Id, name = r.Name, lines = r.Lines, replaced = r.Replaced });

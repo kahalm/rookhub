@@ -4554,7 +4554,15 @@
       "yourColor": "Tvoja boja",
       "iHaveWhite": "Imam bijele",
       "iHaveBlack": "Imam crne",
-      "trainAllHint": "„Vježbaj sve ovim redoslijedom“ postoji za pojedinačni repertoar. Za sve označene zajedno: „Napravi repertoar za trening“ — skuplja najvažnije linije u jedan repertoar koji onda vježbaš."
+      "trainAllHint": "„Vježbaj sve ovim redoslijedom“ postoji za pojedinačni repertoar. Za sve označene zajedno: „Napravi repertoar za trening“ — skuplja najvažnije linije u jedan repertoar koji onda vježbaš.",
+      "estimated": "procijenjeno",
+      "estimatedTip": "Procijenjeno iz Lichess partija igrača rejtinga {{band}}",
+      "estimatedFrom": "od {{move}} procijenjeno (Lichess {{band}})",
+      "pending": "procjena nepotpuna",
+      "headerFew": "Od {{who}} samo {{n}} odgovarajućih partija — praznine procijenjene iz Lichess partija igrača rejtinga {{band}}.",
+      "headerNone": "Od {{who}} nema odgovarajućih partija — procijenjeno iz Lichess partija igrača rejtinga {{band}} (tipičan igrač njegove jačine).",
+      "headerGaps": "Gdje {{who}} ima premalo partija, linije su procijenjene iz Lichess partija igrača rejtinga {{band}}.",
+      "incomplete": "Lichess explorer nije na vrijeme isporučio sve pozicije — procjena je nepotpuna. Otvori ponovno kasnije."
     },
     "title": "Priprema za protivnika",
     "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",

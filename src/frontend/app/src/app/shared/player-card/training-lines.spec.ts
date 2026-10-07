@@ -1,4 +1,4 @@
-import { lineText, percent, trainingFilterParams, trainingLinesParams, trainingLinesUrl } from './training-lines';
+import { lineText, percent, plyLabel, trainingFilterParams, trainingLinesParams, trainingLinesUrl } from './training-lines';
 
 describe('training-lines (Hilfen)', () => {
   it('percent: ganze Prozente ab 10, sonst eine Stelle mit Komma, winzig als „<0,1 %"', () => {
@@ -38,5 +38,10 @@ describe('training-lines (Hilfen)', () => {
     expect(p.get('source')).toBe('online');
     const empty = trainingLinesParams({ repertoire: null, color: null, chapterColors: {} });
     expect(empty.keys()).toEqual([]);
+  });
+
+  it('plyLabel: „1…c6", „2.d4"', () => {
+    expect(plyLabel(['e4', 'c6', 'd4', 'd5'], null, 1)).toBe('1…c6');
+    expect(plyLabel(['e4', 'c6', 'Nf3'], null, 2)).toBe('2.Sf3');
   });
 });

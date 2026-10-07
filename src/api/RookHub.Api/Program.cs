@@ -294,6 +294,8 @@ try
         sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<RookHub.Api.Services.League.LeagueService>(),
         RookHub.Api.Services.Prep.PrepCardService.LimitFrom(builder.Configuration), RookHub.Api.Services.Prep.PrepCardService.MaxFrom(builder.Configuration)));
     // Trainingslinien gegen einen Gegner — ein Dienst für Spielervorbereitung und LeagueHub (0.701.0).
+    // Schätzung der Lücken über den Lichess-Explorer (lokal, sonst online wie der Lochfinder).
+    builder.Services.AddScoped<RookHub.Api.Services.Prep.ITrainingExplorer, RookHub.Api.Services.Prep.TrainingExplorer>();
     builder.Services.AddScoped<RookHub.Api.Services.Prep.TrainingLinesService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueFixtureGames>();   // Paarungen samt Partien (0.673.0)
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(

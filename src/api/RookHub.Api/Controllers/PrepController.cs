@@ -136,7 +136,8 @@ public class PrepController : BaseApiController
         if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
         var filter = await FilterAsync(source ?? "both", speeds, years, unsure);
         var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
-        var r = await lines.LinesAsync(GetUserId(), q, () => cards.TrainingGamesAsync(l, filter, ct), ct);
+        var r = await lines.LinesAsync(GetUserId(), q, () => cards.TrainingGamesAsync(l, filter, ct), ct,
+            () => lines.PrepEloAsync(l.Player.Id, l.Player.MaxElo, ct));
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
     }
 
@@ -152,7 +153,11 @@ public class PrepController : BaseApiController
         if (await cards.LoadAsync(id, req.All == true, req.Twin == true, ct) is not { } l) return NotFound();
         var filter = await FilterAsync(req.Source ?? "both", req.Speeds, req.Years, req.Unsure);
         TrainingLinesService.Created? r;
-        try { r = await lines.CreateRepertoireAsync(GetUserId(), l.Player.Name, req.ToQuery(), () => cards.TrainingGamesAsync(l, filter, ct), ct); }
+        try
+        {
+            r = await lines.CreateRepertoireAsync(GetUserId(), l.Player.Name, req.ToQuery(), () => cards.TrainingGamesAsync(l, filter, ct), ct,
+                () => lines.PrepEloAsync(l.Player.Id, l.Player.MaxElo, ct));
+        }
         catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(new { id = r.Id, name = r.Name, lines = r.Lines, replaced = r.Replaced });
     }

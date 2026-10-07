@@ -44,15 +44,83 @@ public static class OpponentTrainingLines
     /// <param name="Missing">Gegnerzüge der Linie, die danach fehlen (0 = voll getroffen).</param>
     /// <param name="PrefixProbability">Wahrscheinlichkeit des getroffenen Anfangs (= <paramref name="Probability"/>, wenn voll).</param>
     /// <param name="PrefixReached">Partien, die die tiefste getroffene Stellung erreicht haben.</param>
+    /// <param name="Source">Woher die Wahrscheinlichkeit kommt: <c>own</c> (nur seine Partien), <c>mixed</c>, <c>lichess</c> (nur
+    /// Explorer) oder <c>none</c> (eine Gegner-Stellung ohne jede Quelle — dann gilt die Auffüllregel).</param>
+    /// <param name="OwnMoves">Gegnerzüge der Linie aus seinen Partien.</param>
+    /// <param name="LichessMoves">Gegnerzüge der Linie aus dem Lichess-Explorer (geschätzt).</param>
+    /// <param name="LichessFrom">Halbzug (Index in <paramref name="Sans"/>) des ersten geschätzten Gegnerzugs.</param>
+    /// <param name="Pending">Eine benötigte Explorer-Stellung kam im Zeitbudget nicht an.</param>
     public sealed record Line(string Key, string End, string? StartFen, string Chapter, IReadOnlyList<string> Sans, double Probability,
         int Reached, int? LastYear, bool NeverReached, int Index, int Matched = 0, int Missing = 0, double PrefixProbability = 0,
-        int PrefixReached = 0)
+        int PrefixReached = 0, string Source = "own", int OwnMoves = 0, int LichessMoves = 0, int? LichessFrom = null, bool Pending = false)
     {
         /// <summary>Stufe der Reihung: 0 = voll getroffen, n = n Gegnerzüge fehlen, ganz hinten = gar nicht getroffen.</summary>
         internal int Tier => NeverReached ? int.MaxValue : Missing;
     }
 
     public sealed record Result(int Games, List<Line> Lines);
+
+    /// <summary>Schätzung für Lücken (Wunsch 2026-10-07: „wenn gaaaanz wenig games vorhanden sind … nimm lichesspartien"): je
+    /// Gegner-Stellung, in der er weniger als <see cref="MinOwn"/> Partien weitergespielt hat, die Zughäufigkeiten des Explorers
+    /// (Spieler seiner Stärke) — <see cref="Explorer"/> liefert sie je Stellung oder <c>null</c>; <see cref="Pending"/> = Stellungen,
+    /// die gebraucht, aber im Zeitbudget nicht geholt wurden.</summary>
+    public sealed record Estimate(Func<RepertoireReach.Node, ExplorerPositionStats?> Explorer, int MinOwn, IReadOnlySet<string> Pending);
+
+    /// <summary>Seine Partien, gezählt je Stellung des Repertoires — einmal, für <see cref="NeedsExplorer"/> und <see cref="Rank(RepertoireReach.Graph, IReadOnlyList{string}, Analysis, Estimate?)"/>.</summary>
+    public sealed class Analysis
+    {
+        internal Analysis(int games, Dictionary<string, PositionStats> stats) { Games = games; Stats = stats; }
+        public int Games { get; }
+        internal Dictionary<string, PositionStats> Stats { get; }
+    }
+
+    /// <summary>Zählt die Partien des Gegners mit der anderen Farbe als <paramref name="graph"/>.</summary>
+    public static Analysis Analyze(RepertoireReach.Graph graph, IEnumerable<Game> games)
+    {
+        var opponentWhite = graph.Color == 'b';
+        var relevant = games.Where(g => g.OpponentWhite == opponentWhite).ToList();
+        return new Analysis(relevant.Count, Count(relevant, graph));
+    }
+
+    /// <summary>Die Gegner-Stellungen der Linien, für die seine Partien nicht reichen (weniger als <paramref name="minOwn"/>
+    /// weitergespielt) — genau die braucht die Schätzung vom Explorer; je Stellung einmal.</summary>
+    public static List<RepertoireReach.Node> NeedsExplorer(RepertoireReach.Graph graph, Analysis a, int minOwn)
+    {
+        var need = new Dictionary<string, RepertoireReach.Node>(StringComparer.Ordinal);
+        foreach (var nodes in graph.Mainlines)
+            for (var k = 0; k + 1 < nodes.Count; k++)
+            {
+                var at = nodes[k];
+                if (at.UserToMove || need.ContainsKey(at.Key)) continue;
+                if ((a.Stats.GetValueOrDefault(at.Key)?.Continued ?? 0) < Math.Max(1, minOwn)) need[at.Key] = at;
+            }
+        return need.Values.ToList();
+    }
+
+    /// <summary>Wie oft der Explorer genau den Zug der Linie kennt (Anteil an allen Partien der Stellung); fehlt er in der Liste,
+    /// „weniger als eine Partie" wie in <see cref="RepertoireReach"/> — winzig, nicht null.</summary>
+    private static double ExplorerShare(ExplorerPositionStats e, RepertoireReach.Node at, string san, string targetKey)
+    {
+        var hit = e.Moves.FirstOrDefault(m => RepertoireReach.SameSan(m.San, san));
+        if (hit is null)
+        {
+            Chess.ChessBoard? board = null;
+            try { board = Chess.ChessBoard.LoadFromFen(at.Fen); } catch { /* ohne Brett nur der SAN-Vergleich */ }
+            if (board is not null)
+                foreach (var m in e.Moves)
+                {
+                    try
+                    {
+                        if (!board.Move(m.San)) continue;
+                        var k = RepertoireReach.Key(board.ToFen());
+                        board.Cancel();
+                        if (k == targetKey) { hit = m; break; }
+                    }
+                    catch { /* unlesbarer Zug des Explorers */ }
+                }
+        }
+        return hit is not null ? hit.Games / (double)e.Total : 0.5 / e.Total;
+    }
 
     /// <summary>Was je Stellung gezählt wird (über alle Zugfolgen dorthin).</summary>
     internal sealed class PositionStats
@@ -78,11 +146,19 @@ public static class OpponentTrainingLines
     /// <paramref name="chapters"/> = Kapitel (<c>[Black]</c>) je Hauptvariante, in derselben Reihenfolge wie
     /// <see cref="RepertoireReach.Graph.Mainlines"/>. Gleiche Linien (gleicher Schlüssel) erscheinen einmal.
     /// </summary>
-    public static Result Rank(RepertoireReach.Graph graph, IReadOnlyList<string> chapters, IEnumerable<Game> games)
+    public static Result Rank(RepertoireReach.Graph graph, IReadOnlyList<string> chapters, IEnumerable<Game> games) =>
+        Rank(graph, chapters, Analyze(graph, games), null);
+
+    /// <summary>
+    /// Wie oben; mit <paramref name="estimate"/> KOMBINIERT je Gegner-Stellung: hat er dort mindestens <see cref="Estimate.MinOwn"/>
+    /// Partien weitergespielt, zählen seine Partien, sonst der Explorer (mindestens <see cref="RepertoireReach.MinGames"/> Partien).
+    /// Wahrscheinlichkeit = Produkt über die Gegnerzüge aus der jeweiligen Quelle. Linien, bei denen eine Stellung keine Quelle hat,
+    /// reihen sich wie bisher (Auffüllregel) HINTER allen mit Quelle; diese nach Wahrscheinlichkeit, dann mehr eigene Gegnerzüge,
+    /// dann Partien, dann Reihenfolge im Repertoire.
+    /// </summary>
+    public static Result Rank(RepertoireReach.Graph graph, IReadOnlyList<string> chapters, Analysis analysis, Estimate? estimate)
     {
-        var opponentWhite = graph.Color == 'b';
-        var relevant = games.Where(g => g.OpponentWhite == opponentWhite).ToList();
-        var stats = Count(relevant, graph);
+        var stats = analysis.Stats;
 
         var lines = new List<Line>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -122,17 +198,63 @@ public static class OpponentTrainingLines
             if (opponentMoves == 0 && reached == 0) never = true;
             var prefixReached = stats.GetValueOrDefault(deepest.Key)?.Reached ?? 0;
             var start = nodes[0].Key == RepertoireReach.StandardStartKey ? null : nodes[0].Fen;
-            lines.Add(new Line(key, nodes[^1].Key, start, i < chapters.Count ? chapters[i] : "", sans,
+            var line = new Line(key, nodes[^1].Key, start, i < chapters.Count ? chapters[i] : "", sans,
                 missing == 0 && !never ? prefix : 0, reached, end?.LastYear, never, i, matched, missing, never ? 0 : prefix,
-                prefixReached));
+                prefixReached, missing == 0 && !never ? "own" : "none", matched);
+            if (estimate is not null) line = Combine(line, nodes, sans, stats, estimate);
+            lines.Add(line);
         }
 
-        lines = lines.OrderBy(l => l.Tier)
+        static IOrderedEnumerable<Line> FillRule(IEnumerable<Line> ls) => ls.OrderBy(l => l.Tier)
             .ThenByDescending(l => l.Missing == 0 ? l.Probability : l.PrefixProbability)
             .ThenByDescending(l => l.Missing == 0 ? l.Reached : l.PrefixReached)
             .ThenByDescending(l => l.Reached)
-            .ThenBy(l => l.Index).ToList();
-        return new Result(relevant.Count, lines);
+            .ThenBy(l => l.Index);
+
+        if (estimate is null) return new Result(analysis.Games, FillRule(lines).ToList());
+        var sourced = lines.Where(l => l.Source != "none").OrderByDescending(l => l.Probability).ThenByDescending(l => l.OwnMoves)
+            .ThenByDescending(l => l.Reached).ThenBy(l => l.Index);
+        return new Result(analysis.Games, sourced.Concat(FillRule(lines.Where(l => l.Source == "none"))).ToList());
+    }
+
+    /// <summary>Die kombinierte Wahrscheinlichkeit einer Linie (siehe <see cref="Rank(RepertoireReach.Graph, IReadOnlyList{string}, Analysis, Estimate?)"/>).</summary>
+    private static Line Combine(Line line, List<RepertoireReach.Node> nodes, List<string> sans, Dictionary<string, PositionStats> stats,
+        Estimate estimate)
+    {
+        var p = 1.0;
+        int own = 0, lichess = 0;
+        int? from = null;
+        bool gap = false, pending = false;
+        var minOwn = Math.Max(1, estimate.MinOwn);
+        for (var k = 0; k + 1 < nodes.Count; k++)
+        {
+            var at = nodes[k];
+            if (at.UserToMove) continue;
+            var after = nodes[k + 1];
+            var st = stats.GetValueOrDefault(at.Key);
+            if (st is not null && st.Continued >= minOwn)
+            {
+                p = p * st.Next.GetValueOrDefault(after.Key) / st.Continued;
+                own++;
+                continue;
+            }
+            if (estimate.Explorer(at) is { } e && e.Total >= RepertoireReach.MinGames)
+            {
+                p *= ExplorerShare(e, at, sans[k], after.Key);
+                lichess++;
+                from ??= k;
+                continue;
+            }
+            gap = true;
+            if (estimate.Pending.Contains(at.Key)) pending = true;
+        }
+        if (gap) return line with { Source = "none", OwnMoves = own, LichessMoves = lichess, LichessFrom = from, Pending = pending };
+        var source = lichess == 0 ? "own" : own == 0 && lichess > 0 ? "lichess" : "mixed";
+        return line with
+        {
+            Probability = p, Source = source, OwnMoves = own, LichessMoves = lichess, LichessFrom = from,
+            NeverReached = false,
+        };
     }
 
     /// <summary>Die Züge einer Hauptvariante (so, wie das Brett sie schreibt); <c>null</c> = keine.</summary>

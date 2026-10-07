@@ -18,8 +18,15 @@ namespace RookHub.Api.Services.Prep;
 /// (<see cref="RepertoireReach.Build"/>) und reiht die Linien mit <see cref="OpponentTrainingLines.Rank"/> gegen die Partien,
 /// die der Aufrufer liefert. Die Liste seiner Repertoires geht mit, damit die Karte mit EINEM Aufruf auskommt.
 /// </summary>
-public sealed class TrainingLinesService(AppDbContext db, RepertoireService repertoires, IConfiguration config)
+public sealed class TrainingLinesService(AppDbContext db, RepertoireService repertoires, IConfiguration config,
+    ITrainingExplorer? explorer = null)
 {
+    /// <summary>Ab so vielen weitergespielten Partien in einer Stellung zählen SEINE Züge; darunter schätzt der Lichess-Explorer
+    /// (Wunsch 2026-10-07). Einstellbar über <see cref="MinOwnKey"/>.</summary>
+    public const int DefaultMinOwn = 5;
+    public const string MinOwnKey = "Prep:TrainingMinOwnGames";
+    private int MinOwn => int.TryParse(config[MinOwnKey], out var n) ? Math.Clamp(n, 1, 1000) : DefaultMinOwn;
+
     /// <summary>So viele Linien liefert eine Antwort ohne <c>take</c> (der Rest als <c>more</c>); einstellbar über <see cref="TakeKey"/>.</summary>
     public const int DefaultTake = 50;
     public const string TakeKey = "Prep:TrainingLines";
@@ -71,7 +78,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <summary>Das Ergebnis der Rechnung samt allem, was Liste und Anlegen brauchen. <see cref="Ranked"/> = <c>null</c>: für die
     /// Farbe gibt es keine Linien (oder gar kein markiertes Repertoire). <see cref="Mine"/> läuft parallel zu den Hauptvarianten.</summary>
     internal sealed record Computed(List<RepertoireInfo> Repertoires, int? Selected, char? Color, List<char> Colors,
-        OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources);
+        OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources, string? Band = null,
+        bool ExplorerIncomplete = false);
 
     /// <summary>
     /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
@@ -81,7 +89,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <see cref="SameRepertoireException"/>. <c>null</c> = das verlangte Repertoire gehört dem Nutzer nicht / ist nicht markiert.
     /// </summary>
     internal async Task<Computed?> ComputeAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
-        string? exclude = null)
+        string? exclude = null, Func<Task<int?>>? elo = null)
     {
         var list = await RepertoiresAsync(userId, ct);
         if (q.Repertoire is { } want && list.All(r => r.Id != want)) return null;
@@ -116,7 +124,18 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var mine = sources.SelectMany(x => x.Sections.Where(s => s.Color == color).Select(s => new Source(x.Rep, s.Section))).ToList();
         var graph = RepertoireReach.Build(mine.Select(x => x.Section.Parsed), color);
         var chapters = mine.Select(x => Chapter(x.Section.Parsed)).ToList();
-        return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, await games()), mine, refs);
+        var analysis = OpponentTrainingLines.Analyze(graph, await games());
+        if (explorer is null) return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, analysis, null), mine, refs);
+
+        // Lücken schätzen: nur die Gegner-Stellungen, für die seine Partien nicht reichen, je einmal (Wunsch 2026-10-07).
+        var need = OpponentTrainingLines.NeedsExplorer(graph, analysis, MinOwn);
+        var opponentElo = (elo is null ? null : await elo()) ?? TrainingExplorer.DefaultElo;
+        TrainingExplorerResult? found = need.Count == 0 ? null : await explorer.StatsAsync(userId, need, opponentElo, ct);
+        var estimate = new OpponentTrainingLines.Estimate(n => found?.Stats.GetValueOrDefault(n.Key), MinOwn,
+            found?.Pending ?? new HashSet<string>());
+        var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
+        return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs, TrainingExplorer.Band(opponentElo),
+            found?.Pending.Count > 0);
     }
 
     /// <summary>
@@ -125,9 +144,11 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// Ohne Farbe die mit den meisten Linien. Je Linie dazu <c>repertoireId</c>/<c>repertoireName</c>.
     /// <paramref name="games"/> wird nur gerufen, wenn es überhaupt Linien gibt.
     /// </summary>
-    public async Task<JsonObject?> LinesAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct)
+    /// <param name="elo">Elo des Gegners für das Wertungsband der Schätzung (ohne: <see cref="TrainingExplorer.DefaultElo"/>).</param>
+    public async Task<JsonObject?> LinesAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
+        Func<Task<int?>>? elo = null)
     {
-        if (await ComputeAsync(userId, q, games, ct) is not { } c) return null;
+        if (await ComputeAsync(userId, q, games, ct, elo: elo) is not { } c) return null;
         var o = new JsonObject
         {
             ["repertoires"] = new JsonArray(c.Repertoires.Select(r => (JsonNode)new JsonObject
@@ -142,6 +163,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var lines = c.Ranked?.Lines ?? [];
         var n = Math.Clamp(q.Take ?? DefaultTakeFromConfig, 1, MaxTake);
         o["games"] = c.Ranked?.Games ?? 0;
+        o["ownGames"] = c.Ranked?.Games ?? 0;
+        o["lichessBand"] = c.Band;
+        o["explorerIncomplete"] = c.ExplorerIncomplete;
         o["total"] = lines.Count;
         o["lines"] = new JsonArray(lines.Take(n).Select(l => (JsonNode)new JsonObject
         {
@@ -160,6 +184,11 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             ["missing"] = l.Missing,
             ["prefixProbability"] = Math.Round(l.PrefixProbability, 6),
             ["prefixReached"] = l.PrefixReached,
+            ["source"] = l.Source,
+            ["ownMoves"] = l.OwnMoves,
+            ["lichessMoves"] = l.LichessMoves,
+            ["lichessFrom"] = l.LichessFrom,
+            ["pending"] = l.Pending,
         }).ToArray());
         o["more"] = Math.Max(0, lines.Count - n);
         return o;
@@ -194,11 +223,11 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <c>null</c> = Repertoire fremd/nicht markiert; <see cref="DomainValidationException"/>, wenn es keine Linien gibt.
     /// </summary>
     public async Task<Created?> CreateRepertoireAsync(int userId, string opponent, Query q,
-        Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct)
+        Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct, Func<Task<int?>>? elo = null)
     {
         var now = DateTime.UtcNow;
         var name = RepertoireName(opponent, now.Year);
-        if (await ComputeAsync(userId, q, games, ct, exclude: name) is not { } c) return null;
+        if (await ComputeAsync(userId, q, games, ct, exclude: name, elo: elo) is not { } c) return null;
         if (c.Sources.Count == 0) throw new DomainValidationException("Kein Repertoire ist für die Vorbereitung freigegeben.");
         if (c.Ranked is not { Lines.Count: > 0 } ranked) throw new DomainValidationException("Die markierten Repertoires haben für diese Farbe keine Linien.");
 
@@ -237,6 +266,17 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         await repertoires.UploadFileAsync(id, userId, "prep-training.pgn", stream);
         return new Created(id, name, picked.Count, existing is not null);
     }
+
+    // ── Elo des Gegners (Wertungsband der Schätzung) ─────────────────────────────────────────────
+
+    /// <summary>Spieler des Bestands: die jüngste Elo aus seinen Partien, sonst seine höchste.</summary>
+    public async Task<int?> PrepEloAsync(int playerId, short? maxElo, CancellationToken ct) =>
+        await PrepAccountSearch.LatestEloAsync(db, playerId, ct) ?? maxElo;
+
+    /// <summary>Ligaspieler: die Elo aus der jüngsten Meldeliste (international, sonst national).</summary>
+    public async Task<int?> LeagueEloAsync(string fide, CancellationToken ct) =>
+        await db.LeaguePlayers.AsNoTracking().Where(p => p.FideId == fide && (p.EloI != null || p.EloN != null))
+            .OrderByDescending(p => p.Tnr).Select(p => p.EloI ?? p.EloN).FirstOrDefaultAsync(ct);
 
     // ── Partien von LeagueHub ────────────────────────────────────────────────────────────────────
 

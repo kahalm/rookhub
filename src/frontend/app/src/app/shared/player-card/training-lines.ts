@@ -35,6 +35,15 @@ export interface TrainingLine {
   prefixProbability: number;
   /** Partien, die die tiefste getroffene Stellung erreicht haben. */
   prefixReached: number;
+  /** Woher die Wahrscheinlichkeit kommt (2026-10-07): seine Partien, gemischt, nur Lichess-Explorer, oder keine Quelle
+   *  (dann Auffüllregel). */
+  source: 'own' | 'mixed' | 'lichess' | 'none';
+  ownMoves: number;
+  lichessMoves: number;
+  /** Halbzug (Index in `moves`) des ersten geschätzten Gegnerzugs. */
+  lichessFrom: number | null;
+  /** Eine nötige Explorer-Stellung kam nicht rechtzeitig an. */
+  pending: boolean;
 }
 
 /** Antwort von `POST …/training-repertoire` („Show me lines to train"). */
@@ -84,6 +93,12 @@ export interface TrainingLines {
   colors: ('w' | 'b')[];
   /** Gezählte Partien (der Gegner mit der anderen Farbe). */
   games: number;
+  /** Seine passenden Partien (wie `games`). */
+  ownGames?: number;
+  /** Wertungsband der Schätzung, z. B. „2000–2300"; `null` = keine Schätzung. */
+  lichessBand?: string | null;
+  /** Der Explorer hat nicht alle nötigen Stellungen geliefert (Budget, Drossel). */
+  explorerIncomplete?: boolean;
   total: number;
   lines: TrainingLine[];
   /** So viele Linien mehr gibt es (ohne `take` höchstens 50 in der Antwort). */
@@ -162,4 +177,17 @@ export function lineText(moves: string[], start: string | null): string {
     black = !black;
   });
   return out.join(' ');
+}
+
+/** Ein Halbzug als Zugangabe („1…c6", „2.d4"), deutsch notiert — für „ab 1…c6 geschätzt". */
+export function plyLabel(moves: string[], start: string | null, index: number): string {
+  const parts = (start ?? '').split(' ');
+  let black = parts[1] === 'b';
+  let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
+  for (let i = 0; i < moves.length; i++) {
+    if (i === index) return black ? `${no}…${de(moves[i])}` : `${no}.${de(moves[i])}`;
+    if (black) no++;
+    black = !black;
+  }
+  return '';
 }

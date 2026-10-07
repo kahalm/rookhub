@@ -4554,7 +4554,15 @@
       "yourColor": "Deine Farbe",
       "iHaveWhite": "Ich habe Weiß",
       "iHaveBlack": "Ich habe Schwarz",
-      "trainAllHint": "„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst."
+      "trainAllHint": "„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst.",
+      "estimated": "geschätzt",
+      "estimatedTip": "Geschätzt mit Lichess-Partien von Spielern der Stufe {{band}}",
+      "estimatedFrom": "ab {{move}} geschätzt (Lichess {{band}})",
+      "pending": "Schätzung unvollständig",
+      "headerFew": "Von {{who}} nur {{n}} passende Partien — Lücken mit Lichess-Partien der Stufe {{band}} geschätzt.",
+      "headerNone": "Von {{who}} keine passenden Partien — geschätzt mit Lichess-Partien der Stufe {{band}} (ein typischer Spieler seiner Stärke).",
+      "headerGaps": "Wo {{who}} zu wenige Partien hat, sind die Linien mit Lichess-Partien der Stufe {{band}} geschätzt.",
+      "incomplete": "Der Lichess-Explorer hat nicht alle Stellungen rechtzeitig geliefert — die Schätzung ist unvollständig. Später noch einmal öffnen."
     },
     "title": "Gegner vorbereiten",
     "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",

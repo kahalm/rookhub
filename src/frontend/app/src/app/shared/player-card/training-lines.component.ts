@@ -8,7 +8,7 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
-import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
 interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
@@ -58,6 +58,11 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                 {{ d.games === 1 ? 'Partie' : 'Partien' }} von {{ who() }} mit {{ d.color === 'w' ? 'Schwarz' : 'Weiß' }}. }
               @if (loading()) { Lade … }
             </p>
+            @if (estimated(d)) {
+              <!-- Lücken geschätzt (2026-10-07): Lichess-Partien von Spielern seiner Stärke -->
+              <p class="small tl-estimate" role="note">{{ t(d.games === 0 ? 'headerNone' : d.games < 20 ? 'headerFew' : 'headerGaps', { who: who(), n: d.games, band: d.lichessBand }) }}</p>
+            }
+            @if (d.explorerIncomplete) { <p class="small tl-estimate tl-incomplete" role="status">{{ t('incomplete') }}</p> }
             @if (d.lines.length) {
               <div class="tl-actions">
                 @if (canCreate) {
@@ -76,9 +81,21 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                     <div class="tl-line">
                       <span class="tl-moves">{{ text(l) }}</span>
                       <span class="muted small tl-chapter">{{ origin(d, l) }}</span>
+                      @if (l.source === 'lichess') {
+                        <span class="tl-tag" [title]="t('estimatedTip', { band: d.lichessBand })">{{ t('estimated') }}</span>
+                      } @else if (l.source === 'mixed' && l.lichessFrom !== null) {
+                        <span class="tl-tag">{{ t('estimatedFrom', { move: from(l), band: d.lichessBand }) }}</span>
+                      } @else if (l.pending) {
+                        <span class="tl-tag tl-tag-warn">{{ t('pending') }}</span>
+                      }
                     </div>
                     <div class="tl-stats">
-                      @if (l.neverReached) {
+                      @if (l.source !== 'none') {
+                        <span class="tl-p" [title]="'Wahrscheinlichkeit, dass ' + who() + ' diese Linie spielt'">{{ pct(l.probability) }}</span>
+                        @if (l.ownMoves) {
+                          <span class="muted small">{{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}@if (l.lastYear) {, zuletzt {{ l.lastYear }}}</span>
+                        }
+                      } @else if (l.neverReached) {
                         <span class="tl-p muted">nie erreicht</span>
                         @if (l.reached) { <span class="muted small">nur über Zugumstellung: {{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}</span> }
                       } @else if (l.missing > 0) {
@@ -124,6 +141,11 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
     .tl-p { font-weight: 600; min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
     .tl-partial { font-weight: 500; }
     .tl-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .tl-tag { display: inline-block; margin-top: .15rem; padding: 0 .4rem; border-radius: .6rem; font-size: .75rem;
+      border: 1px solid var(--line, #d9dfe7); color: var(--muted, #5a6878); }
+    .tl-tag-warn { border-color: var(--warn, #b45309); color: var(--warn, #b45309); }
+    .tl-estimate { margin: .2rem 0 .4rem; padding: .35rem .5rem; border-left: 3px solid var(--focus, #1c5fd4); }
+    .tl-incomplete { border-left-color: var(--warn, #b45309); }
   `],
 })
 export class TrainingLinesComponent {
@@ -155,6 +177,10 @@ export class TrainingLinesComponent {
 
   readonly text = (l: TrainingLine) => lineText(l.moves, l.start);
   readonly until = (d: TrainingLines, l: TrainingLine) => matchedUntil(l, d.color ?? 'w') ?? '?';
+  /** Gibt es geschätzte Linien? */
+  readonly estimated = (d: TrainingLines) => !!d.lichessBand && d.lines.some(l => l.source === 'lichess' || l.source === 'mixed');
+  readonly from = (l: TrainingLine) => l.lichessFrom === null ? '' : plyLabel(l.moves, l.start, l.lichessFrom);
+
   /** Woher die Linie stammt: bei „Alle markierten" Repertoire · Kapitel, sonst das Kapitel. */
   readonly origin = (d: TrainingLines, l: TrainingLine) =>
     [d.repertoire === null ? l.repertoireName : '', l.chapter].filter(x => !!x).join(' · ');
@@ -316,6 +342,14 @@ const GERMAN: Record<string, string> = {
   done: '„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …',
   sameRepertoire: 'Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um.',
   allMarked: 'Alle markierten',
+  estimated: 'geschätzt',
+  estimatedTip: 'Geschätzt mit Lichess-Partien von Spielern der Stufe {{band}}',
+  estimatedFrom: 'ab {{move}} geschätzt (Lichess {{band}})',
+  pending: 'Schätzung unvollständig',
+  headerFew: 'Von {{who}} nur {{n}} passende Partien — Lücken mit Lichess-Partien der Stufe {{band}} geschätzt.',
+  headerNone: 'Von {{who}} keine passenden Partien — geschätzt mit Lichess-Partien der Stufe {{band}} (ein typischer Spieler seiner Stärke).',
+  headerGaps: 'Wo {{who}} zu wenige Partien hat, sind die Linien mit Lichess-Partien der Stufe {{band}} geschätzt.',
+  incomplete: 'Der Lichess-Explorer hat nicht alle Stellungen rechtzeitig geliefert — die Schätzung ist unvollständig. Später noch einmal öffnen.',
   yourColor: 'Deine Farbe',
   iHaveWhite: 'Ich habe Weiß',
   iHaveBlack: 'Ich habe Schwarz',

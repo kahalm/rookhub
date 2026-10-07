@@ -14,13 +14,13 @@ const DATA: TrainingLines = {
   repertoire: 7, color: 'w', colors: ['w', 'b'], games: 12, total: 4, more: 1,
   lines: [
     { key: 'lA', end: 'x', start: null, chapter: 'Najdorf', repertoireId: 7, repertoireName: 'Sizilianisch (Weiß)', moves: ['e4', 'c5', 'Nf3', 'd6'], probability: 0.5, reached: 6, lastYear: 2025,
-      neverReached: false, matched: 2, missing: 0, prefixProbability: 0.5, prefixReached: 6 },
+      neverReached: false, matched: 2, missing: 0, prefixProbability: 0.5, prefixReached: 6, source: 'own', ownMoves: 2, lichessMoves: 0, lichessFrom: null, pending: false },
     { key: 'lB', end: 'y', start: null, chapter: '', repertoireId: 7, repertoireName: 'Sizilianisch (Weiß)', moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], probability: 0.0004, reached: 1, lastYear: 2019,
-      neverReached: false, matched: 2, missing: 0, prefixProbability: 0.0004, prefixReached: 1 },
+      neverReached: false, matched: 2, missing: 0, prefixProbability: 0.0004, prefixReached: 1, source: 'own', ownMoves: 2, lichessMoves: 0, lichessFrom: null, pending: false },
     { key: 'lD', end: 'w', start: null, chapter: 'Drache', repertoireId: 7, repertoireName: 'Sizilianisch (Weiß)', moves: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'g6'], probability: 0, reached: 0,
-      lastYear: null, neverReached: false, matched: 3, missing: 1, prefixProbability: 0.12, prefixReached: 4 },
+      lastYear: null, neverReached: false, matched: 3, missing: 1, prefixProbability: 0.12, prefixReached: 4, source: 'none', ownMoves: 2, lichessMoves: 0, lichessFrom: null, pending: false },
     { key: 'lC', end: 'z', start: null, chapter: '', repertoireId: 9, repertoireName: 'Französisch', moves: ['e4', 'c6', 'd4', 'd5'], probability: 0, reached: 0, lastYear: null,
-      neverReached: true, matched: 0, missing: 2, prefixProbability: 0, prefixReached: 12 },
+      neverReached: true, matched: 0, missing: 2, prefixProbability: 0, prefixReached: 12, source: 'none', ownMoves: 2, lichessMoves: 0, lichessFrom: null, pending: false },
   ],
 };
 
@@ -313,6 +313,46 @@ describe('TrainingLinesComponent', () => {
       await fixture.whenStable();
       expect(trainingRepertoire).toHaveBeenCalledOnceWith('1606921', jasmine.objectContaining({
         repertoire: null, color: 'w', chapterColors: { '9': { Hauptlinie: 'b' } } }));
+    });
+  });
+
+  describe('Schätzung mit Lichess-Partien (2026-10-07)', () => {
+    const EST: TrainingLines = {
+      ...DATA, repertoire: null, games: 3, ownGames: 3, lichessBand: '2000–2300', explorerIncomplete: true,
+      lines: [
+        { ...DATA.lines[0], key: 'm1', moves: ['e4', 'c6', 'd4', 'd5', 'e5'], source: 'mixed', ownMoves: 1, lichessMoves: 1, lichessFrom: 3,
+          probability: 0.62, reached: 0 },
+        { ...DATA.lines[1], key: 'm2', source: 'lichess', ownMoves: 0, lichessMoves: 2, lichessFrom: 1, probability: 0.2 },
+        { ...DATA.lines[2], key: 'm3', source: 'none', pending: true },
+      ],
+    };
+
+    it('Kopfzeile sagt, dass Lücken geschätzt sind; je Linie „geschätzt" bzw. „ab 2…d5 geschätzt"; unvollständig angezeigt', async () => {
+      build();
+      trainingLines.and.resolveTo(EST);
+      await openSection();
+      expect(el().querySelector('.tl-estimate')?.textContent).toContain('Von Huber nur 3 passende Partien — Lücken mit Lichess-Partien der Stufe 2000–2300 geschätzt.');
+      expect(el().querySelector('.tl-incomplete')?.textContent).toContain('unvollständig');
+      const items = Array.from(el().querySelectorAll('.tl-list li'));
+      expect(items[0].querySelector('.tl-tag')?.textContent).toContain('ab 2…d5 geschätzt (Lichess 2000–2300)');
+      expect(items[0].textContent).toContain('62 %');
+      expect(items[1].querySelector('.tl-tag')?.textContent?.trim()).toBe('geschätzt');
+      expect(items[2].querySelector('.tl-tag-warn')?.textContent).toContain('Schätzung unvollständig');
+      expect(items[2].textContent).toContain('bis 3…cxd4 dabei');            // ohne Quelle: Auffüllregel wie bisher
+    });
+
+    it('ganz ohne passende Partien: „ein typischer Spieler seiner Stärke"', async () => {
+      build();
+      trainingLines.and.resolveTo({ ...EST, games: 0, ownGames: 0, explorerIncomplete: false });
+      await openSection();
+      expect(el().querySelector('.tl-estimate')?.textContent).toContain('keine passenden Partien');
+      expect(el().querySelector('.tl-incomplete')).toBeNull();
+    });
+
+    it('ohne Schätzung keine Kopfzeile', async () => {
+      build();
+      await openSection();
+      expect(el().querySelector('.tl-estimate')).toBeNull();
     });
   });
 });

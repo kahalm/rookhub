@@ -4554,7 +4554,15 @@
       "yourColor": "Your colour",
       "iHaveWhite": "I have White",
       "iHaveBlack": "I have Black",
-      "trainAllHint": "“Train all in this order” is available for a single repertoire. For all marked repertoires together: “Show me lines to train” — it collects the most important lines in one repertoire that you then train."
+      "trainAllHint": "“Train all in this order” is available for a single repertoire. For all marked repertoires together: “Show me lines to train” — it collects the most important lines in one repertoire that you then train.",
+      "estimated": "estimated",
+      "estimatedTip": "Estimated from Lichess games of players rated {{band}}",
+      "estimatedFrom": "estimated from {{move}} on (Lichess {{band}})",
+      "pending": "estimate incomplete",
+      "headerFew": "Only {{n}} matching games of {{who}} — gaps estimated from Lichess games of players rated {{band}}.",
+      "headerNone": "No matching games of {{who}} — estimated from Lichess games of players rated {{band}} (a typical player of his strength).",
+      "headerGaps": "Where {{who}} has too few games, the lines are estimated from Lichess games of players rated {{band}}.",
+      "incomplete": "The Lichess explorer did not deliver every position in time — the estimate is incomplete. Open it again later."
     },
     "title": "Prepare for an opponent",
     "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",

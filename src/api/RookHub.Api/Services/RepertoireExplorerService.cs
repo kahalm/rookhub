@@ -310,6 +310,75 @@ public class RepertoireExplorerService
         return dto;
     }
 
+    /// <summary>Ergebnis von <see cref="BatchStatsAsync"/>: die geholten Stellungen (Schlüssel wie <see cref="RepertoireReach.Key"/>)
+    /// und die, die im Zeitbudget nicht ankamen (Budget, Drossel, fehlender Token, Ausfall).</summary>
+    public sealed record BatchResult(Dictionary<string, ExplorerPositionStats> Stats, HashSet<string> Pending);
+
+    /// <summary>
+    /// Zughäufigkeiten vieler Stellungen auf einmal — für die Schätzung der Trainingslinien (Spielervorbereitung, 2026-10-07).
+    /// Dieselbe Datenstrecke wie der Lochfinder: <paramref name="local"/> über <see cref="LocalExplorerClient"/> (gleichzeitig,
+    /// Arbeitsspeicher), sonst online mit Datenbank-Speicher, Token, Leitung (<see cref="LichessExplorerGate"/>) und
+    /// <see cref="Budget"/>; was im Budget nicht ankommt, steht in <see cref="BatchResult.Pending"/> — der nächste Aufruf findet
+    /// das Geholte im Speicher und macht dort weiter.
+    /// </summary>
+    public async Task<BatchResult> BatchStatsAsync(int userId, IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query,
+        bool local, CancellationToken ct)
+    {
+        var clock = Stopwatch.StartNew();
+        var result = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
+        var wanted = positions.GroupBy(p => p.Key, StringComparer.Ordinal).Select(g => g.First()).ToList();
+        if (wanted.Count == 0) return new BatchResult(new(StringComparer.Ordinal), new(StringComparer.Ordinal));
+
+        if (local && _local.IsConfigured)
+        {
+            string MemoryKey(string key) => "explorer:local:" + query.CachePrefix + key;
+            var missing = new List<(string Key, string Fen)>();
+            foreach (var p in wanted)
+                if (_memory.TryGetValue<ExplorerPositionStats>(MemoryKey(p.Key), out var hit) && hit is not null) result[p.Key] = hit;
+                else missing.Add(p);
+            if (missing.Count > 0)
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(Budget);
+                try
+                {
+                    await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalParallelism, CancellationToken = cts.Token },
+                        async (p, token) =>
+                        {
+                            var stats = await _local.FetchAsync(p.Fen, query, token);
+                            if (stats is null) return;
+                            result[p.Key] = stats;
+                            _memory.Set(MemoryKey(p.Key), stats, LocalMemoryTtl);
+                        });
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested) { /* Budget um: der Rest bleibt offen */ }
+            }
+        }
+        else
+        {
+            foreach (var (k, v) in await LoadCacheAsync(query, wanted.Select(p => p.Key), ct)) result[k] = v;
+            string? token = null;
+            var tokenResolved = false;
+            var failures = 0;
+            foreach (var p in wanted.Where(p => !result.ContainsKey(p.Key)))
+            {
+                if (clock.Elapsed >= Budget || _gate.BlockedFor is not null || failures >= MaxFailures) break;
+                if (!tokenResolved) { token = await ResolveTokenAsync(userId, ct); tokenResolved = true; }
+                if (token is null) break;
+                var (status, stats) = await _client.FetchAsync(p.Fen, query, token, ct);
+                if (status == ExplorerFetchStatus.Ok)
+                {
+                    result[p.Key] = stats!;
+                    await StoreAsync(query.CachePrefix + p.Key, stats!, ct);
+                }
+                else if (status is ExplorerFetchStatus.RateLimited or ExplorerFetchStatus.Unauthorized) break;
+                else failures++;
+            }
+        }
+        var pending = wanted.Where(p => !result.ContainsKey(p.Key)).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
+        return new BatchResult(new Dictionary<string, ExplorerPositionStats>(result, StringComparer.Ordinal), pending);
+    }
+
     /// <summary>Welche Quellen es gibt — die Oberfläche zeigt „lokal" nur, wenn eingerichtet.</summary>
     public ExplorerSourcesDto Sources() => new()
     {

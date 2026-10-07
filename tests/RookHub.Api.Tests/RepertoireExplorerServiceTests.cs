@@ -687,6 +687,54 @@ public class RepertoireExplorerServiceTests : IDisposable
     }
 
     /// <summary>Antwortet je Stellung (über den fen-Parameter) mit festem JSON; merkt sich Anfragen.</summary>
+    // ── BatchStatsAsync (Schätzung der Trainingslinien, 2026-10-07) ────────────────────────────────
+
+    private static readonly ExplorerQuery TrainingQuery = ExplorerQuery.Create("lichess", [2000, 2200], ["blitz", "rapid", "classical"]);
+
+    [Fact]
+    public async Task Batch_Online_FetchesStoresAndServesFromTheCacheNextTime()
+    {
+        var (userId, _) = await SeedAsync(BlackVsE4);
+        _handler.Respond(StartKey, StartJson);
+        var service = Service();
+
+        var r = await service.BatchStatsAsync(userId, [(StartKey, StartFen), (StartKey, StartFen)], TrainingQuery, local: false, default);
+
+        Assert.Equal(1000, r.Stats[StartKey].Total);
+        Assert.Empty(r.Pending);
+        Assert.Single(_handler.Urls);                              // dieselbe Stellung nur einmal
+        var again = await Service().BatchStatsAsync(userId, [(StartKey, StartFen)], TrainingQuery, local: false, default);
+        Assert.Equal(1000, again.Stats[StartKey].Total);
+        Assert.Single(_handler.Urls);                              // aus dem Speicher, keine zweite Abfrage
+    }
+
+    [Fact]
+    public async Task Batch_Online_BudgetExceededOrNoToken_LeavesPositionsPending()
+    {
+        var (userId, _) = await SeedAsync(BlackVsE4);
+        var service = Service();
+        service.Budget = TimeSpan.Zero;
+        var r = await service.BatchStatsAsync(userId, [(StartKey, StartFen)], TrainingQuery, local: false, default);
+        Assert.Contains(StartKey, r.Pending);
+        Assert.Empty(_handler.Urls);
+
+        var (noToken, _) = await SeedAsync(BlackVsE4, userToken: null);
+        var r2 = await Service().BatchStatsAsync(noToken, [(StartKey, StartFen)], TrainingQuery, local: false, default);
+        Assert.Contains(StartKey, r2.Pending);
+        Assert.Empty(_handler.Urls);
+    }
+
+    [Fact]
+    public async Task Batch_Local_UsesTheLocalExplorer()
+    {
+        var (userId, _) = await SeedAsync(BlackVsE4);
+        _localHandler.Respond(StartKey, StartJson);
+        var r = await Service().BatchStatsAsync(userId, [(StartKey, StartFen)], TrainingQuery, local: true, default);
+        Assert.Equal(1000, r.Stats[StartKey].Total);
+        Assert.Empty(_handler.Urls);                               // nie online
+        Assert.Single(_localHandler.Urls);
+    }
+
     private sealed class StubHandler : HttpMessageHandler
     {
         private readonly Dictionary<string, string> _byKey = new();
