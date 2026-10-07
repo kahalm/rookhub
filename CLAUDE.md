@@ -349,6 +349,9 @@ hat aber keinen, fällt sie still auf online zurück (`effectiveSettings`).
 | POST | `/api/extension/games/known` | Welche Partien einer Übersicht liegen schon bei RookHub? `{ source, externalIds[] }` (≤ 300) → je bekannte Partie `{ externalId, id, analysis }`. Die Erweiterung zeigt daraufhin ein Häkchen statt des Sende-Knopfs — und den Analyse-Fortschritt, wenn einer läuft. Nur Existenz und Stand, nie Züge |
 | POST | `/api/extension/games/{id}/analyze` | „In RookHub analysieren“ aus der Übersicht auf chess.com/lichess (0.528.0) — für eine Partie, die schon bei RookHub liegt, aber nie gerechnet wurde. Derselbe Weg und dieselbe Antwort wie `POST /api/games/{id}/analyze` (`GameAnalyzeResultDto`, Absage 400 `{ reason, message }`, fremde Partie 404); eigene Route, weil das API-Token der Erweiterung nur `/api/extension/*` erreicht (`PatScopeFenceMiddleware`) |
 
+`UseForExtension` heißt in der Oberfläche seit 0.700.1 „Für Extension und Vorbereitung verwenden": solche Repertoires
+nutzt RepCheck UND die Spielervorbereitung (Trainingslinien gegen einen Gegner, siehe „Spielervorbereitung (Prep)").
+Feld- und API-Name bleiben.
 
 **Der Browser-Import laeuft LAUFEND, nicht gepuffert (0.484.0).** Die Extension streamt einen Kurs
 kapitelweise an `POST /api/extension/chessable/ingest/chunk`; jeder Chunk wird SOFORT geparst und
@@ -2483,6 +2486,20 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   wieder vor; Umstufen lässt die Partien stehen.
 - Minderjährige (bekannter Jahrgang unter 18, `LeagueHiddenAccounts`): über `/api/prep/*` nie ein Vorschlag, eine
   Prüfung, ein Konto in der Liste oder eine Pflege — auch nicht für Admins (404); entscheiden kann nur ein Admin in LeagueHub.
+- Trainingslinien gegen einen Gegner (0.701.0/0.702.0): `TrainingLinesService` + `OpponentTrainingLines` (Services/Prep)
+  hinter `GET /api/prep/player/{id}/training-lines` (prep.view; Partien wie die Karte inkl. `all`/`twin`, Filter wie das
+  Profil) und `GET /api/league/player/{fide}/training-lines` (eigene Datei `LeagueTrainingController`, league.view, KEINE
+  Fassung unter `/s/{token}`). Parameter: `repertoire`, `color` w/b, `chapterColors` (JSON, eigene Kapitelfarben des
+  Trainers), `take` (Vorgabe `Prep:TrainingLines` = 50, höchstens 5000), `source`/`speeds`/`years`/`unsure` (ohne `source`:
+  Brett + online; die Karte schickt immer ihren Filter mit). Nur EIGENE Repertoires mit `UseForExtension` (Oberfläche:
+  „Für Extension und Vorbereitung verwenden"), sonst 404. Rechnung: nur Partien des Gegners mit der anderen Farbe, je die
+  ersten 40 Halbzüge als Präfixbaum durch EIN Brett, gezählt je Stellungsschlüssel (`RepertoireReach.Key`, Zugumstellungen
+  inklusive); Wahrscheinlichkeit = Produkt über die Gegnerzüge (Anteil des Zugs unter den Partien, die die Stellung
+  erreicht UND dort weitergespielt haben), eigene Züge 1; „nie erreicht" = keine Partie erreicht die Stellung nach dem
+  letzten Gegnerzug (bleibt in der Liste, hinten). Linie = Hauptvariante eines Abschnitts (wie im Trainer, Info-Linien
+  raus). Antwort `{ repertoires, repertoire, color, colors, games, total, lines[{ key, end, start, chapter, moves,
+  probability, reached, lastYear, neverReached }], more }`; `key` = Trainer-lineKey (`LineKeyFromSans`). Gemessen mit
+  echten Lumbra-Partien: 3000 verschiedene ≈ 0,75 s, 10 000 ≈ 1,7 s.
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |

@@ -236,6 +236,12 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   Spielerseite nachlädt — sonst sprengte die LeagueHub-Gestaltung das Komponenten-Budget. Klassen in Prep-Komponenten
   nicht wie LeagueHub-Klassen nennen (`.acc-list` gibt es dort schon → `prep-acc-list`). Am Handy (≤ 520 px) steht in
   der Prep-Karte die Eröffnung der letzten Partien unter dem Gegner (nur `prep-card.scss`).
+- Trainingslinien (0.702.0): `training-lines.component` (Abschnitt „Trainingslinien", aufklappbar, lädt erst beim
+  Öffnen) erscheint nur, wenn `PLAYER_CARD_API.trainingLines` existiert, jemand angemeldet ist und kein Teilen-Token
+  gilt; deutsch wie die übrige Karte. `trainerParams` liefert den Gegner für den Trainer (`prep:<id>` + `all`/`twin`,
+  Vorgabe `league:<fide>`); `LeagueApiService` hat dafür genau EINE Methode. Trainer: `?opponent=prep:<id>|league:<fide>
+  &color=…` (+ Filter) holt alle Trainingslinien, sortiert danach statt zu mischen, nur Kapitel der Farbe; leer → einmal
+  anderer Modus. Ohne den Parameter unverändert. Hilfen in `shared/player-card/training-lines.ts`.
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 
