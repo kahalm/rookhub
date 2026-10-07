@@ -2551,6 +2551,18 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   raus). Antwort `{ repertoires, repertoire, color, colors, games, total, lines[{ key, end, start, chapter, moves,
   probability, reached, lastYear, neverReached }], more }`; `key` = Trainer-lineKey (`LineKeyFromSans`). Gemessen mit
   echten Lumbra-Partien: 3000 verschiedene ≈ 0,75 s, 10 000 ≈ 1,7 s.
+- Auffüllregel + Trainings-Repertoire (0.705.0): Je Linie `matched` (Gegnerzüge, die er von vorne weg getroffen hat —
+  bis zur ersten Stellung, die er nie erreicht oder in der er nie den Zug der Linie spielt), `missing` (= Gegnerzüge der
+  Linie − matched), `prefixProbability`, `prefixReached`. Reihung in Stufen: voll getroffen nach Wahrscheinlichkeit, dann
+  1 fehlender Gegnerzug („als ob er einen Zug vorher abgewichen wäre") nach Präfix-Wahrscheinlichkeit, dann 2 …; gleich:
+  Partien ↓, Repertoire-Reihenfolge; matched = 0 = „nie erreicht", ganz hinten. Achtung: `missing` zählt relativ zur
+  LÄNGE der Linie — eine früh abweichende, kurze Linie kann in derselben Stufe stehen wie eine erst am letzten Zug
+  abweichende. `POST /api/prep/player/{id}/training-repertoire` (prep.view) und `POST /api/league/player/{fide}/
+  training-repertoire` (`LeagueTrainingController`, league.view, kein Teilen-Link), Rumpf wie die Abfrage
+  (`TrainingLinesService.CreateRequest`) → `{ id, name, lines, replaced }`: eigenes Repertoire „Prep: <Gegner> <Jahr>"
+  mit höchstens 50 Linien (min(`Prep:TrainingLines`, 50)) in der gereihten Reihenfolge, je Linie der UNVERÄNDERTE
+  PGN-Abschnitt der Quelle; `UseForExtension=false`, `Kind` wie die Quelle. Gleichnamiges eigenes wird ersetzt
+  (gleiche Id; Dateien über `RepertoireService.DeleteFileAsync`, neue per `UploadFileAsync` — SR-Stand je lineKey bleibt).
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |

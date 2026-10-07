@@ -246,6 +246,12 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   Vorgabe `league:<fide>`); `LeagueApiService` hat dafür genau EINE Methode. Trainer: `?opponent=prep:<id>|league:<fide>
   &color=…` (+ Filter) holt alle Trainingslinien, sortiert danach statt zu mischen, nur Kapitel der Farbe; leer → einmal
   anderer Modus. Ohne den Parameter unverändert. Hilfen in `shared/player-card/training-lines.ts`.
+- „Show me lines to train" (0.706.0): Knopf `button.tl-create` im Abschnitt (i18n `prep.trainingRepertoire.*` in
+  en/de/hr/hu; in LeagueHub ohne gesetzte Sprache die deutschen Texte aus der Komponente), Rückfrage über
+  `ConfirmService` (nennt den Namen, sagt „gleichnamiges wird ersetzt"), dann zur neuen Seite `/repertoires/{id}
+  ?trainColor=w|b` (LeagueHub per `jumpToRookHub`). `repertoire-detail` setzt mit `?trainColor=` einmal die
+  Trainingsfarbe ALLER Kapitel (nur eigenes Repertoire) — die Auto-Erkennung könnte an einer Auswahl von Linien kippen.
+  Die Liste zeigt nicht voll getroffene Linien als „bis 5…a6 dabei" + „Anfang p %".
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 
