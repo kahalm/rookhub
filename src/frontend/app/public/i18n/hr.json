@@ -2166,6 +2166,10 @@
     },
     "variation": {
       "previewing": "Prikaz linije iz komentara"
+    },
+    "commentDialog": {
+      "open": "Čitaj u prozoru",
+      "moveHint": "Potez u tekstu zatvara prozor i prikazuje varijantu na ploči."
     }
   },
   "admin": {

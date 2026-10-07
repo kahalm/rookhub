@@ -2166,6 +2166,10 @@
     },
     "variation": {
       "previewing": "Showing a line from the comment"
+    },
+    "commentDialog": {
+      "open": "Read in a window",
+      "moveHint": "A move in the text closes the window and shows the line on the board."
     }
   },
   "admin": {

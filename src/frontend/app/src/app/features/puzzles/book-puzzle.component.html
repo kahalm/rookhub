@@ -151,9 +151,9 @@
                      zusätzlich als Kopfzeile. Im Review/Info-Modus der Kommentar zum durchgespielten
                      Zug, sonst die Einleitung des Puzzles. -->
                 @if (commentLines.length) {
-                  <div class="ctx-comment">
+                  <div class="ctx-comment" [class.ctx-comment-long]="commentIsLong">
                     <mat-icon>chat_bubble_outline</mat-icon>
-                    <div class="ctx-comment-body">
+                    <div class="ctx-comment-body" (click)="onCommentBodyClick($event)">
                       @for (block of commentBlocks; track $index) {
                         <p>@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
                       }
@@ -164,6 +164,11 @@
                             <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
                           </button>
                         </div>
+                      }
+                      @if (commentIsLong) {
+                        <button type="button" class="ctx-comment-expand" (click)="openCommentDialog()">
+                          <mat-icon>open_in_full</mat-icon> {{ 'book.commentDialog.open' | translate }}
+                        </button>
                       }
                       @if (langEnabled && puzzle.commentMachine) {
                         <app-machine-note [clickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"

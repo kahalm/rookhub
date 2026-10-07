@@ -2166,6 +2166,10 @@
     },
     "variation": {
       "previewing": "Zeigt eine Variante aus dem Kommentar"
+    },
+    "commentDialog": {
+      "open": "Im Fenster lesen",
+      "moveHint": "Ein Zug im Text schließt das Fenster und zeigt die Variante am Brett."
     }
   },
   "admin": {

@@ -430,6 +430,16 @@ app/src/app/
   kein „falsch" mehr. Tests, die das trennen, schreiben die SAN der Linie deshalb absichtlich auf
   eine nicht kanonische Form um — ein Test, der nur ein PGN hineingibt, prüft den PARSER.
 
+## Langer Kurs-Kommentar im Fenster (0.696.1)
+
+Im Buch-/Kurs-Löser (`book-puzzle.component`) steht der Kommentar seit 0.696.1 IMMER ganz im Kasten — die frühere
+Höhengrenze (40 vh mit eigenem Scrollbalken) ist weg (Wunsch 2026-10-07: „trotzdem alles anzeigen, damit ich nicht klicken
+muss"). Ab `LONG_COMMENT_CHARS` (300 Zeichen aller Absätze, `commentLength`) öffnet ein Klick auf den Text (nicht auf einen
+Zug-Chip, nicht bei markiertem Text) oder auf „Im Fenster lesen" zusätzlich `CommentDialogComponent`
+(`features/puzzles/comment-dialog.component.ts`): Titel + Kapitel/Kurs, größere Schrift, Zeilenlänge 68ch, dieselben
+Zug-Chips — ein Zug schließt das Fenster und geht an `previewVariationMove`. Gilt für alle Modi des Buch-Lösers (Kurs, Buch,
+Tagespuzzle, Wochenpost).
+
 ## Partie-Rückblick: Bewertungskurve, Genauigkeit, Zug-Klassen (0.512.0, Sonderklassen 0.514.0)
 
 Unter dem Brett der geteilten Partie (`/g/:token`) und der eigenen Partie-Seite (`/games/:id`, seit 0.513.0 statt des Nachspiel-Dialogs; der Dialog `PgnViewerComponent` kann es weiterhin) —

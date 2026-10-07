@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.696.1", date: "2026-10-07", changes: [
+    { en: "Courses: a comment now always shows in full next to the board — no inner scroll bar any more. A long one (a foreword, a chapter introduction) can also be read in a window with more room: click the text or \"Read in a window\". Moves in the window stay clickable; a click closes it and shows the line on the board.", de: "Kurse: ein Kommentar steht jetzt immer ganz neben dem Brett — ohne eigenen Scrollbalken. Einen langen (Vorwort, Kapitel-Einleitung) kann man zusätzlich in einem Fenster mit mehr Platz lesen: Klick auf den Text oder auf „Im Fenster lesen“. Züge im Fenster bleiben anklickbar; ein Klick schließt es und zeigt die Variante am Brett." },
+  ] },
   { version: "0.696.0", date: "2026-10-07", changes: [
     { en: "RepCheck reports every aborted “Fetch course” to RookHub — also errors that are not an unexpected Chessable response (for example a fault in the extension or while sending). RookHub logs them and notifies the admins, at most once an hour per user and course.", de: "RepCheck meldet jeden abgebrochenen „Kurs holen“-Lauf an RookHub — auch Fehler, die keine unerwartete Chessable-Antwort sind (etwa ein Fehler in der Erweiterung oder beim Senden). RookHub legt sie im Log ab und benachrichtigt die Admins, höchstens einmal pro Stunde je Nutzer und Kurs." },
   ] },

@@ -1773,7 +1773,11 @@
     "variation": {
       "previewing": "Egy változatot mutat a kommentárból"
     },
-    "sourceGame": "Játszma megnyitása"
+    "sourceGame": "Játszma megnyitása",
+    "commentDialog": {
+      "open": "Olvasás ablakban",
+      "moveHint": "A szövegben egy lépésre kattintva bezárul az ablak, és a változat a táblán látható."
+    }
   },
   "admin": {
     "title": "Admin",

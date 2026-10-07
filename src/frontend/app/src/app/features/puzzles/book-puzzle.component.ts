@@ -15,6 +15,7 @@ import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CommentSegment } from './comment-variation.util';
+import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
 import { CommentBlockCache, lineStepAt } from './line-step.util';
 import {
   latestCommentUpTo as latestCommentUpToUtil,
@@ -1024,6 +1025,27 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   previewVariationMove(seg: CommentSegment): void {
     if (!seg.fen || !seg.from || !seg.to) return;
     this.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key] };
+  }
+
+  /** Langer Kommentar (Vorwort, Einleitung): steht weiter VOLLSTÄNDIG im Kasten, ein Klick öffnet ihn zusätzlich im
+   *  Fenster (Wunsch 2026-10-07: „modal, damit mehr Platz … trotzdem alles anzeigen, damit ich nicht klicken muss"). */
+  get commentIsLong(): boolean { return commentLength(this.commentBlocks) >= LONG_COMMENT_CHARS; }
+
+  /** Kommentar im Fenster; ein Zug darin schließt es und spielt die Variante am Brett vor wie im Kasten. */
+  openCommentDialog(): void {
+    const subtitle = [this.chapterDisplay, this.displayBookName].filter(s => !!s).join(' · ') || null;
+    this.dialog.open(CommentDialogComponent, {
+      data: { title: this.titleDisplay, subtitle, blocks: this.commentBlocks },
+      width: '760px', maxWidth: '96vw', maxHeight: '90vh', autoFocus: false,
+    }).afterClosed().subscribe((seg?: CommentSegment) => { if (seg) this.previewVariationMove(seg); });
+  }
+
+  /** Klick in den Kommentartext: nur Text öffnet das Fenster — Zug-Chips und markierter Text nicht. */
+  onCommentBodyClick(ev: MouseEvent): void {
+    if (!this.commentIsLong) return;
+    if ((ev.target as HTMLElement | null)?.closest('button')) return;
+    if ((window.getSelection?.()?.toString() ?? '') !== '') return;
+    this.openCommentDialog();
   }
 
   /** Vorschau beenden → zurück zur Puzzle-/Review-Stellung. */
