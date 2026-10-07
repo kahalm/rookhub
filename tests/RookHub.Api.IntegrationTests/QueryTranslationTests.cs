@@ -150,6 +150,59 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(2, await Db.LeaguePlayers.CountAsync(p => p.Tnr == 900_004_711));
     }
 
+    /// <summary>
+    /// Online-Schach Oberbayern (0.716.0): laufende Saison je Region, Meldelisten der Region Bayern (Join über <c>InRegion</c>),
+    /// Selbstmeldungen ersetzen, Vorschläge mit <c>ToLower()</c>-Vergleich und Such-Eintrag — gegen echtes SQL.
+    /// </summary>
+    [MySqlFact]
+    public async Task LeagueHub_OnlineSchachOberbayern_MeldungenUndVorschlaege()
+    {
+        Db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = 912_026_001, Name = "Zugspitzliga", Season = "2026/27", League = "ZL", Stage = "Liga", Source = "zugspitze" },
+            new LeagueTournament { Tnr = 7, Name = "Landesliga", Season = "2025/26", League = "LL", Stage = "Liga" });
+        Db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 912_026_001, Team = "SK Weilheim II", Name = "Wiesner, Konrad", NameKey = "wiesner, konrad", FideId = "900" },
+            new LeaguePlayer { Tnr = 7, Team = "Schwaz 1", Name = "Wiesner, Konrad", NameKey = "wiesner, konrad", FideId = "999" });
+        await Db.SaveChangesAsync();
+        Assert.Equal(new[] { 7, 912_026_001 },
+            (await RookHub.Api.Services.League.LeagueOnlineRegions.CurrentSeasonTnrsAsync(Db, default)).OrderBy(x => x));
+
+        const string list = "<table><tr><td>Online-KEM 2022 M I</td><td><a href='https://lichess.org/swiss/AAAAaaa1' target=_new>Turnierseite</a>"
+            + "<a href='../onlineergebnis/?saison=20221&serie=KEM2022&turnier=AAAAaaa1'>Ergebnisse</a></td><td>(9 Runden)</td><td>5</td><td>x</td></tr></table>";
+        const string page = "<b><u>Einzelwertung</u></b><div class='lefttable'><table><tr><th>Rang</th></tr><tr><td>1.</td><td>Wiesner,Konrad</b></td>"
+            + "<td>SK Weilheim</b></td><td>2010</b></td></table></div><div class='righttable0'><table><tr><th>Punkte</th><th>S-B</th></tr>"
+            + "<tr><td><b>6&#189;</b></td><td>30.25</td></table></div><div class='midtable0'></div>";
+        var http = new PathHttp(q =>
+            q.StartsWith("/onlineturniere/") ? list : q.StartsWith("/onlineergebnis/") ? page
+            : q.StartsWith("/api/swiss/AAAAaaa1/results") ? "{\"points\":6.5,\"tieBreak\":30.25,\"rating\":2010,\"username\":\"KonniW\"}\n"
+            : q.StartsWith("/api/fide/player/") ? "{\"year\":1980,\"federation\":\"GER\"}" : null);
+        var reports = new RookHub.Api.Services.League.ZugspitzeOnlineReports(Db, http,
+            NullLogger<RookHub.Api.Services.League.ZugspitzeOnlineReports>.Instance) { Pause = TimeSpan.Zero };
+
+        var res = await reports.ImportAsync("20221", dryRun: false, default);
+
+        Assert.Equal((1, 1), (res.Counts.Reports, res.Suggestions));
+        Db.ChangeTracker.Clear();
+        var r = await Db.LeagueSelfReports.SingleAsync();
+        Assert.Equal(("900", "KonniW", (string?)"Schachkreis Zugspitze"), (r.FideId, r.UserName, r.Reporter));
+        Assert.Equal("900", (await Db.LeagueAccountSuggestions.SingleAsync()).FideId);
+        Assert.Equal(1980, (await Db.LeagueAccountScans.SingleAsync()).BirthYear);
+        Assert.Equal(0, (await reports.ImportAsync("20221", dryRun: false, default)).Suggestions);     // nichts doppelt
+    }
+
+    private sealed class PathHttp(Func<string, string?> page) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(new Handler(page)) { BaseAddress = new Uri("https://site.test/") };
+
+        private sealed class Handler(Func<string, string?> page) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct) =>
+                Task.FromResult(page(r.RequestUri!.PathAndQuery) is { } body
+                    ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(body) }
+                    : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
+    }
+
     private sealed class LigamanagerHttp(Func<string, string?> page) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(new Handler(page)) { BaseAddress = new Uri("https://ligamanager.test/") };

@@ -229,7 +229,8 @@ public class LeagueAccountSuggestion
     public DateTime CreatedAt { get; set; }
     public DateTime? DecidedAt { get; set; }
     /// <summary>Wer vorgeschlagen hat: <c>null</c> = die Namenssuche (<c>LeagueAccountFinder</c>), <c>team</c> = die Team-Suche
-    /// (<c>LeagueTeamScout</c>, 0.612.0). Die Namenssuche räumt beim erneuten Suchen nur IHRE offenen Vorschläge weg.</summary>
+    /// (<c>LeagueTeamScout</c>, 0.612.0), <c>report</c> = aus einer Meldung Dritter (<c>ZugspitzeOnlineReports</c>, 0.716.0). Die
+    /// Namenssuche räumt beim erneuten Suchen nur IHRE offenen Vorschläge weg.</summary>
     public string? Source { get; set; }
 }
 

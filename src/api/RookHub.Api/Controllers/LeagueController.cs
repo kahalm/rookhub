@@ -517,6 +517,31 @@ public class LeagueController : BaseApiController
     /// Ansichten. <c>?dryRun=true</c> liest und zählt nur. 400 <c>invalidLeague</c> / <c>unsupportedLeague</c> (Senioren,
     /// Jugend, Pokal, Verbandsliga), 404 <c>notFound</c>, 409 <c>conflict</c>, 503 <c>unreachable</c>.
     /// </summary>
+    /// <summary>
+    /// Meldungen Dritter aus dem Online-Bereich des Schachkreises Zugspitze / Bezirks Oberbayern (0.716.0) für EINE Saison
+    /// (<c>season</c> = Jahr + Quartal: 20204, 20211, 20212, 20213, 20221): Turnierliste → je Turnier Ergebnisseite + Lichess-Ergebnisse,
+    /// Zuordnung über Wertung + Punkte, dann Name + Verein gegen die bayerischen Meldelisten → Selbstmeldungen der Quelle
+    /// „Online-Schach Oberbayern {season}" (Reporter „Schachkreis Zugspitze") + je neuer Meldung ein Vorschlag. <c>dryRun</c>: nur zählen,
+    /// mit Liste. 400 <c>invalidSeason</c>, 404 <c>notFound</c>, 503 <c>rateLimited</c>/<c>unreachable</c>.
+    /// </summary>
+    [HttpPost("admin/online-reports/zugspitze")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> ImportZugspitzeOnlineReports([FromQuery] string? season, [FromQuery] bool dryRun,
+        [FromServices] ZugspitzeOnlineReports reports, CancellationToken ct)
+    {
+        if (!Services.League.ZugspitzeOnlineReports.ValidSeason(season)) return BadRequest(new { reason = "invalidSeason" });
+        try
+        {
+            return Ok(await reports.ImportAsync(season!, dryRun, ct));
+        }
+        catch (Services.League.ZugspitzeOnlineReports.NotFoundException e) { return NotFound(new { reason = "notFound", message = e.Message }); }
+        catch (LeagueOnlineSync.RateLimitedException) { return StatusCode(503, new { reason = "rateLimited" }); }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return StatusCode(503, new { reason = "unreachable" });
+        }
+    }
+
     [HttpPost("admin/zugspitze/import")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> ZugspitzeImport([FromBody] ZugspitzeImportRequest? req, [FromQuery] bool dryRun,

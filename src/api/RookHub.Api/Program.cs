@@ -358,6 +358,8 @@ try
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
     });
     builder.Services.AddScoped<RookHub.Api.Services.League.ZugspitzeSource>();
+    // Meldungen aus dem Online-Bereich des Schachkreises Zugspitze/Bezirks Oberbayern (0.716.0): Kreis-Seite + Lichess-Ergebnisse.
+    builder.Services.AddScoped<RookHub.Api.Services.League.ZugspitzeOnlineReports>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();
     builder.Services.AddHttpClient(nameof(IpCountryService));
