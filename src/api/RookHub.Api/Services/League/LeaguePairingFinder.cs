@@ -15,8 +15,8 @@ namespace RookHub.Api.Services.League;
 /// Tage neben dem Rundentermin (ohne Tag: die Saison passt zum Jahr). Genau EIN solcher Vorschlag wird vorgewählt.</item>
 /// <item>Reihenfolge: genaue zuerst, dann die mit mehr passenden Seiten, dann die zeitlich nächste (ohne Tag: die jüngste).</item>
 /// </list>
-/// Gespeichert wird die Wahl als <see cref="LeagueClubGame.LeagueGameId"/>; sie schlägt danach jede Raterei (Paarungen der Runde,
-/// Taktik-Kapitel).
+/// Gespeichert wird die Wahl als <see cref="LeagueClubGame.LeagueGameId"/> samt Schlüssel (<see cref="LeagueGameLinks.Set"/>); sie
+/// schlägt danach jede Raterei (Paarungen der Runde, Taktik-Kapitel). Gelesen wird sie nur über <see cref="LeagueGameLinks.ResolveAsync"/>.
 /// </summary>
 public sealed class LeaguePairingFinder(AppDbContext db)
 {
@@ -79,9 +79,10 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     /// </summary>
     public async Task ApplyAsync(LeagueClubGame game, int id, CancellationToken ct)
     {
-        if (id <= 0) { game.LeagueGameId = null; return; }
-        if (await ByIdAsync(id, ct) is not { } o) return;
-        game.LeagueGameId = o.Id;
+        if (id <= 0) { LeagueGameLinks.Set(game, null); return; }
+        if (await ByIdAsync(id, ct) is not { } o
+            || await db.LeagueGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id, ct) is not { } row) return;
+        LeagueGameLinks.Set(game, row);   // Id + Schlüssel (Tnr, Runde, Begegnung, Brett) — überlebt jedes Aktualisieren
         if (o.Date is { } d && DateOnly.TryParseExact(d, "dd.MM.yyyy", out var day)) game.Year = day.Year;
         game.Classifier1 = o.League;
         game.Classifier2 = o.Season;

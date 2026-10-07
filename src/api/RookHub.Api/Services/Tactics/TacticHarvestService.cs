@@ -556,12 +556,13 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     /// </summary>
     internal static async Task<LeagueRound?> LeagueRoundAsync(AppDbContext db, LeagueClubGame g, LeagueClub club, CancellationToken ct)
     {
-        // fest zugeordnet (0.678.0): genau diese Paarung
-        if (g.LeagueGameId is { } linkedId)
+        // fest zugeordnet (0.678.0): genau diese Paarung — über LeagueGameLinks aufgelöst (Id, sonst Schlüssel); eine tote Id
+        // fällt auf das Raten unten zurück (0.716.1)
+        if (await LeagueGameLinks.FindAsync(db, g, ct) is { } linked)
         {
             var l = await (from lg in db.LeagueGames.AsNoTracking()
                            join t in db.LeagueTournaments.AsNoTracking() on lg.Tnr equals t.Tnr
-                           where lg.Id == linkedId
+                           where lg.Id == linked.Id
                            select new { lg, t.Season, t.League, t.Grp }).FirstOrDefaultAsync(ct);
             if (l != null)
             {

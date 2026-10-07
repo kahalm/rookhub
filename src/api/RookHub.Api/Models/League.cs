@@ -406,9 +406,21 @@ public class LeagueClubGame
 
     /// <summary>Die Brettpaarung (<see cref="LeagueGame"/>), die diese Partie ist — vom Nutzer gewählt bzw. beim Hinzufügen
     /// eindeutig erkannt (0.678.0, <see cref="Services.League.LeaguePairingFinder"/>); <c>null</c> = keine bzw. nicht
-    /// zugeordnet. Kein Fremdschlüssel: ein Aktualisieren ersetzt die Zeilen einer Liga. Schlägt jede Raterei über
-    /// Spieler und Jahr (Paarungen der Runde, Taktik-Kapitel).</summary>
+    /// zugeordnet. Schlägt jede Raterei über Spieler und Jahr (Paarungen der Runde, Taktik-Kapitel). Kein Fremdschlüssel —
+    /// aber seit 0.716.1 STABIL: ein Aktualisieren erhält die Id je (Tnr, Runde, Begegnung, Brett)
+    /// (<see cref="Services.League.LeagueGameLinks.Merge"/>; vorher legte es alle Zeilen einer Liga neu an, und jede
+    /// Zuordnung hing danach ins Leere). Gesetzt wird sie nur über <see cref="Services.League.LeagueGameLinks.Set"/>, zusammen
+    /// mit dem Schlüssel <see cref="LeagueTnr"/>/<see cref="LeagueRound"/>/<see cref="LeagueMatchNo"/>/<see cref="LeagueBoard"/>;
+    /// gelesen nur über <see cref="Services.League.LeagueGameLinks.ResolveAsync"/> (tote Id → über den Schlüssel, sonst wie
+    /// keine Zuordnung).</summary>
     public int? LeagueGameId { get; set; }
+    /// <summary>Sicherheitsnetz zu <see cref="LeagueGameId"/> (0.716.1): die Paarung als Schlüssel (Tnr, Runde, Begegnung, Brett) —
+    /// nach jedem Ersetzen einer Liga wird die Id daraus neu aufgelöst (<see cref="Services.League.LeagueGameLinks.RelinkAsync"/>).
+    /// Alle vier oder keiner.</summary>
+    public int? LeagueTnr { get; set; }
+    public int? LeagueRound { get; set; }
+    public int? LeagueMatchNo { get; set; }
+    public int? LeagueBoard { get; set; }
 
     /// <summary>Archiviert (2026-10-06, Wunsch: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon eingegeben
     /// ist, das alte archivieren, damit es nicht mehr aufscheint"): eine neuere Fassung derselben Partie hat sie ersetzt.

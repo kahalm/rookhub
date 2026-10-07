@@ -954,6 +954,10 @@ try
         // Ligamanager-Ligen ohne Tnr-Versatz (Altbestand vor dem Versatz; erwartet: keine) nur melden, nicht umschreiben.
         await RookHub.Api.Services.League.LigamanagerSource.WarnLegacyTnrsAsync(db,
             app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
+        // Feste Ligapaarungen der Vereinspartien heilen (0.716.1): Schlüssel nachtragen, tote Ids über den Schlüssel bzw. die
+        // Paarungssuche neu finden oder leeren. Idempotent, wirft nie.
+        await RookHub.Api.Services.League.LeagueGameLinks.HealOnStartupAsync(db,
+            app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
     }
 
     // H-5: Global exception handler. Domänen-Ausnahmen kommen hier nicht an (DomainExceptionFilter);

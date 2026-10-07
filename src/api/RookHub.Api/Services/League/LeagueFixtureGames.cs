@@ -18,7 +18,7 @@ namespace RookHub.Api.Services.League;
 /// </list>
 /// Ausgegeben wird nur das PGN der Partie, wie es in der jeweiligen Quelle steht (eine Vereinspartie also mit dem Vereinsnamen).
 /// </summary>
-public sealed class LeagueFixtureGames(AppDbContext db)
+public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGames>? log = null)
 {
     public const int DayTolerance = 3;
 
@@ -40,13 +40,20 @@ public sealed class LeagueFixtureGames(AppDbContext db)
         var fides = games.SelectMany(g => new[] { g.HomeFide, g.AwayFide }).Where(f => !string.IsNullOrEmpty(f)).Select(f => f!)
             .Distinct().ToList();
         var year = date?.Year;
-        var clubGames = year is null ? new List<LeagueClubGame>() : await db.LeagueClubGames.AsNoTracking()
-            .Where(c => c.ClubId == club.Id && c.Year == year && c.LeagueGameId == null).OrderByDescending(c => c.Id).ToListAsync(ct);
-        // fest zugeordnete Partien (0.678.0) schlagen jede Raterei — und werden nie einer ANDEREN Paarung zugeraten
+        // fest zugeordnete Partien (0.678.0) schlagen jede Raterei — und werden nie einer ANDEREN Paarung zugeraten. Die Zuordnung
+        // wird über LeagueGameLinks aufgelöst (Id, sonst Schlüssel Tnr/Runde/Begegnung/Brett): eine Partie mit TOTER Id (vor 0.716.1
+        // legte jedes Aktualisieren die Paarungen neu an) zählt wie eine ohne Zuordnung und darf geraten werden — vorher fiel sie
+        // aus beiden Töpfen und verschwand ganz aus den Paarungen (gemeldet 2026-10-07).
         var gameIds = games.Select(g => g.Id).ToList();
-        var linked = (await db.LeagueClubGames.AsNoTracking()
-                .Where(c => c.ClubId == club.Id && c.LeagueGameId != null && gameIds.Contains(c.LeagueGameId.Value))
-            .OrderByDescending(c => c.Id).ToListAsync(ct)).GroupBy(c => c.LeagueGameId!.Value).ToDictionary(x => x.Key, x => x.First());
+        var pool = await db.LeagueClubGames.AsNoTracking()
+            .Where(c => c.ClubId == club.Id && (c.Year == year && year != null
+                || c.LeagueGameId != null && gameIds.Contains(c.LeagueGameId.Value)
+                || c.LeagueTnr == tnr && c.LeagueRound == round))
+            .OrderByDescending(c => c.Id).ToListAsync(ct);
+        var resolved = await LeagueGameLinks.ResolveAsync(db, pool, ct, log);
+        var linked = pool.Where(c => resolved.TryGetValue(c.Id, out var lg) && gameIds.Contains(lg.Id))
+            .GroupBy(c => resolved[c.Id].Id).ToDictionary(x => x.Key, x => x.First());
+        var clubGames = pool.Where(c => c.Year == year && year != null && !resolved.ContainsKey(c.Id)).ToList();
         var profiles = date is null || fides.Count == 0 ? new Dictionary<string, string>() : await db.LeaguePlayerProfiles.AsNoTracking()
             .Where(p => fides.Contains(p.FideId)).ToDictionaryAsync(p => p.FideId, p => p.Pgn, ct);
 

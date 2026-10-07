@@ -1709,7 +1709,7 @@ Rollenverwaltung an).
 - **Feste Ligapaarung einer Vereinspartie** (0.678.0, Wunsch 2026-10-05: „wenn ich eine Partie von meinen Spielen in die
   Vereins-DB kopiere, kann ich sie keiner Ligarunde zuweisen — überleg dir da was"): `LeagueClubGames.LeagueGameId` (Index, KEIN
   FK) zeigt auf die Brettpaarung (`LeagueGames.Id`) und schlägt jede Raterei — `LeagueFixtureGames` nimmt fest zugeordnete
-  Partien zuerst (das Raten nur noch unter `LeagueGameId == null`), `TacticHarvestService.LeagueRoundAsync` ebenso. Vorschläge
+  Partien zuerst (das Raten nur noch unter Partien ohne lebende Zuordnung), `TacticHarvestService.LeagueRoundAsync` ebenso. Vorschläge
   rechnet `Services/League/LeaguePairingFinder.cs`: Paarungen mit mindestens einer FIDE-ID der Partie (auch der internen hinter
   „Schwaz"; die „Schwaz"-Seite passt zu jedem Spieler des eigenen Vereins), `Exact` = beide Seiten in ihren Farben UND Tag
   ±`DayTolerance` (3) um den Rundentermin (ohne Tag: Saison passt zum Jahr), höchstens `MaxOptions` (8); vorgewählt nur bei
@@ -1720,6 +1720,22 @@ Rollenverwaltung an).
   Klassifizierer: `leagueGameId`/`leagueGameLabel` im DTO nur mit `CanDelete` (Hochladender/Verwalter). Oberfläche: Auswahl
   „Ligapartie" in `club-import-review` (unter dem Turnier), `club-scan-page` und dem Bearbeiten-Feld von `club-games-page`;
   eine gewählte Paarung setzt die noch nicht angefassten Spieler aus dem Spielplan (`ImportReview.setPairing`).
+  **Stabil über jedes Aktualisieren** (0.716.1, gemeldet 2026-10-07: „gefühlt zum dritten Mal zugewiesen — die Zuordnung
+  verschwindet immer wieder"; `Services/League/LeagueGameLinks.cs`): bis dahin legte jedes Aktualisieren alle `LeagueGames` einer
+  Liga neu an, jede Zuordnung zeigte ins Leere, und weil `LeagueFixtureGames` nur unter `LeagueGameId == null` riet, verschwand die
+  Partie ganz aus den Paarungen. Jetzt: (1) **Ersetzen erhält die Id** je Schlüssel (Tnr, Runde, Begegnung, Brett) —
+  `LeagueGameLinks.Merge` in `LeagueRefresh.ReplaceAsync` (also auch Ligamanager/Zugspitze) und im Bundle-Import; Runde + Brett
+  allein reichen NICHT, jede Begegnung hat ihre Bretter 1…n. (2) **Sicherheitsnetz**: `LeagueClubGames.LeagueTnr/LeagueRound/
+  LeagueMatchNo/LeagueBoard` (nullable, Index) — gesetzt NUR über `LeagueGameLinks.Set` (auch in `ApplyAsync`), nach jedem Ersetzen
+  löst `RelinkAsync(tnr)` die Id aus dem Schlüssel neu auf (Paarung weg → Id `null`, Schlüssel bleibt, kommt sie wieder, findet der
+  nächste Lauf sie). **Jeder Leser** geht über `LeagueGameLinks.ResolveAsync`/`FindAsync` (Id, wenn sie lebt und zum Schlüssel
+  passt, sonst Schlüssel, sonst „nicht zugeordnet" + Warnung): `LeagueFixtureGames` (tote Id = raten erlaubt — eine Partie
+  verschwindet nie wegen einer toten Id), `TacticHarvestService.LeagueRoundAsync`, `PairingsForGameAsync`, die Bezeichnung im DTO
+  (`FillPairingLabelsAsync` gibt die aufgelöste Id aus) und `ArchiveOlderVersionsAsync` (gleiche Paarung = gleiche aufgelöste Id
+  bzw. gleicher Schlüssel; eine tote Id ist keine „andere feste Paarung"). Wer einen neuen Leser baut, nimmt `ResolveAsync`, nie
+  `LeagueGameId` roh. (3) **Heilung beim Start** (`LeagueGameLinks.HealOnStartupAsync` in `Program.cs`, idempotent, wirft nie):
+  alle mit Schlüssel neu auflösen; gültige Ids ohne Schlüssel bekommen ihn; tote Ids ohne Schlüssel werden über
+  `LeaguePairingFinder` neu gefunden (`AutoPick`, genau EIN genauer Treffer; PGN-Datum, sonst das Jahr) oder geleert (Warnung).
 - **Ältere Fassungen archivieren** (0.691.0, Wunsch 2026-10-06: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon
   eingegeben ist, das alte archivieren"): `LeagueClubGames.ArchivedAt`/`ReplacedById`, gesetzt in `LeagueClubService.ArchiveOlderVersionsAsync`
   nach jedem Formular-Add (`AddAsync`, nicht beim PGN-Import). Dieselbe Partie = dieselbe feste Ligapaarung, oder (ohne zwei verschiedene
@@ -1743,7 +1759,10 @@ Rollenverwaltung an).
   für die wahrscheinlichen Gegner offener Runden (p ≥ 0,15, `CrFetchedAt` älter als 14 Tage, max. 40; Gegner von
   JEDES Vereins in `LeagueClubs` zuerst wie in stale_players.py („Gegner von Schwaz zuerst"), dann höchste Wahrscheinlichkeit) → `LeagueProfileBuilder` führt Bestand + neue Partien zusammen (Dubletten über
   Datum + Nachnamen + Ergebnis; Farbe per FIDE-ID-Tag, sonst Nachname — 2022/23 ohne Komma) und baut die
-  Spielerkarte neu; zuletzt Ansichten erneut. HttpClient `LeagueCrawler` (5 min Timeout). Eine Liga bzw. ein Spieler,
+  Spielerkarte neu; zuletzt Ansichten erneut. **Die Brettpaarungen werden seit 0.716.1 ZUSAMMENGEFÜHRT, nicht neu angelegt**: je
+  (Tnr, Runde, Begegnung, Brett) behält eine Zeile ihre Id (`LeagueGameLinks.Merge`), danach `RelinkAsync` — siehe „Feste
+  Ligapaarung einer Vereinspartie". Meldelisten, Begegnungen und Runden werden weiter ersetzt (an ihren Ids hängt nichts).
+  HttpClient `LeagueCrawler` (5 min Timeout). Eine Liga bzw. ein Spieler,
   der gerade nicht zu holen ist, hält den Rest NICHT auf (Warnung im Log, Meldung „nicht aktualisiert: Liga …“); erst
   wenn KEINE Liga kommt, gilt der Lauf als gescheitert. Vier leere Seiten (Fehl-/Drosselseite) ersetzen nichts —
   und auch EINE leere Seite nicht, solange die Liga dafür Bestand hat (Paarungen art=2, Brettpaarungen art=3,
@@ -1770,7 +1789,8 @@ Rollenverwaltung an).
   `Tnr ≤ TnrOffset`; gab es nie — Dev/Prod hatten beim Umstellen keine Ligamanager-Ligen): bewusst KEINE
   Umschreibe-Migration; `LegacyTnrsAsync` meldet sie beim Start als Warnung, `LeagueRefresh` lässt sie aus (Tnr passt nicht
   zur Id in `SourceRef` → Liga gescheitert, sonst entstünde sie doppelt). Abhilfe: neu einspielen, alte Zeile samt
-  Abhängigen löschen (`LeagueClubGames` hängt an `LeagueGames.Id`, nicht an der Tnr). Neue Spalten `Source` (`null` = chess-results,
+  Abhängigen löschen (`LeagueClubGames` hängt an `LeagueGames.Id` bzw. dem Schlüssel (Tnr, Runde, Begegnung, Brett) — nach dem
+  Umschlüsseln der Liga `LeagueGameLinks.RelinkAsync` bzw. die Heilung beim Start). Neue Spalten `Source` (`null` = chess-results,
   `"ligamanager"`), `SourceRef` („bsb/2026-2027/landesliga-sued-2573"), `Boards` (Bretter je Begegnung, solange keine Runde
   gespielt ist: Anfrage `boards`, sonst die Vorsaison derselben Region+Slug; `LeagueWorld.BoardsOf` nimmt sie vor der
   Tiroler Stufen-Vorgabe). Season „2026/27", League = Überschrift („Landesliga Süd"), Grp leer. **Stufen**
@@ -4993,7 +5013,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ClubNotes | Datierte Trainer-Notiz zum Lernstand | MemberId (Cascade), AuthorUserId? (kein FK — bleibt ohne Namen, wenn das Konto geht), CreatedAt, Text (TEXT ≤2000); Index (MemberId, CreatedAt) |
 | LeagueClubs | Vereine als Mandanten von LeagueHub (0.698.0, siehe „LeagueHub — Vereine als Mandanten") | Id, Name (≤120, UNIQUE), TeamPrefix (≤80, Anfang der Mannschaftsnamen), AnonName (≤60), Region (≤20; `tirol` | `bayern` — Migration `LeagueClubRegion` hat `Source` umbenannt: null → tirol, ligamanager → bayern), CreatedAt — Migration legt 1 = SK Schwaz, 2 = SK Weilheim an |
 | LeagueClubMembers | Gruppe → Verein (0.698.0) | PK (ClubId, GroupId), **GroupId UNIQUE** (eine Gruppe gehört zu höchstens einem Verein); FK Club Restrict, Group Cascade |
-| LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite mit dem `AnonName` des Vereins) | **ClubId (FK LeagueClubs Restrict, Index (ClubId, Year); 0.698.0)**, Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)**, **LeagueGameId? (Index, kein FK; fest zugeordnete Brettpaarung, 0.678.0)** |
+| LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite mit dem `AnonName` des Vereins) | **ClubId (FK LeagueClubs Restrict, Index (ClubId, Year); 0.698.0)**, Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)**, **LeagueGameId? (Index, kein FK; fest zugeordnete Brettpaarung, 0.678.0 — seit 0.716.1 stabil, gelesen nur über `LeagueGameLinks.ResolveAsync`) + LeagueTnr?/LeagueRound?/LeagueMatchNo?/LeagueBoard? (Schlüssel der Paarung, Index; Sicherheitsnetz)** |
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount, **AddedBy? (≤60, 0.630.0: Nutzername bzw. „anonym" über einen Teilen-Link) + AddedShareHash? (≤64, SHA-256 des Links)** |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
 | LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?, **Source? (≤16; `null` = Namenssuche, `team` = Team-Suche, 0.612.0)**; Index (Status, Score) |

@@ -61,7 +61,10 @@ internal sealed class LeagueGameConfiguration : IEntityTypeConfiguration<LeagueG
         e.Property(g => g.HomeFide).HasMaxLength(16);
         e.Property(g => g.AwayFide).HasMaxLength(16);
         e.Property(g => g.PgnId).HasMaxLength(20);
-        e.HasIndex(g => new { g.Tnr, g.Round });
+        // Schlüssel einer Brettpaarung (0.716.1): das Aktualisieren erhält die Id je (Tnr, Runde, Begegnung, Brett), und eine
+        // Vereinspartie löst ihre Zuordnung darüber neu auf (LeagueGameLinks). Bewusst nicht eindeutig — eine Quelle mit einer
+        // doppelten Zeile soll das Aktualisieren nicht kippen; die Zuordnung nimmt dann die kleinste Id.
+        e.HasIndex(g => new { g.Tnr, g.Round, g.MatchNo, g.Board });
     }
 }
 
@@ -312,6 +315,7 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.Property(g => g.WhiteRealFide).HasMaxLength(16);
         e.Property(g => g.BlackRealFide).HasMaxLength(16);
         e.HasIndex(g => g.LeagueGameId);
+        e.HasIndex(g => new { g.LeagueTnr, g.LeagueRound, g.LeagueMatchNo, g.LeagueBoard });   // 0.716.1, LeagueGameLinks
         e.HasIndex(g => g.MovesHash);
         e.HasIndex(g => g.ArchivedAt);
         // Archivierte Fassungen (ersetzt durch ein neueres Formular) sind überall unsichtbar.

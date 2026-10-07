@@ -59,7 +59,9 @@ public sealed class LeagueImportService
                 Tnr = m.Tnr, Round = m.Round, MatchNo = m.MatchNo, Home = m.Home, Away = m.Away, HomePts = m.HomePts,
                 AwayPts = m.AwayPts, Date = m.Date, Time = m.Time, Venue = Trim(m.Venue, 300),
             }).ToList();
-            var games = (b.Games ?? new()).Select(g => new LeagueGame
+            // Brettpaarungen je Versuch frisch (Merge setzt ihre Id) und ZUSAMMENGEFÜHRT statt ersetzt: je (Tnr, Runde, Begegnung,
+            // Brett) bleibt die Id — an ihr hängen die festen Ligapaarungen der Vereinspartien (LeagueGameLinks, 0.716.1).
+            List<LeagueGame> Games() => (b.Games ?? new()).Select(g => new LeagueGame
             {
                 Tnr = g.Tnr, Round = g.Round, MatchNo = g.MatchNo, Board = g.Board, HomeTeam = g.HomeTeam, AwayTeam = g.AwayTeam,
                 HomePlayer = g.HomePlayer, AwayPlayer = g.AwayPlayer, HomeTitle = g.HomeTitle, AwayTitle = g.AwayTitle,
@@ -75,7 +77,8 @@ public sealed class LeagueImportService
             }).ToList();
             await ReplaceAllAsync(async () =>
             {
-                await ClearAsync(_db.LeagueGames, ct);
+                _db.ChangeTracker.Clear();
+                LeagueGameLinks.Merge(_db, await _db.LeagueGames.ToListAsync(ct), Games());
                 await ClearAsync(_db.LeaguePlayers, ct);
                 await ClearAsync(_db.LeagueMatches, ct);
                 await ClearAsync(_db.LeagueRounds, ct);
@@ -83,9 +86,10 @@ public sealed class LeagueImportService
                 _db.LeagueTournaments.AddRange(tournaments);
                 _db.LeagueRounds.AddRange(rounds);
                 _db.LeagueMatches.AddRange(matches);
-                _db.LeagueGames.AddRange(games);
                 _db.LeaguePlayers.AddRange(players);
             }, ct);
+            _db.ChangeTracker.Clear();
+            await LeagueGameLinks.RelinkAsync(_db, null, ct);
             res["tournaments"] = b.Tournaments.Count;
             res["games"] = b.Games?.Count ?? 0;
             res["players"] = b.Players?.Count ?? 0;

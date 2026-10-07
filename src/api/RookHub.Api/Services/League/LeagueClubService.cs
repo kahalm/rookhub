@@ -113,7 +113,9 @@ public sealed class LeagueClubService
         if (g == null || !CanDelete(g, userId, canManage)) return null;
         var options = await _pairings.ForAsync(LeaguePairingFinder.QueryOf(g, null), club, ct);
         // die schon zugeordnete steht immer drin, auch wenn sie nicht mehr unter den Vorschlägen wäre
-        if (g.LeagueGameId is { } cur && options.All(o => o.Id != cur) && await _pairings.ByIdAsync(cur, ct, club) is { } o0) options.Insert(0, o0);
+        // (über den Schlüssel aufgelöst — eine tote Id fände keine Paarung, 0.716.1)
+        if (await LeagueGameLinks.FindAsync(_db, g, ct, _log) is { Id: var cur } && options.All(o => o.Id != cur)
+            && await _pairings.ByIdAsync(cur, ct, club) is { } o0) options.Insert(0, o0);
         return options.Select(LeagueClubPairingDto.Of).ToList();
     }
 
@@ -738,15 +740,23 @@ public sealed class LeagueClubService
     /// </summary>
     internal async Task<int> ArchiveOlderVersionsAsync(LeagueClubGame game, IReadOnlyList<string> sans, DateTime now, CancellationToken ct)
     {
+        // Gleiche Paarung = gleiche Id ODER gleicher Schlüssel (Tnr, Runde, Begegnung, Brett) — eine ältere Fassung kann noch eine
+        // Id von vor dem letzten Aktualisieren tragen (0.716.1).
+        var (kt, kr, km, kb) = (game.LeagueTnr, game.LeagueRound, game.LeagueMatchNo, game.LeagueBoard);
         var cands = await _db.LeagueClubGames
             .Where(c => c.ClubId == game.ClubId)   // nur im eigenen Verein
             .Where(c => c.Id != game.Id && (game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
+                || kt != null && c.LeagueTnr == kt && c.LeagueRound == kr && c.LeagueMatchNo == km && c.LeagueBoard == kb
                 || c.Year == game.Year && (c.White == game.White || game.WhiteFide != null && c.WhiteFide == game.WhiteFide)
                                        && (c.Black == game.Black || game.BlackFide != null && c.BlackFide == game.BlackFide)))
             .ToListAsync(ct);
-        var old = cands.Where(c => game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
-            || !(game.LeagueGameId != null && c.LeagueGameId != null)   // zwei verschiedene feste Paarungen: zwei Partien
-               && SamePlayers(c, game) && SamePrefix(SansOf(c.Pgn), sans)).ToList();
+        // Die Paarung jeder Kandidatin, wie sie HEUTE steht — eine tote Id zählt wie keine Zuordnung (darf nicht als „andere
+        // feste Paarung" die Archivierung verhindern).
+        var live = await LeagueGameLinks.ResolveAsync(_db, cands, ct, _log);
+        var mine = game.LeagueGameId;
+        var old = cands.Where(c => live.GetValueOrDefault(c.Id)?.Id is { } cid
+                ? mine != null ? cid == mine : SamePlayers(c, game) && SamePrefix(SansOf(c.Pgn), sans)
+                : SamePlayers(c, game) && SamePrefix(SansOf(c.Pgn), sans)).ToList();
         if (old.Count == 0) return 0;
         foreach (var c in old)
         {
@@ -932,8 +942,17 @@ public sealed class LeagueClubService
     /// darf (<see cref="LeagueClubGameDto.LeagueGameId"/> ist dann gesetzt).</summary>
     private async Task FillPairingLabelsAsync(LeagueClub club, List<LeagueClubGameDto> items, CancellationToken ct)
     {
+        var ids = items.Where(i => i.LeagueGameId != null).Select(i => i.Id).ToList();
+        if (ids.Count == 0) return;
+        // Die gespeicherte Id kann tot sein (vor 0.716.1 legte jedes Aktualisieren die Paarungen neu an): über den Schlüssel
+        // auflösen, sonst gilt die Partie als nicht zugeordnet — die Auswahl zeigte sonst eine Paarung, die es nicht gibt.
+        var games = await _db.LeagueClubGames.AsNoTracking().Where(c => ids.Contains(c.Id)).ToListAsync(ct);
+        var live = await LeagueGameLinks.ResolveAsync(_db, games, ct, _log);
         foreach (var i in items.Where(i => i.LeagueGameId != null))
-            i.LeagueGameLabel = (await _pairings.ByIdAsync(i.LeagueGameId!.Value, ct, club))?.Label;
+        {
+            i.LeagueGameId = live.GetValueOrDefault(i.Id)?.Id;
+            if (i.LeagueGameId is { } id) i.LeagueGameLabel = (await _pairings.ByIdAsync(id, ct, club))?.Label;
+        }
     }
 
     /// <summary>Die Hauptvariante als UCI („e2e4 e7e5 …") — für den Knopf „Analyse", der RookHubs Analysebrett mit

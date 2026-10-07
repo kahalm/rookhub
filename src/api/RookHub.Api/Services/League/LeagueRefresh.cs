@@ -141,7 +141,9 @@ public sealed class LeagueRefresh
     public Task ReplaceAsync(Pages p, CancellationToken ct) => ReplaceAsync(_db, p, _now(), ct);
 
     /// <summary>Wie oben, ohne Dienst — auch für andere Quellen (<see cref="LigamanagerSource"/>), die dieselben Zwischenformen
-    /// liefern. Speichert selbst (ein <c>SaveChanges</c>; in einer offenen Transaktion des Aufrufers läuft es darin).</summary>
+    /// liefern. Speichert selbst (in einer offenen Transaktion des Aufrufers läuft es darin). Die Brettpaarungen behalten ihre
+    /// Id je (Runde, Begegnung, Brett), danach werden die festen Ligapaarungen der Vereinspartien neu aufgelöst
+    /// (<see cref="LeagueGameLinks"/>).</summary>
     public static async Task ReplaceAsync(AppDbContext db, Pages p, DateTime now, CancellationToken ct)
     {
         var tnr = p.Tnr;
@@ -162,7 +164,11 @@ public sealed class LeagueRefresh
             throw new InvalidOperationException($"Crawler lieferte für Liga {tnr} leere Seite(n) {string.Join(", ", lost)} bei vorhandenem Bestand — der Bestand bleibt.");
         db.LeagueRounds.RemoveRange(await db.LeagueRounds.Where(x => x.Tnr == tnr).ToListAsync(ct));
         db.LeagueMatches.RemoveRange(await db.LeagueMatches.Where(x => x.Tnr == tnr).ToListAsync(ct));
-        db.LeagueGames.RemoveRange(await db.LeagueGames.Where(x => x.Tnr == tnr).ToListAsync(ct));
+        // Brettpaarungen NICHT löschen + neu anlegen (0.716.1): je (Tnr, Runde, Begegnung, Brett) behält die Zeile ihre Id —
+        // an ihr hängt die feste Ligapaarung einer Vereinspartie (LeagueClubGame.LeagueGameId), die sonst bei jedem Aktualisieren
+        // ins Leere zeigte (gemeldet 2026-10-07). Zusammengeführt wird unten in LeagueGameLinks.Merge.
+        var existingGames = await db.LeagueGames.Where(x => x.Tnr == tnr).ToListAsync(ct);
+        var incomingGames = new List<LeagueGame>();
         db.LeaguePlayers.RemoveRange(await db.LeaguePlayers.Where(x => x.Tnr == tnr).ToListAsync(ct));
 
         var stats = new Dictionary<(string, string), StatsRow>();
@@ -194,7 +200,7 @@ public sealed class LeagueRefresh
             string? ap = Empty.Contains(g.AwayPlayer) ? null : g.AwayPlayer;
             var hr = hp is null ? null : roster.GetValueOrDefault((g.HomeTeam, LeagueNames.NameKey(hp)));
             var ar = ap is null ? null : roster.GetValueOrDefault((g.AwayTeam, LeagueNames.NameKey(ap)));
-            db.LeagueGames.Add(new LeagueGame
+            incomingGames.Add(new LeagueGame
             {
                 Tnr = tnr, Round = g.Round, MatchNo = g.MatchNo, Board = g.Board, HomeTeam = g.HomeTeam, AwayTeam = g.AwayTeam,
                 HomePlayer = hp, AwayPlayer = ap, HomeTitle = g.HomeTitle, AwayTitle = g.AwayTitle, HomeColor = g.HomeColor,
@@ -205,9 +211,12 @@ public sealed class LeagueRefresh
                 AwayElo = ar is null ? null : ar.EloI is > 0 ? ar.EloI : ar.EloN,
             });
         }
+        LeagueGameLinks.Merge(db, existingGames, incomingGames);
         var t = await db.LeagueTournaments.FindAsync(new object[] { tnr }, ct);
         if (t is not null) t.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
+        // Sicherheitsnetz: Zuordnungen über ihren Schlüssel neu auflösen (eine Paarung, die es nicht mehr gibt, ruht).
+        await LeagueGameLinks.RelinkAsync(db, tnr, ct);
     }
 
     /// <summary>FIDE-IDs der wahrscheinlichen Gegner in offenen Runden, deren chess-results-Partien veraltet sind —
