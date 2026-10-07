@@ -381,11 +381,19 @@ public sealed class LeagueModel
         Weights = weights;
     }
 
-    /// <summary>Gewichte aus der eingebetteten <c>Assets/league-model.json</c>.</summary>
-    public static LeagueModel FromEmbedded()
+    /// <summary>Gewichte aus der eingebetteten <c>Assets/league-model.json</c> (Tirol).</summary>
+    public static LeagueModel FromEmbedded() => TryFromEmbedded(LeagueRegions.Tirol)!;
+
+    /// <summary>Das eingebettete Modell einer Region (<c>Assets/league-model-{region}.json</c>, Tirol: <c>league-model.json</c>) —
+    /// <c>null</c>, wenn die Region keins hat. Die Wahl samt Rückfall auf Tirol trifft <see cref="LeagueModels"/>.</summary>
+    public static LeagueModel? FromEmbedded(string region) => TryFromEmbedded(region);
+
+    private static LeagueModel? TryFromEmbedded(string region)
     {
+        var file = region == LeagueRegions.Tirol ? "league-model.json" : $"league-model-{region}.json";
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames().First(n => n.EndsWith("league-model.json", StringComparison.Ordinal));
+        var name = asm.GetManifestResourceNames().FirstOrDefault(n => n.EndsWith("." + file, StringComparison.Ordinal));
+        if (name is null) return null;
         using var s = asm.GetManifestResourceStream(name)!;
         using var doc = JsonDocument.Parse(s);
         return FromJson(doc.RootElement);
@@ -440,10 +448,14 @@ public sealed class LeagueModel
                 "lvl4" => lvl4,
                 "gk_q" => r.QSame * lvl4,
                 // Bayern (2026-10-07, eigenes Modell): Stufe als Zahl 0 (Oberliga) … 1 (C-Klasse), Kreisebene (ab Stufe 5 —
-                // Zugspitzliga und darunter) samt Wechselwirkung mit der Vorsaison-Quote. Tirols Liste nutzt sie nicht.
+                // Zugspitzliga und darunter) samt Wechselwirkungen mit Vorsaison-Quote, „unter den ersten B" und Meldeplatz.
+                // Eine Konstante je Stufe (lvl_n, kreis, lvlN) wirkt nach der Normierung je Mannschaftskampf NICHT auf die
+                // Prognose — nur die Wechselwirkungen tun es. Tirols Liste nutzt keines davon.
                 "lvl_n" => (r.Level - 1) / (double)(LeagueLevels.Max - 1),
                 "kreis" => r.Level >= KreisLevel ? 1 : 0,
                 "kreis_q" => r.Level >= KreisLevel ? r.QSame : 0,
+                "kreis_top" => r.Level >= KreisLevel ? r.Top : 0,
+                "kreis_pos" => r.Level >= KreisLevel ? Math.Min(r.Pos, 4.0) : 0,
                 // weitere Stufen-Dummies „lvl5" … „lvl9" (Bayern), gleiche Bedeutung wie lvl2–lvl4: Stufe == n
                 var x when x.StartsWith("lvl", StringComparison.Ordinal) && int.TryParse(x.AsSpan(3), out var lv) => r.Level == lv ? 1 : 0,
                 var x => throw new InvalidOperationException($"Unbekanntes Merkmal im Modell: {x}"),
@@ -558,6 +570,54 @@ public sealed class LeagueModel
         b = Math.Min(b, p.Count);
         return BoardMatrix(FittedOdds(p, b), b);
     }
+}
+
+/// <summary>
+/// Das Prognose-Modell je Region (2026-10-07, „eigenes Modell für Bayern"): Tirol rechnet mit <c>Assets/league-model.json</c>
+/// (Python-Training, unverändert), Bayern mit <c>Assets/league-model-bayern.json</c> (<c>tools/LibraryImport league-train</c>,
+/// <see cref="LeagueTraining"/>). Eine Region ohne eigenes Modell fällt auf Tirol zurück — mit EINER Warnung je Region und Prozess.
+/// </summary>
+public sealed class LeagueModels
+{
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> Warned = new();
+    private static readonly Lazy<IReadOnlyDictionary<string, LeagueModel>> Embedded = new(() =>
+        LeagueRegions.All.Where(r => r != LeagueRegions.Tirol)
+            .Select(r => (Region: r, Model: LeagueModel.FromEmbedded(r)))
+            .Where(x => x.Model is not null)
+            .ToDictionary(x => x.Region, x => x.Model!));
+
+    private readonly IReadOnlyDictionary<string, LeagueModel> _byRegion;
+    private readonly ILogger? _log;
+
+    /// <param name="tirol">Das Tiroler Modell — zugleich der Rückfall.</param>
+    /// <param name="others">Modelle weiterer Regionen; <c>null</c> = keine (alle Regionen rechnen mit <paramref name="tirol"/>).</param>
+    public LeagueModels(LeagueModel tirol, IReadOnlyDictionary<string, LeagueModel>? others = null, ILogger? log = null)
+    {
+        Tirol = tirol;
+        _byRegion = others ?? new Dictionary<string, LeagueModel>();
+        _log = log;
+    }
+
+    /// <summary>Tirol aus <paramref name="tirol"/>, die übrigen Regionen aus den eingebetteten Modellen.</summary>
+    public static LeagueModels WithEmbedded(LeagueModel tirol, ILogger? log = null) => new(tirol, Embedded.Value, log);
+
+    public LeagueModel Tirol { get; }
+
+    /// <summary>Hat die Region ein eigenes Modell (Tirol immer)?</summary>
+    public bool Has(string region) => region == LeagueRegions.Tirol || _byRegion.ContainsKey(region);
+
+    /// <summary>Modell der Region; ohne eigenes → Tirol (einmalige Warnung).</summary>
+    public LeagueModel ForRegion(string region)
+    {
+        if (region == LeagueRegions.Tirol) return Tirol;
+        if (_byRegion.TryGetValue(region, out var m)) return m;
+        if (_log is not null && Warned.TryAdd(region, true))
+            _log.LogWarning("LeagueHub: Region {Region} hat kein eigenes Prognose-Modell — gerechnet wird mit dem Tiroler", region);
+        return Tirol;
+    }
+
+    /// <summary>Modell für eine Liga dieser Quelle (<see cref="LeagueRegions.Of"/>).</summary>
+    public LeagueModel For(string? source) => ForRegion(LeagueRegions.Of(source));
 }
 
 /// <summary>

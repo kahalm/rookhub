@@ -105,6 +105,9 @@ public class LeagueTrainingTests
         var zl = m.Vec(new FeatureRow { Level = LeagueModel.KreisLevel, QSame = 0.25 });
         Assert.Equal(1, zl[2]);
         Assert.Equal(0.25, zl[3]);
+        var k = new LeagueModel(["kreis_top", "kreis_pos"], new double[2]);
+        Assert.Equal([1, 4.0], k.Vec(new FeatureRow { Level = 8, Top = 1, Pos = 5.5 }));    // Meldeplatz wie pos_c bei 4 gekappt
+        Assert.Equal([0, 0], k.Vec(new FeatureRow { Level = 4, Top = 1, Pos = 0.5 }));      // Bezirksliga ist keine Kreisebene
         Assert.Throws<InvalidOperationException>(() => new LeagueModel(["const", "gibts_nicht"], new double[2]).Vec(new FeatureRow()));
     }
 

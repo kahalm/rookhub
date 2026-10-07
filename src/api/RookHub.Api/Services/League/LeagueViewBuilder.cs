@@ -22,15 +22,43 @@ public sealed class LeagueViewBuilder
         [(2, "R1")] = .58, [(2, "R2+")] = .66, [(3, "R1")] = .52, [(3, "R2+")] = .63, [(4, "R1")] = .33, [(4, "R2+")] = .56,
     };
 
+    /// <summary>Dasselbe für Bayern mit <c>Assets/league-model-bayern.json</c> (2026-10-07, <c>league-train --region bayern
+    /// --holdout 2022/23,2023/24,2024/25,2025/26</c>: je Saison nur auf früheren gefittet). Stufen 1–4 Ligamanager (Oberliga …
+    /// Bezirksliga Oberbayern), 5–8 Schachkreis Zugspitze (erst ab 2024/25 mit Brettern — daher wenige Kämpfe). „So vorab"
+    /// kam im Backtest nicht vor (die Vorab-Mischung prüft er nicht) — wie in Tirol der Wert von R2+.</summary>
+    private static readonly Dictionary<(int, string), double> HitsBayern = new()
+    {
+        [(1, "R1")] = .74, [(1, "R2+")] = .79, [(1, "So vorab")] = .79, [(1, "So nach Sa")] = .83,
+        [(2, "R1")] = .71, [(2, "R2+")] = .79, [(3, "R1")] = .71, [(3, "R2+")] = .79, [(4, "R1")] = .75, [(4, "R2+")] = .82,
+        [(5, "R1")] = .62, [(5, "R2+")] = .72, [(6, "R1")] = .69, [(6, "R2+")] = .71, [(7, "R1")] = .61, [(7, "R2+")] = .65,
+        [(8, "R1")] = .58, [(8, "R2+")] = .65,
+    };
+
+    /// <summary>Erwartete Treffer-Quote einer Lage (Backtest der Region) — nur, wenn die Region mit IHREM Modell rechnet; fällt sie
+    /// auf das Tiroler zurück, gibt es keinen passenden Backtest.</summary>
+    internal static double? ExpectedHits(string region, bool ownModel, int level, string phase) =>
+        !ownModel ? null
+        : region == LeagueRegions.Tirol ? (Hits.TryGetValue((level, phase), out var t) ? t : null)
+        : region == LeagueRegions.Bayern ? (HitsBayern.TryGetValue((level, phase), out var b) ? b : null)
+        : null;
+
     private readonly LeagueWorld _w;
-    private readonly LeagueModel _m;
+    private readonly LeagueModels _models;
     private readonly IReadOnlyDictionary<string, int> _gameCounts;
     private readonly IReadOnlyDictionary<string, List<LeagueOnlineAccount>> _accounts;
 
+    /// <summary>Ein Modell für alle Ligen (Tests, Paritätsprüfung gegen Python).</summary>
     public LeagueViewBuilder(LeagueWorld w, LeagueModel m, IReadOnlyDictionary<string, int> gameCounts,
         IReadOnlyDictionary<string, List<LeagueOnlineAccount>> accounts)
+        : this(w, new LeagueModels(m), gameCounts, accounts)
     {
-        _w = w; _m = m; _gameCounts = gameCounts; _accounts = accounts;
+    }
+
+    /// <summary>Modell je Region der Liga (<see cref="LeagueModels.For"/>).</summary>
+    public LeagueViewBuilder(LeagueWorld w, LeagueModels models, IReadOnlyDictionary<string, int> gameCounts,
+        IReadOnlyDictionary<string, List<LeagueOnlineAccount>> accounts)
+    {
+        _w = w; _models = models; _gameCounts = gameCounts; _accounts = accounts;
     }
 
     public static string? FmtDate(DateOnly? d) => d is null ? null : $"{Weekday[(int)d.Value.DayOfWeek]} {d.Value:dd.MM.yyyy}";
@@ -74,7 +102,7 @@ public sealed class LeagueViewBuilder
     }
 
     /// <summary>(Zeilen, Wahrscheinlichkeiten, Lage) — Prognose für OPP in Runde RND mit dem Wissen vor der Runde.</summary>
-    private (List<FeatureRow> Rows, double[] P, string Phase) Forecast(int tnr, string opp, int rnd, int level)
+    private (List<FeatureRow> Rows, double[] P, string Phase) Forecast(LeagueModel m, int tnr, string opp, int rnd, int level)
     {
         var date = _w.RDate.GetValueOrDefault((tnr, rnd));
         var prev = _w.SchedOf(tnr, opp).Where(s => s.Round < rnd).ToList();
@@ -85,10 +113,10 @@ public sealed class LeagueViewBuilder
         {
             var sun = LeagueFeatures.RowsFor(_w, tnr, opp, rnd, asof: sat.Date);
             var satRows = LeagueFeatures.RowsFor(_w, tnr, opp, sat.Round);
-            return (sun, _m.SundayAdvance(satRows, sun), "So vorab");
+            return (sun, m.SundayAdvance(satRows, sun), "So vorab");
         }
         var rows = LeagueFeatures.RowsFor(_w, tnr, opp, rnd);
-        return (rows, _m.Predict(rows), weekend ? "So nach Sa" : playedBefore ? "R2+" : "R1");
+        return (rows, m.Predict(rows), weekend ? "So nach Sa" : playedBefore ? "R2+" : "R1");
     }
 
     private JsonArray AccShort(string? fide) => new(
@@ -101,6 +129,9 @@ public sealed class LeagueViewBuilder
         var t = _w.T[tnr];
         var level = t.Level;
         var b = _w.BoardsOf(tnr);
+        var region = LeagueRegions.Of(t.Source);
+        var model = _models.ForRegion(region);
+        var ownModel = _models.Has(region);
         var games = leagueGames.Where(g => g.Tnr == tnr).ToList();
         var rounds = _w.Matches.Keys.Where(k => k.Item1 == tnr).Select(k => k.Item2).Distinct().OrderBy(x => x).ToList();
         var teams = _w.Sched.Keys.Where(k => k.Item1 == tnr).Select(k => k.Item2).Distinct()
@@ -176,7 +207,7 @@ public sealed class LeagueViewBuilder
                     e["provisional"] = true;
                     e["unlock_after"] = UnlockAfter(r);
                 }
-                var (rows, p, phase) = Forecast(tnr, s.Opp, r, level);
+                var (rows, p, phase) = Forecast(model, tnr, s.Opp, r, level);
                 if (rows.Count == 0)
                 {
                     e["status"] = "nodata";
@@ -243,8 +274,8 @@ public sealed class LeagueViewBuilder
                 e["boards"] = boards;
                 e["roster"] = roster;
                 e["phase"] = phase;
-                // Der Backtest ist an Tirol gerechnet — für Ligen anderer Quellen gibt es (noch) keinen.
-                e["hit"] = t.Source is null && Hits.TryGetValue((level, phase), out var hit) ? Math.Round(hit * b, 1) : null;
+                // Backtest je Region (Tirol: Python, Bayern: league-train) — nur, wenn die Region mit ihrem eigenen Modell rechnet.
+                e["hit"] = ExpectedHits(region, ownModel, level, phase) is { } hit ? Math.Round(hit * b, 1) : null;
                 fx[r.ToString()] = e;
             }
             fixtures[team] = fx;

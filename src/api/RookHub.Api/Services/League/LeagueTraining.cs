@@ -19,15 +19,17 @@ public static class LeagueTraining
         List<FeatureRow> Rows, int[] Y, IReadOnlyDictionary<string, int> Lineup);
 
     /// <summary>
-    /// Merkmale des bayerischen Modells: die Tiroler OHNE deren Stufen-Dummies (<c>lvl2</c>–<c>lvl4</c>, <c>gk_q</c> — Tiroler
-    /// Ligen), dafür die Stufe als Zahl (<c>lvl_n</c>), die Kreisebene (<c>kreis</c>) und ihre Wechselwirkung mit der
-    /// Vorsaison-Quote (<c>kreis_q</c>). Wenige, robuste Merkmale — die bayerische Historie ist kleiner als die Tiroler.
+    /// Merkmale des bayerischen Modells (gewählt 2026-10-07 im Backtest 2022/23–2025/26): die Tiroler OHNE deren Stufen-Dummies
+    /// (<c>lvl2</c>–<c>lvl4</c>, <c>gk_q</c> — Tiroler Ligen), dafür die Kreisebene (<c>kreis</c>, Stufe ≥ 5) und ihre
+    /// Wechselwirkungen mit der Vorsaison-Quote (<c>kreis_q</c>), „unter den ersten B" (<c>kreis_top</c>) und dem Meldeplatz
+    /// (<c>kreis_pos</c>) — in Zugspitzliga/A-/B-Klasse rücken Ersatzleute anders nach als in Ober- bis Bezirksliga. Reine
+    /// Stufen-Konstanten (<c>lvl_n</c>, <c>lvl5</c>…) änderten am Backtest nichts: die Normierung je Mannschaftskampf hebt sie auf.
     /// </summary>
     public static readonly IReadOnlyList<string> BayernFeatures =
     [
         "const", "top", "bench", "pos_c", "q_same", "q_higher", "q_lower", "new_prev", "new_ever", "first", "q_same_first",
         "cur", "cur_n", "last", "last2", "yesterday", "yest_played", "yest_not", "conflict_hi", "conflict_lo",
-        "lvl_n", "kreis", "kreis_q",
+        "kreis", "kreis_q", "kreis_top", "kreis_pos",
     ];
 
     /// <summary>Vorgabe der Merkmale je Region: Bayern <see cref="BayernFeatures"/>, sonst die des eingebetteten Tiroler Modells.</summary>

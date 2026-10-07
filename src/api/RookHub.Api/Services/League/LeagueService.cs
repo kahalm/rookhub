@@ -20,6 +20,7 @@ public sealed class LeagueService
     private static readonly JsonSerializerOptions Compact = new() { WriteIndented = false };
 
     private readonly AppDbContext _db;
+    /// <summary>Das Tiroler Modell (DI); weitere Regionen kommen eingebettet dazu (<see cref="LeagueModels.WithEmbedded"/>).</summary>
     private readonly LeagueModel _model;
     private readonly ILogger<LeagueService> _log;
     private readonly IMemoryCache? _cache;
@@ -65,7 +66,8 @@ public sealed class LeagueService
             var accounts = (await _db.LeagueOnlineAccounts.AsNoTracking().ToListAsync(ct))
                 .Where(a => !hidden.Contains(a.FideId))
                 .GroupBy(a => a.FideId).ToDictionary(g => g.Key, g => g.ToList());
-            var builder = new LeagueViewBuilder(w, _model, counts, accounts);
+            // Modell je Region (2026-10-07): Tirol = das eingespeiste, Bayern = Assets/league-model-bayern.json.
+            var builder = new LeagueViewBuilder(w, LeagueModels.WithEmbedded(_model, _log), counts, accounts);
             var now = DateTime.UtcNow;
             var n = 0;
             foreach (var t in leagues)

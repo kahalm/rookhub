@@ -1581,7 +1581,7 @@ Rollenverwaltung an).
   (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf).
 - **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
   Merkmale NUR aus Wissen vor der Runde, logistische Regression mit den eingebetteten Gewichten
-  `Assets/league-model.json` (trainiert in Python, `export_weights.py`), Normierung je Match auf B Bretter,
+  `Assets/league-model.json` (trainiert in Python, `export_weights.py`; Bayern seit 0.708.0 eigenes Modell, siehe „Modell je Region"), Normierung je Match auf B Bretter,
   Brett-Wahrscheinlichkeiten über elementarsymmetrische Polynome (Bretter folgen der Meldeliste),
   Sonntag vorab = Mischung aus „Samstag gespielt ja/nein". **Tor**: `LeaguePythonParityTests` gegen den
   echten Bestand (`LEAGUE_BUNDLE`, `LEAGUE_PY_DATA`, sonst übersprungen) — 0.569.0: 88 Begegnungen,
@@ -1862,6 +1862,31 @@ Rollenverwaltung an).
   Partien für die Karten); Spielplan und Meldelisten sind offen. **Zugspitze-Archiv**: Bretter (Spieler je Runde) gibt es erst ab
   2024/25 — ältere Saisonen kommen nur mit Begegnungen und Mannschaftsergebnis (0 Bretter, 0 Spieler) und taugen weder für
   Merkmale noch fürs Training.
+- **Modell je Region** (0.708.0, Wunsch 2026-10-07 „ein eigenes Prognose-Modell für die Region Bayern"): Tirol rechnet weiter
+  mit `Assets/league-model.json` (Python, unverändert — `LeaguePythonParityTests`/`LeagueEngineTests` gleich), Bayern
+  (Ligamanager + Zugspitze) mit `Assets/league-model-bayern.json` (Embedded Resource). `LeagueModel.FromEmbedded(region)` lädt
+  `league-model-{region}.json` (`null` = keins), `LeagueModels` wählt nach `LeagueRegions.Of(tournament.Source)` und fällt für eine
+  Region ohne eigenes Modell auf Tirol zurück (Warnung einmal je Region). `LeagueService.RebuildViewsAsync` baut den
+  `LeagueViewBuilder` mit `LeagueModels.WithEmbedded(<Tiroler Modell aus DI>)`; der alte Konstruktor mit EINEM Modell bleibt für
+  Tests/Parität. Erwartete Treffer `hit` je Region (`LeagueViewBuilder.ExpectedHits`: Tirol `Hits`, Bayern `HitsBayern`) — nur,
+  wenn die Region mit ihrem eigenen Modell rechnet; die Treffer-Statistik (`ForecastStatsAsync`) war schon je Region getrennt.
+  **Merkmale Bayern** (`LeagueTraining.BayernFeatures`): die Tiroler ohne `lvl2`–`lvl4`/`gk_q`, dazu `kreis`, `kreis_q`,
+  `kreis_top`, `kreis_pos` (Wechselwirkungen der Kreisebene ≥ Stufe 5). Reine Stufen-Konstanten (`lvl_n`, `lvlN`) änderten am
+  Backtest nichts — die Normierung je Mannschaftskampf hebt eine Konstante je Liga auf. **Datenbasis** (Wegwerf-MariaDB, 07.10.2026):
+  Ligamanager Oberliga, Regionalliga Süd-Ost + Süd-West, Landesliga Nord + Süd, Bezirksliga Oberbayern 2019/20 + 2021/22–2026/27
+  (2020/21 gab es nicht; bis 2018/19 zeigt der Ligamanager Aufstellungen und Einzelergebnisse NUR angemeldet → leer), Zugspitze
+  Ligen 1/2/3/5 2024/25–2026/27 (ältere ohne Bretter). 6 Trainingssaisonen, 3 696 Mannschaftskämpfe (je Team), 71 679 Zeilen; Gemeldete mit
+  FIDE-ID 34 % (2019/20) … 52 % (2025/26), 59 % (2026/27). **Backtest** (`league-train --region bayern --holdout
+  2022/23,2023/24,2024/25,2025/26`, je Saison nur auf früheren gefittet, 2 702 Kämpfe; Modell Bayern / Tiroler Modell / Basis
+  Meldeliste): Treffer 76,9 / 76,5 / 70,5 %, Top-1 je Brett 42,3 / 39,6 / 25,6 %, Top-3 78,5 / 74,2 / 66,2 %, Log-Loss 0,426 /
+  0,439 / 0,667 (gleichmäßig); Kalibrierung Bayern-Modell in allen Stufen ±2 Punkte, das Tiroler überschätzt unten (7,6 % → 4,5 %)
+  und unterschätzt oben (84,8 % → 88,3 %). Stufen 1–4 klar besser (Top-3 +3…+6 Punkte), Kreisebene 5–8 etwa gleich bis leicht
+  schlechter (Top-1 Stufe 7: 35,5 vs. 37,0 %) — dort gibt es erst zwei Saisonen. **Neu trainieren** nach jeder abgeschlossenen
+  Saison (frühestens Sommer 2027, dann mit drei Zugspitze-Saisonen) oder wenn neue Ligen/Bezirke dazukommen: Wegwerf-MariaDB
+  (`docker run -d --rm --name rh-train-mariadb -e MARIADB_ROOT_PASSWORD=test -p 3399:3306 mariadb:11.8`, Datenbank anlegen,
+  `migrate`), `league-import --batch` (je Liga JÜNGSTE Saison zuerst — FIDE-Nachfüllung; Ligamanager-Liga-Ids je Saison auf
+  `/{saison}/gesamt`), `league-train --region bayern --holdout … --out src/api/RookHub.Api/Assets/league-model-bayern.json`,
+  `HitsBayern` aus der Ausgabe übernehmen, Container entfernen.
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,
