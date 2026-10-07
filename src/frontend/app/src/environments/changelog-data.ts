@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.714.0", date: "2026-10-07", changes: [
+    { en: "Game page on a wide screen: board, move list and evaluation now stand side by side, and the board grows with the window (up to 760 px). Before, the evaluation sat below the board, which kept the board small while a third of the page stayed empty. On the phone nothing changes.", de: "Partieseite am breiten Bildschirm: Brett, Zugliste und Auswertung stehen jetzt nebeneinander, und das Brett wächst mit dem Fenster (bis 760 px). Vorher lag die Auswertung unter dem Brett — das hielt das Brett klein, während ein Drittel der Seite leer blieb. Am Handy ändert sich nichts." },
+  ] },
   { version: "0.713.0", date: "2026-10-07", changes: [
     { en: "Large repertoires (e.g. a Chessable course with 1,220 lines) are now read completely: line list, move tree and trainer used to stop after about 500 lines or 2 MB. Reading happens in portions with a progress line, so the page stays usable. “View” from “Position in my repertoires” now also opens lines further back in such a repertoire.", de: "Große Repertoires (z. B. ein Chessable-Kurs mit 1.220 Linien) werden jetzt ganz gelesen: Linienliste, Zugbaum und Trainer endeten bisher nach rund 500 Linien bzw. 2 MB. Gelesen wird in Portionen mit Fortschrittsanzeige, die Seite bleibt bedienbar. „Ansehen“ aus „Stellung in meinen Repertoires“ öffnet jetzt auch Linien weiter hinten in so einem Repertoire." },
   ] },

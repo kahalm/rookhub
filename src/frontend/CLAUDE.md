@@ -828,6 +828,13 @@ sah der Browser 274: Linienliste, Zugbaum und Trainer endeten dort, der Server (
 synchron — eine async-Funktion läuft bis zum ersten `await` synchron). Repertoire-Seite (mit Fortschrittszeile, Zugbaum aus
 denselben Partien statt zweitem Parse) und Trainer; der Link sucht nur den EINEN Abschnitt (`splitPgnGames` + `findSection`).
 
+**Partieseite am PC: drei Spalten** (0.714.0, gemeldet 2026-10-07 mit Screenshot: „viel vergeudeter Platz, sehr kleines
+Brett"): ab 1280 px stehen Brett | Zugliste (300 px) | Auswertung (`.side-section`: Rückblick, Repertoire, ähnliche Partien,
+`clamp(340px, 24vw, 460px)`, scrollt in sich auf Brett-Höhe) nebeneinander; vorher lag die Auswertung unter dem Brett und die
+Seite war auf `--page-max-width` (1240 px) begrenzt — jetzt `min(1760px, 96vw)`. Brett:
+`clamp(360px, min(100vh − 260px, 100vw − 860px), 760px)` (darunter `100vw − 440px`). 769–1279 px: Auswertung unter Brett
+und Zugliste. Handy unverändert (Auswertung per `order` vor der Zugliste).
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

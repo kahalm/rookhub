@@ -481,12 +481,17 @@ describe('SharedGameComponent', () => {
     expect(el.querySelector('.header .original')).not.toBeNull();
 
     if (window.innerWidth > 768) {
-      // Brett = clamp(360, min(100vh − 300, 100vw − 440), 640) — hängt am Fenster, nicht mehr fest 400 px.
-      const expected = Math.min(640, Math.max(360, Math.min(window.innerHeight - 300, window.innerWidth - 440)));
+      // Brett = clamp(360, min(100vh − 260, 100vw − 440 bzw. ab 1280 px − 860), 760) — hängt am Fenster (0.714.0).
+      const wide = window.innerWidth >= 1280;
+      const expected = Math.min(760, Math.max(360, Math.min(window.innerHeight - 260, window.innerWidth - (wide ? 860 : 440))));
       expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(expected));
       expect(Math.round(moves.getBoundingClientRect().width)).toBe(300);
       // Zugliste NEBEN dem Brett (gleiche Oberkante), nicht darunter.
       expect(Math.abs(moves.getBoundingClientRect().top - board.getBoundingClientRect().top)).toBeLessThan(2);
+      // Auswertung: ab 1280 px eine dritte Spalte rechts der Zugliste, schmaler darunter.
+      const side = (el.querySelector('.side-section') as HTMLElement).getBoundingClientRect();
+      if (wide) expect(side.left).toBeGreaterThanOrEqual(moves.getBoundingClientRect().right);
+      else expect(side.top).toBeGreaterThanOrEqual(board.getBoundingClientRect().bottom);
     } else {
       // Handy-Regeln: Brett volle Breite, Zugliste darunter.
       const section = el.querySelector('.board-section') as HTMLElement;

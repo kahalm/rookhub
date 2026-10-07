@@ -289,6 +289,16 @@ const TAP_MAX_MS = 500;
                 <app-live-engine-panel class="live-slot" [session]="l" [gameFen]="service.currentFen" [steps]="false" (closed)="stopLive()" />
               }
               }
+            </div>
+            <div class="moves-section">
+              @if (service.currentGame; as g) {
+                <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" (moveClicked)="service.goToMove($event)" />
+              }
+            </div>
+            <!-- Auswertung, Repertoire, ähnliche Partien: am breiten Bildschirm eine eigene dritte Spalte (0.714.0) — vorher
+                 standen sie unter dem Brett, die Brettspalte wurde lang und das Brett klein, rechts blieb ein Drittel leer.
+                 Schmaler: unter Brett und Zugliste; am Handy direkt unter dem Brett (vor der Zugliste, wie bisher). -->
+            <div class="side-section">
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [withExplanations]="!club" [fens]="g.fens" [moves]="g.moves"
                                  [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()" [liveEngine]="!!live()" [offGame]="!!live()?.variation()?.length" [withAlternatives]="loggedIn"
@@ -302,18 +312,14 @@ const TAP_MAX_MS = 500;
               <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
               <app-similar-games class="similar-slot" [url]="similarUrl" />
             </div>
-            <div class="moves-section">
-              @if (service.currentGame; as g) {
-                <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" (moveClicked)="service.goToMove($event)" />
-              }
-            </div>
           </div>
         </mat-card>
       }
     </div>
   `,
   styles: [`
-    .shared-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
+    /* Breiter als die übrigen Seiten (0.714.0): Brett, Zugliste und Auswertung stehen nebeneinander. */
+    .shared-page { max-width: min(1760px, 96vw); margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
@@ -323,7 +329,7 @@ const TAP_MAX_MS = 500;
        über 640 px (darüber wird es ein Poster) und nie unter 360 px (gemeldet 2026-09-23: 400 px auf einem
        2250 px breiten Bildschirm, zwei Drittel der Seite leer). */
     .viewer {
-      --board-size: clamp(360px, min(calc(100vh - 300px), calc(100vw - 440px)), 640px);
+      --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 440px)), 760px);
       width: fit-content; max-width: 100%; margin: 0 auto; padding: 16px 20px 20px; box-sizing: border-box;
     }
     .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -342,7 +348,14 @@ const TAP_MAX_MS = 500;
     }
     .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; opacity: 0.6; }
     .original, .analyze { white-space: nowrap; }
-    .body { display: flex; gap: 20px; align-items: flex-start; }
+    .body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+    .side-section { display: flex; flex-direction: column; gap: 8px; flex: 1 1 100%; min-width: 0; }
+    /* Breit genug für drei Spalten: die Auswertung rechts neben der Zugliste, das Brett nimmt die Höhe. */
+    @media (min-width: 1280px) {
+      .viewer { --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 860px)), 760px); }
+      .body { flex-wrap: nowrap; }
+      .side-section { flex: 0 0 clamp(340px, 24vw, 460px); max-height: var(--board-size); overflow-y: auto; }
+    }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
     .board-wrap app-chess-board { display: block; width: var(--board-size); }
@@ -379,6 +392,8 @@ const TAP_MAX_MS = 500;
       .header-actions { flex-direction: column; align-items: stretch; }
       .recap { padding: 0 16px; }
       .body { flex-direction: column; align-items: stretch; }
+      .side-section { order: 1; }   /* am Handy: Auswertung vor der Zugliste, wie bisher */
+      .moves-section { order: 2; }
       .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
       .board-wrap app-chess-board { width: 100%; }
