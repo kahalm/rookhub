@@ -261,6 +261,13 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   springt in den Trainer von `line.repertoireId`. „Alle in dieser Reihenfolge trainieren" (`.tl-all`) nur bei
   Einzelwahl, sonst der Hinweis `.tl-all-hint` auf „Trainings-Repertoire anlegen". Eigene Kapitelfarben gehen je
   Repertoire mit (beim ersten Laden über alle markierten einmal nachgeladen, weil die Ids erst dann bekannt sind).
+- Schätzung (0.715.0): Kopfzeile `.tl-estimate` („Von Huber nur 3 passende Partien — Lücken mit Lichess-Partien der Stufe
+  … geschätzt", ohne Partien bzw. bei vielen andere Fassung), `.tl-incomplete` bei `explorerIncomplete`; je Linie
+  `.tl-tag` „geschätzt" (nur Lichess) bzw. „ab 2…d5 geschätzt (Lichess …)" (`plyLabel` aus `lichessFrom`) oder
+  „Schätzung unvollständig" (`pending`). Linien ohne Quelle zeigen weiter die Auffüll-Anzeige. Texte
+  `prep.trainingRepertoire.*` (en/de/hr/hu, in LeagueHub die deutschen aus der Komponente).
+- Widerspruch (0.715.1): `source = deviates` → `.tl-deviates` „weicht ab: er spielt hier {{move}} ({{n}} Partie/n)"
+  (`deviationLabel` setzt seinen Zug an `deviationPly` ein) und „≈ p %" (Schätzung ab dort).
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 

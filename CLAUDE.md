@@ -2663,6 +2663,25 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Repertoire (`{ "7": { Kapitel: "b" } }`). Anlegen aus allen markierten: höchstens 50 Linien quer über alle Quellen,
   Beschreibung nennt sie, `Kind` gemeinsam sonst None; ein markiertes Repertoire mit dem Zielnamen wird als Quelle
   AUSGENOMMEN (und dann ersetzt), nur als einzige Quelle 400 `sameRepertoire`.
+- Schätzung mit Lichess-Partien (0.715.0, Wunsch: „wenn gaaaanz wenig games … nimm lichesspartien, +100 - +400 elo … oder
+  kombination"): JE GEGNER-STELLUNG einer Linie zählen seine Partien, wenn er dort mindestens `Prep:TrainingMinOwnGames`
+  weitergespielt hat (Vorgabe 1 — seine Züge haben Vorrang, 0.715.1: „mach seine züge immer oberste priorität"), sonst der Explorer (mindestens `RepertoireReach.MinGames` = 10 Partien; fehlt der Zug in seiner
+  Liste: 0,5/Total). Wahrscheinlichkeit = Produkt aus der jeweiligen Quelle; je Linie `source` own|mixed|lichess|none,
+  `ownMoves`, `lichessMoves`, `lichessFrom` (Halbzug), `pending`; Kopf `ownGames`, `lichessBand` („2000–2300"),
+  `explorerIncomplete`. Reihung: alle Linien MIT Quelle nach kombinierter p (dann mehr eigene Gegnerzüge, Partien,
+  Reihenfolge), dahinter die ohne Quelle mit der Auffüllregel. Explorer: `ITrainingExplorer` → `TrainingExplorer` →
+  `RepertoireExplorerService.BatchStatsAsync` (dieselbe Strecke wie der Lochfinder: lokal mit `LichessExplorer:LocalUrl`,
+  sonst online mit Token/Gate/Budget; was im Budget nicht ankommt, ist `Pending`). Band = Elo+100…+400 → alle Stufen,
+  deren Bereich es schneidet (oberste nach oben offen; lokal nur `LocalRatings`, z. B. 1500 → 1600+1800), Blitz/Schnell/
+  Klassisch. Elo: Prep `PrepAccountSearch.LatestEloAsync` sonst `MaxElo`, Liga jüngste Meldeliste (`EloI ?? EloN`),
+  sonst 1800. Abgefragt werden nur Gegner-Stellungen ohne genug eigene Daten (`OpponentTrainingLines.NeedsExplorer`),
+  je Stellung einmal. Tests mocken den Explorer immer.
+- Widerspruch als eigene Stufe (0.715.1): Hat er in einer Stellung weitergespielt, aber NIE den Zug der Linie, ist die
+  Linie `source = deviates` — Stufe HINTER allen Linien, die ihm nicht widersprechen (own/mixed/lichess), VOR denen ohne
+  jede Quelle. Darin: mehr übereinstimmende Gegnerzüge vor dem Widerspruch (`ownMoves`) zuerst, dann die Schätzung ab dem
+  Widerspruch (Präfix aus seinen Partien × Explorer-Anteile für den Rest). `deviationPly`/`deviationSan`/`deviationGames`
+  = sein häufigster Zug dort (Liste: „weicht ab: er spielt hier 1…c5 (1 Partie)"). `NeedsExplorer` fragt dafür auch die
+  Widerspruchs-Stellungen ab.
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
