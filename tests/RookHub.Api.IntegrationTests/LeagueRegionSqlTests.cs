@@ -79,6 +79,20 @@ public class LeagueRegionSqlTests(LeagueRegionSqlFixture fixture) : IAsyncLifeti
             Assert.Equal("90000001", (await db.LeagueGames.SingleAsync(g => g.Tnr == Zg)).HomeFide);
         }
     }
+
+    /// <summary>Das Wartungswerkzeug (league-train) lädt die Welt EINER Region — die Listen-Filter über die Turniernummern müssen
+    /// in SQL übersetzt werden (2026-10-07, eigenes Modell für Bayern).</summary>
+    [MySqlFact]
+    public async Task TrainingWorld_LoadsOnlyTheRegion()
+    {
+        await SeedAsync();
+        await using var db = fixture.Schema.NewContext();
+        var w = await LeagueTraining.LoadWorldAsync(db, LeagueRegions.Bayern, default);
+        Assert.Equal(new[] { Lm, Zg }.Order(), w.T.Keys.Order());
+        Assert.Single(w.Games);
+        Assert.Equal(2, w.Roster.Count);
+        Assert.Empty(LeagueTraining.Dataset(w, LeagueRegions.Bayern));   // ohne Begegnung kein Spielplan → keine Trainingszeile
+    }
 }
 
 public sealed class LeagueRegionSqlFixture() : MariaDbClassFixture("lregion", withApp: false);

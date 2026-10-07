@@ -24,6 +24,10 @@ using RookHub.Tools.LibraryImport;
 //                    — auch einen KURS: translate --to de --course <bookId> [--parallel p]
 //   resplit          als einsprachig vermerkte, aber zweisprachige Partien nachtraeglich zerlegen [--dry-run]
 //   stats            zeigen, was drinsteht
+//   migrate          Schema per Migrationen anlegen (nur fuer eine WEGWERF-MariaDB, z. B. zum Trainieren)
+//   league-import    eine Liga aus dem SBV-Ligamanager oder dem Schachkreis Zugspitze einspielen (ohne Ansichten;
+//                    --profiles = auch Spielerkarten) — siehe LeagueCommands
+//   league-train     Prognose-Modell einer Region trainieren + Backtest (--region bayern --out league-model-bayern.json)
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
 // ein zweiter RookHub.Api gegen dieselbe Datenbank streitet sich mit dem Auftrags-Worker
@@ -66,6 +70,9 @@ switch (command)
     case "embed": return await EmbedAsync();
     case "resplit": return await ResplitAsync();
     case "stats": return await StatsAsync();
+    case "migrate": return await LeagueCommands.MigrateAsync(() => NewDb());
+    case "league-import": return await LeagueCommands.ImportAsync(args, () => NewDb());
+    case "league-train": return await LeagueCommands.TrainAsync(args, () => NewDb(TimeSpan.FromMinutes(10)));
     default:
         Console.Error.WriteLine($"Unbekannter Befehl: {command}");
         return 1;

@@ -518,10 +518,12 @@ public sealed partial class LigamanagerSource
     /// nur noch ein Sicherheitsnetz — chess-results-Nummern reichen nicht bis dorthin.</summary>
     public sealed class ConflictException(string message) : Exception(message);
 
-    private async Task<(byte[] Body, string? Charset)?> GetAsync(HttpClient client, string path, CancellationToken ct)
+    /// <param name="forbiddenIsMissing">403 wie 404 behandeln — der PGN-Download älterer Saisonen (gemessen 07.10.2026: bis
+    /// 2018/19) antwortet dauerhaft mit 403 „Fehler | Ligamanager"; Spielplan und Meldelisten sind dort weiter offen.</param>
+    private async Task<(byte[] Body, string? Charset)?> GetAsync(HttpClient client, string path, CancellationToken ct, bool forbiddenIsMissing = false)
     {
         using var r = await client.GetAsync(path, ct);
-        if (r.StatusCode == HttpStatusCode.NotFound) return null;
+        if (r.StatusCode == HttpStatusCode.NotFound || forbiddenIsMissing && r.StatusCode == HttpStatusCode.Forbidden) return null;
         r.EnsureSuccessStatusCode();
         return (await r.Content.ReadAsByteArrayAsync(ct), r.Content.Headers.ContentType?.CharSet);
     }
@@ -537,7 +539,8 @@ public sealed partial class LigamanagerSource
         await Wait(ct);
         var teams = await GetAsync(client, $"{lref.Path}/mannschaften", ct);
         await Wait(ct);
-        var pgn = await GetAsync(client, $"{lref.Path}/partien/download/alle.pgn", ct);   // 404 = noch keine Partien
+        // 404 = noch keine Partien; 403 = ältere Saison ohne Download → Farben nach der Regel, keine Partien für die Karten
+        var pgn = await GetAsync(client, $"{lref.Path}/partien/download/alle.pgn", ct, forbiddenIsMissing: true);
         var schedule = ParseSchedule(Encoding.UTF8.GetString(plan.Body));
         var roster = teams is { } t ? ParseRoster(Encoding.UTF8.GetString(t.Body)) : new();
         // Eine 404-Seite kommt als HTML — nur echtes PGN zählt.
@@ -554,9 +557,11 @@ public sealed partial class LigamanagerSource
     /// Eine Liga holen und — ohne <paramref name="dryRun"/> — ersetzen (Turnier-Zeile + Runden/Begegnungen/Bretter/Meldelisten
     /// in EINER Transaktion), fehlende FIDE-IDs ergänzen, die Partien in die Karten spielen und mit <paramref name="rebuildViews"/>
     /// die Ansichten neu rechnen. <paramref name="boards"/>: Bretter je Begegnung, solange noch keine Runde gespielt ist (sonst aus
-    /// einer früheren Saison derselben Liga).
+    /// einer früheren Saison derselben Liga). <paramref name="importProfiles"/> = <c>false</c> (Wartungswerkzeug beim Laden der
+    /// Trainings-Historie): die Partien NICHT in die Spielerkarten spielen.
     /// </summary>
-    public async Task<ImportResult> ImportAsync(LeagueRef lref, bool dryRun, CancellationToken ct, int? boards = null, bool rebuildViews = true)
+    public async Task<ImportResult> ImportAsync(LeagueRef lref, bool dryRun, CancellationToken ct, int? boards = null, bool rebuildViews = true,
+        bool importProfiles = true)
     {
         var parsed = await FetchAsync(lref, ct);
         var t = parsed.Tournament;
@@ -589,7 +594,7 @@ public sealed partial class LigamanagerSource
                 .Select(p => new { p.Team, p.NameKey, p.FideId }).ToListAsync(ct))
             .GroupBy(p => (p.Team, p.NameKey)).ToDictionary(g => g.Key, g => g.First().FideId);
         var (pgn, n, withFide) = ProfilePgn(parsed.PgnGames, (team, key) => team is null ? null : fides.GetValueOrDefault((team, key)));
-        var (imported, profiles) = withFide == 0 ? (0, 0)
+        var (imported, profiles) = withFide == 0 || !importProfiles ? (0, 0)
             : await new LeagueProfileStore(_db).ImportGamesAsync(pgn, PgnSource, ct, skipSameMoves: true);
         int? views = rebuildViews ? await _league.RebuildViewsAsync(ct) : null;
         _log.LogInformation("LeagueHub: Ligamanager-Liga {Path} eingespielt — {Matches} Begegnungen, {Boards} Bretter, {Games} Partien in {Profiles} Karten",

@@ -388,8 +388,21 @@ public sealed class LeagueModel
         var name = asm.GetManifestResourceNames().First(n => n.EndsWith("league-model.json", StringComparison.Ordinal));
         using var s = asm.GetManifestResourceStream(name)!;
         using var doc = JsonDocument.Parse(s);
-        var f = doc.RootElement.GetProperty("features").EnumerateArray().Select(x => x.GetString()!).ToList();
-        var w = doc.RootElement.GetProperty("weights").EnumerateArray().Select(x => x.GetDouble()).ToArray();
+        return FromJson(doc.RootElement);
+    }
+
+    /// <summary>Gewichte aus dem JSON-Format von <c>Assets/league-model.json</c> (features, weights, …).</summary>
+    public static LeagueModel FromJson(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return FromJson(doc.RootElement);
+    }
+
+    private static LeagueModel FromJson(JsonElement root)
+    {
+        var f = root.GetProperty("features").EnumerateArray().Select(x => x.GetString()!).ToList();
+        var w = root.GetProperty("weights").EnumerateArray().Select(x => x.GetDouble()).ToArray();
+        if (f.Count != w.Length) throw new InvalidOperationException($"Modell: {f.Count} Merkmale, aber {w.Length} Gewichte");
         return new LeagueModel(f, w);
     }
 
@@ -426,11 +439,21 @@ public sealed class LeagueModel
                 "lvl3" => r.Level == 3 ? 1 : 0,
                 "lvl4" => lvl4,
                 "gk_q" => r.QSame * lvl4,
+                // Bayern (2026-10-07, eigenes Modell): Stufe als Zahl 0 (Oberliga) … 1 (C-Klasse), Kreisebene (ab Stufe 5 —
+                // Zugspitzliga und darunter) samt Wechselwirkung mit der Vorsaison-Quote. Tirols Liste nutzt sie nicht.
+                "lvl_n" => (r.Level - 1) / (double)(LeagueLevels.Max - 1),
+                "kreis" => r.Level >= KreisLevel ? 1 : 0,
+                "kreis_q" => r.Level >= KreisLevel ? r.QSame : 0,
+                // weitere Stufen-Dummies „lvl5" … „lvl9" (Bayern), gleiche Bedeutung wie lvl2–lvl4: Stufe == n
+                var x when x.StartsWith("lvl", StringComparison.Ordinal) && int.TryParse(x.AsSpan(3), out var lv) => r.Level == lv ? 1 : 0,
                 var x => throw new InvalidOperationException($"Unbekanntes Merkmal im Modell: {x}"),
             };
         }
         return v;
     }
+
+    /// <summary>Ab dieser Stufe spielt eine bayerische Liga auf Kreisebene (Zugspitzliga = 5, <see cref="ZugspitzeSource.LevelOf"/>).</summary>
+    public const int KreisLevel = 5;
 
     public double Logit(FeatureRow r)
     {

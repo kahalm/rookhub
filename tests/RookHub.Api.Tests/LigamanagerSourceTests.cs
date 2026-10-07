@@ -320,6 +320,30 @@ public class LigamanagerSourceTests : IDisposable
         await LigamanagerSource.WarnLegacyTnrsAsync(_db, NullLogger.Instance);    // wirft nicht
     }
 
+    /// <summary>Ältere Saisonen (bis 2018/19) sperren den PGN-Download dauerhaft mit 403 — die Liga kommt trotzdem, Farben nach der
+    /// Regel, keine Partien für die Karten (gefunden 07.10.2026 beim Laden der Trainings-Historie).</summary>
+    [Fact]
+    public async Task Import_PgnForbidden_ImportsWithoutGames()
+    {
+        var res = await Source(new Factory((_, r) => r.RequestUri!.AbsolutePath.EndsWith("/alle.pgn")
+            ? new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("<html>Fehler</html>", Encoding.UTF8, "text/html") }
+            : Site(r))).ImportAsync(Ref, dryRun: false, default, rebuildViews: false);
+        Assert.Equal(0, res.Counts.PgnGames);
+        Assert.Equal(8, _db.LeagueGames.Count());
+        Assert.Empty(_db.LeaguePlayerProfiles);
+        Assert.Null(res.Views);
+    }
+
+    [Fact]
+    public async Task Import_WithoutProfiles_LeavesTheCardsAlone()
+    {
+        var res = await Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default, rebuildViews: false, importProfiles: false);
+        Assert.Equal((7, 5), (res.ProfileGames, res.ProfileGamesWithFide));   // gezählt, aber nicht eingespielt
+        Assert.Equal(0, res.ProfilesTouched);
+        Assert.Empty(_db.LeaguePlayerProfiles);
+        Assert.Empty(_db.LeagueViews);
+    }
+
     [Fact]
     public async Task Import_UnknownLeague_IsNotFound()
     {

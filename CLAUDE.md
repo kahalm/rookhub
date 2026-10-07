@@ -1840,6 +1840,28 @@ Rollenverwaltung an).
   198 Spieler (5; Weilheim III 4/18); B-Klasse (5) — 6 Runden, 1 gespielt, 12 Brettpartien, 101 Spieler (9; Weilheim IV 3/28);
   Vorsaison 2025/26: Zugspitzliga 352 Brettpartien/150 Spieler (25 FIDE), A-Klasse 252/128 (7), B-Klasse 114/70 (3),
   Kreisklasse 168/84 (0); 0 Ersatzspieler ohne Meldeliste, 0 Farben gegen die Regel.
+- **Training + Backtest je Region ohne API-Instanz** (0.707.0, Schritt „eigenes Prognose-Modell für Bayern"): `tools/LibraryImport`
+  (öffnet nur einen DbContext, `ConnectionStrings__DefaultConnection`; NIE eine zweite `RookHub.Api` gegen Dev) kennt
+  `migrate` (Schema per Migrationen — nur für eine WEGWERF-MariaDB), `league-import --source ligamanager --url <Liga-URL>
+  [--boards n] [--profiles]`, `league-import --source zugspitze --liga <id> --season <JJJJ/JJ>` und `league-import --batch <datei>`
+  (je Zeile `ligamanager <url>` bzw. `zugspitze <liga> <saison>`; ruft `LigamanagerSource`/`ZugspitzeSource.ImportAsync` mit
+  `rebuildViews: false`, Spielerkarten nur mit `--profiles` → neuer Parameter `importProfiles`), sowie `league-train --region
+  bayern [--holdout S[,S2…]] [--out datei] [--features a,b,…]`. Der Rechenteil steht testbar in der API
+  (`Services/League/LeagueTraining.cs`): `LoadWorldAsync` (nur die Ligen der Region), `Dataset` (Python `features.dataset`: je
+  gespielter Runde jedes Teams einer Liga-Stufe „Liga", nicht abgebrochen, je Gemeldetem eine `FeatureRow` aus `RowsFor`, Label =
+  in `LineupOf`), `Fit` (Python `model.fit`: Newton, L2 = 1 ohne Achsenabschnitt, ≤ 30 Schritte, Abbruch bei Schritt < 1e-6 —
+  `LeagueTrainingTests` rechnet die Tiroler `rows.json` nach und trifft `Assets/league-model.json` auf 6 Stellen, läuft nur, wenn
+  `~/claude/league-analyzer/rows.json` bzw. `LEAGUE_ROWS_JSON` da ist), `Backtest` (je Mannschaftskampf normiert auf B: „Treffer" =
+  Aufgestellte unter den B wahrscheinlichsten wie Tirols `Hits`, Top-1/Top-3 je besetztem Brett, Log-Loss, Kalibrierung in 10
+  Stufen; Basis = Meldelisten-Reihenfolge: die ersten B, Brett k ← Gemeldeter k bzw. k…k+2, Log-Loss gleichmäßig B/N) und
+  `TrainAsync` (Holdout = jüngste vollständige Saison, je Holdout-Saison nur auf FRÜHEREN gefittet; Vergleich mit dem Tiroler
+  Modell auf denselben Gruppen; endgültige Gewichte auf allen Saisonen außer der laufenden, JSON wie `league-model.json`).
+  `LeagueModel.Vec` kennt zusätzlich `lvl_n` ((Stufe−1)/8), `kreis` (Stufe ≥ `LeagueModel.KreisLevel` = 5), `kreis_q` (QSame ·
+  kreis) und `lvl5`…`lvl9` — die Tiroler Liste bleibt unberührt. **Ligamanager-PGN älterer Saisonen**: der Download antwortet bis
+  2018/19 dauerhaft mit 403 („Fehler | Ligamanager") — `FetchAsync` behandelt 403 dort wie 404 (Farben nach der Regel, keine
+  Partien für die Karten); Spielplan und Meldelisten sind offen. **Zugspitze-Archiv**: Bretter (Spieler je Runde) gibt es erst ab
+  2024/25 — ältere Saisonen kommen nur mit Begegnungen und Mannschaftsergebnis (0 Bretter, 0 Spieler) und taugen weder für
+  Merkmale noch fürs Training.
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,
