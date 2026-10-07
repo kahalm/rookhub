@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.695.1", date: "2026-10-07", changes: [
+    { en: "RepCheck: every unexpected response from Chessable during “Fetch course” now also creates a message to the RookHub admins (before only when it looked like a ban; everything else was only logged). Repeats for the same course are combined for an hour.", de: "RepCheck: jede unerwartete Antwort von Chessable beim „Kurs holen“ legt jetzt auch eine Nachricht an die RookHub-Admins an (vorher nur, wenn sie nach einer Sperre aussah; alles andere stand nur im Log). Wiederholungen für denselben Kurs werden eine Stunde lang zusammengefasst." },
+  ] },
   {
     version: '0.695.0',
     date: '2026-10-06',

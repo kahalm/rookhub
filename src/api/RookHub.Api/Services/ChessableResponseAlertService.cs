@@ -13,11 +13,13 @@ namespace RookHub.Api.Services;
 /// regelmäßig durchgesehen (TODO.md, „Periodisch“): erst am Wortlaut ist zu erkennen, ob Chessable gegen das
 /// automatische Holen vorgeht oder bloß eine Antwort anders aussieht als erwartet.
 ///
-/// <para>Sieht die Antwort nach einer SPERRE aus, legt der Dienst zusätzlich eine Admin-Nachricht im Thread des
-/// Nutzers an — derselbe Kanal wie „falsches Turnier melden“, mit Glocke bei allen Admins und einem Rückweg zum
-/// Nutzer. Höchstens eine je Nutzer in <see cref="BanMessageCooldown"/>: wer nach der Warnung trotzdem erneut holt,
-/// soll den Kanal nicht füllen. Anlass: zu 31 Linien lieferte Chessable am 30.06.2026 nur
-/// <c>{"error":{"message":"User is banned or deleted"}}</c>, und aufgefallen ist das erst im September.</para>
+/// <para>JEDE Meldung legt zusätzlich eine Admin-Nachricht im Thread des Nutzers an (seit 0.695.1, gewünscht 07.10.2026:
+/// „damit ich das zeitnah prüfe“ — vorher nur bei einer Sperre, alles andere stand allein im Log und wurde erst beim
+/// periodischen Durchsehen gefunden). Derselbe Kanal wie „falsches Turnier melden“, mit Glocke bei allen Admins und
+/// einem Rückweg zum Nutzer. Gegen Fluten: eine Sperre höchstens einmal je Nutzer in <see cref="BanMessageCooldown"/>,
+/// eine sonstige unerwartete Antwort höchstens einmal je Nutzer UND Kurs in <see cref="UnexpectedMessageCooldown"/> —
+/// wer nach der Warnung trotzdem erneut holt, soll den Kanal nicht füllen. Anlass der Sperr-Regel: zu 31 Linien lieferte
+/// Chessable am 30.06.2026 nur <c>{"error":{"message":"User is banned or deleted"}}</c>, aufgefallen erst im September.</para>
 /// </summary>
 public class ChessableResponseAlertService
 {
@@ -25,6 +27,11 @@ public class ChessableResponseAlertService
     public const string BanMessagePrefix = "[RepCheck] Chessable-Sperre gemeldet";
 
     public static readonly TimeSpan BanMessageCooldown = TimeSpan.FromHours(24);
+
+    /// <summary>Erste Zeile jeder automatischen Nachricht zu einer unerwarteten Antwort, die nicht nach Sperre aussieht.</summary>
+    public const string UnexpectedMessagePrefix = "[RepCheck] Unerwartete Chessable-Antwort";
+
+    public static readonly TimeSpan UnexpectedMessageCooldown = TimeSpan.FromHours(1);
 
     /// <summary>So viel vom Antwort-Ausschnitt steht in der Admin-Nachricht (das Log bekommt ihn ganz).</summary>
     public const int MessageSnippetChars = 600;
@@ -76,7 +83,18 @@ public class ChessableResponseAlertService
                 userId, dto.Bid, dto.Endpoint, dto.Lid, dto.Oid, dto.Status, dto.Reason, banned,
                 dto.ExtensionVersion, dto.Message, dto.Snippet);
 
-        if (!banned) return new ChessableUnexpectedResponseResultDto(false, false);
+        if (!banned)
+        {
+            // Je Nutzer UND Kurs entprellt: derselbe Kurs, gleich wieder versucht, ist eine Nachricht; ein anderer Kurs
+            // ist ein neuer Fall. Die bid steht als „(bid N)“ in der Nachricht (BuildMessage).
+            var seit = DateTime.UtcNow - UnexpectedMessageCooldown;
+            var marke = $"(bid {dto.Bid})";
+            var schonGemeldet = await _db.AdminMessages.AnyAsync(m => m.UserId == userId && !m.FromAdmin
+                && m.CreatedAt >= seit && m.Body.StartsWith(UnexpectedMessagePrefix) && m.Body.Contains(marke), ct);
+            if (!schonGemeldet)
+                await _messages.SendFromUserAsync(userId, BuildMessage(dto, banned: false));
+            return new ChessableUnexpectedResponseResultDto(false, true);
+        }
 
         var since = DateTime.UtcNow - BanMessageCooldown;
         var alreadySent = await _db.AdminMessages.AnyAsync(m => m.UserId == userId && !m.FromAdmin
@@ -86,21 +104,28 @@ public class ChessableResponseAlertService
         return new ChessableUnexpectedResponseResultDto(true, true);
     }
 
-    internal static string BuildBanMessage(ChessableUnexpectedResponseInputDto dto)
+    internal static string BuildBanMessage(ChessableUnexpectedResponseInputDto dto) => BuildMessage(dto, banned: true);
+
+    internal static string BuildMessage(ChessableUnexpectedResponseInputDto dto, bool banned)
     {
         var where = dto.Oid != null ? $" oid {dto.Oid}" : dto.Lid != null ? $" lid {dto.Lid}" : "";
         var course = string.IsNullOrWhiteSpace(dto.CourseName) ? "?" : dto.CourseName.Trim();
         var lines = new List<string>
         {
-            BanMessagePrefix,
-            "RepCheck hat beim „Kurs holen“ eine Antwort bekommen, die nach einer Sperre aussieht, und den Abruf gestoppt.",
+            banned ? BanMessagePrefix : UnexpectedMessagePrefix,
+            banned
+                ? "RepCheck hat beim „Kurs holen“ eine Antwort bekommen, die nach einer Sperre aussieht, und den Abruf gestoppt."
+                : "RepCheck hat beim „Kurs holen“ eine Antwort bekommen, die nicht die erwartete Form hat, und den Abruf "
+                  + "gestoppt. Bitte prüfen, ob dahinter eine Anti-Crawling-Maßnahme steckt; der Nutzer wartet auf das Okay.",
             "",
             $"Kurs: {course} (bid {dto.Bid}) — https://www.chessable.com/course/{dto.Bid}/",
-            $"Abruf: {dto.Endpoint}{where}, HTTP {dto.Status?.ToString() ?? "?"}",
+            $"Abruf: {dto.Endpoint}{where}, HTTP {dto.Status?.ToString() ?? "?"}"
+                + (string.IsNullOrWhiteSpace(dto.Reason) ? "" : $", Grund {dto.Reason}"),
         };
         if (!string.IsNullOrWhiteSpace(dto.Message))
             lines.Add($"Chessable: „{dto.Message.Trim()}“");
-        else if (!string.IsNullOrWhiteSpace(dto.Snippet))
+        // Ohne Sperr-Meldung zählt der Wortlaut der Antwort — er steht deshalb auch neben einer Fehlermeldung da.
+        if (!string.IsNullOrWhiteSpace(dto.Snippet) && (string.IsNullOrWhiteSpace(dto.Message) || !banned))
             lines.Add("Antwort (Ausschnitt): " + (dto.Snippet.Length > MessageSnippetChars
                 ? dto.Snippet[..MessageSnippetChars] + " …"
                 : dto.Snippet));

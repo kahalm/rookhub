@@ -1275,7 +1275,7 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task ChessableUnexpectedResponse_OtherResponse_OnlyLogged()
+    public async Task ChessableUnexpectedResponse_OtherResponse_AlsoNotifiesTheAdmins()
     {
         var user = await CreateUserAsync();
         SetUser(user.Id, "extension");
@@ -1287,6 +1287,7 @@ public class ExtensionControllerTests : IDisposable
 
         var dto = Assert.IsType<ChessableUnexpectedResponseResultDto>(Assert.IsType<OkObjectResult>(res).Value);
         Assert.False(dto.Banned);
-        Assert.Empty(_db.AdminMessages);
+        Assert.True(dto.AdminNotified);   // seit 07.10.2026 jede unerwartete Antwort, nicht nur eine Sperre
+        Assert.Contains("(bid 207313)", Assert.Single(_db.AdminMessages).Body);
     }
 }

@@ -7,7 +7,8 @@ using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
-/// <summary>Unerwartete Chessable-Antworten aus RepCheck: Log immer, Admin-Nachricht nur bei einer Sperre (1× je 24 h).</summary>
+/// <summary>Unerwartete Chessable-Antworten aus RepCheck: Log immer, Admin-Nachricht IMMER — Sperre 1× je Nutzer in 24 h,
+/// sonst 1× je Nutzer und Kurs in 1 h.</summary>
 public class ChessableResponseAlertServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
@@ -55,17 +56,44 @@ public class ChessableResponseAlertServiceTests : IDisposable
     public void LooksBanned_FollowsTheRepCheckRule(string? message, string? snippet, bool expected)
         => Assert.Equal(expected, ChessableResponseAlertService.LooksBanned(message, snippet));
 
+    // Gewünscht 07.10.2026: JEDE unerwartete Antwort soll den Admins gemeldet werden, nicht nur eine Sperre.
     [Fact]
-    public async Task Report_NotBanned_LogsWarning_WithoutAdminMessage()
+    public async Task Report_NotBanned_LogsWarning_AndSendsAdminMessageWithTheResponse()
     {
         var res = await _service.ReportAsync(7, Report(snippet: "{\"foo\":1}", reason: "shape"));
 
         Assert.False(res.Banned);
-        Assert.False(res.AdminNotified);
-        Assert.Empty(_db.AdminMessages);
+        Assert.True(res.AdminNotified);
+        var msg = Assert.Single(_db.AdminMessages);
+        Assert.Equal(7, msg.UserId);
+        Assert.StartsWith(ChessableResponseAlertService.UnexpectedMessagePrefix, msg.Body);
+        Assert.Contains("(bid 104929)", msg.Body);
+        Assert.Contains("getGame oid 17672584, HTTP 200, Grund shape", msg.Body);
+        Assert.Contains("Antwort (Ausschnitt): {\"foo\":1}", msg.Body);
+        Assert.Contains(_db.Notifications, n => n.UserId == 1);   // Glocke beim Admin
         var entry = Assert.Single(_log.Events);
         Assert.Equal(LogLevel.Warning, entry.Level);
         Assert.StartsWith("ChessableUnexpectedResponse", entry.Message);
+    }
+
+    [Fact]
+    public async Task Report_NotBanned_SameCourseTwiceWithinAnHour_OneMessage_OtherCourseIsANewCase()
+    {
+        await _service.ReportAsync(7, Report(snippet: "{}", reason: "shape"));
+        await _service.ReportAsync(7, Report(snippet: "{}", reason: "shape"));
+        Assert.Single(_db.AdminMessages);
+        Assert.Equal(2, _log.Events.Count);
+
+        var anderer = Report(snippet: "{}", reason: "shape");
+        anderer.Bid = "27821";
+        await _service.ReportAsync(7, anderer);
+        Assert.Equal(2, _db.AdminMessages.Count());
+
+        var erste = _db.AdminMessages.OrderBy(m => m.Id).First();
+        erste.CreatedAt = DateTime.UtcNow - ChessableResponseAlertService.UnexpectedMessageCooldown - TimeSpan.FromMinutes(1);
+        await _db.SaveChangesAsync();
+        await _service.ReportAsync(7, Report(snippet: "{}", reason: "shape"));
+        Assert.Equal(3, _db.AdminMessages.Count());
     }
 
     [Fact]
