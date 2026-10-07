@@ -18,7 +18,7 @@ import { Repertoire } from '../../core/models';
   imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, MatSelectModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ (editMode ? 'repertoire.dialog.editTitle' : 'repertoire.dialog.title') | translate }}</h2>
-    <mat-dialog-content>
+    <mat-dialog-content class="scroll-cue">
       <form class="dialog-form">
         <mat-form-field appearance="outline">
           <mat-label>{{ 'repertoire.dialog.name' | translate }}</mat-label>
@@ -37,7 +37,9 @@ import { Repertoire } from '../../core/models';
             <mat-option [value]="3">{{ 'repertoire.kind.endgame' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <!-- subscriptSizing="dynamic": der dreizeilige Hinweis bekommt seinen Platz im Fluss, statt (feste Unterzeile)
+             über die Checkbox darunter zu laufen (gemeldet 2026-10-07). -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="course-id">
           <mat-label>{{ 'repertoire.dialog.chessableCourseId' | translate }}</mat-label>
           <input matInput [(ngModel)]="chessableCourseId" name="chessableCourseId" maxlength="32" placeholder="z. B. 12345">
           <mat-hint>{{ 'repertoire.dialog.chessableCourseIdHint' | translate }}</mat-hint>
@@ -54,8 +56,21 @@ import { Repertoire } from '../../core/models';
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(300px, 78vw); } mat-form-field { width: 100%; }
-    .ext-note { margin: 0 0 0 30px; font-size: 0.78rem; line-height: 1.3; color: color-mix(in srgb, currentColor 60%, transparent); }`]
+  // Die Unterlage scrollt (Material: max-height 65vh), aber Overlay-Rollbalken (Chrome unter Windows, Handys) zeigen das
+  // nicht — der letzte Hinweis sah abgeschnitten aus. Deshalb ein Schatten am Rand, solange darüber/darunter noch etwas
+  // kommt (background-attachment: local deckt ihn am Ende zu), und oben etwas Luft für das schwebende Label des ersten Felds.
+  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(300px, 78vw); padding-top: 6px; }
+    mat-form-field { width: 100%; }
+    .course-id { margin-bottom: 0.75rem; }
+    .ext-note { margin: 0 0 0.25rem 30px; font-size: 0.78rem; line-height: 1.3; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .scroll-cue {
+      --cue-bg: var(--mat-dialog-container-color, var(--mat-sys-surface, #121316));
+      background:
+        linear-gradient(var(--cue-bg) 30%, transparent) top / 100% 24px no-repeat local,
+        linear-gradient(transparent, var(--cue-bg) 70%) bottom / 100% 24px no-repeat local,
+        radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.45), transparent) top / 100% 10px no-repeat scroll,
+        radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.45), transparent) bottom / 100% 10px no-repeat scroll;
+    }`]
 })
 export class CreateRepertoireDialogComponent {
   name = '';
