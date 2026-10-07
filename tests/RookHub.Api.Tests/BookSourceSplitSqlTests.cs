@@ -110,4 +110,17 @@ public class BookSourceSplitSqlTests
         Assert.Equal("SourcePgn", source.FindProperty(nameof(BookSource.SourcePgn))!.GetColumnName());
         Assert.True(book.FindNavigation(nameof(Book.Source))!.ForeignKey.IsRequiredDependent);
     }
+    [Fact]
+    public void TacticHarvest_PerTickQueries_StartWithTheIndexedBookPrefix()
+    {
+        // Ohne das Präfix ein Vollscan über alle BookPuzzles: auf Prod 20 s im Leerlauf, unter Last über dem
+        // Command-Timeout — „Taktik-Ernte: Takt fehlgeschlagen" jede Minute (2026-10-07).
+        using var db = MySqlContext();
+        foreach (var sql in new[]
+        {
+            RookHub.Api.Services.Tactics.TacticHarvestService.OldCommentPuzzles(db.BookPuzzles).ToQueryString(),
+            RookHub.Api.Services.Tactics.TacticHarvestService.UnlinkedPuzzles(db.BookPuzzles).ToQueryString(),
+        })
+            Assert.Contains("LIKE 'tactics-%'", sql);
+    }
 }

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.714.2", date: "2026-10-07", changes: [
+    { en: "Tactic harvest: the two look-ups that run every minute now use the index on the book file name. Before, each of them scanned all course lines including their comments — on the server 20 seconds when idle and beyond the 30-second database timeout under load, so the harvest step failed every one to two minutes and new puzzles were not published.", de: "Taktik-Ernte: die beiden Abfragen, die jede Minute laufen, nutzen jetzt den Index auf dem Buch-Dateinamen. Vorher lasen sie jedes Mal alle Kurs-Linien samt Kommentaren — auf dem Server 20 Sekunden im Leerlauf und unter Last mehr als das 30-Sekunden-Limit der Datenbank; der Erntelauf scheiterte deshalb alle ein, zwei Minuten, und neue Aufgaben wurden nicht veröffentlicht." },
+  ] },
   { version: "0.714.1", date: "2026-10-07", changes: [
     { en: "Courses: uploading an opening repertoire under „Create course“ (games from the starting position, e.g. a ChessBase export) now says what is going on — the file is a repertoire, not a course with puzzles — and offers a button to the repertoires, where it belongs. Before, the upload just failed with „No playable lines found in the PGN.“. The other course upload errors now show in the language of the page as well.", de: "Kurse: wer ein Eröffnungsrepertoire unter „Kurs erstellen“ hochlädt (Partien ab der Grundstellung, z. B. ein ChessBase-Export), bekommt jetzt gesagt, woran es liegt — die Datei ist ein Repertoire, kein Kurs mit Aufgaben — und einen Knopf zu den Repertoires, wo sie hingehört. Vorher scheiterte der Upload nur mit „No playable lines found in the PGN.“. Die übrigen Fehler beim Kurs-Upload erscheinen außerdem in der Sprache der Seite." },
   ] },

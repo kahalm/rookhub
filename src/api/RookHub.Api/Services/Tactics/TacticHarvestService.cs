@@ -651,6 +651,21 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         return null;
     }
 
+    // Beide Abfragen laufen in JEDEM Takt (minütlich) und fangen mit dem Buch-Präfix an: über den Index auf BookFileName
+    // sind es die paar hundert Aufgaben der Taktik-Bücher, ohne ihn ein Vollscan über alle BookPuzzles samt Kommentaren —
+    // auf Prod (156 000 Zeilen) 20 s im Leerlauf, unter Last über dem Command-Timeout von 30 s: „Taktik-Ernte: Takt
+    // fehlgeschlagen" alle 1–2 Minuten (gemeldet 2026-10-07), und die Veröffentlichung dahinter lief nie.
+
+    /// <summary>Aufgaben mit altem Kommentar-Wortlaut (<see cref="RewordCommentsAsync"/>).</summary>
+    internal static IQueryable<BookPuzzle> OldCommentPuzzles(IQueryable<BookPuzzle> puzzles)
+        => puzzles.Where(p => p.BookFileName.StartsWith(BookPrefix) && p.Source == "tactic-harvest" && p.Comment != null
+            && (p.Comment.Contains("Nach dem ersten Zug: ") || p.Comment.Contains("Die Lösung bringt +") || p.Comment.Contains("Die Lösung bringt -")));
+
+    /// <summary>Veröffentlichte Aufgaben ohne Partie-Verweis (<see cref="LinkGamesAsync"/>); die Meisterpartien haben keine Partie-Seite.</summary>
+    internal static IQueryable<BookPuzzle> UnlinkedPuzzles(IQueryable<BookPuzzle> puzzles)
+        => puzzles.Where(p => p.BookFileName.StartsWith(BookPrefix) && p.Source == "tactic-harvest" && p.SourceGame == null && !p.Retired
+            && p.BookFileName != MasterBook);
+
     private static readonly System.Text.RegularExpressions.Regex OldOutcome =
         new(@" (?:Nach dem ersten Zug: |Die Lösung bringt )([+-]?\d+(?:\.\d+)?|#\d+)\.$");
 
@@ -658,9 +673,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     /// <see cref="Outcome"/> umstellen (Matt-Texte „#3" der ersten Fassung ebenso).</summary>
     private async Task RewordCommentsAsync(CancellationToken ct)
     {
-        var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.Comment != null
-                && (p.Comment.Contains("Nach dem ersten Zug: ") || p.Comment.Contains("Die Lösung bringt +") || p.Comment.Contains("Die Lösung bringt -")))
-            .Take(200).ToListAsync(ct);
+        var puzzles = await OldCommentPuzzles(db.BookPuzzles).Take(200).ToListAsync(ct);
         foreach (var p in puzzles)
         {
             var m = OldOutcome.Match(p.Comment!);
@@ -674,8 +687,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     private async Task LinkGamesAsync(CancellationToken ct)
     {
         await RewordCommentsAsync(ct);
-        var puzzles = await db.BookPuzzles.Where(p => p.Source == "tactic-harvest" && p.SourceGame == null && !p.Retired
-                && p.BookFileName != MasterBook).OrderBy(p => p.Id).Take(200).ToListAsync(ct);
+        var puzzles = await UnlinkedPuzzles(db.BookPuzzles).OrderBy(p => p.Id).Take(200).ToListAsync(ct);
         if (puzzles.Count == 0) return;
         var lineIds = puzzles.Select(p => p.LineId).ToList();
         var cands = await db.TacticCandidates.Include(c => c.GameAnalysis).Where(c => c.LineId != null && lineIds.Contains(c.LineId))
