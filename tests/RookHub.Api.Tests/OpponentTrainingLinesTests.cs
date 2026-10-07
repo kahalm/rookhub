@@ -67,7 +67,9 @@ public class OpponentTrainingLinesTests
         Assert.True(r.Lines[1].NeverReached);
         var line = r.Lines[0];
         Assert.Equal(3, line.Reached);          // die Stellung nach 3.Nc3 erreichen alle drei, über die andere Zugfolge
-        Assert.False(line.NeverReached);
+        // von vorne weg trifft er keinen Zug der Linie (1.d4 spielt er nie) — „nie erreicht", aber mit Partien vor den leeren
+        Assert.True(line.NeverReached);
+        Assert.Equal(0, line.Matched);
         // Die Zwischenstellungen der Linie (nach 1.d4) erreicht der Gegner so nie — das Produkt ist 0, die Partien zählen trotzdem.
         Assert.Equal(0, line.Probability);
     }
@@ -102,6 +104,66 @@ public class OpponentTrainingLinesTests
         Assert.Equal(0, caro.Probability);
         Assert.Equal(0, caro.Reached);
         Assert.Null(caro.LastYear);
+    }
+
+    [Fact]
+    public void FillRule_FullLinesFirst_ThenOneOpponentMoveMissing_ThenTwo_NeverReachedLast()
+    {
+        // Nutzer Weiß; der Gegner hat zweimal Schwarz gespielt
+        var g = Graph('w',
+            "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3",   // 0: voll
+            "1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6 4. O-O",                          // 1: ein Gegnerzug fehlt (a6 statt Nf6), Anfang 1/2
+            "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 g6 6. Be3",    // 2: ein Gegnerzug fehlt (der letzte)
+            "1. e4 c5 2. Nf3 e6 3. d4 d5",                                     // 3: zwei fehlen
+            "1. e4 c6 2. d4 d5",                                               // 4: nie
+            "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4");                          // 5: voll
+        var games = new[] { G("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6", false), G("e4 e5 Nf3 Nc6 Bb5 a6", false) };
+
+        var r = OpponentTrainingLines.Rank(g, ["K", "K", "K", "K", "K", "K"], games);
+
+        Assert.Equal(new[] { 0, 5, 1, 2, 3, 4 }, r.Lines.Select(l => l.Index));
+        var najdorf = r.Lines[0];
+        Assert.Equal((5, 0), (najdorf.Matched, najdorf.Missing));
+        Assert.Equal(0.5, najdorf.Probability, 6);
+        Assert.Equal(0.5, najdorf.PrefixProbability, 6);
+        var spanish = r.Lines[2];
+        Assert.Equal((2, 1), (spanish.Matched, spanish.Missing));
+        Assert.Equal(0, spanish.Probability);
+        Assert.Equal(0.5, spanish.PrefixProbability, 6);
+        Assert.Equal(1, spanish.PrefixReached);           // die Partie, die bis 2...Sc6 dabei war
+        Assert.False(spanish.NeverReached);
+        var dragon = r.Lines[3];
+        Assert.Equal((4, 1), (dragon.Matched, dragon.Missing));
+        var twoMissing = r.Lines[4];
+        Assert.Equal((1, 2), (twoMissing.Matched, twoMissing.Missing));
+        Assert.True(r.Lines[5].NeverReached);
+        Assert.Equal(0, r.Lines[5].Matched);
+    }
+
+    [Fact]
+    public void FillRule_UsersExample_OneGame_FewFullLines_TheNextComeFromOneMoveEarlier()
+    {
+        // Wunsch des Users: er hat nur EINMAL gespielt — voll getroffen ist nur die eine Linie; aufgefüllt wird, „als ob er
+        // den letzten Zug nicht gespielt hätte, sondern eins vorher abgewichen wäre", dann zwei vorher …
+        var tails = new[] { "a6", "g6", "e6", "Nc6", "e5", "Bd7", "Qb6", "h6" };
+        var lines = tails.Select(t => $"1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 {t} 6. h3").ToList();
+        lines.Add("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 e5 5. Nb5");             // weicht einen Zug früher ab
+        lines.Add("1. e4 c5 2. Nf3 d6 3. d4 Nf6 4. Nc3");                          // zwei früher
+        lines.Add("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 g6 5. Nc3 Bg7 6. Be3");  // weicht früher ab UND geht weiter: zwei fehlen
+        var g = Graph('w', lines.ToArray());
+        var r = OpponentTrainingLines.Rank(g, Enumerable.Repeat("K", lines.Count).ToList(),
+            [G("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5", false, 2026)]);
+
+        Assert.Equal(0, r.Lines[0].Missing);
+        Assert.Equal("a6", r.Lines[0].Sans[9]);
+        // sieben Linien weichen erst beim letzten Gegnerzug ab; die früher abweichenden (4...e5, 3...Sf6) enden gleich danach,
+        // ihnen fehlt also AUCH nur ein Gegnerzug — gleiche Stufe, gleicher Anfang (1/1), gleiche Partien → Repertoire-Reihenfolge
+        Assert.All(r.Lines.Skip(1).Take(8), l => Assert.Equal(1, l.Missing));
+        Assert.Equal(new[] { "g6", "e6", "Nc6", "e5", "Bd7", "Qb6", "h6" }, r.Lines.Skip(1).Take(7).Select(l => l.Sans[9]));
+        Assert.Equal(1, r.Lines[^3].Missing);
+        Assert.Equal("e5", r.Lines[^3].Sans[7]);
+        Assert.Equal((2, 1), (r.Lines[^2].Matched, r.Lines[^2].Missing));
+        Assert.Equal((3, 2), (r.Lines[^1].Matched, r.Lines[^1].Missing));   // zwei fehlende: nach allen mit einem
     }
 
     [Fact]
@@ -218,13 +280,13 @@ public class OpponentTrainingLinesTests
         var foreign = await db.RepertoireAsync(2, "Fremd", Section("x", "1. d4 d5"));
         var svc = db.Service();
 
-        var r = await svc.LinesAsync(1, null, null, null, null, NoGames, default);
+        var r = await svc.LinesAsync(1, new TrainingLinesService.Query(null, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default);
         Assert.NotNull(r);
         var reps = r!["repertoires"]!.AsArray();
         Assert.Equal(mine, Assert.Single(reps)!["id"]!.GetValue<int>());
         Assert.Equal(mine, r["repertoire"]!.GetValue<int>());
-        Assert.Null(await svc.LinesAsync(1, off, null, null, null, NoGames, default));
-        Assert.Null(await svc.LinesAsync(1, foreign, null, null, null, NoGames, default));
+        Assert.Null(await svc.LinesAsync(1, new TrainingLinesService.Query(off, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default));
+        Assert.Null(await svc.LinesAsync(1, new TrainingLinesService.Query(foreign, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default));
     }
 
     [Fact]
@@ -232,7 +294,7 @@ public class OpponentTrainingLinesTests
     {
         using var db = new Db();
         var called = false;
-        var r = await db.Service().LinesAsync(5, null, null, null, null, () => { called = true; return NoGames(); }, default);
+        var r = await db.Service().LinesAsync(5, new TrainingLinesService.Query(null, null, TrainingLinesService.ParseOverrides(null), null), () => { called = true; return NoGames(); }, default);
         Assert.Empty(r!["repertoires"]!.AsArray());
         Assert.Null(r["repertoire"]);
         Assert.Empty(r["lines"]!.AsArray());
@@ -248,17 +310,17 @@ public class OpponentTrainingLinesTests
         var id = await db.RepertoireAsync(1, "Gemischt", pgn);
         var svc = db.Service();
 
-        var r = (await svc.LinesAsync(1, id, null, null, null, NoGames, default))!;
+        var r = (await svc.LinesAsync(1, new TrainingLinesService.Query(id, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default))!;
         Assert.Equal("b", r["color"]!.GetValue<string>());
         Assert.Equal(new[] { "w", "b" }, r["colors"]!.AsArray().Select(x => x!.GetValue<string>()));
         Assert.Equal(2, r["total"]!.GetValue<int>());
 
-        var w = (await svc.LinesAsync(1, id, "w", null, null, NoGames, default))!;
+        var w = (await svc.LinesAsync(1, new TrainingLinesService.Query(id, "w", TrainingLinesService.ParseOverrides(null), null), NoGames, default))!;
         Assert.Equal("w", w["color"]!.GetValue<string>());
         Assert.Equal("Weiß", Assert.Single(w["lines"]!.AsArray())!["chapter"]!.GetValue<string>());
 
         // eigene Festlegung: „Weiß" doch als Schwarz → dann gibt es nur noch Schwarz
-        var o = (await svc.LinesAsync(1, id, null, "{\"Weiß\":\"b\"}", null, NoGames, default))!;
+        var o = (await svc.LinesAsync(1, new TrainingLinesService.Query(id, null, TrainingLinesService.ParseOverrides("{\"Weiß\":\"b\"}"), null), NoGames, default))!;
         Assert.Equal(new[] { "b" }, o["colors"]!.AsArray().Select(x => x!.GetValue<string>()));
         Assert.Equal(3, o["total"]!.GetValue<int>());
     }
@@ -273,18 +335,117 @@ public class OpponentTrainingLinesTests
         var pgn = string.Concat(firsts.SelectMany(a => seconds.Select(b => Section("Weiß", $"1. e4 {a} 2. {b}"))));
         var id = await db.RepertoireAsync(1, "Viel", pgn);
 
-        var r = (await db.Service().LinesAsync(1, id, "w", null, null, NoGames, default))!;
+        var r = (await db.Service().LinesAsync(1, new TrainingLinesService.Query(id, "w", TrainingLinesService.ParseOverrides(null), null), NoGames, default))!;
         Assert.Equal(60, r["total"]!.GetValue<int>());
         Assert.Equal(50, r["lines"]!.AsArray().Count);
         Assert.Equal(10, r["more"]!.GetValue<int>());
 
-        var all = (await db.Service().LinesAsync(1, id, "w", null, 5000, NoGames, default))!;
+        var all = (await db.Service().LinesAsync(1, new TrainingLinesService.Query(id, "w", TrainingLinesService.ParseOverrides(null), 5000), NoGames, default))!;
         Assert.Equal(60, all["lines"]!.AsArray().Count);
         Assert.Equal(0, all["more"]!.GetValue<int>());
 
-        var cfg = (await db.Service(new() { [TrainingLinesService.TakeKey] = "7" }).LinesAsync(1, id, "w", null, null, NoGames, default))!;
+        var cfg = (await db.Service(new() { [TrainingLinesService.TakeKey] = "7" }).LinesAsync(1, new TrainingLinesService.Query(id, "w", TrainingLinesService.ParseOverrides(null), null), NoGames, default))!;
         Assert.Equal(7, cfg["lines"]!.AsArray().Count);
         Assert.Equal(53, cfg["more"]!.GetValue<int>());
+    }
+
+    private static TrainingLinesService.Query Q(int? rep, string? color = null) =>
+        new(rep, color, new Dictionary<string, char>(), null);
+
+    [Fact]
+    public async Task CreateRepertoire_CopiesTheRankedSectionsUnchanged_InThisOrder_ReplacesTheSameName()
+    {
+        using var db = new Db();
+        // Abschnitte mit Kommentaren und Varianten — sie müssen unverändert ankommen
+        var pgn = Section("Offen", "1. e4 e5 {Hauptlinie} 2. Nf3 (2. Bc4 Nf6) 2... Nc6 3. Bb5")
+                  + Section("Sizilianisch", "1. e4 c5 2. Nf3 d6 3. d4")
+                  + Section("Caro", "1. e4 c6 2. d4 d5 3. e5");
+        var source = await db.RepertoireAsync(1, "Weiß-Repertoire", pgn);
+        db.Ctx.Repertoires.Single(r => r.Id == source).Kind = RepertoireKind.Opening;
+        await db.Ctx.SaveChangesAsync();
+        var games = () => Task.FromResult(new List<OpponentTrainingLines.Game>
+        {
+            G("e4 c5 Nf3 d6 d4 cxd4", false, 2025), G("e4 c5 Nf3 d6 d4 cxd4", false, 2024), G("e4 e5 Nf3 Nc6 Bb5 a6", false, 2023),
+        });
+        var svc = db.Service();
+
+        var created = (await svc.CreateRepertoireAsync(1, "Huber, Franz", Q(source), games, default))!;
+        var year = DateTime.UtcNow.Year;
+        Assert.Equal($"Prep: Huber, Franz {year}", created.Name);
+        Assert.Equal(3, created.Lines);
+        Assert.False(created.Replaced);
+
+        var rep = db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == created.Id);
+        Assert.False(rep.UseForExtension);              // sonst wäre es selbst eine Quelle der Vorbereitung
+        Assert.Equal(RepertoireKind.Opening, rep.Kind);
+        Assert.Contains("Weiß-Repertoire", rep.Description);
+        Assert.Contains("3 Partien", rep.Description);
+
+        // dieselben Linien-Schlüssel wie die gereihten Quelllinien, in dieser Reihenfolge; Abschnitte unverändert
+        var ranked = (await svc.LinesAsync(1, Q(source), games, default))!["lines"]!.AsArray().Select(l => l!["key"]!.GetValue<string>()).ToList();
+        var file = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id).PgnContent;
+        var copied = RepertoireReach.Build(TrainingLinesService.Sections(file), 'w');
+        Assert.Equal(ranked, copied.Mainlines.Select(KeyOf));
+        Assert.Contains("{Hauptlinie}", file);
+        Assert.Contains("(2. Bc4 Nf6)", file);
+        Assert.Contains("[Black \"Sizilianisch\"]", file);
+        Assert.StartsWith("[Event", file);
+        Assert.Equal(pgn, db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == source).PgnContent);   // Quelle unberührt
+
+        // zweites Mal: dasselbe Repertoire, Inhalt ersetzt, kein zweites
+        var again = (await svc.CreateRepertoireAsync(1, "Huber, Franz", Q(source), games, default))!;
+        Assert.Equal(created.Id, again.Id);
+        Assert.True(again.Replaced);
+        Assert.Equal(1, db.Ctx.Repertoires.Count(r => r.UserId == 1 && r.Name == created.Name));
+        Assert.Equal(1, db.Ctx.RepertoireFiles.Count(f => f.RepertoireId == created.Id));
+    }
+
+    private static string KeyOf(List<RepertoireReach.Node> nodes)
+    {
+        var sans = new List<string>();
+        for (var k = 0; k + 1 < nodes.Count; k++) sans.Add(nodes[k].Children.First(c => ReferenceEquals(c.Child, nodes[k + 1])).San);
+        return ChessableTrainedLineService.LineKeyFromSans(sans);
+    }
+
+    [Fact]
+    public async Task CreateRepertoire_AtMost50Lines_EvenIfTheListMayShowMore()
+    {
+        using var db = new Db();
+        var firsts = new[] { "a6", "a5", "b6", "b5", "c6", "c5", "d6", "d5", "e6", "e5", "f6", "f5", "g6", "g5", "h6", "h5", "Na6", "Nc6", "Nf6", "Nh6" };
+        var seconds = new[] { "Nf3", "d4", "Nc3" };
+        var id = await db.RepertoireAsync(1, "Viel", string.Concat(firsts.SelectMany(a => seconds.Select(b => Section("Weiß", $"1. e4 {a} 2. {b}")))));
+
+        var created = (await db.Service(new() { [TrainingLinesService.TakeKey] = "500" })
+            .CreateRepertoireAsync(1, "Gegner", Q(id, "w"), NoGames, default))!;
+        Assert.Equal(50, created.Lines);
+        var file = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id).PgnContent;
+        Assert.Equal(50, TrainingLinesService.Sections(file).Count);
+    }
+
+    [Fact]
+    public async Task CreateRepertoire_SourceHasTheTargetName_IsRefusedAndStaysUntouched()
+    {
+        using var db = new Db();
+        var name = TrainingLinesService.RepertoireName("Huber, Franz", DateTime.UtcNow.Year);
+        var pgn = Section("K", "1. e4 c5 2. Nf3 d6");
+        var source = await db.RepertoireAsync(1, name, pgn);   // die Quelle heißt schon wie das Ziel (und ist freigegeben)
+
+        var e = await Assert.ThrowsAsync<TrainingLinesService.SameRepertoireException>(() =>
+            db.Service().CreateRepertoireAsync(1, "Huber, Franz", Q(source), NoGames, default));
+        Assert.Contains(name, e.Message);
+        Assert.IsAssignableFrom<RookHub.Api.Exceptions.DomainValidationException>(e);   // ohne eigenen catch: 400
+        Assert.Equal(pgn, db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == source).PgnContent);
+        Assert.Equal(1, db.Ctx.Repertoires.Count(r => r.UserId == 1));
+    }
+
+    [Fact]
+    public async Task CreateRepertoire_ForeignRepertoireIsNull_NoLinesIsAValidationError()
+    {
+        using var db = new Db();
+        var foreign = await db.RepertoireAsync(2, "Fremd", Section("x", "1. d4 d5"));
+        var svc = db.Service();
+        Assert.Null(await svc.CreateRepertoireAsync(1, "G", Q(foreign), NoGames, default));
+        await Assert.ThrowsAsync<RookHub.Api.Exceptions.DomainValidationException>(() => svc.CreateRepertoireAsync(1, "G", Q(null), NoGames, default));
     }
 
     [Fact]

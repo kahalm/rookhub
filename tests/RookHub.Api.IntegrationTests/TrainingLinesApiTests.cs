@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
@@ -145,6 +146,71 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
         Assert.Equal(1.0, lines[0]!["probability"]!.GetValue<double>(), 4);
         Assert.Equal(2025, lines[0]!["lastYear"]!.GetValue<int>());
         Assert.True(lines[1]!["neverReached"]!.GetValue<bool>());
+    }
+
+    [MySqlFact]
+    public async Task TrainingRepertoire_Prep_And_League_CreateThenReplace_RightsAsForTheList()
+    {
+        var pgn = Game("Huber, Franz", "Gegner, Gerd", "1. e4 c5 2. Nf3 d6 3. d4 cxd4", "2024.05.17", blackFide: "990103");
+        await using (var db = fixture.Schema.NewContext())
+        {
+            await new PrepImportService(db).ImportChunkAsync(PrepSources.Mega, 0, 0, pgn, default);
+            db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "990103", Name = "Gegner, Gerd", GameCount = 1, UpdatedAt = DateTime.UtcNow, Pgn = pgn });
+            await db.SaveChangesAsync();
+        }
+        int id;
+        await using (var db = fixture.Schema.NewContext()) id = db.PrepPlayers.Single(p => p.FideId == "990103").Id;
+        var (userId, jwt) = await UserAsync("anleger", Permissions.PrepView, Permissions.LeagueView);
+        var (_, plainJwt) = await UserAsync("ohnerecht");
+        var (otherId, _) = await UserAsync("andererr", Permissions.PrepView);
+        var source = await RepertoireAsync(userId, Najdorf);
+        var foreign = await RepertoireAsync(otherId, Najdorf);
+
+        var prepUrl = $"/api/prep/player/{id}/training-repertoire";
+        const string leagueUrl = "/api/league/player/990103/training-repertoire";
+        using (var anonymous = Client(null))
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync(prepUrl, new { })).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync(leagueUrl, new { })).StatusCode);
+            var share = await anonymous.PostAsJsonAsync("/api/league/s/irgendein-token/player/990103/training-repertoire", new { });
+            Assert.True(share.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed, share.StatusCode.ToString());
+        }
+        using (var plain = Client(plainJwt))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsJsonAsync(prepUrl, new { })).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsJsonAsync(leagueUrl, new { })).StatusCode);
+        }
+
+        using var me = Client(jwt);
+        Assert.Equal(HttpStatusCode.NotFound, (await me.PostAsJsonAsync(prepUrl, new { repertoire = foreign })).StatusCode);
+
+        var first = JsonNode.Parse(await (await me.PostAsJsonAsync(prepUrl, new { repertoire = source, source = "board" })).Content.ReadAsStringAsync())!;
+        var year = DateTime.UtcNow.Year;
+        Assert.Equal($"Prep: Gegner, Gerd {year}", first["name"]!.GetValue<string>());
+        Assert.Equal(2, first["lines"]!.GetValue<int>());
+        Assert.False(first["replaced"]!.GetValue<bool>());
+        var newId = first["id"]!.GetValue<int>();
+
+        // derselbe Name über LeagueHub: ersetzt, kein zweites
+        var res = await me.PostAsJsonAsync(leagueUrl, new { repertoire = source });
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var second = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
+        Assert.Equal(newId, second["id"]!.GetValue<int>());
+        Assert.True(second["replaced"]!.GetValue<bool>());
+        await using var check = fixture.Schema.NewContext();
+        var rep = check.Repertoires.Single(r => r.Id == newId);
+        Assert.Equal(userId, rep.UserId);
+        Assert.False(rep.UseForExtension);
+        Assert.Equal(1, check.RepertoireFiles.Count(f => f.RepertoireId == newId));
+        Assert.Equal(1, check.Repertoires.Count(r => r.UserId == userId && r.Name.StartsWith("Prep:")));
+
+        // Schutz: das NEUE Repertoire als Quelle (angehakt) würde sich selbst überschreiben → 400 sameRepertoire
+        var prepRep = check.Repertoires.Single(r => r.Id == newId);
+        prepRep.UseForExtension = true;
+        await check.SaveChangesAsync();
+        var same = await me.PostAsJsonAsync(prepUrl, new { repertoire = newId });
+        Assert.Equal(HttpStatusCode.BadRequest, same.StatusCode);
+        Assert.Equal("sameRepertoire", JsonNode.Parse(await same.Content.ReadAsStringAsync())!["reason"]!.GetValue<string>());
     }
 }
 

@@ -135,9 +135,26 @@ public class PrepController : BaseApiController
     {
         if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
         var filter = await FilterAsync(source ?? "both", speeds, years, unsure);
-        var r = await lines.LinesAsync(GetUserId(), repertoire, color, chapterColors, take,
-            () => cards.TrainingGamesAsync(l, filter, ct), ct);
+        var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
+        var r = await lines.LinesAsync(GetUserId(), q, () => cards.TrainingGamesAsync(l, filter, ct), ct);
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
+    }
+
+    /// <summary>„Show me lines to train": legt ein eigenes Repertoire „Prep: &lt;Spieler&gt; &lt;Jahr&gt;" mit den höchstens 50 wichtigsten
+    /// Linien gegen diesen Spieler an (gleichnamiges wird ersetzt) → <c>{ id, name, lines, replaced }</c>. Rumpf wie die Abfrage
+    /// (<see cref="TrainingLinesService.CreateRequest"/>); fremdes Repertoire 404, keine Linien 400.</summary>
+    [HttpPost("player/{id:int}/training-repertoire")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> TrainingRepertoire(int id, [FromBody] TrainingLinesService.CreateRequest? req,
+        [FromServices] PrepCardService cards, [FromServices] TrainingLinesService lines, CancellationToken ct)
+    {
+        req ??= new(null, null, null, null, null, null, null, null, null);
+        if (await cards.LoadAsync(id, req.All == true, req.Twin == true, ct) is not { } l) return NotFound();
+        var filter = await FilterAsync(req.Source ?? "both", req.Speeds, req.Years, req.Unsure);
+        TrainingLinesService.Created? r;
+        try { r = await lines.CreateRepertoireAsync(GetUserId(), l.Player.Name, req.ToQuery(), () => cards.TrainingGamesAsync(l, filter, ct), ct); }
+        catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
+        return r is null ? NotFound(new { reason = "repertoire" }) : Ok(new { id = r.Id, name = r.Name, lines = r.Lines, replaced = r.Replaced });
     }
 
     // ---- Online-Konten suchen (Phase 4) -------------------------------------------------------------

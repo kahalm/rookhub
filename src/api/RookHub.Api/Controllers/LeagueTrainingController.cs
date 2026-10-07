@@ -27,8 +27,32 @@ public class LeagueTrainingController : BaseApiController
         [FromQuery] int? years, [FromQuery] bool? unsure, [FromServices] TrainingLinesService lines, CancellationToken ct)
     {
         var filter = LeagueProfileStore.TreeFilter.Parse(source ?? "both", speeds, years, onlySure: unsure != true);
-        var r = await lines.LinesAsync(GetUserId(), repertoire, color, chapterColors, take,
-            () => lines.LeagueGamesAsync(fide, filter, ct), ct);
+        var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
+        var r = await lines.LinesAsync(GetUserId(), q, async () => (await lines.LeagueGamesAsync(fide, filter, ct)).Games, ct);
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
+    }
+
+    /// <summary>„Show me lines to train" für einen Ligaspieler — wie <c>POST /api/prep/player/{id}/training-repertoire</c>; Name aus
+    /// seiner Karte (sonst die FIDE-ID). Nur angemeldet, keine Fassung über einen Teilen-Link.</summary>
+    [HttpPost("player/{fide}/training-repertoire")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> TrainingRepertoire(string fide, [FromBody] TrainingLinesService.CreateRequest? req,
+        [FromServices] TrainingLinesService lines, CancellationToken ct)
+    {
+        req ??= new(null, null, null, null, null, null, null, null, null);
+        var filter = LeagueProfileStore.TreeFilter.Parse(req.Source ?? "both", req.Speeds, req.Years, onlySure: req.Unsure != true);
+        var name = fide;
+        TrainingLinesService.Created? r;
+        try
+        {
+            r = await lines.CreateRepertoireAsync(GetUserId(), "", req.ToQuery(), async () =>
+            {
+                var (n, games) = await lines.LeagueGamesAsync(fide, filter, ct);
+                if (!string.IsNullOrWhiteSpace(n)) name = n;
+                return games;
+            }, ct, () => name);
+        }
+        catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
+        return r is null ? NotFound(new { reason = "repertoire" }) : Ok(new { id = r.Id, name = r.Name, lines = r.Lines, replaced = r.Replaced });
     }
 }

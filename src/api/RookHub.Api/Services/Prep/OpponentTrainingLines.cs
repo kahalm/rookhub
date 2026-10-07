@@ -13,8 +13,14 @@ namespace RookHub.Api.Services.Prep;
 /// und in welche Stellung es von dort weiterging. Eine Linie (die Hauptvariante eines Repertoire-Abschnitts — dieselbe
 /// Einheit, die der Trainer abfragt) hat die Wahrscheinlichkeit Π (Partien mit dem Gegnerzug der Linie / Partien, die die
 /// Stellung erreicht UND dort weitergespielt haben) über alle Gegnerzüge der Linie; eigene Züge zählen 1. Dazu: wie viele
-/// Partien die Stellung nach dem letzten Gegnerzug der Linie erreicht haben, und deren jüngstes Jahr. Hat keine Partie
-/// sie erreicht, ist die Linie „nie erreicht" — sie bleibt in der Liste, hinten.</para>
+/// Partien die Stellung nach dem letzten Gegnerzug der Linie erreicht haben, und deren jüngstes Jahr.</para>
+///
+/// <para><b>Auffüllen (Wunsch 2026-10-07: „geh in seiner Partie einen Schritt vor … als ob er eins vorher abgewichen
+/// ist").</b> Je Linie zählt, wie viele ihrer Gegnerzüge von vorne weg „getroffen" sind (<see cref="Line.Matched"/>): bis
+/// zur ersten Stellung, die der Gegner nie erreicht oder in der er nie den Zug der Linie gespielt hat. Gereiht wird in
+/// Stufen: zuerst die voll getroffenen nach Wahrscheinlichkeit, dann die mit EINEM fehlenden Gegnerzug nach der
+/// Wahrscheinlichkeit ihres getroffenen Anfangs, dann mit zwei fehlenden … ; je Stufe mehr Partien zuerst, dann die
+/// Reihenfolge im Repertoire. Linien, die er gar nicht trifft (<c>Matched = 0</c>), stehen ganz hinten („nie erreicht").</para>
 ///
 /// <para><b>Aufwand.</b> Die Partien laufen als Präfixbaum durch EIN Brett (Zug, Unterbaum, Zug zurück): gemeinsame
 /// Anfänge werden einmal gezogen, nicht je Partie.</para>
@@ -33,8 +39,18 @@ public static class OpponentTrainingLines
     /// <param name="End">Endstellung (Schlüssel) — wie die Linien-Häufigkeiten von „Häufigste zuerst".</param>
     /// <param name="StartFen">Eigene Startstellung der Linie, <c>null</c> = Grundstellung.</param>
     /// <param name="Index">Stelle im Repertoire (Abschnitt), für eine stabile Reihenfolge.</param>
+    /// <param name="Probability">Wahrscheinlichkeit der ganzen Linie (0, sobald ein Gegnerzug fehlt).</param>
+    /// <param name="Matched">Gegnerzüge der Linie, die er von vorne weg getroffen hat.</param>
+    /// <param name="Missing">Gegnerzüge der Linie, die danach fehlen (0 = voll getroffen).</param>
+    /// <param name="PrefixProbability">Wahrscheinlichkeit des getroffenen Anfangs (= <paramref name="Probability"/>, wenn voll).</param>
+    /// <param name="PrefixReached">Partien, die die tiefste getroffene Stellung erreicht haben.</param>
     public sealed record Line(string Key, string End, string? StartFen, string Chapter, IReadOnlyList<string> Sans, double Probability,
-        int Reached, int? LastYear, bool NeverReached, int Index);
+        int Reached, int? LastYear, bool NeverReached, int Index, int Matched = 0, int Missing = 0, double PrefixProbability = 0,
+        int PrefixReached = 0)
+    {
+        /// <summary>Stufe der Reihung: 0 = voll getroffen, n = n Gegnerzüge fehlen, ganz hinten = gar nicht getroffen.</summary>
+        internal int Tier => NeverReached ? int.MaxValue : Missing;
+    }
 
     public sealed record Result(int Games, List<Line> Lines);
 
@@ -78,26 +94,44 @@ public static class OpponentTrainingLines
             var key = ChessableTrainedLineService.LineKeyFromSans(sans);
             if (!seen.Add(key)) continue;
 
-            var p = 1.0;
+            var prefix = 1.0;
+            var matched = 0;
+            var opponentMoves = 0;
+            var hit = true;                             // bisher jeder Gegnerzug getroffen
             var after = nodes[0];                       // Stellung nach dem letzten Gegnerzug (ohne Gegnerzug: der Start)
+            var deepest = nodes[0];                     // Stellung nach dem letzten GETROFFENEN Gegnerzug
             for (var k = 0; k + 1 < nodes.Count; k++)
             {
                 var at = nodes[k];
                 if (at.UserToMove) continue;
+                opponentMoves++;
                 after = nodes[k + 1];
-                if (p == 0) continue;
+                if (!hit) continue;
                 var st = stats.GetValueOrDefault(at.Key);
                 var n = st?.Next.GetValueOrDefault(after.Key) ?? 0;
-                p = st is null || st.Continued == 0 ? 0 : p * n / st.Continued;
+                if (st is null || st.Continued == 0 || n == 0) { hit = false; continue; }
+                prefix = prefix * n / st.Continued;
+                matched++;
+                deepest = after;
             }
             var end = stats.GetValueOrDefault(after.Key);
             var reached = end?.Reached ?? 0;
+            var missing = opponentMoves - matched;
+            var never = opponentMoves > 0 && matched == 0;
+            // Ohne Gegnerzug zählt der Start: wer ihn erreicht, spielt die Linie — sonst ist auch sie „nie erreicht".
+            if (opponentMoves == 0 && reached == 0) never = true;
+            var prefixReached = stats.GetValueOrDefault(deepest.Key)?.Reached ?? 0;
             var start = nodes[0].Key == RepertoireReach.StandardStartKey ? null : nodes[0].Fen;
-            lines.Add(new Line(key, nodes[^1].Key, start, i < chapters.Count ? chapters[i] : "", sans, reached == 0 ? 0 : p,
-                reached, end?.LastYear, reached == 0, i));
+            lines.Add(new Line(key, nodes[^1].Key, start, i < chapters.Count ? chapters[i] : "", sans,
+                missing == 0 && !never ? prefix : 0, reached, end?.LastYear, never, i, matched, missing, never ? 0 : prefix,
+                prefixReached));
         }
 
-        lines = lines.OrderByDescending(l => l.Probability).ThenByDescending(l => l.Reached).ThenBy(l => l.Index).ToList();
+        lines = lines.OrderBy(l => l.Tier)
+            .ThenByDescending(l => l.Missing == 0 ? l.Probability : l.PrefixProbability)
+            .ThenByDescending(l => l.Missing == 0 ? l.Reached : l.PrefixReached)
+            .ThenByDescending(l => l.Reached)
+            .ThenBy(l => l.Index).ToList();
         return new Result(relevant.Count, lines);
     }
 
