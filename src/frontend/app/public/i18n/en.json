@@ -4538,6 +4538,15 @@
     "n": "Promote to knight"
   },
   "prep": {
+    "trainingRepertoire": {
+      "button": "Show me lines to train",
+      "hint": "Creates your own repertoire “{{name}}” with the (up to {{max}}) lines you are most likely to meet against this opponent.",
+      "confirm": "Create the repertoire “{{name}}” with the up to {{max}} most important lines against this opponent? An existing repertoire with this name is replaced.",
+      "busy": "Creating …",
+      "failed": "The training repertoire could not be created.",
+      "done": "“{{name}}” is ready ({{lines}} lines) — opening it …",
+      "sameRepertoire": "The chosen repertoire is itself called “{{name}}” — it would overwrite itself. Choose another one or rename it."
+    },
     "title": "Prepare for an opponent",
     "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",
     "searchLabel": "Name or FIDE ID",

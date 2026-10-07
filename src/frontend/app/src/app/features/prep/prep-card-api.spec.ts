@@ -53,6 +53,16 @@ describe('PrepCardApi (Schnittstelle der Spielerkarte für die Spielervorbereitu
     expect(api.trainerParams('42')).toEqual({ opponent: 'prep:42', twin: 'true' });
   });
 
+  it('Trainings-Repertoire: POST an /api/prep mit all/twin der Seite', async () => {
+    api.options.set({ all: false, twin: true });
+    const p = api.trainingRepertoire('42', { repertoire: 7, color: 'b', filter: null });
+    const req = http.expectOne('/api/prep/player/42/training-repertoire');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(jasmine.objectContaining({ repertoire: 7, color: 'b', all: null, twin: true }));
+    req.flush({ id: 5, name: 'Prep: Huber, Franz 2026', lines: 50, replaced: false });
+    expect((await p).id).toBe(5);
+  });
+
   it('fragt mit den Schaltern der Seite und merkt sich, was geladen ist', async () => {
     api.options.set({ all: true, twin: true });
     const p = api.card('42');

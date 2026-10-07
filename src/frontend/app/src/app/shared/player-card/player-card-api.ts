@@ -1,7 +1,7 @@
 import { InjectionToken, inject } from '@angular/core';
 import { LeagueApiService } from '@lh/core/league-api.service';
 import { OpeningTree, PlayerCard, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
-import { TrainingLines, TrainingLinesQuery } from './training-lines';
+import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult } from './training-lines';
 
 /**
  * Woher die Spielerkarte (und ihr Eröffnungsbaum) die Daten holt — die schmale Schnittstelle zwischen Karte und API
@@ -24,6 +24,8 @@ export interface PlayerCardApi {
   unsureAllowed?(): boolean;
   /** Trainingslinien gegen diesen Spieler (2026-10-07) — nur angemeldet, nie über einen Teilen-Link. Fehlt = kein Abschnitt. */
   trainingLines?(key: string, q: TrainingLinesQuery): Promise<TrainingLines>;
+  /** „Show me lines to train": eigenes Repertoire „Prep: … Jahr" mit den bis zu 50 wichtigsten Linien anlegen bzw. ersetzen. */
+  trainingRepertoire?(key: string, q: TrainingLinesQuery): Promise<TrainingRepertoireResult>;
   /** Wie der Trainer diesen Gegner findet (`?opponent=` und was sonst mitgeht). Fehlt = `league:<key>`. */
   trainerParams?(key: string): Record<string, string>;
 }

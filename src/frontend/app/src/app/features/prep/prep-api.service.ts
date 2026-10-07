@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { filterParams } from '@lh/core/league-api.service';
-import { TrainingLines, TrainingLinesQuery, trainingLinesParams } from '@rh/shared/player-card/training-lines';
+import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody } from '@rh/shared/player-card/training-lines';
 import { Account, AccountChecks, OpeningTree, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
 import { PrepCardJson, PrepHit, PrepOptions, PrepSuggestionList } from './prep.models';
 
@@ -38,6 +38,12 @@ export class PrepApiService {
   /** Trainingslinien gegen diesen Spieler (2026-10-07) — Grenze/Zwilling wie die Karte. */
   trainingLines(id: number, o: PrepOptions, q: TrainingLinesQuery): Promise<TrainingLines> {
     return firstValueFrom(this.http.get<TrainingLines>(`/api/prep/player/${id}/training-lines`, { params: opts(trainingLinesParams(q), o) }));
+  }
+
+  /** „Show me lines to train": Trainings-Repertoire anlegen — Grenze/Zwilling wie die Karte. */
+  trainingRepertoire(id: number, o: PrepOptions, q: TrainingLinesQuery): Promise<TrainingRepertoireResult> {
+    return firstValueFrom(this.http.post<TrainingRepertoireResult>(`/api/prep/player/${id}/training-repertoire`,
+      trainingRepertoireBody(q, { all: o.all || null, twin: o.twin || null })));
   }
 
   tree(id: number, o: PrepOptions, color: 'w' | 's', line: string[], filter?: TreeFilter): Promise<OpeningTree> {

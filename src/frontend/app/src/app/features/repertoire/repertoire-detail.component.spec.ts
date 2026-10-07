@@ -188,3 +188,39 @@ describe('RepertoireDetailComponent Beliebtheit im Baum', () => {
     expect(position).not.toHaveBeenCalled();
   });
 });
+
+describe('RepertoireDetailComponent ?trainColor= (Trainings-Repertoire, 2026-10-07)', () => {
+  const PGN = '[Event "Rep"]\n[Black "Najdorf"]\n\n1. e4 c5 2. Nf3 d6 *\n\n[Event "Rep"]\n[Black "Offen"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 *\n';
+
+  async function make() {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+    comp.id = 77;
+    comp.viewerService.loadPgn(PGN);
+    comp.trainableGames = comp.viewerService.games;
+    return comp;
+  }
+
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_77'));
+
+  it('legt die Farbe einmal für jedes Kapitel fest — im eigenen Repertoire', async () => {
+    const comp = await make();
+    comp.repertoire = { id: 77, isOwner: true } as any;
+    (comp as any).pendingTrainColor = 'w';
+    (comp as any).applyTrainColor();
+    expect(JSON.parse(localStorage.getItem('rookhub_rep_train_chaptercolor_77')!)).toEqual({ Najdorf: 'w', Offen: 'w' });
+    expect((comp as any).pendingTrainColor).toBeNull();
+  });
+
+  it('in einem geteilten (fremden) Repertoire nicht', async () => {
+    const comp = await make();
+    comp.repertoire = { id: 77, isOwner: false } as any;
+    (comp as any).pendingTrainColor = 'b';
+    (comp as any).applyTrainColor();
+    expect(localStorage.getItem('rookhub_rep_train_chaptercolor_77')).toBeNull();
+  });
+});

@@ -1,11 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { Router } from '@angular/router';
 import { TreeFilter } from '@lh/core/league.models';
 import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
-import { TRAINING_LINES_KEY, TrainingLine, TrainingLines, lineText, percent, trainingFilterParams } from './training-lines';
+import { TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+  trainingRepertoireName } from './training-lines';
 
 interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
 
@@ -54,8 +58,13 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
             </p>
             @if (d.lines.length) {
               <div class="tl-actions">
-                <button type="button" class="btn-pri" [disabled]="busy()" (click)="trainAll(d)">Alle in dieser Reihenfolge trainieren</button>
+                @if (canCreate) {
+                  <button type="button" class="btn-pri tl-create" [disabled]="busy()" [title]="t('hint')" (click)="createRepertoire(d)">
+                    {{ creating() ? t('busy') : t('button') }}</button>
+                }
+                <button type="button" class="btn-sec" [disabled]="busy()" (click)="trainAll(d)">Alle in dieser Reihenfolge trainieren</button>
               </div>
+              @if (createNote(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
               <ol class="tl-list">
                 @for (l of d.lines; track l.key) {
                   <li [class.never]="l.neverReached">
@@ -64,8 +73,15 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                       @if (l.chapter) { <span class="muted small tl-chapter">{{ l.chapter }}</span> }
                     </div>
                     <div class="tl-stats">
-                      @if (l.neverReached) { <span class="tl-p muted">nie erreicht</span> }
-                      @else {
+                      @if (l.neverReached) {
+                        <span class="tl-p muted">nie erreicht</span>
+                        @if (l.reached) { <span class="muted small">nur über Zugumstellung: {{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}</span> }
+                      } @else if (l.missing > 0) {
+                        <span class="tl-p tl-partial" [title]="'Er spielt die Linie bis ' + until(d, l) + ', danach ist er anders weitergegangen'">
+                          bis {{ until(d, l) }} dabei</span>
+                        <span class="muted small">Anfang {{ pct(l.prefixProbability) }}, {{ l.prefixReached }}
+                          {{ l.prefixReached === 1 ? 'Partie' : 'Partien' }}</span>
+                      } @else {
                         <span class="tl-p" [title]="'Wahrscheinlichkeit, dass ' + who() + ' diese Linie spielt'">{{ pct(l.probability) }}</span>
                         <span class="muted small">{{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}@if (l.lastYear) {, zuletzt {{ l.lastYear }}}</span>
                       }
@@ -101,12 +117,16 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
     .tl-chapter { display: block; }
     .tl-stats { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; }
     .tl-p { font-weight: 600; min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+    .tl-partial { font-weight: 500; }
+    .tl-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
   `],
 })
 export class TrainingLinesComponent {
   private readonly api = inject(PLAYER_CARD_API);
   private readonly router = inject(Router);
   private readonly handoff = inject(HandoffService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly translate = inject(TranslateService, { optional: true });
 
   /** Womit die API den Gegner findet (Karte: `key` bzw. FIDE-ID). */
   readonly key = input.required<string>();
@@ -120,11 +140,56 @@ export class TrainingLinesComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
+  readonly creating = signal(false);
+  readonly createNote = signal<{ text: string; err: boolean } | null>(null);
+  /** „Show me lines to train" anbieten: die API kann es (Spielervorbereitung, LeagueHub). */
+  readonly canCreate = !!this.api.trainingRepertoire;
   readonly who = computed(() => (this.name() || '').split(',')[0].trim() || 'diesen Gegner');
   private seq = 0;
   private loadedFor = '';
 
   readonly text = (l: TrainingLine) => lineText(l.moves, l.start);
+  readonly until = (d: TrainingLines, l: TrainingLine) => matchedUntil(l, d.color ?? 'w') ?? '?';
+
+  /** Text des Knopfs „Show me lines to train" und seiner Meldungen: in RookHub in der Sprache der Oberfläche (en/de/hr/hu),
+   *  in LeagueHub (stellt keine Sprache ein) deutsch wie die übrige Karte. */
+  t(key: string, params: Record<string, unknown> = {}): string {
+    const name = trainingRepertoireName(this.name());
+    const all = { name, max: TRAINING_REPERTOIRE_MAX, ...params };
+    if (this.translate?.getCurrentLang()) {
+      const v = this.translate.instant(`prep.trainingRepertoire.${key}`, all);
+      if (v && v !== `prep.trainingRepertoire.${key}`) return v;
+    }
+    return GERMAN[key]?.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => String(all[k as keyof typeof all] ?? '')) ?? key;
+  }
+
+  /** „Show me lines to train": Repertoire „Prep: … Jahr" anlegen (gleichnamiges wird nach Rückfrage ersetzt) und öffnen. */
+  async createRepertoire(d: TrainingLines): Promise<void> {
+    const create = this.api.trainingRepertoire;
+    if (!create || d.repertoire === null) return;
+    if (!(await firstValueFrom(this.confirm.ask(this.t('confirm'))))) return;
+    this.busy.set(true);
+    this.creating.set(true);
+    this.createNote.set(null);
+    try {
+      const r = await create.call(this.api, this.key(), {
+        repertoire: d.repertoire, color: d.color, filter: this.filter(),
+        chapterColors: readChapterColorOverrides(d.repertoire),
+      });
+      this.createNote.set({ text: this.t('done', { name: r.name, lines: r.lines }), err: false });
+      // Die Kapitel des neuen Repertoires trainieren mit der Farbe von hier (die Auto-Erkennung könnte an einer Auswahl kippen).
+      const params: Record<string, string> = d.color ? { trainColor: d.color } : {};
+      if (this.handoff.rookHubUrl) await this.handoff.jumpToRookHub(`repertoires/${r.id}?${new URLSearchParams(params).toString()}`);
+      else await this.router.navigate(['/repertoires', r.id], { queryParams: params });
+    } catch (e) {
+      // die Quelle heißt selbst wie das Ziel: der Server schützt sie (400 sameRepertoire)
+      const same = (e as { error?: { reason?: string } })?.error?.reason === 'sameRepertoire';
+      this.createNote.set({ text: this.t(same ? 'sameRepertoire' : 'failed'), err: true });
+    } finally {
+      this.creating.set(false);
+      this.busy.set(false);
+    }
+  }
   readonly pct = percent;
 
   toggle(): void {
@@ -211,3 +276,14 @@ export class TrainingLinesComponent {
     }
   }
 }
+
+/** Die Texte des Knopfs in LeagueHub (ohne Sprache) — dieselben wie `prep.trainingRepertoire.*` in de.json. */
+const GERMAN: Record<string, string> = {
+  button: 'Trainings-Repertoire anlegen',
+  hint: 'Legt dir ein eigenes Repertoire „{{name}}“ mit den (bis zu {{max}}) Linien an, die du gegen diesen Gegner am wahrscheinlichsten triffst.',
+  confirm: 'Repertoire „{{name}}“ mit den bis zu {{max}} wichtigsten Linien gegen diesen Gegner anlegen? Ein vorhandenes gleichnamiges wird ersetzt.',
+  busy: 'Lege an …',
+  failed: 'Das Trainings-Repertoire ließ sich nicht anlegen.',
+  done: '„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …',
+  sameRepertoire: 'Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um.',
+};

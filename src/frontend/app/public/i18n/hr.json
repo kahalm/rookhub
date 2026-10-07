@@ -4538,6 +4538,15 @@
     "n": "Promoviraj u skakača"
   },
   "prep": {
+    "trainingRepertoire": {
+      "button": "Napravi repertoar za trening",
+      "hint": "Napravi ti vlastiti repertoar „{{name}}“ s (do {{max}}) linija koje ćeš protiv ovog protivnika najvjerojatnije susresti.",
+      "confirm": "Napraviti repertoar „{{name}}“ s do {{max}} najvažnijih linija protiv ovog protivnika? Postojeći repertoar istog imena bit će zamijenjen.",
+      "busy": "Izrađujem …",
+      "failed": "Repertoar za trening nije se mogao napraviti.",
+      "done": "„{{name}}“ je spreman ({{lines}} linija) — otvara se …",
+      "sameRepertoire": "Odabrani repertoar se i sam zove „{{name}}“ — prepisao bi sam sebe. Odaberi drugi ili ga preimenuj."
+    },
     "title": "Priprema za protivnika",
     "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",
     "searchLabel": "Ime ili FIDE ID",

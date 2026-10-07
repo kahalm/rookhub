@@ -21,6 +21,7 @@ import { isInfoLineGame } from './repertoire-info-line.util';
 import { ExplorerPosition, ExplorerSettings, RepertoireExplorerService } from './repertoire-explorer.service';
 import { Subscription, switchMap } from 'rxjs';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
+import { TrainColor, setChapterColorOverride } from './repertoire-color.util';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
@@ -454,6 +455,10 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     const plyParam = this.route.snapshot.queryParamMap.get('ply');
     this.focusPly = plyParam != null ? parseInt(plyParam, 10) : null;
     if (this.focusLineKey && !modeParam) this.mode = 'lines';
+    // Frisch angelegtes Trainings-Repertoire („Show me lines to train", 2026-10-07): ?trainColor=w|b legt die Trainingsfarbe
+    // aller seiner Kapitel fest — die Auto-Erkennung könnte an der Auswahl der Linien kippen.
+    const tc = this.route.snapshot.queryParamMap.get('trainColor');
+    this.pendingTrainColor = tc === 'w' || tc === 'b' ? tc : null;
     this.loadRepertoire();
   }
 
@@ -516,6 +521,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);
         this.trainableGames = this.viewerService.games.filter((_, i) => !isInfoLineGame(this.viewerService.rawGames[i]));
+        this.applyTrainColor();
         this.loadTreePopularity();   // direkt im Baum geöffnet (?mode=tree)
         this.applyFocusLine();
         this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand
@@ -526,6 +532,17 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.recomputeFilter();
       }
     });
+  }
+
+  /** Trainingsfarbe aus ?trainColor= einmalig für jedes Kapitel festlegen (nur im eigenen Repertoire). */
+  private pendingTrainColor: TrainColor | null = null;
+
+  private applyTrainColor(): void {
+    const color = this.pendingTrainColor;
+    this.pendingTrainColor = null;
+    if (!color || this.repertoire?.isOwner === false) return;
+    for (const chapter of new Set(this.trainableGames.map(g => (g.headers['Black'] || '').trim())))
+      setChapterColorOverride(this.id, chapter, color);
   }
 
   /** Springt einmalig auf die per Deep-Link (?line=&ply=) gewählte Linie/Stellung (Stellungssuche „Ansehen"). */

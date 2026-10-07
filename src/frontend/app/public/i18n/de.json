@@ -4538,6 +4538,15 @@
     "n": "In einen Springer umwandeln"
   },
   "prep": {
+    "trainingRepertoire": {
+      "button": "Trainings-Repertoire anlegen",
+      "hint": "Legt dir ein eigenes Repertoire „{{name}}“ mit den (bis zu {{max}}) Linien an, die du gegen diesen Gegner am wahrscheinlichsten triffst.",
+      "confirm": "Repertoire „{{name}}“ mit den bis zu {{max}} wichtigsten Linien gegen diesen Gegner anlegen? Ein vorhandenes gleichnamiges wird ersetzt.",
+      "busy": "Lege an …",
+      "failed": "Das Trainings-Repertoire ließ sich nicht anlegen.",
+      "done": "„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …",
+      "sameRepertoire": "Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um."
+    },
     "title": "Gegner vorbereiten",
     "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",
     "searchLabel": "Name oder FIDE-ID",

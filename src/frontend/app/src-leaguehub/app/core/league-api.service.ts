@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Account, AccountChecks, AccountInput, AdminClub, Broadcast, ClubInput, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, RhGroup, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
-import { TrainingLines, TrainingLinesQuery, trainingLinesParams } from '@rh/shared/player-card/training-lines';
+import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody } from '@rh/shared/player-card/training-lines';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -86,6 +86,12 @@ export class LeagueApiService {
   trainingLines(fide: string, q: TrainingLinesQuery): Promise<TrainingLines> {
     return firstValueFrom(this.http.get<TrainingLines>(`/api/league/player/${encodeURIComponent(fide)}/training-lines`,
       { params: trainingLinesParams(q) }));
+  }
+
+  /** „Show me lines to train" (2026-10-07): legt das Trainings-Repertoire gegen diesen Spieler an — nur angemeldet. */
+  trainingRepertoire(fide: string, q: TrainingLinesQuery): Promise<TrainingRepertoireResult> {
+    return firstValueFrom(this.http.post<TrainingRepertoireResult>(`/api/league/player/${encodeURIComponent(fide)}/training-repertoire`,
+      trainingRepertoireBody(q)));
   }
 
   // ── Online-Konten eines Spielers (0.605.0, league.manage) ──

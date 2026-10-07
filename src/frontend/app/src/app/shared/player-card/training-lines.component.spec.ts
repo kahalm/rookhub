@@ -5,14 +5,22 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { PLAYER_CARD_API } from './player-card-api';
 import { TRAINING_LINES_KEY, TrainingLines } from './training-lines';
 import { TrainingLinesComponent } from './training-lines.component';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { TranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 
 const DATA: TrainingLines = {
   repertoires: [{ id: 7, name: 'Sizilianisch (Weiß)' }, { id: 9, name: 'Französisch' }],
-  repertoire: 7, color: 'w', colors: ['w', 'b'], games: 12, total: 3, more: 1,
+  repertoire: 7, color: 'w', colors: ['w', 'b'], games: 12, total: 4, more: 1,
   lines: [
-    { key: 'lA', end: 'x', start: null, chapter: 'Najdorf', moves: ['e4', 'c5', 'Nf3', 'd6'], probability: 0.5, reached: 6, lastYear: 2025, neverReached: false },
-    { key: 'lB', end: 'y', start: null, chapter: '', moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], probability: 0.0004, reached: 1, lastYear: 2019, neverReached: false },
-    { key: 'lC', end: 'z', start: null, chapter: '', moves: ['e4', 'c6', 'd4', 'd5'], probability: 0, reached: 0, lastYear: null, neverReached: true },
+    { key: 'lA', end: 'x', start: null, chapter: 'Najdorf', moves: ['e4', 'c5', 'Nf3', 'd6'], probability: 0.5, reached: 6, lastYear: 2025,
+      neverReached: false, matched: 2, missing: 0, prefixProbability: 0.5, prefixReached: 6 },
+    { key: 'lB', end: 'y', start: null, chapter: '', moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], probability: 0.0004, reached: 1, lastYear: 2019,
+      neverReached: false, matched: 2, missing: 0, prefixProbability: 0.0004, prefixReached: 1 },
+    { key: 'lD', end: 'w', start: null, chapter: 'Drache', moves: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'g6'], probability: 0, reached: 0,
+      lastYear: null, neverReached: false, matched: 3, missing: 1, prefixProbability: 0.12, prefixReached: 4 },
+    { key: 'lC', end: 'z', start: null, chapter: '', moves: ['e4', 'c6', 'd4', 'd5'], probability: 0, reached: 0, lastYear: null,
+      neverReached: true, matched: 0, missing: 2, prefixProbability: 0, prefixReached: 12 },
   ],
 };
 
@@ -22,19 +30,28 @@ describe('TrainingLinesComponent', () => {
   let trainerParams: jasmine.Spy | undefined;
   let router: jasmine.SpyObj<Router>;
   let handoff: { rookHubUrl: string | null; jumpToRookHub: jasmine.Spy };
+  let trainingRepertoire: jasmine.Spy;
+  let confirmAsk: jasmine.Spy;
+  let lang: string | undefined;
   const el = () => fixture.nativeElement as HTMLElement;
   const buttons = (text: string) => Array.from(el().querySelectorAll<HTMLButtonElement>('button')).filter(b => b.textContent?.includes(text));
 
   function build(withPrepParams = false): void {
     trainingLines = jasmine.createSpy('trainingLines').and.resolveTo(DATA);
+    trainingRepertoire = jasmine.createSpy('trainingRepertoire').and.resolveTo({ id: 501, name: 'Prep: Huber, Franz 2026', lines: 4, replaced: false });
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     trainerParams = withPrepParams ? jasmine.createSpy('trainerParams').and.returnValue({ opponent: 'prep:42', all: 'true' }) : undefined;
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
     handoff = { rookHubUrl: null, jumpToRookHub: jasmine.createSpy('jumpToRookHub').and.resolveTo() };
     const api = { card: jasmine.createSpy(), profile: jasmine.createSpy(), recent: jasmine.createSpy(), tree: jasmine.createSpy(),
-      pgn: jasmine.createSpy(), trainingLines, ...(trainerParams ? { trainerParams } : {}) };
+      pgn: jasmine.createSpy(), trainingLines, trainingRepertoire, ...(trainerParams ? { trainerParams } : {}) };
+    const translate = { getCurrentLang: () => lang,
+      instant: (k: string, p: Record<string, unknown>) => k === 'prep.trainingRepertoire.button' ? 'Show me lines to train'
+        : k === 'prep.trainingRepertoire.confirm' ? `Create ${p['name']}?` : k };
     TestBed.configureTestingModule({ imports: [TrainingLinesComponent], providers: [
       { provide: PLAYER_CARD_API, useValue: api }, { provide: Router, useValue: router }, { provide: HandoffService, useValue: handoff },
+      { provide: ConfirmService, useValue: { ask: confirmAsk } }, { provide: TranslateService, useValue: translate },
     ] });
     fixture = TestBed.createComponent(TrainingLinesComponent);
     fixture.componentRef.setInput('key', withPrepParams ? '42' : '1606921');
@@ -50,6 +67,7 @@ describe('TrainingLinesComponent', () => {
   }
 
   beforeEach(() => {
+    lang = undefined;
     localStorage.removeItem(TRAINING_LINES_KEY);
     localStorage.removeItem('rookhub_rep_train_chaptercolor_9');
   });
@@ -66,7 +84,7 @@ describe('TrainingLinesComponent', () => {
     expect(trainingLines).toHaveBeenCalledOnceWith('1606921', jasmine.objectContaining({
       repertoire: null, color: null, filter: { source: 'both', speeds: ['blitz'], years: 3, withUnsure: false } }));
     const items = Array.from(el().querySelectorAll('.tl-list li'));
-    expect(items.length).toBe(3);
+    expect(items.length).toBe(4);
     expect(items[0].textContent).toContain('1.e4 c5 2.Sf3 d6');
     expect(items[0].textContent).toContain('Najdorf');
     expect(items[0].textContent).toContain('50 %');
@@ -74,8 +92,11 @@ describe('TrainingLinesComponent', () => {
     expect(items[1].textContent).toContain('3.Lb5');
     expect(items[1].textContent).toContain('<0,1 %');
     expect(items[1].textContent).toContain('1 Partie, zuletzt 2019');
-    expect(items[2].classList).toContain('never');
-    expect(items[2].textContent).toContain('nie erreicht');
+    // aufgefüllt: nur der Anfang getroffen — „bis Zug … dabei" mit der Wahrscheinlichkeit des Anfangs
+    expect(items[2].textContent).toContain('bis 3…cxd4 dabei');
+    expect(items[2].textContent).toContain('Anfang 12 %, 4 Partien');
+    expect(items[3].classList).toContain('never');
+    expect(items[3].textContent).toContain('nie erreicht');
     expect(el().textContent).toContain('gezählt: 12 Partien von Huber mit Schwarz');
     expect(el().textContent).toContain('1 weitere Linie');
     // beide Farben im Repertoire: Umschalter
@@ -114,7 +135,7 @@ describe('TrainingLinesComponent', () => {
     fixture.detectChanges();
     expect(trainingLines.calls.count()).toBe(2);
     expect(trainingLines.calls.mostRecent().args[1].repertoire).toBeNull();
-    expect(el().querySelectorAll('.tl-list li').length).toBe(3);
+    expect(el().querySelectorAll('.tl-list li').length).toBe(4);
     expect(el().querySelector('.err')).toBeNull();
   });
 
@@ -163,5 +184,64 @@ describe('TrainingLinesComponent', () => {
     await openSection();
     const host = fixture.nativeElement as HTMLElement;
     expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+  });
+
+  describe('„Show me lines to train" (Trainings-Repertoire)', () => {
+    const createBtn = () => el().querySelector<HTMLButtonElement>('button.tl-create')!;
+
+    it('LeagueHub ohne Sprache: deutsch; Rückfrage nennt den Namen und das Ersetzen; danach per Absprung zur neuen Seite', async () => {
+      build();
+      handoff.rookHubUrl = 'https://rookhub.example';
+      await openSection();
+      expect(createBtn().textContent).toContain('Trainings-Repertoire anlegen');
+      createBtn().click();
+      await fixture.whenStable();
+      const year = new Date().getFullYear();
+      expect(confirmAsk.calls.mostRecent().args[0]).toContain(`„Prep: Huber, Franz ${year}“`);
+      expect(confirmAsk.calls.mostRecent().args[0]).toContain('gleichnamiges wird ersetzt');
+      expect(trainingRepertoire).toHaveBeenCalledOnceWith('1606921', jasmine.objectContaining({
+        repertoire: 7, color: 'w', filter: { source: 'both', speeds: ['blitz'], years: 3, withUnsure: false } }));
+      expect(handoff.jumpToRookHub).toHaveBeenCalledWith('repertoires/501?trainColor=w');
+    });
+
+    it('in RookHub in der Sprache der Oberfläche; nach Erfolg zur Repertoire-Seite (mit Trainingsfarbe)', async () => {
+      lang = 'en';
+      build(true);
+      await openSection();
+      expect(createBtn().textContent).toContain('Show me lines to train');
+      createBtn().click();
+      await fixture.whenStable();
+      expect(confirmAsk.calls.mostRecent().args[0]).toContain('Create Prep: Huber, Franz');
+      expect(router.navigate).toHaveBeenCalledWith(['/repertoires', 501], { queryParams: { trainColor: 'w' } });
+    });
+
+    it('Rückfrage verneint: nichts passiert; Fehler: sagt es', async () => {
+      build();
+      await openSection();
+      confirmAsk.and.returnValue(of(false));
+      createBtn().click();
+      await fixture.whenStable();
+      expect(trainingRepertoire).not.toHaveBeenCalled();
+
+      confirmAsk.and.returnValue(of(true));
+      trainingRepertoire.and.rejectWith(new HttpErrorResponse({ status: 400 }));
+      createBtn().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el().querySelector('.err')?.textContent).toContain('ließ sich nicht anlegen');
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('Quelle heißt wie das Ziel (400 sameRepertoire): sagt genau das', async () => {
+      build();
+      trainingRepertoire.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'sameRepertoire' } }));
+      await openSection();
+      createBtn().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el().querySelector('.err')?.textContent).toContain('würde sich selbst überschreiben');
+      expect(el().querySelector('.err')?.textContent).toContain('Prep: Huber, Franz');
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
   });
 });

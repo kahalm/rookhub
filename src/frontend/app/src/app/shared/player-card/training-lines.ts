@@ -22,7 +22,54 @@ export interface TrainingLine {
   /** Partien, die die Stellung nach dem letzten Gegnerzug der Linie erreicht haben. */
   reached: number;
   lastYear: number | null;
+  /** Er trifft von vorne weg keinen Gegnerzug der Linie. */
   neverReached: boolean;
+  /** Gegnerzüge der Linie, die er von vorne weg getroffen hat (Auffüllregel, 2026-10-07). */
+  matched: number;
+  /** Gegnerzüge, die danach fehlen — 0 = voll getroffen; gereiht wird in Stufen nach dieser Zahl. */
+  missing: number;
+  /** Wahrscheinlichkeit des getroffenen Anfangs. */
+  prefixProbability: number;
+  /** Partien, die die tiefste getroffene Stellung erreicht haben. */
+  prefixReached: number;
+}
+
+/** Antwort von `POST …/training-repertoire` („Show me lines to train"). */
+export interface TrainingRepertoireResult { id: number; name: string; lines: number; replaced: boolean }
+
+/** Höchstens so viele Linien kommen in ein Trainings-Repertoire (fest am Server). */
+export const TRAINING_REPERTOIRE_MAX = 50;
+
+/** Name des Trainings-Repertoires wie am Server: „Prep: Huber, Franz 2026". */
+export function trainingRepertoireName(opponent: string, year = new Date().getFullYear()): string {
+  return `Prep: ${opponent.trim() || '?'} ${year}`;
+}
+
+/** Rumpf von `POST …/training-repertoire`: dieselbe Auswahl wie die Abfrage. */
+export function trainingRepertoireBody(q: TrainingLinesQuery, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  const f = trainingFilterParams(q.filter);
+  return {
+    repertoire: q.repertoire, color: q.color,
+    chapterColors: q.chapterColors && Object.keys(q.chapterColors).length ? q.chapterColors : null,
+    source: f['source'] ?? null, speeds: f['speeds'] ?? null, years: f['years'] ? Number(f['years']) : null,
+    unsure: f['unsure'] === 'true' ? true : null, ...extra,
+  };
+}
+
+/** Bis zu welchem Zug ein nicht voll getroffene Linie dabei ist: Zugnummer des letzten getroffenen Gegnerzugs („5…a6"), `null` = keiner. */
+export function matchedUntil(l: Pick<TrainingLine, 'moves' | 'start' | 'matched'>, color: 'w' | 'b'): string | null {
+  if (l.matched <= 0) return null;
+  const parts = (l.start ?? '').split(' ');
+  let black = parts[1] === 'b';
+  let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
+  let seen = 0;
+  for (const m of l.moves) {
+    const opponent = black ? color === 'w' : color === 'b';
+    if (opponent && ++seen === l.matched) return black ? `${no}…${de(m)}` : `${no}.${de(m)}`;
+    if (black) no++;
+    black = !black;
+  }
+  return null;
 }
 
 export interface TrainingLines {

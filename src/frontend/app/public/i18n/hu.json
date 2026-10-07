@@ -4538,6 +4538,15 @@
     "n": "Átváltozás huszárrá"
   },
   "prep": {
+    "trainingRepertoire": {
+      "button": "Edzésrepertoár létrehozása",
+      "hint": "Saját repertoárt hoz létre „{{name}}” néven azokkal a (legfeljebb {{max}}) vonalakkal, amelyekkel ez ellen az ellenfél ellen a legvalószínűbben találkozol.",
+      "confirm": "Létrehozod a(z) „{{name}}” repertoárt a legfeljebb {{max}} legfontosabb vonallal ez ellen az ellenfél ellen? A meglévő azonos nevű repertoár lecserélődik.",
+      "busy": "Létrehozás …",
+      "failed": "Az edzésrepertoárt nem sikerült létrehozni.",
+      "done": "„{{name}}” elkészült ({{lines}} vonal) — megnyitás …",
+      "sameRepertoire": "A kiválasztott repertoár neve maga is „{{name}}” — önmagát írná felül. Válassz másikat, vagy nevezd át."
+    },
     "title": "Felkészülés ellenfélre",
     "intro": "Keressen meg bármely játékost a játszmaadatbázisban (ChessBase Megabase és Lumbra GigaBase): megnyitási profil, megnyitásfa és a legutóbbi játszmák visszajátszásra.",
     "searchLabel": "Név vagy FIDE-azonosító",
