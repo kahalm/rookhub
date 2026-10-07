@@ -2587,7 +2587,7 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
 - Trainingslinien gegen einen Gegner (0.701.0/0.702.0): `TrainingLinesService` + `OpponentTrainingLines` (Services/Prep)
   hinter `GET /api/prep/player/{id}/training-lines` (prep.view; Partien wie die Karte inkl. `all`/`twin`, Filter wie das
   Profil) und `GET /api/league/player/{fide}/training-lines` (eigene Datei `LeagueTrainingController`, league.view, KEINE
-  Fassung unter `/s/{token}`). Parameter: `repertoire`, `color` w/b, `chapterColors` (JSON, eigene Kapitelfarben des
+  Fassung unter `/s/{token}`). Parameter: `repertoire` (optional, ohne = alle markierten, siehe unten), `color` w/b, `chapterColors` (JSON, eigene Kapitelfarben des
   Trainers), `take` (Vorgabe `Prep:TrainingLines` = 50, höchstens 5000), `source`/`speeds`/`years`/`unsure` (ohne `source`:
   Brett + online; die Karte schickt immer ihren Filter mit). Nur EIGENE Repertoires mit `UseForExtension` (Oberfläche:
   „Für Extension und Vorbereitung verwenden"), sonst 404. Rechnung: nur Partien des Gegners mit der anderen Farbe, je die
@@ -2610,6 +2610,15 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   mit höchstens 50 Linien (min(`Prep:TrainingLines`, 50)) in der gereihten Reihenfolge, je Linie der UNVERÄNDERTE
   PGN-Abschnitt der Quelle; `UseForExtension=false`, `Kind` wie die Quelle. Gleichnamiges eigenes wird ersetzt
   (gleiche Id; Dateien über `RepertoireService.DeleteFileAsync`, neue per `UploadFileAsync` — SR-Stand je lineKey bleibt).
+- Alle markierten statt Auswahl (0.709.0, Wunsch: „nicht ein repertoir auswählen sondern die markierten verwenden"): ohne
+  `repertoire` sind die Quellen ALLE eigenen Repertoires mit `UseForExtension`, nach Name sortiert; je Repertoire die
+  Kapitel der gewählten Farbe (Kapitelfarbe wie im Trainer), alle Linien in EINER Reihung mit der Auffüllregel. Gleicher
+  Linien-Schlüssel in mehreren Repertoires: einmal, das nach Name erste gewinnt. Antwort: `repertoires[{ id, name,
+  colors }]`, `repertoire` = `null` (alle) bzw. die Id (Filter), je Linie `repertoireId`/`repertoireName`.
+  `chapterColors` flach (`{ Kapitel: "w" }`, nur für ein gewähltes Repertoire — so schickt es der Trainer) oder je
+  Repertoire (`{ "7": { Kapitel: "b" } }`). Anlegen aus allen markierten: höchstens 50 Linien quer über alle Quellen,
+  Beschreibung nennt sie, `Kind` gemeinsam sonst None; ein markiertes Repertoire mit dem Zielnamen wird als Quelle
+  AUSGENOMMEN (und dann ersetzt), nur als einzige Quelle 400 `sameRepertoire`.
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |

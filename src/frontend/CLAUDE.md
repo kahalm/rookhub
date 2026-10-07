@@ -252,6 +252,12 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   ?trainColor=w|b` (LeagueHub per `jumpToRookHub`). `repertoire-detail` setzt mit `?trainColor=` einmal die
   Trainingsfarbe ALLER Kapitel (nur eigenes Repertoire) — die Auto-Erkennung könnte an einer Auswahl von Linien kippen.
   Die Liste zeigt nicht voll getroffene Linien als „bis 5…a6 dabei" + „Anfang p %".
+- Alle markierten (0.709.0): Vorgabe der Karte ist `repertoire = null` (alle markierten); oben der Farbumschalter „Ich
+  habe Weiß / Schwarz" (`.tl-color`), daneben das Menü `.tl-rep` mit „Alle markierten" + den einzelnen Repertoires
+  (gemerkt in `lh-training-lines` = `{ repertoire, color }`). Jede Linie zeigt „Repertoire · Kapitel"; „Trainieren"
+  springt in den Trainer von `line.repertoireId`. „Alle in dieser Reihenfolge trainieren" (`.tl-all`) nur bei
+  Einzelwahl, sonst der Hinweis `.tl-all-hint` auf „Trainings-Repertoire anlegen". Eigene Kapitelfarben gehen je
+  Repertoire mit (beim ersten Laden über alle markierten einmal nachgeladen, weil die Ids erst dann bekannt sind).
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 
