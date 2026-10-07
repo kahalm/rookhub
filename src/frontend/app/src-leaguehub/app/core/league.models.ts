@@ -112,6 +112,21 @@ export interface Broadcast {
   error: string | null;
 }
 
+/** Ein Verein in der Verwaltung (`GET /api/league/admin/clubs`, 0.700.0). `source`: `null` = chess-results (Tirol),
+ *  `ligamanager` = Bayern. `clubGames` ohne archivierte Partien. */
+export interface AdminClub {
+  id: number; name: string; anonName: string; teamPrefix: string; source: string | null;
+  createdAt: string | null;
+  clubGames: number;
+  groups: { id: number; name: string; members: number }[];
+}
+
+/** Eingabe für Anlegen/Ändern eines Vereins (`source: ""` = chess-results). */
+export interface ClubInput { name: string; teamPrefix: string; anonName: string; source: string }
+
+/** Eine Gruppe aus RookHubs Gruppenverwaltung (`GET /api/admin/groups`, `GroupDto`). */
+export interface RhGroup { id: number; name: string; description?: string | null; memberCount: number; isEveryone: boolean }
+
 /** Eingabe für ein Konto: Name oder kopierte Profiladresse. Fehlende Felder bleiben beim Ändern, wie sie sind. */
 export interface AccountInput { site?: string | null; user?: string | null; sure?: boolean | null; comment?: string | null }
 

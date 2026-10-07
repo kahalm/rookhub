@@ -19,6 +19,7 @@ export function provideTestClub(club: LeagueClubInfo | null = TEST_CLUB, clubs: 
     anonName: computed(() => active()?.anonName ?? 'Verein'),
     clubName: computed(() => active()?.name ?? 'dem Verein'),
     ensure: () => of(current()?.id ?? null),
+    reload: () => of(current()?.id ?? null),
     select: (id: number) => current.set(clubs.find(c => c.id === id) ?? current()),
     useShareClub: (c: LeagueClubInfo | null | undefined) => shareClub.set(c ?? null),
     useShare: () => { /* der Verein des Links: im Test wie gesetzt */ },

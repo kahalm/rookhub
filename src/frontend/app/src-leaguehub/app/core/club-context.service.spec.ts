@@ -85,6 +85,20 @@ describe('club-context (Vereine als Mandanten, 0.698.0)', () => {
       expect(ctx.current()?.name).toBe('SK Weiler');
     });
 
+    it('reload: fragt /me erneut, kennt den neuen Verein und behält den gewählten (0.700.0)', async () => {
+      const ctx = TestBed.inject(ClubContextService);
+      const first = firstValueFrom(ctx.ensure());
+      http.expectOne('/api/league/me').flush({ clubs: [SCHWAZ, WEILER], current: 2 } satisfies LeagueMe);
+      expect(await first).toBe(2);
+      const again = firstValueFrom(ctx.ensure());                     // ohne reload: kein zweites /me
+      expect(await again).toBe(2);
+      const NEU = { id: 3, name: 'SK Neu', anonName: 'Neu', teamPrefix: 'Neu', source: null };
+      const r = firstValueFrom(ctx.reload());
+      http.expectOne('/api/league/me').flush({ clubs: [SCHWAZ, WEILER, NEU], current: null } satisfies LeagueMe);
+      expect(await r).toBe(2);
+      expect(ctx.clubs().map(c => c.name)).toEqual(['SK Testdorf', 'SK Weiler', 'SK Neu']);
+    });
+
     it('ohne Anmeldung: kein /me, der Aufruf geht ohne Verein', async () => {
       user = null;
       const r = firstValueFrom(client.get('/api/league/index'));

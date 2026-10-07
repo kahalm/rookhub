@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountChecks, AccountInput, Broadcast, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountChecks, AccountInput, AdminClub, Broadcast, ClubInput, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, RhGroup, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -138,6 +138,33 @@ export class LeagueApiService {
   }
 
   /** Per Link (Turnier oder Runde) hinzufügen und gleich einspielen. */
+  // ---- Vereine verwalten (0.700.0, nur Admins mit league.manage) ----
+
+  adminClubs(): Promise<AdminClub[]> {
+    return firstValueFrom(this.http.get<AdminClub[]>('/api/league/admin/clubs'));
+  }
+
+  createClub(input: ClubInput): Promise<AdminClub> {
+    return firstValueFrom(this.http.post<AdminClub>('/api/league/admin/clubs', input));
+  }
+
+  updateClub(id: number, input: ClubInput): Promise<AdminClub> {
+    return firstValueFrom(this.http.put<AdminClub>(`/api/league/admin/clubs/${id}`, input));
+  }
+
+  addClubGroup(clubId: number, groupId: number): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/league/admin/clubs/${clubId}/groups/${groupId}`, null));
+  }
+
+  removeClubGroup(clubId: number, groupId: number): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`/api/league/admin/clubs/${clubId}/groups/${groupId}`));
+  }
+
+  /** RookHubs Gruppen (Admin-Endpunkt, `groups.manage` — Admins haben jedes Recht). */
+  groups(): Promise<RhGroup[]> {
+    return firstValueFrom(this.http.get<RhGroup[]>('/api/admin/groups'));
+  }
+
   addBroadcast(url: string): Promise<{ tourId: string; name: string; games: number; finished: boolean; error: string | null }> {
     return firstValueFrom(this.http.post<{ tourId: string; name: string; games: number; finished: boolean; error: string | null }>(
       '/api/league/admin/broadcasts', { url }));

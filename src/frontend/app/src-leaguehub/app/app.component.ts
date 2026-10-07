@@ -55,6 +55,7 @@ import { ClubContextService } from './core/club-context.service';
           @if (nav().manage) {
             <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a>
             <a routerLink="/uebertragungen" routerLinkActive="on">Übertragungen</a>
+            @if (nav().admin) { <a routerLink="/vereine" routerLinkActive="on">Vereine</a> }
           }
         </nav>
       }
@@ -87,7 +88,9 @@ export class LeagueHubAppComponent implements OnInit {
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
   readonly nav = computed(() => {
     this.user();
-    return { view: this.auth.has('league.view'), contribute: this.auth.has('league.contribute'), manage: this.auth.has('league.manage') };
+    const manage = this.auth.has('league.manage');
+    // „Vereine" (0.700.0): der Server verlangt Admin UND league.manage
+    return { view: this.auth.has('league.view'), contribute: this.auth.has('league.contribute'), manage, admin: manage && !!this.auth.isAdmin };
   });
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });

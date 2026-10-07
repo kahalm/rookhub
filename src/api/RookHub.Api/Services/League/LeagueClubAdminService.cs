@@ -21,17 +21,24 @@ public sealed class LeagueClubAdminService(AppDbContext db, ILogger<LeagueClubAd
     /// <summary>Die erlaubten Liga-Quellen eines Vereins: <c>null</c> = chess-results (Tirol), <c>ligamanager</c> = Bayern.</summary>
     public static bool ValidSource(string? source) => source is null || source == LigamanagerSource.Source;
 
+    /// <summary>Alle Vereine für die Verwaltung (LeagueHub `/vereine`, 0.700.0) →
+    /// <c>[{ id, name, anonName, teamPrefix, source, createdAt, clubGames, groups[{ id, name, members }] }]</c>.
+    /// <c>clubGames</c> zählt die Vereinspartien ohne archivierte (Query-Filter), <c>members</c> die Konten der Gruppe.</summary>
     public async Task<JsonArray> ListAsync(CancellationToken ct)
     {
         var clubs = await db.LeagueClubs.AsNoTracking().OrderBy(c => c.Id).ToListAsync(ct);
         var groups = await (from m in db.LeagueClubMembers.AsNoTracking()
                             join g in db.Groups.AsNoTracking() on m.GroupId equals g.Id
-                            select new { m.ClubId, g.Id, g.Name }).ToListAsync(ct);
+                            select new { m.ClubId, g.Id, g.Name, Members = db.UserGroups.Count(u => u.GroupId == g.Id) }).ToListAsync(ct);
+        var games = await db.LeagueClubGames.AsNoTracking().GroupBy(g => g.ClubId)
+            .Select(g => new { ClubId = g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.ClubId, g => g.Count, ct);
         return new JsonArray(clubs.Select(c =>
         {
             var o = LeagueService.ClubJson(c);
+            o["createdAt"] = DateTime.SpecifyKind(c.CreatedAt, DateTimeKind.Utc);
+            o["clubGames"] = games.GetValueOrDefault(c.Id);
             o["groups"] = new JsonArray(groups.Where(g => g.ClubId == c.Id).OrderBy(g => g.Name)
-                .Select(g => (JsonNode)new JsonObject { ["id"] = g.Id, ["name"] = g.Name }).ToArray());
+                .Select(g => (JsonNode)new JsonObject { ["id"] = g.Id, ["name"] = g.Name, ["members"] = g.Members }).ToArray());
             return (JsonNode)o;
         }).ToArray());
     }

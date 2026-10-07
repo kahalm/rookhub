@@ -346,6 +346,28 @@ public class LeagueClubTenancyTests : IDisposable
         Assert.Equal("Taktiken aus Vereinspartien – SK Neustadt", (await _db.Books.SingleAsync(b => b.FileName == TacticHarvestService.ClubBookOf(club.Id))).DisplayName);
     }
 
+    [Fact]
+    public async Task Admin_List_CarriesGroupsWithMembers_GameCount_AndCreatedAt()
+    {
+        await SeedAsync();
+        _db.LeagueClubGames.AddRange(
+            new LeagueClubGame { ClubId = TestClubs.HomeId, White = "A", Black = "B", Pgn = "x", MovesHash = "h1" },
+            new LeagueClubGame { ClubId = TestClubs.HomeId, White = "C", Black = "D", Pgn = "x", MovesHash = "h2" },
+            new LeagueClubGame { ClubId = TestClubs.HomeId, White = "E", Black = "F", Pgn = "x", MovesHash = "h3", ArchivedAt = Now },
+            new LeagueClubGame { ClubId = TestClubs.OtherId, White = "G", Black = "H", Pgn = "x", MovesHash = "h4" });
+        await _db.SaveChangesAsync();
+        var list = await new LeagueClubAdminService(_db, NullLogger<LeagueClubAdminService>.Instance).ListAsync(default);
+
+        var home = list.Single(c => (int)c!["id"]! == TestClubs.HomeId)!;
+        Assert.Equal(2, (int)home["clubGames"]!);   // die archivierte zählt nicht
+        var group = home["groups"]!.AsArray().Single()!;
+        Assert.Equal((HomeGroup, "Testdorf", 3), ((int)group["id"]!, (string)group["name"]!, (int)group["members"]!));
+        Assert.NotNull(home["createdAt"]);
+        var other = list.Single(c => (int)c!["id"]! == TestClubs.OtherId)!;
+        Assert.Equal(1, (int)other["clubGames"]!);
+        Assert.Equal(2, (int)other["groups"]![0]!["members"]!);
+    }
+
     [Theory]
     [InlineData("Schwaz", "Schwaz", true)]
     [InlineData("Schwaz", "Schwaz 2", true)]

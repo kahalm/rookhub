@@ -279,7 +279,8 @@ public class LeagueController : BaseApiController
 
     public sealed record ClubRequest(string? Name, string? TeamPrefix, string? AnonName, string? Source);
 
-    /// <summary>Alle Vereine samt ihrer Gruppen → <c>[{ id, name, anonName, teamPrefix, source, groups[{ id, name }] }]</c>.</summary>
+    /// <summary>Alle Vereine samt Gruppen und Partienzahl → <c>[{ id, name, anonName, teamPrefix, source, createdAt, clubGames,
+    /// groups[{ id, name, members }] }]</c> (<see cref="LeagueClubAdminService.ListAsync"/>).</summary>
     [HttpGet("admin/clubs")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> Clubs([FromServices] LeagueClubAdminService admin, CancellationToken ct) =>

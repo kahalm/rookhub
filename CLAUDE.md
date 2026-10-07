@@ -1866,12 +1866,19 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
 * **Oberfläche (0.699.0)**: `ClubContextService` + `leagueClubInterceptor` in `src-leaguehub` (Details in
   `src/frontend/CLAUDE.md`): `GET /api/league/me` einmal je Konto, `?club=` an jeden Aufruf, Umschalter im Kopf bei mehreren
   Vereinen (gemerkt in `lh-club`, Wechsel lädt neu), alle Texte mit „Schwaz" lesen Name/`AnonName` des Vereins, Teilen-Seiten
-  den Verein des Links. Eine Verwaltungs-Oberfläche für Vereine gibt es noch nicht (Admin-Endpunkte per API).
+  den Verein des Links.
+* **Vereinsverwaltung `/vereine` (0.700.0)**: Reiter „Vereine" in LeagueHub, nur Admins mit `league.manage` (sonst
+  Sperrkarte; der Server verlangt beides). Liste (Name, `anonName`, `teamPrefix`, Quelle, Gruppen, Vereinspartien, angelegt),
+  Anlegen/Ändern (400/409 `reason` → Klartext; Quelle umstellen mit Rückfrage — `PUT` darf alle vier Felder ändern, die
+  Startseite filtert nach `Source`), Gruppen zuordnen über eine Suche in `GET /api/admin/groups` (`groups.manage`, Admins haben
+  jedes Recht; „Everyone" und Gruppen ANDERER Vereine nicht wählbar, obwohl der Server eine andere Zuordnung ersetzen würde)
+  und lösen mit Rückfrage. Nach jeder Änderung `ClubContextService.reload()` (neues `/api/league/me`, gewählter Verein
+  bleibt). Seite `src-leaguehub/app/features/clubs/clubs-page.component.ts`.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
 | GET | `/api/league/me` | angemeldet | `{ clubs[{ id, name, anonName, teamPrefix, source }], current }` — `current` = Verein ohne `?club=` (`null` bei mehreren ohne Vorgabe) |
-| GET | `/api/league/admin/clubs` | Admin + manage | Alle Vereine samt Gruppen `[{ id, name, anonName, teamPrefix, source, groups[{ id, name }] }]` |
+| GET | `/api/league/admin/clubs` | Admin + manage | Alle Vereine `[{ id, name, anonName, teamPrefix, source, createdAt, clubGames, groups[{ id, name, members }] }]` — `clubGames` ohne archivierte, `members` = Konten der Gruppe (0.700.0) |
 | POST | `/api/league/admin/clubs` | Admin + manage | `{ name, teamPrefix, anonName, source }` → Verein; 400 `invalidName`/`invalidTeamPrefix`/`invalidAnonName`/`invalidSource`, 409 `duplicate` |
 | PUT | `/api/league/admin/clubs/{id}` | Admin + manage | Ändern (fehlende Felder bleiben, `source: ""` = chess-results); 404 |
 | POST | `/api/league/admin/clubs/{id}/groups/{groupId}` | Admin + manage | Gruppe zuordnen → 204; 404 `clubNotFound`/`groupNotFound`, 400 `everyone` |

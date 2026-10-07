@@ -205,6 +205,10 @@ Mehrere Vereine: Umschalter im Kopf (`app.component`), der Wechsel merkt sich de
 `importSummary(r, anon)` bekommt den Namen mit. Startseite: Vorauswahl der Mannschaft über `ownsTeam(teamPrefix, team)` (SPIEGEL
 von `LeagueClub.OwnsTeam`). Datenschutz: `LEGAL_SITE.leagueClub` nennt den Verein (`legal.privacy.leagueClub`). Specs:
 `provideTestClub()` aus `core/club-context.testing.ts` (Verein „SK Testdorf"/„Testdorf" — bewusst nicht Schwaz).
+`reload()` (0.700.0) verwirft die gemerkte `/me`-Antwort und fragt neu (gewählter Verein bleibt, solange das Konto dazugehört) —
+die Vereinsverwaltung `/vereine` (`features/clubs/clubs-page.component.ts`, Admin + `league.manage`) ruft es nach Anlegen,
+Ändern, Zuordnen und Lösen, damit der Umschalter im Kopf den neuen Verein kennt. Deren 390-px-Spec misst wie
+`touch-targets.spec` in einem iframe mit den globalen Styles (die Handy-Regeln greifen im 1400-px-Karma-Browser sonst nie).
 
 LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: ohne `share` angemeldet
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort

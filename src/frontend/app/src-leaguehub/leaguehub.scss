@@ -728,3 +728,27 @@ lh-claim-prompt { display: block; }
 .claim-done { margin: 12px 0 0; color: var(--ok); }
 .stats-tbl .exp { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
 .cal-h { margin-top: 14px !important; }
+
+/* Vereine verwalten (0.700.0, /vereine) */
+.clubs-page h2 { margin: 18px 0 6px; }
+.clubs-help { max-width: 72ch; }
+.clubs-bar { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 12px 0 4px; }
+.clubs-tbl { table-layout: auto; }
+.clubs-tbl .club-name { font-weight: 600; overflow-wrap: anywhere; }
+.clubs-tbl .show-s { display: none; font-weight: 400; }
+.clubs-tbl tr.sel td { background: var(--paper); }
+.club-edit { margin-top: 16px; max-width: 760px; }
+.club-edit form { max-width: 560px; }
+.field-hint { font: 400 13px/1.35 var(--body); color: var(--muted); }
+.club-groups, .group-hits { list-style: none; margin: 0 0 8px; padding: 0; }
+.club-groups li, .group-hits li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px;
+  padding: 6px 0; border-top: 1px solid var(--line); }
+.club-groups li > span, .group-hits li > span { min-width: 0; overflow-wrap: anywhere; }
+.club-groups .btn-link.del { color: var(--red); }
+.group-search { margin-top: 14px; }
+.group-hits li.off > span { color: var(--muted); }
+.group-hits .owner { display: block; }
+@media (max-width: 640px) {
+  .clubs-tbl .show-s { display: block; }
+  .club-edit { padding: 14px 12px; }
+}

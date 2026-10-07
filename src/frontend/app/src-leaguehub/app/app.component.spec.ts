@@ -126,3 +126,35 @@ describe('LeagueHubAppComponent Umschalter zwischen Vereinen', () => {
     expect(el.querySelector('.lede')!.textContent).toContain('bayerischen Mannschaftsligen');
   });
 });
+
+/** Vereine verwalten (0.700.0): der Reiter „Vereine" nur für Admins mit league.manage — der Server verlangt beides. */
+describe('LeagueHubAppComponent Reiter „Vereine"', () => {
+  async function tabs(isAdmin: boolean, manage: boolean): Promise<string[]> {
+    const user = { userId: 7, username: 'patrik' };
+    TestBed.configureTestingModule({
+      imports: [LeagueHubAppComponent],
+      providers: [
+        provideRouter([{ path: '**', component: StubPageComponent }]),
+        { provide: AuthService, useValue: { currentUser$: of(user), currentUser: user, isAdmin, has: (p: string) => p !== 'league.manage' || manage, logout: () => {} } },
+        { provide: HandoffService, useValue: { consumeIncoming: () => Promise.resolve(false) } },
+        { provide: LocaleService, useValue: { init: () => {}, applyUnsaved: () => {} } },
+        { provide: ThemeService, useValue: {} },
+        provideTestClub(),
+      ],
+    });
+    const fixture = TestBed.createComponent(LeagueHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav.tabs a')).map(a => a.textContent!.trim());
+  }
+
+  it('Admin mit league.manage sieht ihn, ein Verwalter ohne Admin nicht', async () => {
+    expect(await tabs(true, true)).toContain('Vereine');
+    TestBed.resetTestingModule();
+    const manager = await tabs(false, true);
+    expect(manager).toContain('Übertragungen');
+    expect(manager).not.toContain('Vereine');
+  });
+});

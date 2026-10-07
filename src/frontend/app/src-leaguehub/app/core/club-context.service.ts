@@ -89,7 +89,8 @@ export class ClubContextService {
     this.pendingFor = uid;
     this.pending = this.http.get<LeagueMe>('/api/league/me').pipe(
       map(me => {
-        const pick = pickClub(me, readRemembered());
+        // gemerkt, sonst der bisher gewählte (reload nach der Vereinsverwaltung), sonst die Vorgabe des Servers
+        const pick = pickClub(me, readRemembered() ?? this.current()?.id ?? null);
         this.clubs.set(me.clubs ?? []);
         this.current.set(pick);
         this.loaded.set(true);
@@ -104,6 +105,14 @@ export class ClubContextService {
       shareReplay(1),
     );
     return this.pending;
+  }
+
+  /** Die Vereine neu holen (nach Anlegen/Ändern/Zuordnen in `/vereine`, 0.700.0): der Umschalter kennt dann den neuen Verein.
+   *  Der gewählte Verein bleibt, solange das Konto noch dazugehört. */
+  reload(): Observable<number | null> {
+    this.pending = null;
+    this.pendingFor = null;
+    return this.ensure();
   }
 
   /** Verein wechseln (Umschalter im Kopf): gemerkt; die Seite lädt danach neu, damit nichts vom alten Verein stehen bleibt. */
