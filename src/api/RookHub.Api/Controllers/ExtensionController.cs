@@ -531,6 +531,21 @@ public class ExtensionController : BaseApiController
     /// Nutzers raus (<see cref="ChessableResponseAlertService"/>). Der Dienst kommt per <c>[FromServices]</c>, damit
     /// der ohnehin lange Konstruktor nicht wächst.
     /// </summary>
+    /// <summary>
+    /// RepCheck: „Kurs holen“ ist mit einem Fehler abgebrochen, der KEINE unerwartete Chessable-Antwort war (Fehler in der
+    /// Erweiterung, beim Senden an RookHub …). Log + Admin-Nachricht (<see cref="ChessableResponseAlertService.ReportCrawlErrorAsync"/>).
+    /// </summary>
+    [HttpPost("chessable/crawl-error")]
+    public async Task<IActionResult> ChessableCrawlError([FromBody] ChessableCrawlErrorInputDto dto,
+        [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)
+    {
+        if (dto is null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid bid." });
+        if (string.IsNullOrWhiteSpace(dto.Message))
+            return BadRequest(new { message = "Message required." });
+        return Ok(await alerts.ReportCrawlErrorAsync(GetUserId(), dto, ct));
+    }
+
     [HttpPost("chessable/unexpected-response")]
     public async Task<IActionResult> ChessableUnexpectedResponse([FromBody] ChessableUnexpectedResponseInputDto dto,
         [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)

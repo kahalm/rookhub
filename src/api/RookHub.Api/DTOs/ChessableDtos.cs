@@ -247,6 +247,38 @@ public class ChessableUnexpectedResponseInputDto
 /// innerhalb der Sperrfrist schon vorher).</summary>
 public record ChessableUnexpectedResponseResultDto(bool Banned, bool AdminNotified);
 
+/// <summary>
+/// RepCheck (ab 1.73.0, RookHub 0.696.0): „Kurs holen" ist mit einem Fehler abgebrochen, der KEINE unerwartete Chessable-Antwort war —
+/// etwa ein Fehler in der Erweiterung selbst oder beim Senden an RookHub. Kommt über den direkten Kanal der Erweiterung,
+/// nicht über den RookHub-Client (dessen Ausfall genau so ein Fall ist, 07.10.2026).
+/// </summary>
+public class ChessableCrawlErrorInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.MaxLength(300)]
+    public string? CourseName { get; set; }
+    /// <summary>book oder repertoire.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string? Target { get; set; }
+    /// <summary>Wo es passierte: structure, chapters, lines, sending, finishing.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string? Phase { get; set; }
+    /// <summary>Der Fehlertext, wie ihn der Nutzer sah.</summary>
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(1000)]
+    public string Message { get; set; } = string.Empty;
+    /// <summary>Wie viele Linien dieser Lauf bis zum Abbruch schon geholt/gesendet hatte.</summary>
+    public int? LinesFetched { get; set; }
+    public int? LinesSent { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string? ExtensionVersion { get; set; }
+    /// <summary>Grob: „Firefox 143", „Chrome 141" — kein voller User-Agent.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(40)]
+    public string? Browser { get; set; }
+}
+
+public record ChessableCrawlErrorResultDto(bool AdminNotified);
+
 /// <summary>Batch „schwierige Züge": je Linie (oid) die von der Extension geernteten Felder.
 /// Quellen ergänzen sich: getList → NHard, getGame → ProblemMoves (thisUser) + LastReviewed;
 /// fehlende Felder lassen den gespeicherten Wert unangetastet.</summary>

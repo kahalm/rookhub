@@ -1290,4 +1290,23 @@ public class ExtensionControllerTests : IDisposable
         Assert.True(dto.AdminNotified);   // seit 07.10.2026 jede unerwartete Antwort, nicht nur eine Sperre
         Assert.Contains("(bid 207313)", Assert.Single(_db.AdminMessages).Body);
     }
+
+    [Fact]
+    public async Task ChessableCrawlError_ValidatesBidAndMessage_AndNotifiesTheAdmins()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, "extension");
+
+        Assert.IsType<BadRequestObjectResult>(await _controller.ChessableCrawlError(
+            new ChessableCrawlErrorInputDto { Bid = "abc", Message = "x" }, Alerts(), default));
+        Assert.IsType<BadRequestObjectResult>(await _controller.ChessableCrawlError(
+            new ChessableCrawlErrorInputDto { Bid = "27821", Message = "  " }, Alerts(), default));
+        Assert.Empty(_db.AdminMessages);
+
+        var res = await _controller.ChessableCrawlError(
+            new ChessableCrawlErrorInputDto { Bid = "27821", Message = "Not connected to RookHub", Phase = "sending" }, Alerts(), default);
+        var dto = Assert.IsType<ChessableCrawlErrorResultDto>(Assert.IsType<OkObjectResult>(res).Value);
+        Assert.True(dto.AdminNotified);
+        Assert.Contains("„Not connected to RookHub“", Assert.Single(_db.AdminMessages).Body);
+    }
 }

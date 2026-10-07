@@ -104,6 +104,52 @@ public class ChessableResponseAlertService
         return new ChessableUnexpectedResponseResultDto(true, true);
     }
 
+    /// <summary>Erste Zeile jeder automatischen Nachricht zu einem abgebrochenen „Kurs holen“ (Fehler ohne Chessable-Anteil).</summary>
+    public const string CrawlErrorMessagePrefix = "[RepCheck] Kurs holen abgebrochen";
+
+    /// <summary>
+    /// „Kurs holen“ ist mit einem Fehler abgebrochen, der keine unerwartete Chessable-Antwort war (RepCheck ≥ 1.73.0):
+    /// Warnung im Log (<c>ChessableCrawlError</c>) und Admin-Nachricht, je Nutzer UND Kurs höchstens eine in
+    /// <see cref="UnexpectedMessageCooldown"/>. Anlass 07.10.2026: in Firefox scheiterte jeder Versand an RookHub,
+    /// der Nutzer sah „RepCheck was updated or reloaded“, und auf dem Server stand davon nichts.
+    /// </summary>
+    public async Task<ChessableCrawlErrorResultDto> ReportCrawlErrorAsync(int userId, ChessableCrawlErrorInputDto dto,
+        CancellationToken ct = default)
+    {
+        using (LogContext.PushProperty("LogTags", "chessable,extension,crawl"))
+            _logger.LogWarning(
+                "ChessableCrawlError: user {UserId}, bid {Bid}, target {Target}, phase {Phase}, lines {LinesFetched} geholt / " +
+                "{LinesSent} gesendet, RepCheck {ExtensionVersion}, {Browser}: {ErrorMessage}",
+                userId, dto.Bid, dto.Target, dto.Phase, dto.LinesFetched, dto.LinesSent, dto.ExtensionVersion, dto.Browser,
+                dto.Message);
+
+        var seit = DateTime.UtcNow - UnexpectedMessageCooldown;
+        var marke = $"(bid {dto.Bid})";
+        var schonGemeldet = await _db.AdminMessages.AnyAsync(m => m.UserId == userId && !m.FromAdmin
+            && m.CreatedAt >= seit && m.Body.StartsWith(CrawlErrorMessagePrefix) && m.Body.Contains(marke), ct);
+        if (!schonGemeldet)
+            await _messages.SendFromUserAsync(userId, BuildCrawlErrorMessage(dto));
+        return new ChessableCrawlErrorResultDto(true);
+    }
+
+    internal static string BuildCrawlErrorMessage(ChessableCrawlErrorInputDto dto)
+    {
+        var course = string.IsNullOrWhiteSpace(dto.CourseName) ? "?" : dto.CourseName.Trim();
+        var lines = new List<string>
+        {
+            CrawlErrorMessagePrefix,
+            "„Kurs holen“ in RepCheck ist mit einem Fehler abgebrochen (keine unerwartete Chessable-Antwort, sondern ein Fehler "
+                + "in der Erweiterung oder beim Senden an RookHub).",
+            "",
+            $"Kurs: {course} (bid {dto.Bid}) — https://www.chessable.com/course/{dto.Bid}/",
+            $"Ziel: {dto.Target ?? "?"}, Phase: {dto.Phase ?? "?"}, Linien: {dto.LinesFetched?.ToString() ?? "?"} geholt / "
+                + $"{dto.LinesSent?.ToString() ?? "?"} gesendet",
+            $"Fehler: „{dto.Message.Trim()}“",
+            $"RepCheck {dto.ExtensionVersion ?? "?"}, {dto.Browser ?? "Browser ?"}, {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC",
+        };
+        return string.Join("\n", lines);
+    }
+
     internal static string BuildBanMessage(ChessableUnexpectedResponseInputDto dto) => BuildMessage(dto, banned: true);
 
     internal static string BuildMessage(ChessableUnexpectedResponseInputDto dto, bool banned)

@@ -181,4 +181,42 @@ public class ChessableResponseAlertServiceTests : IDisposable
         Assert.Contains(" …", body);
         Assert.True(body.Length < ChessableResponseAlertService.MessageSnippetChars + 500);
     }
+
+    // ----- Abbruch ohne Chessable-Anteil (RepCheck ≥ 1.73.0, gewünscht 07.10.2026) -----
+
+    private static ChessableCrawlErrorInputDto CrawlError(string bid = "27821") => new()
+    {
+        Bid = bid, CourseName = "Chess Tactics from Scratch", Target = "book", Phase = "sending",
+        Message = "RepCheck was updated or reloaded while this page was open", LinesFetched = 41, LinesSent = 0,
+        ExtensionVersion = "1.70.0", Browser = "Firefox 143",
+    };
+
+    [Fact]
+    public async Task CrawlError_LogsAndSendsAdminMessageWithTheDetails()
+    {
+        var res = await _service.ReportCrawlErrorAsync(7, CrawlError());
+
+        Assert.True(res.AdminNotified);
+        var msg = Assert.Single(_db.AdminMessages);
+        Assert.StartsWith(ChessableResponseAlertService.CrawlErrorMessagePrefix, msg.Body);
+        Assert.Contains("(bid 27821)", msg.Body);
+        Assert.Contains("Ziel: book, Phase: sending, Linien: 41 geholt / 0 gesendet", msg.Body);
+        Assert.Contains("„RepCheck was updated or reloaded while this page was open“", msg.Body);
+        Assert.Contains("RepCheck 1.70.0, Firefox 143", msg.Body);
+        Assert.Contains(_db.Notifications, n => n.UserId == 1);
+        var entry = Assert.Single(_log.Events);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.StartsWith("ChessableCrawlError", entry.Message);
+    }
+
+    [Fact]
+    public async Task CrawlError_SameCourseWithinAnHour_OneMessage_ButEveryOneLogged_UnexpectedDoesNotSuppressIt()
+    {
+        await _service.ReportAsync(7, Report(snippet: "{}", reason: "shape"));   // unerwartete Antwort, eigenes Präfix
+        await _service.ReportCrawlErrorAsync(7, CrawlError("104929"));
+        await _service.ReportCrawlErrorAsync(7, CrawlError("104929"));
+
+        Assert.Equal(2, _db.AdminMessages.Count());
+        Assert.Equal(3, _log.Events.Count);
+    }
 }
