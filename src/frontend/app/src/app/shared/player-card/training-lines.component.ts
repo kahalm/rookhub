@@ -8,7 +8,7 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
-import { TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
 interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
@@ -37,19 +37,21 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
               „Für Extension und Vorbereitung verwenden“ anhaken.</p>
           } @else {
             <div class="tl-pick">
-              <label>Repertoire
-                <select [value]="d.repertoire ?? ''" (change)="pickRepertoire($any($event.target).value)" [disabled]="loading()">
-                  @for (r of d.repertoires; track r.id) { <option [value]="r.id" [selected]="r.id === d.repertoire">{{ r.name }}</option> }
-                </select>
-              </label>
+              <!-- Vorgabe: alle markierten Repertoires der Farbe in EINER Reihung (Wunsch 2026-10-07); die Farbe ist die Wahl -->
               @if (d.colors.length > 1) {
-                <div class="seg" role="group" aria-label="Deine Farbe">
+                <div class="seg tl-color" role="group" [attr.aria-label]="t('yourColor')">
                   @for (c of d.colors; track c) {
                     <button type="button" [attr.aria-pressed]="d.color === c" [disabled]="loading()" (click)="pickColor(c)">
-                      {{ c === 'w' ? 'Ich mit Weiß' : 'Ich mit Schwarz' }}</button>
+                      {{ t(c === 'w' ? 'iHaveWhite' : 'iHaveBlack') }}</button>
                   }
                 </div>
               }
+              <label>Repertoire
+                <select class="tl-rep" (change)="pickRepertoire($any($event.target).value)" [disabled]="loading()">
+                  <option value="" [selected]="d.repertoire === null">{{ t('allMarked') }}</option>
+                  @for (r of d.repertoires; track r.id) { <option [value]="r.id" [selected]="r.id === d.repertoire">{{ r.name }}</option> }
+                </select>
+              </label>
             </div>
             <p class="muted small tl-basis" role="status">
               @if (d.color) { Du mit {{ d.color === 'w' ? 'Weiß' : 'Schwarz' }} — gezählt: {{ d.games }}
@@ -62,15 +64,18 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                   <button type="button" class="btn-pri tl-create" [disabled]="busy()" [title]="t('hint')" (click)="createRepertoire(d)">
                     {{ creating() ? t('busy') : t('button') }}</button>
                 }
-                <button type="button" class="btn-sec" [disabled]="busy()" (click)="trainAll(d)">Alle in dieser Reihenfolge trainieren</button>
+                @if (d.repertoire !== null) {
+                  <button type="button" class="btn-sec tl-all" [disabled]="busy()" (click)="trainAll(d)">Alle in dieser Reihenfolge trainieren</button>
+                }
               </div>
+              @if (d.repertoire === null) { <p class="muted small tl-all-hint">{{ t('trainAllHint') }}</p> }
               @if (createNote(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
               <ol class="tl-list">
                 @for (l of d.lines; track l.key) {
                   <li [class.never]="l.neverReached">
                     <div class="tl-line">
                       <span class="tl-moves">{{ text(l) }}</span>
-                      @if (l.chapter) { <span class="muted small tl-chapter">{{ l.chapter }}</span> }
+                      <span class="muted small tl-chapter">{{ origin(d, l) }}</span>
                     </div>
                     <div class="tl-stats">
                       @if (l.neverReached) {
@@ -91,9 +96,9 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                   </li>
                 }
               </ol>
-              @if (d.more) { <p class="muted small">… und {{ d.more }} weitere {{ d.more === 1 ? 'Linie' : 'Linien' }} (im Trainer mit „Alle“ dabei).</p> }
+              @if (d.more) { <p class="muted small">… und {{ d.more }} weitere {{ d.more === 1 ? 'Linie' : 'Linien' }}.</p> }
             } @else if (!loading()) {
-              <p class="muted small">Dieses Repertoire hat für diese Farbe keine Linien.</p>
+              <p class="muted small">Für diese Farbe gibt es keine Linien.</p>
             }
           }
         } @else if (loading()) { <p class="muted small">Lade Trainingslinien …</p> }
@@ -150,6 +155,9 @@ export class TrainingLinesComponent {
 
   readonly text = (l: TrainingLine) => lineText(l.moves, l.start);
   readonly until = (d: TrainingLines, l: TrainingLine) => matchedUntil(l, d.color ?? 'w') ?? '?';
+  /** Woher die Linie stammt: bei „Alle markierten" Repertoire · Kapitel, sonst das Kapitel. */
+  readonly origin = (d: TrainingLines, l: TrainingLine) =>
+    [d.repertoire === null ? l.repertoireName : '', l.chapter].filter(x => !!x).join(' · ');
 
   /** Text des Knopfs „Show me lines to train" und seiner Meldungen: in RookHub in der Sprache der Oberfläche (en/de/hr/hu),
    *  in LeagueHub (stellt keine Sprache ein) deutsch wie die übrige Karte. */
@@ -166,7 +174,7 @@ export class TrainingLinesComponent {
   /** „Show me lines to train": Repertoire „Prep: … Jahr" anlegen (gleichnamiges wird nach Rückfrage ersetzt) und öffnen. */
   async createRepertoire(d: TrainingLines): Promise<void> {
     const create = this.api.trainingRepertoire;
-    if (!create || d.repertoire === null) return;
+    if (!create || !d.repertoires.length) return;
     if (!(await firstValueFrom(this.confirm.ask(this.t('confirm'))))) return;
     this.busy.set(true);
     this.creating.set(true);
@@ -174,7 +182,7 @@ export class TrainingLinesComponent {
     try {
       const r = await create.call(this.api, this.key(), {
         repertoire: d.repertoire, color: d.color, filter: this.filter(),
-        chapterColors: readChapterColorOverrides(d.repertoire),
+        chapterColors: this.overrides(d.repertoire, d.repertoires.map(r => r.id)),
       });
       this.createNote.set({ text: this.t('done', { name: r.name, lines: r.lines }), err: false });
       // Die Kapitel des neuen Repertoires trainieren mit der Farbe von hier (die Auto-Erkennung könnte an einer Auswahl kippen).
@@ -200,10 +208,10 @@ export class TrainingLinesComponent {
     }
   }
 
+  /** Filter: '' = alle markierten (Vorgabe), sonst ein Repertoire. Die Farbe bleibt, wenn es sie dort gibt. */
   pickRepertoire(value: string): void {
-    const id = Number(value);
-    if (!id) return;
-    void this.load({ repertoire: id, color: null });
+    const id = Number(value) || null;
+    void this.load({ repertoire: id, color: this.data()?.color ?? null });
   }
 
   pickColor(c: 'w' | 'b'): void {
@@ -228,13 +236,20 @@ export class TrainingLinesComponent {
     try {
       const d = await fetch.call(this.api, key, {
         repertoire: want.repertoire, color: want.color, filter,
-        chapterColors: want.repertoire ? readChapterColorOverrides(want.repertoire) : null,
+        chapterColors: this.overrides(want.repertoire, this.data()?.repertoires.map(r => r.id) ?? []),
       });
       if (my !== this.seq) return;
+      // Erste Abfrage über alle markierten: die Ids kennt die Seite erst jetzt — gibt es eigene Kapitelfarben, einmal mit ihnen.
+      if (want.repertoire === null && !this.data() && !retried
+          && Object.keys(this.overrides(null, d.repertoires.map(r => r.id)) ?? {}).length) {
+        this.data.set(d);
+        void this.load({ repertoire: null, color: d.color }, true);
+        return;
+      }
       this.data.set(d);
       this.loadedFor = `${key}|${JSON.stringify(filter)}`;
       // nur eine Bequemlichkeit — scheitert still (localStorage voll/gesperrt)
-      writeJson(localStore(), TRAINING_LINES_KEY, { repertoire: d.repertoire, color: want.color ? d.color : null });
+      writeJson(localStore(), TRAINING_LINES_KEY, { repertoire: d.repertoire, color: d.color });
     } catch (e) {
       if (my !== this.seq) return;
       // das gemerkte Repertoire gibt es nicht mehr (gelöscht, nicht mehr freigegeben): einmal ohne Vorgabe
@@ -248,9 +263,23 @@ export class TrainingLinesComponent {
     }
   }
 
-  /** Eine Linie im Trainer. */
+  /** Eigene Kapitelfarben (Trainer, je Gerät): flach für ein gewähltes Repertoire, sonst je Repertoire; `null` = keine. */
+  private overrides(repertoire: number | null, all: number[]): ChapterColorOverrides | null {
+    if (repertoire !== null) {
+      const flat = readChapterColorOverrides(repertoire);
+      return Object.keys(flat).length ? flat : null;
+    }
+    const per: ChapterColorOverrides = {};
+    for (const id of all) {
+      const m = readChapterColorOverrides(id);
+      if (Object.keys(m).length) per[String(id)] = m;
+    }
+    return Object.keys(per).length ? per : null;
+  }
+
+  /** Eine Linie im Trainer ihres Repertoires. */
   train(d: TrainingLines, l: TrainingLine): Promise<void> {
-    return this.go(d, { line: l.key, chapter: l.chapter || null });
+    return this.go(d, { line: l.key, chapter: l.chapter || null }, l.repertoireId);
   }
 
   /** Alle Linien dieses Repertoires und dieser Farbe, in der Reihenfolge nach diesem Gegner. */
@@ -258,15 +287,15 @@ export class TrainingLinesComponent {
     return this.go(d, {});
   }
 
-  private async go(d: TrainingLines, extra: Record<string, string | null>): Promise<void> {
-    if (d.repertoire === null) return;
+  private async go(d: TrainingLines, extra: Record<string, string | null>, repertoire = d.repertoire): Promise<void> {
+    if (repertoire === null) return;
     const params: Record<string, string> = {
       ...this.api.trainerParams?.(this.key()) ?? { opponent: `league:${this.key()}` },
       ...(d.color ? { color: d.color } : {}),
       ...trainingFilterParams(this.filter()),
     };
     for (const [k, v] of Object.entries(extra)) if (v) params[k] = v;
-    const path = `repertoires/${d.repertoire}/train`;
+    const path = `repertoires/${repertoire}/train`;
     this.busy.set(true);
     try {
       if (this.handoff.rookHubUrl) await this.handoff.jumpToRookHub(`${path}?${new URLSearchParams(params).toString()}`);
@@ -286,4 +315,9 @@ const GERMAN: Record<string, string> = {
   failed: 'Das Trainings-Repertoire ließ sich nicht anlegen.',
   done: '„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …',
   sameRepertoire: 'Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um.',
+  allMarked: 'Alle markierten',
+  yourColor: 'Deine Farbe',
+  iHaveWhite: 'Ich habe Weiß',
+  iHaveBlack: 'Ich habe Schwarz',
+  trainAllHint: '„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst.',
 };

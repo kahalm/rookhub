@@ -4545,7 +4545,12 @@
       "busy": "Izrađujem …",
       "failed": "Repertoar za trening nije se mogao napraviti.",
       "done": "„{{name}}“ je spreman ({{lines}} linija) — otvara se …",
-      "sameRepertoire": "Odabrani repertoar se i sam zove „{{name}}“ — prepisao bi sam sebe. Odaberi drugi ili ga preimenuj."
+      "sameRepertoire": "Odabrani repertoar se i sam zove „{{name}}“ — prepisao bi sam sebe. Odaberi drugi ili ga preimenuj.",
+      "allMarked": "Svi označeni",
+      "yourColor": "Tvoja boja",
+      "iHaveWhite": "Imam bijele",
+      "iHaveBlack": "Imam crne",
+      "trainAllHint": "„Vježbaj sve ovim redoslijedom“ postoji za pojedinačni repertoar. Za sve označene zajedno: „Napravi repertoar za trening“ — skuplja najvažnije linije u jedan repertoar koji onda vježbaš."
     },
     "title": "Priprema za protivnika",
     "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",

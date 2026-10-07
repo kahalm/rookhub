@@ -41,16 +41,13 @@ public class LeagueTrainingController : BaseApiController
     {
         req ??= new(null, null, null, null, null, null, null, null, null);
         var filter = LeagueProfileStore.TreeFilter.Parse(req.Source ?? "both", req.Speeds, req.Years, onlySure: req.Unsure != true);
-        var name = fide;
+        // Name (für „Prep: <Name> <Jahr>" und den Namensschutz) und Partien in einem — der Name steht erst damit fest
+        var (n, games) = await lines.LeagueGamesAsync(fide, filter, ct);
         TrainingLinesService.Created? r;
         try
         {
-            r = await lines.CreateRepertoireAsync(GetUserId(), "", req.ToQuery(), async () =>
-            {
-                var (n, games) = await lines.LeagueGamesAsync(fide, filter, ct);
-                if (!string.IsNullOrWhiteSpace(n)) name = n;
-                return games;
-            }, ct, () => name);
+            r = await lines.CreateRepertoireAsync(GetUserId(), string.IsNullOrWhiteSpace(n) ? fide : n, req.ToQuery(),
+                () => Task.FromResult(games), ct);
         }
         catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(new { id = r.Id, name = r.Name, lines = r.Lines, replaced = r.Replaced });

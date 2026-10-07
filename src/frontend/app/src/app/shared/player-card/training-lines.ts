@@ -15,6 +15,9 @@ export interface TrainingLine {
   /** Eigene Startstellung, `null` = Grundstellung. */
   start: string | null;
   chapter: string;
+  /** Aus welchem markierten Repertoire die Linie stammt (bei „Alle markierten" verschieden). */
+  repertoireId: number;
+  repertoireName: string;
   /** Züge in englischer SAN. */
   moves: string[];
   /** 0…1 — Produkt der Anteile der Gegnerzüge in seinen Partien. */
@@ -73,7 +76,9 @@ export function matchedUntil(l: Pick<TrainingLine, 'moves' | 'start' | 'matched'
 }
 
 export interface TrainingLines {
-  repertoires: { id: number; name: string }[];
+  /** Die markierten Repertoires des Nutzers, nach Name, je mit den Farben ihrer Kapitel. */
+  repertoires: { id: number; name: string; colors: ('w' | 'b')[] }[];
+  /** Gewähltes Repertoire, `null` = alle markierten. */
   repertoire: number | null;
   color: 'w' | 'b' | null;
   colors: ('w' | 'b')[];
@@ -85,11 +90,16 @@ export interface TrainingLines {
   more: number;
 }
 
+/** Eigene Farb-Festlegungen: flach `{ Kapitel: 'w' }` (ein gewähltes Repertoire, so schickt sie der Trainer) oder je Repertoire
+ *  `{ '7': { Kapitel: 'b' } }` (alle markierten). */
+export type ChapterColorOverrides = Record<string, string | Record<string, string>>;
+
 export interface TrainingLinesQuery {
+  /** `null` = alle markierten Repertoires. */
   repertoire: number | null;
   color: 'w' | 'b' | null;
-  /** Eigene Farb-Festlegungen je Kapitel (Trainer) — sonst rechnet der Server die Auto-Erkennung. */
-  chapterColors?: Record<string, string> | null;
+  /** Eigene Farb-Festlegungen je Kapitel — sonst rechnet der Server die Auto-Erkennung. */
+  chapterColors?: ChapterColorOverrides | null;
   take?: number;
   /** Der Filter der Karte (Brett/online, Tempo, Jahre, unsichere Konten); `null` = Vorgabe des Servers (Brett + online). */
   filter?: TreeFilter | null;

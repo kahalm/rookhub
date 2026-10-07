@@ -284,7 +284,10 @@ public class OpponentTrainingLinesTests
         Assert.NotNull(r);
         var reps = r!["repertoires"]!.AsArray();
         Assert.Equal(mine, Assert.Single(reps)!["id"]!.GetValue<int>());
-        Assert.Equal(mine, r["repertoire"]!.GetValue<int>());
+        // 1.e4 c5 2.Sf3 d6 endet mit einem Schwarzzug → Auto-Erkennung: das Kapitel wird als Schwarz trainiert
+        Assert.Equal(new[] { "b" }, reps[0]!["colors"]!.AsArray().Select(x => x!.GetValue<string>()));
+        Assert.Null(r["repertoire"]);                                       // ohne Wahl: alle markierten
+        Assert.Equal(mine, r["lines"]!.AsArray()[0]!["repertoireId"]!.GetValue<int>());
         Assert.Null(await svc.LinesAsync(1, new TrainingLinesService.Query(off, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default));
         Assert.Null(await svc.LinesAsync(1, new TrainingLinesService.Query(foreign, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default));
     }
@@ -350,7 +353,7 @@ public class OpponentTrainingLinesTests
     }
 
     private static TrainingLinesService.Query Q(int? rep, string? color = null) =>
-        new(rep, color, new Dictionary<string, char>(), null);
+        new(rep, color, TrainingLinesService.ChapterOverrides.None, null);
 
     [Fact]
     public async Task CreateRepertoire_CopiesTheRankedSectionsUnchanged_InThisOrder_ReplacesTheSameName()
@@ -449,6 +452,87 @@ public class OpponentTrainingLinesTests
     }
 
     [Fact]
+    public async Task AllMarked_OneRanking_ColorFilteredPerChapter_DuplicateLineOnce_FirstRepertoireByNameWins()
+    {
+        using var db = new Db();
+        var a = await db.RepertoireAsync(1, "A Sizilianisch", Section("Najdorf", "1. e4 c5 2. Nf3 d6 3. d4") + Section("Offen", "1. e4 e5 2. Nf3 Nc6 3. Bb5"));
+        // B: dieselbe Spanisch-Linie (Dublette), eine eigene Weiß-Linie und ein SCHWARZ-Kapitel (gehört nicht in die Weiß-Reihung)
+        var b = await db.RepertoireAsync(1, "B Gemischt", Section("Spanisch", "1. e4 e5 2. Nf3 Nc6 3. Bb5")
+            + Section("Französisch", "1. e4 e6 2. d4 d5 3. Nc3") + Section("Gegen d4", "1. d4 Nf6 2. c4 e6") + Section("Gegen d4", "1. d4 d5 2. c4 e6"));
+        var games = () => Task.FromResult(new List<OpponentTrainingLines.Game>
+        {
+            G("e4 e6 d4 d5 Nc3", false), G("e4 e6 d4 d5 Nc3", false), G("e4 c5 Nf3 d6 d4", false), G("e4 e5 Nf3 Nc6 Bb5", false),
+        });
+
+        var r = (await db.Service().LinesAsync(1, Q(null, "w"), games, default))!;
+        Assert.Null(r["repertoire"]);
+        Assert.Equal("w", r["color"]!.GetValue<string>());
+        var lines = r["lines"]!.AsArray();
+        Assert.Equal(new[] { "e6", "c5", "e5" }, lines.Select(l => l!["moves"]![1]!.GetValue<string>()));   // 2/4, 1/4, 1/4 — kein d4-Kapitel
+        Assert.Equal(b, lines[0]!["repertoireId"]!.GetValue<int>());
+        Assert.Equal("B Gemischt", lines[0]!["repertoireName"]!.GetValue<string>());
+        // die Spanisch-Linie steht in beiden: einmal, aus A (nach Name zuerst)
+        Assert.Equal(a, lines[2]!["repertoireId"]!.GetValue<int>());
+        Assert.Equal("Offen", lines[2]!["chapter"]!.GetValue<string>());
+        var reps = r["repertoires"]!.AsArray();
+        Assert.Equal(new[] { "w", "b" }, reps[1]!["colors"]!.AsArray().Select(x => x!.GetValue<string>()));
+
+        // Schwarz: nur das Schwarz-Kapitel aus B
+        var black = (await db.Service().LinesAsync(1, Q(null, "b"), games, default))!;
+        Assert.Equal(2, black["total"]!.GetValue<int>());
+        Assert.All(black["lines"]!.AsArray(), l => Assert.Equal(b, l!["repertoireId"]!.GetValue<int>()));
+        // Filter auf EIN Repertoire wie bisher
+        var onlyA = (await db.Service().LinesAsync(1, Q(a, "w"), games, default))!;
+        Assert.Equal(a, onlyA["repertoire"]!.GetValue<int>());
+        Assert.Equal(2, onlyA["total"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task CreateFromAllMarked_SectionsOfBothSources_InRankedOrder_AtMost50AcrossAll()
+    {
+        using var db = new Db();
+        var firsts = new[] { "a6", "a5", "b6", "b5", "c6", "c5", "d6", "d5", "e6", "e5", "f6", "f5", "g6", "g5", "h6", "h5", "Na6", "Nc6", "Nf6", "Nh6" };
+        string Lines(string second) => string.Concat(firsts.Select(f => Section("K", $"1. e4 {f} 2. {second}")));
+        var a = await db.RepertoireAsync(1, "A", Lines("Nf3"));           // 20 Linien
+        var b = await db.RepertoireAsync(1, "B", Lines("d4") + Lines("Nc3"));  // 40 Linien
+        // der Gegner spielt 1...c5 und 1...e5 — deren Linien (aus beiden Quellen) zuerst
+        var games = () => Task.FromResult(new List<OpponentTrainingLines.Game> { G("e4 c5 d4", false), G("e4 e5 Nc3", false) });
+        var svc = db.Service();
+
+        var created = (await svc.CreateRepertoireAsync(1, "Huber, Franz", Q(null, "w"), games, default))!;
+        Assert.Equal(50, created.Lines);
+        var ranked = (await svc.LinesAsync(1, new(null, "w", TrainingLinesService.ChapterOverrides.None, 50), games, default))!["lines"]!.AsArray();
+        var file = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id).PgnContent;
+        var copied = RepertoireReach.Build(TrainingLinesService.Sections(file), 'w');
+        Assert.Equal(ranked.Select(l => l!["key"]!.GetValue<string>()), copied.Mainlines.Select(KeyOf));
+        Assert.Contains(ranked, l => l!["repertoireId"]!.GetValue<int>() == a);
+        Assert.Contains(ranked, l => l!["repertoireId"]!.GetValue<int>() == b);
+        Assert.Contains(ranked[0]!["moves"]![1]!.GetValue<string>(), new[] { "c5", "e5" });
+        var rep = db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == created.Id);
+        Assert.Contains("„A“", rep.Description);
+        Assert.Contains("„B“", rep.Description);
+    }
+
+    [Fact]
+    public async Task CreateFromAllMarked_AMarkedRepertoireWithTheTargetName_IsLeftOut_AndReplaced()
+    {
+        using var db = new Db();
+        var name = TrainingLinesService.RepertoireName("Huber, Franz", DateTime.UtcNow.Year);
+        var source = await db.RepertoireAsync(1, "Weiß", Section("K", "1. e4 c5 2. Nf3 d6"));
+        var old = await db.RepertoireAsync(1, name, Section("Alt", "1. d4 d5 2. c4"));   // früher erzeugt und angehakt
+        var created = (await db.Service().CreateRepertoireAsync(1, "Huber, Franz", Q(null, "w"), NoGames, default))!;
+
+        Assert.Equal(old, created.Id);
+        Assert.True(created.Replaced);
+        Assert.Equal(1, created.Lines);
+        var file = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == old).PgnContent;
+        Assert.Contains("1. e4 c5", file);
+        Assert.DoesNotContain("1. d4 d5", file);
+        Assert.DoesNotContain(name, db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == created.Id).Description!.Split(" aus ")[1]);
+        Assert.NotEqual(source, created.Id);
+    }
+
+    [Fact]
     public void Sections_DropInfoLines_LikeTheTrainer()
     {
         var pgn = Section("K", "1. e4 c5") + Section("K", "1. e4 e5", white: "Info | Erklärung") + Section("K", "1. d4 { [%info] } d5");
@@ -462,7 +546,12 @@ public class OpponentTrainingLinesTests
     {
         var s = TrainingLinesService.Sections(Section("A", "1. e4 c5") + Section("A", "1. e4 c5 2. Nf3"));
         Assert.Equal('b', TrainingLinesService.ChapterColors(s, new Dictionary<string, char>())["A"]);
-        Assert.Equal('w', TrainingLinesService.ChapterColors(s, TrainingLinesService.ParseOverrides("{\"A\":\"w\"}"))["A"]);
-        Assert.Empty(TrainingLinesService.ParseOverrides("kaputt"));
+        Assert.Equal('w', TrainingLinesService.ChapterColors(s, TrainingLinesService.ParseOverrides("{\"A\":\"w\"}").Flat)["A"]);
+        Assert.Empty(TrainingLinesService.ParseOverrides("kaputt").Flat);
+        // je Repertoire: { "7": { "A": "b" } } — gilt nur für Repertoire 7; flach nur für ein einzeln gewähltes
+        var both = TrainingLinesService.ParseOverrides("{\"A\":\"w\",\"7\":{\"A\":\"b\"}}");
+        Assert.Equal('b', both.For(7, single: false)["A"]);
+        Assert.Equal('w', both.For(9, single: true)["A"]);
+        Assert.Empty(both.For(9, single: false));
     }
 }

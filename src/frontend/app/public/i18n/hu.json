@@ -4545,7 +4545,12 @@
       "busy": "Létrehozás …",
       "failed": "Az edzésrepertoárt nem sikerült létrehozni.",
       "done": "„{{name}}” elkészült ({{lines}} vonal) — megnyitás …",
-      "sameRepertoire": "A kiválasztott repertoár neve maga is „{{name}}” — önmagát írná felül. Válassz másikat, vagy nevezd át."
+      "sameRepertoire": "A kiválasztott repertoár neve maga is „{{name}}” — önmagát írná felül. Válassz másikat, vagy nevezd át.",
+      "allMarked": "Minden megjelölt",
+      "yourColor": "A színed",
+      "iHaveWhite": "Világossal vagyok",
+      "iHaveBlack": "Sötéttel vagyok",
+      "trainAllHint": "Az „Összes edzése ebben a sorrendben” egyetlen repertoárnál érhető el. Az összes megjelölt együtt: „Edzésrepertoár létrehozása” — ez egy repertoárba gyűjti a legfontosabb vonalakat, amelyet aztán edzel."
     },
     "title": "Felkészülés ellenfélre",
     "intro": "Keressen meg bármely játékost a játszmaadatbázisban (ChessBase Megabase és Lumbra GigaBase): megnyitási profil, megnyitásfa és a legutóbbi játszmák visszajátszásra.",

@@ -99,7 +99,8 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
 
         var r = JsonNode.Parse(await viewer.GetStringAsync(url))!;
         Assert.Equal(mine, Assert.Single(r["repertoires"]!.AsArray())!["id"]!.GetValue<int>());
-        Assert.Equal(mine, r["repertoire"]!.GetValue<int>());
+        Assert.Null(r["repertoire"]);                                 // ohne Wahl: alle markierten
+        Assert.Equal(mine, r["lines"]![0]!["repertoireId"]!.GetValue<int>());
         Assert.Equal("w", r["color"]!.GetValue<string>());
         Assert.Equal(3, r["games"]!.GetValue<int>());
         var lines = r["lines"]!.AsArray();

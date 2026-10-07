@@ -4545,7 +4545,12 @@
       "busy": "Creating …",
       "failed": "The training repertoire could not be created.",
       "done": "“{{name}}” is ready ({{lines}} lines) — opening it …",
-      "sameRepertoire": "The chosen repertoire is itself called “{{name}}” — it would overwrite itself. Choose another one or rename it."
+      "sameRepertoire": "The chosen repertoire is itself called “{{name}}” — it would overwrite itself. Choose another one or rename it.",
+      "allMarked": "All marked",
+      "yourColor": "Your colour",
+      "iHaveWhite": "I have White",
+      "iHaveBlack": "I have Black",
+      "trainAllHint": "“Train all in this order” is available for a single repertoire. For all marked repertoires together: “Show me lines to train” — it collects the most important lines in one repertoire that you then train."
     },
     "title": "Prepare for an opponent",
     "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",

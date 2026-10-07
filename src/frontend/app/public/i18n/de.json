@@ -4545,7 +4545,12 @@
       "busy": "Lege an …",
       "failed": "Das Trainings-Repertoire ließ sich nicht anlegen.",
       "done": "„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …",
-      "sameRepertoire": "Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um."
+      "sameRepertoire": "Das gewählte Repertoire heißt selbst „{{name}}“ — es würde sich selbst überschreiben. Wähle ein anderes oder benenne es um.",
+      "allMarked": "Alle markierten",
+      "yourColor": "Deine Farbe",
+      "iHaveWhite": "Ich habe Weiß",
+      "iHaveBlack": "Ich habe Schwarz",
+      "trainAllHint": "„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst."
     },
     "title": "Gegner vorbereiten",
     "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",

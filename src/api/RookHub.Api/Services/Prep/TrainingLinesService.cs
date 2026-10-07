@@ -30,73 +30,99 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     public sealed record RepertoireRef(int Id, string Name);
 
-    /// <summary>Die Repertoires des Nutzers, die die Vorbereitung nutzen darf: EIGENE (keine geteilten) mit <c>UseForExtension</c>.</summary>
+    /// <summary>Die Repertoires des Nutzers, die die Vorbereitung nutzt: EIGENE (keine geteilten) mit <c>UseForExtension</c>
+    /// („Für Extension und Vorbereitung verwenden"), nach Name — das ist auch die Reihenfolge, in der bei gleicher Linie in
+    /// mehreren Repertoires das erste gewinnt.</summary>
     public Task<List<RepertoireRef>> RepertoiresAsync(int userId, CancellationToken ct) =>
         db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.UseForExtension)
             .OrderBy(r => r.Name).ThenBy(r => r.Id).Select(r => new RepertoireRef(r.Id, r.Name)).ToListAsync(ct);
 
-    /// <summary>Was eine Anfrage gewählt hat: Repertoire, Farbe, eigene Kapitelfarben, Grenze.</summary>
-    public sealed record Query(int? Repertoire, string? Color, IReadOnlyDictionary<string, char> ChapterColors, int? Take);
+    /// <summary>Eigene Farb-Festlegungen je Kapitel: <see cref="Flat"/> = <c>{ "Kapitel": "w" }</c> (gilt für ein EINZELN gewähltes
+    /// Repertoire — so schickt sie der Trainer), <see cref="PerRepertoire"/> = <c>{ "7": { "Kapitel": "b" } }</c> (je Repertoire —
+    /// so schickt sie die Karte für alle markierten).</summary>
+    public sealed record ChapterOverrides(IReadOnlyDictionary<string, char> Flat, IReadOnlyDictionary<int, IReadOnlyDictionary<string, char>> PerRepertoire)
+    {
+        public static readonly ChapterOverrides None = new(new Dictionary<string, char>(), new Dictionary<int, IReadOnlyDictionary<string, char>>());
+
+        public IReadOnlyDictionary<string, char> For(int repertoireId, bool single) =>
+            PerRepertoire.TryGetValue(repertoireId, out var m) ? m : single ? Flat : None.Flat;
+    }
+
+    /// <summary>Was eine Anfrage gewählt hat: Repertoire (<c>null</c> = alle markierten), Farbe, eigene Kapitelfarben, Grenze.</summary>
+    public sealed record Query(int? Repertoire, string? Color, ChapterOverrides ChapterColors, int? Take);
 
     /// <summary>Rumpf von <c>POST …/training-repertoire</c> — dieselbe Auswahl wie die Abfrage (Filter wie Profil/Baum; <c>all</c>/<c>twin</c>
-    /// nur in der Spielervorbereitung).</summary>
-    public sealed record CreateRequest(int? Repertoire, string? Color, Dictionary<string, string>? ChapterColors, string? Source,
+    /// nur in der Spielervorbereitung). <c>chapterColors</c> in einer der beiden Formen von <see cref="ChapterOverrides"/>.</summary>
+    public sealed record CreateRequest(int? Repertoire, string? Color, JsonObject? ChapterColors, string? Source,
         string? Speeds, int? Years, bool? Unsure, bool? All, bool? Twin)
     {
-        public Query ToQuery() => new(Repertoire, Color, Overrides(ChapterColors), null);
+        public Query ToQuery() => new(Repertoire, Color, ParseOverrides(ChapterColors?.ToJsonString()), null);
     }
 
-    /// <summary>Eigene Festlegungen als Wörterbuch; Unbrauchbares fällt weg.</summary>
-    internal static Dictionary<string, char> Overrides(IReadOnlyDictionary<string, string>? raw)
-    {
-        var res = new Dictionary<string, char>(StringComparer.Ordinal);
-        foreach (var (k, v) in raw ?? new Dictionary<string, string>())
-            if (v is "w" or "b" && res.Count < 2000) res[k.Trim()] = v[0];
-        return res;
-    }
-
-    /// <summary>Ein Abschnitt des Repertoires: der unveränderte PGN-Text und was der Parser daraus macht.</summary>
+    /// <summary>Ein Abschnitt eines Repertoires: der unveränderte PGN-Text und was der Parser daraus macht.</summary>
     internal sealed record Section(string Raw, ParsedSection Parsed);
 
-    /// <summary>Das Ergebnis der Rechnung samt allem, was Liste und Anlegen brauchen. <see cref="Rep"/> = <c>null</c>: der
-    /// Nutzer hat kein freigegebenes Repertoire; <see cref="Ranked"/> = <c>null</c>: für die Farbe gibt es keine Linien.</summary>
-    internal sealed record Computed(List<RepertoireRef> Repertoires, RepertoireRef? Rep, char? Color, List<char> Colors,
-        OpponentTrainingLines.Result? Ranked, List<Section> Mine);
+    /// <summary>Ein Abschnitt samt seinem Repertoire — so laufen die Linien aller markierten Repertoires in EINE Reihung.</summary>
+    internal sealed record Source(RepertoireRef Rep, Section Section);
 
-    /// <summary>Die gemeinsame Rechnung; <c>null</c> = das verlangte Repertoire gehört dem Nutzer nicht oder ist nicht freigegeben.</summary>
-    internal async Task<Computed?> ComputeAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct)
+    /// <summary>Ein markiertes Repertoire mit den Farben seiner Kapitel (für die Auswahl der Karte).</summary>
+    internal sealed record RepertoireInfo(RepertoireRef Rep, List<char> Colors);
+
+    /// <summary>Das Ergebnis der Rechnung samt allem, was Liste und Anlegen brauchen. <see cref="Ranked"/> = <c>null</c>: für die
+    /// Farbe gibt es keine Linien (oder gar kein markiertes Repertoire). <see cref="Mine"/> läuft parallel zu den Hauptvarianten.</summary>
+    internal sealed record Computed(List<RepertoireInfo> Repertoires, int? Selected, char? Color, List<char> Colors,
+        OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources);
+
+    /// <summary>
+    /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
+    /// repertoir auswählen sondern die markierten verwenden"), je nur die Kapitel der Farbe; ihre Linien laufen in EINE Reihung.
+    /// Gleiche Linie in mehreren Repertoires: das erste in <see cref="RepertoiresAsync"/>-Reihenfolge (Name) gewinnt.
+    /// <paramref name="exclude"/>: Repertoire dieses Namens nicht als Quelle (das Ziel des Anlegens); bleibt dann keine Quelle,
+    /// <see cref="SameRepertoireException"/>. <c>null</c> = das verlangte Repertoire gehört dem Nutzer nicht / ist nicht markiert.
+    /// </summary>
+    internal async Task<Computed?> ComputeAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
+        string? exclude = null)
     {
         var list = await RepertoiresAsync(userId, ct);
-        RepertoireRef? rep;
-        if (q.Repertoire is { } want)
+        if (q.Repertoire is { } want && list.All(r => r.Id != want)) return null;
+
+        // Alle markierten laden — die Karte braucht die Farben jedes Repertoires für die Auswahl.
+        var byRep = new List<(RepertoireRef Rep, List<(Section Section, char Color)> Sections)>();
+        foreach (var rep in list)
         {
-            rep = list.FirstOrDefault(r => r.Id == want);
-            if (rep is null) return null;
+            var sections = RawSections(await repertoires.GetCombinedPgnAsync(rep.Id, userId))
+                // Abschnitte, die RepertoireReach.Build überspränge (kaputte [FEN]), gar nicht erst — sonst liefen Hauptvarianten,
+                // Kapitel und PGN-Text auseinander.
+                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed)).ToList();
+            var colors = ChapterColors(sections.Select(x => x.Parsed), q.ChapterColors.For(rep.Id, q.Repertoire == rep.Id));
+            byRep.Add((rep, sections.Select(x => (x, colors.GetValueOrDefault(Chapter(x.Parsed), 'w'))).ToList()));
         }
-        else rep = list.FirstOrDefault();
-        if (rep is null) return new Computed(list, null, null, [], null, []);
+        var infos = byRep.Select(x => new RepertoireInfo(x.Rep,
+            new[] { 'w', 'b' }.Where(c => x.Sections.Any(s => s.Color == c)).ToList())).ToList();
 
-        var sections = RawSections(await repertoires.GetCombinedPgnAsync(rep.Id, userId));
-        var colors = ChapterColors(sections.Select(x => x.Parsed), q.ChapterColors);
-        // Abschnitte, die RepertoireReach.Build überspränge (kaputte [FEN]), gar nicht erst mitnehmen — so laufen
-        // Hauptvarianten, Kapitel und PGN-Text parallel.
-        var byColor = sections.Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed))
-            .GroupBy(x => colors.GetValueOrDefault(Chapter(x.Parsed), 'w'))
-            .ToDictionary(g => g.Key, g => g.ToList());
-        var available = new[] { 'w', 'b' }.Where(byColor.ContainsKey).ToList();
-        char pick = q.Color is "w" or "b" && byColor.ContainsKey(q.Color[0]) ? q.Color[0]
-            : available.OrderByDescending(c => byColor[c].Count).ThenBy(c => c == 'w' ? 0 : 1).FirstOrDefault('w');
-        if (!byColor.TryGetValue(pick, out var mine)) return new Computed(list, rep, pick, available, null, []);
+        var sources = byRep.Where(x => q.Repertoire is null || x.Rep.Id == q.Repertoire).ToList();
+        if (exclude is not null && sources.Any(x => x.Rep.Name == exclude))
+        {
+            sources = sources.Where(x => x.Rep.Name != exclude).ToList();
+            if (sources.Count == 0) throw new SameRepertoireException(exclude);
+        }
+        var counts = new[] { 'w', 'b' }.ToDictionary(c => c, c => sources.Sum(x => x.Sections.Count(s => s.Color == c)));
+        var available = counts.Where(kv => kv.Value > 0).Select(kv => kv.Key).ToList();
+        char? pick = q.Color is "w" or "b" && counts[q.Color[0]] > 0 ? q.Color[0]
+            : available.Count == 0 ? null : available.OrderByDescending(c => counts[c]).ThenBy(c => c == 'w' ? 0 : 1).First();
+        var refs = sources.Select(x => x.Rep).ToList();
+        if (pick is not { } color) return new Computed(infos, q.Repertoire, null, available, null, [], refs);
 
-        var graph = RepertoireReach.Build(mine.Select(x => x.Parsed), pick);
-        var chapters = mine.Select(x => Chapter(x.Parsed)).ToList();
-        return new Computed(list, rep, pick, available, OpponentTrainingLines.Rank(graph, chapters, await games()), mine);
+        var mine = sources.SelectMany(x => x.Sections.Where(s => s.Color == color).Select(s => new Source(x.Rep, s.Section))).ToList();
+        var graph = RepertoireReach.Build(mine.Select(x => x.Section.Parsed), color);
+        var chapters = mine.Select(x => Chapter(x.Section.Parsed)).ToList();
+        return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, await games()), mine, refs);
     }
 
     /// <summary>
-    /// Die Antwort <c>{ repertoires[{ id, name }], repertoire, color, colors, games, total, lines[…], more }</c>; <c>null</c> = das
-    /// verlangte Repertoire gehört dem Nutzer nicht oder ist nicht freigegeben (→ 404). Ohne Repertoire das erste der Liste; ohne
-    /// Farbe die mit den meisten Linien. <see cref="Query.ChapterColors"/> = eigene Farb-Festlegungen je Kapitel aus dem Trainer.
+    /// Die Antwort <c>{ repertoires[{ id, name, colors }], repertoire, color, colors, games, total, lines[…], more }</c>; <c>null</c> = das
+    /// verlangte Repertoire gehört dem Nutzer nicht oder ist nicht markiert (→ 404). <c>repertoire</c> = <c>null</c>: alle markierten.
+    /// Ohne Farbe die mit den meisten Linien. Je Linie dazu <c>repertoireId</c>/<c>repertoireName</c>.
     /// <paramref name="games"/> wird nur gerufen, wenn es überhaupt Linien gibt.
     /// </summary>
     public async Task<JsonObject?> LinesAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct)
@@ -104,8 +130,12 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         if (await ComputeAsync(userId, q, games, ct) is not { } c) return null;
         var o = new JsonObject
         {
-            ["repertoires"] = new JsonArray(c.Repertoires.Select(r => (JsonNode)new JsonObject { ["id"] = r.Id, ["name"] = r.Name }).ToArray()),
-            ["repertoire"] = c.Rep?.Id,
+            ["repertoires"] = new JsonArray(c.Repertoires.Select(r => (JsonNode)new JsonObject
+            {
+                ["id"] = r.Rep.Id, ["name"] = r.Rep.Name,
+                ["colors"] = new JsonArray(r.Colors.Select(x => (JsonNode)x.ToString()).ToArray()),
+            }).ToArray()),
+            ["repertoire"] = c.Selected,
             ["color"] = c.Color?.ToString(),
             ["colors"] = new JsonArray(c.Colors.Select(x => (JsonNode)x.ToString()).ToArray()),
         };
@@ -119,6 +149,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             ["end"] = l.End,
             ["start"] = l.StartFen,
             ["chapter"] = l.Chapter,
+            ["repertoireId"] = c.Mine[l.Index].Rep.Id,
+            ["repertoireName"] = c.Mine[l.Index].Rep.Name,
             ["moves"] = new JsonArray(l.Sans.Select(s => (JsonNode)s).ToArray()),
             ["probability"] = Math.Round(l.Probability, 6),
             ["reached"] = l.Reached,
@@ -140,8 +172,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     public sealed record Created(int Id, string Name, int Lines, bool Replaced);
 
-    /// <summary>Das Quell-Repertoire heißt selbst wie das Ziel („Prep: … Jahr") — Ersetzen würde die Quelle überschreiben → 400
-    /// <c>{ reason: "sameRepertoire" }</c>.</summary>
+    /// <summary>Das Quell-Repertoire heißt selbst wie das Ziel („Prep: … Jahr") und ist die EINZIGE Quelle — Ersetzen würde es
+    /// überschreiben → 400 <c>{ reason: "sameRepertoire" }</c>. (Unter mehreren Quellen wird es nur ausgenommen.)</summary>
     public sealed class SameRepertoireException(string name)
         : DomainValidationException($"Das gewählte Repertoire heißt selbst „{name}“ — es würde sich selbst überschreiben. Bitte ein anderes wählen oder es umbenennen.");
 
@@ -154,34 +186,35 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     /// <summary>
     /// „Show me lines to train" (Wunsch 2026-10-07): legt dem Nutzer ein Repertoire „Prep: &lt;Gegner&gt; &lt;Jahr&gt;" an — die
-    /// gereihten Linien (höchstens <see cref="MaxRepertoireLines"/>, Grenze sonst wie die Liste) in dieser Reihenfolge, je Linie
-    /// der UNVERÄNDERTE PGN-Abschnitt der Quelle (Kopfzeilen, Kapitel, Kommentare, Varianten). Gibt es schon ein eigenes mit
-    /// genau diesem Namen, wird dessen Inhalt ersetzt (Id, Freigabe-Häkchen und Trainingsstand je Linien-Schlüssel bleiben).
-    /// Angelegt und befüllt über <see cref="RepertoireService"/> (Grenzen, PGN-Prüfung, Caches wie beim Hochladen).
-    /// <c>null</c> = Repertoire fremd/nicht freigegeben; <see cref="DomainValidationException"/>, wenn es keine Linien gibt.
+    /// gereihten Linien aller markierten Repertoires der Farbe (bzw. des gewählten), höchstens <see cref="MaxRepertoireLines"/>
+    /// quer über alle, in dieser Reihenfolge, je Linie der UNVERÄNDERTE PGN-Abschnitt aus ihrem Repertoire. Ein markiertes
+    /// Repertoire mit dem Zielnamen (ein früher erzeugtes „Prep: …", angehakt) wird als Quelle ausgenommen; ist es die einzige,
+    /// <see cref="SameRepertoireException"/>. Gibt es schon ein eigenes mit dem Namen, wird dessen Inhalt ersetzt (Id, Häkchen und
+    /// Trainingsstand je Linien-Schlüssel bleiben). Angelegt und befüllt über <see cref="RepertoireService"/>.
+    /// <c>null</c> = Repertoire fremd/nicht markiert; <see cref="DomainValidationException"/>, wenn es keine Linien gibt.
     /// </summary>
-    /// <param name="opponentAfter">Name des Gegners, wenn er erst beim Laden der Partien feststeht (LeagueHub).</param>
     public async Task<Created?> CreateRepertoireAsync(int userId, string opponent, Query q,
-        Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct, Func<string>? opponentAfter = null)
+        Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct)
     {
-        if (await ComputeAsync(userId, q, games, ct) is not { } c) return null;
-        if (opponentAfter is not null) opponent = opponentAfter();
-        if (c.Rep is null) throw new DomainValidationException("Kein Repertoire ist für die Vorbereitung freigegeben.");
-        if (c.Ranked is not { Lines.Count: > 0 } ranked) throw new DomainValidationException("Das Repertoire hat für diese Farbe keine Linien.");
+        var now = DateTime.UtcNow;
+        var name = RepertoireName(opponent, now.Year);
+        if (await ComputeAsync(userId, q, games, ct, exclude: name) is not { } c) return null;
+        if (c.Sources.Count == 0) throw new DomainValidationException("Kein Repertoire ist für die Vorbereitung freigegeben.");
+        if (c.Ranked is not { Lines.Count: > 0 } ranked) throw new DomainValidationException("Die markierten Repertoires haben für diese Farbe keine Linien.");
 
         var n = Math.Min(DefaultTakeFromConfig, MaxRepertoireLines);
         var picked = ranked.Lines.Take(n).ToList();
-        var pgn = string.Join("\n\n", picked.Select(l => c.Mine[l.Index].Raw.Trim())) + "\n";
+        var pgn = string.Join("\n\n", picked.Select(l => c.Mine[l.Index].Section.Raw.Trim())) + "\n";
 
-        var now = DateTime.UtcNow;
-        var name = RepertoireName(opponent, now.Year);
-        if (string.Equals(c.Rep.Name, name, StringComparison.Ordinal)) throw new SameRepertoireException(name);
         var colorText = c.Color == 'b' ? "Schwarz" : "Weiß";
-        var description = $"Trainingslinien gegen {opponent} aus „{c.Rep.Name}“ ({colorText}), "
+        var sourceNames = string.Join(", ", c.Sources.Select(r => $"„{r.Name}“"));
+        var description = $"Trainingslinien gegen {opponent} ({colorText}) aus {sourceNames}, "
                           + $"{now.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)}, {ranked.Games} Partien gezählt, "
                           + $"{picked.Count} von {ranked.Lines.Count} Linien.";
-        if (description.Length > 1000) description = description[..1000];
-        var kind = await db.Repertoires.AsNoTracking().Where(r => r.Id == c.Rep.Id).Select(r => r.Kind).FirstAsync(ct);
+        if (description.Length > 1000) description = description[..997] + "…";
+        var sourceIds = c.Sources.Select(r => r.Id).ToList();
+        var kinds = await db.Repertoires.AsNoTracking().Where(r => sourceIds.Contains(r.Id)).Select(r => r.Kind).Distinct().ToListAsync(ct);
+        var kind = kinds.Count == 1 ? kinds[0] : RookHub.Api.Models.RepertoireKind.None;
 
         var existing = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.Name == name)
             .OrderBy(r => r.Id).Select(r => (int?)r.Id).FirstOrDefaultAsync(ct);
@@ -296,13 +329,33 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         return res;
     }
 
-    /// <summary>Eigene Festlegungen aus der Adresse; Unlesbares zählt als „keine".</summary>
-    internal static Dictionary<string, char> ParseOverrides(string? json)
+    /// <summary>Eigene Festlegungen aus der Adresse bzw. dem Rumpf — flach (<c>{ "Kapitel": "w" }</c>) oder je Repertoire
+    /// (<c>{ "7": { "Kapitel": "b" } }</c>), auch gemischt; Unlesbares zählt als „keine".</summary>
+    internal static ChapterOverrides ParseOverrides(string? json)
     {
-        var res = new Dictionary<string, char>(StringComparer.Ordinal);
-        if (string.IsNullOrWhiteSpace(json) || json.Length > 20_000) return res;
-        try { return Overrides(JsonSerializer.Deserialize<Dictionary<string, string>>(json)); }
-        catch (JsonException) { }
-        return res;
+        if (string.IsNullOrWhiteSpace(json) || json.Length > 200_000) return ChapterOverrides.None;
+        JsonObject? root;
+        try { root = JsonNode.Parse(json) as JsonObject; }
+        catch (JsonException) { return ChapterOverrides.None; }
+        if (root is null) return ChapterOverrides.None;
+        var flat = new Dictionary<string, char>(StringComparer.Ordinal);
+        var per = new Dictionary<int, IReadOnlyDictionary<string, char>>();
+        foreach (var (k, v) in root)
+        {
+            if (v is JsonObject inner && int.TryParse(k, NumberStyles.None, CultureInfo.InvariantCulture, out var id))
+            {
+                var m = new Dictionary<string, char>(StringComparer.Ordinal);
+                foreach (var (ck, cv) in inner) Put(m, ck, cv);
+                per[id] = m;
+            }
+            else Put(flat, k, v);
+        }
+        return new ChapterOverrides(flat, per);
+
+        static void Put(Dictionary<string, char> into, string chapter, JsonNode? value)
+        {
+            if (into.Count >= 2000 || value is not JsonValue jv || !jv.TryGetValue<string>(out var c) || c is not ("w" or "b")) return;
+            into[chapter.Trim()] = c[0];
+        }
     }
 }

@@ -10,16 +10,16 @@ import { TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 
 const DATA: TrainingLines = {
-  repertoires: [{ id: 7, name: 'Sizilianisch (Weiß)' }, { id: 9, name: 'Französisch' }],
+  repertoires: [{ id: 7, name: 'Sizilianisch (Weiß)', colors: ['w'] }, { id: 9, name: 'Französisch', colors: ['w', 'b'] }],
   repertoire: 7, color: 'w', colors: ['w', 'b'], games: 12, total: 4, more: 1,
   lines: [
-    { key: 'lA', end: 'x', start: null, chapter: 'Najdorf', moves: ['e4', 'c5', 'Nf3', 'd6'], probability: 0.5, reached: 6, lastYear: 2025,
+    { key: 'lA', end: 'x', start: null, chapter: 'Najdorf', repertoireId: 7, repertoireName: 'Sizilianisch (Weiß)', moves: ['e4', 'c5', 'Nf3', 'd6'], probability: 0.5, reached: 6, lastYear: 2025,
       neverReached: false, matched: 2, missing: 0, prefixProbability: 0.5, prefixReached: 6 },
-    { key: 'lB', end: 'y', start: null, chapter: '', moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], probability: 0.0004, reached: 1, lastYear: 2019,
+    { key: 'lB', end: 'y', start: null, chapter: '', repertoireId: 7, repertoireName: 'Sizilianisch (Weiß)', moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], probability: 0.0004, reached: 1, lastYear: 2019,
       neverReached: false, matched: 2, missing: 0, prefixProbability: 0.0004, prefixReached: 1 },
-    { key: 'lD', end: 'w', start: null, chapter: 'Drache', moves: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'g6'], probability: 0, reached: 0,
+    { key: 'lD', end: 'w', start: null, chapter: 'Drache', repertoireId: 7, repertoireName: 'Sizilianisch (Weiß)', moves: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'g6'], probability: 0, reached: 0,
       lastYear: null, neverReached: false, matched: 3, missing: 1, prefixProbability: 0.12, prefixReached: 4 },
-    { key: 'lC', end: 'z', start: null, chapter: '', moves: ['e4', 'c6', 'd4', 'd5'], probability: 0, reached: 0, lastYear: null,
+    { key: 'lC', end: 'z', start: null, chapter: '', repertoireId: 9, repertoireName: 'Französisch', moves: ['e4', 'c6', 'd4', 'd5'], probability: 0, reached: 0, lastYear: null,
       neverReached: true, matched: 0, missing: 2, prefixProbability: 0, prefixReached: 12 },
   ],
 };
@@ -100,7 +100,7 @@ describe('TrainingLinesComponent', () => {
     expect(el().textContent).toContain('gezählt: 12 Partien von Huber mit Schwarz');
     expect(el().textContent).toContain('1 weitere Linie');
     // beide Farben im Repertoire: Umschalter
-    expect(buttons('Ich mit Schwarz').length).toBe(1);
+    expect(buttons('Ich habe Schwarz').length).toBe(1);
   });
 
   it('ohne freigegebenes Repertoire: sagt, wo man es einschaltet', async () => {
@@ -121,8 +121,8 @@ describe('TrainingLinesComponent', () => {
     select.dispatchEvent(new Event('change'));
     await fixture.whenStable();
     expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({
-      repertoire: 9, color: null, chapterColors: { Hauptlinie: 'b' } }));
-    expect(JSON.parse(localStorage.getItem(TRAINING_LINES_KEY)!)).toEqual({ repertoire: 9, color: null });
+      repertoire: 9, color: 'w', chapterColors: { Hauptlinie: 'b' } }));
+    expect(JSON.parse(localStorage.getItem(TRAINING_LINES_KEY)!)).toEqual({ repertoire: 9, color: 'w' });
   });
 
   it('das gemerkte Repertoire gibt es nicht mehr (404): einmal ohne Vorgabe', async () => {
@@ -242,6 +242,77 @@ describe('TrainingLinesComponent', () => {
       expect(el().querySelector('.err')?.textContent).toContain('würde sich selbst überschreiben');
       expect(el().querySelector('.err')?.textContent).toContain('Prep: Huber, Franz');
       expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Vorgabe: alle markierten Repertoires (2026-10-07)', () => {
+    const ALL: TrainingLines = { ...DATA, repertoire: null };
+
+    it('„Alle markierten" ist vorgewählt, Linien tragen ihr Repertoire, „Alle trainieren" nur bei Einzelwahl (sonst Hinweis)', async () => {
+      build();
+      trainingLines.and.resolveTo(ALL);
+      await openSection();
+      const select = el().querySelector<HTMLSelectElement>('select.tl-rep')!;
+      expect(select.options[0].textContent).toContain('Alle markierten');
+      expect(select.options[0].selected).toBeTrue();
+      expect(select.options.length).toBe(3);
+      const items = Array.from(el().querySelectorAll('.tl-list li'));
+      expect(items[0].querySelector('.tl-chapter')?.textContent).toContain('Sizilianisch (Weiß) · Najdorf');
+      expect(items[3].querySelector('.tl-chapter')?.textContent).toContain('Französisch');
+      expect(el().querySelector('button.tl-all')).toBeNull();
+      expect(el().querySelector('.tl-all-hint')?.textContent).toContain('Trainings-Repertoire anlegen');
+      expect(el().querySelector('button.tl-create')).not.toBeNull();
+
+      // Einzelwahl: der Knopf ist da, der Hinweis weg
+      trainingLines.and.resolveTo(DATA);
+      select.value = '7';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el().querySelector('button.tl-all')).not.toBeNull();
+      expect(el().querySelector('.tl-all-hint')).toBeNull();
+    });
+
+    it('Farbumschalter „Ich habe Weiß / Schwarz" fragt alle markierten mit der anderen Farbe', async () => {
+      build();
+      trainingLines.and.resolveTo(ALL);
+      await openSection();
+      expect(buttons('Ich habe Weiß').length).toBe(1);
+      buttons('Ich habe Schwarz')[0].click();
+      await fixture.whenStable();
+      expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ repertoire: null, color: 'b' }));
+    });
+
+    it('„Trainieren" öffnet den Trainer des Quell-Repertoires der Linie', async () => {
+      build();
+      trainingLines.and.resolveTo(ALL);
+      await openSection();
+      buttons('Trainieren').filter(b => b.classList.contains('tl-train'))[3].click();
+      await fixture.whenStable();
+      expect(router.navigate.calls.mostRecent().args[0]).toEqual(['/repertoires/9/train']);
+    });
+
+    it('eigene Kapitelfarben je Repertoire gehen beim ersten Laden nachträglich mit (einmal)', async () => {
+      localStorage.setItem('rookhub_rep_train_chaptercolor_9', JSON.stringify({ Hauptlinie: 'b' }));
+      build();
+      trainingLines.and.resolveTo(ALL);
+      await openSection();
+      await fixture.whenStable();
+      expect(trainingLines.calls.count()).toBe(2);
+      expect(trainingLines.calls.mostRecent().args[1].chapterColors).toEqual({ '9': { Hauptlinie: 'b' } });
+    });
+
+    it('Anlegen aus allen markierten: repertoire null, Kapitelfarben je Repertoire', async () => {
+      localStorage.setItem('rookhub_rep_train_chaptercolor_9', JSON.stringify({ Hauptlinie: 'b' }));
+      build();
+      trainingLines.and.resolveTo(ALL);
+      await openSection();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      el().querySelector<HTMLButtonElement>('button.tl-create')!.click();
+      await fixture.whenStable();
+      expect(trainingRepertoire).toHaveBeenCalledOnceWith('1606921', jasmine.objectContaining({
+        repertoire: null, color: 'w', chapterColors: { '9': { Hauptlinie: 'b' } } }));
     });
   });
 });
