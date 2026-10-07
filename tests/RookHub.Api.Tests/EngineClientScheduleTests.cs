@@ -79,12 +79,14 @@ public class EngineClientScheduleTests : IDisposable
 
     // ── Verfuegbarkeit je Engine ─────────────────────────────────────────────────────────────────
 
-    private void Register(string id, string name)
+    /// <param name="lastSeen">Letzter Poll; Vorgabe: gerade eben (zum Prüfzeitpunkt <see cref="MondayTenVienna"/>).</param>
+    private void Register(string id, string name, DateTime? lastSeen = null, bool neverSeen = false)
     {
         _db.ExternalEngineRegistrations.Add(new ExternalEngineRegistration
         {
             Id = id, UserId = 5, Name = name, ClientSecret = "s", MaxThreads = 2, MaxHash = 16,
             Variants = "chess", ProviderSelector = "sel" + id, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            LastSeenAt = neverSeen ? null : lastSeen ?? MondayTenVienna.UtcDateTime.AddSeconds(-20),
         });
         _db.SaveChanges();
     }
@@ -112,6 +114,22 @@ public class EngineClientScheduleTests : IDisposable
 
         Assert.Empty(await EngineAvailability.UsableAsync(_db, 5, list, batch: true, Quiet(), MondayTenVienna));
         Assert.Equal(list, await EngineAvailability.UsableAsync(_db, 5, list, batch: false, Quiet(), MondayTenVienna));
+    }
+
+    // Gemeldet 2026-10-07 (/games/61): neue Aufträge landeten auf den 16 Engines eines seit einem Tag ausgeschalteten PCs.
+    [Fact]
+    public async Task EngineOhneAktuellenPoll_bekommtKeineArbeit()
+    {
+        Register("rhe_gross000001", "Gross Hintergrund");                                              // pollt
+        Register("rhe_pcbg0000001", "PC Hintergrund", MondayTenVienna.UtcDateTime.AddDays(-1));         // seit gestern aus
+        Register("rhe_pcbg0000002", "PC Hintergrund 2", MondayTenVienna.UtcDateTime.AddMinutes(-2));    // kurz still: zählt noch
+        Register("rhe_neu00000001", "Neu", neverSeen: true);                                            // nie gepollt
+        string[] list = ["rhe_pcbg0000001", "rhe_pcbg0000002", "rhe_neu00000001", "rhe_gross000001", "eei_lichess0001"];
+
+        var usable = await EngineAvailability.UsableAsync(_db, 5, list, batch: false, Quiet(), MondayTenVienna);
+
+        // Lichess-Engines kennen wir nicht — sie bleiben.
+        Assert.Equal(["rhe_pcbg0000002", "rhe_gross000001", "eei_lichess0001"], usable);
     }
 
     [Fact]

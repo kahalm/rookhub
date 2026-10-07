@@ -321,6 +321,22 @@ describe('GameReviewComponent', () => {
     http.expectNone(url);
   }));
 
+  // Gemeldet 2026-10-07: am Laptop ein waagrechter Scrollbalken unter der Tabelle (mit Lc0-Spalte).
+  it('die Tabelle passt ohne Scrollbalken in 380 px (Platz für die Lc0-Spalte bleibt)', () => {
+    const { fixture, http, el } = setup();
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', { games: { review: { accuracy: 'Genauigkeit', white: 'Weiß', black: 'Schwarz' } } }, true);
+    t.use('de');
+    el.style.display = 'block';
+    el.style.width = '380px';
+    document.body.appendChild(el);
+    flushEvals(http, evals('done'));
+    fixture.detectChanges();
+    const wrap = el.querySelector('.table-wrap') as HTMLElement;
+    expect(wrap.scrollWidth).toBeLessThanOrEqual(wrap.clientWidth);
+    el.remove();
+  });
+
   it('Klick aufs Klassen-Symbol bzw. auf die Zahl springt zum nächsten Zug dieser Klasse (0.688.0)', () => {
     const { fixture, http, el } = setup();
     flushEvals(http, evals('done'));

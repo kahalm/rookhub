@@ -17,20 +17,32 @@ namespace RookHub.Api.Services.EngineBroker;
 ///
 /// <para>Lichess-Engines (<c>eei_…</c>) haben keine Registrierung bei uns und damit nie eine Meldung — für sie gilt immer
 /// der zweite Fall.</para>
+///
+/// <para><b>Und nur, wer gerade abfragt</b> (0.711.0, gemeldet 2026-10-07 an /games/61): eine direkt angemeldete Engine
+/// (<c>rhe_</c>), deren Provider seit <see cref="OfflineAfter"/> nicht gepollt hat, bekommt keine Arbeit — sie ist aus
+/// (Rechner aus, Client abgestürzt, alter Client ohne Zeitplan-Meldung). Vorher landeten neue Aufträge auf den
+/// 16 Engines eines seit einem Tag ausgeschalteten PCs (leerste Schlange!), bekamen 503 und wanderten reihum auf die
+/// nächste ausgeschaltete — die Partie stand minutenlang bei Tiefe 0.</para>
 /// </summary>
 public static class EngineAvailability
 {
+    /// <summary>So lange ohne Poll gilt eine direkt angemeldete Engine als aus. <c>LastSeenAt</c> schreibt
+    /// <see cref="EngineBrokerMaintenanceService"/> minütlich, ein Provider pollt alle paar Sekunden.</summary>
+    public static readonly TimeSpan OfflineAfter = TimeSpan.FromMinutes(3);
+
     /// <summary>Die Teilmenge von <paramref name="engines"/>, die jetzt Arbeit bekommen darf — Reihenfolge bleibt.</summary>
     public static async Task<List<string>> UsableAsync(AppDbContext db, int ownerId, IReadOnlyList<string> engines,
         bool batch, QuietHours? quiet, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         if (engines.Count == 0) return [];
         var schedules = await SchedulesByEngineIdAsync(db, ownerId, engines, ct);
+        var offline = await OfflineEngineIdsAsync(db, ownerId, engines, nowUtc, ct);
         var quietNow = quiet?.IsQuiet(nowUtc) == true;
 
         var usable = new List<string>(engines.Count);
         foreach (var id in engines)
         {
+            if (offline.Contains(id)) continue;
             if (schedules.TryGetValue(id, out var s))
             {
                 if (IsOpen(s, nowUtc)) usable.Add(id);
@@ -60,6 +72,21 @@ public static class EngineAvailability
         {
             return true;
         }
+    }
+
+    /// <summary>Direkt angemeldete Engines des Besitzers, die seit <see cref="OfflineAfter"/> (oder nie) gepollt haben.
+    /// Unbekannte Kennungen und Lichess-Engines zählen nicht als aus — über sie wissen wir nichts.</summary>
+    private static async Task<HashSet<string>> OfflineEngineIdsAsync(AppDbContext db, int ownerId,
+        IReadOnlyList<string> engines, DateTimeOffset nowUtc, CancellationToken ct)
+    {
+        var local = engines.Where(e => e.StartsWith(ExternalEngineRegistration.IdPrefix, StringComparison.Ordinal)).ToList();
+        if (local.Count == 0) return [];
+        var cutoff = nowUtc.UtcDateTime - OfflineAfter;
+        var ids = await db.ExternalEngineRegistrations.AsNoTracking()
+            .Where(r => r.UserId == ownerId && local.Contains(r.Id) && (r.LastSeenAt == null || r.LastSeenAt < cutoff))
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+        return ids.ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>Gemeldete Zeitpläne, nach Engine-KENNUNG: die Meldung kommt mit dem Namen, die Hintergrund-Liste trägt

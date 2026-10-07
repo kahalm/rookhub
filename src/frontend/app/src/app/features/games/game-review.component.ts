@@ -317,8 +317,11 @@ const MATE_GAP_PAWNS = 100;
     .current .evals { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 75%, transparent); }
     /* Eigenes overflow-x: auf einem schmalen Handy darf die Tabelle nicht die ganze Seite verbreitern. */
     .table-wrap { overflow-x: auto; }
-    .summary { border-collapse: collapse; font-size: 0.8rem; min-width: 340px; width: 100%; }
-    .summary th, .summary td { padding: 2px 4px; text-align: center; white-space: nowrap; }
+    /* Muss ohne Scrollbalken neben das Brett passen — auch mit der Lc0-Spalte (gemeldet 2026-10-07 am Laptop): knappe
+       Zellen, die Knöpfe ohne eigenen Innenabstand, die Überschrift „Genauigkeit" darf umbrechen. */
+    .summary { border-collapse: collapse; font-size: 0.8rem; width: 100%; }
+    .summary th, .summary td { padding: 2px 1px; text-align: center; white-space: nowrap; }
+    .summary thead .acc-h { white-space: normal; line-height: 1.15; font-size: 0.72rem; }
     .summary tbody th { text-align: left; font-weight: 500; }
     .summary .acc-h, .summary .acc { text-align: right; font-variant-numeric: tabular-nums; }
     .summary .acc { font-weight: 600; }
@@ -341,10 +344,10 @@ const MATE_GAP_PAWNS = 100;
     .dis-move { font-weight: 600; }
     .dis-vs { opacity: 0.6; font-size: 0.7rem; }
     .summary .count { font-variant-numeric: tabular-nums; }
-    .summary button.jump { border: 0; cursor: pointer; font: inherit; }
+    .summary button.jump { border: 0; cursor: pointer; font-family: inherit; margin: 0; }
     .summary button.jump:hover, .summary button.jump:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
-    .summary .count-jump { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0 4px;
-      border-radius: 4px; min-width: 1.6em; text-decoration: underline dotted; text-underline-offset: 2px; }
+    .summary .count-jump { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0 3px; margin: 0;
+      border-radius: 4px; text-decoration: underline dotted; text-underline-offset: 2px; }
     .summary .count-jump:hover, .summary .count-jump:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); }
     .summary .count.zero { color: color-mix(in srgb, currentColor 35%, transparent); }
     .sym {
