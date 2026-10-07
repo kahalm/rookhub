@@ -203,7 +203,10 @@ Mehrere Vereine: Umschalter im Kopf (`app.component`), der Wechsel merkt sich de
 `useShare(token)`; `shareClub` schlägt den angemeldeten. Texte, die früher „SK Schwaz"/„Schwaz" sagten, lesen jetzt
 `clubName()`/`anonName()` (Zugangs-Sperrkarten sprechen allgemein von den Vereinsgruppen der teilnehmenden Vereine);
 `importSummary(r, anon)` bekommt den Namen mit. Startseite: Vorauswahl der Mannschaft über `ownsTeam(teamPrefix, team)` (SPIEGEL
-von `LeagueClub.OwnsTeam`). Datenschutz: `LEGAL_SITE.leagueClub` nennt den Verein (`legal.privacy.leagueClub`). Specs:
+von `LeagueClub.OwnsTeam`). Ligaauswahl (0.710.0): nur Ligen mit eigener Mannschaft (Server filtert); Verwalter haben den
+Schalter „alle Ligen der Region" (`lh-all-leagues` im localStorage, Vorgabe aus → `index(true)` = `?all=true`); eine gemerkte
+Liga (`leaguehub`/`?liga=`) außerhalb der Liste fällt auf die erste eigene; ohne eigene Liga (`filtered && total > 0`) die Karte
+„Noch keine Liga mit einer Mannschaft von <Verein>" (Verwalter: „Alle Ligen zeigen"). Datenschutz: `LEGAL_SITE.leagueClub` nennt den Verein (`legal.privacy.leagueClub`). Specs:
 `provideTestClub()` aus `core/club-context.testing.ts` (Verein „SK Testdorf"/„Testdorf" — bewusst nicht Schwaz).
 `reload()` (0.700.0) verwirft die gemerkte `/me`-Antwort und fragt neu (gewählter Verein bleibt, solange das Konto dazugehört) —
 die Vereinsverwaltung `/vereine` (`features/clubs/clubs-page.component.ts`, Admin + `league.manage`) ruft es nach Anlegen,

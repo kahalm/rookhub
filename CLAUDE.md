@@ -1921,8 +1921,8 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   gehört dem Verein, der ihn erzeugt — darüber laufen die anonymen Uploads), die Anonymisierung (`AnonName`), „einer von uns"
   (`LeagueClub.OwnsTeam`: Mannschaftsname = `TeamPrefix` oder beginnt mit `TeamPrefix` + Leerzeichen/„/", ohne Groß/klein —
   „SK Weilheim 1" ja, „SK Weilheimer" nein), der Taktik-Kurs (`tactics-club-{id}.pgn`), die Zeile „Vereins-Datenbank" der
-  Quellen-Tabelle, die Paarungen gespielter Runden (Vereinspartie nur aus dem eigenen Verein), die Startseite (nur Ligen von
-  `Source`), die Treffer-Statistik (nur Ligen von `Source`). **Global** bleiben: `LeagueNameAliases` (PGN-Name → Spieler ist
+  Quellen-Tabelle, die Paarungen gespielter Runden (Vereinspartie nur aus dem eigenen Verein), die Startseite (nur Ligen der Region,
+  seit 0.710.0 nur die mit eigener Mannschaft), die Treffer-Statistik (nur Ligen von `Source`). **Global** bleiben: `LeagueNameAliases` (PGN-Name → Spieler ist
   eine Aussage über öffentliche Ligaspieler, sie verweist bewusst weder auf Partie noch auf Verein oder Nutzer —
   vereinsübergreifend harmlos), `LeagueSelfReports`/Online-Konten (hängen an FIDE-IDs), der Meldelisten-Index (je Verein nur mit
   eigener `OwnClub`-Regel, gecacht je Verein), Zuordnen nach dem Anmelden (der Schlüssel des Browsers sagt, was ER hochgeladen
@@ -1968,6 +1968,18 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   „Region" statt „Liga-Quelle", 400 `invalidRegion` (eine Quelle wie `ligamanager` ist KEINE Region). Geprüft in
   `LeagueClubTenancyTests.Index_BavarianClubSeesLigamanagerAndZugspitze_TyroleanClubNeither`, gegen MariaDB in
   `LeagueRegionSqlTests` und `MigrationsTests.LeagueClubRegion_MachtAusDerQuelleDieRegion`.
+* **Nur Ligen mit eigener Mannschaft (0.710.0)**, Wunsch 2026-10-07 („Zeig bei der Ligaauswahl nur die Ligen, in denen der
+  Verein vertreten ist"): `LeagueService.IndexAsync(club, ct, all)` filtert die Ligen der Region auf die mit einer Mannschaft
+  des Vereins (`LeagueClub.OwnsTeam` über DISTINCT `LeagueMatches.Home/Away` + `LeaguePlayers.Team` — drei Abfragen
+  für alle Ligen zusammen, nicht je Liga; das `teams` der Ansicht stammt aus demselben Spielplan, hieße aber jede Ansicht samt
+  Prognosen zu laden). `?all=true` liefert für Verwalter (`league.manage` live über `PermissionResolver`, Admin) alle Ligen der
+  Region; ohne das Recht wird der Schalter still übergangen statt 400 (ein gemerkter Schalter nach entzogenem Recht soll die
+  Seite nicht leer machen). Antwort `filtered` + `total`. Oberfläche: Verwalter-Schalter „alle Ligen der Region"
+  (`lh-all-leagues`, Vorgabe aus), gemerkte fremde Liga → erste eigene, ohne eigene Liga die Karte „Noch keine Liga mit einer
+  Mannschaft von <Verein>" (Verwalter: „Alle Ligen zeigen"). Teilen-Links und die geteilten Liga-Daten (`/{tnr}`) bleiben
+  ungefiltert — eine fremde Liga per `?liga=` öffnet die Seite nicht mehr, `GET /api/league/{tnr}` liefert sie aber weiter.
+  Geprüft in `LeagueClubTenancyTests.Index_OnlyLeaguesWithAnOwnTeam_AllOnRequest`/`IndexEndpoint_AllOnlyForManagers_…` und
+  gegen MariaDB in `LeagueRegionSqlTests`.
 * **Vereinsverwaltung `/vereine` (0.700.0)**: Reiter „Vereine" in LeagueHub, nur Admins mit `league.manage` (sonst
   Sperrkarte; der Server verlangt beides). Liste (Name, `anonName`, `teamPrefix`, Quelle, Gruppen, Vereinspartien, angelegt),
   Anlegen/Ändern (400/409 `reason` → Klartext; Quelle umstellen mit Rückfrage — `PUT` darf alle vier Felder ändern, die
@@ -1978,6 +1990,7 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
+| GET | `/api/league/index` | `league.view` | Startseite `{ season, club, generated, filtered, total, leagues[{ tnr, name }] }` — seit 0.710.0 nur Ligen der Region, in denen der Verein eine Mannschaft hat (`OwnsTeam` über Spielplan + Meldelisten); `?all=true` = alle der Region, nur mit `league.manage` (sonst still übergangen, `filtered: true`, kein 400); `total` = Ligen der Region mit Ansicht |
 | GET | `/api/league/me` | angemeldet | `{ clubs[{ id, name, anonName, teamPrefix, region }], current }` (`region` seit 0.704.0, vorher `source`) — `current` = Verein ohne `?club=` (`null` bei mehreren ohne Vorgabe) |
 | GET | `/api/league/admin/clubs` | Admin + manage | Alle Vereine `[{ id, name, anonName, teamPrefix, region, createdAt, clubGames, groups[{ id, name, members }] }]` — `clubGames` ohne archivierte, `members` = Konten der Gruppe (0.700.0) |
 | POST | `/api/league/admin/clubs` | Admin + manage | `{ name, teamPrefix, anonName, region }` (`tirol`/`bayern`, leer = `tirol`) → Verein; 400 `invalidName`/`invalidTeamPrefix`/`invalidAnonName`/`invalidRegion`, 409 `duplicate` |

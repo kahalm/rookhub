@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -268,6 +269,8 @@ public class LeagueClubTenancyTests : IDisposable
             new LeagueTournament { Tnr = zgOld, Season = "2025/26", Level = 5, League = "Zugspitzliga", Stage = "Liga", Source = ZugspitzeSource.Source });
         _db.LeagueViews.AddRange(new LeagueView { Tnr = 1, Json = "{}", GeneratedAt = Now }, new LeagueView { Tnr = 900_000_001, Json = "{}", GeneratedAt = Now },
             new LeagueView { Tnr = zg, Json = "{}", GeneratedAt = Now }, new LeagueView { Tnr = zgOld, Json = "{}", GeneratedAt = Now });
+        // die Zweite im Spielplan des Kreises (seit 0.710.0 zeigt die Startseite nur Ligen mit eigener Mannschaft)
+        _db.LeagueMatches.Add(new LeagueMatch { Tnr = zg, Round = 1, Home = "SK Weiler 2", Away = "SC Garmisch 1" });
         await _db.SaveChangesAsync();
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
         var tirol = await league.IndexAsync(TestClubs.Home, default);
@@ -277,6 +280,67 @@ public class LeagueClubTenancyTests : IDisposable
         Assert.Equal(("2026/27", "bayern"), (bayern["season"]!.GetValue<string>(), bayern["club"]!["region"]!.GetValue<string>()));
         Assert.Equal("tirol", tirol["club"]!["region"]!.GetValue<string>());
         Assert.Equal("2026/27", (await league.ForecastStatsAsync(LeagueRegions.Bayern, default))["season"]!.GetValue<string>());
+    }
+
+    /// <summary>Fünf Tiroler Ligen mit Ansicht; Testdorf spielt in Liga 1 (Meldeliste aus <see cref="SeedAsync"/>) und Liga 3 (nur im
+    /// Spielplan, als Gast), in Liga 4 nur ein „Testdorfer SC" (anderer Verein), Liga 5 ohne Ansicht zählt nicht.</summary>
+    private async Task SeedFiveTyroleanLeaguesAsync()
+    {
+        await SeedAsync();
+        foreach (var (tnr, level) in new[] { (2, 2), (3, 3), (4, 4), (5, 5), (6, 6) })
+            _db.LeagueTournaments.Add(new LeagueTournament { Tnr = tnr, Season = "2026/27", Level = level, League = $"Liga {tnr}", Stage = "Liga" });
+        foreach (var tnr in new[] { 1, 2, 3, 4, 5 })
+            _db.LeagueViews.Add(new LeagueView { Tnr = tnr, Json = "{}", GeneratedAt = Now });
+        _db.LeagueMatches.AddRange(
+            new LeagueMatch { Tnr = 2, Round = 1, Home = "Absam", Away = "Hall" },
+            new LeagueMatch { Tnr = 3, Round = 1, Home = "Wörgl", Away = "Testdorf 2" },
+            new LeagueMatch { Tnr = 4, Round = 1, Home = "Testdorfer SC", Away = "Kufstein" },
+            new LeagueMatch { Tnr = 6, Round = 1, Home = "Testdorf 3", Away = "Kufstein" });   // ohne Ansicht
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 5, Team = "Rum", Name = "Rum, Rudi", NameKey = "rum, rudi" });
+        await _db.SaveChangesAsync();
+    }
+
+    private static int[] Tnrs(JsonObject ix) => ix["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()).ToArray();
+
+    [Fact]
+    public async Task Index_OnlyLeaguesWithAnOwnTeam_AllOnRequest()
+    {
+        // Wunsch 2026-10-07 (0.710.0): „Zeig bei der Ligaauswahl nur die Ligen, in denen der Verein vertreten ist."
+        await SeedFiveTyroleanLeaguesAsync();
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var own = await league.IndexAsync(TestClubs.Home, default);
+        Assert.Equal(new[] { 1, 3 }, Tnrs(own));
+        Assert.Equal((true, 5), (own["filtered"]!.GetValue<bool>(), own["total"]!.GetValue<int>()));
+        var all = await league.IndexAsync(TestClubs.Home, default, all: true);
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, Tnrs(all));
+        Assert.Equal((false, 5), (all["filtered"]!.GetValue<bool>(), all["total"]!.GetValue<int>()));
+        // ein Verein ohne Mannschaft in der Region: leer, aber `total` sagt, dass es Ligen gäbe
+        var none = await league.IndexAsync(new LeagueClub { Id = 9, Name = "SK Nirgends", TeamPrefix = "Nirgends", AnonName = "Nirgends" }, default);
+        Assert.Empty(Tnrs(none));
+        Assert.Equal(5, none["total"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task IndexEndpoint_AllOnlyForManagers_OthersGetTheFilterSilently()
+    {
+        await SeedFiveTyroleanLeaguesAsync();
+        var role = await new RoleAdminService(_db).CreateAsync(new CreateRoleDto
+        {
+            Key = "liga-verwalter", Name = "Liga-Verwalter", Permissions = [Permissions.LeagueView, Permissions.LeagueManage],
+        });
+        await new RoleAdminService(_db).SetUserRolesAsync(BothMember, new SetUserRolesDto { RoleIds = [role.Id] });
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var permissions = new PermissionResolver(_db, TestServices.Cache());
+        async Task<JsonObject> Index(int user, bool admin, bool? all) =>
+            (JsonObject)((OkObjectResult)await new LeagueController(league, null!, null!, Resolver()).As(user, admin, TestClubs.HomeId)
+                .Index(all, permissions, default)).Value!;
+
+        var member = await Index(HomeMember, false, true);          // ohne league.manage: Schalter übergangen, kein 400
+        Assert.Equal(new[] { 1, 3 }, Tnrs(member));
+        Assert.True(member["filtered"]!.GetValue<bool>());
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, Tnrs(await Index(BothMember, false, true)));   // Verwalter über die Rolle
+        Assert.Equal(new[] { 1, 3 }, Tnrs(await Index(BothMember, false, null)));            // ohne Schalter auch er gefiltert
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, Tnrs(await Index(Admin, true, true)));
     }
 
     [Fact]

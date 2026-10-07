@@ -7,6 +7,10 @@ export interface LeagueIndex {
   leagues: { tnr: number; name: string }[];
   /** Der Verein der Anfrage (0.698.0) — nur Ligen seiner Quelle stehen in `leagues`. */
   club?: { id: number; name: string; anonName: string; teamPrefix: string; region: string | null };
+  /** 0.710.0: `true` = nur Ligen mit einer Mannschaft des Vereins, `false` = alle der Region (`?all=true`, nur Verwalter). */
+  filtered?: boolean;
+  /** 0.710.0: Ligen der Region mit Ansicht, ungefiltert — ohne eigene Liga unterscheidet das „keine Daten" von „keine Mannschaft". */
+  total?: number;
 }
 
 /** Partien im Bestand je Quelle (0.626.0, `GET /api/league/sources`). `key`: Lumbra, Mega, chess-results, Lichess-Übertragung,

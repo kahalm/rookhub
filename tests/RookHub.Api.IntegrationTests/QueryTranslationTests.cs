@@ -1183,9 +1183,10 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(new HashSet<int> { home.Id, other.Id }, await RookHub.Api.Services.League.LeagueClubResolver.ClubIdsOfAsync(Db, admin));
 
         var league = Get<RookHub.Api.Services.League.LeagueService>();
-        var tirol = await league.IndexAsync(home, default);
+        // alle Ligen der Region (0.710.0: ohne `all` nur die mit eigener Mannschaft — die prüft LeagueRegionSqlTests)
+        var tirol = await league.IndexAsync(home, default, all: true);
         Assert.Equal(new[] { 4101 }, tirol["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
-        var bayern = await league.IndexAsync(other, default);
+        var bayern = await league.IndexAsync(other, default, all: true);
         Assert.Equal(new[] { 900_002_573 }, bayern["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
         Assert.Equal("2026/27", (await league.ForecastStatsAsync(null, default))["season"]!.GetValue<string>());
 

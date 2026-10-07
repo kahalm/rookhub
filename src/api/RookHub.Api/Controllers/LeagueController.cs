@@ -57,9 +57,19 @@ public class LeagueController : BaseApiController
         });
     }
 
+    /// <summary>Startseite: die Ligen der Region, in denen der Verein eine Mannschaft hat (0.710.0). <c>?all=true</c> = alle Ligen
+    /// der Region — nur für Verwalter (<see cref="Permissions.LeagueManage"/>, live wie bei den Paarungen); ohne das Recht wird der
+    /// Schalter STILL übergangen (gefiltert, <c>filtered: true</c>) statt 400: ein gemerkter Schalter nach entzogenem Recht soll die
+    /// Seite nicht leer machen.</summary>
     [HttpGet("index")]
     [HasPermission(Permissions.LeagueView)]
-    public Task<IActionResult> Index(CancellationToken ct) => WithClubAsync(ct, async club => Ok(await _league.IndexAsync(club, ct)));
+    public Task<IActionResult> Index([FromQuery] bool? all, [FromServices] PermissionResolver permissions, CancellationToken ct) =>
+        WithClubAsync(ct, async club =>
+        {
+            var everything = all == true
+                && (User.IsInRole("Admin") || (await permissions.GetAsync(GetUserId())).Has(Permissions.LeagueManage));
+            return Ok(await _league.IndexAsync(club, ct, everything));
+        });
 
     /// <summary>Fertig gerechnete Liga (alle Teams, alle Runden) — Feldnamen wie in der Python-Fassung.</summary>
     [HttpGet("{tnr:int}")]

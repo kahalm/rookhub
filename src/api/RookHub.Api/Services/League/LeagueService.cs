@@ -132,26 +132,58 @@ public sealed class LeagueService
     /// <summary>Startseite: die Ligen der laufenden Saison — seit dem Mandanten-Schritt (2026-10-07) nur die der Region des
     /// Vereins (<see cref="LeagueClub.Region"/>: Schwaz sieht Tirol, Weilheim Bayern = Ligamanager UND Schachkreis Zugspitze;
     /// gleiche Stufe → erst die Ligamanager-Liga, dann nach Gruppe); dazu der Verein selbst (Name,
-    /// Mannschafts-Anfang für die Vorauswahl, Anonymisierungs-Name).</summary>
-    public async Task<JsonObject> IndexAsync(LeagueClub club, CancellationToken ct)
+    /// Mannschafts-Anfang für die Vorauswahl, Anonymisierungs-Name).
+    /// <para>Seit 0.710.0 (Wunsch 2026-10-07: „nur die Ligen, in denen der Verein vertreten ist") nur die Ligen, in denen der
+    /// Verein mindestens eine Mannschaft hat (<see cref="LeagueClub.OwnsTeam"/> über Spielplan <c>LeagueMatches</c> und Meldelisten
+    /// <c>LeaguePlayers</c> — drei DISTINCT-Abfragen für alle Ligen zusammen, nicht je Liga; das <c>teams</c> der Ansicht stammt aus
+    /// demselben Spielplan, hieße aber jede Ansicht samt aller Prognosen zu laden). <paramref name="all"/> (nur Verwalter, das
+    /// prüft der Controller) liefert weiter alle Ligen der Region. Antwort: <c>filtered</c> (ob gefiltert wurde) und
+    /// <c>total</c> (Ligen der Region mit Ansicht — ohne eigene Liga unterscheidet die Oberfläche damit „keine Daten" von
+    /// „keine Mannschaft").</para></summary>
+    public async Task<JsonObject> IndexAsync(LeagueClub club, CancellationToken ct, bool all = false)
     {
         var region = club.Region;
         var season = await CurrentSeasonAsync(region, ct);
         var ts = await _db.LeagueTournaments.AsNoTracking().InRegion(region).Where(t => t.Season == season && t.Stage == "Liga")
             .OrderBy(t => t.Level).ThenBy(t => t.Source).ThenBy(t => t.Grp).ToListAsync(ct);
-        var views = await _db.LeagueViews.AsNoTracking().Where(v => ts.Select(t => t.Tnr).Contains(v.Tnr))
+        var tnrs = ts.Select(t => t.Tnr).ToList();
+        var views = await _db.LeagueViews.AsNoTracking().Where(v => tnrs.Contains(v.Tnr))
             .Select(v => new { v.Tnr, v.GeneratedAt }).ToListAsync(ct);
         var generated = views.Count > 0 ? views.Max(v => v.GeneratedAt) : (DateTime?)null;
+        var shown = ts.Where(t => views.Any(v => v.Tnr == t.Tnr)).ToList();
+        var total = shown.Count;
+        if (!all)
+        {
+            var own = await OwnLeaguesAsync(club, shown.Select(t => t.Tnr).ToList(), ct);
+            shown = shown.Where(t => own.Contains(t.Tnr)).ToList();
+        }
         return new JsonObject
         {
             ["season"] = season,
             ["club"] = ClubJson(club),
             ["generated"] = generated is null ? null : ToLocal(generated.Value).ToString("dd.MM.yyyy HH:mm"),
-            ["leagues"] = new JsonArray(ts.Where(t => views.Any(v => v.Tnr == t.Tnr)).Select(t => (JsonNode)new JsonObject
+            ["filtered"] = !all,
+            ["total"] = total,
+            ["leagues"] = new JsonArray(shown.Select(t => (JsonNode)new JsonObject
             {
                 ["tnr"] = t.Tnr, ["name"] = t.League + (string.IsNullOrEmpty(t.Grp) ? "" : $" {t.Grp}"),
             }).ToArray()),
         };
+    }
+
+    /// <summary>Die Ligen unter <paramref name="tnrs"/>, in denen der Verein eine Mannschaft hat — im Spielplan (Heim oder Gast)
+    /// oder in einer Meldeliste. Die Namen kommen als DISTINCT aus der Datenbank, verglichen wird im Speicher
+    /// (<see cref="LeagueClub.OwnsTeam"/> ist keine SQL-Bedingung).</summary>
+    private async Task<HashSet<int>> OwnLeaguesAsync(LeagueClub club, List<int> tnrs, CancellationToken ct)
+    {
+        if (tnrs.Count == 0) return new();
+        var home = await _db.LeagueMatches.AsNoTracking().Where(m => tnrs.Contains(m.Tnr)).Select(m => new { m.Tnr, Team = m.Home })
+            .Distinct().ToListAsync(ct);
+        var away = await _db.LeagueMatches.AsNoTracking().Where(m => tnrs.Contains(m.Tnr)).Select(m => new { m.Tnr, Team = m.Away })
+            .Distinct().ToListAsync(ct);
+        var roster = await _db.LeaguePlayers.AsNoTracking().Where(p => tnrs.Contains(p.Tnr)).Select(p => new { p.Tnr, p.Team })
+            .Distinct().ToListAsync(ct);
+        return home.Concat(away).Concat(roster).Where(x => club.OwnsTeam(x.Team)).Select(x => x.Tnr).ToHashSet();
     }
 
     /// <summary>Was die Oberfläche vom Verein wissen darf (kein Mitglied, keine Gruppe).</summary>

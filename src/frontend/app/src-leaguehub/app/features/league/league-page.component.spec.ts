@@ -38,6 +38,7 @@ describe('LeaguePageComponent', () => {
 
   beforeEach(() => {
     localStorage.removeItem('leaguehub');
+    localStorage.removeItem('lh-all-leagues');
     sessionStorage.removeItem('leaguehub-round');
     perms = new Set(['league.view', 'league.manage']);
     query = {};
@@ -100,6 +101,109 @@ describe('LeaguePageComponent', () => {
     expect(fixture.componentInstance.team()).toBe('SK Weiler 1');
     expect(el.textContent).toContain('Ligamanager des Bayerischen Schachbunds');
     expect(el.textContent).toContain('Schachkreis');
+  });
+
+  // Wunsch 2026-10-07 (0.710.0): „Zeig bei der Ligaauswahl nur die Ligen, in denen der Verein vertreten ist."
+  describe('nur Ligen mit eigener Mannschaft', () => {
+    const ALL: LeagueIndex = { ...INDEX, filtered: false, total: 3,
+      leagues: [{ tnr: 10, name: 'Landesliga' }, { tnr: 20, name: '1. Klasse Ost' }, { tnr: 30, name: '2. Klasse West' }] };
+    const OWN: LeagueIndex = { ...INDEX, filtered: true, total: 3, leagues: [{ tnr: 10, name: 'Landesliga' }] };
+    const options = (el: HTMLElement) => Array.from(el.querySelectorAll('form.pick select')[0].querySelectorAll('option')).map(o => o.textContent!.trim());
+
+    beforeEach(() => api.index.and.callFake(async (all = false) => all ? ALL : OWN));
+
+    it('die Liste zeigt nur die gefilterten Ligen; ohne Schalter fragt die Seite gefiltert', async () => {
+      const el = create();
+      await settle();
+      expect(api.index).toHaveBeenCalledWith(false);
+      expect(options(el)).toEqual(['Landesliga']);
+      expect(fixture.componentInstance.team()).toBe('Testdorf');
+    });
+
+    it('gemerkte fremde Liga (Gerät oder ?liga=) fällt auf die erste eigene', async () => {
+      localStorage.setItem('leaguehub', JSON.stringify({ liga: 20, verein: 'Hall' }));
+      create();
+      await settle();
+      expect([fixture.componentInstance.tnr(), fixture.componentInstance.team()]).toEqual([10, 'Testdorf']);
+      expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Testdorf' });
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      query = { liga: '30' };
+      create();
+      await settle();
+      expect(fixture.componentInstance.tnr()).toBe(10);
+    });
+
+    it('Verwalter-Schalter „alle Ligen der Region": holt alle, wird gemerkt, die gewählte Liga bleibt', async () => {
+      const el = create();
+      await settle();
+      const box = el.querySelector('.all-leagues input') as HTMLInputElement;
+      expect(box.checked).toBeFalse();
+      expect(el.querySelector('.all-leagues')!.textContent).toContain('alle Ligen der Region (3)');
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+      await settle();
+      expect(api.index).toHaveBeenCalledWith(true);
+      expect(options(el)).toEqual(['Landesliga', '1. Klasse Ost', '2. Klasse West']);
+      expect(localStorage.getItem('lh-all-leagues')).toBe('true');
+      expect(fixture.componentInstance.tnr()).toBe(10);
+      await fixture.componentInstance.pickLeague(20);
+      await settle();
+      // zurück auf „nur eigene": die fremde Liga fällt auf die erste eigene
+      await fixture.componentInstance.toggleAll(false);
+      await settle();
+      expect(options(el)).toEqual(['Landesliga']);
+      expect(fixture.componentInstance.tnr()).toBe(10);
+      expect(localStorage.getItem('lh-all-leagues')).toBe('false');
+    });
+
+    it('der gemerkte Schalter gilt beim nächsten Öffnen — für Nicht-Verwalter nie, und ohne Schalter im Bild', async () => {
+      localStorage.setItem('lh-all-leagues', 'true');
+      let el = create();
+      await settle();
+      expect(api.index).toHaveBeenCalledWith(true);
+      expect((el.querySelector('.all-leagues input') as HTMLInputElement).checked).toBeTrue();
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      api.index.calls.reset();
+      perms = new Set(['league.view']);
+      el = create();
+      await settle();
+      expect(api.index).toHaveBeenCalledWith(false);
+      expect(el.querySelector('.all-leagues')).toBeNull();
+    });
+
+    it('keine Liga mit eigener Mannschaft: Hinweis mit Vereinsnamen; Verwalter kann alle zeigen', async () => {
+      api.index.and.callFake(async (all = false) => all ? ALL : { ...OWN, leagues: [] });
+      const el = create();
+      await settle();
+      expect(el.textContent).toContain('Noch keine Liga mit einer Mannschaft von SK Testdorf');
+      expect(el.textContent).not.toContain('Noch keine Daten');
+      expect(api.league).not.toHaveBeenCalled();
+      const btn = Array.from(el.querySelectorAll('.no-own button')).find(b => b.textContent?.includes('Alle Ligen zeigen')) as HTMLButtonElement;
+      btn.click();
+      await settle();
+      expect(options(el)).toEqual(['Landesliga', '1. Klasse Ost', '2. Klasse West']);
+      expect(fixture.componentInstance.tnr()).toBe(10);
+    });
+
+    it('keine Liga mit eigener Mannschaft, ohne league.manage: Hinweis ohne Knopf', async () => {
+      perms = new Set(['league.view']);
+      api.index.and.resolveTo({ ...OWN, leagues: [] });
+      const el = create();
+      await settle();
+      expect(el.textContent).toContain('Noch keine Liga mit einer Mannschaft von SK Testdorf');
+      expect(el.textContent).toContain('Ein Verwalter des Vereins spielt die Daten ein.');
+      expect(el.querySelector('.no-own button')).toBeNull();
+    });
+
+    it('gar kein Bestand der Region: weiter „Noch keine Daten"', async () => {
+      api.index.and.resolveTo({ ...OWN, leagues: [], total: 0 });
+      const el = create();
+      await settle();
+      expect(el.textContent).toContain('Noch keine Daten');
+      expect(el.textContent).not.toContain('Noch keine Liga mit einer Mannschaft');
+    });
   });
 
   it('wählt ohne Vorgabe die erste Liga, die erste offene Runde und den eigenen Verein', async () => {

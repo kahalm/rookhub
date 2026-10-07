@@ -10,8 +10,10 @@ export class LeagueApiService {
   private readonly http = inject(HttpClient);
   private readonly leagues = new Map<number, League>();
 
-  index(): Promise<LeagueIndex> {
-    return firstValueFrom(this.http.get<LeagueIndex>('/api/league/index'));
+  /** Ligen der laufenden Saison, in denen der Verein eine Mannschaft hat (0.710.0); `all` = alle der Region (nur Verwalter,
+   *  sonst übergeht der Server den Schalter). */
+  index(all = false): Promise<LeagueIndex> {
+    return firstValueFrom(this.http.get<LeagueIndex>('/api/league/index', all ? { params: { all: 'true' } } : {}));
   }
 
   /** Partien im Bestand je Quelle (0.626.0; über einen Teilen-Link seit 0.627.0) — der Server zählt höchstens alle 30 min neu.

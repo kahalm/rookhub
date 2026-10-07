@@ -62,6 +62,11 @@ public class LeagueRegionSqlTests(LeagueRegionSqlFixture fixture) : IAsyncLifeti
             Assert.Equal(new[] { Lm, Zg }, bayern["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
             var tirol = await league.IndexAsync(new LeagueClub { Id = 1, Name = "SK Schwaz", TeamPrefix = "Schwaz", AnonName = "Schwaz" }, default);
             Assert.Equal(new[] { Cr }, tirol["leagues"]!.AsArray().Select(l => l!["tnr"]!.GetValue<int>()));
+            // 0.710.0: nur Ligen mit eigener Mannschaft — DISTINCT über Spielplan + Meldelisten, verglichen im Speicher
+            var nowhere = await league.IndexAsync(new LeagueClub { Id = 3, Name = "SK Nirgends", TeamPrefix = "Nirgends", AnonName = "Nirgends",
+                Region = LeagueRegions.Bayern }, default);
+            Assert.Empty(nowhere["leagues"]!.AsArray());
+            Assert.Equal(2, nowhere["total"]!.GetValue<int>());
             Assert.Equal("2026/27", (await league.ForecastStatsAsync(LeagueRegions.Bayern, default))["season"]!.GetValue<string>());
         }
     }

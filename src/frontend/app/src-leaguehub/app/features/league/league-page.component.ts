@@ -16,6 +16,8 @@ const PICK_KEY = 'leaguehub';
  *  Bewusst nur im sessionStorage: ein neuer Tab oder Tag beginnt wieder bei der ersten offenen Runde. */
 const ROUND_KEY = 'leaguehub-round';
 const POLL_MS = 4000;
+/** Verwalter-Schalter „alle Ligen der Region" (0.710.0) — je Gerät gemerkt, Vorgabe aus. */
+const ALL_KEY = 'lh-all-leagues';
 
 interface Pick { liga?: number; verein?: string }
 
@@ -39,11 +41,33 @@ interface Pick { liga?: number; verein?: string }
         <div class="actions"><button type="button" class="btn-sec" (click)="loadIndex()">Neu laden</button></div>
       </section>
     } @else if (index(); as ix) {
+      @if (canManage) {
+        <label class="all-leagues">
+          <input type="checkbox" [checked]="showAll()" (change)="toggleAll($any($event.target).checked)" />
+          alle Ligen der Region@if (ix.total) { ({{ ix.total }})}
+        </label>
+      }
       @if (!ix.leagues.length) {
-        <section class="gate">
-          <h2>Noch keine Daten</h2>
-          <p>Es liegt noch kein Bestand vor. Ein Admin spielt ihn einmal über den Import ein.</p>
-        </section>
+        @if (ix.filtered && ix.total) {
+          <section class="gate no-own">
+            <h2>Noch keine Liga mit einer Mannschaft von {{ clubName() }}</h2>
+            @if (canManage) {
+              <p>In der laufenden Saison hat {{ clubName() }} in keiner der {{ ix.total }} Ligen der Region eine Mannschaft — oder
+                deren Daten sind noch nicht eingespielt.</p>
+              <div class="actions">
+                <button type="button" class="btn-sec" (click)="toggleAll(true)">Alle Ligen zeigen</button>
+              </div>
+            } @else {
+              <p>Sobald die Ligen mit Mannschaften von {{ clubName() }} eingespielt sind, stehen sie hier. Ein Verwalter des Vereins
+                spielt die Daten ein.</p>
+            }
+          </section>
+        } @else {
+          <section class="gate">
+            <h2>Noch keine Daten</h2>
+            <p>Es liegt noch kein Bestand vor. Ein Admin spielt ihn einmal über den Import ein.</p>
+          </section>
+        }
       } @else {
         <form class="pick" autocomplete="off" (submit)="$event.preventDefault()">
           <label>Liga
@@ -115,6 +139,9 @@ export class LeaguePageComponent implements OnInit {
   readonly canManage = this.auth.has('league.manage');
 
   readonly index = signal<LeagueIndex | null>(null);
+  /** Verwalter sehen auf Wunsch alle Ligen der Region statt nur der mit eigener Mannschaft (0.710.0); für andere immer aus. */
+  readonly showAll = signal(this.canManage && readJson<boolean>(localStore(), ALL_KEY) === true);
+  readonly clubName = computed(() => this.index()?.club?.name ?? this.clubs.current()?.name ?? 'deinem Verein');
   /** Partien je Quelle (0.626.0, Wunsch: „x Spiele aus Lumbra, y aus ChessBase, z aus Lichess, w aus chess.com"). */
   readonly sources = signal<GameSources | null>(null);
   /** Meldeliste des Gegners in der gewählten Begegnung — ändert sie sich (oder die Liga), werden „Liga" und „Begegnung" neu geholt (0.628.0). */
@@ -178,26 +205,36 @@ export class LeaguePageComponent implements OnInit {
     }
   }
 
-  /** Bestand holen und die gemerkte Auswahl zeigen — auch „Neu laden", wenn der Bestand nicht kam (UX-034). */
-  async loadIndex(): Promise<void> {
+  /** Bestand holen und die gemerkte Auswahl zeigen — auch „Neu laden", wenn der Bestand nicht kam (UX-034). Seit 0.710.0
+   *  nur Ligen mit eigener Mannschaft: eine gemerkte Liga, die nicht (mehr) in der Liste steht, fällt auf die erste eigene. */
+  async loadIndex(keep?: { liga: number; runde: number; verein: string }): Promise<void> {
     this.loadError.set(null);
     const q = this.route.snapshot.queryParamMap;
     const saved = readJson<Pick>(localStore(), PICK_KEY) ?? {};
-    const pref = {
+    const pref = keep ?? {
       liga: Number(q.get('liga')) || saved.liga || 0,
       runde: Number(q.get('runde')) || 0,
       verein: q.get('verein') || saved.verein || '',
     };
     try {
-      const ix = await this.api.index();
+      const ix = await this.api.index(this.showAll());
       this.index.set(ix);
-      if (!ix.leagues.length) return;
+      if (!ix.leagues.length) { this.league.set(null); this.tnr.set(0); return; }
       const tnr = ix.leagues.some(l => l.tnr === pref.liga) ? pref.liga : ix.leagues[0].tnr;
       const lastRound = readJson<{ liga: number; runde: number }>(sessionStore(), ROUND_KEY);
       await this.showLeague(tnr, pref.runde || (lastRound?.liga === tnr ? lastRound.runde : 0), pref.verein);
     } catch (err) {
       this.loadError.set(this.errorText(err));
     }
+  }
+
+  /** Verwalter-Schalter „alle Ligen der Region": merken und die Liste neu holen; die gewählte Liga bleibt, wenn sie noch dabei ist. */
+  async toggleAll(on: boolean): Promise<void> {
+    if (!this.canManage) return;
+    this.showAll.set(on);
+    writeJson(localStore(), ALL_KEY, on);
+    const keep = this.tnr() ? { liga: this.tnr(), runde: this.round(), verein: this.team() } : undefined;
+    await this.loadIndex(keep);
   }
 
   async pickLeague(tnr: number): Promise<void> {
@@ -283,9 +320,10 @@ export class LeaguePageComponent implements OnInit {
       if (s.ok) {
         this.api.clearCache();
         try {
-          const ix = await this.api.index();
+          const ix = await this.api.index(this.showAll());
           this.index.set(ix);
-          await this.showLeague(this.tnr(), this.round(), this.team(), true);
+          const tnr = ix.leagues.some(l => l.tnr === this.tnr()) ? this.tnr() : ix.leagues[0]?.tnr;
+          if (tnr) await this.showLeague(tnr, this.round(), this.team(), true);
           this.setMsg(`Aktualisiert: ${s.message ?? ''}. Stand der Daten: ${ix.generated ?? '–'}.`, false);
         } catch (err) {
           this.setMsg(`Aktualisiert, aber neu laden hat nicht geklappt: ${this.errorText(err)}`, true);
