@@ -1785,7 +1785,10 @@ Rollenverwaltung an).
   `conflict`, 503 `unreachable`. **Aktualisieren**: `LeagueRefresh.RunAsync` holt Ligen mit `Source = ligamanager` über
   `LigamanagerSource.ImportAsync` statt über den Crawler (nie `api/league/{tnr}` für sie); Ligen ohne Source bleiben
   chess-results. Noch offen (Mandanten-Schritt): `OwnTeam = "Schwaz"`, Startseite mischt Tirol + Bayern einer Saison
-  (sortiert nach Stufe), `LeagueNames.Club`-Regeln sind Tiroler Regex („hall" träfe „Bad Reichenhall").
+  (sortiert nach Stufe). **Je Quelle getrennt (0.697.2)**: `LeagueWorld.Mpt` (Mannschaftskämpfe je Team, Schlüssel
+  (Quelle, Saison, Stufe), lesen über `MptOf`) und `ClubTeams` (Schlüssel (Quelle, Saison, Verein), `ClubTeamsOf`); die
+  Tiroler Vereinsnamen-Regeln von `LeagueNames.Club(team, source)` gelten nur für chess-results (`source` null), in Bayern
+  fällt nur die Mannschaftsnummer weg („hall" träfe sonst „Bad Reichenhall").
   Gemessen 07.10.2026 (Probelauf gegen die echten Seiten): Landesliga Süd 2026/27 — 9 Runden, 45 Begegnungen, 0
   Brettpartien, 218 Spieler (196 mit FIDE-ID), kein PGN; 2025/26 — 9 Runden, 45 Begegnungen, 360 Brettpartien (alle mit
   Farbe aus dem PGN, 0 gegen die Regel), 218 Spieler (0 mit FIDE-ID; 100 bekommen sie aus 2026/27), 360 PGN-Partien

@@ -79,13 +79,20 @@ public static class LeagueNames
         (new Regex("svi/ivb|sportverein innsbruck", RegexOptions.IgnoreCase), "Sportverein Innsbruck"),
     };
 
-    /// <summary>Kanonischer Verein: Spielgemeinschafts-Umbenennungen, Sponsoren, „1"/„2" zusammengeführt.</summary>
-    public static string Club(string? team)
+    /// <summary>Kanonischer Verein: Spielgemeinschafts-Umbenennungen, Sponsoren, „1"/„2" zusammengeführt.
+    /// <para>Die Namensregeln (<see cref="ClubRules"/>) sind TIROLER Vereine — sie gelten nur für chess-results-Ligen
+    /// (<paramref name="source"/> <c>null</c>); in Bayern träfe „hall" sonst „Bad Reichenhall" (2026-10-07, Mandanten-Schritt).
+    /// Dort zählt nur das Wegfallen der Mannschaftsnummer („SK Weilheim 1" → „SK Weilheim").</para></summary>
+    public static string Club(string? team, string? source = null)
     {
         var t = team ?? "";
-        foreach (var (re, club) in ClubRules)
-            if (re.IsMatch(t)) return club;
-        return Regex.Replace(t, @"\s+[12]$", "");
+        if (source is null)
+        {
+            foreach (var (re, club) in ClubRules)
+                if (re.IsMatch(t)) return club;
+            return Regex.Replace(t, @"\s+[12]$", "");
+        }
+        return Regex.Replace(t, @"\s+\d+$", "");
     }
 }
 
@@ -104,9 +111,13 @@ public sealed class LeagueWorld
     public HashSet<(int, int, string)> Real { get; } = new();
     public Dictionary<(int, string), List<RosterEntry>> Roster { get; } = new();
     public Dictionary<(string, int, string), int> AppsLvl { get; } = new();
-    public Dictionary<(string, int), int> Mpt { get; } = new();
+    /// <summary>Mannschaftskämpfe je Team (das Maximum) je (Quelle, Saison, Stufe) — seit 2026-10-07 je QUELLE getrennt: die
+    /// Stufen beider Länder liegen auf derselben Zahlenachse (Landesliga Tirol = 1, Oberliga Bayern = 1), der Nenner der
+    /// Einsatzquote darf sich nicht über die Länder mischen. Lesen über <see cref="MptOf"/>.</summary>
+    public Dictionary<(string? Source, string Season, int Level), int> Mpt { get; } = new();
     public Dictionary<(int, string), List<SchedEntry>> Sched { get; } = new();
-    public Dictionary<(string, string), HashSet<(int, string)>> ClubTeams { get; } = new();
+    /// <summary>Teams eines Vereins je (Quelle, Saison, Verein) — Verein nach <see cref="LeagueNames.Club"/> in der Regel seiner Quelle.</summary>
+    public Dictionary<(string? Source, string Season, string Club), HashSet<(int, string)>> ClubTeams { get; } = new();
     public List<LeagueGame> Games { get; }
 
     private static readonly Dictionary<string, int> None = new();
@@ -161,7 +172,7 @@ public sealed class LeagueWorld
         }
         foreach (var t in T.Values.Where(t => t.Stage == "Liga"))
         {
-            var k = (t.Season, t.Level);
+            var k = (t.Source, t.Season, t.Level);
             Mpt[k] = Math.Max(Mpt.GetValueOrDefault(k), MatchesPerTeam(t.Tnr));
         }
         foreach (var ((tnr, rnd), ms) in Matches)
@@ -177,7 +188,8 @@ public sealed class LeagueWorld
         foreach (var k in Sched.Keys.ToList()) Sched[k] = Sched[k].OrderBy(s => s.Round).ToList();
         foreach (var (tnr, team) in Sched.Keys)
         {
-            var k = (T[tnr].Season, LeagueNames.Club(team));
+            var src = T[tnr].Source;
+            var k = (src, T[tnr].Season, LeagueNames.Club(team, src));
             if (!ClubTeams.TryGetValue(k, out var set)) ClubTeams[k] = set = new();
             set.Add((tnr, team));
         }
@@ -216,6 +228,17 @@ public sealed class LeagueWorld
 
     public List<SchedEntry> SchedOf(int tnr, string team) =>
         Sched.TryGetValue((tnr, team), out var s) ? s : new();
+
+    /// <summary>Mannschaftskämpfe je Team einer Stufe in einer Saison DIESER Quelle (0 = unbekannt).</summary>
+    public int MptOf(string? source, string? season, int level) =>
+        season is null ? 0 : Mpt.GetValueOrDefault((source, season, level));
+
+    /// <summary>Die Teams desselben Vereins in dieser Saison (gleiche Quelle) — <c>null</c>, wenn es keine gibt.</summary>
+    public HashSet<(int, string)>? ClubTeamsOf(int tnr, string team)
+    {
+        var t = T[tnr];
+        return ClubTeams.TryGetValue((t.Source, t.Season, LeagueNames.Club(team, t.Source)), out var set) ? set : null;
+    }
 
     public int Apps(string? season, int level, string pid) =>
         season is null ? 0 : AppsLvl.GetValueOrDefault((season, level, pid));
@@ -284,17 +307,17 @@ public static class LeagueFeatures
         var yesterday = n > 0 && date is not null && past[^1].Date is not null
                         && date.Value.DayNumber - past[^1].Date!.Value.DayNumber == 1;
         var ps = w.PrevSeason(season);
-        var mptPrev = ps is null ? 0 : w.Mpt.GetValueOrDefault((ps, level));
-        var club = LeagueNames.Club(team);
+        var src = t.Source;
+        var mptPrev = w.MptOf(src, ps, level);
         var sameDay = new List<(int Tnr, string Team, int Round)>();
-        if (w.ClubTeams.TryGetValue((season, club), out var clubTeams))
+        if (w.ClubTeamsOf(tnr, team) is { } clubTeams)
             foreach (var (tnr2, team2) in clubTeams)
             {
                 if (tnr2 == tnr && team2 == team) continue;
                 foreach (var s2 in w.SchedOf(tnr2, team2))
                     if (date is not null && s2.Date == date) sameDay.Add((tnr2, team2, s2.Round));
             }
-        double MptOr1(string? s, int l) => Math.Max(1, s is null ? 1 : w.Mpt.TryGetValue((s, l), out var v) ? v : 1);
+        double MptOr1(string? s, int l) => Math.Max(1, s is null ? 1 : w.Mpt.TryGetValue((src, s, l), out var v) ? v : 1);
 
         var roster = w.Roster.TryGetValue((tnr, team), out var r) ? r : new List<RosterEntry>();
         var rows = new List<FeatureRow>(roster.Count);
@@ -515,9 +538,9 @@ public sealed class LeagueModel
 /// Ligastufen über beide Quellen (2026-10-07). Tirol (chess-results) kennt 1–4, Bayern (Ligamanager) 1–8
 /// (<see cref="LigamanagerSource.LevelOf"/>). Die Merkmale QHigher/QLower/NewEver zählen Einsätze aller Stufen bis
 /// <see cref="Max"/> — für Tirol ändert das nichts (über 4 gibt es dort keine Einsätze). Die Stufen beider Länder liegen auf
-/// derselben Zahlenachse; ein Spieler spielt aber nur in einem Land, daher mischen sich die Einsätze nicht. Was sich mischt,
-/// ist <see cref="LeagueWorld.Mpt"/> (Mannschaftskämpfe je Saison + Stufe, das Maximum über beide Länder) — der Nenner der
-/// Einsatzquote früherer Stufen; bei 9 (Tirol) gegen 9 (Bayern, 10er-Liga) Runden ohne Wirkung.
+/// derselben Zahlenachse; ein Spieler spielt aber nur in einem Land, daher mischen sich die Einsätze nicht. Der Nenner der
+/// Einsatzquote (<see cref="LeagueWorld.Mpt"/>, Mannschaftskämpfe je Saison + Stufe) ist seit dem Mandanten-Schritt
+/// (2026-10-07) je QUELLE getrennt, ebenso die Teams eines Vereins (<see cref="LeagueWorld.ClubTeams"/>).
 /// </summary>
 public static class LeagueLevels
 {

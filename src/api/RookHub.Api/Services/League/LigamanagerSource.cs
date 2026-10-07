@@ -652,12 +652,12 @@ public sealed partial class LigamanagerSource
         if (tnrs.Count == 0) return 0;
         var players = await _db.LeaguePlayers.Where(p => tnrs.Contains(p.Tnr)).ToListAsync(ct);
         var known = players.Where(p => !string.IsNullOrEmpty(p.FideId))
-            .GroupBy(p => (LeagueNames.Club(p.Team), p.NameKey))
+            .GroupBy(p => (LeagueNames.Club(p.Team, Source), p.NameKey))
             .Select(g => (g.Key, Ids: g.Select(p => p.FideId!).Distinct().ToList()))
             .Where(x => x.Ids.Count == 1).ToDictionary(x => x.Key, x => x.Ids[0]);
         var filled = 0;
         foreach (var p in players.Where(p => string.IsNullOrEmpty(p.FideId)))
-            if (known.TryGetValue((LeagueNames.Club(p.Team), p.NameKey), out var f)) { p.FideId = f; filled++; }
+            if (known.TryGetValue((LeagueNames.Club(p.Team, Source), p.NameKey), out var f)) { p.FideId = f; filled++; }
         if (filled == 0) return 0;
         var roster = players.Where(p => !string.IsNullOrEmpty(p.FideId))
             .GroupBy(p => (p.Tnr, p.Team, p.NameKey)).ToDictionary(g => g.Key, g => g.First().FideId);

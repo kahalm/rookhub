@@ -68,6 +68,35 @@ public class LeagueEngineTests
     [InlineData("Völs & Hak Ibk", "Völs & Hak Ibk")]
     public void Club_MergesRenamedTeams(string team, string club) => Assert.Equal(club, LeagueNames.Club(team));
 
+    /// <summary>Mandanten-Schritt (2026-10-07): die Tiroler Namensregeln gelten nur für chess-results-Ligen — „hall" träfe
+    /// sonst „Bad Reichenhall"; in Bayern fällt nur die Mannschaftsnummer weg.</summary>
+    [Theory]
+    [InlineData("SK Bad Reichenhall 2", "SK Bad Reichenhall")]
+    [InlineData("SK Weilheim 1", "SK Weilheim")]
+    [InlineData("SC Rum 10", "SC Rum")]
+    public void Club_InBavaria_IgnoresTheTyroleanRules(string team, string club) =>
+        Assert.Equal(club, LeagueNames.Club(team, LigamanagerSource.Source));
+
+    [Fact]
+    public void Mpt_IsSeparatedBySource()
+    {
+        // Tirol: Stufe 1 mit 2 Mannschaftskämpfen je Team; Bayern: Stufe 1 mit 1 — dieselbe Saison, dieselbe Stufe.
+        var tirol = new LeagueTournament { Tnr = 1, Season = "2025/26", Level = 1, League = "Landesliga", Stage = "Liga" };
+        var bayern = new LeagueTournament { Tnr = 900_000_001, Season = "2025/26", Level = 1, League = "Oberliga", Stage = "Liga",
+            Source = LigamanagerSource.Source };
+        var matches = new List<LeagueMatch>
+        {
+            new() { Id = 1, Tnr = 1, Round = 1, Home = "A", Away = "B" },
+            new() { Id = 2, Tnr = 1, Round = 2, Home = "B", Away = "A" },
+            new() { Id = 3, Tnr = 900_000_001, Round = 1, Home = "SK X 1", Away = "SK Y 1" },
+        };
+        var w = new LeagueWorld(new[] { tirol, bayern }, Array.Empty<LeagueRound>(), matches, Array.Empty<LeagueGame>(),
+            Array.Empty<LeaguePlayer>());
+        Assert.Equal(2, w.MptOf(null, "2025/26", 1));
+        Assert.Equal(1, w.MptOf(LigamanagerSource.Source, "2025/26", 1));
+        Assert.Equal(0, w.MptOf(null, null, 1));
+    }
+
     [Fact]
     public void Model_LoadsEmbeddedWeights()
     {

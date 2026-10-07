@@ -55,10 +55,10 @@ public sealed class LeagueViewBuilder
         {
             var lg = LeagueLevels.Short(t.Source, lvl);
             var n = _w.Apps(ps, lvl, pid);
-            if (ps is not null && n > 0) prev.Add($"{lg} {n}/{_w.Mpt.GetValueOrDefault((ps, lvl))}");
+            if (ps is not null && n > 0) prev.Add($"{lg} {n}/{_w.MptOf(t.Source, ps, lvl)}");
         }
         var cur = new List<string>();
-        if (_w.ClubTeams.TryGetValue((t.Season, LeagueNames.Club(team)), out var teams))
+        if (_w.ClubTeamsOf(tnr, team) is { } teams)
         {
             foreach (var (tnr2, team2) in teams.OrderBy(x => _w.T[x.Item1].Level))
             {
