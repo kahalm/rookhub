@@ -85,10 +85,15 @@ public sealed class LeagueAnalysisQueue
     /// <summary>Die geordnete Liste bauen (siehe Klassenkommentar).</summary>
     internal static async Task<List<Item>> BuildAsync(AppDbContext db, DateTime now, CancellationToken ct)
     {
-        var season = await db.LeagueTournaments.AsNoTracking().MaxAsync(t => (string?)t.Season, ct);
-        if (season == null) return new();
-        var tnrs = await db.LeagueTournaments.AsNoTracking().Where(t => t.Season == season && t.Stage == "Liga")
-            .Select(t => t.Tnr).ToListAsync(ct);
+        // Die laufende Saison JE REGION (Rest-Bug aus 0.712.0, behoben 0.720.0): mit der globalen jüngsten Saison fiele eine Region,
+        // deren neue Saison noch nicht eingespielt ist, ganz heraus — und Vorsaisonen (z. B. Bundesliga 2024/25 für die Merkmale)
+        // zählen nie mit.
+        var leagues = await db.LeagueTournaments.AsNoTracking().Where(t => t.Stage == "Liga")
+            .Select(t => new { t.Tnr, t.Season, t.Source }).ToListAsync(ct);
+        if (leagues.Count == 0) return new();
+        var current = leagues.GroupBy(t => LeagueRegions.Of(t.Source))
+            .ToDictionary(g => g.Key, g => g.Select(t => t.Season).Max(StringComparer.Ordinal)!);
+        var tnrs = leagues.Where(t => t.Season == current[LeagueRegions.Of(t.Source)]).Select(t => t.Tnr).ToList();
         var players = await db.LeaguePlayers.AsNoTracking().Where(p => tnrs.Contains(p.Tnr) && p.FideId != null && p.FideId != "")
             .Select(p => new { p.Tnr, p.Team, p.FideId }).ToListAsync(ct);
         var opponents = await NextRoundOpponentFidesAsync(db, tnrs, players.Select(p => (p.Tnr, p.Team, p.FideId!)).ToList(), ct);

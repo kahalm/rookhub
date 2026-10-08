@@ -68,6 +68,23 @@ public class LeagueAnalysisQueueTests : IDisposable
         Assert.Equal(new[] { true, true, false, false }, items.Select(i => i.Opponent));
     }
 
+    /// <summary>Die laufende Saison je REGION (Rest-Bug aus 0.712.0, behoben 0.720.0): Bayern hat noch keine 2026/27 eingespielt —
+    /// seine jüngste Saison 2025/26 zählt trotzdem; Tirols Vorsaison nicht.</summary>
+    [Fact]
+    public async Task Build_juengsteSaisonJeRegion()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 900_000_001, Season = "2025/26", League = "Oberliga", Stage = "Liga",
+            Source = LigamanagerSource.Source });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 900_000_001, Team = "SK Weiler 1", Name = "Bayer, Bert", FideId = "400" });
+        _db.SaveChanges();
+        Profile("400", Game("2026.07.01", "1. e4 c6 2. d4 d5"));
+        Profile("300", Game("2026.08.01", "1. b3 e5 2. Bb2 Nc6"));   // Tirol 2025/26: nicht mehr laufend
+
+        var items = await LeagueAnalysisQueue.BuildAsync(_db, Now, default);
+
+        Assert.Equal(new[] { "2026-07-01" }, items.Select(i => i.Date.ToString("yyyy-MM-dd")));
+    }
+
     [Fact]
     public async Task Build_dieselbePartieInZweiProfilen_zaehltEinmal_StellungspartieNicht()
     {

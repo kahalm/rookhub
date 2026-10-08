@@ -1749,7 +1749,8 @@ Rollenverwaltung an).
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/import` (Bestand aus `export_bundle.py`, gzip, `?rebuild=true`),
-  `POST /api/league/admin/rebuild`, `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten),
+  `POST /api/league/admin/rebuild`, `POST /api/league/admin/chessresults/import` (eine chess-results-Liga je Saison über den Crawler,
+  Bundesliga, siehe „Österreichische Bundesliga"), `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten),
   `POST /api/league/admin/zugspitze/import` (Schachkreis Zugspitze, siehe unten), `POST /api/league/admin/online-reports/zugspitze`
   (Online-Schach Oberbayern → Meldungen, siehe „Konto-Prüfung (i)"). Öffentlich (Rate-Limit `anonymous-tournament`):
   `GET /api/league/s/{token}` (+`/player/{fide}`, `/pgn`) — nur Spieler der geteilten Meldeliste, Online-Konten
@@ -1934,6 +1935,24 @@ Rollenverwaltung an).
   seit 2009 unverändert; `LeagueClub.OwnsTeam` vergleicht in Tirol zusätzlich den kanonischen Verein (Schwaz spielt 2026/27 als
   „Schachklub Schwaz" in der 1. Bundesliga, 2024/25 + 2025/26 als „Schachclub Schwaz" in der 2. BL West → die Startseite zeigt die BL
   dem Verein ohne „alle Ligen").
+  **Import je Saison** (0.720.0, `Services/League/ChessResultsLeagueImport.cs`): `POST /api/league/admin/chessresults/import`
+  (league.manage) `{ tnr, season ("2026/27"), level (1–6), league, grp?, stage? ("Liga"|"Playoff"), name? }` (+ `?dryRun=true`) holt die
+  vier Seiten über den Crawler (`GET {Crawler}/api/league/{tnr}`, HttpClient `LeagueCrawler` wie „Daten aktualisieren") und schreibt
+  Turnier-Zeile (`Source` null, Start/End/Rounds aus den Rundenterminen) + `LeagueRefresh.ReplaceAsync` (stabile Brettpaarungs-Ids,
+  `RelinkAsync`) in EINER Transaktion, dann `RebuildViewsAsync` (nur die laufende Saison bekommt Ansichten — Vorsaisonen sind nur
+  Merkmale). Antwort `{ tnr, name, season, level, dryRun, counts{ rounds, roundsPlayed, matches, teams, boardGames, boardGamesPlayed,
+  boardPlayersUnmatched, boards, players, playersWithFide, fideNotInLeagues, fideWithoutCard, firstRound, lastRound, roundBlocks },
+  views }`; 400 `invalidLeague` (Tnr ≥ 900 000 000, Saison nicht „JJJJ/JJ", Stufe außerhalb 1–6, Liga leer), 404 `notFound` (vier leere
+  Seiten), 409 `conflict` (Nummer gehört Ligamanager/Zugspitze), 502 `incomplete` (eine leere Seite bei Bestand — nichts ersetzt),
+  503 `unreachable`. Danach holt „Daten aktualisieren" die Ligen der laufenden Saison wie jede TMM-Liga. **Turniernummern** (chess-results,
+  Veranstalter ÖSB): 1. BL 2026/27 **1404438**, 2025/26 1163837, 2024/25 929746; 2. BL West 1410724 / 1221888 / 966389; Mitte
+  1409864 / 1174791 / 936680; Ost 1418722 / 1179184 / 956466 (2026/27 / 2025/26 / 2024/25). **Was der Crawler liefert** (08.10.2026):
+  12 Teams (West 2025/26: 11 + spielfrei), 6 Bretter, 11 Runden, Meldelisten 208–232 Spieler ALLE mit FIDE-ID (Ost 2026/27: 229/230),
+  Heim an ungeraden Brettern Weiß, Statistik (art=20) erst nach Saisonstart, ungespielte Runden mit Gast „FED" und „Brett nicht
+  besetzt". Gegen Prod 08.10.: 1 013 FIDE-IDs der zwölf Ligen haben keine Spielerkarte (je Liga 119–224) — Lumbra/Megabase nachfiltern
+  ist ein eigener Datenjob. **Reihenfolge** egal (keine FIDE-Nachfüllung wie in Bayern, alle Meldelisten tragen IDs); danach
+  `admin/rebuild` bzw. „Daten aktualisieren". `LeagueAnalysisQueue.BuildAsync` nimmt seit 0.720.0 die jüngste Saison JE REGION
+  (vorher global — eine Region ohne neue Saison fiel heraus).
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,

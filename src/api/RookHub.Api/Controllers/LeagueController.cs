@@ -507,6 +507,36 @@ public class LeagueController : BaseApiController
         }
     }
 
+    /// <summary>Eine chess-results-Liga (0.720.0): Turniernummer, Saison „2026/27", Tiroler Stufe (1 = 1. Bundesliga … 6 =
+    /// Gebietsklasse), Liga, Gruppe, Phase („Liga" | „Playoff"), Name (leer = „{Liga} {Gruppe} {Saison}").</summary>
+    public sealed record ChessResultsImportRequest(int? Tnr, string? Season, int? Level, string? League, string? Grp, string? Stage, string? Name);
+
+    /// <summary>
+    /// Eine chess-results-Liga über den Crawler einspielen (Österreichische Bundesliga, 0.720.0, <see cref="ChessResultsLeagueImport"/>) —
+    /// laufende Saison oder Vorsaison; danach die Ansichten. <c>?dryRun=true</c> holt und zählt nur (u. a. FIDE-IDs ohne Spielerkarte).
+    /// 400 <c>invalidLeague</c>, 404 <c>notFound</c>, 409 <c>conflict</c>, 502 <c>incomplete</c>, 503 <c>unreachable</c>.
+    /// </summary>
+    [HttpPost("admin/chessresults/import")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> ChessResultsImport([FromBody] ChessResultsImportRequest? req, [FromQuery] bool dryRun,
+        [FromServices] ChessResultsLeagueImport import, CancellationToken ct)
+    {
+        if (req?.Tnr is not { } tnr || req.Level is not { } level || string.IsNullOrWhiteSpace(req.Season) || string.IsNullOrWhiteSpace(req.League))
+            return BadRequest(new { reason = "invalidLeague", message = "tnr, season, level und league sind Pflicht" });
+        try
+        {
+            return Ok(await import.ImportAsync(new ChessResultsLeagueImport.Request(tnr, req.Season, level, req.League, req.Grp, req.Stage, req.Name), dryRun, ct));
+        }
+        catch (ChessResultsLeagueImport.InvalidException e) { return BadRequest(new { reason = "invalidLeague", message = e.Message }); }
+        catch (ChessResultsLeagueImport.NotFoundException e) { return NotFound(new { reason = "notFound", message = e.Message }); }
+        catch (ChessResultsLeagueImport.ConflictException e) { return Conflict(new { reason = "conflict", message = e.Message }); }
+        catch (ChessResultsLeagueImport.IncompleteException e) { return StatusCode(502, new { reason = "incomplete", message = e.Message }); }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+        {
+            return StatusCode(503, new { reason = "unreachable" });
+        }
+    }
+
     /// <summary>Eine Liga des Schachkreises Zugspitze: Adresse (<c>https://schachkreis-zugspitze.de/ergebnisse/?Saison=2026&amp;Liga=1</c>)
     /// ODER Liga-Id + Saison („2026/27", leer = laufende); <c>Boards</c> wie beim Ligamanager.</summary>
     public sealed record ZugspitzeImportRequest(string? Url, int? LigaId, string? Season, int? Boards);

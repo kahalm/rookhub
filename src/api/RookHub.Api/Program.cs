@@ -262,6 +262,7 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.ChessResultsLeagueImport>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
     // Vereine als Mandanten (2026-10-07): die EINE Stelle, die den Verein einer Anfrage bestimmt, und die Verwaltung der Vereine.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubResolver(
