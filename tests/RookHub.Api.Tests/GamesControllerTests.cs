@@ -363,6 +363,64 @@ public class GamesControllerTests : IDisposable
         Assert.Equal(1, _db.SavedGames.Count(g => g.UserId == user.Id && g.ExternalId == "heal-1"));
     }
 
+    /// <summary>Prod-Partie 63 (08.10.): der erste Save kam ganz ohne Metadaten. Ein zweiter mit denselben Zügen trägt
+    /// Spieler, Bedenkzeit und Datum nach — auch ohne neue Züge oder Wertung; Link und Id bleiben.</summary>
+    [Fact]
+    public async Task Save_Resave_SameMoves_FillsMissingPlayersTimeControlAndDate()
+    {
+        var user = await CreateUserAsync();
+        var moves = new List<string> { "e4", "e5", "Nf3" };
+        var first = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = moves, Result = "1-0", ExternalId = "heal-meta",
+        });
+        Assert.Null(first.White);
+
+        var second = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = moves, Result = "1-0", ExternalId = "heal-meta",
+            White = "kahalm", Black = "ukker1992", TimeControl = "180+2", PlayedAt = new DateTime(2026, 10, 8, 13, 33, 57, DateTimeKind.Utc),
+        });
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(first.ShareToken, second.ShareToken);
+        Assert.Equal(("kahalm", "ukker1992"), (second.White, second.Black));
+        Assert.Contains("[White \"kahalm\"]", second.Pgn);
+        Assert.Contains("[TimeControl \"180+2\"]", second.Pgn);
+        var row = _db.SavedGames.AsNoTracking().Single(g => g.Id == first.Id);
+        Assert.Equal("180+2", row.TimeControl);
+        Assert.NotNull(row.PlayedAt);
+    }
+
+    /// <summary>Ein Heil-Save, dem selbst etwas fehlt (hier die Namen), behält die gespeicherten — in den Spalten UND im PGN-Kopf.</summary>
+    [Fact]
+    public async Task Save_Resave_HealWithoutNames_KeepsStoredNamesInPgn()
+    {
+        var user = await CreateUserAsync();
+        await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5" }, White = "a", Black = "b", Result = "*", ExternalId = "heal-keep",
+        });
+        var healed = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", "Nf3" }, Result = "*", ExternalId = "heal-keep", WhiteElo = 2000,
+        });
+        Assert.Equal(("a", "b"), (healed.White, healed.Black));
+        Assert.Contains("[White \"a\"]", healed.Pgn);
+        Assert.Contains("[Black \"b\"]", healed.Pgn);
+    }
+
+    /// <summary>Hat die gespeicherte Partie schon alles, ändert ein gleicher Save nichts (kein unnötiges Neuschreiben).</summary>
+    [Fact]
+    public void FillsMissing_NurWennWirklichEtwasFehlt()
+    {
+        var full = new SavedGame { White = "a", Black = "b", TimeControl = "600", PlayedAt = DateTime.UtcNow };
+        Assert.False(SavedGameService.FillsMissing(full, new SaveGameInputDto { White = "x", Black = "y", TimeControl = "180+2", PlayedAt = DateTime.UtcNow }));
+        Assert.True(SavedGameService.FillsMissing(new SavedGame { Black = "b", TimeControl = "600", PlayedAt = DateTime.UtcNow },
+            new SaveGameInputDto { White = "x" }));
+        Assert.False(SavedGameService.FillsMissing(new SavedGame(), new SaveGameInputDto { White = " ", TimeControl = "kaputt" }));
+    }
+
     [Fact]
     public async Task Save_Resave_FewerMovesNoElo_DoesNotTruncate()
     {

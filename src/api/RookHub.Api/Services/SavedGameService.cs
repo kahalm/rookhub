@@ -107,7 +107,7 @@ public class SavedGameService
         if (result == null || !AllowedResults.Contains(result)) result = "*";
 
         // Dedup: gleicher User + Source + ExternalId → bestehende Partie. Wenn der neue
-        // Save BESSER ist (mehr Züge ODER erstmals Elo), heilt er den Datensatz in-place
+        // Save BESSER ist (mehr Züge, erstmals Elo ODER fehlende Spieler/Bedenkzeit/Datum), heilt er den Datensatz in-place
         // (gleiches ShareToken/Id) — so repariert ein Re-Save eine alt gespeicherte,
         // lückenhafte/Elo-lose Partie, ohne den Teilen-Link zu ändern.
         // Das gilt nur, solange es DIESELBE Partie ist: die neuen Züge setzen die gespeicherten fort
@@ -1088,8 +1088,16 @@ public class SavedGameService
         var newHasElo = IsPlausibleElo(dto.WhiteElo) || IsPlausibleElo(dto.BlackElo);
         var oldHasElo = ParseEloHeader(existing.Pgn, "WhiteElo") != null || ParseEloHeader(existing.Pgn, "BlackElo") != null;
         var moreMoves = moves.Count > CountPlies(existing.Pgn);
-        if (!moreMoves && !(newHasElo && !oldHasElo)) return false;
+        if (!moreMoves && !(newHasElo && !oldHasElo) && !FillsMissing(existing, dto)) return false;
 
+        // Das PGN wird aus dem NEUEN Save gebaut — was ihm fehlt, kommt aus der gespeicherten Partie, sonst stünde im Kopf
+        // „?" bzw. keine Wertung, während die Spalten den alten Wert behalten.
+        if (string.IsNullOrWhiteSpace(dto.White)) dto.White = existing.White;
+        if (string.IsNullOrWhiteSpace(dto.Black)) dto.Black = existing.Black;
+        dto.WhiteElo ??= existing.WhiteElo;
+        dto.BlackElo ??= existing.BlackElo;
+        if (CleanTimeControl(dto.TimeControl) == null) dto.TimeControl = existing.TimeControl;
+        dto.PlayedAt ??= existing.PlayedAt;
         existing.Pgn = BuildPgn(moves, dto, result);
         existing.MoveCount = moves.Count;   // MUSS mit: das PGN wird hier ersetzt
         // Die Spalten kommen aus derselben Quelle wie das PGN — aber nur, wenn der neue Save etwas
@@ -1105,6 +1113,17 @@ public class SavedGameService
         if (!string.IsNullOrWhiteSpace(dto.SourceUrl)) existing.SourceUrl = Clip(dto.SourceUrl, 1000);
         return true;
     }
+
+    /// <summary>
+    /// Bringt der neue Save Kopfdaten, die der gespeicherten Partie FEHLEN (Spieler, Bedenkzeit, Datum)? Dann heilt er sie
+    /// auch ohne neue Züge oder Wertung (0.725.x, Prod-Partie 63 am 08.10.: RepCheck schickte direkt nach Partieende gar keine
+    /// Metadaten, „?" gegen „?" — ein zweiter Klick auf „Partie speichern" reparierte das nicht, weil nur Züge/Elo heilten).
+    /// </summary>
+    internal static bool FillsMissing(SavedGame existing, SaveGameInputDto dto)
+        => (string.IsNullOrWhiteSpace(existing.White) && !string.IsNullOrWhiteSpace(dto.White))
+           || (string.IsNullOrWhiteSpace(existing.Black) && !string.IsNullOrWhiteSpace(dto.Black))
+           || (existing.TimeControl == null && CleanTimeControl(dto.TimeControl) != null)
+           || (existing.PlayedAt == null && dto.PlayedAt.HasValue);
 
     /// <summary>Liest ein Elo aus einem PGN-Header (z. B. <c>[WhiteElo "1832"]</c>); null wenn fehlt/unplausibel.</summary>
     public static int? ParseEloHeader(string pgn, string tag)
