@@ -9,6 +9,18 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.723.0',
+    date: '2026-10-08',
+    changes: [
+      { en: "LeagueHub, entering moves: a second mode “Position” lets you enter a position directly — paste a FEN (e.g. from Lichess or chess.com) or set it up on a board: pick a piece (or ✕ to clear) and tap squares, plus “Starting position”, “Clear board” and who is to move. FEN field and board stay in sync; castling rights come from the position. Impossible setups (not exactly one king each, pawns on the 1st/8th rank, the side not to move in check) are flagged.",
+        de: "LeagueHub, Züge eingeben: ein zweiter Modus „Stellung“ nimmt eine Stellung direkt — FEN einfügen (z. B. aus Lichess oder chess.com) oder am Brett aufbauen: Figur (oder ✕ zum Leeren) wählen und Felder antippen, dazu „Grundstellung“, „Brett leeren“ und wer am Zug ist. FEN-Feld und Brett laufen gleich, die Rochaderechte folgen aus der Stellung. Unmögliche Aufstellungen (nicht je genau ein König, Bauern auf der 1./8. Reihe, die Seite, die nicht am Zug ist, im Schach) werden angezeigt." },
+      { en: "LeagueHub, “Suggest move orders”: looks up in the local Lichess opening explorer which move orders most often lead to the position (up to 20 plies) and lists up to ten with the opening name, the moves in German notation and the estimated number of games (e.g. “≈ 2.8 million games · 89.4 % of the games in this position”). Tapping one takes the moves over into the “Moves” mode, saved as usual.",
+        de: "LeagueHub, „Zugfolgen vorschlagen“: sucht im lokalen Lichess-Eröffnungs-Explorer, über welche Zugfolgen man am häufigsten in die Stellung kommt (bis 20 Halbzüge), und listet bis zu zehn mit Eröffnungsname, Zügen in deutscher Schreibweise und geschätzter Partienzahl (z. B. „≈ 2,8 Mio. Partien · 89,4 % der Partien in dieser Stellung“). Antippen übernimmt die Zugfolge in den Modus „Züge“, gespeichert wird wie gewohnt." },
+      { en: "New endpoint GET /api/explorer/paths (signed in, local explorer only): best-first search from the starting position with bounds (share ≥ 1 %, top 8 moves per position, ply limit and side to move, square distance, material, pawns never move back, a lower bound of moves per side), at most 400 explorer queries or 20 seconds, 8 at a time; ranked by games at the start × the product of move shares.",
+        de: "Neuer Endpunkt GET /api/explorer/paths (angemeldet, nur lokaler Explorer): Suche „beste zuerst“ von der Grundstellung mit Schranken (Anteil ≥ 1 %, die 8 häufigsten Züge je Stellung, Halbzug-Grenze und Seite am Zug, Felder-Abstand, Material, Bauern gehen nicht zurück, Untergrenze der Züge je Farbe), höchstens 400 Explorer-Abfragen bzw. 20 Sekunden, 8 gleichzeitig; Rang nach Partien der Grundstellung × Produkt der Zuganteile." },
+    ],
+  },
+  {
     version: '0.722.0',
     date: '2026-10-08',
     changes: [

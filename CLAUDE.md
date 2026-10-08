@@ -234,6 +234,7 @@ ungelesene User-Nachricht, gibt es keine neue Glocke; nach dem Lesen klingelt di
 | POST | `/api/repertoires/similar-positions` | Ähnlichkeitssuche (`RepertoireSimilarityService`, Metrik `PositionSimilarity`) `{ fen, preset?, minScore?, limit?, includeMirrored?, sameSideToMove?, repertoireIds?, move?, onlyWithMove? }` → `{ matches[], preset, minScore, limit, compared, move, onlyWithMove, truncated }`. Deckel wie `position-tree` (Policy `repertoire-scan`, Zeitbudget 8 s `Budget`, dann `truncated: true` mit den Treffern des schon verglichenen Teils). Der Brett-Walk (`RepertoireLineSource.WalkPositions`) hört nach `MaxPositionsPerLine` (400) je Linie auf, statt die Linie ohne Meldung zu Ende zu spielen |
 | GET | `/api/explorer/position?fen=&source=&database=&ratings=&speeds=` | **Eröffnungs-Explorer des Analysebretts** (0.504.0, `ExplorerController`, nur angemeldet): Zugstatistik EINER Stellung `{ status, retryAfterSeconds?, source, database, total, white, draws, black, opening?, eco?, moves[{ uci, san, games, white, draws, black, averageRating?, opening?, eco? }] }`; `status` ∈ `ok`/`tokenMissing`/`tokenInvalid`/`rateLimited`/`failed` (immer 200), keine FEN / unbekannte Auswahl → 400. `ratings`/`speeds` als Komma-Liste. Dieselbe Datenstrecke wie der Lochfinder (`RepertoireExplorerService.PositionAsync`) |
 | GET | `/api/explorer/games?fen=&source=&database=&ratings=&speeds=` | Eine Handvoll Partien (≤ 5), die die Stellung erreicht haben (0.505.0): Meister = die bestbewerteten, Lichess = bestbewertete + jüngste, ohne Doppelte `{ status, retryAfterSeconds?, games[{ id, white, whiteRating?, black, blackRating?, winner?, date?, speed?, url? }] }`. Der Client fragt die Stellung NACH einem Zug = die Partien mit diesem Zug. Nur Arbeitsspeicher (1 h), kein DB-Speicher. `url` fehlt bei LOKALEN Meisterpartien (Lumbra — die Kennung gibt es auf lichess.org nicht) |
+| GET | `/api/explorer/paths?fen=&maxPlies=20&source=local` | **Zugfolgen zu einer Stellung** (0.723.0, `ExplorerPathFinder`, LeagueHub-Zugeditor): die häufigsten Wege von der Grundstellung zu `fen` (Brett + Seite am Zug, Rochade/e.p. egal) NUR aus dem LOKALEN Explorer → `{ opening?{ eco, name }, games, paths[{ moves (SAN), uci, estGames, share }], searched, queries, truncated, failed }`, höchstens 10 nach `estGames`. 400 `reason` ∈ `noLocalExplorer`/`invalidFen`/`onlyLocal`; Rate-Limit `explorer-paths` (10/min je Konto). Regeln unter „LeagueHub — Aufstellungen je Runde + erste Züge" |
 | GET | `/api/explorer/sources` | Wie `/api/repertoires/explorer/sources` (Quellen für den Explorer) |
 | GET | `/api/repertoires/explorer/sources` | Welche Explorer-Quellen es gibt `{ online, local, localRatings[], localSpeeds[] }` — `local` nur mit `LichessExplorer:LocalUrl` (0.503.0) |
 | POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
@@ -2105,6 +2106,40 @@ Möglichkeit, die ersten paar Züge einzugeben."
 
 Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids), `LeagueGameMovesSqlTests` (Migration + eindeutiger
 Schlüssel gegen MariaDB); Frontend `round-lineups`/`moves-editor`/`league-page`/`fixture-view`-Specs.
+
+**Stellung eingeben + Zugfolgen vorschlagen** (0.723.0, Wunsch 2026-10-08: „lass mich dort auch direkt Stellungen eingeben. schau
+dann in der lokalen Lichess-DB nach, welche Eröffnungen am häufigsten zu der Stellung kommen, und schlag sie mir vor"):
+* **Zweiter Modus „Stellung" im Zug-Editor** (`moves-editor`, Umschalter „Züge | Stellung"): FEN-Feld (einfügen) UND Aufstell-Brett
+  `shared/setup-board.component.ts` — ein eigenes 8×8-Raster mit den cburnett-Bildern (`/piece/cburnett/*.svg`), weil `app-chess-board`
+  nur legale Züge kennt; Palette mit 12 Figuren + ✕ (Figur wählen, Feld antippen; dieselbe Figur noch einmal = Feld leeren; ein zweiter
+  König derselben Farbe ersetzt den ersten), „Grundstellung", „Brett leeren", Seite am Zug. Startet mit der Stellung nach den eingegebenen
+  Zügen. FEN ↔ Brett synchron: das Brett schreibt die FEN neu (Rochaderechte aus König/Turm auf den Ausgangsfeldern, e.p. „-", Zähler
+  „0 1"), eine getippte FEN stellt das Brett, solange sie lesbar ist (sonst Hinweis, Brett bleibt). Gültigkeit (`positionProblem`): je
+  genau ein König, keine Bauern auf der 1./8. Reihe, die Seite, die NICHT am Zug ist, nicht im Schach (chess.js `skipValidation` +
+  `isAttacked`). Reine Regeln in `core/position-setup.ts`.
+* **„Zugfolgen vorschlagen"** → `GET /api/explorer/paths` (Knopf nur, wenn `/api/repertoires/explorer/sources` `local` meldet; ein 400
+  `noLocalExplorer` blendet ihn ebenfalls aus). Liste: Eröffnungsname, je Vorschlag die Zugfolge deutsch („1.e4 c5 2.Sf3 …",
+  `formatMoves`), „≈ 2,8 Mio. Partien" (`formatGames`) und Anteil an den Partien der Stellung; Antippen übernimmt die Zugfolge in den Modus
+  „Züge" (Speichern wie bisher). Keine Treffer: „Keine Zugfolge gefunden (…)". Hinweis unter dem Feld: die Zugzahl ist bei einer von Hand
+  aufgebauten Stellung unbekannt, die Suche prüft bis 20 Halbzüge.
+* **Suche** (`Services/ExplorerPathFinder.cs`, nur lokaler Explorer, Auswahl Lichess ab 1600, Blitz/Schnell/Klassisch): vorwärts von der
+  Grundstellung, Knoten = (Stellung, Tiefe) — Zugumstellungen werden je Tiefe EINMAL erweitert, alle Vorgänger bleiben (jeder Pfad zählt).
+  „Beste zuerst" nach Wahrscheinlichkeit (Produkt der Zuganteile) · 0,3 je noch nötigem Zug (`NeedWeight` 1,2 im Logarithmus), FLIESSEND
+  bis zu 8 Abfragen gleichzeitig (eine langsame Abfrage — HDD, bis Sekunden — hält die anderen nicht auf). Schranken: Anteil ≥ 1 %, die 8
+  häufigsten Züge je Knoten; Halbzug-Grenze + Parität (Seite am Zug der Zielstellung); Felder-Abstand `diff > 2·Rest + 4` → weg; Material
+  nimmt nur ab; Bauern gehen nicht zurück (Zuordnung jedes Zielbauern zu einem eigenen Bauern dahinter, Linienwechsel = Schlagzüge, die die
+  Materialbilanz des Gegners hergeben muss); Zug-Untergrenze je Farbe (fehlende Zielfelder der Figuren + Bauernschritte, Rochade füllt zwei)
+  ≤ eigene Züge bis zur Grenze. Umwandlungen sind ausgenommen. Ende, wenn die zehn besten Funde (mindestens 0,1 % des besten) jede offene
+  Stellung SCHÄTZUNGSWEISE schlagen, oder am Budget (400 Abfragen bzw. 20 s, `truncated`). Antworten 1 h im Arbeitsspeicher, derselbe
+  Schlüssel wie der Lochfinder (`RepertoireExplorerService.LocalMemoryKey`). Rang: `estGames` = Partien(Grundstellung) · Π Anteil;
+  `games` = Partien der Zielstellung, `opening` dessen Name (sonst der letzte benannte Zug des besten Wegs). Die Rochade kommt vom Explorer
+  als König-schlägt-Turm (`e1h1`) und geht als `e1g1` zurück.
+* **Gemessen** (08.10.2026, Najdorf nach 5…a6, gegen den lokalen Explorer): warm 1,0 s / 331 Abfragen, 10 Wege, an der Spitze
+  1.e4 c5 2.Sf3 d6 3.d4 cxd4 4.Sxd4 Sf6 5.Sc3 a6 (≈ 2,8 Mio., 89 %); kalt (Platte) ~10–20 Abfragen/s, der erste Lauf erreichte dort das
+  20-s-Budget mit derselben Rangfolge. QGD nach 3…Sf6 120 Abfragen, Berlin nach 3…Sf6 213 (nur zwei Wege über 1 % je Zug).
+* Tests: `ExplorerPathFinderTests` (gefälschter Baum: Sizilianisch über 1.e4 c5 2.Sf3 und 1.Sf3 c5 2.e4, Rangfolge, Zugumstellung,
+  Parität, Abstandsschranke, Budget, Speicher, ungültige FEN, Controller 400, Rate-Limit), `ExplorerPathFinderLiveTests` gegen den echten
+  Explorer nur mit `ROOKHUB_TEST_EXPLORER_URL` (optional `…_FEN`, `…_MAXQ`); Frontend `moves-editor`- und `position-setup`-Specs.
 
 ### LeagueHub — Vereins-Datenbank (0.573.0, Übersicht/Teilen-Link/Megabase 0.574.0)
 
