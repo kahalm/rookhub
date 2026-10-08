@@ -207,16 +207,4 @@ public class LeagueBroadcastImportTests : IDisposable
         var shortGame = LeagueProfileBuilder.Parse(Game("A, B", "C, D", "1-0", moves: "1. e4 e5 2. Nf3 Nc6"), "x")[0];
         Assert.Null(LeagueProfileStore.SameGameKey(shortGame));
     }
-
-    [Fact]
-    public async Task BundleImport_OfProfiles_LetsBroadcastsImportAgain()
-    {
-        _db.LeagueBroadcasts.Add(new LeagueBroadcast { TourId = "favpBItT", Name = "x", FoundAt = DateTime.UtcNow, ImportedAt = DateTime.UtcNow, Finished = true });
-        await _db.SaveChangesAsync();
-        var bundle = new LeagueImportService.Bundle(null, null, null, null, null, null,
-            new() { new("1610198", "Hoebarth, Guenter", 0, new System.Text.Json.Nodes.JsonObject(), "", null) });
-        await new LeagueImportService(_db).ImportAsync(bundle, default);
-        var b = await _db.LeagueBroadcasts.AsNoTracking().SingleAsync();
-        Assert.Equal((false, (DateTime?)null), (b.Finished, b.ImportedAt));
-    }
 }

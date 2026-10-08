@@ -23,13 +23,12 @@ namespace RookHub.Api.Controllers;
 public class LeagueController : BaseApiController
 {
     private readonly LeagueService _league;
-    private readonly LeagueImportService _import;
     private readonly LeagueUpdateService _update;
     private readonly LeagueClubResolver _clubs;
 
-    public LeagueController(LeagueService league, LeagueImportService import, LeagueUpdateService update, LeagueClubResolver clubs)
+    public LeagueController(LeagueService league, LeagueUpdateService update, LeagueClubResolver clubs)
     {
-        _league = league; _import = import; _update = update; _clubs = clubs;
+        _league = league; _update = update; _clubs = clubs;
     }
 
     /// <summary>Im Verein der Anfrage (<c>?club=</c>, <see cref="LeagueClubResolver"/>), sonst die Absage.</summary>
@@ -364,15 +363,14 @@ public class LeagueController : BaseApiController
     [HasPermission(Permissions.LeagueView)]
     public IActionResult UpdateStatus() => Ok(_update.Status());
 
-    // ---- Übernahme aus der Python-Fassung --------------------------------------------------------------
+    // ---- Fremde Partien und Spielerverzeichnis (gzip) ----------------------------------------------------
+    // Der Bündel-Import der Python-Fassung (admin/import, leerte ALLE Ligen) ist entfernt (Wunsch 08.10.2026) — Ligen kommen je Saison
+    // über admin/chessresults/import, admin/ligamanager/import und admin/zugspitze/import.
 
-    /// <summary>Rumpf-Obergrenze von <c>admin/import</c> — unkomprimiert UND (bei gzip) entpackt.</summary>
-    internal const long ImportMaxBytes = 200L * 1024 * 1024;
     /// <summary>Rumpf-Obergrenze von <c>admin/games</c> und <c>admin/mega-players</c> — unkomprimiert UND entpackt.
     /// Real (28.09.): Megabase-Auswahl 52 MB PGN, Spielerverzeichnis 15 MB TSV.</summary>
     internal const long CollectionMaxBytes = 400L * 1024 * 1024;
     // Entpackt-Grenzen; Tests verkleinern sie, statt Hunderte MB zu erzeugen.
-    internal long ImportUnpackedLimit { get; init; } = ImportMaxBytes;
     internal long CollectionUnpackedLimit { get; init; } = CollectionMaxBytes;
 
     /// <summary>Der Rumpf, bei <c>Content-Encoding: gzip</c> entpackt — aber höchstens <paramref name="limit"/> Bytes:
@@ -385,24 +383,6 @@ public class LeagueController : BaseApiController
 
     private ObjectResult UnpackedTooLarge(long limit) =>
         StatusCode(StatusCodes.Status413PayloadTooLarge, new { message = $"entpackt größer als {limit / (1024 * 1024)} MB — bitte aufteilen" });
-
-    /// <summary>Bestand übernehmen (JSON, gern gzip-komprimiert mit <c>Content-Encoding: gzip</c>); 413, wenn der Rumpf
-    /// entpackt größer als <see cref="ImportMaxBytes"/> ist.</summary>
-    [HttpPost("admin/import")]
-    [HasPermission(Permissions.LeagueManage)]
-    [RequestSizeLimit(ImportMaxBytes)]
-    public async Task<IActionResult> Import([FromQuery] bool rebuild, CancellationToken ct)
-    {
-        var body = AdminBody(ImportUnpackedLimit);
-        LeagueImportService.Bundle? bundle;
-        try { bundle = await JsonSerializer.DeserializeAsync<LeagueImportService.Bundle>(body, LeagueImportService.Json, ct); }
-        catch (JsonException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (LimitedReadStream.LimitExceededException) { return UnpackedTooLarge(ImportUnpackedLimit); }
-        if (bundle is null) return BadRequest(new { message = "leer" });
-        var res = await _import.ImportAsync(bundle, ct);
-        if (rebuild) res["views"] = await _league.RebuildViewsAsync(ct);
-        return Ok(res);
-    }
 
     /// <summary>
     /// Eine fremde Partiesammlung einspielen (PGN, gern gzip mit <c>Content-Encoding: gzip</c>), z. B. die aus der

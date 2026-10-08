@@ -136,23 +136,6 @@ public class LeagueOnlineTests : IDisposable
         Assert.Equal(new[] { "conf", "site", "url", "user" }, shared.Select(kv => kv.Key).OrderBy(k => k));
     }
 
-    [Fact]
-    public async Task BundleImport_KeepsAccountsMaintainedInLeagueHub()
-    {
-        await SeedPlayerAsync();
-        var manual = await AccountWithGamesAsync("lichess", "Max_Muster", "sicher");
-        _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "222", Site = "chess.com", UserName = "old", Url = "u", Confidence = "sicher" });
-        await _db.SaveChangesAsync();
-        await new LeagueImportService(_db).ImportAsync(new LeagueImportService.Bundle(null, null, null, null, null, new()
-        {
-            new("222", "lichess", "max_muster", "u2", "wahrscheinlich", "Import"),       // gibt es schon, gepflegt → bleibt wie es ist
-            new("222", "chess.com", "neu", "u3", "sicher", null),
-        }, null), default);
-        var all = await _db.LeagueOnlineAccounts.AsNoTracking().OrderBy(a => a.Id).ToListAsync();
-        Assert.Equal(new[] { "Max_Muster:sicher", "neu:sicher" }, all.Select(a => $"{a.UserName}:{a.Confidence}"));
-        Assert.Equal(1, await _db.LeagueOnlineGames.CountAsync(g => g.AccountId == manual.Id));
-    }
-
     // ── Lesen ──────────────────────────────────────────────────────────────────────────────────
 
     private static string LichessLine(string id, DateTime created, string speed, string white, string black, string? winner,
@@ -375,7 +358,7 @@ public class LeagueOnlineTests : IDisposable
         foreach (var a in _db.LeagueOnlineAccounts) a.GameCount = a.Confidence == "sicher" ? 4 : 1;
         await _db.SaveChangesAsync();
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
-        var ctl = new LeagueController(league, null!, null!, null!);
+        var ctl = new LeagueController(league, null!, null!);
         static JsonObject Body(IActionResult r) => (JsonObject)((OkObjectResult)r).Value!;
 
         Assert.Equal((3, 0, 3, "e4:3"), Summary(Body(await ctl.Tree("222", "w", null, "online", null, null, null, default))));
@@ -424,7 +407,7 @@ public class LeagueOnlineTests : IDisposable
     {
         await TreeSeedAsync();
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
-        var ctl = new LeagueController(league, null!, null!, null!);
+        var ctl = new LeagueController(league, null!, null!);
         async Task<JsonObject> P(string? source, string? speeds = null, int? years = null, bool? unsure = null) =>
             (JsonObject)((OkObjectResult)await ctl.Profile("222", source, speeds, years, unsure, default)).Value!;
         static string First(JsonObject o, string section) => string.Join(" ", o[section]!["first"]!.AsArray()

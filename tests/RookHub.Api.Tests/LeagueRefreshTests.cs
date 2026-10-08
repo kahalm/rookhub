@@ -263,32 +263,6 @@ public class LeagueRefreshTests : IDisposable
     }
 
     [Fact]
-    public async Task Import_ReplacesTheLeagueData_AndUpsertsProfiles()
-    {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 99, Season = "2019/20", League = "alt" });
-        _db.LeagueGames.Add(new LeagueGame { Tnr = 99, HomeTeam = "alt", AwayTeam = "alt" });
-        _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "111", Name = "alt", GameCount = 1 });
-        await _db.SaveChangesAsync();
-        var bundle = new LeagueImportService.Bundle(
-            new() { new(7, "TMM Landesliga 2026/2027", "2026/27", 1, "Landesliga", null, "Liga", false, null, null, 11) },
-            new() { new(7, 1, "03.10.2026") },
-            new() { new(7, 1, 1, "Schwaz", "Absam", null, null, null, null, null) },
-            new() { new(7, 1, 1, 1, "Schwaz", "Absam", "Binder, Moriz", "Hengl, Philip", null, null, "w", "½ - ½", .5, .5, 0, "111", "222", 2, 1, 2201, 2172, null) },
-            new() { new(7, "Schwaz", 2, 1, null, "Binder, Moriz", "binder, moriz", "111", 2201, null, "AUT", null, null, null) },
-            new() { new("111", "lichess", "moriz", "https://lichess.org/@/moriz", "sicher", null) },
-            new() { new("111", "Binder, Moriz", 3, new System.Text.Json.Nodes.JsonObject { ["n"] = 3 }, "[Event \"x\"]", null) });
-        var res = await new LeagueImportService(_db).ImportAsync(bundle, default);
-        Assert.Equal(1, res["tournaments"]!.GetValue<int>());
-        Assert.Equal(new[] { 7 }, _db.LeagueTournaments.Select(t => t.Tnr).ToArray());
-        Assert.Equal(LeagueLevels.TirolLandesliga, _db.LeagueTournaments.Single().Level);   // Python-Stufe 1 → Landesliga 3 (0.719.0)
-        Assert.Single(_db.LeagueGames);                                   // die alte Liga ist ersetzt
-        Assert.Equal(new DateOnly(2026, 10, 3), _db.LeagueRounds.Single().Date);
-        Assert.Single(_db.LeagueOnlineAccounts);
-        var prof = _db.LeaguePlayerProfiles.Find("111")!;
-        Assert.Equal(("Binder, Moriz", 3), (prof.Name, prof.GameCount));   // vorhandenes Profil aktualisiert
-    }
-
-    [Fact]
     public async Task Update_AfterARun_NotAgainWithinTwoMinutes()
     {
         // Ohne registriertes LeagueRefresh scheitert der Lauf sofort — genug, um die Sperre danach zu prüfen.

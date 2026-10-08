@@ -21,6 +21,9 @@ public class RetiredEndpointsTests
         // A9-008: Komplettlöschung aller Puzzles ohne Aufrufer — scheiterte relational am Restrict-FK der
         // RevengeNotifications und hätte FavoritePuzzles/PuzzleChallenges/WorksheetItems mit toten Ids zurückgelassen
         "DELETE /api/admin/puzzles",
+        // Bündel-Import der Python-Fassung (export_bundle.py, entfernt 08.10.2026): leerte ALLE LeagueTournaments — seit Bayern und
+        // der Bundesliga gefährlich; Ligen kommen je Saison über admin/chessresults|ligamanager|zugspitze/import
+        "POST /api/league/admin/import",
     ];
 
     [Fact]

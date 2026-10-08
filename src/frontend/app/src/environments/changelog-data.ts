@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.721.1", date: "2026-10-08", changes: [
+    { en: "LeagueHub: the old one-off bundle import from the earlier Python version (admin) is gone — it replaced ALL leagues at once, which no longer fits now that Bavaria and the Bundesliga live alongside the Tyrolean leagues. Leagues are imported per season through the chess-results, Ligamanager and Zugspitze imports.",
+      de: "LeagueHub: der alte einmalige Bündel-Import aus der früheren Python-Fassung (Verwaltung) ist entfernt — er ersetzte ALLE Ligen auf einmal, was seit Bayern und der Bundesliga neben den Tiroler Ligen nicht mehr passt. Ligen kommen je Saison über die Importe von chess-results, Ligamanager und Zugspitze." },
+  ] },
   { version: "0.721.0", date: "2026-10-08", changes: [
     { en: "LeagueHub: new button “All lineups of round N” below the selection on the league page — it opens every match of the chosen round: home – away with the match score, and below it each board with the home player (title, rating), colour, result and away player, like on chess-results. Your own club’s matches are framed; rounds whose lineups are not out yet say “No lineup yet”. The open state is kept in the address (&aufstellungen=1) and with the remembered round. On phones the players of a board stack instead of scrolling sideways.",
       de: "LeagueHub: neuer Knopf „Alle Aufstellungen der Runde N“ unter der Auswahl der Ligaseite — klappt alle Begegnungen der gewählten Runde auf: Heim – Gast mit Mannschaftsergebnis, darunter je Brett Heimspieler (Titel, Elo), Farbe, Ergebnis und Gastspieler wie auf chess-results. Begegnungen des eigenen Vereins sind umrahmt; Runden ohne veröffentlichte Aufstellung zeigen „Noch keine Aufstellung“. Der offene Zustand steht in der Adresse (&aufstellungen=1) und bleibt mit der gemerkten Runde. Am Handy stehen die Spieler eines Bretts untereinander statt waagrecht zu scrollen." },

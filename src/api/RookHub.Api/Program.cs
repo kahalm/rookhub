@@ -260,7 +260,6 @@ try
             SizeLimit = RookHub.Api.Services.League.LeagueProfileStore.CacheSizeLimit,
         }));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueService>();
-    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.ChessResultsLeagueImport>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();

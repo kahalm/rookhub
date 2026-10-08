@@ -1563,7 +1563,10 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
 ### LeagueHub — Tiroler Ligen, Aufstellungs-Prognosen (Admin + öffentliche Teilen-Links, 0.569.0)
 
 Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag unter
-`leaguehub.oberschmid.homes` als eigener Stack `/opt/stacks/leaguehub`). Rechte: `league.view` lesen,
+`leaguehub.oberschmid.homes` als eigener Stack `/opt/stacks/leaguehub`). **Bestand übernommen** einmalig über den Bündel-Import
+(`export_bundle.py` → `POST /api/league/admin/import`); der Endpunkt samt `LeagueImportService` ist **entfernt in 0.721.1** (Wunsch
+2026-10-08: er leerte ALLE `LeagueTournaments` — seit Bayern und der Bundesliga gefährlich). Neue Ligen kommen je Saison über
+`admin/chessresults/import`, `admin/ligamanager/import` und `admin/zugspitze/import`. Rechte: `league.view` lesen,
 `league.manage` aktualisieren/teilen/importieren, `league.contribute` Vereinspartien beitragen (0.573.0) — Admin erfüllt
 alles; die Vereinsgruppe bekommt eine Rolle mit `league.view` + `league.contribute` (legt der Admin in der
 Rollenverwaltung an).
@@ -1585,9 +1588,10 @@ Rollenverwaltung an).
   Merkmale NUR aus Wissen vor der Runde, logistische Regression mit den eingebetteten Gewichten
   `Assets/league-model.json` (trainiert in Python, `export_weights.py`; Bayern seit 0.708.0 eigenes Modell, siehe „Modell je Region"), Normierung je Match auf B Bretter,
   Brett-Wahrscheinlichkeiten über elementarsymmetrische Polynome (Bretter folgen der Meldeliste),
-  Sonntag vorab = Mischung aus „Samstag gespielt ja/nein". **Tor**: `LeaguePythonParityTests` gegen den
-  echten Bestand (`LEAGUE_BUNDLE`, `LEAGUE_PY_DATA`, sonst übersprungen) — 0.569.0: 88 Begegnungen,
-  1 676 Wahrscheinlichkeiten, größte Abweichung 0,000.
+  Sonntag vorab = Mischung aus „Samstag gespielt ja/nein". **Maßgeblich ist die C#-Fassung** (die Python-Fassung wird nicht
+  mehr gepflegt). Paritäts-Nachweis zuletzt 2026-10-08 gegen den echten Bestand: 88 Begegnungen, 1 676 Wahrscheinlichkeiten,
+  Abweichung 0 (0.569.0 ebenso). Der Test dafür (`LeaguePythonParityTests`, las das Prod-Bündel `data.json.gz`) ist mit dem
+  Bündel-Import entfernt.
 - **Freigabe-Regel** (Wunsch des Nutzers): die NÄCHSTE Runde einer Liga ist „offen" (`rounds[].open`, Vorauswahl; Landesliga
   Samstag + Sonntag gemeinsam). Spätere Runden sind seit 2026-10-06 nicht mehr „gesperrt" (Wunsch: „lass mich auch zukünftige
   Runden sehen — Prognosen kannst du machen und dann anpassen"): `status: "open"` + `provisional: true` + `unlock_after`, dieselbe
@@ -1748,7 +1752,6 @@ Rollenverwaltung an).
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
-  `POST /api/league/admin/import` (Bestand aus `export_bundle.py`, gzip, `?rebuild=true`),
   `POST /api/league/admin/rebuild`, `POST /api/league/admin/chessresults/import` (eine chess-results-Liga je Saison über den Crawler,
   Bundesliga, siehe „Österreichische Bundesliga"), `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten),
   `POST /api/league/admin/zugspitze/import` (Schachkreis Zugspitze, siehe unten), `POST /api/league/admin/online-reports/zugspitze`
@@ -1771,8 +1774,8 @@ Rollenverwaltung an).
   und auch EINE leere Seite nicht, solange die Liga dafür Bestand hat (Paarungen art=2, Brettpaarungen art=3,
   Meldeliste art=16, Statistik art=20 = Punkte/Partien/Performance an der Meldeliste; Codereview N4-002): der Crawler
   holt die vier nacheinander und meldet eine Drosselseite als leere Liste, dann bleibt die Liga und steht unter „nicht
-  aktualisiert“. Leer bleiben darf eine Seite nur, wenn auch der Bestand dafür leer ist (Saisonbeginn). Der
-  Import (`admin/import`) ersetzt in EINER Transaktion (Execution-Strategy-Muster).
+  aktualisiert“. Leer bleiben darf eine Seite nur, wenn auch der Bestand dafür leer ist (Saisonbeginn). (Der Bündel-Import
+  `admin/import`, der alle Ligen in EINER Transaktion ersetzte, ist seit 2026-10-08 entfernt.)
 - **Ligamanager (Bayern) als zweite Liga-Quelle** (2026-10-07, Schritt 1 von „LeagueHub für SK Weilheim"):
   `Services/League/LigamanagerSource.cs` liest EINE Liga des SBV-Ligamanagers (`https://ligamanager.schachbund-bayern.de`,
   keine API, HTML per Regex; Muster am Ende der Klasse) direkt aus RookHub.Api — kein Crawler, kein VPN, eigener HttpClient
@@ -1887,7 +1890,7 @@ Rollenverwaltung an).
   2024/25 — ältere Saisonen kommen nur mit Begegnungen und Mannschaftsergebnis (0 Bretter, 0 Spieler) und taugen weder für
   Merkmale noch fürs Training.
 - **Modell je Region** (0.708.0, Wunsch 2026-10-07 „ein eigenes Prognose-Modell für die Region Bayern"): Tirol rechnet weiter
-  mit `Assets/league-model.json` (Python, unverändert — `LeaguePythonParityTests`/`LeagueEngineTests` gleich), Bayern
+  mit `Assets/league-model.json` (Python, unverändert — `LeagueEngineTests` gleich), Bayern
   (Ligamanager + Zugspitze) mit `Assets/league-model-bayern.json` (Embedded Resource). `LeagueModel.FromEmbedded(region)` lädt
   `league-model-{region}.json` (`null` = keins), `LeagueModels` wählt nach `LeagueRegions.Of(tournament.Source)` und fällt für eine
   Region ohne eigenes Modell auf Tirol zurück (Warnung einmal je Region). `LeagueService.RebuildViewsAsync` baut den
@@ -1916,11 +1919,12 @@ Rollenverwaltung an).
   `tirol`, Tnr = chess-results-Nummer, „Daten aktualisieren" holt sie über den Crawler mit). **Stufen um zwei verschoben**
   (Entscheidung „(a)", `LeagueLevels`): 1 = 1. BL, 2 = 2. BL, 3 = Landesliga, 4 = 1. Klasse, 5 = 2. Klasse, 6 = Gebietsklasse; Migration
   `LeagueTirolLevelsBundesliga` (`Level + 2 WHERE Source IS NULL`, Bayern bleibt; Ansichten tragen die alte Stufe bis zum nächsten
-  Rechnen), Bündel-Import der Python-Fassung über `LeagueLevels.FromTmm` (1–4 → 3–6). **Modell unverändert**: `Assets/league-model.json`
+  Rechnen), Trainingszeilen der Python-Fassung (`rows.json`) über `LeagueLevels.FromTmm` (1–4 → 3–6; der Bündel-Import, der sie
+  ebenfalls nutzte, ist seit 2026-10-08 entfernt). **Modell unverändert**: `Assets/league-model.json`
   heißt `lvl4`/`lvl5`/`lvl6` statt Pythons `lvl2`–`lvl4` (Gewichte gleich, Feld `levels` erklärt es), `gk_q` = q_same in Stufe 6 —
   `LeagueBundesligaTests.TirolModel_LogitOfAShiftedRow_EqualsThePythonLogit`, `LeagueTrainingTests` (rows.json über `FromTmm`) und die
-  Python-Parität (lokal mit dem Prod-Bündel: 88 Begegnungen, 1 676 Wahrscheinlichkeiten, Abweichung 0,000000 — der Test selbst scheitert
-  seit 0.66x an den alten `locked`-Status der Python-Ansicht) liefern dieselben Zahlen. Backtest `Hits` sitzt auf 3–6, für die
+  Python-Parität (lokal mit dem Prod-Bündel 2026-10-08: 88 Begegnungen, 1 676 Wahrscheinlichkeiten, Abweichung 0,000000; der Test
+  scheiterte seit 0.66x an den alten `locked`-Status der Python-Ansicht und ist mit dem Bündel-Import entfernt) liefern dieselben Zahlen. Backtest `Hits` sitzt auf 3–6, für die
   Bundesliga gibt es keinen (`hit` fehlt). Bretter ohne Brettpaarungen `LeagueLevels.DefaultBoards` (Tirol: 1–4 → 6, 2. Kl 5, GK 4;
   BL 2024/25–2026/27 nachgezählt 6; Bayern unverändert). **Runden-Blöcke** (`LeagueLevels.HasRoundBlocks`/`Consecutive`, ersetzt die
   Regel `level == 1`): Tirol Stufen 1–3 (Bayern weiter nur Stufe 1); Runden am Tag danach — in der Bundesliga auch am SELBEN Tag
@@ -2652,8 +2656,8 @@ da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da si
   Karte schon hat (fremde + Vereinspartien).
 * **Stand**: laufende alle 6 h neu, noch nicht begonnene warten; fertig = alle Runden `finished` (sonst 3 Tage nach dem letzten Tag)
   → nie wieder. **Falle**: `ImportGamesAsync` leert am Ende den ChangeTracker — den Stand der Übertragung schreibt `SaveAsync` deshalb
-  ausdrücklich (`Update`). Ein Bündel-Import mit Profilen ersetzt die fremden Partien der Karten und setzt deshalb alle Übertragungen
-  zurück (`Finished`/`ImportedAt`), sonst wären ihre Partien weg.
+  ausdrücklich (`Update`). (Der Bündel-Import, der die fremden Partien der Karten ersetzte und deshalb alle Übertragungen
+  zurücksetzte, ist seit 2026-10-08 entfernt.)
 * **Takt**: im `LeagueOnlineSyncScheduler` nach Abruf und Konto-Suche, je Runde höchstens 5 min; `LeagueBroadcasts:Enabled=false`
   schaltet es ab. Oberfläche: Reiter „Übertragungen" (`/uebertragungen`, `features/broadcasts/`, nur Verwalter) mit Liste und
   „Hinzufügen und einspielen".

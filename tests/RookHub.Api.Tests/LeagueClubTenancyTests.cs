@@ -108,7 +108,7 @@ public class LeagueClubTenancyTests : IDisposable
         await SeedAsync();
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
         async Task<JsonObject> MeAsync(int user, bool admin = false) =>
-            (JsonObject)((OkObjectResult)await new LeagueController(league, null!, null!, Resolver()).As(user, admin).Me(default)).Value!;
+            (JsonObject)((OkObjectResult)await new LeagueController(league, null!, Resolver()).As(user, admin).Me(default)).Value!;
 
         var member = await MeAsync(HomeMember);
         Assert.Equal(new[] { "SK Testdorf" }, member["clubs"]!.AsArray().Select(c => c!["name"]!.GetValue<string>()));
@@ -332,7 +332,7 @@ public class LeagueClubTenancyTests : IDisposable
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
         var permissions = new PermissionResolver(_db, TestServices.Cache());
         async Task<JsonObject> Index(int user, bool admin, bool? all) =>
-            (JsonObject)((OkObjectResult)await new LeagueController(league, null!, null!, Resolver()).As(user, admin, TestClubs.HomeId)
+            (JsonObject)((OkObjectResult)await new LeagueController(league, null!, Resolver()).As(user, admin, TestClubs.HomeId)
                 .Index(all, permissions, default)).Value!;
 
         var member = await Index(HomeMember, false, true);          // ohne league.manage: Schalter übergangen, kein 400

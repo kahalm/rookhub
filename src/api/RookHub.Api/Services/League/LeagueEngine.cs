@@ -640,8 +640,8 @@ public sealed class LeagueModels
 /// Ligastufen über alle Quellen. <b>Tirol/Österreich</b> (chess-results, Region <c>tirol</c>) seit der Bundesliga (0.719.0, Wunsch
 /// 2026-10-08 „ergänz LeagueHub in Österreich um die höheren Ligen"): 1 = 1. Bundesliga, 2 = 2. Bundesliga (Ost/Mitte/West),
 /// 3 = Landesliga, 4 = 1. Klasse, 5 = 2. Klasse, 6 = Gebietsklasse — vorher Landesliga 1 … Gebietsklasse 4 (Migration
-/// <c>LeagueTirolLevelsBundesliga</c> schiebt den Bestand um <see cref="TirolShift"/>, der Bündel-Import der Python-Fassung über
-/// <see cref="FromTmm"/>). <b>Bayern</b> 1–9: Ligamanager 1–8 (<see cref="LigamanagerSource.LevelOf"/>), Schachkreis Zugspitze 5–9
+/// <c>LeagueTirolLevelsBundesliga</c> schiebt den Bestand um <see cref="TirolShift"/>, die Trainingszeilen der Python-Fassung
+/// <c>rows.json</c> über <see cref="FromTmm"/>). <b>Bayern</b> 1–9: Ligamanager 1–8 (<see cref="LigamanagerSource.LevelOf"/>), Schachkreis Zugspitze 5–9
 /// (<see cref="ZugspitzeSource.LevelOf"/>). Die Merkmale QHigher/QLower/NewEver zählen Einsätze aller Stufen bis <see cref="Max"/> der
 /// REGION (<see cref="LeagueWorld.AppsLvl"/>, <see cref="LeagueWorld.Mpt"/> und <see cref="LeagueWorld.ClubTeams"/> je Region).
 /// </summary>
@@ -660,7 +660,7 @@ public static class LeagueLevels
     /// <summary>Um so viel liegen die TMM-Stufen seit der Bundesliga tiefer (Landesliga 1 → 3).</summary>
     public const int TirolShift = 2;
 
-    /// <summary>Stufe der Python-Fassung (TMM: Landesliga 1 … Gebietsklasse 4, <c>export_bundle.py</c>, <c>rows.json</c>) → heutige
+    /// <summary>Stufe der Python-Fassung (TMM: Landesliga 1 … Gebietsklasse 4, <c>rows.json</c> fürs Nachtrainieren) → heutige
     /// Tiroler Stufe (3 … 6). Andere Zahlen bleiben (die Python-Fassung kennt keine).</summary>
     public static int FromTmm(int level) => level is >= 1 and <= 4 ? level + TirolShift : level;
 

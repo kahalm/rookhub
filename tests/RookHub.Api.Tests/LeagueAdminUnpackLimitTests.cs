@@ -11,7 +11,7 @@ using RookHub.Api.Services.League;
 
 namespace RookHub.Api.Tests;
 
-/// <summary>F7-021: Die LeagueHub-Admin-Importe (admin/import, admin/games, admin/mega-players) entpacken gzip nur
+/// <summary>F7-021: Die LeagueHub-Admin-Importe (admin/games, admin/mega-players; admin/import ist seit 08.10.2026 entfernt) entpacken gzip nur
 /// noch bis zur Rumpf-Obergrenze. RequestSizeLimit zählt die komprimierten Bytes; eine gzip-Bombe entpackte bis
 /// dahin ungebremst (admin/games sogar per ReadToEndAsync in EINEN String).</summary>
 public class LeagueAdminUnpackLimitTests : IDisposable
@@ -40,9 +40,8 @@ public class LeagueAdminUnpackLimitTests : IDisposable
         var http = new DefaultHttpContext();
         http.Request.Body = new MemoryStream(body);
         if (gzip) http.Request.Headers.ContentEncoding = "gzip";
-        return new LeagueController(league, null!, null!, null!)
+        return new LeagueController(league, null!, null!)
         {
-            ImportUnpackedLimit = SmallLimit,
             CollectionUnpackedLimit = SmallLimit,
             ControllerContext = new ControllerContext { HttpContext = http },
         };
@@ -64,12 +63,6 @@ public class LeagueAdminUnpackLimitTests : IDisposable
         var bomb = Bomb("[Event \"x\"]\n[WhiteFideId \"1\"]\n\n1. e4 {", 'a', "} 1-0\n");
         Assert.True(bomb.Length < SmallLimit);                                     // komprimiert unter jeder Grenze
         Assert413(await Controller(bomb).ImportGames("Mega", default));
-    }
-
-    [Fact]
-    public async Task Import_GzipBomb_Returns413()
-    {
-        Assert413(await Controller(Bomb("{\"tournaments\":[],\"x\":\"", 'a', "\"}")).Import(false, default));
     }
 
     [Fact]
@@ -97,7 +90,6 @@ public class LeagueAdminUnpackLimitTests : IDisposable
     [Fact]
     public void RequestSizeLimits_StayWhereTheyWere()
     {
-        Assert.Equal(200L * 1024 * 1024, LeagueController.ImportMaxBytes);
         Assert.Equal(400L * 1024 * 1024, LeagueController.CollectionMaxBytes);
     }
 }

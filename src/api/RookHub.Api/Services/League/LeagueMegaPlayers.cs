@@ -107,7 +107,7 @@ public sealed class LeagueMegaPlayers
 
     /// <summary>
     /// Alles ersetzen: TSV-Zeilen <c>name \t fide \t games \t last_year \t max_elo</c>. Liefert die Zeilenzahl.
-    /// <para>Relational liegen Löschen und alle Portionen in EINER Transaktion (wie <c>LeagueImportService.ReplaceAllAsync</c>):
+    /// <para>Relational liegen Löschen und alle Portionen in EINER Transaktion (Execution-Strategy-Muster wie <c>KidsPuzzleService.ReplaceAsync</c>):
     /// bricht der Upload ab (<paramref name="ct"/> = RequestAborted, Proxy-Zeitlimit, zu großer Rumpf, Datenbankfehler),
     /// bleibt das alte Verzeichnis vollständig stehen statt eines halben, und ein paralleler Abgleich liest bis zum
     /// Commit den alten Stand — nie ein Teilverzeichnis, in dem ein Name fälschlich eindeutig wäre.</para>

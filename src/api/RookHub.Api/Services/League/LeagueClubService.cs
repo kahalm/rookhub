@@ -149,8 +149,8 @@ public sealed class LeagueClubService
     /// Die Meldelisten aller Saisonen als Abgleich-Index. Gecacht (Codereview 2026-09-29, F7-007): Suche und Namensabgleich
     /// fragen das bei jeder Tipp-Pause, auch ohne Konto über den Teilen-Link — vorher las jeder Aufruf alle Meldelisten-Zeilen
     /// und baute den Index neu. Schlüssel: Anzahl und höchste Id der Meldelisten-Zeilen und Anzahl der Ligen. Meldelisten
-    /// werden nie an Ort und Stelle geändert, nur gelöscht und neu angelegt (<see cref="LeagueRefresh.ReplaceAsync"/>, die
-    /// Übernahme in <see cref="LeagueImportService"/>) — jede Änderung bringt neue Ids, der Index wird neu gebaut.
+    /// werden nie an Ort und Stelle geändert, nur gelöscht und neu angelegt (<see cref="LeagueRefresh.ReplaceAsync"/> und die
+    /// Quell-Leser) — jede Änderung bringt neue Ids, der Index wird neu gebaut.
     /// <para>Je VEREIN (Mandanten-Schritt 2026-10-07): wer „einer von uns" ist (<see cref="LeagueRosterIndex.Person.OwnClub"/>),
     /// sagt <see cref="LeagueClub.OwnsTeam"/> — der Index gilt für alle Ligen und Saisonen, aber je Verein.</para>
     /// </summary>

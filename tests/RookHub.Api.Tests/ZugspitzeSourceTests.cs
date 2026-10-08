@@ -414,7 +414,7 @@ public class ZugspitzeSourceTests : IDisposable
     [Fact]
     public async Task Endpoint_ParsesTheRequestAndMapsErrors()
     {
-        var ctl = new LeagueController(League(), null!, null!, null!);
+        var ctl = new LeagueController(League(), null!, null!);
         var src = Source(new Factory((_, r) => Site(r)));
         Assert.IsType<BadRequestObjectResult>(await ctl.ZugspitzeImport(new("https://example.org/?Liga=1", null, null, null), true, src, default));
         Assert.IsType<BadRequestObjectResult>(await ctl.ZugspitzeImport(new(null, null, "2026", null), true, src, default));

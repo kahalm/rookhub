@@ -215,8 +215,11 @@ public class LeagueGameLinksTests : IDisposable
     }
 
     [Fact]
-    public async Task BundleImport_keepsTheIds_andRelinks()
+    public async Task MergeOfFreshRows_overAllLeagues_keepsTheIds_andRelinks()
     {
+        // Früher über den Bündel-Import (admin/import, entfernt 08.10.2026) abgedeckt: frisch angelegte Brettpaarungen ALLER Ligen
+        // (ohne Id) gehen über LeagueGameLinks.Merge — die Ids je (Tnr, Runde, Begegnung, Brett) bleiben, RelinkAsync(null) hält
+        // die festen Ligapaarungen der Vereinspartien.
         await SeedAsync();
         var board2 = await BoardAsync(2, 2);
         var game = Haselbeck(leagueGameId: board2.Id);
@@ -225,15 +228,16 @@ public class LeagueGameLinksTests : IDisposable
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
 
-        var games = await _db.LeagueGames.AsNoTracking().ToListAsync();
-        var bundle = new LeagueImportService.Bundle(
-            new() { new(Tnr, "LL", "2026/27", 1, "Landesliga", null, "Liga", false, null, null, 9) },
-            new() { new(Tnr, 2, "04.10.2026") }, new(),
-            games.Select(g => new LeagueImportService.GameIn(g.Tnr, g.Round, g.MatchNo, g.Board, g.HomeTeam, g.AwayTeam, g.HomePlayer,
-                g.AwayPlayer, null, null, g.HomeColor, g.Result, g.HomeScore, g.AwayScore, g.Forfeit, g.HomeFide, g.AwayFide, null, null,
-                null, null, null)).ToList(),
-            new(), null, null);
-        await new LeagueImportService(_db).ImportAsync(bundle, default);
+        var fresh = (await _db.LeagueGames.AsNoTracking().ToListAsync()).Select(g => new LeagueGame
+        {
+            Tnr = g.Tnr, Round = g.Round, MatchNo = g.MatchNo, Board = g.Board, HomeTeam = g.HomeTeam, AwayTeam = g.AwayTeam,
+            HomePlayer = g.HomePlayer, AwayPlayer = g.AwayPlayer, HomeColor = g.HomeColor, Result = g.Result, HomeScore = g.HomeScore,
+            AwayScore = g.AwayScore, Forfeit = g.Forfeit, HomeFide = g.HomeFide, AwayFide = g.AwayFide,
+        }).ToList();
+        LeagueGameLinks.Merge(_db, await _db.LeagueGames.ToListAsync(), fresh);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        await LeagueGameLinks.RelinkAsync(_db, null, default);
         _db.ChangeTracker.Clear();
 
         Assert.Equal(board2.Id, (await BoardAsync(2, 2)).Id);

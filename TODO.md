@@ -38,8 +38,8 @@ Anwesenheit abhaken, Lernstand (Stufe + Notizen), Konto-Verknüpfung per Einmal-
 „Daten aktualisieren" (`LeagueRefresh.RunAsync`) holt nur die Ligen neu, die für `MAX(Season)` schon in
 `LeagueTournaments` stehen. Die Python-Fassung fand neue Saisonen über die chess-results-Turniersuche
 (`search.py` + `crawl.py`, Einordnung Liga/Klasse/Gruppe über `league_of()` in `parse.py`) — das ist NICHT
-portiert. Solange der Python-Stack lebt, kommt eine neue Saison per `export_bundle.py` + `POST
-/api/league/admin/import`; spätestens vor der Saison 2027/28 (Herbst 2027) braucht es den Weg in C#: Crawler-
+portiert. Der Bündel-Weg (`export_bundle.py` + `POST /api/league/admin/import`) ist seit 2026-10-08 entfernt; eine
+einzelne chess-results-Liga lässt sich je Saison über `POST /api/league/admin/chessresults/import` einspielen; spätestens vor der Saison 2027/28 (Herbst 2027) braucht es den Weg in C#: Crawler-
 Endpunkt für die Turniersuche (TMM, Föderation AUT, Bundesland Tirol), Namensregeln → Level/Grp/Stage, neue
 `LeagueTournament`-Zeilen, dann der bestehende Lauf. Nebenbei offen: die Barlow-Schriften in
 `public-leaguehub/fonts/` tragen keinen Inhalts-Hash, der Frontend-nginx cached `/fonts/*.woff2` aber ein Jahr
