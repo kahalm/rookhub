@@ -359,3 +359,15 @@ internal sealed class LeagueClubMemberConfiguration : IEntityTypeConfiguration<L
         e.HasOne(m => m.Group).WithMany().HasForeignKey(m => m.GroupId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class LeagueGameMoveConfiguration : IEntityTypeConfiguration<LeagueGameMove>
+{
+    public void Configure(EntityTypeBuilder<LeagueGameMove> e)
+    {
+        // Natürlicher Schlüssel der Paarung (2026-10-08): eine Zeile je Brett einer Begegnung — nicht LeagueGames.Id (die Zeilen
+        // werden beim Aktualisieren zusammengeführt, siehe LeagueGameLinks).
+        e.HasIndex(m => new { m.Tnr, m.Round, m.MatchNo, m.Board }).IsUnique();
+        e.Property(m => m.Moves).HasMaxLength(600);
+        e.HasOne<LeagueClub>().WithMany().HasForeignKey(m => m.ClubId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
