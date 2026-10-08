@@ -19,8 +19,9 @@ namespace RookHub.Api.Services.League;
 /// Lichess-Konto, das zwei Zeilen erklären würde. Dann „Nachname,Vorname" + Verein gegen die bayerischen Meldelisten
 /// (<see cref="LeagueRosterIndex"/>, voller Vorname nötig; mehrere Kandidaten → der mit demselben Verein; ein Verein auf der Seite,
 /// der zu keinem seiner Vereine passt → weg). Ergebnis: <see cref="LeagueSelfReport"/> der Quelle <see cref="SourceOf"/> mit
-/// <see cref="Reporter"/> (im (i) „Gemeldet von Schachkreis Zugspitze") und je Meldung ein Vorschlag der Konto-Suche
-/// (<see cref="SuggestionSource"/>) — Selbstmeldungen flossen bis dahin nicht in die Vorschläge.</para>
+/// <see cref="Reporter"/> (im (i) „Gemeldet von Schachkreis Zugspitze") und je Meldung direkt ein Konto „gesichert" (0.726.0, vorher
+/// ein Vorschlag, den ein Verwalter einzeln übernehmen musste) — nur wenn das Konto schon bei einem ANDEREN Spieler steht, bleibt es
+/// beim Vorschlag der Konto-Suche (<see cref="SuggestionSource"/>), siehe <see cref="AccountsAsync"/>.</para>
 /// <para><b>Minderjährige</b>: Jugend-Turniere/-Serien werden übersprungen; sonst greift <see cref="LeagueHiddenAccounts"/> (vor jedem
 /// Vorschlag wird der Jahrgang geholt wie bei der Team-Suche).</para>
 /// <para><b>Höflich</b>: je Saison eine Turnierliste, je Turnier eine Ergebnisseite und ein Lichess-Abruf, <see cref="Pause"/>
@@ -43,10 +44,12 @@ public sealed partial class ZugspitzeOnlineReports
     private readonly IHttpClientFactory _http;
     private readonly ILogger<ZugspitzeOnlineReports> _log;
     private readonly string _lichess;
+    private readonly LeagueOnlineSyncSignal? _signal;
 
-    public ZugspitzeOnlineReports(AppDbContext db, IHttpClientFactory http, ILogger<ZugspitzeOnlineReports> log, IConfiguration? config = null)
+    public ZugspitzeOnlineReports(AppDbContext db, IHttpClientFactory http, ILogger<ZugspitzeOnlineReports> log, IConfiguration? config = null,
+        LeagueOnlineSyncSignal? signal = null)
     {
-        _db = db; _http = http; _log = log;
+        _db = db; _http = http; _log = log; _signal = signal;
         _lichess = (config?["Lichess:SiteUrl"] ?? "https://lichess.org").TrimEnd('/');
     }
 
@@ -254,8 +257,29 @@ public sealed partial class ZugspitzeOnlineReports
     /// <summary>Eine Meldung: Konto ↔ Spieler, mit den Turnieren als Beleg.</summary>
     public sealed record Item(string Fide, string Player, string User, string Team, string PageName, List<string> Tournaments);
 
+    /// <summary>Was mit den Konten geschah (0.726.0): je Meldung genau ein Zähler.</summary>
+    public sealed class AccountCounts
+    {
+        /// <summary>Neu angelegt („gesichert", <see cref="Reporter"/>).</summary>
+        public int Created { get; set; }
+        /// <summary>Stand schon bei diesem Spieler als „wahrscheinlich" → „sicher", Meldung im Kommentar ergänzt.</summary>
+        public int Upgraded { get; set; }
+        /// <summary>Stand schon bei diesem Spieler als „sicher" (höchstens die fehlende Meldung im Kommentar ergänzt).</summary>
+        public int Unchanged { get; set; }
+        /// <summary>Ein offener Vorschlag für dieses Konto wurde dabei übernommen (zählt NICHT zusätzlich als <see cref="Created"/>).</summary>
+        public int Accepted { get; set; }
+        /// <summary>Steht bei einem ANDEREN Spieler → kein Konto, nur Meldung + Vorschlag.</summary>
+        public int TakenElsewhere { get; set; }
+        /// <summary>Ein Verwalter hat den Vorschlag (Spieler, Konto) verworfen → kein Konto.</summary>
+        public int Rejected { get; set; }
+        /// <summary>Der Spieler hat schon <see cref="LeagueOnlineAccountService.MaxPerPlayer"/> Konten (oder das Anlegen scheiterte sonst).</summary>
+        public int Failed { get; set; }
+    }
+
+    /// <summary><paramref name="Suggestions"/> = neue Vorschläge — seit 0.726.0 nur noch für Meldungen, die KEIN Konto bekamen
+    /// (<see cref="AccountCounts.TakenElsewhere"/>).</summary>
     public sealed record Result(string Season, string Source, bool DryRun, Counts Counts, LeagueSelfReportImport.Outcome? Reports,
-        int Suggestions, List<Item>? Items);
+        AccountCounts Accounts, int Suggestions, List<Item>? Items);
 
     private async Task<string?> GetSiteAsync(string path, CancellationToken ct)
     {
@@ -284,7 +308,7 @@ public sealed partial class ZugspitzeOnlineReports
 
     /// <summary>
     /// Eine Saison einspielen (<paramref name="dryRun"/>: nur zählen und die Zuordnung zeigen). Ersetzt die Meldungen der Quelle
-    /// <see cref="SourceOf"/> (wie <c>POST admin/self-reports</c>) und legt je neuer Meldung einen Vorschlag an.
+    /// <see cref="SourceOf"/> (wie <c>POST admin/self-reports</c>) und legt je Meldung das Konto an (<see cref="AccountsAsync"/>).
     /// Wirft <see cref="NotFoundException"/> (keine Turnierliste), <see cref="LeagueOnlineSync.RateLimitedException"/> (Lichess 429)
     /// und <see cref="HttpRequestException"/> (Kreis/Lichess nicht erreichbar).
     /// </summary>
@@ -340,11 +364,13 @@ public sealed partial class ZugspitzeOnlineReports
         var request = new LeagueSelfReportImport.Request(source,
             items.Select(x => new LeagueSelfReportImport.Entry(x.Fide, LeagueOnlineSites.Lichess, x.User, x.Team, Note(x))).ToList(), Reporter);
         var (outcome, _) = await LeagueSelfReportImport.ImportAsync(_db, request, dryRun, ct);
-        var suggestions = dryRun ? 0 : await SuggestAsync(items, source, ct);
+        var (accounts, suggestions) = await AccountsAsync(items, source, dryRun, ct);
         _log.LogInformation("LeagueHub: Online-Schach Oberbayern {Season}{Dry} — {Tournaments} Turniere, {Rows} Zeilen, {Matched} Lichess-Konten, "
-                            + "{Assigned} zugeordnet, {Reports} Meldungen, {Suggestions} neue Vorschläge",
-            season, dryRun ? " (Probelauf)" : "", counts.Tournaments, counts.Rows, counts.Matched, counts.Assigned, counts.Reports, suggestions);
-        return new Result(season, source, dryRun, counts, outcome, suggestions, dryRun ? items : null);
+                            + "{Assigned} zugeordnet, {Reports} Meldungen; Konten: {Created} neu, {Accepted} aus Vorschlag, {Upgraded} auf sicher, "
+                            + "{Unchanged} unverändert, {Elsewhere} bei anderem Spieler, {Rejected} verworfen; {Suggestions} neue Vorschläge",
+            season, dryRun ? " (Probelauf)" : "", counts.Tournaments, counts.Rows, counts.Matched, counts.Assigned, counts.Reports,
+            accounts.Created, accounts.Accepted, accounts.Upgraded, accounts.Unchanged, accounts.TakenElsewhere, accounts.Rejected, suggestions);
+        return new Result(season, source, dryRun, counts, outcome, accounts, suggestions, dryRun ? items : null);
     }
 
     /// <summary>„Online-KEM 2022 M I (Rang 1, Lichess-Wertung 2365) + 2 weitere" — höchstens <see cref="LeagueSelfReportImport.MaxNoteLength"/>.</summary>
@@ -399,32 +425,89 @@ public sealed partial class ZugspitzeOnlineReports
         return person;
     }
 
-    /// <summary>Je Meldung ein Vorschlag (<see cref="SuggestionSource"/>), wenn es das Konto weder als Konto (bei irgendwem) noch als
-    /// Vorschlag für ihn (auch verworfen) gibt. Vorher der Jahrgang (Minderjährige verborgen). Speichert.</summary>
-    private async Task<int> SuggestAsync(List<Item> items, string source, CancellationToken ct)
+    /// <summary>Kommentar des Kontos: „Online-Schach Oberbayern 20211: Online-KEM 2021 M II (Rang 1, Lichess-Wertung 1968) + 2 weitere".</summary>
+    internal static string AccountComment(string source, Item x) => $"{source}: {Note(x)}";
+
+    /// <summary>
+    /// Je Meldung das Konto (0.726.0, Wunsch 2026-10-08: „solche Konten sollten direkt als gesichert übernommen werden") — über
+    /// <see cref="LeagueOnlineAccountService"/> wie beim Anlegen durch einen Verwalter (Deckel je Spieler, Ansichten, Abruf wecken):
+    /// <list type="bullet">
+    /// <item>schon bei DIESEM Spieler: „wahrscheinlich" → „sicher" (<c>upgraded</c>), sonst <c>unchanged</c>; die Meldung wird im
+    /// Kommentar ergänzt, wenn sie fehlt (nie überschrieben);</item>
+    /// <item>bei einem ANDEREN Spieler: kein Konto (<c>takenElsewhere</c>), dafür wie bisher ein Vorschlag — das entscheidet ein Verwalter;</item>
+    /// <item>verworfener Vorschlag (Spieler, Konto): kein Konto (<c>rejected</c>);</item>
+    /// <item>sonst angelegt, „gesichert", <see cref="Reporter"/> als „hinzugefügt von"; ein offener Vorschlag dafür ist damit erledigt
+    /// (<c>accepted</c> statt <c>created</c>).</item>
+    /// </list>
+    /// Vorher der Jahrgang (<see cref="LeagueAccountFinder.ScanRowAsync"/>): Konten Minderjähriger werden angelegt und bleiben verborgen
+    /// (<see cref="LeagueHiddenAccounts"/>). <paramref name="dryRun"/>: nur zählen.
+    /// </summary>
+    private async Task<(AccountCounts Accounts, int Suggestions)> AccountsAsync(List<Item> items, string source, bool dryRun, CancellationToken ct)
     {
+        var res = new AccountCounts();
+        var suggestions = 0;
+        var service = new LeagueOnlineAccountService(_db, _signal);
         var lichess = _http.CreateClient(LeagueOnlineSync.ClientName);
-        var added = 0;
         foreach (var x in items)
         {
             var lower = x.User.ToLower();
-            if (await _db.LeagueOnlineAccounts.AnyAsync(a => a.Site == LeagueOnlineSites.Lichess && a.UserName.ToLower() == lower, ct)
-                || await _db.LeagueAccountSuggestions.AnyAsync(s => s.FideId == x.Fide && s.Site == LeagueOnlineSites.Lichess && s.UserName.ToLower() == lower, ct))
-                continue;
-            var asked = (_db.LeagueAccountScans.Local.FirstOrDefault(s => s.FideId == x.Fide)
-                         ?? await _db.LeagueAccountScans.AsNoTracking().FirstOrDefaultAsync(s => s.FideId == x.Fide, ct))?.BirthYear is null;
-            await LeagueAccountFinder.ScanRowAsync(_db, lichess, _lichess, x.Fide, ct);
-            if (asked) await WaitAsync(ct);                                       // ein Lichess-Abruf (Jahrgang) — höflich
-            var evidence = $"Gemeldet von {Reporter} ({source}): {x.PageName}, {x.Team} — {string.Join("; ", x.Tournaments)}";
-            _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
+            var comment = AccountComment(source, x);
+            var accs = await _db.LeagueOnlineAccounts.AsNoTracking()
+                .Where(a => a.Site == LeagueOnlineSites.Lichess && a.UserName.ToLower() == lower).ToListAsync(ct);
+            if (accs.FirstOrDefault(a => a.FideId == x.Fide) is { } mine)
             {
-                FideId = x.Fide, Site = LeagueOnlineSites.Lichess, UserName = x.User, Url = LeagueOnlineSites.ProfileUrl(LeagueOnlineSites.Lichess, x.User),
-                Score = SuggestionScore, Evidence = evidence.Length <= 500 ? evidence : evidence[..500], Status = LeagueSuggestionStatus.Open,
-                CreatedAt = DateTime.UtcNow, Source = SuggestionSource,
-            });
-            await _db.SaveChangesAsync(ct);
-            added++;
+                var sure = mine.Confidence == LeagueOnlineAccountService.Sure;
+                if (sure) res.Unchanged++; else res.Upgraded++;
+                var noted = (mine.Evidence ?? "").Contains(source + ":", StringComparison.Ordinal);
+                if (dryRun || sure && noted) continue;
+                var evidence = noted ? null : string.IsNullOrWhiteSpace(mine.Evidence) ? comment : mine.Evidence.TrimEnd() + " · " + comment;
+                await service.UpdateAsync(mine.Id, new LeagueOnlineAccountService.Input(null, null, true, evidence), ct);
+                continue;
+            }
+            var sugg = await _db.LeagueAccountSuggestions.AsNoTracking()
+                .Where(s => s.FideId == x.Fide && s.Site == LeagueOnlineSites.Lichess && s.UserName.ToLower() == lower).ToListAsync(ct);
+            if (accs.Count > 0)
+            {
+                res.TakenElsewhere++;
+                _log.LogWarning("LeagueHub: Online-Schach Oberbayern — Lichess-Konto {User} gemeldet für FIDE {Fide}, steht aber bei FIDE {Other}; kein Konto, nur Vorschlag",
+                    x.User, x.Fide, string.Join(",", accs.Select(a => a.FideId)));
+                if (dryRun || sugg.Count > 0) continue;
+                await ScanAsync(lichess, x.Fide, ct);
+                var evidence = $"Gemeldet von {Reporter} ({source}): {x.PageName}, {x.Team} — {string.Join("; ", x.Tournaments)}";
+                _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
+                {
+                    FideId = x.Fide, Site = LeagueOnlineSites.Lichess, UserName = x.User, Url = LeagueOnlineSites.ProfileUrl(LeagueOnlineSites.Lichess, x.User),
+                    Score = SuggestionScore, Evidence = evidence.Length <= 500 ? evidence : evidence[..500], Status = LeagueSuggestionStatus.Open,
+                    CreatedAt = DateTime.UtcNow, Source = SuggestionSource,
+                });
+                await _db.SaveChangesAsync(ct);
+                suggestions++;
+                continue;
+            }
+            if (sugg.Any(s => s.Status == LeagueSuggestionStatus.Rejected)) { res.Rejected++; continue; }
+            var open = sugg.Any(s => s.Status == LeagueSuggestionStatus.Open);
+            if (dryRun) { if (open) res.Accepted++; else res.Created++; continue; }
+            await ScanAsync(lichess, x.Fide, ct);
+            // CreateAsync räumt den offenen Vorschlag für genau dieses Konto weg — dasselbe wie „Übernehmen", nur mit unserem Kommentar.
+            var (acc, reason) = await service.CreateAsync(x.Fide, new LeagueOnlineAccountService.Input(LeagueOnlineSites.Lichess, x.User, true, comment), ct,
+                addedBy: Reporter);
+            if (acc is null)
+            {
+                res.Failed++;
+                _log.LogWarning("LeagueHub: Online-Schach Oberbayern — Konto {User} für FIDE {Fide} nicht angelegt: {Reason}", x.User, x.Fide, reason);
+                continue;
+            }
+            if (open) res.Accepted++; else res.Created++;
         }
-        return added;
+        return (res, suggestions);
+    }
+
+    /// <summary>Jahrgang holen (Minderjährige verborgen) — ein Lichess-Abruf, danach höflich warten. Gespeichert wird mit dem Konto.</summary>
+    private async Task ScanAsync(HttpClient lichess, string fide, CancellationToken ct)
+    {
+        var asked = (_db.LeagueAccountScans.Local.FirstOrDefault(s => s.FideId == fide)
+                     ?? await _db.LeagueAccountScans.AsNoTracking().FirstOrDefaultAsync(s => s.FideId == fide, ct))?.BirthYear is null;
+        await LeagueAccountFinder.ScanRowAsync(_db, lichess, _lichess, fide, ct);
+        if (asked) await WaitAsync(ct);
     }
 }

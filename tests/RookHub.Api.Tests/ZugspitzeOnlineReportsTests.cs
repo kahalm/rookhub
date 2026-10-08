@@ -125,7 +125,7 @@ public class ZugspitzeOnlineReportsTests : IDisposable
     private static HttpResponseMessage Ok(string body) => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8) };
     private static HttpResponseMessage NotFound() => new(HttpStatusCode.NotFound) { Content = new StringContent("") };
 
-    private static Factory World(bool lichessThrottles = false) => new((_, r) =>
+    private static Factory World(bool lichessThrottles = false, string? minorFide = null) => new((_, r) =>
     {
         var q = r.RequestUri!.PathAndQuery;
         if (q.StartsWith("/onlineturniere/?saison=20221", StringComparison.Ordinal)) return Ok(Html("onlineturniere.html"));
@@ -136,6 +136,8 @@ public class ZugspitzeOnlineReportsTests : IDisposable
         if (q.StartsWith("/api/swiss/AAAAaaa1/results", StringComparison.Ordinal)) return Ok(SwissNdjson);
         if (q.StartsWith("/api/tournament/BBBBbbb2/results", StringComparison.Ordinal)) return Ok(TeamNdjson);
         if (q.StartsWith("/api/tournament/CCCCccc3/results", StringComparison.Ordinal)) return Ok(HauptNdjson);   // geraten war „swiss"
+        if (minorFide is not null && q.StartsWith($"/api/fide/player/{minorFide}", StringComparison.Ordinal))
+            return Ok($"{{\"id\":1,\"federation\":\"GER\",\"year\":{DateTime.UtcNow.Year - 12}}}");
         if (q.StartsWith("/api/fide/player/", StringComparison.Ordinal)) return Ok("{\"id\":1,\"federation\":\"GER\",\"year\":1980}");
         return NotFound();
     });
@@ -190,17 +192,27 @@ public class ZugspitzeOnlineReportsTests : IDisposable
         Assert.Equal(("Wiesner, Konrad", "SK Weilheim", "Wiesner,Konrad"), (konni.Player, konni.Team, konni.PageName));
         Assert.Equal(new[] { "Online-KEM 2022 M I (Rang 1, Lichess-Wertung 2010)", "1.Kreisliga 7+3 Teamkampf (Rang 1, Lichess-Wertung 1990)" }, konni.Tournaments);
         Assert.Equal((3, 0, 0), (r.Reports!.Added, r.Reports.Updated, r.Reports.Removed));
+        Assert.Equal((2, 0, 1, 0, 0, 0), (r.Accounts.Created, r.Accounts.Upgraded, r.Accounts.Unchanged, r.Accounts.Accepted,
+            r.Accounts.TakenElsewhere, r.Accounts.Rejected));                                          // KonniW + StefMayr neu, ThesiB steht schon
         Assert.Equal(0, r.Suggestions);
         Assert.Empty(await _db.LeagueSelfReports.ToListAsync());
         Assert.Empty(await _db.LeagueAccountSuggestions.ToListAsync());
+        Assert.Equal("ThesiB", (await _db.LeagueOnlineAccounts.SingleAsync()).UserName);               // nichts angelegt
+        Assert.Null((await _db.LeagueOnlineAccounts.SingleAsync()).Evidence);                          // nichts ergänzt
+        Assert.Empty(await _db.LeagueAccountScans.ToListAsync());
         Assert.DoesNotContain(http.Calls, x => x.Contains("JJJJjjj9"));                                // Jugend nie abgerufen
         Assert.DoesNotContain(http.Calls, x => x.Contains("zug-2") || x.Contains("onlinemm"));         // 4er-MM: anderer Ausrichter
         Assert.Contains($"{RookHub.Api.Services.League.LeagueOnlineSync.ClientName} /api/swiss/CCCCccc3/results?nb=1000", http.Calls);   // geraten,
         Assert.Contains($"{RookHub.Api.Services.League.LeagueOnlineSync.ClientName} /api/tournament/CCCCccc3/results?nb=1000", http.Calls); // dann die andere Art
     }
 
+    private const string KonniNote = "Online-Schach Oberbayern 20221: Online-KEM 2022 M I (Rang 1, Lichess-Wertung 2010) + 1 weitere";
+
+    private static (int, int, int, int, int, int, int) Tally(ZugspitzeOnlineReports.AccountCounts a) =>
+        (a.Created, a.Upgraded, a.Unchanged, a.Accepted, a.TakenElsewhere, a.Rejected, a.Failed);
+
     [Fact]
-    public async Task Import_WritesThirdPartyReports_SuggestionsAndTheCheckShowsTheReporter()
+    public async Task Import_WritesThirdPartyReports_AndSureAccounts_SecondRunIdempotent()
     {
         await SeedAsync();
         var r = await Reports(World()).ImportAsync("20221", dryRun: false, default);
@@ -210,25 +222,127 @@ public class ZugspitzeOnlineReportsTests : IDisposable
         Assert.All(reports, x => Assert.Equal(("Online-Schach Oberbayern 20221", (string?)"Schachkreis Zugspitze", "lichess"), (x.Source, x.Reporter, x.Site)));
         Assert.Equal(("900", "KonniW", (string?)"SK Weilheim", (string?)"Online-KEM 2022 M I (Rang 1, Lichess-Wertung 2010) + 1 weitere"),
             (reports[0].FideId, reports[0].UserName, reports[0].Team, reports[0].Note));
-        // Vorschläge: ThesiB ist schon sein Konto → keiner; KonniW und StefMayr neu, mit Jahrgang (Minderjährige wären verborgen)
-        Assert.Equal(2, r.Suggestions);
-        var sugg = await _db.LeagueAccountSuggestions.OrderBy(s => s.FideId).ToListAsync();
-        Assert.Equal(new[] { ("900", "KonniW"), ("903", "StefMayr") }, sugg.Select(s => (s.FideId, s.UserName)));
-        Assert.All(sugg, s => Assert.Equal((ZugspitzeOnlineReports.SuggestionSource, ZugspitzeOnlineReports.SuggestionScore, LeagueSuggestionStatus.Open),
-            (s.Source!, s.Score, s.Status)));
-        Assert.StartsWith("Gemeldet von Schachkreis Zugspitze (Online-Schach Oberbayern 20221): Wiesner,Konrad, SK Weilheim — Online-KEM 2022 M I", sugg[0].Evidence);
+
+        // Konten statt Vorschlägen: KonniW + StefMayr neu „gesichert", ThesiB stand schon — nur die Meldung im Kommentar ergänzt.
+        Assert.Equal((2, 0, 1, 0, 0, 0, 0), Tally(r.Accounts));
+        Assert.Equal(0, r.Suggestions);
+        Assert.Empty(await _db.LeagueAccountSuggestions.ToListAsync());
+        var accs = await _db.LeagueOnlineAccounts.OrderBy(a => a.FideId).ToListAsync();
+        Assert.Equal(new[] { ("900", "KonniW"), ("903", "StefMayr"), ("904", "ThesiB") }, accs.Select(a => (a.FideId, a.UserName)));
+        var konni = accs[0];
+        Assert.Equal(("lichess", "sicher", true, (string?)"Schachkreis Zugspitze", (string?)KonniNote, "https://lichess.org/@/KonniW"),
+            (konni.Site, konni.Confidence, konni.Manual, konni.AddedBy, konni.Evidence, konni.Url));
+        Assert.Null(konni.SyncedAt);                                                                   // der Abruf holt seine Partien
+        Assert.Equal("Online-Schach Oberbayern 20221: Online-KEM 2022 M I (Rang 2, Lichess-Wertung 1850)", accs[2].Evidence);
+        Assert.Null(accs[2].AddedBy);                                                                  // wer es eingetragen hat, bleibt
         Assert.Equal(1980, (await _db.LeagueAccountScans.SingleAsync(s => s.FideId == "900")).BirthYear);
 
-        // Die (i)-Prüfung des Vorschlags zeigt „Gemeldet von Schachkreis Zugspitze" (Profil gibt es in der Attrappe nicht — egal).
+        // Die (i)-Prüfung des Kontos zeigt „Gemeldet von Schachkreis Zugspitze".
         var checks = new LeagueAccountChecks(_db, new HttpClient(new Handler(_ => NotFound())), null);
-        var res = (await checks.ForSuggestionAsync(sugg[0].Id, default))!;
+        var res = (await checks.ForAccountAsync(konni.Id, default))!;
         var item = res.Items.Single(i => i.Key == "reported:Schachkreis Zugspitze");
         Assert.Equal(("Gemeldet von Schachkreis Zugspitze", LeagueAccountChecks.Ok), (item.Label, item.Status));
-        Assert.StartsWith("für ihn gemeldet (Online-KEM 2022 M I", item.Text);
 
-        // Ein zweiter Lauf ändert nichts und legt keine Vorschläge doppelt an.
+        // Ein zweiter Lauf ändert nichts: keine Meldung, kein Konto, kein Kommentar doppelt.
         var again = await Reports(World()).ImportAsync("20221", dryRun: false, default);
         Assert.Equal((0, 3, 0), (again.Reports!.Added, again.Reports.Unchanged, again.Suggestions));
+        Assert.Equal((0, 0, 3, 0, 0, 0, 0), Tally(again.Accounts));
+        var after = await _db.LeagueOnlineAccounts.AsNoTracking().OrderBy(a => a.FideId).ToListAsync();
+        Assert.Equal(accs.Select(a => a.Evidence), after.Select(a => a.Evidence));
+    }
+
+    [Fact]
+    public async Task UnsureAccountOfThisPlayer_BecomesSure_CommentAppended()
+    {
+        await SeedAsync();
+        _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount
+        {
+            FideId = "900", Site = "lichess", UserName = "konniw", Url = "https://lichess.org/@/konniw", Confidence = "wahrscheinlich",
+            Evidence = "Name passt", AddedBy = "patrik",
+        });
+        await _db.SaveChangesAsync();
+        var r = await Reports(World()).ImportAsync("20221", dryRun: false, default);
+        Assert.Equal((1, 1, 1, 0, 0, 0, 0), Tally(r.Accounts));
+        var konni = await _db.LeagueOnlineAccounts.AsNoTracking().SingleAsync(a => a.FideId == "900");
+        Assert.Equal(("sicher", "Name passt · " + KonniNote, (string?)"patrik", true), (konni.Confidence, konni.Evidence, konni.AddedBy, konni.Manual));
+        Assert.Equal(3, await _db.LeagueOnlineAccounts.CountAsync());
+    }
+
+    [Fact]
+    public async Task AccountOfAnotherPlayer_NoAccount_ButSuggestion()
+    {
+        await SeedAsync();
+        _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount
+        {
+            FideId = "999", Site = "lichess", UserName = "StefMayr", Url = "https://lichess.org/@/StefMayr", Confidence = "sicher",
+        });
+        await _db.SaveChangesAsync();
+        var dry = await Reports(World()).ImportAsync("20221", dryRun: true, default);
+        Assert.Equal((1, 0, 1, 0, 1, 0, 0), Tally(dry.Accounts));
+        var r = await Reports(World()).ImportAsync("20221", dryRun: false, default);
+        Assert.Equal((1, 0, 1, 0, 1, 0, 0), Tally(r.Accounts));
+        Assert.Equal(1, r.Suggestions);
+        Assert.False(await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == "903"));
+        var sugg = await _db.LeagueAccountSuggestions.SingleAsync();
+        Assert.Equal(("903", "StefMayr", ZugspitzeOnlineReports.SuggestionSource, ZugspitzeOnlineReports.SuggestionScore, LeagueSuggestionStatus.Open),
+            (sugg.FideId, sugg.UserName, sugg.Source!, sugg.Score, sugg.Status));
+        Assert.StartsWith("Gemeldet von Schachkreis Zugspitze (Online-Schach Oberbayern 20221): Mayr,Stefan", sugg.Evidence);
+        Assert.Equal(1980, (await _db.LeagueAccountScans.SingleAsync(s => s.FideId == "903")).BirthYear);
+        // Ein zweiter Lauf legt den Vorschlag nicht doppelt an.
+        var again = await Reports(World()).ImportAsync("20221", dryRun: false, default);
+        Assert.Equal((0, 1), (again.Suggestions, await _db.LeagueAccountSuggestions.CountAsync()));
+    }
+
+    [Fact]
+    public async Task RejectedSuggestion_NoAccount()
+    {
+        await SeedAsync();
+        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
+        {
+            FideId = "900", Site = "lichess", UserName = "konniw", Url = "https://lichess.org/@/konniw", Evidence = "Konto entfernt",
+            Status = LeagueSuggestionStatus.Rejected, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        var r = await Reports(World()).ImportAsync("20221", dryRun: false, default);
+        Assert.Equal((1, 0, 1, 0, 0, 1, 0), Tally(r.Accounts));
+        Assert.False(await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == "900"));
+        Assert.Equal(LeagueSuggestionStatus.Rejected, (await _db.LeagueAccountSuggestions.SingleAsync()).Status);   // bleibt verworfen
+    }
+
+    [Fact]
+    public async Task OpenReportSuggestion_IsAccepted()
+    {
+        await SeedAsync();
+        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
+        {
+            FideId = "903", Site = "lichess", UserName = "StefMayr", Url = "https://lichess.org/@/StefMayr", Score = ZugspitzeOnlineReports.SuggestionScore,
+            Evidence = "Gemeldet von Schachkreis Zugspitze (…)", Status = LeagueSuggestionStatus.Open, CreatedAt = DateTime.UtcNow,
+            Source = ZugspitzeOnlineReports.SuggestionSource,
+        });
+        await _db.SaveChangesAsync();
+        var dry = await Reports(World()).ImportAsync("20221", dryRun: true, default);
+        Assert.Equal((1, 0, 1, 1, 0, 0, 0), Tally(dry.Accounts));
+        Assert.Single(await _db.LeagueAccountSuggestions.ToListAsync());                              // Probelauf: bleibt
+        var r = await Reports(World()).ImportAsync("20221", dryRun: false, default);
+        Assert.Equal((1, 0, 1, 1, 0, 0, 0), Tally(r.Accounts));
+        Assert.Empty(await _db.LeagueAccountSuggestions.ToListAsync());                               // erledigt
+        var acc = await _db.LeagueOnlineAccounts.SingleAsync(a => a.FideId == "903");
+        Assert.Equal(("sicher", (string?)"Schachkreis Zugspitze"), (acc.Confidence, acc.AddedBy));
+        Assert.StartsWith("Online-Schach Oberbayern 20221: 1.Kreisliga", acc.Evidence);
+    }
+
+    [Fact]
+    public async Task Minor_AccountCreated_ButHiddenEverywhere()
+    {
+        await SeedAsync();
+        var r = await Reports(World(minorFide: "900")).ImportAsync("20221", dryRun: false, default);
+        Assert.Equal((2, 0, 1, 0, 0, 0, 0), Tally(r.Accounts));
+        var acc = await _db.LeagueOnlineAccounts.SingleAsync(a => a.FideId == "900");
+        Assert.Equal("sicher", acc.Confidence);
+        Assert.Contains("900", await LeagueHiddenAccounts.FidesAsync(_db, null, default));
+        var json = await new LeagueOnlineAccountService(_db).JsonAsync(acc, default);
+        Assert.Equal((true, null, null, null), (json["hidden"]!.GetValue<bool>(), json["user"], json["comment"], json["addedBy"]));
+        Assert.DoesNotContain("KonniW", json.ToJsonString());
     }
 
     [Fact]

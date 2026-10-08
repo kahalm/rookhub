@@ -2649,7 +2649,7 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
   Vorschlag (auch über den Klarnamen) für ein Konto, das schon bei IRGENDEINEM Spieler eingetragen ist (ein selbst gemeldetes Konto
   kam sonst über die Stellungen beim Vereinskollegen noch einmal). Das Ergebnis je Konto steht in
   `LeagueScoutAccount.Result`. Ein Konto, dessen Partien nicht zu holen sind, kommt am nächsten Tag wieder; ein 429 beendet den Durchgang.
-* **Eigene Vorschläge** (`LeagueAccountSuggestion.Source = "team"`; seit 0.716.0 auch `"report"` = aus einer Meldung, siehe
+* **Eigene Vorschläge** (`LeagueAccountSuggestion.Source = "team"`; seit 0.716.0 auch `"report"` = aus einer Meldung — seit 0.726.0 nur noch, wenn das Konto bei einem anderen Spieler steht, siehe
   „Online-Schach Oberbayern"): die Namenssuche räumt beim erneuten Suchen nur Vorschläge OHNE
   Source weg — sonst verschwänden die der Team-Suche bei jedem Rescan, weil sie sie nie bestätigen kann.
 * **Minderjährige**: vor jedem Vorschlag holt die Team-Suche den Such-Eintrag samt Jahrgang (`LeagueAccountFinder.ScanRowAsync`, legt
@@ -2723,7 +2723,7 @@ in `core/account-checks.ts`), Liste darunter mit Zeichen (✓ ! ✕ – i) + Wor
 | GET | `/api/league/accounts/{id}/checks` | view | Prüfung eines Kontos `{ site, user, url, player, elo, checkedAt, profileLoaded, items[] }`; 404 unbekannt/verborgen |
 | POST | `/api/league/s/{token}/player/{fide}/accounts` | anonym (Teilen-Link) | **Online-Konto ohne Anmeldung eintragen** (0.630.0, Wunsch: „soll auch für nicht registrierte User möglich sein — direkt als sicher, beim Spieler vermerken, wer ihn hinzugefügt hat, in dem Fall dann anonym") `{ site, user, comment }` → sofort „gesichert", `AddedBy = "anonym"` + Hash des Links, Kommentar „Über einen Teilen-Link hinzugefügt (anonym)…"; nur Spieler der geteilten Begegnung (sonst 404), 400 wie beim Anlegen und `takenElsewhere` (Konto steht schon bei einem anderen Spieler). Ändern/Entfernen bleibt den Verwaltern. Angemeldet zeigt jedes Konto „hinzugefügt von …" (`addedBy` im Konto-JSON, nie über den Link), das (i) eine Zeile „Eingetragen"; Anlegen und Übernehmen eines Vorschlags vermerken den Nutzernamen |
 | GET | `/api/league/suggestions/{id}/checks` | manage | Dasselbe für einen Vorschlag |
-| POST | `/api/league/admin/online-reports/zugspitze?season=&dryRun=` | manage | **Online-Schach Oberbayern** (0.716.0, siehe unten) für EINE Saison (`20204`, `20211`, `20212`, `20213`, `20221`) → `{ season, source, dryRun, counts{ tournaments, skippedYouth, unreadable, rows, matched, ambiguous, notOnLichess, noRoster, rosterAmbiguous, otherClub, noFide, assigned, conflicting, reports }, reports{ added, updated, unchanged, removed, skipped, dryRun }, suggestions, items? }` (`items[{ fide, player, user, team, pageName, tournaments[] }]` nur bei `dryRun`); 400 `invalidSeason`, 404 `notFound` (keine Turnierliste), 503 `rateLimited`/`unreachable` |
+| POST | `/api/league/admin/online-reports/zugspitze?season=&dryRun=` | manage | **Online-Schach Oberbayern** (0.716.0, siehe unten) für EINE Saison (`20204`, `20211`, `20212`, `20213`, `20221`) → `{ season, source, dryRun, counts{ tournaments, skippedYouth, unreadable, rows, matched, ambiguous, notOnLichess, noRoster, rosterAmbiguous, otherClub, noFide, assigned, conflicting, reports }, reports{ added, updated, unchanged, removed, skipped, dryRun }, accounts{ created, upgraded, unchanged, accepted, takenElsewhere, rejected, failed }, suggestions, items? }` (seit 0.726.0 je Meldung direkt ein Konto „gesichert"; `suggestions` = neue Vorschläge, nur noch für `takenElsewhere`; `items[{ fide, player, user, team, pageName, tournaments[] }]` nur bei `dryRun`); 400 `invalidSeason`, 404 `notFound` (keine Turnierliste), 503 `rateLimited`/`unreachable` |
 | POST | `/api/league/admin/self-reports?dryRun=` | manage | Selbstmeldungen einer Quelle einspielen `{ source, reporter?, items[{ fide, site, user (Name oder Profiladresse), team, note? }] }` — ERSETZT die Einträge dieser Quelle → `{ added, updated, unchanged, removed, skipped[{ index, reason }], dryRun }` (`reason` ∈ invalidFide/unknownPlayer/invalidUser/duplicate); 400 `noSource`/`tooMany` (über 5000)/`invalidReporter` (über 60). Mit `reporter` (0.629.0) sind es Meldungen DRITTER: im (i) je Meldendem eine Zeile „Gemeldet von …" (`reported:<Name>`, gleich nach der Selbstmeldung; ok = für ihn gemeldet, fail = für einen anderen Spieler, warn = für ihn ein anderes Konto derselben Seite, sonst „nicht in der Liste von …"), die Selbstmeldung zählt nur Zeilen ohne `reporter` |
 
 **Online-Schach Oberbayern** (0.716.0, Wunsch 2026-10-07 „Online-Konten-Zuordnung für die Region Bayern";
@@ -2742,10 +2742,21 @@ seiner Vereine → `otherClub`; Kreis-Team auf der Seite widerspricht nie; ohne 
 Ein Konto, das in zwei Turnieren zwei Spielern zugeordnet würde → `conflicting`, weg. Ergebnis über `LeagueSelfReportImport`
 (ERSETZT die Quelle) als Meldungen Dritter: `Source` „Online-Schach Oberbayern {saison}", `Reporter` „Schachkreis Zugspitze",
 `Team` = Verein laut Seite, `Note` = erstes Turnier mit Rang + Wertung („+ n weitere") → im (i) die Zeile „Gemeldet von Schachkreis
-Zugspitze". **Vorschläge**: Selbstmeldungen flossen bis dahin NICHT in die Konto-Vorschläge — der Importer legt je Meldung einen an
-(`LeagueAccountSuggestion.Source = "report"`, Punkte 5, Hinweis „Gemeldet von Schachkreis Zugspitze (…): Name, Verein — Turniere"),
-außer das Konto steht schon bei irgendwem oder es gibt den Vorschlag für ihn (auch verworfen); vorher der Jahrgang
-(`ScanRowAsync`, Minderjährige verborgen). Die Namenssuche räumt ihn nicht weg (sie räumt nur Vorschläge ohne Source).
+Zugspitze". **Konten direkt** (0.726.0, Wunsch 2026-10-08: „solche Konten sollten direkt als gesichert übernommen werden" — bis dahin
+je Meldung nur ein Vorschlag, auf Prod lagen 33 offen): je Meldung legt `AccountsAsync` über `LeagueOnlineAccountService.CreateAsync`
+(derselbe Weg wie ein Verwalter: Deckel 20 je Spieler, `PatchViewsAsync`, Abruf wecken) ein Lichess-Konto an — `Confidence` „sicher",
+`Manual = true`, `AddedBy` „Schachkreis Zugspitze", Kommentar „Online-Schach Oberbayern {saison}: {Turnier} (Rang r, Lichess-Wertung w)
++ n weitere"; vorher der Jahrgang (`ScanRowAsync`; Konten Minderjähriger werden angelegt und bleiben über `LeagueHiddenAccounts`
+verborgen). Regeln/Zähler `accounts{…}` (je Meldung genau einer): Konto steht schon bei DIESEM Spieler → „wahrscheinlich" wird „sicher"
+(`upgraded`), „sicher" bleibt (`unchanged`); beide Male wird die Meldung an den Kommentar angehängt (` · `), wenn „{Quelle}:" darin
+fehlt — nie überschrieben, `AddedBy` bleibt. Konto steht bei einem ANDEREN Spieler → kein Konto (`takenElsewhere`, Warnung im Log mit
+beiden FIDE-IDs), stattdessen wie früher ein Vorschlag (`Source = "report"`, Punkte 5, Hinweis „Gemeldet von Schachkreis Zugspitze
+(…): Name, Verein — Turniere", nur wenn es für ihn noch keinen gibt, auch keinen verworfenen) — `suggestions` zählt nur diese.
+Verworfener Vorschlag (Spieler, Konto) → kein Konto (`rejected`). Offener Vorschlag für dasselbe Konto (gleich welcher Quelle) →
+`CreateAsync` räumt ihn weg wie beim Übernehmen (`accepted` statt `created`). `failed` = `CreateAsync` lehnte ab (`tooMany`). `dryRun`
+zählt nur. Ein zweiter Lauf derselben Saison ist idempotent (nur `unchanged`). **Bestand nachziehen**: die offenen `report`-Vorschläge
+werden zu Konten, indem man die fünf Saisonen (20204, 20211, 20212, 20213, 20221) noch einmal über den Endpunkt laufen lässt — je
+Saison erst `?dryRun=true` (erwartet `accepted` ≈ offene Vorschläge, `created` ≈ 0), dann ohne.
 **Minderjährige**: Turniere/Serien mit „Jugend" werden nicht abgerufen. **Höflich**: 1 s Pause nach jedem Abruf (je Saison ~2 je
 Turnier: 20204 39, 20211 28, 20212 13, 20213 1, 20221 11 Turniere ohne Jugend), Lichess 429 → Abbruch (503 `rateLimited`), geschrieben
 wird erst am Ende. Am 07.10.2026 gegen zwei echte Seiten geprüft: Kreisliga-Teamkampf 21/21 zugeordnet, Blitz-Swiss 14/15 (einer

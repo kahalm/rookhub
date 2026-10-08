@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.726.0", date: "2026-10-08", changes: [
+    { en: "LeagueHub, Online Chess Upper Bavaria: accounts assigned from the results pages of the Schachkreis Zugspitze are now added right away as “confirmed” accounts (added by “Schachkreis Zugspitze”, the tournament as comment) instead of waiting as suggestions for an administrator. An account already listed as “probable” for the same player becomes “confirmed”; an account that belongs to a different player, or that an administrator has rejected, is not added — the former still shows up as a suggestion. Open report suggestions are taken over on the next run. Accounts of minors are added but stay hidden.",
+      de: "LeagueHub, Online-Schach Oberbayern: Konten, die über die Ergebnisseiten des Schachkreises Zugspitze zugeordnet sind, werden jetzt gleich als „gesichert“ angelegt (hinzugefügt von „Schachkreis Zugspitze“, das Turnier als Kommentar), statt als Vorschlag auf einen Verwalter zu warten. Ein Konto, das beim selben Spieler schon als „unsicher“ steht, wird „gesichert“; ein Konto, das bei einem anderen Spieler steht oder das ein Verwalter verworfen hat, wird nicht angelegt — Ersteres erscheint weiter als Vorschlag. Offene Vorschläge aus Meldungen werden beim nächsten Lauf übernommen. Konten Minderjähriger werden angelegt, bleiben aber verborgen." },
+  ] },
   { version: "0.725.3", date: "2026-10-08", changes: [
     { en: "My games: saving a game again through RepCheck now fills in what the first save was missing — player names, time control and date — even when no new moves or ratings come along. Before, a game saved right after it ended could stay “? – ?” for good.", de: "Meine Partien: Eine Partie noch einmal über RepCheck zu speichern trägt jetzt nach, was beim ersten Mal fehlte — Spielernamen, Bedenkzeit und Datum —, auch wenn keine neuen Züge oder Wertungen dabei sind. Vorher konnte eine direkt nach Partieende gespeicherte Partie dauerhaft „? – ?“ bleiben." },
   ] },

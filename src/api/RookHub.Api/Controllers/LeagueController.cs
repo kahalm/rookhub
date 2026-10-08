@@ -531,7 +531,8 @@ public class LeagueController : BaseApiController
     /// Meldungen Dritter aus dem Online-Bereich des Schachkreises Zugspitze / Bezirks Oberbayern (0.716.0) für EINE Saison
     /// (<c>season</c> = Jahr + Quartal: 20204, 20211, 20212, 20213, 20221): Turnierliste → je Turnier Ergebnisseite + Lichess-Ergebnisse,
     /// Zuordnung über Wertung + Punkte, dann Name + Verein gegen die bayerischen Meldelisten → Selbstmeldungen der Quelle
-    /// „Online-Schach Oberbayern {season}" (Reporter „Schachkreis Zugspitze") + je neuer Meldung ein Vorschlag. <c>dryRun</c>: nur zählen,
+    /// „Online-Schach Oberbayern {season}" (Reporter „Schachkreis Zugspitze") + je Meldung direkt ein Konto „gesichert" (0.726.0; steht es bei
+    /// einem anderen Spieler, nur ein Vorschlag). <c>dryRun</c>: nur zählen,
     /// mit Liste. 400 <c>invalidSeason</c>, 404 <c>notFound</c>, 503 <c>rateLimited</c>/<c>unreachable</c>.
     /// </summary>
     [HttpPost("admin/online-reports/zugspitze")]
