@@ -10,6 +10,7 @@ import { GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 import { ClubContextService, ownsTeam } from '../../core/club-context.service';
+import { RoundLineupsComponent } from '../../shared/round-lineups.component';
 
 const PICK_KEY = 'leaguehub';
 /** Die gewählte Runde je Browser-Tab (Wunsch 2026-10-06: „Runde ändern, Reiter wechseln, zurück — soll er sich merken").
@@ -30,7 +31,7 @@ interface Pick { liga?: number; verein?: string }
   selector: 'lh-league-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, AccessGateComponent],
+  imports: [FixtureViewComponent, AccessGateComponent, RoundLineupsComponent],
   template: `
     @if (!allowed) {
       <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
@@ -95,6 +96,21 @@ interface Pick { liga?: number; verein?: string }
           <span class="update-msg" [class.err]="updateErr()" role="status" aria-live="polite">{{ updateMsg() }}</span>
         </div>
 
+        <!-- 2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde anzeigt" — aufklappbar,
+             der Zustand steht in der Adresse (&aufstellungen=1) und mit der gemerkten Runde im Tab. -->
+        @if (league()) {
+          <div class="lineups-toggle">
+            <button type="button" class="btn-sec" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16M9 4v16"/></svg>
+              {{ showLineups() ? 'Aufstellungen ausblenden' : 'Alle Aufstellungen der Runde ' + round() }}
+            </button>
+          </div>
+          @if (showLineups()) {
+            <div id="round-lineups"><lh-round-lineups [tnr]="tnr()" [round]="round()" [teamPrefix]="teamPrefix()" /></div>
+          }
+        }
+
         @if (league(); as L) {
           <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [leagueTnr]="L.tnr" [round]="round()" [team]="team()"
                       [fixture]="fixture()" [sources]="sources()" />
@@ -126,6 +142,10 @@ interface Pick { liga?: number; verein?: string }
       </div>
     }
   `,
+  styles: [`
+    .lineups-toggle { margin: 0 0 14px; }
+    .lineups-toggle .btn-sec { display: inline-flex; align-items: center; gap: 6px; }
+  `],
 })
 export class LeaguePageComponent implements OnInit {
   private readonly api = inject(LeagueApiService);
@@ -158,6 +178,10 @@ export class LeaguePageComponent implements OnInit {
   readonly updating = signal(false);
   readonly updateMsg = signal('');
   readonly updateErr = signal(false);
+
+  /** Alle Aufstellungen der gewählten Runde aufgeklappt (2026-10-08) — in der Adresse `&aufstellungen=1`. */
+  readonly showLineups = signal(false);
+  readonly teamPrefix = computed(() => this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix ?? null);
 
   readonly fixture = computed(() => this.league()?.fixtures[this.team()]?.[String(this.round())]);
   readonly tn = tn;
@@ -221,7 +245,9 @@ export class LeaguePageComponent implements OnInit {
       this.index.set(ix);
       if (!ix.leagues.length) { this.league.set(null); this.tnr.set(0); return; }
       const tnr = ix.leagues.some(l => l.tnr === pref.liga) ? pref.liga : ix.leagues[0].tnr;
-      const lastRound = readJson<{ liga: number; runde: number }>(sessionStore(), ROUND_KEY);
+      const lastRound = readJson<{ liga: number; runde: number; aufstellungen?: boolean }>(sessionStore(), ROUND_KEY);
+      this.showLineups.set(keep ? this.showLineups()
+        : q.get('aufstellungen') === '1' || (!q.get('runde') && lastRound?.liga === tnr && lastRound.aufstellungen === true));
       await this.showLeague(tnr, pref.runde || (lastRound?.liga === tnr ? lastRound.runde : 0), pref.verein);
     } catch (err) {
       this.loadError.set(this.errorText(err));
@@ -247,6 +273,11 @@ export class LeaguePageComponent implements OnInit {
 
   pickRound(round: number): void {
     this.round.set(round);
+    this.remember();
+  }
+
+  toggleLineups(): void {
+    this.showLineups.update(v => !v);
     this.remember();
   }
 
@@ -282,11 +313,11 @@ export class LeaguePageComponent implements OnInit {
 
   private remember(): void {
     void this.router.navigate([], {
-      queryParams: { liga: this.tnr(), runde: this.round(), verein: this.team() },
+      queryParams: { liga: this.tnr(), runde: this.round(), verein: this.team(), ...(this.showLineups() ? { aufstellungen: 1 } : {}) },
       replaceUrl: true,
     });
     writeJson(localStore(), PICK_KEY, { liga: this.tnr(), verein: this.team() } satisfies Pick);
-    writeJson(sessionStore(), ROUND_KEY, { liga: this.tnr(), runde: this.round() });
+    writeJson(sessionStore(), ROUND_KEY, { liga: this.tnr(), runde: this.round(), ...(this.showLineups() ? { aufstellungen: true } : {}) });
   }
 
   async startUpdate(): Promise<void> {

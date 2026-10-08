@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@an
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
+import { LineupsApiService } from '../../core/lineups';
 import { LeagueApiService } from '../../core/league-api.service';
 import { League, LeagueIndex } from '../../core/league.models';
 import { LeaguePageComponent } from './league-page.component';
@@ -33,6 +34,7 @@ describe('LeaguePageComponent', () => {
   let fixture: ComponentFixture<LeaguePageComponent>;
   let api: jasmine.SpyObj<LeagueApiService>;
   let router: jasmine.SpyObj<Router>;
+  let lineupsApi: jasmine.SpyObj<LineupsApiService>;
   let perms: Set<string>;
   let query: Record<string, string>;
 
@@ -56,6 +58,9 @@ describe('LeaguePageComponent', () => {
     }));
     api.league.and.callFake(async (tnr: number) => league(tnr, tnr === 10 ? ['Kufstein', 'Testdorf', 'Wörgl'] : ['Absam', 'Hall']));
     api.updateStatus.and.resolveTo({ running: false, started: null, finished: null, ok: null, message: null });
+    lineupsApi = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves']);
+    lineupsApi.lineups.and.callFake(async (tnr: number, round: number) => ({ tnr, round, date: null, canEdit: false, matches: [
+      { matchNo: 1, home: 'Testdorf', away: 'Kufstein', homePts: null, awayPts: null, own: true, boards: [] }] }));
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
   });
@@ -65,6 +70,7 @@ describe('LeaguePageComponent', () => {
       imports: [LeaguePageComponent],
       providers: [
         { provide: LeagueApiService, useValue: api },
+        { provide: LineupsApiService, useValue: lineupsApi },
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
@@ -236,6 +242,33 @@ describe('LeaguePageComponent', () => {
     await settle();
     expect(api.sources).toHaveBeenCalledWith(null, ['Wörgl-1'], 10);
     expect(el.querySelector('.src-tbl thead')!.textContent).toContain('Gegner von Wörgl');
+  });
+
+  it('Knopf „Aufstellungen": klappt alle Aufstellungen der gewählten Runde auf, steht in der Adresse und im Tab (2026-10-08)', async () => {
+    const el = create();
+    await settle();
+    expect(el.querySelector('lh-round-lineups')).toBeNull();
+    const btn = el.querySelector('.lineups-toggle button') as HTMLButtonElement;
+    expect(btn.textContent).toContain('Alle Aufstellungen der Runde 2');
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    btn.click();
+    await settle();
+    expect(lineupsApi.lineups).toHaveBeenCalledWith(10, 2);
+    expect(el.querySelector('lh-round-lineups .lu-match')?.textContent).toContain('Noch keine Aufstellung');
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({
+      queryParams: { liga: 10, runde: 2, verein: 'Testdorf', aufstellungen: 1 } }));
+    expect(JSON.parse(sessionStorage.getItem('leaguehub-round')!)).toEqual({ liga: 10, runde: 2, aufstellungen: true });
+    // andere Runde: bleibt offen, lädt die neue
+    fixture.componentInstance.pickRound(1);
+    await settle();
+    expect(lineupsApi.lineups).toHaveBeenCalledWith(10, 1);
+    // Reiterwechsel ohne Adresse: wieder offen
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    create();
+    await settle();
+    expect(fixture.componentInstance.showLineups()).toBeTrue();
+    expect(fixture.componentInstance.round()).toBe(1);
   });
 
   it('die gewählte Runde bleibt beim Zurückkommen ohne Adresse (Reiterwechsel), aber nur für dieselbe Liga', async () => {

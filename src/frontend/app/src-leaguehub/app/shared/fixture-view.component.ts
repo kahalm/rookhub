@@ -10,6 +10,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
+import { BoardMovesComponent } from './board-moves.component';
+import { LineupMatch, LineupsApiService } from '../core/lineups';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
@@ -23,7 +25,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule],
+  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule, BoardMovesComponent],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -68,6 +70,16 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                     }
                   </td>
                 </tr>
+                <!-- 2026-10-08: die ersten Züge der Partie (angemeldet; über einen Teilen-Link nicht) -->
+                @if (movesBoard(p.board); as mb) {
+                  @if (mb.moves || mb.canEditMoves) {
+                    <tr class="moves-row"><td></td><td colspan="4">
+                      <lh-board-moves [key]="{ tnr: leagueTnr()!, round: round(), matchNo: ownMatch()!.matchNo ?? 0, board: p.board }"
+                                      [title]="'Brett ' + p.board + ': ' + (p.white ?? '–') + ' – ' + (p.black ?? '–')"
+                                      [initial]="mb.moves" [canEdit]="mb.canEditMoves" [flipped]="ownIsBlack(p)" />
+                    </td></tr>
+                  }
+                }
                 @if (openBoard() === p.board && p.pgn) {
                   <tr class="replay-row"><td colspan="5">
                     <lh-game-replay [pgn]="p.pgn" [flipped]="ownIsBlack(p)"
@@ -324,6 +336,12 @@ export class FixtureViewComponent {
   readonly pairings = signal<FixturePairing[]>([]);
   readonly openBoard = signal<number | null>(null);
   private pairingsFor = '';
+  private readonly lineups = inject(LineupsApiService);
+  /** Die eigene Begegnung aus den Aufstellungen der Runde — trägt die ersten Züge je Brett (2026-10-08). */
+  readonly ownMatch = signal<LineupMatch | null>(null);
+  movesBoard(board: number) {
+    return this.ownMatch()?.boards.find(b => b.board === board) ?? null;
+  }
 
   constructor() {
     effect(() => {
@@ -332,11 +350,17 @@ export class FixtureViewComponent {
       if (key === this.pairingsFor) return;
       this.pairingsFor = key;
       this.pairings.set([]);
+      this.ownMatch.set(null);
       this.openBoard.set(null);
       if (f?.status !== 'played' || (!token && tnr == null)) return;
       this.api.fixtureGames(tnr, round, team, token).then(
         p => { if (this.pairingsFor === key) this.pairings.set(p); },
         () => { if (this.pairingsFor === key) this.pairings.set([]); });
+      // Erste Züge (2026-10-08) über die Aufstellungen der Runde — nur angemeldet; fehlen sie, fehlt nur die Zeile.
+      if (!token && tnr != null)
+        this.lineups.lineups(tnr, round).then(
+          l => { if (this.pairingsFor === key) this.ownMatch.set(l.matches.find(m => m.home === team || m.away === team) ?? null); },
+          () => undefined);
     });
     effect(() => {
       const token = this.shareToken();

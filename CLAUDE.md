@@ -2069,6 +2069,39 @@ Alle anderen angemeldeten LeagueHub-Endpunkte (`/api/league/index`, `/sources`, 
 `/accounts/…`, `/suggestions/…`, `/admin/…`). `GET /api/league/index` trägt zusätzlich `club` (der Verein der Anfrage),
 `GET /api/league/s/{token}` trägt `club: { id, name, anonName }` (der Verein des Links).
 
+### LeagueHub — Aufstellungen je Runde + erste Züge (0.721.0)
+
+Wunsch 2026-10-08: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde anzeigt — dann bei jeder Partie die
+Möglichkeit, die ersten paar Züge einzugeben."
+
+* **Knopf** „Alle Aufstellungen der Runde N" unter der Auswahl der Ligaseite (`league-page`), klappt `shared/round-lineups.component.ts`
+  auf: je Begegnung Heim – Gast mit Mannschaftsergebnis (½), darunter je Brett Heimspieler (Titel, Elo), Farbe des Heimspielers,
+  Ergebnis (Sicht Heim – Gast wie chess-results), Gastspieler, Züge. Eigene Begegnung (Rahmen) über `own` (`LeagueClub.OwnsTeam`).
+  Begegnung ohne Brettpaarungen = „Noch keine Aufstellung". CSS-Grid statt Tabelle — am Handy stehen Heim/Gast untereinander.
+  Zustand in der Adresse `&aufstellungen=1` und mit der Runde im Tab (`leaguehub-round` → `aufstellungen: true`, nur wenn offen).
+* **Erste Züge** (`shared/board-moves.component.ts` + Dialog `shared/moves-editor.component.ts`): Anzeige „1.e4 c5 2.Sf3" (deutsche
+  Figurenbuchstaben über `de()`), „Züge eingeben/ändern" öffnet Brett (`app-chess-board`, gedreht aus Sicht des eigenen Spielers) +
+  Textfeld, beide synchron (Brett hängt an, Tippen stellt das Brett bis zum ersten falschen Zug), Zurück, Speichern, Löschen.
+  Auch an den Paarungen der eigenen gespielten Begegnung in `lh-fixture` (die Ansicht holt dafür die Aufstellungen der Runde nach;
+  über einen Teilen-Link nicht). `LeagueViewBuilder`/Prognose unberührt.
+* **Speicherung** `LeagueGameMoves` am natürlichen Schlüssel (Tnr, Runde, Begegnung, Brett) — die Zeilen von `LeagueGames`
+  werden beim Aktualisieren zusammengeführt, der Schlüssel bleibt. Regeln in `Services/League/LeagueGameMoves.cs`: `Parse` nimmt
+  Zugnummern, `{…}`/`(…)`, Ergebnis, deutsche Buchstaben (S/L/T/D, auch bei der Umwandlung), `0-0`; höchstens 60 Halbzüge;
+  Legalität über `SavedGameService.LegalSans` (dieselbe Prüfung wie Vereinspartien), gespeichert als englische SAN.
+* **Rechte**: lesen `league.view`; schreiben `league.contribute` (wie Vereinspartien anlegen) — ohne `league.manage` nur an
+  Begegnungen mit einer Mannschaft des eigenen Vereins (403 `foreignMatch`) und nur eigene Einträge ändern/löschen (403 `notYours`,
+  Regel wie `CanDelete` der Vereinspartien); Verwalter (live über `PermissionResolver`) alles. Kampflose/unbesetzte Bretter: 400 `noGame`.
+  Mandant über `?club=` (`LeagueClubAsync`). Controller `LeagueLineupsController` (eigene Datei, gleiche Route `api/league`).
+
+| Methode | Endpoint | Recht | Zweck |
+|---------|----------|-------|-------|
+| GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves }] }] }`; 404 ohne Runde |
+| PUT | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | `{ moves }` (leer = löschen) → `{ moves }` (englische SAN); 404 ohne Paarung, 403 `foreignMatch`/`notYours`, 400 `noGame`/`tooLong`/`illegal` (+ `move`, `ply`) |
+| DELETE | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | → 204; 404/403 wie oben |
+
+Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids), `LeagueGameMovesSqlTests` (Migration + eindeutiger
+Schlüssel gegen MariaDB); Frontend `round-lineups`/`moves-editor`/`league-page`/`fixture-view`-Specs.
+
 ### LeagueHub — Vereins-Datenbank (0.573.0, Übersicht/Teilen-Link/Megabase 0.574.0)
 
 Mitglieder von SK Schwaz laden Partien hoch — viele auf einmal als PGN oder EIN Partieformular (Foto, gelesen vom
@@ -5080,6 +5113,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ClubNotes | Datierte Trainer-Notiz zum Lernstand | MemberId (Cascade), AuthorUserId? (kein FK — bleibt ohne Namen, wenn das Konto geht), CreatedAt, Text (TEXT ≤2000); Index (MemberId, CreatedAt) |
 | LeagueClubs | Vereine als Mandanten von LeagueHub (0.698.0, siehe „LeagueHub — Vereine als Mandanten") | Id, Name (≤120, UNIQUE), TeamPrefix (≤80, Anfang der Mannschaftsnamen), AnonName (≤60), Region (≤20; `tirol` | `bayern` — Migration `LeagueClubRegion` hat `Source` umbenannt: null → tirol, ligamanager → bayern), CreatedAt — Migration legt 1 = SK Schwaz, 2 = SK Weilheim an |
 | LeagueClubMembers | Gruppe → Verein (0.698.0) | PK (ClubId, GroupId), **GroupId UNIQUE** (eine Gruppe gehört zu höchstens einem Verein); FK Club Restrict, Group Cascade |
+| LeagueGameMoves | Erste Züge einer Ligapartie (0.721.0, siehe „LeagueHub — Aufstellungen je Runde + erste Züge“) | Tnr, Round, MatchNo, Board (**UNIQUE** — natürlicher Schlüssel der Paarung, NICHT `LeagueGames.Id`), Moves (≤600, englische SAN mit Leerzeichen, ≤ 60 Halbzüge, ab Grundstellung geprüft), ClubId (FK `LeagueClubs` Restrict — nur Zuordnung, sichtbar sind die Züge für alle Vereine), UpdatedByUserId? (kein FK), UpdatedAt |
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite mit dem `AnonName` des Vereins) | **ClubId (FK LeagueClubs Restrict, Index (ClubId, Year); 0.698.0)**, Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)**, **LeagueGameId? (Index, kein FK; fest zugeordnete Brettpaarung, 0.678.0 — seit 0.716.1 stabil, gelesen nur über `LeagueGameLinks.ResolveAsync`) + LeagueTnr?/LeagueRound?/LeagueMatchNo?/LeagueBoard? (Schlüssel der Paarung, Index; Sicherheitsnetz)** |
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount, **AddedBy? (≤60, 0.630.0: Nutzername bzw. „anonym" über einen Teilen-Link) + AddedShareHash? (≤64, SHA-256 des Links)** |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |

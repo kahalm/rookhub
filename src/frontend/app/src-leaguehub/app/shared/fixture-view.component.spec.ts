@@ -3,6 +3,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
 import { LeagueApiService } from '../core/league-api.service';
+import { LineupsApiService } from '../core/lineups';
 import { Fixture } from '../core/league.models';
 import { FixtureViewComponent } from './fixture-view.component';
 
@@ -25,6 +26,7 @@ const OPEN: Fixture = {
 describe('FixtureViewComponent', () => {
   let fixture: ComponentFixture<FixtureViewComponent>;
   let api: jasmine.SpyObj<LeagueApiService>;
+  let lineupsApi: jasmine.SpyObj<LineupsApiService>;
 
   function render(e: Fixture | undefined, opts: { tnr?: number | null; token?: string | null } = {}): HTMLElement {
     fixture.componentRef.setInput('leagueName', 'Landesliga');
@@ -40,6 +42,8 @@ describe('FixtureViewComponent', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats', 'fixtureGames']);
     api.fixtureGames.and.resolveTo([]);
+    lineupsApi = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves']);
+    lineupsApi.lineups.and.resolveTo({ tnr: 1479345, round: 1, date: null, canEdit: false, matches: [] });
     api.forecastStats.and.resolveTo({
       season: '2026/27', total: { fixtures: 4, top1: 10, top2: 18, top3: 22, of: 30, e1: 9000, e2: 16500, e3: 21000, pa: 6300, pb: 1800 },
       rounds: [{ round: 1, fixtures: 3, top1: 6, top2: 13, top3: 15, of: 22, e1: 6600, e2: 12000, e3: 15400 },
@@ -56,7 +60,7 @@ describe('FixtureViewComponent', () => {
     });
     TestBed.configureTestingModule({
       imports: [FixtureViewComponent],
-      providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: () => false } },
+      providers: [{ provide: LeagueApiService, useValue: api }, { provide: LineupsApiService, useValue: lineupsApi }, { provide: AuthService, useValue: { has: () => false } },
         provideTranslateService({ fallbackLang: 'de' }), provideRouter([])],
     });
     fixture = TestBed.createComponent(FixtureViewComponent);
@@ -91,6 +95,39 @@ describe('FixtureViewComponent', () => {
     (items[0] as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.pairings lh-game-replay')).not.toBeNull();
+  });
+
+  it('gespielte Runde: erste Züge je Brett aus den Aufstellungen, „Züge eingeben" wo erlaubt (2026-10-08)', async () => {
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Ackermann, Anna', whiteElo: 2040, black: 'Brunner, Bert', blackElo: 2100, result: '1 - 0', forfeit: false,
+        pgn: null, source: null, clubGameId: null },
+      { board: 2, white: 'Clauss, Carl', whiteElo: null, black: 'Dorn, Dora', blackElo: 1900, result: '0 - 1', forfeit: false,
+        pgn: null, source: null, clubGameId: null },
+    ]);
+    lineupsApi.lineups.and.resolveTo({ tnr: 1479345, round: 1, date: null, canEdit: true, matches: [
+      { matchNo: 4, home: 'Spg Kufstein/Wörgl', away: 'Schwaz', homePts: 3, awayPts: 3, own: true, boards: [
+        { board: 1, homePlayer: 'Brunner, Bert', homeTitle: null, homeElo: 2100, awayPlayer: 'Ackermann, Anna', awayTitle: null, awayElo: 2040,
+          homeColor: 's', result: '0 - 1', forfeit: 0, moves: 'd4 Nf6 c4', canEditMoves: false },
+        { board: 2, homePlayer: 'Clauss, Carl', homeTitle: null, homeElo: null, awayPlayer: 'Dorn, Dora', awayTitle: null, awayElo: 1900,
+          homeColor: 'w', result: '0 - 1', forfeit: 0, moves: null, canEditMoves: true },
+      ] }] });
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render({ ...OPEN, status: 'played', score: '3 : 3' });
+    for (let i = 0; i < 3; i++) { await fixture.whenStable(); fixture.detectChanges(); }
+    const el = fixture.nativeElement as HTMLElement;
+    expect(lineupsApi.lineups).toHaveBeenCalledWith(1479345, 1);
+    const rows = el.querySelectorAll('.pairings .moves-row');
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('1.d4 Sf6 2.c4');
+    expect(rows[0].querySelector('.bm-edit')).toBeNull();
+    expect(rows[1].querySelector('.bm-edit')?.textContent).toContain('Züge eingeben');
+  });
+
+  it('über einen Teilen-Link keine Züge (keine Abfrage der Aufstellungen)', async () => {
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render({ ...OPEN, status: 'played', score: '3 : 3' }, { token: 'abc' });
+    await fixture.whenStable();
+    expect(lineupsApi.lineups).not.toHaveBeenCalled();
   });
 
   it('offene Runde: keine Paarungen, keine Abfrage', () => {
