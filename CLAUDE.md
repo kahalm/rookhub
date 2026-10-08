@@ -4833,6 +4833,7 @@ Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt
 | GET | `/api/admin/scoresheets/pending` | messages.admin: wartende Einlesungen für den Leser von außen (0.687.0) `[{ id, purpose (own/league), userId, anonymous, pageCount, notationLanguage, ownerSide, createdAt }]`, älteste zuerst |
 | GET | `/api/admin/scoresheets/{id}/photo?page=` | messages.admin: Foto einer Seite |
 | POST | `/api/admin/scoresheets/{id}/reading` | messages.admin: Lesung übernehmen `{ transcription }` → die Einlesung; 400 `reason` ∈ notPending/invalidTranscription, 404 |
+| POST | `/api/admin/scoresheets/{id}/start` | messages.admin: der Leser fängt an — wartend → läuft, die Seite zeigt „wird gelesen“ (0.721.2) → 204 |
 | POST | `/api/admin/scoresheets/{id}/fail` | messages.admin: als gescheitert schließen `{ reason }` (unreadable/noMoves/failed, Glocke wie sonst) → 204 |
 
 ### Partie rekonstruieren (auth)

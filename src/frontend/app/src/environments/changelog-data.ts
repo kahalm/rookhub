@@ -8,6 +8,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.721.2',
+    date: '2026-10-08',
+    changes: [
+      { en: "Scoresheets (RookHub and LeagueHub): the page now says whether an upload is still waiting for the reader (it checks every 5 minutes) or is being read right now — the reader reports when it starts.", de: "Partieformulare (RookHub und LeagueHub): Die Seite sagt jetzt, ob ein Formular noch auf den Leser wartet (er schaut alle 5 Minuten nach) oder gerade gelesen wird — der Leser meldet, wann er anfängt." },
+    ],
+  },
   { version: "0.721.1", date: "2026-10-08", changes: [
     { en: "LeagueHub: the old one-off bundle import from the earlier Python version (admin) is gone — it replaced ALL leagues at once, which no longer fits now that Bavaria and the Bundesliga live alongside the Tyrolean leagues. Leagues are imported per season through the chess-results, Ligamanager and Zugspitze imports.",
       de: "LeagueHub: der alte einmalige Bündel-Import aus der früheren Python-Fassung (Verwaltung) ist entfernt — er ersetzte ALLE Ligen auf einmal, was seit Bayern und der Bundesliga neben den Tiroler Ligen nicht mehr passt. Ligen kommen je Saison über die Importe von chess-results, Ligamanager und Zugspitze." },

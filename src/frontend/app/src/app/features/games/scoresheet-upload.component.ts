@@ -171,7 +171,7 @@ export const MAX_PAGES = 3;
                 <mat-spinner diameter="28"></mat-spinner>
                 <div>
                   <strong>{{ (scan.status === 'pending' ? 'scoresheet.pending' : 'scoresheet.running') | translate }}</strong>
-                  <div class="facts">{{ 'scoresheet.runningHint' | translate: { time: clock(elapsed()), perMove: perMove } }}</div>
+                  <div class="facts">{{ (scan.status === 'pending' ? 'scoresheet.pendingHint' : 'scoresheet.runningHint') | translate: { time: clock(elapsed()), perMove: perMove } }}</div>
                 </div>
               </div>
             }

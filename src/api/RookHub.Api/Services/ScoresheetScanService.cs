@@ -357,6 +357,21 @@ public class ScoresheetScanService
         return (ToDto(scan), null);
     }
 
+    /// <summary>Der Leser von außen fängt an (0.721.2, Wunsch 2026-10-08: „erst wartet, dann reading"): wartend → läuft, damit
+    /// die Seite „wird gelesen" statt „wartet" zeigt. Gründe: <c>notFound</c>, <c>notPending</c>.</summary>
+    public async Task<string?> StartExternalAsync(int scanId, CancellationToken ct = default)
+    {
+        var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.Id == scanId, ct);
+        if (scan == null) return "notFound";
+        if (scan.Status == ScoresheetScanStatus.Running) return null;
+        if (scan.Status != ScoresheetScanStatus.Pending) return "notPending";
+        scan.Status = ScoresheetScanStatus.Running;
+        scan.StartedAt = DateTime.UtcNow;
+        scan.Model = ManualModel;
+        await _db.SaveChangesAsync(ct);
+        return null;
+    }
+
     /// <summary>Eine wartende Einlesung von außen als gescheitert abschließen (Foto unbrauchbar, keine Partie darauf,
     /// verdächtiger Inhalt) — mit Glocke wie ein gescheitertes Lesen. Erlaubte Gründe: <c>unreadable</c>, <c>noMoves</c>,
     /// <c>failed</c>.</summary>

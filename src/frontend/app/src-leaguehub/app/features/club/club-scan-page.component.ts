@@ -88,8 +88,13 @@ function readAutoMine(): boolean {
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
           @else {
-            <p class="muted" role="status">Das Formular wird noch gelesen … <b class="scan-clock">{{ clock() }}</b>
-              <span class="small"> — das dauert meist ein paar Minuten.</span></p>
+            @if (st.scan.status === 'pending') {
+              <p class="muted" role="status">Das Formular wartet aufs Einlesen … <b class="scan-clock">{{ clock() }}</b>
+                <span class="small"> — der Leser schaut alle 5 Minuten nach neuen Formularen.</span></p>
+            } @else {
+              <p class="muted" role="status">Das Formular wird gelesen … <b class="scan-clock">{{ clock() }}</b>
+                <span class="small"> — das dauert meist ein paar Minuten.</span></p>
+            }
           }
         } @else {
           <p class="muted">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den Zug am Brett spielen

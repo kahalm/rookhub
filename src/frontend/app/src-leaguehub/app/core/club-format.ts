@@ -87,7 +87,7 @@ export function loadErrorText(err: unknown): string {
 /** Wie weit ist eine Einlesung? */
 export function scanStateText(s: ScoresheetScan): string {
   switch (s.status) {
-    case 'pending': return 'wartet';
+    case 'pending': return 'wartet aufs Einlesen';
     case 'running': return 'wird gelesen …';
     case 'done': return `gelesen: ${Math.ceil(s.moveCount / 2)} Züge${s.uncertainCount ? `, ${s.uncertainCount} unsicher` : ''}`;
     default: return `gescheitert${s.error === 'unreadable' ? ' (unleserlich)' : s.error === 'noMoves' ? ' (keine Züge)' : ''}`;

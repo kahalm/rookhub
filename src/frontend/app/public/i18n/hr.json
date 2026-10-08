@@ -4437,6 +4437,7 @@
     "quota": "danas {{used}} od {{limit}}",
     "pending": "Čeka na čitanje …",
     "running": "Zapisnik se čita …",
+    "pendingHint": "Čitač svakih 5 minuta provjerava nove zapisnike — učitano prije {{time}}. Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama.",
     "runningHint": "Obično traje nekoliko minuta — čita se već {{time}}. Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama.",
     "doneTitle": "Učitano: {{moves}} polupoteza",
     "uncertain": "nesigurno: {{count}}",

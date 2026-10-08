@@ -4437,6 +4437,7 @@
     "quota": "{{used}} of {{limit}} today",
     "pending": "Waiting to be read …",
     "running": "Reading the scoresheet …",
+    "pendingHint": "The reader checks for new scoresheets every 5 minutes — uploaded {{time}} ago. You can leave the page — the game will appear in your games.",
     "runningHint": "Usually takes a few minutes — reading for {{time}}. You can leave the page — the game will appear in your games.",
     "doneTitle": "Read: {{moves}} half-moves",
     "uncertain": "{{count}} uncertain",

@@ -507,6 +507,25 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Single(await _service.PendingForExternalAsync());
     }
 
+    /// <summary>Wunsch 2026-10-08: „erst wartet, dann reading" — der Watcher meldet den Beginn.</summary>
+    [Fact]
+    public async Task StartExternal_MarksTheScanAsRunning_AndTheReadingStillGoesThrough()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Null(await _service.StartExternalAsync(scan!.Id));
+        Assert.Null(await _service.StartExternalAsync(scan.Id));                 // zweimal schadet nicht
+        Assert.Equal("running", (await _service.GetAsync(u.Id, scan.Id))!.Status);
+        Assert.Equal("notFound", await _service.StartExternalAsync(9999));
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan.Id, Answer(Written));
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        Assert.Equal("notPending", await _service.StartExternalAsync(scan.Id));
+    }
+
     [Fact]
     public async Task FailExternal_EndsTheScanWithTheBell_OnlyForKnownReasons()
     {

@@ -4437,6 +4437,7 @@
     "quota": "{{used}} von {{limit}} heute",
     "pending": "Wartet aufs Einlesen …",
     "running": "Das Formular wird gelesen …",
+    "pendingHint": "Der Leser schaut alle 5 Minuten nach neuen Formularen — hochgeladen vor {{time}}. Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
     "runningHint": "Dauert meist ein paar Minuten — läuft seit {{time}}. Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
     "doneTitle": "Eingelesen: {{moves}} Halbzüge",
     "uncertain": "{{count}} unsicher",

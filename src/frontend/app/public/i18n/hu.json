@@ -4437,6 +4437,7 @@
     "quota": "ma {{used}} / {{limit}}",
     "pending": "Beolvasásra vár …",
     "running": "A játszmalap olvasása folyik …",
+    "pendingHint": "Az olvasó 5 percenként keres új játszmalapokat — {{time}} óta feltöltve. Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
     "runningHint": "Általában néhány percig tart — {{time}} óta olvassuk. Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
     "doneTitle": "Beolvasva: {{moves}} féllépés",
     "uncertain": "{{count}} bizonytalan",

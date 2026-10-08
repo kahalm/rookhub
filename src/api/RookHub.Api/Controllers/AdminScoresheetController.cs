@@ -39,6 +39,16 @@ public class AdminScoresheetController(ScoresheetScanService scans) : BaseApiCon
         };
     }
 
+    /// <summary>Der Leser fängt an: wartend → läuft (die Seite zeigt dann „wird gelesen"). 204; 400 <c>notPending</c>, 404.</summary>
+    [HttpPost("{id:int}/start")]
+    public async Task<IActionResult> Start(int id, CancellationToken ct) =>
+        await scans.StartExternalAsync(id, ct) switch
+        {
+            null => NoContent(),
+            "notFound" => NotFound(),
+            var reason => BadRequest(new { reason }),
+        };
+
     /// <summary>Als gescheitert abschließen (<c>reason</c> ∈ unreadable/noMoves/failed) — der Hochladende bekommt die
     /// übliche Glocke „konnte nicht gelesen werden".</summary>
     [HttpPost("{id:int}/fail")]
