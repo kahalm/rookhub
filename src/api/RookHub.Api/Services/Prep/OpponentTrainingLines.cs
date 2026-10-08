@@ -170,7 +170,8 @@ public static class OpponentTrainingLines
     /// Partien weitergespielt, zählen seine Partien, sonst der Explorer (mindestens <see cref="RepertoireReach.MinGames"/> Partien).
     /// Wahrscheinlichkeit = Produkt über die Gegnerzüge aus der jeweiligen Quelle. Linien, bei denen eine Stellung keine Quelle hat,
     /// reihen sich wie bisher (Auffüllregel) HINTER allen mit Quelle; diese nach Wahrscheinlichkeit, dann mehr eigene Gegnerzüge,
-    /// dann Partien, dann Reihenfolge im Repertoire.
+    /// dann Partien, dann Reihenfolge im Repertoire. Darunter zuerst die, denen er folgt, so weit seine Partien reichen
+    /// (<c>none</c> mit eigenen Gegnerzügen), dann die Widersprüche (<c>deviates</c>), zuletzt die ganz ohne Treffer.
     /// </summary>
     public static Result Rank(RepertoireReach.Graph graph, IReadOnlyList<string> chapters, Analysis analysis, Estimate? estimate)
     {
@@ -231,11 +232,15 @@ public static class OpponentTrainingLines
         // Stufe 1: widerspricht seinen Partien nicht (eigene, gemischte, reine Explorer-Linien) — nach Wahrscheinlichkeit
         var sourced = lines.Where(l => l.Source is "own" or "mixed" or "lichess").OrderByDescending(l => l.Probability)
             .ThenByDescending(l => l.OwnMoves).ThenByDescending(l => l.Reached).ThenBy(l => l.Index);
-        // Stufe 2: widerspricht ihm — mehr übereinstimmende Gegnerzüge zuerst, dann die Schätzung ab dem Widerspruch
+        // Stufe 2: er folgt ihr, so weit seine Partien reichen, danach fehlt jede Quelle (kein Explorer) — Auffüllregel; VOR den
+        // Widersprüchen, sonst stünde die Linie, der er folgt, hinter der, der er widerspricht (0.718.1)
+        var followed = FillRule(lines.Where(l => l.Source == "none" && l.OwnMoves > 0));
+        // Stufe 3: widerspricht ihm — mehr übereinstimmende Gegnerzüge zuerst, dann die Schätzung ab dem Widerspruch
         var deviates = lines.Where(l => l.Source == "deviates").OrderByDescending(l => l.OwnMoves)
             .ThenByDescending(l => l.Probability).ThenBy(l => l.Index);
-        // Stufe 3: weder er noch der Explorer geben etwas her — Auffüllregel wie bisher
-        return new Result(analysis.Games, sourced.Concat(deviates).Concat(FillRule(lines.Where(l => l.Source == "none"))).ToList());
+        // Stufe 4: weder er noch der Explorer geben etwas her — Auffüllregel wie bisher
+        var rest = FillRule(lines.Where(l => l.Source == "none" && l.OwnMoves == 0));
+        return new Result(analysis.Games, sourced.Concat(followed).Concat(deviates).Concat(rest).ToList());
     }
 
     /// <summary>

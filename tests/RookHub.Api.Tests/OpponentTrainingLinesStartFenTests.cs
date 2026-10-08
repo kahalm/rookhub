@@ -85,6 +85,24 @@ public class OpponentTrainingLinesStartFenTests
     }
 
     [Fact]
+    public void LineHeFollows_ButNoSourceAfterwards_RanksBeforeTheLineHeContradicts()
+    {
+        // Er spielte einmal 1.e4 c5 2.Nf3, kein Explorer (z. B. lokaler aus): die Najdorf-Linie folgt seiner Partie und endet ohne
+        // Quelle, die 1…e5-Linie widerspricht ihr — die gefolgte gehört davor, nicht in die letzte Stufe hinter den Widerspruch.
+        var g = Graph(Section("1. e4 c5 2. Nf3 d6"), Section("1. e4 e5 2. Nf3 Nc6"), Section("1. d4 d5 2. c4"));
+        var a = OpponentTrainingLines.Analyze(g, Times(1, "e4 c5 Nf3"));
+        var noExplorer = new OpponentTrainingLines.Estimate(_ => null, 1, new HashSet<string>());
+
+        var r = OpponentTrainingLines.Rank(g, ["K", "K", "K"], a, noExplorer);
+
+        Assert.Equal(new[] { "c5", "e5", "d5" }, r.Lines.Select(l => l.Sans[1]));
+        Assert.Equal(("none", 1), (r.Lines[0].Source, r.Lines[0].OwnMoves));
+        Assert.Equal("deviates", r.Lines[1].Source);
+        Assert.Equal(("none", 0), (r.Lines[2].Source, r.Lines[2].OwnMoves));
+        Assert.True(r.Lines[2].NeverReached);
+    }
+
+    [Fact]
     public void WithoutEstimate_TheExerciseIsNeverReachedAsBefore()
     {
         var g = Graph(Section(Exercise, Fen), Section("1. e4 c5 2. Nf3 d6"));

@@ -2749,6 +2749,9 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Explorer kennt ab der FEN die Züge, aber nicht die Wahrscheinlichkeit, dort je hinzukommen (kurze Übungen mit 1–2
   Gegnerzügen schlugen sonst jede echte Eröffnungslinie). `NeedsExplorer` fragt für solche Linien nichts ab. Linienliste
   der Repertoire-Seite nummeriert die Zugvorschau ab dem Start-FEN („12. Bc4 …" statt „1. Bc4 …", `startNumbering`).
+- Gefolgt, aber ohne Quelle danach (0.718.1): `source = none` mit `ownMoves > 0` (er folgt der Linie, so weit seine Partien
+  reichen, danach kein Explorer) ist eine eigene Stufe ZWISCHEN „mit Quelle" und `deviates` (Auffüllregel darin) — vorher
+  stand die Linie, der er folgt, hinter der, der er widerspricht. Ganz hinten bleiben nur `none` ohne eigenen Treffer.
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
