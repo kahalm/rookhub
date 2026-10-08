@@ -9,6 +9,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.722.0',
+    date: '2026-10-08',
+    changes: [
+      { en: "LeagueHub, checking a scoresheet: an engine can now be switched on below the board — Stockfish in the browser or one of your own engines (directly connected or via Lichess). It evaluates the position at the selected move, shows three lines and draws its best move as a blue arrow next to the yellow one of the move read. Off by default; choice and on/off are remembered per device. Only a reading aid — what the sheet says still decides.",
+        de: "LeagueHub, Formular prüfen: unter dem Brett lässt sich jetzt eine Engine zuschalten — Stockfish im Browser oder eine eigene Engine (direkt angemeldet oder über Lichess). Sie bewertet die Stellung am gewählten Zug, zeigt drei Linien und ihren besten Zug als blauen Pfeil neben dem gelben des gelesenen Zugs. Standardmäßig aus; Wahl und an/aus merkt sich das Gerät. Nur eine Lesehilfe — was auf dem Formular steht, entscheidet weiter." },
+    ],
+  },
+  {
     version: '0.721.2',
     date: '2026-10-08',
     changes: [

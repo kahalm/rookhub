@@ -6,9 +6,10 @@ import { NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
-import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
+import { BoardArrow, ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { scrollIntoContainer } from '@rh/shared/pgn-viewer/move-list.component';
 import { isBoardHotkey } from '@rh/shared/keyboard.util';
+import { ScanEngineComponent } from './scan-engine.component';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -50,7 +51,7 @@ function readAutoMine(): boolean {
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent, AccessGateComponent],
+  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent, AccessGateComponent, ScanEngineComponent],
   template: `
     @if (!allowed) {
       <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
@@ -131,7 +132,7 @@ function readAutoMine(): boolean {
           }
 
           <section class="panel scan-board">
-            <app-chess-board [fen]="s.cursorFen()" [lastMove]="s.lastMove()" [arrows]="s.arrows()" [flipped]="ownerSide() === 'black'"
+            <app-chess-board [fen]="s.cursorFen()" [lastMove]="s.lastMove()" [arrows]="boardArrows()" [flipped]="ownerSide() === 'black'"
                              [playable]="!s.busy()" (userMove)="onBoardMove($event)" />
             <div class="board-nav">
               <button type="button" class="btn-sec" (click)="s.go(0)" [disabled]="s.cursor() === 0" aria-label="Zum Anfang">⏮</button>
@@ -148,6 +149,7 @@ function readAutoMine(): boolean {
                 <button type="button" class="btn-sec warn" (click)="s.nextUncertain()">Nächste unsichere Stelle ({{ s.uncertainLeft() }})</button>
               }
             </div>
+            <lh-scan-engine [fen]="s.cursorFen()" (arrowsChange)="engineArrows.set($event)" />
           </section>
 
           <!-- Am Handy steht dieser Teil OBEN (Wunsch 2026-09-28): die Zeile des Formulars, die Lesarten und „Stimmt so"
@@ -482,6 +484,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private pairingTimer: ReturnType<typeof setTimeout> | null = null;
   private pairingSeq = 0;
 
+  /** Bester Zug der zugeschalteten Engine (blau) — zum gelben Pfeil des bisherigen Zugs dazu (0.722.0). */
+  readonly engineArrows = signal<BoardArrow[]>([]);
+  readonly boardArrows = computed<BoardArrow[]>(() => [...this.s.arrows(), ...this.engineArrows()]);
   readonly s = new SheetEditSession({
     resolve: (prefix, writtenFrom) => this.gameId != null
       ? this.api.clubResolve(this.gameId, prefix, writtenFrom)

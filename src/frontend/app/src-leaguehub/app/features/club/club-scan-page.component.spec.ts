@@ -1,3 +1,4 @@
+import { ExternalEngineService } from '@rh/features/analysis/external-engine.service';
 import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
@@ -64,6 +65,7 @@ describe('ClubScanPageComponent', () => {
       imports: [ClubScanPageComponent],
       providers: [
         provideTestClub(),
+        { provide: ExternalEngineService, useValue: { listEngines: () => of({ hasCredentials: false, tokenInvalid: false, engines: [] }), analyse: () => of() } },
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }),
         { provide: ClubApiService, useValue: clubApi },

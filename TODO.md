@@ -9,6 +9,18 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] Formular-Leser: d/e verwechselbar + Engine nur als Gleichstands-Entscheider (2026-10-08)
+
+Anlass: LeagueHub-Formular 30 — gelesen „Sd7", gemeint war Se7 (Springer auf c6 kommt nicht nach d7). Se7 stand in den
+Lesarten HINTER Sd4/Sa7, weil d/e nicht als verwechselbares Paar gilt.
+- **d/e in `ScoresheetNotation.Confusable` aufnehmen** (wie f/g in 0.647.1): ein d↔e-Lesefehler wird dann um 0,5
+  billiger, Se7 läge vor Sa7/Sd4. Vorher am 10er-Testsatz per `tools/ScoresheetBench --replay` nachmessen
+  (kostenlos), dass nichts kippt.
+- **Stockfish nur als Gleichstands-Entscheider**, nicht als Hauptkriterium: unter Lesarten mit (fast) gleichen Lesekosten
+  die nehmen, die die Engine vorzieht. Amateurzüge sind oft nicht die besten — als Hauptkriterium würde die Engine
+  richtig gelesene schwache Züge „korrigieren". Ansatzpunkt: Reihung der Lesarten in `ScoresheetResolver`
+  (`AddBranches`) bzw. `ScoresheetPlausibility`.
+
 ## [~] ClubHub: Kartei der Kinder und Jugendlichen — gebaut in 0.613.0, Dev + Prod live (2026-09-30)
 
 Gebaut: Kartei mit Kontakten (mehrere Telefonnummern/E-Mail je Kind, jede mit Hinweis), Gruppen mit Trainingstag,
