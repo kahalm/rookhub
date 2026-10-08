@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
@@ -42,6 +43,29 @@ public class ExplorerController : BaseApiController
     {
         var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
         return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct));
+    }
+
+    /// <summary>Die häufigsten Zugfolgen von der Grundstellung zu <paramref name="fen"/> — NUR aus dem lokalen Explorer
+    /// (<see cref="ExplorerPathFinder"/>). Ohne lokalen Explorer 400 <c>noLocalExplorer</c>, ungültige Stellung 400
+    /// <c>invalidFen</c>, andere Quelle als <c>local</c> 400 <c>onlyLocal</c>.</summary>
+    [HttpGet("paths")]
+    [EnableRateLimiting(RateLimitPartitions.ExplorerPathsPolicy)]
+    public async Task<ActionResult<ExplorerPathsResultDto>> Paths(
+        [FromQuery] string? fen, [FromQuery] int? maxPlies, [FromQuery] string? source,
+        [FromServices] ExplorerPathFinder finder, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(source) && source != "local")
+            return BadRequest(new { reason = "onlyLocal", message = "Die Zugfolgen-Suche gibt es nur mit dem lokalen Explorer." });
+        if (!finder.IsAvailable)
+            return BadRequest(new { reason = "noLocalExplorer", message = "Der lokale Explorer ist auf diesem Server nicht eingerichtet." });
+        try
+        {
+            return Ok(await finder.FindAsync(fen ?? "", maxPlies, ct));
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(new { reason = "invalidFen", message = "Keine gültige Stellung." });
+        }
     }
 
     private static IEnumerable<string> Split(string? csv) =>

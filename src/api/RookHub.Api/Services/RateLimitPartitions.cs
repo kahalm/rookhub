@@ -157,6 +157,15 @@ public static class RateLimitPartitions
             RepertoireScanPermitPerMinute * scale, TimeSpan.FromMinutes(1),
             RepertoireScanConcurrentPerAccount * scale, RepertoireScanQueuePerAccount));
 
+    /// <summary>Policy-Name der Zugfolgen-Suche (<c>GET /api/explorer/paths</c>, LeagueHub-Zugeditor).</summary>
+    public const string ExplorerPathsPolicy = "explorer-paths";
+    /// <summary>Suchen je Konto und Minute. Jede fragt bis zu 400 Stellungen beim lokalen Explorer ab und rechnet bis zu
+    /// 20 s; ein Mensch klickt „Zugfolgen vorschlagen" einmal je Stellung.</summary>
+    public const int ExplorerPathsPermitPerMinute = 10;
+
+    public static RateLimitPartition<string> ExplorerPaths(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), ExplorerPathsPermitPerMinute * scale);
+
     public static RateLimitPartition<string> UserSocial(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), UserSocialPermitPerMinute * scale);
 

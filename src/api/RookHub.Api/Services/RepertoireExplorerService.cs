@@ -41,7 +41,10 @@ public class RepertoireExplorerService
     private const int CacheChunk = 500;
     /// <summary>So viele gleichzeitige Anfragen an den lokalen Explorer.</summary>
     public const int LocalParallelism = 8;
-    private static readonly TimeSpan LocalMemoryTtl = TimeSpan.FromHours(1);
+    internal static readonly TimeSpan LocalMemoryTtl = TimeSpan.FromHours(1);
+
+    /// <summary>Schlüssel einer Antwort des LOKALEN Explorers im Arbeitsspeicher — geteilt mit <see cref="ExplorerPathFinder"/>.</summary>
+    internal static string LocalMemoryKey(ExplorerQuery query, string positionKey) => "explorer:local:" + query.CachePrefix + positionKey;
 
     /// <summary>So lange darf eine Schicht der lokalen Quelle mindestens laufen, auch wenn das Budget
     /// fast aufgebraucht ist — sonst käme die letzte Schicht einer Runde nie zu einer Antwort.</summary>

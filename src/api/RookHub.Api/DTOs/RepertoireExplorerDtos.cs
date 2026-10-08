@@ -154,3 +154,41 @@ public class ExplorerGameDto
     /// gibt es die Partie unter dieser Kennung nicht).</summary>
     public string? Url { get; set; }
 }
+
+/// <summary>Antwort von <c>GET /api/explorer/paths</c>: die häufigsten Zugfolgen von der Grundstellung zu einer Stellung
+/// (lokaler Explorer, <see cref="RookHub.Api.Services.ExplorerPathFinder"/>).</summary>
+public class ExplorerPathsResultDto
+{
+    /// <summary>Eröffnungsname des Explorers für die Zielstellung oder den letzten benannten Zug davor.</summary>
+    public ExplorerOpeningDto? Opening { get; set; }
+    /// <summary>Partien in der Zielstellung (Weiß + Remis + Schwarz).</summary>
+    public long Games { get; set; }
+    /// <summary>Höchstens 10, nach <c>EstGames</c> absteigend.</summary>
+    public List<ExplorerPathDto> Paths { get; set; } = new();
+    /// <summary>Erweiterte Stellungen.</summary>
+    public int Searched { get; set; }
+    /// <summary>Abfragen an den Explorer (Treffer im Arbeitsspeicher zählen nicht).</summary>
+    public int Queries { get; set; }
+    /// <summary>Budget (Abfragen oder Zeit) erreicht — es kann weitere Zugfolgen geben.</summary>
+    public bool Truncated { get; set; }
+    /// <summary>Der Explorer hat nicht geantwortet.</summary>
+    public bool Failed { get; set; }
+}
+
+public class ExplorerOpeningDto
+{
+    public string? Eco { get; set; }
+    public string Name { get; set; } = "";
+}
+
+public class ExplorerPathDto
+{
+    /// <summary>Englische SAN.</summary>
+    public List<string> Moves { get; set; } = new();
+    /// <summary>UCI (Rochade als e1g1).</summary>
+    public List<string> Uci { get; set; } = new();
+    /// <summary>Geschätzte Partien, die genau dieser Zugfolge folgen: Partien(Grundstellung) · Π Anteil.</summary>
+    public long EstGames { get; set; }
+    /// <summary>Anteil an den Partien der Zielstellung (0..1).</summary>
+    public double Share { get; set; }
+}

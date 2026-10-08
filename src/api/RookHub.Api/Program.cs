@@ -215,6 +215,8 @@ try
             refillInterval: refillMs is >= 0 ? TimeSpan.FromMilliseconds(refillMs.Value) : null);
     });
     builder.Services.AddScoped<RepertoireExplorerService>();
+    // Zugfolgen zu einer Stellung aus dem LOKALEN Explorer (LeagueHub-Zugeditor, Modus „Stellung").
+    builder.Services.AddScoped<ExplorerPathFinder>();
     builder.Services.AddScoped<PlayerSearchService>();
     // Turnierverzeichnis: Sweep, Umkreis-Aufloesung und der (nur per Admin ausgeloeste) Import
     // des GeoNames-Ortslexikons.
@@ -893,6 +895,8 @@ try
         // Freundschaftsanfrage und Challenge (friends/request, challenges): je KONTO, ein gemeinsames Fenster — jede legte
         // beim Empfänger Glocke + Web-Push an, Senden–Zurückziehen–Senden flutete beliebige Konten (RateLimitPartitions,
         // Codereview N9-003). Die Glocke der Freundschaftsanfrage entprellt zusätzlich FriendService.
+        // Zugfolgen-Suche im lokalen Explorer (explorer/paths): je KONTO — bis zu 400 Abfragen und 20 s je Aufruf.
+        options.AddPolicy("explorer-paths", ctx => RookHub.Api.Services.RateLimitPartitions.ExplorerPaths(ctx, permitScale));
         options.AddPolicy("user-social", ctx => RookHub.Api.Services.RateLimitPartitions.UserSocial(ctx, permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         // Retry-After + Rumpf, und eine gedrosselte Warnung je (IP, Policy): vorher hinterließ eine Absage keine Spur —
