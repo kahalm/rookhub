@@ -268,6 +268,12 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   `prep.trainingRepertoire.*` (en/de/hr/hu, in LeagueHub die deutschen aus der Komponente).
 - Widerspruch (0.715.1): `source = deviates` → `.tl-deviates` „weicht ab: er spielt hier {{move}} ({{n}} Partie/n)"
   (`deviationLabel` setzt seinen Zug an `deviationPly` ein) und „≈ p %" (Schätzung ab dort).
+- Anlegen (0.718.0): erst ohne `replace`; nur bei 409 `exists` die Rückfrage („Es gibt schon ein Repertoire … ersetzen?",
+  Knöpfe „Ersetzen"/common.cancel — `ConfirmService.ask(text, params, { confirm, cancel })`), dann mit `replace: true`.
+- Trainer mit `?opponent=` (0.718.0): `?line=` ist der EINSTIEG (`opponentStart`) — die Linie sofort, die Reihung im
+  Hintergrund (`loadOpponentOrder(false)` → `extendOpponentQueue`), danach die Linien nach ihr; ohne Fälligkeit und ohne
+  Modus-Wechsel (`opponentLines`); Ende `DONE` mit „Alle {{n}} Linien gegen diesen Gegner durch" (`opponentTotal`),
+  „Von vorn" (`restart`, ganze Reihung) und „Zurück zur Spielerkarte" (`history.back()`). Ohne `?opponent=` unverändert.
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 

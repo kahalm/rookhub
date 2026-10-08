@@ -2718,8 +2718,9 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   `ownMoves`, `lichessMoves`, `lichessFrom` (Halbzug), `pending`; Kopf `ownGames`, `lichessBand` („2000–2300"),
   `explorerIncomplete`. Reihung: alle Linien MIT Quelle nach kombinierter p (dann mehr eigene Gegnerzüge, Partien,
   Reihenfolge), dahinter die ohne Quelle mit der Auffüllregel. Explorer: `ITrainingExplorer` → `TrainingExplorer` →
-  `RepertoireExplorerService.BatchStatsAsync` (dieselbe Strecke wie der Lochfinder: lokal mit `LichessExplorer:LocalUrl`,
-  sonst online mit Token/Gate/Budget; was im Budget nicht ankommt, ist `Pending`). Band = Elo+100…+400 → alle Stufen,
+  `RepertoireExplorerService.BatchStatsAsync` — NUR der lokale Explorer (`LichessExplorer:LocalUrl`, seit 0.718.0 nie
+  online; ohne `LocalUrl` ist `ITrainingExplorer.Available` falsch: keine Schätzung, keine Abfrage, kein Token; eigenes
+  Budget `LocalBatchBudget` 60 s, 16 gleichzeitig; was nicht ankommt, ist `Pending`). Band = Elo+100…+400 → alle Stufen,
   deren Bereich es schneidet (oberste nach oben offen; lokal nur `LocalRatings`, z. B. 1500 → 1600+1800), Blitz/Schnell/
   Klassisch. Elo: Prep `PrepAccountSearch.LatestEloAsync` sonst `MaxElo`, Liga jüngste Meldeliste (`EloI ?? EloN`),
   sonst 1800. Abgefragt werden nur Gegner-Stellungen ohne genug eigene Daten (`OpponentTrainingLines.NeedsExplorer`),
@@ -2730,6 +2731,18 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Widerspruch (Präfix aus seinen Partien × Explorer-Anteile für den Rest). `deviationPly`/`deviationSan`/`deviationGames`
   = sein häufigster Zug dort (Liste: „weicht ab: er spielt hier 1…c5 (1 Partie)"). `NeedsExplorer` fragt dafür auch die
   Widerspruchs-Stellungen ab.
+- Anlegen mit Rückfrage nur bei Bedarf (0.718.0): `POST …/training-repertoire` hat `replace` (Vorgabe false); gibt es ein
+  eigenes Repertoire mit dem Zielnamen und fehlt `replace` → 409 `{ reason: "exists", id, name }`, nichts geschrieben
+  (`RepertoireExistsException`); die Karte fragt dann und schickt denselben POST mit `replace: true`. Ohne Treffer sofort
+  anlegen. `sameRepertoire` (400) wird VOR `exists` geprüft.
+- Tempo (0.718.0, gemessen auf Prod 21–22 s je Abfrage): das Ergebnis von `ComputeAsync` (Reihung samt Schätzung) bleibt
+  15 min im `IMemoryCache`, Schlüssel = Nutzer, `scope` (Gegner + Filter, Prep mit all/twin — `TrainingLinesService.Scope`),
+  Auswahl, Farbe, chapterColors, exclude und `Id@UpdatedAt` ALLER markierten Repertoires (geändert → sofort neu). Ohne
+  `scope` (Tests) kein Cache. Je Rechnung eine INFO-Zeile „Trainingslinien: … ms gesamt — Repertoires laden+parsen …,
+  Partien laden …, Zählen …, Explorer … (Stellungen, Treffer, offen, Budget erreicht), Reihen …". Gemessen lokal an den 4
+  markierten Repertoires des Users (13,6 MB PGN, 2543 Abschnitte): Parsen 0,25–0,36 s, Graph bauen 1,5–2,4 s, Reihen
+  < 0,1 s, ohne Gegnerpartien 7571 Explorer-Stellungen — der Explorer dominiert, danach der Graph (nächster Schritt
+  wäre ein Repertoire-Cache wie beim Lochfinder).
 - Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
   Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
   Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der
