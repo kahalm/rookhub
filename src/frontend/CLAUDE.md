@@ -274,6 +274,10 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   Hintergrund (`loadOpponentOrder(false)` → `extendOpponentQueue`), danach die Linien nach ihr; ohne Fälligkeit und ohne
   Modus-Wechsel (`opponentLines`); Ende `DONE` mit „Alle {{n}} Linien gegen diesen Gegner durch" (`opponentTotal`),
   „Von vorn" (`restart`, ganze Reihung) und „Zurück zur Spielerkarte" (`history.back()`). Ohne `?opponent=` unverändert.
+- Unvollständige Schätzung (0.725.1): `.tl-incomplete` „Schätzung unvollständig — {{n}} Stellungen offen" (`explorerPending`)
+  mit `.tl-continue` „Weiter rechnen" (dieselbe Abfrage); automatisch nach 3 s, höchstens 3 Runden
+  (`AutoContinueMs`/`AutoContinueRounds`, Wecker außerhalb der Zone, damit `whenStable` nicht wartet; Wahl/Öffnen setzt
+  die Runden zurück).
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 

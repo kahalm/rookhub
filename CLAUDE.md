@@ -2940,6 +2940,14 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   markierten Repertoires des Users (13,6 MB PGN, 2543 Abschnitte): Parsen 0,25–0,36 s, Graph bauen 1,5–2,4 s, Reihen
   < 0,1 s, ohne Gegnerpartien 7571 Explorer-Stellungen — der Explorer dominiert, danach der Graph (nächster Schritt
   wäre ein Repertoire-Cache wie beim Lochfinder).
+- Frist statt 500 (Hotfix 0.725.1; Prod 08.10.: 500 nach 60 s, nginx kappte, `RequestAborted` ließ den Abbruch aus
+  `BatchStatsAsync` durch): Gesamtfrist je Anfrage `Prep:TrainingDeadlineSeconds` (20, höchstens 30), Explorer davon
+  `Prep:TrainingExplorerSeconds` (12) bzw. was nach 2 s Reserve übrig ist; Stellungen in der Reihenfolge der VORLÄUFIGEN
+  Reihung (`TrainingLinesService.Prioritize`: Rank nur aus seinen Partien, je Linie ihre Lücken) und gedeckelt auf
+  `Prep:TrainingExplorerMaxPositions` (1 500); der Rest ist `pending` → `explorerIncomplete` + `explorerPending`.
+  `BatchStatsAsync(positions, query, ct, budget)` läuft an einer EIGENEN Frist, nicht am Anfrage-Token (Abbruch der
+  Anfrage stoppt die Arbeit nicht, nie eine Ausnahme), Stellungen 24 h im Speicher (`BatchMemoryTtl`). Unvollständige
+  Ergebnisse werden NICHT gecacht — die nächste Anfrage kommt mit den gespeicherten Stellungen weiter.
 - Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
   Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
   Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der
