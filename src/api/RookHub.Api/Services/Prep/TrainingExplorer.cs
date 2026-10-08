@@ -10,11 +10,15 @@ public interface ITrainingExplorer
     /// <summary>Die Stellungen <paramref name="positions"/> im Wertungsband des Gegners (<paramref name="elo"/>).</summary>
     /// <param name="positions">In der Reihenfolge ihrer Wichtigkeit — bei knapper Frist kommen die ersten zuerst dran.</param>
     /// <param name="budget">Höchstens so lange abfragen; der Rest bleibt offen.</param>
-    Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget, CancellationToken ct);
+    /// <param name="maxNew">Höchstens so viele noch nicht gespeicherte neu anfragen; gespeicherte zählen nicht dagegen.</param>
+    /// <param name="parallelism">Gleichzeitige Abfragen (Hintergrund weniger als Vordergrund); <c>null</c> = Vorgabe.</param>
+    Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget, int maxNew,
+        CancellationToken ct, int? parallelism = null);
 }
 
 /// <param name="Band">Anzeige des Bands, z. B. „2000–2300".</param>
-public sealed record TrainingExplorerResult(IReadOnlyDictionary<string, ExplorerPositionStats> Stats, IReadOnlySet<string> Pending, string Band);
+public sealed record TrainingExplorerResult(IReadOnlyDictionary<string, ExplorerPositionStats> Stats, IReadOnlySet<string> Pending, string Band,
+    int FromMemory = 0, int Asked = 0, int Capped = 0);
 
 /// <summary>
 /// Explorer-Anbindung der Trainingslinien (Wunsch 2026-10-07: „nimm lichesspartien, +100 - +400 elo"): Spieler im Band
@@ -32,13 +36,13 @@ public sealed class TrainingExplorer(RepertoireExplorerService explorer, LocalEx
     public bool Available => local.IsConfigured;
 
     public async Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget,
-        CancellationToken ct)
+        int maxNew, CancellationToken ct, int? parallelism = null)
     {
         if (!Available)
             return new TrainingExplorerResult(new Dictionary<string, ExplorerPositionStats>(), new HashSet<string>(), Band(elo));
         var query = ExplorerQuery.Create(ExplorerQuery.Lichess, Stages(elo, LocalExplorerClient.LocalRatings), Speeds);
-        var r = await explorer.BatchStatsAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), query, ct, budget);
-        return new TrainingExplorerResult(r.Stats, r.Pending, Band(elo));
+        var r = await explorer.BatchStatsAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), query, ct, budget, maxNew, parallelism);
+        return new TrainingExplorerResult(r.Stats, r.Pending, Band(elo), r.FromMemory, r.Asked, r.Capped);
     }
 
     /// <summary>„2000–2300" für Elo 1900.</summary>

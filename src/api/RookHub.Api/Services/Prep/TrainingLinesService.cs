@@ -20,7 +20,8 @@ namespace RookHub.Api.Services.Prep;
 /// die der Aufrufer liefert. Die Liste seiner Repertoires geht mit, damit die Karte mit EINEM Aufruf auskommt.
 /// </summary>
 public sealed class TrainingLinesService(AppDbContext db, RepertoireService repertoires, IConfiguration config,
-    ITrainingExplorer? explorer = null, IMemoryCache? cache = null, ILogger<TrainingLinesService>? logger = null)
+    ITrainingExplorer? explorer = null, IMemoryCache? cache = null, ILogger<TrainingLinesService>? logger = null,
+    TrainingLinesContinuation? continuation = null)
 {
     /// <summary>So lange bleibt eine fertige Reihung (samt Schätzung) im Speicher — je Nutzer, Gegner und Auswahl; ein geändertes
     /// Repertoire (<c>UpdatedAt</c>) rechnet sofort neu (Tempo, 2026-10-08: gemessen 21–22 s je Abfrage auf Prod).</summary>
@@ -45,8 +46,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <summary>Davon höchstens so lange für den Explorer (<see cref="ExplorerBudgetKey"/>).</summary>
     public const int DefaultExplorerSeconds = 12;
     public const string ExplorerBudgetKey = "Prep:TrainingExplorerSeconds";
-    /// <summary>Höchstens so viele Explorer-Stellungen je Anfrage, die wichtigsten zuerst; der Rest bleibt offen
-    /// (<see cref="MaxPositionsKey"/>).</summary>
+    /// <summary>Höchstens so viele NOCH NICHT gespeicherte Explorer-Stellungen je Anfrage neu anfragen, die wichtigsten zuerst
+    /// (gespeicherte zählen nicht dagegen, 0.725.2); der Rest bleibt offen (<see cref="MaxPositionsKey"/>).</summary>
     public const int DefaultMaxPositions = 1500;
     public const string MaxPositionsKey = "Prep:TrainingExplorerMaxPositions";
 
@@ -112,7 +113,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// Farbe gibt es keine Linien (oder gar kein markiertes Repertoire). <see cref="Mine"/> läuft parallel zu den Hauptvarianten.</summary>
     internal sealed record Computed(List<RepertoireInfo> Repertoires, int? Selected, char? Color, List<char> Colors,
         OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources, string? Band = null,
-        bool ExplorerIncomplete = false, int ExplorerPending = 0);
+        bool ExplorerIncomplete = false, int ExplorerPending = 0, bool ExplorerRunning = false);
 
     /// <summary>
     /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
@@ -126,7 +127,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     internal async Task<Computed?> ComputeAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
         string? exclude = null, Func<Task<int?>>? elo = null, string? scope = null)
     {
-        if (scope is null || cache is null) return await ComputeCoreAsync(userId, q, games, ct, exclude, elo);
+        if (scope is null || cache is null) return await ComputeCoreAsync(userId, q, games, ct, exclude, elo, null);
         // Schlüssel mit Stand (UpdatedAt) jedes markierten Repertoires: ändert sich eines oder die Markierung, rechnet es neu
         var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.UseForExtension)
             .OrderBy(r => r.Id).Select(r => new { r.Id, r.UpdatedAt }).ToListAsync(ct);
@@ -139,14 +140,14 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var key = $"training-lines:{userId}:{scope}:{q.Repertoire}:{q.Color}:{exclude}:{overrides}:"
                   + string.Join(",", stamps.Select(x => $"{x.Id}@{x.UpdatedAt.Ticks}"));
         if (cache.TryGetValue(key, out Computed? hit) && hit is not null) return hit;
-        var computed = await ComputeCoreAsync(userId, q, games, ct, exclude, elo);
+        var computed = await ComputeCoreAsync(userId, q, games, ct, exclude, elo, key);
         // Unvollständig NICHT halten: die nächste Anfrage kommt mit den inzwischen gespeicherten Stellungen weiter.
         if (computed is not null && !computed.ExplorerIncomplete) cache.Set(key, computed, CacheFor);
         return computed;
     }
 
     private async Task<Computed?> ComputeCoreAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
-        string? exclude, Func<Task<int?>>? elo)
+        string? exclude, Func<Task<int?>>? elo, string? cacheKey)
     {
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var list = await RepertoiresAsync(userId, ct);
@@ -195,22 +196,19 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         // Ohne lokalen Explorer keine Schätzung: seine Züge zählen weiter, Lücken bleiben ohne Quelle (Auffüllregel), nichts offen.
         var need = explorer.Available ? OpponentTrainingLines.NeedsExplorer(graph, analysis, MinOwn) : [];
         var opponentElo = (elo is null || !explorer.Available ? null : await elo()) ?? TrainingExplorer.DefaultElo;
-        // Die wichtigsten Stellungen zuerst, gedeckelt; der Rest bleibt offen (Hotfix 2026-10-08)
+        // Die wichtigsten Stellungen zuerst; gespeicherte immer mit, NEU angefragt höchstens MaxPositions (Hotfix 0.725.2)
         var ordered = Prioritize(graph, chapters, analysis, need, MinOwn);
-        var asked = ordered.Take(MaxPositions).ToList();
-        var capped = ordered.Skip(asked.Count).Select(n => n.Key).ToHashSet(StringComparer.Ordinal);
         // Frist: was von der Gesamtfrist übrig ist (mit Reserve fürs Reihen), höchstens das Explorer-Budget
         var budget = Deadline - clock.Elapsed - DeadlineReserve;
         if (budget > ExplorerBudget) budget = ExplorerBudget;
+        if (budget < TimeSpan.Zero) budget = TimeSpan.Zero;   // dann nur, was schon im Speicher liegt
+        // Läuft für diese Rechnung schon die Fortsetzung im Hintergrund, nichts doppelt anfragen — nur den Speicher lesen.
+        var background = cacheKey is not null && continuation?.IsRunning(cacheKey) == true;
         t0 = clock.ElapsedMilliseconds;
-        TrainingExplorerResult? found = asked.Count == 0 ? null
-            : budget <= TimeSpan.Zero
-                ? new TrainingExplorerResult(new Dictionary<string, ExplorerPositionStats>(), asked.Select(n => n.Key).ToHashSet(StringComparer.Ordinal),
-                    TrainingExplorer.Band(opponentElo))
-                : await explorer.StatsAsync(userId, asked, opponentElo, budget, ct);
+        TrainingExplorerResult? found = ordered.Count == 0 ? null
+            : await explorer.StatsAsync(userId, ordered, opponentElo, background ? TimeSpan.Zero : budget, background ? 0 : MaxPositions, ct);
         var explorerMs = clock.ElapsedMilliseconds - t0;
         var pending = new HashSet<string>(found?.Pending ?? new HashSet<string>(), StringComparer.Ordinal);
-        pending.UnionWith(capped);
         var estimate = new OpponentTrainingLines.Estimate(n => found?.Stats.GetValueOrDefault(n.Key), MinOwn, pending);
         t0 = clock.ElapsedMilliseconds;
         var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
@@ -219,13 +217,41 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         logger?.LogInformation(
             "Trainingslinien: {Total} ms gesamt — Repertoires laden+parsen {Parse} ms ({Repertoires} Rep., {Sections} Abschnitte), "
             + "Partien laden {Games} ms ({GameCount}), Zählen {Count} ms, Explorer {Explorer} ms ({Positions} Stellungen, {Hits} Treffer, "
-            + "{Pending} offen, davon {Capped} über dem Deckel, Budget {Budget} ms erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien, "
-            + "Anfrage abgebrochen: {Aborted}",
+            + "aus Speicher {FromMemory}, neu angefragt {Asked}, {Pending} offen, davon {Capped} über dem Deckel, Budget {Budget} ms "
+            + "erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien, Anfrage abgebrochen: {Aborted}",
             clock.ElapsedMilliseconds, parseMs, list.Count, byRep.Sum(x => x.Sections.Count), gamesMs, gameList.Count, countMs,
-            explorerMs, need.Count, found?.Stats.Count ?? 0, pending.Count, capped.Count, (long)Math.Max(0, budget.TotalMilliseconds),
-            found?.Pending.Count > 0, rankMs, ranked.Lines.Count, ct.IsCancellationRequested);
+            explorerMs, need.Count, found?.Stats.Count ?? 0, found?.FromMemory ?? 0, found?.Asked ?? 0, pending.Count, found?.Capped ?? 0,
+            (long)budget.TotalMilliseconds, pending.Count > (found?.Capped ?? 0), rankMs, ranked.Lines.Count, ct.IsCancellationRequested);
+        // Offen geblieben: im Hintergrund fertig rechnen lassen (höchstens einmal je Nutzer gleichzeitig)
+        var running = background;
+        if (pending.Count > 0 && cacheKey is not null && continuation is not null && !background)
+            running = StartContinuation(userId, cacheKey, ordered, opponentElo, graph, chapters, analysis, infos, q.Repertoire, color, available,
+                mine, refs);
         return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs,
-            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count);
+            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count, running);
+    }
+
+    /// <summary>Startet die Fortsetzung: die restlichen Stellungen in Priorisierungs-Reihenfolge (8 gleichzeitig, eigenes Zeitlimit),
+    /// danach die Reihung aus dem Speicher — vollständig, dann in den 15-min-Speicher unter <paramref name="cacheKey"/>.</summary>
+    private bool StartContinuation(int userId, string cacheKey, List<RepertoireReach.Node> ordered, int elo, RepertoireReach.Graph graph,
+        List<string> chapters, OpponentTrainingLines.Analysis analysis, List<RepertoireInfo> infos, int? selected, char color,
+        List<char> available, List<Source> mine, List<RepertoireRef> refs)
+    {
+        var minOwn = MinOwn;
+        var band = TrainingExplorer.Band(elo);
+        return continuation!.TryStart(userId, cacheKey, async (sp, limit, token) =>
+        {
+            var ex = sp.GetRequiredService<ITrainingExplorer>();
+            await ex.StatsAsync(userId, ordered, elo, limit, int.MaxValue, token, TrainingLinesContinuation.Parallelism);
+            // jetzt alles aus dem Speicher: Reihung wie im Vordergrund
+            var final = await ex.StatsAsync(userId, ordered, elo, TimeSpan.Zero, 0, CancellationToken.None);
+            var estimate = new OpponentTrainingLines.Estimate(n => final.Stats.GetValueOrDefault(n.Key), minOwn, final.Pending);
+            var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
+            var computed = new Computed(infos, selected, color, available, ranked, mine, refs, band, final.Pending.Count > 0, final.Pending.Count);
+            if (!computed.ExplorerIncomplete) sp.GetService<IMemoryCache>()?.Set(cacheKey, computed, CacheFor);
+            logger?.LogInformation("Trainingslinien: Fortsetzung {Key} — {Hits} Treffer, {Pending} offen", cacheKey, final.Stats.Count,
+                final.Pending.Count);
+        });
     }
 
     /// <summary>
@@ -277,6 +303,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         o["lichessBand"] = c.Band;
         o["explorerIncomplete"] = c.ExplorerIncomplete;
         o["explorerPending"] = c.ExplorerPending;
+        o["explorerRunning"] = c.ExplorerRunning;
         o["total"] = lines.Count;
         o["lines"] = new JsonArray(lines.Take(n).Select(l => (JsonNode)new JsonObject
         {

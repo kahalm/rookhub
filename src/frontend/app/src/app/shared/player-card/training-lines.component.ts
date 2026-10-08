@@ -62,8 +62,13 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
               <!-- Lücken geschätzt (2026-10-07): Lichess-Partien von Spielern seiner Stärke -->
               <p class="small tl-estimate" role="note">{{ t(d.games === 0 ? 'headerNone' : d.games < 20 ? 'headerFew' : 'headerGaps', { who: who(), n: d.games, band: d.lichessBand }) }}</p>
             }
-            @if (d.explorerIncomplete) {
-              <!-- Hotfix 2026-10-08: Teilliste zeigen, weiter rechnen lassen (die Stellungen bleiben am Server im Speicher) -->
+            @if (d.explorerRunning) {
+              <!-- 0.725.2: der Server rechnet im Hintergrund weiter, die Seite fragt alle 3 s nach -->
+              <p class="small tl-estimate tl-running" role="status">{{ t('running', { n: d.explorerPending ?? 0, total: pendingStart() }) }}
+                <progress class="tl-progress" [max]="pendingStart() || 1" [value]="pendingStart() - (d.explorerPending ?? 0)"></progress>
+              </p>
+            } @else if (d.explorerIncomplete) {
+              <!-- Rückfall (z. B. nach dem Zeitlimit der Fortsetzung): selbst weiter rechnen lassen -->
               <p class="small tl-estimate tl-incomplete" role="status">{{ t('incomplete', { n: d.explorerPending ?? 0 }) }}
                 <button type="button" class="btn-sec tl-continue" [disabled]="loading()" (click)="continueEstimate(d)">{{ t('continue') }}</button>
               </p>
@@ -254,10 +259,10 @@ export class TrainingLinesComponent {
   }
   readonly pct = percent;
 
-  /** Automatisches Nachladen einer unvollständigen Schätzung: nach 3 s, höchstens 3 Runden. */
-  static readonly AutoContinueMs = 3000;
-  static readonly AutoContinueRounds = 3;
-  private autoRounds = 0;
+  /** Solange der Server im Hintergrund rechnet (<c>explorerRunning</c>), alle 3 s nachfragen — ohne Rundenlimit. */
+  static readonly PollMs = 3000;
+  /** Offene Stellungen beim ersten „läuft" dieser Abfrage — für den Fortschritt. */
+  readonly pendingStart = signal(0);
   private autoTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
@@ -276,7 +281,7 @@ export class TrainingLinesComponent {
 
   toggle(): void {
     this.clearAuto();
-    this.autoRounds = 0;
+    this.pendingStart.set(0);
     this.open.update(o => !o);
     if (this.open()) {
       const want = `${this.key()}|${JSON.stringify(this.filter())}`;
@@ -287,14 +292,14 @@ export class TrainingLinesComponent {
   /** Filter: '' = alle markierten (Vorgabe), sonst ein Repertoire. Die Farbe bleibt, wenn es sie dort gibt. */
   pickRepertoire(value: string): void {
     this.clearAuto();
-    this.autoRounds = 0;
+    this.pendingStart.set(0);
     const id = Number(value) || null;
     void this.load({ repertoire: id, color: this.data()?.color ?? null });
   }
 
   pickColor(c: 'w' | 'b'): void {
     this.clearAuto();
-    this.autoRounds = 0;
+    this.pendingStart.set(0);
     void this.load({ repertoire: this.data()?.repertoire ?? null, color: c });
   }
 
@@ -328,15 +333,16 @@ export class TrainingLinesComponent {
       }
       this.data.set(d);
       this.loadedFor = `${key}|${JSON.stringify(filter)}`;
-      // unvollständig: von selbst weiterrechnen lassen (nach 3 s, höchstens 3 Runden)
+      // rechnet der Server noch: in 3 s wieder fragen (bis er fertig ist oder die Seite zu)
       this.clearAuto();
-      if (d.explorerIncomplete && this.open() && this.autoRounds < TrainingLinesComponent.AutoContinueRounds) {
-        this.autoRounds++;
+      if (d.explorerRunning) this.pendingStart.update(v => Math.max(v, d.explorerPending ?? 0));
+      else this.pendingStart.set(0);
+      if (d.explorerRunning && this.open()) {
         // außerhalb der Zone: der Wecker soll niemanden „warten lassen" (Stabilität der Seite, Tests); die Signale zeichnen selbst
         this.autoTimer = this.zone.runOutsideAngular(() => setTimeout(() => {
           this.autoTimer = null;
           if (my === this.seq && this.open()) this.zone.run(() => void this.load({ repertoire: d.repertoire, color: d.color }));
-        }, TrainingLinesComponent.AutoContinueMs));
+        }, TrainingLinesComponent.PollMs));
       }
       // nur eine Bequemlichkeit — scheitert still (localStorage voll/gesperrt)
       writeJson(localStore(), TRAINING_LINES_KEY, { repertoire: d.repertoire, color: d.color });
@@ -419,6 +425,7 @@ const GERMAN: Record<string, string> = {
   headerGaps: 'Wo {{who}} zu wenige Partien hat, sind die Linien mit Lichess-Partien der Stufe {{band}} geschätzt.',
   incomplete: 'Schätzung unvollständig — {{n}} Stellungen offen.',
   continue: 'Weiter rechnen',
+  running: 'Schätzung läuft — noch {{n}} von {{total}} Stellungen.',
   yourColor: 'Deine Farbe',
   iHaveWhite: 'Ich habe Weiß',
   iHaveBlack: 'Ich habe Schwarz',

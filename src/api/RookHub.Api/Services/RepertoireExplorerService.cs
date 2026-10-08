@@ -321,7 +321,11 @@ public class RepertoireExplorerService
 
     /// <summary>Ergebnis von <see cref="BatchStatsAsync"/>: die geholten Stellungen (Schlüssel wie <see cref="RepertoireReach.Key"/>)
     /// und die, die im Zeitbudget nicht ankamen.</summary>
-    public sealed record BatchResult(Dictionary<string, ExplorerPositionStats> Stats, HashSet<string> Pending);
+    /// <param name="FromMemory">Schon im Speicher (kosten nichts).</param>
+    /// <param name="Asked">Neu angefragt (höchstens <c>maxNew</c>).</param>
+    /// <param name="Capped">Fehlende über dem Deckel <c>maxNew</c> — gar nicht angefragt, offen.</param>
+    public sealed record BatchResult(Dictionary<string, ExplorerPositionStats> Stats, HashSet<string> Pending, int FromMemory = 0, int Asked = 0,
+        int Capped = 0);
 
     /// <summary>So lange bleiben Stellungen aus <see cref="BatchStatsAsync"/> im Arbeitsspeicher — die lokalen Daten ändern sich
     /// nur mit einem Import (monatlich); so kommt die nächste Anfrage dort weiter, wo die letzte aufhörte.</summary>
@@ -337,9 +341,13 @@ public class RepertoireExplorerService
     /// Frist, nicht am Token der Anfrage — fertige Stellungen landen <see cref="BatchMemoryTtl"/> lang im Speicher, auch wenn
     /// niemand mehr auf die Antwort wartet.</para>
     /// </summary>
+    /// <param name="maxNew">Höchstens so viele NOCH NICHT gespeicherte Stellungen neu anfragen (die ersten in der Reihenfolge);
+    /// gespeicherte zählen nicht dagegen — so kommt jede Runde weiter (Hotfix 0.725.2: der Deckel schnitt vorher die ganze Liste
+    /// ab, und „Weiter rechnen" blieb bei den ersten 1 500 stehen).</param>
     public async Task<BatchResult> BatchStatsAsync(IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query,
-        CancellationToken ct, TimeSpan? budget = null)
+        CancellationToken ct, TimeSpan? budget = null, int maxNew = int.MaxValue, int? parallelism = null)
     {
+        int fromMemory = 0, asked = 0, capped = 0;
         var result = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
         var wanted = positions.GroupBy(p => p.Key, StringComparer.Ordinal).Select(g => g.First()).ToList();
         if (wanted.Count > 0 && _local.IsConfigured)
@@ -349,13 +357,21 @@ public class RepertoireExplorerService
             foreach (var p in wanted)
                 if (_memory.TryGetValue<ExplorerPositionStats>(MemoryKey(p.Key), out var hit) && hit is not null) result[p.Key] = hit;
                 else missing.Add(p);
+            fromMemory = result.Count;
+            if (missing.Count > Math.Max(0, maxNew))
+            {
+                capped = missing.Count - Math.Max(0, maxNew);
+                missing = missing.Take(Math.Max(0, maxNew)).ToList();
+            }
             var left = budget ?? LocalBatchBudget;
             if (missing.Count > 0 && left > TimeSpan.Zero)
             {
+                asked = missing.Count;
                 using var deadline = new CancellationTokenSource(left);    // bewusst NICHT mit ct verknüpft (siehe oben)
                 try
                 {
-                    await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalBatchParallelism, CancellationToken = deadline.Token },
+                    await Parallel.ForEachAsync(missing, new ParallelOptions
+                        { MaxDegreeOfParallelism = parallelism ?? LocalBatchParallelism, CancellationToken = deadline.Token },
                         async (p, token) =>
                         {
                             var stats = await _local.FetchAsync(p.Fen, query, token);
@@ -368,7 +384,7 @@ public class RepertoireExplorerService
             }
         }
         var pending = wanted.Where(p => !result.ContainsKey(p.Key)).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
-        return new BatchResult(new Dictionary<string, ExplorerPositionStats>(result, StringComparer.Ordinal), pending);
+        return new BatchResult(new Dictionary<string, ExplorerPositionStats>(result, StringComparer.Ordinal), pending, fromMemory, asked, capped);
     }
 
     /// <summary>Welche Quellen es gibt — die Oberfläche zeigt „lokal" nur, wenn eingerichtet.</summary>

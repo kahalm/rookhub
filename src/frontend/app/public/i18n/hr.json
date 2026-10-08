@@ -4567,6 +4567,7 @@
       "headerGaps": "Gdje {{who}} ima premalo partija, linije su procijenjene iz Lichess partija igrača rejtinga {{band}}.",
       "incomplete": "Procjena nepotpuna — još {{n}} otvorenih pozicija.",
       "continue": "Nastavi računati",
+      "running": "Procjena u tijeku — još {{n}} od {{total}} pozicija.",
       "deviatesOne": "odstupa: on ovdje igra {{move}} ({{n}} partija)",
       "deviatesMany": "odstupa: on ovdje igra {{move}} ({{n}} partija)",
       "deviatesTip": "Proturječi njegovim partijama — procijenjeno kao da je ovdje nastavio kao tipičan igrač njegove jačine"

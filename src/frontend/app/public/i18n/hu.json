@@ -4567,6 +4567,7 @@
       "headerGaps": "Ahol {{who}} túl kevés játszmát játszott, a vonalakat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
       "incomplete": "A becslés hiányos — még {{n}} állás nyitott.",
       "continue": "Számolás folytatása",
+      "running": "A becslés fut — még {{n}} / {{total}} állás.",
       "deviatesOne": "eltér: ő itt {{move}} lépést játszik ({{n}} játszma)",
       "deviatesMany": "eltér: ő itt {{move}} lépést játszik ({{n}} játszma)",
       "deviatesTip": "Ellentmond a játszmáinak — úgy becsülve, mintha itt egy hasonló erősségű tipikus játékosként folytatta volna"

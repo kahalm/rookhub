@@ -304,6 +304,8 @@ try
     // Trainingslinien gegen einen Gegner — ein Dienst für Spielervorbereitung und LeagueHub (0.701.0).
     // Schätzung der Lücken über den Lichess-Explorer (lokal, sonst online wie der Lochfinder).
     builder.Services.AddScoped<RookHub.Api.Services.Prep.ITrainingExplorer, RookHub.Api.Services.Prep.TrainingExplorer>();
+    // Fortsetzung unvollständiger Schätzungen im Hintergrund (0.725.2): ein Durchlauf je Nutzer, eigener DI-Bereich.
+    builder.Services.AddSingleton<RookHub.Api.Services.Prep.TrainingLinesContinuation>();
     builder.Services.AddScoped<RookHub.Api.Services.Prep.TrainingLinesService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueFixtureGames>();   // Paarungen samt Partien (0.673.0)
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameMoves(   // Aufstellungen + erste Züge (2026-10-08)

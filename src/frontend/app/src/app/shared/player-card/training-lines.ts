@@ -105,6 +105,8 @@ export interface TrainingLines {
   explorerIncomplete?: boolean;
   /** So viele Explorer-Stellungen sind noch offen (Frist oder Deckel) — „Weiter rechnen" holt weitere. */
   explorerPending?: number;
+  /** Der Server rechnet die offenen Stellungen gerade im Hintergrund fertig — die Seite fragt nach. */
+  explorerRunning?: boolean;
   total: number;
   lines: TrainingLine[];
   /** So viele Linien mehr gibt es (ohne `take` höchstens 50 in der Antwort). */

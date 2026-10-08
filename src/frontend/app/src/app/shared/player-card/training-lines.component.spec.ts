@@ -359,23 +359,44 @@ describe('TrainingLinesComponent', () => {
       expect(items[3].textContent).toContain('≈ 36 %');
     });
 
-    it('unvollständig: „… Stellungen offen", von selbst nach 3 s weiter (höchstens 3 Runden), „Weiter rechnen" fragt erneut', fakeAsync(() => {
+    it('der Server rechnet im Hintergrund: Fortschritt anzeigen und alle 3 s nachfragen, bis explorerRunning false', fakeAsync(() => {
       build();
-      trainingLines.and.resolveTo({ ...EST, explorerPending: 120 });
+      trainingLines.and.returnValues(
+        Promise.resolve({ ...EST, explorerIncomplete: true, explorerRunning: true, explorerPending: 300 }),
+        Promise.resolve({ ...EST, explorerIncomplete: true, explorerRunning: true, explorerPending: 120 }),
+        Promise.resolve({ ...EST, explorerIncomplete: false, explorerRunning: false, explorerPending: 0 }));
       el().querySelector<HTMLButtonElement>('button.tl-toggle')!.click();
       flushMicrotasks();
       fixture.detectChanges();
-      expect(trainingLines).toHaveBeenCalledTimes(1);
-      expect(el().querySelector('.tl-incomplete')?.textContent).toContain('Schätzung unvollständig — 120 Stellungen offen.');
-      for (const n of [2, 3, 4]) { tick(3000); flushMicrotasks(); expect(trainingLines).toHaveBeenCalledTimes(n); }
-      tick(3000); flushMicrotasks();
-      expect(trainingLines).toHaveBeenCalledTimes(4);                // nach 3 automatischen Runden Schluss
+      expect(el().querySelector('.tl-running')?.textContent).toContain('Schätzung läuft — noch 300 von 300 Stellungen.');
+      expect(el().querySelector('button.tl-continue')).toBeNull();     // kein Klicken nötig
+      tick(3000); flushMicrotasks(); fixture.detectChanges();
+      expect(trainingLines).toHaveBeenCalledTimes(2);
+      expect(el().querySelector('.tl-running')?.textContent).toContain('noch 120 von 300');
+      expect(el().querySelector<HTMLProgressElement>('progress.tl-progress')!.value).toBe(180);
+      tick(3000); flushMicrotasks(); fixture.detectChanges();
+      expect(trainingLines).toHaveBeenCalledTimes(3);
+      expect(el().querySelector('.tl-running')).toBeNull();
+      tick(10_000); flushMicrotasks();
+      expect(trainingLines).toHaveBeenCalledTimes(3);                 // fertig: kein weiteres Nachfragen
+    }));
+
+    it('unvollständig OHNE Hintergrund-Lauf: „… Stellungen offen" + „Weiter rechnen" (Rückfall), kein Nachfragen von selbst', fakeAsync(() => {
+      build();
+      trainingLines.and.resolveTo({ ...EST, explorerRunning: false, explorerPending: 120 });
+      el().querySelector<HTMLButtonElement>('button.tl-toggle')!.click();
+      flushMicrotasks();
       fixture.detectChanges();
+      expect(el().querySelector('.tl-incomplete')?.textContent).toContain('Schätzung unvollständig — 120 Stellungen offen.');
+      tick(10_000); flushMicrotasks();
+      expect(trainingLines).toHaveBeenCalledTimes(1);
       el().querySelector<HTMLButtonElement>('button.tl-continue')!.click();
       flushMicrotasks();
-      expect(trainingLines).toHaveBeenCalledTimes(5);
+      expect(trainingLines).toHaveBeenCalledTimes(2);
+      el().querySelector<HTMLButtonElement>('button.tl-continue')!.click();   // beliebig oft
+      flushMicrotasks();
+      expect(trainingLines).toHaveBeenCalledTimes(3);
       expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ repertoire: null, color: 'w' }));
-      discardPeriodicTasks();
     }));
 
     it('vollständig: kein automatisches Nachladen', fakeAsync(() => {

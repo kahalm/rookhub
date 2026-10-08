@@ -743,6 +743,36 @@ public class RepertoireExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Batch_MaxNew_CountsOnlyMissing_NextCallAsksTheNext_AllStored_NoQuery()
+    {
+        const string e4Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+        const string d4Fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1";
+        var e4 = RepertoireReach.Key(e4Fen);
+        var d4 = RepertoireReach.Key(d4Fen);
+        _localHandler.Respond(StartKey, StartJson);
+        _localHandler.Respond(e4, StartJson);
+        _localHandler.Respond(d4, StartJson);
+        List<(string, string)> all = [(StartKey, StartFen), (e4, e4Fen), (d4, d4Fen)];
+
+        var first = await Service().BatchStatsAsync(all, TrainingQuery, default, maxNew: 1);
+        Assert.Equal((0, 1, 2), (first.FromMemory, first.Asked, first.Capped));
+        Assert.Equal([StartKey], first.Stats.Keys);
+        Assert.Equal(2, first.Pending.Count);
+
+        // die gespeicherte zählt nicht gegen den Deckel: jetzt die nächste
+        var second = await Service().BatchStatsAsync(all, TrainingQuery, default, maxNew: 1);
+        Assert.Equal((1, 1, 1), (second.FromMemory, second.Asked, second.Capped));
+        Assert.Contains(e4, second.Stats.Keys);
+
+        await Service().BatchStatsAsync(all, TrainingQuery, default, maxNew: 1);
+        var urls = _localHandler.Urls.Count;
+        var done = await Service().BatchStatsAsync(all, TrainingQuery, default, maxNew: 1);
+        Assert.Equal((3, 0, 0), (done.FromMemory, done.Asked, done.Capped));
+        Assert.Empty(done.Pending);
+        Assert.Equal(urls, _localHandler.Urls.Count);              // alles gespeichert: keine Abfrage
+    }
+
+    [Fact]
     public async Task Batch_ExplicitBudgetZero_AsksNothing()
     {
         _localHandler.Respond(StartKey, StartJson);

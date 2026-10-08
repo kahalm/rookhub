@@ -217,20 +217,26 @@ public class OpponentTrainingEstimateTests
         public bool Available => available;
         public List<(List<string> Keys, int Elo)> Calls { get; } = new();
         public List<TimeSpan> Budgets { get; } = new();
+        public List<int> MaxNews { get; } = new();
         public Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget,
-            CancellationToken ct)
+            int maxNew, CancellationToken ct, int? parallelism = null)
         {
             Budgets.Add(budget);
+            MaxNews.Add(maxNew);
             onCall?.Invoke();
             Calls.Add((positions.Select(p => p.Key).ToList(), elo));
             var found = positions.Where(p => stats.ContainsKey(p.Key)).ToDictionary(p => p.Key, p => stats[p.Key]);
-            var open = positions.Where(p => pending?.Contains(p.Key) == true).Select(p => p.Key).ToHashSet();
+            // wie BatchStatsAsync: ohne Frist nichts Neues, sonst höchstens maxNew der fehlenden — der Rest bleibt offen
+            var missing = positions.Where(p => !stats.ContainsKey(p.Key)).ToList();
+            var tried = budget <= TimeSpan.Zero ? 0 : Math.Max(0, maxNew);
+            var open = positions.Where(p => pending?.Contains(p.Key) == true).Select(p => p.Key)
+                .Concat(missing.Skip(tried).Select(p => p.Key)).ToHashSet();
             return Task.FromResult(new TrainingExplorerResult(found, open, TrainingExplorer.Band(elo)));
         }
     }
 
     private static async Task<(AppDbContext Db, TrainingLinesService Svc, int Rep)> ServiceAsync(ITrainingExplorer explorer, string pgn,
-        IMemoryCache? cache = null, Dictionary<string, string?>? config = null)
+        IMemoryCache? cache = null, Dictionary<string, string?>? config = null, TrainingLinesContinuation? continuation = null)
     {
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
@@ -242,7 +248,8 @@ public class OpponentTrainingEstimateTests
         var notifications = new NotificationService(db);
         var reps = new RepertoireService(db, new RepertoireAnalyzeService(db, new MemoryCache(new MemoryCacheOptions())),
             new FriendService(db, notifications), notifications);
-        return (db, new TrainingLinesService(db, reps, new ConfigurationBuilder().AddInMemoryCollection(config ?? new()).Build(), explorer, cache), rep.Id);
+        return (db, new TrainingLinesService(db, reps, new ConfigurationBuilder().AddInMemoryCollection(config ?? new()).Build(), explorer, cache,
+            null, continuation), rep.Id);
     }
 
     [Fact]
@@ -377,10 +384,10 @@ public class OpponentTrainingEstimateTests
             config: new() { [TrainingLinesService.MaxPositionsKey] = "1" });
         using var _ = db;
         var r = (await svc.LinesAsync(1, Qw(rep), () => Task.FromResult(new List<OpponentTrainingLines.Game>()), default))!;
-        Assert.Single(Assert.Single(explorer.Calls).Keys);              // höchstens 1 Stellung abgefragt
+        // ALLE Stellungen gehen mit (gespeicherte kosten nichts), der Deckel gilt nur für neue
+        Assert.True(Assert.Single(explorer.Calls).Keys.Count >= 3);
+        Assert.Equal(1, Assert.Single(explorer.MaxNews));
         Assert.True(r["explorerIncomplete"]!.GetValue<bool>());
-        Assert.True(r["explorerPending"]!.GetValue<int>() >= 2);
-        Assert.Contains(r["lines"]!.AsArray(), l => l!["pending"]!.GetValue<bool>());
     }
 
     [Fact]
@@ -394,7 +401,7 @@ public class OpponentTrainingEstimateTests
         var loads = 0;
         Task<List<OpponentTrainingLines.Game>> Games() { loads++; return Task.FromResult(new List<OpponentTrainingLines.Game>()); }
         var r = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
-        Assert.Empty(explorer.Calls);                                 // keine Zeit: nichts abgefragt, alles offen
+        Assert.Equal(TimeSpan.Zero, Assert.Single(explorer.Budgets)); // keine Zeit: nur der Speicher, nichts Neues
         Assert.True(r["explorerIncomplete"]!.GetValue<bool>());
         await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1");
         Assert.Equal(2, loads);                                       // unvollständig wird NICHT gehalten
@@ -424,5 +431,140 @@ public class OpponentTrainingEstimateTests
         Assert.True(aborted.IsCancellationRequested);
         Assert.NotNull(r);
         Assert.NotEmpty(r!["lines"]!.AsArray());
+    }
+
+    // ── Fortsetzung im Hintergrund (0.725.2) ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Explorer, der im Vordergrund nichts schafft (alles offen) und im Hintergrund alles liefert — bei Bedarf erst nach
+    /// <see cref="Gate"/>.</summary>
+    private sealed class SlowExplorer(Dictionary<string, ExplorerPositionStats> stats) : ITrainingExplorer
+    {
+        public bool Available => true;
+        public TaskCompletionSource Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool Blocking { get; set; }
+        public bool Hang { get; set; }
+        public int BackgroundCalls;
+        public readonly List<(int MaxNew, TimeSpan Budget, int? Parallelism)> Calls = new();
+        private readonly HashSet<string> _stored = new();
+
+        public async Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget,
+            int maxNew, CancellationToken ct, int? parallelism = null)
+        {
+            lock (Calls) Calls.Add((maxNew, budget, parallelism));
+            if (parallelism is not null)                           // die Fortsetzung
+            {
+                Interlocked.Increment(ref BackgroundCalls);
+                if (Hang) await Task.Delay(Timeout.Infinite, ct);
+                if (Blocking) await Gate.Task;
+                lock (_stored) foreach (var p in positions) _stored.Add(p.Key);
+            }
+            lock (_stored)
+            {
+                var found = positions.Where(p => _stored.Contains(p.Key) && stats.ContainsKey(p.Key)).ToDictionary(p => p.Key, p => stats[p.Key]);
+                var open = positions.Where(p => !_stored.Contains(p.Key)).Select(p => p.Key).ToHashSet();
+                return new TrainingExplorerResult(found, open, TrainingExplorer.Band(elo));
+            }
+        }
+    }
+
+    private static TrainingLinesContinuation Continuation(ITrainingExplorer explorer, IMemoryCache memory)
+    {
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, explorer);
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, memory);
+        var sp = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        var scopes = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<
+            Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(sp);
+        return new TrainingLinesContinuation(scopes, Microsoft.Extensions.Logging.Abstractions.NullLogger<TrainingLinesContinuation>.Instance);
+    }
+
+    private static async Task WaitUntil(Func<bool> done)
+    {
+        for (var i = 0; i < 200 && !done(); i++) await Task.Delay(20);
+        Assert.True(done());
+    }
+
+    private static Dictionary<string, ExplorerPositionStats> AllStats() => new()
+    {
+        [KeyAfter("e4")] = Stats(("e5", 40), ("c5", 40), ("c6", 20)),
+        [KeyAfter("e4", "e5", "Nf3")] = Stats(("Nc6", 100)),
+        [KeyAfter("e4", "c5", "Nf3")] = Stats(("d6", 100)),
+        [KeyAfter("e4", "c6", "d4")] = Stats(("d5", 100)),
+    };
+
+    [Fact]
+    public async Task Continuation_StartsOnce_FillsTheStore_PutsTheCompleteResultIntoTheCache()
+    {
+        using var memory = new MemoryCache(new MemoryCacheOptions());
+        var explorer = new SlowExplorer(AllStats());
+        var continuation = Continuation(explorer, memory);
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines, memory, continuation: continuation);
+        using var _ = db;
+        var loads = 0;
+        Task<List<OpponentTrainingLines.Game>> Games() { loads++; return Task.FromResult(new List<OpponentTrainingLines.Game>()); }
+
+        var first = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
+        Assert.True(first["explorerIncomplete"]!.GetValue<bool>());
+        Assert.True(first["explorerRunning"]!.GetValue<bool>());
+        await WaitUntil(() => explorer.BackgroundCalls == 1 && continuation.RunningCount == 0);
+        Assert.Equal(3, explorer.Calls.Count);                        // Vordergrund, Fortsetzung, Reihung aus dem Speicher
+        Assert.Equal(TrainingLinesContinuation.Parallelism, explorer.Calls[1].Parallelism);
+        Assert.Equal(int.MaxValue, explorer.Calls[1].MaxNew);
+
+        // danach: vollständig aus dem Speicher (ohne Rechnung)
+        var second = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
+        Assert.Equal(1, loads);                                       // aus dem 15-min-Speicher
+        Assert.False(second["explorerIncomplete"]!.GetValue<bool>());
+        Assert.False(second["explorerRunning"]!.GetValue<bool>());
+        Assert.Equal(1, explorer.BackgroundCalls);
+    }
+
+    [Fact]
+    public async Task Continuation_SecondRequestDuringTheRun_StartsNoSecond_AndAsksNothingNew()
+    {
+        using var memory = new MemoryCache(new MemoryCacheOptions());
+        var explorer = new SlowExplorer(AllStats()) { Blocking = true };
+        var continuation = Continuation(explorer, memory);
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines, memory, continuation: continuation);
+        using var _ = db;
+        Task<List<OpponentTrainingLines.Game>> Games() => Task.FromResult(new List<OpponentTrainingLines.Game>());
+
+        await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1");
+        await WaitUntil(() => explorer.BackgroundCalls == 1);
+        var during = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
+        Assert.True(during["explorerRunning"]!.GetValue<bool>());
+        var last = explorer.Calls[^1];
+        Assert.Equal((0, TimeSpan.Zero), (last.MaxNew, last.Budget));    // nur der Speicher, nichts doppelt
+        Assert.Equal(1, explorer.BackgroundCalls);
+
+        // ein anderer Gegner desselben Nutzers während des Laufs: keine zweite Fortsetzung
+        var other = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:2"))!;
+        Assert.False(other["explorerRunning"]!.GetValue<bool>());
+        Assert.Equal(1, explorer.BackgroundCalls);
+
+        explorer.Gate.SetResult();
+        await WaitUntil(() => explorer.Calls.Count(c => c.Budget == TimeSpan.Zero && c.Parallelism is null && c.MaxNew == 0) >= 2);
+    }
+
+    [Fact]
+    public async Task Continuation_TimeLimit_EndsTheRun_NothingCached()
+    {
+        using var memory = new MemoryCache(new MemoryCacheOptions());
+        var explorer = new SlowExplorer(AllStats()) { Hang = true };
+        var continuation = Continuation(explorer, memory);
+        continuation.Limit = TimeSpan.FromMilliseconds(100);
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines, memory, continuation: continuation);
+        using var _ = db;
+        var loads = 0;
+        Task<List<OpponentTrainingLines.Game>> Games() { loads++; return Task.FromResult(new List<OpponentTrainingLines.Game>()); }
+
+        var first = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
+        Assert.True(first["explorerRunning"]!.GetValue<bool>());
+        await WaitUntil(() => explorer.BackgroundCalls == 1 && continuation.RunningCount == 0);
+        var after = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
+        Assert.Equal(2, loads);                                       // nichts gecacht
+        Assert.True(after["explorerIncomplete"]!.GetValue<bool>());
+        Assert.True(after["explorerRunning"]!.GetValue<bool>());      // der Lauf war zu Ende — eine neue Fortsetzung durfte starten
+        await WaitUntil(() => explorer.BackgroundCalls == 2);
     }
 }

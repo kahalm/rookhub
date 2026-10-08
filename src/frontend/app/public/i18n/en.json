@@ -4567,6 +4567,7 @@
       "headerGaps": "Where {{who}} has too few games, the lines are estimated from Lichess games of players rated {{band}}.",
       "incomplete": "Estimate incomplete — {{n}} positions still open.",
       "continue": "Keep calculating",
+      "running": "Estimate running — {{n}} of {{total}} positions still open.",
       "deviatesOne": "deviates: he plays {{move}} here ({{n}} game)",
       "deviatesMany": "deviates: he plays {{move}} here ({{n}} games)",
       "deviatesTip": "Contradicts his games — estimated as if he had continued here like a typical player of his strength"
