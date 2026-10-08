@@ -34,17 +34,32 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
             .Where(g => g.Tnr == tnr && g.Round == round && (g.HomeTeam == team || g.AwayTeam == team))
             .OrderBy(g => g.Board).ToListAsync(ct);
         if (games.Count == 0) return new();
+        var byId = await ForGamesAsync(club, tnr, round, games, ct, userId, canManage);
+        return games.Select(g => byId[g.Id]).ToList();
+    }
+
+    /// <summary>
+    /// Dieselbe Regel für beliebig viele Brettpaarungen EINER Runde auf einmal (0.724.0, Aufstellungen je Runde: „wenn ich die
+    /// Partie hab, soll er nicht Züge eingeben lassen, sondern die Partie ausweisen") — Schlüssel ist <see cref="LeagueGame.Id"/>.
+    /// Kosten je Aufruf, gleich für eine Begegnung wie für die ganze Runde: Rundentermin, Vereinspartien des Vereins (Jahr der
+    /// Runde ODER zugeordnet), deren Zuordnung (<see cref="LeagueGameLinks.ResolveAsync"/>, ≤ 2 Abfragen) und die Spielerkarten
+    /// NUR der Bretter, für die keine Vereinspartie gefunden wurde. Eine geratene Vereinspartie wird höchstens EINEM Brett
+    /// zugeordnet (über eine ganze Runde könnten sonst zwei Bretter mit gleichen Nachnamen dieselbe Partie bekommen).
+    /// </summary>
+    public async Task<Dictionary<int, Pairing>> ForGamesAsync(LeagueClub club, int tnr, int round, IReadOnlyList<LeagueGame> games,
+        CancellationToken ct, int? userId = null, bool canManage = false)
+    {
+        var result = new Dictionary<int, Pairing>();
+        if (games.Count == 0) return result;
         var date = await db.LeagueRounds.AsNoTracking().Where(r => r.Tnr == tnr && r.Round == round)
             .Select(r => r.Date).FirstOrDefaultAsync(ct);
-
-        var fides = games.SelectMany(g => new[] { g.HomeFide, g.AwayFide }).Where(f => !string.IsNullOrEmpty(f)).Select(f => f!)
-            .Distinct().ToList();
         var year = date?.Year;
         // fest zugeordnete Partien (0.678.0) schlagen jede Raterei — und werden nie einer ANDEREN Paarung zugeraten. Die Zuordnung
         // wird über LeagueGameLinks aufgelöst (Id, sonst Schlüssel Tnr/Runde/Begegnung/Brett): eine Partie mit TOTER Id (vor 0.716.1
         // legte jedes Aktualisieren die Paarungen neu an) zählt wie eine ohne Zuordnung und darf geraten werden — vorher fiel sie
-        // aus beiden Töpfen und verschwand ganz aus den Paarungen (gemeldet 2026-10-07).
-        var gameIds = games.Select(g => g.Id).ToList();
+        // aus beiden Töpfen und verschwand ganz aus den Paarungen (gemeldet 2026-10-07). Archivierte Partien blendet der globale
+        // Filter aus; Vereinspartien nur des Vereins der Anfrage.
+        var gameIds = games.Select(g => g.Id).Distinct().ToList();
         var pool = await db.LeagueClubGames.AsNoTracking()
             .Where(c => c.ClubId == club.Id && (c.Year == year && year != null
                 || c.LeagueGameId != null && gameIds.Contains(c.LeagueGameId.Value)
@@ -54,34 +69,46 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
         var linked = pool.Where(c => resolved.TryGetValue(c.Id, out var lg) && gameIds.Contains(lg.Id))
             .GroupBy(c => resolved[c.Id].Id).ToDictionary(x => x.Key, x => x.First());
         var clubGames = pool.Where(c => c.Year == year && year != null && !resolved.ContainsKey(c.Id)).ToList();
-        var profiles = date is null || fides.Count == 0 ? new Dictionary<string, string>() : await db.LeaguePlayerProfiles.AsNoTracking()
-            .Where(p => fides.Contains(p.FideId)).ToDictionaryAsync(p => p.FideId, p => p.Pgn, ct);
+        var guessed = new HashSet<int>();
 
-        var result = new List<Pairing>();
-        foreach (var g in games)
+        var open = new List<(LeagueGame G, bool HomeWhite, (string? Name, string? Fide, int? Elo, string Team) W,
+            (string? Name, string? Fide, int? Elo, string Team) B, bool Forfeit)>();
+        foreach (var g in games.DistinctBy(g => g.Id))
         {
             var homeWhite = g.HomeColor != "s";
             var w = homeWhite ? (g.HomePlayer, g.HomeFide, g.HomeElo, g.HomeTeam) : (g.AwayPlayer, g.AwayFide, g.AwayElo, g.AwayTeam);
             var b = homeWhite ? (g.AwayPlayer, g.AwayFide, g.AwayElo, g.AwayTeam) : (g.HomePlayer, g.HomeFide, g.HomeElo, g.HomeTeam);
             var forfeit = g.Forfeit != 0 || w.Item1 is null || b.Item1 is null;
-            string? pgn = null, source = null;
-            int? clubId = null;
-            var canEdit = false;
             if (!forfeit)
             {
-                var hit = linked.GetValueOrDefault(g.Id) ?? clubGames.FirstOrDefault(c => SideMatches(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
+                var hit = linked.GetValueOrDefault(g.Id) ?? clubGames.FirstOrDefault(c => !guessed.Contains(c.Id)
+                    && SideMatches(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
                     && SideMatches(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2, b.Item4)
                     && (Strong(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
                         || Strong(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)));
                 if (hit is not null)
                 {
-                    (pgn, source, clubId) = (hit.Pgn, "club", hit.Id);
-                    canEdit = userId is { } me && (canManage || hit.UploadedByUserId == me);
+                    if (!linked.ContainsKey(g.Id)) guessed.Add(hit.Id);
+                    var canEdit = userId is { } me && (canManage || hit.UploadedByUserId == me);
+                    result[g.Id] = new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, WhiteBlackResult(g.Result, homeWhite),
+                        false, hit.Pgn, "club", hit.Id, canEdit);
+                    continue;
                 }
-                else if (date is { } d && FromProfiles(profiles, d, w.Item1!, w.Item2, b.Item1!, b.Item2) is { } raw)
-                    (pgn, source) = (raw, "profile");
             }
-            result.Add(new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, clubId, canEdit));
+            open.Add((g, homeWhite, w, b, forfeit));
+        }
+
+        // Spielerkarten nur für die Bretter ohne Vereinspartie — eine Karte trägt alle Partien eines Spielers (große PGNs).
+        var fides = open.Where(o => !o.Forfeit).SelectMany(o => new[] { o.W.Fide, o.B.Fide })
+            .Where(f => !string.IsNullOrEmpty(f)).Select(f => f!).Distinct().ToList();
+        var profiles = date is null || fides.Count == 0 ? new Dictionary<string, string>() : await db.LeaguePlayerProfiles.AsNoTracking()
+            .Where(p => fides.Contains(p.FideId)).ToDictionaryAsync(p => p.FideId, p => p.Pgn, ct);
+        foreach (var (g, homeWhite, w, b, forfeit) in open)
+        {
+            string? pgn = null, source = null;
+            if (!forfeit && date is { } d && FromProfiles(profiles, d, w.Name!, w.Fide, b.Name!, b.Fide) is { } raw)
+                (pgn, source) = (raw, "profile");
+            result[g.Id] = new Pairing(g.Board, w.Name, w.Elo, b.Name, b.Elo, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, null);
         }
         return result;
     }

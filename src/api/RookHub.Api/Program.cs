@@ -301,7 +301,8 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.Prep.TrainingLinesService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueFixtureGames>();   // Paarungen samt Partien (0.673.0)
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameMoves(   // Aufstellungen + erste Züge (2026-10-08)
-        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), null,                     // + Partie je Brett (0.724.0)
+        sp.GetRequiredService<RookHub.Api.Services.League.LeagueFixtureGames>()));
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();

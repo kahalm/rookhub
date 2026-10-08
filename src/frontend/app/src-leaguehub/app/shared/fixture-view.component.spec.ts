@@ -123,6 +123,34 @@ describe('FixtureViewComponent', () => {
     expect(rows[1].querySelector('.bm-edit')?.textContent).toContain('Züge eingeben');
   });
 
+  it('0.724.0: an Brettern MIT Partie keine Zug-Zeile mit „Züge eingeben", alter Eintrag nur „ersetzt"', async () => {
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Ackermann, Anna', whiteElo: 2040, black: 'Brunner, Bert', blackElo: 2100, result: '1 - 0', forfeit: false,
+        pgn: '[White "Ackermann, Anna"]\n\n1. e4 e5 1-0', source: 'club', clubGameId: 168 },
+      { board: 2, white: 'Clauss, Carl', whiteElo: null, black: 'Dorn, Dora', blackElo: 1900, result: '0 - 1', forfeit: false,
+        pgn: null, source: null, clubGameId: null },
+    ]);
+    lineupsApi.lineups.and.resolveTo({ tnr: 1479345, round: 1, date: null, canEdit: true, matches: [
+      { matchNo: 4, home: 'Spg Kufstein/Wörgl', away: 'Schwaz', homePts: 3, awayPts: 3, own: true, boards: [
+        { board: 1, homePlayer: 'Brunner, Bert', homeTitle: null, homeElo: 2100, awayPlayer: 'Ackermann, Anna', awayTitle: null, awayElo: 2040,
+          homeColor: 's', result: '0 - 1', forfeit: 0, moves: 'e4 e5', canEditMoves: false, canDeleteMoves: true,
+          game: { source: 'club', clubGameId: 168, plies: 2, result: '1-0', white: 'Ackermann, Anna', black: 'Brunner, Bert',
+            firstMoves: ['e4', 'e5'], canEdit: false } },
+        { board: 2, homePlayer: 'Clauss, Carl', homeTitle: null, homeElo: null, awayPlayer: 'Dorn, Dora', awayTitle: null, awayElo: 1900,
+          homeColor: 'w', result: '0 - 1', forfeit: 0, moves: null, canEditMoves: true },
+      ] }] });
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render({ ...OPEN, status: 'played', score: '3 : 3' });
+    for (let i = 0; i < 3; i++) { await fixture.whenStable(); fixture.detectChanges(); }
+    const el = fixture.nativeElement as HTMLElement;
+    const rows = el.querySelectorAll('.pairings .moves-row');
+    expect(rows.length).toBe(2);
+    expect(rows[0].classList).toContain('replaced');
+    expect(rows[0].querySelector('.bm-edit')).toBeNull();
+    expect(rows[0].textContent).toContain('ersetzt durch die Partie');
+    expect(rows[1].querySelector('.bm-edit')?.textContent).toContain('Züge eingeben');
+  });
+
   it('über einen Teilen-Link keine Züge (keine Abfrage der Aufstellungen)', async () => {
     fixture.componentRef.setInput('leagueTnr', 1479345);
     render({ ...OPEN, status: 'played', score: '3 : 3' }, { token: 'abc' });

@@ -71,8 +71,18 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   </td>
                 </tr>
                 <!-- 2026-10-08: die ersten Züge der Partie (angemeldet; über einen Teilen-Link nicht) -->
+                <!-- 0.724.0: an Brettern MIT Partie keine Zug-Eingabe — die Partie steht schon in der Zeile darüber;
+                     ein alter Handeintrag nur noch grau als „ersetzt durch die Partie". -->
                 @if (movesBoard(p.board); as mb) {
-                  @if (mb.moves || mb.canEditMoves) {
+                  @if (p.pgn || mb.game) {
+                    @if (mb.moves) {
+                      <tr class="moves-row replaced"><td></td><td colspan="4">
+                        <lh-board-moves [key]="{ tnr: leagueTnr()!, round: round(), matchNo: ownMatch()!.matchNo ?? 0, board: p.board }"
+                                        [title]="'Brett ' + p.board + ': ' + (p.white ?? '–') + ' – ' + (p.black ?? '–')"
+                                        [initial]="mb.moves" [replaced]="true" [canDelete]="!!mb.canDeleteMoves" />
+                      </td></tr>
+                    }
+                  } @else if (mb.moves || mb.canEditMoves) {
                     <tr class="moves-row"><td></td><td colspan="4">
                       <lh-board-moves [key]="{ tnr: leagueTnr()!, round: round(), matchNo: ownMatch()!.matchNo ?? 0, board: p.board }"
                                       [title]="'Brett ' + p.board + ': ' + (p.white ?? '–') + ' – ' + (p.black ?? '–')"

@@ -11,21 +11,39 @@ namespace RookHub.Api.Services.League;
 /// <list type="bullet">
 /// <item><see cref="LineupsAsync"/>: alle Begegnungen einer Runde samt Brettpaarungen aus <see cref="LeagueGame"/> (öffentliche
 /// Ligadaten) und den hinterlegten Zügen; eine Begegnung ohne Brettpaarungen = „noch keine Aufstellung".</item>
+/// <item>Je Brett zusätzlich die PARTIE, wo es eine gibt (0.724.0, Wunsch 2026-10-08: „wenn ich das hab, dann sollt er nicht Züge
+/// eingeben lassen, sondern die Partie ausweisen") — dieselbe Regel wie die Paarungen gespielter Runden
+/// (<see cref="LeagueFixtureGames.ForGamesAsync"/>: feste Zuordnung, Raten, Spielerkarten), EIN Aufruf für die ganze Runde. Die
+/// Aufstellung trägt davon nur Quelle, Halbzüge, Ergebnis, Namen und die ersten <see cref="FirstPlies"/> Halbzüge — das PGN holt
+/// die Oberfläche über <c>…/round/{r}/games</c> bzw. <c>club/games/{id}</c>. Mit Partie keine Zug-Eingabe mehr
+/// (<c>canEditMoves = false</c>); ein alter Eintrag kommt weiter mit (<c>moves</c>), darf gelöscht, aber nicht geändert werden.</item>
 /// <item><see cref="SaveAsync"/>: Züge einer Paarung speichern/löschen, Schlüssel (Tnr, Runde, Begegnung, Brett).</item>
 /// </list>
 /// Schreiben (Regel wie bei den Vereinspartien — beitragen darf, wer <c>league.contribute</c> hat; ändern/löschen der Verwalter
 /// oder wer sie eingetragen hat): ohne <c>league.manage</c> nur an Begegnungen mit einer Mannschaft des eigenen Vereins
 /// (<see cref="LeagueClub.OwnsTeam"/>) und nur, solange kein anderer die Züge eingetragen hat.
 /// </summary>
-public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now = null)
+public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now = null, LeagueFixtureGames? fixtures = null)
 {
+    /// <summary>So viele Halbzüge der vorhandenen Partie zeigt die Aufstellung („1.e4 c5 2.Sf3 …").</summary>
+    public const int FirstPlies = 10;
+
+    private readonly LeagueFixtureGames _fixtures = fixtures ?? new LeagueFixtureGames(db);
+
     /// <summary>Höchstens so viele Halbzüge — es geht um „die ersten paar Züge", nicht um die Partie.</summary>
     public const int MaxPlies = 60;
 
     private readonly Func<DateTime> _now = now ?? (() => DateTime.UtcNow);
 
     public sealed record LineupBoard(int Board, string? HomePlayer, string? HomeTitle, int? HomeElo, string? AwayPlayer,
-        string? AwayTitle, int? AwayElo, string? HomeColor, string Result, int Forfeit, string? Moves, bool CanEditMoves);
+        string? AwayTitle, int? AwayElo, string? HomeColor, string Result, int Forfeit, string? Moves, bool CanEditMoves,
+        LineupGame? Game = null, bool CanDeleteMoves = false);
+
+    /// <summary>Die vorhandene Partie eines Bretts (ohne PGN): <c>source</c> <c>club</c> (Vereinspartie, <c>clubGameId</c>) oder
+    /// <c>profile</c> (Spielerkarte), Halbzüge, Ergebnis und Namen wie im PGN, die ersten <see cref="FirstPlies"/> Halbzüge
+    /// (englische SAN), <c>canEdit</c> = darf die Vereinspartie bearbeiten (Verwalter oder Hochladender).</summary>
+    public sealed record LineupGame(string Source, int? ClubGameId, int Plies, string Result, string? White, string? Black,
+        List<string> FirstMoves, bool CanEdit);
 
     public sealed record LineupMatch(int? MatchNo, string Home, string Away, double? HomePts, double? AwayPts, bool Own,
         List<LineupBoard> Boards);
@@ -54,6 +72,12 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
         if (matches.Count == 0 && games.Count == 0 && roundRow is null) return null;
         var moves = await db.LeagueGameMoves.AsNoTracking().Where(m => m.Tnr == tnr && m.Round == round).ToListAsync(ct);
         var byKey = moves.GroupBy(m => (m.MatchNo, m.Board)).ToDictionary(x => x.Key, x => x.First());
+        // Partien der ganzen Runde in EINEM Durchgang; doppelte Zeilen desselben Bretts zählen zusammen (die Zuordnung einer
+        // Vereinspartie kann auf jede von ihnen zeigen).
+        var found = await _fixtures.ForGamesAsync(club, tnr, round, games, ct, userId, canManage);
+        var gameByKey = games.Where(g => found.TryGetValue(g.Id, out var p) && p.Source is not null && p.Pgn is not null)
+            .GroupBy(g => (g.MatchNo, g.Board))
+            .ToDictionary(x => x.Key, x => ToGame(found[x.OrderBy(g => g.Id).First().Id]));
 
         // Brettpaarungen je Begegnung: zuerst über die Nummer der Begegnung, sonst über die Mannschaftsnamen (eine Quelle
         // ohne Nummer im Spielplan). Eine doppelte Zeile (gleiches Brett zweimal) zählt einmal — die kleinste Id.
@@ -84,11 +108,25 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
             return new LineupMatch(matchNo, home, away, hp, ap, own, boards.Select(g =>
             {
                 var entry = byKey.GetValueOrDefault((g.MatchNo, g.Board));
-                var editable = mayWrite && Playable(g) && (entry is null || canManage || entry.UpdatedByUserId == userId);
+                var game = gameByKey.GetValueOrDefault((g.MatchNo, g.Board));
+                var editable = game is null && mayWrite && Playable(g) && (entry is null || canManage || entry.UpdatedByUserId == userId);
+                // Löschen bleibt auch neben einer Partie möglich (ein alter, nun ersetzter Handeintrag) — Regel wie Speichern.
+                var deletable = entry is not null && mayWrite && (canManage || entry.UpdatedByUserId == userId);
                 return new LineupBoard(g.Board, g.HomePlayer, g.HomeTitle, g.HomeElo, g.AwayPlayer, g.AwayTitle, g.AwayElo,
-                    g.HomeColor, g.Result, g.Forfeit, entry?.Moves, editable);
+                    g.HomeColor, g.Result, g.Forfeit, entry?.Moves, editable, game, deletable);
             }).ToList());
         }
+    }
+
+    /// <summary>Die Partie eines Bretts ohne PGN: Kopfzeilen und Hauptvariante (bereinigt wie überall).</summary>
+    internal static LineupGame ToGame(LeagueFixtureGames.Pairing p)
+    {
+        var (headers, moveText) = PgnParser.SplitGames(p.Pgn!).FirstOrDefault();
+        headers ??= new();
+        var sans = PgnParser.ExtractMainlineSans(moveText ?? "");
+        var result = headers.GetValueOrDefault("Result") is { Length: > 0 } r && r != "*" ? r : p.Result.Replace(" ", "");
+        return new LineupGame(p.Source!, p.ClubGameId, sans.Count, result, headers.GetValueOrDefault("White") ?? p.White,
+            headers.GetValueOrDefault("Black") ?? p.Black, sans.Take(FirstPlies).ToList(), p.CanEdit);
     }
 
     /// <summary>Beide Bretter besetzt und nicht kampflos — sonst gibt es keine Partie, deren Züge man eintragen könnte.</summary>

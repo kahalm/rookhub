@@ -9,6 +9,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.724.0',
+    date: '2026-10-08',
+    changes: [
+      { en: "LeagueHub, line-ups per round: if a board already has its game (a club game assigned to the pairing, a guessed club game or a game from the player cards), the board now shows the game instead of offering “Enter moves”: “Game available · 81 plies · 1.e4 c5 2.Nf3 …” with Replay, Analysis (club games) and Edit/Correct for those allowed. An older hand-entered move list is shown greyed out as “replaced by the game” and can still be deleted.",
+        de: "LeagueHub, Aufstellungen je Runde: liegt an einem Brett schon die Partie vor (eine der Paarung zugeordnete Vereinspartie, eine erkannte Vereinspartie oder eine Partie aus den Spielerkarten), zeigt das Brett jetzt die Partie statt „Züge eingeben“ anzubieten: „Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …“ mit Nachspielen, Analyse (Vereinspartien) und für Berechtigte Bearbeiten/Korrigieren. Ein älterer Handeintrag steht nur noch grau als „ersetzt durch die Partie“ da und lässt sich weiter löschen." },
+      { en: "The same rule on the boards of your own match: the move row with “Enter moves” only appears on boards without a game. The server resolves the games of a whole round in one pass (same rule as the pairings of played rounds; club games only from your own club, archived ones never).",
+        de: "Dieselbe Regel an den Brettern der eigenen Begegnung: die Zug-Zeile mit „Züge eingeben“ erscheint nur noch an Brettern ohne Partie. Der Server löst die Partien einer ganzen Runde in einem Durchgang auf (dieselbe Regel wie bei den Paarungen gespielter Runden; Vereinspartien nur des eigenen Vereins, archivierte nie)." },
+    ],
+  },
+  {
     version: '0.723.1',
     date: '2026-10-08',
     changes: [

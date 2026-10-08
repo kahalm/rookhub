@@ -2097,14 +2097,28 @@ Möglichkeit, die ersten paar Züge einzugeben."
   Begegnungen mit einer Mannschaft des eigenen Vereins (403 `foreignMatch`) und nur eigene Einträge ändern/löschen (403 `notYours`,
   Regel wie `CanDelete` der Vereinspartien); Verwalter (live über `PermissionResolver`) alles. Kampflose/unbesetzte Bretter: 400 `noGame`.
   Mandant über `?club=` (`LeagueClubAsync`). Controller `LeagueLineupsController` (eigene Datei, gleiche Route `api/league`).
+* **Partie je Brett statt Zug-Eingabe** (0.724.0, Wunsch 2026-10-08: „ich habe eine Partie drinnen: Hess, Max – Platzgummer, Fabian —
+  wenn ich das hab, dann sollt er nicht Züge eingeben lassen, sondern die Partie ausweisen"): die Aufstellung löst je Brett die
+  vorhandene Partie mit DERSELBEN Regel wie die Paarungen gespielter Runden auf — `LeagueFixtureGames.ForGamesAsync` (seit 0.724.0 der
+  Kern, `ForFixtureAsync` = gefiltert auf eine Mannschaft): feste Zuordnung (`LeagueGameLinks.ResolveAsync`) → Raten unter Partien ohne
+  lebende Zuordnung (eine geratene Partie höchstens EINEM Brett) → Spielerkarten ±3 Tage. Vereinspartien nur des Vereins der Anfrage,
+  archivierte nie. EIN Aufruf für die ganze Runde: Rundentermin, Vereinspartien des Vereins (Jahr ODER zugeordnet), Auflösung (≤ 2
+  Abfragen) und Spielerkarten NUR der Bretter ohne Vereinspartie. Je Brett `game: { source (club|profile), clubGameId, plies, result,
+  white, black, firstMoves (die ersten 10 Halbzüge, englische SAN), canEdit }` — OHNE PGN (das holt „Nachspielen": Vereinspartie
+  `GET …/club/games/{id}` samt Bewertungen, Spielerkarte `GET …/round/{r}/games?team=<Heim>`). Mit Partie ist `canEditMoves = false`;
+  ein alter Handeintrag kommt weiter als `moves` und `canDeleteMoves` (löschen darf, wer ihn auch ändern dürfte). Oberfläche:
+  `shared/board-game.component.ts` („Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …", Nachspielen, Analyse per Einmal-Code, mit
+  `canEdit` Bearbeiten/Korrigieren), `board-moves` mit `replaced` (grau „ersetzt durch die Partie", nur Löschen). In `lh-fixture`
+  erscheint die Zug-Zeile nur an Brettern OHNE Partie. Der Server lehnt Schreiben an einem Brett mit Partie NICHT ab (Rechte unverändert).
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
-| GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves }] }] }`; 404 ohne Runde |
+| GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves, game?, canDeleteMoves }] }] }` — `game` (0.724.0) = vorhandene Partie des Bretts `{ source, clubGameId, plies, result, white, black, firstMoves, canEdit }` oder `null`, dann `canEditMoves = false`; 404 ohne Runde |
 | PUT | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | `{ moves }` (leer = löschen) → `{ moves }` (englische SAN); 404 ohne Paarung, 403 `foreignMatch`/`notYours`, 400 `noGame`/`tooLong`/`illegal` (+ `move`, `ply`) |
 | DELETE | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | → 204; 404/403 wie oben |
 
-Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids), `LeagueGameMovesSqlTests` (Migration + eindeutiger
+Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids; seit 0.724.0 Partie je Brett: fest zugeordnete
+Vereinspartie, anderer Verein sieht sie nicht, archivierte zählt nicht, Spielerkarte, geratene Partie nur einmal), `LeagueGameMovesSqlTests` (Migration + eindeutiger
 Schlüssel gegen MariaDB); Frontend `round-lineups`/`moves-editor`/`league-page`/`fixture-view`-Specs.
 
 **Stellung eingeben + Zugfolgen vorschlagen** (0.723.0, Wunsch 2026-10-08: „lass mich dort auch direkt Stellungen eingeben. schau

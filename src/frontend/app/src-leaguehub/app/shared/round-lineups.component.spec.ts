@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
+import { HandoffService } from '@rh/core/handoff.service';
 import { LineupsApiService, RoundLineups, formatMoves, parseMoves, points } from '../core/lineups';
 import { RoundLineupsComponent } from './round-lineups.component';
 
@@ -35,9 +38,11 @@ describe('RoundLineupsComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves']);
+    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'fixturePgn']);
     api.lineups.and.resolveTo(DATA);
-    TestBed.configureTestingModule({ imports: [RoundLineupsComponent], providers: [{ provide: LineupsApiService, useValue: api }] });
+    TestBed.configureTestingModule({ imports: [RoundLineupsComponent], providers: [{ provide: LineupsApiService, useValue: api },
+      { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
+      provideRouter([]), provideTranslateService({ fallbackLang: 'de' })] });
     fixture = TestBed.createComponent(RoundLineupsComponent);
   });
 
@@ -79,6 +84,61 @@ describe('RoundLineupsComponent', () => {
     api.lineups.and.rejectWith(new Error('weg'));
     const el = await render();
     expect(el.querySelector('.err')?.textContent).toContain('Aufstellungen nicht geladen');
+  });
+
+  // 0.724.0: „wenn ich die Partie hab, soll er nicht Züge eingeben lassen, sondern die Partie ausweisen"
+  const PGN = '[White "Ackermann, Anna"]\n[Black "Brunner, Bert"]\n\n1. e4 c5 2. Nf3 d6 1-0';
+  function withGames(): RoundLineups {
+    const d: RoundLineups = JSON.parse(JSON.stringify(DATA));
+    Object.assign(d.matches[0].boards[0], { canEditMoves: false, canDeleteMoves: true, game: { source: 'club', clubGameId: 168, plies: 81,
+      result: '1-0', white: 'Ackermann, Anna', black: 'Brunner, Bert', firstMoves: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6'],
+      canEdit: true } });
+    Object.assign(d.matches[1].boards[0], { game: { source: 'profile', clubGameId: null, plies: 4, result: '1-0', white: 'Fink, Franz',
+      black: 'Gruber, Gerd', firstMoves: ['d4', 'd5', 'c4', 'e6'], canEdit: false } });
+    return d;
+  }
+
+  it('Brett mit Partie: Partie-Zeile statt „Züge eingeben", alter Handeintrag nur noch „ersetzt"', async () => {
+    api.lineups.and.resolveTo(withGames());
+    const el = await render();
+    const boards = el.querySelectorAll('.lu-board');
+    const what = boards[0].querySelector('.bg-what')?.textContent ?? '';
+    expect(what).toContain('Partie vorhanden · 81 Halbzüge');
+    expect(what).toContain('1.e4 c5 2.Sf3 d6 3.d4 cxd4 4.Sxd4 Sf6 5.Sc3 a6 …');
+    expect(boards[0].querySelector('.bm-edit')).toBeNull();
+    expect(boards[0].querySelector('.bm-replaced')?.textContent).toContain('ersetzt durch die Partie');
+    expect(boards[0].querySelector('.bm-del')).not.toBeNull();
+    expect(boards[0].querySelector('.bg-edit')?.getAttribute('href')).toBe('/verein?bearbeiten=168');
+    expect(boards[0].querySelector('.bg-fix')?.getAttribute('href')).toBe('/verein/partie/168/korrigieren');
+    expect(boards[1].querySelector('.bm-edit')?.textContent).toContain('Züge eingeben');   // Brett ohne Partie bleibt
+    expect(boards[2].querySelector('.bg-what')?.textContent).toContain('Partie vorhanden · 4 Halbzüge · 1.d4 d5 2.c4 e6');
+    expect(boards[2].querySelector('.bg-edit')).toBeNull();
+  });
+
+  it('Nachspielen holt das PGN: Vereinspartie über den Club-Endpunkt, Spielerkarte über …/games?team=', async () => {
+    api.lineups.and.resolveTo(withGames());
+    api.clubGame.and.resolveTo({ pgn: PGN, analysis: { status: 'done' } });
+    api.fixturePgn.and.resolveTo(PGN);
+    const el = await render();
+    const boards = el.querySelectorAll('.lu-board');
+    (boards[0].querySelector('.bg-replay') as HTMLButtonElement).click();
+    (boards[2].querySelector('.bg-replay') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.clubGame).toHaveBeenCalledWith(168);
+    expect(api.fixturePgn).toHaveBeenCalledWith(4711, 2, 'Talhausen', 1);
+    expect(el.querySelectorAll('lh-game-replay').length).toBe(2);
+  });
+
+  it('Löschen eines ersetzten Handeintrags', async () => {
+    api.lineups.and.resolveTo(withGames());
+    api.deleteMoves.and.resolveTo();
+    const el = await render();
+    (el.querySelector('.bm-del') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.deleteMoves).toHaveBeenCalledWith({ tnr: 4711, round: 2, matchNo: 1, board: 1 });
+    expect(el.querySelector('.bm-replaced')).toBeNull();
   });
 });
 

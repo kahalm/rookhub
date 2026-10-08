@@ -264,6 +264,93 @@ public class LeagueGameMovesTests : IDisposable
         Assert.IsType<NotFoundResult>(await Controller(HomeMember, perms: Permissions.LeagueView).Lineups(Tnr, 9, default));
     }
 
+    // ---- Partie je Brett (0.724.0: „wenn ich die Partie hab, nicht Züge eingeben lassen, sondern die Partie ausweisen") -----
+
+    private const string GamePgn = "[White \"Ackermann, Anna\"]\n[Black \"Brunner, Bert\"]\n[Result \"1-0\"]\n\n"
+        + "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be2 e5 7. Nb3 Be7 8. O-O O-O 9. Be3 Be6 10. Qd2 Nbd7 11. a4 Qc7 1-0";
+
+    private async Task<LeagueClubGame> LinkedClubGameAsync(int clubId = TestClubs.HomeId, DateTime? archived = null)
+    {
+        var lg = await _db.LeagueGames.SingleAsync(g => g.MatchNo == 1 && g.Board == 1);
+        var c = new LeagueClubGame { ClubId = clubId, Year = 2026, White = "Ackermann, Anna", Black = "Brunner, Bert", Result = "1-0",
+            Plies = 22, Pgn = GamePgn, MovesHash = "h1", UploadedByUserId = HomeMember, LeagueGameId = lg.Id, ArchivedAt = archived };
+        LeagueGameLinks.Set(c, lg);
+        _db.LeagueClubGames.Add(c);
+        await _db.SaveChangesAsync();
+        return c;
+    }
+
+    private async Task<LeagueGameMoves.Lineups> LineupsAs(int user, params string[] perms) =>
+        (LeagueGameMoves.Lineups)((OkObjectResult)await Controller(user, perms: perms).Lineups(Tnr, Round, default)).Value!;
+
+    [Fact]
+    public async Task Lineups_LinkedClubGame_ShownAsGame_NoMoveEntry_OldEntryKept()
+    {
+        await SeedAsync();
+        await Controller(HomeMember, perms: Permissions.LeagueContribute).SaveMoves(Tnr, Round, 1, 1, new() { Moves = "e4 c5" }, default);
+        var c = await LinkedClubGameAsync();
+        var l = await LineupsAs(HomeMember, Permissions.LeagueView, Permissions.LeagueContribute);
+        var board = l.Matches[0].Boards[0];
+        var g = Assert.IsType<LeagueGameMoves.LineupGame>(board.Game);
+        Assert.Equal(("club", (int?)c.Id, 22, "1-0", "Ackermann, Anna", "Brunner, Bert", true),
+            (g.Source, g.ClubGameId, g.Plies, g.Result, g.White, g.Black, g.CanEdit));
+        Assert.Equal("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6", string.Join(' ', g.FirstMoves));
+        Assert.False(board.CanEditMoves);          // keine Zug-Eingabe bei vorhandener Partie
+        Assert.Equal("e4 c5", board.Moves);       // alter Handeintrag kommt weiter mit
+        Assert.True(board.CanDeleteMoves);        // … und darf von dem, der ihn eintrug, gelöscht werden
+        Assert.Null(l.Matches[0].Boards[1].Game);
+        Assert.True(l.Matches[0].Boards[1].CanEditMoves);
+        // ein anderer Beitragender des Vereins sieht die Partie, darf sie aber nicht bearbeiten (nicht hochgeladen)
+        var other = await LineupsAs(HomeMember2, Permissions.LeagueView, Permissions.LeagueContribute);
+        Assert.False(other.Matches[0].Boards[0].Game!.CanEdit);
+        Assert.False(other.Matches[0].Boards[0].CanDeleteMoves);   // fremder Eintrag
+    }
+
+    [Fact]
+    public async Task Lineups_ClubGame_OtherClubDoesNotSeeIt_ArchivedNeverCounts()
+    {
+        await SeedAsync();
+        await LinkedClubGameAsync();
+        var foreign = await LineupsAs(OtherMember, Permissions.LeagueView);
+        Assert.All(foreign.Matches.SelectMany(m => m.Boards), b => Assert.Null(b.Game));
+
+        _db.LeagueClubGames.Single().ArchivedAt = Now;
+        await _db.SaveChangesAsync();
+        var l = await LineupsAs(HomeMember, Permissions.LeagueView, Permissions.LeagueContribute);
+        Assert.Null(l.Matches[0].Boards[0].Game);
+        Assert.True(l.Matches[0].Boards[0].CanEditMoves);
+    }
+
+    [Fact]
+    public async Task Lineups_ProfileGame_NearRoundDate_SourceProfile()
+    {
+        await SeedAsync();
+        var lg = await _db.LeagueGames.SingleAsync(g => g.MatchNo == 2 && g.Board == 1);
+        (lg.HomeFide, lg.AwayFide) = ("9911", "9922");
+        _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "9922", Name = "Gruber, Gerd",
+            Pgn = "[Event \"Liga\"]\n[Date \"2026.10.12\"]\n[White \"Fink, Franz\"]\n[Black \"Gruber, Gerd\"]\n[Result \"0-1\"]\n\n1. d4 d5 2. c4 e6 0-1\n\n" });
+        await _db.SaveChangesAsync();
+        var l = await LineupsAs(Reader, Permissions.LeagueView);
+        var g = Assert.IsType<LeagueGameMoves.LineupGame>(l.Matches[1].Boards[0].Game);
+        Assert.Equal(("profile", (int?)null, 4, "0-1", false), (g.Source, g.ClubGameId, g.Plies, g.Result, g.CanEdit));
+        Assert.Equal(new[] { "d4", "d5", "c4", "e6" }, g.FirstMoves);
+    }
+
+    [Fact]
+    public async Task ForGames_GuessedClubGame_GoesToOneBoardOnly()
+    {
+        await SeedAsync();
+        // zweite Brettpaarung mit denselben Nachnamen in einer anderen Begegnung — die geratene Partie gehört nur EINEM Brett
+        _db.LeagueGames.Add(new LeagueGame { Tnr = Tnr, Round = Round, MatchNo = 2, Board = 2, HomeTeam = "Talhausen", AwayTeam = "Seewinkel",
+            HomePlayer = "Ackermann, Arno", AwayPlayer = "Brunner, Berta", HomeColor = "w", Result = "1 - 0" });
+        _db.LeagueClubGames.Add(new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "Ackermann, Anna", Black = "Brunner, Bert",
+            Result = "1-0", Plies = 22, Pgn = GamePgn, MovesHash = "h2" });
+        await _db.SaveChangesAsync();
+        var games = await _db.LeagueGames.Where(g => g.Tnr == Tnr && g.Round == Round).ToListAsync();
+        var found = await new LeagueFixtureGames(_db).ForGamesAsync(TestClubs.Home, Tnr, Round, games, default);
+        Assert.Single(found.Values, p => p.Source == "club");
+    }
+
     // ---- Rechte an den Endpunkten (Attribute wertet ein direkter Controller-Aufruf nicht aus) ------------------
 
     [Theory]

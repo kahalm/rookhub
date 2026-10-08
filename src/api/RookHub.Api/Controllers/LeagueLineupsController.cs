@@ -33,7 +33,8 @@ public class LeagueLineupsController(LeagueGameMoves moves, LeagueClubResolver c
 
     /// <summary>Alle Begegnungen der Runde mit ihren Brettpaarungen und den hinterlegten Zügen → <c>{ tnr, round, date, canEdit,
     /// matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle,
-    /// awayElo, homeColor, result, forfeit, moves, canEditMoves }] }] }</c>; 404, wenn es die Runde nicht gibt.</summary>
+    /// awayElo, homeColor, result, forfeit, moves, canEditMoves, game?, canDeleteMoves }] }] }</c> — <c>game</c> = vorhandene Partie des Bretts
+    /// (<see cref="LeagueGameMoves.LineupGame"/>, ohne PGN; dann <c>canEditMoves = false</c>); 404, wenn es die Runde nicht gibt.</summary>
     [HttpGet("{tnr:int}/round/{round:int}/lineups")]
     [HasPermission(Permissions.LeagueView)]
     public Task<IActionResult> Lineups(int tnr, int round, CancellationToken ct) => WithClubAsync(ct, async club =>

@@ -20,7 +20,30 @@ export interface LineupBoard {
   forfeit: number;
   /** Englische SAN mit Leerzeichen. */
   moves: string | null;
+  /** Mit vorhandener Partie (`game`) immer `false` — dann gibt es keine Zug-Eingabe mehr. */
   canEditMoves: boolean;
+  /** 0.724.0: die vorhandene Partie des Bretts (ohne PGN), sonst `null`. */
+  game?: LineupGame | null;
+  /** 0.724.0: den Handeintrag löschen dürfen — auch neben einer Partie (dort ist er „ersetzt"). */
+  canDeleteMoves?: boolean;
+}
+
+/**
+ * Die vorhandene Partie eines Bretts (0.724.0, Wunsch 2026-10-08: „wenn ich die Partie hab, soll er nicht Züge eingeben lassen,
+ * sondern die Partie ausweisen") — dieselbe Regel wie die Paarungen gespielter Runden: Vereinspartie des eigenen Vereins
+ * (feste Zuordnung, sonst geraten) oder Spielerkarte. Das PGN holt erst „Nachspielen".
+ */
+export interface LineupGame {
+  source: 'club' | 'profile';
+  clubGameId: number | null;
+  plies: number;
+  result: string;
+  white: string | null;
+  black: string | null;
+  /** Die ersten 10 Halbzüge, englische SAN. */
+  firstMoves: string[];
+  /** Darf die Vereinspartie bearbeiten/korrigieren (Verwalter oder Hochladender). */
+  canEdit: boolean;
 }
 
 export interface LineupMatch {
@@ -49,6 +72,23 @@ export class LineupsApiService {
     const r = await firstValueFrom(this.http.put<{ moves: string | null }>(
       `/api/league/${k.tnr}/round/${k.round}/match/${k.matchNo}/board/${k.board}/moves`, { moves }));
     return r.moves ?? null;
+  }
+
+  /** Den Handeintrag löschen (auch den „ersetzten" neben einer Partie). */
+  async deleteMoves(k: MovesKey): Promise<void> {
+    await firstValueFrom(this.http.delete(`/api/league/${k.tnr}/round/${k.round}/match/${k.matchNo}/board/${k.board}/moves`));
+  }
+
+  /** PGN einer Vereinspartie samt Stand der Analyse (wie die Vereinsliste, `league.view`, Verein über `?club=`). */
+  clubGame(id: number): Promise<{ pgn: string; analysis?: unknown | null }> {
+    return firstValueFrom(this.http.get<{ pgn: string; analysis?: unknown | null }>(`/api/league/club/games/${id}`));
+  }
+
+  /** PGN einer Spielerkarten-Partie über denselben Weg wie `lh-fixture` (`…/round/{r}/games?team=`), Brett `board`. */
+  async fixturePgn(tnr: number, round: number, team: string, board: number): Promise<string | null> {
+    const list = await firstValueFrom(this.http.get<{ board: number; pgn: string | null }[]>(
+      `/api/league/${tnr}/round/${round}/games?team=${encodeURIComponent(team)}`));
+    return list.find(p => p.board === board)?.pgn ?? null;
   }
 }
 

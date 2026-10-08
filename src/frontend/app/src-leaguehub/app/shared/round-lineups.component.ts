@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { tn } from '../core/league-format';
 import { LineupBoard, LineupMatch, LineupsApiService, MovesKey, RoundLineups, points } from '../core/lineups';
 import { BoardMovesComponent } from './board-moves.component';
+import { BoardGameComponent } from './board-game.component';
 import { ownsTeam } from '../core/club-context.service';
 
 /**
@@ -15,7 +16,7 @@ import { ownsTeam } from '../core/club-context.service';
   selector: 'lh-round-lineups',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BoardMovesComponent],
+  imports: [BoardMovesComponent, BoardGameComponent],
   template: `
     <section class="lu" aria-label="Aufstellungen der Runde">
       @if (error(); as e) {
@@ -46,7 +47,18 @@ import { ownsTeam } from '../core/club-context.service';
                     <span class="lu-away">
                       {{ player(b.awayPlayer, b.awayTitle) }}@if (b.awayElo) { <span class="muted lu-elo">{{ b.awayElo }}</span>}
                     </span>
-                    @if (b.moves || b.canEditMoves) {
+                    <!-- 0.724.0: liegt die Partie vor, wird sie ausgewiesen — keine Zug-Eingabe; ein alter Handeintrag
+                         steht nur noch grau als „ersetzt durch die Partie" da. -->
+                    @if (b.game; as g) {
+                      <span class="lu-moves">
+                        <lh-board-game [game]="g" [tnr]="tnr()" [round]="round()" [team]="m.home" [board]="b.board"
+                                       [title]="boardTitle(b)" [flipped]="ownIsBlack(m, b)" />
+                        @if (b.moves) {
+                          <lh-board-moves [key]="key(m, b)" [title]="boardTitle(b)" [initial]="b.moves" [replaced]="true"
+                                          [canDelete]="!!b.canDeleteMoves" />
+                        }
+                      </span>
+                    } @else if (b.moves || b.canEditMoves) {
                       <span class="lu-moves">
                         <lh-board-moves [key]="key(m, b)" [title]="boardTitle(b)" [initial]="b.moves" [canEdit]="b.canEditMoves"
                                         [flipped]="ownIsBlack(m, b)" />
@@ -79,7 +91,7 @@ import { ownsTeam } from '../core/club-context.service';
     .lu-home { grid-area: home; overflow-wrap: anywhere; }
     .lu-res { grid-area: res; font-weight: 700; white-space: nowrap; text-align: center; }
     .lu-away { grid-area: away; overflow-wrap: anywhere; text-align: right; }
-    .lu-moves { grid-area: moves; }
+    .lu-moves { grid-area: moves; display: grid; gap: 2px; min-width: 0; }
     .lu-elo { font-size: 13px; margin-left: 3px; }
     .lu-home .sq { display: inline-block; width: 11px; height: 11px; margin: 0 4px 0 0; vertical-align: baseline; }
     @media (max-width: 640px) {
