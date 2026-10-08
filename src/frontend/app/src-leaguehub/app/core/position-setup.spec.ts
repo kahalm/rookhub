@@ -1,4 +1,4 @@
-import { boardFromPlacement, castlingOf, composeFen, formatGames, formatShare, parseFenInput, placementOf, positionProblem, START_PLACEMENT } from './position-setup';
+import { blackOf, boardFromPlacement, castlingOf, movePiece, placePiece, removePiece, composeFen, formatGames, formatShare, materialProblem, parseFenInput, placementOf, positionProblem, START_PLACEMENT } from './position-setup';
 
 describe('position-setup', () => {
   it('Platzierung hin und zurück', () => {
@@ -35,6 +35,44 @@ describe('position-setup', () => {
     expect(p('4k3/8/8/8/8/8/8/4R1K1', 'w')).toContain('Schwarz steht im Schach');
     expect(p('4k3/8/8/8/8/8/8/4R1K1', 'b')).toBeNull();
     expect(p('4k3/4r3/8/8/8/8/8/4K3', 'b')).toContain('Weiß steht im Schach');
+  });
+
+  it('Figurenzahl: drei Springer (gesetzt statt gezogen), neun Bauern; Umwandlung erlaubt Überzählige je fehlendem Bauern', () => {
+    const p = (fen: string) => positionProblem(boardFromPlacement(fen)!, 'w');
+    // Prod-Befund 08.10.: Sf3 gesetzt, Sg1 nicht entfernt
+    expect(p('rnbqkbnr/pp3ppp/4p3/2pp4/4P3/2P2N2/PP1P1PPP/RNBQKBNR'))
+      .toBe('Weiß hat 3 Springer — in der Grundstellung sind es 2; Figur wegnehmen oder ziehen statt setzen.');
+    expect(p('rnbqkbnr/pp3ppp/4p3/2pp4/4P3/2P2N2/PP1P1PPP/RNBQKB1R')).toBeNull();
+    expect(p('4k3/8/8/8/P7/8/PPPPPPPP/4K3')).toContain('Weiß hat 9 Bauern');
+    expect(p('4k3/pppppppp/p7/8/8/8/8/4K3')).toContain('Schwarz hat 9 Bauern');
+    // Dame + ein fehlender Bauer = zwei Damen erlaubt, zwei Extra-Damen nicht
+    expect(p('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNQ')).toBeNull();
+    expect(p('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RQBQKBNQ')).toContain('Weiß hat 3 Damen');
+    expect(p('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RQBQKBNQ')).toContain('es fehlt nur 1 Bauer');
+    expect(materialProblem(boardFromPlacement('4k3/8/8/8/8/8/8/QQQQK3')!)).toBeNull();   // keine Bauern: bis zu 8 Extras
+  });
+
+  it('Ziehen/Setzen/Entfernen: reine Funktionen, Ziel wird ersetzt, Ausgangsfeld = Abbruch', () => {
+    const b = boardFromPlacement(START_PLACEMENT)!;
+    const moved = movePiece(b, 52, 36);   // e2 → e4
+    expect(placementOf(moved)).toBe('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR');
+    expect(placementOf(b)).toBe(START_PLACEMENT);   // Eingabe bleibt unverändert
+    const takes = movePiece(b, 59, 11);  // Dd1 auf d7 ersetzt den Bauern
+    expect(takes[11]).toBe('Q');
+    expect(takes[59]).toBe('');
+    expect(placementOf(movePiece(b, 52, 52))).toBe(START_PLACEMENT);   // zurück aufs Ausgangsfeld
+    expect(placementOf(movePiece(b, 36, 20))).toBe(START_PLACEMENT);   // leeres Ausgangsfeld
+    expect(removePiece(b, 0)[0]).toBe('');
+    const placed = placePiece(b, 27, 'n');
+    expect(placed[27]).toBe('n');
+    // zweiter König derselben Farbe ersetzt den ersten
+    const king = placePiece(b, 36, 'K');
+    expect(king[36]).toBe('K');
+    expect(king[60]).toBe('');
+    expect(king.filter(p => p === 'K').length).toBe(1);
+    expect(blackOf('Q')).toBe('q');
+    expect(blackOf('q')).toBe('q');
+    expect(blackOf('x')).toBe('x');
   });
 
   it('Partien und Anteil deutsch gerundet', () => {

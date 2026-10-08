@@ -116,6 +116,29 @@ describe('MovesEditorComponent', () => {
     expect(explorer.hasLocal).toHaveBeenCalled();
   });
 
+  it('Stellung: Rechtsklick/langer Druck setzt in Schwarz, Ziehen verschiebt/setzt/entfernt, FEN folgt', () => {
+    const c = render();
+    c.setMode('position');
+    c.pick('Q');
+    c.onSquare(27, true);   // Rechtsklick d5 → schwarze Dame
+    expect(c.setup()[27]).toBe('q');
+    c.onSquare(28);         // Linksklick e5 → weiße Dame
+    expect(c.setup()[28]).toBe('Q');
+    c.onPieceMoved({ from: 52, to: 36 });   // e2 → e4
+    expect(c.fenText()).toBe('rnbqkbnr/pppppppp/8/3qQ3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1');
+    c.onPieceRemoved({ from: 63 });         // Th1 weg → kein kurzes Rochaderecht
+    expect(c.fenText()).toContain(' w Qkq - ');
+    c.onPieceDropped({ piece: 'n', to: 40 }); // a3
+    expect(c.setup()[40]).toBe('n');
+    // Am Brett sichtbar: das Aufstell-Brett bekommt altPlace, sobald eine Figur gewählt ist
+    fixture.detectChanges();
+    const sq = (fixture.nativeElement as HTMLElement).querySelector('[data-i="27"]') as HTMLElement;
+    const menu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    sq.dispatchEvent(menu);
+    expect(menu.defaultPrevented).toBeTrue();
+    expect(c.setup()[27]).toBe('');   // dieselbe schwarze Dame noch einmal = Feld leeren
+  });
+
   it('Stellung: ungültige Aufstellungen sperren die Suche mit Hinweis', () => {
     const c = render();
     c.setMode('position');
@@ -131,6 +154,10 @@ describe('MovesEditorComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.me-suggest')?.disabled).toBeTrue();
     c.setSide('b');
     expect(c.setupProblem()).toBeNull();
+    c.onFenInput('rnbqkbnr/pp3ppp/4p3/2pp4/4P3/2P2N2/PP1P1PPP/RNBQKBNR w - - 0 1');   // Sf3 gesetzt, Sg1 nicht weg
+    expect(c.setupProblem()).toContain('Weiß hat 3 Springer');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.me-suggest')?.disabled).toBeTrue();
   });
 
   it('Stellung: Vorschläge zeigen Eröffnung, Zugfolge deutsch und Partien; Klick übernimmt die Züge', async () => {
@@ -156,13 +183,22 @@ describe('MovesEditorComponent', () => {
   });
 
   it('Stellung: keine Treffer und Fehler werden gesagt; ohne lokalen Explorer kein Knopf', async () => {
-    explorer.paths.and.resolveTo({ ...RESULT, opening: null, paths: [] });
+    // Stellung kennt der Explorer gar nicht
+    explorer.paths.and.resolveTo({ ...RESULT, opening: null, games: 0, paths: [] });
     const c = render();
     c.setMode('position');
     await c.suggest();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Keine Zugfolge gefunden');
+    expect(el.querySelector('.me-none')?.textContent).toContain('Der Explorer kennt diese Stellung nicht (0 Partien) — Figuren und Seite am Zug prüfen');
+    expect(el.querySelector('.me-truncated')).toBeNull();
+    // Stellung bekannt, aber kein Weg dorthin, und am Budget abgebrochen
+    explorer.paths.and.resolveTo({ ...RESULT, opening: null, games: 523125, paths: [], truncated: true });
+    await c.suggest();
+    fixture.detectChanges();
+    expect(el.querySelector('.me-none')?.textContent)
+      .toContain('Stellung bekannt (≈ 520.000 Partien), aber keine Zugfolge innerhalb von 20 Halbzügen gefunden');
+    expect(el.querySelector('.me-truncated')?.textContent).toContain('Suche am Budget abgebrochen — vielleicht gibt es mehr');
     explorer.paths.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'noLocalExplorer' } }));
     await c.suggest();
     fixture.detectChanges();

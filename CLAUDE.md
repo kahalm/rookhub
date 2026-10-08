@@ -2115,8 +2115,23 @@ dann in der lokalen Lichess-DB nach, welche Eröffnungen am häufigsten zu der S
   König derselben Farbe ersetzt den ersten), „Grundstellung", „Brett leeren", Seite am Zug. Startet mit der Stellung nach den eingegebenen
   Zügen. FEN ↔ Brett synchron: das Brett schreibt die FEN neu (Rochaderechte aus König/Turm auf den Ausgangsfeldern, e.p. „-", Zähler
   „0 1"), eine getippte FEN stellt das Brett, solange sie lesbar ist (sonst Hinweis, Brett bleibt). Gültigkeit (`positionProblem`): je
-  genau ein König, keine Bauern auf der 1./8. Reihe, die Seite, die NICHT am Zug ist, nicht im Schach (chess.js `skipValidation` +
-  `isAttacked`). Reine Regeln in `core/position-setup.ts`.
+  genau ein König, keine Bauern auf der 1./8. Reihe, Material (`materialProblem`, 0.723.1: ≤ 8 Bauern, mehr D/T/L/S als in der
+  Grundstellung nur so viele, wie Bauern fehlen — Prod-Befund: Sf3 GESETZT statt gezogen ergab drei Springer und nur „keine Zugfolge"),
+  die Seite, die NICHT am Zug ist, nicht im Schach (chess.js `skipValidation` + `isAttacked`). Reine Regeln in `core/position-setup.ts`
+  (auch `placePiece`/`movePiece`/`removePiece`/`blackOf`).
+* **Ziehen + Rechtsklick** (0.723.1): Figuren lassen sich auf dem Aufstell-Brett mit Maus UND Finger ziehen — Pointer Events (kein
+  HTML5-Drag-and-drop, das gibt es auf Touch nicht), Zuhörer am `window` je Geste, `setPointerCapture` auf dem Brett. Erst ab 6 px
+  Bewegung (`DRAG_THRESHOLD_PX`) wird aus dem Tipp ein Ziehen, darunter bleibt es der Klick; nach einem Ziehen wird der eine Klick,
+  den der Browser hinterherschickt, verschluckt. Geisterfigur (`position: fixed`) folgt dem Zeiger, Ausgangsfeld abgedunkelt, Ziel
+  umrandet; Loslassen auf ein anderes Feld = `pieceMoved` (ersetzt), außerhalb des Bretts = `pieceRemoved`, aufs Ausgangsfeld oder
+  Escape (am `window` abgefangen, damit der Dialog offen bleibt) = Abbruch. Aus der Palette (`paletteDown`, an den Palette-Knöpfen)
+  aufs Brett = `pieceDropped`. Felder MIT Figur und die Palette haben `touch-action: none` (Wisch zieht statt zu scrollen), leere
+  Felder `manipulation` (dort lässt sich die Seite weiter scrollen). Mit gewählter Figur: Rechtsklick (`contextmenu`, auf dem Brett
+  immer `preventDefault`) bzw. langer Druck auf Touch (400 ms ohne Bewegung, `LONG_PRESS_MS`; Bewegung vorher = Ziehen) setzt
+  denselben Typ in Schwarz (`squareAltClick` → `onSquare(i, true)`).
+* **Meldungen nach der Suche** (0.723.1): `games === 0` → „Der Explorer kennt diese Stellung nicht (0 Partien) — Figuren und Seite am
+  Zug prüfen"; `games > 0` ohne Wege → „Stellung bekannt (≈ n Partien), aber keine Zugfolge innerhalb von 20 Halbzügen gefunden";
+  `truncated` → „Suche am Budget abgebrochen — vielleicht gibt es mehr".
 * **„Zugfolgen vorschlagen"** → `GET /api/explorer/paths` (Knopf nur, wenn `/api/repertoires/explorer/sources` `local` meldet; ein 400
   `noLocalExplorer` blendet ihn ebenfalls aus). Liste: Eröffnungsname, je Vorschlag die Zugfolge deutsch („1.e4 c5 2.Sf3 …",
   `formatMoves`), „≈ 2,8 Mio. Partien" (`formatGames`) und Anteil an den Partien der Stellung; Antippen übernimmt die Zugfolge in den Modus
@@ -2139,7 +2154,8 @@ dann in der lokalen Lichess-DB nach, welche Eröffnungen am häufigsten zu der S
   20-s-Budget mit derselben Rangfolge. QGD nach 3…Sf6 120 Abfragen, Berlin nach 3…Sf6 213 (nur zwei Wege über 1 % je Zug).
 * Tests: `ExplorerPathFinderTests` (gefälschter Baum: Sizilianisch über 1.e4 c5 2.Sf3 und 1.Sf3 c5 2.e4, Rangfolge, Zugumstellung,
   Parität, Abstandsschranke, Budget, Speicher, ungültige FEN, Controller 400, Rate-Limit), `ExplorerPathFinderLiveTests` gegen den echten
-  Explorer nur mit `ROOKHUB_TEST_EXPLORER_URL` (optional `…_FEN`, `…_MAXQ`); Frontend `moves-editor`- und `position-setup`-Specs.
+  Explorer nur mit `ROOKHUB_TEST_EXPLORER_URL` (optional `…_FEN`, `…_MAXQ`); Frontend `moves-editor`-, `position-setup`- und
+  `setup-board`-Specs (Pointer-Folgen, Tipp vs. Ziehen, Palette, gedreht, Rechtsklick, langer Druck).
 
 ### LeagueHub — Vereins-Datenbank (0.573.0, Übersicht/Teilen-Link/Megabase 0.574.0)
 

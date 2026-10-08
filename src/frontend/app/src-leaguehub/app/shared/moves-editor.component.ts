@@ -4,7 +4,7 @@ import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-
 import { LineupsApiService, MAX_PLIES, MovesKey, fenAfter, formatMoves, lastMoveOf, movesErrorText, parseMoves } from '../core/lineups';
 import {
   ExplorerPath, ExplorerPathsResult, ExplorerPathsService, MAX_SEARCH_PLIES, PIECES, START_PLACEMENT, Side, boardFromPlacement,
-  composeFen, emptyBoard, formatGames, formatShare, parseFenInput, pathsErrorText, positionProblem,
+  blackOf, composeFen, emptyBoard, movePiece, placePiece, removePiece, formatGames, formatShare, parseFenInput, pathsErrorText, positionProblem,
 } from '../core/position-setup';
 import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.component';
 
@@ -60,11 +60,14 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
       } @else {
         <div class="me-body">
           <div class="me-board">
-            <lh-setup-board [board]="setup()" [flipped]="flipped()" (squareClick)="onSquare($event)" />
+            <lh-setup-board #sb [board]="setup()" [flipped]="flipped()" [altPlace]="!!brush()" (squareClick)="onSquare($event)"
+                           (squareAltClick)="onSquare($event, true)" (pieceMoved)="onPieceMoved($event)"
+                           (pieceDropped)="onPieceDropped($event)" (pieceRemoved)="onPieceRemoved($event)" />
             <div class="me-palette" role="toolbar" aria-label="Figur zum Setzen wählen">
               @for (p of pieces; track p) {
                 <button type="button" class="me-pc" [class.on]="brush() === p" [attr.aria-pressed]="brush() === p"
-                        [attr.aria-label]="pieceName(p)" [title]="pieceName(p)" (click)="pick(p)">
+                        [attr.aria-label]="pieceName(p)" [title]="pieceName(p)" (click)="pick(p)"
+                        (pointerdown)="sb.paletteDown(p, $event)">
                   <img [src]="pieceSrc(p)" alt="" draggable="false" />
                 </button>
               }
@@ -72,7 +75,9 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
                       aria-label="Löschen: Feld leeren" title="Löschen: Feld leeren" (click)="pick('x')">✕</button>
             </div>
             <p class="me-hint muted">{{ brush() ? (brush() === 'x' ? 'Feld antippen = leeren.' : 'Feld antippen = ' + pieceName(brush()!) + ' setzen.')
-              : 'Erst eine Figur (oder ✕) wählen, dann ein Feld antippen.' }}</p>
+              : 'Erst eine Figur (oder ✕) wählen, dann ein Feld antippen.' }}
+              @if (brush() && brush() !== 'x') { Rechtsklick/langer Druck: in Schwarz setzen. }
+              Figuren lassen sich auch ziehen (auch aus der Palette); außerhalb des Bretts loslassen = entfernen.</p>
           </div>
           <div class="me-side">
             <label class="me-label" for="me-fen">FEN (z. B. aus Lichess oder chess.com einfügen)</label>
@@ -108,8 +113,10 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
                 @if (r.opening) { <p class="me-opening"><b>{{ r.opening.eco }}</b> {{ r.opening.name }}</p> }
                 @if (r.failed) {
                   <p class="err">Der lokale Eröffnungs-Explorer hat nicht geantwortet — bitte später noch einmal versuchen.</p>
+                } @else if (!r.paths.length && r.games === 0) {
+                  <p class="muted me-none">Der Explorer kennt diese Stellung nicht (0 Partien) — Figuren und Seite am Zug prüfen.</p>
                 } @else if (!r.paths.length) {
-                  <p class="muted">Keine Zugfolge gefunden (Stellung außerhalb der gängigen Eröffnungen oder zu tief).</p>
+                  <p class="muted me-none">Stellung bekannt ({{ games(r.games) }}), aber keine Zugfolge innerhalb von {{ searchPlies }} Halbzügen gefunden.</p>
                 } @else {
                   <p class="me-hint muted">Antippen übernimmt die Zugfolge.</p>
                   <ol class="me-paths">
@@ -123,7 +130,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
                     }
                   </ol>
                 }
-                @if (r.truncated) { <p class="me-hint muted">Die Suche wurde an ihrer Zeit- bzw. Abfragegrenze beendet — es kann weitere Zugfolgen geben.</p> }
+                @if (r.truncated && !r.failed) { <p class="me-hint muted me-truncated">Suche am Budget abgebrochen — vielleicht gibt es mehr.</p> }
               </div>
             }
             <div class="me-actions">
@@ -154,7 +161,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
     .me-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 8px 0; }
     .me-fen { font: 14px/1.3 ui-monospace, monospace; }
     .me-palette { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
-    .me-pc { aspect-ratio: 1; padding: 2px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--paper, #fff);
+    .me-pc { touch-action: none; aspect-ratio: 1; padding: 2px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--paper, #fff);
       cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--ink); min-height: 36px; }
     .me-pc img { width: 100%; height: 100%; }
     .me-pc.on { border-color: var(--red); box-shadow: 0 0 0 2px var(--red) inset; }
@@ -279,15 +286,34 @@ export class MovesEditorComponent implements OnInit {
     this.brush.set(this.brush() === p ? null : p);
   }
 
-  onSquare(index: number): void {
+  /**
+   * Feld angeklickt: die gewählte Figur setzen (dieselbe Figur noch einmal = Feld leeren, ✕ = leeren). `black` (Rechtsklick
+   * bzw. langer Druck) setzt denselben Figurentyp in Schwarz.
+   */
+  onSquare(index: number, black = false): void {
     const b = this.brush();
     if (!b) return;
-    const next = [...this.setup()];
-    const piece = b === 'x' ? '' : b;
-    // Ein zweiter König derselben Farbe ersetzt den ersten (es gibt nur einen).
-    if (piece === 'K' || piece === 'k') { const old = next.indexOf(piece); if (old >= 0) next[old] = ''; }
-    next[index] = next[index] === piece ? '' : piece;
-    this.setup.set(next);
+    const piece = b === 'x' ? '' : black ? blackOf(b) : b;
+    const board = this.setup();
+    this.setup.set(!piece || board[index] === piece ? removePiece(board, index) : placePiece(board, index, piece));
+    this.syncFen();
+  }
+
+  /** Am Aufstell-Brett gezogen. */
+  onPieceMoved(e: { from: number; to: number }): void {
+    this.setup.set(movePiece(this.setup(), e.from, e.to));
+    this.syncFen();
+  }
+
+  /** Aus der Palette aufs Brett gezogen. */
+  onPieceDropped(e: { piece: string; to: number }): void {
+    this.setup.set(placePiece(this.setup(), e.to, e.piece));
+    this.syncFen();
+  }
+
+  /** Vom Brett weggezogen. */
+  onPieceRemoved(e: { from: number }): void {
+    this.setup.set(removePiece(this.setup(), e.from));
     this.syncFen();
   }
 

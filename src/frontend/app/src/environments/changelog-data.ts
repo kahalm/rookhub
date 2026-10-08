@@ -9,6 +9,20 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.723.1',
+    date: '2026-10-08',
+    changes: [
+      { en: "LeagueHub, entering a position: pieces can now simply be dragged on the setup board — with the mouse or a finger. A ghost piece follows the pointer, the origin square is dimmed and the target highlighted; dropping on a square moves the piece there (replacing what stood there), dropping off the board removes it, dropping back on the origin square or Escape cancels. Pieces can also be dragged from the palette onto the board. A short tap without movement stays the familiar click; the page does not scroll while dragging a piece.",
+        de: "LeagueHub, Stellung eingeben: Figuren lassen sich auf dem Aufstell-Brett jetzt einfach ziehen — mit der Maus oder dem Finger. Eine Geisterfigur folgt dem Zeiger, das Ausgangsfeld wird abgedunkelt und das Zielfeld hervorgehoben; Loslassen auf einem Feld stellt die Figur dorthin (ersetzt, was dort stand), Loslassen neben dem Brett nimmt sie weg, zurück aufs Ausgangsfeld oder Escape bricht ab. Auch aus der Palette lassen sich Figuren aufs Brett ziehen. Ein kurzer Tipp ohne Bewegung bleibt der gewohnte Klick; beim Ziehen einer Figur scrollt die Seite nicht." },
+      { en: "With a piece selected in the palette, a left click sets it as before and a right click sets the same piece in black (on phones: long press, about 0.4 s without moving). The browser's context menu stays off on the board.",
+        de: "Ist in der Palette eine Figur gewählt, setzt ein Linksklick sie wie bisher und ein Rechtsklick denselben Figurentyp in Schwarz (am Handy: langer Druck, etwa 0,4 s ohne Bewegung). Das Kontextmenü des Browsers bleibt auf dem Brett aus." },
+      { en: "Impossible material is now flagged and blocks the search: more than 8 pawns, or more queens/rooks/bishops/knights than in the starting position beyond what missing pawns could have promoted to (e.g. “White has 3 knights — the starting position has 2; remove a piece or drag instead of placing”). Found on production: a knight placed on f3 without removing the one on g1 only produced “no move order found”.",
+        de: "Unmögliches Material wird jetzt angezeigt und sperrt die Suche: mehr als 8 Bauern oder mehr Damen/Türme/Läufer/Springer als in der Grundstellung, als fehlende Bauern umgewandelt haben könnten (z. B. „Weiß hat 3 Springer — in der Grundstellung sind es 2; Figur wegnehmen oder ziehen statt setzen“). Befund auf Prod: ein auf f3 gesetzter Springer ohne den auf g1 wegzunehmen ergab nur „Keine Zugfolge gefunden“." },
+      { en: "Clearer messages after “Suggest move orders”: “The explorer does not know this position (0 games) — check the pieces and side to move”, or “Position known (≈ n games), but no move order within 20 plies found”, plus “Search stopped at its budget — there may be more” when it was cut off.",
+        de: "Klarere Meldungen nach „Zugfolgen vorschlagen“: „Der Explorer kennt diese Stellung nicht (0 Partien) — Figuren und Seite am Zug prüfen“ bzw. „Stellung bekannt (≈ n Partien), aber keine Zugfolge innerhalb von 20 Halbzügen gefunden“, dazu „Suche am Budget abgebrochen — vielleicht gibt es mehr“, wenn sie abgebrochen wurde." },
+    ],
+  },
+  {
     version: '0.723.0',
     date: '2026-10-08',
     changes: [

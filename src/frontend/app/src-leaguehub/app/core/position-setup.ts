@@ -37,6 +37,42 @@ export function emptyBoard(): string[] {
   return Array(64).fill('');
 }
 
+/**
+ * Figur auf ein Feld setzen (ersetzt, was dort steht). Ein zweiter König derselben Farbe ersetzt den ersten — es gibt nur
+ * einen. Gibt ein neues Feld zurück, das alte bleibt unverändert.
+ */
+export function placePiece(board: SetupBoard, to: number, piece: string): string[] {
+  const next = [...board];
+  if (piece === 'K' || piece === 'k') { const old = next.indexOf(piece); if (old >= 0) next[old] = ''; }
+  next[to] = piece;
+  return next;
+}
+
+/** Feld leeren. */
+export function removePiece(board: SetupBoard, from: number): string[] {
+  const next = [...board];
+  next[from] = '';
+  return next;
+}
+
+/**
+ * Figur von einem Feld auf ein anderes ziehen (Aufstell-Brett, Drag-and-drop): die Zielfigur wird ersetzt. Leeres
+ * Ausgangsfeld oder Ziel = Ausgangsfeld → unverändert (Abbruch).
+ */
+export function movePiece(board: SetupBoard, from: number, to: number): string[] {
+  const piece = board[from];
+  if (!piece || from === to) return [...board];
+  const next = [...board];
+  next[from] = '';
+  next[to] = piece;
+  return next;
+}
+
+/** Figur in Schwarz („Q" → „q"); „x" (löschen) bleibt. */
+export function blackOf(piece: string): string {
+  return piece === 'x' ? piece : piece.toLowerCase();
+}
+
 /** 64 Felder → Platzierungsteil der FEN. */
 export function placementOf(board: SetupBoard): string {
   const rows: string[] = [];
@@ -83,6 +119,36 @@ function squareOf(index: number): Square {
   return `${'abcdefgh'[index % 8]}${8 - Math.floor(index / 8)}` as Square;
 }
 
+const START_COUNT: Record<string, number> = { Q: 1, R: 2, B: 2, N: 2 };
+const PLURAL: Record<string, [string, string]> = { Q: ['Dame', 'Damen'], R: ['Turm', 'Türme'], B: ['Läufer', 'Läufer'], N: ['Springer', 'Springer'] };
+
+/**
+ * Figurenzahl je Seite (Befund Prod 08.10.2026: Springer auf f3 GESETZT statt gezogen → drei weiße Springer, und die Suche
+ * fand nur „keine Zugfolge"): höchstens 8 Bauern; mehr Damen/Türme/Läufer/Springer als in der Grundstellung nur so viele,
+ * wie Bauern fehlen (Umwandlung).
+ */
+export function materialProblem(board: SetupBoard): string | null {
+  for (const white of [true, false]) {
+    const who = white ? 'Weiß' : 'Schwarz';
+    const count = (t: string) => board.filter(p => p === (white ? t : t.toLowerCase())).length;
+    const pawns = count('P');
+    if (pawns > 8) return `${who} hat ${pawns} Bauern — höchstens 8 gehen.`;
+    let extra = 0;
+    let first: string | null = null;
+    for (const t of ['Q', 'R', 'B', 'N']) {
+      const over = count(t) - START_COUNT[t];
+      if (over > 0) { extra += over; first ??= t; }
+    }
+    if (first && extra > 8 - pawns) {
+      const n = count(first), start = START_COUNT[first];
+      const [one, many] = PLURAL[first];
+      return `${who} hat ${n} ${n === 1 ? one : many} — in der Grundstellung ${start === 1 ? 'ist es 1' : `sind es ${start}`}`
+        + `${8 - pawns > 0 ? ` (mehr nur durch Umwandlung, und es ${8 - pawns === 1 ? 'fehlt nur 1 Bauer' : `fehlen nur ${8 - pawns} Bauern`})` : ''}; Figur wegnehmen oder ziehen statt setzen.`;
+    }
+  }
+  return null;
+}
+
 /** Warum die Stellung nicht gehen kann, oder `null`. */
 export function positionProblem(board: SetupBoard, side: Side): string | null {
   const whiteKings = board.filter(p => p === 'K').length;
@@ -90,6 +156,8 @@ export function positionProblem(board: SetupBoard, side: Side): string | null {
   if (whiteKings !== 1 || blackKings !== 1) return 'Jede Seite braucht genau einen König.';
   for (let f = 0; f < 8; f++)
     if (/[Pp]/.test(board[f]) || /[Pp]/.test(board[56 + f])) return 'Bauern können nicht auf der 1. oder 8. Reihe stehen.';
+  const material = materialProblem(board);
+  if (material) return material;
   // Die Seite, die NICHT am Zug ist, darf nicht im Schach stehen (sie hätte gerade einen illegalen Zug gemacht).
   const otherKing = board.indexOf(side === 'w' ? 'k' : 'K');
   try {
