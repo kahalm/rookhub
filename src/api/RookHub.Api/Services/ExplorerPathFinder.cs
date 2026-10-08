@@ -26,8 +26,9 @@ namespace RookHub.Api.Services;
 ///
 /// <para><b>Ende:</b> sobald die zehn besten gefundenen Zugfolgen wahrscheinlicher sind als jeder offene Knoten (dann ist die
 /// Rangfolge exakt), wenn nichts mehr offen ist, oder am Budget: höchstens <see cref="MaxQueries"/> Explorer-Abfragen bzw.
-/// <see cref="Budget"/> (dann <c>truncated</c>). Antworten liegen eine Stunde im Arbeitsspeicher — derselbe Schlüssel wie beim
-/// Lochfinder (<see cref="RepertoireExplorerService.LocalMemoryKey"/>).</para>
+/// <see cref="Budget"/> (dann <c>truncated</c>). Antworten liegen 24 h im eigenen Speicher (<see cref="PathCacheTtl"/>, gedeckelt
+/// auf <see cref="CacheSizeLimit"/> Stellungen) und zusätzlich eine Stunde unter dem Schlüssel des Lochfinders
+/// (<see cref="RepertoireExplorerService.LocalMemoryKey"/>).</para>
 ///
 /// <para><b>Rang:</b> geschätzte Partien genau dieser Zugfolge = <c>Partien(Grundstellung) · Π Anteil</c> (Anteil = Partien des Zugs /
 /// Partien der Stellung davor).</para>
@@ -55,17 +56,29 @@ public sealed class ExplorerPathFinder
 
     private readonly Func<string, CancellationToken, Task<ExplorerPositionStats?>>? _fetch;
     private readonly IMemoryCache _memory;
+    private readonly IMemoryCache _pathCache;
     private readonly ILogger<ExplorerPathFinder>? _logger;
 
-    public ExplorerPathFinder(LocalExplorerClient local, IMemoryCache memory, ILogger<ExplorerPathFinder> logger)
-        : this(local.IsConfigured ? (fen, ct) => local.FetchAsync(fen, Query, ct) : null, memory, logger) { }
+    /// <summary>Schlüssel des eigenen Zwischenspeichers (keyed Singleton, <see cref="CacheSizeLimit"/>).</summary>
+    public const string CacheServiceKey = "explorer-paths";
+    /// <summary>Höchstens so viele Stellungen im eigenen Speicher (Size = 1 je Stellung). Eine Stellung sind je nach Zugzahl
+    /// grob 2–10 KB (bis 40 Züge), also höchstens ~200 MB, üblich deutlich weniger; eine Suche braucht 70–300 Stellungen.</summary>
+    public const long CacheSizeLimit = 20_000;
+    /// <summary>Antworten des lokalen Explorers für die Pfadsuche: 24 h (der Lochfinder behält seine 1 h). Die Daten wachsen
+    /// nur monatlich, und die ersten Züge sind in jeder Suche dieselben.</summary>
+    public static readonly TimeSpan PathCacheTtl = TimeSpan.FromHours(24);
+
+    public ExplorerPathFinder(LocalExplorerClient local, IMemoryCache memory,
+        [FromKeyedServices(CacheServiceKey)] IMemoryCache pathCache, ILogger<ExplorerPathFinder> logger)
+        : this(local.IsConfigured ? (fen, ct) => local.FetchAsync(fen, Query, ct) : null, memory, logger, pathCache) { }
 
     /// <summary>Für Tests: ein beliebiger Explorer (<c>null</c> = keiner eingerichtet).</summary>
     internal ExplorerPathFinder(Func<string, CancellationToken, Task<ExplorerPositionStats?>>? fetch, IMemoryCache memory,
-        ILogger<ExplorerPathFinder>? logger = null)
+        ILogger<ExplorerPathFinder>? logger = null, IMemoryCache? pathCache = null)
     {
         _fetch = fetch;
         _memory = memory;
+        _pathCache = pathCache ?? new MemoryCache(new MemoryCacheOptions { SizeLimit = CacheSizeLimit });
         _logger = logger;
     }
 
@@ -128,7 +141,11 @@ public sealed class ExplorerPathFinder
                 // Ende, wenn die zehn besten Funde jede offene Stellung schlagen — gemessen an deren SCHÄTZUNG (Wahrscheinlichkeit ·
                 // ≈0,3 je noch nötigem Zug, = exp(Priority)). Mit der reinen Wahrscheinlichkeit (exakt) liefe fast jede tiefe
                 // Stellung ins Budget, weil frühe, häufige Knoten (1.d4) auf dem Papier noch alles erreichen könnten.
-                if (tenth > 0 && tenth >= Math.Max(MaxEstimate(open), inflight.Count == 0 ? 0 : inflight.Values.Max(n => Math.Exp(n.Priority)))) break;
+                // Die Abfragen, die noch unterwegs sind, zählen dabei NICHT mit (bis 0.723.1 taten sie es): hing eine einzige
+                // Abfrage mit hoher Schätzung an der Platte, füllten die übrigen sieben Plätze sich so lange mit immer
+                // schlechteren Stellungen, bis das Budget erreicht war (Prod 08.10., Alapin: kalt 243 Abfragen in 20 s). Jetzt
+                // wartet die Suche auf sie — ihre Folgestellungen können die Schwelle wieder überschreiten.
+                if (tenth > 0 && tenth >= MaxEstimate(open)) break;
                 if (queries >= MaxQueries || clock.Elapsed >= Budget) { truncated = true; break; }
                 var best = 0;
                 for (var i = 1; i < open.Count; i++) if (open[i].Priority > open[best].Priority) best = i;
@@ -191,7 +208,7 @@ public sealed class ExplorerPathFinder
                 child.Priority = Math.Log(prob) - NeedWeight * need;
                 open.Add(child);
             }
-            if (changed && found.Count > 0) tenth = Cutoff(found);
+            if (changed && found.Count > 0) tenth = Cutoff(found, MinShareOfBest);
         }
         // Am Budget abgebrochen: was noch unterwegs ist, wird verworfen (die Abfragen enden mit dem Abbruch).
         if (inflight.Count > 0)
@@ -218,6 +235,23 @@ public sealed class ExplorerPathFinder
             });
         }
 
+        // Nichts gefunden oder kaum bekannt? Dann EINE Abfrage derselben Stellung mit der anderen Seite am Zug — meist ist dann
+        // die Seite falsch eingestellt (Prod 08.10.: Italienisch mit „Weiß am Zug" = 135 Partien, mit Schwarz 3 Mio.; die Suche
+        // fand dort sogar Tempoverlust-Wege, ein „nichts gefunden" allein hätte es nie gemeldet).
+        if ((dto.Games < OtherSideProbeBelow || dto.Paths.Count == 0) && !ct.IsCancellationRequested)
+        {
+            try
+            {
+                var other = await FetchAsync(OtherSideFen(target), ct, () => queries++);
+                dto.OtherSideGames = other?.Total ?? 0;
+                dto.Queries = queries;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger?.LogWarning(ex, "Explorer-Pfade: Gegenprobe mit der anderen Seite am Zug gescheitert");
+            }
+        }
+
         if (targetStats?.Opening is { } name) dto.Opening = new ExplorerOpeningDto { Eco = targetStats.Eco, Name = name };
         else if (paths.Count > 0 && paths[0].Edges.LastOrDefault(e => e.Opening is not null) is { Opening: not null } named)
             dto.Opening = new ExplorerOpeningDto { Eco = named.Eco, Name = named.Opening };
@@ -225,6 +259,18 @@ public sealed class ExplorerPathFinder
         _logger?.LogInformation("Explorer-Pfade: {Found} Zugfolgen, {Queries} Abfragen, {Searched} Stellungen, {Ms} ms{Cut}",
             dto.Paths.Count, queries, dto.Searched, clock.ElapsedMilliseconds, truncated ? " (abgeschnitten)" : "");
         return dto;
+    }
+
+    /// <summary>Unter so vielen Partien in der Zielstellung fragt die Suche auch die andere Seite am Zug ab.</summary>
+    public const long OtherSideProbeBelow = 1000;
+
+    /// <summary>Dieselbe Stellung mit der anderen Seite am Zug (en passant fällt weg).</summary>
+    internal static string OtherSideFen(Pos target)
+    {
+        var f = target.ToFen().Split(' ');
+        f[1] = f[1] == "w" ? "b" : "w";
+        if (f.Length > 3) f[3] = "-";
+        return string.Join(' ', f);
     }
 
     /// <summary>Gewicht je noch nötigem Zug in der Reihenfolge der offenen Knoten (ln ≈ 0,3 je Zug).</summary>
@@ -237,17 +283,24 @@ public sealed class ExplorerPathFinder
         return max;
     }
 
-    /// <summary>Unter diesem Bruchteil der besten Zugfolge lohnt keine weitere Suche (0,1 %).</summary>
+    /// <summary>Mit zehn Funden: unter diesem Bruchteil der besten Zugfolge lohnt keine weitere Suche (0,1 %).</summary>
     public const double MinRelative = 0.001;
 
-    /// <summary>Ab wo eine offene Stellung nichts mehr beitragen kann: die Wahrscheinlichkeit der <see cref="MaxPaths"/>-besten
-    /// gefundenen Zugfolge, mindestens <see cref="MinRelative"/> der besten (sonst liefe eine Stellung mit wenigen Zugfolgen
-    /// immer ins Budget).</summary>
-    private static double Cutoff(List<Node> found)
+    /// <summary>Mit WENIGER als zehn Funden (0.723.2): eine Zugfolge unter 0,5 % der besten ist für den Nutzer wertlos. Mit
+    /// 0,1 % leerte die Suche dort alle machbaren Umwege (Springer raus und zurück …) — gemessen am lokalen Explorer:
+    /// Alapin 272 → 140 Abfragen (Weg 6 mit 0,04 % entfällt), Berlin 139 → 90, Wege 1–5 unverändert.</summary>
+    public const double DefaultMinShareOfBest = 0.005;
+    /// <summary>Für Messungen einstellbar; Vorgabe <see cref="DefaultMinShareOfBest"/>.</summary>
+    public double MinShareOfBest { get; set; } = DefaultMinShareOfBest;
+
+    /// <summary>Ab wo eine offene Stellung nichts mehr beitragen kann: mit zehn Funden die Wahrscheinlichkeit der zehntbesten,
+    /// mindestens <see cref="MinRelative"/> der besten; mit weniger <paramref name="minShareOfBest"/> der besten (sonst liefe
+    /// eine Stellung mit wenigen Zugfolgen immer ins Budget).</summary>
+    private static double Cutoff(List<Node> found, double minShareOfBest)
     {
         var best = Enumerate(found).Where(p => p.Edges.Count > 0).Select(p => p.Prob).OrderByDescending(p => p).Take(MaxPaths).ToList();
         if (best.Count == 0) return 0;
-        return Math.Max(best.Count < MaxPaths ? 0 : best[^1], best[0] * MinRelative);
+        return best.Count < MaxPaths ? best[0] * minShareOfBest : Math.Max(best[^1], best[0] * MinRelative);
     }
 
     private sealed record PathEdge(string San, string Uci, string? Opening, string? Eco);
@@ -278,15 +331,33 @@ public sealed class ExplorerPathFinder
         return result;
     }
 
+    /// <summary>Schlüssel im eigenen Speicher — eigener Präfix, damit die 24 h nicht mit den 1-h-Einträgen des Lochfinders
+    /// (<see cref="RepertoireExplorerService.LocalMemoryKey"/>) verwechselt werden.</summary>
+    internal static string PathCacheKey(string fen) => "explorer:paths:" + Query.CachePrefix + RepertoireReach.Key(fen);
+
     private async Task<ExplorerPositionStats?> FetchAsync(string fen, CancellationToken ct, Action counted)
     {
-        var key = RepertoireExplorerService.LocalMemoryKey(Query, RepertoireReach.Key(fen));
-        if (_memory.TryGetValue<ExplorerPositionStats>(key, out var hit) && hit is not null) return hit;
+        var key = PathCacheKey(fen);
+        if (_pathCache.TryGetValue<ExplorerPositionStats>(key, out var own) && own is not null) return own;
+        // Was der Lochfinder in der letzten Stunde geholt hat, gilt auch hier.
+        var shared = RepertoireExplorerService.LocalMemoryKey(Query, RepertoireReach.Key(fen));
+        if (_memory.TryGetValue<ExplorerPositionStats>(shared, out var hit) && hit is not null)
+        {
+            Remember(key, hit);
+            return hit;
+        }
         counted();
         var stats = await _fetch!(fen, ct);
-        if (stats is not null) _memory.Set(key, stats, RepertoireExplorerService.LocalMemoryTtl);
+        if (stats is not null)
+        {
+            _memory.Set(shared, stats, RepertoireExplorerService.LocalMemoryTtl);
+            Remember(key, stats);
+        }
         return stats;
     }
+
+    private void Remember(string key, ExplorerPositionStats stats) =>
+        _pathCache.Set(key, stats, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = PathCacheTtl });
 
     /// <summary>Die Schranken (2)–(5) der Klassenbeschreibung gegen EINE Zielstellung.</summary>
     internal sealed class Bounds

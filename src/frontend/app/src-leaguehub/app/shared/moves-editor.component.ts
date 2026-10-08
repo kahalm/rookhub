@@ -4,7 +4,8 @@ import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-
 import { LineupsApiService, MAX_PLIES, MovesKey, fenAfter, formatMoves, lastMoveOf, movesErrorText, parseMoves } from '../core/lineups';
 import {
   ExplorerPath, ExplorerPathsResult, ExplorerPathsService, MAX_SEARCH_PLIES, PIECES, START_PLACEMENT, Side, boardFromPlacement,
-  blackOf, composeFen, emptyBoard, movePiece, placePiece, removePiece, formatGames, formatShare, parseFenInput, pathsErrorText, positionProblem,
+  autoSideText, blackOf, composeFen, emptyBoard, expectedSide, movePiece, otherSideHint, placePiece, removePiece, formatGames, formatShare,
+  parseFenInput, pathsErrorText, positionProblem, sideWarning,
 } from '../core/position-setup';
 import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.component';
 
@@ -63,6 +64,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
             <lh-setup-board #sb [board]="setup()" [flipped]="flipped()" [altPlace]="!!brush()" (squareClick)="onSquare($event)"
                            (squareAltClick)="onSquare($event, true)" (pieceMoved)="onPieceMoved($event)"
                            (pieceDropped)="onPieceDropped($event)" (pieceRemoved)="onPieceRemoved($event)" />
+            <!-- Zwei Reihen, je Spalte ein Figurentyp (König unter König …), ✕ rechts daneben über beide Reihen. -->
             <div class="me-palette" role="toolbar" aria-label="Figur zum Setzen wählen">
               @for (p of pieces; track p) {
                 <button type="button" class="me-pc" [class.on]="brush() === p" [attr.aria-pressed]="brush() === p"
@@ -90,6 +92,8 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
               <button type="button" class="me-mode" role="radio" [class.on]="side() === 'b'" [attr.aria-checked]="side() === 'b'"
                       (click)="setSide('b')">Schwarz am Zug</button>
             </div>
+            @if (autoNote(); as an) { <p class="me-hint me-auto-side" role="status">{{ an }}</p> }
+            @if (sideWarn(); as sw) { <p class="me-hint me-side-warn" role="alert">{{ sw }}</p> }
             <div class="me-row">
               <button type="button" class="btn-link" (click)="startPosition()">Grundstellung</button>
               <button type="button" class="btn-link" (click)="clearBoard()">Brett leeren</button>
@@ -111,6 +115,12 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
             @if (result(); as r) {
               <div class="me-result">
                 @if (r.opening) { <p class="me-opening"><b>{{ r.opening.eco }}</b> {{ r.opening.name }}</p> }
+                @if (otherSide(r)) {
+                  <div class="me-other-side" role="alert">
+                    <p>Mit {{ side() === 'w' ? 'Schwarz' : 'Weiß' }} am Zug kennt der Explorer die Stellung ({{ games(r.otherSideGames ?? 0) }}).</p>
+                    <button type="button" class="btn-sec me-switch-side" (click)="switchSideAndSearch()" [disabled]="searching()">Seite wechseln und erneut suchen</button>
+                  </div>
+                }
                 @if (r.failed) {
                   <p class="err">Der lokale Eröffnungs-Explorer hat nicht geantwortet — bitte später noch einmal versuchen.</p>
                 } @else if (!r.paths.length && r.games === 0) {
@@ -160,9 +170,11 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
     .me-mode.on { background: var(--ink); color: var(--paper, #fff); border-color: var(--ink); }
     .me-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 8px 0; }
     .me-fen { font: 14px/1.3 ui-monospace, monospace; }
-    .me-palette { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+    .me-palette { display: grid; grid-template-columns: repeat(6, minmax(40px, 1fr)) minmax(40px, 1fr); grid-template-rows: auto auto;
+      gap: 4px; margin-top: 8px; }
+    .me-erase { grid-column: 7; grid-row: 1 / span 2; aspect-ratio: auto; }
     .me-pc { touch-action: none; aspect-ratio: 1; padding: 2px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--paper, #fff);
-      cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--ink); min-height: 36px; }
+      cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--ink); min-height: 40px; min-width: 40px; }
     .me-pc img { width: 100%; height: 100%; }
     .me-pc.on { border-color: var(--red); box-shadow: 0 0 0 2px var(--red) inset; }
     .me-suggest { margin: 4px 0 8px; }
@@ -172,6 +184,9 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
     @keyframes me-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .me-spin { animation: none; } }
     .me-opening { margin: 4px 0 6px; }
+    .me-side-warn { color: var(--red); }
+    .me-other-side { border: 1.5px solid var(--red); border-radius: 6px; padding: 8px 10px; margin: 4px 0 8px; }
+    .me-other-side p { margin: 0 0 6px; }
     .me-paths { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
     .me-path { width: 100%; text-align: left; display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line);
       border-radius: 6px; background: var(--paper, #fff); color: var(--ink); cursor: pointer; font: 15px/1.35 var(--body); }
@@ -222,6 +237,16 @@ export class MovesEditorComponent implements OnInit {
   /** Gewählte Figur („K" … „p") oder „x" = löschen. */
   readonly brush = signal<string | null>(null);
   readonly setupProblem = computed(() => positionProblem(this.setup(), this.side()));
+  /** Seite am Zug von Hand gewählt (oder aus einer FEN): dann keine Automatik mehr für diese Stellung, nur noch Warnung. */
+  readonly sideManual = signal(false);
+  /** „Seite am Zug automatisch: Schwarz (…)" — nur, wenn die Automatik zuletzt gesetzt hat. */
+  readonly autoNote = signal<string | null>(null);
+  /** Warnung bei von Hand gewählter Seite, die nicht zur Figurenstellung passt — bzw. „unmöglich" (sperrt nichts). */
+  readonly sideWarn = computed(() => {
+    const e = expectedSide(this.setup());
+    if (e.impossible) return sideWarning(this.setup(), this.side());
+    return this.sideManual() ? sideWarning(this.setup(), this.side()) : null;
+  });
   /** `null` = noch nicht gefragt, sonst ob der Server einen lokalen Explorer hat. */
   readonly localExplorer = signal<boolean | null>(null);
   readonly searching = signal(false);
@@ -276,6 +301,7 @@ export class MovesEditorComponent implements OnInit {
       const [placement, side] = this.fen().split(' ');
       this.setup.set(boardFromPlacement(placement) ?? boardFromPlacement(START_PLACEMENT)!);
       this.side.set(side === 'b' ? 'b' : 'w');
+      this.resetSideAuto();
       this.syncFen();
       if (this.localExplorer() === null) void this.explorer.hasLocal().then(v => this.localExplorer.set(v));
     }
@@ -296,41 +322,78 @@ export class MovesEditorComponent implements OnInit {
     const piece = b === 'x' ? '' : black ? blackOf(b) : b;
     const board = this.setup();
     this.setup.set(!piece || board[index] === piece ? removePiece(board, index) : placePiece(board, index, piece));
+    this.autoSide();
     this.syncFen();
   }
 
   /** Am Aufstell-Brett gezogen. */
   onPieceMoved(e: { from: number; to: number }): void {
     this.setup.set(movePiece(this.setup(), e.from, e.to));
+    this.autoSide();
     this.syncFen();
   }
 
   /** Aus der Palette aufs Brett gezogen. */
   onPieceDropped(e: { piece: string; to: number }): void {
     this.setup.set(placePiece(this.setup(), e.to, e.piece));
+    this.autoSide();
     this.syncFen();
   }
 
   /** Vom Brett weggezogen. */
   onPieceRemoved(e: { from: number }): void {
     this.setup.set(removePiece(this.setup(), e.from));
+    this.autoSide();
     this.syncFen();
   }
 
+  /** Von Hand umgeschaltet: hebt die Automatik für diese Stellung auf (stattdessen Warnung, wenn es nicht passt). */
   setSide(side: Side): void {
     this.side.set(side);
+    this.sideManual.set(true);
+    this.autoNote.set(null);
     this.syncFen();
+  }
+
+  /**
+   * Nach dem Setzen/Ziehen: passt die Seite am Zug nicht zur geschätzten Zugzahl (`expectedSide`), wird sie umgestellt —
+   * solange der Nutzer sie nicht selbst gewählt hat. Bei „unmöglich" bleibt sie, die Warnung sagt es.
+   */
+  private autoSide(): void {
+    if (this.sideManual()) return;
+    const e = expectedSide(this.setup());
+    if (!e.side || e.side === this.side()) return;
+    this.side.set(e.side);
+    this.autoNote.set(autoSideText(e));
+  }
+
+  /** Neue Stellung: Automatik wieder an. */
+  private resetSideAuto(): void {
+    this.sideManual.set(false);
+    this.autoNote.set(null);
   }
 
   startPosition(): void {
     this.setup.set(boardFromPlacement(START_PLACEMENT)!);
     this.side.set('w');
+    this.resetSideAuto();
     this.syncFen();
   }
 
   clearBoard(): void {
     this.setup.set(emptyBoard());
+    this.resetSideAuto();
     this.syncFen();
+  }
+
+  otherSide(r: ExplorerPathsResult): boolean {
+    return otherSideHint(r);
+  }
+
+  /** „Seite wechseln und erneut suchen" (Server meldet Partien mit der anderen Seite am Zug). */
+  switchSideAndSearch(): void {
+    this.setSide(this.side() === 'w' ? 'b' : 'w');
+    void this.suggest();
   }
 
   /** FEN getippt/eingefügt: lesbar → Brett und Seite folgen, der Text bleibt, wie er getippt ist. */
@@ -341,6 +404,9 @@ export class MovesEditorComponent implements OnInit {
     if (!parsed) return;
     this.setup.set(parsed.board);
     this.side.set(parsed.side);
+    // Eine FEN nennt die Seite selbst — sie gilt wie von Hand gewählt.
+    this.sideManual.set(true);
+    this.autoNote.set(null);
     this.clearResult();
   }
 

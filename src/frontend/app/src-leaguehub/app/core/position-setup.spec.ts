@@ -1,4 +1,4 @@
-import { blackOf, boardFromPlacement, castlingOf, movePiece, placePiece, removePiece, composeFen, formatGames, formatShare, materialProblem, parseFenInput, placementOf, positionProblem, START_PLACEMENT } from './position-setup';
+import { autoSideText, expectedSide, movesMade, otherSideHint, sideWarning, blackOf, boardFromPlacement, castlingOf, movePiece, placePiece, removePiece, composeFen, formatGames, formatShare, materialProblem, parseFenInput, placementOf, positionProblem, START_PLACEMENT } from './position-setup';
 
 describe('position-setup', () => {
   it('Platzierung hin und zurück', () => {
@@ -84,5 +84,54 @@ describe('position-setup', () => {
     expect(formatShare(0.894)).toBe('89,4 %');
     expect(formatShare(0.0004)).toBe('< 0,1 %');
     expect(formatShare(0)).toBe('0,0 %');
+  });
+
+  describe('Zugzahl je Seite (Seite am Zug)', () => {
+    const b = (placement: string) => boardFromPlacement(placement)!;
+
+    it('Grundstellung 0/0 → Weiß', () => {
+      expect(movesMade(b(START_PLACEMENT))).toEqual({ white: 0, black: 0 });
+      expect(expectedSide(b(START_PLACEMENT)).side).toBe('w');
+    });
+
+    it('Italienisch (e4 d3 Sf3 Lc4 gegen e5 Sc6 Sf6) 4/3 → Schwarz', () => {
+      const it4 = b('r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R');
+      expect(movesMade(it4)).toEqual({ white: 4, black: 3 });
+      const e = expectedSide(it4);
+      expect(e.side).toBe('b');
+      expect(autoSideText(e)).toBe('Seite am Zug automatisch: Schwarz (Weiß hat 4 Züge gemacht, Schwarz 3)');
+      expect(sideWarning(it4, 'w')).toBe('Weiß am Zug passt nicht zur Figurenstellung — Schwarz hat weniger Züge gemacht.');
+      expect(sideWarning(it4, 'b')).toBeNull();
+    });
+
+    it('Alapin (e4 c3 Sf3 gegen c5 e6 d5) 3/3 → Weiß', () => {
+      const alapin = b('rnbqkbnr/pp3ppp/4p3/2pp4/4P3/2P2N2/PP1P1PPP/RNBQKB1R');
+      expect(movesMade(alapin)).toEqual({ white: 3, black: 3 });
+      expect(expectedSide(alapin).side).toBe('w');
+    });
+
+    it('Rochade zählt als EIN Zug (König + Turm), Bauernschritte ab der Grundreihe', () => {
+      // 1.e4 e5 2.Sf3 Sc6 3.Lc4 Lc5 4.O-O — Weiß 4, Schwarz 3
+      const castled = b('r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1');
+      expect(movesMade(castled)).toEqual({ white: 4, black: 3 });
+      // Bauer e2-e6: Doppelschritt + zwei Einzelschritte = 3
+      expect(movesMade(b('rnbqkbnr/pppppppp/4P3/8/8/8/PPPP1PPP/RNBQKBNR')).white).toBe(3);
+    });
+
+    it('Schwarz mit mehr Zügen als Weiß ist unmöglich — Hinweis, keine Seite', () => {
+      const e = expectedSide(b('rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR'));
+      expect(e.impossible).toBeTrue();
+      expect(e.side).toBeNull();
+      expect(sideWarning(b('rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR'), 'w')).toContain('Schwarz hat mehr Züge gemacht als Weiß');
+    });
+
+    it('Hinweis auf die andere Seite: bei 0 Partien ab einer, sonst ab zehnmal so vielen', () => {
+      const base = { opening: null, paths: [], searched: 0, queries: 0, truncated: false, failed: false };
+      expect(otherSideHint({ ...base, games: 0, otherSideGames: 5 })).toBeTrue();
+      expect(otherSideHint({ ...base, games: 0, otherSideGames: 0 })).toBeFalse();
+      expect(otherSideHint({ ...base, games: 135, otherSideGames: 3_000_000 })).toBeTrue();
+      expect(otherSideHint({ ...base, games: 500, otherSideGames: 900 })).toBeFalse();
+      expect(otherSideHint({ ...base, games: 0 })).toBeFalse();
+    });
   });
 });

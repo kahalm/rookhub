@@ -173,6 +173,9 @@ public class ExplorerPathsResultDto
     public bool Truncated { get; set; }
     /// <summary>Der Explorer hat nicht geantwortet.</summary>
     public bool Failed { get; set; }
+    /// <summary>Partien derselben Stellung mit der ANDEREN Seite am Zug — nur gefragt, wenn die Zielstellung weniger als
+    /// <c>ExplorerPathFinder.OtherSideProbeBelow</c> (1000) Partien hat oder keine Zugfolge gefunden wurde (sonst <c>null</c>). Meist hat dann jemand die Seite am Zug falsch eingestellt.</summary>
+    public long? OtherSideGames { get; set; }
 }
 
 public class ExplorerOpeningDto

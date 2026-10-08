@@ -52,15 +52,56 @@ public class ExplorerPathFinderTests
             return pos.BoardKey;
         }
 
-        public Task<ExplorerPositionStats?> Fetch(string fen, CancellationToken ct)
+        /// <summary>Jede Stellung bekommt zusätzlich Springer-Pendelzüge (Sg1-h3-g1, Sb1-a3-b1, Sg8-h6-g8, Sb8-a6-b8) — wertlose
+        /// Umwege, die nie zum Ziel führen, aber immer weiter Abfragen kosten.</summary>
+        public bool Detours;
+        /// <summary>Stellungen, deren Antwort so lange auf sich warten lässt (eine langsame Abfrage auf der Platte).</summary>
+        public readonly Dictionary<string, TimeSpan> Slow = new(StringComparer.Ordinal);
+
+        public FakeExplorer SlowAt(string fenOrMoves, TimeSpan delay)
+        {
+            Slow[Key(fenOrMoves)] = delay;
+            return this;
+        }
+
+        private static (string Uci, string San, long Games)[] Shuffles(ExplorerPathFinder.Pos pos)
+        {
+            var b = pos.Board;
+            var list = new List<(string, string, long)>();
+            void Try(int from, int to, char piece, string uci, string san)
+            {
+                if (b[from] == piece && b[to] == '.') list.Add((uci, san, 0));
+            }
+            if (pos.WhiteToMove)
+            {
+                Try(6, 23, 'N', "g1h3", "Nh3"); Try(23, 6, 'N', "h3g1", "Ng1");
+                Try(1, 16, 'N', "b1a3", "Na3"); Try(16, 1, 'N', "a3b1", "Nb1");
+            }
+            else
+            {
+                Try(62, 47, 'n', "g8h6", "Nh6"); Try(47, 62, 'n', "h6g8", "Ng8");
+                Try(57, 40, 'n', "b8a6", "Na6"); Try(40, 57, 'n', "a6b8", "Nb8");
+            }
+            return list.ToArray();
+        }
+
+        public async Task<ExplorerPositionStats?> Fetch(string fen, CancellationToken ct)
         {
             Interlocked.Increment(ref Calls);
-            var key = ExplorerPathFinder.Pos.Parse(fen)!.BoardKey;
+            var pos = ExplorerPathFinder.Pos.Parse(fen)!;
+            var key = pos.BoardKey;
+            if (Slow.TryGetValue(key, out var delay)) await Task.Delay(delay, ct);
             var moves = _tree.TryGetValue(key, out var m) ? m : Array.Empty<(string Uci, string San, long Games)>();
+            if (Detours)
+            {
+                // Je Pendelzug 3 % der Partien der Stellung (mindestens 10) — selten, aber über der 1-%-Schwelle.
+                var share = Math.Max(10, moves.Sum(x => x.Games) * 3 / 100);
+                moves = moves.Concat(Shuffles(pos).Select(x => (x.Uci, x.San, share))).ToArray();
+            }
             var list = moves.Select(x => new ExplorerMoveStat(x.Uci, x.San, x.Games, null, null, x.Games, 0, 0)).ToList();
             var total = list.Sum(x => x.Games);
             _openings.TryGetValue(key, out var o);
-            return Task.FromResult<ExplorerPositionStats?>(new ExplorerPositionStats(total, list, total, 0, 0, o.Name, o.Eco));
+            return new ExplorerPositionStats(total, list, total, 0, 0, o.Name, o.Eco);
         }
     }
 
@@ -128,7 +169,7 @@ public class ExplorerPathFinderTests
         var r = await Finder(fake).FindAsync("4k3/8/8/8/8/8/8/4K3 w - - 0 1", 4, CancellationToken.None);
         Assert.Empty(r.Paths);
         Assert.Equal(0, r.Searched);
-        Assert.Equal(1, fake.Calls);   // nur die Zielstellung selbst
+        Assert.Equal(2, fake.Calls);   // nur die Zielstellung selbst — mit beiden Seiten am Zug (0 Partien → Gegenprobe)
     }
 
     [Fact]
@@ -153,6 +194,91 @@ public class ExplorerPathFinderTests
         Assert.Equal(first, fake.Calls);
         Assert.Equal(0, r.Queries);
         Assert.Equal(2, r.Paths.Count);
+    }
+
+    [Fact]
+    public async Task Find_FewPaths_StopsLongBeforeTheBudget_DespiteWorthlessDetours()
+    {
+        // Drei Wege (1.e4 c5 2.Sf3, 1.Sf3 c5 2.e4, 1.e4 c5 2.Sc3 … Sf3 gibt es nicht — also zwei plus der über d4 nicht),
+        // dazu überall Springer-Pendelzüge. Der Abbruch „zehn Funde" greift nie, die Schwelle von 0,5 % der besten muss tragen.
+        var fake = Sicilian();
+        fake.Detours = true;
+        var finder = Finder(fake);
+        var r = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+
+        Assert.False(r.Truncated);
+        Assert.True(r.Queries < 60, $"{r.Queries} Abfragen");
+        Assert.Equal(new[] { "e4", "c5", "Nf3", "d6" }, r.Paths[0].Moves);
+        Assert.Equal(new[] { "Nf3", "c5", "e4", "d6" }, r.Paths[1].Moves);
+    }
+
+    [Fact]
+    public async Task Find_SlowQueryInFlight_DoesNotFillTheOtherSlotsWithDetours()
+    {
+        // Die Abfrage nach 1.Sf3 c5 (hohe Schätzung) hängt 300 ms an der „Platte". Bis 0.723.1 zählte sie beim Abbruch mit,
+        // und die übrigen sieben Plätze holten derweil Pendelzug um Pendelzug, bis das Budget erreicht war.
+        var fake = Sicilian().SlowAt("g1f3 c7c5", TimeSpan.FromMilliseconds(300));
+        fake.Detours = true;
+        var finder = Finder(fake);
+        finder.MinShareOfBest = ExplorerPathFinder.MinRelative;   // nur die Regel „unterwegs zählt nicht" prüfen
+        var r = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+
+        Assert.False(r.Truncated);
+        Assert.True(r.Queries < 70, $"{r.Queries} Abfragen");
+        Assert.Equal(2, r.Paths.Count(p => p.Moves.SequenceEqual(new[] { "e4", "c5", "Nf3", "d6" })
+                                           || p.Moves.SequenceEqual(new[] { "Nf3", "c5", "e4", "d6" })));
+    }
+
+    [Fact]
+    public async Task Find_WrongSide_ReportsGamesWithTheOtherSideToMove()
+    {
+        var fake = Sicilian().Add("e2e4 c7c5 g1f3 d7d6", ("d2d4", "d4", 5000));
+        var r = await Finder(fake).FindAsync(SicilianD6.Replace(" w ", " b "), 20, CancellationToken.None);
+        Assert.Equal(0, r.Games);
+        Assert.Equal(5000, r.OtherSideGames);
+
+        // Gut bekannte Stellung mit Zugfolgen: keine Gegenprobe.
+        var ok = await Finder(fake).FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.Equal(5000, ok.Games);
+        Assert.NotEmpty(ok.Paths);
+        Assert.Null(ok.OtherSideGames);
+    }
+
+    [Fact]
+    public void OtherSideFen_FlipsTheSide_AndDropsEnPassant()
+    {
+        var pos = ExplorerPathFinder.Pos.Parse("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2")!;
+        var flipped = ExplorerPathFinder.OtherSideFen(pos).Split(' ');
+        Assert.Equal("b", flipped[1]);
+        Assert.Equal("-", flipped[3]);
+    }
+
+    private sealed class TestClock : Microsoft.Extensions.Internal.ISystemClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task Find_PathCache_KeepsAnswers24Hours_LochfinderKeyOnlyOne()
+    {
+        var clock = new TestClock();
+        var shared = new MemoryCache(new MemoryCacheOptions { Clock = clock });
+        var paths = new MemoryCache(new MemoryCacheOptions { Clock = clock, SizeLimit = ExplorerPathFinder.CacheSizeLimit });
+        var fake = Sicilian();
+        var finder = new ExplorerPathFinder(fake.Fetch, shared, null, paths);
+        var first = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.True(first.Queries > 0);
+
+        clock.UtcNow += TimeSpan.FromHours(2);   // Lochfinder-Schlüssel (1 h) abgelaufen, eigener Speicher nicht
+        Assert.False(shared.TryGetValue(RepertoireExplorerService.LocalMemoryKey(ExplorerPathFinder.Query,
+            RepertoireReach.Key(ExplorerPathFinder.StartFen)), out _));
+        var warm = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.Equal(0, warm.Queries);
+        Assert.Equal(first.Paths.Count, warm.Paths.Count);
+
+        clock.UtcNow += TimeSpan.FromHours(23);   // 25 h nach dem ersten Lauf
+        var cold = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.Equal(first.Queries, cold.Queries);
     }
 
     [Theory]
@@ -278,7 +404,7 @@ public class ExplorerPathFinderLiveTests(ITestOutputHelper output)
         var url = Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_URL")!.TrimEnd('/') + "/";
         var local = new LocalExplorerClient(new HttpClient { BaseAddress = new Uri(url), Timeout = TimeSpan.FromSeconds(30) },
             NullLogger<LocalExplorerClient>.Instance);
-        var finder = new ExplorerPathFinder(local, new MemoryCache(new MemoryCacheOptions()), NullLogger<ExplorerPathFinder>.Instance);
+        var finder = new ExplorerPathFinder(local, new MemoryCache(new MemoryCacheOptions()), new MemoryCache(new MemoryCacheOptions { SizeLimit = ExplorerPathFinder.CacheSizeLimit }), NullLogger<ExplorerPathFinder>.Instance);
         if (int.TryParse(Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_MAXQ"), out var maxq)) finder.MaxQueries = maxq;
         var fen = Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_FEN")
                   ?? "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6";
@@ -288,5 +414,42 @@ public class ExplorerPathFinderLiveTests(ITestOutputHelper output)
         foreach (var p in r.Paths) output.WriteLine($"  {p.EstGames,10}  {p.Share:P1}  {string.Join(' ', p.Moves)}");
         Assert.NotEmpty(r.Paths);
         Assert.Equal(new[] { "e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6" }, r.Paths[0].Moves);
+    }
+
+    /// <summary>Messung je Stellung (Abfragen, Zeit, Wege) — `ROOKHUB_TEST_EXPLORER_SHARE` setzt <see cref="ExplorerPathFinder.MinShareOfBest"/>
+    /// für Vergleiche. Ein zweiter Lauf mit DEMSELBEN Speicher zeigt den warmen Fall.</summary>
+    [LiveTheory]
+    [InlineData("alapin", "rnbqkbnr/pp3ppp/4p3/2pp4/4P3/2P2N2/PP1P1PPP/RNBQKB1R w KQkq - 0 1")]
+    [InlineData("najdorf", "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6")]
+    [InlineData("berlin", "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4")]
+    [InlineData("qgd", "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4")]
+    [InlineData("italienisch-weiss", "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1")]
+    public async Task Measure(string name, string fen)
+    {
+        var url = Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_URL")!.TrimEnd('/') + "/";
+        var local = new LocalExplorerClient(new HttpClient { BaseAddress = new Uri(url), Timeout = TimeSpan.FromSeconds(30) },
+            NullLogger<LocalExplorerClient>.Instance);
+        var memory = new MemoryCache(new MemoryCacheOptions());
+        var finder = new ExplorerPathFinder(local, memory, new MemoryCache(new MemoryCacheOptions { SizeLimit = ExplorerPathFinder.CacheSizeLimit }), NullLogger<ExplorerPathFinder>.Instance);
+        if (double.TryParse(Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_SHARE"),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var share))
+            finder.MinShareOfBest = share;
+        for (var run = 1; run <= 2; run++)
+        {
+            var clock = Stopwatch.StartNew();
+            var r = await finder.FindAsync(fen, 20, CancellationToken.None);
+            output.WriteLine($"{name} Lauf {run}: {clock.Elapsed.TotalSeconds:0.00} s, {r.Queries} Abfragen, {r.Searched} Stellungen, " +
+                             $"truncated={r.Truncated}, games={r.Games}, otherSide={r.OtherSideGames}, Wege={r.Paths.Count}");
+            if (run == 1) foreach (var p in r.Paths) output.WriteLine($"  {p.EstGames,10}  {p.Share:P2}  {string.Join(' ', p.Moves)}");
+        }
+    }
+
+    public sealed class LiveTheoryAttribute : TheoryAttribute
+    {
+        public LiveTheoryAttribute()
+        {
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_URL")))
+                Skip = "ROOKHUB_TEST_EXPLORER_URL fehlt — Messung nur lokal gegen den echten Explorer.";
+        }
     }
 }

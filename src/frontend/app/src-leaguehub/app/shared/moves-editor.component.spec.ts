@@ -124,10 +124,10 @@ describe('MovesEditorComponent', () => {
     expect(c.setup()[27]).toBe('q');
     c.onSquare(28);         // Linksklick e5 → weiße Dame
     expect(c.setup()[28]).toBe('Q');
-    c.onPieceMoved({ from: 52, to: 36 });   // e2 → e4
-    expect(c.fenText()).toBe('rnbqkbnr/pppppppp/8/3qQ3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1');
+    c.onPieceMoved({ from: 52, to: 36 });   // e2 → e4 — Weiß 2 Züge, Schwarz 1 → Schwarz am Zug (Automatik)
+    expect(c.fenText()).toBe('rnbqkbnr/pppppppp/8/3qQ3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1');
     c.onPieceRemoved({ from: 63 });         // Th1 weg → kein kurzes Rochaderecht
-    expect(c.fenText()).toContain(' w Qkq - ');
+    expect(c.fenText()).toContain(' b Qkq - ');
     c.onPieceDropped({ piece: 'n', to: 40 }); // a3
     expect(c.setup()[40]).toBe('n');
     // Am Brett sichtbar: das Aufstell-Brett bekommt altPlace, sobald eine Figur gewählt ist
@@ -204,5 +204,74 @@ describe('MovesEditorComponent', () => {
     fixture.detectChanges();
     expect(c.searchError()).toContain('keinen lokalen');
     expect(el.querySelector('.me-suggest')).toBeNull();
+  });
+
+  const ITALIAN = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R';
+
+  it('Stellung: Palette in zwei Reihen — K D T L S B über k d t l s b, ✕ eigener Knopf', () => {
+    const c = render();
+    c.setMode('position');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const imgs = [...el.querySelectorAll<HTMLButtonElement>('.me-palette .me-pc:not(.me-erase) img')].map(i => i.getAttribute('src') ?? '');
+    const codes = imgs.map(src => { const f = src.split('/').pop()!.replace('.svg', ''); return f[0] === 'w' ? f[1] : f[1].toLowerCase(); });
+    expect(codes).toEqual(['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p']);
+    const erase = el.querySelector<HTMLButtonElement>('.me-palette .me-erase');
+    expect(erase?.textContent).toContain('✕');
+    expect(getComputedStyle(erase!).gridColumnStart).toBe('7');
+  });
+
+  it('Stellung: Automatik setzt Schwarz am Zug (Weiß 4 Züge, Schwarz 3), mit Hinweis', () => {
+    const c = render();
+    c.setMode('position');
+    // Italienisch aufbauen: Ausgangsstellung, dann Züge als Verschiebungen
+    c.onPieceMoved({ from: 52, to: 36 });   // e2-e4
+    c.onPieceMoved({ from: 12, to: 28 });   // e7-e5
+    c.onPieceMoved({ from: 62, to: 45 });   // Sg1-f3
+    c.onPieceMoved({ from: 1, to: 18 });    // Sb8-c6
+    c.onPieceMoved({ from: 61, to: 34 });   // Lf1-c4
+    c.onPieceMoved({ from: 6, to: 21 });    // Sg8-f6
+    c.onPieceMoved({ from: 51, to: 43 });   // d2-d3
+    expect(c.fenText().split(' ')[0]).toBe(ITALIAN);
+    expect(c.side()).toBe('b');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.me-auto-side')?.textContent)
+      .toContain('Seite am Zug automatisch: Schwarz (Weiß hat 4 Züge gemacht, Schwarz 3)');
+  });
+
+  it('Stellung: Umschalten von Hand hebt die Automatik auf — dann Warnung statt Umstellen', () => {
+    const c = render();
+    c.setMode('position');
+    c.onPieceMoved({ from: 52, to: 36 });   // e2-e4 → Schwarz
+    expect(c.side()).toBe('b');
+    c.setSide('w');
+    c.onPieceMoved({ from: 62, to: 45 });   // Sg1-f3: bleibt Weiß
+    expect(c.side()).toBe('w');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-auto-side')).toBeNull();
+    expect(el.querySelector('.me-side-warn')?.textContent)
+      .toContain('Weiß am Zug passt nicht zur Figurenstellung — Schwarz hat weniger Züge gemacht');
+    c.startPosition();   // neue Stellung: Automatik wieder an
+    c.onPieceMoved({ from: 52, to: 36 });
+    expect(c.side()).toBe('b');
+  });
+
+  it('Stellung: Server kennt die Stellung mit der anderen Seite am Zug → Meldung + „Seite wechseln und erneut suchen"', async () => {
+    explorer.paths.and.resolveTo({ ...RESULT, opening: null, games: 0, paths: [], otherSideGames: 3_041_000 });
+    const c = render();
+    c.setMode('position');
+    c.onFenInput(ITALIAN + ' w KQkq - 0 1');
+    await c.suggest();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-other-side')?.textContent)
+      .toContain('Mit Schwarz am Zug kennt der Explorer die Stellung (≈ 3 Mio. Partien)');
+    explorer.paths.calls.reset();
+    explorer.paths.and.resolveTo(RESULT);
+    el.querySelector<HTMLButtonElement>('.me-switch-side')!.click();
+    await fixture.whenStable();
+    expect(c.side()).toBe('b');
+    expect(explorer.paths).toHaveBeenCalledWith(ITALIAN + ' b KQkq - 0 1');
   });
 });

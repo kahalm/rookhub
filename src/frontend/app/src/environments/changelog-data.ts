@@ -9,6 +9,18 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.724.1',
+    date: '2026-10-08',
+    changes: [
+      { en: "LeagueHub, “Suggest move orders”: much faster search. A single slow explorer query no longer lets the other slots fill up with ever worse detours (the search now waits for it), and with fewer than ten finds it stops at 0.5 % of the best move order. Measured against the local explorer: Alapin 349 → 140 queries, Berlin 139 → 90; the top five move orders stay the same. Explorer answers for the search are now kept for 24 hours.",
+        de: "LeagueHub, „Zugfolgen vorschlagen“: die Suche ist deutlich schneller. Eine einzelne langsame Explorer-Abfrage lässt die übrigen Plätze nicht mehr mit immer schlechteren Umwegen volllaufen (die Suche wartet auf sie), und mit weniger als zehn Funden endet sie bei 0,5 % der besten Zugfolge. Gemessen am lokalen Explorer: Alapin 349 → 140 Abfragen, Berlin 139 → 90; die fünf besten Zugfolgen bleiben gleich. Explorer-Antworten für die Suche bleiben jetzt 24 Stunden im Speicher." },
+      { en: "Side to move is set automatically while you place pieces: the board estimates how many moves each side has made (White 4, Black 3 → Black to move) and says so. Switching by hand turns the automatic off for this position and shows a warning if it does not fit. If the explorer knows the position only with the other side to move, the result says so with a button “Switch side and search again”.",
+        de: "Seite am Zug stellt sich beim Aufbauen von selbst: das Brett schätzt, wie viele Züge jede Seite gemacht hat (Weiß 4, Schwarz 3 → Schwarz am Zug), und sagt es. Von Hand umgeschaltet gilt die Automatik für diese Stellung nicht mehr, stattdessen kommt eine Warnung, wenn es nicht passt. Kennt der Explorer die Stellung nur mit der anderen Seite am Zug, sagt das Ergebnis es, mit dem Knopf „Seite wechseln und erneut suchen“." },
+      { en: "Piece palette below the setup board in two rows with the same order: White K Q R B N P on top, Black below — king under king; the ✕ (clear square) is its own button to the right.",
+        de: "Figuren-Palette unter dem Aufstell-Brett in zwei Reihen mit derselben Reihenfolge: oben Weiß K D T L S B, darunter Schwarz — König unter König; ✕ (Feld leeren) ist ein eigener Knopf rechts daneben." },
+    ],
+  },
+  {
     version: '0.724.0',
     date: '2026-10-08',
     changes: [

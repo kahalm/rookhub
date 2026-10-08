@@ -216,6 +216,12 @@ try
     });
     builder.Services.AddScoped<RepertoireExplorerService>();
     // Zugfolgen zu einer Stellung aus dem LOKALEN Explorer (LeagueHub-Zugeditor, Modus „Stellung").
+    // Eigener Speicher der Zugfolgen-Suche (24 h, gedeckelt — der allgemeine IMemoryCache hat keine Grenze).
+    builder.Services.AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(ExplorerPathFinder.CacheServiceKey,
+        (_, _) => new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+        {
+            SizeLimit = ExplorerPathFinder.CacheSizeLimit,
+        }));
     builder.Services.AddScoped<ExplorerPathFinder>();
     builder.Services.AddScoped<PlayerSearchService>();
     // Turnierverzeichnis: Sweep, Umkreis-Aufloesung und der (nur per Admin ausgeloeste) Import

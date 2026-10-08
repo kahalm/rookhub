@@ -169,6 +169,71 @@ export function positionProblem(board: SetupBoard, side: Side): string | null {
   return null;
 }
 
+/** Grundfelder je Figurentyp (Index wie das Brett: 0 = a8, 63 = h1). Bauern stehen auf ihrer Grundreihe. */
+const HOME: Record<string, readonly number[]> = {
+  K: [60], Q: [59], R: [56, 63], B: [58, 61], N: [57, 62],
+  k: [4], q: [3], r: [0, 7], b: [2, 5], n: [1, 6],
+};
+
+/** Mindestzahl Züge, mit denen ein Bauer auf seinem Feld steht (Doppelschritt von der Grundreihe = ein Zug). */
+function pawnMoves(index: number, white: boolean): number {
+  const rank = 8 - Math.floor(index / 8);
+  const steps = white ? rank - 2 : 7 - rank;
+  if (steps <= 0) return 0;
+  return steps <= 2 ? 1 : steps - 1;
+}
+
+/**
+ * Wie viele Züge jede Seite MINDESTENS gemacht hat (2026-10-08, Prod-Befund: Italienisch mit „Weiß am Zug" aufgebaut —
+ * der Explorer kennt die Stellung so aus 135 Partien, mit Schwarz am Zug aus 3 Mio.). Dieselbe Idee wie `SideNeed` im Server,
+ * vereinfacht: jede Figur, die nicht auf einem Grundfeld ihres Typs steht, ein Zug; je Bauer die Schritte von der Grundreihe
+ * (Doppelschritt = einer); König + Turm rochiert (Kg1+Tf1, Kc1+Td1) zusammen ein Zug. Geschlagene Figuren zählen nicht —
+ * es ist eine Schätzung, keine Beweispartie.
+ */
+export function movesMade(board: SetupBoard): { white: number; black: number } {
+  let white = 0;
+  let black = 0;
+  board.forEach((p, i) => {
+    if (!p) return;
+    const isWhite = p === p.toUpperCase();
+    const n = p === 'P' || p === 'p' ? pawnMoves(i, isWhite) : HOME[p].includes(i) ? 0 : 1;
+    if (isWhite) white += n; else black += n;
+  });
+  if ((board[62] === 'K' && board[61] === 'R') || (board[58] === 'K' && board[59] === 'R')) white--;
+  if ((board[6] === 'k' && board[5] === 'r') || (board[2] === 'k' && board[3] === 'r')) black--;
+  return { white, black };
+}
+
+/** Welche Seite nach der Figurenstellung am Zug sein muss: mehr weiße Züge → Schwarz, gleich viele → Weiß; weniger weiße
+ * Züge als schwarze ist eigentlich unmöglich (`impossible`, Seite dann `null`). */
+export function expectedSide(board: SetupBoard): { side: Side | null; white: number; black: number; impossible: boolean } {
+  const { white, black } = movesMade(board);
+  if (white < black) return { side: null, white, black, impossible: true };
+  return { side: white > black ? 'b' : 'w', white, black, impossible: false };
+}
+
+function moveWord(n: number): string {
+  return n === 1 ? '1 Zug' : `${n} Züge`;
+}
+
+/** „Seite am Zug automatisch: Schwarz (Weiß hat 4 Züge gemacht, Schwarz 3)". */
+export function autoSideText(e: { side: Side | null; white: number; black: number }): string {
+  return `Seite am Zug automatisch: ${e.side === 'b' ? 'Schwarz' : 'Weiß'} (Weiß hat ${moveWord(e.white)} gemacht, Schwarz ${e.black})`;
+}
+
+/** Warnung, wenn die von Hand gewählte Seite nicht zur Figurenstellung passt (sonst `null`). */
+export function sideWarning(board: SetupBoard, side: Side): string | null {
+  const e = expectedSide(board);
+  if (e.impossible) {
+    return `Schwarz hat mehr Züge gemacht als Weiß (Weiß ${e.white}, Schwarz ${e.black}) — so kann die Stellung kaum entstanden sein. `
+      + 'Die Schätzung ist nicht exakt; gesucht wird trotzdem.';
+  }
+  if (e.side === side) return null;
+  return side === 'w'
+    ? 'Weiß am Zug passt nicht zur Figurenstellung — Schwarz hat weniger Züge gemacht.'
+    : 'Schwarz am Zug passt nicht zur Figurenstellung — beide Seiten haben gleich viele Züge gemacht.';
+}
+
 /** Ein Vorschlag des Servers. */
 export interface ExplorerPath {
   /** Englische SAN. */
@@ -187,6 +252,15 @@ export interface ExplorerPathsResult {
   queries: number;
   truncated: boolean;
   failed: boolean;
+  /** Partien derselben Stellung mit der anderen Seite am Zug — nur bei wenigen/keinen Partien gefragt, sonst `null`. */
+  otherSideGames?: number | null;
+}
+
+/** Hinweis „mit der anderen Seite am Zug kennt der Explorer die Stellung"? Bei 0 Partien sobald es dort welche gibt, sonst
+ * erst ab zehnmal so vielen. */
+export function otherSideHint(r: ExplorerPathsResult): boolean {
+  const other = r.otherSideGames ?? 0;
+  return !r.failed && other > 0 && (r.games === 0 || other >= 10 * r.games);
 }
 
 /** Halbzüge, bis zu denen die Suche prüft. */
