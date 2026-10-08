@@ -172,13 +172,28 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
             candidates.Add((game, color + "|" + FirstPlies(moves, LeagueProfileStore.SameGamePlies)));
         }
 
+        // Teilpartien (nur die ersten Züge einer Ligapaarung, 0.725.0) zählen nicht, wenn der Bestand die volle Partie hat:
+        // gleiche Farbe, Datum ±3 Tage am Rundentermin, gleicher Gegner-Nachname.
+        List<CardGame> SameBoard(CardGame partial) => partial.PlayedOn is not { } pd || PrepDay(pd) is not { } day ? []
+            : prep.Where(g => g.Color == partial.Color && g.PlayedOn is { } d && PrepDay(d) is { } gd
+                              && Math.Abs(gd.DayNumber - day.DayNumber) <= LeagueFixtureGames.DayTolerance).ToList();
+
         // Zweiter Schlüssel: nur für Kandidaten mit gleichem Anfang die Gegner-Namen aus dem Bestand holen (wenige).
         var opponents = candidates.Where(c => c.Game.Moves.Count(ch => ch == ' ') + 1 >= 10 && byStart.ContainsKey(c.Start))
-            .SelectMany(c => byStart[c.Start]).Select(g => g.Color == "w" ? g.BlackId : g.WhiteId).OfType<int>().Distinct().ToList();
+            .SelectMany(c => byStart[c.Start])
+            .Concat(candidates.Where(c => LeaguePartialGames.Is(c.Game.League!)).SelectMany(c => SameBoard(c.Game)))
+            .Select(g => g.Color == "w" ? g.BlackId : g.WhiteId).OfType<int>().Distinct().ToList();
         var names = await NamesAsync(opponents, ct);
         var result = new List<CardGame>();
         foreach (var (game, start) in candidates)
         {
+            if (LeaguePartialGames.Is(game.League!))
+            {
+                var vs = PrepPgn.Surname(game.League!.Headers.GetValueOrDefault(game.Color == "w" ? "Black" : "White"));
+                if (vs.Length > 0 && SameBoard(game).Any(g => (g.Color == "w" ? g.BlackId : g.WhiteId) is { } o
+                                                             && names.TryGetValue(o, out var n) && PrepPgn.Surname(n.Name) == vs))
+                    continue;
+            }
             if (byStart.TryGetValue(start, out var same) && game.Moves.Count(ch => ch == ' ') + 1 >= 10)
             {
                 var vs = PrepPgn.Surname(game.League!.Headers.GetValueOrDefault(game.Color == "w" ? "Black" : "White"));
@@ -189,6 +204,13 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
             result.Add(game);
         }
         return result;
+    }
+
+    /// <summary>JJJJMMTT als Tag; ohne Monat/Tag (00) <c>null</c>.</summary>
+    private static DateOnly? PrepDay(int d)
+    {
+        int y = d / 10000, m = d / 100 % 100, day = d % 100;
+        return y >= 1900 && m is >= 1 and <= 12 && day >= 1 && day <= DateTime.DaysInMonth(y, m) ? new DateOnly(y, m, day) : null;
     }
 
     private static string FirstPlies(string moves, int n)
@@ -431,7 +453,9 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
 
     private async Task<List<(JsonObject Entry, LeagueProfileBuilder.Game Game)>> RecentEntriesAsync(Loaded l, string? color, CancellationToken ct)
     {
-        var pick = l.Games.Where(g => color is null || g.Color == color).Take(LeagueProfileBuilder.RecentCount).ToList();
+        // Teilpartien (erste Züge einer Ligapaarung) zählen in Profil und Baum, sind aber keine Partie zum Nachspielen
+        var pick = l.Games.Where(g => (color is null || g.Color == color) && !(g.League is { } lg && LeaguePartialGames.Is(lg)))
+            .Take(LeagueProfileBuilder.RecentCount).ToList();
         var pgn = await AsPgnGamesAsync(pick, ct);
         return pick.Select((g, i) => (LeagueProfileBuilder.RecentEntry(pgn[i], g.Color), pgn[i])).ToList();
     }
@@ -439,7 +463,7 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
     /// <summary>Alle geladenen Partien als PGN (Grenze und Zwilling wie die Karte) — der Download je Spieler.</summary>
     public async Task<string> PgnAsync(Loaded l, CancellationToken ct)
     {
-        var games = await AsPgnGamesAsync(l.Games, ct);
+        var games = await AsPgnGamesAsync(l.Games.Where(g => !(g.League is { } lg && LeaguePartialGames.Is(lg))).ToList(), ct);
         return string.Join("\n", games.Select(g => g.Raw.TrimEnd() + "\n"));
     }
 

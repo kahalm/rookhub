@@ -36,6 +36,7 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         LeagueBroadcastImport.Source => "Lichess-Übertragungen",
         LigamanagerSource.PgnSource => "SBV-Ligamanager",
         LeagueProfileStore.ClubSource => "Vereins-Datenbank",
+        LeaguePartialGames.Source => "Ligarunde (erste Züge)",
         LeagueOnlineSites.Lichess => "Lichess",
         LeagueOnlineSites.ChessCom => "chess.com",
         _ => source,
@@ -78,9 +79,11 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     {
         var board = new Dictionary<string, int>(StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var partials = new PartialCount(await LeaguePartialGames.LoadAsync(db, fides, ct));
         await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Where(p => fides.Contains(p.FideId)).Select(p => p.Pgn)
                            .AsAsyncEnumerable().WithCancellation(ct))
-            CountBoard(pgn, seen, board);
+            CountBoard(pgn, seen, board, partials.Collect);
+        await partials.AddToAsync(db, board, ct);
         var club = await db.LeagueClubGames.AsNoTracking().Where(g => g.ClubId == clubId)
             .CountAsync(g => (g.WhiteFide != null && fides.Contains(g.WhiteFide)) || (g.BlackFide != null && fides.Contains(g.BlackFide)), ct);
         if (club > 0) board[LeagueProfileStore.ClubSource] = club;
@@ -114,8 +117,10 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         if (cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
         var board = new Dictionary<string, int>(StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var partials = new PartialCount(await LeaguePartialGames.LoadAsync(db, null, ct));
         await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Select(p => p.Pgn).AsAsyncEnumerable().WithCancellation(ct))
-            CountBoard(pgn, seen, board);
+            CountBoard(pgn, seen, board, partials.Collect);
+        await partials.AddToAsync(db, board, ct);
         var club = await db.LeagueClubGames.AsNoTracking().CountAsync(g => g.ClubId == clubId, ct);
         if (club > 0) board[LeagueProfileStore.ClubSource] = club;
         var online = (await db.LeagueOnlineGames.AsNoTracking()
@@ -143,13 +148,15 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     /// Die Partien EINES gespeicherten PGN zählen — jede, deren Schlüssel noch nicht in <paramref name="seen"/> steht, unter ihrer
     /// Quelle. Liest nur die Kopfzeilen: eine neue Partie beginnt mit einer Kopfzeile nach Zugtext.
     /// </summary>
-    public static void CountBoard(string pgn, HashSet<string> seen, Dictionary<string, int> counts)
+    public static void CountBoard(string pgn, HashSet<string> seen, Dictionary<string, int> counts,
+        Action<IReadOnlyDictionary<string, string>>? onGame = null)
     {
         var headers = new Dictionary<string, string>(StringComparer.Ordinal);
         var inMoves = false;
         void Flush()
         {
             if (headers.Count == 0) return;
+            onGame?.Invoke(headers);
             var key = string.Join('|', Letters(headers.GetValueOrDefault("White")), Letters(headers.GetValueOrDefault("Black")),
                 headers.GetValueOrDefault("Date") ?? "", headers.GetValueOrDefault("Round") ?? "");
             if (seen.Add(key))
@@ -174,6 +181,36 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
             else inMoves = true;
         }
         Flush();
+    }
+
+    /// <summary>
+    /// Die Teilpartien aus ersten Zügen (<see cref="LeaguePartialGames"/>, 0.725.0) als eigene Zeile „Ligarunde (erste Züge)": je
+    /// Brett einmal, ohne die Bretter mit voller Partie — dieselbe Regel wie die Karte. Beim Durchgehen der Karten-PGNs merkt
+    /// <see cref="Collect"/> nur die Kopfzeilen von Partien derselben beiden Spieler (Nachnamen oder FIDE-IDs) — sonst nichts.
+    /// </summary>
+    private sealed class PartialCount(List<LeaguePartialGames.Partial> partials)
+    {
+        private readonly HashSet<string> _pairs = partials.SelectMany(p => new[]
+        {
+            "l:" + LeagueProfileBuilder.LastName(p.White) + "|" + LeagueProfileBuilder.LastName(p.Black),
+            "f:" + p.WhiteFide + "|" + p.BlackFide,
+        }).ToHashSet(StringComparer.Ordinal);
+        private readonly List<LeaguePartialGames.FullRef> _refs = new();
+
+        public Action<IReadOnlyDictionary<string, string>>? Collect => partials.Count == 0 ? null : h =>
+        {
+            var r = LeaguePartialGames.RefOf(h);
+            if (_pairs.Contains("l:" + r.WhiteLast + "|" + r.BlackLast)
+                || r.WhiteFide is not null && r.BlackFide is not null && _pairs.Contains("f:" + r.WhiteFide + "|" + r.BlackFide))
+                _refs.Add(r);
+        };
+
+        public async Task AddToAsync(AppDbContext db, Dictionary<string, int> board, CancellationToken ct)
+        {
+            if (partials.Count == 0) return;
+            var n = (await LeaguePartialGames.FilterAsync(db, partials, _refs, ct)).Count;
+            if (n > 0) board[LeaguePartialGames.Source] = n;
+        }
     }
 
     private static string Letters(string? s) => s is null ? "" : new string(s.Where(char.IsLetter).Select(char.ToLowerInvariant).ToArray());

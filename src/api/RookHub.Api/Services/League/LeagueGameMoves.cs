@@ -153,6 +153,7 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
             {
                 db.LeagueGameMoves.Remove(entry);
                 await db.SaveChangesAsync(ct);
+                await RefreshCardsAsync(game, ct);
             }
             return new(null, null);
         }
@@ -169,7 +170,25 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
         entry.UpdatedByUserId = userId;
         entry.UpdatedAt = _now();
         await db.SaveChangesAsync(ct);
+        await RefreshCardsAsync(game, ct);
         return new(null, joined);
+    }
+
+    /// <summary>
+    /// Die Züge sind eine Teilpartie beider Spieler (<see cref="LeaguePartialGames"/>, 0.725.0): nach jedem Speichern/Löschen ihre
+    /// Karten neu rechnen und die Partienzahl <c>g</c> in den fertigen Ansichten nachziehen — derselbe Weg wie nach einem
+    /// Vereinspartien-Upload (<c>LeagueClubService.RefreshCardsAsync</c>), synchron wie dort (zwei Karten).
+    /// </summary>
+    private async Task RefreshCardsAsync(LeagueGame game, CancellationToken ct)
+    {
+        var ids = new[] { game.HomeFide, game.AwayFide }.Where(f => !string.IsNullOrEmpty(f)).Select(f => f!)
+            .Distinct(StringComparer.Ordinal).ToList();
+        if (ids.Count == 0) return;
+        var store = new LeagueProfileStore(db);
+        var now = _now();
+        foreach (var f in ids) await store.RebuildAsync(f, ct, now: now);
+        await db.SaveChangesAsync(ct);
+        await store.PatchViewCountsAsync(ids, ct);
     }
 
     [GeneratedRegex(@"\{[^}]*\}|\([^)]*\)|\$\d+")]

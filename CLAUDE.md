@@ -1606,7 +1606,9 @@ Rollenverwaltung an).
   liegen je SPIELER in `LeaguePlayerProfiles.Pgn` (eine Partie zweier Ligaspieler steht zweimal da) — gezählt wird jede
   einmal (Schlüssel: beide Namen nur aus Buchstaben + Datum + Runde, nur Kopfzeilen gelesen), Quelle nach
   `LeagueProfileBuilder.StoredSource` (Kopf `LeagueSource`, sonst FIDE-IDs = Lumbra, sonst chess-results), dazu
-  `LeagueClubGames` als „Vereins-Datenbank"; online je Seite `COUNT(DISTINCT ExternalId)`. Prod 01.10.2026: rund 34.800
+  `LeagueClubGames` als „Vereins-Datenbank"; online je Seite `COUNT(DISTINCT ExternalId)`. Seit 0.725.0 die Zeile „Ligarunde (erste
+  Züge)" (Schlüssel `Ligarunde`): Teilpartien aus `LeagueGameMoves` je Brett einmal, ohne die mit voller Partie (`LeaguePartialGames.FilterAsync`;
+  die Kartenpartien derselben Spielerpaare sammelt `CountBoard` über `onGame` beim ohnehin laufenden Durchgang). Prod 01.10.2026: rund 34.800
   Lumbra, 18.800 ChessBase-Megabase, 4.600 chess-results, 212 Lichess-Übertragungen; 667.881 Lichess, 29.528 chess.com.
   Oberfläche: zwei Zeilen unter „Stand der Daten" auf der Startseite (`core/game-sources.ts`); fehlt die Zählung, fehlt nur
   die Zeile. Seit 0.627.0 auch auf dem Teilen-Link: `GET /api/league/s/{token}/sources` (anonym, nur mit gültigem Token,
@@ -2111,6 +2113,27 @@ Möglichkeit, die ersten paar Züge einzugeben."
   `shared/board-game.component.ts` („Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …", Nachspielen, Analyse per Einmal-Code, mit
   `canEdit` Bearbeiten/Korrigieren), `board-moves` mit `replaced` (grau „ersetzt durch die Partie", nur Löschen). In `lh-fixture`
   erscheint die Zug-Zeile nur an Brettern OHNE Partie. Der Server lehnt Schreiben an einem Brett mit Partie NICHT ab (Rechte unverändert).
+* **Teilpartien** (0.725.0, Frage 2026-10-08: „fließen die [ersten Züge] in die Eröffnungsbäume bei der Vorbereitung ein?" — „ja mach
+  das so"): jeder Eintrag in `LeagueGameMoves` ist eine TEILPARTIE beider Spieler (`Services/League/LeaguePartialGames.cs`), gerechnet
+  bei jedem Lesen (Join der kleinen Zug-Tabelle auf `LeagueGames`, nur gespielte Bretter), nicht gespeichert: Kopf aus der Paarung —
+  Namen, FIDE-IDs, Elo, Farben aus `HomeColor`, Datum = Rundentermin, Event „{Liga} {Saison}, Runde N" (Saison nur, wenn sie nicht im
+  Namen steht), `Round`, `Board`, Ergebnis Sicht Weiß (`WhiteBlackResult` → PGN), `[LeagueSource "Ligarunde"]`. **Fließt ein** über
+  `LeagueProfileStore.BoardAsync` (= `WithClub` + Teilpartien): Karte (`RebuildAsync`: `n`/`g`, Abschnitte, `src.Ligarunde`), Baum
+  (`TreeAsync`, `source=board|both`), gefiltertes Profil (`ProfileAsync`) und `GamesAsync` (→ Prep-Karte `PrepCardService`,
+  `TrainingLinesService.LeagueGamesAsync`, Team-Suche). **Nicht** in `recent` (Karte: `Build` und `Recent` überspringen
+  `LeaguePartialGames.Is`), nicht in `RecentAsync`/PGN-Download (auch Prep: Recent/PGN ohne Teilpartien). **Ausschluss** (`FilterAsync`,
+  ohne Vereinskontext — die Karte ist für alle Vereine dieselbe, die Züge sind global): Teilpartie fällt weg, wenn (a) eine Vereinspartie
+  IRGENDEINES Vereins fest auf das Brett zugeordnet ist (Schlüssel bzw. `LeagueGameId`), oder (b) eine Partie derselben beiden Spieler
+  (FIDE-ID, wo beide Seiten eine haben, sonst Nachname; Farben wie am Brett) ±3 Tage am Rundentermin liegt — geprüft gegen die
+  Vereinspartien BEIDER Spieler (alle Vereine, auch über die echte FIDE-ID/den echten Namen hinter „Schwaz"; nur Jahr → gleiches Jahr)
+  und die fremden Partien der eigenen Karte. Archivierte nie. Gewählt statt `ForGamesAsync`: das braucht einen Verein (Pool + Raten
+  über `AnonName`) und je Karte die Runde aller Teilpartien — die Namens/Datums-Regel ist dieselbe wie dort die Spielerkarten-Stufe.
+  Grenzfall: dieselben zwei Spieler zweimal im selben Jahr mit einer Vereinspartie nur mit Jahr → Teilpartie weg. Prep zusätzlich:
+  hat der Bestand (Mega/Lumbra) die Partie (gleiche Farbe, ±3 Tage, gleicher Gegner-Nachname), fällt die Teilpartie weg.
+  **Nachrechnen**: `SaveAsync` (Speichern und Löschen) ruft `RefreshCardsAsync` — `RebuildAsync` beider FIDE-Spieler +
+  `PatchViewCountsAsync`, synchron wie `LeagueClubService.RefreshCardsAsync` nach einem Upload (zwei Karten; kein Hintergrundlauf).
+  Die Prep-Karte bleibt bis zu 15 min im Speicher. Kosten je Lesen ohne Teilpartie: eine Abfrage; mit: zusätzlich Rundentermine,
+  Ligen und eine Vereinspartien-Abfrage ohne PGN.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
@@ -2120,7 +2143,9 @@ Möglichkeit, die ersten paar Züge einzugeben."
 
 Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids; seit 0.724.0 Partie je Brett: fest zugeordnete
 Vereinspartie, anderer Verein sieht sie nicht, archivierte zählt nicht, Spielerkarte, geratene Partie nur einmal), `LeagueGameMovesSqlTests` (Migration + eindeutiger
-Schlüssel gegen MariaDB); Frontend `round-lineups`/`moves-editor`/`league-page`/`fixture-view`-Specs.
+Schlüssel gegen MariaDB), `LeaguePartialGamesTests` (0.725.0: Teilpartie bei beiden Spielern mit Kopf, Karte/Profil/Baum ohne `recent`,
+Löschen rechnet nach + Ansicht, zugeordnete/gleichnamige Vereinspartie und Kartenpartie ±3 Tage schlagen sie, Quellen-Zeile, Trainingslinien,
+Prep-Karte samt Bestands-Ausschluss); Frontend `round-lineups`/`moves-editor`/`league-page`/`fixture-view`-Specs.
 
 **Stellung eingeben + Zugfolgen vorschlagen** (0.723.0, Wunsch 2026-10-08: „lass mich dort auch direkt Stellungen eingeben. schau
 dann in der lokalen Lichess-DB nach, welche Eröffnungen am häufigsten zu der Stellung kommen, und schlag sie mir vor"):
@@ -2808,7 +2833,8 @@ nicht). Messung 01.10.: 554 B/Partie, voller Bestand ≈ 15,2 Mio. Zeilen ≈ 8,
 - Vorgabe die jüngsten 500 Partien (`Prep:CardLimit`), `all=true` bis 3 000 (`Prep:CardMax`). Kalt kostet jede Partie
   einen Plattenzugriff (2–8 ms); gemessen 02.10. am vollen Lumbra-Bestand mit 128 MB Puffer: Karte 1–4,4 s, 3 000
   Partien 21–24 s. Geladenes bleibt 15 min im IMemoryCache; Online-Partien fragt jede Anfrage neu.
-- Mit FIDE-ID kommen dazu: Liga-, chess-results- und Vereinspartien ohne Dubletten (`LeagueProfileStore.GamesAsync`),
+- Mit FIDE-ID kommen dazu: Liga-, chess-results- und Vereinspartien ohne Dubletten (`LeagueProfileStore.GamesAsync`; seit 0.725.0
+  auch Teilpartien aus eingegebenen ersten Zügen, ohne `recent`/PGN und ohne die, deren volle Partie der Bestand hat),
   Online-Partien über `LeagueProfileStore.OnlineGames` (gemeinsame Auswahl mit der Liga) und Konten über
   `LeagueService.CardAsync(…, prep: true)` ohne `reveal` (Minderjährige auch für Admins verborgen).
 - Nur `prep.view` (0.634.0): Konten nur gesichert und ohne Kommentar, wie über einen Teilen-Link; `unsure=true` wirkt

@@ -9,6 +9,18 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.725.0',
+    date: '2026-10-08',
+    changes: [
+      { en: "LeagueHub: the first moves entered for a board now count as a partial game of both players — with both names, colours, the round date, league and round as event and the board result. They flow into the player card (number of games, opening profile, also with filters), the opening tree of both players and the opponent preparation (/prep card, tree and training lines via the FIDE ID). They are not listed under “recent games” and are not part of the PGN download — a few moves are no game to replay.",
+        de: "LeagueHub: die zu einem Brett eingegebenen ersten Züge zählen jetzt als Teilpartie beider Spieler — mit beiden Namen, Farben, dem Rundentermin, Liga und Runde als Veranstaltung und dem Ergebnis des Bretts. Sie fließen in die Spielerkarte (Partienzahl, Eröffnungsprofil, auch mit Filtern), in den Eröffnungsbaum beider Spieler und in die Gegnervorbereitung (/prep-Karte, Baum und Trainingslinien über die FIDE-ID). Unter „letzte Partien“ stehen sie nicht, und im PGN-Download fehlen sie — ein paar Züge sind keine Partie zum Nachspielen." },
+      { en: "A full game beats the partial one: if a club game (of any club, not archived) is assigned to the board, or a game of the same two players lies within three days of the round date (club games: same year), only the full game counts. Saving or deleting the moves recalculates the cards of both players and updates the number of games in the league views right away.",
+        de: "Eine volle Partie schlägt die Teilpartie: ist dem Brett eine Vereinspartie (irgendeines Vereins, nicht archiviert) zugeordnet oder liegt eine Partie derselben beiden Spieler höchstens drei Tage neben dem Rundentermin (Vereinspartien: gleiches Jahr), zählt nur die volle Partie. Speichern oder Löschen der Züge rechnet die Karten beider Spieler neu und zieht die Partienzahl in den Liga-Ansichten sofort nach." },
+      { en: "The source table on the start page has a new row “Ligarunde (erste Züge)” — partial games from entered first moves, once per board.",
+        de: "Die Quellen-Tabelle der Startseite hat eine neue Zeile „Ligarunde (erste Züge)“ — Teilpartien aus eingegebenen ersten Zügen, je Brett einmal." },
+    ],
+  },
+  {
     version: '0.724.1',
     date: '2026-10-08',
     changes: [

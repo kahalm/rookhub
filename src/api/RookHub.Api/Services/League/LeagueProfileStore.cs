@@ -105,7 +105,26 @@ public sealed class LeagueProfileStore
             if (!known.Add(MovesKey(parsed.Headers, b.Sans))) continue;
             all.Add(b);
         }
-        return all.OrderByDescending(b => b.Game.Headers.TryGetValue("Date", out var d) ? d : "", StringComparer.Ordinal).ToList();
+        return ByDate(all);
+    }
+
+    private static List<BoardGame> ByDate(IEnumerable<BoardGame> games) =>
+        games.OrderByDescending(b => b.Game.Headers.TryGetValue("Date", out var d) ? d : "", StringComparer.Ordinal).ToList();
+
+    /// <summary>
+    /// Alle Brettpartien der Karte: fremde + Vereinspartien (<see cref="WithClub(List{BoardGame}, IEnumerable{LeagueClubGame})"/>)
+    /// + die Teilpartien aus von Hand eingegebenen ersten Zügen (<see cref="LeaguePartialGames"/>, 0.725.0) — ohne die, zu deren
+    /// Brett es eine volle Partie gibt. Für Karte (Zählung + Profil), Baum, gefiltertes Profil und <see cref="GamesAsync"/>
+    /// (Spielervorbereitung, Team-Suche); NICHT für „letzte Partien" und den PGN-Download — eine Teilpartie ist keine Partie zum
+    /// Nachspielen. Ohne Teilpartie kostet das eine kleine Abfrage (Join der Zug-Einträge auf die Paarungen dieses Spielers).
+    /// </summary>
+    private async Task<List<BoardGame>> BoardAsync(string fide, List<BoardGame> external, List<LeagueClubGame> club, CancellationToken ct)
+    {
+        var all = WithClub(external, club);
+        var partials = await LeaguePartialGames.LoadAsync(_db, new[] { fide }, ct);
+        if (partials.Count == 0) return all;
+        partials = await LeaguePartialGames.FilterAsync(_db, partials, external.Select(b => LeaguePartialGames.RefOf(b.Game.Headers)), ct);
+        return partials.Count == 0 ? all : ByDate(all.Concat(partials.Select(x => new BoardGame(x.Game))));
     }
 
     /// <summary>Die fremden Partien einer Karte, zerlegt; <c>null</c> = keine Karte. <see cref="HasPgn"/>: das gespeicherte
@@ -129,13 +148,15 @@ public sealed class LeagueProfileStore
         return card;
     }
 
-    /// <summary>Alle Brettpartien eines Spielers (fremde + Vereinspartien) samt seinem Namen — für den Stellungs-Abgleich der
+    /// <summary>Alle Brettpartien eines Spielers (fremde + Vereinspartien + Teilpartien aus ersten Zügen, 0.725.0 — erkennbar an
+    /// <see cref="LeaguePartialGames.Is"/>) samt seinem Namen — für die Spielervorbereitung, die Trainingslinien und den Stellungs-Abgleich der
     /// Team-Suche (<see cref="LeagueTeamScout"/>). Leer, wenn es keine Karte gibt.</summary>
     public async Task<(string Name, List<LeagueProfileBuilder.Game> Games)> GamesAsync(string fide, CancellationToken ct)
     {
         var row = await _db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => new { p.Name, p.Pgn }).FirstOrDefaultAsync(ct);
         var name = await NameAsync(fide, row?.Name, ct);
-        return (name, WithClub(Stored(row?.Pgn), await ClubGamesAsync(fide, ct)));
+        var all = await BoardAsync(fide, Stored(row?.Pgn).Select(g => new BoardGame(g)).ToList(), await ClubGamesAsync(fide, ct), ct);
+        return (name, all.Select(b => b.Game).ToList());
     }
 
     private Task<List<LeagueClubGame>> ClubGamesAsync(string fide, CancellationToken ct) =>
@@ -164,8 +185,9 @@ public sealed class LeagueProfileStore
             externalPgn = LeagueProfileBuilder.Build(fide, name, external).Pgn;
         }
         var club = await ClubGamesAsync(fide, ct);
-        if (row is null && club.Count == 0 && fresh is null) return;
-        var (profile, _, count) = LeagueProfileBuilder.Build(fide, name, WithClub(external, club));
+        var all = await BoardAsync(fide, external.Select(g => new BoardGame(g)).ToList(), club, ct);
+        if (row is null && all.Count == 0 && fresh is null) return;
+        var (profile, _, count) = LeagueProfileBuilder.Build(fide, name, all.Select(b => b.Game).ToList());
         if (row is null)
         {
             row = new LeaguePlayerProfile { FideId = fide };
@@ -344,7 +366,7 @@ public sealed class LeagueProfileStore
         }
 
         if (filter.Board)
-            foreach (var b in WithClub(p?.Games ?? new(), club))
+            foreach (var b in await BoardAsync(fide, p?.Games ?? new(), club, ct))
             {
                 var g = b.Game;
                 if (LeagueProfileBuilder.ColorOf(g, fide, name) != color) continue;
@@ -418,7 +440,7 @@ public sealed class LeagueProfileStore
         int board = 0, online = 0;
 
         if (filter.Board)
-            foreach (var b in WithClub(p?.Games ?? new(), club))
+            foreach (var b in await BoardAsync(fide, p?.Games ?? new(), club, ct))
             {
                 var g = b.Game;
                 var color = LeagueProfileBuilder.ColorOf(g, fide, name);

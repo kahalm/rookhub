@@ -184,7 +184,8 @@ public static class LeagueProfileBuilder
     /// <param name="color"><c>w</c>/<c>s</c> = nur die letzten Partien mit dieser Farbe (0.592.0 — die Karte filtert oben nach
     /// Farbe, und acht gemischte gefiltert ließen oft nur drei übrig); <c>null</c> = beide, wie auf der Karte.</param>
     public static List<(Game G, string Color)> Recent(string fide, string name, List<Game> games, string? color = null) =>
-        games.Select(g => (G: g, C: ColorOf(g, fide, name))).Where(x => x.C is not null && (color is null || x.C == color))
+        games.Where(g => !LeaguePartialGames.Is(g)).Select(g => (G: g, C: ColorOf(g, fide, name)))
+            .Where(x => x.C is not null && (color is null || x.C == color))
             .Select(x => (x.G, x.C!)).Take(RecentCount).ToList();
 
     /// <summary>Eine Zeile der „letzten Partien" in der Form der Karte (<c>recent</c>).</summary>
@@ -211,7 +212,8 @@ public static class LeagueProfileBuilder
             ["src"] = src,
         };
         AddSections(profile, mv.Select(x => new ProfileGame(x.M, x.C, Pts(H(x.G, "Result"), x.C))).ToList());
-        profile["recent"] = new JsonArray(mv.Take(RecentCount).Select(x => (JsonNode)new JsonObject
+        // Teilpartien (nur die ersten Züge, 0.725.0) zählen mit, sind aber keine „letzte Partie" zum Nachspielen
+        profile["recent"] = new JsonArray(mv.Where(x => !LeaguePartialGames.Is(x.G)).Take(RecentCount).Select(x => (JsonNode)new JsonObject
             {
                 ["date"] = H(x.G, "Date"), ["event"] = H(x.G, "Event"),
                 ["vs"] = H(x.G, x.C == "w" ? "Black" : "White"), ["vs_elo"] = H(x.G, x.C == "w" ? "BlackElo" : "WhiteElo"),
