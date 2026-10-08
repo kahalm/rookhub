@@ -59,6 +59,33 @@ describe('RepertoireViewerService', () => {
       expect(service.lines[0].summary).toContain('2. Nf3');
     });
 
+    it('nummeriert die Vorschau ab dem Start-FEN (Übung aus einer Modellpartie, Weiß am Zug)', () => {
+      service.loadPgn(`[Event "Übung"]
+[White "Ivanchuk - Akopian, Exercise #1"]
+[Black "Model Games"]
+[FEN "r1bq1rk1/ppp2pb1/2nn2pp/8/5Q1P/2N1BN2/PPP2PP1/2KR1B1R w - - 0 12"]
+
+12. Bc4 Bf5 13. Rhe1 Qf6 *`);
+      expect(service.lines[0].summary).toBe('12. Bc4 Bf5 13. Rhe1 Qf6');
+    });
+
+    it('nummeriert die Vorschau ab dem Start-FEN (Schwarz am Zug)', () => {
+      service.loadPgn(`[Event "Übung"]
+[White "W"]
+[Black "K"]
+[FEN "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"]
+
+2. Nf3 d6 3. d4 *`);
+      expect(service.lines[0].summary).toBe('2. Nf3 d6 3. d4');
+      service.loadPgn(`[Event "Übung"]
+[White "W"]
+[Black "K"]
+[FEN "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"]
+
+2... d6 3. d4 cxd4 *`);
+      expect(service.lines[0].summary).toBe('2… d6 3. d4 cxd4');
+    });
+
     it('should reset state on reload', () => {
       service.loadPgn(SAMPLE_PGN);
       service.selectLine(0);

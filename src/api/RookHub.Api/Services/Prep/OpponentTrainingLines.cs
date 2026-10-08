@@ -91,6 +91,8 @@ public static class OpponentTrainingLines
     {
         var need = new Dictionary<string, RepertoireReach.Node>(StringComparer.Ordinal);
         foreach (var nodes in graph.Mainlines)
+        {
+            if (!StartReached(nodes, a.Stats)) continue;      // eigene Startstellung, die er nie erreicht: nichts zu schätzen
             for (var k = 0; k + 1 < nodes.Count; k++)
             {
                 var at = nodes[k];
@@ -99,8 +101,15 @@ public static class OpponentTrainingLines
                 // zu wenig eigene Daten — ODER er hat dort nie den Zug der Linie gespielt (Widerspruch: ab hier schätzt der Explorer)
                 if ((st?.Continued ?? 0) < Math.Max(1, minOwn) || st!.Next.GetValueOrDefault(nodes[k + 1].Key) == 0) need[at.Key] = at;
             }
+        }
         return need.Values.ToList();
     }
+
+    /// <summary>Beginnt die Linie in der Grundstellung, oder hat er ihre eigene Startstellung (<c>[FEN]</c>) in einer Partie
+    /// erreicht? Sonst ist sie „nie erreicht" — und bleibt es auch mit Schätzung: der Explorer kennt ab der FEN zwar die Züge,
+    /// aber nicht, ob man dort je hinkommt (Chessable-Übungen aus Modellpartien schlügen sonst jede echte Eröffnungslinie).</summary>
+    private static bool StartReached(List<RepertoireReach.Node> nodes, Dictionary<string, PositionStats> stats) =>
+        nodes.Count == 0 || nodes[0].Key == RepertoireReach.StandardStartKey || (stats.GetValueOrDefault(nodes[0].Key)?.Reached ?? 0) > 0;
 
     /// <summary>Wie oft der Explorer genau den Zug der Linie kennt (Anteil an allen Partien der Stellung); fehlt er in der Liste,
     /// „weniger als eine Partie" wie in <see cref="RepertoireReach"/> — winzig, nicht null.</summary>
@@ -208,7 +217,7 @@ public static class OpponentTrainingLines
             var line = new Line(key, nodes[^1].Key, start, i < chapters.Count ? chapters[i] : "", sans,
                 missing == 0 && !never ? prefix : 0, reached, end?.LastYear, never, i, matched, missing, never ? 0 : prefix,
                 prefixReached, missing == 0 && !never ? "own" : "none", matched);
-            if (estimate is not null) line = Combine(line, nodes, sans, stats, estimate);
+            if (estimate is not null && StartReached(nodes, stats)) line = Combine(line, nodes, sans, stats, estimate);
             lines.Add(line);
         }
 

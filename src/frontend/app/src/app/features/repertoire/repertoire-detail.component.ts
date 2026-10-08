@@ -201,8 +201,10 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       margin-bottom: 1rem;
       gap: 1rem;
     }
+    .header-info { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
     .header-info h2 { margin: 0; }
     .subtitle { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 14px; }
+    .train-btn { margin-top: 2px; }
 
     .viewer-layout {
       display: flex;
@@ -238,7 +240,8 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       min-width: 250px;
       border: 1px solid #e0e0e0;
       border-radius: 4px;
-      height: 440px;
+      /* mindestens Bretthöhe; am hohen Bildschirm wächst die Liste mit, statt die halbe Seite leer zu lassen */
+      height: max(440px, calc(100vh - 330px));
       overflow: hidden;
     }
     .edit-panel {

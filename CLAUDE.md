@@ -2730,6 +2730,12 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Widerspruch (Präfix aus seinen Partien × Explorer-Anteile für den Rest). `deviationPly`/`deviationSan`/`deviationGames`
   = sein häufigster Zug dort (Liste: „weicht ab: er spielt hier 1…c5 (1 Partie)"). `NeedsExplorer` fragt dafür auch die
   Widerspruchs-Stellungen ab.
+- Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
+  Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
+  Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der
+  Explorer kennt ab der FEN die Züge, aber nicht die Wahrscheinlichkeit, dort je hinzukommen (kurze Übungen mit 1–2
+  Gegnerzügen schlugen sonst jede echte Eröffnungslinie). `NeedsExplorer` fragt für solche Linien nichts ab. Linienliste
+  der Repertoire-Seite nummeriert die Zugvorschau ab dem Start-FEN („12. Bc4 …" statt „1. Bc4 …", `startNumbering`).
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |

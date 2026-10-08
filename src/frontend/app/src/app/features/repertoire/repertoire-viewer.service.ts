@@ -4,6 +4,7 @@ import { ParsedGame, ParsedGameWithSource, START_FEN, parsePgnTextWithSource, pa
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { isInfoLineGame } from './repertoire-info-line.util';
+import { startNumbering } from './repertoire-move-format.util';
 
 export interface RepertoireLine {
   gameIndex: number;
@@ -125,10 +126,18 @@ export class RepertoireViewerService {
 
   private buildLine(game: ParsedGame, index: number, isInfo: boolean): RepertoireLine {
     const moves = game.moves;
+    // Nummerierung ab der Startstellung des Abschnitts: eine Linie mit [FEN] (z. B. eine Übung aus einer Modellpartie)
+    // zeigt „11. d3 Nf6 12. …" statt „1. d3 Nf6 2. …".
+    const { side, fullMove } = startNumbering(game.fens[0]);
     const summaryMoves: string[] = [];
+    let num = fullMove;
+    let toMove = side;
     for (let i = 0; i < Math.min(moves.length, 8); i++) {
-      if (i % 2 === 0) summaryMoves.push(`${Math.floor(i / 2) + 1}.`);
+      if (toMove === 'w') summaryMoves.push(`${num}.`);
+      else if (i === 0) summaryMoves.push(`${num}…`);
       summaryMoves.push(moves[i].san);
+      if (toMove === 'b') num++;
+      toMove = toMove === 'w' ? 'b' : 'w';
     }
     if (moves.length > 8) summaryMoves.push('...');
 
