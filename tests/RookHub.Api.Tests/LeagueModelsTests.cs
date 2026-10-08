@@ -77,7 +77,8 @@ public class LeagueModelsTests
     }
 
     [Theory]
-    [InlineData("tirol", true, 1, "R1", .58)]
+    [InlineData("tirol", true, 3, "R1", .58)]   // Landesliga seit 0.719.0 Stufe 3
+    [InlineData("tirol", true, 1, "R1", null)]    // 1. Bundesliga: kein Backtest
     [InlineData("bayern", true, 3, "R2+", .79)]
     [InlineData("bayern", true, 1, "So vorab", .79)]
     [InlineData("bayern", false, 3, "R2+", null)]

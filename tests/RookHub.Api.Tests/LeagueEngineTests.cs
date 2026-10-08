@@ -80,8 +80,8 @@ public class LeagueEngineTests
     [Fact]
     public void Mpt_IsSeparatedBySource()
     {
-        // Tirol: Stufe 1 mit 2 Mannschaftskämpfen je Team; Bayern: Stufe 1 mit 1 — dieselbe Saison, dieselbe Stufe.
-        var tirol = new LeagueTournament { Tnr = 1, Season = "2025/26", Level = 1, League = "Landesliga", Stage = "Liga" };
+        // Tirol: Stufe 1 (1. Bundesliga) mit 2 Mannschaftskämpfen je Team; Bayern: Stufe 1 mit 1 — dieselbe Saison, dieselbe Stufe.
+        var tirol = new LeagueTournament { Tnr = 1, Season = "2025/26", Level = LeagueLevels.Bundesliga, League = "1. Bundesliga", Stage = "Liga" };
         var bayern = new LeagueTournament { Tnr = 900_000_001, Season = "2025/26", Level = 1, League = "Oberliga", Stage = "Liga",
             Source = LigamanagerSource.Source };
         var matches = new List<LeagueMatch>
@@ -143,7 +143,7 @@ public class LeagueEngineTests
     /// <summary>Landesliga mit vier Teams: Runde 1 gespielt (Sa), Runde 2 am Tag danach (So), Runde 3 später.</summary>
     internal static LeagueWorld TinyWorld(bool round2Played = false)
     {
-        var t = new LeagueTournament { Tnr = 1, Name = "TMM Landesliga 2026/2027", Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" };
+        var t = new LeagueTournament { Tnr = 1, Name = "TMM Landesliga 2026/2027", Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" };
         var rounds = new[]
         {
             new LeagueRound { Tnr = 1, Round = 1, Date = new DateOnly(2026, 10, 3) },
@@ -261,7 +261,7 @@ public class LeagueEngineTests
     public async Task ForecastStats_WithTheSizeLimitedLeagueCache_StoresAndServesFromCache()
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         db.LeagueViews.Add(new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow,
             Json = "{\"fixtures\":{\"A\":{\"1\":{\"eval\":{\"top1\":3,\"top2\":5,\"top3\":6,\"of\":8}}}}}" });
         await db.SaveChangesAsync();
@@ -281,9 +281,9 @@ public class LeagueEngineTests
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         db.LeagueTournaments.AddRange(
-            new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" },
-            new LeagueTournament { Tnr = 2, Season = "2026/27", Level = 2, League = "1. Klasse", Grp = "Ost", Stage = "Liga" },
-            new LeagueTournament { Tnr = 9, Season = "2025/26", Level = 1, League = "Landesliga", Stage = "Liga" });
+            new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" },
+            new LeagueTournament { Tnr = 2, Season = "2026/27", Level = 4, League = "1. Klasse", Grp = "Ost", Stage = "Liga" },
+            new LeagueTournament { Tnr = 9, Season = "2025/26", Level = 3, League = "Landesliga", Stage = "Liga" });
         static string Ev(int t1, int t2, int t3, int of) => $"{{\"eval\":{{\"top1\":{t1},\"top2\":{t2},\"top3\":{t3},\"of\":{of}}}}}";
         db.LeagueViews.AddRange(
             new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow, Json = $"{{\"fixtures\":{{\"A\":{{\"1\":{Ev(3, 5, 6, 8)},\"2\":{Ev(4, 6, 7, 8)},\"3\":{{\"status\":\"open\"}}}},\"B\":{{\"1\":{Ev(2, 4, 5, 8)}}}}}}}" },

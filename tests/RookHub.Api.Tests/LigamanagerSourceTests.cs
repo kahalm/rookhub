@@ -263,7 +263,7 @@ public class LigamanagerSourceTests : IDisposable
     public async Task Import_RefusesANumberThatBelongsToAChessResultsLeague()
     {
         // Sicherheitsnetz: unter der VERSETZTEN Nummer steht (künstlich) eine Liga fremder Quelle → 409, nichts geschrieben.
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = T, Name = "TMM", Season = "2026/27", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = T, Name = "TMM", Season = "2026/27", Level = 3, League = "Landesliga" });
         await _db.SaveChangesAsync();
         await Assert.ThrowsAsync<LigamanagerSource.ConflictException>(() =>
             Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default));
@@ -275,7 +275,7 @@ public class LigamanagerSourceTests : IDisposable
     public async Task Import_ChessResultsLeagueWithTheBareLigamanagerId_NoLongerCollides()
     {
         // Vor dem Versatz brach das mit 409 ab; jetzt liegen beide nebeneinander.
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4711, Name = "TMM", Season = "2026/27", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 4711, Name = "TMM", Season = "2026/27", Level = 3, League = "Landesliga" });
         await _db.SaveChangesAsync();
         var res = await Source(new Factory((_, r) => Site(r))).ImportAsync(Ref, dryRun: false, default);
         Assert.Equal(T, res.Tnr);

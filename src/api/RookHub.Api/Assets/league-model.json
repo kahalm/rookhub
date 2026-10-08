@@ -20,9 +20,9 @@
   "yest_not",
   "conflict_hi",
   "conflict_lo",
-  "lvl2",
-  "lvl3",
   "lvl4",
+  "lvl5",
+  "lvl6",
   "gk_q"
  ],
  "weights": [
@@ -62,5 +62,6 @@
   "2025/26"
  ],
  "rows": 52090,
- "note": "Logistische Regression (Newton, L2=1); FEATS/vec siehe model.py"
+ "note": "Logistische Regression (Newton, L2=1); FEATS/vec siehe model.py",
+ "levels": "Tirol seit 0.719.0: 1 = 1. Bundesliga, 2 = 2. Bundesliga, 3 = Landesliga, 4 = 1. Klasse, 5 = 2. Klasse, 6 = Gebietsklasse (Python/export_weights.py: lvl2-lvl4 = 1. Klasse-Gebietsklasse, hier umbenannt zu lvl4-lvl6; gk_q = q_same in der Gebietsklasse)"
 }

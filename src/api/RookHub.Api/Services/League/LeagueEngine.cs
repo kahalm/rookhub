@@ -66,7 +66,9 @@ public static class LeagueNames
 
     private static readonly (Regex Re, string Club)[] ClubRules =
     {
-        (new Regex("rum|hall", RegexOptions.IgnoreCase), "Rum/Hall/Mils"),
+        // Seit der Bundesliga (0.719.0) an Wortgrenzen: „hall" traf sonst „SK Elektro Strobl Hallein" (2. Bundesliga West) — an
+        // allen 56 Tiroler Mannschaftsnamen seit 2009 ändert das nichts.
+        (new Regex(@"\brum\b|\bhall\b", RegexOptions.IgnoreCase), "Rum/Hall/Mils"),
         (new Regex("kufstein", RegexOptions.IgnoreCase), "Kufstein/Wörgl"),
         (new Regex("fügen|rattenberg|zillertal", RegexOptions.IgnoreCase), "Fügen/Zillertal/Rattenberg"),
         (new Regex("jenbach", RegexOptions.IgnoreCase), "Jenbach"),
@@ -77,6 +79,11 @@ public static class LeagueNames
         (new Regex("zirl", RegexOptions.IgnoreCase), "Zirl"),
         (new Regex("wattens", RegexOptions.IgnoreCase), "Wattens"),
         (new Regex("svi/ivb|sportverein innsbruck", RegexOptions.IgnoreCase), "Sportverein Innsbruck"),
+        // Bundesliga-Namen derselben Vereine (0.719.0): „Schachklub Schwaz"/„Schachclub Schwaz" (1./2. Bundesliga) = „Schwaz" der
+        // TMM, „Innsbruck Pradl" (2. Bundesliga West) = „Innsbruck-Pradl" — sonst sähe die Termin-Konflikt-Regel die Mannschaften
+        // eines Vereins in BL und Landesliga nicht als EINEN Verein.
+        (new Regex(@"\bschwaz\b", RegexOptions.IgnoreCase), "Schwaz"),
+        (new Regex(@"\bpradl\b", RegexOptions.IgnoreCase), "Innsbruck-Pradl"),
     };
 
     /// <summary>Kanonischer Verein: Spielgemeinschafts-Umbenennungen, Sponsoren, „1"/„2" zusammengeführt.
@@ -111,7 +118,10 @@ public sealed class LeagueWorld
     public Dictionary<(int, int, string), Dictionary<string, int>> Lineup { get; } = new();
     public HashSet<(int, int, string)> Real { get; } = new();
     public Dictionary<(int, string), List<RosterEntry>> Roster { get; } = new();
-    public Dictionary<(string, int, string), int> AppsLvl { get; } = new();
+    /// <summary>Einsätze je (Region, Saison, Stufe, Spieler) — seit der Bundesliga (0.719.0) mit Region: die Tiroler Stufen 1–6
+    /// (Bundesliga … Gebietsklasse) und die bayerischen 1–9 liegen auf derselben Zahlenachse, und ein Spieler kann in beiden Ländern
+    /// gemeldet sein (2. Bundesliga West und Oberliga Bayern) — seine Quoten sollen sich nicht über die Länder mischen.</summary>
+    public Dictionary<(string Region, string Season, int Level, string Pid), int> AppsLvl { get; } = new();
     /// <summary>Mannschaftskämpfe je Team (das Maximum) je (Region, Saison, Stufe) — seit 2026-10-07 je Land getrennt: die
     /// Stufen beider Länder liegen auf derselben Zahlenachse (Landesliga Tirol = 1, Oberliga Bayern = 1), der Nenner der
     /// Einsatzquote darf sich nicht über die Länder mischen; die Quellen EINER Region (Ligamanager + Zugspitze) teilen ihn
@@ -169,7 +179,7 @@ public sealed class LeagueWorld
             if (!T.TryGetValue(tnr, out var t) || t.Stage != "Liga" || !Real.Contains((tnr, rnd, team))) continue;
             foreach (var p in lu.Keys)
             {
-                var k = (t.Season, t.Level, p);
+                var k = (LeagueRegions.Of(t.Source), t.Season, t.Level, p);
                 AppsLvl[k] = AppsLvl.GetValueOrDefault(k) + 1;
             }
         }
@@ -243,15 +253,16 @@ public sealed class LeagueWorld
         return ClubTeams.TryGetValue((LeagueRegions.Of(t.Source), t.Season, LeagueNames.Club(team, t.Source)), out var set) ? set : null;
     }
 
-    public int Apps(string? season, int level, string pid) =>
-        season is null ? 0 : AppsLvl.GetValueOrDefault((season, level, pid));
+    /// <summary>Einsätze eines Spielers auf einer Stufe in einer Saison der REGION dieser Quelle.</summary>
+    public int Apps(string? source, string? season, int level, string pid) =>
+        season is null ? 0 : AppsLvl.GetValueOrDefault((LeagueRegions.Of(source), season, level, pid));
 
     /// <summary>Bretter je Begegnung: aus den Brettpaarungen, sonst aus der Quelle (<see cref="LeagueTournament.Boards"/>,
-    /// Ligamanager), sonst nach der Tiroler Stufe.</summary>
+    /// Ligamanager), sonst nach der Stufe (<see cref="LeagueLevels.DefaultBoards"/>).</summary>
     public int BoardsOf(int tnr) =>
         Boards.GetValueOrDefault(tnr) is > 0 and var b ? b
         : T[tnr].Boards is > 0 and var tb ? tb
-        : T[tnr].Level switch { 1 => 6, 2 => 6, 3 => 5, 4 => 4, _ => 6 };
+        : LeagueLevels.DefaultBoards(T[tnr].Source, T[tnr].Level);
 }
 
 /// <summary>Merkmale eines gemeldeten Spielers für eine Runde (Python: features.rows_for).</summary>
@@ -328,17 +339,19 @@ public static class LeagueFeatures
         {
             var e = roster[i];
             var p = e.Pid;
-            var qSame = mptPrev > 0 ? (double)w.Apps(ps, level, p) / mptPrev : 0;
+            var qSame = mptPrev > 0 ? (double)w.Apps(src, ps, level, p) / mptPrev : 0;
             double qHigher = 0, qLower = 0;
             if (ps is not null)
             {
-                for (var l = 1; l < level; l++) qHigher += w.Apps(ps, l, p) / MptOr1(ps, l);
+                // Seit der Bundesliga (0.719.0) zählen in der Landesliga auch Einsätze in 1./2. Bundesliga als „höher" — genau so ist
+                // das Merkmal gemeint; ohne eingespielte Bundesliga-Saisonen sind sie 0 und die Zahlen bleiben die von Python.
+                for (var l = 1; l < level; l++) qHigher += w.Apps(src, ps, l, p) / MptOr1(ps, l);
                 // Bis LeagueLevels.Max statt bis 4 (Bayern hat mehr Stufen); in Tirol sind die Einsätze darüber 0 → gleiche Zahlen.
-                for (var l = level + 1; l <= LeagueLevels.Max; l++) qLower += w.Apps(ps, l, p) / MptOr1(ps, l);
+                for (var l = level + 1; l <= LeagueLevels.Max; l++) qLower += w.Apps(src, ps, l, p) / MptOr1(ps, l);
             }
             var knownPrev = qSame + qHigher + qLower > 0;
             var knownEver = w.Seasons.Where(s => string.CompareOrdinal(s, season) < 0)
-                .Any(s => Enumerable.Range(1, LeagueLevels.Max).Any(l => w.Apps(s, l, p) > 0));
+                .Any(s => Enumerable.Range(1, LeagueLevels.Max).Any(l => w.Apps(src, s, l, p) > 0));
             double cHi = 0, cLo = 0;
             foreach (var (tnr2, team2, r2) in sameDay)
             {
@@ -348,7 +361,7 @@ public static class LeagueFeatures
                 var lvl2 = w.T[tnr2].Level;
                 double rate = past2.Count > 0
                     ? (double)past2.Count(x => w.LineupOf(tnr2, x, team2).ContainsKey(p)) / past2.Count
-                    : ps is not null ? w.Apps(ps, lvl2, p) / MptOr1(ps, lvl2) : 0;
+                    : ps is not null ? w.Apps(src, ps, lvl2, p) / MptOr1(ps, lvl2) : 0;
                 var inRoster = w.Roster.TryGetValue((tnr2, team2), out var r2list) && r2list.Any(x => x.Pid == p);
                 if (!inRoster) continue;
                 if (lvl2 < level) cHi = Math.Max(cHi, rate); else cLo = Math.Max(cLo, rate);
@@ -417,7 +430,6 @@ public sealed class LeagueModel
     /// <summary>Merkmalsvektor in der Reihenfolge von <see cref="Features"/> (Python: model.vec).</summary>
     public double[] Vec(FeatureRow r)
     {
-        var lvl4 = r.Level == 4 ? 1 : 0;
         var v = new double[Features.Count];
         for (var i = 0; i < Features.Count; i++)
         {
@@ -443,10 +455,10 @@ public sealed class LeagueModel
                 "yest_not" => r.Yesterday == 1 && r.YestPlayed == 0 ? 1 : 0,
                 "conflict_hi" => r.ConflictHi,
                 "conflict_lo" => r.ConflictLo,
-                "lvl2" => r.Level == 2 ? 1 : 0,
-                "lvl3" => r.Level == 3 ? 1 : 0,
-                "lvl4" => lvl4,
-                "gk_q" => r.QSame * lvl4,
+                // Tiroler Stufen-Dummies (Python: lvl2–lvl4 = 1. Klasse … Gebietsklasse) heißen seit der Bundesliga (0.719.0, Stufen
+                // um 2 verschoben) lvl4–lvl6 in Assets/league-model.json und laufen über die allgemeine Regel „lvlN" unten;
+                // gk_q = Vorsaison-Quote nur in der Gebietsklasse — dieselben Zahlen wie vorher.
+                "gk_q" => r.Level == LeagueLevels.TirolGebietsklasse ? r.QSame : 0,
                 // Bayern (2026-10-07, eigenes Modell): Stufe als Zahl 0 (Oberliga) … 1 (C-Klasse), Kreisebene (ab Stufe 5 —
                 // Zugspitzliga und darunter) samt Wechselwirkungen mit Vorsaison-Quote, „unter den ersten B" und Meldeplatz.
                 // Eine Konstante je Stufe (lvl_n, kreis, lvlN) wirkt nach der Normierung je Mannschaftskampf NICHT auf die
@@ -456,7 +468,7 @@ public sealed class LeagueModel
                 "kreis_q" => r.Level >= KreisLevel ? r.QSame : 0,
                 "kreis_top" => r.Level >= KreisLevel ? r.Top : 0,
                 "kreis_pos" => r.Level >= KreisLevel ? Math.Min(r.Pos, 4.0) : 0,
-                // weitere Stufen-Dummies „lvl5" … „lvl9" (Bayern), gleiche Bedeutung wie lvl2–lvl4: Stufe == n
+                // Stufen-Dummies „lvlN": Stufe == N (Tirol lvl4–lvl6, Bayern lvl5 … lvl9)
                 var x when x.StartsWith("lvl", StringComparison.Ordinal) && int.TryParse(x.AsSpan(3), out var lv) => r.Level == lv ? 1 : 0,
                 var x => throw new InvalidOperationException($"Unbekanntes Merkmal im Modell: {x}"),
             };
@@ -497,9 +509,13 @@ public sealed class LeagueModel
         rows.Count == 0 ? Array.Empty<double>() : Normalize(rows.Select(Logit).ToList(), rows[0].B);
 
     /// <summary>Sonntag vorhersagen, bevor der Samstag gespielt ist: Mischung aus „hat Samstag gespielt" und „nicht".</summary>
-    public double[] SundayAdvance(IReadOnlyList<FeatureRow> rowsSat, IReadOnlyList<FeatureRow> rowsSun)
+    public double[] SundayAdvance(IReadOnlyList<FeatureRow> rowsSat, IReadOnlyList<FeatureRow> rowsSun) =>
+        SundayAdvance(rowsSat, Predict(rowsSat), rowsSun);
+
+    /// <summary>Wie oben mit schon gerechneten Einsatz-Wahrscheinlichkeiten des Vortags <paramref name="pSat"/> (in einem
+    /// Bundesliga-Block kann der Vortag selbst eine Vorab-Mischung sein).</summary>
+    public double[] SundayAdvance(IReadOnlyList<FeatureRow> rowsSat, IReadOnlyList<double> pSat, IReadOnlyList<FeatureRow> rowsSun)
     {
-        var pSat = Predict(rowsSat);
         var sat = new Dictionary<string, double>();
         for (var i = 0; i < rowsSat.Count; i++) sat[rowsSat[i].Pid] = pSat[i];
         var mix = new List<double>(rowsSun.Count);
@@ -621,18 +637,37 @@ public sealed class LeagueModels
 }
 
 /// <summary>
-/// Ligastufen über alle Quellen (2026-10-07). Tirol (chess-results) kennt 1–4, Bayern 1–9: Ligamanager 1–8
-/// (<see cref="LigamanagerSource.LevelOf"/>), Schachkreis Zugspitze 5–9 (<see cref="ZugspitzeSource.LevelOf"/>). Die Merkmale QHigher/QLower/NewEver zählen Einsätze aller Stufen bis
-/// <see cref="Max"/> — für Tirol ändert das nichts (über 4 gibt es dort keine Einsätze). Die Stufen beider Länder liegen auf
-/// derselben Zahlenachse; ein Spieler spielt aber nur in einem Land, daher mischen sich die Einsätze nicht. Der Nenner der
-/// Einsatzquote (<see cref="LeagueWorld.Mpt"/>, Mannschaftskämpfe je Saison + Stufe) ist seit dem Mandanten-Schritt
-/// (2026-10-07) je QUELLE getrennt, ebenso die Teams eines Vereins (<see cref="LeagueWorld.ClubTeams"/>).
+/// Ligastufen über alle Quellen. <b>Tirol/Österreich</b> (chess-results, Region <c>tirol</c>) seit der Bundesliga (0.719.0, Wunsch
+/// 2026-10-08 „ergänz LeagueHub in Österreich um die höheren Ligen"): 1 = 1. Bundesliga, 2 = 2. Bundesliga (Ost/Mitte/West),
+/// 3 = Landesliga, 4 = 1. Klasse, 5 = 2. Klasse, 6 = Gebietsklasse — vorher Landesliga 1 … Gebietsklasse 4 (Migration
+/// <c>LeagueTirolLevelsBundesliga</c> schiebt den Bestand um <see cref="TirolShift"/>, der Bündel-Import der Python-Fassung über
+/// <see cref="FromTmm"/>). <b>Bayern</b> 1–9: Ligamanager 1–8 (<see cref="LigamanagerSource.LevelOf"/>), Schachkreis Zugspitze 5–9
+/// (<see cref="ZugspitzeSource.LevelOf"/>). Die Merkmale QHigher/QLower/NewEver zählen Einsätze aller Stufen bis <see cref="Max"/> der
+/// REGION (<see cref="LeagueWorld.AppsLvl"/>, <see cref="LeagueWorld.Mpt"/> und <see cref="LeagueWorld.ClubTeams"/> je Region).
 /// </summary>
 public static class LeagueLevels
 {
     /// <summary>Tiefste Stufe: 9 = C-Klasse des Schachkreises Zugspitze (<see cref="ZugspitzeSource.LevelOf"/>).</summary>
     public const int Max = 9;
-    private static readonly Dictionary<int, string> Tirol = new() { [1] = "LL", [2] = "1.Kl", [3] = "2.Kl", [4] = "GK" };
+    /// <summary>Tirol: 1. Bundesliga.</summary>
+    public const int Bundesliga = 1;
+    /// <summary>Tirol: 2. Bundesliga (Ost, Mitte, West).</summary>
+    public const int Bundesliga2 = 2;
+    /// <summary>Tirol: Landesliga (vor 0.719.0 Stufe 1).</summary>
+    public const int TirolLandesliga = 3;
+    /// <summary>Tirol: Gebietsklasse (vor 0.719.0 Stufe 4).</summary>
+    public const int TirolGebietsklasse = 6;
+    /// <summary>Um so viel liegen die TMM-Stufen seit der Bundesliga tiefer (Landesliga 1 → 3).</summary>
+    public const int TirolShift = 2;
+
+    /// <summary>Stufe der Python-Fassung (TMM: Landesliga 1 … Gebietsklasse 4, <c>export_bundle.py</c>, <c>rows.json</c>) → heutige
+    /// Tiroler Stufe (3 … 6). Andere Zahlen bleiben (die Python-Fassung kennt keine).</summary>
+    public static int FromTmm(int level) => level is >= 1 and <= 4 ? level + TirolShift : level;
+
+    private static readonly Dictionary<int, string> Tirol = new()
+    {
+        [1] = "BL", [2] = "2.BL", [3] = "LL", [4] = "1.Kl", [5] = "2.Kl", [6] = "GK",
+    };
     private static readonly Dictionary<int, string> Bayern = new()
     {
         [1] = "OL", [2] = "RL", [3] = "LL", [4] = "BL", [5] = "KL", [6] = "KK", [7] = "B-Kl", [8] = "C-Kl",
@@ -656,6 +691,36 @@ public static class LeagueLevels
     /// <summary>Die Stufen, die in der Region einer Quelle vorkommen (für die Notizen über die Vorsaison).</summary>
     public static IEnumerable<int> Of(string? source) =>
         LeagueRegions.Of(source) == LeagueRegions.Bayern ? Enumerable.Range(1, Max) : Tirol.Keys;
+
+    /// <summary>Bretter je Begegnung, wenn weder Brettpaarungen noch die Quelle sie nennen. Tirol: Bundesliga, Landesliga und
+    /// 1. Klasse 6, 2. Klasse 5, Gebietsklasse 4 (Bundesliga 2024/25–2026/27 nachgezählt: 6). Bayern wie bisher nach der alten
+    /// Tiroler Tabelle (1–2 → 6, 3 → 5, 4 → 4, sonst 6) — dort tragen die Ligen ihre Bretter selbst
+    /// (<see cref="LeagueTournament.Boards"/>).</summary>
+    public static int DefaultBoards(string? source, int level) =>
+        LeagueRegions.Of(source) == LeagueRegions.Tirol
+            ? level switch { 5 => 5, 6 => 4, _ => 6 }
+            : level switch { 1 => 6, 2 => 6, 3 => 5, 4 => 4, _ => 6 };
+
+    /// <summary>
+    /// Spielt diese Stufe Runden in Blöcken an aufeinanderfolgenden Tagen (Landesliga Sa + So; Bundesliga Fr–So bzw. fünf Tage am
+    /// Stück)? Dann öffnet die Prognose den ganzen Block, die Runde nach einem noch offenen Vortag wird als Mischung „Vortag gespielt
+    /// ja/nein" gerechnet, und eine vorläufige Runde wird erst nach der Runde VOR dem Block genauer. Tirol: Bundesliga, 2. Bundesliga,
+    /// Landesliga (vor 0.719.0 nur die Landesliga = Stufe 1); Bayern unverändert die Stufe 1 (Oberliga).
+    /// </summary>
+    public static bool HasRoundBlocks(string? source, int level) =>
+        LeagueRegions.Of(source) == LeagueRegions.Tirol ? level is >= Bundesliga and <= TirolLandesliga : level == 1;
+
+    /// <summary>
+    /// Folgt Runde <paramref name="next"/> (Termin) im selben Block auf <paramref name="prev"/>? Am Tag danach — und in der
+    /// Bundesliga auch am SELBEN Tag (Doppelrunde: 1. Bundesliga 2024/25–2026/27 je einmal zwei Runden an einem Tag). In den
+    /// TMM-Ligen zählt der selbe Tag nicht: dort stehen Platzhalter-Termine (01.01.2022 für drei Runden) im Bestand.
+    /// </summary>
+    public static bool Consecutive(string? source, int level, DateOnly? prev, DateOnly? next)
+    {
+        if (prev is null || next is null || !HasRoundBlocks(source, level)) return false;
+        var d = next.Value.DayNumber - prev.Value.DayNumber;
+        return d == 1 || d == 0 && LeagueRegions.Of(source) == LeagueRegions.Tirol && level <= Bundesliga2;
+    }
 }
 
 internal static class LeagueDates

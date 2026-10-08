@@ -35,7 +35,7 @@ public class LeaguePythonParityTests
         var b = JsonSerializer.Deserialize<LeagueImportService.Bundle>(gz, LeagueImportService.Json)!;
         var id = 0;
         var w = new LeagueWorld(
-            b.Tournaments!.Select(t => new LeagueTournament { Tnr = t.Tnr, Name = t.Name, Season = t.Season, Level = t.Level, League = t.League, Grp = t.Grp ?? "", Stage = t.Stage, Aborted = t.Aborted }),
+            b.Tournaments!.Select(t => new LeagueTournament { Tnr = t.Tnr, Name = t.Name, Season = t.Season, Level = LeagueLevels.FromTmm(t.Level), League = t.League, Grp = t.Grp ?? "", Stage = t.Stage, Aborted = t.Aborted }),
             b.Rounds!.Select(r => new LeagueRound { Tnr = r.Tnr, Round = r.Round, Date = DateOnly.TryParseExact(r.Date ?? "", "dd.MM.yyyy", out var d) ? d : null }),
             b.Matches!.Select(m => new LeagueMatch { Id = ++id, Tnr = m.Tnr, Round = m.Round, MatchNo = m.MatchNo, Home = m.Home, Away = m.Away, HomePts = m.HomePts, AwayPts = m.AwayPts, Date = m.Date, Time = m.Time, Venue = m.Venue }),
             b.Games!.Select(g => new LeagueGame { Id = ++id, Tnr = g.Tnr, Round = g.Round, MatchNo = g.MatchNo, Board = g.Board, HomeTeam = g.HomeTeam, AwayTeam = g.AwayTeam, HomePlayer = g.HomePlayer, AwayPlayer = g.AwayPlayer, Result = g.Result ?? "", HomeScore = g.HomeScore, AwayScore = g.AwayScore, Forfeit = g.Forfeit, HomeFide = g.HomeFide, AwayFide = g.AwayFide, HomeElo = g.HomeElo, AwayElo = g.AwayElo }),

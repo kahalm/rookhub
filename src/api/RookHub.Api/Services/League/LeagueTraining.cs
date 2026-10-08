@@ -20,7 +20,7 @@ public static class LeagueTraining
 
     /// <summary>
     /// Merkmale des bayerischen Modells (gewählt 2026-10-07 im Backtest 2022/23–2025/26): die Tiroler OHNE deren Stufen-Dummies
-    /// (<c>lvl2</c>–<c>lvl4</c>, <c>gk_q</c> — Tiroler Ligen), dafür die Kreisebene (<c>kreis</c>, Stufe ≥ 5) und ihre
+    /// (<c>lvl4</c>–<c>lvl6</c>, bis 0.719.0 <c>lvl2</c>–<c>lvl4</c>, und <c>gk_q</c> — Tiroler Ligen), dafür die Kreisebene (<c>kreis</c>, Stufe ≥ 5) und ihre
     /// Wechselwirkungen mit der Vorsaison-Quote (<c>kreis_q</c>), „unter den ersten B" (<c>kreis_top</c>) und dem Meldeplatz
     /// (<c>kreis_pos</c>) — in Zugspitzliga/A-/B-Klasse rücken Ersatzleute anders nach als in Ober- bis Bezirksliga. Reine
     /// Stufen-Konstanten (<c>lvl_n</c>, <c>lvl5</c>…) änderten am Backtest nichts: die Normierung je Mannschaftskampf hebt sie auf.

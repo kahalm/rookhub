@@ -1569,7 +1569,9 @@ alles; die Vereinsgruppe bekommt eine Rolle mit `league.view` + `league.contribu
 Rollenverwaltung an).
 
 - **Tabellen** (`Models/League.cs`): `LeagueTournaments` (PK = chess-results-tnr bzw. 900 000 000 + Ligamanager-Id, Season/Level/League/Grp/Stage,
-  Source/SourceRef/Boards — siehe „Ligamanager"),
+  Source/SourceRef/Boards — siehe „Ligamanager"; **`Level`** Tirol/Österreich seit 0.719.0: 1 = 1. Bundesliga, 2 = 2. Bundesliga,
+  3 = Landesliga, 4 = 1. Klasse, 5 = 2. Klasse, 6 = Gebietsklasse — vorher Landesliga 1 … Gebietsklasse 4, siehe „Österreichische
+  Bundesliga"; Bayern 1 = Oberliga … 9 = C-Klasse),
   `LeagueRounds` (Datum je Runde), `LeagueMatches`, `LeagueGames` (Brettpartien, Spieler null = „Brett nicht
   besetzt", Forfeit 0/1/2 — 2 = „- - -", z. B. Corona-Abbruch 2019/20), `LeaguePlayers` (Meldeliste;
   `NameKey` ohne akad. Titel = Schlüssel zu den Brettpaarungen), `LeaguePlayerProfiles` (PK FIDE-ID:
@@ -1908,6 +1910,30 @@ Rollenverwaltung an).
   `migrate`), `league-import --batch` (je Liga JÜNGSTE Saison zuerst — FIDE-Nachfüllung; Ligamanager-Liga-Ids je Saison auf
   `/{saison}/gesamt`), `league-train --region bayern --holdout … --out src/api/RookHub.Api/Assets/league-model-bayern.json`,
   `HitsBayern` aus der Ausgabe übernehmen, Container entfernen.
+- **Österreichische Bundesliga** (0.719.0, Wunsch 2026-10-08: „ergänz LeagueHub in Österreich um die höheren Ligen (Bundesliga 1 & 2)"):
+  1. Bundesliga und 2. Bundesliga (Ost/Mitte/West) kommen wie die TMM von chess-results (Veranstalter ÖSB, `Source` null = Region
+  `tirol`, Tnr = chess-results-Nummer, „Daten aktualisieren" holt sie über den Crawler mit). **Stufen um zwei verschoben**
+  (Entscheidung „(a)", `LeagueLevels`): 1 = 1. BL, 2 = 2. BL, 3 = Landesliga, 4 = 1. Klasse, 5 = 2. Klasse, 6 = Gebietsklasse; Migration
+  `LeagueTirolLevelsBundesliga` (`Level + 2 WHERE Source IS NULL`, Bayern bleibt; Ansichten tragen die alte Stufe bis zum nächsten
+  Rechnen), Bündel-Import der Python-Fassung über `LeagueLevels.FromTmm` (1–4 → 3–6). **Modell unverändert**: `Assets/league-model.json`
+  heißt `lvl4`/`lvl5`/`lvl6` statt Pythons `lvl2`–`lvl4` (Gewichte gleich, Feld `levels` erklärt es), `gk_q` = q_same in Stufe 6 —
+  `LeagueBundesligaTests.TirolModel_LogitOfAShiftedRow_EqualsThePythonLogit`, `LeagueTrainingTests` (rows.json über `FromTmm`) und die
+  Python-Parität (lokal mit dem Prod-Bündel: 88 Begegnungen, 1 676 Wahrscheinlichkeiten, Abweichung 0,000000 — der Test selbst scheitert
+  seit 0.66x an den alten `locked`-Status der Python-Ansicht) liefern dieselben Zahlen. Backtest `Hits` sitzt auf 3–6, für die
+  Bundesliga gibt es keinen (`hit` fehlt). Bretter ohne Brettpaarungen `LeagueLevels.DefaultBoards` (Tirol: 1–4 → 6, 2. Kl 5, GK 4;
+  BL 2024/25–2026/27 nachgezählt 6; Bayern unverändert). **Runden-Blöcke** (`LeagueLevels.HasRoundBlocks`/`Consecutive`, ersetzt die
+  Regel `level == 1`): Tirol Stufen 1–3 (Bayern weiter nur Stufe 1); Runden am Tag danach — in der Bundesliga auch am SELBEN Tag
+  (Doppelrunde; die TMM hat Platzhalter-Termine wie 01.01.2022 für drei Runden, dort nicht) — bilden einen Block: offen ist der ganze
+  Block der nächsten Runde, `unlock_after` = die Runde vor dem Block, die Vorab-Mischung „Vortag gespielt ja/nein" rechnet rekursiv
+  über den Block (`SundayAdvance(rowsSat, pSat, rowsSun)`; Landesliga = dieselben Zahlen), eine am selben Tag schon gespielte Runde
+  zählt mit (`asof` = Tag danach). Spielpläne laut Crawler: 1. BL 2026/27 25.–29.11.2026 + 10.–14.03.2027 (Runden 8 und 9 am 12.03.),
+  2. BL Fr–So und Sa–So. **Einsätze je Region** (`LeagueWorld.AppsLvl` = (Region, Saison, Stufe, Spieler), `Apps(source, …)`): BL-Spieler
+  stehen auch in bayerischen Ligen. QHigher der Landesliga zählt jetzt Bundesliga-Einsätze der Vorsaison mit (so ist das Merkmal
+  gemeint; ohne eingespielte BL-Saisonen = 0). **Vereinsnamen** (`LeagueNames.Club`, Tirol): „Schachklub/Schachclub Schwaz" → „Schwaz",
+  „Innsbruck Pradl" → „Innsbruck-Pradl", „rum|hall" nur noch an Wortgrenzen (traf „SK Elektro Strobl Hallein") — an allen 56 TMM-Namen
+  seit 2009 unverändert; `LeagueClub.OwnsTeam` vergleicht in Tirol zusätzlich den kanonischen Verein (Schwaz spielt 2026/27 als
+  „Schachklub Schwaz" in der 1. Bundesliga, 2024/25 + 2025/26 als „Schachclub Schwaz" in der 2. BL West → die Startseite zeigt die BL
+  dem Verein ohne „alle Ligen").
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,

@@ -47,7 +47,7 @@ public class LeagueGameLinksSqlTests(LeagueGameLinksSqlFixture fixture) : IAsync
         {
             if (!await db.LeagueClubs.AnyAsync(c => c.Id == 1))   // ResetAsync leert auch die Vereine der Migration
                 db.LeagueClubs.Add(new LeagueClub { Id = 1, Name = "SK Schwaz", TeamPrefix = "Schwaz", AnonName = "Schwaz" });
-            db.LeagueTournaments.Add(new LeagueTournament { Tnr = Tnr, Name = "LL", Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+            db.LeagueTournaments.Add(new LeagueTournament { Tnr = Tnr, Name = "LL", Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
             await db.SaveChangesAsync();
             await LeagueRefresh.ReplaceAsync(db, Pages(), Now, default);
         }

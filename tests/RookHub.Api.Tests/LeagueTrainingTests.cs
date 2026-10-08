@@ -80,7 +80,7 @@ public class LeagueTrainingTests
             int I(string k) => (int)r.GetProperty(k).GetDouble();
             var row = new FeatureRow
             {
-                Level = I("level"), B = I("B"), Pos = D("pos"), Top = I("top"), Bench = I("bench"), QSame = D("q_same"),
+                Level = LeagueLevels.FromTmm(I("level")), B = I("B"), Pos = D("pos"), Top = I("top"), Bench = I("bench"), QSame = D("q_same"),
                 QHigher = D("q_higher"), QLower = D("q_lower"), NewPrev = I("new_prev"), NewEver = I("new_ever"), N = I("n"),
                 First = I("first"), Cur = D("cur"), Last = I("last"), Last2 = I("last2"), Yesterday = I("yesterday"),
                 YestPlayed = I("yest_played"), ConflictHi = D("conflict_hi"), ConflictLo = D("conflict_lo"),
@@ -208,7 +208,7 @@ public class LeagueTrainingTests
         db.LeagueTournaments.AddRange(t); db.LeagueRounds.AddRange(r); db.LeagueMatches.AddRange(m);
         db.LeagueGames.AddRange(g); db.LeaguePlayers.AddRange(p);
         // eine Tiroler Liga gehört NICHT dazu
-        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2025/26", Level = 1, League = "Landesliga", Stage = "Liga" });
+        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2025/26", Level = 3, League = "Landesliga", Stage = "Liga" });
         await db.SaveChangesAsync();
 
         var rep = await LeagueTraining.TrainAsync(db, LeagueRegions.Bayern, LeagueTraining.BayernFeatures, null, LeagueModel.FromEmbedded(), default);

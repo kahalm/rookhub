@@ -24,7 +24,7 @@ public class LeagueRegionSqlTests(LeagueRegionSqlFixture fixture) : IAsyncLifeti
         db.LeagueTournaments.AddRange(
             new LeagueTournament { Tnr = Lm, Name = "LL", Season = "2026/27", Level = 3, League = "Landesliga Süd", Stage = "Liga", Source = LigamanagerSource.Source },
             new LeagueTournament { Tnr = Zg, Name = "ZL", Season = "2026/27", Level = 5, League = "Zugspitzliga", Stage = "Liga", Source = ZugspitzeSource.Source },
-            new LeagueTournament { Tnr = Cr, Name = "TMM", Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+            new LeagueTournament { Tnr = Cr, Name = "TMM", Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         db.LeaguePlayers.AddRange(
             new LeaguePlayer { Tnr = Lm, Team = "SK Weilheim 1", Name = "Muster, Max", NameKey = "muster, max", FideId = "90000001" },
             new LeaguePlayer { Tnr = Zg, Team = "SK Weilheim II", Name = "Muster, Max", NameKey = "muster, max" },

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.719.0", date: "2026-10-08", changes: [
+    { en: "LeagueHub: preparation for the Austrian Bundesliga. The Tyrolean league levels move down by two (1st Bundesliga 1, 2nd Bundesliga 2, Landesliga 3 … Gebietsklasse 6) — the forecast model computes exactly the same numbers. Leagues that play several rounds on consecutive days (Landesliga Saturday + Sunday, Bundesliga Friday to Sunday or five days in a row, two rounds on one day) open the whole block at once and forecast each round with the previous one as “played yes/no”. Club names of the Bundesliga (“Schachklub Schwaz”) count as the same club as in the Tyrolean leagues.",
+      de: "LeagueHub: Vorbereitung für die Österreichische Bundesliga. Die Tiroler Ligastufen rücken um zwei nach unten (1. Bundesliga 1, 2. Bundesliga 2, Landesliga 3 … Gebietsklasse 6) — das Prognose-Modell rechnet genau dieselben Zahlen. Ligen, die mehrere Runden an aufeinanderfolgenden Tagen spielen (Landesliga Samstag + Sonntag, Bundesliga Freitag bis Sonntag oder fünf Tage am Stück, zwei Runden an einem Tag), öffnen den ganzen Block auf einmal und rechnen jede Runde mit der vorigen als „gespielt ja/nein“. Vereinsnamen der Bundesliga („Schachklub Schwaz“) gelten als derselbe Verein wie in den Tiroler Ligen." },
+  ] },
   { version: "0.718.1", date: "2026-10-08", changes: [
     { en: "Training lines: a line the opponent follows as far as his games go, with no estimate available afterwards (e.g. the local explorer is off), now ranks ahead of the lines he contradicts. Before, with one game 1.e4 c5 2.Nf3, the Najdorf line he actually plays ended up behind the 1…e5 line he never plays.",
       de: "Trainingslinien: eine Linie, der der Gegner folgt, so weit seine Partien reichen, und für die danach keine Schätzung da ist (z. B. lokaler Explorer aus), steht jetzt vor den Linien, denen er widerspricht. Vorher landete bei einer Partie 1.e4 c5 2.Sf3 die Najdorf-Linie, die er wirklich spielt, hinter der 1…e5-Linie, die er nie spielt." },

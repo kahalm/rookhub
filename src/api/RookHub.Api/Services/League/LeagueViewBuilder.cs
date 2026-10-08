@@ -9,17 +9,20 @@ namespace RookHub.Api.Services.League;
 /// (snake_case): so lässt sich die C#-Ausgabe direkt gegen die Python-Ausgabe prüfen.
 ///
 /// <para>Regel (Wunsch des Nutzers): Prognose nur für die NÄCHSTE Runde einer Liga — die übernächste
-/// erst, wenn die nächste gespielt ist. Ausnahme Landesliga: Samstag + Sonntag gemeinsam. Gespielte
+/// erst, wenn die nächste gespielt ist. Ausnahme Runden-Blöcke (<see cref="LeagueLevels.HasRoundBlocks"/>): Landesliga Samstag +
+/// Sonntag gemeinsam, Bundesliga der ganze Block (Fr–So, fünf Tage am Stück, Doppelrunde an einem Tag). Gespielte
 /// Runden zeigen die echte Aufstellung neben der Prognose, die VOR der Runde gegolten hätte.</para>
 /// </summary>
 public sealed class LeagueViewBuilder
 {
     private static readonly string[] Weekday = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
-    /// <summary>Backtest (Saison-Holdout 2020/21–2025/26): Anteil der Aufgestellten unter den Top-B der Prognose.</summary>
+    /// <summary>Backtest (Saison-Holdout 2020/21–2025/26): Anteil der Aufgestellten unter den Top-B der Prognose. Stufen seit der
+    /// Bundesliga (0.719.0): Landesliga 3, 1. Klasse 4, 2. Klasse 5, Gebietsklasse 6 (Python: 1–4). Für die Bundesliga (1, 2) gibt es
+    /// keinen Backtest — dort fehlt <c>hit</c>.</summary>
     private static readonly Dictionary<(int, string), double> Hits = new()
     {
-        [(1, "R1")] = .58, [(1, "R2+")] = .64, [(1, "So vorab")] = .64, [(1, "So nach Sa")] = .76,
-        [(2, "R1")] = .58, [(2, "R2+")] = .66, [(3, "R1")] = .52, [(3, "R2+")] = .63, [(4, "R1")] = .33, [(4, "R2+")] = .56,
+        [(3, "R1")] = .58, [(3, "R2+")] = .64, [(3, "So vorab")] = .64, [(3, "So nach Sa")] = .76,
+        [(4, "R1")] = .58, [(4, "R2+")] = .66, [(5, "R1")] = .52, [(5, "R2+")] = .63, [(6, "R1")] = .33, [(6, "R2+")] = .56,
     };
 
     /// <summary>Dasselbe für Bayern mit <c>Assets/league-model-bayern.json</c> (2026-10-07, <c>league-train --region bayern
@@ -82,7 +85,7 @@ public sealed class LeagueViewBuilder
         foreach (var lvl in LeagueLevels.Of(t.Source))
         {
             var lg = LeagueLevels.Short(t.Source, lvl);
-            var n = _w.Apps(ps, lvl, pid);
+            var n = _w.Apps(t.Source, ps, lvl, pid);
             if (ps is not null && n > 0) prev.Add($"{lg} {n}/{_w.MptOf(t.Source, ps, lvl)}");
         }
         var cur = new List<string>();
@@ -102,20 +105,28 @@ public sealed class LeagueViewBuilder
     }
 
     /// <summary>(Zeilen, Wahrscheinlichkeiten, Lage) — Prognose für OPP in Runde RND mit dem Wissen vor der Runde.</summary>
+    /// <remarks>Runden-Blöcke (<see cref="LeagueLevels.Consecutive"/>): ist der Vortag (bzw. die Runde am Vormittag) noch nicht gespielt,
+    /// wird diese Runde als Mischung „dort gespielt ja/nein" gerechnet — mit der Prognose des Vortags, die in einem Bundesliga-Block
+    /// selbst schon eine solche Mischung sein kann (rekursiv; Landesliga: der Samstag ist eine gewöhnliche Prognose, also dieselben
+    /// Zahlen wie vorher). Ist eine Runde am SELBEN Tag schon gespielt (Bundesliga-Doppelrunde), zählt sie mit
+    /// (<c>asof</c> = Tag danach).</remarks>
     private (List<FeatureRow> Rows, double[] P, string Phase) Forecast(LeagueModel m, int tnr, string opp, int rnd, int level)
     {
+        var src = _w.T[tnr].Source;
         var date = _w.RDate.GetValueOrDefault((tnr, rnd));
         var prev = _w.SchedOf(tnr, opp).Where(s => s.Round < rnd).ToList();
         var sat = prev.Count > 0 ? prev[^1] : null;
-        var weekend = level == 1 && sat?.Date is not null && date is not null && date.Value.DayNumber - sat.Date!.Value.DayNumber == 1;
+        var weekend = sat is not null && LeagueLevels.Consecutive(src, level, sat.Date, date);
         var playedBefore = prev.Any(s => _w.Real.Contains((tnr, s.Round, opp)));
         if (weekend && !_w.Real.Contains((tnr, sat!.Round, opp)))
         {
             var sun = LeagueFeatures.RowsFor(_w, tnr, opp, rnd, asof: sat.Date);
-            var satRows = LeagueFeatures.RowsFor(_w, tnr, opp, sat.Round);
-            return (sun, m.SundayAdvance(satRows, sun), "So vorab");
+            var (satRows, pSat, _) = Forecast(m, tnr, opp, sat.Round, level);
+            return (sun, m.SundayAdvance(satRows, pSat, sun), "So vorab");
         }
-        var rows = LeagueFeatures.RowsFor(_w, tnr, opp, rnd);
+        var rows = weekend && sat!.Date == date
+            ? LeagueFeatures.RowsFor(_w, tnr, opp, rnd, asof: date!.Value.AddDays(1))
+            : LeagueFeatures.RowsFor(_w, tnr, opp, rnd);
         return (rows, m.Predict(rows), weekend ? "So nach Sa" : playedBefore ? "R2+" : "R1");
     }
 
@@ -142,16 +153,17 @@ public sealed class LeagueViewBuilder
         if (r0 is not null)
         {
             open.Add(r0.Value);
-            var d0 = _w.RDate.GetValueOrDefault((tnr, r0.Value));
-            var d1 = _w.RDate.GetValueOrDefault((tnr, r0.Value + 1));
-            if (level == 1 && d0 is not null && d1 is not null && d1.Value.DayNumber - d0.Value.DayNumber == 1)
-                open.Add(r0.Value + 1);   // Landesliga: Samstag + Sonntag
+            // Runden-Block (Landesliga Sa + So, Bundesliga Fr–So bzw. fünf Tage am Stück): der ganze Block ist offen.
+            for (var r = r0.Value; rounds.Contains(r + 1) && Linked(r, r + 1); r++) open.Add(r + 1);
         }
+        bool Linked(int a, int b) =>
+            LeagueLevels.Consecutive(t.Source, level, _w.RDate.GetValueOrDefault((tnr, a)), _w.RDate.GetValueOrDefault((tnr, b)));
+        // Genauer wird eine vorläufige Runde, sobald die Runde VOR ihrem Block gespielt ist.
         int UnlockAfter(int r)
         {
-            var d = _w.RDate.GetValueOrDefault((tnr, r));
-            var dp = _w.RDate.GetValueOrDefault((tnr, r - 1));
-            return level == 1 && d is not null && dp is not null && d.Value.DayNumber - dp.Value.DayNumber == 1 ? r - 2 : r - 1;
+            var first = r;
+            while (first > 1 && Linked(first - 1, first)) first--;
+            return first - 1;
         }
         var venues = new Dictionary<(int, string), string?>();
         var times = new Dictionary<(int, string), string?>();

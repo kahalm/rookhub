@@ -50,7 +50,9 @@ public sealed class LeagueImportService
             var now = DateTime.UtcNow;
             var tournaments = b.Tournaments.Select(t => new LeagueTournament
             {
-                Tnr = t.Tnr, Name = t.Name, Season = t.Season, Level = t.Level, League = t.League, Grp = t.Grp ?? "",
+                // Das Bündel kennt die TMM-Stufen der Python-Fassung (Landesliga 1 … Gebietsklasse 4) — seit der Bundesliga (0.719.0)
+                // liegen sie um zwei tiefer (LeagueLevels.FromTmm).
+                Tnr = t.Tnr, Name = t.Name, Season = t.Season, Level = LeagueLevels.FromTmm(t.Level), League = t.League, Grp = t.Grp ?? "",
                 Stage = t.Stage, Aborted = t.Aborted, Start = t.Start, End = t.End, Rounds = t.Rounds, UpdatedAt = now,
             }).ToList();
             var rounds = (b.Rounds ?? new()).Select(r => new LeagueRound { Tnr = r.Tnr, Round = r.Round, Date = LeagueDates.Parse(r.Date) }).ToList();

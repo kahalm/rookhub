@@ -104,7 +104,7 @@ public class TacticHarvestTests : IDisposable
 
     private async Task<(GameAnalysis A, LeagueClubGame G)> SeedClubAsync()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         _db.LeagueGames.Add(new LeagueGame
         {
             Tnr = 7, Round = 1, MatchNo = 1, Board = 4, HomeTeam = "Testdorf", AwayTeam = "Spg Fügen-Zillertal/Rattenberg",

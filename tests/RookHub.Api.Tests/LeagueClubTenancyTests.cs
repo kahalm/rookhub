@@ -50,7 +50,7 @@ public class LeagueClubTenancyTests : IDisposable
         Player(900_000_001, "SK Weiler 1", "Bayer, Benno", "300");
         Player(900_000_001, "SC Bad Reichenhall 1", "Reich, Rudi", "400");
         _db.LeagueTournaments.AddRange(
-            new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" },
+            new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" },
             new LeagueTournament { Tnr = 900_000_001, Season = "2026/27", Level = 3, League = "Landesliga Süd", Stage = "Liga",
                 Source = LigamanagerSource.Source });
         await _db.SaveChangesAsync();
@@ -287,7 +287,7 @@ public class LeagueClubTenancyTests : IDisposable
     private async Task SeedFiveTyroleanLeaguesAsync()
     {
         await SeedAsync();
-        foreach (var (tnr, level) in new[] { (2, 2), (3, 3), (4, 4), (5, 5), (6, 6) })
+        foreach (var (tnr, level) in new[] { (2, 4), (3, 5), (4, 6), (5, 7), (6, 8) })   // Liga 1 = Landesliga (Stufe 3)
             _db.LeagueTournaments.Add(new LeagueTournament { Tnr = tnr, Season = "2026/27", Level = level, League = $"Liga {tnr}", Stage = "Liga" });
         foreach (var tnr in new[] { 1, 2, 3, 4, 5 })
             _db.LeagueViews.Add(new LeagueView { Tnr = tnr, Json = "{}", GeneratedAt = Now });
@@ -463,10 +463,21 @@ public class LeagueClubTenancyTests : IDisposable
     [InlineData("Schwaz", "Schwaz", true)]
     [InlineData("Schwaz", "Schwaz 2", true)]
     [InlineData("Schwaz", "Schwazer SK", false)]
+    [InlineData("Schwaz", "Schachklub Schwaz", true)]     // 1. Bundesliga 2026/27 (0.719.0: kanonischer Verein in Tirol)
+    [InlineData("Schwaz", "Schachclub Schwaz", true)]     // 2. Bundesliga West
+    [InlineData("Schwaz", "SK Schwarzach", false)]
     [InlineData("SK Weilheim", "SK Weilheim 1", true)]
     [InlineData("SK Weilheim", "sk weilheim 2", true)]
     [InlineData("SK Weilheim", "SK Weilheimer 1", false)]
     [InlineData("SK Weilheim", "Weilheim", false)]
     public void OwnsTeam_PrefixAtAWordBoundary(string prefix, string team, bool own) =>
         Assert.Equal(own, new LeagueClub { TeamPrefix = prefix }.OwnsTeam(team));
+
+    /// <summary>Die Tiroler Vereinsregeln (<see cref="LeagueNames.Club"/>) gelten nur für Vereine der Region Tirol.</summary>
+    [Fact]
+    public void OwnsTeam_CanonicalClub_OnlyInTirol()
+    {
+        Assert.True(new LeagueClub { TeamPrefix = "Rochade Rum" }.OwnsTeam("Spg Hall/Mils"));
+        Assert.False(new LeagueClub { TeamPrefix = "Rochade Rum", Region = LeagueRegions.Bayern }.OwnsTeam("Spg Hall/Mils"));
+    }
 }

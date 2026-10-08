@@ -140,7 +140,7 @@ public class LeagueViewConcurrencyTests
     /// <summary>Eine kleine Liga wie <c>LeagueEngineTests.TinyWorld</c>: Runde 1 gespielt, Runden 2 und 3 offen.</summary>
     private static void SeedWorld(AppDbContext db)
     {
-        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Name = "TMM Landesliga 2026/2027", Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Name = "TMM Landesliga 2026/2027", Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         db.LeagueRounds.AddRange(
             new LeagueRound { Tnr = 1, Round = 1, Date = new DateOnly(2026, 10, 3) },
             new LeagueRound { Tnr = 1, Round = 2, Date = new DateOnly(2026, 10, 4) },

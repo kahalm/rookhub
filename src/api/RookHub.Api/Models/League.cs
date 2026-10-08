@@ -15,8 +15,9 @@ public class LeagueTournament
     public string Name { get; set; } = string.Empty;
     /// <summary>„2026/27".</summary>
     public string Season { get; set; } = string.Empty;
-    /// <summary>Tirol: 1 = Landesliga, 2 = 1. Klasse, 3 = 2. Klasse, 4 = Gebietsklasse. Bayern (Ligamanager):
-    /// <see cref="Services.League.LigamanagerSource.LevelOf"/> — 1 = Oberliga … 8 = C-Klasse.</summary>
+    /// <summary>Tirol/Österreich (chess-results) seit 0.719.0: 1 = 1. Bundesliga, 2 = 2. Bundesliga, 3 = Landesliga, 4 = 1. Klasse,
+    /// 5 = 2. Klasse, 6 = Gebietsklasse (vorher Landesliga 1 … Gebietsklasse 4 — <see cref="Services.League.LeagueLevels"/>).
+    /// Bayern (Ligamanager): <see cref="Services.League.LigamanagerSource.LevelOf"/> — 1 = Oberliga … 8 = C-Klasse.</summary>
     public int Level { get; set; }
     public string League { get; set; } = string.Empty;
     /// <summary>„Ost", „West", „Aufstiegs-Playoff" … oder leer.</summary>
@@ -578,13 +579,17 @@ public class LeagueClub
     public DateTime CreatedAt { get; set; }
 
     /// <summary>Gehört diese Mannschaft dem Verein? „Schwaz" = „Schwaz"; „SK Weilheim 1" beginnt mit „SK Weilheim " —
-    /// verglichen ohne Groß/klein, an einer Wortgrenze (ein „SK Weilheimer" wäre ein anderer Verein).</summary>
+    /// verglichen ohne Groß/klein, an einer Wortgrenze (ein „SK Weilheimer" wäre ein anderer Verein). In Tirol zusätzlich über den
+    /// kanonischen Verein (<see cref="Services.League.LeagueNames.Club"/>, 0.719.0): die Bundesliga schreibt „Schachklub Schwaz".</summary>
     public bool OwnsTeam(string? team)
     {
         var t = Services.League.LeagueNames.Clean(team).TrimEnd('/', '-', ' ');
         var p = Services.League.LeagueNames.Clean(TeamPrefix);
-        return p.Length > 0 && (t.Equals(p, StringComparison.OrdinalIgnoreCase)
-            || t.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase) || t.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));
+        if (p.Length == 0) return false;
+        return t.Equals(p, StringComparison.OrdinalIgnoreCase)
+            || t.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase) || t.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase)
+            || Region == Services.League.LeagueRegions.Tirol && t.Length > 0
+               && Services.League.LeagueNames.Club(t).Equals(Services.League.LeagueNames.Club(p), StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Eine anonymisierte Seite dieses Vereins: Name = <see cref="AnonName"/> und keine FIDE-ID.</summary>

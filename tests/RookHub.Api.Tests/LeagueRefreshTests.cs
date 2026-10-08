@@ -45,7 +45,7 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task Replace_LinksBoardGamesToTheRoster()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 3, League = "Landesliga" });
         _db.LeagueGames.Add(new LeagueGame { Tnr = 7, Round = 9, HomeTeam = "alt", AwayTeam = "alt" });   // wird ersetzt
         await _db.SaveChangesAsync();
         await Refresh().ReplaceAsync(SamplePages(), default);
@@ -90,7 +90,7 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task StalePlayers_OnlyLikelyOpponents_OldestFirstCapped()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 3, League = "Landesliga" });
         _db.LeagueViews.Add(new LeagueView
         {
             Tnr = 1,
@@ -106,7 +106,7 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task StalePlayers_OpponentsOfOwnClubFirst_ThenByProbability()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 3, League = "Landesliga" });
         // „A" ist ein fremder Verein, Testdorf der eigene (ein Verein in LeagueClubs): dessen Gegner (Spieler 5, nur 20 %)
         // kommt vor den 90 % von A.
         _db.LeagueClubs.Add(TestClubs.Home);
@@ -125,7 +125,7 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task Run_FetchesPagesAndGamesThroughTheCrawler()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         await _db.SaveChangesAsync();
         var asked = new List<string>();
         var json = System.Text.Json.JsonSerializer.Serialize(SamplePages(), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
@@ -145,7 +145,7 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task Replace_EmptyPages_KeepTheLeague()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 3, League = "Landesliga" });
         _db.LeagueGames.Add(new LeagueGame { Tnr = 7, Round = 1, HomeTeam = "A", AwayTeam = "B" });
         await _db.SaveChangesAsync();
         var empty = new LeagueRefresh.Pages(7, new(), new(), new(), new(), new());   // Fehl-/Drosselseite von chess-results
@@ -161,7 +161,7 @@ public class LeagueRefreshTests : IDisposable
     public async Task Replace_OneEmptyPageWithExistingRows_KeepsTheLeague(string emptyPage)
     {
         // Bestand aus einem früheren Lauf: alle vier Seiten hatten Zeilen
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 3, League = "Landesliga" });
         await _db.SaveChangesAsync();
         await Refresh().ReplaceAsync(SamplePages(), default);
         _db.ChangeTracker.Clear();
@@ -186,7 +186,7 @@ public class LeagueRefreshTests : IDisposable
     public async Task Replace_EmptyPageWithoutExistingRows_ReplacesAsBefore()
     {
         // Saisonbeginn: noch keine Brettpaarungen und keine Statistik — weder neu noch im Bestand
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 3, League = "Landesliga" });
         _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "alt", NameKey = "alt" });   // ohne Statistik
         await _db.SaveChangesAsync();
         var pages = SamplePages() with { Games = new(), RoundDates = new(), Stats = new() };
@@ -199,8 +199,8 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task Run_EmptyRosterPage_ReportsTheLeagueAsNotUpdated()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 6, Season = "2026/27", Level = 2, League = "1. Klasse", Stage = "Liga" });
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 6, Season = "2026/27", Level = 4, League = "1. Klasse", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 6, Team = "Schwaz", Name = "Binder, Moriz", NameKey = "binder, moriz", FideId = "111" });
         await _db.SaveChangesAsync();
         var web = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
@@ -221,8 +221,8 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task Run_OneLeagueFails_TheOthersAndTheViewsStillUpdate()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 6, Season = "2026/27", Level = 2, League = "1. Klasse", Stage = "Liga" });
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 6, Season = "2026/27", Level = 4, League = "1. Klasse", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         await _db.SaveChangesAsync();
         var json = System.Text.Json.JsonSerializer.Serialize(SamplePages(), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
         var handler = new StubHandler(req => req.RequestUri!.AbsolutePath switch
@@ -241,7 +241,7 @@ public class LeagueRefreshTests : IDisposable
     [Fact]
     public async Task Run_EveryLeagueFails_IsAFailedRun()
     {
-        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
         await _db.SaveChangesAsync();
         var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         await Assert.ThrowsAsync<InvalidOperationException>(() => Refresh(handler).RunAsync(default));
@@ -280,6 +280,7 @@ public class LeagueRefreshTests : IDisposable
         var res = await new LeagueImportService(_db).ImportAsync(bundle, default);
         Assert.Equal(1, res["tournaments"]!.GetValue<int>());
         Assert.Equal(new[] { 7 }, _db.LeagueTournaments.Select(t => t.Tnr).ToArray());
+        Assert.Equal(LeagueLevels.TirolLandesliga, _db.LeagueTournaments.Single().Level);   // Python-Stufe 1 → Landesliga 3 (0.719.0)
         Assert.Single(_db.LeagueGames);                                   // die alte Liga ist ersetzt
         Assert.Equal(new DateOnly(2026, 10, 3), _db.LeagueRounds.Single().Date);
         Assert.Single(_db.LeagueOnlineAccounts);

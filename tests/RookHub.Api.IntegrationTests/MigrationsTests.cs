@@ -321,6 +321,39 @@ public class MigrationsTests
     }
 
     /// <summary>
+    /// <c>LeagueTirolLevelsBundesliga</c> (Österreichische Bundesliga, 0.719.0): die Tiroler Stufen (<c>Source IS NULL</c>) rücken um
+    /// zwei nach unten (Landesliga 1 → 3 … Gebietsklasse 4 → 6), Ligamanager und Zugspitze bleiben; der Rückweg schiebt zurück.
+    /// </summary>
+    [MySqlFact]
+    public async Task LeagueTirolLevelsBundesliga_SchiebtNurDieTirolerStufen()
+    {
+        await using var schema = await MariaDbSchema.CreateAsync("blstufen");
+        await using var db = schema.NewContext();
+
+        var alle = db.Database.GetMigrations().ToList();
+        var index = alle.FindIndex(m => m.EndsWith("_LeagueTirolLevelsBundesliga", StringComparison.Ordinal));
+        Assert.True(index > 0, "Migration LeagueTirolLevelsBundesliga nicht gefunden");
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(alle[index - 1]);
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO LeagueTournaments (Tnr, Name, Season, Level, League, Grp, Stage, Aborted, UpdatedAt, Source) VALUES
+              (11, 'TMM Landesliga', '2026/27', 1, 'Landesliga', '', 'Liga', 0, NOW(), NULL),
+              (12, 'TMM 1. Klasse', '2026/27', 2, '1. Klasse', 'Ost', 'Liga', 0, NOW(), NULL),
+              (14, 'TMM Gebietsklasse', '2025/26', 4, 'Gebietsklasse', 'West', 'Liga', 0, NOW(), NULL),
+              (900002573, 'Landesliga Süd', '2026/27', 3, 'Landesliga Süd', '', 'Liga', 0, NOW(), 'ligamanager'),
+              (912026001, 'Zugspitzliga', '2026/27', 5, 'Zugspitzliga', '', 'Liga', 0, NOW(), 'zugspitze')
+            """);
+
+        await migrator.MigrateAsync(alle[index]);
+        Assert.Equal(new[] { (11, 3), (12, 4), (14, 6), (900002573, 3), (912026001, 5) },
+            (await db.LeagueTournaments.AsNoTracking().OrderBy(t => t.Tnr).ToListAsync()).Select(t => (t.Tnr, t.Level)));
+
+        await migrator.MigrateAsync(alle[index - 1]);
+        Assert.Equal(new[] { 1, 2, 4, 3, 5 },
+            await db.Database.SqlQueryRaw<int>("SELECT Level AS Value FROM LeagueTournaments ORDER BY Tnr").ToListAsync());
+    }
+
+    /// <summary>
     /// Faengt den Fall ab, dass jemand eine Entitaet aendert und die Migration vergisst: das
     /// Modell traegt dann Aenderungen, die in keiner Migration stehen, und Prod liefe mit einem
     /// Schema, das nicht zum Code passt.

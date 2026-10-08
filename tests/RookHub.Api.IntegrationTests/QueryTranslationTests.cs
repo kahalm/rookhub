@@ -1222,7 +1222,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Db.LeagueClubMembers.Add(new LeagueClubMember { ClubId = other.Id, GroupId = 501 });
         Db.UserGroups.Add(new UserGroup { UserId = member, GroupId = 501 });
         Db.LeagueTournaments.AddRange(
-            new LeagueTournament { Tnr = 4101, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" },
+            new LeagueTournament { Tnr = 4101, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" },
             new LeagueTournament { Tnr = 900_002_573, Season = "2026/27", Level = 3, League = "Landesliga Süd", Stage = "Liga", Source = "ligamanager" });
         Db.LeagueViews.AddRange(new LeagueView { Tnr = 4101, Json = "{}", GeneratedAt = DateTime.UtcNow },
             new LeagueView { Tnr = 900_002_573, Json = "{}", GeneratedAt = DateTime.UtcNow });
