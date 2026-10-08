@@ -59,8 +59,9 @@
     "freqIncomplete": "The frequencies are still incomplete – lines without a value come last.",
     "opponentOrder": "Order by opponent: the lines this opponent is most likely to play come first (from the player card); only the chapters of your colour against him.",
     "opponentFailed": "The opponent's order could not be loaded — the lines come in the usual order.",
-    "opponentToLearn": "Nothing is due against this opponent right now — switched to “Learn”, in the opponent's order.",
-    "opponentToQuiz": "All lines against this opponent are already learned — switched to “Review”, in the opponent's order.",
+    "opponentDone": "All {{n}} lines against this opponent done.",
+    "opponentAgain": "Start over",
+    "opponentBack": "Back to the player card",
     "freqLineTip": "How often you reach this line in real games (Lichess explorer, same selection as in the hole finder)"
   },
   "srConfig": {
@@ -4545,7 +4546,8 @@
     "trainingRepertoire": {
       "button": "Show me lines to train",
       "hint": "Creates your own repertoire “{{name}}” with the (up to {{max}}) lines you are most likely to meet against this opponent.",
-      "confirm": "Create the repertoire “{{name}}” with the up to {{max}} most important lines against this opponent? An existing repertoire with this name is replaced.",
+      "replaceConfirm": "There already is a repertoire “{{name}}”. Replace its content with the newly ranked lines? Your training progress per line is kept.",
+      "replace": "Replace",
       "busy": "Creating …",
       "failed": "The training repertoire could not be created.",
       "done": "“{{name}}” is ready ({{lines}} lines) — opening it …",

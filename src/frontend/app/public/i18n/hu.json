@@ -2563,8 +2563,9 @@
     "freqIncomplete": "A gyakoriságok még hiányosak – az érték nélküli változatok kerülnek a végére.",
     "opponentOrder": "Sorrend az ellenfél szerint: elöl azok a vonalak, amelyeket ez az ellenfél a legvalószínűbben játszik (a játékoskártyáról); csak a te színed fejezetei ellene.",
     "opponentFailed": "Az ellenfél szerinti sorrendet nem sikerült betölteni — a vonalak a megszokott sorrendben jönnek.",
-    "opponentToLearn": "Ez ellen az ellenfél ellen most semmi sem esedékes — átváltva erre: „Tanulás”, az ellenfél szerinti sorrendben.",
-    "opponentToQuiz": "Ez ellen az ellenfél ellen már mindent megtanultál — átváltva erre: „Kérdezés”, az ellenfél szerinti sorrendben.",
+    "opponentDone": "Mind a(z) {{n}} vonal kész ez ellen az ellenfél ellen.",
+    "opponentAgain": "Elölről",
+    "opponentBack": "Vissza a játékoskártyához",
     "freqLineTip": "Milyen gyakran jutsz el ehhez a változathoz valódi játszmákban (Lichess explorer, ugyanaz a beállítás, mint a lyukkeresőnél)"
   },
   "srConfig": {
@@ -4545,7 +4546,8 @@
     "trainingRepertoire": {
       "button": "Edzésrepertoár létrehozása",
       "hint": "Saját repertoárt hoz létre „{{name}}” néven azokkal a (legfeljebb {{max}}) vonalakkal, amelyekkel ez ellen az ellenfél ellen a legvalószínűbben találkozol.",
-      "confirm": "Létrehozod a(z) „{{name}}” repertoárt a legfeljebb {{max}} legfontosabb vonallal ez ellen az ellenfél ellen? A meglévő azonos nevű repertoár lecserélődik.",
+      "replaceConfirm": "Már van „{{name}}” nevű repertoár. Lecseréled a tartalmát az újonnan rangsorolt vonalakra? Az edzési előrehaladásod vonalanként megmarad.",
+      "replace": "Csere",
       "busy": "Létrehozás …",
       "failed": "Az edzésrepertoárt nem sikerült létrehozni.",
       "done": "„{{name}}” elkészült ({{lines}} vonal) — megnyitás …",

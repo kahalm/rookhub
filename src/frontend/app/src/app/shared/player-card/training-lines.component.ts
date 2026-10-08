@@ -8,7 +8,7 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
-import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
 interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
@@ -203,19 +203,36 @@ export class TrainingLinesComponent {
     return GERMAN[key]?.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => String(all[k as keyof typeof all] ?? '')) ?? key;
   }
 
+  /** „Abbrechen" wie überall (common.cancel); in LeagueHub ohne Sprache deutsch. */
+  private cancelLabel(): string {
+    return this.translate?.getCurrentLang() ? this.translate.instant('common.cancel') : 'Abbrechen';
+  }
+
   /** „Show me lines to train": Repertoire „Prep: … Jahr" anlegen (gleichnamiges wird nach Rückfrage ersetzt) und öffnen. */
   async createRepertoire(d: TrainingLines): Promise<void> {
     const create = this.api.trainingRepertoire;
     if (!create || !d.repertoires.length) return;
-    if (!(await firstValueFrom(this.confirm.ask(this.t('confirm'))))) return;
     this.busy.set(true);
     this.creating.set(true);
     this.createNote.set(null);
+    const query = {
+      repertoire: d.repertoire, color: d.color, filter: this.filter(),
+      chapterColors: this.overrides(d.repertoire, d.repertoires.map(r => r.id)),
+    };
     try {
-      const r = await create.call(this.api, this.key(), {
-        repertoire: d.repertoire, color: d.color, filter: this.filter(),
-        chapterColors: this.overrides(d.repertoire, d.repertoires.map(r => r.id)),
-      });
+      // Erst ohne Ersetzen: gibt es noch kein „Prep: …", legt der Server gleich an — keine Rückfrage (Wunsch 2026-10-08).
+      let r: TrainingRepertoireResult;
+      try {
+        r = await create.call(this.api, this.key(), query, false);
+      } catch (e) {
+        const err = (e as { status?: number; error?: { reason?: string; name?: string } });
+        if (err?.status !== 409 || err.error?.reason !== 'exists') throw e;
+        // Es gibt schon eins: jetzt fragen, und nur bei „Ersetzen" denselben Aufruf mit replace
+        const ok = await firstValueFrom(this.confirm.ask(this.t('replaceConfirm', { name: err.error.name ?? trainingRepertoireName(this.name()) }),
+          undefined, { confirm: this.t('replace'), cancel: this.cancelLabel() }));
+        if (!ok) return;
+        r = await create.call(this.api, this.key(), query, true);
+      }
       this.createNote.set({ text: this.t('done', { name: r.name, lines: r.lines }), err: false });
       // Die Kapitel des neuen Repertoires trainieren mit der Farbe von hier (die Auto-Erkennung könnte an einer Auswahl kippen).
       const params: Record<string, string> = d.color ? { trainColor: d.color } : {};
@@ -342,7 +359,8 @@ export class TrainingLinesComponent {
 const GERMAN: Record<string, string> = {
   button: 'Trainings-Repertoire anlegen',
   hint: 'Legt dir ein eigenes Repertoire „{{name}}“ mit den (bis zu {{max}}) Linien an, die du gegen diesen Gegner am wahrscheinlichsten triffst.',
-  confirm: 'Repertoire „{{name}}“ mit den bis zu {{max}} wichtigsten Linien gegen diesen Gegner anlegen? Ein vorhandenes gleichnamiges wird ersetzt.',
+  replaceConfirm: 'Es gibt schon ein Repertoire „{{name}}“. Seinen Inhalt durch die neu gereihten Linien ersetzen? Dein Trainingsstand je Linie bleibt erhalten.',
+  replace: 'Ersetzen',
   busy: 'Lege an …',
   failed: 'Das Trainings-Repertoire ließ sich nicht anlegen.',
   done: '„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …',

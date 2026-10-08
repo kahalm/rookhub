@@ -83,12 +83,13 @@ export class ConfirmService {
   private labels = inject(CONFIRM_LABELS, { optional: true });
   private overlays = inject(OverlayContainer);
 
-  /** `messageKey` ist ein i18n-Schlüssel; ein bereits übersetzter Text geht genauso durch. */
-  ask(messageKey: string, params?: Record<string, unknown>): Observable<boolean> {
+  /** `messageKey` ist ein i18n-Schlüssel; ein bereits übersetzter Text geht genauso durch. `labels`: eigene Knopftexte
+   *  (z. B. „Ersetzen"), sonst die der Oberfläche. */
+  ask(messageKey: string, params?: Record<string, unknown>, labels?: { confirm?: string; cancel?: string }): Observable<boolean> {
     const data: ConfirmData = {
       message: this.translate.instant(messageKey, params),
-      confirmLabel: this.labels?.confirm,
-      cancelLabel: this.labels?.cancel,
+      confirmLabel: labels?.confirm ?? this.labels?.confirm,
+      cancelLabel: labels?.cancel ?? this.labels?.cancel,
     };
     const restore = this.intoModalDialog();
     return this.dialog.open(ConfirmDialogComponent, { data, maxWidth: '32rem' })

@@ -97,7 +97,12 @@
 
     <mat-card *ngSwitchCase="'DONE'" class="msg">
       <mat-icon>celebration</mat-icon>
-      @if (mode === 'learn') {
+      @if (opponent && opponentTotal) {
+        <!-- Gegner-Sitzung (2026-10-08): der Reihe nach durch, dann diese Meldung -->
+        <p class="opponent-done">{{ 'repertoireTrainer.opponentDone' | translate: { n: opponentTotal } }}</p>
+        <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.opponentAgain' | translate }}</button>
+        <button mat-stroked-button (click)="backToCard()">{{ 'repertoireTrainer.opponentBack' | translate }}</button>
+      } @else if (mode === 'learn') {
         <p>{{ 'repertoireTrainer.learnDone' | translate }}</p>
         <button mat-raised-button color="primary" (click)="setMode('quiz')">
           <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}

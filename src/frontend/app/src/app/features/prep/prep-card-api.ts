@@ -60,8 +60,8 @@ export class PrepCardApi implements PlayerCardApi {
     return this.api.trainingLines(Number(key), this.options(), q);
   }
 
-  trainingRepertoire(key: string, q: TrainingLinesQuery): Promise<TrainingRepertoireResult> {
-    return this.api.trainingRepertoire(Number(key), this.options(), q);
+  trainingRepertoire(key: string, q: TrainingLinesQuery, replace = false): Promise<TrainingRepertoireResult> {
+    return this.api.trainingRepertoire(Number(key), this.options(), q, replace);
   }
 
   /** Der Trainer holt dieselben Linien über `/api/prep/…` — mit derselben Grenze und demselben Zwilling wie die Karte. */

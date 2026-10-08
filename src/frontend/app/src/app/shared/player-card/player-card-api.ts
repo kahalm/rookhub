@@ -25,7 +25,8 @@ export interface PlayerCardApi {
   /** Trainingslinien gegen diesen Spieler (2026-10-07) — nur angemeldet, nie über einen Teilen-Link. Fehlt = kein Abschnitt. */
   trainingLines?(key: string, q: TrainingLinesQuery): Promise<TrainingLines>;
   /** „Show me lines to train": eigenes Repertoire „Prep: … Jahr" mit den bis zu 50 wichtigsten Linien anlegen bzw. ersetzen. */
-  trainingRepertoire?(key: string, q: TrainingLinesQuery): Promise<TrainingRepertoireResult>;
+  /** `replace`: ein gleichnamiges eigenes ersetzen — ohne antwortet der Server 409 `{ reason: 'exists', id, name }`. */
+  trainingRepertoire?(key: string, q: TrainingLinesQuery, replace?: boolean): Promise<TrainingRepertoireResult>;
   /** Wie der Trainer diesen Gegner findet (`?opponent=` und was sonst mitgeht). Fehlt = `league:<key>`. */
   trainerParams?(key: string): Record<string, string>;
 }

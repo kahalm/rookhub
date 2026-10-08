@@ -91,9 +91,9 @@ export class LeagueApiService {
   }
 
   /** „Show me lines to train" (2026-10-07): legt das Trainings-Repertoire gegen diesen Spieler an — nur angemeldet. */
-  trainingRepertoire(fide: string, q: TrainingLinesQuery): Promise<TrainingRepertoireResult> {
+  trainingRepertoire(fide: string, q: TrainingLinesQuery, replace = false): Promise<TrainingRepertoireResult> {
     return firstValueFrom(this.http.post<TrainingRepertoireResult>(`/api/league/player/${encodeURIComponent(fide)}/training-repertoire`,
-      trainingRepertoireBody(q)));
+      trainingRepertoireBody(q, { replace })));
   }
 
   // ── Online-Konten eines Spielers (0.605.0, league.manage) ──

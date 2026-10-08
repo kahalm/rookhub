@@ -189,46 +189,59 @@ describe('TrainingLinesComponent', () => {
   describe('„Show me lines to train" (Trainings-Repertoire)', () => {
     const createBtn = () => el().querySelector<HTMLButtonElement>('button.tl-create')!;
 
-    it('LeagueHub ohne Sprache: deutsch; Rückfrage nennt den Namen und das Ersetzen; danach per Absprung zur neuen Seite', async () => {
+    const exists = () => new HttpErrorResponse({ status: 409, error: { reason: 'exists', id: 77, name: 'Prep: Huber, Franz 2026' } });
+
+    it('noch kein „Prep: …": KEINE Rückfrage, legt an (replace false) und springt per Absprung hin (LeagueHub, deutsch)', async () => {
       build();
       handoff.rookHubUrl = 'https://rookhub.example';
       await openSection();
       expect(createBtn().textContent).toContain('Trainings-Repertoire anlegen');
       createBtn().click();
       await fixture.whenStable();
-      const year = new Date().getFullYear();
-      expect(confirmAsk.calls.mostRecent().args[0]).toContain(`„Prep: Huber, Franz ${year}“`);
-      expect(confirmAsk.calls.mostRecent().args[0]).toContain('gleichnamiges wird ersetzt');
+      expect(confirmAsk).not.toHaveBeenCalled();
       expect(trainingRepertoire).toHaveBeenCalledOnceWith('1606921', jasmine.objectContaining({
-        repertoire: 7, color: 'w', filter: { source: 'both', speeds: ['blitz'], years: 3, withUnsure: false } }));
+        repertoire: 7, color: 'w', filter: { source: 'both', speeds: ['blitz'], years: 3, withUnsure: false } }), false);
       expect(handoff.jumpToRookHub).toHaveBeenCalledWith('repertoires/501?trainColor=w');
     });
 
-    it('in RookHub in der Sprache der Oberfläche; nach Erfolg zur Repertoire-Seite (mit Trainingsfarbe)', async () => {
+    it('es gibt schon eins (409 exists): Rückfrage mit Namen und „Ersetzen"/„Abbrechen"; Ersetzen schickt replace', async () => {
+      build();
+      trainingRepertoire.and.callFake((_k: string, _q: unknown, replace: boolean) =>
+        replace ? Promise.resolve({ id: 77, name: 'Prep: Huber, Franz 2026', lines: 4, replaced: true }) : Promise.reject(exists()));
+      await openSection();
+      createBtn().click();
+      await fixture.whenStable();
+      const [message, , labels] = confirmAsk.calls.mostRecent().args;
+      expect(message).toContain('Es gibt schon ein Repertoire „Prep: Huber, Franz 2026“');
+      expect(message).toContain('Trainingsstand je Linie bleibt erhalten');
+      expect(labels).toEqual({ confirm: 'Ersetzen', cancel: 'Abbrechen' });
+      expect(trainingRepertoire.calls.allArgs().map(a => a[2])).toEqual([false, true]);
+      expect(router.navigate).toHaveBeenCalledWith(['/repertoires', 77], { queryParams: { trainColor: 'w' } });
+    });
+
+    it('Abbrechen schreibt nichts (kein zweiter Aufruf), keine Fehlermeldung', async () => {
+      build();
+      trainingRepertoire.and.rejectWith(exists());
+      confirmAsk.and.returnValue(of(false));
+      await openSection();
+      createBtn().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(trainingRepertoire).toHaveBeenCalledTimes(1);
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(el().querySelector('.err')).toBeNull();
+    });
+
+    it('in RookHub in der Sprache der Oberfläche; anderer Fehler: sagt es', async () => {
       lang = 'en';
       build(true);
       await openSection();
       expect(createBtn().textContent).toContain('Show me lines to train');
-      createBtn().click();
-      await fixture.whenStable();
-      expect(confirmAsk.calls.mostRecent().args[0]).toContain('Create Prep: Huber, Franz');
-      expect(router.navigate).toHaveBeenCalledWith(['/repertoires', 501], { queryParams: { trainColor: 'w' } });
-    });
-
-    it('Rückfrage verneint: nichts passiert; Fehler: sagt es', async () => {
-      build();
-      await openSection();
-      confirmAsk.and.returnValue(of(false));
-      createBtn().click();
-      await fixture.whenStable();
-      expect(trainingRepertoire).not.toHaveBeenCalled();
-
-      confirmAsk.and.returnValue(of(true));
       trainingRepertoire.and.rejectWith(new HttpErrorResponse({ status: 400 }));
       createBtn().click();
       await fixture.whenStable();
       fixture.detectChanges();
-      expect(el().querySelector('.err')?.textContent).toContain('ließ sich nicht anlegen');
+      expect(el().querySelector('.err')).not.toBeNull();
       expect(router.navigate).not.toHaveBeenCalled();
     });
 
@@ -312,7 +325,7 @@ describe('TrainingLinesComponent', () => {
       el().querySelector<HTMLButtonElement>('button.tl-create')!.click();
       await fixture.whenStable();
       expect(trainingRepertoire).toHaveBeenCalledOnceWith('1606921', jasmine.objectContaining({
-        repertoire: null, color: 'w', chapterColors: { '9': { Hauptlinie: 'b' } } }));
+        repertoire: null, color: 'w', chapterColors: { '9': { Hauptlinie: 'b' } } }), false);
     });
   });
 

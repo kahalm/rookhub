@@ -4,6 +4,9 @@ namespace RookHub.Api.Services.Prep;
 /// echte Abfragen schicken.</summary>
 public interface ITrainingExplorer
 {
+    /// <summary>Gibt es eine Quelle? Ohne bleibt jede Lücke ohne Quelle (Auffüllregel), und es wird nichts abgefragt.</summary>
+    bool Available { get; }
+
     /// <summary>Die Stellungen <paramref name="positions"/> im Wertungsband des Gegners (<paramref name="elo"/>).</summary>
     Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, CancellationToken ct);
 }
@@ -14,8 +17,9 @@ public sealed record TrainingExplorerResult(IReadOnlyDictionary<string, Explorer
 /// <summary>
 /// Explorer-Anbindung der Trainingslinien (Wunsch 2026-10-07: „nimm lichesspartien, +100 - +400 elo"): Spieler im Band
 /// Gegner-Elo +100 bis +400 (Lichess-Wertungen liegen über FIDE — dieselbe Regel wie die Konto-Prüfung), Blitz/Schnell/Klassisch,
-/// über <see cref="RepertoireExplorerService.BatchStatsAsync"/> — lokal, wenn <c>LichessExplorer:LocalUrl</c> gesetzt ist (dann nur
-/// dessen Stufen), sonst online mit Token, Leitung und Budget des Lochfinders.
+/// über <see cref="RepertoireExplorerService.BatchStatsAsync"/> — NUR der lokale Explorer (<c>LichessExplorer:LocalUrl</c>, Dienst
+/// <c>rookhub-explorer</c>, nur dessen Stufen), nie explorer.lichess.ovh (Vorgabe des Users 2026-10-08). Ohne <c>LocalUrl</c> gibt es
+/// keine Schätzung: <see cref="Available"/> ist falsch, nichts wird abgefragt, kein Token nötig.
 /// </summary>
 public sealed class TrainingExplorer(RepertoireExplorerService explorer, LocalExplorerClient local) : ITrainingExplorer
 {
@@ -23,12 +27,14 @@ public sealed class TrainingExplorer(RepertoireExplorerService explorer, LocalEx
     public const int DefaultElo = 1800;
     public static readonly IReadOnlyList<string> Speeds = ["blitz", "rapid", "classical"];
 
+    public bool Available => local.IsConfigured;
+
     public async Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, CancellationToken ct)
     {
-        var useLocal = local.IsConfigured;
-        var stages = Stages(elo, useLocal ? LocalExplorerClient.LocalRatings : ExplorerQuery.AllowedRatings);
-        var query = ExplorerQuery.Create(ExplorerQuery.Lichess, stages, Speeds);
-        var r = await explorer.BatchStatsAsync(userId, positions.Select(n => (n.Key, n.Fen)).ToList(), query, useLocal, ct);
+        if (!Available)
+            return new TrainingExplorerResult(new Dictionary<string, ExplorerPositionStats>(), new HashSet<string>(), Band(elo));
+        var query = ExplorerQuery.Create(ExplorerQuery.Lichess, Stages(elo, LocalExplorerClient.LocalRatings), Speeds);
+        var r = await explorer.BatchStatsAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), query, ct);
         return new TrainingExplorerResult(r.Stats, r.Pending, Band(elo));
     }
 

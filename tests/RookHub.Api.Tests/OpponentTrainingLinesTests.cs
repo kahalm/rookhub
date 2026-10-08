@@ -395,8 +395,17 @@ public class OpponentTrainingLinesTests
         Assert.StartsWith("[Event", file);
         Assert.Equal(pgn, db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == source).PgnContent);   // Quelle unberührt
 
-        // zweites Mal: dasselbe Repertoire, Inhalt ersetzt, kein zweites
-        var again = (await svc.CreateRepertoireAsync(1, "Huber, Franz", Q(source), games, default))!;
+        // zweites Mal OHNE replace: 409 „exists" — nichts geschrieben (Rückfrage nur, wenn wirklich eins da ist)
+        var fileBefore = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id);
+        var exists = await Assert.ThrowsAsync<TrainingLinesService.RepertoireExistsException>(() =>
+            svc.CreateRepertoireAsync(1, "Huber, Franz", Q(source), games, default));
+        Assert.Equal(created.Id, exists.Id);
+        Assert.Equal(created.Name, exists.Name);
+        var fileAfter = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id);
+        Assert.Equal((fileBefore.Id, fileBefore.PgnContent), (fileAfter.Id, fileAfter.PgnContent));
+
+        // mit replace: dasselbe Repertoire, Inhalt ersetzt, kein zweites
+        var again = (await svc.CreateRepertoireAsync(1, "Huber, Franz", Q(source), games, default, replace: true))!;
         Assert.Equal(created.Id, again.Id);
         Assert.True(again.Replaced);
         Assert.Equal(1, db.Ctx.Repertoires.Count(r => r.UserId == 1 && r.Name == created.Name));
@@ -520,7 +529,10 @@ public class OpponentTrainingLinesTests
         var name = TrainingLinesService.RepertoireName("Huber, Franz", DateTime.UtcNow.Year);
         var source = await db.RepertoireAsync(1, "Weiß", Section("K", "1. e4 c5 2. Nf3 d6"));
         var old = await db.RepertoireAsync(1, name, Section("Alt", "1. d4 d5 2. c4"));   // früher erzeugt und angehakt
-        var created = (await db.Service().CreateRepertoireAsync(1, "Huber, Franz", Q(null, "w"), NoGames, default))!;
+        // ohne replace: das früher erzeugte gibt es → Rückfrage (409)
+        await Assert.ThrowsAsync<TrainingLinesService.RepertoireExistsException>(() =>
+            db.Service().CreateRepertoireAsync(1, "Huber, Franz", Q(null, "w"), NoGames, default));
+        var created = (await db.Service().CreateRepertoireAsync(1, "Huber, Franz", Q(null, "w"), NoGames, default, replace: true))!;
 
         Assert.Equal(old, created.Id);
         Assert.True(created.Replaced);

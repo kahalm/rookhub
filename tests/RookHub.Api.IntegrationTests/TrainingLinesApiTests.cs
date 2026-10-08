@@ -194,8 +194,17 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
         Assert.False(first["replaced"]!.GetValue<bool>());
         var newId = first["id"]!.GetValue<int>();
 
-        // derselbe Name über LeagueHub: ersetzt, kein zweites
-        var res = await me.PostAsJsonAsync(leagueUrl, new { repertoire = source });
+        // derselbe Name über LeagueHub, ohne replace: 409 exists (mit Id und Name), nichts geschrieben
+        var conflict = await me.PostAsJsonAsync(leagueUrl, new { repertoire = source });
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        var c409 = JsonNode.Parse(await conflict.Content.ReadAsStringAsync())!;
+        Assert.Equal("exists", c409["reason"]!.GetValue<string>());
+        Assert.Equal(newId, c409["id"]!.GetValue<int>());
+        Assert.Equal(first["name"]!.GetValue<string>(), c409["name"]!.GetValue<string>());
+        // dasselbe über die Spielervorbereitung
+        Assert.Equal(HttpStatusCode.Conflict, (await me.PostAsJsonAsync(prepUrl, new { repertoire = source, source = "board" })).StatusCode);
+        // mit replace: ersetzt, kein zweites
+        var res = await me.PostAsJsonAsync(leagueUrl, new { repertoire = source, replace = true });
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var second = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
         Assert.Equal(newId, second["id"]!.GetValue<int>());

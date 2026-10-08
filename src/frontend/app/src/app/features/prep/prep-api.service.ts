@@ -41,9 +41,9 @@ export class PrepApiService {
   }
 
   /** „Show me lines to train": Trainings-Repertoire anlegen — Grenze/Zwilling wie die Karte. */
-  trainingRepertoire(id: number, o: PrepOptions, q: TrainingLinesQuery): Promise<TrainingRepertoireResult> {
+  trainingRepertoire(id: number, o: PrepOptions, q: TrainingLinesQuery, replace = false): Promise<TrainingRepertoireResult> {
     return firstValueFrom(this.http.post<TrainingRepertoireResult>(`/api/prep/player/${id}/training-repertoire`,
-      trainingRepertoireBody(q, { all: o.all || null, twin: o.twin || null })));
+      trainingRepertoireBody(q, { all: o.all || null, twin: o.twin || null, replace })));
   }
 
   tree(id: number, o: PrepOptions, color: 'w' | 's', line: string[], filter?: TreeFilter): Promise<OpeningTree> {

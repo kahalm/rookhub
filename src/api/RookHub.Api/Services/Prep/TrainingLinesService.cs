@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
@@ -19,8 +20,16 @@ namespace RookHub.Api.Services.Prep;
 /// die der Aufrufer liefert. Die Liste seiner Repertoires geht mit, damit die Karte mit EINEM Aufruf auskommt.
 /// </summary>
 public sealed class TrainingLinesService(AppDbContext db, RepertoireService repertoires, IConfiguration config,
-    ITrainingExplorer? explorer = null)
+    ITrainingExplorer? explorer = null, IMemoryCache? cache = null, ILogger<TrainingLinesService>? logger = null)
 {
+    /// <summary>So lange bleibt eine fertige Reihung (samt Schätzung) im Speicher — je Nutzer, Gegner und Auswahl; ein geändertes
+    /// Repertoire (<c>UpdatedAt</c>) rechnet sofort neu (Tempo, 2026-10-08: gemessen 21–22 s je Abfrage auf Prod).</summary>
+    public static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(15);
+
+    /// <summary>Speicher-Bereich einer Abfrage: wer der Gegner ist (<c>prep:42:all:twin</c>, <c>league:1606921</c>) und mit welchem Filter.</summary>
+    public static string Scope(string opponent, LeagueProfileStore.TreeFilter f) =>
+        $"{opponent}|{f.Source}|{string.Join(',', f.Speeds)}|{f.Years}|{(f.OnlySure ? "sure" : "all")}";
+
     /// <summary>Ab so vielen weitergespielten Partien in einer Stellung zählen SEINE Züge; darunter schätzt der Lichess-Explorer.
     /// Vorgabe 1 — seine Züge haben Vorrang (Wunsch 2026-10-07: „mach seine züge immer oberste priorität - geschätzt nur wenn seine
     /// nicht reichen"). Einstellbar über <see cref="MinOwnKey"/>.</summary>
@@ -61,8 +70,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     /// <summary>Rumpf von <c>POST …/training-repertoire</c> — dieselbe Auswahl wie die Abfrage (Filter wie Profil/Baum; <c>all</c>/<c>twin</c>
     /// nur in der Spielervorbereitung). <c>chapterColors</c> in einer der beiden Formen von <see cref="ChapterOverrides"/>.</summary>
+    /// <param name="Replace">Ein vorhandenes gleichnamiges eigenes Repertoire ersetzen; ohne → <see cref="RepertoireExistsException"/>
+    /// (409 <c>exists</c>), damit die Seite erst nachfragt.</param>
     public sealed record CreateRequest(int? Repertoire, string? Color, JsonObject? ChapterColors, string? Source,
-        string? Speeds, int? Years, bool? Unsure, bool? All, bool? Twin)
+        string? Speeds, int? Years, bool? Unsure, bool? All, bool? Twin, bool? Replace = null)
     {
         public Query ToQuery() => new(Repertoire, Color, ParseOverrides(ChapterColors?.ToJsonString()), null);
     }
@@ -89,9 +100,33 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <paramref name="exclude"/>: Repertoire dieses Namens nicht als Quelle (das Ziel des Anlegens); bleibt dann keine Quelle,
     /// <see cref="SameRepertoireException"/>. <c>null</c> = das verlangte Repertoire gehört dem Nutzer nicht / ist nicht markiert.
     /// </summary>
+    /// <param name="scope">Wer der Gegner ist und mit welchem Filter (z. B. <c>prep:42|all|board</c>) — mit ihm wird das Ergebnis
+    /// <see cref="CacheFor"/> lang gehalten; <c>null</c> = nicht halten.</param>
     internal async Task<Computed?> ComputeAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
-        string? exclude = null, Func<Task<int?>>? elo = null)
+        string? exclude = null, Func<Task<int?>>? elo = null, string? scope = null)
     {
+        if (scope is null || cache is null) return await ComputeCoreAsync(userId, q, games, ct, exclude, elo);
+        // Schlüssel mit Stand (UpdatedAt) jedes markierten Repertoires: ändert sich eines oder die Markierung, rechnet es neu
+        var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.UseForExtension)
+            .OrderBy(r => r.Id).Select(r => new { r.Id, r.UpdatedAt }).ToListAsync(ct);
+        var overrides = JsonSerializer.Serialize(new
+        {
+            flat = q.ChapterColors.Flat.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => x.Key + "=" + x.Value),
+            per = q.ChapterColors.PerRepertoire.OrderBy(x => x.Key).Select(x => x.Key + ":" + string.Join(",",
+                x.Value.OrderBy(y => y.Key, StringComparer.Ordinal).Select(y => y.Key + "=" + y.Value))),
+        });
+        var key = $"training-lines:{userId}:{scope}:{q.Repertoire}:{q.Color}:{exclude}:{overrides}:"
+                  + string.Join(",", stamps.Select(x => $"{x.Id}@{x.UpdatedAt.Ticks}"));
+        if (cache.TryGetValue(key, out Computed? hit) && hit is not null) return hit;
+        var computed = await ComputeCoreAsync(userId, q, games, ct, exclude, elo);
+        if (computed is not null) cache.Set(key, computed, CacheFor);
+        return computed;
+    }
+
+    private async Task<Computed?> ComputeCoreAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
+        string? exclude, Func<Task<int?>>? elo)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         var list = await RepertoiresAsync(userId, ct);
         if (q.Repertoire is { } want && list.All(r => r.Id != want)) return null;
 
@@ -106,6 +141,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             var colors = ChapterColors(sections.Select(x => x.Parsed), q.ChapterColors.For(rep.Id, q.Repertoire == rep.Id));
             byRep.Add((rep, sections.Select(x => (x, colors.GetValueOrDefault(Chapter(x.Parsed), 'w'))).ToList()));
         }
+        var parseMs = clock.ElapsedMilliseconds;
         var infos = byRep.Select(x => new RepertoireInfo(x.Rep,
             new[] { 'w', 'b' }.Where(c => x.Sections.Any(s => s.Color == c)).ToList())).ToList();
 
@@ -125,18 +161,35 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var mine = sources.SelectMany(x => x.Sections.Where(s => s.Color == color).Select(s => new Source(x.Rep, s.Section))).ToList();
         var graph = RepertoireReach.Build(mine.Select(x => x.Section.Parsed), color);
         var chapters = mine.Select(x => Chapter(x.Section.Parsed)).ToList();
-        var analysis = OpponentTrainingLines.Analyze(graph, await games());
+        var t0 = clock.ElapsedMilliseconds;
+        var gameList = await games();
+        var gamesMs = clock.ElapsedMilliseconds - t0;
+        t0 = clock.ElapsedMilliseconds;
+        var analysis = OpponentTrainingLines.Analyze(graph, gameList);
+        var countMs = clock.ElapsedMilliseconds - t0;
         if (explorer is null) return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, analysis, null), mine, refs);
 
         // Lücken schätzen: nur die Gegner-Stellungen, für die seine Partien nicht reichen, je einmal (Wunsch 2026-10-07).
-        var need = OpponentTrainingLines.NeedsExplorer(graph, analysis, MinOwn);
-        var opponentElo = (elo is null ? null : await elo()) ?? TrainingExplorer.DefaultElo;
+        // Ohne lokalen Explorer keine Schätzung: seine Züge zählen weiter, Lücken bleiben ohne Quelle (Auffüllregel), nichts offen.
+        var need = explorer.Available ? OpponentTrainingLines.NeedsExplorer(graph, analysis, MinOwn) : [];
+        var opponentElo = (elo is null || !explorer.Available ? null : await elo()) ?? TrainingExplorer.DefaultElo;
+        t0 = clock.ElapsedMilliseconds;
         TrainingExplorerResult? found = need.Count == 0 ? null : await explorer.StatsAsync(userId, need, opponentElo, ct);
+        var explorerMs = clock.ElapsedMilliseconds - t0;
         var estimate = new OpponentTrainingLines.Estimate(n => found?.Stats.GetValueOrDefault(n.Key), MinOwn,
             found?.Pending ?? new HashSet<string>());
+        t0 = clock.ElapsedMilliseconds;
         var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
-        return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs, TrainingExplorer.Band(opponentElo),
-            found?.Pending.Count > 0);
+        var rankMs = clock.ElapsedMilliseconds - t0;
+        // Messen statt raten (2026-10-08): wo geht die Zeit hin?
+        logger?.LogInformation(
+            "Trainingslinien: {Total} ms gesamt — Repertoires laden+parsen {Parse} ms ({Repertoires} Rep., {Sections} Abschnitte), "
+            + "Partien laden {Games} ms ({GameCount}), Zählen {Count} ms, Explorer {Explorer} ms ({Positions} Stellungen, {Hits} Treffer, "
+            + "{Pending} offen, Budget erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien",
+            clock.ElapsedMilliseconds, parseMs, list.Count, byRep.Sum(x => x.Sections.Count), gamesMs, gameList.Count, countMs,
+            explorerMs, need.Count, found?.Stats.Count ?? 0, found?.Pending.Count ?? 0, found?.Pending.Count > 0, rankMs, ranked.Lines.Count);
+        return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs,
+            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, found?.Pending.Count > 0);
     }
 
     /// <summary>
@@ -147,9 +200,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// </summary>
     /// <param name="elo">Elo des Gegners für das Wertungsband der Schätzung (ohne: <see cref="TrainingExplorer.DefaultElo"/>).</param>
     public async Task<JsonObject?> LinesAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
-        Func<Task<int?>>? elo = null)
+        Func<Task<int?>>? elo = null, string? scope = null)
     {
-        if (await ComputeAsync(userId, q, games, ct, elo: elo) is not { } c) return null;
+        if (await ComputeAsync(userId, q, games, ct, elo: elo, scope: scope) is not { } c) return null;
         var o = new JsonObject
         {
             ["repertoires"] = new JsonArray(c.Repertoires.Select(r => (JsonNode)new JsonObject
@@ -210,6 +263,14 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     public sealed class SameRepertoireException(string name)
         : DomainValidationException($"Das gewählte Repertoire heißt selbst „{name}“ — es würde sich selbst überschreiben. Bitte ein anderes wählen oder es umbenennen.");
 
+    /// <summary>Es gibt schon ein eigenes Repertoire mit dem Zielnamen und es wurde nicht <c>replace</c> verlangt → 409
+    /// <c>{ reason: "exists", id, name }</c>; nichts ist geschrieben (Wunsch 2026-10-08: Rückfrage nur, wenn wirklich eins da ist).</summary>
+    public sealed class RepertoireExistsException(int id, string name) : ConflictException($"Es gibt schon ein Repertoire „{name}“.")
+    {
+        public int Id { get; } = id;
+        public string Name { get; } = name;
+    }
+
     /// <summary>Name des Trainings-Repertoires: „Prep: Huber, Franz 2026".</summary>
     public static string RepertoireName(string opponent, int year)
     {
@@ -226,12 +287,14 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// Trainingsstand je Linien-Schlüssel bleiben). Angelegt und befüllt über <see cref="RepertoireService"/>.
     /// <c>null</c> = Repertoire fremd/nicht markiert; <see cref="DomainValidationException"/>, wenn es keine Linien gibt.
     /// </summary>
+    /// <param name="replace">Ein gleichnamiges eigenes Repertoire ersetzen; sonst <see cref="RepertoireExistsException"/>.</param>
     public async Task<Created?> CreateRepertoireAsync(int userId, string opponent, Query q,
-        Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct, Func<Task<int?>>? elo = null)
+        Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct, Func<Task<int?>>? elo = null, bool replace = false,
+        string? scope = null)
     {
         var now = DateTime.UtcNow;
         var name = RepertoireName(opponent, now.Year);
-        if (await ComputeAsync(userId, q, games, ct, exclude: name, elo: elo) is not { } c) return null;
+        if (await ComputeAsync(userId, q, games, ct, exclude: name, elo: elo, scope: scope) is not { } c) return null;
         if (c.Sources.Count == 0) throw new DomainValidationException("Kein Repertoire ist für die Vorbereitung freigegeben.");
         if (c.Ranked is not { Lines.Count: > 0 } ranked) throw new DomainValidationException("Die markierten Repertoires haben für diese Farbe keine Linien.");
 
@@ -251,6 +314,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
         var existing = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.Name == name)
             .OrderBy(r => r.Id).Select(r => (int?)r.Id).FirstOrDefaultAsync(ct);
+        if (existing is { } there && !replace) throw new RepertoireExistsException(there, name);
         int id;
         if (existing is { } old)
         {

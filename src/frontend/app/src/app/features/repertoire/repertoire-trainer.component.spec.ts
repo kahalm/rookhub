@@ -1,5 +1,5 @@
 import { fakeAsync, tick } from '@angular/core/testing';
-import { EMPTY, of, throwError } from 'rxjs';
+import { EMPTY, Subject, of, throwError } from 'rxjs';
 import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { LineStateDto } from './repertoire-training.service';
@@ -1010,14 +1010,21 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
     expect(c.opponentNotice).toBe('repertoireTrainer.opponentOrder');
   });
 
-  it('?line= aus der Karte: nichts fällig → einmal in den Lern-Modus, die Linie bleibt', () => {
-    const get = jasmine.createSpy('get').and.returnValue(of(answer([KEY_S], 'b')));
-    const c = makeOpp({ opponent: 'league:1606921', color: 'b', line: KEY_S }, { get });
+  it('?line= ist der Einstieg: die Linie sofort, die Reihung im Hintergrund, KEIN Modus-Wechsel trotz nichts fällig', () => {
+    const answers = new Subject<any>();
+    const get = jasmine.createSpy('get').and.returnValue(answers);
+    // keine Zustände: nichts im Pool, nichts fällig — früher schaltete er in „Lernen"
+    const c = makeOpp({ opponent: 'league:1606921', color: 'w', line: KEY_B }, { get }, []);
 
     expect(get.calls.mostRecent().args[0]).toBe('/api/league/player/1606921/training-lines');
-    expect(c.mode).toBe('learn');
-    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.e4 c5']);
-    expect(c.opponentNotice).toBe('repertoireTrainer.opponentToLearn');
+    expect(c.phase).toBe('PLAYING');                              // nicht auf die Reihung warten
+    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.d4 d5']);
+    expect(c.mode).toBe('quiz');
+
+    answers.next(answer([KEY_A, KEY_B]));                         // Reihung: A vor B — nach dem Einstieg B kommt nichts mehr
+    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.d4 d5']);
+    expect(c.mode).toBe('quiz');
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentOrder');
   });
 
   it('Fehler beim Holen: wie gewohnt weiter, aber mit Hinweis', () => {
@@ -1034,5 +1041,50 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
     expect(c.opponent).toBeNull();
     expect(c.opponentNotice).toBeNull();
     expect(c.queue.length).toBe(2);
+  });
+
+  describe('Einstieg mitten in der Reihung', () => {
+    const PGN5 = [1, 2, 3, 4, 5].map(i => {
+      const first = ['e4', 'd4', 'c4', 'Nf3', 'g3'][i - 1];
+      return `[Event "Rep"]\n[White "L${i}"]\n[Black "W"]\n\n1. ${first} d5 2. b3 *\n`;
+    }).join('\n');
+    const keys = ['e4', 'd4', 'c4', 'Nf3', 'g3'].map(f => lineKeyFromSans([f, 'd5', 'b3']));
+
+    function make5(query: Record<string, string>, http: any): RepertoireTrainerComponent {
+      localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ W: 'w' }));
+      const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => query[k] ?? null } } };
+      const training: any = {
+        getPgn: () => of(PGN5), getLineStates: () => of([]), reviewLine: () => of(state(keys[0], FUTURE())),
+        promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
+      };
+      const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+        { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+        { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any, { enqueue: () => {} } as any,
+        NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, http);
+      c.ngOnInit();
+      return c;
+    }
+
+    it('Einstieg bei Linie 3 → danach 4, 5; am Ende „Alle N Linien … durch"', () => {
+      const get = jasmine.createSpy('get').and.returnValue(of(answer(keys)));
+      const c = make5({ opponent: 'prep:42', color: 'w', line: keys[2] }, { get });
+      expect(c.queue.map(l => l.headers['White'])).toEqual(['L3', 'L4', 'L5']);
+      expect(c.opponentTotal).toBe(3);
+      (c as any).qIndex = 3;
+      (c as any).startCurrentLine();
+      expect(c.phase).toBe('DONE');
+      // „Von vorn": die ganze Reihung ab Linie 1
+      c.restart();
+      expect(c.queue.map(l => l.headers['White'])).toEqual(['L1', 'L2', 'L3', 'L4', 'L5']);
+      expect(c.opponentTotal).toBe(5);
+    });
+
+    it('ohne ?opponent= bleibt ?line= eine Einzellinie mit Fälligkeit (nichts fällig → leer)', () => {
+      const get = jasmine.createSpy('get');
+      const c = make5({ line: keys[2] }, { get });
+      expect(get).not.toHaveBeenCalled();
+      expect(c.queue.length).toBe(0);
+      expect(c.phase).toBe('EMPTY');
+    });
   });
 });

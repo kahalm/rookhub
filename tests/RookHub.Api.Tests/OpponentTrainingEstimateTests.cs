@@ -211,8 +211,10 @@ public class OpponentTrainingEstimateTests
 
     // ── Dienst mit gemocktem Explorer ────────────────────────────────────────────────────────────
 
-    private sealed class FakeExplorer(Dictionary<string, ExplorerPositionStats> stats, HashSet<string>? pending = null) : ITrainingExplorer
+    private sealed class FakeExplorer(Dictionary<string, ExplorerPositionStats> stats, HashSet<string>? pending = null, bool available = true)
+        : ITrainingExplorer
     {
+        public bool Available => available;
         public List<(List<string> Keys, int Elo)> Calls { get; } = new();
         public Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, CancellationToken ct)
         {
@@ -223,7 +225,8 @@ public class OpponentTrainingEstimateTests
         }
     }
 
-    private static async Task<(AppDbContext Db, TrainingLinesService Svc, int Rep)> ServiceAsync(ITrainingExplorer explorer, string pgn)
+    private static async Task<(AppDbContext Db, TrainingLinesService Svc, int Rep)> ServiceAsync(ITrainingExplorer explorer, string pgn,
+        IMemoryCache? cache = null)
     {
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
@@ -235,7 +238,7 @@ public class OpponentTrainingEstimateTests
         var notifications = new NotificationService(db);
         var reps = new RepertoireService(db, new RepertoireAnalyzeService(db, new MemoryCache(new MemoryCacheOptions())),
             new FriendService(db, notifications), notifications);
-        return (db, new TrainingLinesService(db, reps, new ConfigurationBuilder().Build(), explorer), rep.Id);
+        return (db, new TrainingLinesService(db, reps, new ConfigurationBuilder().Build(), explorer, cache), rep.Id);
     }
 
     [Fact]
@@ -279,5 +282,62 @@ public class OpponentTrainingEstimateTests
         await svc.LinesAsync(1, new(rep, "w", TrainingLinesService.ChapterOverrides.None, null),
             () => Task.FromResult(new List<OpponentTrainingLines.Game>()), default);
         Assert.Equal(1800, Assert.Single(explorer.Calls).Elo);
+    }
+
+    [Fact]
+    public async Task Service_WithoutLocalExplorer_NoQuery_NoEstimate_FillRule_HisMovesStillFirst()
+    {
+        var explorer = new FakeExplorer(new() { [KeyAfter("e4", "c5", "Nf3")] = Stats(("d6", 100)) }, available: false);
+        var (db, svc, rep) = await ServiceAsync(explorer,
+            "[Event \"x\"]\n[Black \"K\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n\n[Event \"x\"]\n[Black \"K\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 *\n");
+        using var _ = db;
+        var eloAsked = false;
+        var r = (await svc.LinesAsync(1, new(rep, "w", TrainingLinesService.ChapterOverrides.None, null),
+            () => Task.FromResult(Times(1, "e4 c5 Nf3", false).ToList()), default,
+            () => { eloAsked = true; return Task.FromResult<int?>(2000); }))!;
+
+        Assert.Empty(explorer.Calls);                               // keine Abfrage
+        Assert.False(eloAsked);
+        Assert.Null(r["lichessBand"]);
+        Assert.False(r["explorerIncomplete"]!.GetValue<bool>());
+        var lines = r["lines"]!.AsArray();
+        Assert.All(lines, l => Assert.False(l!["pending"]!.GetValue<bool>()));
+        Assert.DoesNotContain(lines, l => l!["source"]!.GetValue<string>() is "lichess" or "mixed");
+        // seine Partie geht bis 2.Sf3: die Najdorf-Linie hat danach keine Quelle (Auffüllregel), die 1...e5-Linie widerspricht ihm
+        Assert.Equal("none", lines.Single(l => l!["moves"]![1]!.GetValue<string>() == "c5")!["source"]!.GetValue<string>());
+        Assert.Equal("deviates", lines.Single(l => l!["moves"]![1]!.GetValue<string>() == "e5")!["source"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Cache_SecondCallComputesNothing_ChangedRepertoireRecomputes_OtherScopeToo()
+    {
+        using var memory = new MemoryCache(new MemoryCacheOptions());
+        var explorer = new FakeExplorer(new() { [KeyAfter("e4", "c5", "Nf3")] = Stats(("d6", 100)) });
+        var (db, svc, rep) = await ServiceAsync(explorer, "[Event \"x\"]\n[Black \"K\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n", memory);
+        using var _ = db;
+        var loads = 0;
+        Task<List<OpponentTrainingLines.Game>> Games() { loads++; return Task.FromResult(Times(1, "e4 c5 Nf3", false).ToList()); }
+        var q = new TrainingLinesService.Query(rep, "w", TrainingLinesService.ChapterOverrides.None, null);
+
+        var first = (await svc.LinesAsync(1, q, Games, default, scope: "prep:42"))!;
+        var second = (await svc.LinesAsync(1, q, Games, default, scope: "prep:42"))!;
+        Assert.Equal(1, loads);                                    // zweiter Aufruf ohne Rechnung
+        Assert.Single(explorer.Calls);
+        Assert.Equal(first.ToJsonString(), second.ToJsonString());
+
+        await svc.LinesAsync(1, q, Games, default, scope: "prep:43");   // anderer Gegner: eigene Rechnung
+        Assert.Equal(2, loads);
+
+        // Repertoire geändert (UpdatedAt): sofort neu
+        var r = db.Repertoires.Single(x => x.Id == rep);
+        r.UpdatedAt = r.UpdatedAt.AddSeconds(1);
+        await db.SaveChangesAsync();
+        await svc.LinesAsync(1, q, Games, default, scope: "prep:42");
+        Assert.Equal(3, loads);
+
+        // ohne scope (z. B. Tests) wird nichts gehalten
+        await svc.LinesAsync(1, q, Games, default);
+        await svc.LinesAsync(1, q, Games, default);
+        Assert.Equal(5, loads);
     }
 }

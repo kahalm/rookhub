@@ -29,7 +29,7 @@ public class LeagueTrainingController : BaseApiController
         var filter = LeagueProfileStore.TreeFilter.Parse(source ?? "both", speeds, years, onlySure: unsure != true);
         var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
         var r = await lines.LinesAsync(GetUserId(), q, async () => (await lines.LeagueGamesAsync(fide, filter, ct)).Games, ct,
-            () => lines.LeagueEloAsync(fide, ct));
+            () => lines.LeagueEloAsync(fide, ct), TrainingLinesService.Scope($"league:{fide}", filter));
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
     }
 
@@ -40,7 +40,7 @@ public class LeagueTrainingController : BaseApiController
     public async Task<IActionResult> TrainingRepertoire(string fide, [FromBody] TrainingLinesService.CreateRequest? req,
         [FromServices] TrainingLinesService lines, CancellationToken ct)
     {
-        req ??= new(null, null, null, null, null, null, null, null, null);
+        req ??= new(null, null, null, null, null, null, null, null, null, null);
         var filter = LeagueProfileStore.TreeFilter.Parse(req.Source ?? "both", req.Speeds, req.Years, onlySure: req.Unsure != true);
         // Name (für „Prep: <Name> <Jahr>" und den Namensschutz) und Partien in einem — der Name steht erst damit fest
         var (n, games) = await lines.LeagueGamesAsync(fide, filter, ct);
@@ -48,9 +48,11 @@ public class LeagueTrainingController : BaseApiController
         try
         {
             r = await lines.CreateRepertoireAsync(GetUserId(), string.IsNullOrWhiteSpace(n) ? fide : n, req.ToQuery(),
-                () => Task.FromResult(games), ct, () => lines.LeagueEloAsync(fide, ct));
+                () => Task.FromResult(games), ct, () => lines.LeagueEloAsync(fide, ct), req.Replace == true,
+                TrainingLinesService.Scope($"league:{fide}", filter));
         }
         catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
+        catch (TrainingLinesService.RepertoireExistsException e) { return Conflict(new { reason = "exists", id = e.Id, name = e.Name }); }
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(new { id = r.Id, name = r.Name, lines = r.Lines, replaced = r.Replaced });
     }
 }

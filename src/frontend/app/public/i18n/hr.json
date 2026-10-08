@@ -59,8 +59,9 @@
     "freqIncomplete": "Učestalosti još nisu potpune – varijante bez vrijednosti dolaze zadnje.",
     "opponentOrder": "Redoslijed prema protivniku: najprije linije koje će ovaj protivnik najvjerojatnije igrati (iz kartice igrača); samo poglavlja tvoje boje protiv njega.",
     "opponentFailed": "Redoslijed prema protivniku nije se mogao učitati — linije dolaze uobičajenim redom.",
-    "opponentToLearn": "Protiv ovog protivnika trenutno ništa nije na redu — prebačeno na „Uči“, redoslijedom prema protivniku.",
-    "opponentToQuiz": "Protiv ovog protivnika sve je već naučeno — prebačeno na „Provjera“, redoslijedom prema protivniku.",
+    "opponentDone": "Svih {{n}} linija protiv ovog protivnika je gotovo.",
+    "opponentAgain": "Ispočetka",
+    "opponentBack": "Natrag na karticu igrača",
     "freqLineTip": "Koliko često dosegneš ovu varijantu u stvarnim partijama (Lichess explorer, isti odabir kao kod traženja rupa)"
   },
   "srConfig": {
@@ -4545,7 +4546,8 @@
     "trainingRepertoire": {
       "button": "Napravi repertoar za trening",
       "hint": "Napravi ti vlastiti repertoar „{{name}}“ s (do {{max}}) linija koje ćeš protiv ovog protivnika najvjerojatnije susresti.",
-      "confirm": "Napraviti repertoar „{{name}}“ s do {{max}} najvažnijih linija protiv ovog protivnika? Postojeći repertoar istog imena bit će zamijenjen.",
+      "replaceConfirm": "Repertoar „{{name}}“ već postoji. Zamijeniti njegov sadržaj novo poredanim linijama? Tvoj napredak u vježbanju po liniji ostaje sačuvan.",
+      "replace": "Zamijeni",
       "busy": "Izrađujem …",
       "failed": "Repertoar za trening nije se mogao napraviti.",
       "done": "„{{name}}“ je spreman ({{lines}} linija) — otvara se …",

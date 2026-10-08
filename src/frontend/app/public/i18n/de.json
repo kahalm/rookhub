@@ -59,8 +59,9 @@
     "freqIncomplete": "Die Häufigkeiten sind noch unvollständig – Linien ohne Wert kommen zuletzt.",
     "opponentOrder": "Reihenfolge nach Gegner: zuerst die Linien, die dieser Gegner am wahrscheinlichsten spielt (aus der Spielerkarte); nur die Kapitel deiner Farbe gegen ihn.",
     "opponentFailed": "Die Reihenfolge nach dem Gegner ließ sich nicht laden — die Linien kommen in der gewohnten Reihenfolge.",
-    "opponentToLearn": "Gegen diesen Gegner ist gerade nichts fällig — auf „Lernen“ umgeschaltet, in der Reihenfolge nach dem Gegner.",
-    "opponentToQuiz": "Gegen diesen Gegner ist schon alles gelernt — auf „Abfragen“ umgeschaltet, in der Reihenfolge nach dem Gegner.",
+    "opponentDone": "Alle {{n}} Linien gegen diesen Gegner durch.",
+    "opponentAgain": "Von vorn",
+    "opponentBack": "Zurück zur Spielerkarte",
     "freqLineTip": "Wie oft du diese Linie in echten Partien erreichst (Lichess-Explorer, Auswahl wie im Lochfinder)"
   },
   "srConfig": {
@@ -4545,7 +4546,8 @@
     "trainingRepertoire": {
       "button": "Trainings-Repertoire anlegen",
       "hint": "Legt dir ein eigenes Repertoire „{{name}}“ mit den (bis zu {{max}}) Linien an, die du gegen diesen Gegner am wahrscheinlichsten triffst.",
-      "confirm": "Repertoire „{{name}}“ mit den bis zu {{max}} wichtigsten Linien gegen diesen Gegner anlegen? Ein vorhandenes gleichnamiges wird ersetzt.",
+      "replaceConfirm": "Es gibt schon ein Repertoire „{{name}}“. Seinen Inhalt durch die neu gereihten Linien ersetzen? Dein Trainingsstand je Linie bleibt erhalten.",
+      "replace": "Ersetzen",
       "busy": "Lege an …",
       "failed": "Das Trainings-Repertoire ließ sich nicht anlegen.",
       "done": "„{{name}}“ ist fertig ({{lines}} Linien) — wird geöffnet …",

@@ -63,6 +63,12 @@ public class RepertoireExplorerService
     /// hielte der Client den Lauf für festgefahren. Reverse-Proxy und nginx schneiden erst nach 60 s ab.</summary>
     public TimeSpan Budget { get; set; } = TimeSpan.FromSeconds(20);
 
+    /// <summary>Budget von <see cref="BatchStatsAsync"/> (nur lokaler Explorer, Antworten ~12–16 ms): höher als das Online-Budget —
+    /// eine große Reihung braucht Hunderte Stellungen, und die Antwort bleibt ehrlich (offen = <c>Pending</c>).</summary>
+    public TimeSpan LocalBatchBudget { get; set; } = TimeSpan.FromSeconds(60);
+    /// <summary>So viele gleichzeitige Anfragen an den lokalen Explorer in <see cref="BatchStatsAsync"/>.</summary>
+    public const int LocalBatchParallelism = 16;
+
     public RepertoireExplorerService(
         AppDbContext db, RepertoireService repertoires, LichessExplorerClient client, LocalExplorerClient local,
         IMemoryCache memory, LichessExplorerGate gate, EncryptionService encryption, IConfiguration config,
@@ -311,25 +317,20 @@ public class RepertoireExplorerService
     }
 
     /// <summary>Ergebnis von <see cref="BatchStatsAsync"/>: die geholten Stellungen (Schlüssel wie <see cref="RepertoireReach.Key"/>)
-    /// und die, die im Zeitbudget nicht ankamen (Budget, Drossel, fehlender Token, Ausfall).</summary>
+    /// und die, die im Zeitbudget nicht ankamen.</summary>
     public sealed record BatchResult(Dictionary<string, ExplorerPositionStats> Stats, HashSet<string> Pending);
 
     /// <summary>
-    /// Zughäufigkeiten vieler Stellungen auf einmal — für die Schätzung der Trainingslinien (Spielervorbereitung, 2026-10-07).
-    /// Dieselbe Datenstrecke wie der Lochfinder: <paramref name="local"/> über <see cref="LocalExplorerClient"/> (gleichzeitig,
-    /// Arbeitsspeicher), sonst online mit Datenbank-Speicher, Token, Leitung (<see cref="LichessExplorerGate"/>) und
-    /// <see cref="Budget"/>; was im Budget nicht ankommt, steht in <see cref="BatchResult.Pending"/> — der nächste Aufruf findet
-    /// das Geholte im Speicher und macht dort weiter.
+    /// Zughäufigkeiten vieler Stellungen auf einmal aus dem LOKALEN Explorer — für die Schätzung der Trainingslinien
+    /// (Spielervorbereitung, 2026-10-07; nie online, Vorgabe des Users 2026-10-08). Gleichzeitig (<see cref="LocalParallelism"/>),
+    /// im Arbeitsspeicher gehalten wie beim Lochfinder, höchstens <see cref="LocalBatchBudget"/> lang; was nicht ankommt, steht in
+    /// <see cref="BatchResult.Pending"/>. Ohne eingerichteten lokalen Explorer: nichts geholt, alles offen.
     /// </summary>
-    public async Task<BatchResult> BatchStatsAsync(int userId, IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query,
-        bool local, CancellationToken ct)
+    public async Task<BatchResult> BatchStatsAsync(IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query, CancellationToken ct)
     {
-        var clock = Stopwatch.StartNew();
         var result = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
         var wanted = positions.GroupBy(p => p.Key, StringComparer.Ordinal).Select(g => g.First()).ToList();
-        if (wanted.Count == 0) return new BatchResult(new(StringComparer.Ordinal), new(StringComparer.Ordinal));
-
-        if (local && _local.IsConfigured)
+        if (wanted.Count > 0 && _local.IsConfigured)
         {
             string MemoryKey(string key) => "explorer:local:" + query.CachePrefix + key;
             var missing = new List<(string Key, string Fen)>();
@@ -339,10 +340,10 @@ public class RepertoireExplorerService
             if (missing.Count > 0)
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(Budget);
+                cts.CancelAfter(LocalBatchBudget);
                 try
                 {
-                    await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalParallelism, CancellationToken = cts.Token },
+                    await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalBatchParallelism, CancellationToken = cts.Token },
                         async (p, token) =>
                         {
                             var stats = await _local.FetchAsync(p.Fen, query, token);
@@ -352,27 +353,6 @@ public class RepertoireExplorerService
                         });
                 }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested) { /* Budget um: der Rest bleibt offen */ }
-            }
-        }
-        else
-        {
-            foreach (var (k, v) in await LoadCacheAsync(query, wanted.Select(p => p.Key), ct)) result[k] = v;
-            string? token = null;
-            var tokenResolved = false;
-            var failures = 0;
-            foreach (var p in wanted.Where(p => !result.ContainsKey(p.Key)))
-            {
-                if (clock.Elapsed >= Budget || _gate.BlockedFor is not null || failures >= MaxFailures) break;
-                if (!tokenResolved) { token = await ResolveTokenAsync(userId, ct); tokenResolved = true; }
-                if (token is null) break;
-                var (status, stats) = await _client.FetchAsync(p.Fen, query, token, ct);
-                if (status == ExplorerFetchStatus.Ok)
-                {
-                    result[p.Key] = stats!;
-                    await StoreAsync(query.CachePrefix + p.Key, stats!, ct);
-                }
-                else if (status is ExplorerFetchStatus.RateLimited or ExplorerFetchStatus.Unauthorized) break;
-                else failures++;
             }
         }
         var pending = wanted.Where(p => !result.ContainsKey(p.Key)).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
