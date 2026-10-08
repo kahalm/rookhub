@@ -323,13 +323,22 @@ public class RepertoireExplorerService
     /// und die, die im Zeitbudget nicht ankamen.</summary>
     public sealed record BatchResult(Dictionary<string, ExplorerPositionStats> Stats, HashSet<string> Pending);
 
+    /// <summary>So lange bleiben Stellungen aus <see cref="BatchStatsAsync"/> im Arbeitsspeicher — die lokalen Daten ändern sich
+    /// nur mit einem Import (monatlich); so kommt die nächste Anfrage dort weiter, wo die letzte aufhörte.</summary>
+    internal static readonly TimeSpan BatchMemoryTtl = TimeSpan.FromHours(24);
+
     /// <summary>
     /// Zughäufigkeiten vieler Stellungen auf einmal aus dem LOKALEN Explorer — für die Schätzung der Trainingslinien
-    /// (Spielervorbereitung, 2026-10-07; nie online, Vorgabe des Users 2026-10-08). Gleichzeitig (<see cref="LocalParallelism"/>),
-    /// im Arbeitsspeicher gehalten wie beim Lochfinder, höchstens <see cref="LocalBatchBudget"/> lang; was nicht ankommt, steht in
-    /// <see cref="BatchResult.Pending"/>. Ohne eingerichteten lokalen Explorer: nichts geholt, alles offen.
+    /// (Spielervorbereitung, 2026-10-07; nie online, Vorgabe des Users 2026-10-08). In der GEGEBENEN Reihenfolge (die wichtigsten
+    /// zuerst), <see cref="LocalBatchParallelism"/> gleichzeitig, höchstens <paramref name="budget"/> lang (Vorgabe
+    /// <see cref="LocalBatchBudget"/>); was nicht ankommt, steht in <see cref="BatchResult.Pending"/>.
+    /// <para><b>Nie eine Ausnahme nach außen, und der Abbruch der Anfrage stoppt die Arbeit nicht</b> (Hotfix 2026-10-08: nach
+    /// 60 s kappte nginx, Kestrel brach die Anfrage ab, und der Abbruch flog als 500 heraus): die Abfragen laufen an einer eigenen
+    /// Frist, nicht am Token der Anfrage — fertige Stellungen landen <see cref="BatchMemoryTtl"/> lang im Speicher, auch wenn
+    /// niemand mehr auf die Antwort wartet.</para>
     /// </summary>
-    public async Task<BatchResult> BatchStatsAsync(IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query, CancellationToken ct)
+    public async Task<BatchResult> BatchStatsAsync(IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query,
+        CancellationToken ct, TimeSpan? budget = null)
     {
         var result = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
         var wanted = positions.GroupBy(p => p.Key, StringComparer.Ordinal).Select(g => g.First()).ToList();
@@ -340,22 +349,22 @@ public class RepertoireExplorerService
             foreach (var p in wanted)
                 if (_memory.TryGetValue<ExplorerPositionStats>(MemoryKey(p.Key), out var hit) && hit is not null) result[p.Key] = hit;
                 else missing.Add(p);
-            if (missing.Count > 0)
+            var left = budget ?? LocalBatchBudget;
+            if (missing.Count > 0 && left > TimeSpan.Zero)
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(LocalBatchBudget);
+                using var deadline = new CancellationTokenSource(left);    // bewusst NICHT mit ct verknüpft (siehe oben)
                 try
                 {
-                    await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalBatchParallelism, CancellationToken = cts.Token },
+                    await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = LocalBatchParallelism, CancellationToken = deadline.Token },
                         async (p, token) =>
                         {
                             var stats = await _local.FetchAsync(p.Fen, query, token);
                             if (stats is null) return;
                             result[p.Key] = stats;
-                            _memory.Set(MemoryKey(p.Key), stats, LocalMemoryTtl);
+                            _memory.Set(MemoryKey(p.Key), stats, BatchMemoryTtl);
                         });
                 }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested) { /* Budget um: der Rest bleibt offen */ }
+                catch (OperationCanceledException) { /* Frist um: der Rest bleibt offen */ }
             }
         }
         var pending = wanted.Where(p => !result.ContainsKey(p.Key)).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);

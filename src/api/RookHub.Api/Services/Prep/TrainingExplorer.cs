@@ -8,7 +8,9 @@ public interface ITrainingExplorer
     bool Available { get; }
 
     /// <summary>Die Stellungen <paramref name="positions"/> im Wertungsband des Gegners (<paramref name="elo"/>).</summary>
-    Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, CancellationToken ct);
+    /// <param name="positions">In der Reihenfolge ihrer Wichtigkeit — bei knapper Frist kommen die ersten zuerst dran.</param>
+    /// <param name="budget">Höchstens so lange abfragen; der Rest bleibt offen.</param>
+    Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget, CancellationToken ct);
 }
 
 /// <param name="Band">Anzeige des Bands, z. B. „2000–2300".</param>
@@ -29,12 +31,13 @@ public sealed class TrainingExplorer(RepertoireExplorerService explorer, LocalEx
 
     public bool Available => local.IsConfigured;
 
-    public async Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, CancellationToken ct)
+    public async Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget,
+        CancellationToken ct)
     {
         if (!Available)
             return new TrainingExplorerResult(new Dictionary<string, ExplorerPositionStats>(), new HashSet<string>(), Band(elo));
         var query = ExplorerQuery.Create(ExplorerQuery.Lichess, Stages(elo, LocalExplorerClient.LocalRatings), Speeds);
-        var r = await explorer.BatchStatsAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), query, ct);
+        var r = await explorer.BatchStatsAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), query, ct, budget);
         return new TrainingExplorerResult(r.Stats, r.Pending, Band(elo));
     }
 

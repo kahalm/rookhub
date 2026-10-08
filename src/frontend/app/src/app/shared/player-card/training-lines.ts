@@ -103,6 +103,8 @@ export interface TrainingLines {
   lichessBand?: string | null;
   /** Der Explorer hat nicht alle nötigen Stellungen geliefert (Budget, Drossel). */
   explorerIncomplete?: boolean;
+  /** So viele Explorer-Stellungen sind noch offen (Frist oder Deckel) — „Weiter rechnen" holt weitere. */
+  explorerPending?: number;
   total: number;
   lines: TrainingLine[];
   /** So viele Linien mehr gibt es (ohne `take` höchstens 50 in der Antwort). */

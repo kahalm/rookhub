@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
@@ -358,6 +358,34 @@ describe('TrainingLinesComponent', () => {
       expect(items[3].querySelector('.tl-deviates')?.textContent).toContain('weicht ab: er spielt hier 1…c5 (1 Partie)');
       expect(items[3].textContent).toContain('≈ 36 %');
     });
+
+    it('unvollständig: „… Stellungen offen", von selbst nach 3 s weiter (höchstens 3 Runden), „Weiter rechnen" fragt erneut', fakeAsync(() => {
+      build();
+      trainingLines.and.resolveTo({ ...EST, explorerPending: 120 });
+      el().querySelector<HTMLButtonElement>('button.tl-toggle')!.click();
+      flushMicrotasks();
+      fixture.detectChanges();
+      expect(trainingLines).toHaveBeenCalledTimes(1);
+      expect(el().querySelector('.tl-incomplete')?.textContent).toContain('Schätzung unvollständig — 120 Stellungen offen.');
+      for (const n of [2, 3, 4]) { tick(3000); flushMicrotasks(); expect(trainingLines).toHaveBeenCalledTimes(n); }
+      tick(3000); flushMicrotasks();
+      expect(trainingLines).toHaveBeenCalledTimes(4);                // nach 3 automatischen Runden Schluss
+      fixture.detectChanges();
+      el().querySelector<HTMLButtonElement>('button.tl-continue')!.click();
+      flushMicrotasks();
+      expect(trainingLines).toHaveBeenCalledTimes(5);
+      expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ repertoire: null, color: 'w' }));
+      discardPeriodicTasks();
+    }));
+
+    it('vollständig: kein automatisches Nachladen', fakeAsync(() => {
+      build();
+      trainingLines.and.resolveTo({ ...EST, explorerIncomplete: false, explorerPending: 0 });
+      el().querySelector<HTMLButtonElement>('button.tl-toggle')!.click();
+      flushMicrotasks();
+      tick(10_000); flushMicrotasks();
+      expect(trainingLines).toHaveBeenCalledTimes(1);
+    }));
 
     it('ganz ohne passende Partien: „ein typischer Spieler seiner Stärke"', async () => {
       build();

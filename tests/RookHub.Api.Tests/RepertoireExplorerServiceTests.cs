@@ -728,6 +728,29 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.Empty(_handler.Urls);
     }
 
+    [Fact]
+    public async Task Batch_AbortedRequest_NoException_FinishedPositionsAreStillStored()
+    {
+        // Hotfix 2026-10-08: nginx kappt, Kestrel bricht die Anfrage ab — das darf weder werfen noch die Arbeit verwerfen
+        _localHandler.Respond(StartKey, StartJson);
+        using var aborted = new CancellationTokenSource();
+        aborted.Cancel();
+        var r = await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, aborted.Token);
+        Assert.Equal(1000, r.Stats[StartKey].Total);
+        Assert.Single(_localHandler.Urls);
+        await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Single(_localHandler.Urls);                         // aus dem Speicher (24 h)
+    }
+
+    [Fact]
+    public async Task Batch_ExplicitBudgetZero_AsksNothing()
+    {
+        _localHandler.Respond(StartKey, StartJson);
+        var r = await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default, TimeSpan.Zero);
+        Assert.Contains(StartKey, r.Pending);
+        Assert.Empty(_localHandler.Urls);
+    }
+
     private sealed class StubHandler : HttpMessageHandler
     {
         private readonly Dictionary<string, string> _byKey = new();

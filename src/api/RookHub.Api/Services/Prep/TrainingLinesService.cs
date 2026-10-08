@@ -37,6 +37,27 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     public const string MinOwnKey = "Prep:TrainingMinOwnGames";
     private int MinOwn => int.TryParse(config[MinOwnKey], out var n) ? Math.Clamp(n, 1, 1000) : DefaultMinOwn;
 
+    /// <summary>Harte Frist je Anfrage für die ganze Rechnung (Hotfix 2026-10-08: auf Prod 500 nach 60 s, weil nginx kappte);
+    /// höchstens <see cref="MaxDeadlineSeconds"/>. Einstellbar über <see cref="DeadlineKey"/>.</summary>
+    public const int DefaultDeadlineSeconds = 20;
+    public const int MaxDeadlineSeconds = 30;
+    public const string DeadlineKey = "Prep:TrainingDeadlineSeconds";
+    /// <summary>Davon höchstens so lange für den Explorer (<see cref="ExplorerBudgetKey"/>).</summary>
+    public const int DefaultExplorerSeconds = 12;
+    public const string ExplorerBudgetKey = "Prep:TrainingExplorerSeconds";
+    /// <summary>Höchstens so viele Explorer-Stellungen je Anfrage, die wichtigsten zuerst; der Rest bleibt offen
+    /// (<see cref="MaxPositionsKey"/>).</summary>
+    public const int DefaultMaxPositions = 1500;
+    public const string MaxPositionsKey = "Prep:TrainingExplorerMaxPositions";
+
+    private TimeSpan Deadline => TimeSpan.FromSeconds(
+        int.TryParse(config[DeadlineKey], out var n) ? Math.Clamp(n, 1, MaxDeadlineSeconds) : DefaultDeadlineSeconds);
+    private TimeSpan ExplorerBudget => TimeSpan.FromSeconds(
+        int.TryParse(config[ExplorerBudgetKey], out var n) ? Math.Clamp(n, 0, MaxDeadlineSeconds) : DefaultExplorerSeconds);
+    private int MaxPositions => int.TryParse(config[MaxPositionsKey], out var n) ? Math.Clamp(n, 0, 100_000) : DefaultMaxPositions;
+    /// <summary>So viel Luft bleibt nach dem Explorer für Reihen und Antwort.</summary>
+    private static readonly TimeSpan DeadlineReserve = TimeSpan.FromSeconds(2);
+
     /// <summary>So viele Linien liefert eine Antwort ohne <c>take</c> (der Rest als <c>more</c>); einstellbar über <see cref="TakeKey"/>.</summary>
     public const int DefaultTake = 50;
     public const string TakeKey = "Prep:TrainingLines";
@@ -91,7 +112,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// Farbe gibt es keine Linien (oder gar kein markiertes Repertoire). <see cref="Mine"/> läuft parallel zu den Hauptvarianten.</summary>
     internal sealed record Computed(List<RepertoireInfo> Repertoires, int? Selected, char? Color, List<char> Colors,
         OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources, string? Band = null,
-        bool ExplorerIncomplete = false);
+        bool ExplorerIncomplete = false, int ExplorerPending = 0);
 
     /// <summary>
     /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
@@ -119,7 +140,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
                   + string.Join(",", stamps.Select(x => $"{x.Id}@{x.UpdatedAt.Ticks}"));
         if (cache.TryGetValue(key, out Computed? hit) && hit is not null) return hit;
         var computed = await ComputeCoreAsync(userId, q, games, ct, exclude, elo);
-        if (computed is not null) cache.Set(key, computed, CacheFor);
+        // Unvollständig NICHT halten: die nächste Anfrage kommt mit den inzwischen gespeicherten Stellungen weiter.
+        if (computed is not null && !computed.ExplorerIncomplete) cache.Set(key, computed, CacheFor);
         return computed;
     }
 
@@ -173,11 +195,23 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         // Ohne lokalen Explorer keine Schätzung: seine Züge zählen weiter, Lücken bleiben ohne Quelle (Auffüllregel), nichts offen.
         var need = explorer.Available ? OpponentTrainingLines.NeedsExplorer(graph, analysis, MinOwn) : [];
         var opponentElo = (elo is null || !explorer.Available ? null : await elo()) ?? TrainingExplorer.DefaultElo;
+        // Die wichtigsten Stellungen zuerst, gedeckelt; der Rest bleibt offen (Hotfix 2026-10-08)
+        var ordered = Prioritize(graph, chapters, analysis, need, MinOwn);
+        var asked = ordered.Take(MaxPositions).ToList();
+        var capped = ordered.Skip(asked.Count).Select(n => n.Key).ToHashSet(StringComparer.Ordinal);
+        // Frist: was von der Gesamtfrist übrig ist (mit Reserve fürs Reihen), höchstens das Explorer-Budget
+        var budget = Deadline - clock.Elapsed - DeadlineReserve;
+        if (budget > ExplorerBudget) budget = ExplorerBudget;
         t0 = clock.ElapsedMilliseconds;
-        TrainingExplorerResult? found = need.Count == 0 ? null : await explorer.StatsAsync(userId, need, opponentElo, ct);
+        TrainingExplorerResult? found = asked.Count == 0 ? null
+            : budget <= TimeSpan.Zero
+                ? new TrainingExplorerResult(new Dictionary<string, ExplorerPositionStats>(), asked.Select(n => n.Key).ToHashSet(StringComparer.Ordinal),
+                    TrainingExplorer.Band(opponentElo))
+                : await explorer.StatsAsync(userId, asked, opponentElo, budget, ct);
         var explorerMs = clock.ElapsedMilliseconds - t0;
-        var estimate = new OpponentTrainingLines.Estimate(n => found?.Stats.GetValueOrDefault(n.Key), MinOwn,
-            found?.Pending ?? new HashSet<string>());
+        var pending = new HashSet<string>(found?.Pending ?? new HashSet<string>(), StringComparer.Ordinal);
+        pending.UnionWith(capped);
+        var estimate = new OpponentTrainingLines.Estimate(n => found?.Stats.GetValueOrDefault(n.Key), MinOwn, pending);
         t0 = clock.ElapsedMilliseconds;
         var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
         var rankMs = clock.ElapsedMilliseconds - t0;
@@ -185,11 +219,33 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         logger?.LogInformation(
             "Trainingslinien: {Total} ms gesamt — Repertoires laden+parsen {Parse} ms ({Repertoires} Rep., {Sections} Abschnitte), "
             + "Partien laden {Games} ms ({GameCount}), Zählen {Count} ms, Explorer {Explorer} ms ({Positions} Stellungen, {Hits} Treffer, "
-            + "{Pending} offen, Budget erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien",
+            + "{Pending} offen, davon {Capped} über dem Deckel, Budget {Budget} ms erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien, "
+            + "Anfrage abgebrochen: {Aborted}",
             clock.ElapsedMilliseconds, parseMs, list.Count, byRep.Sum(x => x.Sections.Count), gamesMs, gameList.Count, countMs,
-            explorerMs, need.Count, found?.Stats.Count ?? 0, found?.Pending.Count ?? 0, found?.Pending.Count > 0, rankMs, ranked.Lines.Count);
+            explorerMs, need.Count, found?.Stats.Count ?? 0, pending.Count, capped.Count, (long)Math.Max(0, budget.TotalMilliseconds),
+            found?.Pending.Count > 0, rankMs, ranked.Lines.Count, ct.IsCancellationRequested);
         return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs,
-            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, found?.Pending.Count > 0);
+            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count);
+    }
+
+    /// <summary>
+    /// Die Explorer-Stellungen in der Reihenfolge, in der ihre Linien VORLÄUFIG stehen (Reihung nur aus seinen Partien: zuerst
+    /// Linien mit Quelle, dann nach Präfix aus seinen Daten, dann die abweichenden) — je Linie ihre Lücken von vorn nach hinten.
+    /// So kommen bei knapper Frist die Linien zuerst dran, die oben stehen werden. Nutzt nur <see cref="OpponentTrainingLines.Rank(RepertoireReach.Graph, IReadOnlyList{string}, OpponentTrainingLines.Analysis, OpponentTrainingLines.Estimate?)"/>.
+    /// </summary>
+    internal static List<RepertoireReach.Node> Prioritize(RepertoireReach.Graph graph, IReadOnlyList<string> chapters,
+        OpponentTrainingLines.Analysis analysis, IReadOnlyList<RepertoireReach.Node> need, int minOwn)
+    {
+        if (need.Count == 0) return [];
+        var wanted = need.ToDictionary(n => n.Key, StringComparer.Ordinal);
+        var preliminary = OpponentTrainingLines.Rank(graph, chapters, analysis,
+            new OpponentTrainingLines.Estimate(_ => null, minOwn, new HashSet<string>()));
+        var order = new List<RepertoireReach.Node>(need.Count);
+        foreach (var line in preliminary.Lines)
+            foreach (var node in graph.Mainlines[line.Index])
+                if (wanted.Remove(node.Key, out var hit)) order.Add(hit);
+        order.AddRange(wanted.Values);                 // (Stellungen, die keine gezeigte Linie hat — der Vollständigkeit halber)
+        return order;
     }
 
     /// <summary>
@@ -220,6 +276,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         o["ownGames"] = c.Ranked?.Games ?? 0;
         o["lichessBand"] = c.Band;
         o["explorerIncomplete"] = c.ExplorerIncomplete;
+        o["explorerPending"] = c.ExplorerPending;
         o["total"] = lines.Count;
         o["lines"] = new JsonArray(lines.Take(n).Select(l => (JsonNode)new JsonObject
         {

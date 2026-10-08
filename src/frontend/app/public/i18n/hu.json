@@ -4565,7 +4565,8 @@
       "headerFew": "{{who}} csak {{n}} megfelelő játszmája van — a hiányokat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
       "headerNone": "{{who}} nincs megfelelő játszmája — becslés {{band}} értékszámú játékosok Lichess-játszmái alapján (egy hasonló erősségű tipikus játékos).",
       "headerGaps": "Ahol {{who}} túl kevés játszmát játszott, a vonalakat {{band}} értékszámú játékosok Lichess-játszmái alapján becsültük.",
-      "incomplete": "A Lichess-explorer nem adott vissza időben minden állást — a becslés hiányos. Nyisd meg később újra.",
+      "incomplete": "A becslés hiányos — még {{n}} állás nyitott.",
+      "continue": "Számolás folytatása",
       "deviatesOne": "eltér: ő itt {{move}} lépést játszik ({{n}} játszma)",
       "deviatesMany": "eltér: ő itt {{move}} lépést játszik ({{n}} játszma)",
       "deviatesTip": "Ellentmond a játszmáinak — úgy becsülve, mintha itt egy hasonló erősségű tipikus játékosként folytatta volna"

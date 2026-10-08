@@ -211,13 +211,17 @@ public class OpponentTrainingEstimateTests
 
     // ── Dienst mit gemocktem Explorer ────────────────────────────────────────────────────────────
 
-    private sealed class FakeExplorer(Dictionary<string, ExplorerPositionStats> stats, HashSet<string>? pending = null, bool available = true)
-        : ITrainingExplorer
+    private sealed class FakeExplorer(Dictionary<string, ExplorerPositionStats> stats, HashSet<string>? pending = null, bool available = true,
+        Action? onCall = null) : ITrainingExplorer
     {
         public bool Available => available;
         public List<(List<string> Keys, int Elo)> Calls { get; } = new();
-        public Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, CancellationToken ct)
+        public List<TimeSpan> Budgets { get; } = new();
+        public Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget,
+            CancellationToken ct)
         {
+            Budgets.Add(budget);
+            onCall?.Invoke();
             Calls.Add((positions.Select(p => p.Key).ToList(), elo));
             var found = positions.Where(p => stats.ContainsKey(p.Key)).ToDictionary(p => p.Key, p => stats[p.Key]);
             var open = positions.Where(p => pending?.Contains(p.Key) == true).Select(p => p.Key).ToHashSet();
@@ -226,7 +230,7 @@ public class OpponentTrainingEstimateTests
     }
 
     private static async Task<(AppDbContext Db, TrainingLinesService Svc, int Rep)> ServiceAsync(ITrainingExplorer explorer, string pgn,
-        IMemoryCache? cache = null)
+        IMemoryCache? cache = null, Dictionary<string, string?>? config = null)
     {
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
@@ -238,7 +242,7 @@ public class OpponentTrainingEstimateTests
         var notifications = new NotificationService(db);
         var reps = new RepertoireService(db, new RepertoireAnalyzeService(db, new MemoryCache(new MemoryCacheOptions())),
             new FriendService(db, notifications), notifications);
-        return (db, new TrainingLinesService(db, reps, new ConfigurationBuilder().Build(), explorer, cache), rep.Id);
+        return (db, new TrainingLinesService(db, reps, new ConfigurationBuilder().AddInMemoryCollection(config ?? new()).Build(), explorer, cache), rep.Id);
     }
 
     [Fact]
@@ -339,5 +343,86 @@ public class OpponentTrainingEstimateTests
         await svc.LinesAsync(1, q, Games, default);
         await svc.LinesAsync(1, q, Games, default);
         Assert.Equal(5, loads);
+    }
+
+    // ── Hotfix 2026-10-08: Frist, Deckel, Reihenfolge, kein Halten unvollständiger Ergebnisse ─────────────────────────
+
+    private const string ThreeLines = "[Event \"x\"]\n[Black \"K\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 *\n\n"
+        + "[Event \"x\"]\n[Black \"K\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n\n"
+        + "[Event \"x\"]\n[Black \"K\"]\n\n1. e4 c6 2. d4 d5 3. e5 *\n";
+
+    private static TrainingLinesService.Query Qw(int rep) => new(rep, "w", TrainingLinesService.ChapterOverrides.None, null);
+
+    [Fact]
+    public async Task Priority_GapsOfTheLinesHeFollows_First_ThenTheDeviating()
+    {
+        var explorer = new FakeExplorer(new());
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines);
+        using var _ = db;
+        // er hat 3× 1...c5 2.Sf3 gespielt (Partie endet dort): die Najdorf-Linie folgt ihm, die beiden anderen weichen ab
+        await svc.LinesAsync(1, Qw(rep), () => Task.FromResult(Times(3, "e4 c5 Nf3", false).ToList()), default);
+        var keys = Assert.Single(explorer.Calls).Keys;
+        // die Lücke der Linie, der er folgt, vor den Stellungen, die nur die abweichenden Linien brauchen
+        var najdorf = keys.IndexOf(KeyAfter("e4", "c5", "Nf3"));
+        Assert.True(najdorf >= 0);
+        Assert.True(najdorf < keys.IndexOf(KeyAfter("e4", "e5", "Nf3")), string.Join(" | ", keys));
+        Assert.True(najdorf < keys.IndexOf(KeyAfter("e4", "c6", "d4")), string.Join(" | ", keys));
+    }
+
+    [Fact]
+    public async Task Cap_OnlyTheFirstNPositions_RestPending_AndIncomplete()
+    {
+        var explorer = new FakeExplorer(new());
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines,
+            config: new() { [TrainingLinesService.MaxPositionsKey] = "1" });
+        using var _ = db;
+        var r = (await svc.LinesAsync(1, Qw(rep), () => Task.FromResult(new List<OpponentTrainingLines.Game>()), default))!;
+        Assert.Single(Assert.Single(explorer.Calls).Keys);              // höchstens 1 Stellung abgefragt
+        Assert.True(r["explorerIncomplete"]!.GetValue<bool>());
+        Assert.True(r["explorerPending"]!.GetValue<int>() >= 2);
+        Assert.Contains(r["lines"]!.AsArray(), l => l!["pending"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task Deadline_UsedUp_NoQuery_HonestPartialAnswer_NotCached()
+    {
+        using var memory = new MemoryCache(new MemoryCacheOptions());
+        var explorer = new FakeExplorer(new());
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines, memory,
+            new() { [TrainingLinesService.ExplorerBudgetKey] = "0" });
+        using var _ = db;
+        var loads = 0;
+        Task<List<OpponentTrainingLines.Game>> Games() { loads++; return Task.FromResult(new List<OpponentTrainingLines.Game>()); }
+        var r = (await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1"))!;
+        Assert.Empty(explorer.Calls);                                 // keine Zeit: nichts abgefragt, alles offen
+        Assert.True(r["explorerIncomplete"]!.GetValue<bool>());
+        await svc.LinesAsync(1, Qw(rep), Games, default, scope: "league:1");
+        Assert.Equal(2, loads);                                       // unvollständig wird NICHT gehalten
+    }
+
+    [Fact]
+    public async Task ExplorerBudget_IsTheSmallerOfConfigAndWhatTheDeadlineLeaves()
+    {
+        var explorer = new FakeExplorer(new());
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines);
+        using var _ = db;
+        await svc.LinesAsync(1, Qw(rep), () => Task.FromResult(new List<OpponentTrainingLines.Game>()), default);
+        var budget = Assert.Single(explorer.Budgets);
+        Assert.True(budget <= TimeSpan.FromSeconds(TrainingLinesService.DefaultExplorerSeconds), budget.ToString());
+        Assert.True(budget > TimeSpan.FromSeconds(5), budget.ToString());
+    }
+
+    [Fact]
+    public async Task AbortedRequest_StillAnswers_NoException()
+    {
+        // nginx kappt mitten in der Schätzung → Kestrel bricht die Anfrage ab: danach darf nichts mehr werfen
+        using var aborted = new CancellationTokenSource();
+        var explorer = new FakeExplorer(new() { [KeyAfter("e4")] = Stats(("e5", 50), ("c5", 50)) }, onCall: aborted.Cancel);
+        var (db, svc, rep) = await ServiceAsync(explorer, ThreeLines);
+        using var _ = db;
+        var r = await svc.LinesAsync(1, Qw(rep), () => Task.FromResult(new List<OpponentTrainingLines.Game>()), aborted.Token);
+        Assert.True(aborted.IsCancellationRequested);
+        Assert.NotNull(r);
+        Assert.NotEmpty(r!["lines"]!.AsArray());
     }
 }

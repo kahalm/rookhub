@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.725.1", date: "2026-10-07", changes: [
+    { en: "Hotfix for training lines that never finished loading: the request was cut off after 60 s and answered with an error. Now a request takes at most 20 seconds in total (the explorer part at most 12), always answers — partially if needed — and asks the local explorer for the most important positions first (the gaps of the lines that will be at the top), at most 1,500 per request. What is not ready yet shows as “Estimate incomplete — N positions open” with a “Keep calculating” button; the card also continues on its own after 3 seconds, up to three times. Positions already looked up are kept for 24 hours, so each round gets further, even if the page was closed in between.",
+      de: "Hotfix für Trainingslinien, die nie fertig luden: die Anfrage wurde nach 60 s abgeschnitten und mit einem Fehler beantwortet. Jetzt dauert eine Anfrage insgesamt höchstens 20 Sekunden (der Explorer-Teil höchstens 12), antwortet immer — notfalls mit einem Teilergebnis — und fragt den lokalen Explorer nach den wichtigsten Stellungen zuerst (den Lücken der Linien, die oben stehen werden), höchstens 1 500 je Anfrage. Was noch nicht fertig ist, steht als „Schätzung unvollständig — N Stellungen offen“ mit einem Knopf „Weiter rechnen“ da; die Karte rechnet außerdem nach 3 Sekunden von selbst weiter, bis zu dreimal. Schon abgefragte Stellungen bleiben 24 Stunden gespeichert, jede Runde kommt also weiter — auch wenn die Seite zwischendurch geschlossen wurde." },
+  ] },
   {
     version: '0.725.0',
     date: '2026-10-08',
