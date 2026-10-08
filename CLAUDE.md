@@ -2948,6 +2948,13 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   `BatchStatsAsync(positions, query, ct, budget)` läuft an einer EIGENEN Frist, nicht am Anfrage-Token (Abbruch der
   Anfrage stoppt die Arbeit nicht, nie eine Ausnahme), Stellungen 24 h im Speicher (`BatchMemoryTtl`). Unvollständige
   Ergebnisse werden NICHT gecacht — die nächste Anfrage kommt mit den gespeicherten Stellungen weiter.
+- Hintergrund statt „Weiter rechnen" (0.725.2): der Deckel `Prep:TrainingExplorerMaxPositions` gilt nur für NEU
+  anzufragende Stellungen (`BatchStatsAsync(…, maxNew, parallelism)`, gespeicherte immer mit; `BatchResult.FromMemory/
+  Asked/Capped`) — vorher schnitt er die ganze Liste ab, und Runden kamen nie über 1 500 hinaus. Bleibt eine Abfrage
+  unvollständig, startet `TrainingLinesContinuation` (Singleton, eigener DI-Bereich) für denselben Cache-Schlüssel einen
+  Hintergrund-Durchlauf: alle restlichen Stellungen in Priorisierungs-Reihenfolge, 8 gleichzeitig, Zeitlimit 5 min, kein
+  Anfrage-Token, höchstens EIN Lauf je Nutzer; danach Reihung aus dem Speicher und das vollständige Ergebnis in den
+  15-min-Cache. Während er läuft, liest der Vordergrund nur den Speicher (budget 0, maxNew 0). Antwort `explorerRunning`.
 - Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
   Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
   Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der

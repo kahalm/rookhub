@@ -278,6 +278,9 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
   mit `.tl-continue` „Weiter rechnen" (dieselbe Abfrage); automatisch nach 3 s, höchstens 3 Runden
   (`AutoContinueMs`/`AutoContinueRounds`, Wecker außerhalb der Zone, damit `whenStable` nicht wartet; Wahl/Öffnen setzt
   die Runden zurück).
+- Seit 0.725.2 ersetzt das Nachfragen die automatischen Runden: solange `explorerRunning`, alle 3 s dieselbe Abfrage
+  (`PollMs`, ohne Rundenlimit), `.tl-running` „Schätzung läuft — noch N von M Stellungen" mit `progress.tl-progress`
+  (M = `pendingStart`); `.tl-continue` nur noch als Rückfall bei `explorerIncomplete` ohne Lauf.
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 
