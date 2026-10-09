@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.727.6", date: "2026-10-09", changes: [
+    { en: "Docs: the README of RookHub and of the ChessResults crawler no longer calls them private projects. Both repositories are public and licensed under the GNU GPL-3.0 (see LICENSE).",
+      de: "Doku: die README von RookHub und vom ChessResults-Crawler nennt sie nicht mehr private Projekte. Beide Repositories sind öffentlich und stehen unter der GNU GPL-3.0 (siehe LICENSE)." },
+  ] },
   { version: "0.727.5", date: "2026-10-09", changes: [
     { en: "Player card in LeagueHub and Player preparation: the “📷 Photos” link to the league photo page is now shown only to admins. Everyone else no longer sees the link at all (as before, it never appears on share links). The check follows the current admin status, so revoking admin hides it without a new login.",
       de: "Spielerkarte in LeagueHub und Spielervorbereitung: den Link „📷 Fotos“ zur Liga-Foto-Seite sehen jetzt nur noch Admins. Alle anderen sehen ihn gar nicht mehr (über Teilen-Links erscheint er wie bisher nie). Geprüft wird der aktuelle Admin-Stand, ein Entzug blendet ihn also ohne neues Anmelden aus." },

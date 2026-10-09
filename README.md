@@ -273,4 +273,5 @@ Crawler-Responses werden als `JsonElement` durchgereicht (kein festes DTO-Mappin
 
 ## Lizenz
 
-Privates Projekt — kein oeffentliches Repository.
+Freie Software unter der GNU General Public License v3.0 (GPL-3.0) — der vollständige Text steht in [LICENSE](LICENSE).
+Das Repository ist öffentlich auf GitHub.
