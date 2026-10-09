@@ -181,13 +181,16 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
 
         var res = await reports.ImportAsync("20221", dryRun: false, default);
 
-        Assert.Equal((1, 1), (res.Counts.Reports, res.Suggestions));
+        // seit 0.726.0 direkt ein gesichertes Konto statt eines Vorschlags
+        Assert.Equal((1, 1, 0), (res.Counts.Reports, res.Accounts.Created, res.Suggestions));
         Db.ChangeTracker.Clear();
         var r = await Db.LeagueSelfReports.SingleAsync();
         Assert.Equal(("900", "KonniW", (string?)"Schachkreis Zugspitze"), (r.FideId, r.UserName, r.Reporter));
-        Assert.Equal("900", (await Db.LeagueAccountSuggestions.SingleAsync()).FideId);
+        Assert.Equal("900", (await Db.LeagueOnlineAccounts.SingleAsync()).FideId);
+        Assert.False(await Db.LeagueAccountSuggestions.AnyAsync());
         Assert.Equal(1980, (await Db.LeagueAccountScans.SingleAsync()).BirthYear);
-        Assert.Equal(0, (await reports.ImportAsync("20221", dryRun: false, default)).Suggestions);     // nichts doppelt
+        var again = await reports.ImportAsync("20221", dryRun: false, default);                         // nichts doppelt
+        Assert.Equal((0, 1, 0), (again.Accounts.Created, again.Accounts.Unchanged, again.Suggestions));
     }
 
     private sealed class PathHttp(Func<string, string?> page) : IHttpClientFactory
