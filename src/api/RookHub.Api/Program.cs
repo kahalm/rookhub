@@ -917,7 +917,12 @@ try
     builder.Services.AddResponseCompression();
     // Domänen-Ausnahmen (NotFound/DomainValidation/Conflict/Forbidden) → { message } mit 404/400/409/403,
     // noch im Endpoint, damit das Request-Log den echten Status sieht (Begründung in DomainExceptionFilter).
-    builder.Services.AddControllers(o => o.Filters.Add<RookHub.Api.Filters.DomainExceptionFilter>())
+    // Browser-Abbruch (RequestAborted) → 499 ohne Error-Log statt 500 (ClientAbortedExceptionFilter, 0.727.4).
+    builder.Services.AddControllers(o =>
+        {
+            o.Filters.Add<RookHub.Api.Filters.DomainExceptionFilter>();
+            o.Filters.Add<RookHub.Api.Filters.ClientAbortedExceptionFilter>();
+        })
         // Validierungs-400 mit message (= erste Meldung) neben errors/traceId (Codereview A10-006).
         .ConfigureApiBehaviorOptions(o => o.InvalidModelStateResponseFactory = ApiErrorResponses.InvalidModelState)
         .AddJsonOptions(opts =>

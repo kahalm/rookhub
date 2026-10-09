@@ -184,6 +184,48 @@ public class ExplorerPathFinderTests
     }
 
     [Fact]
+    public async Task Find_TimeBudget_EndsTruncated_WithoutException()
+    {
+        // Das Budget-Token (eigene Frist) ist KEIN Browser-Abbruch: Ergebnis mit truncated, keine Ausnahme.
+        var fake = Sicilian().SlowAt("e2e4", TimeSpan.FromSeconds(10));
+        var finder = Finder(fake);
+        finder.Budget = TimeSpan.FromMilliseconds(150);
+        var clock = Stopwatch.StartNew();
+        var r = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.True(r.Truncated);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"{clock.Elapsed}");
+    }
+
+    [Fact]
+    public async Task Find_RequestAborted_Throws_AndLeavesNoQueryRunning()
+    {
+        // Prod 09.10.2026: der Browser bricht ab (neue Stellung, Fortsetzungsrunde verworfen). Die Suche wirft die
+        // OperationCanceledException weiter (→ ClientAbortedExceptionFilter, 499), wartet aber vorher alle laufenden
+        // Abfragen ab — keine verwaisten Tasks.
+        var fake = Sicilian().SlowAt("e2e4", TimeSpan.FromSeconds(10));
+        var started = 0;
+        var finished = 0;
+        async Task<ExplorerPositionStats?> Tracked(string fen, CancellationToken ct)
+        {
+            Interlocked.Increment(ref started);
+            try { return await fake.Fetch(fen, ct); }
+            finally
+            {
+                // Wie ein HttpClient, der nach dem Abbruch noch kurz abwickelt: ohne Abwarten wäre die Suche vorher draußen.
+                await Task.Delay(50, CancellationToken.None);
+                Interlocked.Increment(ref finished);
+            }
+        }
+        var finder = new ExplorerPathFinder(Tracked, new MemoryCache(new MemoryCacheOptions()));
+        using var request = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+        var clock = Stopwatch.StartNew();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => finder.FindAsync(SicilianD6, 20, request.Token));
+        Assert.Equal(started, finished);
+        Assert.True(started > 1, $"{started} Abfragen");
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"{clock.Elapsed}");
+    }
+
+    [Fact]
     public async Task Find_SecondCall_ComesFromMemory()
     {
         var fake = Sicilian();

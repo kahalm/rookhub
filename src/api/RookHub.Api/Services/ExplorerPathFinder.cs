@@ -168,6 +168,9 @@ public sealed class ExplorerPathFinder
             inflight.Remove(done);
             try { node.Stats = await done; }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested) { node.Stats = null; truncated = true; }
+            // Der Browser hat abgebrochen (neue Stellung, neu geladen): nichts mehr erweitern — die übrigen Abfragen werden unten
+            // abgebrochen und abgewartet (keine verwaisten Tasks), danach geht die Ausnahme an den ClientAbortedExceptionFilter (499).
+            catch (OperationCanceledException) { break; }
             if (node.Stats is null)
             {
                 node.Failed = true;
@@ -218,13 +221,14 @@ public sealed class ExplorerPathFinder
             }
             if (changed && found.Count > 0) tenth = Cutoff(found, MinShareOfBest);
         }
-        // Am Budget abgebrochen: was noch unterwegs ist, wird verworfen (die Abfragen enden mit dem Abbruch).
+        // Am Budget (oder vom Browser) abgebrochen: was noch unterwegs ist, wird verworfen (die Abfragen enden mit dem Abbruch).
         if (inflight.Count > 0)
         {
             budget.Cancel();
-            try { await Task.WhenAll(inflight.Keys); } catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
+            try { await Task.WhenAll(inflight.Keys); } catch (OperationCanceledException) { }
             truncated = true;
         }
+        ct.ThrowIfCancellationRequested();
 
         dto.Searched = nodes.Values.Count(n => n.Expanded);
         dto.Queries = queries;

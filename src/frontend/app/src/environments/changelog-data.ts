@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.727.4", date: "2026-10-09", changes: [
+    { en: "Internal: if the browser cancels an explorer request (new position on the board, page reloaded, a follow-up round of the move-order search discarded), the server no longer records it as a server error (500 with stack trace) but quietly as “client closed request” (499). Applies to move orders, explorer position and games, and the gap finder; the explorer queries still running are stopped and awaited. No change for users.",
+      de: "Intern: bricht der Browser eine Explorer-Anfrage ab (neue Stellung auf dem Brett, Seite neu geladen, Fortsetzungsrunde der Zugfolgen-Suche verworfen), verbucht der Server das nicht mehr als Serverfehler (500 mit Stacktrace), sondern still als „Client hat abgebrochen“ (499). Gilt für Zugfolgen, Explorer-Stellung und -Partien sowie den Lochfinder; die noch laufenden Explorer-Abfragen werden abgebrochen und abgewartet. Für Nutzer ändert sich nichts." },
+  ] },
   { version: "0.727.3", date: "2026-10-09", changes: [
     { en: "LeagueHub, “Suggest move orders” for an entered position: if a search hits its budget, the page now continues on its own — up to three rounds, each building on the answers of the previous one (“Round 2 of 3 … (so far n paths)”), and shows the paths found so far after every round. After that, “Keep searching” continues one round at a time. Deep positions (e.g. 15 half-moves into a rare opening) used to end with “no move order found” after the first 20 seconds.",
       de: "LeagueHub, „Zugfolgen vorschlagen“ für eine eingegebene Stellung: endet eine Suche am Budget, sucht die Seite jetzt von selbst weiter — bis zu drei Runden, jede baut auf den Antworten der vorigen auf („Runde 2 von 3 … (bisher n Wege)“), die bis dahin gefundenen Wege stehen nach jeder Runde da. Danach setzt „Weiter suchen“ Runde für Runde fort. Tiefe Stellungen (etwa 15 Halbzüge in einer seltenen Eröffnung) endeten bisher nach den ersten 20 Sekunden mit „keine Zugfolge gefunden“." },
