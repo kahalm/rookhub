@@ -37,7 +37,7 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
 
     public sealed record LineupBoard(int Board, string? HomePlayer, string? HomeTitle, int? HomeElo, string? AwayPlayer,
         string? AwayTitle, int? AwayElo, string? HomeColor, string Result, int Forfeit, string? Moves, bool CanEditMoves,
-        LineupGame? Game = null, bool CanDeleteMoves = false);
+        LineupGame? Game = null, bool CanDeleteMoves = false, string? HomeFide = null, string? AwayFide = null);
 
     /// <summary>Die vorhandene Partie eines Bretts (ohne PGN): <c>source</c> <c>club</c> (Vereinspartie, <c>clubGameId</c>) oder
     /// <c>profile</c> (Spielerkarte), Halbzüge, Ergebnis und Namen wie im PGN, die ersten <see cref="FirstPlies"/> Halbzüge
@@ -113,10 +113,14 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
                 // Löschen bleibt auch neben einer Partie möglich (ein alter, nun ersetzter Handeintrag) — Regel wie Speichern.
                 var deletable = entry is not null && mayWrite && (canManage || entry.UpdatedByUserId == userId);
                 return new LineupBoard(g.Board, g.HomePlayer, g.HomeTitle, g.HomeElo, g.AwayPlayer, g.AwayTitle, g.AwayElo,
-                    g.HomeColor, g.Result, g.Forfeit, entry?.Moves, editable, game, deletable);
+                    g.HomeColor, g.Result, g.Forfeit, entry?.Moves, editable, game, deletable,
+                    // 0.727.2: FIDE-IDs der öffentlichen Paarung — der Name öffnet damit die Spielerkarte (wie in der Prognose).
+                    NullIfEmpty(g.HomeFide), NullIfEmpty(g.AwayFide));
             }).ToList());
         }
     }
+
+    private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
 
     /// <summary>Die Partie eines Bretts ohne PGN: Kopfzeilen und Hauptvariante (bereinigt wie überall).</summary>
     internal static LineupGame ToGame(LeagueFixtureGames.Pairing p)

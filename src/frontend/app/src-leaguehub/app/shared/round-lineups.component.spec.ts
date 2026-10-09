@@ -4,6 +4,10 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { HandoffService } from '@rh/core/handoff.service';
 import { LineupsApiService, RoundLineups, formatMoves, parseMoves, points } from '../core/lineups';
 import { RoundLineupsComponent } from './round-lineups.component';
+import { By } from '@angular/platform-browser';
+import { AuthService } from '@rh/core/auth.service';
+import { PLAYER_CARD_API } from '@rh/shared/player-card/player-card-api';
+import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 
 // Erfundene Vereine und Spieler.
 const DATA: RoundLineups = {
@@ -11,9 +15,9 @@ const DATA: RoundLineups = {
   matches: [
     { matchNo: 1, home: 'Bergheim', away: 'Testdorf 1', homePts: 1.5, awayPts: 2.5, own: true, boards: [
       { board: 1, homePlayer: 'Ackermann, Anna', homeTitle: 'FM', homeElo: 2201, awayPlayer: 'Brunner, Bert', awayTitle: null, awayElo: 2105,
-        homeColor: 'w', result: '0 - 1', forfeit: 0, moves: 'e4 c5 Nf3', canEditMoves: true },
+        homeFide: '1610001', awayFide: null, homeColor: 'w', result: '0 - 1', forfeit: 0, moves: 'e4 c5 Nf3', canEditMoves: true },
       { board: 2, homePlayer: 'Clauss, Carl', homeTitle: null, homeElo: null, awayPlayer: 'Dorn, Dora', awayTitle: null, awayElo: 1990,
-        homeColor: 's', result: '½ - ½', forfeit: 0, moves: null, canEditMoves: true },
+        homeFide: null, awayFide: '1610002', homeColor: 's', result: '½ - ½', forfeit: 0, moves: null, canEditMoves: true },
     ] },
     { matchNo: 2, home: 'Talhausen', away: 'Seewinkel', homePts: 2, awayPts: 2, own: false, boards: [
       { board: 1, homePlayer: 'Fink, Franz', homeTitle: null, homeElo: 1800, awayPlayer: 'Gruber, Gerd', awayTitle: null, awayElo: 1750,
@@ -42,6 +46,8 @@ describe('RoundLineupsComponent', () => {
     api.lineups.and.resolveTo(DATA);
     TestBed.configureTestingModule({ imports: [RoundLineupsComponent], providers: [{ provide: LineupsApiService, useValue: api },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
+      { provide: PLAYER_CARD_API, useValue: jasmine.createSpyObj('PlayerCardApi', ['card']) },
+      { provide: AuthService, useValue: { has: () => false, isLoggedIn: true } },
       provideRouter([]), provideTranslateService({ fallbackLang: 'de' })] });
     fixture = TestBed.createComponent(RoundLineupsComponent);
   });
@@ -84,6 +90,24 @@ describe('RoundLineupsComponent', () => {
     api.lineups.and.rejectWith(new Error('weg'));
     const el = await render();
     expect(el.querySelector('.err')?.textContent).toContain('Aufstellungen nicht geladen');
+  });
+
+  // 0.727.2: „namen sollten klickbar sein (selbe info wie bei der prognose)"
+  it('Namen mit FIDE-ID öffnen die Spielerkarte mit der Farbe an diesem Brett, ohne FIDE-ID bloßer Text', async () => {
+    const el = await render();
+    const card = fixture.debugElement.query(By.directive(PlayerCardComponent)).componentInstance as PlayerCardComponent;
+    const open = spyOn(card, 'open').and.resolveTo();
+    const boards = el.querySelectorAll('.lu-board');
+    const home1 = boards[0].querySelector('.lu-home button.pl') as HTMLButtonElement;
+    expect(home1.textContent?.trim()).toBe('FM Ackermann, Anna');
+    expect(boards[0].querySelector('.lu-away button.pl')).toBeNull();          // Brunner ohne FIDE-ID
+    expect(boards[0].querySelector('.lu-away')?.textContent).toContain('Brunner, Bert');
+    expect(boards[1].querySelector('.lu-home button.pl')).toBeNull();
+    home1.click();
+    expect(open).toHaveBeenCalledWith('1610001', 'w', 1, null);
+    (boards[1].querySelector('.lu-away button.pl') as HTMLButtonElement).click();   // Heim hat Schwarz → Gast Weiß
+    expect(open).toHaveBeenCalledWith('1610002', 'w', 2, null);
+    expect(el.querySelectorAll('button.pl').length).toBe(2);
   });
 
   // 0.724.0: „wenn ich die Partie hab, soll er nicht Züge eingeben lassen, sondern die Partie ausweisen"

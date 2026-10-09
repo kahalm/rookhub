@@ -2089,6 +2089,10 @@ Möglichkeit, die ersten paar Züge einzugeben."
   Ergebnis (Sicht Heim – Gast wie chess-results), Gastspieler, Züge. Eigene Begegnung (Rahmen) über `own` (`LeagueClub.OwnsTeam`).
   Begegnung ohne Brettpaarungen = „Noch keine Aufstellung". CSS-Grid statt Tabelle — am Handy stehen Heim/Gast untereinander.
   Zustand in der Adresse `&aufstellungen=1` und mit der Runde im Tab (`leaguehub-round` → `aufstellungen: true`, nur wenn offen).
+  **Namen → Spielerkarte** (0.727.2, Wunsch 2026-10-09: „namen sollten klickbar sein (selbe info wie bei der prognose)"): Heim- und
+  Gastname mit FIDE-ID (`homeFide`/`awayFide` aus `LeagueGames.HomeFide/AwayFide`, leer = `null`) sind `button.pl` wie in `lh-fixture`
+  und öffnen dieselbe `lh-player-card` (`open(fide, Farbe des Spielers an diesem Brett, Brett, null)` — Gast = Gegenfarbe von
+  `homeColor`, unbekannt = keine Vorgabe; Mandant `?club=` über den Interceptor). Ohne FIDE-ID bloßer Text (wie in der Prognose).
 * **Erste Züge** (`shared/board-moves.component.ts` + Dialog `shared/moves-editor.component.ts`): Anzeige „1.e4 c5 2.Sf3" (deutsche
   Figurenbuchstaben über `de()`), „Züge eingeben/ändern" öffnet Brett (`app-chess-board`, gedreht aus Sicht des eigenen Spielers) +
   Textfeld, beide synchron (Brett hängt an, Tippen stellt das Brett bis zum ersten falschen Zug), Zurück, Speichern, Löschen.
@@ -2113,7 +2117,9 @@ Möglichkeit, die ersten paar Züge einzugeben."
   `GET …/club/games/{id}` samt Bewertungen, Spielerkarte `GET …/round/{r}/games?team=<Heim>`). Mit Partie ist `canEditMoves = false`;
   ein alter Handeintrag kommt weiter als `moves` und `canDeleteMoves` (löschen darf, wer ihn auch ändern dürfte). Oberfläche:
   `shared/board-game.component.ts` („Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …", Nachspielen, Analyse per Einmal-Code, mit
-  `canEdit` Bearbeiten/Korrigieren), `board-moves` mit `replaced` (grau „ersetzt durch die Partie", nur Löschen). In `lh-fixture`
+  `canEdit` Bearbeiten/Korrigieren — alle vier seit 0.727.2 als `.btn-link` auf einer Grundlinie, `.bg-actions` mit
+  `align-items: baseline`; vorher waren Bearbeiten/Korrigieren nackte `<a>` in Browser-Linkfarbe ohne Polster und standen höher),
+  `board-moves` mit `replaced` (grau „ersetzt durch die Partie", nur Löschen). In `lh-fixture`
   erscheint die Zug-Zeile nur an Brettern OHNE Partie. Der Server lehnt Schreiben an einem Brett mit Partie NICHT ab (Rechte unverändert).
 * **Teilpartien** (0.725.0, Frage 2026-10-08: „fließen die [ersten Züge] in die Eröffnungsbäume bei der Vorbereitung ein?" — „ja mach
   das so"): jeder Eintrag in `LeagueGameMoves` ist eine TEILPARTIE beider Spieler (`Services/League/LeaguePartialGames.cs`), gerechnet
@@ -2139,15 +2145,15 @@ Möglichkeit, die ersten paar Züge einzugeben."
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
-| GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves, game?, canDeleteMoves }] }] }` — `game` (0.724.0) = vorhandene Partie des Bretts `{ source, clubGameId, plies, result, white, black, firstMoves, canEdit }` oder `null`, dann `canEditMoves = false`; 404 ohne Runde |
+| GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves, game?, canDeleteMoves, homeFide, awayFide }] }] }` — `homeFide`/`awayFide` (0.727.2) = FIDE-IDs der Paarung oder `null`; `game` (0.724.0) = vorhandene Partie des Bretts `{ source, clubGameId, plies, result, white, black, firstMoves, canEdit }` oder `null`, dann `canEditMoves = false`; 404 ohne Runde |
 | PUT | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | `{ moves }` (leer = löschen) → `{ moves }` (englische SAN); 404 ohne Paarung, 403 `foreignMatch`/`notYours`, 400 `noGame`/`tooLong`/`illegal` (+ `move`, `ply`) |
 | DELETE | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | → 204; 404/403 wie oben |
 
 Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids; seit 0.724.0 Partie je Brett: fest zugeordnete
-Vereinspartie, anderer Verein sieht sie nicht, archivierte zählt nicht, Spielerkarte, geratene Partie nur einmal), `LeagueGameMovesSqlTests` (Migration + eindeutiger
+Vereinspartie, anderer Verein sieht sie nicht, archivierte zählt nicht, Spielerkarte, geratene Partie nur einmal; 0.727.2 FIDE-IDs), `LeagueGameMovesSqlTests` (Migration + eindeutiger
 Schlüssel gegen MariaDB), `LeaguePartialGamesTests` (0.725.0: Teilpartie bei beiden Spielern mit Kopf, Karte/Profil/Baum ohne `recent`,
 Löschen rechnet nach + Ansicht, zugeordnete/gleichnamige Vereinspartie und Kartenpartie ±3 Tage schlagen sie, Quellen-Zeile, Trainingslinien,
-Prep-Karte samt Bestands-Ausschluss); Frontend `round-lineups`/`moves-editor`/`league-page`/`fixture-view`-Specs.
+Prep-Karte samt Bestands-Ausschluss); Frontend `round-lineups`/`board-game`/`moves-editor`/`league-page`/`fixture-view`-Specs.
 
 **Stellung eingeben + Zugfolgen vorschlagen** (0.723.0, Wunsch 2026-10-08: „lass mich dort auch direkt Stellungen eingeben. schau
 dann in der lokalen Lichess-DB nach, welche Eröffnungen am häufigsten zu der Stellung kommen, und schlag sie mir vor"):

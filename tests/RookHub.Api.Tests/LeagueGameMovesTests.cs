@@ -240,6 +240,24 @@ public class LeagueGameMovesTests : IDisposable
     }
 
     [Fact]
+    public async Task Lineups_CarryFideIdsOfThePairing_EmptyIsNull()
+    {
+        // 0.727.2: der Name in der Aufstellung öffnet die Spielerkarte — dafür braucht die Oberfläche die FIDE-IDs der Paarung.
+        await SeedAsync();
+        var g1 = await _db.LeagueGames.SingleAsync(g => g.MatchNo == 1 && g.Board == 1);
+        g1.HomeFide = "1610001";
+        g1.AwayFide = " ";
+        var g2 = await _db.LeagueGames.SingleAsync(g => g.MatchNo == 1 && g.Board == 2);
+        g2.AwayFide = "1610002";
+        await _db.SaveChangesAsync();
+        var l = (await Service().LineupsAsync(TestClubs.Home, Tnr, Round, Reader, false, false))!;
+        var b = l.Matches[0].Boards;
+        Assert.Equal(("1610001", (string?)null), (b[0].HomeFide, b[0].AwayFide));
+        Assert.Equal(((string?)null, "1610002"), (b[1].HomeFide, b[1].AwayFide));
+        Assert.Null(l.Matches[1].Boards[0].HomeFide);
+    }
+
+    [Fact]
     public async Task Lineups_Reader_SeesMoves_ButCannotEdit_OthersEntryNotEditable()
     {
         await SeedAsync();

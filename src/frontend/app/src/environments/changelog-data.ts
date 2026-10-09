@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.727.2", date: "2026-10-09", changes: [
+    { en: "LeagueHub, all line-ups of a round: player names with a FIDE ID now open the same player card as in the forecast, preset to the colour the player had at that board. Names without a FIDE ID stay plain text.",
+      de: "LeagueHub, alle Aufstellungen einer Runde: Spielernamen mit FIDE-ID öffnen jetzt dieselbe Spielerkarte wie in der Prognose, voreingestellt auf die Farbe des Spielers an diesem Brett. Namen ohne FIDE-ID bleiben bloßer Text." },
+    { en: "LeagueHub, existing game at a board: “Replay”, “Analysis”, “Edit” and “Correct” now look the same and sit on one baseline — “Edit” and “Correct” used to be plain links in the browser’s link colour, slightly higher than the other two.",
+      de: "LeagueHub, vorhandene Partie an einem Brett: „Nachspielen“, „Analyse“, „Bearbeiten“ und „Korrigieren“ sehen jetzt gleich aus und stehen auf einer Grundlinie — „Bearbeiten“ und „Korrigieren“ waren bisher nackte Links in der Linkfarbe des Browsers und standen etwas höher." },
+  ] },
   { version: "0.727.1", date: "2026-10-09", changes: [
     { en: "Internal: a database test still expected the old suggestion behaviour of 0.726.0 and stopped the release build. No change for users; 0.726.0 and 0.727.0 now ship together with this version.",
       de: "Intern: ein Datenbanktest erwartete noch das alte Vorschlagsverhalten vor 0.726.0 und hielt den Release-Build auf. Für Nutzer ändert sich nichts; 0.726.0 und 0.727.0 kommen mit dieser Version gemeinsam heraus." },

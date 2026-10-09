@@ -10,7 +10,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
  * Züge eingeben lassen, sondern die Partie ausweisen"): „Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …" mit „Nachspielen"
  * (klappt `lh-game-replay` auf; das PGN kommt erst dann — Vereinspartie über `club/games/{id}` samt Bewertungen, Spielerkarte
  * über `…/round/{r}/games?team=` wie in `lh-fixture`), an einer Vereinspartie „Analyse" (RookHub per Einmal-Code) und mit
- * `canEdit` „Bearbeiten"/„Korrigieren" wie in `lh-fixture`.
+ * `canEdit` „Bearbeiten"/„Korrigieren" wie in `lh-fixture`. Alle vier als `.btn-link` (0.727.2: gleiche Farbe und Grundlinie).
  */
 @Component({
   selector: 'lh-board-game',
@@ -30,8 +30,8 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
                     title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen">Analyse</button>
           }
           @if (g.canEdit) {
-            <a class="bg-edit" [routerLink]="['/verein']" [queryParams]="{ bearbeiten: g.clubGameId }">Bearbeiten</a>
-            <a class="bg-fix" [routerLink]="['/verein/partie', g.clubGameId, 'korrigieren']">Korrigieren</a>
+            <a class="btn-link bg-edit" [routerLink]="['/verein']" [queryParams]="{ bearbeiten: g.clubGameId }">Bearbeiten</a>
+            <a class="btn-link bg-fix" [routerLink]="['/verein/partie', g.clubGameId, 'korrigieren']">Korrigieren</a>
           }
         }
       </span>
@@ -50,7 +50,9 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
     .bg { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 14px; }
     .bg-what { overflow-wrap: anywhere; }
     .bg-moves { font-family: var(--body); }
-    .bg-actions { display: inline-flex; flex-wrap: wrap; gap: 2px 10px; white-space: nowrap; }
+    /* 0.727.2: alle vier Aktionen dieselbe Art (.btn-link) — bis dahin waren „Bearbeiten"/„Korrigieren" nackte <a> (Browser-
+       Linkfarbe, ohne das Polster der Knöpfe) und standen höher als „Nachspielen"/„Analyse". Grundlinie statt Oberkante. */
+    .bg-actions { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; white-space: nowrap; }
     .bg-replay-box { margin: 8px 0 4px; }
   `],
 })

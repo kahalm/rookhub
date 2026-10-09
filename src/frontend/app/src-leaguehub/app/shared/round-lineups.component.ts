@@ -1,22 +1,25 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { tn } from '../core/league-format';
 import { LineupBoard, LineupMatch, LineupsApiService, MovesKey, RoundLineups, points } from '../core/lineups';
 import { BoardMovesComponent } from './board-moves.component';
 import { BoardGameComponent } from './board-game.component';
 import { ownsTeam } from '../core/club-context.service';
+import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 
 /**
  * Alle Aufstellungen einer Runde (2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde
  * anzeigt"): je Begegnung Heim – Gast mit Ergebnis, darunter die Bretter wie auf chess-results (Heimspieler mit Titel und Elo,
  * Farbe, Ergebnis, Gastspieler) und die ersten Züge. Begegnungen des eigenen Vereins hervorgehoben; ohne Brettpaarungen
  * „noch keine Aufstellung". Kein Tabellen-Layout: am Handy stehen die Spieler eines Bretts untereinander.
+ * Seit 0.727.2 (Wunsch 2026-10-09: „namen sollten klickbar sein, selbe info wie bei der prognose") öffnen die Namen mit FIDE-ID
+ * dieselbe Spielerkarte wie `lh-fixture` (`button.pl`, Vorgabe = Farbe des Spielers an diesem Brett); ohne FIDE-ID bloßer Text.
  */
 @Component({
   selector: 'lh-round-lineups',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BoardMovesComponent, BoardGameComponent],
+  imports: [BoardMovesComponent, BoardGameComponent, PlayerCardComponent],
   template: `
     <section class="lu" aria-label="Aufstellungen der Runde">
       @if (error(); as e) {
@@ -41,11 +44,15 @@ import { ownsTeam } from '../core/club-context.service';
                     <span class="lu-home">
                       <span class="sq" [class.w]="b.homeColor !== 's'" [class.s]="b.homeColor === 's'" role="img"
                             [attr.aria-label]="b.homeColor === 's' ? 'Heim hat Schwarz' : 'Heim hat Weiß'"></span>
-                      {{ player(b.homePlayer, b.homeTitle) }}@if (b.homeElo) { <span class="muted lu-elo">{{ b.homeElo }}</span>}
+                      @if (b.homeFide && b.homePlayer) {
+                        <button type="button" class="pl" (click)="openCard(b.homeFide, homeColor(b), b.board)">{{ player(b.homePlayer, b.homeTitle) }}</button>
+                      } @else { {{ player(b.homePlayer, b.homeTitle) }} }@if (b.homeElo) { <span class="muted lu-elo">{{ b.homeElo }}</span>}
                     </span>
                     <span class="lu-res">{{ b.result || '–' }}</span>
                     <span class="lu-away">
-                      {{ player(b.awayPlayer, b.awayTitle) }}@if (b.awayElo) { <span class="muted lu-elo">{{ b.awayElo }}</span>}
+                      @if (b.awayFide && b.awayPlayer) {
+                        <button type="button" class="pl" (click)="openCard(b.awayFide, awayColor(b), b.board)">{{ player(b.awayPlayer, b.awayTitle) }}</button>
+                      } @else { {{ player(b.awayPlayer, b.awayTitle) }} }@if (b.awayElo) { <span class="muted lu-elo">{{ b.awayElo }}</span>}
                     </span>
                     <!-- 0.724.0: liegt die Partie vor, wird sie ausgewiesen — keine Zug-Eingabe; ein alter Handeintrag
                          steht nur noch grau als „ersetzt durch die Partie" da. -->
@@ -74,6 +81,7 @@ import { ownsTeam } from '../core/club-context.service';
         <p class="muted">Lade Aufstellungen …</p>
       }
     </section>
+    <lh-player-card />
   `,
   styles: [`
     .lu { margin: 0 0 18px; display: grid; gap: 12px; }
@@ -91,17 +99,19 @@ import { ownsTeam } from '../core/club-context.service';
     .lu-home { grid-area: home; overflow-wrap: anywhere; }
     .lu-res { grid-area: res; font-weight: 700; white-space: nowrap; text-align: center; }
     .lu-away { grid-area: away; overflow-wrap: anywhere; text-align: right; }
+    .lu-away button.pl { text-align: right; }
     .lu-moves { grid-area: moves; display: grid; gap: 2px; min-width: 0; }
     .lu-elo { font-size: 13px; margin-left: 3px; }
     .lu-home .sq { display: inline-block; width: 11px; height: 11px; margin: 0 4px 0 0; vertical-align: baseline; }
     @media (max-width: 640px) {
       .lu-board { grid-template-columns: 1.6em minmax(0, 1fr) auto; grid-template-areas: "no home res" ". away ." ". moves moves"; }
-      .lu-away { text-align: left; }
+      .lu-away, .lu-away button.pl { text-align: left; }
     }
   `],
 })
 export class RoundLineupsComponent {
   private readonly api = inject(LineupsApiService);
+  private readonly card = viewChild.required(PlayerCardComponent);
   readonly tnr = input.required<number>();
   readonly round = input.required<number>();
 
@@ -137,6 +147,21 @@ export class RoundLineupsComponent {
   player(name: string | null, title: string | null): string {
     if (!name) return 'nicht besetzt';
     return title ? `${title} ${name}` : name;
+  }
+
+  /** Farbe des Heimspielers an diesem Brett (Vorgabe der Spielerkarte); unbekannt = keine Vorgabe. */
+  homeColor(b: LineupBoard): 'w' | 's' | null {
+    return b.homeColor === 's' ? 's' : b.homeColor === 'w' ? 'w' : null;
+  }
+
+  awayColor(b: LineupBoard): 'w' | 's' | null {
+    const h = this.homeColor(b);
+    return h === 'w' ? 's' : h === 's' ? 'w' : null;
+  }
+
+  /** Dieselbe Spielerkarte wie in der Prognose (`lh-fixture`); die Aufstellungen gibt es nur angemeldet, also ohne Teilen-Link. */
+  openCard(fide: string, color: 'w' | 's' | null, board: number): void {
+    void this.card().open(fide, color, board, null);
   }
 
   key(m: LineupMatch, b: LineupBoard): MovesKey {
