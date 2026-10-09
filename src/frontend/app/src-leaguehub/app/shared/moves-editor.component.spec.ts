@@ -192,13 +192,14 @@ describe('MovesEditorComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.me-none')?.textContent).toContain('Der Explorer kennt diese Stellung nicht (0 Partien) — Figuren und Seite am Zug prüfen');
     expect(el.querySelector('.me-truncated')).toBeNull();
-    // Stellung bekannt, aber kein Weg dorthin, und am Budget abgebrochen
-    explorer.paths.and.resolveTo({ ...RESULT, opening: null, games: 523125, paths: [], truncated: true });
+    // Stellung bekannt, aber kein Weg dorthin (ohne Budget-Abbruch)
+    explorer.paths.and.resolveTo({ ...RESULT, opening: null, games: 523125, paths: [] });
     await c.suggest();
     fixture.detectChanges();
     expect(el.querySelector('.me-none')?.textContent)
       .toContain('Stellung bekannt (≈ 520.000 Partien), aber keine Zugfolge innerhalb von 20 Halbzügen gefunden');
-    expect(el.querySelector('.me-truncated')?.textContent).toContain('Suche am Budget abgebrochen — vielleicht gibt es mehr');
+    expect(el.querySelector('.me-truncated')).toBeNull();
+    expect(el.querySelector('.me-continue')).toBeNull();
     explorer.paths.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'noLocalExplorer' } }));
     await c.suggest();
     fixture.detectChanges();
@@ -207,6 +208,105 @@ describe('MovesEditorComponent', () => {
   });
 
   const ITALIAN = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R';
+
+  // Prod 09.10.2026: D00 nach 15 Halbzügen, kalt 0 Wege am Budget, mit dem Speicher der vorigen Runde 5.
+  const D00 = 'rnbq1rk1/pp3ppp/2pb1p2/8/2BP4/1QN1P3/PP3PPP/R3K1NR b KQ - 0 1';
+  const DEEP_EMPTY: ExplorerPathsResult = { ...RESULT, opening: { eco: 'D00', name: 'Queen\'s Pawn Game: Levitsky Attack' }, games: 146,
+    paths: [], truncated: true, queries: 240, cached: 0 };
+  const DEEP_FOUND: ExplorerPathsResult = { ...DEEP_EMPTY, truncated: false, cached: 241, paths: [
+    { moves: ['d4', 'd5', 'Bg5', 'Nf6', 'Bxf6', 'exf6', 'e3', 'Bd6', 'c4', 'c6', 'Nc3', 'O-O', 'Qb3', 'dxc4', 'Bxc4'], uci: [], estGames: 15, share: 0.1 },
+  ] };
+
+  function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+    let resolve!: (v: T) => void;
+    const promise = new Promise<T>(r => { resolve = r; });
+    return { promise, resolve };
+  }
+
+  it('Runden: truncated → von selbst Runde 2 mit Fortschritt und den bisherigen Wegen; endet, sobald nicht mehr truncated', async () => {
+    const partial: ExplorerPathsResult = { ...DEEP_EMPTY, paths: [DEEP_FOUND.paths[0]] };
+    const second = deferred<ExplorerPathsResult>();
+    explorer.paths.and.returnValues(Promise.resolve(partial), second.promise, Promise.resolve(DEEP_FOUND));
+    const c = render();
+    c.setMode('position');
+    c.onFenInput(D00);
+    const run = c.suggest();
+    await fixture.whenStable();
+    await new Promise(r => setTimeout(r));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(explorer.paths).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('.me-searching')?.textContent).toContain('Runde 2 von 3 … (bisher 1 Weg)');
+    expect(el.querySelectorAll('.me-path').length).toBe(1);   // Zwischenstand schon sichtbar
+    second.resolve({ ...DEEP_FOUND });
+    await run;
+    fixture.detectChanges();
+    expect(explorer.paths).toHaveBeenCalledTimes(2);           // Runde 2 war nicht mehr truncated → keine dritte
+    expect(explorer.paths.calls.allArgs().every(a => a[0] === D00)).toBeTrue();
+    expect(el.querySelector('.me-searching')).toBeNull();
+    expect(el.querySelectorAll('.me-path').length).toBe(1);
+    expect(el.querySelector('.me-continue')).toBeNull();
+    expect(c.roundsDone()).toBe(2);
+  });
+
+  it('Runden: drei Runden ohne Weg → Meldung „in 3 Runden" und „Weiter suchen" fragt eine vierte', async () => {
+    explorer.paths.and.resolveTo(DEEP_EMPTY);
+    const c = render();
+    c.setMode('position');
+    c.onFenInput(D00);
+    await c.suggest();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(explorer.paths).toHaveBeenCalledTimes(3);
+    expect(el.querySelector('.me-none')?.textContent).toContain(
+      'Stellung bekannt (≈ 146 Partien), aber in 3 Runden keine Zugfolge gefunden — tiefe');
+    expect(el.querySelector('.me-none')?.textContent).toContain('„Weiter suchen" setzt fort');
+    const more = el.querySelector<HTMLButtonElement>('.me-continue');
+    expect(more?.textContent).toContain('Weiter suchen');
+    explorer.paths.and.resolveTo(DEEP_FOUND);
+    more!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(explorer.paths).toHaveBeenCalledTimes(4);
+    expect(c.roundsDone()).toBe(4);
+    expect(el.querySelectorAll('.me-path').length).toBe(1);
+    expect(el.querySelector('.me-continue')).toBeNull();
+    expect(el.querySelector('.me-none')).toBeNull();
+  });
+
+  it('Runden: ein 429 beendet die Runden mit Hinweis, der bisherige Stand bleibt', async () => {
+    const partial: ExplorerPathsResult = { ...DEEP_EMPTY, paths: [DEEP_FOUND.paths[0]] };
+    explorer.paths.and.returnValues(Promise.resolve(partial),
+      Promise.reject(new HttpErrorResponse({ status: 429, error: null })), Promise.resolve(DEEP_FOUND));
+    const c = render();
+    c.setMode('position');
+    c.onFenInput(D00);
+    await c.suggest();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(explorer.paths).toHaveBeenCalledTimes(2);
+    expect(c.searchError()).toContain('Zu viele Suchen');
+    expect(el.querySelectorAll('.me-path').length).toBe(1);
+    expect(el.querySelector('.me-truncated')?.textContent).toContain('Suche nach 1 Runde am Budget abgebrochen');
+    expect(el.querySelector('.me-continue')).not.toBeNull();
+    expect(c.searching()).toBeFalse();
+  });
+
+  it('Runden: eine geänderte Stellung bricht die laufenden Runden ab', async () => {
+    const second = deferred<ExplorerPathsResult>();
+    explorer.paths.and.returnValues(Promise.resolve(DEEP_EMPTY), second.promise, Promise.resolve(DEEP_EMPTY));
+    const c = render();
+    c.setMode('position');
+    c.onFenInput(D00);
+    const run = c.suggest();
+    await new Promise(r => setTimeout(r));
+    c.startPosition();
+    second.resolve(DEEP_EMPTY);
+    await run;
+    expect(explorer.paths).toHaveBeenCalledTimes(2);
+    expect(c.result()).toBeNull();
+    expect(c.searching()).toBeFalse();
+  });
 
   it('Stellung: Palette in zwei Reihen — K D T L S B über k d t l s b, ✕ eigener Knopf', () => {
     const c = render();

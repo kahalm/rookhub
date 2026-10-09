@@ -197,6 +197,52 @@ public class ExplorerPathFinderTests
     }
 
     [Fact]
+    public async Task Find_Cached_CountsTheAnswersFromMemory()
+    {
+        var fake = Sicilian();
+        var finder = Finder(fake);
+        var first = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.Equal(0, first.Cached);
+        Assert.True(first.Queries > 0);
+        var second = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.Equal(0, second.Queries);
+        Assert.Equal(first.Queries, second.Cached);
+    }
+
+    [Fact]
+    public void MaxQueries_DefaultIs600()
+    {
+        Assert.Equal(600, ExplorerPathFinder.DefaultMaxQueries);
+        Assert.Equal(600, Finder(Sicilian()).MaxQueries);
+        Assert.Equal(1.6, Finder(Sicilian()).NeedWeight);
+    }
+
+    [Fact]
+    public async Task Find_MaxQueries_CapsTheQueries_AndAFollowUpRoundGetsFurtherFromMemory()
+    {
+        // Wie die Fortsetzungsrunden der Seite: dieselbe Anfrage noch einmal, die vorige Runde liegt im Speicher.
+        var fake = Sicilian();
+        fake.Detours = true;
+        var finder = Finder(fake);
+        finder.MaxQueries = 4;
+        var r = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+        Assert.True(r.Truncated);
+        Assert.True(r.Queries <= finder.MaxQueries + 1, $"{r.Queries} Abfragen");   // + Gegenprobe mit der anderen Seite
+        var rounds = 1;
+        while (r.Truncated && rounds < 20)
+        {
+            var next = await finder.FindAsync(SicilianD6, 20, CancellationToken.None);
+            Assert.True(next.Cached > 0);
+            Assert.True(next.Searched >= r.Searched);
+            r = next;
+            rounds++;
+        }
+        Assert.False(r.Truncated);
+        Assert.True(rounds > 1);
+        Assert.Equal(new[] { "e4", "c5", "Nf3", "d6" }, r.Paths[0].Moves);
+    }
+
+    [Fact]
     public async Task Find_FewPaths_StopsLongBeforeTheBudget_DespiteWorthlessDetours()
     {
         // Drei Wege (1.e4 c5 2.Sf3, 1.Sf3 c5 2.e4, 1.e4 c5 2.Sc3 … Sf3 gibt es nicht — also zwei plus der über d4 nicht),
@@ -441,6 +487,47 @@ public class ExplorerPathFinderLiveTests(ITestOutputHelper output)
             output.WriteLine($"{name} Lauf {run}: {clock.Elapsed.TotalSeconds:0.00} s, {r.Queries} Abfragen, {r.Searched} Stellungen, " +
                              $"truncated={r.Truncated}, games={r.Games}, otherSide={r.OtherSideGames}, Wege={r.Paths.Count}");
             if (run == 1) foreach (var p in r.Paths) output.WriteLine($"  {p.EstGames,10}  {p.Share:P2}  {string.Join(' ', p.Moves)}");
+        }
+    }
+
+    /// <summary>Gewicht je nötigem Zug (<see cref="ExplorerPathFinder.NeedWeight"/>) an fünf Stellungen, je Lauf FRISCHER
+    /// Speicher, ohne Budget: Abfragen bis zum ersten Fund, bis zum Ende, und die Top-5 (0.727.3, Messung 09.10.2026).
+    /// `ROOKHUB_TEST_EXPLORER_WEIGHTS` = Komma-Liste (Vorgabe 0.8,1.2,1.6).</summary>
+    [LiveFact]
+    public async Task MeasureNeedWeight()
+    {
+        var url = Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_URL")!.TrimEnd('/') + "/";
+        var weights = (Environment.GetEnvironmentVariable("ROOKHUB_TEST_EXPLORER_WEIGHTS") ?? "0.8,1.2,1.6")
+            .Split(',').Select(w => double.Parse(w, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        var positions = new (string Name, string Fen)[]
+        {
+            ("alapin", "rnbqkbnr/pp3ppp/4p3/2pp4/4P3/2P2N2/PP1P1PPP/RNBQKB1R w KQkq - 0 1"),
+            ("najdorf", "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6"),
+            ("berlin", "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"),
+            ("qgd", "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4"),
+            ("d00", "rnbq1rk1/pp3ppp/2pb1p2/8/2BP4/1QN1P3/PP3PPP/R3K1NR b KQ - 0 1"),
+        };
+        var local = new LocalExplorerClient(new HttpClient { BaseAddress = new Uri(url), Timeout = TimeSpan.FromSeconds(30) },
+            NullLogger<LocalExplorerClient>.Instance);
+        foreach (var w in weights)
+        {
+            int sumFirst = 0, sumAll = 0;
+            foreach (var (name, fen) in positions)
+            {
+                var finder = new ExplorerPathFinder(local, new MemoryCache(new MemoryCacheOptions()),
+                    new MemoryCache(new MemoryCacheOptions { SizeLimit = ExplorerPathFinder.CacheSizeLimit }), NullLogger<ExplorerPathFinder>.Instance)
+                {
+                    NeedWeight = w, MaxQueries = 20_000, Budget = TimeSpan.FromMinutes(10),
+                };
+                var clock = Stopwatch.StartNew();
+                var r = await finder.FindAsync(fen, 20, CancellationToken.None);
+                sumFirst += r.QueriesToFirstPath ?? r.Queries;
+                sumAll += r.Queries;
+                output.WriteLine($"w={w:0.0} {name}: erster Fund nach {r.QueriesToFirstPath?.ToString() ?? "-"} Abfragen, Ende nach {r.Queries} " +
+                                 $"({clock.Elapsed.TotalSeconds:0.0} s, truncated={r.Truncated}, Wege={r.Paths.Count})");
+                foreach (var p in r.Paths.Take(5)) output.WriteLine($"    {p.EstGames,10}  {string.Join(' ', p.Moves)}");
+            }
+            output.WriteLine($"w={w:0.0} SUMME: erster Fund {sumFirst}, Ende {sumAll}");
         }
     }
 

@@ -250,6 +250,8 @@ export interface ExplorerPathsResult {
   paths: ExplorerPath[];
   searched: number;
   queries: number;
+  /** Antworten aus dem Speicher des Servers (0.727.3) — nur Information. */
+  cached?: number;
   truncated: boolean;
   failed: boolean;
   /** Partien derselben Stellung mit der anderen Seite am Zug — nur bei wenigen/keinen Partien gefragt, sonst `null`. */
@@ -265,6 +267,11 @@ export function otherSideHint(r: ExplorerPathsResult): boolean {
 
 /** Halbzüge, bis zu denen die Suche prüft. */
 export const MAX_SEARCH_PLIES = 20;
+
+/** Runden einer Suche (0.727.3): kommt eine Antwort mit `truncated`, fragt die Seite von selbst noch einmal — der Server hat
+ * die Antworten der vorigen Runde im Speicher und kommt mit demselben Budget weiter (Prod 09.10.: D00 nach 15 Halbzügen
+ * kalt 0 Wege, in Runde 2/3 dann 5). Drei Runden passen ins Rate-Limit `explorer-paths` (10/min je Konto). */
+export const MAX_ROUNDS = 3;
 
 @Injectable({ providedIn: 'root' })
 export class ExplorerPathsService {

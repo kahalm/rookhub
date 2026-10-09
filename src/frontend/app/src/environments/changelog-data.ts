@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.727.3", date: "2026-10-09", changes: [
+    { en: "LeagueHub, “Suggest move orders” for an entered position: if a search hits its budget, the page now continues on its own — up to three rounds, each building on the answers of the previous one (“Round 2 of 3 … (so far n paths)”), and shows the paths found so far after every round. After that, “Keep searching” continues one round at a time. Deep positions (e.g. 15 half-moves into a rare opening) used to end with “no move order found” after the first 20 seconds.",
+      de: "LeagueHub, „Zugfolgen vorschlagen“ für eine eingegebene Stellung: endet eine Suche am Budget, sucht die Seite jetzt von selbst weiter — bis zu drei Runden, jede baut auf den Antworten der vorigen auf („Runde 2 von 3 … (bisher n Wege)“), die bis dahin gefundenen Wege stehen nach jeder Runde da. Danach setzt „Weiter suchen“ Runde für Runde fort. Tiefe Stellungen (etwa 15 Halbzüge in einer seltenen Eröffnung) endeten bisher nach den ersten 20 Sekunden mit „keine Zugfolge gefunden“." },
+    { en: "Move-order search: up to 600 instead of 400 explorer queries per round (the 20-second limit stays), and a stronger preference for positions close to the target — measured on five positions, about 60 % fewer queries for the same top five.",
+      de: "Zugfolgen-Suche: bis zu 600 statt 400 Explorer-Abfragen je Runde (die 20-Sekunden-Grenze bleibt), und Stellungen nahe am Ziel kommen stärker zuerst dran — gemessen an fünf Stellungen rund 60 % weniger Abfragen für dieselben fünf besten Wege." },
+  ] },
   { version: "0.727.2", date: "2026-10-09", changes: [
     { en: "LeagueHub, all line-ups of a round: player names with a FIDE ID now open the same player card as in the forecast, preset to the colour the player had at that board. Names without a FIDE ID stay plain text.",
       de: "LeagueHub, alle Aufstellungen einer Runde: Spielernamen mit FIDE-ID öffnen jetzt dieselbe Spielerkarte wie in der Prognose, voreingestellt auf die Farbe des Spielers an diesem Brett. Namen ohne FIDE-ID bleiben bloßer Text." },

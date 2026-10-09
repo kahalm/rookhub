@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { LineupsApiService, MAX_PLIES, MovesKey, fenAfter, formatMoves, lastMoveOf, movesErrorText, parseMoves } from '../core/lineups';
 import {
-  ExplorerPath, ExplorerPathsResult, ExplorerPathsService, MAX_SEARCH_PLIES, PIECES, START_PLACEMENT, Side, boardFromPlacement,
+  ExplorerPath, ExplorerPathsResult, ExplorerPathsService, MAX_ROUNDS, MAX_SEARCH_PLIES, PIECES, START_PLACEMENT, Side, boardFromPlacement,
   autoSideText, blackOf, composeFen, emptyBoard, expectedSide, movePiece, otherSideHint, placePiece, removePiece, formatGames, formatShare,
   parseFenInput, pathsErrorText, positionProblem, sideWarning,
 } from '../core/position-setup';
@@ -18,7 +18,8 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
  * Zweiter Modus „Stellung" (2026-10-08, Wunsch: „lass mich dort auch direkt Stellungen eingeben, schau in der lokalen
  * Lichess-DB nach, welche Eröffnungen am häufigsten zu der Stellung kommen, und schlag sie mir vor"): FEN-Feld und
  * Aufstell-Brett laufen synchron, „Zugfolgen vorschlagen" fragt `GET /api/explorer/paths`; ein Vorschlag wird in den
- * Modus „Züge" übernommen und wie gewohnt gespeichert.
+ * Modus „Züge" übernommen und wie gewohnt gespeichert. Endet eine Runde am Budget (`truncated`), fragt die Seite von selbst
+ * weiter (bis {@link MAX_ROUNDS} Runden, danach „Weiter suchen") — die Wege jeder Runde stehen sofort da.
  */
 @Component({
   selector: 'lh-moves-editor',
@@ -108,8 +109,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
               <p class="muted">Vorschläge gibt es nur mit dem lokalen Eröffnungs-Explorer — auf diesem Server ist keiner eingerichtet.</p>
             }
             @if (searching()) {
-              <p class="me-searching muted" role="status"><span class="me-spin" aria-hidden="true"></span>Suche im Eröffnungs-Explorer …
-                (bis zu 20 Sekunden)</p>
+              <p class="me-searching muted" role="status"><span class="me-spin" aria-hidden="true"></span>{{ progressText() }}</p>
             }
             @if (searchError(); as e) { <p class="err" role="alert">{{ e }}</p> }
             @if (result(); as r) {
@@ -126,7 +126,14 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
                 } @else if (!r.paths.length && r.games === 0) {
                   <p class="muted me-none">Der Explorer kennt diese Stellung nicht (0 Partien) — Figuren und Seite am Zug prüfen.</p>
                 } @else if (!r.paths.length) {
-                  <p class="muted me-none">Stellung bekannt ({{ games(r.games) }}), aber keine Zugfolge innerhalb von {{ searchPlies }} Halbzügen gefunden.</p>
+                  @if (!searching()) {
+                    @if (r.truncated) {
+                      <p class="muted me-none">Stellung bekannt ({{ games(r.games) }}), aber in {{ roundsText() }} keine Zugfolge gefunden — tiefe
+                        Stellung; „Weiter suchen" setzt fort.</p>
+                    } @else {
+                      <p class="muted me-none">Stellung bekannt ({{ games(r.games) }}), aber keine Zugfolge innerhalb von {{ searchPlies }} Halbzügen gefunden.</p>
+                    }
+                  }
                 } @else {
                   <p class="me-hint muted">Antippen übernimmt die Zugfolge.</p>
                   <ol class="me-paths">
@@ -140,7 +147,12 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
                     }
                   </ol>
                 }
-                @if (r.truncated && !r.failed) { <p class="me-hint muted me-truncated">Suche am Budget abgebrochen — vielleicht gibt es mehr.</p> }
+                @if (r.truncated && !r.failed && r.paths.length && !searching()) {
+                  <p class="me-hint muted me-truncated">Suche nach {{ roundsText() }} am Budget abgebrochen — vielleicht gibt es mehr.</p>
+                }
+                @if (canContinue() && !searching()) {
+                  <button type="button" class="btn-sec me-continue" (click)="continueSearch()">Weiter suchen</button>
+                }
               </div>
             }
             <div class="me-actions">
@@ -178,6 +190,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
     .me-pc img { width: 100%; height: 100%; }
     .me-pc.on { border-color: var(--red); box-shadow: 0 0 0 2px var(--red) inset; }
     .me-suggest { margin: 4px 0 8px; }
+    .me-continue { margin: 4px 0 8px; }
     .me-searching { display: flex; align-items: center; gap: 8px; }
     .me-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--ink);
       animation: me-spin .8s linear infinite; flex: none; }
@@ -252,6 +265,18 @@ export class MovesEditorComponent implements OnInit {
   readonly searching = signal(false);
   readonly searchError = signal<string | null>(null);
   readonly result = signal<ExplorerPathsResult | null>(null);
+  /** Runden dieser Suche, die schon geantwortet haben; `round` = die gerade laufende. */
+  readonly roundsDone = signal(0);
+  readonly round = signal(0);
+  /** Letzte Runde war `truncated`, die automatischen sind verbraucht (oder ein 429 kam dazwischen): „Weiter suchen". */
+  readonly canContinue = signal(false);
+  readonly progressText = computed(() => {
+    const n = this.round();
+    if (n <= 1) return 'Suche im Eröffnungs-Explorer … (bis zu 20 Sekunden)';
+    const found = this.result()?.paths.length ?? 0;
+    return `Runde ${n}${n <= MAX_ROUNDS ? ` von ${MAX_ROUNDS}` : ''} … (bisher ${found} ${found === 1 ? 'Weg' : 'Wege'})`;
+  });
+  readonly roundsText = computed(() => { const n = this.roundsDone(); return `${n} ${n === 1 ? 'Runde' : 'Runden'}`; });
   private searchSeq = 0;
   readonly pieceSrc = pieceSrc;
   readonly pieceName = pieceName;
@@ -416,25 +441,66 @@ export class MovesEditorComponent implements OnInit {
     this.clearResult();
   }
 
+  /** Ergebnis weg — und eine laufende Suche (samt ihrer weiteren Runden) gilt nicht mehr: die Stellung hat sich geändert. */
   private clearResult(): void {
+    this.searchSeq++;
+    this.searching.set(false);
     this.result.set(null);
     this.searchError.set(null);
+    this.roundsDone.set(0);
+    this.round.set(0);
+    this.canContinue.set(false);
   }
 
+  /** „Zugfolgen vorschlagen": bis zu {@link MAX_ROUNDS} Runden, solange der Server `truncated` meldet. */
   async suggest(): Promise<void> {
     if (this.setupProblem() || this.fenError()) return;
-    const seq = ++this.searchSeq;
-    this.searching.set(true);
     this.clearResult();
+    await this.runRounds(this.searchSeq, MAX_ROUNDS);
+  }
+
+  /** „Weiter suchen" nach den automatischen Runden: eine weitere Runde derselben Stellung. */
+  async continueSearch(): Promise<void> {
+    if (!this.result() || this.searching()) return;
+    await this.runRounds(++this.searchSeq, 1);
+  }
+
+  /** Dieselbe Anfrage bis zu `count`-mal; jede Antwort ersetzt die vorige (sie ist vollständig nach `estGames` sortiert). Endet
+   * früher, wenn eine Runde nicht mehr `truncated` ist; ein Fehler (auch 429) beendet die Runden mit Hinweis. */
+  private async runRounds(seq: number, count: number): Promise<void> {
+    const fen = composeFen(this.setup(), this.side());
+    this.searching.set(true);
+    this.searchError.set(null);
+    this.canContinue.set(false);
     try {
-      const r = await this.explorer.paths(composeFen(this.setup(), this.side()));
-      if (seq === this.searchSeq) this.result.set(r);
-    } catch (err) {
-      if (seq !== this.searchSeq) return;
-      if (err instanceof HttpErrorResponse && (err.error as { reason?: string } | null)?.reason === 'noLocalExplorer') this.localExplorer.set(false);
-      this.searchError.set(pathsErrorText(err));
+      for (let i = 0; i < count; i++) {
+        this.round.set(this.roundsDone() + 1);
+        let r: ExplorerPathsResult;
+        try {
+          r = await this.explorer.paths(fen);
+        } catch (err) {
+          if (seq !== this.searchSeq) return;
+          if (err instanceof HttpErrorResponse && (err.error as { reason?: string } | null)?.reason === 'noLocalExplorer') this.localExplorer.set(false);
+          const prev = this.result();
+          if (err instanceof HttpErrorResponse && err.status === 429 && prev) {
+            this.searchError.set('Zu viele Suchen in kurzer Zeit — die Runden enden hier; „Weiter suchen" geht in einer Minute wieder.');
+            this.canContinue.set(prev.truncated && !prev.failed);
+          } else {
+            this.searchError.set(pathsErrorText(err));
+          }
+          return;
+        }
+        if (seq !== this.searchSeq) return;
+        this.roundsDone.update(n => n + 1);
+        this.result.set(r);
+        if (!r.truncated || r.failed) return;
+      }
+      this.canContinue.set(true);
     } finally {
-      if (seq === this.searchSeq) this.searching.set(false);
+      if (seq === this.searchSeq) {
+        this.searching.set(false);
+        this.round.set(0);
+      }
     }
   }
 

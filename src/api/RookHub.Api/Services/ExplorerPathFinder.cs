@@ -26,7 +26,8 @@ namespace RookHub.Api.Services;
 ///
 /// <para><b>Ende:</b> sobald die zehn besten gefundenen Zugfolgen wahrscheinlicher sind als jeder offene Knoten (dann ist die
 /// Rangfolge exakt), wenn nichts mehr offen ist, oder am Budget: höchstens <see cref="MaxQueries"/> Explorer-Abfragen bzw.
-/// <see cref="Budget"/> (dann <c>truncated</c>). Antworten liegen 24 h im eigenen Speicher (<see cref="PathCacheTtl"/>, gedeckelt
+/// <see cref="Budget"/> (dann <c>truncated</c>; der Client setzt dann selbst mit einer weiteren Runde fort — die
+/// Antworten liegen ja im Speicher, <c>cached</c> zählt sie). Antworten liegen 24 h im eigenen Speicher (<see cref="PathCacheTtl"/>, gedeckelt
 /// auf <see cref="CacheSizeLimit"/> Stellungen) und zusätzlich eine Stunde unter dem Schlüssel des Lochfinders
 /// (<see cref="RepertoireExplorerService.LocalMemoryKey"/>).</para>
 ///
@@ -42,8 +43,12 @@ public sealed class ExplorerPathFinder
     public const int MaxPaths = 10;
     public const int Parallelism = 8;
 
-    /// <summary>Höchstens so viele Abfragen an den Explorer je Aufruf (Treffer im Arbeitsspeicher zählen nicht).</summary>
-    public int MaxQueries { get; set; } = 400;
+    /// <summary>Höchstens so viele Abfragen an den Explorer je Aufruf (Treffer im Arbeitsspeicher zählen nicht). 600 seit
+    /// 0.727.3 (vorher 400): kalt bleibt das Zeitbudget die harte Grenze (~12 Abfragen/s auf der Platte), warm sind 600
+    /// Abfragen in Sekunden durch — und eine tiefe Stellung (Prod 09.10., D00 nach 15 Halbzügen) brauchte warm 575–840
+    /// Knoten bis zum ersten Fund.</summary>
+    public int MaxQueries { get; set; } = DefaultMaxQueries;
+    public const int DefaultMaxQueries = 600;
     /// <summary>Höchstens so lange sucht ein Aufruf (die nginx/Reverse-Proxy-Grenze liegt bei 60 s).</summary>
     public TimeSpan Budget { get; set; } = TimeSpan.FromSeconds(20);
 
@@ -113,11 +118,12 @@ public sealed class ExplorerPathFinder
         var clock = Stopwatch.StartNew();
         var dto = new ExplorerPathsResultDto();
         var queries = 0;
+        var cached = 0;
         var nodes = new Dictionary<string, Node>(StringComparer.Ordinal);
         var open = new List<Node>();
 
         // Zielstellung selbst: Partien + Eröffnungsname (eine Abfrage, auch wenn keine Zugfolge gefunden wird).
-        var targetStats = await FetchAsync(target.ToFen(), ct, () => queries++);
+        var targetStats = await FetchAsync(target.ToFen(), ct, () => queries++, () => cached++);
         dto.Games = targetStats?.Total ?? 0;
 
         var root = new Node { Pos = Pos.Parse(StartFen)!, Depth = 0, Prob = 1 };
@@ -139,7 +145,7 @@ public sealed class ExplorerPathFinder
             while (inflight.Count < Parallelism && open.Count > 0)
             {
                 // Ende, wenn die zehn besten Funde jede offene Stellung schlagen — gemessen an deren SCHÄTZUNG (Wahrscheinlichkeit ·
-                // ≈0,3 je noch nötigem Zug, = exp(Priority)). Mit der reinen Wahrscheinlichkeit (exakt) liefe fast jede tiefe
+                // ≈0,2 je noch nötigem Zug (`NeedWeight`), = exp(Priority)). Mit der reinen Wahrscheinlichkeit (exakt) liefe fast jede tiefe
                 // Stellung ins Budget, weil frühe, häufige Knoten (1.d4) auf dem Papier noch alles erreichen könnten.
                 // Die Abfragen, die noch unterwegs sind, zählen dabei NICHT mit (bis 0.723.1 taten sie es): hing eine einzige
                 // Abfrage mit hoher Schätzung an der Platte, füllten die übrigen sieben Plätze sich so lange mit immer
@@ -152,7 +158,8 @@ public sealed class ExplorerPathFinder
                 var n = open[best];
                 open[best] = open[^1];
                 open.RemoveAt(open.Count - 1);
-                inflight[FetchAsync(n.Pos.ToFen(), budget.Token, () => Interlocked.Increment(ref queries))] = n;
+                inflight[FetchAsync(n.Pos.ToFen(), budget.Token, () => Interlocked.Increment(ref queries),
+                    () => Interlocked.Increment(ref cached))] = n;
             }
             if (inflight.Count == 0) break;
 
@@ -198,6 +205,7 @@ public sealed class ExplorerPathFinder
                 if (depth % 2 == targetParity && next.BoardKey == targetBoard)
                 {
                     child.IsTarget = true;
+                    if (found.Count == 0) dto.QueriesToFirstPath = queries;
                     found.Add(child);
                     changed = true;
                     continue;
@@ -220,6 +228,7 @@ public sealed class ExplorerPathFinder
 
         dto.Searched = nodes.Values.Count(n => n.Expanded);
         dto.Queries = queries;
+        dto.Cached = cached;
         dto.Truncated = truncated;
         var rootTotal = root.Stats?.Total ?? 0;
         var paths = Enumerate(found).Where(p => p.Edges.Count > 0).OrderByDescending(p => p.Prob).Take(MaxPaths).ToList();
@@ -242,9 +251,10 @@ public sealed class ExplorerPathFinder
         {
             try
             {
-                var other = await FetchAsync(OtherSideFen(target), ct, () => queries++);
+                var other = await FetchAsync(OtherSideFen(target), ct, () => queries++, () => cached++);
                 dto.OtherSideGames = other?.Total ?? 0;
                 dto.Queries = queries;
+                dto.Cached = cached;
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
@@ -256,8 +266,8 @@ public sealed class ExplorerPathFinder
         else if (paths.Count > 0 && paths[0].Edges.LastOrDefault(e => e.Opening is not null) is { Opening: not null } named)
             dto.Opening = new ExplorerOpeningDto { Eco = named.Eco, Name = named.Opening };
 
-        _logger?.LogInformation("Explorer-Pfade: {Found} Zugfolgen, {Queries} Abfragen, {Searched} Stellungen, {Ms} ms{Cut}",
-            dto.Paths.Count, queries, dto.Searched, clock.ElapsedMilliseconds, truncated ? " (abgeschnitten)" : "");
+        _logger?.LogInformation("Explorer-Pfade: {Found} Zugfolgen, {Queries} Abfragen, {Cached} aus dem Speicher, {Searched} Stellungen, {Ms} ms{Cut}",
+            dto.Paths.Count, queries, cached, dto.Searched, clock.ElapsedMilliseconds, truncated ? " (abgeschnitten)" : "");
         return dto;
     }
 
@@ -273,8 +283,13 @@ public sealed class ExplorerPathFinder
         return string.Join(' ', f);
     }
 
-    /// <summary>Gewicht je noch nötigem Zug in der Reihenfolge der offenen Knoten (ln ≈ 0,3 je Zug).</summary>
-    private const double NeedWeight = 1.2;
+    /// <summary>Gewicht je noch nötigem Zug in der Reihenfolge der offenen Knoten (1,6 = ln ≈ 0,2 je Zug; bis 0.727.2 1,2 ≈ 0,3).
+    /// Gemessen 09.10.2026 am lokalen Explorer, je Lauf frischer Speicher, fünf Stellungen (Alapin, Najdorf, Berlin, QGD, D00),
+    /// Abfragen bis zum Ende: 0,8 → 5102, 1,2 → 1967, 1,6 → 841 bei denselben Top-5; bis zum ersten Fund 1936/700/528, die
+    /// tiefe D00-Stellung allein 1741/498/397 (Ende 4416/1378/441).</summary>
+    public const double DefaultNeedWeight = 1.6;
+    /// <summary>Für Messungen einstellbar; Vorgabe <see cref="DefaultNeedWeight"/>.</summary>
+    public double NeedWeight { get; set; } = DefaultNeedWeight;
 
     private static double MaxEstimate(List<Node> open)
     {
@@ -335,15 +350,16 @@ public sealed class ExplorerPathFinder
     /// (<see cref="RepertoireExplorerService.LocalMemoryKey"/>) verwechselt werden.</summary>
     internal static string PathCacheKey(string fen) => "explorer:paths:" + Query.CachePrefix + RepertoireReach.Key(fen);
 
-    private async Task<ExplorerPositionStats?> FetchAsync(string fen, CancellationToken ct, Action counted)
+    private async Task<ExplorerPositionStats?> FetchAsync(string fen, CancellationToken ct, Action counted, Action fromMemory)
     {
         var key = PathCacheKey(fen);
-        if (_pathCache.TryGetValue<ExplorerPositionStats>(key, out var own) && own is not null) return own;
+        if (_pathCache.TryGetValue<ExplorerPositionStats>(key, out var own) && own is not null) { fromMemory(); return own; }
         // Was der Lochfinder in der letzten Stunde geholt hat, gilt auch hier.
         var shared = RepertoireExplorerService.LocalMemoryKey(Query, RepertoireReach.Key(fen));
         if (_memory.TryGetValue<ExplorerPositionStats>(shared, out var hit) && hit is not null)
         {
             Remember(key, hit);
+            fromMemory();
             return hit;
         }
         counted();

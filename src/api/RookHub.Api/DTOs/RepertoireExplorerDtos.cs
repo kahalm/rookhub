@@ -169,6 +169,12 @@ public class ExplorerPathsResultDto
     public int Searched { get; set; }
     /// <summary>Abfragen an den Explorer (Treffer im Arbeitsspeicher zählen nicht).</summary>
     public int Queries { get; set; }
+    /// <summary>Antworten, die aus dem Speicher kamen statt vom Explorer (Knoten der Suche samt Zielstellung, 24-h-Speicher
+    /// bzw. 1-h-Schlüssel des Lochfinders) — nur zur Information (0.727.3): eine Fortsetzungsrunde kommt damit weiter.</summary>
+    public int Cached { get; set; }
+    /// <summary>Abfragen bis zum ersten gefundenen Weg (Messung des Gewichts, nicht in der Antwort); <c>null</c> = keiner.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int? QueriesToFirstPath { get; set; }
     /// <summary>Budget (Abfragen oder Zeit) erreicht — es kann weitere Zugfolgen geben.</summary>
     public bool Truncated { get; set; }
     /// <summary>Der Explorer hat nicht geantwortet.</summary>
