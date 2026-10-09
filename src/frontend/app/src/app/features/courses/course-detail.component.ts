@@ -32,6 +32,8 @@ import { OfflineLanguageMeta, labelOr, offlineLanguageStale } from './course-lan
 import { CourseLangPickerComponent } from './course-lang-picker.component';
 import { CourseTranslationsComponent } from './course-translations.component';
 import { getBookOfflineLanguage, saveBookOffline } from '../puzzles/book-offline.util';
+import { AuthService } from '../../core/auth.service';
+import { WeeklyService, nextWeeklySlot } from '../weekly/weekly.service';
 
 /**
  * Kurs-Detailseite (`/courses/:bookId`): Metadaten, eigener Fortschritt und — neu — die
@@ -95,7 +97,34 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     private worksheets: WorksheetService,
     readonly courseLang: CourseLanguageService,
     private confirm: ConfirmService,
+    private auth: AuthService,
+    private weekly: WeeklyService,
   ) {}
+
+  // ===== Wochenpost aus diesem Kapitel ======================================
+
+  /** Darf Wochenposts anlegen (Recht `weeklyposts.manage`, Admin eingeschlossen). */
+  get canCreateWeekly(): boolean { return this.auth.has('weeklyposts.manage'); }
+
+  /** „Wochenpost erstellen" am Kapitel: derselbe Dialog wie auf der Wochenpost-Seite, Buch und Kapitel vorbelegt,
+   *  Termin = letzter Wochenpost + 7 Tage (wie dort). Gibt es die Liste gerade nicht, gilt heute 19:00. */
+  async createWeeklyFromChapter(chapter: CourseManageChapter): Promise<void> {
+    if (chapter.solverIndex == null) return;
+    const { WeeklyFromChapterDialogComponent } = await import('../weekly/weekly-from-chapter-dialog.component');
+    const open = (latest: string | null) => {
+      const slot = nextWeeklySlot(latest);
+      this.dialog.open(WeeklyFromChapterDialogComponent, {
+        data: { date: slot.date, time: slot.time, bookId: this.bookId, chapterIndex: chapter.solverIndex! },
+        width: '480px', maxWidth: '95vw',
+      }).afterClosed().subscribe(post => {
+        if (post) this.snackbar.info(this.translate.instant('weekly.created'), { action: 'common.ok', duration: 3000 });
+      });
+    };
+    this.subs.add(this.weekly.getAll().subscribe({
+      next: posts => open(posts.length ? posts.reduce((a, b) => (a.scheduledAt > b.scheduledAt ? a : b)).scheduledAt : null),
+      error: () => open(null),
+    }));
+  }
 
   // ===== Sprache der Kommentare (Kurs-Übersetzung, Stufe C) =================
 

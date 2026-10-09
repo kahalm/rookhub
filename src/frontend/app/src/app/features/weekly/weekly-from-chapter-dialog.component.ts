@@ -17,6 +17,9 @@ import { apiErrorText } from '../../core/api-error';
 export interface WeeklyFromChapterDialogData {
   date: string;   // YYYY-MM-DD
   time: string;   // HH:mm
+  /** Vorbelegtes Buch + Kapitel (Solver-Index) — aus dem ⋮-Menü eines Kapitels auf der Kursseite. */
+  bookId?: number;
+  chapterIndex?: number;
 }
 
 /**
@@ -158,7 +161,13 @@ export class WeeklyFromChapterDialogComponent implements OnInit {
   ngOnInit(): void {
     this.loadingBooks = true;
     this.courses.getCourses().subscribe({
-      next: list => { this.books = list; this.loadingBooks = false; },
+      next: list => {
+        this.books = list; this.loadingBooks = false;
+        if (this.data?.bookId != null && list.some(b => b.bookId === this.data.bookId)) {
+          this.bookId = this.data.bookId;
+          this.onBookChange(this.data.chapterIndex ?? null);
+        }
+      },
       error: () => { this.loadingBooks = false; this.snackbar.info(this.translate.instant('weekly.fromChapter.loadBooksFailed'), { action: 'common.ok', duration: 3000 }); },
     });
   }
@@ -186,14 +195,18 @@ export class WeeklyFromChapterDialogComponent implements OnInit {
     setTimeout(() => this.chapterSearch?.nativeElement.focus(), 0);
   }
 
-  onBookChange(): void {
+  /** @param preselect Kapitel, das nach dem Laden gewählt wird (Vorbelegung), sonst keins. */
+  onBookChange(preselect: number | null = null): void {
     this.chapterIndex = null;
     this.chapters = [];
     this.chapterFilter = '';
     if (!this.bookId) return;
     this.loadingChapters = true;
     this.courses.getChapters(this.bookId).subscribe({
-      next: ch => { this.chapters = ch; this.loadingChapters = false; },
+      next: ch => {
+        this.chapters = ch; this.loadingChapters = false;
+        if (preselect != null && ch.some(c => c.index === preselect)) this.chapterIndex = preselect;
+      },
       error: () => { this.loadingChapters = false; this.snackbar.info(this.translate.instant('weekly.fromChapter.loadChaptersFailed'), { action: 'common.ok', duration: 3000 }); },
     });
   }

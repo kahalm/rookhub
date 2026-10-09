@@ -61,3 +61,36 @@ describe('WeeklyFromChapterDialogComponent Termin als UTC', () => {
     expect(ref.close).toHaveBeenCalled();
   });
 });
+
+describe('WeeklyFromChapterDialogComponent Vorbelegung aus dem Kapitel', () => {
+  // Aus dem ⋮-Menü eines Kapitels auf der Kursseite: Buch und Kapitel stehen schon, Termin und Titel bleiben frei.
+  function open(data: any) {
+    const courses = {
+      getCourses: () => of([{ bookId: 7, displayName: 'Kurs', puzzleCount: 20 }]),
+      getChapters: jasmine.createSpy('getChapters').and.returnValue(of([
+        { index: 0, name: 'Pins', puzzleCount: 10 }, { index: 3, name: 'Forks', puzzleCount: 8 },
+      ])),
+    };
+    const c = new WeeklyFromChapterDialogComponent({ close: () => {} } as any, data, courses as any, {} as any, {} as any, {} as any);
+    c.ngOnInit();
+    return { c, courses };
+  }
+
+  it('wählt Buch und Kapitel vor, Termin aus den Daten', () => {
+    const { c, courses } = open({ date: '2026-10-16', time: '18:30', bookId: 7, chapterIndex: 3 });
+    expect(courses.getChapters).toHaveBeenCalledWith(7);
+    expect(c.bookId).toBe(7);
+    expect(c.chapterIndex).toBe(3);
+    expect(c.date).toBe('2026-10-16');
+    expect(c.time).toBe('18:30');
+    expect(c.title).toBe('');
+    expect(c.canCreate()).toBeTrue();
+  });
+
+  it('ein unbekanntes Kapitel wird nicht vorgewählt, ein unbekanntes Buch gar nicht geladen', () => {
+    expect(open({ date: '2026-10-16', time: '18:30', bookId: 7, chapterIndex: 9 }).c.chapterIndex).toBeNull();
+    const { c, courses } = open({ date: '2026-10-16', time: '18:30', bookId: 99, chapterIndex: 0 });
+    expect(c.bookId).toBeNull();
+    expect(courses.getChapters).not.toHaveBeenCalled();
+  });
+});

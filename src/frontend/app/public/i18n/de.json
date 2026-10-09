@@ -1523,7 +1523,8 @@
       "title": "Kurs",
       "chapterPoints": "{{score}} Pkt",
       "downloadChapterPgn": "Kapitel als PGN herunterladen",
-      "downloadLinePgn": "Linie als PGN herunterladen"
+      "downloadLinePgn": "Linie als PGN herunterladen",
+      "createWeekly": "Wochenpost erstellen"
     },
     "sequential": "Sequenziell",
     "random": "Zufällig",

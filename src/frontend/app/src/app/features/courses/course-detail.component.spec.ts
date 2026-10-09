@@ -85,11 +85,24 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     { sendAndNotify: (target: number | null, items: unknown[]) => calls.push(`worksheet:${target}:${items.length}`) } as never,
     courseLang(),
     confirm as never,
+    { has: (perm: string) => perm === 'weeklyposts.manage' } as never,
+    { getAll: () => { calls.push('weeklyList'); return of([{ scheduledAt: '2026-10-09T17:00:00Z' }]); } } as never,
   );
   return { component, calls, warnings, confirm };
 }
 
 describe('CourseDetailComponent', () => {
+  it('Wochenpost aus dem Kapitel: holt den letzten Termin und öffnet den Dialog; ohne Solver-Index nichts', async () => {
+    const { component, calls } = make();
+    expect(component.canCreateWeekly).toBeTrue();
+    await component.createWeeklyFromChapter({ name: 'Pins', solverIndex: 2 } as never);
+    expect(calls).toContain('weeklyList');
+    expect(calls).toContain('dialog');
+    const before = calls.length;
+    await component.createWeeklyFromChapter({ name: 'Stellungen', solverIndex: null } as never);
+    expect(calls.length).toBe(before);
+  });
+
   it('creates (template AOT-compiles + DI resolves)', async () => {
     await TestBed.configureTestingModule({
       imports: [CourseDetailComponent],

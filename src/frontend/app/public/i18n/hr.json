@@ -1523,7 +1523,8 @@
       "title": "Tečaj",
       "chapterPoints": "{{score}} bod.",
       "downloadChapterPgn": "Preuzmi poglavlje kao PGN",
-      "downloadLinePgn": "Preuzmi varijantu kao PGN"
+      "downloadLinePgn": "Preuzmi varijantu kao PGN",
+      "createWeekly": "Izradi tjednu objavu"
     },
     "sequential": "Slijedno",
     "random": "Nasumično",

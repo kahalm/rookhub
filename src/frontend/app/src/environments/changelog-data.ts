@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.728.0", date: "2026-10-09", changes: [
+    { en: "Weekly posts can now also be created straight from a course chapter: in the chapter's ⋮ menu on the course page, \"Create weekly post\" opens the familiar dialog with course and chapter already chosen and the date set to one week after the last weekly post — only the time and, if you like, a different title remain. Shown to whoever may manage weekly posts.", de: "Wochenposts lassen sich jetzt auch direkt aus einem Kurs-Kapitel anlegen: im ⋮-Menü des Kapitels auf der Kursseite öffnet „Wochenpost erstellen“ den bekannten Dialog mit Kurs und Kapitel schon ausgewählt und dem Termin eine Woche nach dem letzten Wochenpost — bleiben nur Uhrzeit und, wenn gewünscht, ein anderer Titel. Sichtbar für alle, die Wochenposts verwalten dürfen." },
+  ] },
   { version: "0.727.6", date: "2026-10-09", changes: [
     { en: "Docs: the README of RookHub and of the ChessResults crawler no longer calls them private projects. Both repositories are public and licensed under the GNU GPL-3.0 (see LICENSE).",
       de: "Doku: die README von RookHub und vom ChessResults-Crawler nennt sie nicht mehr private Projekte. Beide Repositories sind öffentlich und stehen unter der GNU GPL-3.0 (siehe LICENSE)." },

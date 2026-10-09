@@ -265,6 +265,12 @@
                                                  [disabled]="ch.quizCount === 0"
                                                  (pick)="sendChapterToWorksheet(ch, $event)" />
                         }
+                        @if (canCreateWeekly && !d.isCalculation && ch.solverIndex != null) {
+                          <button mat-menu-item class="weekly-from-chapter" (click)="createWeeklyFromChapter(ch)">
+                            <mat-icon>event</mat-icon>
+                            <span>{{ 'courses.detail.createWeekly' | translate }}</span>
+                          </button>
+                        }
                         @if (!d.isCalculation) {
                           <button mat-menu-item (click)="downloadChapterPgn(ch)" [disabled]="ch.lineCount === 0">
                             <mat-icon>download</mat-icon>

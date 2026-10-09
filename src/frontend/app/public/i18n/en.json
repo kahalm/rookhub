@@ -1523,7 +1523,8 @@
       "title": "Course",
       "chapterPoints": "{{score}} pts",
       "downloadChapterPgn": "Download chapter as PGN",
-      "downloadLinePgn": "Download line as PGN"
+      "downloadLinePgn": "Download line as PGN",
+      "createWeekly": "Create weekly post"
     },
     "sequential": "Sequential",
     "random": "Random",

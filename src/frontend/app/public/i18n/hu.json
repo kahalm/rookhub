@@ -1272,7 +1272,8 @@
       "resetCourseFailed": "A tanfolyamot nem sikerült visszaállítani.",
       "sharedBy": "Megosztotta: {{name}}",
       "downloadChapterPgn": "Fejezet letöltése PGN-ként",
-      "downloadLinePgn": "Változat letöltése PGN-ként"
+      "downloadLinePgn": "Változat letöltése PGN-ként",
+      "createWeekly": "Heti poszt létrehozása"
     },
     "pinTooltip": "Rögzítés az irányítópultra",
     "unpinTooltip": "Levétel az irányítópultról",
