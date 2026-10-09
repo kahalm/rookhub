@@ -1974,7 +1974,9 @@ Rollenverwaltung an).
   die Prognosen sollen frisch vom Server kommen. `partner-site.ts` kennt `leaguehub(-dev)` nur fürs geteilte
   Sprach-/Design-Cookie, einen Sprung aus RookHub gibt es nicht. Bausteine: `shared/fixture-view.component.ts`
   (Bretter, Meldeliste, WhatsApp-Text = drei Kandidaten je Brett, „Link teilen" nur mit `league.manage`),
-  `shared/player-card.component.ts` (Dialog, Vorgabe = Farbe an diesem Brett), reine Regeln in
+  `shared/player-card.component.ts` (Dialog, Vorgabe = Farbe an diesem Brett; seit 0.727.0 Link „📷 Fotos" →
+  `https://ligafotos.<Elterndomäne>/#spieler=<Name>` über `ligaFotosUrl`, nicht über Teilen-Links/Dev — die Foto-Seite
+  ist ein eigener Python-Dienst außerhalb dieses Repos, `~/claude/liga-fotos-app`, Login per `rh_session` + `league.view`), reine Regeln in
   `core/league-format.ts`. „Daten aktualisieren" fragt alle 4 s `/api/league/update/status` nach und lädt danach frisch.
 
 ### LeagueHub — Vereine als Mandanten (0.698.0)

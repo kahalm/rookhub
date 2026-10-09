@@ -37,6 +37,9 @@ type Show = 'w' | 's' | 'b';
               @else { Keine Partien gefunden }
               <span class="muted">{{ srcText(c) }}</span>@if (c.fide) { –
               <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">FIDE-Profil</a> }
+              @if (photosUrl(c.name); as u) { –
+              <a class="card-photos" [href]="u" target="_blank" rel="noopener"
+                 title="Alle Fotos dieses Spielers auf der Liga-Foto-Seite (Anmeldung wie LeagueHub)">📷 Fotos</a> }
             </p>
           }
         </div>
@@ -287,6 +290,11 @@ export class PlayerCardComponent {
     }
   }
   token: string | null = null;
+
+  /** Link „📷 Fotos" (2026-10-09): alle Fotos des Spielers auf der Liga-Foto-Seite; nicht über Teilen-Links. */
+  photosUrl(name: string | null | undefined): string | null {
+    return this.token ? null : ligaFotosUrl(name, location.hostname);
+  }
   /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
   private seq = 0;
 
@@ -507,4 +515,17 @@ export class PlayerCardComponent {
     const name = `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide || this.key(c)}.pgn`;
     if (!downloadBlob(blob, name)) this.error.set('Die PGN-Datei konnte nicht geladen werden.');
   }
+}
+
+/**
+ * Adresse der Liga-Foto-Seite für einen Spieler (2026-10-09, Wunsch des Users: „für einen Spieler in LeagueHub einen
+ * Fotobutton, der alle seine Fotos einblendet"). Die Seite liegt als `ligafotos.<Elterndomäne>` neben LeagueHub/RookHub
+ * und filtert über `#spieler=<Name>` (Schreibweise „Nachname, Vorname" wie in den Aufstellungen). Nur auf Prod-Hosts:
+ * Dev (`*-dev.…`), localhost und IP-Adressen haben keine Foto-Seite → `null`.
+ */
+export function ligaFotosUrl(name: string | null | undefined, host: string): string | null {
+  const n = (name ?? '').trim();
+  const parts = (host ?? '').toLowerCase().split('.');
+  if (!n || parts.length < 3 || parts[0].endsWith('-dev') || /^\d+$/.test(parts[parts.length - 1])) return null;
+  return `https://ligafotos.${parts.slice(1).join('.')}/#spieler=${encodeURIComponent(n)}`;
 }

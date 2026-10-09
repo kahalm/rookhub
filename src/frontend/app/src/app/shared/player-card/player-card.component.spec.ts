@@ -5,7 +5,7 @@ import { LeagueApiService } from '@lh/core/league-api.service';
 import { MyGamesService } from '@lh/core/my-games.service';
 import { PlayerCard, ProfileView } from '@lh/core/league.models';
 import { TREE_FILTER_KEY } from './tree-filter';
-import { PlayerCardComponent } from './player-card.component';
+import { PlayerCardComponent, ligaFotosUrl } from './player-card.component';
 import { PLAYER_CARD_API, PlayerCardApi } from './player-card-api';
 
 const CARD: PlayerCard = {
@@ -364,5 +364,22 @@ describe('PlayerCardComponent', () => {
       fixture.detectChanges();
       expect(toggle().length).withContext('API ohne Trainingslinien').toBe(0);
     });
+  });
+});
+
+describe('ligaFotosUrl', () => {
+  it('baut auf Prod-Hosts den Link zur Foto-Seite mit dem Spieler', () => {
+    expect(ligaFotosUrl('Hess, Max', 'leaguehub.oberschmid.homes'))
+      .toBe('https://ligafotos.oberschmid.homes/#spieler=Hess%2C%20Max');
+    expect(ligaFotosUrl('Müller, Jörg', 'rookhub.oberschmid.homes'))
+      .toBe('https://ligafotos.oberschmid.homes/#spieler=M%C3%BCller%2C%20J%C3%B6rg');
+  });
+
+  it('kein Link auf Dev, lokal, über IP oder ohne Namen', () => {
+    expect(ligaFotosUrl('Hess, Max', 'leaguehub-dev.oberschmid.homes')).toBeNull();
+    expect(ligaFotosUrl('Hess, Max', 'localhost')).toBeNull();
+    expect(ligaFotosUrl('Hess, Max', '10.24.13.6')).toBeNull();
+    expect(ligaFotosUrl('  ', 'leaguehub.oberschmid.homes')).toBeNull();
+    expect(ligaFotosUrl(null, 'leaguehub.oberschmid.homes')).toBeNull();
   });
 });
