@@ -132,6 +132,17 @@ export class AuthService {
     return this.isAdmin || this.permissions.has(permission);
   }
 
+  /**
+   * Ist der Nutzer JETZT Admin? Live-Stand aus `GET /api/auth/permissions` (wie {@link has}), sonst die Rolle am Token.
+   * Liest das Signal — Templates/`computed` ziehen nach, ein Entzug wirkt ohne neues Anmelden (Foto-Link 0.727.5).
+   */
+  get isAdminLive(): boolean {
+    const live = this.live();
+    const user = this.getValidUser();
+    if (live && user && live.userId === user.userId) return live.isAdmin;
+    return this.isAdmin;
+  }
+
   /** Den Live-Stand der Rechte holen. Still bei Fehlern (offline, Server weg) — dann bleibt der bisherige Stand. */
   async refreshPermissions(): Promise<void> {
     const user = this.getValidUser();

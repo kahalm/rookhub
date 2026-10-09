@@ -39,7 +39,7 @@ type Show = 'w' | 's' | 'b';
               <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">FIDE-Profil</a> }
               @if (photosUrl(c.name); as u) { –
               <a class="card-photos" [href]="u" target="_blank" rel="noopener"
-                 title="Alle Fotos dieses Spielers auf der Liga-Foto-Seite (Anmeldung wie LeagueHub)">📷 Fotos</a> }
+                 title="Alle Fotos dieses Spielers auf der Liga-Foto-Seite (nur Admins)">📷 Fotos</a> }
             </p>
           }
         </div>
@@ -291,9 +291,12 @@ export class PlayerCardComponent {
   }
   token: string | null = null;
 
-  /** Link „📷 Fotos" (2026-10-09): alle Fotos des Spielers auf der Liga-Foto-Seite; nicht über Teilen-Links. */
-  photosUrl(name: string | null | undefined): string | null {
-    return this.token ? null : ligaFotosUrl(name, location.hostname);
+  /**
+   * Link „📷 Fotos" (2026-10-09): alle Fotos des Spielers auf der Liga-Foto-Seite; nicht über Teilen-Links und seit
+   * 0.727.5 NUR für Admins (Live-Stand `AuthService.isAdminLive`) — sonst kein Link, kein Platzhalter.
+   */
+  photosUrl(name: string | null | undefined, host: string = location.hostname): string | null {
+    return this.token || !this.auth.isAdminLive ? null : ligaFotosUrl(name, host);
   }
   /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
   private seq = 0;

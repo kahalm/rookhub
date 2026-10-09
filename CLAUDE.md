@@ -1975,7 +1975,8 @@ Rollenverwaltung an).
   Sprach-/Design-Cookie, einen Sprung aus RookHub gibt es nicht. Bausteine: `shared/fixture-view.component.ts`
   (Bretter, Meldeliste, WhatsApp-Text = drei Kandidaten je Brett, „Link teilen" nur mit `league.manage`),
   `shared/player-card.component.ts` (Dialog, Vorgabe = Farbe an diesem Brett; seit 0.727.0 Link „📷 Fotos" →
-  `https://ligafotos.<Elterndomäne>/#spieler=<Name>` über `ligaFotosUrl`, nicht über Teilen-Links/Dev — die Foto-Seite
+  `https://ligafotos.<Elterndomäne>/#spieler=<Name>` über `ligaFotosUrl`, seit 0.727.5 **nur für Admins** (`AuthService.isAdminLive`
+  = Live-Stand aus `/api/auth/permissions`, sonst Token-Rolle; sonst kein Link), nicht über Teilen-Links/Dev — die Foto-Seite
   ist ein eigener Python-Dienst außerhalb dieses Repos, `~/claude/liga-fotos-app`, Login per `rh_session` + `league.view`), reine Regeln in
   `core/league-format.ts`. „Daten aktualisieren" fragt alle 4 s `/api/league/update/status` nach und lädt danach frisch.
 
@@ -3045,7 +3046,8 @@ Rolle wirkte erst nach dem nächsten Anmelden, eine entzogene galt so lange weit
   90 Tage weiter; alle Sitzungen des Kontos enden sofort) und nimmt die System-Rolle „admin" weg, die der `RoleSeeder`
   beim Start nur ANLEGT; das Hochstufen hängt sie an.
 * **Oberfläche**: `GET /api/auth/permissions` → `{ isAdmin, permissions }` (live). `AuthService.has` liest diesen Stand
-  (Signal, sonst die Claims des Tokens als Rückfall); `core/permission-refresher.service.ts` holt ihn vor dem ersten
+  (Signal, sonst die Claims des Tokens als Rückfall), `AuthService.isAdminLive` ebenso für die reine Admin-Frage (0.727.5;
+  `isAdmin` ist die Token-Rolle); `core/permission-refresher.service.ts` holt ihn vor dem ersten
   Seitenaufbau (`provideAppInitializer` in RookHub, Turnierseite, LeagueHub, höchstens 3 s gewartet), bei jeder
   An-/Abmeldung, beim Zurückkehren in den Tab (höchstens alle 2 min, seit Codereview F1-019 — vorher ≥ 30 s) und alle
   2 min, solange der Tab sichtbar ist.

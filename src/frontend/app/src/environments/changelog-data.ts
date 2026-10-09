@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.727.5", date: "2026-10-09", changes: [
+    { en: "Player card in LeagueHub and Player preparation: the “📷 Photos” link to the league photo page is now shown only to admins. Everyone else no longer sees the link at all (as before, it never appears on share links). The check follows the current admin status, so revoking admin hides it without a new login.",
+      de: "Spielerkarte in LeagueHub und Spielervorbereitung: den Link „📷 Fotos“ zur Liga-Foto-Seite sehen jetzt nur noch Admins. Alle anderen sehen ihn gar nicht mehr (über Teilen-Links erscheint er wie bisher nie). Geprüft wird der aktuelle Admin-Stand, ein Entzug blendet ihn also ohne neues Anmelden aus." },
+  ] },
   { version: "0.727.4", date: "2026-10-09", changes: [
     { en: "Internal: if the browser cancels an explorer request (new position on the board, page reloaded, a follow-up round of the move-order search discarded), the server no longer records it as a server error (500 with stack trace) but quietly as “client closed request” (499). Applies to move orders, explorer position and games, and the gap finder; the explorer queries still running are stopped and awaited. No change for users.",
       de: "Intern: bricht der Browser eine Explorer-Anfrage ab (neue Stellung auf dem Brett, Seite neu geladen, Fortsetzungsrunde der Zugfolgen-Suche verworfen), verbucht der Server das nicht mehr als Serverfehler (500 mit Stacktrace), sondern still als „Client hat abgebrochen“ (499). Gilt für Zugfolgen, Explorer-Stellung und -Partien sowie den Lochfinder; die noch laufenden Explorer-Abfragen werden abgebrochen und abgewartet. Für Nutzer ändert sich nichts." },

@@ -26,11 +26,11 @@ describe('PlayerCardComponent', () => {
   const headings = () => Array.from(el().querySelectorAll('h3')).map(h => h.textContent ?? '');
 
   let perms: Set<string>;
-  let auth: { has: (p: string) => boolean; isLoggedIn: boolean };
+  let auth: { has: (p: string) => boolean; isLoggedIn: boolean; isAdminLive: boolean };
 
   beforeEach(() => {
     perms = new Set();
-    auth = { has: (p: string) => perms.has(p), isLoggedIn: false };
+    auth = { has: (p: string) => perms.has(p), isLoggedIn: false, isAdminLive: false };
     localStorage.removeItem(TREE_FILTER_KEY);
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree', 'profile', 'playerSuggestions']);
     api.playerSuggestions.and.resolveTo({ items: [] });
@@ -331,6 +331,37 @@ describe('PlayerCardComponent', () => {
 
   it('LeagueHub: das Token liefert ohne eigenen Eintrag den LeagueApiService', () => {
     expect(TestBed.inject(PLAYER_CARD_API)).toBe(api as unknown as PlayerCardApi);
+  });
+
+  describe('Link „📷 Fotos" nur für Admins (0.727.5)', () => {
+    const HOST = 'leaguehub.oberschmid.homes';
+    const link = () => el().querySelector<HTMLAnchorElement>('a.card-photos');
+
+    it('Admin: der Link ist da', async () => {
+      auth.isAdminLive = true;
+      await fixture.componentInstance.open('1606921', null, null, null);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.photosUrl('Oberschmid, Patrik', HOST))
+        .toBe('https://ligafotos.oberschmid.homes/#spieler=Oberschmid%2C%20Patrik');
+    });
+
+    it('league.view ohne Admin: kein Link, kein Platzhalter', async () => {
+      perms.add('league.view');
+      perms.add('league.manage');
+      await fixture.componentInstance.open('1606921', null, null, null);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.photosUrl('Oberschmid, Patrik', HOST)).toBeNull();
+      expect(link()).toBeNull();
+      expect(el().textContent).not.toContain('Fotos');
+    });
+
+    it('über einen Teilen-Link nie, auch nicht als Admin', async () => {
+      auth.isAdminLive = true;
+      await fixture.componentInstance.open('1606921', null, null, 'TOKEN');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.photosUrl('Oberschmid, Patrik', HOST)).toBeNull();
+      expect(link()).toBeNull();
+    });
   });
 
   describe('Trainingslinien (2026-10-07)', () => {
