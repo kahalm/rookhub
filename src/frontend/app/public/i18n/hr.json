@@ -4314,7 +4314,32 @@
     "loading": "Trenutak …",
     "loadError": "Ups, nešto je zapelo. Pokušaj odmah ponovno!",
     "retry": "Pokušaj ponovno",
-    "language": "Jezik"
+    "language": "Jezik",
+    "stars": {
+      "title": "Lov na zvijezde",
+      "tileHint": "Jedna figura, puno zvijezda",
+      "intro": "Pojedi sve zvijezde – svakim potezom točno jednu!",
+      "stage": "Razina {{stage}}",
+      "round": "Zadatak {{n}}/{{total}}",
+      "starCount": "Zvijezda: {{count}}",
+      "task": "Pojedi sve zvijezde – svakim potezom točno jednu!",
+      "left": "Još zvijezda: {{count}}",
+      "completed": "Razina riješena!",
+      "piece": {
+        "R": "Top",
+        "B": "Lovac",
+        "Q": "Dama",
+        "N": "Skakač",
+        "K": "Kralj"
+      },
+      "feedback": {
+        "play": "Ti si na potezu! Još zvijezda: {{count}}.",
+        "good": "Njam! Još zvijezda: {{count}}.",
+        "empty": "Ups – svaki potez mora pojesti zvijezdu!",
+        "deadEnd": "Odande ne možeš doći do svih zvijezda. Probaj drugu!",
+        "solved": "Sve zvijezde pojedene! 🌟"
+      }
+    }
   },
   "turnierAdmin": {
     "title": "Prijavi se kao korisnik",

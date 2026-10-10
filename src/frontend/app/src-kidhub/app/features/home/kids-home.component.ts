@@ -6,6 +6,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsEndlessStore } from '../../core/kids-endless.store';
+import { KidsStarsStore } from '../../core/kids-stars.store';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
@@ -51,6 +52,13 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
           @else { {{ 'kids.endless.tileHint' | translate }} }
         </span>
       </a>
+      <a class="tile stars" routerLink="/stars">
+        <span class="icon" aria-hidden="true">🌟</span>
+        <span class="name">{{ 'kids.stars.title' | translate }}</span>
+        <span class="meta">
+          @if (stars.done() > 0) { ✅ {{ stars.done() }}/{{ stars.total }} } @else { {{ 'kids.stars.tileHint' | translate }} }
+        </span>
+      </a>
       @if (courses().length > 0) {
         <a class="tile courses" [routerLink]="courseLink()">
           <span class="icon" aria-hidden="true">📚</span>
@@ -89,6 +97,7 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     .tile.puzzles { background: var(--kid-sky); }
     .tile.courses { background: var(--kid-peach); }
     .tile.endless { background: #e8e0ff; }
+    .tile.stars { background: #fff3c4; }
     .icon { font-size: 3.4rem; line-height: 1.1; }
     .name { font-size: 1.7rem; font-weight: 800; }
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
@@ -99,6 +108,7 @@ export class KidsHomeComponent {
   private readonly api = inject(KidsApiService);
   readonly progress = inject(KidsProgressStore);
   readonly endless = inject(KidsEndlessStore);
+  readonly stars = inject(KidsStarsStore);
   private readonly translate = inject(TranslateService);
   readonly user = toSignal(inject(AuthService).currentUser$, { initialValue: null });
 

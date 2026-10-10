@@ -4314,7 +4314,32 @@
     "loading": "Einen Moment …",
     "loadError": "Hoppla, da klemmt etwas. Versuch es gleich noch einmal!",
     "retry": "Nochmal",
-    "language": "Sprache"
+    "language": "Sprache",
+    "stars": {
+      "title": "Sternenjagd",
+      "tileHint": "Eine Figur, viele Sterne",
+      "intro": "Friss alle Sterne – mit jedem Zug genau einen!",
+      "stage": "Stufe {{stage}}",
+      "round": "Aufgabe {{n}}/{{total}}",
+      "starCount": "{{count}} Sterne",
+      "task": "Friss alle Sterne – mit jedem Zug genau einen!",
+      "left": "Noch {{count}} Sterne",
+      "completed": "Stufe geschafft!",
+      "piece": {
+        "R": "Turm",
+        "B": "Läufer",
+        "Q": "Dame",
+        "N": "Springer",
+        "K": "König"
+      },
+      "feedback": {
+        "play": "Du bist dran! Noch {{count}} Sterne.",
+        "good": "Lecker! Noch {{count}} Sterne.",
+        "empty": "Hoppla – jeder Zug muss einen Stern fressen!",
+        "deadEnd": "Von dort kommst du nicht mehr an alle Sterne. Probier einen anderen!",
+        "solved": "Alle Sterne gefressen! 🌟"
+      }
+    }
   },
   "turnierAdmin": {
     "title": "Als Nutzer einsteigen",

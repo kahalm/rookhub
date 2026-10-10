@@ -5608,6 +5608,17 @@ Kinderseite" unter REST API.
   Rochade/en passant/Unterverwandlung; Figurenzahl frei), drei Sprünge, dann zufällig unter den ersten 200 des Fensters.
   Auf Dev gemessen (5,36 Mio. Puzzles): ~10 ms je Sprung (Plan: Primärschlüssel-Scan), kindgerecht sind je 200er-Band
   zwischen 30 % (2400) und 70 % (1000–1400).
+- **Sternenjagd** (0.731.0, Wunsch 2026-10-10 „x Punkte auf dem Brett, von einer Figur in x Zügen zu fressen, jeden Zug
+  einen, nur eindeutige Lösungen"): Routen `/stars` (Stufenkarte) und `/stars/:stage`, Kachel auf der Startseite, ohne
+  Server. Regeln und Generator rein in `core/kids-stars.ts`: EINE weiße Figur (R/B/Q/N/K) ohne König auf dem Brett (FEN
+  nur mit ihr — das Brett prüft keine Schachregeln, `dests` rechnet die Seite), Sterne als `customSvg`-Markierung
+  (`STAR_SVG`). Sterne BLOCKIEREN Turm/Läufer/Dame (auf ihn ja, darüber nicht), Springer/König nicht. Gestellt wird nur,
+  was GENAU EINE Reihenfolge hat (`solveStars` zählt bis 2): zufälliger Weg der Figur, dann zählen, bis 600 Versuche;
+  bevorzugt mit mehr als einem erreichbaren Stern am Anfang. Deshalb ist jeder andere Stern eine Sackgasse und wird
+  SOFORT als falsch gezeigt (`deadEnd`), ein Zug auf ein leeres Feld ebenso (`empty`) — beides bleibt `WRONG_HOLD_MS`
+  stehen. `STAR_STAGES` = 20 feste Stufen (2 bis 6 Sterne), je `STARS_PER_STAGE` (5) frisch gewürfelte Aufgaben; Tipps
+  kostenlos (Stern leuchtet, dann Pfeil). Fortschritt nur im Browser (`KidsStarsStore`, `rh-kids-stars-v1`). Dafür
+  zeichnet `PuzzleBoardComponent` `reviewShapes` jetzt auch beim Aufbau (vorher erst bei der nächsten Änderung).
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);
   im LETZTEN Zug zählt jedes Matt; Kurs-`AltMoves` sind „auch gut, aber gesucht ist ein anderer" (kein Fehler);

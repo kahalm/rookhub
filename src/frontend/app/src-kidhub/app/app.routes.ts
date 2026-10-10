@@ -12,6 +12,9 @@ export const routes: Routes = [
   { path: 'levels/:level', loadComponent: () => import('./features/levels/level-play.component').then(m => m.LevelPlayComponent) },
   // Endlos-Modus: Aufgabe um Aufgabe, jede etwas schwerer, bis die Herzen weg sind.
   { path: 'endless', loadComponent: () => import('./features/endless/endless-play.component').then(m => m.EndlessPlayComponent) },
+  // Sternenjagd: eine Figur frisst alle Sterne, in jedem Zug einen (eindeutige Loesung, `core/kids-stars.ts`).
+  { path: 'stars', loadComponent: () => import('./features/stars/stars-map.component').then(m => m.StarsMapComponent) },
+  { path: 'stars/:stage', loadComponent: () => import('./features/stars/stars-play.component').then(m => m.StarsPlayComponent) },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent) },
   { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-play.component').then(m => m.CoursePlayComponent) },
   // Anmelden und Registrieren: dieselben Masken wie in RookHub und auf der Turnierseite — dasselbe

@@ -564,6 +564,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
     });
 
+    // Markierungen, die schon VOR dem Aufbau des Bretts gesetzt waren (KidHub-Sternenjagd: die Sterne stehen ab dem
+    // ersten Bild) — ngOnChanges laeuft davor und findet noch kein Brett.
+    this.applyAutoShapes();
+
     // After init, force a redraw to ensure correct dimensions
     requestAnimationFrame(() => { this.ground?.redrawAll(); this.repaintCrazyPieces(); });
 
