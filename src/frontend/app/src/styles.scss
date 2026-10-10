@@ -362,3 +362,9 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
     min-height: 44px; min-width: 44px; justify-content: center;
   }
 }
+
+/* Spielweise-Dialog (SolveModeService, UI-Sweep 2026-10-10): klar abgedunkelter Hintergrund, runde Ecken; am Handy
+   als Blatt am unteren Rand (nur oben gerundet). Global, weil Panel und Hintergrund außerhalb der Komponente liegen. */
+.solve-mode-backdrop { background: rgba(0, 0, 0, 0.6); }
+.solve-mode-panel .mat-mdc-dialog-surface { border-radius: 20px; }
+.solve-mode-sheet .mat-mdc-dialog-surface { border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }

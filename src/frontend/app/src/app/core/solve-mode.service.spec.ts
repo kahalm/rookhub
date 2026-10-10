@@ -33,6 +33,23 @@ describe('SolveModeService', () => {
     expect(svc.get('puzzles')).toBe('easy');
   });
 
+  // UI-Sweep 10.10.: abgedunkelter Hintergrund, am PC breiter Dialog, am Handy Blatt am unteren Rand.
+  it('öffnet den Dialog mit abgedunkeltem Hintergrund — breit am PC, als Blatt am Handy', () => {
+    setup('easy');
+    spyOn(SolveModeService, 'narrow').and.returnValue(false);
+    svc.ensure('puzzles').subscribe();
+    const wide = dialogOpen.calls.mostRecent().args[1];
+    expect(wide.backdropClass).toBe('solve-mode-backdrop');
+    expect(wide.hasBackdrop).toBeTrue();
+    expect(wide.width).toBe('560px');
+    expect(wide.position).toBeUndefined();
+    (SolveModeService.narrow as jasmine.Spy).and.returnValue(true);
+    svc.ensure('endless').subscribe();
+    const sheet = dialogOpen.calls.mostRecent().args[1];
+    expect(sheet.position).toEqual({ bottom: '0' });
+    expect(sheet.panelClass).toContain('solve-mode-sheet');
+  });
+
   it('fragt beim zweiten Mal NICHT mehr', () => {
     setup('easy');
     svc.ensure('puzzles').subscribe();

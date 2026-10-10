@@ -37,27 +37,23 @@ export interface SolveModeDialogResult {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatDialogModule, MatCheckboxModule, MatIconModule, TranslatePipe],
   template: `
-    <h2 mat-dialog-title>
-      {{ (data.scopeLabel ? 'solveMode.titleFor' : 'solveMode.title') | translate:{ scope: data.scopeLabel } }}
-    </h2>
+    <h2 mat-dialog-title class="sm-title">{{ (data.scopeLabel ? 'solveMode.titleFor' : 'solveMode.title') | translate:{ scope: data.scopeLabel } }}</h2>
     <mat-dialog-content>
       <p class="sm-intro">{{ data.intro || ('solveMode.intro' | translate) }}</p>
 
-      <button type="button" class="sm-choice" (click)="pick('training')">
-        <mat-icon>psychology</mat-icon>
-        <span class="sm-text">
+      <div class="sm-choices">
+        <button type="button" class="sm-choice" (click)="pick('training')">
+          <span class="sm-icon"><mat-icon>psychology</mat-icon></span>
           <span class="sm-name">{{ 'solveMode.training' | translate }}</span>
           <span class="sm-desc">{{ data.trainingDesc || ('solveMode.trainingDesc' | translate) }}</span>
-        </span>
-      </button>
+        </button>
 
-      <button type="button" class="sm-choice" (click)="pick('easy')">
-        <mat-icon>pan_tool</mat-icon>
-        <span class="sm-text">
+        <button type="button" class="sm-choice" (click)="pick('easy')">
+          <span class="sm-icon"><mat-icon>pan_tool</mat-icon></span>
           <span class="sm-name">{{ 'solveMode.easy' | translate }}</span>
           <span class="sm-desc">{{ 'solveMode.easyDesc' | translate }}</span>
-        </span>
-      </button>
+        </button>
+      </div>
 
       @if (data.offerApplyAll) {
         <mat-checkbox class="sm-all" [checked]="applyAll" (change)="applyAll = $event.checked">
@@ -69,21 +65,33 @@ export interface SolveModeDialogResult {
     </mat-dialog-content>
   `,
   styles: [`
-    .sm-intro { margin: 0 0 12px; }
+    /* Zwei gleich große Kacheln nebeneinander (am Handy untereinander), Symbol im getönten Kreis. Texte unverändert. */
+    .sm-intro { margin: 0 0 14px; color: color-mix(in srgb, currentColor 75%, transparent); }
+    .sm-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .sm-choice {
-      display: flex; align-items: center; gap: 12px; width: 100%;
-      padding: 12px 14px; margin-bottom: 8px;
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-      border-radius: 8px; background: none; color: inherit; cursor: pointer; text-align: left;
-      font: inherit;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      padding: 16px; min-height: 44px; box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+      border-radius: 14px; background: color-mix(in srgb, currentColor 4%, transparent);
+      color: inherit; cursor: pointer; text-align: left; font: inherit;
+      transition: border-color .15s, background .15s;
     }
-    .sm-choice:hover, .sm-choice:focus-visible { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .sm-choice mat-icon { flex: 0 0 auto; }
-    .sm-text { display: flex; flex-direction: column; gap: 2px; }
-    .sm-name { font-weight: 600; }
-    .sm-desc { font-size: .85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .sm-choice:hover, .sm-choice:focus-visible {
+      border-color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 10%, transparent); outline: none;
+    }
+    .sm-icon {
+      display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+      background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent);
+    }
+    .sm-name { font-weight: 600; font-size: 1.02rem; }
+    .sm-desc { font-size: .85rem; line-height: 1.4; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sm-all { display: block; margin: 0 0 4px; }
     .sm-hint { margin: 4px 0 0; font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    @media (max-width: 600px) {
+      .sm-choices { grid-template-columns: 1fr; }
+      .sm-choice { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+      .sm-desc { flex-basis: 100%; }
+    }
   `],
 })
 export class SolveModeDialogComponent {

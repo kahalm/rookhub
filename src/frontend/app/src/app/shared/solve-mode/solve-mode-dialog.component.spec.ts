@@ -42,4 +42,15 @@ describe('SolveModeDialogComponent', () => {
     choices(el)[0].click();
     expect(close).toHaveBeenCalledWith({ mode: 'training', applyAll: false });
   });
+
+  it('neues Design (UI-Sweep 10.10.): Titel ohne Leerraum davor, zwei Kacheln mit Symbol, Texte unverändert', () => {
+    const { el } = render({});
+    expect(el.querySelector('h2')!.textContent).toBe('solveMode.title');
+    expect(el.querySelectorAll('.sm-choices > .sm-choice').length).toBe(2);
+    choices(el).forEach(c => {
+      expect(c.querySelector('.sm-icon mat-icon')).not.toBeNull();
+      expect(c.querySelector('.sm-name')).not.toBeNull();
+      expect(c.querySelector('.sm-desc')).not.toBeNull();
+    });
+  });
 });

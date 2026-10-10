@@ -99,9 +99,6 @@
     .theme-preset-chip.active {
       border-color: #1976d2; background: #1976d2; color: #fff; font-weight: 600;
     }
-    .config-lives-row { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 1rem 0; }
-    .config-lives { margin: 0; }
-    .config-lives-label { font-size: 0.9em; color: color-mix(in srgb, currentColor 70%, transparent); }
     .highscore-badge {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #ff9800; font-weight: 500; margin-bottom: 1rem;

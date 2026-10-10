@@ -2011,8 +2011,7 @@
       "archiveAndNew": "Archive & New Game",
       "newGame": "New Game",
       "start": "Start",
-      "advanced": "Fine-tuning",
-      "startLives": "{{count}} lives"
+      "advanced": "Fine-tuning"
     },
     "game": {
       "vizCountdown": "Pieces disappear in {{seconds}}s...",

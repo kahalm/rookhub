@@ -86,6 +86,11 @@ export class SolveModeService {
    * und lässt sich hinterher nicht rückwirkend korrigieren. Sie kommt aber nur EINMAL je
    * Bereich — wer schon gewählt hat, sieht nie wieder einen Dialog.
    */
+  /** Schmaler Bildschirm (Handy): der Dialog kommt als Blatt vom unteren Rand. */
+  static narrow(): boolean {
+    return typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
+  }
+
   ensure(scope: string, data: SolveModeDialogData = {}): Observable<SolveMode> {
     const gemerkt = this.get(scope);
     if (gemerkt) return of(gemerkt);
@@ -93,8 +98,14 @@ export class SolveModeService {
     return this.dialog
       // autoFocus 'dialog': den Container fokussieren, nicht die erste Karte — sonst trägt
       // „Trainingsmodus" den Fokusrahmen und sieht vorausgewählt aus (UX-004).
+      // Neues Design (UI-Sweep 2026-10-10, Texte unverändert): deutlich abgedunkelter Hintergrund — ohne ihn hing der
+      // Dialog scheinbar schief über dem Brett —, am Handy als Blatt am unteren Rand.
       .open(SolveModeDialogComponent, {
-        width: '460px', maxWidth: '94vw', disableClose: true, autoFocus: 'dialog',
+        ...(SolveModeService.narrow()
+          ? { width: '100vw', maxWidth: '100vw', position: { bottom: '0' }, panelClass: ['solve-mode-panel', 'solve-mode-sheet'] }
+          : { width: '560px', maxWidth: '94vw', panelClass: 'solve-mode-panel' }),
+        hasBackdrop: true, backdropClass: 'solve-mode-backdrop',
+        disableClose: true, autoFocus: 'dialog',
         data: { ...data, offerApplyAll: shared },
       })
       .afterClosed()

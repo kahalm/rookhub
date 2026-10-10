@@ -2011,8 +2011,7 @@
       "archiveAndNew": "Archivieren & neues Spiel",
       "newGame": "Neues Spiel",
       "start": "Start",
-      "advanced": "Feineinstellungen",
-      "startLives": "{{count}} Leben"
+      "advanced": "Feineinstellungen"
     },
     "game": {
       "vizCountdown": "Figuren verschwinden in {{seconds}}s...",

@@ -1604,8 +1604,7 @@
       "newGame": "Új játék",
       "start": "Kezdés",
       "clearThemes": "Összes törlése",
-      "advanced": "Finomhangolás",
-      "startLives": "{{count}} élet"
+      "advanced": "Finomhangolás"
     },
     "game": {
       "vizCountdown": "A bábuk {{seconds}} másodperc múlva eltűnnek...",

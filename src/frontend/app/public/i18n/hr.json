@@ -2011,8 +2011,7 @@
       "archiveAndNew": "Arhiviraj i nova igra",
       "newGame": "Nova igra",
       "start": "Početak",
-      "advanced": "Fino podešavanje",
-      "startLives": "{{count}} života"
+      "advanced": "Fino podešavanje"
     },
     "game": {
       "vizCountdown": "Figure nestaju za {{seconds}}s...",

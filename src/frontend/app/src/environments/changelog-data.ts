@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.743.0", date: "2026-10-10", changes: [
+    { en: "Play-mode question (training or easy) has a new look: centred with a dimmed background and two tiles with icons, on phones a sheet at the bottom of the screen — the texts are unchanged. The endless start screen shows the three hearts without the “3 lives” label again.", de: "Die Frage nach der Spielweise (Training oder Einfach) hat ein neues Aussehen: mittig mit abgedunkeltem Hintergrund und zwei Kacheln mit Symbol, am Handy als Blatt am unteren Rand — die Texte sind unverändert. Der Endlos-Start zeigt die drei Herzen wieder ohne die Beschriftung „3 Leben“." },
+  ] },
   { version: "0.742.0", date: "2026-10-10", changes: [
     { en: "Roast my game: “Share game with this roast” shares the game publicly with exactly this roast — the shared page shows it above the game and link previews use it as the description. Rolling again or “Stop sharing” withdraws it, so a link never shows a different text.", de: "Roast my game: „Partie mit diesem Roast teilen“ teilt die Partie öffentlich mit genau diesem Roast — die geteilte Seite zeigt ihn über der Partie, Link-Vorschauen nehmen ihn als Beschreibung. Neu würfeln oder „Nicht mehr teilen“ zieht ihn zurück, ein Link zeigt also nie einen anderen Text." },
   ] },
