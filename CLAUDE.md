@@ -1756,6 +1756,14 @@ Rollenverwaltung an).
   `LeagueGameId` roh. (3) **Heilung beim Start** (`LeagueGameLinks.HealOnStartupAsync` in `Program.cs`, idempotent, wirft nie):
   alle mit Schlüssel neu auflösen; gültige Ids ohne Schlüssel bekommen ihn; tote Ids ohne Schlüssel werden über
   `LeaguePairingFinder` neu gefunden (`AutoPick`, genau EIN genauer Treffer; PGN-Datum, sonst das Jahr) oder geleert (Warnung).
+- **Leere Bretter der laufenden Runde** (0.740.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?"):
+  die FIDE-Suche fand Bretter ohne Spieler nie. `LeaguePairingFinder.OpenBoardsAsync` hängt an jede Vorschlagsliste die leeren
+  Bretter (beide Spieler `null`, nicht kampflos) der EIGENEN Begegnungen (`OwnsTeam`) mit Rundentermin höchstens `OpenRoundDays`
+  (21) Tage her bzw. `DayTolerance` voraus (`Today` für Tests). Farbe nach Regel (`HomeWhiteByRule`: Tirol Heim Weiß an ungeraden,
+  Bayern an geraden Brettern); die eigene Seite der Partie = die anonymisierte, sonst die mit der FIDE-ID eines eigenen Spielers
+  der Meldeliste — passt die Farbe nicht, kein Vorschlag; unbekannt → alle Bretter, nie „genau". `Option.Open` = true,
+  `White`/`Black` = MANNSCHAFTEN; LeagueHub lässt bei der Wahl die Spieler stehen (`setPairing`, `choosePairing`), Text „…, noch
+  nicht besetzt". Mehrere passende Bretter → keine Vorwahl.
 - **Ältere Fassungen archivieren** (0.691.0, Wunsch 2026-10-06: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon
   eingegeben ist, das alte archivieren"): `LeagueClubGames.ArchivedAt`/`ReplacedById`, gesetzt in `LeagueClubService.ArchiveOlderVersionsAsync`
   nach jedem Formular-Add (`AddAsync`, nicht beim PGN-Import). Dieselbe Partie = dieselbe feste Ligapaarung, oder (ohne zwei verschiedene

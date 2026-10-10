@@ -42,6 +42,37 @@ public class LeagueClubPairingTests : IDisposable
         return lg.Id;
     }
 
+    // 0.740.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?" — die Bretter der laufenden Runde
+    // haben noch keine Spieler; angeboten werden die leeren Bretter der eigenen Begegnung, in der passenden Farbe.
+    [Fact]
+    public async Task Finder_LaufendeRunde_BietetLeereBretterDerEigenenBegegnung_InDerFarbe()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 9, Season = "2026/27", League = "1. Klasse", Stage = "Liga" });
+        _db.LeagueRounds.AddRange(new LeagueRound { Tnr = 9, Round = 2, Date = new DateOnly(2026, 10, 10) },
+            new LeagueRound { Tnr = 9, Round = 5, Date = new DateOnly(2027, 1, 9) });
+        foreach (var b in Enumerable.Range(1, 6))
+            _db.LeagueGames.Add(new LeagueGame { Tnr = 9, Round = 2, MatchNo = 5, Board = b, HomeTeam = "Testdorf", AwayTeam = "Freibauer", HomeColor = "w", Result = "" });
+        _db.LeagueGames.Add(new LeagueGame { Tnr = 9, Round = 2, MatchNo = 6, Board = 1, HomeTeam = "Rum", AwayTeam = "Wörgl", HomeColor = "w", Result = "" });
+        _db.LeagueGames.Add(new LeagueGame { Tnr = 9, Round = 5, MatchNo = 1, Board = 1, HomeTeam = "Testdorf", AwayTeam = "Absam", HomeColor = "w", Result = "" });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 9, Team = "Testdorf", Name = "Fischer, Florian", FideId = "901" });
+        await _db.SaveChangesAsync();
+        var finder = new LeaguePairingFinder(_db) { Today = () => new DateOnly(2026, 10, 10) };
+
+        // „Testdorf" hatte Weiß → Heim Testdorf hat Weiß an den ungeraden Brettern (chess-results)
+        var anon = await finder.ForAsync(new("Testdorf", null, "Frolik, Michael", "777", null, 2026), TestClubs.Home, default);
+        Assert.Equal(new[] { 1, 3, 5 }, anon.Select(o => _db.LeagueGames.Single(g => g.Id == o.Id).Board));
+        Assert.All(anon, o => Assert.True(o.Open && o.Exact));
+        Assert.Equal(("Testdorf", "Freibauer"), (anon[0].White, anon[0].Black));
+        Assert.Null(LeaguePairingFinder.AutoPick(anon));                       // mehrere Bretter: der Nutzer wählt
+
+        // beim Prüfen eines Formulars noch mit Klarnamen: die eigene Seite über die FIDE-ID der Meldeliste, Schwarz → gerade Bretter
+        var real = await finder.ForAsync(new("Frolik, Michael", "777", "Fischer, Florian", "901", new DateOnly(2026, 10, 10), null), TestClubs.Home, default);
+        Assert.Equal(new[] { 2, 4, 6 }, real.Select(o => _db.LeagueGames.Single(g => g.Id == o.Id).Board));
+
+        // ohne Verein nichts, und die künftige Runde 5 (Januar) ist keine laufende
+        Assert.Empty(await finder.ForAsync(new("Testdorf", null, "X", null, null, 2026), null, default));
+    }
+
     [Fact]
     public async Task Preview_genauerTreffer_istVorgewaehlt_samtLabel()
     {

@@ -26,10 +26,18 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     /// <summary>Was über die Partie bekannt ist: je Seite Name + FIDE-ID (bei „Schwaz" die interne), dazu Tag bzw. Jahr.</summary>
     public sealed record Query(string White, string? WhiteFide, string Black, string? BlackFide, DateOnly? Date, int? Year);
 
+    /// <param name="Open">0.740.0: ein noch leeres Brett der eigenen Begegnung (laufende Runde, chess-results hat die Aufstellung
+    /// noch nicht) — <see cref="White"/>/<see cref="Black"/> sind dann die MANNSCHAFTEN, die Spieler der Partie bleiben.</param>
     public sealed record Option(int Id, string Label, string? Date, string White, string? WhiteFide, string Black, string? BlackFide,
-        string Result, bool WhiteOwnClub, bool BlackOwnClub, bool Exact, string League, string Season);
+        string Result, bool WhiteOwnClub, bool BlackOwnClub, bool Exact, string League, string Season, bool Open = false);
 
-    private sealed record Row(LeagueGame G, string Season, string League, DateOnly? Date);
+    private sealed record Row(LeagueGame G, string Season, string League, DateOnly? Date, string? Source = null);
+
+    /// <summary>Heute (für die laufende Runde) — in Tests überschreibbar.</summary>
+    internal Func<DateOnly> Today { get; init; } = () => DateOnly.FromDateTime(DateTime.UtcNow);
+
+    /// <summary>Wie weit eine „laufende" Runde zurückliegen darf, deren Bretter noch leer sind.</summary>
+    public const int OpenRoundDays = 21;
 
     /// <summary>Vorschläge für viele Partien auf einmal (Übersicht eines PGN-Imports) — EINE Abfrage für alle.</summary>
     /// <param name="club">Der Verein der Anfrage — wer „der eigene" ist (ohne: keiner).</param>
@@ -49,7 +57,66 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             rows.AddRange(part.Select(x => new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date)));
         }
         rows = rows.DistinctBy(r => r.G.Id).ToList();
-        return queries.Select(q => Options(q, rows, club)).ToList();
+        var (open, ownFides) = await OpenBoardsAsync(club, ct);
+        return queries.Select(q => Options(q, rows, club).Concat(OpenOptions(q, open, ownFides, club)).Take(MaxOptions).ToList()).ToList();
+    }
+
+    /// <summary>
+    /// Noch leere Bretter der eigenen Begegnungen in laufenden Runden (0.740.0, Wunsch 2026-10-10: „wie kann ich eine Partie der
+    /// aktuellen Runde zuweisen?" — die Bretter haben dort noch keine Spieler, über die FIDE-ID fand die Suche sie nie):
+    /// Rundentermin höchstens <see cref="OpenRoundDays"/> Tage her und höchstens <see cref="DayTolerance"/> Tage voraus.
+    /// </summary>
+    private async Task<(List<Row> Rows, HashSet<string> OwnFides)> OpenBoardsAsync(LeagueClub? club, CancellationToken ct)
+    {
+        if (club is null) return (new(), new());
+        var today = Today();
+        var earliest = today.AddDays(-OpenRoundDays);
+        var latest = today.AddDays(DayTolerance);
+        var part = await (from g in db.LeagueGames.AsNoTracking()
+                          join t in db.LeagueTournaments.AsNoTracking() on g.Tnr equals t.Tnr
+                          join r in db.LeagueRounds.AsNoTracking() on new { g.Tnr, g.Round } equals new { r.Tnr, r.Round }
+                          where g.Forfeit == 0 && g.HomePlayer == null && g.AwayPlayer == null
+                                && r.Date != null && r.Date >= earliest && r.Date <= latest
+                          select new { g, t.Season, t.League, t.Grp, t.Source, r.Date }).ToListAsync(ct);
+        var rows = part.Where(x => club.OwnsTeam(x.g.HomeTeam) || club.OwnsTeam(x.g.AwayTeam))
+            .Select(x => new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date, x.Source))
+            .DistinctBy(r => r.G.Id).ToList();
+        // FIDE-IDs der eigenen Spieler dieser Ligen — so ist die eigene Seite auch erkennbar, solange sie noch nicht „Schwaz" heißt
+        var tnrs = rows.Select(r => r.G.Tnr).Distinct().ToList();
+        var roster = tnrs.Count == 0 ? new() : await db.LeaguePlayers.AsNoTracking()
+            .Where(p => tnrs.Contains(p.Tnr) && p.FideId != null).Select(p => new { p.Team, p.FideId }).ToListAsync(ct);
+        return (rows, roster.Where(p => club.OwnsTeam(p.Team)).Select(p => p.FideId!).ToHashSet());
+    }
+
+    /// <summary>Heim hat Weiß an ungeraden Brettern (chess-results/Österreich), in Bayern an geraden (Ligamanager-Regel).</summary>
+    internal static bool HomeWhiteByRule(string? source, int board) =>
+        LeagueRegions.Of(source) == LeagueRegions.Bayern ? board % 2 == 0 : board % 2 == 1;
+
+    private static IEnumerable<Option> OpenOptions(Query q, List<Row> open, HashSet<string> ownFides, LeagueClub? club)
+    {
+        if (club is null || open.Count == 0) return Enumerable.Empty<Option>();
+        // Welche Farbe hatte der eigene Verein in der Partie? Die anonymisierte Seite ist die eigene, sonst die mit der FIDE-ID
+        // eines eigenen Spielers (nur wenn genau eine Seite passt).
+        bool Own(string? fide) => !string.IsNullOrEmpty(fide) && ownFides.Contains(fide);
+        bool? ownWhite = club.IsAnon(q.White) ? true : club.IsAnon(q.Black) ? false
+            : Own(q.WhiteFide) && !Own(q.BlackFide) ? true : Own(q.BlackFide) && !Own(q.WhiteFide) ? false : null;
+        var list = new List<(Option O, int Distance)>();
+        foreach (var r in open)
+        {
+            var homeOwn = club.OwnsTeam(r.G.HomeTeam);
+            var homeWhite = HomeWhiteByRule(r.Source, r.G.Board);
+            var ownIsWhite = homeOwn ? homeWhite : !homeWhite;
+            if (ownWhite is { } ow && ow != ownIsWhite) continue;   // andere Farbe an diesem Brett
+            var inTime = q.Date is { } d && r.Date is { } rd ? Math.Abs(rd.DayNumber - d.DayNumber) <= DayTolerance
+                : q.Year is { } y && InSeason(r.Season, y);
+            var (wTeam, bTeam) = homeWhite ? (r.G.HomeTeam, r.G.AwayTeam) : (r.G.AwayTeam, r.G.HomeTeam);
+            var date = r.Date?.ToString("dd.MM.yyyy");
+            var label = $"{r.Season} · {r.League} · Runde {r.G.Round} · Brett {r.G.Board}" + (date is null ? "" : $" ({date})");
+            var distance = q.Date is { } qd && r.Date is { } rdd ? Math.Abs(rdd.DayNumber - qd.DayNumber) : 0;
+            list.Add((new Option(r.G.Id, label, date, wTeam, null, bTeam, null, "", club.OwnsTeam(wTeam), club.OwnsTeam(bTeam),
+                ownWhite != null && inTime, r.League, r.Season, Open: true), distance));
+        }
+        return list.OrderByDescending(x => x.O.Exact).ThenBy(x => x.Distance).ThenBy(x => x.O.Label).Select(x => x.O);
     }
 
     public async Task<List<Option>> ForAsync(Query q, LeagueClub? club, CancellationToken ct) => (await ForManyAsync(new[] { q }, ct, club))[0];

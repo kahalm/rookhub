@@ -220,6 +220,19 @@ describe('ImportReview — Ligapaarung (0.678.0)', () => {
     expect(ImportReview.restore(gone, r.snapshot(), true).games()[0].pairingId).toBe(42);
   });
 
+  // 0.740.0: leeres Brett der laufenden Runde — Mannschaften statt Spieler, die Spieler der Partie bleiben
+  it('leeres Brett der laufenden Runde: Text „noch nicht besetzt", Wahl lässt die Spieler stehen', () => {
+    const OPEN = { ...PAIR, id: 50, label: '2026/27 · 1. Klasse · Runde 2 · Brett 5 (10.10.2026)', white: 'Schwaz', black: 'Freibauer Innsbruck',
+      whiteFide: null, blackFide: null, open: true };
+    expect(pairingText(OPEN)).toBe('2026/27 · 1. Klasse · Runde 2 · Brett 5 (10.10.2026) — Schwaz – Freibauer Innsbruck, noch nicht besetzt');
+    const p: ClubPreview = { ...P(null), games: [{ ...P(null).games[0], pairings: [OPEN] }] };
+    const r = new ImportReview(p, true);
+    const before = r.games()[0].white;
+    r.setPairing(1, 50);
+    expect(r.games()[0].white).toEqual(before);
+    expect(r.games()[0].pairingId).toBe(50);
+  });
+
   it('Text der Auswahl: Spielplan-Namen, unsichere mit (?)', () => {
     expect(pairingText(PAIR)).toBe('2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026) — Hengl, Philip – Oberschmid, Patrik');
     expect(pairingText(OTHER)).toContain('(?)');

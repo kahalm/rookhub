@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.740.0", date: "2026-10-10", changes: [
+    { en: "LeagueHub: games of the current round can be assigned to a board yourself — the “League game” choice also offers the still empty boards of your own match (“… Board 5 (10.10.2026) — Schwaz – Freibauer, not yet filled”), in the colour that fits your side.",
+      de: "LeagueHub: Partien der laufenden Runde lassen sich selbst einem Brett zuordnen — die Auswahl „Ligapartie“ bietet auch die noch leeren Bretter der eigenen Begegnung an („… Brett 5 (10.10.2026) — Schwaz – Freibauer, noch nicht besetzt“), in der Farbe, die zur eigenen Seite passt." },
+  ] },
   { version: "0.743.0", date: "2026-10-10", changes: [
     { en: "Play-mode question (training or easy) has a new look: centred with a dimmed background and two tiles with icons, on phones a sheet at the bottom of the screen — the texts are unchanged. The endless start screen shows the three hearts without the “3 lives” label again.", de: "Die Frage nach der Spielweise (Training oder Einfach) hat ein neues Aussehen: mittig mit abgedunkeltem Hintergrund und zwei Kacheln mit Symbol, am Handy als Blatt am unteren Rand — die Texte sind unverändert. Der Endlos-Start zeigt die drei Herzen wieder ohne die Beschriftung „3 Leben“." },
   ] },

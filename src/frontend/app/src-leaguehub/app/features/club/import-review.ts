@@ -205,6 +205,7 @@ export class ImportReview {
     this.update(index, r => {
       const p = id == null ? undefined : r.game.pairings?.find(x => x.id === id);
       if (!p) return { ...r, pairingId: null };
+      if (p.open) return { ...r, pairingId: p.id, excluded: false };   // leeres Brett: Spieler bleiben
       const from = (s: ReviewSide, name: string, fide: string | null, own: boolean): ReviewSide => s.changed ? s : {
         ...s, name, fide, league: true, ambiguous: false, club: own, candidates: [], replace: this.defaultReplace(own, s.owner),
         changed: true, lastNameOnly: false, mega: false, alias: false, similar: [],
@@ -286,5 +287,6 @@ interface ReviewSnapshot {
 /** Wie eine Paarung in der Auswahl steht: „2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026) — Hengl – Muster". Die
  *  Namen sind die des öffentlichen Spielplans; „(?)" = Spieler oder Tag passen nicht ganz. */
 export function pairingText(p: ClubPairing): string {
+  if (p.open) return `${p.label} — ${p.white} – ${p.black}, noch nicht besetzt${p.exact ? '' : ' (?)'}`;
   return `${p.label} — ${p.white} – ${p.black}${p.exact ? '' : ' (?)'}`;
 }

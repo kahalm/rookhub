@@ -837,7 +837,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.pairingTouched = true;
     const p = value ? this.pairings().find(x => x.id === Number(value)) : undefined;
     this.pairingId.set(p?.id ?? null);
-    if (!p) return;
+    if (!p || p.open) return;   // leeres Brett der laufenden Runde: die Namen bleiben, wie sie sind
     const person = (name: string, fide: string | null, club: boolean): RosterPerson => ({ name, fide, teams: [], club, league: true });
     this.pickPerson('white', person(p.white, p.whiteFide, p.whiteOwnClub));
     this.pickPerson('black', person(p.black, p.blackFide, p.blackOwnClub));

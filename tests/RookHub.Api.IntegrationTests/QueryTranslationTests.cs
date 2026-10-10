@@ -1332,5 +1332,15 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         await Db.SaveChangesAsync();
         var pairings = await new RookHub.Api.Services.League.LeagueFixtureGames(Db).ForFixtureAsync(home, 88, 2, "Schwaz", default);
         Assert.Equal("club", Assert.Single(pairings).Source);
+
+        // 0.740.0: noch leere Bretter der eigenen Begegnung in der laufenden Runde (Join auf den Termin, Bereich, Meldeliste)
+        Db.LeagueRounds.Add(new LeagueRound { Tnr = 88, Round = 4, Date = new DateOnly(2026, 10, 10) });
+        var empty = new LeagueGame { Tnr = 88, Round = 4, MatchNo = 5, Board = 5, HomeTeam = "Schwaz", AwayTeam = "Absam", HomeColor = "w", Result = "" };
+        Db.LeagueGames.Add(empty);
+        Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 88, Team = "Schwaz", Name = "Fischer, Florian", FideId = "901" });
+        await Db.SaveChangesAsync();
+        var today = new RookHub.Api.Services.League.LeaguePairingFinder(Db) { Today = () => new DateOnly(2026, 10, 10) };
+        var open = await today.ForAsync(new("Fischer, Florian", "901", "Frolik, Michael", "777", null, 2026), home, default);
+        Assert.Contains(open, o => o.Id == empty.Id && o.Open && o.Exact);
     }
 }
