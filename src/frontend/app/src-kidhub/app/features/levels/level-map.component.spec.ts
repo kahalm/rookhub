@@ -6,6 +6,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { KidsLevel } from '../../core/kids-api.service';
 import { LevelMapComponent, NUDGE_MS, SCROLL_FROM_LEVEL } from './level-map.component';
 import { KidsApiService } from '../../core/kids-api.service';
+import { contrast, parseColor } from '@rh/testing/contrast';
 
 describe('LevelMapComponent', () => {
   const KEY = 'rh-kids-progress-v1';
@@ -64,6 +65,25 @@ describe('LevelMapComponent', () => {
     expect(locked!.classList).not.toContain('nudge');
     expect(el.querySelector('.toast')).toBeNull();
   }));
+
+  /** UI-Sweep 2026-10-10 (k-locked-contrast): Nummer, Schloss und Name gesperrter Stufen waren hellgrau auf fast Weiss. */
+  it('gesperrte Stufe: Text mit 4,5:1, Schloss als Abzeichen, Thema bleibt sichtbar, Kachel nicht durchsichtig', () => {
+    api.levels.and.returnValue(of([{ level: 1, theme: 'mate1', puzzleCount: 10 }, { level: 2, theme: 'promote', puzzleCount: 10 }]));
+    const f = TestBed.createComponent(LevelMapComponent);
+    f.detectChanges();
+    const locked = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('button.level.locked')!;
+    const style = getComputedStyle(locked);
+    expect(Number(style.opacity)).toBe(1);
+    const bg = parseColor(style.backgroundColor);
+    for (const part of ['.num', '.name']) {
+      const color = parseColor(getComputedStyle(locked.querySelector(part)!).color);
+      expect(contrast(color, bg)).withContext(part).toBeGreaterThanOrEqual(4.5);
+    }
+    const badge = locked.querySelector<HTMLElement>('.lock')!;
+    expect(badge.textContent).toContain('🔒');
+    expect(getComputedStyle(badge).position).toBe('absolute');
+    expect(locked.querySelector('.icon')!.textContent).not.toContain('🔒');
+  });
 });
 
 /**

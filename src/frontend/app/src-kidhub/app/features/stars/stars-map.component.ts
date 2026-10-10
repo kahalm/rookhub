@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { STAR_STAGES } from '../../core/kids-stars';
 import { KidsStarsStore } from '../../core/kids-stars.store';
-import { KID_BACK } from '../../shared/kids-layout';
+import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
 import { pieceGlyph } from './stars-play.component';
 
 /** Die Stufen der Sternenjagd: Figur und Zahl der Sterne; offen ist Stufe 1 und jede nach einer geschafften. */
@@ -36,7 +36,10 @@ import { pieceGlyph } from './stars-play.component';
           } @else {
             <span class="stage locked" [attr.aria-label]="('kids.stars.stage' | translate: { stage: s.stage }) + ' – ' + ('kids.levels.locked' | translate)">
               <span class="num">{{ s.stage }}</span>
-              <span class="glyph" aria-hidden="true">🔒</span>
+              <span class="lock" aria-hidden="true">🔒</span>
+              <!-- Auch gesperrt mit Figur: das Kind sieht, was kommt (k-locked-contrast). -->
+              <span class="glyph" aria-hidden="true">{{ glyph(s.piece) }}</span>
+              <span class="name">{{ 'kids.stars.piece.' + s.piece | translate }}</span>
               <span class="meta">{{ 'kids.stars.starRange' | translate: { min: s.counts[0], max: s.counts[s.counts.length - 1] } }}</span>
             </span>
           }
@@ -45,7 +48,7 @@ import { pieceGlyph } from './stars-play.component';
     </ol>
   `,
   styles: [KID_BACK, `
-    :host { display: block; max-width: 980px; margin: 0 auto; padding: 16px; }
+    :host { display: block; max-width: ${KID_PAGE_WIDTH.map}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
     .count { font-size: 1.15rem; font-weight: 800; white-space: nowrap; }
@@ -66,7 +69,12 @@ import { pieceGlyph } from './stars-play.component';
     a.stage:hover { transform: translateY(-2px); }
     .stage.done { background: var(--kid-good-bg); }
     .stage.current { outline: 4px solid var(--kid-green-strong); outline-offset: -4px; }
-    .stage.locked { opacity: .55; }
+    /* Gesperrt: lesbare Schrift (#5f6b7a) auf gedaempftem Grund, Schloss als Abzeichen, nur die Figur blass
+       (UI-Sweep 2026-10-10, k-locked-contrast — vorher die ganze Kachel auf 55 %, Text unter 4,5:1). */
+    .stage.locked { background: #f1f5f9; color: #5f6b7a; box-shadow: 0 4px 0 rgba(30, 70, 120, .14); }
+    .stage.locked .num, .stage.locked .meta { opacity: 1; }
+    .stage.locked .glyph { opacity: .45; }
+    .lock { position: absolute; top: 6px; right: 10px; font-size: 1.15rem; line-height: 1; }
     .num { position: absolute; top: 8px; left: 12px; font-weight: 800; opacity: .7; }
     .glyph { font-size: 2.8rem; line-height: 1.1; }
     .name { font-size: 1.1rem; font-weight: 800; }

@@ -22,8 +22,25 @@ import { TournamentDatePipe } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DIRECTORY_SOURCE_KINDS, DirectoryEntry } from './tournament-directory.model';
 import { directoryCalendarEvent, directoryChessResultsUrl } from './directory-calendar-event';
+
+const KNOWN_SOURCE_KINDS: ReadonlySet<string> = new Set(DIRECTORY_SOURCE_KINDS);
+
+/**
+ * Name einer Fundstelle („Gefunden auf") als i18n-Schluessel. Der Ankuendigungskalender von chess-results heisst wie
+ * chess-results (dieselbe Seite) und bekommt den Zusatz aus {@link directorySourceNote}; eine Quellart, die diese
+ * Seite noch nicht kennt, „Unbekannte Quelle" — vorher stand der rohe Schluessel da (UI-Sweep t-i18n-source).
+ */
+export function directorySourceLabel(kind: string): string {
+  if (kind === 'ChessResultsCalendar') return 'tournamentDirectory.source.ChessResults';
+  return `tournamentDirectory.source.${KNOWN_SOURCE_KINDS.has(kind) ? kind : 'Unknown'}`;
+}
+
+/** Grauer Klammerzusatz hinter dem Link, oder `null`. */
+export function directorySourceNote(kind: string): string | null {
+  return kind === 'ChessResultsCalendar' ? 'tournamentDirectory.source.ChessResultsCalendar' : null;
+}
 
 /**
  * Ein Turnier aus dem Verzeichnis als eigene Seite.
@@ -64,6 +81,9 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
   private readonly opener = inject(OpenTournamentService);
+
+  readonly sourceLabel = directorySourceLabel;
+  readonly sourceNote = directorySourceNote;
 
   /** Angemeldet? Ohne Konto (seit 0.643.0 erlaubt) gibt es kein Merken — das Turnier holt dann „Teilnehmer und Ergebnisse". */
   get loggedIn(): boolean { return this.auth.isLoggedIn; }

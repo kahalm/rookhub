@@ -71,7 +71,7 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
   it('am Freitag geht die Liste für HEUTE auf, alle noch ohne Haken; ein Kind ohne Nachnamen steht mit dem Vornamen da', async () => {
     await create(new Date(2026, 8, 25, 17, 5));
     expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-25');
-    expect(el().querySelector<HTMLInputElement>('input[name=date]')!.value).toBe('2026-09-25');
+    expect(el().querySelector<HTMLInputElement>('input[name=date]')!.value).toBe('25.09.2026');
     expect(el().textContent).toContain('Freitag, 25. September 2026');
     expect(ticks().map(t => t.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Auer Anna', 'Berger Ben', 'Carla']);
     expect(pressed()).toEqual(['false', 'false', 'false']);
@@ -279,10 +279,10 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
 
     // Auch das Datumsfeld fragt — und zeigt bei „nein" wieder den Tag, auf dem man steht.
     const input = el().querySelector<HTMLInputElement>('input[name=date]')!;
-    input.value = '2026-09-18';
+    input.value = '18.09.2026';
     input.dispatchEvent(new Event('change'));
     await settle();
-    expect(input.value).toBe('2026-09-25');
+    expect(input.value).toBe('25.09.2026');
 
     ask.and.returnValue(of(true));
     el().querySelector<HTMLButtonElement>('.pager .prev')!.click();
@@ -348,6 +348,51 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     expect(api.saveSession).not.toHaveBeenCalled();                                        // die Einheit gab es schon
     expect(fixture.componentInstance.session()!.photos.map(p => p.id)).toEqual([7]);
     expect(el().querySelector('.photos-section > [role=alert]')!.textContent).toContain('Nicht hochgeladen: Das ist kein Bild');
+  });
+
+  it('Tag der Einheit steht als TT.MM.JJJJ da (nicht im Format des Browsers); getippt und über den Kalender wählbar', async () => {
+    api.sessionDates.and.resolveTo(['2026-10-02']);
+    await create(new Date(2026, 9, 9, 17, 5));
+    const input = el().querySelector<HTMLInputElement>('input[name=date]')!;
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('09.10.2026');                                      // nicht 10/09/2026
+
+    input.value = '2.10.26';
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-10-02');
+    expect(input.value).toBe('02.10.2026');
+
+    input.value = '31.2.2026';                                                    // gibt es nicht
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    expect(input.value).toBe('02.10.2026');
+    expect(el().querySelector('.hint.err')!.textContent).toContain('TT.MM.JJJJ');
+
+    // Der Knopf öffnet die Auswahl des versteckten nativen Felds; dessen Wahl wechselt den Tag.
+    const native = el().querySelector<HTMLInputElement>('input.day-native')!;
+    const shown = jasmine.createSpy('showPicker');
+    (native as unknown as { showPicker: () => void }).showPicker = shown;
+    el().querySelector<HTMLButtonElement>('.day-pick')!.click();
+    expect(shown).toHaveBeenCalled();
+    native.value = '2026-10-09';
+    native.dispatchEvent(new Event('change'));
+    await settle();
+    expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-10-09');
+    expect(input.value).toBe('09.10.2026');
+    expect(el().querySelector('.hint.err')).toBeNull();
+  });
+
+  it('„Anwesenheit speichern" reicht über die volle Breite; der Foto-Hinweis steht als eigene Zeile unter dem Knopf', async () => {
+    await create(new Date(2026, 8, 25, 17, 5));
+    const bar = el().querySelector<HTMLElement>('.save-bar')!;
+    const save = bar.querySelector<HTMLElement>('.save')!;
+    const inner = bar.getBoundingClientRect();
+    expect(Math.round(save.getBoundingClientRect().width)).toBe(Math.round(inner.width));   // aus clubhub.scss
+    const upload = el().querySelector<HTMLElement>('.photos-section label.upload')!.getBoundingClientRect();
+    const hint = el().querySelector<HTMLElement>('.photo-hint')!;
+    expect(hint.textContent).toContain('Beim ersten Foto');
+    expect(hint.getBoundingClientRect().top).toBeGreaterThanOrEqual(upload.bottom + 8);
   });
 
   it('eine Gruppe ohne Kinder lädt zum Anlegen ein (mit der Gruppe vorausgewählt)', async () => {

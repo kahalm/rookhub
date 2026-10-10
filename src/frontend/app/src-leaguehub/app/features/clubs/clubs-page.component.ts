@@ -10,6 +10,14 @@ import { AdminClub, ClubInput, RhGroup } from '../../core/league.models';
 /** Höchstlängen wie der Server (`LeagueClubAdminService.MaxName/MaxTeamPrefix/MaxAnonName`). */
 export const CLUB_LIMITS = { name: 120, teamPrefix: 80, anonName: 60 } as const;
 
+/** Region und Quellen getrennt — in der Tabelle steht die Quelle als graue zweite Zeile (UI-Sweep 2026-10-10, l-clubs-table). */
+export function clubRegionName(region: string | null | undefined): string {
+  return region === 'bayern' ? 'Bayern' : 'Tirol';
+}
+export function clubRegionSources(region: string | null | undefined): string {
+  return region === 'bayern' ? 'Ligamanager + Schachkreis Zugspitze' : 'chess-results';
+}
+
 /** Die Region in Worten (0.704.0; vorher die Liga-Quelle). */
 export function clubRegionText(region: string | null | undefined): string {
   return region === 'bayern' ? 'Bayern (Ligamanager + Schachkreis Zugspitze)' : 'Tirol (chess-results)';
@@ -88,9 +96,9 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', region: 'tiro
                   <td class="club-name">{{ c.name }}
                     <span class="small show-s">{{ regionText(c.region) }} · anonym „{{ c.anonName }}"</span>
                   </td>
-                  <td class="hide-s">{{ c.anonName }}</td>
-                  <td class="hide-s">{{ c.teamPrefix }}</td>
-                  <td class="hide-s">{{ regionText(c.region) }}</td>
+                  <td class="hide-s nowrap">{{ c.anonName }}</td>
+                  <td class="hide-s nowrap">{{ c.teamPrefix }}</td>
+                  <td class="hide-s region">{{ regionName(c.region) }}<span class="region-src">{{ regionSources(c.region) }}</span></td>
                   <td class="num">{{ c.groups.length }}</td>
                   <td class="num">{{ c.clubGames }}</td>
                   <td class="hide-s">{{ date(c.createdAt) }}</td>
@@ -187,6 +195,8 @@ export class ClubsPageComponent implements OnInit {
   readonly allowed = !!this.auth.isAdmin && this.auth.has('league.manage');
   readonly limits = CLUB_LIMITS;
   readonly regionText = clubRegionText;
+  readonly regionName = clubRegionName;
+  readonly regionSources = clubRegionSources;
   readonly date = clubDate;
 
   readonly clubs = signal<AdminClub[]>([]);

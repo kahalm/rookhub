@@ -592,6 +592,7 @@
     "firstName": "First name",
     "lastName": "Last name",
     "searchPlayer": "Search player",
+    "searchPlayerHint": "Finds your FIDE and ChessResults ID automatically.",
     "noResults": "No results found.",
     "email": "Email",
     "emailHint": "Used to reset your password. Leave empty to remove it.",
@@ -782,6 +783,17 @@
       "updated": "Last updated: 1 October 2026",
       "tocTitle": "Contents",
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
+      "introLeagueHub": "LeagueHub (part of RookHub) prepares lineup forecasts for team matches and keeps the game database of participating clubs. The account is the same as on RookHub. This statement explains how personal data is processed under the GDPR.",
+      "introClubHub": "ClubHub (part of RookHub) is the club's card index for its children and young players. The account is the same as on RookHub. This statement explains how personal data is processed under the GDPR.",
+      "clubTitle": "ClubHub (card index)",
+      "clubIntro": "In ClubHub, the club's management and trainers keep a card for each child or young player. A card is not an account: the child does not need to be registered with us.",
+      "clubData": "Stored on a card: first name (required), last name, date or year of birth, level, FIDE ID and national player ID, the child's groups, optionally a photo with a marked face area for the portrait, and dated trainer notes on learning progress.",
+      "clubContacts": "Contacts: phone numbers and e-mail addresses, each with a note such as “mother” or “father”.",
+      "clubAttendance": "Attendance per training session (present or absent), the topic and content of the session, and photos of the session.",
+      "clubAccess": "Only signed-in club accounts with the matching role see the card index: management sees everything, trainers only the children of their own groups. Nothing of it is reachable without signing in; the server logs contain only ID numbers, no names.",
+      "clubPhotos": "Whether photos of children may be taken and stored is agreed between the club and the parents; ClubHub does not record a consent.",
+      "clubLink": "A child's own RookHub account is linked to its card only with a one-time code that the account itself redeems. The club then sees summarised training figures (puzzles, training goals, KidHub progress), no individual attempts. Both sides can remove the link.",
+      "clubRetention": "The data is stored on the operator's server and is not cached on the device. Deleting a card removes its contacts, notes, photo and attendance. If a trainer's account is deleted, the cards and notes stay with the club, without the trainer's name.",
       "kidIntro": "KidHub is the chess site for children. Here we explain in simple words which data we store and why. The detailed version for parents follows below.",
       "kidTitle": "The most important points",
       "kidDevice": "Without an account, your stars and your progress stay only on this device. We do not store them.",
@@ -4139,13 +4151,32 @@
       "showIgnored": "Show hidden ones",
       "rounds": "{{count}} rounds, {{from}} to {{to}}",
       "actionAria": "{{action}}: {{name}}",
-      "implausible": "Implausible dates"
+      "implausible": "Implausible dates",
+      "short": {
+        "bookmarked": "Saved",
+        "calendar": "Calendar",
+        "hide": "Hide",
+        "show": "Show",
+        "report": "Report"
+      }
     },
     "source": {
       "Unknown": "Unknown source",
       "ChessResults": "chess-results",
       "Fide": "FIDE calendar",
-      "Manual": "Entered by hand"
+      "Manual": "Entered by hand",
+      "ChessResultsCalendar": "announcement calendar",
+      "ItalianChessFederation": "Italian Chess Federation",
+      "SlovenianChessFederation": "Chess Federation of Slovenia",
+      "SlovakChessFederation": "Slovak Chess Federation",
+      "HungarianChessFederation": "Hungarian Chess Federation",
+      "CzechChessFederation": "Czech Chess Federation",
+      "PolishChessFederation": "Polish Chess Federation",
+      "GermanChessFederation": "German Chess Federation",
+      "EnglishChessFederation": "English Chess Federation",
+      "IrishChessUnion": "Irish Chess Union",
+      "FrenchChessFederation": "French Chess Federation",
+      "NorwegianChessFederation": "Norwegian Chess Federation"
     }
   },
   "clubhub": {
@@ -4188,6 +4219,7 @@
       "noSingleResult": "no individual result",
       "noSingleResultTooltip": "chess-results does not list an individual result for this tournament — waiting will not help.",
       "noName": "Your last name is missing from your profile — chess-results is searched by name, so there is nothing to look up.",
+      "noNameAction": "Add last name in profile",
       "sourceUnavailable": "chess-results could not be reached. What is shown is the last state fetched.",
       "empty": "No tournaments found under this name.",
       "loadError": "The history could not be loaded. Check your connection and try again.",
@@ -4211,7 +4243,7 @@
       "allSpeeds": "All",
       "pointsTooltip": "Points from games played. The number of games comes from the player card, not from the tournament round count.",
       "track": {
-        "add": "Track",
+        "add": "Track player",
         "addError": "The player couldn't be added.",
         "added": "{{name}} is now being tracked.",
         "help": "Follow any player: your child, a club mate, your next opponent — no account needed.",
@@ -4264,6 +4296,9 @@
     "courses": {
       "title": "Courses",
       "empty": "No courses for kids yet.",
+      "soon": "Courses are coming soon!",
+      "playLevels": "Play levels",
+      "playEndless": "Play endless",
       "progress": "{{done}} of {{total}} done",
       "completed": "Course complete!",
       "restart": "Start over"
@@ -4334,7 +4369,7 @@
       "tileHint": "One piece, many stars",
       "intro": "Eat all the stars – exactly one with every move!",
       "stage": "Stage {{stage}}",
-      "round": "Puzzle {{n}}/{{total}}",
+      "round": "Puzzle {{n}} of {{total}}",
       "task": "Eat all the stars – exactly one with every move!",
       "left": "{{count}} stars left",
       "completed": "Stage complete!",

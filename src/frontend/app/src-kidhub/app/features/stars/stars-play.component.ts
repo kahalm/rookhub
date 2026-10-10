@@ -15,7 +15,7 @@ import {
 import { KidsStarsStore } from '../../core/kids-stars.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
-import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_COORDS, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 
 /** Figurenzeichen fuer Stufenkarte und Kopfzeile (weisse Figuren, wie auf dem Brett). */
 export function pieceGlyph(piece: StarPiece): string {
@@ -65,9 +65,6 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       } @else if (stage(); as s) {
         <h1><span aria-hidden="true">{{ glyph(s.piece) }}</span> {{ 'kids.stars.stage' | translate: { stage: s.stage } }}
           · {{ 'kids.stars.piece.' + s.piece | translate }}</h1>
-        @if (!complete()) {
-          <span class="round">{{ 'kids.stars.round' | translate: { n: round() + 1, total: perStage } }}</span>
-        }
       }
     </header>
 
@@ -93,14 +90,25 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
             <ng-container [ngTemplateOutlet]="picker" />
             @if (!p.unique) { <p class="note">{{ 'kids.stars.free.manyWays' | translate }}</p> }
           }
+          @if (!free()) {
+            <!-- Aufgabe x von 6 als Balken ueber der Aufgabe, nicht verloren am rechten Rand der Kopfzeile
+                 (UI-Sweep 2026-10-10, k-task-pos). -->
+            <div class="rounds">
+              <div class="segments" aria-hidden="true" [style.--rounds]="roundSlots().length">
+                @for (n of roundSlots(); track n) { <span [class.on]="n <= round()"></span> }
+              </div>
+              <span class="round">{{ 'kids.stars.round' | translate: { n: round() + 1, total: perStage } }}</span>
+            </div>
+          }
           <p class="task">{{ 'kids.stars.task' | translate }}</p>
-          <p class="left" [attr.aria-label]="'kids.stars.left' | translate: { count: starsLeft().length }">
+          <!-- Grosse Sterne: gefressen gold, offen als grauer Umriss (k-stars-progress). -->
+          <p class="left" role="img" [attr.aria-label]="'kids.stars.left' | translate: { count: starsLeft().length }">
             @if (p.stars.length <= 10) {
               @for (s of p.solution; track s; let i = $index) {
-                <span [class.eaten]="i < step()">{{ i < step() ? '✔' : '⭐' }}</span>
+                <span [class.eaten]="i < step()">{{ i < step() ? '★' : '☆' }}</span>
               }
             } @else {
-              ⭐ {{ starsLeft().length }} / {{ p.stars.length }}
+              <span class="eaten">★</span> <span class="count">{{ starsLeft().length }} / {{ p.stars.length }}</span>
             }
           </p>
         </div>
@@ -167,12 +175,17 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
             </div>
     </ng-template>
   `,
-  styles: [KID_BACK, `
+  styles: [KID_BACK, KID_COORDS, `
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .round { margin-left: auto; font-size: 1.2rem; font-weight: 800; }
+    .rounds { max-width: 260px; }
+    .rounds .round { display: block; margin: 4px 0 0; font-size: .95rem; font-weight: 700; color: #4f5d6e; }
+    .segments { display: grid; grid-template-columns: repeat(var(--rounds, 6), 1fr); gap: 4px; }
+    .segments span { height: 10px; border-radius: 4px; box-sizing: border-box; border: 1.5px solid #7a8494; }
+    .segments span.on { background: var(--kid-green); border-color: var(--kid-green-strong); }
     .info { text-align: center; font-size: 1.2rem; }
     .puzzle {
       display: grid; justify-content: center; align-items: start; column-gap: 28px; row-gap: 14px;
@@ -199,13 +212,13 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     .chip.glyph-chip { font-size: 1.8rem; line-height: 1; }
     .chip.on { background: var(--kid-green-strong); color: #fff; }
     .task { margin: 0; font-size: 1.5rem; font-weight: 800; line-height: 1.3; color: var(--kid-title); }
-    .left { margin: 0; font-size: 1.6rem; letter-spacing: 4px; }
-    .left .eaten { color: var(--kid-green-strong); font-weight: 800; }
+    .left { margin: 0; font-size: 30px; line-height: 1.15; letter-spacing: 6px; color: #7a8494; }
+    .left .eaten { color: #f5b400; text-shadow: 0 1px 0 #a87400; }
+    .left .count { font-size: 1.4rem; font-weight: 800; letter-spacing: 0; color: var(--kid-title); vertical-align: middle; }
     .board {
       grid-area: board; width: var(--kid-board, 640px);
       border-radius: 14px; overflow: hidden; box-shadow: 0 6px 0 var(--kid-shadow);
     }
-    .board ::ng-deep .cg-wrap coords { font-size: 11px; opacity: 1; }
     .side { grid-area: side; display: flex; flex-direction: column; gap: 14px; }
     .bubble {
       display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 22px;
@@ -252,14 +265,16 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       }
       .board { width: 100%; min-width: 0; }
       .task, .left { text-align: center; }
+      .rounds { align-self: center; width: 100%; }
+      .rounds .round { text-align: center; }
       .pick { justify-content: center; }
       .task { font-size: 1.3rem; }
-      .round { margin-left: 0; }
+      .head .round { margin-left: 0; }
     }
     @media ${KID_SHORT} {
       .head { flex-wrap: nowrap; gap: 12px; }
       .head h1 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1.25rem; }
-      .back, .round { flex-shrink: 0; white-space: nowrap; }
+      .back, .head .round { flex-shrink: 0; white-space: nowrap; }
     }
   `],
 })
@@ -268,6 +283,8 @@ export class StarsPlayComponent {
   private readonly router = inject(Router);
 
   readonly perStage = STARS_PER_STAGE;
+  /** Die Abschnitte des Fortschrittsbalkens (0 … Aufgaben−1). */
+  readonly roundSlots = computed(() => Array.from({ length: this.stage()?.counts.length ?? STARS_PER_STAGE }, (_, i) => i));
   readonly glyph = pieceGlyph;
   /** Zufall der Aufgaben — Tests setzen einen festen. */
   rng: Rng = Math.random;

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../core/club-api.service';
+import { FilePickDirective } from './file-pick.directive';
 
 /** Gründe des Servers beim Stapel-Upload → Text. */
 export function batchErrorText(reason: string | undefined): string {
@@ -22,6 +23,7 @@ export function batchErrorText(reason: string | undefined): string {
 @Component({
   selector: 'lh-batch-upload',
   standalone: true,
+  imports: [FilePickDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <details class="batch" [open]="!!files().length || !!done()">
@@ -34,7 +36,7 @@ export function batchErrorText(reason: string | undefined): string {
         <button type="button" class="btn-sec" (click)="reset()">Noch einen Stapel</button>
       } @else {
         <label class="field">Bilder
-          <input type="file" multiple accept="image/*,application/pdf" [disabled]="busy()" (change)="pick($event)" />
+          <input type="file" lhFilePick multiple accept="image/*,application/pdf" [disabled]="busy()" (change)="pick($event)" />
         </label>
         <label class="field">Kommentar <span class="muted small">(optional, z. B. Runde oder Mannschaft)</span>
           <textarea rows="2" maxlength="1000" [disabled]="busy()" [value]="comment()" (input)="comment.set($any($event.target).value)"></textarea>

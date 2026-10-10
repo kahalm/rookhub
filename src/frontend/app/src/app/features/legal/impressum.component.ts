@@ -50,6 +50,7 @@ import { legalBackLink } from './legal-site';
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }
+    .back a::before { content: '← ' / ''; }
   `]
 })
 export class ImpressumComponent {

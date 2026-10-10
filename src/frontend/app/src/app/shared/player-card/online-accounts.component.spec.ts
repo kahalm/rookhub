@@ -210,7 +210,7 @@ describe('OnlineAccountsComponent', () => {
     expect(el().querySelector('.sugg')?.textContent).toContain('Nichts Neues gefunden.');
 
     api.acceptSuggestion.and.resolveTo(SURE);
-    (Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button')).find(b => b.textContent?.includes('gesichert')))!.click();
+    (Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button')).find(b => b.textContent?.includes('Gesichert')))!.click();
     await fixture.whenStable();
     expect(api.acceptSuggestion).toHaveBeenCalledWith(3, true);
     expect(changed).toBe(1);                                                        // Karte lädt neu, das Konto steht dann da

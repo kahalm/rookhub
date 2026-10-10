@@ -97,14 +97,16 @@ h3 { font-size: 19px; font-weight: 600; }
 .account .btn { border-color: var(--linen-muted); color: var(--linen-ink); background: transparent; min-height: 36px; padding: 6px 12px; }
 .account .btn:hover { background: var(--linen-ink); color: var(--linen); }
 .lede { margin: 4px auto 0; color: var(--linen-muted); font-size: 15px; }
-/* Reiter stehen auf der Unterkante des Einbands; der aktive hat die Farbe der Seite und geht in sie über. */
+/* Reiter stehen auf der Unterkante des Einbands; der aktive hat die Farbe der Seite und geht in sie über.
+   Aktiv heißt NUR Fläche und Farbe (UI-Sweep c-tabs): gleiche Schrift, gleiche Polster — vorher hatte der aktive
+   unten 3 px mehr und saß damit höher als der andere. */
 .tabs { display: flex; gap: 4px; margin-top: 16px; align-items: flex-end; }
 .tabs a {
   font: 600 18px/1 var(--slab); text-decoration: none; color: var(--linen-ink);
-  padding: 10px 18px 9px; border-radius: 8px 8px 0 0; background: rgba(255, 255, 255, 0.1);
+  padding: 10px 18px 12px; border-radius: 8px 8px 0 0; background: rgba(255, 255, 255, 0.1);
 }
 .tabs a:hover { background: rgba(255, 255, 255, 0.2); }
-.tabs a.on { background: var(--paper); color: var(--ink); padding-bottom: 12px; }
+.tabs a.on, .tabs a.on:hover { background: var(--paper); color: var(--ink); }
 .top.no-tabs { padding-bottom: 16px; }
 
 main.wrap { padding-top: 22px; padding-bottom: 28px; min-height: 55vh; }
@@ -248,6 +250,10 @@ a.chip:hover { border-color: var(--ink); }
   flex-wrap: nowrap;
 }
 .form-save .btn.primary { flex: 1 1 auto; }
+/* Die Leiste klebt unten und deckt ab, was darunter liegt — ein fokussiertes Feld (Tab, Tastatur am Handy) soll ÜBER
+   ihr stehen, nicht unter ihr (UI-Sweep c-form-mobile: nach der Personennummer verschwanden FIDE-Nummer und „Bild"
+   unter der zweizeiligen Leiste). Abstand = Höhe der Leiste plus Luft. */
+html:has(.form-save, .save-bar) { scroll-padding-bottom: 96px; }
 .photo-field { display: grid; gap: 8px; justify-items: start; }
 .photo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
 .photo-label { font-size: 15px; color: var(--muted); }
@@ -295,14 +301,15 @@ h3.inline { display: inline; }
 .matrix-scroll { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
 .matrix { border-collapse: collapse; width: 100%; font-size: 16px; }
 .matrix th, .matrix td { padding: 8px 8px; border-top: 1px solid var(--line); text-align: center; white-space: nowrap; }
-.matrix thead th { border-top: 0; font-weight: 400; color: var(--muted); font-size: 14px; vertical-align: bottom; }
+.matrix thead th { border-top: 0; font-weight: 400; color: var(--muted); font-size: 14px; vertical-align: baseline; }
 .matrix thead th a { text-decoration: none; display: inline-block; padding: 6px 2px; }
 .matrix thead th a:hover { color: var(--ink); text-decoration: underline; }
 .matrix th.name, .matrix td.name { text-align: left; position: sticky; left: 0; background: var(--card); min-width: 9.5rem; white-space: normal; }
 .matrix th.name { font-weight: 400; }
 .matrix th.name a { text-decoration: none; display: inline-block; padding: 4px 0; }
 .matrix th.name a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.matrix td.rate { color: var(--muted); font-size: 15px; text-align: right; }
+.matrix td.rate { color: var(--muted); font-size: 15px; }
+.matrix .rate { text-align: right; }                    /* Kopf „da" steht über seinen rechtsbündigen Werten */
 .matrix tr.coach-head th { padding-top: 12px; font: 600 14px/1.2 var(--slab); color: var(--muted); text-align: left; position: static; }
 .cell { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; font-weight: 700; font-size: 15px; }
 .cell.present { background: var(--ok-soft); color: var(--ok); }
@@ -314,6 +321,20 @@ h3.inline { display: inline; }
 /* ---- Anwesenheit abhaken ------------------------------------------------------------------- */
 .roll-head { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 12px; margin: 14px 0 12px; }
 .field.done { margin: 0 0 16px; }
+/* Tag der Einheit: Textfeld TT.MM.JJJJ, rechts der Kalender-Knopf; das native Datumsfeld dahinter ist unsichtbar und
+   liefert nur die Auswahl (UI-Sweep c-date-us). */
+.day-input { position: relative; display: block; }
+.day-input > input[name] { padding-right: 50px; }
+.day-pick {
+  position: absolute; top: 2px; right: 2px; bottom: 2px; width: 44px; display: grid; place-items: center;
+  border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; padding: 0;
+}
+.day-pick:hover { color: var(--ink); }
+.day-pick svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.day-input .day-native {
+  position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0;
+  opacity: 0; pointer-events: none;
+}
 .field.done textarea { min-height: 76px; }
 /* Trainingstagebuch auf der Gruppenseite */
 .diary h2 { margin-bottom: 4px; }
@@ -344,7 +365,9 @@ h3.inline { display: inline; }
 .tick[aria-pressed="true"] .box svg { stroke-dashoffset: 0; transition: stroke-dashoffset .18s ease-out; }
 .tick b { font-weight: 700; }
 .save-bar { position: sticky; bottom: 0; background: var(--paper); padding: 12px 0; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; border-top: 1px solid var(--line); }
-.save-bar .btn.primary { flex: 1 1 14rem; min-height: 52px; font-size: 18px; }
+.save-bar .btn.primary { flex: 1 0 100%; min-height: 52px; font-size: 18px; }
+/* Leere Meldungen nahmen mit ihrem Abstand 28 px — der Knopf endete vor der Inhaltskante (UI-Sweep c-save-btn). */
+.save-bar > span:empty { display: none; }
 
 /* Zilla Slab setzt von sich aus Mediävalziffern — in „3 von 5 da" und im Code sollen sie auf der Zeile stehen.
    Steht NACH allen font-Kurzschreibweisen: die setzen font-variant-numeric zurück. */
@@ -353,6 +376,7 @@ h1, h2, h3, .brand, .tabs a, .today strong, .tally strong, .stats dd, .code, .re
 /* ---- Fotos zur Einheit -------------------------------------------------------------------- */
 .photos-section { margin: 18px 0 4px; }
 .photos-section h2 { margin-bottom: 8px; }
+.photo-hint { margin: 8px 0 0; }
 .photos { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
 .photos.small { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); margin: 6px 0 0; }
 .photos li { position: relative; }
@@ -384,6 +408,44 @@ label.upload.disabled { opacity: .5; }
 .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; cursor: default; }
 .lightbox-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; font: 700 26px/1 var(--body); color: #fff; background: rgba(255, 255, 255, 0.18); cursor: pointer; }
 
+/* ---- Anmelden / Registrieren / Passwort (RookHubs Masken über @rh/*) in ClubHub-Farben ------------------
+   Die Masken sind Material-Karten aus RookHub (graublau, blau-violetter Knopf). Hier — nur in diesem Bündel — bekommt
+   die Karte die Farben und Schriften der Kartei (UI-Sweep c-login-style): System-Tokens des Themas auf der Karte
+   umgestellt, damit Fokus-Rahmen, Knopf, Häkchen und Links dieselbe Primärfarbe tragen; Überschrift in Zilla Slab,
+   Knopf eckig wie `.btn`. Die Komponente selbst bleibt unverändert. */
+:is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card {
+  --mat-sys-primary: var(--primary);
+  --mat-sys-on-primary: var(--primary-ink);
+  --mat-sys-on-surface: var(--ink);
+  --mat-sys-on-surface-variant: var(--muted);
+  --mat-sys-outline: var(--line);
+  --mat-sys-body-large-font: var(--body);
+  --mat-sys-body-medium-font: var(--body);
+  --mat-sys-body-small-font: var(--body);
+  --mat-sys-label-large-font: var(--body);
+  --mat-card-elevated-container-color: var(--card);
+  --mat-card-elevated-container-elevation: none;
+  --mat-card-elevated-container-shape: 10px;
+  --mat-card-title-text-font: var(--slab);
+  --mat-card-title-text-size: 26px;
+  --mat-card-title-text-weight: 700;
+  --mat-card-title-text-line-height: 1.15;
+  --mat-button-protected-container-shape: 8px;
+  --mat-button-filled-container-shape: 8px;
+  --mat-button-text-label-text-color: var(--ink);
+  --mat-form-field-outlined-container-shape: 8px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--body);
+}
+:is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card .mat-mdc-card-actions a {
+  text-decoration: underline; text-underline-offset: 3px;
+}
+/* Hinweis-Kasten der Maske: grüne statt hellblaue Kante (Spezifität über der der Komponente). */
+:is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card .auth-required {
+  background: color-mix(in srgb, var(--primary) 12%, transparent); border-left-color: var(--primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tick[aria-pressed="true"] .box svg { transition: none; }
   .today { transform: none; }
@@ -393,7 +455,7 @@ label.upload.disabled { opacity: .5; }
   body { font-size: 16px; }
   h1 { font-size: 27px; }
   .brand { font-size: 29px; }
-  .tabs a { padding: 10px 14px 9px; font-size: 17px; }
+  .tabs a { padding: 10px 14px 12px; font-size: 17px; }
   .register { grid-template-columns: 1fr; }
   .register > .letter { position: static; font-size: 26px; padding: 0 0 4px 2px; }
   .kid { grid-template-columns: 1fr; }
@@ -412,6 +474,7 @@ label.upload.disabled { opacity: .5; }
   /* Beim Anlegen stehen drei Knöpfe in der Leiste: Speichern + Abbrechen oben, „Weiteres Kind anlegen" darunter. */
   .form-save { margin: 0 -14px; padding: 10px 14px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; }
   .form-save .save-next { grid-column: 1 / -1; grid-row: 2; }
+  html:has(.form-save) { scroll-padding-bottom: 140px; }               /* zwei Reihen Knöpfe */
   .avatar.portrait { width: 76px; height: 76px; }
   .face-stage img { max-height: 360px; }
   .sheet-head.has-photo { gap: 4px 12px; }

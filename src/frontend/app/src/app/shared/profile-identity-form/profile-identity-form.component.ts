@@ -94,20 +94,25 @@ export interface PlayerSearchResult {
         <input matInput [(ngModel)]="profile.lastName" [ngModelOptions]="{ standalone: true }"
                name="lastName" autocomplete="family-name">
       </mat-form-field>
-      <button mat-stroked-button type="button" class="pif-search" (click)="searchPlayer()"
-              [disabled]="!searchable || searching">
-        <!-- Lupe und Spinner stehen je ALLEIN in ihrem Zweig, der Text ausserhalb: nur einen
-             Block mit genau einem Wurzelelement projiziert MatButton in seinen Icon-Slot (18 px,
-             Aussenabstand). Standen Icon UND Text im selben Zweig, ging der ganze Block in den
-             Text-Slot — 24-px-Lupe ohne Abstand, und der Knopf sprang beim Suchen in der Breite
-             (Compiler-Warnung NG8011). -->
-        @if (searching) {
-          <mat-spinner matButtonIcon diameter="18" />
-        } @else {
-          <mat-icon>search</mat-icon>
-        }
-        {{ 'profile.searchPlayer' | translate }}
-      </button>
+      <!-- Knopf auf Feldhoehe neben dem Nachnamen, darunter was er tut (UI-Sweep t-profile-search): 40 px neben
+           56-px-Feldern und ohne Erklaerung klebte er rechts, am Handy stand er als kleine Pille verloren da. -->
+      <div class="pif-search-box">
+        <button mat-stroked-button type="button" class="pif-search" (click)="searchPlayer()"
+                [disabled]="!searchable || searching" aria-describedby="pif-search-hint">
+          <!-- Lupe und Spinner stehen je ALLEIN in ihrem Zweig, der Text ausserhalb: nur einen
+               Block mit genau einem Wurzelelement projiziert MatButton in seinen Icon-Slot (18 px,
+               Aussenabstand). Standen Icon UND Text im selben Zweig, ging der ganze Block in den
+               Text-Slot — 24-px-Lupe ohne Abstand, und der Knopf sprang beim Suchen in der Breite
+               (Compiler-Warnung NG8011). -->
+          @if (searching) {
+            <mat-spinner matButtonIcon diameter="18" />
+          } @else {
+            <mat-icon>search</mat-icon>
+          }
+          {{ 'profile.searchPlayer' | translate }}
+        </button>
+        <span class="pif-search-hint muted" id="pif-search-hint">{{ 'profile.searchPlayerHint' | translate }}</span>
+      </div>
     </div>
 
     @if (results) {
@@ -204,7 +209,14 @@ export interface PlayerSearchResult {
        Hinweis-Bereich unter sich wie die Felder, und das schwebende Label des Folgefelds
        ("Anzeigename") ragt rund 7 px ueber dessen Oberkante — es lief durch die Unterkante des
        Knopfs. Auf dem Desktop (eine Zeile, Felder 78 px hoch) aendert er nichts. */
-    .pif-search { margin-top: 10px; margin-bottom: 14px; align-self: flex-start; }
+    .pif-search-box { display: flex; flex-direction: column; gap: 4px; flex: 0 1 auto; margin-bottom: 14px; }
+    .pif-search { height: 56px; }
+    .pif-search-hint { font-size: 12px; max-width: 16rem; }
+    /* Am Handy (umgebrochen) volle Breite statt einer kleinen Pille am Zeilenende. */
+    @media (max-width: 600px) {
+      .pif-search-box { flex: 1 1 100%; }
+      .pif-search-hint { max-width: none; }
+    }
     /* mat-spinner traegt keine .mat-icon-Klasse, die Icon-Offsets des Outlined-Knopfs (-8/8 px)
        greifen also nicht — nachgestellt, damit der Knopf beim Suchen nicht in der Breite springt. */
     .pif-search mat-spinner { margin: 0 8px 0 -8px; }

@@ -100,9 +100,11 @@ interface TurnierProfile {
           <h2>{{ 'turnier.profile.accountTitle' | translate }}</h2>
           <p class="muted">{{ 'turnier.profile.accountText' | translate }}</p>
           <div class="account-links">
-            <trn-rookhub-link path="profile">{{ 'turnier.profile.changePassword' | translate }}</trn-rookhub-link>
+            <!-- Eine Zeile, mittig: Passwort als Umriss-Knopf, Loeschen als roter Text-Knopf — es ist die gefaehrliche
+                 der beiden Aktionen und darf nicht gleichrangig aussehen (UI-Sweep t-profile-links). -->
+            <trn-rookhub-link class="pw-link" path="profile">{{ 'turnier.profile.changePassword' | translate }}</trn-rookhub-link>
             <!-- Die eigene Loeschseite erklaert, was verschwindet, und fuehrt dann nach RookHub. -->
-            <a routerLink="/account-deletion" class="delete-link">{{ 'turnier.profile.deleteAccount' | translate }}</a>
+            <a mat-button routerLink="/account-deletion" class="delete-link">{{ 'turnier.profile.deleteAccount' | translate }}</a>
           </div>
         </mat-card>
       }
@@ -137,8 +139,14 @@ interface TurnierProfile {
 
     .actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
     .account p { margin: 0 0 0.5rem; }
-    .account-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
-    .delete-link { padding: 6px 0; color: var(--mat-sys-primary); text-underline-offset: 2px; }
+    .account-links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.5rem 1rem; }
+    .pw-link ::ng-deep .rh-link {
+      display: inline-flex; align-items: center; height: 40px; padding: 0 24px; box-sizing: border-box;
+      border: 1px solid var(--mat-sys-outline); border-radius: 20px;
+      text-decoration: none; font-weight: 500; font-size: 0.875rem;
+    }
+    .pw-link ::ng-deep .rh-link:hover { background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent); }
+    .delete-link.mat-mdc-button { color: var(--rh-error); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
     .card.failed p { margin: 0; }

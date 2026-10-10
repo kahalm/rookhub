@@ -23,6 +23,9 @@ registerFormatLocaleData();
  * <p>Bewusst NICHT uebernommen: der `visitorInterceptor` — die anonyme Sitzungs-Id zaehlt geloeste
  * Puzzles, wofuer es hier kein Gegenstueck gibt.</p>
  */
+/** Startseite der Turnierseite (der Kalender, `''` leitet dorthin um). */
+export const TURNIER_HOME = '/tournaments/calendar';
+
 export const turnierConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
@@ -35,8 +38,9 @@ export const turnierConfig: ApplicationConfig = {
     provideRhHttpClient(),
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub; das Profil hier hat aber keine Karte „Konto loeschen" — die Loeschseite verweist
-    // auf RookHubs Profil (Codereview UX-023).
-    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
+    // auf RookHubs Profil (Codereview UX-023). Ohne Schritt zurueck fuehrt der Ruecklink auf den Kalender, die Startseite
+    // hier — auch abgemeldet offen, die Anmeldung ist hier kein Ziel (UI-Sweep 2026-10-10, x-back-login).
+    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub', back: TURNIER_HOME }) },
     // Die Anmeldemaske ist hier die Startseite jedes neuen Besuchers: sie sagt, was die Seite bietet und dass das
     // RookHub-Konto gilt; die Registrierung, dass das neue Konto auch in RookHub gilt (Codereview UX-027).
     { provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login', register: 'turnier.authIntro.register' } },

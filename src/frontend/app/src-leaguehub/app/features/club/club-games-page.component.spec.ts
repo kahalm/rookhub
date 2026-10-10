@@ -153,8 +153,9 @@ describe('ClubGamesPageComponent', () => {
   }));
 
   // UX-035: bei 390 px lag die Aktionsspalte (nowrap) 177 px rechts außerhalb — „Bearbeiten“/„Löschen“ nur durch
-  // unsichtbares Querwischen erreichbar. Unter 640 px Containerbreite stehen sie jetzt in einer eigenen Zeile darunter.
-  it('am Handy (390 px) stehen die Aktionen in einer eigenen Zeile, die Tabelle läuft nicht quer über (UX-035)', async () => {
+  // unsichtbares Querwischen erreichbar. Seit dem UI-Sweep 2026-10-10 (l-club-mobile) ist jede Partie am Handy eine Karte:
+  // „Weiß – Schwarz“, Ergebnis rechts, Jahr · Eröffnung grau, „Nachspielen“ und ⋮ rechtsbündig.
+  it('am Handy (390 px) eine Karte je Partie, die Tabelle läuft nicht quer über (UX-035, l-club-mobile)', async () => {
     api.list.and.resolveTo({ total: 1, page: 1, pageSize: 50, items: [
       G(7, { white: 'Mustermann-Huber, Maximilian', whiteFide: '900', whiteElo: 1860, anonymized: false, canDelete: true,
         analysis: { status: 'done', analyzed: 22, total: 22, accuracyWhite: 87.4, accuracyBlack: 71.6 } })] });
@@ -168,17 +169,38 @@ describe('ClubGamesPageComponent', () => {
     await (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready;   // … und gemessen wird mit ihr
     const visible = (e: Element | null) => !!e && getComputedStyle(e).display !== 'none';
     const game = el.querySelector('tbody tr.game') as HTMLElement;
-    const acts = el.querySelector('tbody tr.acts-row') as HTMLElement;
+    const card = game.querySelector('td.card-cell') as HTMLElement;
     expect(visible(game.querySelector('td.acts'))).toBeFalse();
-    expect(visible(acts)).toBeTrue();
-    const labels = Array.from(acts.querySelectorAll('.btn-link')).map(b => b.textContent?.trim());
+    expect(visible(card)).toBeTrue();
+    expect(card.querySelector('.gc-names')?.textContent).toContain('Mustermann-Huber, Maximilian');
+    expect(card.querySelector('.gc-names')?.textContent).toContain('Hengl, Philip');
+    expect(card.querySelector('.gc-result')?.textContent?.trim()).toBe('1–0');
+    expect(card.querySelector('.gc-meta')?.textContent?.trim()).toBe('2024 · 1.e4 c5 2.Sf3 d6');
+    const labels = Array.from(card.querySelectorAll('.gc-acts .btn-link')).map(b => b.textContent?.trim());
     expect(labels).toEqual(['Nachspielen', '⋮']);                         // der Rest steckt im Menü (0.678.0)
+    expect(card.getBoundingClientRect().right - (card.querySelector('.gc-acts .more-btn') as HTMLElement).getBoundingClientRect().right)
+      .toBeLessThan(12);                                                  // rechtsbündig
     expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
-    // breit wie bisher: Aktionen in der Spalte, keine eigene Zeile
+    // breit wie bisher: Aktionen in der Spalte, keine Karte
     el.style.width = '900px';
     expect(visible(game.querySelector('td.acts'))).toBeTrue();
-    expect(visible(acts)).toBeFalse();
+    expect(visible(card)).toBeFalse();
   });
+
+  // UI-Sweep 2026-10-10 (l-club-table): die Spalte „Analyse“ zeigte nur „–“.
+  it('Spalte „Analyse“ nur, wenn mindestens eine Partie einen Wert hat', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const heads = () => Array.from(el.querySelectorAll('thead th')).map(t => t.textContent?.trim());
+    expect(heads()).not.toContain('Analyse');
+    expect(el.querySelectorAll('tbody tr.game')[0].querySelectorAll('td').length).toBe(8);   // 6 + Aktionen + Karte
+    expect(el.querySelector('tbody tr.game td.opening')?.getAttribute('title')).toBe('1.e4 c5 2.Sf3 d6');
+    fixture.componentInstance.items.update(xs => [{ ...xs[0], analysis: { status: 'running', analyzed: 5, total: 22,
+      accuracyWhite: null, accuracyBlack: null } }, ...xs.slice(1)]);
+    fixture.detectChanges();
+    expect(heads()).toContain('Analyse');
+  }));
 
   it('Löschen fragt nach und nimmt die Zeile heraus', fakeAsync(() => {
     const el = create();

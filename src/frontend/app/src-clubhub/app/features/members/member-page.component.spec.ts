@@ -443,6 +443,8 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     api.addNote.and.resolveTo(MEMBER({ noteEntries: [{ id: 4, text: 'rechnet zwei Züge', createdAt: '2026-09-30T10:00:00Z', author: 'tina', canDelete: true }] }));
     api.deleteNote.and.resolveTo(MEMBER({ noteEntries: [] }));
     await create('7');
+    // Kurzer Platzhalter — der lange („…, übt Matt mit zwei Tü…") wurde am Handy mitten im Wort abgeschnitten.
+    expect(el().querySelector<HTMLInputElement>('.note-input')!.placeholder).toBe('z. B. kann die Gabel');
     type('.note-input', ' rechnet zwei Züge ');
     el().querySelector<HTMLButtonElement>('.add-note')!.click();
     await settle();

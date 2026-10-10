@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
@@ -19,6 +19,13 @@ export function broadcastStatus(b: Broadcast, now = new Date()): string {
   if (b.finished) return `fertig — ${games}`;
   if (!b.importedAt) return b.startsAt && new Date(b.startsAt) > now ? 'beginnt noch' : 'wird demnächst eingespielt';
   return `läuft — ${games}, alle 6 Stunden nachgeholt`;
+}
+
+/** Filter der Liste: „nur mit Ligaspielern" (mindestens eine Partie) und Suche in Name und Ort, ohne Groß/klein. */
+export function filterBroadcasts(items: Broadcast[], onlyLeague: boolean, query: string): Broadcast[] {
+  const q = query.trim().toLowerCase();
+  return items.filter(b => (!onlyLeague || b.games > 0)
+    && (!q || b.name.toLowerCase().includes(q) || (b.location ?? '').toLowerCase().includes(q)));
 }
 
 /** Absage beim Hinzufügen als Satz. */
@@ -62,20 +69,38 @@ export function broadcastErrorText(reason: string | undefined): string {
         @if (note(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
         @if (error()) { <p class="err">{{ error() }}</p> }
         @if (loading() && !items().length) { <p class="muted">Lade …</p> }
-        <ul class="bc-list">
-          @for (b of items(); track b.tourId) {
-            <li>
-              <div class="acc-row">
-                <a [href]="b.url" target="_blank" rel="noopener">{{ b.name }}</a>
-                @if (b.manual) { <span class="tag">per Link</span> }
-              </div>
-              <p class="small muted">{{ dates(b) }}@if (b.location) { — {{ b.location }} }</p>
-              <p class="small" [class.err]="!!b.error">{{ status(b) }}</p>
-            </li>
-          } @empty {
-            @if (!loading() && !error()) { <li class="muted">Noch keine Übertragung vorgemerkt — die Suche läuft im Hintergrund.</li> }
+        <!-- UI-Sweep 2026-10-10 (l-broadcasts): kompakte Zeilen statt hoher Karten, oben Suche und „nur mit Ligaspielern" (an) -->
+        @if (items().length) {
+          <div class="bc-tools">
+            <label class="bc-only"><input type="checkbox" [checked]="onlyLeague()" (change)="onlyLeague.set($any($event.target).checked)" />
+              nur mit Ligaspielern</label>
+            <input type="search" class="bc-search" placeholder="Suchen …" aria-label="Übertragungen suchen" [value]="query()"
+                   (input)="query.set($any($event.target).value)" />
+            @if (hiddenCount()) { <span class="small muted">{{ hiddenCount() }} ausgeblendet</span> }
+          </div>
+        }
+        <div class="roster-scroll"><table class="rtable bc-list">
+          @if (shown().length) {
+            <thead><tr><th>Übertragung</th><th>Zeitraum</th><th class="hide-s">Ort</th><th class="num">Partien</th></tr></thead>
           }
-        </ul>
+          <tbody>
+            @for (b of shown(); track b.tourId) {
+              <tr [attr.title]="status(b)">
+                <td><a [href]="b.url" target="_blank" rel="noopener">{{ b.name }}</a>
+                  @if (b.manual) { <span class="tag">per Link</span> }
+                  @if (b.error || !b.finished) { <span class="bc-state small" [class.err]="!!b.error">{{ status(b) }}</span> }</td>
+                <td class="muted nowrap">{{ dates(b) }}</td>
+                <td class="muted hide-s">{{ b.location }}</td>
+                <td class="num">{{ b.games }}</td>
+              </tr>
+            } @empty {
+              @if (!loading() && !error()) {
+                <tr><td class="muted" colspan="4">{{ items().length ? 'Keine Übertragung passt zur Auswahl.'
+                  : 'Noch keine Übertragung vorgemerkt — die Suche läuft im Hintergrund.' }}</td></tr>
+              }
+            }
+          </tbody>
+        </table></div>
       </section>
     }
   `,
@@ -91,6 +116,11 @@ export class BroadcastsPageComponent implements OnInit {
   readonly link = signal('');
   readonly adding = signal(false);
   readonly note = signal<{ text: string; err: boolean } | null>(null);
+  /** Vorgabe an: die vielen „0 Partien mit Ligaspielern" verdeckten die, um die es geht. */
+  readonly onlyLeague = signal(true);
+  readonly query = signal('');
+  readonly shown = computed(() => filterBroadcasts(this.items(), this.onlyLeague(), this.query()));
+  readonly hiddenCount = computed(() => this.items().length - this.shown().length);
   readonly dates = broadcastDates;
   readonly status = (b: Broadcast) => broadcastStatus(b);
 

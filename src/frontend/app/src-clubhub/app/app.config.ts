@@ -32,7 +32,7 @@ export const clubhubConfig: ApplicationConfig = {
     provideRhHttpClient(),
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub; Konto loeschen geht aber nur dort — die Loeschseite verweist dorthin (Codereview UX-023).
-    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
+    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), kind: 'clubhub', accountHome: 'rookhub' }) },
     // Anmeldemaske: für wen die Kartei ist und dass der Verein freischaltet — statt RookHubs „Ein Konto ist kostenlos“,
     // nach dem ein neues Konto hier nur „Nicht freigeschaltet“ sähe. Den Code des Trainers (/verknuepfen) löst dagegen
     // jedes Konto ein; auch das sagt der Satz (Codereview UX-027).

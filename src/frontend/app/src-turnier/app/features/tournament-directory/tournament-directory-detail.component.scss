@@ -50,13 +50,14 @@ h2 {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: minmax(120px, max-content) 1fr;
-  gap: 6px 16px;
+  /* Feste Beschriftungsspalte (UI-Sweep t-dir-labels): „Hauptschiedsrichter" stiess fast an seinen Wert, und die
+     Wertespalte begann nur zufaellig buendig. */
+  grid-template-columns: 180px 1fr;
+  gap: 4px 16px;
   margin: 0;
 }
 
 .detail-grid dt {
-  font-weight: 500;
   color: var(--mat-sys-on-surface-variant);
 }
 
@@ -91,6 +92,10 @@ span.group-link { color: inherit; }
   gap: 4px 12px;
 }
 
+.source-note { margin-left: 4px; }
+/* Zwei Quellen derselben Seite (chess-results + Ankuendigungskalender) standen sonst als „chess-results chess-results …“ da. */
+.source + .source::before { content: '·'; margin-right: 12px; color: color-mix(in srgb, currentColor 50%, transparent); }
+
 /* Die gefuellte Marke in der Akzentfarbe sagt „gemerkt", der Text daneben, was ein Klick tut. */
 .detail-actions .on { color: var(--mat-sys-primary); }
 
@@ -101,6 +106,9 @@ span.group-link { color: inherit; }
   gap: 10px;
   margin-top: 20px;
 }
+
+.icon-actions { display: contents; }
+.icon-actions .short { display: none; }
 
 .hint {
   margin: 12px 0 0;
@@ -140,4 +148,30 @@ span.group-link { color: inherit; }
     min-height: 40px;
     padding-block: 6px;
   }
+
+  /* UI-Sweep t-dir-buttons: Merken gefuellt als Hauptaktion, „Teilnehmer und Ergebnisse" umrandet, Kalender /
+     chess-results / Melden als Zeile beschrifteter Symbole (Tippflaeche >= 44 x 44). */
+  .detail-actions .primary-mobile {
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    border-color: var(--mat-sys-primary);
+  }
+
+  .icon-actions {
+    display: flex;
+    justify-content: space-around;
+    gap: 4px;
+  }
+  .icon-actions .long { display: none; }
+  .icon-actions .short { display: block; font-size: 11px; line-height: 1.2; }
+  .detail-actions .icon-actions .mat-mdc-button-base {
+    flex-direction: column;
+    gap: 2px;
+    min-width: 64px;
+    min-height: 48px;
+    padding: 4px 8px;
+    border-color: transparent;
+    border-radius: 12px;
+  }
+  .icon-actions .mat-icon { margin: 0; }
 }

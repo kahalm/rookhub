@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { CourseListComponent } from './course-list.component';
 import { KidsApiService } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
+import { contrast, parseColor } from '@rh/testing/contrast';
 
 describe('CourseListComponent', () => {
   it('fragt die Kurse in der Sprache der Seite (Kindertitel je Sprache) und zeigt ihre Titel', async () => {
@@ -74,5 +75,39 @@ describe('CourseListComponent', () => {
     expect(api.courses).toHaveBeenCalledTimes(2);
     expect(el.querySelector('kid-error')).toBeNull();
     expect(el.textContent).toContain('Matt in einem Zug');
+  });
+
+  /** UI-Sweep 2026-10-10 (k-courses-empty): vorher nur eine graue Zeile, der Titel stand neben der Mitte. */
+  it('ohne Kurse: Karte mit Eule und zwei Wegen zum Spielen, der Titel genau mittig', async () => {
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['courses']);
+    api.courses.and.returnValue(of([]));
+    TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), { provide: KidsApiService, useValue: api }],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { kids: { back: 'Start', courses: {
+      title: 'Kurse', soon: 'Hier kommen bald Kurse!', playLevels: 'Stufen spielen', playEndless: 'Endlos spielen' } } });
+    await translate.use('de');
+
+    const f = TestBed.createComponent(CourseListComponent);
+    (f.nativeElement as HTMLElement).style.width = '820px';
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+
+    const card = el.querySelector('.empty')!;
+    expect(card.querySelector('.owl')?.textContent).toContain('🦉');
+    expect(card.querySelector('h2')?.textContent).toContain('Hier kommen bald Kurse!');
+    const links = Array.from(card.querySelectorAll<HTMLAnchorElement>('a.way'));
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/levels', '/endless']);
+    expect(links.map(a => a.textContent!.trim())).toEqual(['Stufen spielen', 'Endlos spielen']);
+    for (const a of links) {
+      const s = getComputedStyle(a);
+      expect(contrast(parseColor(s.color), parseColor(s.backgroundColor))).withContext(a.textContent!).toBeGreaterThanOrEqual(4.5);
+    }
+
+    const head = el.querySelector('.head')!.getBoundingClientRect();
+    const title = el.querySelector('.head h1')!.getBoundingClientRect();
+    expect(Math.abs((title.left + title.right) / 2 - (head.left + head.right) / 2)).toBeLessThan(1.5);
   });
 });

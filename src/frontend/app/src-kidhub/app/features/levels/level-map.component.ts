@@ -8,7 +8,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { themeIcon, themeNameKey } from '../../core/kids-themes';
-import { KID_BACK } from '../../shared/kids-layout';
+import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /** So lange wackelt eine gesperrte Stufe nach dem Tippen und steht der Hinweis da. */
@@ -60,7 +60,8 @@ export const SCROLL_FROM_LEVEL = 5;
                       [attr.aria-label]="('kids.levels.level' | translate: { level: l.level }) + ' – ' + ('kids.levels.locked' | translate)"
                       (click)="nudge(l.level)">
                 <span class="num">{{ l.level }}</span>
-                <span class="icon" aria-hidden="true">🔒</span>
+                <span class="lock" aria-hidden="true">🔒</span>
+                <span class="icon" aria-hidden="true">{{ l.icon }}</span>
                 <span class="name">{{ l.nameKey | translate }}</span>
               </button>
             }
@@ -74,7 +75,7 @@ export const SCROLL_FROM_LEVEL = 5;
     </div>
   `,
   styles: [KID_BACK, `
-    :host { display: block; max-width: 980px; margin: 0 auto; padding: 16px; }
+    :host { display: block; max-width: ${KID_PAGE_WIDTH.map}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
     .stars { font-size: 1.15rem; font-weight: 800; text-decoration: none; color: inherit; white-space: nowrap; }
@@ -89,7 +90,12 @@ export const SCROLL_FROM_LEVEL = 5;
     a.level:hover { transform: translateY(-2px); }
     .level.done { background: var(--kid-good-bg); }
     .level.current { outline: 4px solid var(--kid-green-strong); animation: pulse 1.6s ease-in-out infinite; }
-    .level.locked { opacity: .55; filter: grayscale(.7); }
+    /* Gesperrt (UI-Sweep 2026-10-10, k-locked-contrast): nicht mehr die ganze Kachel auf 55 % — Nummer und Name waren
+       hellgrau auf fast Weiss (unter 4,5:1). Jetzt lesbare Schrift (#5f6b7a, 4,9:1 auf dem gedaempften Grund), das Schloss
+       als Abzeichen in der Ecke, nur das Bild blass. */
+    .level.locked { background: #f1f5f9; color: #5f6b7a; box-shadow: 0 4px 0 rgba(30, 70, 120, .14); }
+    .level.locked .icon { opacity: .45; filter: grayscale(1); }
+    .lock { position: absolute; top: 6px; right: 10px; font-size: 1.15rem; line-height: 1; }
     button.level { width: 100%; font: inherit; color: inherit; border: 0; cursor: pointer; }
     .level.locked.nudge { animation: wiggle .45s ease-in-out; }
     .toast-slot { position: fixed; left: 0; right: 0; bottom: 16px; display: flex; justify-content: center;

@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { Broadcast } from '../../core/league.models';
-import { BroadcastsPageComponent, broadcastDates, broadcastErrorText, broadcastStatus } from './broadcasts-page.component';
+import { BroadcastsPageComponent, broadcastDates, broadcastErrorText, broadcastStatus, filterBroadcasts } from './broadcasts-page.component';
 
 const B = (over: Partial<Broadcast> = {}): Broadcast => ({
   tourId: 'FX5cToFp', name: 'Schach Tirol Open 2026', location: 'Innsbruck, Austria', url: 'https://lichess.org/broadcast/-/FX5cToFp',
@@ -56,7 +56,7 @@ describe('BroadcastsPageComponent', () => {
     create();
     await fixture.whenStable();
     fixture.detectChanges();
-    const rows = el().querySelectorAll('.bc-list li');
+    const rows = el().querySelectorAll('.bc-list tbody tr');
     expect(rows.length).toBe(2);
     expect(rows[0].querySelector('a')?.getAttribute('href')).toBe('https://lichess.org/broadcast/-/FX5cToFp');
     expect(rows[1].textContent).toContain('per Link');
@@ -74,5 +74,34 @@ describe('BroadcastsPageComponent', () => {
     fixture.componentInstance.link.set('quatsch');
     await fixture.componentInstance.add();
     expect(fixture.componentInstance.note()).toEqual({ text: broadcastErrorText('invalidUrl'), err: true });
+  });
+
+  // UI-Sweep 2026-10-10 (l-broadcasts): kompakte Zeilen, „nur mit Ligaspielern" (an) und Suche
+  it('blendet Übertragungen ohne Ligaspieler aus und sucht in Name und Ort', async () => {
+    const list = [B(), B({ tourId: 'a', name: 'Bavarian Open', location: 'München', games: 0 }),
+      B({ tourId: 'b', name: 'Kufstein Open', location: 'Kufstein', games: 4 })];
+    expect(filterBroadcasts(list, true, '').map(b => b.tourId)).toEqual(['FX5cToFp', 'b']);
+    expect(filterBroadcasts(list, false, 'münch').map(b => b.tourId)).toEqual(['a']);
+    expect(filterBroadcasts(list, true, 'KUF').map(b => b.tourId)).toEqual(['b']);
+
+    api.broadcasts.and.resolveTo(list);
+    create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const rows = () => Array.from(el().querySelectorAll('.bc-list tbody tr'));
+    expect(rows().length).toBe(2);
+    expect(rows()[0].querySelectorAll('td').length).toBe(4);
+    expect(rows()[0].querySelector('td.num')?.textContent?.trim()).toBe('88');
+    expect(el().querySelector('.bc-tools')?.textContent).toContain('1 ausgeblendet');
+    const only = el().querySelector('.bc-only input') as HTMLInputElement;
+    expect(only.checked).toBeTrue();
+    only.click();
+    fixture.detectChanges();
+    expect(rows().length).toBe(3);
+    const search = el().querySelector('.bc-search') as HTMLInputElement;
+    search.value = 'bavarian';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(rows().map(r => r.querySelector('a')?.textContent)).toEqual(['Bavarian Open']);
   });
 });

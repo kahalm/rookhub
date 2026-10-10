@@ -52,20 +52,24 @@ describe('LeagueHub: Bedienziele am Handy (UX-069)', () => {
 
   const plBtn = (id: string, name: string) => `<button type="button" class="pl" id="${id}">${name}</button>`;
 
-  /** Vereinstabelle wie club-games-page (UX-035): am Handy steht unter jeder Partie eine eigene Aktionszeile, 2 px unter
-   *  den Namen. Dazu die Meldeliste wie fixture-view (.rtable in .roster-scroll) und eine Kandidatenliste (.cands). */
+  /** Vereinstabelle wie club-games-page (UX-035, seit dem UI-Sweep 2026-10-10 als Karte je Partie): am Handy stehen die
+   *  Aktionen unter Namen und Jahr/Eröffnung in derselben Kartenzelle. Dazu die Meldeliste wie fixture-view (.rtable in .roster-scroll) und eine Kandidatenliste (.cands). */
   const LISTS = `
       <div class="roster-scroll club-scroll"><table class="rtable club-table">
         <thead><tr><th class="num">Jahr</th><th>Weiß</th><th>Schwarz</th><th class="num">Ergebnis</th><th class="hide-s">Eröffnung</th>
           <th class="num">Analyse</th><th class="acts"><span class="sr">Aktionen</span></th></tr></thead>
         <tbody>${[0, 1].map(i => `
-          <tr class="game"><td class="num">2024</td><td>${plBtn(`w${i}`, 'Hengl, P.')}</td>
-            <td><button type="button" class="pl unknown" id="b${i}">Unbekannt <span class="small muted">✎</span></button></td>
-            <td class="num">1-0</td><td class="hide-s small">Sizilianisch</td><td class="num small">91 · 88</td><td class="acts"></td></tr>
-          <tr class="acts-row"><td colspan="7"><div class="row-acts">
-            <button type="button" class="btn-link" id="view${i}">Nachspielen</button><a class="btn-link" id="ana${i}" href="#">Analyse</a>
-            <button type="button" class="btn-link" id="edit${i}">Bearbeiten</button><button type="button" class="btn-link" id="del${i}">Löschen</button>
-          </div></td></tr>`).join('')}
+          <tr class="game"><td class="num">2024</td><td class="side">${plBtn(`ww${i}`, 'Hengl, P.')}</td>
+            <td class="side"><button type="button" class="pl unknown">Unbekannt <span class="small muted">✎</span></button></td>
+            <td class="num">1-0</td><td class="hide-s small opening">Sizilianisch</td><td class="num small">91 · 88</td><td class="acts"></td>
+            <td class="card-cell"><div class="gc-head"><span class="gc-names"><span class="gc-side">${plBtn(`w${i}`, 'Hengl, P.')}</span>
+              <span class="gc-vs">–</span><span class="gc-side"><button type="button" class="pl unknown" id="b${i}">Unbekannt
+              <span class="small muted">✎</span></button></span></span><b class="gc-result">1-0</b></div>
+              <div class="gc-meta muted small">2024 · Sizilianisch</div>
+              <div class="row-acts gc-acts">
+                <button type="button" class="btn-link" id="view${i}">Nachspielen</button><a class="btn-link" id="ana${i}" href="#">Analyse</a>
+                <button type="button" class="btn-link" id="edit${i}">Bearbeiten</button><button type="button" class="btn-link" id="del${i}">Löschen</button>
+              </div></td></tr>`).join('')}
         </tbody></table></div>
       <div class="roster-scroll" id="rscroll"><table class="rtable">
         <thead><tr><th class="num">Meld.</th><th>Spieler</th><th class="num">Elo</th><th class="num">spielt</th></tr></thead>

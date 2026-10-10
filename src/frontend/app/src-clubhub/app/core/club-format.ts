@@ -102,6 +102,22 @@ export function shortDate(iso: string): string {
   return d ? `${WEEKDAYS_SHORT[isoWeekday(d) - 1]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.` : iso;
 }
 
+/**
+ * „09.10.2026" — so steht der Tag einer Einheit im Datumsfeld: TT.MM.JJJJ wie überall auf der Seite. Ein natives
+ * `<input type="date">` zeigt das Format des BROWSERS (en-US: 10/09/2026 — liest sich wie der 10. September).
+ */
+export function dayText(iso: string): string {
+  const d = parts(iso);
+  return d ? `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}` : '';
+}
+
+/** Ein getippter Tag („9.10.2026", „09.10.26" oder ISO) → yyyy-MM-dd; `null` = so nicht lesbar oder kein Tag. */
+export function parseDay(text: string): string | null {
+  const short = /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{2})$/.exec(text.trim());
+  const read = parseBirth(short ? `${short[1]}.${short[2]}.20${short[3]}` : text);
+  return read?.birthDate ?? null;
+}
+
 /** „Freitag, 25. September 2026". */
 export function longDate(iso: string): string {
   const d = parts(iso);

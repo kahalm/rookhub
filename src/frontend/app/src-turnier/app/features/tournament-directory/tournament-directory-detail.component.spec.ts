@@ -340,6 +340,59 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.verify();
   });
 
+  // ----- UI-Sweep 2026-10-10 -----
+
+  it('nennt den Ankuendigungskalender als chess-results mit grauem Zusatz, unbekannte Quellen ohne rohen Schluessel (t-i18n-source)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', {
+      sources: [
+        { kind: 'ChessResults', externalId: '1457129', url: 'https://chess-results.com/tnr1457129.aspx' },
+        { kind: 'ChessResultsCalendar', externalId: '77', url: null },
+        { kind: 'MarsChessFederation' as never, externalId: '1', url: null },
+      ],
+    }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const sources = [...fixture.nativeElement.querySelectorAll('.sources > .source')].map((n: Element) => n.textContent!.replace(/\s+/g, ' ').trim());
+    expect(sources).toEqual([
+      'tournamentDirectory.source.ChessResults',
+      'tournamentDirectory.source.ChessResults(tournamentDirectory.source.ChessResultsCalendar)',
+      'tournamentDirectory.source.Unknown',
+    ]);
+    expect(fixture.nativeElement.querySelector('.source-note').classList).toContain('muted');
+  });
+
+  it('zeigt keinen Bedenkzeit-Chip „Unbekannt" (t-chip-unknown)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { speed: 'Unknown' }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.badges').textContent).not.toContain('tournamentDirectory.speed.Unknown');
+  });
+
+  it('gibt der Beschriftungsspalte feste 180 px und 16 px Abstand (t-dir-labels)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { chiefArbiter: 'ÖS Ing. Erich Wurzer' }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const dl = getComputedStyle(fixture.nativeElement.querySelector('.detail-grid'));
+    if (window.innerWidth > 600) expect(dl.gridTemplateColumns.split(' ')[0]).toBe('180px');
+    expect(dl.columnGap).toBe('16px');
+  });
+
+  it('fasst Kalender, chess-results und Melden als beschriftete Symbole zusammen (t-dir-buttons)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const icons = [...fixture.nativeElement.querySelectorAll('.icon-actions > *')] as HTMLElement[];
+    expect(icons.map(b => b.querySelector('.short')!.textContent!.trim())).toEqual([
+      'tournamentDirectory.card.short.calendar', 'tournamentDirectory.source.ChessResults', 'tournamentDirectory.card.short.report']);
+    expect(icons.map(b => b.getAttribute('aria-label'))).toEqual([
+      'tournamentDirectory.detail.toCalendar', 'tournamentDirectory.openChessResults', 'tournamentDirectory.report.cta']);
+    expect(fixture.nativeElement.querySelector('.detail-actions .primary-mobile')?.textContent).toContain('tournamentDirectory.bookmark');
+  });
+
   /**
    * Bei einer Liga sagt der Zeitraum fast nichts (September bis April), die Runden sagen alles.
    */

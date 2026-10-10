@@ -184,6 +184,22 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.pairings')!.textContent).toContain('offen');
   });
 
+  // UI-Sweep 2026-10-10 (l-fixture-head, l-names-mobile)
+  it('Kopf: Paarung zuerst, dann Runde · Datum, das Spiellokal vollständig in eigener Zeile; Kandidaten mit Elo · Partien', () => {
+    const el = render(OPEN);
+    const art = el.querySelector('article.fixture')!;
+    const kids = Array.from(art.children).slice(0, 3);
+    expect(kids.map(k => k.className)).toEqual(['match', 'when', 'venue']);
+    expect(art.querySelector('.when')?.textContent?.trim()).toBe('Runde 1 · Sa 03.10.2026');
+    expect(art.querySelector('.venue')?.textContent).toContain('Kursaal, 6323 Bad Häring');
+    expect(art.querySelector('.when')?.textContent).not.toContain('Kursaal');
+    const metas = Array.from(el.querySelectorAll('.board')[0].querySelectorAll('.cand .meta')).map(m => m.textContent?.trim());
+    expect(metas).toEqual(['2112 · 12 Partien', '2238', '–']);
+    expect(fixture.componentInstance.candMeta({ n: 'X', elo: 2302, rb: 1, p: 0.4, fide: null, g: 1259 })).toBe('2302 · 1.259 Partien');
+    render({ ...OPEN, venue: null as unknown as string });
+    expect(el.querySelector('.venue')).toBeNull();
+  });
+
   it('offene Runde über einen Teilen-Link: keine Abfrage', () => {
     fixture.componentRef.setInput('leagueTnr', 1479345);
     render(OPEN, { token: 'abc' });

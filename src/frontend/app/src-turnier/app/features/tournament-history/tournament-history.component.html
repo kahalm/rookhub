@@ -34,8 +34,7 @@
       </mat-tab-group>
     }
 
-    <!-- aria-label (UX-042): am Handy ist der Text ausgeblendet (display:none) und das Symbol aria-hidden — der Knopf
-         hatte dort GAR keinen zugaenglichen Namen. -->
+    <!-- Auch am Handy beschriftet (UI-Sweep t-history-plus): ein nacktes „+" sagte nicht, dass es Spieler verfolgt. -->
     <button mat-stroked-button type="button" class="track-add" (click)="addTracked()"
             [matTooltip]="'turnier.history.track.help' | translate"
             [attr.aria-label]="'turnier.history.track.add' | translate">
@@ -126,10 +125,11 @@
         </div>
 
         @if (history.status === 'noName') {
-          <p class="hint">
-            {{ 'turnier.history.noName' | translate }}
-            <a mat-stroked-button routerLink="/profile">{{ 'nav.profile' | translate }}</a>
-          </p>
+          <!-- Buendig mit dem Namen darueber, der Weg als Hauptknopf mit klarem Ziel statt „Profil" (UI-Sweep t-history-card). -->
+          <div class="no-name">
+            <p class="muted">{{ 'turnier.history.noName' | translate }}</p>
+            <a mat-flat-button routerLink="/profile">{{ 'turnier.history.noNameAction' | translate }}</a>
+          </div>
         } @else if (history.status === 'sourceUnavailable') {
           <p class="hint warn">{{ 'turnier.history.sourceUnavailable' | translate }}</p>
         }

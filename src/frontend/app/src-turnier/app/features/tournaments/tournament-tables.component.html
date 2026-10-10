@@ -31,11 +31,20 @@
             }
           </mat-select>
         </mat-form-field>
+        <span class="fav-group">
         <mat-slide-toggle class="favorites-only" [checked]="showFavoritesOnly" [disabled]="!hasFavorites && !showFavoritesOnly"
                           (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
         @if (!hasFavorites && !showFavoritesOnly) {
-          <span class="filter-hint">{{ 'tournaments.favoritesOnlyHint' | translate }}</span>
+          <!-- Der Satz stand in 11 px bis an den Rand gequetscht daneben (UI-Sweep t-fav-hint): jetzt hinter „?".
+               Klick/Tipp schaltet den Hinweis, damit er auch am Handy ohne Hover erreichbar ist. -->
+          <button mat-icon-button type="button" class="filter-hint-btn" #favHint="matTooltip"
+                  [matTooltip]="'tournaments.favoritesOnlyHint' | translate"
+                  [attr.aria-label]="'tournaments.favoritesOnlyHint' | translate"
+                  (click)="favHint.toggle()">
+            <mat-icon>help_outline</mat-icon>
+          </button>
         }
+        </span>
       </div>
       @if (playerQuery.trim() && shownPlayers.length === 0) {
         <p class="empty-hint search-none">{{ 'tournaments.players.searchNone' | translate: { query: playerQuery.trim() } }}</p>
@@ -71,7 +80,10 @@
           </ng-container>
           <ng-container matColumnDef="title">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.title' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.title }}</td>
+            <!-- Nur echte Titel: in manchen Startlisten steht in der Titelspalte etwas anderes („Z56", „N"). -->
+            <td mat-cell *matCellDef="let p">
+              @if (chessTitle(p.title); as t) { {{ t }} } @else { <span class="no-title" aria-hidden="true">—</span> }
+            </td>
           </ng-container>
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.name' | translate }}</th>
@@ -123,7 +135,7 @@
                 {{ isFavorite(p) ? 'star' : 'star_border' }}
               </mat-icon>
               <span class="player-snr">{{ p.snr }}</span>
-              <span class="player-title" *ngIf="p.title">{{ p.title }}</span>
+              @if (chessTitle(p.title); as t) { <span class="player-title">{{ t }}</span> }
               <span class="player-name">{{ p.name }}</span>
             </div>
             <div class="player-details">

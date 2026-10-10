@@ -141,6 +141,9 @@ h3 {
   font-size: 0.9rem;
 }
 
+.no-name { margin: 0.4rem 0 0.25rem; }
+.no-name p { margin: 0 0 0.6rem; font-size: 0.9rem; }
+
 .hint.warn { background: color-mix(in srgb, var(--mat-sys-error) 18%, transparent); }
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
 
@@ -260,7 +263,5 @@ h3 {
 }
 
 @media (max-width: 768px) {
-  .track-add-label { display: none; }
-  /* Ein Knopf ohne Text bleibt trotzdem ein Ziel fuer den Daumen. */
-  .track-add { min-width: 44px; padding: 0 0.5rem; }
+  .track-add { min-height: 44px; }
 }

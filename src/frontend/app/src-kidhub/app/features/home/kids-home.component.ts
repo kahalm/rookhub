@@ -8,6 +8,10 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { KidsStarsStore } from '../../core/kids-stars.store';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
+import { KID_PAGE_WIDTH } from '../../shared/kids-layout';
+
+/** Ab dieser Fensterbreite steht die Startseite senkrecht mittig mit grossen Kacheln (k-start-space). */
+export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
 
 /**
  * Startseite: ein grosser „Los geht's"-Knopf zur naechsten offenen Stufe, darunter die zwei Wege —
@@ -77,7 +81,7 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
 
   `,
   styles: [`
-    :host { display: block; max-width: 900px; margin: 0 auto; padding: 16px; }
+    :host { display: block; max-width: ${KID_PAGE_WIDTH.home}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .hero { text-align: center; padding: 24px 12px 8px; }
     h1 { font-size: clamp(2rem, 7vw, 3.4rem); margin: 0 0 6px; color: var(--kid-title); letter-spacing: .5px; }
     .hero p { font-size: 1.25rem; margin: 0 0 22px; }
@@ -102,6 +106,18 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     .name { font-size: 1.7rem; font-weight: 800; }
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
     .saved { text-align: center; margin: 22px 0 0; font-size: .95rem; opacity: .8; }
+    /* PC (UI-Sweep 2026-10-10, k-start-space): die Kacheln endeten bei y ≈ 550, darunter fast 500 px leer. Jetzt steht
+       der Inhalt senkrecht mittig zwischen Kopf- und Fusszeile (~140 px), die Kacheln sind ~360 × 260 px gross. */
+    @media ${KID_HOME_WIDE} {
+      :host { display: flex; flex-direction: column; justify-content: center;
+              min-height: calc(var(--kid-vh, 1vh) * 100 - 140px); }
+      .hero { padding-top: 0; }
+      .tiles { grid-template-columns: repeat(auto-fit, minmax(300px, 360px)); justify-content: center; gap: 22px; }
+      .tile { min-height: 260px; box-sizing: border-box; justify-content: center; gap: 10px; padding: 28px 22px; }
+      .icon { font-size: 64px; }
+      .name { font-size: 32px; }
+      .meta { font-size: 1.15rem; }
+    }
   `],
 })
 export class KidsHomeComponent {

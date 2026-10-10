@@ -110,12 +110,28 @@ describe('TournamentTablesComponent', () => {
     const toggle = () => fixture.nativeElement.querySelector('.player-tools .favorites-only button') as HTMLButtonElement | null;
     expect(toggle()).withContext('Schalter fehlt ohne Favoriten').not.toBeNull();
     expect(toggle()!.disabled).toBeTrue();
-    expect(fixture.nativeElement.querySelector('.player-tools .filter-hint')).not.toBeNull();
+    // Der Hinweis steht hinter „?" (Tooltip + aria-label), nicht mehr als Satz daneben (t-fav-hint).
+    const hint = () => fixture.nativeElement.querySelector('.player-tools .filter-hint-btn') as HTMLButtonElement | null;
+    expect(hint()).not.toBeNull();
+    expect(hint()!.getAttribute('aria-label')).toBe('tournaments.favoritesOnlyHint');
+    expect(fixture.nativeElement.querySelector('.player-tools .filter-hint')).toBeNull();
 
     component.hasFavorites = true;
     fixture.detectChanges();
     expect(toggle()!.disabled).toBeFalse();
-    expect(fixture.nativeElement.querySelector('.player-tools .filter-hint')).toBeNull();
+    expect(hint()).toBeNull();
+  });
+
+  it('zeigt in der Titelspalte nur echte Titel — „Z56" aus der Startliste nicht (t-title-col)', () => {
+    component.players = component.displayedPlayers = [
+      player({ id: 1, snr: 1, title: 'GM', name: 'Navara David' }),
+      player({ id: 2, snr: 2, title: 'Z56', name: 'Saric Ivan' }),
+    ];
+    fixture.detectChanges();
+    const cells = [...fixture.nativeElement.querySelectorAll('td.mat-column-title')].map((c: Element) => c.textContent!.trim());
+    expect(cells).toEqual(['GM', '—']);
+    const cardTitles = [...fixture.nativeElement.querySelectorAll('.player-card .player-title')].map((c: Element) => c.textContent!.trim());
+    expect(cardTitles).toEqual(['GM']);
   });
 
   /**

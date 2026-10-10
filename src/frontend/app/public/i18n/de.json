@@ -592,6 +592,7 @@
     "firstName": "Vorname",
     "lastName": "Nachname",
     "searchPlayer": "Spieler suchen",
+    "searchPlayerHint": "Findet FIDE- und ChessResults-ID automatisch.",
     "noResults": "Keine Ergebnisse gefunden.",
     "email": "E-Mail",
     "emailHint": "Für das Zurücksetzen des Passworts. Leer lassen, um sie zu entfernen.",
@@ -782,6 +783,17 @@
       "updated": "Stand: 1. Oktober 2026",
       "tocTitle": "Inhalt",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
+      "introLeagueHub": "LeagueHub (Teil von RookHub) erstellt Aufstellungs-Prognosen für Mannschaftskämpfe und führt die Partiedatenbank teilnehmender Vereine. Das Konto ist dasselbe wie bei RookHub. Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
+      "introClubHub": "ClubHub (Teil von RookHub) ist die Kartei des Vereins für seine Kinder und Jugendlichen. Das Konto ist dasselbe wie bei RookHub. Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
+      "clubTitle": "ClubHub (Kartei)",
+      "clubIntro": "In ClubHub führen Leitung und Trainer des Vereins ein Karteiblatt je Kind bzw. Jugendlichem. Ein Karteiblatt ist kein Konto: das Kind muss bei uns nicht registriert sein.",
+      "clubData": "Auf dem Karteiblatt: Vorname (Pflicht), Nachname, Geburtsdatum oder Jahrgang, Stufe, FIDE-ID und Personennummer beim Verband, die Gruppen des Kindes, auf Wunsch ein Bild mit markiertem Gesichtsausschnitt für das Porträt sowie datierte Notizen der Trainer zum Lernstand.",
+      "clubContacts": "Kontakte: Telefonnummern und E-Mail-Adressen, jeweils mit einem Hinweis wie „Mutter“ oder „Vater“.",
+      "clubAttendance": "Anwesenheit je Trainingseinheit (da oder nicht da), Thema und Inhalt der Einheit sowie Fotos zur Einheit.",
+      "clubAccess": "Die Kartei sehen nur angemeldete Konten des Vereins mit der passenden Rolle: die Leitung alles, Trainer nur die Kinder ihrer eigenen Gruppen. Ohne Anmeldung ist nichts davon erreichbar; in den Protokollen des Servers stehen nur Kennnummern, keine Namen.",
+      "clubPhotos": "Ob Fotos der Kinder gemacht und gespeichert werden dürfen, klärt der Verein mit den Eltern; ClubHub erfasst keine Einwilligung.",
+      "clubLink": "Ein eigenes RookHub-Konto des Kindes wird mit seinem Karteiblatt nur über einen Einmal-Code verknüpft, den das Konto selbst einlöst. Der Verein sieht dann zusammengefasste Trainingszahlen (Puzzles, Trainingsziele, KidHub-Fortschritt), keine einzelnen Versuche. Beide Seiten können die Verknüpfung lösen.",
+      "clubRetention": "Die Daten liegen auf dem Server des Betreibers und werden nicht auf dem Gerät zwischengespeichert. Wird ein Karteiblatt gelöscht, gehen Kontakte, Notizen, Bild und Anwesenheit mit. Wird das Konto eines Trainers gelöscht, bleiben Karteiblätter und Notizen beim Verein, ohne seinen Namen.",
       "kidIntro": "KidHub ist die Schachseite für Kinder. Hier steht in einfachen Worten, welche Daten wir speichern und warum. Darunter folgt die ausführliche Fassung für Eltern.",
       "kidTitle": "Das Wichtigste in Kürze",
       "kidDevice": "Ohne Konto bleiben deine Sterne und dein Fortschritt nur auf diesem Gerät. Wir speichern sie nicht.",
@@ -4139,13 +4151,32 @@
       "showIgnored": "Ausgeblendete zeigen",
       "rounds": "{{count}} Runden, {{from}} bis {{to}}",
       "actionAria": "{{action}}: {{name}}",
-      "implausible": "Zeitraum unplausibel"
+      "implausible": "Zeitraum unplausibel",
+      "short": {
+        "bookmarked": "Gemerkt",
+        "calendar": "Kalender",
+        "hide": "Ausblenden",
+        "show": "Zeigen",
+        "report": "Melden"
+      }
     },
     "source": {
       "Unknown": "Unbekannte Quelle",
       "ChessResults": "chess-results",
       "Fide": "FIDE-Kalender",
-      "Manual": "Von Hand eingetragen"
+      "Manual": "Von Hand eingetragen",
+      "ChessResultsCalendar": "Ankündigungskalender",
+      "ItalianChessFederation": "Italienischer Schachverband",
+      "SlovenianChessFederation": "Slowenischer Schachverband",
+      "SlovakChessFederation": "Slowakischer Schachverband",
+      "HungarianChessFederation": "Ungarischer Schachverband",
+      "CzechChessFederation": "Tschechischer Schachverband",
+      "PolishChessFederation": "Polnischer Schachverband",
+      "GermanChessFederation": "Deutscher Schachbund",
+      "EnglishChessFederation": "Englischer Schachverband",
+      "IrishChessUnion": "Irischer Schachverband",
+      "FrenchChessFederation": "Französischer Schachverband",
+      "NorwegianChessFederation": "Norwegischer Schachverband"
     }
   },
   "clubhub": {
@@ -4188,6 +4219,7 @@
       "noSingleResult": "kein Einzelergebnis",
       "noSingleResultTooltip": "chess-results führt für dieses Turnier kein Einzelergebnis — Warten hilft hier nicht.",
       "noName": "In deinem Profil fehlt der Nachname — chess-results wird über den Namen gesucht, es gibt also nichts nachzuschlagen.",
+      "noNameAction": "Nachname im Profil eintragen",
       "sourceUnavailable": "chess-results war nicht erreichbar. Gezeigt wird der letzte geholte Stand.",
       "empty": "Unter diesem Namen wurden keine Turniere gefunden.",
       "loadError": "Der Verlauf konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
@@ -4211,7 +4243,7 @@
       "allSpeeds": "Alle",
       "pointsTooltip": "Punkte aus gespielten Partien. Die Partienzahl kommt von der Spielerkarte, nicht aus der Rundenzahl des Turniers.",
       "track": {
-        "add": "Verfolgen",
+        "add": "Spieler verfolgen",
         "addError": "Der Spieler konnte nicht hinzugefügt werden.",
         "added": "{{name}} wird jetzt verfolgt.",
         "help": "Beliebige Person verfolgen: dein Kind, ein Vereinskamerad, dein nächster Gegner — ganz ohne Konto.",
@@ -4264,6 +4296,9 @@
     "courses": {
       "title": "Kurse",
       "empty": "Noch keine Kurse für Kinder.",
+      "soon": "Hier kommen bald Kurse!",
+      "playLevels": "Stufen spielen",
+      "playEndless": "Endlos spielen",
       "progress": "{{done}} von {{total}} geschafft",
       "completed": "Kurs geschafft!",
       "restart": "Von vorn"
@@ -4334,7 +4369,7 @@
       "tileHint": "Eine Figur, viele Sterne",
       "intro": "Friss alle Sterne – mit jedem Zug genau einen!",
       "stage": "Stufe {{stage}}",
-      "round": "Aufgabe {{n}}/{{total}}",
+      "round": "Aufgabe {{n}} von {{total}}",
       "task": "Friss alle Sterne – mit jedem Zug genau einen!",
       "left": "Noch {{count}} Sterne",
       "completed": "Stufe geschafft!",

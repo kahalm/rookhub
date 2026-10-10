@@ -8,6 +8,7 @@ import { AccountDeletionComponent } from './account-deletion.component';
 import { ImpressumComponent } from './impressum.component';
 import { LEGAL_SITE, LegalSite, legalBackLink } from './legal-site';
 import { PrivacyComponent } from './privacy.component';
+import { AuthService } from '../../core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -23,7 +24,8 @@ describe('legalBackLink (UX-017)', () => {
   function setup(site?: LegalSite) {
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([{ path: 'dashboard', component: StubComponent }, { path: 'privacy', component: StubComponent }]),
+        provideRouter([{ path: 'dashboard', component: StubComponent }, { path: 'privacy', component: StubComponent },
+          { path: 'login', component: StubComponent }]),
         provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
         ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : []),
       ],
@@ -65,6 +67,32 @@ describe('legalBackLink (UX-017)', () => {
     link.go(plain);
     expect(back).toHaveBeenCalledTimes(1);
     expect(plain.preventDefault).toHaveBeenCalled();
+  });
+
+  it('angemeldet ohne Verlauf: zur Startseite statt zur Anmeldung (x-back-login)', () => {
+    setup();
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn').and.returnValue(true);
+    const link = TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back'));
+    expect(link).toEqual(jasmine.objectContaining({ history: false, link: '/', label: 'legal.backHome', href: '/' }));
+  });
+
+  it('eigenes Ziel der Oberflaeche gilt auch angemeldet (Turnierseite: Kalender)', () => {
+    setup({ contactEmail: 'x@y.z', imprint: true, back: '/tournaments/calendar' });
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn').and.returnValue(true);
+    const link = TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back'));
+    expect(link).toEqual(jasmine.objectContaining({ link: '/tournaments/calendar', label: 'legal.backHome' }));
+  });
+
+  it('von der Anmeldung gekommen: „Zurueck zur Anmeldung", sonst nur „Zurueck" (x-back-login)', async () => {
+    const back = setup();
+    await TestBed.inject(Router).navigateByUrl('/login?returnUrl=%2Fx');
+    const link = TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back'));
+    expect(link).toEqual(jasmine.objectContaining({ history: true, label: 'legal.privacy.back' }));
+    link.go(click());
+    expect(back).toHaveBeenCalledTimes(1);
+
+    await TestBed.inject(Router).navigateByUrl('/dashboard');
+    expect(TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back')).label).toBe('common.back');
   });
 
   for (const [name, page] of [['Datenschutz', PrivacyComponent], ['Impressum', ImpressumComponent], ['Konto loeschen', AccountDeletionComponent]] as const) {

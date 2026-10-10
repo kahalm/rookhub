@@ -5,13 +5,13 @@
     // 'anywhere' statt 'break-word', weil nur das die min-content-Breite senkt und der Flex-Header so schrumpfen kann.
     mat-card-title, mat-card-subtitle { overflow-wrap: anywhere; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .title-row { display: flex; align-items: flex-start; }
+    .title-row mat-card-header { flex: 1 1 auto; min-width: 0; }
+    .more-actions { display: none; flex: none; margin: 8px 4px 0 0; }
 
     @media (max-width: 768px) {
       .detail-container { padding: 0.75rem; }
-      .btn-label { display: none; }
-      .action-bar button, .action-bar a {
-        min-width: 0 !important; padding: 0 !important; width: 44px; height: 44px; border-radius: 50%;
-        display: inline-flex; align-items: center; justify-content: center;
-      }
-      :host ::ng-deep .action-bar .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
+      // UI-Sweep t-head-buttons: Teilen und chess-results stehen am Handy im ⋮-Menue neben dem Titel.
+      .more-actions { display: inline-flex; }
+      .action-bar { display: none; }
     }

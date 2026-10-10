@@ -67,7 +67,7 @@ describe('AccountSuggestionsComponent', () => {
     expect(rows[0].querySelector('.sugg-evidence')?.textContent).toContain('Land Österreich');
     expect(rows[1].querySelector('a')?.getAttribute('href')).toBe('https://lichess.org/@/MaxMuster');
 
-    buttons(rows[0]).find(b => b.textContent?.includes('unsicher'))!.click();
+    buttons(rows[0]).find(b => b.textContent?.includes('Unsicher'))!.click();
     await fixture.whenStable();
     fixture.detectChanges();
     expect(api.acceptSuggestion).toHaveBeenCalledWith(1, false);
@@ -80,6 +80,18 @@ describe('AccountSuggestionsComponent', () => {
     expect(api.rejectSuggestion).toHaveBeenCalledWith(2);
     expect(el().querySelectorAll('.sugg-list li')[1].textContent).toContain('wird nicht wieder vorgeschlagen');
     expect(decided).toEqual([{ id: 1, accepted: true }, { id: 2, accepted: false }]);
+  });
+
+  // UI-Sweep 2026-10-10 (l-account-btns): drei gleich breite Knöpfe mit kurzen Texten, die langen als Tooltip.
+  it('drei Knöpfe: Unsicher, Gesichert (gefüllt), Verwerfen — lange Texte im Tooltip', () => {
+    fixture.componentRef.setInput('items', [S(1)]);
+    fixture.detectChanges();
+    const btns = Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button'));
+    expect(btns.map(b => b.textContent?.trim())).toEqual(['Unsicher', 'Gesichert', 'Verwerfen']);
+    expect(btns.map(b => b.title)).toEqual(['Als unsicher übernehmen', 'Als gesichert übernehmen', 'Vorschlag verwerfen — er kommt nicht wieder']);
+    expect(btns[1].classList).toContain('btn-pri');
+    expect(btns[2].classList).toContain('sa-reject');
+    expect(btns.every(b => b.classList.contains('sa-btn'))).toBeTrue();
   });
 
   it('schon erledigt (404) und andere Absagen', async () => {

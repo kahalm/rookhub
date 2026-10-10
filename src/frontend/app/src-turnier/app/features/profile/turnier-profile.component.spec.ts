@@ -63,6 +63,20 @@ describe('TurnierProfileComponent', () => {
     expect(card!.querySelector('a.delete-link')?.getAttribute('href')).toBe('/account-deletion');
   });
 
+  it('stellt Passwort (Umriss) und Konto loeschen (roter Text-Knopf) mittig in eine Zeile (UI-Sweep t-profile-links)', () => {
+    setup();
+    const links = (fixture.nativeElement as HTMLElement).querySelector('.account-links') as HTMLElement;
+    expect(getComputedStyle(links).justifyContent).toBe('center');
+    expect(getComputedStyle(links).alignItems).toBe('center');
+    const del = links.querySelector('a.delete-link') as HTMLElement;
+    expect(del.classList).toContain('mat-mdc-button');
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--rh-error)';
+    links.appendChild(probe);
+    expect(getComputedStyle(del).color).toBe(getComputedStyle(probe).color);
+    probe.remove();
+  });
+
   it('zeigt den Weg auch, wenn das Profil nicht geladen werden konnte', () => {
     TestBed.configureTestingModule({
       imports: [TurnierProfileComponent],

@@ -69,6 +69,21 @@ describe('PublicTournamentComponent', () => {
     expect(c.displayedPairings).toBe(c.displayedPairings);
   });
 
+  it('hat neben dem Titel ein ⋮-Menue mit Teilen und chess-results (t-head-buttons, am Handy statt der Symbolkreise)', async () => {
+    const { fixture, http } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    fixture.detectChanges();
+    const more = (fixture.nativeElement as HTMLElement).querySelector('.title-row .more-actions') as HTMLButtonElement;
+    expect(more.getAttribute('aria-label')).toBe('common.moreActions');
+    more.click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [mat-menu-item]')).map(i => i.textContent!);
+    expect(items.length).toBe(2);
+    expect(items[0]).toContain('tournaments.actions.share');
+    expect(items[1]).toContain('tournamentDirectory.openChessResults');
+  });
+
   it('Teams vor Spielern geladen: das Team des favorisierten Spielers steht trotzdem in der Teamliste', async () => {
     const { http, c } = await render();
     http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);

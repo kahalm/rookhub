@@ -85,7 +85,10 @@ import { DirectoryEntry } from './tournament-directory.model';
         @if (entry.distanceKm !== null) {
           <span class="badge">{{ 'tournamentDirectory.distance' | translate: { km: entry.distanceKm } }}</span>
         }
-        <span class="badge">{{ 'tournamentDirectory.speed.' + entry.speed | translate }}</span>
+        <!-- „Unbekannt" ohne Bezug sagte nicht, dass die Bedenkzeit gemeint ist — dann lieber kein Chip (t-chip-unknown). -->
+        @if (entry.speed !== 'Unknown') {
+          <span class="badge">{{ 'tournamentDirectory.speed.' + entry.speed | translate }}</span>
+        }
         @if (entry.kind === 'Team') {
           <span class="badge">{{ 'tournamentDirectory.kind.Team' | translate }}</span>
         }
@@ -125,42 +128,55 @@ import { DirectoryEntry } from './tournament-directory.model';
              („Merken aufheben, gedrueckt" — ist es jetzt gemerkt oder nicht?). -->
         @if (bookmarkable) {
           @let bookmarkText = (subscribed() ? 'tournamentDirectory.bookmarkRemove' : 'tournamentDirectory.bookmark') | translate;
-          <button mat-icon-button (click)="bookmark()" [disabled]="busy()"
+          <button mat-icon-button class="tc-act" (click)="bookmark()" [disabled]="busy()"
                   [matTooltip]="bookmarkText"
                   [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: bookmarkText, name: entry.name }">
             <mat-icon [class.on]="subscribed()">{{ subscribed() ? 'bookmark' : 'bookmark_add' }}</mat-icon>
+            <span class="tc-act-label" aria-hidden="true">{{ (subscribed() ? 'tournamentDirectory.card.short.bookmarked' : 'tournamentDirectory.bookmark') | translate }}</span>
           </button>
+        } @else {
+          <span class="tc-act tc-slot" aria-hidden="true"></span>
         }
 
         @if (entry.startDate) {
-          <button mat-icon-button (click)="addToCalendar()"
+          <button mat-icon-button class="tc-act" (click)="addToCalendar()"
                   [matTooltip]="'tournamentDirectory.detail.toCalendar' | translate"
                   [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ('tournamentDirectory.detail.toCalendar' | translate), name: entry.name }">
             <mat-icon>event_available</mat-icon>
+            <span class="tc-act-label" aria-hidden="true">{{ 'tournamentDirectory.card.short.calendar' | translate }}</span>
           </button>
+        } @else {
+          <span class="tc-act tc-slot" aria-hidden="true"></span>
         }
 
         @if (loggedIn) {
           @let ignoreText = (ignored() ? 'tournamentDirectory.card.show' : 'tournamentDirectory.card.hide') | translate;
-          <button mat-icon-button (click)="toggleIgnore()" [disabled]="busy()"
+          <button mat-icon-button class="tc-act" (click)="toggleIgnore()" [disabled]="busy()"
                   [matTooltip]="ignoreText"
                   [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ignoreText, name: entry.name }">
             <mat-icon>{{ ignored() ? 'visibility' : 'visibility_off' }}</mat-icon>
+            <span class="tc-act-label" aria-hidden="true">{{ (ignored() ? 'tournamentDirectory.card.short.show' : 'tournamentDirectory.card.short.hide') | translate }}</span>
           </button>
         }
 
-        <button mat-icon-button (click)="report()"
+        <button mat-icon-button class="tc-act" (click)="report()"
                 [matTooltip]="'tournamentDirectory.report.cta' | translate"
                 [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ('tournamentDirectory.report.cta' | translate), name: entry.name }">
           <mat-icon>flag</mat-icon>
+          <span class="tc-act-label" aria-hidden="true">{{ 'tournamentDirectory.card.short.report' | translate }}</span>
         </button>
       </div>
     </div>
   `,
   styles: [`
+    /* Die Karte fuellt ihre Zelle (t-card-actions): nur so sitzt die Aktionsleiste per margin-top: auto an der
+       UNTERKANTE, und Nachbarkarten derselben Rasterzeile haben ihre Symbole auf einer Hoehe. */
+    :host { display: flex; flex-direction: column; flex: 1 1 auto; }
+
     .tc {
       display: flex;
       flex-direction: column;
+      flex: 1 1 auto;
       gap: 0.3rem;
     }
 
@@ -233,6 +249,24 @@ import { DirectoryEntry } from './tournament-directory.model';
        Akzentfarbe und ein getoenter Grund. Nur ein anderes Glyph (bookmark vs. bookmark_add) ist
        auf 24 px kein Unterschied, den man ohne Vergleich erkennt. */
     .tc-actions .on { color: var(--mat-sys-primary); }
+
+    /* Feste Plaetze Merken | Kalender | Ausblenden | Melden: fehlt eine Aktion (FIDE-Turnier ohne chess-results-
+       Nummer, kein Startdatum), haelt ein leerer Platz die anderen an ihrer Stelle (t-card-actions). */
+    .tc-slot { display: inline-block; width: 40px; height: 40px; flex: none; }
+    .tc-act-label { display: none; }
+
+    /* Am Handy steht unter jedem Symbol ein kurzes Wort, Tippflaeche mindestens 44 x 44 (t-card-labels). */
+    @media (max-width: 600px) {
+      .tc-actions { justify-content: space-between; }
+      .tc-actions .tc-act {
+        width: auto; min-width: 64px; height: auto; min-height: 48px; padding: 4px 6px;
+        border-radius: 12px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      }
+      .tc-actions .tc-act ::ng-deep .mat-mdc-button-persistent-ripple,
+      .tc-actions .tc-act ::ng-deep .mat-mdc-button-ripple { border-radius: 12px; }
+      .tc-act-label { display: block; font-size: 11px; line-height: 1.2; white-space: nowrap; }
+      .tc-slot { width: 64px; }
+    }
     .tc-actions button:has(.on) {
       background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent);
     }

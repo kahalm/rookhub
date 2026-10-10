@@ -1,4 +1,4 @@
-import { STATUS_LABEL, ageClass, attendanceText, byInitial, dateNeighbours, emptyInput, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
+import { STATUS_LABEL, ageClass, attendanceText, byInitial, dateNeighbours, dayText, parseDay, emptyInput, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
 
 describe('club-format', () => {
   it('Blättern: die Einheit davor und danach — der Tag, für den die Liste aufgeht, zählt als letzter Halt mit', () => {
@@ -68,6 +68,18 @@ describe('club-format', () => {
     expect(trainsToday(null, friday)).toBeFalse();
     expect(weekdayName(5)).toBe('Freitag');
     expect(weekdayName(null)).toBe('');
+  });
+
+  it('dayText/parseDay: der Tag der Einheit steht als TT.MM.JJJJ im Feld, nicht im Format des Browsers', () => {
+    expect(dayText('2026-10-09')).toBe('09.10.2026');
+    expect(dayText('')).toBe('');
+    expect(parseDay('9.10.2026')).toBe('2026-10-09');
+    expect(parseDay(' 09.10.26 ')).toBe('2026-10-09');
+    expect(parseDay('2026-10-09')).toBe('2026-10-09');
+    expect(parseDay('31.2.2026')).toBeNull();                                         // gibt es nicht
+    expect(parseDay('2026')).toBeNull();                                              // ein Jahr ist kein Tag
+    expect(parseDay('')).toBeNull();
+    expect(parseDay('10/09/2026')).toBeNull();
   });
 
   it('das Datum in Ortszeit, nicht in UTC', () => {

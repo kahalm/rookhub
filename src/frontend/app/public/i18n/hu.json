@@ -347,6 +347,7 @@
     "firstName": "Keresztnév",
     "lastName": "Vezetéknév",
     "searchPlayer": "Játékos keresése",
+    "searchPlayerHint": "Automatikusan megtalálja a FIDE- és ChessResults-azonosítót.",
     "noResults": "Nincs találat.",
     "email": "E-mail",
     "emailHint": "A jelszó visszaállításához használatos. Hagyd üresen az eltávolításhoz.",
@@ -537,6 +538,17 @@
       "updated": "Utoljára frissítve: 2026. október 1.",
       "tocTitle": "Tartalom",
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
+      "introLeagueHub": "A LeagueHub (a RookHub része) összeállítás-előrejelzéseket készít csapatmérkőzésekhez, és vezeti a résztvevő klubok játszmaadatbázisát. A fiók ugyanaz, mint a RookHubon. Ez a nyilatkozat a személyes adatok GDPR szerinti kezeléséről tájékoztat.",
+      "introClubHub": "A ClubHub (a RookHub része) az egyesület nyilvántartása a gyerekekről és fiatalokról. A fiók ugyanaz, mint a RookHubon. Ez a nyilatkozat a személyes adatok GDPR szerinti kezeléséről tájékoztat.",
+      "clubTitle": "ClubHub (nyilvántartás)",
+      "clubIntro": "A ClubHubban az egyesület vezetése és edzői minden gyerekről, illetve fiatalról egy adatlapot vezetnek. Az adatlap nem fiók: a gyereknek nem kell nálunk regisztrálnia.",
+      "clubData": "Az adatlapon: keresztnév (kötelező), vezetéknév, születési dátum vagy év, szint, FIDE-azonosító és nemzeti játékosazonosító, a gyerek csoportjai, kérésre egy fénykép a portréhoz kijelölt arcrészlettel, valamint az edzők dátumozott jegyzetei a fejlődésről.",
+      "clubContacts": "Kapcsolatok: telefonszámok és e-mail-címek, mindegyik egy megjegyzéssel, például „anya” vagy „apa”.",
+      "clubAttendance": "Jelenlét edzésenként (jelen vagy hiányzik), az edzés témája és tartalma, valamint fényképek az edzésről.",
+      "clubAccess": "A nyilvántartást csak az egyesület bejelentkezett, megfelelő szerepkörű fiókjai látják: a vezetés mindent, az edzők csak a saját csoportjaik gyerekeit. Bejelentkezés nélkül semmi sem érhető el belőle; a szerver naplóiban csak azonosítószámok szerepelnek, nevek nem.",
+      "clubPhotos": "Azt, hogy a gyerekekről készülhet-e és tárolható-e fénykép, az egyesület a szülőkkel egyezteti; a ClubHub nem rögzít hozzájárulást.",
+      "clubLink": "A gyerek saját RookHub-fiókja csak egy egyszer használható kóddal kapcsolódik az adatlaphoz, amelyet maga a fiók vált be. Az egyesület ezután összesített edzésadatokat lát (feladványok, edzéscélok, KidHub-haladás), egyes próbálkozásokat nem. A kapcsolatot mindkét fél megszüntetheti.",
+      "clubRetention": "Az adatok az üzemeltető szerverén vannak, és nem tárolódnak az eszközön. Az adatlap törlésével a kapcsolatok, jegyzetek, fénykép és jelenlét is törlődik. Ha egy edző fiókját törlik, az adatlapok és jegyzetek az egyesületnél maradnak, a neve nélkül.",
       "kidIntro": "A KidHub a gyerekeknek szóló sakkoldal. Itt egyszerű szavakkal elmondjuk, milyen adatokat tárolunk és miért. Alatta következik a részletes változat a szülőknek.",
       "kidTitle": "A legfontosabbak röviden",
       "kidDevice": "Fiók nélkül a csillagaid és a haladásod csak ezen az eszközön maradnak. Mi nem tároljuk őket.",
@@ -3818,13 +3830,32 @@
       "showIgnored": "Elrejtettek mutatása",
       "rounds": "{{count}} forduló, {{from}} – {{to}}",
       "actionAria": "{{action}}: {{name}}",
-      "implausible": "Valószínűtlen időszak"
+      "implausible": "Valószínűtlen időszak",
+      "short": {
+        "bookmarked": "Megjelölve",
+        "calendar": "Naptár",
+        "hide": "Elrejtés",
+        "show": "Mutasd",
+        "report": "Jelentés"
+      }
     },
     "source": {
       "Unknown": "Ismeretlen forrás",
       "ChessResults": "chess-results",
       "Fide": "FIDE-naptár",
-      "Manual": "Kézzel felvéve"
+      "Manual": "Kézzel felvéve",
+      "ChessResultsCalendar": "előzetes versenynaptár",
+      "ItalianChessFederation": "Olasz Sakkszövetség",
+      "SlovenianChessFederation": "Szlovén Sakkszövetség",
+      "SlovakChessFederation": "Szlovák Sakkszövetség",
+      "HungarianChessFederation": "Magyar Sakkszövetség",
+      "CzechChessFederation": "Cseh Sakkszövetség",
+      "PolishChessFederation": "Lengyel Sakkszövetség",
+      "GermanChessFederation": "Német Sakkszövetség",
+      "EnglishChessFederation": "Angol Sakkszövetség",
+      "IrishChessUnion": "Ír Sakkszövetség",
+      "FrenchChessFederation": "Francia Sakkszövetség",
+      "NorwegianChessFederation": "Norvég Sakkszövetség"
     }
   },
   "clubhub": {
@@ -3867,6 +3898,7 @@
       "noSingleResult": "nincs egyéni eredmény",
       "noSingleResultTooltip": "A chess-results ehhez a versenyhez nem vezet egyéni eredményt — a várakozás itt nem segít.",
       "noName": "A profilodból hiányzik a vezetéknév — a chess-resultson név alapján keresünk, tehát nincs mit kikeresni.",
+      "noNameAction": "Vezetéknév megadása a profilban",
       "sourceUnavailable": "A chess-results nem volt elérhető. Az utoljára lehozott állapot látszik.",
       "empty": "Ezen a néven nem találtunk versenyt.",
       "loadError": "A versenytörténetet nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
@@ -3890,7 +3922,7 @@
       "allSpeeds": "Mind",
       "pointsTooltip": "Pontok a lejátszott játszmákból. A játszmák száma a játékoskártyáról származik, nem a verseny fordulószámából.",
       "track": {
-        "add": "Követés",
+        "add": "Játékos követése",
         "addError": "A játékost nem sikerült hozzáadni.",
         "added": "{{name}} követése elindult.",
         "help": "Kövess bárkit: a gyermekedet, egy klubtársat, a következő ellenfeledet — fiók nélkül is.",
@@ -3943,6 +3975,9 @@
     "courses": {
       "title": "Kurzusok",
       "empty": "Még nincs kurzus gyerekeknek.",
+      "soon": "Hamarosan jönnek a kurzusok!",
+      "playLevels": "Szintek játszása",
+      "playEndless": "Végtelen játék",
       "progress": "{{done}}/{{total}} kész",
       "completed": "Kurzus teljesítve!",
       "restart": "Elölről"
@@ -4013,7 +4048,7 @@
       "tileHint": "Egy bábu, sok csillag",
       "intro": "Edd meg az összes csillagot – minden lépéssel pontosan egyet!",
       "stage": "{{stage}}. szint",
-      "round": "{{n}}/{{total}}. feladat",
+      "round": "Feladat: {{n}} / {{total}}",
       "task": "Edd meg az összes csillagot – minden lépéssel pontosan egyet!",
       "left": "Még {{count}} csillag",
       "completed": "Szint teljesítve!",

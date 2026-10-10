@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ImpressumComponent } from './impressum.component';
 
@@ -7,7 +9,7 @@ describe('ImpressumComponent', () => {
   it('renders (template compiles)', async () => {
     await TestBed.configureTestingModule({
       imports: [ImpressumComponent],
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' })],
     }).compileComponents();
     const f = TestBed.createComponent(ImpressumComponent);
     f.detectChanges();
@@ -17,7 +19,7 @@ describe('ImpressumComponent', () => {
   it('zeigt nur den Kontakt: rookhub@oberschm.id, kein Diensteanbieter-Block, kein Platzhalter-Hinweis', async () => {
     await TestBed.configureTestingModule({
       imports: [ImpressumComponent],
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' })],
     }).compileComponents();
     const f = TestBed.createComponent(ImpressumComponent);
     f.detectChanges();
@@ -37,7 +39,7 @@ describe('ImpressumComponent', () => {
   it('Titel als h1, Abschnitte als h2 — keine uebersprungene Ebene (UX-057)', () => {
     TestBed.configureTestingModule({
       imports: [ImpressumComponent],
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' })],
     });
     const f = TestBed.createComponent(ImpressumComponent);
     f.detectChanges();

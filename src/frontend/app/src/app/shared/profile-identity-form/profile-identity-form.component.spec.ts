@@ -178,6 +178,14 @@ describe('ProfileIdentityFormComponent', () => {
     expect(profile.chessResultsId).toBeNull();
   });
 
+  it('stellt den Such-Knopf auf Feldhoehe und erklaert darunter, was er tut (UI-Sweep t-profile-search)', () => {
+    const button = fixture.nativeElement.querySelector('button.pif-search') as HTMLElement;
+    expect(button.getBoundingClientRect().height).toBe(56);
+    const hint = fixture.nativeElement.querySelector('.pif-search-box .pif-search-hint') as HTMLElement;
+    expect(hint.textContent!.trim()).toMatch(/searchPlayerHint|FIDE/);
+    expect(button.getAttribute('aria-describedby')).toBe(hint.id);
+  });
+
   /**
    * Lupe und Spinner gehoeren in den ICON-Slot des Knopfs (18 px, Aussenabstand), nicht in den
    * Text-Slot — dort war die Lupe 24 px gross, klebte am Text, und der Knopf sprang beim Suchen

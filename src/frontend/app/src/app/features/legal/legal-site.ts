@@ -2,6 +2,7 @@ import { InjectionToken, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { OPERATOR } from '../../../environments/operator';
+import { AuthService } from '../../core/auth.service';
 
 /**
  * Was die Rechtsseiten je Oberflaeche zeigen. RookHub und die Turnierseite nehmen die Vorgabe
@@ -18,8 +19,9 @@ export interface LegalSite {
    *  (auch die Turnierseite). KidHub bekommt eine Fassung in einfacher Sprache mit Elternhinweis (Codereview F7-003),
    *  LeagueHub den Abschnitt ueber die Daten der Ligaspieler ohne Konto (Art. 14 DSGVO, Codereview F7-006). */
   kind?: LegalSiteKind;
-  /** Ziel des Ruecklinks am Ende der Rechtsseiten; fehlt = `/login`. KidHub: `/` — ein Kind soll zurueck zum
-   *  Spiel, nicht auf die Anmeldemaske. */
+  /** Ziel des Ruecklinks am Ende der Rechtsseiten, wenn es keinen Schritt zurueck gibt; fehlt = abgemeldet `/login`,
+   *  angemeldet `/`. KidHub: `/` — ein Kind soll zurueck zum Spiel, nicht auf die Anmeldemaske; Turnierseite: der
+   *  Kalender (ihre Startseite, auch abgemeldet offen). */
   back?: string;
   /** Wo das Konto gefuehrt wird, wenn nicht hier. KidHub, LeagueHub, ClubHub und die Turnierseite haben keine Karte
    *  „Konto loeschen" — es ist dasselbe RookHub-Konto, geloescht wird es in RookHubs Profil. Die Loeschseite sagt das
@@ -38,7 +40,7 @@ export const PROFILE_SECTION_PARAM = 'section';
 export const ACCOUNT_DELETE_SECTION = 'delete';
 export const ACCOUNT_DELETE_QUERY: Readonly<Record<string, string>> = { [PROFILE_SECTION_PARAM]: ACCOUNT_DELETE_SECTION };
 
-export type LegalSiteKind = 'rookhub' | 'kidhub' | 'leaguehub';
+export type LegalSiteKind = 'rookhub' | 'kidhub' | 'leaguehub' | 'clubhub';
 
 /** Vorgabe fuer RookHub und die Turnierseite. */
 export function defaultLegalSite(): LegalSite {
@@ -46,9 +48,10 @@ export function defaultLegalSite(): LegalSite {
 }
 
 /** Ruecklink der Rechtsseiten: `/login` behaelt den Text der Seite („Zurueck zur Anmeldung"), jedes andere Ziel
- *  heisst „Zurueck zur Startseite". */
-export function legalBack(site: LegalSite, loginLabel: string): { link: string; label: string } {
-  const link = site.back ?? '/login';
+ *  heisst „Zurueck zur Startseite". Angemeldet fuehrt er ohne eigenes Ziel der Oberflaeche auf ihre Startseite (`/`)
+ *  statt auf die Anmeldemaske (UI-Sweep 2026-10-10, x-back-login). */
+export function legalBack(site: LegalSite, loginLabel: string, loggedIn = false): { link: string; label: string } {
+  const link = site.back ?? (loggedIn ? '/' : '/login');
   return { link, label: link === '/login' ? loginLabel : 'legal.backHome' };
 }
 
@@ -56,7 +59,8 @@ export function legalBack(site: LegalSite, loginLabel: string): { link: string; 
 export interface LegalBackLink {
   /** Ersatzziel ohne Verlauf (`/login`, KidHub `/`) — als routerLink, damit die Routen-Specs es pruefen. */
   link: string;
-  /** Schon fertig gewaehlter i18n-Schluessel: „Zurueck" mit Verlauf, sonst der Text des Ersatzziels. */
+  /** Schon fertig gewaehlter i18n-Schluessel: „Zurueck" mit Verlauf (von /login aus „Zurueck zur Anmeldung"),
+   *  sonst der Text des Ersatzziels. */
   label: string;
   /** Kam man innerhalb der App hierher? Dann fuehrt der Link zurueck, wo man war. */
   history: boolean;
@@ -70,17 +74,20 @@ export interface LegalBackLink {
  * Ruecklink der Rechtsseiten (Codereview UX-017): Wer aus der App kam — Fusszeile, ☰-Menue, Anmeldemaske, eingeloggt
  * vom Dashboard —, kommt mit „Zurueck" genau dorthin zurueck, statt immer auf /login zu landen (eingeloggt leitete das
  * ohnehin aufs Dashboard um). Direkt aufgerufen (Lesezeichen, Mail, Play Store, neuer Tab) gibt es keinen Schritt
- * zurueck in der App: dann das Ziel aus {@link legalBack}. Nur im Injektionskontext aufrufen (Feld-Initialisierer).
+ * zurueck in der App: dann das Ziel aus {@link legalBack}. „Zur Anmeldung" heisst er nur, wenn man von /login kam
+ * (UI-Sweep 2026-10-10, x-back-login). Nur im Injektionskontext aufrufen (Feld-Initialisierer).
  */
 export function legalBackLink(loginLabel: string): LegalBackLink {
   const router = inject(Router);
   const location = inject(Location);
-  const { link, label } = legalBack(inject(LEGAL_SITE), loginLabel);
+  const { link, label } = legalBack(inject(LEGAL_SITE), loginLabel, inject(AuthService).isLoggedIn);
   // Waehrend die Seite entsteht, laeuft ihre eigene Navigation noch — die letzte ERFOLGREICHE ist die Seite davor.
-  const history = router.lastSuccessfulNavigation() !== null;
+  const previous = router.lastSuccessfulNavigation();
+  const history = previous !== null;
+  const fromLogin = !!previous && router.serializeUrl(previous.finalUrl ?? previous.extractedUrl).split(/[?#]/)[0] === '/login';
   return {
     link,
-    label: history ? 'common.back' : label,
+    label: history ? (fromLogin ? loginLabel : 'common.back') : label,
     history,
     href: router.serializeUrl(router.parseUrl(link)),
     go: (e: MouseEvent) => {

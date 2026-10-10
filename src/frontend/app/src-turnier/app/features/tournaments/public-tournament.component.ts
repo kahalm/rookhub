@@ -5,6 +5,7 @@ import { PublicTournamentService } from '../../core/public-tournament.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
@@ -21,7 +22,7 @@ import { displayedTables } from './tournament-favorites.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './public-tournament.component.html',
   styleUrls: ['./public-tournament.component.scss'],
 })

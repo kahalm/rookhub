@@ -108,6 +108,10 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     expect(first).toContain('42');
     expect(first).toContain('07.10.2026');
     expect(rows[1].textContent).toContain('Bayern (Ligamanager + Schachkreis Zugspitze)');
+    // UI-Sweep 2026-10-10 (l-clubs-table): Region schmal, die Quelle als graue zweite Zeile
+    expect(rows[0].querySelector('td.region')?.firstChild?.textContent?.trim()).toBe('Tirol');
+    expect(rows[0].querySelector('td.region .region-src')?.textContent).toBe('chess-results');
+    expect(rows[1].querySelector('td.region .region-src')?.textContent).toBe('Ligamanager + Schachkreis Zugspitze');
     expect(el().querySelector('.clubs-help')!.textContent).toContain('keiner Vereinsgruppe');
   });
 

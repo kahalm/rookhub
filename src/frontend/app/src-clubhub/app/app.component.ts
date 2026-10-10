@@ -6,6 +6,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { LocaleService } from '@rh/core/locale.service';
 import { ThemeService } from '@rh/core/theme.service';
+import { FooterPresenceService } from '@rh/shared/app-footer/footer-presence';
 import { environment } from '../../src/environments/environment';
 import { hasClubAccess } from './core/club-access';
 import { MemberPhotoStore } from './core/member-photo.store';
@@ -34,7 +35,8 @@ export function isCardIndexUrl(url: string): boolean {
           @if (user(); as u) {
             <span class="who">{{ u.username }}</span>
             <button type="button" class="btn" (click)="logout()">Abmelden</button>
-          } @else {
+          } @else if (!onLogin()) {
+            <!-- UI-Sweep 2026-10-10 (x-login-headbtn): auf /login selbst kein zweiter „Anmelden“-Knopf -->
             <a class="btn" routerLink="/login" [queryParams]="{ returnUrl: '/' }">Anmelden</a>
           }
         </nav>
@@ -75,6 +77,14 @@ export class ClubHubAppComponent implements OnInit {
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
   readonly onCardIndex = computed(() => isCardIndexUrl(this.url()));
+  /** Auf der Anmeldemaske selbst gibt es oben keinen „Anmelden“-Knopf (UI-Sweep 2026-10-10, x-login-headbtn). */
+  readonly onLogin = computed(() => this.url().split(/[?#]/)[0] === '/login');
+
+  constructor() {
+    // Die Fusszeile zeigt Impressum und Datenschutz immer — die Anmeldemaske laesst ihre eigene Zeile dann weg
+    // (UI-Sweep 2026-10-10, x-login-legal).
+    inject(FooterPresenceService).presence.set('always');
+  }
 
   ngOnInit(): void {
     // Die Seite ist deutsch; die geteilten Masken (Anmelden, Datenschutz) zeigen es ebenso — ANGEZEIGT, ohne die

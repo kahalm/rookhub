@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
+import { chessTitle } from './tournament-table.util';
 
 /**
  * Rein präsentationale Darstellung der Turnier-Tabs (Spieler/Teams/Paarungen)
@@ -34,6 +35,9 @@ import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/model
   styleUrls: ['./tournament-tables.component.scss'],
 })
 export class TournamentTablesComponent {
+  /** Nur echte Titel anzeigen (t-title-col). */
+  readonly chessTitle = chessTitle;
+
   // --- Daten ---
   @Input() players: TournamentPlayer[] = [];
   @Input() teams: TournamentTeam[] = [];

@@ -44,6 +44,12 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
               <li>{{ 'legal.privacy.kidNoTracking' | translate }}</li>
             </ul>
             <p>{{ 'legal.privacy.kidDetails' | translate }}</p>
+          } @else if (kind === 'leaguehub') {
+            <!-- Einleitung je Oberflaeche (UI-Sweep 2026-10-10, x-privacy-intro): LeagueHub stellte sich als
+                 „RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus …)“ vor. -->
+            <p>{{ 'legal.privacy.introLeagueHub' | translate }}</p>
+          } @else if (kind === 'clubhub') {
+            <p>{{ 'legal.privacy.introClubHub' | translate }}</p>
           } @else {
             <p>{{ 'legal.privacy.intro' | translate }}</p>
           }
@@ -56,6 +62,22 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
                  bewusst nicht (Entscheidung 2026-09-30), nur die Kontaktadresse der Oberflaeche. -->
             <p>{{ 'legal.privacy.controllerNamed' | translate }}<br>
               <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
+          }
+
+          @if (kind === 'clubhub') {
+            <!-- ClubHub: die Kartei der Kinder und Jugendlichen (UI-Sweep 2026-10-10, x-privacy-intro) — Inhalt nach dem
+                 Ist-Stand der Oberflaeche und des Servers (Haupt-CLAUDE.md „ClubHub“); Rechtstext, vom Betreiber freizugeben. -->
+            <h2 id="privacy-club" tabindex="-1">{{ 'legal.privacy.clubTitle' | translate }}</h2>
+            <p>{{ 'legal.privacy.clubIntro' | translate }}</p>
+            <ul>
+              <li>{{ 'legal.privacy.clubData' | translate }}</li>
+              <li>{{ 'legal.privacy.clubContacts' | translate }}</li>
+              <li>{{ 'legal.privacy.clubAttendance' | translate }}</li>
+              <li>{{ 'legal.privacy.clubAccess' | translate }}</li>
+              <li>{{ 'legal.privacy.clubPhotos' | translate }}</li>
+              <li>{{ 'legal.privacy.clubLink' | translate }}</li>
+              <li>{{ 'legal.privacy.clubRetention' | translate }}</li>
+            </ul>
           }
 
           @if (kind === 'leaguehub') {
@@ -175,6 +197,7 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }
+    .back a::before { content: '← ' / ''; }
   `]
 })
 export class PrivacyComponent {
@@ -189,6 +212,7 @@ export class PrivacyComponent {
   readonly toc: readonly { id: string; title: string }[] = [
     ...(this.kind === 'kidhub' ? [{ id: 'privacy-kid', title: 'legal.privacy.kidTitle' }] : []),
     { id: 'privacy-controller', title: 'legal.privacy.controllerTitle' },
+    ...(this.kind === 'clubhub' ? [{ id: 'privacy-club', title: 'legal.privacy.clubTitle' }] : []),
     ...(this.kind === 'leaguehub' ? [{ id: 'privacy-league', title: 'legal.privacy.leagueTitle' }] : []),
     { id: 'privacy-data', title: 'legal.privacy.dataTitle' },
     { id: 'privacy-purposes', title: 'legal.privacy.purposesTitle' },

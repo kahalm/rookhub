@@ -107,6 +107,7 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
     h2 { margin: 1.25rem 0 0.25rem; font-size: 1em; font-weight: bold; color: var(--mat-sys-primary); }
     a { color: var(--mat-sys-primary); }
     .back { margin-top: 1.5rem; }
+    .back a::before { content: '← ' / ''; }
     .action { margin: 0.75rem 0 0.25rem; }
     .backup-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: -0.25rem; }
     .backup-links a, .league-kept a { display: inline-block; padding: 10px 0; }

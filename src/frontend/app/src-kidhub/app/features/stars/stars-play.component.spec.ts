@@ -39,6 +39,33 @@ describe('StarsPlayComponent', () => {
   };
   const move = (c: StarsPlayComponent, orig: string, dest: string) => c.onMove({ orig: orig as Key, dest: dest as Key });
 
+  /** UI-Sweep 2026-10-10 (k-stars-progress, k-task-pos): grosse Fortschritts-Sterne, „Aufgabe x von 6" ueber der Aufgabe. */
+  it('Fortschritt: grosse Sterne (gefressen gold, offen grau) und der Aufgaben-Balken in der rechten Spalte', () => {
+    const { f, c } = create();
+    const el = f.nativeElement as HTMLElement;
+    const stars = () => Array.from(el.querySelectorAll<HTMLElement>('.left span'));
+    expect(stars().map(s => s.textContent!.trim())).toEqual(['☆', '☆']);
+    const size = parseFloat(getComputedStyle(el.querySelector('.left')!).fontSize);
+    expect(size).toBeGreaterThanOrEqual(28);
+    expect(size).toBeLessThanOrEqual(32);
+    expect(el.querySelector('.left')!.getAttribute('role')).toBe('img');
+
+    move(c, 'a1', 'a3');
+    f.detectChanges();
+    expect(stars().map(s => s.textContent!.trim())).toEqual(['★', '☆']);
+    expect(getComputedStyle(stars()[0]).color).toBe('rgb(245, 180, 0)');
+    expect(getComputedStyle(stars()[1]).color).not.toBe('rgb(245, 180, 0)');
+
+    // Aufgabe 1 von 6: nicht mehr in der Kopfzeile, sondern ueber der Aufgabe — sechs Abschnitte, der erste gefuellt.
+    expect(el.querySelector('.head .round')).toBeNull();
+    const rounds = el.querySelector('.task-slot .rounds')!;
+    expect(rounds.querySelector('.round')!.textContent).toContain('kids.stars.round');
+    const segs = Array.from(rounds.querySelectorAll('.segments span'));
+    expect(segs.length).toBe(STARS_PER_STAGE);
+    expect(segs.map(x => x.classList.contains('on'))).toEqual([true, false, false, false, false, false]);
+    expect(rounds.compareDocumentPosition(el.querySelector('.task')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('zeigt die Sterne und frisst sie in der richtigen Reihenfolge', () => {
     const { c } = create();
     expect(c.shapes().filter(s => s.customSvg).map(s => s.orig)).toEqual(['a3', 'c3'] as Key[]);

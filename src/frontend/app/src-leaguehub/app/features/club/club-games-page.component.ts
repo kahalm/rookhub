@@ -75,41 +75,41 @@ type Side = 'white' | 'black';
           }
         </section>
       } @else if (items().length) {
-        <!-- UX-035: am Handy (Container unter 640 px) stehen die Aktionen in einer eigenen Zeile unter der Partie — in der
-             Spalte lagen „Bearbeiten“ und „Löschen“ rechts außerhalb und waren nur durch unsichtbares Querwischen erreichbar. -->
+        <!-- UX-035 + UI-Sweep 2026-10-10 (l-club-mobile): am Handy (Container unter 640 px) steht jede Partie als Karte —
+             „Weiß – Schwarz“, Ergebnis rechts, Jahr und Eröffnung grau, „Nachspielen“ und ⋮ rechtsbündig. Breit die Tabelle,
+             Namen einzeilig, Eröffnung mit „…“, die Spalte „Analyse“ nur, wenn eine Partie einen Wert hat (l-club-table). -->
         <div class="roster-scroll club-scroll">
           <table class="rtable club-table">
             <thead><tr><th class="num">Jahr</th><th>Weiß</th><th>Schwarz</th><th class="num">Ergebnis</th>
               <th class="hide-s">Eröffnung</th><th class="num hide-s">Züge</th>
-              <th class="num" title="Genauigkeit Weiß · Schwarz aus der Hintergrund-Analyse">Analyse</th>
+              @if (showAnalysis()) { <th class="num" title="Genauigkeit Weiß · Schwarz aus der Hintergrund-Analyse">Analyse</th> }
               <th class="acts"><span class="sr">Aktionen</span></th></tr></thead>
             <tbody>
               @for (g of items(); track g.id) {
                 <tr class="game">
                   <td class="num">{{ g.year ?? '–' }}</td>
                   @for (k of sides; track k) {
-                    <td>@if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
-                        @else if (isAnon(g, k)) { <span class="anon">{{ nameOf(g, k) }}</span> }
-                        @else if (inRoster(g, k)) { <span class="pl-nofide" title="Ligaspieler ohne FIDE-ID — dazu gibt es keine Spielerkarte">{{ nameOf(g, k) }}
-                                  <span class="small muted">(ohne FIDE-ID)</span></span> }
-                        @else if (g.canDelete) { <button type="button" class="pl unknown" (click)="edit(g)"
-                                  [attr.title]="'Kein Spieler zugeordnet (keine FIDE-ID, also keine Spielerkarte) — zum Zuordnen klicken'">{{ nameOf(g, k) }}
-                                  <span class="small muted" aria-hidden="true">✎</span></button> }
-                        @else { <span>{{ nameOf(g, k) }}</span> }
-                        @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }</td>
+                    <td class="side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: k }" /></td>
                   }
                   <td class="num">{{ resultText(g.result) }}</td>
-                  <td class="hide-s small">{{ de(g.opening) }}</td>
+                  <td class="hide-s small opening" [attr.title]="de(g.opening)">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
-                  <td class="num small" [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</td>
+                  @if (showAnalysis()) { <td class="num small" [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</td> }
                   <td class="acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></td>
+                  <td class="card-cell">
+                    <div class="gc-head">
+                      <span class="gc-names"><span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'white' }" /></span>
+                        <span class="gc-vs" aria-hidden="true">–</span>
+                        <span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'black' }" /></span></span>
+                      <b class="gc-result">{{ resultText(g.result) }}</b>
+                    </div>
+                    <div class="gc-meta muted small">{{ cardMeta(g) }}</div>
+                    <div class="row-acts gc-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
+                  </td>
                 </tr>
-                <tr class="acts-row"><td colspan="8">
-                  <div class="row-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
-                </td></tr>
                 @if (viewing(); as v) {
                   @if (v.id === g.id) {
-                    <tr class="edit-row"><td colspan="8">
+                    <tr class="edit-row"><td colspan="9">
                       @if (v.game; as d) {
                         <lh-game-replay [pgn]="d.pgn" [evalsUrl]="d.analysis ? api.evalsUrl(d.id) : null" />
                         @if (!d.analysis) { <p class="small muted">Noch nicht analysiert — die Analyse läuft abends und am Wochenende.</p> }
@@ -120,7 +120,7 @@ type Side = 'white' | 'black';
                 }
                 @if (editing(); as e) {
                   @if (e.id === g.id) {
-                    <tr class="edit-row"><td colspan="8">
+                    <tr class="edit-row"><td colspan="9">
                       <div class="side-edit">
                         <div class="field-row">
                           @for (k of sides; track k) {
@@ -172,6 +172,18 @@ type Side = 'white' | 'black';
     }
     <!-- Die Aktionen einer Partie — in der Spalte (breit) bzw. in der eigenen Zeile darunter (Handy); die jeweils andere
          Stelle blendet das CSS aus (display: none, also weder sichtbar noch für Vorleser oder Tab erreichbar). -->
+    <!-- Ein Spielername — in der Tabelle UND in der Karte am Handy derselbe Baustein. -->
+    <ng-template #sideName let-g let-k="k">
+      @if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
+      @else if (isAnon(g, k)) { <span class="anon">{{ nameOf(g, k) }}</span> }
+      @else if (inRoster(g, k)) { <span class="pl-nofide" title="Ligaspieler ohne FIDE-ID — dazu gibt es keine Spielerkarte">{{ nameOf(g, k) }}
+                <span class="small muted">(ohne FIDE-ID)</span></span> }
+      @else if (g.canDelete) { <button type="button" class="pl unknown" (click)="edit(g)"
+                [attr.title]="'Kein Spieler zugeordnet (keine FIDE-ID, also keine Spielerkarte) — zum Zuordnen klicken'">{{ nameOf(g, k) }}
+                <span class="small muted" aria-hidden="true">✎</span></button> }
+      @else { <span>{{ nameOf(g, k) }}</span> }
+      @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }
+    </ng-template>
     <ng-template #rowActs let-g>
       <!-- Nachspielen bleibt sichtbar, der Rest steckt im ⋮ (Wunsch 2026-10-06: die Spalte machte die Tabelle zu breit). -->
       <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
@@ -209,6 +221,8 @@ export class ClubGamesPageComponent implements OnInit {
   readonly de = de;
 
   readonly items = signal<ClubGame[]>([]);
+  /** Spalte „Analyse" nur, wenn mindestens eine Partie einen Wert hat — sonst stand dort nur „–" (UI-Sweep 2026-10-10). */
+  readonly showAnalysis = computed(() => this.items().some(g => this.analysisText(g) !== '–'));
   readonly total = signal<number | null>(null);
   readonly query = signal('');
   readonly loading = signal(false);
@@ -342,6 +356,11 @@ export class ClubGamesPageComponent implements OnInit {
   }
 
   /** Spalte „Analyse": fertig die Genauigkeit beider Seiten, sonst der Fortschritt. */
+  /** „2026 · Sizilianisch …" — Jahr und Eröffnung in der Karte am Handy. */
+  cardMeta(g: ClubGame): string {
+    return [g.year ?? '–', de(g.opening) || null].filter(x => x !== null).join(' · ');
+  }
+
   analysisText(g: ClubGame): string {
     const a = g.analysis;
     if (!a) return '–';

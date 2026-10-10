@@ -8,7 +8,7 @@ import { SessionPhotosComponent } from '../../shared/session-photos.component';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, SessionDetail, Status } from '../../core/club.models';
-import { dateNeighbours, longDate, nameHead, nameTail, shortDate, trainingDate } from '../../core/club-format';
+import { dateNeighbours, dayText, longDate, nameHead, nameTail, parseDay, shortDate, trainingDate } from '../../core/club-format';
 
 /** „7 von 12 da" */
 export function tallyText(present: number, total: number): string {
@@ -51,8 +51,19 @@ export function tallyText(present: number, total: number): string {
           {{ around().next ? short(around().next!) : 'keine spätere' }} <span aria-hidden="true">›</span></button>
       </nav>
       <div class="roll-head">
+        <!-- TT.MM.JJJJ statt <input type="date">: das zeigt das Format des Browsers (en-US 10/09/2026 = der 10. September?).
+             Der Kalender bleibt erreichbar — der Knopf öffnet ein verstecktes natives Datumsfeld. -->
         <label class="field"><span>Tag der Einheit</span>
-          <input type="date" name="date" [value]="date()" (change)="changeDate($any($event.target).value, $any($event.target))"></label>
+          <span class="day-input">
+            <input name="date" inputmode="numeric" autocomplete="off" placeholder="TT.MM.JJJJ" [value]="day(date())"
+              (change)="typeDate($any($event.target))" (keydown.enter)="$any($event.target).blur()">
+            <button type="button" class="day-pick" aria-label="Kalender öffnen" title="Kalender öffnen" (click)="pickDate(picker)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+            </button>
+            <input #picker type="date" class="day-native" tabindex="-1" aria-hidden="true" [value]="date()" (change)="changeDate(picker.value, picker)">
+          </span>
+          @if (dateError()) { <span class="hint err">So nicht lesbar — bitte als TT.MM.JJJJ, z. B. 09.10.2026.</span> }
+        </label>
         <label class="field"><span>Thema</span>
           <input name="topic" autocomplete="off" maxlength="200" placeholder="z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
       </div>
@@ -102,7 +113,7 @@ export function tallyText(present: number, total: number): string {
             {{ uploading() ? uploading() : 'Fotos hinzufügen' }}
             <input type="file" accept="image/*" multiple hidden [disabled]="busy() || loading()" (change)="addPhotos($any($event.target))">
           </label>
-          @if (!session()) { <span class="muted small">Beim ersten Foto wird die Einheit gespeichert.</span> }
+          @if (!session()) { <p class="muted small photo-hint">Beim ersten Foto wird die Einheit gespeichert.</p> }
           <p class="err status-line" role="alert">{{ photoError() ?? '' }}</p>
         </section>
         <div class="save-bar">
@@ -162,6 +173,9 @@ export class AttendancePageComponent implements OnInit {
   readonly tally = computed(() => tallyText(this.present(), this.listed().length));
   readonly long = longDate;
   readonly short = shortDate;
+  readonly day = dayText;
+  /** Der getippte Tag war so nicht lesbar — das Feld zeigt wieder den Tag, auf dem man steht. */
+  readonly dateError = signal(false);
   readonly head = nameHead;
   readonly tail = nameTail;
 
@@ -194,6 +208,7 @@ export class AttendancePageComponent implements OnInit {
    * nach Rückfrage; bei „nein" zeigt das Datumsfeld wieder den Tag, auf dem man steht.
    */
   changeDate(value: string, input?: HTMLInputElement): void {
+    this.dateError.set(false);
     if (!value || value === this.date()) return;
     if (!this.dirty()) {
       this.open(value);
@@ -202,8 +217,29 @@ export class AttendancePageComponent implements OnInit {
     void firstValueFrom(this.confirm.ask('Die Änderungen an dieser Einheit sind noch nicht gespeichert. Trotzdem zu einem anderen Tag wechseln?'))
       .then(ok => {
         if (ok) this.open(value);
-        else if (input) input.value = this.date();
+        else if (input) input.value = input.type === 'date' ? this.date() : dayText(this.date());
       });
+  }
+
+  /** Ins Datumsfeld getippt (TT.MM.JJJJ): lesbar → wie ein gewählter Tag, sonst zurück auf den Tag, auf dem man steht. */
+  typeDate(input: HTMLInputElement): void {
+    const iso = parseDay(input.value);
+    if (!iso) {
+      input.value = dayText(this.date());
+      this.dateError.set(true);
+      return;
+    }
+    input.value = dayText(iso);                                          // „9.10.26" steht danach als „09.10.2026" da
+    this.changeDate(iso, input);
+  }
+
+  /** Der Kalender-Knopf öffnet die Auswahl des versteckten nativen Datumsfelds (ohne showPicker: Klick darauf). */
+  pickDate(picker: HTMLInputElement): void {
+    const native = picker as HTMLInputElement & { showPicker?: () => void };
+    try {
+      if (native.showPicker) { native.showPicker(); return; }
+    } catch { /* z. B. nicht aus einer Nutzeraktion heraus — dann der Klick */ }
+    picker.click();
   }
 
   /** Den Tag öffnen und in die Adresse schreiben (`?datum=`), damit Neuladen und „Zurück" auf ihm bleiben. */

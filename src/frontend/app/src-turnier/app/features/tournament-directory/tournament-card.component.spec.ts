@@ -261,6 +261,45 @@ describe('TournamentCardComponent', () => {
     expect(badges).toContain('tournamentDirectory.gender.Female');
   });
 
+  // ----- UI-Sweep 2026-10-10 -----
+
+  it('zeigt keinen Bedenkzeit-Chip „Unbekannt" (t-chip-unknown)', () => {
+    setup({ speed: 'Unknown' });
+    const badges = [...fixture.nativeElement.querySelectorAll('.badge')].map((n: Element) => n.textContent?.trim());
+    expect(badges).not.toContain('tournamentDirectory.speed.Unknown');
+    TestBed.resetTestingModule();
+    setup({ speed: 'Rapid' });
+    expect([...fixture.nativeElement.querySelectorAll('.badge')].map((n: Element) => n.textContent?.trim()))
+      .toContain('tournamentDirectory.speed.Rapid');
+  });
+
+  it('haelt die Plaetze der Aktionen fest: ohne Merken/Kalender steht ein leerer Platz (t-card-actions)', () => {
+    setup({ chessResultsId: null, startDate: null });
+    const slots = [...fixture.nativeElement.querySelectorAll('.tc-actions > *')] as HTMLElement[];
+    expect(slots.length).toBe(4);
+    expect(slots[0].classList).toContain('tc-slot');
+    expect(slots[1].classList).toContain('tc-slot');
+    expect(slots[3].querySelector('mat-icon')!.textContent!.trim()).toBe('flag');
+  });
+
+  it('fuellt die Zelle, damit die Aktionsleiste unten sitzt (t-card-actions)', () => {
+    setup();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(getComputedStyle(host).display).toBe('flex');
+    expect(getComputedStyle(host).flexGrow).toBe('1');
+    expect(getComputedStyle(host.querySelector('.tc')!).flexGrow).toBe('1');
+  });
+
+  it('beschriftet jede Aktion mit einem kurzen Wort (am Handy sichtbar, t-card-labels)', () => {
+    setup();
+    const labels = [...fixture.nativeElement.querySelectorAll('.tc-actions .tc-act-label')].map((n: Element) => n.textContent?.trim());
+    expect(labels).toEqual(['tournamentDirectory.bookmark', 'tournamentDirectory.card.short.calendar',
+      'tournamentDirectory.card.short.hide', 'tournamentDirectory.card.short.report']);
+    if (window.innerWidth > 600) {
+      expect(getComputedStyle(fixture.nativeElement.querySelector('.tc-act-label')).display).toBe('none');
+    }
+  });
+
   it('führt erst über den Namen auf die Detailseite', () => {
     setup();
     let selected: DirectoryEntry | null = null;

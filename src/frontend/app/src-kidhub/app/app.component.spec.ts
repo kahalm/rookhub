@@ -10,6 +10,7 @@ import { Subject } from 'rxjs';
 import { isHomeUrl, KidHubAppComponent, KIDS_LANGUAGES } from './app.component';
 import { AuthResponse, AuthService } from '@rh/core/auth.service';
 import { FORMAT_LOCALES, LocaleService } from '@rh/core/locale.service';
+import { FooterPresenceService } from '@rh/shared/app-footer/footer-presence';
 
 @Component({ standalone: true, template: '' })
 class BlankComponent {}
@@ -41,6 +42,11 @@ describe('KidHubAppComponent', () => {
   afterEach(() => {
     localStorage.removeItem('rookhub_lang'); localStorage.removeItem('rookhub_user');
     localStorage.removeItem(AuthService.SessionEndPendingKey);
+  });
+
+  it('meldet die Fusszeile als immer sichtbar — die Anmeldemaske zeigt „Datenschutz" nicht doppelt (x-login-legal)', () => {
+    TestBed.createComponent(KidHubAppComponent);
+    expect(TestBed.inject(FooterPresenceService).presence()).toBe('always');
   });
 
   function selected(f: { nativeElement: HTMLElement }): string {

@@ -81,7 +81,7 @@ describe('PrepAccountsComponent (Online-Konten suchen, Phase 4)', () => {
     api.suggestionChecks.and.resolveTo({ site: 'lichess', user: 'PaulPrepmann', url: 'u', player: 'Prepmann, Paul', elo: 2210,
       checkedAt: '2026-10-02T10:00:00Z', profileLoaded: true, items: [] });
     const buttons = () => Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button'));
-    buttons().find(b => b.textContent?.includes('Als gesichert übernehmen'))!.click();
+    buttons().find(b => b.textContent?.includes('Gesichert'))!.click();
     await settle();
     expect(api.acceptSuggestion).toHaveBeenCalledWith(7, true);
     expect(changed).toBe(1);
@@ -197,7 +197,7 @@ describe('PrepAccountsComponent (Online-Konten suchen, Phase 4)', () => {
     await create([SUGG]);
     api.acceptSuggestion.and.resolveTo({ site: 'lichess', user: 'PaulPrepmann', url: 'u', conf: 'sicher' });
     api.suggestions.and.resolveTo({ items: [], perHour: 20, remaining: 20, accounts: [{ ...GOOD, site: 'lichess' }], leagueHub: false });
-    Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button')).find(b => b.textContent?.includes('Als gesichert übernehmen'))!.click();
+    Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button')).find(b => b.textContent?.includes('Gesichert'))!.click();
     await settle();
     expect(changed).toBe(1);
     expect(rows().length).toBe(1);

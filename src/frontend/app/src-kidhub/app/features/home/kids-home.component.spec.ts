@@ -115,4 +115,53 @@ describe('KidsHomeComponent', () => {
     const saved = el.querySelector('.saved')!;
     expect(saved.nextElementSibling).withContext('nichts mehr unter dem Speicherhinweis').toBeNull();
   }));
+
+  /** Die gerenderte Seite samt aller Stile in einem iframe von `w`×`h` — dort gelten dessen Media-Queries. */
+  function measureAt(host: HTMLElement, w: number, h: number) {
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const frame = document.createElement('iframe');
+    frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: ${h}px; border: 0;`;
+    document.body.appendChild(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0">${host.outerHTML}</body></html>`);
+      doc.close();
+      const tile = doc.querySelector('.tile')!;
+      const r = tile.getBoundingClientRect();
+      const win = frame.contentWindow!;
+      return {
+        tile: { width: r.width, height: r.height },
+        icon: parseFloat(win.getComputedStyle(doc.querySelector('.tile .icon')!).fontSize),
+        name: parseFloat(win.getComputedStyle(doc.querySelector('.tile .name')!).fontSize),
+        hostHeight: doc.body.firstElementChild!.getBoundingClientRect().height,
+      };
+    } finally {
+      frame.remove();
+    }
+  }
+
+  /** UI-Sweep 2026-10-10 (k-start-space): am PC endeten die Kacheln bei y ≈ 550, darunter fast 500 px leer. */
+  it('am PC: Inhalt senkrecht mittig, Kacheln ~360 × 260 mit 64-px-Symbol und 32-px-Titel; am Handy wie bisher', () => {
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([]);
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 10 }]);
+    f.detectChanges();
+    const host = f.nativeElement as HTMLElement;
+
+    const pc = measureAt(host, 1440, 900);
+    expect(pc.tile.height).toBeGreaterThanOrEqual(260);
+    expect(pc.tile.width).toBeGreaterThanOrEqual(300);
+    expect(pc.tile.width).toBeLessThanOrEqual(360);
+    expect(pc.icon).toBe(64);
+    expect(pc.name).toBe(32);
+    expect(pc.hostHeight).withContext('fuellt die Hoehe zwischen Kopf- und Fusszeile').toBeGreaterThanOrEqual(900 - 140 - 1);
+
+    const phone = measureAt(host, 390, 844);
+    expect(phone.icon).toBeLessThan(64);
+    expect(phone.tile.height).toBeLessThan(260);
+  });
 });

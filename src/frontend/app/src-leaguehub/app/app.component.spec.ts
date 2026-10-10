@@ -158,3 +158,62 @@ describe('LeagueHubAppComponent Reiter „Vereine"', () => {
     expect(manager).not.toContain('Vereine');
   });
 });
+
+/** UI-Sweep 2026-10-10: Kopf auf /login ohne „Anmelden" (x-login-headbtn), am Handy ein Konto-Menü (l-nav-mobile),
+ *  Vereinspartien breiter (l-club-table). */
+describe('LeagueHubAppComponent Kopf (UI-Sweep 2026-10-10)', () => {
+  async function create(url: string, user: { userId: number; username: string } | null, clubs = [TEST_CLUB]) {
+    TestBed.configureTestingModule({
+      imports: [LeagueHubAppComponent],
+      providers: [
+        provideRouter([{ path: '**', component: StubPageComponent }]),
+        { provide: AuthService, useValue: { currentUser$: of(user), currentUser: user, has: () => !!user, logout: () => {} } },
+        { provide: HandoffService, useValue: { consumeIncoming: () => Promise.resolve(false) } },
+        { provide: LocaleService, useValue: { init: () => {}, applyUnsaved: () => {} } },
+        { provide: ThemeService, useValue: {} },
+        provideTestClub(user ? clubs[0] : null, user ? clubs : []),
+      ],
+    });
+    const fixture = TestBed.createComponent(LeagueHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl(url);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('auf /login kein „Anmelden" im Kopf, auf /register und anderswo schon', async () => {
+    let f = await create('/login?returnUrl=%2Fverein', null);
+    expect((f.nativeElement as HTMLElement).querySelector('header a.btn-sec')).toBeNull();
+    TestBed.resetTestingModule();
+    f = await create('/register', null);
+    expect((f.nativeElement as HTMLElement).querySelector('header a.btn-sec')?.textContent).toContain('Anmelden');
+    TestBed.resetTestingModule();
+    f = await create('/s/abc', null);
+    expect((f.nativeElement as HTMLElement).querySelector('header a.btn-sec')?.textContent).toContain('Anmelden');
+  });
+
+  it('angemeldet: Konto-Knopf mit Menü (Name, Verein wechseln, Abmelden)', async () => {
+    const OTHER = { id: 2, name: 'SK Weiler', anonName: 'Weiler', teamPrefix: 'SK Weiler', region: 'bayern' };
+    const f = await create('/', { userId: 7, username: 'patrik' }, [TEST_CLUB, OTHER]);
+    const el = f.nativeElement as HTMLElement;
+    const btn = el.querySelector('header button.acct-btn') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(el.querySelector('header .who')?.classList).toContain('desk');
+    btn.click();
+    f.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item')).map(b => b.textContent?.trim());
+    expect(items).toEqual(['patrik', '✓ SK Testdorf', 'SK Weiler', 'Abmelden']);
+    const reload = spyOn(f.componentInstance, 'reload');
+    (Array.from(document.querySelectorAll('.mat-mdc-menu-item')).find(b => b.textContent?.includes('SK Weiler')) as HTMLButtonElement).click();
+    expect(reload).toHaveBeenCalled();
+  });
+
+  it('Vereinspartien bekommen die breitere Seite, andere Seiten nicht', async () => {
+    let f = await create('/verein', { userId: 7, username: 'patrik' });
+    expect((f.nativeElement as HTMLElement).querySelector('main')?.classList).toContain('mid');
+    TestBed.resetTestingModule();
+    f = await create('/verein/neu', { userId: 7, username: 'patrik' });
+    expect((f.nativeElement as HTMLElement).querySelector('main')?.classList).not.toContain('mid');
+  });
+});

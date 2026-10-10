@@ -592,6 +592,7 @@
     "firstName": "Ime",
     "lastName": "Prezime",
     "searchPlayer": "Pretraži igrača",
+    "searchPlayerHint": "Automatski pronalazi FIDE i ChessResults ID.",
     "noResults": "Nema rezultata.",
     "email": "E-pošta",
     "emailHint": "Za ponovno postavljanje lozinke. Ostavi prazno za uklanjanje.",
@@ -782,6 +783,17 @@
       "updated": "Zadnja izmjena: 1. listopada 2026.",
       "tocTitle": "Sadržaj",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
+      "introLeagueHub": "LeagueHub (dio RookHuba) izrađuje prognoze postava za ekipne mečeve i vodi bazu partija klubova sudionika. Račun je isti kao na RookHubu. Ova izjava objašnjava obradu osobnih podataka prema GDPR-u.",
+      "introClubHub": "ClubHub (dio RookHuba) je klupska kartoteka za djecu i mlade. Račun je isti kao na RookHubu. Ova izjava objašnjava obradu osobnih podataka prema GDPR-u.",
+      "clubTitle": "ClubHub (kartoteka)",
+      "clubIntro": "U ClubHubu vodstvo i treneri kluba vode karton za svako dijete odnosno mladog igrača. Karton nije račun: dijete se kod nas ne mora registrirati.",
+      "clubData": "Na kartonu: ime (obavezno), prezime, datum ili godina rođenja, razina, FIDE ID i nacionalni broj igrača, grupe djeteta, po želji fotografija s označenim dijelom lica za portret te datirane bilješke trenera o napretku.",
+      "clubContacts": "Kontakti: brojevi telefona i e-mail adrese, svaki s napomenom poput „majka” ili „otac”.",
+      "clubAttendance": "Prisutnost po treningu (prisutan ili odsutan), tema i sadržaj treninga te fotografije s treninga.",
+      "clubAccess": "Kartoteku vide samo prijavljeni klupski računi s odgovarajućom ulogom: vodstvo sve, treneri samo djecu svojih grupa. Bez prijave ništa od toga nije dostupno; u zapisnicima poslužitelja nalaze se samo identifikacijski brojevi, bez imena.",
+      "clubPhotos": "Smiju li se djeca fotografirati i fotografije pohraniti, klub dogovara s roditeljima; ClubHub ne bilježi privolu.",
+      "clubLink": "Vlastiti RookHub račun djeteta povezuje se s kartonom samo jednokratnim kodom koji račun sam iskoristi. Klub tada vidi sažete brojke treninga (zagonetke, ciljeve treninga, napredak na KidHubu), bez pojedinačnih pokušaja. Obje strane mogu ukloniti vezu.",
+      "clubRetention": "Podaci su pohranjeni na poslužitelju operatera i ne spremaju se na uređaj. Brisanjem kartona brišu se i kontakti, bilješke, fotografija i prisutnost. Ako se izbriše račun trenera, kartoni i bilješke ostaju klubu, bez njegova imena.",
       "kidIntro": "KidHub je šahovska stranica za djecu. Ovdje jednostavnim riječima objašnjavamo koje podatke spremamo i zašto. Ispod slijedi detaljna verzija za roditelje.",
       "kidTitle": "Najvažnije ukratko",
       "kidDevice": "Bez računa tvoje zvjezdice i tvoj napredak ostaju samo na ovom uređaju. Mi ih ne spremamo.",
@@ -4139,13 +4151,32 @@
       "showIgnored": "Prikaži skrivene",
       "rounds": "{{count}} kola, {{from}} do {{to}}",
       "actionAria": "{{action}}: {{name}}",
-      "implausible": "Nevjerodostojno razdoblje"
+      "implausible": "Nevjerodostojno razdoblje",
+      "short": {
+        "bookmarked": "Spremljeno",
+        "calendar": "Kalendar",
+        "hide": "Sakrij",
+        "show": "Prikaži",
+        "report": "Prijavi"
+      }
     },
     "source": {
       "Unknown": "Nepoznat izvor",
       "ChessResults": "chess-results",
       "Fide": "FIDE-in kalendar",
-      "Manual": "Ručno unesen"
+      "Manual": "Ručno unesen",
+      "ChessResultsCalendar": "kalendar najava",
+      "ItalianChessFederation": "Talijanski šahovski savez",
+      "SlovenianChessFederation": "Šahovski savez Slovenije",
+      "SlovakChessFederation": "Slovački šahovski savez",
+      "HungarianChessFederation": "Mađarski šahovski savez",
+      "CzechChessFederation": "Češki šahovski savez",
+      "PolishChessFederation": "Poljski šahovski savez",
+      "GermanChessFederation": "Njemački šahovski savez",
+      "EnglishChessFederation": "Engleski šahovski savez",
+      "IrishChessUnion": "Irski šahovski savez",
+      "FrenchChessFederation": "Francuski šahovski savez",
+      "NorwegianChessFederation": "Norveški šahovski savez"
     }
   },
   "clubhub": {
@@ -4188,6 +4219,7 @@
       "noSingleResult": "nema pojedinačnog rezultata",
       "noSingleResultTooltip": "chess-results za ovaj turnir ne navodi pojedinačni rezultat — čekanje neće pomoći.",
       "noName": "U tvojem profilu nedostaje prezime — chess-results se traži po imenu, nema se što potražiti.",
+      "noNameAction": "Upiši prezime u profil",
       "sourceUnavailable": "chess-results nije bio dostupan. Prikazuje se zadnje dohvaćeno stanje.",
       "empty": "Pod ovim imenom nisu nađeni turniri.",
       "loadError": "Povijest se nije mogla učitati. Provjeri vezu i pokušaj ponovno.",
@@ -4211,7 +4243,7 @@
       "allSpeeds": "Sve",
       "pointsTooltip": "Bodovi iz odigranih partija. Broj partija dolazi s kartona igrača, ne iz broja kola turnira.",
       "track": {
-        "add": "Prati",
+        "add": "Prati igrača",
         "addError": "Igrača nije bilo moguće dodati.",
         "added": "{{name}} se sada prati.",
         "help": "Prati bilo koga: svoje dijete, člana kluba, sljedećeg protivnika — bez računa.",
@@ -4264,6 +4296,9 @@
     "courses": {
       "title": "Tečajevi",
       "empty": "Još nema tečajeva za djecu.",
+      "soon": "Tečajevi uskoro stižu!",
+      "playLevels": "Igraj razine",
+      "playEndless": "Igraj beskonačno",
       "progress": "{{done}} od {{total}} riješeno",
       "completed": "Tečaj završen!",
       "restart": "Ispočetka"
@@ -4334,7 +4369,7 @@
       "tileHint": "Jedna figura, puno zvijezda",
       "intro": "Pojedi sve zvijezde – svakim potezom točno jednu!",
       "stage": "Razina {{stage}}",
-      "round": "Zadatak {{n}}/{{total}}",
+      "round": "Zadatak {{n}} od {{total}}",
       "task": "Pojedi sve zvijezde – svakim potezom točno jednu!",
       "left": "Još zvijezda: {{count}}",
       "completed": "Razina riješena!",

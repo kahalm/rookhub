@@ -5,7 +5,10 @@
     .player-tools { flex-wrap: wrap; gap: 0.5rem 1rem; }
     .player-search { flex: 1 1 16rem; max-width: 24rem; }
     .player-sort { flex: 0 1 10rem; }
-    .filter-hint { flex: 1 1 12rem; font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* Schalter und ? bleiben zusammen — am Handy rutschte das ? sonst allein in eine eigene Zeile. */
+    .fav-group { display: inline-flex; align-items: center; flex-wrap: nowrap; }
+    .filter-hint-btn { margin-left: -8px; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .no-title { color: color-mix(in srgb, currentColor 45%, transparent); }
     .club-derived { font-style: italic; color: color-mix(in srgb, currentColor 70%, transparent); }
     .empty-hint { padding: 1rem 0; color: color-mix(in srgb, currentColor 65%, transparent); }
 

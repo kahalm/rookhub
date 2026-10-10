@@ -52,9 +52,13 @@ export function suggestionFacts(s: AccountSuggestion): string {
             <p class="small muted">{{ note }}</p>
           } @else {
             <div class="sugg-actions">
-              <button type="button" class="btn-sec" [disabled]="busy() === s.id" (click)="accept(s, false)">Als unsicher übernehmen</button>
-              <button type="button" class="btn-sec" [disabled]="busy() === s.id" (click)="accept(s, true)">Als gesichert übernehmen</button>
-              <button type="button" class="btn-link" [disabled]="busy() === s.id" (click)="reject(s)">Verwerfen</button>
+              <!-- UI-Sweep 2026-10-10 (l-account-btns): drei gleich breite Knöpfe ≥ 40 px, die langen Texte als Tooltip -->
+              <button type="button" class="btn-sec sa-btn" [disabled]="busy() === s.id" (click)="accept(s, false)"
+                      title="Als unsicher übernehmen">Unsicher</button>
+              <button type="button" class="btn-pri sa-btn" [disabled]="busy() === s.id" (click)="accept(s, true)"
+                      title="Als gesichert übernehmen">Gesichert</button>
+              <button type="button" class="btn-sec sa-btn sa-reject" [disabled]="busy() === s.id" (click)="reject(s)"
+                      title="Vorschlag verwerfen — er kommt nicht wieder">Verwerfen</button>
             </div>
           }
         </li>

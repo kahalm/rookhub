@@ -216,10 +216,17 @@ describe('TournamentDetailComponent', () => {
       };
       expect(labelShown('tournamentDirectory.bookmark')).withContext('Merken mit Text').toBeTrue();
       expect(labelShown('tournaments.actions.monitor')).withContext('Beobachten mit Text').toBeTrue();
-      // Die eindeutigen Symbole bleiben Kreise (Tooltip + aria-label tragen den Text).
-      expect(labelShown('tournaments.actions.refresh')).toBeFalse();
-      expect(labelShown('tournaments.actions.share')).toBeFalse();
-      expect(labelShown('tournaments.actions.chessResults')).toBeFalse();
+      // UI-Sweep t-head-buttons: Aktualisieren, Teilen und chess-results stehen am Handy im ⋮-Menue neben dem Titel,
+      // Merken und Beobachten teilen sich die Zeile je zur Haelfte.
+      const shown = (aria: string) =>
+        getComputedStyle(actionsOf(fixture).find(a => a.getAttribute('aria-label') === aria)!).display !== 'none';
+      expect(shown('tournaments.actions.refresh')).toBeFalse();
+      expect(shown('tournaments.actions.share')).toBeFalse();
+      expect(shown('tournaments.actions.chessResults')).toBeFalse();
+      const more = (fixture.nativeElement as HTMLElement).querySelector('.title-row .more-actions') as HTMLElement;
+      expect(getComputedStyle(more).display).not.toBe('none');
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('.action-bar') as HTMLElement;
+      expect(getComputedStyle(bar).gridTemplateColumns.split(' ').length).toBe(2);
 
       const strip = (fixture.nativeElement as HTMLElement).querySelector('.group-switch') as HTMLElement;
       const style = getComputedStyle(strip);
@@ -228,6 +235,20 @@ describe('TournamentDetailComponent', () => {
     } finally {
       restore();
     }
+  });
+
+  it('am Breitbild kein ⋮-Menue, alle Aktionen in der Leiste; das Menue enthaelt die drei Nebenaktionen', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const el = fixture.nativeElement as HTMLElement;
+    if (window.innerWidth > 768) {
+      expect(getComputedStyle(el.querySelector('.more-actions')!).display).toBe('none');
+    }
+    (el.querySelector('.more-actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [mat-menu-item]')).map(i => i.textContent!.trim());
+    expect(items.length).toBe(3);
+    ['tournaments.actions.refresh', 'tournaments.actions.share', 'tournamentDirectory.openChessResults']
+      .forEach((k, i) => expect(items[i]).toContain(k));
   });
 
   // ----- Gruppen derselben Veranstaltung -----------------------------------

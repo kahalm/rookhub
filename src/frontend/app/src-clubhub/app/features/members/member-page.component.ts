@@ -184,7 +184,7 @@ function orNull(value: string | null | undefined): string | null {
           <h2>Lernstand</h2>
           <div class="note-form">
             <label class="field"><span>Neue Notiz</span>
-              <input class="note-input" maxlength="2000" placeholder="z. B. kann die Gabel, übt Matt mit zwei Türmen" [value]="noteText()" (input)="noteText.set($any($event.target).value)" (keydown.enter)="addNote()"></label>
+              <input class="note-input" maxlength="2000" placeholder="z. B. kann die Gabel" [value]="noteText()" (input)="noteText.set($any($event.target).value)" (keydown.enter)="addNote()"></label>
             <button type="button" class="btn add-note" [disabled]="busy() || !noteText().trim()" (click)="addNote()">Notiz speichern</button>
           </div>
           @if (m.noteEntries.length) {

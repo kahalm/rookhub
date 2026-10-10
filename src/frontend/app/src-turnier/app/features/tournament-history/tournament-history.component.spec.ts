@@ -226,7 +226,13 @@ describe('TournamentHistoryComponent', () => {
     req.flush([history({ status: 'noName', entries: [] })]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.hint')).toBeTruthy();
+    const box = fixture.nativeElement.querySelector('.no-name') as HTMLElement;
+    expect(box.textContent).toContain('turnier.history.noName');
+    // UI-Sweep t-history-card: Hauptknopf mit klarem Ziel statt „Profil".
+    const link = box.querySelector('a')!;
+    expect(link.textContent!.trim()).toBe('turnier.history.noNameAction');
+    expect(link.classList).toContain('mat-mdc-unelevated-button');
+    expect(link.getAttribute('href')).toBe('/profile');
   });
 
   /**
@@ -839,6 +845,8 @@ describe('TournamentHistoryComponent', () => {
 
     const button = (fixture.nativeElement as HTMLElement).querySelector('.track-add')!;
     expect(button.getAttribute('aria-label')).toBe('turnier.history.track.add');
+    // UI-Sweep t-history-plus: der Text steht auch am Handy da.
+    expect(getComputedStyle(button.querySelector('.track-add-label')!).display).not.toBe('none');
   });
 
   /** „Nicht mehr verfolgen" nimmt den Reiter weg und springt auf den eigenen zurueck. */

@@ -1,3 +1,4 @@
+import { FilePickDirective } from '../../shared/file-pick.directive';
 import { BatchUploadComponent } from '../../shared/batch-upload.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -53,7 +54,7 @@ const SAVE_DEBOUNCE_MS = 1500;
   selector: 'lh-club-add-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ClubImportReviewComponent, AccessGateComponent, BatchUploadComponent],
+  imports: [FilePickDirective, RouterLink, ClubImportReviewComponent, AccessGateComponent, BatchUploadComponent],
   template: `
     @if (!allowed) {
       <!-- UX-033: wer schon lesen darf, gehört zur Lesegruppe — ihm fehlt nur das Beitragsrecht. -->
@@ -100,11 +101,11 @@ const SAVE_DEBOUNCE_MS = 1500;
                   ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je Partie ändern.</span></span>
             </label>
             <label class="field">PGN-Datei
-              <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
+              <input type="file" lhFilePick accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
               @if (readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
             </label>
             <label class="field">… oder eine ChessBase-Datenbank
-              <input type="file" multiple [disabled]="busy()" (change)="pickChessBase($event)" />
+              <input type="file" lhFilePick multiple [disabled]="busy()" (change)="pickChessBase($event)" />
               <span class="small muted">Alle Dateien der Datenbank auswählen (z. B. MeineSpiele.2cbh, .2cbg, .2lid … bzw. .cbh,
                 .cbg, .cbp …) oder ein ZIP davon. Gelesen wird die Hauptvariante, ohne Kommentare.
                 @if (readingDb()) { <b>Lese die Datenbank …</b> }</span>
@@ -184,13 +185,13 @@ const SAVE_DEBOUNCE_MS = 1500;
               Minuten; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
               <label class="field">Foto des Formulars{{ extraPhotos().length ? ' (Seite 1)' : '' }}
-                <input #photoInput type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
+                <input #photoInput type="file" lhFilePick accept="image/*" capture="environment" (change)="pickPhoto($event)" />
               </label>
               <!-- 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen, um die Erkennung zu verbessern" — ohne capture,
                    sonst öffnet das Handy die Kamera (ein Foto) statt der Galerie -->
               @if (photosOfLastPage() < maxPhotosPerPage) {
                 <label class="field multi-pick small">Mehrere Fotos derselben Seite auf einmal (Galerie, höchstens {{ maxPhotosPerPage }})
-                  <input #multiInput class="multi-photo" type="file" accept="image/*" multiple (change)="pickMany($event)" />
+                  <input #multiInput class="multi-photo" type="file" lhFilePick accept="image/*" multiple (change)="pickMany($event)" />
                 </label>
               }
               @if (multiNote(); as n) { <p class="muted small">{{ n }}</p> }
@@ -202,7 +203,7 @@ const SAVE_DEBOUNCE_MS = 1500;
                     <span class="field">{{ extraLabels()[i] }}: <span class="muted">{{ p.name }}</span></span>
                   } @else {
                     <label class="field">{{ extraLabels()[i] }}
-                      <input class="extra-photo" type="file" accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
+                      <input class="extra-photo" type="file" lhFilePick accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
                     </label>
                   }
                   <button type="button" class="btn-sec" (click)="removeExtra(i)" [attr.aria-label]="extraLabels()[i] + ' entfernen'">✕</button>

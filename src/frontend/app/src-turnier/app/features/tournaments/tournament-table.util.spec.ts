@@ -1,6 +1,19 @@
-import { sortTableData, toDisplayPairings, PLAYER_COLUMNS } from './tournament-table.util';
+import { chessTitle, sortTableData, toDisplayPairings, PLAYER_COLUMNS } from './tournament-table.util';
 
 describe('tournament-table.util', () => {
+  describe('chessTitle (t-title-col)', () => {
+    it('laesst nur echte Titel durch', () => {
+      for (const t of ['GM', 'IM', 'FM', 'CM', 'WGM', 'WIM', 'WFM', 'WCM']) expect(chessTitle(t)).toBe(t);
+      expect(chessTitle(' gm ')).toBe('GM');
+      for (const t of ['Z56', 'Z41', 'N', '', null, undefined]) expect(chessTitle(t)).toBeNull();
+    });
+
+    it('sortiert nach dem gezeigten Titel — Fremdwerte wie „ohne Titel"', () => {
+      const rows = [{ title: 'Z56' }, { title: 'GM' }, { title: null }, { title: 'IM' }];
+      expect(sortTableData(rows, { active: 'title', direction: 'desc' }).map(r => r.title).slice(0, 2)).toEqual(['IM', 'GM']);
+    });
+  });
+
   describe('sortTableData', () => {
     it('gibt die Daten unverändert zurück ohne aktive Sortierung', () => {
       const data = [{ snr: 2 }, { snr: 1 }];

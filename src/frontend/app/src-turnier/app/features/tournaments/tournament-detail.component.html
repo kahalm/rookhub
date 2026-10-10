@@ -3,10 +3,29 @@
     } @else if (tournament) {
       <div class="detail-container">
         <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ tournament.name }}</mat-card-title>
-            <mat-card-subtitle>{{ subtitle }}</mat-card-subtitle>
-          </mat-card-header>
+          <div class="title-row">
+            <mat-card-header>
+              <mat-card-title>{{ tournament.name }}</mat-card-title>
+              <mat-card-subtitle>{{ subtitle }}</mat-card-subtitle>
+            </mat-card-header>
+            <!-- Am Handy (UI-Sweep t-head-buttons): Aktualisieren, Teilen und chess-results brachen als nackte Symbole in
+                 eine zweite Zeile um — sie stehen dort in diesem ⋮-Menue neben dem Titel. -->
+            <button mat-icon-button class="more-actions" [matMenuTriggerFor]="moreMenu"
+                    [attr.aria-label]="'common.moreActions' | translate" [matTooltip]="'common.moreActions' | translate">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #moreMenu="matMenu" xPosition="before">
+              <button mat-menu-item (click)="refresh()" [disabled]="refreshing">
+                <mat-icon>refresh</mat-icon><span>{{ 'tournaments.actions.refresh' | translate }}</span>
+              </button>
+              <button mat-menu-item (click)="share()">
+                <mat-icon>share</mat-icon><span>{{ 'tournaments.actions.share' | translate }}</span>
+              </button>
+              <a mat-menu-item [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
+                <mat-icon>open_in_new</mat-icon><span>{{ 'tournamentDirectory.openChessResults' | translate }}</span>
+              </a>
+            </mat-menu>
+          </div>
           <!-- Die Gruppen derselben Veranstaltung (chess-results „Turnierauswahl") — an einem
                Rallye-Tag vier Turniere, zwischen denen man sonst ueber den Kalender springen musste. -->
           @if (groups.length > 0) {
@@ -58,15 +77,15 @@
                 <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
               </button>
             }
-            <button mat-stroked-button (click)="refresh()" [disabled]="refreshing"
+            <button mat-stroked-button class="wide-only" (click)="refresh()" [disabled]="refreshing"
                     [matTooltip]="'tournaments.actions.refresh' | translate" [attr.aria-label]="'tournaments.actions.refresh' | translate">
               <mat-icon>refresh</mat-icon><span class="btn-label"> {{ 'tournaments.actions.refresh' | translate }}</span>
             </button>
-            <button mat-stroked-button (click)="share()"
+            <button mat-stroked-button class="wide-only" (click)="share()"
                     [matTooltip]="'tournaments.actions.share' | translate" [attr.aria-label]="'tournaments.actions.share' | translate">
               <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
             </button>
-            <a mat-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer"
+            <a mat-button class="wide-only" [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer"
                [matTooltip]="'tournaments.actions.chessResults' | translate" [attr.aria-label]="'tournaments.actions.chessResults' | translate">
               <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
             </a>

@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Sort } from '@angular/material/sort';
@@ -30,7 +31,7 @@ import { displayedTables } from './tournament-favorites.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, MatMenuModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })

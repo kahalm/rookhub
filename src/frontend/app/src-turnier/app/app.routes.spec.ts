@@ -41,6 +41,12 @@ describe('Turnier-Routen', () => {
     expect(legal?.useFactory()).toEqual(jasmine.objectContaining({ imprint: true, accountHome: 'rookhub' }));
   });
 
+  it('Ruecklink der Rechtsseiten ohne Verlauf: zum Kalender, nicht zur Anmeldung (x-back-login)', () => {
+    const legal = turnierConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
+      { useFactory: () => LegalSite } | undefined;
+    expect(legal?.useFactory().back).toBe('/tournaments/calendar');
+  });
+
   it('die Anmeldemaske (hier die Startseite) erklaert das Angebot, die Registrierung das RookHub-Konto (UX-027)', () => {
     const intro = turnierConfig.providers.find(p => (p as { provide?: unknown }).provide === AUTH_INTRO) as
       { useValue: AuthIntro } | undefined;

@@ -43,3 +43,51 @@ export const KID_BACK = `
     .back::after { content: ''; position: absolute; left: 0; right: 0; top: -5px; bottom: -5px; }
   }
 `;
+
+/**
+ * Brett-Koordinaten der Kinderseite (UI-Sweep 2026-10-10, k-coords): RookHub setzt sie seit 0.740.0 global auf 11/12 px
+ * halbfett (`src/styles.scss`) — auf dem bis zu 820 px grossen Kinderbrett bleibt das winzig. Hier ~2,2 % der Brettbreite
+ * (`--kid-board`, mindestens 11 px am Handy), fett und deckend in der GEGENFARBE des Felds: dunkles Blau auf den hellen,
+ * Weiss auf den dunklen Feldern des Themas „blue" (#d4e3ed / #5882a1). Welche Ziffer auf welchem Feld steht, regelt
+ * styles.scss (UX-060: Raenge links, Linien unten) — die Reihenfolge der Faerbung ist dieselbe, nur die Toene sind
+ * kraeftiger. Die Leisten wachsen mit der Schrift (styles.scss legt sie fest auf 14 px). Nur fuer `.board` der
+ * Kinderseiten — RookHubs Bretter bleiben unberuehrt.
+ */
+export const KID_COORD_LIGHT_TEXT = '#ffffff';
+export const KID_COORD_DARK_TEXT = '#2f4f6c';
+export const KID_COORDS = `
+  .board ::ng-deep .cg-wrap coords {
+    font-size: max(11px, calc(var(--kid-board, 640px) * 0.022)); font-weight: 700; line-height: 1; opacity: 1;
+  }
+  .board ::ng-deep .cg-wrap coords.ranks { width: 1.6em !important; }
+  .board ::ng-deep .cg-wrap coords.files { height: 1.4em !important; }
+  .board ::ng-deep .board-theme-blue .orientation-white .ranks :nth-child(even),
+  .board ::ng-deep .board-theme-blue .orientation-white .files :nth-child(even),
+  .board ::ng-deep .board-theme-blue .orientation-black .ranks :nth-child(odd),
+  .board ::ng-deep .board-theme-blue .orientation-black .files :nth-child(odd) { color: ${KID_COORD_DARK_TEXT}; }
+  .board ::ng-deep .board-theme-blue .orientation-white .ranks :nth-child(odd),
+  .board ::ng-deep .board-theme-blue .orientation-white .files :nth-child(odd),
+  .board ::ng-deep .board-theme-blue .orientation-black .ranks :nth-child(even),
+  .board ::ng-deep .board-theme-blue .orientation-black .files :nth-child(even) { color: ${KID_COORD_LIGHT_TEXT}; }
+`;
+
+/**
+ * Breite der Inhaltsspalte je Seite (UI-Sweep 2026-10-10, k-logo): die Kopfzeile mit dem Logo steht in derselben
+ * zentrierten Spalte wie der Inhalt — vorher klebte das Logo am PC ganz links (x = 16), der Inhalt begann erst bei
+ * x = 336. Die Seiten setzen ihre `max-width` aus diesen Werten (Polsterung 16 px eingerechnet), die App-Huelle
+ * gibt der Kopfzeile dieselbe Breite ({@link kidPageWidth}).
+ */
+export const KID_PAGE_WIDTH = { home: 1160, map: 980, list: 820, legal: 840 } as const;
+
+/**
+ * Breite der Kopfzeile fuer die Seite unter `url` (CSS-Wert). Aufgabenseiten (Stufe, Endlos, Sternenjagd, Kurs)
+ * richten ihre Titelzeile an `--kid-row` aus (Brett + Spalte daneben), dazu die 16 px Polsterung je Seite.
+ */
+export function kidPageWidth(url: string): string {
+  const path = url.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  if (/^\/(levels|stars|courses)\/[^/]+$/.test(path) || path === '/endless') return 'calc(var(--kid-row, 1068px) + 32px)';
+  if (path === '/') return `${KID_PAGE_WIDTH.home}px`;
+  if (path === '/courses') return `${KID_PAGE_WIDTH.list}px`;
+  if (path === '/privacy') return `${KID_PAGE_WIDTH.legal}px`;
+  return `${KID_PAGE_WIDTH.map}px`;
+}

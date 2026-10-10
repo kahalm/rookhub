@@ -127,6 +127,25 @@ describe('ClubHub-Gruppen', () => {
       expect([statusMark('present'), statusMark('absent'), statusMark(null)]).toEqual(['✓', '–', '·']);
     });
 
+    it('Spaltenköpfe stehen auf einer Grundlinie; „da" ist rechtsbündig wie seine Werte', async () => {
+      const fixture = await open(GROUP());
+      const el = fixture.nativeElement as HTMLElement;
+      const heads = Array.from(el.querySelectorAll<HTMLElement>('.matrix thead th'));
+      /** Unterkante des TEXTS (nicht der Zelle) — die Schrift ist überall gleich groß, also = Grundlinie. */
+      const textBottom = (th: HTMLElement) => {
+        const text = document.createTreeWalker(th, NodeFilter.SHOW_TEXT).nextNode()!;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        return Math.round(range.getBoundingClientRect().bottom);
+      };
+      const bottoms = heads.map(textBottom);
+      expect(heads.map(h => h.textContent!.trim())).toEqual(['Kind', 'Fr 18.09.', 'Fr 25.09.', 'da']);
+      expect(Math.max(...bottoms) - Math.min(...bottoms)).toBeLessThanOrEqual(1);         // vorher stand das Datum 6 px höher
+      const da = heads[3];
+      expect(da.classList).toContain('rate');
+      expect(getComputedStyle(da).textAlign).toBe('right');                              // aus clubhub.scss
+    });
+
     it('Trainer stehen als eigener Block unter den Kindern in der Tabelle, mit Haken und Quote', async () => {
       const fixture = await open(GROUP({ coaches: [{ id: 91, firstName: 'Bernhard', lastName: '', statuses: ['present', 'present'], present: 2, recorded: 2 }] }));
       const el = fixture.nativeElement as HTMLElement;

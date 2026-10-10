@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { PHASE_TEXT, pct, shareText, shortTeam, tn } from '../core/league-format';
-import { Board, Fixture, FixturePairing, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
+import { Board, Candidate, Fixture, FixturePairing, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
 import { GameSourcesComponent } from './game-sources.component';
 import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
@@ -37,11 +37,14 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
       </article>
     } @else {
       <article class="fixture">
-        <p class="when">Runde {{ round() }}@if (e.date) {, {{ e.date }}}@if (e.venue) {, {{ e.venue }}}</p>
+        <!-- UI-Sweep 2026-10-10 (l-fixture-head): die Paarung als Überschrift, darunter Runde + Datum, das Spiellokal
+             vollständig in einer eigenen Zeile -->
         <h2 class="match">
           <span [class.me]="e.home">{{ tn(home()) }}</span><span class="vs">–</span><span [class.me]="!e.home">{{ tn(away()) }}</span>
           @if (e.score) { <span class="score">{{ e.score }}</span> }
         </h2>
+        <p class="when">Runde {{ round() }}@if (e.date) { · {{ e.date }}}</p>
+        @if (e.venue) { <p class="venue"><span aria-hidden="true">📍 </span>{{ e.venue }}</p> }
         <!-- 0.673.0, Wunsch 2026-10-05: bei gespielten Runden die Paarungen gleich unter dem Ergebnis, mit Partie, wo es eine gibt. -->
         @if (pairings().length && (e.status === 'played' || provisional())) {
           @if (e.status !== 'played') {
@@ -260,12 +263,14 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                     @for (c of b.cand; track c.n; let i = $index) {
                       <div class="cand" [class.first]="i === 0">
                         <span class="name">
-                          @if (c.fide || c.key) { <button type="button" class="pl" (click)="openCard((c.fide || c.key)!, b.opp_color, b.board)">{{ c.n }}</button> }
-                          @else { {{ c.n }} }
+                          @if (c.fide || c.key) { <button type="button" class="pl" (click)="openCard((c.fide || c.key)!, b.opp_color, b.board)"><span class="pl-t">{{ c.n }}</span></button> }
+                          @else { <span class="pl-t">{{ c.n }}</span> }
                           @if (c.g) { <span class="g muted" [attr.title]="c.g + ' Partien im Bestand'">({{ c.g }})</span> }
                           @if (b.actual?.n === c.n) { <span class="hit">gespielt</span> }
                         </span>
                         <span class="elo">{{ c.elo ?? '–' }}</span>
+                        <!-- am Handy statt Elo-Spalte und „(n)": eine kleine Zeile unter dem Namen (UI-Sweep 2026-10-10, l-names-mobile) -->
+                        <span class="meta">{{ candMeta(c) }}</span>
                         <span class="pct">{{ pct(c.p) }}</span>
                         <span class="bar" aria-hidden="true"><i [style.width.%]="c.p * 100"></i></span>
                       </div>
@@ -340,6 +345,12 @@ export class FixtureViewComponent {
 
   readonly tn = tn;
   readonly pct = pct;
+
+  /** „2302 · 259 Partien" — Elo und Partien im Bestand, am Handy unter dem Namen (UI-Sweep 2026-10-10, l-names-mobile). */
+  candMeta(c: Candidate): string {
+    const games = c.g ? `${thousands(c.g)} ${c.g === 1 ? 'Partie' : 'Partien'}` : null;
+    return [c.elo ?? '–', games].filter(x => x !== null).join(' · ');
+  }
   readonly home = computed(() => (this.fixture()?.home ? this.team() : this.fixture()?.opp ?? ''));
   readonly away = computed(() => (this.fixture()?.home ? this.fixture()?.opp ?? '' : this.team()));
   readonly canShareLink = computed(() => !this.shareToken() && this.tnr() !== null);

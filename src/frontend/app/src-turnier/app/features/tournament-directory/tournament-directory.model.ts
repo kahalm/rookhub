@@ -118,9 +118,18 @@ export interface DirectoryRound {
   time: string | null;
 }
 
+/** Die Quellarten des Servers (`DirectorySourceKind`, als Name serialisiert). */
+export const DIRECTORY_SOURCE_KINDS = [
+  'Unknown', 'ChessResults', 'Fide', 'Manual', 'ChessResultsCalendar', 'ItalianChessFederation',
+  'SlovenianChessFederation', 'SlovakChessFederation', 'HungarianChessFederation', 'CzechChessFederation',
+  'PolishChessFederation', 'GermanChessFederation', 'EnglishChessFederation', 'IrishChessUnion',
+  'FrenchChessFederation', 'NorwegianChessFederation',
+] as const;
+export type DirectorySourceKind = typeof DIRECTORY_SOURCE_KINDS[number];
+
 /** Eine Seite, auf der dieses Turnier gefunden wurde. */
 export interface DirectorySource {
-  kind: 'Unknown' | 'ChessResults' | 'Fide' | 'Manual';
+  kind: DirectorySourceKind;
   externalId: string;
   url: string | null;
 }

@@ -56,7 +56,7 @@ export function statusMark(status: Status | null): string {
                 @for (s of g.sessions; track s.id) {
                   <th scope="col"><a [routerLink]="['/gruppen', g.id, 'anwesenheit']" [queryParams]="{ datum: s.date }" [title]="s.topic ?? ''">{{ short(s.date) }}</a></th>
                 }
-                <th scope="col">da</th>
+                <th class="rate" scope="col">da</th>
               </tr>
             </thead>
             <tbody>

@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PrivacyComponent } from './privacy.component';
 import { LEGAL_SITE, LegalSite } from './legal-site';
@@ -10,7 +12,7 @@ describe('PrivacyComponent', () => {
     TestBed.configureTestingModule({
       imports: [PrivacyComponent],
       providers: [
-        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
         ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : []),
       ],
     });
@@ -72,6 +74,27 @@ describe('PrivacyComponent', () => {
     TestBed.resetTestingModule();
     const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
     expect(kid.textContent).not.toContain('legal.privacy.leagueTitle');
+  });
+
+  // UI-Sweep 2026-10-10 (x-privacy-intro): LeagueHub und ClubHub stellten sich mit RookHubs Einleitung vor,
+  // ClubHub beschrieb die Kartei gar nicht.
+  it('Einleitung je Oberflaeche; ClubHub mit eigenem Abschnitt „Kartei“ samt Inhaltsverzeichnis', () => {
+    const league = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
+    expect(league.textContent).toContain('legal.privacy.introLeagueHub');
+    expect(Array.from(league.querySelectorAll('p')).some(p => p.textContent?.trim() === 'legal.privacy.intro')).toBeFalse();
+    expect(league.textContent).not.toContain('legal.privacy.clubTitle');
+    TestBed.resetTestingModule();
+    const club = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'clubhub', accountHome: 'rookhub' });
+    const keys = ['introClubHub', 'clubTitle', 'clubIntro', 'clubData', 'clubContacts', 'clubAttendance', 'clubAccess',
+      'clubPhotos', 'clubLink', 'clubRetention'].map(k => 'legal.privacy.' + k);
+    for (const k of keys) expect(club.textContent).withContext(k).toContain(k);
+    expect(club.textContent).not.toContain('legal.privacy.leagueTitle');
+    expect(club.querySelector('nav.toc a[href$="#privacy-club"]')).not.toBeNull();
+    TestBed.resetTestingModule();
+    const rookhub = render();
+    expect(rookhub.textContent).toContain('legal.privacy.intro');
+    expect(rookhub.textContent).not.toContain('legal.privacy.introClubHub');
+    expect(rookhub.textContent).not.toContain('legal.privacy.clubTitle');
   });
 
   it('LeagueHub: nennt den Verein, für den das Konto LeagueHub gerade nutzt — nur, wenn er bekannt ist (0.698.0)', () => {
