@@ -90,9 +90,9 @@ const TAP_MAX_MS = 500;
             }
             <div class="header-main">
               <span class="players">
-                <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo">({{ game.whiteElo }})</span> }
+                <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo">(Elo {{ game.whiteElo }})</span> }
                 –
-                <strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo">({{ game.blackElo }})</span> }
+                <strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo">(Elo {{ game.blackElo }})</span> }
               </span>
               <span class="meta">
                 @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }

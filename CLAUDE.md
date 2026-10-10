@@ -558,6 +558,11 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | GET | `/api/library-games/{id}/view?lang=` | Auth | „Anschauen" einer Meisterpartie (0.567.0, `LibraryGameService.ViewAsync`) → `{ id, pgn, language, languages }`: PGN aus der HAUPTVARIANTE und den Kommentar-Sätzen in `lang` (`CommentSetService.ForLibraryAsync`: dieselbe Regel wie beim Nachspielen, fehlende Halbzüge aus der Quelle, Quell-Sätze entstehen beim ersten Bedarf), nicht das rohe Quell-PGN (zwei Sprachen hintereinander, ChessBase-Figurenschrift). Nur angemeldet wie das Anfordern; 404 unbekannt/aussortiert/nicht nachspielbar |
 | GET | `/api/games/{id}/recap` | Auth | „Kurz erzählt" (0.541.0): die Nacherzählung der eigenen Partie `{ available, hasAnalysis, text?, language?, createdAt?, pending }`. Fehlt sie bei fertiger Analyse (Analyse von vor 0.541.0, gescheiterter Lauf), stößt schon dieser Abruf sie im Hintergrund an (`pending: true`, die Seite fragt alle 15 s nach, höchstens achtmal); 404 fremde Partie. Der Teilen-Link bekommt denselben Text als `recap` in `GET /api/games/shared/{token}` |
 
+**Elo im Kopf** (0.737.0, Wunsch 2026-10-10): Partieseite und Teilen-Link zeigen „Name (Elo n)", der og:title des Teilen-Links
+ebenso. Fehlt einer Kopie mit `LeagueClubGameId` die Wertung (PGN-Kopf), liefert `SavedGameService.WithLeagueEloAsync` sie beim
+LESEN aus `LeaguePlayers` (FIDE der Seite, bei „Schwaz" die interne; Liga der zugeordneten Paarung zuerst, sonst jüngste
+Meldeliste, `EloI ?? EloN`) — nichts wird gespeichert, ein späteres Aktualisieren der Meldeliste wirkt sofort.
+
 **Deckel je Konto** (Codereview 2026-09-29, A6-007): höchstens `SavedGameService.MaxGamesPerUser` (5 000) Partien
 und `MaxPgnCharsPerUser` (100 Mio. Zeichen PGN, Summe) je Konto, alle Quellen zusammen. `POST /api/games/import`
 meldet jede neue Partie darüber in `failed` mit `reason: "quota"` (HTTP 200); `PUT /api/games/{id}` antwortet bei

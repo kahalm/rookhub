@@ -441,6 +441,38 @@ public class GamesControllerTests : IDisposable
         Assert.Equal("1-0", second.Result);
     }
 
+    // ===== Elo aus der Liga (0.737.0, Wunsch 2026-10-10: „beim Anschauen und Teilen die Elo oben im Namen") ====
+
+    [Fact]
+    public async Task Detail_AndShared_CopyOfAClubGame_TakesTheEloFromTheLeagueRoster()
+    {
+        var user = await CreateUserAsync();
+        var club = new LeagueClubGame { ClubId = 1, White = "Mitteregger, Gottfried", WhiteFide = "1651846", Black = "Schwaz",
+            BlackRealFide = "1700001", Result = "1/2-1/2", Pgn = "1. e4 c6 1/2-1/2", MovesHash = "h", LeagueTnr = 20 };
+        _db.LeagueClubGames.Add(club);
+        _db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 10, Team = "Freibauer", Name = "Mitteregger, Gottfried", FideId = "1651846", EloI = 1700 },
+            new LeaguePlayer { Tnr = 20, Team = "Freibauer", Name = "Mitteregger, Gottfried", FideId = "1651846", EloI = 1826 },
+            new LeaguePlayer { Tnr = 20, Team = "Schwaz", Name = "Erlacher, Herbert", FideId = "1700001", EloN = 1712 });
+        await _db.SaveChangesAsync();
+        var game = new SavedGame { UserId = user.Id, Source = "pgn", White = "Mitteregger, Gottfried", Black = "Erlacher, Herbert",
+            Pgn = "[White \"Mitteregger, Gottfried\"]\n[Black \"Erlacher, Herbert\"]\n\n1. e4 c6 1/2-1/2", ShareToken = "tok173",
+            LeagueClubGameId = club.Id, CreatedAt = DateTime.UtcNow };
+        _db.SavedGames.Add(game);
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetAsync(user.Id, game.Id);
+        Assert.Equal((1826, 1712), (detail!.WhiteElo, detail.BlackElo));          // Liga der Paarung vor älterer Meldeliste
+        var shared = await _service.GetSharedAsync("tok173");
+        Assert.Equal((1826, 1712), (shared!.WhiteElo, shared.BlackElo));
+
+        // Teilen: die Linkvorschau trägt die Elo im Titel
+        var meta = new RookHub.Api.Services.Og.OgMetaService(_service, null!, null!, null!, _db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RookHub.Api.Services.Og.OgMetaService>.Instance);
+        var page = await meta.ResolvePageAsync("/g/tok173", "https://rookhub.example");
+        Assert.Equal("Mitteregger, Gottfried (Elo 1826) – Erlacher, Herbert (Elo 1712)", page!.Title);
+    }
+
     // ===== Gleiche ExternalId, andere Partie (N8-001: lichess-Analysebrett meldete „analysis") ====
 
     [Fact]

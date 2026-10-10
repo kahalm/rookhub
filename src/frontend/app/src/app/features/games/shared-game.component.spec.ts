@@ -103,6 +103,7 @@ describe('SharedGameComponent', () => {
     expect(c.evalsUrl).toBe('/api/league/club/games/12/evals');
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.players')!.textContent).toContain('Hengl, Philip');
+    expect(el.querySelector('.players')!.textContent).toContain('(Elo 1850)');   // 0.737.0: „Name (Elo n)"
     expect(el.querySelector('.meta')!.textContent).toContain('2025');
     expect(el.querySelector('.meta')!.textContent).toContain('Landesliga');
     expect(el.querySelector('button.analyze')).toBeNull();

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.737.0", date: "2026-10-10", changes: [
+    { en: "Game page and shared link show the players' rating in the header as “Name (Elo 1826)”, and the link preview title carries it too. A copy of a club game without ratings takes them from the league rosters (league of the assigned pairing first).",
+      de: "Partieseite und Teilen-Link zeigen die Wertung der Spieler im Kopf als „Name (Elo 1826)“, auch der Titel der Linkvorschau trägt sie. Eine Kopie einer Vereinspartie ohne Wertungen holt sie aus den Liga-Meldelisten (zuerst die Liga der zugeordneten Paarung)." },
+  ] },
   { version: "0.736.0", date: "2026-10-10", changes: [
     { en: "LeagueHub score sheets: several photos of the SAME page. When uploading, “+ another photo of this page” adds a second shot (other light, other angle) instead of a new page; the reader compares unclear entries with it. Two sheets already read separately can be merged on the check page (“Merge with another photo of the same page …”): the other one's photos join this one, it is closed, and the game is read again with all photos. The check page switches between the photos of a page.",
       de: "LeagueHub-Partieformulare: mehrere Fotos DERSELBEN Seite. Beim Hochladen nimmt „+ weiteres Foto dieser Seite“ eine zweite Aufnahme (anderes Licht, anderer Winkel) statt einer neuen Seite dazu; der Leser vergleicht unklare Einträge damit. Zwei schon getrennt eingelesene Formulare lassen sich auf der Prüfseite zusammenführen („Mit anderem Foto derselben Seite zusammenführen …“): die Fotos der anderen kommen dazu, sie selbst wird geschlossen, und die Partie wird mit allen Fotos neu gelesen. Die Prüfseite schaltet zwischen den Fotos einer Seite um." },

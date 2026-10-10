@@ -104,7 +104,8 @@ public class OgMetaService
                     if (g is null) return null;
                     var white = string.IsNullOrWhiteSpace(g.White) ? "?" : g.White!;
                     var black = string.IsNullOrWhiteSpace(g.Black) ? "?" : g.Black!;
-                    var title = $"{white} – {black}";
+                    // Elo im Namen (0.737.0): „Mitteregger, Gottfried (Elo 1826) – Erlacher, Herbert (Elo 1712)"
+                    var title = $"{white}{(g.WhiteElo is int we ? $" (Elo {we})" : "")} – {black}{(g.BlackElo is int be ? $" (Elo {be})" : "")}";
                     var descParts = new List<string>();
                     if (!string.IsNullOrWhiteSpace(g.Result)) descParts.Add(g.Result!);
                     if (!string.IsNullOrWhiteSpace(g.Source)) descParts.Add(g.Source!);

@@ -356,6 +356,7 @@ public class SavedGameService
         dto.OwnerSide = DetermineOwnerSide(g, profile);
         dto.ScanId = await _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefaultAsync();
         dto.ClubGameId = g.LeagueClubGameId;
+        (dto.WhiteElo, dto.BlackElo) = await WithLeagueEloAsync(g.LeagueClubGameId, dto.WhiteElo, dto.BlackElo);
         if (dto.ScanId == null && g.LeagueClubGameId is { } clubId)
         {
             var now = DateTime.UtcNow;
@@ -394,6 +395,8 @@ public class SavedGameService
         if (g == null) return null;
         var profile = await _db.UserProfiles.AsNoTracking()
             .FirstOrDefaultAsync(p => p.UserId == g.UserId);
+        var (whiteElo, blackElo) = await WithLeagueEloAsync(g.LeagueClubGameId,
+            ParseEloHeader(g.Pgn, "WhiteElo"), ParseEloHeader(g.Pgn, "BlackElo"));
         return new SharedGameDto
         {
             Source = g.Source,
@@ -404,8 +407,8 @@ public class SavedGameService
             SourceUrl = SafeSourceUrl(g.SourceUrl),
             Pgn = g.Pgn,
             CreatedAt = g.CreatedAt,
-            WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
-            BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
+            WhiteElo = whiteElo,
+            BlackElo = blackElo,
             OwnerSide = DetermineOwnerSide(g, profile),
             OwnGameId = callerUserId is int caller && caller == g.UserId ? g.Id : null,
             Recap = (await GameRecapService.CurrentAsync(_db, g.Id, g.ReviewLanguage))?.Text,
@@ -1197,6 +1200,29 @@ public class SavedGameService
 
     private Task<string> GenerateUniqueTokenAsync()
         => ShareTokens.NewUniqueAsync(t => _db.SavedGames.AnyAsync(g => g.ShareToken == t));
+
+    /// <summary>
+    /// Fehlende Elo einer mit einer Vereinspartie verbundenen Kopie aus den Liga-Meldelisten (0.737.0, Wunsch 2026-10-10:
+    /// „beim Anschauen und Teilen der Partie die Elo der Spieler oben im Namen dazu"): über die FIDE-ID der Seite (bei
+    /// „Schwaz" die interne — die Kopie trägt ohnehin den echten Namen), bevorzugt die Liga der zugeordneten Paarung, sonst die
+    /// jüngste Meldeliste; <c>EloI ?? EloN</c>. Was schon da ist, bleibt.
+    /// </summary>
+    private async Task<(int? White, int? Black)> WithLeagueEloAsync(int? clubGameId, int? white, int? black)
+    {
+        if (clubGameId is not int id || (white != null && black != null)) return (white, black);
+        var c = await _db.LeagueClubGames.AsNoTracking().Where(x => x.Id == id)
+            .Select(x => new { W = x.WhiteFide ?? x.WhiteRealFide, B = x.BlackFide ?? x.BlackRealFide, x.LeagueTnr }).FirstOrDefaultAsync();
+        if (c == null) return (white, black);
+        async Task<int?> Of(string? fide)
+        {
+            if (string.IsNullOrWhiteSpace(fide)) return null;
+            var rows = await _db.LeaguePlayers.AsNoTracking().Where(p => p.FideId == fide)
+                .Select(p => new { p.Tnr, Elo = p.EloI ?? p.EloN }).ToListAsync();
+            return PlausibleElo(rows.Where(r => r.Elo > 0).OrderByDescending(r => r.Tnr == c.LeagueTnr).ThenByDescending(r => r.Tnr)
+                .Select(r => r.Elo).FirstOrDefault());
+        }
+        return (white ?? await Of(c.W), black ?? await Of(c.B));
+    }
 
     private static SavedGameDetailDto MapDetail(SavedGame g) => new()
     {
