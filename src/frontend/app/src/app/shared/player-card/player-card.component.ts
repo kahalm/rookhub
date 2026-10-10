@@ -145,7 +145,7 @@ type Show = 'w' | 's' | 'b';
           }
           @if (c.accounts.length || canEdit() || token) {
             <h3>Online-Konten</h3>
-            <lh-online-accounts class="acc" [fide]="c.fide" [accounts]="c.accounts" [canEdit]="canEdit()" [shareToken]="token"
+            <lh-online-accounts class="acc" [fide]="accountsKey(c)" [accounts]="c.accounts" [canEdit]="canEdit()" [shareToken]="token"
                                 (changed)="reloadCard()" />
             <p class="muted small-note">„gesichert": das Konto gehört sicher diesem Spieler, „unsicher": nur vermutet.
               Über einen Teilen-Link erscheinen nur gesicherte. Ihre Partien holt LeagueHub im Hintergrund — im Eröffnungsbaum
@@ -487,6 +487,12 @@ export class PlayerCardComponent {
   /** Womit die API den Spieler findet: `key`, sonst die FIDE-ID (LeagueHub). */
   key(c: PlayerCard): string {
     return c.key ?? c.fide;
+  }
+
+  /** Woran die Online-Konten hängen: die FIDE-ID, bei einem Ligaspieler ohne FIDE-ID sein n-Schlüssel (0.730.0). Der
+   *  Schlüssel der Spielervorbereitung (Id im Bestand) ist KEIN Konten-Schlüssel. */
+  accountsKey(c: PlayerCard): string {
+    return c.fide || (c.key?.startsWith('n-') ? c.key : c.fide);
   }
 
   unsureAllowed(): boolean {

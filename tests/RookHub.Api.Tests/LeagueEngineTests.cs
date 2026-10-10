@@ -141,7 +141,7 @@ public class LeagueEngineTests
     // ---- kleine Liga: Merkmale, Freigabe-Regel, Brett-Prognose -------------------------------------
 
     /// <summary>Landesliga mit vier Teams: Runde 1 gespielt (Sa), Runde 2 am Tag danach (So), Runde 3 später.</summary>
-    internal static LeagueWorld TinyWorld(bool round2Played = false)
+    internal static LeagueWorld TinyWorld(bool round2Played = false, string? withoutFide = null)
     {
         var t = new LeagueTournament { Tnr = 1, Name = "TMM Landesliga 2026/2027", Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" };
         var rounds = new[]
@@ -166,7 +166,7 @@ public class LeagueEngineTests
                 players.Add(new LeaguePlayer
                 {
                     Id = id++, Tnr = 1, Team = team, RosterBoard = rb, Name = $"{team}spieler, Nr{rb}",
-                    NameKey = $"{team.ToLowerInvariant()}spieler, nr{rb}", FideId = $"{team}{rb}", EloI = 2000 - rb * 50,
+                    NameKey = $"{team.ToLowerInvariant()}spieler, nr{rb}", FideId = $"{team}{rb}" == withoutFide ? null : $"{team}{rb}", EloI = 2000 - rb * 50,
                 });
         var games = new List<LeagueGame>();
         var gid = 1;

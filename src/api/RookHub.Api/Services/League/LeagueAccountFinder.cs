@@ -443,6 +443,7 @@ public sealed partial class LeagueAccountFinder
     /// <inheritdoc cref="PlayerAsync(string, CancellationToken)"/>
     public static async Task<Player?> PlayerAsync(AppDbContext db, string fide, CancellationToken ct)
     {
+        if (LeagueNames.IsNoFideKey(fide)) return await LeagueNoFidePlayers.PlayerAsync(db, fide, ct);
         var row = await (from p in db.LeaguePlayers.AsNoTracking()
                          join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
                          where p.FideId == fide

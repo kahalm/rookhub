@@ -168,6 +168,7 @@ public sealed class LeagueProfileStore
 
     private async Task<string> NameAsync(string fide, string? stored, CancellationToken ct) =>
         !string.IsNullOrEmpty(stored) ? stored
+            : LeagueNames.IsNoFideKey(fide) ? (await LeagueNoFidePlayers.PlayerAsync(_db, fide, ct))?.Name ?? ""
             : await _db.LeaguePlayers.Where(x => x.FideId == fide).OrderByDescending(x => x.Tnr).Select(x => x.Name).FirstOrDefaultAsync(ct) ?? "";
 
     /// <summary>Karte eines Spielers neu rechnen: fremde Partien (optional um <paramref name="fresh"/> ergänzt, dann auch

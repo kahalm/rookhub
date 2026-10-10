@@ -33,7 +33,7 @@ export interface PlayerSources {
 }
 
 /** `g`: Partien im Bestand (0.649.0), wie „Partien" in der Meldeliste. */
-export interface Candidate { n: string; elo: number | null; rb: number | null; p: number; fide: string | null; g?: number }
+export interface Candidate { n: string; elo: number | null; rb: number | null; p: number; fide: string | null; key?: string | null; g?: number }
 
 export interface ActualBoard {
   n: string; elo: number | null; rank: number | null; score: string | null; own: string | null; vs: string; vs_elo: number | null;
@@ -142,7 +142,10 @@ export interface TreeFilter { source: TreeSource; speeds: string[]; years: numbe
 
 export interface RosterEntry {
   rb: number | null; n: string; elo: number | null; p: number; prev: string; cur: string;
-  fide: string | null; g: number; acc: Account[];
+  fide: string | null;
+  /** Ohne FIDE-ID: Schlüssel für Karte und Online-Konten („n-…", 0.730.0). */
+  key?: string | null;
+  g: number; acc: Account[];
 }
 
 export type Phase = 'R1' | 'R2+' | 'So vorab' | 'So nach Sa';

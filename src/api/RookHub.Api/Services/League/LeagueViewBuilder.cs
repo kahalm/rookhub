@@ -237,6 +237,8 @@ public sealed class LeagueViewBuilder
                     {
                         ["n"] = rows[i].Name, ["elo"] = rows[i].Elo > 0 ? rows[i].Elo : null, ["rb"] = rows[i].Rb,
                         ["p"] = R3(bp[i, k]), ["fide"] = rows[i].Fide,
+                        // Ohne FIDE-ID: Schlüssel für Karte und Online-Konten (0.730.0)
+                        ["key"] = rows[i].Fide is null ? LeagueNames.AccountKeyOfPid(rows[i].Pid) : null,
                         // Partien im Bestand (0.649.0) — wie die Spalte „Partien" der Meldeliste
                         ["g"] = rows[i].Fide is { } cf ? _gameCounts.GetValueOrDefault(cf) : 0,
                     }).ToArray());
@@ -276,10 +278,12 @@ public sealed class LeagueViewBuilder
                     var (prevN, curN) = Notes(tnr, row.Pid, s.Opp);
                     var f = row.Fide;
                     var g = f is not null ? _gameCounts.GetValueOrDefault(f) : 0;
+                    // Ohne FIDE-ID hängen Karte und Online-Konten am n-Schlüssel (0.730.0)
+                    var key = f is null ? LeagueNames.AccountKeyOfPid(row.Pid) : null;
                     roster.Add(new JsonObject
                     {
                         ["rb"] = row.Rb, ["n"] = row.Name, ["elo"] = row.Elo > 0 ? row.Elo : null, ["p"] = R3(p[i]),
-                        ["prev"] = prevN, ["cur"] = curN, ["fide"] = f, ["g"] = g, ["acc"] = AccShort(f),
+                        ["prev"] = prevN, ["cur"] = curN, ["fide"] = f, ["key"] = key, ["g"] = g, ["acc"] = AccShort(f ?? key),
                     });
                 }
                 if (isPlayed && act.Count > 0) e["eval"] = Evaluate(rows, p, bp, b, act);

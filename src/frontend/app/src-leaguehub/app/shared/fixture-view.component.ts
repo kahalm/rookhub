@@ -256,7 +256,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                     @for (c of b.cand; track c.n; let i = $index) {
                       <div class="cand" [class.first]="i === 0">
                         <span class="name">
-                          @if (c.fide) { <button type="button" class="pl" (click)="openCard(c.fide, b.opp_color, b.board)">{{ c.n }}</button> }
+                          @if (c.fide || c.key) { <button type="button" class="pl" (click)="openCard((c.fide || c.key)!, b.opp_color, b.board)">{{ c.n }}</button> }
                           @else { {{ c.n }} }
                           @if (c.g) { <span class="g muted" [attr.title]="c.g + ' Partien im Bestand'">({{ c.g }})</span> }
                           @if (b.actual?.n === c.n) { <span class="hit">gespielt</span> }
@@ -280,7 +280,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   @for (r of e.roster; track $index) {
                     <tr>
                       <td class="num">{{ r.rb ?? '' }}</td>
-                      <td>@if (r.fide) { <button type="button" class="pl" (click)="openCard(r.fide, null, null)">{{ r.n }}</button> } @else { {{ r.n }} }</td>
+                      <td>@if (r.fide || r.key) { <button type="button" class="pl" (click)="openCard((r.fide || r.key)!, null, null)">{{ r.n }}</button> } @else { {{ r.n }} }</td>
                       <td class="num">{{ r.elo ?? '–' }}</td>
                       <td class="num"><b>{{ pct(r.p) }}</b></td>
                       <td class="num">{{ r.g || '–' }}</td>

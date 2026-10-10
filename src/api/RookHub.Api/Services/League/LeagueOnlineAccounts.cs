@@ -332,7 +332,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
                 foreach (var (_, fx) in rounds?.AsObject() ?? new JsonObject())
                     foreach (var r in fx?["roster"] as JsonArray ?? new JsonArray())
                     {
-                        if (r?["fide"]?.GetValue<string>() != fide) continue;
+                        if (r is null || (r["fide"]?.GetValue<string>() ?? r["key"]?.GetValue<string>()) != fide) continue;
                         r["acc"] = acc.DeepClone();
                         changed = true;
                     }
@@ -356,9 +356,11 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         fide.Length is > 0 and <= 16 && (await LeagueKnowsAsync(db, fide, ct) || prep && await db.PrepPlayers.AnyAsync(p => p.FideId == fide, ct));
 
     /// <summary>Kennt LeagueHub den Spieler (Meldeliste oder Liga-Karte)? Konten und Vorschläge eines Spielers, den nur die
-    /// Spielervorbereitung kennt (0.637.0), sieht LeagueHub nicht: für ihn antworten seine Endpunkte wie vorher (0.638.0).</summary>
+    /// Spielervorbereitung kennt (0.637.0), sieht LeagueHub nicht: für ihn antworten seine Endpunkte wie vorher (0.638.0).
+    /// Ein Spieler ohne FIDE-ID kommt über seinen n-Schlüssel (<see cref="LeagueNames.AccountKey"/>, 0.730.0).</summary>
     public static async Task<bool> LeagueKnowsAsync(AppDbContext db, string fide, CancellationToken ct) =>
-        await db.LeaguePlayers.AnyAsync(p => p.FideId == fide, ct) || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct);
+        LeagueNames.IsNoFideKey(fide) ? await LeagueNoFidePlayers.NameKeyAsync(db, fide, ct) is not null
+            : await db.LeaguePlayers.AnyAsync(p => p.FideId == fide, ct) || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct);
 
     private static bool Same(LeagueOnlineAccount a, string site, string user) =>
         a.Site == site && string.Equals(a.UserName, user, StringComparison.OrdinalIgnoreCase);

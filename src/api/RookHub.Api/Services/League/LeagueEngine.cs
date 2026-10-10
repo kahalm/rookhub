@@ -64,6 +64,22 @@ public static class LeagueNames
     /// <summary>Personen-Schlüssel: FIDE-ID, sonst „n:" + Namensschlüssel.</summary>
     public static string Pid(string? fide, string? nameKey) => !string.IsNullOrEmpty(fide) ? fide : "n:" + (nameKey ?? "");
 
+    /// <summary>
+    /// Schlüssel für Online-Konten, Karte und Partien eines Spielers OHNE FIDE-ID (0.730.0, Wunsch 2026-10-10: „die Verbindung von
+    /// Onlinekonto zu Ligakonto soll nicht nur über FIDE gehen, um auch die ohne FIDE zu fangen"): „n-" + 14 Hex-Zeichen aus dem
+    /// Namensschlüssel — passt in die 16 Zeichen der FideId-Spalten und in eine Adresse. Spieler mit FIDE-ID behalten die FIDE-ID.
+    /// </summary>
+    public static string AccountKey(string? fide, string? nameKey) =>
+        !string.IsNullOrEmpty(fide) ? fide : NoFidePrefix + Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(nameKey ?? "")))[..14].ToLowerInvariant();
+
+    /// <summary><see cref="AccountKey"/> aus einem <see cref="Pid"/>.</summary>
+    public static string AccountKeyOfPid(string pid) => pid.StartsWith("n:", StringComparison.Ordinal) ? AccountKey(null, pid[2..]) : pid;
+
+    public const string NoFidePrefix = "n-";
+
+    public static bool IsNoFideKey(string? key) => key is { Length: 16 } && key.StartsWith(NoFidePrefix, StringComparison.Ordinal);
+
     private static readonly (Regex Re, string Club)[] ClubRules =
     {
         // Seit der Bundesliga (0.719.0) an Wortgrenzen: „hall" traf sonst „SK Elektro Strobl Hallein" (2. Bundesliga West) — an

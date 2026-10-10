@@ -46,6 +46,14 @@ describe('PlayerCardComponent', () => {
 
   afterEach(() => { fixture.componentInstance.close(); localStorage.removeItem(TREE_FILTER_KEY); });
 
+  it('0.730.0: Online-Konten hängen an der FIDE-ID, ohne sie am n-Schlüssel — nie an der Id der Spielervorbereitung', () => {
+    const c = fixture.componentInstance;
+    expect(c.accountsKey({ fide: '1606921', n: 0 } as never)).toBe('1606921');
+    expect(c.accountsKey({ fide: '', key: 'n-0123456789abcd', n: 0 } as never)).toBe('n-0123456789abcd');
+    expect(c.accountsKey({ fide: '1606921', key: '4711', n: 0 } as never)).toBe('1606921');
+    expect(c.accountsKey({ fide: '', key: '4711', n: 0 } as never)).toBe('');
+  });
+
   it('aus einer Brett-Zeile geöffnet: nur die Farbe an diesem Brett, umschaltbar', async () => {
     await fixture.componentInstance.open('1606921', 'w', 3, null);
     fixture.detectChanges();

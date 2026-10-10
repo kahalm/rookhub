@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.730.0", date: "2026-10-10", changes: [
+    { en: "LeagueHub: online accounts can now also be linked to league players without a FIDE ID. In the roster and the forecast their names open the player card like everyone else's; there you can add, check and remove chess.com/Lichess accounts, and the games of those accounts are fetched and show up in the opening tree. Players without a FIDE ID are identified by their name in the rosters.",
+      de: "LeagueHub: Online-Konten lassen sich jetzt auch Ligaspielern ohne FIDE-ID zuordnen. In Meldeliste und Prognose öffnen ihre Namen die Spielerkarte wie bei allen anderen; dort kann man chess.com-/Lichess-Konten eintragen, prüfen und entfernen, und die Partien dieser Konten werden geholt und erscheinen im Eröffnungsbaum. Erkannt werden Spieler ohne FIDE-ID über ihren Namen in den Meldelisten." },
+  ] },
   { version: "0.729.0", date: "2026-10-10", changes: [
     { en: "Analysis board and live engine on the game page: with 7 pieces or fewer, RookHub asks the Lichess endgame tablebase for the exact result — who wins (or draw), mate in n, and the result of every move; a click plays it. The evaluation bar shows the exact result. Stockfish keeps calculating alongside, so nothing is lost if Lichess does not answer.", de: "Analysebrett und Live-Engine der Partieseite: Ab 7 Steinen fragt RookHub die Endspiel-Datenbank (Tablebase) von Lichess nach dem genauen Ergebnis — wer gewinnt (oder Remis), Matt in n und das Ergebnis jedes Zugs; ein Klick spielt ihn. Die Bewertungsleiste zeigt das genaue Ergebnis. Stockfish rechnet daneben weiter — antwortet Lichess nicht, fehlt nichts." },
   ] },

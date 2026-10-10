@@ -304,8 +304,13 @@ public sealed class LeagueService
         var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
             .Select(x => new { x.ProfileJson, x.Name, x.GameCount }).FirstOrDefaultAsync(ct);
         var acc = await _db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).ToListAsync(ct);
-        if (p is null && (acc.Count == 0 || !prep && !await LeagueOnlineAccountService.LeagueKnowsAsync(_db, fide, ct))) return null;
-        var card = p is null ? new JsonObject { ["fide"] = fide, ["n"] = 0 } : JsonNode.Parse(p.ProfileJson)!.AsObject();
+        // Spieler ohne FIDE-ID (0.730.0): nie eine Liga-Karte, aber eine Karte zum Pflegen der Konten, sobald er in einer
+        // Meldeliste steht — auch ohne Konto.
+        var noFide = LeagueNames.IsNoFideKey(fide) ? await LeagueNoFidePlayers.PlayerAsync(_db, fide, ct) : null;
+        if (p is null && noFide is null
+            && (acc.Count == 0 || !prep && !await LeagueOnlineAccountService.LeagueKnowsAsync(_db, fide, ct))) return null;
+        var card = noFide is not null ? new JsonObject { ["fide"] = "", ["key"] = fide, ["name"] = noFide.Name, ["n"] = 0 }
+            : p is null ? new JsonObject { ["fide"] = fide, ["n"] = 0 } : JsonNode.Parse(p.ProfileJson)!.AsObject();
         var shown = acc.Where(a => !onlySure || a.Confidence == LeagueOnlineAccountService.Sure).OrderBy(a => a.Id).ToList();
         // Minderjährige (0.610.0): angemeldet steht nur DASS es ein Konto gibt, über einen Teilen-Link gar nichts.
         var hidden = (await LeagueHiddenAccounts.FidesAsync(_db, new[] { fide }, ct)).Contains(fide);
@@ -485,7 +490,7 @@ public sealed class LeagueService
         if (_cache != null && _cache.TryGetValue(key, out HashSet<string>? hit) && hit != null) return hit;
         var f = await FixtureAsync(s.Tnr, s.Round, s.Team, ct);
         var fides = f is null || !Shareable(f.Value.Fixture) ? new HashSet<string>(StringComparer.Ordinal)
-            : (f.Value.Fixture["roster"]?.AsArray() ?? new JsonArray()).Select(r => r?["fide"]?.GetValue<string>())
+            : (f.Value.Fixture["roster"]?.AsArray() ?? new JsonArray()).Select(r => r?["fide"]?.GetValue<string>() ?? r?["key"]?.GetValue<string>())
                 .OfType<string>().ToHashSet(StringComparer.Ordinal);
         _cache?.Set(key, fides, new MemoryCacheEntryOptions { Size = 1, SlidingExpiration = LeagueProfileStore.CacheIdle });
         return fides;

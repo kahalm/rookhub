@@ -189,6 +189,19 @@ describe('FixtureViewComponent', () => {
     expect(boards[0].querySelectorAll('.name .g').length).toBe(1);
   });
 
+  it('0.730.0: Spieler ohne FIDE-ID öffnen die Karte über ihren n-Schlüssel (Meldeliste und Kandidat)', async () => {
+    api.card.and.resolveTo({ fide: '', key: 'n-0123456789abcd', name: 'Tabernig, Bernhard', n: 0, accounts: [] } as never);
+    const el = render({ ...OPEN,
+      boards: [{ ...OPEN.boards![0], cand: [{ n: 'Tabernig, Bernhard', elo: null, rb: 3, p: 0.4, fide: null, key: 'n-0123456789abcd' }] }],
+      roster: [{ rb: 3, n: 'Tabernig, Bernhard', elo: null, p: 0.4, prev: '', cur: '', fide: null, key: 'n-0123456789abcd', g: 0,
+        acc: [{ site: 'chess.com', user: 'tabi', url: 'https://www.chess.com/member/tabi', conf: 'wahrscheinlich' }] }] });
+    expect(el.querySelector('.board button.pl')?.textContent?.trim()).toBe('Tabernig, Bernhard');
+    const rosterButton = [...el.querySelectorAll('button.pl')].find(b => !b.closest('.board')) as HTMLButtonElement;
+    rosterButton.click();
+    await fixture.whenStable();
+    expect(api.card).toHaveBeenCalledWith('n-0123456789abcd', null);
+  });
+
   it('zwei (i) am Anfang: Partien der Begegnung und Prognose mit Treffern je Runde, Liga, gesamt (0.650.0)', async () => {
     fixture.componentRef.setInput('sources', {
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 900 }], boardTotal: 900, online: [], onlineTotal: 300, countedAt: '',

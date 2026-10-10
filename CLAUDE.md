@@ -2536,6 +2536,18 @@ Seite, gesichert oder unsicher + Kommentare; im Hintergrund holst du die Spiele 
   nur verschwundene Import-Konten fallen samt Partien weg. Höchstens 20 je Spieler. Andere Seite oder anderer Name = anderes Konto:
   Partien weg, Abruf von vorn; nur andere Groß/Kleinschreibung behält sie. Nach jeder Änderung werden die Konten in den fertigen
   Ansichten nachgezogen (`PatchViewsAsync`, `roster[].acc`) und der Abruf geweckt.
+* **Spieler ohne FIDE-ID** (0.730.0, Wunsch 2026-10-10: „die Verbindung von Onlinekonto zu Ligakonto soll nicht nur über FIDE
+  gehen, um auch die ohne FIDE zu fangen"): sie bekommen den Schlüssel `LeagueNames.AccountKey(null, NameKey)` = „n-" + 14
+  Hex-Zeichen SHA-256 des Namensschlüssels — passt in die 16 Zeichen aller `FideId`-Spalten (Konten, Online-Partien, Vorschläge,
+  Scans), also KEINE Migration; Konten, Abruf, Baum und Profil laufen über denselben Weg wie mit FIDE-ID. Zurückgerechnet wird
+  über `LeagueNoFidePlayers` (Namensschlüssel der Meldelisten ohne FIDE-ID durchsuchen): `LeagueKnowsAsync`,
+  `LeagueAccountFinder.PlayerAsync`, `LeagueProfileStore.NameAsync`. Die Ansicht trägt `roster[].key` und `cand[].key`
+  (nur ohne FIDE-ID), `acc` hängt am Schlüssel; `PatchViewsAsync` und die Meldeliste des Teilen-Links nehmen `key`, wo `fide`
+  fehlt. `CardAsync` liefert für einen bekannten n-Schlüssel immer eine Karte (`fide: ""`, `key`, `name`), auch ohne Konto —
+  sonst ließe sich nie eins eintragen. Frontend: `fixture-view` öffnet die Karte mit `fide || key`, `player-card.accountsKey`
+  bindet die Konten an den n-Schlüssel (nie an die Id der Spielervorbereitung). Grenzen: gleicher Name = derselbe Schlüssel
+  (wie `LeagueNames.Pid`); ein späterer Wechsel auf eine FIDE-ID lässt die Konten am alten Schlüssel liegen; Minderjährige sind
+  ohne Scan-Zeile nicht verborgen (`LeagueHiddenAccounts`); die Aufstellungen je Runde (`round-lineups`) verlinken nur FIDE-Spieler.
 * **Sichtbarkeit**: angemeldet trägt die Karte je Konto `id`, `comment`, `games`, `syncedAt`, `error` (`ToJson(full: true)`), dazu
   `online` = Summe der Partien; über einen Teilen-Link nur gesicherte Konten und nur `site/user/url/conf`. Pflegen nur
   `league.manage`, nie über einen Teilen-Link (`shared/online-accounts.component.ts`, in der Spielerkarte).
