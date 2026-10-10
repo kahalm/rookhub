@@ -2990,6 +2990,11 @@
     "openInAnalysis": "Megnyitás az elemzésben",
     "share": "Megosztási link másolása",
     "shareCopied": "A megosztási link a vágólapra másolva",
+    "shareTrainingCopied": "Link másolva — közvetlenül a hibagyakorlást nyitja meg, fiók nélkül is",
+    "shareTraining": {
+      "white": "Hibagyakorlás megosztása — világos ({{count}})",
+      "black": "Hibagyakorlás megosztása — sötét ({{count}})"
+    },
     "openOriginal": "Eredeti játszma megnyitása",
     "analyze": "Játszma elemzése",
     "analyzeHint": "A játszma elemzése a háttérben — utána a tábla alatt megjelenik az értékelési görbe pontossággal és lépésosztályokkal.",

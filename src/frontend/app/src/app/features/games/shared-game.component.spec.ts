@@ -759,6 +759,56 @@ describe('SharedGameComponent', () => {
     }
   });
 
+  // Wunsch 2026-10-10: ein teilbarer Link, der für die gewählte Farbe direkt das Fehler-Nachspielen öffnet (an-/abgemeldet).
+  it('?train=black opens the mistakes training for Black by itself, once the analysis has tasks for that side', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SharedGameComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: false, has: () => false } },
+        { provide: ActivatedRoute, useValue: { snapshot: {
+          paramMap: convertToParamMap({ token: 'tok' }), queryParamMap: convertToParamMap({ train: 'black' }), data: {} } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedGameComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush({
+      ...sharedGame('white'), pgn: '[White "a"]\n[Black "b"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 1-0',
+    });
+    fixture.detectChanges();
+    const game = fixture.componentInstance;
+    expect(game.mistakeSide()).toBe('black');                 // schlägt die Seite des Besitzers (Weiß)
+    expect(game.training()).toBeNull();                        // noch keine Aufgaben → noch kein Training
+
+    const fenBefore = game.service.currentGame!.fens[5];
+    const mistake = {
+      ply: 5, white: false, cls: 'blunder', fenBefore, playedSan: 'Nf6', playedUci: 'g8f6',
+      bestUci: 'g7g6', bestSan: 'g6', acceptUci: ['g7g6'], acceptSan: ['g6'],
+      evalBefore: { cp: 30 }, evalAfter: { cp: 900 }, lostPercent: 40,
+    } as never;
+    game.mistakes.set({ white: [], black: [mistake] });
+    fixture.detectChanges();
+    expect(game.training()).not.toBeNull();
+    expect(game.training()!.side()).toBe('black');
+    game.endTraining();
+    game.mistakes.set({ white: [], black: [mistake] });
+    fixture.detectChanges();
+    expect(game.training()).toBeNull();                        // nur einmal von selbst
+  });
+
+  it('the owner copies a training link per side; his own shared link keeps ?train= when it redirects', async () => {
+    const { fixture } = await setup(true, true);
+    const page = fixture.componentInstance;
+    page.shareToken = 'abc';
+    expect(page.trainingShareUrl('white')).toMatch(/\/g\/abc\?train=white$/);
+    const written: string[] = [];
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: (t: string) => { written.push(t); return Promise.resolve(); } } as never);
+    page.shareTraining('black');
+    expect(written[0]).toMatch(/\/g\/abc\?train=black$/);
+  });
+
   // Gewuenscht 2026-09-24: „Eigene Fehler nachspielen" auf dem Brett der Seite statt in einem Dialog mit eigenem Brett.
   it('replays the mistakes on the page board — no dialog, tap zones gone, the move list follows the task', async () => {
     const { fixture, http } = await setup();

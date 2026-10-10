@@ -144,6 +144,17 @@ const TAP_MAX_MS = 500;
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #gameMenu="matMenu">
+                  <!-- Fehler-Training teilen (0.740.0): Link öffnet für jeden direkt das Nachspielen der gewählten Farbe. -->
+                  @if (own && shareToken) {
+                    @for (side of trainSides; track side) {
+                      @if (mistakeCount(side) > 0) {
+                        <button mat-menu-item [class]="'share-training ' + side" (click)="shareTraining(side)">
+                          <mat-icon>school</mat-icon>
+                          <span>{{ ('games.shareTraining.' + side) | translate: { count: mistakeCount(side) } }}</span>
+                        </button>
+                      }
+                    }
+                  }
                   <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
                     <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
                   </button>
@@ -497,7 +508,18 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Wessen Partie — als Signal, damit Zähler und Trainer-Seite nachziehen, sobald die Partie da ist. */
   private readonly ownerSide = signal<'white' | 'black' | null>(null);
   /** Die Seite, die der Trainer abfragt — der Knopf zählt NUR sie (siehe `trainingSide`). */
-  readonly mistakeSide = computed(() => trainingSide(this.mistakes(), this.ownerSide()));
+  readonly mistakeSide = computed(() => this.trainSide() ?? trainingSide(this.mistakes(), this.ownerSide()));
+  /** Seite aus dem geteilten Trainings-Link (`?train=white|black`, 0.740.0) — schlägt die Seite des Besitzers. */
+  readonly trainSide = signal<'white' | 'black' | null>(null);
+  /** Mit `?train=` geöffnet: das Training startet von selbst, sobald die Analyse Aufgaben dieser Seite hergibt (einmal). */
+  private autoTrain = false;
+  private readonly autoTrainEffect = effect(() => {
+    const side = this.trainSide();
+    if (!side || !this.autoTrain || this.training()) return;
+    if (mistakesOf(this.mistakes(), side).length === 0) return;
+    this.autoTrain = false;
+    untracked(() => this.trainMistakes());
+  });
   readonly mistakeTotal = computed(() => mistakesOf(this.mistakes(), this.mistakeSide()).length);
 
   analysisRunning(): boolean {
@@ -820,6 +842,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   ) {}
 
   ngOnInit(): void {
+    const train = this.route.snapshot.queryParamMap?.get('train');
+    if (train === 'white' || train === 'black') { this.trainSide.set(train); this.autoTrain = true; }
     this.own = this.route.snapshot.data?.['mode'] === 'own';
     this.club = this.route.snapshot.data?.['mode'] === 'club';
     if (this.club) {
@@ -852,7 +876,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
         // Der eigene Teilen-Link: dieselbe Ansicht wie über die Partienliste (Zurück-Pfeil, Teilen-Knopf, gemerktes
         // Fehler-Training …) — gewünscht 2026-09-24. `replaceUrl`, damit „Zurück" im Browser nicht wieder hierher führt.
         if (g.ownGameId && this.auth.isLoggedIn) {
-          this.router.navigate(['/games', g.ownGameId], { replaceUrl: true });
+          const side = this.trainSide();   // der geteilte Trainings-Link gilt auch für den Besitzer selbst
+          this.router.navigate(['/games', g.ownGameId], side ? { replaceUrl: true, queryParams: { train: side } } : { replaceUrl: true });
           return;
         }
         this.show(g);
@@ -939,6 +964,26 @@ export class SharedGameComponent implements OnInit, DoCheck {
     downloadBlob(new Blob([g.pgn.endsWith('\n') ? g.pgn : g.pgn + '\n'], { type: 'application/x-chess-pgn' }),
       pgnFileName(players || 'game', (g.playedAt ?? g.createdAt ?? '').slice(0, 10)));
   }
+
+  /** Link „Fehler nachspielen" für eine Seite (0.740.0, Wunsch 2026-10-10): der Teilen-Link mit `?train=`. Wer ihn öffnet —
+   *  angemeldet oder nicht —, landet direkt im Fehler-Training dieser Farbe. */
+  trainingShareUrl(side: 'white' | 'black'): string | null {
+    return this.shareToken ? `${this.games.shareUrl(this.shareToken)}?train=${side}` : null;
+  }
+
+  shareTraining(side: 'white' | 'black'): void {
+    const url = this.trainingShareUrl(side);
+    if (!url) return;
+    navigator.clipboard?.writeText(url).then(
+      () => this.snackbar.copy(this.translate.instant('games.shareTrainingCopied')),
+      () => this.snackbar.warn(url),
+    );
+  }
+
+  readonly trainSides: readonly ('white' | 'black')[] = ['white', 'black'];
+
+  /** Anzahl Aufgaben je Seite — für die Menüpunkte „Fehler-Training teilen". */
+  mistakeCount(side: 'white' | 'black'): number { return mistakesOf(this.mistakes(), side).length; }
 
   /** Teilen-Link der eigenen Partie in die Zwischenablage — wie in der Liste. */
   share(): void {

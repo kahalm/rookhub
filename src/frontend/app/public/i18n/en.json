@@ -2645,6 +2645,11 @@
     "openInAnalysis": "Open in analysis",
     "share": "Copy share link",
     "shareCopied": "Share link copied to clipboard",
+    "shareTrainingCopied": "Link copied — it opens the mistakes training directly, also without an account",
+    "shareTraining": {
+      "white": "Share mistakes training — White ({{count}})",
+      "black": "Share mistakes training — Black ({{count}})"
+    },
     "openOriginal": "Open original game",
     "analyze": "Analyse game",
     "analyzeHint": "Have the game analysed in the background — the evaluation graph with accuracy and move classes then appears below the board.",

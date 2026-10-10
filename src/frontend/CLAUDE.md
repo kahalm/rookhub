@@ -882,6 +882,14 @@ umrandetem Knopf, Vorgabe `button` unverändert für Analysebrett & Co.). Die Zu
 abgesetzte Nummern-Spalte (40 px), Textschrift mit Tabellenziffern statt der nie geladenen Monospace, aktiver Zug in
 `--rh-accent`. Am Handy sitzt das ⋮ absolut oben rechts in der Kopfzeile.
 
+**Fehler-Training teilen** (0.741.0, Wunsch 2026-10-10: „Link zum Teilen, wo man für die ausgewählte Farbe die Fehler
+nachspielen kann — ein-/ausgeloggt egal"): der Teilen-Link der Partie mit `?train=white|black` (`/g/{token}?train=…`).
+`SharedGameComponent` liest den Parameter (alle Modi), die gewählte Seite schlägt die des Besitzers (`trainSide` →
+`mistakeSide`), und ein `effect` startet `trainMistakes()` EINMAL von selbst, sobald die Analyse Aufgaben dieser Seite hergibt.
+Anonym sieht der Betrachter die vom Besitzer verknüpfte Analyse (wie die Kurve des Teilen-Links); Fortschritt wird nur bei der
+eigenen Partie gemeldet. Öffnet der Besitzer seinen eigenen Link, behält die Umleitung auf `/games/{id}` den Parameter.
+Menü ⋮ der eigenen Partie: „Fehler-Training teilen — Weiß/Schwarz (n)", nur Seiten mit Aufgaben (`shareTraining`).
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

@@ -2645,6 +2645,11 @@
     "openInAnalysis": "In Analyse öffnen",
     "share": "Teilen-Link kopieren",
     "shareCopied": "Teilen-Link in die Zwischenablage kopiert",
+    "shareTrainingCopied": "Link kopiert — er öffnet direkt das Fehler-Training, auch ohne Konto",
+    "shareTraining": {
+      "white": "Fehler-Training teilen — Weiß ({{count}})",
+      "black": "Fehler-Training teilen — Schwarz ({{count}})"
+    },
     "openOriginal": "Originalpartie öffnen",
     "analyze": "Partie analysieren",
     "analyzeHint": "Partie im Hintergrund rechnen lassen — danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen.",

@@ -2645,6 +2645,11 @@
     "openInAnalysis": "Otvori u analizi",
     "share": "Kopiraj poveznicu za dijeljenje",
     "shareCopied": "Poveznica za dijeljenje kopirana u međuspremnik",
+    "shareTrainingCopied": "Poveznica kopirana — otvara izravno trening grešaka, i bez računa",
+    "shareTraining": {
+      "white": "Podijeli trening grešaka — bijeli ({{count}})",
+      "black": "Podijeli trening grešaka — crni ({{count}})"
+    },
     "openOriginal": "Otvori izvornu partiju",
     "analyze": "Analiziraj partiju",
     "analyzeHint": "Neka se partija analizira u pozadini — nakon toga ispod ploče stoji graf procjene s preciznošću i ocjenama poteza.",
