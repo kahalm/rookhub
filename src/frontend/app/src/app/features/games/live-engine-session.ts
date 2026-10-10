@@ -75,9 +75,11 @@ export class LiveEngineSession {
     return v.length ? uciLineToSan(this.baseFen, v.map(m => m.uci), v.length) : '';
   });
 
-  constructor(engineFactory: () => AnalysisEngineService = () => new AnalysisEngineService(), depthCap = 22) {
+  /** `lineCount`: Zahl der Linien (Vorgabe {@link LIVE_LINES}; die Formular-Prüfseite will 10, 0.738.0). */
+  constructor(engineFactory: () => AnalysisEngineService = () => new AnalysisEngineService(), depthCap = 22,
+    readonly lineCount = LIVE_LINES) {
     this.engine = engineFactory();
-    this.engine.setMultiPv(LIVE_LINES);
+    this.engine.setMultiPv(lineCount);
     this.engine.setDepth(depthCap);
     this.sub = this.engine.analysis$.subscribe(s => {
       if (!s.fen || s.fen !== this.analyzedFen) return;

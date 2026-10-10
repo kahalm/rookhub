@@ -269,6 +269,34 @@ describe('ClubAddPageComponent', () => {
     flush();
   }));
 
+  // 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen" — alle als Fotos von Seite 1, höchstens vier
+  it('mehrere Fotos auf einmal: das erste wird Seite 1, die übrigen weitere Fotos derselben Seite, mehr als vier fallen weg', fakeAsync(() => {
+    query = { art: 'formular' };
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const files = [1, 2, 3, 4, 5].map(n => new File([String(n)], `f${n}.jpg`, { type: 'image/jpeg' }));
+    const input = el.querySelector('.multi-photo') as HTMLInputElement;
+    expect(input.multiple).toBeTrue();
+    expect(input.hasAttribute('capture')).toBeFalse();                       // Galerie, nicht die Kamera
+    const dt = new DataTransfer();
+    files.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(c.photo()).toBe(files[0]);
+    expect(c.layout()).toEqual([1, 1, 1, 1]);
+    expect(el.textContent).toContain('1 Foto(s) nicht übernommen');
+    expect(el.querySelector('.multi-photo')).toBeNull();                    // Seite voll
+    expect(el.querySelector('.extra-page')?.textContent).toContain('Seite 1, Foto 2: f2.jpg');
+    api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
+    void c.upload();
+    flushMicrotasks();
+    expect(api.upload).toHaveBeenCalledWith(files.slice(0, 4), 'auto', 'auto', [1, 1, 1, 1]);
+    flush();
+  }));
+
   // 0.736.0, Wunsch 2026-10-10: dieselbe Seite zweimal fotografiert — EINE Seite mit zwei Fotos, nicht Seite 2
   it('„+ weiteres Foto dieser Seite“ schickt beide Fotos als Seite 1', fakeAsync(() => {
     query = { art: 'formular' };

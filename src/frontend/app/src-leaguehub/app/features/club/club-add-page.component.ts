@@ -186,12 +186,25 @@ const SAVE_DEBOUNCE_MS = 1500;
               <label class="field">Foto des Formulars{{ extraPhotos().length ? ' (Seite 1)' : '' }}
                 <input #photoInput type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
               </label>
+              <!-- 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen, um die Erkennung zu verbessern" — ohne capture,
+                   sonst öffnet das Handy die Kamera (ein Foto) statt der Galerie -->
+              @if (photosOfLastPage() < maxPhotosPerPage) {
+                <label class="field multi-pick small">Mehrere Fotos derselben Seite auf einmal (Galerie, höchstens {{ maxPhotosPerPage }})
+                  <input #multiInput class="multi-photo" type="file" accept="image/*" multiple (change)="pickMany($event)" />
+                </label>
+              }
+              @if (multiNote(); as n) { <p class="muted small">{{ n }}</p> }
+              @if (photo(); as f) { <p class="muted small chosen">Seite 1: {{ f.name }}</p> }
               <!-- Wunsch 2026-10-06: eine lange Partie geht über zwei oder drei Blätter — EINE Einlesung mit allen Seiten. -->
               @for (p of extraPhotos(); track $index; let i = $index) {
                 <div class="field-row extra-page">
-                  <label class="field">{{ extraLabels()[i] }}
-                    <input class="extra-photo" type="file" accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
-                  </label>
+                  @if (p) {
+                    <span class="field">{{ extraLabels()[i] }}: <span class="muted">{{ p.name }}</span></span>
+                  } @else {
+                    <label class="field">{{ extraLabels()[i] }}
+                      <input class="extra-photo" type="file" accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
+                    </label>
+                  }
                   <button type="button" class="btn-sec" (click)="removeExtra(i)" [attr.aria-label]="extraLabels()[i] + ' entfernen'">✕</button>
                 </div>
               }
@@ -344,6 +357,7 @@ export class ClubAddPageComponent implements OnInit {
   readonly extraPhotos = signal<(File | null)[]>([]);
   readonly maxPages = 3;
   readonly maxPhotosPerPage = 4;
+  readonly multiNote = signal<string | null>(null);
   /** Je weiterem Foto: gehört es zur Seite davor (dieselbe Seite noch einmal fotografiert, 0.736.0)? */
   readonly extraSame = signal<boolean[]>([]);
   /** Seite je Foto (das erste ist Seite 1) — geht als `layout` mit. */
@@ -780,6 +794,27 @@ export class ClubAddPageComponent implements OnInit {
     this.photo.set((ev.target as HTMLInputElement).files?.[0] ?? null);
   }
 
+  /** Mehrere Fotos auf einmal (0.738.0): alle zeigen dieselbe Seite — ohne Hauptfoto wird das erste zum Hauptfoto, die
+   *  übrigen sind weitere Fotos der letzten Seite. Was über {@link maxPhotosPerPage} geht, bleibt weg (mit Hinweis). */
+  pickMany(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length) return;
+    // offene leere Zeilen weg, sonst stünden die neuen Fotos hinter einer Lücke
+    const keep = this.extraPhotos().map((f, i) => ({ f, same: this.extraSame()[i] })).filter(x => x.f != null);
+    this.extraPhotos.set(keep.map(x => x.f));
+    this.extraSame.set(keep.map(x => x.same));
+    if (!this.photo()) this.photo.set(files.shift()!);
+    let skipped = 0;
+    for (const f of files) {
+      if (this.photosOfLastPage() >= this.maxPhotosPerPage) { skipped++; continue; }
+      this.extraPhotos.set([...this.extraPhotos(), f]);
+      this.extraSame.set([...this.extraSame(), true]);
+    }
+    this.multiNote.set(skipped ? `${skipped} Foto(s) nicht übernommen — höchstens ${this.maxPhotosPerPage} je Seite.` : null);
+  }
+
   /** `same`: ein weiteres Foto der Seite davor statt einer neuen Seite (0.736.0). */
   addExtra(same = false): void {
     if (same ? this.photosOfLastPage() >= this.maxPhotosPerPage : (this.layout().at(-1) ?? 1) >= this.maxPages) return;
@@ -813,6 +848,7 @@ export class ClubAddPageComponent implements OnInit {
       this.photo.set(null);
       this.extraPhotos.set([]);
       this.extraSame.set([]);
+      this.multiNote.set(null);
       // UX-037: das Feld zeigte sonst weiter den Dateinamen, während „Formular einlesen" gesperrt blieb.
       const input = this.photoInput()?.nativeElement;
       if (input) input.value = '';

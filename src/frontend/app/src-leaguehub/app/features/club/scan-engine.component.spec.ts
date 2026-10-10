@@ -59,6 +59,18 @@ describe('ScanEngineComponent', () => {
   beforeEach(() => localStorage.removeItem(SCAN_ENGINE_KEY));
   afterEach(() => localStorage.removeItem(SCAN_ENGINE_KEY));
 
+  // 0.738.0, Wunsch 2026-10-10: „immer 5 Linien, 10 wäre besser" — 10 im Browser, externe Engines liefern höchstens 5
+  it('zeigt im Browser immer 10 Linien, mit einer externen Engine 5', () => {
+    const f = create();
+    f.componentInstance.toggle(true);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.se-lines li').length).toBe(10);
+    f.componentInstance.choose('rhe_lc0');
+    f.detectChanges();
+    expect(el.querySelectorAll('.se-lines li').length).toBe(5);
+  });
+
   it('ist standardmäßig aus und rechnet nichts', () => {
     const f = create();
     expect(f.componentInstance.on()).toBeFalse();

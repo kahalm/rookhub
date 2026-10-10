@@ -394,6 +394,20 @@ describe('AnalysisEngineService remote/local isolation', () => {
   const ENGINE = { id: 'eei_a', name: 'SF', maxThreads: 2, maxHash: 64 };
   const remote = () => { const s = new Subject<any>(); return { s, t: () => s.asObservable() }; };
 
+  // 0.738.0: im Browser bis zu 10 Linien (Formular-Prüfseite), extern höchstens 5 (Protokoll)
+  it('allows 10 lines locally, but asks an external engine for at most 5', async () => {
+    const eng = new TestEngine();
+    eng.setMultiPv(25);
+    expect(eng.linesRequested).toBe(10);
+    await eng.analyze(FEN);
+    expect(eng.last.posted).toContain('setoption name MultiPV value 10');
+    const s = new Subject<any>();
+    let work: { multiPv: number } | null = null;
+    eng.setRemoteEngine(ENGINE, ((_id: string, w: { multiPv: number }) => { work = w; return s.asObservable(); }) as any);
+    await eng.analyze(FEN);
+    expect(work!.multiPv).toBe(5);
+  });
+
   it('stops the running WASM search when an external engine takes over', async () => {
     const eng = new TestEngine();
     await eng.analyze(FEN);                       // WASM sucht

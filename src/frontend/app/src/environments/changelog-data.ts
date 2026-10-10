@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.738.0", date: "2026-10-10", changes: [
+    { en: "LeagueHub score sheet: “Several photos of the same page at once” picks several shots from the gallery in one go (up to four per page) — the reader compares them for unclear entries. The engine on the check page shows 10 lines in the browser (external engines 5).",
+      de: "LeagueHub-Partieformular: „Mehrere Fotos derselben Seite auf einmal“ nimmt mehrere Aufnahmen in einem Schritt aus der Galerie (bis zu vier je Seite) — der Leser vergleicht sie bei unklaren Einträgen. Die Engine auf der Prüfseite zeigt im Browser 10 Linien (externe Engines 5)." },
+  ] },
   { version: "0.737.2", date: "2026-10-10", changes: [
     { en: "Merged score sheet: the waiting clock now starts at the merge instead of the first upload (it showed hours).",
       de: "Zusammengeführtes Formular: die Warte-Uhr beginnt beim Zusammenführen statt beim ersten Hochladen (sie zeigte Stunden)." },

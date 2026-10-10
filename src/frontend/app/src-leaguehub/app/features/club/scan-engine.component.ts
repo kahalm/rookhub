@@ -1,14 +1,17 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { AuthService } from '@rh/core/auth.service';
 import { BoardArrow } from '@rh/shared/pgn-viewer/chess-board.component';
 import { ExternalEngineInfo, ExternalEngineService, isEngineOffline } from '@rh/features/analysis/external-engine.service';
-import { LIVE_LINES, LiveEngineSession } from '@rh/features/games/live-engine-session';
+import { LiveEngineSession } from '@rh/features/games/live-engine-session';
+import { AnalysisEngineService } from '@rh/features/analysis/analysis-engine.service';
 import { de } from '../../core/league-format';
 
 /** Gemerkte Wahl der Prüfseite (localStorage): an/aus und welche Engine (`wasm` = Stockfish im Browser). */
 export const SCAN_ENGINE_KEY = 'lh-scan-engine';
 export const SCAN_ENGINE_DEPTH = 20;
+/** Linien auf der Prüfseite (Wunsch 2026-10-10: „immer 5, 10 wäre besser") — 10 im Browser, externe Engines liefern 5. */
+export const SCAN_ENGINE_LINES = 10;
 
 export interface ScanEngineChoice { on: boolean; engine: string; }
 
@@ -56,7 +59,7 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
       @if (on()) {
         @if (session(); as s) {
           <ol class="se-lines">
-            @for (i of slots; track i) {
+            @for (i of slots(); track i) {
               @if (s.lines()[i]; as l) {
                 <li><span class="se-eval" [class.white]="l.positive">{{ l.evalText }}</span> <span class="se-san">{{ de(l.san) }}</span></li>
               } @else {
@@ -91,7 +94,9 @@ export class ScanEngineComponent implements OnDestroy {
   /** Bester Zug als Pfeil — die Seite legt ihn zu ihren eigenen auf das Brett. */
   readonly arrowsChange = output<BoardArrow[]>();
 
-  readonly slots = Array.from({ length: LIVE_LINES }, (_, i) => i);
+  /** Immer so viele Zeilen wie die gewählte Engine liefert (leere als Platzhalter) — die Liste springt nicht. */
+  readonly slots = computed(() => Array.from({ length: this.engine() === 'wasm' ? SCAN_ENGINE_LINES
+    : Math.min(SCAN_ENGINE_LINES, AnalysisEngineService.MaxRemoteMultiPv) }, (_, i) => i));
   readonly de = de;
   readonly on = signal(false);
   readonly engine = signal('wasm');
@@ -135,7 +140,7 @@ export class ScanEngineComponent implements OnDestroy {
 
   /** Eigene Engine-Instanz — als Methode, damit Tests keinen echten Stockfish starten. */
   protected createSession(): LiveEngineSession {
-    return new LiveEngineSession(undefined, SCAN_ENGINE_DEPTH);
+    return new LiveEngineSession(undefined, SCAN_ENGINE_DEPTH, SCAN_ENGINE_LINES);
   }
 
   private start(): void {

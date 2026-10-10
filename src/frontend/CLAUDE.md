@@ -143,6 +143,13 @@ Auftragsseite (`analysis-jobs.component.ts`) benutzen diese drei — keine eigen
   Browser-Erweiterung, Vorgabe; `engine` = Engine-Provider), die Liste zeigt ihn als Spalte. Ein Engine-Token erreicht
   serverseitig NUR `/api/external-engine/*`.
 
+## Linienzahl der Engine (0.738.0)
+
+`AnalysisEngineService.setMultiPv` nimmt bis `MaxLocalMultiPv` (10) — Stockfish im Browser rechnet so viele; an eine externe
+Engine geht höchstens `MaxRemoteMultiPv` (5, Protokoll `work.multiPv`). `LiveEngineSession` hat als dritten Parameter die
+Linienzahl (Vorgabe `LIVE_LINES` 3); die Formular-Prüfseite in LeagueHub (`scan-engine.component.ts`, `SCAN_ENGINE_LINES`)
+will 10 und zeigt mit externer Engine 5 Zeilen.
+
 ## Maia-Sparring (`features/analysis/maia/`, 0.632.0)
 
 Sparringsgegner im Analysebrett (Entscheidungen, Fallen, Pin und Regeln: Haupt-CLAUDE.md „Maia-Sparring im Analysebrett").

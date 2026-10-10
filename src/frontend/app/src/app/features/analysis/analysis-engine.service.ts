@@ -418,7 +418,7 @@ export class AnalysisEngineService implements OnDestroy {
       sessionId: this.remoteSessionId,
       initialFen: fen,
       moves: [],
-      multiPv: this.multiPv,
+      multiPv: Math.min(this.multiPv, AnalysisEngineService.MaxRemoteMultiPv),
       ...(nodeGoal !== null ? { nodes: nodeGoal } : { depth: this.depthCap }),
       threads: engine.maxThreads,
       // Hash gedeckelt: die REGISTRIERUNGS-Grenze sagt nur, was Lichess zulässt (bis 1 TiB) — nicht,
@@ -492,8 +492,13 @@ export class AnalysisEngineService implements OnDestroy {
   // onDepthChange). Früher triggerten die Setter zusätzlich selbst analyze() → pro Änderung zwei
   // gen++/running-Emissionen für dieselbe FEN. Jetzt genau ein analyze() pro Änderung.
   setMultiPv(n: number): void {
-    this.multiPv = Math.max(1, Math.min(5, Math.round(n)));
+    this.multiPv = Math.max(1, Math.min(AnalysisEngineService.MaxLocalMultiPv, Math.round(n)));
   }
+
+  /** Stockfish im Browser rechnet bis zu 10 Linien (0.738.0, Prüfseite der Formulare); externe Engines höchstens
+   *  {@link MaxRemoteMultiPv} — mehr erlaubt das Protokoll (`work.multiPv`) nicht. */
+  static readonly MaxLocalMultiPv = 10;
+  static readonly MaxRemoteMultiPv = 5;
 
   setDepth(d: number): void {
     // Obergrenze 50 — muss mindestens so hoch sein wie der größte Wert in DEPTH_OPTIONS
