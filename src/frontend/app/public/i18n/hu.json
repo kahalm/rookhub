@@ -4016,7 +4016,13 @@
         "deadEnd": "Onnan nem éred el az összes csillagot. Próbálj egy másikat!",
         "solved": "Minden csillag megvan! 🌟"
       },
-      "starRange": "{{min}}–{{max}} csillag"
+      "starRange": "{{min}}–{{max}} csillag",
+      "free": {
+        "title": "Szabad játék",
+        "hint": "Válaszd ki magad a bábut és a csillagok számát",
+        "piece": "Bábu",
+        "count": "Csillagok száma"
+      }
     }
   },
   "turnierAdmin": {

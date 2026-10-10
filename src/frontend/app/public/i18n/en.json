@@ -4337,7 +4337,13 @@
         "deadEnd": "From there you can't reach all the stars. Try another one!",
         "solved": "All stars eaten! 🌟"
       },
-      "starRange": "{{min}}–{{max}} stars"
+      "starRange": "{{min}}–{{max}} stars",
+      "free": {
+        "title": "Free play",
+        "hint": "Choose the piece and the number of stars yourself",
+        "piece": "Piece",
+        "count": "Number of stars"
+      }
     }
   },
   "turnierAdmin": {

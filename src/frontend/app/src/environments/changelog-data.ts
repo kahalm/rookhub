@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.733.0", date: "2026-10-10", changes: [
+    { en: "KidHub Star Hunt: new free play — choose the piece (rook, bishop, knight, queen) and the number of stars (2 to 8) yourself and play as many puzzles as you like. Button on the Star Hunt page; the last choice is remembered on the device, and free play does not count towards the stages.",
+      de: "KidHub-Sternenjagd: neues freies Spiel — Figur (Turm, Läufer, Springer, Dame) und Zahl der Sterne (2 bis 8) selbst wählen und beliebig viele Aufgaben spielen. Knopf auf der Sternenjagd-Seite; die letzte Wahl merkt sich das Gerät, und das freie Spiel zählt nicht für die Stufen." },
+  ] },
   { version: "0.732.0", date: "2026-10-10", changes: [
     { en: "KidHub Star Hunt gets harder faster: every stage has six puzzles that grow within the stage — two with n stars, two with n+1, two with n+2. Stage 1 starts at 2 stars, and every four stages it goes up by one, up to 8 stars. Puzzles in which the piece would simply keep going straight after eating a star are no longer set: after every star it has to turn or go back.",
       de: "KidHub-Sternenjagd wird schneller schwer: jede Stufe hat sechs Aufgaben, die innerhalb der Stufe wachsen — zwei mit n Sternen, zwei mit n+1, zwei mit n+2. Stufe 1 beginnt bei 2 Sternen, alle vier Stufen kommt einer dazu, bis 8 Sterne. Aufgaben, in denen die Figur nach einem Stern einfach geradeaus weiterzieht, gibt es nicht mehr: nach jedem Stern muss sie abbiegen oder zurück." },

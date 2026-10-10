@@ -14,6 +14,7 @@ export const routes: Routes = [
   { path: 'endless', loadComponent: () => import('./features/endless/endless-play.component').then(m => m.EndlessPlayComponent) },
   // Sternenjagd: eine Figur frisst alle Sterne, in jedem Zug einen (eindeutige Loesung, `core/kids-stars.ts`).
   { path: 'stars', loadComponent: () => import('./features/stars/stars-map.component').then(m => m.StarsMapComponent) },
+  { path: 'stars/free', data: { free: true }, loadComponent: () => import('./features/stars/stars-play.component').then(m => m.StarsPlayComponent) },
   { path: 'stars/:stage', loadComponent: () => import('./features/stars/stars-play.component').then(m => m.StarsPlayComponent) },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent) },
   { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-play.component').then(m => m.CoursePlayComponent) },

@@ -5619,7 +5619,8 @@ Kinderseite" unter REST API.
   SOFORT als falsch gezeigt (`deadEnd`), ein Zug auf ein leeres Feld ebenso (`empty`) — beides bleibt `WRONG_HOLD_MS`
   stehen. `STAR_STAGES` = 20 Stufen, Figur reihum R/B/N/Q, je sechs frisch gewürfelte Aufgaben mit wachsender Sternzahl
   (`counts` = n, n, n+1, n+1, n+2, n+2; n = 2 + ⌊(Stufe−1)/4⌋, bis 8 Sterne; Wunsch 0.732.0 „steiler"); Tipps
-  kostenlos (Stern leuchtet, dann Pfeil). Fortschritt nur im Browser (`KidsStarsStore`, `rh-kids-stars-v1`). Dafür
+  kostenlos (Stern leuchtet, dann Pfeil). Fortschritt nur im Browser (`KidsStarsStore`, `rh-kids-stars-v1`). Freies Spiel (0.733.0) `/stars/free` (Route-`data.free`, dieselbe
+  `StarsPlayComponent`): Figur + Sternzahl 2–8 frei, Aufgaben ohne Ende, zählt nicht für Stufen, Wahl in `rh-kids-stars-free`. Dafür
   zeichnet `PuzzleBoardComponent` `reviewShapes` jetzt auch beim Aufbau (vorher erst bei der nächsten Änderung).
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);

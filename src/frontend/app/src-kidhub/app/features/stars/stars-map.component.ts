@@ -19,6 +19,8 @@ import { pieceGlyph } from './stars-play.component';
       <span class="count">✅ {{ store.done() }}/{{ store.total }}</span>
     </header>
     <p class="intro">{{ 'kids.stars.intro' | translate }}</p>
+    <p class="free"><a class="free-btn" routerLink="/stars/free">🎲 {{ 'kids.stars.free.title' | translate }}</a>
+      <span>{{ 'kids.stars.free.hint' | translate }}</span></p>
     <ol class="grid">
       @for (s of stages; track s.stage) {
         <li>
@@ -48,6 +50,12 @@ import { pieceGlyph } from './stars-play.component';
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
     .count { font-size: 1.15rem; font-weight: 800; white-space: nowrap; }
     .intro { text-align: center; font-size: 1.15rem; margin: 0 0 16px; }
+    .free { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; margin: 0 0 18px; }
+    .free-btn {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 8px 20px; border-radius: 999px;
+      background: #e8e0ff; color: inherit; text-decoration: none; font-size: 1.2rem; font-weight: 800;
+      box-shadow: 0 4px 0 var(--kid-shadow);
+    }
     .grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px;
             grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
     .stage {

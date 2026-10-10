@@ -4337,7 +4337,13 @@
         "deadEnd": "Odande ne možeš doći do svih zvijezda. Probaj drugu!",
         "solved": "Sve zvijezde pojedene! 🌟"
       },
-      "starRange": "Zvijezda: {{min}}–{{max}}"
+      "starRange": "Zvijezda: {{min}}–{{max}}",
+      "free": {
+        "title": "Slobodna igra",
+        "hint": "Sam odaberi figuru i broj zvijezda",
+        "piece": "Figura",
+        "count": "Broj zvijezda"
+      }
     }
   },
   "turnierAdmin": {

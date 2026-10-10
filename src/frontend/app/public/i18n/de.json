@@ -4337,7 +4337,13 @@
         "deadEnd": "Von dort kommst du nicht mehr an alle Sterne. Probier einen anderen!",
         "solved": "Alle Sterne gefressen! 🌟"
       },
-      "starRange": "{{min}}–{{max}} Sterne"
+      "starRange": "{{min}}–{{max}} Sterne",
+      "free": {
+        "title": "Freies Spiel",
+        "hint": "Figur und Zahl der Sterne selbst wählen",
+        "piece": "Figur",
+        "count": "Zahl der Sterne"
+      }
     }
   },
   "turnierAdmin": {

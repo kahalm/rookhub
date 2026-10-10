@@ -21,6 +21,21 @@ export function pieceGlyph(piece: StarPiece): string {
   return { R: '♖', B: '♗', Q: '♕', N: '♘' }[piece];
 }
 
+/** Sternzahlen im freien Modus. */
+export const FREE_COUNTS: readonly number[] = [2, 3, 4, 5, 6, 7, 8];
+const FREE_KEY = 'rh-kids-stars-free';
+
+/** Die zuletzt gewaehlte Figur und Sternzahl des freien Modus — Unsinn faellt auf Turm mit 3 Sternen. */
+export function readFreeChoice(): { piece: StarPiece; count: number } {
+  try {
+    const v = JSON.parse(localStorage.getItem(FREE_KEY) ?? 'null') as { piece?: unknown; count?: unknown } | null;
+    if (v && ['R', 'B', 'N', 'Q'].includes(v.piece as string) && FREE_COUNTS.includes(v.count as number)) {
+      return { piece: v.piece as StarPiece, count: v.count as number };
+    }
+  } catch { /* kein Speicher */ }
+  return { piece: 'R', count: 3 };
+}
+
 /** Was die Eule sagt. */
 export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
 
@@ -39,7 +54,10 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
   template: `
     <header class="head">
       <a class="back" routerLink="/stars">← {{ 'kids.stars.title' | translate }}</a>
-      @if (stage(); as s) {
+      @if (free()) {
+        <h1><span aria-hidden="true">🎲</span> {{ 'kids.stars.free.title' | translate }}</h1>
+        <span class="round">✅ {{ freeSolved() }}</span>
+      } @else if (stage(); as s) {
         <h1><span aria-hidden="true">{{ glyph(s.piece) }}</span> {{ 'kids.stars.stage' | translate: { stage: s.stage } }}
           · {{ 'kids.stars.piece.' + s.piece | translate }}</h1>
         @if (!complete()) {
@@ -66,6 +84,22 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     } @else if (puzzle(); as p) {
       <div class="puzzle">
         <div class="task-slot">
+          @if (free()) {
+            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.piece' | translate">
+              @for (pc of freePieces; track pc) {
+                <button type="button" class="chip glyph-chip" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
+                        [title]="'kids.stars.piece.' + pc | translate" [attr.aria-label]="'kids.stars.piece.' + pc | translate"
+                        (click)="chooseFree(pc, freeCount())">{{ glyph(pc) }}</button>
+              }
+            </div>
+            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.count' | translate">
+              <span class="pick-label">⭐</span>
+              @for (n of freeCounts; track n) {
+                <button type="button" class="chip" [class.on]="n === freeCount()" [attr.aria-pressed]="n === freeCount()"
+                        (click)="chooseFree(freePiece(), n)">{{ n }}</button>
+              }
+            </div>
+          }
           <p class="task">{{ 'kids.stars.task' | translate }}</p>
           <p class="left" [attr.aria-label]="'kids.stars.left' | translate: { count: starsLeft().length }">
             @for (s of p.solution; track s; let i = $index) {
@@ -122,6 +156,15 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       grid-template-areas: "board task" "board side";
     }
     .task-slot { grid-area: task; display: flex; flex-direction: column; gap: 6px; }
+    .pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .pick-label { font-size: 1.3rem; }
+    .chip {
+      font: inherit; font-size: 1.2rem; font-weight: 800; min-width: 44px; min-height: 44px; padding: 4px 10px;
+      border: 0; border-radius: 14px; background: var(--kid-card); color: inherit; cursor: pointer;
+      box-shadow: 0 3px 0 var(--kid-shadow);
+    }
+    .chip.glyph-chip { font-size: 1.8rem; line-height: 1; }
+    .chip.on { background: var(--kid-green-strong); color: #fff; }
     .task { margin: 0; font-size: 1.5rem; font-weight: 800; line-height: 1.3; color: var(--kid-title); }
     .left { margin: 0; font-size: 1.6rem; letter-spacing: 4px; }
     .left .eaten { color: var(--kid-green-strong); font-weight: 800; }
@@ -176,6 +219,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       }
       .board { width: 100%; min-width: 0; }
       .task, .left { text-align: center; }
+      .pick { justify-content: center; }
       .task { font-size: 1.3rem; }
       .round { margin-left: 0; }
     }
@@ -196,6 +240,13 @@ export class StarsPlayComponent {
   rng: Rng = Math.random;
 
   readonly stage = signal<StarStage | null>(null);
+  /** Freier Modus (`/stars/free`): Figur und Sternzahl waehlt das Kind, Aufgaben ohne Ende, kein Fortschritt. */
+  readonly free = signal(false);
+  readonly freePieces: readonly StarPiece[] = ['R', 'B', 'N', 'Q'];
+  readonly freeCounts: readonly number[] = FREE_COUNTS;
+  readonly freePiece = signal<StarPiece>('R');
+  readonly freeCount = signal(3);
+  readonly freeSolved = signal(0);
   readonly locked = signal(false);
   readonly failed = signal(false);
   readonly complete = signal(false);
@@ -238,7 +289,14 @@ export class StarsPlayComponent {
   constructor() {
     const destroy = inject(DestroyRef);
     destroy.onDestroy(() => clearTimeout(this.timer));
-    inject(ActivatedRoute).paramMap.pipe(takeUntilDestroyed(destroy)).subscribe(params => {
+    const route = inject(ActivatedRoute);
+    if (route.snapshot?.data?.['free']) {
+      this.free.set(true);
+      const saved = readFreeChoice();
+      this.chooseFree(saved.piece, saved.count);
+      return;
+    }
+    route.paramMap.pipe(takeUntilDestroyed(destroy)).subscribe(params => {
       const no = Number(params.get('stage'));
       const stage = STAR_STAGES.find(s => s.stage === no);
       if (!stage) {
@@ -255,6 +313,16 @@ export class StarsPlayComponent {
     this.locked.set(!this.store.isOpen(stage.stage));
     if (this.locked()) return;
     this.round.set(0);
+    this.newPuzzle();
+  }
+
+  /** Freier Modus: Auswahl uebernehmen (und auf dem Geraet merken), sofort eine neue Aufgabe. */
+  chooseFree(piece: StarPiece, count: number): void {
+    this.freePiece.set(piece);
+    this.freeCount.set(count);
+    this.stage.set({ stage: 0, piece, counts: [count] });
+    this.round.set(0);
+    try { localStorage.setItem(FREE_KEY, JSON.stringify({ piece, count })); } catch { /* egal */ }
     this.newPuzzle();
   }
 
@@ -325,6 +393,11 @@ export class StarsPlayComponent {
   next(): void {
     const s = this.stage();
     if (!s || this.status() !== 'solved') return;
+    if (this.free()) {
+      this.freeSolved.update(n => n + 1);
+      this.newPuzzle();
+      return;
+    }
     if (this.round() + 1 < s.counts.length) {
       this.round.update(r => r + 1);
       this.newPuzzle();

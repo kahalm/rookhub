@@ -105,3 +105,54 @@ describe('StarsPlayComponent', () => {
     expect(f.componentInstance.locked()).toBeTrue();
   });
 });
+
+describe('StarsPlayComponent – freier Modus', () => {
+  const FREE = 'rh-kids-stars-free';
+  beforeEach(() => {
+    localStorage.removeItem(FREE);
+    TestBed.configureTestingModule({
+      imports: [StarsPlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { free: true } }, paramMap: new BehaviorSubject(convertToParamMap({})) } },
+      ],
+    });
+  });
+  afterEach(() => localStorage.removeItem(FREE));
+
+  it('Figur und Sternzahl frei wählen, Aufgaben ohne Ende, kein Stufen-Fortschritt', () => {
+    const f = TestBed.createComponent(StarsPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    expect(c.free()).toBeTrue();
+    expect(c.puzzle()?.piece).toBe('R');
+    expect(c.puzzle()?.stars.length).toBe(3);
+
+    c.chooseFree('N', 5);
+    expect(c.puzzle()?.piece).toBe('N');
+    expect(c.puzzle()?.stars.length).toBe(5);
+    expect(JSON.parse(localStorage.getItem(FREE)!)).toEqual({ piece: 'N', count: 5 });
+
+    for (let r = 0; r < 8; r++) {
+      const p = c.puzzle()!;
+      let from = p.start;
+      for (const s of p.solution) {
+        c.onMove({ orig: squareName(from) as Key, dest: squareName(s) as Key });
+        from = s;
+      }
+      c.next();
+    }
+    expect(c.freeSolved()).toBe(8);
+    expect(c.complete()).toBeFalse();
+    expect(c.puzzle()?.stars.length).toBe(5);
+    expect(TestBed.inject(KidsStarsStore).done()).toBe(0);
+  });
+
+  it('merkt sich die letzte Wahl', () => {
+    localStorage.setItem(FREE, JSON.stringify({ piece: 'Q', count: 7 }));
+    const f = TestBed.createComponent(StarsPlayComponent);
+    f.detectChanges();
+    expect(f.componentInstance.puzzle()?.piece).toBe('Q');
+    expect(f.componentInstance.puzzle()?.stars.length).toBe(7);
+  });
+});
