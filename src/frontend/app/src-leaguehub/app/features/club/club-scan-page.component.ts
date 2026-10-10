@@ -13,7 +13,7 @@ import { ScanEngineComponent } from './scan-engine.component';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { ClubGameDetail, ClubPairing, ClubSheetState, LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
+import { ClubGameDetail, ClubPairing, ClubSheetState, LeagueScanState, RosterPerson, ScanRef, SideMatch } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ClubContextService } from '../../core/club-context.service';
 import { SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
@@ -114,14 +114,22 @@ function readAutoMine(): boolean {
               @if (pageCount() > 1) {
                 <div class="seg pager" role="group" aria-label="Seite des Formulars">
                   @for (n of pageNumbers(); track n) {
-                    <button type="button" [attr.aria-pressed]="shownPage() === n" (click)="shownPage.set(n)">Seite {{ n }}</button>
+                    <button type="button" [attr.aria-pressed]="shownPage() === n" (click)="showPage(n)">Seite {{ n }}</button>
+                  }
+                </div>
+              }
+              @if (viewNumbers().length > 1) {
+                <!-- 0.736.0: weitere Fotos derselben Seite — Ausschnitt und Markierung gehören zum ersten -->
+                <div class="seg pager views" role="group" aria-label="Foto dieser Seite">
+                  @for (v of viewNumbers(); track v) {
+                    <button type="button" [attr.aria-pressed]="shownView() === v" (click)="showView(v)">Foto {{ v + 1 }}</button>
                   }
                 </div>
               }
               <div class="photo-scroll" [class.zoom]="zoom()">
                 <div class="photo-frame">
                   <img [src]="src" alt="Foto des Partieformulars" (load)="onPhotoLoad($event)" />
-                  @if (s.mark(); as m) { @if (m.page === shownPage()) {
+                  @if (s.mark(); as m) { @if (m.page === shownPage() && shownView() === 0) {
                     <div class="photo-mark" [class.uncertain]="m.uncertain" [style.left.%]="m.left" [style.top.%]="m.top"
                          [style.width.%]="m.width" [style.height.%]="m.height" aria-hidden="true"></div>
                   } }
@@ -325,6 +333,27 @@ function readAutoMine(): boolean {
               <button type="button" class="btn-link" [disabled]="saving()" (click)="discard()">Formular verwerfen</button>
               <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
             </div>
+            @if (canMerge) {
+              <!-- 0.736.0, Wunsch 2026-10-10: zwei Fotos derselben Seite getrennt eingelesen → zu einer Einlesung vereinen -->
+              <div class="merge small">
+                @if (mergeCandidates(); as list) {
+                  @if (list.length === 0) {
+                    <span class="muted">Keine andere offene Einlesung zum Zusammenführen.</span>
+                  } @else {
+                    <span class="muted">Welche Einlesung zeigt dieselbe Partie? Ihre Fotos kommen hierher, die Partie wird neu gelesen.</span>
+                    <ul class="merge-list">
+                      @for (c of list; track c.ref) {
+                        <li><button type="button" class="btn-sec" [disabled]="merging()" (click)="merge(c)">{{ candidateLabel(c) }}</button></li>
+                      }
+                    </ul>
+                  }
+                  <button type="button" class="btn-link" (click)="mergeCandidates.set(null)">Abbrechen</button>
+                } @else {
+                  <button type="button" class="btn-link merge-open" (click)="openMerge()">Mit anderem Foto derselben Seite zusammenführen …</button>
+                }
+                @if (mergeError(); as e) { <span class="err" role="status">{{ e }}</span> }
+              </div>
+            }
           }
           <div class="actions pgn-actions">
             <span class="muted small">Die geprüfte Partie:</span>
@@ -413,10 +442,23 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly pageNumbers = computed(() => Array.from({ length: this.pageCount() }, (_, i) => i + 1));
   /** Welche Seite im großen Foto steht — folgt dem gewählten Zug, lässt sich mit den Knöpfen wechseln. */
   readonly shownPage = signal(1);
-  readonly photoUrl = computed(() => this.photoUrls()[this.shownPage() - 1] ?? this.photoUrls()[0] ?? null);
+  /** Weitere Fotos derselben Seite (0.736.0): je Seite ihre Zahl, `shownView` 0 = das Hauptfoto. */
+  readonly viewCounts = signal<number[]>([]);
+  readonly shownView = signal(0);
+  readonly viewNumbers = computed(() => Array.from({ length: 1 + (this.viewCounts()[this.shownPage() - 1] ?? 0) }, (_, i) => i));
+  private readonly viewUrls = signal<Record<string, string>>({});
+  private readonly mainUrl = computed(() => this.photoUrls()[this.shownPage() - 1] ?? this.photoUrls()[0] ?? null);
+  readonly photoUrl = computed(() => {
+    const view = this.shownView();
+    return (view > 0 ? this.viewUrls()[`${this.shownPage()}:${view}`] : null) ?? this.mainUrl();
+  });
+  /** Zusammenführen (nur angemeldet, beim Prüfen einer Einlesung): `null` = Auswahl zu. */
+  readonly mergeCandidates = signal<ScanRef[] | null>(null);
+  readonly merging = signal(false);
+  readonly mergeError = signal<string | null>(null);
   private readonly followPage = effect(() => {
     const page = this.s.currentPage();
-    if (page) untracked(() => this.shownPage.set(Math.min(page, this.pageCount())));
+    if (page) untracked(() => { const p = Math.min(page, this.pageCount()); if (p !== this.shownPage()) this.showPage(p); });
   });
   readonly zoom = signal(false);
   /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
@@ -547,6 +589,64 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.destroyed = true;
     for (const t of [this.pollTimer, this.matchTimer, this.pairingTimer]) if (t) clearTimeout(t);
     for (const url of this.photoUrls()) if (url) URL.revokeObjectURL(url);
+    for (const url of Object.values(this.viewUrls())) URL.revokeObjectURL(url);
+  }
+
+  get canMerge(): boolean { return !this.share && this.loggedIn && this.gameId == null; }
+
+  showPage(n: number): void {
+    this.shownPage.set(n);
+    this.shownView.set(0);
+  }
+
+  /** Ein weiteres Foto der Seite erst bei Bedarf holen. */
+  async showView(v: number): Promise<void> {
+    this.shownView.set(v);
+    const page = this.shownPage();
+    const key = `${page}:${v}`;
+    if (v === 0 || this.viewUrls()[key]) return;
+    try {
+      const blob = await this.api.photo(this.scanRef, page, v);
+      if (this.destroyed) return;
+      const url = URL.createObjectURL(blob);
+      this.viewUrls.update(m => ({ ...m, [key]: url }));
+    } catch { /* dann bleibt das Hauptfoto stehen */ }
+  }
+
+  async openMerge(): Promise<void> {
+    this.mergeError.set(null);
+    try {
+      const list = await this.api.scans();
+      this.mergeCandidates.set(list.filter(x => x.ref !== this.scanRef && x.scan.status !== 'running'));
+    } catch {
+      this.mergeError.set('Die Einlesungen ließen sich gerade nicht laden.');
+    }
+  }
+
+  candidateLabel(c: ScanRef): string {
+    const names = c.scan.white || c.scan.black ? `${c.scan.white ?? '?'} – ${c.scan.black ?? '?'}` : (c.scan.fileName ?? 'Formular');
+    const moves = c.scan.moveCount ? ` · ${c.scan.moveCount} Halbzüge` : '';
+    return `#${c.ref} · ${names}${moves}`;
+  }
+
+  async merge(c: ScanRef): Promise<void> {
+    const ok = await firstValueFrom(this.confirm.ask(`Einlesung #${c.ref} hier dazunehmen? Ihre Fotos werden weitere Fotos dieser `
+      + 'Einlesung, sie selbst wird geschlossen, und die Partie wird mit allen Fotos neu gelesen — Änderungen hier gehen dabei verloren.'));
+    if (!ok) return;
+    this.merging.set(true);
+    this.mergeError.set(null);
+    try {
+      await this.api.merge(this.scanRef, c.ref);
+      this.mergeCandidates.set(null);
+      this.reload();
+    } catch (err) {
+      const reason = err instanceof HttpErrorResponse ? (err.error as { reason?: string } | null)?.reason : undefined;
+      this.mergeError.set(reason === 'tooManyViews' ? 'Zu viele Fotos für diese Seite (höchstens vier).'
+        : reason === 'busy' ? 'Eine der beiden wird gerade gelesen — bitte kurz warten.'
+        : 'Zusammenführen hat nicht geklappt.');
+    } finally {
+      this.merging.set(false);
+    }
   }
 
   pageUrl(page: number): string | null {
@@ -554,6 +654,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   }
 
   onPhotoLoad(e: Event): void {
+    if (this.shownView() > 0) return;   // die Maße für den Ausschnitt kommen nur vom Hauptfoto
     const img = e.target as HTMLImageElement;
     if (this.shownPage() === 1) this.s.onPhotoLoad(e);
     else this.s.setPageSize(this.shownPage(), img.naturalWidth, img.naturalHeight);
@@ -610,6 +711,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.failures = 0;
     this.loadError.set(null);
     this.state.set(st);
+    this.viewCounts.set(st.viewCounts ?? []);
     const reading = st.scan.status === 'pending' || st.scan.status === 'running';
     this.ticker.run(reading);
     if (reading) {

@@ -1247,6 +1247,78 @@ public class ScoresheetScanServiceTests : IDisposable
 
     private static ScoresheetScanService.ScanActor As(int userId) => ScoresheetScanService.ScanActor.User(userId);
 
+    // ── Mehrere Fotos derselben Seite + zusammenführen (0.736.0) ────────────
+
+    [Fact]
+    public void SheetGroups_GroupsByPage_RejectsMixedAndGaps()
+    {
+        ScoresheetUpload U(int page) => new(Jpeg(), "image/jpeg", "a.jpg", page);
+        Assert.Equal(new[] { 1, 1 }, ScoresheetScanService.SheetGroups(new[] { U(0), U(0) })!.Select(g => g.Count));
+        Assert.Equal(new[] { 2, 1 }, ScoresheetScanService.SheetGroups(new[] { U(1), U(2), U(1) })!.Select(g => g.Count));
+        Assert.Null(ScoresheetScanService.SheetGroups(new[] { U(1), U(0) }));   // gemischt
+        Assert.Null(ScoresheetScanService.SheetGroups(new[] { U(1), U(3) }));   // Lücke
+    }
+
+    [Fact]
+    public async Task LeagueScan_SecondPhotoOfTheSamePage_IsAViewNotAPage()
+    {
+        var u = await UserAsync();
+        var (scan, reason) = await _service.CreateAsync(u.Id,
+            new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg", 1), new ScoresheetUpload(Jpeg(50, 30), "image/jpeg", "b.jpg", 1) },
+            "auto", null, ScoresheetScan.PurposeLeague);
+        Assert.Null(reason);
+        Assert.Equal(1, scan!.PageCount);
+        var state = await _service.LeagueScanStateAsync(As(u.Id), scan.Id);
+        Assert.Equal(new[] { 1 }, state!.ViewCounts);
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id, 1, 1));
+        Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id, 1, 2));
+        Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id + 1), scan.Id, 1, 1));   // fremd
+        Assert.Equal(1, (await _service.PendingForExternalAsync()).Single().ViewCount);
+        Assert.NotNull(await _service.PhotoForExternalAsync(scan.Id, 1, default, 1));
+
+        var five = Enumerable.Range(0, 5).Select(_ => new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg", 1)).ToList();
+        Assert.Equal("tooManyViews", (await _service.CreateAsync(u.Id, five, "auto", null, ScoresheetScan.PurposeLeague)).Reason);
+
+        // Verwerfen nimmt die weiteren Fotos mit
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id));
+        Assert.Empty(_db.ScoresheetScanViews);
+    }
+
+    [Fact]
+    public async Task MergeLeagueScans_MovesThePhotos_ClosesTheOther_AndReadsAgain()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (a, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        var (b, _) = await _service.CreateAsync(u.Id, Jpeg(50, 30), "image/jpeg", "b.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(a!.Id, default);
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(As(u.Id), a.Id))!.Scan.Status);
+
+        Assert.Equal("same", await _service.MergeLeagueScansAsync(As(u.Id), a.Id, a.Id));
+        Assert.Equal("notFound", await _service.MergeLeagueScansAsync(As(u.Id + 1), a.Id, b!.Id));   // fremd
+        Assert.Null(await _service.MergeLeagueScansAsync(As(u.Id), a.Id, b.Id));
+
+        var state = await _service.LeagueScanStateAsync(As(u.Id), a.Id);
+        Assert.Equal("pending", state!.Scan.Status);                     // wird mit beiden Fotos neu gelesen
+        Assert.Equal(new[] { 1 }, state.ViewCounts);
+        var view = await _service.LeagueScanPhotoAsync(As(u.Id), a.Id, 1, 1);
+        Assert.Equal(await _db.ScoresheetScanArchives.AsNoTracking().Where(x => x.ScoresheetScanId == b.Id).Select(x => x.Photo).SingleAsync(),
+            view!.Value.Data);                                           // das Foto der anderen, unverändert
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id), b.Id)); // die andere ist geschlossen
+        Assert.Equal("notFound", await _service.MergeLeagueScansAsync(As(u.Id), a.Id, b.Id));
+    }
+
+    [Fact]
+    public async Task MergeLeagueScans_WhileOneIsBeingRead_IsBusy()
+    {
+        var u = await UserAsync();
+        var (a, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        var (b, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "b.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        await _service.ClaimNextAsync(default);                          // a läuft
+        Assert.Equal("busy", await _service.MergeLeagueScansAsync(As(u.Id), b!.Id, a!.Id));
+    }
+
     [Fact]
     public async Task LeagueScan_IsNoSavedGame_AndClosingDropsThePhotoButKeepsTheCount()
     {

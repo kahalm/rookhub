@@ -41,6 +41,10 @@ public class ScoresheetScanService
     /// eine lange Partie geht über mehrere Blätter. Gelesen wird in EINEM Aufruf, es bleibt EINE Einlesung (Tageszahl).</summary>
     public const int MaxPages = 3;
 
+    /// <summary>So viele Fotos DERSELBEN Seite (Hauptfoto + weitere, 0.736.0) — der Leser vergleicht sie bei unklaren
+    /// Einträgen.</summary>
+    public const int MaxPhotosPerPage = 4;
+
     /// <summary>Größte Anfrage beim Hochladen (alle Fotos zusammen) — so viel lässt auch der Frontend-nginx für
     /// <c>/api/scoresheets</c> durch (<c>DeploymentConfigTests</c>).</summary>
     public const int MaxUploadRequestBytes = 64 * 1024 * 1024;
@@ -238,7 +242,9 @@ public class ScoresheetScanService
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
         if (!ScoresheetNotation.IsKnown(lang)) return (null, "invalidLanguage");
         if (pages.Count == 0) return (null, "noFile");
-        if (pages.Count > MaxPages) return (null, "tooManyPages");
+        if (SheetGroups(pages) is not { } groups) return (null, "invalidLayout");
+        if (groups.Count > MaxPages) return (null, "tooManyPages");
+        if (groups.Any(g => g.Count > MaxPhotosPerPage)) return (null, "tooManyViews");
         foreach (var page in pages)
         {
             if (page.Data.Length == 0 || page.Data.Length > MaxUploadBytes) return (null, "tooLarge");
@@ -260,18 +266,23 @@ public class ScoresheetScanService
         }
         if (!External && AllowanceFor(userId, spent).Blocked is { } blocked) return (null, blocked);   // von außen: keine Kosten
 
-        var stored = new List<(byte[] Photo, string Type)>();
-        foreach (var page in pages)
+        var stored = new List<List<(byte[] Photo, string Type, string? Name)>>();
+        foreach (var group in groups)
         {
-            var photo = page.Data;
-            var type = page.ContentType ?? "image/jpeg";
-            if (photo.Length > MaxStoredBytes)
+            var photos = new List<(byte[] Photo, string Type, string? Name)>();
+            foreach (var page in group)
             {
-                photo = ScoresheetImage.Prepare(page.Data, StoredEdge, 90) ?? page.Data;
-                type = "image/jpeg";
-                if (photo.Length > MaxStoredBytes) return (null, "tooLarge");
+                var photo = page.Data;
+                var type = page.ContentType ?? "image/jpeg";
+                if (photo.Length > MaxStoredBytes)
+                {
+                    photo = ScoresheetImage.Prepare(page.Data, StoredEdge, 90) ?? page.Data;
+                    type = "image/jpeg";
+                    if (photo.Length > MaxStoredBytes) return (null, "tooLarge");
+                }
+                photos.Add((photo, type, CleanFileName(page.FileName)));
             }
-            stored.Add((photo, type));
+            stored.Add(photos);
         }
 
         var scan = new ScoresheetScan
@@ -279,14 +290,18 @@ public class ScoresheetScanService
             UserId = userId,
             AccessKey = accessKey,
             AnonIpHash = ipHash,
-            Photo = stored[0].Photo,
-            ContentType = stored[0].Type,
-            FileName = CleanFileName(pages[0].FileName),
-            PageCount = pages.Count,
+            Photo = stored[0][0].Photo,
+            ContentType = stored[0][0].Type,
+            FileName = stored[0][0].Name,
+            PageCount = stored.Count,
             Pages = stored.Skip(1).Select((p, i) => new ScoresheetScanPage
             {
-                Page = i + 2, Photo = p.Photo, ContentType = p.Type, FileName = CleanFileName(pages[i + 1].FileName),
+                Page = i + 2, Photo = p[0].Photo, ContentType = p[0].Type, FileName = p[0].Name,
             }).ToList(),
+            Views = stored.SelectMany((p, i) => p.Skip(1).Select((v, j) => new ScoresheetScanView
+            {
+                Page = i + 1, View = j + 1, Photo = v.Photo, ContentType = v.Type, FileName = v.Name,
+            })).ToList(),
             NotationLanguage = lang,
             OwnerSide = ownerSide is "white" or "black" ? ownerSide : "auto",
             Purpose = purpose,
@@ -297,8 +312,20 @@ public class ScoresheetScanService
         _db.ScoresheetScans.Add(scan);
         await _db.SaveChangesAsync();
         _logger.LogInformation("Formular-Einlesung {ScanId} von User {UserId} angenommen ({Pages} Seite(n), {Bytes} Bytes, Sprache {Language})",
-            scan.Id, userId?.ToString() ?? "ohne Konto", pages.Count, stored.Sum(p => p.Photo.Length), lang);
+            scan.Id, userId?.ToString() ?? "ohne Konto", stored.Count, stored.Sum(p => p.Sum(x => x.Photo.Length)), lang);
         return (ToDto(scan), null);
+    }
+
+    /// <summary>Die Fotos eines Uploads nach Seiten (0.736.0): ohne <see cref="ScoresheetUpload.SheetPage"/> ist jedes Foto
+    /// eine eigene Seite (wie bisher); mit ihr gehören Fotos derselben Zahl zu einer Seite, das erste ist ihr Hauptfoto.
+    /// <c>null</c> = gemischt oder Seiten nicht lückenlos ab 1.</summary>
+    internal static List<List<ScoresheetUpload>>? SheetGroups(IReadOnlyList<ScoresheetUpload> uploads)
+    {
+        if (uploads.All(u => u.SheetPage <= 0)) return uploads.Select(u => new List<ScoresheetUpload> { u }).ToList();
+        if (uploads.Any(u => u.SheetPage <= 0)) return null;
+        var groups = uploads.GroupBy(u => u.SheetPage).OrderBy(g => g.Key).ToList();
+        if (!groups.Select(g => g.Key).SequenceEqual(Enumerable.Range(1, groups.Count))) return null;
+        return groups.Select(g => g.ToList()).ToList();
     }
 
     /// <summary>Wartende Einlesungen für den Leser von außen (<see cref="External"/>), älteste zuerst — ohne Fotos.</summary>
@@ -310,11 +337,15 @@ public class ScoresheetScanService
             {
                 Id = s.Id, Purpose = s.Purpose ?? "own", UserId = s.UserId, Anonymous = s.UserId == null,
                 PageCount = s.PageCount, NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, CreatedAt = s.CreatedAt,
+                ViewCount = s.Views.Count,
             }).ToListAsync(ct);
 
-    /// <summary>Foto einer Seite (ab 1) einer Einlesung — für den Leser von außen.</summary>
-    public async Task<(byte[] Data, string ContentType)?> PhotoForExternalAsync(int scanId, int page, CancellationToken ct = default)
+    /// <summary>Foto einer Seite (ab 1) einer Einlesung — für den Leser von außen; <paramref name="view"/> ab 1 = ein weiteres
+    /// Foto derselben Seite (0.736.0).</summary>
+    public async Task<(byte[] Data, string ContentType)?> PhotoForExternalAsync(int scanId, int page, CancellationToken ct = default,
+        int view = 0)
     {
+        if (view > 0) return await ViewPhotoAsync(scanId, page, view, ct);
         if (page <= 1)
             return await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scanId && s.Photo.Length > 0)
                 .Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync(ct) is { } p ? (p.Photo, p.ContentType) : null;
@@ -1102,7 +1133,8 @@ public class ScoresheetScanService
         if (scanId is int id) q = q.Where(s => s.Id == id);
         var scan = await q.FirstOrDefaultAsync(ct);
         if (scan == null) return null;
-        var dto = new LeagueScanStateDto { Scan = ToDto(scan) };
+        var dto = new LeagueScanStateDto { Scan = ToDto(scan), PageCount = Math.Max(1, scan.PageCount) };
+        dto.ViewCounts = await ViewCountsAsync(scan.Id, dto.PageCount, ct);
         if (scan.Status != ScoresheetScanStatus.Done) return dto;
         var json = await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scan.Id)
             .Select(s => s.TranscriptionJson).FirstOrDefaultAsync(ct);
@@ -1127,11 +1159,13 @@ public class ScoresheetScanService
         return dto;
     }
 
-    /// <summary>Das Foto einer Liga-Einlesung.</summary>
-    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(ScanActor actor, int? scanId, int page = 1)
+    /// <summary>Das Foto einer Liga-Einlesung; <paramref name="view"/> ab 1 = ein weiteres Foto derselben Seite (0.736.0).</summary>
+    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(ScanActor actor, int? scanId, int page = 1, int view = 0)
     {
         var q = LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor);
         if (scanId is int id) q = q.Where(s => s.Id == id);
+        if (view > 0)
+            return await q.Select(s => (int?)s.Id).FirstOrDefaultAsync() is int owner ? await ViewPhotoAsync(owner, page, view) : null;
         if (page > 1)
         {
             // Seite 2+ (0.690.1): erst die Einlesung über die Eigentumsregel finden, dann ihr Blatt
@@ -1177,6 +1211,7 @@ public class ScoresheetScanService
         await ArchiveAsync(key.Id, finalPgn, clubGameId);
         DetachWithoutLoading(_db, new[] { (key.Id, key.UserId, key.SavedGameId) });
         RemovePagesWithoutLoading(_db, await PageKeysAsync(_db, new[] { key.Id }));
+        RemoveViewsWithoutLoading(_db, await ViewKeysAsync(_db, new[] { key.Id }));
         var scan = _db.ScoresheetScans.Local.First(s => s.Id == key.Id);
         scan.FileName = DiscardedMark;
         scan.AccessKey = null;
@@ -1415,6 +1450,104 @@ public class ScoresheetScanService
         }
     }
 
+    /// <summary>Die weiteren Fotos dieser Einlesungen (Id, Einlesung) — für <see cref="RemoveViewsWithoutLoading"/>.</summary>
+    public static async Task<List<(int Id, int ScanId)>> ViewKeysAsync(AppDbContext db, IReadOnlyCollection<int> scanIds)
+    {
+        if (scanIds.Count == 0) return new();
+        var rows = await db.ScoresheetScanViews.Where(v => scanIds.Contains(v.ScoresheetScanId))
+            .Select(v => new { v.Id, v.ScoresheetScanId }).ToListAsync();
+        return rows.Select(x => (x.Id, x.ScoresheetScanId)).ToList();
+    }
+
+    /// <summary>Weitere Fotos löschen, ohne sie zu laden — überall, wo <see cref="RemovePagesWithoutLoading"/> die Seiten
+    /// abräumt (0.736.0).</summary>
+    public static void RemoveViewsWithoutLoading(AppDbContext db, IEnumerable<(int Id, int ScanId)> views)
+    {
+        foreach (var (id, scanId) in views)
+        {
+            var tracked = db.ScoresheetScanViews.Local.FirstOrDefault(v => v.Id == id);
+            if (tracked != null) { db.ScoresheetScanViews.Remove(tracked); continue; }
+            var stub = new ScoresheetScanView { Id = id, ScoresheetScanId = scanId };
+            db.ScoresheetScanViews.Attach(stub);
+            db.ScoresheetScanViews.Remove(stub);
+        }
+    }
+
+    private async Task<(byte[] Data, string ContentType)?> ViewPhotoAsync(int scanId, int page, int view, CancellationToken ct = default)
+    {
+        var v = await _db.ScoresheetScanViews.AsNoTracking()
+            .Where(x => x.ScoresheetScanId == scanId && x.Page == Math.Max(1, page) && x.View == view)
+            .Select(x => new { x.Photo, x.ContentType }).FirstOrDefaultAsync(ct);
+        return v == null || v.Photo.Length == 0 ? null : (v.Photo, v.ContentType);
+    }
+
+    private async Task<List<int>> ViewCountsAsync(int scanId, int pageCount, CancellationToken ct)
+    {
+        var counts = await _db.ScoresheetScanViews.AsNoTracking().Where(v => v.ScoresheetScanId == scanId)
+            .GroupBy(v => v.Page).Select(g => new { Page = g.Key, Count = g.Count() }).ToListAsync(ct);
+        return Enumerable.Range(1, pageCount).Select(p => counts.FirstOrDefault(c => c.Page == p)?.Count ?? 0).ToList();
+    }
+
+    /// <summary>
+    /// Zwei Liga-Einlesungen DESSELBEN Formulars zusammenführen (0.736.0, Wunsch 2026-10-10: „ich habe 2 Bilder bereits
+    /// analysiert, will dort die Funktionen zusammenführen"): die Fotos von <paramref name="otherId"/> werden weitere Fotos der
+    /// passenden Seiten von <paramref name="targetId"/> (Seite p → p, über die Seitenzahl hinaus die letzte), die andere
+    /// Einlesung wird wie verworfen geschlossen (Archiv, kein Foto mehr), und die Ziel-Einlesung wartet wieder — der Leser
+    /// liest sie mit allen Fotos neu. Gründe: <c>notFound</c> (fremd/unbekannt/geschlossen), <c>same</c>, <c>busy</c>
+    /// (eine wird gerade gelesen), <c>tooManyViews</c> (über <see cref="MaxPhotosPerPage"/> je Seite).
+    /// </summary>
+    public async Task<string?> MergeLeagueScansAsync(ScanActor actor, int targetId, int otherId, CancellationToken ct = default)
+    {
+        if (targetId == otherId) return "same";
+        var heads = await LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor)
+            .Where(s => (s.Id == targetId || s.Id == otherId) && s.FileName != DiscardedMark && s.Photo.Length > 0)
+            .Select(s => new { s.Id, s.Status, s.PageCount }).ToListAsync(ct);
+        var target = heads.FirstOrDefault(h => h.Id == targetId);
+        var other = heads.FirstOrDefault(h => h.Id == otherId);
+        if (target == null || other == null) return "notFound";
+        if (target.Status == ScoresheetScanStatus.Running || other.Status == ScoresheetScanStatus.Running) return "busy";
+
+        var moved = new List<(int Page, byte[] Photo, string Type, string? Name)>();
+        var main = await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == otherId)
+            .Select(s => new { s.Photo, s.ContentType, s.FileName }).FirstAsync(ct);
+        moved.Add((1, main.Photo, main.ContentType, main.FileName));
+        moved.AddRange((await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == otherId).OrderBy(p => p.Page)
+            .Select(p => new { p.Page, p.Photo, p.ContentType, p.FileName }).ToListAsync(ct))
+            .Select(p => (p.Page, p.Photo, p.ContentType, p.FileName)));
+        moved.AddRange((await _db.ScoresheetScanViews.AsNoTracking().Where(v => v.ScoresheetScanId == otherId)
+            .OrderBy(v => v.Page).ThenBy(v => v.View)
+            .Select(v => new { v.Page, v.Photo, v.ContentType, v.FileName }).ToListAsync(ct))
+            .Select(v => (v.Page, v.Photo, v.ContentType, v.FileName)));
+
+        var pages = Math.Max(1, target.PageCount);
+        var existing = await _db.ScoresheetScanViews.AsNoTracking().Where(v => v.ScoresheetScanId == targetId)
+            .Select(v => new { v.Page, v.View }).ToListAsync(ct);
+        var next = Enumerable.Range(1, pages).ToDictionary(p => p,
+            p => existing.Where(e => e.Page == p).Select(e => e.View).DefaultIfEmpty(0).Max() + 1);
+        var added = new List<ScoresheetScanView>();
+        foreach (var m in moved.Where(m => m.Photo.Length > 0))
+        {
+            var page = Math.Clamp(m.Page, 1, pages);
+            if (next[page] >= MaxPhotosPerPage) return "tooManyViews";
+            added.Add(new ScoresheetScanView
+            {
+                ScoresheetScanId = targetId, Page = page, View = next[page]++, Photo = m.Photo, ContentType = m.Type, FileName = m.Name,
+            });
+        }
+        _db.ScoresheetScanViews.AddRange(added);
+
+        var scan = await _db.ScoresheetScans.FirstAsync(s => s.Id == targetId, ct);
+        scan.Status = ScoresheetScanStatus.Pending;
+        scan.StartedAt = null;
+        scan.FinishedAt = null;
+        scan.Error = null;
+        // Die andere schließen wie „verworfen" (Archiv, Foto weg); speichert alles zusammen.
+        await CloseLeagueScanAsync(actor, otherId);
+        _logger.LogInformation("Formular-Einlesung {OtherId} in {TargetId} zusammengeführt ({Photos} Foto(s)) — wartet wieder",
+            otherId, targetId, added.Count);
+        return null;
+    }
+
     /// <summary>Die Schlüssel der Einlesungen, die <see cref="RemoveWithoutLoading"/> braucht.</summary>
     public static async Task<List<(int Id, int? UserId, int? SavedGameId)>> KeysAsync(IQueryable<ScoresheetScan> query)
     {
@@ -1455,7 +1588,8 @@ public class ScoresheetScanService
 }
 
 /// <summary>Ein hochgeladenes Foto (eine Seite des Formulars).</summary>
-public sealed record ScoresheetUpload(byte[] Data, string? ContentType, string? FileName);
+/// <param name="SheetPage">Seite des Formulars, zu der das Foto gehört (0.736.0); 0 = jedes Foto eine eigene Seite.</param>
+public sealed record ScoresheetUpload(byte[] Data, string? ContentType, string? FileName, int SheetPage = 0);
 
 /// <summary>Eine wartende Einlesung für den Leser von außen (<c>GET /api/admin/scoresheets/pending</c>).</summary>
 public sealed class ExternalPendingScanDto
@@ -1466,6 +1600,8 @@ public sealed class ExternalPendingScanDto
     public int? UserId { get; set; }
     public bool Anonymous { get; set; }
     public int PageCount { get; set; }
+    /// <summary>Weitere Fotos derselben Seiten zusammen (0.736.0); <c>GET …/{id}/photo?page=&amp;view=</c>.</summary>
+    public int ViewCount { get; set; }
     public string NotationLanguage { get; set; } = "auto";
     public string? OwnerSide { get; set; }
     public DateTime CreatedAt { get; set; }

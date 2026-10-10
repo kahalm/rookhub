@@ -62,6 +62,11 @@ public class ScoresheetScan
     public int PageCount { get; set; } = 1;
     public List<ScoresheetScanPage> Pages { get; set; } = new();
 
+    /// <summary>Weitere Fotos DERSELBEN Seite (0.736.0, Wunsch 2026-10-10: „zwei Fotos einer Partie, beide die gleiche Seite —
+    /// vereinen für bessere Erkennung"). Das Hauptfoto der Seite bleibt <see cref="Photo"/> bzw. die <see cref="Pages"/>-Zeile;
+    /// die Kästen der Lesung beziehen sich immer auf das Hauptfoto.</summary>
+    public List<ScoresheetScanView> Views { get; set; } = new();
+
     /// <summary>Gewählte Notationssprache (<c>de</c>, <c>en</c>, …) oder <c>auto</c>.</summary>
     public string NotationLanguage { get; set; } = "auto";
 
@@ -166,4 +171,26 @@ public class ScoresheetScanArchive
     public string? NotationLanguage { get; set; }
     public DateTime ArchivedAt { get; set; }
     public DateTime ExpiresAt { get; set; }
+}
+
+/// <summary>
+/// Ein weiteres Foto einer Formular-Seite (0.736.0): dieselbe Seite noch einmal fotografiert (anderes Licht, anderer
+/// Winkel). Der Leser vergleicht unklare Einträge mit ihm; die Kästen gehören zum Hauptfoto. Geht mit der Einlesung
+/// (Cascade) und mit dem Foto (<see cref="Services.ScoresheetScanService.RemoveViewsWithoutLoading"/>).
+/// </summary>
+public class ScoresheetScanView
+{
+    public int Id { get; set; }
+    public int ScoresheetScanId { get; set; }
+    public ScoresheetScan? Scan { get; set; }
+
+    /// <summary>Seite, zu der das Foto gehört (ab 1).</summary>
+    public int Page { get; set; }
+
+    /// <summary>Nummer des Fotos auf der Seite, ab 1 (0 ist das Hauptfoto).</summary>
+    public int View { get; set; }
+
+    public byte[] Photo { get; set; } = Array.Empty<byte>();
+    public string ContentType { get; set; } = "image/jpeg";
+    public string? FileName { get; set; }
 }

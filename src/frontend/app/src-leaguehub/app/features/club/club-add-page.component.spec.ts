@@ -207,7 +207,7 @@ describe('ClubAddPageComponent', () => {
     fixture.componentInstance.side.set('white');
     void fixture.componentInstance.upload();
     flushMicrotasks();
-    expect(api.upload).toHaveBeenCalledWith([file], 'auto', 'white');
+    expect(api.upload).toHaveBeenCalledWith([file], 'auto', 'white', [1]);
     tick(3000);
     flushMicrotasks();
     fixture.detectChanges();
@@ -264,8 +264,32 @@ describe('ClubAddPageComponent', () => {
     api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
     void c.upload();
     flushMicrotasks();
-    expect(api.upload).toHaveBeenCalledWith([p1, p2, p3], 'auto', 'auto');
+    expect(api.upload).toHaveBeenCalledWith([p1, p2, p3], 'auto', 'auto', [1, 2, 3]);
     expect(c.extraPhotos()).toEqual([]);
+    flush();
+  }));
+
+  // 0.736.0, Wunsch 2026-10-10: dieselbe Seite zweimal fotografiert — EINE Seite mit zwei Fotos, nicht Seite 2
+  it('„+ weiteres Foto dieser Seite“ schickt beide Fotos als Seite 1', fakeAsync(() => {
+    query = { art: 'formular' };
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const p1 = new File(['1'], 'a.jpg', { type: 'image/jpeg' });
+    const p2 = new File(['2'], 'b.jpg', { type: 'image/jpeg' });
+    c.photo.set(p1);
+    fixture.detectChanges();
+    (el.querySelector('.add-view') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.extra-page')?.textContent).toContain('Seite 1, Foto 2');
+    c.extraPhotos.set([p2]);
+    fixture.detectChanges();
+    expect(el.querySelector('.add-page')?.textContent).toContain('Seite 2');   // eine neue Seite geht weiter
+    api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
+    void c.upload();
+    flushMicrotasks();
+    expect(api.upload).toHaveBeenCalledWith([p1, p2], 'auto', 'auto', [1, 1]);
     flush();
   }));
 

@@ -201,11 +201,14 @@ export class ClubClient {
   }
 
   /** Ein Formular, auch über mehrere Blätter: die Fotos in Seitenreihenfolge (höchstens drei, 0.690.1) — EINE Einlesung. */
-  async upload(files: File[], language: string, side: 'white' | 'black' | 'auto'): Promise<ScanRef> {
+  /** `layout` (0.736.0): je Foto seine Seite (ab 1) — mehrere Fotos mit derselben Zahl sind dieselbe Seite noch einmal
+   *  fotografiert; ohne = jedes Foto eine Seite. */
+  async upload(files: File[], language: string, side: 'white' | 'black' | 'auto', layout?: number[]): Promise<ScanRef> {
     const form = new FormData();
     for (const file of files) form.append('file', file, file.name);
     form.append('language', language);
     form.append('side', side);
+    if (layout && layout.some((p, i) => p !== i + 1)) form.append('layout', layout.join(','));
     if (this.anonymous) {
       const r = await firstValueFrom(this.http.post<{ key: string; scan: ScoresheetScan }>(`${this.base}/scans`, form));
       return { ref: r.key, scan: r.scan };
@@ -218,8 +221,17 @@ export class ClubClient {
     return firstValueFrom(this.http.get<LeagueScanState>(`${this.base}/scans/${encodeURIComponent(ref)}`));
   }
 
-  photo(ref: string, page = 1): Promise<Blob> {
-    return firstValueFrom(this.http.get(`${this.base}/scans/${encodeURIComponent(ref)}/photo`, { params: { page }, responseType: 'blob' }));
+  /** `view` ab 1 = ein weiteres Foto derselben Seite (0.736.0). */
+  photo(ref: string, page = 1, view = 0): Promise<Blob> {
+    const params: Record<string, number> = view > 0 ? { page, view } : { page };
+    return firstValueFrom(this.http.get(`${this.base}/scans/${encodeURIComponent(ref)}/photo`, { params, responseType: 'blob' }));
+  }
+
+  /** Zwei Einlesungen desselben Formulars zusammenführen (0.736.0, nur angemeldet): die Fotos von `otherRef` werden
+   *  weitere Fotos dieser Einlesung, die andere geht zu, diese wird neu gelesen. */
+  merge(ref: string, otherRef: string): Promise<LeagueScanState> {
+    return firstValueFrom(this.http.post<LeagueScanState>(`${this.base}/scans/${encodeURIComponent(ref)}/merge`,
+      { otherId: Number(otherRef) }));
   }
 
   /** Als Observable: die geteilte Korrektur-Sitzung hängt es an die Lebensdauer der Seite. */

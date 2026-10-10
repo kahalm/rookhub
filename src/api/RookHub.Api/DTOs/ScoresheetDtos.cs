@@ -156,6 +156,9 @@ public class LeagueScanStateDto
     /// <summary>Wie <see cref="ScoresheetEditStateDto.PageCount"/>/<see cref="ScoresheetEditStateDto.Pages"/>.</summary>
     public int PageCount { get; set; } = 1;
     public List<int> Pages { get; set; } = new();
+    /// <summary>Je Seite (Index = Seite − 1), wie viele WEITERE Fotos derselben Seite es gibt (0.736.0) —
+    /// <c>GET …/photo?page=&amp;view=</c> holt sie, <c>view</c> ab 1.</summary>
+    public List<int> ViewCounts { get; set; } = new();
     public List<ScoresheetPly> Plies { get; set; } = new();
     public List<string> Unresolved { get; set; } = new();
     public int? UnresolvedFrom { get; set; }

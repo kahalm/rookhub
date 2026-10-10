@@ -139,6 +139,18 @@ internal sealed class ScoresheetScanPageConfiguration : IEntityTypeConfiguration
     }
 }
 
+internal sealed class ScoresheetScanViewConfiguration : IEntityTypeConfiguration<ScoresheetScanView>
+{
+    public void Configure(EntityTypeBuilder<ScoresheetScanView> e)
+    {
+        e.HasOne(v => v.Scan).WithMany(s => s.Views).HasForeignKey(v => v.ScoresheetScanId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(v => v.Photo).HasColumnType("LONGBLOB");
+        e.Property(v => v.ContentType).HasMaxLength(40);
+        e.Property(v => v.FileName).HasMaxLength(200);
+        e.HasIndex(v => new { v.ScoresheetScanId, v.Page, v.View }).IsUnique();
+    }
+}
+
 internal sealed class GameReconstructionConfiguration : IEntityTypeConfiguration<GameReconstruction>
 {
     public void Configure(EntityTypeBuilder<GameReconstruction> e)

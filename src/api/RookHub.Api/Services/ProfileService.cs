@@ -434,6 +434,8 @@ public class ProfileService
         var scanKeys = await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.UserId == userId));
         ScoresheetScanService.RemovePagesWithoutLoading(_db,
             await ScoresheetScanService.PageKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
+        ScoresheetScanService.RemoveViewsWithoutLoading(_db,
+            await ScoresheetScanService.ViewKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
         // Aufbewahrte Liga-Einlesungen (0.655.0) gehen mit — ohne die Fotos zu laden (MariaDB cascadet ohnehin, InMemory nicht).
         var scanIds = scanKeys.Select(k => k.Id).ToList();
         foreach (var archiveId in await _db.ScoresheetScanArchives.Where(a => scanIds.Contains(a.ScoresheetScanId)).Select(a => a.Id).ToListAsync())

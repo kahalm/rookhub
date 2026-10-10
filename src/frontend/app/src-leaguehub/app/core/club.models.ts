@@ -173,6 +173,8 @@ export interface LeagueScanState {
   /** Formular über mehrere Blätter (0.690.1): Zahl der Fotos und je Eintrag seine Seite (ab 1). */
   pageCount?: number;
   pages?: number[];
+  /** Je Seite (Index = Seite − 1) die Zahl WEITERER Fotos derselben Seite (0.736.0). */
+  viewCounts?: number[];
 }
 
 export interface ClubGameRequest {

@@ -402,6 +402,9 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .scan-check .crop-frame { max-width: none; }
 }
 .scan-photo .pager { margin: 0 0 8px; }
+.merge { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.merge-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.merge-list .btn-sec { text-align: left; white-space: normal; }
 .extra-page { align-items: flex-end; }
 
 /* Am Handy steht das ganze Foto erst nach einem Tipp (UX-036): der Ausschnitt der Zeile steht schon im Prüfteil, und das ganze

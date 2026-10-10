@@ -171,6 +171,7 @@ public partial class AppDbContext : DbContext
     public DbSet<ScoresheetScanArchive> ScoresheetScanArchives => Set<ScoresheetScanArchive>();
     public DbSet<TacticCandidate> TacticCandidates => Set<TacticCandidate>();
     public DbSet<ScoresheetScanPage> ScoresheetScanPages => Set<ScoresheetScanPage>();
+    public DbSet<ScoresheetScanView> ScoresheetScanViews => Set<ScoresheetScanView>();
     public DbSet<GameMistakeProgress> GameMistakeProgresses => Set<GameMistakeProgress>();
     public DbSet<SharedLine> SharedLines => Set<SharedLine>();
     public DbSet<GameReconstruction> GameReconstructions => Set<GameReconstruction>();

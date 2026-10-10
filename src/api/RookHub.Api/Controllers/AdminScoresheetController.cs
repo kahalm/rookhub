@@ -22,8 +22,8 @@ public class AdminScoresheetController(ScoresheetScanService scans) : BaseApiCon
 
     /// <summary>Foto einer Seite (ab 1).</summary>
     [HttpGet("{id:int}/photo")]
-    public async Task<IActionResult> Photo(int id, [FromQuery] int page = 1, CancellationToken ct = default) =>
-        await scans.PhotoForExternalAsync(id, page, ct) is { } p ? File(p.Data, p.ContentType) : NotFound();
+    public async Task<IActionResult> Photo(int id, [FromQuery] int page = 1, [FromQuery] int view = 0, CancellationToken ct = default) =>
+        await scans.PhotoForExternalAsync(id, page, ct, view) is { } p ? File(p.Data, p.ContentType) : NotFound();
 
     /// <summary>Die Lesung übernehmen (Form der Modell-Antwort im Feld <c>transcription</c>) → die Einlesung; 400
     /// <c>reason</c> ∈ notPending/invalidTranscription, 404 unbekannt.</summary>

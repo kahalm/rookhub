@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@an
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -50,7 +51,7 @@ describe('ClubScanPageComponent', () => {
     params = { id: '7' };
     routeData = {};
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard',
-      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves', 'pairings']);
+      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves', 'pairings', 'scans', 'merge']);
     api.pairings.and.resolveTo([]);
     api.scan.and.resolveTo(structuredClone(STATE));
     api.photo.and.rejectWith(new Error('kein Foto'));
@@ -410,6 +411,61 @@ describe('ClubScanPageComponent', () => {
     const c = fixture.componentInstance;
     c.pickPerson('black', { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false, league: true, elo: 2172 });
     expect(c.elo('black')()).toBe(2172);
+    tick(1000);
+  }));
+
+  // 0.736.0, Wunsch 2026-10-10: zwei Fotos derselben Seite — umschalten, und getrennte Einlesungen zusammenführen
+  it('weitere Fotos derselben Seite: „Foto 2" holt das zweite Foto, die Markierung gehört nur zum ersten', fakeAsync(() => {
+    const st = structuredClone(STATE);
+    st.viewCounts = [1];
+    api.scan.and.resolveTo(st);
+    api.photo.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const buttons = Array.from(el.querySelectorAll('.views button')) as HTMLButtonElement[];
+    expect(buttons.map(b => b.textContent?.trim())).toEqual(['Foto 1', 'Foto 2']);
+    buttons[1].click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.photo).toHaveBeenCalledWith('7', 1, 1);
+    expect(fixture.componentInstance.shownView()).toBe(1);
+    expect(el.querySelector('.photo-mark')).toBeNull();
+  }));
+
+  it('„Mit anderem Foto zusammenführen": andere offene Einlesungen zur Wahl, nach Rückfrage zusammengeführt und neu geladen', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    api.scans.and.resolveTo([
+      { ref: '7', scan: { ...STATE.scan } },
+      { ref: '9', scan: { ...STATE.scan, id: 9, white: 'Florian', black: 'Frank', moveCount: 70 } },
+    ]);
+    api.merge.and.resolveTo(structuredClone(STATE));
+    spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
+    (el.querySelector('.merge-open') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const choices = Array.from(el.querySelectorAll('.merge-list button')) as HTMLButtonElement[];
+    expect(choices.length).toBe(1);                                                  // nicht sich selbst
+    expect(choices[0].textContent).toContain('#9 · Florian – Frank · 70 Halbzüge');
+    const before = api.scan.calls.count();
+    choices[0].click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.merge).toHaveBeenCalledWith('7', '9');
+    expect(api.scan.calls.count()).toBeGreaterThan(before);
+    expect(el.querySelector('.merge-list')).toBeNull();
+    tick(1000);
+  }));
+
+  it('über einen Teilen-Link gibt es kein Zusammenführen', fakeAsync(() => {
+    loggedIn = false;
+    params = { token: 'TOK', key: 'geheim' };
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.merge-open')).toBeNull();
     tick(1000);
   }));
 

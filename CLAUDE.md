@@ -4994,6 +4994,21 @@ Einlesung bleibt fürs Kontingent), das Konto ebenso. **Frontend-nginx**: eigene
 verschachtelte nginx-Location dafür auf 64M), `GET …/scans/{id|key}/photo?page=n`; die Seite bietet nach dem ersten Foto
 „+ Seite 2/3“, die Prüfseite blättert zwischen den Seiten (folgt dem gewählten Zug).
 
+**Mehrere Fotos DERSELBEN Seite + zusammenführen** (0.736.0, Wunsch 2026-10-10: „zwei Fotos einer Partie, beide die gleiche
+Seite — vereinen für bessere Erkennung"; „zwei Bilder schon analysiert, dort zusammenführen"): Tabelle `ScoresheetScanViews`
+(ScanId Cascade, `Page` ab 1, `View` ab 1 — 0 ist das Hauptfoto, unique (Scan, Page, View)), höchstens `MaxPhotosPerPage` 4
+je Seite. Hochladen (nur LeagueHub, angemeldet und Teilen-Link): Formularfeld `layout` = je Teil `file` seine Seite
+(„1,1,2"; `ScoresheetUpload.SheetPage`, `SheetGroups` — erstes Foto je Seite = Hauptfoto; Absagen `invalidLayout`,
+`tooManyViews`). `POST /api/league/club/scans/{id}/merge { otherId }` (contribute, nur angemeldet, eigene bzw. Verwalter, gleicher
+Verein): die Fotos der anderen (Haupt, Seiten, weitere) werden weitere Fotos der passenden Seite (über die Seitenzahl hinaus
+die letzte), die andere wird wie verworfen geschlossen (Archiv), die Ziel-Einlesung wartet wieder (`Pending`, StartedAt/Error
+leer) und wird mit allen Fotos neu gelesen → neuer Stand; 400 `same`/`busy` (eine läuft)/`tooManyViews`, 404 fremd.
+`LeagueScanStateDto.ViewCounts` (je Seite), `ExternalPendingScanDto.ViewCount`, `?view=` an allen drei Foto-Endpunkten (Liga,
+Teilen-Link, Admin). Jeder Löschweg der Seiten räumt auch die weiteren Fotos ab (`RemoveViewsWithoutLoading`); das Archiv
+nimmt sie NICHT mit. Die Kästen der Lesung gehören immer zum Hauptfoto. Der Watcher (`~/claude/formulare-bot/bin/fetch-scan`,
+außerhalb des Repos) legt sie als `img/s<id>-p<seite>-v<n>.jpg` ab; `instructions-scan.md` sagt, bei unklaren Einträgen dort
+nachzusehen. Gelesen durch das Modell (`Scoresheet:Reader=model`) werden sie nicht.
+
 **Glocke** (0.531.0): fertig gelesen → `scoresheet_read` (Daten white/black/moves/uncertain/unresolved, Link auf
 `/games/{id}/edit`), gescheitert → `scoresheet_failed` (Daten reason, die Glocke übersetzt den Code über
 `scoresheet.error.*`). Ein Fehler beim Benachrichtigen lässt die Einlesung nicht scheitern.

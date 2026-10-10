@@ -345,9 +345,9 @@ public class LeagueClubController : BaseApiController
     [RequestSizeLimit(ScoresheetScanService.MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadRequestBytes)]
     public Task<IActionResult> Upload([FromForm] List<IFormFile>? file, [FromForm] string? language, [FromForm] string? side,
-        CancellationToken ct) => WithClubAsync(ct, async club =>
+        [FromForm] string? layout, CancellationToken ct) => WithClubAsync(ct, async club =>
     {
-        var (pages, error) = await ClubUpload.ReadPagesAsync(file);
+        var (pages, error) = await ClubUpload.ReadPagesAsync(file, layout);
         if (error != null) return BadRequest(error);
         var (scan, reason) = await _scans.CreateAsync(GetUserId(), pages!, language, side, ScoresheetScan.PurposeLeague, club.Id);
         if (ClubUpload.Refusal(reason) is { } refused) return refused;
@@ -396,8 +396,25 @@ public class LeagueClubController : BaseApiController
 
     [HttpGet("scans/{id:int}/photo")]
     [HasPermission(Permissions.LeagueContribute)]
-    public Task<IActionResult> Photo(int id, [FromQuery] int page = 1, CancellationToken ct = default) => WithClubAsync(ct, async club =>
-        ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(club), id, page)));
+    public Task<IActionResult> Photo(int id, [FromQuery] int page = 1, [FromQuery] int view = 0, CancellationToken ct = default) =>
+        WithClubAsync(ct, async club => ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(club), id, page, view)));
+
+    public sealed record MergeScanRequest(int OtherId);
+
+    /// <summary>Zwei Einlesungen desselben Formulars zusammenführen (0.736.0): die Fotos von <c>otherId</c> werden weitere
+    /// Fotos dieser Einlesung, die andere wird geschlossen, diese wird neu gelesen → der neue Stand; 400 <c>reason</c> ∈
+    /// same/busy/tooManyViews, 404 fremd/unbekannt.</summary>
+    [HttpPost("scans/{id:int}/merge")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public Task<IActionResult> Merge(int id, [FromBody] MergeScanRequest req, CancellationToken ct) => WithClubAsync(ct, async club =>
+    {
+        var me = await MeAsync(club);
+        var reason = await _scans.MergeLeagueScansAsync(me, id, req?.OtherId ?? 0, ct);
+        if (reason == "notFound") return NotFound();
+        if (reason != null) return BadRequest(new { reason });
+        _signal.Wake();
+        return await _scans.LeagueScanStateAsync(me, id, ct) is { } s ? Ok(s) : NotFound();
+    });
 
     [HttpPost("scans/{id:int}/resolve")]
     [HasPermission(Permissions.LeagueContribute)]
@@ -589,10 +606,10 @@ public class LeagueShareClubController : ControllerBase
     [RequestSizeLimit(ScoresheetScanService.MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadRequestBytes)]
     public async Task<IActionResult> Upload(string token, [FromForm] List<IFormFile>? file, [FromForm] string? language,
-        [FromForm] string? side, CancellationToken ct)
+        [FromForm] string? side, [FromForm] string? layout, CancellationToken ct)
     {
         if (await LinkAsync(token, ct) is not { } link) return NotFound();
-        var (pages, error) = await ClubUpload.ReadPagesAsync(file);
+        var (pages, error) = await ClubUpload.ReadPagesAsync(file, layout);
         if (error != null) return BadRequest(error);
         var (scan, key, reason) = await _scans.CreateAnonymousAsync(pages!, language, side, IpHash, link.Club.Id);
         if (ClubUpload.Refusal(reason) is { } refused) return refused;
@@ -635,10 +652,12 @@ public class LeagueShareClubController : ControllerBase
     }
 
     [HttpGet("scans/{key}/photo")]
-    public async Task<IActionResult> Photo(string token, string key, [FromQuery] int page = 1, CancellationToken ct = default)
+    public async Task<IActionResult> Photo(string token, string key, [FromQuery] int page = 1, [FromQuery] int view = 0,
+        CancellationToken ct = default)
     {
         if (await LinkAsync(token, ct) is not { } link) return NotFound();
-        return ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(Actor.Anonymous(key) with { ClubId = link.Club.Id }, null, page));
+        return ClubUpload.PhotoResult(this,
+            await _scans.LeagueScanPhotoAsync(Actor.Anonymous(key) with { ClubId = link.Club.Id }, null, page, view));
     }
 
     [HttpPost("scans/{key}/resolve")]
@@ -676,13 +695,25 @@ internal static class ClubUpload
     }
 
     /// <summary>Die Fotos EINES Formulars (1 bis <see cref="ScoresheetScanService.MaxPages"/> Teile <c>file</c>, in
-    /// Seitenreihenfolge) — sonst die Absage (<c>noFile</c>/<c>tooManyPages</c>/<c>tooLarge</c>).</summary>
-    public static async Task<(List<ScoresheetUpload>? Pages, object? Error)> ReadPagesAsync(List<IFormFile>? file)
+    /// Seitenreihenfolge) — sonst die Absage (<c>noFile</c>/<c>tooManyPages</c>/<c>tooLarge</c>/<c>invalidLayout</c>).
+    /// <paramref name="layout"/> (0.736.0): je Teil die Seite, zu der es gehört („1,1,2" = zwei Fotos von Seite 1, eins von
+    /// Seite 2); leer = jedes Foto eine Seite.</summary>
+    public static async Task<(List<ScoresheetUpload>? Pages, object? Error)> ReadPagesAsync(List<IFormFile>? file, string? layout = null)
     {
         var files = (file ?? new()).Where(f => f.Length > 0).ToList();
         if (files.Count == 0) return (null, new { reason = "noFile", message = "No file." });
-        if (files.Count > ScoresheetScanService.MaxPages)
-            return (null, new { reason = "tooManyPages", message = $"At most {ScoresheetScanService.MaxPages} photos." });
+        var sheetPages = new List<int>();
+        if (!string.IsNullOrWhiteSpace(layout))
+        {
+            foreach (var part in layout.Split(',', StringSplitOptions.TrimEntries))
+                if (int.TryParse(part, out var n) && n is >= 1 and <= ScoresheetScanService.MaxPages) sheetPages.Add(n);
+                else return (null, new { reason = "invalidLayout", message = "Invalid layout." });
+            if (sheetPages.Count != files.Count) return (null, new { reason = "invalidLayout", message = "Invalid layout." });
+        }
+        var maxFiles = sheetPages.Count > 0 ? ScoresheetScanService.MaxPages * ScoresheetScanService.MaxPhotosPerPage
+            : ScoresheetScanService.MaxPages;
+        if (files.Count > maxFiles)
+            return (null, new { reason = "tooManyPages", message = $"At most {maxFiles} photos." });
         if (files.Any(f => f.Length > ScoresheetScanService.MaxUploadBytes))
             return (null, new { reason = "tooLarge", message = "File too large." });
         var pages = new List<ScoresheetUpload>();
@@ -690,7 +721,7 @@ internal static class ClubUpload
         {
             using var ms = new MemoryStream();
             await f.CopyToAsync(ms);
-            pages.Add(new ScoresheetUpload(ms.ToArray(), f.ContentType, f.FileName));
+            pages.Add(new ScoresheetUpload(ms.ToArray(), f.ContentType, f.FileName, sheetPages.Count > 0 ? sheetPages[pages.Count] : 0));
         }
         return (pages, null);
     }

@@ -376,6 +376,8 @@ public class SavedGameService
         ScoresheetScanService.DetachWithoutLoading(_db, scanKeys);
         ScoresheetScanService.RemovePagesWithoutLoading(_db,
             await ScoresheetScanService.PageKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
+        ScoresheetScanService.RemoveViewsWithoutLoading(_db,
+            await ScoresheetScanService.ViewKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
         _db.SavedGames.Remove(g);
         await _db.SaveChangesAsync();
         return true;

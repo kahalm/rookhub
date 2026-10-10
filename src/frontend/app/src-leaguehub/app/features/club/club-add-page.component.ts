@@ -189,15 +189,23 @@ const SAVE_DEBOUNCE_MS = 1500;
               <!-- Wunsch 2026-10-06: eine lange Partie geht über zwei oder drei Blätter — EINE Einlesung mit allen Seiten. -->
               @for (p of extraPhotos(); track $index; let i = $index) {
                 <div class="field-row extra-page">
-                  <label class="field">Seite {{ i + 2 }}
+                  <label class="field">{{ extraLabels()[i] }}
                     <input class="extra-photo" type="file" accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
                   </label>
-                  <button type="button" class="btn-sec" (click)="removeExtra(i)" [attr.aria-label]="'Seite ' + (i + 2) + ' entfernen'">✕</button>
+                  <button type="button" class="btn-sec" (click)="removeExtra(i)" [attr.aria-label]="extraLabels()[i] + ' entfernen'">✕</button>
                 </div>
               }
-              @if (photo() && extraPhotos().length < maxPages - 1 && !extraPhotos().includes(null)) {
-                <div class="actions"><button type="button" class="btn-sec add-page" (click)="addExtra()">
-                  + Seite {{ extraPhotos().length + 2 }} (Formular geht weiter)</button></div>
+              @if (photo() && !extraPhotos().includes(null)) {
+                <div class="actions">
+                  @if (layout().at(-1)! < maxPages) {
+                    <button type="button" class="btn-sec add-page" (click)="addExtra()">
+                      + Seite {{ layout().at(-1)! + 1 }} (Formular geht weiter)</button>
+                  }
+                  <!-- 0.736.0, Wunsch 2026-10-10: dieselbe Seite noch einmal fotografiert — der Leser vergleicht beide -->
+                  @if (photosOfLastPage() < maxPhotosPerPage) {
+                    <button type="button" class="btn-sec add-view" (click)="addExtra(true)">+ weiteres Foto dieser Seite</button>
+                  }
+                </div>
               }
               <div class="field-row">
                 <label class="field">Notation
@@ -335,6 +343,23 @@ export class ClubAddPageComponent implements OnInit {
   /** Weitere Blätter desselben Formulars (Seite 2 und 3), `null` = Feld da, noch kein Foto gewählt. */
   readonly extraPhotos = signal<(File | null)[]>([]);
   readonly maxPages = 3;
+  readonly maxPhotosPerPage = 4;
+  /** Je weiterem Foto: gehört es zur Seite davor (dieselbe Seite noch einmal fotografiert, 0.736.0)? */
+  readonly extraSame = signal<boolean[]>([]);
+  /** Seite je Foto (das erste ist Seite 1) — geht als `layout` mit. */
+  readonly layout = computed(() => {
+    const pages = [1];
+    for (const same of this.extraSame()) pages.push(same ? pages.at(-1)! : pages.at(-1)! + 1);
+    return pages;
+  });
+  readonly photosOfLastPage = computed(() => { const l = this.layout(); return l.filter(p => p === l.at(-1)).length; });
+  readonly extraLabels = computed(() => {
+    const l = this.layout();
+    return l.slice(1).map((page, i) => {
+      const nth = l.slice(0, i + 2).filter(p => p === page).length;
+      return nth > 1 ? `Seite ${page}, Foto ${nth}` : `Seite ${page}`;
+    });
+  });
   private readonly photoInput = viewChild<ElementRef<HTMLInputElement>>('photoInput');
   readonly uploading = signal(false);
   readonly scanError = signal<string | null>(null);
@@ -755,8 +780,11 @@ export class ClubAddPageComponent implements OnInit {
     this.photo.set((ev.target as HTMLInputElement).files?.[0] ?? null);
   }
 
-  addExtra(): void {
-    if (this.extraPhotos().length < this.maxPages - 1) this.extraPhotos.set([...this.extraPhotos(), null]);
+  /** `same`: ein weiteres Foto der Seite davor statt einer neuen Seite (0.736.0). */
+  addExtra(same = false): void {
+    if (same ? this.photosOfLastPage() >= this.maxPhotosPerPage : (this.layout().at(-1) ?? 1) >= this.maxPages) return;
+    this.extraPhotos.set([...this.extraPhotos(), null]);
+    this.extraSame.set([...this.extraSame(), same]);
   }
 
   pickExtra(i: number, ev: Event): void {
@@ -767,20 +795,24 @@ export class ClubAddPageComponent implements OnInit {
 
   removeExtra(i: number): void {
     this.extraPhotos.set(this.extraPhotos().filter((_, j) => j !== i));
+    this.extraSame.set(this.extraSame().filter((_, j) => j !== i));
   }
 
   async upload(): Promise<void> {
     const file = this.photo();
     if (!file) return;
-    const files = [file, ...this.extraPhotos().filter((f): f is File => f != null)];
+    const picked = this.extraPhotos().map((f, i) => ({ f, page: this.layout()[i + 1] })).filter(x => x.f != null);
+    const files = [file, ...picked.map(x => x.f!)];
+    const layout = [1, ...picked.map(x => x.page)];
     this.uploading.set(true);
     this.scanError.set(null);
     try {
-      const sc = await this.client.upload(files, this.language(), this.side());
+      const sc = await this.client.upload(files, this.language(), this.side(), layout);
       if (this.share) rememberAnonKey(this.share, sc.ref);
       this.scans.set([sc, ...this.scans().filter(s => s.ref !== sc.ref)]);
       this.photo.set(null);
       this.extraPhotos.set([]);
+      this.extraSame.set([]);
       // UX-037: das Feld zeigte sonst weiter den Dateinamen, während „Formular einlesen" gesperrt blieb.
       const input = this.photoInput()?.nativeElement;
       if (input) input.value = '';
