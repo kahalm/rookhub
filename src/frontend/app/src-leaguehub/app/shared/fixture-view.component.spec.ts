@@ -158,11 +158,36 @@ describe('FixtureViewComponent', () => {
     expect(lineupsApi.lineups).not.toHaveBeenCalled();
   });
 
-  it('offene Runde: keine Paarungen, keine Abfrage', () => {
+  it('offene Runde ohne zugeordnete Partie: keine Paarungen', async () => {
     fixture.componentRef.setInput('leagueTnr', 1479345);
     const el = render(OPEN);
-    expect(api.fixtureGames).not.toHaveBeenCalled();
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(el.querySelector('.pairings')).toBeNull();
+  });
+
+  // 0.739.0, Wunsch 2026-10-10: die laufende Runde aus den zugeordneten Vereinspartien
+  it('offene Runde mit zugeordneten Partien: vorläufige Aufstellung mit Hinweis, leere Bretter „offen"', async () => {
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Kobold, Jonathan', whiteElo: 1935, black: 'Niedermayer, Anton', blackElo: 1987, result: '1 - 0', forfeit: false,
+        pgn: '1. e4 1-0', source: 'club', clubGameId: 171, provisional: true },
+      { board: 5, white: null, whiteElo: null, black: null, blackElo: null, result: '', forfeit: true, pgn: null, source: null, clubGameId: null },
+    ]);
+    const el = render(OPEN);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('.provisional-note')?.textContent).toContain('vorläufig');
+    const rows = el.querySelectorAll('.pairings tbody tr');
+    expect(rows[0].textContent).toContain('Kobold, Jonathan');
+    expect(rows[0].textContent).toContain('Niedermayer, Anton');
+    expect(el.querySelector('.pairings')!.textContent).toContain('offen');
+  });
+
+  it('offene Runde über einen Teilen-Link: keine Abfrage', () => {
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render(OPEN, { token: 'abc' });
+    expect(api.fixtureGames).not.toHaveBeenCalled();
   });
 
   it('zeigt je Brett die Kandidaten, den ersten hervorgehoben, Balken nach Prozent', () => {

@@ -15,6 +15,8 @@ export interface LineupBoard {
   awayPlayer: string | null; awayTitle: string | null; awayElo: number | null;
   /** 0.727.2: FIDE-IDs der Paarung — mit ID öffnet der Name die Spielerkarte. */
   homeFide?: string | null; awayFide?: string | null;
+  /** 0.739.0: aus der zugeordneten Vereinspartie (chess-results hat die Runde noch nicht). */
+  provisional?: boolean;
   /** Farbe des HEIMspielers: „w" | „s". */
   homeColor: string | null;
   /** Aus Sicht Heim – Gast, wie chess-results („1 - 0" = Heim gewinnt). */

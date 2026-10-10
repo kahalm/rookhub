@@ -37,7 +37,8 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
 
     public sealed record LineupBoard(int Board, string? HomePlayer, string? HomeTitle, int? HomeElo, string? AwayPlayer,
         string? AwayTitle, int? AwayElo, string? HomeColor, string Result, int Forfeit, string? Moves, bool CanEditMoves,
-        LineupGame? Game = null, bool CanDeleteMoves = false, string? HomeFide = null, string? AwayFide = null);
+        LineupGame? Game = null, bool CanDeleteMoves = false, string? HomeFide = null, string? AwayFide = null,
+        bool Provisional = false);
 
     /// <summary>Die vorhandene Partie eines Bretts (ohne PGN): <c>source</c> <c>club</c> (Vereinspartie, <c>clubGameId</c>) oder
     /// <c>profile</c> (Spielerkarte), Halbzüge, Ergebnis und Namen wie im PGN, die ersten <see cref="FirstPlies"/> Halbzüge
@@ -74,7 +75,9 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
         var byKey = moves.GroupBy(m => (m.MatchNo, m.Board)).ToDictionary(x => x.Key, x => x.First());
         // Partien der ganzen Runde in EINEM Durchgang; doppelte Zeilen desselben Bretts zählen zusammen (die Zuordnung einer
         // Vereinspartie kann auf jede von ihnen zeigen).
-        var found = await _fixtures.ForGamesAsync(club, tnr, round, games, ct, userId, canManage);
+        // Nur angemeldete Vereinsmitglieder kommen hierher (league.view + Verein) — sie sehen in einer vorläufigen Aufstellung
+        // auch die eigene Seite (0.739.0).
+        var found = await _fixtures.ForGamesAsync(club, tnr, round, games, ct, userId, canManage, revealOwn: true);
         var gameByKey = games.Where(g => found.TryGetValue(g.Id, out var p) && p.Source is not null && p.Pgn is not null)
             .GroupBy(g => (g.MatchNo, g.Board))
             .ToDictionary(x => x.Key, x => ToGame(found[x.OrderBy(g => g.Id).First().Id]));
@@ -109,6 +112,13 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
             {
                 var entry = byKey.GetValueOrDefault((g.MatchNo, g.Board));
                 var game = gameByKey.GetValueOrDefault((g.MatchNo, g.Board));
+                // 0.739.0: Brett noch ohne Spieler, aber mit zugeordneter Partie → vorläufig aus ihr
+                if (found.GetValueOrDefault(g.Id) is { Provisional: true, HomeWhite: { } hw } pv)
+                    return new LineupBoard(g.Board, hw ? pv.White : pv.Black, null, hw ? pv.WhiteElo : pv.BlackElo,
+                        hw ? pv.Black : pv.White, null, hw ? pv.BlackElo : pv.WhiteElo, hw ? "w" : "s",
+                        hw ? pv.Result : Flip(pv.Result), 0, entry?.Moves, false, game, entry is not null && mayWrite
+                            && (canManage || entry.UpdatedByUserId == userId),
+                        hw ? pv.WhiteFide : pv.BlackFide, hw ? pv.BlackFide : pv.WhiteFide, Provisional: true);
                 var editable = game is null && mayWrite && Playable(g) && (entry is null || canManage || entry.UpdatedByUserId == userId);
                 // Löschen bleibt auch neben einer Partie möglich (ein alter, nun ersetzter Handeintrag) — Regel wie Speichern.
                 var deletable = entry is not null && mayWrite && (canManage || entry.UpdatedByUserId == userId);
@@ -121,6 +131,9 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
     }
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
+
+    /// <summary>„1 - 0" aus Sicht Weiß → aus Sicht Heim, wenn Heim Schwarz hatte.</summary>
+    private static string Flip(string r) => r switch { "1 - 0" => "0 - 1", "0 - 1" => "1 - 0", _ => r };
 
     /// <summary>Die Partie eines Bretts ohne PGN: Kopfzeilen und Hauptvariante (bereinigt wie überall).</summary>
     internal static LineupGame ToGame(LeagueFixtureGames.Pairing p)

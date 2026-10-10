@@ -2127,6 +2127,15 @@ Möglichkeit, die ersten paar Züge einzugeben."
   `align-items: baseline`; vorher waren Bearbeiten/Korrigieren nackte `<a>` in Browser-Linkfarbe ohne Polster und standen höher),
   `board-moves` mit `replaced` (grau „ersetzt durch die Partie", nur Löschen). In `lh-fixture`
   erscheint die Zug-Zeile nur an Brettern OHNE Partie. Der Server lehnt Schreiben an einem Brett mit Partie NICHT ab (Rechte unverändert).
+* **Laufende Runde aus zugeordneten Partien** (0.739.0, Wunsch 2026-10-10: „die laufende Aufstellung schon sehen — ich weiß ja
+  die Paarungen"): ist ein Brett noch ohne Spieler (chess-results hat die Runde nicht), aber eine Vereinspartie FEST darauf
+  zugeordnet, kommt das Brett aus ihr (`LeagueFixtureGames.ProvisionalAsync`, `Pairing.Provisional` + `HomeWhite`): Namen/FIDE aus
+  der Partie, Elo aus der Partie sonst der Meldeliste der Liga, Heimfarbe über die anonymisierte eigene Seite (sonst die Mannschaft
+  der weißen FIDE-ID), Ergebnis aus der Partie. **Die eigene Seite („Schwaz") zeigt den internen echten Spieler NUR mit
+  `revealOwn`** — gesetzt von `GET /api/league/{tnr}/round/{r}/games` und den Aufstellungen (angemeldete Vereinsmitglieder; bewusste
+  Ausnahme von „Real-Namen nie ausgeben", Entscheidung des Users 10.10.), nie über `/api/league/s/{token}/games`. `LineupBoard.Provisional`;
+  `lh-fixture` lädt die Paarungen angemeldet auch für eine offene Runde und zeigt sie mit Hinweis „vorläufig", sobald ein Brett
+  vorläufig ist (leere Bretter „offen"). Sobald chess-results die Runde bringt, gilt wieder die öffentliche Paarung.
 * **Teilpartien** (0.725.0, Frage 2026-10-08: „fließen die [ersten Züge] in die Eröffnungsbäume bei der Vorbereitung ein?" — „ja mach
   das so"): jeder Eintrag in `LeagueGameMoves` ist eine TEILPARTIE beider Spieler (`Services/League/LeaguePartialGames.cs`), gerechnet
   bei jedem Lesen (Join der kleinen Zug-Tabelle auf `LeagueGames`, nur gespielte Bretter), nicht gespeichert: Kopf aus der Paarung —

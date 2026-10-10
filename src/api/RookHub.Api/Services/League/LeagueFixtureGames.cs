@@ -22,19 +22,24 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
 {
     public const int DayTolerance = 3;
 
+    /// <param name="Provisional">0.739.0: die Spieler stammen aus der zugeordneten Vereinspartie, weil chess-results die Runde
+    /// noch nicht hat — dann sagt <paramref name="HomeWhite"/>, welche Farbe die Heimmannschaft hatte.</param>
     public sealed record Pairing(int Board, string? White, int? WhiteElo, string? Black, int? BlackElo, string Result,
-        bool Forfeit, string? Pgn, string? Source, int? ClubGameId, bool CanEdit = false);
+        bool Forfeit, string? Pgn, string? Source, int? ClubGameId, bool CanEdit = false, bool Provisional = false,
+        bool? HomeWhite = null, string? WhiteFide = null, string? BlackFide = null);
 
     /// <param name="userId">Der Angemeldete (über einen Teilen-Link <c>null</c>) — entscheidet mit <paramref name="canManage"/>,
     /// ob er eine Vereinspartie bearbeiten darf (0.675.0, dieselbe Regel wie die Vereinsliste: Verwalter oder Hochladender).</param>
+    /// <param name="revealOwn">Angemeldetes Mitglied des Vereins (nie über einen Teilen-Link): in einer vorläufigen Aufstellung
+    /// (<see cref="Pairing.Provisional"/>) steht für die eigene Seite der echte Spieler statt „Schwaz" (Wunsch 2026-10-10).</param>
     public async Task<List<Pairing>> ForFixtureAsync(LeagueClub club, int tnr, int round, string team, CancellationToken ct,
-        int? userId = null, bool canManage = false)
+        int? userId = null, bool canManage = false, bool revealOwn = false)
     {
         var games = await db.LeagueGames.AsNoTracking()
             .Where(g => g.Tnr == tnr && g.Round == round && (g.HomeTeam == team || g.AwayTeam == team))
             .OrderBy(g => g.Board).ToListAsync(ct);
         if (games.Count == 0) return new();
-        var byId = await ForGamesAsync(club, tnr, round, games, ct, userId, canManage);
+        var byId = await ForGamesAsync(club, tnr, round, games, ct, userId, canManage, revealOwn);
         return games.Select(g => byId[g.Id]).ToList();
     }
 
@@ -47,7 +52,7 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
     /// zugeordnet (über eine ganze Runde könnten sonst zwei Bretter mit gleichen Nachnamen dieselbe Partie bekommen).
     /// </summary>
     public async Task<Dictionary<int, Pairing>> ForGamesAsync(LeagueClub club, int tnr, int round, IReadOnlyList<LeagueGame> games,
-        CancellationToken ct, int? userId = null, bool canManage = false)
+        CancellationToken ct, int? userId = null, bool canManage = false, bool revealOwn = false)
     {
         var result = new Dictionary<int, Pairing>();
         if (games.Count == 0) return result;
@@ -73,8 +78,16 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
 
         var open = new List<(LeagueGame G, bool HomeWhite, (string? Name, string? Fide, int? Elo, string Team) W,
             (string? Name, string? Fide, int? Elo, string Team) B, bool Forfeit)>();
+        var roster = new Dictionary<string, (int? Elo, string Team)>();
         foreach (var g in games.DistinctBy(g => g.Id))
         {
+            // Laufende Runde (0.739.0, Wunsch 2026-10-10: „die laufende Aufstellung schon sehen — weiß ja die Paarungen"):
+            // chess-results hat das Brett noch nicht besetzt, eine Vereinspartie ist ihm aber fest zugeordnet → Spieler aus ihr.
+            if (g.HomePlayer is null && g.AwayPlayer is null && g.Forfeit == 0 && linked.TryGetValue(g.Id, out var lc))
+            {
+                result[g.Id] = await ProvisionalAsync(club, g, lc, revealOwn, userId, canManage, roster, ct);
+                continue;
+            }
             var homeWhite = g.HomeColor != "s";
             var w = homeWhite ? (g.HomePlayer, g.HomeFide, g.HomeElo, g.HomeTeam) : (g.AwayPlayer, g.AwayFide, g.AwayElo, g.AwayTeam);
             var b = homeWhite ? (g.AwayPlayer, g.AwayFide, g.AwayElo, g.AwayTeam) : (g.HomePlayer, g.HomeFide, g.HomeElo, g.HomeTeam);
@@ -111,6 +124,38 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
             result[g.Id] = new Pairing(g.Board, w.Name, w.Elo, b.Name, b.Elo, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, null);
         }
         return result;
+    }
+
+    /// <summary>Ein Brett aus seiner zugeordneten Vereinspartie (<see cref="Pairing.Provisional"/>): Namen und FIDE-IDs aus der
+    /// Partie, die eigene Seite („Schwaz") nur mit <paramref name="revealOwn"/> als echter Spieler; Elo und Mannschaft aus der
+    /// Meldeliste der Liga. Welche Farbe die Heimmannschaft hatte: die eigene Seite ist die anonymisierte, sonst entscheidet die
+    /// Mannschaft der weißen FIDE-ID.</summary>
+    private async Task<Pairing> ProvisionalAsync(LeagueClub club, LeagueGame g, LeagueClubGame c, bool revealOwn, int? userId,
+        bool canManage, Dictionary<string, (int? Elo, string Team)> roster, CancellationToken ct)
+    {
+        async Task<(int? Elo, string Team)> Roster(string? fide)
+        {
+            if (string.IsNullOrWhiteSpace(fide)) return (null, "");
+            if (roster.TryGetValue(fide, out var hit)) return hit;
+            var row = await db.LeaguePlayers.AsNoTracking().Where(p => p.Tnr == g.Tnr && p.FideId == fide)
+                .Select(p => new { p.EloI, p.EloN, p.Team }).FirstOrDefaultAsync(ct);
+            return roster[fide] = (row?.EloI ?? row?.EloN, row?.Team ?? "");
+        }
+        var wOwn = c.Anonymized && c.White == club.AnonName;
+        var bOwn = c.Anonymized && c.Black == club.AnonName;
+        var wFide = c.WhiteFide ?? (revealOwn ? c.WhiteRealFide : null);
+        var bFide = c.BlackFide ?? (revealOwn ? c.BlackRealFide : null);
+        var wName = wOwn ? (revealOwn ? c.WhiteRealName ?? c.White : c.White) : c.White;
+        var bName = bOwn ? (revealOwn ? c.BlackRealName ?? c.Black : c.Black) : c.Black;
+        var wRoster = await Roster(c.WhiteFide ?? c.WhiteRealFide);
+        var bRoster = await Roster(c.BlackFide ?? c.BlackRealFide);
+        var ownIsHome = club.OwnsTeam(g.HomeTeam);
+        bool homeWhite = wOwn ? ownIsHome : bOwn ? !ownIsHome
+            : wRoster.Team.Length > 0 ? wRoster.Team == g.HomeTeam : bRoster.Team.Length > 0 ? bRoster.Team != g.HomeTeam : g.HomeColor != "s";
+        var result = c.Result switch { "1-0" => "1 - 0", "0-1" => "0 - 1", "1/2-1/2" => "½ - ½", _ => "" };
+        var canEdit = userId is { } me && (canManage || c.UploadedByUserId == me);
+        return new Pairing(g.Board, wName, c.WhiteElo ?? wRoster.Elo, bName, c.BlackElo ?? bRoster.Elo, result, false, c.Pgn, "club",
+            c.Id, canEdit, Provisional: true, HomeWhite: homeWhite, WhiteFide: wFide, BlackFide: bFide);
     }
 
     /// <summary>

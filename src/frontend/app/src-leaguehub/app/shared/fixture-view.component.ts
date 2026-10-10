@@ -43,16 +43,20 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
           @if (e.score) { <span class="score">{{ e.score }}</span> }
         </h2>
         <!-- 0.673.0, Wunsch 2026-10-05: bei gespielten Runden die Paarungen gleich unter dem Ergebnis, mit Partie, wo es eine gibt. -->
-        @if (e.status === 'played' && pairings().length) {
+        @if (pairings().length && (e.status === 'played' || provisional())) {
+          @if (e.status !== 'played') {
+            <!-- 0.739.0, Wunsch 2026-10-10: die laufende Runde aus den zugeordneten Vereinspartien -->
+            <p class="muted small provisional-note">Aufstellung laut euren Partien — vorläufig, bis chess-results die Runde bringt.</p>
+          }
           <table class="pairings">
             <caption class="sr-only">Brettpaarungen</caption>
             <tbody>
               @for (p of pairings(); track p.board) {
                 <tr>
                   <td class="num">{{ p.board }}</td>
-                  <td class="pw">{{ p.white ?? 'nicht besetzt' }}@if (p.whiteElo) { <span class="muted"> {{ p.whiteElo }}</span>}</td>
+                  <td class="pw">{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted"> {{ p.whiteElo }}</span>}</td>
                   <td class="pr">{{ p.result }}</td>
-                  <td class="pb">{{ p.black ?? 'nicht besetzt' }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
+                  <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
                          dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link nur „Nachspielen". -->
@@ -345,6 +349,8 @@ export class FixtureViewComponent {
   /** Brettpaarungen samt Partien der gespielten Begegnung (0.673.0); späte Antworten einer anderen Begegnung fallen weg. */
   readonly pairings = signal<FixturePairing[]>([]);
   readonly openBoard = signal<number | null>(null);
+  /** Mindestens ein Brett kommt aus einer zugeordneten Vereinspartie (laufende Runde, 0.739.0). */
+  readonly provisional = computed(() => this.pairings().some(p => p.provisional));
   private pairingsFor = '';
   private readonly lineups = inject(LineupsApiService);
   /** Die eigene Begegnung aus den Aufstellungen der Runde — trägt die ersten Züge je Brett (2026-10-08). */
@@ -362,7 +368,9 @@ export class FixtureViewComponent {
       this.pairings.set([]);
       this.ownMatch.set(null);
       this.openBoard.set(null);
-      if (f?.status !== 'played' || (!token && tnr == null)) return;
+      // 0.739.0: auch die laufende Runde — gezeigt wird sie nur, wenn ein Brett aus einer zugeordneten Partie kommt
+      // (angemeldet; über einen Teilen-Link nur gespielte Runden wie bisher)
+      if (!f || (!token && tnr == null) || (f.status !== 'played' && token)) return;
       this.api.fixtureGames(tnr, round, team, token).then(
         p => { if (this.pairingsFor === key) this.pairings.set(p); },
         () => { if (this.pairingsFor === key) this.pairings.set([]); });

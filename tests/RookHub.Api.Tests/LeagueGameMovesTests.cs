@@ -301,6 +301,40 @@ public class LeagueGameMovesTests : IDisposable
     private async Task<LeagueGameMoves.Lineups> LineupsAs(int user, params string[] perms) =>
         (LeagueGameMoves.Lineups)((OkObjectResult)await Controller(user, perms: perms).Lineups(Tnr, Round, default)).Value!;
 
+    // 0.739.0, Wunsch 2026-10-10: „die laufende Aufstellung schon sehen — weiß ja die Paarungen" — chess-results hat das Brett
+    // noch leer, eine Vereinspartie ist ihm zugeordnet → Spieler aus ihr; die eigene Seite nur für angemeldete Mitglieder.
+    [Fact]
+    public async Task Lineups_EmptyBoardWithAssignedClubGame_ProvisionalFromTheGame_OwnSideOnlyForMembers()
+    {
+        await SeedAsync();
+        var lg = new LeagueGame { Tnr = Tnr, Round = Round, MatchNo = 1, Board = 4, HomeTeam = "Testdorf", AwayTeam = "Bergheim",
+            HomeColor = "w", Result = "" };
+        _db.LeagueGames.Add(lg);
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = Tnr, Team = "Bergheim", Name = "Ober, Olga", FideId = "222", EloI = 1900 });
+        await _db.SaveChangesAsync();
+        // Testdorf hatte an Brett 4 Schwarz — die Partie: Ober (Bergheim) mit Weiß gegen „Testdorf" (intern: Hess)
+        var c = new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "Ober, Olga", WhiteFide = "222", Black = "Testdorf",
+            BlackRealName = "Hess, Max", BlackRealFide = "111", Anonymized = true, Result = "0-1", Plies = 22, Pgn = GamePgn,
+            MovesHash = "h4", UploadedByUserId = HomeMember };
+        LeagueGameLinks.Set(c, lg);
+        _db.LeagueClubGames.Add(c);
+        await _db.SaveChangesAsync();
+
+        var b = (await LineupsAs(HomeMember, Permissions.LeagueView)).Matches[0].Boards.Single(x => x.Board == 4);
+        Assert.Equal(("Hess, Max", "111", "Ober, Olga", "222", (int?)1900, "s", "1 - 0", true),
+            (b.HomePlayer, b.HomeFide, b.AwayPlayer, b.AwayFide, b.AwayElo, b.HomeColor, b.Result, b.Provisional));
+        Assert.Equal(c.Id, b.Game!.ClubGameId);
+
+        // über einen Teilen-Link (revealOwn aus) bleibt die eigene Seite „Testdorf"
+        var fixtures = new LeagueFixtureGames(_db);
+        var shared = (await fixtures.ForFixtureAsync(TestClubs.Home, Tnr, Round, "Testdorf", default)).Single(p => p.Board == 4);
+        Assert.Equal(("Ober, Olga", "Testdorf", "0 - 1", true), (shared.White, shared.Black, shared.Result, shared.Provisional));
+        Assert.Null(shared.BlackFide);
+        var member = (await fixtures.ForFixtureAsync(TestClubs.Home, Tnr, Round, "Testdorf", default, HomeMember, revealOwn: true))
+            .Single(p => p.Board == 4);
+        Assert.Equal("Hess, Max", member.Black);
+    }
+
     [Fact]
     public async Task Lineups_LinkedClubGame_ShownAsGame_NoMoveEntry_OldEntryKept()
     {

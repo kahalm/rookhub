@@ -87,7 +87,8 @@ public class LeagueController : BaseApiController
         // Verwalter LIVE wie in LeagueClubController (0.589.0) — eine eben vergebene Rolle gilt sofort
         var manage = User.IsInRole("Admin") || (await permissions.GetAsync(me)).Has(Permissions.LeagueManage);
         // Vereinspartien nur aus der Vereins-Datenbank des Vereins der Anfrage
-        return Ok(await games.ForFixtureAsync(club, tnr, round, team, ct, me, manage));
+        // Angemeldetes Vereinsmitglied: in einer vorläufigen Aufstellung auch die eigene Seite (0.739.0) — über den Teilen-Link nie
+        return Ok(await games.ForFixtureAsync(club, tnr, round, team, ct, me, manage, revealOwn: true));
     });
 
     /// <summary>Partien im Bestand je Quelle (0.626.0) → <c>{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }</c>;

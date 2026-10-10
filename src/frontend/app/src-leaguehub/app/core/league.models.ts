@@ -45,6 +45,8 @@ export interface FixturePairing {
   result: string; forfeit: boolean; pgn: string | null; source: 'club' | 'profile' | null; clubGameId: number | null;
   /** 0.675.0: der Angemeldete darf die Vereinspartie bearbeiten/korrigieren (Hochladender oder Verwalter). */
   canEdit?: boolean;
+  /** 0.739.0: Spieler aus der zugeordneten Vereinspartie — chess-results hat die Runde noch nicht. */
+  provisional?: boolean;
 }
 
 export interface Board {
