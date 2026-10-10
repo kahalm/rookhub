@@ -1543,6 +1543,9 @@ public class ScoresheetScanService
         scan.StartedAt = null;
         scan.FinishedAt = null;
         scan.Error = null;
+        // Neu eingereiht (0.737.2): die Uhr der Seite („wartet seit …") zählt ab hier, nicht ab dem ersten Hochladen (gemeldet:
+        // „276:02"), und der Leser von außen sieht nur Einlesungen der letzten 7 Tage. Kontingent: die Zeile zählt weiter einmal.
+        scan.CreatedAt = DateTime.UtcNow;
         // Die andere schließen wie „verworfen" (Archiv, Foto weg); speichert alles zusammen.
         await CloseLeagueScanAsync(actor, otherId);
         _logger.LogInformation("Formular-Einlesung {OtherId} in {TargetId} zusammengeführt ({Photos} Foto(s)) — wartet wieder",

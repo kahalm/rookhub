@@ -1301,6 +1301,7 @@ public class ScoresheetScanServiceTests : IDisposable
 
         var state = await _service.LeagueScanStateAsync(As(u.Id), a.Id);
         Assert.Equal("pending", state!.Scan.Status);                     // wird mit beiden Fotos neu gelesen
+        Assert.InRange(DateTime.UtcNow - state.Scan.CreatedAt, TimeSpan.Zero, TimeSpan.FromMinutes(1));   // Uhr ab dem Zusammenführen
         Assert.Equal(new[] { 1 }, state.ViewCounts);
         var view = await _service.LeagueScanPhotoAsync(As(u.Id), a.Id, 1, 1);
         Assert.Equal(await _db.ScoresheetScanArchives.AsNoTracking().Where(x => x.ScoresheetScanId == b.Id).Select(x => x.Photo).SingleAsync(),

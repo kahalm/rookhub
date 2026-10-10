@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.737.2", date: "2026-10-10", changes: [
+    { en: "Merged score sheet: the waiting clock now starts at the merge instead of the first upload (it showed hours).",
+      de: "Zusammengeführtes Formular: die Warte-Uhr beginnt beim Zusammenführen statt beim ersten Hochladen (sie zeigte Stunden)." },
+  ] },
   { version: "0.737.1", date: "2026-10-10", changes: [
     { en: "Fix: merging two score sheet readings failed with a server error (the database could not translate the photo check). Score sheet reading: more easily confused letters (e/g, a/c, d/e, f/h, a/g) are now offered as alternative readings — they were the most frequent misreadings in recent corrections.",
       de: "Fix: Zusammenführen zweier Formular-Einlesungen scheiterte mit einem Serverfehler (die Datenbank konnte die Foto-Prüfung nicht übersetzen). Formular-Erkennung: weitere leicht verwechselbare Buchstaben (e/g, a/c, d/e, f/h, a/g) werden jetzt als Lesarten angeboten — sie waren in den letzten Korrekturen die häufigsten Verleser." },
