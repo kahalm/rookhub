@@ -18,6 +18,20 @@ internal sealed class GameMistakeProgressConfiguration : IEntityTypeConfiguratio
     }
 }
 
+internal sealed class MarkedPositionConfiguration : IEntityTypeConfiguration<MarkedPosition>
+{
+    public void Configure(EntityTypeBuilder<MarkedPosition> e)
+    {
+        e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(p => p.PositionKey).HasMaxLength(100);
+        e.Property(p => p.Fen).HasMaxLength(100);
+        e.Property(p => p.Context).HasMaxLength(16);
+        e.Property(p => p.ShareToken).HasMaxLength(32);
+        e.Property(p => p.BestUci).HasMaxLength(5);
+        e.HasIndex(p => new { p.UserId, p.PositionKey }).IsUnique();
+    }
+}
+
 internal sealed class SavedGameConfiguration : IEntityTypeConfiguration<SavedGame>
 {
     public void Configure(EntityTypeBuilder<SavedGame> e)

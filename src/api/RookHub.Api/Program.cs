@@ -475,6 +475,7 @@ try
     builder.Services.AddSingleton<ScoresheetScanSignal>();
     builder.Services.AddHostedService<ScoresheetScanWorker>();
     builder.Services.AddScoped<GameMistakeProgressService>();
+    builder.Services.AddScoped<MarkedPositionService>();
     builder.Services.AddScoped<GameReconstructionService>();
     builder.Services.AddScoped<SharedLineService>();
     builder.Services.AddScoped<WeeklyPostService>();

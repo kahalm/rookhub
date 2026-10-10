@@ -8,6 +8,8 @@ import { buildStagedHints, classifyMoveFromFen } from '../puzzles/puzzle-hints.u
 import { EvalScore, MOVE_CLASS_COLORS, MoveClass, formatEval } from './game-review.util';
 import { Mistake } from './mistakes.util';
 import { MistakesSession } from './mistakes-session';
+import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
+import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
 
 /**
  * „Eigene Fehler nachspielen" — die Leiste UNTER dem Brett der Partie-Seite: Aufgabe, Rückmeldung,
@@ -19,7 +21,7 @@ import { MistakesSession } from './mistakes-session';
   selector: 'app-mistakes-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent],
   template: `
     <div class="top">
       <span class="title">{{ (title || 'games.mistakes.title') | translate }}</span>
@@ -52,6 +54,8 @@ import { MistakesSession } from './mistakes-session';
         <span class="progress">{{ 'games.mistakes.progress' | translate: { current: session.index() + 1, total: session.list().length } }}</span>
         <span class="badge" [style.background]="color(m.cls)">{{ ('games.review.class.' + m.cls) | translate }}</span>
         <span class="evals">{{ fmt(m) }}</span>
+        <!-- „+" (0.749.0): die Aufgabenstellung als besonders gute Stellung markieren — mit der Lösung. -->
+        <app-mark-position-button class="mark" [fen]="m.fenBefore" [origin]="origin(m)" />
       </div>
       <!-- Sammlung über mehrere Partien (0.748.0): aus welcher Partie die Aufgabe stammt — öffnet sie in einem neuen Tab. -->
       @if (m.gameLabel && m.gameId) {
@@ -149,6 +153,7 @@ import { MistakesSession } from './mistakes-session';
     .badge { padding: 1px 8px; border-radius: 10px; color: #fff; font-weight: 600; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45); }
     .game { display: inline-block; margin-top: 2px; font-size: 0.8rem; color: inherit; opacity: 0.75; }
     .dismiss { opacity: 0.75; }
+    .head .mark { margin-left: auto; }
     .evals { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 70%, transparent); }
     .prompt { margin: 6px 0 0; }
     .prompt.right { color: #2e7d32; font-weight: 500; }
@@ -179,6 +184,21 @@ export class MistakesTrainerComponent {
   @Input() analyzable = true;
   /** Eigener Titel (Übersetzungsschlüssel) — die Sammlung nennt sich anders als das Training einer Partie. */
   @Input() title = '';
+  /** Aus welcher Partie die Aufgaben stammen (für den „+"-Knopf); in der Sammlung trägt jede Aufgabe ihre `gameId`. */
+  @Input() markSource: Partial<MarkOrigin> = {};
+  private readonly originCache = new Map<Mistake, MarkOrigin>();
+
+  /** Herkunft der Aufgabe für die Markierung — je Aufgabe einmal gebaut (stabiles Objekt fürs Signal-Input). */
+  origin(m: Mistake): MarkOrigin {
+    let o = this.originCache.get(m);
+    if (!o) {
+      o = m.gameId != null
+        ? { context: 'mistake', savedGameId: m.gameId, ply: m.ply, bestUci: m.bestUci }
+        : { ...this.markSource, context: 'mistake', ply: m.ply, bestUci: m.bestUci };
+      this.originCache.set(m, o);
+    }
+    return o;
+  }
 
   color(c: MoveClass): string { return MOVE_CLASS_COLORS[c]; }
   fmt(m: Mistake): string { return `${formatEval(m.evalBefore)} → ${formatEval(m.evalAfter)}`; }

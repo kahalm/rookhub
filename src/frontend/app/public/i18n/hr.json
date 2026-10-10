@@ -4761,5 +4761,9 @@
       "actionFailed": "To trenutno nije uspjelo — pokušajte ponovno.",
       "after": "Preuzete račune RookHub zatim dohvaća u pozadini (partije posljednjih pet godina); u stablu otvaranja mogu se odabrati pod „Brett + online“."
     }
+  },
+  "markPosition": {
+    "mark": "Označi kao posebno dobru poziciju (+)",
+    "unmark": "Ukloni oznaku +"
   }
 }

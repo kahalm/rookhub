@@ -29,6 +29,8 @@ import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY, ANALYSIS_PROVIDER_KEY } from './analysis-settings';
 import { PositionMenuComponent } from './position-menu.component';
+import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
+import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
 import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.component';
@@ -86,7 +88,7 @@ const EVAL_SETTLE_DEPTH = 10;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent,
+    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
     IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent
   ],
   template: `
@@ -296,6 +298,8 @@ const EVAL_SETTLE_DEPTH = 10;
                 <button mat-icon-button (click)="reset()" [appIconLabel]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
                 <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
                      die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
+                <!-- „+" (0.749.0): besonders gute Stellung markieren. -->
+                <app-mark-position-button [fen]="currentFen" [origin]="boardMarkOrigin" />
                 <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
                                    [candidates]="engineCandidates"
                                    [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
@@ -442,6 +446,8 @@ const EVAL_SETTLE_DEPTH = 10;
   `]
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
+  /** Herkunft für den „+"-Knopf (0.749.0): das Analysebrett kennt keine Partie. */
+  readonly boardMarkOrigin: MarkOrigin = { context: 'board' };
   /** Zugbaum der Analyse (0.604.0): die Wurzel ist die Ausgangsstellung, `children[0]` jeweils die Fortsetzung. */
   root: AnalysisNode = createRoot(START_FEN);
   /** Die Linie durch den aktuellen Knoten: der Weg dorthin und seine Fortsetzung — Pfeiltasten laufen auf ihr. */

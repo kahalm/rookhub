@@ -30,6 +30,8 @@ import { Mistake, MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide, without
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
 import { MistakeJudgeService } from './mistake-judge.service';
+import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
+import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { ExternalEngineInfo, ExternalEngineService, engineTagKey, isEngineOffline } from '../analysis/external-engine.service';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
@@ -67,7 +69,7 @@ const TAP_MAX_MS = 500;
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
-    MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MatMenuModule, MatDialogModule,
+    MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
     SimilarGamesComponent,
   ],
   providers: [PgnViewerService],
@@ -279,7 +281,7 @@ const TAP_MAX_MS = 500;
                 }
               </div>
               @if (training(); as t) {
-                <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()"
+                <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
                                       [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()" />
                 @if (trainingAnalysis(); as a) {
                   <app-live-engine-panel class="live-slot" [session]="a.session" [gameFen]="a.base" (closed)="stopTrainingAnalysis()" />
@@ -305,6 +307,8 @@ const TAP_MAX_MS = 500;
                         [matTooltip]="'games.live.toggle' | translate" [attr.aria-label]="'games.live.toggle' | translate">
                   <mat-icon>memory</mat-icon>
                 </button>
+                <!-- „+" (0.749.0): besonders gute Stellung markieren — auch in einer eigenen Nebenvariante der Live-Engine. -->
+                <app-mark-position-button class="nav-mark" [fen]="positionFen()" [origin]="markOrigin()" />
                 <!-- ⋮ für die Stellung auf dem Brett (0.527.0) — auch die einer eigenen Nebenvariante der Live-Engine. -->
                 <app-position-menu class="nav-menu" [fen]="positionFen()" [orientation]="flipped ? 'black' : 'white'" [deep]="deepStored()" />
               </div>
@@ -676,6 +680,17 @@ export class SharedGameComponent implements OnInit, DoCheck {
     return this.live()?.fen(this.service.currentFen) ?? this.service.currentFen;
   }
 
+  /** Herkunft für den „+"-Knopf (0.749.0): welche Partie — gesetzt in ngOnInit je Ansicht. */
+  markSource: Partial<MarkOrigin> = {};
+  private markOriginCache: { ply: number | null; origin: MarkOrigin } | null = null;
+  /** Herkunft der Stellung auf dem Brett; in einer eigenen Nebenvariante ohne Halbzug (sie steht in keiner Partie). */
+  markOrigin(): MarkOrigin {
+    const ply = this.live()?.variation()?.length ? null : this.service.currentMoveIndex + 1;
+    // Gleiches Objekt, solange sich nichts ändert — das Signal-Input des Knopfs soll nicht bei jeder Prüfung feuern.
+    if (this.markOriginCache?.ply !== ply) this.markOriginCache = { ply, origin: { ...this.markSource, context: 'analysis', ply } };
+    return this.markOriginCache.origin;
+  }
+
   stopLive(): void {
     this.live()?.destroy();
     this.live.set(null);
@@ -894,6 +909,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.club = this.route.snapshot.data?.['mode'] === 'club';
     if (this.club) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
+      this.markSource = { clubGameId: id };
       this.evalsUrl = this.games.clubEvalsUrl(id);
       this.games.clubGame(id).subscribe({
         next: g => this.show(g),
@@ -904,6 +920,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     if (this.own) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
       this.gameId = id;
+      this.markSource = { savedGameId: id };
       this.evalsUrl = this.games.evalsUrl(id);
       this.similarUrl = this.games.similarUrl(id);
       this.analyzeUrl = this.games.analyzeUrl(id);
@@ -915,6 +932,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       return;
     }
     const token = this.route.snapshot.paramMap.get('token') || '';
+    this.markSource = { shareToken: token };
     this.evalsUrl = this.games.sharedEvalsUrl(token);
     this.similarUrl = this.games.sharedSimilarUrl(token);
     this.analyzeUrl = this.games.sharedAnalyzeUrl(token);

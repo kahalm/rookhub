@@ -4761,5 +4761,9 @@
       "actionFailed": "Ez most nem sikerült — kérjük, próbálja újra.",
       "after": "Az átvett fiókokat a RookHub ezután a háttérben tölti le (az elmúlt öt év játszmái); a megnyitásfában a „Brett + online” alatt választhatók."
     }
+  },
+  "markPosition": {
+    "mark": "Megjelölés különösen jó állásként (+)",
+    "unmark": "A + jelölés eltávolítása"
   }
 }

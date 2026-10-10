@@ -4761,5 +4761,9 @@
       "actionFailed": "Das hat gerade nicht geklappt — bitte noch einmal.",
       "after": "Übernommene Konten holt RookHub danach im Hintergrund ab (Partien der letzten fünf Jahre); im Eröffnungsbaum sind sie dann unter „Brett + online“ wählbar."
     }
+  },
+  "markPosition": {
+    "mark": "Als besonders gute Stellung markieren (+)",
+    "unmark": "+-Markierung entfernen"
   }
 }
