@@ -67,14 +67,14 @@ describe('kids-stars', () => {
     expect(turnsEveryMove('N', a('a1'), [a('b3'), a('d4')])).toBeTrue();
   });
 
-  it('viele Sterne: bis 63 (Läufer 31) mit einer legalen Lösung, die nach jedem Stern abbiegt', () => {
+  it('viele Sterne: bis 63 (Läufer 31) mit einer legalen Lösung — abbiegen nur bei eindeutigen', () => {
     const rng = seededRng(7);
-    for (const [piece, count] of [['Q', 63], ['N', 63], ['N', 62], ['R', 40], ['B', 30], ['N', 15], ['Q', 13]] as const) {
+    for (const [piece, count] of [['Q', 63], ['N', 63], ['N', 62], ['R', 63], ['R', 40], ['B', 31], ['N', 15], ['Q', 13]] as const) {
       const p = generateStarPuzzle(piece, count, rng, 2000);
       expect(p).withContext(`${piece} ${count}`).not.toBeNull();
       expect(new Set(p!.stars).size).toBe(count);
       expect(p!.stars).not.toContain(p!.start);
-      expect(turnsEveryMove(piece, p!.start, p!.solution)).toBeTrue();
+      if (p!.unique) expect(turnsEveryMove(piece, p!.start, p!.solution)).toBeTrue();
       let pos = p!.start;
       const left = new Set(p!.stars);
       for (const sq of p!.solution) {

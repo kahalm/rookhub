@@ -301,8 +301,8 @@ function generateChain(piece: StarPiece, count: number, rng: Rng, budgetMs: numb
 /**
  * Wenn sich keine eindeutige Aufgabe findet (viele Sterne — mit 20 Sternen ist an fast jeder Stelle mehr als einer zu
  * sehen), eine mit MEHREREN Loesungen: rueckwaerts gelegt wie `generateChain`, aber ohne Sichtbarkeits-Regel und mit
- * Zuruecksetzen, wenn es nicht weitergeht. Der Richtungswechsel gilt fuer die gelegte Loesung; gespielt zaehlt jeder
- * Weg, der alle Sterne frisst (die Seite prueft eine Sackgasse mit `solveStars`).
+ * Zuruecksetzen, wenn es nicht weitergeht, und OHNE Richtungswechsel-Regel (die gilt nur fuer eindeutige Aufgaben);
+ * gespielt zaehlt jeder Weg, der alle Sterne frisst (die Seite prueft eine Sackgasse mit `solveStars`).
  */
 export function generateOpenPath(piece: StarPiece, count: number, rng: Rng, budgetMs: number): StarPuzzle | null {
   if (count > maxStars(piece)) return null;
@@ -317,11 +317,11 @@ export function generateOpenPath(piece: StarPiece, count: number, rng: Rng, budg
       if (seq.length === count + 1) return true;
       if (++steps > OPEN_STEPS_PER_TRY || (steps % 512 === 0 && Date.now() > deadline)) return false;
       const target = seq[seq.length - 1];
-      const after = seq.length >= 2 ? seq[seq.length - 2] : null;
       const blockers = new Set(remaining);
       blockers.delete(target);
-      const options = reachable(piece, target, blockers).filter(x => !remaining.has(x)
-        && (after === null || direction(piece, x, target) !== direction(piece, target, after)));
+      // Ohne Abbiege-Regel: die gilt nur fuer eindeutige Aufgaben (Wunsch 2026-10-10) — mit ihr fand der Turm auf
+      // vollem Brett kaum einen Weg.
+      const options = reachable(piece, target, blockers).filter(x => !remaining.has(x));
       // Felder mit wenigen Fortsetzungen zuerst (Warnsdorff) — sonst bleibt am Ende ein Feld unerreichbar liegen.
       const scored = options.map(x => ({ x, n: reachable(piece, x, remaining).length, r: rng() }))
         .sort((a, b) => a.n - b.n || a.r - b.r);

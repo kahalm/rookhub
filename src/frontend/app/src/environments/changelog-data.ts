@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.734.2", date: "2026-10-10", changes: [
+    { en: "KidHub Star Hunt: the rook now manages 63 stars too. The “turn after every star” rule only applies when building puzzles with exactly one solution; puzzles with many stars and several ways no longer have to follow it — with it, the rook hardly ever found a way across a full board.",
+      de: "KidHub-Sternenjagd: auch der Turm schafft jetzt 63 Sterne. Die Regel „nach jedem Stern abbiegen“ gilt nur beim Bauen von Aufgaben mit genau einer Lösung; Aufgaben mit vielen Sternen und mehreren Wegen müssen sie nicht mehr erfüllen — mit ihr fand der Turm auf vollem Brett kaum einen Weg." },
+  ] },
   { version: "0.734.1", date: "2026-10-10", changes: [
     { en: "KidHub Star Hunt: many stars work reliably now — knight and queen up to 63, rook up to about 60, bishop up to 31. A search that got stuck used to run until its time was up; now it starts over from another square.",
       de: "KidHub-Sternenjagd: viele Sterne klappen jetzt verlässlich — Springer und Dame bis 63, Turm bis etwa 60, Läufer bis 31. Eine Suche, die sich festgefahren hatte, lief bisher bis zum Zeitende; jetzt fängt sie auf einem anderen Feld neu an." },
