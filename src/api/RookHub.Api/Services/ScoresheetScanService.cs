@@ -331,7 +331,7 @@ public class ScoresheetScanService
     /// <summary>Wartende Einlesungen für den Leser von außen (<see cref="External"/>), älteste zuerst — ohne Fotos.</summary>
     public async Task<List<ExternalPendingScanDto>> PendingForExternalAsync(CancellationToken ct = default) =>
         await _db.ScoresheetScans.AsNoTracking()
-            .Where(s => s.Status == ScoresheetScanStatus.Pending && s.Photo.Length > 0)
+            .Where(s => s.Status == ScoresheetScanStatus.Pending && s.FileName != DiscardedMark)   // „Photo.Length" übersetzt MariaDB nicht
             .OrderBy(s => s.CreatedAt)
             .Select(s => new ExternalPendingScanDto
             {
@@ -347,8 +347,8 @@ public class ScoresheetScanService
     {
         if (view > 0) return await ViewPhotoAsync(scanId, page, view, ct);
         if (page <= 1)
-            return await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scanId && s.Photo.Length > 0)
-                .Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync(ct) is { } p ? (p.Photo, p.ContentType) : null;
+            return await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scanId)
+                .Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync(ct) is { Photo.Length: > 0 } p ? (p.Photo, p.ContentType) : null;
         return await _db.ScoresheetScanPages.AsNoTracking().Where(x => x.ScoresheetScanId == scanId && x.Page == page)
             .Select(x => new { x.Photo, x.ContentType }).FirstOrDefaultAsync(ct) is { } q ? (q.Photo, q.ContentType) : null;
     }
@@ -1500,7 +1500,9 @@ public class ScoresheetScanService
     {
         if (targetId == otherId) return "same";
         var heads = await LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor)
-            .Where(s => (s.Id == targetId || s.Id == otherId) && s.FileName != DiscardedMark && s.Photo.Length > 0)
+            // Kein „Photo.Length > 0" hier: das übersetzt MariaDB nicht (Prod 0.736.0, 500) — eine
+            // geschlossene Einlesung erkennt man am Dateinamen „∅".
+            .Where(s => (s.Id == targetId || s.Id == otherId) && s.FileName != DiscardedMark)
             .Select(s => new { s.Id, s.Status, s.PageCount }).ToListAsync(ct);
         var target = heads.FirstOrDefault(h => h.Id == targetId);
         var other = heads.FirstOrDefault(h => h.Id == otherId);

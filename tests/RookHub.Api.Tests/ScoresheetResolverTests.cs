@@ -257,6 +257,10 @@ public class ScoresheetResolverTests
         Assert.True(ScoresheetNotation.IsConfusable("Rf8", "Rf6"));
         Assert.False(ScoresheetNotation.IsConfusable("Rf8", "Ra8"));
         Assert.True(ScoresheetNotation.IsConfusable("Qf5", "Qg5"));
+        // 0.737.1: aus den Korrekturen der LeagueHub-Formulare (Prod, 06.–10.10.) — e6/g6, Le7/Lg7, Tc4/Ta4, Dd1/De1,
+        // Da3/Dg3, Kh1/Kf1 waren dort verlesen
+        foreach (var (a, b) in new[] { ("e6", "g6"), ("Rc4", "Ra4"), ("Qd1", "Qe1"), ("Qa3", "Qg3"), ("Kh1", "Kf1") })
+            Assert.True(ScoresheetNotation.IsConfusable(a, b), $"{a}/{b}");
         Assert.Equal(1.0, ScoresheetNotation.WeightedDistance("ba4", "bc4"));
         Assert.Equal(1.2, ScoresheetNotation.WeightedDistance("ba4", "a4"));
     }

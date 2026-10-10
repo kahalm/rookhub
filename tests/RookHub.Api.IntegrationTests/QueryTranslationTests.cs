@@ -219,6 +219,48 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         }
     }
 
+    /// <summary>
+    /// Mehrere Fotos derselben Seite + Zusammenführen (0.736.0). Auf Prod lief das Zusammenführen sofort in einen 500
+    /// („Photo.Any() could not be translated") — InMemory hatte die Abfrage im Speicher ausgewertet. Hier laufen alle neuen
+    /// Wege gegen MariaDB: zusammenführen, Fotozahlen je Seite, die wartende Liste, Fotos abrufen, verwerfen.
+    /// </summary>
+    [MySqlFact]
+    public async Task Partieformular_WeitereFotos_UndZusammenfuehren()
+    {
+        var userId = await SeedUserAsync("merge");
+        var club = await ClubAsync();
+        ScoresheetScan Scan(ScoresheetScanStatus status, byte b) => new()
+        {
+            UserId = userId, Purpose = ScoresheetScan.PurposeLeague, ClubId = club.Id, Photo = new byte[] { b, b, b },
+            ContentType = "image/jpeg", FileName = $"{b}.jpg", Status = status, CreatedAt = DateTime.UtcNow,
+        };
+        var target = Scan(ScoresheetScanStatus.Done, 1);
+        var other = Scan(ScoresheetScanStatus.Done, 2);
+        other.Views.Add(new ScoresheetScanView { Page = 1, View = 1, Photo = new byte[] { 3 }, ContentType = "image/jpeg" });
+        Db.ScoresheetScans.AddRange(target, other);
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var scans = Get<ScoresheetScanService>();
+        var me = ScoresheetScanService.ScanActor.User(userId) with { ClubId = club.Id };
+        Assert.Null(await scans.MergeLeagueScansAsync(me, target.Id, other.Id));
+        Db.ChangeTracker.Clear();
+
+        var state = await scans.LeagueScanStateAsync(me, target.Id);
+        Assert.Equal("pending", state!.Scan.Status);
+        Assert.Equal(new[] { 2 }, state.ViewCounts);
+        Assert.Equal(new byte[] { 2, 2, 2 }, (await scans.LeagueScanPhotoAsync(me, target.Id, 1, 1))!.Value.Data);
+        Assert.Equal(new byte[] { 3 }, (await scans.LeagueScanPhotoAsync(me, target.Id, 1, 2))!.Value.Data);
+        Assert.Equal(2, Assert.Single(await scans.PendingForExternalAsync()).ViewCount);
+        Assert.NotNull(await scans.PhotoForExternalAsync(target.Id, 1, default, 2));
+        Assert.Null(await scans.LeagueScanStateAsync(me, other.Id));                     // die andere ist zu
+        Assert.False(await Db.ScoresheetScanViews.AnyAsync(v => v.ScoresheetScanId == other.Id));
+
+        Assert.True(await scans.CloseLeagueScanAsync(me, target.Id));
+        Db.ChangeTracker.Clear();
+        Assert.False(await Db.ScoresheetScanViews.AnyAsync());
+    }
+
     [MySqlFact]
     public async Task Partieformular_ListeTraegtScanId_UndLoeschenLaedtDasFotoNicht()
     {

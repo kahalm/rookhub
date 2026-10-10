@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.737.1", date: "2026-10-10", changes: [
+    { en: "Fix: merging two score sheet readings failed with a server error (the database could not translate the photo check). Score sheet reading: more easily confused letters (e/g, a/c, d/e, f/h, a/g) are now offered as alternative readings — they were the most frequent misreadings in recent corrections.",
+      de: "Fix: Zusammenführen zweier Formular-Einlesungen scheiterte mit einem Serverfehler (die Datenbank konnte die Foto-Prüfung nicht übersetzen). Formular-Erkennung: weitere leicht verwechselbare Buchstaben (e/g, a/c, d/e, f/h, a/g) werden jetzt als Lesarten angeboten — sie waren in den letzten Korrekturen die häufigsten Verleser." },
+  ] },
   { version: "0.737.0", date: "2026-10-10", changes: [
     { en: "Game page and shared link show the players' rating in the header as “Name (Elo 1826)”, and the link preview title carries it too. A copy of a club game without ratings takes them from the league rosters (league of the assigned pairing first).",
       de: "Partieseite und Teilen-Link zeigen die Wertung der Spieler im Kopf als „Name (Elo 1826)“, auch der Titel der Linkvorschau trägt sie. Eine Kopie einer Vereinspartie ohne Wertungen holt sie aus den Liga-Meldelisten (zuerst die Liga der zugeordneten Paarung)." },
