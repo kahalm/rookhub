@@ -798,6 +798,30 @@ describe('SharedGameComponent', () => {
     expect(game.training()).toBeNull();                        // nur einmal von selbst
   });
 
+  // Wunsch 2026-10-10: die Partie öffentlich teilen, aber mit dem Text aus einem Roast (0.742.0).
+  it('?roast=42 shows the released roast above the game instead of the recap', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SharedGameComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: false, has: () => false } },
+        { provide: ActivatedRoute, useValue: { snapshot: {
+          paramMap: convertToParamMap({ token: 'tok' }), queryParamMap: convertToParamMap({ roast: '42' }), data: {} } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedGameComponent);
+    const http = TestBed.inject(HttpTestingController);
+    const el = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    http.expectOne(req => req.url === '/api/games/shared/tok').flush({ ...sharedGame('white'), recap: 'Kurz erzählt.' });
+    http.expectOne('/api/games/shared/tok/roasts/42')
+      .flush({ id: 42, shared: true, style: 'cheeky', language: 'en', text: 'Qh5 again? Bold.', createdAt: '' });
+    fixture.detectChanges();
+    expect(el.querySelector('.recap.roast')!.textContent).toContain('Qh5 again? Bold.');
+    expect(el.textContent).not.toContain('Kurz erzählt.');
+  });
+
   it('the owner copies a training link per side; his own shared link keeps ?train= when it redirects', async () => {
     const { fixture } = await setup(true, true);
     const page = fixture.componentInstance;

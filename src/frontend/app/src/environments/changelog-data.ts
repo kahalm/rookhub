@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.742.0", date: "2026-10-10", changes: [
+    { en: "Roast my game: “Share game with this roast” shares the game publicly with exactly this roast — the shared page shows it above the game and link previews use it as the description. Rolling again or “Stop sharing” withdraws it, so a link never shows a different text.", de: "Roast my game: „Partie mit diesem Roast teilen“ teilt die Partie öffentlich mit genau diesem Roast — die geteilte Seite zeigt ihn über der Partie, Link-Vorschauen nehmen ihn als Beschreibung. Neu würfeln oder „Nicht mehr teilen“ zieht ihn zurück, ein Link zeigt also nie einen anderen Text." },
+  ] },
   { version: "0.741.0", date: "2026-10-10", changes: [
     { en: "Game page: “Share mistakes training — White/Black” in the ⋮ menu copies a link that opens the mistakes training of that colour directly — for anyone, logged in or not.", de: "Partieseite: „Fehler-Training teilen — Weiß/Schwarz“ im ⋮-Menü kopiert einen Link, der direkt das Fehler-Nachspielen dieser Farbe öffnet — für jeden, angemeldet oder nicht." },
   ] },

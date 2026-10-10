@@ -2700,8 +2700,13 @@
         "failed": "AI nije isporučio — pokušaj ponovno.",
         "invalidStyle": "Nepoznat stil.",
         "copyFailed": "Kopiranje nije uspjelo.",
-        "notFound": "Partija nije pronađena."
-      }
+        "notFound": "Partija nije pronađena.",
+        "shareFailed": "Dijeljenje nije uspjelo."
+      },
+      "shareGame": "Podijeli partiju s ovim roastom",
+      "sharedNote": "Javno podijeljeno — poveznica prikazuje ovaj roast iznad partije. Novo bacanje prekida dijeljenje.",
+      "unshare": "Prestani dijeliti",
+      "linkCopied": "Poveznica kopirana — tko je otvori, vidi partiju s ovim roastom."
     },
     "deep": {
       "menu": "Duboka analiza",

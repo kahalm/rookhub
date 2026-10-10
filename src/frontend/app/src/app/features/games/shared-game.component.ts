@@ -22,7 +22,7 @@ import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
 import { GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
-import { GamesService, SharedGame } from './games.service';
+import { GameRoast, GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
 import { DeepStored } from './deep-analysis.util';
@@ -219,8 +219,14 @@ const TAP_MAX_MS = 500;
               }
             </div>
           </div>
-          <!-- „Kurz erzählt" (0.541.0): dieselbe Zeile wie in der Link-Vorschau, vom Sprachmodell aus der Analyse. -->
-          @if (recap(); as text) {
+          <!-- Mit Roast geteilt (0.742.0, /g/{token}?roast={id}): der freigegebene Roast statt „Kurz erzählt". -->
+          @if (sharedRoast(); as r) {
+            <p class="recap roast">
+              <span class="roast-icon" [matTooltip]="'games.roast.title' | translate" [attr.aria-label]="'games.roast.title' | translate">🔥</span>
+              <span>{{ r.text }}</span>
+            </p>
+          } @else if (recap(); as text) {
+            <!-- „Kurz erzählt" (0.541.0): dieselbe Zeile wie in der Link-Vorschau, vom Sprachmodell aus der Analyse. -->
             <p class="recap">
               <mat-icon [matTooltip]="'games.recap.hint' | translate" [attr.aria-label]="'games.recap.hint' | translate">auto_stories</mat-icon>
               <span>{{ text }}</span>
@@ -371,6 +377,8 @@ const TAP_MAX_MS = 500;
       background: color-mix(in srgb, var(--rh-accent) 7%, transparent);
       font-size: 0.92rem; line-height: 1.5; color: color-mix(in srgb, currentColor 85%, transparent);
     }
+    .recap.roast { background: color-mix(in srgb, #e64a19 9%, transparent); white-space: pre-wrap; }
+    .roast-icon { flex: 0 0 auto; font-size: 18px; line-height: 1.3; }
     .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
     .original, .analyze { white-space: nowrap; }
     .body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
@@ -553,6 +561,14 @@ export class SharedGameComponent implements OnInit, DoCheck {
    * fragt sie ein paar Mal nach.
    */
   readonly recap = signal<string | null>(null);
+  /** Der freigegebene Roast hinter `?roast=` (0.742.0) — null ohne Parameter oder wenn nicht (mehr) freigegeben. */
+  readonly sharedRoast = signal<GameRoast | null>(null);
+  private roastId: number | null = null;
+
+  private loadSharedRoast(token: string | null | undefined): void {
+    if (!token || this.roastId == null) return;
+    this.games.sharedRoast(token, this.roastId).subscribe({ next: r => this.sharedRoast.set(r), error: () => undefined });
+  }
   private recapTries = 0;
   private recapTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly loadRecap = effect(() => {
@@ -844,6 +860,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   ngOnInit(): void {
     const train = this.route.snapshot.queryParamMap?.get('train');
     if (train === 'white' || train === 'black') { this.trainSide.set(train); this.autoTrain = true; }
+    const roast = Number(this.route.snapshot.queryParamMap?.get('roast'));
+    this.roastId = Number.isInteger(roast) && roast > 0 ? roast : null;
     this.own = this.route.snapshot.data?.['mode'] === 'own';
     this.club = this.route.snapshot.data?.['mode'] === 'club';
     if (this.club) {
@@ -862,7 +880,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       this.similarUrl = this.games.similarUrl(id);
       this.analyzeUrl = this.games.analyzeUrl(id);
       this.games.get(id).subscribe({
-        next: g => { this.shareToken = g.shareToken; this.scanId = g.scanId ?? null; this.show(g); },
+        next: g => { this.shareToken = g.shareToken; this.scanId = g.scanId ?? null; this.show(g); this.loadSharedRoast(g.shareToken); },
         error: () => { this.notFound = true; this.loading = false; },
       });
       return;
@@ -876,11 +894,16 @@ export class SharedGameComponent implements OnInit, DoCheck {
         // Der eigene Teilen-Link: dieselbe Ansicht wie über die Partienliste (Zurück-Pfeil, Teilen-Knopf, gemerktes
         // Fehler-Training …) — gewünscht 2026-09-24. `replaceUrl`, damit „Zurück" im Browser nicht wieder hierher führt.
         if (g.ownGameId && this.auth.isLoggedIn) {
-          const side = this.trainSide();   // der geteilte Trainings-Link gilt auch für den Besitzer selbst
-          this.router.navigate(['/games', g.ownGameId], side ? { replaceUrl: true, queryParams: { train: side } } : { replaceUrl: true });
+          // Trainings- bzw. Roast-Link gilt auch für den Besitzer selbst
+          const queryParams: Record<string, string | number> = {};
+          const side = this.trainSide();
+          if (side) queryParams['train'] = side;
+          if (this.roastId != null) queryParams['roast'] = this.roastId;
+          this.router.navigate(['/games', g.ownGameId], Object.keys(queryParams).length ? { replaceUrl: true, queryParams } : { replaceUrl: true });
           return;
         }
         this.show(g);
+        this.loadSharedRoast(token);
       },
       error: () => { this.notFound = true; this.loading = false; },
     });
@@ -907,7 +930,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
   roast(): void {
     if (!this.gameId) return;
     this.dialog.open(GameRoastDialogComponent, {
-      data: { gameId: this.gameId, shareUrl: this.shareToken ? this.games.shareUrl(this.shareToken) : null } satisfies GameRoastData,
+      data: { gameId: this.gameId, shareUrl: this.shareToken ? this.games.shareUrl(this.shareToken) : null, shareToken: this.shareToken ?? null } satisfies GameRoastData,
       maxWidth: '96vw',
     });
   }

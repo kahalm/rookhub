@@ -27,5 +27,10 @@ public class GameRoast
     /// Tagesdeckel des Würfelns; „Neu würfeln" macht daraus einen gewürfelten.</summary>
     public bool Automatic { get; set; }
 
+    /// <summary>Vom Besitzer zum öffentlichen Teilen freigegeben (0.742.0): der Teilen-Link der Partie mit <c>?roast={Id}</c>
+    /// zeigt dann diesen Text (Seite und Link-Vorschau). Neu würfeln nimmt die Freigabe zurück — ein geteilter Link soll nie
+    /// still einen anderen Text zeigen.</summary>
+    public DateTime? SharedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

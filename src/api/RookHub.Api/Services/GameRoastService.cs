@@ -64,7 +64,7 @@ public sealed class GameRoastService
                 && await _db.GameAnalyses.AnyAsync(a => a.Id == aid && a.Status == GameAnalysisStatus.Done, ct),
             Items = (await _db.GameRoasts.AsNoTracking().Where(r => r.SavedGameId == gameId && r.Language == language)
                 .OrderBy(r => r.Style)
-                .Select(r => new GameRoastDto { Style = r.Style, Language = r.Language, Text = r.Text, CreatedAt = r.CreatedAt })
+                .Select(r => new GameRoastDto { Id = r.Id, Shared = r.SharedAt != null, Style = r.Style, Language = r.Language, Text = r.Text, CreatedAt = r.CreatedAt })
                 .ToListAsync(ct))
                 .Select(r => { r.Text = PieceLetters.Convert(r.Text, "en", r.Language); return r; }).ToList(),
         };
@@ -116,13 +116,14 @@ public sealed class GameRoastService
             _db.GameRoasts.Add(row);
         }
         row.Text = text;
+        row.SharedAt = null;   // neuer Text = keine Freigabe mehr (siehe GameRoast.SharedAt)
         row.Automatic = automatic;
         row.Model = _llm.TranslationModel;
         row.CreatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return new(new GameRoastDto
         {
-            Style = style, Language = language, Text = PieceLetters.Convert(text, "en", language), CreatedAt = row.CreatedAt,
+            Id = row.Id, Style = style, Language = language, Text = PieceLetters.Convert(text, "en", language), CreatedAt = row.CreatedAt,
         }, null);
     }
 
@@ -184,4 +185,34 @@ public sealed class GameRoastService
         ("1/2-1/2", _) => "drew",
         _ => "the result is open",
     };
+
+    // ── Öffentlich teilen (0.742.0, Wunsch 2026-10-10: „die Partie öffentlich teilen, aber mit dem Text aus einem Roast —
+    //    am besten direkt auf der Roast-Seite") ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Den Roast (Stil + Sprache) der eigenen Partie freigeben bzw. die Freigabe zurücknehmen; die Kennung für den
+    /// Link, <c>null</c> bei fremder Partie oder unbekanntem Roast.</summary>
+    public async Task<int?> SetSharedAsync(int userId, int gameId, string? style, string? lang, bool shared, CancellationToken ct = default)
+    {
+        var language = GameMoveExplanationService.NormalizeLanguage(lang);
+        var row = await _db.GameRoasts
+            .Where(r => r.SavedGameId == gameId && r.Style == style && r.Language == language
+                && _db.SavedGames.Any(g => g.Id == gameId && g.UserId == userId))
+            .FirstOrDefaultAsync(ct);
+        if (row == null) return null;
+        row.SharedAt = shared ? row.SharedAt ?? DateTime.UtcNow : null;
+        await _db.SaveChangesAsync(ct);
+        return row.Id;
+    }
+
+    /// <summary>Ein freigegebener Roast hinter dem Teilen-Link — nur, wenn er zu GENAU dieser Partie gehört und freigegeben ist.</summary>
+    public async Task<GameRoastDto?> GetSharedAsync(string? token, int roastId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        var r = await _db.GameRoasts.AsNoTracking()
+            .Where(x => x.Id == roastId && x.SharedAt != null && _db.SavedGames.Any(g => g.Id == x.SavedGameId && g.ShareToken == token))
+            .Select(x => new GameRoastDto { Id = x.Id, Shared = true, Style = x.Style, Language = x.Language, Text = x.Text, CreatedAt = x.CreatedAt })
+            .FirstOrDefaultAsync(ct);
+        if (r != null) r.Text = PieceLetters.Convert(r.Text, "en", r.Language);
+        return r;
+    }
 }

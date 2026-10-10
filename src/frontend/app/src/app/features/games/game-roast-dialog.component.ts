@@ -12,12 +12,18 @@ export interface GameRoastData {
   gameId: number;
   /** Öffentlicher Link der Partie — geht beim Kopieren und Teilen mit. */
   shareUrl: string | null;
+  /** Teilen-Kennung der Partie — für „Partie mit diesem Roast teilen" (0.742.0). */
+  shareToken?: string | null;
 }
 
 /**
  * „Roast my game" (0.535.0): ein frecher Kommentar zur eigenen Partie, geschrieben vom Sprachmodell auf eigener
  * Hardware (Server `GameRoastService`). Drei Stile — freundlich, frech, russisch (der gnadenlose sowjetische Trainer).
  * Nichts wird automatisch veröffentlicht: Kopieren bzw. Teilen macht der Nutzer selbst.
+ *
+ * „Partie mit diesem Roast teilen" (0.742.0, Wunsch 2026-10-10): gibt GENAU diesen Text frei und kopiert/teilt den Link
+ * `/g/{token}?roast={id}` — die geteilte Seite zeigt den Roast über der Partie, die Link-Vorschau nimmt ihn als Beschreibung.
+ * Neu würfeln nimmt die Freigabe zurück (der Link zeigt nie still einen anderen Text); „Nicht mehr teilen" ebenso.
  */
 @Component({
   selector: 'app-game-roast-dialog',
@@ -46,6 +52,15 @@ export interface GameRoastData {
               <span>{{ 'games.roast.busy' | translate }}</span></div>
           } @else if (current(); as r) {
             <blockquote class="text">{{ r.text }}</blockquote>
+            @if (r.shared && data.shareToken) {
+              <p class="shared">
+                <mat-icon>public</mat-icon>
+                <span>{{ 'games.roast.sharedNote' | translate }}</span>
+                <button mat-button type="button" class="unshare" (click)="unshareGame(r)" [disabled]="busy()">
+                  {{ 'games.roast.unshare' | translate }}</button>
+              </p>
+            }
+            @if (linkCopied()) { <p class="ok">{{ 'games.roast.linkCopied' | translate }}</p> }
           }
           @if (error(); as e) { <p class="error">{{ ('games.roast.error.' + e) | translate }}</p> }
         }
@@ -55,6 +70,10 @@ export interface GameRoastData {
     </div>
     <div mat-dialog-actions align="end">
       @if (current(); as r) {
+        @if (data.shareToken) {
+          <button mat-button class="share-game" (click)="shareGame(r)" [disabled]="busy()">
+            <mat-icon>public</mat-icon> {{ 'games.roast.shareGame' | translate }}</button>
+        }
         <button mat-button (click)="copy(r)" [disabled]="busy()"><mat-icon>content_copy</mat-icon> {{ 'common.copy' | translate }}</button>
         @if (canShare) {
           <button mat-button (click)="share(r)" [disabled]="busy()"><mat-icon>share</mat-icon> {{ 'games.roast.share' | translate }}</button>
@@ -77,10 +96,13 @@ export interface GameRoastData {
     .text { margin: 0; padding: 10px 14px; border-left: 3px solid #e64a19; white-space: pre-wrap; line-height: 1.45; }
     .note { margin: 4px 0; }
     .error { color: #c62828; }
+    .shared { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0 0; font-size: .85rem; opacity: .85; }
+    .shared mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .ok { color: #2e7d32; margin: 6px 0 0; font-size: .85rem; }
   `],
 })
 export class GameRoastDialogComponent implements OnInit {
-  private data = inject<GameRoastData>(MAT_DIALOG_DATA);
+  readonly data = inject<GameRoastData>(MAT_DIALOG_DATA);
   private games = inject(GamesService);
   private translate = inject(TranslateService);
   private destroyRef = inject(DestroyRef);
@@ -92,6 +114,7 @@ export class GameRoastDialogComponent implements OnInit {
   readonly style = signal<RoastStyle>('friendly');
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  readonly linkCopied = signal(false);
   /** Sperrzeit der Spark (0.546.0): bis wann gewürfelt werden kann — leer = frei. */
   readonly canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
@@ -113,12 +136,14 @@ export class GameRoastDialogComponent implements OnInit {
   pick(style: RoastStyle): void {
     this.style.set(style);
     this.error.set(null);
+    this.linkCopied.set(false);
   }
 
   roast(): void {
     const style = this.style();
     this.busy.set(true);
     this.error.set(null);
+    this.linkCopied.set(false);
     this.games.roast(this.data.gameId, style, this.lang()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
         this.state.update(s => s ? { ...s, items: [...s.items.filter(i => i.style !== r.style), r] } : s);
@@ -142,5 +167,44 @@ export class GameRoastDialogComponent implements OnInit {
 
   share(r: GameRoast): void {
     void navigator.share({ text: r.text, url: this.data.shareUrl ?? undefined }).catch(() => undefined);
+  }
+
+  private setShared(style: RoastStyle, shared: boolean): void {
+    this.state.update(s => s ? { ...s, items: s.items.map(i => i.style === style ? { ...i, shared } : i) } : s);
+  }
+
+  /** Den Roast freigeben und den Link `/g/{token}?roast={id}` teilen (Handy) bzw. kopieren. */
+  shareGame(r: GameRoast): void {
+    const token = this.data.shareToken;
+    if (!token) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.linkCopied.set(false);
+    this.games.shareRoast(this.data.gameId, r.style, this.lang()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ roastId }) => {
+        this.busy.set(false);
+        this.setShared(r.style, true);
+        const url = this.games.roastShareUrl(token, roastId);
+        if (this.canShare) {
+          void navigator.share({ url }).catch(() => undefined);
+        } else {
+          void navigator.clipboard?.writeText(url).then(
+            () => this.linkCopied.set(true), () => this.error.set('copyFailed'));
+        }
+      },
+      error: () => {
+        this.busy.set(false);
+        this.error.set('shareFailed');
+      },
+    });
+  }
+
+  unshareGame(r: GameRoast): void {
+    this.busy.set(true);
+    this.linkCopied.set(false);
+    this.games.unshareRoast(this.data.gameId, r.style, this.lang()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => { this.busy.set(false); this.setShared(r.style, false); },
+      error: () => { this.busy.set(false); this.error.set('shareFailed'); },
+    });
   }
 }

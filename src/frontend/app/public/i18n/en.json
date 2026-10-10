@@ -2700,8 +2700,13 @@
         "failed": "The AI did not deliver — try again.",
         "invalidStyle": "Unknown style.",
         "copyFailed": "Copying failed.",
-        "notFound": "Game not found."
-      }
+        "notFound": "Game not found.",
+        "shareFailed": "Sharing failed."
+      },
+      "shareGame": "Share game with this roast",
+      "sharedNote": "Shared publicly — the link shows this roast above the game. Rolling again stops sharing.",
+      "unshare": "Stop sharing",
+      "linkCopied": "Link copied — anyone who opens it sees the game with this roast."
     },
     "deep": {
       "menu": "Deep analysis",

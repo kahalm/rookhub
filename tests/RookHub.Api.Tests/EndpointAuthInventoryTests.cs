@@ -122,6 +122,7 @@ public class EndpointAuthInventoryTests
         "GET /api/puzzles/{id:int}",                                 // PuzzleController.GetById
         "GET /api/repertoires/shared-line/{token}",                  // RepertoireController.GetSharedLine
         "GET /api/tablebase",                                        // TablebaseController.Get (Endspiel-Datenbank, Analysebrett ist offen)
+        "GET /api/games/shared/{token}/roasts/{roastId:int}",        // GameRoastController.GetShared (freigegebener Roast am Teilen-Link, 0.742.0)
         "GET /api/tournaments/{id}/pairings",                        // TournamentProxyController.GetPairings
         "GET /api/tournaments/{id}/players/{snr:int}/results",       // TournamentProxyController.GetPlayerResults
         "GET /api/tournaments/{id}/players",                         // TournamentProxyController.GetPlayers

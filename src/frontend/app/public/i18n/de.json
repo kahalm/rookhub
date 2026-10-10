@@ -2700,8 +2700,13 @@
         "failed": "Die KI hat nicht geliefert — nochmal versuchen.",
         "invalidStyle": "Unbekannter Stil.",
         "copyFailed": "Kopieren hat nicht geklappt.",
-        "notFound": "Partie nicht gefunden."
-      }
+        "notFound": "Partie nicht gefunden.",
+        "shareFailed": "Teilen hat nicht geklappt."
+      },
+      "shareGame": "Partie mit diesem Roast teilen",
+      "sharedNote": "Öffentlich geteilt — der Link zeigt diesen Roast über der Partie. Neu würfeln beendet das Teilen.",
+      "unshare": "Nicht mehr teilen",
+      "linkCopied": "Link kopiert — wer ihn öffnet, sieht die Partie mit diesem Roast."
     },
     "deep": {
       "menu": "Tiefe Analyse",

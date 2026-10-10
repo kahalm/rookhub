@@ -7,13 +7,13 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { GameRoastDialogComponent } from './game-roast-dialog.component';
 
 describe('GameRoastDialogComponent', () => {
-  function setup() {
+  function setup(data: object = { gameId: 7, shareUrl: 'https://x/g/abc' }) {
     TestBed.configureTestingModule({
       imports: [GameRoastDialogComponent],
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: MAT_DIALOG_DATA, useValue: { gameId: 7, shareUrl: 'https://x/g/abc' } },
+        { provide: MAT_DIALOG_DATA, useValue: data },
         { provide: MatDialogRef, useValue: { close: () => undefined } },
       ],
     });
@@ -58,5 +58,38 @@ describe('GameRoastDialogComponent', () => {
     http.expectOne(r => r.method === 'POST').flush({ reason: 'dailyLimit' }, { status: 429, statusText: 'Too Many' });
     fixture.detectChanges();
     expect(el.querySelector('.error')!.textContent).toContain('games.roast.error.dailyLimit');
+  });
+
+  it('Partie mit diesem Roast teilen: gibt frei, kopiert /g/{token}?roast={id}, „Nicht mehr teilen" nimmt zurück', async () => {
+    const { fixture, http, el } = setup({ gameId: 7, shareUrl: 'https://x/g/abc', shareToken: 'abc' });
+    http.expectOne(r => r.url === '/api/games/7/roasts' && r.method === 'GET')
+      .flush({ available: true, hasAnalysis: true, items: [{ id: 42, shared: false, style: 'friendly', language: 'en', text: 'Nice try.', createdAt: '' }] });
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as { canShare: boolean }).canShare = false;
+    const write = spyOn(navigator.clipboard, 'writeText').and.returnValue(Promise.resolve());
+    expect(el.querySelector('.shared')).toBeNull();
+
+    (el.querySelector('button.share-game') as HTMLButtonElement).click();
+    const req = http.expectOne(r => r.url === '/api/games/7/roasts/share' && r.method === 'POST');
+    expect(req.request.params.get('style')).toBe('friendly');
+    req.flush({ roastId: 42 });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(write).toHaveBeenCalledWith(`${window.location.origin}/g/abc?roast=42`);
+    expect(el.querySelector('.shared')!.textContent).toContain('games.roast.sharedNote');
+    expect(el.querySelector('.ok')!.textContent).toContain('games.roast.linkCopied');
+
+    (el.querySelector('button.unshare') as HTMLButtonElement).click();
+    http.expectOne(r => r.url === '/api/games/7/roasts/share' && r.method === 'DELETE').flush(null);
+    fixture.detectChanges();
+    expect(el.querySelector('.shared')).toBeNull();
+  });
+
+  it('ohne Teilen-Kennung kein „Partie teilen"-Knopf', () => {
+    const { fixture, http, el } = setup();
+    http.expectOne(r => r.method === 'GET')
+      .flush({ available: true, hasAnalysis: true, items: [{ id: 1, style: 'friendly', language: 'en', text: 'x', createdAt: '' }] });
+    fixture.detectChanges();
+    expect(el.querySelector('button.share-game')).toBeNull();
   });
 });

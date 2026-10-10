@@ -3045,8 +3045,13 @@
         "failed": "Az AI nem teljesített — próbáld újra.",
         "invalidStyle": "Ismeretlen stílus.",
         "copyFailed": "A másolás nem sikerült.",
-        "notFound": "A játszma nem található."
-      }
+        "notFound": "A játszma nem található.",
+        "shareFailed": "A megosztás nem sikerült."
+      },
+      "shareGame": "Játszma megosztása ezzel a roasttal",
+      "sharedNote": "Nyilvánosan megosztva — a link a játszma fölött mutatja ezt a roastot. Újrasorsolás megszünteti a megosztást.",
+      "unshare": "Megosztás leállítása",
+      "linkCopied": "Link másolva — aki megnyitja, a játszmát ezzel a roasttal látja."
     },
     "deep": {
       "menu": "Mély elemzés",

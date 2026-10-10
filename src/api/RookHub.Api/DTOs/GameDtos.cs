@@ -372,6 +372,10 @@ public class GameRoastsDto
 
 public class GameRoastDto
 {
+    /// <summary>Kennung — für den Teilen-Link <c>/g/{token}?roast={Id}</c> (0.742.0).</summary>
+    public int Id { get; set; }
+    /// <summary>Zum öffentlichen Teilen freigegeben.</summary>
+    public bool Shared { get; set; }
     public string Style { get; set; } = string.Empty;
     public string Language { get; set; } = "en";
     public string Text { get; set; } = string.Empty;

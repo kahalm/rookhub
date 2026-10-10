@@ -199,4 +199,42 @@ public class GameRoastTests : IDisposable
         var failed = Assert.IsType<ObjectResult>((await c.Roast(gameId, "friendly", "de", default)).Result);
         Assert.Equal(502, failed.StatusCode);
     }
+
+    [Fact]
+    public async Task Share_NurEigeneFreigegebene_amRichtigenLink_undNeuWuerfelnNimmtFreigabeZurueck()
+    {
+        var (userId, gameId) = await SeedAsync();
+        _llm.Answers.Enqueue("{\"roast\":\"Nf6? Qxf7#. Erster Text.\"}");
+        _llm.Answers.Enqueue("{\"roast\":\"Zweiter Text.\"}");
+        var service = Service();
+        var roast = (await service.RoastAsync(userId, gameId, "friendly", "de")).Roast!;
+        var token = (await _db.SavedGames.FindAsync(gameId))!.ShareToken;
+
+        Assert.Null(await service.GetSharedAsync(token, roast.Id));                       // noch nicht freigegeben
+        Assert.Null(await service.SetSharedAsync(userId + 999, gameId, "friendly", "de", true)); // fremde Partie
+        Assert.Null(await service.SetSharedAsync(userId, gameId, "russian", "de", true));  // diesen Stil gibt es nicht
+        Assert.Equal(roast.Id, await service.SetSharedAsync(userId, gameId, "friendly", "de", true));
+
+        var shared = await service.GetSharedAsync(token, roast.Id);
+        Assert.NotNull(shared);
+        Assert.True(shared!.Shared);
+        Assert.Contains("Erster Text", shared.Text);
+        Assert.Contains("Sf6", shared.Text);                                               // deutsche Figurenbuchstaben
+        Assert.Null(await service.GetSharedAsync("falscher-token", roast.Id));             // nur an DIESER Partie
+        Assert.True((await service.GetAsync(userId, gameId, "de"))!.Items.Single().Shared);
+
+        await service.RoastAsync(userId, gameId, "friendly", "de");                        // neu würfeln
+        Assert.Null(await service.GetSharedAsync(token, roast.Id));
+
+        await service.SetSharedAsync(userId, gameId, "friendly", "de", true);
+        await service.SetSharedAsync(userId, gameId, "friendly", "de", false);
+        Assert.Null(await service.GetSharedAsync(token, roast.Id));
+    }
+
+    [Fact]
+    public void Og_QueryParam_liestDenRoast()
+    {
+        Assert.Equal("17", RookHub.Api.Services.Og.OgMetaService.QueryParam("/g/abc?train=white&roast=17", "roast"));
+        Assert.Null(RookHub.Api.Services.Og.OgMetaService.QueryParam("/g/abc", "roast"));
+    }
 }

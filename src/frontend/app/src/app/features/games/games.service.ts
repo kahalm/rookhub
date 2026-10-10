@@ -161,6 +161,10 @@ export interface GameExplanations {
 export type RoastStyle = 'friendly' | 'cheeky' | 'russian';
 
 export interface GameRoast {
+  /** Kennung — für den Teilen-Link `/g/{token}?roast={id}` (0.742.0). */
+  id: number;
+  /** Zum öffentlichen Teilen freigegeben; neu würfeln nimmt die Freigabe zurück. */
+  shared?: boolean;
   style: RoastStyle;
   language: string;
   text: string;
@@ -291,6 +295,26 @@ export class GamesService {
   /** Würfeln — ersetzt den vorigen Text desselben Stils. Dauert ein paar Sekunden (Sprachmodell auf der Spark). */
   roast(id: number, style: RoastStyle, lang: string): Observable<GameRoast> {
     return this.http.post<GameRoast>(`/api/games/${id}/roasts`, {}, { params: { style, lang } });
+  }
+
+  /** Partie mit diesem Roast öffentlich teilen (0.742.0): gibt den Roast frei → Kennung für `?roast=`. */
+  shareRoast(id: number, style: RoastStyle, lang: string): Observable<{ roastId: number }> {
+    return this.http.post<{ roastId: number }>(`/api/games/${id}/roasts/share`, {}, { params: { style, lang } });
+  }
+
+  /** Freigabe zurücknehmen — der Link zeigt danach die Partie ohne Roast. */
+  unshareRoast(id: number, style: RoastStyle, lang: string): Observable<void> {
+    return this.http.delete<void>(`/api/games/${id}/roasts/share`, { params: { style, lang } });
+  }
+
+  /** Der freigegebene Roast hinter dem Teilen-Link (ohne Anmeldung; 404, wenn nicht mehr freigegeben). */
+  sharedRoast(token: string, roastId: number): Observable<GameRoast> {
+    return this.http.get<GameRoast>(`/api/games/shared/${encodeURIComponent(token)}/roasts/${roastId}`);
+  }
+
+  /** Teilen-Link der Partie mit Roast. */
+  roastShareUrl(shareToken: string, roastId: number): string {
+    return `${this.shareUrl(shareToken)}?roast=${roastId}`;
   }
 
   /** „Kurz erzählt" (0.541.0) der eigenen Partie. Fehlt sie bei fertiger Analyse, stößt schon der Abruf sie an. */

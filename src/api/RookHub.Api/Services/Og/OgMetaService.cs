@@ -86,6 +86,15 @@ public class OgMetaService
         }
     }
 
+    /// <summary>Ein Wert aus dem Query-Teil des Pfads (oder null).</summary>
+    internal static string? QueryParam(string? path, string name)
+    {
+        var q = path?.IndexOf('?') ?? -1;
+        if (q < 0) return null;
+        var hit = path![(q + 1)..].Split('&').Select(p => p.Split('=', 2)).FirstOrDefault(p => p.Length == 2 && p[0] == name);
+        return hit == null ? null : Uri.UnescapeDataString(hit[1]);
+    }
+
     public async Task<OgPage?> ResolvePageAsync(string? path, string baseUrl, CancellationToken ct = default)
     {
         var parsed = ParsePath(path);
@@ -112,6 +121,17 @@ public class OgMetaService
                     descParts.Add("Partie auf RookHub nachspielen");
                     // „Kurz erzählt" (0.541.0) statt der dürren Kopfzeile, sobald es die Nacherzählung gibt.
                     var description = string.IsNullOrWhiteSpace(g.Recap) ? string.Join(" · ", descParts) : g.Recap!;
+                    // Mit Roast geteilt (0.742.0, /g/{token}?roast={id}): der freigegebene Roast-Text ist die Beschreibung.
+                    if (int.TryParse(QueryParam(path, "roast"), out var roastId))
+                    {
+                        var roast = await _db.GameRoasts.AsNoTracking()
+                            .Where(r => r.Id == roastId && r.SharedAt != null
+                                && _db.SavedGames.Any(s => s.Id == r.SavedGameId && s.ShareToken == id))
+                            .Select(r => new { r.Text, r.Language })
+                            .FirstOrDefaultAsync(ct);
+                        if (roast != null && !string.IsNullOrWhiteSpace(roast.Text))
+                            description = PieceLetters.Convert(roast.Text, "en", roast.Language);
+                    }
                     // Mit der Analyse bekommt das Bild die Kurve — unter NEUER Adresse: das Bild ist „immutable" gecacht,
                     // und Discord & Co. merken sich Bilder ohnehin nach der Adresse.
                     var version = CurveVersion(await _games.GetSharedEvalsAsync(id, null, ct));

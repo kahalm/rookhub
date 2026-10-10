@@ -489,7 +489,7 @@ export class GamesListComponent implements OnInit {
   /** „Roast my game" (0.535.0). */
   roast(g: SavedGame): void {
     this.dialog.open(GameRoastDialogComponent, {
-      data: { gameId: g.id, shareUrl: g.shareToken ? this.service.shareUrl(g.shareToken) : null } satisfies GameRoastData,
+      data: { gameId: g.id, shareUrl: g.shareToken ? this.service.shareUrl(g.shareToken) : null, shareToken: g.shareToken ?? null } satisfies GameRoastData,
       maxWidth: '96vw',
     });
   }
