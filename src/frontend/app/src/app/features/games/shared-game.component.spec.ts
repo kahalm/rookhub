@@ -481,11 +481,17 @@ describe('SharedGameComponent', () => {
     expect(el.querySelector('.header .original')).not.toBeNull();
 
     if (window.innerWidth > 768) {
-      // Brett = clamp(360, min(100vh − 260, 100vw − 440 bzw. ab 1280 px − 860), 760) — hängt am Fenster (0.714.0).
+      // Brett hängt am Fenster: schmal clamp(360, min(100vh − 260, 100vw − 440), 760); ab 1280 px ein festes Raster
+      // Brett | Zugliste (280) | Auswertung (clamp(420, 30vw, 520)), Brett = min(100vh − 250, 100vw − 280 − Auswertung − 140)
+      // (0.735.0). „Kurz erzählt" über dem Brett zieht 80 px Höhe ab.
       const wide = window.innerWidth >= 1280;
-      const expected = Math.min(760, Math.max(360, Math.min(window.innerHeight - 260, window.innerWidth - (wide ? 860 : 440))));
-      expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(expected));
-      expect(Math.round(moves.getBoundingClientRect().width)).toBe(300);
+      const recap = el.querySelector('.recap') ? 80 : 0;
+      const sideWidth = Math.min(520, Math.max(420, window.innerWidth * 0.3));
+      const expected = Math.min(760, Math.max(360, wide
+        ? Math.min(window.innerHeight - 250 - recap, window.innerWidth - 280 - sideWidth - 140)
+        : Math.min(window.innerHeight - 260 - recap, window.innerWidth - 440)));
+      expect(Math.abs(board.getBoundingClientRect().width - expected)).toBeLessThan(2);
+      expect(Math.round(moves.getBoundingClientRect().width)).toBe(280);
       // Zugliste NEBEN dem Brett (gleiche Oberkante), nicht darunter.
       expect(Math.abs(moves.getBoundingClientRect().top - board.getBoundingClientRect().top)).toBeLessThan(2);
       // Auswertung: ab 1280 px eine dritte Spalte rechts der Zugliste, schmaler darunter.

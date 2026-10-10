@@ -863,6 +863,17 @@ Brett"): ab 1280 px stehen Brett | Zugliste (300 px) | Auswertung (`.side-sectio
 Seite war auf `--page-max-width` (1240 px) begrenzt — jetzt `min(1760px, 96vw)`. Brett:
 `clamp(360px, min(100vh − 260px, 100vw − 860px), 760px)` (darunter `100vw − 440px`). 769–1279 px: Auswertung unter Brett
 und Zugliste. Handy unverändert (Auswertung per `order` vor der Zugliste).
+**Seit 0.735.0 ein festes Raster** (gemeldet 2026-10-10 mit zwei Screenshots: Karte sprang beim Erscheinen der Analyse in
+der Breite, rechts wurde der Engine-Umschalter, die Genauigkeitstabelle und „In welchen Repertoires?" abgeschnitten):
+ab 1280 px `grid-template-columns: var(--board-size) var(--moves-width) var(--side-width)` mit `--moves-width` 280 px und
+`--side-width` `clamp(420px, 30vw, 520px)`, Brett `min(100vh − 250 − Kurz-erzählt, 100vw − Zugliste − Auswertung − 140)`;
+die Spalten hängen nicht mehr am Inhalt (`fit-content` maß vorher die langen Linien mit). Die Seitenspalte scrollt nur
+senkrecht (`overflow-x: hidden`). „Kurz erzählt" über dem Brett zieht `--recap-room` (80 px) von der Brett-Höhe ab
+(`.viewer:has(> .recap)`). Rückblick, Repertoire und ähnliche Partien sind gleich gerahmte Karten (Rahmen von der Seite,
+leerer Rückblick per `:empty` weg); `app-position-repertoires` hat dafür `appearance="row"` (Zeile mit Pfeil statt
+umrandetem Knopf, Vorgabe `button` unverändert für Analysebrett & Co.). Die Zugliste (`move-list`, überall) hat eine
+abgesetzte Nummern-Spalte (40 px), Textschrift mit Tabellenziffern statt der nie geladenen Monospace, aktiver Zug in
+`--rh-accent`. Am Handy sitzt das ⋮ absolut oben rechts in der Kopfzeile.
 
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 

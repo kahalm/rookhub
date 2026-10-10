@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.735.0", date: "2026-10-10", changes: [
+    { en: "Game page redesigned: on wide screens board, move list and review now sit in a fixed three-column layout, so the card no longer jumps in width when the analysis appears and nothing on the right is cut off anymore. The move list reads like a score sheet (number column, clearer moves, highlighted current move in the accent colour), the header shows result, source and date as small chips, “In short” sits in a tinted box, and the review, “In which repertoires?” and “Similar master games” look like one set of cards. On phones the ⋮ menu moved next to the player names.",
+      de: "Partieseite neu gestaltet: am breiten Bildschirm stehen Brett, Zugliste und Auswertung in einem festen Dreispalten-Raster — die Karte springt nicht mehr in der Breite, wenn die Analyse erscheint, und rechts wird nichts mehr abgeschnitten. Die Zugliste liest sich wie ein Partieformular (Nummern-Spalte, klarere Züge, aktueller Zug in der Akzentfarbe), die Kopfzeile zeigt Ergebnis, Quelle und Datum als kleine Etiketten, „Kurz erzählt“ steht in einem getönten Kasten, und Auswertung, „In welchen Repertoires?“ und „Ähnliche Meisterpartien“ sind einheitliche Karten. Am Handy sitzt das ⋮-Menü neben den Spielernamen." },
+  ] },
   { version: "0.734.2", date: "2026-10-10", changes: [
     { en: "KidHub Star Hunt: the rook now manages 63 stars too. The “turn after every star” rule only applies when building puzzles with exactly one solution; puzzles with many stars and several ways no longer have to follow it — with it, the rook hardly ever found a way across a full board.",
       de: "KidHub-Sternenjagd: auch der Turm schafft jetzt 63 Sterne. Die Regel „nach jedem Stern abbiegen“ gilt nur beim Bauen von Aufgaben mit genau einer Lösung; Aufgaben mit vielen Sternen und mehreren Wegen müssen sie nicht mehr erfüllen — mit ihr fand der Turm auf vollem Brett kaum einen Weg." },

@@ -55,26 +55,30 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
     </div>
   `,
   styles: [`
+    /* Zugliste wie ein Partieformular: Nummern-Spalte links abgesetzt, Züge in der Textschrift mit Tabellenziffern
+       (die Monospace-Schrift war nirgends geladen und fiel auf die Systemschrift zurück), kompakte Zeilen. */
     .move-list {
-      font-family: 'Roboto Mono', monospace;
-      font-size: 13px;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
       overflow-y: auto;
       height: 100%;
-      padding: 4px 0;
+      padding: 0;
     }
     .move-row {
       display: grid;
-      grid-template-columns: 32px 1fr 1fr;
-      align-items: center;
-      padding: 1px 6px;
-      border-radius: 3px;
+      grid-template-columns: 40px 1fr 1fr;
+      align-items: stretch;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 6%, transparent);
     }
-    .move-row.row-active {
-      background: color-mix(in srgb, currentColor 6%, transparent);
+    .move-row.row-active .move-number {
+      color: inherit;
+      background: color-mix(in srgb, currentColor 10%, transparent);
     }
     .move-number {
+      display: flex; align-items: center; justify-content: center;
       color: color-mix(in srgb, currentColor 45%, transparent);
-      font-size: 11px;
+      background: color-mix(in srgb, currentColor 4%, transparent);
+      font-size: 12px;
       user-select: none;
     }
     .move {
@@ -83,14 +87,14 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
       font: inherit; color: inherit; background: none; border: 0; margin: 0;
       display: block; width: 100%; box-sizing: border-box; text-align: left;
       cursor: pointer;
-      padding: 3px 6px;
-      border-radius: 3px;
-      line-height: 1.6;
+      padding: 4px 12px;
+      font-weight: 500;
+      line-height: 1.5;
     }
-    .move:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
-    .move.active { background: #1976d2; color: white; }
+    .move:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+    .move.active { background: var(--rh-accent, #1976d2); color: var(--mat-sys-on-primary, #fff); }
     .move-empty { display: block; }
-    .comment-intro { padding-left: 6px; }
+    .comment-intro { padding: 6px; }
     .cmt-move {
       font: inherit; font-style: normal; font-weight: 600; cursor: pointer;
       color: var(--mat-sys-primary, #1565c0);
@@ -100,7 +104,8 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
     }
     .cmt-move:hover { background: color-mix(in srgb, currentColor 22%, transparent); }
     .comment-row {
-      padding: 2px 6px 6px 38px;
+      padding: 4px 10px 6px 50px;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 6%, transparent);
       color: color-mix(in srgb, currentColor 60%, transparent);
       font-style: italic;
       font-size: 12px;

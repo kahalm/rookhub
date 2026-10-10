@@ -32,7 +32,8 @@ import { GamesService, SimilarGame, SimilarGames } from './games.service';
   imports: [TranslatePipe, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `
     <details class="similar" (toggle)="onToggle($event)">
-      <summary><mat-icon>auto_stories</mat-icon> {{ 'games.similar.title' | translate }}</summary>
+      <summary><mat-icon>auto_stories</mat-icon> <span class="label">{{ 'games.similar.title' | translate }}</span>
+        <mat-icon class="chevron">expand_more</mat-icon></summary>
       @if (loading()) {
         <div class="center"><mat-spinner diameter="22"></mat-spinner></div>
       } @else if (failed()) {
@@ -87,9 +88,21 @@ import { GamesService, SimilarGame, SimilarGames } from './games.service';
   `,
   styles: [`
     :host { display: block; width: 100%; }
-    .similar { border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; padding: 6px 10px; }
-    summary { cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.92rem; }
+    /* Rahmen bringt die Seite mit (Seitenspalte der Partieseite) — hier nur Zeile und Inhalt. */
+    .similar { border-radius: inherit; }
+    summary {
+      cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      font-size: 0.92rem; font-weight: 500; list-style: none; border-radius: inherit;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     summary mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
+    summary .label { flex: 1; }
+    summary .chevron { font-size: 20px; width: 20px; height: 20px; transition: transform 0.15s; }
+    .similar[open] summary .chevron { transform: rotate(180deg); }
+    .similar[open] summary { border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 0; }
+    .similar > :not(summary) { margin-left: 12px; margin-right: 12px; }
+    .similar[open] { padding-bottom: 6px; }
     .center { display: flex; justify-content: center; padding: 8px; }
     .muted { font-size: 0.82rem; color: color-mix(in srgb, currentColor 65%, transparent); margin: 6px 0; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0;

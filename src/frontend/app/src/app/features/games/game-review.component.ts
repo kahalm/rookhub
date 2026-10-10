@@ -281,19 +281,20 @@ const MATE_GAP_PAWNS = 100;
     .title .chevron { font-size: 20px; width: 20px; height: 20px; opacity: 0.7; }
     .progress { font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress.failed { color: #e53935; }
-    .toggles { display: inline-flex; margin-left: auto; }
-    /* Umschalter Stockfish | Lc0 | beide: klein, damit er neben Überschrift und Schaltern in eine Zeile passt. */
-    .engine-view { --mat-button-toggle-height: 28px; font-size: 0.78rem; margin-left: auto; }
-    .engine-view + .toggles { margin-left: 0; }
+    /* Reihenfolge: Überschrift + Schalter in der ersten Zeile, der Engine-Umschalter (und wie weit die zweite Engine
+       gerechnet hat) darf darunter umbrechen — nebeneinander passte es in die Seitenspalte nicht (gemeldet 2026-10-10). */
+    .toggles { display: inline-flex; margin-left: auto; order: 1; }
+    /* Umschalter Stockfish | Lc0 | beide: klein, damit er in die Seitenspalte passt. */
+    .engine-view { --mat-button-toggle-height: 28px; font-size: 0.78rem; order: 2; }
     .lines-label { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin: 4px 0 1px; }
     .lines-label.alt { color: #ff9800; opacity: 1; }
     .lines-label.deep { font-weight: 500; font-style: italic; margin-top: 0; }
-    .alt-nodes { font-size: 0.75rem; color: #ff9800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .alt-nodes { font-size: 0.75rem; color: #ff9800; font-variant-numeric: tabular-nums; white-space: nowrap; order: 3; margin-left: auto; }
     .toggle { opacity: 0.45; --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .toggle.on { opacity: 1; color: #81b64c; }
-    .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.82rem; }
-    .lines li { display: flex; gap: 8px; align-items: baseline; min-width: 0; padding: 1px 4px; border-radius: 4px; }
+    .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem; }
+    .lines li { display: flex; gap: 8px; align-items: baseline; min-width: 0; padding: 2px 4px; border-radius: 4px; }
     .lines li.played { background: color-mix(in srgb, currentColor 8%, transparent); }
     .line-eval {
       flex: 0 0 auto; min-width: 3.4em; text-align: center; padding: 0 4px; border-radius: 3px;
@@ -319,8 +320,10 @@ const MATE_GAP_PAWNS = 100;
     .table-wrap { overflow-x: auto; }
     /* Muss ohne Scrollbalken neben das Brett passen — auch mit der Lc0-Spalte (gemeldet 2026-10-07 am Laptop): knappe
        Zellen, die Knöpfe ohne eigenen Innenabstand, die Überschrift „Genauigkeit" darf umbrechen. */
-    .summary { border-collapse: collapse; font-size: 0.8rem; width: 100%; }
-    .summary th, .summary td { padding: 2px 1px; text-align: center; white-space: nowrap; }
+    .summary { border-collapse: collapse; font-size: 0.78rem; width: 100%; margin-top: 2px; }
+    .summary th, .summary td { padding: 3px 0; text-align: center; white-space: nowrap; }
+    .summary tbody tr { border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+    .summary .acc, .summary .acc-h { padding-right: 6px; }
     .summary thead .acc-h { white-space: normal; line-height: 1.15; font-size: 0.72rem; }
     .summary tbody th { text-align: left; font-weight: 500; }
     .summary .acc-h, .summary .acc { text-align: right; font-variant-numeric: tabular-nums; }
@@ -351,8 +354,8 @@ const MATE_GAP_PAWNS = 100;
     .summary .count-jump:hover, .summary .count-jump:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); }
     .summary .count.zero { color: color-mix(in srgb, currentColor 35%, transparent); }
     .sym {
-      display: inline-block; min-width: 20px; padding: 0 3px; border-radius: 9px; box-sizing: border-box;
-      color: #fff; font-weight: 700; font-size: 0.75rem; line-height: 18px; cursor: default;
+      display: inline-block; min-width: 18px; padding: 0 2px; border-radius: 9px; box-sizing: border-box;
+      color: #fff; font-weight: 700; font-size: 0.7rem; line-height: 18px; cursor: default;
       text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
     }
   `],

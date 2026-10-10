@@ -73,11 +73,20 @@ const SIMILAR_LIMIT = 40;
             PositionTreeComponent, SimilarPositionsComponent],
   template: `
     @if (auth.isLoggedIn) {
-      <div class="pos-reps">
-        <button mat-stroked-button class="pr-toggle" (click)="toggle()" [disabled]="!fen">
-          <mat-icon>menu_book</mat-icon>
-          {{ 'positionInReps.button' | translate }}
-        </button>
+      <div class="pos-reps" [class.pr-as-row]="appearance === 'row'">
+        @if (appearance === 'row') {
+          <!-- Als Zeile (Seitenspalte der Partieseite): gleich wie „Ähnliche Meisterpartien" darunter. -->
+          <button type="button" class="pr-toggle pr-row" (click)="toggle()" [disabled]="!fen" [attr.aria-expanded]="open">
+            <mat-icon>menu_book</mat-icon>
+            <span class="pr-row-label">{{ 'positionInReps.button' | translate }}</span>
+            <mat-icon class="pr-chevron">{{ open ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        } @else {
+          <button mat-stroked-button class="pr-toggle" (click)="toggle()" [disabled]="!fen">
+            <mat-icon>menu_book</mat-icon>
+            {{ 'positionInReps.button' | translate }}
+          </button>
+        }
 
         @if (open) {
           <div class="pr-panel">
@@ -203,6 +212,17 @@ const SIMILAR_LIMIT = 40;
   styles: [`
     .pos-reps { display: block; }
     .pr-toggle { width: 100%; }
+    .pr-row {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px; box-sizing: border-box;
+      border: 0; background: none; color: inherit; font: inherit; font-size: 0.92rem; font-weight: 500;
+      text-align: left; cursor: pointer; border-radius: inherit;
+    }
+    .pr-row:hover:not(:disabled) { background: color-mix(in srgb, currentColor 6%, transparent); }
+    .pr-row:disabled { opacity: 0.5; cursor: default; }
+    .pr-row mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
+    .pr-row-label { flex: 1; }
+    .pr-row .pr-chevron { font-size: 20px; width: 20px; height: 20px; }
+    .pr-as-row .pr-panel { margin: 0; border: 0; border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 0; padding: 8px 12px 10px; }
     .pr-panel { margin-top: 8px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 6px; padding: 8px; max-height: 46vh; overflow: auto; }
     .pr-modes { display: flex; justify-content: flex-end; gap: 2px; margin-bottom: 4px; }
     .pr-mode { width: 26px; height: 26px; padding: 0; border: none; background: none; color: color-mix(in srgb, currentColor 55%, transparent); cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
@@ -232,6 +252,8 @@ const SIMILAR_LIMIT = 40;
 })
 export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   @Input() fen = '';
+  /** `button` = umrandeter Knopf (Vorgabe), `row` = Zeile mit Pfeil für eine Seitenspalte mit eigenem Rahmen. */
+  @Input() appearance: 'button' | 'row' = 'button';
   /** Feuert vor jeder Navigation — z. B. damit ein umschließender Dialog sich schließt. */
   @Output() navigated = new EventEmitter<void>();
   /** Baummodus: SAN-Zugfolge ab der aktuellen Stellung, die aufs Brett gespielt werden soll.

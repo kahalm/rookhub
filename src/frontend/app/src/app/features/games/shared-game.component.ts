@@ -308,7 +308,7 @@ const TAP_MAX_MS = 500;
                                  (mistakesChange)="mistakes.set($event)"
                                  (storedChange)="reviewStored.set($event)" />
               }
-              <app-position-repertoires class="pr-slot" [fen]="service.currentFen" />
+              <app-position-repertoires class="pr-slot" appearance="row" [fen]="service.currentFen" />
               <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
               <app-similar-games class="similar-slot" [url]="similarUrl" />
             </div>
@@ -323,38 +323,69 @@ const TAP_MAX_MS = 500;
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
-    /* Die Karte umschließt ihren Inhalt (Brett + Zugliste) und steht mittig, statt sich auf die Seitenbreite zu
-       dehnen und rechts von der Zugliste leer zu bleiben. Das Brett wächst mit dem Fenster: so hoch, dass
-       Kopfzeile und Steuerleiste noch Platz haben, und so breit, dass die Zugliste daneben passt — aber nie
-       über 640 px (darüber wird es ein Poster) und nie unter 360 px (gemeldet 2026-09-23: 400 px auf einem
-       2250 px breiten Bildschirm, zwei Drittel der Seite leer). */
+    /* Die Karte umschließt ihren Inhalt und steht mittig. Das Brett wächst mit dem Fenster: so hoch, dass
+       Kopfzeile und Steuerleiste noch Platz haben, und so breit, dass Zugliste (und am PC die Auswertung) daneben
+       passen — nie unter 360 px (gemeldet 2026-09-23: 400 px auf 2250 px Breite) und nie über 760 px. */
     .viewer {
-      --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 440px)), 760px);
-      width: fit-content; max-width: 100%; margin: 0 auto; padding: 16px 20px 20px; box-sizing: border-box;
+      --board-size: clamp(360px, min(calc(100vh - 260px - var(--recap-room, 0px)), calc(100vw - 440px)), 760px);
+      --moves-width: 280px;
+      --side-width: clamp(420px, 30vw, 520px);
+      width: fit-content; max-width: 100%; margin: 0 auto; padding: 18px 24px 22px; box-sizing: border-box;
+      border-radius: 14px;
     }
-    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 12px; }
+    /* „Kurz erzählt“ steht über dem Brett — sein Platz geht von der Höhe ab, sonst ragt das Brett samt Leiste unten raus. */
+    .viewer:has(> .recap) { --recap-room: 80px; }
+    .header {
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+      gap: 8px 16px; margin-bottom: 14px;
+    }
+    .header:not(:has(.back)) { grid-template-columns: minmax(0, 1fr) auto; }
     .header-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .players { font-size: 1.05rem; }
-    .players .elo { font-weight: 400; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .result { color: var(--rh-accent); font-weight: 600; }
-    .header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
+    .players { font-size: 1.2rem; line-height: 1.3; }
+    .players strong { font-weight: 600; }
+    .players .elo { font-weight: 400; font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.82rem; }
+    .meta > span {
+      padding: 1px 8px; border-radius: 999px;
+      background: color-mix(in srgb, currentColor 7%, transparent);
+      color: color-mix(in srgb, currentColor 75%, transparent);
+    }
+    .meta > .result { background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent); font-weight: 600; }
+    .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
     /* Breite 0 + Mindestbreite 100 %: der Satz trägt nichts zur Breite der Karte bei — sie umschließt Brett und Zugliste,
        ein langer Absatz dehnte sie sonst auf die ganze Seite. */
     .recap {
-      width: 0; min-width: 100%; box-sizing: border-box; margin: 0 0 12px;
-      display: flex; gap: 8px; align-items: flex-start;
-      font-size: 0.92rem; line-height: 1.45; color: color-mix(in srgb, currentColor 82%, transparent);
+      width: 0; min-width: 100%; box-sizing: border-box; margin: 0 0 14px; padding: 10px 14px;
+      display: flex; gap: 10px; align-items: flex-start; border-radius: 10px;
+      background: color-mix(in srgb, var(--rh-accent) 7%, transparent);
+      font-size: 0.92rem; line-height: 1.5; color: color-mix(in srgb, currentColor 85%, transparent);
     }
-    .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; opacity: 0.6; }
+    .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
     .original, .analyze { white-space: nowrap; }
     .body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
-    .side-section { display: flex; flex-direction: column; gap: 8px; flex: 1 1 100%; min-width: 0; }
-    /* Breit genug für drei Spalten: die Auswertung rechts neben der Zugliste, das Brett nimmt die Höhe. */
+    .side-section { display: flex; flex-direction: column; gap: 12px; flex: 1 1 100%; min-width: 0; }
+    /* Die drei Blöcke rechts als ruhige Karten mit gleichem Rahmen; ein leerer Rückblick (noch keine Analyse) fällt weg. */
+    .side-section > .review-slot,
+    .side-section > .pr-slot,
+    .side-section > .similar-slot {
+      box-sizing: border-box; border-radius: 10px;
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    }
+    .side-section > .review-slot { padding: 12px 14px; }
+    .side-section > .review-slot:empty, .side-section > .pr-slot:empty { display: none; }
+    /* Breit genug für drei Spalten: ein FESTES Raster (Brett | Zugliste | Auswertung). Die Spaltenbreiten hängen
+       nicht am Inhalt — vorher wuchs die Karte, sobald die Auswertung erschien, und lange Linien wurden rechts
+       abgeschnitten (gemeldet 2026-10-10). */
     @media (min-width: 1280px) {
-      .viewer { --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 860px)), 760px); }
-      .body { flex-wrap: nowrap; }
-      .side-section { flex: 0 0 clamp(340px, 24vw, 460px); max-height: var(--board-size); overflow-y: auto; }
+      .viewer { --board-size: clamp(360px, min(calc(100vh - 250px - var(--recap-room, 0px)), calc(100vw - var(--moves-width) - var(--side-width) - 140px)), 760px); }
+      .body {
+        display: grid; flex-wrap: nowrap; gap: 20px;
+        grid-template-columns: var(--board-size) var(--moves-width) var(--side-width);
+      }
+      .side-section {
+        max-height: calc(var(--board-size) + 56px); overflow-y: auto; overflow-x: hidden;
+        scrollbar-gutter: stable; padding-right: 2px;
+      }
     }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
@@ -382,15 +413,20 @@ const TAP_MAX_MS = 500;
        nebeneinander stehen statt — bei einer Spalte, die den Rest der Karte füllt — mit einer Handbreit Luft
        dazwischen. */
     .moves-section {
-      width: 300px; height: var(--board-size); flex-shrink: 0; box-sizing: border-box;
-      border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; overflow: auto;
+      width: var(--moves-width); height: var(--board-size); flex-shrink: 0; box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 10px; overflow: auto;
     }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }
       .viewer { width: auto; padding: 0; border-radius: 0; }
-      .header { flex-direction: column; align-items: stretch; padding: 12px 16px; }
-      .header-actions { flex-direction: column; align-items: stretch; }
-      .recap { padding: 0 16px; }
+      .header { position: relative; grid-template-columns: auto minmax(0, 1fr); padding: 12px 52px 12px 16px; margin-bottom: 4px; }
+      .header-actions { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
+      /* Nur das ⋮ (es sitzt absolut oben rechts): die leere Zeile samt Abstand fällt weg. */
+      .header-actions:not(:has(> button:not(.game-menu), > a)) { margin-top: -8px; }
+      /* Das ⋮ oben rechts neben den Namen statt allein in einer eigenen Zeile. */
+      .header .game-menu { position: absolute; top: 8px; right: 8px; }
+      .recap { margin: 0 16px 12px; width: auto; min-width: 0; }
+      .side-section { padding: 0 12px; }
       .body { flex-direction: column; align-items: stretch; }
       .side-section { order: 1; }   /* am Handy: Auswertung vor der Zugliste, wie bisher */
       .moves-section { order: 2; }
