@@ -137,17 +137,20 @@ describe('GameReviewComponent', () => {
       ],
     });
 
-    it('aus bis zum Klick; an: die Linien der Stellung auf dem Brett, gemerkt je Gerät', () => {
+    // 0.745.0 (Wunsch 2026-10-10): standardmäßig an; ein Klick schaltet aus, und das Aus bleibt gemerkt
+    it('standardmäßig an: die Linien der Stellung auf dem Brett; aus per Klick, gemerkt je Gerät', () => {
       const { fixture, http, el } = setup();
       flushEvals(http, withCandidates());
       fixture.detectChanges();
-      expect(el.querySelector('.lines')).toBeNull();
+      // currentIndex −1 = Startstellung → Zeile 0
+      expect(Array.from(el.querySelectorAll('.lines .line-san')).map(e => e.textContent!.trim())).toEqual(['1. e4 e5', '1. d4']);
 
       (el.querySelector('button.lines-toggle') as HTMLButtonElement).click();
       fixture.detectChanges();
-      // currentIndex −1 = Startstellung → Zeile 0
-      expect(Array.from(el.querySelectorAll('.lines .line-san')).map(e => e.textContent!.trim())).toEqual(['1. e4 e5', '1. d4']);
-      expect(localStorage.getItem(GameReviewComponent.LinesKey)).toBe('1');
+      expect(el.querySelector('.lines')).toBeNull();
+      expect(localStorage.getItem(GameReviewComponent.LinesKey)).toBe('0');
+      (el.querySelector('button.lines-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
       fixture.componentRef.setInput('currentIndex', 0);
       fixture.detectChanges();
@@ -161,10 +164,7 @@ describe('GameReviewComponent', () => {
       fixture.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
       flushEvals(http, withCandidates());
       fixture.detectChanges();
-
-      (el.querySelector('button.arrow-toggle') as HTMLButtonElement).click();
-      fixture.detectChanges();
-      expect(arrows[arrows.length - 1]).toEqual([{ from: 'e2', to: 'e4' }]);
+      expect(arrows[arrows.length - 1]).toEqual([{ from: 'e2', to: 'e4' }]);   // standardmäßig an (0.745.0)
 
       fixture.componentRef.setInput('currentIndex', 0);
       fixture.detectChanges();
@@ -633,12 +633,13 @@ describe('GameReviewComponent', () => {
     const lineSans = (el: HTMLElement, sel = '.lines:not(.alt) .line-san') =>
       Array.from(el.querySelectorAll(sel)).map(e => e.textContent!.trim());
 
-    it('findet die Lc0-Analyse derselben Partie und bietet den Umschalter an — Vorgabe Stockfish', () => {
+    it('findet die Lc0-Analyse derselben Partie und bietet den Umschalter an — Vorgabe „Beide" (0.745.0)', () => {
       const { el, fixture } = withAlternative();
       const toggles = Array.from(el.querySelectorAll('.engine-view mat-button-toggle')).map(t => t.textContent!.trim());
       expect(toggles).toEqual(['Stockfish', 'Lc0', 'games.review.engineBoth']);
-      expect(fixture.componentInstance.view()).toBe('primary');
+      expect(fixture.componentInstance.view()).toBe('both');
       expect(lineSans(el)).toEqual(['1. e4']);
+      expect(el.querySelector('.lines.alt')).not.toBeNull();   // Lc0-Linien darunter
     });
 
     it('„Lc0": Linien und Kurve aus der zweiten Analyse; gemerkt je Gerät', () => {
@@ -697,6 +698,7 @@ describe('GameReviewComponent', () => {
       withNodes.plies[1] = { ...withNodes.plies[1], nodes: 89133 };
       cmp.altEvals.set(withNodes);
       fixture.componentRef.setInput('currentIndex', 0);   // Brett nach 1.e4 = Stellung von Halbzug 1
+      cmp.setView('primary');
       fixture.detectChanges();
       expect(el.querySelector('.alt-nodes')).toBeNull();   // Ansicht „Stockfish"
       cmp.setView('alt');
@@ -725,6 +727,8 @@ describe('GameReviewComponent', () => {
 
     it('nur „Stockfish": keine Lc0-Spalte, keine uneinigen Züge', () => {
       const { el, fixture } = withAlternative();
+      fixture.componentInstance.setView('primary');
+      fixture.detectChanges();
       expect(el.querySelector('th.acc-h.alt')).toBeNull();
       expect(fixture.componentInstance.disagreements()).toEqual([]);
     });

@@ -668,6 +668,9 @@ sprang eine angeforderte Partie sofort auf „Spielen" — das Spiel stand dann 
 
 ## Computer-Linien + Pfeil für den besten Zug (0.521.0)
 
+Seit 0.745.0 (Wunsch 2026-10-10) standardmäßig AN, ebenso die Ansicht „Beide" (Stockfish + Lc0), wo es eine zweite Analyse gibt:
+gemerkt wird nur noch ein ausdrückliches Aus (`'0'` bzw. `'primary'`/`'alt'`). Im Fehler-Training bleiben Linien und Pfeil weg.
+
 Zwei Schalter in der Kopfzeile des Rückblicks (`game-review.component.ts`), je Gerät gemerkt
 (`rookhub_game_lines`, `rookhub_game_arrow`, localStorage): die KANDIDATEN der eigenen Partie-Analyse für die
 Stellung auf dem Brett (bis zu fünf, Bewertung in Weiß-Sicht, Variante in SAN — `computer-lines.util.ts`,

@@ -40,7 +40,8 @@ export type EngineView = 'primary' | 'alt' | 'both';
 
 function readView(): EngineView {
   const v = readRaw(localStore(), 'rookhub_game_engine_view');
-  return v === 'alt' || v === 'both' ? v : 'primary';
+  // 0.745.0 (Wunsch 2026-10-10: „standardmäßig die Computerlines Stockfish und Lc0 einblenden"): ohne Wahl „Beide"
+  return v === 'alt' || v === 'primary' ? v : 'both';
 }
 
 /** Diese Klassen bekommen einen Punkt in der Kurve — die Züge, bei denen man hinsehen will. */
@@ -501,8 +502,10 @@ export class GameReviewComponent {
   /** Die Kurve ist standardmäßig ZU und klappt nur auf Wunsch auf — bewusst nicht gemerkt: „standardmäßig". */
   readonly graphOpen = linkedSignal(() => this.expanded());
   /** Schalter je Gerät (localStorage — reine Anzeige-Vorliebe); mit `expanded` von Anfang an an. */
-  readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) === '1');
-  readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) === '1');
+  //  Seit 0.745.0 standardmäßig AN (Wunsch 2026-10-10) — nur ein ausdrückliches Aus bleibt gemerkt. Im Fehler-Training
+  //  bleiben Linien und Pfeil trotzdem weg (`engineHidden`/`boardMarksHidden`).
+  readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) !== '0');
+  readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) !== '0');
   readonly lines = computed(() => {
     if (!this.showLines() || this.engineHidden() || this.offGame()) return [];
     const deep = this.view() === 'alt' ? this.deepLc0() : this.deepSf();

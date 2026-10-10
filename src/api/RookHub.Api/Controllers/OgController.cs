@@ -67,7 +67,7 @@ public class OgController : ControllerBase
         var board = await _meta.ResolveBoardAsync(kind, id, ct);
         if (board is null) return NotFound();
 
-        var png = _images.RenderBoard(board.Fen, board.Flip, board.Curve);
+        var png = _images.RenderBoard(board.Fen, board.Flip, board.Curve, board.Train);
         // Unveränderlich je (kind,id,Stellung) → aggressiv cachen. Kommt bei einer Partie die Kurve dazu, zeigt die
         // Vorschau auf eine neue Adresse (?v=, OgMetaService.CurveVersion).
         Response.Headers.CacheControl = "public, max-age=604800, immutable";

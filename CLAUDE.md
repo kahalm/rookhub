@@ -687,6 +687,14 @@ geschrieben vom Modell auf eigener Hardware (`IsLocal`), im Muster des Roasts. R
   `immutable` gecacht ist und Discord & Co. Bilder nach der ADRESSE merken, trägt og:image dann `?v={analysisId}-{refined}`
   (`OgMetaService.CurveVersion`). Eine halbe Kurve (Analyse läuft) kommt nicht ins Bild.
 
+**Karte des Trainingslinks** (0.745.0, Wunsch 2026-10-10: „beim Trainlink eine schöne Karte mit der Evalkurve … Verbessere dich —
+spiele deine Fehler neu"): `/g/{token}?train=white|black` (Fehler-Training teilen, 0.741.0) bekommt og:title „Verbessere dich — spiele
+deine Fehler neu", eine Beschreibung mit der Zahl der Fehler und das Bild `/api/og/img/train/{side}-{token}.png` (`?v=` wie bei der
+Partie). `OgImageService.TrainCard`: Brett links (gedreht bei Schwarz), rechts „Verbessere dich" / „Spiele deine Fehler neu" /
+„Die Fehler von …" über der Kurve, die Fehler der Seite als rote Punkte (`OgMetaService.TrainMarks`: ≥ 10 Prozentpunkte
+Gewinnchance aus Sicht des Ziehenden, Lichess-Formel). **Das Bild ist damit nicht mehr schriftfrei**: die Schrift ist EINGEBETTET
+(`Assets/fonts/DejaVuSans*.ttf`, Lizenz daneben) — das API-Image hat kein fontconfig. Neue Texte auf Bildern nur mit dieser Schrift.
+
 **Bewertungskurve aus der EIGENEN Analyse (0.512.0).** „Partie analysieren" (`/g/…`, Liste, Nachspiel-Dialog)
 wirft die Partie über denselben Weg wie die Punktepartie-Seite ein (`GameAnalysisService.CreateForGuessAsync`:
 Haus-Engine, fünf Linien, gemeinsamer Deckel — aber **Tiefe 30** statt 20, `GameAnalysisDefaults.SavedGameTargetDepth`

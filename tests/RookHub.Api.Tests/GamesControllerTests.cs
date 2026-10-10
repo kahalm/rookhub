@@ -471,6 +471,17 @@ public class GamesControllerTests : IDisposable
             Microsoft.Extensions.Logging.Abstractions.NullLogger<RookHub.Api.Services.Og.OgMetaService>.Instance);
         var page = await meta.ResolvePageAsync("/g/tok173", "https://rookhub.example");
         Assert.Equal("Mitteregger, Gottfried (Elo 1826) – Erlacher, Herbert (Elo 1712)", page!.Title);
+
+        // Trainingslink (0.745.0): eigene Überschrift und eigenes Bild
+        var train = await meta.ResolvePageAsync("/g/tok173?train=black", "https://rookhub.example");
+        Assert.Equal("Verbessere dich — spiele deine Fehler neu", train!.Title);
+        Assert.Contains("Erlacher, Herbert", train.Description);
+        Assert.StartsWith("https://rookhub.example/api/og/img/train/black-tok173.png", train.ImageUrl);
+        Assert.Equal("https://rookhub.example/g/tok173?train=black", train.CanonicalUrl);
+        var board = await meta.ResolveBoardAsync("train", "black-tok173");
+        Assert.True(board!.Flip);
+        Assert.Equal("Die Fehler von Erlacher, Herbert", board.Train!.Note);
+        Assert.Null(await meta.ResolveBoardAsync("train", "green-tok173"));
     }
 
     // ===== Gleiche ExternalId, andere Partie (N8-001: lichess-Analysebrett meldete „analysis") ====

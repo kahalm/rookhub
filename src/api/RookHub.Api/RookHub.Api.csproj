@@ -18,6 +18,8 @@
     <EmbeddedResource Include="Assets\pieces\cburnett\*.svg" />
     <!-- LeagueHub: Gewichte des Aufstellungs-Modells (trainiert in ~/claude/league-analyzer, export_weights.py) -->
     <EmbeddedResource Include="Assets\league-model.json" />
+    <!-- Schrift für die Karte des Trainingslinks (0.745.0) — DejaVu, freie Lizenz (Assets/fonts/LICENSE-DejaVu.txt) -->
+    <EmbeddedResource Include="Assets\fonts\*.ttf" />
     <EmbeddedResource Include="Assets\league-model-bayern.json" />
   </ItemGroup>
 

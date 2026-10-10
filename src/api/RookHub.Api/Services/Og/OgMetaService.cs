@@ -15,7 +15,7 @@ public record OgPage(string Title, string Description, string ImageUrl, string C
 
 /// <summary>Die für das Brett-Bild aufgelöste Stellung (FEN + Perspektive), bei einer analysierten Partie dazu die
 /// Bewertungskurve (<see cref="OgMetaService.CurveOf"/>).</summary>
-public record OgBoard(string Fen, bool Flip, IReadOnlyList<double?>? Curve = null);
+public record OgBoard(string Fen, bool Flip, IReadOnlyList<double?>? Curve = null, OgImageService.TrainCard? Train = null);
 
 /// <summary>
 /// Liest aus einer öffentlichen SPA-Route (<c>/g/{token}</c>, <c>/puzzles/*</c>, <c>/t/{id}</c>) die Daten
@@ -134,7 +134,20 @@ public class OgMetaService
                     }
                     // Mit der Analyse bekommt das Bild die Kurve — unter NEUER Adresse: das Bild ist „immutable" gecacht,
                     // und Discord & Co. merken sich Bilder ohnehin nach der Adresse.
-                    var version = CurveVersion(await _games.GetSharedEvalsAsync(id, null, ct));
+                    var evals = await _games.GetSharedEvalsAsync(id, null, ct);
+                    var version = CurveVersion(evals);
+                    // Trainingslink (0.745.0, /g/{token}?train=white|black, Fehler-Training seit 0.741.0): eigene Karte mit
+                    // Überschrift „Verbessere dich" und den Fehlern dieser Seite in der Kurve.
+                    if (QueryParam(path, "train") is "white" or "black" && QueryParam(path, "train") is { } side)
+                    {
+                        var who = side == "white" ? white : black;
+                        var n = TrainMarks(evals, side == "white").Count;
+                        var trainDesc = n > 0
+                            ? $"{n} Fehler von {who} in {white} – {black} — finde jetzt die besseren Züge."
+                            : $"{white} – {black}: spiele die Fehler von {who} neu und finde die besseren Züge.";
+                        var trainImg = $"{baseUrl}/api/og/img/train/{side}-{Uri.EscapeDataString(id)}.png";
+                        return new OgPage(TrainTitle, trainDesc, version == null ? trainImg : $"{trainImg}?v={version}", canonical, "article");
+                    }
                     return new OgPage(title, description, version == null ? img : $"{img}?v={version}", canonical, "article");
                 }
                 case "puzzle":
@@ -203,6 +216,22 @@ public class OgMetaService
                     return new OgBoard(EndFenFromPgn(g.Pgn), Flip: g.OwnerSide == "black",
                         Curve: CurveOf(await _games.GetSharedEvalsAsync(id, null, ct)));
                 }
+                case "train":
+                {
+                    // „white-<token>" bzw. „black-<token>" (das Token selbst darf Bindestriche tragen)
+                    var dash = id.IndexOf('-');
+                    if (dash <= 0) return null;
+                    var side = id[..dash];
+                    if (side is not ("white" or "black")) return null;
+                    var token = id[(dash + 1)..];
+                    var g = await _games.GetSharedAsync(token);
+                    if (g is null) return null;
+                    var evals = await _games.GetSharedEvalsAsync(token, null, ct);
+                    var who = side == "white" ? (string.IsNullOrWhiteSpace(g.White) ? "Weiß" : g.White!) : (string.IsNullOrWhiteSpace(g.Black) ? "Schwarz" : g.Black!);
+                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: side == "black", Curve: CurveOf(evals),
+                        Train: new OgImageService.TrainCard("Verbessere dich", "Spiele deine Fehler neu", TrainMarks(evals, side == "white"),
+                            $"Die Fehler von {who}"));
+                }
                 case "puzzle":
                 {
                     if (!int.TryParse(id, out var pid)) return null;
@@ -252,6 +281,41 @@ public class OgMetaService
     /// (<see cref="GameEvalsDto.Final"/>), <c>null</c> = Lücke. Nur mit FERTIGER Analyse — eine halbe Kurve sähe im geteilten
     /// Bild wie das Ende der Partie aus. Weniger als zwei Punkte: keine Kurve.
     /// </summary>
+    /// <summary>Überschrift der Trainingslink-Karte (Wunsch 2026-10-10).</summary>
+    internal const string TrainTitle = "Verbessere dich — spiele deine Fehler neu";
+
+    /// <summary>
+    /// Die Fehler einer Seite als Kurven-Index der Stellung NACH dem Zug: ein Zug, der aus Sicht des Ziehenden mindestens
+    /// 10 Prozentpunkte Gewinnchance kostet (Fehler und grober Fehler wie im Rückblick, <c>CLASS_LIMITS</c>). Weiß zieht die
+    /// geraden Halbzüge (Partie ab der Grundstellung); fehlt eine Bewertung, zählt der Zug nicht.
+    /// </summary>
+    internal static List<int> TrainMarks(GameEvalsDto? evals, bool white)
+    {
+        var marks = new List<int>();
+        if (evals is null || evals.Status != "done" || evals.Total <= 0) return marks;
+        var byPly = evals.Plies.GroupBy(p => p.Ply).ToDictionary(g => g.Key, g => g.First());
+        double? Win(int i)
+        {
+            if (i == evals.Total) return evals.Final is { } f ? WinPercent(f.Cp, f.Mate) : null;
+            return byPly.TryGetValue(i, out var p) ? WinPercent(p.Cp, p.Mate) : null;
+        }
+        for (var k = white ? 0 : 1; k < evals.Total; k += 2)
+        {
+            if (Win(k) is not double before || Win(k + 1) is not double after) continue;
+            var drop = white ? before - after : after - before;
+            if (drop >= 10) marks.Add(k + 1);
+        }
+        return marks;
+    }
+
+    /// <summary>Gewinnchance von Weiß in Prozent (Lichess-Formel wie <c>winPercent</c> im Client), Matt = 100/0.</summary>
+    internal static double? WinPercent(int? cp, int? mate)
+    {
+        if (mate is int m) return m > 0 ? 100 : m < 0 ? 0 : null;
+        if (cp is not int c) return null;
+        return 50 + 50 * (2 / (1 + Math.Exp(-0.00368208 * c)) - 1);
+    }
+
     internal static IReadOnlyList<double?>? CurveOf(GameEvalsDto? evals)
     {
         if (evals is null || evals.Status != "done" || evals.Total <= 0) return null;

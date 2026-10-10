@@ -54,23 +54,52 @@ public class OgImageService
 
     /// <summary>Rendert die Brett-Stellung der FEN als PNG. <paramref name="flip"/>=true zeigt aus Schwarz-Sicht;
     /// <paramref name="curve"/> (Kurvenhöhen 0..100 je Stellung, <c>null</c> = Lücke) stellt die Bewertungskurve daneben.</summary>
-    public byte[] RenderBoard(string fen, bool flip = false, IReadOnlyList<double?>? curve = null)
+    public byte[] RenderBoard(string fen, bool flip = false, IReadOnlyList<double?>? curve = null, TrainCard? train = null)
     {
         if (curve is { Count: < 2 }) curve = null;
         var key = $"{fen}|{(flip ? "b" : "w")}"
-            + (curve == null ? "" : "|" + string.Join(",", curve.Select(v => v?.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) ?? "")));
+            + (curve == null ? "" : "|" + string.Join(",", curve.Select(v => v?.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) ?? "")))
+            + (train == null ? "" : $"|train:{string.Join(",", train.Marks)}|{train.Title}|{train.Subtitle}|{train.Note}");
         if (RenderCache.TryGetValue(key, out var cached)) return cached;
 
-        var png = Render(fen, flip, curve);
+        var png = Render(fen, flip, curve, train);
         // Cache begrenzen (simple Schutzobergrenze; Vorschau-URLs sind endlich, aber nie unbegrenzt).
         if (RenderCache.Count > 2000) RenderCache.Clear();
         RenderCache[key] = png;
         return png;
     }
 
-    private byte[] Render(string fen, bool flip, IReadOnlyList<double?>? curve)
+    /// <summary>Karte des Trainingslinks (0.745.0, Wunsch 2026-10-10: „schöne Karte mit der Evalkurve … Verbessere dich — spiele
+    /// deine Fehler neu"): Überschrift + Unterzeile über der Kurve, die Fehler der trainierten Seite als rote Punkte
+    /// (<see cref="Marks"/> = Kurven-Index der Stellung NACH dem Fehler).</summary>
+    public sealed record TrainCard(string Title, string Subtitle, IReadOnlyList<int> Marks, string? Note = null);
+
+    private static readonly SKColor MarkColor = SKColor.Parse("#e04b3a");
+    private static readonly SKColor TitleColor = SKColor.Parse("#ffffff");
+    private static readonly SKColor SubtitleColor = SKColor.Parse("#c9c5e0");
+    private static readonly Lazy<SKTypeface?> FontBold = new(() => LoadFont("DejaVuSans-Bold.ttf"));
+    private static readonly Lazy<SKTypeface?> FontRegular = new(() => LoadFont("DejaVuSans.ttf"));
+
+    private static SKTypeface? LoadFont(string file)
     {
-        var originX = curve == null ? CenteredX : LeftX;
+        var asm = Assembly.GetExecutingAssembly();
+        var name = asm.GetManifestResourceNames().FirstOrDefault(n => n.EndsWith("fonts." + file, StringComparison.Ordinal));
+        if (name == null) return null;
+        using var stream = asm.GetManifestResourceStream(name);
+        return stream == null ? null : SKTypeface.FromStream(stream);
+    }
+
+    /// <summary>Text, der höchstens <paramref name="maxWidth"/> breit wird — die Schrift schrumpft, bis er passt.</summary>
+    private static void DrawFittedText(SKCanvas canvas, string text, float x, float y, float size, float maxWidth, SKTypeface? face, SKColor color)
+    {
+        using var paint = new SKPaint { Color = color, IsAntialias = true, Typeface = face ?? SKTypeface.Default, TextSize = size };
+        while (paint.MeasureText(text) > maxWidth && paint.TextSize > 14) paint.TextSize -= 1;
+        canvas.DrawText(text, x, y, paint);
+    }
+
+    private byte[] Render(string fen, bool flip, IReadOnlyList<double?>? curve, TrainCard? train = null)
+    {
+        var originX = curve == null && train == null ? CenteredX : LeftX;
         var info = new SKImageInfo(Width, Height, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var surface = SKSurface.Create(info);
         var canvas = surface.Canvas;
@@ -113,7 +142,32 @@ public class OgImageService
             }
         }
 
-        if (curve != null) DrawCurve(canvas, curve, GraphRect);
+        if (train != null)
+        {
+            var left = GraphRect.Left;
+            var width = Width - OriginY - left;
+            DrawFittedText(canvas, train.Title, left, OriginY + 56, 58, width, FontBold.Value, TitleColor);
+            DrawFittedText(canvas, train.Subtitle, left, OriginY + 104, 36, width, FontBold.Value, MarkColor);
+            if (train.Note is { Length: > 0 } note)
+                DrawFittedText(canvas, note, left, OriginY + 144, 24, width, FontRegular.Value, SubtitleColor);
+            if (curve != null)
+            {
+                var rect = SKRect.Create(left, OriginY + 172, width, Board - 172);
+                DrawCurve(canvas, curve, rect);
+                using var dot = new SKPaint { Color = MarkColor, Style = SKPaintStyle.Fill, IsAntialias = true };
+                using var ring = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = 3, IsAntialias = true };
+                var last = 50.0;
+                var heights = curve.Select(v => last = v is double d ? Math.Clamp(d, 0, 100) : last).ToList();
+                foreach (var m in train.Marks.Where(m => m >= 0 && m < curve.Count))
+                {
+                    var x = rect.Left + rect.Width * m / (curve.Count - 1);
+                    var y = (float)(rect.Bottom - rect.Height * heights[m] / 100);
+                    canvas.DrawCircle(x, y, 9, dot);
+                    canvas.DrawCircle(x, y, 9, ring);
+                }
+            }
+        }
+        else if (curve != null) DrawCurve(canvas, curve, GraphRect);
 
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 90);

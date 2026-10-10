@@ -65,6 +65,36 @@ public class OgTests
         Assert.Equal(PngSignature, png[..PngSignature.Length]);
     }
 
+    // 0.745.0, Wunsch 2026-10-10: Karte des Trainingslinks mit Überschrift (eingebettete Schrift) und Fehler-Punkten in der Kurve
+    [Fact]
+    public void RenderBoard_TrainCard_DrawsTextAndMarks()
+    {
+        var svc = new OgImageService(new TestLogger<OgImageService>());
+        var curve = new double?[] { 50, 55, 48, 70, 30, 35, 60, 20 };
+        var plain = svc.RenderBoard(StartFen, curve: curve);
+        var train = svc.RenderBoard(StartFen, curve: curve,
+            train: new OgImageService.TrainCard("Verbessere dich", "Spiele deine Fehler neu", new[] { 4, 7 }, "Die Fehler von Hess, Max"));
+        if (Environment.GetEnvironmentVariable("OG_DUMP") is { Length: > 0 } dump) File.WriteAllBytes(dump, train);
+        Assert.Equal(PngSignature, train[..PngSignature.Length]);
+        Assert.NotEqual(plain, train);
+        using var bmp = SkiaSharp.SKBitmap.Decode(train);
+        // In der Zeile der Überschrift steht helle Schrift (die Schrift ist eingebettet — ohne sie bliebe die Zeile leer)
+        var bright = Enumerable.Range(640, 500).Count(x => bmp.GetPixel(x, 35 + 40).Red > 200);
+        Assert.True(bright > 20, $"helle Pixel in der Überschrift: {bright}");
+    }
+
+    [Fact]
+    public void TrainMarks_FehlerDerSeite_AbZehnProzentpunkten()
+    {
+        // Stellungen (Weiß-Sicht): 20, 30, 40, −300, Ende +400
+        var evals = new GameEvalsDto { Status = "done", Total = 4, Plies = new()
+        {
+            new() { Ply = 0, Cp = 20 }, new() { Ply = 1, Cp = 30 }, new() { Ply = 2, Cp = 40 }, new() { Ply = 3, Cp = -300 },
+        }, Final = new() { Cp = 400 } };
+        Assert.Equal(new[] { 3 }, OgMetaService.TrainMarks(evals, white: true));    // 3. Halbzug (Weiß): +40 → −300
+        Assert.Equal(new[] { 4 }, OgMetaService.TrainMarks(evals, white: false));   // 4. Halbzug (Schwarz): −300 → +400
+    }
+
     [Fact]
     public void RenderBoard_DifferentPositionsDiffer_AndFlipChangesOutput()
     {
