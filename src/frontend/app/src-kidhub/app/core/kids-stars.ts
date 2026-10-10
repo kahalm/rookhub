@@ -4,7 +4,7 @@
  * die Stufenfolge.
  *
  * <p>Regeln: Sterne stehen im Weg wie Figuren — Turm, Laeufer und Dame koennen nicht ueber einen Stern hinweg ziehen,
- * nur auf ihn (er ist ja zu fressen). Springer und Koenig springen bzw. gehen ein Feld, fuer sie gibt es keine
+ * nur auf ihn (er ist ja zu fressen). Der Springer springt, fuer ihn gibt es keine
  * Blockade. Es werden nur Aufgaben mit GENAU EINER Reihenfolge gestellt (Wunsch 2026-10-10: „nur eindeutige Loesungen
  * aufstellen") — damit ist jeder Stern, der nicht der naechste der Loesung ist, eine Sackgasse, und das darf das Kind
  * sofort erfahren statt erst drei Zuege spaeter.</p>
@@ -12,7 +12,7 @@
  * <p>Felder sind Zahlen 0..63: a1 = 0, h1 = 7, a8 = 56.</p>
  */
 
-export type StarPiece = 'R' | 'B' | 'Q' | 'N' | 'K';
+export type StarPiece = 'R' | 'B' | 'Q' | 'N';
 
 export interface StarPuzzle {
   piece: StarPiece;
@@ -35,20 +35,20 @@ export interface StarStage {
 export const STARS_PER_STAGE = 5;
 
 /**
- * Die Stufenfolge: erst wenige Sterne mit geraden Figuren, dann Springer und Koenig, die Zahl der Sterne waechst.
+ * Die Stufenfolge: Turm, Laeufer, Springer und Dame (Wunsch 2026-10-10 — kein Koenig), die Zahl der Sterne waechst.
  * Feste Liste statt Formel — so laesst sie sich lesen und umsortieren.
  */
 export const STAR_STAGES: readonly StarStage[] = ([
-  ['R', 2], ['B', 2], ['R', 3], ['Q', 3], ['N', 2],
-  ['B', 3], ['K', 3], ['N', 3], ['R', 4], ['Q', 4],
-  ['B', 4], ['K', 4], ['N', 4], ['R', 5], ['Q', 5],
-  ['B', 5], ['N', 5], ['K', 5], ['Q', 6], ['N', 6],
+  ['R', 2], ['B', 2], ['N', 2], ['R', 3], ['B', 3],
+  ['Q', 3], ['N', 3], ['R', 4], ['B', 4], ['Q', 4],
+  ['N', 4], ['R', 5], ['B', 5], ['Q', 5], ['N', 5],
+  ['R', 6], ['B', 6], ['Q', 6], ['N', 6],
 ] as const).map(([piece, stars], i) => ({ stage: i + 1, piece, stars }));
 
 const ROOK_DIRS: readonly [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const BISHOP_DIRS: readonly [number, number][] = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 const KNIGHT_STEPS: readonly [number, number][] = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
-const KING_STEPS: readonly [number, number][] = [...ROOK_DIRS, ...BISHOP_DIRS];
+const QUEEN_DIRS: readonly [number, number][] = [...ROOK_DIRS, ...BISHOP_DIRS];
 
 /** „e4" fuer Feld 28. */
 export function squareName(sq: number): string {
@@ -69,16 +69,15 @@ export function reachable(piece: StarPiece, from: number, stars: ReadonlySet<num
   const fx = from % 8;
   const fy = Math.floor(from / 8);
   const out: number[] = [];
-  const steps = piece === 'N' ? KNIGHT_STEPS : piece === 'K' ? KING_STEPS : null;
-  if (steps) {
-    for (const [dx, dy] of steps) {
+  if (piece === 'N') {
+    for (const [dx, dy] of KNIGHT_STEPS) {
       const x = fx + dx;
       const y = fy + dy;
       if (x >= 0 && x < 8 && y >= 0 && y < 8) out.push(y * 8 + x);
     }
     return out;
   }
-  const dirs = piece === 'R' ? ROOK_DIRS : piece === 'B' ? BISHOP_DIRS : KING_STEPS;
+  const dirs = piece === 'R' ? ROOK_DIRS : piece === 'B' ? BISHOP_DIRS : QUEEN_DIRS;
   for (const [dx, dy] of dirs) {
     let x = fx + dx;
     let y = fy + dy;

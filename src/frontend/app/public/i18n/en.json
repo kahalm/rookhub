@@ -4329,8 +4329,7 @@
         "R": "Rook",
         "B": "Bishop",
         "Q": "Queen",
-        "N": "Knight",
-        "K": "King"
+        "N": "Knight"
       },
       "feedback": {
         "play": "Your turn! {{count}} stars left.",

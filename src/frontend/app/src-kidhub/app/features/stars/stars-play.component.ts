@@ -18,7 +18,7 @@ import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 
 /** Figurenzeichen fuer Stufenkarte und Kopfzeile (weisse Figuren, wie auf dem Brett). */
 export function pieceGlyph(piece: StarPiece): string {
-  return { R: '♖', B: '♗', Q: '♕', N: '♘', K: '♔' }[piece];
+  return { R: '♖', B: '♗', Q: '♕', N: '♘' }[piece];
 }
 
 /** Was die Eule sagt. */

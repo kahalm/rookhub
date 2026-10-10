@@ -4329,8 +4329,7 @@
         "R": "Top",
         "B": "Lovac",
         "Q": "Dama",
-        "N": "Skakač",
-        "K": "Kralj"
+        "N": "Skakač"
       },
       "feedback": {
         "play": "Ti si na potezu! Još zvijezda: {{count}}.",

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.731.1", date: "2026-10-10", changes: [
+    { en: "KidHub Star Hunt: only rook, bishop, knight and queen — the king stages are gone. 19 stages, 2 to 6 stars each.",
+      de: "KidHub-Sternenjagd: nur noch Turm, Läufer, Springer und Dame — die Stufen mit dem König sind weg. 19 Stufen, je 2 bis 6 Sterne." },
+  ] },
   { version: "0.731.0", date: "2026-10-10", changes: [
     { en: "KidHub: new mode “Star Hunt”. One piece stands on the board with a few stars around it — eat all the stars, exactly one with every move. Every puzzle has exactly one solution: a move to an empty square or to a star from which not all the others can be reached stays on the board for a moment and is taken back. 20 stages (rook, bishop, queen, knight, king, from 2 up to 6 stars), five fresh puzzles each; the next stage opens when the previous one is done. Hints are free: first the next star lights up, then an arrow shows the move. Progress is kept on the device.",
       de: "KidHub: neuer Modus „Sternenjagd“. Eine Figur steht auf dem Brett, rundherum ein paar Sterne — friss alle Sterne, mit jedem Zug genau einen. Jede Aufgabe hat genau eine Lösung: ein Zug auf ein leeres Feld oder auf einen Stern, von dem aus nicht mehr alle anderen zu holen sind, bleibt kurz stehen und wird zurückgenommen. 20 Stufen (Turm, Läufer, Dame, Springer, König, von 2 bis 6 Sternen), je fünf frisch gewürfelte Aufgaben; die nächste Stufe öffnet sich, wenn die vorige geschafft ist. Tipps kosten nichts: erst leuchtet der nächste Stern, dann zeigt ein Pfeil den Zug. Der Fortschritt bleibt auf dem Gerät." },

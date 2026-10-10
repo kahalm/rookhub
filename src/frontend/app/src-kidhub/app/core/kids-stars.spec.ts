@@ -24,9 +24,8 @@ describe('kids-stars', () => {
     expect(bishop).not.toContain('f4');
   });
 
-  it('Springer und König springen bzw. gehen ein Feld, ohne Blockade', () => {
+  it('der Springer springt, ohne Blockade', () => {
     expect(reachable('N', squareIndex('a1'), new Set()).map(squareName).sort()).toEqual(['b3', 'c2']);
-    expect(reachable('K', squareIndex('a1'), new Set()).map(squareName).sort()).toEqual(['a2', 'b1', 'b2']);
     expect(reachableStars('N', squareIndex('a1'), new Set(sq(['b3', 'd4'])))).toEqual(sq(['b3']));
   });
 
@@ -50,6 +49,10 @@ describe('kids-stars', () => {
         expect(solveStars(p!.piece, p!.start, p!.stars, 3)).toEqual([p!.solution]);
       }
     }
+  });
+
+  it('nur Turm, Läufer, Springer und Dame', () => {
+    expect([...new Set(STAR_STAGES.map(s => s.piece))].sort()).toEqual(['B', 'N', 'Q', 'R']);
   });
 
   it('die Stellung trägt nur die Figur', () => {

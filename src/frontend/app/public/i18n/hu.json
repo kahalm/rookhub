@@ -4008,8 +4008,7 @@
         "R": "Bástya",
         "B": "Futó",
         "Q": "Vezér",
-        "N": "Huszár",
-        "K": "Király"
+        "N": "Huszár"
       },
       "feedback": {
         "play": "Te jössz! Még {{count}} csillag.",

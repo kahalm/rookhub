@@ -4329,8 +4329,7 @@
         "R": "Turm",
         "B": "Läufer",
         "Q": "Dame",
-        "N": "Springer",
-        "K": "König"
+        "N": "Springer"
       },
       "feedback": {
         "play": "Du bist dran! Noch {{count}} Sterne.",
