@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.749.1", date: "2026-10-11", changes: [
+    { en: "UI sweep tool (maintenance, not part of the app): pages are now shot logged out, as a normal account and as an admin; the normal test account gets a realistic stock of courses, repertoires, games, KidHub progress and a LeagueHub club membership (seed-user.mjs).", de: "UI-Sweep-Werkzeug (Wartung, kein Teil der App): die Seiten werden jetzt abgemeldet, als normales Konto und als Admin aufgenommen; das normale Testkonto bekommt einen realistischen Bestand an Kursen, Repertoires, Partien, KidHub-Fortschritt und eine LeagueHub-Vereinsmitgliedschaft (seed-user.mjs)." },
+  ] },
   { version: "0.749.0", date: "2026-10-11", changes: [
     { en: "Mark particularly good positions with “+”: in the game review (under the board, also in your own side line), on the analysis board and while replaying your mistakes (the task position, together with its solution). A marked position shows a green +, a second click removes the mark. The same position from another game counts as the same mark. For now only you see your marks — they are the stock for a coming feature that offers such positions to everyone to replay.", de: "Besonders gute Stellungen mit „+“ markieren: im Partie-Rückblick (unter dem Brett, auch in der eigenen Nebenvariante), am Analysebrett und beim Nachspielen der eigenen Fehler (die Aufgabenstellung, samt Lösung). Eine markierte Stellung zeigt ein grünes +, ein zweiter Klick nimmt die Markierung zurück. Dieselbe Stellung aus einer anderen Partie ist dieselbe Markierung. Vorerst siehst nur du deine Markierungen — sie sind der Vorrat für ein kommendes Feature, das solche Stellungen allen zum Nachspielen anbietet." },
   ] },

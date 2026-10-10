@@ -39,8 +39,16 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   wiedergefunden; einmalig wird die Partie zur Analyse eingeworfen). Gefundene Werte merkt sich `runs/params-dev.json`;
   das Zufallspuzzle und der LeagueHub-Teilen-Link werden von dort weiterbenutzt. Fehlt ein Parameter (kein Freund,
   keine Kinderkurse auf Dev), wird die Route übersprungen und in der Übersicht unter „nicht auflösbar" genannt.
-- **Zugang**: `~/.config/rookhub/dev-claude.env` (`ROOKHUB_DEV_USER`, `ROOKHUB_DEV_PASSWORD`) oder
-  `UI_SWEEP_USER`/`UI_SWEEP_PASSWORD`. `--env prod` rendert nur abgemeldet und legt nichts an.
+- **Rollen** (`--auth anon,user,admin`): `admin` = das Admin-Konto `claude-dev` (`ROOKHUB_DEV_USER`/`_PASSWORD`),
+  `user` = ein normales Konto ohne Sonderrechte (`ROOKHUB_DEV_PLAIN_USER`/`_PASSWORD`, wird beim ersten Lauf auf Dev
+  registriert und in dieselbe Datei geschrieben), beide in `~/.config/rookhub/dev-claude.env`. Konto-eigene Parameter
+  (Partie, Repertoire, Kurs … — `OWNED_PARAMS` in `sweep.mjs`) kommen je Rolle aus den eigenen Daten
+  (`runs/params-dev-user.json`); `anon` überspringt Routen, die ein Konto voraussetzen (`ANON_SKIP`).
+  `--env prod` rendert nur abgemeldet und legt nichts an.
+- **Bestand des normalen Kontos**: `node seed-user.mjs` gibt ihm, was ein Nutzer auf Prod typischerweise hat — Kurse über
+  eine Gruppe (drei angepinnt, drei angefangen), vier Repertoires, eigene Partien, ein Aufgabenblatt, Trainingsziel,
+  Puzzle-Versuche, einen Endlos-Lauf, eine Freundschaft; LeagueHub als Mitglied Schwaz (Rolle „Verein Schwaz"),
+  KidHub-Fortschritt und ein verknüpftes ClubHub-Karteiblatt. Wiederholbar, nur Dev.
 - **Browser**: das von Playwright gecachte Chromium (`~/.cache/ms-playwright/chromium-*`) oder `CHROME_BIN`.
 
 ## Vergleich

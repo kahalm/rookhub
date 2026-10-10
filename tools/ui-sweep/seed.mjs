@@ -33,6 +33,7 @@ export async function login(base, user, password) {
 
 function api(base, token) {
   const call = async (method, path, body) => {
+    await new Promise(r => setTimeout(r, 400));   // Drossel der API (100/min je Adresse) — nach einem 429 fehlten ganze Parameter
     const res = await fetch(`${base}${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'content-type': 'application/json' } : {}) },
@@ -52,7 +53,8 @@ export async function resolveParams(base, token, log = () => {}, previous = {}) 
   const a = api(base, token);
   const p = {};
   const today = new Date();
-  p.today = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  // UTC-Datum: der Server kennt das Tagespuzzle nur für heute/gestern in UTC — kurz nach Mitternacht in Wien wäre das Ortsdatum schon morgen (400).
+  p.today = `${today.getUTCFullYear()}${String(today.getUTCMonth() + 1).padStart(2, '0')}${String(today.getUTCDate()).padStart(2, '0')}`;
 
   const step = async (names, fn) => {
     try {

@@ -7,6 +7,7 @@ import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { PNG } from 'pngjs';
@@ -46,7 +47,7 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --route text           nur Routen, deren Pfad oder Name den Text enthält (mehrere mit Komma)
   --viewport v,w         mobile (390), laptop (1366), wide (1920)       Vorgabe: mobile,wide
   --theme t,u            dark, light                                       Vorgabe: dark
-  --auth a,b             anon, user                                        Vorgabe: anon,user
+  --auth a,b             anon, user (normales Konto), admin (claude-dev)    Vorgabe: anon,user
   --concurrency n        gleichzeitige Seiten (Vorgabe 2 — mehr läuft in die Drossel der API)
   --rate n               höchstens n API-Anfragen je Minute (Vorgabe 70; die API drosselt bei 100 je Adresse)
   --compare run|none     mit diesem Lauf vergleichen (Ordnername unter runs/); Vorgabe: der vorige Lauf
@@ -83,9 +84,9 @@ function parseArgs(argv) {
     }
   }
   for (const vp of o.viewport) if (!VIEWPORTS[vp]) throw new Error(`Unbekannte Breite ${vp}`);
-  if (o.env === 'prod' && o.auth.includes('user')) {
-    console.log('Hinweis: auf prod nur abgemeldet — --auth user entfällt.');
-    o.auth = o.auth.filter(x => x !== 'user');
+  if (o.env === 'prod' && o.auth.some(a => a !== 'anon')) {
+    console.log('Hinweis: auf prod nur abgemeldet — --auth user/admin entfällt.');
+    o.auth = o.auth.filter(x => x === 'anon');
   }
   return o;
 }
@@ -102,6 +103,31 @@ function credentials() {
     .map(l => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]));
   return { user: env.ROOKHUB_DEV_USER, password: env.ROOKHUB_DEV_PASSWORD };
 }
+
+/** Normales Konto ohne Sonderrechte (Rolle „user"): ROOKHUB_DEV_PLAIN_USER/_PASSWORD in derselben Datei. Fehlt es,
+ *  wird es auf Dev registriert und dort eingetragen. Das Admin-Konto (claude-dev) ist die Rolle „admin". */
+async function plainCredentials(base) {
+  if (process.env.UI_SWEEP_PLAIN_USER) return { user: process.env.UI_SWEEP_PLAIN_USER, password: process.env.UI_SWEEP_PLAIN_PASSWORD };
+  const file = path.join(os.homedir(), '.config/rookhub/dev-claude.env');
+  const text = fs.readFileSync(file, 'utf8');
+  const env = Object.fromEntries(text.split('\n').filter(l => l.includes('='))
+    .map(l => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]));
+  if (env.ROOKHUB_DEV_PLAIN_USER) return { user: env.ROOKHUB_DEV_PLAIN_USER, password: env.ROOKHUB_DEV_PLAIN_PASSWORD };
+  const user = 'claude-dev-user';
+  const password = 'Sw-' + crypto.randomBytes(12).toString('base64url') + '!7';
+  const res = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: user, email: null, password }) });
+  if (!res.ok) throw new Error(`Normales Konto anlegen gescheitert: HTTP ${res.status} ${await res.text()}`);
+  fs.appendFileSync(file, (text.endsWith('\n') ? '' : '\n') + `ROOKHUB_DEV_PLAIN_USER=${user}\nROOKHUB_DEV_PLAIN_PASSWORD=${password}\n`);
+  console.log(`Normales Konto ${user} auf Dev angelegt (Zugang in ${file}).`);
+  return { user, password };
+}
+
+/** Parameter, die an den EIGENEN Daten des Admin-Kontos hängen — für das normale Konto wären das fremde 404-Seiten. */
+const OWNED_PARAMS = new Set(['gameId', 'analyzedGameId', 'repertoireId', 'worksheetId', 'reconstructionId', 'guessId',
+  'analysisId', 'comparisonId', 'friendId', 'bookId', 'calcBookId']);
+/** Für abgemeldet ohne Sinn: die Punktepartie gehört einem Konto (anonym gäbe es nur ein 404). */
+const ANON_SKIP = new Set(['guessId']);
 
 function chromePath() {
   if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
@@ -150,7 +176,7 @@ async function main() {
   const routes = ROUTES.filter(r => (!opts.app || opts.app.includes(r.app)) && (!opts.area || opts.area.includes(areaOf(r)))
     && (!opts.route || opts.route.some(t => r.url.includes(t) || routeId(r).includes(t))));
 
-  let session = null; let params = {};
+  let session = null; let plainSession = null; let params = {}; let userParams = {};
   const cachePath = path.join(RUNS, `params-${opts.env}.json`);
   const previousParams = fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, 'utf8')) : {};
   const resolveLog = [];
@@ -160,6 +186,16 @@ async function main() {
     const { user, password } = credentials();
     session = await login(apiBase, user, password);
     console.log(`Angemeldet als ${session.username} an ${apiBase}`);
+    if (opts.auth.includes('user')) {
+      const plain = await plainCredentials(apiBase);
+      plainSession = await login(apiBase, plain.user, plain.password);
+      console.log(`Normales Konto: ${plainSession.username} — eigene Daten:`);
+      const userCache = path.join(RUNS, `params-${opts.env}-user.json`);
+      const prevUser = fs.existsSync(userCache) ? JSON.parse(fs.readFileSync(userCache, 'utf8')) : {};
+      userParams = await resolveParams(apiBase, plainSession.token, (name, value) =>
+        OWNED_PARAMS.has(name) && console.log(`  ${name.padEnd(22)} ${value instanceof Error ? 'Fehler: ' + value.message : value ?? '—'}`), prevUser);
+      fs.writeFileSync(userCache, JSON.stringify(userParams, null, 2));
+    }
     params = await resolveParams(apiBase, session.token, (name, value) => {
       const text = value instanceof Error ? `Fehler: ${value.message}` : value ?? '— (nichts gefunden)';
       resolveLog.push({ name, value: value instanceof Error ? null : value, note: text });
@@ -169,24 +205,29 @@ async function main() {
     fs.writeFileSync(cachePath, JSON.stringify(params, null, 2));
   }
 
-  const fill = url => {
+  // Konto-eigene Parameter (Partie, Repertoire …) kommen für die Rolle „user" aus dessen eigenen Daten, der Rest ist geteilt.
+  const fill = (url, auth) => {
     const missing = [];
-    const out = url.replace(/\{(\w+)\}/g, (_, n) => { if (params[n] == null) missing.push(n); return params[n] ?? ''; });
+    const src = n => (auth === 'user' && OWNED_PARAMS.has(n) ? userParams : params)[n];
+    const out = url.replace(/\{(\w+)\}/g, (_, n) => { if (src(n) == null) missing.push(n); return src(n) ?? ''; });
     return { url: out, missing };
   };
 
   const jobs = []; const unresolved = [];
   for (const route of routes) {
-    const { url, missing } = fill(route.url);
-    if (missing.length) { unresolved.push({ id: routeId(route), url: route.url, missing }); continue; }
-    const auths = route.auth === 'any' ? opts.auth : opts.auth.filter(a => a === route.auth);
-    for (const auth of auths) for (const viewport of opts.viewport) for (const theme of opts.theme) {
-      jobs.push({ route, id: routeId(route), url, auth, viewport, theme });
+    const wanted = route.auth === 'any' ? opts.auth
+      : route.auth === 'user' ? opts.auth.filter(a => a !== 'anon') : opts.auth.filter(a => a === route.auth);
+    for (const auth of wanted) {
+      if (auth === 'anon' && [...route.url.matchAll(/\{(\w+)\}/g)].some(m => ANON_SKIP.has(m[1]))) continue;
+      const { url, missing } = fill(route.url, auth);
+      if (missing.length) { unresolved.push({ id: `${routeId(route)} (${auth})`, url: route.url, missing }); continue; }
+      for (const viewport of opts.viewport) for (const theme of opts.theme) jobs.push({ route, id: routeId(route), url, auth, viewport, theme });
     }
   }
 
+
   if (opts.list) {
-    for (const r of routes) { const { url, missing } = fill(r.url); console.log(`${routeId(r).padEnd(42)} ${r.auth.padEnd(5)} ${missing.length ? `[fehlt: ${missing}]` : url}`); }
+    for (const r of routes) { const { url, missing } = fill(r.url, 'admin'); console.log(`${routeId(r).padEnd(42)} ${r.auth.padEnd(5)} ${missing.length ? `[fehlt: ${missing}]` : url}`); }
     console.log(`\n${jobs.length} Aufnahmen, ${unresolved.length} Routen nicht auflösbar.`);
     return;
   }
@@ -227,7 +268,7 @@ async function main() {
       locale: 'de-DE', timezoneId: 'Europe/Vienna', ignoreHTTPSErrors: true,
     });
     let toolDelayMs = 0; const apiCalls = [];
-    const userJson = job.auth === 'user' ? JSON.stringify(session) : null;
+    const userJson = job.auth === 'admin' ? JSON.stringify(session) : job.auth === 'user' ? JSON.stringify(plainSession) : null;
     await ctx.addInitScript(([user, theme]) => {
       try {
         if (user) localStorage.setItem('rookhub_user', user); else localStorage.removeItem('rookhub_user');
