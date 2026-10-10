@@ -163,4 +163,58 @@ public class GameMistakeProgressTests : IDisposable
 
         Assert.IsType<NotFoundResult>((await _controller.Mistakes(game.Id, default)).Result);
     }
+    [Fact]
+    public async Task Dismiss_HidesPly_AndItNoLongerCountsAsOpen()
+    {
+        var game = await GameAsync(9911);
+        await _service.RecordAsync(9911, game.Id, 5, new[] { 10 });
+
+        var stand = await _service.DismissAsync(9911, game.Id, ply: 22, hidden: true, total: 5);
+
+        Assert.Equal(new[] { 22 }, stand!.DismissedPlies);
+        Assert.Equal(1, stand.Solved);
+        Assert.Equal(3, stand.Open);
+    }
+
+    [Fact]
+    public async Task Dismiss_UntrainedGame_CreatesRow_AndSolvedPlusDismissedCountsOnce()
+    {
+        var game = await GameAsync(9912);
+
+        await _service.DismissAsync(9912, game.Id, 30, true, 4);
+        var stand = await _service.RecordAsync(9912, game.Id, 4, new[] { 30 });
+
+        Assert.Equal(1, stand!.Solved);
+        Assert.Equal(3, stand.Open);
+        Assert.Equal(new[] { 30 }, stand.DismissedPlies);
+    }
+
+    [Fact]
+    public async Task Dismiss_Undo_SinglePly_AndAll()
+    {
+        var game = await GameAsync(9913);
+        await _service.DismissAsync(9913, game.Id, 4, true, 6);
+        await _service.DismissAsync(9913, game.Id, 8, true, 6);
+
+        var eins = await _service.DismissAsync(9913, game.Id, 4, hidden: false, total: 6);
+        Assert.Equal(new[] { 8 }, eins!.DismissedPlies);
+
+        var alle = await _service.DismissAsync(9913, game.Id, -1, hidden: false, total: 6);
+        Assert.Empty(alle!.DismissedPlies);
+        Assert.Equal(6, alle.Open);
+    }
+
+    [Fact]
+    public async Task Controller_Dismiss_ForeignGame_IsNotFound()
+    {
+        var game = await GameAsync(9914);
+        _db.AppUsers.Add(new AppUser { Id = 9915, Username = "u9915", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        SetUser(9915);
+
+        var res = await _controller.DismissMistake(game.Id, new MistakeDismissInputDto { Ply = 3, Total = 2 }, default);
+
+        Assert.IsType<NotFoundResult>(res.Result);
+        Assert.Empty(_db.GameMistakeProgresses);
+    }
 }

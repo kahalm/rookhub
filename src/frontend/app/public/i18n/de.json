@@ -2818,7 +2818,21 @@
       "analyze": "Analysieren",
       "triedEval": "Nach {{san}}: {{eval}} (bester Zug: {{best}})",
       "triedEvalPending": "{{san}} wird bewertet …",
-      "replayed": "Fehler nachgespielt"
+      "replayed": "Fehler nachgespielt",
+      "dismiss": "Nicht mehr zeigen",
+      "dismissHint": "Diesen Fehler nie wieder abfragen — etwa, wenn du nichts daraus lernst. Auf der Partieseite lässt er sich wieder einblenden.",
+      "restore": "{{count}} ausgeblendet — wieder zeigen",
+      "collection": {
+        "button": "Fehler nach Liga/Saison nachspielen",
+        "title": "Fehler nach Liga/Saison nachspielen",
+        "hint": "Wähle Liga und/oder Saison: alle offenen Fehler deiner analysierten Partien dieser Auswahl kommen nacheinander auf einem Brett.",
+        "includeSolved": "Auch schon gefundene Fehler",
+        "selection": "{{games}} Partien gewählt, davon {{analysed}} analysiert",
+        "loading": "Lade Partien … {{done}} von {{total}}",
+        "start": "Starten",
+        "none": "In dieser Auswahl gibt es keine offenen Fehler.",
+        "source": "{{mistakes}} Fehler aus {{games}} Partien"
+      }
     },
     "live": {
       "toggle": "Live-Engine — eigene Züge ausprobieren",

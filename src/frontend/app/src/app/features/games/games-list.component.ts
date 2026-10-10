@@ -18,6 +18,7 @@ import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { distinctTags, filterByTag } from './tags.util';
 import { distinctClassifiers, filterByClassifiers, hasUnclassified, NO_CLASSIFIER } from './classifier.util';
+import { classifierToParam } from './mistakes-collection.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -49,6 +50,12 @@ export type AnalysisState = 'none' | 'running' | 'done';
           <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
             <mat-icon>upload_file</mat-icon> {{ 'games.pgnUpload.button' | translate }}
           </button>
+          <!-- Fehler mehrerer Partien am Stück (0.748.0) — übernimmt die gewählte Liga/Saison. -->
+          @if (games.length > 0) {
+            <a mat-stroked-button class="mistakes-collection" routerLink="/games/mistakes" [queryParams]="collectionParams()">
+              <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.button' | translate }}
+            </a>
+          }
         </div>
         <p class="hint">{{ 'games.hint' | translate }}</p>
         <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
@@ -350,6 +357,11 @@ export class GamesListComponent implements OnInit {
   filterTag = '';
   tagOptions(): string[] { return distinctTags(this.games); }
   readonly none = NO_CLASSIFIER;
+
+  /** Die gewählten Klassifizierer als Adresse für „Fehler nachspielen (Liga/Saison)". */
+  collectionParams(): Record<string, string | null> {
+    return { c1: classifierToParam(this.filter1), c2: classifierToParam(this.filter2) };
+  }
 
   firstOptions(): string[] { return distinctClassifiers(this.games, 1); }
   secondOptions(): string[] { return distinctClassifiers(this.games, 2); }

@@ -2818,7 +2818,21 @@
       "analyze": "Analiziraj",
       "triedEval": "Nakon {{san}}: {{eval}} (najbolji potez: {{best}})",
       "triedEvalPending": "Procjena {{san}} …",
-      "replayed": "Pogreške ponovljene"
+      "replayed": "Pogreške ponovljene",
+      "dismiss": "Ne prikazuj više",
+      "dismissHint": "Nikad više ne pitaj ovu pogrešku — npr. ako iz nje ništa ne naučiš. Na stranici partije može se ponovno prikazati.",
+      "restore": "{{count}} skriveno — prikaži ponovno",
+      "collection": {
+        "button": "Ponovi pogreške po ligi/sezoni",
+        "title": "Ponovi pogreške po ligi/sezoni",
+        "hint": "Odaberi ligu i/ili sezonu: sve otvorene pogreške tvojih analiziranih partija iz tog odabira dolaze jedna za drugom na jednoj ploči.",
+        "includeSolved": "I već pronađene pogreške",
+        "selection": "Odabrano partija: {{games}}, od toga analizirano: {{analysed}}",
+        "loading": "Učitavanje partija … {{done}} od {{total}}",
+        "start": "Pokreni",
+        "none": "U ovom odabiru nema otvorenih pogrešaka.",
+        "source": "{{mistakes}} pogrešaka iz {{games}} partija"
+      }
     },
     "live": {
       "toggle": "Motor uživo — isprobaj vlastite poteze",

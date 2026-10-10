@@ -75,6 +75,20 @@ public class GamesController : BaseApiController
         return stand == null ? NotFound() : Ok(stand);
     }
 
+    /// <summary>
+    /// „Diesen Fehler nicht mehr zeigen" (0.748.0): blendet einen Halbzug im Fehler-Training aus (<c>hidden = false</c>: wieder
+    /// ein; <c>ply = -1</c> mit <c>hidden = false</c>: alle wieder ein). Gilt für das Training dieser Partie und für die
+    /// Sammlung über Liga/Saison.
+    /// </summary>
+    [HttpPost("{id:int}/mistakes/dismiss")]
+    public async Task<ActionResult<GameMistakeProgressDto>> DismissMistake(int id,
+        [FromBody] MistakeDismissInputDto dto, CancellationToken ct)
+    {
+        if (dto is null) return BadRequest(new { message = "Body required." });
+        var stand = await _mistakes.DismissAsync(GetUserId(), id, dto.Ply, dto.Hidden, dto.Total, ct);
+        return stand == null ? NotFound() : Ok(stand);
+    }
+
     /// <summary>Öffentliche Sicht auf eine geteilte Partie (kein Login nötig). Literal-Route vor {id}.</summary>
     [HttpGet("shared/{token}")]
     [AllowAnonymous]

@@ -28,6 +28,12 @@ public class GameMistakeProgress
     /// <summary>Anzahl der Eintraege in <see cref="SolvedPlies"/> (fuer die Liste).</summary>
     public int SolvedCount { get; set; }
 
+    /// <summary>
+    /// Vom Nutzer ausgeblendete Halbzuege („Diesen Fehler nicht mehr zeigen", 0.748.0) als CSV, aufsteigend — er lernt
+    /// nach eigener Meinung nichts daraus. Der Trainer laesst sie weg, und sie zaehlen nicht als offen. Leer = keiner.
+    /// </summary>
+    public string DismissedPlies { get; set; } = string.Empty;
+
     public DateTime FirstTrainedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastTrainedAt { get; set; } = DateTime.UtcNow;
 }

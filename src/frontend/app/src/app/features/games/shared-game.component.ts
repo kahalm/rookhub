@@ -26,7 +26,7 @@ import { GameRoast, GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
 import { DeepStored } from './deep-analysis.util';
-import { MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide } from './mistakes.util';
+import { Mistake, MistakesBySide, NO_MISTAKES, mistakesOf, trainingSide, withoutPlies } from './mistakes.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
 import { MistakeJudgeService } from './mistake-judge.service';
@@ -129,6 +129,12 @@ const TAP_MAX_MS = 500;
               @if (mistakeTotal() > 0 && !training()) {
                 <button mat-stroked-button class="mistakes" (click)="trainMistakes()">
                   <mat-icon>replay</mat-icon> {{ 'games.mistakes.button' | translate: { count: mistakeTotal() } }}
+                </button>
+              }
+              <!-- Ausgeblendete Fehler („nicht mehr zeigen", 0.748.0) lassen sich hier alle wieder einblenden. -->
+              @if (own && dismissedPlies().length > 0 && !training()) {
+                <button mat-button class="restore-dismissed" (click)="restoreDismissed()">
+                  <mat-icon>visibility</mat-icon> {{ 'games.mistakes.restore' | translate: { count: dismissedPlies().length } }}
                 </button>
               }
               @if (own && shareToken) {
@@ -513,10 +519,14 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private readonly review = viewChild(GameReviewComponent);
   /** Abfragbare Fehler beider Seiten, gemeldet vom Rückblick unter dem Brett. */
   readonly mistakes = signal<MistakesBySide>(NO_MISTAKES);
+  /** Vom Besitzer ausgeblendete Halbzüge („nicht mehr zeigen", 0.748.0) — nur bei der eigenen Partie geladen. */
+  readonly dismissedPlies = signal<readonly number[]>([]);
+  /** Was der Trainer abfragt: die Fehler ohne die ausgeblendeten. */
+  readonly trainable = computed(() => withoutPlies(this.mistakes(), this.dismissedPlies()));
   /** Wessen Partie — als Signal, damit Zähler und Trainer-Seite nachziehen, sobald die Partie da ist. */
   private readonly ownerSide = signal<'white' | 'black' | null>(null);
   /** Die Seite, die der Trainer abfragt — der Knopf zählt NUR sie (siehe `trainingSide`). */
-  readonly mistakeSide = computed(() => this.trainSide() ?? trainingSide(this.mistakes(), this.ownerSide()));
+  readonly mistakeSide = computed(() => this.trainSide() ?? trainingSide(this.trainable(), this.ownerSide()));
   /** Seite aus dem geteilten Trainings-Link (`?train=white|black`, 0.740.0) — schlägt die Seite des Besitzers. */
   readonly trainSide = signal<'white' | 'black' | null>(null);
   /** Mit `?train=` geöffnet: das Training startet von selbst, sobald die Analyse Aufgaben dieser Seite hergibt (einmal). */
@@ -524,11 +534,11 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private readonly autoTrainEffect = effect(() => {
     const side = this.trainSide();
     if (!side || !this.autoTrain || this.training()) return;
-    if (mistakesOf(this.mistakes(), side).length === 0) return;
+    if (mistakesOf(this.trainable(), side).length === 0) return;
     this.autoTrain = false;
     untracked(() => this.trainMistakes());
   });
-  readonly mistakeTotal = computed(() => mistakesOf(this.mistakes(), this.mistakeSide()).length);
+  readonly mistakeTotal = computed(() => mistakesOf(this.trainable(), this.mistakeSide()).length);
 
   analysisRunning(): boolean {
     const s = this.reviewStatus();
@@ -812,8 +822,26 @@ export class SharedGameComponent implements OnInit, DoCheck {
   trainMistakes(): void {
     this.stopLive();
     // Nicht gelistete Züge prüft die Browser-Engine nach (nur wo die Analyse das offen lässt).
-    this.training.set(new MistakesSession(this.mistakes(), this.mistakeSide(),
-      (m, fen) => this.mistakeJudge.judge(m, fen), fen => this.mistakeJudge.evaluate(fen)));
+    this.training.set(new MistakesSession(this.trainable(), this.mistakeSide(),
+      (m, fen) => this.mistakeJudge.judge(m, fen), fen => this.mistakeJudge.evaluate(fen),
+      this.own && this.gameId ? m => this.dismissMistake(m) : undefined));
+  }
+
+  /** „Diesen Fehler nicht mehr zeigen" (0.748.0): auf dem Server merken; ein Fehlschlag bleibt still (wie die Meldung). */
+  private dismissMistake(m: Mistake): void {
+    if (!this.gameId) return;
+    this.dismissedPlies.update(p => p.includes(m.ply) ? p : [...p, m.ply]);
+    const total = mistakesOf(this.mistakes(), m.white ? 'white' : 'black').length;
+    this.games.dismissMistake(this.gameId, m.ply, true, total).subscribe({ error: () => { /* nächster Versuch beim nächsten Klick */ } });
+  }
+
+  /** Alle ausgeblendeten Fehler dieser Partie wieder einblenden. */
+  restoreDismissed(): void {
+    if (!this.gameId) return;
+    const before = this.dismissedPlies();
+    this.dismissedPlies.set([]);
+    this.games.dismissMistake(this.gameId, -1, false, mistakesOf(this.mistakes(), this.mistakeSide()).length)
+      .subscribe({ error: () => this.dismissedPlies.set(before) });
   }
 
   onTrainingMove(e: UserBoardMove): void {
@@ -879,6 +907,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       this.evalsUrl = this.games.evalsUrl(id);
       this.similarUrl = this.games.similarUrl(id);
       this.analyzeUrl = this.games.analyzeUrl(id);
+      this.games.mistakes(id).subscribe(p => this.dismissedPlies.set(p?.dismissedPlies ?? []));
       this.games.get(id).subscribe({
         next: g => { this.shareToken = g.shareToken; this.scanId = g.scanId ?? null; this.show(g); this.loadSharedRoast(g.shareToken); },
         error: () => { this.notFound = true; this.loading = false; },

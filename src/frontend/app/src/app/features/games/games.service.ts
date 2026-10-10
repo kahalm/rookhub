@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, catchError, map, of } from 'rxjs';
 import { LibraryGame } from '../guess/library.service';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { GameEvals } from './game-review.util';
@@ -54,6 +54,8 @@ export interface GameMistakeProgress {
   solved: number;
   open: number;
   solvedPlies: number[];
+  /** Ausgeblendete Halbzüge („nicht mehr zeigen", 0.748.0) — der Trainer lässt sie weg. Fehlt bei älterem Server. */
+  dismissedPlies?: number[];
   lastTrainedAt: string;
 }
 
@@ -250,6 +252,18 @@ export class GamesService {
    */
   recordMistakes(id: number, total: number, solved: number[]): Observable<GameMistakeProgress> {
     return this.http.post<GameMistakeProgress>(`/api/games/${id}/mistakes`, { total, solved });
+  }
+  /** Stand des Fehler-Trainings einer eigenen Partie; `null` = noch nie trainiert (404). */
+  mistakes(id: number): Observable<GameMistakeProgress | null> {
+    return this.http.get<GameMistakeProgress>(`/api/games/${id}/mistakes`).pipe(catchError(() => of(null)));
+  }
+
+  /**
+   * „Diesen Fehler nicht mehr zeigen" (0.748.0); `hidden = false` blendet ihn wieder ein, `ply = -1` mit `hidden = false`
+   * alle der Partie. `total` = Aufgaben der Partie (Seite des Nutzers) — die Zeile kann dabei erst entstehen.
+   */
+  dismissMistake(id: number, ply: number, hidden: boolean, total: number): Observable<GameMistakeProgress> {
+    return this.http.post<GameMistakeProgress>(`/api/games/${id}/mistakes/dismiss`, { ply, hidden, total });
   }
   /** Bewertungen einer eigenen Partie (Nachspiel-Dialog). */
   evalsUrl(id: number): string { return `/api/games/${id}/evals`; }

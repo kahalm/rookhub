@@ -59,6 +59,36 @@ public class GameMistakeProgressService
         return Map(zeile);
     }
 
+    /// <summary>
+    /// „Diesen Fehler nicht mehr zeigen" (0.748.0) — bzw. mit <paramref name="hidden"/> = false wieder einblenden; ein
+    /// negativer <paramref name="ply"/> blendet ALLE der Partie wieder ein. Legt die Zeile an, wenn die Partie noch nie
+    /// trainiert wurde. `null`, wenn die Partie dem Nutzer nicht gehoert.
+    /// </summary>
+    public async Task<GameMistakeProgressDto?> DismissAsync(int userId, int savedGameId, int ply, bool hidden, int total,
+        CancellationToken ct = default)
+    {
+        var gehoert = await _db.SavedGames.AnyAsync(g => g.Id == savedGameId && g.UserId == userId, ct);
+        if (!gehoert) return null;
+
+        var jetzt = DateTime.UtcNow;
+        var zeile = await _db.GameMistakeProgresses
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.SavedGameId == savedGameId, ct);
+        if (zeile == null)
+        {
+            if (!hidden) return new GameMistakeProgressDto { Total = Math.Clamp(total, 0, MaxPly), Open = Math.Clamp(total, 0, MaxPly) };
+            zeile = new GameMistakeProgress { UserId = userId, SavedGameId = savedGameId, FirstTrainedAt = jetzt, LastTrainedAt = jetzt };
+            _db.GameMistakeProgresses.Add(zeile);
+        }
+
+        var aus = Parse(zeile.DismissedPlies).ToHashSet();
+        if (ply < 0) aus.Clear();
+        else if (ply < MaxPly) { if (hidden) aus.Add(ply); else aus.Remove(ply); }
+        zeile.DismissedPlies = string.Join(',', aus.OrderBy(p => p));
+        if (total > 0) zeile.Total = Math.Clamp(total, zeile.SolvedCount, MaxPly);
+        await _db.SaveChangesAsync(ct);
+        return Map(zeile);
+    }
+
     /// <summary>Fortschritt zu mehreren Partien — fuer die Uebersicht (eine Abfrage statt N).</summary>
     public async Task<Dictionary<int, GameMistakeProgressDto>> ForGamesAsync(int userId,
         IReadOnlyCollection<int> gameIds, CancellationToken ct = default)
@@ -85,12 +115,20 @@ public class GameMistakeProgressService
             if (int.TryParse(teil, out var p) && p >= 0 && p < MaxPly) yield return p;
     }
 
-    private static GameMistakeProgressDto Map(GameMistakeProgress p) => new()
+    private static GameMistakeProgressDto Map(GameMistakeProgress p)
     {
-        Total = p.Total,
-        Solved = p.SolvedCount,
-        Open = Math.Max(0, p.Total - p.SolvedCount),
-        SolvedPlies = Parse(p.SolvedPlies).ToList(),
-        LastTrainedAt = p.LastTrainedAt,
-    };
+        var geloest = Parse(p.SolvedPlies).ToList();
+        var aus = Parse(p.DismissedPlies).ToList();
+        // Ausgeblendet UND gefunden zaehlt nur einmal.
+        var erledigt = geloest.Union(aus).Count();
+        return new()
+        {
+            Total = p.Total,
+            Solved = p.SolvedCount,
+            Open = Math.Max(0, p.Total - erledigt),
+            SolvedPlies = geloest,
+            DismissedPlies = aus,
+            LastTrainedAt = p.LastTrainedAt,
+        };
+    }
 }

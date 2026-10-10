@@ -15,6 +15,9 @@ export type UnlistedMoveJudge = (m: Mistake, fenAfter: string) => Promise<boolea
 /** Bewertung einer Stellung (Weiß-Sicht) durch die Browser-Engine — für den Fehlversuch, den die Analyse nicht führt. */
 export type PositionEvaluator = (fen: string) => Promise<EvalScore | null>;
 
+/** „Diesen Fehler nicht mehr zeigen" (0.748.0): die Seite merkt es sich auf dem Server. */
+export type MistakeDismisser = (m: Mistake) => void;
+
 /**
  * Der Zustand von „Eigene Fehler nachspielen" — getrennt von jeder Anzeige, damit das BRETT der
  * Partie-Seite ihn spielen kann (seit 0.518.1; vorher ein Dialog mit eigenem, kleinerem Brett, auf Wunsch
@@ -59,14 +62,29 @@ export class MistakesSession {
    * wer erst danebengreift oder die Lösung zeigen lässt, bekommt die Aufgabe nicht gutgeschrieben.
    */
   readonly solvedPlies = signal<number[]>([]);
+  /** Die selbst gefundenen Aufgaben selbst — die Sammlung über mehrere Partien meldet sie je Partie (`Mistake.gameId`). */
+  readonly solvedMistakes = signal<Mistake[]>([]);
+  /** In dieser Sitzung ausgeblendet („nicht mehr zeigen") — fallen aus der Liste, auch bei „Von vorn". */
+  private readonly hidden = signal<ReadonlySet<Mistake>>(new Set());
+  readonly dismissedCount = computed(() => this.hidden().size);
 
-  readonly list = computed<Mistake[]>(() => this.side() === 'white' ? this.bySide.white : this.bySide.black);
+  readonly list = computed<Mistake[]>(() => {
+    const all = this.side() === 'white' ? this.bySide.white : this.bySide.black;
+    const hidden = this.hidden();
+    return hidden.size ? all.filter(m => !hidden.has(m)) : all;
+  });
   readonly current = computed<Mistake | null>(() => this.list()[this.index()] ?? null);
-  readonly flipped = computed(() => this.side() === 'black');
+  /** Brett aus Sicht des Ziehenden der Aufgabe — in der Sammlung über mehrere Partien wechselt das je Partie. */
+  readonly flipped = computed(() => {
+    const m = this.current();
+    return m ? !m.white : this.side() === 'black';
+  });
   readonly last = computed(() => this.index() >= this.list().length - 1);
   /** Nimmt das Brett gerade einen Zug an? */
   readonly playable = computed(() => this.phase() === 'ask' && this.current() !== null);
   readonly bothSides: boolean;
+  /** Gibt es „nicht mehr zeigen"? Nur mit einem {@link MistakeDismisser} (eigene Partie). */
+  readonly canDismiss: boolean;
 
   /** Auf dieser Aufgabe schon danebengegriffen? Dann zählt sie nicht als selbst gefunden. */
   private missedHere = false;
@@ -75,8 +93,9 @@ export class MistakesSession {
   private epoch = 0;
 
   constructor(readonly bySide: MistakesBySide, side: 'white' | 'black', private readonly judge?: UnlistedMoveJudge,
-              private readonly evaluate?: PositionEvaluator) {
+              private readonly evaluate?: PositionEvaluator, private readonly dismisser?: MistakeDismisser) {
     this.bothSides = bySide.white.length > 0 && bySide.black.length > 0;
+    this.canDismiss = !!dismisser;
     this.side.set(side);
     this.start(0);
   }
@@ -112,8 +131,10 @@ export class MistakesSession {
   private found(san: string, best: boolean, byEngine: boolean): void {
     if (!this.missedHere) {
       this.solved.update(n => n + 1);
-      const ply = this.current()?.ply;
+      const cur = this.current();
+      const ply = cur?.ply;
       if (ply != null) this.solvedPlies.update(p => p.includes(ply) ? p : [...p, ply]);
+      if (cur) this.solvedMistakes.update(l => l.includes(cur) ? l : [...l, cur]);
     }
     this.foundSan.set(san);
     this.foundBest.set(best);
@@ -175,6 +196,17 @@ export class MistakesSession {
   }
 
   next(): void { this.start(this.index() + 1); }
+
+  /** „Diesen Fehler nicht mehr zeigen": der Seite melden, aus der Liste nehmen — die nächste Aufgabe rückt nach. */
+  dismiss(): void {
+    const m = this.current();
+    if (!m || !this.dismisser) return;
+    this.dismisser(m);
+    // Gerade selbst gefunden und dann ausgeblendet: zählt in der Zusammenfassung nicht mehr mit (sonst „3 von 2").
+    if (this.phase() === 'right' && !this.missedHere) this.solved.update(n => Math.max(0, n - 1));
+    this.hidden.update(h => new Set([...h, m]));
+    this.start(this.index());
+  }
 
   restart(): void {
     this.solved.set(0);

@@ -3163,7 +3163,21 @@
       "analyze": "Elemzés",
       "triedEval": "{{san}} után: {{eval}} (legjobb lépés: {{best}})",
       "triedEvalPending": "{{san}} értékelése …",
-      "replayed": "Hibák újrajátszva"
+      "replayed": "Hibák újrajátszva",
+      "dismiss": "Ne mutasd többé",
+      "dismissHint": "Ezt a hibát soha többé ne kérdezze — pl. ha semmit sem tanulsz belőle. A parti oldalán újra megjeleníthető.",
+      "restore": "{{count}} elrejtve — mutasd újra",
+      "collection": {
+        "button": "Hibák újrajátszása liga/szezon szerint",
+        "title": "Hibák újrajátszása liga/szezon szerint",
+        "hint": "Válassz ligát és/vagy szezont: a kiválasztás elemzett partijainak összes nyitott hibája egymás után jön egy táblán.",
+        "includeSolved": "A már megtalált hibák is",
+        "selection": "{{games}} parti kiválasztva, ebből {{analysed}} elemezve",
+        "loading": "Partik betöltése … {{done}} / {{total}}",
+        "start": "Indítás",
+        "none": "Ebben a kiválasztásban nincs nyitott hiba.",
+        "source": "{{mistakes}} hiba {{games}} partiból"
+      }
     },
     "live": {
       "toggle": "Élő motor — próbáld ki a saját lépéseidet",

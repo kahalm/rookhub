@@ -13,6 +13,7 @@ internal sealed class GameMistakeProgressConfiguration : IEntityTypeConfiguratio
         e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
         e.HasOne(p => p.Game).WithMany().HasForeignKey(p => p.SavedGameId).OnDelete(DeleteBehavior.Cascade);
         e.Property(p => p.SolvedPlies).HasMaxLength(4000);
+        e.Property(p => p.DismissedPlies).HasMaxLength(4000);
         e.HasIndex(p => new { p.UserId, p.SavedGameId }).IsUnique();
     }
 }

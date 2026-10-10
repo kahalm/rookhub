@@ -285,4 +285,49 @@ describe('MistakesSession', () => {
     c.next();
     expect(c.hintLevel()).toBe(0);
   });
+  // 0.748.0: „Nicht mehr zeigen" — der Seite melden, aus der Liste nehmen, die nächste Aufgabe rückt nach.
+  it('„nicht mehr zeigen": meldet die Aufgabe, nimmt sie aus der Liste, auch bei „Von vorn"', () => {
+    const gemeldet: Mistake[] = [];
+    const c = new MistakesSession(zwei, 'white', undefined, undefined, m => gemeldet.push(m));
+    expect(c.canDismiss).toBeTrue();
+
+    c.dismiss();
+
+    expect(gemeldet.map(m => m.ply)).toEqual([2]);
+    expect(c.list().length).toBe(1);
+    expect(c.index()).toBe(0);
+    expect(c.current()?.ply).toBe(4);
+    expect(c.phase()).toBe('ask');
+    expect(c.dismissedCount()).toBe(1);
+
+    c.restart();
+    expect(c.list().map(m => m.ply)).toEqual([4]);
+  });
+
+  it('„nicht mehr zeigen" nach dem Finden zählt nicht mehr als gefunden; ohne Melder gibt es den Knopf nicht', () => {
+    const c = new MistakesSession(zwei, 'white', undefined, undefined, () => {});
+    c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'danach' });
+    expect(c.solved()).toBe(1);
+
+    c.dismiss();
+
+    expect(c.solved()).toBe(0);
+    expect(c.solvedMistakes().map(m => m.ply)).toEqual([2]);
+    expect(setup(zwei).canDismiss).toBeFalse();
+  });
+
+  it('letzte Aufgabe ausgeblendet → fertig', () => {
+    const c = new MistakesSession({ white: [fehler()], black: [] }, 'white', undefined, undefined, () => {});
+    c.dismiss();
+    expect(c.phase()).toBe('done');
+    expect(c.list().length).toBe(0);
+  });
+
+  // Sammlung über mehrere Partien: das Brett dreht sich nach dem Ziehenden der Aufgabe, nicht nach der gewählten Seite.
+  it('dreht das Brett je Aufgabe nach dem Ziehenden', () => {
+    const c = setup({ white: [fehler(), fehler({ ply: 5, white: false })], black: [] });
+    expect(c.flipped()).toBeFalse();
+    c.next();
+    expect(c.flipped()).toBeTrue();
+  });
 });

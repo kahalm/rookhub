@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession } from './mistakes-session';
@@ -14,20 +15,20 @@ describe('MistakesTrainerComponent', () => {
     candidates: [{ uci: 'g1f3', score: { cp: 30 } }, { uci: 'b1c3', score: { cp: -45 } }],
   };
 
-  function setup() {
+  function setup(t: Mistake = task, dismisser?: (m: Mistake) => void) {
     TestBed.configureTestingModule({
       imports: [MistakesTrainerComponent],
-      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
     });
     const tr = TestBed.inject(TranslateService);
     tr.setTranslation('en', {
       puzzles: { hints: { show: 'Hint', next: 'Next hint', t1Quiet: 'Quiet move.', t2Piece: 'Move your {{piece}}.',
         t3Move: 'Play {{move}}.', pieces: { knight: 'knight' } } },
-      games: { mistakes: { analyze: 'Analyse', triedEval: 'After {{san}}: {{eval}} (best move: {{best}})' } },
+      games: { mistakes: { analyze: 'Analyse', dismiss: "Don't show again", triedEval: 'After {{san}}: {{eval}} (best move: {{best}})' } },
     });
     tr.use('en');
     const fixture = TestBed.createComponent(MistakesTrainerComponent);
-    const session = new MistakesSession({ white: [task], black: [] }, 'white');
+    const session = new MistakesSession({ white: [t], black: [] }, 'white', undefined, undefined, dismisser);
     fixture.componentInstance.session = session;
     fixture.detectChanges();
     return { fixture, session, el: fixture.nativeElement as HTMLElement };
@@ -60,5 +61,26 @@ describe('MistakesTrainerComponent', () => {
     session.retry(); session.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'nach Nf3' });
     fixture.detectChanges();
     expect(el.querySelector('button.analyze')).not.toBeNull(); // auch nach einer richtigen Lösung
+  });
+  // 0.748.0
+  it('„Nicht mehr zeigen" nur mit Melder; der Klick meldet die Aufgabe', () => {
+    expect(setup().el.querySelector('button.dismiss')).toBeNull();
+    TestBed.resetTestingModule();
+    const gemeldet: number[] = [];
+    const { fixture, el } = setup(task, m => gemeldet.push(m.ply));
+    const btn = el.querySelector('button.dismiss') as HTMLButtonElement;
+    expect(btn.textContent).toContain("Don't show again");
+    btn.click(); fixture.detectChanges();
+    expect(gemeldet).toEqual([2]);
+  });
+
+  it('Sammlung: nennt die Partie der Aufgabe und verlinkt sie; ohne „Analysieren", wenn abgeschaltet', () => {
+    const { fixture, session, el } = setup({ ...task, gameId: 77, gameLabel: 'A – B · 01.10.2026' });
+    fixture.componentInstance.analyzable = false;
+    const a = el.querySelector('a.game') as HTMLAnchorElement;
+    expect(a.textContent).toContain('A – B · 01.10.2026');
+    expect(a.getAttribute('href')).toBe('/games/77?ply=2');
+    session.showSolution(); fixture.detectChanges();
+    expect(el.querySelector('button.analyze')).toBeNull();
   });
 });

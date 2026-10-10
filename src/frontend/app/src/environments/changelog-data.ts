@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.748.0", date: "2026-10-11", changes: [
+    { en: "Replay your mistakes: “Don’t show again” takes a mistake out of the training for good — for mistakes you learn nothing from. It no longer counts as open in “My games”; on the game page “n hidden — show again” brings them all back.", de: "Eigene Fehler nachspielen: „Nicht mehr zeigen“ nimmt einen Fehler dauerhaft aus dem Training — für Fehler, aus denen du nichts lernst. Er zählt in „Meine Partien“ nicht mehr als offen; auf der Partieseite holt „n ausgeblendet — wieder zeigen“ alle zurück." },
+    { en: "New: “Replay mistakes by league/season” (button in “My games”). Choose a league and/or season — all open mistakes of your analysed games in that selection come one after the other on one board, in the order the games were played, each with its game named and linked. Optionally also the mistakes you already found. Found and hidden mistakes are saved per game, as on the game page.", de: "Neu: „Fehler nach Liga/Saison nachspielen“ (Knopf in „Meine Partien“). Liga und/oder Saison wählen — alle offenen Fehler deiner analysierten Partien dieser Auswahl kommen nacheinander auf einem Brett, in der Reihenfolge, in der die Partien gespielt wurden, jeweils mit Partie als Link. Auf Wunsch auch die schon gefundenen. Gefundenes und Ausgeblendetes wird je Partie gespeichert, wie auf der Partieseite." },
+  ] },
   { version: "0.747.0", date: "2026-10-11", changes: [
     { en: "KidHub star hunt, free play: the piece is a single switch with four fields, the number of stars a big counter with − and + (2 up to the piece's maximum; hold to count faster) — instead of seven number buttons plus an input field. Back link, title and “✓ solved” fit in one line on phones.", de: "KidHub-Sternenjagd, Freies Spiel: die Figur ist ein Umschalter mit vier Feldern, die Sternzahl ein großer Zähler mit − und + (2 bis zum Höchstwert der Figur; gedrückt halten zählt schneller) — statt sieben Zahlknöpfen plus Eingabefeld. Zurück, Titel und „✓ geschafft“ stehen am Handy in einer Zeile." },
   ] },

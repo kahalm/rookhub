@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { buildStagedHints, classifyMoveFromFen } from '../puzzles/puzzle-hints.util';
 import { EvalScore, MOVE_CLASS_COLORS, MoveClass, formatEval } from './game-review.util';
@@ -18,10 +19,10 @@ import { MistakesSession } from './mistakes-session';
   selector: 'app-mistakes-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe],
   template: `
     <div class="top">
-      <span class="title">{{ 'games.mistakes.title' | translate }}</span>
+      <span class="title">{{ (title || 'games.mistakes.title') | translate }}</span>
       @if (session.bothSides) {
         <span class="sides">
           @for (s of SIDES; track s) {
@@ -52,6 +53,10 @@ import { MistakesSession } from './mistakes-session';
         <span class="badge" [style.background]="color(m.cls)">{{ ('games.review.class.' + m.cls) | translate }}</span>
         <span class="evals">{{ fmt(m) }}</span>
       </div>
+      <!-- Sammlung über mehrere Partien (0.748.0): aus welcher Partie die Aufgabe stammt — öffnet sie in einem neuen Tab. -->
+      @if (m.gameLabel && m.gameId) {
+        <a class="game" [routerLink]="['/games', m.gameId]" [queryParams]="{ ply: m.ply }" target="_blank" rel="noopener">{{ m.gameLabel }}</a>
+      }
 
       <p class="prompt" [class.right]="session.phase() === 'right'" [class.wrong]="session.phase() === 'wrong'">
         @switch (session.phase()) {
@@ -98,7 +103,7 @@ import { MistakesSession } from './mistakes-session';
         }
         <!-- Nach dem Urteil (daneben, gezeigt oder gefunden): frei weiterrechnen mit der Live-Engine, bis zur nächsten
              Aufgabe (seit 0.526.2, gewünscht 2026-09-24). -->
-        @if (session.phase() === 'wrong' || session.phase() === 'shown' || session.phase() === 'right') {
+        @if (analyzable && (session.phase() === 'wrong' || session.phase() === 'shown' || session.phase() === 'right')) {
           <button mat-stroked-button class="analyze" [class.on]="analyzing" (click)="analyze.emit()">
             <mat-icon>memory</mat-icon> {{ 'games.mistakes.analyze' | translate }}
           </button>
@@ -108,6 +113,12 @@ import { MistakesSession } from './mistakes-session';
             <mat-icon>lightbulb</mat-icon>
             {{ (session.hintLevel() === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
             ({{ session.hintLevel() }}/{{ hints(m).length }})
+          </button>
+        }
+        <!-- „Diesen Fehler nicht mehr zeigen" (0.748.0, Wunsch: „ich lerne nichts davon") — nur bei der eigenen Partie. -->
+        @if (session.canDismiss && session.phase() !== 'checking') {
+          <button mat-button class="dismiss" (click)="session.dismiss()" [matTooltip]="'games.mistakes.dismissHint' | translate">
+            <mat-icon>visibility_off</mat-icon> {{ 'games.mistakes.dismiss' | translate }}
           </button>
         }
         @if (session.phase() === 'ask' || session.phase() === 'wrong' || session.phase() === 'checking') {
@@ -136,6 +147,8 @@ import { MistakesSession } from './mistakes-session';
     .close { margin-left: auto; }
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.85rem; }
     .badge { padding: 1px 8px; border-radius: 10px; color: #fff; font-weight: 600; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45); }
+    .game { display: inline-block; margin-top: 2px; font-size: 0.8rem; color: inherit; opacity: 0.75; }
+    .dismiss { opacity: 0.75; }
     .evals { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 70%, transparent); }
     .prompt { margin: 6px 0 0; }
     .prompt.right { color: #2e7d32; font-weight: 500; }
@@ -162,6 +175,10 @@ export class MistakesTrainerComponent {
   @Input() analyzing = false;
   /** „Analysieren": die Seite macht das Brett frei und schaltet die Live-Engine zu — bis zur nächsten Aufgabe. */
   @Output() analyze = new EventEmitter<void>();
+  /** Gibt es den Knopf „Analysieren"? Die Sammlung über mehrere Partien hat keine Live-Engine-Leiste. */
+  @Input() analyzable = true;
+  /** Eigener Titel (Übersetzungsschlüssel) — die Sammlung nennt sich anders als das Training einer Partie. */
+  @Input() title = '';
 
   color(c: MoveClass): string { return MOVE_CLASS_COLORS[c]; }
   fmt(m: Mistake): string { return `${formatEval(m.evalBefore)} → ${formatEval(m.evalAfter)}`; }
@@ -169,7 +186,7 @@ export class MistakesTrainerComponent {
 
   /** Tipps zur Aufgabe, dieselben wie beim Puzzle: zum Bestzug der Analyse aus der Stellung VOR dem Fehler. */
   hints(m: Mistake): string[] {
-    const key = `${m.ply}:${this.translate.currentLang() ?? ''}`;
+    const key = `${m.gameId ?? ''}:${m.ply}:${this.translate.currentLang() ?? ''}`;
     let h = this.hintCache.get(key);
     if (!h) {
       h = buildStagedHints(classifyMoveFromFen(m.fenBefore, m.bestUci), (k, p) => this.translate.instant(k, p));

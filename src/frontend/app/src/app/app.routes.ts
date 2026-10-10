@@ -66,6 +66,8 @@ export const routes: Routes = [
   { path: 'prep/:id', loadComponent: () => import('./features/prep/prep-player.component').then(m => m.PrepPlayerComponent), canActivate: [authGuard, permissionGuard('prep.view')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },
   // Partieformular einlesen (0.529.0) — Literal VOR games/:id, sonst wäre „scoresheet" eine Partie-Id.
+  // Fehler aus Liga/Saison nachspielen (0.748.0) — Literal VOR games/:id.
+  { path: 'games/mistakes', loadComponent: () => import('./features/games/mistakes-collection.component').then(m => m.MistakesCollectionComponent), canActivate: [authGuard, menuGuard('games')] },
   { path: 'games/scoresheet', loadComponent: () => import('./features/games/scoresheet-upload.component').then(m => m.ScoresheetUploadComponent), canActivate: [authGuard, menuGuard('scoresheet')] },
   // Partie korrigieren (Züge, Kopfdaten; bei eingelesenen Partien mit Foto und Lesarten).
   { path: 'games/:id/edit', loadComponent: () => import('./features/games/game-edit.component').then(m => m.GameEditComponent), canActivate: [authGuard, menuGuard('games')], canDeactivate: [unsavedChangesGuard] },

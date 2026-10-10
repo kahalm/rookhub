@@ -115,10 +115,12 @@ public class GameMistakeProgressDto
     public int Total { get; set; }
     /// <summary>Davon selbst gefunden.</summary>
     public int Solved { get; set; }
-    /// <summary>Noch offen (<c>Total - Solved</c>, nie negativ).</summary>
+    /// <summary>Noch offen: <c>Total</c> ohne gefundene und ohne ausgeblendete, nie negativ.</summary>
     public int Open { get; set; }
     /// <summary>Die gefundenen Halbzuege — der Trainer markiert damit, was schon saß.</summary>
     public List<int> SolvedPlies { get; set; } = new();
+    /// <summary>Ausgeblendete Halbzuege („nicht mehr zeigen", 0.748.0) — der Trainer laesst sie weg.</summary>
+    public List<int> DismissedPlies { get; set; } = new();
     public DateTime LastTrainedAt { get; set; }
 }
 
@@ -130,6 +132,15 @@ public class MistakeProgressInputDto
     public int Total { get; set; }
     /// <summary>Selbst gefundene Halbzuege dieses Durchlaufs.</summary>
     public List<int> Solved { get; set; } = new();
+}
+
+/// <summary>„Diesen Fehler nicht mehr zeigen" (0.748.0): <c>Hidden = false</c> blendet den Halbzug wieder ein. <c>Total</c> wie
+/// beim Fortschritt — die Zeile kann durch das Ausblenden erst entstehen.</summary>
+public class MistakeDismissInputDto
+{
+    public int Ply { get; set; }
+    public bool Hidden { get; set; } = true;
+    public int Total { get; set; }
 }
 
 /// <summary>Kopf der verknuepften Analyse fuer die Partienliste — ohne Stellungen.</summary>

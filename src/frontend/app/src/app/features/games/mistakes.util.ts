@@ -50,6 +50,10 @@ export interface Mistake {
   /** Alle Kandidaten der Analyse in dieser Stellung (Weiß-Sicht) — daraus nennt der Trainer die Bewertung eines
    *  Fehlversuchs, ohne die Engine zu fragen (seit 0.526.2). Fehlt bei Aufgaben von Hand. */
   candidates?: { uci: string; score: EvalScore }[];
+  /** Aus welcher eigenen Partie — nur in der Sammlung über mehrere Partien (Liga/Saison, 0.748.0). */
+  gameId?: number;
+  /** Kopfzeile dieser Partie für die Sammlung („Weiß – Schwarz · Liga 2026/27"). */
+  gameLabel?: string;
 }
 
 export interface MistakesBySide {
@@ -187,6 +191,13 @@ export function collectMistakes(
     });
   }
   return out;
+}
+
+/** Ohne die ausgeblendeten Halbzüge („nicht mehr zeigen", 0.748.0) — beide Seiten. */
+export function withoutPlies(bySide: MistakesBySide, plies: ReadonlySet<number> | readonly number[]): MistakesBySide {
+  const skip = plies instanceof Set ? plies : new Set(plies as readonly number[]);
+  if (!skip.size) return bySide;
+  return { white: bySide.white.filter(m => !skip.has(m.ply)), black: bySide.black.filter(m => !skip.has(m.ply)) };
 }
 
 /** Die Aufgaben EINER Seite. */
