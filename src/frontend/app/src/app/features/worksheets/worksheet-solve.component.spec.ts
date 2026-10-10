@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { SharedWorksheetItem } from './worksheet.service';
-import { WorksheetTask } from './worksheet-solve.component';
+import { WorksheetTask, sameText } from './worksheet-solve.component';
 
 /** Aufgabe: Weiß zieht 1.e4, Schwarz antwortet 1…e5, dann 2.Sf3 als zweiter Lösungszug. */
 const item = (over: Partial<SharedWorksheetItem> = {}): SharedWorksheetItem => ({
@@ -93,5 +93,18 @@ describe('WorksheetTask', () => {
   it('eine kaputte FEN macht die Aufgabe nicht kaputt', () => {
     const task = new WorksheetTask(item({ fen: 'unsinn', solutionMoves: '' }));
     expect(task.fen).toBe(new Chess().fen());   // Ersatzbrett statt Absturz
+  });
+});
+
+describe('sameText (Begleittext gleich Untertitel)', () => {
+  it('erkennt die Wiederholung trotz Punkt, Leerraum und Schreibweise', () => {
+    expect(sameText('Weiß am Zug.', 'Weiß am Zug')).toBeTrue();
+    expect(sameText('  weiß  am Zug ', 'Weiß am Zug')).toBeTrue();
+  });
+
+  it('lässt echten Begleittext stehen', () => {
+    expect(sameText('Weiß am Zug gewinnt eine Figur.', 'Weiß am Zug')).toBeFalse();
+    expect(sameText('Schwarz am Zug', 'Weiß am Zug')).toBeFalse();
+    expect(sameText('', '')).toBeFalse();
   });
 });

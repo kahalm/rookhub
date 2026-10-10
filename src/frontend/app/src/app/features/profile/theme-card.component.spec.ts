@@ -22,3 +22,19 @@ describe('ThemeCardComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 });
+
+describe('ThemeCardComponent Breite', () => {
+  it('ist nur so breit wie die drei Segmente (inline-flex statt volle Breite)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ThemeCardComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ThemeCardComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const group = (fixture.nativeElement as HTMLElement).querySelector('.theme-toggle') as HTMLElement;
+    expect(getComputedStyle(group).display).toBe('inline-flex');
+    expect(group.querySelectorAll('mat-button-toggle').length).toBe(3);
+    fixture.nativeElement.remove();
+  });
+});

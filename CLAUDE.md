@@ -5880,6 +5880,18 @@ dotnet ef database update                   # Braucht laufende MariaDB
 ```
 Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automatisch angewendet.
 
+## UI-Sweep (Screenshots aller Seiten, `tools/ui-sweep`)
+
+Rendert jede Seite aller fünf Oberflächen in Chromium, prüft sie automatisch (Seite zu breit, Elemente ragen raus, Text
+abgeschnitten, Übersetzungsschlüssel statt Text, Ladekreis steht, Konsolen-/API-Fehler) und vergleicht mit dem vorigen
+Lauf (Pixel-Diff). `cd tools/ui-sweep && ./sweep.sh` (Dev, Handy + breit, dunkel, ab- und angemeldet), `--area kurse,repertoire`
+für einzelne Bereiche (`--areas` listet sie), `--local` für den lokalen Build gegen die Dev-API, `--help`. Ergebnis in
+`runs/<Zeitpunkt>/index.html` (nicht im Repo). Anleitung und Fallen: `tools/ui-sweep/README.md`. Zwei Dinge, die dabei
+nicht kippen dürfen: (1) Die API drosselt je Adresse (100/min) — das Werkzeug bremst sich selbst (`--rate`, Vorgabe 80/min),
+schaltet die Offline-Vorräte der App ab und pausiert nach einem 429 eine Minute; ein Bild mit gebremsten Anfragen trägt
+`toolDelayMs` und zeigt evtl. einen Ladezustand, der NICHT von der App kommt. (2) Testdaten legt `seed.mjs` für `claude-dev`
+an (alles mit „ui-sweep" im Namen, wird wiedergefunden). Neue Route → in `routes.mjs` eintragen und einem Bereich zuordnen.
+
 ## Offene Aufgaben
 
 Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodische Aufgaben (Code Review, Security Review etc.) werden in **`rookhub/TODO.md`** geführt. Neue Punkte dort eintragen, nicht separat als Markdown-Datei anlegen.

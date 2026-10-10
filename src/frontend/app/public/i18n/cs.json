@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Týdenní",
     "intro": "Týdenní šachové příspěvky k procházení. Datum a čas ukazují, kdy je příspěvek naplánován.",
-    "oClock": "",
     "play": "Přehrát",
     "empty": "Zatím žádné týdenní příspěvky.",
     "deleteConfirm": "Smazat týdenní příspěvek \"{{title}}\"?",

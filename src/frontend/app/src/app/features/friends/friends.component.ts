@@ -63,8 +63,10 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
         </mat-card>
       }
 
-      <mat-tab-group [selectedIndex]="tabIndex" (selectedIndexChange)="tabIndex = $event">
-        <mat-tab [label]="'friends.tabs.friends' | translate:{ count: friends.length }">
+      <!-- Drei Reiter auf voller Breite, kurze Namen + Zähler als Badge — am Handy sonst „Cha…" hinter Pfeilen. -->
+      <mat-tab-group class="friends-tabs" mat-stretch-tabs [selectedIndex]="tabIndex" (selectedIndexChange)="tabIndex = $event">
+        <mat-tab>
+          <ng-template mat-tab-label>{{ 'friends.tabs.friends' | translate }}<span class="tab-count">{{ friends.length }}</span></ng-template>
           @if (loading) {
             <app-loading-spinner />
           } @else {
@@ -97,7 +99,8 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
             </mat-list>
           }
         </mat-tab>
-        <mat-tab [label]="'friends.tabs.requests' | translate:{ count: requests.length + sentRequests.length }">
+        <mat-tab>
+          <ng-template mat-tab-label>{{ 'friends.tabs.requests' | translate }}<span class="tab-count">{{ requests.length + sentRequests.length }}</span></ng-template>
           <h3 class="section-title">{{ 'friends.requests.incoming' | translate }}</h3>
           <mat-list>
             @for (req of requests; track req.friendshipId) {
@@ -137,7 +140,8 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
             }
           </mat-list>
         </mat-tab>
-        <mat-tab [label]="'friends.challenges.tab' | translate:{ count: incoming.length }">
+        <mat-tab>
+          <ng-template mat-tab-label>{{ 'friends.challenges.tab' | translate }}<span class="tab-count">{{ incoming.length }}</span></ng-template>
           <h3 class="section-title">{{ 'friends.challenges.inbox' | translate }}</h3>
           <mat-list>
             @for (c of incoming; track c.id) {
@@ -209,8 +213,16 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
       100% { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
     }
     .friends-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
-    .search-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    /* mat-card ist von Haus aus eine Spalte — ausdrücklich Zeile, sonst schrumpft das Feld auf Inhaltsbreite. */
+    .search-card { display: flex; flex-direction: row; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; }
     .search-field { flex: 1; min-width: 0; margin-bottom: -1.25em; }
+    .search-card button { flex: none; }
+    .friends-tabs ::ng-deep .mdc-tab { min-width: 0; padding: 0 8px; }
+    .tab-count {
+      display: inline-block; min-width: 1.4em; margin-left: 6px; padding: 0 6px; border-radius: 10px;
+      font-size: 0.75rem; line-height: 1.4; text-align: center;
+      background: color-mix(in srgb, currentColor 14%, transparent);
+    }
     .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     .chess-identities { font-size: 0.75rem; color: color-mix(in srgb, currentColor 40%, transparent); }
     .section-title { margin: 1rem 1rem 0; font-size: 0.95rem; color: color-mix(in srgb, currentColor 65%, transparent); }
@@ -223,8 +235,6 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
     @media (max-width: 768px) {
       .friends-container { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }
-      .search-field { flex-basis: 100%; }
-      .search-card button { width: 100%; }
     }
   `]
 })

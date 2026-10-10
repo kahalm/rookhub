@@ -106,7 +106,10 @@ import { APK_VERSION } from '../environments/changelog';
     }
   `,
   styles: [`
-    :host { display: block; }
+    /* Spalte über die ganze Fensterhöhe, der Inhalt nimmt den Rest: so sitzt die Fußzeile auch unter kurzen Seiten
+       am unteren Rand statt mitten im Bild (UI-Review footer-short). */
+    :host { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+    main { flex: 1 0 auto; }
     .apk-banner {
       display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
       background: #e65100; color: #fff; padding: 6px 14px; font-size: 0.85rem; font-weight: 500;

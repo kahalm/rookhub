@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Settimanale",
     "intro": "I post settimanali di scacchi da sfogliare. Data e ora indicano quando il post è programmato.",
-    "oClock": "",
     "play": "Gioca",
     "empty": "Nessun post settimanale ancora.",
     "deleteConfirm": "Eliminare il post settimanale \"{{title}}\"?",

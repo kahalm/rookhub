@@ -611,8 +611,8 @@
     "searchUsers": "Felhasználók keresése",
     "searchResults": "Keresési eredmények",
     "tabs": {
-      "friends": "Barátok ({{count}})",
-      "requests": "Kérések ({{count}})"
+      "friends": "Barátok",
+      "requests": "Kérések"
     },
     "empty": {
       "friends": "Még nincsenek barátaid. Keress felhasználókat a barátok hozzáadásához!",
@@ -656,7 +656,7 @@
       "loadError": "A revans-listát nem sikerült betölteni"
     },
     "challenges": {
-      "tab": "Kihívások ({{count}})",
+      "tab": "Kihívások",
       "inbox": "Beérkezett",
       "sent": "Elküldött",
       "fromLine": "Feladó: {{name}} · értékszám {{rating}}",
@@ -1459,7 +1459,6 @@
   "weekly": {
     "title": "Heti",
     "intro": "A heti sakk-bejegyzések, amelyeken végigléphetsz. A dátum és az idő jelzi, mikor van ütemezve a bejegyzés.",
-    "oClock": "óra",
     "play": "Végiglejátszás",
     "empty": "Még nincsenek heti bejegyzések.",
     "deleteConfirm": "Törlöd a(z) „{{title}}” heti bejegyzést?",
@@ -1545,7 +1544,10 @@
       "switchedTraining": "Edzésmód — a következő feladványtól.",
       "switchedEasy": "Egyszerű mód — a következő feladványtól.",
       "split": "{{training}} edzés · {{easy}} egyszerű"
-    }
+    },
+    "titleLabel": "Heti {{title}}",
+    "puzzleCount": "{{count}} feladvány",
+    "schedulePreview": "Megjelenik: {{date}}, {{time}} (helyi idő)"
   },
   "endless": {
     "offlineNoCache": "Offline vagy, és nincs gyorsítótárazott futam. Nyisd meg a Végtelen módot egyszer online, hogy elmentsd a feladványokat offline játékhoz.",
@@ -1602,7 +1604,8 @@
       "newGame": "Új játék",
       "start": "Kezdés",
       "clearThemes": "Összes törlése",
-      "advanced": "Finomhangolás"
+      "advanced": "Finomhangolás",
+      "startLives": "{{count}} élet"
     },
     "game": {
       "vizCountdown": "A bábuk {{seconds}} másodperc múlva eltűnnek...",
@@ -1749,7 +1752,8 @@
       "noPuzzles": "Ez a heti bejegyzés nem tartalmaz lejátszható feladványt.",
       "allSolved": "Minden feladvány megoldva!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved",
-      "guestHint": "Vendégként játszol — az eredményed nem számít."
+      "guestHint": "Vendégként játszol — az eredményed nem számít.",
+      "position": "{{n}}. feladvány / {{total}}"
     },
     "longSolve": {
       "title": "Elég sokáig tartott",
@@ -3111,6 +3115,7 @@
     },
     "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
     "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",
+    "movesCount": "{{count}} lépés",
     "mistakes": {
       "button": "Saját hibák újrajátszása ({{count}})",
       "title": "Saját hibák újrajátszása",
@@ -3348,7 +3353,7 @@
     "nodesLines": "{{nodes}} csomópont · {{lines}} változat",
     "nodes": {
       "title": "Játszma elemzése lc0-val",
-      "button": "lc0-val …",
+      "button": "Elemzés Lc0-val",
       "buttonHint": "A teljes játszmát csomópont-alapú motorral (pl. lc0) elemezteti — kérésre a Stockfish mellett",
       "hint": "A motor a játszma minden állását rögzített csomópontszámmal elemzi. Az lc0-nál a mélység keveset mond — a csomópontok döntik el a minőséget és az időt.",
       "engine": "Motor",
@@ -4376,6 +4381,7 @@
     "partsCount": "{{count}} rész",
     "knownPlies": "{{count}} biztos féllépés",
     "gaps": "{{count}} hézag",
+    "gapsOne": "{{count}} hézag",
     "notFound": "Ez a rekonstrukció (már) nem létezik.",
     "editHead": "Adatok szerkesztése",
     "white": "Világos",
@@ -4415,7 +4421,9 @@
       "notFound": "Ez a megosztott játszma (már) nem létezik.",
       "intro": "Emlékezetből összerakott játszma: lépések, egyes állások és a köztük lévő hézagok. Kattints a lapozáshoz, vagy használd a ← → billentyűket.",
       "position": "Felidézett állás",
-      "nothing": "Ehhez a játszmához még nincs semmi rögzítve."
+      "nothing": "Ehhez a játszmához még nincs semmi rögzítve.",
+      "gapToPosition": "az út a felidézett állásig ismeretlen",
+      "gapToMoves": "a köztes lépések ismeretlenek"
     },
     "copyPrefix": "Biztos lépések másolása",
     "copied": "Másolva.",

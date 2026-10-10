@@ -35,7 +35,8 @@ import { ThemeService } from '../../core/theme.service';
   `,
   styles: [`
     .theme-section h4 { margin: 0 0 0.75rem; color: #90caf9; }
-    .theme-toggle { display: flex; flex-wrap: wrap; }
+    /* Nur so breit wie die drei Segmente — auf voller Breite blieb rechts ein leeres Feld stehen. */
+    .theme-toggle { display: inline-flex; flex-wrap: wrap; max-width: 100%; }
     .theme-toggle mat-button-toggle { display: flex; align-items: center; gap: 6px; }
   `]
 })

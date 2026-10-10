@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Săptămânal",
     "intro": "Postările săptămânale de șah pentru parcurgere. Data și ora indică momentul programat al postării.",
-    "oClock": "",
     "play": "Parcurge",
     "empty": "Nicio postare săptămânală încă.",
     "deleteConfirm": "Ștergi postarea săptămânală „{{title}}“?",

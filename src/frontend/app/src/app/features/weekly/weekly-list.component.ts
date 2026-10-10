@@ -7,12 +7,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
-import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart, weeklyScheduledAtUtc, weeklyDisplayTime } from './weekly.service';
+import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart, weeklyScheduledAtUtc, weeklyDisplayTime, weeklyTitleLabel } from './weekly.service';
+import { WeeklyScheduleFieldsComponent } from './weekly-schedule-fields.component';
 import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
 import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -30,8 +32,8 @@ interface WeeklyPostRow extends WeeklyPost {
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatDialogModule,
-    TranslatePipe, LoadingSpinnerComponent
+    MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule,
+    TranslatePipe, LoadingSpinnerComponent, WeeklyScheduleFieldsComponent
   ],
   template: `
     <div class="weekly-container">
@@ -47,14 +49,7 @@ interface WeeklyPostRow extends WeeklyPost {
               <button mat-stroked-button (click)="pgnInput.click()">
                 <mat-icon>upload_file</mat-icon> {{ uploadFileName || ('weekly.upload.choosePgn' | translate) }}
               </button>
-              <mat-form-field appearance="outline" class="f-date">
-                <mat-label>{{ 'weekly.fields.date' | translate }}</mat-label>
-                <input matInput type="date" [(ngModel)]="uploadDate">
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="f-time">
-                <mat-label>{{ 'weekly.fields.time' | translate }}</mat-label>
-                <input matInput type="time" [(ngModel)]="uploadTime">
-              </mat-form-field>
+              <app-weekly-schedule-fields [(date)]="uploadDate" [(time)]="uploadTime" />
               <mat-form-field appearance="outline" class="f-title">
                 <mat-label>{{ 'weekly.fields.titleOptional' | translate }}</mat-label>
                 <input matInput [(ngModel)]="uploadTitle" [placeholder]="'weekly.upload.titlePlaceholder' | translate">
@@ -69,6 +64,9 @@ interface WeeklyPostRow extends WeeklyPost {
                 <mat-icon>add</mat-icon> {{ 'weekly.upload.create' | translate }}
               </button>
             </div>
+            @if (previewAt(uploadDate, uploadTime); as at) {
+              <p class="sched-preview">{{ 'weekly.schedulePreview' | translate:{ date: (at | date:'EEE, dd.MM.yyyy'), time: (at | date:'HH:mm') } }}</p>
+            }
             <p class="upload-hint">{{ 'weekly.upload.hint' | translate }}</p>
             <div class="or-chapter">
               <span class="or-sep">{{ 'weekly.fromChapter.or' | translate }}</span>
@@ -88,51 +86,79 @@ interface WeeklyPostRow extends WeeklyPost {
         <div class="wp-list">
           @for (r of rows; track r.id) {
             <mat-card class="wp-card">
-              <div class="wp-row">
-                <div class="wp-meta">
-                  @if (canManage) {
-                    <input class="inline-title" [(ngModel)]="r.title" (change)="savePost(r)"
-                           [placeholder]="'weekly.columns.title' | translate">
-                    <input class="inline-desc" [(ngModel)]="r.description" (change)="savePost(r)" maxlength="500"
-                           [placeholder]="'weekly.fields.descriptionOptional' | translate">
-                    <div class="wp-edit-sched">
-                      <input type="date" class="inline-date" [(ngModel)]="r.editDate" (change)="savePost(r)">
-                      <input type="time" class="inline-time" [(ngModel)]="r.editTime" (change)="savePost(r)">
-                    </div>
-                  } @else {
-                    @if (r.title) { <span class="wp-title">{{ r.title }}</span> }
-                    @if (r.description) { <span class="wp-desc">{{ r.description }}</span> }
-                    <span class="wp-sched">
-                      {{ displayTime(r) | date:'EEEE, dd.MM.yyyy' }} · {{ displayTime(r) | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
-                    </span>
+              @if (editId === r.id && draft; as d) {
+                <div class="wp-edit">
+                  <div class="upload-row">
+                    <mat-form-field appearance="outline" class="f-title">
+                      <mat-label>{{ 'weekly.columns.title' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="d.title">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="f-desc">
+                      <mat-label>{{ 'weekly.fields.descriptionOptional' | translate }}</mat-label>
+                      <input matInput [(ngModel)]="d.description" maxlength="500">
+                    </mat-form-field>
+                    <app-weekly-schedule-fields [(date)]="d.date" [(time)]="d.time" />
+                  </div>
+                  @if (previewAt(d.date, d.time); as at) {
+                    <p class="sched-preview">{{ 'weekly.schedulePreview' | translate:{ date: (at | date:'EEE, dd.MM.yyyy'), time: (at | date:'HH:mm') } }}</p>
                   }
-                  @if (prog[r.id]; as p) {
-                    <span class="wp-prog">
-                      <span class="wp-solved" [attr.title]="'weekly.progress.solvedLabel' | translate">✓ {{ p.solvedCount }}</span>
-                      <span class="wp-slash">/</span>
-                      <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
-                      <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
-                      @if (p.totalSeconds > 0) {
-                        <span class="wp-time" [attr.title]="'weekly.progress.timeLabel' | translate">· ⏱ {{ fmtTime(p.totalSeconds) }}</span>
-                      }
-                    </span>
-                  }
-                </div>
-                <div class="wp-actions">
-                  <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
-                    <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
-                  </button>
-                  <button mat-icon-button (click)="toggleBoard(r)"
-                          [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
-                    <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
-                  </button>
-                  @if (canManage) {
-                    <button mat-icon-button color="warn" (click)="remove(r)" [attr.title]="'common.delete' | translate">
-                      <mat-icon>delete</mat-icon>
+                  <div class="wp-edit-actions">
+                    <button mat-button (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
+                    <button mat-flat-button color="primary" [disabled]="!d.date || !d.time || saving" (click)="saveEdit(r)">
+                      {{ 'common.save' | translate }}
                     </button>
-                  }
+                  </div>
                 </div>
-              </div>
+              } @else {
+                <div class="wp-row">
+                  <div class="wp-head">
+                    <div class="wp-meta">
+                      <span class="wp-title">{{ titleLabel(r) }}</span>
+                      <span class="wp-sched">
+                        {{ displayTime(r) | date:'EEE, dd.MM.yyyy' }} · {{ displayTime(r) | date:'HH:mm' }}@if (puzzleCount(r); as n) { · {{ 'weekly.puzzleCount' | translate:{ count: n } }}}
+                      </span>
+                      @if (r.description) { <span class="wp-desc">{{ r.description }}</span> }
+                      @if (prog[r.id]; as p) {
+                        <span class="wp-prog">
+                          <span class="wp-solved" [attr.title]="'weekly.progress.solvedLabel' | translate">✓ {{ p.solvedCount }}</span>
+                          <span class="wp-slash">/</span>
+                          <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
+                          <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
+                          @if (p.totalSeconds > 0) {
+                            <span class="wp-time" [attr.title]="'weekly.progress.timeLabel' | translate">· ⏱ {{ fmtTime(p.totalSeconds) }}</span>
+                          }
+                        </span>
+                      }
+                    </div>
+                    @if (canManage) {
+                      <div class="wp-manage">
+                        <button mat-icon-button class="wp-edit-btn" (click)="startEdit(r)" [attr.aria-label]="'common.edit' | translate"
+                                [attr.title]="'common.edit' | translate">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button [matMenuTriggerFor]="more" [attr.aria-label]="'common.moreActions' | translate"
+                                [attr.title]="'common.moreActions' | translate">
+                          <mat-icon>more_vert</mat-icon>
+                        </button>
+                        <mat-menu #more="matMenu">
+                          <button mat-menu-item (click)="remove(r)">
+                            <mat-icon>delete</mat-icon> {{ 'common.delete' | translate }}
+                          </button>
+                        </mat-menu>
+                      </div>
+                    }
+                  </div>
+                  <div class="wp-actions">
+                    <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
+                      <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
+                    </button>
+                    <button mat-icon-button (click)="toggleBoard(r)"
+                            [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
+                      <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
 
               @if (expandedId === r.id) {
                 <div class="lb">
@@ -187,14 +213,11 @@ interface WeeklyPostRow extends WeeklyPost {
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .upload-card { margin-bottom: 20px; }
     .upload-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .f-date, .f-time { width: 150px; }
     .f-title { flex: 1; min-width: 180px; }
     .upload-hint { color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.8rem; margin: 4px 0 0; }
     .or-chapter { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
     .or-sep { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.85rem; }
-    .inline-date, .inline-time { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; }
-    .inline-title { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 320px; }
-    .inline-desc { font: inherit; font-size: 0.9rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 420px; }
+    .sched-preview { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; margin: 0; }
     .f-desc { flex: 1; min-width: 200px; }
     .wp-desc { color: color-mix(in srgb, currentColor 78%, transparent); font-size: 0.9rem; white-space: pre-wrap; }
 
@@ -202,15 +225,19 @@ interface WeeklyPostRow extends WeeklyPost {
     .wp-list { display: flex; flex-direction: column; gap: 8px; }
     .wp-card { padding: 12px 16px; }
     .wp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .wp-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .wp-edit-sched { display: flex; flex-wrap: wrap; gap: 6px; }
-    .wp-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-    .wp-sched { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.9rem; }
+    /* Kopf: Titel/Termin links, Stift + ⋮ rechts daneben (Lesemodus; bearbeitet wird über den Stift) */
+    .wp-head { display: flex; align-items: flex-start; gap: 4px; flex: 1; min-width: 0; }
+    .wp-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+    .wp-manage { display: flex; align-items: center; flex-shrink: 0; }
+    .wp-title { font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; }
+    .wp-edit { display: flex; flex-direction: column; gap: 8px; }
+    .wp-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .wp-sched { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; }
     .wp-actions { display: flex; align-items: center; flex-shrink: 0; }
 
     .wp-prog { font-variant-numeric: tabular-nums; }
-    .wp-solved { color: #2e7d32; font-weight: 600; }
-    .wp-failed { color: #c62828; font-weight: 600; }
+    .wp-solved { color: var(--rh-success); font-weight: 600; }
+    .wp-failed { color: var(--rh-error); font-weight: 600; }
     .wp-slash { color: color-mix(in srgb, currentColor 40%, transparent); margin: 0 4px; }
     .wp-pct { color: color-mix(in srgb, currentColor 65%, transparent); margin-left: 6px; }
     .wp-time { color: color-mix(in srgb, currentColor 65%, transparent); margin-left: 6px; }
@@ -234,9 +261,7 @@ interface WeeklyPostRow extends WeeklyPost {
     @media (max-width: 600px) {
       .weekly-container { margin: 16px auto; }
       .upload-row { flex-direction: column; align-items: stretch; }
-      .f-date, .f-title { width: 100%; }
-      .f-time { width: 100%; }
-      .inline-title { max-width: none; }
+      .f-title { width: 100%; }
       .wp-row { flex-direction: column; align-items: stretch; }
       .wp-actions { justify-content: flex-end; }
       .wp-prog { white-space: nowrap; }
@@ -264,6 +289,11 @@ export class WeeklyListComponent implements OnInit {
   uploadTitle = '';
   uploadDescription = '';
   uploading = false;
+
+  /** Karte im Bearbeiten-Modus (eine zur Zeit) und ihr Entwurf — die Liste zeigt sonst nur Text. */
+  editId: number | null = null;
+  draft: { title: string; description: string; date: string; time: string } | null = null;
+  saving = false;
 
   constructor(
     public auth: AuthService,
@@ -337,6 +367,42 @@ export class WeeklyListComponent implements OnInit {
 
   /** Termin für die Anzeige in Ortszeit (Server liefert UTC). */
   displayTime(r: WeeklyPost): number | string { return weeklyDisplayTime(r.scheduledAt); }
+
+  /** „Wochenpost 3" statt der nackten „3" (siehe weeklyTitleLabel). */
+  titleLabel(r: WeeklyPost): string { return weeklyTitleLabel(r.title, this.translate); }
+
+  /** Anzahl Puzzles, soweit bekannt (aus dem eigenen Fortschritt bzw. der geladenen Bestenliste). */
+  puzzleCount(r: WeeklyPost): number | null {
+    return this.prog[r.id]?.total || this.boardTotal[r.id] || null;
+  }
+
+  /** Vorschau „Erscheint am …" für Datum + Uhrzeit (Wandzeit, über dieselbe UTC-Umrechnung wie beim Speichern). */
+  previewAt(date: string, time: string): number | null {
+    if (!date || !time) return null;
+    const t = weeklyDisplayTime(weeklyScheduledAtUtc(date, time));
+    return typeof t === 'number' && !isNaN(t) ? t : null;
+  }
+
+  startEdit(r: WeeklyPostRow): void {
+    this.editId = r.id;
+    this.draft = { title: r.title ?? '', description: r.description ?? '', date: r.editDate, time: r.editTime };
+  }
+
+  cancelEdit(): void {
+    this.editId = null;
+    this.draft = null;
+  }
+
+  /** Entwurf übernehmen und speichern; die Karte geht erst bei Erfolg zurück in den Lesemodus. */
+  saveEdit(r: WeeklyPostRow): void {
+    const d = this.draft;
+    if (!d || !d.date || !d.time) return;
+    r.title = d.title.trim();
+    r.description = d.description;
+    r.editDate = d.date;
+    r.editTime = d.time;
+    this.savePost(r);
+  }
 
   /** Prozent gespielt (von allen Puzzles des Posts). */
   pct(p: WeeklyProgress): number {
@@ -417,10 +483,19 @@ export class WeeklyListComponent implements OnInit {
   savePost(row: WeeklyPostRow): void {
     if (!row.editDate || !row.editTime) return;
     const scheduledAt = weeklyScheduledAtUtc(row.editDate, row.editTime);
+    this.saving = true;
     this.weekly.update(row.id, { title: row.title, description: row.description ?? '', scheduledAt }).subscribe({
-      next: p => { row.scheduledAt = p.scheduledAt; row.description = p.description ?? null; },
+      next: p => {
+        row.scheduledAt = p.scheduledAt;
+        row.description = p.description ?? null;
+        if (p.title !== undefined) row.title = p.title;
+        this.saving = false;
+        if (this.editId === row.id) this.cancelEdit();
+      },
       error: err => {
+        this.saving = false;
         this.snackbar.info(apiErrorText(err, this.translate, 'weekly.saveFailed'), { action: 'common.ok', duration: 3000 });
+        this.cancelEdit();
         this.loadPosts();
       }
     });

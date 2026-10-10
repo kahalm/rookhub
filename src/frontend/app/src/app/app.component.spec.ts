@@ -225,6 +225,21 @@ describe('AppComponent App-Vollbild', () => {
     expect(fixture.nativeElement.querySelector('.app-fs-exit')).not.toBeNull();
   });
 
+  // UI-Review footer-short: die Hülle ist eine Spalte über die ganze Fensterhöhe, <main> nimmt den Rest — die
+  // Fußzeile sitzt damit auch unter einer kurzen Seite am unteren Rand.
+  it('hält die Fußzeile auch unter kurzem Inhalt am unteren Fensterrand', () => {
+    TestBed.overrideComponent(AppComponent, { set: { template: `<main><p>kurz</p></main><footer class="ft">f</footer>` } });
+    const fixture = TestBed.createComponent(AppComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(getComputedStyle(host).display).toBe('flex');
+    expect(getComputedStyle(host).flexDirection).toBe('column');
+    const footer = host.querySelector('.ft') as HTMLElement;
+    expect(Math.round(footer.getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(window.innerHeight - 1);
+    host.remove();
+  });
+
   it('der schwebende Knopf verlässt das Vollbild', () => {
     const exit = spyOn(document, 'exitFullscreen').and.returnValue(Promise.resolve());
     const fixture = TestBed.createComponent(AppComponent);

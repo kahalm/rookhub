@@ -856,8 +856,8 @@
     "searchUsers": "Search users",
     "searchResults": "Search results",
     "tabs": {
-      "friends": "Friends ({{count}})",
-      "requests": "Requests ({{count}})"
+      "friends": "Friends",
+      "requests": "Requests"
     },
     "empty": {
       "friends": "No friends yet. Search for users to add friends!",
@@ -891,7 +891,7 @@
       "loadError": "Could not load revenge list"
     },
     "challenges": {
-      "tab": "Challenges ({{count}})",
+      "tab": "Challenges",
       "inbox": "Inbox",
       "sent": "Sent",
       "fromLine": "From {{name}} · rating {{rating}}",
@@ -1857,7 +1857,6 @@
   "weekly": {
     "title": "Weekly",
     "intro": "The weekly chess posts to click through. Date & time indicate when the post is scheduled.",
-    "oClock": "",
     "play": "Play through",
     "empty": "No weekly posts yet.",
     "deleteConfirm": "Delete weekly post “{{title}}”?",
@@ -1943,7 +1942,10 @@
       "switchedTraining": "Training mode — from the next puzzle on.",
       "switchedEasy": "Easy mode — from the next puzzle on.",
       "split": "{{training}} training · {{easy}} easy"
-    }
+    },
+    "titleLabel": "Weekly {{title}}",
+    "puzzleCount": "{{count}} puzzles",
+    "schedulePreview": "Appears on {{date}} at {{time}} (local time)"
   },
   "endless": {
     "themePreset": {
@@ -2009,7 +2011,8 @@
       "archiveAndNew": "Archive & New Game",
       "newGame": "New Game",
       "start": "Start",
-      "advanced": "Fine-tuning"
+      "advanced": "Fine-tuning",
+      "startLives": "{{count}} lives"
     },
     "game": {
       "vizCountdown": "Pieces disappear in {{seconds}}s...",
@@ -2159,7 +2162,8 @@
       "noPuzzles": "This weekly post contains no playable puzzles.",
       "allSolved": "All puzzles solved!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved",
-      "guestHint": "You are playing as a guest — your result is not recorded."
+      "guestHint": "You are playing as a guest — your result is not recorded.",
+      "position": "Puzzle {{n}} of {{total}}"
     },
     "longSolve": {
       "title": "Took a while",
@@ -2766,6 +2770,7 @@
     },
     "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
     "accuracyHint": "Accuracy white · black (from the game analysis)",
+    "movesCount": "{{count}} moves",
     "mistakes": {
       "button": "Replay your mistakes ({{count}})",
       "title": "Replay your mistakes",
@@ -3669,7 +3674,7 @@
     "nodesLines": "{{nodes}} nodes · {{lines}} lines",
     "nodes": {
       "title": "Analyse game with lc0",
-      "button": "With lc0 …",
+      "button": "Analyse with Lc0",
       "buttonHint": "Analyse the whole game with a node-based engine (e.g. lc0) — optionally in addition to Stockfish",
       "hint": "The engine analyses every position of the game with a fixed number of nodes. For lc0 depth means little — nodes decide quality and duration.",
       "engine": "Engine",
@@ -4376,6 +4381,7 @@
     "partsCount": "{{count}} parts",
     "knownPlies": "{{count}} half-moves secured",
     "gaps": "{{count}} gaps",
+    "gapsOne": "{{count}} gap",
     "notFound": "This reconstruction does not exist (any more).",
     "editHead": "Edit details",
     "white": "White",
@@ -4415,7 +4421,9 @@
       "notFound": "This shared game does not exist (any more).",
       "intro": "A game pieced together from memory: moves, single positions and the gaps in between. Click to step through, or use the arrow keys.",
       "position": "Remembered position",
-      "nothing": "Nothing has been recorded for this game yet."
+      "nothing": "Nothing has been recorded for this game yet.",
+      "gapToPosition": "the way to the remembered position is unknown",
+      "gapToMoves": "the moves in between are unknown"
     },
     "copyPrefix": "Copy secured moves",
     "copied": "Copied.",

@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Semanal",
     "intro": "As publicações semanais de xadrez para explorar. A data e hora indicam quando a publicação está agendada.",
-    "oClock": "",
     "play": "Jogar",
     "empty": "Ainda não há publicações semanais.",
     "deleteConfirm": "Eliminar publicação semanal “{{title}}”?",

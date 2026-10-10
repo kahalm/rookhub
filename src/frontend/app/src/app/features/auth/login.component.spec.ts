@@ -8,6 +8,7 @@ import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LEGAL_SITE } from '../legal/legal-site';
 import { AUTH_INTRO } from './auth-intro';
+import { FooterPresenceService } from '../../shared/app-footer/footer-presence';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { Component } from '@angular/core';
@@ -385,5 +386,49 @@ describe('LoginComponent — neue Query auf derselben Route (UX-038)', () => {
     again.username = 'u'; again.password = 'p';
     again.onSubmit();
     expect(navigate).toHaveBeenCalledWith('/tournaments/history');
+  });
+});
+
+/**
+ * UI-Review login-legal: „Datenschutz · Impressum" unter der Karte nur, wo keine Fußzeile dieselben Links zeigt —
+ * RookHub (Fußzeile nur breiter als 768px) blendet die Zeile am PC aus, die Turnierseite (Fußzeile immer) ganz,
+ * Oberflächen ohne Fußzeile zeigen sie immer. Die Links bleiben dabei im DOM (checkSharedPageLinks prüft sie).
+ */
+describe('LoginComponent — Rechtslinks nur ohne Fußzeile', () => {
+  async function render(presence: 'none' | 'wide' | 'always'): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+      ],
+    }).compileComponents();
+    TestBed.inject(FooterPresenceService).presence.set(presence);
+    const fixture = TestBed.createComponent(LoginComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => document.querySelectorAll('app-login').forEach(e => e.remove()));
+
+  it('ohne Fußzeile sichtbar, mit dauerhafter Fußzeile ausgeblendet, Links bleiben im DOM', async () => {
+    const shown = (el: HTMLElement) => getComputedStyle(el.querySelector('.legal-links')!).display !== 'none';
+    let el = await render('none');
+    expect(shown(el)).toBeTrue();
+    TestBed.resetTestingModule();
+    el = await render('always');
+    expect(shown(el)).toBeFalse();
+    expect(el.querySelector('.legal-links a[routerLink="/privacy"]')).not.toBeNull();
+  });
+
+  it('RookHub-Fußzeile (nur breit): Zeile ist nur am Handy da (Karma-Fenster ist breit)', async () => {
+    const el = await render('wide');
+    const links = el.querySelector('.legal-links')!;
+    expect(links.classList).toContain('footer-wide');
+    expect(getComputedStyle(links).display).toBe(window.innerWidth > 768 ? 'none' : 'block');
   });
 });

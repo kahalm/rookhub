@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Semanal",
     "intro": "Las publicaciones semanales de ajedrez para repasar. La fecha y hora indican cuándo está programada la publicación.",
-    "oClock": "",
     "play": "Repasar",
     "empty": "Aún no hay publicaciones semanales.",
     "deleteConfirm": "¿Eliminar la publicación semanal “{{title}}”?",

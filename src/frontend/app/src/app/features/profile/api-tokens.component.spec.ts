@@ -83,6 +83,25 @@ describe('ApiTokensComponent', () => {
     http.verify();
   });
 
+  // Abschnitt im Muster der übrigen Profil-Abschnitte: Überschrift + Erklärsatz, keine eigene Karte.
+  it('renders as a plain profile section (no own card), button below the hint', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ApiTokensComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ApiTokensComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/profile/tokens').flush([]);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('mat-card')).toBeNull();
+    expect(el.querySelector('.tokens-section h4')?.textContent).toContain('profile.tokens.title');
+    expect(el.querySelector('.tokens-hint')?.textContent).toContain('profile.tokens.subtitle');
+    expect(el.querySelector('.tokens-section > button.tokens-create')).not.toBeNull();
+  });
+
   // Die Ablauf-Auswahl trug fuer "Nie" den Wert null — und ein MatSelect zeigt eine Option mit dem
   // Wert null nie als gewaehlt an (`option.value != null` in _selectOptionByValue). Das Feld stand
   // deshalb leer da, auch nachdem man "Nie" angeklickt hatte. Jetzt ist "Nie" die 0; nach aussen

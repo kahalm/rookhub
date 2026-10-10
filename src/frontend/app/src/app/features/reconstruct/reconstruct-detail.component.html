@@ -19,7 +19,7 @@
       <span class="chip">{{ 'reconstruct.partsCount' | translate:{ count: data()!.partCount } }}</span>
       <span class="chip ok">{{ 'reconstruct.knownPlies' | translate:{ count: data()!.knownPlies } }}</span>
       @if (data()!.gaps > 0) {
-        <span class="chip warn">{{ 'reconstruct.gaps' | translate:{ count: data()!.gaps } }}</span>
+        <span class="chip warn">{{ (data()!.gaps === 1 ? 'reconstruct.gapsOne' : 'reconstruct.gaps') | translate:{ count: data()!.gaps } }}</span>
       }
       @if (data()!.prefixSan) {
         <button mat-button (click)="copyPrefix()">

@@ -97,3 +97,58 @@ describe('WeeklyListComponent canManage', () => {
     expect(make(() => false).canManage).toBeFalse();
   });
 });
+
+// Listenkarte im Lesemodus, bearbeitet wird über den Stift (Entwurf, erst beim Speichern übernommen).
+describe('WeeklyListComponent Lesemodus + Bearbeiten', () => {
+  let component: WeeklyListComponent;
+  let weekly: any;
+
+  beforeEach(() => {
+    weekly = {
+      update: jasmine.createSpy('update').and.callFake((id: number, dto: any) => of({ id, ...dto })),
+      getAll: jasmine.createSpy('getAll').and.returnValue(of([])),
+    };
+    const translate = { instant: (k: string, p?: any) => k === 'weekly.title' ? 'Wochenpost' : (p ? `${k}:${p.title}` : k) } as any;
+    component = new WeeklyListComponent({ isLoggedIn: false } as any, weekly, { info: () => {} } as any, translate, {} as any, {} as any);
+  });
+
+  it('beschriftet rein numerische Titel', () => {
+    expect(component.titleLabel({ title: '3' } as any)).toBe('weekly.titleLabel:3');
+    expect(component.titleLabel({ title: 'Wochenpost 5' } as any)).toBe('Wochenpost 5');
+    expect(component.titleLabel({ title: 'Gabeln' } as any)).toBe('Gabeln');   // nur reine Zahlen bekommen das Wort
+    expect(component.titleLabel({ title: '' } as any)).toBe('Wochenpost');
+  });
+
+  it('nennt die Puzzle-Anzahl nur, wenn sie bekannt ist', () => {
+    expect(component.puzzleCount({ id: 1 } as any)).toBeNull();
+    component.prog[1] = { total: 12 } as any;
+    expect(component.puzzleCount({ id: 1 } as any)).toBe(12);
+  });
+
+  it('übernimmt den Entwurf erst beim Speichern und schließt danach', () => {
+    const row = { id: 7, title: '3', description: null, scheduledAt: '', editDate: '2026-07-09', editTime: '21:00' } as any;
+    component.startEdit(row);
+    component.draft!.title = '4';
+    component.draft!.time = '19:30';
+    expect(row.title).toBe('3');
+    component.saveEdit(row);
+    const dto = weekly.update.calls.mostRecent().args[1];
+    expect(dto.title).toBe('4');
+    expect(dto.scheduledAt).toBe(new Date(2026, 6, 9, 19, 30).toISOString());
+    expect(component.editId).toBeNull();
+  });
+
+  it('Abbrechen verwirft den Entwurf', () => {
+    const row = { id: 7, title: '3', editDate: '2026-07-09', editTime: '21:00' } as any;
+    component.startEdit(row);
+    component.draft!.title = 'x';
+    component.cancelEdit();
+    expect(row.title).toBe('3');
+    expect(weekly.update).not.toHaveBeenCalled();
+  });
+
+  it('Vorschau des Termins nur bei Datum und Uhrzeit', () => {
+    expect(component.previewAt('', '21:00')).toBeNull();
+    expect(component.previewAt('2026-07-16', '21:00')).toBe(new Date(2026, 6, 16, 21, 0).getTime());
+  });
+});

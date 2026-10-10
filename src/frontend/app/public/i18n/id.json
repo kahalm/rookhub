@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Mingguan",
     "intro": "Posting catur mingguan untuk dimainkan. Tanggal & waktu menunjukkan kapan posting dijadwalkan.",
-    "oClock": "",
     "play": "Mainkan",
     "empty": "Belum ada posting mingguan.",
     "deleteConfirm": "Hapus posting mingguan “{{title}}”?",

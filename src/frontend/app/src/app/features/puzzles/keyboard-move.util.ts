@@ -34,6 +34,21 @@ export function pieceLettersFor(lang: string | null | undefined): Readonly<Recor
   return LETTERS[(lang ?? '').split('-')[0].toLowerCase()] ?? EN;
 }
 
+/**
+ * Die Gegenrichtung zur Anzeige: englisches SAN → Figurenbuchstaben der Oberflächensprache („Nf3" → „Sf3",
+ * „e8=Q" → „e8=D"; ungarisch „Hf3"). Abgeleitet aus {@link LETTERS}, damit Eingabe und Anzeige dieselben
+ * Buchstaben kennen; Sprachen ohne eigene Buchstaben bleiben englisch.
+ */
+export function localizeSan(san: string, lang: string | null | undefined): string {
+  const letters = pieceLettersFor(lang);
+  const toLocal: Record<string, string> = {};
+  for (const [local, en] of Object.entries(letters)) if (local !== en) toLocal[en] = local;
+  if (!Object.keys(toLocal).length) return san;
+  return san
+    .replace(/^[QRBN](?=[a-h1-8x])/, p => toLocal[p] ?? p)
+    .replace(/=([QRBN])/, (_m, p: string) => '=' + (toLocal[p] ?? p));
+}
+
 /** SAN ohne Zeichen, die für die Identität des Zugs nichts sagen: Schach/Matt, Bewertung, Schlagzeichen, „=". */
 function sanKey(san: string): string {
   return san.replace(/[+#!?x:=]/g, '');

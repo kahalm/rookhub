@@ -365,6 +365,20 @@ describe('NavbarComponent Anmelden/Registrieren behalten das Ziel (UX-020)', () 
     expect(el.querySelector('mat-toolbar button[aria-label="nav.fullscreen"]')).not.toBeNull();
   });
 
+  /** UI-Review header-anon-mobile: unter 480px nur „Anmelden“ + ☰ in der Leiste — „Registrieren“ und Vollbild stehen
+   *  dann im ☰ (.anon-narrow; breiter per CSS aus), in der Leiste tragen sie .anon-wide (schmal per CSS aus). */
+  it('Gast am Handy: „Registrieren“ und Vollbild auch im ☰-Menü, in der Leiste nur breit', async () => {
+    const { el } = await renderAt('/puzzles');
+    expect(el.querySelector('mat-toolbar a[routerLink="/register"]')!.classList).toContain('anon-wide');
+    expect(el.querySelector('mat-toolbar button[aria-label="nav.fullscreen"]')!.classList).toContain('anon-wide');
+    expect(el.querySelector('mat-toolbar a[routerLink="/login"]')!.classList).not.toContain('anon-wide');
+    (el.querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement).click();
+    const narrow = Array.from(document.querySelectorAll('.cdk-overlay-container .anon-narrow'));
+    expect(narrow.length).toBe(2);
+    expect(narrow[0].getAttribute('href')).toBe('/register?returnUrl=%2Fpuzzles');
+    expect(narrow[1].textContent).toContain('nav.fullscreen');
+  });
+
   it('auf einer offenen Seite: zurück zu genau dieser Seite', async () => {
     expect((await renderAt('/puzzles/daily/today')).login).toBe('/login?returnUrl=%2Fpuzzles%2Fdaily%2Ftoday');
   });

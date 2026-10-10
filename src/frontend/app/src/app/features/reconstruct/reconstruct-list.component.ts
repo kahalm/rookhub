@@ -62,7 +62,7 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
                 <span class="chip">{{ 'reconstruct.partsCount' | translate:{ count: item.partCount } }}</span>
                 <span class="chip ok">{{ 'reconstruct.knownPlies' | translate:{ count: item.knownPlies } }}</span>
                 @if (item.gaps > 0) {
-                  <span class="chip warn">{{ 'reconstruct.gaps' | translate:{ count: item.gaps } }}</span>
+                  <span class="chip warn">{{ (item.gaps === 1 ? 'reconstruct.gapsOne' : 'reconstruct.gaps') | translate:{ count: item.gaps } }}</span>
                 }
               </div>
               <div class="actions">

@@ -144,6 +144,19 @@ export function weeklyTimePart(iso: string): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/**
+ * Anzeige-Titel: ein rein numerischer Titel („3") stand sonst ohne Bezug da und wirkte wie ein Darstellungsfehler — er
+ * wird zu „Wochenpost 3". Jeder andere Titel bleibt, wie er ist (Wunsch 2026-10-10: „nur bei reinen Zahlen"); ohne Titel
+ * nur das Wort.
+ */
+export function weeklyTitleLabel(title: string | null | undefined,
+                                 translate: { instant(key: string, params?: object): string }): string {
+  const t = (title ?? '').trim();
+  const word = translate.instant('weekly.title');
+  if (!t) return word;
+  return /^\d+$/.test(t) ? translate.instant('weekly.titleLabel', { title: t }) : t;
+}
+
 function ymd(d: Date): string {
   const p = (n: number) => n.toString().padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;

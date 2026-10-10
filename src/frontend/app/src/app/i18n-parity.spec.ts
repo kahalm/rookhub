@@ -37,8 +37,9 @@ describe('i18n Sprachdateien', () => {
   let en: Flat;
   beforeAll(async () => { en = await load('en'); });
 
-  /** Bewusst leere en-Werte: Suffixe, die es im Englischen nicht gibt (de „14:00 Uhr" → en „14:00"). */
-  const INTENTIONALLY_EMPTY_EN = new Set(['weekly.oClock']);
+  /** Bewusst leere en-Werte: Suffixe, die es im Englischen nicht gibt. (Bis 0.739.0 `weekly.oClock` — „14:00 Uhr"; die
+   *  Wochenpost zeigt seither die Uhrzeit im Format der Sprache.) */
+  const INTENTIONALLY_EMPTY_EN = new Set<string>([]);
 
   it('en ist die Quelle: viele Keys, keine (unbeabsichtigt) leeren Werte', () => {
     expect(Object.keys(en).length).toBeGreaterThan(1000);

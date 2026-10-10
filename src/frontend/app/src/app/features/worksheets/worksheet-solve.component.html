@@ -30,9 +30,8 @@
 
     <mat-card class="wsv-task">
       @if (t.item.heading) { <h2 class="wsv-heading">{{ t.item.heading }}</h2> }
-      <p class="wsv-turn">
-        {{ (t.item.orientation === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
-      </p>
+      @let turnText = (t.item.orientation === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate;
+      <p class="wsv-turn">{{ turnText }}</p>
 
       <div class="wsv-board">
         <app-puzzle-board
@@ -45,7 +44,8 @@
           (moveMade)="onMove($event)" />
       </div>
 
-      @if (t.item.text) { <p class="wsv-text">{{ t.item.text }}</p> }
+      <!-- Begleittext, der nur den Untertitel wiederholt („Weiß am Zug."), entfällt. -->
+      @if (t.item.text && !sameText(t.item.text, turnText)) { <p class="wsv-text">{{ t.item.text }}</p> }
 
       <div class="wsv-status" [class.wsv-ok]="t.state === 'solved'" [class.wsv-bad]="t.state === 'wrong'">
         @switch (t.state) {

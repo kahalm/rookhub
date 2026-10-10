@@ -856,8 +856,8 @@
     "searchUsers": "Pretraži korisnike",
     "searchResults": "Rezultati pretrage",
     "tabs": {
-      "friends": "Prijatelji ({{count}})",
-      "requests": "Zahtjevi ({{count}})"
+      "friends": "Prijatelji",
+      "requests": "Zahtjevi"
     },
     "empty": {
       "friends": "Još nemaš prijatelja. Pretraži korisnike i dodaj prijatelje!",
@@ -891,7 +891,7 @@
       "loadError": "Popis za osvetu nije moguće učitati"
     },
     "challenges": {
-      "tab": "Izazovi ({{count}})",
+      "tab": "Izazovi",
       "inbox": "Pristigli",
       "sent": "Poslani",
       "fromLine": "Od {{name}} · rejting {{rating}}",
@@ -1857,7 +1857,6 @@
   "weekly": {
     "title": "Tjedna objava",
     "intro": "Tjedne šahovske objave za prelistavanje. Datum i vrijeme označavaju kada je objava zakazana.",
-    "oClock": "sati",
     "play": "Odigraj",
     "empty": "Još nema tjednih objava.",
     "deleteConfirm": "Izbrisati tjednu objavu „{{title}}“?",
@@ -1943,7 +1942,10 @@
       "switchedTraining": "Trening način — od sljedeće zagonetke.",
       "switchedEasy": "Jednostavan način — od sljedeće zagonetke.",
       "split": "{{training}} trening · {{easy}} jednostavno"
-    }
+    },
+    "titleLabel": "Tjedna objava {{title}}",
+    "puzzleCount": "{{count}} zagonetki",
+    "schedulePreview": "Objavljuje se {{date}} u {{time}} (lokalno vrijeme)"
   },
   "endless": {
     "themePreset": {
@@ -2009,7 +2011,8 @@
       "archiveAndNew": "Arhiviraj i nova igra",
       "newGame": "Nova igra",
       "start": "Početak",
-      "advanced": "Fino podešavanje"
+      "advanced": "Fino podešavanje",
+      "startLives": "{{count}} života"
     },
     "game": {
       "vizCountdown": "Figure nestaju za {{seconds}}s...",
@@ -2159,7 +2162,8 @@
       "noPuzzles": "Ova tjedna objava ne sadrži zagonetke za igranje.",
       "allSolved": "Sve zagonetke riješene!",
       "progress": "{{played}}/{{total}} odigrano · {{solved}} riješeno",
-      "guestHint": "Igraš kao gost — tvoj rezultat se ne broji."
+      "guestHint": "Igraš kao gost — tvoj rezultat se ne broji.",
+      "position": "Zagonetka {{n}} od {{total}}"
     },
     "longSolve": {
       "title": "Poprilično dugo",
@@ -2766,6 +2770,7 @@
     },
     "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
     "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",
+    "movesCount": "Potezi: {{count}}",
     "mistakes": {
       "button": "Ponovi vlastite pogreške ({{count}})",
       "title": "Ponovi vlastite pogreške",
@@ -3669,7 +3674,7 @@
     "nodesLines": "{{nodes}} čvorova · {{lines}} varijanti",
     "nodes": {
       "title": "Analiziraj partiju s lc0",
-      "button": "S lc0 …",
+      "button": "Analiziraj s Lc0",
       "buttonHint": "Analiziraj cijelu partiju strojem koji radi po čvorovima (npr. lc0) — po želji uz Stockfish",
       "hint": "Stroj analizira svaku poziciju partije s fiksnim brojem čvorova. Kod lc0 dubina malo govori — čvorovi određuju kvalitetu i trajanje.",
       "engine": "Stroj",
@@ -4376,6 +4381,7 @@
     "partsCount": "Dijelova: {{count}}",
     "knownPlies": "Sigurnih polupoteza: {{count}}",
     "gaps": "Praznina: {{count}}",
+    "gapsOne": "Praznina: {{count}}",
     "notFound": "Ova rekonstrukcija (više) ne postoji.",
     "editHead": "Uredi podatke",
     "white": "Bijeli",
@@ -4415,7 +4421,9 @@
       "notFound": "Ova podijeljena partija (više) ne postoji.",
       "intro": "Partija složena po sjećanju: potezi, pojedine pozicije i praznine između njih. Klikni za listanje ili koristi tipke ← →.",
       "position": "Zapamćena pozicija",
-      "nothing": "Za ovu partiju još ništa nije zabilježeno."
+      "nothing": "Za ovu partiju još ništa nije zabilježeno.",
+      "gapToPosition": "put do zapamćene pozicije nije poznat",
+      "gapToMoves": "potezi između nisu poznati"
     },
     "copyPrefix": "Kopiraj sigurne poteze",
     "copied": "Kopirano.",

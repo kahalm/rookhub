@@ -179,6 +179,10 @@ import {
     .depth { width: 120px; }
     .hint { flex: 1 1 220px; }
     .nodes-btn { white-space: nowrap; }
+    /* Am Handy beide Knöpfe untereinander in voller Breite — nebeneinander reichte der Platz nicht für den ganzen Text. */
+    @media (max-width: 600px) {
+      .new-row > button { flex: 1 1 100%; }
+    }
     .ga { margin-bottom: 10px; }
     .ga-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
     .ga-title { font-weight: 600; text-decoration: none; color: inherit; }

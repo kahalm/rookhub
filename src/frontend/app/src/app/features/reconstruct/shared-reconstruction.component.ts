@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { START_FEN } from '../analysis/position-setup.component';
@@ -14,6 +14,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { withSideToMove } from './reconstruct-detail.component';
 import { PartKind, ReconstructService, SharedReconstruction, SharedReconstructionPart } from './reconstruct.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { localizeSan } from '../puzzles/keyboard-move.util';
 
 /**
  * Eine Zeile der geteilten Partie: ein Zug, eine erinnerte Stellung oder eine LÜCKE.
@@ -124,7 +125,7 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
             <div class="chips">
               <span class="chip ok">{{ 'reconstruct.knownPlies' | translate:{ count: game.knownPlies } }}</span>
               @if (game.gaps > 0) {
-                <span class="chip warn">{{ 'reconstruct.gaps' | translate:{ count: game.gaps } }}</span>
+                <span class="chip warn">{{ (game.gaps === 1 ? 'reconstruct.gapsOne' : 'reconstruct.gaps') | translate:{ count: game.gaps } }}</span>
               }
             </div>
             <p class="muted small">{{ 'reconstruct.shared.intro' | translate }}</p>
@@ -166,7 +167,9 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
               </div>
             </div>
 
-            <!-- Die Partie als Folge: Züge, erinnerte Stellungen, Lücken — in dieser Reihenfolge. -->
+            <!-- Die Partie als Folge: Züge, erinnerte Stellungen, Lücken — in dieser Reihenfolge.
+                 Die Spalte ist so hoch wie Brett + Leiste (die Liste liegt absolut darin und rollt). -->
+            <div class="moves-col">
             <div class="moves-section">
               @if (rows.length === 0) {
                 <p class="muted empty-line">{{ 'reconstruct.shared.nothing' | translate }}</p>
@@ -175,7 +178,8 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
                 @if (row.type === 'gap') {
                   <div class="gap-row">
                     <mat-icon class="gap-icon">more_horiz</mat-icon>
-                    <span class="muted">{{ 'reconstruct.gap.here' | translate }}</span>
+                    <span class="muted">{{ 'reconstruct.gap.here' | translate }} — {{
+                      (rows[$index + 1]?.type === 'position' ? 'reconstruct.shared.gapToPosition' : 'reconstruct.shared.gapToMoves') | translate }}</span>
                   </div>
                 } @else if (row.type === 'position') {
                   <div class="pos-row" [class.current]="isCurrent(row)" (click)="show(row)">
@@ -192,11 +196,12 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
                     @if (row.moveNo !== null && row.moveNo !== undefined) {
                       <span class="no">{{ row.moveNo }}{{ row.black ? '…' : '.' }}</span>
                     }
-                    {{ row.san }}
+                    {{ sanShown(row.san) }}
                   </span>
                   @if (row.first && row.note) { <div class="muted note">{{ row.note }}</div> }
                 }
               }
+            </div>
             </div>
           </div>
 
@@ -221,14 +226,15 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .chip.warn { background: color-mix(in srgb, #ed6c02 22%, transparent); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: 0.85rem; }
-    .body { display: flex; gap: 16px; align-items: flex-start; }
+    .body { display: flex; gap: 16px; align-items: stretch; }
     .board-section { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { width: 400px; }
     .board-wrap app-chess-board { display: block; width: 400px; }
     .nav { display: flex; gap: 4px; align-items: center; }
     .ply-count { font-size: 0.8rem; }
+    .moves-col { flex: 1; min-width: 200px; position: relative; }
     .moves-section {
-      flex: 1; min-width: 200px; max-height: 62vh; overflow: auto; padding: 8px;
+      position: absolute; inset: 0; overflow: auto; padding: 8px;
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px;
       line-height: 2;
     }
@@ -239,6 +245,7 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .move.unsure { font-style: italic; opacity: 0.85; }
     .move .no { color: color-mix(in srgb, currentColor 55%, transparent); margin-right: 2px; }
     .gap-row, .pos-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; line-height: 1.4; }
+    .gap-row { padding: 6px 8px; border: 1px dashed color-mix(in srgb, currentColor 35%, transparent); border-radius: 8px; }
     .pos-row { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
     .pos-row:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .pos-row.current { background: color-mix(in srgb, #1976d2 28%, transparent); }
@@ -254,7 +261,7 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
       .board-wrap { width: 100%; }
       .board-wrap app-chess-board { width: 100%; }
       .nav { justify-content: center; }
-      .moves-section { width: auto; max-height: 40vh; }
+      .moves-section { position: static; width: auto; max-height: 40vh; }
       .head-note { padding: 0 16px 16px; }
     }
   `],
@@ -272,6 +279,7 @@ export class SharedReconstructionComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   readonly preferences = inject(PreferencesService);
+  private translate = inject(TranslateService);
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('token') || '';
@@ -291,6 +299,11 @@ export class SharedReconstructionComponent implements OnInit {
   /** Die Stellung auf dem Brett — vor dem ersten Schritt die Grundstellung. */
   boardFen(): string {
     return this.steps[this.stepIndex]?.fen || START_FEN;
+  }
+
+  /** Der Zug in den Figurenbuchstaben der Oberfläche („Sf3" statt „Nf3"). */
+  sanShown(san: string | undefined): string {
+    return localizeSan(san ?? '', this.translate.currentLang());
   }
 
   isCurrent(row: SharedRow): boolean {

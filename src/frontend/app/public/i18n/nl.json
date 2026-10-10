@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Wekelijks",
     "intro": "De wekelijkse schaakberichten om doorheen te klikken. Datum en tijd geven aan wanneer het bericht gepland staat.",
-    "oClock": "",
     "play": "Doorspelen",
     "empty": "Nog geen wekelijkse berichten.",
     "deleteConfirm": "Wekelijks bericht \"{{title}}\" verwijderen?",

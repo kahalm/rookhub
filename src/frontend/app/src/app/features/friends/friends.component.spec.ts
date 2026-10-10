@@ -351,3 +351,38 @@ describe('FriendsComponent removeFriend', () => {
     httpMock.verify();
   });
 });
+
+describe('FriendsComponent Reiter (kurze Namen + Zähler-Badge)', () => {
+  it('zeigt drei gestreckte Reiter mit kurzem Namen und dem Zähler als eigenes Badge', () => {
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/friends').flush([
+      { friendshipId: 1, userId: 7, username: 'a', displayName: null, openRevengeCount: 0 },
+      { friendshipId: 2, userId: 8, username: 'b', displayName: null, openRevengeCount: 0 },
+    ]);
+    http.expectOne('/api/friends/requests').flush([]);
+    http.expectOne('/api/friends/requests/sent').flush([]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const counts = Array.from(el.querySelectorAll('.tab-count')).map(e => e.textContent?.trim());
+    expect(counts).toEqual(['2', '0', '0']);
+    // Ohne Übersetzungsdateien stehen die Schlüssel da — und KEIN „(n)" mehr im Namen.
+    const labels = Array.from(el.querySelectorAll('[role="tab"]')).map(e => e.textContent ?? '');
+    expect(labels.length).toBe(3);
+    labels.forEach(l => expect(l).not.toContain('('));
+    expect(el.querySelector('.search-card .search-field')).not.toBeNull();
+    http.verify();
+  });
+});

@@ -65,3 +65,8 @@ html.dark-theme .prep-card-scope {
   .prep-card-scope .card table.recent td:nth-child(3) { grid-column: 2; grid-row: 2; padding-top: 0; }
   .prep-card-scope .card table.recent td:nth-child(4) { grid-column: 3; grid-row: 1 / span 2; }
 }
+
+/* Breit (Vorbereitung als Seite): die Zugfolge in „Letzte Partien" in einer Zeile statt nach jedem Halbzug umgebrochen. */
+@media (min-width: 900px) {
+  .prep-card-scope .card.inline table.recent td.opening { white-space: nowrap; }
+}

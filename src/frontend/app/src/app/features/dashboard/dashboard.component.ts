@@ -222,6 +222,12 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .edit-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0.25rem 0 0.5rem; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
+    /* Kacheln einer Rasterzeile sind gleich hoch (stretch), die Aktionszeile sitzt am Kartenboden — sonst stehen
+       „Spielen“ und „Puzzles lösen“ verschieden tief, sobald eine Beschreibung zweizeilig ist (UI-Review dash-links).
+       Bewusst kein grid-auto-rows: 1fr — die Kurs-Kachel ist hoch und zöge jede Zeile mit. */
+    .dashboard-grid { align-items: stretch; }
+    .dashboard-grid > mat-card { display: flex; flex-direction: column; }
+    .dashboard-grid > mat-card > mat-card-actions { margin-top: auto; }
     /* Bearbeitungsmodus: gleiche Rasteransicht, nur Schild + Steuerelemente als Overlay. */
     mat-card.tile-editing { position: relative; }
     mat-card.tile-off { opacity: 0.45; }

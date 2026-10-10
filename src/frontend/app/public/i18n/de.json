@@ -856,8 +856,8 @@
     "searchUsers": "Benutzer suchen",
     "searchResults": "Suchergebnisse",
     "tabs": {
-      "friends": "Freunde ({{count}})",
-      "requests": "Anfragen ({{count}})"
+      "friends": "Freunde",
+      "requests": "Anfragen"
     },
     "empty": {
       "friends": "Noch keine Freunde. Suche nach Benutzern, um Freunde hinzuzufügen!",
@@ -891,7 +891,7 @@
       "loadError": "Revanche-Liste konnte nicht geladen werden"
     },
     "challenges": {
-      "tab": "Challenges ({{count}})",
+      "tab": "Duelle",
       "inbox": "Posteingang",
       "sent": "Gesendet",
       "fromLine": "Von {{name}} · Wertung {{rating}}",
@@ -1857,7 +1857,6 @@
   "weekly": {
     "title": "Wochenpost",
     "intro": "Die wöchentlichen Schach-Posts zum Durchklicken. Datum & Uhrzeit geben an, wann der Post geplant ist.",
-    "oClock": "Uhr",
     "play": "Durchspielen",
     "empty": "Noch keine Wochenposts vorhanden.",
     "deleteConfirm": "Wochenpost „{{title}}“ löschen?",
@@ -1943,7 +1942,10 @@
       "switchedTraining": "Trainingsmodus — ab dem nächsten Puzzle.",
       "switchedEasy": "Einfachmodus — ab dem nächsten Puzzle.",
       "split": "{{training}} Training · {{easy}} einfach"
-    }
+    },
+    "titleLabel": "Wochenpost {{title}}",
+    "puzzleCount": "{{count}} Puzzles",
+    "schedulePreview": "Erscheint am {{date}} um {{time}} (Ortszeit)"
   },
   "endless": {
     "themePreset": {
@@ -2009,7 +2011,8 @@
       "archiveAndNew": "Archivieren & neues Spiel",
       "newGame": "Neues Spiel",
       "start": "Start",
-      "advanced": "Feineinstellungen"
+      "advanced": "Feineinstellungen",
+      "startLives": "{{count}} Leben"
     },
     "game": {
       "vizCountdown": "Figuren verschwinden in {{seconds}}s...",
@@ -2159,7 +2162,8 @@
       "noPuzzles": "Dieser Wochenpost enthält keine spielbaren Puzzles.",
       "allSolved": "Alle Puzzles gelöst!",
       "progress": "{{played}}/{{total}} gespielt · {{solved}} gelöst",
-      "guestHint": "Du spielst als Gast — dein Ergebnis wird nicht gewertet."
+      "guestHint": "Du spielst als Gast — dein Ergebnis wird nicht gewertet.",
+      "position": "Puzzle {{n}} von {{total}}"
     },
     "longSolve": {
       "title": "Ganz schön lang",
@@ -2766,6 +2770,7 @@
     },
     "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
     "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)",
+    "movesCount": "{{count}} Züge",
     "mistakes": {
       "button": "Eigene Fehler nachspielen ({{count}})",
       "title": "Eigene Fehler nachspielen",
@@ -3669,7 +3674,7 @@
     "nodesLines": "{{nodes}} Knoten · {{lines}} Varianten",
     "nodes": {
       "title": "Partie mit lc0 analysieren",
-      "button": "Mit lc0 …",
+      "button": "Mit Lc0 analysieren",
       "buttonHint": "Ganze Partie mit einer Knoten-Engine (z. B. lc0) rechnen — wahlweise zusätzlich zu Stockfish",
       "hint": "Die Engine rechnet jede Stellung der Partie mit einer festen Knotenzahl. Bei lc0 sagt die Tiefe nichts aus — die Knoten bestimmen Qualität und Dauer.",
       "engine": "Engine",
@@ -4376,6 +4381,7 @@
     "partsCount": "{{count}} Teile",
     "knownPlies": "{{count}} Halbzüge gesichert",
     "gaps": "{{count}} Lücken",
+    "gapsOne": "{{count}} Lücke",
     "notFound": "Diese Rekonstruktion gibt es (nicht mehr).",
     "editHead": "Angaben bearbeiten",
     "white": "Weiß",
@@ -4415,7 +4421,9 @@
       "notFound": "Diese geteilte Partie gibt es (nicht mehr).",
       "intro": "Eine aus der Erinnerung zusammengetragene Partie: Züge, einzelne Stellungen und die Lücken dazwischen. Zum Blättern anklicken oder ← → drücken.",
       "position": "Erinnerte Stellung",
-      "nothing": "Zu dieser Partie ist noch nichts aufgezeichnet."
+      "nothing": "Zu dieser Partie ist noch nichts aufgezeichnet.",
+      "gapToPosition": "Weg zur erinnerten Stellung unbekannt",
+      "gapToMoves": "Züge dazwischen unbekannt"
     },
     "copyPrefix": "Gesicherte Züge kopieren",
     "copied": "Kopiert.",

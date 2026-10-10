@@ -122,7 +122,7 @@ type Show = 'w' | 's' | 'b';
           }
           @if (c.recent?.length) {
             <h3>Letzte Partien@if (show() !== 'b') { mit {{ show() === 'w' ? 'Weiß' : 'Schwarz' }} }
-              <span class="muted small">— anklicken zum Nachspielen</span></h3>
+              <span class="muted small"> — zum Nachspielen anklicken</span></h3>
             @if (replayError()) { <p class="err small">{{ replayError() }}</p> }
             @if (recentShown(); as list) {
               @if (!list.length) { <p class="muted small">Keine Partien mit {{ show() === 'w' ? 'Weiß' : 'Schwarz' }}.</p> }
@@ -138,7 +138,7 @@ type Show = 'w' | 's' | 'b';
                     @if (g.vs_elo) { <span class="muted">{{ g.vs_elo }}</span> }
                     <br><span class="muted">{{ g.event }}</span>
                     @if (speed(g.event ?? "")) { <span class="tag">Blitz/Schnell</span> }</td>
-                  <td class="muted">{{ de(g.opening ?? '') }}</td>
+                  <td class="muted opening">{{ de(g.opening ?? '') }}</td>
                   <td class="num"><b>{{ g.score === null ? '–' : g.score === 0.5 ? '½' : g.score }}</b></td>
                 </tr>
               }
@@ -162,7 +162,7 @@ type Show = 'w' | 's' | 'b';
     <ng-template #first let-s="s" let-names="names">
       @if (!s?.first?.length) { <p class="muted">Keine Partien mit Zügen.</p> }
       @else {
-        <table>
+        <table class="stats">
           @for (r of s.first; track r[0]) {
             <tr><td>{{ names?.[r[0]] || de(r[0]) }}</td><td class="num">{{ share(r[1], s.n) }} %</td>
               <td class="num muted">{{ r[1] }}×</td><td class="num muted">{{ r[2] === null ? '' : 'Score ' + r[2] + ' %' }}</td></tr>
@@ -170,7 +170,7 @@ type Show = 'w' | 's' | 'b';
         </table>
         @if (s.lines?.length) {
           <p class="muted sub">Häufigste Zugfolgen</p>
-          <table>
+          <table class="stats">
             @for (l of s.lines.slice(0, 4); track l[0]) {
               <tr><td>{{ de(l[0]) }}</td><td class="num muted">{{ l[1] }}×</td><td class="num muted">{{ l[2] === null ? '' : l[2] + ' %' }}</td></tr>
             }

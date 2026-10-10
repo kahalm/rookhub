@@ -355,6 +355,49 @@ describe('DashboardComponent pinned courses', () => {
   });
 });
 
+// UI-Review dash-links: in einer Rasterzeile stehen die Aktionszeilen auf EINER Höhe — auch wenn eine Kachel eine
+// zweizeilige Beschreibung hat (Karte = Flex-Spalte, Aktionen mit margin-top: auto, Zeile per stretch gleich hoch).
+describe('DashboardComponent Kachel-Aktionen', () => {
+  beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+  afterEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+
+  it('setzt die Aktionszeilen einer Rasterzeile auf dieselbe Höhe', () => {
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]),
+          getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
+        } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '1100px';
+    document.body.appendChild(host);
+    fixture.detectChanges();
+    // Eine Kachel bekommt eine lange, mehrzeilige Beschreibung.
+    const subtitle = host.querySelector('mat-card-subtitle') as HTMLElement;
+    subtitle.textContent = 'Eine Meisterpartie Zug für Zug auf Punkte spielen — mit einer Beschreibung, die sicher umbricht.';
+
+    const cards = Array.from(host.querySelectorAll('.dashboard-grid > mat-card')) as HTMLElement[];
+    const top = cards[0].getBoundingClientRect().top;
+    const row = cards.filter(c => Math.abs(c.getBoundingClientRect().top - top) < 1);
+    expect(row.length).toBeGreaterThan(1);
+    const bottoms = row.map(c => Math.round((c.querySelector('mat-card-actions') as HTMLElement).getBoundingClientRect().bottom));
+    expect(new Set(bottoms).size).withContext(String(bottoms)).toBe(1);
+    host.remove();
+  });
+});
+
 /**
  * Codereview F5-024: Die Admin-Warteschlange baute ihre Statuszeile selbst — ohne Gesamt-Linienzahl und ohne
  * Restzeit, obwohl chessableQueueLabel (chessable-progress.util) beides kann; wer den Text „wie im Chessable-Tab“

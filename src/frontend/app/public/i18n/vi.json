@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Tuần này",
     "intro": "Các bài đăng cờ vua hàng tuần để xem qua. Ngày & giờ cho biết khi nào bài đăng được lên lịch.",
-    "oClock": "",
     "play": "Xem qua",
     "empty": "Chưa có bài đăng hàng tuần.",
     "deleteConfirm": "Xóa bài đăng hàng tuần “{{title}}”?",

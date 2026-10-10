@@ -2248,3 +2248,19 @@ describe('BookPuzzleComponent Tastatur hinter offenem Dialog', () => {
     expect(c.reviewNext).not.toHaveBeenCalled();
   });
 });
+
+// Wochenpost-Chip im Kontext (Review-Fund weekly-orphan): ein rein numerischer Titel bekommt die Beschriftung.
+describe('BookPuzzleComponent Wochenpost-Chip', () => {
+  it('beschriftet einen rein numerischen Titel', () => {
+    const c = makeComponent();
+    c.weeklyTitle = '3';
+    expect(c.weeklyChipLabel).toBe('weekly.titleLabel {"title":"3"}');
+  });
+
+  it('lässt einen Titel, der schon mit dem Wort beginnt, unverändert', () => {
+    const c = makeComponent();
+    c.translate.instant = (k: string, p?: object) => (k === 'weekly.title' ? 'Wochenpost' : k + JSON.stringify(p ?? {}));
+    c.weeklyTitle = 'Wochenpost 3';
+    expect(c.weeklyChipLabel).toBe('Wochenpost 3');
+  });
+});

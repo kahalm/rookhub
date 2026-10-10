@@ -141,18 +141,22 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                          (click)="lineSelected.emit(line.gameIndex)"
                          (keydown.enter)="lineSelected.emit(line.gameIndex)"
                          (keydown.space)="$event.preventDefault(); lineSelected.emit(line.gameIndex)">
-                      <div class="line-players">
-                        <span>{{ line.white }} vs {{ line.black }}</span>
-                        @if (line.isInfo) {
-                          <span class="sr-badge info" [matTooltip]="'repertoire.lines.infoTooltip' | translate">{{ 'repertoire.lines.info' | translate }}</span>
-                        } @else {
-                          <span class="sr-badge" [ngClass]="status(line)"
-                                [matTooltip]="badgeTooltip(line) | translate">{{ badge(line) }}</span>
-                        }
-                      </div>
+                      <div class="line-players">{{ lineTitle(line) }}</div>
                       @if (line.opening) { <div class="line-opening">{{ line.opening }}</div> }
                       <div class="line-summary">{{ line.summary }}</div>
                     </div>
+                    <!-- Status neben der Zeile statt im Titel; „+" (noch nicht im Pool) nimmt die Linie mit einem Tipp auf —
+                         mit voller Trefferfläche (am Handy war es ein 18-px-Etikett). -->
+                    @if (line.isInfo) {
+                      <span class="sr-badge info" [matTooltip]="'repertoire.lines.infoTooltip' | translate">{{ 'repertoire.lines.info' | translate }}</span>
+                    } @else if (repertoireId != null && status(line) === 'new') {
+                      <button type="button" class="sr-add" [disabled]="busy" (click)="promote([line.lineKey])"
+                              [matTooltip]="'repertoire.lines.sr.addToPool' | translate"
+                              [attr.aria-label]="'repertoire.lines.sr.addToPool' | translate"><span class="sr-badge new">+</span></button>
+                    } @else {
+                      <span class="sr-badge" [ngClass]="status(line)"
+                            [matTooltip]="badgeTooltip(line) | translate">{{ badge(line) }}</span>
+                    }
                     @if (repertoireId != null) {
                       <button mat-icon-button class="line-menu-btn" [matMenuTriggerFor]="lineMenu" [disabled]="busy"
                               (click)="$event.stopPropagation()"
@@ -208,12 +212,18 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .chapter-color.b { background: #222; color: #f5f5f5; }
     .menu-label { padding: 6px 16px 2px; font-size: 11px; font-weight: 700; text-transform: uppercase;
       letter-spacing: .04em; opacity: .6; }
-    .line-item { display: flex; align-items: flex-start; border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
-    .line-main { flex: 1; padding: 10px 8px 10px 32px; cursor: pointer; transition: background 0.15s; min-width: 0; }
+    .line-item { display: flex; align-items: center; border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
+    /* Titel direkt neben der Checkbox (8 px) — der frühere 32-px-Einzug ließ am Handy eine Lücke. */
+    .line-main { flex: 1; padding: 10px 8px 10px 6px; cursor: pointer; transition: background 0.15s; min-width: 0; }
     .line-main:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .line-menu-btn { flex: 0 0 auto; margin: 4px 2px 0 0; }
-    .line-players { display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      font-weight: 500; font-size: 14px; }
+    .line-players { font-weight: 500; font-size: 14px; overflow-wrap: anywhere; }
+    .line-item > .sr-badge { margin: 0 4px; }
+    .sr-add { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px;
+      padding: 0; border: 0; background: none; color: inherit; cursor: pointer; border-radius: 50%; }
+    .sr-add:hover:not(:disabled) { background: color-mix(in srgb, currentColor 8%, transparent); }
+    .sr-add:disabled { cursor: default; opacity: .5; }
+    .sr-add .sr-badge { font-size: 14px; padding: 2px 9px; }
     .line-opening { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin-top: 2px; }
     .line-summary { font-family: 'Roboto Mono', monospace; font-size: 12px;
       color: color-mix(in srgb, currentColor 47%, transparent); margin-top: 4px;
@@ -371,6 +381,12 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
     if (s === 'paused') return '⏸';
     const st = this.states().get(line.lineKey);
     return 'S' + (st?.level ?? 0);
+  }
+
+  /** Titel der Linie im Kapitel: Chessable trägt den Kapitelnamen als Schwarz-Kopf — innerhalb des Kapitels
+   *  wiederholt „Weiß vs Kapitel" ihn nur (und brach am Handy auf 2–3 Zeilen um). */
+  lineTitle(line: RepertoireLine): string {
+    return line.chapter && line.black === line.chapter && line.white ? line.white : `${line.white} vs ${line.black}`;
   }
 
   badgeTooltip(line: RepertoireLine): string {

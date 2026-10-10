@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Hebdomadaire",
     "intro": "Les posts d'échecs hebdomadaires à parcourir. La date et l'heure indiquent quand le post est planifié.",
-    "oClock": "",
     "play": "Parcourir",
     "empty": "Aucun post hebdomadaire pour l'instant.",
     "deleteConfirm": "Supprimer le post hebdomadaire « {{title}} » ?",

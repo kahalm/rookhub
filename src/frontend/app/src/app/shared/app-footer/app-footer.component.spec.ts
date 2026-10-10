@@ -6,6 +6,7 @@ import { DISCORD_INVITE_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
 import { setDarkTheme, textContrast } from '../../testing/contrast';
+import { FooterPresenceService } from './footer-presence';
 
 /**
  * Die Fusszeile gehoert BEIDEN Oberflaechen (RookHub und Turnierseite). Geprueft wird vor allem
@@ -167,6 +168,27 @@ describe('AppFooterComponent', () => {
 
     it('kein Link auf einen Weg, den die App nicht hat', () => {
       expect(legalHrefs(buildFixture())).toEqual([]);
+    });
+
+    // UI-Review login-legal: die Fusszeile meldet, wo sie die Rechtslinks zeigt — die Anmeldemaske laesst ihre Zeile dort weg.
+    it('meldet ihre Rechtslinks: RookHub nur breit, Turnierseite immer, ohne Datenschutz-Route keine, weg = keine', () => {
+      let fixture = buildFixture([{ path: 'privacy' }]);
+      const presence = TestBed.inject(FooterPresenceService).presence;
+      fixture.detectChanges();
+      expect(presence()).toBe('wide');
+      fixture.destroy();
+      expect(presence()).toBe('none');
+
+      TestBed.resetTestingModule();
+      fixture = buildFixture([{ path: 'privacy' }]);
+      fixture.componentRef.setInput('hideOnMobile', false);
+      fixture.detectChanges();
+      expect(TestBed.inject(FooterPresenceService).presence()).toBe('always');
+
+      TestBed.resetTestingModule();
+      fixture = buildFixture();
+      fixture.detectChanges();
+      expect(TestBed.inject(FooterPresenceService).presence()).toBe('none');
     });
   });
 });

@@ -58,7 +58,7 @@ import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
-import { WeeklyMode, WeeklyService } from '../weekly/weekly.service';
+import { WeeklyMode, WeeklyService, weeklyTitleLabel } from '../weekly/weekly.service';
 import { WeeklyModeDialogComponent } from '../weekly/weekly-mode-dialog.component';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -1346,6 +1346,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   // ===== Wochenpost-Modus =====
   get weeklyTotal(): number { return this.weeklyPuzzles.length; }
+  /** „Wochenpost 3" — ein rein numerischer Titel stand sonst als nackte Zahl unter dem Kapitel. */
+  get weeklyChipLabel(): string { return weeklyTitleLabel(this.weeklyTitle, this.translate); }
   get weeklyDisplayIndex(): number {
     return this.weeklyTotal === 0 ? 0 : Math.min(this.weeklyIndex + 1, this.weeklyTotal);
   }

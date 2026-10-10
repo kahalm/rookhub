@@ -1,6 +1,14 @@
     .trainer { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 8px; }
     .bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
     .bar .title { font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; }
+    /* Am Handy der Umschalter Abfragen/Lernen in eigener Zeile unter dem Titel (je 50 %), die Icon-Knöpfe danach —
+       neben „Zurück" drückte er den Titel auf zwei Zeilen und klebte am rechten Rand. */
+    @media (max-width: 600px) {
+      .bar { row-gap: 8px; }
+      .bar .mode-toggle { order: 1; flex: 1 1 100%; }
+      .bar .mode-toggle mat-button-toggle { flex: 1 1 50%; }
+      .bar > button { order: 2; }
+    }
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
     .chapter-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }

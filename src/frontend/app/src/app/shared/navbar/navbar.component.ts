@@ -192,15 +192,32 @@ import {
         <!-- Auf den Anmelde-/Passwortseiten kein Vollbild (nutzt dort nichts) und unten keine Kopie der Karten-Links
              „Anmelden"/„Registrieren" — auf /register standen sonst zwei gleiche Knoepfe (Codereview W5 UX-052). -->
         @if (fsSupported && !onAuthPage) {
-          <button mat-icon-button (click)="toggleAppFullscreen()"
+          <button mat-icon-button class="anon-wide" (click)="toggleAppFullscreen()"
                   [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
             <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
           </button>
         }
-        <button mat-icon-button [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
+        <!-- Unter 480px nur „Anmelden" (kompakt, gefuellt) und ☰ in der Leiste; „Registrieren" und Vollbild stehen dann
+             im ☰-Menue (.anon-narrow) — vier Ziele drängten sich sonst ohne Abstand bis an den Rand. -->
+        @if (!onAuthPage) {
+          <a mat-button class="nav-login" routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
+        }
+        <button mat-icon-button class="anon-menu" [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
         <mat-menu #anonMenu="matMenu">
+          @if (!onAuthPage) {
+            <a mat-menu-item class="anon-narrow" routerLink="/register" [queryParams]="authQuery">
+              <mat-icon>person_add</mat-icon>
+              <span>{{ 'nav.register' | translate }}</span>
+            </a>
+            @if (fsSupported) {
+              <button mat-menu-item class="anon-narrow" (click)="toggleAppFullscreen()">
+                <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+                <span>{{ fsLabel }}</span>
+              </button>
+            }
+          }
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
@@ -241,9 +258,8 @@ import {
           </button>
         </mat-menu>
         @if (!onAuthPage) {
-          <a mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
           <!-- color="primary": die Einladung an Gaeste ist die Primaeraktion der Leiste (gefuellt, styles.scss). -->
-          <a mat-raised-button color="primary" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
+          <a mat-raised-button color="primary" class="anon-wide nav-register" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
         }
       }
       <mat-menu #langMenu="matMenu">
@@ -293,6 +309,23 @@ import {
       /* Ausgeloggte Text-Links (Puzzles/Analyse) wandern auf schmalen Schirmen ins ☰-Menü —
          sonst läuft die Toolbar über die Viewport-Breite und die ganze Seite scrollt horizontal. */
       .nav-anon { display: none; }
+    }
+    /* Gast-Leiste am Handy: „Registrieren" und Vollbild wandern ins ☰ (dort .anon-narrow, breiter ausgeblendet),
+       „Anmelden" wird der eine gefuellte Knopf — Tippziele 44px, 8px Abstand, Rand zum Bildschirm. */
+    @media (min-width: 481px) { .anon-narrow { display: none; } }
+    @media (max-width: 480px) {
+      .anon-wide { display: none; }
+      mat-toolbar { padding: 0 8px 0 14px; }
+      .nav-login {
+        min-height: 44px; padding: 0 14px; margin-right: 8px;
+        background: var(--mat-sys-primary);
+        --mat-button-text-label-text-color: var(--mat-sys-on-primary);
+        --mat-button-text-state-layer-color: var(--mat-sys-on-primary);
+      }
+      /* Die Toolbar setzt die Schriftfarbe ihrer Knöpfe selbst — ohne diese Regel stand helle Schrift auf dem hellen
+         Primär-Hintergrund (geprüft per UI-Sweep 2026-10-10). */
+      .nav-login.mat-mdc-button { color: var(--mat-sys-on-primary); }
+      .anon-menu { width: 44px; height: 44px; padding: 10px; }
     }
   `]
 })

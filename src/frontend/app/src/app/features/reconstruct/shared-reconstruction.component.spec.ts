@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { SharedReconstructionComponent, buildRows } from './shared-reconstruction.component';
 import { PartKind, SharedReconstruction, SharedReconstructionPart } from './reconstruct.service';
 
@@ -115,6 +115,25 @@ describe('SharedReconstructionComponent', () => {
     expect(c.boardFen()).not.toBe(MIDDLE);
     c.go('start');
     expect(c.stepIndex).toBe(0);
+  });
+
+  it('zeigt die Züge in den Figurenbuchstaben der Oberfläche und „1 Lücke" in der Einzahl', async () => {
+    const { fixture, http } = await setup();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { reconstruct: { gaps: '{{count}} Lücken', gapsOne: '{{count}} Lücke' } });
+    translate.use('de');
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/reconstructions/shared/')).flush(shared([
+      part({ moves: 'e4 e5 Nf3 Nc6 Bb5', startPly: 0 }),
+      part({ kind: PartKind.Position, fen: MIDDLE, moves: null, startPly: null, endFen: MIDDLE }),
+    ]));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const moves = Array.from(el.querySelectorAll('.move')).map(m => m.textContent!.replace(/\s+/g, ' ').trim());
+    expect(moves).toEqual(['1. e4', '1… e5', '2. Sf3', '2… Sc6', '3. Lb5']);
+    expect(el.querySelector('.chip.warn')!.textContent!.trim()).toBe('1 Lücke');
+    expect(el.querySelector('.gap-row')).not.toBeNull();
   });
 
   it('sagt es, wenn hinter dem Link nichts (mehr) steht', async () => {

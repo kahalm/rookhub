@@ -154,11 +154,19 @@
                 <!-- Feineinstellungen zugeklappt: vor dem Start zählen Start-Rating + Themen. Tiefe,
                      Schwellen und Kurvenvorschau sind Nachjustierung und standen bisher als 4 weitere
                      Blöcke zwischen Start-Knopf und Lauf. -->
-                <button type="button" class="adv-toggle" (click)="showAdvanced = !showAdvanced"
-                        [attr.aria-expanded]="showAdvanced">
-                  <mat-icon>{{ showAdvanced ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  <span>{{ 'endless.config.advanced' | translate }}</span>
-                </button>
+                <!-- Zahnrad (Brett-/Anzeige-Einstellungen) rechts in derselben Zeile statt allein in einer leeren Zone darunter. -->
+                <div class="adv-row">
+                  <button type="button" class="adv-toggle" (click)="showAdvanced = !showAdvanced"
+                          [attr.aria-expanded]="showAdvanced">
+                    <mat-icon>{{ showAdvanced ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    <span>{{ 'endless.config.advanced' | translate }}</span>
+                  </button>
+                  <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()"
+                          [attr.title]="'endless.config.settings' | translate"
+                          [attr.aria-label]="'endless.config.settings' | translate">
+                    <mat-icon>settings</mat-icon>
+                  </button>
+                </div>
 
                 @if (showAdvanced) {
                 <div class="config-fields adv-fields">
@@ -207,16 +215,14 @@
                 </div>
                 }
 
-                <div class="settings-bar">
-                  <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()" [attr.title]="'endless.config.settings' | translate">
-                    <mat-icon>settings</mat-icon>
-                  </button>
-                </div>
-
-                <div class="lives-display config-lives" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: 3, max: 3 }">
-                  @for (i of [1,2,3]; track i) {
-                    <mat-icon class="heart full">favorite</mat-icon>
-                  }
+                <!-- Herzen mit Beschriftung: ohne sie war nicht klar, wofür die drei stehen. -->
+                <div class="config-lives-row">
+                  <div class="lives-display config-lives" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: 3, max: 3 }">
+                    @for (i of [1,2,3]; track i) {
+                      <mat-icon class="heart full">favorite</mat-icon>
+                    }
+                  </div>
+                  <span class="config-lives-label" aria-hidden="true">{{ 'endless.config.startLives' | translate:{ count: 3 } }}</span>
                 </div>
 
                 @if (highscore > 0) {

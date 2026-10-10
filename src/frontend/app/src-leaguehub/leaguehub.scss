@@ -283,6 +283,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .card table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .card td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .card td.num { text-align: right; white-space: nowrap; }
+/* Eröffnungstabellen: Zahlen schmal direkt neben dem Namen statt am rechten Rand (in der breiten Vorbereitung
+   lagen sonst 200–300 px Leerraum dazwischen). */
+.card table.stats { max-width: 640px; }
+.card table.stats td.num { width: 1%; padding-left: 14px; }
 .card .tag { font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-left: 6px; color: var(--muted); white-space: nowrap; }
 .card .acc a { color: var(--ink); font-weight: 600; }
 .card .actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 10px; }
@@ -623,6 +627,7 @@ lh-online-accounts { display: block; }
 .card table.recent tr:hover td, .card table.recent tr:focus-visible td { background: var(--paper); }
 .card table.recent tr:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .card table.recent tr.busy { cursor: progress; }
+.card table.recent td.opening { min-width: 16ch; }
 .replay { outline: none; margin-top: 10px; }
 .replay-head { margin: 0 0 10px; }
 .replay-head .muted { margin-left: 6px; }

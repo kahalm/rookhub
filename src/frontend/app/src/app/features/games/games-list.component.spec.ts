@@ -107,6 +107,10 @@ describe('GamesListComponent', () => {
     expect(el.querySelectorAll('button.analyze').length).toBe(2);
     expect(el.querySelectorAll('.progress').length).toBe(0);
     expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 100 %', '♚ —']);
+    // Am Handy (ohne Spaltenkopf) stehen Genauigkeit als Etikett mit Trenner und die Zugzahl mit Einheit da.
+    expect(el.querySelector('.accuracy .sep')!.textContent).toBe('·');
+    expect(el.querySelectorAll('.moves .moves-num').length).toBe(3);
+    expect(el.querySelectorAll('.moves .moves-label').length).toBe(3);
     tick(ANALYSIS_POLL_MS);
     http.expectNone(listRequest);   // nichts läuft → kein Nachfragen
     discardPeriodicTasks();

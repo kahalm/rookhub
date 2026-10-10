@@ -541,7 +541,6 @@
   "weekly": {
     "title": "Haftalık",
     "intro": "Tıklayarak geçilebilecek haftalık satranç gönderileri. Tarih ve saat gönderinin planlandığı zamanı gösterir.",
-    "oClock": "",
     "play": "Oynat",
     "empty": "Henüz haftalık gönderi yok.",
     "deleteConfirm": "\"{{title}}\" haftalık gönderisi silinsin mi?",

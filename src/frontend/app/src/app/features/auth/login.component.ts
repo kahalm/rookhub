@@ -15,6 +15,7 @@ import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 import { apiErrorCodeText } from '../../core/api-error';
 import { AUTH_INTRO, AuthIntro } from './auth-intro';
+import { FooterPresence, FooterPresenceService } from '../../shared/app-footer/footer-presence';
 
 /**
  * Erstes Segment des Ziels → Name des Bereichs aus dem Menü (`nav.*`), damit der Anmelde-Hinweis sagt, wohin es danach
@@ -132,7 +133,9 @@ export function loginRetryAfterSeconds(err: any): number {
           <a mat-button routerLink="/forgot-password">{{ 'auth.login.forgotLink' | translate }}</a>
         </mat-card-actions>
       </mat-card>
-      <div class="legal-links">
+      <!-- Nur, wo keine Fusszeile dieselben Links zeigt: am PC steht sie bei RookHub darunter, auf der Turnierseite
+           immer; am Handy ist RookHubs Fusszeile aus, KidHub/LeagueHub/ClubHub haben keine (UI-Review login-legal). -->
+      <div class="legal-links" [class.footer-wide]="footer() === 'wide'" [class.footer-always]="footer() === 'always'">
         <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
         @if (legal.imprint) {
           <span>·</span>
@@ -149,6 +152,8 @@ export function loginRetryAfterSeconds(err: any): number {
        Layouthoehe bei 15px, damit sich nichts verschiebt (die Karte endet 16px hoeher, es gibt keine Ueberlappung). */
     .legal-links a { color: var(--mat-sys-primary); display: inline-block; padding: 15px 4px; margin: -15px 0; }
     .legal-links span { color: color-mix(in srgb, currentColor 53%, transparent); margin: 0 6px; }
+    .legal-links.footer-always { display: none; }
+    @media (min-width: 769px) { .legal-links.footer-wide { display: none; } }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-required { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     .auth-sub { display: block; margin-top: 0.3rem; opacity: 0.85; }
@@ -199,11 +204,15 @@ export class LoginComponent implements OnDestroy {
    *  Oberfläche eine Einleitung setzt: die Turnierseite sagt „kostenlos“ selbst, ClubHub sagt, dass der Verein
    *  freischaltet (ein neues Konto allein sähe dort nur „Nicht freigeschaltet“). */
   readonly showFreeNote: boolean;
+  /** Wo die Fusszeile der App die Rechtslinks schon zeigt (ohne DI in Specs: keine Fusszeile). */
+  readonly footer: () => FooterPresence;
 
   constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private translate: TranslateService,
               // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
               @Optional() @Inject(LEGAL_SITE) legal?: LegalSite,
-              @Optional() @Inject(AUTH_INTRO) intro?: AuthIntro) {
+              @Optional() @Inject(AUTH_INTRO) intro?: AuthIntro,
+              @Optional() footerPresence?: FooterPresenceService) {
+    this.footer = footerPresence?.presence ?? (() => 'none');
     this.legal = legal ?? defaultLegalSite();
     this.leagueHub = this.legal.kind === 'leaguehub';
     this.intro = intro ?? {};

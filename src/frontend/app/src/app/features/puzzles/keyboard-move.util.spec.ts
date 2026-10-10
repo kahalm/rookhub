@@ -1,4 +1,4 @@
-import { parseKeyboardMove, pieceLettersFor } from './keyboard-move.util';
+import { localizeSan, parseKeyboardMove, pieceLettersFor } from './keyboard-move.util';
 
 /** Codereview F2-004: getippte Züge — literale Stellungen, literale Erwartungen. */
 describe('parseKeyboardMove', () => {
@@ -68,5 +68,18 @@ describe('parseKeyboardMove', () => {
     expect(parseKeyboardMove(START, '   ')).toBeNull();
     expect(parseKeyboardMove('kein fen', 'e4')).toBeNull();
     expect(parseKeyboardMove('8/8/8/8/8/8/8/8 w - - 0 1', 'e4')).toBeNull();   // Info-Diagramm ohne Könige
+  });
+});
+
+/** Anzeige in der Oberflächensprache — die Gegenrichtung zur Eingabe. */
+describe('localizeSan', () => {
+  it('schreibt deutsch/kroatisch S L T D, ungarisch H F B V, sonst englisch', () => {
+    expect(['Nf3', 'Bb5', 'Rxe1+', 'Qd8#', 'Ke2', 'O-O', 'exd5', 'e8=Q'].map(s => localizeSan(s, 'de')))
+      .toEqual(['Sf3', 'Lb5', 'Txe1+', 'Dd8#', 'Ke2', 'O-O', 'exd5', 'e8=D']);
+    expect(localizeSan('Nbd2', 'hr')).toBe('Sbd2');
+    expect(['Nf3', 'Bb5', 'Rd1', 'Qh5', 'b8=N'].map(s => localizeSan(s, 'hu'))).toEqual(['Hf3', 'Fb5', 'Bd1', 'Vh5', 'b8=H']);
+    expect(localizeSan('Nf3', 'en')).toBe('Nf3');
+    expect(localizeSan('Nf3', 'fr')).toBe('Nf3');
+    expect(localizeSan('Nf3', null)).toBe('Nf3');
   });
 });

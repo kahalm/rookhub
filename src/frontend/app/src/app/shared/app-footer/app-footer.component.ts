@@ -1,4 +1,4 @@
-import { Component, HostListener, Input, inject } from '@angular/core';
+import { Component, HostListener, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
@@ -9,6 +9,7 @@ import { ChangelogEntry } from '../../../environments/changelog';
 import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
 import { partnerSiteUrl } from '../../core/partner-site';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { FooterPresenceService } from './footer-presence';
 
 /**
  * Die Fusszeile — und das Changelog-Overlay, das ihr Versionslink oeffnet.
@@ -177,7 +178,7 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
     .changelog-more:hover { border-color: currentColor; }
   `],
 })
-export class AppFooterComponent {
+export class AppFooterComponent implements OnInit, OnDestroy {
   private readonly translate = inject(TranslateService);
   private readonly router = inject(Router);
 
@@ -234,6 +235,15 @@ export class AppFooterComponent {
   showOlderChangelog(): void {
     this.changelogShown += AppFooterComponent.ChangelogPage;
   }
+
+  private readonly presence = inject(FooterPresenceService);
+
+  /** Meldet, wo diese Fusszeile die Rechtslinks zeigt — die Anmeldemaske laesst ihre eigene Zeile dort weg. */
+  ngOnInit(): void {
+    this.presence.presence.set(!this.privacyRoute ? 'none' : this.hideOnMobile ? 'wide' : 'always');
+  }
+
+  ngOnDestroy(): void { this.presence.presence.set('none'); }
 
   /** Laufender Nachlade-Vorgang — als Feld, damit Tests den async-Ablauf awaiten koennen. */
   changelogLoad?: Promise<void>;

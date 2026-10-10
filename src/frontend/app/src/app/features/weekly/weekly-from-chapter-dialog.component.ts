@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from '../courses/course.service';
 import { WeeklyService, weeklyScheduledAtUtc } from './weekly.service';
+import { WeeklyScheduleFieldsComponent } from './weekly-schedule-fields.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { apiErrorText } from '../../core/api-error';
 
@@ -32,7 +33,7 @@ export interface WeeklyFromChapterDialogData {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
-    MatInputModule, MatButtonModule, MatIconModule, TranslatePipe,
+    MatInputModule, MatButtonModule, MatIconModule, TranslatePipe, WeeklyScheduleFieldsComponent,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'weekly.fromChapter.title' | translate }}</h2>
@@ -82,14 +83,7 @@ export interface WeeklyFromChapterDialogData {
         </mat-form-field>
 
         <div class="fc-row">
-          <mat-form-field appearance="outline" class="fc-date">
-            <mat-label>{{ 'weekly.fields.date' | translate }}</mat-label>
-            <input matInput type="date" [(ngModel)]="date">
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="fc-time">
-            <mat-label>{{ 'weekly.fields.time' | translate }}</mat-label>
-            <input matInput type="time" [(ngModel)]="time">
-          </mat-form-field>
+          <app-weekly-schedule-fields [(date)]="date" [(time)]="time" />
         </div>
 
         <mat-form-field appearance="outline">
@@ -115,7 +109,6 @@ export interface WeeklyFromChapterDialogData {
   styles: [`
     .fc-form { display: flex; flex-direction: column; gap: 8px; min-width: 340px; }
     .fc-row { display: flex; gap: 12px; }
-    .fc-date, .fc-time { flex: 1; }
     .fc-search {
       display: flex; align-items: center; gap: 6px;
       padding: 4px 12px 6px; position: sticky; top: 0; z-index: 1;

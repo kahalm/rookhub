@@ -1,0 +1,12 @@
+{
+  "name": "rookhub-ui-sweep",
+  "private": true,
+  "type": "module",
+  "description": "Screenshots aller Seiten aller RookHub-Oberflaechen + automatische Layout-Pruefung + Vergleich zwischen Laeufen",
+  "scripts": { "sweep": "node sweep.mjs" },
+  "dependencies": {
+    "pixelmatch": "^7.1.0",
+    "playwright-core": "^1.55.0",
+    "pngjs": "^7.0.0"
+  }
+}

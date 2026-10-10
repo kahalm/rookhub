@@ -14,6 +14,17 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { LineSolver } from '../../shared/chess/line-solver';
 import { SharedWorksheet, SharedWorksheetItem, WorksheetService } from './worksheet.service';
 
+/**
+ * Gleicher Text bis auf Groß-/Kleinschreibung, Leerraum und Satzzeichen am Ende? Damit entfällt ein Begleittext,
+ * der nur den Untertitel wiederholt („Weiß am Zug." unter „Weiß am Zug").
+ */
+export function sameText(a: string | null | undefined, b: string | null | undefined): boolean {
+  const norm = (s: string | null | undefined) =>
+    (s ?? '').trim().replace(/[\s.!:…]+$/u, '').replace(/\s+/g, ' ').toLocaleLowerCase();
+  const x = norm(a);
+  return x.length > 0 && x === norm(b);
+}
+
 /** Was gerade an der aktuellen Aufgabe passiert. */
 export type SolveState = 'solving' | 'wrong' | 'solved' | 'given-up' | 'free';
 
@@ -122,6 +133,7 @@ export class WorksheetSolveComponent implements OnInit {
   get solvedCount(): number { return this.cleanSolves.size; }
   get boardTheme(): string { return this.prefs.boardTheme; }
   get pieceSet(): string { return this.prefs.pieceSet; }
+  readonly sameText = sameText;
   /** Alle Aufgaben abgearbeitet → Schlussbild statt Brett. */
   done = false;
 

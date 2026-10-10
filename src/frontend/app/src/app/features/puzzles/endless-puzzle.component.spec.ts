@@ -1201,7 +1201,7 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
   });
   TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
   const translate = TestBed.inject(TranslateService);
-  translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
+  translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' }, config: { startLives: '{{count}} lives' } } });
   translate.use('en');
   const fixture = TestBed.createComponent(EndlessPuzzleComponent);
   setup(fixture.componentInstance);
@@ -1236,6 +1236,15 @@ describe('EndlessPuzzleComponent a11y: Auto-Knopf und Leben (UX-047)', () => {
     const lives = render(() => {}).querySelector('.config-lives')!;
     expect(lives.getAttribute('role')).toBe('img');
     expect(lives.getAttribute('aria-label')).toBe('3 of 3 lives');
+  });
+
+  it('Startbildschirm: Herzen sichtbar beschriftet, Zahnrad in der Feineinstellungen-Zeile (UI-Sweep 10.10.)', () => {
+    const el = render(() => {});
+    expect(el.querySelector('.config-lives-label')!.textContent!.trim()).toBe('3 lives');
+    const row = el.querySelector('.adv-row')!;
+    expect(row.querySelector('.adv-toggle')).not.toBeNull();
+    expect(row.querySelector('.settings-gear')).not.toBeNull();
+    expect(el.querySelector('.settings-bar')).toBeNull();
   });
 
   it('im Lauf: die Herzen nennen die verbleibenden Leben', () => {

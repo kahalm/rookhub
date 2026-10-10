@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -154,14 +153,13 @@ export class ShowTokenDialogComponent implements OnDestroy {
 @Component({
   selector: 'app-api-tokens',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
+  // Gleiches Muster wie die übrigen Abschnitte der Profilseite (Discord, Engine, Design): kleine farbige
+  // Überschrift, grauer Erklärsatz, keine eigene Karte, Knopf bündig mit dem Text.
   template: `
-    <mat-card class="tokens-card">
-      <mat-card-header>
-        <mat-card-title>{{ 'profile.tokens.title' | translate }}</mat-card-title>
-        <mat-card-subtitle>{{ 'profile.tokens.subtitle' | translate }}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
+    <div class="tokens-section">
+      <h4>{{ 'profile.tokens.title' | translate }}</h4>
+      <p class="tokens-hint">{{ 'profile.tokens.subtitle' | translate }}</p>
         @if (loading) {
           <p>{{ 'common.loading' | translate }}</p>
         } @else if (tokens.length === 0) {
@@ -200,17 +198,16 @@ export class ShowTokenDialogComponent implements OnDestroy {
           </table>
           </div>
         }
-      </mat-card-content>
-      <mat-card-actions>
-        <button mat-raised-button color="primary" (click)="openCreateDialog()">
-          <mat-icon>add</mat-icon> {{ 'profile.tokens.create' | translate }}
-        </button>
-      </mat-card-actions>
-    </mat-card>
+      <button mat-stroked-button class="tokens-create" (click)="openCreateDialog()">
+        <mat-icon>add</mat-icon> {{ 'profile.tokens.create' | translate }}
+      </button>
+    </div>
   `,
   styles: [`
-    .tokens-card { margin-top: 1rem; }
-    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
+    .tokens-section h4 { margin: 0 0 0.25rem; color: var(--rh-info); }
+    .tokens-hint { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; margin: 0 0 0.5rem; }
+    .tokens-create { margin-top: 0.25rem; }
+    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; font-style: italic; margin: 0 0 0.5rem; }
     .tokens-scroll { overflow-x: auto; }
     .tokens-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.9rem; }
     .tokens-table th, .tokens-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); text-align: left; }

@@ -82,6 +82,13 @@ describe('RepertoireLinesComponent chapterGroups reactivity', () => {
     expect(c.badge(line('A', 0))).toBe('S3');
   });
 
+  it('lineTitle lässt den Kapitelnamen weg, den Chessable als Schwarz-Kopf wiederholt', () => {
+    const c = makeComponent();
+    expect(c.lineTitle({ ...line('1) Weiß spielt ohne 2.d4', 0), white: '1A | 2.Sf3' })).toBe('1A | 2.Sf3');
+    expect(c.lineTitle({ ...line('', 0), white: 'Carlsen', black: 'Nepo' })).toBe('Carlsen vs Nepo');
+    expect(c.lineTitle({ ...line('Kap', 0), white: '', black: 'Kap' })).toBe(' vs Kap');
+  });
+
   it('lädt persistente Flashcard-Marks und toggelt optimistisch über den Service', () => {
     const training: any = {
       getLineStates: () => of([]),

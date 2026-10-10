@@ -141,6 +141,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   @case ('done') {
                     <span class="accuracy" [matTooltip]="'games.accuracyHint' | translate">
                       <span>♔ {{ pct(g.analysis?.accuracyWhite) }}</span>
+                      <i class="sep" aria-hidden="true">·</i>
                       <span>♚ {{ pct(g.analysis?.accuracyBlack) }}</span>
                     </span>
                   }
@@ -159,7 +160,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   }
                 }
               </div>
-              <div class="moves mid">{{ g.moveCount }}</div>
+              <!-- Am Handy fehlt die Spaltenüberschrift — dort steht die Zahl mit „Züge" dahinter. -->
+              <div class="moves mid"><span class="moves-num">{{ g.moveCount }}</span><span class="moves-label">{{ 'games.movesCount' | translate:{ count: g.moveCount } }}</span></div>
               <div class="date">{{ (g.playedAt || g.createdAt) | date:'mediumDate' }}</div>
               <div class="actions">
                 <a mat-icon-button [routerLink]="['/games', g.id]" [matTooltip]="'games.replay' | translate" [attr.aria-label]="'games.replay' | translate">
@@ -287,6 +289,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
       color: color-mix(in srgb, currentColor 80%, transparent);
     }
     .accuracy span { line-height: 1.45; }
+    .accuracy .sep, .moves-label { display: none; }
     /* So breit wie ein Icon-Knopf, damit die Zeile beim Wechsel Knopf → Prozent nicht springt. */
     .progress {
       display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
@@ -312,7 +315,13 @@ export type AnalysisState = 'none' | 'running' | 'done';
       .row.head-row { display: none; }
       .players { flex: 1 1 55%; }
       .acc-cell { margin-left: auto; }
-      .accuracy { flex-direction: row; gap: 8px; text-align: left; }
+      /* Ohne Spaltenüberschrift als Etikett „♔ 85 % · ♚ 79 %" — eine nackte Zahl las sich nicht als Genauigkeit. */
+      .accuracy { flex-direction: row; gap: 5px; text-align: left; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px;
+        background: color-mix(in srgb, var(--rh-accent) 16%, transparent); }
+      .accuracy span { line-height: 1.3; }
+      .accuracy .sep { display: inline; font-style: normal; opacity: 0.6; }
+      .moves-num { display: none; }
+      .moves-label { display: inline; white-space: nowrap; }
       .actions { order: 9; margin-left: auto; }
       /* Die Fussnote ganz nach hinten, sonst draengt sie die Knoepfe in eine eigene leere Zeile. */
       .foot { order: 10; flex-basis: 100%; }

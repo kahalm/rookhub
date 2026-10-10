@@ -73,6 +73,11 @@ describe('PlayerCardComponent', () => {
     expect(headings().some(h => h.startsWith('Mit Weiß'))).toBeTrue();
     expect(headings().some(h => h.startsWith('Mit Schwarz gegen 1.e4'))).toBeTrue();
     expect(el().textContent).toContain('Sizilianisch');
+    // Bei „Beide" fällt „mit Weiß" weg — der Zusatz klebt trotzdem nicht am Wort.
+    expect(headings().some(h => h.replace(/\s+/g, ' ').trim() === 'Letzte Partien — zum Nachspielen anklicken')).toBeTrue();
+    // Zahlenspalten der Eröffnungstabellen schmal neben dem Namen (Klasse stats, leaguehub.scss)
+    expect(el().querySelectorAll('table.stats').length).toBeGreaterThan(0);
+    expect(el().querySelector('table.recent td.opening')?.textContent).toContain('2.Sf3');
   });
 
   it('eine der letzten Partien anklicken spielt sie nach; zurück zur Karte', async () => {

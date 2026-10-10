@@ -55,4 +55,16 @@ describe('Brett-Koordinaten: Farbe passend zum Feld darunter (UX-060)', () => {
       });
     }
   }
+
+  it('Koordinaten sind lesbar gross und halbfett, volle Deckkraft (UI-Sweep 10.10.)', () => {
+    const wrap = mount('brown', 'white');
+    for (const coords of Array.from(wrap.querySelectorAll<HTMLElement>('coords.ranks, coords.files'))) {
+      const cs = getComputedStyle(coords);
+      expect(parseFloat(cs.fontSize)).toBeGreaterThanOrEqual(11);
+      expect(Number(cs.fontWeight)).toBeGreaterThanOrEqual(600);
+      expect(Number(cs.opacity)).toBe(1);
+    }
+    // Linien klein wie in der Notation („a", nicht „A")
+    expect(getComputedStyle(wrap.querySelector('coords.files')!).textTransform).toBe('none');
+  });
 });
