@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.734.1", date: "2026-10-10", changes: [
+    { en: "KidHub Star Hunt: many stars work reliably now — knight and queen up to 63, rook up to about 60, bishop up to 31. A search that got stuck used to run until its time was up; now it starts over from another square.",
+      de: "KidHub-Sternenjagd: viele Sterne klappen jetzt verlässlich — Springer und Dame bis 63, Turm bis etwa 60, Läufer bis 31. Eine Suche, die sich festgefahren hatte, lief bisher bis zum Zeitende; jetzt fängt sie auf einem anderen Feld neu an." },
+  ] },
   { version: "0.734.0", date: "2026-10-10", changes: [
     { en: "KidHub Star Hunt: in free play a number field after the 8 lets you choose up to 63 stars (bishop: 31 — it stays on its colour). Up to about 12 stars (knight about 20) every puzzle still has exactly one solution; with more there are several ways, and any way that eats all the stars counts — a star from which the rest can no longer be reached is still marked wrong. And the piece no longer has to be tapped first: it is always selected, so tapping the target square is enough (dragging still works).",
       de: "KidHub-Sternenjagd: im freien Spiel lässt ein Zahlenfeld hinter der 8 bis zu 63 Sterne zu (Läufer: 31 — er bleibt auf seiner Farbe). Bis etwa 12 Sterne (Springer etwa 20) hat jede Aufgabe weiter genau eine Lösung; mit mehr gibt es mehrere Wege, und jeder Weg zählt, der alle Sterne frisst — ein Stern, von dem aus der Rest nicht mehr zu holen ist, gilt weiter als falsch. Und die Figur muss man nicht mehr erst antippen: sie ist immer ausgewählt, ein Tipp aufs Zielfeld genügt (Ziehen geht weiter)." },

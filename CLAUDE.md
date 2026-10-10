@@ -5630,7 +5630,9 @@ Kinderseite" unter REST API.
   Seit 0.734.0 Zahlenfeld hinter der 8 bis `MAX_STARS` 63 (`maxStars`: Läufer 31). Über `RANDOM_WALK_MAX` (8) erst
   `generateChain` (RÜCKWÄRTS gelegt: von jedem Vorgängerfeld aus ist genau der nächste Stern sichtbar, sonst nur eine
   FALLE ohne Fortsetzung → eindeutig ohne Suche; trägt bis ~12, Springer ~20), sonst `generateOpenPath` (rückwärts mit
-  Zurücksetzen + Warnsdorff, `unique: false`, mehrere Wege). Je Aufgabe höchstens `GENERATE_BUDGET_MS` 400 ms;
+  Zurücksetzen + Warnsdorff, `unique: false`, mehrere Wege). Kette nur bis `chainMax` (R 14, B 12, N 25, Q 10), darüber gleich die offene Aufgabe; deren Anlauf bricht nach
+  `OPEN_STEPS_PER_TRY` (20 000) Schritten ab und beginnt auf einem anderen Feld (0.734.1: vorher bohrte EIN festgefahrener
+  Anlauf bis zum Zeitende — Springer 63 scheiterte). Je Aufgabe höchstens `GENERATE_BUDGET_MS` 600 ms; Turm über 60 selten.
   `solveStars` hat einen Knotendeckel (`null` = keine Aussage). Bei `unique: false` prüft die Seite einen anderen Stern
   mit `solveStars` (Deckel 60 000, ohne Aussage = gilt) und führt die Restfolge (`route`). Die Figur ist immer
   ausgewählt: `PuzzleBoardComponent.autoSelect` wählt nach jeder Änderung und jedem Tippen wieder aus. Dafür

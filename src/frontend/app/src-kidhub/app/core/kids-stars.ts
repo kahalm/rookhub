@@ -192,7 +192,13 @@ export function generateStarPuzzle(
 ): StarPuzzle | null {
   if (count > maxStars(piece)) return null;
   if (count > RANDOM_WALK_MAX) {
-    return generateChain(piece, count, rng, budgetMs / 2) ?? generateOpenPath(piece, count, rng, budgetMs / 2);
+    // Eindeutig nur, solange die Kette es schafft — darueber gleich die offene Aufgabe mit dem ganzen Budget.
+    if (count <= chainMax(piece)) {
+      const chain = generateChain(piece, count, rng, budgetMs / 2);
+      if (chain) return chain;
+      return generateOpenPath(piece, count, rng, budgetMs / 2);
+    }
+    return generateOpenPath(piece, count, rng, budgetMs);
   }
   let fallback: StarPuzzle | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -223,12 +229,20 @@ export const RANDOM_WALK_MAX = 8;
 /** Hoechstzahl Sterne im freien Spiel (alle Felder ausser dem Startfeld). */
 export const MAX_STARS = 63;
 
+/** Bis hierher findet `generateChain` eindeutige Aufgaben (gemessen 2026-10-10); darueber versucht sie es nicht mehr. */
+function chainMax(piece: StarPiece): number {
+  return { R: 14, B: 12, N: 25, Q: 10 }[piece];
+}
+
+/** Schritte je Anlauf der offenen Aufgabe — haengt die Suche fest, lieber neu anfangen (anderes Feld) als weiterbohren. */
+const OPEN_STEPS_PER_TRY = 20_000;
+
 /** Mehr geht mit dieser Figur nicht: der Laeufer bleibt auf seiner Farbe (32 Felder, eins davon ist das Startfeld). */
 export function maxStars(piece: StarPiece): number {
   return piece === 'B' ? 31 : MAX_STARS;
 }
 /** So lange darf das Wuerfeln einer grossen Aufgabe dauern — es laeuft im Browser, das Brett soll nicht haengen. */
-export const GENERATE_BUDGET_MS = 400;
+export const GENERATE_BUDGET_MS = 600;
 /** Deckel fuer die Loesungssuche: ohne ihn lief die Dame mit 20 Sternen minutenlang. */
 const DFS_MAX_NODES = 200_000;
 /** So oft wird beim Legen eine Falle erlaubt (ein zweiter sichtbarer Stern, nach dem es nicht weitergeht). */
@@ -301,7 +315,7 @@ export function generateOpenPath(piece: StarPiece, count: number, rng: Rng, budg
     let steps = 0;
     const extend = (): boolean => {
       if (seq.length === count + 1) return true;
-      if (++steps % 512 === 0 && Date.now() > deadline) return false;
+      if (++steps > OPEN_STEPS_PER_TRY || (steps % 512 === 0 && Date.now() > deadline)) return false;
       const target = seq[seq.length - 1];
       const after = seq.length >= 2 ? seq[seq.length - 2] : null;
       const blockers = new Set(remaining);
@@ -318,7 +332,7 @@ export function generateOpenPath(piece: StarPiece, count: number, rng: Rng, budg
         if (extend()) return true;
         seq.pop();
         if (!last) remaining.delete(x);
-        if (Date.now() > deadline) return false;
+        if (steps > OPEN_STEPS_PER_TRY || Date.now() > deadline) return false;
       }
       return false;
     };

@@ -69,7 +69,7 @@ describe('kids-stars', () => {
 
   it('viele Sterne: bis 63 (Läufer 31) mit einer legalen Lösung, die nach jedem Stern abbiegt', () => {
     const rng = seededRng(7);
-    for (const [piece, count] of [['Q', 63], ['N', 63], ['R', 40], ['B', 30], ['N', 15]] as const) {
+    for (const [piece, count] of [['Q', 63], ['N', 63], ['N', 62], ['R', 40], ['B', 30], ['N', 15], ['Q', 13]] as const) {
       const p = generateStarPuzzle(piece, count, rng, 2000);
       expect(p).withContext(`${piece} ${count}`).not.toBeNull();
       expect(new Set(p!.stars).size).toBe(count);
