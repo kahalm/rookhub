@@ -84,6 +84,7 @@ describe('StarsPlayComponent', () => {
   it('nach allen Aufgaben ist die Stufe geschafft und die nächste offen', () => {
     const { c } = create();
     for (let r = 0; r < STARS_PER_STAGE; r++) {
+      if (r > 0) expect(c.puzzle()!.stars.length).toBe([2, 2, 3, 3, 4, 4][r]);
       const p = c.puzzle()!;
       let from = p.start;
       for (const s of p.solution) {

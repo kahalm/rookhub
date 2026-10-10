@@ -4321,7 +4321,6 @@
       "intro": "Pojedi sve zvijezde – svakim potezom točno jednu!",
       "stage": "Razina {{stage}}",
       "round": "Zadatak {{n}}/{{total}}",
-      "starCount": "Zvijezda: {{count}}",
       "task": "Pojedi sve zvijezde – svakim potezom točno jednu!",
       "left": "Još zvijezda: {{count}}",
       "completed": "Razina riješena!",
@@ -4337,7 +4336,8 @@
         "empty": "Ups – svaki potez mora pojesti zvijezdu!",
         "deadEnd": "Odande ne možeš doći do svih zvijezda. Probaj drugu!",
         "solved": "Sve zvijezde pojedene! 🌟"
-      }
+      },
+      "starRange": "Zvijezda: {{min}}–{{max}}"
     }
   },
   "turnierAdmin": {

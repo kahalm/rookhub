@@ -4321,7 +4321,6 @@
       "intro": "Eat all the stars – exactly one with every move!",
       "stage": "Stage {{stage}}",
       "round": "Puzzle {{n}}/{{total}}",
-      "starCount": "{{count}} stars",
       "task": "Eat all the stars – exactly one with every move!",
       "left": "{{count}} stars left",
       "completed": "Stage complete!",
@@ -4337,7 +4336,8 @@
         "empty": "Oops – every move has to eat a star!",
         "deadEnd": "From there you can't reach all the stars. Try another one!",
         "solved": "All stars eaten! 🌟"
-      }
+      },
+      "starRange": "{{min}}–{{max}} stars"
     }
   },
   "turnierAdmin": {

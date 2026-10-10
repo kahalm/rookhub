@@ -4000,7 +4000,6 @@
       "intro": "Edd meg az összes csillagot – minden lépéssel pontosan egyet!",
       "stage": "{{stage}}. szint",
       "round": "{{n}}/{{total}}. feladat",
-      "starCount": "{{count}} csillag",
       "task": "Edd meg az összes csillagot – minden lépéssel pontosan egyet!",
       "left": "Még {{count}} csillag",
       "completed": "Szint teljesítve!",
@@ -4016,7 +4015,8 @@
         "empty": "Hoppá – minden lépésnek meg kell ennie egy csillagot!",
         "deadEnd": "Onnan nem éred el az összes csillagot. Próbálj egy másikat!",
         "solved": "Minden csillag megvan! 🌟"
-      }
+      },
+      "starRange": "{{min}}–{{max}} csillag"
     }
   },
   "turnierAdmin": {

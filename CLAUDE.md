@@ -5614,9 +5614,11 @@ Kinderseite" unter REST API.
   nur mit ihr — das Brett prüft keine Schachregeln, `dests` rechnet die Seite), Sterne als `customSvg`-Markierung
   (`STAR_SVG`). Sterne BLOCKIEREN Turm/Läufer/Dame (auf ihn ja, darüber nicht), den Springer nicht. Gestellt wird nur,
   was GENAU EINE Reihenfolge hat (`solveStars` zählt bis 2): zufälliger Weg der Figur, dann zählen, bis 600 Versuche;
-  bevorzugt mit mehr als einem erreichbaren Stern am Anfang. Deshalb ist jeder andere Stern eine Sackgasse und wird
+  bevorzugt mit mehr als einem erreichbaren Stern am Anfang; seit 0.732.0 nur, wenn die Lösung nach JEDEM Stern die
+  Richtung wechselt (`turnsEveryMove`: Linie bei Turm/Läufer/Dame, Sprung beim Springer — zurück zählt als Wechsel). Deshalb ist jeder andere Stern eine Sackgasse und wird
   SOFORT als falsch gezeigt (`deadEnd`), ein Zug auf ein leeres Feld ebenso (`empty`) — beides bleibt `WRONG_HOLD_MS`
-  stehen. `STAR_STAGES` = 19 feste Stufen (2 bis 6 Sterne), je `STARS_PER_STAGE` (5) frisch gewürfelte Aufgaben; Tipps
+  stehen. `STAR_STAGES` = 20 Stufen, Figur reihum R/B/N/Q, je sechs frisch gewürfelte Aufgaben mit wachsender Sternzahl
+  (`counts` = n, n, n+1, n+1, n+2, n+2; n = 2 + ⌊(Stufe−1)/4⌋, bis 8 Sterne; Wunsch 0.732.0 „steiler"); Tipps
   kostenlos (Stern leuchtet, dann Pfeil). Fortschritt nur im Browser (`KidsStarsStore`, `rh-kids-stars-v1`). Dafür
   zeichnet `PuzzleBoardComponent` `reviewShapes` jetzt auch beim Aufbau (vorher erst bei der nächsten Änderung).
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles

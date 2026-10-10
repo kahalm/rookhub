@@ -29,13 +29,13 @@ import { pieceGlyph } from './stars-play.component';
               <span class="num">{{ s.stage }}</span>
               <span class="glyph" aria-hidden="true">{{ glyph(s.piece) }}</span>
               <span class="name">{{ 'kids.stars.piece.' + s.piece | translate }}</span>
-              <span class="meta">{{ 'kids.stars.starCount' | translate: { count: s.stars } }}</span>
+              <span class="meta">{{ 'kids.stars.starRange' | translate: { min: s.counts[0], max: s.counts[s.counts.length - 1] } }}</span>
             </a>
           } @else {
             <span class="stage locked" [attr.aria-label]="('kids.stars.stage' | translate: { stage: s.stage }) + ' – ' + ('kids.levels.locked' | translate)">
               <span class="num">{{ s.stage }}</span>
               <span class="glyph" aria-hidden="true">🔒</span>
-              <span class="meta">{{ 'kids.stars.starCount' | translate: { count: s.stars } }}</span>
+              <span class="meta">{{ 'kids.stars.starRange' | translate: { min: s.counts[0], max: s.counts[s.counts.length - 1] } }}</span>
             </span>
           }
         </li>

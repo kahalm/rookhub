@@ -1,5 +1,5 @@
 import {
-  STAR_STAGES, STAR_SVG, generateStarPuzzle, reachable, reachableStars, seededRng, solveStars, squareIndex, squareName,
+  turnsEveryMove, STAR_STAGES, STAR_SVG, generateStarPuzzle, reachable, reachableStars, seededRng, solveStars, squareIndex, squareName,
   starFen,
 } from './kids-stars';
 
@@ -38,17 +38,33 @@ describe('kids-stars', () => {
     expect(solveStars('R', squareIndex('a1'), sq(['a3', 'c3', 'c1'])).length).toBe(2);
   });
 
-  it('jede Stufe bekommt eindeutige Aufgaben mit der richtigen Zahl Sterne', () => {
+  it('jede Stufe bekommt eindeutige Aufgaben mit der richtigen Zahl Sterne, die nie geradeaus weitergehen', () => {
     const rng = seededRng(42);
     for (const stage of STAR_STAGES) {
-      for (let i = 0; i < 5; i++) {
-        const p = generateStarPuzzle(stage.piece, stage.stars, rng);
+      for (const count of stage.counts) {
+        const p = generateStarPuzzle(stage.piece, count, rng);
         expect(p).withContext(`Stufe ${stage.stage}`).not.toBeNull();
-        expect(p!.stars.length).toBe(stage.stars);
+        expect(p!.stars.length).toBe(count);
+        expect(turnsEveryMove(p!.piece, p!.start, p!.solution)).toBeTrue();
         expect(p!.stars).not.toContain(p!.start);
         expect(solveStars(p!.piece, p!.start, p!.stars, 3)).toEqual([p!.solution]);
       }
     }
+  });
+
+  it('die Kurve: Stufe 1 = 2, 2, 3, 3, 4, 4 Sterne, alle vier Stufen eins mehr', () => {
+    expect(STAR_STAGES[0].counts).toEqual([2, 2, 3, 3, 4, 4]);
+    expect(STAR_STAGES[4].counts).toEqual([3, 3, 4, 4, 5, 5]);
+    expect(STAR_STAGES[19].counts).toEqual([6, 6, 7, 7, 8, 8]);
+  });
+
+  it('geradeaus weiter zählt nicht, zurück und abbiegen schon', () => {
+    const a = squareIndex;
+    expect(turnsEveryMove('R', a('a1'), [a('a3'), a('a5')])).toBeFalse();
+    expect(turnsEveryMove('R', a('a1'), [a('a3'), a('a2')])).toBeTrue();
+    expect(turnsEveryMove('R', a('a1'), [a('a3'), a('c3')])).toBeTrue();
+    expect(turnsEveryMove('N', a('a1'), [a('b3'), a('c5')])).toBeFalse();
+    expect(turnsEveryMove('N', a('a1'), [a('b3'), a('d4')])).toBeTrue();
   });
 
   it('nur Turm, Läufer, Springer und Dame', () => {

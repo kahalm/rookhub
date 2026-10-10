@@ -25,7 +25,7 @@ export function pieceGlyph(piece: StarPiece): string {
 export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
 
 /**
- * Eine Stufe der Sternenjagd: `STARS_PER_STAGE` Aufgaben hintereinander, jede frisch gewuerfelt (Regeln und Generator in
+ * Eine Stufe der Sternenjagd: Aufgaben hintereinander mit wachsender Sternzahl (`StarStage.counts`), jede frisch gewuerfelt (Regeln und Generator in
  * `kids-stars.ts`). Gezogen werden darf ueberall hin, wohin die Figur kommt — ein Zug auf ein leeres Feld oder auf
  * einen Stern, nach dem nicht mehr alle zu holen sind, bleibt `WRONG_HOLD_MS` stehen und wird zurueckgenommen
  * (wie in den Stufen). Tipps kosten nichts: erst leuchtet der naechste Stern, dann zeigt ein Pfeil den Zug.
@@ -266,7 +266,7 @@ export class StarsPlayComponent {
   private newPuzzle(): void {
     clearTimeout(this.timer);
     const s = this.stage();
-    const p = s ? generateStarPuzzle(s.piece, s.stars, this.rng) : null;
+    const p = s ? generateStarPuzzle(s.piece, s.counts[this.round()], this.rng) : null;
     this.failed.set(!p);
     this.puzzle.set(p);
     this.step.set(0);
@@ -325,7 +325,7 @@ export class StarsPlayComponent {
   next(): void {
     const s = this.stage();
     if (!s || this.status() !== 'solved') return;
-    if (this.round() + 1 < STARS_PER_STAGE) {
+    if (this.round() + 1 < s.counts.length) {
       this.round.update(r => r + 1);
       this.newPuzzle();
     } else {

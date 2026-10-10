@@ -4321,7 +4321,6 @@
       "intro": "Friss alle Sterne – mit jedem Zug genau einen!",
       "stage": "Stufe {{stage}}",
       "round": "Aufgabe {{n}}/{{total}}",
-      "starCount": "{{count}} Sterne",
       "task": "Friss alle Sterne – mit jedem Zug genau einen!",
       "left": "Noch {{count}} Sterne",
       "completed": "Stufe geschafft!",
@@ -4337,7 +4336,8 @@
         "empty": "Hoppla – jeder Zug muss einen Stern fressen!",
         "deadEnd": "Von dort kommst du nicht mehr an alle Sterne. Probier einen anderen!",
         "solved": "Alle Sterne gefressen! 🌟"
-      }
+      },
+      "starRange": "{{min}}–{{max}} Sterne"
     }
   },
   "turnierAdmin": {

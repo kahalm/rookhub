@@ -28,22 +28,26 @@ export interface StarStage {
   /** 1-basiert. */
   stage: number;
   piece: StarPiece;
-  stars: number;
+  /** Sterne je Aufgabe, in Reihenfolge — die Laenge ist die Zahl der Aufgaben. */
+  counts: readonly number[];
 }
 
-/** Aufgaben je Stufe. */
-export const STARS_PER_STAGE = 5;
+/** Aufgaben je Stufe: je zwei mit n, n+1 und n+2 Sternen. */
+export const STARS_PER_STAGE = 6;
 
 /**
- * Die Stufenfolge: Turm, Laeufer, Springer und Dame (Wunsch 2026-10-10 — kein Koenig), die Zahl der Sterne waechst.
- * Feste Liste statt Formel — so laesst sie sich lesen und umsortieren.
+ * Die Stufenfolge (Wunsch 2026-10-10: „steiler — Stufe 1: 2 Puzzles mit 2 Sternen, dann 2 mit 3, dann 2 mit 4"): Turm,
+ * Laeufer, Springer, Dame reihum; jede Stufe zieht innerhalb von sich an (n, n, n+1, n+1, n+2, n+2), und alle vier
+ * Stufen steigt n um eins — Stufe 1 beginnt bei 2, Stufe 17–20 bei 6 (bis 8 Sterne).
  */
-export const STAR_STAGES: readonly StarStage[] = ([
-  ['R', 2], ['B', 2], ['N', 2], ['R', 3], ['B', 3],
-  ['Q', 3], ['N', 3], ['R', 4], ['B', 4], ['Q', 4],
-  ['N', 4], ['R', 5], ['B', 5], ['Q', 5], ['N', 5],
-  ['R', 6], ['B', 6], ['Q', 6], ['N', 6],
-] as const).map(([piece, stars], i) => ({ stage: i + 1, piece, stars }));
+export const STAR_STAGES: readonly StarStage[] = Array.from({ length: 20 }, (_, i) => {
+  const base = 2 + Math.floor(i / 4);
+  return {
+    stage: i + 1,
+    piece: (['R', 'B', 'N', 'Q'] as const)[i % 4],
+    counts: [base, base, base + 1, base + 1, base + 2, base + 2],
+  };
+});
 
 const ROOK_DIRS: readonly [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const BISHOP_DIRS: readonly [number, number][] = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
@@ -124,6 +128,29 @@ export function solveStars(piece: StarPiece, start: number, stars: readonly numb
   return found;
 }
 
+/** Richtung eines Zugs: bei Turm/Laeufer/Dame die Linie (Vorzeichen), beim Springer der Sprung selbst. */
+function direction(piece: StarPiece, from: number, to: number): string {
+  const dx = (to % 8) - (from % 8);
+  const dy = Math.floor(to / 8) - Math.floor(from / 8);
+  return piece === 'N' ? `${dx},${dy}` : `${Math.sign(dx)},${Math.sign(dy)}`;
+}
+
+/**
+ * Nach jedem gefressenen Stern geht es in eine ANDERE Richtung weiter — zurueck oder abgebogen, nie geradeaus
+ * (Wunsch 2026-10-10). Geradeaus waere fuer Turm/Laeufer/Dame derselbe Strahl, und den sieht ein Kind ohne Nachdenken.
+ */
+export function turnsEveryMove(piece: StarPiece, start: number, solution: readonly number[]): boolean {
+  let prev: string | null = null;
+  let pos = start;
+  for (const sq of solution) {
+    const dir = direction(piece, pos, sq);
+    if (dir === prev) return false;
+    prev = dir;
+    pos = sq;
+  }
+  return true;
+}
+
 /** Zufallsquelle 0 ≤ x < 1 — in Tests fest. */
 export type Rng = () => number;
 
@@ -144,12 +171,13 @@ function pick<T>(list: readonly T[], rng: Rng): T {
 }
 
 /** Hoechstens so viele Versuche je Aufgabe; danach gilt die erste eindeutige, die gefunden wurde. */
-const MAX_ATTEMPTS = 600;
+const MAX_ATTEMPTS = 3000;
 
 /**
  * Eine Aufgabe mit `count` Sternen und GENAU einer Loesung. Gebaut wird ein zufaelliger Weg der Figur (Felder verschieden,
  * nie zurueck aufs Startfeld), auf dessen Zielfeldern die Sterne liegen; danach zaehlt `solveStars`, ob es genau eine
- * Reihenfolge gibt. Bevorzugt werden Aufgaben, bei denen am Anfang mehr als ein Stern erreichbar ist — sonst ist
+ * Reihenfolge gibt und sie nach jedem Stern die Richtung wechselt (`turnsEveryMove`). Bevorzugt werden Aufgaben,
+ * bei denen am Anfang mehr als ein Stern erreichbar ist — sonst ist
  * die erste Entscheidung keine. `null` nur, wenn gar keine eindeutige Aufgabe gefunden wurde.
  */
 export function generateStarPuzzle(piece: StarPiece, count: number, rng: Rng = Math.random): StarPuzzle | null {
@@ -169,7 +197,7 @@ export function generateStarPuzzle(piece: StarPiece, count: number, rng: Rng = M
     }
     if (path.length < count) continue;
     const solutions = solveStars(piece, start, path, 2);
-    if (solutions.length !== 1) continue;
+    if (solutions.length !== 1 || !turnsEveryMove(piece, start, solutions[0])) continue;
     const puzzle: StarPuzzle = { piece, start, stars: [...path].sort((a, b) => a - b), solution: solutions[0] };
     if (count < 2 || reachableStars(piece, start, new Set(path)).length >= 2) return puzzle;
     fallback ??= puzzle;
