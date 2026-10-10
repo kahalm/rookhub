@@ -220,7 +220,7 @@ describe('ImportReview — Ligapaarung (0.678.0)', () => {
     expect(ImportReview.restore(gone, r.snapshot(), true).games()[0].pairingId).toBe(42);
   });
 
-  // 0.740.0: leeres Brett der laufenden Runde — Mannschaften statt Spieler, die Spieler der Partie bleiben
+  // 0.744.0: leeres Brett der laufenden Runde — Mannschaften statt Spieler, die Spieler der Partie bleiben
   it('leeres Brett der laufenden Runde: Text „noch nicht besetzt", Wahl lässt die Spieler stehen', () => {
     const OPEN = { ...PAIR, id: 50, label: '2026/27 · 1. Klasse · Runde 2 · Brett 5 (10.10.2026)', white: 'Schwaz', black: 'Freibauer Innsbruck',
       whiteFide: null, blackFide: null, open: true };

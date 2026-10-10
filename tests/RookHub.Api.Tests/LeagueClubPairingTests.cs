@@ -42,7 +42,7 @@ public class LeagueClubPairingTests : IDisposable
         return lg.Id;
     }
 
-    // 0.740.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?" — die Bretter der laufenden Runde
+    // 0.744.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?" — die Bretter der laufenden Runde
     // haben noch keine Spieler; angeboten werden die leeren Bretter der eigenen Begegnung, in der passenden Farbe.
     [Fact]
     public async Task Finder_LaufendeRunde_BietetLeereBretterDerEigenenBegegnung_InDerFarbe()

@@ -49,7 +49,7 @@ export interface ClubPairing {
   blackOwnClub: boolean;
   /** Beide Spieler in ihren Farben und der Tag passen. */
   exact: boolean;
-  /** 0.740.0: noch leeres Brett der eigenen Begegnung (laufende Runde) — `white`/`black` sind dann die Mannschaften,
+  /** 0.744.0: noch leeres Brett der eigenen Begegnung (laufende Runde) — `white`/`black` sind dann die Mannschaften,
    *  die Spieler der Partie bleiben bei der Wahl, wie sie sind. */
   open?: boolean;
 }

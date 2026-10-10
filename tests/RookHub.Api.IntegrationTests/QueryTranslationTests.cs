@@ -1333,7 +1333,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         var pairings = await new RookHub.Api.Services.League.LeagueFixtureGames(Db).ForFixtureAsync(home, 88, 2, "Schwaz", default);
         Assert.Equal("club", Assert.Single(pairings).Source);
 
-        // 0.740.0: noch leere Bretter der eigenen Begegnung in der laufenden Runde (Join auf den Termin, Bereich, Meldeliste)
+        // 0.744.0: noch leere Bretter der eigenen Begegnung in der laufenden Runde (Join auf den Termin, Bereich, Meldeliste)
         Db.LeagueRounds.Add(new LeagueRound { Tnr = 88, Round = 4, Date = new DateOnly(2026, 10, 10) });
         var empty = new LeagueGame { Tnr = 88, Round = 4, MatchNo = 5, Board = 5, HomeTeam = "Schwaz", AwayTeam = "Absam", HomeColor = "w", Result = "" };
         Db.LeagueGames.Add(empty);

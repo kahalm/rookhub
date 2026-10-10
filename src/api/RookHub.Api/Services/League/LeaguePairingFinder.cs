@@ -26,7 +26,7 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     /// <summary>Was über die Partie bekannt ist: je Seite Name + FIDE-ID (bei „Schwaz" die interne), dazu Tag bzw. Jahr.</summary>
     public sealed record Query(string White, string? WhiteFide, string Black, string? BlackFide, DateOnly? Date, int? Year);
 
-    /// <param name="Open">0.740.0: ein noch leeres Brett der eigenen Begegnung (laufende Runde, chess-results hat die Aufstellung
+    /// <param name="Open">0.744.0: ein noch leeres Brett der eigenen Begegnung (laufende Runde, chess-results hat die Aufstellung
     /// noch nicht) — <see cref="White"/>/<see cref="Black"/> sind dann die MANNSCHAFTEN, die Spieler der Partie bleiben.</param>
     public sealed record Option(int Id, string Label, string? Date, string White, string? WhiteFide, string Black, string? BlackFide,
         string Result, bool WhiteOwnClub, bool BlackOwnClub, bool Exact, string League, string Season, bool Open = false);
@@ -62,7 +62,7 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     }
 
     /// <summary>
-    /// Noch leere Bretter der eigenen Begegnungen in laufenden Runden (0.740.0, Wunsch 2026-10-10: „wie kann ich eine Partie der
+    /// Noch leere Bretter der eigenen Begegnungen in laufenden Runden (0.744.0, Wunsch 2026-10-10: „wie kann ich eine Partie der
     /// aktuellen Runde zuweisen?" — die Bretter haben dort noch keine Spieler, über die FIDE-ID fand die Suche sie nie):
     /// Rundentermin höchstens <see cref="OpenRoundDays"/> Tage her und höchstens <see cref="DayTolerance"/> Tage voraus.
     /// </summary>

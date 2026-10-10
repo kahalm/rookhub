@@ -8,7 +8,7 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: "0.740.0", date: "2026-10-10", changes: [
+  { version: "0.744.0", date: "2026-10-10", changes: [
     { en: "LeagueHub: games of the current round can be assigned to a board yourself — the “League game” choice also offers the still empty boards of your own match (“… Board 5 (10.10.2026) — Schwaz – Freibauer, not yet filled”), in the colour that fits your side.",
       de: "LeagueHub: Partien der laufenden Runde lassen sich selbst einem Brett zuordnen — die Auswahl „Ligapartie“ bietet auch die noch leeren Bretter der eigenen Begegnung an („… Brett 5 (10.10.2026) — Schwaz – Freibauer, noch nicht besetzt“), in der Farbe, die zur eigenen Seite passt." },
   ] },

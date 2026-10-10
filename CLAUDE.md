@@ -1756,7 +1756,7 @@ Rollenverwaltung an).
   `LeagueGameId` roh. (3) **Heilung beim Start** (`LeagueGameLinks.HealOnStartupAsync` in `Program.cs`, idempotent, wirft nie):
   alle mit Schlüssel neu auflösen; gültige Ids ohne Schlüssel bekommen ihn; tote Ids ohne Schlüssel werden über
   `LeaguePairingFinder` neu gefunden (`AutoPick`, genau EIN genauer Treffer; PGN-Datum, sonst das Jahr) oder geleert (Warnung).
-- **Leere Bretter der laufenden Runde** (0.740.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?"):
+- **Leere Bretter der laufenden Runde** (0.744.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?"):
   die FIDE-Suche fand Bretter ohne Spieler nie. `LeaguePairingFinder.OpenBoardsAsync` hängt an jede Vorschlagsliste die leeren
   Bretter (beide Spieler `null`, nicht kampflos) der EIGENEN Begegnungen (`OwnsTeam`) mit Rundentermin höchstens `OpenRoundDays`
   (21) Tage her bzw. `DayTolerance` voraus (`Today` für Tests). Farbe nach Regel (`HomeWhiteByRule`: Tirol Heim Weiß an ungeraden,
