@@ -523,6 +523,34 @@ public class OpponentTrainingLinesTests
     }
 
     [Fact]
+    public async Task CreateRepertoire_Description_NamesBothColors_AndOnlyTheContributingSources()
+    {
+        // Wunsch 2026-10-10: „gegen Hess, Max (Weiß)" war mehrdeutig — jetzt aus Sicht des Gegners UND mit der eigenen Farbe
+        using var db = new Db();
+        var a = await db.RepertoireAsync(1, "A", Section("K", "1. e4 c5 2. Nf3"));
+        var b = await db.RepertoireAsync(1, "B", Section("K", "1. e4 e5 2. Nf3"));
+        var games = () => Task.FromResult(new List<OpponentTrainingLines.Game> { G("e4 c5 Nf3", false), G("e4 c5 Nf3", false) });
+        // nur EINE Linie übernehmen: die aus A — B hat nichts beigesteuert und wird nicht genannt
+        var created = (await db.Service(new() { [TrainingLinesService.TakeKey] = "1" })
+            .CreateRepertoireAsync(1, "Hess, Max", Q(null, "w"), games, default))!;
+        Assert.Equal(1, created.Lines);
+        var description = db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == created.Id).Description!;
+        Assert.StartsWith("Trainingslinien gegen Hess, Max — er hat Schwarz, ich spiele Weiß — aus „A“, ", description);
+        Assert.DoesNotContain("„B“", description);
+        Assert.Contains("2 Partien gezählt, 1 von 2 Linien.", description);
+    }
+
+    [Fact]
+    public void Description_BlackForMe_MeansHeHasWhite()
+    {
+        var d = TrainingLinesService.Description(" Hess, Max ", 'b', ["Gustafsson 1.e4", "Sizilianisch"], new DateTime(2026, 10, 10), 12, 5, 9);
+        Assert.Equal("Trainingslinien gegen Hess, Max — er hat Weiß, ich spiele Schwarz — aus „Gustafsson 1.e4“, „Sizilianisch“, "
+                     + "10.10.2026, 12 Partien gezählt, 5 von 9 Linien.", d);
+        Assert.Contains("er hat Schwarz, ich spiele Weiß", TrainingLinesService.Description("X", 'w', ["A"], DateTime.UtcNow, 0, 1, 1));
+        Assert.True(TrainingLinesService.Description("X", 'w', [new string('a', 2000)], DateTime.UtcNow, 0, 1, 1).Length <= 1000);
+    }
+
+    [Fact]
     public async Task CreateFromAllMarked_AMarkedRepertoireWithTheTargetName_IsLeftOut_AndReplaced()
     {
         using var db = new Db();

@@ -7,6 +7,8 @@ import { PlayerCard, ProfileView } from '@lh/core/league.models';
 import { TREE_FILTER_KEY } from './tree-filter';
 import { PlayerCardComponent, ligaFotosUrl } from './player-card.component';
 import { PLAYER_CARD_API, PlayerCardApi } from './player-card-api';
+import { By } from '@angular/platform-browser';
+import { TrainingLinesComponent } from './training-lines.component';
 
 const CARD: PlayerCard = {
   fide: '1606921', name: 'Oberschmid, Patrik', n: 20, years: ['2019', '2026'], src: { Lumbra: 12, 'chess-results': 8 },
@@ -402,6 +404,23 @@ describe('PlayerCardComponent', () => {
       await fixture.componentInstance.open('1606921', null, null, null);
       fixture.detectChanges();
       expect(toggle().length).withContext('API ohne Trainingslinien').toBe(0);
+    });
+
+    it('aus einer Begegnung (Brett bekannt): reicht SEINE Farbe als opponentColor durch, sonst null', async () => {
+      auth.isLoggedIn = true;
+      offer();
+      const tl = () => fixture.debugElement.query(By.directive(TrainingLinesComponent)).componentInstance as TrainingLinesComponent;
+      await fixture.componentInstance.open('1606921', 'w', 3, null);
+      fixture.detectChanges();
+      expect(tl().opponentColor()).toBe('w');
+      expect(tl().wanted()).toBe('b');
+      await fixture.componentInstance.open('1606921', 's', 2, null);
+      fixture.detectChanges();
+      expect(tl().wanted()).toBe('w');
+      // Farbe ohne Brett (Vereinspartien: seine Farbe in einer alten Partie) ist kein Zusammenhang
+      await fixture.componentInstance.open('1606921', 'w', null, null);
+      fixture.detectChanges();
+      expect(tl().opponentColor()).toBeNull();
     });
   });
 });

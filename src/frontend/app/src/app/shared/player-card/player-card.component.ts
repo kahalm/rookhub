@@ -96,7 +96,8 @@ type Show = 'w' | 's' | 'b';
             }
             @if (training()) {
               <!-- Trainingslinien gegen diesen Spieler (2026-10-07): nur angemeldet, nie über einen Teilen-Link -->
-              <lh-training-lines [key]="key(c)" [name]="c.name ?? ''" [filter]="active()" />
+              <!-- Vorgabe der Farbe aus der Begegnung (Brett bekannt): color() = SEINE Farbe dort (2026-10-10) -->
+              <lh-training-lines [key]="key(c)" [name]="c.name ?? ''" [filter]="active()" [opponentColor]="board() !== null ? color() : null" />
             }
           }
           @if (sections(); as sec) {

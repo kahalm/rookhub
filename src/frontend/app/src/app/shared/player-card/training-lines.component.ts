@@ -11,7 +11,8 @@ import { PLAYER_CARD_API } from './player-card-api';
 import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
-interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
+/** Was eine Abfrage will: Repertoire (null = alle markierten) und MEINE Farbe (null = der Server wählt die mit den meisten Linien). */
+interface Want { repertoire: number | null; color: 'w' | 'b' | null }
 
 /**
  * Abschnitt „Trainingslinien" der Spielerkarte (Wunsch 2026-10-07): die Linien eines eigenen Repertoires (nur „Für Extension
@@ -39,10 +40,11 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
             <div class="tl-pick">
               <!-- Vorgabe: alle markierten Repertoires der Farbe in EINER Reihung (Wunsch 2026-10-07); die Farbe ist die Wahl -->
               @if (d.colors.length > 1) {
-                <div class="seg tl-color" role="group" [attr.aria-label]="t('yourColor')">
-                  @for (c of d.colors; track c) {
+                <!-- aus Sicht des Gegners (Wunsch 2026-10-10: „er spielt Weiß" gewählt und Weiß-Linien bekommen) — intern bleibt color = MEINE Farbe -->
+                <div class="seg tl-color" role="group" [attr.aria-label]="t('whoHasWhich')">
+                  @for (c of opponentFirst(d.colors); track c) {
                     <button type="button" [attr.aria-pressed]="d.color === c" [disabled]="loading()" (click)="pickColor(c)">
-                      {{ t(c === 'w' ? 'iHaveWhite' : 'iHaveBlack') }}</button>
+                      {{ t(c === 'b' ? 'heHasWhite' : 'heHasBlack') }}</button>
                   }
                 </div>
               }
@@ -58,6 +60,12 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
                 {{ d.games === 1 ? 'Partie' : 'Partien' }} von {{ who() }} mit {{ d.color === 'w' ? 'Schwarz' : 'Weiß' }}. }
               @if (loading()) { Lade … }
             </p>
+            @if (wanted(); as w) {
+              @if (d.color && d.color !== w && !d.colors.includes(w) && !loading()) {
+                <!-- die Begegnung sagt eine Farbe, für die es keine markierten Linien gibt: nicht still die andere zeigen -->
+                <p class="small tl-estimate tl-incomplete tl-other" role="note">{{ t(w === 'w' ? 'noLinesWhite' : 'noLinesBlack') }}</p>
+              }
+            }
             @if (estimated(d)) {
               <!-- Lücken geschätzt (2026-10-07): Lichess-Partien von Spielern seiner Stärke -->
               <p class="small tl-estimate" role="note">{{ t(d.games === 0 ? 'headerNone' : d.games < 20 ? 'headerFew' : 'headerGaps', { who: who(), n: d.games, band: d.lichessBand }) }}</p>
@@ -77,7 +85,7 @@ interface Remembered { repertoire: number | null; color: 'w' | 'b' | null }
               <div class="tl-actions">
                 @if (canCreate) {
                   <button type="button" class="btn-pri tl-create" [disabled]="busy()" [title]="t('hint')" (click)="createRepertoire(d)">
-                    {{ creating() ? t('busy') : t('button') }}</button>
+                    {{ creating() ? t('busy') : t('button', { side: side(d) }) }}</button>
                 }
                 @if (d.repertoire !== null) {
                   <button type="button" class="btn-sec tl-all" [disabled]="busy()" (click)="trainAll(d)">Alle in dieser Reihenfolge trainieren</button>
@@ -176,6 +184,10 @@ export class TrainingLinesComponent {
   readonly name = input<string>('');
   /** Der Filter der Karte — dieselben Partien wie Profil und Baum. */
   readonly filter = input<TreeFilter | null>(null);
+  /** Die Farbe des GEGNERS in der Begegnung ('w'/'s', aus der Paarung); `null` = ohne Zusammenhang (Prep-Seite, Meldeliste). */
+  readonly opponentColor = input<'w' | 's' | null>(null);
+  /** Meine Farbe aus der Begegnung — das Gegenteil seiner; `null` = ohne Zusammenhang (dann wählt der Server). */
+  readonly wanted = computed<'w' | 'b' | null>(() => this.opponentColor() === 'w' ? 'b' : this.opponentColor() === 's' ? 'w' : null);
 
   readonly open = signal(false);
   readonly data = signal<TrainingLines | null>(null);
@@ -238,7 +250,7 @@ export class TrainingLinesComponent {
         const err = (e as { status?: number; error?: { reason?: string; name?: string } });
         if (err?.status !== 409 || err.error?.reason !== 'exists') throw e;
         // Es gibt schon eins: jetzt fragen, und nur bei „Ersetzen" denselben Aufruf mit replace
-        const ok = await firstValueFrom(this.confirm.ask(this.t('replaceConfirm', { name: err.error.name ?? trainingRepertoireName(this.name()) }),
+        const ok = await firstValueFrom(this.confirm.ask(this.t('replaceConfirm', { name: err.error.name ?? trainingRepertoireName(this.name()), side: this.side(d) }),
           undefined, { confirm: this.t('replace'), cancel: this.cancelLabel() }));
         if (!ok) return;
         r = await create.call(this.api, this.key(), query, true);
@@ -258,6 +270,11 @@ export class TrainingLinesComponent {
     }
   }
   readonly pct = percent;
+
+  /** „ich mit Weiß"/„ich mit Schwarz" für Knopf und Rückfrage — wer anlegt, sieht die Farbe. */
+  readonly side = (d: TrainingLines) => d.color ? this.t(d.color === 'w' ? 'asWhite' : 'asBlack') : '';
+  /** Umschalter: zuerst „Gegner hat Weiß" (= meine Farbe Schwarz), dann „Gegner hat Schwarz". */
+  readonly opponentFirst = (colors: readonly ('w' | 'b')[]) => [...colors].sort((a, b) => (a === 'b' ? 0 : 1) - (b === 'b' ? 0 : 1));
 
   /** Solange der Server im Hintergrund rechnet (<c>explorerRunning</c>), alle 3 s nachfragen — ohne Rundenlimit. */
   static readonly PollMs = 3000;
@@ -285,7 +302,7 @@ export class TrainingLinesComponent {
     this.open.update(o => !o);
     if (this.open()) {
       const want = `${this.key()}|${JSON.stringify(this.filter())}`;
-      if (want !== this.loadedFor) void this.load(this.remembered());
+      if (want !== this.loadedFor) void this.load({ repertoire: this.rememberedRepertoire(), color: this.wanted() });
     }
   }
 
@@ -303,15 +320,14 @@ export class TrainingLinesComponent {
     void this.load({ repertoire: this.data()?.repertoire ?? null, color: c });
   }
 
-  private remembered(): Remembered {
-    const r = readJson<Partial<Remembered>>(localStore(), TRAINING_LINES_KEY);
-    return {
-      repertoire: typeof r?.repertoire === 'number' ? r.repertoire : null,
-      color: r?.color === 'w' || r?.color === 'b' ? r.color : null,
-    };
+  /** Nur das Repertoire wird gemerkt — die Farbe nicht (2026-10-10): die des letzten Gegners wäre beim nächsten still falsch.
+   *  Die Vorgabe kommt aus der Begegnung (`opponentColor`), sonst wählt der Server die Farbe mit den meisten Linien. */
+  private rememberedRepertoire(): number | null {
+    const r = readJson<{ repertoire?: unknown }>(localStore(), TRAINING_LINES_KEY);
+    return typeof r?.repertoire === 'number' ? r.repertoire : null;
   }
 
-  private async load(want: Remembered, retried = false): Promise<void> {
+  private async load(want: Want, retried = false): Promise<void> {
     const fetch = this.api.trainingLines;
     if (!fetch) return;
     const my = ++this.seq;
@@ -345,12 +361,12 @@ export class TrainingLinesComponent {
         }, TrainingLinesComponent.PollMs));
       }
       // nur eine Bequemlichkeit — scheitert still (localStorage voll/gesperrt)
-      writeJson(localStore(), TRAINING_LINES_KEY, { repertoire: d.repertoire, color: d.color });
+      writeJson(localStore(), TRAINING_LINES_KEY, { repertoire: d.repertoire });
     } catch (e) {
       if (my !== this.seq) return;
       // das gemerkte Repertoire gibt es nicht mehr (gelöscht, nicht mehr freigegeben): einmal ohne Vorgabe
       if (!retried && want.repertoire !== null && (e as { status?: number })?.status === 404) {
-        void this.load({ repertoire: null, color: null }, true);
+        void this.load({ repertoire: null, color: want.color }, true);
         return;
       }
       this.error.set('Die Trainingslinien konnten nicht geladen werden.');
@@ -404,9 +420,9 @@ export class TrainingLinesComponent {
 
 /** Die Texte des Knopfs in LeagueHub (ohne Sprache) — dieselben wie `prep.trainingRepertoire.*` in de.json. */
 const GERMAN: Record<string, string> = {
-  button: 'Trainings-Repertoire anlegen',
+  button: 'Trainings-Repertoire anlegen ({{side}})',
   hint: 'Legt dir ein eigenes Repertoire „{{name}}“ mit den (bis zu {{max}}) Linien an, die du gegen diesen Gegner am wahrscheinlichsten triffst.',
-  replaceConfirm: 'Es gibt schon ein Repertoire „{{name}}“. Seinen Inhalt durch die neu gereihten Linien ersetzen? Dein Trainingsstand je Linie bleibt erhalten.',
+  replaceConfirm: 'Es gibt schon ein Repertoire „{{name}}“. Seinen Inhalt durch die neu gereihten Linien ({{side}}) ersetzen? Dein Trainingsstand je Linie bleibt erhalten.',
   replace: 'Ersetzen',
   busy: 'Lege an …',
   failed: 'Das Trainings-Repertoire ließ sich nicht anlegen.',
@@ -426,8 +442,12 @@ const GERMAN: Record<string, string> = {
   incomplete: 'Schätzung unvollständig — {{n}} Stellungen offen.',
   continue: 'Weiter rechnen',
   running: 'Schätzung läuft — noch {{n}} von {{total}} Stellungen.',
-  yourColor: 'Deine Farbe',
-  iHaveWhite: 'Ich habe Weiß',
-  iHaveBlack: 'Ich habe Schwarz',
+  whoHasWhich: 'Wer spielt welche Farbe',
+  heHasWhite: 'Gegner hat Weiß → ich spiele Schwarz',
+  heHasBlack: 'Gegner hat Schwarz → ich spiele Weiß',
+  asWhite: 'ich mit Weiß',
+  asBlack: 'ich mit Schwarz',
+  noLinesWhite: 'Für Weiß hast du keine markierten Linien — gezeigt werden deine Linien mit Schwarz.',
+  noLinesBlack: 'Für Schwarz hast du keine markierten Linien — gezeigt werden deine Linien mit Weiß.',
   trainAllHint: '„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst.',
 };

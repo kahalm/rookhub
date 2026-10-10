@@ -47,7 +47,8 @@ describe('TrainingLinesComponent', () => {
     const api = { card: jasmine.createSpy(), profile: jasmine.createSpy(), recent: jasmine.createSpy(), tree: jasmine.createSpy(),
       pgn: jasmine.createSpy(), trainingLines, trainingRepertoire, ...(trainerParams ? { trainerParams } : {}) };
     const translate = { getCurrentLang: () => lang,
-      instant: (k: string, p: Record<string, unknown>) => k === 'prep.trainingRepertoire.button' ? 'Show me lines to train'
+      instant: (k: string, p: Record<string, unknown>) => k === 'prep.trainingRepertoire.button' ? `Show me lines to train (${p['side']})`
+        : k === 'prep.trainingRepertoire.asWhite' ? 'me with White'
         : k === 'prep.trainingRepertoire.confirm' ? `Create ${p['name']}?` : k };
     TestBed.configureTestingModule({ imports: [TrainingLinesComponent], providers: [
       { provide: PLAYER_CARD_API, useValue: api }, { provide: Router, useValue: router }, { provide: HandoffService, useValue: handoff },
@@ -99,8 +100,14 @@ describe('TrainingLinesComponent', () => {
     expect(items[3].textContent).toContain('nie erreicht');
     expect(el().textContent).toContain('gezählt: 12 Partien von Huber mit Schwarz');
     expect(el().textContent).toContain('1 weitere Linie');
-    // beide Farben im Repertoire: Umschalter
-    expect(buttons('Ich habe Schwarz').length).toBe(1);
+    // beide Farben im Repertoire: Umschalter aus Sicht des Gegners (2026-10-10), „Gegner hat Weiß" zuerst
+    const seg = Array.from(el().querySelectorAll('.tl-color button')).map(b => b.textContent!.trim());
+    expect(seg).toEqual(['Gegner hat Weiß → ich spiele Schwarz', 'Gegner hat Schwarz → ich spiele Weiß']);
+    expect(el().querySelector('.tl-color button[aria-pressed="true"]')!.textContent).toContain('Gegner hat Schwarz → ich spiele Weiß');
+    expect(el().querySelector('.tl-color')!.getAttribute('aria-label')).toBe('Wer spielt welche Farbe');
+    // die Farbe steht auch auf dem Anlegen-Knopf
+    expect(el().querySelector('button.tl-create')!.textContent).toContain('Trainings-Repertoire anlegen (ich mit Weiß)');
+    expect(el().querySelector('.tl-other')).toBeNull();
   });
 
   it('ohne freigegebenes Repertoire: sagt, wo man es einschaltet', async () => {
@@ -111,7 +118,61 @@ describe('TrainingLinesComponent', () => {
     expect(el().querySelector('.tl-list')).toBeNull();
   });
 
-  it('Repertoire wechseln: schickt dessen eigene Kapitelfarben mit und merkt sich die Wahl', async () => {
+  describe('Farbe aus der Begegnung (opponentColor, 2026-10-10)', () => {
+    function buildWith(opp: 'w' | 's' | null): void {
+      build();
+      fixture.componentRef.setInput('opponentColor', opp);
+      fixture.detectChanges();
+    }
+
+    it('Gegner hat Weiß → Vorgabe ich mit Schwarz', async () => {
+      buildWith('w');
+      trainingLines.and.resolveTo({ ...DATA, color: 'b' });
+      await openSection();
+      expect(trainingLines.calls.first().args[1]).toEqual(jasmine.objectContaining({ repertoire: null, color: 'b' }));
+      expect(el().querySelector('.tl-color button[aria-pressed="true"]')!.textContent).toContain('Gegner hat Weiß → ich spiele Schwarz');
+      expect(el().querySelector('button.tl-create')!.textContent).toContain('(ich mit Schwarz)');
+      expect(el().textContent).toContain('Du mit Schwarz — gezählt: 12 Partien von Huber mit Weiß');
+    });
+
+    it('Gegner hat Schwarz → Vorgabe ich mit Weiß', async () => {
+      buildWith('s');
+      await openSection();
+      expect(trainingLines.calls.first().args[1]).toEqual(jasmine.objectContaining({ color: 'w' }));
+    });
+
+    it('die Begegnung schlägt eine gemerkte Farbe (die wird nicht mehr gelesen); das gemerkte Repertoire bleibt', async () => {
+      localStorage.setItem(TRAINING_LINES_KEY, JSON.stringify({ repertoire: 9, color: 'w' }));
+      buildWith('w');
+      trainingLines.and.resolveTo({ ...DATA, repertoire: 9, color: 'b' });
+      await openSection();
+      expect(trainingLines.calls.first().args[1]).toEqual(jasmine.objectContaining({ repertoire: 9, color: 'b' }));
+    });
+
+    it('ohne Zusammenhang: eine früher gemerkte Farbe wird ignoriert, der Server wählt', async () => {
+      localStorage.setItem(TRAINING_LINES_KEY, JSON.stringify({ repertoire: null, color: 'b' }));
+      buildWith(null);
+      await openSection();
+      expect(trainingLines.calls.first().args[1]).toEqual(jasmine.objectContaining({ repertoire: null, color: null }));
+    });
+
+    it('für meine Farbe gibt es keine markierten Linien: sagt es, statt still die andere zu zeigen', async () => {
+      buildWith('w');
+      trainingLines.and.resolveTo({ ...DATA, color: 'w', colors: ['w'] });
+      await openSection();
+      expect(el().querySelector('.tl-other')!.textContent)
+        .toContain('Für Schwarz hast du keine markierten Linien — gezeigt werden deine Linien mit Weiß.');
+    });
+
+    it('selbst umgeschaltet (beide Farben da): kein Hinweis', async () => {
+      buildWith('w');
+      trainingLines.and.resolveTo({ ...DATA, color: 'w' });
+      await openSection();
+      expect(el().querySelector('.tl-other')).toBeNull();
+    });
+  });
+
+  it('Repertoire wechseln: schickt dessen eigene Kapitelfarben mit und merkt sich NUR das Repertoire', async () => {
     build();
     await openSection();
     localStorage.setItem('rookhub_rep_train_chaptercolor_9', JSON.stringify({ Hauptlinie: 'b' }));
@@ -122,7 +183,8 @@ describe('TrainingLinesComponent', () => {
     await fixture.whenStable();
     expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({
       repertoire: 9, color: 'w', chapterColors: { Hauptlinie: 'b' } }));
-    expect(JSON.parse(localStorage.getItem(TRAINING_LINES_KEY)!)).toEqual({ repertoire: 9, color: 'w' });
+    // die Farbe nicht (2026-10-10): die des letzten Gegners wäre beim nächsten still falsch
+    expect(JSON.parse(localStorage.getItem(TRAINING_LINES_KEY)!)).toEqual({ repertoire: 9 });
   });
 
   it('das gemerkte Repertoire gibt es nicht mehr (404): einmal ohne Vorgabe', async () => {
@@ -214,6 +276,7 @@ describe('TrainingLinesComponent', () => {
       const [message, , labels] = confirmAsk.calls.mostRecent().args;
       expect(message).toContain('Es gibt schon ein Repertoire „Prep: Huber, Franz 2026“');
       expect(message).toContain('Trainingsstand je Linie bleibt erhalten');
+      expect(message).toContain('neu gereihten Linien (ich mit Weiß) ersetzen');
       expect(labels).toEqual({ confirm: 'Ersetzen', cancel: 'Abbrechen' });
       expect(trainingRepertoire.calls.allArgs().map(a => a[2])).toEqual([false, true]);
       expect(router.navigate).toHaveBeenCalledWith(['/repertoires', 77], { queryParams: { trainColor: 'w' } });
@@ -236,7 +299,7 @@ describe('TrainingLinesComponent', () => {
       lang = 'en';
       build(true);
       await openSection();
-      expect(createBtn().textContent).toContain('Show me lines to train');
+      expect(createBtn().textContent).toContain('Show me lines to train (me with White)');
       trainingRepertoire.and.rejectWith(new HttpErrorResponse({ status: 400 }));
       createBtn().click();
       await fixture.whenStable();
@@ -286,12 +349,12 @@ describe('TrainingLinesComponent', () => {
       expect(el().querySelector('.tl-all-hint')).toBeNull();
     });
 
-    it('Farbumschalter „Ich habe Weiß / Schwarz" fragt alle markierten mit der anderen Farbe', async () => {
+    it('Farbumschalter „Gegner hat Weiß → ich spiele Schwarz" fragt alle markierten mit MEINER Farbe Schwarz', async () => {
       build();
       trainingLines.and.resolveTo(ALL);
       await openSection();
-      expect(buttons('Ich habe Weiß').length).toBe(1);
-      buttons('Ich habe Schwarz')[0].click();
+      expect(buttons('Gegner hat Schwarz → ich spiele Weiß').length).toBe(1);
+      buttons('Gegner hat Weiß → ich spiele Schwarz')[0].click();
       await fixture.whenStable();
       expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ repertoire: null, color: 'b' }));
     });

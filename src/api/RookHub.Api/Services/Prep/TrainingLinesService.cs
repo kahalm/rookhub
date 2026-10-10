@@ -362,6 +362,21 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         return name.Length <= 200 ? name : name[..200];
     }
 
+    /// <summary>Beschreibung des angelegten „Prep: …" (Wunsch 2026-10-10): aus Sicht des Gegners UND eigener Farbe ausgeschrieben —
+    /// „(Weiß)" hinter dem Gegnernamen war mehrdeutig (gemeint war die eigene Farbe). <paramref name="myColor"/> = die eigene Farbe
+    /// ('w'/'b'), <paramref name="sources"/> = nur die Repertoires, aus denen Linien stammen.</summary>
+    internal static string Description(string opponent, char myColor, IReadOnlyList<string> sources, DateTime when, int games, int picked, int total)
+    {
+        var mine = myColor == 'b' ? "Schwarz" : "Weiß";
+        var his = myColor == 'b' ? "Weiß" : "Schwarz";
+        var who = string.IsNullOrWhiteSpace(opponent) ? "?" : opponent.Trim();
+        var description = $"Trainingslinien gegen {who} — er hat {his}, ich spiele {mine} — aus "
+                          + string.Join(", ", sources.Select(n => $"„{n}“")) + ", "
+                          + $"{when.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)}, {games} Partien gezählt, "
+                          + $"{picked} von {total} Linien.";
+        return description.Length > 1000 ? description[..997] + "…" : description;
+    }
+
     /// <summary>
     /// „Show me lines to train" (Wunsch 2026-10-07): legt dem Nutzer ein Repertoire „Prep: &lt;Gegner&gt; &lt;Jahr&gt;" an — die
     /// gereihten Linien aller markierten Repertoires der Farbe (bzw. des gewählten), höchstens <see cref="MaxRepertoireLines"/>
@@ -386,12 +401,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var picked = ranked.Lines.Take(n).ToList();
         var pgn = string.Join("\n\n", picked.Select(l => c.Mine[l.Index].Section.Raw.Trim())) + "\n";
 
-        var colorText = c.Color == 'b' ? "Schwarz" : "Weiß";
-        var sourceNames = string.Join(", ", c.Sources.Select(r => $"„{r.Name}“"));
-        var description = $"Trainingslinien gegen {opponent} ({colorText}) aus {sourceNames}, "
-                          + $"{now.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)}, {ranked.Games} Partien gezählt, "
-                          + $"{picked.Count} von {ranked.Lines.Count} Linien.";
-        if (description.Length > 1000) description = description[..997] + "…";
+        // nur die Repertoires, die wirklich Linien beigesteuert haben — in der Reihenfolge der Quellen
+        var contributed = c.Sources.Where(r => picked.Any(l => c.Mine[l.Index].Rep.Id == r.Id)).Select(r => r.Name).ToList();
+        var description = Description(opponent, c.Color ?? 'w', contributed, now, ranked.Games, picked.Count, ranked.Lines.Count);
         var sourceIds = c.Sources.Select(r => r.Id).ToList();
         var kinds = await db.Repertoires.AsNoTracking().Where(r => sourceIds.Contains(r.Id)).Select(r => r.Kind).Distinct().ToListAsync(ct);
         var kind = kinds.Count == 1 ? kinds[0] : RookHub.Api.Models.RepertoireKind.None;
