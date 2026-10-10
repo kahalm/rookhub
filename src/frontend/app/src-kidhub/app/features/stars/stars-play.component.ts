@@ -26,7 +26,6 @@ export function pieceGlyph(piece: StarPiece): string {
 const OPEN_CHECK_NODES = 60_000;
 
 /** Sternzahlen im freien Modus (Knoepfe; mehr ueber das Zahlenfeld). */
-export const FREE_COUNTS: readonly number[] = [2, 3, 4, 5, 6, 7, 8];
 const FREE_KEY = 'rh-kids-stars-free';
 
 /** Die zuletzt gewaehlte Figur und Sternzahl des freien Modus — Unsinn faellt auf Turm mit 3 Sternen. */
@@ -57,11 +56,11 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, TranslatePipe, PuzzleBoardComponent, NgTemplateOutlet],
   template: `
-    <header class="head">
+    <header class="head" [class.free-head]="free()">
       <a class="back" routerLink="/stars">← {{ 'kids.stars.title' | translate }}</a>
       @if (free()) {
-        <h1><span aria-hidden="true">🎲</span> {{ 'kids.stars.free.title' | translate }}</h1>
-        <span class="round">✅ {{ freeSolved() }}</span>
+        <h1><span class="dice" aria-hidden="true">🎲</span> {{ 'kids.stars.free.title' | translate }}</h1>
+        <span class="round solved-pill" [attr.aria-label]="'kids.stars.free.solved' | translate: { n: freeSolved() }">✓ {{ freeSolved() }}</span>
       } @else if (stage(); as s) {
         <h1><span aria-hidden="true">{{ glyph(s.piece) }}</span> {{ 'kids.stars.stage' | translate: { stage: s.stage } }}
           · {{ 'kids.stars.piece.' + s.piece | translate }}</h1>
@@ -154,25 +153,25 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     }
 
     <ng-template #picker>
-            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.piece' | translate">
+            <!-- Freies Spiel (UI-Sweep 2026-10-10, k-free-controls, zweiter Vorschlag): Figur als EIN Umschalter,
+                 Sternzahl als grosser Zaehler mit − / + (2 bis Hoechstwert der Figur; gedrueckt halten zaehlt schneller). -->
+            <div class="seg" role="group" [attr.aria-label]="'kids.stars.free.piece' | translate">
               @for (pc of freePieces; track pc) {
-                <button type="button" class="chip glyph-chip" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
+                <button type="button" class="seg-btn" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
                         [title]="'kids.stars.piece.' + pc | translate" [attr.aria-label]="'kids.stars.piece.' + pc | translate"
-                        (click)="chooseFree(pc, freeCount())">{{ glyph(pc) }}</button>
+                        (click)="chooseFree(pc, shownCount())">{{ glyph(pc) }}</button>
               }
             </div>
-            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.count' | translate">
-              <span class="pick-label">⭐</span>
-              @for (n of freeCounts; track n) {
-                <button type="button" class="chip" [class.on]="n === freeCount()" [attr.aria-pressed]="n === freeCount()"
-                        (click)="chooseFree(freePiece(), n)">{{ n }}</button>
-              }
-              <!-- Mehr als 8: frei eintippen, bis 63 (Laeufer 31 — er bleibt auf seiner Farbe). -->
-              <input class="count-input" type="number" inputmode="numeric" min="2" [max]="freeMax()"
-                     [class.on]="freeCount() > 8" [value]="freeCount() > 8 ? freeCount() : ''"
-                     [placeholder]="'9–' + freeMax()" [attr.aria-label]="'kids.stars.free.count' | translate"
-                     (change)="typedCount($event)" (keydown.enter)="typedCount($event)" />
+            <div class="stepper" role="group" [attr.aria-label]="'kids.stars.free.count' | translate">
+              <button type="button" class="step" [disabled]="shownCount() <= 2" [attr.aria-label]="'kids.stars.free.less' | translate"
+                      (pointerdown)="holdStep(-1, $event)" (pointerup)="releaseStep()" (pointerleave)="releaseStep()"
+                      (pointercancel)="releaseStep()" (click)="clickStep(-1)">−</button>
+              <span class="count" aria-live="polite">{{ shownCount() }} <span class="count-star" aria-hidden="true">★</span></span>
+              <button type="button" class="step" [disabled]="shownCount() >= freeMax()" [attr.aria-label]="'kids.stars.free.more' | translate"
+                      (pointerdown)="holdStep(1, $event)" (pointerup)="releaseStep()" (pointerleave)="releaseStep()"
+                      (pointercancel)="releaseStep()" (click)="clickStep(1)">+</button>
             </div>
+            <p class="range">{{ 'kids.stars.free.range' | translate: { max: freeMax() } }}</p>
     </ng-template>
   `,
   styles: [KID_BACK, KID_COORDS, `
@@ -181,6 +180,15 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
             max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .round { margin-left: auto; font-size: 1.2rem; font-weight: 800; }
+    /* Freies Spiel: Zurueck · Titel · ✓ n in EINER Zeile (k-free-controls), am Handy etwas kleiner und ohne Wuerfel. */
+    .head.free-head { flex-wrap: nowrap; }
+    .head.free-head h1 { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .head.free-head .solved-pill { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+    @media (max-width: 480px) {
+      .head.free-head h1 { font-size: 1.2rem; }
+      .head.free-head .dice { display: none; }
+    }
+    .solved-pill { padding: 4px 12px; border-radius: 999px; background: var(--kid-good-bg); color: var(--kid-good-fg); font-size: 1.1rem; }
     .rounds { max-width: 260px; }
     .rounds .round { display: block; margin: 4px 0 0; font-size: .95rem; font-weight: 700; color: #4f5d6e; }
     .segments { display: grid; grid-template-columns: repeat(var(--rounds, 6), 1fr); gap: 4px; }
@@ -197,13 +205,20 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     .pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .free-failed { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 520px; margin: 0 auto; }
     .pick-label { font-size: 1.3rem; }
-    .count-input {
-      font: inherit; font-size: 1.2rem; font-weight: 800; width: 5.2em; min-height: 44px; box-sizing: border-box;
-      padding: 4px 8px; border: 2px solid transparent; border-radius: 14px; background: var(--kid-card); color: inherit;
-      box-shadow: 0 3px 0 var(--kid-shadow);
-    }
-    .count-input.on { border-color: var(--kid-green-strong); }
     .note { margin: 0; font-size: 1rem; opacity: .85; }
+    .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 16px;
+           background: var(--kid-card); box-shadow: 0 3px 0 var(--kid-shadow); }
+    .seg-btn { font: inherit; font-size: 1.8rem; line-height: 1; min-height: 48px; border: 0; border-radius: 12px;
+               background: transparent; color: inherit; cursor: pointer; }
+    .seg-btn.on { background: var(--kid-green-strong); color: #fff; }
+    .stepper { display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .step { font: inherit; font-size: 1.8rem; font-weight: 800; width: 52px; height: 52px; border: 0; border-radius: 50%;
+            background: var(--kid-card); color: inherit; cursor: pointer; box-shadow: 0 3px 0 var(--kid-shadow);
+            touch-action: manipulation; user-select: none; }
+    .step:disabled { opacity: .4; cursor: default; }
+    .count { min-width: 3.4em; text-align: center; font-size: 2rem; font-weight: 800; }
+    .count-star { color: #f5b400; }
+    .range { margin: 0; text-align: center; font-size: .9rem; color: #4f5d6e; }
     .chip {
       font: inherit; font-size: 1.2rem; font-weight: 800; min-width: 44px; min-height: 44px; padding: 4px 10px;
       border: 0; border-radius: 14px; background: var(--kid-card); color: inherit; cursor: pointer;
@@ -293,7 +308,6 @@ export class StarsPlayComponent {
   /** Freier Modus (`/stars/free`): Figur und Sternzahl waehlt das Kind, Aufgaben ohne Ende, kein Fortschritt. */
   readonly free = signal(false);
   readonly freePieces: readonly StarPiece[] = ['R', 'B', 'N', 'Q'];
-  readonly freeCounts: readonly number[] = FREE_COUNTS;
   readonly freePiece = signal<StarPiece>('R');
   readonly freeCount = signal(3);
   readonly freeSolved = signal(0);
@@ -345,7 +359,7 @@ export class StarsPlayComponent {
 
   constructor() {
     const destroy = inject(DestroyRef);
-    destroy.onDestroy(() => clearTimeout(this.timer));
+    destroy.onDestroy(() => { clearTimeout(this.timer); clearTimeout(this.applyTimer); this.releaseStep(); });
     const route = inject(ActivatedRoute);
     if (route.snapshot?.data?.['free']) {
       this.free.set(true);
@@ -373,6 +387,56 @@ export class StarsPlayComponent {
     this.newPuzzle();
   }
 
+  /** Angezeigte Sternzahl — waehrend des Zaehlens schon die neue, die Aufgabe kommt erst nach einer kurzen Pause. */
+  readonly pendingCount = signal<number | null>(null);
+  readonly shownCount = computed(() => this.pendingCount() ?? this.freeCount());
+  private stepTimer: ReturnType<typeof setTimeout> | undefined;
+  private repeatTimer: ReturnType<typeof setTimeout> | undefined;
+  private applyTimer: ReturnType<typeof setTimeout> | undefined;
+  private heldSteps = 0;
+
+  /** Ein Schritt − / + (ohne neue Aufgabe; die kommt `ApplyDelayMs` nach dem letzten Schritt). */
+  stepCount(delta: number): void {
+    const next = Math.min(Math.max(this.shownCount() + delta, 2), this.freeMax());
+    if (next === this.shownCount()) return;
+    this.pendingCount.set(next);
+    clearTimeout(this.applyTimer);
+    this.applyTimer = setTimeout(() => this.applyPending(), StarsPlayComponent.ApplyDelayMs);
+  }
+
+  applyPending(): void {
+    clearTimeout(this.applyTimer);
+    const n = this.pendingCount();
+    this.pendingCount.set(null);
+    if (n !== null && n !== this.freeCount()) this.chooseFree(this.freePiece(), n);
+  }
+
+  /** Gedrueckt halten: nach `HoldDelayMs` zaehlt es von selbst weiter. Der erste Schritt kommt ueber `click`. */
+  holdStep(delta: number, event: PointerEvent): void {
+    if (event.button !== 0) return;
+    this.releaseStep();
+    this.heldSteps = 0;
+    this.stepTimer = setTimeout(() => {
+      const tick = () => { this.heldSteps++; this.stepCount(delta); this.repeatTimer = setTimeout(tick, StarsPlayComponent.RepeatMs); };
+      tick();
+    }, StarsPlayComponent.HoldDelayMs);
+  }
+
+  releaseStep(): void {
+    clearTimeout(this.stepTimer);
+    clearTimeout(this.repeatTimer);
+  }
+
+  /** Klick = ein Schritt — ausser das Halten hat schon gezaehlt (dann waere der Klick ein Schritt zu viel). */
+  clickStep(delta: number): void {
+    if (this.heldSteps > 0) { this.heldSteps = 0; return; }
+    this.stepCount(delta);
+  }
+
+  static readonly ApplyDelayMs = 450;
+  static readonly HoldDelayMs = 400;
+  static readonly RepeatMs = 90;
+
   /** Freie Zahl hinter der 8: uebernommen, wenn sie zwischen 2 und dem Hoechstwert der Figur liegt. */
   typedCount(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -385,6 +449,8 @@ export class StarsPlayComponent {
 
   /** Freier Modus: Auswahl uebernehmen (und auf dem Geraet merken), sofort eine neue Aufgabe. */
   chooseFree(piece: StarPiece, count: number): void {
+    clearTimeout(this.applyTimer);
+    this.pendingCount.set(null);
     count = Math.min(count, maxStars(piece));
     this.freePiece.set(piece);
     this.freeCount.set(count);

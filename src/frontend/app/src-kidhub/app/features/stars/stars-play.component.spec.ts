@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject } from 'rxjs';
@@ -211,6 +211,48 @@ describe('StarsPlayComponent – freier Modus', () => {
     c.chooseFree('B', 63);
     expect(c.freeCount()).toBe(31);
   });
+
+  // UI-Sweep 2026-10-10 (k-free-controls, zweiter Vorschlag): Figur als Umschalter, Sternzahl als Zähler − / +.
+  it('Zähler − / +: zeigt die neue Zahl sofort, würfelt erst nach der Pause, bleibt in den Grenzen', fakeAsync(() => {
+    const f = TestBed.createComponent(StarsPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    c.chooseFree('R', 3);
+    const steps = f.nativeElement.querySelectorAll('.stepper .step') as NodeListOf<HTMLButtonElement>;
+    steps[1].click(); steps[1].click();
+    f.detectChanges();
+    expect(c.shownCount()).toBe(5);
+    expect(c.freeCount()).toBe(3);                       // noch keine neue Aufgabe
+    expect(f.nativeElement.querySelector('.stepper .count').textContent).toContain('5');
+    tick(StarsPlayComponent.ApplyDelayMs);
+    expect(c.freeCount()).toBe(5);
+    expect(c.puzzle()?.stars.length).toBe(5);
+    c.chooseFree('R', 2);
+    c.stepCount(-1);
+    expect(c.shownCount()).toBe(2);                      // nie unter 2
+    c.chooseFree('B', 31);
+    c.stepCount(1);
+    expect(c.shownCount()).toBe(31);                     // Läufer höchstens 31
+    expect(f.nativeElement.querySelectorAll('.seg .seg-btn').length).toBe(4);
+    discardPeriodicTasks();
+  }));
+
+  it('gedrückt halten zählt weiter, der Klick danach zählt nicht doppelt', fakeAsync(() => {
+    const f = TestBed.createComponent(StarsPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    c.chooseFree('N', 3);
+    c.holdStep(1, { button: 0 } as PointerEvent);
+    tick(StarsPlayComponent.HoldDelayMs + 2 * StarsPlayComponent.RepeatMs);
+    c.releaseStep();
+    const held = c.shownCount();
+    expect(held).toBe(6);
+    c.clickStep(1);
+    expect(c.shownCount()).toBe(held);
+    tick(StarsPlayComponent.ApplyDelayMs);
+    expect(c.freeCount()).toBe(6);
+    discardPeriodicTasks();
+  }));
 
   it('merkt sich die letzte Wahl', () => {
     localStorage.setItem(FREE, JSON.stringify({ piece: 'Q', count: 7 }));

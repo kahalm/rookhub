@@ -4393,7 +4393,11 @@
         "piece": "Figura",
         "count": "Broj zvijezda",
         "manyWays": "Puno zvijezda: ima više putova — vrijedi svaki put koji pojede sve zvijezde.",
-        "tooMany": "Toliko zvijezda sada ne ide s ovom figurom — probaj s manje."
+        "tooMany": "Toliko zvijezda sada ne ide s ovom figurom — probaj s manje.",
+        "less": "Manje zvjezdica",
+        "more": "Više zvjezdica",
+        "range": "2 do {{max}} zvjezdica · drži za brže brojanje",
+        "solved": "{{n}} riješeno"
       }
     }
   },

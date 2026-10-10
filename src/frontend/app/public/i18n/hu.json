@@ -4072,7 +4072,11 @@
         "piece": "Bábu",
         "count": "Csillagok száma",
         "manyWays": "Sok csillag: több út is van — minden út jó, amely megeszi az összes csillagot.",
-        "tooMany": "Ennyi csillag ezzel a bábuval most nem megy — próbálj kevesebbet."
+        "tooMany": "Ennyi csillag ezzel a bábuval most nem megy — próbálj kevesebbet.",
+        "less": "Kevesebb csillag",
+        "more": "Több csillag",
+        "range": "2–{{max}} csillag · tartsd lenyomva a gyorsabb számoláshoz",
+        "solved": "{{n}} megoldva"
       }
     }
   },

@@ -4393,7 +4393,11 @@
         "piece": "Figur",
         "count": "Zahl der Sterne",
         "manyWays": "Viele Sterne: es gibt mehrere Wege — jeder Weg zählt, der alle Sterne frisst.",
-        "tooMany": "So viele Sterne gehen mit dieser Figur gerade nicht — probier weniger."
+        "tooMany": "So viele Sterne gehen mit dieser Figur gerade nicht — probier weniger.",
+        "less": "Weniger Sterne",
+        "more": "Mehr Sterne",
+        "range": "2 bis {{max}} Sterne · gedrückt halten zählt schneller",
+        "solved": "{{n}} geschafft"
       }
     }
   },
