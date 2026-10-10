@@ -3014,6 +3014,34 @@
       "deleteFrom": "Delete from here",
       "hint": "Right-click a move (long press on a phone): star, promote a variation, make it the main line or delete from there."
     },
+    "tablebase": {
+      "title": "Tablebase (Lichess)",
+      "asking": "asking Lichess …",
+      "unavailable": "Lichess is not answering — Stockfish keeps calculating",
+      "rateLimited": "Lichess is busy — Stockfish keeps calculating",
+      "wins": "{{side}} wins",
+      "cursed": "{{side}} would win — draw by the 50-move rule",
+      "draw": "Draw",
+      "unknown": "unclear",
+      "checkmate": "Checkmate",
+      "stalemate": "Stalemate",
+      "insufficient": "Draw — insufficient material",
+      "white": "White",
+      "black": "Black",
+      "mateIn": "mate in {{n}}",
+      "dtz": "DTZ {{n}}",
+      "mateNow": "mate",
+      "cat": {
+        "win": "win",
+        "cursed-win": "win (50-move draw)",
+        "maybe-win": "win?",
+        "draw": "draw",
+        "maybe-loss": "loss?",
+        "blessed-loss": "loss (50-move draw)",
+        "loss": "loss",
+        "unknown": "?"
+      }
+    },
     "maia": {
       "title": "Sparring against Maia",
       "strength": "Strength",

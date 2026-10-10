@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -10,9 +12,9 @@ describe('LiveEnginePanelComponent', () => {
     const lines = signal<{ evalText: string; san: string; positive: boolean }[]>([]);
     const session = {
       fallback: () => false, engineName: () => null, depth: () => 0, isLc0: () => false, nodes: () => 0,
-      variation: () => [], canRedo: () => false, variationSan: () => '', lines,
+      variation: () => [], canRedo: () => false, variationSan: () => '', lines, fen: (g: string) => g,
     } as unknown as LiveEngineSession;
-    TestBed.configureTestingModule({ imports: [LiveEnginePanelComponent], providers: [provideTranslateService({ fallbackLang: 'de' })] });
+    TestBed.configureTestingModule({ imports: [LiveEnginePanelComponent], providers: [provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting()] });
     const f = TestBed.createComponent(LiveEnginePanelComponent);
     f.componentRef.setInput('session', session);
     f.componentRef.setInput('gameFen', 'start');

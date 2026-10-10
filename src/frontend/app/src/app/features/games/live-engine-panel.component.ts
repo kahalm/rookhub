@@ -4,7 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
+import { Chess } from 'chess.js';
 import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
+import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
 
 /**
  * Leiste der Live-Engine unter dem Brett der Partieseite: welche Engine rechnet und wie tief, die eigene
@@ -15,7 +17,7 @@ import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
   selector: 'app-live-engine-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
+  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe, TablebasePanelComponent],
   template: `
     @let s = session();
     <section class="live">
@@ -74,6 +76,8 @@ import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
           }
         }
       </ol>
+      <!-- Ab 7 Steinen das genaue Ergebnis von Lichess (0.729.0); ein Klick spielt den Zug in die eigene Variante. -->
+      <app-tablebase-panel [fen]="s.fen(gameFen())" (playSan)="playSan($event)" />
     </section>
   `,
   styles: [`
@@ -114,4 +118,14 @@ export class LiveEnginePanelComponent {
   steps = input(true);
   /** Feste Zeilenzahl der Linienliste (siehe Template). */
   readonly slots = Array.from({ length: LIVE_LINES }, (_, i) => i);
+
+  /** Zug aus der Tablebase-Liste in die eigene Variante spielen (wie am Brett gezogen). */
+  playSan(san: string): void {
+    const s = this.session();
+    try {
+      const c = new Chess(s.fen(this.gameFen()));
+      const m = c.move(san);
+      s.play({ from: m.from, to: m.to, san: m.san, fen: c.fen(), promotion: m.promotion as never }, this.gameFen());
+    } catch { /* Zug passt nicht mehr zur Stellung (inzwischen weitergeklickt) — nichts tun */ }
+  }
 }

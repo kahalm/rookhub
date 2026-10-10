@@ -3014,6 +3014,34 @@
       "deleteFrom": "Obriši odavde",
       "hint": "Desni klik na potez (na mobitelu dugi pritisak): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande."
     },
+    "tablebase": {
+      "title": "Tablebase (Lichess)",
+      "asking": "pitam Lichess …",
+      "unavailable": "Lichess ne odgovara — Stockfish nastavlja računati",
+      "rateLimited": "Lichess je zauzet — Stockfish nastavlja računati",
+      "wins": "{{side}} pobjeđuje",
+      "cursed": "{{side}} bi pobijedio — remi po pravilu 50 poteza",
+      "draw": "Remi",
+      "unknown": "nejasno",
+      "checkmate": "Mat",
+      "stalemate": "Pat",
+      "insufficient": "Remi — premalo materijala",
+      "white": "Bijeli",
+      "black": "Crni",
+      "mateIn": "mat u {{n}}",
+      "dtz": "DTZ {{n}}",
+      "mateNow": "mat",
+      "cat": {
+        "win": "pobjeda",
+        "cursed-win": "pobjeda (50 poteza: remi)",
+        "maybe-win": "pobjeda?",
+        "draw": "remi",
+        "maybe-loss": "poraz?",
+        "blessed-loss": "poraz (50 poteza: remi)",
+        "loss": "poraz",
+        "unknown": "?"
+      }
+    },
     "maia": {
       "title": "Sparing protiv Maie",
       "strength": "Jačina",

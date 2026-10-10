@@ -43,6 +43,7 @@ import {
 } from './maia/maia-model';
 import { BadMoveVerdict, EvalPoint, SparringWarning, badMoveVerdict } from './maia/sparring-check';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
+import { TablebasePanelComponent, TablebaseVerdict } from './tablebase-panel.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { buildSparringPgn } from './maia/sparring-pgn';
 import { GamesService } from '../games/games.service';
@@ -86,7 +87,7 @@ const EVAL_SETTLE_DEPTH = 10;
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent,
-    IconLabelDirective, MaiaSparringCardComponent
+    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent
   ],
   template: `
     <div class="analysis-page">
@@ -105,8 +106,9 @@ const EVAL_SETTLE_DEPTH = 10;
               [initialFen]="currentFen" [orientation]="orientation"
               (apply)="onSetupApply($event)" (cancel)="editing = false" />
           } @else {
-            <div class="eval-bar" [matTooltip]="evalText">
-              <div class="eval-white" [style.height.%]="whiteHeight"></div>
+            <!-- Mit Tablebase-Ergebnis zeigt die Leiste die Wahrheit statt der Schätzung der Engine (0.729.0). -->
+            <div class="eval-bar" [matTooltip]="tbVerdict?.fen === currentFen ? tbVerdict!.text : evalText">
+              <div class="eval-white" [style.height.%]="tbVerdict?.fen === currentFen ? tbVerdict!.whiteHeight : whiteHeight"></div>
             </div>
             <!-- Mobil: schmale, unsichtbare Tap-Zonen — links = Zug zurück (liegt als Overlay ÜBER der
                  Bewertungsleiste, kostet keine Brettbreite), rechts = Zug vor. goTo() clampt selbst. -->
@@ -252,6 +254,11 @@ const EVAL_SETTLE_DEPTH = 10;
                 }
               } @else {
                 <p class="muted">{{ (sparring ? 'analysis.maia.enginePaused' : 'analysis.engineOff') | translate }}</p>
+              }
+              <!-- Endspiel-Datenbank (0.729.0): ab 7 Steinen das genaue Ergebnis von Lichess, Stockfish rechnet daneben weiter.
+                   Nicht im Sparring gegen Maia (sie verriete den besten Zug). -->
+              @if (!terminal && !sparring && !editing) {
+                <app-tablebase-panel [fen]="currentFen" (playSan)="playRepertoireMoves([$event])" (verdict)="tbVerdict = $event" />
               }
             </mat-card-content>
           </mat-card>
@@ -441,6 +448,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   line: AnalysisNode[] = [];
   /** Wie weit man auf `line` steht (0 = Ausgangsstellung). */
   ply = 0;
+  /** Ergebnis der Endspiel-Datenbank für die aktuelle Stellung (0.729.0) — schlägt die Engine-Bewertung in der Leiste. */
+  tbVerdict: TablebaseVerdict | null = null;
   /** Zählt Änderungen am Baum (Zug, Variante, Stern, Bewertung) — die Zugliste baut danach neu auf. */
   treeVersion = 0;
 

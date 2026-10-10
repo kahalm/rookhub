@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.729.0", date: "2026-10-10", changes: [
+    { en: "Analysis board and live engine on the game page: with 7 pieces or fewer, RookHub asks the Lichess endgame tablebase for the exact result — who wins (or draw), mate in n, and the result of every move; a click plays it. The evaluation bar shows the exact result. Stockfish keeps calculating alongside, so nothing is lost if Lichess does not answer.", de: "Analysebrett und Live-Engine der Partieseite: Ab 7 Steinen fragt RookHub die Endspiel-Datenbank (Tablebase) von Lichess nach dem genauen Ergebnis — wer gewinnt (oder Remis), Matt in n und das Ergebnis jedes Zugs; ein Klick spielt ihn. Die Bewertungsleiste zeigt das genaue Ergebnis. Stockfish rechnet daneben weiter — antwortet Lichess nicht, fehlt nichts." },
+  ] },
   { version: "0.728.0", date: "2026-10-09", changes: [
     { en: "Weekly posts can now also be created straight from a course chapter: in the chapter's ⋮ menu on the course page, \"Create weekly post\" opens the familiar dialog with course and chapter already chosen and the date set to one week after the last weekly post — only the time and, if you like, a different title remain. Shown to whoever may manage weekly posts.", de: "Wochenposts lassen sich jetzt auch direkt aus einem Kurs-Kapitel anlegen: im ⋮-Menü des Kapitels auf der Kursseite öffnet „Wochenpost erstellen“ den bekannten Dialog mit Kurs und Kapitel schon ausgewählt und dem Termin eine Woche nach dem letzten Wochenpost — bleiben nur Uhrzeit und, wenn gewünscht, ein anderer Titel. Sichtbar für alle, die Wochenposts verwalten dürfen." },
   ] },

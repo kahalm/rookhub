@@ -681,6 +681,16 @@ try
         client.Timeout = Timeout.InfiniteTimeSpan;
     });
 
+    // Endspiel-Datenbank von Lichess (0.729.0): kurz warten — die Live-Analyse rechnet daneben ohnehin mit Stockfish.
+    builder.Services.AddHttpClient(TablebaseService.ClientName, client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["Lichess:TablebaseUrl"] ?? TablebaseService.DefaultBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(8);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub.oberschmid.homes)");
+    });
+    builder.Services.AddSingleton<TablebaseGate>();
+    builder.Services.AddScoped<TablebaseService>();
+
     builder.Services.AddHttpClient<LichessExplorerClient>(client =>
     {
         client.BaseAddress = new Uri(LichessExplorerClient.BaseUrl);

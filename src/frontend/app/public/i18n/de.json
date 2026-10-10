@@ -3014,6 +3014,34 @@
       "deleteFrom": "Ab hier löschen",
       "hint": "Rechtsklick auf einen Zug (am Handy lange drücken): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen."
     },
+    "tablebase": {
+      "title": "Tablebase (Lichess)",
+      "asking": "frage Lichess …",
+      "unavailable": "Lichess antwortet nicht — Stockfish rechnet weiter",
+      "rateLimited": "Lichess ist ausgelastet — Stockfish rechnet weiter",
+      "wins": "{{side}} gewinnt",
+      "cursed": "{{side}} gewänne — Remis nach der 50-Züge-Regel",
+      "draw": "Remis",
+      "unknown": "unklar",
+      "checkmate": "Matt",
+      "stalemate": "Patt",
+      "insufficient": "Remis — zu wenig Material",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "mateIn": "Matt in {{n}}",
+      "dtz": "DTZ {{n}}",
+      "mateNow": "Matt",
+      "cat": {
+        "win": "Gewinn",
+        "cursed-win": "Gewinn (50 Züge: Remis)",
+        "maybe-win": "Gewinn?",
+        "draw": "Remis",
+        "maybe-loss": "Verlust?",
+        "blessed-loss": "Verlust (50 Züge: Remis)",
+        "loss": "Verlust",
+        "unknown": "?"
+      }
+    },
     "maia": {
       "title": "Sparring gegen Maia",
       "strength": "Stärke",

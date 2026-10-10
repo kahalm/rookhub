@@ -2217,6 +2217,34 @@
       "deleteFrom": "Törlés innentől",
       "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól."
     },
+    "tablebase": {
+      "title": "Végjáték-adatbázis (Lichess)",
+      "asking": "Lichess lekérdezése …",
+      "unavailable": "A Lichess nem válaszol — a Stockfish tovább számol",
+      "rateLimited": "A Lichess túlterhelt — a Stockfish tovább számol",
+      "wins": "{{side}} nyer",
+      "cursed": "{{side}} nyerne — döntetlen az 50 lépéses szabály miatt",
+      "draw": "Döntetlen",
+      "unknown": "bizonytalan",
+      "checkmate": "Matt",
+      "stalemate": "Patt",
+      "insufficient": "Döntetlen — kevés anyag",
+      "white": "Világos",
+      "black": "Sötét",
+      "mateIn": "matt {{n}} lépésben",
+      "dtz": "DTZ {{n}}",
+      "mateNow": "matt",
+      "cat": {
+        "win": "nyerés",
+        "cursed-win": "nyerés (50 lépés: döntetlen)",
+        "maybe-win": "nyerés?",
+        "draw": "döntetlen",
+        "maybe-loss": "vesztés?",
+        "blessed-loss": "vesztés (50 lépés: döntetlen)",
+        "loss": "vesztés",
+        "unknown": "?"
+      }
+    },
     "maia": {
       "title": "Edzőjátszma Maia ellen",
       "strength": "Erősség",
