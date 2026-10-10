@@ -281,6 +281,15 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
 - Seit 0.725.2 ersetzt das Nachfragen die automatischen Runden: solange `explorerRunning`, alle 3 s dieselbe Abfrage
   (`PollMs`, ohne Rundenlimit), `.tl-running` „Schätzung läuft — noch N von M Stellungen" mit `progress.tl-progress`
   (M = `pendingStart`); `.tl-continue` nur noch als Rückfall bei `explorerIncomplete` ohne Lauf.
+- Farbe aus Sicht des Gegners (0.733.1): der Umschalter `.tl-color` heißt „Gegner hat Weiß → ich spiele Schwarz" /
+  „Gegner hat Schwarz → ich spiele Weiß" (i18n `heHasWhite`/`heHasBlack`, Gruppe `whoHasWhich`; „Gegner hat Weiß" zuerst),
+  intern bleibt `color` = MEINE Farbe. Eingabe `opponentColor` ('w'|'s' = SEINE Farbe): `player-card` reicht `color()` nur
+  durch, wenn ein Brett bekannt ist (`open(fide, color, board, …)` aus `fixture-view`/`round-lineups`; Vereinspartien
+  geben eine Farbe ohne Brett = kein Zusammenhang); Vorgabe meine Farbe = das Gegenteil (`wanted()`), sonst wählt der
+  Server. `lh-training-lines` merkt nur noch `{ repertoire }` — eine gemerkte Farbe des letzten Gegners wäre still falsch.
+  Hat die Begegnungsfarbe keine markierten Linien (`colors` ohne sie), zeigt `.tl-other` „Für Schwarz hast du keine
+  markierten Linien — gezeigt werden deine Linien mit Weiß". Knopf und Ersetzen-Rückfrage nennen die Farbe
+  (`{{side}}` = `asWhite`/`asBlack`, „ich mit Schwarz"; Parameter NICHT `as` nennen — Schlüsselwort im Template).
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 

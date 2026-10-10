@@ -3027,6 +3027,12 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
 - Gefolgt, aber ohne Quelle danach (0.718.1): `source = none` mit `ownMoves > 0` (er folgt der Linie, so weit seine Partien
   reichen, danach kein Explorer) ist eine eigene Stufe ZWISCHEN „mit Quelle" und `deviates` (Auffüllregel darin) — vorher
   stand die Linie, der er folgt, hinter der, der er widerspricht. Ganz hinten bleiben nur `none` ohne eigenen Treffer.
+- Farbe aus Sicht des Gegners (0.733.1, Prod 10.10.: „hab gesagt er spielt weiß, er hat trotzdem dann lines aus meinem
+  weißrepertoir genommen"): `color` bleibt MEINE Farbe — die Rechnung war richtig, die Bedienung mehrdeutig. Die
+  Beschreibung des „Prep: …" schreibt beide Seiten aus (`TrainingLinesService.Description`: „Trainingslinien gegen Hess, Max
+  — er hat Weiß, ich spiele Schwarz — aus …") und nennt nur die Repertoires, aus denen übernommene Linien stammen
+  (vorher „gegen Hess, Max (Weiß)" = meine Farbe, dazu alle Quellen). Oberfläche: Haupt-`src/frontend/CLAUDE.md`
+  „Spielerkarte geteilt + Spielervorbereitung".
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
