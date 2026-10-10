@@ -152,6 +152,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   /** Umwandlung ohne Auswahl immer zur Dame (Kinderseite: ein Schritt weniger, Unterverwandlung
    *  kommt dort nicht vor). Standard: Auswahl anzeigen. */
   @Input() autoQueen = false;
+  /** Diese Figur bleibt ausgewaehlt (KidHub-Sternenjagd: nur eine Figur — das Kind tippt nur das Zielfeld). Nach einem
+   *  Klick daneben, der die Auswahl aufhebt, wird sie gleich wieder ausgewaehlt. `undefined` = wie bisher. */
+  @Input() autoSelect?: Key;
   /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
    *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
   @Input() visualization = 0;
@@ -368,6 +371,15 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
   }
 
+  private applyAutoSelect(): void {
+    const key = this.autoSelect;
+    if (!key || !this.ground || this.destroyed || this.viewOnly || this.visualization > 0) return;
+    if (this.ground.state.selected === key || this.ground.state.pieces.get(key) === undefined) return;
+    // Erst abwaehlen: mit einer anderen Auswahl hielte chessground das Feld fuer ein Zugziel.
+    if (this.ground.state.selected) this.ground.selectSquare(null);
+    this.ground.selectSquare(key);
+  }
+
   private applyAutoShapes(): void {
     if (!this.ground) return;
     // Alle Auto-Shapes in EINEM setAutoShapes-Aufruf zusammenführen:
@@ -564,6 +576,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
     });
 
+    // Dauer-Auswahl (autoSelect): nach jedem Tippen/Ziehen wieder auswaehlen, wenn chessground sie aufgehoben hat.
+    el.addEventListener('pointerup', () => setTimeout(() => this.applyAutoSelect()));
+    this.applyAutoSelect();
+
     // Markierungen, die schon VOR dem Aufbau des Bretts gesetzt waren (KidHub-Sternenjagd: die Sterne stehen ab dem
     // ersten Bild) — ngOnChanges laeuft davor und findet noch kein Brett.
     this.applyAutoShapes();
@@ -636,6 +652,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         enabled: this.premovable && !vizActive
       }
     });
+
+    this.applyAutoSelect();
 
     if ('vizOpponentArrow' in changes || 'visualization' in changes || 'vizOpponentArrowBrush' in changes || 'reviewShapes' in changes) {
       this.applyAutoShapes();

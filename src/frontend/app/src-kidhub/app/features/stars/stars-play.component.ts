@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, inject, signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -8,7 +9,7 @@ import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { PuzzleBoardComponent } from '@rh/features/puzzles/puzzle-board.component';
 import {
-  Rng, STARS_PER_STAGE, STAR_STAGES, STAR_SVG, StarPiece, StarPuzzle, StarStage, generateStarPuzzle, reachable,
+  MAX_STARS, Rng, STARS_PER_STAGE, maxStars, reachableStars, solveStars, STAR_STAGES, STAR_SVG, StarPiece, StarPuzzle, StarStage, generateStarPuzzle, reachable,
   squareIndex, squareName, starFen,
 } from '../../core/kids-stars';
 import { KidsStarsStore } from '../../core/kids-stars.store';
@@ -21,7 +22,10 @@ export function pieceGlyph(piece: StarPiece): string {
   return { R: '♖', B: '♗', Q: '♕', N: '♘' }[piece];
 }
 
-/** Sternzahlen im freien Modus. */
+/** Deckel der Pruefung „geht es von hier noch auf?" bei Aufgaben mit mehreren Wegen. */
+const OPEN_CHECK_NODES = 60_000;
+
+/** Sternzahlen im freien Modus (Knoepfe; mehr ueber das Zahlenfeld). */
 export const FREE_COUNTS: readonly number[] = [2, 3, 4, 5, 6, 7, 8];
 const FREE_KEY = 'rh-kids-stars-free';
 
@@ -29,7 +33,8 @@ const FREE_KEY = 'rh-kids-stars-free';
 export function readFreeChoice(): { piece: StarPiece; count: number } {
   try {
     const v = JSON.parse(localStorage.getItem(FREE_KEY) ?? 'null') as { piece?: unknown; count?: unknown } | null;
-    if (v && ['R', 'B', 'N', 'Q'].includes(v.piece as string) && FREE_COUNTS.includes(v.count as number)) {
+    const n = v?.count as number;
+    if (v && ['R', 'B', 'N', 'Q'].includes(v.piece as string) && Number.isInteger(n) && n >= 2 && n <= MAX_STARS) {
       return { piece: v.piece as StarPiece, count: v.count as number };
     }
   } catch { /* kein Speicher */ }
@@ -50,7 +55,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
   selector: 'kid-stars-play',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, PuzzleBoardComponent],
+  imports: [RouterLink, TranslatePipe, PuzzleBoardComponent, NgTemplateOutlet],
   template: `
     <header class="head">
       <a class="back" routerLink="/stars">← {{ 'kids.stars.title' | translate }}</a>
@@ -85,30 +90,23 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       <div class="puzzle">
         <div class="task-slot">
           @if (free()) {
-            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.piece' | translate">
-              @for (pc of freePieces; track pc) {
-                <button type="button" class="chip glyph-chip" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
-                        [title]="'kids.stars.piece.' + pc | translate" [attr.aria-label]="'kids.stars.piece.' + pc | translate"
-                        (click)="chooseFree(pc, freeCount())">{{ glyph(pc) }}</button>
-              }
-            </div>
-            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.count' | translate">
-              <span class="pick-label">⭐</span>
-              @for (n of freeCounts; track n) {
-                <button type="button" class="chip" [class.on]="n === freeCount()" [attr.aria-pressed]="n === freeCount()"
-                        (click)="chooseFree(freePiece(), n)">{{ n }}</button>
-              }
-            </div>
+            <ng-container [ngTemplateOutlet]="picker" />
+            @if (!p.unique) { <p class="note">{{ 'kids.stars.free.manyWays' | translate }}</p> }
           }
           <p class="task">{{ 'kids.stars.task' | translate }}</p>
           <p class="left" [attr.aria-label]="'kids.stars.left' | translate: { count: starsLeft().length }">
-            @for (s of p.solution; track s; let i = $index) {
-              <span [class.eaten]="i < step()">{{ i < step() ? '✔' : '⭐' }}</span>
+            @if (p.stars.length <= 10) {
+              @for (s of p.solution; track s; let i = $index) {
+                <span [class.eaten]="i < step()">{{ i < step() ? '✔' : '⭐' }}</span>
+              }
+            } @else {
+              ⭐ {{ starsLeft().length }} / {{ p.stars.length }}
             }
           </p>
         </div>
         <div class="board">
           <app-puzzle-board
+            [autoSelect]="selectedSquare()"
             [fen]="fen()"
             orientation="white"
             turnColor="white"
@@ -138,9 +136,36 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
           </div>
         </div>
       </div>
+    } @else if (failed() && free()) {
+      <div class="free-failed">
+        <ng-container [ngTemplateOutlet]="picker" />
+        <p class="info">{{ 'kids.stars.free.tooMany' | translate }}</p>
+      </div>
     } @else if (failed()) {
       <p class="info">{{ 'kids.loadError' | translate }}</p>
     }
+
+    <ng-template #picker>
+            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.piece' | translate">
+              @for (pc of freePieces; track pc) {
+                <button type="button" class="chip glyph-chip" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
+                        [title]="'kids.stars.piece.' + pc | translate" [attr.aria-label]="'kids.stars.piece.' + pc | translate"
+                        (click)="chooseFree(pc, freeCount())">{{ glyph(pc) }}</button>
+              }
+            </div>
+            <div class="pick" role="group" [attr.aria-label]="'kids.stars.free.count' | translate">
+              <span class="pick-label">⭐</span>
+              @for (n of freeCounts; track n) {
+                <button type="button" class="chip" [class.on]="n === freeCount()" [attr.aria-pressed]="n === freeCount()"
+                        (click)="chooseFree(freePiece(), n)">{{ n }}</button>
+              }
+              <!-- Mehr als 8: frei eintippen, bis 63 (Laeufer 31 — er bleibt auf seiner Farbe). -->
+              <input class="count-input" type="number" inputmode="numeric" min="2" [max]="freeMax()"
+                     [class.on]="freeCount() > 8" [value]="freeCount() > 8 ? freeCount() : ''"
+                     [placeholder]="'9–' + freeMax()" [attr.aria-label]="'kids.stars.free.count' | translate"
+                     (change)="typedCount($event)" (keydown.enter)="typedCount($event)" />
+            </div>
+    </ng-template>
   `,
   styles: [KID_BACK, `
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
@@ -157,7 +182,15 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     }
     .task-slot { grid-area: task; display: flex; flex-direction: column; gap: 6px; }
     .pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .free-failed { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 520px; margin: 0 auto; }
     .pick-label { font-size: 1.3rem; }
+    .count-input {
+      font: inherit; font-size: 1.2rem; font-weight: 800; width: 5.2em; min-height: 44px; box-sizing: border-box;
+      padding: 4px 8px; border: 2px solid transparent; border-radius: 14px; background: var(--kid-card); color: inherit;
+      box-shadow: 0 3px 0 var(--kid-shadow);
+    }
+    .count-input.on { border-color: var(--kid-green-strong); }
+    .note { margin: 0; font-size: 1rem; opacity: .85; }
     .chip {
       font: inherit; font-size: 1.2rem; font-weight: 800; min-width: 44px; min-height: 44px; padding: 4px 10px;
       border: 0; border-radius: 14px; background: var(--kid-card); color: inherit; cursor: pointer;
@@ -252,8 +285,11 @@ export class StarsPlayComponent {
   readonly complete = signal(false);
   readonly round = signal(0);
   readonly puzzle = signal<StarPuzzle | null>(null);
-  /** Gefressene Sterne der laufenden Aufgabe. */
-  readonly step = signal(0);
+  /** Gefressene Sterne der laufenden Aufgabe, in Reihenfolge. */
+  private readonly eaten = signal<number[]>([]);
+  readonly step = computed(() => this.eaten().length);
+  /** Die restlichen Sterne in einer Reihenfolge, die aufgeht — bei eindeutigen Aufgaben der Rest der Loesung. */
+  private readonly route = signal<number[]>([]);
   readonly status = signal<StarsStatus>('play');
   readonly holding = signal(false);
   readonly fen = signal('8/8/8/8/8/8/8/8 w - - 0 1');
@@ -265,9 +301,13 @@ export class StarsPlayComponent {
   /** Wo die Figur steht. */
   private readonly pos = computed(() => {
     const p = this.puzzle();
-    return p ? (this.step() === 0 ? p.start : p.solution[this.step() - 1]) : -1;
+    const e = this.eaten();
+    return p ? (e.length ? e[e.length - 1] : p.start) : -1;
   });
-  readonly starsLeft = computed(() => this.puzzle()?.solution.slice(this.step()) ?? []);
+  readonly starsLeft = computed(() => this.route());
+  /** Die Figur ist immer ausgewaehlt: das Kind tippt nur noch das Zielfeld (Wunsch 2026-10-10). */
+  readonly selectedSquare = computed(() => this.puzzle() && this.interactive() ? squareName(this.pos()) as Key : undefined);
+  readonly freeMax = computed(() => maxStars(this.freePiece()));
   readonly interactive = computed(() => !this.holding() && this.status() !== 'solved');
   readonly dests = computed(() => {
     const p = this.puzzle();
@@ -316,8 +356,19 @@ export class StarsPlayComponent {
     this.newPuzzle();
   }
 
+  /** Freie Zahl hinter der 8: uebernommen, wenn sie zwischen 2 und dem Hoechstwert der Figur liegt. */
+  typedCount(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const n = Math.round(Number(input.value));
+    if (!Number.isFinite(n) || input.value === '') return;
+    const count = Math.min(Math.max(n, 2), this.freeMax());
+    input.value = String(count);
+    if (count !== this.freeCount()) this.chooseFree(this.freePiece(), count);
+  }
+
   /** Freier Modus: Auswahl uebernehmen (und auf dem Geraet merken), sofort eine neue Aufgabe. */
   chooseFree(piece: StarPiece, count: number): void {
+    count = Math.min(count, maxStars(piece));
     this.freePiece.set(piece);
     this.freeCount.set(count);
     this.stage.set({ stage: 0, piece, counts: [count] });
@@ -337,7 +388,8 @@ export class StarsPlayComponent {
     const p = s ? generateStarPuzzle(s.piece, s.counts[this.round()], this.rng) : null;
     this.failed.set(!p);
     this.puzzle.set(p);
-    this.step.set(0);
+    this.eaten.set([]);
+    this.route.set(p ? [...p.solution] : []);
     this.status.set('play');
     this.holding.set(false);
     this.marks.set([]);
@@ -352,12 +404,22 @@ export class StarsPlayComponent {
     const dest = squareIndex(event.dest);
     const from = this.pos();
     this.marks.set([]);
-    if (dest === p.solution[this.step()]) {
+    const left = this.route();
+    let accepted: number[] | null = dest === left[0] ? left.slice(1) : null;
+    if (!accepted && !p.unique && left.includes(dest)) {
+      // Mehrere Wege: zaehlt, wenn es von dort aus noch aufgeht. Weiss die Suche es nicht (Deckel), gilt der Zug.
+      const rest = left.filter(sq => sq !== dest);
+      const found = solveStars(p.piece, dest, rest, 1, OPEN_CHECK_NODES);
+      if (found === null) accepted = rest;
+      else if (found.length) accepted = found[0];
+    }
+    if (accepted) {
       this.hintLevel = 0;
-      this.step.update(n => n + 1);
+      this.eaten.update(e => [...e, dest]);
+      this.route.set(accepted);
       this.fen.set(starFen(p.piece, dest));
       this.lastMove.set([event.orig, event.dest]);
-      if (this.step() >= p.solution.length) {
+      if (accepted.length === 0) {
         this.status.set('solved');
       } else {
         this.status.set('good');
@@ -381,7 +443,14 @@ export class StarsPlayComponent {
 
   /** Erster Druck: der naechste Stern leuchtet. Zweiter: ein Pfeil zeigt den Zug. */
   showHint(): void {
-    const target = this.starsLeft()[0];
+    const p = this.puzzle();
+    let target = this.route()[0];
+    // Nach einem Zug, den die Suche nicht zu Ende pruefen konnte, ist die gemerkte Reihenfolge nur geraten.
+    if (p && !p.unique && target !== undefined && !reachableStars(p.piece, this.pos(), new Set(this.route())).includes(target)) {
+      const found = solveStars(p.piece, this.pos(), this.route(), 1, OPEN_CHECK_NODES);
+      target = found?.[0]?.[0] as number;
+      if (found?.length) this.route.set(found[0]);
+    }
     if (target === undefined || !this.interactive()) return;
     this.hintLevel = Math.min(this.hintLevel + 1, 2);
     const to = squareName(target) as Key;

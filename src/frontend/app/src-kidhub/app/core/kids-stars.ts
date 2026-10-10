@@ -20,8 +20,10 @@ export interface StarPuzzle {
   start: number;
   /** Felder der Sterne (ungeordnet). */
   stars: number[];
-  /** Die eine Reihenfolge, in der alle Sterne gefressen werden. */
+  /** Eine Reihenfolge, in der alle Sterne gefressen werden — bei `unique` die einzige. */
   solution: number[];
+  /** Genau eine Loesung. Nur grosse Aufgaben des freien Spiels sind es nicht (`generateOpenPath`). */
+  unique: boolean;
 }
 
 export interface StarStage {
@@ -105,12 +107,16 @@ export function reachableStars(piece: StarPiece, from: number, stars: ReadonlySe
  * Reihenfolgen, in denen alle Sterne gefressen werden — hoechstens `limit` (mehr als zwei braucht niemand: eins heisst
  * eindeutig). Liefert die Loesungen selbst, damit der Generator die eine gleich mitnehmen kann.
  */
-export function solveStars(piece: StarPiece, start: number, stars: readonly number[], limit = 2): number[][] {
+export function solveStars(
+  piece: StarPiece, start: number, stars: readonly number[], limit = 2, maxNodes = Infinity,
+): number[][] | null {
   const found: number[][] = [];
   const left = new Set(stars);
   const path: number[] = [];
+  let nodes = 0;
   const walk = (pos: number): void => {
-    if (found.length >= limit) return;
+    if (found.length >= limit || nodes > maxNodes) return;
+    nodes++;
     if (left.size === 0) {
       found.push([...path]);
       return;
@@ -121,11 +127,12 @@ export function solveStars(piece: StarPiece, start: number, stars: readonly numb
       walk(sq);
       path.pop();
       left.add(sq);
-      if (found.length >= limit) return;
+      if (found.length >= limit || nodes > maxNodes) return;
     }
   };
   walk(start);
-  return found;
+  // Budget erschoepft: keine Aussage — `null`, damit der Generator die Aufgabe verwirft statt zu raten.
+  return nodes > maxNodes ? null : found;
 }
 
 /** Richtung eines Zugs: bei Turm/Laeufer/Dame die Linie (Vorzeichen), beim Springer der Sprung selbst. */
@@ -180,7 +187,13 @@ const MAX_ATTEMPTS = 3000;
  * bei denen am Anfang mehr als ein Stern erreichbar ist — sonst ist
  * die erste Entscheidung keine. `null` nur, wenn gar keine eindeutige Aufgabe gefunden wurde.
  */
-export function generateStarPuzzle(piece: StarPiece, count: number, rng: Rng = Math.random): StarPuzzle | null {
+export function generateStarPuzzle(
+  piece: StarPiece, count: number, rng: Rng = Math.random, budgetMs = GENERATE_BUDGET_MS,
+): StarPuzzle | null {
+  if (count > maxStars(piece)) return null;
+  if (count > RANDOM_WALK_MAX) {
+    return generateChain(piece, count, rng, budgetMs / 2) ?? generateOpenPath(piece, count, rng, budgetMs / 2);
+  }
   let fallback: StarPuzzle | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const start = Math.floor(rng() * 64);
@@ -196,13 +209,125 @@ export function generateStarPuzzle(piece: StarPiece, count: number, rng: Rng = M
       path.push(pos);
     }
     if (path.length < count) continue;
-    const solutions = solveStars(piece, start, path, 2);
-    if (solutions.length !== 1 || !turnsEveryMove(piece, start, solutions[0])) continue;
-    const puzzle: StarPuzzle = { piece, start, stars: [...path].sort((a, b) => a - b), solution: solutions[0] };
+    const solutions = solveStars(piece, start, path, 2, DFS_MAX_NODES);
+    if (!solutions || solutions.length !== 1 || !turnsEveryMove(piece, start, solutions[0])) continue;
+    const puzzle: StarPuzzle = { piece, start, stars: [...path].sort((a, b) => a - b), solution: solutions[0], unique: true };
     if (count < 2 || reachableStars(piece, start, new Set(path)).length >= 2) return puzzle;
     fallback ??= puzzle;
   }
   return fallback;
+}
+
+/** Bis zu so vielen Sternen reicht der Zufallsweg; darueber werden eindeutige Aufgaben damit zu selten. */
+export const RANDOM_WALK_MAX = 8;
+/** Hoechstzahl Sterne im freien Spiel (alle Felder ausser dem Startfeld). */
+export const MAX_STARS = 63;
+
+/** Mehr geht mit dieser Figur nicht: der Laeufer bleibt auf seiner Farbe (32 Felder, eins davon ist das Startfeld). */
+export function maxStars(piece: StarPiece): number {
+  return piece === 'B' ? 31 : MAX_STARS;
+}
+/** So lange darf das Wuerfeln einer grossen Aufgabe dauern — es laeuft im Browser, das Brett soll nicht haengen. */
+export const GENERATE_BUDGET_MS = 400;
+/** Deckel fuer die Loesungssuche: ohne ihn lief die Dame mit 20 Sternen minutenlang. */
+const DFS_MAX_NODES = 200_000;
+/** So oft wird beim Legen eine Falle erlaubt (ein zweiter sichtbarer Stern, nach dem es nicht weitergeht). */
+const TRAP_CHANCE = 0.4;
+
+/**
+ * Grosse Aufgaben (mehr als `RANDOM_WALK_MAX` Sterne) werden RUECKWAERTS gelegt: vom letzten Stern aus wird jeweils
+ * das Feld davor gesucht, von dem aus von den noch liegenden Sternen genau der naechste zu sehen ist. Ein Stern, der
+ * spaeter (zeitlich frueher) dazukommt, aendert an den schon gelegten Zuegen nichts — die sind ja dann gefressen.
+ * So ist die Loesung eindeutig, ohne dass gesucht werden muss. Damit es nicht nur „den einen sichtbaren Stern
+ * finden" ist, darf an einer Stelle ein zweiter Stern sichtbar sein, wenn er eine FALLE ist: nach ihm ist kein Stern
+ * mehr erreichbar (`TRAP_CHANCE`). Der Richtungswechsel gilt schon beim Legen.
+ */
+function generateChain(piece: StarPiece, count: number, rng: Rng, budgetMs: number): StarPuzzle | null {
+  const deadline = Date.now() + budgetMs;
+  let first = true;
+  while (first || Date.now() < deadline) {
+    first = false;
+    // seq[0] = letzter Stern; davor wird angehaengt (rueckwaerts in der Zeit).
+    const seq = [Math.floor(rng() * 64)];
+    const remaining = new Set<number>(seq);
+    let ok = true;
+    for (let k = 0; k < count && ok; k++) {
+      const target = seq[seq.length - 1];
+      const after = seq.length >= 2 ? seq[seq.length - 2] : null;
+      const blockers = new Set(remaining);
+      blockers.delete(target);
+      const clean: number[] = [];
+      const traps: number[] = [];
+      for (const x of reachable(piece, target, blockers)) {
+        if (remaining.has(x)) continue;
+        if (after !== null && direction(piece, x, target) === direction(piece, target, after)) continue;
+        const seen = reachableStars(piece, x, remaining);
+        if (seen.length === 1) clean.push(x);
+        else if (seen.length === 2) {
+          const other = seen[0] === target ? seen[1] : seen[0];
+          const rest = new Set(remaining);
+          rest.delete(other);
+          if (reachableStars(piece, other, rest).length === 0) traps.push(x);
+        }
+      }
+      const pool = traps.length && rng() < TRAP_CHANCE ? traps : clean.length ? clean : traps;
+      if (!pool.length) { ok = false; break; }
+      const x = pick(pool, rng);
+      if (k < count - 1) remaining.add(x);
+      seq.push(x);
+    }
+    if (!ok) continue;
+    const start = seq[seq.length - 1];
+    const solution = seq.slice(0, -1).reverse();
+    return { piece, start, stars: [...solution].sort((a, b) => a - b), solution, unique: true };
+  }
+  return null;
+}
+
+/**
+ * Wenn sich keine eindeutige Aufgabe findet (viele Sterne — mit 20 Sternen ist an fast jeder Stelle mehr als einer zu
+ * sehen), eine mit MEHREREN Loesungen: rueckwaerts gelegt wie `generateChain`, aber ohne Sichtbarkeits-Regel und mit
+ * Zuruecksetzen, wenn es nicht weitergeht. Der Richtungswechsel gilt fuer die gelegte Loesung; gespielt zaehlt jeder
+ * Weg, der alle Sterne frisst (die Seite prueft eine Sackgasse mit `solveStars`).
+ */
+export function generateOpenPath(piece: StarPiece, count: number, rng: Rng, budgetMs: number): StarPuzzle | null {
+  if (count > maxStars(piece)) return null;
+  const deadline = Date.now() + budgetMs;
+  let first = true;
+  while (first || Date.now() < deadline) {
+    first = false;
+    const seq = [Math.floor(rng() * 64)];
+    const remaining = new Set<number>(seq);
+    let steps = 0;
+    const extend = (): boolean => {
+      if (seq.length === count + 1) return true;
+      if (++steps % 512 === 0 && Date.now() > deadline) return false;
+      const target = seq[seq.length - 1];
+      const after = seq.length >= 2 ? seq[seq.length - 2] : null;
+      const blockers = new Set(remaining);
+      blockers.delete(target);
+      const options = reachable(piece, target, blockers).filter(x => !remaining.has(x)
+        && (after === null || direction(piece, x, target) !== direction(piece, target, after)));
+      // Felder mit wenigen Fortsetzungen zuerst (Warnsdorff) — sonst bleibt am Ende ein Feld unerreichbar liegen.
+      const scored = options.map(x => ({ x, n: reachable(piece, x, remaining).length, r: rng() }))
+        .sort((a, b) => a.n - b.n || a.r - b.r);
+      for (const { x } of scored) {
+        const last = seq.length === count;
+        if (!last) remaining.add(x);
+        seq.push(x);
+        if (extend()) return true;
+        seq.pop();
+        if (!last) remaining.delete(x);
+        if (Date.now() > deadline) return false;
+      }
+      return false;
+    };
+    if (!extend()) continue;
+    const start = seq[seq.length - 1];
+    const solution = seq.slice(0, -1).reverse();
+    return { piece, start, stars: [...solution].sort((a, b) => a - b), solution, unique: false };
+  }
+  return null;
 }
 
 /** Die Stellung fuer das Brett: nur die weisse Figur (kein Koenig — das Brett prueft keine Schachregeln). */

@@ -5626,7 +5626,14 @@ Kinderseite" unter REST API.
   stehen. `STAR_STAGES` = 20 Stufen, Figur reihum R/B/N/Q, je sechs frisch gewürfelte Aufgaben mit wachsender Sternzahl
   (`counts` = n, n, n+1, n+1, n+2, n+2; n = 2 + ⌊(Stufe−1)/4⌋, bis 8 Sterne; Wunsch 0.732.0 „steiler"); Tipps
   kostenlos (Stern leuchtet, dann Pfeil). Fortschritt nur im Browser (`KidsStarsStore`, `rh-kids-stars-v1`). Freies Spiel (0.733.0) `/stars/free` (Route-`data.free`, dieselbe
-  `StarsPlayComponent`): Figur + Sternzahl 2–8 frei, Aufgaben ohne Ende, zählt nicht für Stufen, Wahl in `rh-kids-stars-free`. Dafür
+  `StarsPlayComponent`): Figur + Sternzahl 2–8 frei, Aufgaben ohne Ende, zählt nicht für Stufen, Wahl in `rh-kids-stars-free`.
+  Seit 0.734.0 Zahlenfeld hinter der 8 bis `MAX_STARS` 63 (`maxStars`: Läufer 31). Über `RANDOM_WALK_MAX` (8) erst
+  `generateChain` (RÜCKWÄRTS gelegt: von jedem Vorgängerfeld aus ist genau der nächste Stern sichtbar, sonst nur eine
+  FALLE ohne Fortsetzung → eindeutig ohne Suche; trägt bis ~12, Springer ~20), sonst `generateOpenPath` (rückwärts mit
+  Zurücksetzen + Warnsdorff, `unique: false`, mehrere Wege). Je Aufgabe höchstens `GENERATE_BUDGET_MS` 400 ms;
+  `solveStars` hat einen Knotendeckel (`null` = keine Aussage). Bei `unique: false` prüft die Seite einen anderen Stern
+  mit `solveStars` (Deckel 60 000, ohne Aussage = gilt) und führt die Restfolge (`route`). Die Figur ist immer
+  ausgewählt: `PuzzleBoardComponent.autoSelect` wählt nach jeder Änderung und jedem Tippen wieder aus. Dafür
   zeichnet `PuzzleBoardComponent` `reviewShapes` jetzt auch beim Aufbau (vorher erst bei der nächsten Änderung).
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);

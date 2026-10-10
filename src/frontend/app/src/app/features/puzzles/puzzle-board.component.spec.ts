@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import {
@@ -477,5 +477,43 @@ describe('PuzzleBoardComponent Zug-Eingabe per Tastatur (F2-004)', () => {
       const live = el.querySelector('[aria-live="polite"]') as HTMLElement;
       expect(live.textContent!.trim()).toBe('puzzles.keyboardMove.lastMove');
     });
+  });
+});
+
+describe('PuzzleBoardComponent autoSelect (KidHub-Sternenjagd)', () => {
+  @Component({
+    standalone: true,
+    imports: [PuzzleBoardComponent],
+    template: `<div style="width:320px"><app-puzzle-board [fen]="fen()" orientation="white" turnColor="white"
+      [dests]="dests()" [autoSelect]="sel()" [reviewShapes]="shapes" [allowFullscreen]="false" /></div>`,
+  })
+  class StarHost {
+    fen = signal('8/8/8/8/8/8/8/R7 w - - 0 1');
+    dests = signal(new Map<Key, Key[]>([['a1' as Key, ['a2', 'a3', 'b1'] as Key[]]]));
+    sel = signal<Key | undefined>('a1' as Key);
+    shapes = [{ orig: 'a3' as Key, customSvg: { html: '<circle r="2"/>' } }];
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [StarHost],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+  });
+
+  it('hält die eine Figur ausgewählt und zeichnet schon gesetzte Markierungen beim Aufbau', () => {
+    const fixture = TestBed.createComponent(StarHost);
+    fixture.detectChanges();
+    const board = fixture.debugElement.query(By.directive(PuzzleBoardComponent)).componentInstance as PuzzleBoardComponent;
+    const ground = (board as unknown as { ground: { state: { selected?: Key; drawable: { autoShapes: unknown[] } } } }).ground;
+    expect(ground.state.selected).toBe('a1' as Key);
+    expect(ground.state.drawable.autoShapes.length).toBe(1);
+
+    // Nach dem Zug steht die Figur woanders — die neue Stellung wählt das neue Feld aus.
+    fixture.componentInstance.fen.set('8/8/8/8/8/R7/8/8 w - - 0 1');
+    fixture.componentInstance.dests.set(new Map<Key, Key[]>([['a3' as Key, ['a4'] as Key[]]]));
+    fixture.componentInstance.sel.set('a3' as Key);
+    fixture.detectChanges();
+    expect(ground.state.selected).toBe('a3' as Key);
   });
 });

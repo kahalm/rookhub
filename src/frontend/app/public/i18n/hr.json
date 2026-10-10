@@ -4342,7 +4342,9 @@
         "title": "Slobodna igra",
         "hint": "Sam odaberi figuru i broj zvijezda",
         "piece": "Figura",
-        "count": "Broj zvijezda"
+        "count": "Broj zvijezda",
+        "manyWays": "Puno zvijezda: ima više putova — vrijedi svaki put koji pojede sve zvijezde.",
+        "tooMany": "Toliko zvijezda sada ne ide s ovom figurom — probaj s manje."
       }
     }
   },

@@ -26,11 +26,13 @@ describe('StarsPlayComponent', () => {
   afterEach(() => localStorage.removeItem(KEY));
 
   /** Turm a1, Sterne a3 und c3 — eindeutig a3, dann c3. */
-  const fixed: StarPuzzle = { piece: 'R', start: 0, stars: [16, 18], solution: [16, 18] };
+  const fixed: StarPuzzle = { piece: 'R', start: 0, stars: [16, 18], solution: [16, 18], unique: true };
   const create = () => {
     const f = TestBed.createComponent(StarsPlayComponent);
     const c = f.componentInstance;
     c.puzzle.set(fixed);
+    (c as any).route.set([...fixed.solution]);
+    (c as any).eaten.set([]);
     c.fen.set(starFen('R', 0));
     f.detectChanges();
     return { f, c };
@@ -65,11 +67,33 @@ describe('StarsPlayComponent', () => {
 
   it('ein Stern, nach dem nicht mehr alle zu holen sind, ist eine Sackgasse', fakeAsync(() => {
     const { c } = create();
-    c.puzzle.set({ piece: 'R', start: 0, stars: [2, 16, 18], solution: [16, 18, 2] });
+    c.puzzle.set({ piece: 'R', start: 0, stars: [2, 16, 18], solution: [16, 18, 2], unique: true });
+    (c as any).route.set([16, 18, 2]);
     move(c, 'a1', 'c1');
     expect(c.status()).toBe('deadEnd');
     tick(WRONG_HOLD_MS);
     expect(c.fen()).toBe(starFen('R', 0));
+  }));
+
+  it('die Figur ist immer ausgewählt — nur das Zielfeld tippen', () => {
+    const { c } = create();
+    expect(c.selectedSquare()).toBe('a1' as Key);
+    move(c, 'a1', 'a3');
+    expect(c.selectedSquare()).toBe('a3' as Key);
+  });
+
+  it('mehrere Wege: ein anderer Stern zählt, solange es noch aufgeht', fakeAsync(() => {
+    const { c } = create();
+    // Turm a1, Sterne a3, c3, c1: a3→c3→c1 und c1→c3→a3 gehen beide.
+    c.puzzle.set({ piece: 'R', start: 0, stars: [2, 16, 18], solution: [16, 18, 2], unique: false });
+    (c as any).route.set([16, 18, 2]);
+    move(c, 'a1', 'c1');
+    expect(c.status()).toBe('good');
+    expect(c.starsLeft()).toEqual([18, 16]);
+    // Hier wäre a1 ein leeres Feld — weiter c3, dann a3.
+    move(c, 'c1', 'c3');
+    move(c, 'c3', 'a3');
+    expect(c.status()).toBe('solved');
   }));
 
   it('Tipp: erst leuchtet der nächste Stern, dann zeigt ein Pfeil den Zug', () => {
@@ -146,6 +170,19 @@ describe('StarsPlayComponent – freier Modus', () => {
     expect(c.complete()).toBeFalse();
     expect(c.puzzle()?.stars.length).toBe(5);
     expect(TestBed.inject(KidsStarsStore).done()).toBe(0);
+  });
+
+  it('Zahlenfeld hinter der 8: bis 63, beim Läufer bis 31', () => {
+    const f = TestBed.createComponent(StarsPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    const input = document.createElement('input');
+    input.value = '99';
+    c.typedCount({ target: input } as unknown as Event);
+    expect(c.freeCount()).toBe(63);
+    expect(input.value).toBe('63');
+    c.chooseFree('B', 63);
+    expect(c.freeCount()).toBe(31);
   });
 
   it('merkt sich die letzte Wahl', () => {

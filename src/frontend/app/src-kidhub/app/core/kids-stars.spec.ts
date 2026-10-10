@@ -1,5 +1,5 @@
 import {
-  turnsEveryMove, STAR_STAGES, STAR_SVG, generateStarPuzzle, reachable, reachableStars, seededRng, solveStars, squareIndex, squareName,
+  maxStars, turnsEveryMove, STAR_STAGES, STAR_SVG, generateStarPuzzle, reachable, reachableStars, seededRng, solveStars, squareIndex, squareName,
   starFen,
 } from './kids-stars';
 
@@ -35,7 +35,7 @@ describe('kids-stars', () => {
     // a3 und c1 liegen auf keiner gemeinsamen Linie.
     expect(solveStars('R', squareIndex('a1'), sq(['a3', 'c1']))).toEqual([]);
     // Rundherum geht es in beide Richtungen.
-    expect(solveStars('R', squareIndex('a1'), sq(['a3', 'c3', 'c1'])).length).toBe(2);
+    expect(solveStars('R', squareIndex('a1'), sq(['a3', 'c3', 'c1']))?.length).toBe(2);
   });
 
   it('jede Stufe bekommt eindeutige Aufgaben mit der richtigen Zahl Sterne, die nie geradeaus weitergehen', () => {
@@ -65,6 +65,27 @@ describe('kids-stars', () => {
     expect(turnsEveryMove('R', a('a1'), [a('a3'), a('c3')])).toBeTrue();
     expect(turnsEveryMove('N', a('a1'), [a('b3'), a('c5')])).toBeFalse();
     expect(turnsEveryMove('N', a('a1'), [a('b3'), a('d4')])).toBeTrue();
+  });
+
+  it('viele Sterne: bis 63 (Läufer 31) mit einer legalen Lösung, die nach jedem Stern abbiegt', () => {
+    const rng = seededRng(7);
+    for (const [piece, count] of [['Q', 63], ['N', 63], ['R', 40], ['B', 30], ['N', 15]] as const) {
+      const p = generateStarPuzzle(piece, count, rng, 2000);
+      expect(p).withContext(`${piece} ${count}`).not.toBeNull();
+      expect(new Set(p!.stars).size).toBe(count);
+      expect(p!.stars).not.toContain(p!.start);
+      expect(turnsEveryMove(piece, p!.start, p!.solution)).toBeTrue();
+      let pos = p!.start;
+      const left = new Set(p!.stars);
+      for (const sq of p!.solution) {
+        expect(reachableStars(piece, pos, left)).toContain(sq);
+        left.delete(sq);
+        pos = sq;
+      }
+      if (p!.unique) expect(solveStars(piece, p!.start, p!.stars, 2, 1e6)).toEqual([p!.solution]);
+    }
+    expect(generateStarPuzzle('B', 32, rng)).toBeNull();
+    expect(maxStars('B')).toBe(31);
   });
 
   it('nur Turm, Läufer, Springer und Dame', () => {

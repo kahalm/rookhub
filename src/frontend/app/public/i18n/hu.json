@@ -4021,7 +4021,9 @@
         "title": "Szabad játék",
         "hint": "Válaszd ki magad a bábut és a csillagok számát",
         "piece": "Bábu",
-        "count": "Csillagok száma"
+        "count": "Csillagok száma",
+        "manyWays": "Sok csillag: több út is van — minden út jó, amely megeszi az összes csillagot.",
+        "tooMany": "Ennyi csillag ezzel a bábuval most nem megy — próbálj kevesebbet."
       }
     }
   },

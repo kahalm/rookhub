@@ -4342,7 +4342,9 @@
         "title": "Free play",
         "hint": "Choose the piece and the number of stars yourself",
         "piece": "Piece",
-        "count": "Number of stars"
+        "count": "Number of stars",
+        "manyWays": "Many stars: there are several ways — any way that eats all the stars counts.",
+        "tooMany": "That's too many stars for this piece right now — try fewer."
       }
     }
   },
