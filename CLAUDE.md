@@ -292,7 +292,8 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   EngineBroker, Engines, Games, Kids, League, Library, Og, Prep, Puzzles, Repertoires, Scoresheet, Social, Tactics,
   Tournaments, TournamentDirectory. **Gemeinsame Bausteine bleiben direkt in `Services/`** (PGN/FEN-Werkzeuge,
   `PeriodicWorker`, Rate-Limiter, `Paging`, LLM-Clients …): der Eltern-Namespace ist aus jedem Bereich ohne `using`
-  sichtbar. Neue Dienste in den Ordner ihres Bereichs; ein neuer Bereich = eigener Commit, nur `git mv` + Namespace +
+  sichtbar. Abgesichert durch `ArchitectureGuardTests` (Ort, Namespace = Ordner,
+  keine Dienst→Controller-/Model→Dienst-Abhängigkeit, DTO→Dienst nur per Erlaubt-Liste). Neue Dienste in den Ordner ihres Bereichs; ein neuer Bereich = eigener Commit, nur `git mv` + Namespace +
   `using`s, vorher der anderen Sitzung ankündigen.
 - **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.12", date: "2026-10-11", changes: [
+    { en: "Developer tooling: automatic architecture checks keep the new folder structure of the server code from drifting (location, namespaces, dependency direction). No change to the app.",
+      de: "Entwickler-Werkzeuge: automatische Architektur-Prüfungen halten die neue Ordnerstruktur des Server-Codes stabil (Ort, Namespaces, Abhängigkeitsrichtung). Keine Änderung an der App." },
+  ] },
   { version: "0.753.11", date: "2026-10-11", changes: [
     { en: "Developer tooling: the UI-sweep tool now checks what is visible without scrolling — whether the main content of each page starts above the fold on phone, laptop and large screens, how much space sits above it, how many banners, sticky bars and page length — and takes a first-view image plus screen-high strips for reviewing the scrolled part. No change to the app.",
       de: "Entwickler-Werkzeuge: das UI-Sweep-Werkzeug prüft jetzt, was ohne Scrollen sichtbar ist – ob die Hauptsache jeder Seite am Handy, Laptop und großen Bildschirm über der Falz beginnt, wie viel Platz davor liegt, wie viele Banner, klebende Leisten und wie lang die Seite ist – und macht dazu ein Bild des ersten Blicks und bildschirmhohe Streifen für den gescrollten Teil. Keine Änderung an der App." },
