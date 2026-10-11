@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.8", date: "2026-10-11", changes: [
+    { en: "Developer documentation: the project notes describe the new folder layout of the server services by area. No change to the app.",
+      de: "Entwickler-Doku: die Projektnotizen beschreiben die neue Ordnerstruktur der Server-Dienste nach Fachbereich. Keine Änderung an der App." },
+  ] },
   { version: "0.753.7", date: "2026-10-11", changes: [
     { en: "Code structure: the 13 server services for friends, notifications, messages, bot, training goals, play time now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 13 Server-Dienste für Freunde, Benachrichtigungen, Nachrichten, Bot, Trainingsziele, Spielzeit liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

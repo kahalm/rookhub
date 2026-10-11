@@ -157,17 +157,8 @@ src/
                             Course, Calculation, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
                             Puzzle, Admin, Me, BotStats, Engine, ExternalEngine, Token, Club,
                             BaseApiController
-    Services/               Auth, Profile, Friend, Repertoire, CrawlerProxy, PlayerSearch,
-                            BookPuzzle, Course, CourseAccess, CourseAuthoring, Calculation,
-                            FenListParser, Puzzle, EndlessProgress, TrainingGoal,
-                            PlayTime, PlayTimeSync, WeeklyPost, BotStats,
-                            ApiToken+ApiTokenAuthenticationHandler, DiscordLink, PgnImport,
-                            SchachBotWebhook, BackgroundTaskQueue, Admin, BookAdmin,
-                            AdminSeeder, AutoSubscription, RoundMonitor,
-                            DailyPuzzleScheduler, Heartbeat,
-                            CalcEdition, CalcSeriesAnnounce(+Scheduler), LichessEngine,
-                            EngineActivityTracker, AnalysisJob(+Worker), NdjsonHeartbeatPump,
-                            EngineBroker/ (eigener Broker: Hub, Registry, Emit, Sanitizer)
+    Services/               <Bereich>/ je Fachbereich (siehe „Arbeitsweise“ → Dienste nach Fachbereich),
+                            direkt darin nur gemeinsame Bausteine (PGN/FEN, PeriodicWorker, Rate-Limiter, LLM-Clients)
     Models/                 EF-Entities (1:1 zum Schema oben)
     DTOs/                   Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
@@ -297,9 +288,12 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   eigentliche Änderung. Kein eigener Zerlege-Durchgang, nur dort, wo ohnehin gearbeitet wird. Aufrufer über das
   LSP-Werkzeug (`findReferences`) suchen, nicht per grep.
 - **Dienste liegen nach Fachbereich in Unterordnern** (`Services/<Bereich>/`, Namespace `RookHub.Api.Services.<Bereich>`,
-  Nutzer binden ihn per `using` ein). Umzug eines Bereichs: eigener Commit, nur `git mv` + Namespace + `using`s, kein
-  Code geändert; vorher der anderen Sitzung ankündigen. Bisher: League, Prep, Tactics, Club, ChessBase, EngineBroker,
-  Og, TournamentDirectory (0.752.2). Neue Dienste eines vorhandenen Bereichs gehören in dessen Ordner.
+  Nutzer binden ihn per `using` ein — kein `global using`). Bereiche: Accounts, Chessable, ChessBase, Club, Courses,
+  EngineBroker, Engines, Games, Kids, League, Library, Og, Prep, Puzzles, Repertoires, Scoresheet, Social, Tactics,
+  Tournaments, TournamentDirectory. **Gemeinsame Bausteine bleiben direkt in `Services/`** (PGN/FEN-Werkzeuge,
+  `PeriodicWorker`, Rate-Limiter, `Paging`, LLM-Clients …): der Eltern-Namespace ist aus jedem Bereich ohne `using`
+  sichtbar. Neue Dienste in den Ordner ihres Bereichs; ein neuer Bereich = eigener Commit, nur `git mv` + Namespace +
+  `using`s, vorher der anderen Sitzung ankündigen.
 - **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 
 ## Versionierung
