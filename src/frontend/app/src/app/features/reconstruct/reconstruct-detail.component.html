@@ -194,7 +194,26 @@
               </button>
             </div>
             <div class="part-body">
-              <code>{{ summary(part) }}</code>
+              @if (part.kind === Kind.Position && part.fen) {
+                <!-- UI-Sweep 2026-10-11 (r2-rg-recon-fen): eine erinnerte Stellung als Mini-Brett statt roher FEN-Zeile;
+                     die FEN gibt es zum Kopieren und eingeklappt. -->
+                <div class="pos-preview">
+                  <app-flashcard-board class="pos-board" [fen]="part.fen" [orientation]="positionOrientation(part)"
+                                       [pieceSet]="pieceSet" />
+                  <div class="pos-info">
+                    <span>{{ positionLine(part) }}</span>
+                    <button mat-button type="button" class="pos-copy" (click)="copyFen(part); $event.stopPropagation()">
+                      <mat-icon>content_copy</mat-icon> {{ 'reconstruct.copyFen' | translate }}
+                    </button>
+                    <details class="pos-fen" (click)="$event.stopPropagation()">
+                      <summary>{{ 'reconstruct.showFen' | translate }}</summary>
+                      <code>{{ part.fen }}</code>
+                    </details>
+                  </div>
+                </div>
+              } @else {
+                <code>{{ summary(part) | san:'text' }}</code>
+              }
               @if (part.kind === Kind.Moves) {
                 <span class="muted">{{ 'reconstruct.plyCount' | translate:{ count: plyCountOf(part) } }}</span>
               }

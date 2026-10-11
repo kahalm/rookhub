@@ -573,7 +573,7 @@ public sealed partial class LeagueTeamScout
         var toks = LeagueAccountFinder.Tokens(prof.RealName);
         if (toks.Count > 0)
         {
-            var found = 0;
+            var hits = new List<(LeagueAccountFinder.Player P, LeagueAccountFinder.Verdict V)>();
             foreach (var p in ctx.Season)
             {
                 var (last, first) = LeagueAccountFinder.SplitName(p.Name);
@@ -582,22 +582,26 @@ public sealed partial class LeagueTeamScout
                     || LeagueAccountFinder.FirstNameMatch(toks, lt, LeagueAccountFinder.Tokens(first)) != LeagueAccountFinder.NameFit.Full) continue;
                 var scan = await LeagueAccountFinder.ScanRowAsync(_db, _http, _lichess, p.Fide, ct);
                 if (LeagueAccountFinder.Judge(p, prof, derived: false, scan.Federation, lead: origin) is not { } v) continue;
-                if (await AddAsync(p, prof, v.Score + 1, v.Evidence, ct)) found++;
+                hits.Add((p, v));
             }
+            // UI-Sweep 2026-10-11 (r2-l-same-account): passt der Klarname auf MEHRERE Spieler („Hans Schmidt" → „Schmidt, Hans"
+            // SC Garching UND „Schmidt, Hans Christoph" SC Haar), entscheidet der Verein, für den das Konto spielte bzw. in dessen
+            // Team es ist — nur die Spieler dieses Vereins bekommen den Vorschlag. Passt keiner zum Verein, bleiben alle (der
+            // Verwalter sieht in der Liste, dass das Konto mehrfach vorgeschlagen ist).
+            if (hits.Count > 1)
+            {
+                var own = ClubFides(a.PlayedFor is { Length: > 0 } ? a.PlayedFor : a.Teams, ctx).ToHashSet(StringComparer.Ordinal);
+                if (hits.Where(h => own.Contains(h.P.Fide)).ToList() is { Count: > 0 } narrowed) hits = narrowed;
+            }
+            var found = 0;
+            foreach (var (p, v) in hits)
+                if (await AddAsync(p, prof, v.Score + 1, v.Evidence, ct)) found++;
             if (found > 0) return $"Klarname: {found} Vorschlag/Vorschläge";
         }
 
         // 2) Verein + Stellungen — je Region die Vereins-Schlüssel der Teams, für die er spielte (Kreis/Bezirk zählen nicht)
         if (a.PlayedFor is not { Length: > 0 }) return toks.Count > 0 ? "Klarname passt zu keinem Spieler der Saison" : "kein Klarname, kein Verein";
-        var playedFor = a.PlayedFor.Split("; ", StringSplitOptions.RemoveEmptyEntries);
-        var club = new List<string>();
-        foreach (var r in _regions)
-        {
-            var keys = playedFor.SelectMany(r.ClubKeys).Distinct().ToList();
-            if (keys.Count == 0) continue;
-            club.AddRange(ctx.AllTeams.Where(t => t.Region == r.Id && t.Keys.Any(keys.Contains)).Select(t => t.Fide));
-        }
-        club = club.Distinct().ToList();
+        var club = ClubFides(a.PlayedFor, ctx);
         if (club.Count < 2) return "zu wenige Vereinsspieler zum Vergleich";
         var ndjson = await GetAsync($"{_lichess}/api/games/user/{Uri.EscapeDataString(a.UserName)}?max={MaxGames}&moves=true&clocks=false"
                                    + "&evals=false&opening=false&pgnInJson=false", ct, "application/x-ndjson");
@@ -617,6 +621,38 @@ public sealed partial class LeagueTeamScout
         var ev = new List<string> { origin, PositionsText(best, depths.Count, ctx) };
         if (LeagueAccountFinder.RatingEvidence(prof.RatingLabel, prof.Rating, player.Elo) is { } re) ev.Add(re.Text);
         return await AddAsync(player, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt oder bei einem anderen Spieler";
+    }
+
+    private static readonly Regex OriginRe = new("(?:spielte für|Mitglied im Lichess-Team) „([^“]+)“", RegexOptions.Compiled);
+
+    /// <summary>UI-Sweep 2026-10-11 (r2-l-same-account): der Verein aus dem ersten Hinweis eines Team-Vorschlags (den schreibt
+    /// <see cref="CheckAsync"/>: „spielte für „…““ bzw. „Mitglied im Lichess-Team „…““), sonst <c>null</c>.</summary>
+    public static string? OriginClub(string? evidence) => OriginRe.Match(evidence ?? "") is { Success: true } m ? m.Groups[1].Value : null;
+
+    /// <summary>UI-Sweep 2026-10-11 (r2-l-same-account): gehört die Mannschaft <paramref name="team"/> zu dem Verein
+    /// <paramref name="club"/> (gleicher Vereins-Schlüssel der Region; Kreis/Bezirk nie)?</summary>
+    public static bool SameClub(string? team, string? club, string? region)
+    {
+        if (string.IsNullOrWhiteSpace(team) || string.IsNullOrWhiteSpace(club)) return false;
+        var r = LeagueOnlineRegions.Of(region);
+        var keys = r.ClubKeys(club);
+        return keys.Count > 0 && r.ClubKeys(team).Any(keys.Contains);
+    }
+
+    /// <summary>Die Spieler (FIDE-IDs, alle Saisonen) der Vereine, deren Teams in <paramref name="teams"/> stehen („; "-Liste) —
+    /// je Region über die Vereins-Schlüssel (Kreis/Bezirk zählen nicht).</summary>
+    private List<string> ClubFides(string? teams, Context ctx)
+    {
+        var club = new List<string>();
+        if (string.IsNullOrWhiteSpace(teams)) return club;
+        var names = teams.Split("; ", StringSplitOptions.RemoveEmptyEntries);
+        foreach (var r in _regions)
+        {
+            var keys = names.SelectMany(r.ClubKeys).Distinct().ToList();
+            if (keys.Count == 0) continue;
+            club.AddRange(ctx.AllTeams.Where(t => t.Region == r.Id && t.Keys.Any(keys.Contains)).Select(t => t.Fide));
+        }
+        return club.Distinct().ToList();
     }
 
     /// <summary>

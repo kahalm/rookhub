@@ -286,13 +286,15 @@ public class PuzzleStatsService
             .ToListAsync());
         themes = AttemptStats.TopThemes(themes);
 
-        // Rating-Bänder (200er-Schritte): GROUP BY (Rating DIV 200) server-seitig.
+        // Rating-Bänder (200er-Schritte) server-seitig. UI-Sweep 2026-10-11 (r2-rp-ratingbands):
+        // gruppiert wird nach der Bandgrenze `Rating - Rating % 200` — reine Ganzzahl-Arithmetik.
+        // `Rating / 200` übersetzte MariaDB als Dezimaldivision (669/200 = 3,345) → ein Band je Rating.
         var ratingBands = AttemptStats.RatingBands((await _db.PuzzleAttempts
             .Where(a => a.UserId == userId)
-            .GroupBy(a => a.Puzzle.Rating / 200)
-            .Select(g => new { Bucket = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
+            .GroupBy(a => a.Puzzle.Rating - a.Puzzle.Rating % 200)
+            .Select(g => new { From = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
             .ToListAsync())
-            .Select(b => (b.Bucket, b.Attempts, b.Solved)));
+            .Select(b => (b.From / 200, b.Attempts, b.Solved)));
 
         // Aktivität pro Tag (letzte 365 Tage): GROUP BY CAST(AttemptedAt AS date) server-seitig.
         var since = AttemptStats.ActivityWindowStart(DateTime.UtcNow);

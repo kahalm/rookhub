@@ -1326,6 +1326,24 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
     expect(c.visualizationMode).toBe(0);
   });
 
+  // UI-Sweep 2026-10-11 (r2-rk-weekly-mode-dialog): der Wochenpost fragt über den GEMEINSAMEN Spielweisen-Dialog,
+  // nur Titel/Einleitung/Hinweis sind seine — Kacheln und Erklärtexte sind die der Puzzles (kein Entwicklertext).
+  it('fragt über den gemeinsamen Spielweisen-Dialog mit Wochenpost-Titel und merkt die Wahl', () => {
+    const c = makeWeekly();
+    c.dialog.open = jasmine.createSpy('open');
+    c.solveMode.openDialog = jasmine.createSpy('openDialog').and.returnValue(of({ mode: 'easy', applyAll: false }));
+    const setup = spyOn(c, 'setupPuzzle');   // das erste Puzzle wird mit der Wahl neu aufgesetzt (ohne Engine im Test)
+    c.askWeeklyMode();
+    expect(setup).toHaveBeenCalledWith(c.puzzle);
+    expect(c.dialog.open).not.toHaveBeenCalled();
+    const data = c.solveMode.openDialog.calls.mostRecent().args[0];
+    expect(data).toEqual({ title: 'weekly.mode.title', intro: 'weekly.mode.intro', hint: 'weekly.mode.switchHint' });
+    expect(data.trainingDesc).toBeUndefined();   // gleiche Beschreibung wie bei den Puzzles
+    expect(c.weeklyMode).toBe('easy');
+    expect(sessionStorage.getItem(KEY)).toBe('easy');
+    expect(c.visualizationMode).toBe(0);
+  });
+
   it('anonyme Besucher werden nicht gefragt (für sie wird nichts gewertet)', () => {
     const c = makeWeekly();
     c.auth.isLoggedIn = false;

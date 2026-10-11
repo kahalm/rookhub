@@ -32,7 +32,8 @@ describe('MembersPageComponent (Kartei)', () => {
 
   beforeEach(() => {
     perms = new Set(['club.trainer']);
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['members', 'groups', 'memberPhotoBlob']);
+    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['members', 'groups', 'memberPhotoBlob', 'linkState']);
+    api.linkState.and.resolveTo({ linked: false });
     api.memberPhotoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.groups.and.resolveTo([GROUP(1, 'Anfänger', 5), GROUP(2, 'Turnier', 2)]);
     api.members.and.resolveTo([
@@ -50,6 +51,25 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(el().textContent).toContain('Nicht freigeschaltet');
     expect(el().querySelector('a[href="/verknuepfen"]')).not.toBeNull();
     expect(api.members).not.toHaveBeenCalled();
+    expect(el().textContent).not.toContain('Rolle');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-c-start-linked)
+  it('ohne Club-Recht, aber schon verknüpft: Auskunft über die Verknüpfung statt der Code-Aufforderung', async () => {
+    perms.clear();
+    api.linkState.and.resolveTo({ linked: true, firstName: 'Lena' });
+    await create();
+    expect(el().textContent).toContain('Hallo Lena!');
+    expect(el().textContent).toContain('mit dem Karteiblatt von Lena verknüpft');
+    expect(el().textContent).not.toContain('Nicht freigeschaltet');
+    expect(el().textContent).not.toContain('Code bekommen');
+    expect(el().querySelector('a[href="/verknuepfen"]')!.textContent).toContain('Verknüpfung ansehen');
+    expect(api.members).not.toHaveBeenCalled();
+  });
+
+  it('mit Club-Recht wird der Verknüpfungsstand nicht abgefragt', async () => {
+    await create();
+    expect(api.linkState).not.toHaveBeenCalled();
   });
 
   it('zeigt die Kartei in Registern; die erste TELEFONNUMMER steht mit ihrem Hinweis zum Antippen in der Zeile', async () => {

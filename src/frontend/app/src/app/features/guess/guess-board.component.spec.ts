@@ -426,6 +426,24 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.boardFen).withContext('bleibt dort stehen').toContain('2B1P3');
   });
 
+  // UI-Sweep 2026-10-11 (r2-rg-guess-start): beim Durchsehen kein „am Zug", sondern Hinweis + Knopf zur Aufgabe.
+  it('zeigt beim Durchsehen der Eroeffnung den Weg zur Aufgabe statt „am Zug"', () => {
+    const fixture = TestBed.createComponent(GuessBoardComponent);
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/guess-sessions/3').flush(base());
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.browse-actions')).withContext('Hinweis beim Durchsehen').not.toBeNull();
+    expect(fixture.componentInstance.preMoves).toBe(4);           // Aufgabe bei Zug 5
+    expect(el.querySelector('.actions:not(.browse-actions)')).withContext('kein „am Zug"/Passen').toBeNull();
+
+    (el.querySelector('.to-task') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.browseIndex).toBeNull();
+    expect(el.querySelector('.browse-actions')).toBeNull();
+    expect(el.querySelector('.actions')).withContext('jetzt die Aufgabe').not.toBeNull();
+  });
+
   it('die Pfeile fuehren nie ueber die Aufgabe hinaus', () => {
     // Der Verlauf endet beim Zug VOR der Aufgabe — ein Schritt weiter waere die Loesung.
     const c = loadAtStart();

@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Sayfa başına öğe:",
+      "firstPage": "İlk sayfa",
+      "previousPage": "Önceki sayfa",
+      "nextPage": "Sonraki sayfa",
+      "lastPage": "Son sayfa",
+      "range": "{{start}}–{{end}} / {{length}}",
+      "rangeEmpty": "0 / {{length}}"
+    },
     "moreActions": "Diğer işlemler",
     "save": "Kaydet",
     "cancel": "İptal",
@@ -243,7 +252,6 @@
       "title": "Gizlilik Politikası",
       "intro": "RookHub bir satranç antrenman platformudur (problemler, sonsuz mod, kurslar, repertuarlar). Bu politika, kişisel verilerin GDPR kapsamında nasıl işlendiğini açıklar.",
       "controllerTitle": "Veri sorumlusu",
-      "controller": "Veri işlemenin sorumlusu, künye bilgilerinde belirtilen işletmecedir",
       "dataTitle": "Hangi verileri işliyoruz",
       "dataIntro": "Kullanımınıza bağlı olarak şu verileri işliyoruz:",
       "dataAccount": "Hesap verileri: kullanıcı adı, e-posta adresi, şifre (yalnızca özet olarak saklanır).",

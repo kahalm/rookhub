@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -160,9 +160,9 @@ export class ShowTokenDialogComponent implements OnDestroy {
     <div class="tokens-section">
       <h4>{{ 'profile.tokens.title' | translate }}</h4>
       <p class="tokens-hint">{{ 'profile.tokens.subtitle' | translate }}</p>
-        @if (loading) {
+        @if (loading()) {
           <p>{{ 'common.loading' | translate }}</p>
-        } @else if (tokens.length === 0) {
+        } @else if (tokens().length === 0) {
           <p class="empty-hint">{{ 'profile.tokens.empty' | translate }}</p>
         } @else {
           <div class="tokens-scroll">
@@ -179,7 +179,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
               </tr>
             </thead>
             <tbody>
-              @for (t of tokens; track t.id) {
+              @for (t of tokens(); track t.id) {
                 <tr>
                   <td>{{ t.name }}</td>
                   <td><code>{{ t.prefix }}…</code></td>
@@ -215,8 +215,10 @@ export class ShowTokenDialogComponent implements OnDestroy {
   `]
 })
 export class ApiTokensComponent implements OnInit {
-  tokens: ApiToken[] = [];
-  loading = true;
+  // UI-Sweep 2026-10-11 (r2-rk-tokens-loading): Signale statt Felder — Angular 22 zeichnet nach einer
+  // fetch-Antwort sonst nicht neu, die Seite blieb dauerhaft auf „Wird geladen…“ (auch nach Anlegen/Widerrufen).
+  readonly tokens = signal<ApiToken[]>([]);
+  readonly loading = signal(true);
 
   constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
 
@@ -225,10 +227,10 @@ export class ApiTokensComponent implements OnInit {
   }
 
   load(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.http.get<ApiToken[]>('/api/profile/tokens').subscribe({
-      next: t => { this.tokens = t; this.loading = false; },
-      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('profile.tokens.loadFailed')); }
+      next: t => { this.tokens.set(t ?? []); this.loading.set(false); },
+      error: () => { this.loading.set(false); this.snackbar.info(this.translate.instant('profile.tokens.loadFailed')); }
     });
   }
 

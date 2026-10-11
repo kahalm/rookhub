@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Mục mỗi trang:",
+      "firstPage": "Trang đầu",
+      "previousPage": "Trang trước",
+      "nextPage": "Trang sau",
+      "lastPage": "Trang cuối",
+      "range": "{{start}}–{{end}} trên {{length}}",
+      "rangeEmpty": "0 trên {{length}}"
+    },
     "moreActions": "Thao tác khác",
     "save": "Lưu",
     "cancel": "Hủy",
@@ -243,7 +252,6 @@
       "title": "Chính sách bảo mật",
       "intro": "RookHub là nền tảng luyện tập cờ vua (bài tập, chế độ vô tận, khóa học, repertoire). Chính sách này giải thích cách xử lý dữ liệu cá nhân theo GDPR.",
       "controllerTitle": "Người kiểm soát dữ liệu",
-      "controller": "Người kiểm soát việc xử lý dữ liệu là nhà điều hành được đề cập trong phần ghi chú pháp lý",
       "dataTitle": "Dữ liệu chúng tôi xử lý",
       "dataIntro": "Tùy thuộc vào cách sử dụng, chúng tôi xử lý:",
       "dataAccount": "Dữ liệu tài khoản: tên người dùng, địa chỉ email, mật khẩu (chỉ lưu dưới dạng mã băm).",

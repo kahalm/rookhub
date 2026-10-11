@@ -48,18 +48,23 @@ public static class AttemptStats
         => total == 0 ? 0 : Math.Round((double)solved / total * 100, 1);
 
     /// <summary>200er-Rating-Bänder aus den (Bucket, Versuche, Gelöst)-Gruppen der Datenbank —
-    /// sortiert und auf die Grenzen <c>bucket*200 … +199</c> ausgerechnet. Der Bucket kommt aus
-    /// einer Ganzzahl-Division im SQL (<c>Rating / 200</c>), die Sortierung erst hier: die
-    /// Gruppierung selbst liefert keine verlässliche Reihenfolge.</summary>
+    /// sortiert und auf die Grenzen <c>bucket*200 … +199</c> ausgerechnet. Die Dienste gruppieren im
+    /// SQL nach der Bandgrenze <c>Rating - Rating % 200</c> und teilen erst im Speicher durch 200;
+    /// die Sortierung entsteht erst hier: die Gruppierung selbst liefert keine verlässliche Reihenfolge.
+    /// <para>UI-Sweep 2026-10-11 (r2-rp-ratingbands): gleiche Buckets werden zusätzlich ZUSAMMENGEFASST.
+    /// <c>Rating / 200</c> war auf MariaDB eine Dezimaldivision — eine Gruppe je Rating, nach dem
+    /// Kürzen auf int lauter gleich beschriftete Säulen. Kommt eine Gruppierung wieder zu fein an,
+    /// entstehen so trotzdem keine doppelten Bänder.</para></summary>
     public static List<RatingBandStatDto> RatingBands(IEnumerable<(int Bucket, int Attempts, int Solved)> buckets)
         => buckets
-            .OrderBy(b => b.Bucket)
-            .Select(b => new RatingBandStatDto
+            .GroupBy(b => b.Bucket)
+            .OrderBy(g => g.Key)
+            .Select(g => new RatingBandStatDto
             {
-                From = b.Bucket * 200,
-                To = b.Bucket * 200 + 199,
-                Attempts = b.Attempts,
-                Solved = b.Solved,
+                From = g.Key * 200,
+                To = g.Key * 200 + 199,
+                Attempts = g.Sum(b => b.Attempts),
+                Solved = g.Sum(b => b.Solved),
             })
             .ToList();
 

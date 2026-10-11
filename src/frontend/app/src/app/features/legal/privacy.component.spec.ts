@@ -24,10 +24,15 @@ describe('PrivacyComponent', () => {
   const hrefs = (el: HTMLElement) =>
     Array.from(el.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
 
-  it('RookHub: verweist auf das Impressum, Kontakt aus OPERATOR', () => {
+  // UI-Sweep 2026-10-11 (r2-rk-privacy-operator): der Verantwortliche wurde nur als „der im Impressum genannte Betreiber"
+  // bezeichnet — das Impressum nennt aber nur die Kontaktadresse. Jetzt steht er hier mit der Adresse der Oberfläche.
+  it('RookHub: nennt den Verantwortlichen über die Kontaktadresse statt aufs Impressum zu verweisen', () => {
     const el = render();
-    expect(hrefs(el)).toContain('/impressum');
-    expect(hrefs(el)).toContain('mailto:' + OPERATOR.email);
+    const controller = el.querySelector('#privacy-controller')!.nextElementSibling as HTMLElement;
+    expect(controller.textContent).toContain('legal.privacy.controllerNamed');
+    expect(controller.querySelector('a')!.getAttribute('href')).toBe('mailto:' + OPERATOR.email);
+    expect(el.textContent).not.toContain('legal.privacy.controller ');
+    expect(hrefs(el)).not.toContain('/impressum');
   });
 
   it('RookHub: Erwachsenen-Einleitung, Ruecklink zur Anmeldung', () => {
@@ -67,7 +72,7 @@ describe('PrivacyComponent', () => {
       'leagueRetention', 'leagueObjection'].map(k => 'legal.privacy.' + k);
     const league = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
     for (const k of keys) expect(league.textContent).withContext(k).toContain(k);
-    expect(hrefs(league)).toContain('/impressum');
+    expect(league.textContent).toContain('legal.privacy.controllerNamed');
     TestBed.resetTestingModule();
     const rookhub = render();
     expect(rookhub.textContent).not.toContain('legal.privacy.leagueTitle');

@@ -303,8 +303,12 @@ export class LeaguePageComponent implements OnInit {
     const firstOpen = L.rounds.find(r => r.open) ?? L.rounds[L.rounds.length - 1];
     const round = L.rounds.some(r => r.round === wantRound) ? wantRound : firstOpen?.round ?? 1;
     // Vorauswahl: die gemerkte Mannschaft, sonst die erste des eigenen Vereins (0.698.0: TeamPrefix statt fest „Schwaz")
+    // UI-Sweep 2026-10-11 (r2-l-default-verein): zuerst die eigenen Mannschaften laut Server — der Präfix allein fand
+    // „Schachklub Schwaz" (1. Bundesliga) nicht, und vorgewählt war der alphabetisch erste Verein.
     const prefix = this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix;
-    const team = L.teams.includes(wantTeam) ? wantTeam : L.teams.find(t => ownsTeam(prefix, t)) ?? L.teams[0] ?? '';
+    const own = this.index()?.leagues.find(l => l.tnr === tnr)?.own ?? [];
+    const team = L.teams.includes(wantTeam) ? wantTeam
+      : L.teams.find(t => own.includes(t)) ?? L.teams.find(t => ownsTeam(prefix, t)) ?? L.teams[0] ?? '';
     this.round.set(round);
     this.team.set(team);
     this.league.set(L);

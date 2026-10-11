@@ -212,4 +212,19 @@ describe('OpeningExplorerComponent', () => {
 
     expect(fixture.componentInstance.expanded()).toBeNull();
   }));
+
+  // UI-Sweep 2026-10-11 (r2-rg-explorer-cols): Anteil und Partien als eigene Spalten, Partien kurz.
+  it('shows share and games in separate columns and shortens large counts', fakeAsync(() => {
+    setup();
+    setFen(START);
+    tick(300);
+    fixture.detectChanges();
+    const row: HTMLElement = fixture.nativeElement.querySelector('tbody tr');
+    expect(row.querySelector('td.share-col')).not.toBeNull();
+    expect(row.querySelector('td.count-col')).not.toBeNull();
+    const c = fixture.componentInstance;
+    expect(c.compact(950)).toBe((950).toLocaleString());
+    expect(c.compact(369_974)).withContext('ohne Übersetzung der englische Schlüssel').toBe('analysis.explorer.thousands');
+    expect(c.compact(1_700_000)).not.toContain('1.700.000');
+  }));
 });

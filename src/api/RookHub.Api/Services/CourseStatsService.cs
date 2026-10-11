@@ -107,12 +107,14 @@ public class CourseStatsService
             .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved }));
 
         // Rating-Bänder (200er-Schritte) — server-seitig, nur Versuche mit gesetztem BookRating.
+        // UI-Sweep 2026-10-11 (r2-rp-ratingbands): Gruppe = Bandgrenze `Rating - Rating % 200` (Ganzzahl);
+        // `Rating / 200` wurde auf MariaDB zur Dezimaldivision → ein Band je Rating.
         var ratingBands = AttemptStats.RatingBands((await _db.CourseAttempts
             .Where(a => a.UserId == userId && a.BookPuzzle!.BookRating != null)
-            .GroupBy(a => a.BookPuzzle!.BookRating!.Value / 200)
-            .Select(g => new { Bucket = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
+            .GroupBy(a => a.BookPuzzle!.BookRating!.Value - a.BookPuzzle!.BookRating!.Value % 200)
+            .Select(g => new { From = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
             .ToListAsync())
-            .Select(b => (b.Bucket, b.Attempts, b.Solved)));
+            .Select(b => (b.From / 200, b.Attempts, b.Solved)));
 
         // Aktivität pro Tag (letzte 365 Tage) — server-seitig via GROUP BY CAST(AttemptedAt AS date).
         var since = AttemptStats.ActivityWindowStart(DateTime.UtcNow);

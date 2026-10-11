@@ -8,6 +8,7 @@ import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
 import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
+import { splitCourseText } from './course-text';
 
 /** Naechste ungeloeste Linie ab `from` (einschliesslich), am Ende von vorn — `-1`, wenn alle geloest sind. */
 export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number>, from: number): number {
@@ -48,7 +49,14 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
           <div kidTask class="line-text">
             @if (line.chapterLabel ?? line.chapter; as chapter) { <p class="chapter">{{ chapter }}</p> }
             @if (line.titleLabel ?? line.title; as heading) { <h2 class="line-title">{{ heading }}</h2> }
-            @if (line.comment) { <p class="intro">{{ line.comment }}</p> }
+            <!-- UI-Sweep 2026-10-11 (r2-k-course-heading): Zwischenüberschriften aus dem Kommentar fett absetzen -->
+            @if (introBlocks().length) {
+              <div class="intro">
+                @for (b of introBlocks(); track $index) {
+                  @if (b.kind === 'h') { <p class="hl">{{ b.text }}</p> } @else { <p>{{ b.text }}</p> }
+                }
+              </div>
+            }
           </div>
         </kid-puzzle>
       }
@@ -79,6 +87,10 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--kid-card);
       font-size: 1.1rem; line-height: 1.45; white-space: pre-line; max-height: 40vh; overflow-y: auto;
     }
+    .intro p { margin: 0; }
+    .intro p + p { margin-top: 8px; }
+    .intro .hl { font-weight: 800; color: var(--kid-title); }
+    .intro .hl + p { margin-top: 2px; }
     @media ${KID_STACKED} {
       .chapter, .line-title { text-align: center; }
       .intro { max-height: 30vh; }
@@ -113,6 +125,8 @@ export class CoursePlayComponent {
 
   readonly title = computed(() => this.lines()[0]?.bookTitle ?? null);
   readonly current = computed(() => this.lines()[this.index()] ?? null);
+  /** Einleitung der Linie in Überschriften und Absätze zerlegt (UI-Sweep 2026-10-11, r2-k-course-heading). */
+  readonly introBlocks = computed(() => splitCourseText(this.current()?.comment));
   readonly solvedCount = computed(() => {
     const solved = new Set(this.progress.course(this.bookId()).solved);
     return this.lines().filter(l => solved.has(l.id)).length;

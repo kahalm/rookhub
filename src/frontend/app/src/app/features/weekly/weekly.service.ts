@@ -30,7 +30,8 @@ export interface WeeklyPlay {
 }
 
 /** Per-User-Fortschritt eines Wochenposts. */
-/** Spielweise eines Wochenpost-Puzzles (Vertrag zum Server, siehe weekly-mode-dialog.component). */
+/** Spielweise eines Wochenpost-Puzzles. Die Zeichenketten sind der Vertrag zum Server (`WeeklyPostAttempt.Mode`) —
+ *  nicht umbenennen ohne Migration. Gefragt wird über den gemeinsamen Spielweisen-Dialog (`SolveModeService.openDialog`). */
 export type WeeklyMode = 'training' | 'easy';
 
 export interface WeeklyProgress {

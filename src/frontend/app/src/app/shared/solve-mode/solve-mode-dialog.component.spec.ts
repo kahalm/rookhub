@@ -53,4 +53,14 @@ describe('SolveModeDialogComponent', () => {
       expect(c.querySelector('.sm-desc')).not.toBeNull();
     });
   });
+
+  // UI-Sweep 2026-10-11 (r2-rk-weekly-mode-dialog): der Wochenpost bringt Titel und Hinweis mit, die Kacheln bleiben gleich.
+  it('nimmt eigenen Titel und Hinweis, Kachel-Texte bleiben die gemeinsamen', () => {
+    const { el } = render({ title: 'Wochenpost-Titel', intro: 'Gilt für diesen Wochenpost.', hint: 'Ab dem nächsten Puzzle.' });
+    expect(el.querySelector('h2')!.textContent).toBe('Wochenpost-Titel');
+    expect(el.querySelector('.sm-intro')!.textContent).toBe('Gilt für diesen Wochenpost.');
+    expect(el.querySelector('.sm-hint')!.textContent).toBe('Ab dem nächsten Puzzle.');
+    expect(choices(el)[0].querySelector('.sm-desc')!.textContent).toBe('solveMode.trainingDesc');
+    expect(choices(el)[1].querySelector('.sm-desc')!.textContent).toBe('solveMode.easyDesc');
+  });
 });

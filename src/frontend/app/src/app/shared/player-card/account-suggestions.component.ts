@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '@lh/core/league-api.service';
-import { AccountSuggestion } from '@lh/core/league.models';
+import { AccountSuggestion, AccountSuggestionTwin } from '@lh/core/league.models';
 import { HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from './account-format';
 import { AccountChecksComponent } from './account-checks.component';
 
@@ -15,6 +15,28 @@ export function lastActiveText(iso: string | null): string | null {
 /** Was die Seite unter einem Vorschlag verrät: Profilname, Ort, zuletzt aktiv. */
 export function suggestionFacts(s: AccountSuggestion): string {
   return [s.profileName ? `Profil: ${s.profileName}` : null, s.location, lastActiveText(s.lastActive)].filter(x => !!x).join(', ');
+}
+
+/** UI-Sweep 2026-10-11 (r2-l-same-account): der Verein aus dem Hinweis eines Team-Vorschlags („spielte für „…““ bzw.
+ *  „Mitglied im Lichess-Team „…““), sonst `null` — dieselbe Regel wie `LeagueTeamScout.OriginClub` am Server. */
+export function originClub(evidence: string | null | undefined): string | null {
+  const m = /(?:spielte für|Mitglied im Lichess-Team) „([^“]+)“/.exec(evidence ?? '');
+  return m ? m[1] : null;
+}
+
+/** „Schmidt, Hans (SC Garching 4)" — Name und Mannschaft eines anderen Spielers desselben Kontos. */
+export function twinText(t: AccountSuggestionTwin): string {
+  return `${t.name ?? t.fide}${t.team ? ` (${t.team})` : ''}`;
+}
+
+/** UI-Sweep 2026-10-11 (r2-l-same-account): passt der Verein des Kontos zu einem ANDEREN Spieler, aber nicht zu diesem —
+ *  „spielte für „SC Garching 1980 e.V.“ – passt eher zu Schmidt, Hans (SC Garching 4)". Sonst `null`. */
+export function betterFitText(s: AccountSuggestion): string | null {
+  if (s.clubFits || !s.alsoFor?.length) return null;
+  const fits = s.alsoFor.filter(t => t.clubFits);
+  if (!fits.length) return null;
+  const club = originClub(s.evidence);
+  return `${club ? `spielte für „${club}“ – ` : ''}passt eher zu ${fits.map(twinText).join(', ')}`;
 }
 
 /**
@@ -45,6 +67,12 @@ export function suggestionFacts(s: AccountSuggestion): string {
               @if (s.team) { <span class="muted small">{{ s.team }}</span> }
             }
           </div>
+          @if (s.alsoFor?.length) {
+            <!-- UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto steht auch bei anderen Spielern — wer es hier
+                 übernimmt, verwirft die anderen (ein Konto gehört einem Menschen). -->
+            <p class="also-for" [class.fits]="s.clubFits">auch vorgeschlagen für: {{ twins(s) }}</p>
+            @if (betterFit(s); as b) { <p class="small muted sugg-better">{{ b }}</p> }
+          }
           <p class="small sugg-evidence">{{ s.evidence }}</p>
           @if (checksOpen().has(s.id)) { <lh-account-checks kind="suggestion" [id]="s.id" /> }
           @if (facts(s); as f) { <p class="small muted sugg-facts">{{ f }}</p> }
@@ -77,6 +105,8 @@ export class AccountSuggestionsComponent {
   private readonly api = inject(LeagueApiService);
   readonly label = siteLabel;
   readonly facts = suggestionFacts;
+  readonly betterFit = betterFitText;
+  twins(s: AccountSuggestion): string { return (s.alsoFor ?? []).map(twinText).join(', '); }
   readonly hiddenLabel = HIDDEN_ACCOUNT;
   readonly minorLabel = MINOR_ACCOUNT;
   readonly minorTitle = MINOR_ACCOUNT_TITLE;
@@ -94,7 +124,9 @@ export class AccountSuggestionsComponent {
   async accept(s: AccountSuggestion, sure: boolean): Promise<void> {
     await this.run(s, async () => {
       await this.api.acceptSuggestion(s.id, sure);
-      return sure ? 'Als gesichert übernommen.' : 'Als unsicher übernommen.';
+      const note = sure ? 'Als gesichert übernommen.' : 'Als unsicher übernommen.';
+      // UI-Sweep 2026-10-11 (r2-l-same-account): der Server verwirft die Vorschläge desselben Kontos bei anderen Spielern.
+      return s.alsoFor?.length ? `${note} Vorschlag für ${this.twins(s)} verworfen — gehört jemand anderem.` : note;
     }, true);
   }
 

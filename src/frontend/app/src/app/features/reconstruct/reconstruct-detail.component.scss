@@ -123,6 +123,16 @@
   /* Eine lange Zugfolge oder FEN darf die Seite nicht breiter machen. */
   code { overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
   .note { font-size: 0.9rem; }
+
+  /* UI-Sweep 2026-10-11 (r2-rg-recon-fen): Mini-Brett + Seite am Zug, FEN eingeklappt. */
+  .pos-preview { display: flex; gap: 0.75rem; align-items: flex-start; }
+  .pos-board { width: 96px; height: 96px; flex: 0 0 96px; display: block; }
+  .pos-info { display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; min-width: 0; }
+  .pos-copy { margin-left: -12px; }
+  .pos-fen { font-size: 0.75rem; max-width: 100%;
+    summary { cursor: pointer; color: color-mix(in srgb, currentColor 65%, transparent); }
+    code { font-size: 0.75rem; }
+  }
 }
 
 .editor {

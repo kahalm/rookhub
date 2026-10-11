@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Itens por página:",
+      "firstPage": "Primeira página",
+      "previousPage": "Página anterior",
+      "nextPage": "Próxima página",
+      "lastPage": "Última página",
+      "range": "{{start}}–{{end}} de {{length}}",
+      "rangeEmpty": "0 de {{length}}"
+    },
     "moreActions": "Mais ações",
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -243,7 +252,6 @@
       "title": "Política de Privacidade",
       "intro": "O RookHub é uma plataforma de treino de xadrez (puzzles, modo sem fim, cursos, repertórios). Esta política explica como os dados pessoais são tratados ao abrigo do RGPD.",
       "controllerTitle": "Responsável pelo tratamento",
-      "controller": "O responsável pelo tratamento de dados é o operador indicado no aviso legal",
       "dataTitle": "Que dados tratamos",
       "dataIntro": "Dependendo da utilização, tratamos:",
       "dataAccount": "Dados de conta: nome de utilizador, endereço de email, palavra-passe (guardada apenas como hash).",

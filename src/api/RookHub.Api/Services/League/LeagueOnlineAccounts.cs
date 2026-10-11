@@ -267,14 +267,31 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
             .Select(a => $"{a.FideId}|{a.Site}|{a.UserName.ToLowerInvariant()}").ToHashSet();
         list = list.Where(x => !taken.Contains($"{x.FideId}|{x.Site}|{x.UserName.ToLowerInvariant()}")).ToList();
 
+        // UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto bei MEHREREN Spielern („Lichess: Shape62" für „Schmidt, Hans"
+        // und „Schmidt, Hans Christoph") — die anderen offenen Vorschläge dieses Kontos, auch wenn nur EIN Spieler gefragt ist.
+        var users = list.Select(x => x.UserName.ToLower()).Distinct().ToList();
+        var twinQ = db.LeagueAccountSuggestions.AsNoTracking()
+            .Where(x => x.Status == LeagueSuggestionStatus.Open && users.Contains(x.UserName.ToLower()));
+        if (!prep) twinQ = twinQ.Where(x => db.LeaguePlayers.Any(p => p.FideId == x.FideId) || db.LeaguePlayerProfiles.Any(p => p.FideId == x.FideId));
+        var twins = users.Count == 0 ? new List<LeagueAccountSuggestion>() : await twinQ.ToListAsync(ct);
+        fides = fides.Concat(twins.Select(x => x.FideId)).Distinct().ToList();
+
         var names = (await (from p in db.LeaguePlayers.AsNoTracking()
                             join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
                             where p.FideId != null && fides.Contains(p.FideId)
                             orderby t.Season descending
-                            select new { p.FideId, p.Name, p.Team }).ToListAsync(ct))
-            .GroupBy(x => x.FideId!).ToDictionary(g => g.Key, g => (g.First().Name, (string?)g.First().Team));
+                            select new { p.FideId, p.Name, p.Team, t.Source }).ToListAsync(ct))
+            .GroupBy(x => x.FideId!).ToDictionary(g => g.Key, g => (g.First().Name, (string?)g.First().Team, Region: LeagueRegions.Of(g.First().Source)));
         var hidden = await LeagueHiddenAccounts.FidesAsync(db, fides, ct);
-        var res = new JsonObject { ["items"] = new JsonArray(list.Select(x => (JsonNode)SuggestionJson(x, names, hidden.Contains(x.FideId), reveal)).ToArray()) };
+        var shown = names.ToDictionary(kv => kv.Key, kv => (kv.Value.Name, kv.Value.Item2));
+        var items = new JsonArray();
+        foreach (var x in list)
+        {
+            var o = SuggestionJson(x, shown, hidden.Contains(x.FideId), reveal);
+            if (reveal || !hidden.Contains(x.FideId)) AddTwins(o, x);
+            items.Add(o);
+        }
+        var res = new JsonObject { ["items"] = items };
         if (string.IsNullOrEmpty(fide))
         {
             var tnrs = await LeagueOnlineRegions.CurrentSeasonTnrsAsync(db, ct);           // je Region die laufende Saison (0.712.0)
@@ -286,6 +303,27 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
             res["scanned"] = await db.LeagueAccountScans.AsNoTracking().CountAsync(x => current.Contains(x.FideId) && x.ScannedAt >= due, ct);
         }
         return res;
+
+        // Je Vorschlag: „auch vorgeschlagen für" (andere Spieler, ohne verborgene Minderjährige) und ob der Verein des Kontos
+        // (Team-Suche: „spielte für …") zur Mannschaft des Spielers passt — dann zeigt die Liste, zu wem es eher gehört.
+        bool Fits(LeagueAccountSuggestion s) => names.TryGetValue(s.FideId, out var n)
+            && LeagueTeamScout.SameClub(n.Item2, LeagueTeamScout.OriginClub(s.Evidence), n.Region);
+        void AddTwins(JsonObject o, LeagueAccountSuggestion x)
+        {
+            var others = twins.Where(t => t.FideId != x.FideId && t.Site == x.Site
+                    && string.Equals(t.UserName, x.UserName, StringComparison.OrdinalIgnoreCase)
+                    && (reveal || !hidden.Contains(t.FideId)))
+                .DistinctBy(t => t.FideId).OrderBy(t => t.FideId, StringComparer.Ordinal).ToList();
+            if (others.Count == 0) return;
+            o["clubFits"] = Fits(x);
+            o["alsoFor"] = new JsonArray(others.Select(t => (JsonNode)new JsonObject
+            {
+                ["id"] = t.Id, ["fide"] = t.FideId,
+                ["name"] = names.TryGetValue(t.FideId, out var n) ? n.Name : null,
+                ["team"] = names.TryGetValue(t.FideId, out var n2) ? n2.Item2 : null,
+                ["clubFits"] = Fits(t),
+            }).ToArray());
+        }
     }
 
     /// <summary>Vorschlag übernehmen → ein Konto („gesichert" oder „unsicher"), die Hinweise werden der Kommentar.</summary>
@@ -299,6 +337,20 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         {
             db.LeagueAccountSuggestions.Remove(x);                           // das Konto gibt es schon — Vorschlag erledigt
             await db.SaveChangesAsync(ct);
+        }
+        // UI-Sweep 2026-10-11 (r2-l-same-account): ein Konto gehört EINEM Menschen — die offenen Vorschläge desselben Kontos bei
+        // anderen Spielern sind damit verworfen („gehört jemand anderem"; sie kommen bei der nächsten Suche nicht wieder).
+        if (r.Account is not null)
+        {
+            var user = x.UserName.ToLower();
+            var others = await db.LeagueAccountSuggestions.Where(s => s.Status == LeagueSuggestionStatus.Open && s.FideId != x.FideId
+                && s.Site == x.Site && s.UserName.ToLower() == user).ToListAsync(ct);
+            foreach (var o in others)
+            {
+                o.Status = LeagueSuggestionStatus.Rejected;
+                o.DecidedAt = DateTime.UtcNow;
+            }
+            if (others.Count > 0) await db.SaveChangesAsync(ct);
         }
         return r;
     }

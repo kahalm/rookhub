@@ -83,6 +83,39 @@ describe('ApiTokensComponent', () => {
     http.verify();
   });
 
+  // UI-Sweep 2026-10-11 (r2-rk-tokens-loading): nach der HTTP-Antwort stand dauerhaft „Wird geladen…“ —
+  // Angular 22 zeichnet ohne Signal/Markierung nach einer fetch-Antwort nicht neu. Hier OHNE händisches
+  // detectChanges nach dem flush: nur der Scheduler darf die Liste bzw. den Leerhinweis zeichnen.
+  it('renders the empty hint and the token table after the response without a manual detectChanges', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ApiTokensComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ApiTokensComponent);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('common.loading');
+
+    http.expectOne('/api/profile/tokens').flush([]);
+    await fixture.whenStable();
+    expect(el.textContent).not.toContain('common.loading');
+    expect(el.querySelector('.empty-hint')?.textContent).toContain('profile.tokens.empty');
+
+    fixture.componentInstance.load();
+    http.expectOne('/api/profile/tokens').flush([
+      { id: 7, name: 'Laptop', prefix: 'rkh_a1b2', scope: 'extension', createdAt: '2026-10-01T10:00:00Z', lastUsedAt: null, expiresAt: null },
+    ]);
+    await fixture.whenStable();
+    const rows = el.querySelectorAll('.tokens-table tbody tr');
+    expect(rows.length).toBe(1);
+    expect(rows[0].textContent).toContain('Laptop');
+    expect(el.querySelector('.empty-hint')).toBeNull();
+    http.verify();
+  });
+
   // Abschnitt im Muster der übrigen Profil-Abschnitte: Überschrift + Erklärsatz, keine eigene Karte.
   it('renders as a plain profile section (no own card), button below the hint', async () => {
     await TestBed.configureTestingModule({

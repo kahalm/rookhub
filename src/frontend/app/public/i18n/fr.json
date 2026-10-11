@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Éléments par page :",
+      "firstPage": "Première page",
+      "previousPage": "Page précédente",
+      "nextPage": "Page suivante",
+      "lastPage": "Dernière page",
+      "range": "{{start}}–{{end}} sur {{length}}",
+      "rangeEmpty": "0 sur {{length}}"
+    },
     "moreActions": "Plus d'actions",
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -243,7 +252,6 @@
       "title": "Politique de confidentialité",
       "intro": "RookHub est une plateforme d'entraînement aux échecs (puzzles, mode infini, cours, répertoires). Cette politique explique comment les données personnelles sont traitées conformément au RGPD.",
       "controllerTitle": "Responsable du traitement",
-      "controller": "Le responsable du traitement des données est l'opérateur désigné dans les mentions légales",
       "dataTitle": "Données traitées",
       "dataIntro": "Selon votre utilisation, nous traitons :",
       "dataAccount": "Données de compte : nom d'utilisateur, adresse e-mail, mot de passe (stocké uniquement sous forme de hachage).",

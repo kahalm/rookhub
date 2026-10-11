@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Elementów na stronę:",
+      "firstPage": "Pierwsza strona",
+      "previousPage": "Poprzednia strona",
+      "nextPage": "Następna strona",
+      "lastPage": "Ostatnia strona",
+      "range": "{{start}}–{{end}} z {{length}}",
+      "rangeEmpty": "0 z {{length}}"
+    },
     "moreActions": "Więcej akcji",
     "save": "Zapisz",
     "cancel": "Anuluj",
@@ -243,7 +252,6 @@
       "title": "Polityka prywatności",
       "intro": "RookHub to platforma treningowa do szachów (zadania, tryb nieskończony, kursy, repertuary). Niniejsza polityka wyjaśnia, jak dane osobowe są przetwarzane zgodnie z RODO.",
       "controllerTitle": "Administrator danych",
-      "controller": "Administratorem danych jest operator wskazany w stopce redakcyjnej",
       "dataTitle": "Jakie dane przetwarzamy",
       "dataIntro": "W zależności od sposobu korzystania przetwarzamy:",
       "dataAccount": "Dane konta: nazwa użytkownika, adres e-mail, hasło (przechowywane wyłącznie jako skrót).",

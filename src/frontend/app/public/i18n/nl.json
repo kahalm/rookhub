@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Items per pagina:",
+      "firstPage": "Eerste pagina",
+      "previousPage": "Vorige pagina",
+      "nextPage": "Volgende pagina",
+      "lastPage": "Laatste pagina",
+      "range": "{{start}}–{{end}} van {{length}}",
+      "rangeEmpty": "0 van {{length}}"
+    },
     "moreActions": "Meer acties",
     "save": "Opslaan",
     "cancel": "Annuleren",
@@ -243,7 +252,6 @@
       "title": "Privacybeleid",
       "intro": "RookHub is een schaaktrainingsplatform (puzzels, eindeloze modus, cursussen, repertoires). Dit beleid legt uit hoe persoonsgegevens worden verwerkt onder de AVG.",
       "controllerTitle": "Verwerkingsverantwoordelijke",
-      "controller": "De verwerkingsverantwoordelijke is de exploitant vermeld in het impressum",
       "dataTitle": "Welke gegevens wij verwerken",
       "dataIntro": "Afhankelijk van uw gebruik verwerken wij:",
       "dataAccount": "Accountgegevens: gebruikersnaam, e-mailadres, wachtwoord (alleen als hash opgeslagen).",

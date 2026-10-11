@@ -752,11 +752,11 @@ public sealed class LeagueClubService
             .ToListAsync(ct);
         // Die Paarung jeder Kandidatin, wie sie HEUTE steht — eine tote Id zählt wie keine Zuordnung (darf nicht als „andere
         // feste Paarung" die Archivierung verhindern).
-        var live = await LeagueGameLinks.ResolveAsync(_db, cands, ct, _log);
-        var mine = game.LeagueGameId;
-        var old = cands.Where(c => live.GetValueOrDefault(c.Id)?.Id is { } cid
-                ? mine != null ? cid == mine : SamePlayers(c, game) && SamePrefix(SansOf(c.Pgn), sans)
-                : SamePlayers(c, game) && SamePrefix(SansOf(c.Pgn), sans)).ToList();
+        // UI-Sweep 2026-10-11 (r2-l-dup-game): auch die eigene Paarung aufgelöst (eine tote Id ist keine feste Paarung) — die
+        // Regel steht in SameVersion und gilt gleich für den Hinweis „möglicherweise doppelt" in der Liste.
+        var live = await LeagueGameLinks.ResolveAsync(_db, cands.Append(game), ct, _log);
+        var mine = live.GetValueOrDefault(game.Id)?.Id;
+        var old = cands.Where(c => SameVersion(c, live.GetValueOrDefault(c.Id)?.Id, game, mine, SansOf(c.Pgn), sans)).ToList();
         if (old.Count == 0) return 0;
         foreach (var c in old)
         {
@@ -769,6 +769,55 @@ public sealed class LeagueClubService
         _log.LogInformation("Vereins-Datenbank: Partie {Id} ersetzt ältere Fassung(en) {Old} — archiviert", game.Id,
             string.Join(",", old.Select(c => c.Id)));
         return old.Count;
+    }
+
+    /// <summary>Ist <paramref name="c"/> eine Fassung derselben Partie wie <paramref name="game"/>? Beide fest zugeordnet
+    /// (<paramref name="cLive"/>/<paramref name="mine"/> = aufgelöste Paarung, <c>null</c> = keine): gleiche Paarung; sonst
+    /// gleiches Jahr, gleiche Spieler und gleicher Anfang (<see cref="SameGamePrefixPlies"/>).</summary>
+    private static bool SameVersion(LeagueClubGame c, int? cLive, LeagueClubGame game, int? mine,
+        IReadOnlyList<string> cSans, IReadOnlyList<string> sans) =>
+        cLive is { } cid && mine is { } m ? cid == m : SamePlayers(c, game) && SamePrefix(cSans, sans);
+
+    /// <summary>
+    /// UI-Sweep 2026-10-11 (r2-l-dup-game): „möglicherweise doppelt" — nur für Verwalter. Zwei Fassungen derselben Partie
+    /// (Regel wie <see cref="ArchiveOlderVersionsAsync"/>) blieben stehen, wenn sie vor 0.691.0 eingegeben wurden (Anlass
+    /// 153/164, für die das Archivieren gebaut wurde, nur greift es erst beim NÄCHSTEN Formular) oder über den PGN-Import
+    /// kamen (dort bewusst kein automatisches Archivieren: viele Partien, kein Mensch schaut hin). Je Zeile die Ids der
+    /// anderen lebenden Fassungen; der Verwalter entscheidet mit „ältere archivieren" (<see cref="ArchiveOlderAsync"/>).
+    /// </summary>
+    private async Task FillDuplicatesAsync(LeagueClub club, List<LeagueClubGame> rows, List<LeagueClubGameDto> items, CancellationToken ct)
+    {
+        if (rows.Count == 0) return;
+        var years = rows.Select(r => r.Year).Distinct().ToList();
+        var names = rows.SelectMany(r => new[] { r.White, r.Black }).Distinct().ToList();
+        var fides = rows.SelectMany(r => new[] { r.WhiteFide, r.WhiteRealFide, r.BlackFide, r.BlackRealFide })
+            .Where(f => f != null).Distinct().ToList();
+        var ids = rows.Select(r => r.Id).ToList();
+        var cands = await Games(club).AsNoTracking().Where(c => !ids.Contains(c.Id) && years.Contains(c.Year)
+                && (names.Contains(c.White) || fides.Contains(c.WhiteFide) || fides.Contains(c.WhiteRealFide))
+                && (names.Contains(c.Black) || fides.Contains(c.BlackFide) || fides.Contains(c.BlackRealFide)))
+            .ToListAsync(ct);
+        var all = rows.Concat(cands).ToList();   // auch zwei Fassungen auf derselben Seite
+        var live = await LeagueGameLinks.ResolveAsync(_db, all, ct, _log);
+        var sans = new Dictionary<int, IReadOnlyList<string>>();
+        IReadOnlyList<string> Sans(LeagueClubGame g) => sans.TryGetValue(g.Id, out var s) ? s : sans[g.Id] = SansOf(g.Pgn);
+        var byId = items.ToDictionary(i => i.Id);
+        foreach (var r in rows)
+        {
+            var mine = live.GetValueOrDefault(r.Id)?.Id;
+            var dups = all.Where(c => c.Id != r.Id && SameVersion(c, live.GetValueOrDefault(c.Id)?.Id, r, mine, Sans(c), Sans(r)))
+                .Select(c => c.Id).Distinct().OrderBy(x => x).ToList();
+            if (dups.Count > 0 && byId.TryGetValue(r.Id, out var dto)) dto.DuplicateIds = dups;
+        }
+    }
+
+    /// <summary>UI-Sweep 2026-10-11 (r2-l-dup-game): Verwalter archiviert die anderen Fassungen dieser Partie (die behält er) —
+    /// derselbe Weg wie nach einem Formular. <c>null</c> = gibt es (im Verein) nicht; sonst die Zahl der archivierten.</summary>
+    public async Task<int?> ArchiveOlderAsync(LeagueClub club, int id, CancellationToken ct = default)
+    {
+        var g = await Games(club).FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g == null) return null;
+        return await ArchiveOlderVersionsAsync(g, SansOf(g.Pgn), _now(), ct);
     }
 
     private static IReadOnlyList<string> SansOf(string pgn) =>
@@ -865,6 +914,7 @@ public sealed class LeagueClubService
         await FillAnalysisAsync(items, ct);
         await FillRosterAsync(club, items, ct);
         await FillPairingLabelsAsync(club, items, ct);
+        if (canManage) await FillDuplicatesAsync(club, rows, items, ct);   // UI-Sweep 2026-10-11 (r2-l-dup-game)
         return new LeagueClubListDto { Total = total, Page = page, PageSize = PageSize, Items = items };
     }
 

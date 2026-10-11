@@ -228,6 +228,39 @@ public class LeagueClubPairingTests : IDisposable
         Assert.Equal(4, await _db.LeagueClubGames.CountAsync());
     }
 
+    // UI-Sweep 2026-10-11 (r2-l-dup-game): zwei Fassungen derselben Partie aus der Zeit vor dem Archivieren (153/164: „Schwaz" –
+    // Schöler, ein Zug in der 56. Runde anders gelesen) — der Verwalter sieht „möglicherweise doppelt" und archiviert die ältere.
+    [Fact]
+    public async Task Liste_ZweiFassungenOhneArchiv_VerwalterSiehtDublette_undArchiviertDieAeltere()
+    {
+        await SeedAsync();
+        LeagueClubGame Row(string tail, string? realFide) => new()
+        {
+            ClubId = TestClubs.HomeId, Year = 2026, White = "Testdorf", Black = "Hengl, Philip", BlackFide = "222", WhiteRealFide = realFide,
+            Anonymized = true, Result = "1-0", Plies = Long.Length + 1, MovesHash = tail,
+            Pgn = $"[White \"Testdorf\"]\n[Black \"Hengl, Philip\"]\n[Result \"1-0\"]\n\n{Moves.Replace(" 1-0", "")} 12. {tail} 1-0\n",
+        };
+        var older = Row("Kb1", null);
+        var newer = Row("a3", "900");
+        var other = Row("h4", null);
+        other.Year = 2025;                                                     // anderes Jahr = andere Partie
+        _db.LeagueClubGames.AddRange(older, newer, other);
+        await _db.SaveChangesAsync();
+
+        var list = (await Club().ListAsync(TestClubs.Home, _user, true, null, null, 1, default)).Items.ToDictionary(i => i.Id);
+        Assert.Equal(new[] { newer.Id }, list[older.Id].DuplicateIds);
+        Assert.Equal(new[] { older.Id }, list[newer.Id].DuplicateIds);
+        Assert.Null(list[other.Id].DuplicateIds);
+        // ohne Verwalter-Recht kein Hinweis
+        Assert.All((await Club().ListAsync(TestClubs.Home, _user, false, null, null, 1, default)).Items, i => Assert.Null(i.DuplicateIds));
+
+        Assert.Equal(1, await Club().ArchiveOlderAsync(TestClubs.Home, newer.Id));
+        var archived = await _db.LeagueClubGames.IgnoreQueryFilters().AsNoTracking().SingleAsync(g => g.Id == older.Id);
+        Assert.Equal((Now, (int?)newer.Id), (archived.ArchivedAt, archived.ReplacedById));
+        Assert.All((await Club().ListAsync(TestClubs.Home, _user, true, null, null, 1, default)).Items, i => Assert.Null(i.DuplicateIds));
+        Assert.Null(await Club().ArchiveOlderAsync(TestClubs.Other, newer.Id));            // anderer Verein: nicht gefunden
+    }
+
     [Fact]
     public async Task Archivierte_bleibenFuerDenRueckbauEinesTeilenLinksErreichbar()
     {

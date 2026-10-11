@@ -152,11 +152,8 @@ public sealed class LeagueService
         var generated = views.Count > 0 ? views.Max(v => v.GeneratedAt) : (DateTime?)null;
         var shown = ts.Where(t => views.Any(v => v.Tnr == t.Tnr)).ToList();
         var total = shown.Count;
-        if (!all)
-        {
-            var own = await OwnLeaguesAsync(club, shown.Select(t => t.Tnr).ToList(), ct);
-            shown = shown.Where(t => own.Contains(t.Tnr)).ToList();
-        }
+        var own = await OwnTeamsAsync(club, shown.Select(t => t.Tnr).ToList(), ct);
+        if (!all) shown = shown.Where(t => own.ContainsKey(t.Tnr)).ToList();
         return new JsonObject
         {
             ["season"] = season,
@@ -167,14 +164,17 @@ public sealed class LeagueService
             ["leagues"] = new JsonArray(shown.Select(t => (JsonNode)new JsonObject
             {
                 ["tnr"] = t.Tnr, ["name"] = t.League + (string.IsNullOrEmpty(t.Grp) ? "" : $" {t.Grp}"),
+                // UI-Sweep 2026-10-11 (r2-l-default-verein): die eigenen Mannschaften nach DERSELBEN Regel wie der Filter —
+                // die Oberfläche wählte sonst über den Präfix vor und fand „Schachklub Schwaz" (1. BL) nicht.
+                ["own"] = new JsonArray((own.GetValueOrDefault(t.Tnr) ?? []).Select(n => (JsonNode)n!).ToArray()),
             }).ToArray()),
         };
     }
 
-    /// <summary>Die Ligen unter <paramref name="tnrs"/>, in denen der Verein eine Mannschaft hat — im Spielplan (Heim oder Gast)
-    /// oder in einer Meldeliste. Die Namen kommen als DISTINCT aus der Datenbank, verglichen wird im Speicher
+    /// <summary>Die Mannschaften des Vereins je Liga unter <paramref name="tnrs"/> — aus dem Spielplan (Heim oder Gast) oder einer
+    /// Meldeliste; Ligen ohne eigene Mannschaft fehlen. Die Namen kommen als DISTINCT aus der Datenbank, verglichen wird im Speicher
     /// (<see cref="LeagueClub.OwnsTeam"/> ist keine SQL-Bedingung).</summary>
-    private async Task<HashSet<int>> OwnLeaguesAsync(LeagueClub club, List<int> tnrs, CancellationToken ct)
+    private async Task<Dictionary<int, List<string>>> OwnTeamsAsync(LeagueClub club, List<int> tnrs, CancellationToken ct)
     {
         if (tnrs.Count == 0) return new();
         var home = await _db.LeagueMatches.AsNoTracking().Where(m => tnrs.Contains(m.Tnr)).Select(m => new { m.Tnr, Team = m.Home })
@@ -183,7 +183,8 @@ public sealed class LeagueService
             .Distinct().ToListAsync(ct);
         var roster = await _db.LeaguePlayers.AsNoTracking().Where(p => tnrs.Contains(p.Tnr)).Select(p => new { p.Tnr, p.Team })
             .Distinct().ToListAsync(ct);
-        return home.Concat(away).Concat(roster).Where(x => club.OwnsTeam(x.Team)).Select(x => x.Tnr).ToHashSet();
+        return home.Concat(away).Concat(roster).Where(x => club.OwnsTeam(x.Team))
+            .GroupBy(x => x.Tnr).ToDictionary(g => g.Key, g => g.Select(x => x.Team).Distinct().Order(StringComparer.Ordinal).ToList());
     }
 
     /// <summary>Was die Oberfläche vom Verein wissen darf (kein Mitglied, keine Gruppe).</summary>

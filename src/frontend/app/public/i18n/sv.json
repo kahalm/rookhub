@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Poster per sida:",
+      "firstPage": "Första sidan",
+      "previousPage": "Föregående sida",
+      "nextPage": "Nästa sida",
+      "lastPage": "Sista sidan",
+      "range": "{{start}}–{{end}} av {{length}}",
+      "rangeEmpty": "0 av {{length}}"
+    },
     "moreActions": "Fler åtgärder",
     "save": "Spara",
     "cancel": "Avbryt",
@@ -243,7 +252,6 @@
       "title": "Integritetspolicy",
       "intro": "RookHub är en schackträningsplattform (uppgifter, ändlöst läge, kurser, repertoarer). Denna policy förklarar hur personuppgifter behandlas enligt GDPR.",
       "controllerTitle": "Personuppgiftsansvarig",
-      "controller": "Personuppgiftsansvarig för databehandlingen är den operatör som anges i impressum",
       "dataTitle": "Vilka uppgifter vi behandlar",
       "dataIntro": "Beroende på din användning behandlar vi:",
       "dataAccount": "Kontouppgifter: användarnamn, e-postadress, lösenord (lagrat enbart som hash).",

@@ -86,7 +86,17 @@ describe('RepertoireLinesComponent chapterGroups reactivity', () => {
     const c = makeComponent();
     expect(c.lineTitle({ ...line('1) Weiß spielt ohne 2.d4', 0), white: '1A | 2.Sf3' })).toBe('1A | 2.Sf3');
     expect(c.lineTitle({ ...line('', 0), white: 'Carlsen', black: 'Nepo' })).toBe('Carlsen vs Nepo');
-    expect(c.lineTitle({ ...line('Kap', 0), white: '', black: 'Kap' })).toBe(' vs Kap');
+    expect(c.lineTitle({ ...line('Kap', 0), white: '', black: 'Kap' })).toBe('Kap');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-rg-rep-question): „?"-Kopfzeilen werden nicht als Name angezeigt.
+  it('„?" als Kapitel/Spieler zählt als fehlend', () => {
+    const c = makeComponent();
+    expect(c.lineTitle({ ...line('?', 0), white: '?', black: '?' })).withContext('→ „Linie n" in der Vorlage').toBe('');
+    expect(c.lineTitle({ ...line('?', 0), white: 'Italienisch', black: '?' })).toBe('Italienisch');
+    expect(c.chapterLabel('?')).toBe('');
+    expect(c.chapterLabel('Kap')).toBe('Kap');
+    expect(c.playersOf({ ...line('?', 0), white: '?', black: '?' })).toBe('');
   });
 
   it('lädt persistente Flashcard-Marks und toggelt optimistisch über den Service', () => {

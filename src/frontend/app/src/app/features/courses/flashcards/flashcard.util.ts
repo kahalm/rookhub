@@ -4,6 +4,7 @@ import { BookPuzzleDto } from '../../puzzles/puzzle.service';
 import { applyUci, tryLoadFen } from '../../puzzles/puzzle-move.util';
 import { parseMoveShapes } from '../../puzzles/move-shapes.util';
 import { labelOr } from '../course-language.util';
+import { pgnHeaderText } from '../../../shared/pgn-viewer/pgn-header.util';
 
 /**
  * Eine druckbare/lernbare Karteikarte. Zwei Spielarten:
@@ -160,8 +161,10 @@ export function buildRepertoireFlashcards(
     out.push({
       lineKey: lineKeyOf(sans),
       card: {
-        heading: game.headers['White']?.trim() || `#${g + 1}`,
-        chapter: game.headers['Black']?.trim() || null,
+        // UI-Sweep 2026-10-11 (r2-rg-rep-question): der PGN-Platzhalter gilt als fehlend - kein Fragezeichen
+        // als Titel und keins als Kapitel auf der Karte.
+        heading: pgnHeaderText(game.headers['White']) || `#${g + 1}`,
+        chapter: pgnHeaderText(game.headers['Black']) || null,
         frontFen: game.fens[game.fens.length - 1],
         orientation: lastMoveWhite ? 'white' : 'black',
         shapes: extractLastShapes(rawGames[g] || ''),

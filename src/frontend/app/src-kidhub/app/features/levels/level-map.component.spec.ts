@@ -43,6 +43,25 @@ describe('LevelMapComponent', () => {
     expect(el.querySelectorAll('.grid li').length).toBe(2);
   });
 
+  /** UI-Sweep 2026-10-11 (r2-k-level-run): eine angefangene Stufe sah aus wie eine nie begonnene. */
+  it('angefangene Stufe: Balken und „Aufgabe n von m" statt leerer Sterne; fertige und neue Stufen zeigen Sterne', () => {
+    localStorage.setItem(KEY, JSON.stringify({ levels: { '1': { stars: 3, runIndex: 0, runMistakes: 0 },
+      '2': { stars: 0, runIndex: 4, runMistakes: 1 } }, courses: {} }));
+    api.levels.and.returnValue(of([{ level: 1, theme: 'mate1', puzzleCount: 10 }, { level: 2, theme: 'promote', puzzleCount: 10 },
+      { level: 3, theme: 'mate1', puzzleCount: 10 }]));
+    const f = TestBed.createComponent(LevelMapComponent);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const tiles = el.querySelectorAll<HTMLElement>('.grid li .level');
+    expect(tiles[0].querySelector('.row')).not.toBeNull();
+    expect(tiles[0].querySelector('.run')).toBeNull();
+    expect(tiles[1].querySelector('.row')).toBeNull();
+    expect(tiles[1].querySelector('.run-text')?.textContent).toContain('kids.levels.runAt');
+    expect(tiles[1].querySelector<HTMLElement>('.fill')!.style.width).toBe('40%');
+    expect(f.componentInstance.tiles()[1]).toEqual(jasmine.objectContaining({ run: 4, total: 10 }));
+    expect(tiles[2].querySelector('.run')).toBeNull();
+  });
+
   /** Codereview 2026-09-29, F7-012: gesperrte Stufen waren ein span ohne Handler — ein Tipp bewirkte nichts, der
    *  Hinweis „Schaff zuerst die Stufe davor!" erschien nur beim Direktaufruf der Adresse. */
   it('Tipp auf eine gesperrte Stufe: sie wackelt und der Hinweis erscheint, kurz darauf ist er wieder weg', fakeAsync(() => {

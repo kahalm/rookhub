@@ -4,7 +4,9 @@
 export interface LeagueIndex {
   season: string;
   generated: string | null;
-  leagues: { tnr: number; name: string }[];
+  /** `own` (UI-Sweep 2026-10-11, r2-l-default-verein): die Mannschaften des Vereins in dieser Liga, nach der Regel des Servers
+   *  (`LeagueClub.OwnsTeam`, in Tirol auch „Schachklub Schwaz" = „Schwaz"). Ältere Server schicken es nicht. */
+  leagues: { tnr: number; name: string; own?: string[] }[];
   /** Der Verein der Anfrage (0.698.0) — nur Ligen seiner Quelle stehen in `leagues`. */
   club?: { id: number; name: string; anonName: string; teamPrefix: string; region: string | null };
   /** 0.710.0: `true` = nur Ligen mit einer Mannschaft des Vereins, `false` = alle der Region (`?all=true`, nur Verwalter). */
@@ -84,7 +86,14 @@ export interface AccountSuggestion {
   profileName: string | null; location: string | null; lastActive: string | null;
   /** Nur in der Übersicht: Name und Mannschaft des Spielers. */
   name?: string; team?: string | null;
+  /** UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto ist auch diesen Spielern vorgeschlagen (fehlt = keinem). */
+  alsoFor?: AccountSuggestionTwin[] | null;
+  /** Nur mit `alsoFor`: passt der Verein des Kontos (Team-Suche „spielte für …") zur Mannschaft dieses Spielers? */
+  clubFits?: boolean;
 }
+
+/** UI-Sweep 2026-10-11 (r2-l-same-account): ein anderer offener Vorschlag desselben Kontos. */
+export interface AccountSuggestionTwin { id: number; fide: string; name: string | null; team: string | null; clubFits: boolean }
 
 /** `GET …/suggestions`: offene Vorschläge; in der Übersicht dazu, wie viele Spieler schon abgesucht sind. */
 /** Eine Prüfung der Konto-Prüfung (i), 0.619.0: `ok` spricht dafür, `weak` schwächer dafür (0.621.0), `warn` macht stutzig,

@@ -3,6 +3,7 @@ import {
   SimpleChanges, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Move } from 'chess.js';
+import { SanPipe } from '../chess/san.pipe';
 
 /** Ein Stück Kommentartext; mit `move` ein anklickbarer Zug, dessen Stellung `fen` ist. */
 export interface MoveListCommentSegment { text?: string; move?: string; fen?: string; from?: string; to?: string; }
@@ -11,7 +12,8 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-move-list',
   standalone: true,
-  imports: [CommonModule],
+  // UI-Sweep 2026-10-11 (r2-rg-notation): Züge in den Figurenbuchstaben der Oberflächensprache.
+  imports: [CommonModule, SanPipe],
   template: `
     <ng-template #commentTpl let-idx>
       @for (seg of segmentsFor(idx); track $index) {
@@ -34,14 +36,14 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
           @if (pair.white !== undefined) {
             <button type="button" class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
                     [attr.aria-current]="pair.whiteIndex === currentMoveIndex ? 'true' : null"
-                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white }}</button>
+                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white | san }}</button>
           } @else {
             <span class="move-empty"></span>
           }
           @if (pair.black) {
             <button type="button" class="move" [class.active]="pair.blackIndex === currentMoveIndex"
                     [attr.aria-current]="pair.blackIndex === currentMoveIndex ? 'true' : null"
-                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black }}</button>
+                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black | san }}</button>
           } @else {
             <span class="move-empty"></span>
           }

@@ -64,4 +64,17 @@ describe('AccountSuggestionsPageComponent', () => {
     expect(el().textContent).toContain('Keine offenen Vorschläge.');
     expect(el().textContent).toContain('Alle 400 Spieler der Saison sind abgesucht.');
   });
+
+  // UI-Sweep 2026-10-11 (r2-l-same-account): übernommen → die Vorschläge desselben Kontos bei anderen Spielern verschwinden.
+  it('übernommen mit „auch vorgeschlagen für": die anderen fallen aus der Übersicht', async () => {
+    const a = { ...S(1, '301', 'Schmidt, Hans', 10), alsoFor: [{ id: 2, fide: '302', name: 'Schmidt, Hans Christoph', team: 'SC Haar 1', clubFits: false }] };
+    const b = { ...S(2, '302', 'Schmidt, Hans Christoph', 11), alsoFor: [{ id: 1, fide: '301', name: 'Schmidt, Hans', team: 'SC Garching 4', clubFits: true }] };
+    api.suggestions.and.resolveTo({ items: [b, a, S(3, '333', 'Huber, Franz', 5)], scanned: 1, total: 1 });
+    create();
+    await fixture.whenStable();
+    fixture.componentInstance.onDecided({ suggestion: a, accepted: true });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.items().map(x => x.id)).toEqual([1, 3]);
+    expect(fixture.componentInstance.groups().map(g => g.fide)).toEqual(['301', '333']);
+  });
 });

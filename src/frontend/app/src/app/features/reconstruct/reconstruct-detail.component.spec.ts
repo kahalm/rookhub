@@ -130,6 +130,24 @@ describe('ReconstructDetailComponent', () => {
 
   // Die Grundannahme ist LÜCKE: Bruchstücke stammen von verschiedenen Stellen der Partie.
   // Nach einer STELLUNG ist die Fortsetzung dagegen der Normalfall.
+  // UI-Sweep 2026-10-11 (r2-rg-recon-fen): eine Stellung als Mini-Brett mit Seite am Zug, FEN zum Kopieren.
+  it('zeigt ein Stellungs-Teil als Mini-Brett statt roher FEN', async () => {
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5')
+      .flush(data([part({ id: 2, kind: PartKind.Position, fen: MIDDLE, endFen: MIDDLE, moves: null })]));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.part-body .pos-board')).not.toBeNull();
+    const c = fixture.componentInstance;
+    const p = c.data()!.parts[0];
+    expect(c.positionOrientation(p)).toBe('black');
+    expect(c.positionLine(p)).toBe('reconstruct.posToMove');      // ohne geladene Texte der Schlüssel
+    c.copyFen(p);
+    expect(clipboard.writeText).toHaveBeenCalledWith(MIDDLE);
+    await fixture.whenStable();                                    // Hinweis erst nach dem Kopieren, noch im Test
+  });
+
   it('schlägt den Anschluss nur nach einer Stellung vor', () => {
     const afterMoves = open([part({ id: 1, kind: PartKind.Moves })]);
     afterMoves.startNew(PartKind.Moves);

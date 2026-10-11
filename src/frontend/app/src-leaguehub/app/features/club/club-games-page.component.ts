@@ -107,6 +107,17 @@ type Side = 'white' | 'black';
                     <div class="row-acts gc-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
                   </td>
                 </tr>
+                @if (g.duplicateIds?.length) {
+                  <!-- UI-Sweep 2026-10-11 (r2-l-dup-game): zwei Fassungen derselben Partie (gleiches Jahr, gleiche Spieler, gleicher
+                       Anfang) — nur Verwalter sehen den Hinweis; an der jüngsten Fassung „ältere archivieren“. -->
+                  <tr class="dup-row"><td colspan="9">
+                    <span class="dup-hint small" role="note">Möglicherweise doppelt — {{ dupText(g) }}</span>
+                    @if (isNewestVersion(g)) {
+                      <button type="button" class="btn-sec dup-archive" [disabled]="archiving() === g.id" (click)="archiveOlder(g)">
+                        {{ archiving() === g.id ? 'Archiviere …' : 'ältere archivieren' }}</button>
+                    }
+                  </td></tr>
+                }
                 @if (viewing(); as v) {
                   @if (v.id === g.id) {
                     <tr class="edit-row"><td colspan="9">
@@ -228,6 +239,8 @@ export class ClubGamesPageComponent implements OnInit {
   readonly loading = signal(false);
   readonly downloading = signal(false);
   readonly deleting = signal<number | null>(null);
+  /** UI-Sweep 2026-10-11 (r2-l-dup-game): die Partie, deren ältere Fassungen gerade archiviert werden. */
+  readonly archiving = signal<number | null>(null);
   readonly error = signal<string | null>(null);
   readonly sides: Side[] = ['white', 'black'];
   readonly rookHub = rookHubUrlForLeagueHub();
@@ -441,6 +454,39 @@ export class ClubGamesPageComponent implements OnInit {
         ? 'Diese Partie darfst du nicht löschen.' : 'Löschen hat nicht geklappt.');
     } finally {
       this.deleting.set(null);
+    }
+  }
+
+  /** UI-Sweep 2026-10-11 (r2-l-dup-game): „gleiche Partie wie #153“ bzw. „neuere Fassung: #164“. */
+  dupText(g: ClubGame): string {
+    const ids = g.duplicateIds ?? [];
+    const list = ids.map(i => `#${i}`).join(', ');
+    return this.isNewestVersion(g) ? `gleiche Partie wie ${list} (ältere Fassung)` : `neuere Fassung: ${list}`;
+  }
+
+  /** Die jüngste Fassung (höchste Id) behält ihren Platz; „ältere archivieren“ steht nur dort. */
+  isNewestVersion(g: ClubGame): boolean {
+    return (g.duplicateIds ?? []).every(i => i < g.id);
+  }
+
+  async archiveOlder(g: ClubGame): Promise<void> {
+    const ids = g.duplicateIds ?? [];
+    if (!ids.length) return;
+    if (!(await firstValueFrom(this.confirm.ask(`Ältere Fassung${ids.length > 1 ? 'en' : ''} ${ids.map(i => '#' + i).join(', ')} von `
+      + `${g.white} – ${g.black} archivieren? Diese Partie (#${g.id}) bleibt.`)))) return;
+    this.archiving.set(g.id);
+    this.error.set(null);
+    try {
+      const r = await this.api.archiveOlder(g.id);
+      const gone = new Set(ids);
+      this.items.set(this.items().filter(x => !gone.has(x.id)).map(x => x.id === g.id ? { ...x, duplicateIds: null } : x));
+      this.total.set(Math.max(0, (this.total() ?? 0) - r.replaced));
+      this.notice.set(r.replaced ? `${r.replaced} ältere Fassung${r.replaced > 1 ? 'en' : ''} archiviert.` : 'Nichts zu archivieren.');
+    } catch (err) {
+      this.error.set(err instanceof HttpErrorResponse && err.status === 403
+        ? 'Archivieren dürfen nur Verwalter.' : 'Archivieren hat nicht geklappt.');
+    } finally {
+      this.archiving.set(null);
     }
   }
 

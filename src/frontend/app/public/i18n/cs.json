@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Položek na stránku:",
+      "firstPage": "První stránka",
+      "previousPage": "Předchozí stránka",
+      "nextPage": "Další stránka",
+      "lastPage": "Poslední stránka",
+      "range": "{{start}}–{{end}} z {{length}}",
+      "rangeEmpty": "0 z {{length}}"
+    },
     "moreActions": "Další akce",
     "save": "Uložit",
     "cancel": "Zrušit",
@@ -243,7 +252,6 @@
       "title": "Zásady ochrany osobních údajů",
       "intro": "RookHub je platforma pro šachový trénink (úlohy, nekonečný mód, kurzy, repertoáry). Tyto zásady vysvětlují, jak jsou osobní údaje zpracovávány v souladu s GDPR.",
       "controllerTitle": "Správce",
-      "controller": "Správcem zpracování osobních údajů je provozovatel uvedený v impresu",
       "dataTitle": "Jaké údaje zpracováváme",
       "dataIntro": "V závislosti na vašem používání zpracováváme:",
       "dataAccount": "Údaje účtu: uživatelské jméno, e-mailová adresa, heslo (uloženo pouze jako hash).",

@@ -1,4 +1,4 @@
-import { localizeSan, parseKeyboardMove, pieceLettersFor } from './keyboard-move.util';
+import { localizeSan, localizeSanText, parseKeyboardMove, pieceLettersFor } from './keyboard-move.util';
 
 /** Codereview F2-004: getippte Züge — literale Stellungen, literale Erwartungen. */
 describe('parseKeyboardMove', () => {
@@ -81,5 +81,16 @@ describe('localizeSan', () => {
     expect(localizeSan('Nf3', 'en')).toBe('Nf3');
     expect(localizeSan('Nf3', 'fr')).toBe('Nf3');
     expect(localizeSan('Nf3', null)).toBe('Nf3');
+  });
+});
+
+// UI-Sweep 2026-10-11 (r2-rg-notation): ganze Zugfolgen als Text.
+describe('localizeSanText', () => {
+  it('übersetzt jedes Wort, Zugnummern bleiben', () => {
+    expect(localizeSanText('1. e4 e5 2. Nf3 Nc6 3. Bb5 ...', 'de')).toBe('1. e4 e5 2. Sf3 Sc6 3. Lb5 ...');
+    expect(localizeSanText('12.Nf3 a6 13.Qxd8+', 'de')).toBe('12.Sf3 a6 13.Dxd8+');
+    expect(localizeSanText('5…Nc6 6.O-O', 'hr')).toBe('5…Sc6 6.O-O');
+    expect(localizeSanText('1. e4 e5 2. Nf3', 'en')).toBe('1. e4 e5 2. Nf3');
+    expect(localizeSanText('', 'de')).toBe('');
   });
 });

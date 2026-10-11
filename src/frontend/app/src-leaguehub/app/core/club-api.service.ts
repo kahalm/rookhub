@@ -131,6 +131,11 @@ export class ClubClient {
     return firstValueFrom(this.http.delete(`${this.base}/games/${id}`));
   }
 
+  /** UI-Sweep 2026-10-11 (r2-l-dup-game): die anderen Fassungen dieser Partie archivieren, diese bleibt (nur Verwalter). */
+  archiveOlder(id: number): Promise<{ replaced: number }> {
+    return firstValueFrom(this.http.post<{ replaced: number }>(`${this.base}/games/${id}/archive-older`, {}));
+  }
+
   /** Namen und Ergebnis einer gespeicherten Partie korrigieren (angemeldet; wer löschen darf, darf korrigieren). */
   updateGame(id: number, body: ClubGameUpdate): Promise<ClubGame> {
     return firstValueFrom(this.http.put<ClubGame>(`${this.base}/games/${id}`, body));

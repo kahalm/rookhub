@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Elementi per pagina:",
+      "firstPage": "Prima pagina",
+      "previousPage": "Pagina precedente",
+      "nextPage": "Pagina successiva",
+      "lastPage": "Ultima pagina",
+      "range": "{{start}}–{{end}} di {{length}}",
+      "rangeEmpty": "0 di {{length}}"
+    },
     "moreActions": "Altre azioni",
     "save": "Salva",
     "cancel": "Annulla",
@@ -243,7 +252,6 @@
       "title": "Informativa sulla privacy",
       "intro": "RookHub è una piattaforma di allenamento agli scacchi (puzzle, modalità infinita, corsi, repertori). Questa informativa spiega come vengono trattati i dati personali ai sensi del GDPR.",
       "controllerTitle": "Titolare del trattamento",
-      "controller": "Il titolare del trattamento dei dati è l'operatore indicato nell'impronta",
       "dataTitle": "Dati che trattiamo",
       "dataIntro": "A seconda dell'utilizzo, trattiamo:",
       "dataAccount": "Dati dell'account: nome utente, indirizzo email, password (conservata solo come hash).",

@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Elemente pe pagină:",
+      "firstPage": "Prima pagină",
+      "previousPage": "Pagina anterioară",
+      "nextPage": "Pagina următoare",
+      "lastPage": "Ultima pagină",
+      "range": "{{start}}–{{end}} din {{length}}",
+      "rangeEmpty": "0 din {{length}}"
+    },
     "moreActions": "Mai multe acțiuni",
     "save": "Salvează",
     "cancel": "Anulează",
@@ -243,7 +252,6 @@
       "title": "Politică de confidențialitate",
       "intro": "RookHub este o platformă de antrenament la șah (probleme, mod infinit, cursuri, repertorii). Această politică explică modul în care sunt prelucrate datele personale în conformitate cu GDPR.",
       "controllerTitle": "Operator",
-      "controller": "Operatorul pentru prelucrarea datelor este operatorul menționat în imprint",
       "dataTitle": "Ce date prelucrăm",
       "dataIntro": "În funcție de utilizare, prelucrăm:",
       "dataAccount": "Date de cont: nume utilizator, adresă de email, parolă (stocată doar ca hash).",

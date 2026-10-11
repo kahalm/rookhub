@@ -480,6 +480,50 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Null(next.Chapter);        // ein Kapitel -> kein eigener Kapitel-Block
     }
 
+    /// <summary>UI-Sweep 2026-10-11 (r2-rp-ratingbands): „Nach Rating" zeigte je Versuch eine eigene Säule mit
+    /// doppelten Beschriftungen — `Rating / 200` teilte MariaDB DEZIMAL (669/200 = 3,345), die Gruppierung lief
+    /// also je Rating. InMemory rechnet int-Division und sah das nie. Hier echtes SQL: 669 und 799 gehören in
+    /// EIN Band 600–799, 800 und 999 in 800–999 — für Standard-Puzzles und Kurs-Linien.</summary>
+    [MySqlFact]
+    public async Task Statistik_RatingBaender_FassenJe200Zusammen()
+    {
+        var userId = await SeedUserAsync("baender");
+        var ratings = new[] { 669, 799, 800, 999, 1450 };
+        var puzzles = ratings.Select((r, i) => new Puzzle
+        {
+            LichessId = $"rb{i}", Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", Moves = "a1b1", Rating = r, Themes = "",
+        }).ToList();
+        Db.Puzzles.AddRange(puzzles);
+        var book = new Book { FileName = "it-baender.pgn", DisplayName = "IT", OwnerUserId = userId, Source = new BookSource() };
+        Db.Books.Add(book);
+        await Db.SaveChangesAsync();
+        var lines = ratings.Select(r => new BookPuzzle
+        {
+            BookId = book.Id, BookFileName = book.FileName, BookRating = r,
+            LineId = Guid.NewGuid().ToString("N"), Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", Moves = "a1",
+        }).ToList();
+        Db.BookPuzzles.AddRange(lines);
+        await Db.SaveChangesAsync();
+        for (var i = 0; i < ratings.Length; i++)
+        {
+            Db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = userId, PuzzleId = puzzles[i].Id, Solved = i % 2 == 0 });
+            Db.CourseAttempts.Add(new CourseAttempt { UserId = userId, BookId = book.Id, BookPuzzleId = lines[i].Id, Solved = i % 2 == 0 });
+        }
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        foreach (var bands in new[]
+                 {
+                     (await Get<PuzzleStatsService>().GetBreakdownAsync(userId)).RatingBands,
+                     (await Get<CourseStatsService>().GetBreakdownAsync(userId)).RatingBands,
+                 })
+        {
+            Assert.Equal(new[] { 600, 800, 1400 }, bands.Select(b => b.From));
+            Assert.Equal(new[] { 2, 2, 1 }, bands.Select(b => b.Attempts));
+            Assert.Equal(new[] { 1, 1, 1 }, bands.Select(b => b.Solved));
+        }
+    }
+
     [MySqlFact]
     public async Task ChessableAbgleich_UebersetztDenKennungsZwischenspeicher()
     {

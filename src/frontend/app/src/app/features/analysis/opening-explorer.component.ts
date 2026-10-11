@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, computed, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,8 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { SanPipe } from '../../shared/chess/san.pipe';
 import { Observable, Subject, Subscription, debounceTime, of, switchMap, tap, timer, catchError, map } from 'rxjs';
 import { Chess } from 'chess.js';
 import {
@@ -49,7 +50,7 @@ function readOpen(): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatIconModule, MatProgressBarModule,
-    MatTooltipModule, TranslatePipe,
+    MatTooltipModule, TranslatePipe, SanPipe,
   ],
   template: `
     <div class="head">
@@ -123,7 +124,10 @@ function readOpen(): boolean {
                 <thead>
                   <tr>
                     <th>{{ 'analysis.explorer.move' | translate }}</th>
-                    <th class="num">{{ 'analysis.explorer.games' | translate }}</th>
+                    <!-- UI-Sweep 2026-10-11 (r2-rg-explorer-cols): Anteil und Partien als zwei eigene, rechtsbündige
+                         Spalten mit Abstand — vorher klebten sie in einer Zelle zusammen („9,9 %369.974"). -->
+                    <th class="num share-col">{{ 'analysis.explorer.share' | translate }}</th>
+                    <th class="num count-col">{{ 'analysis.explorer.games' | translate }}</th>
                     <th class="wdl-head">{{ 'analysis.explorer.results' | translate }}</th>
                     <th class="info-head"></th>
                   </tr>
@@ -131,11 +135,9 @@ function readOpen(): boolean {
                 <tbody>
                   @for (row of rows(); track row.move.uci) {
                     <tr (click)="play(row.move)" [matTooltip]="row.move.opening ? (row.move.eco + ' ' + row.move.opening) : ''">
-                      <td class="san"><button type="button" class="san-btn" (click)="$event.stopPropagation(); play(row.move)">{{ row.move.san }}</button></td>
-                      <td class="num">
-                        <span class="share">{{ pct(row.share) }}</span>
-                        <span class="count">{{ compact(row.move.games) }}</span>
-                      </td>
+                      <td class="san"><button type="button" class="san-btn" (click)="$event.stopPropagation(); play(row.move)">{{ row.move.san | san }}</button></td>
+                      <td class="num share-col">{{ pct(row.share) }}</td>
+                      <td class="num count-col count">{{ compact(row.move.games) }}</td>
                       <td>
                         <div class="wdl" [attr.aria-label]="wdlLabel(row)">
                           <span class="w" [style.width.%]="row.w * 100">{{ row.w >= 0.14 ? pct(row.w) : '' }}</span>
@@ -155,7 +157,7 @@ function readOpen(): boolean {
                     </tr>
                     @if (expanded() === row.move.uci) {
                       <tr class="games-row">
-                        <td colspan="4">
+                        <td colspan="5">
                           @if (gamesLoading()) {
                             <mat-progress-bar mode="indeterminate" />
                           } @else if (games(); as gs) {
@@ -224,8 +226,10 @@ function readOpen(): boolean {
     tbody tr { cursor: pointer; }
     tbody tr:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .share { display: inline-block; min-width: 3.4em; }
-    .count { display: inline-block; min-width: 3.6em; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* UI-Sweep 2026-10-11 (r2-rg-explorer-cols): feste, rechtsbündige Spalten mit Abstand. */
+    .share-col { width: 3.6em; padding-left: 8px; }
+    .count-col { width: 4.6em; padding-left: 10px; }
+    .count { color: color-mix(in srgb, currentColor 60%, transparent); }
     .san { width: 1%; white-space: nowrap; }
     .san-btn { font: inherit; font-weight: 600; font-family: 'Roboto Mono', monospace; background: none; border: 0;
       padding: 0; color: inherit; cursor: pointer; }
@@ -297,6 +301,8 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
   private sub: Subscription | null = null;
   private retry: Subscription | null = null;
   private ready = false;
+
+  private readonly translate = inject(TranslateService, { optional: true });
 
   constructor(private explorer: RepertoireExplorerService) {}
 
@@ -414,8 +420,18 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
 
   pct(x: number): string { return formatPercent(x); }
 
+  /**
+   * Partienzahl kurz: ab einer Million „1,7 Mio." (Intl, kurz), ab 10 000 auf Tausend gerundet mit dem Kürzel
+   * der Sprache („370 Tsd.", „370K") — UI-Sweep 2026-10-11 (r2-rg-explorer-cols): die kurze Intl-Form kennt
+   * im Deutschen keine Tausender und schrieb „369.974", das die Spalte sprengte.
+   */
   compact(n: number): string {
-    return n.toLocaleString(undefined, n >= 10_000 ? { notation: 'compact', maximumFractionDigits: 1 } : {});
+    if (n >= 1_000_000) return n.toLocaleString(undefined, { notation: 'compact', maximumFractionDigits: 1 });
+    if (n >= 10_000) {
+      const k = Math.round(n / 1000).toLocaleString();
+      return this.translate ? this.translate.instant('analysis.explorer.thousands', { n: k }) : `${k}K`;
+    }
+    return n.toLocaleString();
   }
 
   ratingLabel(r: number): string {

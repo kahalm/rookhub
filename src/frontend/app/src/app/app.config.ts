@@ -12,6 +12,8 @@ import { visitorInterceptor } from './core/visitor.interceptor';
 import { resolveStartupLocale } from './core/locale.service';
 import { registerFormatLocaleData } from './core/locale-data';
 import { provideFullscreenSafeOverlays } from './shared/fullscreen/fullscreen-overlay.service';
+import { MatPaginatorIntl } from '@angular/material/paginator';
+import { TranslatedPaginatorIntl } from './core/translated-paginator-intl';
 
 // Locale-Daten für die übersetzten Sprachen registrieren (en ist eingebaut), damit
 // DatePipe/DecimalPipe/PercentPipe entsprechend der gewählten Sprache formatieren
@@ -37,6 +39,8 @@ export const appConfig: ApplicationConfig = {
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' })
     }),
+    // UI-Sweep 2026-10-11 (r2-rk-paginator-en): Blätterleiste (mat-paginator) übersetzt statt Material-Englisch.
+    { provide: MatPaginatorIntl, useClass: TranslatedPaginatorIntl },
     // Service Worker (nur im Prod-Build aktiv) — cacht App-Shell + Lazy-Chunks + i18n,
     // damit Puzzle-/Endless-Modus auch offline geladen & gestartet werden können.
     provideServiceWorker('ngsw-worker.js', {

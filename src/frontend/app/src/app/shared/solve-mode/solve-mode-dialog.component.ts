@@ -8,6 +8,11 @@ import { TranslatePipe } from '@ngx-translate/core';
 export interface SolveModeDialogData {
   /** Klartext-Name des Bereichs für die Überschrift („Tagespuzzle", Kursname …). */
   scopeLabel?: string;
+  /** Eigene Überschrift (schlägt `scopeLabel`) — der Wochenpost: „Wie möchtest du diesen Wochenpost spielen?"
+   *  (UI-Sweep 2026-10-11, r2-rk-weekly-mode-dialog). */
+  title?: string;
+  /** Eigener Hinweis unten (Vorgabe: Umschalten über das ⋮-Menü). */
+  hint?: string;
   /** Erklärt, wie oft die Wahl gilt. Default: „einmalig, jederzeit umschaltbar". */
   intro?: string;
   /** Was der Trainingsmodus hier konkret bedeutet — hängt an der eingestellten Stufe. */
@@ -37,7 +42,7 @@ export interface SolveModeDialogResult {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatDialogModule, MatCheckboxModule, MatIconModule, TranslatePipe],
   template: `
-    <h2 mat-dialog-title class="sm-title">{{ (data.scopeLabel ? 'solveMode.titleFor' : 'solveMode.title') | translate:{ scope: data.scopeLabel } }}</h2>
+    <h2 mat-dialog-title class="sm-title">{{ data.title || ((data.scopeLabel ? 'solveMode.titleFor' : 'solveMode.title') | translate:{ scope: data.scopeLabel }) }}</h2>
     <mat-dialog-content>
       <p class="sm-intro">{{ data.intro || ('solveMode.intro' | translate) }}</p>
 
@@ -61,7 +66,7 @@ export interface SolveModeDialogResult {
         </mat-checkbox>
       }
 
-      <p class="sm-hint">{{ 'solveMode.switchHint' | translate }}</p>
+      <p class="sm-hint">{{ data.hint || ('solveMode.switchHint' | translate) }}</p>
     </mat-dialog-content>
   `,
   styles: [`

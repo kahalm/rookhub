@@ -168,7 +168,7 @@ describe('i18n Sprachdateien', () => {
     /** Was die nicht gepflegten Sprachen uebersetzt haben duerfen, mit dem Fingerabdruck des en-Texts von damals. */
     const TRANSLATED_FROM_EN: Readonly<Record<string, string>> = {
       'legal.privacy.title': '2526541f', 'legal.privacy.intro': '11947df0',
-      'legal.privacy.controllerTitle': 'a15e8ea1', 'legal.privacy.controller': 'f991e755',
+      'legal.privacy.controllerTitle': 'a15e8ea1',
       'legal.privacy.dataTitle': 'df172352', 'legal.privacy.dataIntro': 'f6c135d3',
       'legal.privacy.dataAccount': '07a9ced8', 'legal.privacy.dataProfile': 'acf57914',
       'legal.privacy.dataUsage': 'e3661c7e', 'legal.privacy.dataTechnical': '22f3e113',

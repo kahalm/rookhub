@@ -55,14 +55,11 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
           }
 
           <h2 id="privacy-controller" tabindex="-1">{{ 'legal.privacy.controllerTitle' | translate }}</h2>
-          @if (site.imprint) {
-            <p>{{ 'legal.privacy.controller' | translate }} (<a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>).</p>
-          } @else {
-            <!-- Ohne Impressum steht der Kontakt des Verantwortlichen hier; Name/Anschrift nennt der Betreiber
-                 bewusst nicht (Entscheidung 2026-09-30), nur die Kontaktadresse der Oberflaeche. -->
-            <p>{{ 'legal.privacy.controllerNamed' | translate }}<br>
-              <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
-          }
+          <!-- Der Verantwortliche steht HIER mit der Kontaktadresse der Oberflaeche; Name/Anschrift nennt der Betreiber
+               bewusst nicht (Entscheidung 2026-09-30). UI-Sweep 2026-10-11 (r2-rk-privacy-operator): auch mit Impressum —
+               der fruehere Verweis „der im Impressum genannte Betreiber" fuehrte ins Leere, dort steht nur der Kontakt. -->
+          <p>{{ 'legal.privacy.controllerNamed' | translate }}<br>
+            <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
 
           @if (kind === 'clubhub') {
             <!-- ClubHub: die Kartei der Kinder und Jugendlichen (UI-Sweep 2026-10-10, x-privacy-intro) — Inhalt nach dem

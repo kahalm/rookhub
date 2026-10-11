@@ -252,6 +252,13 @@ public class LeagueClubController : BaseApiController
             _ => NotFound(),
         });
 
+    /// <summary>UI-Sweep 2026-10-11 (r2-l-dup-game): „ältere archivieren" — die anderen Fassungen dieser Partie (Hinweis
+    /// <c>duplicateIds</c> der Liste) archivieren, diese bleibt → <c>{ replaced }</c>; 404 unbekannt/anderer Verein.</summary>
+    [HttpPost("games/{id:int}/archive-older")]
+    [HasPermission(Permissions.LeagueManage)]
+    public Task<IActionResult> ArchiveOlder(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _club.ArchiveOlderAsync(club, id, ct) is { } n ? Ok(new { replaced = n }) : NotFound());
+
     /// <summary>„Alle Partien dieses Links entfernen" (Verwalter, Codereview 2026-09-29): alles, was über den Teilen-Link
     /// hochgeladen wurde — auch nach seinem Ablauf, in jeder Schreibweise, solange die Link-Zeile noch steht (sonst zählt
     /// der Wert, wie er kommt); nur Partien des eigenen Vereins. <c>dryRun=true</c> zählt nur → <c>{ count, dryRun }</c>.</summary>

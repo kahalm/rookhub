@@ -398,6 +398,49 @@ describe('DashboardComponent Kachel-Aktionen', () => {
   });
 });
 
+// UI-Sweep 2026-10-11 (r2-rk-dash-stretch): mit mehreren angepinnten Kursen stand die hohe Kachel neben „Kurse“ und
+// „Trainingsziele“ und streckte beide auf ihre Höhe. Jetzt geht sie über die volle Breite — allein in ihrer Zeile.
+describe('DashboardComponent angepinnte Kurse über die volle Breite', () => {
+  beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+  afterEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+
+  it('stellt die Kachel mit drei Kursen allein in eine Zeile, die kleinen Kacheln bleiben niedrig', () => {
+    const pinned = [1, 2, 3].map(i => ({ bookId: i, displayName: 'Kurs ' + i, puzzleCount: 10, solvedCount: 1, progressPercent: 10, isPinned: true }));
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => of([]), getCourses: () => of(pinned), getSubscriptions: () => of([]),
+          getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
+        } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '1100px';
+    document.body.appendChild(host);
+    fixture.detectChanges();
+
+    const grid = host.querySelector('.dashboard-grid') as HTMLElement;
+    const wide = host.querySelector('.dashboard-grid > mat-card.tile-wide') as HTMLElement;
+    expect(wide).not.toBeNull();
+    expect(wide.querySelectorAll('.pinned-course').length).toBe(3);
+    expect(Math.round(wide.getBoundingClientRect().width)).toBe(Math.round(grid.getBoundingClientRect().width));
+    const cards = Array.from(host.querySelectorAll('.dashboard-grid > mat-card')) as HTMLElement[];
+    const wideTop = wide.getBoundingClientRect().top;
+    expect(cards.filter(c => c !== wide && Math.abs(c.getBoundingClientRect().top - wideTop) < 1).length).toBe(0);
+    host.remove();
+  });
+});
+
 /**
  * Codereview F5-024: Die Admin-Warteschlange baute ihre Statuszeile selbst — ohne Gesamt-Linienzahl und ohne
  * Restzeit, obwohl chessableQueueLabel (chessable-progress.util) beides kann; wer den Text „wie im Chessable-Tab“

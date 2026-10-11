@@ -59,7 +59,6 @@ import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyMode, WeeklyService, weeklyTitleLabel } from '../weekly/weekly.service';
-import { WeeklyModeDialogComponent } from '../weekly/weekly-mode-dialog.component';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isBoardHotkey } from '../../shared/keyboard.util';
@@ -1411,9 +1410,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       return;
     }
     if (!this.auth.isLoggedIn) { this.applyWeeklyMode(); return; }
-    this.dialog.open(WeeklyModeDialogComponent, { width: '420px', maxWidth: '92vw', disableClose: true })
-      .afterClosed().subscribe((mode: WeeklyMode | undefined) => {
-        this.weeklyMode = mode === 'easy' ? 'easy' : 'training';
+    // UI-Sweep 2026-10-11 (r2-rk-weekly-mode-dialog): dieselbe Modus-Frage wie bei den Puzzles (Kacheln, Erklärtexte),
+    // nur Titel/Hinweis „gilt für diesen Wochenpost"; vorher ein eigener Dialog mit Entwicklertext.
+    this.solveMode.openDialog({
+      title: this.translate.instant('weekly.mode.title'),
+      intro: this.translate.instant('weekly.mode.intro'),
+      hint: this.translate.instant('weekly.mode.switchHint'),
+    }).subscribe(r => {
+        this.weeklyMode = r?.mode === 'easy' ? 'easy' : 'training';
         try { sessionStorage.setItem(key, this.weeklyMode); } catch { /* Privatmodus */ }
         this.applyWeeklyMode();
         // Das erste Puzzle steht schon — mit der frisch gewählten Spielweise neu aufsetzen.

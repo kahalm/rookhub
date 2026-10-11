@@ -209,6 +209,9 @@ public class LeagueClubGameDto
     public bool BlackInRoster { get; set; }
     /// <summary>Stand der Hintergrund-Analyse dieser Partie (0.593.0) — wie in „Meine Partien"; <c>null</c> = noch keine.</summary>
     public SavedGameAnalysisDto? Analysis { get; set; }
+    /// <summary>UI-Sweep 2026-10-11 (r2-l-dup-game): andere lebende Fassungen DIESER Partie (gleiches Jahr, gleiche Spieler,
+    /// gleicher Anfang bzw. gleiche feste Paarung) — nur für Verwalter, sonst <c>null</c>.</summary>
+    public List<int>? DuplicateIds { get; set; }
 }
 
 public class LeagueClubListDto

@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService } from '../../core/club-api.service';
-import { GroupRow, MemberRow } from '../../core/club.models';
+import { GroupRow, LinkState, MemberRow } from '../../core/club.models';
 import { ageClass, byInitial, firstPhone, nameHead, nameTail, telHref, trainsToday, weekdayName } from '../../core/club-format';
 import { MemberPhotoComponent } from '../../shared/member-photo.component';
 
@@ -39,11 +39,26 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
   imports: [RouterLink, MemberPhotoComponent],
   template: `
     @if (!allowed) {
-      <section class="gate">
-        <h1>Nicht freigeschaltet</h1>
-        <p>ClubHub sehen die Trainer und die Leitung des Vereins. Wenn du dazugehörst, lass dir die Rolle geben.</p>
-        <p>Hast du von deinem Trainer einen Code bekommen? <a routerLink="/verknuepfen">Konto verknüpfen</a></p>
-      </section>
+      <!-- UI-Sweep 2026-10-11 (r2-c-start-linked): ein schon verknüpftes Konto bekommt eine Auskunft statt der Code-Aufforderung -->
+      @if (link(); as s) {
+        @if (s.linked) {
+          <section class="gate linked-gate">
+            <h1>Hallo{{ s.firstName ? ' ' + s.firstName : '' }}!</h1>
+            <p>Dein Konto ist mit dem Karteiblatt von <b>{{ s.firstName }}</b> verknüpft. Deine Trainer sehen, wie viel du in
+              RookHub und KidHub trainierst – einzelne Aufgaben oder Partien nicht.</p>
+            <p><a class="btn" routerLink="/verknuepfen">Verknüpfung ansehen</a></p>
+            <p class="muted">Die Kartei selbst sehen nur Trainer und Vereinsleitung.</p>
+          </section>
+        } @else {
+          <section class="gate">
+            <h1>Nicht freigeschaltet</h1>
+            <p>ClubHub sehen die Trainer und die Leitung des Vereins. Wenn du Trainer bist, bitte die Vereinsleitung um Zugang.</p>
+            <p>Hast du von deinem Trainer einen Code bekommen? <a routerLink="/verknuepfen">Konto verknüpfen</a></p>
+          </section>
+        }
+      } @else {
+        <p class="muted">Lade …</p>
+      }
     } @else {
       @for (g of today(); track g.id) {
         <p class="today" role="status">
@@ -151,6 +166,8 @@ export class MembersPageComponent implements OnInit {
   readonly archived = signal(false);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  /** UI-Sweep 2026-10-11 (r2-c-start-linked): Verknüpfungsstand eines Kontos ohne Club-Recht (für die Startkarte). */
+  readonly link = signal<LinkState | null>(null);
   /** „Heute" — als Feld, damit ein Test den Wochentag festlegen kann. */
   now: () => Date = () => new Date();
 
@@ -189,6 +206,16 @@ export class MembersPageComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.allowed) void this.load();
+    else void this.loadLink();
+  }
+
+  /** Ohne Club-Recht: nur den eigenen Verknüpfungsstand holen; schlägt das fehl, bleibt der bisherige Hinweis. */
+  async loadLink(): Promise<void> {
+    try {
+      this.link.set(await this.api.linkState());
+    } catch {
+      this.link.set({ linked: false });
+    }
   }
 
   async load(): Promise<void> {

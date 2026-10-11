@@ -47,7 +47,7 @@ export function groupByPlayer(items: AccountSuggestion[]): { fide: string; name:
           <article class="sugg-group">
             <h3><button type="button" class="btn-link sugg-name" (click)="openCard(g.fide)">{{ g.name }}</button>
               @if (g.team) { <span class="muted small">{{ g.team }}</span> }</h3>
-            <lh-account-suggestions [items]="g.items" (decided)="onDecided()" />
+            <lh-account-suggestions [items]="g.items" (decided)="onDecided($event)" />
           </article>
         } @empty {
           @if (!loading() && !error()) { <p class="muted">Keine offenen Vorschläge.</p> }
@@ -99,8 +99,12 @@ export class AccountSuggestionsPageComponent implements OnInit {
     }
   }
 
-  onDecided(): void {
+  onDecided(e?: { suggestion: AccountSuggestion; accepted: boolean }): void {
     this.decided.update(n => n + 1);
+    // UI-Sweep 2026-10-11 (r2-l-same-account): übernommen → die Vorschläge desselben Kontos bei anderen Spielern hat der
+    // Server verworfen; sie verschwinden aus der Übersicht (auch aus den Gruppen der anderen Spieler).
+    const twins = e?.accepted ? new Set((e.suggestion.alsoFor ?? []).map(t => t.id)) : null;
+    if (twins?.size) this.items.update(list => list.filter(x => !twins.has(x.id)));
   }
 
   openCard(fide: string): void {

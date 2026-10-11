@@ -16,6 +16,8 @@ import { RepertoireTrainingService, LineStateDto } from './repertoire-training.s
 import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from './repertoire-color.util';
 import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
+import { SanPipe } from '../../shared/chess/san.pipe';
+import { pgnHeaderText } from '../../shared/pgn-viewer/pgn-header.util';
 
 /** Ein Chapter-Bucket mit seinen Linien. Reihenfolge = erstes Auftreten im PGN (die Gruppierung
  *  selbst liegt in `shared/lines/chapter-groups.util`, geteilt mit der Kurs-Durchsicht). */
@@ -34,7 +36,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatListModule, MatIconModule, MatButtonModule, MatMenuModule,
-    MatTooltipModule, TranslatePipe, MoveListComponent,
+    MatTooltipModule, TranslatePipe, MoveListComponent, SanPipe,
   ],
   template: `
     @if (selectedIndex >= 0) {
@@ -43,7 +45,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
           <mat-icon>arrow_back</mat-icon> {{ 'repertoire.lines.allLines' | translate }}
         </button>
         <div class="line-header">
-          <span class="players">{{ lines[selectedIndex].white }} vs {{ lines[selectedIndex].black }}</span>
+          <span class="players">{{ playersOf(lines[selectedIndex]) || ('repertoire.lines.lineN' | translate:{ n: selectedIndex + 1 }) }}</span>
           <span class="result">{{ lines[selectedIndex].result }}</span>
         </div>
         <div class="move-list-wrap">
@@ -60,13 +62,15 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
       <div class="lines-list">
         @if (repertoireId != null && chapterGroups().length > 0) {
           <div class="course-bar">
-            <a mat-stroked-button [routerLink]="['/repertoires', repertoireId, 'train']"
+            <!-- UI-Sweep 2026-10-11 (r2-rg-rep-toolbar): die Pillen tragen eine Beschriftung (vorher nur ein Icon,
+                 die Bedeutung stand allein im Tooltip — am Handy gar nicht zu erfahren). -->
+            <a mat-stroked-button class="bar-btn" [routerLink]="['/repertoires', repertoireId, 'train']"
                [matTooltip]="'repertoire.lines.sr.reviewAll' | translate">
-              <mat-icon>fitness_center</mat-icon>
+              <mat-icon>replay</mat-icon><span class="bar-label">{{ 'repertoire.lines.sr.reviewShort' | translate }}</span>
             </a>
-            <a mat-stroked-button [routerLink]="['/repertoires', repertoireId, 'train']" [queryParams]="{ mode: 'learn' }"
+            <a mat-stroked-button class="bar-btn" [routerLink]="['/repertoires', repertoireId, 'train']" [queryParams]="{ mode: 'learn' }"
                [matTooltip]="'repertoire.lines.sr.learnAll' | translate">
-              <mat-icon>school</mat-icon>
+              <mat-icon>school</mat-icon><span class="bar-label">{{ 'repertoire.lines.sr.learnShort' | translate }}</span>
             </a>
             <span class="spacer"></span>
             @if (marked.size > 0) {
@@ -76,9 +80,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                 <mat-icon>style</mat-icon>({{ marked.size }})
               </a>
             }
-            <a mat-stroked-button [routerLink]="['/repertoires', repertoireId, 'flashcards']"
+            <a mat-stroked-button class="bar-btn" [routerLink]="['/repertoires', repertoireId, 'flashcards']"
                [matTooltip]="'courses.flashcards.browseTooltip' | translate">
-              <mat-icon>style</mat-icon>
+              <mat-icon>style</mat-icon><span class="bar-label">{{ 'repertoire.lines.sr.flashcardsShort' | translate }}</span>
             </a>
             <button mat-icon-button [matMenuTriggerFor]="courseMenu" [disabled]="busy"
                     [matTooltip]="'repertoire.lines.sr.courseActions' | translate"><mat-icon>more_vert</mat-icon></button>
@@ -100,7 +104,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                         [attr.aria-expanded]="group.expanded"
                         [attr.aria-label]="'repertoire.lines.toggleChapter' | translate">
                   <mat-icon>{{ group.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
-                  <span class="chapter-name">{{ group.chapter || ('repertoire.lines.noChapter' | translate) }}</span>
+                  <!-- UI-Sweep 2026-10-11 (r2-rg-rep-question): „?" (PGN-Platzhalter) heißt „ohne Kapitel"; der
+                       SCHLÜSSEL bleibt (Trainer, Kapitelfarben). -->
+                  <span class="chapter-name">{{ chapterLabel(group.chapter) || ('repertoire.lines.noChapter' | translate) }}</span>
                   <span class="chapter-count">{{ group.lines.length }}</span>
                 </button>
                 @if (repertoireId != null) {
@@ -130,7 +136,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                 }
               </div>
               @if (group.expanded) {
-                @for (line of group.lines; track line.gameIndex) {
+                @for (line of group.lines; track line.gameIndex; let li = $index) {
                   <div class="line-item">
                     <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend). -->
                     <input type="checkbox" class="line-pick" [checked]="marked.has(line.lineKey)"
@@ -141,9 +147,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                          (click)="lineSelected.emit(line.gameIndex)"
                          (keydown.enter)="lineSelected.emit(line.gameIndex)"
                          (keydown.space)="$event.preventDefault(); lineSelected.emit(line.gameIndex)">
-                      <div class="line-players">{{ lineTitle(line) }}</div>
+                      <div class="line-players">{{ lineTitle(line) || ('repertoire.lines.lineN' | translate:{ n: li + 1 }) }}</div>
                       @if (line.opening) { <div class="line-opening">{{ line.opening }}</div> }
-                      <div class="line-summary">{{ line.summary }}</div>
+                      <div class="line-summary">{{ line.summary | san:'text' }}</div>
                     </div>
                     <!-- Status neben der Zeile statt im Titel; „+" (noch nicht im Pool) nimmt die Linie mit einem Tipp auf —
                          mit voller Trefferfläche (am Handy war es ein 18-px-Etikett). -->
@@ -195,6 +201,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
          existiert in diesem Theme nicht → fiel im Dark-Mode auf Weiß zurück (heller Balken). */
       background: var(--mat-sys-surface-container, #fff); z-index: 1; }
     .course-bar .spacer { flex: 1; }
+    /* UI-Sweep 2026-10-11 (r2-rg-rep-toolbar): Icon + kurze Beschriftung; ganz schmal nur das Icon. */
+    .bar-btn mat-icon { margin-right: 4px; }
+    @media (max-width: 380px) { .bar-btn .bar-label { display: none; } .bar-btn mat-icon { margin-right: 0; } }
     .chapter-block { border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
     .chapter-head { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 4px;
       background: color-mix(in srgb, currentColor 5%, transparent); }
@@ -386,8 +395,23 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   /** Titel der Linie im Kapitel: Chessable trägt den Kapitelnamen als Schwarz-Kopf — innerhalb des Kapitels
    *  wiederholt „Weiß vs Kapitel" ihn nur (und brach am Handy auf 2–3 Zeilen um). */
   lineTitle(line: RepertoireLine): string {
-    return line.chapter && line.black === line.chapter && line.white ? line.white : `${line.white} vs ${line.black}`;
+    // UI-Sweep 2026-10-11 (r2-rg-rep-question): „?" bzw. leere Kopfzeilen gelten als fehlend — ganz ohne Namen
+    // liefert das '' und die Vorlage schreibt „Linie n" (statt „?" oder „? vs ?").
+    const white = pgnHeaderText(line.white);
+    const black = pgnHeaderText(line.black);
+    if (!white && !black) return '';
+    if (line.chapter && line.black === line.chapter) return white || black;
+    if (!white || !black) return white || black;
+    return `${white} vs ${black}`;
   }
+
+  /** „Weiß vs Schwarz" der Kopfzeilen ohne Platzhalter (UI-Sweep 2026-10-11, r2-rg-rep-question). */
+  playersOf(line: RepertoireLine): string {
+    return [pgnHeaderText(line.white), pgnHeaderText(line.black)].filter(s => s).join(' vs ');
+  }
+
+  /** Anzeige-Name eines Kapitels: der PGN-Platzhalter „?" zählt als „ohne Kapitel" (leer). */
+  chapterLabel(chapter: string): string { return pgnHeaderText(chapter); }
 
   badgeTooltip(line: RepertoireLine): string {
     return 'repertoire.lines.sr.status.' + this.status(line);

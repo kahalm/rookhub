@@ -59,3 +59,30 @@ describe('CoursePlayComponent — Ladefehler', () => {
     expect(f.componentInstance.current()?.id).toBe(1);
   });
 });
+
+/** UI-Sweep 2026-10-11 (r2-k-course-heading): eine angeklebte Zwischenüberschrift steht fett über dem Text. */
+describe('CoursePlayComponent — Einleitung', () => {
+  it('setzt die Zwischenüberschrift als eigene fette Zeile ab', () => {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const line: KidsCourseLine = {
+      id: 1, bookTitle: 'Endspiel', fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8', startPly: 0,
+      title: null, chapter: null, comment: 'Den Weg verstellenSchauen wir uns nun Stellung 1.3 an.', moveComments: null, altMoves: null,
+    };
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.returnValue(of([line]));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '50' })) } },
+      ],
+    });
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    const intro = (f.nativeElement as HTMLElement).querySelector('.intro')!;
+    expect(intro.querySelector('.hl')?.textContent).toBe('Den Weg verstellen');
+    expect(intro.querySelectorAll('p')[1].textContent).toBe('Schauen wir uns nun Stellung 1.3 an.');
+    expect(getComputedStyle(intro.querySelector('.hl')!).fontWeight).toBe('800');
+  });
+});

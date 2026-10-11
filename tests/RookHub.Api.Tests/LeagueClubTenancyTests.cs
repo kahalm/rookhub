@@ -284,6 +284,9 @@ public class LeagueClubTenancyTests : IDisposable
 
     /// <summary>Fünf Tiroler Ligen mit Ansicht; Testdorf spielt in Liga 1 (Meldeliste aus <see cref="SeedAsync"/>) und Liga 3 (nur im
     /// Spielplan, als Gast), in Liga 4 nur ein „Testdorfer SC" (anderer Verein), Liga 5 ohne Ansicht zählt nicht.</summary>
+    private static string[] OwnTeams(JsonObject index, int tnr) =>
+        index["leagues"]!.AsArray().Single(l => l!["tnr"]!.GetValue<int>() == tnr)!["own"]!.AsArray().Select(n => n!.GetValue<string>()).ToArray();
+
     private async Task SeedFiveTyroleanLeaguesAsync()
     {
         await SeedAsync();
@@ -311,7 +314,11 @@ public class LeagueClubTenancyTests : IDisposable
         var own = await league.IndexAsync(TestClubs.Home, default);
         Assert.Equal(new[] { 1, 3 }, Tnrs(own));
         Assert.Equal((true, 5), (own["filtered"]!.GetValue<bool>(), own["total"]!.GetValue<int>()));
+        // UI-Sweep 2026-10-11 (r2-l-default-verein): je Liga die eigenen Mannschaften nach der Regel des Servers
+        Assert.Equal(new[] { "Testdorf" }, OwnTeams(own, 1));
+        Assert.Equal(new[] { "Testdorf 2" }, OwnTeams(own, 3));
         var all = await league.IndexAsync(TestClubs.Home, default, all: true);
+        Assert.Empty(OwnTeams(all, 2));
         Assert.Equal(new[] { 1, 2, 3, 4, 5 }, Tnrs(all));
         Assert.Equal((false, 5), (all["filtered"]!.GetValue<bool>(), all["total"]!.GetValue<int>()));
         // ein Verein ohne Mannschaft in der Region: leer, aber `total` sagt, dass es Ligen gäbe

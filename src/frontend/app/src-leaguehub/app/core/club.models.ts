@@ -33,6 +33,8 @@ export interface ClubGame {
   leagueGameId?: number | null;
   /** „2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026)". */
   leagueGameLabel?: string | null;
+  /** UI-Sweep 2026-10-11 (r2-l-dup-game): andere lebende Fassungen DIESER Partie — nur für Verwalter, sonst fehlt es. */
+  duplicateIds?: number[] | null;
 }
 
 /** Eine Brettpaarung, die eine Vereinspartie sein könnte (0.678.0, `LeagueClubPairingDto`). */

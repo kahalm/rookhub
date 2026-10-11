@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Elementos por página:",
+      "firstPage": "Primera página",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente",
+      "lastPage": "Última página",
+      "range": "{{start}}–{{end}} de {{length}}",
+      "rangeEmpty": "0 de {{length}}"
+    },
     "moreActions": "Más acciones",
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -243,7 +252,6 @@
       "title": "Política de privacidad",
       "intro": "RookHub es una plataforma de entrenamiento de ajedrez (ejercicios, modo sin fin, cursos, repertorios). Esta política explica cómo se tratan los datos personales en virtud del RGPD.",
       "controllerTitle": "Responsable",
-      "controller": "El responsable del tratamiento de datos es el operador indicado en el aviso legal",
       "dataTitle": "Qué datos tratamos",
       "dataIntro": "En función de tu uso, tratamos:",
       "dataAccount": "Datos de cuenta: usuario, dirección de correo electrónico, contraseña (almacenada solo como hash).",

@@ -50,9 +50,17 @@ export const SCROLL_FROM_LEVEL = 5;
                 <span class="num">{{ l.level }}</span>
                 <span class="icon" aria-hidden="true">{{ l.icon }}</span>
                 <span class="name">{{ l.nameKey | translate }}</span>
-                <span class="row" aria-hidden="true">
-                  @for (s of [1, 2, 3]; track s) { <span [class.on]="s <= l.stars">★</span> }
-                </span>
+                @if (l.stars === 0 && l.run > 0) {
+                  <!-- UI-Sweep 2026-10-11 (r2-k-level-run): angefangene Stufe zeigt den Zwischenstand statt leerer Sterne -->
+                  <span class="run">
+                    <span class="bar" aria-hidden="true"><span class="fill" [style.width.%]="l.run * 100 / l.total"></span></span>
+                    <span class="run-text">{{ 'kids.levels.runAt' | translate: { n: l.run + 1, total: l.total } }}</span>
+                  </span>
+                } @else {
+                  <span class="row" aria-hidden="true">
+                    @for (s of [1, 2, 3]; track s) { <span [class.on]="s <= l.stars">★</span> }
+                  </span>
+                }
               </a>
             } @else {
               <!-- Ein Knopf, kein stummes span: ein Tipp wackelt die Kachel und sagt, warum es nicht geht. -->
@@ -107,6 +115,20 @@ export const SCROLL_FROM_LEVEL = 5;
     .name { font-weight: 700; font-size: .98rem; text-align: center; }
     .row { font-size: 1.35rem; letter-spacing: 2px; color: #c9c9c9; }
     .row .on { color: #ffb300; }
+    .run { display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 4px 8px 0; box-sizing: border-box; }
+    .bar { height: 8px; border-radius: 4px; background: var(--kid-shadow); overflow: hidden; }
+    .fill { display: block; height: 100%; border-radius: 4px; background: var(--kid-green-strong); }
+    .run-text { margin-top: 2px; font-size: .8rem; font-weight: 700; text-align: center; }
+    /* UI-Sweep 2026-10-11 (r2-k-map-cols): am Handy drei statt zwei Spalten — 40 Stufen waren 20 Reihen, 3 300 px Wischen. */
+    @media (max-width: 479.98px) {
+      .grid { gap: 10px; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+      .level { min-height: 118px; padding: 12px 4px 8px; border-radius: 20px; }
+      .icon { font-size: 2.1rem; }
+      .name { font-size: .88rem; line-height: 1.2; }
+      .row { font-size: 1.15rem; letter-spacing: 1px; }
+      .num { top: 6px; left: 10px; font-size: .95rem; }
+      .lock { top: 5px; right: 7px; font-size: 1rem; }
+    }
     @keyframes pulse { 50% { transform: scale(1.04); } }
     @keyframes wiggle { 25% { transform: translateX(-6px) rotate(-3deg); } 75% { transform: translateX(6px) rotate(3deg); } }
     @media (prefers-reduced-motion: reduce) { .level.locked.nudge { animation: none; } }
@@ -136,6 +158,9 @@ export class LevelMapComponent {
     icon: themeIcon(l.theme),
     nameKey: themeNameKey(l.theme),
     stars: this.progress.level(l.level).stars,
+    // Laufender Durchgang (UI-Sweep 2026-10-11, r2-k-level-run): schon gelöste Aufgaben, nie über die Stufengröße.
+    run: Math.min(this.progress.level(l.level).runIndex, Math.max(l.puzzleCount - 1, 0)),
+    total: l.puzzleCount,
     unlocked: this.progress.isUnlocked(l.level),
   })));
 

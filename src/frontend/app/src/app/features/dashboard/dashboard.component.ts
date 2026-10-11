@@ -99,8 +99,11 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
            cdkDropList cdkDropListOrientation="mixed" [cdkDropListDisabled]="!editing" (cdkDropListDropped)="drop($event)">
         @for (tile of visibleTiles; track tile.id; let first = $first; let last = $last) {
           @let sub = tile.subtitle();
+          <!-- UI-Sweep 2026-10-11 (r2-rk-dash-stretch): ab zwei angepinnten Kursen geht die Kachel über die volle
+               Breite (Kurse nebeneinander) — sonst streckte sie die Nachbarkacheln ihrer Rasterzeile auf ~440 px. -->
           <mat-card cdkDrag [cdkDragDisabled]="!editing"
-                    [class.tile-off]="editing && !isEnabled(tile)" [class.tile-editing]="editing">
+                    [class.tile-off]="editing && !isEnabled(tile)" [class.tile-editing]="editing"
+                    [class.tile-wide]="tile.id === 'pinnedCourses' && pinnedCourses.length > 1">
             @if (editing) {
               <!-- Transparentes Schild: fängt NUR Klicks auf den Kachel-Buttons ab (keine
                    versehentliche Navigation). Bewusst KEIN cdkDragHandle mehr — sonst fängt es
@@ -228,6 +231,10 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .dashboard-grid { align-items: stretch; }
     .dashboard-grid > mat-card { display: flex; flex-direction: column; }
     .dashboard-grid > mat-card > mat-card-actions { margin-top: auto; }
+    /* UI-Sweep 2026-10-11 (r2-rk-dash-stretch): die hohe Kachel steht allein in ihrer Zeile, die Kurse darin im Raster. */
+    .dashboard-grid > mat-card.tile-wide { grid-column: 1 / -1; }
+    mat-card.tile-wide .pinned-courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 1rem 1.5rem; }
+    mat-card.tile-wide .pinned-course + .pinned-course { border-top: none; padding-top: 0; }
     /* Bearbeitungsmodus: gleiche Rasteransicht, nur Schild + Steuerelemente als Overlay. */
     mat-card.tile-editing { position: relative; }
     mat-card.tile-off { opacity: 0.45; }

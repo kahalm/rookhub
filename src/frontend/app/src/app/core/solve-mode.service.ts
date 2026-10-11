@@ -95,6 +95,25 @@ export class SolveModeService {
     const gemerkt = this.get(scope);
     if (gemerkt) return of(gemerkt);
     const shared = SolveModeService.isShared(scope);
+    return this.openDialog({ ...data, offerApplyAll: shared })
+      .pipe(map((r: SolveModeDialogResult | undefined) => {
+        // Abgebrochen (Escape ist durch disableClose aus, aber defensiv) → Trainingsmodus,
+        // das bisherige Verhalten. Gemerkt wird nur eine echte Wahl.
+        const mode: SolveMode = r?.mode === 'easy' ? 'easy' : 'training';
+        if (r) {
+          this.set(scope, mode);
+          if (shared && r.applyAll) this.set(GRUNDWAHL, mode);
+        }
+        return mode;
+      }));
+  }
+
+  /**
+   * Der gemeinsame Spielweisen-Dialog, ohne etwas zu merken. Benutzt von `ensure` und — UI-Sweep 2026-10-11
+   * (r2-rk-weekly-mode-dialog) — vom Wochenpost, der seine Wahl selbst je Post merkt; vorher hatte der eine eigene,
+   * anders aussehende Abfrage mit anderem Erklärtext.
+   */
+  openDialog(data: SolveModeDialogData = {}): Observable<SolveModeDialogResult | undefined> {
     return this.dialog
       // autoFocus 'dialog': den Container fokussieren, nicht die erste Karte — sonst trägt
       // „Trainingsmodus" den Fokusrahmen und sieht vorausgewählt aus (UX-004).
@@ -106,19 +125,9 @@ export class SolveModeService {
           : { width: '560px', maxWidth: '94vw', panelClass: 'solve-mode-panel' }),
         hasBackdrop: true, backdropClass: 'solve-mode-backdrop',
         disableClose: true, autoFocus: 'dialog',
-        data: { ...data, offerApplyAll: shared },
+        data,
       })
-      .afterClosed()
-      .pipe(map((r: SolveModeDialogResult | undefined) => {
-        // Abgebrochen (Escape ist durch disableClose aus, aber defensiv) → Trainingsmodus,
-        // das bisherige Verhalten. Gemerkt wird nur eine echte Wahl.
-        const mode: SolveMode = r?.mode === 'easy' ? 'easy' : 'training';
-        if (r) {
-          this.set(scope, mode);
-          if (shared && r.applyAll) this.set(GRUNDWAHL, mode);
-        }
-        return mode;
-      }));
+      .afterClosed();
   }
 
   /**

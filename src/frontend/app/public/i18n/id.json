@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "Item per halaman:",
+      "firstPage": "Halaman pertama",
+      "previousPage": "Halaman sebelumnya",
+      "nextPage": "Halaman berikutnya",
+      "lastPage": "Halaman terakhir",
+      "range": "{{start}}–{{end}} dari {{length}}",
+      "rangeEmpty": "0 dari {{length}}"
+    },
     "moreActions": "Tindakan lainnya",
     "save": "Simpan",
     "cancel": "Batal",
@@ -243,7 +252,6 @@
       "title": "Kebijakan Privasi",
       "intro": "RookHub adalah platform pelatihan catur (puzzle, mode tanpa batas, kursus, repertoir). Kebijakan ini menjelaskan bagaimana data pribadi diproses berdasarkan GDPR.",
       "controllerTitle": "Pengendali",
-      "controller": "Pengendali pemrosesan data adalah operator yang disebutkan dalam imprint",
       "dataTitle": "Data yang kami proses",
       "dataIntro": "Tergantung penggunaan Anda, kami memproses:",
       "dataAccount": "Data akun: nama pengguna, alamat email, kata sandi (disimpan hanya sebagai hash).",

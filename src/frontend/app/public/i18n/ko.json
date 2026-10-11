@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "페이지당 항목 수:",
+      "firstPage": "첫 페이지",
+      "previousPage": "이전 페이지",
+      "nextPage": "다음 페이지",
+      "lastPage": "마지막 페이지",
+      "range": "{{start}}–{{end}} / {{length}}",
+      "rangeEmpty": "0 / {{length}}"
+    },
     "moreActions": "추가 작업",
     "save": "저장",
     "cancel": "취소",
@@ -243,7 +252,6 @@
       "title": "개인정보 처리방침",
       "intro": "RookHub는 체스 훈련 플랫폼(퍼즐, 무한 모드, 코스, 레퍼토리)입니다. 이 방침은 GDPR에 따른 개인 데이터 처리 방식을 설명합니다.",
       "controllerTitle": "관리자",
-      "controller": "데이터 처리의 관리자는 인상(임프린트)에 명시된 운영자입니다",
       "dataTitle": "처리하는 데이터",
       "dataIntro": "사용 방식에 따라 다음 데이터를 처리합니다:",
       "dataAccount": "계정 데이터: 사용자명, 이메일 주소, 비밀번호(해시로만 저장).",

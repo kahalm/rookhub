@@ -19,6 +19,8 @@ import { PreferencesService } from '../../core/preferences.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GapResult, PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /**
  * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
@@ -51,7 +53,7 @@ export function withSideToMove(fen: string, black: boolean): string {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule,
-    TranslatePipe, ChessBoardComponent, PositionSetupComponent],
+    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',
 })
@@ -689,6 +691,32 @@ export class ReconstructDetailComponent implements OnInit {
       () => this.snackbar.info(this.translate.instant('reconstruct.copied')),
       () => this.snackbar.warn(this.translate.instant('reconstruct.copyFailed')),
     );
+  }
+
+  /** UI-Sweep 2026-10-11 (r2-rg-recon-fen): die FEN eines Stellungs-Teils kopieren (statt sie roh anzuzeigen). */
+  copyFen(part: ReconstructionPart): void {
+    const fen = part.fen ?? '';
+    if (!fen) return;
+    navigator.clipboard?.writeText(fen).then(
+      () => this.snackbar.info(this.translate.instant('reconstruct.copied')),
+      () => this.snackbar.warn(this.translate.instant('reconstruct.copyFailed')),
+    );
+  }
+
+  /**
+   * UI-Sweep 2026-10-11 (r2-rg-recon-fen): „Weiß am Zug · Zug 5" zu einer Stellung — aus der Seite am Zug und
+   * der Zugnummer der FEN; die FEN selbst steht nur noch eingeklappt darunter.
+   */
+  positionLine(part: ReconstructionPart): string {
+    const f = (part.fen ?? '').trim().split(/\s+/);
+    const side = this.translate.instant(f[1] === 'b' ? 'reconstruct.sideBlack' : 'reconstruct.sideWhite');
+    const move = Number(f[5]) > 0 ? Number(f[5]) : 1;
+    return this.translate.instant('reconstruct.posToMove', { side, move });
+  }
+
+  /** Ausrichtung der Mini-Vorschau: aus Sicht der Seite am Zug. */
+  positionOrientation(part: ReconstructionPart): 'white' | 'black' {
+    return (part.fen ?? '').trim().split(/\s+/)[1] === 'b' ? 'black' : 'white';
   }
 
   // ----- Anzeige-Helfer -----

@@ -327,4 +327,40 @@ describe('ClubGamesPageComponent', () => {
     TestBed.inject(HttpTestingController).verify();
     flush();
   }));
+
+  // UI-Sweep 2026-10-11 (r2-l-dup-game): zwei Fassungen derselben Partie — Hinweis für Verwalter, „ältere archivieren" an der jüngeren.
+  it('Dublette: Hinweis an beiden Fassungen, „ältere archivieren" nur an der jüngeren, danach eine Zeile', fakeAsync(() => {
+    (api as any).archiveOlder = jasmine.createSpy('archiveOlder').and.resolveTo({ replaced: 1 });
+    api.list.and.resolveTo({ total: 3, page: 1, pageSize: 50, items: [G(164, { duplicateIds: [153] }), G(7), G(153, { duplicateIds: [164] })] });
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const rows = Array.from(el.querySelectorAll('tr.dup-row'));
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('gleiche Partie wie #153');
+    expect(rows[1].textContent).toContain('neuere Fassung: #164');
+    expect(rows[1].querySelector('.dup-archive')).toBeNull();
+    (rows[0].querySelector('.dup-archive') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect((api as any).archiveOlder).toHaveBeenCalledWith(164);
+    const c = fixture.componentInstance as any;
+    expect(c.items().map((g: ClubGame) => g.id)).toEqual([164, 7]);
+    expect(c.total()).toBe(2);
+    expect(el.querySelector('tr.dup-row')).toBeNull();
+    expect(c.notice()).toContain('archiviert');
+    flush();
+  }));
+
+  it('Dublette: Rückfrage abgelehnt → nichts archiviert', fakeAsync(() => {
+    (api as any).archiveOlder = jasmine.createSpy('archiveOlder').and.resolveTo({ replaced: 1 });
+    confirmAsk.and.returnValue(of(false));
+    api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [G(164, { duplicateIds: [153] }), G(153, { duplicateIds: [164] })] });
+    create();
+    flushMicrotasks();
+    void (fixture.componentInstance as any).archiveOlder(G(164, { duplicateIds: [153] }));
+    flushMicrotasks();
+    expect((api as any).archiveOlder).not.toHaveBeenCalled();
+    flush();
+  }));
 });

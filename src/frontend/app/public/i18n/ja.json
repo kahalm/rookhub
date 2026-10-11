@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "1ページあたりの件数:",
+      "firstPage": "最初のページ",
+      "previousPage": "前のページ",
+      "nextPage": "次のページ",
+      "lastPage": "最後のページ",
+      "range": "{{start}}–{{end}} / {{length}}",
+      "rangeEmpty": "0 / {{length}}"
+    },
     "moreActions": "その他の操作",
     "save": "保存",
     "cancel": "キャンセル",
@@ -243,7 +252,6 @@
       "title": "プライバシーポリシー",
       "intro": "RookHub はチェストレーニングプラットフォームです（パズル、エンドレスモード、コース、レパートリー）。本ポリシーでは、GDPR に基づく個人データの取り扱いを説明します。",
       "controllerTitle": "管理者",
-      "controller": "データ処理の管理者はインプリントに記載された運営者です",
       "dataTitle": "処理するデータ",
       "dataIntro": "ご利用状況に応じて、以下のデータを処理します。",
       "dataAccount": "アカウントデータ: ユーザー名、メールアドレス、パスワード（ハッシュのみ保存）。",

@@ -28,7 +28,12 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
       <p>{{ 'kids.home.subtitle' | translate }}</p>
       @if (current(); as level) {
         <a class="go" [routerLink]="['/levels', level]">
-          {{ (done() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
+          <!-- UI-Sweep 2026-10-11 (r2-k-level-run): angefangener Durchgang mit der nächsten Aufgabe -->
+          @if (currentRun() > 0) {
+            {{ 'kids.home.continueAt' | translate: { level, n: currentRun() + 1 } }} ▶
+          } @else {
+            {{ (done() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
+          }
         </a>
       } @else if (failed()) {
         <!-- An der Stelle des Startknopfs, nicht klein unter dem Speicherhinweis: ohne Stufen fehlte der Knopf
@@ -133,6 +138,14 @@ export class KidsHomeComponent {
   readonly failed = signal(false);
 
   readonly current = computed(() => this.progress.currentLevel(this.levels().map(l => l.level)));
+  /** Schon gelöste Aufgaben im laufenden Durchgang der aktuellen Stufe (0 = nicht angefangen;
+   *  UI-Sweep 2026-10-11, r2-k-level-run). */
+  readonly currentRun = computed(() => {
+    const level = this.current();
+    if (level === null) return 0;
+    const count = this.levels().find(l => l.level === level)?.puzzleCount ?? 0;
+    return Math.min(this.progress.level(level).runIndex, Math.max(count - 1, 0));
+  });
   /** Geschaffte Stufen der aktuellen Leiter — nie mehr als sie hat (F7-014). */
   readonly done = computed(() => this.progress.completedOf(this.levels().map(l => l.level)));
   readonly courseLink = computed(() => {

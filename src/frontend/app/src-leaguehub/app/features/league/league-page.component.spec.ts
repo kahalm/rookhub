@@ -109,6 +109,14 @@ describe('LeaguePageComponent', () => {
     expect(el.textContent).toContain('Schachkreis');
   });
 
+  it('UI-Sweep 2026-10-11 (r2-l-default-verein): die eigene Mannschaft laut Server schlägt den ersten Verein der Liste', async () => {
+    api.index.and.resolveTo({ ...INDEX, leagues: [{ tnr: 10, name: '1. Bundesliga', own: ['Schachklub Testdorf'] }] });
+    api.league.and.callFake(async (tnr: number) => league(tnr, ['1. SK Absam', 'Pinggau', 'Schachklub Testdorf']));
+    create();
+    await settle();
+    expect(fixture.componentInstance.team()).toBe('Schachklub Testdorf');
+  });
+
   // Wunsch 2026-10-07 (0.710.0): „Zeig bei der Ligaauswahl nur die Ligen, in denen der Verein vertreten ist."
   describe('nur Ligen mit eigener Mannschaft', () => {
     const ALL: LeagueIndex = { ...INDEX, filtered: false, total: 3,

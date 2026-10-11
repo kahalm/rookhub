@@ -101,6 +101,26 @@ describe('KidsHomeComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.tile.puzzles .meta')!.textContent).toContain('3 of 3 levels');
   }));
 
+  /** UI-Sweep 2026-10-11 (r2-k-level-run): der Startknopf nennt bei einem angefangenen Durchgang die nächste Aufgabe. */
+  it('angefangene Stufe: „Weiter mit Stufe n · Aufgabe m"', fakeAsync(() => {
+    const progress = TestBed.inject(KidsProgressStore);
+    progress.completeRun(1);
+    for (let i = 0; i < 4; i++) progress.recordSolved(2, 0);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { kids: { home: { continueAt: 'Level {{level}} · puzzle {{n}}', continue: 'Level {{level}}' } } });
+    translate.use('en');
+
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([]);
+    http.expectOne('/api/kids/levels').flush([
+      { level: 1, theme: 'mate1', puzzleCount: 10 }, { level: 2, theme: 'mate1', puzzleCount: 10 },
+    ]);
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('a.go')!.textContent).toContain('Level 2 · puzzle 5');
+  }));
+
   /** Codereview 2026-09-29, UX-062: ohne Stufen fehlte der Startknopf ersatzlos, der Fehlersatz stand klein als letzte
    *  Zeile unter dem Speicherhinweis (am Handy bei y ≈ 680 px). */
   it('das Fehlerbild steht an der Stelle des Startknopfs, nicht unter dem Speicherhinweis', fakeAsync(() => {

@@ -61,6 +61,18 @@ public class AttemptStatsTests
         Assert.Equal(new[] { 8, 0, 3 }, bands.Select(b => b.Solved));
     }
 
+    /// <summary>UI-Sweep 2026-10-11 (r2-rp-ratingbands): kommt derselbe Bucket mehrfach an (früher je
+    /// Rating eine Gruppe, weil MariaDB `Rating / 200` dezimal teilte), wird er zu EINEM Band summiert.</summary>
+    [Fact]
+    public void RatingBands_MergesDuplicateBuckets()
+    {
+        var bands = AttemptStats.RatingBands(new[] { (4, 1, 1), (3, 1, 0), (4, 2, 1), (3, 1, 1), (4, 1, 0) });
+
+        Assert.Equal(new[] { 600, 800 }, bands.Select(b => b.From));
+        Assert.Equal(new[] { 2, 4 }, bands.Select(b => b.Attempts));
+        Assert.Equal(new[] { 1, 2 }, bands.Select(b => b.Solved));
+    }
+
     [Fact]
     public void RatingBands_Empty_IsEmpty()
         => Assert.Empty(AttemptStats.RatingBands(Array.Empty<(int, int, int)>()));

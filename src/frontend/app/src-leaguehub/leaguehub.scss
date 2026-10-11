@@ -424,6 +424,16 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .club-table tr.game > td { display: none; }
   .club-table tr.game > td.card-cell { display: block; padding: 10px 2px 4px; }
 }
+/* UI-Sweep 2026-10-11 (r2-l-dup-game): Hinweis „möglicherweise doppelt" (nur Verwalter) direkt unter der Partie. */
+.club-table tr.dup-row td { padding: 2px 6px 8px; border-top: 0;
+  background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.dup-hint { color: var(--warn); margin-right: 12px; }
+.dup-archive { padding: 2px 10px; }
+
+/* UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto ist mehreren Spielern vorgeschlagen. */
+.also-for { display: inline-block; margin: 4px 0 0; padding: 1px 8px; border-radius: 4px; font-size: .85rem;
+  color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.also-for.fits { color: inherit; }
 
 /* Formular-Korrektur: Foto | Brett | Zug + Zugliste — am PC nebeneinander, darunter die Partie-Daten */
 /* Formular prüfen: Foto | Brett | Prüfen + Zugliste. Am Handy zuerst „Prüfen" (Ausschnitt der Zeile, Lesarten, „Stimmt so"),

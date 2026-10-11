@@ -318,6 +318,33 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.StartsWith("Mitglied im Lichess-Team „Schachkreis Zugspitze“", sugg.Evidence);
     }
 
+    // UI-Sweep 2026-10-11 (r2-l-same-account): „Hans Schmidt" passt auf „Schmidt, Hans" (SC Garching 4) und „Schmidt, Hans
+    // Christoph" (SC Haar 1) — das Konto spielte für SC Garching, also bekommt nur der Garchinger den Vorschlag.
+    [Fact]
+    public async Task Check_RealNameFitsTwoPlayers_TheClubDecides()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 912_026_001, Name = "BOL", Season = "2026/27", League = "BOL", Stage = "Liga", Source = ZugspitzeSource.Source });
+        _db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 912_026_001, Team = "SC Garching 4", Name = "Schmidt, Hans", NameKey = "schmidt, hans", FideId = "301", EloN = 2070 },
+            new LeaguePlayer { Tnr = 912_026_001, Team = "SC Haar 1", Name = "Schmidt, Hans Christoph", NameKey = "schmidt, hans christoph", FideId = "302", EloN = 1962 });
+        _db.LeagueScoutAccounts.Add(new LeagueScoutAccount { UserName = "shape62", DisplayName = "Shape62", PlayedFor = "SC Garching 1980 e.V.", FoundAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        var http = new FakeHttp(req =>
+        {
+            var u = req.RequestUri!.ToString();
+            if (u.EndsWith("/api/users"))
+                return Ok("""[{"id":"shape62","username":"Shape62","profile":{"flag":"DE","realName":"Hans Schmidt"},"perfs":{"blitz":{"games":200,"rating":2148}}}]""");
+            if (u.Contains("/api/fide/player/")) return Ok("{\"federation\":\"GER\",\"year\":1970}");
+            return Status(HttpStatusCode.NotFound);
+        });
+        await Scout(http).RunOnceAsync(TimeSpan.FromMinutes(1), refreshPool: false, default);
+        var sugg = Assert.Single(await _db.LeagueAccountSuggestions.Where(x => x.UserName == "Shape62").ToListAsync());
+        Assert.Equal("301", sugg.FideId);
+        Assert.Equal("SC Garching 1980 e.V.", LeagueTeamScout.OriginClub(sugg.Evidence));
+        Assert.True(LeagueTeamScout.SameClub("SC Garching 4", "SC Garching 1980 e.V.", LeagueRegions.Bayern));
+        Assert.False(LeagueTeamScout.SameClub("SC Haar 1", "SC Garching 1980 e.V.", LeagueRegions.Bayern));
+    }
+
     [Fact]
     public async Task Pool_SkipsATeamThatGivesNothing_AndReadsTheOnesAfterIt()
     {

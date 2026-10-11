@@ -18,6 +18,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessAccept, GuessHistoryMove, GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /** Umwandlungsfigur aus dem SAN („e8=Q+" → „q"); leer, wenn der Zug keine Umwandlung ist. */
 function promotionOf(san: string | undefined): string {
@@ -46,7 +47,7 @@ interface HistoryRow {
   standalone: true,
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressBarModule, MatMenuModule, MatCheckboxModule, FormsModule,
-    TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent],
+    TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent, SanPipe],
   template: `
     <div class="gb-container">
       @if (loading) {
@@ -96,16 +97,28 @@ interface HistoryRow {
                              [playable]="canGuess" (userMove)="onMove($event)" />
 
             @if (session.status === 'running' && !holding) {
-              <div class="actions">
-                <button mat-stroked-button (click)="skip()" [disabled]="busy || browsing">
-                  <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
-                </button>
-                <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
-              </div>
+              <!-- UI-Sweep 2026-10-11 (r2-rg-guess-start): beim Durchsehen der Eroeffnung NICHT „Du bist am Zug"
+                   unter einer fremden Stellung, sondern was gerade zu sehen ist + der Weg zur Aufgabe direkt
+                   unter dem Brett (am Handy stand „Zur Aufgabe" erst weit unten unter dem Fortschritt). -->
+              @if (browsing) {
+                <div class="actions browse-actions">
+                  <span class="muted small">{{ 'guess.browsingHint' | translate:{ count: preMoves } }}</span>
+                  <button mat-flat-button color="primary" class="to-task" (click)="browse(null)">
+                    {{ 'guess.toTaskMove' | translate:{ move: moveLabel } }} <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+                  </button>
+                </div>
+              } @else {
+                <div class="actions">
+                  <button mat-stroked-button (click)="skip()" [disabled]="busy">
+                    <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
+                  </button>
+                  <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
+                </div>
+              }
             }
             @if (rejected) {
               <div class="held g-similar">
-                <span class="hg">{{ 'guess.notTheGameMove' | translate:{ move: rejected } }}</span>
+                <span class="hg">{{ 'guess.notTheGameMove' | translate:{ move: (rejected | san) } }}</span>
               </div>
             }
             <!-- Dein Zug steht auf dem Brett; DARUNTER, was die Partie gespielt hat. -->
@@ -114,12 +127,12 @@ interface HistoryRow {
                 <!-- Beim Halt WEGEN eines Kommentars steht der Partiezug schon auf dem Brett; ihn
                      danebenzuschreiben waere doppelt. Dann zaehlt nur noch der Weg zurueck ins Spiel. -->
                 @if (!holdingNote) {
-                  <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: last.gameMoveSan } }}</span>
+                  <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: (last.gameMoveSan | san) } }}</span>
                   @if (evalDelta) {
                     <span class="hd">{{ 'guess.evalDelta' | translate:{ delta: evalDelta } }}</span>
                   }
                 } @else {
-                  <span class="hg">{{ 'guess.gamePlayed' | translate:{ move: last.gameMoveSan } }}</span>
+                  <span class="hg">{{ 'guess.gamePlayed' | translate:{ move: (last.gameMoveSan | san) } }}</span>
                 }
                 <button mat-flat-button color="primary" (click)="continueGame()">
                   {{ 'guess.continue' | translate }} <mat-icon>arrow_forward</mat-icon>
@@ -135,10 +148,10 @@ interface HistoryRow {
                   </div>
                   <p class="fb-line">
                     @if (last.playedSan) {
-                      <span>{{ 'guess.youPlayed' | translate:{ move: last.playedSan } }}</span> ·
+                      <span>{{ 'guess.youPlayed' | translate:{ move: (last.playedSan | san) } }}</span> ·
                     }
-                    <span>{{ 'guess.gamePlayed' | translate:{ move: last.gameMoveSan } }}</span>
-                    @if (last.replySan) { · <span>{{ 'guess.reply' | translate:{ move: last.replySan } }}</span> }
+                    <span>{{ 'guess.gamePlayed' | translate:{ move: (last.gameMoveSan | san) } }}</span>
+                    @if (last.replySan) { · <span>{{ 'guess.reply' | translate:{ move: (last.replySan | san) } }}</span> }
                   </p>
                   @if (last.evalText) {
                     <p class="muted small">{{ 'guess.evalAfter' | translate:{ eval: last.evalText } }}</p>
@@ -168,8 +181,8 @@ interface HistoryRow {
                       @for (r of review; track r.ply) {
                         <div class="rev-row" [class]="'g-' + (r.grade || 'skipped')">
                           <span class="no">{{ r.moveNumber }}{{ r.white ? '.' : '…' }}</span>
-                          <span class="game">{{ r.gameSan }}</span>
-                          <span class="yours">{{ r.playedSan || '–' }}</span>
+                          <span class="game">{{ r.gameSan | san }}</span>
+                          <span class="yours">{{ (r.playedSan | san) || '–' }}</span>
                           <span class="pts">{{ r.points > 0 ? '+' : '' }}{{ r.points }}</span>
                           <!-- Nur wo es etwas Besseres gab als den Partiezug. -->
                           @if (hasBetter(r)) {
@@ -214,7 +227,7 @@ interface HistoryRow {
                 }
                 @if (browsedComment; as note) {
                   <div class="note">
-                    <span class="note-move">{{ note.move }}</span>
+                    <span class="note-move">{{ note.move | san:'text' }}</span>
                     <span>{{ note.text }}</span>
                     <!-- Steht der Kommentar nur in einer anderen Sprache da, wird das gesagt statt
                          eine Luecke zu lassen. -->
@@ -231,13 +244,13 @@ interface HistoryRow {
                         <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
                                 [class.noted]="row.wNoted" [class.skipped]="row.wSkipped"
                                 [attr.title]="hintFor(row.wNoted, row.wSkipped)"
-                                (click)="browse(row.wIdx)">{{ row.w }}</button>
+                                (click)="browse(row.wIdx)">{{ row.w | san }}</button>
                       } @else { <span class="mv muted">…</span> }
                       @if (row.b !== null) {
                         <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
                                 [class.noted]="row.bNoted" [class.skipped]="row.bSkipped"
                                 [attr.title]="hintFor(row.bNoted, row.bSkipped)"
-                                (click)="browse(row.bIdx)">{{ row.b }}</button>
+                                (click)="browse(row.bIdx)">{{ row.b | san }}</button>
                       } @else { <span></span> }
                     </div>
                   }
@@ -262,6 +275,8 @@ interface HistoryRow {
        leeres Drittel zu lassen (auf dem Desktop gemeldet, 2026-09-10). */
     .side-col { flex: 1 1 320px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
     .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    /* UI-Sweep 2026-10-11 (r2-rg-guess-start): Hinweis + Hauptknopf zur Aufgabe direkt unter dem Brett. */
+    .browse-actions .to-task { margin-left: auto; }
     .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     /* Eröffnung: Navigation oben, darunter die Züge UNTEREINANDER (Nr. · Weiß · Schwarz). */
     .opening { margin-top: 8px; }
@@ -534,6 +549,15 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     if (cp === null || cp === undefined || !this.showsDelta) return null;
     const pawns = cp / 100;
     return (pawns > 0 ? '+' : '') + pawns.toFixed(2);
+  }
+
+  /**
+   * UI-Sweep 2026-10-11 (r2-rg-guess-start): wie viele ganze Züge vor der Aufgabe vorgespielt sind
+   * („Zug 10" → 9) — für den Hinweis beim Durchsehen der Eröffnung.
+   */
+  get preMoves(): number {
+    const p = this.session?.position;
+    return p ? Math.max(0, p.moveNumber - 1) : 0;
   }
 
   get moveLabel(): string {

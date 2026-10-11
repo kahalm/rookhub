@@ -17,6 +17,7 @@ import { FlashcardBoardComponent } from './flashcard-board.component';
 import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
 import { CourseLanguageService } from '../course-language.service';
 import { isBoardHotkey } from '../../../shared/keyboard.util';
+import { pgnHeaderText } from '../../../shared/pgn-viewer/pgn-header.util';
 
 /**
  * Druckansicht „Flashcards": je Kurs-Linie eine Karteikarte — VORN die Endstellung mit den
@@ -147,7 +148,8 @@ export class FlashcardsComponent implements OnInit {
           const wanted = new Set(rawLines);
           built = built.filter(b => wanted.has(b.lineKey));
         } else if (chapter !== null) {
-          built = built.filter(b => (b.card.chapter?.trim() || '') === chapter);
+          // Platzhalter-Kapitel stehen auf der Karte leer (pgnHeaderText) - der Filter vergleicht in derselben Form.
+          built = built.filter(b => (b.card.chapter?.trim() || '') === pgnHeaderText(chapter));
         }
         this.finish(built.map(b => b.card));
       },

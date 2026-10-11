@@ -482,6 +482,42 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Equal(0, (await Finder(World()).ScanAsync(Max, default)).Found);
     }
 
+    // UI-Sweep 2026-10-11 (r2-l-same-account): „Lichess: Shape62" war für „Schmidt, Hans" (SC Garching 4) UND „Schmidt, Hans
+    // Christoph" (SC Haar 1) vorgeschlagen — ohne Hinweis. Jetzt: „auch vorgeschlagen für", welcher Verein passt, und wer eines
+    // übernimmt, verwirft die anderen.
+    [Fact]
+    public async Task SameAccount_ForTwoPlayers_IsMarked_ClubFitShown_AcceptRejectsTheOther()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Name = "BOL", Season = "2026/27", League = "BOL", Stage = "x", Source = ZugspitzeSource.Source });
+        _db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 7, Team = "SC Garching 4", Name = "Schmidt, Hans", NameKey = "schmidt, hans", FideId = "301" },
+            new LeaguePlayer { Tnr = 7, Team = "SC Haar 1", Name = "Schmidt, Hans Christoph", NameKey = "schmidt, hans christoph", FideId = "302" });
+        const string ev = "spielte für „SC Garching 1980 e.V.“ (Lichess-Team-Battle); Klarname im Profil („Hans Schmidt“)";
+        _db.LeagueAccountSuggestions.AddRange(
+            new LeagueAccountSuggestion { FideId = "301", Site = "lichess", UserName = "Shape62", Url = "u", Score = 10, Evidence = ev, Source = "team" },
+            new LeagueAccountSuggestion { FideId = "302", Site = "lichess", UserName = "shape62", Url = "u", Score = 11, Evidence = ev, Source = "team" },
+            new LeagueAccountSuggestion { FideId = "302", Site = "lichess", UserName = "Other", Url = "u", Score = 3, Evidence = "x" });
+        await _db.SaveChangesAsync();
+        var svc = new LeagueOnlineAccountService(_db);
+
+        var items = (await svc.SuggestionsAsync(null, default))["items"]!.AsArray();
+        var haar = items.Single(i => (string)i!["fide"]! == "302" && (string)i!["user"]! == "shape62")!;
+        Assert.False((bool)haar["clubFits"]!);
+        var also = Assert.Single(haar["alsoFor"]!.AsArray())!;
+        Assert.Equal(("301", "Schmidt, Hans", "SC Garching 4", true), ((string)also["fide"]!, (string)also["name"]!, (string)also["team"]!, (bool)also["clubFits"]!));
+        Assert.True((bool)items.Single(i => (string)i!["fide"]! == "301")!["clubFits"]!);
+        Assert.Null(items.Single(i => (string)i!["user"]! == "Other")!["alsoFor"]);          // anderes Konto: kein Hinweis
+        // auch in der Liste EINES Spielers steht, für wen das Konto noch vorgeschlagen ist
+        Assert.Equal("301", (string)(await svc.SuggestionsAsync("302", default))["items"]!.AsArray()
+            .Single(i => (string)i!["user"]! == "shape62")!["alsoFor"]![0]!["fide"]!);
+
+        var garching = await _db.LeagueAccountSuggestions.SingleAsync(s => s.FideId == "301");
+        Assert.Null((await svc.AcceptSuggestionAsync(garching.Id, sure: true, default)).Reason);
+        var other = await _db.LeagueAccountSuggestions.AsNoTracking().SingleAsync(s => s.FideId == "302" && s.UserName == "shape62");
+        Assert.Equal(LeagueSuggestionStatus.Rejected, other.Status);                          // gehört jemand anderem
+        Assert.Equal(LeagueSuggestionStatus.Open, (await _db.LeagueAccountSuggestions.AsNoTracking().SingleAsync(s => s.UserName == "Other")).Status);
+    }
+
     [Fact]
     public void SuggestionJson_CarriesTheFieldsTheCardShows()
     {

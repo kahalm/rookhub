@@ -63,4 +63,24 @@ describe('clubhub.scss', () => {
     const bar = host.querySelector<HTMLElement>('.form-save')!;
     expect(pad).toBeGreaterThanOrEqual(bar.getBoundingClientRect().height);
   });
+  // UI-Sweep 2026-10-11 (r2-c-privacy-style)
+  it('Datenschutzseite: ClubHub-Karte, Slab-Köpfe in Kopflinienfarbe, Links in Primärfarbe, kein Extra-Rand im .wrap', () => {
+    const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card">
+      <h2>Verantwortlicher</h2><a href="#x">Link</a></div></div></app-privacy></main></ch-root>`);
+    const card = el.querySelector<HTMLElement>('.mat-mdc-card')!;
+    const cs = getComputedStyle(card);
+    expect(cs.getPropertyValue('--mat-sys-primary').trim()).toBe(rootVar('--primary'));
+    expect(cs.getPropertyValue('--mat-card-title-text-font')).toContain('Zilla Slab');
+    expect(getComputedStyle(el.querySelector('.legal-container')!).paddingLeft).toBe('0px');
+    const probe = (v: string) => {
+      const p = document.createElement('span');
+      p.style.color = `var(${v})`;
+      card.appendChild(p);
+      return getComputedStyle(p).color;
+    };
+    const h2 = getComputedStyle(el.querySelector('h2')!);
+    expect(h2.fontFamily).toContain('Zilla Slab');
+    expect(h2.color).toBe(probe('--rule'));
+    expect(getComputedStyle(el.querySelector('a')!).color).toBe(probe('--primary'));
+  });
 });

@@ -79,6 +79,16 @@ import { pieceGlyph } from './stars-play.component';
     .glyph { font-size: 2.8rem; line-height: 1.1; }
     .name { font-size: 1.1rem; font-weight: 800; }
     .meta { font-size: .95rem; opacity: .85; }
+    /* UI-Sweep 2026-10-11 (r2-k-map-cols): am Handy drei statt zwei Spalten, wie die Stufenkarte. */
+    @media (max-width: 479.98px) {
+      .grid { gap: 10px; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+      .stage { min-height: 118px; padding: 12px 4px 8px; border-radius: 20px; }
+      .glyph { font-size: 2.2rem; }
+      .name { font-size: .95rem; text-align: center; line-height: 1.2; }
+      .meta { font-size: .8rem; text-align: center; }
+      .num { top: 6px; left: 10px; font-size: .95rem; }
+      .lock { top: 5px; right: 7px; font-size: 1rem; }
+    }
   `],
 })
 export class StarsMapComponent {

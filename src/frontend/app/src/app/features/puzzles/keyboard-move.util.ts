@@ -49,6 +49,21 @@ export function localizeSan(san: string, lang: string | null | undefined): strin
     .replace(/=([QRBN])/, (_m, p: string) => '=' + (toLocal[p] ?? p));
 }
 
+/**
+ * UI-Sweep 2026-10-11 (r2-rg-notation): eine ganze Zugfolge als TEXT („1. e4 e5 2. Nf3", „12.Nf3 a6",
+ * „5…Nc6") in die Figurenbuchstaben der Sprache. Jedes Leerzeichen-Wort wird für sich übersetzt, eine
+ * vorangestellte Zugnummer („12.", „5…", „5...") bleibt stehen. NUR für reine Zugfolgen, nie für Prosa:
+ * ein Wort wie „Bauer" (B + a) sähe für {@link localizeSan} wie ein Läuferzug aus.
+ */
+export function localizeSanText(text: string, lang: string | null | undefined): string {
+  if (!text) return text;
+  return text.split(' ').map(word => {
+    const m = /^(\d+(?:\.\.\.|\.|…))?(.*)$/.exec(word);
+    if (!m || !m[2]) return word;
+    return (m[1] ?? '') + localizeSan(m[2], lang);
+  }).join(' ');
+}
+
 /** SAN ohne Zeichen, die für die Identität des Zugs nichts sagen: Schach/Matt, Bewertung, Schlagzeichen, „=". */
 function sanKey(san: string): string {
   return san.replace(/[+#!?x:=]/g, '');

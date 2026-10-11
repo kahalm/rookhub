@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '@lh/core/league-api.service';
 import { AccountSuggestion } from '@lh/core/league.models';
-import { AccountSuggestionsComponent, lastActiveText, suggestionFacts } from './account-suggestions.component';
+import { AccountSuggestionsComponent, betterFitText, lastActiveText, originClub, suggestionFacts } from './account-suggestions.component';
 
 const S = (id: number, over: Partial<AccountSuggestion> = {}): AccountSuggestion => ({
   id, fide: '222', site: 'chess.com', user: 'Max_Muster', url: 'https://www.chess.com/member/Max_Muster', score: 2,
@@ -127,5 +127,25 @@ describe('AccountSuggestionsComponent', () => {
     expect(row.querySelector('.sugg-evidence')?.textContent).toContain('Land Österreich');
     await fixture.componentInstance.accept(S(4, { hidden: true }), false);
     expect(api.acceptSuggestion).toHaveBeenCalledWith(4, false);
+  });
+
+  // UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto bei zwei Spielern.
+  it('dasselbe Konto bei zwei Spielern: „auch vorgeschlagen für", passt eher zu, Übernehmen nennt die verworfenen', async () => {
+    api.acceptSuggestion.and.resolveTo({} as never);
+    const haar = S(11, { site: 'lichess', user: 'shape62', clubFits: false,
+      evidence: 'spielte für „SC Garching 1980 e.V.“ (Lichess-Team-Battle); Klarname im Profil („Hans Schmidt“)',
+      alsoFor: [{ id: 10, fide: '301', name: 'Schmidt, Hans', team: 'SC Garching 4', clubFits: true }] });
+    fixture.componentRef.setInput('items', [haar, S(12)]);
+    fixture.detectChanges();
+    const [li, other] = Array.from(el().querySelectorAll('.sugg-list li'));
+    expect(li.querySelector('.also-for')?.textContent).toContain('auch vorgeschlagen für: Schmidt, Hans (SC Garching 4)');
+    expect(li.querySelector('.sugg-better')?.textContent).toContain('spielte für „SC Garching 1980 e.V.“ – passt eher zu Schmidt, Hans (SC Garching 4)');
+    expect(other.querySelector('.also-for')).toBeNull();
+    await fixture.componentInstance.accept(haar, true);
+    fixture.detectChanges();
+    expect(li.textContent).toContain('Vorschlag für Schmidt, Hans (SC Garching 4) verworfen');
+    expect(betterFitText({ ...haar, clubFits: true })).toBeNull();
+    expect(originClub('Mitglied im Lichess-Team „SK Kufstein“; …')).toBe('SK Kufstein');
+    expect(originClub('Nutzername aus dem Namen')).toBeNull();
   });
 });

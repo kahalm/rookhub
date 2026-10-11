@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginator": {
+      "itemsPerPage": "每页条数：",
+      "firstPage": "第一页",
+      "previousPage": "上一页",
+      "nextPage": "下一页",
+      "lastPage": "最后一页",
+      "range": "第 {{start}}–{{end}} 条，共 {{length}} 条",
+      "rangeEmpty": "0，共 {{length}} 条"
+    },
     "moreActions": "更多操作",
     "save": "保存",
     "cancel": "取消",
@@ -243,7 +252,6 @@
       "title": "隐私政策",
       "intro": "RookHub 是一个国际象棋训练平台（战术题、无尽模式、课程、开局库）。本政策说明个人数据如何在 GDPR 框架下被处理。",
       "controllerTitle": "数据控制者",
-      "controller": "数据处理的控制者为版权声明中所列的运营者",
       "dataTitle": "我们处理哪些数据",
       "dataIntro": "根据你的使用情况，我们可能处理以下数据：",
       "dataAccount": "账户数据：用户名、邮箱地址、密码（仅以哈希形式存储）。",

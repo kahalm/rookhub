@@ -446,6 +446,31 @@ label.upload.disabled { opacity: .5; }
   background: color-mix(in srgb, var(--primary) 12%, transparent); border-left-color: var(--primary);
 }
 
+/* Rechtsseiten (Datenschutz, Impressum, Konto löschen) im ClubHub-Look statt RookHub-Material (UI-Sweep 2026-10-11,
+   r2-c-privacy-style): Karte wie .gate, Titel und Abschnittsköpfe in Zilla Slab, Köpfe mit der roten Kopflinienfarbe,
+   Links in der Primärfarbe. Am Handy kein eigener 2rem-Rand mehr — .wrap gibt schon 16 px je Seite.
+   Die Selektoren sind spezifischer als die der Komponenten (.legal-container[_ngcontent] / h2[_ngcontent]). */
+ch-root .wrap .legal-container { padding: 0; }
+:is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card {
+  --mat-sys-primary: var(--primary);
+  --mat-sys-on-surface: var(--ink);
+  --mat-sys-on-surface-variant: var(--muted);
+  --mat-sys-body-large-font: var(--body);
+  --mat-sys-body-medium-font: var(--body);
+  --mat-card-elevated-container-color: var(--card);
+  --mat-card-elevated-container-elevation: none;
+  --mat-card-elevated-container-shape: 10px;
+  --mat-card-title-text-font: var(--slab);
+  --mat-card-title-text-size: 28px;
+  --mat-card-title-text-weight: 700;
+  --mat-card-title-text-line-height: 1.15;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--body);
+}
+:is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 700 19px/1.2 var(--slab); color: var(--rule); }
+:is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a { color: var(--primary); }
+
 @media (prefers-reduced-motion: reduce) {
   .tick[aria-pressed="true"] .box svg { transition: none; }
   .today { transform: none; }
