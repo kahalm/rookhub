@@ -215,7 +215,7 @@ public class ChessableLineTrainedResultDto
 }
 
 /// <summary>RepCheck meldet eine unerwartete Chessable-Antwort beim „Kurs holen“ (RepCheck ≥ 1.60.0 hat den Abruf
-/// deswegen gestoppt). Siehe <see cref="RookHub.Api.Services.ChessableResponseAlertService"/>.</summary>
+/// deswegen gestoppt). Siehe <see cref="RookHub.Api.Services.Chessable.ChessableResponseAlertService"/>.</summary>
 public class ChessableUnexpectedResponseInputDto
 {
     [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]

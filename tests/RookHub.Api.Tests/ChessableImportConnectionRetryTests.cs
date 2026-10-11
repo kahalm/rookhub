@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Tests;
 

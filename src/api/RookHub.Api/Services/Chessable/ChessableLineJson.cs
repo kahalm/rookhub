@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Liest aus den ROHEN getGame-Antworten eines Browser-Imports, was die Extension nicht verlaesslich

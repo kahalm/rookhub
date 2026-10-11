@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Fehler aus dem piratechess-Backend. <see cref="Status"/> ist der Original-

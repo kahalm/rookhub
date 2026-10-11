@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Services;
 

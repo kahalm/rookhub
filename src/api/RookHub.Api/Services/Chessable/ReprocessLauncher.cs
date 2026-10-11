@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Stößt das Neu-Aufbereiten von Kursen/Repertoires (<see cref="ImportReprocessService"/>) im

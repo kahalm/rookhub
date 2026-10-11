@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Aktualisiert (i. d. R. nächtlich, vom <see cref="ChessableCourseRefreshScheduler"/> getrieben) die

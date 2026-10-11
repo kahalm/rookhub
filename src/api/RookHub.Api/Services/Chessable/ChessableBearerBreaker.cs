@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Circuit-Breaker für den pro-User gespeicherten Chessable-Bearer.

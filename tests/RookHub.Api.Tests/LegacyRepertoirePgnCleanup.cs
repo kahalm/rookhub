@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Tests;
 

@@ -1,6 +1,7 @@
 using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Tests;
 

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Zustand einer LAUFENDEN Browser-Import-Sitzung (RepCheck): die Extension streamt einen Chessable-Kurs

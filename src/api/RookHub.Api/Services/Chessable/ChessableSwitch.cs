@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// EINE Stelle fuer den Schalter des RookHub-EIGENEN Chessable-Wegs (<c>Chessable:Enabled</c>, Vorgabe AN) —

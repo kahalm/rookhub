@@ -9,6 +9,7 @@ using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Controllers;
 

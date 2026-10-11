@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// EINE Form fuer Chessable-Kennungen (Codereview 2026-09-29, A3-013). Vorher stand die bid-Pruefung an vier Stellen

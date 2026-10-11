@@ -1,4 +1,5 @@
 using Chess;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Services.Prep;
 

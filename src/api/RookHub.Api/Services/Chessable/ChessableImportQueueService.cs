@@ -5,7 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Geteilte Helfer rund um die Chessable-Import-Warteschlange, die sowohl der User-Controller

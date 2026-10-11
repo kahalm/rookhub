@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using RookHub.Api.Controllers;
 using RookHub.Api.Filters;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Tests;
 

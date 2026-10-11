@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Stößt einmal je 24 h (um 04:00 UTC) den Refresh aller Chessable-Kurslisten an

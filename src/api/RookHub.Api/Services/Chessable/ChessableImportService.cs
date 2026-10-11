@@ -7,7 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using Serilog.Context;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Führt einen asynchronen Chessable-Kurs-Import durch: holt den Kurs (tief) von piratechess

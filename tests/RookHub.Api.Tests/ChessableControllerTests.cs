@@ -16,6 +16,7 @@ using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Tests;
 

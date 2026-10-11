@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Chess;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Reiner, DB-freier Konverter einer Chessable-<c>getReview</c>-Antwort in ein PGN im

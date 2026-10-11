@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Byte-Stand der Chessable-Roh-Senken. Deren Deckel zählen BYTES, nicht Zeilen: ein Zeilendeckel allein ließ in

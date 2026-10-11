@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Treibt die SCHNELLE Import-Lane: voll-gecachte Chessable-Kurse (<c>FullyCached==true</c>) brauchen

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
 
 namespace RookHub.Api.Tests;
 
@@ -52,6 +53,6 @@ public class ChessableSwitchTests
             .OrderBy(p => p, StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(new[] { "Services/ChessableSwitch.cs" }, treffer);
+        Assert.Equal(new[] { "Services/Chessable/ChessableSwitch.cs" }, treffer);
     }
 }

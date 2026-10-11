@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Verschiebt die KAPITELnummer in den <c>[Round "CCC.SSS"]</c>-Kopfzeilen eines Parser-PGN.

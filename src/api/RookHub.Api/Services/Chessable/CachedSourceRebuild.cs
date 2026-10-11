@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Erneuert den ZUGTEXT der Linien eines gespeicherten Chessable-PGN aus dem geteilten piratechess-Linien-Cache —

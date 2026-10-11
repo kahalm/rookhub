@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using Serilog.Context;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Meldungen von RepCheck über eine UNERWARTETE Chessable-Antwort beim „Kurs holen“. RepCheck (ab 1.60.0) stoppt

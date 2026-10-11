@@ -5,7 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// „Auf Chessable trainiert → in RookHub gelernt": eine auf chessable.com abgeschlossene Linie
