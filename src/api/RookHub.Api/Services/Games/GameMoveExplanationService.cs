@@ -7,7 +7,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// „Warum war das ein Fehler?" (0.534.0): zu jedem Fehler einer analysierten Partie ein, zwei Sätze — geschrieben von

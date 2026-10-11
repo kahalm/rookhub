@@ -93,7 +93,7 @@ public class SavedGameDto
     public GameMistakeProgressDto? Mistakes { get; set; }
 
     /// <summary>Klassifizierer 1 (0.661.0): bei Online-Partien die Seite, bei Ligapartien die Liga. Gesetzter Wert, sonst der
-    /// abgeleitete (<see cref="Services.GameClassifier"/>); <c>null</c> = keiner bekannt.</summary>
+    /// abgeleitete (<see cref="Services.Games.GameClassifier"/>); <c>null</c> = keiner bekannt.</summary>
     public string? Classifier1 { get; set; }
 
     /// <summary>Klassifizierer 2: bei Online-Partien der Modus, bei Ligapartien der Jahrgang.</summary>
@@ -152,7 +152,7 @@ public class SavedGameAnalysisDto
     public int Analyzed { get; set; }
     /// <summary>Halbzuege der Partie.</summary>
     public int Total { get; set; }
-    /// <summary>Genauigkeit in Prozent, nur bei <c>done</c> (<see cref="Services.GameAccuracy"/>); <c>null</c>,
+    /// <summary>Genauigkeit in Prozent, nur bei <c>done</c> (<see cref="Services.Games.GameAccuracy"/>); <c>null</c>,
     /// wenn die Seite keinen bewertbaren Zug hat.</summary>
     public double? AccuracyWhite { get; set; }
     public double? AccuracyBlack { get; set; }
@@ -201,7 +201,7 @@ public class SharedGameDto
     public int? OwnGameId { get; set; }
 
     /// <summary>„Kurz erzählt" (0.541.0): die Partie in zwei, drei Sätzen, vom Sprachmodell aus der Analyse des Besitzers
-    /// geschrieben (<see cref="Services.GameRecapService"/>) — dieselbe Zeile steht in der Link-Vorschau. <c>null</c>, solange
+    /// geschrieben (<see cref="Services.Games.GameRecapService"/>) — dieselbe Zeile steht in der Link-Vorschau. <c>null</c>, solange
     /// es keine gibt.</summary>
     public string? Recap { get; set; }
 }
@@ -254,7 +254,7 @@ public class GameEvalsDto
     /// nicht unter den Kandidaten steht.</summary>
     public GameEvalScoreDto? Final { get; set; }
     /// <summary>Hochgerechnete Restdauer in Minuten, solange die Analyse laeuft — aus dem Tempo der
-    /// juengsten gerechneten Stellungen DIESER Partie (<see cref="Services.GameEvals.EtaMinutes"/>).
+    /// juengsten gerechneten Stellungen DIESER Partie (<see cref="Services.Games.GameEvals.EtaMinutes"/>).
     /// <c>null</c>, solange es noch kein Tempo gibt (weniger als zwei Ergebnisse) oder nichts mehr laeuft.</summary>
     public int? EtaMinutes { get; set; }
     /// <summary>„Buchzüge" (seit 0.522.0): die Halbzüge (0-basiert), die in einem für die Erweiterung markierten

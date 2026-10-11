@@ -6,7 +6,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Engines;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// „Diese ganze Partie einmal durchrechnen": zerlegt ein PGN in Halbzüge und lässt jede Stellung von

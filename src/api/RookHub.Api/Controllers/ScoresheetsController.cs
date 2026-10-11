@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Controllers;
 

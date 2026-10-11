@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Services.League;
 

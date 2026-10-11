@@ -6,7 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// „Kurz erzählt" (0.541.0): die Partie als Nacherzählung in zwei, drei Sätzen — für die Link-Vorschau des Teilen-Links

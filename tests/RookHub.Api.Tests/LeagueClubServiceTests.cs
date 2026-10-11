@@ -12,6 +12,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Tests;
 

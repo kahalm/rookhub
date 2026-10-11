@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Der gemeinsame Teil der kurzen Modelltexte zur Partie (A6-018): Nacherzählung (<see cref="GameRecapService"/>), Roast

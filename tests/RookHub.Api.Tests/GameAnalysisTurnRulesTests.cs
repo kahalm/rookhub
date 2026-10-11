@@ -1,4 +1,5 @@
 using RookHub.Api.Services;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Tests;
 
@@ -40,8 +41,8 @@ public class GameAnalysisTurnRulesTests
     /// <c>CreateForGuessAsync</c> samt Parametern über <c>CreateLibraryBatchAsync</c>).
     /// </summary>
     [Theory]
-    [InlineData("Services/GameAnalysisService.cs")]
-    [InlineData("Services/GameAnalysisTurnRules.cs")]
+    [InlineData("Services/Games/GameAnalysisService.cs")]
+    [InlineData("Services/Games/GameAnalysisTurnRules.cs")]
     public void DokuBloecke_stehenNichtGestapelt(string file)
     {
         var lines = File.ReadAllLines(Path.Combine(ApiRoot(), file));

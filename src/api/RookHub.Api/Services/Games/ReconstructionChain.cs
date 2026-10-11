@@ -1,7 +1,7 @@
 using Chess;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Verkettet die Bruchstücke einer Rekonstruktion: Welches Teil lässt sich prüfen, welche Stellung

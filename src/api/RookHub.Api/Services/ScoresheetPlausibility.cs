@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Chess;
 using RookHub.Api.Services.Engines;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Services;
 

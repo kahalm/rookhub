@@ -1,7 +1,7 @@
 using RookHub.Api.DTOs;
 using RookHub.Api.Services.Engines;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Eine Zeile der Partie-Analyse → Bewertung aus WEISS-Sicht, fuer Kurve, Genauigkeit und Zug-Klassen

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Die Texte zur Partie entstehen von selbst (0.540.0, Wunsch des Nutzers: „direkt nach der Analyse, damit sie gleich

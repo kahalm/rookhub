@@ -20,7 +20,7 @@ public enum ReconstructionPartKind
 ///
 /// <para>Bewusst NICHT als PGN mit Kommentaren gespeichert: ein PGN kann eine Stellung ohne den Weg
 /// dorthin nicht ausdrücken, und genau diese Teile sind hier die Daten. Was sich verketten lässt,
-/// rechnet <see cref="Services.ReconstructionChain"/> beim Lesen aus.</para>
+/// rechnet <see cref="Services.Games.ReconstructionChain"/> beim Lesen aus.</para>
 /// </summary>
 public class GameReconstruction
 {

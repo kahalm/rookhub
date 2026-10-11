@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Buchfuehrung zum Fehler-Training einer gespeicherten Partie. Der Trainer laeuft im Browser; hier wird

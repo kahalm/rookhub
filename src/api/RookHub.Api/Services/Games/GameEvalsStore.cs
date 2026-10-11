@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Liest, was die Partieseiten aus einer <see cref="GameAnalysis"/> brauchen: die Bewertungen für Kurve, Genauigkeit und

@@ -1,6 +1,6 @@
 using Chess;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Sucht die ZÜGE ZWISCHEN zwei bekannten Stellungen — der zweite Schritt der Rekonstruktion:

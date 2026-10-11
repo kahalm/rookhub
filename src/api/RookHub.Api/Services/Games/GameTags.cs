@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Eigene Tags einer gespeicherten Partie (0.662.0): Freitext, höchstens <see cref="MaxTags"/> je Partie, jedes

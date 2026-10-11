@@ -18,7 +18,7 @@ wären sie EIN Teil. Nur das erste Teil hängt automatisch an der Grundstellung.
 den Haken beim Anlegen genau dann vor, wenn das neue Zug-Teil auf eine STELLUNG folgt („in dieser
 Stellung ging es so weiter") — nach einer Zugfolge nicht.
 
-**Geprüft wird serverseitig** (`Services/ReconstructionChain.cs`, reine Funktion über Gera.Chess,
+**Geprüft wird serverseitig** (`Services/Games/ReconstructionChain.cs`, reine Funktion über Gera.Chess,
 ohne DB und Engine): je Teil `Anchored` (ist die Stellung davor bekannt?), `Valid`, `StartFen`,
 `EndFen`, `PlyCount`, `StartPly` und der erste nicht spielbare Zug. Zwei Regeln hängen daran:
 
@@ -72,7 +72,7 @@ erkennst du den Rest wieder?"). Drei Entscheidungen hängen daran:
 * **Ein vergebenes Token bleibt** (Teilen ist idempotent), damit ein schon verschickter Link
   gültig bleibt; das Abschalten ist der Widerruf und erzeugt beim nächsten Mal ein neues.
 
-**Die Lücke schließen ist eine SUCHE, kein Raten** (`Services/GapSolver.cs`). Gesucht wird das
+**Die Lücke schließen ist eine SUCHE, kein Raten** (`Services/Games/GapSolver.cs`). Gesucht wird das
 klassische Beweispartie-Problem: welche Halbzüge führen von der Stellung am Ende des vorigen Teils
 zu der erinnerten Stellung? Der Baum wächst mit ~30 Zügen je Halbzug, deshalb vier Dinge:
 iterative Vertiefung (die KÜRZESTE Erklärung zuerst — ist eine Tiefe fündig, hört die Suche auf),

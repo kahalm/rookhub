@@ -1,7 +1,7 @@
 using Chess;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Die FEHLER einer analysierten Partie — Ungenauigkeit, Fehler, grober Fehler, verpasste Chance — samt der Fakten,

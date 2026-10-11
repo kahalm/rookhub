@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Wie viele Lückensuchen (<see cref="GapSolver"/>) im ganzen Prozess GLEICHZEITIG rechnen dürfen — über alle Konten.

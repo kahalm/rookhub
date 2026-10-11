@@ -50,10 +50,10 @@ public class ShareTokensTests
 
     /// <summary>Wachhund: kein Dienst wuerfelt seinen Teilen-Link wieder selbst.</summary>
     [Theory]
-    [InlineData("Services/SavedGameService.cs")]
+    [InlineData("Services/Games/SavedGameService.cs")]
     [InlineData("Services/Courses/WorksheetService.cs")]
     [InlineData("Services/Repertoires/SharedLineService.cs")]
-    [InlineData("Services/GameReconstructionService.cs")]
+    [InlineData("Services/Games/GameReconstructionService.cs")]
     [InlineData("Services/League/LeagueService.cs")]
     public void TeilenDienste_NutzenShareTokens(string pfad)
     {

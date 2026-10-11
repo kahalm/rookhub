@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Meisterkommentare zur Stellung eines Fehlers (0.542.0) — der Kontext, mit dem „Warum war das ein Fehler?"

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.DTOs;
 
@@ -21,7 +22,7 @@ public class ReconstructionListItemDto
     public DateTime UpdatedAt { get; set; }
 }
 
-/// <summary>Ein Bruchstück samt Auswertung (<see cref="Services.ReconstructionChain"/>).</summary>
+/// <summary>Ein Bruchstück samt Auswertung (<see cref="Services.Games.ReconstructionChain"/>).</summary>
 public class ReconstructionPartDto
 {
     public int Id { get; set; }
@@ -191,9 +192,9 @@ public class ReconstructionOrderRequest
 /// <summary>Wie weit darf die Suche nach den fehlenden Zügen gehen?</summary>
 public class ReconstructionGapRequest
 {
-    /// <summary>Halbzüge; ohne Angabe <see cref="Services.GapSolver.DefaultMaxPlies"/>, gedeckelt auf
-    /// <see cref="Services.GapSolver.MaxSearchPlies"/> (der Baum wächst exponentiell).</summary>
-    [Range(1, Services.GapSolver.MaxSearchPlies)]
+    /// <summary>Halbzüge; ohne Angabe <see cref="Services.Games.GapSolver.DefaultMaxPlies"/>, gedeckelt auf
+    /// <see cref="Services.Games.GapSolver.MaxSearchPlies"/> (der Baum wächst exponentiell).</summary>
+    [Range(1, Services.Games.GapSolver.MaxSearchPlies)]
     public int? MaxPlies { get; set; }
 }
 
@@ -221,7 +222,7 @@ public class ReconstructionGapResultDto
     /// <summary>Bis zu wie vielen Halbzügen wurde wirklich gesucht? („So weit kam ich.")</summary>
     public int DeepestSearched { get; set; }
     /// <summary>Warum die Liste leer ist (<c>no-previous</c>/<c>no-gap</c>/<c>target-not-a-position</c>/
-    /// <c>no-anchor</c> bzw. die Gründe des <see cref="Services.GapSolver"/>).</summary>
+    /// <c>no-anchor</c> bzw. die Gründe des <see cref="Services.Games.GapSolver"/>).</summary>
     public string? Reason { get; set; }
     public List<ReconstructionGapSolutionDto> Solutions { get; set; } = new();
 }

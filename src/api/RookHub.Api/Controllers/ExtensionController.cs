@@ -10,6 +10,7 @@ using RookHub.Api.Authorization;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Controllers;
 

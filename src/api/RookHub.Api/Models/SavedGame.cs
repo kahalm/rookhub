@@ -54,7 +54,7 @@ public class SavedGame
     /// nicht mehr nur im PGN-Header: die Partienliste zeigt sie (wie die Uebersicht auf chess.com),
     /// und das PGN dafuer zu laden ist genau der Fehler, den <see cref="MoveCount"/> schon einmal
     /// behoben hat. Der Altbestand wird portionsweise aus dem PGN nachgetragen
-    /// (<see cref="Services.SavedGameService.HeaderBackfillPerCall"/>).
+    /// (<see cref="Services.Games.SavedGameService.HeaderBackfillPerCall"/>).
     /// </summary>
     public int? WhiteElo { get; set; }
 
@@ -115,7 +115,7 @@ public class SavedGame
     /// <summary>
     /// Erster Klassifizierer der Partienliste (0.661.0), vom Nutzer gesetzt. Online-Partien: die Seite (chess.com, lichess);
     /// Ligapartien: die Liga („Landesliga"). <c>null</c> = nicht gesetzt — dann gilt bei Online-Partien der abgeleitete Wert
-    /// (<see cref="Services.GameClassifier"/>), sonst bleibt er leer.
+    /// (<see cref="Services.Games.GameClassifier"/>), sonst bleibt er leer.
     /// </summary>
     public string? Classifier1 { get; set; }
 
@@ -123,7 +123,7 @@ public class SavedGame
     public string? Classifier2 { get; set; }
 
     /// <summary>Eigene Tags des Besitzers (0.662.0), durch Zeilenumbruch getrennt — Freitext, vorerst nur für ihn
-    /// (<see cref="Services.GameTags"/>). <c>null</c> = keine.</summary>
+    /// (<see cref="Services.Games.GameTags"/>). <c>null</c> = keine.</summary>
     public string? Tags { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

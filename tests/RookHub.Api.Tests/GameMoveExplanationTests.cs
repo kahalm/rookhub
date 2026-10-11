@@ -10,6 +10,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Tests;
 

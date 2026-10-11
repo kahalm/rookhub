@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Die zwei Klassifizierer der Partienliste (0.661.0, Wunsch 2026-10-05): bei Online-Partien Seite + Modus

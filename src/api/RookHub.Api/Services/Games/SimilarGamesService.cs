@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// „Ähnliche Meisterpartien" (0.543.0): zu einer gespeicherten Partie die kommentierten Partien des Rohbestands

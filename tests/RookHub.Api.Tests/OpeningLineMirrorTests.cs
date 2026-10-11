@@ -1,5 +1,6 @@
 using System.Text;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Tests;
 

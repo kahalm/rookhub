@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Games;
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // ScoresheetBench — Testinterface für „Partieformular einlesen".

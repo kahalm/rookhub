@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// „Roast my game" (0.535.0): ein frecher Kommentar zur EIGENEN Partie, vom Sprachmodell auf eigener Hardware

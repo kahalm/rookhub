@@ -1,7 +1,7 @@
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Genauigkeit je Seite einer analysierten Partie — der SPIEGEL von <c>features/games/game-review.util.ts</c>

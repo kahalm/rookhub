@@ -1,4 +1,5 @@
 using Chess;
+using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Services;
 

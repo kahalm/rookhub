@@ -39,7 +39,7 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   liest jeder mit `league.view` — der Zugang hängt an der PARTIE, nicht am Besitzer der Analyse. `GET
   /api/league/club/games` trägt je Zeile `analysis` (Stand + Genauigkeit wie in „Meine Partien"), `GET
   …/games/{id}` dieselbe Zeile mit frischem Stand, `GET …/games/{id}/evals` die Bewertungen (ohne Buchzüge). Gelesen wird über
-  `Services/GameEvalsStore.cs` — DIESELBEN zwei Wege wie bei den gespeicherten Partien (`SavedGameService` nutzt ihn
+  `Services/Games/GameEvalsStore.cs` — DIESELBEN zwei Wege wie bei den gespeicherten Partien (`SavedGameService` nutzt ihn
   seither auch): `ReadAsync` (Kurve/Zug-Klassen) und `StatesAsync` (Listen-Stand samt Genauigkeits-Nachtrag). Welche
   Analyse zu einer Vereinspartie gehört: die jüngste mit `Origin = Club`. LeagueHub: Spalte „Analyse" (Genauigkeit
   Weiß · Schwarz bzw. Fortschritt) und „Nachspielen" (klappt `lh-game-replay` mit `evalsUrl` auf — darunter RookHubs

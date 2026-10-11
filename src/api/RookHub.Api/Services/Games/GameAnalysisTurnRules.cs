@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Die Reihenfolge-Regeln der Partie-Pumpe (<see cref="GameAnalysisService.PumpOneAsync"/>) als reine Funktionen:

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.752.9", date: "2026-10-11", changes: [
+    { en: "Code structure: the 25 server services for saved games, game analysis, review texts, reconstruction now live in their own folder. No change in behaviour.",
+      de: "Code-Struktur: die 25 Server-Dienste für gespeicherte Partien, Partie-Analyse, Rückblick-Texte, Rekonstruktion liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.752.8", date: "2026-10-11", changes: [
     { en: "Code structure: the 21 server services for engines, analysis jobs, explorer, move comparison, tablebase now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 21 Server-Dienste für Engines, Analyseaufträge, Explorer, Zugvergleich, Endspiel-Datenbank liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

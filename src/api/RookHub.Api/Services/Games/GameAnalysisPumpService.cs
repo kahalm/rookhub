@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Hält die Partie-Analysen in Bewegung: sammelt fertige Aufträge ein und füttert neue nach.

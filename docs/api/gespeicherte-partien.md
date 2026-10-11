@@ -50,7 +50,7 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   `game-review.util.ts`, literale Grenzwerte in `GameMoveExplanationTests` ↔ `game-review.util.spec.ts`) liefert je Fehler
   Stellung, gespielten Zug, Bestzug + Engine-Linie (SAN, Rochade König-schlägt-Turm aufgelöst), Widerlegung (Linie der
   NÄCHSTEN Stellung) und Bewertung vorher/nachher. Das Modell soll erklären, nicht rechnen.
-* **Der GRUND, nicht die Bewertung** (0.572.0, `Services/ExplanationFacts.cs`, gemeldet 2026-09-28 an Prod-Partie 34): mit
+* **Der GRUND, nicht die Bewertung** (0.572.0, `Services/Games/ExplanationFacts.cs`, gemeldet 2026-09-28 an Prod-Partie 34): mit
   Gewinnchance und SAN-Linien begründete das Modell jeden Fehler mit genau dem („ein Fehler, weil er seine Gewinnchancen
   senkt") und erfand Material („starker Bauernvorteil", wo eine Figur fiel). Jetzt bekommt es GEPRÜFTE Fakten: `Situation`
   (die Lage in Worten aus Sicht des LESERS, Stufen ab 2,5 / 1 / 0,4 Bauern: „from clearly worse to lost", „still winning,
@@ -65,7 +65,7 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   nur als „+5.8 → +4.4". **Schon verloren = keine Erklärung** (`AlreadyLost`: vorher UND nachher Stufe −3, Wunsch „von −4
   auf −6 muss das nicht kommentiert werden"). **Fassung** `GameMoveExplanation.Revision` (`CurrentRevision` = 2 seit 0.585.1): ältere
   Texte zeigt `GetAsync` nicht, `GenerateAsync` räumt sie weg — wer den Auftrag spürbar ändert, erhöht die Zahl.
-* **Meisterkommentar zur SELBEN Stellung** (0.542.0, `Services/MasterComments.cs`): vor dem Schreiben sucht der Dienst
+* **Meisterkommentar zur SELBEN Stellung** (0.542.0, `Services/Games/MasterComments.cs`): vor dem Schreiben sucht der Dienst
   im Rohbestand kommentierte Partien mit GENAU derselben Zugfolge bis zur Stellung vor dem Fehler (`LibraryGame.OpeningLine`,
   Präfix-Suche, 40 beste nach Note) und gibt den treffendsten Kommentar dem Modell mit: (1) Meister spielte denselben Zug
   und der Kommentator urteilt dazu, (2) der Kommentar nennt den gespielten Zug (meist als Variante, auch in den Buchstaben
@@ -184,7 +184,7 @@ flachere), aber mit eigenem Ursprung
   eingeworfene), neueste nicht gescheiterte, beim Besitzer verknüpft; (3) erst dann anlegen. Zwei Klicks binnen
   Millisekunden fängt der Client (Knopf gesperrt, solange der Aufruf läuft).
 * **Perspektive**: die Kandidatenlisten stehen aus Sicht der Seite am Zug; `GameEvalsDto` liefert ALLES aus
-  WEISS-Sicht (`Services/GameEvals.cs`, gedreht mit derselben FEN-Regel wie beim Einlesen). `cp/mate` = bester
+  WEISS-Sicht (`Services/Games/GameEvals.cs`, gedreht mit derselben FEN-Regel wie beim Einlesen). `cp/mate` = bester
   Kandidat, `played*` = Kandidat des Partiezugs (fehlt er unter den fünf → `null`), `second*` = zweiter (seit
   0.514.0 im Client für Great/Brilliant, siehe `src/frontend/CLAUDE.md`), `candidates` = alle (seit 0.519.0,
   für die gleichwertigen Züge in „Eigene Fehler nachspielen"). `final` = gespielter Kandidat der LETZTEN Zeile (für die Endstellung gibt es
@@ -232,7 +232,7 @@ flachere), aber mit eigenem Ursprung
   Anmeldung — `/g/` ist öffentlich. Die Schreibweise („11 min", „3 h 20 min") teilen sich beide über
   `shared/eta.util.ts`.
 * **Genauigkeit je Seite liegt AN DER ANALYSE** (0.515.0, `GameAnalysis.AccuracyWhite/AccuracyBlack`,
-  `Services/GameAccuracy.cs` = Server-SPIEGEL der Client-Formeln mit denselben LITERALEN Testwerten in
+  `Services/Games/GameAccuracy.cs` = Server-SPIEGEL der Client-Formeln mit denselben LITERALEN Testwerten in
   `GameAccuracyTests` ↔ `game-review.util.spec.ts`): gerechnet in `PumpOneAsync` beim Übergang auf `Done`, damit die
   Partienliste sie zeigen kann, ohne je Partie die Stellungen zu laden (sie fragt während einer Rechnung alle 10 s).
   Die Liste zeigt statt des Analysieren-Knopfs den Fortschritt in %, fertig die beiden Genauigkeiten neben

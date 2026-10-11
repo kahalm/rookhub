@@ -1,7 +1,7 @@
 using System.Globalization;
 using Chess;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// Konkrete, GEPRÜFTE Fakten für „Warum war das ein Fehler?" (0.572.0, gemeldet 2026-09-28 an Prod-Partie 34): das Modell

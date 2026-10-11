@@ -38,7 +38,7 @@ public class SharedChessHelpersTests
     [Theory]
     // GameEvals behält seine Fassung bewusst (fehlendes Feld = Schwarz, gekoppelt mit BrokerCandidates).
     [InlineData("static bool WhiteToMove(",
-        "src/api/RookHub.Api/Services/FenFields.cs,src/api/RookHub.Api/Services/GameEvals.cs")]
+        "src/api/RookHub.Api/Services/FenFields.cs,src/api/RookHub.Api/Services/Games/GameEvals.cs")]
     // Die eine UCI-Schreibweise — Partie-Analyse und Linien-Abgleich MÜSSEN zeichengleich sein.
     [InlineData("OriginalPosition.ToString() +", "src/api/RookHub.Api/Services/PgnParser.cs")]
     public void NoPrivateCopiesLeft(string needle, string allowedCsv)

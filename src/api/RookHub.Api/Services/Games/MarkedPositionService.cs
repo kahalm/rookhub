@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// „+"-Markierungen besonders guter Stellungen (0.749.0) — markieren, zurücknehmen, auflisten. Eine Stellung je Nutzer

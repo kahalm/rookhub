@@ -3,7 +3,7 @@
 Generiert vorberechnete, gestufte Lösungstipps (1=Motiv, 2=Figur/Bereich, 3=erster Zug)
 für Buch-Puzzles und schreibt sie sprach-keyed (de/en/hr) nach BookPuzzles.HintsJson.
 
-Spiegelt die Backend-Logik (RookHub.Api/Services/HintGenerationService.cs):
+Spiegelt die Backend-Logik (RookHub.Api/Services/Puzzles/HintGenerationService.cs):
   - Quelle ist die VERIFIZIERTE Lösungslinie (Moves ab StartPly) + Buch-Kommentare
     (Comment + MoveComments) + optional ein Stockfish-Signal. Das LLM beschreibt nur die
     gegebene Lösung (kein Selbst-Lösen → kein Halluzinieren).

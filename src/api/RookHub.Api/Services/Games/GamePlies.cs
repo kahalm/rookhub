@@ -1,6 +1,6 @@
 using Chess;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Games;
 
 /// <summary>
 /// PGN → Halbzug-Liste: je Halbzug die Stellung DAVOR, der gespielte Zug in Standard-UCI und in SAN.
