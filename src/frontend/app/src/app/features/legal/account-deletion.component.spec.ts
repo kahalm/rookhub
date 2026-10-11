@@ -86,6 +86,24 @@ describe('AccountDeletionComponent', () => {
       expect(el.textContent).not.toContain('legal.accountDeletion.inPartner');
     });
 
+    // UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored): im M3-Thema nahm der Knopf die Primärfarbe.
+    it('der Löschknopf trägt die Fehler- statt der Primärfarbe (RookHub und Partnerseiten)', () => {
+      const color = (v: string, at: HTMLElement) => {
+        const p = document.createElement('span');
+        p.style.backgroundColor = `var(${v})`;
+        at.appendChild(p);
+        return getComputedStyle(p).backgroundColor;
+      };
+      for (const el of [render(), render({ contactEmail: 'x@y', imprint: false, kind: 'kidhub', accountHome: 'rookhub' }, 'https://rookhub.example')]) {
+        document.body.appendChild(el);
+        try {
+          const bg = getComputedStyle(el.querySelector('a.delete-now')!).backgroundColor;
+          expect(bg).toBe(color('--mat-sys-error', el));
+          expect(bg).not.toBe(color('--mat-sys-primary', el));
+        } finally { el.remove(); }
+      }
+    });
+
     it('KidHub/LeagueHub: sagt, dass es ein RookHub-Konto ist, und verlinkt RookHubs Profil', () => {
       const el = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' },
         'https://rookhub.example');

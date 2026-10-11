@@ -88,7 +88,8 @@ export function kidPageWidth(url: string): string {
   if (/^\/(levels|stars|courses)\/[^/]+$/.test(path) || path === '/endless') return 'calc(var(--kid-row, 1068px) + 32px)';
   if (path === '/') return `${KID_PAGE_WIDTH.home}px`;
   if (path === '/courses') return `${KID_PAGE_WIDTH.list}px`;
-  if (path === '/privacy') return `${KID_PAGE_WIDTH.legal}px`;
+  // Rechtsseiten (Datenschutz, Konto loeschen: d1-k-account-deletion-style) — Kopfzeile so breit wie ihre Karte.
+  if (path === '/privacy' || path === '/account-deletion') return `${KID_PAGE_WIDTH.legal}px`;
   return `${KID_PAGE_WIDTH.map}px`;
 }
 

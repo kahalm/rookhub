@@ -24,12 +24,13 @@ import { RevengeService, RevengeNotification } from '../../core/revenge.service'
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { apiErrorText } from '../../core/api-error';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -140,10 +141,14 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
             @for (c of incoming; track c.id) {
               <mat-list-item>
                 <span matListItemTitle>{{ 'friends.challenges.fromLine' | translate:{ name: c.fromDisplayName || c.fromUsername, rating: c.rating } }}</span>
-                <span matListItemLine class="themes">{{ c.title || formatThemes(c.themes) }}</span>
-                <button mat-flat-button color="primary" matListItemMeta (click)="solveChallenge(c)">
-                  <mat-icon>sports_esports</mat-icon> {{ 'friends.challenges.solve' | translate }}
-                </button>
+                <span matListItemLine class="themes">@if (c.title) { {{ c.title }} } @else { @for (t of themeList(c.themes); track t) { <span class="theme">{{ t | puzzleTheme }}</span> } }</span>
+                <!-- UI-Sweep 2026-10-11 (d1-rk-revenge-loesen-knopf-kaputt): matListItemMeta auf dem Container, nicht auf
+                     dem Knopf — sonst übernimmt der Knopf Schrift/Farbe/Ausrichtung des Listen-Endbereichs. -->
+                <div matListItemMeta class="item-action">
+                  <button mat-flat-button color="primary" (click)="solveChallenge(c)">
+                    <mat-icon>sports_esports</mat-icon> {{ 'friends.challenges.solve' | translate }}
+                  </button>
+                </div>
               </mat-list-item>
             } @empty {
               <p class="empty-state">{{ 'friends.challenges.emptyInbox' | translate }}</p>
@@ -219,6 +224,8 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
     .chess-identities { font-size: 0.75rem; color: color-mix(in srgb, currentColor 40%, transparent); }
     .section-title { margin: 1rem 1rem 0; font-size: 0.95rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .themes { font-size: 0.8rem; color: color-mix(in srgb, currentColor 50%, transparent); }
+    .theme + .theme::before { content: ', '; }
+    .item-action { display: flex; align-items: center; height: 100%; }
     .status { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
     .status.solved { color: var(--rh-success); }
     .status.failed { color: var(--rh-error); }
@@ -355,8 +362,8 @@ export class FriendsComponent implements OnInit {
     this.router.navigate(path, { queryParams: { challengeId: c.id } });
   }
 
-  formatThemes(themes: string | null): string {
-    return themes ? themes.split(' ').filter(t => t).slice(0, 4).join(', ') : '';
+  themeList(themes: string | null): string[] {
+    return puzzleThemeList(themes);
   }
 
   search(): void {

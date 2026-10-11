@@ -1,5 +1,5 @@
 import { KID_PAGE_WIDTH, kidPageWidth } from './kids-layout';
-import { foldPrivacy, isPrivacyUrl } from './kids-privacy';
+import { foldAccountDeletion, foldPrivacy, isAccountDeletionUrl, isLegalUrl, isPrivacyUrl, setAccountDeletionTexts } from './kids-privacy';
 
 describe('kidPageWidth (k-logo: Kopfzeile in der Spalte des Inhalts)', () => {
   it('Aufgabenseiten richten sich nach --kid-row, die uebrigen nach ihrer Seitenbreite', () => {
@@ -15,6 +15,7 @@ describe('kidPageWidth (k-logo: Kopfzeile in der Spalte des Inhalts)', () => {
     expect(kidPageWidth('/stars')).toBe('980px');
     expect(kidPageWidth('/courses')).toBe('820px');
     expect(kidPageWidth('/privacy#privacy-data')).toBe('840px');
+    expect(kidPageWidth('/account-deletion')).toBe('840px');   // d1-k-account-deletion-style
     expect(kidPageWidth('/login')).toBe('980px');
     expect(KID_PAGE_WIDTH).toEqual({ home: 1160, map: 980, list: 820, legal: 840 });
   });
@@ -75,5 +76,62 @@ describe('foldPrivacy (k-privacy: Eltern-Abschnitte zum Aufklappen)', () => {
     expect(isPrivacyUrl('/privacy?x=1')).toBeTrue();
     expect(isPrivacyUrl('/account-deletion')).toBeFalse();
     expect(isPrivacyUrl('/')).toBeFalse();
+  });
+});
+
+// UI-Sweep 2026-10-11 (d1-k-account-deletion-jargon): Fachbegriff-Liste fuer Eltern zugeklappt, davor ein Kindersatz.
+describe('foldAccountDeletion (Konto loeschen in der Kinder-Fassung)', () => {
+  const texts = { short: 'Alles von dir wird geloescht.', parents: 'Fuer Eltern: was genau geloescht wird' };
+
+  function page(): HTMLElement {
+    const root = document.createElement('div');
+    root.innerHTML = `
+      <app-account-deletion><mat-card-content>
+        <p class="intro">Dasselbe Konto wie RookHub</p>
+        <h2>So loeschst du dein Konto</h2>
+        <p class="action"><a class="delete-now">Loeschen</a></p>
+        <h2 class="removed-title">Was entfernt wird</h2>
+        <ul class="removed"><li>API-Tokens</li><li>Chessable-Zugang</li></ul>
+        <h2>Was bleibt</h2>
+        <p class="kept">Anonym</p>
+        <p class="back"><a>Zurueck</a></p>
+      </mat-card-content></app-account-deletion>`;
+    return root;
+  }
+
+  it('Liste in ein zugeklapptes <details class="kid-parent">, Kindersatz direkt unter der Ueberschrift', () => {
+    const root = page();
+    expect(foldAccountDeletion(root, texts)).toBeTrue();
+    const details = root.querySelector('details.kid-parent')!;
+    expect(details.hasAttribute('open')).withContext('zugeklappt').toBeFalse();
+    expect(details.querySelector('ul.removed li')).not.toBeNull();
+    expect(details.querySelector('summary .kid-parent-label')!.textContent).toBe(texts.parents);
+    const short = root.querySelector('p.kid-short')!;
+    expect(short.textContent).toBe(texts.short);
+    expect(short.previousElementSibling!.classList).toContain('removed-title');
+    expect(short.nextElementSibling).toBe(details);
+    // Uebriges bleibt stehen: Knopf, „Was bleibt", Ruecklink am Ende.
+    expect(root.querySelector('details .delete-now, details .kept, details .back')).toBeNull();
+    expect(root.querySelector('mat-card-content')!.lastElementChild!.classList).toContain('back');
+  });
+
+  it('Sprachwechsel setzt die Texte neu; ein zweiter Aufruf aendert nichts; andere Seiten bleiben unberuehrt', () => {
+    const root = page();
+    foldAccountDeletion(root, texts);
+    expect(foldAccountDeletion(root, texts)).toBeFalse();
+    expect(root.querySelectorAll('details').length).toBe(1);
+    setAccountDeletionTexts(root, { short: 'Everything is deleted.', parents: 'For parents' });
+    expect(root.querySelector('.kid-short')!.textContent).toBe('Everything is deleted.');
+    expect(root.querySelector('.kid-parent-label')!.textContent).toBe('For parents');
+    expect(foldAccountDeletion(document.createElement('div'), texts)).toBeFalse();
+  });
+
+  it('isAccountDeletionUrl / isLegalUrl', () => {
+    expect(isAccountDeletionUrl('/account-deletion')).toBeTrue();
+    expect(isAccountDeletionUrl('/account-deletion?x=1')).toBeTrue();
+    expect(isAccountDeletionUrl('/privacy')).toBeFalse();
+    expect(isLegalUrl('/privacy#a')).toBeTrue();
+    expect(isLegalUrl('/account-deletion/')).toBeTrue();
+    expect(isLegalUrl('/login')).toBeFalse();
   });
 });

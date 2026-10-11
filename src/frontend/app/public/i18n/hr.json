@@ -2887,9 +2887,13 @@
         "hint": "Odaberi ligu i/ili sezonu: sve otvorene pogreške tvojih analiziranih partija iz tog odabira dolaze jedna za drugom na jednoj ploči.",
         "includeSolved": "I već pronađene pogreške",
         "selection": "Odabrano partija: {{games}}, od toga analizirano: {{analysed}}",
+        "selectionOne": "Odabrana 1 partija, od toga analizirano: {{analysed}}",
         "loading": "Učitavanje partija … {{done}} od {{total}}",
         "start": "Pokreni",
         "none": "U ovom odabiru nema otvorenih pogrešaka.",
+        "noneAnalysed": "Nijedna od ovih partija još nije analizirana. Otvori partiju i ondje pokreni „Analiziraj partiju“ – nakon toga ovdje možeš ponoviti njezine pogreške.",
+        "noGames": "Za ovaj odabir nema partija.",
+        "sourceOne": "{{mistakes}} pogrešaka iz 1 partije",
         "source": "{{mistakes}} pogrešaka iz {{games}} partija"
       }
     },
@@ -4475,6 +4479,10 @@
     "loadError": "Ups, nešto je zapelo. Pokušaj odmah ponovno!",
     "retry": "Pokušaj ponovno",
     "language": "Jezik",
+    "accountDeletion": {
+      "short": "Sve tvoje se briše: tvoje zvijezde, razine i tečajevi.",
+      "parents": "Za roditelje: što se točno briše"
+    },
     "stars": {
       "title": "Lov na zvijezde",
       "tileHint": "Jedna figura, puno zvijezda",

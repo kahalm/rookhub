@@ -1,3 +1,16 @@
+import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { MatButtonModule } from '@angular/material/button';
+import { contrast, parseColor } from '@rh/testing/contrast';
+
+/** Der Löschknopf der geteilten Seite „Konto löschen" als echter Material-Knopf. */
+@Component({
+  standalone: true,
+  imports: [MatButtonModule],
+  template: `<a mat-flat-button color="warn" class="delete-now" href="#">Konto in RookHub löschen</a>`,
+})
+class DeleteButtonComponent {}
+
 /**
  * Regeln aus clubhub.scss (das Karma für ClubHub mitlädt), die an keiner eigenen Komponente hängen: die Karteireiter
  * der App-Hülle, RookHubs Anmelde-Maske in ClubHub-Farben und der Abstand über der klebenden Speichern-Leiste.
@@ -83,4 +96,31 @@ describe('clubhub.scss', () => {
     expect(h2.color).toBe(probe('--rule'));
     expect(getComputedStyle(el.querySelector('a')!).color).toBe(probe('--primary'));
   });
+
+  // UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored)
+  for (const dark of [false, true]) {
+    it(`Konto löschen (${dark ? 'dunkel' : 'hell'}): Knopf in --bad statt Primärgrün, Form wie .btn (Radius 8, ≥ 44 px), lesbar`, () => {
+      document.documentElement.classList.toggle('dark-theme', dark);
+      try {
+        const el = mount(`<ch-root><main class="wrap"><app-account-deletion><div class="legal-container"><div class="mat-mdc-card">
+          </div></div></app-account-deletion></main></ch-root>`);
+        TestBed.configureTestingModule({ imports: [DeleteButtonComponent] });
+        const fixture = TestBed.createComponent(DeleteButtonComponent);
+        fixture.detectChanges();
+        el.querySelector('.mat-mdc-card')!.appendChild(fixture.nativeElement);
+        const btn = el.querySelector<HTMLElement>('.delete-now')!;
+        const s = getComputedStyle(btn);
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--bad)';
+        el.appendChild(probe);
+        expect(s.backgroundColor).toBe(getComputedStyle(probe).color);
+        expect(contrast(parseColor(s.color), parseColor(s.backgroundColor))).toBeGreaterThanOrEqual(4.5);
+        expect(s.borderTopLeftRadius).toBe('8px');
+        expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      } finally {
+        document.documentElement.classList.remove('dark-theme');
+        TestBed.resetTestingModule();
+      }
+    });
+  }
 });

@@ -204,6 +204,44 @@ und „ragt raus“ automatisch.
 - **KidHub-Aufgabenseiten:** Brettgröße als Variable `--kid-board`/`--kid-row` in der App-Hülle, drei Ansichten
   (`KID_STACKED`, `KID_SHORT`, PC).
 
+### 4.6 Erster Blick und Scrollen
+
+**Falz** = was beim Öffnen ohne Scrollen sichtbar ist. Geprüft in **drei Ansichten**: Handy 390 × 844, Laptop
+1366 × 768, großer Bildschirm 1920 × 1080.
+
+*Erster Blick*
+1. Jede Seite hat eine **Hauptsache** — der Inhalt oder die Aktion, für die man kommt (Brett, Liste/Tabelle,
+   Hauptknopf, Formular). Sie steht im Routen-Katalog des UI-Sweeps (`main`).
+2. Die Hauptsache **beginnt über der Falz**, in allen drei Ansichten (Listen: mindestens der erste Eintrag;
+   Hauptknopf: ganz).
+3. **Vorlauf** (App-Kopf, Seitenkopf, Banner, Erklärtext, Filter über der Hauptsache) höchstens **40 %** der Höhe
+   (Handy ≈ 340 px, Laptop ≈ 300 px, groß ≈ 430 px).
+4. **Großer Bildschirm nutzt den Platz:** keine schmale Spalte mit leerem Rest, wenn der Inhalt Breite brauchen könnte
+   (z. B. Brett und Zugliste nebeneinander statt untereinander); Fließtext bleibt bei ≤ ~75 Zeichen je Zeile. Die
+   Hauptsache steht nicht verloren in einer Ecke.
+5. **Erklärtexte** über der Hauptsache höchstens 3 Zeilen; Längeres hinter „Mehr“/ⓘ oder unter die Hauptsache.
+6. **Höchstens ein Banner** über der Hauptsache; weitere Hinweise darunter oder in die Glocke.
+7. **Filter/Einstellungen** mit mehr als einer Zeile am Handy zugeklappt („Filter ▾“, aktive Filter als Chips).
+8. Gilt auch für **Leer- und Fehlerzustände**: Hinweis samt Weg zum Weiterkommen über der Falz.
+
+*Nach dem Scrollen*
+
+9. **Klebende Leisten** zusammen höchstens 64 px (Handy) bzw. 72 px (Laptop/groß); sie verdecken keine Fokus- und
+   Ankerziele (`scroll-padding-top`).
+10. Unter **schwebenden/klebenden Elementen unten** (FAB, Speichern-Leiste) bleibt der letzte Inhalt frei.
+11. **Seitenlänge** je Ansicht: ab **6 Bildschirmen** braucht die Seite Gliederung (Abschnittsköpfe mit Sprung,
+    geteilte Listen mit „Mehr“/Seiten); ab **12 Bildschirmen** ist es ein Befund.
+12. **Abschnitte bleiben einordenbar:** eigener Kopf je Abschnitt; lange Tabellen behalten ihren Kopf.
+13. **Unten gelten dieselben Regeln wie oben:** keine engeren Abstände, keine abgeschnittenen Texte, letzte Karte mit
+    Abstand zum Fuß.
+
+*Prüfung (UI-Sweep):* gemessen ohne Modell in allen drei Ansichten — Lage der Hauptsache (2), Vorlauf (3),
+Bannerzahl (6), klebende Leisten (9), Verdeckung unten (10), Seitenlänge (11). Bilder fürs Modell: „Erster Blick“
+(ein Bildschirm je Ansicht, Regeln 1–8) und „Gescrollt“ (bildschirmhohe Streifen, 10 % Überlappung, Originalgröße,
+nur bei Seiten über 2 Bildschirmen, Regeln 9–13).
+
+**Ausnahmen:** Vollbild-Brett, Dialoge, Druckansicht des Aufgabenblatts.
+
 ---
 
 ## 5 Komponenten-Muster
@@ -245,6 +283,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - Zahlen rechtsbündig, `tabular-nums`; Anteil und Anzahl als **getrennte** Spalten (r2-rg-explorer-cols).
 - Meta-Zeilen am Handy: „Wert · Wert“ kompakt unter dem Namen (l-names-mobile, r2-t-meta-dot).
 - Blätterleisten übersetzt (`core/translated-paginator-intl.ts`).
+- `matListItemMeta` nie direkt auf einen Text-Knopf (`mat-flat-button`/`mat-stroked-button`), sondern auf ein
+  umschließendes `<div>` — sonst übernimmt der Knopf Schrift, Farbe und Ausrichtung des Listen-Endbereichs
+  (Beschriftung winzig und fast unsichtbar, d1-rk-revenge-loesen-knopf-kaputt).
 
 ### 5.4 Aktionen und Knöpfe
 
@@ -258,6 +299,10 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 
 - `styles.scss` (UX-052) füllt `mat-raised-button color="primary"` wie einen Flat-Knopf, `color="warn"` mit der
   Fehlerfarbe — beide Schreibweisen sehen gleich aus. **Regel ab jetzt:** neu nur `mat-flat-button color="primary"`.
+- **Gefahrknopf gefüllt:** `mat-flat-button color="warn"` (Konto löschen, Bestätigen im Rückfrage-Dialog) bekommt global
+  `--mat-sys-error` / `--mat-sys-on-error` (`styles.scss`, d1-x-account-delete-warn-ignored) — im M3-Thema wirkt `color`
+  sonst nicht. Hubs setzen die beiden Rollen auf ihrer Karte (LeagueHub `--red`/`--on-red`, ClubHub `--bad`/`--bad-ink`,
+  KidHub `--kid-bad-fg`). Link-Regeln in Karten treffen Knöpfe nicht: `a:not(.mat-mdc-button-base)`.
 - Knopf = Symbol + kurze Beschriftung; ganz schmal (≤ 380 px) darf die Beschriftung wegfallen (r2-rg-rep-toolbar).
   Symbole **in** Knöpfen behalten die Material-Größe (r2-rg-trainer-icons).
 - **Gesperrter Knopf → Grund sichtbar darunter** (leise Zeile), nicht nur im Tooltip (r2-rg-analyze-disabled) —
@@ -532,6 +577,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | `--paper` / `--surface` | #f3f5f8 / #ffffff | #0f141b / #161d26 | Grund / Karten |
 | `--ink` / `--muted` / `--line` | #17202b / #5a6878 / #d9dfe7 | #e6ebf1 / #97a5b5 / #28323e | Text / leise / Linien |
 | `--red` | #c8102e | #ff4d63 | **Tiroler Rot** — wahrscheinlichster Spieler, Akzent, Fehler |
+| `--on-red` | #ffffff | #0f141b | Schrift auf gefülltem Rot (Masken-Hauptknopf, Gefahrknopf, `.cta .btn-pri`), ≥ 4,5:1 (d1-l-mask-red-contrast) |
 | `--ok` / `--warn` | #1f7a4d / #b45309 | #4cc28a / #f0a04b | bestätigt / unsicher |
 | `--bar`, `--track`, `--sq-*` | | | Balken, Brettfarbe-Quadrate |
 | `--focus` | #1c5fd4 | #7aa7ff | Fokusrahmen |
@@ -562,6 +608,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | `--rule` | #c4453a | #e0695e | rote Kopflinie, Abschnittsköpfe |
 | `--mark` / `--mark-ink` | #ffe45c / #2b2600 | #d8b92a / #1c1800 | Textmarker, Codes |
 | `--ok`/`--ok-soft`, `--bad`/`--bad-soft` | #1d7347 / #e2f1e8, #b3261e / #f9e4e2 | … | anwesend / fehlt |
+| `--bad-ink` | #ffffff | #1b0f0e | Schrift auf gefülltem `--bad` (Gefahrknopf der Rechtsseiten) |
 
 - Überschriften Zilla Slab 700 (h1 32, h2 23, h3 19 px), Text Atkinson Hyperlegible 17 px.
 - `.btn` (min. 44 px, Radius 8, 1.5 px Rahmen), `.btn.primary`, `.btn.danger`, `.btn.slim` (36 px);
@@ -588,8 +635,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 |---|---|
 | RookHub, Turnierseite | Material unverändert |
 | LeagueHub | `lh-root :is(app-login, …, app-account-deletion) .mat-mdc-card { --mat-sys-primary: var(--red); --mat-card-elevated-container-shape: 10px; --mat-button-*-container-shape: 6px; … }`, Schrift Barlow, Rechtsseiten-Köpfe rot (r2-l-legal-style) |
-| ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style) |
-| KidHub | `KID_AUTH_STYLES` / `KID_PRIVACY_STYLES` in der Hülle + „← Start“-Pille |
+| ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style); Knöpfe auf Rechtsseiten wie `.btn` (Radius 8, 44 px) |
+| KidHub | `KID_AUTH_STYLES` / `KID_PRIVACY_STYLES` in der Hülle + „← Start“-Pille; Rechtsseiten = `/privacy` **und** `/account-deletion` (`isLegalUrl`, Breite `KID_PAGE_WIDTH.legal`); Fachbegriff-Listen für Eltern zugeklappt (`details.kid-parent`), davor ein Kindersatz (`foldPrivacy`, `foldAccountDeletion`) |
 
 ---
 
@@ -666,8 +713,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-11 | 0.751.0 | Gesperrter Knopf nennt den Grund darunter; Reiter nicht `[disabled]` | Tooltip am Handy/bei disabled unsichtbar | r2-rg-analyze-disabled, r2-t-history-disabled-tab |
 | 2026-10-11 | 0.751.0 | Aktionen, die nicht passen, ins ⋮ (Rekonstruktion); Repertoire-Karten gleich hoch, Aktionen unten | vier Knöpfe passten am Handy nicht | r2-rg-recon-actions, r2-rg-rep-cards |
 | 2026-10-11 | 0.751.0 | Dialogtitel kurz, lange Namen als Unterzeile | dreizeiliger Titel am Handy | r2-rp-mode-title |
+| 2026-10-11 | 0.753.0 | `matListItemMeta` auf einem Container, nie auf einem Text-Knopf | „Lösen“ kaum lesbar, Symbol und Text versetzt | d1-rk-revenge-loesen-knopf-kaputt |
 | 2026-10-11 | 0.751.0 | Abzeichen nur für gesetzte Werte; keine internen Dateinamen; Spalten ohne Inhalt weglassen | Scheininformation | r2-rp-taktik-chip, r2-rp-sourcefile, r2-t-title-empty |
 | 2026-10-11 | 0.751.2 | „Mehr“ als Textknopf am Satzende; ⋮ bleibt am Handy in der Knopfzeile; Abstand zwischen Sperrkarten-Knöpfen; Leerzeichen um `@if` fest im Markup | Einzelwörter brachen allein in eine Zeile, „Spielennoch offen“ | Nachprüfung Runde 3 |
 | 2026-10-11 | 0.751.2 | Diese Datei angelegt; Gestaltungsentscheidungen werden ab jetzt hier festgehalten | Wunsch des Nutzers: eine Stelle für „wie Seiten designt sind“ | — |
 | 2026-10-11 | 0.752.0 | Aufräumrunde nach Abschnitt 10 über alle Oberflächen: Zustandsfarben → `--rh-*`/`--mat-sys-*` (Indigo `#3f51b5` entfernt, theme-color Azure `#005cbb`), globale Klasse `.empty-state`, Primärknöpfe nur `mat-flat-button`, Breakpoints auf 600/768/900 (`599.98px`-Form; `SolveModeService.narrow()` angeglichen), Klammer-Mehrzahl → `…One`-Schlüssel, Symbolknöpfe `appIconLabel`, Seitenkopf `.header`, globale Löschfarbe `.mat-mdc-menu-item.delete-item mat-icon`. Bewusst geblieben: Brett-/Marken-/Kategorie-/Diagrammfarben, KidHub-Palette, LH/CH-eigene Variablen, Karten-Pin-Palette, laufzeitfarbiger „Weiter“-Knopf | Abweichungen aus Abschnitt 10 abbauen (Wunsch „räume gezielt auf“) | Aufräumrunde 11.10. |
 | 2026-10-11 | 0.752.3 | Knopf-Variablen folgen der Knopfart: `mat-flat-button` → `--mat-button-filled-*` (nicht `protected-*`); KidHub-Masken als zentrierte Spalte oben; Symbol/Kreisel im Knopf als EIN Wurzelelement je Zweig, Text außerhalb | Aufräumrunde 0.752.0 hatte raised→flat getauscht, die Variablen aber nicht — KidHub-Knopf verlor Farbe/Form; Symbol rutschte unter die Textlinie | d1-k-kid-primary-button-restyled, d1-k-kid-auth-card-left-wide, d1-k-kid-auth-pills-offset, d1-rk-update-all-icon-misaligned |
+| 2026-10-11 | 0.753.0 | Gefahrknopf `mat-flat-button color="warn"` global in `--mat-sys-error`/`--mat-sys-on-error` (Hubs setzen die Rollen auf der Karte, Link-Unterstreichung nur `a:not(.mat-mdc-button-base)`); LeagueHub-Token `--on-red` (dunkel #0f141b) statt festem Weiß auf Rot, ClubHub `--bad-ink` + Knopfform wie `.btn` auf Rechtsseiten; KidHub-Rechtsseiten umfassen „Konto löschen“ (Kinderkarte, „← Start“, Breite 840, Löschknopf groß in `--kid-bad-fg`, Fachbegriffe für Eltern zugeklappt hinter einem Kindersatz) | Löschknopf sah überall wie die Hauptaktion aus; Weiß auf #ff4d63 nur 3,2:1; KidHub-Seite im RookHub-Look voller Fachjargon | d1-x-account-delete-warn-ignored, d1-l-mask-red-contrast, d1-k-account-deletion-style, d1-k-account-deletion-jargon |
+| 2026-10-11 | 0.753.0 | Neuer Abschnitt 4.6 „Erster Blick und Scrollen“: Hauptsache je Seite über der Falz in Handy/Laptop/groß, Vorlauf ≤ 40 %, ≤ 1 Banner, Erklärtext ≤ 3 Zeilen, großer Bildschirm nutzt den Platz, klebende Leisten ≤ 64/72 px, Seitenlänge 6/12 Bildschirme; UI-Sweep misst das und liefert „Erster Blick“-Bilder und Streifen | Nutzerwunsch: das Wichtigste sofort sichtbar, auch nach dem Scrollen gutes Design | — |

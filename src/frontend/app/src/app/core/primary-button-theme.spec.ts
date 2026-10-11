@@ -20,6 +20,10 @@ import { MatButtonModule } from '@angular/material/button';
     <a mat-raised-button color="primary" class="primary-link" href="#">Los</a>
     <button mat-raised-button color="warn" class="warn">Löschen</button>
     <button mat-raised-button class="plain">Neutral</button>
+    <button mat-flat-button color="warn" class="flat-warn">Löschen</button>
+    <a mat-flat-button color="warn" class="flat-warn-link" href="#">Löschen</a>
+    <button mat-flat-button color="primary" class="flat-primary">Los</button>
+    <span class="probe-on-error" style="color: var(--mat-sys-on-error)">x</span>
   `,
 })
 class HostComponent {}
@@ -53,5 +57,14 @@ describe('Primärknöpfe im M3-Thema (styles.scss)', () => {
   it('füllt color="warn" mit der Fehlerfarbe und lässt raised ohne Farbe beim M3-Knopf', () => {
     expect(bg('.warn')).toBe(bg('.probe-error'));
     expect(bg('.plain')).toBe(bg('.probe-surface'));
+  });
+
+  // UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored): „Konto löschen" und die Rückfrage-Bestätigung.
+  it('füllt mat-flat-button color="warn" mit der Fehler- statt der Primärfarbe — als Knopf und als Link', () => {
+    expect(bg('.probe-error')).not.toBe(bg('.probe-primary'));   // Prüfung trägt
+    expect(bg('.flat-warn')).toBe(bg('.probe-error'));
+    expect(fg('.flat-warn')).toBe(fg('.probe-on-error'));
+    expect(bg('.flat-warn-link')).toBe(bg('.probe-error'));
+    expect(bg('.flat-primary')).toBe(bg('.probe-primary'));
   });
 });

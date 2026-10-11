@@ -2887,9 +2887,13 @@
         "hint": "Wähle Liga und/oder Saison: alle offenen Fehler deiner analysierten Partien dieser Auswahl kommen nacheinander auf einem Brett.",
         "includeSolved": "Auch schon gefundene Fehler",
         "selection": "{{games}} Partien gewählt, davon {{analysed}} analysiert",
+        "selectionOne": "1 Partie gewählt, davon {{analysed}} analysiert",
         "loading": "Lade Partien … {{done}} von {{total}}",
         "start": "Starten",
         "none": "In dieser Auswahl gibt es keine offenen Fehler.",
+        "noneAnalysed": "Noch keine dieser Partien ist fertig analysiert. Öffne eine Partie und starte dort „Partie analysieren“ – danach kannst du ihre Fehler hier nachspielen.",
+        "noGames": "Für diese Auswahl gibt es keine Partien.",
+        "sourceOne": "{{mistakes}} Fehler aus 1 Partie",
         "source": "{{mistakes}} Fehler aus {{games}} Partien"
       }
     },
@@ -4475,6 +4479,10 @@
     "loadError": "Hoppla, da klemmt etwas. Versuch es gleich noch einmal!",
     "retry": "Nochmal",
     "language": "Sprache",
+    "accountDeletion": {
+      "short": "Alles von dir wird gelöscht: deine Sterne, Stufen und Kurse.",
+      "parents": "Für Eltern: was genau gelöscht wird"
+    },
     "stars": {
       "title": "Sternenjagd",
       "tileHint": "Eine Figur, viele Sterne",

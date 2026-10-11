@@ -16,6 +16,15 @@ export function humanizeThemeKey(key: string): string {
 }
 
 /**
+ * Lichess-Themen (leer- oder kommagetrennt) als auf `max` gekürzte Schlüsselliste — zur Anzeige je Eintrag
+ * durch `puzzleTheme` schicken, nie roh zusammenfügen (UI-Sweep 2026-10-11, d1-rk-revenge-themen-rohschluessel).
+ */
+export function puzzleThemeList(themes: string | null | undefined, max = 4): string[] {
+  if (!themes) return [];
+  return themes.split(/[\s,]+/).filter(t => t).slice(0, max);
+}
+
+/**
  * `{{ theme | puzzleTheme }}` — übersetzter Name eines Puzzle-Themas. Unrein mit Signal je
  * Schlüssel (wie TranslatePipe in ngx-translate 18), damit ein Sprachwechsel und das späte Laden
  * der Sprachdatei auch in OnPush-Komponenten ankommen.

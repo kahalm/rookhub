@@ -3239,9 +3239,13 @@
         "hint": "Válassz ligát és/vagy szezont: a kiválasztás elemzett partijainak összes nyitott hibája egymás után jön egy táblán.",
         "includeSolved": "A már megtalált hibák is",
         "selection": "{{games}} parti kiválasztva, ebből {{analysed}} elemezve",
+        "selectionOne": "1 parti kiválasztva, ebből {{analysed}} elemezve",
         "loading": "Partik betöltése … {{done}} / {{total}}",
         "start": "Indítás",
         "none": "Ebben a kiválasztásban nincs nyitott hiba.",
+        "noneAnalysed": "Ezek közül a partik közül még egyik sincs elemezve. Nyiss meg egy partit, és ott indítsd el a „Játszma elemzése” gombot – utána itt újrajátszhatod a hibáit.",
+        "noGames": "Ehhez a kiválasztáshoz nincs parti.",
+        "sourceOne": "{{mistakes}} hiba 1 partiból",
         "source": "{{mistakes}} hiba {{games}} partiból"
       }
     },
@@ -4134,6 +4138,10 @@
     "loadError": "Hoppá, valami elakadt. Próbáld újra most!",
     "retry": "Újra",
     "language": "Nyelv",
+    "accountDeletion": {
+      "short": "Minden adatod törlődik: a csillagaid, a szintjeid és a kurzusaid.",
+      "parents": "Szülőknek: pontosan mi törlődik"
+    },
     "stars": {
       "title": "Csillagvadászat",
       "tileHint": "Egy bábu, sok csillag",

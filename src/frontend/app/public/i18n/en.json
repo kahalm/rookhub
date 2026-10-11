@@ -2887,9 +2887,13 @@
         "hint": "Choose a league and/or season: all open mistakes of your analysed games in that selection come one after the other on one board.",
         "includeSolved": "Also mistakes you already found",
         "selection": "{{games}} games selected, {{analysed}} of them analysed",
+        "selectionOne": "1 game selected, {{analysed}} of them analysed",
         "loading": "Loading games … {{done}} of {{total}}",
         "start": "Start",
         "none": "No open mistakes in this selection.",
+        "noneAnalysed": "None of these games has been analysed yet. Open a game and start “Analyse game” there – then you can replay its mistakes here.",
+        "noGames": "There are no games for this selection.",
+        "sourceOne": "{{mistakes}} mistakes from 1 game",
         "source": "{{mistakes}} mistakes from {{games}} games"
       }
     },
@@ -4475,6 +4479,10 @@
     "loadError": "Oops, something got stuck. Let's try again!",
     "retry": "Try again",
     "language": "Language",
+    "accountDeletion": {
+      "short": "Everything of yours is deleted: your stars, levels and courses.",
+      "parents": "For parents: exactly what is deleted"
+    },
     "stars": {
       "title": "Star Hunt",
       "tileHint": "One piece, many stars",

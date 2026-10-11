@@ -386,3 +386,44 @@ describe('FriendsComponent Reiter (kurze Namen + Zähler-Badge)', () => {
     http.verify();
   });
 });
+
+describe('FriendsComponent Herausforderungen (UI-Sweep 2026-10-11)', () => {
+  it('„Lösen" sitzt in einem matListItemMeta-Container und die Themen sind übersetzt', () => {
+    const incoming = [{
+      id: 5, fromUserId: 9, fromUsername: 'eve', fromDisplayName: null, puzzleId: 77, source: 'Standard',
+      rating: 1500, themes: 'kingsideAttack mateIn1', title: null, createdAt: '2026-10-01T00:00:00Z',
+    }];
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of(incoming), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ tab: 'challenges' }) } } },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { puzzleThemes: { kingsideAttack: 'Königsangriff', mateIn1: 'Matt in 1' } });
+    translate.use('de');
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/friends').flush([]);
+    http.expectOne('/api/friends/requests').flush([]);
+    http.expectOne('/api/friends/requests/sent').flush([]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const themes = el.querySelector('.themes')?.textContent ?? '';
+    expect(themes).toContain('Königsangriff');
+    expect(themes).toContain('Matt in 1');
+    expect(themes).not.toContain('kingsideAttack');
+    const btn = el.querySelector('mat-list-item button[mat-flat-button]');
+    expect(btn).not.toBeNull();
+    expect(btn!.classList.contains('mdc-list-item__end')).toBeFalse();
+    expect(btn!.parentElement?.classList.contains('item-action')).toBeTrue();
+    http.verify();
+  });
+});

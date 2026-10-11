@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -32,7 +34,8 @@ const LOAD_CONCURRENCY = 4;
   selector: 'app-mistakes-collection',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [FormsModule, RouterLink, MatButtonModule, MatCheckboxModule, MatIconModule, MatProgressSpinnerModule,
+  imports: [FormsModule, RouterLink, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatSelectModule, MatIconModule,
+    MatProgressSpinnerModule,
     TranslatePipe, ChessBoardComponent, MistakesTrainerComponent],
   template: `
     <div class="page">
@@ -45,30 +48,39 @@ const LOAD_CONCURRENCY = 4;
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (!training()) {
         <p class="hint">{{ 'games.mistakes.collection.hint' | translate }}</p>
+        <!-- UI-Sweep 2026-10-11 (d1-rk-mistakes-native-selects): Filter als Material-Felder (DESIGN 5.8), nicht nativ. -->
         <div class="filters">
-          <label>{{ 'games.classifier.first' | translate }}
-            <select [(ngModel)]="filter1" name="filter1" [attr.aria-label]="'games.classifier.first' | translate">
-              <option value="">{{ 'games.classifier.all' | translate }}</option>
-              @for (v of firstOptions(); track v) { <option [value]="v">{{ v }}</option> }
-              @if (unclassified1()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
-            </select>
-          </label>
-          <label>{{ 'games.classifier.second' | translate }}
-            <select [(ngModel)]="filter2" name="filter2" [attr.aria-label]="'games.classifier.second' | translate">
-              <option value="">{{ 'games.classifier.all' | translate }}</option>
-              @for (v of secondOptions(); track v) { <option [value]="v">{{ v }}</option> }
-              @if (unclassified2()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
-            </select>
-          </label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
+            <mat-label>{{ 'games.classifier.first' | translate }}</mat-label>
+            <mat-select [(ngModel)]="filter1" name="filter1" class="filter1">
+              <mat-option value="">{{ 'games.classifier.all' | translate }}</mat-option>
+              @for (v of firstOptions(); track v) { <mat-option [value]="v">{{ v }}</mat-option> }
+              @if (unclassified1()) { <mat-option [value]="none">{{ 'games.classifier.none' | translate }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
+            <mat-label>{{ 'games.classifier.second' | translate }}</mat-label>
+            <mat-select [(ngModel)]="filter2" name="filter2" class="filter2">
+              <mat-option value="">{{ 'games.classifier.all' | translate }}</mat-option>
+              @for (v of secondOptions(); track v) { <mat-option [value]="v">{{ v }}</mat-option> }
+              @if (unclassified2()) { <mat-option [value]="none">{{ 'games.classifier.none' | translate }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
           <mat-checkbox [(ngModel)]="includeSolved" name="includeSolved">{{ 'games.mistakes.collection.includeSolved' | translate }}</mat-checkbox>
         </div>
-        <p class="count">{{ 'games.mistakes.collection.selection' | translate: { games: selected().length, analysed: analysed().length } }}</p>
+        <p class="count">{{ (selected().length === 1 ? 'games.mistakes.collection.selectionOne' : 'games.mistakes.collection.selection')
+          | translate: { games: selected().length, analysed: analysed().length } }}</p>
         @if (loadProgress(); as p) {
           <p class="loading"><mat-spinner diameter="18"></mat-spinner> {{ 'games.mistakes.collection.loading' | translate: p }}</p>
         } @else {
           <button mat-flat-button color="primary" class="start" [disabled]="analysed().length === 0" (click)="start()">
             <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.start' | translate }}
           </button>
+          <!-- UI-Sweep 2026-10-11 (d1-rk-mistakes-starten-ohne-grund): der Grund steht sichtbar unter dem gesperrten Knopf. -->
+          @if (analysed().length === 0) {
+            <p class="disabled-reason">{{ (selected().length === 0 ? 'games.mistakes.collection.noGames'
+              : 'games.mistakes.collection.noneAnalysed') | translate }}</p>
+          }
           @if (empty()) { <p class="empty-state">{{ 'games.mistakes.collection.none' | translate }}</p> }
         }
       } @else {
@@ -81,7 +93,8 @@ const LOAD_CONCURRENCY = 4;
           </div>
           <app-mistakes-trainer class="trainer" [session]="t" [analyzable]="false"
                                 title="games.mistakes.collection.title" (closed)="stop()" />
-          <p class="source">{{ 'games.mistakes.collection.source' | translate: { games: sessionGames(), mistakes: t.bySide.white.length } }}</p>
+          <p class="source">{{ (sessionGames() === 1 ? 'games.mistakes.collection.sourceOne' : 'games.mistakes.collection.source')
+            | translate: { games: sessionGames(), mistakes: t.bySide.white.length } }}</p>
         </div>
       }
     </div>
@@ -91,11 +104,10 @@ const LOAD_CONCURRENCY = 4;
     .header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
     .header h1 { margin: 0; font-size: 1.4rem; }
     .hint, .count, .empty-state, .source { color: color-mix(in srgb, currentColor 75%, transparent); }
-    .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 8px 0; font-size: 0.9rem; }
-    .filters label { display: inline-flex; align-items: center; gap: 6px; }
-    .filters select { font: inherit; color: inherit; background: transparent; padding: 4px 8px;
-      border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 4px; }
-    .filters option { color: initial; }
+    .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 12px 0 8px; }
+    .filter-field { min-width: 200px; }
+    .disabled-reason { margin: 6px 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    @media (max-width: 599.98px) { .filter-field { flex: 1 1 100%; } }
     .loading { display: flex; align-items: center; gap: 8px; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .body { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }

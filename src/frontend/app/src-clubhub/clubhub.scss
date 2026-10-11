@@ -39,6 +39,7 @@ html {
   --ok: #1d7347;
   --ok-soft: #e2f1e8;
   --bad: #b3261e;
+  --bad-ink: #ffffff;      /* Schrift auf gefülltem --bad (6,5:1); d1-x-account-delete-warn-ignored */
   --bad-soft: #f9e4e2;
   --focus: #1c5fd4;
   --slab: "Zilla Slab", Rockwell, "Roboto Slab", Georgia, serif;
@@ -61,6 +62,7 @@ html.dark-theme {
   --ok: #57c48c;
   --ok-soft: #1a3327;
   --bad: #f07b72;
+  --bad-ink: #1b0f0e;      /* Weiß auf #f07b72 hätte nur 2,6:1 */
   --bad-soft: #3a1d1b;
   --focus: #7aa7ff;
 }
@@ -473,12 +475,20 @@ ch-root .wrap .legal-container { padding: 0; }
   --mat-card-title-text-size: 28px;
   --mat-card-title-text-weight: 700;
   --mat-card-title-text-line-height: 1.15;
+  /* UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored): „Konto in RookHub löschen" in der Gefahrfarbe und in der
+     Form von .btn (Radius 8, mind. 44 px) statt als grüne Vollpille — styles.scss füllt mat-flat-button color="warn"
+     mit --mat-sys-error. */
+  --mat-sys-error: var(--bad);
+  --mat-sys-on-error: var(--bad-ink);
+  --mat-button-filled-container-shape: 8px;
+  --mat-button-filled-container-height: 44px;
+  --mat-sys-label-large-font: var(--body);
   border: 1px solid var(--line);
   color: var(--ink);
   font-family: var(--body);
 }
 :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 700 19px/1.2 var(--slab); color: var(--rule); }
-:is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a { color: var(--primary); }
+:is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a:not(.mat-mdc-button-base) { color: var(--primary); }
 
 @media (prefers-reduced-motion: reduce) {
   .tick[aria-pressed="true"] .box svg { transition: none; }

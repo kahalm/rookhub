@@ -60,6 +60,18 @@ body { background-color: var(--mat-sys-surface); }
     protected-ripple-color: color-mix(in srgb, var(--mat-sys-on-error) 12%, transparent),
   ));
 }
+/* UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored): dasselbe fuer den gefuellten Knopf. `mat-flat-button
+   color="warn"` nahm im M3-Thema die Primaerfarbe — „Konto loeschen" und die Bestaetigung im Rueckfrage-Dialog sahen
+   wie die harmlose Hauptaktion aus (RookHub hellblau, KidHub blau, ClubHub gruen). Jetzt Fehlerfarbe + on-error in
+   allen fuenf Oberflaechen; die Hubs setzen --mat-sys-error/--mat-sys-on-error auf ihrer Karte selbst. */
+.mat-mdc-unelevated-button.mat-warn {
+  @include mat.button-overrides((
+    filled-container-color: var(--mat-sys-error),
+    filled-label-text-color: var(--mat-sys-on-error),
+    filled-state-layer-color: var(--mat-sys-on-error),
+    filled-ripple-color: color-mix(in srgb, var(--mat-sys-on-error) 12%, transparent),
+  ));
+}
 
 /* Chessground board styles */
 @import 'chessground/assets/chessground.base.css';

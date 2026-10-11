@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.0", date: "2026-10-11", changes: [
+    { en: "Design fixes from the catch-up design check: the “Delete account” button is red on every site again (and every confirmation button too), with readable text in dark mode; on LeagueHub the red main buttons of the sign-in pages now have enough contrast in dark mode; the KidHub “Delete account” page now looks like a kids’ page with the technical details folded away for parents. The revenge page shows puzzle themes in your language and a readable “Solve” button (also for challenges on the friends page). “Replay mistakes by league/season” explains why “Start” is locked, says “1 game” instead of “1 games”, and uses the app’s own dropdowns. New design rule: what matters most is visible without scrolling on phone, laptop and large screens.",
+      de: "Gestaltungskorrekturen aus der nachgeholten Design-Durchsicht: der Knopf „Konto löschen“ ist auf allen Seiten wieder rot (ebenso jeder Bestätigen-Knopf), mit lesbarer Schrift im dunklen Modus; in LeagueHub haben die roten Hauptknöpfe der Anmeldeseiten im dunklen Modus genug Kontrast; die KidHub-Seite „Konto löschen“ sieht wie eine Kinderseite aus, die Fachdetails für Eltern sind zugeklappt. Die Revanche-Seite zeigt Aufgabenthemen in deiner Sprache und einen lesbaren Knopf „Lösen“ (auch bei Herausforderungen auf der Freunde-Seite). „Fehler nach Liga/Saison nachspielen“ sagt, warum „Starten“ gesperrt ist, schreibt „1 Partie“ statt „1 Partien“ und nutzt die Auswahlfelder der App. Neue Gestaltungsregel: das Wichtigste ist ohne Scrollen sichtbar – am Handy, Laptop und großen Bildschirm." },
+  ] },
   { version: "0.752.9", date: "2026-10-11", changes: [
     { en: "Code structure: the 25 server services for saved games, game analysis, review texts, reconstruction now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 25 Server-Dienste für gespeicherte Partien, Partie-Analyse, Rückblick-Texte, Rekonstruktion liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

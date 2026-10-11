@@ -16,6 +16,9 @@ html {
   --muted: #5a6878;
   --line: #d9dfe7;
   --red: #c8102e;          /* Tiroler Rot – nur für den wahrscheinlichsten Spieler */
+  /* Schrift auf gefülltem Rot (UI-Sweep 2026-10-11, d1-l-mask-red-contrast): hell Weiß (5,9:1 auf #c8102e),
+     dunkel die Tinte des Grunds — Weiß auf #ff4d63 hatte nur 3,2:1, #0f141b hat 5,7:1. */
+  --on-red: #ffffff;
   --bar: #aab5c2;          /* weitere Kandidaten */
   --track: #e8ecf1;
   --sq-white: #ffffff;
@@ -34,6 +37,7 @@ html.dark-theme {
   --muted: #97a5b5;
   --line: #28323e;
   --red: #ff4d63;
+  --on-red: #0f141b;
   --bar: #5d6b7b;
   --track: #222b36;
   --sq-white: #e9edf2;
@@ -227,7 +231,11 @@ lh-root .wrap .legal-links { display: none; }
    bleiben unberührt; die Selektoren sind spezifischer als ihre gekapselten Regeln. Analog r2-c-privacy-style in ClubHub. */
 lh-root :is(app-login, app-register, app-forgot-password, app-reset-password, app-privacy, app-impressum, app-account-deletion) .mat-mdc-card {
   --mat-sys-primary: var(--red);
-  --mat-sys-on-primary: #fff;
+  --mat-sys-on-primary: var(--on-red);
+  /* Gefahrknopf (d1-x-account-delete-warn-ignored): „Konto löschen" in Rot mit lesbarer Schrift, nicht in der
+     Primärfarbe — styles.scss füllt mat-flat-button color="warn" mit --mat-sys-error. */
+  --mat-sys-error: var(--red);
+  --mat-sys-on-error: var(--on-red);
   --mat-sys-on-surface: var(--ink);
   --mat-sys-on-surface-variant: var(--muted);
   --mat-sys-outline: var(--line);
@@ -244,7 +252,7 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password, ap
   --mat-card-title-text-line-height: 1.2;
   --mat-button-filled-container-shape: 6px;
   --mat-button-filled-container-color: var(--red);
-  --mat-button-filled-label-text-color: #fff;
+  --mat-button-filled-label-text-color: var(--on-red);
   --mat-button-outlined-container-shape: 6px;
   --mat-button-text-container-shape: 6px;
   --mat-button-text-label-text-color: var(--ink);
@@ -260,7 +268,8 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .m
   background: color-mix(in srgb, var(--red) 8%, transparent); border-left-color: var(--red); color: var(--ink);
 }
 lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 600 20px/1.2 var(--cond); color: var(--red); }
-lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+/* Nur echte Links — nicht der Knopf „Konto in RookHub löschen", der ebenfalls ein <a> ist (d1-x-account-delete-warn-ignored). */
+lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a:not(.mat-mdc-button-base) { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 .foot-note { color: var(--muted); font-size: 14px; padding-top: 20px; }
 /* Partien je Quelle unter „Stand der Daten" (0.626.0; als Tabelle seit 0.628.0, Fassung B des Entwurfs) */
@@ -585,7 +594,7 @@ span.match.ok { color: var(--ok); }
 .cta h2 { margin: 0 0 6px; font: 600 22px/1.2 var(--cond); color: var(--ink); }
 .cta p { margin: 0 0 12px; max-width: 70ch; color: var(--muted); }
 .cta-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.cta .btn-pri { background: var(--red); border-color: var(--red); color: #fff; }
+.cta .btn-pri { background: var(--red); border-color: var(--red); color: var(--on-red); }   /* d1-l-mask-red-contrast */
 
 /* Übersicht vor dem PGN-Import */
 .review-head { display: grid; gap: 8px; margin-bottom: 10px; }
@@ -689,7 +698,7 @@ lh-online-accounts { display: block; }
 .sugg-actions .sa-btn { min-height: 40px; padding: 8px 6px; font-size: 15px; text-align: center; display: inline-flex;
   align-items: center; justify-content: center; }
 .sugg-actions .sa-reject { color: var(--red); border-color: var(--red); }
-.sugg-actions .sa-reject:hover { background: var(--red); color: #fff; }
+.sugg-actions .sa-reject:hover { background: var(--red); color: var(--on-red); }   /* --on-red: d1-l-mask-red-contrast */
 .sugg-page h2 { margin: 18px 0 6px; }
 .sugg-group { margin-top: 16px; }
 

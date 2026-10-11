@@ -11,6 +11,8 @@ import { KidHubAppComponent } from './app.component';
 import { kidhubConfig } from './app.config';
 import { LEGAL_SITE } from '@rh/features/legal/legal-site';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
+import { AccountDeletionComponent } from '@rh/features/legal/account-deletion.component';
+import { HandoffService } from '@rh/core/handoff.service';
 import { contrast, parseColor } from '@rh/testing/contrast';
 
 @Component({ standalone: true, template: '<p class="page">Seite</p>' })
@@ -33,6 +35,7 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
           { path: 'levels', component: BlankComponent },
           { path: 'levels/:level', component: BlankComponent },
           { path: 'privacy', component: PrivacyComponent },
+          { path: 'account-deletion', component: AccountDeletionComponent },
         ]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         legal!,
@@ -111,5 +114,45 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
     await TestBed.inject(Router).navigateByUrl('/levels');
     f.detectChanges();
     expect(el.querySelector('.legal-top')).toBeNull();
+  });
+
+  // UI-Sweep 2026-10-11 (d1-k-account-deletion-style, d1-k-account-deletion-jargon)
+  it('Konto löschen: Kinderkarte, „← Start" oben, Kopfzeile so breit wie die Karte, Eltern-Liste zu, Löschknopf groß und rot', async () => {
+    // Auf localhost gibt es kein RookHub zum Löschen — wie auf kidhub.* soll der Knopf erscheinen.
+    spyOnProperty(HandoffService.prototype, 'accountHomeUrl', 'get').and.returnValue('https://rookhub.example');
+    const f = await at('/account-deletion');
+    await new Promise(r => setTimeout(r));
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+
+    const back = el.querySelector<HTMLAnchorElement>('.legal-top a.back')!;
+    expect(back).withContext('„← Start" oben').not.toBeNull();
+    expect(back.compareDocumentPosition(el.querySelector('app-account-deletion')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(el.querySelector<HTMLElement>('header.top')!.style.getPropertyValue('--kid-page-width')).toBe('840px');
+
+    const card = getComputedStyle(el.querySelector<HTMLElement>('app-account-deletion mat-card')!);
+    expect(card.borderTopLeftRadius).toBe('22px');
+    expect(card.backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(card.maxWidth).toBe('808px');
+    const h1 = getComputedStyle(el.querySelector<HTMLElement>('app-account-deletion h1')!);
+    expect(h1.fontWeight).toBe('800');
+    expect(h1.color).toBe('rgb(29, 79, 145)');                        // --kid-title
+    expect(getComputedStyle(el.querySelector<HTMLElement>('app-account-deletion mat-card-content')!).fontSize).toBe('16px');
+
+    // Fachbegriffe für Eltern zugeklappt, davor der Kindersatz.
+    const details = el.querySelector('app-account-deletion details.kid-parent')!;
+    expect(details).not.toBeNull();
+    expect(details.hasAttribute('open')).toBeFalse();
+    expect(details.querySelector('ul.removed')).not.toBeNull();
+    expect(el.querySelector('app-account-deletion .kid-short')).not.toBeNull();
+
+    // Löschknopf: Gefahrfarbe --kid-bad-fg, weiße Schrift ≥ 4,5:1, Hauptknopf-Form (≥ 52 px, Radius 18, fett).
+    const btn = el.querySelector<HTMLElement>('app-account-deletion .delete-now')!;
+    const b = getComputedStyle(btn);
+    expect(b.backgroundColor).toBe('rgb(155, 28, 28)');
+    expect(contrast(parseColor(b.color), parseColor(b.backgroundColor))).toBeGreaterThanOrEqual(4.5);
+    expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(52);
+    expect(b.borderTopLeftRadius).toBe('18px');
+    expect(b.fontWeight).toBe('800');
   });
 });

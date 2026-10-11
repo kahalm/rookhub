@@ -14,7 +14,10 @@ import { environment } from '../../src/environments/environment';
 import { KidsApiService } from './core/kids-api.service';
 import { KidsProgressSync } from './core/kids-progress-sync.service';
 import { KID_BACK, KID_PAGE_WIDTH, KID_SHORT, KID_STACKED, kidPageWidth } from './shared/kids-layout';
-import { KID_PRIVACY_STYLES, foldPrivacy, isPrivacyUrl } from './shared/kids-privacy';
+import {
+  KID_PRIVACY_STYLES, KidDeletionTexts, foldAccountDeletion, foldPrivacy, isAccountDeletionUrl, isLegalUrl, isPrivacyUrl,
+  setAccountDeletionTexts,
+} from './shared/kids-privacy';
 import { KID_AUTH_STYLES, isAuthUrl } from './shared/kids-auth';
 
 /** Die vollstaendig uebersetzten Sprachen — nur die bietet die Kinderseite an. */
@@ -71,8 +74,9 @@ export function isHomeUrl(url: string): boolean {
       }
     </header>
     <main>
-      @if (isPrivacy()) {
-        <!-- Datenschutz: der Weg zurueck zum Spiel steht oben, nicht erst nach 3 500 px (UI-Sweep 2026-10-10, k-privacy). -->
+      @if (isLegal()) {
+        <!-- Datenschutz: der Weg zurueck zum Spiel steht oben, nicht erst nach 3 500 px (UI-Sweep 2026-10-10, k-privacy);
+             ebenso auf „Konto loeschen" (UI-Sweep 2026-10-11, d1-k-account-deletion-style). -->
         <div class="legal-top"><a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a></div>
       } @else if (isAuth()) {
         <!-- UI-Sweep 2026-10-11 (r2-k-login): derselbe „← Start"-Knopf wie auf den übrigen Seiten, über der Karte. -->
@@ -204,7 +208,8 @@ export class KidHubAppComponent implements OnInit {
     { initialValue: this.router.url },
   );
   readonly isHome = computed(() => isHomeUrl(this.url()));
-  readonly isPrivacy = computed(() => isPrivacyUrl(this.url()));
+  /** Rechtsseite (Datenschutz oder Konto loeschen) — „← Start" oben (k-privacy, d1-k-account-deletion-style). */
+  readonly isLegal = computed(() => isLegalUrl(this.url()));
   /** Anmelde-Masken (UI-Sweep 2026-10-11, r2-k-login). */
   readonly isAuth = computed(() => isAuthUrl(this.url()));
   /** Breite der Kopfzeile = Breite der Inhaltsspalte dieser Seite (k-logo). */
@@ -212,6 +217,15 @@ export class KidHubAppComponent implements OnInit {
   readonly version = environment.version;
   /** Die TATSAECHLICH aktive Sprache — nicht eine eigene Kopie, die mit ihr auseinanderlaufen kann. */
   readonly lang = computed(() => this.translate.currentLang());
+  /** Kindertexte fuer „Konto loeschen" — die geteilte Seite kennt sie nicht, die Huelle setzt sie ein. */
+  private readonly deletionTexts = toSignal(
+    this.translate.stream(['kids.accountDeletion.short', 'kids.accountDeletion.parents']).pipe(
+      map((t: Record<string, string>): KidDeletionTexts => ({
+        short: t['kids.accountDeletion.short'], parents: t['kids.accountDeletion.parents'],
+      })),
+    ),
+    { initialValue: { short: '', parents: '' } },
+  );
 
   private readonly api = inject(KidsApiService);
   /** Die Antwort des Servers wird je Seitenaufruf nur EINMAL geholt. */
@@ -226,7 +240,14 @@ export class KidHubAppComponent implements OnInit {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const injector = inject(Injector);
     this.router.events.pipe(filter(e => e instanceof NavigationEnd), takeUntilDestroyed()).subscribe(e => {
-      if (isPrivacyUrl((e as NavigationEnd).urlAfterRedirects)) afterNextRender(() => foldPrivacy(host), { injector });
+      const url = (e as NavigationEnd).urlAfterRedirects;
+      if (isPrivacyUrl(url)) afterNextRender(() => foldPrivacy(host), { injector });
+      if (isAccountDeletionUrl(url)) afterNextRender(() => foldAccountDeletion(host, this.deletionTexts()), { injector });
+    });
+    // „Konto loeschen" (d1-k-account-deletion-jargon): Kindersatz + Eltern-Aufklapper folgen der Sprache.
+    effect(() => {
+      const texts = this.deletionTexts();
+      untracked(() => setAccountDeletionTexts(host, texts));
     });
     // Nur de/en/hr/hu haben die Kindertexte vollstaendig; jede andere Sprache (Browser, Wahl auf
     // RookHub) stuende hier halb in Englisch. Dann zuerst das Land der IP fragen (AT → de, HU → hu,
