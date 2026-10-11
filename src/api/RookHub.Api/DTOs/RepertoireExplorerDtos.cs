@@ -156,7 +156,7 @@ public class ExplorerGameDto
 }
 
 /// <summary>Antwort von <c>GET /api/explorer/paths</c>: die häufigsten Zugfolgen von der Grundstellung zu einer Stellung
-/// (lokaler Explorer, <see cref="RookHub.Api.Services.ExplorerPathFinder"/>).</summary>
+/// (lokaler Explorer, <see cref="RookHub.Api.Services.Engines.ExplorerPathFinder"/>).</summary>
 public class ExplorerPathsResultDto
 {
     /// <summary>Eröffnungsname des Explorers für die Zielstellung oder den letzten benannten Zug davor.</summary>

@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Endspiel-Datenbank (Syzygy, bis 7 Steine) über die öffentliche Schnittstelle von Lichess (0.729.0, Wunsch 2026-10-10:

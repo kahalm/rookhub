@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using Chess;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Services;
 

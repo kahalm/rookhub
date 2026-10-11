@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Buchführung über die laufenden LIVE-Analyse-Streams (Singleton) — mit zwei Blickwinkeln, weil zwei

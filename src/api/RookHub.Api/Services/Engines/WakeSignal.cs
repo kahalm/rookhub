@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Ein Takt, der sich vorzeitig wecken lässt. Der <see cref="AnalysisJobWorker"/> lief bis 0.543.0 in einem

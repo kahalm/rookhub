@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Chess;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Broker-Ergebniszeile → Kandidatenliste, wie die Wertung sie braucht

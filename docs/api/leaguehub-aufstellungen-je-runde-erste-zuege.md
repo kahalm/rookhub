@@ -125,7 +125,7 @@ dann in der lokalen Lichess-DB nach, welche Eröffnungen am häufigsten zu der S
   `formatMoves`), „≈ 2,8 Mio. Partien" (`formatGames`) und Anteil an den Partien der Stellung; Antippen übernimmt die Zugfolge in den Modus
   „Züge" (Speichern wie bisher). Keine Treffer: „Keine Zugfolge gefunden (…)". Hinweis unter dem Feld: die Zugzahl ist bei einer von Hand
   aufgebauten Stellung unbekannt, die Suche prüft bis 20 Halbzüge.
-* **Suche** (`Services/ExplorerPathFinder.cs`, nur lokaler Explorer, Auswahl Lichess ab 1600, Blitz/Schnell/Klassisch): vorwärts von der
+* **Suche** (`Services/Engines/ExplorerPathFinder.cs`, nur lokaler Explorer, Auswahl Lichess ab 1600, Blitz/Schnell/Klassisch): vorwärts von der
   Grundstellung, Knoten = (Stellung, Tiefe) — Zugumstellungen werden je Tiefe EINMAL erweitert, alle Vorgänger bleiben (jeder Pfad zählt).
   „Beste zuerst" nach Wahrscheinlichkeit (Produkt der Zuganteile) · 0,3 je noch nötigem Zug (`NeedWeight` 1,2 im Logarithmus), FLIESSEND
   bis zu 8 Abfragen gleichzeitig (eine langsame Abfrage — HDD, bis Sekunden — hält die anderen nicht auf). Seit 0.727.3 0,2 je nötigem Zug (`NeedWeight` 1,6, siehe Messung unten). Schranken: Anteil ≥ 1 %, die 8

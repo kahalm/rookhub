@@ -16,7 +16,7 @@ Lichess-Konto registrierten External Engines und reicht Analyse-Anfragen an den 
 Dauer-Geheimnis (wer es hat, kann fremde Rechenzeit verbrauchen) und bleibt deshalb serverseitig
 (`LichessEngineService`, MemoryCache je `userId:engineId`, TTL 10 min). Nebeneffekt: die CSP
 (`connect-src 'self'`) bleibt unangetastet und die eigene Engine ist auch vom Handy aus nutzbar.
-Logik in `Services/LichessEngineService.cs`; URLs konfigurierbar (`Lichess:ApiUrl`/`Lichess:BrokerUrl`) —
+Logik in `Services/Engines/LichessEngineService.cs`; URLs konfigurierbar (`Lichess:ApiUrl`/`Lichess:BrokerUrl`) —
 zugleich die Vorbereitung auf den RookHub-EIGENEN Broker (seit 0.537.0, gleiche Endpoints, siehe unten).
 
 | Methode | Endpoint | Zweck |

@@ -11,6 +11,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.EngineBroker;
 using Xunit;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.IntegrationTests;
 

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>Ein Zwischenstand einer Knotenanalyse (Bewertung <b>aus Sicht der Seite am Zug</b>): der beste Zug und seine
 /// Bewertung, als die Suche bei <paramref name="Nodes"/> Knoten stand — zugeordnet der Schwelle <paramref name="Threshold"/>

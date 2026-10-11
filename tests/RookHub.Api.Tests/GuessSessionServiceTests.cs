@@ -5,6 +5,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

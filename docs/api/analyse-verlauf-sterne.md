@@ -4,7 +4,7 @@
 
 Wunsch 2026-09-29: „merk dir eine History der letzten 20 Analysen von jedem User — diese sollen auch irgendwo ausgewählt
 werden können" und „innerhalb einer Analyse will ich Stellungen mit einem Stern markieren, damit ich schnell zu diesen
-springen kann". `Services/AnalysisHistoryService.cs`, Tabelle `AnalysisHistoryEntries`.
+springen kann". `Services/Engines/AnalysisHistoryService.cs`, Tabelle `AnalysisHistoryEntries`.
 * Eine Analyse = Ausgangsstellung + Zugfolge (UCI, serverseitig nachgespielt — eine, die nicht geht, ist ein 400) + der
   Halbzug, an dem man stand + Sterne (Halbzüge, 0 = Ausgangsstellung) + Titel aus den PGN-Kopfdaten. Höchstens
   `MaxPerUser` 20 je Nutzer, die zuletzt angefassten bleiben; Konto löschen räumt ab.

@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

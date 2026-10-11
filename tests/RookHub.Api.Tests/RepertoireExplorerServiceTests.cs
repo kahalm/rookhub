@@ -10,6 +10,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

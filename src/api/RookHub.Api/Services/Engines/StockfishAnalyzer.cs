@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Engine-Einschätzung einer Stellung (relativ zur Seite am Zug). <see cref="MateIn"/> &gt; 0 =

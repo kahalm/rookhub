@@ -1,3 +1,5 @@
+using RookHub.Api.Services.Engines;
+
 namespace RookHub.Api.Services.EngineBroker;
 
 /// <summary>

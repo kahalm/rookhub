@@ -6,6 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

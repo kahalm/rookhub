@@ -21,6 +21,7 @@ using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Engines;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()

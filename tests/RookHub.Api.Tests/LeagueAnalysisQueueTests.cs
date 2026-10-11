@@ -5,6 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.League;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

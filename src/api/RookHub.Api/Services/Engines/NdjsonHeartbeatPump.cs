@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Kopiert einen ndjson-Stream 1:1 weiter und schreibt bei Funkstille eine LEERZEILE als Lebenszeichen.

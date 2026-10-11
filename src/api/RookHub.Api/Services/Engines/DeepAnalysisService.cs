@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// „Tiefe Analyse" einer Stellung (0.686.0, Wunsch 2026-10-06): Vereinsmitglieder lassen die Stellung auf dem Brett

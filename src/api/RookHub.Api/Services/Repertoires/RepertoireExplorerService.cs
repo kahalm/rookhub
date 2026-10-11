@@ -6,6 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Services.Repertoires;
 

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services.Repertoires;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// „Über welche Zugfolgen kommt man am häufigsten in diese Stellung?" (<c>GET /api/explorer/paths</c>, LeagueHub-Zugeditor,

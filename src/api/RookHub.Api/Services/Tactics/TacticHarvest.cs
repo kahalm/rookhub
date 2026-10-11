@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Chess;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Services.Tactics;
 

@@ -8,6 +8,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

@@ -8,7 +8,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Repertoires;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>Griff des Workers für den Service: einen Auftrag, der gerade rechnet, sofort stoppen
 /// (Löschen, Linien ↑ = Neustart). Ohne registrierte Implementierung (Tests) passiert nichts.</summary>

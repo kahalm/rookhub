@@ -6,7 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Analyse-Verlauf des Analysebretts (0.603.0): „merk dir eine History der letzten 20 Analysen von jedem User — diese

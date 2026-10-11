@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

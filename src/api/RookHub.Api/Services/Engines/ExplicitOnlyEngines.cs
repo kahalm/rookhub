@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Engines, die NUR rechnen, wenn ein Auftrag sie ausdrücklich nennt (<c>AnalysisJobs:ExplicitOnlyEngineIds</c>, Liste;

@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Wo die Stockfish-CLI liegt — EINE Regel für den Tipp-Generator (<see cref="StockfishAnalyzer"/>) und die Engine-Prüfung

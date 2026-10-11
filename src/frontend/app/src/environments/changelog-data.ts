@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.752.8", date: "2026-10-11", changes: [
+    { en: "Code structure: the 21 server services for engines, analysis jobs, explorer, move comparison, tablebase now live in their own folder. No change in behaviour.",
+      de: "Code-Struktur: die 21 Server-Dienste für Engines, Analyseaufträge, Explorer, Zugvergleich, Endspiel-Datenbank liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.752.7", date: "2026-10-11", changes: [
     { en: "Code structure: the 14 server services for repertoires, gap finder, repertoire trainer, position search now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 14 Server-Dienste für Repertoires, Lochfinder, Repertoire-Trainer, Stellungssuche liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

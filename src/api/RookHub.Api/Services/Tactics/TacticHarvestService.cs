@@ -4,6 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Services.Tactics;
 

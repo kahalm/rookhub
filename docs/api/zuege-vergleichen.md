@@ -3,7 +3,7 @@
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
 Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was
-sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/MoveComparisonService.cs`,
+sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/Engines/MoveComparisonService.cs`,
 Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpService` (5 s, `MoveComparison:PumpIntervalSeconds`).
 * **Zwei Durchgänge über die Hintergrund-Aufträge** (NICHT die Live-Engine — rechnet auch, wenn die Seite zu ist):
   (1) je Kandidat (2–4) die Stellung DANACH mit `CandidateLines` (3) Linien = die besten Antworten des Gegners; daraus
@@ -11,7 +11,7 @@ Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpSer
   `RepliesTested` (3) beste Antworten, gespielt nach dem BESTEN: geht die Antwort dort nicht → `Illegal` (ohne Auftrag,
   selbst eine Auskunft), sonst ein Auftrag mit 1 Linie = die eigene Erwiderung und die Bewertung. Matt/Patt auf dem Brett
   braucht keinen Auftrag (`Terminal`).
-* **Engine wie die Punktepartie** (`Services/EngineOwnerResolver.cs`, von `GameAnalysisService` mitbenutzt): eigene
+* **Engine wie die Punktepartie** (`Services/Engines/EngineOwnerResolver.cs`, von `GameAnalysisService` mitbenutzt): eigene
   Hintergrund-Engine, sonst die Haus-Engine; auf der Haus-Engine höchstens `HouseMaxDepth` 24 (eigene bis 30, Vorgabe 22).
   Die Aufträge sind normale (nicht `Background`) — sie verdrängen Vertiefung/Meisterpartien. `remember: false`, und
   `AnalysisJobService.ListAsync` blendet Aufträge eines Vergleichs aus. **Fertige Aufträge werden eingesammelt**: Ergebnis
@@ -84,7 +84,7 @@ gar nicht — der Browser sah null Bytes, brach ab und meldete „Externe Engine
 während Provider und Broker fehlerfrei rechneten. Im NPM-Zugriffslog erkennbar an `499` mit
 `Length 0` bei langen und `200` mit ~15 KB bei kurzen Suchen.
 **Lebenszeichen + Fortsetzung (0.377.0)**: Der API-Proxy kopiert den Broker-Stream nicht mehr nackt
-(`Services/NdjsonHeartbeatPump.cs`): schweigt der Broker 20 s, geht eine Leerzeile raus. Grund: bei
+(`Services/Engines/NdjsonHeartbeatPump.cs`): schweigt der Broker 20 s, geht eine Leerzeile raus. Grund: bei
 MultiPV 5 liegen ab Tiefe ~27 Minuten zwischen zwei Zeilen, und NPM (Default `proxy_read_timeout`
 60 s) kappte den Stream, den der Browser dann als „fertig" wertete (Prod-Log: Streams mit exakt ~61 s,
 Anzeige bleibt bei Tiefe 27 stehen). Der Client-Parser ignoriert Leerzeilen und Steuerzeilen ohne `pvs`

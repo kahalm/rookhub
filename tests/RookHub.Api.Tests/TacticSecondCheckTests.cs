@@ -5,6 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Tactics;
+using RookHub.Api.Services.Engines;
 using Cand = RookHub.Api.Services.Tactics.TacticHarvest.Cand;
 
 namespace RookHub.Api.Tests;

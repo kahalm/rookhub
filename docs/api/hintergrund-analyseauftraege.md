@@ -14,7 +14,7 @@ Ruhe dort fort; andere Engines bleiben unberührt. **Laufender Stand**: `Current
 bei JEDER empfangenen Zeile fortgeschrieben — auch bei den flacheren, die das Ergebnis nicht ersetzen.
 Ohne das stand die Anzeige nach einer Fortsetzung minutenlang still (die Engine rechnet erst von Tiefe 1
 wieder hoch, und ohne Persist lief nicht einmal die Zeit weiter). Für die SEKÜNDLICHE Anzeige kommt
-`Services/AnalysisJobLive.cs` (Singleton) dazu: derselbe Stand ohne Datenbank, `Seconds` wächst aus der
+`Services/Engines/AnalysisJobLive.cs` (Singleton) dazu: derselbe Stand ohne Datenbank, `Seconds` wächst aus der
 Startzeit des Laufs (läuft also auch, während die Engine schweigt), abrufbar über `GET
 /api/analysis-jobs/live`. Bewusst NICHT über häufigeres Persistieren gelöst — das hieße, für eine reine
 Anzeige jede Sekunde eine Zeile zu schreiben. **Fortsetzungs-Regel**: der Broker liefert nach

@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RookHub.Api.Exceptions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Welche Partien der Explorer zählt: die Lichess-Datenbank (gefiltert nach Elo-Stufen und

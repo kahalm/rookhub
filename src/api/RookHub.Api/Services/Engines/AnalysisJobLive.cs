@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>Laufender Stand der gerade rechnenden Analyseaufträge — NUR im Arbeitsspeicher.
 ///

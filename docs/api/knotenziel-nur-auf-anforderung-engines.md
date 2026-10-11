@@ -8,11 +8,11 @@
   `UpdateAsync`/`RestartAsync` fassen fertige Knotenaufträge nicht an.
 - Config `AnalysisJobs:ExplicitOnlyEngineIds` (Liste von Engine-Ids; leer = wie bisher, NICHT in Prod gesetzt): solche Engines fallen
   aus der automatischen Wahl (`PickBackgroundEngineAsync`), aus dem Failover (`NextEngineAfter`, weder hinein noch heraus) und aus der
-  Platzzahl der Meisterpartien-Analyse; mit ausdrücklicher `EngineId` rechnen sie. Helfer `Services/ExplicitOnlyEngines.cs`.
+  Platzzahl der Meisterpartien-Analyse; mit ausdrücklicher `EngineId` rechnen sie. Helfer `Services/Engines/ExplicitOnlyEngines.cs`.
 - Offen: `EngineOwnerResolver` zählt sie noch als Hintergrund-Engine (nur Lc0 eingetragen → Besitzer gilt als „hat Engine", automatische Wahl wirft).
 - **Konvergenz-Stufen einer Knotenanalyse** (2026-10-05, UNGETAGGT): bei Aufträgen mit `TargetNodes` hält der Worker aus denselben Stream-Zeilen
   (keine Mehrrechnung) je Schwelle `AnalysisJobs:SnapshotStepNodes` (Vorgabe 10 000, 0 = aus) den Stand fest — `NodeStepRecorder`
-  (`Services/NodeSteps.cs`, rein): Schwelle T bekommt die LETZTE Zeile mit `nodes ≤ T`, aber nur, wenn sie höchstens eine Schrittweite alt ist
+  (`Services/Engines/NodeSteps.cs`, rein): Schwelle T bekommt die LETZTE Zeile mit `nodes ≤ T`, aber nur, wenn sie höchstens eine Schrittweite alt ist
   (sonst fehlt die Stufe, nichts wird erfunden); am Ende steht die letzte Zeile zusätzlich unter dem Knotenziel selbst (mit der tatsächlich
   erreichten Knotenzahl). Eine Wiederaufnahme ersetzt eine Stufe nur mit MEHR Knoten. Gespeichert als JSON `AnalysisJobs.NodeStepsJson`
   (`[{"t","n","m","cp"|"mate"}]`, Bewertung aus Sicht der Seite am Zug, mit dem Persist-Intervall gebündelt) und beim Ingest nach

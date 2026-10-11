@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Hält die Zugvergleiche in Bewegung (<see cref="MoveComparisonService.PumpAllAsync"/>): fertige Aufträge einsammeln,

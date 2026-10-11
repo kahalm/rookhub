@@ -4,6 +4,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Tactics;
 using Xunit;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Tests;
 

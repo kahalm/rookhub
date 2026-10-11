@@ -8,7 +8,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>Absage beim Anlegen eines Vergleichs — <see cref="Reason"/> ist der Code, den die Seite übersetzt.</summary>
 public sealed class MoveComparisonException(string reason, string message) : Exception(message)

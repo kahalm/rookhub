@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Tempo der Hintergrund-Analyse aus den Zeitstempeln fertiger Stellungen (<c>GameAnalysisPosition.AnalyzedAt</c>) —

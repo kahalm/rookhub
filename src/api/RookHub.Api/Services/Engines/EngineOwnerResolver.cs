@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>
 /// Wer rechnet einen Auftrag auf Zuruf, wenn der Nutzer selbst keine Maschine stehen hat? Erst die EIGENE

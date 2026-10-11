@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Engines;
 
 /// <summary>Von Lichess gelistete External Engine inkl. serverseitig gehaltenem clientSecret.</summary>
 public record LichessExternalEngine(string Id, string Name, int MaxThreads, int MaxHash, string ClientSecret);
