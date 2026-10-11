@@ -10,6 +10,8 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.League;
+using RookHub.Api.DTOs.League;
 
 namespace RookHub.Api.Tests.League;
 

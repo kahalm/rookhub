@@ -180,7 +180,7 @@ public class EndpointAuthInventoryTests
     internal static List<Endpoint> Inventory()
     {
         var result = new List<Endpoint>();
-        var asm = typeof(RookHub.Api.Controllers.ProfileController).Assembly;
+        var asm = typeof(RookHub.Api.Controllers.Accounts.ProfileController).Assembly;
         foreach (var type in asm.GetTypes()
                      .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t))
                      .OrderBy(t => t.Name, StringComparer.Ordinal))
@@ -244,7 +244,7 @@ public class EndpointAuthInventoryTests
         // ohnehin nie aus (siehe Klassenkommentar).
         var unguarded = new List<string>();
         var adminSeen = new List<string>();
-        var asm = typeof(RookHub.Api.Controllers.ProfileController).Assembly;
+        var asm = typeof(RookHub.Api.Controllers.Accounts.ProfileController).Assembly;
         foreach (var type in asm.GetTypes()
                      .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t))
                      .OrderBy(t => t.Name, StringComparer.Ordinal))
@@ -308,7 +308,7 @@ public class EndpointAuthInventoryTests
     [Fact]
     public void NoVerblessPublicMethods()
     {
-        var asm = typeof(RookHub.Api.Controllers.ProfileController).Assembly;
+        var asm = typeof(RookHub.Api.Controllers.Accounts.ProfileController).Assembly;
         var verbless = asm.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t))
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance)

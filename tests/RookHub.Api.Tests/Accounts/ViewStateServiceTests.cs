@@ -7,6 +7,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Controllers.Accounts;
 
 namespace RookHub.Api.Tests.Accounts;
 

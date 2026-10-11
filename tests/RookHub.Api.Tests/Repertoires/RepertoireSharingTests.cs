@@ -7,6 +7,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Tests.Repertoires;
 

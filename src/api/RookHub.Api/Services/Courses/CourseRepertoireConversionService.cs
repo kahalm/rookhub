@@ -4,6 +4,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.DTOs.Courses;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Services.Courses;
 
@@ -11,7 +13,7 @@ namespace RookHub.Api.Services.Courses;
 /// Kurs ⇄ Repertoire umwandeln — BEIDE Richtungen an EINER Stelle. Sie sind dieselbe Operation mit
 /// vertauschten Rollen (Quell-PGN holen, Ziel daraus anlegen, Original entfernen), lagen aber in
 /// verschiedenen Schichten: „Kurs → Repertoire" im <see cref="CourseService"/>, „Repertoire → Kurs"
-/// ausgeschrieben im <see cref="Controllers.RepertoireController"/> — samt Besitzer-Prüfung,
+/// ausgeschrieben im <see cref="Controllers.Repertoires.RepertoireController"/> — samt Besitzer-Prüfung,
 /// Leer-Prüfung und Reihenfolge des Löschens. Eine Regel, die nur in einem Controller steht, ist für
 /// jeden anderen Aufrufer unerreichbar und für einen Service-Test unsichtbar.
 /// </summary>

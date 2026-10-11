@@ -8,6 +8,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Engines;
+using RookHub.Api.Controllers.Engines;
+using RookHub.Api.DTOs.Engines;
 
 namespace RookHub.Api.Tests.Engines;
 

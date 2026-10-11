@@ -1,0 +1,192 @@
+namespace RookHub.Api.DTOs.Games;
+
+/// <summary>Anlegen einer Partie-Analyse — PGN plus optionale Abweichungen von den Vorgaben.</summary>
+public class CreateGameAnalysisRequest
+{
+    public string? Pgn { get; set; }
+    public string? Title { get; set; }
+    /// <summary>Vorgabe 30 (siehe <c>GameAnalysisDefaults</c>); Tiefe 40 kostet grob das Zehnfache.</summary>
+    public int? TargetDepth { get; set; }
+    /// <summary>Vorgabe 5 = Protokoll-Maximum.</summary>
+    public int? MultiPv { get; set; }
+    /// <summary>Leer = Hintergrund-Engine aus dem Profil.</summary>
+    public string? EngineId { get; set; }
+    /// <summary>Knotenziel je Stellung statt Tiefe — nur mit <see cref="EngineId"/> (Bereich wie bei den Aufträgen).</summary>
+    public long? TargetNodes { get; set; }
+}
+
+public class GameAnalysisDto
+{
+    public int Id { get; set; }
+    public string? Title { get; set; }
+    public string? White { get; set; }
+    public string? Black { get; set; }
+    public string? Result { get; set; }
+    public string? Event { get; set; }
+    public int TargetDepth { get; set; }
+    public int MultiPv { get; set; }
+    public string? EngineId { get; set; }
+    /// <summary>Knotenziel je Stellung (lc0-Analyse); sonst <c>null</c> und die Tiefe gilt.</summary>
+    public long? TargetNodes { get; set; }
+    /// <summary>pending · running · done · failed</summary>
+    public string Status { get; set; } = "pending";
+    public int PlyCount { get; set; }
+    /// <summary>Wie viele Stellungen bereits ihre Kandidatenliste haben (Fortschritt).</summary>
+    public int AnalyzedPlies { get; set; }
+    public string? LastError { get; set; }
+    /// <summary>Kuratierter Bestand: als Punktepartie fuer jeden spielbar, auch ohne Anmeldung.</summary>
+    public bool IsPublic { get; set; }
+    /// <summary>Traegt das Quell-PGN Kommentare? Grundlage des Filters „alle / nur kommentierte" in
+    /// der Punktepartie-Auswahl. Ermittelt in SQL (<c>Pgn LIKE '%{%'</c>) statt aus einer eigenen
+    /// Spalte: jede geschweifte Klammer in einem PGN IST ein Kommentar, und so bleibt das
+    /// LONGTEXT-Feld ausserhalb der Antwort — geladen wuerde es sonst je Zeile.</summary>
+    public bool Annotated { get; set; }
+    /// <summary>Welche Seite man in dieser Partie uebernimmt, wenn man es nicht selbst sagt — die
+    /// des GEWINNERS (<see cref="Services.Library.GuessSides"/>). Nur im KURATIERTEN Bestand gefuellt: bei
+    /// eigenen Analysen waehlt man die Seite selbst, und ein Wert dort waere eine Behauptung ueber
+    /// eine Entscheidung, die der Nutzer noch trifft.</summary>
+    public bool? GuessWhite { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+    public DateTime? FinishedAt { get; set; }
+    /// <summary>Nur im Detail-Abruf gefüllt.</summary>
+    public List<GameAnalysisPositionDto>? Positions { get; set; }
+}
+
+/// <summary>Eine Stellung der Partie. BEWUSST ohne Kandidatenliste: die ist die Grundlage der
+/// späteren Punktepartie und bleibt serverseitig — wer sie ausliefert, liefert die Lösung mit.</summary>
+public class GameAnalysisPositionDto
+{
+    public int Ply { get; set; }
+    public int MoveNumber { get; set; }
+    public bool White { get; set; }
+    public string San { get; set; } = string.Empty;
+    public string Uci { get; set; } = string.Empty;
+    public string Fen { get; set; } = string.Empty;
+    public string? EvalText { get; set; }
+    public int Depth { get; set; }
+    public bool Analyzed { get; set; }
+}
+
+/// <summary>Kuratierten Bestand einer Partie-Analyse schalten (Besitzer/Admin).</summary>
+public class SetGameAnalysisPublicRequest
+{
+    public bool IsPublic { get; set; }
+}
+
+/// <summary>Eine auf der PUNKTEPARTIE-Seite eingeworfene Partie. Bewusst NUR PGN und Titel: Tiefe,
+/// Linienzahl und Engine setzt der Server (<c>GameAnalysisDefaults.GuessTargetDepth</c>). Ein Feld,
+/// das der Server ohnehin ueberschreibt, waere ein Versprechen, das die Antwort bricht — und auf
+/// fremder Rechenzeit hat der Einwerfer die Tiefe nicht zu bestimmen.</summary>
+public class CreateGuessGameRequest
+{
+    public string? Pgn { get; set; }
+    public string? Title { get; set; }
+}
+
+/// <summary>Warum ein Einwurf abgelehnt wurde. Ein GRUND und kein Satz: die Seite formuliert ihn in
+/// der Sprache des Nutzers, der Server kennt sie nicht.</summary>
+public static class GuessUploadReason
+{
+    /// <summary>Der Nutzer hat schon <c>MaxOpenGuessGamesPerUser</c> Partien in der Rechnung.</summary>
+    public const string TooManyOpen = "too-many-open";
+    /// <summary>Weder eigene Hintergrund-Engine noch freigegebene Haus-Engine.</summary>
+    public const string NoEngine = "no-engine";
+    /// <summary>Im Text steckt keine spielbare Partie.</summary>
+    public const string InvalidPgn = "invalid-pgn";
+}
+
+/// <summary>Ergebnis eines Einwurfs: entweder die angelegte Analyse oder ein Grund.</summary>
+public record GuessUploadResult(GameAnalysisDto? Analysis, string? Reason);
+
+/// <summary>Ob und wie oft der Nutzer noch einwerfen darf.</summary>
+public class GuessUploadStatusDto
+{
+    /// <summary>Ueberhaupt eine Engine da (eigene oder Haus)? Ohne sie zeigt die Seite das Feld gar nicht erst.</summary>
+    public bool EngineAvailable { get; set; }
+    /// <summary>Rechnet die eigene Maschine? Nur fuer den Hinweistext — die Tiefe bleibt so oder so fest.</summary>
+    public bool OwnEngine { get; set; }
+    public int OpenGames { get; set; }
+    public int MaxGames { get; set; }
+}
+
+/// <summary>
+/// Tempo und Restdauer der eigenen Analysen, AUS DER HISTORIE gerechnet.
+///
+/// <para>Vorher zaehlte der Browser selbst mit: er nahm bei jedem Abruf eine Probe und brauchte
+/// eine Minute offener Seite, bevor er ueberhaupt etwas sagen konnte — und beim naechsten
+/// Seitenaufruf fing er wieder bei null an. Die Stellungen tragen aber ihren Zeitstempel
+/// (<c>GameAnalysisPosition.AnalyzedAt</c>); daraus steht die Antwort sofort da, auch wenn der
+/// Reiter die ganze Nacht zu war.</para>
+/// </summary>
+public class AnalysisThroughputDto
+{
+    /// <summary>Gerechnete Stellungen je Minute; 0 = im Fenster ist nichts passiert.</summary>
+    public double PerMinute { get; set; }
+    /// <summary>Wie viele Stellungen im Fenster fertig wurden.</summary>
+    public int AnalyzedInWindow { get; set; }
+    /// <summary>Laenge des Fensters in Minuten — nicht die Vorgabe, sondern die tatsaechlich
+    /// gemessene Spanne: faengt die Arbeit vor zehn Minuten an, waere Teilen durch sechzig
+    /// eine Rate, die nur ein Sechstel der Wahrheit zeigt.</summary>
+    public int WindowMinutes { get; set; }
+    /// <summary>Noch offene Stellungen ueber alle unfertigen Partien.</summary>
+    public int Remaining { get; set; }
+    /// <summary>Hochgerechnete Restdauer in Minuten; <c>null</c> ohne Tempo oder ohne Rest.</summary>
+    public int? EtaMinutes { get; set; }
+    /// <summary>Wie viele Auftraege dieses Nutzers GERADE rechnen — je Engine laeuft genau einer,
+    /// die Zahl ist also die der arbeitenden Engines. Aus <see cref="Services.AnalysisJobLive"/>,
+    /// nach einem API-Neustart 0, bis der Worker wieder aufgreift.</summary>
+    public int RunningEngines { get; set; }
+    /// <summary>Summe der zuletzt gemeldeten Knoten/s dieser Laeufe; 0 = noch keine Zeile mit Tempo.</summary>
+    public long NodesPerSecond { get; set; }
+    /// <summary>Hoechste Zahl gleichzeitig rechnender Engines in den letzten 24 Stunden (0.543.0) — der
+    /// Vergleichswert zu <see cref="RunningEngines"/>: am Schwanz einer Partie rechnet oft nur eine, und
+    /// ohne die Spitze sah das wie ein Ausfall aus. Aus dem Arbeitsspeicher, nach einem API-Neustart 0.</summary>
+    public int MaxRunningEngines24h { get; set; }
+    /// <summary>Hoechstes Gesamttempo (Knoten/s ueber alle Laeufe) in den letzten 24 Stunden; 0 = keine Aufzeichnung.</summary>
+    public long MaxNodesPerSecond24h { get; set; }
+}
+
+/// <summary>Auswertung „wann zahlt sich tieferes Rechnen aus" einer Knotenanalyse (Zwischenstände je 10k, 20k, … Knoten gegen das Ziel;
+/// <see cref="Services.Convergence"/>). Nur Stellungen mit mindestens zwei Stufen zählen.</summary>
+public class ConvergenceDto
+{
+    public long? TargetNodes { get; set; }
+    /// <summary>Stellungen mit Zwischenständen (mindestens zwei Stufen).</summary>
+    public int Positions { get; set; }
+    public List<ConvergenceRowDto> Rows { get; set; } = [];
+}
+
+public class ConvergenceRowDto
+{
+    /// <summary>Schwelle in Knoten.</summary>
+    public long Threshold { get; set; }
+    /// <summary>Stellungen, die für diese Schwelle einen Stand haben.</summary>
+    public int Positions { get; set; }
+    /// <summary>Anteil (0..100), dessen bester Zug schon der des Ziels ist.</summary>
+    public double SameMovePercent { get; set; }
+    /// <summary>Median / 90. Perzentil des Bewertungsunterschieds zum Ziel in Centibauern (Matt = ±1000, gedeckelt).</summary>
+    public double MedianCp { get; set; }
+    public double P90Cp { get; set; }
+    /// <summary>Dasselbe in Gewinnchance-Prozentpunkten.</summary>
+    public double MedianWinPct { get; set; }
+    public double P90WinPct { get; set; }
+    /// <summary>Wie oft der beste Zug gegenüber der Vorstufe wechselte.</summary>
+    public int MoveChanges { get; set; }
+    /// <summary>Wie oft hier Matt vs. keine Mattbewertung gegenüber dem Ziel auseinanderlagen.</summary>
+    public int MateMismatch { get; set; }
+    /// <summary>Mittlere tatsächlich erreichte Knotenzahl (die Engine meldet nicht genau auf die Schwelle).</summary>
+    public double MeanNodes { get; set; }
+}
+
+/// <summary>Eine weitere Analyse DESSELBEN Spiels im eigenen Konto (0.682.0) — die Partieseite bietet sie als Umschalter
+/// neben ihrer eigenen Kurve an, z. B. Lc0 neben Stockfish. <see cref="EngineId"/> <c>null</c> = die Hintergrund-Engines
+/// (Stockfish), sonst eine ausdrücklich gewählte Engine samt Namen.</summary>
+public record GameAnalysisAlternativeDto(int Id, string? Title, string? EngineId, string? EngineName, long? TargetNodes,
+    int TargetDepth, int MultiPv, string Status, int AnalyzedPlies, int PlyCount);
+
+/// <summary>Die Züge der Partie als UCI (<c>e2e4</c>, Umwandlung klein: <c>e7e8q</c>) — Kennung „dasselbe Spiel".</summary>
+public class SameGameRequest
+{
+    public List<string>? Ucis { get; set; }
+}

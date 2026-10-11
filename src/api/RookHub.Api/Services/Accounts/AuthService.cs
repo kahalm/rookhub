@@ -6,6 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Accounts;
 
 namespace RookHub.Api.Services.Accounts;
 

@@ -1,0 +1,69 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.DTOs;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Library;
+using RookHub.Api.DTOs.Library;
+
+namespace RookHub.Api.Controllers.Library;
+
+/// <summary>
+/// Punktepartie: eine analysierte Partie Zug für Zug erraten. Die Wertung passiert serverseitig
+/// (<see cref="GuessScoring"/>) — der Client bekommt die Fortsetzung erst als Antwort auf seinen
+/// Rateversuch, nie vorher.
+/// </summary>
+[ApiController]
+[Route("api/guess-sessions")]
+[Authorize]
+public class GuessSessionController : BaseApiController
+{
+    private readonly GuessSessionService _service;
+
+    public GuessSessionController(GuessSessionService service) => _service = service;
+
+    /// <summary>Der angemeldete Besitzer. Ohne Anmeldung fuehrt der Weg ueber
+    /// <see cref="GuessSessionAnonymousController"/> — dort haengt der Rate-Limiter dran.</summary>
+    private GuessOwner Owner => GuessOwner.ForUser(GetUserId());
+
+    [HttpGet]
+    public async Task<ActionResult<List<GuessSessionDto>>> List(CancellationToken ct)
+        => Ok(await _service.ListAsync(Owner, ct));
+
+    [HttpPost]
+    public async Task<ActionResult<GuessSessionDto>> Start([FromBody] CreateGuessSessionRequest req,
+        CancellationToken ct, [FromQuery] string? lang = null)
+        => Ok(await _service.StartAsync(Owner, req, ct, lang));
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<GuessSessionDto>> Get(int id, CancellationToken ct,
+        [FromQuery] string? lang = null)
+    {
+        var dto = await _service.GetAsync(Owner, id, ct, lang);
+        return dto is null ? NotFound(new { message = "Session not found." }) : Ok(dto);
+    }
+
+    /// <summary>Zug raten. Leeres <c>uci</c> = passen: 0 Punkte, aber keine Strafe.</summary>
+    [HttpPost("{id:int}/guess")]
+    public async Task<ActionResult<GuessResultDto>> Guess(int id, [FromBody] GuessMoveRequest req,
+        CancellationToken ct, [FromQuery] string? lang = null)
+        => Ok(await _service.GuessAsync(Owner, id, req, ct, lang));
+
+    [HttpGet("{id:int}/review")]
+    public async Task<ActionResult<List<GuessReviewMoveDto>>> Review(int id, CancellationToken ct)
+    {
+        var rows = await _service.ReviewAsync(Owner, id, ct);
+        return rows is null ? NotFound(new { message = "Session not found." }) : Ok(rows);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => await _service.DeleteAsync(Owner, id, ct)
+            ? NoContent()
+            : NotFound(new { message = "Session not found." });
+
+    /// <summary>Die anonymen Durchläufe dieses Browsers ins Konto übernehmen — die Oberfläche ruft das nach dem
+    /// Anmelden/Registrieren, wie die claim-session-Wege von Puzzle, Buch-Puzzle und Endless (Codereview N11-003).</summary>
+    [HttpPost("claim-session")]
+    public async Task<ActionResult<object>> ClaimSession([FromBody] ClaimGuessSessionsRequest req, CancellationToken ct)
+        => Ok(new { claimed = await _service.ClaimAnonymousAsync(GetUserId(), req.SessionId, ct) });
+}

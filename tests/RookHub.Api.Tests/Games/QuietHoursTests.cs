@@ -11,6 +11,8 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using System.Security.Claims;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Controllers.Games;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Tests.Games;
 

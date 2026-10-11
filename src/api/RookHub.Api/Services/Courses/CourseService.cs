@@ -7,6 +7,7 @@ using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Services.Courses;
 

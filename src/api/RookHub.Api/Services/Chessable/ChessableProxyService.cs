@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Services.Chessable;
 

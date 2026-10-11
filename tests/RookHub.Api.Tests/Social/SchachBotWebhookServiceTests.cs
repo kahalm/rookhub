@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Courses;
+using RookHub.Api.DTOs.Puzzles;
 
 namespace RookHub.Api.Tests.Social;
 

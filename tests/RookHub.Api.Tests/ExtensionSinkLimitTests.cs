@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Controllers;
+using RookHub.Api.Controllers.Chessable;
 
 namespace RookHub.Api.Tests;
 

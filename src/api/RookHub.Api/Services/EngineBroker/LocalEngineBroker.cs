@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using RookHub.Api.DTOs;
 using Serilog.Context;
+using RookHub.Api.DTOs.EngineBroker;
 
 namespace RookHub.Api.Services.EngineBroker;
 

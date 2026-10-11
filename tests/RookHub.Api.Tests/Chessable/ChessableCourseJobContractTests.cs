@@ -2,6 +2,8 @@ using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Controllers.Chessable;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Tests.Chessable;
 

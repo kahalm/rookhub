@@ -2,6 +2,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Kids;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Club;
 
 namespace RookHub.Api.Services.Club;
 

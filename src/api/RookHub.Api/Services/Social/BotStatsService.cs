@@ -5,6 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.DTOs.Social;
 
 namespace RookHub.Api.Services.Social;
 

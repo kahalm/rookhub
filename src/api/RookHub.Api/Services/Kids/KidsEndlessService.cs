@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
+using RookHub.Api.DTOs.Kids;
 
 namespace RookHub.Api.Services.Kids;
 

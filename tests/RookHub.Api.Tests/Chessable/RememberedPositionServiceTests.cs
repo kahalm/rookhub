@@ -7,6 +7,8 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.DTOs.Chessable;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Tests.Chessable;
 

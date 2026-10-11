@@ -11,6 +11,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Filters;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Controllers.Chessable;
 
 namespace RookHub.Api.Tests.Chessable;
 

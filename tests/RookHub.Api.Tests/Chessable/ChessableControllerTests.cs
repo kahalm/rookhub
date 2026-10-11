@@ -20,6 +20,8 @@ using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Chessable;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Tests.Chessable;
 

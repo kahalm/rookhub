@@ -1,0 +1,189 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.DTOs;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Social;
+
+namespace RookHub.Api.Controllers.Social;
+
+/// <summary>
+/// Trainingsziele des eingeloggten Users: effektives Tagesziel (persönlich oder aus Gruppen-Vorlage)
+/// lesen/anpassen/zurücksetzen, heutiger Fortschritt und der Ziele-Tracker (Tagesreihe für die Heatmap).
+/// </summary>
+[ApiController]
+[Route("api/training-goals")]
+[Authorize]
+public class TrainingGoalController : BaseApiController
+{
+    private readonly TrainingGoalService _service;
+    private readonly PlayTimeService _playTime;
+
+    public TrainingGoalController(TrainingGoalService service, PlayTimeService playTime)
+    {
+        _service = service;
+        _playTime = playTime;
+    }
+
+    /// <summary>Effektives Ziel des Users (persönlich &gt; Gruppen-Vorlage &gt; keins).</summary>
+    [HttpGet]
+    public async Task<ActionResult<TrainingGoalDto>> Get()
+        => Ok(await _service.GetEffectiveGoalAsync(GetUserId()));
+
+    /// <summary>Persönlichen Override setzen/aktualisieren; gibt das neue effektive Ziel zurück.</summary>
+    [HttpPut]
+    public async Task<ActionResult<TrainingGoalDto>> Set([FromBody] TrainingGoalInputDto dto)
+        => Ok(await _service.SetPersonalGoalAsync(GetUserId(), dto));
+
+    /// <summary>Persönlichen Override entfernen → Rückfall auf die Gruppen-Vorlage (falls vorhanden).</summary>
+    [HttpDelete]
+    public async Task<ActionResult<TrainingGoalDto>> DeleteOverride()
+        => Ok(await _service.DeletePersonalGoalAsync(GetUserId()));
+
+    /// <summary>Heutiger Fortschritt je Kategorie + Wochenstand.</summary>
+    [HttpGet("today")]
+    public async Task<ActionResult<TodayProgressDto>> Today()
+        => Ok(await _service.GetTodayAsync(GetUserId()));
+
+    /// <summary>Tagesreihe der letzten <paramref name="weeks"/> Wochen für die Tracker-Heatmap.</summary>
+    [HttpGet("tracker")]
+    public async Task<ActionResult<TrackerResponseDto>> Tracker([FromQuery] int weeks = 27)
+        => Ok(await _service.GetTrackerAsync(GetUserId(), weeks));
+
+    /// <summary>Vollständige Tagesreihe (ganze Historie) für die umschaltbare Perioden-Aufschlüsselung
+    /// (Tag/Woche/Monat/Jahr/Gesamt) — die Periodenwahl + das Durchschalten passieren client-seitig.</summary>
+    [HttpGet("daily-series")]
+    public async Task<ActionResult<DailySeriesDto>> DailySeries()
+        => Ok(await _service.GetDailySeriesAsync(GetUserId()));
+
+    /// <summary>Externe Spielzeit (Lichess/chess.com) des eigenen Users jetzt synchronisieren — je Plattform höchstens
+    /// alle <see cref="PlayTimeService.ManualSyncCooldown"/>. Kam der letzte Abruf gerade erst, antwortet der Endpunkt
+    /// <c>{ synced: false, retryAfterSeconds }</c>, statt erneut bei Lichess/chess.com zu fragen; parallele Anfragen
+    /// (vor dem ersten gespeicherten Abruf) bremst die Policy „sync-play" je Konto.</summary>
+    [HttpPost("sync-play")]
+    [EnableRateLimiting("sync-play")]
+    public async Task<IActionResult> SyncPlay(CancellationToken ct)
+    {
+        var wait = await _playTime.SyncUserOnRequestAsync(GetUserId(), ct);
+        return wait is { } w
+            ? Ok(new { synced = false, retryAfterSeconds = (int)Math.Ceiling(w.TotalSeconds) })
+            : Ok(new { synced = true });
+    }
+
+    // ----- Manuelle Offline-Aktivitäten ------------------------------------
+
+    /// <summary>Eigene manuell eingetragene Offline-Aktivitäten (neueste zuerst).</summary>
+    [HttpGet("manual")]
+    public async Task<ActionResult<List<ManualActivityDto>>> ListManual([FromQuery] int take = 200)
+        => Ok(await _service.ListManualAsync(GetUserId(), take));
+
+    /// <summary>Manuelle Offline-Aktivität anlegen (OTB-Partie / Offline-Studium / -Puzzle / Trainerstunde).</summary>
+    [HttpPost("manual")]
+    public async Task<ActionResult<ManualActivityDto>> AddManual([FromBody] ManualActivityInputDto dto)
+    {
+        try { return Ok(await _service.AddManualAsync(GetUserId(), dto)); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Eigene manuelle Aktivität ändern (404, wenn nicht vorhanden/nicht eigene).</summary>
+    [HttpPut("manual/{id:int}")]
+    public async Task<ActionResult<ManualActivityDto>> UpdateManual(int id, [FromBody] ManualActivityInputDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdateManualAsync(GetUserId(), id, dto);
+            return updated == null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Eigene manuelle Aktivität löschen (404, wenn nicht vorhanden/nicht eigene).</summary>
+    [HttpDelete("manual/{id:int}")]
+    public async Task<IActionResult> DeleteManual(int id)
+        => await _service.DeleteManualAsync(GetUserId(), id) ? NoContent() : NotFound();
+
+    // ----- Aktivitäts-Vorlagen (Preset) + Timer ----------------------------
+
+    /// <summary>Eigene Timer-Vorlagen (Schnellstart auf dem Dashboard).</summary>
+    [HttpGet("presets")]
+    public async Task<ActionResult<List<ActivityPresetDto>>> ListPresets()
+        => Ok(await _service.ListPresetsAsync(GetUserId()));
+
+    /// <summary>Neue Vorlage anlegen (nur Minuten-Arten: OfflinePuzzle/OfflineStudy/Coaching).</summary>
+    [HttpPost("presets")]
+    public async Task<ActionResult<ActivityPresetDto>> AddPreset([FromBody] ActivityPresetInputDto dto)
+    {
+        try { return Ok(await _service.AddPresetAsync(GetUserId(), dto)); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Vorlage aktualisieren (404 bei fremder/unbekannter Vorlage).</summary>
+    [HttpPut("presets/{id:int}")]
+    public async Task<ActionResult<ActivityPresetDto>> UpdatePreset(int id, [FromBody] ActivityPresetInputDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdatePresetAsync(GetUserId(), id, dto);
+            return updated == null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Vorlage löschen (404 bei fremder/unbekannter Vorlage).</summary>
+    [HttpDelete("presets/{id:int}")]
+    public async Task<IActionResult> DeletePreset(int id)
+        => await _service.DeletePresetAsync(GetUserId(), id) ? NoContent() : NotFound();
+
+    /// <summary>Aktueller Timer des Users (204, wenn keiner läuft).</summary>
+    [HttpGet("timer")]
+    public async Task<ActionResult<ActivityTimerDto>> GetTimer()
+    {
+        var t = await _service.GetTimerAsync(GetUserId());
+        return t == null ? NoContent() : Ok(t);
+    }
+
+    /// <summary>Timer starten (aus Vorlage per <c>presetId</c> oder ad-hoc mit <c>label</c>+<c>kind</c>).
+    /// Ersetzt still einen ggf. laufenden Timer — der Client sollte vorher warnen.</summary>
+    [HttpPost("timer/start")]
+    public async Task<ActionResult<ActivityTimerDto>> StartTimer([FromBody] StartActivityTimerDto dto)
+    {
+        try { return Ok(await _service.StartTimerAsync(GetUserId(), dto)); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Timer stoppen und als manuellen Aktivitätseintrag speichern. Optional
+    /// <c>endedAt</c> (ISO 8601) für Backdating — muss zwischen Start und jetzt liegen.
+    /// 404 wenn kein Timer aktiv.</summary>
+    [HttpPost("timer/stop")]
+    public async Task<ActionResult<ManualActivityDto>> StopTimer([FromBody] StopActivityTimerDto dto)
+    {
+        try
+        {
+            var saved = await _service.StopTimerAsync(GetUserId(), dto);
+            return saved == null ? NotFound() : Ok(saved);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Laufenden Timer verwerfen (ohne Eintrag). 404 wenn keiner aktiv.</summary>
+    [HttpDelete("timer")]
+    public async Task<IActionResult> DiscardTimer()
+        => await _service.DiscardTimerAsync(GetUserId()) ? NoContent() : NotFound();
+
+    /// <summary>Chessable-Kurs-History (nach Kurs gruppiert) inkl. ermitteltem Thema; mit
+    /// <paramref name="unassignedOnly"/> nur Kurse ohne feststehendes Thema.</summary>
+    [HttpGet("chessable-courses")]
+    public async Task<ActionResult<List<ChessableCourseSummaryDto>>> ChessableCourses([FromQuery] bool unassignedOnly = false)
+        => Ok(await _service.GetChessableCoursesAsync(GetUserId(), unassignedOnly));
+
+    /// <summary>Einem Chessable-Kurs manuell ein Thema zuordnen (Upsert). 400 bei leerer Kurs-ID.</summary>
+    [HttpPut("chessable-courses/{courseId}")]
+    public async Task<IActionResult> SetChessableCourseTheme(string courseId, [FromBody] ChessableCourseThemeInputDto dto)
+        => await _service.SetChessableCourseThemeAsync(GetUserId(), courseId, dto.Theme) ? NoContent() : BadRequest();
+
+    /// <summary>Manuelle Themen-Zuordnung eines Kurses entfernen (404, wenn keine vorhanden war).</summary>
+    [HttpDelete("chessable-courses/{courseId}")]
+    public async Task<IActionResult> ClearChessableCourseTheme(string courseId)
+        => await _service.ClearChessableCourseThemeAsync(GetUserId(), courseId) ? NoContent() : NotFound();
+}

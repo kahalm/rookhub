@@ -1,6 +1,7 @@
 using Chess;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Repertoires;
 using static RookHub.Api.Services.Repertoires.RepertoireLineSource;
 
 namespace RookHub.Api.Services.Repertoires;

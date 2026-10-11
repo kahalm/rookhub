@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Authorization;
 using RookHub.Api.Services;
+using RookHub.Api.Controllers.Social;
 
 namespace RookHub.Api.Controllers;
 

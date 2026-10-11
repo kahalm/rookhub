@@ -1,4 +1,5 @@
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Kids;
 
 namespace RookHub.Api.Services.Kids;
 

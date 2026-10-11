@@ -14,6 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
+using RookHub.Api.Controllers.Accounts;
+using RookHub.Api.Controllers.Club;
+using RookHub.Api.Controllers.Social;
 
 namespace RookHub.Api.Tests;
 

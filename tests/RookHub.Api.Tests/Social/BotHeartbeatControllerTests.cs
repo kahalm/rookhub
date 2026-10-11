@@ -6,6 +6,7 @@ using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Social;
 
 namespace RookHub.Api.Tests.Social;
 

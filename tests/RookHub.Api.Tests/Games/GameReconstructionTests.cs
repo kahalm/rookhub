@@ -5,6 +5,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Tests.Social;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Tests.Games;
 

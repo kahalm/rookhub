@@ -5,6 +5,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Data;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Services.Chessable;
 

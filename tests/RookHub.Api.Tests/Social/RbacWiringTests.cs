@@ -15,6 +15,12 @@ using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Social;
+using RookHub.Api.DTOs.Puzzles;
+using RookHub.Api.Controllers.Puzzles;
+using RookHub.Api.DTOs.Courses;
+using RookHub.Api.DTOs.Social;
+using RookHub.Api.Controllers.Courses;
 
 namespace RookHub.Api.Tests.Social;
 

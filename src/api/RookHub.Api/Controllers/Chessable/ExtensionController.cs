@@ -1,0 +1,745 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.DTOs;
+using RookHub.Api.Filters;
+using RookHub.Api.Models;
+using RookHub.Api.Authorization;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Chessable;
+using RookHub.Api.DTOs.Games;
+using RookHub.Api.DTOs.Repertoires;
+using RookHub.Api.DTOs.Social;
+
+namespace RookHub.Api.Controllers.Chessable;
+
+[ApiController]
+[Route("api/extension")]
+[Authorize]
+[EnableCors("ExtensionPolicy")]
+// Eine Stelle statt 17: prüft je Anfrage, dass ein PAT den Scope „extension" trägt (JWT-Nutzer
+// haben keinen scope-Claim und dürfen immer). Vorher stand dieselbe Zeile in JEDER Action.
+[RequireTokenScope(ApiTokenService.DefaultScope)]
+public class ExtensionController : BaseApiController
+{
+    private readonly RepertoireService _repertoireService;
+    private readonly RepertoireAnalyzeService _analyzeService;
+    private readonly TrainingGoalService _trainingGoalService;
+    private readonly RememberedPositionService _rememberedPositionService;
+    private readonly SavedGameService _savedGameService;
+    private readonly SharedLineService _sharedLineService;
+    private readonly ChessableProxyService _chessableProxy;
+    private readonly ChessableImportService _chessableImport;
+    private readonly ChessableIngestSessionStore _ingestSessions;
+    private readonly ChessableTrainedLineService _trainedLines;
+    private readonly ChessableProblemMoveService _problemMoves;
+    private readonly ChessableReviewLineService _reviewLines;
+    private readonly ChessableSessionMoveService _sessionMoves;
+    private readonly ILogger<ExtensionController> _logger;
+
+    public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
+        TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
+        SavedGameService savedGameService, SharedLineService sharedLineService,
+        ChessableProxyService chessableProxy, ChessableImportService chessableImport,
+        ChessableIngestSessionStore ingestSessions, ChessableTrainedLineService trainedLines,
+        ChessableProblemMoveService problemMoves, ChessableReviewLineService reviewLines,
+        ChessableSessionMoveService sessionMoves,
+        ILogger<ExtensionController> logger)
+    {
+        _repertoireService = repertoireService;
+        _analyzeService = analyzeService;
+        _trainingGoalService = trainingGoalService;
+        _rememberedPositionService = rememberedPositionService;
+        _savedGameService = savedGameService;
+        _sharedLineService = sharedLineService;
+        _chessableProxy = chessableProxy;
+        _chessableImport = chessableImport;
+        _ingestSessions = ingestSessions;
+        _trainedLines = trainedLines;
+        _problemMoves = problemMoves;
+        _reviewLines = reviewLines;
+        _sessionMoves = sessionMoves;
+        _logger = logger;
+    }
+
+    private static bool IsValidBid(string? bid) => ChessableIds.IsValidBid(bid);
+
+    /// <summary>Obergrenze einer Linien-Cache-Abfrage — höchstens die von piratechess
+    /// (<c>BrowserCourseAssembler.MaxOidsPerLookup</c>), sonst beantwortet piratechess eine hier erlaubte Anfrage mit 400
+    /// und die Extension holt still alle Linien selbst. Kette mit literalem Spiegeltest
+    /// (<c>ChessableCourseJobContractTests</c>): RepCheck <c>SHARED_CACHE_BATCH</c> ≤ dies ≤ piratechess.</summary>
+    internal const int MaxCachedLineLookup = 10000;
+
+    private static bool IsValidOid(string? oid) => ChessableIds.TryParseOid(oid, out _);
+
+    /// <summary>Form der <c>LineOids</c> prüfen — dieselben Regeln wie piratechess, aber hier mit klarer Meldung
+    /// statt eines durchgereichten 400. <c>null</c> = in Ordnung.</summary>
+    private static string? ValidateLineOids(IEnumerable<ChessableIngestChapter> chapters)
+    {
+        foreach (var ch in chapters)
+        {
+            var lines = ch.Lines ?? new List<string>();
+            if (ch.LineOids is null)
+            {
+                if (lines.Any(string.IsNullOrEmpty))
+                    return "A line without content needs lineOids (it is filled from the shared cache).";
+                continue;
+            }
+            if (ch.LineOids.Count != lines.Count)
+                return "lineOids must have exactly one entry per line.";
+            if (!ch.LineOids.All(IsValidOid))
+                return "Invalid oid in lineOids.";
+        }
+        return null;
+    }
+
+    /// <summary>Soll piratechess Linien aus dem geteilten Cache einsetzen? Das sind genau die Linien ohne Inhalt
+    /// (nach <see cref="ValidateLineOids"/> tragen sie immer eine oid) — dieselbe Regel wie <c>OidsToFill</c> dort.</summary>
+    private static bool WantsCacheFill(IEnumerable<ChessableIngestChapter> chapters)
+        => chapters.Any(ch => (ch.Lines ?? new List<string>()).Any(string.IsNullOrEmpty));
+
+    /// <summary>Meldung, wenn Linien aus dem geteilten Cache für einen Kurs verlangt werden, der nicht in der
+    /// bestätigten Kursliste des Nutzers steht (siehe <see cref="ChessableImportService.HasVerifiedCourseAsync"/>).</summary>
+    private const string CacheFillNotVerifiedMessage =
+        "Lines from the shared cache are only filled for courses in your verified Chessable course list. Send the line content instead.";
+
+    private ObjectResult CacheFillForbidden(int userId, string bid)
+    {
+        _logger.LogWarning("Browser-Import: Linien aus dem geteilten Cache für einen nicht bestätigten Kurs verlangt — abgelehnt (User {UserId}, bid {Bid})",
+            userId, bid);
+        return StatusCode(StatusCodes.Status403Forbidden, new { message = CacheFillNotVerifiedMessage });
+    }
+
+    private async Task<IActionResult> ParseAndImportAsync(
+        int userId, string bid, string target, string? courseName, List<ChessableIngestChapter> chapters, CancellationToken ct,
+        string? courseJson = null, bool complete = false)
+    {
+        var mode = target == "book" ? "FirstKeyMove" : "None";
+        ChessableCourseDataDto parsed;
+        try
+        {
+            parsed = await _chessableProxy.ParseCourseAsync(bid, mode, chapters, courseJson, complete, ct);
+        }
+        catch (ChessableProxyException ex)
+        {
+            return ChessableProxyExceptionFilter.ResultFor(ex);
+        }
+
+        if (string.IsNullOrWhiteSpace(parsed.Pgn))
+            return BadRequest(new { message = "Parser produced no importable lines." });
+
+        var name = !string.IsNullOrWhiteSpace(courseName) ? courseName! : parsed.Name;
+        var import = await _chessableImport.ImportPgnDirectAsync(userId, bid, parsed.Pgn, name, target, parsed.LineCount, ct);
+        return Ok(new ChessableIngestResultDto(
+            import.Id, import.Target, import.ResultId, import.CourseName,
+            import.Imported, import.Skipped, import.Invalid, parsed.LineCount));
+    }
+
+    /// <summary>
+    /// Repertoire-Liste fuer Extension-Clients. <paramref name="kind"/> akzeptiert die
+    /// String-Repraesentation von <see cref="RepertoireKind"/> (z. B. <c>opening</c>,
+    /// case-insensitive). Ohne Filter werden alle Kinds zurueckgegeben.
+    /// </summary>
+    [HttpGet("repertoires")]
+    public async Task<ActionResult<List<ExtensionRepertoireDto>>> GetRepertoires([FromQuery] string? kind = null)
+    {
+        RepertoireKind? kindFilter = null;
+        if (!string.IsNullOrWhiteSpace(kind))
+        {
+            if (!Enum.TryParse<RepertoireKind>(kind, ignoreCase: true, out var parsed))
+                return BadRequest(new { message = "Invalid kind. Allowed: None, Opening, Middlegame, Endgame." });
+            kindFilter = parsed;
+        }
+        return Ok(await _repertoireService.GetExtensionListAsync(GetUserId(), kindFilter));
+    }
+
+    [HttpGet("repertoires/{id}/pgn")]
+    public async Task<IActionResult> GetPgn(int id)
+    {
+        try
+        {
+            var pgn = await _repertoireService.GetCombinedPgnAsync(id, GetUserId());
+            return Content(pgn, "text/plain");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Server-seitige Partie-Analyse: Client schickt die SAN-Zugliste der aktuellen Partie,
+    /// Server vergleicht ply-weise gegen das (gecachte) Positions-Set des Users und liefert
+    /// Abweichungs-Index, Zugumstellungen und FEN-vor-Abweichung zurueck. Vermeidet, dass das
+    /// ganze Repertoire-PGN zur Extension wandern muss. Je Konto gedrosselt (ein Neuaufbau des Sets ist teuer); laufen
+    /// im Prozess schon zu viele Neuaufbauten, 429 mit <c>reason: busy</c> (siehe <see cref="PositionSetBuildGate"/>).
+    /// </summary>
+    [HttpPost("analyze-game")]
+    [EnableRateLimiting(RateLimitPartitions.ExtensionAnalyzePolicy)]
+    public async Task<ActionResult<AnalyzeGameResponseDto>> AnalyzeGame([FromBody] AnalyzeGameRequestDto dto)
+    {
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        if (dto.Moves == null) dto.Moves = new();
+        if (dto.Moves.Count > 600)
+            return BadRequest(new { message = "Too many moves (max 600 plies)." });
+        try
+        {
+            return Ok(await _analyzeService.AnalyzeAsync(GetUserId(), dto));
+        }
+        catch (PositionSetBusyException)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { reason = "busy", message = "Too many repertoire checks are being prepared right now. Try again in a few seconds." });
+        }
+    }
+
+    /// <summary>
+    /// Meldet ein Häppchen AKTIVER Chessable-Trainingszeit (von der RepCheck-Extension/dem Userscript auf
+    /// chessable.com gemessen). Append-only; fließt in die eigene Kategorie „Chessable" des Trainingsziele-
+    /// Trackers. Zeitstempel wird serverseitig gesetzt; <see cref="ChessableActivityInputDto.SecondsActive"/>
+    /// ist auf 1–3600 s je Aufruf begrenzt (die Extension flusht in kleinen Intervallen).
+    /// </summary>
+    [HttpPost("training-activity")]
+    public async Task<IActionResult> RecordTrainingActivity([FromBody] ChessableActivityInputDto dto)
+    {
+        if (dto == null || dto.SecondsActive <= 0)
+            return BadRequest(new { message = "secondsActive required and > 0." });
+        await _trainingGoalService.RecordChessableActivityAsync(GetUserId(), dto);
+        return Ok(new { recorded = true });
+    }
+
+    /// <summary>
+    /// Merkt eine auf chessable.com angezeigte Stellung (Button „Remember line"): FEN + Kontext
+    /// (Kurs-ID, Seiten-URL) werden append-only gespeichert. Verwendungszweck noch offen.
+    /// </summary>
+    [HttpPost("remember-line")]
+    public async Task<ActionResult<RememberedPositionDto>> RememberLine([FromBody] RememberLineInputDto dto)
+    {
+        if (dto == null || !RememberedPositionService.LooksLikeFen(dto.Fen))
+            return BadRequest(new { message = "Valid fen required." });
+        return Ok(await _rememberedPositionService.SaveAsync(GetUserId(), dto));
+    }
+
+    /// <summary>Listet die gemerkten Stellungen des Users (neueste zuerst).</summary>
+    [HttpGet("remembered-lines")]
+    public async Task<ActionResult<List<RememberedPositionDto>>> GetRememberedLines([FromQuery] int take = 200)
+    {
+        return Ok(await _rememberedPositionService.ListAsync(GetUserId(), take));
+    }
+
+    /// <summary>Löscht eine gemerkte Stellung des Users (idempotent).</summary>
+    [HttpDelete("remembered-lines/{id:int}")]
+    public async Task<IActionResult> DeleteRememberedLine(int id)
+    {
+        return await _rememberedPositionService.DeleteAsync(GetUserId(), id) ? NoContent() : NotFound();
+    }
+
+    /// <summary>
+    /// „Trennen" in RepCheck: widerruft GENAU den API-Token, mit dem diese Anfrage kommt — ohne Id, ein
+    /// Extension-Token kann nur sich selbst widerrufen (die übrigen verwaltet das Profil, das der Scope-Zaun
+    /// für Tokens sperrt). 204 auch, wenn der Token inzwischen schon weg war; 400 ohne API-Token (JWT), da gibt
+    /// es nichts „selbst" zu widerrufen. Der Dienst kommt per <c>[FromServices]</c>, damit der Konstruktor nicht wächst.
+    /// </summary>
+    [HttpDelete("token/self")]
+    public async Task<IActionResult> RevokeOwnToken([FromServices] ApiTokenService tokens)
+    {
+        if (!int.TryParse(User.FindFirst(ApiTokenAuthenticationHandler.TokenIdClaim)?.Value,
+                System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var tokenId))
+            return BadRequest(new { message = "Only an API token can revoke itself." });
+        try
+        {
+            await tokens.RevokeAsync(GetUserId(), tokenId);
+        }
+        catch (KeyNotFoundException)
+        {
+            // schon widerrufen (paralleles „Trennen", Profil) — das Ziel ist erreicht
+        }
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Speichert die aktuell auf chess.com/lichess angeschaute Partie (Button „Partie speichern").
+    /// Der Client schickt die SAN-Zugliste + Best-Effort-Metadaten; der Server baut das PGN und
+    /// vergibt ein ShareToken. Dedup über (User, Source, ExternalId). Sichtbar im Bereich „Partien".
+    /// </summary>
+    [HttpPost("games")]
+    public async Task<ActionResult<SavedGameDetailDto>> SaveGame([FromBody] SaveGameInputDto dto, CancellationToken ct = default)
+    {
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        try
+        {
+            var saved = await _savedGameService.SaveAsync(GetUserId(), dto);
+            // Jede über die Erweiterung gespeicherte Partie wird gleich analysiert (0.667.0, Wunsch 2026-10-05; vorher nur mit
+            // <c>analyze</c> aus der Übersicht, das Flag bleibt der Verträglichkeit halber). Wiederholtes Speichern rechnet nichts
+            // doppelt (<see cref="SavedGameService.AnalyzeAsync"/> nutzt eine vorhandene Analyse). Scheitert es (keine Engine,
+            // Deckel), bleibt die Partie trotzdem gespeichert — die Seite zeigt dann den Analysieren-Knopf.
+            try { await _savedGameService.AnalyzeAsync(GetUserId(), saved.Id, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Analyse nach dem Speichern von Partie {Id} nicht gestartet", saved.Id);
+            }
+            return Ok(saved);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Teilt die aktuell auf chess.com/lichess gespielte Zugfolge als öffentliche Nur-Ansehen-Line
+    /// (<c>/l/{token}</c>) — für die „Sharebar" im Extension-Popup. Der Server baut aus der SAN-Liste
+    /// ein PGN; dieselbe Zugfolge desselben Users liefert denselben Link (Dedup). 400 bei leerer Liste,
+    /// illegalem oder zu langem Zug und zu großem PGN; der Rumpf ist auf 64 KB gedeckelt (600 Züge sind ~6 KB).
+    /// </summary>
+    [HttpPost("share-line")]
+    [RequestSizeLimit(ShareLineRequestLimit)]
+    public async Task<ActionResult<ShareLineResultDto>> ShareLine([FromBody] ShareExtensionLineInputDto dto, CancellationToken ct)
+    {
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        try
+        {
+            var res = await _sharedLineService.CreateStandaloneAsync(GetUserId(), dto.Moves, dto.Title, ct);
+            return res == null ? BadRequest(new { message = "No moves." }) : Ok(res);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Rumpf-Deckel von share-line (Codereview N8-003) — vorher galten Kestrels 30 MB bzw. nginx' 15 MB.</summary>
+    internal const long ShareLineRequestLimit = 64 * 1024;
+
+    /// <summary>
+    /// Browser-Import „Über meinen Browser holen": die RepCheck-Extension hat die rohen Chessable-
+    /// Antworten als eigene eingeloggte Session geholt (V2 aktiv) bzw. beim Training mitgeschnitten (V1
+    /// passiv) und schickt sie hier je Kapitel. RookHub lässt sie vom fetch-freien piratechess-Parser in
+    /// PGN wandeln und importiert das Ergebnis als Repertoire bzw. Buch/Kurs — ganz ohne serverseitigen
+    /// Chessable-Abruf/VPN (der Browser passiert Cloudflare als echte Session). <c>Target</c> "repertoire"
+    /// (Default) oder "book". Bei erneutem Senden desselben Kurses idempotent; in ein vorhandenes Repertoire wird
+    /// nur angehängt, nie ersetzt (ein Mitschnitt trägt meist nur einzelne Kapitel).
+    /// </summary>
+    [HttpPost("chessable/ingest")]
+    [RequestSizeLimit(64_000_000)]
+    [TypeFilter(typeof(ChessableProxyExceptionFilter))]   // piratechess nicht erreichbar → 502 (A3-015)
+    public async Task<IActionResult> ChessableIngest([FromBody] ChessableIngestRequest dto, CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid or missing bid." });
+
+        var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
+        if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
+            return BadRequest(new { message = "No captured lines." });
+        if (ValidateLineOids(chapters) is { } shapeError)
+            return BadRequest(new { message = shapeError });
+        var userId = GetUserId();
+        if (WantsCacheFill(chapters) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
+            return CacheFillForbidden(userId, dto.Bid);
+
+        var target = dto.Target == "book" ? "book" : "repertoire";
+        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
+        var courseName = ChessableLineJson.ResolveCourseName(dto.CourseName, chapters.SelectMany(c => c.Lines ?? new List<string>()));
+        return await ParseAndImportAsync(userId, dto.Bid, target, courseName, chapters, ct);
+    }
+
+    /// <summary>
+    /// Import-Fortschritt eines Chessable-Kurses (für die Overlays auf chessable.com): liefert die
+    /// Chessable-oids, die der User bereits importiert hat (Buch und/oder Repertoire). Die Extension
+    /// matcht sie gegen die Linien-oids der Kursstruktur und zeigt Kurs-/Kapitel-/Linien-Fortschritt.
+    /// </summary>
+    /// <summary>
+    /// „Linie auf Chessable trainiert": markiert die Linie (Kurs-bid + Varianten-oid) in den
+    /// RookHub-Gegenstücken — Kurs-Linie gilt als gelöst, im Repertoire-Trainer wird eine neue
+    /// Linie „gelernt" bzw. eine fällige eine SR-Stufe vorgerückt (Chessable ersetzt das Review).
+    /// Idempotent; unbekannte bid/oid sind kein Fehler (leeres Ergebnis). Eine oid ausserhalb der piratechess-Regel
+    /// (<see cref="ChessableIds.TryParseOid"/>, z. B. „0" oder mehr als <c>int.MaxValue</c>) ist dagegen 400.
+    /// </summary>
+    [HttpPost("chessable/line-trained")]
+    public async Task<ActionResult<ChessableLineTrainedResultDto>> ChessableLineTrained(
+        [FromBody] ChessableLineTrainedInputDto dto, CancellationToken ct)
+    {
+        // oid in kanonischer Form (wie im PGN-Header [ChessableOid]); vorher reichten bis zu 32 Ziffern (A3-013).
+        var oid = dto == null ? null : ChessableIds.CanonicalOid(dto.Oid);
+        if (dto == null || !IsValidBid(dto.Bid) || oid is null)
+            return BadRequest(new { message = "Valid bid and oid required." });
+        return Ok(await _trainedLines.MarkTrainedAsync(GetUserId(), dto.Bid, oid, ct));
+    }
+
+    /// <summary>Rumpf-Deckel der drei Chessable-Roh-Senken (problem-moves, session-moves, review-lines), wie beim
+    /// anonymen Pfad. Vorher galt Kestrels Vorgabe (30 MB) bzw. 64 MB bei review-lines. RepCheck schickt je Senke und
+    /// Kurs höchstens 400 schwierige Züge, 200 Sitzungszüge bzw. 50 getReview-Linien; die größte je gemessene
+    /// getReview-Linie hat 77 KB (Prod, 29.09.2026), 50 davon sind rund 4 MB.</summary>
+    internal const long ChessableSinkRequestLimit = 16_000_000;
+
+    /// <summary>
+    /// „Schwierige Züge" ablegen: Batch-Upsert je (User, Kurs-bid, Linien-oid) — nHard aus den
+    /// Kapitel-Listen, Zug-Details (problemMoves.thisUser) + lastReviewed aus den Linien-Antworten,
+    /// die die Extension beim Training/Kurs-Holen ohnehin mitschneidet. Idempotent.
+    /// </summary>
+    [HttpPost("chessable/problem-moves")]
+    [EnableRateLimiting("extension-sink")]
+    [RequestSizeLimit(ChessableSinkRequestLimit)]
+    public async Task<IActionResult> ChessableProblemMoves([FromBody] ChessableProblemMovesInputDto dto,
+        CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        var written = await _problemMoves.UpsertBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
+        return Ok(new { written });
+    }
+
+    /// <summary>
+    /// „Sitzungszüge" ablegen (append-only, KEIN Upsert): je trainierter Linie der rohe moves-Block aus
+    /// Chessables eigenem Session-Report (saveProgressAndReturnNewProgressInfo) — enthält je Halbzug
+    /// u. a. die falsch gespielten Züge (wrong[]), Overstudy-/Alternative-Flags, Level und Punkte.
+    /// Quelle: RepCheck-Capture beim Training. Als Roh-Log gesammelt, Auswertung offen.
+    /// </summary>
+    [HttpPost("chessable/session-moves")]
+    [EnableRateLimiting("extension-sink")]
+    [RequestSizeLimit(ChessableSinkRequestLimit)]
+    public async Task<IActionResult> ChessableSessionMoves([FromBody] ChessableSessionMovesInputDto dto,
+        CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        var stored = await _sessionMoves.AppendBatchAsync(GetUserId(), dto.Bid, dto.Entries, ct);
+        return Ok(new { stored });
+    }
+
+    /// <summary>
+    /// „getReview-Linien" ablegen (zweite Linien-Quelle neben getGame): Batch-Upsert je (User, Kurs-bid,
+    /// Linien-oid) der ROHEN getReview-Antwort. Wird beim Empfang NICHT geparst — nur roh gespeichert; der
+    /// Aufbau zum Kurs (Fallback, wenn kein getGame vorliegt) passiert erst beim Kurs-Aufbau. Idempotent.
+    /// </summary>
+    [HttpPost("chessable/review-lines")]
+    [EnableRateLimiting("extension-sink")]
+    [RequestSizeLimit(ChessableSinkRequestLimit)]
+    public async Task<IActionResult> ChessableReviewLines([FromBody] ChessableReviewLinesInputDto dto,
+        CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        var userId = GetUserId();
+        var stored = await _reviewLines.UpsertBatchAsync(userId, dto.Bid, dto.Entries, ct);
+
+        // Kurs beim Training fortlaufend mit den Review-Linien ergänzen (getGame gewinnt, Review füllt
+        // nur Lücken). Best-effort: ein Merge-Fehler darf den erfolgreichen Speicher-200 nicht kippen.
+        var merged = 0;
+        try { merged = await _reviewLines.MergeIntoCourseAsync(userId, dto.Bid, ct); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "getReview-Merge in den Kurs (User {UserId}, bid {Bid}) fehlgeschlagen — Speichern bleibt erfolgreich",
+                userId, dto.Bid);
+        }
+        return Ok(new { stored, merged });
+    }
+
+    /// <summary>
+    /// Token-lose Ablage von getReview-Linien — für Nutzer OHNE hinterlegten RookHub-Token. Statt eines
+    /// RookHub-Accounts identifiziert die Chessable-<c>uid</c> (client-seitig aus dem Chessable-JWT
+    /// decodiert) die Linien; sie landen in der Anon-Senke und werden geclaimt, sobald diese uid einem
+    /// RookHub-Account zugeordnet wird (der User verknüpft seinen Chessable-Bearer). <c>AllowAnonymous</c>
+    /// + per-IP-Ratelimit; KEIN Kurs-Merge hier (es gibt kein Zielkonto). Der Client sendet erst nach
+    /// expliziter Zustimmung (einmaliger Hinweis in der Extension).
+    /// </summary>
+    [HttpPost("chessable/review-lines/anon")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    [RequestSizeLimit(16_000_000)]   // der Client batcht ≤50 Linien (offener Endpoint → DoS-Schranke)
+    public async Task<IActionResult> ChessableReviewLinesAnon([FromBody] AnonymousChessableReviewLinesInputDto dto,
+        CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Valid bid required." });
+        if (string.IsNullOrWhiteSpace(dto.Uid) || dto.Uid.Length > 32 || !dto.Uid.All(char.IsAsciiDigit))
+            return BadRequest(new { message = "Valid uid required." });
+        var stored = await _reviewLines.UpsertAnonBatchAsync(dto.Uid, dto.Bid, dto.Entries, ct);
+        return Ok(new { stored });
+    }
+
+    [HttpGet("chessable/progress")]
+    public async Task<IActionResult> ChessableProgress([FromQuery] string bid, CancellationToken ct)
+    {
+        if (!IsValidBid(bid)) return BadRequest(new { message = "Invalid bid." });
+        var (oids, book, repertoire) = await _chessableImport.GetImportedOidsAsync(GetUserId(), bid, ct);
+        return Ok(new ChessableProgressDto(book, repertoire, oids.ToList()));
+    }
+
+    /// <summary>
+    /// Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
+    /// überspringt beim „Kurs holen" für diese Linien den Chessable-Abruf und schickt beim Import nur die oid —
+    /// den Inhalt setzt piratechess ein. Nur die Existenz, nie der Inhalt. piratechess nicht erreichbar →
+    /// leere Liste (die Extension holt dann eben alle Linien selbst).
+    /// <para>Treffer gibt es nur für einen Kurs (<c>Bid</c>) aus der bestätigten Kursliste des Nutzers, und nur
+    /// Linien, mit denen piratechess diesen Kurs auch füllt — dieselbe Schranke wie beim Ingest. Ohne <c>Bid</c> oder
+    /// für einen anderen Kurs: leere Liste, die Extension schickt dann alle Linien selbst (statt Linien ohne Inhalt,
+    /// die der Ingest ablehnen würde).</para>
+    /// </summary>
+    [HttpPost("chessable/cached-lines")]
+    public async Task<IActionResult> ChessableCachedLines([FromBody] ChessableCachedLinesRequest dto, CancellationToken ct)
+    {
+        var oids = dto?.Oids ?? new List<string>();
+        if (oids.Count > MaxCachedLineLookup)
+            return BadRequest(new { message = $"At most {MaxCachedLineLookup} oids per request." });
+        if (!oids.All(IsValidOid))
+            return BadRequest(new { message = "Invalid oid." });
+        var bid = dto?.Bid;
+        if (bid is not null && !IsValidBid(bid))
+            return BadRequest(new { message = "Invalid bid." });
+        var distinct = oids.Distinct().ToList();
+        if (bid is null || distinct.Count == 0 || !await _chessableImport.HasVerifiedCourseAsync(GetUserId(), bid, ct))
+            return Ok(new ChessableCachedLinesDto(new List<string>()));
+        var cached = await _chessableProxy.GetCachedLineOidsAsync(bid, distinct, ct);
+        return Ok(new ChessableCachedLinesDto(distinct.Where(cached.Contains).ToList()));
+    }
+
+    /// <summary>
+    /// Welche Partien der Uebersicht (chess.com/lichess) liegen schon bei RookHub? Die Erweiterung zeigt
+    /// dort dann ein Haekchen statt des Sende-Knopfs — und, wenn eine Analyse laeuft, deren Fortschritt.
+    /// </summary>
+    [HttpPost("games/known")]
+    public async Task<ActionResult<List<KnownGameDto>>> KnownGames([FromBody] KnownGamesInputDto dto, CancellationToken ct)
+    {
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        if (dto.ExternalIds.Count > SavedGameService.MaxKnownLookup)
+            return BadRequest(new { message = $"At most {SavedGameService.MaxKnownLookup} ids per request." });
+        return Ok(await _savedGameService.KnownAsync(GetUserId(), dto.Source, dto.ExternalIds, ct));
+    }
+
+    /// <summary>
+    /// „In RookHub analysieren" aus der Uebersicht auf chess.com/lichess — fuer eine Partie, die schon bei
+    /// RookHub liegt, aber nie gerechnet wurde (etwa ueber 💾 gespeichert, bevor es „gleich analysieren"
+    /// gab). Derselbe Weg und dieselbe Antwort wie <c>POST /api/games/{id}/analyze</c>; eine eigene Route,
+    /// weil das API-Token der Erweiterung nur die Extension-Flaeche erreicht (<c>PatScopeFenceMiddleware</c>).
+    /// </summary>
+    [HttpPost("games/{id:int}/analyze")]
+    public async Task<ActionResult<GameAnalyzeResultDto>> AnalyzeSavedGame(int id, CancellationToken ct)
+    {
+        var result = await _savedGameService.AnalyzeAsync(GetUserId(), id, ct);
+        if (result is null) return NotFound();
+        if (result.Reason is not null)
+            return BadRequest(new { reason = result.Reason, message = "Game could not be accepted." });
+        return Ok(result);
+    }
+
+    private static readonly HashSet<string> UnexpectedResponseEndpoints =
+        new(StringComparer.Ordinal) { "getCourse", "getList", "getGame" };
+
+    /// <summary>
+    /// RepCheck hat beim „Kurs holen“ eine unerwartete Chessable-Antwort bekommen und den Abruf gestoppt. Die Antwort
+    /// wird zum Durchsehen protokolliert; sieht sie nach einer Sperre aus, geht eine Admin-Nachricht im Namen des
+    /// Nutzers raus (<see cref="ChessableResponseAlertService"/>). Der Dienst kommt per <c>[FromServices]</c>, damit
+    /// der ohnehin lange Konstruktor nicht wächst.
+    /// </summary>
+    /// <summary>
+    /// RepCheck: „Kurs holen“ ist mit einem Fehler abgebrochen, der KEINE unerwartete Chessable-Antwort war (Fehler in der
+    /// Erweiterung, beim Senden an RookHub …). Log + Admin-Nachricht (<see cref="ChessableResponseAlertService.ReportCrawlErrorAsync"/>).
+    /// </summary>
+    [HttpPost("chessable/crawl-error")]
+    public async Task<IActionResult> ChessableCrawlError([FromBody] ChessableCrawlErrorInputDto dto,
+        [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)
+    {
+        if (dto is null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid bid." });
+        if (string.IsNullOrWhiteSpace(dto.Message))
+            return BadRequest(new { message = "Message required." });
+        return Ok(await alerts.ReportCrawlErrorAsync(GetUserId(), dto, ct));
+    }
+
+    [HttpPost("chessable/unexpected-response")]
+    public async Task<IActionResult> ChessableUnexpectedResponse([FromBody] ChessableUnexpectedResponseInputDto dto,
+        [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)
+    {
+        if (dto is null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid bid." });
+        if (!UnexpectedResponseEndpoints.Contains(dto.Endpoint ?? ""))
+            return BadRequest(new { message = "Unknown endpoint." });
+        if ((dto.Lid != null && !IsValidOid(dto.Lid)) || (dto.Oid != null && !IsValidOid(dto.Oid)))
+            return BadRequest(new { message = "Invalid lid/oid." });
+        return Ok(await alerts.ReportAsync(GetUserId(), dto, ct));
+    }
+
+    /// <summary>
+    /// Kapitelweiser Browser-Import: die Extension streamt einen großen Kurs Kapitel für Kapitel (bounded
+    /// pro Request) statt in einem einzigen (potenziell riesigen) Ingest-Body. Der Server sammelt die rohen
+    /// Kapitel je <c>SessionId</c> (<see cref="ChessableIngestSessionStore"/>) und parst/importiert erst
+    /// beim Chunk mit <c>Final=true</c> den GANZEN Kurs — so bleibt die Kapitel-/Round-Reihenfolge über
+    /// Kapitel hinweg korrekt (ein einzelnes Kapitel parsen würde die Round-Nummerierung je Chunk auf 1
+    /// zurücksetzen). <c>Bid</c>/<c>Target</c>/<c>CourseName</c> stammen vom ersten Chunk.
+    /// </summary>
+    [HttpPost("chessable/ingest/chunk")]
+    [RequestSizeLimit(48_000_000)]
+    [TypeFilter(typeof(ChessableProxyExceptionFilter))]   // piratechess nicht erreichbar → 502 (A3-015)
+    public async Task<IActionResult> ChessableIngestChunk([FromBody] ChessableIngestChunkRequest dto, CancellationToken ct)
+    {
+        if (dto == null || string.IsNullOrWhiteSpace(dto.SessionId) || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "sessionId and valid bid required." });
+
+        var userId = GetUserId();
+        var target = dto.Target == "book" ? "book" : "repertoire";
+
+        // Abbruch aus dem Browser (Chessable-Sperre, Nutzer stoppt): Sitzung schliessen und den Datensatz
+        // mit der Bilanz des Erreichten als abgebrochen markieren — statt bis zum Ablauf der Sitzung
+        // (30 min) auf „laeuft" zu stehen. Die Linien selbst sind laengst importiert und bleiben.
+        if (dto.Aborted)
+        {
+            var dropped = _ingestSessions.Discard(userId, dto.SessionId);
+            if (dropped?.ImportId is int abortedId)
+                await _chessableImport.FailBrowserImportAsync(abortedId,
+                    $"Im Browser abgebrochen — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
+            return Ok(new ChessableIngestChunkAck(true, dropped?.ChaptersDone ?? 0, dropped?.LinesSeen ?? 0, dropped?.Imported ?? 0));
+        }
+
+        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
+        var courseName = ChessableLineJson.ResolveCourseName(dto.CourseName, dto.Chapter?.Lines);
+        var (session, storeError) = _ingestSessions.GetOrCreate(userId, dto.SessionId, dto.Bid, target, courseName);
+        if (session is null)
+        {
+            // Abgelehnte Chunks waren bisher nur als nackter 400 im Zugriffslog zu sehen — der Grund stand
+            // ausschliesslich im Quelltext (am 2026-09-19 die halbe Fehlersuche gekostet).
+            _logger.LogWarning("Browser-Import abgelehnt (User {UserId}, bid {Bid}): {Reason}", userId, dto.Bid, storeError);
+            return BadRequest(new { message = storeError });
+        }
+
+        // Kapitel SOFORT parsen und anhängen (ein finaler Chunk darf leer sein, wenn das letzte Kapitel
+        // schon zuvor kam). Nichts wird zwischengelagert: was geholt ist, steht danach in der Datenbank.
+        if (dto.Chapter is { } chapter && (chapter.Lines?.Count ?? 0) > 0)
+        {
+            if (ValidateLineOids(new[] { chapter }) is { } shapeError)
+            {
+                var dropped = _ingestSessions.Discard(userId, dto.SessionId);
+                if (dropped?.ImportId is int brokenId)
+                    await _chessableImport.FailBrowserImportAsync(brokenId,
+                        $"Ungültiger Chunk ({shapeError}) — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
+                return BadRequest(new { message = shapeError });
+            }
+            if (WantsCacheFill(new[] { chapter }) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
+            {
+                var dropped = _ingestSessions.Discard(userId, dto.SessionId);
+                if (dropped?.ImportId is int refusedId)
+                    await _chessableImport.FailBrowserImportAsync(refusedId,
+                        $"Linien aus dem geteilten Cache für einen nicht bestätigten Kurs verlangt — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
+                return CacheFillForbidden(userId, dto.Bid);
+            }
+
+            ChessableCourseDataDto parsed;
+            try
+            {
+                parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, target == "book" ? "FirstKeyMove" : "None",
+                    new[] { chapter }, dto.CourseJson, dto.Complete, ct);
+            }
+            catch (ChessableProxyException ex)
+            {
+                _logger.LogWarning(ex, "Browser-Import: Parser-Fehler (User {UserId}, bid {Bid})", userId, dto.Bid);
+                return ChessableProxyExceptionFilter.ResultFor(ex);
+            }
+
+            if (!string.IsNullOrWhiteSpace(parsed.Pgn))
+            {
+                if (session.ImportId is null)
+                {
+                    var (import, inflight) = await _chessableImport.StartBrowserImportAsync(
+                        userId, dto.Bid, courseName ?? parsed.Name, target, ct);
+                    _ingestSessions.AttachImport(session, import.Id, inflight);
+                }
+
+                // Kapitelnummern nahtlos hinter den bisherigen fortschreiben — sonst überschriebe Chunk 2 die
+                // Linien von Chunk 1 (LineId = Datei:Round). Siehe ChessableRoundOffset.
+                //
+                // Ein Kapitel, dessen Linien zusammen über dem Body-Limit liegen, kommt in MEHREREN Chunks mit
+                // demselben ChapterKey an (RepCheck ≥ 1.61.0). Eine solche Fortsetzung bleibt in derselben
+                // Kapitelnummer und setzt nur die Liniennummer fort: der Parser wirft die Einträge ohne Inhalt
+                // aus list.data und begänne sonst wieder bei .002 — also genau auf den Linien von Teil 1.
+                var continues = dto.ChapterKey is { Length: > 0 }
+                    && string.Equals(dto.ChapterKey, session.LastChapterKey, StringComparison.Ordinal)
+                    && session.CurrentChapter > 0;
+                // Erster Chunk einer Sitzung, die der Server nicht kennt — nach einem API-Neustart mitten im Import
+                // ist der Versatz im Arbeitsspeicher weg. Träfe der Chunk mit Versatz 0 auf schon importierte
+                // Kapitel, setzt er hinter dem Buch fort (ChessableImportService.ResumeChapterOffsetAsync). Nicht bei
+                // einem Teil-Import: dort bekommt eine kollidierende neue Linie ohnehin einen freien Platz.
+                var previousMaxChapter = session.ChapterOffset;
+                if (!continues && session.ChaptersDone == 0 && previousMaxChapter == 0 && target == "book" && !dto.Partial)
+                    previousMaxChapter = await _chessableImport.ResumeChapterOffsetAsync(userId, dto.Bid, parsed.Pgn!, ct);
+                var chapterShift = continues
+                    ? ChessableRoundOffset.SameChapterOffset(session.CurrentChapter, parsed.Pgn)
+                    : ChessableRoundOffset.NextOffset(previousMaxChapter, parsed.Pgn);
+                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, chapterShift,
+                    continues ? ChessableRoundOffset.NextLineOffset(session.MaxLineInChapter, parsed.Pgn) : 0);
+                var res = await _chessableImport.AppendBrowserChunkAsync(
+                    session.ImportId!.Value, shifted, parsed.LineCount, dto.Partial, ct);
+                _ingestSessions.NoteChapter(session, ChessableRoundOffset.MaxChapter(shifted),
+                    parsed.LineCount, res.Imported, res.ResultId,
+                    dto.ChapterKey, continues, ChessableRoundOffset.MaxLine(shifted));
+            }
+        }
+
+        if (!dto.Final)
+            return Ok(new ChessableIngestChunkAck(false, session.ChaptersDone, session.LinesSeen, session.Imported));
+
+        // Final: Sitzung schliessen. Das Importierte steht laengst in der Datenbank.
+        var taken = _ingestSessions.Take(userId, dto.SessionId);
+        if (taken?.ImportId is not int importId)
+            return BadRequest(new { message = "No captured lines in session." });
+
+        var done = await _chessableImport.FinishBrowserImportAsync(importId, ct);
+        if (done is null) return BadRequest(new { message = "Import record vanished." });
+        return Ok(new ChessableIngestResultDto(done.Id, done.Target, done.ResultId, done.CourseName,
+            done.Imported, done.Skipped, done.Invalid, taken.LinesSeen));
+    }
+
+    /// <summary>
+    /// Live-Append „beim Durchklicken" (V1): die Extension schickt die soeben passiv erfassten Linien SOFORT
+    /// hierher (nicht erst am Ende). Sie werden über den fetch-freien Parser zu PGN gewandelt und DIREKT ans
+    /// bestehende Repertoire angehängt (bzw. legen es bei der ersten Linie an) → das Repertoire wächst live
+    /// mit. Anders als /ingest wird pro Aufruf KEIN Import-Datensatz und KEINE Benachrichtigung erzeugt; der
+    /// Server dedupliziert Linien per Zugtext. <c>Chapters</c> trägt nur die NEUEN Linien.
+    /// </summary>
+    [HttpPost("chessable/ingest/live")]
+    [RequestSizeLimit(16_000_000)]
+    [TypeFilter(typeof(ChessableProxyExceptionFilter))]   // piratechess nicht erreichbar → 502 (A3-015)
+    public async Task<IActionResult> ChessableIngestLive([FromBody] ChessableLiveIngestRequest dto, CancellationToken ct)
+    {
+        if (dto == null || !IsValidBid(dto.Bid))
+            return BadRequest(new { message = "Invalid or missing bid." });
+
+        var chapters = dto.Chapters ?? new List<ChessableIngestChapter>();
+        if (chapters.Count == 0 || chapters.All(c => (c.Lines?.Count ?? 0) == 0))
+            return BadRequest(new { message = "No lines." });
+        if (ValidateLineOids(chapters) is { } shapeError)
+            return BadRequest(new { message = shapeError });
+        var userId = GetUserId();
+        if (WantsCacheFill(chapters) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
+            return CacheFillForbidden(userId, dto.Bid);
+
+        var target = dto.Target == "book" ? "book" : "repertoire";
+        var mode = target == "book" ? "FirstKeyMove" : "None";
+
+        ChessableCourseDataDto parsed;
+        try
+        {
+            parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, mode, chapters, ct: ct);
+        }
+        catch (ChessableProxyException ex)
+        {
+            return ChessableProxyExceptionFilter.ResultFor(ex);
+        }
+
+        // Reine Info-/Erklärlinien liefern kein PGN → nichts anzuhängen, aber kein Fehler (Client macht weiter).
+        if (string.IsNullOrWhiteSpace(parsed.Pgn))
+            return Ok(new ChessableLiveIngestResultDto(0, null, target, 0));
+
+        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
+        var name = ChessableLineJson.ResolveCourseName(dto.CourseName, chapters.SelectMany(c => c.Lines ?? new List<string>()), parsed.Name) ?? parsed.Name;
+        var live = await _chessableImport.AppendLiveAsync(userId, dto.Bid, parsed.Pgn, name, target, ct);
+        return Ok(new ChessableLiveIngestResultDto(live.Imported, live.ResultId, live.Target, parsed.LineCount, live.Linked));
+    }
+}

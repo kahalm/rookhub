@@ -7,6 +7,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Library;
+using RookHub.Api.DTOs.Library;
 
 namespace RookHub.Api.Tests.Library;
 

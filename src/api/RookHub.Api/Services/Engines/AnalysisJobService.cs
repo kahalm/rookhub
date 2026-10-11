@@ -7,6 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.DTOs.Engines;
 
 namespace RookHub.Api.Services.Engines;
 

@@ -16,6 +16,8 @@ using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Kids;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Club;
+using RookHub.Api.DTOs.Club;
 
 namespace RookHub.Api.Tests.Club;
 

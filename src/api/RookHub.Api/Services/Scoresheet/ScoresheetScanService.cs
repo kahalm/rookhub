@@ -7,6 +7,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Scoresheet;
+using RookHub.Api.DTOs.League;
 
 namespace RookHub.Api.Services.Scoresheet;
 

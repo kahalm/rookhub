@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Controllers;
+using RookHub.Api.Controllers.Accounts;
 
 namespace RookHub.Api.Tests;
 

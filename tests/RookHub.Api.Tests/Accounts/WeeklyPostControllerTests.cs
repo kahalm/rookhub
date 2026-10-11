@@ -10,6 +10,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Controllers.Puzzles;
+using RookHub.Api.DTOs.Puzzles;
 
 namespace RookHub.Api.Tests.Accounts;
 

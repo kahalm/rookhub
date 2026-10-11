@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Engines;
 
 namespace RookHub.Api.Services.Engines;
 

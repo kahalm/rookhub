@@ -844,7 +844,7 @@ public class DeploymentConfigTests
         var size = Regex.Match(body, @"client_max_body_size (?<n>\d+)k;");
         Assert.True(size.Success, "client_max_body_size (in k) fehlt in der Poll-Location");
         var nginxBytes = long.Parse(size.Groups["n"].Value) * 1024;
-        Assert.InRange(nginxBytes, RookHub.Api.Controllers.ExternalEngineController.MaxAcquireBodyBytes, 64 * 1024);
+        Assert.InRange(nginxBytes, RookHub.Api.Controllers.EngineBroker.ExternalEngineController.MaxAcquireBodyBytes, 64 * 1024);
     }
 
     [Fact]
@@ -868,7 +868,7 @@ public class DeploymentConfigTests
         };
         var nginxBytes = long.Parse(size.Groups["n"].Value) * unit;
 
-        var limits = typeof(RookHub.Api.Controllers.ExtensionController).GetMethods()
+        var limits = typeof(RookHub.Api.Controllers.Chessable.ExtensionController).GetMethods()
             .Where(m => m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.HttpPostAttribute), false)
                 .Cast<Microsoft.AspNetCore.Mvc.HttpPostAttribute>()
                 .Any(a => a.Template?.StartsWith("chessable/", StringComparison.Ordinal) == true))
@@ -893,7 +893,7 @@ public class DeploymentConfigTests
         Assert.Contains("proxy_pass http://$rookhub_sheet_api$request_uri;", loc.Groups["body"].Value);
         var nginxBytes = long.Parse(size.Groups["n"].Value) * 1024 * 1024;
 
-        var upload = typeof(RookHub.Api.Controllers.ScoresheetsController).GetMethod("Upload")!;
+        var upload = typeof(RookHub.Api.Controllers.Scoresheet.ScoresheetsController).GetMethod("Upload")!;
         var limit = upload.GetCustomAttributesData()
             .Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute));
         var apiBytes = Convert.ToInt64(limit.ConstructorArguments[0].Value);
@@ -932,7 +932,7 @@ public class DeploymentConfigTests
         Assert.True(size.Success, "client_max_body_size (in M) fehlt in der Upload-Location");
         var nginxBytes = long.Parse(size.Groups["n"].Value) * 1024 * 1024;
 
-        foreach (var controller in new[] { typeof(RookHub.Api.Controllers.LeagueClubController), typeof(RookHub.Api.Controllers.LeagueShareClubController) })
+        foreach (var controller in new[] { typeof(RookHub.Api.Controllers.League.LeagueClubController), typeof(RookHub.Api.Controllers.League.LeagueShareClubController) })
         {
             foreach (var (method, template) in new[] { ("Upload", "scans"), ("BatchFile", "batches/{key}/files") })
             {

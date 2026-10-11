@@ -9,6 +9,8 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Controllers.Courses;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Tests.Courses;
 

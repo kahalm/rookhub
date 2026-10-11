@@ -1,0 +1,351 @@
+namespace RookHub.Api.DTOs.Chessable;
+
+/// <summary>Speichert/aktualisiert den Chessable-Bearer eines Users.</summary>
+public record SaveChessableBearerRequest(string Bearer);
+
+/// <summary>ADMIN: Kurs im Namen eines Users holen. <paramref name="Target"/> = "repertoire" oder "book"
+/// (Default "repertoire", falls leer); optional ein Name. Besitzer des Ergebnisses ist immer der Admin.</summary>
+public record AdminChessableImportRequest(string? Name, string? Target = null);
+
+/// <summary>ADMIN: Ein User mit hinterlegtem Chessable-Bearer (Auswahl für „Kurse holen").
+/// <paramref name="Blocked"/>=true ⇒ Circuit-Breaker offen (Bearer abgewiesen, bis „Testen" bestätigt).</summary>
+public record ChessableCredentialedUserDto(
+    int UserId, string Username, System.DateTime? CoursesCachedAt, bool Blocked, string? BlockedReason);
+
+/// <summary>Ob der User den Chessable-Haftungsausschluss bestätigt hat.</summary>
+public record ChessableDisclaimerDto(bool Accepted);
+
+/// <summary>Antwort der credentials-Endpoints. Bearer wird nur maskiert zurueckgegeben.
+/// <paramref name="Blocked"/>=true ⇒ der Circuit-Breaker ist offen (Bearer wurde von Chessable als
+/// gesperrt/gelöscht bzw. tot abgewiesen) — es laufen keine Anfragen mehr, bis „Testen" die
+/// Gültigkeit bestätigt; <paramref name="BlockedReason"/> trägt die auslösende Meldung.</summary>
+public record ChessableCredentialResponse(
+    bool HasCredentials, string? MaskedBearer, bool Blocked = false, string? BlockedReason = null);
+
+/// <summary>Ein Chessable-Kurs (vom piratechess-Backend durchgereicht).</summary>
+public record ChessableCourseDto(string Bid, string Name)
+{
+    /// <summary>Dieser Kurs wurde vom User bereits als Repertoire importiert.</summary>
+    public bool ImportedRepertoire { get; init; }
+    /// <summary>Dieser Kurs wurde vom User bereits als Buch importiert.</summary>
+    public bool ImportedBook { get; init; }
+    /// <summary>Rohdaten liegen in der piratechess-DB (gecacht) → Import quasi sofort (kein Chessable-Abruf).</summary>
+    public bool Cached { get; init; }
+    /// <summary>Für diesen Kurs läuft bereits ein Import (Status "running": wartend oder in Arbeit) →
+    /// nicht erneut einreihen.</summary>
+    public bool Queued { get; init; }
+}
+
+/// <summary>Kursliste + Zeitpunkt des Abrufs (aus dem DB-Cache oder frisch geholt).</summary>
+public record ChessableCoursesDto(List<ChessableCourseDto> Courses, DateTime? CachedAt);
+
+/// <summary>Test-Ergebnis: gibt die uid des Bearers und die Anzahl der Kurse zurueck.</summary>
+public record ChessableTestResultDto(string Uid, int CourseCount);
+
+/// <summary>Antwort des piratechess /api/chessable/direct/course-Endpoints (tiefer Kurs-Abruf, synchron).
+/// Dieselbe Form liefert auch der fetch-freie /course/parse-Endpoint (Browser-Import).</summary>
+public record ChessableCourseDataDto(string Bid, string Name, string Mode, int ChapterCount, int LineCount, string Pgn);
+
+/// <summary>Browser-Import („Über meinen Browser holen"): die RepCheck-Extension hat die rohen Chessable-
+/// Antworten als eigene eingeloggte Session geholt (V2 aktiv) bzw. beim Training mitgeschnitten (V1 passiv)
+/// und schickt sie je Kapitel — die getList-Antwort (<see cref="ChessableIngestChapter.ChapterJson"/>) plus
+/// die getGame-Antworten (<see cref="ChessableIngestChapter.Lines"/>) in getList-Reihenfolge. RookHub reicht
+/// sie an den fetch-freien piratechess-Parser durch und importiert das PGN als Repertoire (<c>Target</c>
+/// "repertoire", Default) bzw. Buch/Kurs ("book"). Kein serverseitiger Chessable-Abruf/VPN.</summary>
+public record ChessableIngestRequest(string Bid, string? Target, string? CourseName, List<ChessableIngestChapter>? Chapters);
+/// <remarks><c>LineOids</c> (seit RepCheck 1.57.0) trägt je Linie ihre Chessable-oid, parallel zu <c>Lines</c>:
+/// piratechess ordnet die Linien dann über die oid statt über ihre Position zu (vorher landete ein Teil der Linien
+/// eines Kapitels unter fremder oid). Eine Linie darf dann <c>null</c> sein — ihr Inhalt kommt aus dem geteilten
+/// Linien-Cache (siehe <see cref="ChessableCachedLinesRequest"/>). Ohne <c>LineOids</c> positionsbasiert wie bisher.</remarks>
+public record ChessableIngestChapter(string? ChapterJson, List<string>? Lines, List<string>? LineOids = null);
+
+/// <summary>Ergebnis eines Browser-Imports (analog zum Server-Import, aber synchron).</summary>
+public record ChessableIngestResultDto(
+    int ImportId, string Target, int? ResultId, string CourseName, int Imported, int Skipped, int Invalid, int LineCount);
+
+/// <summary>Ein Kapitel-Chunk des kapitelweisen Browser-Imports. Die Extension streamt einen großen Kurs
+/// Kapitel für Kapitel (bounded pro Request); der Server parst und importiert JEDEN Chunk sofort (seit 0.484.0,
+/// Kapitelnummern werden fortgeschrieben) und schließt die Sitzung beim Chunk mit <c>Final=true</c> ab.
+/// <c>Bid</c>/<c>Target</c>/<c>CourseName</c> werden vom ersten Chunk übernommen. <c>SessionId</c> ist
+/// eine clientseitige GUID; Sessions sind pro (User, SessionId) isoliert.
+/// <c>CourseJson</c> (echte getCourse-Antwort) + <c>Complete</c> kommen mit dem FINALEN Chunk, wenn die Extension
+/// den Kurs vollständig geholt hat. <c>Aborted=true</c> (mit <c>Final=true</c>, ohne Kapitel) meldet einen
+/// Abbruch im Browser: die Sitzung wird geschlossen und der Import-Datensatz mit dem bis dahin Übernommenen als
+/// abgebrochen markiert — statt bis zum Ablauf der Sitzung auf „läuft" zu stehen.</summary>
+/// <summary><c>Partial</c> sagt: dieser Lauf schickt NUR die neuen Linien, nicht den ganzen Kurs (die
+/// Extension überspringt, was schon auf RookHub liegt). Daran hängt, wie eine Kollision der
+/// Positionsnummer gedeutet wird — siehe <c>PgnImportService.ImportFileAsync</c>.
+/// <c>ChapterKey</c> (die Chessable-lid) hält ein Kapitel zusammen, das zu groß für EINEN Request ist
+/// und darum in mehreren Chunks ankommt: gleicher Schlüssel wie beim Vorgänger = Fortsetzung, keine neue
+/// Kapitelnummer. Alt-Clients schicken das Feld nicht → jeder Chunk ist wie bisher ein eigenes Kapitel.</summary>
+public record ChessableIngestChunkRequest(
+    string SessionId, string Bid, string? Target, string? CourseName, ChessableIngestChapter? Chapter, bool Final,
+    string? CourseJson = null, bool Complete = false, bool Aborted = false, string? ChapterKey = null,
+    bool Partial = false);
+
+/// <summary>Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
+/// überspringt dafür den Chessable-Abruf. Antwort: die gecachte Teilmenge — nur die Existenz, nie der Inhalt.
+/// <c>Bid</c> = der Kurs, für den gefragt wird; Treffer gibt es nur für einen Kurs aus der bestätigten Kursliste des
+/// Nutzers (ohne <c>Bid</c> keine).</summary>
+public record ChessableCachedLinesRequest(List<string>? Oids, string? Bid = null);
+public record ChessableCachedLinesDto(List<string> Oids);
+
+/// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>
+/// <summary><c>Imported</c> = bereits in dieser Sitzung angelegte Linien. Seit dem laufenden Import
+/// wächst die Zahl mit jedem Chunk, statt erst am Ende zu erscheinen — die Extension kann den
+/// tatsächlichen Stand auf RookHub anzeigen.</summary>
+public record ChessableIngestChunkAck(bool Done, int Chapters, int Lines, int Imported = 0);
+
+/// <summary>Import-Fortschritt eines Chessable-Kurses für die RepCheck-Overlays: welche Chessable-oids
+/// der User bereits importiert hat (als Buch und/oder Repertoire). Die Extension matcht diese oids gegen
+/// die Linien-oids aus getCourse/getList und zeigt Kurs-/Kapitel-/Linien-Fortschritt auf chessable.com.
+/// <c>Book</c>/<c>Repertoire</c> = existiert das jeweilige Ziel (auch bei 0 oids, z. B. Alt-Import).</summary>
+public record ChessableProgressDto(bool Book, bool Repertoire, List<string> Oids);
+
+/// <summary>Live-Append (V1 „beim Durchklicken"): die Extension schickt die soeben erfassten Linien SOFORT
+/// (nicht am Ende) — sie werden direkt ans bestehende Repertoire angehängt (bzw. legen es bei der ersten
+/// Linie an), sodass es live mitwächst. <c>Chapters</c> enthält nur die NEUEN Linien (je Kapitel getList +
+/// getGame). Kein Import-Datensatz/keine Benachrichtigung je Aufruf; serverseitig zugtext-dedupliziert.</summary>
+public record ChessableLiveIngestRequest(string Bid, string? Target, string? CourseName, List<ChessableIngestChapter>? Chapters);
+
+/// <summary>Ergebnis eines Live-Append: tatsächlich NEU hinzugefügte Linien + Ziel-Id; <c>Linked</c> = vorhandene
+/// Linien, die ihre Chessable-oid nachgetragen bekamen (RepCheck nennt sie in der Abschlussmeldung).</summary>
+public record ChessableLiveIngestResultDto(int Imported, int? ResultId, string Target, int LineCount, int Linked = 0);
+
+/// <summary>Antwort von piratechess /direct/course/start (async).</summary>
+public record ChessableCourseStartDto(string JobId);
+
+/// <summary>Vorab-Schätzung der Gesamt-Linienzahl eines Kurses (für die Admin-Kursliste).
+/// <c>Cached</c>=true → sofort verfügbar (kein Chessable-Abruf nötig).</summary>
+public record ChessableCourseInfoDto(string Bid, int TotalLines, bool Cached);
+
+/// <summary>
+/// Statuswerte eines piratechess-Kurs-Abruf-Jobs (<see cref="ChessableCourseProgressDto.Status"/>) — SPIEGEL von
+/// piratechess <c>Services/CourseFetchJobStore.cs</c> (<c>CourseFetchJob.Status</c>), auf beiden Seiten mit LITERALEN
+/// Werten im Test (<c>ChessableCourseJobContractTests</c> ↔ piratechess <c>CourseFetchJobStoreTests</c>). Einen
+/// Wert, den rookhub nicht kennt, behandelt die Poll-Schleife als Fehler statt als Stillstand
+/// (<c>ChessableImportService.RunAsync</c>).
+/// </summary>
+public static class ChessableCourseJobStatus
+{
+    public const string Running = "running";
+    public const string Completed = "completed";
+    public const string Failed = "failed";
+    /// <summary>Abgebrochen (piratechess S2-008). Der Abbruch gibt den Job frei (ein Poll liefert danach 404);
+    /// sieht rookhub den Status trotzdem, gilt er wie ein verschwundener Job.</summary>
+    public const string Cancelled = "cancelled";
+}
+
+/// <summary>Fortschritt/Ergebnis eines piratechess-Kurs-Abruf-Jobs (/direct/course/{jobId}).</summary>
+public record ChessableCourseProgressDto(
+    string Status, int ChaptersDone, int ChaptersTotal, int LinesDone, int LinesTotal,
+    int ChapterCount, int LineCount, string? CourseName, string? Pgn, string? Error);
+
+/// <summary>Startet einen Kurs-Import. Target: "repertoire" oder "book". Name optional (Anzeigename).</summary>
+public record StartChessableImportRequest(string Target, string? Name);
+
+/// <summary>Status/Fortschritt eines Chessable-Kurs-Imports (Polling).</summary>
+public record ChessableImportDto(
+    int Id,
+    string Bid,
+    string CourseName,
+    string Target,
+    string Status,
+    string Phase,
+    string? Error,
+    int? ResultId,
+    int Imported,
+    int Skipped,
+    int Invalid,
+    int ChaptersDone,
+    int ChaptersTotal,
+    int LinesDone,
+    int LinesTotal,
+    int QueuedAhead,
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? CompletedAt);
+
+/// <summary>Import-Satz für die Admin-Ansicht: wie <see cref="ChessableImportDto"/>, zusätzlich
+/// Besitzer (UserId/Username) und Zeitstempel (für „alle Jobs + Verlauf" und das Dashboard-Widget).</summary>
+public record ChessableAdminImportDto(
+    int Id,
+    int UserId,
+    string Username,
+    string Bid,
+    string CourseName,
+    string Target,
+    string Status,
+    string Phase,
+    string? Error,
+    int? ResultId,
+    int Imported,
+    int Skipped,
+    int Invalid,
+    int ChaptersDone,
+    int ChaptersTotal,
+    int LinesDone,
+    int LinesTotal,
+    int QueuedAhead,
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? CompletedAt);
+
+/// <summary>Eingabe „Linie auf Chessable trainiert": Kurs-bid + Varianten-oid (beide von der
+/// Extension aus der Chessable-SPA ermittelt).</summary>
+public class ChessableLineTrainedInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+}
+
+/// <summary>Ergebnis der Markierung: was wurde in den RookHub-Gegenstücken nachgezogen?</summary>
+public class ChessableLineTrainedResultDto
+{
+    /// <summary>Die Linie existiert im importierten Kurs (Buch) des Users.</summary>
+    public bool CourseLineFound { get; set; }
+    /// <summary>Die Kurs-Linie wurde JETZT als gelöst markiert (false = war schon gelöst/nicht da).</summary>
+    public bool CourseLineMarked { get; set; }
+    /// <summary>SR-Linien, die gelernt bzw. eine Stufe vorgerückt sind.</summary>
+    public int RepertoireLinesAdvanced { get; set; }
+    /// <summary>Gefundene, aber bewusst unangetastete SR-Linien (nicht fällig bzw. pausiert).</summary>
+    public int RepertoireLinesSkipped { get; set; }
+}
+
+/// <summary>RepCheck meldet eine unerwartete Chessable-Antwort beim „Kurs holen“ (RepCheck ≥ 1.60.0 hat den Abruf
+/// deswegen gestoppt). Siehe <see cref="RookHub.Api.Services.Chessable.ChessableResponseAlertService"/>.</summary>
+public class ChessableUnexpectedResponseInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.MaxLength(300)]
+    public string? CourseName { get; set; }
+    /// <summary>getCourse, getList oder getGame.</summary>
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string Endpoint { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string? Lid { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string? Oid { get; set; }
+    /// <summary>HTTP-Status der Antwort (200, wenn sie ankam, aber nicht passte).</summary>
+    public int? Status { get; set; }
+    /// <summary>http, json, error oder shape (checkChessableResponse in RepCheck).</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(10)]
+    public string? Reason { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(300)]
+    public string? Message { get; set; }
+    /// <summary>Anfang der Antwort — RepCheck entfernt vorher E-Mail- und IP-Adressen.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(2000)]
+    public string? Snippet { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string? ExtensionVersion { get; set; }
+}
+
+/// <summary>Banned = sah nach einer Sperre aus; AdminNotified = die Admins haben dazu eine Nachricht (jetzt oder
+/// innerhalb der Sperrfrist schon vorher).</summary>
+public record ChessableUnexpectedResponseResultDto(bool Banned, bool AdminNotified);
+
+/// <summary>
+/// RepCheck (ab 1.73.0, RookHub 0.696.0): „Kurs holen" ist mit einem Fehler abgebrochen, der KEINE unerwartete Chessable-Antwort war —
+/// etwa ein Fehler in der Erweiterung selbst oder beim Senden an RookHub. Kommt über den direkten Kanal der Erweiterung,
+/// nicht über den RookHub-Client (dessen Ausfall genau so ein Fall ist, 07.10.2026).
+/// </summary>
+public class ChessableCrawlErrorInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.MaxLength(300)]
+    public string? CourseName { get; set; }
+    /// <summary>book oder repertoire.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string? Target { get; set; }
+    /// <summary>Wo es passierte: structure, chapters, lines, sending, finishing.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string? Phase { get; set; }
+    /// <summary>Der Fehlertext, wie ihn der Nutzer sah.</summary>
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(1000)]
+    public string Message { get; set; } = string.Empty;
+    /// <summary>Wie viele Linien dieser Lauf bis zum Abbruch schon geholt/gesendet hatte.</summary>
+    public int? LinesFetched { get; set; }
+    public int? LinesSent { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(20)]
+    public string? ExtensionVersion { get; set; }
+    /// <summary>Grob: „Firefox 143", „Chrome 141" — kein voller User-Agent.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(40)]
+    public string? Browser { get; set; }
+}
+
+public record ChessableCrawlErrorResultDto(bool AdminNotified);
+
+/// <summary>Batch „schwierige Züge": je Linie (oid) die von der Extension geernteten Felder.
+/// Quellen ergänzen sich: getList → NHard, getGame → ProblemMoves (thisUser) + LastReviewed;
+/// fehlende Felder lassen den gespeicherten Wert unangetastet.</summary>
+public class ChessableProblemMovesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableProblemMoveEntryDto> Entries { get; set; } = new();
+}
+
+public class ChessableProblemMoveEntryDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+    /// <summary>Chessables nHard der Linie (aus getList); null = nicht Teil dieses Batches.</summary>
+    public int? NHard { get; set; }
+    /// <summary>game.problemMoves.thisUser als Roh-JSON-Objekt; {} = keine Fehlzüge (löscht alte).</summary>
+    public System.Text.Json.JsonElement? ProblemMoves { get; set; }
+    /// <summary>Chessables lastReviewed-String ("never" oder "yyyy-MM-dd HH:mm:ss").</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(40)]
+    public string? LastReviewed { get; set; }
+}
+
+/// <summary>Batch „getReview-Linien" ablegen: je Linie (oid) die rohe getReview-Antwort als JSON.
+/// Zweite Linien-Quelle neben getGame; wird roh gespeichert und erst beim Kurs-Aufbau geparst.</summary>
+public class ChessableReviewLinesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableReviewLineEntryDto> Entries { get; set; } = new();
+}
+
+public class ChessableReviewLineEntryDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+    /// <summary>Rohe getReview-Antwort dieser Linie (opak, erst beim Kurs-Aufbau geparst).</summary>
+    [System.ComponentModel.DataAnnotations.Required]
+    public string Json { get; set; } = string.Empty;
+}
+
+/// <summary>Batch „Sitzungszüge" ablegen: je trainierter Linie (oid) der rohe <c>moves</c>-Block aus
+/// Chessables Session-Report (saveProgress) — enthält u. a. die falsch gespielten Züge. Append-only.</summary>
+public class ChessableSessionMovesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableSessionMoveEntryDto> Entries { get; set; } = new();
+}
+
+public class ChessableSessionMoveEntryDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Oid { get; set; } = string.Empty;
+    /// <summary>Rohes JSON-ARRAY der per-Zug-Sitzungsergebnisse (opak, nur Form/Größe geprüft).</summary>
+    public System.Text.Json.JsonElement? Moves { get; set; }
+}
+
+/// <summary>Token-lose (anonyme) Variante von <see cref="ChessableReviewLinesInputDto"/>: der Absender
+/// hat keinen RookHub-Token, identifiziert sich aber über seine Chessable-<c>uid</c> (aus dem
+/// Chessable-JWT decodiert). Landet in der Anon-Senke und wird geclaimt, sobald diese uid einem
+/// RookHub-Account zugeordnet wird.</summary>
+public class AnonymousChessableReviewLinesInputDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(32)]
+    public string Uid { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(12)]
+    public string Bid { get; set; } = string.Empty;
+    public List<ChessableReviewLineEntryDto> Entries { get; set; } = new();
+}

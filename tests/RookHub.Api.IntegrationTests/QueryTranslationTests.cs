@@ -276,7 +276,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         var userId = await SeedUserAsync("sheet");
         var games = Get<SavedGameService>();
         var game = await games.CreateGeneratedAsync(userId, SavedGameService.ScoresheetSource, new[] { "e4", "e5" }, null,
-            new RookHub.Api.DTOs.GameHeaderInput("Simultan", null, "2026-06-05", "1", "A", "B", "0-1"));
+            new RookHub.Api.DTOs.Scoresheet.GameHeaderInput("Simultan", null, "2026-06-05", "1", "A", "B", "0-1"));
         Db.ScoresheetScans.Add(new ScoresheetScan
         {
             UserId = userId, SavedGameId = game.Id, Photo = new byte[] { 1, 2, 3 }, Status = ScoresheetScanStatus.Done,
@@ -409,7 +409,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     {
         var userId = await SeedUserAsync("games");
         var svc = Get<SavedGameService>();
-        await svc.SaveAsync(userId, new RookHub.Api.DTOs.SaveGameInputDto
+        await svc.SaveAsync(userId, new RookHub.Api.DTOs.Games.SaveGameInputDto
         {
             Source = "lichess", Moves = new() { "e4", "c5", "Nf3" }, ExternalId = "it-1",
         });
@@ -437,7 +437,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     {
         var userId = await SeedUserAsync("evals");
         var svc = Get<SavedGameService>();
-        var game = await svc.SaveAsync(userId, new RookHub.Api.DTOs.SaveGameInputDto
+        var game = await svc.SaveAsync(userId, new RookHub.Api.DTOs.Games.SaveGameInputDto
         {
             Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b", ExternalId = "it-evals",
         });
@@ -1151,17 +1151,17 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(link, await league.ValidShareTokenAsync(accented, default));
         Assert.Equal((link, home.Id), (await league.ShareContextAsync(accented, default)) is { } ctx ? (ctx.Token, ctx.Club.Id) : default);
 
-        var controller = new RookHub.Api.Controllers.LeagueShareClubController(league, club, Get<ScoresheetScanService>(),
+        var controller = new RookHub.Api.Controllers.League.LeagueShareClubController(league, club, Get<ScoresheetScanService>(),
             Get<ScoresheetScanSignal>());
-        var imported = await controller.Import(lower, new RookHub.Api.DTOs.LeagueClubImportRequest
+        var imported = await controller.Import(lower, new RookHub.Api.DTOs.League.LeagueClubImportRequest
         {
             Pgn = "[White \"Hengl, Philip\"]\n[Black \"Schnabl, Andreas\"]\n[Date \"2024.05.12\"]\n[Result \"1-0\"]\n\n"
                 + "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0\n",
         }, default);
-        var result = Assert.IsType<RookHub.Api.DTOs.LeagueClubImportResultDto>(
+        var result = Assert.IsType<RookHub.Api.DTOs.League.LeagueClubImportResultDto>(
             Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(imported).Value);
         Assert.Equal(1, result.Added);
-        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Add(accented, new RookHub.Api.DTOs.LeagueClubGameRequest
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Add(accented, new RookHub.Api.DTOs.League.LeagueClubGameRequest
         {
             Moves = new() { "e4", "e5" }, White = "Hengl, Philip", Black = "Schnabl, Andreas", Year = 2024,
         }, null, default));
@@ -1195,19 +1195,19 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         var manager = new RookHub.Api.Services.Club.ClubActor(leitung, true, false);
         var trainer = new RookHub.Api.Services.Club.ClubActor(tina, false, true);
 
-        var mine = await club.CreateGroupAsync(manager, new RookHub.Api.DTOs.ClubGroupInputDto { Name = "Anfänger", Weekday = 5 });
-        var other = await club.CreateGroupAsync(manager, new RookHub.Api.DTOs.ClubGroupInputDto { Name = "Turnier" });
+        var mine = await club.CreateGroupAsync(manager, new RookHub.Api.DTOs.Club.ClubGroupInputDto { Name = "Anfänger", Weekday = 5 });
+        var other = await club.CreateGroupAsync(manager, new RookHub.Api.DTOs.Club.ClubGroupInputDto { Name = "Turnier" });
         await club.AddTrainerAsync(manager, mine.Id, "TINA");                     // Groß/klein egal — hier über die Kollation
-        var daniel = await club.CreateMemberAsync(trainer, new RookHub.Api.DTOs.ClubMemberInputDto
+        var daniel = await club.CreateMemberAsync(trainer, new RookHub.Api.DTOs.Club.ClubMemberInputDto
         {
             FirstName = "Daniel", LastName = "Huber", BirthDate = "2015-03-12", GroupIds = [mine.Id],
             Contacts = [new() { Kind = "phone", Value = "0660 111 22 33", Label = "Mutter Daniela" },
                         new() { Kind = "phone", Value = "0512/58 12 34", Label = "Vater Franz" },
                         new() { Kind = "email", Value = "daniela@example.org" }],
         });
-        var anna = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Anna", LastName = "Šarić", BirthYear = 2016, GroupIds = [other.Id] });
+        var anna = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.Club.ClubMemberInputDto { FirstName = "Anna", LastName = "Šarić", BirthYear = 2016, GroupIds = [other.Id] });
         // Ohne Nachnamen (optional): geordnet wird dann nach dem Vornamen — die CASE-Sortierung muss MariaDB übersetzen.
-        var emil = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Emil", GroupIds = [other.Id] });
+        var emil = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.Club.ClubMemberInputDto { FirstName = "Emil", GroupIds = [other.Id] });
         Assert.Equal(["Emil", "Huber", "Šarić"], (await club.ListMembersAsync(manager, null, false)).Select(m => m.LastName == "" ? m.FirstName : m.LastName));
         Assert.Equal(["Emil", "Anna"], (await club.GetGroupAsync(manager, other.Id)).Members.Select(m => m.FirstName));
         await club.DeleteMemberAsync(manager, emil.Id);
@@ -1221,11 +1221,11 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal("Anfänger", Assert.Single(await club.ListGroupsAsync(trainer)).Name);
 
         // Anwesenheit: eine Einheit je Tag (zweites Speichern ersetzt), Tabelle, Quote, Liste mit Max(Date).
-        var att = new List<RookHub.Api.DTOs.ClubAttendanceInputDto> { new() { MemberId = daniel.Id, Status = "present" } };
-        var first = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
-        await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel", Attendance = att });
+        var att = new List<RookHub.Api.DTOs.Club.ClubAttendanceInputDto> { new() { MemberId = daniel.Id, Status = "present" } };
+        var first = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
+        await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel", Attendance = att });
         att[0].Status = "absent";
-        var again = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
+        var again = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
         Assert.Equal(first.Id, again.Id);
         Assert.Equal(first.Id, (await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-18"))!.Id);
         Assert.Null(await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-19"));
@@ -1240,10 +1240,10 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal((1, 1, "2015-03-12"), (sheet.Attendance.Present, sheet.Attendance.Absent, sheet.BirthDate));
 
         // Trainer als Person: ohne Gruppe, in jeder Gruppe unter den Kindern, abhakbar.
-        var coach = await club.CreateMemberAsync(trainer, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Bernhard", IsTrainer = true });
+        var coach = await club.CreateMemberAsync(trainer, new RookHub.Api.DTOs.Club.ClubMemberInputDto { FirstName = "Bernhard", IsTrainer = true });
         Assert.Equal("Bernhard", Assert.Single((await club.GetGroupAsync(trainer, mine.Id)).Coaches).FirstName);
         Assert.Equal("Bernhard", Assert.Single((await club.GetGroupAsync(manager, other.Id)).Coaches).FirstName);
-        var withCoach = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto
+        var withCoach = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto
         { Date = "2026-10-02", Attendance = [new() { MemberId = coach.Id, Status = "present" }, new() { MemberId = daniel.Id, Status = "absent" }] });
         Assert.Equal((1, 1), (withCoach.Present, withCoach.Absent));
         await club.DeleteMemberAsync(manager, coach.Id);
@@ -1285,7 +1285,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             // Kreis ums Gesicht: drei double-Spalten; gesetzt wird in der GELADENEN Zeile (nur Vorschaubild + Kreis gehen in
             // das UPDATE), gelesen ohne die Bytes; die Gruppe trägt die Marke je Kind.
             Assert.Null((await club.GetMemberAsync(trainer, daniel.Id)).PhotoFace);
-            var faced = await club.SetMemberPhotoFaceAsync(trainer, daniel.Id, new RookHub.Api.DTOs.ClubPhotoFaceDto { X = 0.5, Y = 0.4, R = 0.28 });
+            var faced = await club.SetMemberPhotoFaceAsync(trainer, daniel.Id, new RookHub.Api.DTOs.Club.ClubPhotoFaceDto { X = 0.5, Y = 0.4, R = 0.28 });
             Db.ChangeTracker.Clear();
             Assert.True(faced.PhotoVersion > two.PhotoVersion);
             var readBack = (await club.GetMemberAsync(trainer, daniel.Id)).PhotoFace!;
@@ -1293,7 +1293,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Assert.Equal((256, 256), RookHub.Api.Services.Scoresheet.ScoresheetImage.Size(await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: true))!.Value);   // Quadrat um den Kreis
             Assert.True((await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: false)).Length > 100);          // das Bild blieb
             Assert.Equal(faced.PhotoVersion, (await club.GetGroupAsync(trainer, mine.Id)).Members.Single(m => m.Id == daniel.Id).PhotoVersion);
-            var withFace = await club.SetMemberPhotoAsync(trainer, daniel.Id, data.ToArray(), new RookHub.Api.DTOs.ClubPhotoFaceDto { X = 0.5, Y = 0.5, R = 0.5 });
+            var withFace = await club.SetMemberPhotoAsync(trainer, daniel.Id, data.ToArray(), new RookHub.Api.DTOs.Club.ClubPhotoFaceDto { X = 0.5, Y = 0.5, R = 0.5 });
             Db.ChangeTracker.Clear();
             Assert.Equal(0.5, withFace.Face!.R);
 
@@ -1302,7 +1302,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Assert.False(await Db.ClubMemberPhotos.AnyAsync());
             Assert.Null((await club.GetMemberAsync(trainer, daniel.Id)).PhotoVersion);
 
-            var gone = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Foto", FideId = "1612345", NationalId = "123456" });
+            var gone = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.Club.ClubMemberInputDto { FirstName = "Foto", FideId = "1612345", NationalId = "123456" });
             await club.SetMemberPhotoAsync(manager, gone.Id, data.ToArray());
             Db.ChangeTracker.Clear();
             Assert.Equal(("1612345", "123456"), ((await club.GetMemberAsync(manager, gone.Id)).FideId, (await club.GetMemberAsync(manager, gone.Id)).NationalId));

@@ -7,6 +7,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Social;
+using RookHub.Api.Controllers.Accounts;
 
 namespace RookHub.Api.Tests.Social;
 

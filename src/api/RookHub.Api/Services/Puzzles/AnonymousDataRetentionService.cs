@@ -11,7 +11,7 @@ namespace RookHub.Api.Services.Puzzles;
 /// ist der RÜCKBAU; die Schranke gegen das Vollschreiben sind die Gesamtdeckel
 /// (<see cref="EndlessProgressService.MaxAnonymousProgressRowsTotal"/>,
 /// <see cref="EndlessProgressService.MaxAnonymousSessionRowsTotal"/>) und der engere Deckel des anonymen
-/// Spielstands (<see cref="DTOs.SaveAnonymousProgressDto.MaxActiveGameStateLength"/>) — ein Verfall
+/// Spielstands (<see cref="DTOs.Puzzles.SaveAnonymousProgressDto.MaxActiveGameStateLength"/>) — ein Verfall
 /// nach 60 Tagen allein hätte ein Skript mit frischen Session-Ids nicht gebremst. Die Zeilen sind nach
 /// dem Spielen wertlos: ein Rückkehrer bringt seine Session-Id im Browser-Speicher mit, und wer sich
 /// anmeldet, übernimmt sie sofort (<c>POST /api/endless/claim-session</c>).

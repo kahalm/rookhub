@@ -15,6 +15,9 @@ using SkiaSharp;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Scoresheet;
+using RookHub.Api.DTOs.Scoresheet;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Tests.Scoresheet;
 

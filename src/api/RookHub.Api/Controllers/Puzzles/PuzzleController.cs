@@ -1,0 +1,204 @@
+using System.Security.Claims;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.DTOs;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Puzzles;
+using RookHub.Api.DTOs.Puzzles;
+using RookHub.Api.DTOs.Courses;
+
+namespace RookHub.Api.Controllers.Puzzles;
+
+[ApiController]
+[Route("api/puzzles")]
+[Authorize]
+public class PuzzleController : BaseApiController
+{
+    private readonly PuzzleService _puzzleService;
+    private readonly PuzzleStatsService _stats;
+    private readonly ILogger<PuzzleController> _logger;
+
+    // logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
+    public PuzzleController(PuzzleService puzzleService, PuzzleStatsService stats,
+        ILogger<PuzzleController>? logger = null)
+    {
+        _puzzleService = puzzleService;
+        _stats = stats;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PuzzleController>.Instance;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("rating-range")]
+    public async Task<IActionResult> GetRatingRange()
+    {
+        var range = await _puzzleService.GetRatingRangeAsync();
+        if (range == null)
+            return NotFound(new { message = "No puzzles in database." });
+        return Ok(new { min = range.Value.Min, max = range.Value.Max });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("random")]
+    public async Task<IActionResult> GetRandom(
+        [FromQuery] int? minRating,
+        [FromQuery] int? maxRating,
+        [FromQuery] string? themes,
+        [FromQuery] bool excludeSolved = false,
+        [FromQuery] string? themesAny = null)
+    {
+        int? userId = GetUserIdOrNull();
+        var puzzle = await _puzzleService.GetRandomAsync(userId, minRating, maxRating, themes, excludeSolved, themesAny);
+        if (puzzle == null)
+            return NotFound(new { message = "No puzzles found matching criteria." });
+        return Ok(puzzle);
+    }
+
+    /// <summary>
+    /// Lädt für jedes Rating-Fenster ein eindeutiges Zufalls-Puzzle — für das Offline-
+    /// Vorab-Laden eines ganzen Endless-Runs (ein Request statt vieler).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("random-batch")]
+    public async Task<ActionResult<List<PuzzleDto>>> GetRandomBatch([FromBody] RandomBatchRequestDto dto)
+    {
+        if (dto?.Windows == null || dto.Windows.Count == 0)
+            return Ok(new List<PuzzleDto>());
+        // Schutz gegen überzogene Anfragen.
+        var windows = dto.Windows.Take(100).Select(w => (w.MinRating, w.MaxRating));
+        int? userId = GetUserIdOrNull();
+        var puzzles = await _puzzleService.GetRandomBatchAsync(userId, windows, dto.Themes, dto.ExcludeSolved, dto.ThemesAny);
+        return Ok(puzzles);
+    }
+
+    [HttpPost("{id}/attempt")]
+    public async Task<IActionResult> RecordAttempt(int id, [FromBody] RecordPuzzleAttemptDto dto)
+    {
+        try
+        {
+            var result = await _puzzleService.RecordAttemptAsync(GetUserId(), id, dto);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Markiert die (on-the-fly-)Tipps eines Standard-Puzzles als „dumm/schlecht" (oder hebt das
+    /// auf) — jeder eingeloggte User, pro User gedrosselt („user-flag") und mit Audit-Log (das Flag ist
+    /// global; Missbrauch muss zuordenbar sein). 404 wenn das Puzzle fehlt.</summary>
+    [HttpPost("{id}/flag-hints")]
+    [EnableRateLimiting("user-flag")]
+    public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
+    {
+        var ok = await _puzzleService.FlagHintsAsync(id, body.Flagged);
+        if (ok)
+            _logger.LogInformation("HintsFlagged: Puzzle {PuzzleId} → {Flagged} durch User {UserId}",
+                id, body.Flagged, GetUserId());
+        return ok ? Ok(new { id, hintsFlagged = body.Flagged }) : NotFound(new { message = "Puzzle not found." });
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<PuzzleStatsDto>> GetStats([FromQuery] int? vizLevel)
+    {
+        // vizLevel bewusst nullable durchreichen: ohne explizites Level liefert der Service
+        // das Elo des meistgespielten Levels (Dashboard/Übersicht), nicht stur Level 0.
+        return Ok(await _stats.GetStatsAsync(GetUserId(), vizLevel));
+    }
+
+    [HttpGet("history")]
+    public async Task<ActionResult<List<PuzzleAttemptDto>>> GetHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        return Ok(await _stats.GetHistoryAsync(GetUserId(), page, pageSize));
+    }
+
+    [HttpGet("elo-history")]
+    public async Task<ActionResult<List<EloHistoryPointDto>>> GetEloHistory([FromQuery] int limit = 500)
+    {
+        return Ok(await _stats.GetEloHistoryAsync(GetUserId(), limit));
+    }
+
+    [HttpGet("stats/breakdown")]
+    public async Task<ActionResult<PuzzleBreakdownDto>> GetBreakdown()
+    {
+        return Ok(await _stats.GetBreakdownAsync(GetUserId()));
+    }
+
+    /// <summary>Die schwächsten Themen des Users (niedrigste Lösungsquote) — für „X schwächste Themen trainieren".</summary>
+    [HttpGet("stats/worst-themes")]
+    public async Task<ActionResult<List<ThemeStatDto>>> GetWorstThemes([FromQuery] int count = 5, [FromQuery] int minAttempts = 3)
+    {
+        count = Math.Clamp(count, 1, 20);
+        minAttempts = Math.Clamp(minAttempts, 1, 1000);
+        return Ok(await _stats.GetWorstThemesAsync(GetUserId(), count, minAttempts));
+    }
+
+    /// <summary>Alle im Puzzle-Pool vorkommenden Themen (sortiert) — Optionen für den Themen-Filter (Multiselect-Dropdown).</summary>
+    [AllowAnonymous]
+    [HttpGet("themes")]
+    public async Task<ActionResult<List<string>>> GetThemes()
+        => Ok(await _stats.GetAllThemesAsync());
+
+    // Parameter-Route NACH allen Literal-GET-Routen (rating-range/random/stats/history/elo-history/
+    // themes) — CLAUDE.md-Konvention: Literal-Routen vor Parameter-Routen, sonst matcht der Router
+    // z. B. „stats" als {id}.
+    [AllowAnonymous]
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var puzzle = await _puzzleService.GetByIdAsync(id);
+        if (puzzle == null)
+            return NotFound(new { message = "Puzzle not found." });
+        return Ok(puzzle);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-write")]
+    [HttpPost("{id}/attempt/anonymous")]
+    public async Task<IActionResult> RecordAnonymousAttempt(int id, [FromBody] AnonymousAttemptDto dto)
+    {
+        if (!IsValidSessionId(dto.SessionId))
+            return BadRequest(new { message = "Invalid session ID." });
+
+        try
+        {
+            var result = await _puzzleService.RecordAnonymousAttemptAsync(dto.SessionId, id,
+                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds, MoveLog = dto.MoveLog, ScreenWidth = dto.ScreenWidth, ScreenHeight = dto.ScreenHeight, VisualizationLevel = dto.VisualizationLevel, HintsUsed = dto.HintsUsed });
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-read")]
+    [HttpGet("stats/anonymous")]
+    public async Task<IActionResult> GetAnonymousStats([FromQuery] string sessionId)
+    {
+        if (!IsValidSessionId(sessionId))
+            return BadRequest(new { message = "Invalid session ID." });
+
+        return Ok(await _stats.GetAnonymousStatsAsync(sessionId));
+    }
+
+    [HttpPost("claim-session")]
+    public async Task<IActionResult> ClaimSession([FromBody] ClaimSessionDto dto)
+    {
+        if (!IsValidSessionId(dto.SessionId))
+            return BadRequest(new { message = "Invalid session ID." });
+
+        var claimed = await _stats.ClaimSessionAsync(GetUserId(), dto.SessionId);
+        return Ok(new { claimed });
+    }
+
+    private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
+
+    private static bool IsValidSessionId(string? sessionId)
+        => !string.IsNullOrEmpty(sessionId) && sessionId.Length <= 36 && SessionIdPattern.IsMatch(sessionId);
+}

@@ -11,6 +11,7 @@ using RookHub.Api.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Controllers.Games;
 
 namespace RookHub.Api.Tests.Games;
 

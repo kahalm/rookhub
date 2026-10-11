@@ -11,6 +11,7 @@ using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Services.Og;
 

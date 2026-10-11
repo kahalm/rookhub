@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Accounts;
 
 namespace RookHub.Api.Services.Accounts;
 

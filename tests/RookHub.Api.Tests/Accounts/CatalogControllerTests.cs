@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
+using RookHub.Api.Controllers.Courses;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Tests.Accounts;
 

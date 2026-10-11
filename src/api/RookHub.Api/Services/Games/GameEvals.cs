@@ -1,6 +1,7 @@
 using RookHub.Api.DTOs;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Library;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Services.Games;
 

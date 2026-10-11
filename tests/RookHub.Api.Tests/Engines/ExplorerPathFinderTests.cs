@@ -11,6 +11,8 @@ using RookHub.Api.Services;
 using Xunit.Abstractions;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Engines;
+using RookHub.Api.Controllers.Engines;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Tests.Engines;
 

@@ -4,7 +4,7 @@
 
 
 **Was**: RookHub bietet die PROVIDER-Seite des Lichess-External-Engine-Protokolls selbst an
-(`Controllers/ExternalEngineController.cs`, `Controllers/TokenController.cs`, `Services/EngineBroker/`). Der
+(`Controllers/EngineBroker/ExternalEngineController.cs`, `Controllers/Accounts/TokenController.cs`, `Services/EngineBroker/`). Der
 offizielle Provider (`example-provider.py`, Pin `d0eeb242`) läuft UNVERÄNDERT — nur `--lichess`/`--broker` zeigen
 auf RookHub (`ROOKHUB_URL`), und der Token ist ein RookHub-API-Token mit Scope `engine` (`ROOKHUB_API_TOKEN`,
 im Profil unter „API-Tokens“ anzulegen). Plan, Protokoll und Begründung: `docs/eigener-engine-broker.md`.

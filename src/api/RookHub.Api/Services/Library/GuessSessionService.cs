@@ -7,6 +7,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
+using RookHub.Api.DTOs.Library;
 
 namespace RookHub.Api.Services.Library;
 

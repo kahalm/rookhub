@@ -47,13 +47,13 @@ public static class GameMistakes
 
     /// <summary>Bewertung nach dem letzten Zug: die Endstellung (0.689.0, Zeile <c>Ply == plyCount</c>), wenn gerechnet und
     /// die Partie vollständig vorliegt — sonst wie bisher der gespielte Kandidat der letzten Zeile.</summary>
-    public static DTOs.GameEvalScoreDto? FinalWithEnd(IReadOnlyList<GameAnalysisPosition> ordered, DTOs.GameEvalPlyDto? lastRow,
+    public static DTOs.Games.GameEvalScoreDto? FinalWithEnd(IReadOnlyList<GameAnalysisPosition> ordered, DTOs.Games.GameEvalPlyDto? lastRow,
         int n, int plyCount)
     {
         if (n == plyCount && ordered.FirstOrDefault(p => p.Ply == plyCount) is { } end
             && GameEvals.PlyOf(end.Ply, end.Fen, end.GameMoveUci, end.CandidatesJson, end.Depth) is { } e
             && (e.Cp is not null || e.Mate is not null))
-            return new DTOs.GameEvalScoreDto { Cp = e.Cp, Mate = e.Mate };
+            return new DTOs.Games.GameEvalScoreDto { Cp = e.Cp, Mate = e.Mate };
         return GameEvals.FinalOf(lastRow, n);
     }
 
@@ -66,7 +66,7 @@ public static class GameMistakes
         var ordered = positions.OrderBy(p => p.Ply).ToList();
         var n = Math.Max(0, Math.Min(plyCount, ordered.Count));
         var byPly = ordered.Where(p => p.Ply >= 0 && p.Ply < n).ToDictionary(p => p.Ply);
-        var rows = new Dictionary<int, DTOs.GameEvalPlyDto>();
+        var rows = new Dictionary<int, DTOs.Games.GameEvalPlyDto>();
         foreach (var p in byPly.Values)
             if (GameEvals.PlyOf(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth) is { } dto) rows[p.Ply] = dto;
         var final = FinalWithEnd(ordered, rows.Count > 0 ? rows[rows.Keys.Max()] : null, n, plyCount);
@@ -118,7 +118,7 @@ public static class GameMistakes
     }
 
     /// <summary>Die Engine-Linie des besten Kandidaten; ohne gespeicherte Variante (Analysen vor 0.521.0) nur der Zug.</summary>
-    private static IReadOnlyList<string>? LineOf(DTOs.GameEvalPlyDto row)
+    private static IReadOnlyList<string>? LineOf(DTOs.Games.GameEvalPlyDto row)
         => row.Candidates.FirstOrDefault()?.Pv is { Count: > 0 } pv ? pv
             : string.IsNullOrEmpty(row.BestUci) ? null : new[] { row.BestUci };
 

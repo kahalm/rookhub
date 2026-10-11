@@ -9,6 +9,8 @@ using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Games;
+using RookHub.Api.DTOs.Scoresheet;
 
 namespace RookHub.Api.Services.Games;
 

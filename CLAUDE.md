@@ -40,7 +40,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 
 ### Kritische Abhängigkeiten zwischen den Projekten
 - `Services/Tournaments/CrawlerProxyService.cs` – HTTP-Client zum Crawler, muss Crawler-Routen kennen
-- `Controllers/TournamentProxyController.cs` – Mappt RookHub-Routen auf Crawler-Routen (RookHub-`/api/tournaments/crawl*` → Crawler-`/api/crawl*`)
+- `Controllers/Tournaments/TournamentProxyController.cs` – Mappt RookHub-Routen auf Crawler-Routen (RookHub-`/api/tournaments/crawl*` → Crawler-`/api/crawl*`)
 - `Services/Social/SchachBotWebhookService.cs` – HMAC-signierte Webhooks an den Bot (Tagespuzzle + Wochenpost-Progress)
 - Crawler-Endpoint-Änderungen müssen in den beiden ersten Dateien nachgezogen werden
 - Crawler-Response-Strukturen werden als `JsonElement` durchgereicht (kein festes DTO-Mapping)
@@ -152,15 +152,11 @@ engine-provider/            Docker-Setup für den RECHNER DES NUTZERS: verbindet
                             Analysebrett (läuft NICHT im Stack)
 src/
   api/RookHub.Api/
-    Controllers/            Auth, Profile, Friend, Repertoire, Extension, TournamentProxy,
-                            TournamentFavorite, TournamentMonitor, Subscription, BookPuzzle,
-                            Course, Calculation, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
-                            Puzzle, Admin, Me, BotStats, Engine, ExternalEngine, Token, Club,
-                            BaseApiController
+    Controllers/            <Bereich>/ wie Services/; direkt darin BaseApiController + Infrastruktur (ClientLog, Ci, BotHeartbeat)
     Services/               <Bereich>/ je Fachbereich (siehe „Arbeitsweise“ → Dienste nach Fachbereich),
                             direkt darin nur gemeinsame Bausteine (PGN/FEN, PeriodicWorker, Rate-Limiter, LLM-Clients)
     Models/                 EF-Entities (1:1 zum Schema oben)
-    DTOs/                   Request/Response-Typen je Endpoint-Familie
+    DTOs/                   <Bereich>/ Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
     Program.cs              Startup: DB, JWT+ApiToken Policy-Scheme, CORS, Swagger,
                             Auto-Migration, Health-Endpoint, BackgroundServices,
@@ -290,7 +286,8 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   LSP-Werkzeug (`findReferences`) suchen, nicht per grep.
 - **Tests spiegeln die Bereiche**: `tests/RookHub.Api.Tests/<Bereich>/`, Namespace `RookHub.Api.Tests.<Bereich>`; geteilte
   Hilfen (`TestServices`, `TestLogger`, Fakes …) und Infrastruktur-Tests liegen direkt im Testordner.
-- **Dienste liegen nach Fachbereich in Unterordnern** (`Services/<Bereich>/`, Namespace `RookHub.Api.Services.<Bereich>`,
+- **Dienste, Controller, DTOs und Tests liegen nach Fachbereich in Unterordnern** (`Services/<Bereich>/`,
+  `Controllers/<Bereich>/`, `DTOs/<Bereich>/`, `tests/…/<Bereich>/`; Namespace jeweils `….<Bereich>`, z. B. `RookHub.Api.Services.<Bereich>`,
   Nutzer binden ihn per `using` ein — kein `global using`). Bereiche: Accounts, Chessable, ChessBase, Club, Courses,
   EngineBroker, Engines, Games, Kids, League, Library, Og, Prep, Puzzles, Repertoires, Scoresheet, Social, Tactics,
   Tournaments, TournamentDirectory. **Gemeinsame Bausteine bleiben direkt in `Services/`** (PGN/FEN-Werkzeuge,

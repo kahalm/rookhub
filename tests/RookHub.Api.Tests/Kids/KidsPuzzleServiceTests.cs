@@ -8,6 +8,8 @@ using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Kids;
+using RookHub.Api.Controllers.Kids;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Tests.Kids;
 

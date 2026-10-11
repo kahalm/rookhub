@@ -11,6 +11,8 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Tournaments;
+using RookHub.Api.DTOs.Tournaments;
 
 namespace RookHub.Api.Tests.Social;
 

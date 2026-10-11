@@ -6,6 +6,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Courses;
+using RookHub.Api.DTOs.Puzzles;
 
 namespace RookHub.Api.Services.Puzzles;
 

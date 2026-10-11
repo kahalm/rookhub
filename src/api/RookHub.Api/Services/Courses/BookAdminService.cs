@@ -4,6 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Kids;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Services.Courses;
 

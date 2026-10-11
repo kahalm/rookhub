@@ -10,6 +10,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Tests.Chessable;
 

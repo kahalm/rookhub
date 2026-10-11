@@ -11,6 +11,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Controllers.Tournaments;
 
 namespace RookHub.Api.Tests.Tournaments;
 

@@ -2,6 +2,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.Games;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Tests.Games;
 

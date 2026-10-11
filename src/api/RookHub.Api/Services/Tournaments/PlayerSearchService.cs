@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Tournaments;
 
 namespace RookHub.Api.Services.Tournaments;
 

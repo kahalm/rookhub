@@ -12,6 +12,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Prep;
+using RookHub.Api.Controllers.Prep;
 
 namespace RookHub.Api.Tests.Prep;
 

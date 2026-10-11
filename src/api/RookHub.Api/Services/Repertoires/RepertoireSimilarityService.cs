@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Repertoires;
 using static RookHub.Api.Services.Repertoires.RepertoireLineSource;
 
 namespace RookHub.Api.Services.Repertoires;

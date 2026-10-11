@@ -8,6 +8,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Services.Courses;
 

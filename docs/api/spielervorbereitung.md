@@ -6,7 +6,7 @@
 Ein Gegner lässt sich aus dem ganzen Partiebestand vorbereiten (ChessBase-Megabase + Lumbras GigaBase), nicht nur aus
 den Tiroler Ligen. Rechte: `prep.view` (suchen, Karte lesen), `prep.manage` (einspielen, unsichere Konten, Konto-Suche
 und -Pflege) — Admin erfüllt alles. Menüpunkt „Analyse & Sammlung" → „Gegner vorbereiten" nur mit `prep.view`.
-Code: `Controllers/PrepController.cs`, `Services/Prep/*`, Oberfläche `features/prep/*` (siehe `src/frontend/CLAUDE.md`).
+Code: `Controllers/Prep/PrepController.cs`, `Services/Prep/*`, Oberfläche `features/prep/*` (siehe `src/frontend/CLAUDE.md`).
 
 **Partiebestand (0.631.0).** Tabellen `PrepPlayers` (Identität `KeyHash` aus „#FIDE" bzw. NameKey, eindeutig),
 `PrepEvents`, `PrepGames` (eine Zeile je Partie, `Sources` Bit 1 Mega / 2 Lumbra, `Moves` = SAN mit Leerzeichen,

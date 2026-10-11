@@ -1,0 +1,96 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace RookHub.Api.DTOs.Accounts;
+
+public class ProfileDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? DisplayName { get; set; }
+    public string? FideId { get; set; }
+    public string? ChessResultsId { get; set; }
+    public string? ChessComUsername { get; set; }
+    public string? LichessUsername { get; set; }
+
+    // Discord-Verknüpfung (Username zur Anzeige; ID ist die eindeutige Identität)
+    public string? DiscordId { get; set; }
+    public string? DiscordUsername { get; set; }
+
+    // User Preferences
+    public string? BoardTheme { get; set; }
+    public string? PieceSet { get; set; }
+    public int? StockfishDepth { get; set; }
+    public string? PuzzleDifficulty { get; set; }
+    public int? BookStockfishDepth { get; set; }
+}
+
+public class UpdateProfileDto
+{
+    /// <summary>
+    /// E-Mail-Adresse. <c>null</c> = unverändert lassen (z. B. reine Einstellungs-Saves).
+    /// Leerer String = hinterlegte E-Mail entfernen. Format-/Dublettenprüfung im Service.
+    /// </summary>
+    [MaxLength(255)]
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// Aktuelles Passwort — Pflicht, sobald sich die E-Mail TATSÄCHLICH ändert (auch Erst-Setzen
+    /// und Entfernen): sie ist der Reset-Anker, ohne Nachfrage wurde jede kurz erbeutete Sitzung
+    /// per „Passwort vergessen" zur dauerhaften Kontoübernahme. Bei unveränderter E-Mail ignoriert.
+    /// </summary>
+    [MaxLength(1024)]   // wie die Passwort-Obergrenze der Registrierung
+    public string? CurrentPassword { get; set; }
+
+    [MaxLength(50)]
+    public string? FirstName { get; set; }
+
+    [MaxLength(50)]
+    public string? LastName { get; set; }
+
+    [MaxLength(50)]
+    public string? DisplayName { get; set; }
+
+    [MaxLength(20), RegularExpression(@"^\d*$", ErrorMessage = "FideId must be numeric.")]
+    public string? FideId { get; set; }
+
+    [MaxLength(20), RegularExpression(@"^\d*$", ErrorMessage = "ChessResultsId must be numeric.")]
+    public string? ChessResultsId { get; set; }
+
+    [MaxLength(50), RegularExpression(@"^[a-zA-Z0-9_-]*$", ErrorMessage = "ChessComUsername may only contain letters, digits, hyphens and underscores.")]
+    public string? ChessComUsername { get; set; }
+
+    [MaxLength(50), RegularExpression(@"^[a-zA-Z0-9_-]*$", ErrorMessage = "LichessUsername may only contain letters, digits, hyphens and underscores.")]
+    public string? LichessUsername { get; set; }
+
+    // User Preferences
+    [MaxLength(20)]
+    public string? BoardTheme { get; set; }
+
+    [MaxLength(20)]
+    public string? PieceSet { get; set; }
+
+    [Range(1, 24)]
+    public int? StockfishDepth { get; set; }
+
+    [MaxLength(20)]
+    public string? PuzzleDifficulty { get; set; }
+
+    [Range(1, 24)]
+    public int? BookStockfishDepth { get; set; }
+}
+
+public class LinkDiscordDto
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+}
+
+/// <summary>Bestätigung für das Löschen des eigenen Accounts — verlangt das aktuelle Passwort.</summary>
+public class DeleteAccountDto
+{
+    [Required]
+    public string Password { get; set; } = string.Empty;
+}

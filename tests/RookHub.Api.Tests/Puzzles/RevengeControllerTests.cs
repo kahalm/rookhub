@@ -9,6 +9,8 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Puzzles;
+using RookHub.Api.DTOs.Puzzles;
 
 namespace RookHub.Api.Tests.Puzzles;
 

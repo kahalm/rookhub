@@ -3,6 +3,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Services.Og;
+using RookHub.Api.DTOs.Games;
+using RookHub.Api.Controllers.Og;
 
 namespace RookHub.Api.Tests.Og;
 

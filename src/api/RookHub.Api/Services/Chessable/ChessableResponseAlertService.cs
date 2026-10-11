@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using Serilog.Context;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Services.Chessable;
 

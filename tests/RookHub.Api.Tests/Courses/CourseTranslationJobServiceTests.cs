@@ -9,6 +9,8 @@ using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Tests.Games;
+using RookHub.Api.Controllers.Courses;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Tests.Courses;
 

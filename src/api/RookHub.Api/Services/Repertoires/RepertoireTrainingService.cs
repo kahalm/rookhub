@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Services.Repertoires;
 

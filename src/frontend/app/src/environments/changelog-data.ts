@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.10", date: "2026-10-11", changes: [
+    { en: "Code structure: the 72 server controllers and 57 data-transfer files now live in the same area folders as the services. No change in behaviour.",
+      de: "Code-Struktur: die 72 Server-Controller und 57 Datenobjekt-Dateien liegen jetzt in denselben Bereichsordnern wie die Dienste. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.753.9", date: "2026-10-11", changes: [
     { en: "Code structure: the 346 server test files now live in the same area folders as the services they test. No change to the app.",
       de: "Code-Struktur: die 346 Server-Testdateien liegen jetzt in denselben Bereichsordnern wie die Dienste, die sie prüfen. Keine Änderung an der App." },

@@ -18,6 +18,9 @@ using RookHub.Api.Services.EngineBroker;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Controllers.EngineBroker;
+using RookHub.Api.DTOs.EngineBroker;
+using RookHub.Api.DTOs.Engines;
 
 namespace RookHub.Api.Tests.EngineBroker;
 

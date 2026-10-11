@@ -10,6 +10,8 @@ using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Repertoires;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Services.Chessable;
 

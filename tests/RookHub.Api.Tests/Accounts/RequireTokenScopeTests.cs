@@ -10,6 +10,8 @@ using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Controllers.Chessable;
+using RookHub.Api.Controllers.EngineBroker;
 
 namespace RookHub.Api.Tests.Accounts;
 

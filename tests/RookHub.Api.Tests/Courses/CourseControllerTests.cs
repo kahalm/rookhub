@@ -14,6 +14,9 @@ using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Controllers.Accounts;
+using RookHub.Api.Controllers.Courses;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Tests.Courses;
 
@@ -646,7 +649,7 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(new[] { g1, g2 }.OrderBy(x => x), ids.OrderBy(x => x));   // 999 ignoriert
 
         // GetBooks liefert die Freigaben mit.
-        var books = Unwrap<List<DTOs.BookDto>>(await admin.GetBooks());
+        var books = Unwrap<List<DTOs.Courses.BookDto>>(await admin.GetBooks());
         Assert.Equal(2, books.Single(b => b.Id == book.Id).AccessGroupIds.Count);
 
         // Ersetzen auf nur g1.

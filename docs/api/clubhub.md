@@ -109,7 +109,7 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   geteilten Gerät liegen), `noindex`. Blatt löschen entfernt Kontakte, Notizen und Anwesenheit. Konto-Löschung
   (`ProfileService.DeleteAccountAsync`) löst die Verknüpfung und entfernt Trainer-Zuteilungen — das Blatt gehört dem Verein
   und bleibt; Notizen bleiben ohne Autorennamen.
-- **Endpunkte** (`Controllers/ClubController.cs`, alle `[Authorize]`): `GET/POST /api/club/members`, `GET/PUT/DELETE
+- **Endpunkte** (`Controllers/Club/ClubController.cs`, alle `[Authorize]`): `GET/POST /api/club/members`, `GET/PUT/DELETE
   …/members/{id}`, `POST …/members/{id}/notes`, `DELETE …/notes/{noteId}`, `POST …/link-code`, `DELETE …/link`, `GET
   …/progress`, `POST/GET/DELETE …/members/{id}/photo`, `PUT …/members/{id}/photo/face`; `GET/POST /api/club/groups`, `GET/PUT/DELETE …/groups/{id}`, `POST/DELETE …/groups/{id}/trainers[/{userId}]`
   (Zuteilen über den Benutzernamen), `POST/DELETE …/groups/{id}/members/{memberId}`, `POST …/groups/{id}/sessions`, `PUT

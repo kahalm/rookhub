@@ -4,6 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.DTOs.EngineBroker;
 
 namespace RookHub.Api.Services.EngineBroker;
 

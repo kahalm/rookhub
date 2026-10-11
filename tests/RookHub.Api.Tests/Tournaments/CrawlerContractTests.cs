@@ -126,7 +126,7 @@ public class CrawlerContractTests
         "src/api/RookHub.Api/Services/Social/BotStatsService.cs",
         "src/api/RookHub.Api/Services/Tournaments/RoundMonitorService.cs",
         "src/api/RookHub.Api/Services/Tournaments/CrawlQueueClient.cs",
-        "src/api/RookHub.Api/Controllers/TournamentMonitorController.cs",
+        "src/api/RookHub.Api/Controllers/Tournaments/TournamentMonitorController.cs",
     ];
 
     /// <summary>

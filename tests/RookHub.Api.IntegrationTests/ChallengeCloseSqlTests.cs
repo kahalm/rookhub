@@ -8,6 +8,7 @@ using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Puzzles;
 
 namespace RookHub.Api.IntegrationTests;
 

@@ -62,7 +62,7 @@ public class ChessableProxyServiceTests
             "{\"bid\":\"424242\",\"name\":\"Course X\",\"mode\":\"None\",\"chapterCount\":1,\"lineCount\":2,\"pgn\":\"[Event \\\"x\\\"]\\n1. e4 *\"}");
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
 
-        var chapters = new List<RookHub.Api.DTOs.ChessableIngestChapter>
+        var chapters = new List<RookHub.Api.DTOs.Chessable.ChessableIngestChapter>
         {
             new("{\"list\":{\"name\":\"Ch1\"}}", new List<string> { "{\"game\":{}}" })
         };
@@ -83,7 +83,7 @@ public class ChessableProxyServiceTests
             "{\"bid\":\"424242\",\"name\":\"C\",\"mode\":\"FirstKeyMove\",\"chapterCount\":1,\"lineCount\":1,\"pgn\":\"1. e4 *\"}");
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
 
-        var chapters = new List<RookHub.Api.DTOs.ChessableIngestChapter>
+        var chapters = new List<RookHub.Api.DTOs.Chessable.ChessableIngestChapter>
         {
             new("{\"list\":{}}", new List<string> { null! }, new List<string> { "11" })
         };

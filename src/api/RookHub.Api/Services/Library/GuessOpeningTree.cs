@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Library;
 
 namespace RookHub.Api.Services.Library;
 

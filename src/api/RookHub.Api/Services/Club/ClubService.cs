@@ -7,6 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Scoresheet;
+using RookHub.Api.DTOs.Club;
 
 namespace RookHub.Api.Services.Club;
 

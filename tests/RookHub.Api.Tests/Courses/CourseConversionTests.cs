@@ -148,7 +148,7 @@ public class CourseConversionTests : IDisposable
     [Fact]
     public async Task ConvertRepertoireToCourse_EmptyRepertoire_ThrowsWithCode_AndKeepsRepertoire()
     {
-        var rep = await _repertoires.CreateAsync(userId: 1, new DTOs.CreateRepertoireDto { Name = "Nimzo" });
+        var rep = await _repertoires.CreateAsync(userId: 1, new DTOs.Repertoires.CreateRepertoireDto { Name = "Nimzo" });
 
         var ex = await Assert.ThrowsAsync<CourseConversionException>(
             () => _conversion.ConvertRepertoireToCourseAsync(userId: 1, repertoireId: rep.Id));

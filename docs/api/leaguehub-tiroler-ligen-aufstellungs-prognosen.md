@@ -200,7 +200,7 @@ Rollenverwaltung an).
   `SameGamePrefixPlies` (16) Halbzüge. Die Analyse der alten geht. **Globaler Query-Filter** `ArchivedAt == null` auf `LeagueClubGame`:
   archivierte sind überall unsichtbar; `IgnoreQueryFilters()` nur in Konto löschen (`ProfileService`), Rückbau eines Teilen-Links
   (`DeleteByShareAsync`) und Zuordnen nach dem Anmelden (Claims). Antwort von `POST …/club/games`: `replaced` = Zahl archivierter.
-- **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
+- **Endpunkte** (`Controllers/League/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/rebuild`, `POST /api/league/admin/chessresults/import` (eine chess-results-Liga je Saison über den Crawler,

@@ -12,6 +12,8 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Controllers.Engines;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Tests.Engines;
 

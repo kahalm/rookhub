@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services.EngineBroker;
+using RookHub.Api.DTOs.EngineBroker;
 
 namespace RookHub.Api.Tests.EngineBroker;
 

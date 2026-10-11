@@ -6,6 +6,8 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.DTOs.TournamentDirectory;
+using RookHub.Api.Controllers.TournamentDirectory;
 
 namespace RookHub.Api.Tests.Accounts;
 

@@ -12,6 +12,8 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Controllers.Accounts;
+using RookHub.Api.DTOs.Accounts;
 
 namespace RookHub.Api.Tests.Accounts;
 
@@ -89,7 +91,7 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.Impersonate(target.Id) as OkObjectResult;
 
         Assert.NotNull(result);
-        var dto = Assert.IsType<RookHub.Api.DTOs.AuthResponseDto>(result!.Value);
+        var dto = Assert.IsType<RookHub.Api.DTOs.Accounts.AuthResponseDto>(result!.Value);
         Assert.True(dto.Impersonating);
         Assert.Equal(target.Id, dto.UserId);
         Assert.Equal("victim", dto.Username);
@@ -462,7 +464,7 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.ImportBooks(new List<Microsoft.AspNetCore.Http.IFormFile> { file }, default) as OkObjectResult;
 
         Assert.NotNull(result);
-        var dto = Assert.IsType<RookHub.Api.DTOs.BookImportResultDto>(result.Value);
+        var dto = Assert.IsType<RookHub.Api.DTOs.Courses.BookImportResultDto>(result.Value);
         Assert.Equal(1, dto.TotalImported);
         Assert.Single(dto.Books);
         Assert.Equal(1, await _db.Books.CountAsync());
@@ -494,7 +496,7 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.GetBooks() as OkObjectResult;
 
         Assert.NotNull(result);
-        var books = Assert.IsType<List<RookHub.Api.DTOs.BookDto>>(result.Value);
+        var books = Assert.IsType<List<RookHub.Api.DTOs.Courses.BookDto>>(result.Value);
         var dto = Assert.Single(books);
         Assert.Equal(2, dto.PuzzleCount);
     }
@@ -510,7 +512,7 @@ public class AdminControllerTests : IDisposable
         _db.Books.AddRange(B("global.pgn", null), B($"chessable-u{u1.Id}-1.pgn", u1.Id), B($"chessable-u{u2.Id}-1.pgn", u2.Id));
         await _db.SaveChangesAsync();
 
-        var books = Assert.IsType<List<RookHub.Api.DTOs.BookDto>>(Assert.IsType<OkObjectResult>(await _controller.GetBooks()).Value);
+        var books = Assert.IsType<List<RookHub.Api.DTOs.Courses.BookDto>>(Assert.IsType<OkObjectResult>(await _controller.GetBooks()).Value);
 
         var global = books.Single(b => b.FileName == "global.pgn");
         Assert.Null(global.OwnerUserId);
@@ -526,7 +528,7 @@ public class AdminControllerTests : IDisposable
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
-        var result = await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto
+        var result = await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.Courses.UpdateBookDto
         {
             ForDaily = true,
             ForRandom = true,
@@ -553,10 +555,10 @@ public class AdminControllerTests : IDisposable
         await _db.SaveChangesAsync();
         Assert.Equal(BookKind.Puzzle, book.Kind); // Default
 
-        var result = await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { Kind = BookKind.Study }) as OkObjectResult;
+        var result = await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.Courses.UpdateBookDto { Kind = BookKind.Study }) as OkObjectResult;
 
         Assert.NotNull(result);
-        var dto = Assert.IsType<RookHub.Api.DTOs.BookDto>(result!.Value);
+        var dto = Assert.IsType<RookHub.Api.DTOs.Courses.BookDto>(result!.Value);
         Assert.Equal(BookKind.Study, dto.Kind);
         var updated = await _db.Books.FindAsync(book.Id);
         Assert.Equal(BookKind.Study, updated!.Kind);
@@ -571,16 +573,16 @@ public class AdminControllerTests : IDisposable
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
-        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { IsPublic = true, DisplayName = "Neu" });
+        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.Courses.UpdateBookDto { IsPublic = true, DisplayName = "Neu" });
         var updated = await _db.Books.FindAsync(book.Id);
         Assert.Equal(1200, updated!.MinElo);
         Assert.Equal(1600, updated.MaxElo);
 
         // Eine Grenze einzeln ändern lässt die andere stehen, 0 entfernt sie.
-        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { MaxElo = 1800 });
+        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.Courses.UpdateBookDto { MaxElo = 1800 });
         Assert.Equal(1200, updated.MinElo);
         Assert.Equal(1800, updated.MaxElo);
-        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { MinElo = 0 });
+        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.Courses.UpdateBookDto { MinElo = 0 });
         Assert.Null(updated.MinElo);
         Assert.Equal(1800, updated.MaxElo);
     }
@@ -592,7 +594,7 @@ public class AdminControllerTests : IDisposable
     [InlineData(3501, false)]
     public void UpdateBookDto_EloRange_IsValidated(int elo, bool valid)
     {
-        foreach (var dto in new[] { new RookHub.Api.DTOs.UpdateBookDto { MinElo = elo }, new RookHub.Api.DTOs.UpdateBookDto { MaxElo = elo } })
+        foreach (var dto in new[] { new RookHub.Api.DTOs.Courses.UpdateBookDto { MinElo = elo }, new RookHub.Api.DTOs.Courses.UpdateBookDto { MaxElo = elo } })
         {
             var ok = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
                 dto, new System.ComponentModel.DataAnnotations.ValidationContext(dto), null, validateAllProperties: true);
@@ -614,7 +616,7 @@ public class AdminControllerTests : IDisposable
     [Fact]
     public async Task UpdateBook_NotFound()
     {
-        var result = await _controller.UpdateBook(9999, new RookHub.Api.DTOs.UpdateBookDto { ForDaily = true });
+        var result = await _controller.UpdateBook(9999, new RookHub.Api.DTOs.Courses.UpdateBookDto { ForDaily = true });
 
         Assert.IsType<NotFoundObjectResult>(result);
     }

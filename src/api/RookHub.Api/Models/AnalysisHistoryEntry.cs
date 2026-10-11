@@ -25,7 +25,7 @@ public class AnalysisHistoryEntry
     /// <summary>Länge der Hauptlinie.</summary>
     public int MoveCount { get; set; }
 
-    /// <summary>Zugbaum in der flachen Form von <see cref="DTOs.AnalysisTreeDto"/> (geprüft, JSON); <c>null</c> bei
+    /// <summary>Zugbaum in der flachen Form von <see cref="DTOs.Engines.AnalysisTreeDto"/> (geprüft, JSON); <c>null</c> bei
     /// Einträgen von 0.603.0 — dort ist <see cref="Moves"/> die ganze Analyse.</summary>
     public string? TreeJson { get; set; }
 

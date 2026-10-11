@@ -15,6 +15,9 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Controllers.Puzzles;
+using RookHub.Api.Controllers.Courses;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Tests.Puzzles;
 

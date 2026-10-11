@@ -5,13 +5,14 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.DTOs.Chessable;
 
 namespace RookHub.Api.Services.Chessable;
 
 /// <summary>
 /// Geteilte Helfer rund um die Chessable-Import-Warteschlange, die sowohl der User-Controller
-/// (<see cref="Controllers.ChessableController"/>) als auch der Admin-Controller
-/// (<see cref="Controllers.ChessableAdminController"/>) brauchen: Einreihen des fairen Nächst-Tickets,
+/// (<see cref="Controllers.Chessable.ChessableController"/>) als auch der Admin-Controller
+/// (<see cref="Controllers.Chessable.ChessableAdminController"/>) brauchen: Einreihen des fairen Nächst-Tickets,
 /// faire globale Warteschlangen-Positionen, Kurs-Import-Status-Anreicherung, Eigentumsprüfung und die
 /// DTO-Mapper. Scoped → teilt sich pro Request denselben <see cref="AppDbContext"/> wie der Controller.
 /// </summary>

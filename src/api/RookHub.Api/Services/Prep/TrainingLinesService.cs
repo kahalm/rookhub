@@ -9,6 +9,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Services.Prep;
 

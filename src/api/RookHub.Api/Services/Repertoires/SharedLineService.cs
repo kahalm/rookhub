@@ -8,6 +8,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Services.Repertoires;
 

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Tests;
 

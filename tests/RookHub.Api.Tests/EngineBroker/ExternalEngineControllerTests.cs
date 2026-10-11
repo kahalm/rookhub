@@ -9,6 +9,8 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.EngineBroker;
+using RookHub.Api.Controllers.EngineBroker;
+using RookHub.Api.DTOs.EngineBroker;
 
 namespace RookHub.Api.Tests.EngineBroker;
 

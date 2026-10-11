@@ -8,6 +8,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.IntegrationTests;
 

@@ -9,6 +9,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Controllers.Games;
 
 namespace RookHub.Api.Tests.Og;
 

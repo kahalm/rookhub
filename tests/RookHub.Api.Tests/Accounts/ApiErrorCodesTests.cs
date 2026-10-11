@@ -12,6 +12,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Filters;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.DTOs.Accounts;
 
 namespace RookHub.Api.Tests.Accounts;
 

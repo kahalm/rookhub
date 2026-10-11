@@ -6,7 +6,7 @@ namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// EINE Quelle für die Lese-Zugriffsregel auf ein <see cref="Book"/> in den OFFENEN
-/// Buch-Puzzle-Endpoints (<see cref="Controllers.BookPuzzleController"/>).
+/// Buch-Puzzle-Endpoints (<see cref="Controllers.Courses.BookPuzzleController"/>).
 ///
 /// <para>Hintergrund: der Buch-/Kurs-Inhalt war über die anonymen Endpoints vollständig abziehbar —
 /// <c>GET /api/book-puzzles/books</c> listete ALLE Bücher (inkl. persönlicher Chessable-Importe fremder

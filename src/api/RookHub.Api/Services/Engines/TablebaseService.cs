@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Engines;
 
 namespace RookHub.Api.Services.Engines;
 

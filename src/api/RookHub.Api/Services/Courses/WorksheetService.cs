@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.Courses;
 
 namespace RookHub.Api.Services.Courses;
 

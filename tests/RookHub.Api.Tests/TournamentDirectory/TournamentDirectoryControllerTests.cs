@@ -10,6 +10,8 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.TournamentDirectory;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.Services.Social;
+using RookHub.Api.DTOs.TournamentDirectory;
+using RookHub.Api.Controllers.TournamentDirectory;
 
 namespace RookHub.Api.Tests.TournamentDirectory;
 

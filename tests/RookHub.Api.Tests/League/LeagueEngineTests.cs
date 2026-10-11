@@ -436,7 +436,7 @@ public class LeagueEngineTests
             new LeaguePlayer { Tnr = 2, Team = "Z", Name = "Z1, Z", NameKey = "z1, z", FideId = "Z1" });   // andere Liga
         await db.SaveChangesAsync();
         var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", null, default);
-        var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
+        var controller = new RookHub.Api.Controllers.League.LeagueShareController(svc);
         var sources = new LeagueGameSources(db);
         var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Sources(s!.Token, sources, default));
         var body = (System.Text.Json.Nodes.JsonObject)ok.Value!;
@@ -469,9 +469,9 @@ public class LeagueEngineTests
         db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "B1", Site = "lichess", UserName = "sicher1", Url = "u", Confidence = "sicher" });
         await db.SaveChangesAsync();
         var s = (await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", null, default))!;
-        var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
+        var controller = new RookHub.Api.Controllers.League.LeagueShareController(svc);
         var accounts = new LeagueOnlineAccountService(db);
-        var req = new RookHub.Api.Controllers.LeagueShareController.ShareAccountRequest("lichess", "https://lichess.org/@/NeuerB3", " vom Gegner selbst ");
+        var req = new RookHub.Api.Controllers.League.LeagueShareController.ShareAccountRequest("lichess", "https://lichess.org/@/NeuerB3", " vom Gegner selbst ");
 
         var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.AddAccount(s.Token, "B3", req, accounts, default));
         Assert.Equal("NeuerB3", (string?)((System.Text.Json.Nodes.JsonObject)ok.Value!)["user"]);

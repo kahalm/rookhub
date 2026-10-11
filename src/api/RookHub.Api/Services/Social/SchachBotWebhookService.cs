@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using RookHub.Api.DTOs;
+using RookHub.Api.DTOs.Courses;
+using RookHub.Api.DTOs.Puzzles;
 
 namespace RookHub.Api.Services.Social;
 

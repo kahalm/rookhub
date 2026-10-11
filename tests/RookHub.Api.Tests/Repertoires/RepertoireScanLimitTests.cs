@@ -14,6 +14,8 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Controllers.Repertoires;
+using RookHub.Api.DTOs.Repertoires;
 
 namespace RookHub.Api.Tests.Repertoires;
 

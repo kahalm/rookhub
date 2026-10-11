@@ -4,6 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
+using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Services.Club;
 
