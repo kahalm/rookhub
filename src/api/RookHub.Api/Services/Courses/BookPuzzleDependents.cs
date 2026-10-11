@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Räumt alles ab, was an Linien (<see cref="BookPuzzle"/>) hängt, die gerade gelöscht werden — EINE Liste

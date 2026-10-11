@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Welche Halbzug-Nummer (<see cref="Models.CommentText.Ply"/>) in einem KURS-Satz welches Feld der

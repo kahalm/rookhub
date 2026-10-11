@@ -6,6 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using Serilog.Context;
+using RookHub.Api.Services.Courses;
 
 namespace RookHub.Api.Services.Chessable;
 

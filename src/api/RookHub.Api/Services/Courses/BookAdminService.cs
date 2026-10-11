@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Admin-Verwaltung der Bücher (Kurs-Quelle): Liste inkl. Gruppen-Freigaben, Gruppen-Zugriff

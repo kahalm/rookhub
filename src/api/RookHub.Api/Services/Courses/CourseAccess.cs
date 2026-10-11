@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// EINE Quelle für die Kurs-Zugriffsregel auf ein <see cref="Book"/> (strukturierter Kurs:

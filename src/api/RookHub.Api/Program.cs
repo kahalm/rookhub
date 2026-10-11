@@ -18,6 +18,7 @@ using Serilog.Events;
 using Elastic.Serilog.Sinks;
 using RookHub.Api.Services.TournamentDirectory;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Courses;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()

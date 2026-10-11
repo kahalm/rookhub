@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>Warum ein laufender Kurs-Uebersetzungsauftrag abgebrochen wurde.</summary>
 public enum CourseTranslationStop

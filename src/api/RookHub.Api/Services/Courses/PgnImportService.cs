@@ -8,7 +8,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Serverseitiges Parsen von ChessBase-/Standard-PGN-Dateien zu Buch-Puzzles und deren Persistenz.

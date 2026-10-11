@@ -8,6 +8,7 @@ using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.TournamentDirectory;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Courses;
 
 namespace RookHub.Api.IntegrationTests;
 

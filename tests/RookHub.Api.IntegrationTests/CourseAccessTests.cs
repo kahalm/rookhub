@@ -6,6 +6,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using System.Data.Common;
 using Xunit;
+using RookHub.Api.Services.Courses;
 
 namespace RookHub.Api.IntegrationTests;
 

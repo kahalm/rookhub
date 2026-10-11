@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Version der Import-/Aufbereitungs-Pipeline (Roh-PGN → gespeicherte <see cref="Models.BookPuzzle"/>

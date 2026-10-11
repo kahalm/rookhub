@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Weckt periodisch (Standard alle 5 min, via <c>CalcSeries:AnnounceIntervalSeconds</c>, 60..3600) und

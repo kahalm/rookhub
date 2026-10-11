@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Persistente Flashcard-Markierungen: einzelne KURS-Linien (BookPuzzleId) bzw. REPERTOIRE-Linien

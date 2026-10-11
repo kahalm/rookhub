@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.752.5", date: "2026-10-11", changes: [
+    { en: "Code structure: the 31 server services for courses, books, calculation, worksheets, course translation now live in their own folder. No change in behaviour.",
+      de: "Code-Struktur: die 31 Server-Dienste für Kurse, Bücher, Kalkulation, Aufgabenblätter, Kurs-Übersetzung liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.752.4", date: "2026-10-11", changes: [
     { en: "Code structure: the 27 server services of the Chessable integration (import, sinks, course refresh) now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 27 Server-Dienste der Chessable-Anbindung (Import, Senken, Kurs-Refresh) liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

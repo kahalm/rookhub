@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// „Katalog": ein Besitzer (aktuell nur Admins) gibt einzelnen Usern und/oder Gruppen die LISTE

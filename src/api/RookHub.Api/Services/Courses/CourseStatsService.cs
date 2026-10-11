@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Aggregierte Kurs-Statistik des Users über ALLE Kurse (Pendant zu <see cref="PuzzleStatsService"/>,

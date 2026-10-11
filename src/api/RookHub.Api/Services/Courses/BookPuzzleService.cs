@@ -6,7 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Geschäftslogik rund um Buch-/Tagespuzzles (vormals inline im BookPuzzleController).

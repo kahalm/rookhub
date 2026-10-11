@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>Ein uebersetzbarer Text einer Kurs-Linie: Stelle (<see cref="CourseTextSlots"/>), der
 /// normalisierte Text und sein Fingerabdruck (<see cref="CourseTextHash"/>).</summary>

@@ -5,7 +5,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Kalkulations-Modus: der Nutzer bekommt reine Stellungen eines Buchs (FEN + optionaler

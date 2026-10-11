@@ -1,3 +1,5 @@
+using RookHub.Api.Services.Courses;
+
 namespace RookHub.Api.Services;
 
 /// <summary>

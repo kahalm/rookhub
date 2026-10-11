@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Liefert Kurs-Inhalte in einer gewuenschten Sprache aus (<c>?lang=</c>): ersetzt in fertigen DTOs die

@@ -3,7 +3,7 @@ using System.Text.Json;
 using Chess;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Baut aus den gespeicherten <see cref="BookPuzzle"/> (FEN + UCI-Hauptlinie) ein PGN — ein Spiel

@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// In welche Sprachen ein Kurs uebersetzt werden darf: die 25 Oberflaechensprachen (Entscheidung des Nutzers,

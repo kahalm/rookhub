@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Courses;
 
 namespace RookHub.Api.Controllers;
 

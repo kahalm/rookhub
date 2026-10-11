@@ -20,9 +20,9 @@ public class BookSourceIncludeGuardTests
     private static readonly Dictionary<string, int> ErlaubteIncludes = new()
     {
         // GetBookPgnAsync, GetChapterPgnAsync, GetLinePgnAsync — Download/„Kurs → Repertoire" (EIN Buch).
-        ["Services/CoursePgnExportService.cs"] = 3,
+        ["Services/Courses/CoursePgnExportService.cs"] = 3,
         // ImportFileAsync + ReprocessFromStoredSourceAsync — Import/Neu-Aufbereitung EINES Buchs.
-        ["Services/PgnImportService.cs"] = 2,
+        ["Services/Courses/PgnImportService.cs"] = 2,
         // RebuildFromCacheAsync („Aktualisieren", StaleAction.Cache): EIN Buch, AsNoTracking. Der Text wird
         // gebraucht, weil genau er umgeschrieben wird — die Zugtexte kommen je oid aus dem Linien-Cache, die
         // Header (Round → LineId) aus dem gespeicherten PGN. ReprocessFromStoredSourceAsync geht dafür nicht:
@@ -34,7 +34,7 @@ public class BookSourceIncludeGuardTests
     private static readonly Dictionary<string, int> ErlaubteBookSourcesZugriffe = new()
     {
         // DeleteBookAsync: Stub anhängen, damit InMemory die Source mit löscht (lädt keinen Text).
-        ["Services/BookAdminService.cs"] = 1,
+        ["Services/Courses/BookAdminService.cs"] = 1,
     };
 
     // .Include(b => b.Source) / .ThenInclude(x => x.Source!) — Lambda-Form, auch mit Klammern um den Parameter.

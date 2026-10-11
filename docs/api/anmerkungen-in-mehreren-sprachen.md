@@ -156,14 +156,14 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   zweiter Quell-Satz muesste staendig nachgezogen werden. Kurs-Saetze sind `Origin = Machine`,
   `TranslatedFrom` = `Book.CommentLanguage` (Quellsprache, beim ersten Lauf aus einer Stichprobe der ersten 200
   kommentierten Linien bestimmt, nicht bestimmbar = `und`; eine spaetere Korrektur macht nichts ungueltig).
-* **Stellen** (`Services/CourseTextSlots.cs`, NUR dort die Zahlen): `≥ -1` wie `MoveComments`, `-2` =
+* **Stellen** (`Services/Courses/CourseTextSlots.cs`, NUR dort die Zahlen): `≥ -1` wie `MoveComments`, `-2` =
   `Comment`, `-3` = `Title`, `-4` = `Chapter`. Ein Satz traegt alles, was die Linie an Text hat.
-* **Fingerabdruck** `CommentText.SourceHash` (`Services/CourseTextHash.cs`: 16 Hex-Zeichen SHA-256 ueber den
+* **Fingerabdruck** `CommentText.SourceHash` (`Services/Courses/CourseTextHash.cs`: 16 Hex-Zeichen SHA-256 ueber den
   normalisierten Text, `\r\n`→`\n`, getrimmt; NIRGENDS selbst hashen) — Pflicht bei Kurs-Saetzen, `null` bei
   Partien. Er entscheidet (1) VERALTET: passt er nicht mehr zum Text der Linie, liefert der Localizer das
   Original und der naechste Lauf uebersetzt nur diesen Text neu; (2) WIEDERVERWENDEN: derselbe Text in einem
   anderen Kurs-Satz gleicher Sprache (Doppel-Import, `_firstkey`-Kopie, gleicher Kapitelname) wird KOPIERT.
-* **Uebersetzt wird in `Services/CourseTranslationService.cs`** ueber denselben Kern wie Partien
+* **Uebersetzt wird in `Services/Courses/CourseTranslationService.cs`** ueber denselben Kern wie Partien
   (`Services/CommentTranslator.cs`: Fuhren, Auftrag, `PieceLetters`, Laengen- und Sprachpruefung — der Partie-Weg
   ist woertlich unveraendert, `CommentTranslationServiceTests` unangetastet). Je Linie: nur fehlende/veraltete
   Stellen ans Modell, gleiche Texte (Kommentar = Einleitung, bei 51 549 von 87 035 Prod-Linien) nur EINMAL,
@@ -187,9 +187,9 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
 * **Von Hand**: `tools/LibraryImport translate --to de --course <bookId> [--parallel p]` (Env wie beim
   Bibliothekslauf: `TextLlm__*`, `ConnectionStrings__DefaultConnection`; Strg+C bricht sauber ab) — ohne Auftrag,
   an der Warteschlange vorbei.
-* **Auftraege** (0.548.0, `Services/CourseTranslationJobService.cs`, Tabelle `CourseTranslationJobs`, Endpunkte unter
+* **Auftraege** (0.548.0, `Services/Courses/CourseTranslationJobService.cs`, Tabelle `CourseTranslationJobs`, Endpunkte unter
   „Kurse"): anfordern darf jeder mit Kurs-Zugang, in jede der 25 Oberflaechensprachen
-  (`Services/CourseTranslationLanguages.cs` — Spiegel von `SUPPORTED_LANGS`, beide Seiten mit LITERALER Liste im
+  (`Services/Courses/CourseTranslationLanguages.cs` — Spiegel von `SUPPORTED_LANGS`, beide Seiten mit LITERALER Liste im
   Test), **hoechstens EIN offener angeforderter Auftrag je Nutzer** (wartend oder laufend), Admin unbegrenzt. Gibt es
   fuer (Kurs, Sprache) schon einen offenen, kommt DER zurueck (200, egal wer ihn anlegte, zaehlt nicht gegen das
   Limit). Beides erzwingt der Dienst, nicht die DB. Reihenfolge der Pruefungen: Zugang (404) → Sprache
@@ -198,7 +198,7 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   offene Linien) → Limit (`user-limit`, 409, mit dem offenen Auftrag). **In der Sperrzeit angenommen, kein 503.**
   Zurueckziehen: der Nutzer seinen WARTENDEN, der Admin jeden offenen (`Cancelled`). **Konto loeschen** setzt die
   offenen Auftraege des Nutzers auf `Cancelled` („account deleted") — `RequestedByUserId` hat bewusst keinen FK.
-* **Hintergrunddienst** (`Services/CourseTranslationWorker.cs`, EIN Auftrag gleichzeitig — die Parallelitaet steckt
+* **Hintergrunddienst** (`Services/Courses/CourseTranslationWorker.cs`, EIN Auftrag gleichzeitig — die Parallelitaet steckt
   im Lauf): kein Text-Modell → schlafen (10 min); Sperrzeit (`QuietHours`) → schlafen bis `EndOf`, hoechstens 10 min
   am Stueck; sonst `ClaimNextAsync` — **angeforderte vor der Automatik, je Gruppe die aeltesten** (`InQueueOrder`, EINE
   Stelle fuer Dienst und Platzanzeige). Ohne Arbeit wartet er auf einen Weckruf (`CourseTranslationSignal`: Anfordern,
@@ -229,7 +229,7 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   (er hat seine Arbeit vorher bestimmt). Ein Fehler dabei laesst die Aenderung selbst nicht scheitern.
 * **Vorrang vor dem Bibliothekslauf** liegt AUSSERHALB der App: `.jobs/spark-uebersetzung.sh` haelt an, solange ein
   angeforderter Auftrag offen ist (`Status IN (0,1) AND RequestedByUserId IS NOT NULL`).
-* **Ausliefern ueber `?lang=`** (`Services/CourseCommentLocalizer.cs`, in den Controllern NACH dem Dienst): ersetzt
+* **Ausliefern ueber `?lang=`** (`Services/Courses/CourseCommentLocalizer.cs`, in den Controllern NACH dem Dienst): ersetzt
   `Comment` und `MoveComments[ply]` NUR, wo der Fingerabdruck zum Original IM DTO passt. **`Title`/`Chapter` werden
   NIE ersetzt** — der Kapitelname ist im Frontend ein SCHLUESSEL (`?chapter=`, Kapitel-PGN, Umbenennen,
   Gruppieren); die Uebersetzung kommt als `TitleLabel`/`ChapterLabel` (bzw. `Label` an den Kapitellisten), Anzeige

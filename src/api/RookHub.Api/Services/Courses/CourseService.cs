@@ -5,7 +5,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet (Fortschritt user-bezogen

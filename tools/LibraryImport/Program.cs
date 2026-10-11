@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using RookHub.Tools.LibraryImport;
+using RookHub.Api.Services.Courses;
 
 // ---------------------------------------------------------------------------
 // Rohbestand befuellen. Vier Schritte, jeder fuer sich wiederholbar:

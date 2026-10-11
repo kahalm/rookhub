@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Kurs-Detailseite + Inhaltspflege: Metadaten/Fortschritt/Kapitel für die Detailansicht sowie das

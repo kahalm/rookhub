@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Der Fingerabdruck eines Kurs-Textes (<see cref="Models.CommentText.SourceHash"/>): 16 Hex-Zeichen,

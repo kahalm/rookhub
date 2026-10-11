@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Geteilte Kapitel-Reihenfolge-Logik für Kurse und Wochenposts — EINE Quelle der Wahrheit für den

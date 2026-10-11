@@ -3,7 +3,7 @@
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Kurs-Detailseite + Inhaltspflege (auth)“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
 `/courses/:bookId` (Frontend) zeigt Metadaten, eigenen Fortschritt und die **Kapitel-Verwaltung**.
-Logik in `Services/CourseAuthoringService.cs`. Zwei Rechte-Ebenen: **lesen** = Kurs-Zugriff
+Logik in `Services/Courses/CourseAuthoringService.cs`. Zwei Rechte-Ebenen: **lesen** = Kurs-Zugriff
 (`CourseAccess`, kein Zugriff → 404); **Inhalte ändern** = Besitzer des persönlichen Buchs ODER Admin
 (sonst 403); den **eigenen Fortschritt** (Kapitel-Reset) darf jeder mit Lese-Zugriff.
 
@@ -18,7 +18,7 @@ sollen nicht im „Aktualisieren"-Banner hängen).
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/courses/{bookId:int}` | Auth | Detailbild: Metadaten, Fortschritt, `canManage`, Kapitel-Verwaltungssicht (`LineCount`/`QuizCount`/`SolverIndex`/`FirstLineId`). Terminierte, für den Betrachter noch gesperrte Wochen einer Kalkulations-Serie fehlen in Kapitelliste UND Zählern (`Services/CalcVisibility.cs`; Besitzer/Admin sehen alles — Codereview A7-002) |
+| GET | `/api/courses/{bookId:int}` | Auth | Detailbild: Metadaten, Fortschritt, `canManage`, Kapitel-Verwaltungssicht (`LineCount`/`QuizCount`/`SolverIndex`/`FirstLineId`). Terminierte, für den Betrachter noch gesperrte Wochen einer Kalkulations-Serie fehlen in Kapitelliste UND Zählern (`Services/Courses/CalcVisibility.cs`; Besitzer/Admin sehen alles — Codereview A7-002) |
 | GET | `/api/courses/{bookId:int}/lines?chapter=` | Auth | Linien EINES Kapitels (leer = „ohne Kapitel") — mit `MoveCount`, aber **ohne Zugfolge**. Gesperrte Woche → leere Liste wie ein unbekanntes Kapitel (kein Orakel) |
 | GET | `/api/courses/{bookId:int}/chapter-pgn?chapter=` | Auth | EIN Kapitel als PGN (leer = „ohne Kapitel"): je Linie das Spiel mit derselben `Round` verbatim aus `Book.Source.SourcePgn` (`PgnParser.SplitGameBlocks`), sonst aus der gespeicherten Linie rekonstruiert (`CoursePgnExporter`). **Kalkulationsbücher → 404** (die Züge wären die Lösung) |
 | GET | `/api/courses/{bookId:int}/lines/{lineId:int}/pgn` | Auth | EINE Linie als PGN, gleiche Regeln wie beim Kapitel. Alle drei Kurs-Downloads (auch `/{bookId}/pgn`) entfernen die internen Marker `[%alt]`/`[%info]` (`PgnParser.StripInternalMarkers`); „Kurs → Repertoire" und der Repertoire-Endpunkt `/api/repertoires/{id}/pgn` behalten sie (Viewer/Trainer brauchen `[%alt]`), dort entfernt das Frontend sie erst beim Speichern (`shared/pgn-export.util.ts`) |

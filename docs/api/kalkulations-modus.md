@@ -16,7 +16,7 @@ bewusst NICHT aus; bei einer normalen Puzzle-Linie höchstens den Vorlauf bis zu
 (`CalcPositionDto.SetupMoves` = Halbzüge `0..StartPly`), nie die Züge ab dem Schlüsselzug. Der Baum selbst
 ist für den Server **opak** (JSON-String, nur auf Größe + Gültigkeit geprüft) — Struktur/Semantik liegen im
 Frontend (`features/courses/calc/calc-tree.util.ts`), damit Formatänderungen keine Migration brauchen.
-Zugriff je Buch über `Services/CourseAccess.cs` (dieselbe Regel wie die Kurs-Endpoints, aus
+Zugriff je Buch über `Services/Courses/CourseAccess.cs` (dieselbe Regel wie die Kurs-Endpoints, aus
 `CourseService.CanAccessAsync` herausgezogen); kein Zugriff → 404. Der Modus ist nicht auf Bücher mit dem
 Flag beschränkt — es steuert nur den Einstieg in der Übersicht.
 

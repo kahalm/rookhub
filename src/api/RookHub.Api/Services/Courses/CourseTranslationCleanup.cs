@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Raeumt die Kurs-Uebersetzungen (<see cref="Models.CommentSet.BookPuzzleId"/>) von Linien ab, die gerade

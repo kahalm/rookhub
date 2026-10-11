@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// EINE Regel für die Termin-Sperre der Kalkulations-Serie (<see cref="Models.CalcEdition"/>): welche

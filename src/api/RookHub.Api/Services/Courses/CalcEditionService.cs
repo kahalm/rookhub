@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Verwaltung + Zeitsteuerung der Kalkulations-Ausgaben (Phase 1). Verwaltung nur durch Buch-Besitzer

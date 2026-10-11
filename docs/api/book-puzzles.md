@@ -36,7 +36,7 @@ Prüfung wie `player-progress` (dort ist die Discord-ID das signierte Objekt). H
 gewöhnlicher Aufruf. Die DTOs sind je Abruf frisch gebaut (`RemoveDiscordLinks()` mutiert sie) — wer hier einmal
 eine Antwort cacht, muss vorher kopieren.
 
-**Zugriff auf die offenen Buch-Endpoints (`Services/BookAccess.cs`, seit 0.317.1)**: EINE Regel für
+**Zugriff auf die offenen Buch-Endpoints (`Services/Courses/BookAccess.cs`, seit 0.317.1)**: EINE Regel für
 `{id}/next`, `{id}/random`, `/random?bookId=`, `/books` und (ohne Bot-Signatur, Tagespuzzles ausgenommen) `{id}/results`. Anonym sichtbar ist ein Buch nur, wenn ein Admin
 es bewusst geöffnet hat — `Book.IsPublic` (öffentlicher Kurs) oder Mitgliedschaft in einem offenen Pool
 (`ForDaily`/`ForRandom`/`ForBlind`); eingeloggte sehen zusätzlich eigene (`OwnerUserId`), per `CourseShare`

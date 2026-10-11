@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services.Chessable;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// Kurs ⇄ Repertoire umwandeln — BEIDE Richtungen an EINER Stelle. Sie sind dieselbe Operation mit

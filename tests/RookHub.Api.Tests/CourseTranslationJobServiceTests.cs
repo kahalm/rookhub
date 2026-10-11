@@ -7,6 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using RookHub.Api.Services.Courses;
 
 namespace RookHub.Api.Tests;
 

@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// PGN-Export eines Kurses: ganzes Buch (<c>GET /api/courses/{id}/pgn</c>, auch Grundlage von

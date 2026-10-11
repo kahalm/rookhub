@@ -337,7 +337,7 @@ Vor Arbeit an einem dieser Punkte den Volltext lesen.
 
 - 401 ist nicht gleich Rauswurf
 - Eine selbst geoeffnete Transaktion MUSS in der Execution-Strategy laufen
-- Kurs ⇄ Repertoire liegt in `Services/CourseRepertoireConversionService.cs`
+- Kurs ⇄ Repertoire liegt in `Services/Courses/CourseRepertoireConversionService.cs`
 - Handgespiegelte Listen bekommen auf BEIDEN Seiten einen Test mit LITERALEN Werten
 - Versuchs-Werte kommen aus `Services/AttemptRecording.cs`
 - PGN wird mit `Services/PgnWriter.cs` geschrieben

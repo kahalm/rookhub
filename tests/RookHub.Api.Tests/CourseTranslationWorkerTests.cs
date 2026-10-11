@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Courses;
 
 namespace RookHub.Api.Tests;
 

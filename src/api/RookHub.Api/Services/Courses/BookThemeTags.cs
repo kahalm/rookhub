@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Courses;
 
 /// <summary>
 /// EINE Quelle für die Buch-Themen-Semantik (<c>Book.Themes</c>-CSV): gültige Keys, Parsing mit
