@@ -1204,6 +1204,94 @@ public class TournamentDirectoryServiceTests : IDisposable
                      TournamentDirectoryService.ComputeGroupKey(Entry("2")));
     }
 
+    // ----- UI-Sweep 2026-10-11 (r2-t-dup-cards): Schluessel ueber den verorteten Ort -----
+
+    private static TournamentDirectoryEntry Located(string location, string? place,
+        GeoSource source = GeoSource.City, string name = "O přeborníka Šluknovského výběžku",
+        DateOnly? start = null, string fed = "CZE") => new()
+    {
+        Name = name, BaseName = name, Federation = fed,
+        StartDate = start ?? new DateOnly(2026, 10, 10), EndDate = start ?? new DateOnly(2026, 10, 10),
+        LocationText = location,
+        Lat = place is null ? null : 50.9115, Lon = place is null ? null : 14.6182,
+        GeoSource = place is null ? GeoSource.None : source, GeoPlaceName = place,
+    };
+
+    /// <summary>Der Prod-Fall: dieselben Gruppen, je Gruppe anders geschriebener Ortstext.</summary>
+    [Fact]
+    public void GroupKey_SameGeocodedPlace_GroupsDifferentlySpelledLocations()
+    {
+        var a = TournamentDirectoryService.ComputeGroupKey(Located("Otáhalova 1260 Varnsdorf", "Varnsdorf"));
+        var c = TournamentDirectoryService.ComputeGroupKey(Located("Varnsdorf Otáhalova 1260", "Varnsdorf"));
+        var d = TournamentDirectoryService.ComputeGroupKey(
+            Located("DDM Varnsdorf Otáhalova 1260 40747", "Varnsdorf", GeoSource.PostalCode));
+
+        Assert.Equal(a, c);
+        Assert.Equal(a, d);
+    }
+
+    [Fact]
+    public void GroupKey_SamePlace_StillNeedsSameNameDateAndFederation()
+    {
+        var baseKey = TournamentDirectoryService.ComputeGroupKey(Located("Varnsdorf", "Varnsdorf"));
+
+        Assert.NotEqual(baseKey, TournamentDirectoryService.ComputeGroupKey(
+            Located("Varnsdorf", "Varnsdorf", name: "Václavský Open Air")));
+        Assert.NotEqual(baseKey, TournamentDirectoryService.ComputeGroupKey(
+            Located("Varnsdorf", "Varnsdorf", start: new DateOnly(2026, 10, 11))));
+        Assert.NotEqual(baseKey, TournamentDirectoryService.ComputeGroupKey(
+            Located("Varnsdorf", "Varnsdorf", fed: "SVK")));
+    }
+
+    [Fact]
+    public void GroupKey_DifferentGeocodedPlaces_StayApart_EvenWithEqualText()
+    {
+        // Gleicher (abgekuerzter) Ortstext, aber zwei verschiedene Orte — der Ort entscheidet.
+        Assert.NotEqual(
+            TournamentDirectoryService.ComputeGroupKey(Located("St.Veit", "Sankt Veit im Pongau")),
+            TournamentDirectoryService.ComputeGroupKey(Located("St.Veit", "Sankt Veit an der Glan", GeoSource.TeamHint)));
+    }
+
+    /// <summary>Ein Bundesland-Zentroid ist kein Ort — dort zaehlt weiter der Ortstext.</summary>
+    [Fact]
+    public void GroupKey_RegionOrAmbiguousOrNone_FallsBackToNormalizedText()
+    {
+        var regionA = Located("Halle Nord", "Ústecký kraj", GeoSource.Region);
+        var regionB = Located("Halle Süd", "Ústecký kraj", GeoSource.Region);
+        Assert.NotEqual(TournamentDirectoryService.ComputeGroupKey(regionA),
+                        TournamentDirectoryService.ComputeGroupKey(regionB));
+
+        // Nicht verortet: wie bisher der normalisierte Text (Satzzeichen/Gross-Klein egal).
+        Assert.Equal(
+            TournamentDirectoryService.ComputeGroupKey(Located("Varnsdorf, Otáhalova 1260", null)),
+            TournamentDirectoryService.ComputeGroupKey(Located("varnsdorf otahalova 1260", null)));
+
+        // Mehrdeutig verortet traegt keinen Ort — auch ein stehengebliebener Name zaehlt nicht.
+        var ambiguous = Located("St.Veit", "St. Veit", GeoSource.Ambiguous);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(Located("St.Veit", null)),
+                     TournamentDirectoryService.ComputeGroupKey(ambiguous));
+    }
+
+    /// <summary>
+    /// Der Sweep muss den Schluessel NACH dem Verorten rechnen — vorher stand er aus dem Ortstext
+    /// da, und die Gruppen eines neuen Turniers kamen erst eine Nacht spaeter zusammen.
+    /// </summary>
+    [Fact]
+    public void GroupKey_ApplyGroupingAfterGeocoding_ChangesToThePlaceKey()
+    {
+        var entry = Located("Otáhalova 1260 Varnsdorf", null);
+        TournamentDirectoryService.ApplyGrouping(entry);
+        var textKey = entry.GroupKey;
+
+        entry.Lat = 50.9115; entry.Lon = 14.6182;
+        entry.GeoSource = GeoSource.City; entry.GeoPlaceName = "Varnsdorf";
+        TournamentDirectoryService.ApplyGrouping(entry);
+
+        Assert.NotEqual(textKey, entry.GroupKey);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(Located("Varnsdorf Otáhalova 1260", "Varnsdorf")),
+                     entry.GroupKey);
+    }
+
     // ----- Herkunft eines Eintrags ------------------------------------------
 
     /// <summary>

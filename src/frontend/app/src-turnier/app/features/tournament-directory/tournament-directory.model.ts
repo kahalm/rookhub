@@ -336,9 +336,14 @@ export function displayLocation(location: string | null | undefined, translate: 
 
 /**
  * Gleichnamige Turniere am selben Tag, die NICHT zu einer Karte zusammengefasst sind (UI-Sweep 2026-10-11,
- * r2-t-dup-cards). Zusammengefasst wird am Server nur bei gleichem Namen, Termin UND Ortstext — weicht der Ortstext
- * ab („…Otáhalova 1260 40747" gegen „…Otáhalova 1260 Varnsdorf"), stehen zwei gleich aussehende Karten nebeneinander.
- * Liefert die Ids der Eintraege, die einen solchen Doppelgaenger in derselben Liste haben.
+ * r2-t-dup-cards). Liefert die Ids der Eintraege, die einen solchen Doppelgaenger in derselben Liste haben.
+ *
+ * Seit derselben Runde fasst der Server ueber den VERORTETEN Ort zusammen (`TournamentDirectoryService.GroupPlace`),
+ * nicht mehr ueber den rohen Ortstext — „…Otáhalova 1260 40747" und „Varnsdorf Otáhalova 1260" sind damit eine Karte.
+ * Der Hinweis bleibt als RUECKFALL fuer das, was der Server bewusst getrennt laesst: nur eine Gruppe verortet, beide
+ * nur auf Bundesland-Ebene oder mehrdeutig verortet und verschieden geschrieben, Tippfehler im Ort („Cebu"/„Cebi").
+ * Auf Prod (2026-10-11) waren das noch ~28 Turniere ab Oktober. Er erscheint nur, wo die Liste wirklich zwei gleich
+ * aussehende Karten zeigt.
  */
 export function sameNameSiblings(entries: readonly DirectoryEntry[]): Set<string> {
   const byKey = new Map<string, string[]>();

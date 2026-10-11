@@ -22,7 +22,8 @@
             </mat-menu>
           </div>
           <!-- UI-Sweep 2026-10-11 (r2-t-public-actions): dieselbe Knopfreihe wie in der Detailansicht — Merken primaer
-               (abgemeldet fuehrt es zur Anmeldung und zurueck hierher), „Volle Ansicht" (dort auch Beobachten und
+               (abgemeldet fuehrt es zur Anmeldung und zurueck hierher), Beobachten (gleiche Logik wie dort, geteilter
+               Baustein TournamentRoundMonitor; abgemeldet ebenfalls zur Anmeldung), „Volle Ansicht" (dort auch
                Aktualisieren) und Teilen umrandet, Chess-Results als Textlink zuletzt. Vorher zwei gefuellte Knoepfe in
                umgekehrter Reihenfolge, und wer einen geteilten Link oeffnete, konnte das Turnier nicht uebernehmen. -->
           <mat-card-actions class="action-bar">
@@ -35,6 +36,18 @@
               <button mat-flat-button class="keep-label" (click)="subscribe()" [disabled]="toggling()"
                       [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
                 <mat-icon>bookmark_add</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmark' | translate }}</span>
+              </button>
+            }
+            @if (monitor.monitoring()) {
+              <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
+                      [matTooltip]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') }"
+                      [attr.aria-label]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') }">
+                <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') } }}</span>
+              </button>
+            } @else {
+              <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
+                      [matTooltip]="'tournaments.actions.monitor' | translate" [attr.aria-label]="'tournaments.actions.monitor' | translate">
+                <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
               </button>
             }
             <a mat-stroked-button class="keep-label full-view" [routerLink]="['/tournaments', id]">

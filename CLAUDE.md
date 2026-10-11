@@ -1097,6 +1097,16 @@ Vermerk fuer die Arbeitsliste. Gemessen am Dev-Stand vor der Aenderung: 171 Eint
 Kandidaten > 50 km auseinander, davon 29 mit nachweislich falschem Pin (bis 489 km, „Muenster"
 gibt es 19-mal).
 
+**Gruppen eines Turniers = EINE Karte** (`TournamentDirectoryEntry.GroupKey`, `TournamentDirectoryService.ComputeGroupKey`):
+Hash aus Basisname, Föderation, Beginn, Ende und ORT. Der Ort ist seit UI-Sweep 2026-10-11 (r2-t-dup-cards) der VERORTETE
+(`GroupPlace`: normalisierter `GeoPlaceName` bei PLZ/Ort/von Hand/Nominatim/Vereinsnamen/Quelle), sonst der normalisierte
+Ortstext (Region, mehrdeutig, unverortet) — vorher der rohe Text, und „Otáhalova 1260 Varnsdorf" gegen „Varnsdorf Otáhalova 1260"
+waren zwei Karten (Prod 11.10.: 65 Turniere). Weil die Verortung bei den Zusatzquellen NACH der Klassifizierung läuft, gleicht
+`TournamentGroupingBackfillService.RegroupAsync` JEDEN Schlüssel mit der aktuellen Rechnung ab (schmale Projektion, schreibt nur
+abweichende) — beim Start und als letzter Schritt des Nachtlaufs („Gruppenschluessel-Abgleich"). Keine Fassungs-Spalte: eine
+Regeländerung zieht der nächste Start von selbst nach. Was dann noch getrennt steht, markiert die Oberfläche als „weitere Gruppe?"
+(`sameNameSiblings`).
+
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&kinds&ageGroups&genders&adultsOnly&hideLeagues&includeImplausible&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#). `q` sucht in Name, Ort UND Veranstalter. Die fuenf Publikums-/Formatfilter binden als EIN Objekt (`DirectoryAudienceQuery`) und gelten fuer Liste, Karte und Kalender gleich: `kinds` individual/team/unknown — **„individual" schliesst `unknown` MIT ein**: die Quelle sagt nur „ist MANNSCHAFTS-Turnierart", alles andere ist Einzel, und `unknown` heisst „Abfrage lief hier noch nicht / fiel aus" (kein eigener Fall fuer den Suchenden; als eigener gefuehrt lieferte „Einzel" eine halb leere Liste). In der SPALTE bleibt `Unknown` stehen, damit ein Netzausfall den Bestand nicht auf Einzel umschreibt, `ageGroups` u8…u20/youthUnspecified/senior (**Ueberschneidung**, nicht Gleichheit — „u12" findet die U8-U18-Meisterschaft), `genders` open/female/male, `adultsOnly` (kein JUGENDmerkmal; Senioren bleiben sichtbar), `hideLeagues`. Ein unbekannter Wert ist ein **400**, kein stilles Ignorieren. **Reihenfolge mit `from` (UX-039):** erst was im Zeitraum BEGINNT (nach Start), dann als Block was schon laeuft (`ongoing: true`), zuletzt Eintraege ohne Beginn; letzter Schluessel die Id (Seiten ueberschneidungsfrei), gilt auch im Umkreis. **Unplausible Laufzeiten** (> 1 Jahr UND ohne Spieltermine oder schon > 1 Jahr vor `from` begonnen, `TournamentDirectoryQueryService.Plausible`) sind in Liste, Karte und Kalender standardmaessig AUSGEBLENDET; `includeImplausible=true` zeigt sie mit `implausible: true`. Die Detailseite filtert nicht |

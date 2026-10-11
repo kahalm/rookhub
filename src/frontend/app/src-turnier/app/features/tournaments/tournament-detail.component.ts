@@ -15,13 +15,13 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
-import { NotificationService } from '@rh/core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentGroup, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 import { requireAccount } from '../../core/require-account';
+import { TournamentRoundMonitor } from './tournament-round-monitor';
 import { AuthService } from '@rh/core/auth.service';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { TournamentDetailService } from './tournament-detail.service';
@@ -77,17 +77,28 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] | null = null;
   toggling = false;
   refreshing = false;
-  monitoring = false;
-  monitorActiveUntil: Date | null = null;
-  monitorToggling = false;
   private pollInterval: ReturnType<typeof setInterval> | null = null;
-  private monitorPollInterval: ReturnType<typeof setInterval> | null = null;
-  private lastKnownRounds = 0;
+
+  /**
+   * „Beobachten" (Runden-Monitor). UI-Sweep 2026-10-11 (r2-t-public-actions): Status, An/aus, 30-s-Abfrage und Meldung
+   * bei neuer Runde liegen in `TournamentRoundMonitor` — derselbe Baustein steht auf dem geteilten Link /t/:id. Hier
+   * bleibt nur, was die Detailansicht bei einer neuen Runde nachlaedt.
+   */
+  readonly monitor = new TournamentRoundMonitor(() => this.id, (round) => {
+    this.reloadAll();
+    if (this.selectedTabIndex === 2) {
+      this.selectedRound = round;
+      this.loadPairings();
+    }
+  });
+  get monitoring(): boolean { return this.monitor.monitoring(); }
+  get monitorActiveUntil(): Date | null { return this.monitor.activeUntil(); }
+  get monitorToggling(): boolean { return this.monitor.toggling(); }
 
   private static readonly TAB_NAMES = ['players', 'teams', 'pairings'];
   private id!: string;
 
-  constructor(private route: ActivatedRoute, private router: Router, private api: TournamentDetailService, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
+  constructor(private route: ActivatedRoute, private router: Router, private api: TournamentDetailService, private snackbar: SnackbarService, private dialog: MatDialog, private translate: TranslateService) {}
 
   private readonly opener = inject(OpenTournamentService);
   private readonly auth = inject(AuthService);
@@ -167,7 +178,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.pollInterval) clearInterval(this.pollInterval);
     this.stopClubPoll();
-    this.stopMonitorPoll();
   }
 
   loadSubscription(): void {
@@ -228,101 +238,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   loadMonitorStatus(): void {
-    this.api.getMonitor(this.id).subscribe({
-      next: (res) => {
-        this.monitoring = res.active;
-        this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
-        if (res.active && res.lastKnownRounds) {
-          this.lastKnownRounds = res.lastKnownRounds;
-          this.startMonitorPoll();
-        }
-      },
-      error: () => {}
-    });
+    this.monitor.load();
   }
 
   toggleMonitor(): void {
-    // Beobachten meldet neue Runden in die Glocke — dafür braucht es ein Konto.
-    if (!requireAccount(this.auth, this.router)) return;
-    this.monitorToggling = true;
-    if (this.monitoring) {
-      this.api.stopMonitor(this.id).subscribe({
-        next: () => {
-          this.monitoring = false;
-          this.monitorActiveUntil = null;
-          this.monitorToggling = false;
-          this.stopMonitorPoll();
-          this.snackbar.success(this.translate.instant('tournaments.monitor.stopped'));
-        },
-        error: () => {
-          this.monitorToggling = false;
-          this.snackbar.info(this.translate.instant('tournaments.monitor.stopFailed'));
-        }
-      });
-    } else {
-      this.notificationService.requestPermission();
-      this.api.startMonitor(this.id).subscribe({
-        next: (res) => {
-          this.monitoring = true;
-          this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
-          this.lastKnownRounds = res.lastKnownRounds || 0;
-          this.monitorToggling = false;
-          this.startMonitorPoll();
-          this.snackbar.success(this.translate.instant('tournaments.monitor.activated'));
-        },
-        error: () => {
-          this.monitorToggling = false;
-          this.snackbar.info(this.translate.instant('tournaments.monitor.activateFailed'));
-        }
-      });
-    }
-  }
-
-  private startMonitorPoll(): void {
-    this.stopMonitorPoll();
-    this.monitorPollInterval = setInterval(() => {
-      // Stop if monitoring expired
-      if (this.monitorActiveUntil && new Date() > this.monitorActiveUntil) {
-        this.monitoring = false;
-        this.monitorActiveUntil = null;
-        this.stopMonitorPoll();
-        return;
-      }
-      this.api.getMonitor(this.id).subscribe({
-        next: (res) => {
-          if (!res.active) {
-            this.monitoring = false;
-            this.monitorActiveUntil = null;
-            this.stopMonitorPoll();
-            return;
-          }
-          if (res.lastKnownRounds > this.lastKnownRounds) {
-            const newRound = res.lastKnownRounds;
-            this.lastKnownRounds = newRound;
-            // Browser notification
-            this.notificationService.notify(this.translate.instant('tournaments.monitor.newRoundTitle'), {
-              body: this.translate.instant('tournaments.monitor.newRoundBody', { round: newRound }),
-              icon: '/favicon.ico'
-            });
-            // Snackbar as fallback
-            this.snackbar.warn(this.translate.instant('tournaments.monitor.newRoundSnack', { round: newRound }));
-            // Reload data
-            this.reloadAll();
-            if (this.selectedTabIndex === 2) {
-              this.selectedRound = newRound;
-              this.loadPairings();
-            }
-          }
-        }
-      });
-    }, 30000);
-  }
-
-  private stopMonitorPoll(): void {
-    if (this.monitorPollInterval) {
-      clearInterval(this.monitorPollInterval);
-      this.monitorPollInterval = null;
-    }
+    this.monitor.toggle();
   }
 
   refresh(): void {

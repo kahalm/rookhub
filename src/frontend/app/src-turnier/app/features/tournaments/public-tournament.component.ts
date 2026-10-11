@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { requireAccount } from '../../core/require-account';
@@ -9,6 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
@@ -20,12 +21,13 @@ import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { displayedTables } from './tournament-favorites.util';
+import { TournamentRoundMonitor } from './tournament-round-monitor';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, DatePipe, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './public-tournament.component.html',
   styleUrls: ['./public-tournament.component.scss'],
 })
@@ -72,6 +74,13 @@ export class PublicTournamentComponent implements OnInit {
   readonly toggling = signal(false);
   private subscriptions: Subscription[] | null = null;
 
+  /**
+   * „Beobachten" direkt am geteilten Link (UI-Sweep 2026-10-11, r2-t-public-actions) — vorher nur ueber „Volle Ansicht".
+   * Derselbe Baustein wie in der Detailansicht (`TournamentRoundMonitor`: Status, An/aus, 30-s-Abfrage, Meldung bei neuer
+   * Runde); abgemeldet fuehrt der Knopf zur Anmeldung und zurueck auf diesen Link, wie Merken.
+   */
+  readonly monitor = new TournamentRoundMonitor(() => this.id, (round) => this.reloadAfterNewRound(round));
+
   constructor(
     private route: ActivatedRoute,
     private tournaments: PublicTournamentService,
@@ -84,6 +93,7 @@ export class PublicTournamentComponent implements OnInit {
     this.id = this.route.snapshot.paramMap.get('id')!;
     this.loadLocalFavorites();
     this.loadSubscription();
+    this.monitor.load();
     this.tournaments.getTournament(this.id).subscribe({
       next: (t) => {
         this.tournament = t;
@@ -153,6 +163,23 @@ export class PublicTournamentComponent implements OnInit {
         this.snackbar.info(this.translate.instant('tournamentDirectory.bookmarkRemoveError'));
       },
     });
+  }
+
+  /** Neue Runde laut Beobachtung: Runden, Teilnehmer, Mannschaften und — auf dem Paarungs-Reiter — die neue Runde laden. */
+  private reloadAfterNewRound(round: number): void {
+    this.tournaments.getTournament(this.id).subscribe({
+      next: (t) => {
+        this.tournament = t;
+        if (t.totalRounds) this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
+      },
+      error: () => {},
+    });
+    this.loadPlayers();
+    this.loadTeams();
+    if (this.selectedTabIndex === 2) {
+      this.selectedRound = round;
+      this.loadPairings();
+    }
   }
 
   // --- Share ---

@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PublicTournamentComponent } from './public-tournament.component';
+import { AuthService } from '@rh/core/auth.service';
+import { NotificationService } from '@rh/core/notification.service';
 
 describe('PublicTournamentComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -110,9 +112,9 @@ describe('PublicTournamentComponent', () => {
     expect(localStorage.getItem(keys[1])).toBe('[11]');
   });
 
-  // UI-Sweep 2026-10-11 (r2-t-public-actions): dieselbe Knopfreihe wie /tournaments/:id — Merken primaer, „Volle Ansicht",
-  // Teilen umrandet, Chess-Results als Textlink zuletzt; abgemeldet fuehrt Merken zur Anmeldung.
-  it('Knopfreihe: Merken, Volle Ansicht, Teilen, Chess-Results — in dieser Reihenfolge und diesen Stilen', async () => {
+  // UI-Sweep 2026-10-11 (r2-t-public-actions): dieselbe Knopfreihe wie /tournaments/:id — Merken primaer, Beobachten,
+  // „Volle Ansicht", Teilen umrandet, Chess-Results als Textlink zuletzt; abgemeldet fuehren Merken und Beobachten zur Anmeldung.
+  it('Knopfreihe: Merken, Beobachten, Volle Ansicht, Teilen, Chess-Results — in dieser Reihenfolge und diesen Stilen', async () => {
     const { fixture, http } = await render();
     http.expectOne(`/api/tournaments/${id}/players`).flush(players);
     http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
@@ -120,12 +122,60 @@ describe('PublicTournamentComponent', () => {
     const bar = (fixture.nativeElement as HTMLElement).querySelector('.action-bar')!;
     const items = Array.from(bar.children) as HTMLElement[];
     expect(items.map(i => i.textContent!.trim())).toEqual([
-      'bookmark_add tournamentDirectory.bookmark', 'open_in_full tournaments.actions.openFull',
+      'bookmark_add tournamentDirectory.bookmark', 'notifications_active tournaments.actions.monitor',
+      'open_in_full tournaments.actions.openFull',
       'share tournaments.actions.share', 'open_in_new tournaments.actions.chessResults']);
     expect(items[0].hasAttribute('mat-flat-button')).toBeTrue();
-    expect(items[1].getAttribute('href')).toBe(`/tournaments/${id}`);
-    expect(items[2].hasAttribute('mat-stroked-button')).toBeTrue();
-    expect(items[3].hasAttribute('mat-button')).toBeTrue();
+    expect(items[1].hasAttribute('mat-stroked-button')).toBeTrue();
+    expect(items[1].getAttribute('aria-label')).toBe('tournaments.actions.monitor');
+    expect(items[2].getAttribute('href')).toBe(`/tournaments/${id}`);
+    expect(items[3].hasAttribute('mat-stroked-button')).toBeTrue();
+    expect(items[4].hasAttribute('mat-button')).toBeTrue();
+  });
+
+  it('Beobachten ohne Anmeldung fuehrt zur Anmeldung (mit Ruecksprung), ohne einen Monitor anzulegen', async () => {
+    localStorage.removeItem('rookhub_user');
+    const { fixture, http, c } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    const nav = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    c.monitor.toggle();
+    expect(String(nav.calls.mostRecent().args[0])).toContain('/login?returnUrl=');
+    http.expectNone(`/api/tournament-monitors/${id}`);
+    fixture.destroy();
+  });
+
+  it('angemeldet: laedt den Stand der Beobachtung und schaltet sie mit demselben Endpunkt wie die Detailansicht ein', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PublicTournamentComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id }) } } },
+      ],
+    }).compileComponents();
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.returnValue(true);
+    spyOn(TestBed.inject(NotificationService), 'requestPermission').and.resolveTo('denied');
+    const fixture = TestBed.createComponent(PublicTournamentComponent);
+    const http = TestBed.inject(HttpTestingController);
+    const c = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit
+    http.expectOne('/api/subscriptions').flush([]);
+    http.expectOne(`/api/tournament-monitors/${id}`).flush({ active: false, activeUntil: null, lastKnownRounds: 0 });
+    http.expectOne(`/api/tournaments/${id}`).flush({ id: 1, name: 'Open', chessResultsId: id, totalRounds: 0 });
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    expect(c.monitor.monitoring()).toBeFalse();
+
+    c.monitor.toggle();
+    const start = http.expectOne(r => r.method === 'POST' && r.url === `/api/tournament-monitors/${id}`);
+    start.flush({ active: true, activeUntil: '2026-10-11T20:00:00Z', lastKnownRounds: 3 });
+    fixture.detectChanges();
+    expect(c.monitor.monitoring()).toBeTrue();
+    const monitorBtn = (fixture.nativeElement as HTMLElement).querySelector('.action-bar .monitor')!;
+    expect(monitorBtn.getAttribute('aria-label')).toBe('tournaments.actions.monitoringUntil');
+    expect(monitorBtn.querySelector('mat-icon')!.textContent!.trim()).toBe('notifications_off');
+    fixture.destroy(); // beendet auch die 30-s-Abfrage (DestroyRef)
   });
 
   it('Merken ohne Anmeldung fuehrt zur Anmeldung, ohne etwas zu speichern', async () => {

@@ -350,6 +350,13 @@ public class TournamentDirectoryScheduler : BackgroundService
         new("FIDE-Detail-Durchgang", _fideDetailBatchSize > 0,
             (s, ct) => s.GetRequiredService<FideEventDetailService>()
                 .RunAsync(_fideDetailBatchSize, retryEmpty: false, ct)),
+
+        // UI-Sweep 2026-10-11 (r2-t-dup-cards): zuletzt die Gruppenschluessel abgleichen. Sie
+        // lesen den VERORTETEN Ort, und die Zusatzquellen verorten erst NACH der Klassifizierung —
+        // ohne diesen Schritt stuende ein heute angelegter Eintrag bis zum naechsten Lauf seiner
+        // Quelle mit einem Schluessel aus dem Ortstext da (eine Karte zu viel). Rein lokal, kein Netz.
+        new("Gruppenschluessel-Abgleich", true,
+            (s, ct) => TournamentGroupingBackfillService.RegroupAsync(s.GetRequiredService<AppDbContext>(), ct)),
     ];
 
     /// <summary>

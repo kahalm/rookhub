@@ -675,6 +675,36 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(["111", "112"], braunau.Members.Select(m => m.ChessResultsId));
     }
 
+    /// <summary>
+    /// UI-Sweep 2026-10-11 (r2-t-dup-cards): der Abgleich der Gruppenschluessel (beim Start und
+    /// als letzter Schritt des Nachtlaufs) liest eine Projektion in einen Record und laedt die
+    /// abweichenden Zeilen ueber <c>Contains</c> nach — beides muss MariaDB uebersetzen. Und die
+    /// zwei Gruppen mit verschieden geschriebenem Ortstext muessen danach EINE Karte sein.
+    /// </summary>
+    [MySqlFact]
+    public async Task Turnierverzeichnis_GruppenschluesselAbgleich_UebersetztUndFasstZusammen()
+    {
+        TournamentDirectoryEntry Entry(string id, string name, string location) => new()
+        {
+            PublicId = id, ChessResultsId = id, Name = name, Federation = "CZE",
+            StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 10),
+            LocationText = location, PlayerCount = 10,
+            Lat = 50.9115, Lon = 14.6182, GeoSource = GeoSource.City, GeoPlaceName = "Varnsdorf",
+            GroupKey = "alt-" + id, // Stand vor dem Deploy: Schluessel aus dem Rohtext
+        };
+        Db.TournamentDirectoryEntries.AddRange(
+            Entry("it-dup-a", "O přeborníka Šluknovského výběžku, skupina A", "Otáhalova 1260 Varnsdorf"),
+            Entry("it-dup-c", "O přeborníka Šluknovského výběžku, skupina C", "Varnsdorf Otáhalova 1260"));
+        await Db.SaveChangesAsync();
+
+        Assert.Equal(2, await TournamentGroupingBackfillService.RegroupAsync(Db));
+        Assert.Equal(0, await TournamentGroupingBackfillService.RegroupAsync(Db));
+
+        var result = await Get<TournamentDirectoryQueryService>().SearchAsync(new DirectorySearchQuery());
+        var card = Assert.Single(result.Items);
+        Assert.Equal(2, card.Members.Count);
+    }
+
 
     /// <summary>
     /// UX-039: Die Liste stellt im Zeitraum Beginnendes vor schon Laufendes (CASE im ORDER BY ueber

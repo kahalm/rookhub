@@ -334,7 +334,12 @@ public class TournamentDirectoryService
                 // Nur neu verorten, wenn sich der Ortstext wirklich geaendert hat - sonst wuerde
                 // jede Nacht der gesamte Bestand durch den Gazetteer laufen.
                 if (!string.Equals(oldLocationText, entry.LocationText, StringComparison.Ordinal))
+                {
                     await GeocodeAsync(entry, ct);
+                    // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Schluessel liest den verorteten
+                    // Ort — nach dem Verorten neu rechnen, nicht erst in der naechsten Nacht.
+                    ApplyGrouping(entry);
+                }
             }
             else
             {
@@ -349,6 +354,7 @@ public class TournamentDirectoryService
                 };
                 await ApplyAsync(row, entry, now, artMap, ct);
                 await GeocodeAsync(entry, ct);
+                ApplyGrouping(entry); // UI-Sweep 2026-10-11 (r2-t-dup-cards): s. o.
                 _db.TournamentDirectoryEntries.Add(entry);
                 added.Add(entry);
                 // Sonst legt dieselbe Nummer, zweimal in EINER Trefferliste, zwei Zeilen an —
@@ -848,8 +854,46 @@ public class TournamentDirectoryService
             entry.Federation ?? "",
             entry.StartDate?.ToString("yyyy-MM-dd") ?? "",
             entry.EndDate?.ToString("yyyy-MM-dd") ?? "",
-            GroupText(entry.LocationText));
+            GroupPlace(entry));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant()[..32];
+    }
+
+    /// <summary>
+    /// Der Ortsanteil des Gruppenschluessels: der VERORTETE Ort, wo es einen verlaesslichen gibt,
+    /// sonst der normalisierte Ortstext.
+    ///
+    /// <para>UI-Sweep 2026-10-11 (r2-t-dup-cards): bis dahin zaehlte nur der ROHE Ortstext, und
+    /// chess-results laesst ihn je Gruppe anders schreiben — „Otáhalova 1260 Varnsdorf" (Gruppe A
+    /// und B) gegen „Varnsdorf Otáhalova 1260" (Gruppe C) desselben Turniers standen als zwei
+    /// Karten in der Liste. Auf Prod (Stand 2026-10-11) betraf das 65 Turniere mit 133
+    /// Teil-Schluesseln. Der Ortsname aus dem Lexikon ist fuer alle Schreibweisen derselbe.</para>
+    ///
+    /// <para>Verlaesslich heisst: ein Treffer auf Ortsebene (PLZ, Ort, von Hand, Quelle,
+    /// Vereinsnamen). Ein Bundesland-Zentroid (<see cref="GeoSource.Region"/>) ist zu grob — zwei
+    /// Turniere gleichen Namens am selben Tag in verschiedenen Orten EINES Landes waeren sonst eins;
+    /// mehrdeutige Treffer tragen ohnehin keinen Ort. Bewusst der NAME und nicht gerundete
+    /// Koordinaten: PLZ- und Ortstreffer derselben Stadt liegen ein paar Kilometer auseinander,
+    /// und jede Rasterung hat Kanten, an denen dieselbe Stadt in zwei Zellen faellt.</para>
+    ///
+    /// <para>Falsches Zusammenfassen bleibt unwahrscheinlich: Basisname, Foederation, Beginn und
+    /// Ende muessen weiterhin gleich sein. Ist nur EINE Gruppe verortet, bleiben die Karten getrennt
+    /// (die Oberflaeche zeigt dann den Hinweis „weitere Gruppe?") — getrennt lassen ist der
+    /// billigere Fehler.</para>
+    ///
+    /// <para>Der Schluessel haengt damit an der Verortung, und die laeuft an vielen Stellen NACH
+    /// <see cref="ApplyGrouping"/>. Deshalb zieht <see cref="TournamentGroupingBackfillService"/>
+    /// beim Start und am Ende jedes Nachtlaufs jeden abweichenden Schluessel nach.</para>
+    /// </summary>
+    internal static string GroupPlace(TournamentDirectoryEntry entry)
+    {
+        if (entry.Lat is not null
+            && entry.GeoSource is GeoSource.PostalCode or GeoSource.City or GeoSource.Manual
+                or GeoSource.Nominatim or GeoSource.TeamHint or GeoSource.SourceProvided
+            && !string.IsNullOrWhiteSpace(entry.GeoPlaceName))
+        {
+            return GroupText(entry.GeoPlaceName);
+        }
+        return GroupText(entry.LocationText);
     }
 
     /// <summary>

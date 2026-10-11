@@ -584,7 +584,9 @@ public static class ExternalDirectorySource
     /// (ebenso ein eigener Eintrag aus dem Ankuendigungskalender, <see cref="TournamentCalendarSweepService"/>)
     /// stand bis zum naechsten API-Neustart ungruppiert und danach mit einem Schluessel aus dem
     /// damaligen Termin/Ort, den spaetere Laeufe nicht mehr nachzogen
-    /// (<see cref="TournamentGroupingBackfillService"/> fuellt nur leere).</para>
+    /// (<see cref="TournamentGroupingBackfillService"/> fuellte damals nur leere; seit 2026-10-11
+    /// gleicht er jeden Schluessel ab, auch weil dieser seitdem den VERORTETEN Ort liest — und die
+    /// Verortung laeuft bei den Quellen erst NACH diesem Aufruf).</para>
     /// </summary>
     public static void ApplyClassification(TournamentDirectoryEntry entry)
     {

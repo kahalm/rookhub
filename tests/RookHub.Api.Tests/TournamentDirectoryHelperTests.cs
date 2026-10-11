@@ -702,6 +702,8 @@ public class TournamentDirectorySchedulerTests : IDisposable
             "Rumaenien (FRSah)", "Wales (WCU)", "Kanada (CFC)", "Niederlande (KNSB)",
             "Schottland (Chess Scotland)", "Irland (ICU)", "Norwegen (sjakk.no)", "Frankreich (FFE)",
             "FIDE-Detail-Durchgang",
+            // UI-Sweep 2026-10-11 (r2-t-dup-cards): zuletzt, nach allen Verortungen.
+            "Gruppenschluessel-Abgleich",
         ], Scheduler().Steps().Select(s => s.Name));
 
     [Fact]
