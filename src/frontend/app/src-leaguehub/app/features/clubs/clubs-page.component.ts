@@ -73,7 +73,7 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', region: 'tiro
           darf (ansehen, beitragen, verwalten), kommt weiter aus den Rollen der Gruppe. Wer in keiner Vereinsgruppe ist, sieht nichts.</p>
 
         @if (msg(); as m) { <p class="update-msg" [class.err]="m.err" role="status">{{ m.text }}</p> }
-        @if (loadError()) { <p class="err">{{ loadError() }}</p> }
+        @if (loadError()) { <p class="err" role="alert">{{ loadError() }}</p> }
         @if (loading() && !clubs().length) { <p class="muted">Lade …</p> }
 
         <div class="clubs-bar">
@@ -167,7 +167,7 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', region: 'tiro
                 <input type="search" autocomplete="off" placeholder="Gruppe suchen …" [value]="query()"
                        (input)="query.set($any($event.target).value)" />
               </label>
-              @if (groupsError()) { <p class="err">{{ groupsError() }}</p> }
+              @if (groupsError()) { <p class="err" role="alert">{{ groupsError() }}</p> }
               @if (query().trim()) {
                 <ul class="group-hits">
                   @for (h of hits(); track h.group.id) {

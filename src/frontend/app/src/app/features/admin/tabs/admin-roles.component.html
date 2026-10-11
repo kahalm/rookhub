@@ -23,14 +23,14 @@
             </div>
             <div class="role-actions">
               @if (editingId !== role.id && !isAdminRole(role)) {
-                <button mat-icon-button [attr.aria-label]="'common.edit' | translate"
-                        [matTooltip]="'common.edit' | translate" (click)="startEdit(role)">
+                <button mat-icon-button
+                        [appIconLabel]="'common.edit' | translate" (click)="startEdit(role)">
                   <mat-icon>edit</mat-icon>
                 </button>
               }
               @if (!role.isSystem) {
-                <button mat-icon-button color="warn" [attr.aria-label]="'common.delete' | translate"
-                        [matTooltip]="'common.delete' | translate" (click)="deleteRole(role)">
+                <button mat-icon-button color="warn"
+                        [appIconLabel]="'common.delete' | translate" (click)="deleteRole(role)">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -51,7 +51,7 @@
               }
             </div>
             <div class="edit-buttons">
-              <button mat-raised-button color="primary" [disabled]="savingRole || !editName.trim()" (click)="saveEdit(role)">
+              <button mat-flat-button color="primary" [disabled]="savingRole || !editName.trim()" (click)="saveEdit(role)">
                 <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
               </button>
               <button mat-button [disabled]="savingRole" (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
@@ -95,7 +95,7 @@
           </mat-checkbox>
         }
       </div>
-      <button mat-raised-button color="primary" [disabled]="!canCreate || creating" (click)="createRole()">
+      <button mat-flat-button color="primary" [disabled]="!canCreate || creating" (click)="createRole()">
         <mat-icon>add</mat-icon> {{ 'admin.roles.createBtn' | translate }}
       </button>
     </div>
@@ -121,7 +121,7 @@
               </mat-checkbox>
             }
           </div>
-          <button mat-raised-button color="primary" [disabled]="savingGroupRoles || !groupRolesLoaded" (click)="saveGroupRoles()">
+          <button mat-flat-button color="primary" [disabled]="savingGroupRoles || !groupRolesLoaded" (click)="saveGroupRoles()">
             <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>
@@ -163,7 +163,7 @@
               </mat-checkbox>
             }
           </div>
-          <button mat-raised-button color="primary" [disabled]="savingUserRoles || !userRolesLoaded" (click)="saveUserRoles()">
+          <button mat-flat-button color="primary" [disabled]="savingUserRoles || !userRolesLoaded" (click)="saveUserRoles()">
             <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>

@@ -48,7 +48,6 @@ import { activityKindIcon } from './activity-timer-tile.component';
       color: color-mix(in srgb, currentColor 75%, transparent);
     }
     .preset-list .p-actions { display: flex; gap: 2px; margin-left: auto; }
-    .preset-empty { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
   `],
 })
 export class ActivityPresetsCardComponent implements OnInit {

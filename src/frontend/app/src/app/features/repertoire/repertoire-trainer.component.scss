@@ -3,7 +3,7 @@
     .bar .title { font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; }
     /* Am Handy der Umschalter Abfragen/Lernen in eigener Zeile unter dem Titel (je 50 %), die Icon-Knöpfe danach —
        neben „Zurück" drückte er den Titel auf zwei Zeilen und klebte am rechten Rand. */
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .bar { row-gap: 8px; }
       .bar .mode-toggle { order: 1; flex: 1 1 100%; }
       .bar .mode-toggle mat-button-toggle { flex: 1 1 50%; }
@@ -12,8 +12,8 @@
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
     .chapter-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .offline-chip { background: color-mix(in srgb, #ff9800 22%, transparent); }
-    .freq-on { color: var(--mat-sys-primary, #3f51b5); background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent); }
+    .offline-chip { background: color-mix(in srgb, var(--rh-warn) 22%, transparent); }
+    .freq-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
     .freq-notice { margin: -4px 0 8px; font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .freq-progress { font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .counts .freq { display: inline-flex; align-items: center; gap: 2px; }
@@ -31,9 +31,9 @@
     app-puzzle-board { flex: 1 1 480px; max-width: min(820px, calc(100vh - 180px)); }
     .side { flex: 1 1 340px; min-width: 300px; max-width: 520px; }
     .counts { display: flex; align-items: center; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
-    .counts .ok { color: #2e7d32; } .counts .bad { color: #c62828; }
+    .counts .ok { color: var(--rh-success); } .counts .bad { color: var(--rh-error); }
     .counts .streak { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border-radius: 999px;
-      background: color-mix(in srgb, #ff6f00 22%, transparent); color: #ff6f00; font-weight: 600; font-size: .85rem; }
+      background: color-mix(in srgb, var(--rh-warn) 22%, transparent); color: var(--rh-warn); font-weight: 600; font-size: .85rem; }
     .counts .streak mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .line-label { font-size: 13px; opacity: .85; margin: 4px 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Züge der aktuellen Linie: bereits gespielte grau, aktueller in Primary hervorgehoben, verbleibende
@@ -81,7 +81,7 @@
     .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
     .repeat-due { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--mat-sys-primary, #1565c0); }
     .repeat-due mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .hint { color: var(--mdc-theme-text-secondary-on-background, #666); display: flex; align-items: center; gap: 6px; }
+    .hint { color: color-mix(in srgb, currentColor 60%, transparent); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .eval-info { font-size: 13px; opacity: .85; margin: 0 0 8px; }
 

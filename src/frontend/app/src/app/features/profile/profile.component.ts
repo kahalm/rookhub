@@ -81,7 +81,7 @@ interface Profile {
                 <mat-label>{{ 'profile.lichessUsername' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.lichessUsername" name="lichessUsername">
               </mat-form-field>
-              <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+              <button mat-flat-button color="primary" type="submit" [disabled]="saving">
                 {{ saving ? ('profile.saving' | translate) : ('common.save' | translate) }}
               </button>
             </form>
@@ -157,18 +157,18 @@ interface Profile {
       max-height: 400px;
       overflow-y: auto;
     }
-    .search-results h4 { margin: 0.5rem 0 0.25rem; color: #90caf9; }
+    .search-results h4 { margin: 0.5rem 0 0.25rem; color: var(--rh-accent); }
     .search-item { cursor: pointer; border-radius: 4px; }
     .search-item:hover { background: rgba(255,255,255,0.08); }
     .player-info { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; }
     .title { color: #ffd54f; }
     .elo { color: #a5d6a7; }
-    .country { color: #90caf9; font-size: 12px; }
+    .country { color: var(--rh-accent); font-size: 12px; }
     .id { color: #bdbdbd; font-size: 12px; }
-    .select-icon { color: #90caf9; margin-left: auto; }
+    .select-icon { color: var(--rh-accent); margin-left: auto; }
     .no-results { color: #bdbdbd; font-style: italic; text-align: center; padding: 1rem 0; }
     .discord-divider { margin: 1.25rem 0 1rem; }
-    .discord-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
+    .discord-section h4 { margin: 0 0 0.5rem; color: var(--rh-accent); }
     .discord-linked { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .discord-icon { color: #5865F2; }
     .discord-name { font-weight: 500; }

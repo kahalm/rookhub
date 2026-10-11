@@ -90,7 +90,7 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
     .hint { margin: 0 0 8px; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; margin: 2px 0; }
-    .warn { display: flex; align-items: center; gap: 6px; color: #e65100; font-size: .85rem; }
+    .warn { display: flex; align-items: center; gap: 6px; color: var(--rh-warn); font-size: .85rem; }
     .warn mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
     .group-label { font-size: .78rem; font-weight: 600; margin: 12px 0 6px; color: color-mix(in srgb, currentColor 70%, transparent); }
     .moves { display: flex; flex-wrap: wrap; gap: 6px; }

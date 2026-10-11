@@ -4,9 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { WorksheetService, WorksheetSummary } from './worksheet.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Menü-Eintrag „An Aufgabenblatt senden" mit Ziel-Untermenü: ZWISCHENABLAGE zuerst (der
@@ -25,16 +25,15 @@ import { WorksheetService, WorksheetSummary } from './worksheet.service';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-send-to-worksheet',
   standalone: true,
-  imports: [
-    CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatDividerModule, MatTooltipModule,
-    TranslatePipe,
+  imports: [IconLabelDirective,
+    CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatDividerModule, TranslatePipe,
   ],
   template: `
     @if (asButton) {
       <!-- Eigenständiger Knopf (Werkzeugleisten) statt Menüzeile — gleiches Ziel-Menü. -->
       <button mat-icon-button [matMenuTriggerFor]="targetMenu" [disabled]="disabled"
               (menuOpened)="loadTargets()"
-              [matTooltip]="labelKey | translate" [attr.aria-label]="labelKey | translate">
+              [appIconLabel]="labelKey | translate">
         <mat-icon>post_add</mat-icon>
       </button>
     } @else {

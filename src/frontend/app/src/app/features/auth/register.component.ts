@@ -116,7 +116,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
               <mat-hint>{{ 'auth.register.passwordHint' | translate:{ min: passwordMin } }}</mat-hint>
               <mat-error>{{ 'auth.register.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
             </mat-form-field>
-            <button mat-raised-button color="primary" type="submit" [disabled]="loading()">
+            <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
               {{ loading() ? ('auth.register.submitting' | translate) : ('auth.register.submit' | translate) }}
             </button>
           </form>

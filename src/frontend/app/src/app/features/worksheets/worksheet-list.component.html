@@ -22,8 +22,7 @@
               <mat-icon>edit</mat-icon>{{ 'worksheets.list.open' | translate }}
             </a>
             <button mat-icon-button (click)="clearClipboard()" [disabled]="clip.itemCount === 0"
-                    [matTooltip]="'worksheets.list.clear' | translate"
-                    [attr.aria-label]="'worksheets.list.clear' | translate">
+                    [appIconLabel]="'worksheets.list.clear' | translate">
               <mat-icon>delete_sweep</mat-icon>
             </button>
           </div>
@@ -65,7 +64,7 @@
     }
 
     @if (named.length === 0) {
-      <mat-card class="wl-empty">
+      <mat-card class="wl-empty empty-state">
         <mat-icon>assignment</mat-icon>
         <p>{{ (themeFilter ? 'worksheets.themes.noMatch' : 'worksheets.list.empty') | translate: { theme: themeFilter } }}</p>
       </mat-card>
@@ -94,18 +93,15 @@
             </div>
             <div class="wl-actions">
               <a mat-icon-button [routerLink]="['/worksheets', sheet.id]"
-                 [matTooltip]="'worksheets.list.open' | translate"
-                 [attr.aria-label]="'worksheets.list.open' | translate">
+                 [appIconLabel]="'worksheets.list.open' | translate">
                 <mat-icon>edit</mat-icon>
               </a>
               <a mat-icon-button [routerLink]="['/worksheets', sheet.id, 'print']" [queryParams]="{ print: 1 }"
-                 [matTooltip]="'worksheets.print' | translate"
-                 [attr.aria-label]="'worksheets.print' | translate">
+                 [appIconLabel]="'worksheets.print' | translate">
                 <mat-icon>picture_as_pdf</mat-icon>
               </a>
               <button mat-icon-button color="warn" (click)="remove(sheet)"
-                      [matTooltip]="'common.delete' | translate"
-                      [attr.aria-label]="'common.delete' | translate">
+                      [appIconLabel]="'common.delete' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>

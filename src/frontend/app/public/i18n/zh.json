@@ -359,7 +359,9 @@
       "files": "文件（{{count}}）",
       "empty": "暂无文件。上传 PGN 文件开始吧！",
       "filesSkipped": "{{count}} 个文件已跳过（仅支持 .pgn，最大 10 MB）",
+      "filesSkippedOne": "{{count}} 个文件已跳过（仅支持 .pgn，最大 10 MB）",
       "uploadSuccess": "已上传 {{count}} 个文件",
+      "uploadSuccessOne": "已上传 {{count}} 个文件",
       "uploadPartial": "{{ok}} 个上传成功，{{failed}} 个失败",
       "downloadFailed": "下载失败",
       "deleteConfirm": "删除此文件？"
@@ -826,9 +828,12 @@
       "adminOnly": "仅管理员",
       "deleteBook": "删除书本",
       "deleteConfirm": "删除书本「{{name}}」（共 {{count}} 道题）？",
+      "deleteConfirmOne": "删除书本「{{name}}」（共 {{count}} 道题）？",
       "deleted": "书本「{{name}}」已删除",
       "importedCount": "已导入 {{count}} 道题",
+      "importedCountOne": "已导入 {{count}} 道题",
       "duplicatesCount": "{{count}} 个重复",
+      "duplicatesCountOne": "{{count}} 个重复",
       "invalidCount": "{{count}} 个无效",
       "columns": {
         "book": "书本",

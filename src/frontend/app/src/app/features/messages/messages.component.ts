@@ -43,7 +43,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
         }
         @if (messages.length === 0) {
           @if (!isAdmin) {
-            <p class="empty">{{ 'messages.emptyUserCanWrite' | translate }}</p>
+            <p class="empty-state">{{ 'messages.emptyUserCanWrite' | translate }}</p>
           }
         } @else {
           <mat-card>
@@ -68,7 +68,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
             <textarea matInput [(ngModel)]="draft" rows="3" maxlength="4000"
                       (keydown.control.enter)="send()" [disabled]="sending"></textarea>
           </mat-form-field>
-          <button mat-raised-button color="primary" (click)="send()" [disabled]="sending || !draft.trim()">
+          <button mat-flat-button color="primary" (click)="send()" [disabled]="sending || !draft.trim()">
             <mat-icon>send</mat-icon> {{ 'common.send' | translate }}
           </button>
         </div>
@@ -78,13 +78,12 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
   `,
   styles: [`
     .msg-container { max-width: 760px; margin: 24px auto; padding: 0 16px; }
-    .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .thread { display: flex; flex-direction: column; gap: 10px; padding: 12px 4px; }
     .bubble-row { display: flex; }
     .bubble-row.mine { justify-content: flex-end; }
     .bubble { max-width: 80%; padding: 8px 12px; border-radius: 12px;
               background: color-mix(in srgb, currentColor 8%, transparent); }
-    .bubble.admin { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 16%, transparent); }
+    .bubble.admin { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
     .sender { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
     .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; }
     .meta { font-size: 0.72rem; opacity: 0.55; margin-top: 4px; text-align: right; }

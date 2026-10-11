@@ -5,12 +5,11 @@
     <p class="muted">{{ 'reconstruct.notFound' | translate }}</p>
     <a mat-button routerLink="/reconstruct"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
   } @else {
-    <div class="head">
+    <div class="header">
       <a mat-button routerLink="/reconstruct"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
       <h1>{{ data()!.title }}</h1>
       <button mat-icon-button (click)="showHead = !showHead"
-              [matTooltip]="'reconstruct.editHead' | translate"
-              [attr.aria-label]="'reconstruct.editHead' | translate">
+              [appIconLabel]="'reconstruct.editHead' | translate">
         <mat-icon>{{ showHead ? 'expand_less' : 'edit_note' }}</mat-icon>
       </button>
     </div>
@@ -33,8 +32,7 @@
       </button>
       @if (data()!.shareToken) {
         <button mat-icon-button [disabled]="busy()" (click)="stopSharing()"
-                [matTooltip]="'reconstruct.share.stop' | translate"
-                [attr.aria-label]="'reconstruct.share.stop' | translate">
+                [appIconLabel]="'reconstruct.share.stop' | translate">
           <mat-icon>link_off</mat-icon>
         </button>
       }
@@ -172,15 +170,14 @@
               @if (!part.generated) {
                 <button mat-icon-button class="certain-toggle" [class.unsure]="!part.certain"
                         [disabled]="busy()" (click)="toggleCertain(part); $event.stopPropagation()"
-                        [matTooltip]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate"
-                        [attr.aria-label]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate">
+                        [appIconLabel]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate">
                   <mat-icon>{{ part.certain ? 'check_circle' : 'help' }}</mat-icon>
                 </button>
               }
               <!-- UI-Sweep 2026-10-11 (r2-rg-recon-actions): Verschieben und Löschen im ⋮-Menü — vier Knöpfe passten am
                    Handy nicht in die Kopfzeile und sprangen je Teil in eine zweite Zeile. Sichtbar bleibt nur ✓. -->
               <button mat-icon-button class="part-menu" [matMenuTriggerFor]="partMenu" (click)="$event.stopPropagation()"
-                      [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
+                      [appIconLabel]="'common.moreActions' | translate">
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #partMenu="matMenu">
@@ -296,24 +293,20 @@
             <!-- Blättern durch die eingetippten Züge (am PC auch mit den Pfeiltasten). -->
             <div class="ply-nav">
               <button mat-icon-button [disabled]="plyShown() === 0" (click)="goPly('start')"
-                      [matTooltip]="'reconstruct.plyFirst' | translate"
-                      [attr.aria-label]="'reconstruct.plyFirst' | translate">
+                      [appIconLabel]="'reconstruct.plyFirst' | translate">
                 <mat-icon>first_page</mat-icon>
               </button>
               <button mat-icon-button [disabled]="plyShown() === 0" (click)="goPly(-1)"
-                      [matTooltip]="'reconstruct.plyPrev' | translate"
-                      [attr.aria-label]="'reconstruct.plyPrev' | translate">
+                      [appIconLabel]="'reconstruct.plyPrev' | translate">
                 <mat-icon>chevron_left</mat-icon>
               </button>
               <span class="muted ply-count">{{ 'reconstruct.plyPosition' | translate:{ shown: plyShown(), total: plyTotal() } }}</span>
               <button mat-icon-button [disabled]="atEnd()" (click)="goPly(1)"
-                      [matTooltip]="'reconstruct.plyNext' | translate"
-                      [attr.aria-label]="'reconstruct.plyNext' | translate">
+                      [appIconLabel]="'reconstruct.plyNext' | translate">
                 <mat-icon>chevron_right</mat-icon>
               </button>
               <button mat-icon-button [disabled]="atEnd()" (click)="goPly('end')"
-                      [matTooltip]="'reconstruct.plyLast' | translate"
-                      [attr.aria-label]="'reconstruct.plyLast' | translate">
+                      [appIconLabel]="'reconstruct.plyLast' | translate">
                 <mat-icon>last_page</mat-icon>
               </button>
               @if (!atEnd()) {

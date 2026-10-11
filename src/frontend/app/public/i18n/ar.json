@@ -359,7 +359,9 @@
       "files": "الملفات ({{count}})",
       "empty": "لا ملفات بعد. ارفع ملفات PGN للبدء!",
       "filesSkipped": "تم تخطي {{count}} ملف (PGN فقط، حتى 10 MB)",
+      "filesSkippedOne": "تم تخطي {{count}} ملف (PGN فقط، حتى 10 MB)",
       "uploadSuccess": "تم رفع {{count}} ملف",
+      "uploadSuccessOne": "تم رفع {{count}} ملف",
       "uploadPartial": "{{ok}} مرفوع، {{failed}} فشل",
       "downloadFailed": "فشل التنزيل",
       "deleteConfirm": "حذف هذا الملف؟"
@@ -826,9 +828,12 @@
       "adminOnly": "الإدارة فقط",
       "deleteBook": "حذف الكتاب",
       "deleteConfirm": "حذف الكتاب \"{{name}}\" مع {{count}} لغز؟",
+      "deleteConfirmOne": "حذف الكتاب \"{{name}}\" مع {{count}} لغز؟",
       "deleted": "تم حذف الكتاب \"{{name}}\"",
       "importedCount": "تم استيراد {{count}} لغز",
+      "importedCountOne": "تم استيراد {{count}} لغز",
       "duplicatesCount": "{{count}} مكرر",
+      "duplicatesCountOne": "{{count}} مكرر",
       "invalidCount": "{{count}} غير صالح",
       "columns": {
         "book": "الكتاب",

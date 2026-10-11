@@ -77,7 +77,7 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
     .se-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; min-height: 44px; cursor: pointer; }
     .se-pick { min-height: 36px; max-width: 100%; }
     .se-note { font-size: .85em; opacity: .75; }
-    .se-note.warn { color: var(--rh-warn, #b26a00); opacity: 1; }
+    .se-note.warn { color: var(--warn); opacity: 1; }
     .se-lines { list-style: none; margin: 6px 0 0; padding: 0; font-variant-numeric: tabular-nums; }
     .se-lines li { display: flex; gap: 8px; padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.4em; }
     .se-eval { flex: 0 0 auto; min-width: 3.6em; padding: 0 4px; border-radius: 4px; background: #333; color: #fff; text-align: center; font-weight: 600; }

@@ -359,7 +359,9 @@
       "files": "Dosyalar ({{count}})",
       "empty": "Henüz dosya yok. Başlamak için PGN dosyası yükleyin!",
       "filesSkipped": "{{count}} dosya atlandı (yalnızca .pgn, max 10 MB)",
+      "filesSkippedOne": "{{count}} dosya atlandı (yalnızca .pgn, max 10 MB)",
       "uploadSuccess": "{{count}} dosya yüklendi",
+      "uploadSuccessOne": "{{count}} dosya yüklendi",
       "uploadPartial": "{{ok}} yüklendi, {{failed}} başarısız",
       "downloadFailed": "İndirme başarısız",
       "deleteConfirm": "Bu dosya silinsin mi?"
@@ -826,9 +828,12 @@
       "adminOnly": "yalnızca yönetici",
       "deleteBook": "Kitabı sil",
       "deleteConfirm": "{{count}} problem içeren \"{{name}}\" kitabı silinsin mi?",
+      "deleteConfirmOne": "{{count}} problem içeren \"{{name}}\" kitabı silinsin mi?",
       "deleted": "\"{{name}}\" kitabı silindi",
       "importedCount": "{{count}} problem içe aktarıldı",
+      "importedCountOne": "{{count}} problem içe aktarıldı",
       "duplicatesCount": "{{count}} yinelenen",
+      "duplicatesCountOne": "{{count}} yinelenen",
       "invalidCount": "{{count}} geçersiz",
       "columns": {
         "book": "Kitap",

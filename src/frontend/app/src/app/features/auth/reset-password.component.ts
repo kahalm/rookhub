@@ -64,7 +64,7 @@ const ERROR_KEYS: Record<ResetError, string> = {
                 <mat-error>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
               </mat-form-field>
               <!-- Knopf immer aktiv wie bei Anmelden/Registrieren (UX-052); geprueft wird beim Absenden. -->
-              <button mat-raised-button color="primary" type="submit" [disabled]="loading()">
+              <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
                 {{ loading() ? ('auth.reset.submitting' | translate) : ('auth.reset.submit' | translate) }}
               </button>
             </form>
@@ -91,7 +91,7 @@ const ERROR_KEYS: Record<ResetError, string> = {
     .auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
-    .auth-info { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
+    .auth-info { background: color-mix(in srgb, var(--rh-info) 15%, transparent); border-left: 3px solid var(--rh-info); padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     mat-form-field { width: 100%; }
     .form-error { margin-top: 12px; padding: 12px; border-radius: 8px;
                   background: rgba(211, 47, 47, 0.08); border: 1px solid rgba(211, 47, 47, 0.35); }

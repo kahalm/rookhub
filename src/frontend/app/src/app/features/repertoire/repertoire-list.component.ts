@@ -25,17 +25,18 @@ import { RepertoireTrainingService } from './repertoire-training.service';
 import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, cachedRepertoires } from './repertoire-offline.util';
 import { downloadBlob } from '../../shared/download.util';
 import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
+  imports: [IconLabelDirective, CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
         <h1>{{ 'repertoire.list.title' | translate }}</h1>
-        <button mat-raised-button color="primary" (click)="openCreateDialog()">
+        <button mat-flat-button color="primary" (click)="openCreateDialog()">
           <mat-icon>add</mat-icon> {{ 'repertoire.list.new' | translate }}
         </button>
       </div>
@@ -117,7 +118,7 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
         }
 
         @if (filteredRepertoires.length === 0) {
-          <p>{{ (search ? 'repertoire.list.noMatch' : 'repertoire.list.empty') | translate:{ query: search } }}</p>
+          <p class="empty-state">{{ (search ? 'repertoire.list.noMatch' : 'repertoire.list.empty') | translate:{ query: search } }}</p>
         }
       }
     </div>
@@ -163,13 +164,11 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
             <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
             <button mat-icon-button class="offline-toggle" [disabled]="savingOffline === rep.id"
                     (click)="toggleOffline(rep)"
-                    [matTooltip]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate"
-                    [attr.aria-label]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate">
+                    [appIconLabel]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate">
               <mat-icon>{{ isOffline(rep) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
             </button>
             <button mat-icon-button [matMenuTriggerFor]="repMenu"
-                    [matTooltip]="'common.moreActions' | translate"
-                    [attr.aria-label]="'common.moreActions' | translate">
+                    [appIconLabel]="'common.moreActions' | translate">
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #repMenu="matMenu">
@@ -217,11 +216,11 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
     .offline-banner mat-icon { flex: 0 0 auto; opacity: 0.7; }
     .offline-toggle { margin-left: auto; }
     /* Rotes Icon fuer den Loeschen-Eintrag im Aktionen-Menue (wie course-card). */
-    .delete-item mat-icon { color: color-mix(in srgb, #e53935 80%, currentColor); }
+    .delete-item mat-icon { color: var(--rh-error); }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 1rem; }
     .repertoire-section { margin-bottom: 1.75rem; }
     .repertoire-section .section-title { display: flex; align-items: center; gap: 6px; margin: 0.25rem 0 0.15rem; font-size: 1.05rem; font-weight: 600; }
-    .repertoire-section .section-icon { color: var(--mat-sys-primary, #3f51b5); }
+    .repertoire-section .section-icon { color: var(--mat-sys-primary); }
     .repertoire-section .section-hint { margin: 0 0 0.65rem; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
     /* UI-Sweep 2026-10-11 (r2-rg-rep-cards): gleich hohe Karten, Aktionszeile unten bündig, Titel einzeilig. */
@@ -239,10 +238,10 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
     .kind-chip.kind-middlegame { background-color: #7b1fa2; color: #fff; }
     .kind-chip.kind-endgame { background-color: #c62828; color: #fff; }
     /* Kleiner „RepCheck ok"-Marker im Karten-Titel, in Primärfarbe. */
-    .ext-badge { color: var(--mat-sys-primary, #3f51b5); font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; opacity: 0.9; }
+    .ext-badge { color: var(--mat-sys-primary); font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; opacity: 0.9; }
     .shared-badge-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: middle; opacity: 0.7; }
     /* (!) am Eintrag: klein und warnfarben, aber nicht schreiend — es ist ein Hinweis, kein Fehler. */
-    .stale-badge { color: #ef6c00; font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; cursor: help; }
+    .stale-badge { color: var(--rh-warn); font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; cursor: help; }
   `]
 })
 export class RepertoireListComponent implements OnInit {

@@ -132,7 +132,7 @@ export class ChallengeFriendsComponent implements OnChanges {
         if (skipped > 0) {
           this.snackbar.info(this.translate.instant('puzzles.challenge.batchResult', { sent: res.sent, skipped }));
         } else {
-          this.snackbar.success(this.translate.instant('puzzles.challenge.sentCount', { count: res.sent }));
+          this.snackbar.success(this.translate.instant(res.sent === 1 ? 'puzzles.challenge.sentCountOne' : 'puzzles.challenge.sentCount', { count: res.sent }));
         }
       },
       error: err => {

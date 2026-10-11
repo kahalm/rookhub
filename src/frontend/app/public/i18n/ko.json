@@ -359,7 +359,9 @@
       "files": "파일 ({{count}})",
       "empty": "파일이 없습니다. PGN 파일을 업로드하여 시작하세요!",
       "filesSkipped": "{{count}}개 파일 건너뜀(.pgn만 가능, 최대 10MB)",
+      "filesSkippedOne": "{{count}}개 파일 건너뜀(.pgn만 가능, 최대 10MB)",
       "uploadSuccess": "{{count}}개 파일 업로드됨",
+      "uploadSuccessOne": "{{count}}개 파일 업로드됨",
       "uploadPartial": "{{ok}}개 업로드, {{failed}}개 실패",
       "downloadFailed": "다운로드 실패",
       "deleteConfirm": "이 파일을 삭제할까요?"
@@ -826,9 +828,12 @@
       "adminOnly": "관리자 전용",
       "deleteBook": "교재 삭제",
       "deleteConfirm": "교재 \"{{name}}\"({{count}}개 퍼즐)을 삭제할까요?",
+      "deleteConfirmOne": "교재 \"{{name}}\"({{count}}개 퍼즐)을 삭제할까요?",
       "deleted": "교재 \"{{name}}\" 삭제됨",
       "importedCount": "{{count}}개 퍼즐 가져옴",
+      "importedCountOne": "{{count}}개 퍼즐 가져옴",
       "duplicatesCount": "{{count}}개 중복",
+      "duplicatesCountOne": "{{count}}개 중복",
       "invalidCount": "{{count}}개 유효하지 않음",
       "columns": {
         "book": "교재",

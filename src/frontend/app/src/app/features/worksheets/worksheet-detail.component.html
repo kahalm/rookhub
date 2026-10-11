@@ -146,8 +146,7 @@
                 <div class="wd-share-row">
                   <input class="wd-share-url" [value]="shareUrl" readonly />
                   <button mat-icon-button (click)="copyShareUrl()"
-                          [matTooltip]="'worksheets.share.copy' | translate"
-                          [attr.aria-label]="'worksheets.share.copy' | translate">
+                          [appIconLabel]="'worksheets.share.copy' | translate">
                     <mat-icon>content_copy</mat-icon>
                   </button>
                 </div>
@@ -162,7 +161,7 @@
     }
 
     @if (sheet.items.length === 0) {
-      <mat-card class="wd-empty">
+      <mat-card class="wd-empty empty-state">
         <mat-icon>assignment</mat-icon>
         <p>{{ 'worksheets.detail.empty' | translate }}</p>
       </mat-card>
@@ -195,30 +194,25 @@
 
             <div class="wd-item-actions">
               <button mat-icon-button (click)="move(i, -1)" [disabled]="i === 0"
-                      [matTooltip]="'worksheets.detail.moveUp' | translate"
-                      [attr.aria-label]="'worksheets.detail.moveUp' | translate">
+                      [appIconLabel]="'worksheets.detail.moveUp' | translate">
                 <mat-icon>arrow_upward</mat-icon>
               </button>
               <button mat-icon-button (click)="move(i, 1)" [disabled]="i === sheet.items.length - 1"
-                      [matTooltip]="'worksheets.detail.moveDown' | translate"
-                      [attr.aria-label]="'worksheets.detail.moveDown' | translate">
+                      [appIconLabel]="'worksheets.detail.moveDown' | translate">
                 <mat-icon>arrow_downward</mat-icon>
               </button>
               <button mat-icon-button (click)="flip(item)"
-                      [matTooltip]="'worksheets.detail.flip' | translate"
-                      [attr.aria-label]="'worksheets.detail.flip' | translate">
+                      [appIconLabel]="'worksheets.detail.flip' | translate">
                 <mat-icon>swap_vert</mat-icon>
               </button>
               @if (item.bookId) {
                 <button mat-icon-button (click)="openSource(item)"
-                        [matTooltip]="'worksheets.detail.openSource' | translate"
-                        [attr.aria-label]="'worksheets.detail.openSource' | translate">
+                        [appIconLabel]="'worksheets.detail.openSource' | translate">
                   <mat-icon>menu_book</mat-icon>
                 </button>
               }
               <button mat-icon-button color="warn" (click)="removeItem(item)"
-                      [matTooltip]="'worksheets.detail.removeItem' | translate"
-                      [attr.aria-label]="'worksheets.detail.removeItem' | translate">
+                      [appIconLabel]="'worksheets.detail.removeItem' | translate">
                 <mat-icon>close</mat-icon>
               </button>
             </div>

@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { Observable, Subscription, catchError, map, of, switchMap, takeWhile, timer } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
@@ -77,7 +78,7 @@ export const trackedKey = (id: number): string => `t:${id}`;
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule,
-    MatDialogModule, MatIconModule, MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
+    MatDialogModule, MatIconModule, MatTabsModule, MatTooltipModule, IconLabelDirective, RouterLink, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent, TournamentDatePipe, RookHubLinkComponent,
   ],
   templateUrl: './tournament-history.component.html',

@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FavoritesService, FavoritePuzzle } from '../../core/favorites.service';
@@ -19,12 +20,12 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
   selector: 'app-favorites',
   standalone: true,
   imports: [
-    CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, IconLabelDirective,
     MatProgressSpinnerModule, TranslatePipe, LoadErrorComponent, RouterModule, PuzzleThemePipe,
   ],
   template: `
     <div class="fav-page">
-      <div class="head">
+      <div class="header">
         <h1><mat-icon class="title-heart">favorite</mat-icon> {{ 'favorites.title' | translate }}</h1>
         <!-- UI-Sweep 2026-10-11 (r2-rp-favorites-empty): der Untertitel wiederholte den Leertext fast wörtlich —
              bei leerer Liste steht die Erklärung nur noch im Leerzustand. -->
@@ -38,7 +39,7 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
       } @else if (loadError) {
         <app-load-error (retry)="load()" />
       } @else if (favorites.length === 0) {
-        <mat-card class="empty">
+        <mat-card class="empty-state">
           <mat-icon>favorite_border</mat-icon>
           <p class="empty-title">{{ 'favorites.empty' | translate }}</p>
           <p class="empty-hint">{{ 'favorites.emptyHint' | translate }}</p>
@@ -68,13 +69,13 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
                 </div>
               </div>
               <div class="actions">
-                <button mat-icon-button (click)="replay(f)" [matTooltip]="'favorites.replay' | translate" [attr.aria-label]="'favorites.replay' | translate">
+                <button mat-icon-button (click)="replay(f)" [appIconLabel]="'favorites.replay' | translate">
                   <mat-icon>play_arrow</mat-icon>
                 </button>
-                <button mat-icon-button (click)="analyze(f)" [matTooltip]="'favorites.analyze' | translate" [attr.aria-label]="'favorites.analyze' | translate">
+                <button mat-icon-button (click)="analyze(f)" [appIconLabel]="'favorites.analyze' | translate">
                   <mat-icon>biotech</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" (click)="remove(f)" [matTooltip]="'favorites.removeTooltip' | translate" [attr.aria-label]="'favorites.removeTooltip' | translate">
+                <button mat-icon-button color="warn" (click)="remove(f)" [appIconLabel]="'favorites.removeTooltip' | translate">
                   <mat-icon>heart_broken</mat-icon>
                 </button>
               </div>
@@ -86,14 +87,14 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
   `,
   styles: [`
     .fav-page { max-width: 900px; margin: 0 auto; padding: 16px; }
-    .head h1 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+    .header h1 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
     .title-heart { color: #e91e63; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
-    .empty a mat-icon { font-size: 20px; width: 20px; height: 20px; opacity: 1; }
-    .empty p { margin: 0; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state a mat-icon { font-size: 20px; width: 20px; height: 20px; opacity: 1; }
+    .empty-state p { margin: 0; }
     .empty-title { font-size: 1.05rem; }
     .empty-hint { font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .list { display: flex; flex-direction: column; gap: 8px; }
@@ -108,7 +109,7 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
     .chip { font-size: 0.72rem; padding: 1px 7px; border-radius: 10px; text-transform: capitalize; background: color-mix(in srgb, currentColor 10%, transparent); }
     .date { font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); }
     .actions { display: flex; flex-shrink: 0; }
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .fav { flex-direction: column; align-items: stretch; }
       .actions { justify-content: flex-end; }
     }

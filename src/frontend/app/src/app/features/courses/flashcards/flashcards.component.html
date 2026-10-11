@@ -23,8 +23,7 @@
     @if (view === 'digital') {
       <button mat-icon-button (click)="toggleShuffle()" [disabled]="loading || cards.length < 2"
               [class.fc-view-active]="shuffled"
-              [matTooltip]="'courses.flashcards.shuffle' | translate"
-              [attr.aria-label]="'courses.flashcards.shuffle' | translate">
+              [appIconLabel]="'courses.flashcards.shuffle' | translate">
         <mat-icon>shuffle</mat-icon>
       </button>
     } @else {

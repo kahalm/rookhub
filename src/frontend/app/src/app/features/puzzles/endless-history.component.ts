@@ -70,7 +70,7 @@ interface EndlessHistoryResponse {
             <div class="empty-state">
               <mat-icon class="empty-icon">sports_esports</mat-icon>
               <p>{{ 'endless.history.noSessions' | translate }}</p>
-              <button mat-raised-button color="primary" (click)="router.navigate(['/puzzles/endless'])">
+              <button mat-flat-button color="primary" (click)="router.navigate(['/puzzles/endless'])">
                 <mat-icon>play_arrow</mat-icon> {{ 'endless.history.startPlaying' | translate }}
               </button>
             </div>
@@ -238,14 +238,14 @@ interface EndlessHistoryResponse {
     .history-table { width: 100%; }
     .back-link { margin-top: 1rem; }
     th.mat-mdc-header-cell { font-weight: 600; }
-    .elo-pos { color: #4caf50; font-weight: 600; }
-    .elo-neg { color: #f44336; font-weight: 600; }
+    .elo-pos { color: var(--rh-success); font-weight: 600; }
+    .elo-neg { color: var(--rh-error); font-weight: 600; }
     .toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .selection-count { font-size: 0.875rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .archived-row { opacity: 0.5; }
     .clickable-row { cursor: pointer; }
-    .session-card.clickable-row:focus-visible { outline: 2px solid #1976d2; outline-offset: 2px; }
+    .session-card.clickable-row:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
     tr.clickable-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .session-card.clickable-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
 
@@ -265,7 +265,7 @@ interface EndlessHistoryResponse {
     .session-stat-label { font-size: 0.7rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .session-mistakes {
       display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem;
-      font-size: 0.8rem; color: #f44336;
+      font-size: 0.8rem; color: var(--rh-error);
     }
     .session-mistakes mat-icon { font-size: 14px; width: 14px; height: 14px; }
 

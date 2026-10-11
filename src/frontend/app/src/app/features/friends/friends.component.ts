@@ -13,7 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatBadgeModule } from '@angular/material/badge';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -29,7 +29,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatTooltipModule, MatBadgeModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -39,7 +39,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
           <mat-label>{{ 'friends.searchUsers' | translate }}</mat-label>
           <input matInput [(ngModel)]="searchQuery" (keyup.enter)="search()">
         </mat-form-field>
-        <button mat-raised-button color="primary" (click)="search()">{{ 'common.search' | translate }}</button>
+        <button mat-flat-button color="primary" (click)="search()">{{ 'common.search' | translate }}</button>
       </mat-card>
 
       @if (searchResults.length > 0) {
@@ -53,8 +53,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
                 @if (getChessIdentities(user)) {
                   <span matListItemLine class="chess-identities">{{ getChessIdentities(user) }}</span>
                 }
-                <button mat-icon-button (click)="sendRequest(user.userId)" matListItemMeta
-                        [attr.aria-label]="'friends.aria.sendRequest' | translate" [matTooltip]="'friends.aria.sendRequest' | translate">
+                <button mat-icon-button (click)="sendRequest(user.userId)" matListItemMeta [appIconLabel]="'friends.aria.sendRequest' | translate">
                   <mat-icon>person_add</mat-icon>
                 </button>
               </mat-list-item>
@@ -76,25 +75,22 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
                   <span matListItemTitle>{{ friend.username }}</span>
                   <span matListItemLine>{{ friend.displayName || '' }}</span>
                   <div matListItemMeta>
-                    <button mat-icon-button color="primary" [routerLink]="['/friends', friend.userId, 'stats']"
-                            [attr.aria-label]="'friends.stats.compare' | translate" [matTooltip]="'friends.stats.compare' | translate">
+                    <button mat-icon-button color="primary" [routerLink]="['/friends', friend.userId, 'stats']" [appIconLabel]="'friends.stats.compare' | translate">
                       <mat-icon>bar_chart</mat-icon>
                     </button>
                     <button mat-icon-button [color]="friend.openRevengeCount ? 'warn' : 'primary'"
                             [routerLink]="['/friends', friend.userId, 'revenge']"
-                            [attr.aria-label]="(friend.openRevengeCount ? 'friends.revenge.menuOpen' : 'friends.revenge.menu') | translate:{ count: friend.openRevengeCount }"
-                            [matTooltip]="(friend.openRevengeCount ? 'friends.revenge.menuOpen' : 'friends.revenge.menu') | translate:{ count: friend.openRevengeCount }">
+                            [appIconLabel]="(friend.openRevengeCount ? (friend.openRevengeCount === 1 ? 'friends.revenge.menuOpenOne' : 'friends.revenge.menuOpen') : 'friends.revenge.menu') | translate:{ count: friend.openRevengeCount }">
                       <mat-icon [matBadge]="friend.openRevengeCount" [matBadgeHidden]="!friend.openRevengeCount"
                                 matBadgeColor="warn" matBadgeSize="small">sports_martial_arts</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="removeFriend(friend)"
-                            [attr.aria-label]="'friends.aria.removeFriend' | translate" [matTooltip]="'friends.aria.removeFriend' | translate">
+                    <button mat-icon-button color="warn" (click)="removeFriend(friend)" [appIconLabel]="'friends.aria.removeFriend' | translate">
                       <mat-icon>person_remove</mat-icon>
                     </button>
                   </div>
                 </mat-list-item>
               } @empty {
-                <p class="empty-text">{{ 'friends.empty.friends' | translate }}</p>
+                <p class="empty-state">{{ 'friends.empty.friends' | translate }}</p>
               }
             </mat-list>
           }
@@ -109,18 +105,16 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
                 <span matListItemTitle>{{ req.requesterUsername }}</span>
                 <span matListItemLine>{{ 'friends.sentOn' | translate:{ date: (req.createdAt | date) } }}</span>
                 <div matListItemMeta>
-                  <button mat-icon-button color="primary" (click)="acceptRequest(req.friendshipId)"
-                          [attr.aria-label]="'friends.aria.accept' | translate" [matTooltip]="'friends.aria.accept' | translate">
+                  <button mat-icon-button color="primary" (click)="acceptRequest(req.friendshipId)" [appIconLabel]="'friends.aria.accept' | translate">
                     <mat-icon>check</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" (click)="declineRequest(req.friendshipId)"
-                          [attr.aria-label]="'friends.aria.decline' | translate" [matTooltip]="'friends.aria.decline' | translate">
+                  <button mat-icon-button color="warn" (click)="declineRequest(req.friendshipId)" [appIconLabel]="'friends.aria.decline' | translate">
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">{{ 'friends.empty.requests' | translate }}</p>
+              <p class="empty-state">{{ 'friends.empty.requests' | translate }}</p>
             }
           </mat-list>
 
@@ -130,13 +124,12 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
               <mat-list-item>
                 <span matListItemTitle>{{ req.addresseeDisplayName || req.addresseeUsername }}</span>
                 <span matListItemLine class="status">⏳ {{ 'friends.requests.awaiting' | translate }} · {{ 'friends.sentOn' | translate:{ date: (req.createdAt | date) } }}</span>
-                <button mat-icon-button color="warn" matListItemMeta (click)="withdrawRequest(req.friendshipId)"
-                        [attr.aria-label]="'friends.aria.withdraw' | translate" [matTooltip]="'friends.aria.withdraw' | translate">
+                <button mat-icon-button color="warn" matListItemMeta (click)="withdrawRequest(req.friendshipId)" [appIconLabel]="'friends.aria.withdraw' | translate">
                   <mat-icon>undo</mat-icon>
                 </button>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">{{ 'friends.requests.emptySent' | translate }}</p>
+              <p class="empty-state">{{ 'friends.requests.emptySent' | translate }}</p>
             }
           </mat-list>
         </mat-tab>
@@ -148,12 +141,12 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
               <mat-list-item>
                 <span matListItemTitle>{{ 'friends.challenges.fromLine' | translate:{ name: c.fromDisplayName || c.fromUsername, rating: c.rating } }}</span>
                 <span matListItemLine class="themes">{{ c.title || formatThemes(c.themes) }}</span>
-                <button mat-raised-button color="primary" matListItemMeta (click)="solveChallenge(c)">
+                <button mat-flat-button color="primary" matListItemMeta (click)="solveChallenge(c)">
                   <mat-icon>sports_esports</mat-icon> {{ 'friends.challenges.solve' | translate }}
                 </button>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">{{ 'friends.challenges.emptyInbox' | translate }}</p>
+              <p class="empty-state">{{ 'friends.challenges.emptyInbox' | translate }}</p>
             }
           </mat-list>
 
@@ -171,7 +164,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
                 </span>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">{{ 'friends.challenges.emptySent' | translate }}</p>
+              <p class="empty-state">{{ 'friends.challenges.emptySent' | translate }}</p>
             }
           </mat-list>
 
@@ -188,12 +181,12 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
                 </span>
                 <span matListItemLine class="when">{{ n.createdAt | date:'short' }}</span>
                 <button mat-icon-button matListItemMeta [routerLink]="['/puzzles', n.puzzleId]"
-                        [matTooltip]="'friends.revengeNotifications.openPuzzle' | translate">
+                        [appIconLabel]="'friends.revengeNotifications.openPuzzle' | translate">
                   <mat-icon>open_in_new</mat-icon>
                 </button>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">{{ 'friends.revengeNotifications.empty' | translate }}</p>
+              <p class="empty-state">{{ 'friends.revengeNotifications.empty' | translate }}</p>
             }
           </mat-list>
         </mat-tab>
@@ -223,15 +216,14 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
       font-size: 0.75rem; line-height: 1.4; text-align: center;
       background: color-mix(in srgb, currentColor 14%, transparent);
     }
-    .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     .chess-identities { font-size: 0.75rem; color: color-mix(in srgb, currentColor 40%, transparent); }
     .section-title { margin: 1rem 1rem 0; font-size: 0.95rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .themes { font-size: 0.8rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .status { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
-    .status.solved { color: #2e7d32; }
-    .status.failed { color: #c62828; }
+    .status.solved { color: var(--rh-success); }
+    .status.failed { color: var(--rh-error); }
     .when { font-size: 0.72rem; color: color-mix(in srgb, currentColor 40%, transparent); }
-    .unseen { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 10%, transparent); border-radius: 6px; }
+    .unseen { background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent); border-radius: 6px; }
     @media (max-width: 768px) {
       .friends-container { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }

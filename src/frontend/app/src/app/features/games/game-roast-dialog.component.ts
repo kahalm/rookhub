@@ -91,14 +91,14 @@ export interface GameRoastData {
   styles: [`
     .content { min-width: min(520px, 86vw); }
     .styles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .style.on { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 18%, transparent); font-weight: 600; }
+    .style.on { background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent); font-weight: 600; }
     .center { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
     .text { margin: 0; padding: 10px 14px; border-left: 3px solid #e64a19; white-space: pre-wrap; line-height: 1.45; }
     .note { margin: 4px 0; }
-    .error { color: #c62828; }
+    .error { color: var(--rh-error); }
     .shared { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0 0; font-size: .85rem; opacity: .85; }
     .shared mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .ok { color: #2e7d32; margin: 6px 0 0; font-size: .85rem; }
+    .ok { color: var(--rh-success); margin: 6px 0 0; font-size: .85rem; }
   `],
 })
 export class GameRoastDialogComponent implements OnInit {

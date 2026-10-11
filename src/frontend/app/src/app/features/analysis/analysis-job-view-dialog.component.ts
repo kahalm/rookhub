@@ -105,22 +105,22 @@ const JOB_REFRESH_TICKS = 5;
     .small { font-size: .8rem; }
     .keeps { display: flex; align-items: center; gap: 4px; }
     .keeps mat-icon, .error mat-icon { font-size: 16px; width: 16px; height: 16px; flex: 0 0 auto; }
-    .error { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: #e65100; }
+    .error { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--rh-warn); }
     .status { font-size: .72rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; text-transform: uppercase;
       background: color-mix(in srgb, currentColor 12%, transparent); }
-    .status.running { background: rgba(46,125,50,.18); color: #2e7d32; }
-    .status.paused { background: rgba(255,160,0,.18); color: #e65100; }
-    .status.done { background: rgba(21,101,192,.15); color: #1565c0; }
-    .status.failed { background: rgba(198,40,40,.15); color: #c62828; }
+    .status.running { background: color-mix(in srgb, var(--rh-success) 18%, transparent); color: var(--rh-success); }
+    .status.paused { background: color-mix(in srgb, var(--rh-warn) 18%, transparent); color: var(--rh-warn); }
+    .status.done { background: color-mix(in srgb, var(--rh-info) 15%, transparent); color: var(--rh-info); }
+    .status.failed { background: color-mix(in srgb, var(--rh-error) 15%, transparent); color: var(--rh-error); }
     .now { padding: 0 6px; border-radius: 999px; font-size: .72rem; font-weight: 400;
-      background: rgba(46,125,50,.16); color: #2e7d32; }
+      background: color-mix(in srgb, var(--rh-success) 16%, transparent); color: var(--rh-success); }
     .lines { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
     .line-row { display: flex; gap: 10px; font-size: .9rem; }
     /* Bewertung aus den Zustands-Tokens (UX-015), wie am Analysebrett. */
     .line-eval { flex: 0 0 auto; min-width: 52px; font-family: 'Roboto Mono', monospace; font-weight: 600; color: var(--rh-success); }
     .line-eval.neg { color: var(--rh-error); }
     .line-san { font-family: 'Roboto Mono', monospace; }
-    @media (max-width: 600px) { .board, .board app-chess-board { width: 100%; max-width: 320px; } }
+    @media (max-width: 599.98px) { .board, .board app-chess-board { width: 100%; max-width: 320px; } }
   `],
 })
 export class AnalysisJobViewDialogComponent implements OnInit {

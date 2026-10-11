@@ -414,7 +414,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .stats-container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .stat { text-align: center; padding: 8px; }
-    .stat .val { font-size: 1.6rem; font-weight: 700; color: #1976d2; }
+    .stat .val { font-size: 1.6rem; font-weight: 700; color: var(--rh-accent); }
     .stat .lbl { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .chart-card mat-card-header { display: flex; align-items: center; justify-content: space-between; }
     .level-field { width: 130px; }
@@ -443,14 +443,14 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .ri-sub { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .ri-res { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
     .ri-res mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .recent-scroll { display: none; }
       .recent-list { display: block; }
       .theme-name { width: 120px; }
       .theme-val { width: 96px; }
     }
-    .res-ok { color: #2e7d32; } .res-fail { color: #c62828; }
-    .pos { color: #2e7d32; } .neg { color: #c62828; }
+    .res-ok { color: var(--rh-success); } .res-fail { color: var(--rh-error); }
+    .pos { color: var(--rh-success); } .neg { color: var(--rh-error); }
     .small { font-size: .75rem; }
     .theme-list { display: flex; flex-direction: column; gap: 6px; }
     .theme-row { display: flex; align-items: center; gap: 10px; font-size: .85rem; }
@@ -458,8 +458,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
        mit Auslassung gekürzt statt mitten im Wort umzubrechen (voller Name im title). */
     .theme-name { width: 150px; flex: 0 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .theme-bar { flex: 1; height: 12px; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 6px; overflow: hidden; }
-    .theme-fill { height: 100%; background: #1976d2; }
-    .theme-fill.warn { background: #e53935; }
+    .theme-fill { height: 100%; background: var(--rh-accent); }
+    .theme-fill.warn { background: var(--rh-error); }
     .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     /* Die Baender sind BREITER als ein Hochkant-Handy: 200er-Schritte ueber die ganze
        Rating-Spanne ergeben schnell 14-18 Saeulen. Ohne eigenes overflow-x wuchs damit die SEITE

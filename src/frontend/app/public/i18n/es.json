@@ -358,8 +358,10 @@
       "uploadHint": "Arrastra y suelta archivos PGN aquí o haz clic para subir",
       "files": "Archivos ({{count}})",
       "empty": "Aún no hay archivos. ¡Sube archivos PGN para empezar!",
-      "filesSkipped": "{{count}} archivo(s) omitido(s) (solo .pgn, hasta 10 MB)",
-      "uploadSuccess": "{{count}} archivo(s) subido(s)",
+      "filesSkipped": "{{count}} archivos omitidos (solo .pgn, hasta 10 MB)",
+      "filesSkippedOne": "{{count}} archivo omitido (solo .pgn, hasta 10 MB)",
+      "uploadSuccess": "{{count}} archivos subidos",
+      "uploadSuccessOne": "{{count}} archivo subido",
       "uploadPartial": "{{ok}} subido(s), {{failed}} con error",
       "downloadFailed": "Error al descargar",
       "deleteConfirm": "¿Eliminar este archivo?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "Subir PGN(s)",
+      "uploadPgn": "Subir archivos PGN",
       "importing": "Importando…",
       "poolHint": "Establece por libro en qué grupos aparecen los ejercicios.",
       "empty": "Aún no hay libros importados.",
@@ -825,10 +827,13 @@
       "eloTo": "hasta",
       "adminOnly": "solo admin",
       "deleteBook": "Eliminar libro",
-      "deleteConfirm": "¿Eliminar el libro \"{{name}}\" con {{count}} ejercicio(s)?",
+      "deleteConfirm": "¿Eliminar el libro \"{{name}}\" con {{count}} ejercicios?",
+      "deleteConfirmOne": "¿Eliminar el libro \"{{name}}\" con {{count}} ejercicio?",
       "deleted": "Libro \"{{name}}\" eliminado",
-      "importedCount": "{{count}} ejercicio(s) importado(s)",
-      "duplicatesCount": "{{count}} duplicado(s)",
+      "importedCount": "{{count}} ejercicios importados",
+      "importedCountOne": "{{count}} ejercicio importado",
+      "duplicatesCount": "{{count}} duplicados",
+      "duplicatesCountOne": "{{count}} duplicado",
       "invalidCount": "{{count}} inválido(s)",
       "columns": {
         "book": "Libro",

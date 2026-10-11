@@ -59,7 +59,7 @@ function localInputToIso(local: string): string | null {
   styles: [`
     .ced { display: flex; flex-direction: column; min-width: 320px; padding-top: 8px; }
     .full { width: 100%; }
-    .hint { color: #9aa4b2; font-size: 12px; margin: 0; }
+    .hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin: 0; }
     .spacer { flex: 1 1 auto; }
   `],
 })

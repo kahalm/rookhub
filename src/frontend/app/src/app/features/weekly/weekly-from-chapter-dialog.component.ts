@@ -100,7 +100,7 @@ export interface WeeklyFromChapterDialogData {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="ref.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary"
+      <button mat-flat-button color="primary"
               [disabled]="!canCreate() || saving" (click)="create()">
         <mat-icon>add</mat-icon> {{ 'weekly.fromChapter.create' | translate }}
       </button>

@@ -3,6 +3,7 @@ import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
 import { ThemePreset } from './puzzle-theme-presets';
 import { chainRatingAt, CHAIN_FLAT_STEP, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -1280,7 +1281,8 @@ describe('EndlessPuzzleComponent Hilfe als Dialog (UX-010)', () => {
 
   const renderWithDialog = () => renderEndless(() => {}, {
     providers: [MatDialog, provideNoopAnimations()],
-    imports: [MatDialogModule, MatButtonModule],
+    // appIconLabel setzt Tooltip + aria-label des Hilfe-Knopfs (DESIGN.md 7) — die Direktive muss mit rein.
+    imports: [MatDialogModule, MatButtonModule, IconLabelDirective],
   });
 
   it('der Hilfe-Knopf hat einen Namen', () => {

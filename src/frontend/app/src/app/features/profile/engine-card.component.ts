@@ -144,15 +144,15 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     </div>
   `,
   styles: [`
-    .engine-section h4 { margin: 0 0 0.25rem; color: #90caf9; }
+    .engine-section h4 { margin: 0 0 0.25rem; color: var(--rh-accent); }
     .engine-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
-    .engine-hint a { color: #90caf9; }
+    .engine-hint a { color: var(--rh-accent); }
     .engine-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .token-field { width: 320px; max-width: 100%; }
     .bg-field { width: 320px; max-width: 100%; margin-top: 8px; }
     .masked { color: #ccc; font-size: 0.9rem; }
     .masked code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; }
-    .engine-warn { display: flex; align-items: center; gap: 6px; color: #ef9a9a; font-size: 0.85rem; margin: 4px 0 0; }
+    .engine-warn { display: flex; align-items: center; gap: 6px; color: var(--rh-error); font-size: 0.85rem; margin: 4px 0 0; }
     .engine-warn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .engine-list-title { color: #ccc; font-size: 0.9rem; margin: 4px 0 2px; }
     .engine-list { margin: 0; padding-left: 20px; color: #ccc; font-size: 0.9rem; }
@@ -160,7 +160,7 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     .direct-list { list-style: none; padding-left: 0; }
     .direct-list li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: #757575; flex: 0 0 10px; }
-    .dot.on { background: #66bb6a; }
+    .dot.on { background: var(--rh-success); }
     .state { color: #9e9e9e; font-size: 0.8rem; }
     .del { margin-left: auto; }
     .direct-url { margin-bottom: 0.25rem; }

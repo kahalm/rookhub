@@ -462,7 +462,7 @@ describe('CourseListComponent Sektion „Eigene Kurse"', () => {
   });
 });
 
-/** UI-Sweep r3: „Mehr" stand am Handy allein in einer Zeile — jetzt ein Textknopf am Ende des Hinweissatzes. */
+/** UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" stand am Handy allein in einer Zeile — jetzt ein Textknopf am Ende des Hinweissatzes. */
 describe('CourseListComponent Neu-holen-Hinweis', () => {
   it('trägt den Mehr/Weniger-Knopf im Satz und klappt die Erklärung auf', async () => {
     const item: CourseListItem = {

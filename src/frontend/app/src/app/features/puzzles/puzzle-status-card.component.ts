@@ -183,7 +183,7 @@ const CK = {
                     </button>
                   }
                   @if (showNext) {
-                    <button mat-raised-button color="primary" (click)="nextClicked.emit()">
+                    <button mat-flat-button color="primary" (click)="nextClicked.emit()">
                       {{ ck.nextPuzzle | translate }}@if (solvedCountdown > 0) { ({{ solvedCountdown }})}
                     </button>
                   }
@@ -228,7 +228,7 @@ const CK = {
                       {{ (isFavorite ? 'favorites.loved' : 'favorites.love') | translate }}
                     </button>
                   }
-                  <button mat-raised-button color="primary" (click)="failedNextClicked.emit()">
+                  <button mat-flat-button color="primary" (click)="failedNextClicked.emit()">
                     {{ ck.failedNext | translate }}
                   </button>
                 </div>
@@ -246,12 +246,12 @@ const CK = {
     .psc-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .psc-timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
     .psc-result-icon { font-size: 48px; width: 48px; height: 48px; }
-    .psc-solved .psc-result-icon { color: #4caf50; }
-    .psc-failed .psc-result-icon { color: #f44336; }
-    .psc-gave-up-icon { color: #ff9800 !important; }
+    .psc-solved .psc-result-icon { color: var(--rh-success); }
+    .psc-failed .psc-result-icon { color: var(--rh-error); }
+    .psc-gave-up-icon { color: var(--rh-warn) !important; }
     .psc-elo { font-size: 1.2em; font-weight: bold; }
-    .psc-elo-up { color: #4caf50; }
-    .psc-elo-down { color: #f44336; }
+    .psc-elo-up { color: var(--rh-success); }
+    .psc-elo-down { color: var(--rh-error); }
     .psc-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .psc-loved { color: #e91e63; }
   `],

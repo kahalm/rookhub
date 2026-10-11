@@ -23,7 +23,7 @@ import { MovesEditorComponent } from './moves-editor.component';
             <button type="button" class="btn-link bm-del" [disabled]="busy()" (click)="remove()"
                     [attr.aria-label]="'Eingegebene Züge löschen, ' + title()">Löschen</button>
           }
-          @if (error()) { <span class="err">{{ error() }}</span> }
+          @if (error()) { <span class="err" role="alert">{{ error() }}</span> }
         </span>
       }
     } @else if (moves() || canEdit()) {

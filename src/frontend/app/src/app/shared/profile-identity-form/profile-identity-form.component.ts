@@ -213,7 +213,7 @@ export interface PlayerSearchResult {
     .pif-search { height: 56px; }
     .pif-search-hint { font-size: 12px; max-width: 16rem; }
     /* Am Handy (umgebrochen) volle Breite statt einer kleinen Pille am Zeilenende. */
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .pif-search-box { flex: 1 1 100%; }
       .pif-search-hint { max-width: none; }
     }

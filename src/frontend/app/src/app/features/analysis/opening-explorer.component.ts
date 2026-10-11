@@ -14,6 +14,7 @@ import {
   EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerGame, ExplorerGames, ExplorerPosition, ExplorerPositionMove, ExplorerSettings, ExplorerSource,
   ExplorerSources, RepertoireExplorerService, fitToLocal, formatPercent, readExplorerSettings, saveExplorerSettings,
 } from '../repertoire/repertoire-explorer.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 const OPEN_KEY = 'rookhub_analysis_explorer_open';
 /** So lange ruht die Abfrage nach einem Zug — wer mit den Pfeiltasten durch eine Partie läuft,
@@ -48,7 +49,7 @@ function readOpen(): boolean {
   selector: 'app-opening-explorer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatIconModule, MatProgressBarModule,
     MatTooltipModule, TranslatePipe, SanPipe,
   ],
@@ -73,7 +74,7 @@ function readOpen(): boolean {
         </mat-button-toggle-group>
         @if (settings().database === 'lichess') {
           <button mat-icon-button type="button" (click)="showFilters.set(!showFilters())"
-                  [matTooltip]="'analysis.explorer.filters' | translate" [attr.aria-label]="'analysis.explorer.filters' | translate">
+                  [appIconLabel]="'analysis.explorer.filters' | translate">
             <mat-icon>tune</mat-icon>
           </button>
         }
@@ -148,8 +149,7 @@ function readOpen(): boolean {
                       <td class="info">
                         <button mat-icon-button type="button" class="info-btn" [class.on]="expanded() === row.move.uci"
                                 (click)="$event.stopPropagation(); toggleGames(row.move)"
-                                [matTooltip]="'analysis.explorer.gamesInfo' | translate"
-                                [attr.aria-label]="'analysis.explorer.gamesInfo' | translate"
+                                [appIconLabel]="'analysis.explorer.gamesInfo' | translate"
                                 [attr.aria-expanded]="expanded() === row.move.uci">
                           <mat-icon>info_outline</mat-icon>
                         </button>
@@ -217,7 +217,7 @@ function readOpen(): boolean {
     .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
     .chip { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 12px; cursor: pointer;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
-    .chip.on { background: var(--mat-sys-primary, #3f51b5); color: var(--mat-sys-on-primary, #fff); border-color: transparent; }
+    .chip.on { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary, #fff); border-color: transparent; }
     .bar-slot { height: 4px; margin: 6px 0 2px; }
     .note { font-size: 13px; margin: 6px 0; color: color-mix(in srgb, currentColor 75%, transparent); }
     table.moves { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -243,7 +243,7 @@ function readOpen(): boolean {
     .info-head, .info { width: 1%; padding: 0; }
     .info-btn { width: 28px; height: 28px; padding: 2px; --mdc-icon-button-state-layer-size: 28px; }
     .info-btn mat-icon { font-size: 18px; width: 18px; height: 18px; color: color-mix(in srgb, currentColor 55%, transparent); }
-    .info-btn.on mat-icon { color: var(--mat-sys-primary, #3f51b5); }
+    .info-btn.on mat-icon { color: var(--mat-sys-primary); }
     tr.games-row { cursor: default; }
     tr.games-row:hover { background: none; }
     ul.games { list-style: none; margin: 0; padding: 2px 0 4px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }

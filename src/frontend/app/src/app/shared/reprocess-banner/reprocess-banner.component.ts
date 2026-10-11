@@ -54,10 +54,10 @@ interface ReprocessStatus {
     .reprocess-banner {
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
       margin: 0 0 1.25rem; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem;
-      background: color-mix(in srgb, #ffb300 16%, transparent);
-      border: 1px solid color-mix(in srgb, #ffb300 35%, transparent);
+      background: color-mix(in srgb, var(--rh-warn) 16%, transparent);
+      border: 1px solid color-mix(in srgb, var(--rh-warn) 35%, transparent);
     }
-    .rb-icon { flex: 0 0 auto; color: #ef6c00; }
+    .rb-icon { flex: 0 0 auto; color: var(--rh-warn); }
     .rb-text { flex: 1 1 220px; }
     .rb-spin { display: inline-block; vertical-align: middle; margin-right: 6px; }
   `]

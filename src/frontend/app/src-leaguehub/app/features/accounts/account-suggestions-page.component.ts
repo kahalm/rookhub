@@ -46,7 +46,7 @@ export function groupByPlayer(items: AccountSuggestion[]): { fide: string; name:
         @if (progress(); as p) {
           <p class="small muted" role="status">{{ p }}</p>
         }
-        @if (error()) { <p class="err">{{ error() }}</p> }
+        @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
         @if (loading() && !groups().length) { <p class="muted">Lade …</p> }
         @for (g of groups(); track g.fide) {
           <article class="sugg-group">

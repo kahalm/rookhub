@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -31,7 +32,7 @@ import { apiErrorText } from '../../../core/api-error';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule,
-    MatCheckboxModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslatePipe,
+    MatCheckboxModule, MatTooltipModule, IconLabelDirective, MatSlideToggleModule, MatProgressSpinnerModule, TranslatePipe,
     LoadingSpinnerComponent, LoadErrorComponent,
   ],
   templateUrl: './admin-chessable-download.component.html',

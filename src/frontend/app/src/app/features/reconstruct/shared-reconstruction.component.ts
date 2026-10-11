@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
@@ -15,6 +14,7 @@ import { withSideToMove } from './reconstruct-detail.component';
 import { PartKind, ReconstructService, SharedReconstruction, SharedReconstructionPart } from './reconstruct.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { localizeSan } from '../puzzles/keyboard-move.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Eine Zeile der geteilten Partie: ein Zug, eine erinnerte Stellung oder eine LÜCKE.
@@ -97,16 +97,16 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-shared-reconstruction',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule,
-    MatTooltipModule, TranslatePipe, ChessBoardComponent,
+    TranslatePipe, ChessBoardComponent,
   ],
   template: `
     <div class="shared-page">
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (!game) {
-        <mat-card class="empty">
+        <mat-card class="empty-state">
           <mat-icon>link_off</mat-icon>
           <p>{{ 'reconstruct.shared.notFound' | translate }}</p>
         </mat-card>
@@ -139,29 +139,24 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
               </div>
               <div class="nav">
                 <button mat-icon-button [disabled]="stepIndex <= 0" (click)="go('start')"
-                        [matTooltip]="'reconstruct.plyFirst' | translate"
-                        [attr.aria-label]="'reconstruct.plyFirst' | translate">
+                        [appIconLabel]="'reconstruct.plyFirst' | translate">
                   <mat-icon>first_page</mat-icon>
                 </button>
                 <button mat-icon-button [disabled]="stepIndex <= 0" (click)="go(-1)"
-                        [matTooltip]="'reconstruct.plyPrev' | translate"
-                        [attr.aria-label]="'reconstruct.plyPrev' | translate">
+                        [appIconLabel]="'reconstruct.plyPrev' | translate">
                   <mat-icon>chevron_left</mat-icon>
                 </button>
                 <span class="muted ply-count">{{ 'reconstruct.plyPosition' | translate:{ shown: stepIndex + 1, total: steps.length } }}</span>
                 <button mat-icon-button [disabled]="stepIndex >= steps.length - 1" (click)="go(1)"
-                        [matTooltip]="'reconstruct.plyNext' | translate"
-                        [attr.aria-label]="'reconstruct.plyNext' | translate">
+                        [appIconLabel]="'reconstruct.plyNext' | translate">
                   <mat-icon>chevron_right</mat-icon>
                 </button>
                 <button mat-icon-button [disabled]="stepIndex >= steps.length - 1" (click)="go('end')"
-                        [matTooltip]="'reconstruct.plyLast' | translate"
-                        [attr.aria-label]="'reconstruct.plyLast' | translate">
+                        [appIconLabel]="'reconstruct.plyLast' | translate">
                   <mat-icon>last_page</mat-icon>
                 </button>
                 <button mat-icon-button (click)="flipped = !flipped"
-                        [matTooltip]="'pgnViewer.nav.flip' | translate"
-                        [attr.aria-label]="'pgnViewer.nav.flip' | translate">
+                        [appIconLabel]="'pgnViewer.nav.flip' | translate">
                   <mat-icon>swap_vert</mat-icon>
                 </button>
               </div>
@@ -213,8 +208,8 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
   styles: [`
     .shared-page { max-width: 980px; margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .viewer { padding: 16px; }
     .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .header h1 { margin: 0; font-size: 1.3rem; }
@@ -222,8 +217,8 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .result { color: var(--rh-accent); font-weight: 600; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
     .chip { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, currentColor 10%, transparent); }
-    .chip.ok { background: color-mix(in srgb, #2e7d32 18%, transparent); }
-    .chip.warn { background: color-mix(in srgb, #ed6c02 22%, transparent); }
+    .chip.ok { background: color-mix(in srgb, var(--rh-success) 18%, transparent); }
+    .chip.warn { background: color-mix(in srgb, var(--rh-warn) 22%, transparent); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: 0.85rem; }
     .body { display: flex; gap: 16px; align-items: stretch; }
@@ -241,14 +236,14 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .empty-line { margin: 0; }
     .move { cursor: pointer; padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
     .move:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
-    .move.current { background: color-mix(in srgb, #1976d2 28%, transparent); font-weight: 600; }
+    .move.current { background: color-mix(in srgb, var(--rh-accent) 28%, transparent); font-weight: 600; }
     .move.unsure { font-style: italic; opacity: 0.85; }
     .move .no { color: color-mix(in srgb, currentColor 55%, transparent); margin-right: 2px; }
     .gap-row, .pos-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; line-height: 1.4; }
     .gap-row { padding: 6px 8px; border: 1px dashed color-mix(in srgb, currentColor 35%, transparent); border-radius: 8px; }
     .pos-row { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
     .pos-row:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
-    .pos-row.current { background: color-mix(in srgb, #1976d2 28%, transparent); }
+    .pos-row.current { background: color-mix(in srgb, var(--rh-accent) 28%, transparent); }
     .gap-icon { opacity: 0.6; }
     .note { font-size: 0.8rem; line-height: 1.4; margin: 0 0 4px 4px; }
     .head-note { margin: 12px 0 0; white-space: pre-wrap; }

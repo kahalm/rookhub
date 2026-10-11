@@ -46,7 +46,7 @@ export const MAX_PAGES = 3;
   ],
   template: `
     <div class="sheet-page">
-      <div class="head">
+      <div class="header">
         <h1>{{ 'scoresheet.title' | translate }}</h1>
         <app-help-hint [text]="'scoresheet.help' | translate" />
       </div>
@@ -209,8 +209,8 @@ export const MAX_PAGES = 3;
   `,
   styles: [`
     .sheet-page { max-width: 760px; margin: 0 auto; padding: 16px; }
-    .head { display: flex; align-items: center; gap: 4px; }
-    .head h1 { margin: 0; }
+    .header { display: flex; align-items: center; gap: 4px; }
+    .header h1 { margin: 0; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 4px 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .notice { display: flex; align-items: center; gap: 12px; padding: 16px; }
@@ -234,9 +234,9 @@ export const MAX_PAGES = 3;
     .progress { margin-top: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
     .running, .done { display: flex; align-items: center; gap: 12px; }
     .facts { font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 8px; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .ok { color: #2e7d32; }
+    .ok { color: var(--rh-success); }
     .bad { color: var(--mat-sys-error, #c62828); }
-    .warn { color: #ef6c00; }
+    .warn { color: var(--rh-warn); }
     h2 { font-size: 1.05rem; margin: 24px 0 8px; }
     .recent { display: flex; flex-direction: column; }
     .row { display: grid; grid-template-columns: 28px 120px minmax(0, 1fr) 40px; align-items: center; gap: 8px;

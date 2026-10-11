@@ -48,7 +48,7 @@ interface CategoryDef {
               </mat-card-header>
               <mat-card-content>
                 @if (rows(cat.key).length === 0) {
-                  <p class="lb-empty">{{ 'leaderboards.empty' | translate }}</p>
+                  <p class="empty-state">{{ 'leaderboards.empty' | translate }}</p>
                 } @else {
                   <ol class="lb-list">
                     @for (e of rows(cat.key); track e.rank; let i = $index) {
@@ -78,18 +78,17 @@ interface CategoryDef {
     .lb-period { margin-bottom: 1rem; flex-wrap: wrap; }
     .lb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
     .lb-card mat-card-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.1em; }
-    .lb-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; }
     .lb-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
     .lb-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 6px; }
     .lb-row:last-child { border-bottom: none; }
-    .lb-row.lb-me { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent); font-weight: 600; }
+    .lb-row.lb-me { background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); font-weight: 600; }
     .lb-gap { text-align: center; color: color-mix(in srgb, currentColor 45%, transparent); letter-spacing: 0.2em; padding: 0.1rem 0; user-select: none; }
     .lb-rank { flex: 0 0 2rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .lb-rank.lb-medal { font-size: 1.2em; }
     .lb-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-count { flex: 0 0 auto; font-weight: 600; font-variant-numeric: tabular-nums; }
     .lb-count small { font-weight: 400; opacity: 0.6; }
-    .lb-error { color: #f44336; }
+    .lb-error { color: var(--rh-error); }
   `],
 })
 export class LeaderboardsComponent implements OnInit {

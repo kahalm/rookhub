@@ -174,7 +174,7 @@ describe('TournamentTablesComponent', () => {
     component.players = component.displayedPlayers = [];
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.empty-hint')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
   });
 

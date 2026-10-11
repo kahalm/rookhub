@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Color, Key } from 'chessground/types';
@@ -81,7 +82,7 @@ export type { CalcPositionGroup } from './calc-chapters.util';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatCardModule, MatIconModule, MatFormFieldModule,
-    MatSelectModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe,
+    MatSelectModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, IconLabelDirective, TranslatePipe,
     RouterLink,
     PuzzleBoardComponent, CalcLinesComponent, BoardFullscreenButtonComponent,
     CourseLangPickerComponent, MachineNoteComponent,

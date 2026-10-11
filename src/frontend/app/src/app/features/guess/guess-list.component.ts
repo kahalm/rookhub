@@ -22,6 +22,7 @@ import { GuessService, GuessSession } from './guess.service';
 import { GameAnalysis, GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
 import { ViewStateService } from '../../core/view-state.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** Reihenfolge des Bestands auf der Punktepartie-Seite. */
 export type GuessSort = 'title' | 'short' | 'long' | 'event';
@@ -46,7 +47,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-guess-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
+  imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressBarModule, MatDialogModule, MatTabsModule,
     TranslatePipe, LoadingSpinnerComponent],
@@ -253,8 +254,8 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                   <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span>
                   <span class="spacer"></span>
                   <span class="chip">{{ ('guess.status.' + s.status) | translate }}</span>
-                  <button mat-icon-button [attr.aria-label]="'common.delete' | translate"
-                          [matTooltip]="'common.delete' | translate" (click)="remove(s)">
+                  <button mat-icon-button
+                          [appIconLabel]="'common.delete' | translate" (click)="remove(s)">
                     <mat-icon>delete</mat-icon>
                   </button>
                 </div>
@@ -286,7 +287,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .lists ::ng-deep .mat-mdc-tab-body-content { padding-top: 8px; }
     .search mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-    .chip.err { color: #ef9a9a; }
+    .chip.err { color: var(--rh-error); }
     /* Zwei Kanaele, nicht nur Farbe: der Punkt davor ist gefuellt bzw. hohl. */
     .side { font-size: .72rem; padding: 2px 8px 2px 6px; border-radius: 10px;
             border: 1px solid color-mix(in srgb, currentColor 35%, transparent); white-space: nowrap; }
@@ -301,7 +302,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     /* UI-Sweep 2026-10-11 (r2-rg-guess-rows): Knopf und Chips getrennt — der Spielen-Knopf (nur ▶) steht rechts neben
        dem Titel, die Metazeile darunter über die volle Breite und darf umbrechen. Vorher rutschte „kommentiert" neben
        „Schwarz" in eine eigene Zeile und zog den Knopf mittig, die Zeilenhöhen wechselten. */
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .game-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'title play' 'meta meta';
                   gap: 4px 10px; align-items: start; }
       .game-row .g-title { grid-area: title; align-self: center; }

@@ -6,7 +6,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -32,6 +31,7 @@ import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
 
@@ -39,9 +39,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-detail',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
-    MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ChessBoardComponent,
+    TranslatePipe, LoadingSpinnerComponent, ChessBoardComponent,
     RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent, RepertoireHolesComponent,
   ],
   // Komponenten-bezogen (nicht providedIn:'root') — jede Instanz hat ihren eigenen
@@ -62,7 +62,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
             <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
-            <a mat-raised-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
+            <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
               <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.modeQuiz' | translate }}
             </a>
           </div>
@@ -107,13 +107,11 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                   @if (filterStack.length > 0) {
                     <span class="filter-moves" [attr.title]="filterMovesText">{{ filterMovesText }}</span>
                     <button mat-icon-button (click)="undoFilterMove()"
-                            [matTooltip]="'repertoire.positionFilter.undo' | translate"
-                            [attr.aria-label]="'repertoire.positionFilter.undo' | translate">
+                            [appIconLabel]="'repertoire.positionFilter.undo' | translate">
                       <mat-icon>undo</mat-icon>
                     </button>
                     <button mat-icon-button (click)="resetFilter()"
-                            [matTooltip]="'repertoire.positionFilter.reset' | translate"
-                            [attr.aria-label]="'repertoire.positionFilter.reset' | translate">
+                            [appIconLabel]="'repertoire.positionFilter.reset' | translate">
                       <mat-icon>close</mat-icon>
                     </button>
                   } @else {
@@ -248,7 +246,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       max-width: 800px;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 899.98px) {
       .detail-header { flex-wrap: wrap; }
       .viewer-layout {
         flex-direction: column;

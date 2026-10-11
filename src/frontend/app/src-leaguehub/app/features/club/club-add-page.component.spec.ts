@@ -287,7 +287,7 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     expect(c.photo()).toBe(files[0]);
     expect(c.layout()).toEqual([1, 1, 1, 1]);
-    expect(el.textContent).toContain('1 Foto(s) nicht übernommen');
+    expect(el.textContent).toContain('1 Foto nicht übernommen');
     expect(el.querySelector('.multi-photo')).toBeNull();                    // Seite voll
     expect(el.querySelector('.extra-page')?.textContent).toContain('Seite 1, Foto 2: f2.jpg');
     api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });

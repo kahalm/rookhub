@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -39,7 +39,7 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friend-revenge',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="rev-container">
       <a mat-button routerLink="/friends" class="back-link">
@@ -59,13 +59,13 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
                 <span matListItemTitle>{{ 'friends.revenge.ratingLabel' | translate:{ rating: p.rating } }}</span>
                 <span matListItemLine class="themes">{{ formatThemes(p.themes) }}</span>
                 <span matListItemLine class="fail">{{ 'friends.revenge.failCount' | translate:{ count: p.failCount } }}</span>
-                <button mat-raised-button color="primary" matListItemMeta
+                <button mat-flat-button color="primary" matListItemMeta
                         [routerLink]="['/puzzles', p.puzzleId]" [queryParams]="{ revengeUserId: data.userId }">
                   <mat-icon>sports_martial_arts</mat-icon> {{ 'friends.revenge.solve' | translate }}
                 </button>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">{{ 'friends.revenge.empty' | translate:{ name: data.displayName || data.username } }}</p>
+              <p class="empty-state">{{ 'friends.revenge.empty' | translate:{ name: data.displayName || data.username } }}</p>
             }
           </mat-list>
         </mat-card>
@@ -80,7 +80,7 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
                   <span matListItemTitle>{{ 'friends.revenge.ratingLabel' | translate:{ rating: p.rating } }}</span>
                   <span matListItemLine class="themes">{{ formatThemes(p.themes) }}</span>
                   <button mat-icon-button matListItemMeta [routerLink]="['/puzzles', p.puzzleId]"
-                          [matTooltip]="'friends.revenge.review' | translate">
+                          [appIconLabel]="'friends.revenge.review' | translate">
                     <mat-icon>visibility</mat-icon>
                   </button>
                 </mat-list-item>
@@ -99,10 +99,9 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
     mat-card { padding: 0.5rem 1rem; }
     .themes { font-size: 0.8rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .fail { font-size: 0.75rem; color: color-mix(in srgb, currentColor 45%, transparent); }
-    .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     .done-title { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .done-card { opacity: 0.85; }
-    .done-icon { color: #2e7d32; }
+    .done-icon { color: var(--rh-success); }
     @media (max-width: 768px) {
       .rev-container { padding: 0.75rem; }
       h1 { font-size: 1.3rem; }

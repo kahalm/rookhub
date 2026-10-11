@@ -182,11 +182,11 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
 
   it('ausgeloggt: Puzzles, Analyse, Anmelden und Registrieren sind Links mit href, keine Knöpfe', () => {
     const fixture = render({ loggedIn: false, keys: ['puzzles', 'analysis'] });
-    const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar a[mat-button], mat-toolbar a[mat-raised-button]'))
+    const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar a[mat-button], mat-toolbar a[mat-flat-button]'))
       .map(a => a.getAttribute('href'));
     // Anmelden/Registrieren tragen den Rücksprung als Query (UX-020, eigener Test unten) — hier zählt nur, dass es Links sind.
     expect(hrefs.map(h => h?.split('?')[0])).toEqual(['/puzzles', '/analysis', '/login', '/register']);
-    expect((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar button[mat-button], mat-toolbar button[mat-raised-button]').length).toBe(0);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar button[mat-button], mat-toolbar button[mat-flat-button]').length).toBe(0);
   });
 
   it('ausgeloggt: das ☰-Menü bietet den Theme-Umschalter (Anonyme haben keine Profil-Theme-Karte)', () => {

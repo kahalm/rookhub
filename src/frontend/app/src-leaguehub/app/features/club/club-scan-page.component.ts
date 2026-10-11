@@ -63,14 +63,15 @@ function readAutoMine(): boolean {
       }
     } @else if (notFound() && gameId != null) {
       <section class="gate"><h2>Partie nicht gefunden</h2>
-        <p>Sie ist gelöscht oder du darfst sie nicht korrigieren (das dürfen, wer sie hochgeladen hat, und die Verwalter).
-          <a routerLink="/verein">Zu den Vereinspartien</a></p></section>
+        <p>Sie ist gelöscht oder du darfst sie nicht korrigieren (das dürfen, wer sie hochgeladen hat, und die Verwalter).</p>
+        <div class="actions"><a class="btn-sec" routerLink="/verein">← Zu den Vereinspartien</a></div></section>
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>
-        <p>Es wurde schon übernommen oder verworfen. <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
+        <p>Es wurde schon übernommen oder verworfen.</p>
+        <div class="actions"><a class="btn-sec" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Zu deinen Formularen</a></div></section>
     } @else if (loadError(); as e) {
       <!-- UX-034: früher stand hier minutenlang „Lade …", während die Seite still alle 3 s nachfragte. -->
-      <section class="gate"><h2>Das Formular lässt sich gerade nicht laden</h2>
+      <section class="gate" role="alert"><h2>Das Formular lässt sich gerade nicht laden</h2>
         <p>{{ e }} Dein Formular geht dadurch nicht verloren.</p>
         <div class="actions">
           <button type="button" class="btn-sec" (click)="reload()">Neu laden</button>

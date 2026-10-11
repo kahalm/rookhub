@@ -72,7 +72,7 @@ import { PreferencesService } from '../../../core/preferences.service';
       background: transparent; color: inherit; font: inherit; font-size: .82rem;
     }
     .cs-chip:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .cs-chip--on { border-color: #1976d2; background: color-mix(in srgb, #1976d2 14%, transparent); font-weight: 600; }
+    .cs-chip--on { border-color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 14%, transparent); font-weight: 600; }
     .cs-preview { display: flex; width: 22px; height: 22px; border-radius: 4px; overflow: hidden; }
     .cs-preview span { flex: 1; }
     .cs-img, .cs-piece { width: 22px; height: 22px; border-radius: 4px; background-size: cover; background-position: center; }

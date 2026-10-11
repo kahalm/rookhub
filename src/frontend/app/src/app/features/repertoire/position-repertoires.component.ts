@@ -20,6 +20,7 @@ import { moveKey, parseMoveInput } from './similar-move.util';
 import { PositionTreeComponent } from './position-tree.component';
 import { SimilarPositionsComponent, SimilarRepertoireOption } from './similar-positions.component';
 import { localStore, readJson, readRaw, writeJson, writeRaw } from '../../core/local-json-store';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
@@ -69,7 +70,7 @@ const SIMILAR_LIMIT = 40;
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-position-repertoires',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, TranslatePipe,
+  imports: [IconLabelDirective, CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, TranslatePipe,
             PositionTreeComponent, SimilarPositionsComponent],
   template: `
     @if (auth.isLoggedIn) {
@@ -138,7 +139,7 @@ const SIMILAR_LIMIT = 40;
               @if (trees.length === 0) {
                 <div class="pr-muted">{{ 'positionInReps.none' | translate }}</div>
               } @else {
-                <div class="pr-count">{{ 'positionInReps.tree.foundCount' | translate:{ reps: trees.length, lines: totalOccurrences } }}</div>
+                <div class="pr-count">{{ (trees.length === 1 ? 'positionInReps.repsCountOne' : 'positionInReps.repsCount') | translate:{ count: trees.length } }} · {{ (totalOccurrences === 1 ? 'positionInReps.tree.occurrencesCountOne' : 'positionInReps.tree.occurrencesCount') | translate:{ count: totalOccurrences } }}</div>
                 @for (tree of trees; track tree.repertoireId) {
                   <div class="pr-rep">
                     <button class="pr-rep-head" (click)="toggleRep(tree.repertoireId)">
@@ -170,7 +171,7 @@ const SIMILAR_LIMIT = 40;
             } @else if (repertoires.length === 0) {
               <div class="pr-muted">{{ 'positionInReps.none' | translate }}</div>
             } @else {
-              <div class="pr-count">{{ 'positionInReps.foundCount' | translate:{ reps: repertoires.length, lines: totalLines } }}</div>
+              <div class="pr-count">{{ (repertoires.length === 1 ? 'positionInReps.repsCountOne' : 'positionInReps.repsCount') | translate:{ count: repertoires.length } }} · {{ (totalLines === 1 ? 'positionInReps.linesCountOne' : 'positionInReps.linesCount') | translate:{ count: totalLines } }}</div>
               @for (rep of repertoires; track rep.repertoireId) {
                 <div class="pr-rep">
                   <button class="pr-rep-head" (click)="toggleRep(rep.repertoireId)">
@@ -188,11 +189,11 @@ const SIMILAR_LIMIT = 40;
                             <span class="pr-line-name">{{ line.lineName || ('positionInReps.unnamedLine' | translate) }}</span>
                             <span class="pr-line-actions">
                               <button mat-icon-button (click)="train(rep, line)" [disabled]="busyLine === line.gameIndex + ':' + rep.repertoireId"
-                                      [matTooltip]="'positionInReps.train' | translate">
+                                      [appIconLabel]="'positionInReps.train' | translate">
                                 <mat-icon>fitness_center</mat-icon>
                               </button>
                               <button mat-icon-button (click)="view(rep, line)" [disabled]="busyLine === line.gameIndex + ':' + rep.repertoireId"
-                                      [matTooltip]="'positionInReps.view' | translate">
+                                      [appIconLabel]="'positionInReps.view' | translate">
                                 <mat-icon>visibility</mat-icon>
                               </button>
                             </span>
@@ -227,19 +228,19 @@ const SIMILAR_LIMIT = 40;
     .pr-modes { display: flex; justify-content: flex-end; gap: 2px; margin-bottom: 4px; }
     .pr-mode { width: 26px; height: 26px; padding: 0; border: none; background: none; color: color-mix(in srgb, currentColor 55%, transparent); cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
     .pr-mode:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
-    .pr-mode-on { color: #1976d2; background: color-mix(in srgb, #1976d2 14%, transparent); }
+    .pr-mode-on { color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 14%, transparent); }
     .pr-mode mat-icon { font-size: 17px; width: 17px; height: 17px; }
     .pr-tree { margin: 2px 0 6px 22px; }
     .pr-tree-empty { margin: 2px 0 6px 22px; font-size: .8rem; }
     .pr-muted { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; display: flex; align-items: center; gap: 8px; }
-    .pr-error { color: #c62828; }
+    .pr-error { color: var(--rh-error); }
     .pr-note { font-size: .8rem; margin-bottom: 6px; }
     .pr-count { font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px; }
     .pr-rep { margin-bottom: 4px; }
     .pr-rep-head { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none; color: inherit; cursor: pointer; padding: 4px 2px; text-align: left; font: inherit; }
     .pr-rep-head:hover { background: color-mix(in srgb, currentColor 7%, transparent); border-radius: 4px; }
     .pr-rep-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pr-badge { font-size: .72rem; background: #1976d2; color: #fff; border-radius: 10px; padding: 1px 7px; }
+    .pr-badge { font-size: .72rem; background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-radius: 10px; padding: 1px 7px; }
     .pr-shared { display: inline-flex; align-items: center; gap: 2px; font-size: .68rem; color: color-mix(in srgb, currentColor 65%, transparent); border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 10px; padding: 0 6px 0 3px; }
     .pr-shared mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .pr-chapter { margin: 2px 0 6px 22px; }

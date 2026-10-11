@@ -67,7 +67,7 @@ export type PromotionPiece = 'q' | 'r' | 'b' | 'n';
     .promotion-choices.from-bottom .promotion-piece:first-child { border-radius: 0 0 4px 4px; }
     .promotion-choices.from-bottom .promotion-piece:last-child { border-radius: 4px 4px 0 0; }
     .promotion-piece:hover { background: rgba(200,220,255,0.95); }
-    .promotion-piece:focus-visible { outline: 3px solid #1976d2; outline-offset: -3px; }
+    .promotion-piece:focus-visible { outline: 3px solid var(--rh-accent); outline-offset: -3px; }
     .piece-icon {
       display: block;
       width: 85%; height: 85%;

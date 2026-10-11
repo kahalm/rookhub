@@ -6,7 +6,7 @@
        mat-dialog-content, die Kopfzeile bleibt dabei stehen. */
     .help-header { display: flex; justify-content: space-between; align-items: center; padding-right: 0.5rem; }
     .help-header h2 { flex: 1; }
-    .help-body h3 { margin: 1.25rem 0 0.5rem; color: #1976d2; }
+    .help-body h3 { margin: 1.25rem 0 0.5rem; color: var(--rh-accent); }
     .help-body p { margin: 0.25rem 0; line-height: 1.5; }
     .help-body ul { margin: 0.25rem 0; padding-left: 1.5rem; }
     .help-body li { margin: 0.25rem 0; line-height: 1.5; }
@@ -52,7 +52,7 @@
       cursor: pointer; font-size: 0.85em; user-select: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       input[type=radio] { display: none; }
-      &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
+      &.selected { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-color: var(--mat-sys-primary); }
       &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     }
     .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
@@ -65,7 +65,7 @@
       cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
       transition: border-color 0.15s;
     }
-    .theme-chip.active { border-color: #1976d2; }
+    .theme-chip.active { border-color: var(--rh-accent); }
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     /* Aufklapper für die Feineinstellungen — gleiche Optik wie der Kapitel-Aufklapper der Kurs-Karte. */
     /* Aufklapper links, Zahnrad rechts — eine Zeile mit gemeinsamer Trennlinie. */
@@ -82,7 +82,7 @@
     .adv-toggle:hover { color: inherit; }
     .adv-toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .adv-fields { margin-bottom: 0.4rem; }
-    .settings-gear.active { color: #1976d2; }
+    .settings-gear.active { color: var(--rh-accent); }
     .theme-presets { margin-bottom: 0.6rem; }
     .theme-presets-label {
       display: block; font-size: 0.8em; margin-bottom: 0.35rem;
@@ -97,7 +97,7 @@
     }
     .theme-preset-chip:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .theme-preset-chip.active {
-      border-color: #1976d2; background: #1976d2; color: #fff; font-weight: 600;
+      border-color: var(--mat-sys-primary); background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); font-weight: 600;
     }
     .highscore-badge {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
@@ -118,7 +118,7 @@
       display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
       font-size: 0.9em; color: color-mix(in srgb, currentColor 70%, transparent);
     }
-    .resume-info mat-icon { color: #1976d2; }
+    .resume-info mat-icon { color: var(--rh-accent); }
     .resume-actions { display: flex; flex-direction: column; gap: 0.5rem; }
     .archive-btn { margin-bottom: 0.5rem; }
     .archived-hint {
@@ -139,7 +139,7 @@
       font-size: 0.88em; color: color-mix(in srgb, currentColor 60%, transparent);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
-    .board-hint-countdown { color: #e65100; font-weight: 500; }
+    .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
     .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
     .tomove-dot {
       width: 0.8em; height: 0.8em; border-radius: 50%; flex: 0 0 auto;
@@ -175,10 +175,10 @@
     .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
     .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .board-hint-flag.flagged {
-      border-style: solid; border-color: color-mix(in srgb, #d32f2f 55%, transparent);
-      background: color-mix(in srgb, #d32f2f 12%, transparent); opacity: 1;
+      border-style: solid; border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
+      background: color-mix(in srgb, var(--rh-error) 12%, transparent); opacity: 1;
     }
-    .board-hint-flag.flagged mat-icon { color: #d32f2f; }
+    .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
 
     // Kompakte Pillen-Reihe direkt unter dem Brett: Puzzle-Rating, Level, Herzen.
     // Soll auch auf kleinen Handy-Screens ohne Scrollen sichtbar sein.
@@ -209,9 +209,9 @@
     .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.75rem 0; }
     .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .result-icon { font-size: 48px; width: 48px; height: 48px; }
-    .solved .result-icon { color: #4caf50; }
-    .failed .result-icon { color: #f44336; }
-    .failed .gave-up-icon { color: #ff9800; }
+    .solved .result-icon { color: var(--rh-success); }
+    .failed .result-icon { color: var(--rh-error); }
+    .failed .gave-up-icon { color: var(--rh-warn); }
     .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
@@ -258,7 +258,7 @@
     .go-label { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .mistake-ratings {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
-      color: #f44336; font-size: 0.9em; margin-bottom: 1rem;
+      color: var(--rh-error); font-size: 0.9em; margin-bottom: 1rem;
     }
     .new-highscore {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
@@ -267,7 +267,7 @@
     .gameover-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
     .stockfish-question { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin: 1.5rem 0; }
     .stockfish-fish { font-size: 4rem; }
-    .stockfish-text { font-size: 1.3em; font-weight: bold; color: #1976d2; margin: 0; }
+    .stockfish-text { font-size: 1.3em; font-weight: bold; color: var(--rh-accent); margin: 0; }
 
     .puzzle-review { margin: 1rem 0; text-align: left; }
     .review-title { margin: 0 0 0.5rem; font-size: 0.95em; color: color-mix(in srgb, currentColor 60%, transparent); }
@@ -287,8 +287,8 @@
     .review-number { font-weight: 500; min-width: 32px; color: color-mix(in srgb, currentColor 60%, transparent); }
     .review-rating { flex: 1; font-weight: bold; }
     .review-icon { font-size: 20px; width: 20px; height: 20px; }
-    .review-icon.solved { color: #4caf50; }
-    .review-icon.failed { color: #f44336; }
+    .review-icon.solved { color: var(--rh-success); }
+    .review-icon.failed { color: var(--rh-error); }
 
     @media (max-width: 768px) {
       .endless-page { padding: 0.5rem; }

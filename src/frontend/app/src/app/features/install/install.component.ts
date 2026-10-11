@@ -53,7 +53,7 @@ export const APK_DOWNLOAD_URL =
           @if (pwa.isInstalled()) {
             <p class="installed"><mat-icon>check_circle</mat-icon>{{ 'install.pwa.installed' | translate }}</p>
           } @else if (pwa.canInstallPwa()) {
-            <button mat-raised-button color="primary" (click)="installPwa()">
+            <button mat-flat-button color="primary" (click)="installPwa()">
               <mat-icon>install_desktop</mat-icon>{{ 'install.pwa.button' | translate }}
             </button>
           } @else if (pwa.isIOS) {
@@ -88,7 +88,7 @@ export const APK_DOWNLOAD_URL =
                 <mat-icon>download</mat-icon>{{ 'install.apk.download' | translate }}
               </a>
             } @else {
-              <a mat-raised-button color="primary" [href]="apkUrl" target="_blank" rel="noopener noreferrer" download>
+              <a mat-flat-button color="primary" [href]="apkUrl" target="_blank" rel="noopener noreferrer" download>
                 <mat-icon>download</mat-icon>{{ 'install.apk.download' | translate }}
               </a>
             }
@@ -123,11 +123,11 @@ export const APK_DOWNLOAD_URL =
     .unavailable { color: color-mix(in srgb, currentColor 55%, transparent); }
     /* Ohne das staucht der Flex-Zeilenumbruch das Symbol zu einem halben „i“ bzw. am Handy zu „(“ (UX-052). */
     .unavailable mat-icon, .installed mat-icon, .recommended mat-icon { flex-shrink: 0; }
-    .installed { color: #4caf50; }
+    .installed { color: var(--rh-success); }
     .recommended { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0 0 0.5rem; }
     .qr { display: flex; align-items: center; gap: 12px; margin: 0 0 1rem; flex-wrap: wrap; }
     .qr p { flex: 1 1 200px; margin: 0; }
-    a[mat-raised-button] mat-icon, a[mat-stroked-button] mat-icon,
+    a[mat-flat-button] mat-icon, a[mat-stroked-button] mat-icon,
     button mat-icon { margin-right: 4px; vertical-align: middle; }
   `]
 })

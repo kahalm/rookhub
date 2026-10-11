@@ -29,7 +29,7 @@
     .book-upload {
       display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px;
     }
-    .upload-hint { color: #1976d2; font-weight: 500; }
+    .upload-hint { color: var(--rh-info); font-weight: 500; }
     .book-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .elo-input { width: 56px; }
@@ -89,8 +89,8 @@
 .msg-thread-row { text-align: left; background: none; border: none; color: inherit; font: inherit; cursor: pointer;
   padding: 8px 10px; border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
 .msg-thread-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-.msg-thread-row.active { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent);
-  border-color: var(--mat-sys-primary, #3f51b5); }
+.msg-thread-row.active { background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent);
+  border-color: var(--mat-sys-primary); }
 .msg-thread-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .msg-thread-name { font-weight: 600; }
 .msg-unread-dot { background: #d32f2f; color: #fff; font-size: 0.72rem; font-weight: 700;
@@ -105,7 +105,7 @@
 .bubble-row { display: flex; }
 .bubble-row.mine { justify-content: flex-end; }
 .bubble { max-width: 80%; padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, currentColor 8%, transparent); }
-.bubble.admin { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 16%, transparent); }
+.bubble.admin { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
 .bubble .sender { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
 .bubble .body { white-space: pre-wrap; line-height: 1.35; }
 .bubble .meta { font-size: 0.72rem; opacity: 0.55; margin-top: 4px; text-align: right; }
@@ -120,8 +120,8 @@
 .msg-detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .msg-claim { display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; opacity: 0.75; }
 .msg-claim mat-icon { font-size: 15px; width: 15px; height: 15px; }
-.msg-claim.mine { color: var(--mat-sys-primary, #3f51b5); opacity: 1; font-weight: 600; }
-.msg-claim.unclaimed { color: #d4820a; }
+.msg-claim.mine { color: var(--mat-sys-primary); opacity: 1; font-weight: 600; }
+.msg-claim.unclaimed { color: var(--rh-warn); }
 
 /* --- Kurse von Usern holen --- */
 .dl-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -132,19 +132,19 @@
 .dl-course-name { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dl-import-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .dl-done { display: inline-flex; align-items: center; gap: 3px; font-size: 0.82rem; opacity: 0.8; white-space: nowrap; }
-.dl-done .ok { color: #2e7d32; font-size: 18px; width: 18px; height: 18px; }
+.dl-done .ok { color: var(--rh-success); font-size: 18px; width: 18px; height: 18px; }
 .dl-status { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; opacity: 0.85; white-space: nowrap; }
 .dl-status mat-icon { font-size: 18px; width: 18px; height: 18px; }
-.dl-status .ok { color: #2e7d32; }
-.dl-status .err { color: #d32f2f; }
-.dl-status.dl-queued { color: #ef6c00; opacity: 1; }   /* „bereits in Warteschlange" — Amber-Hinweis */
+.dl-status .ok { color: var(--rh-success); }
+.dl-status .err { color: var(--rh-error); }
+.dl-status.dl-queued { color: var(--rh-warn); opacity: 1; }   /* „bereits in Warteschlange" — Amber-Hinweis */
 .dl-course-name .cached-badge { color: #f9a825; font-size: 18px; width: 18px; height: 18px; vertical-align: text-bottom; margin-left: 4px; }
 
 /* Kursgrößen-Vorabschätzung in der Admin-Kursliste */
 .dl-est-btn { width: 28px; height: 28px; line-height: 28px; }
 .dl-est-btn mat-icon { font-size: 17px; width: 17px; height: 17px; opacity: 0.7; }
 .dl-est { font-size: 0.82rem; opacity: 0.85; white-space: nowrap; }
-.dl-est-err { font-size: 0.82rem; color: #d32f2f; }
+.dl-est-err { font-size: 0.82rem; color: var(--rh-error); }
 .dl-est-spin { display: inline-block; vertical-align: middle; }
 
 /* Books-Tab: Suchfeld + Umbenennen */

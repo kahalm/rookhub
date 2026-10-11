@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.752.0", date: "2026-10-11", changes: [
+    { en: "Design cleanup across all five sites following the new design rules: status colours (error, success, warning, info) now come from the shared colour tokens and look right in light and dark mode, the old indigo leftovers are gone (browser bar in Azure blue), empty pages share one empty-state look, main buttons use one style, layouts switch at the same screen widths everywhere, counts use real singular/plural instead of “(s)”, and icon-only buttons have a name for screen readers. UI-sweep tool: much faster runs on the dev server, optional fast mode, more pages and test accounts.",
+      de: "Gestaltung über alle fünf Oberflächen nach den neuen Gestaltungsregeln aufgeräumt: Zustandsfarben (Fehler, Erfolg, Warnung, Hinweis) kommen aus den gemeinsamen Farbwerten und passen im hellen wie im dunklen Modus, die alten Indigo-Reste sind weg (Browserleiste in Azurblau), leere Seiten sehen einheitlich aus, Hauptknöpfe haben einen Stil, Layouts wechseln überall bei denselben Breiten, Zahlen mit echter Einzahl/Mehrzahl statt „(n)“, und Knöpfe nur mit Symbol haben einen Namen für Screenreader. UI-Sweep-Werkzeug: deutlich schnellere Läufe auf Dev, optionaler Schnellmodus, mehr Seiten und Testkonten." },
+  ] },
   { version: "0.751.5", date: "2026-10-11", changes: [
     { en: "Developer documentation: the frontend notes for the coding assistant shrink from about 1,000 to 275 lines; feature descriptions now live in one file per area under docs/frontend/. No change to the app.",
       de: "Entwickler-Doku: die Frontend-Notizen für den Code-Assistenten schrumpfen von rund 1 000 auf 275 Zeilen; Feature-Beschreibungen stehen jetzt je Bereich unter docs/frontend/. Keine Änderung an der App." },

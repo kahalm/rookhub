@@ -121,7 +121,7 @@ span.group-link { color: inherit; }
 
 .muted { color: var(--mat-sys-on-surface-variant); }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .detail-grid { grid-template-columns: 1fr; gap: 2px 0; }
   .detail-grid dd { margin-bottom: 8px; }
 

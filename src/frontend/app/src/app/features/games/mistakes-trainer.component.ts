@@ -10,6 +10,7 @@ import { Mistake } from './mistakes.util';
 import { MistakesSession } from './mistakes-session';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * „Eigene Fehler nachspielen" — die Leiste UNTER dem Brett der Partie-Seite: Aufgabe, Rückmeldung,
@@ -21,7 +22,7 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
   selector: 'app-mistakes-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent],
+  imports: [IconLabelDirective, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent],
   template: `
     <div class="top">
       <span class="title">{{ (title || 'games.mistakes.title') | translate }}</span>
@@ -35,13 +36,13 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
         </span>
       }
       <button mat-icon-button class="close" (click)="closed.emit()"
-              [matTooltip]="'common.close' | translate" [attr.aria-label]="'common.close' | translate">
+              [appIconLabel]="'common.close' | translate">
         <mat-icon>close</mat-icon>
       </button>
     </div>
 
     @if (session.list().length === 0) {
-      <p class="empty">{{ 'games.mistakes.none' | translate }}</p>
+      <p class="empty-state">{{ 'games.mistakes.none' | translate }}</p>
     } @else if (session.phase() === 'done') {
       <p class="summary">{{ 'games.mistakes.summary' | translate: { solved: session.solved(), total: session.list().length } }}</p>
       <div class="actions">
@@ -156,10 +157,10 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
     .head .mark { margin-left: auto; }
     .evals { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 70%, transparent); }
     .prompt { margin: 6px 0 0; }
-    .prompt.right { color: #2e7d32; font-weight: 500; }
-    .prompt.wrong { color: #c62828; }
+    .prompt.right { color: var(--rh-success); font-weight: 500; }
+    .prompt.wrong { color: var(--rh-error); }
     .cost { margin: 2px 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .empty, .summary { margin: 8px 0; }
+    .empty-state, .summary { margin: 8px 0; }
     .actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .spacer { flex: 1 1 auto; }
     .analyze.on { color: #42a5f5; border-color: #42a5f5; }

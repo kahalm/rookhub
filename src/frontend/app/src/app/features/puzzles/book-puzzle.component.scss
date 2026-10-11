@@ -10,8 +10,8 @@
     .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
     .result-icon { font-size: 48px; width: 48px; height: 48px; }
-    .solved .result-icon { color: #4caf50; }
-    .failed .result-icon { color: #f44336; }
+    .solved .result-icon { color: var(--rh-success); }
+    .failed .result-icon { color: var(--rh-error); }
     .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
@@ -22,7 +22,7 @@
     .countdown-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; color: color-mix(in srgb, currentColor 50%, transparent); }
     .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
-    .settings-gear.active { color: #1976d2; }
+    .settings-gear.active { color: var(--rh-accent); }
     .give-up-btn { opacity: 0.6; font-size: 0.85em !important; }
 
     /* Hinweistext unter dem Brett */
@@ -31,7 +31,7 @@
       font-size: 0.88em; color: color-mix(in srgb, currentColor 60%, transparent);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
-    .board-hint-countdown { color: #e65100; font-weight: 500; }
+    .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
     .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
     .tomove-dot {
       width: 0.8em; height: 0.8em; border-radius: 50%; flex: 0 0 auto;
@@ -67,10 +67,10 @@
     .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
     .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .board-hint-flag.flagged {
-      border-style: solid; border-color: color-mix(in srgb, #d32f2f 55%, transparent);
-      background: color-mix(in srgb, #d32f2f 12%, transparent); opacity: 1;
+      border-style: solid; border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
+      background: color-mix(in srgb, var(--rh-error) 12%, transparent); opacity: 1;
     }
-    .board-hint-flag.flagged mat-icon { color: #d32f2f; }
+    .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
     .hint-list {
       margin: 0.5rem 0 0; padding-left: 1.3rem; text-align: left; max-width: 32rem;
       font-size: 0.92em; line-height: 1.45;
@@ -103,10 +103,10 @@
     }
     .context-card .course-stats .cs-stats > span { display: inline-flex; align-items: center; gap: 0.2rem; }
     .context-card .course-stats .cs-stats mat-icon { font-size: 1.05em; width: 1.05em; height: 1.05em; }
-    .context-card .course-stats .cs-acc mat-icon { color: #2e7d32; }
+    .context-card .course-stats .cs-acc mat-icon { color: var(--rh-success); }
     .context-card .course-stats .cs-eta { color: color-mix(in srgb, currentColor 65%, transparent); }
     .context-card .course-stats .cs-eta mat-icon { color: #6a5acd; }
-    .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
+    .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: var(--rh-success); font-weight: 600; margin: 0.5rem 0 0; }
     .context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
     .skip-quiet { opacity: 0.7; font-size: 0.85em !important; }
@@ -186,7 +186,7 @@
       cursor: pointer; font-size: 0.85em; user-select: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       input[type=radio] { display: none; }
-      &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
+      &.selected { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-color: var(--mat-sys-primary); }
       &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     }
     .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
@@ -212,8 +212,8 @@
       font-size: 0.95em; font-weight: 500;
       span { display: inline-flex; align-items: center; gap: 0.3rem; }
       mat-icon { font-size: 1.1em; width: 1.1em; height: 1.1em; }
-      .track-solved { color: #2e7d32; }
-      .track-failed { color: #c62828; }
+      .track-solved { color: var(--rh-success); }
+      .track-failed { color: var(--rh-error); }
     }
 
     // Info-/Erklärlinie (kein Quiz, nur Durchklicken)
@@ -221,7 +221,7 @@
       .info-line-head {
         display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.25rem;
         font-weight: 600;
-        mat-icon { color: #1565c0; }
+        mat-icon { color: var(--rh-info); }
       }
       .info-line-sub { margin: 0 0 0.5rem; opacity: 0.75; font-size: 0.95em; }
       .info-line-nav {

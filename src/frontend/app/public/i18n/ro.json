@@ -352,8 +352,10 @@
       "uploadHint": "Trage și plasează fișiere PGN aici sau apasă pentru a încărca",
       "files": "Fișiere ({{count}})",
       "empty": "Niciun fișier încă. Încarcă fișiere PGN pentru a începe!",
-      "filesSkipped": "{{count}} fișier(e) omis(e) (doar .pgn, până la 10 MB)",
-      "uploadSuccess": "{{count}} fișier(e) încărcat(e)",
+      "filesSkipped": "{{count}} fișiere omise (doar .pgn, până la 10 MB)",
+      "filesSkippedOne": "{{count}} fișier omis (doar .pgn, până la 10 MB)",
+      "uploadSuccess": "{{count}} fișiere încărcate",
+      "uploadSuccessOne": "{{count}} fișier încărcat",
       "uploadPartial": "{{ok}} încărcate, {{failed}} eșuate",
       "downloadFailed": "Descărcarea a eșuat",
       "deleteConfirm": "Ștergi acest fișier?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "Încarcă PGN(uri)",
+      "uploadPgn": "Încarcă fișiere PGN",
       "importing": "Se importă…",
       "poolHint": "Setează per carte în ce pool-uri apar problemele.",
       "empty": "Nicio carte importată încă.",
@@ -825,10 +827,13 @@
       "eloTo": "până la",
       "adminOnly": "doar admin",
       "deleteBook": "Șterge cartea",
-      "deleteConfirm": "Ștergi cartea „{{name}}“ cu {{count}} problemă/probleme?",
+      "deleteConfirm": "Ștergi cartea „{{name}}“ cu {{count}} probleme?",
+      "deleteConfirmOne": "Ștergi cartea „{{name}}“ cu {{count}} problemă?",
       "deleted": "Cartea „{{name}}“ ștearsă",
-      "importedCount": "{{count}} problemă/probleme importată/importate",
-      "duplicatesCount": "{{count}} duplicat(e)",
+      "importedCount": "{{count}} probleme importate",
+      "importedCountOne": "{{count}} problemă importată",
+      "duplicatesCount": "{{count}} duplicate",
+      "duplicatesCountOne": "{{count}} duplicat",
       "invalidCount": "{{count}} invalid(e)",
       "columns": {
         "book": "Carte",

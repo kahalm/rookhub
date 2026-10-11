@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Key } from 'chessground/types';
@@ -59,15 +60,14 @@ interface ChapterGroup {
   selector: 'app-course-browse',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, IconLabelDirective,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
     SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent,
   ],
   template: `
     <div class="browse-container">
       <div class="browse-head">
-        <button mat-icon-button [routerLink]="['/courses']" [matTooltip]="'courses.browse.back' | translate"
-                [attr.aria-label]="'courses.browse.back' | translate">
+        <button mat-icon-button [routerLink]="['/courses']" [appIconLabel]="'courses.browse.back' | translate">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <div class="head-text">
@@ -98,7 +98,7 @@ interface ChapterGroup {
       @if (loading) {
         <app-loading-spinner />
       } @else if (lines.length === 0) {
-        <p class="empty-hint">{{ 'courses.browse.empty' | translate }}</p>
+        <p class="empty-state">{{ 'courses.browse.empty' | translate }}</p>
       } @else {
         <div class="browse-body">
           <!-- Linien-Liste -->
@@ -137,15 +137,13 @@ interface ChapterGroup {
                     @if (isLoggedIn && !line.isInfoOnly) {
                       <button mat-icon-button class="line-action" (click)="toggleFavorite(line, $event)"
                               [class.faved]="isFavorite(line)"
-                              [matTooltip]="(isFavorite(line) ? 'courses.browse.unfavorite' : 'courses.browse.favorite') | translate"
-                              [attr.aria-pressed]="isFavorite(line)"
-                              [attr.aria-label]="(isFavorite(line) ? 'courses.browse.unfavorite' : 'courses.browse.favorite') | translate">
+                              [appIconLabel]="(isFavorite(line) ? 'courses.browse.unfavorite' : 'courses.browse.favorite') | translate"
+                              [attr.aria-pressed]="isFavorite(line)">
                         <mat-icon>{{ isFavorite(line) ? 'favorite' : 'favorite_border' }}</mat-icon>
                       </button>
                     }
                     <button mat-icon-button class="line-action" (click)="shareLine(line, $event)"
-                            [matTooltip]="'courses.browse.share' | translate"
-                            [attr.aria-label]="'courses.browse.share' | translate">
+                            [appIconLabel]="'courses.browse.share' | translate">
                       <mat-icon>share</mat-icon>
                     </button>
                   </div>
@@ -173,13 +171,13 @@ interface ChapterGroup {
 
               <div class="controls">
                 <button mat-icon-button (click)="first()" [disabled]="plyIndex === 0"
-                        [matTooltip]="'courses.browse.first' | translate"><mat-icon>first_page</mat-icon></button>
+                        [appIconLabel]="'courses.browse.first' | translate"><mat-icon>first_page</mat-icon></button>
                 <app-review-nav [currentIndex]="plyIndex" [totalSteps]="totalPlies"
                                 (prev)="prevPly()" (next)="nextPly()" />
                 <button mat-icon-button (click)="last()" [disabled]="plyIndex >= totalPlies"
-                        [matTooltip]="'courses.browse.last' | translate"><mat-icon>last_page</mat-icon></button>
+                        [appIconLabel]="'courses.browse.last' | translate"><mat-icon>last_page</mat-icon></button>
                 <button mat-icon-button (click)="toggleAutoplay()"
-                        [matTooltip]="(autoplay ? 'courses.browse.pause' : 'courses.browse.play') | translate">
+                        [appIconLabel]="(autoplay ? 'courses.browse.pause' : 'courses.browse.play') | translate">
                   <mat-icon>{{ autoplay ? 'pause' : 'play_arrow' }}</mat-icon>
                 </button>
                 <!-- Genau DIESE Stellung aufs Aufgabenblatt — auch mitten in der Linie. -->
@@ -240,11 +238,12 @@ interface ChapterGroup {
     .browse-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 16px; }
     .browse-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .head-spacer { flex: 1; }
-    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary, #3f51b5); }
+    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary); }
     .head-text h1 { margin: 0; font-size: 1.25rem; }
     .sub { margin: 2px 0 0; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; }
     .dot { margin: 0 6px; opacity: 0.5; }
-    .empty-hint, .select-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+    .empty-state, .select-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
+    .select-hint { padding: 16px 0; }
 
     .browse-body { display: flex; gap: 16px; align-items: flex-start; }
     /* UI-Sweep 2026-10-11 (r2-rp-browse-list): Liste breiter (Titel wie „PATTERN 1 (#1) Increasing Pawn Power"
@@ -270,8 +269,8 @@ interface ChapterGroup {
     .line-row.active .line-item { font-weight: 600; }
     .status-icon { display: inline-flex; width: 18px; flex: none; }
     .status-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .status-icon.status-solved mat-icon { color: #2e7d32; }
-    .status-icon.status-failed mat-icon { color: color-mix(in srgb, #c62828 80%, currentColor); }
+    .status-icon.status-solved mat-icon { color: var(--rh-success); }
+    .status-icon.status-failed mat-icon { color: color-mix(in srgb, var(--rh-error) 80%, currentColor); }
     .line-idx { font-variant-numeric: tabular-nums; opacity: 0.55; min-width: 22px; text-align: right; }
     .line-label { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical;
       -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; line-height: 1.3; }

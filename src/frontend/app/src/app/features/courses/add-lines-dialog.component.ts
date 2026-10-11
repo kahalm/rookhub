@@ -62,10 +62,10 @@ export interface AddLinesDialogData {
         <div class="result">
           <p class="added">
             <mat-icon>check_circle</mat-icon>
-            {{ 'courses.detail.addedCount' | translate:{ count: result.added } }}
+            {{ (result.added === 1 ? 'courses.detail.addedCountOne' : 'courses.detail.addedCount') | translate:{ count: result.added } }}
           </p>
           @if (result.issues.length) {
-            <p class="issues-head">{{ 'courses.detail.skippedCount' | translate:{ count: result.issues.length } }}</p>
+            <p class="issues-head">{{ (result.issues.length === 1 ? 'courses.detail.skippedCountOne' : 'courses.detail.skippedCount') | translate:{ count: result.issues.length } }}</p>
             <ul class="issues">
               @for (issue of result.issues; track $index) {
                 <li>
@@ -95,13 +95,13 @@ export interface AddLinesDialogData {
     textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
     .result { margin-top: 10px; }
     .added { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-weight: 500; }
-    .added mat-icon { color: #2e7d32; font-size: 18px; width: 18px; height: 18px; }
-    .issues-head { margin: 6px 0 4px; font-size: .85rem; color: #e65100; }
+    .added mat-icon { color: var(--rh-success); font-size: 18px; width: 18px; height: 18px; }
+    .issues-head { margin: 6px 0 4px; font-size: .85rem; color: var(--rh-warn); }
     .issues { margin: 0; padding-left: 18px; font-size: .8rem; display: flex; flex-direction: column; gap: 3px; }
     .issues .ln { font-weight: 600; margin-right: 4px; }
     .issues .reason { margin-right: 6px; }
     .issues code { word-break: break-all; opacity: .7; }
-    .error { color: #b71c1c; font-size: .85rem; }
+    .error { color: var(--rh-error); font-size: .85rem; }
     mat-dialog-content { min-width: min(560px, 80vw); }
   `],
 })

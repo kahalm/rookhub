@@ -85,16 +85,16 @@ export interface CalcMembersDialogData { bookId: number; }
   `,
   styles: [`
     .cmd { min-width: 380px; }
-    .hint { color: #9aa4b2; font-size: 12px; margin: 0 0 8px; }
+    .hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin: 0 0 8px; }
     .add-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .add-row .grow { flex: 1 1 180px; }
-    .empty { color: #9aa4b2; font-style: italic; }
+    .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
     .members { list-style: none; margin: 8px 0 0; padding: 0; }
     .member { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .member .name { flex: 1 1 auto; font-weight: 500; }
-    .seen { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; white-space: nowrap; color: #2e7d32; cursor: default; }
+    .seen { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; white-space: nowrap; color: var(--rh-success); cursor: default; }
     .seen mat-icon { font-size: 15px; width: 15px; height: 15px; }
-    .seen--none { color: #9aa4b2; }
+    .seen--none { color: color-mix(in srgb, currentColor 60%, transparent); }
   `],
 })
 export class CalcMembersDialogComponent {

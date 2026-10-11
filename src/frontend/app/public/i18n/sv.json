@@ -358,8 +358,10 @@
       "uploadHint": "Dra och släpp PGN-filer här eller klicka för att ladda upp",
       "files": "Filer ({{count}})",
       "empty": "Inga filer ännu. Ladda upp PGN-filer för att komma igång!",
-      "filesSkipped": "{{count}} fil(er) hoppades över (endast .pgn, upp till 10 MB)",
-      "uploadSuccess": "{{count}} fil(er) uppladdade",
+      "filesSkipped": "{{count}} filer hoppades över (endast .pgn, upp till 10 MB)",
+      "filesSkippedOne": "{{count}} fil hoppades över (endast .pgn, upp till 10 MB)",
+      "uploadSuccess": "{{count}} filer uppladdade",
+      "uploadSuccessOne": "{{count}} fil uppladdad",
       "uploadPartial": "{{ok}} uppladdade, {{failed}} misslyckades",
       "downloadFailed": "Nedladdningen misslyckades",
       "deleteConfirm": "Ta bort den här filen?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "Ladda upp PGN(er)",
+      "uploadPgn": "Ladda upp PGN-filer",
       "importing": "Importerar…",
       "poolHint": "Ange per bok i vilka pooler uppgifterna visas.",
       "empty": "Inga böcker importerade ännu.",
@@ -825,10 +827,13 @@
       "eloTo": "till",
       "adminOnly": "endast admin",
       "deleteBook": "Ta bort bok",
-      "deleteConfirm": "Ta bort boken \"{{name}}\" med {{count}} uppgift(er)?",
+      "deleteConfirm": "Ta bort boken \"{{name}}\" med {{count}} uppgifter?",
+      "deleteConfirmOne": "Ta bort boken \"{{name}}\" med {{count}} uppgift?",
       "deleted": "Boken \"{{name}}\" borttagen",
-      "importedCount": "{{count}} uppgift(er) importerade",
+      "importedCount": "{{count}} uppgifter importerade",
+      "importedCountOne": "{{count}} uppgift importerad",
       "duplicatesCount": "{{count}} duplikat",
+      "duplicatesCountOne": "{{count}} duplikat",
       "invalidCount": "{{count}} ogiltiga",
       "columns": {
         "book": "Bok",

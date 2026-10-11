@@ -7,7 +7,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { interval } from 'rxjs';
@@ -19,6 +18,7 @@ import {
   MoveComparison, MoveComparisonCandidate, MoveComparisonReply, MoveComparisonService, MoveComparisonSummary,
   MoveComparisonTest, numberedLine,
 } from './move-comparison.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** Was das Brett gerade zeigt: eine Stellung des Vergleichs samt Pfeil für den nächsten Zug. */
 interface BoardView { key: string; fen: string; arrows: BoardArrow[]; lastMove?: [string, string]; caption: string; }
@@ -35,8 +35,7 @@ const POLL_MS = 3_000;
   selector: 'app-move-comparison',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
-    TranslatePipe, ChessBoardComponent],
+  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent],
   template: `
     <div class="cmp-page">
       <div class="header">
@@ -176,7 +175,7 @@ const POLL_MS = 3_000;
                 <span class="muted small">{{ h.createdAt | date:'short' }}</span>
                 @if (h.bestSan) { <span class="best">{{ h.bestSan }}</span> }
                 <span class="spacer"></span>
-                <button mat-icon-button type="button" (click)="remove(h)" [matTooltip]="'moveCompare.page.delete' | translate">
+                <button mat-icon-button type="button" (click)="remove(h)" [appIconLabel]="'moveCompare.page.delete' | translate">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -192,7 +191,7 @@ const POLL_MS = 3_000;
     .header h1 { margin: 0; }
     .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .status { margin: .5rem 0; display: flex; gap: 6px; flex-wrap: wrap; }
-    .status.failed { color: #c62828; }
+    .status.failed { color: var(--rh-error); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
     .body { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 16px; align-items: start; margin-top: 10px; }
@@ -208,9 +207,9 @@ const POLL_MS = 3_000;
     .san { font-family: 'Roboto Mono', monospace; }
     .line { font-family: 'Roboto Mono', monospace; font-size: .78rem; padding: 0 8px 6px 2.6em; }
     .spacer { flex: 1; }
-    .best { font-size: .7rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(46,125,50,.18); color: #2e7d32; }
-    .ev { font-family: 'Roboto Mono', monospace; font-weight: 600; color: #2e7d32; }
-    .ev.neg { color: #c62828; }
+    .best { font-size: .7rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--rh-success) 18%, transparent); color: var(--rh-success); }
+    .ev { font-family: 'Roboto Mono', monospace; font-weight: 600; color: var(--rh-success); }
+    .ev.neg { color: var(--rh-error); }
     .pair h3, .history h3 { margin: 0 0 6px; font-size: 1rem; }
     .evals { display: flex; gap: 18px; flex-wrap: wrap; font-size: .9rem; margin-bottom: 6px; }
     .expl { line-height: 1.5; margin: 6px 0 10px; }
@@ -220,11 +219,11 @@ const POLL_MS = 3_000;
     .tests td { padding: 2px 0; vertical-align: top; }
     .cell { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; width: 100%; padding: 4px 6px; border: 0; border-radius: 6px;
       background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
-    .na { display: inline-block; padding: 4px 6px; font-weight: 600; color: #2e7d32; }
+    .na { display: inline-block; padding: 4px 6px; font-weight: 600; color: var(--rh-success); }
     .history { margin-top: 16px; }
     .hist-row { display: flex; align-items: center; gap: 10px; font-size: .88rem; }
     .hist-row.current a { font-weight: 600; }
-    @media (max-width: 760px) { .body { grid-template-columns: 1fr; } .board-col { max-width: 420px; } }
+    @media (max-width: 768px) { .body { grid-template-columns: 1fr; } .board-col { max-width: 420px; } }
   `],
 })
 export class MoveComparisonComponent implements OnInit {

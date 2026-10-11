@@ -33,7 +33,7 @@ export interface LeagueUploadBatch {
         <app-load-error (retry)="load()" />
       } @else if (rows(); as list) {
         @if (!list.length) {
-          <p class="empty">{{ 'admin.uploads.empty' | translate }}</p>
+          <p class="empty-state">{{ 'admin.uploads.empty' | translate }}</p>
         } @else {
           <table class="tbl">
             <thead><tr>
@@ -66,7 +66,7 @@ export interface LeagueUploadBatch {
   `,
   styles: [`
     .uploads { padding: 16px 0; }
-    .intro, .empty { color: var(--mat-sys-on-surface-variant, #666); }
+    .intro { color: var(--mat-sys-on-surface-variant, #666); }
     .tbl { width: 100%; border-collapse: collapse; }
     .tbl th, .tbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(128,128,128,.25); vertical-align: middle; }
     .tbl .num { text-align: right; white-space: nowrap; }

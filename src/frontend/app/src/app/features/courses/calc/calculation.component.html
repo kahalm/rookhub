@@ -36,8 +36,7 @@
     <!-- Stufe 2: Stellung IM Kapitel. Weiter/Zurück verlassen es nicht. -->
     <span class="calc-bar-nav">
       <button mat-icon-button [disabled]="!hasPrev()" (click)="prevPosition()"
-              [matTooltip]="'calc.prevPosition' | translate"
-              [attr.aria-label]="'calc.prevPosition' | translate">
+              [appIconLabel]="'calc.prevPosition' | translate">
         <mat-icon>chevron_left</mat-icon>
       </button>
       <button mat-button class="calc-bar-pick" [matMenuTriggerFor]="posMenu"
@@ -65,8 +64,7 @@
         }
       </mat-menu>
       <button mat-icon-button [disabled]="!hasNext()" (click)="nextPosition()"
-              [matTooltip]="'calc.nextPosition' | translate"
-              [attr.aria-label]="'calc.nextPosition' | translate">
+              [appIconLabel]="'calc.nextPosition' | translate">
         <mat-icon>chevron_right</mat-icon>
       </button>
     </span>
@@ -82,7 +80,7 @@
     <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
       <mat-icon>ac_unit</mat-icon><span class="calc-frozen-text">{{ 'calc.frozen' | translate }}</span>
     </span>
-    <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
+    <button mat-icon-button [appIconLabel]="'calc.flip' | translate" (click)="flipBoard()">
       <mat-icon>flip_camera_android</mat-icon>
     </button>
 
@@ -97,8 +95,7 @@
       <span class="calc-timer-time">{{ timerDisplay }}</span>
     </button>
     <button mat-icon-button (click)="toggleTraining()" [disabled]="trainingDisabled"
-            [matTooltip]="trainingActionKey | translate"
-            [attr.aria-label]="trainingActionKey | translate">
+            [appIconLabel]="trainingActionKey | translate">
       <mat-icon>{{ timerRunning ? 'stop' : 'play_arrow' }}</mat-icon>
     </button>
 
@@ -110,8 +107,7 @@
 
     <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. Einspaltig steht der Knopf in der
          Leiste unter dem Brett (r2-rp-calc-fullscreen), sonst stand er allein in einer eigenen Zeile. -->
-    <button mat-icon-button class="calc-copy-bar" (click)="copyFen()" [matTooltip]="'calc.copyFen' | translate"
-            [attr.aria-label]="'calc.copyFen' | translate">
+    <button mat-icon-button class="calc-copy-bar" (click)="copyFen()" [appIconLabel]="'calc.copyFen' | translate">
       <mat-icon>content_copy</mat-icon>
     </button>
   </ng-template>
@@ -170,12 +166,11 @@
              Vollbild-Knopf (styles.scss blendet ihn erst ab 900px aus) — der hier wäre der zweite. -->
         <app-board-fullscreen-button class="calc-rail-fs" [target]="fsTarget" />
         <button mat-icon-button class="calc-rail-btn calc-rail-copy" (click)="copyFen()"
-                [matTooltip]="'calc.copyFen' | translate" [attr.aria-label]="'calc.copyFen' | translate">
+                [appIconLabel]="'calc.copyFen' | translate">
           <mat-icon>content_copy</mat-icon>
         </button>
         <button mat-icon-button class="calc-rail-btn" (click)="openSettings()"
-                [matTooltip]="'calc.settings.title' | translate"
-                [attr.aria-label]="'calc.settings.title' | translate">
+                [appIconLabel]="'calc.settings.title' | translate">
           <mat-icon>settings</mat-icon>
         </button>
       </div>
@@ -215,20 +210,17 @@
                    dieselbe Aktion. Übrig bleiben Zurücknehmen und die Hilfe. -->
               <span headTools class="calc-head-tools">
                 <button mat-icon-button (click)="deleteFromCursor()" [disabled]="atStart"
-                        [matTooltip]="'calc.deleteFromCursor' | translate"
-                        [attr.aria-label]="'calc.deleteFromCursor' | translate">
+                        [appIconLabel]="'calc.deleteFromCursor' | translate">
                   <mat-icon>undo</mat-icon>
                 </button>
                 <button mat-icon-button (click)="toggleAnnotations()" [disabled]="atStart"
                         [class.calc-tool-on]="showAnnotations"
-                        [matTooltip]="'calc.annotate' | translate"
-                        [attr.aria-label]="'calc.annotate' | translate"
+                        [appIconLabel]="'calc.annotate' | translate"
                         [attr.aria-expanded]="showAnnotations">
                   <span class="calc-tool-letter">A</span>
                 </button>
                 <button mat-icon-button (click)="toggleKeys()" [class.calc-tool-on]="showKeys"
-                        [matTooltip]="'calc.keyboardHelp' | translate"
-                        [attr.aria-label]="'calc.keyboardHelp' | translate"
+                        [appIconLabel]="'calc.keyboardHelp' | translate"
                         [attr.aria-expanded]="showKeys">
                   <mat-icon>help_outline</mat-icon>
                 </button>
@@ -383,8 +375,7 @@
             </a>
             <!-- Ein Vorschlag darf man abstellen: einmal weggeklickt bleibt er für diesen Kurs weg. -->
             <button mat-icon-button class="calc-note-close" (click)="dismissLocalNotice()"
-                    [matTooltip]="'calc.local.dismiss' | translate"
-                    [attr.aria-label]="'calc.local.dismiss' | translate">
+                    [appIconLabel]="'calc.local.dismiss' | translate">
               <mat-icon>close</mat-icon>
             </button>
           </p>
@@ -400,8 +391,7 @@
               {{ 'calc.local.signIn' | translate }}
             </a>
             <button mat-icon-button class="calc-note-close" (click)="dismissLocalWarning()"
-                    [matTooltip]="'calc.local.hideForNow' | translate"
-                    [attr.aria-label]="'calc.local.hideForNow' | translate">
+                    [appIconLabel]="'calc.local.hideForNow' | translate">
               <mat-icon>close</mat-icon>
             </button>
           </p>

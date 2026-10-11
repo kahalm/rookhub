@@ -13,7 +13,7 @@
             <div class="trophy">🎆🏆🎆</div>
             <h2>{{ 'puzzles.revengeDone.title' | translate }}</h2>
             <p class="summary">{{ 'puzzles.revengeDone.summary' | translate:{ solved: revengeSolvedCount, total: revengeTotalCount, name: revengeFriendName } }}</p>
-            <button mat-raised-button color="primary" (click)="goToRevengeList()">
+            <button mat-flat-button color="primary" (click)="goToRevengeList()">
               <mat-icon>arrow_back</mat-icon> {{ 'puzzles.revengeDone.backToFriend' | translate }}
             </button>
           </div>
@@ -132,7 +132,7 @@
                             : 'puzzles.status.loadFailed') | translate }}
                   </p>
                   @if (offlinePoolExhausted) {
-                    <button mat-raised-button color="primary" (click)="replayLastPuzzle()">
+                    <button mat-flat-button color="primary" (click)="replayLastPuzzle()">
                       <mat-icon>replay</mat-icon> {{ 'puzzles.status.replayLast' | translate }}
                     </button>
                   }

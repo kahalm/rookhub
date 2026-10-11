@@ -39,6 +39,7 @@ import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.uti
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -86,7 +87,7 @@ const LEARN_REPEATS = 3;
   selector: 'app-repertoire-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule,
     MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent,
   ],

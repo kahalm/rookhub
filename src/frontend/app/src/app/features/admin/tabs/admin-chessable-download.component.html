@@ -20,7 +20,7 @@
       </button>
     }
     @if (dlSelectedUser()?.blocked) {
-      <button mat-raised-button color="primary" [disabled]="dlTesting" (click)="dlTestUser()">
+      <button mat-flat-button color="primary" [disabled]="dlTesting" (click)="dlTestUser()">
         <mat-icon>cable</mat-icon> {{ (dlTesting ? 'chessable.testing' : 'chessable.testNow') | translate }}
       </button>
     }
@@ -33,7 +33,7 @@
     @if (dlUsersError) {
       <app-load-error (retry)="loadDlUsers()" />
     } @else {
-      <p class="empty">{{ 'admin.courseDl.noUsers' | translate }}</p>
+      <p class="empty-state">{{ 'admin.courseDl.noUsers' | translate }}</p>
     }
   }
 
@@ -46,7 +46,7 @@
       {{ 'admin.courseDl.hideLoaded' | translate }}
     </mat-slide-toggle>
     @if (dlVisibleCourses().length === 0) {
-      <p class="empty">{{ 'admin.courseDl.allLoaded' | translate }}</p>
+      <p class="empty-state">{{ 'admin.courseDl.allLoaded' | translate }}</p>
     }
     <div class="dl-courses">
       @for (c of dlVisibleCourses(); track c.bid) {
@@ -66,7 +66,7 @@
               }
             } @else {
               <button mat-icon-button class="dl-est-btn" (click)="dlEstimate(c)"
-                      [matTooltip]="'admin.courseDl.estimate' | translate" [attr.aria-label]="'admin.courseDl.estimate' | translate">
+                      [appIconLabel]="'admin.courseDl.estimate' | translate">
                 <mat-icon>straighten</mat-icon>
               </button>
             }
@@ -114,6 +114,6 @@
       }
     </div>
   } @else if (dlSelectedUserId != null) {
-    <p class="empty">{{ 'admin.courseDl.noCourses' | translate }}</p>
+    <p class="empty-state">{{ 'admin.courseDl.noCourses' | translate }}</p>
   }
 </div>

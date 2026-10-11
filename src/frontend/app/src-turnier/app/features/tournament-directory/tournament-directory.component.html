@@ -1,5 +1,5 @@
 <div class="page">
-  <div class="page-head">
+  <div class="header">
     <h1>
       {{ 'tournamentDirectory.title' | translate }}
       <app-help-hint [text]="'tournamentDirectory.help' | translate" />
@@ -42,8 +42,7 @@
       }
       @if (geolocationSupported) {
         <button matSuffix mat-icon-button (click)="useCurrentLocation()" [disabled]="locating()"
-                [matTooltip]="'tournamentDirectory.place.useCurrent' | translate"
-                [attr.aria-label]="'tournamentDirectory.place.useCurrent' | translate">
+                [appIconLabel]="'tournamentDirectory.place.useCurrent' | translate">
           <mat-icon>{{ locating() ? 'hourglass_top' : 'my_location' }}</mat-icon>
         </button>
       }
@@ -256,7 +255,7 @@
         } @else if (listFailed()) {
           <ng-container *ngTemplateOutlet="loadFailed" />
         } @else if (entries().length === 0) {
-          <p class="muted">{{ 'tournamentDirectory.empty' | translate }}</p>
+          <p class="empty-state muted">{{ 'tournamentDirectory.empty' | translate }}</p>
         } @else {
           @if (truncated()) {
             <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>

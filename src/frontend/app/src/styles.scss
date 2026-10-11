@@ -368,3 +368,18 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
 .solve-mode-backdrop { background: rgba(0, 0, 0, 0.6); }
 .solve-mode-panel .mat-mdc-dialog-surface { border-radius: 20px; }
 .solve-mode-sheet .mat-mdc-dialog-surface { border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Leerzustand (docs/DESIGN.md 5.10, Design-Aufräumen 2026-10-11): EINE Klasse statt `.empty`, `.empty-hint`, `.empty-text`
+   … je Komponente — zentriert, ein Satz, höchstens eine Aktion. Sekundärtext 60 % (3.1: nicht unter 55 %). Ein
+   gescheitertes Laden ist KEIN Leerzustand (dafür `app-load-error`). Komponenten dürfen Abstände ergänzen, nicht die
+   Grundform ändern. */
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+.empty-state > p { margin: 0.5rem 0; }
+.empty-state > mat-icon { display: block; margin: 0 auto 0.5rem; }
+
+/* Löschen im ⋮-Menü (docs/DESIGN.md 5.5): rotes Symbol aus dem Fehler-Token statt festem #e53935 je Komponente. */
+.mat-mdc-menu-item.delete-item mat-icon { color: var(--rh-error); }

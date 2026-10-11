@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -75,7 +76,7 @@ const ANON_COURSE_PAGE_SIZE = 300;
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
+    MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, IconLabelDirective, MatDialogModule,
     PuzzleBoardComponent, BoardFsActionsComponent, PuzzleTagsComponent,
     TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent,
     RouterLink, CourseLangPickerComponent, MachineNoteComponent,

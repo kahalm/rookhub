@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatChipsModule } from '@angular/material/chips';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CatalogService, CatalogItem, CatalogRequest, CatalogGrants, CatalogGrantUser } from './catalog.service';
@@ -27,7 +27,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatInputModule, MatTooltipModule, MatChipsModule, TranslatePipe, LoadErrorComponent,
+    MatSelectModule, MatInputModule, IconLabelDirective, MatChipsModule, TranslatePipe, LoadErrorComponent,
   ],
   template: `
   <div class="catalog">
@@ -42,7 +42,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
         <!-- User wie bei „Freunde" suchen (Name, Anzeigename, chess.com, lichess, FIDE, CR) statt einer langen Auswahlliste. -->
         <h3>{{ 'catalog.admin.grantedUsers' | translate }}</h3>
         @if (grantUsers.length === 0) {
-          <p class="empty">{{ 'catalog.admin.noGrantedUsers' | translate }}</p>
+          <p class="empty-state">{{ 'catalog.admin.noGrantedUsers' | translate }}</p>
         } @else {
           <mat-chip-set class="granted-users">
             @for (u of grantUsers; track u.userId) {
@@ -63,7 +63,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
         </div>
         @if (searched) {
           @if (searchResults.length === 0) {
-            <p class="empty">{{ 'catalog.admin.noResults' | translate }}</p>
+            <p class="empty-state">{{ 'catalog.admin.noResults' | translate }}</p>
           } @else {
             <div class="search-results">
               @for (u of searchResults; track u.userId) {
@@ -76,8 +76,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
                   @if (isGranted(u.userId)) {
                     <mat-icon class="granted-mark">check_circle</mat-icon>
                   } @else {
-                    <button mat-icon-button (click)="addUser(u)"
-                            [attr.aria-label]="'catalog.admin.add' | translate" [matTooltip]="'catalog.admin.add' | translate">
+                    <button mat-icon-button (click)="addUser(u)" [appIconLabel]="'catalog.admin.add' | translate">
                       <mat-icon>person_add</mat-icon>
                     </button>
                   }
@@ -101,7 +100,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 
         <h2>{{ 'catalog.admin.requestsTitle' | translate }}</h2>
         @if (requests.length === 0) {
-          <p class="empty">{{ 'catalog.admin.noRequests' | translate }}</p>
+          <p class="empty-state">{{ 'catalog.admin.noRequests' | translate }}</p>
         } @else {
           <div class="req-list">
             @for (r of requests; track r.id) {
@@ -134,7 +133,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
       } @else if (loadError) {
         <app-load-error (retry)="loadList()" />
       } @else if (items.length === 0) {
-        <p class="empty">{{ 'catalog.empty' | translate }}</p>
+        <p class="empty-state">{{ 'catalog.empty' | translate }}</p>
       } @else {
         <div class="item-list">
           @for (i of items; track i.itemType + i.itemId) {

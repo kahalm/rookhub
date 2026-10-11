@@ -124,7 +124,7 @@ import { LibraryGame, LibrarySemanticHit, LibraryService } from './library.servi
       @if (loading) {
         <app-loading-spinner />
       } @else if (items.length === 0) {
-        <p class="muted">{{ (total === 0 && !hasFilter ? 'guess.library.empty' : 'guess.library.none') | translate }}</p>
+        <p class="muted empty-state">{{ (total === 0 && !hasFilter ? 'guess.library.empty' : 'guess.library.none') | translate }}</p>
       } @else {
         <p class="muted small count">{{ 'guess.library.found' | translate:{ total } }}</p>
         @for (g of items; track g.id) {
@@ -184,7 +184,7 @@ import { LibraryGame, LibrarySemanticHit, LibraryService } from './library.servi
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
     .modes { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    .mode.on { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 16%, transparent); font-weight: 600; }
+    .mode.on { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); font-weight: 600; }
     .ask { width: 100%; margin-bottom: 8px; }
     .ask mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }
     .snippet { margin-top: 4px; font-style: italic; white-space: pre-line;

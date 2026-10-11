@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CourseService } from '../course.service';
 import { PreferencesService } from '../../../core/preferences.service';
@@ -40,7 +40,7 @@ import { pgnHeaderText } from '../../../shared/pgn-viewer/pgn-header.util';
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatTooltipModule, TranslatePipe, FlashcardBoardComponent, BoardFullscreenButtonComponent,
+    IconLabelDirective, TranslatePipe, FlashcardBoardComponent, BoardFullscreenButtonComponent,
   ],
   templateUrl: './flashcards.component.html',
   styleUrls: ['./flashcards.component.scss'],

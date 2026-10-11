@@ -27,13 +27,11 @@
       </button>
       <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet. -->
       <button mat-icon-button (click)="openConfig()"
-              [matTooltip]="'srConfig.title' | translate"
-              [attr.aria-label]="'srConfig.title' | translate">
+              [appIconLabel]="'srConfig.title' | translate">
         <mat-icon>tune</mat-icon>
       </button>
       <button mat-icon-button (click)="resetProgress()" [disabled]="resetting"
-              [matTooltip]="'repertoireTrainer.resetTooltip' | translate"
-              [attr.aria-label]="'repertoireTrainer.resetTooltip' | translate">
+              [appIconLabel]="'repertoireTrainer.resetTooltip' | translate">
         <mat-icon>restart_alt</mat-icon>
       </button>
     }
@@ -108,16 +106,16 @@
       @if (opponent && opponentTotal) {
         <!-- Gegner-Sitzung (2026-10-08): der Reihe nach durch, dann diese Meldung -->
         <p class="opponent-done">{{ 'repertoireTrainer.opponentDone' | translate: { n: opponentTotal } }}</p>
-        <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.opponentAgain' | translate }}</button>
+        <button mat-flat-button color="primary" (click)="restart()">{{ 'repertoireTrainer.opponentAgain' | translate }}</button>
         <button mat-stroked-button (click)="backToCard()">{{ 'repertoireTrainer.opponentBack' | translate }}</button>
       } @else if (mode === 'learn') {
         <p>{{ 'repertoireTrainer.learnDone' | translate }}</p>
-        <button mat-raised-button color="primary" (click)="setMode('quiz')">
+        <button mat-flat-button color="primary" (click)="setMode('quiz')">
           <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
         </button>
       } @else {
         <p>{{ 'repertoireTrainer.done' | translate: { correct: correct, total: sessionUserMoves } }}</p>
-        <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.again' | translate }}</button>
+        <button mat-flat-button color="primary" (click)="restart()">{{ 'repertoireTrainer.again' | translate }}</button>
       }
     </mat-card>
 
@@ -191,7 +189,7 @@
               <mat-icon>chat_bubble</mat-icon>
               <div class="comment-text">{{ holdComment }}</div>
             </div>
-            <button mat-raised-button color="primary" (click)="continueFromComment(); $event.stopPropagation()">
+            <button mat-flat-button color="primary" (click)="continueFromComment(); $event.stopPropagation()">
               {{ 'repertoireTrainer.continue' | translate }}
             </button>
             <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
@@ -219,11 +217,11 @@
               <button mat-stroked-button (click)="mouseslip(); $event.stopPropagation()">
                 <mat-icon>back_hand</mat-icon> {{ 'repertoireTrainer.mouseslip' | translate }}
               </button>
-              <button mat-raised-button color="primary" (click)="showSolution(); $event.stopPropagation()">
+              <button mat-flat-button color="primary" (click)="showSolution(); $event.stopPropagation()">
                 <mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.showSolution' | translate }}
               </button>
             </div>
-            <button *ngIf="wrongRevealed" mat-raised-button color="primary" (click)="continueAfterWrong(); $event.stopPropagation()">{{ 'repertoireTrainer.continue' | translate }}</button>
+            <button *ngIf="wrongRevealed" mat-flat-button color="primary" (click)="continueAfterWrong(); $event.stopPropagation()">{{ 'repertoireTrainer.continue' | translate }}</button>
           </ng-container>
           <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
@@ -236,7 +234,7 @@
               <p class="repeat-due"><mat-icon>schedule</mat-icon>
                 {{ 'repertoireTrainer.repeatIn' | translate: { when: nextRepeatLabel } }}</p>
             }
-            <button mat-raised-button color="primary" (click)="continueLine(); $event.stopPropagation()">
+            <button mat-flat-button color="primary" (click)="continueLine(); $event.stopPropagation()">
               {{ (pendingRepeat ? 'repertoireTrainer.repeatLine' : 'repertoireTrainer.nextLine') | translate }}
             </button>
             <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>

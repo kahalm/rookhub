@@ -9,7 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
@@ -27,7 +27,7 @@ import { TournamentRoundMonitor } from './tournament-round-monitor';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, DatePipe, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, IconLabelDirective, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './public-tournament.component.html',
   styleUrls: ['./public-tournament.component.scss'],
 })

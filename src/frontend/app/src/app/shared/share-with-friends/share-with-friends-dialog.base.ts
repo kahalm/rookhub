@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../icon-label/icon-label.directive';
 import { Observable, forkJoin } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FriendsService } from '../../core/friends.service';
@@ -38,7 +38,7 @@ export interface ShareBatchResult {
  */
 export const SHARE_DIALOG_IMPORTS = [
   CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatCheckboxModule,
-  MatProgressSpinnerModule, MatTooltipModule, TranslatePipe,
+  MatProgressSpinnerModule, IconLabelDirective, TranslatePipe,
 ];
 
 export const SHARE_DIALOG_TEMPLATE = `
@@ -58,7 +58,7 @@ export const SHARE_DIALOG_TEMPLATE = `
                   <mat-icon class="ok-icon">check_circle</mat-icon>
                   <span class="rname">{{ r.displayName || r.username }}</span>
                   <button mat-icon-button class="remove-btn" [disabled]="busy"
-                          [matTooltip]="tk('unshareTooltip') | translate"
+                          [appIconLabel]="tk('unshareTooltip') | translate"
                           (click)="unshare(r)">
                     <mat-icon>close</mat-icon>
                   </button>
@@ -71,7 +71,7 @@ export const SHARE_DIALOG_TEMPLATE = `
         <div class="section">
           <h3>{{ tk('pickFriends') | translate }}</h3>
           @if (selectableFriends.length === 0) {
-            <p class="empty">{{ tk('noFriends') | translate }}</p>
+            <p class="empty-state">{{ tk('noFriends') | translate }}</p>
           } @else {
             <div class="friend-list">
               @for (f of selectableFriends; track f.userId) {
@@ -86,7 +86,7 @@ export const SHARE_DIALOG_TEMPLATE = `
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="selected.size === 0 || busy" (click)="share()">
+      <button mat-flat-button color="primary" [disabled]="selected.size === 0 || busy" (click)="share()">
         {{ tk('shareButton') | translate:{ count: selected.size } }}
       </button>
     </mat-dialog-actions>
@@ -99,12 +99,11 @@ export const SHARE_DIALOG_STYLES = `
     .section h3 { font-size: 0.85rem; font-weight: 600; margin: 0 0 6px; opacity: 0.75; }
     .recipient-list { list-style: none; margin: 0; padding: 0; }
     .recipient-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-    .ok-icon { color: #4caf50; font-size: 18px; width: 18px; height: 18px; }
+    .ok-icon { color: var(--rh-success); font-size: 18px; width: 18px; height: 18px; }
     .rname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .remove-btn { width: 30px; height: 30px; padding: 3px; }
     .remove-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .friend-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
-    .empty { font-style: italic; font-size: 0.85rem; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0; }
   `;
 
 /**
@@ -188,7 +187,7 @@ export abstract class ShareWithFriendsDialogBase implements OnInit {
         }
         const skipped = res.skipped?.length ?? 0;
         if (res.shared > 0 && skipped === 0) {
-          this.snackbar.success(this.translate.instant(this.tk('shared'), { count: res.shared }));
+          this.snackbar.success(this.translate.instant(this.tk(res.shared === 1 ? 'sharedOne' : 'shared'), { count: res.shared }));
         } else if (res.shared > 0) {
           this.snackbar.info(this.translate.instant(this.tk('sharedPartial'), { shared: res.shared, skipped }));
         } else {

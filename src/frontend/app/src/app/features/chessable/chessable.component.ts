@@ -42,10 +42,10 @@ export { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL };
     .extension-note {
       display: flex; align-items: flex-start; gap: 0.75rem;
       border: 1px solid var(--mat-sys-outline-variant, #d0d0d8);
-      border-left: 5px solid var(--mat-sys-primary, #3f51b5); border-radius: 6px;
+      border-left: 5px solid var(--mat-sys-primary); border-radius: 6px;
       padding: 1rem 1.1rem; margin-top: 0.75rem;
     }
-    .note-icon { color: var(--mat-sys-primary, #3f51b5); flex: 0 0 auto; margin-top: 4px; }
+    .note-icon { color: var(--mat-sys-primary); flex: 0 0 auto; margin-top: 4px; }
     .note-text { flex: 1 1 auto; min-width: 0; }
     .note-text h1 { font-size: 1.35rem; margin: 0 0 0.5rem; }
     .note-text p { margin: 0 0 1rem; line-height: 1.5; }

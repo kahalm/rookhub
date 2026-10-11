@@ -263,6 +263,7 @@
     "chessableQueue": {
       "title": "Chessable-várólista",
       "count": "{{count}} aktív importálás",
+      "countOne": "{{count}} aktív importálás",
       "view": "Összes megtekintése",
       "heading": "Aktív Chessable-importálások",
       "cancel": "Importálás megszakítása",
@@ -667,6 +668,7 @@
     "revenge": {
       "menu": "Revans egy ismerős ellen",
       "menuOpen": "{{count}} nyitott revans — oldd meg őket!",
+      "menuOpenOne": "{{count}} nyitott revans — oldd meg őket!",
       "title": "Revans {{name}} ellen",
       "hint": "Feladványok, amelyeken {{name}} elbukott és még nem oldotta meg — oldd meg őket, és csináld jobban!",
       "back": "Vissza az ismerősökhöz",
@@ -839,7 +841,9 @@
       "files": "Fájlok ({{count}})",
       "empty": "Még nincsenek fájlok. Tölts fel PGN fájlokat a kezdéshez!",
       "filesSkipped": "{{count}} fájl kihagyva (csak .pgn, max. 10 MB)",
+      "filesSkippedOne": "{{count}} fájl kihagyva (csak .pgn, max. 10 MB)",
       "uploadSuccess": "{{count}} fájl feltöltve",
+      "uploadSuccessOne": "{{count}} fájl feltöltve",
       "uploadPartial": "{{ok}} feltöltve, {{failed}} sikertelen",
       "downloadFailed": "Letöltés sikertelen",
       "deleteConfirm": "Törli ezt a fájlt?"
@@ -861,6 +865,7 @@
       "unshareTooltip": "Hozzáférés visszavonása",
       "sharedBy": "megosztotta: {{name}}",
       "shared": "Megosztva {{count}} ismerőssel.",
+      "sharedOne": "Megosztva {{count}} ismerőssel.",
       "sharedPartial": "Megosztva: {{shared}}; {{skipped}} kihagyva.",
       "nothingShared": "Senki sem került hozzáadásra (már meg van osztva, vagy nem ismerős).",
       "unshared": "{{name}} hozzáférése visszavonva.",
@@ -1123,6 +1128,7 @@
     },
     "challenge": {
       "sentCount": "Kihívás elküldve {{count}} ismerősnek",
+      "sentCountOne": "Kihívás elküldve {{count}} ismerősnek",
       "selectAll": "Mind kijelölése",
       "send": "Küldés ({{count}})",
       "batchResult": "Elküldve {{sent}} címzettnek, {{skipped}} kihagyva",
@@ -1226,6 +1232,7 @@
     "sectionInProgressHint": "Megkezdett, még be nem fejezett kurzusok.",
     "detail": {
       "skippedCount": "{{count}} sor kihagyva:",
+      "skippedCountOne": "{{count}} sor kihagyva:",
       "startChapter": "Fejezet indítása",
       "tags": "Címkék",
       "title": "Tanfolyam",
@@ -1236,6 +1243,7 @@
       "addLinesHint": "Az állások a(z) „{{chapter}}” fejezet végére kerülnek.",
       "addLinesTitle": "Állások hozzáadása",
       "addedCount": "{{count}} állás hozzáadva.",
+      "addedCountOne": "{{count}} állás hozzáadva.",
       "calcBook": "Számolási könyv",
       "calcHint": "Megoldás nélküli állások — számolási módban dolgozod fel őket.",
       "calcPoints": "Számolási pontok",
@@ -1330,6 +1338,7 @@
       "unshareTooltip": "Hozzáférés visszavonása",
       "sharedBy": "megosztotta: {{name}}",
       "shared": "Megosztva {{count}} ismerőssel.",
+      "sharedOne": "Megosztva {{count}} ismerőssel.",
       "sharedPartial": "Megosztva vele: {{shared}}; {{skipped}} kihagyva.",
       "nothingShared": "Senki sem került hozzá (már meg van osztva, vagy nem ismerős).",
       "unshared": "{{name}} hozzáférése visszavonva.",
@@ -1884,7 +1893,7 @@
       "impersonateFailed": "Nem sikerült belépni ezzel a felhasználóval."
     },
     "books": {
-      "uploadPgn": "PGN(ek) feltöltése",
+      "uploadPgn": "PGN-fájlok feltöltése",
       "importing": "Importálás…",
       "poolHint": "Könyvenként állítsd be, melyik poolban jelenjenek meg a feladványok.",
       "empty": "Még nincs importált könyv.",
@@ -1893,9 +1902,12 @@
       "adminOnly": "csak admin",
       "deleteBook": "Könyv törlése",
       "deleteConfirm": "Törli a(z) \"{{name}}\" könyvet {{count}} feladvánnyal?",
+      "deleteConfirmOne": "Törli a(z) \"{{name}}\" könyvet {{count}} feladvánnyal?",
       "deleted": "\"{{name}}\" könyv törölve",
       "importedCount": "{{count}} feladvány importálva",
+      "importedCountOne": "{{count}} feladvány importálva",
       "duplicatesCount": "{{count}} duplikát",
+      "duplicatesCountOne": "{{count}} duplikát",
       "invalidCount": "{{count}} érvénytelen",
       "columns": {
         "book": "Könyv",
@@ -2708,7 +2720,10 @@
     "rateLimited": "Túl sok keresés rövid idő alatt. Várj egy kicsit, és próbáld újra.",
     "truncated": "A keresés elérte az időkorlátot: nem minden vonalat néztünk át, ezért az eredmény hiányos.",
     "none": "Ez az állás egyik repertoárodban sem szerepel.",
-    "foundCount": "{{reps}} repertoár · {{lines}} változat",
+    "repsCount": "{{count}} repertoár",
+    "repsCountOne": "{{count}} repertoár",
+    "linesCount": "{{count}} változat",
+    "linesCountOne": "{{count}} változat",
     "unnamedLine": "(névtelen változat)",
     "train": "Változat edzése",
     "view": "Változat megtekintése",
@@ -2720,7 +2735,8 @@
       "similar": "Hasonló állások"
     },
     "tree": {
-      "foundCount": "{{reps}} repertoár · {{lines}} előfordulás",
+      "occurrencesCount": "{{count}} előfordulás",
+      "occurrencesCountOne": "{{count}} előfordulás",
       "noContinuation": "Itt véget ér a repertoár — nincs rögzített folytatás.",
       "truncated": "A fa lerövidítve (nagyon sok elágazás).",
       "linesThrough": "{{count}} változat halad át ezen a lépésen",
@@ -2760,6 +2776,7 @@
       "none": "Nem található hasonló a repertoárjaidban.",
       "noneWithMove": "A repertoárjaidban egyetlen állás sem folytatódik így: {{move}}.",
       "foundCount": "{{count}} hasonló állás",
+      "foundCountOne": "{{count}} hasonló állás",
       "atMove": "lépés: {{move}}",
       "startPosition": "kiindulási állás",
       "openHint": "Állás megnyitása a repertoárban",

@@ -196,7 +196,7 @@ export interface PuzzleSettingsDialogResult {
 
     <mat-dialog-actions align="end">
       <button mat-button [mat-dialog-close]="null">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" (click)="save()">{{ 'common.save' | translate }}</button>
+      <button mat-flat-button color="primary" (click)="save()">{{ 'common.save' | translate }}</button>
     </mat-dialog-actions>
   `,
   styles: [`
@@ -248,7 +248,7 @@ export interface PuzzleSettingsDialogResult {
       margin-left: 4px;
     }
     .psd-info-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .psd-info-btn:hover, .psd-info-btn.active { opacity: 1; color: var(--mat-sys-primary, #1976d2); }
+    .psd-info-btn:hover, .psd-info-btn.active { opacity: 1; color: var(--mat-sys-primary); }
     .psd-viz-info {
       margin: 0 0 8px; padding: 10px 12px;
       background: rgba(128,128,128,0.06); border-radius: 6px;
@@ -258,7 +258,7 @@ export interface PuzzleSettingsDialogResult {
       display: flex; gap: 8px; font-size: 13px;
       align-items: baseline;
     }
-    .psd-viz-info-row.current .psd-viz-name { font-weight: 600; color: var(--mat-sys-primary, #1976d2); }
+    .psd-viz-info-row.current .psd-viz-name { font-weight: 600; color: var(--mat-sys-primary); }
     .psd-viz-name { font-weight: 500; min-width: 72px; flex-shrink: 0; }
     .psd-viz-desc { opacity: 0.75; line-height: 1.4; }
   `]

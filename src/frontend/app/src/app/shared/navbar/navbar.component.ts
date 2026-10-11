@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../icon-label/icon-label.directive';
 import { MatBadgeModule } from '@angular/material/badge';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
@@ -33,7 +33,7 @@ import {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatBadgeModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, IconLabelDirective, MatBadgeModule, TranslatePipe],
   template: `
     <mat-toolbar color="primary">
       <!-- Links, keine span/button mit routerLink (UX-059): nur ein Anker ist per Enter bedienbar, fuer Screenreader
@@ -46,15 +46,14 @@ import {
              ungelesene Nachrichten färben das ☰ und tragen ein Badge. -->
         @if (fsSupported) {
           <button mat-icon-button (click)="toggleAppFullscreen()"
-                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
+                  [appIconLabel]="fsLabel">
             <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
           </button>
         }
         <button mat-icon-button [matMenuTriggerFor]="notifMenu" (menuOpened)="onBellOpened()"
                 class="notif-bell" [class.has-unseen]="notifCount > 0"
                 matBadge="!" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="medium"
-                [matTooltip]="('notifications.title' | translate) + (notifCount > 0 ? ' (' + notifCount + ')' : '')"
-                [attr.aria-label]="'notifications.title' | translate">
+                [appIconLabel]="('notifications.title' | translate) + (notifCount > 0 ? ' (' + notifCount + ')' : '')">
           <mat-icon>notifications</mat-icon>
         </button>
         <mat-menu #notifMenu="matMenu" class="notif-menu">
@@ -62,8 +61,7 @@ import {
             <span class="notif-header-title">{{ 'notifications.title' | translate }}</span>
             @if (hasUnseen()) {
               <button mat-icon-button class="notif-mark-all" (click)="markAllRead($event)"
-                      [matTooltip]="'notifications.markAllRead' | translate"
-                      [attr.aria-label]="'notifications.markAllRead' | translate">
+                      [appIconLabel]="'notifications.markAllRead' | translate">
                 <mat-icon>done_all</mat-icon>
               </button>
             }
@@ -193,7 +191,7 @@ import {
              „Anmelden"/„Registrieren" — auf /register standen sonst zwei gleiche Knoepfe (Codereview W5 UX-052). -->
         @if (fsSupported && !onAuthPage) {
           <button mat-icon-button class="anon-wide" (click)="toggleAppFullscreen()"
-                  [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
+                  [appIconLabel]="fsLabel">
             <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
           </button>
         }
@@ -259,7 +257,7 @@ import {
         </mat-menu>
         @if (!onAuthPage) {
           <!-- color="primary": die Einladung an Gaeste ist die Primaeraktion der Leiste (gefuellt, styles.scss). -->
-          <a mat-raised-button color="primary" class="anon-wide nav-register" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
+          <a mat-flat-button color="primary" class="anon-wide nav-register" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
         }
       }
       <mat-menu #langMenu="matMenu">
@@ -285,13 +283,13 @@ import {
     .notif-empty { padding: 8px 16px 12px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .notif-item .notif-text { white-space: normal; line-height: 1.25; }
     .notif-item.notif-unseen { font-weight: 600; }
-    .notif-item.notif-unseen mat-icon { color: var(--mat-sys-primary, #3f51b5); }
+    .notif-item.notif-unseen mat-icon { color: var(--mat-sys-primary); }
     /* Auffälliger Hinweis bei neuen Benachrichtigungen: fettes rotes „!" + leichtes Pulsieren. */
-    .notif-bell.has-unseen mat-icon { color: #d32f2f; }
+    .notif-bell.has-unseen mat-icon { color: var(--rh-error); }
     /* Mail-Symbol ebenfalls rot, sobald ungelesene Nachrichten vorliegen. */
-    .msg-mail.has-unseen mat-icon { color: #d32f2f; }
+    .msg-mail.has-unseen mat-icon { color: var(--rh-error); }
     .msg-item-unseen { font-weight: 600; }
-    .msg-item-unseen mat-icon { color: #d32f2f; }
+    .msg-item-unseen mat-icon { color: var(--rh-error); }
     .notif-bell ::ng-deep .mat-badge-content {
       background: #d32f2f; color: #fff; font-weight: 800; font-size: 15px;
       width: 19px; height: 19px; line-height: 19px;

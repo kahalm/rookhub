@@ -294,18 +294,18 @@ interface HistoryRow {
     .orow .mv.on { background: color-mix(in srgb, currentColor 22%, transparent); font-weight: 600; }
     .held .hg { font-weight: 600; }
     .held .hd { font-variant-numeric: tabular-nums; }
-    .held.g-worse .hd, .held.g-muchWorse .hd { color: #c62828; }
-    .held.g-clearlyBetter .hd { color: #2e7d32; }
+    .held.g-worse .hd, .held.g-muchWorse .hd { color: var(--rh-error); }
+    .held.g-clearlyBetter .hd { color: var(--rh-success); }
     .feedback .fb-head { display: flex; align-items: baseline; gap: 10px; }
     .feedback .pts { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .feedback .grade { font-weight: 600; }
     .fb-line { margin: 6px 0 0; }
     .final { font-size: 1.4rem; font-weight: 700; margin: 0; }
     /* Farbe nach Güte — dieselbe Ordnung wie die Punkte. */
-    .g-clearlyBetter .pts, .g-better .pts, .g-onlyMove .pts, .g-gameMove .pts { color: #2e7d32; }
+    .g-clearlyBetter .pts, .g-better .pts, .g-onlyMove .pts, .g-gameMove .pts { color: var(--rh-success); }
     .g-similar .pts { color: #558b2f; }
     .g-worse .pts, .g-skipped .pts { color: color-mix(in srgb, currentColor 60%, transparent); }
-    .g-muchWorse .pts { color: #c62828; }
+    .g-muchWorse .pts { color: var(--rh-error); }
     /* Der Rückblick kann lang sein — er scrollt IN SICH, nicht die Seite. */
     .review { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
     .rev-row { display: grid; grid-template-columns: 44px 1fr 1fr 44px 22px; gap: 8px; align-items: baseline;
@@ -322,7 +322,7 @@ interface HistoryRow {
     .set-hint { margin: 2px 0 0; line-height: 1.4; }
     /* Kommentierte Zuege tragen einen Punkt — Farbe allein traegt die Auskunft nicht. */
     .mv.noted { font-weight: 600; }
-    .mv.noted::after { content: '\\2022'; margin-left: 2px; color: var(--mdc-theme-primary, #3f51b5); }
+    .mv.noted::after { content: '\\2022'; margin-left: 2px; color: var(--mat-sys-primary); }
     /* Uebersprungen: durchgestrichen und blass — die Zeile war nie eine Aufgabe. */
     .mv.skipped { text-decoration: line-through; opacity: .6; }
     .skip-note { font-size: .82rem; }

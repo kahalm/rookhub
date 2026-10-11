@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   CalcEval, CalcGlyph, CalcLine, CalcNode, CalcTree, evalNameKey, glyphNameKey, lines, plyPrefix,
@@ -22,15 +23,14 @@ import {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-calc-lines',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatTooltipModule, IconLabelDirective, TranslatePipe],
   template: `
     <div class="calc-lines">
       <div class="cl-head">
         <span class="cl-title">{{ 'calc.lines' | translate }}</span>
         <span class="cl-count" *ngIf="allLines.length">{{ allLines.length }}</span>
         <span class="cl-spacer"></span>
-        <button mat-icon-button class="cl-add" [matTooltip]="'calc.newLine' | translate"
-                [attr.aria-label]="'calc.newLine' | translate" (click)="newLine.emit()">
+        <button mat-icon-button class="cl-add" [appIconLabel]="'calc.newLine' | translate" (click)="newLine.emit()">
           <mat-icon>add_circle_outline</mat-icon>
         </button>
         <!-- Werkzeuge des Elternteils sitzen in DIESER Kopfzeile statt als eigene Knopfreihe
@@ -76,15 +76,15 @@ import {
               </div>
 
               <div class="cl-actions">
-                <button mat-icon-button class="cl-icon" [matTooltip]="'calc.analyzeLine' | translate"
+                <button mat-icon-button class="cl-icon" [appIconLabel]="'calc.analyzeLine' | translate"
                         [disabled]="!line.moves.length" (click)="analyzeLine.emit(line.leafId)">
                   <mat-icon>insights</mat-icon>
                 </button>
-                <button mat-icon-button class="cl-icon" [matTooltip]="'calc.comment' | translate"
+                <button mat-icon-button class="cl-icon" [appIconLabel]="'calc.comment' | translate"
                         (click)="toggleComment(line.leafId)">
                   <mat-icon>{{ leafComment(line) ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
                 </button>
-                <button mat-icon-button class="cl-icon" [matTooltip]="'calc.deleteLine' | translate"
+                <button mat-icon-button class="cl-icon" [appIconLabel]="'calc.deleteLine' | translate"
                         (click)="deleteLine.emit(line.leafId)">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
@@ -135,7 +135,7 @@ import {
       border-left: 3px solid transparent;
     }
     .cl-line--active {
-      border-left-color: #1976d2;
+      border-left-color: var(--rh-accent);
       background: color-mix(in srgb, currentColor 6%, transparent);
     }
     /* Festlegung: die Linie unter dem gewählten ersten Zug bleibt sichtbar hervorgehoben,
@@ -161,7 +161,7 @@ import {
     .cl-move:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
     .cl-move--shared { color: color-mix(in srgb, currentColor 40%, transparent); }
     .cl-move--cursor {
-      background: #1976d2; color: #fff; font-weight: 600;
+      background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); font-weight: 600;
     }
     .cl-num { margin-right: 2px; opacity: 0.65; font-variant-numeric: tabular-nums; }
     .cl-glyph { font-weight: 700; }

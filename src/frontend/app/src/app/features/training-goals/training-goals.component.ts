@@ -234,7 +234,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                       </mat-form-field>
                     </div>
                     <div class="actions">
-                      <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
+                      <button mat-flat-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
                       @if (goal?.source === 'personal') {
                         <button mat-button (click)="resetOverride()" [disabled]="saving">{{ 'trainingGoals.resetOverride' | translate }}</button>
                       }
@@ -360,12 +360,12 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .cats { display: flex; flex-direction: column; gap: 12px; }
     .cat-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; margin-bottom: 4px; }
     .cat-row mat-icon { color: color-mix(in srgb, currentColor 25%, transparent); }
-    .cat-row mat-icon.met { color: #2e7d32; }
+    .cat-row mat-icon.met { color: var(--rh-success); }
     .cat-name { flex: 1; }
     .cat-weekly { border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); padding-top: 10px; }
     .weekly-tag { color: color-mix(in srgb, currentColor 47%, transparent); font-size: .75rem; font-style: italic; }
     /* Abstand + Trenner fest im Markup: Angular entfernt Leerraum zwischen Interpolation und @if, und „Spielennoch offen“
-       stand zusammengeklebt da (UI-Sweep r3). */
+       stand zusammengeklebt da (UI-Sweep 2026-10-11, Nachprüfung Runde 3 — ohne Fund-ID). */
     .weekly-sep { display: inline-block; margin: 0 .4em; font-style: normal; }
     .cat-val { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .sync-btn { margin-top: 12px; }

@@ -113,7 +113,7 @@ export function loginRetryAfterSeconds(err: any): number {
               <mat-error>{{ 'auth.login.fieldRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-checkbox [(ngModel)]="rememberMe" name="rememberMe">{{ 'auth.login.rememberMe' | translate }}</mat-checkbox>
-            <button mat-raised-button color="primary" type="submit" [disabled]="loading">
+            <button mat-flat-button color="primary" type="submit" [disabled]="loading">
               {{ loading ? ('auth.login.submitting' | translate) : ('auth.login.submit' | translate) }}
             </button>
           </form>
@@ -155,7 +155,7 @@ export function loginRetryAfterSeconds(err: any): number {
     .legal-links.footer-always { display: none; }
     @media (min-width: 769px) { .legal-links.footer-wide { display: none; } }
     mat-card { width: 400px; max-width: 90vw; }
-    .auth-required { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
+    .auth-required { background: color-mix(in srgb, var(--rh-info) 15%, transparent); border-left: 3px solid var(--rh-info); padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     .auth-sub { display: block; margin-top: 0.3rem; opacity: 0.85; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     mat-form-field { width: 100%; }

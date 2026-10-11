@@ -185,7 +185,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     .head.free-head { flex-wrap: nowrap; }
     .head.free-head h1 { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .head.free-head .solved-pill { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
-    @media (max-width: 480px) {
+    @media (max-width: 479.98px) {
       .head.free-head h1 { font-size: 1.2rem; }
       .head.free-head .dice { display: none; }
     }

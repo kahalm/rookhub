@@ -813,7 +813,7 @@ export class ClubAddPageComponent implements OnInit {
       this.extraPhotos.set([...this.extraPhotos(), f]);
       this.extraSame.set([...this.extraSame(), true]);
     }
-    this.multiNote.set(skipped ? `${skipped} Foto(s) nicht übernommen — höchstens ${this.maxPhotosPerPage} je Seite.` : null);
+    this.multiNote.set(skipped ? `${skipped} ${skipped === 1 ? 'Foto' : 'Fotos'} nicht übernommen — höchstens ${this.maxPhotosPerPage} je Seite.` : null);
   }
 
   /** `same`: ein weiteres Foto der Seite davor statt einer neuen Seite (0.736.0). */

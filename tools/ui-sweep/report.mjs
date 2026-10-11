@@ -11,6 +11,8 @@ const KIND_LABEL = {
   'i18n-key': 'Schlüssel statt Text', spinner: 'lädt noch',
 };
 
+const AUTH_LABEL = { anon: 'abgemeldet', user: 'normales Konto', admin: 'Admin', empty: 'leeres Konto', trainer: 'Trainer' };
+
 export function writeIndex(runDir, report) {
   const byRoute = new Map();
   for (const s of report.shots) {
@@ -34,7 +36,7 @@ export function writeIndex(runDir, report) {
     const real = problems.filter(p => !p.startsWith('<li class="i">'));
     const flags = [real.length ? 'has-problems' : '', s.diff && s.diff.status !== 'same' ? 'has-diff' : ''].join(' ');
     return `<figure class="shot ${flags}">
-      <figcaption>${esc(s.auth === 'user' ? 'angemeldet' : 'abgemeldet')} · ${esc(s.viewport)} · ${esc(s.theme)}</figcaption>
+      <figcaption>${esc(AUTH_LABEL[s.auth] ?? s.auth)} · ${esc(s.viewport)} · ${esc(s.theme)}${s.lang && s.lang !== 'de' ? ` · ${esc(s.lang)}` : ''}</figcaption>
       ${s.file ? `<a href="${esc(s.file)}" target="_blank"><img loading="lazy" src="${esc(s.file)}" alt=""></a>` : '<div class="noimg">kein Bild</div>'}
       ${diff}
       ${problems.length ? `<ul>${problems.join('')}</ul>` : ''}
@@ -60,6 +62,7 @@ export function writeIndex(runDir, report) {
   body { font: 14px/1.4 system-ui, sans-serif; margin: 0; background: #16181d; color: #e6e6e6; }
   header { position: sticky; top: 0; z-index: 2; background: #1f232b; padding: 10px 18px; border-bottom: 1px solid #333; }
   header h1 { font-size: 17px; margin: 0 0 4px; }
+  header .mode { font-size: 12px; color: #8a93a3; margin-bottom: 2px; }
   header label { margin-right: 14px; }
   main { padding: 10px 18px 40px; }
   .route { border-top: 1px solid #2c313a; padding: 10px 0; }
@@ -77,7 +80,8 @@ export function writeIndex(runDir, report) {
   details { margin-top: 6px; color: #8a93a3; }
 </style></head><body>
 <header>
-  <h1>UI-Sweep ${esc(report.run)} — ${esc(report.env)}${report.local ? ' (lokaler Build)' : ''}</h1>
+  <h1>UI-Sweep ${esc(report.run)} — ${esc(report.env)}${report.local ? ' (lokaler Build)' : ''}${report.fast ? ' · --fast' : ''}</h1>
+  <div class="mode">${report.fast ? 'Modus <b>--fast</b>: jede Seite einmal geladen, Breiten durch Umstellen der Fenstergröße — Handy-Ansicht nur über die Breite, ohne Touch' : 'Modus normal: jede Aufnahme frisch geladen, Handy/Tablet mit Touch-Emulation'}${report.rate ? ` · ${report.rate} API-Anfragen/min, ${report.concurrency} gleichzeitig` : ''}${report.pauses429 != null ? ` · ${report.pauses429} Pausen wegen 429` : ''}</div>
   <div>${total} Aufnahmen · <b>${problems}</b> mit Auffälligkeiten${report.comparedWith ? ` · <b>${changed}</b> verändert gegenüber ${esc(report.comparedWith)}` : ''} · ${report.seconds}s
   &nbsp;&nbsp;<label><input type="checkbox" id="p"> nur Auffällige</label>${report.comparedWith ? '<label><input type="checkbox" id="d"> nur Veränderte</label>' : ''}</div>
   ${unresolved ? `<details><summary>${report.unresolved.length} Routen nicht auflösbar</summary><ul>${unresolved}</ul></details>` : ''}

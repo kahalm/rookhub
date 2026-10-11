@@ -16,6 +16,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap } from 'rxjs';
@@ -71,7 +72,7 @@ type ViewTab = 'list' | 'map' | 'calendar';
     CommonModule, FormsModule, MatAutocompleteModule, MatButtonModule, MatCardModule,
     MatChipsModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule,
     MatMenuModule, MatProgressSpinnerModule, MatSelectModule, MatSlideToggleModule, MatTabsModule,
-    MatTooltipModule, TranslatePipe,
+    MatTooltipModule, IconLabelDirective, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
     TournamentMapComponent,
   ],

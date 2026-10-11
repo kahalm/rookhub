@@ -46,6 +46,7 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { SimilarGamesComponent } from './similar-games.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
 const RECAP_TRIES = 8;
@@ -66,7 +67,7 @@ const TAP_MAX_MS = 500;
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-shared-game',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
@@ -78,7 +79,7 @@ const TAP_MAX_MS = 500;
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (notFound) {
-        <mat-card class="empty">
+        <mat-card class="empty-state">
           <mat-icon>link_off</mat-icon>
           <p>{{ notFoundKey | translate }}</p>
         </mat-card>
@@ -86,7 +87,7 @@ const TAP_MAX_MS = 500;
         <mat-card class="viewer">
           <div class="header">
             @if (own) {
-              <a mat-icon-button routerLink="/games" class="back" [matTooltip]="'common.back' | translate" [attr.aria-label]="'common.back' | translate">
+              <a mat-icon-button routerLink="/games" class="back" [appIconLabel]="'common.back' | translate">
                 <mat-icon>arrow_back</mat-icon>
               </a>
             }
@@ -153,7 +154,7 @@ const TAP_MAX_MS = 500;
                    für die eigene Partie dazu korrigieren, Roast und — bei einer eingelesenen — das Formular-Foto. -->
               @if (game) {
                 <button mat-icon-button class="game-menu" [matMenuTriggerFor]="gameMenu" (menuOpened)="loadLiveEngines()"
-                        [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
+                        [appIconLabel]="'common.moreActions' | translate">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #gameMenu="matMenu">
@@ -309,7 +310,7 @@ const TAP_MAX_MS = 500;
                 <button mat-icon-button class="nav-flip" (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
                 <button mat-icon-button class="live-toggle" [class.on]="!!live()" (click)="toggleLive()"
                         [attr.aria-pressed]="!!live()"
-                        [matTooltip]="'games.live.toggle' | translate" [attr.aria-label]="'games.live.toggle' | translate">
+                        [appIconLabel]="'games.live.toggle' | translate">
                   <mat-icon>memory</mat-icon>
                 </button>
                 <!-- „+" (0.749.0): besonders gute Stellung markieren — auch in einer eigenen Nebenvariante der Live-Engine. -->
@@ -353,8 +354,8 @@ const TAP_MAX_MS = 500;
     /* Breiter als die übrigen Seiten (0.714.0): Brett, Zugliste und Auswertung stehen nebeneinander. */
     .shared-page { max-width: min(1760px, 96vw); margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     /* Die Karte umschließt ihren Inhalt und steht mittig. Das Brett wächst mit dem Fenster: so hoch, dass
        Kopfzeile und Steuerleiste noch Platz haben, und so breit, dass Zugliste (und am PC die Auswertung) daneben
        passen — nie unter 360 px (gemeldet 2026-09-23: 400 px auf 2250 px Breite) und nie über 760 px. */

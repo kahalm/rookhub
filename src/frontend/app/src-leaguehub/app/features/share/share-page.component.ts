@@ -25,7 +25,7 @@ import { ClubContextService } from '../../core/club-context.service';
         <p>Dieser Link ist abgelaufen oder wurde widerrufen.</p>
       </section>
     } @else if (loadError(); as e) {
-      <section class="gate">
+      <section class="gate" role="alert">
         <h2>Gerade nicht erreichbar</h2>
         <p>{{ e }}</p>
         <div class="actions"><button type="button" class="btn-sec" (click)="load()">Neu laden</button></div>

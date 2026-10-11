@@ -78,7 +78,7 @@ export interface SetupDrag {
     .sb-sq:focus-visible { outline: 3px solid var(--red); outline-offset: -3px; z-index: 1; }
     .sb-sq.from .sb-pc { opacity: .25; }
     .sb-sq.from { box-shadow: inset 0 0 0 100px rgba(0, 0, 0, .18); }
-    .sb-sq.over { box-shadow: inset 0 0 0 3px var(--red, #c0392b), inset 0 0 0 100px rgba(255, 255, 255, .25); }
+    .sb-sq.over { box-shadow: inset 0 0 0 3px var(--red), inset 0 0 0 100px rgba(255, 255, 255, .25); }
     .sb-pc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .sb-ghost { position: fixed; z-index: 2000; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .35)); }
   `],

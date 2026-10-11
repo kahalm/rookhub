@@ -267,7 +267,7 @@ import { DirectoryEntry, isPlaceholderLocation } from './tournament-directory.mo
     .tc-act-label { display: none; }
 
     /* Am Handy steht unter jedem Symbol ein kurzes Wort, Tippflaeche mindestens 44 x 44 (t-card-labels). */
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .tc-actions { justify-content: space-between; }
       .tc-actions .tc-act {
         width: auto; min-width: 64px; height: auto; min-height: 48px; padding: 4px 6px;

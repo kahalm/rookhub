@@ -27,6 +27,7 @@ import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.se
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
 export const ANALYSIS_POLL_MS = 10_000;
@@ -38,13 +39,13 @@ export type AnalysisState = 'none' | 'running' | 'done';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-games-list',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, TranslatePipe,
   ],
   template: `
     <div class="games-page">
-      <div class="head">
+      <div class="header">
         <div class="title-row">
           <h1>{{ 'games.title' | translate }}</h1>
           <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
@@ -102,7 +103,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (games.length === 0) {
-        <mat-card class="empty">
+        <mat-card class="empty-state">
           <mat-icon>sports_esports</mat-icon>
           <p>{{ 'games.empty' | translate }}</p>
         </mat-card>
@@ -171,12 +172,12 @@ export type AnalysisState = 'none' | 'running' | 'done';
               <div class="moves mid"><span class="moves-num">{{ g.moveCount }}</span><span class="moves-label">{{ 'games.movesCount' | translate:{ count: g.moveCount } }}</span></div>
               <div class="date">{{ (g.playedAt || g.createdAt) | date:'mediumDate' }}</div>
               <div class="actions">
-                <a mat-icon-button [routerLink]="['/games', g.id]" [matTooltip]="'games.replay' | translate" [attr.aria-label]="'games.replay' | translate">
+                <a mat-icon-button [routerLink]="['/games', g.id]" [appIconLabel]="'games.replay' | translate">
                   <mat-icon>play_arrow</mat-icon>
                 </a>
                 <!-- Alles Weitere ins ⋮: eine Zeile mit sechs Knöpfen liest sich nicht mehr. -->
                 <button mat-icon-button [matMenuTriggerFor]="menu"
-                        [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
+                        [appIconLabel]="'common.moreActions' | translate">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #menu="matMenu">
@@ -231,12 +232,12 @@ export type AnalysisState = 'none' | 'running' | 'done';
   `,
   styles: [`
     .games-page { max-width: 1040px; margin: 0 auto; padding: 16px; }
-    .head h1 { margin: 0 0 4px; }
+    .header h1 { margin: 0 0 4px; }
     .title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .only-open { margin-top: 4px; }
     .classifier-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 0.9rem; }
     .classifier-filters label { display: inline-flex; align-items: center; gap: 6px; }
@@ -300,7 +301,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
     /* So breit wie ein Icon-Knopf, damit die Zeile beim Wechsel Knopf → Prozent nicht springt. */
     .progress {
       display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
-      font-size: 0.8rem; font-variant-numeric: tabular-nums; color: #1976d2; cursor: default;
+      font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--rh-accent); cursor: default;
     }
     .moves { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 70%, transparent); }
     .date { font-size: 0.85rem; white-space: nowrap; color: color-mix(in srgb, currentColor 70%, transparent); }
@@ -315,7 +316,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
 
     /* Am Handy gibt es keine Spalten mehr: dieselben Teile umbrechen, Zahl und Datum rutschen
        in die zweite Reihe. Die Kopfzeile faellt weg — sie beschriftete Spalten, die es nicht gibt. */
-    @media (max-width: 760px) {
+    @media (max-width: 768px) {
       .row { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 10px 8px; }
       /* MIT .row davor: beide Regeln haetten sonst dieselbe Spezifitaet, und die spaetere gewinnt —
          die Kopfzeile stand dann als Wortreihe ueber der Liste (im Bild nachgemessen). */

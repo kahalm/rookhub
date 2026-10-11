@@ -43,7 +43,7 @@ import { CourseCardComponent } from './course-card.component';
             <mat-icon>upload_file</mat-icon>
             {{ 'courses.import.button' | translate }}
           </button>
-          <button mat-raised-button color="primary" [disabled]="creating" (click)="openCreateDialog()">
+          <button mat-flat-button color="primary" [disabled]="creating" (click)="openCreateDialog()">
             <mat-icon>{{ creating ? 'hourglass_empty' : 'add' }}</mat-icon>
             {{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}
           </button>
@@ -58,7 +58,7 @@ import { CourseCardComponent } from './course-card.component';
       @if (reimportCount > 0) {
         <div class="reimport-legend">
           <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
-          <!-- UI-Sweep r3: „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
+          <!-- UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
                allein in eine Zeile. -->
           <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}
             <button type="button" class="reimport-toggle" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">{{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}</button></span>
@@ -78,7 +78,7 @@ import { CourseCardComponent } from './course-card.component';
       @if (loading) {
         <app-loading-spinner />
       } @else if (courses.length === 0) {
-        <p class="empty-hint">{{ 'courses.emptyHint' | translate }}</p>
+        <p class="empty-state">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
         <mat-form-field appearance="outline" class="list-search" subscriptSizing="dynamic">
           <mat-icon matPrefix>search</mat-icon>
@@ -91,7 +91,7 @@ import { CourseCardComponent } from './course-card.component';
           }
         </mat-form-field>
         @if (filtered.length === 0) {
-          <p class="empty-hint">{{ 'courses.noMatch' | translate:{ query: search } }}</p>
+          <p class="empty-state">{{ 'courses.noMatch' | translate:{ query: search } }}</p>
         }
         @if (inProgressCourses.length > 0) {
           <section class="course-section">
@@ -226,7 +226,7 @@ import { CourseCardComponent } from './course-card.component';
     .courses-container { max-width: min(var(--page-max-width), 96vw); margin: 24px auto; padding: 0 16px; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .header h1 { margin: 0; }
-    /* UI-Sweep r3: am Handy standen Titel und zwei Knöpfe gedrängt nebeneinander (Knöpfe übereinander) — die Knöpfe
+    /* UI-Sweep 2026-10-11 (Nachprüfung Runde 3): am Handy standen Titel und zwei Knöpfe gedrängt nebeneinander (Knöpfe übereinander) — die Knöpfe
        rücken in eine eigene Zeile unter den Titel. */
     @media (max-width: 599.98px) {
       .header { flex-wrap: wrap; }
@@ -234,13 +234,14 @@ import { CourseCardComponent } from './course-card.component';
     }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
-    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+    /* Leerzustand nach docs/DESIGN.md 5.10: globale .empty-state (zentriert, Polster) + leise Schrift. */
+    .empty-state { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
 
     .course-section { margin-bottom: 28px; }
     .reimport-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 1rem;
       padding: 6px 12px; border-radius: 8px; font-size: 0.88rem;
-      border: 1px solid color-mix(in srgb, #fb8c00 45%, transparent); }
-    .reimport-chip { border: 1px solid #fb8c00; color: #fb8c00; border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
+      border: 1px solid color-mix(in srgb, var(--rh-warn) 45%, transparent); }
+    .reimport-chip { border: 1px solid var(--rh-warn); color: var(--rh-warn); border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
     .reimport-text { flex: 1 1 220px; }
     .reimport-toggle { font: inherit; font-weight: 500; color: var(--mat-sys-primary); background: none; border: 0;
       padding: 6px 4px; margin: -6px 0; cursor: pointer; white-space: nowrap; text-decoration: underline;

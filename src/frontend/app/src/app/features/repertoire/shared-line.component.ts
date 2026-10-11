@@ -32,7 +32,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (notFound) {
-        <mat-card class="empty">
+        <mat-card class="empty-state">
           <mat-icon>link_off</mat-icon>
           <p>{{ 'repertoire.shareLine.notFound' | translate }}</p>
         </mat-card>
@@ -74,8 +74,8 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
   styles: [`
     .shared-page { max-width: 900px; margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
+    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .viewer { padding: 16px; }
     .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .title { font-weight: 600; font-size: 1.1rem; }

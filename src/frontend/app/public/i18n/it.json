@@ -359,7 +359,9 @@
       "files": "File ({{count}})",
       "empty": "Nessun file ancora. Carica file PGN per iniziare!",
       "filesSkipped": "{{count}} file ignorati (solo .pgn, max 10 MB)",
+      "filesSkippedOne": "{{count}} file ignorato (solo .pgn, max 10 MB)",
       "uploadSuccess": "{{count}} file caricati",
+      "uploadSuccessOne": "{{count}} file caricato",
       "uploadPartial": "{{ok}} caricati, {{failed}} non riusciti",
       "downloadFailed": "Download non riuscito",
       "deleteConfirm": "Eliminare questo file?"
@@ -826,9 +828,12 @@
       "adminOnly": "solo admin",
       "deleteBook": "Elimina libro",
       "deleteConfirm": "Eliminare il libro \"{{name}}\" con {{count}} puzzle?",
+      "deleteConfirmOne": "Eliminare il libro \"{{name}}\" con {{count}} puzzle?",
       "deleted": "Libro \"{{name}}\" eliminato",
       "importedCount": "{{count}} puzzle importati",
+      "importedCountOne": "{{count}} puzzle importato",
       "duplicatesCount": "{{count}} duplicati",
+      "duplicatesCountOne": "{{count}} duplicato",
       "invalidCount": "{{count}} non validi",
       "columns": {
         "book": "Libro",

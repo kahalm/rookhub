@@ -14,6 +14,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { WorksheetService, WorksheetSummary } from './worksheet.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Übersicht der AUFGABENBLÄTTER (`/worksheets`): oben die Zwischenablage — der Sammelkorb, in dem
@@ -28,7 +29,7 @@ import { WorksheetService, WorksheetSummary } from './worksheet.service';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-worksheet-list',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe,

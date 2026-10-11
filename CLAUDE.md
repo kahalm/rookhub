@@ -299,10 +299,11 @@ abgeschnitten, Übersetzungsschlüssel statt Text, Ladekreis steht, Konsolen-/AP
 Lauf (Pixel-Diff). `cd tools/ui-sweep && ./sweep.sh` (Dev, Handy + breit, dunkel, ab- und angemeldet), `--area kurse,repertoire`
 für einzelne Bereiche (`--areas` listet sie), `--local` für den lokalen Build gegen die Dev-API, `--help`. Ergebnis in
 `runs/<Zeitpunkt>/index.html` (nicht im Repo). Anleitung und Fallen: `tools/ui-sweep/README.md`. Zwei Dinge, die dabei
-nicht kippen dürfen: (1) Die API drosselt je Adresse (100/min) — das Werkzeug bremst sich selbst (`--rate`, Vorgabe 80/min),
+nicht kippen dürfen: (1) Die API drosselt je Adresse (Prod 100/min; Dev seit 11.10.2026 ×5 = 500/min über
+`RateLimiting__PermitScale` in der Dev-compose) — das Werkzeug bremst sich selbst (`--rate`, Vorgabe Dev 400/min + 4 Browser, Prod 70/min + 2; `--fast` = Seite einmal laden, alle Breiten darauf; Volllauf Dev ~11 min, fast ~7 min),
 schaltet die Offline-Vorräte der App ab und pausiert nach einem 429 eine Minute; ein Bild mit gebremsten Anfragen trägt
 `toolDelayMs` und zeigt evtl. einen Ladezustand, der NICHT von der App kommt. (2) Testdaten legt `seed.mjs` für `claude-dev`
-an (alles mit „ui-sweep" im Namen, wird wiedergefunden). Neue Route → in `routes.mjs` eintragen und einem Bereich zuordnen.
+an, `seed-user.mjs` für das normale Konto; Rollen `--auth anon,user,admin` (Standard) sowie `empty`/`trainer` (alles mit „ui-sweep" im Namen, wird wiedergefunden). Neue Route → in `routes.mjs` eintragen und einem Bereich zuordnen. Design-Durchsicht gegen `docs/DESIGN.md`: Skill `/ui-design-check`.
 
 ## Offene Aufgaben
 

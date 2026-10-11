@@ -97,8 +97,7 @@
                     <div class="uc-row">
                       @for (g of u.groups ?? []; track g) { <span class="uc-group">{{ g }}</span> }
                       <span class="uc-spacer"></span>
-                      <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId === u.id"
-                              [attr.aria-label]="'admin.users.impersonate' | translate" [matTooltip]="'admin.users.impersonate' | translate">
+                      <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId === u.id" [appIconLabel]="'admin.users.impersonate' | translate">
                         <mat-icon>login</mat-icon>
                       </button>
                       <button mat-icon-button [matMenuTriggerFor]="userMenu"
@@ -136,7 +135,7 @@
           <div class="tab-content">
             <div class="book-upload">
               <input #pgnInput type="file" accept=".pgn" multiple hidden (change)="onBookFilesSelected($event)">
-              <button mat-raised-button color="primary" (click)="pgnInput.click()" [disabled]="booksUploading">
+              <button mat-flat-button color="primary" (click)="pgnInput.click()" [disabled]="booksUploading">
                 <mat-icon>upload_file</mat-icon> {{ 'admin.books.uploadPgn' | translate }}
               </button>
               @if (booksUploading) { <span class="upload-hint">{{ 'admin.books.importing' | translate }}</span> }
@@ -260,9 +259,9 @@
             @if (booksLoading) {
               <app-loading-spinner />
             } @else if (books.length === 0) {
-              <p class="empty-hint">{{ 'admin.books.empty' | translate }}</p>
+              <p class="empty-state">{{ 'admin.books.empty' | translate }}</p>
             } @else if (filteredBooks.length === 0) {
-              <p class="empty-hint">{{ 'admin.books.noMatch' | translate }}</p>
+              <p class="empty-state">{{ 'admin.books.noMatch' | translate }}</p>
             } @else {
               <div class="table-responsive">
               <table mat-table [dataSource]="filteredBooks" class="full-width books-table">
@@ -406,7 +405,7 @@
                 <mat-label>{{ 'admin.groups.descriptionOptional' | translate }}</mat-label>
                 <input matInput [(ngModel)]="newGroupDescription" (keyup.enter)="createGroup()">
               </mat-form-field>
-              <button mat-raised-button color="primary" (click)="createGroup()" [disabled]="!newGroupName.trim()">
+              <button mat-flat-button color="primary" (click)="createGroup()" [disabled]="!newGroupName.trim()">
                 <mat-icon>add</mat-icon> {{ 'admin.groups.create' | translate }}
               </button>
             </div>
@@ -414,7 +413,7 @@
             @if (groupsLoading) {
               <app-loading-spinner />
             } @else if (groups.length === 0) {
-              <p class="empty-hint">{{ 'admin.groups.empty' | translate }}</p>
+              <p class="empty-state">{{ 'admin.groups.empty' | translate }}</p>
             } @else {
               <div class="group-layout">
                 <table mat-table [dataSource]="groups" class="full-width group-table">
@@ -487,7 +486,7 @@
                       @if (membersLoading) {
                         <app-loading-spinner />
                       } @else if (groupMembers.length === 0) {
-                        <p class="empty-hint">{{ 'admin.groups.noMembers' | translate }}</p>
+                        <p class="empty-state">{{ 'admin.groups.noMembers' | translate }}</p>
                       } @else {
                         <mat-chip-set>
                           @for (m of groupMembers; track m.userId) {
@@ -527,7 +526,7 @@
                           </mat-form-field>
                         </div>
                         <div class="goal-actions">
-                          <button mat-raised-button color="primary" [disabled]="!goalLoaded" (click)="saveGroupGoal()">{{ 'common.save' | translate }}</button>
+                          <button mat-flat-button color="primary" [disabled]="!goalLoaded" (click)="saveGroupGoal()">{{ 'common.save' | translate }}</button>
                           @if (goalHasTemplate && goalLoaded) {
                             <button mat-button (click)="clearGroupGoal()">{{ 'admin.groups.goal.clear' | translate }}</button>
                           }

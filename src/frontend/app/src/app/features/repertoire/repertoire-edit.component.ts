@@ -44,7 +44,7 @@ import { downloadBlob } from '../../shared/download.util';
             </div>
           </mat-list-item>
         } @empty {
-          <p class="empty-text">{{ 'repertoire.edit.empty' | translate }}</p>
+          <p class="empty-state">{{ 'repertoire.edit.empty' | translate }}</p>
         }
       </mat-list>
     </div>
@@ -56,9 +56,9 @@ import { downloadBlob } from '../../shared/download.util';
       text-align: center; cursor: pointer; margin: 0 0 1rem;
       transition: border-color 0.2s;
     }
-    .upload-area:hover { border-color: #3f51b5; }
+    .upload-area:hover { border-color: var(--mat-sys-primary); }
     .upload-area mat-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 47%, transparent); }
-    .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .empty-state { color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
 })
 export class RepertoireEditComponent {
@@ -100,7 +100,7 @@ export class RepertoireEditComponent {
     const valid = list.filter(f => f.name.toLowerCase().endsWith('.pgn') && f.size <= MAX_BYTES);
     const rejected = list.length - valid.length;
     if (rejected > 0)
-      this.snackbar.info(this.translate.instant('repertoire.edit.filesSkipped', { count: rejected }));
+      this.snackbar.info(this.translate.instant(rejected === 1 ? 'repertoire.edit.filesSkippedOne' : 'repertoire.edit.filesSkipped', { count: rejected }));
     if (valid.length === 0) return;
 
     // Alle Uploads buendeln und den Reload (fileUploaded) GENAU EINMAL nach Abschluss
@@ -120,7 +120,7 @@ export class RepertoireEditComponent {
       const ok = results.filter(r => r.ok).length;
       const failed = results.length - ok;
       const msg = failed === 0
-        ? this.translate.instant('repertoire.edit.uploadSuccess', { count: ok })
+        ? this.translate.instant(ok === 1 ? 'repertoire.edit.uploadSuccessOne' : 'repertoire.edit.uploadSuccess', { count: ok })
         : this.translate.instant('repertoire.edit.uploadPartial', { ok, failed });
       this.snackbar.info(msg);
       this.fileUploaded.emit();

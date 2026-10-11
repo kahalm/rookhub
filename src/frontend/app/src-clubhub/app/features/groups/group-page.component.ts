@@ -182,7 +182,7 @@ export function statusMark(status: Status | null): string {
         </details>
       }
     } @else if (error()) {
-      <section class="gate"><h1>Gruppe nicht gefunden</h1><p>{{ error() }}</p><p><a routerLink="/gruppen">Zu den Gruppen</a></p></section>
+      <section class="gate"><h1>Gruppe nicht gefunden</h1><p>{{ error() }}</p><p class="gate-actions"><a class="btn" routerLink="/gruppen">Zu den Gruppen</a></p></section>
     } @else {
       <p class="muted">Lade …</p>
     }

@@ -247,7 +247,7 @@ function orNull(value: string | null | undefined): string | null {
         <p class="err status-line" role="alert">{{ error() ?? '' }}</p>
       </article>
     } @else if (error()) {
-      <section class="gate"><h1>Blatt nicht gefunden</h1><p>{{ error() }}</p><p><a routerLink="/">Zur Kartei</a></p></section>
+      <section class="gate"><h1>Blatt nicht gefunden</h1><p>{{ error() }}</p><p class="gate-actions"><a class="btn" routerLink="/">Zur Kartei</a></p></section>
     } @else {
       <p class="muted">Lade …</p>
     }

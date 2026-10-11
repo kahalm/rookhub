@@ -99,7 +99,7 @@ export interface StopDialogResult {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="durationMin < 1" (click)="save()">
+      <button mat-flat-button color="primary" [disabled]="durationMin < 1" (click)="save()">
         <mat-icon>save</mat-icon>
         {{ 'trainingGoals.timer.saveEntry' | translate }}
       </button>
@@ -113,7 +113,7 @@ export interface StopDialogResult {
     .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 0.6rem; }
     .fields mat-form-field:nth-child(2) { grid-column: 2; }
     .fields mat-form-field:nth-child(3) { grid-column: 1 / -1; }
-    @media (max-width: 520px) { .fields { grid-template-columns: 1fr; } .fields mat-form-field:nth-child(2), .fields mat-form-field:nth-child(3) { grid-column: 1; } }
+    @media (max-width: 599.98px) { .fields { grid-template-columns: 1fr; } .fields mat-form-field:nth-child(2), .fields mat-form-field:nth-child(3) { grid-column: 1; } }
     .unit { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.85rem; }
     mat-form-field { width: 100%; }
   `]

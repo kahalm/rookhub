@@ -115,7 +115,7 @@ const LONG_PRESS_SLOP_PX = 10;
     .move, .vmove { cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
       touch-action: manipulation; }
     .move:hover, .vmove:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .move.active, .vmove.active { background: #1976d2; color: #fff; }
+    .move.active, .vmove.active { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
     .move.active .ev { color: rgba(255, 255, 255, .85); }
     .san { font-weight: 600; white-space: nowrap; }
     .ev { font-size: .78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }

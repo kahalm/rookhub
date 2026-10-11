@@ -30,8 +30,8 @@
       </mat-card-actions>
     </mat-card>
   } @else {
-    <p class="empty-hint">{{ 'admin.daily.none' | translate }}</p>
-    <button mat-raised-button color="primary" (click)="regenerateDailyPuzzle()" [disabled]="dailyRegenerating">
+    <p class="empty-state">{{ 'admin.daily.none' | translate }}</p>
+    <button mat-flat-button color="primary" (click)="regenerateDailyPuzzle()" [disabled]="dailyRegenerating">
       <mat-icon>add</mat-icon> {{ 'admin.daily.generate' | translate }}
     </button>
   }

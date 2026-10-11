@@ -4,7 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
@@ -15,6 +14,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GameAnalysis, GameAnalysisPosition, GameAnalysisService, GameConvergence } from './game-analysis.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Eine Partie-Analyse durchblättern (`/analysis/games/:id`): Brett links, Zugliste rechts, je Zug
@@ -28,8 +28,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-game-analysis-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent],
+  imports: [IconLabelDirective, CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent],
   template: `
     <div class="gad-container">
       @if (loading) {
@@ -68,16 +67,16 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
                              [boardTheme]="boardTheme" [pieceSet]="pieceSet" />
             <div class="nav">
               <button mat-icon-button (click)="go(-1)" [disabled]="index < 0"
-                      [matTooltip]="'gameAnalysis.prev' | translate" [attr.aria-label]="'gameAnalysis.prev' | translate">
+                      [appIconLabel]="'gameAnalysis.prev' | translate">
                 <mat-icon>chevron_left</mat-icon>
               </button>
               <span class="pos-label">{{ label }}</span>
               <button mat-icon-button (click)="go(1)" [disabled]="index >= positions.length - 1"
-                      [matTooltip]="'gameAnalysis.next' | translate" [attr.aria-label]="'gameAnalysis.next' | translate">
+                      [appIconLabel]="'gameAnalysis.next' | translate">
                 <mat-icon>chevron_right</mat-icon>
               </button>
               <button mat-icon-button (click)="flipped = !flipped"
-                      [matTooltip]="'gameAnalysis.flip' | translate" [attr.aria-label]="'gameAnalysis.flip' | translate">
+                      [appIconLabel]="'gameAnalysis.flip' | translate">
                 <mat-icon>swap_vert</mat-icon>
               </button>
             </div>
@@ -167,7 +166,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .move { display: flex; align-items: baseline; gap: 6px; background: none; border: 1px solid transparent;
             border-radius: 4px; padding: 3px 6px; font: inherit; color: inherit; cursor: pointer; text-align: left; }
     .move:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .move.current { border-color: #1976d2; background: color-mix(in srgb, #1976d2 12%, transparent); }
+    .move.current { border-color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 12%, transparent); }
     .move.pending .ev { opacity: .5; }
     .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem; min-width: 34px; }
     .san { font-weight: 600; }

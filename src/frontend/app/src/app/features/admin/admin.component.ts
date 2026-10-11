@@ -14,7 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { SnackbarService } from '../../core/snackbar.service';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -47,7 +47,7 @@ import { apiErrorText } from '../../core/api-error';
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
+    MatChipsModule, MatSelectModule, IconLabelDirective, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
     AdminGithubActionsComponent, AdminChessableDownloadComponent,
     AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent,
     AdminRolesComponent,
@@ -377,8 +377,8 @@ export class AdminComponent implements OnInit {
     this.booksUploading = true;
     this.adminService.importBooks(input.files).subscribe({
       next: res => {
-        const parts = [this.translate.instant('admin.books.importedCount', { count: res.totalImported })];
-        if (res.totalSkipped > 0) parts.push(this.translate.instant('admin.books.duplicatesCount', { count: res.totalSkipped }));
+        const parts = [this.translate.instant(res.totalImported === 1 ? 'admin.books.importedCountOne' : 'admin.books.importedCount', { count: res.totalImported })];
+        if (res.totalSkipped > 0) parts.push(this.translate.instant(res.totalSkipped === 1 ? 'admin.books.duplicatesCountOne' : 'admin.books.duplicatesCount', { count: res.totalSkipped }));
         if (res.totalInvalid > 0) parts.push(this.translate.instant('admin.books.invalidCount', { count: res.totalInvalid }));
         this.snackbar.info(parts.join(', '), { duration: 6000 });
         this.booksUploading = false;
@@ -465,7 +465,7 @@ export class AdminComponent implements OnInit {
   }
 
   deleteBook(book: Book): void {
-    this.confirm.ask('admin.books.deleteConfirm', { name: book.displayName, count: book.puzzleCount }).subscribe(ok => {
+    this.confirm.ask(book.puzzleCount === 1 ? 'admin.books.deleteConfirmOne' : 'admin.books.deleteConfirm', { name: book.displayName, count: book.puzzleCount }).subscribe(ok => {
       if (!ok) return;
 
       this.adminService.deleteBook(book.id).subscribe({

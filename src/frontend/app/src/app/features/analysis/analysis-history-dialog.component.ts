@@ -4,10 +4,10 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
@@ -19,14 +19,14 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
   selector: 'app-analysis-history-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatTooltipModule, TranslatePipe],
+  imports: [IconLabelDirective, DatePipe, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'analysis.history.title' | translate }}</h2>
     <mat-dialog-content>
       @if (loading()) {
         <mat-progress-bar mode="indeterminate" />
       } @else if (entries().length === 0) {
-        <p class="muted">{{ 'analysis.history.empty' | translate }}</p>
+        <p class="muted empty-state">{{ 'analysis.history.empty' | translate }}</p>
       } @else {
         <div class="list">
           @for (e of entries(); track e.id) {
@@ -40,7 +40,7 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
                 <span class="preview">{{ e.preview || ('analysis.history.noMoves' | translate) }}</span>
                 <span class="muted small">{{ 'analysis.history.moves' | translate:{ count: e.moveCount } }}@if (e.nodeCount > e.moveCount) { · {{ 'analysis.history.variationMoves' | translate:{ count: e.nodeCount - e.moveCount } }}}</span>
               </button>
-              <button mat-icon-button type="button" (click)="remove(e)" [matTooltip]="'common.delete' | translate">
+              <button mat-icon-button type="button" (click)="remove(e)" [appIconLabel]="'common.delete' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>

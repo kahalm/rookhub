@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -26,7 +27,7 @@ import { labelOr } from './course-language.util';
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
+    MatProgressBarModule, MatTooltipModule, IconLabelDirective, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
   ],
   template: `
       <mat-card class="course-card">
@@ -138,8 +139,7 @@ import { labelOr } from './course-language.util';
             </div>
             <div class="util-actions">
               <button mat-icon-button [matMenuTriggerFor]="actionMenu"
-                      [matTooltip]="'common.moreActions' | translate"
-                      [attr.aria-label]="'common.moreActions' | translate">
+                      [appIconLabel]="'common.moreActions' | translate">
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #actionMenu="matMenu">
@@ -246,14 +246,12 @@ import { labelOr } from './course-language.util';
                              Ein Buch mit 15 Kapiteln zeigte vorher 45 Icons in einer Karte. -->
                         <div class="chapter-btns">
                           <button mat-icon-button color="primary"
-                                  [matTooltip]="startChapterTooltip | translate"
-                                  [attr.aria-label]="startChapterTooltip | translate"
+                                  [appIconLabel]="startChapterTooltip | translate"
                                   [routerLink]="['/courses', course.bookId, 'chapter', ch.index, chapterMode]">
                             <mat-icon>play_arrow</mat-icon>
                           </button>
                           <button mat-icon-button [matMenuTriggerFor]="chapterMenu"
-                                  [matTooltip]="'common.moreActions' | translate"
-                                  [attr.aria-label]="'common.moreActions' | translate">
+                                  [appIconLabel]="'common.moreActions' | translate">
                             <mat-icon>more_vert</mat-icon>
                           </button>
                           <mat-menu #chapterMenu="matMenu">
@@ -295,7 +293,7 @@ import { labelOr } from './course-language.util';
     .shared-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .linked-badge {
       display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; margin-bottom: 6px;
-      color: var(--mdc-theme-primary, #3f51b5); text-decoration: none; cursor: pointer; max-width: 100%;
+      color: var(--mat-sys-primary); text-decoration: none; cursor: pointer; max-width: 100%;
     }
     .linked-badge:hover { text-decoration: underline; }
     .linked-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
@@ -314,7 +312,7 @@ import { labelOr } from './course-language.util';
     /* (!) am Eintrag: klein und warnfarben, aber nicht schreiend — es ist ein Hinweis, kein Fehler. */
     .stale-chip {
       flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px; cursor: pointer;
-      border: 1px solid #fb8c00; color: #fb8c00; background: none; border-radius: 10px;
+      border: 1px solid var(--rh-warn); color: var(--rh-warn); background: none; border-radius: 10px;
       padding: 0 4px 0 7px; font: inherit; font-size: 0.7rem; line-height: 18px; white-space: nowrap;
     }
     .stale-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
@@ -331,7 +329,7 @@ import { labelOr } from './course-language.util';
     .empty-note { margin: 4px 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress-row mat-progress-bar { flex: 1; --mdc-linear-progress-track-height: 5px; --mdc-linear-progress-active-indicator-height: 5px; border-radius: 3px; }
     .progress-label { font-variant-numeric: tabular-nums; font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; min-width: 46px; text-align: right; }
-    .done-hint { display: flex; align-items: center; gap: 4px; color: #4caf50; font-size: 0.82rem; font-weight: 500; margin: 6px 0 0; }
+    .done-hint { display: flex; align-items: center; gap: 4px; color: var(--rh-success); font-size: 0.82rem; font-weight: 500; margin: 6px 0 0; }
     .done-hint mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     .theme-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
@@ -352,8 +350,8 @@ import { labelOr } from './course-language.util';
     .util-actions mat-icon { font-size: 18px; }
 
     /* Aktionsmenü: aktive Aktion (angepinnt / verknüpft) in Primärfarbe, Löschen rot. */
-    .active-item mat-icon { color: var(--mdc-theme-primary, #3f51b5); }
-    .delete-item mat-icon { color: color-mix(in srgb, #e53935 80%, currentColor); }
+    .active-item mat-icon { color: var(--mat-sys-primary); }
+    .delete-item mat-icon { color: var(--rh-error); }
 
     .chapters-block { margin-top: 6px; }
     .chapters-toggle {

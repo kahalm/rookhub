@@ -5,7 +5,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { LocaleService } from '@rh/core/locale.service';
@@ -28,7 +28,7 @@ import { authLinkQuery } from '@rh/core/return-url.util';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [CommonModule, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule,
-    MatIconModule, MatMenuModule, MatTooltipModule, TranslatePipe],
+    MatIconModule, MatMenuModule, IconLabelDirective, TranslatePipe],
   template: `
     <mat-toolbar color="primary" class="tb">
       <!-- Die Marke fuehrt zur Startseite (/ = Kalender, siehe app.routes.ts), nicht auf die Merkliste (F6-019). -->
@@ -83,7 +83,7 @@ import { authLinkQuery } from '@rh/core/return-url.util';
       }
 
       <button mat-icon-button class="wide" (click)="theme.toggle()"
-              [matTooltip]="themeLabel" [attr.aria-label]="themeLabel">
+              [appIconLabel]="themeLabel">
         <mat-icon>{{ themeIcon }}</mat-icon>
       </button>
       <button mat-icon-button class="wide" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">

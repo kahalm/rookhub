@@ -117,7 +117,7 @@ export const SIMILAR_PRESETS: SimilarityPreset[] = ['struktur', 'ausgewogen', 's
         <div class="sp-muted">{{ 'positionInReps.similar.none' | translate }}</div>
       }
     } @else {
-      <div class="sp-count">{{ 'positionInReps.similar.foundCount' | translate:{ count: matches.length } }}</div>
+      <div class="sp-count">{{ (matches.length === 1 ? 'positionInReps.similar.foundCountOne' : 'positionInReps.similar.foundCount') | translate:{ count: matches.length } }}</div>
       <!-- $index im Schlüssel: zwei Treffer derselben Linie/Stellung dürfen die Liste nicht sprengen. -->
       @for (m of matches; track m.repertoireId + ':' + m.gameIndex + ':' + m.ply + ':' + $index) {
         <button type="button" class="sp-match" (click)="open.emit(m)"
@@ -181,27 +181,27 @@ export const SIMILAR_PRESETS: SimilarityPreset[] = ['struktur', 'ausgewogen', 's
       border: 1px solid color-mix(in srgb, currentColor 22%, transparent); background: none; color: inherit;
       border-radius: 12px; padding: 1px 8px; cursor: pointer; }
     .sp-chip:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .sp-chip-on { color: #1976d2; border-color: #1976d2; background: color-mix(in srgb, #1976d2 12%, transparent); }
+    .sp-chip-on { color: var(--rh-accent); border-color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 12%, transparent); }
     .sp-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .sp-rep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sp-link { font: inherit; font-size: .74rem; background: none; border: none; padding: 0 4px; color: #1976d2; cursor: pointer; }
+    .sp-link { font: inherit; font-size: .74rem; background: none; border: none; padding: 0 4px; color: var(--rh-accent); cursor: pointer; }
     .sp-muted { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; }
     .sp-count { font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px; }
     .sp-match { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; font: inherit;
       background: none; border: none; border-radius: 6px; padding: 5px 4px; cursor: pointer; }
     .sp-match:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
     .sp-scores { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; min-width: 44px; }
-    .sp-score { font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: #1976d2; }
-    .sp-score-hi { color: #2e7d32; }
+    .sp-score { font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: var(--rh-accent); }
+    .sp-score-hi { color: var(--rh-success); }
     .sp-score-base { font-size: .64rem; line-height: 1.2; color: color-mix(in srgb, currentColor 55%, transparent); font-variant-numeric: tabular-nums; }
     .sp-move-input { font: inherit; font-size: .78rem; width: 82px; padding: 1px 6px; border-radius: 10px; background: none; color: inherit;
       border: 1px solid color-mix(in srgb, currentColor 22%, transparent); }
-    .sp-move-input:focus { outline: none; border-color: #1976d2; }
-    .sp-move-bad, .sp-move-bad:focus { border-color: #c62828; }
-    .sp-move-ok { font-size: .76rem; font-weight: 600; color: #1976d2; }
-    .sp-move-error { font-size: .74rem; color: #c62828; margin: 0 0 6px; }
-    .sp-movehit { display: block; font-size: .78rem; font-weight: 600; color: #2e7d32; margin-top: 2px; }
-    .sp-movehit-weak { font-weight: 500; color: color-mix(in srgb, #2e7d32 75%, currentColor); }
+    .sp-move-input:focus { outline: none; border-color: var(--rh-accent); }
+    .sp-move-bad, .sp-move-bad:focus { border-color: var(--rh-error); }
+    .sp-move-ok { font-size: .76rem; font-weight: 600; color: var(--rh-accent); }
+    .sp-move-error { font-size: .74rem; color: var(--rh-error); margin: 0 0 6px; }
+    .sp-movehit { display: block; font-size: .78rem; font-weight: 600; color: var(--rh-success); margin-top: 2px; }
+    .sp-movehit-weak { font-weight: 500; color: color-mix(in srgb, var(--rh-success) 75%, currentColor); }
     .sp-body { flex: 1; min-width: 0; }
     .sp-where { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .sp-rep { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -214,7 +214,7 @@ export const SIMILAR_PRESETS: SimilarityPreset[] = ['struktur', 'ausgewogen', 's
     .sp-part { display: flex; align-items: center; gap: 4px; font-size: .7rem; color: color-mix(in srgb, currentColor 62%, transparent); }
     .sp-part-name { flex: 0 0 auto; min-width: 52px; }
     .sp-bar { flex: 1; min-width: 24px; height: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; }
-    .sp-bar i { display: block; height: 100%; background: #1976d2; }
+    .sp-bar i { display: block; height: 100%; background: var(--rh-accent); }
     .sp-part-val { flex: 0 0 auto; min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
   `]
 })

@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
 import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Leiste der Live-Engine unter dem Brett der Partieseite: welche Engine rechnet und wie tief, die eigene
@@ -17,7 +17,7 @@ import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
   selector: 'app-live-engine-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe, TablebasePanelComponent],
+  imports: [IconLabelDirective, DecimalPipe, MatButtonModule, MatIconModule, TranslatePipe, TablebasePanelComponent],
   template: `
     @let s = session();
     <section class="live">
@@ -37,7 +37,7 @@ import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
         }
         <span class="spacer"></span>
         <button mat-icon-button type="button" class="close" (click)="closed.emit()"
-                [matTooltip]="'common.close' | translate" [attr.aria-label]="'common.close' | translate">
+                [appIconLabel]="'common.close' | translate">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -90,7 +90,7 @@ import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
     .engine-icon { font-size: 18px; width: 18px; height: 18px; color: #42a5f5; }
     .engine { font-weight: 600; }
     .depth, .nodes { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
-    .fallback { color: #e65100; font-size: 0.8rem; }
+    .fallback { color: var(--rh-warn); font-size: 0.8rem; }
     .spacer { flex: 1 1 auto; }
     .close { --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .close mat-icon { font-size: 20px; width: 20px; height: 20px; }

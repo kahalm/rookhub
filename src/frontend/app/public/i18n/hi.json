@@ -358,8 +358,10 @@
       "uploadHint": "PGN फ़ाइलें यहाँ खींचें और छोड़ें या अपलोड करने के लिए क्लिक करें",
       "files": "फ़ाइलें ({{count}})",
       "empty": "अभी कोई फ़ाइल नहीं। शुरू करने के लिए PGN फ़ाइलें अपलोड करें!",
-      "filesSkipped": "{{count}} फ़ाइल(ें) छोड़ी गईं (केवल .pgn, अधिकतम 10 MB)",
-      "uploadSuccess": "{{count}} फ़ाइल(ें) अपलोड की गईं",
+      "filesSkipped": "{{count}} फ़ाइलें छोड़ी गईं (केवल .pgn, अधिकतम 10 MB)",
+      "filesSkippedOne": "{{count}} फ़ाइल छोड़ी गई (केवल .pgn, अधिकतम 10 MB)",
+      "uploadSuccess": "{{count}} फ़ाइलें अपलोड की गईं",
+      "uploadSuccessOne": "{{count}} फ़ाइल अपलोड की गई",
       "uploadPartial": "{{ok}} अपलोड, {{failed}} विफल",
       "downloadFailed": "डाउनलोड विफल",
       "deleteConfirm": "यह फ़ाइल हटाएं?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "PGN(s) अपलोड करें",
+      "uploadPgn": "PGN फ़ाइलें अपलोड करें",
       "importing": "आयात हो रहा है…",
       "poolHint": "प्रत्येक किताब के लिए सेट करें कि पहेलियाँ किन पूल में दिखाई दें।",
       "empty": "अभी कोई किताब आयात नहीं हुई।",
@@ -825,10 +827,13 @@
       "eloTo": "तक",
       "adminOnly": "केवल एडमिन",
       "deleteBook": "किताब हटाएं",
-      "deleteConfirm": "किताब \"{{name}}\" को {{count}} पहेली(यों) के साथ हटाएं?",
+      "deleteConfirm": "किताब \"{{name}}\" को {{count}} पहेलियों के साथ हटाएं?",
+      "deleteConfirmOne": "किताब \"{{name}}\" को {{count}} पहेली के साथ हटाएं?",
       "deleted": "किताब \"{{name}}\" हटाई गई",
-      "importedCount": "{{count}} पहेली(याँ) आयात हुईं",
+      "importedCount": "{{count}} पहेलियाँ आयात हुईं",
+      "importedCountOne": "{{count}} पहेली आयात हुई",
       "duplicatesCount": "{{count}} डुप्लिकेट",
+      "duplicatesCountOne": "{{count}} डुप्लिकेट",
       "invalidCount": "{{count}} अमान्य",
       "columns": {
         "book": "किताब",

@@ -102,7 +102,7 @@ describe('ApiTokensComponent', () => {
     http.expectOne('/api/profile/tokens').flush([]);
     await fixture.whenStable();
     expect(el.textContent).not.toContain('common.loading');
-    expect(el.querySelector('.empty-hint')?.textContent).toContain('profile.tokens.empty');
+    expect(el.querySelector('.empty-state')?.textContent).toContain('profile.tokens.empty');
 
     fixture.componentInstance.load();
     http.expectOne('/api/profile/tokens').flush([
@@ -112,7 +112,7 @@ describe('ApiTokensComponent', () => {
     const rows = el.querySelectorAll('.tokens-table tbody tr');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Laptop');
-    expect(el.querySelector('.empty-hint')).toBeNull();
+    expect(el.querySelector('.empty-state')).toBeNull();
     http.verify();
   });
 

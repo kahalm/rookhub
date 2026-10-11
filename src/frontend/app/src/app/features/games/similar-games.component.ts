@@ -12,6 +12,7 @@ import { GameAnalysis, GameAnalysisService } from '../analysis/game-analysis.ser
 import { GuessService } from '../guess/guess.service';
 import { LibraryService } from '../guess/library.service';
 import { GamesService, SimilarGame, SimilarGames } from './games.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * „Ähnliche Meisterpartien" (0.544.0) unter der Partie: kommentierte Partien des Rohbestands, die am längsten dieselben
@@ -29,7 +30,7 @@ import { GamesService, SimilarGame, SimilarGames } from './games.service';
   selector: 'app-similar-games',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
+  imports: [IconLabelDirective, TranslatePipe, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `
     <details class="similar" (toggle)="onToggle($event)">
       <summary><mat-icon>auto_stories</mat-icon> <span class="label">{{ 'games.similar.title' | translate }}</span>
@@ -53,7 +54,7 @@ import { GamesService, SimilarGame, SimilarGames } from './games.service';
               <div class="actions">
                 @if (loggedIn) {
                   <button mat-icon-button class="view" [disabled]="busy() === s.game.id" (click)="view(s)"
-                          [matTooltip]="'games.similar.view' | translate" [attr.aria-label]="'games.similar.view' | translate">
+                          [appIconLabel]="'games.similar.view' | translate">
                     <mat-icon>visibility</mat-icon>
                   </button>
                 }

@@ -5,7 +5,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -15,6 +14,7 @@ import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY } from './analysis-settings';
 import { ExternalEngineService } from './external-engine.service';
 import { chessableFenSearchUrl, positionShareUrl } from './position-links.util';
 import type { DeepStored } from '../games/deep-analysis.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** Was an externen Engines da ist — entscheidet, ob „Im Hintergrund analysieren" angeboten wird. */
 export interface PositionMenuEngines {
@@ -37,10 +37,10 @@ export interface PositionMenuEngines {
   selector: 'app-position-menu',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule, MatTooltipModule, RouterLink, TranslatePipe],
+  imports: [IconLabelDirective, MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule, RouterLink, TranslatePipe],
   template: `
     <button mat-icon-button type="button" class="position-menu-btn" [matMenuTriggerFor]="menu" (menuOpened)="ensureEngines()"
-            [matTooltip]="'analysis.menu.title' | translate" [attr.aria-label]="'analysis.menu.title' | translate">
+            [appIconLabel]="'analysis.menu.title' | translate">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">

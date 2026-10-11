@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
@@ -23,7 +24,7 @@ import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.c
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule,
+    CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, IconLabelDirective,
     TranslatePipe, PuzzleTagsComponent, SendToWorksheetComponent, CourseTranslateMenuComponent,
   ],
   template: `
@@ -38,13 +39,11 @@ import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.c
       <span class="pab-spacer"></span>
       <ng-content />
       <button mat-icon-button class="pab-share" (click)="shareClicked.emit()"
-              [matTooltip]="shareLabelKey | translate"
-              [attr.aria-label]="shareLabelKey | translate">
+              [appIconLabel]="shareLabelKey | translate">
         <mat-icon>share</mat-icon>
       </button>
       <button mat-icon-button [matMenuTriggerFor]="moreMenu"
-              [matTooltip]="'puzzles.bar.more' | translate"
-              [attr.aria-label]="'puzzles.bar.more' | translate">
+              [appIconLabel]="'puzzles.bar.more' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #moreMenu="matMenu">

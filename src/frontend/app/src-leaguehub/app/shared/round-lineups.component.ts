@@ -23,7 +23,7 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
   template: `
     <section class="lu" aria-label="Aufstellungen der Runde">
       @if (error(); as e) {
-        <p class="err">{{ e }} <button type="button" class="btn-link" (click)="load()">Erneut versuchen</button></p>
+        <p class="err" role="alert">{{ e }} <button type="button" class="btn-link" (click)="load()">Erneut versuchen</button></p>
       } @else if (data(); as d) {
         @if (!d.matches.length) {
           <p class="muted">Für Runde {{ d.round }} gibt es noch keine Begegnungen.</p>

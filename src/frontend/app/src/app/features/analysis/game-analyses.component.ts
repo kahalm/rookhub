@@ -25,6 +25,7 @@ import { ExternalEngineService } from './external-engine.service';
 import {
   GameAnalysisNodesDialogComponent, GameAnalysisNodesDialogData, GameAnalysisNodesDialogResult,
 } from './game-analysis-nodes-dialog.component';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Seite „Partie-Analysen" (`/analysis/games`): eine ganze Partie einwerfen und von der
@@ -39,7 +40,7 @@ import {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-game-analyses',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
+  imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressBarModule,
     TranslatePipe, LoadingSpinnerComponent],
   template: `
@@ -124,7 +125,7 @@ import {
       @if (loading) {
         <app-loading-spinner />
       } @else if (analyses.length === 0) {
-        <mat-card><mat-card-content>
+        <mat-card><mat-card-content class="empty-state">
           <p>{{ 'gameAnalysis.empty' | translate }}</p>
         </mat-card-content></mat-card>
       } @else {
@@ -148,8 +149,8 @@ import {
                         [matTooltip]="'gameAnalysis.restartHint' | translate" (click)="restart(a)">
                   <mat-icon>refresh</mat-icon>
                 </button>
-                <button mat-icon-button [attr.aria-label]="'common.delete' | translate"
-                        [matTooltip]="'common.delete' | translate" (click)="remove(a)">
+                <button mat-icon-button
+                        [appIconLabel]="'common.delete' | translate" (click)="remove(a)">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -180,7 +181,7 @@ import {
     .hint { flex: 1 1 220px; }
     .nodes-btn { white-space: nowrap; }
     /* Am Handy beide Knöpfe untereinander in voller Breite — nebeneinander reichte der Platz nicht für den ganzen Text. */
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .new-row > button { flex: 1 1 100%; }
     }
     .ga { margin-bottom: 10px; }
@@ -189,11 +190,11 @@ import {
     .ga-title:hover { text-decoration: underline; }
     .spacer { flex: 1 1 auto; }
     .chip { font-size: .72rem; padding: 2px 8px; border-radius: 10px; border: 1px solid currentColor; }
-    .st-done { color: #2e7d32; }
-    .st-failed { color: #c62828; }
-    .st-running, .st-pending { color: #1976d2; }
+    .st-done { color: var(--rh-success); }
+    .st-failed { color: var(--rh-error); }
+    .st-running, .st-pending { color: var(--rh-accent); }
     .ga-foot { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .err { color: #c62828; }
+    .err { color: var(--rh-error); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
   `],

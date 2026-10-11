@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -37,7 +37,7 @@ import { TournamentDatePipe } from '../../core/tournament-date';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [
-    CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule,
+    CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, IconLabelDirective,
     TranslatePipe, LoadingSpinnerComponent, TournamentDatePipe,
   ],
   template: `
@@ -57,7 +57,7 @@ import { TournamentDatePipe } from '../../core/tournament-date';
       } @else if (upcoming().length === 0 && past().length === 0) {
         <!-- Leer heisst hier nicht „kaputt", sondern „noch nichts gemerkt" — und der Weg dorthin
              gehoert dazu, sonst ist die Seite eine Sackgasse. -->
-        <mat-card class="card empty">
+        <mat-card class="card empty-state">
           <p>{{ 'tournaments.list.emptyBookmarks' | translate }}</p>
           <a mat-flat-button routerLink="/tournaments/calendar">
             <mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}
@@ -99,8 +99,7 @@ import { TournamentDatePipe } from '../../core/tournament-date';
 
         <button mat-icon-button class="row-drop" (click)="unbookmark(sub)"
                 [disabled]="removing() === sub.id"
-                [matTooltip]="'tournamentDirectory.bookmarkRemove' | translate"
-                [attr.aria-label]="'tournamentDirectory.bookmarkRemove' | translate">
+                [appIconLabel]="'tournamentDirectory.bookmarkRemove' | translate">
           <mat-icon>bookmark_remove</mat-icon>
         </button>
       </mat-card>
@@ -112,7 +111,9 @@ import { TournamentDatePipe } from '../../core/tournament-date';
     h2 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
 
     .card { padding: 1rem; }
-    .card.empty, .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .card.empty-state, .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    /* Leerzustand zentriert wie der globale .empty-state (DESIGN.md 5.10). */
+    .card.empty-state { align-items: center; }
     .card.failed p { margin: 0; }
 
     .rows { display: flex; flex-direction: column; gap: 0.5rem; }

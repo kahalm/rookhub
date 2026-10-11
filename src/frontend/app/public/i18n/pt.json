@@ -358,8 +358,10 @@
       "uploadHint": "Arraste e solte ficheiros PGN aqui ou clique para carregar",
       "files": "Ficheiros ({{count}})",
       "empty": "Ainda não há ficheiros. Carregue ficheiros PGN para começar!",
-      "filesSkipped": "{{count}} ficheiro(s) ignorado(s) (apenas .pgn, até 10 MB)",
-      "uploadSuccess": "{{count}} ficheiro(s) carregado(s)",
+      "filesSkipped": "{{count}} ficheiros ignorados (apenas .pgn, até 10 MB)",
+      "filesSkippedOne": "{{count}} ficheiro ignorado (apenas .pgn, até 10 MB)",
+      "uploadSuccess": "{{count}} ficheiros carregados",
+      "uploadSuccessOne": "{{count}} ficheiro carregado",
       "uploadPartial": "{{ok}} carregado(s), {{failed}} falhado(s)",
       "downloadFailed": "Falha no download",
       "deleteConfirm": "Eliminar este ficheiro?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "Carregar PGN(s)",
+      "uploadPgn": "Carregar ficheiros PGN",
       "importing": "A importar…",
       "poolHint": "Defina por livro em que pools os puzzles aparecem.",
       "empty": "Nenhum livro importado ainda.",
@@ -825,10 +827,13 @@
       "eloTo": "a",
       "adminOnly": "apenas admin",
       "deleteBook": "Eliminar livro",
-      "deleteConfirm": "Eliminar livro \"{{name}}\" com {{count}} puzzle(s)?",
+      "deleteConfirm": "Eliminar livro \"{{name}}\" com {{count}} puzzles?",
+      "deleteConfirmOne": "Eliminar livro \"{{name}}\" com {{count}} puzzle?",
       "deleted": "Livro \"{{name}}\" eliminado",
-      "importedCount": "{{count}} puzzle(s) importado(s)",
-      "duplicatesCount": "{{count}} duplicado(s)",
+      "importedCount": "{{count}} puzzles importados",
+      "importedCountOne": "{{count}} puzzle importado",
+      "duplicatesCount": "{{count}} duplicados",
+      "duplicatesCountOne": "{{count}} duplicado",
       "invalidCount": "{{count}} inválido(s)",
       "columns": {
         "book": "Livro",

@@ -190,7 +190,7 @@ import { OpeningMove, OpeningTreeService } from './opening-tree.service';
     .small { font-size: .8rem; }
     /* Handy: das Brett ist die Beigabe, der Baum der Inhalt. Mit 300 px Brett blieben auf einem
        400-px-Geraet genau zwei Zuege sichtbar. */
-    @media (max-width: 620px) {
+    @media (max-width: 599.98px) {
       .pf { min-width: 0; }
       .board { flex: 0 0 42%; }
       .mlist { max-height: 38vh; }

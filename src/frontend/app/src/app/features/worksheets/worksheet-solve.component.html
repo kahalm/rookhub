@@ -2,12 +2,12 @@
   @if (loading) {
     <div class="wsv-center"><mat-spinner diameter="40"></mat-spinner></div>
   } @else if (notFound || !sheet) {
-    <mat-card class="wsv-empty">
+    <mat-card class="wsv-empty empty-state">
       <mat-icon>link_off</mat-icon>
       <p>{{ 'worksheets.solve.notFound' | translate }}</p>
     </mat-card>
   } @else if (total === 0) {
-    <mat-card class="wsv-empty">
+    <mat-card class="wsv-empty empty-state">
       <mat-icon>assignment</mat-icon>
       <p>{{ 'worksheets.detail.empty' | translate }}</p>
     </mat-card>

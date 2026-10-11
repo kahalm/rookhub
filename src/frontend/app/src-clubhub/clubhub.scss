@@ -98,7 +98,7 @@ h3 { font-size: 19px; font-weight: 600; }
 .account .btn:hover { background: var(--linen-ink); color: var(--linen); }
 .lede { margin: 4px auto 0; color: var(--linen-muted); font-size: 15px; }
 /* Reiter stehen auf der Unterkante des Einbands; der aktive hat die Farbe der Seite und geht in sie über.
-   Aktiv heißt NUR Fläche und Farbe (UI-Sweep c-tabs): gleiche Schrift, gleiche Polster — vorher hatte der aktive
+   Aktiv heißt NUR Fläche und Farbe (UI-Sweep 2026-10-10, c-tabs): gleiche Schrift, gleiche Polster — vorher hatte der aktive
    unten 3 px mehr und saß damit höher als der andere. */
 .tabs { display: flex; gap: 4px; margin-top: 16px; align-items: flex-end; }
 .tabs a {
@@ -261,7 +261,7 @@ a.chip:hover { border-color: var(--ink); }
 }
 .form-save .btn.primary { flex: 1 1 auto; }
 /* Die Leiste klebt unten und deckt ab, was darunter liegt — ein fokussiertes Feld (Tab, Tastatur am Handy) soll ÜBER
-   ihr stehen, nicht unter ihr (UI-Sweep c-form-mobile: nach der Personennummer verschwanden FIDE-Nummer und „Bild"
+   ihr stehen, nicht unter ihr (UI-Sweep 2026-10-10, c-form-mobile: nach der Personennummer verschwanden FIDE-Nummer und „Bild"
    unter der zweizeiligen Leiste). Abstand = Höhe der Leiste plus Luft. */
 html:has(.form-save, .save-bar) { scroll-padding-bottom: 96px; }
 .photo-field { display: grid; gap: 8px; justify-items: start; }
@@ -332,7 +332,7 @@ h3.inline { display: inline; }
 .roll-head { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 12px; margin: 14px 0 12px; }
 .field.done { margin: 0 0 16px; }
 /* Tag der Einheit: Textfeld TT.MM.JJJJ, rechts der Kalender-Knopf; das native Datumsfeld dahinter ist unsichtbar und
-   liefert nur die Auswahl (UI-Sweep c-date-us). */
+   liefert nur die Auswahl (UI-Sweep 2026-10-10, c-date-us). */
 .day-input { position: relative; display: block; }
 .day-input > input[name] { padding-right: 50px; }
 .day-pick {
@@ -376,7 +376,7 @@ h3.inline { display: inline; }
 .tick b { font-weight: 700; }
 .save-bar { position: sticky; bottom: 0; background: var(--paper); padding: 12px 0; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; border-top: 1px solid var(--line); }
 .save-bar .btn.primary { flex: 1 0 100%; min-height: 52px; font-size: 18px; }
-/* Leere Meldungen nahmen mit ihrem Abstand 28 px — der Knopf endete vor der Inhaltskante (UI-Sweep c-save-btn). */
+/* Leere Meldungen nahmen mit ihrem Abstand 28 px — der Knopf endete vor der Inhaltskante (UI-Sweep 2026-10-10, c-save-btn). */
 .save-bar > span:empty { display: none; }
 
 /* Zilla Slab setzt von sich aus Mediävalziffern — in „3 von 5 da" und im Code sollen sie auf der Zeile stehen.
@@ -420,7 +420,7 @@ label.upload.disabled { opacity: .5; }
 
 /* ---- Anmelden / Registrieren / Passwort (RookHubs Masken über @rh/*) in ClubHub-Farben ------------------
    Die Masken sind Material-Karten aus RookHub (graublau, blau-violetter Knopf). Hier — nur in diesem Bündel — bekommt
-   die Karte die Farben und Schriften der Kartei (UI-Sweep c-login-style): System-Tokens des Themas auf der Karte
+   die Karte die Farben und Schriften der Kartei (UI-Sweep 2026-10-10, c-login-style): System-Tokens des Themas auf der Karte
    umgestellt, damit Fokus-Rahmen, Knopf, Häkchen und Links dieselbe Primärfarbe tragen; Überschrift in Zilla Slab,
    Knopf eckig wie `.btn`. Die Komponente selbst bleibt unverändert. */
 :is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card {

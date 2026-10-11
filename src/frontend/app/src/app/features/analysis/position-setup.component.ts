@@ -4,12 +4,12 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key, Role, Piece } from 'chessground/types';
 import { Chess } from 'chess.js';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const EMPTY_BOARD = '8/8/8/8/8/8/8/8';
@@ -61,9 +61,9 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-position-setup',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
-    MatTooltipModule, TranslatePipe
+    TranslatePipe
   ],
   template: `
     <div class="ps-editor">
@@ -91,15 +91,15 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
 
       <div class="ps-tools">
         <button mat-icon-button [class.active]="brush === 'trash'" (click)="toggleTrash()"
-                [matTooltip]="'analysis.setup.erase' | translate"><mat-icon>delete</mat-icon></button>
+                [appIconLabel]="'analysis.setup.erase' | translate"><mat-icon>delete</mat-icon></button>
         <mat-button-toggle-group [value]="side" (change)="side = $event.value" hideSingleSelectionIndicator="true">
           <mat-button-toggle value="w">{{ 'common.whiteToMove' | translate }}</mat-button-toggle>
           <mat-button-toggle value="b">{{ 'common.blackToMove' | translate }}</mat-button-toggle>
         </mat-button-toggle-group>
         <span class="ps-spacer"></span>
-        <button mat-icon-button (click)="flip()" [matTooltip]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
-        <button mat-icon-button (click)="setStart()" [matTooltip]="'analysis.setup.startpos' | translate"><mat-icon>restart_alt</mat-icon></button>
-        <button mat-icon-button (click)="clearBoard()" [matTooltip]="'analysis.setup.clear' | translate"><mat-icon>clear</mat-icon></button>
+        <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
+        <button mat-icon-button (click)="setStart()" [appIconLabel]="'analysis.setup.startpos' | translate"><mat-icon>restart_alt</mat-icon></button>
+        <button mat-icon-button (click)="clearBoard()" [appIconLabel]="'analysis.setup.clear' | translate"><mat-icon>clear</mat-icon></button>
       </div>
 
       @if (error) { <p class="ps-error">{{ error }}</p> }
@@ -123,13 +123,13 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
       border-radius: 6px; touch-action: none;
     }
     .sp:hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
-    .sp.active { background-color: color-mix(in srgb, #1976d2 32%, transparent); }
+    .sp.active { background-color: color-mix(in srgb, var(--rh-accent) 32%, transparent); }
     .ps-board-wrap { width: 100%; }
     .ps-board { width: 100%; aspect-ratio: 1 / 1; }
     .ps-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .ps-tools .active { background: color-mix(in srgb, #1976d2 22%, transparent); border-radius: 50%; }
+    .ps-tools .active { background: color-mix(in srgb, var(--rh-accent) 22%, transparent); border-radius: 50%; }
     .ps-spacer { flex: 1 1 auto; }
-    .ps-error { color: #b71c1c; margin: 0; font-size: .85rem; }
+    .ps-error { color: var(--rh-error); margin: 0; font-size: .85rem; }
     .ps-actions { display: flex; gap: 8px; }
   `]
 })

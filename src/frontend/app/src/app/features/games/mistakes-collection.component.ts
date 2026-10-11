@@ -36,7 +36,7 @@ const LOAD_CONCURRENCY = 4;
     TranslatePipe, ChessBoardComponent, MistakesTrainerComponent],
   template: `
     <div class="page">
-      <div class="head">
+      <div class="header">
         <a mat-button routerLink="/games"><mat-icon>arrow_back</mat-icon> {{ 'games.title' | translate }}</a>
         <h1>{{ 'games.mistakes.collection.title' | translate }}</h1>
       </div>
@@ -69,7 +69,7 @@ const LOAD_CONCURRENCY = 4;
           <button mat-flat-button color="primary" class="start" [disabled]="analysed().length === 0" (click)="start()">
             <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.start' | translate }}
           </button>
-          @if (empty()) { <p class="empty">{{ 'games.mistakes.collection.none' | translate }}</p> }
+          @if (empty()) { <p class="empty-state">{{ 'games.mistakes.collection.none' | translate }}</p> }
         }
       } @else {
         @let t = training()!;
@@ -88,9 +88,9 @@ const LOAD_CONCURRENCY = 4;
   `,
   styles: [`
     .page { max-width: 720px; margin: 0 auto; padding: 12px 16px 32px; }
-    .head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
-    .head h1 { margin: 0; font-size: 1.4rem; }
-    .hint, .count, .empty, .source { color: color-mix(in srgb, currentColor 75%, transparent); }
+    .header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+    .header h1 { margin: 0; font-size: 1.4rem; }
+    .hint, .count, .empty-state, .source { color: color-mix(in srgb, currentColor 75%, transparent); }
     .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 8px 0; font-size: 0.9rem; }
     .filters label { display: inline-flex; align-items: center; gap: 6px; }
     .filters select { font: inherit; color: inherit; background: transparent; padding: 4px 8px;

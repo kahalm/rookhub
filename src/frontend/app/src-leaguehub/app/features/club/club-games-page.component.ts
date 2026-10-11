@@ -62,7 +62,7 @@ type Side = 'white' | 'black';
 
       @if (firstLoadFailed()) {
         <!-- UX-034: kam schon der erste Abruf nicht, stand „Lade …" neben „Fehler 500." — ohne nächsten Schritt. -->
-        <section class="gate">
+        <section class="gate" role="alert">
           <h2>Vereinspartien nicht geladen</h2>
           <p>{{ error() }}</p>
           <div class="actions"><button type="button" class="btn-sec" (click)="search(query())">Erneut versuchen</button></div>

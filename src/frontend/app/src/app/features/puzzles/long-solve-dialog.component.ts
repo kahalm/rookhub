@@ -22,7 +22,7 @@ import { formatSecondsClock } from '../../shared/clock-format.util';
     <p class="ls-text">{{ 'book.longSolve.question' | translate:{ time: formatted } }}</p>
     <div class="ls-actions">
       <button mat-stroked-button (click)="close(false)">{{ 'book.longSolve.wasAway' | translate }}</button>
-      <button mat-raised-button color="primary" (click)="close(true)">{{ 'book.longSolve.reallyTookThatLong' | translate }}</button>
+      <button mat-flat-button color="primary" (click)="close(true)">{{ 'book.longSolve.reallyTookThatLong' | translate }}</button>
     </div>
   `,
   styles: [`

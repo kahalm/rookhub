@@ -3,7 +3,7 @@
   <mat-card>
     <mat-card-content>
       <p>{{ 'admin.puzzles.backfillHint' | translate }}</p>
-      <button mat-raised-button color="primary" (click)="backfillPuzzleTags()" [disabled]="puzzleTagsBackfilling">
+      <button mat-flat-button color="primary" (click)="backfillPuzzleTags()" [disabled]="puzzleTagsBackfilling">
         <mat-icon>sync</mat-icon>
         {{ (puzzleTagsBackfilling ? 'admin.puzzles.backfillRunning' : 'admin.puzzles.backfillBtn') | translate }}
       </button>

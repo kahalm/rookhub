@@ -116,8 +116,7 @@
                   @if ((inWeekly && canOpenWeeklyOverview) || inCourse) {
                     <button mat-icon-button class="ctx-back"
                             (click)="inWeekly ? backToWeekly() : backToCourses()"
-                            [attr.aria-label]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate"
-                            [matTooltip]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate">
+                            [appIconLabel]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate">
                       <mat-icon>arrow_back</mat-icon>
                     </button>
                   }
@@ -310,7 +309,7 @@
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
                   @if (canOpenWeeklyOverview) {
                     <div class="ctx-nav">
-                      <button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                      <button mat-flat-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
                     </div>
                   }
                 } @else if (courseCompleted) {
@@ -321,7 +320,7 @@
                   }
                   <div class="ctx-nav">
                     @if (courseModeKind === 'random') {
-                      <button mat-raised-button color="primary" (click)="restartCourse()">
+                      <button mat-flat-button color="primary" (click)="restartCourse()">
                         <mat-icon>replay</mat-icon> {{ (courseFullyDone ? 'book.course.restart' : 'book.course.continueRemaining') | translate }}
                       </button>
                     }
@@ -330,12 +329,12 @@
                 } @else if (state === 'INFO') {
                   <div class="ctx-nav">
                     @if (inCourse) {
-                      <button mat-raised-button color="primary" (click)="courseNext()">
+                      <button mat-flat-button color="primary" (click)="courseNext()">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                       </button>
                     }
                     @if (browseInBook) {
-                      <button mat-raised-button color="primary" (click)="nextInBook()" [disabled]="bookNavLoading">
+                      <button mat-flat-button color="primary" (click)="nextInBook()" [disabled]="bookNavLoading">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
                       </button>
                       <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
@@ -346,12 +345,12 @@
                 } @else if (state === 'SOLVED') {
                   <div class="ctx-nav">
                     @if (inWeekly) {
-                      <button mat-raised-button color="primary" (click)="weeklyNext()">
+                      <button mat-flat-button color="primary" (click)="weeklyNext()">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                       </button>
                     }
                     @if (inCourse) {
-                      <button mat-raised-button color="primary" (click)="courseNext()">
+                      <button mat-flat-button color="primary" (click)="courseNext()">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                       </button>
                     }
@@ -377,10 +376,10 @@
                 } @else if (state === 'FAILED') {
                   <div class="ctx-nav">
                     @if (inWeekly) {
-                      <button mat-raised-button color="primary" (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
+                      <button mat-flat-button color="primary" (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
                     }
                     @if (inCourse) {
-                      <button mat-raised-button color="primary" (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
+                      <button mat-flat-button color="primary" (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
                     }
                     @if (isDaily) {
                       <button mat-stroked-button (click)="prevDaily()">
@@ -451,7 +450,7 @@
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
                   <div class="ctx-nav">
                     @if (courseModeKind === 'random') {
-                      <button mat-raised-button color="primary" (click)="restartCourse()">
+                      <button mat-flat-button color="primary" (click)="restartCourse()">
                         <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
                       </button>
                     }
@@ -468,7 +467,7 @@
               <mat-card-content style="display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:1.5rem 0">
                 <mat-icon color="warn">error_outline</mat-icon>
                 <p style="margin:0">{{ 'book.status.loadError' | translate }}</p>
-                <button mat-raised-button color="primary" (click)="retryLoad()">{{ 'common.retry' | translate }}</button>
+                <button mat-flat-button color="primary" (click)="retryLoad()">{{ 'common.retry' | translate }}</button>
               </mat-card-content>
             </mat-card>
           } @else if (state === 'INFO') {

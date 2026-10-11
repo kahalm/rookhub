@@ -59,7 +59,7 @@ export interface CreateCourseDialogData {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!canSubmit()"
+      <button mat-flat-button color="primary" [disabled]="!canSubmit()"
               (click)="submit()">
         {{ (games ? 'courses.import.button' : 'courses.create.button') | translate }}
       </button>

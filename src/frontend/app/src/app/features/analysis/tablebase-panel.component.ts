@@ -64,8 +64,8 @@ const LOSING: ReadonlySet<TablebaseCategory> = new Set(['loss']);
     .icon { font-size: 18px; width: 18px; height: 18px; opacity: .7; }
     .title { font-weight: 600; }
     .verdict { font-weight: 700; padding: 1px 8px; border-radius: 10px; }
-    .win { color: #1b5e20; background: rgba(76, 175, 80, .18); }
-    .loss { color: #b71c1c; background: rgba(244, 67, 54, .16); }
+    .win { color: var(--rh-success); background: color-mix(in srgb, var(--rh-success) 18%, transparent); }
+    .loss { color: var(--rh-error); background: color-mix(in srgb, var(--rh-error) 16%, transparent); }
     .draw { color: inherit; background: color-mix(in srgb, currentColor 10%, transparent); }
     .dist, .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .moves { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }

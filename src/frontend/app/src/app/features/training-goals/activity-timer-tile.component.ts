@@ -103,7 +103,7 @@ export function activityKindIcon(kind: ManualActivityKind): string {
     .run-kind-icon { color: color-mix(in srgb, currentColor 65%, transparent); }
     .run-label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .run-duration { font-size: 1.7rem; font-variant-numeric: tabular-nums; font-weight: 600;
-      letter-spacing: 0.02em; color: var(--mat-sys-primary, #3f51b5); }
+      letter-spacing: 0.02em; color: var(--mat-sys-primary); }
   `]
 })
 export class ActivityTimerTileComponent implements OnInit, OnDestroy {

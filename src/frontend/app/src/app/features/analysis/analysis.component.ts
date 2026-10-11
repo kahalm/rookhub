@@ -94,7 +94,7 @@ const EVAL_SETTLE_DEPTH = 10;
   ],
   template: `
     <div class="analysis-page">
-      <div class="page-head">
+      <div class="header">
         <h1>{{ 'analysis.title' | translate }}</h1>
         @if (auth.isLoggedIn) {
           <button mat-stroked-button type="button" class="history-btn" (click)="openHistory()">
@@ -133,11 +133,11 @@ const EVAL_SETTLE_DEPTH = 10;
             </button>
           }
           @if (engineCrashed) {
-            <mat-card style="background:#b71c1c;color:#fff;">
+            <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">
               <mat-card-content style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <mat-icon>error_outline</mat-icon>
                 <span style="flex:1">{{ 'analysis.engineCrashed' | translate }}</span>
-                <button mat-stroked-button style="color:#fff;border-color:#fff" (click)="reloadPage()">{{ 'analysis.engineCrashedReload' | translate }}</button>
+                <button mat-stroked-button style="color:var(--mat-sys-on-error);border-color:var(--mat-sys-on-error)" (click)="reloadPage()">{{ 'analysis.engineCrashedReload' | translate }}</button>
               </mat-card-content>
             </mat-card>
           }
@@ -178,7 +178,7 @@ const EVAL_SETTLE_DEPTH = 10;
                 }
                 @if (engineOn && (externalEnginesList.length > 0 || compareOn)) {
                   <button mat-icon-button class="cmp-btn" [class.on]="compareOn"
-                          [matTooltip]="'analysis.compareToggle' | translate"
+                          [appIconLabel]="'analysis.compareToggle' | translate"
                           (click)="compareOn = !compareOn; onCompareToggle()">
                     <mat-icon>balance</mat-icon>
                   </button>
@@ -389,23 +389,23 @@ const EVAL_SETTLE_DEPTH = 10;
     .num-field { width: 116px; }
     .engine-field { width: 190px; }
     .engine-tag { opacity: 0.65; font-size: 0.85em; }
-    .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
+    .remote-fallback { display: flex; align-items: center; gap: 6px; color: var(--rh-warn); font-size: .85rem; margin: 6px 0 0; }
     .cmp-btn { width: 34px; height: 34px; line-height: 34px; opacity: .55; }
-    .cmp-btn.on { opacity: 1; color: #64b5f6; }
+    .cmp-btn.on { opacity: 1; color: var(--rh-accent); }
     .cmp-pick { margin-top: 8px; }
     .cmp-block { margin-top: 10px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
     .eng-label { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; margin: 6px 0 2px;
       color: color-mix(in srgb, currentColor 75%, transparent); }
-    .cmp-err { display: flex; align-items: center; gap: 6px; color: #ef9a9a; font-size: .85rem; margin: 6px 0 0; }
+    .cmp-err { display: flex; align-items: center; gap: 6px; color: var(--rh-error); font-size: .85rem; margin: 6px 0 0; }
     .cmp-err mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .cmp-warn { font-size: 16px; width: 16px; height: 16px; color: #ffb74d; }
+    .cmp-warn { font-size: 16px; width: 16px; height: 16px; color: var(--rh-warn); }
     .eng-depth { font-weight: 400; color: color-mix(in srgb, currentColor 55%, transparent); }
     .terminal-state { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 8px 0 0; }
     .terminal-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .remote-fallback mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .remote-cut, .thinking { display: flex; align-items: center; gap: 6px; font-size: .85rem; margin: 6px 0 0;
       color: color-mix(in srgb, currentColor 65%, transparent); }
-    .remote-cut.final { color: #e65100; }
+    .remote-cut.final { color: var(--rh-warn); }
     .remote-cut mat-icon, .thinking mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .back-btn { width: 100%; margin-bottom: 8px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
@@ -419,8 +419,8 @@ const EVAL_SETTLE_DEPTH = 10;
     .line-eval.neg { color: var(--rh-error); }
     .line-san { font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .controls { display: flex; align-items: center; gap: 2px; }
-    .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .page-head h1 { margin: 0 0 8px; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .header h1 { margin: 0 0 8px; }
     .star-btn.on mat-icon { color: #f9a825; }
     .star-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 8px; }
     .star-jumps .star-icon { color: #f9a825; font-size: 18px; width: 18px; height: 18px; }

@@ -74,7 +74,7 @@ export type ApiTokenScope = 'extension' | 'engine';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!name" (click)="submit()">
+      <button mat-flat-button color="primary" [disabled]="!name" (click)="submit()">
         {{ 'profile.tokens.dialog.create' | translate }}
       </button>
     </mat-dialog-actions>
@@ -112,14 +112,14 @@ export class CreateTokenDialogComponent {
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-raised-button color="primary" (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
+      <button mat-flat-button color="primary" (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
     </mat-dialog-actions>
   `,
   styles: [`
-    .warning { color: #d32f2f; font-weight: 500; }
+    .warning { color: var(--rh-error); font-weight: 500; }
     .token-box { display: flex; align-items: center; gap: 8px; background: var(--mat-sys-surface-container, #f5f5f5); padding: 8px 12px; border-radius: 4px; }
     .token-box code { flex: 1; word-break: break-all; font-family: monospace; font-size: 0.9rem; }
-    .copied { color: #2e7d32; font-size: 0.85rem; }
+    .copied { color: var(--rh-success); font-size: 0.85rem; }
   `]
 })
 export class ShowTokenDialogComponent implements OnDestroy {
@@ -163,7 +163,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
         @if (loading()) {
           <p>{{ 'common.loading' | translate }}</p>
         } @else if (tokens().length === 0) {
-          <p class="empty-hint">{{ 'profile.tokens.empty' | translate }}</p>
+          <p class="empty-state">{{ 'profile.tokens.empty' | translate }}</p>
         } @else {
           <div class="tokens-scroll">
           <table class="tokens-table">
@@ -207,7 +207,6 @@ export class ShowTokenDialogComponent implements OnDestroy {
     .tokens-section h4 { margin: 0 0 0.25rem; color: var(--rh-info); }
     .tokens-hint { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; margin: 0 0 0.5rem; }
     .tokens-create { margin-top: 0.25rem; }
-    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; font-style: italic; margin: 0 0 0.5rem; }
     .tokens-scroll { overflow-x: auto; }
     .tokens-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.9rem; }
     .tokens-table th, .tokens-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); text-align: left; }

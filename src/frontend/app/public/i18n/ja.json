@@ -359,7 +359,9 @@
       "files": "ファイル ({{count}})",
       "empty": "ファイルがまだありません。PGN ファイルをアップロードして始めましょう！",
       "filesSkipped": "{{count}} 個のファイルをスキップしました（.pgn のみ、最大 10 MB）",
+      "filesSkippedOne": "{{count}} 個のファイルをスキップしました（.pgn のみ、最大 10 MB）",
       "uploadSuccess": "{{count}} 個のファイルをアップロードしました",
+      "uploadSuccessOne": "{{count}} 個のファイルをアップロードしました",
       "uploadPartial": "{{ok}} 件成功、{{failed}} 件失敗",
       "downloadFailed": "ダウンロードに失敗しました",
       "deleteConfirm": "このファイルを削除しますか？"
@@ -826,9 +828,12 @@
       "adminOnly": "管理者のみ",
       "deleteBook": "ブックを削除",
       "deleteConfirm": "ブック「{{name}}」（{{count}} 問）を削除しますか？",
+      "deleteConfirmOne": "ブック「{{name}}」（{{count}} 問）を削除しますか？",
       "deleted": "ブック「{{name}}」を削除しました",
       "importedCount": "{{count}} 問インポートしました",
+      "importedCountOne": "{{count}} 問インポートしました",
       "duplicatesCount": "重複 {{count}} 件",
+      "duplicatesCountOne": "重複 {{count}} 件",
       "invalidCount": "無効 {{count}} 件",
       "columns": {
         "book": "ブック",

@@ -28,7 +28,7 @@
         </mat-select>
       </mat-form-field>
       <div class="actions">
-        <button mat-raised-button color="primary" (click)="savePreset()"
+        <button mat-flat-button color="primary" (click)="savePreset()"
                 [disabled]="savingPreset || !presetEdit.label.trim()">
           <mat-icon>{{ editingPresetId ? 'save' : 'add' }}</mat-icon>
           {{ (editingPresetId ? 'common.save' : 'trainingGoals.presets.add') | translate }}
@@ -57,7 +57,7 @@
         }
       </ul>
     } @else {
-      <p class="preset-empty">{{ 'trainingGoals.presets.empty' | translate }}</p>
+      <p class="empty-state">{{ 'trainingGoals.presets.empty' | translate }}</p>
     }
   </mat-card-content>
 </mat-card>

@@ -359,7 +359,9 @@
       "files": "Berkas ({{count}})",
       "empty": "Belum ada berkas. Unggah berkas PGN untuk memulai!",
       "filesSkipped": "{{count}} berkas dilewati (hanya .pgn, hingga 10 MB)",
+      "filesSkippedOne": "{{count}} berkas dilewati (hanya .pgn, hingga 10 MB)",
       "uploadSuccess": "{{count}} berkas diunggah",
+      "uploadSuccessOne": "{{count}} berkas diunggah",
       "uploadPartial": "{{ok}} diunggah, {{failed}} gagal",
       "downloadFailed": "Unduhan gagal",
       "deleteConfirm": "Hapus berkas ini?"
@@ -826,9 +828,12 @@
       "adminOnly": "hanya admin",
       "deleteBook": "Hapus buku",
       "deleteConfirm": "Hapus buku \"{{name}}\" dengan {{count}} puzzle?",
+      "deleteConfirmOne": "Hapus buku \"{{name}}\" dengan {{count}} puzzle?",
       "deleted": "Buku \"{{name}}\" dihapus",
       "importedCount": "{{count}} puzzle diimpor",
+      "importedCountOne": "{{count}} puzzle diimpor",
       "duplicatesCount": "{{count}} duplikat",
+      "duplicatesCountOne": "{{count}} duplikat",
       "invalidCount": "{{count}} tidak valid",
       "columns": {
         "book": "Buku",

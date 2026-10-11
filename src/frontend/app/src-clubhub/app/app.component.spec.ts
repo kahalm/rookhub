@@ -14,7 +14,7 @@ describe('ClubHubAppComponent', () => {
     providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTranslateService({ fallbackLang: 'de' })],
   }));
 
-  // Die Fusszeile zeigt Impressum und Datenschutz immer; die Anmeldemaske wiederholte sie darunter (UI-Sweep x-login-legal).
+  // Die Fusszeile zeigt Impressum und Datenschutz immer; die Anmeldemaske wiederholte sie darunter (UI-Sweep 2026-10-10, x-login-legal).
   it('meldet die Fusszeile als immer sichtbar, die Anmeldemaske laesst ihre Rechtslinks weg', () => {
     const f = TestBed.createComponent(ClubHubAppComponent);
     expect(TestBed.inject(FooterPresenceService).presence()).toBe('always');

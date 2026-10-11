@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, timer } from 'rxjs';
@@ -68,19 +68,19 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatListModule, MatProgressBarModule, MatTooltipModule, DragDropModule, TranslatePipe,
+    MatListModule, MatProgressBarModule, IconLabelDirective, DragDropModule, TranslatePipe,
     ActivityTimerTileComponent,
   ],
   template: `
     <div class="dashboard">
-      <div class="dashboard-head">
+      <div class="header">
         <h1>{{ 'dashboard.welcome' | translate:{ username: auth.currentUser?.username } }}</h1>
-        <div class="head-actions">
+        <div class="header-actions">
           @if (editing) {
             <button mat-button (click)="applyDefault()">
               <mat-icon>restart_alt</mat-icon> {{ 'dashboard.edit.default' | translate }}
             </button>
-            <button mat-raised-button color="primary" (click)="toggleEdit()">
+            <button mat-flat-button color="primary" (click)="toggleEdit()">
               <mat-icon>done</mat-icon> {{ 'dashboard.edit.done' | translate }}
             </button>
           } @else {
@@ -112,20 +112,19 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               <div class="tile-shield"></div>
               <div class="tile-controls">
                 <button mat-icon-button class="tc-btn tc-drag" cdkDragHandle
-                        [matTooltip]="'dashboard.edit.dragAria' | translate" [attr.aria-label]="'dashboard.edit.dragAria' | translate">
+                        [appIconLabel]="'dashboard.edit.dragAria' | translate">
                   <mat-icon>drag_indicator</mat-icon>
                 </button>
                 <button mat-icon-button class="tc-btn" [disabled]="first" (click)="moveUp(tile)"
-                        [matTooltip]="'dashboard.edit.moveUp' | translate" [attr.aria-label]="'dashboard.edit.moveUp' | translate">
+                        [appIconLabel]="'dashboard.edit.moveUp' | translate">
                   <mat-icon>arrow_upward</mat-icon>
                 </button>
                 <button mat-icon-button class="tc-btn" [disabled]="last" (click)="moveDown(tile)"
-                        [matTooltip]="'dashboard.edit.moveDown' | translate" [attr.aria-label]="'dashboard.edit.moveDown' | translate">
+                        [appIconLabel]="'dashboard.edit.moveDown' | translate">
                   <mat-icon>arrow_downward</mat-icon>
                 </button>
                 <button mat-icon-button class="tc-btn tc-eye" (click)="toggle(tile)"
-                        [matTooltip]="(isEnabled(tile) ? 'dashboard.edit.hideAria' : 'dashboard.edit.showAria') | translate"
-                        [attr.aria-label]="(isEnabled(tile) ? 'dashboard.edit.hideAria' : 'dashboard.edit.showAria') | translate">
+                        [appIconLabel]="(isEnabled(tile) ? 'dashboard.edit.hideAria' : 'dashboard.edit.showAria') | translate">
                   <mat-icon>{{ isEnabled(tile) ? 'visibility' : 'visibility_off' }}</mat-icon>
                 </button>
               </div>
@@ -194,8 +193,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               <span matListItemTitle>{{ imp.courseName || imp.bid }} — {{ imp.username }}</span>
               <span matListItemLine>{{ imp.statusLabel }}</span>
               <button mat-icon-button color="warn" matListItemMeta (click)="cancelChessableImport(imp)"
-                      [attr.aria-label]="'dashboard.chessableQueue.cancel' | translate"
-                      [matTooltip]="'dashboard.chessableQueue.cancel' | translate">
+                      [appIconLabel]="'dashboard.chessableQueue.cancel' | translate">
                 <mat-icon>cancel</mat-icon>
               </button>
             </mat-list-item>
@@ -219,9 +217,9 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
   `,
   styles: [`
     .dashboard { padding: 2rem; max-width: 1200px; margin: 0 auto; }
-    .dashboard-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .head-actions { display: flex; gap: 0.5rem; }
-    .head-actions button mat-icon { margin-right: 0.25rem; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .header-actions { display: flex; gap: 0.5rem; }
+    .header-actions button mat-icon { margin-right: 0.25rem; }
     .edit-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0.25rem 0 0.5rem; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
@@ -416,7 +414,10 @@ export class DashboardComponent implements OnInit {
     chessableQueue: {
       id: 'chessableQueue', icon: 'cloud_download', titleKey: 'dashboard.chessableQueue.title',
       eligible: () => this.auth.isAdmin,
-      subtitle: () => ({ key: 'dashboard.chessableQueue.count', params: { count: this.chessableActive.length } }),
+      subtitle: () => ({
+        key: this.chessableActive.length === 1 ? 'dashboard.chessableQueue.countOne' : 'dashboard.chessableQueue.count',
+        params: { count: this.chessableActive.length },
+      }),
       buttons: [{ labelKey: 'dashboard.chessableQueue.view', link: '/chessable' }],
     },
   };

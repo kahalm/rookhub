@@ -53,8 +53,7 @@
               <mat-card-header>
                 <mat-card-title>
                   {{ 'endless.config.title' | translate }}
-                  <button mat-icon-button class="help-btn" type="button" (click)="openHelp()"
-                          [attr.aria-label]="'endless.help.open' | translate" [matTooltip]="'endless.help.open' | translate"><mat-icon>help_outline</mat-icon></button>
+                  <button mat-icon-button class="help-btn" type="button" (click)="openHelp()" [appIconLabel]="'endless.help.open' | translate"><mat-icon>help_outline</mat-icon></button>
                 </mat-card-title>
                 <mat-card-subtitle>{{ 'endless.config.subtitle' | translate }}</mat-card-subtitle>
               </mat-card-header>
@@ -68,7 +67,7 @@
                       <span>{{ 'endless.config.unfinishedRun' | translate:{ level: activeGameState.level + 1, solved: activeGameState.solved, lives: activeGameState.lives, max: activeGameState.maxRatingReached } }}</span>
                     </div>
                     <div class="resume-actions">
-                      <button mat-raised-button color="primary" class="start-btn" (click)="resumeGame()">
+                      <button mat-flat-button color="primary" class="start-btn" (click)="resumeGame()">
                         <mat-icon>play_arrow</mat-icon>
                         {{ 'endless.config.continue' | translate }}
                       </button>
@@ -79,7 +78,7 @@
                     </div>
                   </div>
                 }
-                <button mat-raised-button color="primary" class="start-btn start-btn-top" (click)="startGame()">
+                <button mat-flat-button color="primary" class="start-btn start-btn-top" (click)="startGame()">
                   <mat-icon>play_arrow</mat-icon>
                   {{ (activeGameState ? 'endless.config.newGame' : 'endless.config.start') | translate }}
                 </button>
@@ -502,7 +501,7 @@
                   </div>
                 }
                 <div class="gameover-actions">
-                  <button mat-raised-button color="primary" (click)="playAgain()">
+                  <button mat-flat-button color="primary" (click)="playAgain()">
                     <mat-icon>replay</mat-icon>
                     {{ 'endless.gameOver.playAgain' | translate }}
                   </button>
@@ -584,7 +583,7 @@
                   </div>
                 }
                 <div class="gameover-actions">
-                  <button mat-raised-button color="primary" (click)="playAgain()">
+                  <button mat-flat-button color="primary" (click)="playAgain()">
                     <mat-icon>replay</mat-icon>
                     {{ 'endless.gameOver.playAgain' | translate }}
                   </button>
@@ -668,12 +667,12 @@
                 }
                 <div class="gameover-actions">
                   @if (historyView) {
-                    <button mat-raised-button color="primary" (click)="backToHistory()">
+                    <button mat-flat-button color="primary" (click)="backToHistory()">
                       <mat-icon>arrow_back</mat-icon>
                       {{ 'endless.gameOver.backToHistory' | translate }}
                     </button>
                   } @else {
-                    <button mat-raised-button color="primary" (click)="playAgain()">
+                    <button mat-flat-button color="primary" (click)="playAgain()">
                       <mat-icon>replay</mat-icon>
                       {{ 'endless.gameOver.playAgain' | translate }}
                     </button>

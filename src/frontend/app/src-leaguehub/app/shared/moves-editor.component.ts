@@ -166,26 +166,26 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
   styles: [`
     :host { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 24px 12px; }
     .me-back { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); }
-    .me-dialog { position: relative; background: var(--surface, #fff); color: var(--ink); border-radius: 10px; padding: 16px;
+    .me-dialog { position: relative; background: var(--surface); color: var(--ink); border-radius: 10px; padding: 16px;
       width: min(760px, 100%); box-shadow: 0 10px 40px rgba(0, 0, 0, .3); }
     .me-title { margin: 0 0 12px; font: 600 20px/1.2 var(--cond); overflow-wrap: anywhere; }
     .me-body { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; }
     .me-board { width: 100%; max-width: 340px; }
     .me-label { display: block; font: 600 14px/1.2 var(--cond); color: var(--muted); margin-bottom: 4px; }
     .me-text { width: 100%; box-sizing: border-box; font: 16px/1.4 var(--body); padding: 8px; border: 1.5px solid var(--line); border-radius: 6px;
-      background: var(--paper, #fff); color: var(--ink); resize: vertical; }
+      background: var(--paper); color: var(--ink); resize: vertical; }
     .me-hint { font-size: 13px; margin: 4px 0 8px; }
     .me-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
     .me-modes { display: flex; gap: 6px; margin: 0 0 12px; }
     .me-mode { font: 600 15px/1.2 var(--cond); padding: 6px 14px; min-height: 36px; border: 1.5px solid var(--line); border-radius: 18px;
       background: transparent; color: var(--ink); cursor: pointer; }
-    .me-mode.on { background: var(--ink); color: var(--paper, #fff); border-color: var(--ink); }
+    .me-mode.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
     .me-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 8px 0; }
     .me-fen { font: 14px/1.3 ui-monospace, monospace; }
     .me-palette { display: grid; grid-template-columns: repeat(6, minmax(40px, 1fr)) minmax(40px, 1fr); grid-template-rows: auto auto;
       gap: 4px; margin-top: 8px; }
     .me-erase { grid-column: 7; grid-row: 1 / span 2; aspect-ratio: auto; }
-    .me-pc { touch-action: none; aspect-ratio: 1; padding: 2px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--paper, #fff);
+    .me-pc { touch-action: none; aspect-ratio: 1; padding: 2px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--paper);
       cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--ink); min-height: 40px; min-width: 40px; }
     .me-pc img { width: 100%; height: 100%; }
     .me-pc.on { border-color: var(--red); box-shadow: 0 0 0 2px var(--red) inset; }
@@ -202,7 +202,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
     .me-other-side p { margin: 0 0 6px; }
     .me-paths { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
     .me-path { width: 100%; text-align: left; display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line);
-      border-radius: 6px; background: var(--paper, #fff); color: var(--ink); cursor: pointer; font: 15px/1.35 var(--body); }
+      border-radius: 6px; background: var(--paper); color: var(--ink); cursor: pointer; font: 15px/1.35 var(--body); }
     .me-path:hover, .me-path:focus-visible { border-color: var(--ink); }
     .me-path-games { font-size: 13px; }
     @media (max-width: 640px) {

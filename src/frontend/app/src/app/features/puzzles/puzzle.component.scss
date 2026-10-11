@@ -10,8 +10,8 @@
     .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
     .result-icon { font-size: 48px; width: 48px; height: 48px; }
-    .solved .result-icon { color: #4caf50; }
-    .failed .result-icon { color: #f44336; }
+    .solved .result-icon { color: var(--rh-success); }
+    .failed .result-icon { color: var(--rh-error); }
     .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
@@ -21,8 +21,8 @@
     .eval-arrow { color: color-mix(in srgb, currentColor 40%, transparent); }
     .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .elo-change { font-size: 1.2em; font-weight: bold; }
-    .elo-up { color: #4caf50; }
-    .elo-down { color: #f44336; }
+    .elo-up { color: var(--rh-success); }
+    .elo-down { color: var(--rh-error); }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-puzzle-btn { margin-top: 0.25rem; }
@@ -40,7 +40,7 @@
       cursor: pointer; font-size: 0.85em; user-select: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       input[type=radio] { display: none; }
-      &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
+      &.selected { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-color: var(--mat-sys-primary); }
       &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     }
     .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
@@ -56,13 +56,13 @@
     .theme-chip.matched { background: #2e7d32; color: #fff; font-weight: 600; }
     .status-card { position: relative; }
     .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
-    .settings-gear.active { color: #1976d2; }
+    .settings-gear.active { color: var(--rh-accent); }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
       transition: border-color 0.15s;
     }
-    .theme-chip.active { border-color: #1976d2; }
+    .theme-chip.active { border-color: var(--rh-accent); }
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
 
     .board-hint {
@@ -70,7 +70,7 @@
       font-size: 1em; color: color-mix(in srgb, currentColor 60%, transparent);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
-    .board-hint-countdown { color: #e65100; font-weight: 500; }
+    .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
     .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
     .tomove-dot {
       width: 0.8em; height: 0.8em; border-radius: 50%; flex: 0 0 auto;
@@ -106,10 +106,10 @@
     .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
     .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .board-hint-flag.flagged {
-      border-style: solid; border-color: color-mix(in srgb, #d32f2f 55%, transparent);
-      background: color-mix(in srgb, #d32f2f 12%, transparent); opacity: 1;
+      border-style: solid; border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
+      background: color-mix(in srgb, var(--rh-error) 12%, transparent); opacity: 1;
     }
-    .board-hint-flag.flagged mat-icon { color: #d32f2f; }
+    .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
     .bottom-actions { display: flex; flex-direction: column; gap: 0.5rem; }
     .bottom-actions button, .share-full { width: 100%; }
 

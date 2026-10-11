@@ -5,7 +5,7 @@
     } @else if (players.length === 0) {
       <!-- Keine leere Tabelle ohne Grund: vor dem Turnier (Schnellschach-Rallyes) steht auf
            chess-results oft noch keine Startliste — die Schiedsrichter tragen sie am Morgen ein. -->
-      <p class="empty-hint">{{ 'tournaments.players.none' | translate }}</p>
+      <p class="empty-state">{{ 'tournaments.players.none' | translate }}</p>
     } @else {
       <!-- Suche, Handy-Sortierung und „Nur Favoriten" (Codereview UX-080): bei 178 Spielern fand man
            den eigenen Namen sonst nur durch Scrollen. Der Favoriten-Schalter steht IMMER da — ohne
@@ -47,7 +47,7 @@
         </span>
       </div>
       @if (playerQuery.trim() && shownPlayers.length === 0) {
-        <p class="empty-hint search-none">{{ 'tournaments.players.searchNone' | translate: { query: playerQuery.trim() } }}</p>
+        <p class="empty-state search-none">{{ 'tournaments.players.searchNone' | translate: { query: playerQuery.trim() } }}</p>
       }
       <!-- Startlisten ohne Vereinsspalte: auf Knopfdruck ueber die chess-results-Spielersuche
            nachtragen (ein Abruf je Spieler, dauert Minuten — deshalb nicht von selbst). -->

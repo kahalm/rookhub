@@ -1,6 +1,6 @@
 .page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 1rem; }
 
-.head {
+.header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -24,9 +24,9 @@
   border-radius: 10px;
   background: color-mix(in srgb, currentColor 12%, transparent);
 
-  &.ok { background: color-mix(in srgb, #2e7d32 28%, transparent); }
-  &.warn { background: color-mix(in srgb, #e65100 30%, transparent); }
-  &.bad { background: color-mix(in srgb, #c62828 30%, transparent); }
+  &.ok { background: color-mix(in srgb, var(--rh-success) 28%, transparent); }
+  &.warn { background: color-mix(in srgb, var(--rh-warn) 30%, transparent); }
+  &.bad { background: color-mix(in srgb, var(--rh-error) 30%, transparent); }
 }
 
 /* Die Angaben zur Partie. Feste DREI Spalten statt „auto-fit": mit auto-fit standen auf einem
@@ -111,11 +111,11 @@
   /* Sicher/unsicher ist eine Aussage über den Inhalt — der Umschalter steht deshalb VOR den
      Bearbeiten-Knöpfen, nicht bei Löschen und Verschieben. */
   .certain-toggle { opacity: 0.55; }
-  .certain-toggle.unsure { opacity: 1; color: #e65100; }
+  .certain-toggle.unsure { opacity: 1; color: var(--rh-warn); }
 }
 
 /* UI-Sweep 2026-10-11 (r2-rg-recon-actions): Löschen im ⋮-Menü rot wie in den anderen Karten-Menüs. */
-.delete-item mat-icon { color: color-mix(in srgb, #e53935 80%, currentColor); }
+.delete-item mat-icon { color: var(--rh-error); }
 
 .part-body {
   display: flex;
@@ -181,7 +181,7 @@
   .ply-count { font-variant-numeric: tabular-nums; margin: 0 0.35rem; }
 }
 
-.bad-hint { color: #ef5350; margin: 0 0 0.5rem; }
+.bad-hint { color: var(--rh-error); margin: 0 0 0.5rem; }
 
 /* Eine Lücke ist etwas ZWISCHEN zwei Teilen — deshalb steht sie auch dort und nicht in einer
    Karte. Vorher war sie nirgends zu sehen: man musste wissen, dass der Knopf an der Stellung
@@ -193,7 +193,7 @@
   flex-wrap: wrap;
   margin: 0.15rem 0 0.4rem 0.5rem;
   padding-left: 0.5rem;
-  border-left: 3px dashed color-mix(in srgb, #e65100 60%, transparent);
+  border-left: 3px dashed color-mix(in srgb, var(--rh-warn) 60%, transparent);
 
   .gap-icon { opacity: 0.6; }
   .small { font-size: 0.85rem; }

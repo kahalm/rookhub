@@ -27,7 +27,7 @@
       } @else if (threadsLoadError && threads.length === 0) {
         <app-load-error (retry)="loadThreads()" />
       } @else if (threads.length === 0) {
-        <p class="empty">{{ 'admin.messages.noThreads' | translate }}</p>
+        <p class="empty-state">{{ 'admin.messages.noThreads' | translate }}</p>
       } @else {
         @for (t of threads; track t.userId) {
           <button class="msg-thread-row" [class.active]="t.userId === selectedThreadUserId"
@@ -60,7 +60,7 @@
     <!-- Rechte Spalte: ausgewählter Thread -->
     <div class="msg-detail">
       @if (selectedThreadUserId == null) {
-        <p class="empty">{{ 'admin.messages.selectThread' | translate }}</p>
+        <p class="empty-state">{{ 'admin.messages.selectThread' | translate }}</p>
       } @else {
         <div class="msg-detail-header">
           <h3>{{ selectedThreadName }}</h3>
@@ -88,7 +88,7 @@
         } @else {
           <div class="msg-thread-view">
             @if (threadMessages.length === 0) {
-              <p class="empty">{{ 'admin.messages.emptyThread' | translate }}</p>
+              <p class="empty-state">{{ 'admin.messages.emptyThread' | translate }}</p>
             }
             @for (m of threadMessages; track m.id) {
               <div class="bubble-row" [class.mine]="m.fromAdmin">
@@ -107,7 +107,7 @@
             <textarea matInput [(ngModel)]="adminDraft" rows="3" maxlength="4000"
                       (keydown.control.enter)="sendAdminMessage()" [disabled]="adminSending"></textarea>
           </mat-form-field>
-          <button mat-raised-button color="primary" (click)="sendAdminMessage()" [disabled]="adminSending || !adminDraft.trim()">
+          <button mat-flat-button color="primary" (click)="sendAdminMessage()" [disabled]="adminSending || !adminDraft.trim()">
             <mat-icon>send</mat-icon> {{ 'common.send' | translate }}
           </button>
         </div>

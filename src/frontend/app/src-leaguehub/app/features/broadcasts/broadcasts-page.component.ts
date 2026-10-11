@@ -71,7 +71,7 @@ export function broadcastErrorText(reason: string | undefined): string {
           <button type="submit" class="btn-pri" [disabled]="adding() || !link().trim()">{{ adding() ? 'Spielt ein …' : 'Hinzufügen und einspielen' }}</button>
         </form>
         @if (note(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
-        @if (error()) { <p class="err">{{ error() }}</p> }
+        @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
         @if (loading() && !items().length) { <p class="muted">Lade …</p> }
         <!-- UI-Sweep 2026-10-10 (l-broadcasts): kompakte Zeilen statt hoher Karten, oben Suche und „nur mit Ligaspielern" (an) -->
         @if (items().length) {

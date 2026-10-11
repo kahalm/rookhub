@@ -40,7 +40,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
       @if (pgn(); as p) {
         <div class="bg-replay-box"><lh-game-replay [pgn]="p" [flipped]="flipped()" [evalsUrl]="evalsUrl()" /></div>
       } @else if (error()) {
-        <p class="err">{{ error() }}</p>
+        <p class="err" role="alert">{{ error() }}</p>
       } @else {
         <p class="muted">Lade Partie …</p>
       }

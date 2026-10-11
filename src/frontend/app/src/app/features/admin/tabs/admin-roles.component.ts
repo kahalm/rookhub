@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -32,7 +32,7 @@ import { apiErrorText } from '../../../core/api-error';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatCheckboxModule, MatChipsModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent,
+    MatCheckboxModule, MatChipsModule, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent,
   ],
   templateUrl: './admin-roles.component.html',
   styleUrl: './admin-roles.component.scss',

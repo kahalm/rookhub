@@ -20,6 +20,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Das AUFGABENBLATT in Arbeit (`/worksheets/:id`) — Zwischenablage wie benanntes Blatt.
@@ -36,7 +37,7 @@ import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service'
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-worksheet-detail',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, DragDropModule, MatButtonModule, MatButtonToggleModule,
     MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule,
     MatProgressSpinnerModule, MatSlideToggleModule, MatTooltipModule, TranslatePipe,

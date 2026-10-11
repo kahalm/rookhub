@@ -31,6 +31,7 @@ import { AnalysisJob, AnalysisJobsService } from '../analysis/analysis-jobs.serv
 import { mapBrokerLine, toDisplayLines } from '../analysis/engine-lines.util';
 import type { EngineAnalyseLine } from '../analysis/external-engine.service';
 import type { ComputerLine } from './computer-lines.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
@@ -69,7 +70,7 @@ const MATE_GAP_PAWNS = 100;
   selector: 'app-game-review',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe],
+  imports: [IconLabelDirective, EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe],
   template: `
     @if (status() !== 'none') {
       <section class="review">
@@ -111,13 +112,13 @@ const MATE_GAP_PAWNS = 100;
             <span class="toggles">
               <button mat-icon-button type="button" class="toggle lines-toggle" [class.on]="showLines()"
                       [attr.aria-pressed]="showLines()" (click)="toggleLines()"
-                      [matTooltip]="'games.review.lines' | translate" [attr.aria-label]="'games.review.lines' | translate">
+                      [appIconLabel]="'games.review.lines' | translate">
                 <mat-icon>format_list_numbered</mat-icon>
               </button>
               @if (!liveEngine()) {
                 <button mat-icon-button type="button" class="toggle arrow-toggle" [class.on]="showArrow()"
                         [attr.aria-pressed]="showArrow()" (click)="toggleArrow()"
-                        [matTooltip]="'games.review.arrow' | translate" [attr.aria-label]="'games.review.arrow' | translate">
+                        [appIconLabel]="'games.review.arrow' | translate">
                   <mat-icon>north_east</mat-icon>
                 </button>
               }
@@ -281,7 +282,7 @@ const MATE_GAP_PAWNS = 100;
     }
     .title .chevron { font-size: 20px; width: 20px; height: 20px; opacity: 0.7; }
     .progress { font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
-    .progress.failed { color: #e53935; }
+    .progress.failed { color: var(--rh-error); }
     /* Reihenfolge: Überschrift + Schalter in der ersten Zeile, der Engine-Umschalter (und wie weit die zweite Engine
        gerechnet hat) darf darunter umbrechen — nebeneinander passte es in die Seitenspalte nicht (gemeldet 2026-10-10). */
     .toggles { display: inline-flex; margin-left: auto; order: 1; }

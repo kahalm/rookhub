@@ -98,9 +98,10 @@ export class SolveModeService {
    * und lässt sich hinterher nicht rückwirkend korrigieren. Sie kommt aber nur EINMAL je
    * Bereich — wer schon gewählt hat, sieht nie wieder einen Dialog.
    */
-  /** Schmaler Bildschirm (Handy): der Dialog kommt als Blatt vom unteren Rand. */
+  /** Schmaler Bildschirm (Handy): der Dialog kommt als Blatt vom unteren Rand. Grenze wie im CSS (`599.98px`, docs/DESIGN.md
+   *  4.2) — bei genau 600 px gilt sonst die TS-Regel als Handy, das CSS aber nicht (1-px-Überlappung). */
   static narrow(): boolean {
-    return typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
+    return typeof matchMedia === 'function' && matchMedia('(max-width: 599.98px)').matches;
   }
 
   ensure(scope: string, data: SolveModeDialogData = {}): Observable<SolveMode> {

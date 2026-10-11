@@ -36,7 +36,7 @@ interface Pick { liga?: number; verein?: string }
     @if (!allowed) {
       <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
     } @else if (loadError()) {
-      <section class="gate">
+      <section class="gate" role="alert">
         <h2>Daten nicht geladen</h2>
         <p>{{ loadError() }}</p>
         <div class="actions"><button type="button" class="btn-sec" (click)="loadIndex()">Neu laden</button></div>
@@ -64,7 +64,7 @@ interface Pick { liga?: number; verein?: string }
             }
           </section>
         } @else {
-          <section class="gate">
+          <section class="empty">
             <h2>Noch keine Daten</h2>
             <p>Es liegt noch kein Bestand vor. Ein Admin spielt ihn einmal über den Import ein.</p>
           </section>
@@ -116,7 +116,7 @@ interface Pick { liga?: number; verein?: string }
                       [fixture]="fixture()" [sources]="sources()" />
         } @else if (leagueError(); as e) {
           <!-- F7-010: eine Liga, die nicht kommt, nimmt nicht die ganze Seite mit — Auswahl bleibt, andere Liga geht. -->
-          <section class="gate">
+          <section class="gate" role="alert">
             <h2>Liga nicht geladen</h2>
             <p>{{ e }}</p>
             <div class="actions"><button type="button" class="btn-sec" (click)="retryLeague()">Erneut versuchen</button></div>

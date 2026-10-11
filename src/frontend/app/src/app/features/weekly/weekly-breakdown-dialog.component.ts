@@ -34,7 +34,7 @@ export interface WeeklyBreakdownDialogData {
       } @else if (error) {
         <p class="bd-empty">{{ 'weekly.breakdown.loadFailed' | translate }}</p>
       } @else if ((bd?.rows?.length ?? 0) === 0) {
-        <p class="bd-empty">{{ 'weekly.breakdown.empty' | translate }}</p>
+        <p class="empty-state">{{ 'weekly.breakdown.empty' | translate }}</p>
       } @else {
         <div class="bd-scroll">
           <table class="bd-table">
@@ -94,8 +94,8 @@ export interface WeeklyBreakdownDialogData {
     .bd-res { text-align: center; width: 3em; }
     .bd-title { white-space: normal; min-width: 8em; }
     .bd-zero { color: color-mix(in srgb, currentColor 35%, transparent); }
-    .bd-ok { color: #2e7d32; font-size: 20px; height: 20px; width: 20px; }
-    .bd-fail { color: #c62828; font-size: 20px; height: 20px; width: 20px; }
+    .bd-ok { color: var(--rh-success); font-size: 20px; height: 20px; width: 20px; }
+    .bd-fail { color: var(--rh-error); font-size: 20px; height: 20px; width: 20px; }
     .bd-sum td { border-top: 2px solid color-mix(in srgb, currentColor 20%, transparent); font-weight: 600; }
     .bd-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; padding: 8px 0; }
   `]

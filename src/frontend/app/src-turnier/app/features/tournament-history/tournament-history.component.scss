@@ -4,7 +4,7 @@
   padding: 1rem;
 }
 
-.page-head h1 {
+.header h1 {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -210,8 +210,8 @@ h3 {
   border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   color: color-mix(in srgb, currentColor 75%, transparent);
 }
-.speed-tag.speed-blitz { background: color-mix(in srgb, #f4a70e 18%, transparent); }
-.speed-tag.speed-rapid { background: color-mix(in srgb, #3f8cff 16%, transparent); }
+.speed-tag.speed-blitz { background: color-mix(in srgb, var(--rh-warn) 18%, transparent); }
+.speed-tag.speed-rapid { background: color-mix(in srgb, var(--rh-info) 16%, transparent); }
 .speed-tag.speed-standard { background: color-mix(in srgb, currentColor 8%, transparent); }
 
 .speed-sum { white-space: nowrap; }
@@ -269,7 +269,7 @@ h3 {
 /* Am Handy (UI-Sweep 2026-10-11, r2-t-history-tabs-mobile): „Spieler verfolgen" in eine eigene Zeile ueber den Reitern.
    In derselben Zeile blieben fuer die Reiter ~170 px — nur „Nur ich" war zu sehen, daneben Blaetterpfeile, und dass es
    einen zweiten Reiter gibt, sah man nicht. */
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .whose { flex-wrap: wrap; }
   .track-add { order: -1; margin-left: auto; }
   .whose-tabs { flex: 1 1 100%; }

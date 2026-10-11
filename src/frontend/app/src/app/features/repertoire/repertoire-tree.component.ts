@@ -55,7 +55,7 @@ import { ExplorerPosition, formatPercent } from './repertoire-explorer.service';
             <span class="child-count">{{ (child.count === 1 ? 'repertoire.tree.lineCount' : 'repertoire.tree.lineCountPlural') | translate: { count: child.count } }}</span>
           </div>
         } @empty {
-          <div class="empty">{{ 'repertoire.tree.empty' | translate }}</div>
+          <div class="empty-state">{{ 'repertoire.tree.empty' | translate }}</div>
         }
       </div>
     </div>
@@ -99,13 +99,13 @@ import { ExplorerPosition, formatPercent } from './repertoire-explorer.service';
       font-size: 15px;
     }
     .child-pop { margin-left: auto; margin-right: 12px; font-size: 13px; font-variant-numeric: tabular-nums;
-      color: var(--mat-sys-primary, #3f51b5); }
+      color: var(--mat-sys-primary); }
     .pop-bar { height: 3px; }
     .pop-source { padding: 4px 12px; font-size: 11px; color: color-mix(in srgb, currentColor 55%, transparent);
       border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
     .pop-source.note { color: var(--mat-sys-error, #b00020); }
     .child-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 13px; }
-    .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .empty-state { color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
 })
 export class RepertoireTreeComponent {

@@ -120,7 +120,7 @@
             </mat-slide-toggle>
           }
           <button mat-icon-button [matMenuTriggerFor]="moreMenu"
-                  [matTooltip]="'common.moreActions' | translate">
+                  [appIconLabel]="'common.moreActions' | translate">
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #moreMenu="matMenu">
@@ -186,7 +186,7 @@
         </div>
 
         @if (d.chapters.length === 0) {
-          <p class="empty">
+          <p class="empty-state">
             {{ (d.canManage ? 'courses.detail.emptyManage' : 'courses.detail.empty') | translate }}
           </p>
         } @else {
@@ -234,12 +234,12 @@
                       @if (chapterStartLink(ch); as link) {
                         <button mat-icon-button color="primary" [routerLink]="link"
                                 [queryParams]="chapterStartParams(ch)"
-                                [matTooltip]="'courses.detail.startChapter' | translate">
+                                [appIconLabel]="'courses.detail.startChapter' | translate">
                           <mat-icon>play_arrow</mat-icon>
                         </button>
                       }
                       <button mat-icon-button [matMenuTriggerFor]="chapterMenu"
-                              [matTooltip]="'common.moreActions' | translate">
+                              [appIconLabel]="'common.moreActions' | translate">
                         <mat-icon>more_vert</mat-icon>
                       </button>
                       <mat-menu #chapterMenu="matMenu">
@@ -323,22 +323,21 @@
                               <td class="row-actions">
                                 @if (!d.isCalculation) {
                                   <button mat-icon-button (click)="downloadLinePgn(line)"
-                                          [matTooltip]="'courses.detail.downloadLinePgn' | translate"
-                                          [attr.aria-label]="'courses.detail.downloadLinePgn' | translate">
+                                          [appIconLabel]="'courses.detail.downloadLinePgn' | translate">
                                     <mat-icon>download</mat-icon>
                                   </button>
                                 }
                                 @if (d.isCalculation) {
                                   <a mat-icon-button [routerLink]="['/courses', bookId, 'calc']"
                                      [queryParams]="{ pos: line.id }"
-                                     [matTooltip]="'courses.calculate' | translate">
+                                     [appIconLabel]="'courses.calculate' | translate">
                                     <mat-icon>calculate</mat-icon>
                                   </a>
                                 }
                                 @if (d.canManage) {
                                   <button mat-icon-button class="danger" [disabled]="busy"
                                           (click)="deleteLine(ch, line)"
-                                          [matTooltip]="'courses.detail.deleteLine' | translate">
+                                          [appIconLabel]="'courses.detail.deleteLine' | translate">
                                     <mat-icon>delete_outline</mat-icon>
                                   </button>
                                 }

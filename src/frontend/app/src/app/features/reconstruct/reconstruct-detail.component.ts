@@ -22,6 +22,7 @@ import { GapResult, PartKind, PartInput, Reconstruction, ReconstructionPart, Rec
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { SanPipe } from '../../shared/chess/san.pipe';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
@@ -52,7 +53,7 @@ export function withSideToMove(fen: string, black: boolean): string {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-reconstruct-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
+  imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule, MatMenuModule,
     TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe],
   templateUrl: './reconstruct-detail.component.html',

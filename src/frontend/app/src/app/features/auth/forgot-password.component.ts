@@ -52,7 +52,7 @@ export function resetMailSite(legal: LegalSite, host: string = location.hostname
                 <input matInput type="email" [(ngModel)]="email" name="email" required email autofocus autocomplete="email">
                 <mat-error>{{ 'auth.forgot.emailInvalid' | translate }}</mat-error>
               </mat-form-field>
-              <button mat-raised-button color="primary" type="submit" [disabled]="loading">
+              <button mat-flat-button color="primary" type="submit" [disabled]="loading">
                 {{ loading ? ('auth.forgot.submitting' | translate) : ('auth.forgot.submit' | translate) }}
               </button>
             </form>
@@ -85,7 +85,7 @@ export function resetMailSite(legal: LegalSite, host: string = location.hostname
     .kids-mail { margin-top: 0.75rem; }
     .no-email { margin-top: 1rem; opacity: 0.85; }
     .no-email a { color: var(--mat-sys-primary); overflow-wrap: anywhere; }
-    .auth-info { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
+    .auth-info { background: color-mix(in srgb, var(--rh-info) 15%, transparent); border-left: 3px solid var(--rh-info); padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     mat-form-field { width: 100%; }
   `]
 })

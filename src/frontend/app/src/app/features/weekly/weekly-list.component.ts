@@ -59,7 +59,7 @@ interface WeeklyPostRow extends WeeklyPost {
                 <input matInput [(ngModel)]="uploadDescription" maxlength="500"
                        [placeholder]="'weekly.upload.descriptionPlaceholder' | translate">
               </mat-form-field>
-              <button mat-raised-button color="primary"
+              <button mat-flat-button color="primary"
                       [disabled]="!uploadFile || !uploadDate || !uploadTime || uploading" (click)="upload()">
                 <mat-icon>add</mat-icon> {{ 'weekly.upload.create' | translate }}
               </button>
@@ -81,7 +81,7 @@ interface WeeklyPostRow extends WeeklyPost {
       @if (loading) {
         <app-loading-spinner />
       } @else if (rows.length === 0) {
-        <p class="empty-hint">{{ 'weekly.empty' | translate }}</p>
+        <p class="empty-state">{{ 'weekly.empty' | translate }}</p>
       } @else {
         <div class="wp-list">
           @for (r of rows; track r.id) {
@@ -210,7 +210,6 @@ interface WeeklyPostRow extends WeeklyPost {
   styles: [`
     .weekly-container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
-    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .upload-card { margin-bottom: 20px; }
     .upload-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .f-title { flex: 1; min-width: 180px; }
@@ -258,7 +257,7 @@ interface WeeklyPostRow extends WeeklyPost {
     .lb-done { font-size: 16px; height: 16px; width: 16px; vertical-align: text-bottom; color: #f9a825; margin-left: 4px; }
     .lb-empty { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; padding: 8px 0; display: inline-block; }
 
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .weekly-container { margin: 16px auto; }
       .upload-row { flex-direction: column; align-items: stretch; }
       .f-title { width: 100%; }

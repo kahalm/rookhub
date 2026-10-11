@@ -13,7 +13,7 @@ import { chromium } from 'playwright-core';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { APPS, AREAS, ROUTES, areaOf, routeId } from './routes.mjs';
-import { login, resolveParams } from './seed.mjs';
+import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.mjs';
 import { pageChecks } from './checks.mjs';
 import { writeIndex } from './report.mjs';
 
@@ -23,18 +23,28 @@ const RUNS = path.join(HERE, 'runs');
 
 const VIEWPORTS = {
   mobile: { width: 390, height: 844, isMobile: true, hasTouch: true },
+  tablet: { width: 820, height: 1180, isMobile: true, hasTouch: true },
   laptop: { width: 1366, height: 768 },
   wide: { width: 1920, height: 1080 },
 };
 const MAX_SHOT_HEIGHT = 4000;
+/** Browser-Sprache je Oberflächensprache (Datums-/Zahlenformat der Seite kommt aus der App, das hier ist navigator.language). */
+const BROWSER_LOCALE = { de: 'de-DE', en: 'en-US', hr: 'hr-HR', hu: 'hu-HU' };
 const PUZZLE_AREAS = new Set(['puzzles', 'kurse', 'wochenpost']);
 const SETTLE_MAX_MS = 60000;   // hoch, weil Anfragen in der eigenen Bremse warten können
 const QUIET_MS = 800;
-// Die API drosselt je Adresse (global 100 Anfragen/min, anonyme Wege teils 60/min). Alle Aufnahmen kommen von
-// EINER Adresse — ohne eigene Bremse lief der erste Lauf in hunderte 429 und fotografierte Fehlerzustände.
-const DEFAULT_RATE = 80;
+// Die API drosselt je Adresse (Prod global 100 Anfragen/min, anonyme Wege teils 60/min; Dev läuft mit
+// RateLimiting__PermitScale=5, also 500/min). Alle Aufnahmen kommen von EINER Adresse — ohne eigene Bremse lief der
+// erste Lauf in hunderte 429 und fotografierte Fehlerzustände. Vorgaben je Umgebung, --rate/--concurrency gehen vor.
+const ENV_DEFAULTS = { dev: { rate: 400, concurrency: 4 }, prod: { rate: 70, concurrency: 2 } };
+// --fast: nach dem Umstellen der Fenstergröße kurz warten (Breakpoint-Beobachter, Neuberechnung), dann wie nach dem Laden
+// auf Netzruhe warten — aber kürzer, weil keine Navigation mehr kommt.
+const RESIZE_WAIT_MS = 400;
+const RESIZE_SETTLE_MAX_MS = 15000;
 // Wie lange eine Anfrage in der Bremse warten darf, bevor das Bild als „vom Werkzeug verzögert" gilt.
 const DELAY_FLAG_MS = 3000;
+/** Rollen: `anon` abgemeldet, `admin` = claude-dev, die übrigen sind eigene Dev-Konten (ACCOUNTS weiter unten). */
+const ROLES = ['anon', 'user', 'admin', 'empty', 'trainer'];
 
 // ------------------------------------------------------------------------------------------- Optionen
 const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Vergleich
@@ -45,22 +55,31 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --app a,b              nur diese Oberflächen (rookhub, turnier, kidhub, leaguehub, clubhub)
   --area a,b             nur diese Bereiche, z. B. kurse, repertoire, partien (Liste: --areas)
   --route text           nur Routen, deren Pfad oder Name den Text enthält (mehrere mit Komma)
-  --viewport v,w         mobile (390), laptop (1366), wide (1920)       Vorgabe: mobile,wide
-  --theme t,u            dark, light                                       Vorgabe: dark
-  --auth a,b             anon, user (normales Konto), admin (claude-dev)    Vorgabe: anon,user
-  --concurrency n        gleichzeitige Seiten (Vorgabe 2 — mehr läuft in die Drossel der API)
-  --rate n               höchstens n API-Anfragen je Minute (Vorgabe 70; die API drosselt bei 100 je Adresse)
+  --viewport v,w         mobile (390), tablet (820), laptop (1366), wide (1920)     Vorgabe: mobile,wide
+  --theme t,u            dark, light                                                 Vorgabe: dark
+  --lang l,m             Oberflächensprache (de, en, hr, …; Cookie + localStorage rookhub_lang)  Vorgabe: de
+  --auth a,b             anon, user (normales Konto mit Bestand), admin (claude-dev),
+                         empty (Konto ganz ohne Daten → Leerzustände), trainer (ClubHub-Trainer einer Gruppe)
+                                                                                     Vorgabe: anon,user
+  --concurrency n        gleichzeitige Seiten (Vorgabe dev 4, prod 2 — mehr läuft in die Drossel der API)
+  --rate n               höchstens n API-Anfragen je Minute (Vorgabe dev 400 — Dev drosselt bei 500 je Adresse,
+                         PermitScale 5; prod 70 — Prod drosselt bei 100)
+  --fast                 jede Seite (Route × Konto × Design × Sprache) nur EINMAL laden und alle Breiten durch Umstellen
+                         der Fenstergröße fotografieren (schmalste zuerst). Grenze: Handy-Ansicht nur über die Breite,
+                         ohne Touch — kein isMobile/hasTouch (lässt sich an einem offenen Kontext nicht umschalten),
+                         also kein (pointer: coarse)/(hover: none) und keine Touch-Ereignisse. Für die Abnahme ohne --fast.
   --compare run|none     mit diesem Lauf vergleichen (Ordnername unter runs/); Vorgabe: der vorige Lauf
   --local                die gebauten Oberflächen aus src/frontend/app/dist/<app>/browser ausliefern
                          (API-Aufrufe gehen an die gewählte Umgebung) — einen Umbau ansehen, bevor er deployt ist
   --list                 Katalog mit aufgelösten Adressen zeigen, keinen Browser starten
   --name text            Zusatz am Ordnernamen des Laufs
 
-Zugang: ~/.config/rookhub/dev-claude.env (ROOKHUB_DEV_USER/ROOKHUB_DEV_PASSWORD) oder UI_SWEEP_USER/UI_SWEEP_PASSWORD.
+Zugang: ~/.config/rookhub/dev-claude.env (ROOKHUB_DEV_USER/ROOKHUB_DEV_PASSWORD) oder UI_SWEEP_USER/UI_SWEEP_PASSWORD;
+die Konten user/empty/trainer werden beim ersten Gebrauch auf Dev registriert und dort eingetragen.
 Ergebnis: runs/<Zeitpunkt>/index.html (Übersicht), report.json, shots/*.png, diff/*.png.`;
 
 function parseArgs(argv) {
-  const o = { env: 'dev', viewport: ['mobile', 'wide'], theme: ['dark'], auth: ['anon', 'user'], concurrency: 2, rate: DEFAULT_RATE };
+  const o = { env: 'dev', viewport: ['mobile', 'wide'], theme: ['dark'], lang: ['de'], auth: ['anon', 'user'] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]; const v = () => argv[++i];
     const csv = () => v().split(',').map(s => s.trim()).filter(Boolean);
@@ -73,17 +92,24 @@ function parseArgs(argv) {
       case '--route': o.route = csv(); break;
       case '--viewport': o.viewport = csv(); break;
       case '--theme': o.theme = csv(); break;
+      case '--lang': o.lang = csv(); break;
       case '--auth': o.auth = csv(); break;
       case '--concurrency': o.concurrency = Number(v()); break;
       case '--rate': o.rate = Number(v()); break;
       case '--compare': o.compare = v(); break;
       case '--local': o.local = true; break;
+      case '--fast': o.fast = true; break;
       case '--list': o.list = true; break;
       case '--name': o.name = v(); break;
       default: throw new Error(`Unbekannte Option ${a} (--help)`);
     }
   }
   for (const vp of o.viewport) if (!VIEWPORTS[vp]) throw new Error(`Unbekannte Breite ${vp}`);
+  if (!ENV_DEFAULTS[o.env]) throw new Error(`Unbekannte Umgebung ${o.env} (dev, prod)`);
+  o.rate ??= ENV_DEFAULTS[o.env].rate;
+  o.concurrency ??= ENV_DEFAULTS[o.env].concurrency;
+  for (const t of o.theme) if (!['dark', 'light'].includes(t)) throw new Error(`Unbekanntes Design ${t}`);
+  for (const a of o.auth) if (!ROLES.includes(a)) throw new Error(`Unbekannte Rolle ${a} (${ROLES.join(', ')})`);
   if (o.env === 'prod' && o.auth.some(a => a !== 'anon')) {
     console.log('Hinweis: auf prod nur abgemeldet — --auth user/admin entfällt.');
     o.auth = o.auth.filter(x => x === 'anon');
@@ -104,28 +130,43 @@ function credentials() {
   return { user: env.ROOKHUB_DEV_USER, password: env.ROOKHUB_DEV_PASSWORD };
 }
 
-/** Normales Konto ohne Sonderrechte (Rolle „user"): ROOKHUB_DEV_PLAIN_USER/_PASSWORD in derselben Datei. Fehlt es,
- *  wird es auf Dev registriert und dort eingetragen. Das Admin-Konto (claude-dev) ist die Rolle „admin". */
-async function plainCredentials(base) {
-  if (process.env.UI_SWEEP_PLAIN_USER) return { user: process.env.UI_SWEEP_PLAIN_USER, password: process.env.UI_SWEEP_PLAIN_PASSWORD };
+const ACCOUNTS = {
+  // normales Konto mit Bestand (seed-user.mjs) — die Rolle, mit der die meisten Seiten fotografiert werden
+  user: { env: 'ROOKHUB_DEV_PLAIN', name: 'claude-dev-user', label: 'Normales Konto' },
+  // frisch registriert, nie benutzt: zeigt die Leerzustände (keine Partie, kein Repertoire, kein Verein …)
+  empty: { env: 'ROOKHUB_DEV_EMPTY', name: 'claude-dev-empty', label: 'Leeres Konto' },
+  // Rolle mit club.trainer, einer ClubHub-Gruppe zugeteilt (seed.mjs ensureTrainer) — sonst ohne Daten
+  trainer: { env: 'ROOKHUB_DEV_TRAINER', name: 'claude-dev-trainer', label: 'ClubHub-Trainer' },
+};
+
+/** Zugang eines Dev-Kontos aus ~/.config/rookhub/dev-claude.env (`<ENV>_USER`/`<ENV>_PASSWORD`). Fehlt es, wird es auf
+ *  Dev registriert und in die Datei geschrieben (angehängt, das Kennwort wird nie ausgegeben). */
+async function accountCredentials(base, role) {
+  const acc = ACCOUNTS[role];
+  if (role === 'user' && process.env.UI_SWEEP_PLAIN_USER) return { user: process.env.UI_SWEEP_PLAIN_USER, password: process.env.UI_SWEEP_PLAIN_PASSWORD };
   const file = path.join(os.homedir(), '.config/rookhub/dev-claude.env');
   const text = fs.readFileSync(file, 'utf8');
   const env = Object.fromEntries(text.split('\n').filter(l => l.includes('='))
     .map(l => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]));
-  if (env.ROOKHUB_DEV_PLAIN_USER) return { user: env.ROOKHUB_DEV_PLAIN_USER, password: env.ROOKHUB_DEV_PLAIN_PASSWORD };
-  const user = 'claude-dev-user';
+  if (env[`${acc.env}_USER`]) return { user: env[`${acc.env}_USER`], password: env[`${acc.env}_PASSWORD`] };
+  const user = acc.name;
   const password = 'Sw-' + crypto.randomBytes(12).toString('base64url') + '!7';
   const res = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username: user, email: null, password }) });
-  if (!res.ok) throw new Error(`Normales Konto anlegen gescheitert: HTTP ${res.status} ${await res.text()}`);
-  fs.appendFileSync(file, (text.endsWith('\n') ? '' : '\n') + `ROOKHUB_DEV_PLAIN_USER=${user}\nROOKHUB_DEV_PLAIN_PASSWORD=${password}\n`);
-  console.log(`Normales Konto ${user} auf Dev angelegt (Zugang in ${file}).`);
+  if (!res.ok) throw new Error(`${acc.label} anlegen gescheitert: HTTP ${res.status} ${await res.text()}`);
+  // Zeilenende prüfen: ohne Umbruch am Dateiende verschmölze die neue Zeile mit der letzten.
+  fs.appendFileSync(file, (text.endsWith('\n') ? '' : '\n') + `${acc.env}_USER=${user}\n${acc.env}_PASSWORD=${password}\n`);
+  console.log(`${acc.label} ${user} auf Dev angelegt (Zugang in ${file}).`);
   return { user, password };
 }
 
-/** Parameter, die an den EIGENEN Daten des Admin-Kontos hängen — für das normale Konto wären das fremde 404-Seiten. */
+/** Parameter, die an den EIGENEN Daten eines Kontos hängen — mit denen des Admin-Kontos sähe ein anderes Konto nur fremde
+ *  404-Seiten. Das normale Konto bekommt eigene (seed.mjs legt sie an), das leere und das Trainer-Konto haben keine:
+ *  ihre Routen mit diesen Platzhaltern entfallen still (gezählt als „ohne eigene Daten", nicht als „nicht auflösbar"). */
 const OWNED_PARAMS = new Set(['gameId', 'analyzedGameId', 'repertoireId', 'worksheetId', 'reconstructionId', 'guessId',
-  'analysisId', 'comparisonId', 'friendId', 'bookId', 'calcBookId']);
+  'analysisId', 'comparisonId', 'friendId', 'bookId', 'calcBookId', 'chapterIndex', 'bookPuzzleId', 'scanId']);
+/** Parameter, die für das Trainer-Konto aus SEINER Sicht kommen (nur zugeteilte Gruppen/Kinder). */
+const TRAINER_PARAMS = new Set(['clubGroupId', 'clubMemberId']);
 /** Für abgemeldet ohne Sinn: die Punktepartie gehört einem Konto (anonym gäbe es nur ein 404). */
 const ANON_SKIP = new Set(['guessId']);
 
@@ -176,64 +217,96 @@ async function main() {
   const routes = ROUTES.filter(r => (!opts.app || opts.app.includes(r.app)) && (!opts.area || opts.area.includes(areaOf(r)))
     && (!opts.route || opts.route.some(t => r.url.includes(t) || routeId(r).includes(t))));
 
-  let session = null; let plainSession = null; let params = {}; let userParams = {};
+  const sessions = {};   // Rolle → AuthResponse (genau das legt die App als `rookhub_user` ab)
+  let params = {};
+  const roleParams = { user: {}, empty: {}, trainer: {} };
   const cachePath = path.join(RUNS, `params-${opts.env}.json`);
   const previousParams = fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, 'utf8')) : {};
   const resolveLog = [];
+  const say = (name, value, why) => console.log(`  ${name.padEnd(22)} ${value instanceof Error ? 'Fehler: ' + value.message : value ?? `— ${why ?? '(nichts gefunden)'}`}`);
   if (opts.env === 'prod') {
     console.log('prod: keine Anmeldung, keine Testdaten — Routen mit Platzhaltern entfallen.');
   } else {
     const { user, password } = credentials();
-    session = await login(apiBase, user, password);
-    console.log(`Angemeldet als ${session.username} an ${apiBase}`);
-    if (opts.auth.includes('user')) {
-      const plain = await plainCredentials(apiBase);
-      plainSession = await login(apiBase, plain.user, plain.password);
-      console.log(`Normales Konto: ${plainSession.username} — eigene Daten:`);
-      const userCache = path.join(RUNS, `params-${opts.env}-user.json`);
-      const prevUser = fs.existsSync(userCache) ? JSON.parse(fs.readFileSync(userCache, 'utf8')) : {};
-      userParams = await resolveParams(apiBase, plainSession.token, (name, value) =>
-        OWNED_PARAMS.has(name) && console.log(`  ${name.padEnd(22)} ${value instanceof Error ? 'Fehler: ' + value.message : value ?? '—'}`), prevUser);
-      fs.writeFileSync(userCache, JSON.stringify(userParams, null, 2));
-    }
-    params = await resolveParams(apiBase, session.token, (name, value) => {
-      const text = value instanceof Error ? `Fehler: ${value.message}` : value ?? '— (nichts gefunden)';
-      resolveLog.push({ name, value: value instanceof Error ? null : value, note: text });
-      console.log(`  ${name.padEnd(22)} ${text}`);
-    }, previousParams);
+    sessions.admin = await login(apiBase, user, password);
+    console.log(`Angemeldet als ${sessions.admin.username} an ${apiBase}`);
     fs.mkdirSync(RUNS, { recursive: true });
-    fs.writeFileSync(cachePath, JSON.stringify(params, null, 2));
+    for (const role of Object.keys(ACCOUNTS).filter(r => opts.auth.includes(r))) {
+      const c = await accountCredentials(apiBase, role);
+      sessions[role] = await login(apiBase, c.user, c.password);
+      if (role === 'user') {
+        console.log(`${ACCOUNTS.user.label}: ${sessions.user.username} — eigene Daten:`);
+        const userCache = path.join(RUNS, `params-${opts.env}-user.json`);
+        const prevUser = fs.existsSync(userCache) ? JSON.parse(fs.readFileSync(userCache, 'utf8')) : {};
+        roleParams.user = await resolveParams(apiBase, sessions.user.token, (n, v, why) => OWNED_PARAMS.has(n) && say(n, v, why), prevUser, OWNED_PARAMS);
+        // Zusammenführen: ein Resolver, der diesmal scheiterte (429), soll den gemerkten Wert nicht löschen.
+        fs.writeFileSync(userCache, JSON.stringify({ ...prevUser, ...roleParams.user }, null, 2));
+      } else if (role === 'trainer') {
+        const group = await ensureTrainer(apiBase, sessions.admin.token, sessions.trainer);
+        console.log(`${ACCOUNTS.trainer.label}: ${sessions.trainer.username} — Gruppe „${group.name}" (${group.id}), sieht:`);
+        roleParams.trainer = await resolveClubParams(apiBase, sessions.trainer.token, say);
+      } else {
+        console.log(`${ACCOUNTS[role].label}: ${sessions[role].username} (keine eigenen Daten)`);
+      }
+    }
+    console.log('Admin-Konto (und geteilte Parameter):');
+    params = await resolveParams(apiBase, sessions.admin.token, (name, value, why) => {
+      const text = value instanceof Error ? `Fehler: ${value.message}` : value ?? `— ${why ?? '(nichts gefunden)'}`;
+      resolveLog.push({ name, value: value instanceof Error ? null : value, note: text });
+      say(name, value, why);
+    }, previousParams);
+    fs.writeFileSync(cachePath, JSON.stringify({ ...previousParams, ...params }, null, 2));
   }
 
-  // Konto-eigene Parameter (Partie, Repertoire …) kommen für die Rolle „user" aus dessen eigenen Daten, der Rest ist geteilt.
+  // Konto-eigene Parameter (Partie, Repertoire …) kommen je Rolle aus deren eigenen Daten, der Rest ist geteilt.
+  // `noData` = ein konto-eigener Parameter fehlt bei einem Konto, das absichtlich keine Daten hat (empty/trainer).
   const fill = (url, auth) => {
-    const missing = [];
-    const src = n => (auth === 'user' && OWNED_PARAMS.has(n) ? userParams : params)[n];
-    const out = url.replace(/\{(\w+)\}/g, (_, n) => { if (src(n) == null) missing.push(n); return src(n) ?? ''; });
-    return { url: out, missing };
+    const missing = []; let noData = false;
+    const src = n => {
+      if (auth === 'trainer' && TRAINER_PARAMS.has(n)) return roleParams.trainer[n];
+      if (auth !== 'admin' && auth !== 'anon' && OWNED_PARAMS.has(n)) return roleParams[auth][n];
+      return params[n];
+    };
+    const out = url.replace(/\{(\w+)\}/g, (_, n) => {
+      const v = src(n);
+      if (v == null) { if ((auth === 'empty' || auth === 'trainer') && (OWNED_PARAMS.has(n) || TRAINER_PARAMS.has(n))) noData = true; else missing.push(n); }
+      return v ?? '';
+    });
+    return { url: out, missing, noData };
   };
 
-  const jobs = []; const unresolved = [];
+  const jobs = []; const unresolved = []; let noDataSkipped = 0;
   for (const route of routes) {
     const wanted = route.auth === 'any' ? opts.auth
       : route.auth === 'user' ? opts.auth.filter(a => a !== 'anon') : opts.auth.filter(a => a === route.auth);
     for (const auth of wanted) {
       if (auth === 'anon' && [...route.url.matchAll(/\{(\w+)\}/g)].some(m => ANON_SKIP.has(m[1]))) continue;
-      const { url, missing } = fill(route.url, auth);
+      const { url, missing, noData } = fill(route.url, auth);
       if (missing.length) { unresolved.push({ id: `${routeId(route)} (${auth})`, url: route.url, missing }); continue; }
-      for (const viewport of opts.viewport) for (const theme of opts.theme) jobs.push({ route, id: routeId(route), url, auth, viewport, theme });
+      if (noData) { noDataSkipped++; continue; }
+      for (const viewport of opts.viewport) for (const theme of opts.theme) for (const lang of opts.lang)
+        jobs.push({ route, id: routeId(route), url, auth, viewport, theme, lang });
     }
   }
 
-
   if (opts.list) {
-    for (const r of routes) { const { url, missing } = fill(r.url, 'admin'); console.log(`${routeId(r).padEnd(42)} ${r.auth.padEnd(5)} ${missing.length ? `[fehlt: ${missing}]` : url}`); }
-    console.log(`\n${jobs.length} Aufnahmen, ${unresolved.length} Routen nicht auflösbar.`);
+    const roles = opts.auth;
+    console.log(`\n${'Route'.padEnd(46)} ${'auth'.padEnd(5)} Adresse (Admin) / fehlende Parameter je Rolle`);
+    for (const r of routes) {
+      const { url, missing } = fill(r.url, 'admin');
+      const per = roles.filter(a => a !== 'admin' && a !== 'anon' && r.auth !== 'anon').map(a => {
+        const f = fill(r.url, a);
+        return f.missing.length ? `${a}: fehlt ${f.missing}` : f.noData ? `${a}: (ohne Daten)` : f.url !== url ? `${a}: ${f.url}` : null;
+      }).filter(Boolean);
+      console.log(`${routeId(r).padEnd(46)} ${r.auth.padEnd(5)} ${missing.length ? `[fehlt: ${missing}]` : url}${per.length ? '   | ' + per.join(' · ') : ''}`);
+    }
+    console.log(`\n${jobs.length} Aufnahmen, ${unresolved.length} Routen nicht auflösbar${noDataSkipped ? `, ${noDataSkipped} ohne eigene Daten übersprungen` : ''}.`);
+    for (const u of unresolved) console.log(`  nicht auflösbar: ${u.id} — ${u.missing.join(', ')}`);
     return;
   }
 
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 13);
-  const runName = `${stamp}${opts.env === 'prod' ? '_prod' : ''}${opts.local ? '_local' : ''}${opts.name ? '_' + opts.name : ''}`;
+  const runName = `${stamp}${opts.env === 'prod' ? '_prod' : ''}${opts.local ? '_local' : ''}${opts.fast ? '_fast' : ''}${opts.name ? '_' + opts.name : ''}`;
   const runDir = path.join(RUNS, runName);
   fs.mkdirSync(path.join(runDir, 'shots'), { recursive: true });
 
@@ -259,30 +332,42 @@ async function main() {
   let done = 0;
   const started = Date.now();
 
+  // Wartet, bis seit QUIET_MS keine Anfrage mehr läuft — Poller (Glocke, Analyse) halten das Netz nie ganz still,
+  // deshalb höchstens maxMs.
+  const settle = async (page, net, maxMs) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs && !(net.inflight === 0 && Date.now() - net.lastActivity > QUIET_MS)) await page.waitForTimeout(150);
+  };
+
+  // Eine Arbeitseinheit = eine Seite (Route × Konto × Design × Sprache) mit ihren Breiten `job.viewports`.
+  // Normal ist das genau eine Breite; mit --fast alle, nacheinander durch Umstellen der Fenstergröße.
   async function shoot(job) {
-    const vp = VIEWPORTS[job.viewport];
+    const first = VIEWPORTS[job.viewports[0]];
     const origin = base(job.route.app);
     const ctx = await browser.newContext({
-      viewport: { width: vp.width, height: vp.height }, isMobile: !!vp.isMobile, hasTouch: !!vp.hasTouch,
+      // --fast: ohne Handy-Emulation — isMobile/hasTouch lassen sich an einem offenen Kontext nicht umschalten.
+      viewport: { width: first.width, height: first.height },
+      isMobile: !opts.fast && !!first.isMobile, hasTouch: !opts.fast && !!first.hasTouch,
       deviceScaleFactor: 1, colorScheme: job.theme, reducedMotion: 'reduce', serviceWorkers: 'block',
-      locale: 'de-DE', timezoneId: 'Europe/Vienna', ignoreHTTPSErrors: true,
+      locale: BROWSER_LOCALE[job.lang] ?? job.lang, timezoneId: 'Europe/Vienna', ignoreHTTPSErrors: true,
     });
     let toolDelayMs = 0; const apiCalls = [];
-    const userJson = job.auth === 'admin' ? JSON.stringify(session) : job.auth === 'user' ? JSON.stringify(plainSession) : null;
-    await ctx.addInitScript(([user, theme]) => {
+    const userJson = sessions[job.auth] ? JSON.stringify(sessions[job.auth]) : null;
+    await ctx.addInitScript(([user, theme, lang]) => {
       try {
         if (user) localStorage.setItem('rookhub_user', user); else localStorage.removeItem('rookhub_user');
         localStorage.setItem('rookhub_app_theme', theme);
-        localStorage.setItem('rookhub_lang', 'de');
+        // Sprache: LocaleService liest erst das geteilte Cookie, dann diesen Wert (LeagueHub/ClubHub sind fest deutsch).
+        localStorage.setItem('rookhub_lang', lang);
         // Offline-Vorräte nicht vorladen: jede Seite holte sonst ~8 zusätzliche Puzzle-Anfragen (Drossel!).
         localStorage.setItem('rookhub_offline_settings', JSON.stringify({ puzzleCount: 0, endlessRuns: 0 }));
       } catch { /* kein Speicher */ }
-    }, [userJson, job.theme]);
+    }, [userJson, job.theme, job.lang]);
     const host = new URL(origin).hostname;
     if (host.endsWith('oberschmid.homes')) {
       await ctx.addCookies([
         { name: 'rookhub_theme', value: job.theme, domain: '.oberschmid.homes', path: '/' },
-        { name: 'rookhub_lang', value: 'de', domain: '.oberschmid.homes', path: '/' },
+        { name: 'rookhub_lang', value: job.lang, domain: '.oberschmid.homes', path: '/' },
       ]);
     }
 
@@ -303,56 +388,98 @@ async function main() {
     });
     const page = await ctx.newPage();
     const consoleErrors = []; const failed = [];
-    let inflight = 0; let lastActivity = Date.now();
+    const net = { inflight: 0, lastActivity: Date.now() };
     page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 300)); });
     page.on('pageerror', e => consoleErrors.push(`Ausnahme: ${String(e.message).slice(0, 300)}`));
-    page.on('request', () => { inflight++; lastActivity = Date.now(); });
-    const finish = () => { inflight = Math.max(0, inflight - 1); lastActivity = Date.now(); };
+    page.on('request', () => { net.inflight++; net.lastActivity = Date.now(); });
+    const finish = () => { net.inflight = Math.max(0, net.inflight - 1); net.lastActivity = Date.now(); };
     page.on('requestfinished', finish);
     page.on('requestfailed', req => { finish(); if (!/favicon|\.woff/.test(req.url())) failed.push(`${req.method()} ${shortUrl(req.url())} — ${req.failure()?.errorText}`); });
     page.on('response', res => { if (res.status() >= 400 && res.url().includes('/api/')) failed.push(`${res.request().method()} ${shortUrl(res.url())} → ${res.status()}`); });
 
-    const record = { area: areaOf(job.route), id: job.id, app: job.route.app, path: job.route.url, url: job.url, auth: job.auth, viewport: job.viewport, theme: job.theme };
+    const records = [];
+    let loadError = null;
     try {
       await page.goto(origin + job.url, { waitUntil: 'load', timeout: 30000 });
-      const t0 = Date.now();
-      // „Ruhig": keine offenen Anfragen seit QUIET_MS — Poller (Glocke, Analyse) halten das Netz nie ganz still,
-      // deshalb höchstens SETTLE_MAX_MS.
-      while (Date.now() - t0 < SETTLE_MAX_MS && !(inflight === 0 && Date.now() - lastActivity > QUIET_MS)) await page.waitForTimeout(150);
+      await settle(page, net, SETTLE_MAX_MS);
       await page.addStyleTag({ content: '*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important}' });
       await page.waitForTimeout(300);
-      record.finalUrl = page.url().replace(origin, '');
-      record.findings = await page.evaluate(pageChecks, i18n);
-      const h = await page.evaluate(() => document.documentElement.scrollHeight);
-      const file = `shots/${job.id}__${job.auth}__${job.viewport}__${job.theme}.png`;
-      await page.screenshot({ path: path.join(runDir, file), fullPage: true, clip: { x: 0, y: 0, width: vp.width, height: Math.min(h, MAX_SHOT_HEIGHT) } });
-      record.file = file;
-      record.truncated = h > MAX_SHOT_HEIGHT;
     } catch (e) {
-      record.error = String(e.message).split('\n')[0];
-      record.findings = record.findings ?? [];
+      loadError = String(e.message).split('\n')[0];
     }
-    record.apiCalls = apiCalls.length;
-    if (toolDelayMs) record.toolDelayMs = toolDelayMs;   // Bild evtl. vor den Daten — vom Werkzeug, nicht von der App
-    record.console = [...new Set(consoleErrors)].slice(0, 10);
-    record.failedRequests = [...new Set(failed)].slice(0, 10);
-    if (record.finalUrl && stripQuery(record.finalUrl) !== stripQuery(job.url)) record.redirected = true;
+    for (const [i, viewport] of job.viewports.entries()) {
+      const vp = VIEWPORTS[viewport];
+      const record = { area: areaOf(job.route), id: job.id, app: job.route.app, path: job.route.url, url: job.url, auth: job.auth, viewport, theme: job.theme, lang: job.lang };
+      if (opts.fast) record.fast = true;
+      const callsBefore = i === 0 ? 0 : apiCalls.length;   // die erste Breite trägt das Laden
+      try {
+        if (loadError) throw new Error(loadError);
+        if (i > 0) {
+          // Gleiche Seite, neue Breite: keine Navigation — Fenster umstellen, Layout nachziehen lassen, dann wie
+          // nach dem Laden auf Netzruhe warten (Breakpoints können nachladen) und wieder nach oben scrollen.
+          await page.setViewportSize({ width: vp.width, height: vp.height });
+          await page.waitForTimeout(RESIZE_WAIT_MS);
+          await settle(page, net, RESIZE_SETTLE_MAX_MS);
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.waitForTimeout(100);
+        }
+        record.finalUrl = page.url().replace(origin, '');
+        record.findings = await page.evaluate(pageChecks, i18n);
+        const h = await page.evaluate(() => document.documentElement.scrollHeight);
+        // Deutsch ohne Zusatz im Namen — so bleiben die Bilder mit Läufen von vor der Sprach-Achse vergleichbar.
+        // Auch mit --fast dieselben Namen: Vergleich mit normalen Läufen greift.
+        const file = `shots/${job.id}__${job.auth}__${viewport}__${job.theme}${job.lang === 'de' ? '' : '__' + job.lang}.png`;
+        await page.screenshot({ path: path.join(runDir, file), fullPage: true, clip: { x: 0, y: 0, width: vp.width, height: Math.min(h, MAX_SHOT_HEIGHT) } });
+        record.file = file;
+        record.truncated = h > MAX_SHOT_HEIGHT;
+      } catch (e) {
+        record.error = String(e.message).split('\n')[0];
+        record.findings = record.findings ?? [];
+      }
+      // Bei --fast: die Anfragen dieser Breite (die erste trägt das Laden); Konsole/Anfragen bis hierhin.
+      record.apiCalls = apiCalls.length - (opts.fast ? callsBefore : 0);
+      if (toolDelayMs) record.toolDelayMs = toolDelayMs;   // Bild evtl. vor den Daten — vom Werkzeug, nicht von der App
+      record.console = [...new Set(consoleErrors)].slice(0, 10);
+      record.failedRequests = [...new Set(failed)].slice(0, 10);
+      if (record.finalUrl && stripQuery(record.finalUrl) !== stripQuery(job.url)) record.redirected = true;
+      records.push(record);
+    }
     await ctx.close();
     // Hat der Server trotzdem gedrosselt (sein Fenster zählt auch Anfragen von vorher), zeigt das Bild einen
-    // Fehlerzustand der Drossel, nicht der App: eine Minute Pause für alle, dann diese Aufnahme noch einmal.
-    if (record.failedRequests.some(r => r.endsWith('→ 429')) && !job.retried) {
+    // Fehlerzustand der Drossel, nicht der App: eine Minute Pause für alle, dann diese Seite (alle Breiten) noch einmal.
+    if (records.some(r => r.failedRequests.some(f => f.endsWith('→ 429'))) && !job.retried) {
       pauseUntil = Math.max(pauseUntil, Date.now() + 61000);
+      pauses429++;
       process.stdout.write(`\n429 vom Server bei ${job.id} — eine Minute Pause, dann neu\n`);
       queue.push({ ...job, retried: true });
       return;
     }
-    shots.push(record);
-    done++;
-    const marks = record.error ? 'FEHLER' : record.findings.length ? `${record.findings.length} Funde` : '';
-    process.stdout.write(`\r[${done}/${jobs.length}] ${job.id} ${job.auth}/${job.viewport} ${marks}`.padEnd(110));
+    for (const record of records) {
+      shots.push(record);
+      done++;
+      const marks = record.error ? 'FEHLER' : record.findings.length ? `${record.findings.length} Funde` : '';
+      process.stdout.write(`\r[${done}/${jobs.length}] ${job.id} ${job.auth}/${record.viewport}/${job.theme}/${job.lang} ${marks}`.padEnd(110));
+    }
   }
 
-  const queue = [...jobs];
+  // Arbeitseinheiten: normal je Aufnahme eine, mit --fast je Seite eine mit allen Breiten. Reihenfolge der Breiten
+  // bei --fast: schmalste zuerst (siehe README „--fast").
+  const units = [];
+  if (opts.fast) {
+    const byPage = new Map();
+    for (const j of jobs) {
+      const key = `${j.id}|${j.auth}|${j.theme}|${j.lang}`;
+      if (!byPage.has(key)) { const u = { ...j, viewports: [] }; delete u.viewport; byPage.set(key, u); units.push(u); }
+      byPage.get(key).viewports.push(j.viewport);
+    }
+    for (const u of units) u.viewports.sort((a, b) => VIEWPORTS[a].width - VIEWPORTS[b].width);
+  } else {
+    for (const j of jobs) units.push({ ...j, viewports: [j.viewport] });
+  }
+  let pauses429 = 0;
+  console.log(`${jobs.length} Aufnahmen${opts.fast ? ` aus ${units.length} Seitenladungen (--fast: Handy-Ansicht nur über die Breite, ohne Touch)` : ''}, `
+    + `${opts.concurrency} gleichzeitig, höchstens ${opts.rate} API-Anfragen/min`);
+  const queue = [...units];
   await Promise.all(Array.from({ length: Math.max(1, opts.concurrency) }, async () => {
     while (queue.length) await shoot(queue.shift());
   }));
@@ -364,11 +491,12 @@ async function main() {
   if (compareName) compareWith(path.join(RUNS, compareName), runDir, shots);
 
   shots.sort((a, b) => jobs.findIndex(j => j.id === a.id) - jobs.findIndex(j => j.id === b.id)
-    || a.auth.localeCompare(b.auth) || a.viewport.localeCompare(b.viewport) || a.theme.localeCompare(b.theme));
+    || a.auth.localeCompare(b.auth) || a.viewport.localeCompare(b.viewport) || a.theme.localeCompare(b.theme) || (a.lang ?? '').localeCompare(b.lang ?? ''));
   const report = {
-    run: runName, env: opts.env, local: !!opts.local, startedAt: new Date(started).toISOString(),
-    seconds: Math.round((Date.now() - started) / 1000), matrix: { viewport: opts.viewport, theme: opts.theme, auth: opts.auth },
-    comparedWith: compareName, params: resolveLog, unresolved, shots,
+    run: runName, env: opts.env, local: !!opts.local, fast: !!opts.fast, rate: opts.rate, concurrency: opts.concurrency,
+    pauses429, startedAt: new Date(started).toISOString(),
+    seconds: Math.round((Date.now() - started) / 1000), matrix: { viewport: opts.viewport, theme: opts.theme, lang: opts.lang, auth: opts.auth },
+    comparedWith: compareName, params: resolveLog, unresolved, noDataSkipped, shots,
   };
   fs.writeFileSync(path.join(runDir, 'report.json'), JSON.stringify(report, null, 2));
   writeIndex(runDir, report);
@@ -376,7 +504,7 @@ async function main() {
   const withFindings = shots.filter(hasProblems).length;
   const changed = shots.filter(s => s.diff && s.diff.status !== 'same').length;
   console.log(`\nFertig in ${report.seconds}s: ${shots.length} Aufnahmen, ${withFindings} mit Auffälligkeiten`
-    + (compareName ? `, ${changed} verändert gegenüber ${compareName}` : '') + `, ${unresolved.length} Routen nicht auflösbar.`);
+    + (compareName ? `, ${changed} verändert gegenüber ${compareName}` : '') + `, ${unresolved.length} Routen nicht auflösbar, ${pauses429} Pausen wegen 429.`);
   console.log(`Übersicht: ${path.join(runDir, 'index.html')}`);
 }
 
@@ -388,7 +516,9 @@ function previousRun(current) {
   if (!fs.existsSync(RUNS)) return null;
   // Nur Läufe derselben Art (dev/prod, lokal/deployt) — sonst vergliche man Äpfel mit Birnen.
   const kind = d => `${d.includes('_prod') ? 'prod' : 'dev'}${d.includes('_local') ? '-local' : ''}`;
+  // Ein normaler Lauf vergleicht nicht gegen einen --fast-Lauf (ohne Touch, Layout-Reste) — umgekehrt schon.
   const runs = fs.readdirSync(RUNS).filter(d => d !== current && kind(d) === kind(current)
+    && (current.includes('_fast') || !d.includes('_fast'))
     && fs.existsSync(path.join(RUNS, d, 'report.json'))).sort();
   return runs.at(-1) ?? null;
 }

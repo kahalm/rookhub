@@ -50,13 +50,13 @@ import { AuthService } from '../../core/auth.service';
   `,
   styles: [`
     mat-form-field { width: 100%; }
-    .danger-section h4 { margin: 0 0 0.25rem; color: #ef9a9a; }
+    .danger-section h4 { margin: 0 0 0.25rem; color: var(--rh-error); }
     .danger-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
-    .danger-warn { color: #ef9a9a; font-size: 0.9rem; }
+    .danger-warn { color: var(--rh-error); font-size: 0.9rem; }
     .danger-confirm { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
     .danger-actions { display: flex; gap: 8px; justify-content: flex-end; }
     .danger-link { margin: 0.75rem 0 0; font-size: 0.85rem; }
-    .danger-link a { color: #90caf9; }
+    .danger-link a { color: var(--rh-accent); }
   `]
 })
 export class DeleteAccountCardComponent {

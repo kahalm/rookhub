@@ -95,7 +95,7 @@ const valid = (d: Date | null): d is Date => !!d && !isNaN(d.getTime());
     :host { display: contents; }
     .f-date { width: 170px; }
     .f-time { width: 130px; }
-    @media (max-width: 600px) { .f-date, .f-time { width: 100%; } }
+    @media (max-width: 599.98px) { .f-date, .f-time { width: 100%; } }
   `],
 })
 export class WeeklyScheduleFieldsComponent {

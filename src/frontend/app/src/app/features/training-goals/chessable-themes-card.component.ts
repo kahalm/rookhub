@@ -46,7 +46,7 @@ import { formatDuration } from './duration.util';
     .course-list .c-time .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
     .course-list .c-lines { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .85em; }
     .course-list .c-auto { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .course-list .c-unassigned { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #d4820a 18%, transparent); color: #d4820a; }
+    .course-list .c-unassigned { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--rh-warn) 18%, transparent); color: var(--rh-warn); }
     .course-list .c-theme { width: 190px; }
     .course-list .c-theme mat-form-field { margin-bottom: -1.25em; }
   `],

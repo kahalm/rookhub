@@ -358,8 +358,10 @@
       "uploadHint": "Přetáhněte soubory PGN sem nebo klikněte pro nahrání",
       "files": "Soubory ({{count}})",
       "empty": "Zatím žádné soubory. Nahrajte soubory PGN a začněte!",
-      "filesSkipped": "{{count}} soubor(ů) přeskočen (pouze .pgn, max. 10 MB)",
-      "uploadSuccess": "{{count}} soubor(ů) nahráno",
+      "filesSkipped": "{{count}} souborů přeskočeno (pouze .pgn, max. 10 MB)",
+      "filesSkippedOne": "{{count}} soubor přeskočen (pouze .pgn, max. 10 MB)",
+      "uploadSuccess": "{{count}} souborů nahráno",
+      "uploadSuccessOne": "{{count}} soubor nahrán",
       "uploadPartial": "{{ok}} nahráno, {{failed}} selhalo",
       "downloadFailed": "Stažení se nezdařilo",
       "deleteConfirm": "Smazat tento soubor?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "Nahrát PGN(y)",
+      "uploadPgn": "Nahrát soubory PGN",
       "importing": "Importuji…",
       "poolHint": "Nastavte pro každou knihu, ve kterých poolech se úlohy zobrazují.",
       "empty": "Zatím žádné knihy nebyly importovány.",
@@ -825,10 +827,13 @@
       "eloTo": "do",
       "adminOnly": "pouze admin",
       "deleteBook": "Smazat knihu",
-      "deleteConfirm": "Smazat knihu \"{{name}}\" s {{count}} úlohou/úlohami?",
+      "deleteConfirm": "Smazat knihu \"{{name}}\" s {{count}} úlohami?",
+      "deleteConfirmOne": "Smazat knihu \"{{name}}\" s {{count}} úlohou?",
       "deleted": "Kniha \"{{name}}\" smazána",
-      "importedCount": "{{count}} úloha/úlohy importována/importovány",
+      "importedCount": "{{count}} úloh importováno",
+      "importedCountOne": "{{count}} úloha importována",
       "duplicatesCount": "{{count}} duplicitních",
+      "duplicatesCountOne": "{{count}} duplicitní",
       "invalidCount": "{{count}} neplatných",
       "columns": {
         "book": "Kniha",

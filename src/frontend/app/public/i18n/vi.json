@@ -359,7 +359,9 @@
       "files": "Tệp ({{count}})",
       "empty": "Chưa có tệp. Tải lên tệp PGN để bắt đầu!",
       "filesSkipped": "{{count}} tệp bị bỏ qua (chỉ .pgn, tối đa 10 MB)",
+      "filesSkippedOne": "{{count}} tệp bị bỏ qua (chỉ .pgn, tối đa 10 MB)",
       "uploadSuccess": "Đã tải lên {{count}} tệp",
+      "uploadSuccessOne": "Đã tải lên {{count}} tệp",
       "uploadPartial": "Đã tải lên {{ok}}, {{failed}} thất bại",
       "downloadFailed": "Tải xuống thất bại",
       "deleteConfirm": "Xóa tệp này?"
@@ -826,9 +828,12 @@
       "adminOnly": "chỉ admin",
       "deleteBook": "Xóa sách",
       "deleteConfirm": "Xóa sách \"{{name}}\" với {{count}} bài tập?",
+      "deleteConfirmOne": "Xóa sách \"{{name}}\" với {{count}} bài tập?",
       "deleted": "Đã xóa sách \"{{name}}\"",
       "importedCount": "Đã nhập {{count}} bài tập",
+      "importedCountOne": "Đã nhập {{count}} bài tập",
       "duplicatesCount": "{{count}} trùng lặp",
+      "duplicatesCountOne": "{{count}} trùng lặp",
       "invalidCount": "{{count}} không hợp lệ",
       "columns": {
         "book": "Sách",

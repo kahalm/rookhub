@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
@@ -51,7 +52,7 @@ import { WeeklyService, nextWeeklySlot } from '../weekly/weekly.service';
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule,
     MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatTooltipModule, MatDialogModule, TranslatePipe, SendToWorksheetComponent,
+    MatTooltipModule, IconLabelDirective, MatDialogModule, TranslatePipe, SendToWorksheetComponent,
     CourseLangPickerComponent, CourseTranslationsComponent,
   ],
   templateUrl: './course-detail.component.html',

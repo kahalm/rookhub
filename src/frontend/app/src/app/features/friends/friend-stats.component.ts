@@ -142,7 +142,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
               </tbody>
             </table>
           } @else {
-            <p class="empty-text">{{ 'friends.stats.noThemes' | translate }}</p>
+            <p class="empty-state">{{ 'friends.stats.noThemes' | translate }}</p>
           }
         </mat-card>
       }
@@ -160,11 +160,10 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     .compare-table th, .compare-table td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .compare-table th { font-size: 0.8rem; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .compare-table th:first-child, .compare-table td.metric { text-align: left; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .you-col { color: var(--mat-sys-primary, #3f51b5) !important; }
-    td.win { font-weight: 700; color: var(--mat-sys-primary, #3f51b5); }
+    .you-col { color: var(--mat-sys-primary) !important; }
+    td.win { font-weight: 700; color: var(--mat-sys-primary); }
     td.win::after { content: ' ▲'; font-size: 0.7em; }
     .sub { font-size: 0.75rem; color: color-mix(in srgb, currentColor 45%, transparent); }
-    .empty-text { padding: 0.5rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     @media (max-width: 768px) {
       .fs-container { padding: 0.75rem; }
       .compare-table th, .compare-table td { padding: 0.5rem 0.35rem; }

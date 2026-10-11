@@ -359,7 +359,9 @@
       "files": "فایل‌ها ({{count}})",
       "empty": "هنوز فایلی وجود ندارد. فایل‌های PGN آپلود کنید تا شروع کنید!",
       "filesSkipped": "{{count}} فایل نادیده گرفته شد (فقط .pgn، حداکثر ۱۰ مگابایت)",
+      "filesSkippedOne": "{{count}} فایل نادیده گرفته شد (فقط .pgn، حداکثر ۱۰ مگابایت)",
       "uploadSuccess": "{{count}} فایل آپلود شد",
+      "uploadSuccessOne": "{{count}} فایل آپلود شد",
       "uploadPartial": "{{ok}} آپلود شد، {{failed}} ناموفق",
       "downloadFailed": "دانلود ناموفق بود",
       "deleteConfirm": "این فایل حذف شود؟"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "آپلود PGN(ها)",
+      "uploadPgn": "آپلود فایل‌های PGN",
       "importing": "در حال وارد کردن…",
       "poolHint": "برای هر کتاب مشخص کنید تاکتیک‌ها در کدام مخازن نمایش داده شوند.",
       "empty": "هنوز کتابی وارد نشده است.",
@@ -826,9 +828,12 @@
       "adminOnly": "فقط مدیر",
       "deleteBook": "حذف کتاب",
       "deleteConfirm": "کتاب «{{name}}» با {{count}} تاکتیک حذف شود؟",
+      "deleteConfirmOne": "کتاب «{{name}}» با {{count}} تاکتیک حذف شود؟",
       "deleted": "کتاب «{{name}}» حذف شد",
       "importedCount": "{{count}} تاکتیک وارد شد",
+      "importedCountOne": "{{count}} تاکتیک وارد شد",
       "duplicatesCount": "{{count}} تکراری",
+      "duplicatesCountOne": "{{count}} تکراری",
       "invalidCount": "{{count}} نامعتبر",
       "columns": {
         "book": "کتاب",

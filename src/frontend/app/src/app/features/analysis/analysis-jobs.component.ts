@@ -23,6 +23,7 @@ import { ExternalEngineInfo, ExternalEngineService, engineTagKey } from './exter
 import { JOB_DEPTH_OPTIONS, JOB_LINE_OPTIONS } from './analysis-job-dialog.component';
 import type { EngineAnalyseLine } from './external-engine.service';
 import { SanPipe } from '../../shared/chess/san.pipe';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Seite „Analyse-Aufträge" (`/analysis/jobs`): alle Hintergrund-Aufträge des Users mit Status,
@@ -37,7 +38,7 @@ import { SanPipe } from '../../shared/chess/san.pipe';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-analysis-jobs',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+  imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatFormFieldModule, MatSelectModule, MatProgressSpinnerModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe],
   template: `
     <div class="jobs-container">
@@ -55,7 +56,7 @@ import { SanPipe } from '../../shared/chess/san.pipe';
       @if (loading) {
         <app-loading-spinner />
       } @else if (jobs.length === 0) {
-        <mat-card><mat-card-content>
+        <mat-card><mat-card-content class="empty-state">
           <p>{{ 'analysisJobs.empty' | translate }}</p>
           <p class="muted">{{ 'analysisJobs.emptyHint' | translate }}</p>
         </mat-card-content></mat-card>
@@ -82,9 +83,9 @@ import { SanPipe } from '../../shared/chess/san.pipe';
                 @if (job.lastError) { <div class="job-error"><mat-icon>error_outline</mat-icon> {{ job.lastError }}</div> }
               </div>
               <button mat-icon-button (click)="$event.stopPropagation(); openInBoard(job)"
-                      [matTooltip]="'analysisJobs.openInBoard' | translate"><mat-icon>open_in_new</mat-icon></button>
+                      [appIconLabel]="'analysisJobs.openInBoard' | translate"><mat-icon>open_in_new</mat-icon></button>
               <button mat-icon-button (click)="$event.stopPropagation(); remove(job)"
-                      [matTooltip]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
+                      [appIconLabel]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
             </div>
 
             @if (expandedId === job.id) {
@@ -166,16 +167,16 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .job-main { flex: 1; min-width: 0; }
     .job-title { display: flex; align-items: center; gap: 8px; font-weight: 500; }
     .job-meta { font-size: .85rem; color: color-mix(in srgb, currentColor 65%, transparent); margin-top: 2px; }
-    .job-error { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: #e65100; margin-top: 2px; }
+    .job-error { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--rh-warn); margin-top: 2px; }
     .job-error mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .status { font-size: .72rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; text-transform: uppercase;
       background: color-mix(in srgb, currentColor 12%, transparent); }
-    .status.running { background: rgba(46,125,50,.18); color: #2e7d32; }
-    .status.paused { background: rgba(255,160,0,.18); color: #e65100; }
-    .status.done { background: rgba(21,101,192,.15); color: #1565c0; }
-    .status.failed { background: rgba(198,40,40,.15); color: #c62828; }
+    .status.running { background: color-mix(in srgb, var(--rh-success) 18%, transparent); color: var(--rh-success); }
+    .status.paused { background: color-mix(in srgb, var(--rh-warn) 18%, transparent); color: var(--rh-warn); }
+    .status.done { background: color-mix(in srgb, var(--rh-info) 15%, transparent); color: var(--rh-info); }
+    .status.failed { background: color-mix(in srgb, var(--rh-error) 15%, transparent); color: var(--rh-error); }
     .now { margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: .72rem;
-      background: rgba(46,125,50,.16); color: #2e7d32; }
+      background: color-mix(in srgb, var(--rh-success) 16%, transparent); color: var(--rh-success); }
     /* Bewertung aus den Zustands-Tokens (UX-015), wie am Analysebrett. */
     .eval, .line-eval { font-family: 'Roboto Mono', monospace; font-weight: 600; color: var(--rh-success); }
     .eval.neg, .line-eval.neg { color: var(--rh-error); }
@@ -192,7 +193,7 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .engine { width: 220px; }
     .house-hint { display: flex; align-items: center; gap: 4px; margin: 0; flex: 1 1 240px; }
     .house-hint mat-icon { font-size: 16px; width: 16px; height: 16px; flex: 0 0 auto; }
-    @media (max-width: 700px) { .job-body { padding-left: 12px; } .board, .board app-chess-board { width: 100%; max-width: 320px; } }
+    @media (max-width: 768px) { .job-body { padding-left: 12px; } .board, .board app-chess-board { width: 100%; max-width: 320px; } }
   `],
 })
 export class AnalysisJobsComponent implements OnInit, OnDestroy {

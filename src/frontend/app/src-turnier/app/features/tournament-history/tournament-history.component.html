@@ -1,5 +1,5 @@
 <div class="page">
-  <div class="page-head">
+  <div class="header">
     <h1>
       {{ 'turnier.history.title' | translate }}
       <app-help-hint [text]="'turnier.history.help' | translate" />
@@ -104,8 +104,7 @@
           @if (activeTab(); as tab) {
             @if (tab.kind === 'tracked') {
               <button mat-icon-button type="button" class="untrack" (click)="removeTracked(tab)"
-                      [matTooltip]="'turnier.history.track.remove' | translate"
-                      [attr.aria-label]="'turnier.history.track.remove' | translate">
+                      [appIconLabel]="'turnier.history.track.remove' | translate">
                 <mat-icon>person_remove</mat-icon>
               </button>
             }
@@ -246,7 +245,7 @@
         }
 
         @if (history.status === 'ok' && history.entries.length === 0) {
-          <p class="muted">{{ 'turnier.history.empty' | translate }}</p>
+          <p class="empty-state muted">{{ 'turnier.history.empty' | translate }}</p>
         }
       </mat-card>
     }

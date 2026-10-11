@@ -61,7 +61,7 @@
   mat-icon { font-size: 14px; width: 14px; height: 14px; }
 }
 
-.badge--calc { background: #e3f2fd; color: #1565c0; }
+.badge--calc { background: color-mix(in srgb, var(--rh-info) 18%, transparent); color: var(--rh-info); }
 .badge--theme { background: color-mix(in srgb, currentColor 8%, transparent); font-weight: 500; }
 
 .description {
@@ -124,7 +124,7 @@
   .label-short { display: inline; }
   .actions .calc-toggle { order: 10; margin-left: 0; }
 
-  /* UI-Sweep r3: bei 390 px brach das ⋮ trotzdem allein in eine eigene Zeile (zwei Knöpfe + 48-px-Tippfläche sind
+  /* UI-Sweep 2026-10-11 (Nachprüfung Runde 3): bei 390 px brach das ⋮ trotzdem allein in eine eigene Zeile (zwei Knöpfe + 48-px-Tippfläche sind
      knapp über der Kartenbreite). Als Raster: die Knöpfe links (dürfen schrumpfen), ⋮ rechts in derselben Zeile,
      der Kalkulations-Schalter darunter. Das leere mat-menu-Element bekäme sonst eine eigene Rasterzelle. */
   .actions {
@@ -162,6 +162,12 @@
 }
 
 .spacer { flex: 1; }
+
+/* Leerzustand nach docs/DESIGN.md 5.10: globale .empty-state (zentriert, Polster) + leise Schrift. */
+.empty-state {
+  font-style: italic;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
 
 .empty {
   margin: 0.4rem 0;
@@ -227,7 +233,7 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  color: #1565c0;
+  color: var(--rh-accent);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -306,6 +312,6 @@
   white-space: nowrap;
 }
 
-.pill--position { background: #e3f2fd; color: #1565c0; }
+.pill--position { background: color-mix(in srgb, var(--rh-info) 18%, transparent); color: var(--rh-info); }
 
-.danger { color: #c62828; }
+.danger { color: var(--rh-error); }

@@ -98,7 +98,7 @@ export interface SolveModeDialogResult {
     .sm-desc { font-size: .85rem; line-height: 1.4; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sm-all { display: block; margin: 0 0 4px; }
     .sm-hint { margin: 4px 0 0; font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    @media (max-width: 600px) {
+    @media (max-width: 599.98px) {
       .sm-choices { grid-template-columns: 1fr; }
       .sm-choice { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 12px; }
       .sm-desc { flex-basis: 100%; }

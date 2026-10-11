@@ -358,8 +358,10 @@
       "uploadHint": "Sleep PGN-bestanden hierheen of klik om te uploaden",
       "files": "Bestanden ({{count}})",
       "empty": "Nog geen bestanden. Upload PGN-bestanden om te beginnen!",
-      "filesSkipped": "{{count}} bestand(en) overgeslagen (alleen .pgn, max. 10 MB)",
-      "uploadSuccess": "{{count}} bestand(en) geüpload",
+      "filesSkipped": "{{count}} bestanden overgeslagen (alleen .pgn, max. 10 MB)",
+      "filesSkippedOne": "{{count}} bestand overgeslagen (alleen .pgn, max. 10 MB)",
+      "uploadSuccess": "{{count}} bestanden geüpload",
+      "uploadSuccessOne": "{{count}} bestand geüpload",
       "uploadPartial": "{{ok}} geüpload, {{failed}} mislukt",
       "downloadFailed": "Downloaden mislukt",
       "deleteConfirm": "Dit bestand verwijderen?"
@@ -817,7 +819,7 @@
       }
     },
     "books": {
-      "uploadPgn": "PGN('s) uploaden",
+      "uploadPgn": "PGN-bestanden uploaden",
       "importing": "Importeren…",
       "poolHint": "Stel per boek in welke pools de puzzels in verschijnen.",
       "empty": "Nog geen boeken geïmporteerd.",
@@ -825,10 +827,13 @@
       "eloTo": "tot",
       "adminOnly": "alleen beheerder",
       "deleteBook": "Boek verwijderen",
-      "deleteConfirm": "Boek \"{{name}}\" met {{count}} puzzel(s) verwijderen?",
+      "deleteConfirm": "Boek \"{{name}}\" met {{count}} puzzels verwijderen?",
+      "deleteConfirmOne": "Boek \"{{name}}\" met {{count}} puzzel verwijderen?",
       "deleted": "Boek \"{{name}}\" verwijderd",
-      "importedCount": "{{count}} puzzel(s) geïmporteerd",
-      "duplicatesCount": "{{count}} duplicaat/duplicaten",
+      "importedCount": "{{count}} puzzels geïmporteerd",
+      "importedCountOne": "{{count}} puzzel geïmporteerd",
+      "duplicatesCount": "{{count}} duplicaten",
+      "duplicatesCountOne": "{{count}} duplicaat",
       "invalidCount": "{{count}} ongeldig",
       "columns": {
         "book": "Boek",

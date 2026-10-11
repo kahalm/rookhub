@@ -153,13 +153,13 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .repo-card { border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 8px; padding: 10px 12px; }
     .repo-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; }
     .repo-title mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.6; }
-    .repo-error { color: #e53935; font-size: 0.78rem; font-weight: 400; }
+    .repo-error { color: var(--rh-error); font-size: 0.78rem; font-weight: 400; }
     /* 👁 „beobachten"-Knopf je Repo: schaltet den 10-s-Schnell-Poll für dieses eine Repo ein. */
     .watch-btn { display: inline-flex; align-items: center; justify-content: center; border: none; background: none;
       cursor: pointer; padding: 2px; border-radius: 6px; color: inherit; opacity: 0.55; line-height: 0; }
     .watch-btn:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
     .watch-btn mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 1; }
-    .watch-btn.watching { opacity: 1; color: #1565c0; }   /* aktiv = blau (baut/schnell-poll) */
+    .watch-btn.watching { opacity: 1; color: var(--rh-accent); }   /* aktiv = blau (baut/schnell-poll) */
     @keyframes watch-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
     .watch-btn.watching mat-icon { animation: watch-pulse 1.4s ease-in-out infinite; }
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }

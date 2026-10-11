@@ -14,7 +14,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -37,6 +36,7 @@ import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { SanPipe } from '../../shared/chess/san.pipe';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -51,20 +51,19 @@ import { SanPipe } from '../../shared/chess/san.pipe';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-game-edit',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatTooltipModule,
-    MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent, GameReviewComponent, SanPipe,
+    MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent, GameReviewComponent, SanPipe,
   ],
   template: `
     <div class="edit-page">
       @if (loading()) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (notFound()) {
-        <mat-card class="empty"><mat-icon>link_off</mat-icon><p>{{ 'games.edit.notFound' | translate }}</p></mat-card>
+        <mat-card class="empty-state"><mat-icon>link_off</mat-icon><p>{{ 'games.edit.notFound' | translate }}</p></mat-card>
       } @else {
-        <div class="head">
-          <a mat-icon-button [routerLink]="['/games', gameId]" [matTooltip]="'common.back' | translate" [attr.aria-label]="'common.back' | translate">
+        <div class="header">
+          <a mat-icon-button [routerLink]="['/games', gameId]" [appIconLabel]="'common.back' | translate">
             <mat-icon>arrow_back</mat-icon>
           </a>
           <h1>{{ 'games.edit.title' | translate }}</h1>
@@ -146,11 +145,11 @@ import { SanPipe } from '../../shared/chess/san.pipe';
                   </mat-button-toggle-group>
                 }
                 <span class="spacer"></span>
-                <button mat-icon-button (click)="zoom.set(!zoom())" [matTooltip]="(zoom() ? 'games.edit.zoomOut' : 'games.edit.zoomIn') | translate">
+                <button mat-icon-button (click)="zoom.set(!zoom())" [appIconLabel]="(zoom() ? 'games.edit.zoomOut' : 'games.edit.zoomIn') | translate">
                   <mat-icon>{{ zoom() ? 'zoom_out' : 'zoom_in' }}</mat-icon>
                 </button>
-                <button mat-icon-button (click)="openPhoto(false)" [matTooltip]="'games.photo.show' | translate"><mat-icon>open_in_full</mat-icon></button>
-                <button mat-icon-button (click)="openPhoto(true)" [matTooltip]="'games.photo.download' | translate"><mat-icon>download</mat-icon></button>
+                <button mat-icon-button (click)="openPhoto(false)" [appIconLabel]="'games.photo.show' | translate"><mat-icon>open_in_full</mat-icon></button>
+                <button mat-icon-button (click)="openPhoto(true)" [appIconLabel]="'games.photo.download' | translate"><mat-icon>download</mat-icon></button>
               </div>
               <div class="photo-scroll" [class.zoom]="zoom()">
                 <img [src]="src" [alt]="'games.edit.photo' | translate" (load)="onPhotoLoad($event)" />
@@ -298,9 +297,9 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     /* Werkbank-Seite: am PC mehr Breite als die üblichen 1240 px (Foto + Brett + Zugliste nebeneinander). */
     .edit-page { max-width: min(1800px, 98vw); margin: 0 auto; padding: 12px 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; }
-    .head { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
-    .head h1 { margin: 0; font-size: 1.4rem; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; }
+    .header { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+    .header h1 { margin: 0; font-size: 1.4rem; }
     .spacer { flex: 1; }
     /* Kopfdaten: kompakt, am PC in EINER Zeile (vorher zwei, die den Arbeitsbereich unter den Rand schoben). */
     /* UI-Sweep 2026-10-11 (r2-rg-edit-fields): auto-FIT statt auto-fill — die Felder teilen sich die ganze Kartenbreite,
@@ -316,14 +315,14 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }
     .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     @media (max-width: 1100px) { .layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .photo { grid-column: 1 / -1; } }
-    @media (max-width: 720px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 768px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
     .photo { padding: 8px; }
     /* Zweite Zeile: Seite/Liga, Modus/Jahrgang, Tags — ein gemeinsamer Hinweis darunter statt drei umbrechender. */
     .class-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) minmax(180px, 1fr);
       gap: 8px 12px; align-items: center; }
     .class-row .tag-chips { grid-column: 1 / -1; }
     .class-hint { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    @media (max-width: 720px) { .class-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .class-row .tags-input { grid-column: 1 / -1; } }
+    @media (max-width: 768px) { .class-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .class-row .tags-input { grid-column: 1 / -1; } }
     /* UI-Sweep 2026-10-11 (r2-rg-edit-fields): am schmalen Handy passt „Modus / Jahrgang" nicht in die halbe Breite. */
     @media (max-width: 420px) { .class-row { grid-template-columns: minmax(0, 1fr); } }
     .tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -356,13 +355,13 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .san.bad { text-decoration: line-through; color: var(--mat-sys-error, #c62828); }
     .written { font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .chip { font-size: 0.75rem; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; }
-    .chip.warn, .warn-text { color: #ef6c00; }
-    .chip.ok { color: #2e7d32; }
+    .chip.warn, .warn-text { color: var(--rh-warn); }
+    .chip.ok { color: var(--rh-success); }
     .chip.bad { color: var(--mat-sys-error, #c62828); }
     .options { display: flex; flex-direction: column; gap: 6px; }
     .options .label { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .option { justify-content: flex-start; text-align: left; height: auto; padding: 6px 12px; line-height: 1.3; }
-    .option.chosen { border-color: #ef6c00; border-width: 2px; }
+    .option.chosen { border-color: var(--rh-warn); border-width: 2px; }
     .o-san { font-family: monospace; font-weight: 600; margin-right: 8px; }
     .o-reach { font-size: 0.8rem; margin-right: 8px; }
     .o-preview { font-family: monospace; font-size: 0.8rem; opacity: 0.7; }
@@ -380,11 +379,11 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .ply { font: inherit; font-weight: 500; text-align: left; padding: 3px 8px; border-radius: 4px; cursor: pointer;
       border: 1px solid transparent; background: transparent; color: inherit; }
     .ply:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .ply.uncertain { border-color: #ef6c00; background: color-mix(in srgb, #ef6c00 12%, transparent); }
-    .ply.confirmed { color: #2e7d32; }
+    .ply.uncertain { border-color: var(--rh-warn); background: color-mix(in srgb, var(--rh-warn) 12%, transparent); }
+    .ply.confirmed { color: var(--rh-success); }
     .ply.user { font-style: italic; }
     .ply.illegal { color: var(--mat-sys-error, #c62828); text-decoration: line-through; }
-    .ply.cursor { outline: 2px solid var(--mat-sys-primary, #3f51b5); }
+    .ply.cursor { outline: 2px solid var(--mat-sys-primary); }
     .ply.end { font-family: inherit; font-size: 0.8rem; opacity: 0.7; }
     .unresolved { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; color: var(--mat-sys-error, #c62828); font-size: 0.9rem; }
     .unresolved span { font-family: monospace; word-break: break-word; }

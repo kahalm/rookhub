@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService } from './course.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -29,7 +29,7 @@ export interface LinkCourseDialogData {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-link-course-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatTooltipModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, IconLabelDirective, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'courses.link.title' | translate:{ name: data.displayName } }}</h2>
     <mat-dialog-content>
@@ -40,7 +40,7 @@ export interface LinkCourseDialogData {
           <mat-icon>link</mat-icon>
           <span class="cur-name">{{ 'courses.link.currently' | translate:{ name: data.currentLinkedName || '' } }}</span>
           <button mat-icon-button class="unlink-btn" [disabled]="busy"
-                  [matTooltip]="'courses.link.unlink' | translate" (click)="unlink()">
+                  [appIconLabel]="'courses.link.unlink' | translate" (click)="unlink()">
             <mat-icon>link_off</mat-icon>
           </button>
         </div>
@@ -61,7 +61,7 @@ export interface LinkCourseDialogData {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close(changed)">{{ 'common.close' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!selected || busy" (click)="link()">
+      <button mat-flat-button color="primary" [disabled]="!selected || busy" (click)="link()">
         {{ 'courses.link.linkButton' | translate }}
       </button>
     </mat-dialog-actions>
@@ -69,7 +69,7 @@ export interface LinkCourseDialogData {
   styles: [`
     .hint { margin: 0 0 12px; font-size: 0.88rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .current { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; min-width: min(360px, 80vw); }
-    .current mat-icon { color: var(--mat-sys-primary, #3f51b5); }
+    .current mat-icon { color: var(--mat-sys-primary); }
     .cur-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .picker { width: 100%; }
     .empty { font-style: italic; font-size: 0.85rem; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0; }

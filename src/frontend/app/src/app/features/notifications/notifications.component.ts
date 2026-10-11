@@ -64,7 +64,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
       } @else if (loadError && items.length === 0) {
         <app-load-error (retry)="loadMore()" />
       } @else if (items.length === 0) {
-        <p class="empty">{{ 'notifications.empty' | translate }}</p>
+        <p class="empty-state">{{ 'notifications.empty' | translate }}</p>
       } @else {
         @if (availableCategories.length > 0) {
           <div class="filter-bar">
@@ -89,7 +89,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
         }
 
         @if (visibleItems.length === 0) {
-          <p class="empty">{{ 'notifications.filter.allHidden' | translate }}</p>
+          <p class="empty-state">{{ 'notifications.filter.allHidden' | translate }}</p>
         } @else {
           <mat-card>
             <mat-card-content class="list">
@@ -117,11 +117,10 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
   `,
   styles: [`
     .notif-container { max-width: 760px; margin: 24px auto; padding: 0 16px; }
-    .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .push-card { margin-bottom: 16px; }
     .push-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 6px; }
     .push-hint { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); margin: 0 0 10px; }
-    .push-hint.push-denied { color: #c62828; }
+    .push-hint.push-denied { color: var(--rh-error); }
     .push-cats { display: flex; flex-wrap: wrap; gap: 8px 20px; }
     .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 12px; }
     .filter-label { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
@@ -136,7 +135,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
     .row.clickable { cursor: pointer; }
     .row.clickable:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .row.unseen { font-weight: 600; }
-    .row.unseen .row-icon { color: var(--mat-sys-primary, #3f51b5); }
+    .row.unseen .row-icon { color: var(--mat-sys-primary); }
     .row-icon { color: color-mix(in srgb, currentColor 45%, transparent); flex: 0 0 auto; }
     .row-text { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
     .row-date { flex: 0 0 auto; font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }

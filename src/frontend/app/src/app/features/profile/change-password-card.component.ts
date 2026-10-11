@@ -44,7 +44,7 @@ import { AuthService } from '../../core/auth.service';
           </mat-form-field>
           <div class="changepwd-actions">
             <button mat-button type="button" (click)="cancelChangePwd()">{{ 'common.cancel' | translate }}</button>
-            <button mat-raised-button color="primary" type="button" (click)="changePassword()"
+            <button mat-flat-button color="primary" type="button" (click)="changePassword()"
               [disabled]="!changePwdCurrent || !changePwdNew || !changePwdConfirm || changingPwd">
               {{ changingPwd ? ('profile.changePwd.saving' | translate) : ('profile.changePwd.save' | translate) }}
             </button>
@@ -55,7 +55,7 @@ import { AuthService } from '../../core/auth.service';
   `,
   styles: [`
     mat-form-field { width: 100%; }
-    .changepwd-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
+    .changepwd-section h4 { margin: 0 0 0.5rem; color: var(--rh-accent); }
     .changepwd-form { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
     .changepwd-actions { display: flex; gap: 8px; justify-content: flex-end; }
   `]

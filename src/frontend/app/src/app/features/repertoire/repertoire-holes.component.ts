@@ -177,7 +177,7 @@ export interface HoleBoardView {
     .spacer { flex: 1; }
     .chip { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 12px; cursor: pointer;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
-    .chip.on { background: var(--mat-sys-primary, #3f51b5); color: var(--mat-sys-on-primary, #fff); border-color: transparent; }
+    .chip.on { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary, #fff); border-color: transparent; }
     .threshold { font-size: 13px; display: flex; align-items: center; gap: 4px; }
     .threshold input { width: 56px; font: inherit; padding: 2px 4px; }
     .progress { padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -190,7 +190,7 @@ export interface HoleBoardView {
       background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
       padding: 6px 8px; }
     .hole:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    .hole.sel { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent); }
+    .hole.sel { background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
     .hole-main { display: flex; align-items: baseline; gap: 8px; }
     .move { font-weight: 600; font-family: 'Roboto Mono', monospace; }
     .share { font-size: 13px; }

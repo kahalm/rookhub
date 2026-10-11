@@ -15,7 +15,7 @@
 .wsv-text { margin: 10px 0 0; font-size: 0.95rem; line-height: 1.4; overflow-wrap: anywhere; }
 
 .wsv-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }
-.wsv-status.wsv-ok { color: #2e7d32; }
+.wsv-status.wsv-ok { color: var(--rh-success); }
 .wsv-status.wsv-bad { color: var(--mat-sys-error, #b3261e); }
 
 .wsv-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }

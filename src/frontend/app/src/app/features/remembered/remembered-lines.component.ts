@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
@@ -37,12 +38,12 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
   selector: 'app-remembered-lines',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, IconLabelDirective,
     MatProgressSpinnerModule, MatCheckboxModule, TranslatePipe, ChessBoardComponent,
   ],
   template: `
     <div class="remembered-page">
-      <div class="head">
+      <div class="header">
         <h1>{{ 'remembered.title' | translate }}</h1>
         <p class="hint">{{ 'remembered.hint' | translate }}</p>
       </div>
@@ -67,7 +68,7 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (items.length === 0) {
-        <mat-card class="empty">
+        <mat-card class="empty-state">
           <mat-icon>bookmark_border</mat-icon>
           <p>{{ 'remembered.empty' | translate }}</p>
         </mat-card>
@@ -109,14 +110,14 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
                   <mat-icon>science</mat-icon> {{ 'remembered.analyze' | translate }}
                 </a>
                 @if (!p.analysis && auth.isLoggedIn) {
-                  <button mat-icon-button (click)="queueAnalysis(p)" [matTooltip]="'analysis.queueBackground' | translate">
+                  <button mat-icon-button (click)="queueAnalysis(p)" [appIconLabel]="'analysis.queueBackground' | translate">
                     <mat-icon>schedule</mat-icon>
                   </button>
                 }
-                <button mat-icon-button (click)="copyFen(p)" [matTooltip]="'remembered.copyFen' | translate">
+                <button mat-icon-button (click)="copyFen(p)" [appIconLabel]="'remembered.copyFen' | translate">
                   <mat-icon>content_copy</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" (click)="remove(p)" [matTooltip]="'remembered.delete' | translate">
+                <button mat-icon-button color="warn" (click)="remove(p)" [appIconLabel]="'remembered.delete' | translate">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -128,27 +129,26 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
   `,
   styles: [`
     .remembered-page { max-width: 1100px; margin: 0 auto; padding: 16px; }
-    .head h1 { margin: 0 0 4px; }
-    .head .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; }
+    .header h1 { margin: 0 0 4px; }
+    .header .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
     .item { padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
-    .item.selected { outline: 2px solid var(--mat-sys-primary, #3f51b5); }
+    .item.selected { outline: 2px solid var(--mat-sys-primary); }
     .pick { position: absolute; top: 4px; right: 4px; z-index: 1; background: color-mix(in srgb, var(--mat-sys-surface, #fff) 80%, transparent); border-radius: 4px; }
     .select-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 10px; margin-bottom: 12px;
       border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); position: sticky; top: 0; z-index: 2; }
-    .select-bar.active { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent); }
+    .select-bar.active { background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
     .sel-count { font-weight: 600; }
     .sel-hint { font-size: .85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .board { width: 100%; }
     .board app-chess-board { display: block; width: 100%; }
     .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .course { font-weight: 500; }
-    .course a { display: inline-flex; align-items: center; gap: 3px; color: #1976d2; text-decoration: none; }
+    .course a { display: inline-flex; align-items: center; gap: 3px; color: var(--rh-accent); text-decoration: none; }
     .course a:hover, .course .link:hover { text-decoration: underline; }
-    .course .link { font: inherit; font-weight: 500; color: #1976d2; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+    .course .link { font: inherit; font-weight: 500; color: var(--rh-accent); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
     .course .ext { font-size: 14px; width: 14px; height: 14px; }
     .date { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .fen { font-family: monospace; font-size: 0.72rem; color: color-mix(in srgb, currentColor 55%, transparent);
@@ -159,12 +159,12 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
     .analysis:hover { text-decoration: underline; }
     .status { font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; text-transform: uppercase;
       background: color-mix(in srgb, currentColor 12%, transparent); }
-    .status.running { background: rgba(46,125,50,.18); color: #2e7d32; }
-    .status.paused { background: rgba(255,160,0,.18); color: #e65100; }
-    .status.done { background: rgba(21,101,192,.15); color: #1565c0; }
-    .status.failed { background: rgba(198,40,40,.15); color: #c62828; }
-    .eval { font-family: monospace; font-weight: 600; color: #2e7d32; }
-    .eval.neg { color: #c62828; }
+    .status.running { background: color-mix(in srgb, var(--rh-success) 18%, transparent); color: var(--rh-success); }
+    .status.paused { background: color-mix(in srgb, var(--rh-warn) 18%, transparent); color: var(--rh-warn); }
+    .status.done { background: color-mix(in srgb, var(--rh-info) 15%, transparent); color: var(--rh-info); }
+    .status.failed { background: color-mix(in srgb, var(--rh-error) 15%, transparent); color: var(--rh-error); }
+    .eval { font-family: monospace; font-weight: 600; color: var(--rh-success); }
+    .eval.neg { color: var(--rh-error); }
     .actions { display: flex; align-items: center; gap: 4px; margin-top: auto; }
     .actions a { flex: 1; }
   `]

@@ -18,6 +18,7 @@ import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { pgnHeaderText } from '../../shared/pgn-viewer/pgn-header.util';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /** Ein Chapter-Bucket mit seinen Linien. Reihenfolge = erstes Auftreten im PGN (die Gruppierung
  *  selbst liegt in `shared/lines/chapter-groups.util`, geteilt mit der Kurs-Durchsicht). */
@@ -34,7 +35,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-lines',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, RouterLink, MatListModule, MatIconModule, MatButtonModule, MatMenuModule,
     MatTooltipModule, TranslatePipe, MoveListComponent, SanPipe,
   ],
@@ -85,7 +86,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               <mat-icon>style</mat-icon><span class="bar-label">{{ 'repertoire.lines.sr.flashcardsShort' | translate }}</span>
             </a>
             <button mat-icon-button [matMenuTriggerFor]="courseMenu" [disabled]="busy"
-                    [matTooltip]="'repertoire.lines.sr.courseActions' | translate"><mat-icon>more_vert</mat-icon></button>
+                    [appIconLabel]="'repertoire.lines.sr.courseActions' | translate"><mat-icon>more_vert</mat-icon></button>
             <mat-menu #courseMenu="matMenu">
               <button mat-menu-item (click)="promote(allKeys())"><mat-icon>playlist_add</mat-icon>{{ 'repertoire.lines.sr.addAll' | translate }}</button>
               <button mat-menu-item (click)="makeDue(allKeys())"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeAllDue' | translate }}</button>
@@ -95,7 +96,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
           </div>
         }
         @if (chapterGroups().length === 0) {
-          <div class="empty">{{ 'repertoire.lines.empty' | translate }}</div>
+          <div class="empty-state">{{ 'repertoire.lines.empty' | translate }}</div>
         } @else {
           @for (group of chapterGroups(); track group.chapter) {
             <div class="chapter-block">
@@ -192,7 +193,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     }
   `,
   styles: [`
-    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary, #3f51b5); flex: 0 0 auto; }
+    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary); flex: 0 0 auto; }
     :host { display: block; height: 100%; }
     .lines-list { overflow-y: auto; height: 100%; }
     .course-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px;
@@ -239,9 +240,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sr-badge { flex: 0 0 auto; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); color: color-mix(in srgb, currentColor 65%, transparent); }
-    .sr-badge.due { background: rgba(46,125,50,.18); color: #2e7d32; }
-    .sr-badge.scheduled { background: rgba(21,101,192,.15); color: #1565c0; }
-    .sr-badge.paused { background: rgba(255,160,0,.18); color: #e65100; }
+    .sr-badge.due { background: color-mix(in srgb, var(--rh-success) 18%, transparent); color: var(--rh-success); }
+    .sr-badge.scheduled { background: color-mix(in srgb, var(--rh-info) 15%, transparent); color: var(--rh-info); }
+    .sr-badge.paused { background: color-mix(in srgb, var(--rh-warn) 18%, transparent); color: var(--rh-warn); }
     .sr-badge.info { background: rgba(97,97,97,.15); color: #616161; }
     .move-view { display: flex; flex-direction: column; height: 100%; }
     .back-btn { align-self: flex-start; margin: 4px; }
@@ -250,7 +251,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .players { font-weight: 500; }
     .result { color: var(--rh-accent); font-weight: 600; }
     .move-list-wrap { flex: 1; overflow: hidden; }
-    .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .empty-state { color: color-mix(in srgb, currentColor 47%, transparent); }
   `],
 })
 export class RepertoireLinesComponent implements OnInit, OnChanges {

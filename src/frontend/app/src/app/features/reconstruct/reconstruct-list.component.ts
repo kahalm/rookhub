@@ -7,11 +7,11 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ReconstructService, ReconstructionListItem } from './reconstruct.service';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Übersicht der Partien, die gerade rekonstruiert werden — anlegen, öffnen, löschen.
@@ -24,11 +24,11 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-reconstruct-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule,
-    MatFormFieldModule, MatIconModule, MatInputModule, MatTooltipModule, TranslatePipe],
+  imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule,
+    MatFormFieldModule, MatIconModule, MatInputModule, TranslatePipe],
   template: `
     <div class="page">
-      <div class="head">
+      <div class="header">
         <div>
           <h1>{{ 'reconstruct.title' | translate }}</h1>
           <p class="muted">{{ 'reconstruct.intro' | translate }}</p>
@@ -49,7 +49,7 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
       @if (loading()) {
         <p class="muted">{{ 'common.loading' | translate }}</p>
       } @else if (items().length === 0) {
-        <p class="muted empty">{{ 'reconstruct.empty' | translate }}</p>
+        <p class="muted empty-state">{{ 'reconstruct.empty' | translate }}</p>
       } @else {
         <div class="grid">
           @for (item of items(); track item.id) {
@@ -70,8 +70,7 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
                   <mat-icon>edit</mat-icon> {{ 'reconstruct.open' | translate }}
                 </a>
                 <button mat-icon-button [disabled]="busy()" (click)="remove(item)"
-                        [matTooltip]="'common.delete' | translate"
-                        [attr.aria-label]="'common.delete' | translate">
+                        [appIconLabel]="'common.delete' | translate">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -85,7 +84,7 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
     .page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 1rem; }
     h1 { margin: 0 0 0.25rem; }
     .muted { opacity: 0.75; }
-    .empty { margin-top: 1rem; }
+    .empty-state { margin-top: 1rem; }
     /* flex-direction MUSS hier stehen: mat-card ist selbst ein Flexbox in SPALTEN-Richtung, und
        ohne diese Zeile wirkte \`flex: 1 1 260px\` unten auf die HOEHE — das Titelfeld stand als
        212 x 260 px grosser Kasten da statt als Textzeile. */
@@ -98,8 +97,8 @@ import { ReconstructService, ReconstructionListItem } from './reconstruct.servic
     .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
     .chip { font-size: 0.8rem; padding: 2px 8px; border-radius: 10px;
             background: color-mix(in srgb, currentColor 12%, transparent); }
-    .chip.ok { background: color-mix(in srgb, #2e7d32 28%, transparent); }
-    .chip.warn { background: color-mix(in srgb, #e65100 30%, transparent); }
+    .chip.ok { background: color-mix(in srgb, var(--rh-success) 28%, transparent); }
+    .chip.warn { background: color-mix(in srgb, var(--rh-warn) 30%, transparent); }
     .actions { display: flex; align-items: center; justify-content: space-between; }
   `],
 })
