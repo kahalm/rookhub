@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.751.5", date: "2026-10-11", changes: [
+    { en: "Developer documentation: the frontend notes for the coding assistant shrink from about 1,000 to 275 lines; feature descriptions now live in one file per area under docs/frontend/. No change to the app.",
+      de: "Entwickler-Doku: die Frontend-Notizen für den Code-Assistenten schrumpfen von rund 1 000 auf 275 Zeilen; Feature-Beschreibungen stehen jetzt je Bereich unter docs/frontend/. Keine Änderung an der App." },
+  ] },
   { version: "0.751.4", date: "2026-10-11", changes: [
     { en: "Developer documentation: new design rules for all five sites (docs/DESIGN.md) — general rules, area-specific rules, process and a change log; new and changed UI has to follow them.",
       de: "Entwickler-Doku: neue Gestaltungsregeln für alle fünf Oberflächen (docs/DESIGN.md) — allgemeine Regeln, Bereichsregeln, Ablauf und Änderungsprotokoll; neue und geänderte Oberflächen müssen ihnen folgen." },

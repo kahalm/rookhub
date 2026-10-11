@@ -110,7 +110,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
   `grep -rl "^# X" docs/` findet sie.
 - Datenbank-Schema: `docs/datenbank-schema.md` · Oberflächen (RookHub/Turnier/KidHub, Filterleiste): `docs/oberflaechen.md`
 - Konventionen im Volltext (mit Begründung und Fallen): `docs/konventionen.md` · CI/CD im Detail: `docs/ci.md`
-- Frontend-Regeln: `src/frontend/CLAUDE.md` (lädt automatisch, sobald man dort arbeitet) · Gestaltung: `docs/DESIGN.md` (verbindlich)
+- Frontend-Regeln: `src/frontend/CLAUDE.md` (lädt automatisch, sobald man dort arbeitet); Frontend-Feature-Doku: `docs/frontend/` · Gestaltung: `docs/DESIGN.md` (verbindlich)
 
 ### Endpunkte und Features je Bereich (`docs/api/`)
 
