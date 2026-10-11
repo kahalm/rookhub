@@ -1,6 +1,7 @@
 using Chess;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Tests;
 

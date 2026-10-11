@@ -131,7 +131,7 @@ public class JwtTokensTests : IDisposable
     public void JwtKey_NurInJwtTokensGelesen()
     {
         Assert.Equal(
-            ["Services/JwtTokens.cs", "Services/ScoresheetScanService.cs", "Services/SecretConfigCheck.cs"],
+            ["Services/JwtTokens.cs", "Services/Scoresheet/ScoresheetScanService.cs", "Services/SecretConfigCheck.cs"],
             DateienMit(new Regex(@"\[""Jwt:Key""\]")));
     }
 }

@@ -1,6 +1,6 @@
 using SkiaSharp;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// Bildvorbereitung für Formular-Fotos: aufrecht drehen (EXIF), verkleinern, als JPEG kodieren.

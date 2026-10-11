@@ -946,7 +946,7 @@ public class DeploymentConfigTests
                 Assert.True(nginxBytes >= apiBytes, $"nginx erlaubt {nginxBytes} Bytes, {controller.Name}.{method} bis {apiBytes}");
             }
         }
-        Assert.True(nginxBytes >= RookHub.Api.Services.ScoresheetScanService.MaxUploadBytes);
+        Assert.True(nginxBytes >= RookHub.Api.Services.Scoresheet.ScoresheetScanService.MaxUploadBytes);
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 using Chess;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// Die Lese-Schleife einer Formular-Einlesung — Modell fragen, auflösen, bei einer Sackgasse nachfragen — OHNE

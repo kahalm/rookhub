@@ -13,6 +13,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Club;
 using SkiaSharp;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Tests;
 

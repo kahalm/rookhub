@@ -1,5 +1,6 @@
 using RookHub.Api.Services;
 using SkiaSharp;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Tests;
 

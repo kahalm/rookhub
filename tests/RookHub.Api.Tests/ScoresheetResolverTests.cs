@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Tests;
 

@@ -148,7 +148,7 @@ Solche Zeilen stehen nicht in `GET /api/scoresheets`. Das UPDATE läuft im selbe
 Upload-Seite zeigt den Verbrauch in Prozent (`budgetUsedPercent`, das knappere Budget) und bei erreichter Tageszahl,
 ab wann die nächste geht (`nextAllowedAt`).
 
-**Engine-Prüfung der Lesung** (0.646.0, `Services/ScoresheetPlausibility.cs`, gemeldet 2026-10-03 an Gruber–Schöler,
+**Engine-Prüfung der Lesung** (0.646.0, `Services/Scoresheet/ScoresheetPlausibility.cs`, gemeldet 2026-10-03 an Gruber–Schöler,
 LeagueHub-Vereinspartie 153: „viele Zickzack in der Bewertung — meist ein Zeichen, dass ein Zug nicht richtig erkannt wurde").
 Das Modell hatte „Tc1" als „Te1" und „Ke4" als „Kc4" gelesen — beides legal, also nahm der Auflöser es, und ab dort ließ
 Schwarz zehn Züge lang `fxe1=D+` liegen. Der Auflöser kennt nur Schrift und Legalität; nach dem Lesen (`ProcessAsync`, BEIDE
@@ -210,7 +210,7 @@ genannten Umgebungsvariable, `--list-models` prüft die Verbindung. Eigene Hardw
 Kontextfenster des Servers, nicht das Budget. Abgelegt wird zusätzlich die Rohantwort (`NN.raw.txt` bzw.
 `NN.dots.txt`).
 
-**Quer fotografiert** (0.672.6, `Services/ScoresheetOrientation.cs`, gemeldet 2026-10-05 an LeagueHub-Formular 24): aus den
+**Quer fotografiert** (0.672.6, `Services/Scoresheet/ScoresheetOrientation.cs`, gemeldet 2026-10-05 an LeagueHub-Formular 24): aus den
 Kästen der ersten Lesung — auf einem aufrechten Formular steigen die Zugnummern nach UNTEN und Schwarz steht RECHTS neben
 Weiß (Mediane der Schritte n→n+1 und Weiß→Schwarz; mindestens 6 bzw. 4 Paare, beide Richtungen eindeutig, sonst 0) — folgt
 je Seite die Drehung 0/90/180/270 im Uhrzeigersinn. Ist eine nötig, dreht `ScoresheetImage.Rotate` die gespeicherten Fotos

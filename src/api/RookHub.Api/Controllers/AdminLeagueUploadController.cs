@@ -5,6 +5,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Authorization;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Controllers;
 

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>Die Antwort des Modells, gelesen (Schema aus <see cref="ScoresheetPrompt.Schema"/>).</summary>
 public sealed class ScoresheetTranscription

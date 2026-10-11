@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// Kostenbremse für das Einlesen von Partieformularen: jede Lesung ist ein Aufruf beim großen Modell mit Bild

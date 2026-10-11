@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Tests;
 

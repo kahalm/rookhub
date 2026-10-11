@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using RookHub.Api.Services;
 using SkiaSharp;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Tests;
 

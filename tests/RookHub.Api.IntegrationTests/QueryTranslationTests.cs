@@ -12,6 +12,7 @@ using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.IntegrationTests;
 
@@ -1287,7 +1288,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Assert.True(faced.PhotoVersion > two.PhotoVersion);
             var readBack = (await club.GetMemberAsync(trainer, daniel.Id)).PhotoFace!;
             Assert.Equal((0.5, 0.4, 0.28), (readBack.X, readBack.Y, readBack.R));
-            Assert.Equal((256, 256), RookHub.Api.Services.ScoresheetImage.Size(await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: true))!.Value);   // Quadrat um den Kreis
+            Assert.Equal((256, 256), RookHub.Api.Services.Scoresheet.ScoresheetImage.Size(await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: true))!.Value);   // Quadrat um den Kreis
             Assert.True((await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: false)).Length > 100);          // das Bild blieb
             Assert.Equal(faced.PhotoVersion, (await club.GetGroupAsync(trainer, mine.Id)).Members.Single(m => m.Id == daniel.Id).PhotoVersion);
             var withFace = await club.SetMemberPhotoAsync(trainer, daniel.Id, data.ToArray(), new RookHub.Api.DTOs.ClubPhotoFaceDto { X = 0.5, Y = 0.5, R = 0.5 });

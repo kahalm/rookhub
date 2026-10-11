@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// Formular-Lesung über eine OpenAI-kompatible Chat-Schnittstelle (vLLM, SGLang, llama.cpp-Server) — gedacht für ein

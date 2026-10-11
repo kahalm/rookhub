@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.2", date: "2026-10-11", changes: [
+    { en: "Code structure: the 13 server services for scoresheet reading now live in their own folder. No change in behaviour.",
+      de: "Code-Struktur: die 13 Server-Dienste für Partieformular-Einlesen liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.753.1", date: "2026-10-11", changes: [
     { en: "Code structure: the 3 server services for club games (correction, copies, second engine) now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 3 Server-Dienste für Vereinspartien (Korrektur, Kopien, Zweit-Engine) liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

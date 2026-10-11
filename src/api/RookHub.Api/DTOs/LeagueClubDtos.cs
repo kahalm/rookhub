@@ -1,3 +1,5 @@
+using RookHub.Api.Services.Scoresheet;
+
 namespace RookHub.Api.DTOs;
 
 // LeagueHub — Vereins-Datenbank (/api/league/club): Partien von Vereinsmitgliedern, PGN-Massenimport oder ein
@@ -107,7 +109,7 @@ public class LeagueClubGameRequest
     /// <summary>Stand je Zug beim Übernehmen eines Formulars (0.693.4): Zuordnung zum Formular-Eintrag, Lesarten — geht ins
     /// Archiv, damit „Korrigieren" ihn wie beim ersten Prüfen zeigt (vorher stand dort die erste Lesung, und nach einer
     /// Korrektur beim Übernehmen fehlte jede Zuordnung).</summary>
-    public List<RookHub.Api.Services.ScoresheetPly>? Plies { get; set; }
+    public List<RookHub.Api.Services.Scoresheet.ScoresheetPly>? Plies { get; set; }
 }
 
 public class LeagueClubPreviewSideDto

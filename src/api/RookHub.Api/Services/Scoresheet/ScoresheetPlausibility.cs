@@ -4,7 +4,7 @@ using Chess;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>Eine Engine für <see cref="ScoresheetPlausibility"/>. <c>null</c> = keine Engine da (Lesung bleibt, wie sie ist).</summary>
 public interface IScoresheetEngine

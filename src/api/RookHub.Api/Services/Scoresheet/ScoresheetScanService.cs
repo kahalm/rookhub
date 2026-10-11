@@ -7,7 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// „Partieformular einlesen" (0.529.0): Foto hochladen → Claude liest → der Server macht daraus eine legale

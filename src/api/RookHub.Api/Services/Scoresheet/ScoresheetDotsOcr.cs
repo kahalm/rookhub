@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// Formular-Lesung über <b>dots.ocr</b> (rednote-hilab, 1,7 B Parameter, Layout + Texterkennung in einem Modell,

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Scoresheet;
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // ScoresheetBench — Testinterface für „Partieformular einlesen".

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.DTOs;
 
@@ -130,7 +131,7 @@ public class ScoresheetEditStateDto
 public class ScoresheetResolveRequestDto
 {
     /// <summary>Die festgelegten Halbzüge (SAN) ab Partiebeginn — höchstens
-    /// <see cref="Services.ScoresheetScanService.MaxPrefixPlies"/>, sonst 400 wie bei einem illegalen Zug.</summary>
+    /// <see cref="Services.Scoresheet.ScoresheetScanService.MaxPrefixPlies"/>, sonst 400 wie bei einem illegalen Zug.</summary>
     public List<string> Prefix { get; set; } = new();
 
     /// <summary>Welcher Formular-Eintrag gehört zum nächsten Halbzug? Nach einem Ersetzen der nächste,

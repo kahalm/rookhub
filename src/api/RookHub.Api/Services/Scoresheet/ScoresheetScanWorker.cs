@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>Weckt den <see cref="ScoresheetScanWorker"/>, sobald ein Foto hochgeladen wurde (sonst schaut er
 /// nur alle <see cref="ScoresheetScanWorker.IdlePoll"/> nach).</summary>

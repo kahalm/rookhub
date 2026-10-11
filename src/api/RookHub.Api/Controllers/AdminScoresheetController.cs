@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Authorization;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Controllers;
 

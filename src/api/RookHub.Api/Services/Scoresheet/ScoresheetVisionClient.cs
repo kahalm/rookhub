@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Anthropic.Models.Messages;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>Antwort des Modells: das JSON, oder ein Grund, warum es keins gibt.</summary>
 /// <param name="Json">Die Lesung nach dem Schema aus <see cref="ScoresheetPrompt.Schema"/>.</param>

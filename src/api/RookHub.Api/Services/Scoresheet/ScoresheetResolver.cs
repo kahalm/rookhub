@@ -1,7 +1,7 @@
 using Chess;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>Ein Eintrag des Formulars, wie das Modell ihn gelesen hat (ein Halbzug).</summary>
 /// <param name="Written">Was dasteht, in der Sprache des Formulars (<c>Sf3</c>, <c>Lxd4</c>).</param>

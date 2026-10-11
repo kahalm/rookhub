@@ -16,7 +16,7 @@ public enum ScoresheetScanStatus
 /// <summary>
 /// Ein hochgeladenes Foto eines Partieformulars und was daraus wurde (Menüpunkt „Partieformular
 /// einlesen", 0.529.0). Claude liest das Bild, der Server prüft jeden Zug auf Legalität
-/// (<see cref="Services.ScoresheetResolver"/>), und das Ergebnis landet als normale gespeicherte
+/// (<see cref="Services.Scoresheet.ScoresheetResolver"/>), und das Ergebnis landet als normale gespeicherte
 /// Partie (<see cref="SavedGame"/>, Quelle <c>scoresheet</c>) in „Meine Partien".
 ///
 /// <para>Das FOTO bleibt hier liegen, auch nach dem Einlesen: die Partie verweist über
@@ -47,7 +47,7 @@ public class ScoresheetScan
     public SavedGame? Game { get; set; }
 
     /// <summary>Das Foto (JPEG/PNG/WebP). Sehr große Uploads werden verkleinert abgelegt
-    /// (<see cref="Services.ScoresheetScanService.MaxStoredBytes"/>).</summary>
+    /// (<see cref="Services.Scoresheet.ScoresheetScanService.MaxStoredBytes"/>).</summary>
     public byte[] Photo { get; set; } = Array.Empty<byte>();
 
     /// <summary>MIME-Typ von <see cref="Photo"/>.</summary>
@@ -57,7 +57,7 @@ public class ScoresheetScan
     public string? FileName { get; set; }
 
     /// <summary>Über wie viele Fotos das Formular geht (0.600.0, höchstens
-    /// <see cref="Services.ScoresheetScanService.MaxPages"/>). <see cref="Photo"/> ist Seite 1, die weiteren liegen in
+    /// <see cref="Services.Scoresheet.ScoresheetScanService.MaxPages"/>). <see cref="Photo"/> ist Seite 1, die weiteren liegen in
     /// <see cref="Pages"/> — so blieb jede bestehende Einlesung, wie sie war.</summary>
     public int PageCount { get; set; } = 1;
     public List<ScoresheetScanPage> Pages { get; set; } = new();
@@ -71,7 +71,7 @@ public class ScoresheetScan
     public string NotationLanguage { get; set; } = "auto";
 
     /// <summary>„Ich spielte": <c>white</c>, <c>black</c> oder <c>auto</c> (über die gelesenen Spielernamen und den
-    /// Profilnamen, <see cref="Services.ScoresheetScanService.GuessOwnerSide"/>).</summary>
+    /// Profilnamen, <see cref="Services.Scoresheet.ScoresheetScanService.GuessOwnerSide"/>).</summary>
     public string OwnerSide { get; set; } = "auto";
 
     public ScoresheetScanStatus Status { get; set; } = ScoresheetScanStatus.Pending;
@@ -112,7 +112,7 @@ public class ScoresheetScan
     public int OutputTokens { get; set; }
 
     /// <summary>Kosten dieser Einlesung in Millionstel Dollar, nach den Preisen zum Zeitpunkt des Aufrufs
-    /// (<see cref="Services.ScoresheetBudget"/>). Daran hängen die Budgets je Nutzer und insgesamt.</summary>
+    /// (<see cref="Services.Scoresheet.ScoresheetBudget"/>). Daran hängen die Budgets je Nutzer und insgesamt.</summary>
     public long CostMicroUsd { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -123,7 +123,7 @@ public class ScoresheetScan
 /// <summary>
 /// Seite 2 und folgende eines Partieformulars über mehrere Fotos (0.600.0) — eine lange Partie passt oft nicht auf
 /// ein Blatt. Seite 1 bleibt <see cref="ScoresheetScan.Photo"/>. Geht mit der Einlesung (Cascade) und mit dem Foto
-/// (<see cref="Services.ScoresheetScanService.DetachWithoutLoading"/> räumt die Seiten ab).
+/// (<see cref="Services.Scoresheet.ScoresheetScanService.DetachWithoutLoading"/> räumt die Seiten ab).
 /// </summary>
 public class ScoresheetScanPage
 {
@@ -176,7 +176,7 @@ public class ScoresheetScanArchive
 /// <summary>
 /// Ein weiteres Foto einer Formular-Seite (0.736.0): dieselbe Seite noch einmal fotografiert (anderes Licht, anderer
 /// Winkel). Der Leser vergleicht unklare Einträge mit ihm; die Kästen gehören zum Hauptfoto. Geht mit der Einlesung
-/// (Cascade) und mit dem Foto (<see cref="Services.ScoresheetScanService.RemoveViewsWithoutLoading"/>).
+/// (Cascade) und mit dem Foto (<see cref="Services.Scoresheet.ScoresheetScanService.RemoveViewsWithoutLoading"/>).
 /// </summary>
 public class ScoresheetScanView
 {

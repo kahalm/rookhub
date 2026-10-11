@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Scoresheet;
 
 /// <summary>
 /// Schachnotation in den Sprachen, in denen Partieformulare geschrieben werden, und ihre Übersetzung in

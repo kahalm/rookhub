@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Services.League;
 

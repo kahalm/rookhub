@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Services.Club;
 
