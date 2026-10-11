@@ -4,6 +4,7 @@ using RookHub.Api.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using RookHub.Api.Services.Tournaments;
 using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
 namespace RookHub.Api.Services.TournamentDirectory;

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 public class PlayerSearchService
 {

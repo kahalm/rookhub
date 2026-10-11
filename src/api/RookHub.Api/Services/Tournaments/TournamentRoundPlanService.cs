@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.TournamentDirectory;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Holt die SPIELTERMINE langlaufender Turniere.

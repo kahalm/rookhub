@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using RookHub.Api.Services;
 using RookHub.Api.Services.TournamentDirectory;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 
@@ -120,11 +121,11 @@ public class CrawlerContractTests
     /// <summary>Die Dateien, die Crawler-JSON per Feldnamen lesen.</summary>
     private static readonly string[] ParserFiles =
     [
-        "src/api/RookHub.Api/Services/PlayerSearchService.cs",
-        "src/api/RookHub.Api/Services/AutoSubscriptionService.cs",
+        "src/api/RookHub.Api/Services/Tournaments/PlayerSearchService.cs",
+        "src/api/RookHub.Api/Services/Tournaments/AutoSubscriptionService.cs",
         "src/api/RookHub.Api/Services/BotStatsService.cs",
-        "src/api/RookHub.Api/Services/RoundMonitorService.cs",
-        "src/api/RookHub.Api/Services/CrawlQueueClient.cs",
+        "src/api/RookHub.Api/Services/Tournaments/RoundMonitorService.cs",
+        "src/api/RookHub.Api/Services/Tournaments/CrawlQueueClient.cs",
         "src/api/RookHub.Api/Controllers/TournamentMonitorController.cs",
     ];
 

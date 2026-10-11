@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 public class RoundMonitorService : BackgroundService
 {

@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Haelt „Meine Turniere" von selbst aktuell: einmal taeglich (und kurz nach dem Start) werden die

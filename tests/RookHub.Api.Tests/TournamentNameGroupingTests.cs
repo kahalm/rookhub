@@ -1,4 +1,5 @@
 using RookHub.Api.Services;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 

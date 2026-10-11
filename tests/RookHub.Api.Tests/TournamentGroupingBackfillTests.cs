@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.TournamentDirectory;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 

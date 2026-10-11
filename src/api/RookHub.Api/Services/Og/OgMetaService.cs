@@ -10,6 +10,7 @@ using RookHub.Api.Validation;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Services.Og;
 

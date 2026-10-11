@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.TournamentDirectory;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Traegt Basisname und Gruppenschluessel im ALTBESTAND des Turnierverzeichnisses nach.

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Services.TournamentDirectory;
 

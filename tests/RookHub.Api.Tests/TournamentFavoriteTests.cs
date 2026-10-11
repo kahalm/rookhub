@@ -8,6 +8,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 

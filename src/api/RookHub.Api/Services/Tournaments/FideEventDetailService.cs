@@ -6,7 +6,7 @@ using System.Text.Json;
 using RookHub.Api.Services.TournamentDirectory;
 using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>Was ein Durchgang getan hat. <c>Checked</c> zaehlt die VERSUCHTEN.</summary>
 public record FideDetailResult(int Checked, int WithDetails, int Geocoded);

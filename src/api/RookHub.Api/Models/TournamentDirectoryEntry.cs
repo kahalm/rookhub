@@ -247,7 +247,7 @@ public class TournamentDirectoryEntry
 
     /// <summary>
     /// Liga (Saisonwettbewerb) statt Turnier. Abgeleitet, nicht gemeldet — siehe
-    /// <see cref="Services.TournamentClassifier.LooksLikeLeague"/>. Steht als eigene Spalte, damit
+    /// <see cref="Services.Tournaments.TournamentClassifier.LooksLikeLeague"/>. Steht als eigene Spalte, damit
     /// der Schalter „Ligen ausblenden" in SQL filtern kann.
     /// </summary>
     public bool IsLeague { get; set; }

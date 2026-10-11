@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Services.TournamentDirectory;
 

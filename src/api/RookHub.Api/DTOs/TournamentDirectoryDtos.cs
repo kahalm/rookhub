@@ -167,7 +167,7 @@ public class DirectoryEntryDto
             {
                 Id = g.PublicId,
                 ChessResultsId = g.ChessResultsId,
-                Label = Services.TournamentNameGrouping.GroupLabel(g.Name),
+                Label = Services.Tournaments.TournamentNameGrouping.GroupLabel(g.Name),
                 PlayerCount = g.PlayerCount,
                 Rounds = g.Rounds,
             }).ToList()

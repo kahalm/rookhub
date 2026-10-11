@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.TournamentDirectory;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Ordnet einem Verzeichniseintrag Publikum und Format zu: Jugendklasse, Geschlechtsklasse und

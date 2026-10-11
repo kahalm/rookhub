@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Controllers;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 

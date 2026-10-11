@@ -7,6 +7,7 @@ using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Validation;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Controllers;
 

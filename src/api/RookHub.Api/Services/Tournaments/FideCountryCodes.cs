@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// chess-results fuehrt Foederationen unter FIDE-/IOC-Codes (AUT, GER, SUI), der GeoNames-Gazetteer

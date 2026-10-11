@@ -7,7 +7,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.TournamentDirectory;
 using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Der Turnierverlauf eines Spielers: welche Turniere er gespielt hat, welche noch kommen, und in

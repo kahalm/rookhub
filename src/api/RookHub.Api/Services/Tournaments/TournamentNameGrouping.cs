@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Erkennt Gruppen EINES Turniers, die chess-results als eigenstaendige Zeilen fuehrt

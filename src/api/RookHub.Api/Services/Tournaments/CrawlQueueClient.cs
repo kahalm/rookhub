@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using RookHub.Api.Exceptions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// Crawl-Auftraege der Hintergrunddienste an den Crawler — und die Frage, WELCHES Turnier gemeint ist.

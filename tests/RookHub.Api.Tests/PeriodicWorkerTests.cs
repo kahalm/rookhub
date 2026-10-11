@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using Serilog.Events;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 

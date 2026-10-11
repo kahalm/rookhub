@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 /// <summary>
 /// chess-results liefert die Bedenkzeit nur als Freitext ("90 min/40 moves + 30 sec",

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using RookHub.Api.Exceptions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Tournaments;
 
 public class CrawlerProxyService
 {

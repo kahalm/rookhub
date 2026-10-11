@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Tournaments;
 using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
 namespace RookHub.Api.Services.TournamentDirectory;

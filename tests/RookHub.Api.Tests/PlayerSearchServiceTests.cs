@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Tests;
 

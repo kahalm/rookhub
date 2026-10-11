@@ -279,7 +279,7 @@ statt einem. Faellt ein solcher Durchgang aus ODER laeuft er in die 2000-Zeilen-
 gespeicherte Art **unangetastet** (`Unknown` heisst „noch nicht geklaert"): ein Netzausfall darf
 nicht den halben Bestand auf „Einzel" umschreiben.
 
-`AgeGroups`, `Gender` und `IsLeague` sind ABLEITUNGEN (`Services/TournamentClassifier.cs`, rein
+`AgeGroups`, `Gender` und `IsLeague` sind ABLEITUNGEN (`Services/Tournaments/TournamentClassifier.cs`, rein
 statisch, Wortlisten an EINER Stelle zum Nachruesten). Alter und Geschlecht stehen nirgends als
 Spalte — auch nicht auf der Turnierseite — sondern nur im Namen, und der traegt sie erstaunlich
 verlaesslich („Landesmeisterschaft U12 weiblich", „UNDER 16 GIRLS"). Zwei Fallen sind dort bewusst
