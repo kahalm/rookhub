@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Der Lehrplan der Kinderseite: welche Lichess-Puzzles als „besonders einfach" gelten und in welcher

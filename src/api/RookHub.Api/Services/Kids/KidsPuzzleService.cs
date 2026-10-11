@@ -5,7 +5,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Daten der Kinderseite: die Stufen-Leiter aus markierten Lichess-Puzzles (<see cref="KidsPuzzle"/>)

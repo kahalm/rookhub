@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Endlos-Modus der Kinderseite: je Rating-Fenster ein kindgerechtes Lichess-Puzzle. Die Kurve (welches

@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Der KidHub-Fortschritt im Konto. KidHub schickt seinen GANZEN Stand (er ist klein: ein Eintrag je

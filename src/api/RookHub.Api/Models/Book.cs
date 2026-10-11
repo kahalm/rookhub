@@ -72,7 +72,7 @@ public class Book
     /// </summary>
     public bool ForKids { get; set; }
 
-    /// <summary>Eigene Titel auf KidHub je Sprache, JSON <c>{"de":"…","en":"…"}</c> (<see cref="Services.KidsTitles"/>);
+    /// <summary>Eigene Titel auf KidHub je Sprache, JSON <c>{"de":"…","en":"…"}</c> (<see cref="Services.Kids.KidsTitles"/>);
     /// <c>null</c> = der Buchname. Der Name in RookHub bleibt davon unberuehrt.</summary>
     public string? KidsTitles { get; set; }
 

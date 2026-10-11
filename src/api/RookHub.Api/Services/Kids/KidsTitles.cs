@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Eigene Kurstitel fuer KidHub (<see cref="Models.Book.KidsTitles"/>) — kindgerecht und je Sprache

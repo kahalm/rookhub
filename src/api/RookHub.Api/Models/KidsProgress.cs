@@ -3,7 +3,7 @@ namespace RookHub.Api.Models;
 /// <summary>
 /// Fortschritt eines angemeldeten Kindes auf KidHub in EINER Stufe der Leiter: die beste Sternzahl und
 /// der laufende Durchgang. Ohne Konto liegt dasselbe nur im Browser; angemeldet gleicht KidHub beide
-/// Stände ab (<see cref="Services.KidsProgressMerge"/>).
+/// Stände ab (<see cref="Services.Kids.KidsProgressMerge"/>).
 /// </summary>
 public class KidsLevelProgress
 {

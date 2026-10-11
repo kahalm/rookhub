@@ -28,7 +28,7 @@ RookHub-App schickt sie) — die Obergrenze je Adresse ist dort weiter der globa
 Konto bzw. je IP) bleibt für Client-Log, Bot-Statistik, Token-Test, Extension-Senke und Bestandssuche. Schlüssel und Deckel
 stehen in `Services/RateLimitPartitions.cs`, die Zuordnung je Endpunkt hält `AnonymousRateLimitTests` fest.
 
-**Die Leiter** (`KidsPuzzles`, `Services/KidsCurriculum.cs`) = als „besonders einfach" markierte Lichess-Puzzles.
+**Die Leiter** (`KidsPuzzles`, `Services/Kids/KidsCurriculum.cs`) = als „besonders einfach" markierte Lichess-Puzzles.
 Vorgabe des Nutzers (2026-09-27): die mit dem niedrigsten Rating, deren Lösung 1 (höchstens 2) eigene Züge lang ist
 und bei denen wenig Figuren auf dem Brett stehen. Vorfilter in der DB (Rating ≤ 900, RD ≤ 90, Popularity ≥ 80,
 NbPlays ≥ 50, `Moves` ≤ 23 Zeichen), dann in C#: 2 oder 4 Züge, ≤ 12 Figuren, ohne en passant/Rochade/
@@ -50,7 +50,7 @@ fehlt oder `CurriculumVersion` ≠ `KidsCurriculum.Version`. **Wer Auswahl oder 
 **Fortschritt im Konto** (0.563.0, Wunsch 2026-09-27): drei Tabellen (`KidsLevelProgresses`, `KidsCourseProgresses`,
 `KidsCourseLines`), abgeglichen per „ganzer Stand hinauf, zusammengeführter zurück" statt einzelner Ereignisse — so
 übernimmt der erste Abgleich nach dem Anmelden auch, was das Kind vorher ohne Konto gespielt hat, und ein zweites Gerät
-bekommt denselben Stand. Die EINE Regel (`Services/KidsProgressMerge.cs`, SPIEGEL `mergeProgress` in
+bekommt denselben Stand. Die EINE Regel (`Services/Kids/KidsProgressMerge.cs`, SPIEGEL `mergeProgress` in
 `src-kidhub/app/core/kids-progress.store.ts`, LITERALE Fälle A–E auf beiden Seiten): Sterne nach Höhe; der laufende
 Durchgang der JÜNGERE (`runAt`, Gleichstand: der gespeicherte); Kurs-Linien vereinigt (je Linie die jüngste Zeit), aber
 nur NACH dem jüngsten „Von vorn" (`resetAt`) — ohne die Marke brächte ein anderes Gerät verworfene Linien zurück. Eine
@@ -62,7 +62,7 @@ Netz). Abmelden LEERT den Stand im Browser (er liegt im Konto; auf einem geteilt
 mit fremden Sternen anfangen), und ein Stand mit fremdem `owner` wird beim Anmelden verworfen statt übernommen.
 
 **Kindertitel + „erst, wenn Deutsch"** (0.565.0, Wunsch 2026-09-27: „benenne alle Kurse für die Kinder um, blende sie
-vorerst aus, bis sie deutsch sind"): `Book.KidsTitles` (JSON `{"de":"…","en":"…","hr":"…","hu":"…"}`, `Services/KidsTitles.cs`)
+vorerst aus, bis sie deutsch sind"): `Book.KidsTitles` (JSON `{"de":"…","en":"…","hr":"…","hu":"…"}`, `Services/Kids/KidsTitles.cs`)
 gibt einem Kinderkurs eigene Titel je KidHub-Sprache, OHNE den Buchnamen in RookHub anzufassen; gepflegt in der
 Bücherverwaltung (Stift neben „Kinder", fragt die vier Sprachen nacheinander). Sichtbar ist ein Kinderkurs erst, wenn er
 in jeder Sprache aus `Kids:RequiredCourseLanguages` vorliegt (Vorgabe `de`, leer = sofort) — auch der direkte Link ist

@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Baut die Kinder-Leiter beim Start, wenn sie fehlt oder aus einem aelteren Lehrplan stammt

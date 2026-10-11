@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.4", date: "2026-10-11", changes: [
+    { en: "Code structure: the 8 server services for KidHub kids site now live in their own folder. No change in behaviour.",
+      de: "Code-Struktur: die 8 Server-Dienste für KidHub-Kinderseite liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.753.3", date: "2026-10-11", changes: [
     { en: "Code structure: the 19 server services for game library, guess-the-move, comment search and translation now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 19 Server-Dienste für Rohbestand, Punktepartie, Kommentar-Suche und -Übersetzung liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

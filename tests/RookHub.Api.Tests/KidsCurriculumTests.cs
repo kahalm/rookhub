@@ -1,5 +1,6 @@
 using RookHub.Api.Services;
-using static RookHub.Api.Services.KidsCurriculum;
+using RookHub.Api.Services.Kids;
+using static RookHub.Api.Services.Kids.KidsCurriculum;
 
 namespace RookHub.Api.Tests;
 

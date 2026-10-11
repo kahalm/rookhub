@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Welche der Kindersprachen (de/en/hr/hu — nur die sind auf KidHub vollständig) passt zu einem Land?

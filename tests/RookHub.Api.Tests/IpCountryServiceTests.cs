@@ -10,6 +10,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Kids;
 
 namespace RookHub.Api.Tests;
 

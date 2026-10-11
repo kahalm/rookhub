@@ -1,6 +1,6 @@
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Kids;
 
 /// <summary>
 /// Wie zwei Stände des KidHub-Fortschritts zusammengehen — der im Konto und der aus einem Browser.
