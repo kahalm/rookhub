@@ -119,3 +119,35 @@ describe('TrainingGoalsComponent Spielzeit-Abgleich', () => {
     expect(reload).toHaveBeenCalled();
   });
 });
+
+/** UI-Sweep r3: „Wochenziel Spielen" und „noch offen" klebten zusammen („Spielennoch offen"). */
+describe('TrainingGoalsComponent Wochenziel Spielen', () => {
+  it('trennt „noch offen" sichtbar vom Namen', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TrainingGoalsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(TrainingGoalsComponent);
+    const comp = fixture.componentInstance;
+    spyOn(comp, 'reload');
+    const goal: any = { dailyMinutes: 0, playGames: 3, weeklyDaysTarget: 0 };
+    comp.goal = goal;
+    comp.today = {
+      goal, daily: { targetMinutes: 0, doneSeconds: 0, met: false }, bySource: {}, byTheme: {},
+      play: { targetGames: 3, doneGames: 1, met: false }, status: 'none', weekDaysMet: 0, weeklyDaysTarget: 0,
+    } as any;
+    comp.loading = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const name: HTMLElement | null = fixture.nativeElement.querySelector('.cat-weekly .cat-name');
+    expect(name).not.toBeNull();
+    const tag = name!.querySelector('.weekly-tag');
+    expect(tag).not.toBeNull();
+    expect(tag!.querySelector('.weekly-sep')?.textContent).toBe('·');
+    expect(getComputedStyle(tag!.querySelector('.weekly-sep')!).marginLeft).not.toBe('0px');
+  });
+});

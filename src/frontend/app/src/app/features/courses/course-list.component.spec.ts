@@ -461,3 +461,34 @@ describe('CourseListComponent Sektion „Eigene Kurse"', () => {
     }
   });
 });
+
+/** UI-Sweep r3: „Mehr" stand am Handy allein in einer Zeile — jetzt ein Textknopf am Ende des Hinweissatzes. */
+describe('CourseListComponent Neu-holen-Hinweis', () => {
+  it('trägt den Mehr/Weniger-Knopf im Satz und klappt die Erklärung auf', async () => {
+    const item: CourseListItem = {
+      bookId: 7, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null, tags: null, description: null,
+      puzzleCount: 1, solvedCount: 0, progressPercent: 0, lastMode: null, lastActivityAt: null, isOwned: true,
+      isPinned: false, needsReimport: true,
+    } as CourseListItem;
+    await TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getCourses: () => of([item]) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseListComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const toggle = el.querySelector('.reimport-text > button.reimport-toggle') as HTMLButtonElement | null;
+    expect(toggle).withContext('Knopf steht im Satz').not.toBeNull();
+    expect(getComputedStyle(toggle!).whiteSpace).toBe('nowrap');
+    expect(toggle!.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.reimport-hint')).toBeNull();
+    toggle!.click();
+    fixture.detectChanges();
+    expect(toggle!.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('.reimport-hint')).not.toBeNull();
+  });
+});

@@ -159,6 +159,8 @@ main.wrap { padding-top: 22px; padding-bottom: 28px; min-height: 55vh; }
 /* ---- Hinweise ---------------------------------------------------------------------------- */
 .gate { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px 18px; }
 .gate p { margin: 8px 0 0; max-width: 62ch; }
+/* UI-Sweep 2026-10-11 (Nachprüfung r2-c-gate-deadend): die Knöpfe der Sperrkarte stießen aneinander. */
+.gate .gate-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .empty { border: 1.5px dashed var(--line); border-radius: 10px; padding: 26px 18px; text-align: center; }
 .empty p { margin: 0 0 12px; }
 .status-line { min-height: 1.5em; margin: 8px 0 0; }

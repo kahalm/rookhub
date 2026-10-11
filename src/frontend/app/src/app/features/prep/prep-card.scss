@@ -114,8 +114,10 @@ html.dark-theme .prep-card-scope {
     border-color: transparent;
   }
 
-  /* Zeitraum, Repertoire-Auswahl: wie ein umrandetes Material-Feld (der Pfeil gezeichnet, nicht der des Browsers). */
-  select {
+  /* Zeitraum, Repertoire-Auswahl: wie ein umrandetes Material-Feld (der Pfeil gezeichnet, nicht der des Browsers).
+     Auch „.field select“: die Zeitraum-Auswahl steht in label.field, und dessen Regel aus leaguehub.scss (spezifischer,
+     mit background-Kurzform) löschte sonst den gezeichneten Pfeil — übrig blieb ein Feld ohne jedes Aufklapp-Zeichen. */
+  select, .field select {
     appearance: none; -webkit-appearance: none; box-sizing: border-box;
     min-height: 40px; padding: 0 36px 0 12px; border-radius: 4px;
     font: 400 14px/1.2 var(--body); color: var(--mat-sys-on-surface, #17202b);
@@ -124,9 +126,13 @@ html.dark-theme .prep-card-scope {
     background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
     background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
   }
-  select:hover:not(:disabled) { border-color: var(--mat-sys-on-surface, #17202b); }
+  select:hover:not(:disabled), .field select:hover:not(:disabled) { border-color: var(--mat-sys-on-surface, #17202b); }
   select:focus-visible { outline: 2px solid var(--mat-sys-primary, #1c5fd4); outline-offset: -1px; }
   select option { color: var(--mat-sys-on-surface, #17202b); background: var(--mat-sys-surface-container, #fff); }
+
+  /* Der Kopf der Karte malt seine Fläche bis in die runden Ecken der Karte (overflow: visible) und verdeckte dort deren
+     Rahmen-Bogen — die obere Rahmenlinie stand dann wie ein loser Strich über der Karte. */
+  .card.inline .card-head { border-radius: 9px 9px 0 0; }
 
   /* Als Seite: alle Tabellen so breit wie die Karte (die 640-px-Grenze ist für den LeagueHub-Dialog gedacht). */
   .card.inline table.stats { max-width: none; }
@@ -135,5 +141,7 @@ html.dark-theme .prep-card-scope {
 /* Am Handy weiter 44 px Bedienhöhe (Projektregel UX-069) — nach den Regeln oben, damit sie gewinnt. */
 @media (max-width: 640px) {
   .prep-card-scope .btn-sec, .prep-card-scope .btn-pri, .prep-card-scope .seg button, .prep-card-scope select { min-height: 44px; }
+  /* 16 px: kleiner zoomt iOS beim Antippen in die Seite. */
+  .prep-card-scope select, .prep-card-scope .field select { font-size: 16px; }
   .prep-card-scope .btn-sec, .prep-card-scope .btn-pri { padding-top: 0; padding-bottom: 0; }
 }

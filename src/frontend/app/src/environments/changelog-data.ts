@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.751.2", date: "2026-10-11", changes: [
+    { en: "Follow-up from re-checking the third UI-sweep pass: the period selection on the prep card shows its dropdown arrow again and the card no longer has a double top edge; training goals read “Weekly goal play · still open”; on phones the course page keeps ⋮ next to the buttons and the re-import notice keeps “More” in the sentence; ClubHub lock card buttons have spacing.",
+      de: "Nachbesserung aus der Nachprüfung des dritten UI-Sweep-Durchgangs: die Zeitraum-Auswahl der Vorbereitungs-Karte zeigt wieder ihren Pfeil, die Karte hat keine doppelte Oberkante mehr; Trainingsziele lesen „Wochenziel Spielen · noch offen“; am Handy bleibt auf der Kursseite das ⋮ neben den Knöpfen und im Neu-holen-Hinweis „Mehr“ im Satz; die Knöpfe der ClubHub-Sperrkarte haben Abstand." },
+  ] },
   { version: "0.751.1", date: "2026-10-11", changes: [
     { en: "Tournament calendar: groups of the same tournament are now combined on one card when their venue resolves to the same place, even if the venue text is written differently (e.g. with and without street address); existing entries are re-grouped automatically. The shared tournament link now also offers “Watch” (new-round notifications) directly, next to Save, Full view and Share.",
       de: "Turnierkalender: Gruppen desselben Turniers stehen jetzt auf einer Karte, wenn ihr Spielort zum selben Ort aufgelöst wird — auch wenn der Ortstext verschieden geschrieben ist (z. B. mit und ohne Straße); vorhandene Einträge werden von selbst neu gruppiert. Der geteilte Turnier-Link bietet jetzt auch „Beobachten“ (Meldung bei neuer Runde) direkt an, neben Merken, Volle Ansicht und Teilen." },

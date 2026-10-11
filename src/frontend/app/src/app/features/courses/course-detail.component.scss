@@ -123,6 +123,24 @@
   .label-long { display: none; }
   .label-short { display: inline; }
   .actions .calc-toggle { order: 10; margin-left: 0; }
+
+  /* UI-Sweep r3: bei 390 px brach das ⋮ trotzdem allein in eine eigene Zeile (zwei Knöpfe + 48-px-Tippfläche sind
+     knapp über der Kartenbreite). Als Raster: die Knöpfe links (dürfen schrumpfen), ⋮ rechts in derselben Zeile,
+     der Kalkulations-Schalter darunter. Das leere mat-menu-Element bekäme sonst eine eigene Rasterzelle. */
+  .actions {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, max-content) 1fr auto;
+    gap: 0.4rem;
+  }
+  .actions > .mat-mdc-icon-button { grid-column: 4; grid-row: 1; }
+  .actions > .calc-toggle { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  .actions > mat-menu { display: none; }
+  .actions > .mat-mdc-button-base:not(.mat-mdc-icon-button) {
+    min-width: 0;
+    overflow: hidden;
+    padding-left: 12px;
+    padding-right: 14px;
+  }
 }
 
 .section-head {

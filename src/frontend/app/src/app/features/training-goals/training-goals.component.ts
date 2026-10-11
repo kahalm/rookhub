@@ -157,7 +157,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                           <div class="cat cat-weekly">
                             <div class="cat-row">
                               <mat-icon [class.met]="today?.play?.met">{{ today?.play?.met ? 'check_circle' : 'sports_esports' }}</mat-icon>
-                              <span class="cat-name">{{ 'trainingGoals.weeklyPlay' | translate }}@if (!today?.play?.met) { <span class="weekly-tag">{{ 'trainingGoals.stillOpen' | translate }}</span> }</span>
+                              <span class="cat-name">{{ 'trainingGoals.weeklyPlay' | translate }}@if (!today?.play?.met) {<span class="weekly-tag"><span class="weekly-sep" aria-hidden="true">·</span>{{ 'trainingGoals.stillOpen' | translate }}</span>}</span>
                               <span class="cat-val">{{ today?.play?.doneGames ?? 0 }} / {{ today?.play?.targetGames ?? 0 }} {{ 'trainingGoals.games' | translate }}</span>
                             </div>
                             <mat-progress-bar mode="determinate" [value]="pctCount(today?.play?.doneGames ?? 0, today?.play?.targetGames ?? 0)"></mat-progress-bar>
@@ -364,6 +364,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .cat-name { flex: 1; }
     .cat-weekly { border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); padding-top: 10px; }
     .weekly-tag { color: color-mix(in srgb, currentColor 47%, transparent); font-size: .75rem; font-style: italic; }
+    /* Abstand + Trenner fest im Markup: Angular entfernt Leerraum zwischen Interpolation und @if, und „Spielennoch offen“
+       stand zusammengeklebt da (UI-Sweep r3). */
+    .weekly-sep { display: inline-block; margin: 0 .4em; font-style: normal; }
     .cat-val { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .sync-btn { margin-top: 12px; }
     .breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; margin-top: 16px; }

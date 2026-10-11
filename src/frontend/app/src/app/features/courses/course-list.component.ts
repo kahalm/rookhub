@@ -58,10 +58,10 @@ import { CourseCardComponent } from './course-card.component';
       @if (reimportCount > 0) {
         <div class="reimport-legend">
           <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
-          <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}</span>
-          <button mat-button type="button" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">
-            {{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}
-          </button>
+          <!-- UI-Sweep r3: „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
+               allein in eine Zeile. -->
+          <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}
+            <button type="button" class="reimport-toggle" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">{{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}</button></span>
           @if (reimportOpen) {
             <p class="reimport-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</p>
           }
@@ -226,6 +226,12 @@ import { CourseCardComponent } from './course-card.component';
     .courses-container { max-width: min(var(--page-max-width), 96vw); margin: 24px auto; padding: 0 16px; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .header h1 { margin: 0; }
+    /* UI-Sweep r3: am Handy standen Titel und zwei Knöpfe gedrängt nebeneinander (Knöpfe übereinander) — die Knöpfe
+       rücken in eine eigene Zeile unter den Titel. */
+    @media (max-width: 599.98px) {
+      .header { flex-wrap: wrap; }
+      .header-actions { flex-basis: 100%; }
+    }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
@@ -236,6 +242,10 @@ import { CourseCardComponent } from './course-card.component';
       border: 1px solid color-mix(in srgb, #fb8c00 45%, transparent); }
     .reimport-chip { border: 1px solid #fb8c00; color: #fb8c00; border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
     .reimport-text { flex: 1 1 220px; }
+    .reimport-toggle { font: inherit; font-weight: 500; color: var(--mat-sys-primary); background: none; border: 0;
+      padding: 6px 4px; margin: -6px 0; cursor: pointer; white-space: nowrap; text-decoration: underline;
+      text-underline-offset: 2px; }
+    .reimport-toggle:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; border-radius: 4px; }
     .reimport-hint { flex-basis: 100%; margin: 0 0 4px; color: color-mix(in srgb, currentColor 70%, transparent); }
     .offline-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 1rem;
                       padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
