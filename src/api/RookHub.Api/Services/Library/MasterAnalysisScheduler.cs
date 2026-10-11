@@ -5,7 +5,7 @@ using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Analysiert den Bibliotheksbestand — die Meisterpartien — im Hintergrund. Wunsch 2026-09-28: „zu den gleichen Zeiten

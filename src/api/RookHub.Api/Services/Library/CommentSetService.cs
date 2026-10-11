@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>Ein Kommentar, wie er ausgeliefert wird: der Text und die Sprache, in der er
 /// TATSAECHLICH vorliegt — die kann von der gewuenschten abweichen, wenn ein Halbzug in der

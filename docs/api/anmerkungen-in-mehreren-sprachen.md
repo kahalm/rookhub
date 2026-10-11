@@ -32,7 +32,7 @@ heisst englisch N und deutsch S. Aufgeloest wird deshalb beim Ablegen, wo die Sp
 `comments --figurines` holt den vorhandenen Bestand nach. Der Bauer bekommt als einziger ein WORT
 statt eines Buchstabens — in der Notation traegt er keinen.
 
-**Getrennt wird satzweise** (`Services/CommentSplit.cs`), mit zwei Signalen: den Funktionswoertern
+**Getrennt wird satzweise** (`Services/Library/CommentSplit.cs`), mit zwei Signalen: den Funktionswoertern
 je Sprache (laengere Listen als bei `CommentLanguage` — dort wird eine ganze PARTIE eingeordnet,
 hier ein einzelner SATZ) und den **Figurenbuchstaben**, `Be3/Ng4` gegen `Le3/Sg4`. Gezaehlt werden
 nur Buchstaben, die in genau EINER der beiden Sprachen vorkommen (bei `fr/nl` sagt ein `D` nichts,
@@ -86,7 +86,7 @@ Altbestand ohne Saetze bekommt seine Kommentare weiterhin direkt aus dem PGN.
 Das Brett zeigt die Wahl als Kuerzel neben der Blaetterleiste (nur, wenn es mehr als eine Sprache
 gibt); die Wahl merkt sich das Geraet, und beim ersten Mal gilt die Sprache der Oberflaeche.
 
-**Uebersetzen** (`Services/CommentTranslationService.cs`, `tools/LibraryImport translate --to de`)
+**Uebersetzen** (`Services/Library/CommentTranslationService.cs`, `tools/LibraryImport translate --to de`)
 legt einen weiteren Satz an — `Origin = Machine`, dazu `TranslatedFrom` und das Modell. Vier
 Regeln, die dabei nicht kippen duerfen:
 * **Die PARTIE ist die Einheit, nicht der Kommentar.** Uebersetzt wird in moeglichst wenigen
@@ -164,7 +164,7 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   Original und der naechste Lauf uebersetzt nur diesen Text neu; (2) WIEDERVERWENDEN: derselbe Text in einem
   anderen Kurs-Satz gleicher Sprache (Doppel-Import, `_firstkey`-Kopie, gleicher Kapitelname) wird KOPIERT.
 * **Uebersetzt wird in `Services/Courses/CourseTranslationService.cs`** ueber denselben Kern wie Partien
-  (`Services/CommentTranslator.cs`: Fuhren, Auftrag, `PieceLetters`, Laengen- und Sprachpruefung — der Partie-Weg
+  (`Services/Library/CommentTranslator.cs`: Fuhren, Auftrag, `PieceLetters`, Laengen- und Sprachpruefung — der Partie-Weg
   ist woertlich unveraendert, `CommentTranslationServiceTests` unangetastet). Je Linie: nur fehlende/veraltete
   Stellen ans Modell, gleiche Texte (Kommentar = Einleitung, bei 51 549 von 87 035 Prod-Linien) nur EINMAL,
   Stellen mit verschwundener Vorlage fliegen raus; das Modell muss JEDEN Eintrag beantworten, sonst schreibt die

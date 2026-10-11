@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Zerlegt einen ZWEISPRACHIGEN Kommentarblock in seine beiden Sprachen.

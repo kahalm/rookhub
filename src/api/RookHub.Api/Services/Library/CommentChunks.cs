@@ -2,7 +2,7 @@ using System.Text;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Kommentare einer Bibliothekspartie → Textstücke für die semantische Suche (<see cref="CommentSearchService"/>).

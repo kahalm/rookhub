@@ -6,7 +6,7 @@ namespace RookHub.Api.Models;
 /// EINE Stellung einer <see cref="GameAnalysis"/>: die Stellung VOR dem Halbzug, der Zug, der in der
 /// Partie folgte, und — sobald die Engine fertig ist — die Kandidatenliste.
 ///
-/// <para><see cref="CandidatesJson"/> ist das, was die Wertung braucht (<see cref="Services.GuessScoring"/>):
+/// <para><see cref="CandidatesJson"/> ist das, was die Wertung braucht (<see cref="Services.Library.GuessScoring"/>):
 /// <c>[{"uci":"e2e4","cp":30},{"uci":"d2d4","mate":3}]</c>, Bewertung <b>aus Sicht der Seite am Zug</b>.
 /// Der Broker liefert sie aus Weiß-Sicht — die Umrechnung passiert beim Einlesen, damit später nicht
 /// jede Auswertung erneut daran denken muss.</para>

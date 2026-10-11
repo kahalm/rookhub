@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Chess;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.Services.Engines;
 

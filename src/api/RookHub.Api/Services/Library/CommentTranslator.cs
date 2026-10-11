@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using RookHub.Api.Services.Courses;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>Wofuer eine Uebersetzung laeuft — bestimmt Auftrag, Pruefungen und die Log-Meldungen.</summary>
 public enum TranslationSubject

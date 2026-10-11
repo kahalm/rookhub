@@ -11,6 +11,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Filters;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.Tests;
 

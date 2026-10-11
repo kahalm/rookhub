@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// In welcher Sprache sind die Kommentare einer Partie geschrieben?

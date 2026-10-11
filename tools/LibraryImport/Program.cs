@@ -9,6 +9,7 @@ using RookHub.Api.Services;
 using RookHub.Tools.LibraryImport;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Library;
 
 // ---------------------------------------------------------------------------
 // Rohbestand befuellen. Vier Schritte, jeder fuer sich wiederholbar:

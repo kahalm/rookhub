@@ -525,7 +525,7 @@ aneinander**, ohne Trennzeichen. Ein Kommentar sieht so aus (CBM 212, Van Forees
 > als auch ich unsere Partien verloren. ...}`
 
 Die Grenze muss also GEFUNDEN werden. Zwei Signale, beide im Bestand vorhanden:
-1. **Satzweise Spracherkennung** — `Services/CommentLanguage.cs` kann das schon, nur bisher je
+1. **Satzweise Spracherkennung** — `Services/Library/CommentLanguage.cs` kann das schon, nur bisher je
    Partie statt je Satz.
 2. **Die Figurenbuchstaben**, und die sind das schaerfere Signal: die englische Haelfte schreibt
    `8.Be3` und `8...Ng4`, die deutsche `8.Le3` und `8...Sg4`. Der Wechsel des Buchstabensatzes

@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Die Wertung EINES geratenen Zuges in der Punktepartie — reine Funktion, keine Datenbank, keine

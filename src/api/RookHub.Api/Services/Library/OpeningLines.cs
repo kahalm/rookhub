@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Die Praefix-Suche ueber eine Eroeffnungszeile (<c>OpeningLine</c>, „e4 e5 Nf3"): „alle Partien,

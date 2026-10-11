@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Ab welchem Halbzug lohnt es sich, eine Partie raten zu lassen?

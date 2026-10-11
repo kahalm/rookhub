@@ -7,7 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Der Rohbestand als NACHSCHLAGEWERK: durchsuchen und einzelne Partien zum Rechnen anfordern.

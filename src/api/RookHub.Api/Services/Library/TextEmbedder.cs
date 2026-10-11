@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using RookHub.Api.Services.Scoresheet;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>Texte → Vektoren (normiert auf Länge 1, <see cref="Models.CommentEmbedding.Dimensions"/> Werte).</summary>
 public interface ITextEmbedder

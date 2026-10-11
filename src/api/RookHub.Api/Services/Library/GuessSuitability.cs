@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Wie gut taugt eine Partie des Rohbestands als PUNKTEPARTIE? Eine Zahl von 0 bis 100, aus den

@@ -8,7 +8,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Wem ein Durchlauf gehört: einem Konto ODER — ohne Anmeldung — der vom Browser vergebenen

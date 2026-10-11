@@ -5,6 +5,7 @@ using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.IntegrationTests;
 

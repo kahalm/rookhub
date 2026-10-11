@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 using RookHub.Api.Services;
-using static RookHub.Api.Services.GuessScoring;
+using static RookHub.Api.Services.Library.GuessScoring;
 
 namespace RookHub.Api.Tests;
 

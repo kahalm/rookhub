@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Liest EINE Partie aus einem PGN und fuellt daraus die Spalten des Rohbestands

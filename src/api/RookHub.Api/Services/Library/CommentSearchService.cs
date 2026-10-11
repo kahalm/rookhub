@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// „Frag die Kommentare" (0.536.0): semantische Suche über die Anmerkungen des Rohbestands (<see cref="LibraryGame"/>).

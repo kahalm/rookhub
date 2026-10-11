@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// „Welche Partien des Rohbestands soll die Engine als naechstes rechnen?"

@@ -55,7 +55,7 @@ Docker-Image baut nur aus `src/api/RookHub.Api`). Vier Schritte, jeder fuer sich
 
 **`queue [anzahl] --user <id>`** ist der Massen-Weg zu dem, was auf der Seite der Knopf „Partie
 anfordern" je Partie tut: die besten Partien des Bestands als `GameAnalysis` mit `Origin = Guess`
-und fester Tiefe einreihen. Die Auswahl trifft `Services/LibraryPicks.cs` — Note, dann
+und fester Tiefe einreihen. Die Auswahl trifft `Services/Library/LibraryPicks.cs` — Note, dann
 kommentierte Halbzuege, dann Textmenge, und hoechstens `--per-annotator` (2) Partien je
 Kommentator: an der Spitze stehen tausende Partien mit Note 100, und nach der Zeilennummer
 sortiert bekaeme man den Bestand alphabetisch nach Kommentator. Der Deckel von fuenf offenen

@@ -4,7 +4,7 @@
 
 Wunsch: „zu den gleichen Zeiten wie die Übersetzung auch Analyse der Meisterpartien — auf allen 16 Direktengines, aber
 wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
-- **Takt** (`Services/MasterAnalysisScheduler.cs`, Hosted Service): außerhalb der Sperrzeiten der Spark (`QuietHours`,
+- **Takt** (`Services/Library/MasterAnalysisScheduler.cs`, Hosted Service): außerhalb der Sperrzeiten der Spark (`QuietHours`,
   dieselbe Angabe `TextLlm:QuietHours` wie Übersetzung und Texte — Vorgabe Mo–Do 08–17, Fr 08–14 gesperrt) legt er
   Bibliothekspartien ohne Analyse als `GameAnalysisOrigin.Library` an — erst die kommentierten, dann der Rest, je nach
   Id; eine neue erst, wenn die laufenden zusammen weniger offene Stellungen haben als der Besitzer Hintergrund-Engines

@@ -1,5 +1,6 @@
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.Tests;
 

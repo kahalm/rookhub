@@ -8,6 +8,7 @@ using RookHub.Api.Services.League;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Club;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.Tests;
 

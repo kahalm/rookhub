@@ -24,6 +24,7 @@ using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Scoresheet;
+using RookHub.Api.Services.Library;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()

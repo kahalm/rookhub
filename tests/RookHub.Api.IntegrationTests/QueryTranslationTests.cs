@@ -13,6 +13,7 @@ using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Scoresheet;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.IntegrationTests;
 

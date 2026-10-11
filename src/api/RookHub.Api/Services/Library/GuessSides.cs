@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Library;
 
 /// <summary>
 /// Welche Seite uebernimmt man in einer Punktepartie, wenn man es nicht selbst sagt? Die des

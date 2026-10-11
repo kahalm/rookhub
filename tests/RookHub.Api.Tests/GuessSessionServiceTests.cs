@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.Tests;
 
