@@ -110,7 +110,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
   `grep -rl "^# X" docs/` findet sie.
 - Datenbank-Schema: `docs/datenbank-schema.md` · Oberflächen (RookHub/Turnier/KidHub, Filterleiste): `docs/oberflaechen.md`
 - Konventionen im Volltext (mit Begründung und Fallen): `docs/konventionen.md` · CI/CD im Detail: `docs/ci.md`
-- Frontend-Regeln: `src/frontend/CLAUDE.md` (lädt automatisch, sobald man dort arbeitet)
+- Frontend-Regeln: `src/frontend/CLAUDE.md` (lädt automatisch, sobald man dort arbeitet) · Gestaltung: `docs/DESIGN.md` (verbindlich)
 
 ### Endpunkte und Features je Bereich (`docs/api/`)
 
@@ -346,6 +346,10 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Wichtige Konventionen (Kurzfassung — Volltext mit Begründung: `docs/konventionen.md`)
 
+- **Gestaltung folgt `docs/DESIGN.md` — PFLICHT** (seit 2026-10-11): neue/geänderte UI aller fünf Oberflächen hält sich an
+  die allgemeinen Regeln (Abschnitte 2–7) und die Bereichsregeln (Abschnitt 8); vorher lesen. Jede neue
+  Gestaltungsentscheidung kommt im selben Commit in den passenden Abschnitt UND ins Änderungsprotokoll. Bestand
+  weicht ab → „Regel ab jetzt“ (Abschnitt 10). Nicht geregelt → User fragen, dann eintragen. Prüfen: Skill `/ui-design-check`.
 Vor Arbeit an einem dieser Punkte den Volltext lesen.
 
 - 401 ist nicht gleich Rauswurf

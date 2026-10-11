@@ -1,5 +1,9 @@
 # RookHub Frontend
 
+> **Gestaltung: `../../docs/DESIGN.md` ist verbindlich** (seit 2026-10-11). Neue oder geänderte UI folgt den dortigen
+> allgemeinen und Bereichsregeln; jede neue Gestaltungsentscheidung wird dort im passenden Abschnitt und im
+> Änderungsprotokoll eingetragen (gleicher Commit). Nicht Geregeltes: den User fragen, dann eintragen.
+
 Angular 19 Frontend fuer das RookHub-Portal. Teil des RookHub-Projekts (`C:/git/rookhub`), haengt vom **ChessResults Crawler** (`C:/git/chessresults_crawler`) ab – Turnierdaten werden ueber die RookHub API vom Crawler bezogen. Bei Aenderungen immer alle drei Schichten bedenken.
 
 ## Zusammenspiel

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.751.4", date: "2026-10-11", changes: [
+    { en: "Developer documentation: new design rules for all five sites (docs/DESIGN.md) — general rules, area-specific rules, process and a change log; new and changed UI has to follow them.",
+      de: "Entwickler-Doku: neue Gestaltungsregeln für alle fünf Oberflächen (docs/DESIGN.md) — allgemeine Regeln, Bereichsregeln, Ablauf und Änderungsprotokoll; neue und geänderte Oberflächen müssen ihnen folgen." },
+  ] },
   { version: "0.751.3", date: "2026-10-11", changes: [
     { en: "Developer documentation reorganised: the project notes for the coding assistant shrink from 6,250 to under 400 lines; endpoint and feature details now live in one file per area under docs/, and area-specific pitfalls load automatically only when matching files are touched. No change to the app.",
       de: "Entwickler-Doku neu geordnet: die Projektnotizen für den Code-Assistenten schrumpfen von 6 250 auf unter 400 Zeilen; Endpunkte und Feature-Beschreibungen stehen jetzt je Bereich in einer eigenen Datei unter docs/, bereichsspezifische Fallen laden nur noch, wenn passende Dateien angefasst werden. Keine Änderung an der App." },
