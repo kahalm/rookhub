@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>Optionen fuer <see cref="ApiTokenAuthenticationHandler"/>. Aktuell leer (Marker).</summary>
 public class ApiTokenAuthenticationOptions : AuthenticationSchemeOptions { }

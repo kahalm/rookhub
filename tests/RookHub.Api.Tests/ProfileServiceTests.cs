@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 
@@ -106,7 +107,7 @@ public class ProfileServiceTests : IDisposable
         string? file = null;
         while (!string.IsNullOrEmpty(dir))
         {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Services", "ProfileService.cs");
+            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Services", "Accounts", "ProfileService.cs");
             if (File.Exists(candidate)) { file = candidate; break; }
             dir = Path.GetDirectoryName(dir);
         }

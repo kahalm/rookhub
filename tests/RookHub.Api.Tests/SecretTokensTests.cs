@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 
@@ -54,7 +55,7 @@ public class SecretTokensTests
         var root = ApiRoot();
         var treffer = Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
-            .Where(p => !p.StartsWith("bin/") && !p.StartsWith("obj/") && p != "Services/PasswordHashing.cs")
+            .Where(p => !p.StartsWith("bin/") && !p.StartsWith("obj/") && p != "Services/Accounts/PasswordHashing.cs")
             .Where(p => File.ReadAllText(Path.Combine(root, p)).Contains("BCrypt.HashPassword("))
             .ToList();
         Assert.True(treffer.Count == 0,
@@ -64,9 +65,9 @@ public class SecretTokensTests
 
     /// <summary>Wachhund: die drei Einmal-Token-Dienste bauen Zufall und Hash nicht wieder selbst.</summary>
     [Theory]
-    [InlineData("Services/ApiTokenService.cs")]
-    [InlineData("Services/PasswordResetService.cs")]
-    [InlineData("Services/AuthHandoffService.cs")]
+    [InlineData("Services/Accounts/ApiTokenService.cs")]
+    [InlineData("Services/Accounts/PasswordResetService.cs")]
+    [InlineData("Services/Accounts/AuthHandoffService.cs")]
     public void EinmalTokenDienste_NutzenSecretTokens(string pfad)
     {
         var text = File.ReadAllText(Path.Combine(ApiRoot(), pfad));

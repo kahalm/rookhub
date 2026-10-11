@@ -22,7 +22,7 @@ Admin-Oberfläche „Gruppen“: Mitglieder hinzufügen über ein Suchfeld mit L
 **Rechte gelten LIVE, nicht ab dem nächsten Anmelden** (0.589.0, Wunsch 2026-09-28: „das ist doch scheiße — sollte
 immer wieder neue Infos holen"). Vorher standen die Rechte als `perm`-Claims im Token (bis 30 Tage gültig): eine neue
 Rolle wirkte erst nach dem nächsten Anmelden, eine entzogene galt so lange weiter. Jetzt:
-* **Server**: `Services/PermissionResolver.cs` löst eigene Rollen (`UserRoles`) + Rollen der Gruppen (`GroupRoles` über
+* **Server**: `Services/Accounts/PermissionResolver.cs` löst eigene Rollen (`UserRoles`) + Rollen der Gruppen (`GroupRoles` über
   `UserGroups`) auf, 60 s gespeichert. `PermissionAuthorizationHandler` (`[HasPermission]`) und `LeagueClubController`
   (Verwalter) fragen ihn statt des Claims; die Admin-Rolle des Tokens erfüllt weiter alles. **Jede Änderung** an Rollen,
   Rollen-Rechten, Gruppenrollen, Mitgliedschaften und dem Admin-Flag ruft `PermissionResolver.InvalidateAll()` — wer eine

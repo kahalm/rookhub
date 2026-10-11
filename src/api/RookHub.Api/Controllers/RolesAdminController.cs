@@ -3,6 +3,7 @@ using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Controllers;
 

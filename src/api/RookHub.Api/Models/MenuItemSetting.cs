@@ -19,7 +19,7 @@ public enum MenuVisibilityLevel
 
 /// <summary>
 /// Admin-konfigurierbare Sichtbarkeit eines einzelnen Menüeintrags (z. B. "repertoires").
-/// Fehlt eine Zeile, gilt der Default aus <see cref="Services.MenuRegistry"/>.
+/// Fehlt eine Zeile, gilt der Default aus <see cref="Services.Accounts.MenuRegistry"/>.
 /// </summary>
 public class MenuItemSetting
 {

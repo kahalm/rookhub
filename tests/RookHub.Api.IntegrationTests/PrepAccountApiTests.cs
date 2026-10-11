@@ -10,6 +10,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Prep;
 using Xunit;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.IntegrationTests;
 

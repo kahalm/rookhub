@@ -24,7 +24,7 @@
   damit über den Header — und vorher, ob es überhaupt ein 401 ist: ein ERWARTETES Nein, das schon ein anonymer Besuch
   auslöst, wird mit 204 beantwortet (`POST /api/auth/session` seit 0.478.6, vorher 401). Die Log-Überwachung zählt
   jeden 401 unter `/api/auth` je IP als abgelehnten Anmeldeversuch; 25 frische Browser-Sitzungen reichten für einen
-  Brute-Force-HIGH. Serverseitig loggt `Services/JwtTokenGate.cs` JEDE Token-Ablehnung mit Grund und Pfad
+  Brute-Force-HIGH. Serverseitig loggt `Services/Accounts/JwtTokenGate.cs` JEDE Token-Ablehnung mit Grund und Pfad
   (Logger `RookHub.Api.JwtAuth`; Kibana: `message:JwtAuth*`) — vorher war ein abgelehntes Token in den Logs unsichtbar.
   Die Fehlschläge VOR der Signaturprüfung (abgelaufen, kaputtes Format, fremde Signatur) laufen vor dem Rate-Limiter
   und vor dem IpAddress-Enricher: sie tragen `IpAddress` deshalb selbst und sind je IP + Ausnahmetyp auf eine Zeile

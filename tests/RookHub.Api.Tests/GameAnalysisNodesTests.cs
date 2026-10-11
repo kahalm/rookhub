@@ -13,6 +13,7 @@ using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Library;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 

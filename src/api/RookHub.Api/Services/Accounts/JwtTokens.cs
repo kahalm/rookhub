@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// EINE Stelle fuer Schluessel, Signatur und Pruefregeln der JWTs dieser API (Codereview 2026-09-29, A1-015):

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Anzeige-Zustaende je Nutzer lesen und schreiben (siehe <see cref="UserViewState"/>).

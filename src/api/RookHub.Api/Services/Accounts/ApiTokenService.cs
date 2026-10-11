@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Persoenliche API-Tokens (GitHub-PAT-Stil) fuer Maschinen-Clients.

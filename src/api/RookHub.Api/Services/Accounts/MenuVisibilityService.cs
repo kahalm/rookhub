@@ -3,7 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Verwaltet die admin-konfigurierbare Sichtbarkeit der Menüeinträge und löst die

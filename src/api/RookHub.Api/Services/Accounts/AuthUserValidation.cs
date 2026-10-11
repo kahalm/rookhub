@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Prüft, ob die hinter einem (stateless) JWT stehende Identität noch aktiv ist: der User muss

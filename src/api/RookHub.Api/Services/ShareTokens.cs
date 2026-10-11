@@ -1,3 +1,5 @@
+using RookHub.Api.Services.Accounts;
+
 namespace RookHub.Api.Services;
 
 /// <summary>

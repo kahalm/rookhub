@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Der EINE Ort fuer den BCrypt-Arbeitsfaktor. Er stand dreimal im Code (AuthService, PasswordResetService mit

@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Eine Anmeldung, zwei Oberflaechen: RookHub und die Turnierseite liegen auf eigenen Subdomains

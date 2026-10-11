@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Die beiden Ereignisse des JWT-Handlers, die entscheiden, ob ein formal gültiges Token noch etwas

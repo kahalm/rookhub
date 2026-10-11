@@ -7,7 +7,7 @@ using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Tournaments;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 public class ProfileService
 {

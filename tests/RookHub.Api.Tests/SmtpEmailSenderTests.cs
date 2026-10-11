@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using RookHub.Api.Services;
 using Xunit;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 

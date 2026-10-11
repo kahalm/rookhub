@@ -7,6 +7,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Authorization;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Controllers;
 

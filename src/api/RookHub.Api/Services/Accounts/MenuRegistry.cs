@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>Ein konfigurierbarer Menüeintrag mit Default-Sichtbarkeit.</summary>
 public record MenuItemDef(string Key, MenuVisibilityLevel Default);

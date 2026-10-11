@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Die EFFEKTIVEN Rechte eines Kontos, live aus der Datenbank: seine eigenen Rollen (<c>UserRoles</c>) plus die Rollen

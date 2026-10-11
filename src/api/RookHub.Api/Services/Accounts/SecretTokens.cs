@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Einmal-Geheimnisse, deren Rohwert genau einmal herausgeht und die in der Datenbank nur als SHA-256-Hash liegen

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 

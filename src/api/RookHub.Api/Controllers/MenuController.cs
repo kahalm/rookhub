@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Controllers;
 

@@ -7,6 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.EngineBroker;
 using Serilog.Context;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Controllers;
 

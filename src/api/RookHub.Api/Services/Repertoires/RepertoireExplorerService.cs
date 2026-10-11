@@ -7,6 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Services.Repertoires;
 

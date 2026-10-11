@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Versendet transaktionale E-Mails (aktuell: Passwort-Reset). Implementierungen:

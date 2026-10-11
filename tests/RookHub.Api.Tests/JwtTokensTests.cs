@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 
@@ -118,7 +119,7 @@ public class JwtTokensTests : IDisposable
     [Fact]
     public void Pruefparameter_NurInJwtTokens()
     {
-        Assert.Equal(["Program.cs", "Services/JwtTokens.cs"], DateienMit(new Regex(@"\bTokenValidationParameters\b")));
+        Assert.Equal(["Program.cs", "Services/Accounts/JwtTokens.cs"], DateienMit(new Regex(@"\bTokenValidationParameters\b")));
         var program = File.ReadAllText(Path.Combine(ApiRoot(), "Program.cs"));
         Assert.Contains("JwtTokens.ValidationParameters(", program);
         Assert.DoesNotMatch(new Regex(@"new\s+TokenValidationParameters\b"), program);
@@ -131,7 +132,7 @@ public class JwtTokensTests : IDisposable
     public void JwtKey_NurInJwtTokensGelesen()
     {
         Assert.Equal(
-            ["Services/JwtTokens.cs", "Services/Scoresheet/ScoresheetScanService.cs", "Services/SecretConfigCheck.cs"],
+            ["Services/Accounts/JwtTokens.cs", "Services/Scoresheet/ScoresheetScanService.cs", "Services/SecretConfigCheck.cs"],
             DateienMit(new Regex(@"\[""Jwt:Key""\]")));
     }
 }

@@ -37,7 +37,7 @@ public abstract class BaseApiController : ControllerBase
     /// <summary>Dieselbe Prüfung wie <see cref="HasPermissionAttribute"/>, aber im Rumpf einer Action — für Stellen, an
     /// denen das Recht nur einen TEIL der Antwort freischaltet (unveröffentlichte Wochenposts, Push-Bereich „admin") oder
     /// die einen Forbid-Zweig selbst führen. Admin-Rolle erfüllt alles; sonst der Live-Stand des
-    /// <see cref="Services.PermissionResolver"/>, ohne ihn (Tests) der <c>perm</c>-Claim (F5-005: vorher hing das am
+    /// <see cref="Services.Accounts.PermissionResolver"/>, ohne ihn (Tests) der <c>perm</c>-Claim (F5-005: vorher hing das am
     /// Admin-Flag, eine Rolle mit dem Recht wirkte dort nicht).</summary>
     /// <summary>
     /// Der Verein dieser LeagueHub-Anfrage (Mandanten-Schritt 2026-10-07) — über die EINE Stelle
@@ -59,7 +59,7 @@ public abstract class BaseApiController : ControllerBase
         return r.Club != null ? (r.Club, null) : (null, new ObjectResult(new { reason = r.Reason }) { StatusCode = r.Status });
     }
 
-    protected async Task<bool> HasPermissionAsync(Services.PermissionResolver? resolver, string permission)
+    protected async Task<bool> HasPermissionAsync(Services.Accounts.PermissionResolver? resolver, string permission)
     {
         if (User?.IsInRole("Admin") == true) return true;
         if (User?.Identity?.IsAuthenticated != true) return false;

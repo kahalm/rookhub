@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using RookHub.Api.Services.Chessable;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Symmetrische Verschlüsselung sensibler per-User-Secrets, die RookHub in der DB hält

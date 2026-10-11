@@ -11,7 +11,7 @@ namespace RookHub.Api.Middleware;
 /// (<see cref="AllowedPrefixesByScope"/>: <c>extension</c> → Extension-API, <c>engine</c> →
 /// Engine-Provider-API) — alles andere endet mit 403, noch bevor Routing/Controller den Request sehen.
 ///
-/// <para>WARUM: Ein PAT bekommt im <see cref="Services.ApiTokenAuthenticationHandler"/> dieselben
+/// <para>WARUM: Ein PAT bekommt im <see cref="Services.Accounts.ApiTokenAuthenticationHandler"/> dieselben
 /// Identitäts-Claims wie ein JWT. Vorher war der Scope NUR im ExtensionController geprüft — damit
 /// war ein „extension"-Token faktisch ein Voll-Account-Token: <c>PUT /api/profile</c> ändert die
 /// E-Mail, danach „Passwort vergessen" → Kontoübernahme. Zentral gezogen sind neue Endpoints

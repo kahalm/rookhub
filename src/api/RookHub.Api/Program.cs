@@ -27,6 +27,7 @@ using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Library;
 using RookHub.Api.Services.Kids;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Accounts;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -284,7 +285,7 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
     // Vereine als Mandanten (2026-10-07): die EINE Stelle, die den Verein einer Anfrage bestimmt, und die Verwaltung der Vereine.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubResolver(
-        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<RookHub.Api.Services.PermissionResolver>()));
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<RookHub.Api.Services.Accounts.PermissionResolver>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubAdminService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// „Passwort vergessen"-Flow: Reset-Link per E-Mail anfordern (<see cref="RequestResetAsync"/>)

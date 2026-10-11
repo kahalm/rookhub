@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Xunit;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Tests;
 

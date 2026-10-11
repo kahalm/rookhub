@@ -11,6 +11,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Accounts;
 
 namespace RookHub.Api.Controllers;
 
