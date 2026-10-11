@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.Tests;
 
@@ -71,7 +72,7 @@ public class DirectoryPublicIdTests
     {
         var assignment = new Regex(@"(?i)publicId\s*=.*?\$""(?<fmt>[^""]*\{[^""]*)""");
         var formats = new List<(string File, string Format)>();
-        foreach (var file in Directory.GetFiles(Path.Combine(ApiSourceRoot(), "Services"), "*.cs"))
+        foreach (var file in Directory.GetFiles(Path.Combine(ApiSourceRoot(), "Services"), "*.cs", SearchOption.AllDirectories))
         {
             foreach (var line in File.ReadLines(file))
             {

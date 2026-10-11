@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Welche Form eine Verzeichnis-Kennung (<see cref="Models.TournamentDirectoryEntry.PublicId"/>)

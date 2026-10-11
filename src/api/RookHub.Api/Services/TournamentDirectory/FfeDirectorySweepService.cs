@@ -2,9 +2,9 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
-using static RookHub.Api.Services.DirectoryText;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Der Kalender des franzoesischen Verbands (FFE) als Quelle.

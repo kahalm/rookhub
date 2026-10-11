@@ -3,9 +3,9 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using static RookHub.Api.Services.DirectoryText;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Der Kalender des slowakischen Verbands (chess.sk) als Quelle.

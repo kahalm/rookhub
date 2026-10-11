@@ -3,7 +3,8 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
-using static RookHub.Api.Services.DirectoryText;
+using RookHub.Api.Services.TournamentDirectory;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
 namespace RookHub.Api.Services;
 

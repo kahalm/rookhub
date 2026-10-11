@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.Tests;
 
@@ -542,7 +543,7 @@ public class TournamentDirectorySchedulerTests : IDisposable
     [Fact]
     public void NightlyRun_AlsoFetchesTheFideEventDetails()
     {
-        var scheduler = ReadSource("src/api/RookHub.Api/Services/TournamentDirectoryScheduler.cs");
+        var scheduler = ReadSource("src/api/RookHub.Api/Services/TournamentDirectory/TournamentDirectoryScheduler.cs");
         var program = ReadSource("src/api/RookHub.Api/Program.cs");
 
         Assert.Contains("GetRequiredService<FideEventDetailService>()", scheduler);
@@ -587,7 +588,7 @@ public class TournamentDirectorySchedulerTests : IDisposable
     [MemberData(nameof(SweepServices))]
     public void NightlyRun_CallsEverySweepService(string service) =>
         Assert.True(
-            ReadSource("src/api/RookHub.Api/Services/TournamentDirectoryScheduler.cs")
+            ReadSource("src/api/RookHub.Api/Services/TournamentDirectory/TournamentDirectoryScheduler.cs")
                 .Contains(service, StringComparison.Ordinal),
             $"{service} wird im naechtlichen Zeitplan nicht aufgerufen — die Quelle liefert dann "
             + "nie ein Turnier, ohne dass irgendwo ein Fehler entsteht");

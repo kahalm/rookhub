@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using RookHub.Api.Models;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.Services;
 

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Textaufbereitung fuers Geocoding. Die Spielorte sind roher Freitext in wechselnder Schreibweise

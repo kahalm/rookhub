@@ -291,6 +291,15 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   (`.github/filters.yml`, neuer Job braucht einen Filter); nur `vX.Y.Z`-Tags auf einem master-Commit bauen `:latest`;
   `gh workflow run docker.yml` baut alles von Hand (schiebt `:dev`). Regeln dazu hängen an `CiWorkflowTests` —
   Details, Vorbau/Umhängen und Begründungen: `docs/ci.md`.
+- **Große Dateien beim Anfassen verkleinern** – berührt eine Aufgabe eine Datei mit über 1 000 Zeilen, ZUERST einen in
+  sich geschlossenen Teil herausziehen (Angular: Unterbereich als Kind-Komponente, Zustand/Logik in einen Dienst; C#:
+  ein abgegrenzter Schritt als eigene Klasse) — eigener Commit, kein Verhalten geändert, Tests grün; erst danach die
+  eigentliche Änderung. Kein eigener Zerlege-Durchgang, nur dort, wo ohnehin gearbeitet wird. Aufrufer über das
+  LSP-Werkzeug (`findReferences`) suchen, nicht per grep.
+- **Dienste liegen nach Fachbereich in Unterordnern** (`Services/<Bereich>/`, Namespace `RookHub.Api.Services.<Bereich>`,
+  Nutzer binden ihn per `using` ein). Umzug eines Bereichs: eigener Commit, nur `git mv` + Namespace + `using`s, kein
+  Code geändert; vorher der anderen Sitzung ankündigen. Bisher: League, Prep, Tactics, Club, ChessBase, EngineBroker,
+  Og, TournamentDirectory (0.752.2). Neue Dienste eines vorhandenen Bereichs gehören in dessen Ordner.
 - **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 
 ## Versionierung

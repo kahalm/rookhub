@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using RookHub.Api.Exceptions;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Der EINE Lese-Weg der Hintergrunddienste (Turniersuche, Verbandskalender, Turnierverlauf,

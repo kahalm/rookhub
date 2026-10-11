@@ -7,9 +7,9 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using static RookHub.Api.Services.DirectoryText;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Der Kalender von Chess Scotland (chessscotland.com) als Quelle.

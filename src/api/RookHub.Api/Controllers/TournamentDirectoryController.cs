@@ -8,6 +8,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.Controllers;
 

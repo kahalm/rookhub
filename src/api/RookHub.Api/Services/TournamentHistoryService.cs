@@ -4,7 +4,8 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
-using static RookHub.Api.Services.DirectoryText;
+using RookHub.Api.Services.TournamentDirectory;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
 namespace RookHub.Api.Services;
 

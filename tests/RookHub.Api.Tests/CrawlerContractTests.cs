@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.Tests;
 

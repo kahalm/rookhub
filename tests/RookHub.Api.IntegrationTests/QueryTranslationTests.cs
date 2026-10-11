@@ -6,6 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Xunit;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.IntegrationTests;
 

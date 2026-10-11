@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
-using static RookHub.Api.Services.DirectoryText;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Uebernimmt den FIDE-Kalender ins Verzeichnis — die zweite Quelle.

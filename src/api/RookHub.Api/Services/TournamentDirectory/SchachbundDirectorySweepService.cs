@@ -4,9 +4,9 @@ using RookHub.Api.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using static RookHub.Api.Services.DirectoryText;
+using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Die Turnierdatenbank des Deutschen Schachbunds (schachbund.de) als Quelle.

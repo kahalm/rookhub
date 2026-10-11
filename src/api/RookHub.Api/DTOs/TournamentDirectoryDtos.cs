@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using RookHub.Api.Models;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.DTOs;
 
@@ -302,8 +303,8 @@ public class DirectorySearchProfileDto
         Lat = p.Lat,
         Lon = p.Lon,
         RadiusKm = p.RadiusKm,
-        Federations = Services.TournamentDirectoryService.SplitCsv(p.Federations),
-        Speeds = Services.TournamentDirectoryService.SplitCsv(p.Speeds),
+        Federations = TournamentDirectoryService.SplitCsv(p.Federations),
+        Speeds = TournamentDirectoryService.SplitCsv(p.Speeds),
         WeekendOnly = p.WeekendOnly,
         MinPlayers = p.MinPlayers,
         NotifyNew = p.NotifyNew,

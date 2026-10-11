@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.TournamentDirectory;
 
 namespace RookHub.Api.Tests;
 

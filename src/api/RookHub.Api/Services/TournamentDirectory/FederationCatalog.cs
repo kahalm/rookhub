@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Alle Foederationscodes, die das Laenderfeld der chess-results-Turniersuche kennt (Stand

@@ -8,6 +8,7 @@ paths:
   - "**/Geo*.cs"
   - "**/TournamentCalendarSweepService.cs"
   - "**/FederationCatalog.cs"
+  - "**/Services/TournamentDirectory/**"
 ---
 
 # Turnierverzeichnis: Ortsnamen, Quellen, Fehlschläge

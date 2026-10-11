@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Umkreis-Rechnung. Bewusst in C# und nicht in SQL: <c>Math.Acos</c>/<c>Cos</c>/<c>Sin</c> werden

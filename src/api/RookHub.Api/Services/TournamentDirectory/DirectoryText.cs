@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>
 /// Die Kleinhelfer fuer Crawler-Antworten, die vorher je Datei kopiert waren (Codereview A5-013) —

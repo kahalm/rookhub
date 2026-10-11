@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.TournamentDirectory;
 
 /// <summary>Was ein Durchgang einer externen Quelle getan hat.</summary>
 public record ExternalSweepResult(int Read, int Added, int Updated, int Matched, int Retired);
