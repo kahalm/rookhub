@@ -283,9 +283,9 @@ try
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<RookHub.Api.Services.PermissionResolver>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubAdminService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
-    builder.Services.AddScoped<RookHub.Api.Services.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)
-    builder.Services.AddHostedService<RookHub.Api.Services.ClubCopyLinkScheduler>();
-    builder.Services.AddHostedService<RookHub.Api.Services.ClubSecondEngineScheduler>();
+    builder.Services.AddScoped<RookHub.Api.Services.Club.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)
+    builder.Services.AddHostedService<RookHub.Api.Services.Club.ClubCopyLinkScheduler>();
+    builder.Services.AddHostedService<RookHub.Api.Services.Club.ClubSecondEngineScheduler>();
     // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen
     builder.Services.AddScoped<RookHub.Api.Services.Tactics.TacticHarvestService>();
     builder.Services.AddHostedService<RookHub.Api.Services.Tactics.TacticHarvestScheduler>();

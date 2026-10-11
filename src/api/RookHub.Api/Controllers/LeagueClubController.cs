@@ -8,6 +8,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.ChessBase;
 using RookHub.Api.Services.League;
+using RookHub.Api.Services.Club;
 using Actor = RookHub.Api.Services.ScoresheetScanService.ScanActor;
 
 namespace RookHub.Api.Controllers;

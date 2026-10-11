@@ -4,7 +4,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Club;
 
 /// <summary>
 /// Vereinspartie und ihre Kopien zusammen korrigieren (0.660.0, Wunsch 2026-10-05: „aus einem Scoresheet ein Ligagame gemacht

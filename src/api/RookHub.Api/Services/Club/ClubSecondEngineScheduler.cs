@@ -5,7 +5,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Club;
 
 /// <summary>
 /// Jede Vereinspartie bekommt neben der Stockfish-Analyse eine zweite auf einer festen Engine (0.684.0, Wunsch 2026-10-06:

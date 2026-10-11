@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Club;
 
 namespace RookHub.Api.Services.Engines;
 

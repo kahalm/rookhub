@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Club;
 
 namespace RookHub.Api.Controllers;
 

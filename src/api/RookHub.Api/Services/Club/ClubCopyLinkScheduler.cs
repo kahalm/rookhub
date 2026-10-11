@@ -1,6 +1,6 @@
 using RookHub.Api.Services.Games;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Club;
 
 /// <summary>Kopien von Vereinspartien aus der Zeit vor 0.660.0 nachträglich mit ihrer Vereinspartie verbinden
 /// (<see cref="SavedGameService.LinkClubCopiesAsync"/>) — kurz nach dem Start und dann täglich.</summary>
