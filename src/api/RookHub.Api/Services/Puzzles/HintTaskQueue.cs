@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Eigene Queue NUR für die automatische Tipp-Generierung (je Buch-Puzzle ein Stockfish-Prozess bis 30 s plus drei

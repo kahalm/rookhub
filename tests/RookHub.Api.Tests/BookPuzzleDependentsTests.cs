@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Puzzles;
 
 namespace RookHub.Api.Tests;
 

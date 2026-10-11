@@ -5,7 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>Die anonyme Endless-Senke ist voll (<see cref="EndlessProgressService.MaxAnonymousProgressRowsTotal"/>
 /// bzw. <see cref="EndlessProgressService.MaxAnonymousSessionRowsTotal"/>): keine NEUE anonyme Zeile.

@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Tagespuzzle-Bestenlisten (Monats-Ladder + all-time Hall of Fame), aus <see cref="BookPuzzleService"/>

@@ -13,6 +13,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Puzzles;
 
 namespace RookHub.Api.Tests;
 

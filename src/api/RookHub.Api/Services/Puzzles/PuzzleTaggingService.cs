@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Pflege der normalisierten Puzzle-Themen-Tabellen (<see cref="Tag"/>/<see cref="PuzzleTag"/>) — aus

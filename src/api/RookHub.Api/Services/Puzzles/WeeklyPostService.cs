@@ -6,7 +6,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Per-User-Fortschritt für Wochenposts: zeichnet gespielte Puzzles (idempotent je (Post, User, Index))

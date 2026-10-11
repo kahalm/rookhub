@@ -1,6 +1,6 @@
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Die ARITHMETIK hinter den Versuchs-Statistiken — einmal, für Standard-Puzzles

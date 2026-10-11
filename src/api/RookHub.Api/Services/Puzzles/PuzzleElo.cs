@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Reine Puzzle-Elo-Mathematik, geteilt zwischen dem Versuchs-Recording (<see cref="PuzzleService"/>)

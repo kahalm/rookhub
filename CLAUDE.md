@@ -339,10 +339,10 @@ Vor Arbeit an einem dieser Punkte den Volltext lesen.
 - Eine selbst geoeffnete Transaktion MUSS in der Execution-Strategy laufen
 - Kurs ⇄ Repertoire liegt in `Services/Courses/CourseRepertoireConversionService.cs`
 - Handgespiegelte Listen bekommen auf BEIDEN Seiten einen Test mit LITERALEN Werten
-- Versuchs-Werte kommen aus `Services/AttemptRecording.cs`
+- Versuchs-Werte kommen aus `Services/Puzzles/AttemptRecording.cs`
 - PGN wird mit `Services/PgnWriter.cs` geschrieben
 - DER PGN-Baumparser ist `Services/PgnMoveTree.cs`
-- Statistik-Kennzahlen kommen aus `Services/AttemptStats.cs`
+- Statistik-Kennzahlen kommen aus `Services/Puzzles/AttemptStats.cs`
 - Import-/Aufbereitungs-Pipeline versionieren
 - Kalkulations-Modus ist KEIN Solver
 - Vollbild-Brett gehört in die BRETT-Komponenten

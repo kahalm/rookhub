@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Puzzles;
 
 namespace RookHub.Api.Controllers;
 

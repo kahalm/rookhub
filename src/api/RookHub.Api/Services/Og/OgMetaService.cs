@@ -8,6 +8,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Validation;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Puzzles;
 
 namespace RookHub.Api.Services.Og;
 

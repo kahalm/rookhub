@@ -1,6 +1,6 @@
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Die vier Werte, die JEDER Lösungsversuch gemeinsam hat — einmal normalisiert statt an sieben

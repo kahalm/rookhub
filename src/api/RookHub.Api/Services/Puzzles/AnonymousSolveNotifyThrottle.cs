@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Entprellt den schach-bot-Webhook für ANONYME Buch-Puzzle-Solves (Review-Fund A2-003): höchstens EINE

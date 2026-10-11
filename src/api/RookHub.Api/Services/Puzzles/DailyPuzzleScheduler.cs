@@ -1,6 +1,6 @@
 using RookHub.Api.Services.Courses;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Sorgt dafuer, dass jeden UTC-Tag um 00:00 das Tagespuzzle vorab ausgewaehlt + in

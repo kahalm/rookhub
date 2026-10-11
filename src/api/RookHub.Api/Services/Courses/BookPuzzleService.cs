@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Puzzles;
 
 namespace RookHub.Api.Services.Courses;
 
