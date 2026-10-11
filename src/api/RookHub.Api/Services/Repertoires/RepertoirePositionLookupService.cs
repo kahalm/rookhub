@@ -1,9 +1,9 @@
 using Chess;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.DTOs;
-using static RookHub.Api.Services.RepertoireLineSource;
+using static RookHub.Api.Services.Repertoires.RepertoireLineSource;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Findet zu einer Stellung (FEN) alle EIGENEN Repertoire-Linien des Users, in denen sie vorkommt

@@ -1,5 +1,6 @@
 using RookHub.Api.Services;
-using static RookHub.Api.Services.RepertoireLineSource;
+using RookHub.Api.Services.Repertoires;
+using static RookHub.Api.Services.Repertoires.RepertoireLineSource;
 
 namespace RookHub.Api.Tests;
 

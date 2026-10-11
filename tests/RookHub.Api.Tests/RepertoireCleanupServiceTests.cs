@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

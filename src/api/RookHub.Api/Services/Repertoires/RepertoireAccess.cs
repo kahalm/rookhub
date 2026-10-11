@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// EINE Quelle für die Lese-Zugriffsregel auf Repertoires: Besitzer ODER Empfänger einer

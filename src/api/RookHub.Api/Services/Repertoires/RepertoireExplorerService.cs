@@ -7,7 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Lochfinder und Linien-Häufigkeiten eines Repertoires aus dem Lichess-Explorer

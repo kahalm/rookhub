@@ -52,7 +52,7 @@ public class ShareTokensTests
     [Theory]
     [InlineData("Services/SavedGameService.cs")]
     [InlineData("Services/Courses/WorksheetService.cs")]
-    [InlineData("Services/SharedLineService.cs")]
+    [InlineData("Services/Repertoires/SharedLineService.cs")]
     [InlineData("Services/GameReconstructionService.cs")]
     [InlineData("Services/League/LeagueService.cs")]
     public void TeilenDienste_NutzenShareTokens(string pfad)

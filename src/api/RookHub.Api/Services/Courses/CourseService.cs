@@ -5,6 +5,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Services.Courses;
 

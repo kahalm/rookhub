@@ -7,7 +7,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Courses;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 public class RepertoireService
 {

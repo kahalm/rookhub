@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.DTOs;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Services;
 

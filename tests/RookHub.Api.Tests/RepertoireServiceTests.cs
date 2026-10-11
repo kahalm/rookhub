@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

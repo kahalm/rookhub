@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

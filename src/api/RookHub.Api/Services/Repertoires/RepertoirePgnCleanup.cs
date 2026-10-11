@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using RookHub.Api.Services.Chessable;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Bereinigt Altlasten in Chessable-Repertoire-PGNs, OHNE je eine Partie zu löschen. Ausgeblendet wird über den Header

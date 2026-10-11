@@ -1,6 +1,7 @@
 using Chess;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Prep;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

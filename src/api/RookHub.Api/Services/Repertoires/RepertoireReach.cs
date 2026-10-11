@@ -1,6 +1,6 @@
 using Chess;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// „Wie oft landet man in welcher Repertoire-Stellung?" — die Rechnung hinter dem Lochfinder und

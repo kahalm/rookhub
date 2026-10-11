@@ -3,7 +3,7 @@
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Lochfinder + „Häufigste zuerst" (Lichess-Explorer, 0.502.0)“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
 
-Zwei Fragen, eine Rechnung (`Services/RepertoireReach.cs`, Modell aus Opening Fenix, GPLv3):
+Zwei Fragen, eine Rechnung (`Services/Repertoires/RepertoireReach.cs`, Modell aus Opening Fenix, GPLv3):
 **Wie oft landet man in welcher Repertoire-Stellung?** Die Wurzel hat Wahrscheinlichkeit 1; ist der
 NUTZER am Zug, teilt sie sich gleichmäßig auf seine Repertoire-Züge auf, ist der GEGNER am Zug, nach
 den Explorer-Häufigkeiten. Knoten sind Stellungen, Zugumstellungen summieren sich. Daraus fallen

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

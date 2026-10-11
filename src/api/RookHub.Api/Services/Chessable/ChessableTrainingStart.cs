@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Services.Chessable;
 

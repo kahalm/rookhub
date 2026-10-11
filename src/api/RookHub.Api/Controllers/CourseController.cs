@@ -5,6 +5,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Controllers;
 

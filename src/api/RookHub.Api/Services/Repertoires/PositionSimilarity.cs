@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Numerics;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>Figurentyp-Index in <see cref="PositionFeatures"/> (Reihenfolge = Materialwert-Tabelle).</summary>
 public enum SimPieceType { Pawn = 0, Knight = 1, Bishop = 2, Rook = 3, Queen = 4, King = 5 }

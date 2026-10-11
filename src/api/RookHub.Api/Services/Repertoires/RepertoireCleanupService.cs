@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Wendet <see cref="RepertoirePgnCleanup"/> auf gespeicherte Chessable-Repertoires an: holt für mehrdeutige oids die

@@ -9,6 +9,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using Xunit.Abstractions;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

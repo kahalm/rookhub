@@ -4,7 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Spaced-Repetition-Scheduling für den Repertoire-Trainer als feste 9-Stufen-Leiter (seit v0.245,

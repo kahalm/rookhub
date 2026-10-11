@@ -9,6 +9,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Authorization;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Controllers;
 

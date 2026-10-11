@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 using RookHub.Api.DTOs;
-using static RookHub.Api.Services.RepertoireLineSource;
+using static RookHub.Api.Services.Repertoires.RepertoireLineSource;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// „Ähnliche Stellungen in meinen Repertoires" — das Gegenstück zur exakten Stellungssuche

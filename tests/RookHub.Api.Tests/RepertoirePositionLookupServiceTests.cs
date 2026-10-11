@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Repertoires;
 
 namespace RookHub.Api.Tests;
 

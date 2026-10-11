@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Wie viele Neuaufbauten von Positions-Sets (<see cref="RepertoireAnalyzeService"/>) im ganzen Prozess GLEICHZEITIG

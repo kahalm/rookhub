@@ -7,7 +7,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Serverseitige Repertoire-Analyse fuer die Browser-Extension. Statt das vollstaendige PGN

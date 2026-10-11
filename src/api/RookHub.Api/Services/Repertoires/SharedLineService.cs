@@ -6,7 +6,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
 /// Erzeugt und liest öffentliche Nur-Ansehen-Links für einzelne Repertoire-Linien
