@@ -22,6 +22,7 @@ import { EngineDisplayLine, formatElapsed, formatKiloNodes, formatKiloNps, mapBr
 import { ExternalEngineInfo, ExternalEngineService, engineTagKey } from './external-engine.service';
 import { JOB_DEPTH_OPTIONS, JOB_LINE_OPTIONS } from './analysis-job-dialog.component';
 import type { EngineAnalyseLine } from './external-engine.service';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /**
  * Seite „Analyse-Aufträge" (`/analysis/jobs`): alle Hintergrund-Aufträge des Users mit Status,
@@ -37,7 +38,7 @@ import type { EngineAnalyseLine } from './external-engine.service';
   selector: 'app-analysis-jobs',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatFormFieldModule, MatSelectModule, MatProgressSpinnerModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent],
+    MatFormFieldModule, MatSelectModule, MatProgressSpinnerModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe],
   template: `
     <div class="jobs-container">
       <div class="header">
@@ -96,7 +97,7 @@ import type { EngineAnalyseLine } from './external-engine.service';
                     } @else {
                       <div class="lines">
                         @for (l of lines; track $index) {
-                          <div class="line-row"><span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span><span class="line-san">{{ l.san }}</span></div>
+                          <div class="line-row"><span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span><span class="line-san">{{ l.san | san:'text' }}</span></div>
                         }
                       </div>
                     }

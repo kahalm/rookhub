@@ -208,9 +208,7 @@ interface HistoryRow {
                           [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
                   <button mat-icon-button (click)="step(1)" [disabled]="atTask"
                           [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
-                  <button mat-stroked-button (click)="browse(null)" [disabled]="atTask">
-                    {{ 'guess.toTask' | translate }}
-                  </button>
+                  <!-- UI-Sweep 2026-10-11: kein zweites „Zur Aufgabe" hier — der Hauptknopf steht beim Durchsehen unter dem Brett. -->
                   <!-- Umschalten nur, wenn es etwas umzuschalten gibt. -->
                   @if (commentLanguages.length > 1) {
                     <span class="onav-spacer"></span>

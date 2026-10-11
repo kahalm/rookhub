@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameEditComponent } from './game-edit.component';
@@ -57,6 +57,21 @@ describe('GameEditComponent', () => {
     c.go(4);
     c.onBoardMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: '' });
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Bc4', 'Nc6', 'Nf3']);
+  });
+
+  // UI-Sweep 2026-10-11 (r2-rg-notation): die Zugliste zeigt die Figurenbuchstaben der Sprache, gespeichert bleibt englisch.
+  it('shows the moves in the user\'s piece letters (German: Sf3, Lb5) but keeps English SAN inside', async () => {
+    const { fixture, c, http } = await setup();
+    TestBed.inject(TranslateService).use('de');
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    const shown = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.moves .ply:not(.end)')].map(b => b.textContent!.trim());
+    expect(shown).toEqual(['e4', 'e5', 'Sf3', 'Sc6', 'Lb5']);
+    expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']);
+    c.go(2);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.where .san')!.textContent!.trim()).toBe('Sf3');
   });
 
   it('shows the analysis (graph + computer lines) of the saved moves, and hides it once moves change', async () => {

@@ -14,6 +14,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { AnalysisJob, AnalysisJobLive, AnalysisJobsService } from './analysis-jobs.service';
 import { EngineDisplayLine, formatElapsed, formatKiloNodes, formatKiloNps, mapBrokerLine, toDisplayLines } from './engine-lines.util';
 import type { EngineAnalyseLine } from './external-engine.service';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 export interface AnalysisJobViewData {
   jobId: number;
@@ -37,7 +38,7 @@ const JOB_REFRESH_TICKS = 5;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgClass, RouterLink, MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    TranslatePipe, ChessBoardComponent],
+    TranslatePipe, ChessBoardComponent, SanPipe],
   template: `
     <h2 mat-dialog-title>{{ (job()?.title || data.title) || ('remembered.analysisOrigin' | translate) }}</h2>
     <mat-dialog-content>
@@ -71,7 +72,7 @@ const JOB_REFRESH_TICKS = 5;
               } @else {
                 <div class="lines">
                   @for (l of lines(); track $index) {
-                    <div class="line-row"><span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span><span class="line-san">{{ l.san }}</span></div>
+                    <div class="line-row"><span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span><span class="line-san">{{ l.san | san:'text' }}</span></div>
                   }
                 </div>
               }

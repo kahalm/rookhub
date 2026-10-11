@@ -51,6 +51,7 @@ import { buildSparringPgn } from './maia/sparring-pgn';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 import { GuessUploadStatus } from './game-analysis.service';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
@@ -89,7 +90,7 @@ const EVAL_SETTLE_DEPTH = 10;
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
-    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent
+    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, SanPipe
   ],
   template: `
     <div class="analysis-page">
@@ -224,7 +225,7 @@ const EVAL_SETTLE_DEPTH = 10;
                       <div class="line-row">
                         <span class="line-mark" [style.background]="lineColor(i)" aria-hidden="true"></span>
                         <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
-                        <span class="line-san">{{ l.san }}</span>
+                        <span class="line-san">{{ l.san | san:'text' }}</span>
                       </div>
                     }
                   </div>
@@ -247,7 +248,7 @@ const EVAL_SETTLE_DEPTH = 10;
                         @for (l of compareLines; track $index) {
                           <div class="line-row">
                             <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
-                            <span class="line-san">{{ l.san }}</span>
+                            <span class="line-san">{{ l.san | san:'text' }}</span>
                           </div>
                         }
                       </div>
@@ -427,6 +428,13 @@ const EVAL_SETTLE_DEPTH = 10;
       border: 1px solid rgba(249, 168, 37, .6); background: transparent; color: inherit; cursor: pointer; }
     .star-jumps .jump.active { background: rgba(249, 168, 37, .25); }
     .controls .spacer { flex: 1; }
+    /* UI-Sweep 2026-10-11: neun Symbolknöpfe (seit dem „+" in 0.749.0) brauchen 432 px — am Handy ragte das ⋮ aus dem Fenster.
+       Unter 480 px rücken sie auf 36 px zusammen, auch die in app-mark-position-button und app-position-menu. */
+    @media (max-width: 480px) {
+      .controls { gap: 0; }
+      .controls ::ng-deep .mat-mdc-icon-button { width: 36px; height: 36px; padding: 6px; --mat-icon-button-state-layer-size: 36px; }
+      .controls ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target { width: 36px; height: 36px; }
+    }
     .movetree { margin-top: 8px; }
     .tree-hint { margin: 6px 0 0; font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .io-card .full { width: 100%; }

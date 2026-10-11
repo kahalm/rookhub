@@ -811,7 +811,7 @@
       "kidNoTracking": "KidHub ne prikazuje oglase, ne koristi kolačiće za praćenje i nema chat. Da bismo odabrali odgovarajući jezik, jednom provjerimo iz koje zemlje dolazi tvoja internetska adresa — pritom se ona ne sprema.",
       "kidDetails": "Za roditelje: sljedeći odjeljci detaljno opisuju koje podatke obrađujemo. KidHub račun isti je račun kao na RookHubu, pa vrijede za obje stranice.",
       "controllerTitle": "Voditelj obrade",
-      "controllerNamed": "Voditelj obrade podataka je:",
+      "controllerNamed": "Voditelj obrade podataka je operater ove web-stranice, dostupan na:",
       "leagueTitle": "LeagueHub (priprema ekipe)",
       "leagueIntro": "LeagueHub pomaže članovima šahovskih klubova sudionika da se pripreme za ekipne mečeve svojih liga (Tirol, Bavarska). Svaki klub ima vlastitu klupsku bazu koju nijedan drugi klub ne vidi. Za to obrađujemo i podatke igrača koji kod nas nemaju račun i čije podatke ne prikupljamo izravno od njih (čl. 14 GDPR-a).",
       "leagueClub": "Trenutačno koristiš LeagueHub za {{club}}.",
@@ -3800,7 +3800,6 @@
       "gameMove": "Potez iz partije: {{move}} - procjena {{eval}}",
       "bestMove": "Najbolji potez: {{move}} - procjena {{eval}}"
     },
-    "toTask": "Natrag na zadatak",
     "toTaskMove": "Na zadatak ({{move}})",
     "browsingHint": "Pregled otvaranja · odigrano {{count}} poteza",
     "startPosition": "Početni položaj",

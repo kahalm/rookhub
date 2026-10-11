@@ -23,12 +23,13 @@ const SENTENCE_END = /(?<!\d)[.!?]\s+/g;
  * „Opposition Wir haben …") — für ein Kind ist der Satzanfang so unverständlich. Erkannt werden:
  *  - eine eigene kurze Zeile ohne Satzzeichen am Ende, auf die noch Text folgt;
  *  - eine an den nächsten Satz geklebte Überschrift (klein→GROSS ohne Leerzeichen), ab dem letzten Satzende davor.
- * Mit Leerzeichen angeklebte Überschriften („Opposition Wir") lassen sich nicht sicher erkennen — die braucht den
- * Umbruch aus der Quelle.
+ *  - am ANFANG eine mit Leerzeichen angeklebte Überschrift („Opposition Wir haben …", „Der Springerbauer Betrachten wir …"):
+ *    höchstens sechs Wörter ohne Satzzeichen, gefolgt von einem typischen deutschen Satzanfang (`SENTENCE_STARTERS`).
+ *    Die Quelle trennt sie mit zwei Leerzeichen, beim Import blieb eines übrig (Nachprüfung 2026-10-11, Buch 50).
  */
 export function splitCourseText(comment: string | null | undefined): CourseTextBlock[] {
   if (!comment?.trim()) return [];
-  const text = unglue(comment);
+  const text = unglue(splitLeadingHeading(comment.trim()));
   const lines = text.split(/\n+/).map(l => l.trim()).filter(l => l.length > 0);
   const blocks: CourseTextBlock[] = [];
   lines.forEach((line, i) => {
@@ -40,6 +41,25 @@ export function splitCourseText(comment: string | null | undefined): CourseTextB
     else blocks.push({ kind: heading ? 'h' : 'p', text: line });
   });
   return blocks;
+}
+
+/** Wörter, mit denen in den Kinderkursen ein Satz nach einer Überschrift beginnt. Nur am Textanfang geprüft. */
+const SENTENCE_STARTERS = new Set(['Wir', 'Betrachten', 'Denken', 'Nun', 'Wenn', 'Diese', 'Dieser', 'Dieses', 'Dies', 'Hier',
+  'Jetzt', 'Man', 'Schauen', 'Sehen', 'Stellen', 'Fangen', 'Natürlich', 'Es', 'Eine', 'Ein', 'In', 'Im', 'Bei', 'Was', 'Wie',
+  'Warum', 'Du', 'Ich', 'Achte', 'Versuche', 'Schau']);
+const LEADING_MAX_WORDS = 6;
+
+/** „Opposition Wir haben …" → „Opposition\nWir haben …" — nur am Anfang, nur wenn die Wörter davor keinen Satz bilden. */
+function splitLeadingHeading(text: string): string {
+  if (text.includes('\n')) return text;
+  const words = text.split(' ');
+  for (let i = 1; i <= Math.min(LEADING_MAX_WORDS, words.length - 2); i++) {
+    if (!SENTENCE_STARTERS.has(words[i])) continue;
+    const head = words.slice(0, i).join(' ');
+    if (/[.!?:;]/.test(head) || !/^\p{Lu}/u.test(head)) return text;
+    return head + '\n' + words.slice(i).join(' ');
+  }
+  return text;
 }
 
 /** Setzt vor und hinter jede angeklebte Überschrift einen Umbruch. */

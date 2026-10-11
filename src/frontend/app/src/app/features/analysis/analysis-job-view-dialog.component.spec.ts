@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { AnalysisJobViewDialogComponent } from './analysis-job-view-dialog.component';
 
@@ -64,6 +64,19 @@ describe('AnalysisJobViewDialogComponent', () => {
     tick(10_000);
     http.expectNone(r => r.url.startsWith('/api/engine'));
     http.verify();
+    discardPeriodicTasks();
+  }));
+
+  // UI-Sweep 2026-10-11 (r2-rg-notation): Engine-Linien in den Figurenbuchstaben der Sprache.
+  it('shows the engine lines in German piece letters when the UI is German', fakeAsync(() => {
+    const { fixture, http } = make();
+    TestBed.inject(TranslateService).use('de');
+    http.expectOne('/api/analysis-jobs/5').flush(job({ status: 'done', reachedDepth: 30,
+      resultJson: '{"time":5,"depth":18,"nodes":100,"pvs":[{"depth":18,"cp":25,"moves":["e2e4","c7c5","g1f3"]}]}' }));
+    fixture.detectChanges();
+    const line = (fixture.nativeElement as HTMLElement).querySelector('.line-san')!.textContent!.trim();
+    expect(line).toBe('1. e4 c5 2. Sf3');
+    tick(12_000);
     discardPeriodicTasks();
   }));
 

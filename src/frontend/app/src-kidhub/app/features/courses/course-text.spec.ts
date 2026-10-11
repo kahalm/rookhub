@@ -50,4 +50,18 @@ describe('splitCourseText', () => {
   it('Fließtext-Zeilen hintereinander bleiben ein Absatz', () => {
     expect(splitCourseText('Erster Satz.\nZweiter Satz.')).toEqual([{ kind: 'p', text: 'Erster Satz.\nZweiter Satz.' }]);
   });
+  it('mit Leerzeichen angeklebte Überschrift am Anfang (Nachprüfung 2026-10-11, Buch 50)', () => {
+    expect(splitCourseText('Opposition Wir haben gerade gesehen, was passiert.')).toEqual([
+      { kind: 'h', text: 'Opposition' }, { kind: 'p', text: 'Wir haben gerade gesehen, was passiert.' }]);
+    expect(splitCourseText('Der König auf der falschen Seite Wenn der verteidigende König zu spät kommt.')[0])
+      .toEqual({ kind: 'h', text: 'Der König auf der falschen Seite' });
+    expect(splitCourseText('Euwe, 1934 Diese Stellung ist wichtig.')[0]).toEqual({ kind: 'h', text: 'Euwe, 1934' });
+  });
+
+  it('gewöhnliche Sätze am Anfang bleiben ganz', () => {
+    for (const t of ['Weiß am Zug. Ist die Stellung remis?', 'Das Ergebnis ist jedoch genau anders herum, wenn wir tauschen.',
+      'Wie der Leser vermutlich schon bemerkt hat, haben wir Zeit.', 'Schwarz gewinnt, egal, wer am Zug ist.']) {
+      expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
+    }
+  });
 });

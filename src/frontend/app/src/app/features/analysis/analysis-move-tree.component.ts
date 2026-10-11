@@ -6,6 +6,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
+import { SanPipe } from '../../shared/chess/san.pipe';
 import { AnalysisNode, MoveRow, MoveTableItem, VariationBlock, buildMoveTable, isMainline } from './analysis-tree';
 
 export type MoveTreeAction = 'star' | 'promote' | 'mainline' | 'delete';
@@ -28,7 +29,7 @@ const LONG_PRESS_SLOP_PX = 10;
   selector: 'app-analysis-move-tree',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, MatMenuModule, MatIconModule, TranslatePipe],
+  imports: [NgTemplateOutlet, MatMenuModule, MatIconModule, TranslatePipe, SanPipe],
   template: `
     <div class="tree" #list>
       @for (item of items; track $index) {
@@ -49,7 +50,7 @@ const LONG_PRESS_SLOP_PX = 10;
                     <span class="vmove" [class.active]="t.node === current" [class.starred]="t.node.starred"
                           (click)="pick(t.node)" (contextmenu)="onContextMenu($event, t.node)"
                           (pointerdown)="onPointerDown($event, t.node)" (pointermove)="onPointerMove($event)"
-                          (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label }}@if (t.node.starred) {<span class="star">★</span>}</span>
+                          (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label | san:'text' }}@if (t.node.starred) {<span class="star">★</span>}</span>
                   } @else if (t.kind === 'open') {
                     <span class="paren">(</span>
                   } @else {
@@ -71,7 +72,7 @@ const LONG_PRESS_SLOP_PX = 10;
               (click)="pick(c)" (contextmenu)="onContextMenu($event, c)"
               (pointerdown)="onPointerDown($event, c)" (pointermove)="onPointerMove($event)"
               (pointerup)="clearPress()" (pointercancel)="clearPress()">
-          <span class="san">{{ c.san }}@if (c.starred) {<span class="star">★</span>}</span>
+          <span class="san">{{ c.san | san }}@if (c.starred) {<span class="star">★</span>}</span>
           @if (c.evalText) { <span class="ev">{{ c.evalText }}</span> }
         </span>
       } @else {

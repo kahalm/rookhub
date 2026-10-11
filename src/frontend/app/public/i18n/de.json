@@ -811,7 +811,7 @@
       "kidNoTracking": "KidHub zeigt keine Werbung, verwendet keine Tracking-Cookies und hat keinen Chat. Um eine passende Sprache zu wählen, schauen wir einmal nach, aus welchem Land deine Internet-Adresse kommt — gespeichert wird sie dafür nicht.",
       "kidDetails": "Für Eltern: Die folgenden Abschnitte beschreiben ausführlich, welche Daten wir verarbeiten. Das KidHub-Konto ist dasselbe Konto wie bei RookHub, deshalb gelten sie für beide Seiten.",
       "controllerTitle": "Verantwortlicher",
-      "controllerNamed": "Verantwortlich für die Datenverarbeitung ist:",
+      "controllerNamed": "Verantwortlich für die Datenverarbeitung ist der Betreiber dieser Website, erreichbar unter:",
       "leagueTitle": "LeagueHub (Mannschaftsvorbereitung)",
       "leagueIntro": "LeagueHub hilft Mitgliedern teilnehmender Schachvereine, sich auf Mannschaftskämpfe ihrer Ligen vorzubereiten (Tirol, Bayern). Jeder Verein hat seine eigene Vereins-Datenbank, die kein anderer Verein sieht. Dafür verarbeiten wir auch Daten von Spielerinnen und Spielern, die selbst kein Konto bei uns haben und deren Daten wir nicht bei ihnen selbst erheben (Art. 14 DSGVO).",
       "leagueClub": "Du nutzt LeagueHub gerade für {{club}}.",
@@ -3800,7 +3800,6 @@
       "gameMove": "Zug aus der Partie: {{move}} - Bewertung {{eval}}",
       "bestMove": "Bester Zug: {{move}} - Bewertung {{eval}}"
     },
-    "toTask": "Zur Aufgabe",
     "toTaskMove": "Zur Aufgabe ({{move}})",
     "browsingHint": "Eröffnung ansehen · {{count}} Züge vorgespielt",
     "startPosition": "Grundstellung",

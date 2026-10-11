@@ -36,6 +36,7 @@ import { PlayedMove } from './mistakes.util';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -53,7 +54,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatTooltipModule,
-    MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent, GameReviewComponent,
+    MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent, GameReviewComponent, SanPipe,
   ],
   template: `
     <div class="edit-page">
@@ -221,7 +222,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
               @if (current(); as p) {
                 <div class="where">
                   <strong>{{ plyLabel(cursor()) }}</strong>
-                  <span class="san" [class.bad]="p.illegal">{{ p.san }}</span>
+                  <span class="san" [class.bad]="p.illegal">{{ p.san | san }}</span>
                   @if (p.written) { <span class="written">{{ 'games.edit.written' | translate: { text: p.written } }}</span> }
                   @if (p.match === 'inserted') { <span class="chip warn">{{ 'games.edit.notOnSheet' | translate }}</span> }
                   @if (p.uncertain && !p.confirmed) { <span class="chip warn">{{ 'games.edit.uncertain' | translate }}</span> }
@@ -236,9 +237,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
                     <span class="label">{{ 'games.edit.options' | translate }}</span>
                     @for (o of p.options; track o.uci) {
                       <button mat-stroked-button class="option" [class.chosen]="o.uci === p.uci" (click)="choose(o)" [disabled]="busy()">
-                        <span class="o-san">{{ o.san }}</span>
+                        <span class="o-san">{{ o.san | san }}</span>
                         <span class="o-reach">{{ 'games.edit.reach' | translate: { count: o.reach } }}</span>
-                        @if (o.preview.length) { <span class="o-preview">→ {{ o.preview.join(' ') }}</span> }
+                        @if (o.preview.length) { <span class="o-preview">→ {{ o.preview.join(' ') | san:'text' }}</span> }
                       </button>
                     }
                   </div>
@@ -268,9 +269,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
             <div class="moves">
               @for (row of rows(); track row.no) {
                 <span class="no">{{ row.no }}.</span>
-                <button class="ply" [ngClass]="plyClass(row.white)" (click)="go(row.white)">{{ plies()[row.white].san }}</button>
+                <button class="ply" [ngClass]="plyClass(row.white)" (click)="go(row.white)">{{ plies()[row.white].san | san }}</button>
                 @if (row.black !== null) {
-                  <button class="ply" [ngClass]="plyClass(row.black)" (click)="go(row.black)">{{ plies()[row.black].san }}</button>
+                  <button class="ply" [ngClass]="plyClass(row.black)" (click)="go(row.black)">{{ plies()[row.black].san | san }}</button>
                 } @else { <span></span> }
               }
               <span class="no"></span>

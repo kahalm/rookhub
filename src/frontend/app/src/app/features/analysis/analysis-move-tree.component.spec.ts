@@ -1,6 +1,6 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { AnalysisMoveTreeComponent } from './analysis-move-tree.component';
 import { AnalysisNode, createRoot, playSan } from './analysis-tree';
@@ -48,6 +48,18 @@ describe('AnalysisMoveTreeComponent', () => {
     expect(rows).toEqual(['1 e4 +0.20 c5', '2 f4 f6']);
     expect(texts(el.querySelector('.vars')!, '.var-line > span')).toBe('2...e6 3.g3 Nc6 ( 3...Na6 4.f5 Ke7 )');
     expect(el.querySelector('.vmove.active')!.textContent).toContain('Ke7');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-rg-notation): Anzeige in den Figurenbuchstaben der Sprache, der Baum bleibt englisch.
+  it('shows moves in German piece letters when the UI is German', () => {
+    const { root, ke7 } = screenshotTree();
+    const { fixture, el } = make(root, ke7);
+    TestBed.inject(TranslateService).use('de');
+    fixture.componentRef.setInput('version', 2);
+    fixture.detectChanges();
+    const texts = (parent: Element, sel: string) => [...parent.querySelectorAll(sel)].map(e => e.textContent!.trim()).join(' ');
+    expect(texts(el.querySelector('.vars')!, '.var-line > span')).toBe('2...e6 3.g3 Sc6 ( 3...Sa6 4.f5 Ke7 )');
+    expect(ke7.parent!.parent!.san).toBe('Na6');
   });
 
   it('a click selects the move', () => {

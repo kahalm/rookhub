@@ -566,7 +566,7 @@
       "kidNoTracking": "A KidHub nem mutat reklámot, nem használ nyomkövető sütiket, és nincs benne csevegés. A megfelelő nyelv kiválasztásához egyszer megnézzük, melyik országból származik az internetcímed — ehhez nem tároljuk.",
       "kidDetails": "A szülőknek: a következő részek részletesen leírják, milyen adatokat kezelünk. A KidHub-fiók ugyanaz a fiók, mint a RookHubon, ezért mindkét oldalra vonatkoznak.",
       "controllerTitle": "Adatkezelő",
-      "controllerNamed": "Az adatkezelésért felelős:",
+      "controllerNamed": "Az adatkezelésért e weboldal üzemeltetője felelős, elérhető:",
       "leagueTitle": "LeagueHub (csapatfelkészülés)",
       "leagueIntro": "A LeagueHub a részt vevő sakk-klubok tagjainak segít felkészülni ligáik csapatmérkőzéseire (Tirol, Bajorország). Minden klubnak saját klubadatbázisa van, amelyet más klub nem lát. Ehhez olyan játékosok adatait is kezeljük, akiknek nincs fiókjuk nálunk, és akiknek az adatait nem tőlük gyűjtjük (GDPR 14. cikk).",
       "leagueClub": "Jelenleg a(z) {{club}} számára használod a LeagueHubot.",
@@ -3479,7 +3479,6 @@
       "gameMove": "Lépés a játszmából: {{move}} - értékelés {{eval}}",
       "bestMove": "Legjobb lépés: {{move}} - értékelés {{eval}}"
     },
-    "toTask": "Vissza a feladathoz",
     "toTaskMove": "Tovább a feladathoz ({{move}})",
     "browsingHint": "Megnyitás megtekintése · {{count}} lépés lejátszva",
     "startPosition": "Alapállás",

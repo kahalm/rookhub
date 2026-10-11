@@ -436,6 +436,9 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(el.querySelector('.browse-actions')).withContext('Hinweis beim Durchsehen').not.toBeNull();
     expect(fixture.componentInstance.preMoves).toBe(4);           // Aufgabe bei Zug 5
     expect(el.querySelector('.actions:not(.browse-actions)')).withContext('kein „am Zug"/Passen').toBeNull();
+    expect(el.querySelectorAll('.onav button[mat-stroked-button]').length)
+      .withContext('kein zweites „Zur Aufgabe" in der Navigationszeile').toBe(0);
+    expect(el.querySelectorAll('.to-task').length).withContext('genau ein Knopf zur Aufgabe').toBe(1);
 
     (el.querySelector('.to-task') as HTMLButtonElement).click();
     fixture.detectChanges();

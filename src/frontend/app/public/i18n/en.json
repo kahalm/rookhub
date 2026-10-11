@@ -811,7 +811,7 @@
       "kidNoTracking": "KidHub shows no ads, uses no tracking cookies and has no chat. To choose a suitable language, we check once which country your internet address comes from — it is not stored for this.",
       "kidDetails": "For parents: the following sections describe in detail which data we process. The KidHub account is the same account as on RookHub, so they apply to both sites.",
       "controllerTitle": "Controller",
-      "controllerNamed": "The controller responsible for data processing is:",
+      "controllerNamed": "The controller responsible for data processing is the operator of this website, reachable at:",
       "leagueTitle": "LeagueHub (team preparation)",
       "leagueIntro": "LeagueHub helps members of participating chess clubs prepare for team matches in their leagues (Tyrol, Bavaria). Each club has its own club database that no other club can see. For this we also process data of players who have no account with us and whose data we do not collect from them directly (Art. 14 GDPR).",
       "leagueClub": "You are currently using LeagueHub for {{club}}.",
@@ -3800,7 +3800,6 @@
       "gameMove": "Move from the game: {{move}} - evaluation {{eval}}",
       "bestMove": "Best move: {{move}} - evaluation {{eval}}"
     },
-    "toTask": "Back to the task",
     "toTaskMove": "Go to the task ({{move}})",
     "browsingHint": "Viewing the opening · {{count}} moves played",
     "startPosition": "Starting position",
