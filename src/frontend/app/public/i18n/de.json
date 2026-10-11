@@ -696,7 +696,7 @@
       "houseHint": "Registrierte Nutzer ohne eigene Engine können dann auf der Punktepartie-Seite eigene Partien einwerfen; gerechnet wird auf deiner Maschine, mit fester Tiefe.",
       "houseSaved": "Freigabe gespeichert",
       "directTitle": "Direkt mit RookHub (empfohlen)",
-      "directHint": "Den Engine-Provider auf deinem Rechner mit ROOKHUB_URL und einem API-Token mit Bereich „Engine“ starten (auf dieser Seite unter „API-Tokens“ anlegen). Kein Lichess-Konto nötig.",
+      "directHint": "Starte den Engine-Provider auf deinem Rechner mit dieser Adresse und einem API-Token mit Bereich „Engine“ (auf dieser Seite unter „API-Tokens“ anlegen). Kein Lichess-Konto nötig.",
       "directNone": "Noch keine Engine direkt verbunden.",
       "online": "online",
       "offline": "offline",
@@ -708,7 +708,9 @@
       "lichessUnreachable": "Lichess antwortet gerade nicht — angezeigt werden nur die direkt verbundenen Engines.",
       "noLichessEngines": "Auf deinem Lichess-Konto ist noch keine External Engine registriert.",
       "sourceRookhub": "RookHub",
-      "sourceLichess": "Lichess"
+      "sourceLichess": "Lichess",
+      "guide": "Anleitung öffnen",
+      "urlCopied": "Adresse kopiert"
     },
     "offline": {
       "title": "Offline",
@@ -861,7 +863,8 @@
       "rights": "Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie auf Beschwerde bei einer Aufsichtsbehörde (in Österreich: Datenschutzbehörde).",
       "contactTitle": "Kontakt",
       "contact": "Bei Fragen zum Datenschutz erreichst du uns unter",
-      "back": "Zurück zur Anmeldung"
+      "back": "Zurück zur Anmeldung",
+      "introTurnier": "Die Turnierseite von RookHub zeigt öffentliche Turnierdaten aus chess-results.com und deine gemerkten Turniere. Sie nutzt dasselbe Konto wie RookHub."
     },
     "impressum": {
       "title": "Impressum",
@@ -967,6 +970,7 @@
       "title": "Meine Repertoires",
       "new": "Neues Repertoire",
       "fileCount": "{{count}} Dateien",
+      "fileCountOne": "{{count}} Datei",
       "public": "Öffentlich",
       "private": "Privat",
       "noDescription": "Keine Beschreibung",
@@ -1166,7 +1170,8 @@
       "refresh": "Aktualisieren",
       "monitor": "Beobachten",
       "monitoringUntil": "Beobachtung bis {{time}}",
-      "share": "Teilen"
+      "share": "Teilen",
+      "openFull": "Volle Ansicht"
     },
     "tabs": {
       "players": "Spieler ({{count}})",
@@ -1464,7 +1469,7 @@
     "deleteFailed": "Kurs konnte nicht gelöscht werden",
     "searchPlaceholder": "Kurse durchsuchen…",
     "noMatch": "Keine Kurse passen zu „{{query}}“.",
-    "sectionPublic": "Öffentliche Kurse",
+    "sectionPublic": "Freigegebene Kurse",
     "sectionPublicHint": "Über deine Gruppen freigegebene Kurse.",
     "sectionOwn": "Eigene Kurse",
     "sectionOwnHint": "Von dir selbst importierte oder angelegte Kurse.",
@@ -1484,11 +1489,13 @@
       "calcToggle": "Kalkulations-Modus",
       "calcToggleHint": "Diesen Kurs als Stellungen zum Durchrechnen ausliefern statt als Puzzles zum Lösen: eingefrorenes Brett, keine Lösung, eigener Analysebaum je Stellung. Vorhandene Linien bleiben unverändert.",
       "calcToggleFailed": "Der Kalkulations-Modus konnte nicht umgeschaltet werden.",
-      "chapterDeleted": "{{count}} Linie(n) gelöscht.",
+      "chapterDeleted": "{{count}} Linien gelöscht.",
+      "chapterDeletedOne": "{{count}} Linie gelöscht.",
       "chapterName": "Kapitelname",
       "chapterNameHint": "Leer lassen, um die Stellungen ohne Kapitel anzulegen.",
       "chapterNamePlaceholder": "z. B. Kalkulation 1",
-      "chapterReset": "Fortschritt zurückgesetzt ({{count}} Linie(n)).",
+      "chapterReset": "Fortschritt zurückgesetzt ({{count}} Linien).",
+      "chapterResetOne": "Fortschritt zurückgesetzt ({{count}} Linie).",
       "chapters": "Kapitel",
       "deleteChapter": "Kapitel löschen",
       "deleteChapterConfirm": "Das Kapitel „{{name}}“ mit allen {{count}} Linien löschen? Damit verschwindet auch der Fortschritt aller Nutzer zu diesen Linien.",
@@ -1509,7 +1516,8 @@
       },
       "lastActivity": "Zuletzt genutzt",
       "line": "Zeile {{number}}:",
-      "lineCount": "{{count}} Linie(n)",
+      "lineCount": "{{count}} Linien",
+      "lineCountOne": "{{count}} Linie",
       "lines": "Linien",
       "linesLoadFailed": "Die Linien konnten nicht geladen werden.",
       "linked": "Verknüpfter Kurs",
@@ -1548,7 +1556,8 @@
       "chapterPoints": "{{score}} Pkt",
       "downloadChapterPgn": "Kapitel als PGN herunterladen",
       "downloadLinePgn": "Linie als PGN herunterladen",
-      "createWeekly": "Wochenpost erstellen"
+      "createWeekly": "Wochenpost erstellen",
+      "source": "Quelle"
     },
     "sequential": "Sequenziell",
     "random": "Zufällig",
@@ -1642,7 +1651,8 @@
       "back": "Zurück zu den Kursen",
       "allChapters": "Alle Kapitel",
       "noChapter": "Ohne Kapitel",
-      "lineCount": "{{count}} Linie(n)",
+      "lineCount": "{{count}} Linien",
+      "lineCountOne": "{{count}} Linie",
       "empty": "Dieser Kurs hat keine Linien.",
       "line": "Linie",
       "infoLine": "Erklärlinie (kein Quiz)",
@@ -1723,6 +1733,26 @@
         "not-configured": "Übersetzungen sind gerade nicht verfügbar.",
         "not-waiting": "Nur ein wartender Auftrag lässt sich zurückziehen."
       }
+    },
+    "kindCalculation": "Kalkulation",
+    "emptyCourse": {
+      "gamesOnly": "Nur kommentierte Partien, keine Aufgaben",
+      "noLines": "Dieser Kurs ist noch leer.",
+      "noLinesOwner": "Noch keine Aufgaben – Linien auf der Kursseite hinzufügen.",
+      "browseGames": "Partien durchsehen",
+      "addLines": "Linien hinzufügen"
+    },
+    "origin": {
+      "chessable": "Chessable-Import",
+      "pgn": "PGN-Import",
+      "by": "von {{name}}"
+    },
+    "reimport": {
+      "chip": "Neu holen",
+      "legend": "{{count}} Kurse brauchen einen neuen Import über RepCheck",
+      "legendOne": "1 Kurs braucht einen neuen Import über RepCheck",
+      "more": "Mehr",
+      "less": "Weniger"
     }
   },
   "calc": {
@@ -2000,7 +2030,7 @@
       "settingsStockfishDepth": "<strong>Stockfish-Tiefe</strong> — Stärke der Engine (1 = sehr schwach, 24 = maximale Stärke)",
       "settingsThemes": "<strong>Themen</strong> — Optional: nur bestimmte Taktik-Themen (z.B. „fork pin“)",
       "fasttrackHeading": "Schwierigkeits-Anstieg (Fasttrack)",
-      "fasttrackP1": "Der Anstieg passt sich deiner bisherigen Performance an: er analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.",
+      "fasttrackP1": "Der Anstieg passt sich deiner bisherigen Performance an: er analysiert deine letzten Läufe und berechnet, bei welchem Rating du typischerweise Leben verlierst.",
       "fasttrackPhase1": "<strong>Phase 1 (Puzzle 1–{{p1End}})</strong> — Schneller Anstieg bis zu deinem 1. Schwellenwert",
       "fasttrackPhase2": "<strong>Phase 2 (Puzzle {{p2Start}}–{{p2End}})</strong> — Anstieg vom 1. zum 2. Schwellenwert",
       "fasttrackPhase3": "<strong>Phase 3 (ab Puzzle {{p3Start}})</strong> — Konstanter Schritt von {{flatStep}}",
@@ -2024,7 +2054,8 @@
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Einstellungen",
       "highscore": "Highscore: {{rating}} Rating",
-      "sessionsPlayed": "{{count}} Sessions gespielt",
+      "sessionsPlayed": "{{count}} Läufe gespielt",
+      "sessionsPlayedOne": "{{count}} Lauf gespielt",
       "viewHistory": "Verlauf ansehen",
       "unfinishedRun": "Unbeendeter Lauf: Lv {{level}} | {{solved}} gelöst | {{lives}} Leben | {{max}} max",
       "continue": "Fortsetzen",
@@ -2087,7 +2118,7 @@
     },
     "history": {
       "title": "Verlauf im Endlos-Modus",
-      "noSessions": "Noch keine Sessions gespielt.",
+      "noSessions": "Noch keine Läufe gespielt.",
       "startPlaying": "Jetzt spielen",
       "filterAll": "Alle",
       "filterActive": "Aktiv",
@@ -2095,8 +2126,8 @@
       "selected": "{{count}} ausgewählt",
       "archive": "Archivieren",
       "unarchive": "Dearchivieren",
-      "noArchivedSessions": "Keine archivierten Sessions.",
-      "noActiveSessions": "Keine aktiven Sessions.",
+      "noArchivedSessions": "Keine archivierten Läufe.",
+      "noActiveSessions": "Keine aktiven Läufe.",
       "colDate": "Datum",
       "colMaxRating": "Höchstes Rating",
       "colEloDelta": "Elo ±",
@@ -2548,7 +2579,7 @@
   "favorites": {
     "title": "Geliebte Puzzles",
     "hint": "Puzzles, die du nach dem Lösen oder Aufgeben mit dem Herz markiert hast, landen hier — jederzeit nachspielen oder analysieren.",
-    "empty": "Noch keine geliebten Puzzles. Tippe nach dem Lösen (oder Aufgeben) eines Puzzles aufs Herz, um es hier zu sammeln.",
+    "empty": "Noch keine geliebten Puzzles.",
     "rating": "Wertung",
     "replay": "Nochmal lösen",
     "analyze": "Analysieren",
@@ -2559,7 +2590,9 @@
     "sourceBook": "Kurs-/Buch-Puzzle",
     "love": "Lieben",
     "loved": "Geliebt",
-    "loveLast": "Letztes Puzzle"
+    "loveLast": "Letztes Puzzle",
+    "emptyHint": "Tippe nach einem Puzzle aufs Herz, um es hier zu sammeln.",
+    "solvePuzzles": "Puzzles lösen"
   },
   "worksheets": {
     "title": "Aufgabenblätter",
@@ -2672,6 +2705,7 @@
     "openOriginal": "Originalpartie öffnen",
     "analyze": "Partie analysieren",
     "analyzeHint": "Partie im Hintergrund rechnen lassen — danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen.",
+    "analyzeNoEngine": "Gerade steht keine Engine bereit — versuch es später noch einmal.",
     "analyzeLogin": "Zum Analysieren bitte anmelden.",
     "loadError": "Partie konnte nicht geladen werden.",
     "deleteConfirm": "Diese gespeicherte Partie löschen?",
@@ -3148,7 +3182,10 @@
     "worstThemes": "Schwächste Themen",
     "byRating": "Nach Rating (gelöst)",
     "byRatingHint": "Gelöste Puzzles je Rating-Band — Genauigkeit beim Überfahren.",
-    "activity": "Aktivität"
+    "activity": "Aktivität",
+    "levelEmpty": "Level {{level}} hat noch keine Versuche",
+    "levelOther": "Level {{level}}: {{count}} Versuche",
+    "levelOtherOne": "Level {{level}}: 1 Versuch"
   },
   "trainingGoals": {
     "tabs": {
@@ -3229,7 +3266,6 @@
     "days": "Tage",
     "games": "Partien",
     "gamesPerWeek": "Partien/Woche",
-    "thisWeek": "diese Woche",
     "weeklyDays": "Tage pro Woche",
     "weekProgress": "{{done}} von {{target}} Tagen diese Woche",
     "fromGroup": "Vorgabe aus deiner Gruppe „{{group}}“. Du kannst sie für dich anpassen.",
@@ -3288,7 +3324,10 @@
     },
     "prevPeriod": "Vorherige Periode",
     "nextPeriod": "Nächste Periode",
-    "noActivityPeriod": "In diesem Zeitraum keine Trainingszeit aufgezeichnet."
+    "noActivityPeriod": "In diesem Zeitraum keine Trainingszeit aufgezeichnet.",
+    "dailyReached": "Tagesziel erreicht",
+    "weeklyPlay": "Wochenziel Spielen",
+    "stillOpen": "noch offen"
   },
   "install": {
     "pageTitle": "RookHub installieren",
@@ -3379,7 +3418,7 @@
         "t": "Endlos-Modus",
         "p": [
           "Im Endlos-Modus löst du eine fortlaufende Serie immer schwieriger werdender Puzzles, bis du zu viele Fehler machst. Start-Elo, Themen, Fast-Track-Schwellen und Stockfish-Tiefe stellst du selbst ein.",
-          "Dein Highscore und abgeschlossene Sessions werden gespeichert; den Verlauf siehst du unter ☰ → Konto → Puzzle-Verlauf und kannst alte Sessions archivieren."
+          "Dein Highscore und abgeschlossene Läufe werden gespeichert; den Verlauf siehst du unter ☰ → Konto → Puzzle-Verlauf und kannst alte Läufe archivieren."
         ]
       },
       "daily": {
@@ -3550,7 +3589,9 @@
     "replyLabel": "Deine Antwort",
     "sendError": "Nachricht konnte nicht gesendet werden.",
     "emptyUserCanWrite": "Noch keine Nachrichten. Schreib dem Admin-Team unten — du bekommst die Antwort hier.",
-    "writeLabel": "Deine Nachricht"
+    "writeLabel": "Deine Nachricht",
+    "adminHint": "Du bist Admin – die Nachrichten der Nutzer findest du im Admin-Bereich.",
+    "toConversations": "Zu den Konversationen"
   },
   "leaderboards": {
     "title": "Bestenlisten",
@@ -3569,21 +3610,38 @@
     },
     "unit": {
       "puzzles": "Puzzles",
+      "puzzlesOne": "Puzzle",
       "runs": "Läufe",
+      "runsOne": "Lauf",
       "lines": "Linien",
-      "daily": "Tagespuzzles"
+      "linesOne": "Linie",
+      "daily": "Tagespuzzles",
+      "dailyOne": "Tagespuzzle"
     }
   },
   "reprocess": {
     "available": {
-      "courses": "{{count}} Kurs(e) nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
-      "repertoires": "{{count}} Repertoire(s) nutzen eine ältere Aufbereitung und können aktualisiert werden."
+      "courses": "{{count}} Kurse nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
+      "repertoires": "{{count}} Repertoires nutzen eine ältere Aufbereitung und können aktualisiert werden."
+    },
+    "availableOne": {
+      "courses": "1 Kurs nutzt eine ältere Aufbereitung und kann aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
+      "repertoires": "1 Repertoire nutzt eine ältere Aufbereitung und kann aktualisiert werden."
+    },
+    "availableAll": {
+      "courses": "{{count}} Kurse aller Nutzer (davon eigene: {{own}}) nutzen eine ältere Aufbereitung und können aktualisiert werden.",
+      "repertoires": "{{count}} Repertoires aller Nutzer (davon eigene: {{own}}) nutzen eine ältere Aufbereitung und können aktualisiert werden."
+    },
+    "availableAllOne": {
+      "courses": "1 Kurs aller Nutzer (davon eigene: {{own}}) nutzt eine ältere Aufbereitung und kann aktualisiert werden.",
+      "repertoires": "1 Repertoire aller Nutzer (davon eigene: {{own}}) nutzt eine ältere Aufbereitung und kann aktualisiert werden."
     },
     "itemNeedsReimport": {
       "courses": "Dieser Kurs stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol ihn über die RepCheck-Erweiterung neu, dann ist er auf dem aktuellen Stand.",
       "repertoires": "Dieses Repertoire stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol es über die RepCheck-Erweiterung neu, dann ist es auf dem aktuellen Stand."
     },
     "update": "Aktualisieren ({{count}})",
+    "updateAll": "Alle aktualisieren ({{count}})",
     "updateTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu holen (gecachte gehen sofort, ohne Download).",
     "working": "Wird aktualisiert…",
     "started": "Aktualisierung gestartet — läuft im Hintergrund.",
@@ -3635,7 +3693,8 @@
       "endless": "Endless",
       "daily": "Tagespuzzle",
       "book": "Buch-Puzzles"
-    }
+    },
+    "titleCourses": "Wie möchtest du Kurse spielen?"
   },
   "analysisJobs": {
     "title": "Analyse-Aufträge",
@@ -4174,7 +4233,7 @@
       "shown": "Wieder eingeblendet.",
       "hideError": "Konnte nicht ausgeblendet werden. Bitte noch einmal versuchen.",
       "showIgnored": "Ausgeblendete zeigen",
-      "rounds": "{{count}} Runden, {{from}} bis {{to}}",
+      "rounds": "{{count}} Runden · {{range}}",
       "actionAria": "{{action}}: {{name}}",
       "implausible": "Zeitraum unplausibel",
       "short": {
@@ -4183,7 +4242,9 @@
         "hide": "Ausblenden",
         "show": "Zeigen",
         "report": "Melden"
-      }
+      },
+      "sameName": "weitere Gruppe?",
+      "sameNameHint": "Ein gleichnamiges Turnier am selben Tag steht als eigene Karte daneben — vermutlich eine weitere Gruppe derselben Veranstaltung. Die Teilnehmerzahl unterscheidet sie."
     },
     "source": {
       "Unknown": "Unbekannte Quelle",
@@ -4202,7 +4263,8 @@
       "IrishChessUnion": "Irischer Schachverband",
       "FrenchChessFederation": "Französischer Schachverband",
       "NorwegianChessFederation": "Norwegischer Schachverband"
-    }
+    },
+    "variousVenues": "verschiedene Spielorte"
   },
   "clubhub": {
     "authIntro": {
@@ -4279,7 +4341,8 @@
         "removed": "{{name}} wird nicht mehr verfolgt.",
         "searchError": "Die Suche hat nicht geklappt. Bitte nochmal versuchen.",
         "title": "Spieler verfolgen"
-      }
+      },
+      "friendNoName": "Im Profil von {{name}} fehlt der Name — chess-results wird über den Namen durchsucht, daher gibt es hier nichts anzuzeigen."
     }
   },
   "kids": {
@@ -4305,7 +4368,9 @@
       "puzzles": "Puzzles",
       "courses": "Kurse",
       "levelsDone": "{{done}} von {{total}} Stufen geschafft",
-      "courseCount": "{{count}} Kurse"
+      "courseCount": "{{count}} Kurse",
+      "courseProgress": "{{title}} · {{done}} von {{total}}",
+      "coursesStarted": "{{started}} von {{count}} Kursen angefangen"
     },
     "levels": {
       "title": "Stufen",
@@ -4328,7 +4393,9 @@
       "playEndless": "Endlos spielen",
       "progress": "{{done}} von {{total}} geschafft",
       "completed": "Kurs geschafft!",
-      "restart": "Von vorn"
+      "restart": "Von vorn",
+      "readMore": "Weiterlesen",
+      "readLess": "Weniger anzeigen"
     },
     "themes": {
       "mate1": {
@@ -4781,5 +4848,80 @@
   "markPosition": {
     "mark": "Als besonders gute Stellung markieren (+)",
     "unmark": "+-Markierung entfernen"
+  },
+  "puzzleThemes": {
+    "advancedPawn": "Vorgerückter Bauer",
+    "advantage": "Vorteil",
+    "anastasiaMate": "Anastasias Matt",
+    "arabianMate": "Arabisches Matt",
+    "attackingF2F7": "Angriff auf f2 oder f7",
+    "attraction": "Hinlenkung",
+    "backRankMate": "Grundreihenmatt",
+    "balestraMate": "Balestra-Matt",
+    "bishopEndgame": "Läuferendspiel",
+    "blindSwineMate": "Blinde-Schweine-Matt",
+    "bodenMate": "Bodens Matt",
+    "capturingDefender": "Verteidiger schlagen",
+    "castling": "Rochade",
+    "clearance": "Räumung",
+    "collinearMove": "Kollinearer Zug",
+    "cornerMate": "Eckmatt",
+    "crushing": "Vernichtend",
+    "defensiveMove": "Verteidigungszug",
+    "deflection": "Ablenkung",
+    "discoveredAttack": "Abzugsangriff",
+    "discoveredCheck": "Abzugsschach",
+    "doubleBishopMate": "Läuferpaarmatt",
+    "doubleCheck": "Doppelschach",
+    "dovetailMate": "Schwalbenschwanzmatt",
+    "endgame": "Endspiel",
+    "enPassant": "En passant",
+    "epauletteMate": "Epaulettenmatt",
+    "equality": "Ausgleich",
+    "exposedKing": "Ungeschützter König",
+    "fork": "Gabel",
+    "hangingPiece": "Hängende Figur",
+    "hookMate": "Hakenmatt",
+    "interference": "Unterbrechung",
+    "intermezzo": "Zwischenzug",
+    "killBoxMate": "Kill-Box-Matt",
+    "kingsideAttack": "Königsangriff",
+    "knightEndgame": "Springerendspiel",
+    "long": "Lang",
+    "master": "Meisterpartien",
+    "masterVsMaster": "Meister gegen Meister",
+    "mate": "Matt",
+    "mateIn1": "Matt in 1",
+    "mateIn2": "Matt in 2",
+    "mateIn3": "Matt in 3",
+    "mateIn4": "Matt in 4",
+    "mateIn5": "Matt in 5 oder mehr",
+    "middlegame": "Mittelspiel",
+    "morphysMate": "Morphys Matt",
+    "oneMove": "Einzüger",
+    "opening": "Eröffnung",
+    "operaMate": "Opernmatt",
+    "pawnEndgame": "Bauernendspiel",
+    "pillsburysMate": "Pillsburys Matt",
+    "pin": "Fesselung",
+    "promotion": "Umwandlung",
+    "queenEndgame": "Damenendspiel",
+    "queenRookEndgame": "Dame und Turm",
+    "queensideAttack": "Damenflügelangriff",
+    "quietMove": "Stiller Zug",
+    "rookEndgame": "Turmendspiel",
+    "sacrifice": "Opfer",
+    "short": "Kurz",
+    "skewer": "Spieß",
+    "smotheredMate": "Ersticktes Matt",
+    "superGM": "Super-GM-Partien",
+    "swallowstailMate": "Guéridon-Matt",
+    "trappedPiece": "Gefangene Figur",
+    "triangleMate": "Dreiecksmatt",
+    "underPromotion": "Unterverwandlung",
+    "veryLong": "Sehr lang",
+    "vukovicMate": "Vuković-Matt",
+    "xRayAttack": "Röntgenangriff",
+    "zugzwang": "Zugzwang"
   }
 }

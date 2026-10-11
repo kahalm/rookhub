@@ -118,8 +118,8 @@
             <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.boardShort' | translate }}</th>
             <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
           </ng-container>
-          <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
+          <tr mat-header-row *matHeaderRowDef="shownPlayerColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: shownPlayerColumns;"></tr>
         </table>
       </div>
 
@@ -138,20 +138,25 @@
               @if (chessTitle(p.title); as t) { <span class="player-title">{{ t }}</span> }
               <span class="player-name">{{ p.name }}</span>
             </div>
-            <div class="player-details">
-              @if (p.elo) { <span>{{ p.elo }}</span> }
-              @if (p.country) { <span>{{ p.country }}</span> }
-              <!-- Mobil war der Verein reiner Text: die Aufstellung liess sich auf dem Handy nicht oeffnen, jeder Tipp
-                   toggelte stattdessen den Favoriten (Snackbar + Server-Write). stopPropagation, weil die Karte selbst klickt. -->
-              @if (p.teamName && hasTeamPairings) {
-                <span><span class="team-link" (click)="$event.stopPropagation(); showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span></span>
-              } @else if (p.teamName) {
-                <span>{{ p.teamName }}</span>
-              } @else if (p.club && !hasTeamPairings) {
-                <span class="club-derived">{{ p.club }}</span>
-              }
-              @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
-            </div>
+            <!-- Elo, Land und Brett in einer Zeile, der Verein darunter in einer eigenen (abgeschnitten mit „…"): ein langer
+                 Vereinsname brach sonst um und liess den Trennpunkt allein am Zeilenende stehen
+                 (UI-Sweep 2026-10-11, r2-t-meta-dot). -->
+            @if (p.elo || p.country || p.boardNumber) {
+              <div class="player-details">
+                @if (p.elo) { <span>{{ p.elo }}</span> }
+                @if (p.country) { <span>{{ p.country }}</span> }
+                @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
+              </div>
+            }
+            <!-- Mobil war der Verein reiner Text: die Aufstellung liess sich auf dem Handy nicht oeffnen, jeder Tipp
+                 toggelte stattdessen den Favoriten (Snackbar + Server-Write). stopPropagation, weil die Karte selbst klickt. -->
+            @if (p.teamName && hasTeamPairings) {
+              <div class="player-club"><span class="team-link" (click)="$event.stopPropagation(); showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span></div>
+            } @else if (p.teamName) {
+              <div class="player-club">{{ p.teamName }}</div>
+            } @else if (p.club && !hasTeamPairings) {
+              <div class="player-club club-derived">{{ p.club }}</div>
+            }
           </div>
         }
       </div>

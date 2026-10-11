@@ -17,7 +17,7 @@ import { TournamentListService } from '../../core/tournament-list.service';
 import { formatTournamentDates, formatTournamentDay } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
 
 /**
  * Die Kurzansicht EINES Turniers — Name, Termin, Ort, Merkmale und vier Aktionen.
@@ -64,8 +64,13 @@ import { DirectoryEntry } from './tournament-directory.model';
       @if (entry.location) {
         <div class="tc-line">
           <mat-icon inline>place</mat-icon>
-          <span>{{ entry.location }}</span>
-          @if (entry.geoSource === 'Region') {
+          @if (various) {
+            <!-- „various" aus chess-results ist kein Ort (UI-Sweep 2026-10-11, r2-t-various): uebersetzt und kursiv. -->
+            <span class="tc-various">{{ 'tournamentDirectory.variousVenues' | translate }}</span>
+          } @else {
+            <span>{{ entry.location }}</span>
+          }
+          @if (entry.geoSource === 'Region' && !various) {
             <mat-icon inline class="approx"
                       [matTooltip]="'tournamentDirectory.approximate' | translate">help_outline</mat-icon>
           }
@@ -103,6 +108,11 @@ import { DirectoryEntry } from './tournament-directory.model';
         }
         @if (entry.groupSize > 1) {
           <span class="badge">{{ 'tournamentDirectory.groupCount' | translate: { count: entry.groupSize } }}</span>
+        }
+        <!-- Gleichnamiges Turnier am selben Tag als eigene Karte daneben (UI-Sweep 2026-10-11, r2-t-dup-cards): sagen,
+             dass es vermutlich eine weitere Gruppe ist — sonst sind die beiden Karten nicht zu unterscheiden. -->
+        @if (sameNameSibling && entry.groupSize <= 1) {
+          <span class="badge same-name" [matTooltip]="'tournamentDirectory.card.sameNameHint' | translate">{{ 'tournamentDirectory.card.sameName' | translate }}</span>
         }
         @if (entry.cancelled) {
           <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
@@ -217,6 +227,7 @@ import { DirectoryEntry } from './tournament-directory.model';
     }
 
     .approx { opacity: 0.65; }
+    .tc-various { font-style: italic; }
 
     .tc-meta {
       display: flex;
@@ -294,6 +305,12 @@ export class TournamentCardComponent {
   /** Gedrängte Fassung für Karten-Popup und Kalender-Fenster. */
   @Input() overview = false;
 
+  /** Ein gleichnamiges Turnier am selben Tag steht als eigene Karte in derselben Liste (r2-t-dup-cards). */
+  @Input() sameNameSibling = false;
+
+  /** Ort ist nur ein Platzhalter wie „various" (r2-t-various). */
+  get various(): boolean { return isPlaceholderLocation(this.entry.location); }
+
   /** Bei mehreren Spielorten: der Ort, dessen Punkt angeklickt wurde. */
   @Input() venueName: string | null = null;
 
@@ -346,10 +363,11 @@ export class TournamentCardComponent {
     // September bis April, gespielt wird an elf Tagen.
     const rounds = this.entry.roundDates ?? [];
     if (rounds.length > 1) {
+      // Der Bereich im selben Stil wie ohne Spieltermine („11. Okt. 2026 – 11. Apr. 2027"), nicht „… bis …"
+      // (UI-Sweep 2026-10-11, r2-t-date-format).
       return this.translate.instant('tournamentDirectory.card.rounds', {
         count: rounds.length,
-        from: formatTournamentDay(rounds[0].date, lang),
-        to: formatTournamentDay(rounds[rounds.length - 1].date, lang),
+        range: formatTournamentDates(rounds[0].date, rounds[rounds.length - 1].date, lang),
       });
     }
     return formatTournamentDates(start, end, lang);

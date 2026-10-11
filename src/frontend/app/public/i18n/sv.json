@@ -312,6 +312,7 @@
       "title": "Mina repertoarer",
       "new": "Ny repertoar",
       "fileCount": "{{count}} filer",
+      "fileCountOne": "{{count}} fil",
       "public": "Offentlig",
       "private": "Privat",
       "noDescription": "Ingen beskrivning",
@@ -522,7 +523,7 @@
     "title": "Kurser",
     "intro": "Arbeta igenom en importerad bok uppgift för uppgift — sekventiellt eller slumpmässigt. Ditt framsteg sparas.",
     "emptyHint": "Inga böcker importerade ännu. Importera böcker i adminpanelen under \"Böcker\".",
-    "sectionPublic": "Offentliga kurser",
+    "sectionPublic": "Tillgängliga kurser",
     "sectionPublicHint": "Kurser som delats med dig via dina grupper.",
     "sectionOwn": "Egna kurser",
     "sectionOwnHint": "Kurser som du själv importerat eller skapat.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Pågående",
-    "sectionInProgressHint": "Kurser du har börjat men inte avslutat än."
+    "sectionInProgressHint": "Kurser du har börjat men inte avslutat än.",
+    "origin": {
+      "chessable": "Chessable-import",
+      "pgn": "PGN-import",
+      "by": "av {{name}}"
+    },
+    "reimport": {
+      "chip": "Hämta igen",
+      "legend": "{{count}} kurser behöver importeras igen via RepCheck",
+      "legendOne": "1 kurs behöver importeras igen via RepCheck",
+      "more": "Mer",
+      "less": "Mindre"
+    }
   },
   "weekly": {
     "title": "Veckoinlägg",
@@ -635,6 +648,7 @@
       "settings": "Inställningar",
       "highscore": "Rekord: {{rating}} betyg",
       "sessionsPlayed": "{{count}} sessioner spelade",
+      "sessionsPlayedOne": "{{count}} sessioner spelade",
       "viewHistory": "Visa historik",
       "unfinishedRun": "Oavslutad omgång: Nv {{level}} | {{solved}} lösta | {{lives}} liv | {{max}} max",
       "continue": "Fortsätt",
@@ -936,7 +950,10 @@
     "byTheme": "Per tema",
     "byRating": "Per betyg (lösta)",
     "byRatingHint": "Lösta uppgifter per betygsspann — håll muspekaren för träffsäkerhet.",
-    "activity": "Aktivitet"
+    "activity": "Aktivitet",
+    "levelEmpty": "Nivå {{level}} har inga försök än",
+    "levelOther": "Nivå {{level}}: {{count}} försök",
+    "levelOtherOne": "Nivå {{level}}: 1 försök"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Dagar per vecka",
     "weekProgress": "{{done}} av {{target}} dagar denna vecka",
     "fromGroup": "Mall från din grupp \"{{group}}\". Du kan justera den för dig själv.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Dagsmålet uppnått",
+    "weeklyPlay": "Veckomål: spelande",
+    "stillOpen": "ännu öppet"
   },
   "chessable": {
     "testing": "Testing…",

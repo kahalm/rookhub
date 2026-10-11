@@ -13,6 +13,7 @@ interface CategoryDef {
   titleKey: string;
   icon: string;
   unitKey: string;
+  unitOneKey: string;
 }
 
 /**
@@ -59,7 +60,7 @@ interface CategoryDef {
                           @if (e.rank === 1) { 🥇 } @else if (e.rank === 2) { 🥈 } @else if (e.rank === 3) { 🥉 } @else { {{ e.rank }} }
                         </span>
                         <span class="lb-name">{{ e.name }}</span>
-                        <span class="lb-count">{{ e.count }} <small>{{ cat.unitKey | translate }}</small></span>
+                        <span class="lb-count">{{ e.count }} <small>{{ (e.count === 1 ? cat.unitOneKey : cat.unitKey) | translate }}</small></span>
                       </li>
                     }
                   </ol>
@@ -98,10 +99,10 @@ export class LeaderboardsComponent implements OnInit {
   data: Leaderboards | null = null;
 
   readonly categories: CategoryDef[] = [
-    { key: 'puzzles', titleKey: 'leaderboards.category.puzzles', icon: 'extension', unitKey: 'leaderboards.unit.puzzles' },
-    { key: 'dailyPuzzles', titleKey: 'leaderboards.category.dailyPuzzles', icon: 'today', unitKey: 'leaderboards.unit.daily' },
-    { key: 'endlessRuns', titleKey: 'leaderboards.category.endlessRuns', icon: 'all_inclusive', unitKey: 'leaderboards.unit.runs' },
-    { key: 'courseLines', titleKey: 'leaderboards.category.courseLines', icon: 'menu_book', unitKey: 'leaderboards.unit.lines' },
+    { key: 'puzzles', titleKey: 'leaderboards.category.puzzles', icon: 'extension', unitKey: 'leaderboards.unit.puzzles', unitOneKey: 'leaderboards.unit.puzzlesOne' },
+    { key: 'dailyPuzzles', titleKey: 'leaderboards.category.dailyPuzzles', icon: 'today', unitKey: 'leaderboards.unit.daily', unitOneKey: 'leaderboards.unit.dailyOne' },
+    { key: 'endlessRuns', titleKey: 'leaderboards.category.endlessRuns', icon: 'all_inclusive', unitKey: 'leaderboards.unit.runs', unitOneKey: 'leaderboards.unit.runsOne' },
+    { key: 'courseLines', titleKey: 'leaderboards.category.courseLines', icon: 'menu_book', unitKey: 'leaderboards.unit.lines', unitOneKey: 'leaderboards.unit.linesOne' },
   ];
 
   /** Laden des GEWÄHLTEN Zeitraums: ein Wechsel bricht das Laden des vorigen ab (sonst Monatsliste unter „Woche"). */

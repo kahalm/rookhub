@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
@@ -37,6 +38,7 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     TestBed.configureTestingModule({
       imports: [ClubsPageComponent],
       providers: [
+        provideRouter([]),
         provideTestClub(),
         { provide: LeagueApiService, useValue: api },
         { provide: AuthService, useValue: { get isAdmin() { return admin; }, has: (p: string) => perms.has(p) } },
@@ -87,13 +89,17 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     expect(clubErrorText('invalidTeamPrefix')).toContain('Mannschafts-Präfix');
     expect(clubErrorText('duplicate')).toContain('gibt es schon');
     expect(clubErrorText('everyone')).toContain('Everyone');
-    expect(clubErrorText(undefined, 403)).toContain('league.manage');
+    expect(clubErrorText(undefined, 403)).toBe('Das dürfen nur Admins.');
   });
 
   it('ohne Recht nur die Sperrkarte — auch league.manage ohne Admin', async () => {
     admin = false;
     await create();
     expect(el().textContent).toContain('Nicht freigeschaltet');
+    expect(el().textContent).toContain('Die Vereinsverwaltung sehen nur Admins.');
+    // UI-Sweep 2026-10-11 (r2-l-gate-text): Weg zurück zu den Prognosen, kein Rechte-Schlüssel im Text
+    expect(el().querySelector('.gate a[href="/"]')?.textContent).toContain('Zu den Prognosen');
+    expect(el().textContent).not.toContain('league.manage');
     expect(api.adminClubs).not.toHaveBeenCalled();
     expect(el().querySelector('.clubs-tbl')).toBeNull();
   });

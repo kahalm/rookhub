@@ -70,3 +70,70 @@ html.dark-theme .prep-card-scope {
 @media (min-width: 900px) {
   .prep-card-scope .card.inline table.recent td.opening { white-space: nowrap; }
 }
+
+/* UI-Sweep 2026-10-11 (r2-rg-prep-style): in RookHub sprechen die Bedienelemente der Karte die Material-Sprache der App —
+   runde umrandete Knöpfe (wie mat-stroked-button), der Farb-Umschalter als Knopfgruppe (wie mat-button-toggle), die
+   Auswahlen wie ein umrandetes Feld. Nur hier im Geltungsbereich der Vorbereitung; LeagueHub behält seine Gestaltung.
+   Die Knöpfe bleiben native <button> (die Karte ist geteilt), daher als Gestaltung statt als Material-Komponente. */
+.prep-card-scope {
+  .btn-sec, .btn-pri {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+    min-height: 40px; padding: 0 20px; border-radius: 20px;
+    font: 500 14px/1.2 var(--body); letter-spacing: .1px; text-align: center;
+  }
+  .btn-sec {
+    color: var(--mat-sys-primary, #1c5fd4); background: transparent;
+    border: 1px solid var(--mat-sys-outline, #79747e);
+  }
+  .btn-sec:hover:not(:disabled) { color: var(--mat-sys-primary, #1c5fd4);
+    background: color-mix(in srgb, var(--mat-sys-primary, #1c5fd4) 8%, transparent); }
+  .btn-sec:disabled { color: var(--mat-sys-on-surface, #17202b); background: transparent; opacity: .38; }
+  .btn-pri {
+    color: var(--mat-sys-on-primary, #fff); background: var(--mat-sys-primary, #1c5fd4); border: 1px solid transparent;
+  }
+  .btn-pri:hover:not(:disabled) { background: color-mix(in srgb, var(--mat-sys-primary, #1c5fd4) 88%, var(--mat-sys-on-primary, #fff)); }
+  .btn-sec.warn { color: var(--warn); border-color: var(--warn); }
+  .btn-sec.warn:hover:not(:disabled) { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+
+  .seg { border: 1px solid var(--mat-sys-outline, #79747e); border-radius: 20px; }
+  .seg button {
+    min-height: 40px; padding: 0 16px; font: 500 14px/1.2 var(--body); letter-spacing: .1px;
+    color: var(--mat-sys-on-surface, #17202b);
+  }
+  .seg button + button { border-left: 1px solid var(--mat-sys-outline, #79747e); }
+  .seg button:hover:not([aria-pressed="true"]):not(:disabled) {
+    background: color-mix(in srgb, var(--mat-sys-on-surface, #17202b) 8%, transparent); }
+  .seg button[aria-pressed="true"] {
+    background: var(--mat-sys-secondary-container, #dce3f5); color: var(--mat-sys-on-secondary-container, #17202b);
+  }
+  .tree-filter .seg button { min-height: 36px; padding: 0 12px; font-size: 14px; }
+
+  .fchip { font: 500 13px/1 var(--body); border-radius: 8px; border-width: 1px; border-color: var(--mat-sys-outline, #79747e); }
+  .fchip[aria-pressed="true"] {
+    background: var(--mat-sys-secondary-container, #dce3f5); color: var(--mat-sys-on-secondary-container, #17202b);
+    border-color: transparent;
+  }
+
+  /* Zeitraum, Repertoire-Auswahl: wie ein umrandetes Material-Feld (der Pfeil gezeichnet, nicht der des Browsers). */
+  select {
+    appearance: none; -webkit-appearance: none; box-sizing: border-box;
+    min-height: 40px; padding: 0 36px 0 12px; border-radius: 4px;
+    font: 400 14px/1.2 var(--body); color: var(--mat-sys-on-surface, #17202b);
+    background-color: transparent; border: 1px solid var(--mat-sys-outline, #79747e); cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  }
+  select:hover:not(:disabled) { border-color: var(--mat-sys-on-surface, #17202b); }
+  select:focus-visible { outline: 2px solid var(--mat-sys-primary, #1c5fd4); outline-offset: -1px; }
+  select option { color: var(--mat-sys-on-surface, #17202b); background: var(--mat-sys-surface-container, #fff); }
+
+  /* Als Seite: alle Tabellen so breit wie die Karte (die 640-px-Grenze ist für den LeagueHub-Dialog gedacht). */
+  .card.inline table.stats { max-width: none; }
+}
+
+/* Am Handy weiter 44 px Bedienhöhe (Projektregel UX-069) — nach den Regeln oben, damit sie gewinnt. */
+@media (max-width: 640px) {
+  .prep-card-scope .btn-sec, .prep-card-scope .btn-pri, .prep-card-scope .seg button, .prep-card-scope select { min-height: 44px; }
+  .prep-card-scope .btn-sec, .prep-card-scope .btn-pri { padding-top: 0; padding-bottom: 0; }
+}

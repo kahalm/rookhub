@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -16,6 +16,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LatestRequest } from '../../shared/latest-request.util';
+import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
 
 export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 export interface HeatCell { date: string; count: number; level: number; }   // level -1 = Zukunft (leer)
@@ -105,6 +106,21 @@ export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad =
   return { poly, path, minElo, maxElo, w, h, first: fmt(points[0].attemptedAt), last: fmt(points[n - 1].attemptedAt) };
 }
 
+/**
+ * UI-Sweep 2026-10-11 (r2-rp-elo-level): hat `level` keine Versuche, andere Level aber schon, nennt der Hinweis
+ * das Level mit den meisten (bei Gleichstand das niedrigste). Sonst null.
+ */
+export function emptyLevelHint(points: EloHistoryPoint[], level: number | null): { level: number; other: number; count: number } | null {
+  if (level == null || level < 0 || points.some(p => p.vizLevel === level)) return null;
+  const counts = new Map<number, number>();
+  for (const p of points) counts.set(p.vizLevel, (counts.get(p.vizLevel) ?? 0) + 1);
+  let best: { other: number; count: number } | null = null;
+  for (const [other, count] of counts) {
+    if (!best || count > best.count || (count === best.count && other < best.other)) best = { other, count };
+  }
+  return best ? { level, ...best } : null;
+}
+
 export interface OverlayLine { level: number; poly: string; path: string; color: string; }
 export interface Overlay { lines: OverlayLine[]; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 
@@ -162,7 +178,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent
+    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, PuzzleThemePipe
   ],
   template: `
     <div class="stats-container">
@@ -199,7 +215,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             <mat-card-title>{{ 'stats.eloProgress' | translate }}</mat-card-title>
             <mat-form-field appearance="outline" class="level-field" subscriptSizing="dynamic">
               <mat-label>{{ 'stats.level' | translate }}</mat-label>
-              <mat-select [(ngModel)]="level" (selectionChange)="rebuildCurve()">
+              <mat-select [(ngModel)]="level" (selectionChange)="onLevelChange()">
                 <mat-option [value]="-1">{{ 'stats.allLevels' | translate }}</mat-option>
                 @for (lv of [0,1,2,3,4]; track lv) { <mat-option [value]="lv">{{ lv }}</mat-option> }
               </mat-select>
@@ -236,6 +252,15 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             } @else {
               <p class="muted">{{ 'stats.noData' | translate }}</p>
             }
+            <!-- UI-Sweep 2026-10-11 (r2-rp-elo-level): das bevorzugte Level ist leer — sagen, wo die Versuche liegen. -->
+            @if (levelHint; as h) {
+              <p class="level-hint">
+                {{ 'stats.levelEmpty' | translate:{ level: h.level } }} –
+                <button type="button" class="level-link" (click)="showLevel(h.other)">
+                  {{ (h.count === 1 ? 'stats.levelOtherOne' : 'stats.levelOther') | translate:{ level: h.other, count: h.count } }}
+                </button>
+              </p>
+            }
           </mat-card-content>
         </mat-card>
 
@@ -260,7 +285,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
               <div class="theme-list">
                 @for (t of themes; track t.theme) {
                   <div class="theme-row">
-                    <span class="theme-name">{{ t.theme }}</span>
+                    <span class="theme-name" [title]="t.theme | puzzleTheme">{{ t.theme | puzzleTheme }}</span>
                     <div class="theme-bar"><div class="theme-fill" [style.width.%]="acc(t.solved, t.attempts)"></div></div>
                     <span class="theme-val">{{ acc(t.solved, t.attempts) }}% · {{ t.solved }}/{{ t.attempts }}</span>
                   </div>
@@ -277,7 +302,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
               <div class="theme-list">
                 @for (t of worstThemes; track t.theme) {
                   <div class="theme-row">
-                    <span class="theme-name">{{ t.theme }}</span>
+                    <span class="theme-name" [title]="t.theme | puzzleTheme">{{ t.theme | puzzleTheme }}</span>
                     <div class="theme-bar"><div class="theme-fill warn" [style.width.%]="acc(t.solved, t.attempts)"></div></div>
                     <span class="theme-val">{{ acc(t.solved, t.attempts) }}% · {{ t.solved }}/{{ t.attempts }}</span>
                   </div>
@@ -309,7 +334,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           <mat-card>
             <mat-card-header><mat-card-title>{{ 'stats.activity' | translate }}</mat-card-title></mat-card-header>
             <mat-card-content>
-              <div class="heatmap">
+              <div class="heatmap" #heatmapEl>
                 @for (week of heatmap; track $index) {
                   <div class="hm-col">
                     @for (cell of week; track cell.date) {
@@ -363,6 +388,22 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                 <tr mat-row *matRowDef="let row; columns: cols;"></tr>
               </table>
               </div>
+              <!-- UI-Sweep 2026-10-11 (r2-rp-stats-mobile): am Handy statt der 6-spaltigen Tabelle eine
+                   zweizeilige Liste, die ganze Zeile führt zum Puzzle. -->
+              <div class="recent-list">
+                @for (a of recentRows; track $index) {
+                  <a class="recent-item" [routerLink]="a.link">
+                    <span class="ri-main">
+                      <span>{{ a.attemptedAt | date:'dd.MM. HH:mm' }} · {{ a.rating || '–' }}</span>
+                      <span class="ri-sub">{{ a.time }} s</span>
+                    </span>
+                    <span class="ri-res" [class.res-ok]="a.solved" [class.res-fail]="!a.solved">
+                      <mat-icon [attr.aria-label]="'stats.result' | translate">{{ a.solved ? 'check_circle' : 'cancel' }}</mat-icon>
+                      @if (a.eloChange != null) { <span>{{ (a.eloChange >= 0 ? '+' : '−') + (a.eloChange >= 0 ? a.eloChange : -a.eloChange) }}</span> }
+                    </span>
+                  </a>
+                }
+              </div>
             }
           </mat-card-content>
         </mat-card>
@@ -377,6 +418,9 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .stat .lbl { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .chart-card mat-card-header { display: flex; align-items: center; justify-content: space-between; }
     .level-field { width: 130px; }
+    .level-hint { font-size: .85rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 0; }
+    .level-link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-decoration: underline;
+      color: var(--mat-sys-primary, #1976d2); }
     .chart { display: flex; gap: 6px; height: 180px; }
     .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     .svg { flex: 1; height: 180px; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 4px; }
@@ -392,12 +436,27 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .full-width { width: 100%; }
     .recent-scroll { overflow-x: auto; }
     .recent-table { min-width: 480px; }
+    .recent-list { display: none; }
+    .recent-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px;
+      min-height: 44px; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); color: inherit; text-decoration: none; }
+    .ri-main { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+    .ri-sub { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .ri-res { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .ri-res mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    @media (max-width: 600px) {
+      .recent-scroll { display: none; }
+      .recent-list { display: block; }
+      .theme-name { width: 120px; }
+      .theme-val { width: 96px; }
+    }
     .res-ok { color: #2e7d32; } .res-fail { color: #c62828; }
     .pos { color: #2e7d32; } .neg { color: #c62828; }
     .small { font-size: .75rem; }
     .theme-list { display: flex; flex-direction: column; gap: 6px; }
     .theme-row { display: flex; align-items: center; gap: 10px; font-size: .85rem; }
-    .theme-name { width: 130px; flex: 0 0 auto; text-transform: capitalize; }
+    /* UI-Sweep 2026-10-11 (r2-rp-themes-en): übersetzte Namen statt capitalize-Schlüssel; lange Namen werden
+       mit Auslassung gekürzt statt mitten im Wort umzubrechen (voller Name im title). */
+    .theme-name { width: 150px; flex: 0 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .theme-bar { flex: 1; height: 12px; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 6px; overflow: hidden; }
     .theme-fill { height: 100%; background: #1976d2; }
     .theme-fill.warn { background: #e53935; }
@@ -449,6 +508,10 @@ export class StatsComponent implements OnInit {
   private eloPoints: EloHistoryPoint[] = [];
   curve: Curve | null = null;
   overlay: Overlay | null = null;   // „Alle"-Ansicht: alle Level in einer Grafik, farbkodiert
+  /** UI-Sweep 2026-10-11 (r2-rp-elo-level): Hinweis „Level X leer – Level Y hat n Versuche" (null = keiner). */
+  levelHint: { level: number; other: number; count: number } | null = null;
+  /** Bevorzugtes Level, von dem beim Laden auf „Alle" ausgewichen wurde, weil es keine Versuche hat. */
+  private autoSwitchedFrom: number | null = null;
 
   themes: ThemeStat[] = [];
   worstThemes: ThemeStat[] = [];   // 5 schwächste (Lösungs-% aufsteigend, min. 3 Versuche)
@@ -458,6 +521,16 @@ export class StatsComponent implements OnInit {
   /** Laden des GEWÄHLTEN Modus: ein Wechsel bricht das Laden des vorigen ab — sonst landeten dessen
    *  Zeilen (recentRows/Themen teilen sich beide Modi) unter der neuen Überschrift. */
   private loadRequest = new LatestRequest();
+
+  /** UI-Sweep 2026-10-11 (r2-rp-stats-mobile): die Heatmap beginnt links mit den ältesten Wochen —
+   *  am Handy lag „heute" rechts außerhalb des Sichtbereichs. Sobald sie gerendert ist, ganz nach rechts. */
+  @ViewChild('heatmapEl') set heatmapEl(ref: ElementRef<HTMLElement> | undefined) {
+    const el = ref?.nativeElement;
+    if (!el || el === this.scrolledHeatmap) return;
+    this.scrolledHeatmap = el;
+    requestAnimationFrame(() => { el.scrollLeft = el.scrollWidth; });
+  }
+  private scrolledHeatmap: HTMLElement | null = null;
 
   constructor(private puzzles: PuzzleService, private prefs: PreferencesService) {
     this.level = prefs.visualization;
@@ -506,6 +579,12 @@ export class StatsComponent implements OnInit {
           attemptedAt: a.attemptedAt, eloChange: a.eloChange ?? null, link: ['/puzzles', a.puzzleId],
         }));
         this.applyBreakdown(breakdown);
+        // UI-Sweep 2026-10-11 (r2-rp-elo-level): hat das bevorzugte Level keine Versuche, andere aber
+        // schon, startet der Verlauf auf „Alle" statt leer — der Hinweis sagt, warum.
+        if (this.level !== -1 && elo.length > 0 && !elo.some(p => p.vizLevel === this.level)) {
+          this.autoSwitchedFrom = this.level;
+          this.level = -1;
+        }
         this.rebuildCurve();
         this.loading = false;
       },
@@ -557,7 +636,20 @@ export class StatsComponent implements OnInit {
     return Math.round((100 * solved) / this.maxBandSolved);
   }
 
+  /** Auswahl von Hand: ein früheres Ausweichen auf „Alle" gilt nicht mehr. */
+  onLevelChange(): void {
+    this.autoSwitchedFrom = null;
+    this.rebuildCurve();
+  }
+
+  /** Knopf im Hinweis: zum Level mit den Versuchen springen. */
+  showLevel(level: number): void {
+    this.level = level;
+    this.onLevelChange();
+  }
+
   rebuildCurve(): void {
+    this.levelHint = emptyLevelHint(this.eloPoints, this.level === -1 ? this.autoSwitchedFrom : this.level);
     if (this.level === -1) {
       // „Alle" → alle Modi farbkodiert in EINER Grafik (gemeinsame Skala) + Legende.
       this.overlay = buildOverlay(this.eloPoints);

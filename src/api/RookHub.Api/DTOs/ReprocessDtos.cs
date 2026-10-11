@@ -30,6 +30,14 @@ public class ReprocessStatusDto
 
     /// <summary>Veraltet, weder lokale Quelle noch Re-Fetch möglich → nur durch erneuten manuellen Import lösbar.</summary>
     public int NeedsReimport { get; set; }
+
+    /// <summary>UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): true = die Zahlen umfassen die Datensätze ALLER Nutzer
+    /// (Admin-Sicht) — das Banner sagt das dann dazu, statt bei einem eigenen Eintrag „13 aktualisieren" zu melden.</summary>
+    public bool AllUsers { get; set; }
+
+    /// <summary>UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): davon aktualisierbare (lokal + Re-Fetch) EIGENE Datensätze
+    /// des Aufrufers. Ohne Admin-Sicht gleich <see cref="ReprocessableLocally"/> + <see cref="Refetchable"/>.</summary>
+    public int OwnActionable { get; set; }
 }
 
 /// <summary>Ergebnis eines Reprocess-Laufs.</summary>

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { LinkPageComponent } from './link-page.component';
+import { LinkStateStore } from '../../core/link-state.store';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
@@ -70,6 +71,23 @@ describe('LinkPageComponent (Konto verknüpfen)', () => {
     fixture.detectChanges();
     expect(api.selfUnlink).toHaveBeenCalled();
     expect(el().querySelector('form')).not.toBeNull();
+  });
+
+  // UI-Sweep 2026-10-11 (r2-c-footer-link, r2-c-code-field)
+  it('Einlösen und Trennen landen auch im gemeinsamen Stand (Fußzeile); Feld und Knopf stehen in einer Zeile', async () => {
+    api.redeem.and.resolveTo({ linked: true, firstName: 'Lena' });
+    api.selfUnlink.and.resolveTo();
+    await create();
+    const row = el().querySelector('.code-row')!;
+    expect(row.querySelector('.code-input')).not.toBeNull();
+    expect(row.querySelector('button[type=submit]')).not.toBeNull();
+    const store = TestBed.inject(LinkStateStore);
+    expect(store.state()).toEqual({ linked: false });
+    fixture.componentInstance.code.set('ABCDE-FGHJK');
+    await fixture.componentInstance.redeem();
+    expect(store.state()).toEqual({ linked: true, firstName: 'Lena' });
+    await fixture.componentInstance.unlink();
+    expect(store.state()).toEqual({ linked: false });
   });
 
   it('apiErrorText: der Text des Servers, sonst der Rückfall', () => {

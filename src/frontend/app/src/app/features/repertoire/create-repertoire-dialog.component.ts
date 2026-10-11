@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RepertoireKind } from '../../core/repertoire.types';
+import { RepertoireKind, toRepertoireKind } from '../../core/repertoire.types';
 import { Repertoire } from '../../core/models';
 
 @Component({
@@ -91,7 +91,8 @@ export class CreateRepertoireDialogComponent {
       this.name = data.name;
       this.description = data.description ?? '';
       this.isPublic = data.isPublic;
-      this.kind = data.kind as RepertoireKind;
+      // UI-Sweep 2026-10-11 (r2-rg-rep-cards): die API liefert die Art als Namen — für die Auswahl in die Zahl wandeln.
+      this.kind = toRepertoireKind(data.kind);
       this.useForExtension = data.useForExtension;
       this.chessableCourseId = data.chessableCourseId ?? '';
     }

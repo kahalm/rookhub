@@ -312,6 +312,7 @@
       "title": "Мои репертуары",
       "new": "Новый репертуар",
       "fileCount": "{{count}} файлов",
+      "fileCountOne": "{{count}} файл",
       "public": "Публичный",
       "private": "Приватный",
       "noDescription": "Нет описания",
@@ -522,7 +523,7 @@
     "title": "Курсы",
     "intro": "Решайте задачи из импортированной книги по порядку или вразброс. Прогресс сохраняется.",
     "emptyHint": "Книги ещё не импортированы. Импортируйте книги в разделе администратора «Книги».",
-    "sectionPublic": "Публичные курсы",
+    "sectionPublic": "Доступные курсы",
     "sectionPublicHint": "Курсы, доступные вам через ваши группы.",
     "sectionOwn": "Ваши курсы",
     "sectionOwnHint": "Курсы, импортированные или созданные вами самостоятельно.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "В процессе",
-    "sectionInProgressHint": "Курсы, которые вы начали и ещё не завершили."
+    "sectionInProgressHint": "Курсы, которые вы начали и ещё не завершили.",
+    "origin": {
+      "chessable": "Импорт из Chessable",
+      "pgn": "Импорт PGN",
+      "by": "от {{name}}"
+    },
+    "reimport": {
+      "chip": "Загрузить заново",
+      "legend": "Курсов, которые нужно заново импортировать через RepCheck: {{count}}",
+      "legendOne": "1 курс нужно заново импортировать через RepCheck",
+      "more": "Подробнее",
+      "less": "Свернуть"
+    }
   },
   "weekly": {
     "title": "Еженедельно",
@@ -635,6 +648,7 @@
       "settings": "Настройки",
       "highscore": "Рекорд: рейтинг {{rating}}",
       "sessionsPlayed": "Сыграно сессий: {{count}}",
+      "sessionsPlayedOne": "Сыграно сессий: {{count}}",
       "viewHistory": "История",
       "unfinishedRun": "Незавершённый запуск: ур. {{level}} | решено {{solved}} | {{lives}} жизней | {{max}} макс.",
       "continue": "Продолжить",
@@ -936,7 +950,10 @@
     "byTheme": "По теме",
     "byRating": "По рейтингу (решённые)",
     "byRatingHint": "Решённые задачи по диапазонам рейтинга — наведите для точности.",
-    "activity": "Активность"
+    "activity": "Активность",
+    "levelEmpty": "На уровне {{level}} пока нет попыток",
+    "levelOther": "Уровень {{level}}: попыток — {{count}}",
+    "levelOtherOne": "Уровень {{level}}: 1 попытка"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "дн",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Дней в неделю",
     "weekProgress": "{{done}} из {{target}} дней на этой неделе",
     "fromGroup": "Шаблон из вашей группы «{{group}}». Вы можете изменить его для себя.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Дневная цель достигнута",
+    "weeklyPlay": "Недельная цель: игра",
+    "stillOpen": "ещё не выполнена"
   },
   "chessable": {
     "testing": "Testing…",

@@ -235,7 +235,8 @@ public sealed partial class LeagueAccountFinder
             var code = flag[..2].ToUpperInvariant();
             if (!allowed.Contains(code)) return null;                // anderes Land — vermutlich ein Namensvetter
             score += ScoreCountry;
-            ev.Add(code == region.Country ? $"Land {region.CountryName}" : code == "AT" ? "Land Österreich" : $"Land {code}");
+            // UI-Sweep 2026-10-11 (r2-l-land-codes): jedes Land ausgeschrieben, nicht nur das der Region
+            ev.Add(code == region.Country ? $"Land {region.CountryName}" : $"Land {CountryNames.GermanName(code)}");
         }
         if (!RatingPlausible(prof, p.Elo)) return null;                   // 500 online bei 2000 Elo — ein anderer (höher ist ok)
         if (RatingEvidence(prof.RatingLabel, prof.Rating, p.Elo) is { } re)

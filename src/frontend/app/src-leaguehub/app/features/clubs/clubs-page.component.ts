@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { LeagueApiService } from '../../core/league-api.service';
@@ -34,7 +35,7 @@ export function clubErrorText(reason: string | undefined, status = 400): string 
     case 'notFound': case 'clubNotFound': return 'Diesen Verein gibt es nicht mehr — die Liste ist neu geladen.';
     case 'groupNotFound': return 'Diese Gruppe gibt es nicht mehr — die Liste ist neu geladen.';
     case 'everyone': return '„Everyone" kann keinem Verein gehören — sonst gehörte jedes Konto dazu.';
-    default: return status === 403 ? 'Das dürfen nur Admins mit dem Recht „league.manage".' : 'Das hat nicht geklappt — der Server antwortet gerade nicht.';
+    default: return status === 403 ? 'Das dürfen nur Admins.' : 'Das hat nicht geklappt — der Server antwortet gerade nicht.';
   }
 }
 
@@ -54,12 +55,15 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', region: 'tiro
 @Component({
   selector: 'lh-clubs-page',
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!allowed) {
       <section class="gate">
         <h2>Nicht freigeschaltet</h2>
-        <p>Vereine verwalten nur Admins mit dem Recht „league.manage".</p>
+        <!-- UI-Sweep 2026-10-11 (r2-l-gate-text): Klartext statt Rechte-Schlüssel und ein Weg zurück zu den Prognosen -->
+        <p>Die Vereinsverwaltung sehen nur Admins.</p>
+        <p><a class="btn-sec" routerLink="/">← Zu den Prognosen</a></p>
       </section>
     } @else {
       <section class="clubs-page">

@@ -1378,12 +1378,15 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     return c;
   }
 
-  it('Kurs: fragt beim ersten Puzzle — je Kurs eigener Bereich, Kursname als Beschriftung', () => {
+  it('Kurs: fragt beim ersten Puzzle — je Kurs eigener Bereich, „Kurse" im Titel, Kursname als Unterzeile', () => {
+    // UI-Sweep 2026-10-11 (r2-rp-mode-title): der lange Buchtitel stand vorher in der Überschrift.
     const c = makeCourse();
     c.setupPuzzle(P);
     expect(c.solveMode.asked.length).toBe(1);
     expect(c.solveMode.asked[0].scope).toBe('course:12');
-    expect(c.solveMode.asked[0].data.scopeLabel).toBe('Mein Kurs');
+    expect(c.solveMode.asked[0].data.title).toBe('solveMode.titleCourses');
+    expect(c.solveMode.asked[0].data.subtitle).toBe('Mein Kurs');
+    expect(c.solveMode.asked[0].data.scopeLabel).toBeUndefined();
   });
 
   it('Kurs: fragt beim zweiten Puzzle nicht erneut', () => {

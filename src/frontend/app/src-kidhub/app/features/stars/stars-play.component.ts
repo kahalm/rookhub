@@ -15,7 +15,7 @@ import {
 import { KidsStarsStore } from '../../core/kids-stars.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
-import { KID_BACK, KID_COORDS, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_COORDS, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 
 /** Figurenzeichen fuer Stufenkarte und Kopfzeile (weisse Figuren, wie auf dem Brett). */
 export function pieceGlyph(piece: StarPiece): string {
@@ -60,7 +60,8 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       <a class="back" routerLink="/stars">← {{ 'kids.stars.title' | translate }}</a>
       @if (free()) {
         <h1><span class="dice" aria-hidden="true">🎲</span> {{ 'kids.stars.free.title' | translate }}</h1>
-        <span class="round solved-pill" [attr.aria-label]="'kids.stars.free.solved' | translate: { n: freeSolved() }">✓ {{ freeSolved() }}</span>
+        <!-- UI-Sweep 2026-10-11 (r2-k-counter): gemeinsame Zähler-Pille -->
+      <span class="round solved-pill kid-counter" [attr.aria-label]="'kids.stars.free.solved' | translate: { n: freeSolved() }">✓ {{ freeSolved() }}</span>
       } @else if (stage(); as s) {
         <h1><span aria-hidden="true">{{ glyph(s.piece) }}</span> {{ 'kids.stars.stage' | translate: { stage: s.stage } }}
           · {{ 'kids.stars.piece.' + s.piece | translate }}</h1>
@@ -174,7 +175,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
             <p class="range">{{ 'kids.stars.free.range' | translate: { max: freeMax() } }}</p>
     </ng-template>
   `,
-  styles: [KID_BACK, KID_COORDS, `
+  styles: [KID_BACK, KID_COUNTER, KID_COORDS, `
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
@@ -188,7 +189,6 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       .head.free-head h1 { font-size: 1.2rem; }
       .head.free-head .dice { display: none; }
     }
-    .solved-pill { padding: 4px 12px; border-radius: 999px; background: var(--kid-good-bg); color: var(--kid-good-fg); font-size: 1.1rem; }
     .rounds { max-width: 260px; }
     .rounds .round { display: block; margin: 4px 0 0; font-size: .95rem; font-weight: 700; color: #4f5d6e; }
     .segments { display: grid; grid-template-columns: repeat(var(--rounds, 6), 1fr); gap: 4px; }

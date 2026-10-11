@@ -1,6 +1,9 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '@rh/core/auth.service';
+import { requireAccount } from '../../core/require-account';
+import { TournamentDetailService } from './tournament-detail.service';
 import { PublicTournamentService } from '../../core/public-tournament.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +17,7 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
-import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { displayedTables } from './tournament-favorites.util';
 
@@ -22,7 +25,7 @@ import { displayedTables } from './tournament-favorites.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './public-tournament.component.html',
   styleUrls: ['./public-tournament.component.scss'],
 })
@@ -56,7 +59,18 @@ export class PublicTournamentComponent implements OnInit {
   teamSort: Sort = { active: '', direction: '' };
   pairingSort: Sort = { active: '', direction: '' };
 
-  private id!: string;
+  /** Die Turnier-Id der Adresse — auch Ziel von „Volle Ansicht" (/tournaments/:id). */
+  id!: string;
+
+  // --- Merken (UI-Sweep 2026-10-11, r2-t-public-actions) ---
+  // Signale: die Antworten kommen ausserhalb der Zone an (Angular 22, OnPush-Regel der Turnierseite).
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly api = inject(TournamentDetailService);
+  /** Das Abo dieses Turniers, wenn der angemeldete Nutzer es gemerkt hat. */
+  readonly subscription = signal<Subscription | null>(null);
+  readonly toggling = signal(false);
+  private subscriptions: Subscription[] | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -69,10 +83,12 @@ export class PublicTournamentComponent implements OnInit {
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
     this.loadLocalFavorites();
+    this.loadSubscription();
     this.tournaments.getTournament(this.id).subscribe({
       next: (t) => {
         this.tournament = t;
         this.loading = false;
+        this.matchSubscription();
         if (t.totalRounds) {
           this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
@@ -81,6 +97,61 @@ export class PublicTournamentComponent implements OnInit {
         if (this.selectedTabIndex === 2) this.loadPairings();
       },
       error: () => { this.loading = false; }
+    });
+  }
+
+  // --- Merken (wie in der Detailansicht; r2-t-public-actions) ---
+
+  /** Gemerkte Turniere nur fuer Angemeldete holen — ein Gast hat keine, und der Endpunkt verlangt ein Konto. */
+  private loadSubscription(): void {
+    if (!this.auth.isLoggedIn) return;
+    this.api.getSubscriptions().subscribe({
+      next: (subs) => { this.subscriptions = subs; this.matchSubscription(); },
+      error: () => {},
+    });
+  }
+
+  /** Dieselbe Zuordnung wie in der Detailansicht: unter der Route-Id ODER der chess-results-Nummer gespeichert. */
+  private matchSubscription(): void {
+    if (!this.subscriptions) return;
+    const number = this.tournament?.chessResultsId?.replace(/^tnr/i, '');
+    this.subscription.set(this.subscriptions.find(s =>
+      s.crawlerTournamentId === this.id || (!!number && s.crawlerTournamentId === number)) ?? null);
+  }
+
+  /** Merken — abgemeldet zur Anmeldung und danach zurueck auf diesen Link. */
+  subscribe(): void {
+    if (!requireAccount(this.auth, this.router)) return;
+    this.toggling.set(true);
+    this.api.subscribe(this.id, this.tournament?.name ?? '').subscribe({
+      next: (sub) => {
+        this.subscriptions = [...(this.subscriptions ?? []).filter(s => s.id !== sub.id), sub];
+        this.subscription.set(sub);
+        this.toggling.set(false);
+        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarked'));
+      },
+      error: (err) => {
+        this.toggling.set(false);
+        this.snackbar.info(err.error?.message || this.translate.instant('tournamentDirectory.bookmarkError'));
+      },
+    });
+  }
+
+  unsubscribe(): void {
+    const current = this.subscription();
+    if (!current) return;
+    this.toggling.set(true);
+    this.api.unsubscribe(current.id).subscribe({
+      next: () => {
+        this.subscriptions = (this.subscriptions ?? []).filter(s => s.id !== current.id);
+        this.subscription.set(null);
+        this.toggling.set(false);
+        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarkRemoved'));
+      },
+      error: () => {
+        this.toggling.set(false);
+        this.snackbar.info(this.translate.instant('tournamentDirectory.bookmarkRemoveError'));
+      },
     });
   }
 

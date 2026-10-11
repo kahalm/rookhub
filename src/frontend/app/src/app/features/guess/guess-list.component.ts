@@ -143,8 +143,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                     }
                   </span>
                   <span class="spacer"></span>
-                  <button mat-stroked-button class="g-play" [disabled]="starting" (click)="start(g)">
-                    <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
+                  <button mat-stroked-button class="g-play" [disabled]="starting" (click)="start(g)"
+                          [attr.aria-label]="'guess.play' | translate">
+                    <mat-icon>play_arrow</mat-icon> <span class="g-play-label">{{ 'guess.play' | translate }}</span>
                   </button>
                 </div>
               }
@@ -226,8 +227,8 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                     <span class="spacer"></span>
                     <button mat-stroked-button class="g-play" [disabled]="starting || g.analyzedPlies === 0"
                             [matTooltip]="g.analyzedPlies === 0 ? ('guess.notReady' | translate) : ''"
-                            (click)="start(g, guessWhite)">
-                      <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
+                            (click)="start(g, guessWhite)" [attr.aria-label]="'guess.play' | translate">
+                      <mat-icon>play_arrow</mat-icon> <span class="g-play-label">{{ 'guess.play' | translate }}</span>
                     </button>
                   </div>
                   @if (g.status === 'pending' || g.status === 'running') {
@@ -297,9 +298,17 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .g-meta { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     /* Am Handy ein festes Raster: Titel ueber die volle Breite, darunter Metazeile links und
        Knopf rechts — in JEDER Zeile an derselben Stelle (Codereview W5 UX-016). */
+    /* UI-Sweep 2026-10-11 (r2-rg-guess-rows): Knopf und Chips getrennt — der Spielen-Knopf (nur ▶) steht rechts neben
+       dem Titel, die Metazeile darunter über die volle Breite und darf umbrechen. Vorher rutschte „kommentiert" neben
+       „Schwarz" in eine eigene Zeile und zog den Knopf mittig, die Zeilenhöhen wechselten. */
     @media (max-width: 600px) {
-      .game-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
-      .game-row .g-title { grid-column: 1 / -1; }
+      .game-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'title play' 'meta meta';
+                  gap: 4px 10px; align-items: start; }
+      .game-row .g-title { grid-area: title; align-self: center; }
+      .game-row .g-meta { grid-area: meta; gap: 4px 8px; }
+      .game-row .g-play { grid-area: play; min-width: 44px; padding: 0 10px; }
+      .game-row .g-play mat-icon { margin: 0; }
+      .game-row .g-play-label { display: none; }
       .game-row .spacer { display: none; }
     }
     .g-title { font-weight: 600; text-decoration: none; color: inherit; }

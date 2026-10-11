@@ -5,6 +5,8 @@ import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { FooterPresenceService } from '@rh/shared/app-footer/footer-presence';
 import { ClubHubAppComponent } from './app.component';
+import { AuthService } from '@rh/core/auth.service';
+import { LinkStateStore } from './core/link-state.store';
 
 describe('ClubHubAppComponent', () => {
   beforeEach(() => TestBed.configureTestingModule({
@@ -19,5 +21,23 @@ describe('ClubHubAppComponent', () => {
     f.detectChanges();
     const links = Array.from((f.nativeElement as HTMLElement).querySelectorAll('footer a')).map(a => a.getAttribute('href'));
     expect(links).toEqual(jasmine.arrayContaining(['/impressum', '/privacy']));
+  });
+
+  // UI-Sweep 2026-10-11 (r2-c-footer-link)
+  it('Fußzeile: „Konto verknüpfen" ohne Club-Recht, „Verknüpfung (Lena)" verknüpft, für Trainer/Leitung gar nicht', () => {
+    const f = TestBed.createComponent(ClubHubAppComponent);
+    const auth = TestBed.inject(AuthService);
+    const store = TestBed.inject(LinkStateStore);
+    const link = () => (f.nativeElement as HTMLElement).querySelector('footer a[href="/verknuepfen"]');
+    f.detectChanges();
+    expect(link()!.textContent!.trim()).toBe('Konto verknüpfen');
+    store.set({ linked: true, firstName: 'Lena' });
+    f.detectChanges();
+    expect(link()!.textContent!.trim()).toBe('Verknüpfung (Lena)');
+    spyOn(auth, 'has').and.callFake((p: string) => p === 'club.trainer');
+    (auth as unknown as { currentUserSubject: { next(v: unknown): void } }).currentUserSubject.next(
+      { token: 't', username: 'tina', userId: 5, isAdmin: false });
+    f.detectChanges();
+    expect(link()).toBeNull();
   });
 });

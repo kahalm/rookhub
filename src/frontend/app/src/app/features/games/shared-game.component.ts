@@ -119,6 +119,11 @@ const TAP_MAX_MS = 500;
                         [matTooltip]="analyzeTooltip() | translate">
                   <mat-icon>{{ analyzing() ? 'hourglass_top' : 'insights' }}</mat-icon> {{ 'games.analyze' | translate }}
                 </button>
+                <!-- UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund steht sichtbar unter dem gesperrten Knopf —
+                     am Handy gibt es keinen Tooltip, der graue Knopf wirkte kaputt. -->
+                @if (uploadStatus()?.engineAvailable === false && !analysisRunning()) {
+                  <p class="analyze-no-engine">{{ 'games.analyzeNoEngine' | translate }}</p>
+                }
               }
               @if (game.sourceUrl) {
                 <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
@@ -391,6 +396,9 @@ const TAP_MAX_MS = 500;
     .roast-icon { flex: 0 0 auto; font-size: 18px; line-height: 1.3; }
     .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
     .original, .analyze { white-space: nowrap; }
+    /* UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): eigene Zeile unter den Knöpfen, leise. */
+    .analyze-no-engine { flex: 1 1 100%; margin: -2px 0 0; text-align: right; font-size: 12px;
+      color: color-mix(in srgb, currentColor 60%, transparent); }
     .body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
     .side-section { display: flex; flex-direction: column; gap: 12px; flex: 1 1 100%; min-width: 0; }
     /* Die drei Blöcke rechts als ruhige Karten mit gleichem Rahmen; ein leerer Rückblick (noch keine Analyse) fällt weg. */
@@ -450,6 +458,7 @@ const TAP_MAX_MS = 500;
       .viewer { width: auto; padding: 0; border-radius: 0; }
       .header { position: relative; grid-template-columns: auto minmax(0, 1fr); padding: 12px 52px 12px 16px; margin-bottom: 4px; }
       .header-actions { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
+      .analyze-no-engine { text-align: left; }
       /* Nur das ⋮ (es sitzt absolut oben rechts): die leere Zeile samt Abstand fällt weg. */
       .header-actions:not(:has(> button:not(.game-menu), > a)) { margin-top: -8px; }
       /* Das ⋮ oben rechts neben den Namen statt allein in einer eigenen Zeile. */

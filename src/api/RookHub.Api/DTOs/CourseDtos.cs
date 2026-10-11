@@ -4,6 +4,10 @@ namespace RookHub.Api.DTOs;
 public class CourseListItemDto
 {
     public int BookId { get; set; }
+    /// <summary>UI-Sweep 2026-10-11 (r2-rp-empty-course): Zahl der Info-/Partie-Linien (<c>IsInfoOnly</c>) —
+    /// NUR gefüllt bei Kursen ohne eine einzige Quiz-Linie (sonst 0). Daran sieht die Karte, ob ein Kurs
+    /// „nur kommentierte Partien" hat (Durchsehen statt toter Knöpfe) oder ganz leer ist.</summary>
+    public int InfoLineCount { get; set; }
     public string FileName { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string? Difficulty { get; set; }
@@ -84,6 +88,19 @@ public class CourseListItemDto
     /// ohne ihr Maximum ausgeliefert („14 / 24"). Wie <see cref="CalcPoints"/> nur bei
     /// Kalkulationsbüchern gefüllt.</summary>
     public int? CalcMaxPoints { get; set; }
+
+    /// <summary>
+    /// UI-Sweep 2026-10-11 (r2-rp-course-dupes): Herkunft „Chessable-Import" (Dateiname <c>chessable-…</c> bzw.
+    /// Chessable-Tag, <see cref="Services.StaleContentRule.IsChessable"/>) — die Kursliste unterscheidet damit
+    /// gleichnamige Kurse.
+    /// </summary>
+    public bool IsChessableImport { get; set; }
+
+    /// <summary>
+    /// UI-Sweep 2026-10-11 (r2-rp-course-dupes): Benutzername des Besitzers eines persönlichen Buchs —
+    /// NUR für Admins gefüllt (sie sehen alle Bücher, auch fremde gleichnamige); sonst <c>null</c>.
+    /// </summary>
+    public string? OwnerUsername { get; set; }
 }
 
 /// <summary>Eingabe: die Themen-Tags eines Kurs-Buchs setzen (leer = Rückfall auf Default „tactics").</summary>

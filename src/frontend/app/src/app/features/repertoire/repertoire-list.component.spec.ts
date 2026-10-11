@@ -258,6 +258,20 @@ describe('RepertoireListComponent Karten-Aktionen (⋮-Menü)', () => {
     expect(labels.join(' ')).toContain('common.delete');
   });
 
+  // UI-Sweep 2026-10-11 (r2-rg-rep-cards): die API schickt die Art als NAMEN — „None" zeigt keine Marke mehr,
+  // „Opening" die farbige; eine Datei heißt „1 Datei" (eigener Einzahl-Schlüssel).
+  it('Art-Marke nur bei echter Art (auch als Name aus der API), Einzahl bei einer Datei', async () => {
+    const fixture = await render([rep(1, { kind: 'None' }), rep(2, { kind: 'Opening', fileCount: 3 })]);
+    const cards = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-card'));
+    expect(cards.length).toBe(2);
+    expect(cards[0].querySelector('.kind-chip')).toBeNull();
+    expect(cards[0].textContent).toContain('repertoire.list.fileCountOne');
+    const chip = cards[1].querySelector('.kind-chip');
+    expect(chip?.classList).toContain('kind-opening');
+    expect(chip?.textContent).toContain('repertoire.kind.opening');
+    expect(cards[1].textContent).not.toContain('repertoire.list.fileCountOne');
+  });
+
   it('geteilte Karte: im Menü nur der PGN-Download', async () => {
     const fixture = await render([rep(2, { isShared: true, sharedByUsername: 'noel' })]);
     const trigger = fixture.debugElement.query(By.directive(MatMenuTrigger));

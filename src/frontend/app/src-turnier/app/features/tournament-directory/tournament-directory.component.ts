@@ -41,8 +41,7 @@ import {
   DEFAULT_RADIUS_KM, DIRECTORY_AGE_GROUPS, DIRECTORY_GENDERS, DIRECTORY_KINDS, DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
-  TournamentGender, TournamentKind, TournamentSpeed, rangeFor,
-} from './tournament-directory.model';
+  TournamentGender, TournamentKind, TournamentSpeed, rangeFor, sameNameSiblings } from './tournament-directory.model';
 
 type ViewTab = 'list' | 'map' | 'calendar';
 
@@ -139,6 +138,8 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   readonly upcomingEntries = computed(() => this.entries().filter(e => !e.ongoing));
   readonly ongoingEntries = computed(() => this.entries().filter(e => e.ongoing));
+  /** Gleichnamige Turniere am selben Tag als getrennte Karten (UI-Sweep 2026-10-11, r2-t-dup-cards). */
+  readonly sameNameIds = computed(() => sameNameSiblings(this.entries()));
 
   readonly pins = signal<DirectoryEntry[]>([]);
   /**
@@ -409,7 +410,8 @@ export class TournamentDirectoryComponent implements OnInit {
     // nimmt der Server DESSEN Radius, das Feld zeigte dann 50 km und die Liste 100. Also den
     // Mittelpunkt des Profils uebernehmen und ab hier selbst fuehren.
     if (this.filter.profileId !== null) this.adoptProfileCentre();
-    this.filter.radiusKm = radiusKm;
+    // 0 = „Überall" aus der Auswahl (r2-t-radius-empty); im Filter bleibt das null.
+    this.filter.radiusKm = radiusKm || null;
     this.reload();
   }
 

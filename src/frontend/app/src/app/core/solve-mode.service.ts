@@ -27,6 +27,13 @@ const MAX_EINTRAEGE = 200;
  */
 const GRUNDWAHL = '*';
 
+/**
+ * UI-Sweep 2026-10-11 (r2-rp-mode-title): Grundwahl für ALLE Kurse. Gesetzt, wenn im Kursdialog „für alle
+ * Puzzle-Bereiche übernehmen" angehakt ist — sonst fragte jeder Kurs wieder. Eine eigene Wahl je Kurs
+ * (über das ⋮-Menü) schlägt sie weiterhin.
+ */
+const KURS_GRUNDWAHL = 'course:*';
+
 interface Eintrag { mode: SolveMode; at: number; }
 
 /**
@@ -57,11 +64,16 @@ export class SolveModeService {
   /** Bereich ohne Id (puzzles, daily, book, endless)? Nur dort gilt die Grundwahl. */
   static isShared(scope: string): boolean { return scope !== GRUNDWAHL && !scope.includes(':'); }
 
+  /** Ein einzelner Kurs (nicht die Kurs-Grundwahl selbst)? */
+  static isCourse(scope: string): boolean { return scope.startsWith('course:') && scope !== KURS_GRUNDWAHL; }
+
   /** Gemerkte Wahl, oder null wenn für diesen Bereich noch nie gefragt wurde. Ein Bereich ohne
    *  eigene Wahl fällt auf die Grundwahl zurück, sofern er einer ohne Id ist. */
   get(scope: string): SolveMode | null {
     const alle = this.lesen();
-    return modeOf(alle[scope]) ?? (SolveModeService.isShared(scope) ? modeOf(alle[GRUNDWAHL]) : null);
+    return modeOf(alle[scope])
+      ?? (SolveModeService.isShared(scope) ? modeOf(alle[GRUNDWAHL]) : null)
+      ?? (SolveModeService.isCourse(scope) ? modeOf(alle[KURS_GRUNDWAHL]) : null);
   }
 
   set(scope: string, mode: SolveMode): void {
@@ -95,14 +107,16 @@ export class SolveModeService {
     const gemerkt = this.get(scope);
     if (gemerkt) return of(gemerkt);
     const shared = SolveModeService.isShared(scope);
-    return this.openDialog({ ...data, offerApplyAll: shared })
+    const course = SolveModeService.isCourse(scope);
+    return this.openDialog({ ...data, offerApplyAll: shared || course })
       .pipe(map((r: SolveModeDialogResult | undefined) => {
         // Abgebrochen (Escape ist durch disableClose aus, aber defensiv) → Trainingsmodus,
         // das bisherige Verhalten. Gemerkt wird nur eine echte Wahl.
         const mode: SolveMode = r?.mode === 'easy' ? 'easy' : 'training';
         if (r) {
           this.set(scope, mode);
-          if (shared && r.applyAll) this.set(GRUNDWAHL, mode);
+          if ((shared || course) && r.applyAll) this.set(GRUNDWAHL, mode);
+          if (course && r.applyAll) this.set(KURS_GRUNDWAHL, mode);
         }
         return mode;
       }));
@@ -159,7 +173,7 @@ export class SolveModeService {
 
   private schreiben(alle: Record<string, Eintrag>): void {
     // Die Grundwahl zählt nicht mit und fliegt nie raus — sonst fragten alle Bereiche wieder.
-    const keys = Object.keys(alle).filter(k => k !== GRUNDWAHL);
+    const keys = Object.keys(alle).filter(k => k !== GRUNDWAHL && k !== KURS_GRUNDWAHL);
     if (keys.length > MAX_EINTRAEGE) {
       // Älteste zuerst wegwerfen; sie werden beim nächsten Einstieg einfach neu erfragt.
       keys.sort((a, b) => (alle[a]?.at || 0) - (alle[b]?.at || 0));

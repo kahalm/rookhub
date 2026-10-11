@@ -90,7 +90,7 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal(LeagueAccountChecks.Ok, S("DE", "GER"));                  // Föderation laut FIDE
         Assert.Equal(LeagueAccountChecks.Fail, S("IT"));
         Assert.Equal(LeagueAccountChecks.None, S(null));
-        Assert.Equal("IT — weder Österreich noch seine Föderation (AUT)", LeagueAccountChecks.CountryCheck(Max, Prof(flag: "IT"), null).Text);
+        Assert.Equal("Italien — weder Österreich noch seine Föderation (AUT)", LeagueAccountChecks.CountryCheck(Max, Prof(flag: "IT"), null).Text);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal((LeagueAccountChecks.Ok, "Deutschland"), (LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "DE"), null).Status,
             LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "DE"), null).Text));
         Assert.Equal(LeagueAccountChecks.Fail, LeagueAccountChecks.CountryCheck(Max, Prof(flag: "DE"), null).Status);       // Schwazer: wie bisher
-        Assert.Equal("AT — weder Deutschland noch seine Föderation", LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "AT"), null).Text);
+        Assert.Equal("Österreich — weder Deutschland noch seine Föderation", LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "AT"), null).Text);
         Assert.Equal(LeagueAccountChecks.Ok, LeagueAccountChecks.CountryCheck(weilheimer, Prof(flag: "AT"), "AUT").Status);  // Föderation laut FIDE
     }
 

@@ -18,7 +18,10 @@
       <mat-tab-group class="whose-tabs" [selectedIndex]="activeIndex()"
                      (selectedIndexChange)="onTabChange($event)" mat-stretch-tabs="false">
         @for (tab of tabs(); track trackByTab($index, tab)) {
-          <mat-tab [disabled]="!tab.enabled">
+          <!-- Nicht mehr [disabled] (UI-Sweep 2026-10-11, r2-t-history-disabled-tab): gesperrte Reiter haben in
+               Angular Material pointer-events: none — der Tooltip mit dem Grund erschien nie, am Handy sowieso nicht.
+               Der Reiter laesst sich oeffnen, der Grund steht dann im Inhalt. -->
+          <mat-tab>
             <ng-template mat-tab-label>
               <span [matTooltip]="tab.enabled
                       ? (tab.exact ? '' : ('turnier.history.inexact' | translate))
@@ -72,7 +75,13 @@
     }
   </div>
 
-  @if (loading()) {
+  @if (blockedTab(); as tab) {
+    <!-- Freund ohne Namen im Profil: nichts zu laden, aber der Grund (r2-t-history-disabled-tab). -->
+    <mat-card class="player-card no-name-friend">
+      <div class="player-head"><h2>{{ tab.label }}</h2></div>
+      <p class="muted">{{ 'turnier.history.friendNoName' | translate: { name: tab.label } }}</p>
+    </mat-card>
+  } @else if (loading()) {
     <app-loading-spinner />
   } @else if (failed()) {
     <!-- Mit Wiederholen-Knopf: in der installierten PWA gibt es keinen sichtbaren Neuladen-Knopf. -->

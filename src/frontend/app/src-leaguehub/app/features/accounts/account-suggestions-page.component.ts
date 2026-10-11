@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { AccountSuggestion } from '../../core/league.models';
@@ -25,19 +26,23 @@ export function groupByPlayer(items: AccountSuggestion[]): { fide: string; name:
   selector: 'lh-account-suggestions-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AccountSuggestionsComponent, PlayerCardComponent],
+  imports: [RouterLink, AccountSuggestionsComponent, PlayerCardComponent],
   template: `
     @if (!allowed) {
       <section class="gate">
         <h2>Nicht freigeschaltet</h2>
+        <!-- UI-Sweep 2026-10-11 (r2-l-gate-text): Klartext statt Rechte-Schlüssel und ein Weg zurück zu den Prognosen -->
         <p>Die Konto-Vorschläge sehen nur Liga-Verwalter.</p>
+        <p><a class="btn-sec" routerLink="/">← Zu den Prognosen</a></p>
       </section>
     } @else {
       <section class="sugg-page">
         <h2>Konto-Vorschläge</h2>
-        <p class="muted">LeagueHub sucht auf Lichess und chess.com nach Konten, deren Name zum Spieler passt — nur bei
-          Erwachsenen. Ob ein Konto wirklich ihm gehört, entscheidest du: übernehmen (unsicher oder gesichert) oder verwerfen;
-          Verworfenes kommt nicht wieder.</p>
+        <!-- UI-Sweep 2026-10-11 (r2-l-minor-intro): seit 0.610.0 werden auch Minderjährige gesucht (nur für Admins sichtbar) -->
+        <p class="muted">LeagueHub sucht auf Lichess und chess.com nach Konten, deren Name zum Spieler passt. Ob ein Konto
+          wirklich ihm gehört, entscheidest du: übernehmen (unsicher oder gesichert) oder verwerfen; Verworfenes kommt nicht wieder.</p>
+        <p class="muted small">Konten Minderjähriger werden ebenfalls gesucht, sind aber nur für Admins sichtbar (Etikett
+          „minderjährig") und erscheinen nirgends sonst.</p>
         @if (progress(); as p) {
           <p class="small muted" role="status">{{ p }}</p>
         }

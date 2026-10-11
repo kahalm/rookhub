@@ -312,6 +312,7 @@
       "title": "Repertoriile mele",
       "new": "Repertoriu nou",
       "fileCount": "{{count}} fișiere",
+      "fileCountOne": "{{count}} fișier",
       "public": "Public",
       "private": "Privat",
       "noDescription": "Fără descriere",
@@ -522,7 +523,7 @@
     "title": "Cursuri",
     "intro": "Parcurge o carte importată problemă cu problemă — secvențial sau aleatoriu. Progresul este salvat.",
     "emptyHint": "Nicio carte importată încă. Importă cărți în zona de admin la „Cărți“.",
-    "sectionPublic": "Cursuri publice",
+    "sectionPublic": "Cursuri disponibile",
     "sectionPublicHint": "Cursuri partajate cu tine prin grupurile tale.",
     "sectionOwn": "Cursurile tale",
     "sectionOwnHint": "Cursuri importate sau create de tine.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "În curs",
-    "sectionInProgressHint": "Cursuri pe care le-ai început și nu le-ai terminat încă."
+    "sectionInProgressHint": "Cursuri pe care le-ai început și nu le-ai terminat încă.",
+    "origin": {
+      "chessable": "Import Chessable",
+      "pgn": "Import PGN",
+      "by": "de la {{name}}"
+    },
+    "reimport": {
+      "chip": "Reimportă",
+      "legend": "{{count}} cursuri trebuie reimportate prin RepCheck",
+      "legendOne": "1 curs trebuie reimportat prin RepCheck",
+      "more": "Mai mult",
+      "less": "Mai puțin"
+    }
   },
   "weekly": {
     "title": "Săptămânal",
@@ -635,6 +648,7 @@
       "settings": "Setări",
       "highscore": "Record: Rating {{rating}}",
       "sessionsPlayed": "{{count}} sesiuni jucate",
+      "sessionsPlayedOne": "{{count}} sesiuni jucate",
       "viewHistory": "Vezi istoricul",
       "unfinishedRun": "Run nefinalizat: Niv {{level}} | {{solved}} rezolvate | {{lives}} vieți | {{max}} max",
       "continue": "Continuă",
@@ -936,7 +950,10 @@
     "byTheme": "Pe temă",
     "byRating": "Pe rating (rezolvate)",
     "byRatingHint": "Probleme rezolvate per bandă de rating — plasează cursorul pentru precizie.",
-    "activity": "Activitate"
+    "activity": "Activitate",
+    "levelEmpty": "Nivelul {{level}} nu are încă încercări",
+    "levelOther": "Nivelul {{level}}: {{count}} încercări",
+    "levelOtherOne": "Nivelul {{level}}: 1 încercare"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "z",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Zile pe săptămână",
     "weekProgress": "{{done}} din {{target}} zile în această săptămână",
     "fromGroup": "Obiectiv prestabilit din grupul tău \"{{group}}\". Îl poți ajusta pentru tine.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Obiectivul zilnic atins",
+    "weeklyPlay": "Obiectiv săptămânal: joc",
+    "stillOpen": "încă deschis"
   },
   "chessable": {
     "testing": "Testing…",

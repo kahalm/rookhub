@@ -28,6 +28,8 @@
 .range-field { min-width: 170px; }
 .players-field { width: 150px; }
 .filter-toggle { white-space: nowrap; }
+/* Auf Feldhoehe (56 px) statt 40 px neben den Auswahlfeldern (UI-Sweep 2026-10-11, r2-t-radius-empty). */
+.filter-bar > .filter-toggle { height: 56px; }
 
 .filter-extra {
   display: flex;

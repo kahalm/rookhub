@@ -54,7 +54,12 @@
         }
         @if (entry.location) {
           <dt>{{ 'tournamentDirectory.detail.place' | translate }}</dt>
-          <dd>{{ entry.location }}</dd>
+          <!-- „various" ist kein Ort: uebersetzt und kursiv (UI-Sweep 2026-10-11, r2-t-various). -->
+          @if (various(entry)) {
+            <dd class="various">{{ 'tournamentDirectory.variousVenues' | translate }}</dd>
+          } @else {
+            <dd>{{ entry.location }}</dd>
+          }
         }
         @if (entry.state) {
           <dt>{{ 'tournamentDirectory.detail.region' | translate }}</dt>

@@ -9,6 +9,7 @@ import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, SessionDetail, Status } from '../../core/club.models';
 import { dateNeighbours, dayText, longDate, nameHead, nameTail, parseDay, shortDate, trainingDate } from '../../core/club-format';
+import { ClubGateComponent } from '../../shared/club-gate.component';
 
 /** „7 von 12 da" */
 export function tallyText(present: number, total: number): string {
@@ -37,10 +38,11 @@ export function tallyText(present: number, total: number): string {
   selector: 'ch-attendance-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SessionPhotosComponent, MemberPhotoComponent],
+  imports: [RouterLink, SessionPhotosComponent, MemberPhotoComponent, ClubGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate"><h1>Nicht freigeschaltet</h1><p>Die Anwesenheit erfassen die Trainer und die Leitung des Vereins.</p></section>
+      <!-- UI-Sweep 2026-10-11 (r2-c-gate-deadend): gemeinsame Sperrkarte mit Weg zur Startseite -->
+      <ch-gate area="Die Anwesenheit erfassen nur Trainer und die Vereinsleitung." />
     } @else if (group(); as g) {
       <h1>Wer ist da?</h1>
       <p class="kid-meta"><a [routerLink]="['/gruppen', g.id]">{{ g.name }}</a><span>{{ long(date()) }}</span></p>

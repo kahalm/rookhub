@@ -66,23 +66,30 @@
       @if (mode === 'learn') {
         <mat-icon>school</mat-icon>
         <p>{{ 'repertoireTrainer.nothingToLearn' | translate }}</p>
-        <button mat-flat-button color="primary" (click)="setMode('quiz')">
-          <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
-        </button>
-        <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
-          <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
-        </a>
+        <div class="msg-actions">
+          <button mat-flat-button color="primary" (click)="setMode('quiz')">
+            <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
+          </button>
+          <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
+            <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
+          </a>
+        </div>
       } @else {
       <mat-icon>{{ nextDueAt ? 'schedule' : 'school' }}</mat-icon>
       @if (nextDueAt) {
         <p>{{ 'repertoireTrainer.nextDue' | translate: { when: nextDueLabel } }}</p>
+      } @else {
+        <p>{{ 'repertoireTrainer.nothingInPool' | translate }}</p>
+      }
+      <!-- UI-Sweep 2026-10-11 (r2-rg-trainer-icons): Hauptaktion und „Linien verwalten" nebeneinander in einer Zeile. -->
+      <div class="msg-actions">
+      @if (nextDueAt) {
         @if (!offlineSession) {
           <button mat-flat-button color="primary" (click)="makeAllDue()" [disabled]="poolBusy">
             <mat-icon>bolt</mat-icon> {{ 'repertoireTrainer.makeAllDue' | translate }}
           </button>
         }
       } @else {
-        <p>{{ 'repertoireTrainer.nothingInPool' | translate }}</p>
         @if (!offlineSession) {
           <button mat-flat-button color="primary" (click)="promoteAllToPool()" [disabled]="poolBusy">
             <mat-icon>playlist_add</mat-icon> {{ 'repertoireTrainer.addAllToPool' | translate }}
@@ -92,6 +99,7 @@
       <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
         <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
       </a>
+      </div>
       }
     </mat-card>
 

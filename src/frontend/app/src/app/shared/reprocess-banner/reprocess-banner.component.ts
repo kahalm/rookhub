@@ -11,6 +11,10 @@ import { SnackbarService } from '../../core/snackbar.service';
 interface ReprocessStatus {
   currentVersion: number; total: number; stale: number;
   reprocessableLocally: number; refetchable: number; needsReimport: number;
+  /** UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Zahlen über ALLE Nutzer (Admin-Sicht); ältere Server: fehlt. */
+  allUsers?: boolean;
+  /** Davon aktualisierbare eigene Datensätze. */
+  ownActionable?: number;
 }
 /**
  * Wiederverwendbares Banner „N … können aktualisiert werden", wenn die Import-/Aufbereitungs-Pipeline
@@ -29,7 +33,7 @@ interface ReprocessStatus {
       <div class="reprocess-banner">
         <mat-icon class="rb-icon">auto_fix_high</mat-icon>
         <span class="rb-text">
-          {{ ('reprocess.available.' + section) | translate: { count: actionableCount } }}
+          {{ textKey | translate: { count: actionableCount, own: status.ownActionable ?? 0 } }}
         </span>
         @if (allCount > 0) {
           <!-- EIN Aktualisieren-Knopf: bereitet lokal aus der gespeicherten Quelle auf und holt
@@ -39,7 +43,7 @@ interface ReprocessStatus {
             @if (working) {
               <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
             } @else {
-              <mat-icon>refresh</mat-icon> {{ 'reprocess.update' | translate: { count: allCount } }}
+              <mat-icon>refresh</mat-icon> {{ (status.allUsers ? 'reprocess.updateAll' : 'reprocess.update') | translate: { count: allCount } }}
             }
           </button>
         }
@@ -74,6 +78,13 @@ export class ReprocessBannerComponent implements OnInit {
   }
   /** Irgendetwas aktualisierbar? (steuert das Banner). */
   get actionableCount(): number { return this.allCount; }
+
+  /** UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Bannertext mit echter Einzahl/Mehrzahl; in der Admin-Sicht
+   *  sagt er dazu, dass die Zahl die Einträge ALLER Nutzer umfasst (und wie viele davon eigene sind). */
+  get textKey(): string {
+    const one = this.actionableCount === 1 ? 'One' : '';
+    return `reprocess.available${this.status?.allUsers ? 'All' : ''}${one}.${this.section}`;
+  }
 
   constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 

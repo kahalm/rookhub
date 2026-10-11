@@ -71,7 +71,13 @@ body {
 .account .who { color: var(--muted); }
 /* Umschalter zwischen Vereinen (0.698.0) — nur bei mehreren sichtbar */
 .account .club-switch { display: flex; align-items: center; gap: 6px; color: var(--muted); }
-.account .club-switch select { font: inherit; min-height: 36px; max-width: 12em; }
+/* UI-Sweep 2026-10-11 (r2-l-club-select): wie die Auswahlfelder der Seite (.pick select) — dunkle Fläche, 1px Rahmen,
+   Radius — und so hoch wie der Abmelden-Knopf daneben, statt des grauen Standard-Selects. */
+.account .club-switch select {
+  font: 500 15px/1.2 var(--body); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-height: 33px; max-width: 12em;
+}
+.account .club-switch select:hover { border-color: var(--muted); }
 .lede { margin: 6px auto 0; color: var(--muted); }
 
 /* Auswahl */
@@ -215,6 +221,47 @@ details.roster summary { cursor: pointer; font: 600 17px/1.3 var(--cond); }
 lh-root .wrap .auth-container { min-height: 0; padding-top: 8px; }
 lh-root .wrap .legal-container { padding: 16px 0; }
 lh-root .wrap .legal-links { display: none; }
+
+/* UI-Sweep 2026-10-11 (r2-l-legal-style): Anmeldemasken und Rechtsseiten im LeagueHub-Look statt RookHub-Material —
+   Barlow, Kartenfläche wie .gate, rote Akzentfarbe statt Blau, eckige Knöpfe wie „Abmelden". Die Komponenten selbst
+   bleiben unberührt; die Selektoren sind spezifischer als ihre gekapselten Regeln. Analog r2-c-privacy-style in ClubHub. */
+lh-root :is(app-login, app-register, app-forgot-password, app-reset-password, app-privacy, app-impressum, app-account-deletion) .mat-mdc-card {
+  --mat-sys-primary: var(--red);
+  --mat-sys-on-primary: #fff;
+  --mat-sys-on-surface: var(--ink);
+  --mat-sys-on-surface-variant: var(--muted);
+  --mat-sys-outline: var(--line);
+  --mat-sys-body-large-font: var(--body);
+  --mat-sys-body-medium-font: var(--body);
+  --mat-sys-body-small-font: var(--body);
+  --mat-sys-label-large-font: var(--cond);
+  --mat-card-elevated-container-color: var(--surface);
+  --mat-card-elevated-container-elevation: none;
+  --mat-card-elevated-container-shape: 10px;
+  --mat-card-title-text-font: var(--cond);
+  --mat-card-title-text-size: 24px;
+  --mat-card-title-text-weight: 600;
+  --mat-card-title-text-line-height: 1.2;
+  --mat-button-protected-container-shape: 6px;
+  --mat-button-protected-container-color: var(--red);
+  --mat-button-protected-label-text-color: #fff;
+  --mat-button-filled-container-shape: 6px;
+  --mat-button-outlined-container-shape: 6px;
+  --mat-button-text-container-shape: 6px;
+  --mat-button-text-label-text-color: var(--ink);
+  --mat-form-field-outlined-container-shape: 6px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--body);
+}
+lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card .mat-mdc-card-actions a {
+  text-decoration: underline; text-underline-offset: 3px;
+}
+lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card .auth-required {
+  background: color-mix(in srgb, var(--red) 8%, transparent); border-left-color: var(--red); color: var(--ink);
+}
+lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 600 20px/1.2 var(--cond); color: var(--red); }
+lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 .foot-note { color: var(--muted); font-size: 14px; padding-top: 20px; }
 /* Partien je Quelle unter „Stand der Daten" (0.626.0; als Tabelle seit 0.628.0, Fassung B des Entwurfs) */

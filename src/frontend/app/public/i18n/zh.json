@@ -312,6 +312,7 @@
       "title": "我的开局库",
       "new": "新建开局库",
       "fileCount": "{{count}} 个文件",
+      "fileCountOne": "{{count}} 个文件",
       "public": "公开",
       "private": "私密",
       "noDescription": "暂无描述",
@@ -522,7 +523,7 @@
     "title": "课程",
     "intro": "逐题练习导入的书本——按顺序或随机进行。你的进度将被保存。",
     "emptyHint": "暂无导入的书本。请在管理区的「书本」中导入书本。",
-    "sectionPublic": "公开课程",
+    "sectionPublic": "可用课程",
     "sectionPublicHint": "通过你的群组与你共享的课程。",
     "sectionOwn": "我的课程",
     "sectionOwnHint": "你自己导入或创建的课程。",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "进行中",
-    "sectionInProgressHint": "你已开始但尚未完成的课程。"
+    "sectionInProgressHint": "你已开始但尚未完成的课程。",
+    "origin": {
+      "chessable": "Chessable 导入",
+      "pgn": "PGN 导入",
+      "by": "来自 {{name}}"
+    },
+    "reimport": {
+      "chip": "重新获取",
+      "legend": "{{count}} 门课程需要通过 RepCheck 重新导入",
+      "legendOne": "1 门课程需要通过 RepCheck 重新导入",
+      "more": "更多",
+      "less": "收起"
+    }
   },
   "weekly": {
     "title": "每周精选",
@@ -635,6 +648,7 @@
       "settings": "设置",
       "highscore": "最高分：{{rating}} 评分",
       "sessionsPlayed": "已进行 {{count}} 场",
+      "sessionsPlayedOne": "已进行 {{count}} 场",
       "viewHistory": "查看历史",
       "unfinishedRun": "未完成记录：Lv {{level}} | 已解 {{solved}} 题 | {{lives}} 条命 | 最高 {{max}}",
       "continue": "继续",
@@ -936,7 +950,10 @@
     "byTheme": "按主题",
     "byRating": "按评分（已解）",
     "byRatingHint": "各评分段已解题数——悬停查看正确率。",
-    "activity": "活跃度"
+    "activity": "活跃度",
+    "levelEmpty": "级别 {{level}} 还没有尝试",
+    "levelOther": "级别 {{level}}：{{count}} 次尝试",
+    "levelOtherOne": "级别 {{level}}：1 次尝试"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "天",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "每周天数",
     "weekProgress": "本周 {{done}}/{{target}} 天",
     "fromGroup": "来自你群组「{{group}}」的预设。你可以为自己单独调整。",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "今日目标达成",
+    "weeklyPlay": "每周目标：对局",
+    "stillOpen": "尚未完成"
   },
   "chessable": {
     "testing": "Testing…",

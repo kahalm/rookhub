@@ -135,7 +135,7 @@ public partial class ImportReprocessService
                 // [%info], aber OHNE [ChessableOid] ist NICHT modern → braucht einen Chessable-Re-Fetch, damit
                 // die oids (Grundlage der Fortschritts-Overlays) reinkommen.
                 SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains("[ChessableOid"),
-                b.Tags, b.FileName,
+                b.Tags, b.FileName, b.OwnerUserId,
                 CacheMissed = b.CacheMissAt != null && b.CacheMissAt >= b.UpdatedAt,   // Book.CacheMissAt gilt, solange nicht älter als UpdatedAt
             })
             .ToListAsync(ct);
@@ -160,8 +160,14 @@ public partial class ImportReprocessService
             ReprocessableLocally = actions.Count(a => a is StaleAction.Local or StaleAction.Cache),
             FromCache = actions.Count(a => a == StaleAction.Cache),
             NeedsReimport = actions.Count(a => a == StaleAction.Manual),
+            // UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Umfang fürs Banner (Admin = alle Nutzer, davon eigene).
+            AllUsers = isAdmin,
+            OwnActionable = stale.Zip(actions).Count(x => x.First.OwnerUserId == userId && IsActionable(x.Second)),
         };
     }
+
+    /// <summary>Aktualisierbar im Sinne des Banners (lokal, aus dem Linien-Cache oder per Re-Fetch).</summary>
+    private static bool IsActionable(StaleAction a) => a is StaleAction.Local or StaleAction.Cache or StaleAction.Refetch;
 
     /// <param name="localOnly">true = nur aus dem serverseitig gespeicherten Quell-PGN aufbereiten
     /// („Aus Cache"), KEIN Chessable-Re-Fetch übers Netz. Der Linien-Cache-Weg (<see cref="StaleAction.Cache"/>)
@@ -517,6 +523,9 @@ public partial class ImportReprocessService
             FromCache = actions.Count(a => a == StaleAction.Cache),
             Refetchable = actions.Count(a => a == StaleAction.Refetch),
             NeedsReimport = actions.Count(a => a == StaleAction.Manual),
+            // UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Umfang fürs Banner (Admin = alle Nutzer, davon eigene).
+            AllUsers = isAdmin,
+            OwnActionable = stale.Zip(actions).Count(x => x.First.UserId == userId && IsActionable(x.Second)),
         };
     }
 

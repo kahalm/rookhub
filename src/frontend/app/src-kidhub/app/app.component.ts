@@ -15,6 +15,7 @@ import { KidsApiService } from './core/kids-api.service';
 import { KidsProgressSync } from './core/kids-progress-sync.service';
 import { KID_BACK, KID_PAGE_WIDTH, KID_SHORT, KID_STACKED, kidPageWidth } from './shared/kids-layout';
 import { KID_PRIVACY_STYLES, foldPrivacy, isPrivacyUrl } from './shared/kids-privacy';
+import { KID_AUTH_STYLES, isAuthUrl } from './shared/kids-auth';
 
 /** Die vollstaendig uebersetzten Sprachen — nur die bietet die Kinderseite an. */
 export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
@@ -73,6 +74,9 @@ export function isHomeUrl(url: string): boolean {
       @if (isPrivacy()) {
         <!-- Datenschutz: der Weg zurueck zum Spiel steht oben, nicht erst nach 3 500 px (UI-Sweep 2026-10-10, k-privacy). -->
         <div class="legal-top"><a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a></div>
+      } @else if (isAuth()) {
+        <!-- UI-Sweep 2026-10-11 (r2-k-login): derselbe „← Start"-Knopf wie auf den übrigen Seiten, über der Karte. -->
+        <div class="legal-top auth-top"><a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a></div>
       }
       <router-outlet />
     </main>
@@ -98,7 +102,7 @@ export function isHomeUrl(url: string): boolean {
       <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
     </footer>
   `,
-  styles: [KID_BACK, KID_PRIVACY_STYLES, `
+  styles: [KID_BACK, KID_PRIVACY_STYLES, KID_AUTH_STYLES, `
     :host {
       --kid-bg: #eaf6ff;
       --kid-card: #ffffff;
@@ -170,6 +174,8 @@ export function isHomeUrl(url: string): boolean {
     .globe { font-size: 1.1em; line-height: 1; }
     /* Datenschutz: Ruecklink oben in derselben Spalte wie die Seite. */
     .legal-top { box-sizing: border-box; max-width: ${KID_PAGE_WIDTH.legal}px; margin: 0 auto; padding: 8px 16px 0; }
+    /* Anmelde-Masken: der Knopf steht über der 400-px-Karte (r2-k-login). */
+    .legal-top.auth-top { max-width: 432px; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   `],
 })
@@ -199,6 +205,8 @@ export class KidHubAppComponent implements OnInit {
   );
   readonly isHome = computed(() => isHomeUrl(this.url()));
   readonly isPrivacy = computed(() => isPrivacyUrl(this.url()));
+  /** Anmelde-Masken (UI-Sweep 2026-10-11, r2-k-login). */
+  readonly isAuth = computed(() => isAuthUrl(this.url()));
   /** Breite der Kopfzeile = Breite der Inhaltsspalte dieser Seite (k-logo). */
   readonly pageWidth = computed(() => kidPageWidth(this.url()));
   readonly version = environment.version;

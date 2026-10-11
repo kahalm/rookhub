@@ -10,6 +10,7 @@ import { DEFAULT_FACE, Face } from '../../core/face';
 import { FacePickerComponent } from '../../shared/face-picker.component';
 import { MemberPhotoComponent } from '../../shared/member-photo.component';
 import { STATUS_LABEL, ageClass, attendanceText, emptyInput, formatBirth, formatLinkCode, fullName, parseBirth, shortDate, telHref, toInput } from '../../core/club-format';
+import { ClubGateComponent } from '../../shared/club-gate.component';
 
 /** „30.09.2026" aus einem Zeitstempel der API (Ortszeit des Betrachters). */
 export function formatDay(iso: string | null | undefined): string {
@@ -45,10 +46,11 @@ function orNull(value: string | null | undefined): string | null {
   selector: 'ch-member-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MemberPhotoComponent, FacePickerComponent],
+  imports: [RouterLink, MemberPhotoComponent, FacePickerComponent, ClubGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate"><h1>Nicht freigeschaltet</h1><p>Karteiblätter sehen die Trainer und die Leitung des Vereins.</p></section>
+      <!-- UI-Sweep 2026-10-11 (r2-c-gate-deadend): gemeinsame Sperrkarte mit Weg zur Startseite -->
+      <ch-gate area="Karteiblätter sehen nur Trainer und die Vereinsleitung." />
     } @else if (editing()) {
       <form class="sheet form" (submit)="$event.preventDefault(); save()">
         <header class="sheet-head"><h1>{{ member() ? 'Blatt ändern' : (form().isTrainer ? 'Trainer anlegen' : 'Kind anlegen') }}</h1></header>
@@ -206,8 +208,9 @@ function orNull(value: string | null | undefined): string | null {
             <p>{{ attendance() }}.</p>
             <ul class="notes">
               @for (a of m.attendance.recent; track a.sessionId) {
-                <li><span class="cell" [class]="a.status" aria-hidden="true">{{ mark(a.status) }}</span>
-                  {{ short(a.date) }} {{ label(a.status) }}, {{ a.group }}{{ a.topic ? ' — ' + a.topic : '' }}</li>
+                <!-- UI-Sweep 2026-10-11 (r2-c-attendance-da): der Stand nur als Zeichen (Klartext im aria-label), Gruppe abgesetzt -->
+                <li><span class="cell" [class]="a.status" role="img" [attr.aria-label]="label(a.status)">{{ mark(a.status) }}</span>
+                  {{ short(a.date) }} <span class="muted">· {{ a.group }}{{ a.topic ? ' — ' + a.topic : '' }}</span></li>
               }
             </ul>
           } @else { <p class="muted">Noch keine Einheit erfasst.</p> }

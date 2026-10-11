@@ -312,6 +312,7 @@
       "title": "내 레퍼토리",
       "new": "새 레퍼토리",
       "fileCount": "{{count}}개 파일",
+      "fileCountOne": "{{count}}개 파일",
       "public": "공개",
       "private": "비공개",
       "noDescription": "설명 없음",
@@ -522,7 +523,7 @@
     "title": "코스",
     "intro": "가져온 교재를 퍼즐 단위로 순차 또는 랜덤으로 학습하세요. 진행 상황이 저장됩니다.",
     "emptyHint": "아직 가져온 교재가 없습니다. 관리자 영역의 \"교재\"에서 가져오세요.",
-    "sectionPublic": "공개 코스",
+    "sectionPublic": "이용 가능한 코스",
     "sectionPublicHint": "그룹을 통해 공유된 코스.",
     "sectionOwn": "내 코스",
     "sectionOwnHint": "직접 가져오거나 만든 코스.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "진행 중",
-    "sectionInProgressHint": "시작했지만 아직 끝내지 않은 코스."
+    "sectionInProgressHint": "시작했지만 아직 끝내지 않은 코스.",
+    "origin": {
+      "chessable": "Chessable 가져오기",
+      "pgn": "PGN 가져오기",
+      "by": "{{name}}"
+    },
+    "reimport": {
+      "chip": "다시 가져오기",
+      "legend": "{{count}}개 코스를 RepCheck로 다시 가져와야 합니다",
+      "legendOne": "1개 코스를 RepCheck로 다시 가져와야 합니다",
+      "more": "자세히",
+      "less": "접기"
+    }
   },
   "weekly": {
     "title": "주간",
@@ -635,6 +648,7 @@
       "settings": "설정",
       "highscore": "최고 기록: 등급 {{rating}}",
       "sessionsPlayed": "{{count}}회 플레이",
+      "sessionsPlayedOne": "{{count}}회 플레이",
       "viewHistory": "기록 보기",
       "unfinishedRun": "미완성 기록: 레벨 {{level}} | {{solved}} 풀음 | 목숨 {{lives}} | 최고 {{max}}",
       "continue": "계속",
@@ -936,7 +950,10 @@
     "byTheme": "테마별",
     "byRating": "등급별 (풀음)",
     "byRatingHint": "등급대별 풀은 퍼즐 수 — 마우스를 올려 정확도 확인.",
-    "activity": "활동"
+    "activity": "활동",
+    "levelEmpty": "레벨 {{level}}에는 아직 시도가 없습니다",
+    "levelOther": "레벨 {{level}}: {{count}}회 시도",
+    "levelOtherOne": "레벨 {{level}}: 1회 시도"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "일",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "주당 일수",
     "weekProgress": "이번 주 {{target}}일 중 {{done}}일",
     "fromGroup": "그룹 \"{{group}}\"의 프리셋입니다. 개인적으로 조정할 수 있습니다.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "일일 목표 달성",
+    "weeklyPlay": "주간 목표: 플레이",
+    "stillOpen": "아직 미달성"
   },
   "chessable": {
     "testing": "Testing…",

@@ -162,6 +162,12 @@ export class TournamentHistoryComponent implements OnInit {
   /** Der offene Reiter — die Ansicht braucht ihn fuer „nicht mehr verfolgen". */
   readonly activeTab = computed(() => this.tabs().find(t => t.key === this.activeKey()) ?? null);
 
+  /** Der offene Reiter, wenn er gesperrt ist (Freund ohne Namen im Profil, r2-t-history-disabled-tab). */
+  readonly blockedTab = computed(() => {
+    const tab = this.activeTab();
+    return tab && !tab.enabled ? tab : null;
+  });
+
   /**
    * Auf welche Bedenkzeit die Ansicht eingeschraenkt ist. `null` = alle.
    *
@@ -253,6 +259,15 @@ export class TournamentHistoryComponent implements OnInit {
   /** Reiter oeffnen: gemerkte Fassung sofort zeigen, dann frisch laden. */
   private select(key: string): void {
     this.activeKey.set(key);
+    // Freund ohne Namen im Profil (UI-Sweep 2026-10-11, r2-t-history-disabled-tab): der Reiter ist waehlbar, aber es
+    // gibt nichts zu laden — die Ansicht nennt den Grund. Nicht gemerkt: beim Wiederkommen gilt der eigene Reiter.
+    if (this.tabs().find(t => t.key === key)?.enabled === false) {
+      this.pollSubscription?.unsubscribe();
+      ++this.generation;
+      this.loading.set(false);
+      this.failed.set(false);
+      return;
+    }
     this.store(key);
     this.load(key);
   }

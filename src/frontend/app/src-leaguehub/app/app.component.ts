@@ -59,7 +59,9 @@ import { ClubContextService } from './core/club-context.service';
           }
         </nav>
       </div>
-      <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für {{ region() }}.</p>
+      <!-- UI-Sweep 2026-10-11 (r2-l-subtitle): allgemein statt „Tiroler Mannschaftsmeisterschaft" — LeagueHub zeigt auch die
+           Bundesliga und bayerische Ligen, und die Zeile steht auch vor der Anmeldung, wo der Verein noch unbekannt ist. -->
+      <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für eure Mannschaftskämpfe.</p>
       @if (user()) {
         <nav class="wrap tabs" aria-label="Bereiche">
           @if (nav().view) {
@@ -96,9 +98,6 @@ export class LeagueHubAppComponent implements OnInit {
   readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
   /** Der Verein des Kontos (0.698.0) — Umschalter im Kopf, wenn es mehrere sind. */
   readonly clubs = inject(ClubContextService);
-  /** Wofür die Prognosen sind — nach der Region des Vereins (ohne Verein die Tiroler wie bisher). */
-  readonly region = computed(() => this.clubs.club()?.region === 'bayern'
-    ? 'die bayerischen Mannschaftsligen' : 'die Tiroler Mannschaftsmeisterschaft');
   readonly version = environment.version;
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
   readonly nav = computed(() => {

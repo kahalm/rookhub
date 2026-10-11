@@ -411,6 +411,18 @@ public class CourseService
             .Select(g => new { BookId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.BookId, x => x.Count);
 
+        // UI-Sweep 2026-10-11 (r2-rp-empty-course): Kurse OHNE Quiz-Linie zeigten nur „0 Puzzles" und graue
+        // Knöpfe. Für genau diese (meist wenige) zählen wir die Info-Linien nach — die Karte bietet dann
+        // „Partien durchsehen" an bzw. sagt, dass der Kurs leer ist.
+        var noQuizBookIds = books.Where(b => !b.IsCalculation && !puzzleCountByBook.ContainsKey(b.Id))
+            .Select(b => b.Id).ToList();
+        var infoCountByBook = noQuizBookIds.Count == 0 ? new Dictionary<int, int>()
+            : await _db.BookPuzzles
+                .Where(bp => bp.BookId != null && noQuizBookIds.Contains(bp.BookId.Value) && bp.IsInfoOnly)
+                .GroupBy(bp => bp.BookId!.Value)
+                .Select(g => new { BookId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BookId, x => x.Count);
+
         var solvedByBook = await SolvedQuizResults(userId)
             .GroupBy(cr => cr.BookId)
             .Select(g => new { BookId = g.Key, Count = g.Count() })
@@ -481,6 +493,14 @@ public class CourseService
             : await _db.Books.Where(b => linkByBook.Values.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.DisplayName);
 
+        // UI-Sweep 2026-10-11 (r2-rp-course-dupes): Besitzer-Namen nur für Admins — sie sehen fremde Bücher
+        // gleichen Titels und brauchen ein Unterscheidungsmerkmal. Einer Abfrage für alle Besitzer.
+        var ownerIds = isAdmin
+            ? books.Where(b => b.OwnerUserId != null).Select(b => b.OwnerUserId!.Value).Distinct().ToList()
+            : new List<int>();
+        var ownerNameById = ownerIds.Count == 0 ? new Dictionary<int, string>()
+            : await _db.AppUsers.Where(u => ownerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username);
+
         return books.Select(b =>
         {
             var puzzleCount = b.IsCalculation
@@ -500,6 +520,7 @@ public class CourseService
                 Tags = b.Tags,
                 Description = b.Description,
                 PuzzleCount = puzzleCount,
+                InfoLineCount = infoCountByBook.TryGetValue(b.Id, out var ic) ? ic : 0,
                 SolvedCount = Math.Min(solved, puzzleCount),
                 ProgressPercent = Percent(solved, puzzleCount),
                 LastMode = progress?.LastMode,
@@ -519,6 +540,8 @@ public class CourseService
                 // Summe immer MIT Maximum ausliefern: „14" allein ist ohne die Zahl der
                 // Stellungen nicht lesbar.
                 CalcMaxPoints = b.IsCalculation ? CalculationGrades.MaxPointsFor(puzzleCount) : null,
+                IsChessableImport = StaleContentRule.IsChessable(b.Tags, b.FileName),
+                OwnerUsername = b.OwnerUserId is int oid && ownerNameById.TryGetValue(oid, out var on) ? on : null,
             };
         }).ToList();
     }

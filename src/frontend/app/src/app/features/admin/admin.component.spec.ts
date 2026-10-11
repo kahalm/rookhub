@@ -747,3 +747,43 @@ describe('AdminComponent – Gruppenliste der behaltenen Tabs (F5-020)', () => {
     expect(roles.groupRolesLoaded).toBeFalse();
   });
 });
+
+/** UI-Sweep 2026-10-11 (r2-rk-admin-users-mobile): neben der Tabelle steht je Konto eine Karte (am Handy sichtbar). */
+describe('AdminComponent – Kartenliste der Konten', () => {
+  it('rendert je Konto eine Karte mit Name, Mail, Gruppen und Admin-Vermerk', async () => {
+    const users = [
+      { id: 3, username: 'kahalm', email: 'k@example.com', isAdmin: true, groups: ['Schwaz'], createdAt: '2026-01-01T00:00:00Z' },
+      { id: 4, username: 'test', email: null, isAdmin: false, groups: [], createdAt: '2026-01-01T00:00:00Z' },
+    ];
+    TestBed.configureTestingModule({
+      imports: [AdminComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: AdminService, useValue: {
+          getUsers: () => of({ items: users, totalCount: 2 }), getBooks: () => of([]),
+          getGroups: () => of([]), getConfig: () => of({ kibanaUrl: '' }) } },
+        { provide: MenuService, useValue: { refresh: () => {} } },
+        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true } } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap({})) } },
+      ],
+    });
+    TestBed.overrideComponent(AdminComponent, {
+      remove: { imports: [AdminMenuVisibilityComponent, AdminRolesComponent, AdminMessagesComponent, AdminDailyPuzzleComponent,
+        AdminPuzzleTagsComponent, AdminChessableDownloadComponent, AdminGithubActionsComponent] },
+      add: { imports: [MenuTabStub, RolesTabStub, MessagesTabStub, DailyTabStub, TagsTabStub, DownloadTabStub, CiTabStub] },
+    });
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const fixture = TestBed.createComponent(AdminComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('.user-card') as NodeListOf<HTMLElement>;
+    expect(cards.length).toBe(2);
+    expect(cards[0].querySelector('.uc-name')!.textContent).toContain('kahalm');
+    expect(cards[0].querySelector('.uc-mail')!.textContent).toContain('k@example.com');
+    expect(cards[0].querySelector('.uc-meta')!.textContent).toContain('#3');
+    expect(cards[0].querySelectorAll('.uc-group').length).toBe(1);
+    expect(cards[1].querySelector('.uc-mail')).toBeNull();
+  });
+});

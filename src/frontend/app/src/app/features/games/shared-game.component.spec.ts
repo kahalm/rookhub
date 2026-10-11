@@ -659,6 +659,8 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
+    // UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund steht sichtbar darunter, nicht nur im Tooltip.
+    expect(fixture.nativeElement.querySelector('.analyze-no-engine')?.textContent).toContain('games.analyzeNoEngine');
   });
   // ----- Eigene Partie als Seite (/games/:id, seit 0.513.0 — vorher ein Dialog) -----
 

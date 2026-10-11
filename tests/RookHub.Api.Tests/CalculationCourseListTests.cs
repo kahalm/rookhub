@@ -397,4 +397,29 @@ public class CalculationCourseListTests : IDisposable
         Assert.Empty(_db.BookPuzzles);
         Assert.Empty(_db.CalculationTrees);
     }
+
+    [Fact]
+    public async Task CourseWithoutQuizLines_ReportsInfoLineCount_OthersZero()
+    {
+        // UI-Sweep 2026-10-11 (r2-rp-empty-course): ein Kurs nur aus kommentierten Partien (Info-Linien)
+        // zeigte „0 Puzzles" mit grauen Knöpfen. Die Liste nennt dafür die Info-Linien — nur bei Kursen
+        // ohne Quiz-Linie, sonst 0.
+        var user = await CreateUserAsync();
+        var gamesOnly = await SeedBookAsync(user.Id, isCalculation: false);
+        await SeedLineAsync(gamesOnly, "1", infoOnly: true);
+        await SeedLineAsync(gamesOnly, "2", infoOnly: true);
+        var mixed = await SeedBookAsync(user.Id, isCalculation: false);
+        await SeedLineAsync(mixed, "1", infoOnly: true);
+        await SeedLineAsync(mixed, "2", infoOnly: false);
+        var empty = await SeedBookAsync(user.Id, isCalculation: false);
+
+        var list = await _courses.GetCoursesAsync(user.Id, isAdmin: false);
+
+        var g = list.Single(c => c.BookId == gamesOnly.Id);
+        Assert.Equal(0, g.PuzzleCount);
+        Assert.Equal(2, g.InfoLineCount);
+        Assert.Equal(0, list.Single(c => c.BookId == mixed.Id).InfoLineCount);
+        Assert.Equal(1, list.Single(c => c.BookId == mixed.Id).PuzzleCount);
+        Assert.Equal(0, list.Single(c => c.BookId == empty.Id).InfoLineCount);
+    }
 }

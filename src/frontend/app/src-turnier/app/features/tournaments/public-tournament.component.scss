@@ -13,5 +13,10 @@
       .detail-container { padding: 0.75rem; }
       // UI-Sweep t-head-buttons: Teilen und chess-results stehen am Handy im ⋮-Menue neben dem Titel.
       .more-actions { display: inline-flex; }
-      .action-bar { display: none; }
+      // r2-t-public-actions: Merken und „Volle Ansicht" bleiben am Handy beschriftet (wie in der Detailansicht),
+      // Teilen und Chess-Results stehen im ⋮-Menue.
+      .action-bar .wide-only { display: none; }
+      .action-bar { display: grid; grid-template-columns: 1fr 1fr; }
+      .action-bar .keep-label { height: 44px; min-width: 0; }
+      .action-bar .keep-label .btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     }

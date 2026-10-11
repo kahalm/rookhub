@@ -43,6 +43,7 @@ import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle-theme-presets';
+import { PuzzleThemePipe, humanizeThemeKey } from './puzzle-theme.pipe';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { Key } from 'chessground/types';
@@ -95,7 +96,7 @@ function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAtte
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
     MatChipsModule, MatAutocompleteModule, MatTooltipModule,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
-    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
+    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleThemePipe
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
@@ -199,7 +200,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const selected = new Set(this.selectedThemes);
     return this.allThemes
       .filter(t => !selected.has(t))
-      .filter(t => !q || t.toLowerCase().includes(q));
+      .filter(t => !q || t.toLowerCase().includes(q) || this.themeLabel(t).toLowerCase().includes(q));
+  }
+
+  /** UI-Sweep 2026-10-11 (r2-rp-themes-en): angezeigter (übersetzter) Name eines Themen-Schlüssels —
+   *  die Suche im Dropdown findet „Gabel" genauso wie „fork". */
+  private themeLabel(key: string): string {
+    const path = 'puzzleThemes.' + key;
+    const t = this.translate.instant(path);
+    return typeof t === 'string' && t && t !== path ? t : humanizeThemeKey(key);
   }
 
   /** Lädt die verfügbaren Themen einmalig (best effort; Freitext bleibt auch ohne Liste möglich). */
@@ -220,7 +229,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** Frei getipptes Thema per Enter/Komma/Leertaste übernehmen (nicht in der Vorschlagsliste). */
   onThemeInputTokenEnd(event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
-    if (value) this.addThemeValue(value);
+    // Getippter übersetzter Name („Matt in 2") → Schlüssel („mateIn2"), sonst Freitext wie bisher.
+    const byLabel = value ? this.allThemes.find(t => this.themeLabel(t).toLowerCase() === value.toLowerCase()) : undefined;
+    if (value) this.addThemeValue(byLabel ?? value);
     event.chipInput?.clear();
     this.themeInput = '';
   }

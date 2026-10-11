@@ -121,7 +121,8 @@ import { authLinkQuery } from '@rh/core/return-url.util';
             <mat-icon>logout</mat-icon> {{ 'nav.logout' | translate }}
           </button>
         </mat-menu>
-      } @else {
+      } @else if (!onAuthPage) {
+        <!-- UI-Sweep 2026-10-11 (r2-t-login-headbtn): auf /login und /register kein zweiter „Anmelden“-Link im Kopf. -->
         <a mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
       }
     </mat-toolbar>
@@ -156,6 +157,13 @@ export class TurnierNavbarComponent {
   /** „Anmelden“ fuehrt hierher zurueck, z. B. auf das geteilte Turnier /t/42 (UX-020). Rueckfall „/“: die Turnierseite
    *  hat kein /dashboard, den Rueckfall der Maske. */
   get authQuery(): { returnUrl?: string } { return authLinkQuery(this.router.url, '/'); }
+
+  /** Anmeldemaske oder Registrierung offen? Dort fuehrt „Anmelden“ im Kopf nur auf die Seite, auf der man schon ist
+   *  (UI-Sweep 2026-10-11, r2-t-login-headbtn — gleiche Loesung wie x-login-headbtn in LeagueHub/ClubHub). */
+  get onAuthPage(): boolean {
+    const path = this.router.url.split(/[?#]/)[0];
+    return path === '/login' || path === '/register';
+  }
 
   get partnerUrl(): string | null { return this.handoff.partnerUrl; }
 

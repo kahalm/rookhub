@@ -40,7 +40,8 @@ export const PROFILE_SECTION_PARAM = 'section';
 export const ACCOUNT_DELETE_SECTION = 'delete';
 export const ACCOUNT_DELETE_QUERY: Readonly<Record<string, string>> = { [PROFILE_SECTION_PARAM]: ACCOUNT_DELETE_SECTION };
 
-export type LegalSiteKind = 'rookhub' | 'kidhub' | 'leaguehub' | 'clubhub';
+/** `turnier` (UI-Sweep 2026-10-11, r2-t-privacy-intro): eigene Einleitung, der Abschnitt „Turnierdaten" steht oben. */
+export type LegalSiteKind = 'rookhub' | 'kidhub' | 'leaguehub' | 'clubhub' | 'turnier';
 
 /** Vorgabe fuer RookHub und die Turnierseite. */
 export function defaultLegalSite(): LegalSite {

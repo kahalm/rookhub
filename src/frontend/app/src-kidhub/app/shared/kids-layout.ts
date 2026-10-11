@@ -91,3 +91,16 @@ export function kidPageWidth(url: string): string {
   if (path === '/privacy') return `${KID_PAGE_WIDTH.legal}px`;
   return `${KID_PAGE_WIDTH.map}px`;
 }
+
+/**
+ * Zähler im Seitenkopf (UI-Sweep 2026-10-11, r2-k-counter): Stufen „★ 14", Endlos „✓ 3", Sternenjagd „✓ 0/20" und das
+ * freie Spiel „✓ 0" hatten vier verschiedene Formen (dunkler Text, blauer Text, grüne Pille). Jetzt EINE grüne Pille
+ * mit Zeichen + Zahl — ohne Schatten und ohne Zeiger, damit sie nicht wie ein Knopf aussieht. Klasse `kid-counter`.
+ */
+export const KID_COUNTER = `
+  .kid-counter {
+    display: inline-flex; align-items: center; gap: 4px; box-sizing: border-box; padding: 4px 12px; border-radius: 999px;
+    background: var(--kid-good-bg); color: var(--kid-good-fg); font-size: 1.1rem; font-weight: 800; line-height: 1.3;
+    white-space: nowrap; flex-shrink: 0; cursor: default; user-select: none;
+  }
+`;

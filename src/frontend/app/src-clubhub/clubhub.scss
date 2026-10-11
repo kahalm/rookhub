@@ -145,6 +145,14 @@ main.wrap { padding-top: 22px; padding-bottom: 28px; min-height: 55vh; }
 .field input:focus, .field select:focus, .field textarea:focus, .bare-input:focus { border-color: var(--primary); }
 .field .hint { font-size: 14px; color: var(--muted); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* UI-Sweep 2026-10-11 (r2-c-code-field): Code-Feld nur so breit wie „ABCDE-FGHJK", in Festbreitenschrift und
+   Großbuchstaben (der Server normalisiert ohnehin); der Knopf steht daneben, am Handy darunter. */
+.code-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding-bottom: 14px; }
+.code-field input.code-input {
+  width: 19ch; max-width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.code-field input.code-input::placeholder { letter-spacing: 2px; }
 .check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--primary); flex: none; }
 
@@ -487,6 +495,7 @@ ch-root .wrap .legal-container { padding: 0; }
   .kid-call { text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
   .kid-call span { margin: 0; }
   .grid-2 { grid-template-columns: 1fr; }
+  .code-row { flex-direction: column; align-items: flex-start; }
   .contacts li { grid-template-columns: 1fr; gap: 0; }
   .contacts li + li { margin-top: 6px; }
   .contact-edit { grid-template-columns: 1fr 1fr; padding-bottom: 10px; border-bottom: 1px dashed var(--line); }

@@ -495,10 +495,17 @@ describe('TournamentHistoryComponent', () => {
     const req = await setup([{ userId: 8, displayName: 'Ohne Name', exact: false, hasName: false, entries: 0 }]);
     req.flush([history()]);
 
-    // Material laesst einen gesperrten Reiter gar nicht erst waehlen; ruft ihn doch jemand auf,
-    // bleibt es beim eigenen Verlauf.
     expect(component.tabs()[1].enabled).toBeFalse();
+    // UI-Sweep 2026-10-11 (r2-t-history-disabled-tab): der Reiter ist waehlbar (kein [disabled] mehr — dort erschien
+    // der Tooltip mit dem Grund nie), es wird aber nichts geladen, und der Inhalt nennt den Grund.
+    component.onTabChange(1);
+    fixture.detectChanges();
     http.verify();
+    expect(component.blockedTab()?.id).toBe(8);
+    const box = fixture.nativeElement.querySelector('.no-name-friend') as HTMLElement;
+    expect(box.textContent).toContain('Ohne Name');
+    expect(box.textContent).toContain('turnier.history.friendNoName');
+    expect(fixture.nativeElement.querySelector('.mat-mdc-tab-disabled')).toBeNull();
   });
 
   /**

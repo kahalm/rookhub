@@ -311,3 +311,43 @@ export interface DirectoryReport {
   namePattern: string | null;
   sourceLink: string | null;
 }
+
+/**
+ * Platzhalter statt eines Spielorts. chess-results fuehrt bei Ligen oft „various" (englisch) als Ort — kein Ort,
+ * und auf der deutschen Seite mit Ortsnadel wirkte es wie ein Uebersetzungsfehler. Solche Werte zeigen Karte,
+ * Kartenblase und Kalender als uebersetztes „verschiedene Spielorte" (UI-Sweep 2026-10-11, r2-t-various).
+ */
+const PLACEHOLDER_LOCATIONS: ReadonlySet<string> = new Set([
+  'various', 'various venues', 'various places', 'div', 'diverse', 'diverses',
+  'verschiedene', 'verschiedene orte', 'verschiedene spielorte',
+]);
+
+/** Steht statt eines Orts nur ein Platzhalter („various", „div.", „diverse", „verschiedene")? */
+export function isPlaceholderLocation(location: string | null | undefined): boolean {
+  const key = (location ?? '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.\s]+$/, '');
+  return key.length > 0 && PLACEHOLDER_LOCATIONS.has(key);
+}
+
+/** Der Ort zur Anzeige: Platzhalter werden zum uebersetzten „verschiedene Spielorte", sonst der Text selbst. */
+export function displayLocation(location: string | null | undefined, translate: (key: string) => string): string {
+  if (!location) return '';
+  return isPlaceholderLocation(location) ? translate('tournamentDirectory.variousVenues') : location;
+}
+
+/**
+ * Gleichnamige Turniere am selben Tag, die NICHT zu einer Karte zusammengefasst sind (UI-Sweep 2026-10-11,
+ * r2-t-dup-cards). Zusammengefasst wird am Server nur bei gleichem Namen, Termin UND Ortstext — weicht der Ortstext
+ * ab („…Otáhalova 1260 40747" gegen „…Otáhalova 1260 Varnsdorf"), stehen zwei gleich aussehende Karten nebeneinander.
+ * Liefert die Ids der Eintraege, die einen solchen Doppelgaenger in derselben Liste haben.
+ */
+export function sameNameSiblings(entries: readonly DirectoryEntry[]): Set<string> {
+  const byKey = new Map<string, string[]>();
+  for (const entry of entries) {
+    const key = `${entry.name.trim().toLowerCase()}|${entry.startDate ?? ''}`;
+    const ids = byKey.get(key);
+    if (ids) ids.push(entry.id); else byKey.set(key, [entry.id]);
+  }
+  const result = new Set<string>();
+  for (const ids of byKey.values()) if (ids.length > 1) ids.forEach(id => result.add(id));
+  return result;
+}

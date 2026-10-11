@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterRenderEffect, computed, inject, linkedSignal, signal, viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -50,10 +52,21 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
             @if (line.chapterLabel ?? line.chapter; as chapter) { <p class="chapter">{{ chapter }}</p> }
             @if (line.titleLabel ?? line.title; as heading) { <h2 class="line-title">{{ heading }}</h2> }
             <!-- UI-Sweep 2026-10-11 (r2-k-course-heading): Zwischenüberschriften aus dem Kommentar fett absetzen -->
+            <!-- UI-Sweep 2026-10-11 (r2-k-course-scroll): kein eigener Scrollkasten mehr — ein langer Text wird unten
+                 ausgeblendet und lässt sich mit „Weiterlesen ▾" ganz aufklappen. -->
             @if (introBlocks().length) {
-              <div class="intro">
-                @for (b of introBlocks(); track $index) {
-                  @if (b.kind === 'h') { <p class="hl">{{ b.text }}</p> } @else { <p>{{ b.text }}</p> }
+              <div class="intro-wrap" [class.clipped]="introClipped()">
+                <div #intro class="intro" [class.open]="introOpen()" id="kid-course-intro">
+                  @for (b of introBlocks(); track $index) {
+                    @if (b.kind === 'h') { <p class="hl">{{ b.text }}</p> } @else { <p>{{ b.text }}</p> }
+                  }
+                </div>
+                @if (introClipped() || introOpen()) {
+                  <button type="button" class="more" aria-controls="kid-course-intro" [attr.aria-expanded]="introOpen()"
+                          (click)="introOpen.set(!introOpen())">
+                    {{ (introOpen() ? 'kids.courses.readLess' : 'kids.courses.readMore') | translate }}
+                    <span aria-hidden="true">{{ introOpen() ? '▴' : '▾' }}</span>
+                  </button>
                 }
               </div>
             }
@@ -83,10 +96,23 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     .line-text { display: flex; flex-direction: column; gap: 6px; }
     .chapter { margin: 0; font-weight: 700; opacity: .75; }
     .line-title { margin: 0; font-size: 1.35rem; color: var(--kid-title); }
+    .intro-wrap { position: relative; display: flex; flex-direction: column; border-radius: 16px; background: var(--kid-card); }
     .intro {
-      margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--kid-card);
-      font-size: 1.1rem; line-height: 1.45; white-space: pre-line; max-height: 40vh; overflow-y: auto;
+      margin: 0; padding: 12px 16px; font-size: 1.1rem; line-height: 1.45; white-space: pre-line;
+      max-height: 40vh; overflow: hidden;
     }
+    .intro.open { max-height: none; }
+    /* Verlauf über die letzten Zeilen: zeigt, dass unten noch Text steht (statt einer halb abgeschnittenen Zeile). */
+    .intro-wrap.clipped .intro:not(.open) {
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 3.2em), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 3.2em), transparent);
+    }
+    .more {
+      align-self: center; margin: 0 0 10px; font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer;
+      min-height: 44px; padding: 6px 18px; border-radius: 999px; border: 2px solid var(--kid-title);
+      background: var(--kid-card); color: var(--kid-title); box-shadow: 0 3px 0 var(--kid-shadow);
+    }
+    .more:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kid-shadow); }
     .intro p { margin: 0; }
     .intro p + p { margin-top: 8px; }
     .intro .hl { font-weight: 800; color: var(--kid-title); }
@@ -127,6 +153,11 @@ export class CoursePlayComponent {
   readonly current = computed(() => this.lines()[this.index()] ?? null);
   /** Einleitung der Linie in Überschriften und Absätze zerlegt (UI-Sweep 2026-10-11, r2-k-course-heading). */
   readonly introBlocks = computed(() => splitCourseText(this.current()?.comment));
+  /** UI-Sweep 2026-10-11 (r2-k-course-scroll): Einleitung ganz aufgeklappt? Jede neue Linie beginnt zugeklappt. */
+  readonly introOpen = linkedSignal<KidsCourseLine | null, boolean>({ source: this.current, computation: () => false });
+  /** Ragt die (zugeklappte) Einleitung über ihre Höhe hinaus? Gemessen nach dem Zeichnen. */
+  readonly introClipped = signal(false);
+  private readonly introEl = viewChild<ElementRef<HTMLElement>>('intro');
   readonly solvedCount = computed(() => {
     const solved = new Set(this.progress.course(this.bookId()).solved);
     return this.lines().filter(l => solved.has(l.id)).length;
@@ -142,6 +173,14 @@ export class CoursePlayComponent {
   });
 
   constructor() {
+    // Nach jedem Zeichnen nachmessen (neue Linie, Sprache, Fenstergröße beim nächsten Zeichnen): nur zugeklappt
+    // entscheidet die Höhe, ob „Weiterlesen" nötig ist.
+    afterRenderEffect(() => {
+      const el = this.introEl()?.nativeElement;
+      this.introBlocks();
+      if (!el || this.introOpen()) return;
+      this.introClipped.set(el.scrollHeight > el.clientHeight + 1);
+    });
     const route = inject(ActivatedRoute);
     route.paramMap.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe(params => {
       this.load(Number(params.get('bookId')));

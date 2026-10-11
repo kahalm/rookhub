@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { STAR_STAGES } from '../../core/kids-stars';
 import { KidsStarsStore } from '../../core/kids-stars.store';
-import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_PAGE_WIDTH } from '../../shared/kids-layout';
 import { pieceGlyph } from './stars-play.component';
 
 /** Die Stufen der Sternenjagd: Figur und Zahl der Sterne; offen ist Stufe 1 und jede nach einer geschafften. */
@@ -16,7 +16,8 @@ import { pieceGlyph } from './stars-play.component';
     <header class="head">
       <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
       <h1>{{ 'kids.stars.title' | translate }}</h1>
-      <span class="count">✅ {{ store.done() }}/{{ store.total }}</span>
+      <!-- UI-Sweep 2026-10-11 (r2-k-counter): gemeinsame Zähler-Pille -->
+      <span class="count kid-counter">✓ {{ store.done() }}/{{ store.total }}</span>
     </header>
     <p class="intro">{{ 'kids.stars.intro' | translate }}</p>
     <p class="free"><a class="free-btn" routerLink="/stars/free">🎲 {{ 'kids.stars.free.title' | translate }}</a>
@@ -47,11 +48,10 @@ import { pieceGlyph } from './stars-play.component';
       }
     </ol>
   `,
-  styles: [KID_BACK, `
+  styles: [KID_BACK, KID_COUNTER, `
     :host { display: block; max-width: ${KID_PAGE_WIDTH.map}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
-    .count { font-size: 1.15rem; font-weight: 800; white-space: nowrap; }
     .intro { text-align: center; font-size: 1.15rem; margin: 0 0 16px; }
     .free { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; margin: 0 0 18px; }
     .free-btn {

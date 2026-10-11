@@ -312,6 +312,7 @@
       "title": "Τα ρεπερτόριά μου",
       "new": "Νέο ρεπερτόριο",
       "fileCount": "{{count}} αρχεία",
+      "fileCountOne": "{{count}} αρχείο",
       "public": "Δημόσιο",
       "private": "Ιδιωτικό",
       "noDescription": "Χωρίς περιγραφή",
@@ -522,7 +523,7 @@
     "title": "Μαθήματα",
     "intro": "Εξερευνήστε ένα εισαγόμενο βιβλίο άσκηση-άσκηση — διαδοχικά ή τυχαία. Η πρόοδός σας αποθηκεύεται.",
     "emptyHint": "Δεν έχουν εισαχθεί βιβλία ακόμα. Εισαγάγετε βιβλία στην περιοχή διαχείρισης στην ενότητα «Βιβλία».",
-    "sectionPublic": "Δημόσια μαθήματα",
+    "sectionPublic": "Διαθέσιμα μαθήματα",
     "sectionPublicHint": "Μαθήματα που σου κοινοποιήθηκαν μέσω των ομάδων σου.",
     "sectionOwn": "Τα μαθήματά σου",
     "sectionOwnHint": "Μαθήματα που εισήγαγες ή δημιούργησες ο ίδιος.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Σε εξέλιξη",
-    "sectionInProgressHint": "Μαθήματα που ξεκίνησες και δεν έχεις ολοκληρώσει ακόμη."
+    "sectionInProgressHint": "Μαθήματα που ξεκίνησες και δεν έχεις ολοκληρώσει ακόμη.",
+    "origin": {
+      "chessable": "Εισαγωγή Chessable",
+      "pgn": "Εισαγωγή PGN",
+      "by": "από {{name}}"
+    },
+    "reimport": {
+      "chip": "Επανάληψη λήψης",
+      "legend": "{{count}} μαθήματα χρειάζονται νέα εισαγωγή μέσω RepCheck",
+      "legendOne": "1 μάθημα χρειάζεται νέα εισαγωγή μέσω RepCheck",
+      "more": "Περισσότερα",
+      "less": "Λιγότερα"
+    }
   },
   "weekly": {
     "title": "Εβδομαδιαίο",
@@ -635,6 +648,7 @@
       "settings": "Ρυθμίσεις",
       "highscore": "Υψηλότερη βαθμολογία: {{rating}}",
       "sessionsPlayed": "{{count}} συνεδρίες παίχτηκαν",
+      "sessionsPlayedOne": "{{count}} συνεδρίες παίχτηκαν",
       "viewHistory": "Προβολή ιστορικού",
       "unfinishedRun": "Ημιτελής εκτέλεση: Επ. {{level}} | {{solved}} λυμένες | {{lives}} ζωές | {{max}} μέγιστο",
       "continue": "Συνέχεια",
@@ -936,7 +950,10 @@
     "byTheme": "Ανά θέμα",
     "byRating": "Ανά βαθμολογία (λυμένες)",
     "byRatingHint": "Λυμένες ασκήσεις ανά εύρος βαθμολογίας — τοποθετήστε τον κέρσορα για ακρίβεια.",
-    "activity": "Δραστηριότητα"
+    "activity": "Δραστηριότητα",
+    "levelEmpty": "Το επίπεδο {{level}} δεν έχει ακόμη προσπάθειες",
+    "levelOther": "Επίπεδο {{level}}: {{count}} προσπάθειες",
+    "levelOtherOne": "Επίπεδο {{level}}: 1 προσπάθεια"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "ημ",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Ημέρες ανά εβδομάδα",
     "weekProgress": "{{done}} από {{target}} ημέρες αυτή την εβδομάδα",
     "fromGroup": "Πρότυπο από την ομάδα σας «{{group}}». Μπορείτε να το προσαρμόσετε για τον εαυτό σας.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Ο ημερήσιος στόχος επιτεύχθηκε",
+    "weeklyPlay": "Εβδομαδιαίος στόχος: παιχνίδι",
+    "stillOpen": "ακόμη ανοιχτός"
   },
   "chessable": {
     "testing": "Testing…",

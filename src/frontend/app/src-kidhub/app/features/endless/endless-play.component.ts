@@ -9,7 +9,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { KidsHintCost, KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
-import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
@@ -34,8 +34,9 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       </span>
       <!-- ✅ statt ⭐: der Stern heisst auf KidHub „Bewertungsstern einer Stufe" (Startseite, Stufenkarte) — hier zaehlen die
            geschafften Aufgaben des Laufs, die in keine Sternsumme eingehen (Codereview 2026-09-29, UX-065). -->
-      <span class="score" role="img" [attr.aria-label]="'kids.endless.result' | translate: { count: solved() }"
-            [title]="'kids.endless.result' | translate: { count: solved() }">✅ {{ solved() }}</span>
+      <!-- UI-Sweep 2026-10-11 (r2-k-counter): gemeinsame Zähler-Pille -->
+      <span class="score kid-counter" role="img" [attr.aria-label]="'kids.endless.result' | translate: { count: solved() }"
+            [title]="'kids.endless.result' | translate: { count: solved() }">✓ {{ solved() }}</span>
     </header>
 
     @if (over()) {
@@ -67,14 +68,13 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       <p class="info">{{ 'kids.loading' | translate }}</p>
     }
   `,
-  styles: [KID_BACK, `
+  styles: [KID_BACK, KID_COUNTER, `
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .hearts { margin-left: auto; font-size: 1.5rem; letter-spacing: 2px; }
     .hearts .lost { opacity: .45; }
-    .score { font-size: 1.3rem; font-weight: 800; color: var(--kid-title); }
     .info { text-align: center; font-size: 1.2rem; }
     .side-text { display: flex; flex-direction: column; gap: 6px; }
     .task { margin: 0; font-size: 1.5rem; font-weight: 800; line-height: 1.3; color: var(--kid-title); }

@@ -312,6 +312,7 @@
       "title": "Moje repertoáry",
       "new": "Nový repertoár",
       "fileCount": "{{count}} souborů",
+      "fileCountOne": "{{count}} soubor",
       "public": "Veřejný",
       "private": "Soukromý",
       "noDescription": "Bez popisu",
@@ -522,7 +523,7 @@
     "title": "Kurzy",
     "intro": "Procházejte importovanou knihu úlohu po úloze – postupně nebo náhodně. Váš postup je uložen.",
     "emptyHint": "Zatím žádné knihy nebyly importovány. Importujte knihy v admin sekci pod položkou \"Knihy\".",
-    "sectionPublic": "Veřejné kurzy",
+    "sectionPublic": "Dostupné kurzy",
     "sectionPublicHint": "Kurzy sdílené s tebou prostřednictvím tvých skupin.",
     "sectionOwn": "Vlastní kurzy",
     "sectionOwnHint": "Kurzy, které sis sám naimportoval nebo vytvořil.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Rozpracované",
-    "sectionInProgressHint": "Kurzy, které jsi začal a ještě nedokončil."
+    "sectionInProgressHint": "Kurzy, které jsi začal a ještě nedokončil.",
+    "origin": {
+      "chessable": "Import z Chessable",
+      "pgn": "Import PGN",
+      "by": "od {{name}}"
+    },
+    "reimport": {
+      "chip": "Načíst znovu",
+      "legend": "{{count}} kurzů potřebuje nový import přes RepCheck",
+      "legendOne": "1 kurz potřebuje nový import přes RepCheck",
+      "more": "Více",
+      "less": "Méně"
+    }
   },
   "weekly": {
     "title": "Týdenní",
@@ -635,6 +648,7 @@
       "settings": "Nastavení",
       "highscore": "Highscore: {{rating}} hodnocení",
       "sessionsPlayed": "{{count}} sezení odehráno",
+      "sessionsPlayedOne": "{{count}} sezení odehráno",
       "viewHistory": "Zobrazit historii",
       "unfinishedRun": "Nedokončený běh: Úr. {{level}} | {{solved}} vyřešeno | {{lives}} životů | {{max}} max",
       "continue": "Pokračovat",
@@ -936,7 +950,10 @@
     "byTheme": "Podle tématu",
     "byRating": "Podle hodnocení (vyřešeno)",
     "byRatingHint": "Vyřešené úlohy podle pásma hodnocení – najeďte myší pro přesnost.",
-    "activity": "Aktivita"
+    "activity": "Aktivita",
+    "levelEmpty": "Úroveň {{level}} zatím nemá žádné pokusy",
+    "levelOther": "Úroveň {{level}}: {{count}} pokusů",
+    "levelOtherOne": "Úroveň {{level}}: 1 pokus"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Dní za týden",
     "weekProgress": "{{done}} z {{target}} dní tento týden",
     "fromGroup": "Předvolba z vaší skupiny „{{group}}“. Můžete si ji upravit pro sebe.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Denní cíl splněn",
+    "weeklyPlay": "Týdenní cíl: hraní",
+    "stillOpen": "ještě otevřený"
   },
   "chessable": {
     "testing": "Testing…",

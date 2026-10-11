@@ -54,8 +54,20 @@
       color: color-mix(in srgb, currentColor 60%, transparent);
     }
     /* CSS-Escape mit EINEM Backslash: "\\00b7" (Erbe aus einem JS-Template-Literal) stand auf dem Handy
-       als Text "\00b7" zwischen Elo, Land und Verein. */
-    .player-details span:not(:last-child)::after { content: "\00b7"; margin-left: 0.5rem; }
+       als Text "\00b7" zwischen Elo, Land und Verein.
+       Der Punkt steht VOR dem Folgeelement statt nach jedem: so bleibt er beim Umbruch nie allein am
+       Zeilenende haengen (UI-Sweep 2026-10-11, r2-t-meta-dot). */
+    .player-details > span + span::before { content: "\00b7"; margin-right: 0.5rem; }
+    /* Der Verein in eigener Zeile, einzeilig mit „…" (r2-t-meta-dot). */
+    .player-club {
+      margin-top: 0.15rem;
+      padding-left: 2.4rem;
+      font-size: 0.82rem;
+      color: color-mix(in srgb, currentColor 60%, transparent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     .result-cell { white-space: nowrap; }
 
@@ -88,7 +100,7 @@
       .mobile-only { display: block; }
       :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
-      .player-details { padding-left: 1.5rem; }
+      .player-details, .player-club { padding-left: 1.5rem; }
       .player-search { max-width: none; }
       /* Ein Formularfeld ist inline-flex; das display:block von .mobile-only zerlegte sein Innenleben. */
       .player-sort.mobile-only { display: inline-flex; flex-direction: column; }
@@ -99,5 +111,5 @@
       .team-link { display: inline-block; padding: 0.5rem 0; }
       .pairing-result { padding: 0; }
       /* In der Spielerkarte ohne Layout-Sprung: das negative Margin frisst das Padding wieder auf. */
-      .player-details .team-link { display: inline-block; padding: 0.35rem 0; margin: -0.35rem 0; }
+      .player-club .team-link { display: inline-block; padding: 0.35rem 0; margin: -0.35rem 0; }
     }

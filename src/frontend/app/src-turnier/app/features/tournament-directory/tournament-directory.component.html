@@ -51,8 +51,10 @@
 
     <mat-form-field appearance="outline" class="radius-field" subscriptSizing="dynamic">
       <mat-label>{{ 'tournamentDirectory.radius.label' | translate }}</mat-label>
-      <mat-select [ngModel]="filter.radiusKm" (ngModelChange)="onRadiusChange($event)">
-        <mat-option [value]="null">{{ 'tournamentDirectory.radius.any' | translate }}</mat-option>
+      <!-- „Überall" als echter Wert 0 statt null (UI-Sweep 2026-10-11, r2-t-radius-empty): mit null zeigte mat-select
+           gar keinen Wert, nur „Umkreis" als Platzhalter — man sah nicht, dass gerade „Überall" gilt. -->
+      <mat-select [ngModel]="filter.radiusKm ?? 0" (ngModelChange)="onRadiusChange($event)">
+        <mat-option [value]="0">{{ 'tournamentDirectory.radius.any' | translate }}</mat-option>
         @for (km of radii; track km) {
           <mat-option [value]="km">{{ 'tournamentDirectory.radius.km' | translate: { km: km } }}</mat-option>
         }
@@ -264,7 +266,7 @@
             <div class="entry-grid">
               @for (entry of upcomingEntries(); track trackById($index, entry)) {
                 <mat-card class="entry-card">
-                  <app-tournament-card [entry]="entry" (selected)="select($event)"
+                  <app-tournament-card [entry]="entry" [sameNameSibling]="sameNameIds().has(entry.id)" (selected)="select($event)"
                                        (ignoredChanged)="onIgnoredChanged($event)" />
                 </mat-card>
               }
@@ -277,7 +279,7 @@
               <div class="entry-grid">
                 @for (entry of ongoingEntries(); track trackById($index, entry)) {
                   <mat-card class="entry-card">
-                    <app-tournament-card [entry]="entry" (selected)="select($event)"
+                    <app-tournament-card [entry]="entry" [sameNameSibling]="sameNameIds().has(entry.id)" (selected)="select($event)"
                                          (ignoredChanged)="onIgnoredChanged($event)" />
                   </mat-card>
                 }

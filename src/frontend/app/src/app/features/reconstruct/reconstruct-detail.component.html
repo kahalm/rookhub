@@ -176,22 +176,29 @@
                         [attr.aria-label]="(part.certain ? 'reconstruct.markUnsure' : 'reconstruct.markCertain') | translate">
                   <mat-icon>{{ part.certain ? 'check_circle' : 'help' }}</mat-icon>
                 </button>
-                <button mat-icon-button [disabled]="busy() || i === 0" (click)="move(part, -1); $event.stopPropagation()"
-                        [matTooltip]="'reconstruct.moveUp' | translate"
-                        [attr.aria-label]="'reconstruct.moveUp' | translate">
-                  <mat-icon>arrow_upward</mat-icon>
-                </button>
-                <button mat-icon-button [disabled]="busy() || i === visibleParts().length - 1"
-                        (click)="move(part, 1); $event.stopPropagation()"
-                        [matTooltip]="'reconstruct.moveDown' | translate"
-                        [attr.aria-label]="'reconstruct.moveDown' | translate">
-                  <mat-icon>arrow_downward</mat-icon>
-                </button>
               }
-              <button mat-icon-button [disabled]="busy()" (click)="removePart(part); $event.stopPropagation()"
-                      [matTooltip]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate">
-                <mat-icon>delete</mat-icon>
+              <!-- UI-Sweep 2026-10-11 (r2-rg-recon-actions): Verschieben und Löschen im ⋮-Menü — vier Knöpfe passten am
+                   Handy nicht in die Kopfzeile und sprangen je Teil in eine zweite Zeile. Sichtbar bleibt nur ✓. -->
+              <button mat-icon-button class="part-menu" [matMenuTriggerFor]="partMenu" (click)="$event.stopPropagation()"
+                      [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
+                <mat-icon>more_vert</mat-icon>
               </button>
+              <mat-menu #partMenu="matMenu">
+                @if (!part.generated) {
+                  <button mat-menu-item [disabled]="busy() || i === 0" (click)="move(part, -1)">
+                    <mat-icon>arrow_upward</mat-icon>
+                    <span>{{ 'reconstruct.moveUp' | translate }}</span>
+                  </button>
+                  <button mat-menu-item [disabled]="busy() || i === visibleParts().length - 1" (click)="move(part, 1)">
+                    <mat-icon>arrow_downward</mat-icon>
+                    <span>{{ 'reconstruct.moveDown' | translate }}</span>
+                  </button>
+                }
+                <button mat-menu-item class="delete-item" [disabled]="busy()" (click)="removePart(part)">
+                  <mat-icon>delete</mat-icon>
+                  <span>{{ 'common.delete' | translate }}</span>
+                </button>
+              </mat-menu>
             </div>
             <div class="part-body">
               @if (part.kind === Kind.Position && part.fen) {

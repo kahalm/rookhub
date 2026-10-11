@@ -312,6 +312,7 @@
       "title": "Mijn repertoires",
       "new": "Nieuw repertoire",
       "fileCount": "{{count}} bestanden",
+      "fileCountOne": "{{count}} bestand",
       "public": "Openbaar",
       "private": "Privé",
       "noDescription": "Geen beschrijving",
@@ -522,7 +523,7 @@
     "title": "Cursussen",
     "intro": "Werk een geïmporteerd boek puzzel voor puzzel door — opeenvolgend of willekeurig. Je voortgang wordt opgeslagen.",
     "emptyHint": "Nog geen boeken geïmporteerd. Importeer boeken in het beheergebied onder \"Boeken\".",
-    "sectionPublic": "Openbare cursussen",
+    "sectionPublic": "Beschikbare cursussen",
     "sectionPublicHint": "Cursussen die via je groepen met je zijn gedeeld.",
     "sectionOwn": "Eigen cursussen",
     "sectionOwnHint": "Cursussen die je zelf hebt geïmporteerd of gemaakt.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Bezig",
-    "sectionInProgressHint": "Cursussen die je bent begonnen en nog niet hebt afgerond."
+    "sectionInProgressHint": "Cursussen die je bent begonnen en nog niet hebt afgerond.",
+    "origin": {
+      "chessable": "Chessable-import",
+      "pgn": "PGN-import",
+      "by": "door {{name}}"
+    },
+    "reimport": {
+      "chip": "Opnieuw ophalen",
+      "legend": "{{count}} cursussen moeten opnieuw via RepCheck worden geïmporteerd",
+      "legendOne": "1 cursus moet opnieuw via RepCheck worden geïmporteerd",
+      "more": "Meer",
+      "less": "Minder"
+    }
   },
   "weekly": {
     "title": "Wekelijks",
@@ -635,6 +648,7 @@
       "settings": "Instellingen",
       "highscore": "Highscore: {{rating}} rating",
       "sessionsPlayed": "{{count}} sessies gespeeld",
+      "sessionsPlayedOne": "{{count}} sessies gespeeld",
       "viewHistory": "Geschiedenis bekijken",
       "unfinishedRun": "Onafgemaakte sessie: Nv {{level}} | {{solved}} opgelost | {{lives}} levens | {{max}} max",
       "continue": "Doorgaan",
@@ -936,7 +950,10 @@
     "byTheme": "Per thema",
     "byRating": "Per rating (opgelost)",
     "byRatingHint": "Opgeloste puzzels per ratingband — wijs aan voor nauwkeurigheid.",
-    "activity": "Activiteit"
+    "activity": "Activiteit",
+    "levelEmpty": "Niveau {{level}} heeft nog geen pogingen",
+    "levelOther": "Niveau {{level}}: {{count}} pogingen",
+    "levelOtherOne": "Niveau {{level}}: 1 poging"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Dagen per week",
     "weekProgress": "{{done}} van {{target}} dagen deze week",
     "fromGroup": "Voorinstelling van je groep \"{{group}}\". Je kunt die zelf aanpassen.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Dagdoel gehaald",
+    "weeklyPlay": "Weekdoel: spelen",
+    "stillOpen": "nog open"
   },
   "chessable": {
     "testing": "Testing…",

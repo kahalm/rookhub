@@ -40,6 +40,8 @@ import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
               <span class="name">{{ c.title }}</span>
               @if (c.description) { <span class="desc">{{ c.description }}</span> }
               <span class="meta">{{ 'kids.courses.progress' | translate: { done: solved(c), total: c.puzzleCount } }}</span>
+              <!-- UI-Sweep 2026-10-11 (r2-k-course-tile): dünner Balken unter der Zahl, wie auf der Startseite -->
+              <span class="bar" aria-hidden="true"><span [style.width.%]="percent(c)"></span></span>
             </span>
           </a>
         }
@@ -77,6 +79,9 @@ import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
     .text { display: flex; flex-direction: column; gap: 4px; }
     .name { font-size: 1.4rem; font-weight: 800; }
     .desc, .meta { font-size: 1rem; opacity: .85; }
+    .text { min-width: 0; flex: 1; }
+    .bar { display: block; width: min(260px, 100%); height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .12); overflow: hidden; }
+    .bar span { display: block; height: 100%; border-radius: 3px; background: #e08a00; }
   `],
 })
 export class CourseListComponent {
@@ -111,5 +116,10 @@ export class CourseListComponent {
    */
   solved(c: KidsCourse): number {
     return Math.min(this.progress.course(c.bookId).solved.length, c.puzzleCount);
+  }
+
+  /** Anteil in Prozent für den Balken (r2-k-course-tile). */
+  percent(c: KidsCourse): number {
+    return c.puzzleCount > 0 ? Math.round((this.solved(c) / c.puzzleCount) * 1000) / 10 : 0;
   }
 }

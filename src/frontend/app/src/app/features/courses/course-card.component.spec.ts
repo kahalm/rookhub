@@ -31,6 +31,7 @@ describe('CourseCardComponent', () => {
  * sichtbar sein — im Banner stand nur eine anonyme Zahl, man sah nie, welcher Kurs gemeint ist.
  */
 describe('CourseCardComponent Showstopper-Markierung', () => {
+  let lastFixture: { detectChanges(): void } | null = null;
   async function render(needsReimport: boolean): Promise<HTMLElement> {
     await TestBed.configureTestingModule({
       imports: [CourseCardComponent],
@@ -48,13 +49,23 @@ describe('CourseCardComponent Showstopper-Markierung', () => {
       needsReimport,
     } as never;
     fixture.detectChanges();
+    lastFixture = fixture;
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('zeigt das (!) nur bei einem Kurs, der sich hier nicht aktualisieren lässt', async () => {
-    expect((await render(true)).querySelector('.stale-badge')).not.toBeNull();
+  it('zeigt den Chip „Neu holen" nur bei einem Kurs, der sich hier nicht aktualisieren lässt', async () => {
+    expect((await render(true)).querySelector('.stale-chip')).not.toBeNull();
     TestBed.resetTestingModule();
-    expect((await render(false)).querySelector('.stale-badge')).toBeNull();
+    expect((await render(false)).querySelector('.stale-chip')).toBeNull();
+  });
+
+  // UI-Sweep 2026-10-11 (r2-rp-course-warn): ein Tipp klappt die Erklärung auf (am Handy gibt es keinen Tooltip).
+  it('ein Tipp auf den Chip klappt die Erklärung auf', async () => {
+    const el = await render(true);
+    expect(el.querySelector('.stale-hint')).toBeNull();
+    (el.querySelector('.stale-chip') as HTMLButtonElement).click();
+    lastFixture!.detectChanges();
+    expect(el.querySelector('.stale-hint')).not.toBeNull();
   });
 });
 
@@ -229,5 +240,35 @@ describe('CourseCardComponent Kapitelnamen (label ?? name)', () => {
     expect(names).toEqual(['Königsindisch', 'Endgames', 'courses.noChapter']);
     const c = fixture.componentInstance;
     expect(c.chapterName({ index: 0, name: 'A', label: 'B', puzzleCount: 0, solvedCount: 0, progressPercent: 0, infoCount: 0 })).toBe('B');
+  });
+});
+
+/** UI-Sweep 2026-10-11 (r2-rp-taktik-chip, r2-rp-empty-course): Themen-Chips nur für gesetzte Themen,
+ *  Kalkulationsbücher als „Kalkulation"; Kurse ohne Quiz-Linie bekommen einen Leerzustand. */
+describe('CourseCardComponent Themen-Chip + Leerzustand', () => {
+  function make(course: Record<string, unknown>): CourseCardComponent {
+    const c = new CourseCardComponent();
+    c.course = { puzzleCount: 5, themes: ['tactics'], ...course } as never;
+    return c;
+  }
+
+  it('die Vorgabe „nur Taktik" bekommt keinen Chip, gesetzte Themen schon', () => {
+    expect(make({}).themeChipKeys).toEqual([]);
+    expect(make({ themes: [] }).themeChipKeys).toEqual([]);
+    expect(make({ themes: ['opening'] }).themeChipKeys).toEqual(['trainingGoals.theme.opening']);
+    expect(make({ themes: ['endgame', 'tactics'] }).themeChipKeys)
+      .toEqual(['trainingGoals.theme.endgame', 'trainingGoals.theme.tactics']);
+  });
+
+  it('Kalkulationsbücher heißen „Kalkulation"', () => {
+    expect(make({ isCalculation: true, themes: ['opening'] }).themeChipKeys).toEqual(['courses.kindCalculation']);
+  });
+
+  it('erkennt Kurse ohne Quiz-Linie und ob es Partien zum Durchsehen gibt', () => {
+    expect(make({}).isEmptyQuiz).toBeFalse();
+    expect(make({ puzzleCount: 0 }).isEmptyQuiz).toBeTrue();
+    expect(make({ puzzleCount: 0, isCalculation: true }).isEmptyQuiz).toBeFalse();
+    expect(make({ puzzleCount: 0, infoLineCount: 3 }).hasInfoLines).toBeTrue();
+    expect(make({ puzzleCount: 0 }).hasInfoLines).toBeFalse();
   });
 });

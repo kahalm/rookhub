@@ -9,6 +9,7 @@ import { Group, GroupInput, MemberRow, Status } from '../../core/club.models';
 import { WEEKDAYS, longDate, nameHead, nameTail, shortDate } from '../../core/club-format';
 import { scheduleText } from './groups-page.component';
 import { SessionPhotosComponent } from '../../shared/session-photos.component';
+import { ClubGateComponent } from '../../shared/club-gate.component';
 
 /** Zeichen einer Zelle der Anwesenheitstabelle: ✓ da, – gefehlt, · nicht erfasst. */
 export function statusMark(status: Status | null): string {
@@ -25,10 +26,11 @@ export function statusMark(status: Status | null): string {
   selector: 'ch-group-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SessionPhotosComponent],
+  imports: [RouterLink, SessionPhotosComponent, ClubGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate"><h1>Nicht freigeschaltet</h1><p>Die Gruppen sehen die Trainer und die Leitung des Vereins.</p></section>
+      <!-- UI-Sweep 2026-10-11 (r2-c-gate-deadend): gemeinsame Sperrkarte mit Weg zur Startseite -->
+      <ch-gate area="Die Gruppen sehen nur Trainer und die Vereinsleitung." />
     } @else if (group(); as g) {
       <div class="page-head">
         <div>

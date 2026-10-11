@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { LinkState } from '../../core/club.models';
+import { LinkStateStore } from '../../core/link-state.store';
 
 /**
  * „Konto verknüpfen": hier löst ein KIND (bzw. seine Eltern) den Code ein, den der Trainer ausgegeben hat — angemeldet mit
@@ -30,10 +31,11 @@ import { LinkState } from '../../core/club.models';
           <form class="form" (submit)="$event.preventDefault(); redeem()">
             <p>Gib den Code ein, den du von deinem Trainer bekommen hast. Danach sieht er, wie viel du in RookHub und KidHub
               trainierst.</p>
-            <label class="field"><span>Code</span>
-              <input name="code" class="code-input" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32"
-                placeholder="ABCDE-FGHJK" [value]="code()" (input)="code.set($any($event.target).value)"></label>
-            <div class="actions pb">
+            <!-- UI-Sweep 2026-10-11 (r2-c-code-field): Feld so breit wie der Code, Knopf daneben (am Handy darunter) -->
+            <div class="code-row">
+              <label class="field code-field"><span>Code</span>
+                <input name="code" class="code-input" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32"
+                  placeholder="ABCDE-FGHJK" [value]="code()" (input)="code.set($any($event.target).value)"></label>
               <button type="submit" class="btn primary" [disabled]="busy() || !code().trim()">Konto verknüpfen</button>
             </div>
           </form>
@@ -50,6 +52,8 @@ export class LinkPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly confirm = inject(ConfirmService);
 
+  /** UI-Sweep 2026-10-11 (r2-c-footer-link): der Stand geht auch an die Fußzeile („Verknüpfung (Lena)"). */
+  private readonly store = inject(LinkStateStore);
   readonly state = signal<LinkState | null>(null);
   readonly code = signal('');
   readonly busy = signal(false);
@@ -57,22 +61,27 @@ export class LinkPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.code.set(this.route.snapshot.queryParamMap.get('code') ?? '');
-    void this.run(async () => this.state.set(await this.api.linkState()), 'Der Stand konnte nicht geladen werden.');
+    void this.run(async () => this.setState(await this.api.linkState()), 'Der Stand konnte nicht geladen werden.');
   }
 
   async redeem(): Promise<void> {
     const code = this.code().trim();
     if (!code || this.busy()) return;
-    await this.run(async () => this.state.set(await this.api.redeem(code)), 'Verknüpfen hat nicht geklappt.');
+    await this.run(async () => this.setState(await this.api.redeem(code)), 'Verknüpfen hat nicht geklappt.');
   }
 
   async unlink(): Promise<void> {
     if (!(await firstValueFrom(this.confirm.ask('Die Verknüpfung trennen? Deine Trainer sehen deinen Trainingsstand dann nicht mehr.')))) return;
     await this.run(async () => {
       await this.api.selfUnlink();
-      this.state.set({ linked: false });
+      this.setState({ linked: false });
       this.code.set('');
     }, 'Trennen hat nicht geklappt.');
+  }
+
+  private setState(s: LinkState): void {
+    this.state.set(s);
+    this.store.set(s);
   }
 
   private async run(action: () => Promise<void>, fallback: string): Promise<void> {

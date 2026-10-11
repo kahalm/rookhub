@@ -696,7 +696,7 @@
       "houseHint": "Registered users without an engine of their own can then add games on the points game page; they are computed on your machine, at a fixed depth.",
       "houseSaved": "Sharing saved",
       "directTitle": "Directly with RookHub (recommended)",
-      "directHint": "Run the engine provider on your computer with ROOKHUB_URL and an API token with the “Engine” scope (create it under “API tokens” on this page). No Lichess account needed.",
+      "directHint": "Start the engine provider on your computer with this address and an API token with the “Engine” scope (create it under “API tokens” on this page). No Lichess account needed.",
       "directNone": "No engine connected directly yet.",
       "online": "online",
       "offline": "offline",
@@ -708,7 +708,9 @@
       "lichessUnreachable": "Lichess is not answering right now — only the engines connected directly are shown.",
       "noLichessEngines": "No external engines registered on your Lichess account yet.",
       "sourceRookhub": "RookHub",
-      "sourceLichess": "Lichess"
+      "sourceLichess": "Lichess",
+      "guide": "Open the guide",
+      "urlCopied": "Address copied"
     },
     "offline": {
       "title": "Offline",
@@ -861,7 +863,8 @@
       "rights": "You have the right to access, rectification, erasure, restriction, data portability and objection, as well as the right to lodge a complaint with a supervisory authority (in Austria: the Data Protection Authority).",
       "contactTitle": "Contact",
       "contact": "For privacy questions, reach us at",
-      "back": "Back to login"
+      "back": "Back to login",
+      "introTurnier": "The tournament site of RookHub shows public tournament data from chess-results.com and the tournaments you bookmark. It uses the same account as RookHub."
     },
     "impressum": {
       "title": "Imprint",
@@ -967,6 +970,7 @@
       "title": "My Repertoires",
       "new": "New Repertoire",
       "fileCount": "{{count}} files",
+      "fileCountOne": "{{count}} file",
       "public": "Public",
       "private": "Private",
       "noDescription": "No description",
@@ -1166,7 +1170,8 @@
       "refresh": "Refresh",
       "monitor": "Monitor",
       "monitoringUntil": "Monitoring until {{time}}",
-      "share": "Share"
+      "share": "Share",
+      "openFull": "Full view"
     },
     "tabs": {
       "players": "Players ({{count}})",
@@ -1464,7 +1469,7 @@
     "deleteFailed": "Could not delete course",
     "searchPlaceholder": "Search courses…",
     "noMatch": "No courses match “{{query}}”.",
-    "sectionPublic": "Public courses",
+    "sectionPublic": "Available courses",
     "sectionPublicHint": "Courses shared with you via your groups.",
     "sectionOwn": "Your courses",
     "sectionOwnHint": "Courses you imported or created yourself.",
@@ -1484,11 +1489,13 @@
       "calcToggle": "Calculation mode",
       "calcToggleHint": "Serve this course as positions to calculate instead of puzzles to solve: frozen board, no solution, your own analysis tree per position. Existing lines stay untouched.",
       "calcToggleFailed": "Calculation mode could not be changed.",
-      "chapterDeleted": "{{count}} line(s) deleted.",
+      "chapterDeleted": "{{count}} lines deleted.",
+      "chapterDeletedOne": "{{count}} line deleted.",
       "chapterName": "Chapter name",
       "chapterNameHint": "Leave empty to add the positions without a chapter.",
       "chapterNamePlaceholder": "e.g. Calculation 1",
-      "chapterReset": "Progress reset ({{count}} line(s)).",
+      "chapterReset": "Progress reset ({{count}} lines).",
+      "chapterResetOne": "Progress reset ({{count}} line).",
       "chapters": "Chapters",
       "deleteChapter": "Delete chapter",
       "deleteChapterConfirm": "Delete the chapter “{{name}}” with all {{count}} of its lines? This also removes everyone's progress for those lines.",
@@ -1509,7 +1516,8 @@
       },
       "lastActivity": "Last used",
       "line": "Line {{number}}:",
-      "lineCount": "{{count}} line(s)",
+      "lineCount": "{{count}} lines",
+      "lineCountOne": "{{count}} line",
       "lines": "Lines",
       "linesLoadFailed": "Could not load the lines.",
       "linked": "Linked course",
@@ -1548,7 +1556,8 @@
       "chapterPoints": "{{score}} pts",
       "downloadChapterPgn": "Download chapter as PGN",
       "downloadLinePgn": "Download line as PGN",
-      "createWeekly": "Create weekly post"
+      "createWeekly": "Create weekly post",
+      "source": "Source"
     },
     "sequential": "Sequential",
     "random": "Random",
@@ -1642,7 +1651,8 @@
       "back": "Back to courses",
       "allChapters": "All chapters",
       "noChapter": "Without chapter",
-      "lineCount": "{{count}} line(s)",
+      "lineCount": "{{count}} lines",
+      "lineCountOne": "{{count}} line",
       "empty": "This course has no lines.",
       "line": "Line",
       "infoLine": "Explanation line (no quiz)",
@@ -1723,6 +1733,26 @@
         "not-configured": "Translations are not available right now.",
         "not-waiting": "Only a waiting request can be withdrawn."
       }
+    },
+    "kindCalculation": "Calculation",
+    "emptyCourse": {
+      "gamesOnly": "Annotated games only, no exercises",
+      "noLines": "This course is still empty.",
+      "noLinesOwner": "No exercises yet — add lines on the course page.",
+      "browseGames": "Browse games",
+      "addLines": "Add lines"
+    },
+    "origin": {
+      "chessable": "Chessable import",
+      "pgn": "PGN import",
+      "by": "by {{name}}"
+    },
+    "reimport": {
+      "chip": "Re-fetch",
+      "legend": "{{count}} courses need a new import via RepCheck",
+      "legendOne": "1 course needs a new import via RepCheck",
+      "more": "More",
+      "less": "Less"
     }
   },
   "calc": {
@@ -2000,7 +2030,7 @@
       "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Engine strength (1 = very weak, 24 = maximum strength)",
       "settingsThemes": "<strong>Themes</strong> — Optional: only certain tactical themes (e.g. \"fork pin\")",
       "fasttrackHeading": "Difficulty increase (Fasttrack)",
-      "fasttrackP1": "The increase adapts to your past performance: it analyses your recent sessions and calculates the rating at which you typically lose lives.",
+      "fasttrackP1": "The increase adapts to your past performance: it analyses your recent runs and calculates the rating at which you typically lose lives.",
       "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–{{p1End}})</strong> — Fast increase up to your 1st threshold",
       "fasttrackPhase2": "<strong>Phase 2 (Puzzles {{p2Start}}–{{p2End}})</strong> — Increase from the 1st to the 2nd threshold",
       "fasttrackPhase3": "<strong>Phase 3 (from Puzzle {{p3Start}})</strong> — Constant step of {{flatStep}}",
@@ -2024,7 +2054,8 @@
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Settings",
       "highscore": "Highscore: {{rating}} Rating",
-      "sessionsPlayed": "{{count}} sessions played",
+      "sessionsPlayed": "{{count}} runs played",
+      "sessionsPlayedOne": "{{count}} run played",
       "viewHistory": "View History",
       "unfinishedRun": "Unfinished run: Lv {{level}} | {{solved}} solved | {{lives}} lives | {{max}} max",
       "continue": "Continue",
@@ -2087,7 +2118,7 @@
     },
     "history": {
       "title": "Endless Puzzle History",
-      "noSessions": "No sessions played yet.",
+      "noSessions": "No runs played yet.",
       "startPlaying": "Start Playing",
       "filterAll": "All",
       "filterActive": "Active",
@@ -2095,8 +2126,8 @@
       "selected": "{{count}} selected",
       "archive": "Archive",
       "unarchive": "Unarchive",
-      "noArchivedSessions": "No archived sessions.",
-      "noActiveSessions": "No active sessions.",
+      "noArchivedSessions": "No archived runs.",
+      "noActiveSessions": "No active runs.",
       "colDate": "Date",
       "colMaxRating": "Max Rating",
       "colEloDelta": "Elo ±",
@@ -2548,7 +2579,7 @@
   "favorites": {
     "title": "Loved puzzles",
     "hint": "Puzzles you marked with the heart after solving or giving up land here — replay or analyze them anytime.",
-    "empty": "No loved puzzles yet. After solving (or giving up on) a puzzle, tap the heart to add it here.",
+    "empty": "No loved puzzles yet.",
     "rating": "Rating",
     "replay": "Solve again",
     "analyze": "Analyze",
@@ -2559,7 +2590,9 @@
     "sourceBook": "Course / book puzzle",
     "love": "Love it",
     "loved": "Loved",
-    "loveLast": "Last puzzle"
+    "loveLast": "Last puzzle",
+    "emptyHint": "Tap the heart after a puzzle to collect it here.",
+    "solvePuzzles": "Solve puzzles"
   },
   "worksheets": {
     "title": "Worksheets",
@@ -2672,6 +2705,7 @@
     "openOriginal": "Open original game",
     "analyze": "Analyse game",
     "analyzeHint": "Have the game analysed in the background — the evaluation graph with accuracy and move classes then appears below the board.",
+    "analyzeNoEngine": "No engine is available right now — please try again later.",
     "analyzeLogin": "Sign in to have this game analysed.",
     "loadError": "Could not load the game.",
     "deleteConfirm": "Delete this saved game?",
@@ -3148,7 +3182,10 @@
     "worstThemes": "Weakest themes",
     "byRating": "By rating (solved)",
     "byRatingHint": "Solved puzzles per rating band — hover for accuracy.",
-    "activity": "Activity"
+    "activity": "Activity",
+    "levelEmpty": "Level {{level}} has no attempts yet",
+    "levelOther": "Level {{level}}: {{count}} attempts",
+    "levelOtherOne": "Level {{level}}: 1 attempt"
   },
   "trainingGoals": {
     "tabs": {
@@ -3229,7 +3266,6 @@
     "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Days per week",
     "weekProgress": "{{done}} of {{target}} days this week",
     "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
@@ -3288,7 +3324,10 @@
     },
     "prevPeriod": "Previous period",
     "nextPeriod": "Next period",
-    "noActivityPeriod": "No training recorded in this period."
+    "noActivityPeriod": "No training recorded in this period.",
+    "dailyReached": "Daily goal reached",
+    "weeklyPlay": "Weekly goal: playing",
+    "stillOpen": "still open"
   },
   "install": {
     "pageTitle": "Install RookHub",
@@ -3379,7 +3418,7 @@
         "t": "Endless mode",
         "p": [
           "In endless mode you solve a continuous series of increasingly harder puzzles until you make too many mistakes. You set the starting Elo, themes, fast-track thresholds and Stockfish depth yourself.",
-          "Your high score and finished sessions are saved; see the history under ☰ → Account → Puzzle History and archive old sessions."
+          "Your high score and finished runs are saved; see the history under ☰ → Account → Puzzle History and archive old runs."
         ]
       },
       "daily": {
@@ -3550,7 +3589,9 @@
     "replyLabel": "Your reply",
     "sendError": "Could not send the message.",
     "emptyUserCanWrite": "No messages yet. Write to the admin team below — they will get back to you here.",
-    "writeLabel": "Your message"
+    "writeLabel": "Your message",
+    "adminHint": "You're an admin — users' messages are in the admin area.",
+    "toConversations": "Go to conversations"
   },
   "leaderboards": {
     "title": "Leaderboards",
@@ -3569,21 +3610,38 @@
     },
     "unit": {
       "puzzles": "puzzles",
+      "puzzlesOne": "puzzle",
       "runs": "runs",
+      "runsOne": "run",
       "lines": "lines",
-      "daily": "daily puzzles"
+      "linesOne": "line",
+      "daily": "daily puzzles",
+      "dailyOne": "daily puzzle"
     }
   },
   "reprocess": {
     "available": {
-      "courses": "{{count}} course(s) use an older processing version and can be updated — e.g. to show the book's per-move comments.",
-      "repertoires": "{{count}} repertoire(s) use an older processing version and can be updated."
+      "courses": "{{count}} courses use an older processing version and can be updated — e.g. to show the book's per-move comments.",
+      "repertoires": "{{count}} repertoires use an older processing version and can be updated."
+    },
+    "availableOne": {
+      "courses": "1 course uses an older processing version and can be updated — e.g. to show the book's per-move comments.",
+      "repertoires": "1 repertoire uses an older processing version and can be updated."
+    },
+    "availableAll": {
+      "courses": "{{count}} courses of all users (your own: {{own}}) use an older processing version and can be updated.",
+      "repertoires": "{{count}} repertoires of all users (your own: {{own}}) use an older processing version and can be updated."
+    },
+    "availableAllOne": {
+      "courses": "1 course of all users (your own: {{own}}) uses an older processing version and can be updated.",
+      "repertoires": "1 repertoire of all users (your own: {{own}}) uses an older processing version and can be updated."
     },
     "itemNeedsReimport": {
       "courses": "This course comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date.",
       "repertoires": "This repertoire comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date."
     },
     "update": "Update ({{count}})",
+    "updateAll": "Update all ({{count}})",
     "updateTip": "Reprocess items with a stored source and re-download Chessable items (cached ones update instantly, no download).",
     "working": "Updating…",
     "started": "Update started — running in the background.",
@@ -3635,7 +3693,8 @@
       "endless": "Endless",
       "daily": "Daily puzzle",
       "book": "Book puzzles"
-    }
+    },
+    "titleCourses": "How do you want to play courses?"
   },
   "analysisJobs": {
     "title": "Analysis jobs",
@@ -4174,7 +4233,7 @@
       "shown": "Shown again.",
       "hideError": "Could not be hidden. Please try again.",
       "showIgnored": "Show hidden ones",
-      "rounds": "{{count}} rounds, {{from}} to {{to}}",
+      "rounds": "{{count}} rounds · {{range}}",
       "actionAria": "{{action}}: {{name}}",
       "implausible": "Implausible dates",
       "short": {
@@ -4183,7 +4242,9 @@
         "hide": "Hide",
         "show": "Show",
         "report": "Report"
-      }
+      },
+      "sameName": "another group?",
+      "sameNameHint": "A tournament with the same name on the same day is shown as a separate card — probably another group of the same event. The number of players tells them apart."
     },
     "source": {
       "Unknown": "Unknown source",
@@ -4202,7 +4263,8 @@
       "IrishChessUnion": "Irish Chess Union",
       "FrenchChessFederation": "French Chess Federation",
       "NorwegianChessFederation": "Norwegian Chess Federation"
-    }
+    },
+    "variousVenues": "various venues"
   },
   "clubhub": {
     "authIntro": {
@@ -4279,7 +4341,8 @@
         "removed": "{{name}} is no longer tracked.",
         "searchError": "The search failed. Please try again.",
         "title": "Track a player"
-      }
+      },
+      "friendNoName": "{{name}} has no name in their profile — chess-results is searched by name, so there is nothing to show here."
     }
   },
   "kids": {
@@ -4305,7 +4368,9 @@
       "puzzles": "Puzzles",
       "courses": "Courses",
       "levelsDone": "{{done}} of {{total}} levels done",
-      "courseCount": "{{count}} courses"
+      "courseCount": "{{count}} courses",
+      "courseProgress": "{{title}} · {{done}} of {{total}}",
+      "coursesStarted": "{{started}} of {{count}} courses started"
     },
     "levels": {
       "title": "Levels",
@@ -4328,7 +4393,9 @@
       "playEndless": "Play endless",
       "progress": "{{done}} of {{total}} done",
       "completed": "Course complete!",
-      "restart": "Start over"
+      "restart": "Start over",
+      "readMore": "Read more",
+      "readLess": "Show less"
     },
     "themes": {
       "mate1": {
@@ -4781,5 +4848,80 @@
   "markPosition": {
     "mark": "Mark as a particularly good position (+)",
     "unmark": "Remove the + mark"
+  },
+  "puzzleThemes": {
+    "advancedPawn": "Advanced pawn",
+    "advantage": "Advantage",
+    "anastasiaMate": "Anastasia's mate",
+    "arabianMate": "Arabian mate",
+    "attackingF2F7": "Attacking f2 or f7",
+    "attraction": "Attraction",
+    "backRankMate": "Back rank mate",
+    "balestraMate": "Balestra mate",
+    "bishopEndgame": "Bishop endgame",
+    "blindSwineMate": "Blind swine mate",
+    "bodenMate": "Boden's mate",
+    "capturingDefender": "Capture the defender",
+    "castling": "Castling",
+    "clearance": "Clearance",
+    "collinearMove": "Collinear move",
+    "cornerMate": "Corner mate",
+    "crushing": "Crushing",
+    "defensiveMove": "Defensive move",
+    "deflection": "Deflection",
+    "discoveredAttack": "Discovered attack",
+    "discoveredCheck": "Discovered check",
+    "doubleBishopMate": "Double bishop mate",
+    "doubleCheck": "Double check",
+    "dovetailMate": "Dovetail mate",
+    "endgame": "Endgame",
+    "enPassant": "En passant",
+    "epauletteMate": "Epaulette mate",
+    "equality": "Equality",
+    "exposedKing": "Exposed king",
+    "fork": "Fork",
+    "hangingPiece": "Hanging piece",
+    "hookMate": "Hook mate",
+    "interference": "Interference",
+    "intermezzo": "Intermezzo",
+    "killBoxMate": "Kill box mate",
+    "kingsideAttack": "Kingside attack",
+    "knightEndgame": "Knight endgame",
+    "long": "Long",
+    "master": "Master games",
+    "masterVsMaster": "Master vs master",
+    "mate": "Mate",
+    "mateIn1": "Mate in 1",
+    "mateIn2": "Mate in 2",
+    "mateIn3": "Mate in 3",
+    "mateIn4": "Mate in 4",
+    "mateIn5": "Mate in 5 or more",
+    "middlegame": "Middlegame",
+    "morphysMate": "Morphy's mate",
+    "oneMove": "One move",
+    "opening": "Opening",
+    "operaMate": "Opera mate",
+    "pawnEndgame": "Pawn endgame",
+    "pillsburysMate": "Pillsbury's mate",
+    "pin": "Pin",
+    "promotion": "Promotion",
+    "queenEndgame": "Queen endgame",
+    "queenRookEndgame": "Queen and rook",
+    "queensideAttack": "Queenside attack",
+    "quietMove": "Quiet move",
+    "rookEndgame": "Rook endgame",
+    "sacrifice": "Sacrifice",
+    "short": "Short",
+    "skewer": "Skewer",
+    "smotheredMate": "Smothered mate",
+    "superGM": "Super GM games",
+    "swallowstailMate": "Swallow's tail mate",
+    "trappedPiece": "Trapped piece",
+    "triangleMate": "Triangle mate",
+    "underPromotion": "Underpromotion",
+    "veryLong": "Very long",
+    "vukovicMate": "Vuković mate",
+    "xRayAttack": "X-ray attack",
+    "zugzwang": "Zugzwang"
   }
 }

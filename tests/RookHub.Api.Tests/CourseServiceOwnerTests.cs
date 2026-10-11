@@ -75,6 +75,24 @@ public class CourseServiceOwnerTests : IDisposable
         Assert.DoesNotContain(otherCourses, c => c.BookId == book.Id);
     }
 
+    // UI-Sweep 2026-10-11 (r2-rp-course-dupes): Herkunft für gleichnamige Kurse — Chessable-Import für alle,
+    // Besitzername nur für Admins.
+    [Fact]
+    public async Task GetCourses_OriginFields_ChessableForAll_OwnerNameOnlyForAdmins()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "besitzer", PasswordHash = "x", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+
+        var asAdmin = Assert.Single(await _svc.GetCoursesAsync(userId: 99, isAdmin: true), c => c.BookId == book.Id);
+        Assert.True(asAdmin.IsChessableImport);
+        Assert.Equal("besitzer", asAdmin.OwnerUsername);
+
+        var asOwner = Assert.Single(await _svc.GetCoursesAsync(userId: 1, isAdmin: false), c => c.BookId == book.Id);
+        Assert.True(asOwner.IsChessableImport);
+        Assert.Null(asOwner.OwnerUsername);
+    }
+
     [Fact]
     public async Task HasAnyAccess_TrueForOwner_FalseForOther()
     {

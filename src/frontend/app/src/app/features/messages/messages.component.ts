@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../core/auth.service';
 import { MessageService, ChatMessage } from '../../core/message.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -17,7 +19,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent],
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent],
   template: `
     <div class="msg-container">
       <h1>{{ 'messages.title' | translate }}</h1>
@@ -27,8 +29,22 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
       } @else if (loadError) {
         <app-load-error (retry)="retry()" />
       } @else {
+        <!-- UI-Sweep 2026-10-11 (r2-rk-admin-own-inbox): ein Admin schriebe hier sich selbst — die
+             Konversationen der Nutzer liegen im Admin-Bereich. Schreibfeld und Leertext entfallen. -->
+        @if (isAdmin) {
+          <mat-card class="admin-hint">
+            <mat-card-content>
+              <p>{{ 'messages.adminHint' | translate }}</p>
+              <a mat-flat-button color="primary" routerLink="/admin" [queryParams]="{ tab: 'messages' }">
+                <mat-icon>forum</mat-icon> {{ 'messages.toConversations' | translate }}
+              </a>
+            </mat-card-content>
+          </mat-card>
+        }
         @if (messages.length === 0) {
-          <p class="empty">{{ 'messages.emptyUserCanWrite' | translate }}</p>
+          @if (!isAdmin) {
+            <p class="empty">{{ 'messages.emptyUserCanWrite' | translate }}</p>
+          }
         } @else {
           <mat-card>
             <mat-card-content class="thread">
@@ -45,6 +61,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
           </mat-card>
         }
 
+        @if (!isAdmin) {
         <div class="reply">
           <mat-form-field appearance="outline" class="reply-field">
             <mat-label>{{ (messages.length === 0 ? 'messages.writeLabel' : 'messages.replyLabel') | translate }}</mat-label>
@@ -55,6 +72,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
             <mat-icon>send</mat-icon> {{ 'common.send' | translate }}
           </button>
         </div>
+        }
       }
     </div>
   `,
@@ -70,6 +88,8 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
     .sender { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
     .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; }
     .meta { font-size: 0.72rem; opacity: 0.55; margin-top: 4px; text-align: right; }
+    .admin-hint { margin-bottom: 16px; }
+    .admin-hint p { margin: 0 0 12px; }
     .reply { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
     .reply-field { width: 100%; }
     .reply button { align-self: flex-end; }
@@ -87,7 +107,11 @@ export class MessagesComponent implements OnInit {
     private messageService: MessageService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private auth: AuthService,
   ) {}
+
+  /** UI-Sweep 2026-10-11 (r2-rk-admin-own-inbox): Admins bekommen den Weg zu den Konversationen statt eines Schreibfelds. */
+  get isAdmin(): boolean { return this.auth.isAdmin; }
 
   ngOnInit(): void { this.load(true); }
 

@@ -9,7 +9,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -20,7 +19,7 @@ import { ShareRepertoireDialogComponent, ShareRepertoireDialogData } from './sha
 import { forkJoin, of, catchError } from 'rxjs';
 import { Repertoire } from '../../core/models';
 import { RepertoireService } from '../../core/repertoire.service';
-import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.types';
+import { RepertoireKind, REPERTOIRE_KIND_LABELS, toRepertoireKind } from '../../core/repertoire.types';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { RepertoireTrainingService } from './repertoire-training.service';
 import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, cachedRepertoires } from './repertoire-offline.util';
@@ -31,7 +30,7 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule, MatChipsModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -124,15 +123,12 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
     </div>
 
     <ng-template #repCard let-rep>
-      <mat-card>
+      <!-- UI-Sweep 2026-10-11 (r2-rg-rep-cards): Titel einzeilig mit Ellipse, die Art als kleine Marke in der
+           Unterzeile (bei „keine" gar nicht) und die Aktionszeile unten bündig — sonst sprang „Öffnen" je Karte. -->
+      <mat-card class="rep-card">
         <mat-card-header>
-          <mat-card-title>
-            {{ rep.name }}
-            @if (rep.kind !== Kind.None) {
-              <mat-chip-set class="kind-chip-set">
-                <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === Kind.Opening" [class.kind-middlegame]="rep.kind === Kind.Middlegame" [class.kind-endgame]="rep.kind === Kind.Endgame">{{ kindLabel(rep.kind) | translate }}</mat-chip>
-              </mat-chip-set>
-            }
+          <mat-card-title class="rep-title">
+            <span class="rep-name" [title]="rep.name">{{ rep.name }}</span>
             @if (rep.useForExtension && !rep.isShared) {
               <mat-icon class="ext-badge"
                         [matTooltip]="'repertoire.list.extensionBadge' | translate">extension</mat-icon>
@@ -144,7 +140,11 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
             }
           </mat-card-title>
           <mat-card-subtitle>
-            {{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}
+            @let kind = kindOf(rep);
+            @if (kind !== Kind.None) {
+              <span class="kind-chip" [class.kind-opening]="kind === Kind.Opening" [class.kind-middlegame]="kind === Kind.Middlegame" [class.kind-endgame]="kind === Kind.Endgame">{{ kindLabel(kind) | translate }}</span>
+            }
+            {{ (rep.fileCount === 1 ? 'repertoire.list.fileCountOne' : 'repertoire.list.fileCount') | translate: { count: rep.fileCount } }} · {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}
             @if (rep.isShared && rep.sharedByUsername) {
               · <mat-icon class="shared-badge-icon">group</mat-icon>{{ 'repertoire.share.sharedBy' | translate:{ name: rep.sharedByUsername } }}
             }
@@ -153,7 +153,7 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
         <mat-card-content>
           <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
         </mat-card-content>
-        <mat-card-actions>
+        <mat-card-actions class="rep-actions">
           @if (offlineList) {
             <!-- Offline-Fallback: nur das Training funktioniert (aus dem Offline-Cache). -->
             <a mat-button color="primary" [routerLink]="['/repertoires', rep.id, 'train']">
@@ -224,8 +224,17 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
     .repertoire-section .section-icon { color: var(--mat-sys-primary, #3f51b5); }
     .repertoire-section .section-hint { margin: 0 0 0.65rem; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
-    .kind-chip-set { display: inline-flex; margin-left: 8px; vertical-align: middle; }
-    .kind-chip { font-size: 0.72rem; min-height: 22px; }
+    /* UI-Sweep 2026-10-11 (r2-rg-rep-cards): gleich hohe Karten, Aktionszeile unten bündig, Titel einzeilig. */
+    .rep-card { height: 100%; }
+    .rep-actions { margin-top: auto; }
+    .rep-card mat-card-header { min-width: 0; }
+    .rep-card ::ng-deep .mat-mdc-card-header-text { min-width: 0; flex: 1 1 auto; }
+    .rep-title { display: flex; align-items: center; min-width: 0; }
+    .rep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .rep-title mat-icon { flex: 0 0 auto; }
+    .kind-chip { display: inline-block; font-size: 0.72rem; line-height: 18px; padding: 0 8px; margin-right: 6px;
+                 border-radius: 9px; vertical-align: middle; font-weight: 500;
+                 background: color-mix(in srgb, currentColor 14%, transparent); }
     .kind-chip.kind-opening { background-color: #1976d2; color: #fff; }
     .kind-chip.kind-middlegame { background-color: #7b1fa2; color: #fff; }
     .kind-chip.kind-endgame { background-color: #c62828; color: #fff; }
@@ -274,6 +283,11 @@ export class RepertoireListComponent implements OnInit {
   offlineList = false;
 
   constructor(private repertoireService: RepertoireService, private training: RepertoireTrainingService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
+
+  /** UI-Sweep 2026-10-11 (r2-rg-rep-cards): Art als Enum — die API schickt den NAMEN („None", „Opening", …). */
+  kindOf(rep: Repertoire): RepertoireKind {
+    return toRepertoireKind(rep.kind);
+  }
 
   kindLabel(kind: RepertoireKind): string {
     return REPERTOIRE_KIND_LABELS[kind] ?? 'repertoire.kind.none';

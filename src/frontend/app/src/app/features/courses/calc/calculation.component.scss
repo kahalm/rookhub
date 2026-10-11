@@ -674,3 +674,16 @@
     padding-top: 0;
   }
 }
+
+/* UI-Sweep 2026-10-11 (r2-rp-calc-fullscreen): EIN Vollbild-Knopf — einspaltig der des Bretts (über dem Brett),
+   breit der in der Leiste. Kopieren steht einspaltig in der Leiste statt allein in einer Zeile der Befehlsleiste. */
+.calc-rail-copy { display: none; }
+@media (max-width: 899.98px) {
+  .calc-rail-fs { display: none; }
+  .calc-rail-copy { display: inline-flex; }
+  .calc-bar:not(.calc-bar--side) .calc-copy-bar { display: none; }
+}
+/* Schmal: „Brett eingefroren“ nur als Symbol (Erklärung im Tooltip), damit Uhr und Punkte in eine Zeile passen. */
+@media (max-width: 599.98px) {
+  .calc-frozen-text { display: none; }
+}

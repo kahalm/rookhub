@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PublicTournamentComponent } from './public-tournament.component';
@@ -108,5 +108,37 @@ describe('PublicTournamentComponent', () => {
     c.onPlayerSort({ active: '', direction: '' });
     expect(c.displayedPlayers.length).toBe(3);
     expect(localStorage.getItem(keys[1])).toBe('[11]');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-t-public-actions): dieselbe Knopfreihe wie /tournaments/:id — Merken primaer, „Volle Ansicht",
+  // Teilen umrandet, Chess-Results als Textlink zuletzt; abgemeldet fuehrt Merken zur Anmeldung.
+  it('Knopfreihe: Merken, Volle Ansicht, Teilen, Chess-Results — in dieser Reihenfolge und diesen Stilen', async () => {
+    const { fixture, http } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    fixture.detectChanges();
+    const bar = (fixture.nativeElement as HTMLElement).querySelector('.action-bar')!;
+    const items = Array.from(bar.children) as HTMLElement[];
+    expect(items.map(i => i.textContent!.trim())).toEqual([
+      'bookmark_add tournamentDirectory.bookmark', 'open_in_full tournaments.actions.openFull',
+      'share tournaments.actions.share', 'open_in_new tournaments.actions.chessResults']);
+    expect(items[0].hasAttribute('mat-flat-button')).toBeTrue();
+    expect(items[1].getAttribute('href')).toBe(`/tournaments/${id}`);
+    expect(items[2].hasAttribute('mat-stroked-button')).toBeTrue();
+    expect(items[3].hasAttribute('mat-button')).toBeTrue();
+  });
+
+  it('Merken ohne Anmeldung fuehrt zur Anmeldung, ohne etwas zu speichern', async () => {
+    localStorage.removeItem('rookhub_user');
+    const { fixture, http, c } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    const router = TestBed.inject(Router);
+    const nav = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+    c.subscribe();
+    expect(nav).toHaveBeenCalled();
+    expect(String(nav.calls.mostRecent().args[0])).toContain('/login');
+    http.expectNone('/api/subscriptions');
+    fixture.destroy();
   });
 });

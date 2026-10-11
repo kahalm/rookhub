@@ -156,4 +156,35 @@ describe('StatsComponent', () => {
     expect(c.stats).toBeNull();
     expect(c.loading).toBeFalse();
   });
+
+  it('scrollt die Heatmap nach rechts (heute sichtbar) und rendert die Handy-Liste der letzten Puzzles', async () => {
+    // UI-Sweep 2026-10-11 (r2-rp-stats-mobile): am Handy lag der einzige aktive Tag (heute, rechts)
+    // ausserhalb des Sichtbereichs; die Tabelle war abgeschnitten.
+    await TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(StatsComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '390px';
+    fixture.detectChanges();
+    const c = fixture.componentInstance as unknown as { loading: boolean; heatmap: unknown[][]; recentRows: unknown[] };
+    c.loading = false;
+    c.heatmap = Array.from({ length: 27 }, (_, w) =>
+      Array.from({ length: 7 }, (_, d) => ({ date: `w${w}d${d}`, count: 0, level: 0 })));
+    c.recentRows = [{ rating: 1490, solved: true, time: 64, attemptedAt: '2026-10-11T00:20:00Z', eloChange: 28, link: ['/puzzles', 1] }];
+    fixture.detectChanges();
+    await new Promise(r => requestAnimationFrame(() => r(null)));
+
+    const hm = host.querySelector('.heatmap') as HTMLElement;
+    expect(hm.scrollWidth).toBeGreaterThan(hm.clientWidth);
+    expect(hm.scrollLeft).toBeGreaterThan(0);
+    const item = host.querySelector('.recent-list a.recent-item') as HTMLAnchorElement;
+    expect(item).toBeTruthy();
+    expect(item.getAttribute('href')).toBe('/puzzles/1');
+    expect(item.textContent).toContain('+28');
+  });
 });

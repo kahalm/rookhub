@@ -10,6 +10,7 @@ import { forkJoin } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { PuzzleService, PuzzleStatsDto, ThemeStat } from '../puzzles/puzzle.service';
+import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
 
 /** Antwort von GET /api/friends/{userId}/stats. */
 export interface FriendStats {
@@ -82,7 +83,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friend-stats',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe],
   template: `
     <div class="fs-container">
       <a mat-button routerLink="/friends" class="back-link">
@@ -129,7 +130,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
               <tbody>
                 @for (t of themeRows; track t.theme) {
                   <tr>
-                    <td class="metric">{{ t.theme }}</td>
+                    <td class="metric theme-cell">{{ t.theme | puzzleTheme }}</td>
                     <td [class.win]="t.winner === 'mine'">
                       @if (t.mine) { {{ t.mine.acc }}% <span class="sub">({{ t.mine.attempts }})</span> } @else { – }
                     </td>
@@ -154,6 +155,8 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     mat-card { margin-bottom: 1rem; padding: 1rem; }
     .compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .compare-table th, .compare-table td { overflow-wrap: anywhere; }
+    /* UI-Sweep 2026-10-11 (r2-rp-themes-en): Themen-Namen nur an Wortgrenzen bzw. mit Silbentrennung umbrechen. */
+    .compare-table td.theme-cell { overflow-wrap: normal; hyphens: auto; }
     .compare-table th, .compare-table td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .compare-table th { font-size: 0.8rem; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .compare-table th:first-child, .compare-table td.metric { text-align: left; color: color-mix(in srgb, currentColor 70%, transparent); }

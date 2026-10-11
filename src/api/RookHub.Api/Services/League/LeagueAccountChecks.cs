@@ -135,7 +135,7 @@ public sealed class LeagueAccountChecks
         items.Add(await TwinCheckAsync(player, site, user, fideFed, ct));
         items.Add(await ElsewhereCheckAsync(fide, site, user, ct));
         if (scout?.Result is { Length: > 0 } res) items.Add(new Item("scout", "Team-Suche", Info, res));
-        if (sugg is not null) items.Add(new Item("evidence", "Hinweise der Suche", Info, sugg.Evidence));
+        if (sugg is not null) items.Add(new Item("evidence", "Hinweise der Suche", Info, CountryNames.ExpandLand(sugg.Evidence) ?? ""));
         if (account?.AddedBy is { Length: > 0 } by)
             items.Add(new Item("added", "Eingetragen", Info,
                 by == LeagueOnlineAccountService.Anonymous ? "anonym über einen Teilen-Link" : $"von {by}"));
@@ -357,9 +357,9 @@ public sealed class LeagueAccountChecks
         var code = flag[..2].ToUpperInvariant();
         if (code == region.Country && player.Local) return new Item(key, label, Ok, region.CountryName);
         if (LeagueAccountFinder.AllowedCountries(player.Fed, fideFed, player.Local, player.Region).Contains(code))
-            return new Item(key, label, Ok, $"{code} — seine Föderation ({fideFed ?? player.Fed})");
+            return new Item(key, label, Ok, $"{CountryNames.GermanName(code)} — seine Föderation ({fideFed ?? player.Fed})");
         var fed = fideFed ?? player.Fed;
-        return new Item(key, label, Fail, $"{code} — {(player.Local ? $"weder {region.CountryName} noch seine Föderation" : "nicht seine Föderation")}" + (fed is null ? "" : $" ({fed})"));
+        return new Item(key, label, Fail, $"{CountryNames.GermanName(code)} — {(player.Local ? $"weder {region.CountryName} noch seine Föderation" : "nicht seine Föderation")}" + (fed is null ? "" : $" ({fed})"));
     }
 
     /// <summary>

@@ -312,6 +312,7 @@
       "title": "Repertoir Saya",
       "new": "Repertoir Baru",
       "fileCount": "{{count}} berkas",
+      "fileCountOne": "{{count}} berkas",
       "public": "Publik",
       "private": "Privat",
       "noDescription": "Tidak ada deskripsi",
@@ -522,7 +523,7 @@
     "title": "Kursus",
     "intro": "Kerjakan buku yang diimpor puzzle demi puzzle — secara berurutan atau acak. Progres Anda disimpan.",
     "emptyHint": "Belum ada buku yang diimpor. Impor buku di area admin di bawah \"Buku\".",
-    "sectionPublic": "Kursus publik",
+    "sectionPublic": "Kursus tersedia",
     "sectionPublicHint": "Kursus yang dibagikan kepada Anda melalui grup Anda.",
     "sectionOwn": "Kursus Anda",
     "sectionOwnHint": "Kursus yang Anda impor atau buat sendiri.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Sedang berjalan",
-    "sectionInProgressHint": "Kursus yang sudah kamu mulai dan belum selesai."
+    "sectionInProgressHint": "Kursus yang sudah kamu mulai dan belum selesai.",
+    "origin": {
+      "chessable": "Impor Chessable",
+      "pgn": "Impor PGN",
+      "by": "oleh {{name}}"
+    },
+    "reimport": {
+      "chip": "Ambil ulang",
+      "legend": "{{count}} kursus perlu diimpor ulang lewat RepCheck",
+      "legendOne": "1 kursus perlu diimpor ulang lewat RepCheck",
+      "more": "Selengkapnya",
+      "less": "Lebih sedikit"
+    }
   },
   "weekly": {
     "title": "Mingguan",
@@ -635,6 +648,7 @@
       "settings": "Pengaturan",
       "highscore": "Skor tertinggi: Rating {{rating}}",
       "sessionsPlayed": "{{count}} sesi dimainkan",
+      "sessionsPlayedOne": "{{count}} sesi dimainkan",
       "viewHistory": "Lihat Riwayat",
       "unfinishedRun": "Sesi belum selesai: Lv {{level}} | {{solved}} diselesaikan | {{lives}} nyawa | {{max}} maks",
       "continue": "Lanjutkan",
@@ -936,7 +950,10 @@
     "byTheme": "Berdasarkan tema",
     "byRating": "Berdasarkan rating (diselesaikan)",
     "byRatingHint": "Puzzle yang diselesaikan per band rating — arahkan kursor untuk akurasi.",
-    "activity": "Aktivitas"
+    "activity": "Aktivitas",
+    "levelEmpty": "Level {{level}} belum punya percobaan",
+    "levelOther": "Level {{level}}: {{count}} percobaan",
+    "levelOtherOne": "Level {{level}}: 1 percobaan"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "h",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Hari per minggu",
     "weekProgress": "{{done}} dari {{target}} hari minggu ini",
     "fromGroup": "Preset dari grup Anda \"{{group}}\". Anda dapat menyesuaikannya untuk diri sendiri.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Tujuan harian tercapai",
+    "weeklyPlay": "Tujuan mingguan: bermain",
+    "stillOpen": "belum tercapai"
   },
   "chessable": {
     "testing": "Testing…",

@@ -670,6 +670,42 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.True(await _db.Repertoires.AllAsync(r => r.ImportVersion == ImportPipeline.CurrentVersion));
     }
 
+    // UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): das Banner nennt den Umfang — Admin sieht alle Nutzer, davon eigene.
+    [Fact]
+    public async Task GetRepertoireStatus_Admin_ReportsAllUsersScopeAndOwnShare()
+    {
+        var a = new AppUser { Username = "a", PasswordHash = "h" };
+        var b = new AppUser { Username = "b", PasswordHash = "h" };
+        _db.AppUsers.AddRange(a, b);
+        await _db.SaveChangesAsync();
+        await SeedRepertoireAsync(a.Id, 0, "a-own.pgn");
+        await SeedRepertoireAsync(b.Id, 0, "b-1.pgn");
+        await SeedRepertoireAsync(b.Id, 0, "b-2.pgn");
+
+        var svc = ReprocessTestHelper.Build(_db);
+        var admin = await svc.GetRepertoireStatusAsync(a.Id, isAdmin: true);
+        Assert.True(admin.AllUsers);
+        Assert.Equal(3, admin.ReprocessableLocally + admin.Refetchable);
+        Assert.Equal(1, admin.OwnActionable);
+
+        var own = await svc.GetRepertoireStatusAsync(b.Id, isAdmin: false);
+        Assert.False(own.AllUsers);
+        Assert.Equal(2, own.OwnActionable);
+    }
+
+    [Fact]
+    public async Task GetCourseStatus_Admin_ReportsAllUsersScopeAndOwnShare()
+    {
+        await SeedBookAsync("own.pgn", 0, SamplePgn, null);                 // eigenes, lokal aufbereitbar
+        await SeedBookAsync("other.pgn", 0, SamplePgn, null, owner: 99);    // fremdes, lokal aufbereitbar
+        await SeedBookAsync("own-manual.pgn", 0, null, null);               // eigenes, nur Re-Import → zählt nicht
+
+        var status = await ReprocessTestHelper.Build(_db).GetCourseStatusAsync(UserId, isAdmin: true);
+        Assert.True(status.AllUsers);
+        Assert.Equal(2, status.ReprocessableLocally + status.Refetchable);
+        Assert.Equal(1, status.OwnActionable);
+    }
+
     private async Task<AppUser> UserAsync()
     {
         var user = new AppUser { Username = "u", PasswordHash = "h" };

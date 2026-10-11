@@ -5,7 +5,7 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
-import { DirectoryCalendarDay, DirectoryEntry } from './tournament-directory.model';
+import { DirectoryCalendarDay, DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
 
 interface CalendarCell {
   date: string;
@@ -123,6 +123,9 @@ export class TournamentCalendarComponent implements OnChanges {
 
   trackByDate = (_: number, cell: CalendarCell) => cell.date;
   trackById = (_: number, entry: DirectoryEntry) => entry.id;
+
+  /** Ort ist nur ein Platzhalter wie „various" (UI-Sweep 2026-10-11, r2-t-various). */
+  isVarious(entry: DirectoryEntry): boolean { return isPlaceholderLocation(entry.location); }
 
   private buildWeekdayLabels(): void {
     const formatter = new Intl.DateTimeFormat(this.locale, { weekday: 'short' });

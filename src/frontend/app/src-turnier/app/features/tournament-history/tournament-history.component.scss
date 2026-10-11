@@ -265,3 +265,12 @@ h3 {
 @media (max-width: 768px) {
   .track-add { min-height: 44px; }
 }
+
+/* Am Handy (UI-Sweep 2026-10-11, r2-t-history-tabs-mobile): „Spieler verfolgen" in eine eigene Zeile ueber den Reitern.
+   In derselben Zeile blieben fuer die Reiter ~170 px — nur „Nur ich" war zu sehen, daneben Blaetterpfeile, und dass es
+   einen zweiten Reiter gibt, sah man nicht. */
+@media (max-width: 600px) {
+  .whose { flex-wrap: wrap; }
+  .track-add { order: -1; margin-left: auto; }
+  .whose-tabs { flex: 1 1 100%; }
+}

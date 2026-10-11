@@ -106,7 +106,8 @@ describe('EndlessPlayComponent', () => {
 
     const head = (f.nativeElement as HTMLElement).querySelector('header.head')!;
     const score = head.querySelector<HTMLElement>('.score')!;
-    expect(score.textContent!.trim()).toBe('✅ 2');
+    expect(score.textContent!.trim()).toBe('✓ 2');
+    expect(score.classList).toContain('kid-counter');                // UI-Sweep 2026-10-11 (r2-k-counter): gemeinsame Pille
     expect(head.textContent).not.toContain('⭐');
     expect(score.getAttribute('aria-label')).toBe('kids.endless.result');
   });

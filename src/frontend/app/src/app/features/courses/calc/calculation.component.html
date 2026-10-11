@@ -80,7 +80,7 @@
     <!-- „Eingefroren" ist eine Eigenschaft des MODUS und ändert sich nie — als Dauertext war das
          Grundrauschen, als Symbol mit Erklärung sagt es dasselbe. -->
     <span class="calc-frozen" [matTooltip]="'calc.frozenHint' | translate">
-      <mat-icon>ac_unit</mat-icon>{{ 'calc.frozen' | translate }}
+      <mat-icon>ac_unit</mat-icon><span class="calc-frozen-text">{{ 'calc.frozen' | translate }}</span>
     </span>
     <button mat-icon-button [matTooltip]="'calc.flip' | translate" (click)="flipBoard()">
       <mat-icon>flip_camera_android</mat-icon>
@@ -103,12 +103,14 @@
     </button>
 
     <!-- Kapitelstand. Die Buchsumme ist interessant, aber nie dringend — sie steht im Tooltip. -->
+    <!-- UI-Sweep 2026-10-11 (r2-rp-calc-fullscreen): beschriftet („0 / 24 Punkte“) statt zweier nackter Brüche. -->
     <span class="calc-bar-points" [matTooltip]="pointsTooltip">
-      {{ scoreDisplay(totalPoints, totalMaxPoints) }}
+      {{ 'courses.calcPoints' | translate:{ score: scoreDisplay(totalPoints, totalMaxPoints) } }}
     </span>
 
-    <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. -->
-    <button mat-icon-button (click)="copyFen()" [matTooltip]="'calc.copyFen' | translate"
+    <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. Einspaltig steht der Knopf in der
+         Leiste unter dem Brett (r2-rp-calc-fullscreen), sonst stand er allein in einer eigenen Zeile. -->
+    <button mat-icon-button class="calc-copy-bar" (click)="copyFen()" [matTooltip]="'calc.copyFen' | translate"
             [attr.aria-label]="'calc.copyFen' | translate">
       <mat-icon>content_copy</mat-icon>
     </button>
@@ -164,7 +166,13 @@
            Der Vollbild-Knopf hatte vorher eine eigene Zeile ÜBER dem Brett und kostete Höhe —
            hier kostet er nur Breite, von der genug da ist. -->
       <div class="calc-rail">
-        <app-board-fullscreen-button [target]="fsTarget" />
+        <!-- UI-Sweep 2026-10-11 (r2-rp-calc-fullscreen): einspaltig zeigt das Brett seinen eigenen
+             Vollbild-Knopf (styles.scss blendet ihn erst ab 900px aus) — der hier wäre der zweite. -->
+        <app-board-fullscreen-button class="calc-rail-fs" [target]="fsTarget" />
+        <button mat-icon-button class="calc-rail-btn calc-rail-copy" (click)="copyFen()"
+                [matTooltip]="'calc.copyFen' | translate" [attr.aria-label]="'calc.copyFen' | translate">
+          <mat-icon>content_copy</mat-icon>
+        </button>
         <button mat-icon-button class="calc-rail-btn" (click)="openSettings()"
                 [matTooltip]="'calc.settings.title' | translate"
                 [attr.aria-label]="'calc.settings.title' | translate">

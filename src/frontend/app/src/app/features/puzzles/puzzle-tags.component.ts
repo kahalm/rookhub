@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PuzzleThemePipe } from './puzzle-theme.pipe';
 
 @Component({
   selector: 'app-puzzle-tags',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, PuzzleThemePipe],
   template: `
     @if (tagList.length) {
       <span class="puzzle-tags-toggle" role="button" tabindex="0" [attr.aria-expanded]="expanded"
@@ -17,7 +18,7 @@ import { TranslatePipe } from '@ngx-translate/core';
       @if (expanded) {
         <div class="puzzle-tags-chips">
           @for (t of tagList; track t) {
-            <span class="puzzle-tags-chip">{{ t }}</span>
+            <span class="puzzle-tags-chip">{{ t | puzzleTheme }}</span>
           }
         </div>
       }

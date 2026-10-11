@@ -74,7 +74,7 @@ interface ChapterGroup {
           <h1>{{ bookTitle || ('courses.browse.title' | translate) }}</h1>
           <p class="sub">
             {{ chapterName !== undefined ? (chapterDisplay || ('courses.browse.noChapter' | translate)) : ('courses.browse.allChapters' | translate) }}
-            <span class="dot">·</span>{{ 'courses.browse.lineCount' | translate:{ count: lines.length } }}
+            <span class="dot">·</span>{{ (lines.length === 1 ? 'courses.browse.lineCountOne' : 'courses.browse.lineCount') | translate:{ count: lines.length } }}
           </p>
         </div>
         <span class="head-spacer"></span>
@@ -127,7 +127,8 @@ interface ChapterGroup {
                       </span>
                     }
                     <span class="line-idx">{{ lineNumber(line) }}</span>
-                    <span class="line-label">{{ lineTitle(line) || line.round || ('courses.browse.line' | translate) }}</span>
+                    <!-- UI-Sweep 2026-10-11 (r2-rp-browse-list): zweizeilig statt abgeschnitten, voller Titel im title. -->
+                    <span class="line-label" [attr.title]="lineTitle(line) || line.round || null">{{ lineTitle(line) || line.round || ('courses.browse.line' | translate) }}</span>
                     @if (line.isInfoOnly) {
                       <mat-icon class="info-badge" [matTooltip]="'courses.browse.infoLine' | translate">menu_book</mat-icon>
                     }
@@ -246,8 +247,10 @@ interface ChapterGroup {
     .empty-hint, .select-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
 
     .browse-body { display: flex; gap: 16px; align-items: flex-start; }
+    /* UI-Sweep 2026-10-11 (r2-rp-browse-list): Liste breiter (Titel wie „PATTERN 1 (#1) Increasing Pawn Power"
+       waren sonst nicht unterscheidbar), die Lücke zum Brett schrumpft dafür. */
     .line-list {
-      flex: 0 0 300px; max-height: calc(100vh - 160px); overflow-y: auto;
+      flex: 0 0 clamp(300px, 34vw, 460px); max-height: calc(100vh - 160px); overflow-y: auto;
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 8px; padding: 4px;
     }
     .chapter-head {
@@ -270,11 +273,15 @@ interface ChapterGroup {
     .status-icon.status-solved mat-icon { color: #2e7d32; }
     .status-icon.status-failed mat-icon { color: color-mix(in srgb, #c62828 80%, currentColor); }
     .line-idx { font-variant-numeric: tabular-nums; opacity: 0.55; min-width: 22px; text-align: right; }
-    .line-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .line-label { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; line-height: 1.3; }
     .info-badge { font-size: 16px; width: 16px; height: 16px; opacity: 0.6; }
     .line-actions { display: flex; align-items: center; flex: none; padding-right: 2px; }
+    /* Herz/Teilen sitzen auf der Textzeile: ohne padding 0 rechnete der Icon-Knopf sein Polster für 40 px
+       und schob das Symbol in der 30-px-Box nach unten (r2-rp-browse-list). */
     .line-action {
-      width: 30px; height: 30px; line-height: 30px;
+      width: 30px; height: 30px; line-height: 30px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
       --mdc-icon-button-state-layer-size: 30px; --mdc-icon-button-icon-size: 17px;
       opacity: 0.5;
     }

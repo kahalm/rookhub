@@ -41,6 +41,20 @@ describe('ReprocessBannerComponent', () => {
     expect(c.actionableCount).toBe(36);
   });
 
+  // UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Einzahl/Mehrzahl und Admin-Umfang im Bannertext.
+  it('wählt den Bannertext nach Anzahl und Umfang (eigene vs. alle Nutzer)', () => {
+    const c = createComponent();
+    const base = { currentVersion: 2, total: 13, stale: 13, refetchable: 0, needsReimport: 0 };
+    c.status = { ...base, reprocessableLocally: 1 };
+    expect(c.textKey).toBe('reprocess.availableOne.courses');
+    c.status = { ...base, reprocessableLocally: 13 };
+    expect(c.textKey).toBe('reprocess.available.courses');
+    c.status = { ...base, reprocessableLocally: 13, allUsers: true, ownActionable: 1 };
+    expect(c.textKey).toBe('reprocess.availableAll.courses');
+    c.status = { ...base, reprocessableLocally: 1, allUsers: true, ownActionable: 0 };
+    expect(c.textKey).toBe('reprocess.availableAllOne.courses');
+  });
+
   it('Zählungen = 0 ohne Status', () => {
     const c = createComponent();
     expect(c.allCount).toBe(0);

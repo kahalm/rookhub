@@ -303,8 +303,15 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .head h1 { margin: 0; font-size: 1.4rem; }
     .spacer { flex: 1; }
     /* Kopfdaten: kompakt, am PC in EINER Zeile (vorher zwei, die den Arbeitsbereich unter den Rand schoben). */
-    .headers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; padding: 10px 12px; align-items: start;
+    /* UI-Sweep 2026-10-11 (r2-rg-edit-fields): auto-FIT statt auto-fill — die Felder teilen sich die ganze Kartenbreite,
+       statt bei 150 px stehen zu bleiben (Namen und „nicht festgelegt" wurden abgeschnitten, rechts war die Zeile leer). */
+    .headers { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px 12px; padding: 10px 12px; align-items: start;
       margin-bottom: 12px; --mat-form-field-container-height: 44px; --mat-form-field-container-vertical-padding: 10px; }
+    /* PC: EINE Zeile mit Gewichten — Namen breit, Ergebnis/Runde schmal, „Meine Seite" so breit, dass „nicht festgelegt" passt. */
+    @media (min-width: 1101px) {
+      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(90px, 0.8fr) minmax(0, 1.6fr) minmax(0, 1.4fr)
+        minmax(80px, 0.7fr) minmax(150px, 1fr) minmax(180px, 1.2fr); }
+    }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
     .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }
     .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -317,6 +324,8 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .class-row .tag-chips { grid-column: 1 / -1; }
     .class-hint { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     @media (max-width: 720px) { .class-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .class-row .tags-input { grid-column: 1 / -1; } }
+    /* UI-Sweep 2026-10-11 (r2-rg-edit-fields): am schmalen Handy passt „Modus / Jahrgang" nicht in die halbe Breite. */
+    @media (max-width: 420px) { .class-row { grid-template-columns: minmax(0, 1fr); } }
     .tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 14px; font-size: 0.85rem;
       background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
@@ -363,9 +372,12 @@ import { SanPipe } from '../../shared/chess/san.pipe';
     .comment { width: 100%; }
     .tip { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; }
     .moves-card { padding: 12px; }
-    .moves { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr); gap: 2px 4px; max-height: 70vh; overflow-y: auto; }
+    /* UI-Sweep 2026-10-11 (r2-rg-edit-moves): Spalten wie die Zugliste der Partieseite (Nr. schmal, Züge je ~90 px) statt je
+       halber Kartenbreite; Textschrift mit Tabellenziffern statt Monospace — der Rahmen liegt nur noch um den Zug. */
+    .moves { display: grid; grid-template-columns: 32px 90px 90px; justify-content: start; align-content: start; gap: 2px 4px;
+      max-height: 70vh; overflow-y: auto; font-size: 14px; font-variant-numeric: tabular-nums; }
     .no { text-align: right; padding-right: 4px; color: color-mix(in srgb, currentColor 55%, transparent); align-self: center; font-size: 0.85rem; }
-    .ply { font: inherit; font-family: monospace; text-align: left; padding: 3px 6px; border-radius: 4px; cursor: pointer;
+    .ply { font: inherit; font-weight: 500; text-align: left; padding: 3px 8px; border-radius: 4px; cursor: pointer;
       border: 1px solid transparent; background: transparent; color: inherit; }
     .ply:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
     .ply.uncertain { border-color: #ef6c00; background: color-mix(in srgb, #ef6c00 12%, transparent); }

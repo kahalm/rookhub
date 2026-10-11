@@ -318,6 +318,12 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     return formatScore(d.calcPoints, d.calcMaxPoints ?? maxPoints(d.puzzleCount));
   }
 
+  /** UI-Sweep 2026-10-11 (r2-rp-sourcefile): stammt der Kurs von Chessable? Erkannt am Dateinamen
+   *  (`chessable-u…`, RepCheck-Importe `…_firstkey.pgn`) bzw. an den Tags — für die Zeile „Quelle". */
+  isChessableSource(d: CourseDetail): boolean {
+    return /chessable|_firstkey\.pgn$/i.test(d.fileName) || /chessable/i.test(d.tags ?? '');
+  }
+
   // ===== Starten ============================================================
 
   /** Wohin der Start-Knopf führt: Kalkulationsbuch → Kalkulations-Modus, sonst der letzte Modus. */
@@ -449,7 +455,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
       this.subs.add(this.courses.deleteChapter(this.bookId, chapter.name).subscribe({
         next: res => {
           this.busy = false;
-          this.snackbar.quick(this.translate.instant('courses.detail.chapterDeleted', { count: res.deleted }));
+          this.snackbar.quick(this.translate.instant(res.deleted === 1 ? 'courses.detail.chapterDeletedOne' : 'courses.detail.chapterDeleted', { count: res.deleted }));
           this.linesByChapter = {};
           this.expanded = {};
           this.load();
@@ -484,7 +490,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
       this.subs.add(this.courses.resetChapter(this.bookId, chapter.name).subscribe({
         next: res => {
           this.busy = false;
-          this.snackbar.quick(this.translate.instant('courses.detail.chapterReset', { count: res.cleared }));
+          this.snackbar.quick(this.translate.instant(res.cleared === 1 ? 'courses.detail.chapterResetOne' : 'courses.detail.chapterReset', { count: res.cleared }));
           this.load();
         },
         error: () => { this.busy = false; this.fail('courses.detail.resetChapterFailed'); },

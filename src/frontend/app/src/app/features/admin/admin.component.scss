@@ -10,6 +10,20 @@
     .no-groups { color: color-mix(in srgb, currentColor 40%, transparent); }
     .table-responsive { overflow-x: auto; }
     .users-table { min-width: 640px; }
+    /* UI-Sweep 2026-10-11 (r2-rk-admin-users-mobile): Kartenliste nur am Handy. */
+    .user-cards { display: none; }
+    @media (max-width: 599.98px) {
+      .users-table-wrap { display: none; }
+      .user-cards { display: flex; flex-direction: column; gap: 8px; }
+    }
+    .user-card { border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 8px; padding: 8px 4px 2px 12px; }
+    .uc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-right: 8px; }
+    .uc-name { min-width: 0; overflow-wrap: anywhere; }
+    .uc-meta { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.8rem; white-space: nowrap; }
+    .uc-mail { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.8rem; overflow-wrap: anywhere; }
+    .uc-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .uc-group { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .uc-spacer { flex: 1; }
     .books-table { min-width: 880px; }
 
     .book-upload {

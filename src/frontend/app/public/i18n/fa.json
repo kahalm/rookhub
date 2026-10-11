@@ -312,6 +312,7 @@
       "title": "رپرتوارهای من",
       "new": "رپرتوار جدید",
       "fileCount": "{{count}} فایل",
+      "fileCountOne": "{{count}} فایل",
       "public": "عمومی",
       "private": "خصوصی",
       "noDescription": "بدون توضیحات",
@@ -522,7 +523,7 @@
     "title": "دوره‌ها",
     "intro": "کتاب وارد شده را تاکتیک به تاکتیک کار کنید — به‌ترتیب یا تصادفی. پیشرفت شما ذخیره می‌شود.",
     "emptyHint": "هنوز کتابی وارد نشده است. کتاب‌ها را در بخش مدیریت زیر «کتاب‌ها» وارد کنید.",
-    "sectionPublic": "دوره‌های عمومی",
+    "sectionPublic": "دوره‌های در دسترس",
     "sectionPublicHint": "دوره‌هایی که از طریق گروه‌های شما با شما به اشتراک گذاشته شده‌اند.",
     "sectionOwn": "دوره‌های شما",
     "sectionOwnHint": "دوره‌هایی که خودتان وارد یا ایجاد کرده‌اید.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "در حال انجام",
-    "sectionInProgressHint": "دوره‌هایی که شروع کرده‌ای و هنوز تمام نکرده‌ای."
+    "sectionInProgressHint": "دوره‌هایی که شروع کرده‌ای و هنوز تمام نکرده‌ای.",
+    "origin": {
+      "chessable": "وارد شده از Chessable",
+      "pgn": "وارد شده از PGN",
+      "by": "از {{name}}"
+    },
+    "reimport": {
+      "chip": "دریافت دوباره",
+      "legend": "{{count}} دوره نیاز به وارد کردن دوباره با RepCheck دارند",
+      "legendOne": "۱ دوره نیاز به وارد کردن دوباره با RepCheck دارد",
+      "more": "بیشتر",
+      "less": "کمتر"
+    }
   },
   "weekly": {
     "title": "هفتگی",
@@ -635,6 +648,7 @@
       "settings": "تنظیمات",
       "highscore": "بهترین رکورد: رتبه {{rating}}",
       "sessionsPlayed": "{{count}} جلسه بازی شده",
+      "sessionsPlayedOne": "{{count}} جلسه بازی شده",
       "viewHistory": "مشاهده تاریخچه",
       "unfinishedRun": "بازی ناتمام: سطح {{level}} | {{solved}} حل‌شده | {{lives}} زندگی | {{max}} حداکثر",
       "continue": "ادامه",
@@ -936,7 +950,10 @@
     "byTheme": "بر اساس موضوع",
     "byRating": "بر اساس رتبه (حل‌شده)",
     "byRatingHint": "تاکتیک‌های حل‌شده در هر بازه رتبه — برای دقت نگه دارید.",
-    "activity": "فعالیت"
+    "activity": "فعالیت",
+    "levelEmpty": "سطح {{level}} هنوز تلاشی ندارد",
+    "levelOther": "سطح {{level}}: {{count}} تلاش",
+    "levelOtherOne": "سطح {{level}}: ۱ تلاش"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "روز",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "روز در هفته",
     "weekProgress": "{{done}} از {{target}} روز این هفته",
     "fromGroup": "پیش‌فرض از گروه شما «{{group}}». می‌توانید آن را برای خود تنظیم کنید.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "هدف روزانه محقق شد",
+    "weeklyPlay": "هدف هفتگی: بازی",
+    "stillOpen": "هنوز باز"
   },
   "chessable": {
     "testing": "Testing…",

@@ -104,11 +104,13 @@ describe('LeagueHubAppComponent Umschalter zwischen Vereinen', () => {
     return fixture;
   }
 
-  it('ein Verein: kein Umschalter; die Zeile nennt die Tiroler Liga', async () => {
+  // UI-Sweep 2026-10-11 (r2-l-subtitle): die Zeile ist für alle Vereine dieselbe, allgemeine
+  it('ein Verein: kein Umschalter; die Zeile spricht allgemein von Mannschaftskämpfen', async () => {
     const f = await create([TEST_CLUB]);
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelector('.club-switch')).toBeNull();
-    expect(el.querySelector('.lede')!.textContent).toContain('Tiroler Mannschaftsmeisterschaft');
+    expect(el.querySelector('.lede')!.textContent).toContain('Aufstellungs-Prognosen für eure Mannschaftskämpfe');
+    expect(el.querySelector('.lede')!.textContent).not.toContain('Tirol');
   });
 
   it('zwei Vereine: Umschalter; Wechsel merkt den Verein und lädt neu', async () => {
@@ -123,7 +125,7 @@ describe('LeagueHubAppComponent Umschalter zwischen Vereinen', () => {
     expect(reload).toHaveBeenCalled();
     expect(TestBed.inject(ClubContextService).current()?.id).toBe(2);
     f.detectChanges();
-    expect(el.querySelector('.lede')!.textContent).toContain('bayerischen Mannschaftsligen');
+    expect(el.querySelector('.lede')!.textContent).toContain('eure Mannschaftskämpfe');
   });
 });
 

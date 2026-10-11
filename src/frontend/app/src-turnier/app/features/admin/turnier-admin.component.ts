@@ -108,6 +108,9 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
   `,
   styles: [`
     .ta-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
+    /* Dieselbe Seitenueberschrift wie Profil, Meine Turniere und Kalender (1,4 rem) — als nacktes h1 war sie
+       mit ~32 px deutlich groesser und die Seite wirkte wie aus einer anderen App (UI-Sweep 2026-10-11, r2-t-admin-title). */
+    h1 { font-size: 1.4rem; margin: 0 0 0.75rem; }
     .ta-card { margin-top: 12px; padding: 16px; }
     .ta-search { width: 100%; max-width: 420px; }
     .ta-users { list-style: none; margin: 0; padding: 0; }

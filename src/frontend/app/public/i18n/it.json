@@ -312,6 +312,7 @@
       "title": "I miei repertori",
       "new": "Nuovo repertorio",
       "fileCount": "{{count}} file",
+      "fileCountOne": "{{count}} file",
       "public": "Pubblico",
       "private": "Privato",
       "noDescription": "Nessuna descrizione",
@@ -522,7 +523,7 @@
     "title": "Corsi",
     "intro": "Affronta un libro importato puzzle per puzzle — in sequenza o casualmente. Il tuo progresso viene salvato.",
     "emptyHint": "Nessun libro importato. Importa libri nell'area admin sotto \"Libri\".",
-    "sectionPublic": "Corsi pubblici",
+    "sectionPublic": "Corsi disponibili",
     "sectionPublicHint": "Corsi condivisi con te tramite i tuoi gruppi.",
     "sectionOwn": "I tuoi corsi",
     "sectionOwnHint": "Corsi che hai importato o creato tu stesso.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "In corso",
-    "sectionInProgressHint": "Corsi che hai iniziato e non ancora finito."
+    "sectionInProgressHint": "Corsi che hai iniziato e non ancora finito.",
+    "origin": {
+      "chessable": "Import da Chessable",
+      "pgn": "Import PGN",
+      "by": "di {{name}}"
+    },
+    "reimport": {
+      "chip": "Da reimportare",
+      "legend": "{{count}} corsi vanno reimportati con RepCheck",
+      "legendOne": "1 corso va reimportato con RepCheck",
+      "more": "Altro",
+      "less": "Meno"
+    }
   },
   "weekly": {
     "title": "Settimanale",
@@ -635,6 +648,7 @@
       "settings": "Impostazioni",
       "highscore": "Record: {{rating}} di valutazione",
       "sessionsPlayed": "{{count}} sessioni giocate",
+      "sessionsPlayedOne": "{{count}} sessioni giocate",
       "viewHistory": "Vedi cronologia",
       "unfinishedRun": "Sessione in corso: Lv {{level}} | {{solved}} risolti | {{lives}} vite | {{max}} max",
       "continue": "Continua",
@@ -936,7 +950,10 @@
     "byTheme": "Per tema",
     "byRating": "Per valutazione (risolti)",
     "byRatingHint": "Puzzle risolti per fascia di valutazione — passa il mouse per la precisione.",
-    "activity": "Attività"
+    "activity": "Attività",
+    "levelEmpty": "Il livello {{level}} non ha ancora tentativi",
+    "levelOther": "Livello {{level}}: {{count}} tentativi",
+    "levelOtherOne": "Livello {{level}}: 1 tentativo"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "g",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Giorni a settimana",
     "weekProgress": "{{done}} di {{target}} giorni questa settimana",
     "fromGroup": "Preset dal tuo gruppo \"{{group}}\". Puoi modificarlo per te stesso.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Obiettivo giornaliero raggiunto",
+    "weeklyPlay": "Obiettivo settimanale: gioco",
+    "stillOpen": "ancora aperto"
   },
   "chessable": {
     "testing": "Testing…",

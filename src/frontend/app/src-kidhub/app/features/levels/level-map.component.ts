@@ -8,7 +8,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { themeIcon, themeNameKey } from '../../core/kids-themes';
-import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_PAGE_WIDTH } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /** So lange wackelt eine gesperrte Stufe nach dem Tippen und steht der Hinweis da. */
@@ -30,7 +30,8 @@ export const SCROLL_FROM_LEVEL = 5;
     <header class="head">
       <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
       <h1>{{ 'kids.levels.title' | translate }}</h1>
-      <span class="stars">⭐ {{ progress.totalStars() }}</span>
+      <!-- UI-Sweep 2026-10-11 (r2-k-counter): gemeinsame Zähler-Pille -->
+      <span class="stars kid-counter">★ {{ progress.totalStars() }}</span>
     </header>
 
     @if (loading()) {
@@ -82,11 +83,10 @@ export const SCROLL_FROM_LEVEL = 5;
       @if (nudged() !== null) { <p class="toast">🔒 {{ 'kids.levels.lockedHint' | translate }}</p> }
     </div>
   `,
-  styles: [KID_BACK, `
+  styles: [KID_BACK, KID_COUNTER, `
     :host { display: block; max-width: ${KID_PAGE_WIDTH.map}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
-    .stars { font-size: 1.15rem; font-weight: 800; text-decoration: none; color: inherit; white-space: nowrap; }
     .info { text-align: center; font-size: 1.2rem; }
     .grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px;
             grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }

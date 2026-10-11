@@ -91,7 +91,13 @@
               <dd>{{ d.lastActivityAt | date:'short' }}</dd>
             </div>
           }
-          <div><dt>{{ 'courses.detail.file' | translate }}</dt><dd class="mono">{{ d.fileName }}</dd></div>
+          <!-- UI-Sweep 2026-10-11 (r2-rp-sourcefile): der interne Dateiname (mit Konto-Id) nur für Besitzer/Admin;
+               Lernende sehen höchstens die Quelle. -->
+          @if (d.canManage) {
+            <div><dt>{{ 'courses.detail.file' | translate }}</dt><dd class="mono">{{ d.fileName }}</dd></div>
+          } @else if (isChessableSource(d)) {
+            <div><dt>{{ 'courses.detail.source' | translate }}</dt><dd>Chessable</dd></div>
+          }
         </dl>
 
         <div class="actions">
@@ -99,14 +105,13 @@
             <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
           </button>
           @if (!d.isCalculation) {
+            <!-- UI-Sweep 2026-10-11 (r2-rp-chapter-mobile): am Handy die Kurzform, damit ⋮ in dieser Zeile bleibt. -->
             <button mat-stroked-button [routerLink]="['/courses', bookId, 'browse']" [disabled]="d.totalLines === 0">
-              <mat-icon>auto_stories</mat-icon>{{ 'courses.browseTooltip' | translate }}
+              <mat-icon>auto_stories</mat-icon><span class="label-long">{{ 'courses.browseTooltip' | translate }}</span><span class="label-short">{{ 'courses.browse.title' | translate }}</span>
             </button>
           }
           @if (d.canManage) {
-            <button mat-stroked-button (click)="addChapter()" [disabled]="busy">
-              <mat-icon>create_new_folder</mat-icon>{{ 'courses.detail.addChapter' | translate }}
-            </button>
+            <!-- UI-Sweep 2026-10-11 (r2-rp-dup-chapterbtn): „Kapitel hinzufügen" steht nur noch im Kopf der Kapitelliste. -->
             <!-- Der Kalkulations-Modus wird hier vom Kurs-Verwalter geschaltet (nicht im Admin-Bereich). -->
             <mat-slide-toggle class="calc-toggle" [checked]="d.isCalculation" [disabled]="busy"
                               (change)="setCalculation($event.checked, $event.source)"
@@ -202,7 +207,7 @@
                   } @else {
                     <span class="chapter-name" [class.chapter-name--none]="!ch.name">{{ chapterLabel(ch) }}</span>
                     <span class="chapter-counts">
-                      {{ 'courses.detail.lineCount' | translate:{ count: ch.lineCount } }}
+                      {{ (ch.lineCount === 1 ? 'courses.detail.lineCountOne' : 'courses.detail.lineCount') | translate:{ count: ch.lineCount } }}
                       @if (ch.quizCount > 0 && ch.quizCount !== ch.lineCount) {
                         <span class="quiz-count">· {{ 'courses.detail.quizCount' | translate:{ count: ch.quizCount } }}</span>
                       }

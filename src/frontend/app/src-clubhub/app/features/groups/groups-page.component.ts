@@ -5,6 +5,7 @@ import { hasClubAccess, isClubManager } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { GroupInput, GroupRow } from '../../core/club.models';
 import { WEEKDAYS, shortDate, weekdayName } from '../../core/club-format';
+import { ClubGateComponent } from '../../shared/club-gate.component';
 
 /** „Freitag, 17:00 Vereinsheim" — Trainingstag und freier Text, was davon da ist. */
 export function scheduleText(g: Pick<GroupRow, 'weekday' | 'schedule'>): string {
@@ -19,10 +20,11 @@ export function scheduleText(g: Pick<GroupRow, 'weekday' | 'schedule'>): string 
   selector: 'ch-groups-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, ClubGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate"><h1>Nicht freigeschaltet</h1><p>Die Gruppen sehen die Trainer und die Leitung des Vereins.</p></section>
+      <!-- UI-Sweep 2026-10-11 (r2-c-gate-deadend): gemeinsame Sperrkarte mit Weg zur Startseite -->
+      <ch-gate area="Die Gruppen sehen nur Trainer und die Vereinsleitung." />
     } @else {
       <div class="page-head">
         <h1>Gruppen</h1>

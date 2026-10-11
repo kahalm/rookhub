@@ -312,6 +312,7 @@
       "title": "Repertuarlarım",
       "new": "Yeni Repertuar",
       "fileCount": "{{count}} dosya",
+      "fileCountOne": "{{count}} dosya",
       "public": "Herkese açık",
       "private": "Gizli",
       "noDescription": "Açıklama yok",
@@ -522,7 +523,7 @@
     "title": "Kurslar",
     "intro": "İçe aktarılan bir kitabı sıralı veya rastgele olarak problem problem çalışın. İlerlemeniz kaydedilir.",
     "emptyHint": "Henüz kitap içe aktarılmamış. Yönetici alanında \"Kitaplar\" bölümünden kitap içe aktarın.",
-    "sectionPublic": "Herkese açık kurslar",
+    "sectionPublic": "Erişilebilir kurslar",
     "sectionPublicHint": "Gruplarınız aracılığıyla sizinle paylaşılan kurslar.",
     "sectionOwn": "Kurslarınız",
     "sectionOwnHint": "Kendiniz içe aktardığınız veya oluşturduğunuz kurslar.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Devam eden",
-    "sectionInProgressHint": "Başladığın ve henüz bitirmediğin kurslar."
+    "sectionInProgressHint": "Başladığın ve henüz bitirmediğin kurslar.",
+    "origin": {
+      "chessable": "Chessable içe aktarımı",
+      "pgn": "PGN içe aktarımı",
+      "by": "{{name}} tarafından"
+    },
+    "reimport": {
+      "chip": "Yeniden al",
+      "legend": "{{count}} kursun RepCheck ile yeniden içe aktarılması gerekiyor",
+      "legendOne": "1 kursun RepCheck ile yeniden içe aktarılması gerekiyor",
+      "more": "Daha fazla",
+      "less": "Daha az"
+    }
   },
   "weekly": {
     "title": "Haftalık",
@@ -635,6 +648,7 @@
       "settings": "Ayarlar",
       "highscore": "En Yüksek Skor: {{rating}} Derece",
       "sessionsPlayed": "{{count}} oturum oynandı",
+      "sessionsPlayedOne": "{{count}} oturum oynandı",
       "viewHistory": "Geçmişi Gör",
       "unfinishedRun": "Tamamlanmamış tur: Sv. {{level}} | {{solved}} çözüldü | {{lives}} can | {{max}} maks.",
       "continue": "Devam Et",
@@ -936,7 +950,10 @@
     "byTheme": "Temaya göre",
     "byRating": "Dereceye göre (çözülenler)",
     "byRatingHint": "Derece bandına göre çözülen problemler — isabeti görmek için üzerine gelin.",
-    "activity": "Aktivite"
+    "activity": "Aktivite",
+    "levelEmpty": "Seviye {{level}} için henüz deneme yok",
+    "levelOther": "Seviye {{level}}: {{count}} deneme",
+    "levelOtherOne": "Seviye {{level}}: 1 deneme"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "g",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Haftada gün sayısı",
     "weekProgress": "Bu hafta {{target}} günden {{done}} günü tamamlandı",
     "fromGroup": "\"{{group}}\" grubunuzdan şablon. Kendiniz için ayarlayabilirsiniz.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Günlük hedefe ulaşıldı",
+    "weeklyPlay": "Haftalık hedef: oynama",
+    "stillOpen": "henüz açık"
   },
   "chessable": {
     "testing": "Testing…",

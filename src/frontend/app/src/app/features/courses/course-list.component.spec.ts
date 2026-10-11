@@ -101,6 +101,36 @@ describe('CourseListComponent sorting', () => {
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([2, 3, 1]);
     });
 
+    // UI-Sweep 2026-10-11 (r2-rp-course-dupes)
+    it('ein Kurs „In Arbeit" steht nicht noch einmal in seiner normalen Sektion', () => {
+      const courseService = { getCourses: () => of([
+        item2({ bookId: 1, solvedCount: 3 }),                  // in Arbeit, öffentlich
+        item2({ bookId: 2, solvedCount: 0 }),                  // öffentlich
+        item2({ bookId: 3, solvedCount: 2, isOwned: true }),   // in Arbeit, eigen
+      ]) } as any;
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
+      comp.loadCourses();
+      expect(comp.inProgressCourses.map(c => c.bookId).sort()).toEqual([1, 3]);
+      expect(comp.publicCourses.map(c => c.bookId)).toEqual([2]);
+      expect(comp.ownCourses.length).toBe(0);
+    });
+
+    it('gleichnamige Kurse bekommen eine Herkunft, eindeutige nicht; zählt „Neu holen"', () => {
+      const courseService = { getCourses: () => of([
+        item2({ bookId: 1, displayName: 'Basic Endgames', isChessableImport: true, needsReimport: true }),
+        item2({ bookId: 2, displayName: 'basic endgames ', ownerUsername: 'admin' }),
+        item2({ bookId: 3, displayName: 'Unique' }),
+      ]) } as any;
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: true } as any, {} as any, courseLang(), {} as any);
+      comp.loadCourses();
+      const [a, b, c] = [1, 2, 3].map(id => comp.courses.find(x => x.bookId === id)!);
+      expect(comp.originOf(a)).toEqual({ chessable: true, owner: null });
+      expect(comp.originOf(b)).toEqual({ chessable: false, owner: 'admin' });
+      expect(comp.originOf(a)).toBe(comp.originOf(a));   // stabiles Objekt für die Karte
+      expect(comp.originOf(c)).toBeNull();
+      expect(comp.reimportCount).toBe(1);
+    });
+
     it('verschwindet nach Reset (solvedCount=0, lastActivityAt bleibt gesetzt)', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),

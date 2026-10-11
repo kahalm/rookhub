@@ -20,7 +20,7 @@ const snackbar = { warn: jasmine.createSpy('warn') };
 const translate = { instant: (k: string) => k };
 function newComp(svc: any): MessagesComponent {
   snackbar.warn.calls.reset();
-  return new MessagesComponent(svc, snackbar as any, translate as any);
+  return new MessagesComponent(svc, snackbar as any, translate as any, { isAdmin: false } as any);
 }
 
 describe('MessagesComponent', () => {
@@ -135,5 +135,11 @@ describe('MessagesComponent', () => {
     c.sending = true;
     c.onWindowFocus();
     expect(svc.getThread).toHaveBeenCalledTimes(1);   // kein zusätzliches Laden
+  });
+
+  // UI-Sweep 2026-10-11 (r2-rk-admin-own-inbox)
+  it('isAdmin follows the auth service', () => {
+    const c = new MessagesComponent(makeService(), snackbar as any, translate as any, { isAdmin: true } as any);
+    expect(c.isAdmin).toBeTrue();
   });
 });

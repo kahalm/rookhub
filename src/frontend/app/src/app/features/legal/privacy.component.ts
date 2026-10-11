@@ -50,6 +50,9 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
             <p>{{ 'legal.privacy.introLeagueHub' | translate }}</p>
           } @else if (kind === 'clubhub') {
             <p>{{ 'legal.privacy.introClubHub' | translate }}</p>
+          } @else if (kind === 'turnier') {
+            <!-- UI-Sweep 2026-10-11 (r2-t-privacy-intro): die Turnierseite begann mit RookHubs Trainingsplattform. -->
+            <p>{{ 'legal.privacy.introTurnier' | translate }}</p>
           } @else {
             <p>{{ 'legal.privacy.intro' | translate }}</p>
           }
@@ -60,6 +63,16 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
                der fruehere Verweis „der im Impressum genannte Betreiber" fuehrte ins Leere, dort steht nur der Kontakt. -->
           <p>{{ 'legal.privacy.controllerNamed' | translate }}<br>
             <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
+
+          @if (kind === 'turnier') {
+            <!-- Auf der Turnierseite gleich nach dem Verantwortlichen: das ist, was sie verarbeitet (r2-t-privacy-intro). -->
+            <h2 id="privacy-tournament" tabindex="-1">{{ 'legal.privacy.tournamentTitle' | translate }}</h2>
+            <p>{{ 'legal.privacy.tournamentIntro' | translate }}</p>
+            <ul>
+              <li>{{ 'legal.privacy.tournamentData' | translate }}</li>
+              <li>{{ 'legal.privacy.tournamentRetention' | translate }}</li>
+            </ul>
+          }
 
           @if (kind === 'clubhub') {
             <!-- ClubHub: die Kartei der Kinder und Jugendlichen (UI-Sweep 2026-10-10, x-privacy-intro) — Inhalt nach dem
@@ -147,12 +160,14 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
                cb8f041, W4s-B23) — CrawlJobs 30 Tage nach Abschluss, PlayerClubs 180 Tage ohne Auffrischung; Turniere und
                Spieler bleiben, weil RookHub per CrawlerTournamentId auf sie verweist. ENTWURF (Betreiber): Rechtsgrundlage
                und Widerspruch fuer Spieler ohne Konto (Art. 14 DSGVO) und eine Frist fuer Turniere/Spieler festlegen. -->
-          <h2 id="privacy-tournament" tabindex="-1">{{ 'legal.privacy.tournamentTitle' | translate }}</h2>
-          <p>{{ 'legal.privacy.tournamentIntro' | translate }}</p>
-          <ul>
-            <li>{{ 'legal.privacy.tournamentData' | translate }}</li>
-            <li>{{ 'legal.privacy.tournamentRetention' | translate }}</li>
-          </ul>
+          @if (kind !== 'turnier') {
+            <h2 id="privacy-tournament" tabindex="-1">{{ 'legal.privacy.tournamentTitle' | translate }}</h2>
+            <p>{{ 'legal.privacy.tournamentIntro' | translate }}</p>
+            <ul>
+              <li>{{ 'legal.privacy.tournamentData' | translate }}</li>
+              <li>{{ 'legal.privacy.tournamentRetention' | translate }}</li>
+            </ul>
+          }
 
           <h2 id="privacy-storage" tabindex="-1">{{ 'legal.privacy.storageTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.storage' | translate }}</p>
@@ -189,7 +204,9 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
     .toc { margin: 0.25rem 0 0.5rem; }
     .toc-title { margin: 0; font-weight: bold; }
     .toc ul { margin: 0.25rem 0 0; padding-left: 1.25rem; }
-    .toc a { display: inline-block; padding: 4px 0; }
+    /* UI-Sweep 2026-10-11 (r2-c-privacy-toc-bullet): block statt inline-block — sonst sitzt der Listenpunkt bei einem
+       umbrechenden Eintrag vor der LETZTEN Zeile (Grundlinie des Inline-Blocks). */
+    .toc a { display: block; padding: 4px 0; }
     @media (pointer: coarse) { .toc a { padding: 10px 0; } }
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
@@ -209,6 +226,7 @@ export class PrivacyComponent {
   readonly toc: readonly { id: string; title: string }[] = [
     ...(this.kind === 'kidhub' ? [{ id: 'privacy-kid', title: 'legal.privacy.kidTitle' }] : []),
     { id: 'privacy-controller', title: 'legal.privacy.controllerTitle' },
+    ...(this.kind === 'turnier' ? [{ id: 'privacy-tournament', title: 'legal.privacy.tournamentTitle' }] : []),
     ...(this.kind === 'clubhub' ? [{ id: 'privacy-club', title: 'legal.privacy.clubTitle' }] : []),
     ...(this.kind === 'leaguehub' ? [{ id: 'privacy-league', title: 'legal.privacy.leagueTitle' }] : []),
     { id: 'privacy-data', title: 'legal.privacy.dataTitle' },
@@ -216,7 +234,7 @@ export class PrivacyComponent {
     { id: 'privacy-third', title: 'legal.privacy.thirdTitle' },
     { id: 'privacy-ai', title: 'legal.privacy.aiTitle' },
     { id: 'privacy-bot', title: 'legal.privacy.botTitle' },
-    { id: 'privacy-tournament', title: 'legal.privacy.tournamentTitle' },
+    ...(this.kind !== 'turnier' ? [{ id: 'privacy-tournament', title: 'legal.privacy.tournamentTitle' }] : []),
     { id: 'privacy-storage', title: 'legal.privacy.storageTitle' },
     { id: 'privacy-retention', title: 'legal.privacy.retentionTitle' },
     { id: 'privacy-rights', title: 'legal.privacy.rightsTitle' },

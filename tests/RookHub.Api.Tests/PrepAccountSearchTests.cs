@@ -232,7 +232,7 @@ public class PrepAccountSearchTests : IDisposable
         var prof = new LeagueAccountFinder.Profile("lichess", "OlaHansen", "u", "Ola Hansen", "NO", null, null, null, null, false);
         var v = LeagueAccountFinder.Judge(p, prof, derived: true, fideFed: "NOR");
         Assert.NotNull(v);
-        Assert.Contains("Land NO", v!.Evidence);
+        Assert.Contains("Land Norwegen", v!.Evidence);   // UI-Sweep 2026-10-11 (r2-l-land-codes)
         Assert.Null(LeagueAccountFinder.Judge(p, prof with { Flag = "SE" }, derived: true, fideFed: "NOR"));   // fremdes Land: nein
     }
 

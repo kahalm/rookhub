@@ -101,6 +101,34 @@ describe('KidsHomeComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('.tile.puzzles .meta')!.textContent).toContain('3 of 3 levels');
   }));
 
+  /** UI-Sweep 2026-10-11 (r2-k-course-tile): die Kurs-Kachel nennt den Stand wie die Puzzles-Kachel. */
+  it('ein Kurs: „Titel · 8 von 287" mit Balken; mehrere: wie viele angefangen sind', fakeAsync(() => {
+    const progress = TestBed.inject(KidsProgressStore);
+    for (let id = 1; id <= 8; id++) progress.recordCourseSolved(5, id);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { kids: { home: {
+      courseProgress: '{{title}} · {{done}} of {{total}}', coursesStarted: '{{started}} of {{count}} started', courseCount: '{{count}} courses',
+    } } });
+    translate.use('en');
+
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([{ bookId: 5, title: 'First endgames', description: null, puzzleCount: 287 }]);
+    http.expectOne('/api/kids/levels').flush([]);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile.courses .meta')!.textContent).toContain('First endgames · 8 of 287');
+    expect(el.querySelector<HTMLElement>('.tile.courses .tile-bar span')!.style.width).toBe('2.8%');
+
+    f.componentInstance.courses.set([
+      { bookId: 5, title: 'First endgames', description: null, puzzleCount: 287 },
+      { bookId: 6, title: 'Mates', description: null, puzzleCount: 20 },
+    ]);
+    f.detectChanges();
+    expect(el.querySelector('.tile.courses .meta')!.textContent).toContain('1 of 2 started');
+    expect(el.querySelector('.tile.courses .tile-bar')).toBeNull();
+  }));
+
   /** UI-Sweep 2026-10-11 (r2-k-level-run): der Startknopf nennt bei einem angefangenen Durchgang die nächste Aufgabe. */
   it('angefangene Stufe: „Weiter mit Stufe n · Aufgabe m"', fakeAsync(() => {
     const progress = TestBed.inject(KidsProgressStore);

@@ -86,3 +86,47 @@ describe('CoursePlayComponent — Einleitung', () => {
     expect(getComputedStyle(intro.querySelector('.hl')!).fontWeight).toBe('800');
   });
 });
+
+/** UI-Sweep 2026-10-11 (r2-k-course-scroll): ein langer Einleitungstext steht nicht mehr in einem eigenen Scrollkasten,
+ *  sondern wird unten ausgeblendet und mit „Weiterlesen" ganz aufgeklappt. */
+describe('CoursePlayComponent — langer Einleitungstext', () => {
+  const long = Array.from({ length: 60 }, (_, i) => `Absatz ${i + 1}: Dann hängt alles von der Stellung der Könige ab.`).join('\n\n');
+  const line = (id: number, comment: string | null): KidsCourseLine => ({
+    id, bookTitle: 'Erste Endspiele', fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8', startPly: 0,
+    title: null, chapter: null, comment, moveComments: null, altMoves: null,
+  });
+
+  it('„Weiterlesen" klappt auf, die nächste Linie beginnt wieder zugeklappt; ein kurzer Text braucht keinen Knopf', () => {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.returnValue(of([line(1, long), line(2, 'Kurz.')]));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '7' })) } },
+      ],
+    });
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const intro = el.querySelector<HTMLElement>('.intro')!;
+    expect(getComputedStyle(intro).overflowY).toBe('hidden');               // kein eigener Scrollbalken mehr
+    expect(f.componentInstance.introClipped()).toBeTrue();
+    const more = el.querySelector<HTMLButtonElement>('button.more')!;
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    more.click();
+    f.detectChanges();
+    expect(intro.classList).toContain('open');
+    expect(intro.scrollHeight).toBeLessThanOrEqual(intro.clientHeight + 1);
+    expect(el.querySelector('button.more')!.getAttribute('aria-expanded')).toBe('true');
+
+    f.componentInstance.index.set(1);
+    f.detectChanges();
+    f.detectChanges();
+    expect(f.componentInstance.introOpen()).toBeFalse();
+    expect(el.querySelector('button.more')).toBeNull();
+  });
+});

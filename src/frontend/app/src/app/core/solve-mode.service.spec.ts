@@ -151,19 +151,39 @@ describe('SolveModeService', () => {
     expect(svc.get('puzzles')).toBeNull();
   });
 
-  it('bietet „für alle“ nur in Bereichen ohne Id an — Kurse fragen weiter einzeln', () => {
+  it('Grundwahl aus Puzzle-Bereichen gilt nicht für Kurse — Kurse fragen weiter, bieten „für alle“ aber an', () => {
+    // UI-Sweep 2026-10-11 (r2-rp-mode-title): der Kursdialog bietet das Häkchen jetzt ebenfalls an.
     setup('training', true);
     svc.ensure('daily').subscribe();
     expect(dialogOpen.calls.mostRecent().args[1].data.offerApplyAll).toBeTrue();
     svc.ensure(SolveModeService.scopeCourse(7)).subscribe();
     expect(dialogOpen).toHaveBeenCalledTimes(2);              // Kurs fragt trotz Grundwahl
-    expect(dialogOpen.calls.mostRecent().args[1].data.offerApplyAll).toBeFalse();
+    expect(dialogOpen.calls.mostRecent().args[1].data.offerApplyAll).toBeTrue();
   });
 
-  it('ein Häkchen im Kurs setzt keine Grundwahl', () => {
+  it('ein Häkchen im Kurs gilt für alle Puzzle-Bereiche UND alle Kurse', () => {
     setup('easy', true);
     svc.ensure(SolveModeService.scopeCourse(7)).subscribe();
+    expect(svc.get('puzzles')).toBe('easy');
+    expect(svc.get(SolveModeService.scopeCourse(8))).toBe('easy');
+    expect(svc.get(SolveModeService.scopeWeekly(3))).toBeNull();   // Wochenposts fragen weiter einzeln
+    svc.ensure(SolveModeService.scopeCourse(8)).subscribe();
+    expect(dialogOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('ohne Häkchen im Kurs gilt die Wahl nur für diesen Kurs', () => {
+    setup('easy', false);
+    svc.ensure(SolveModeService.scopeCourse(7)).subscribe();
     expect(svc.get('puzzles')).toBeNull();
+    expect(svc.get(SolveModeService.scopeCourse(8))).toBeNull();
+  });
+
+  it('die eigene Wahl eines Kurses schlägt die Kurs-Grundwahl', () => {
+    setup('easy', true);
+    svc.ensure(SolveModeService.scopeCourse(7)).subscribe();
+    svc.set(SolveModeService.scopeCourse(9), 'training');
+    expect(svc.get(SolveModeService.scopeCourse(9))).toBe('training');
+    expect(svc.get(SolveModeService.scopeCourse(8))).toBe('easy');
   });
 
   it('die eigene Wahl eines Bereichs schlägt die Grundwahl', () => {

@@ -66,6 +66,8 @@ h2 {
    `anywhere` statt `break-word`, weil nur `anywhere` auch die Mindestbreite der Grid-Spalte
    mitnimmt. */
 .detail-grid dd { margin: 0; overflow-wrap: anywhere; }
+/* UI-Sweep 2026-10-11 (r2-t-various): Platzhalter statt Ort kursiv. */
+.detail-grid dd.various { font-style: italic; }
 
 .group-link {
   display: inline-block;

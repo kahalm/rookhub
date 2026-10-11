@@ -53,6 +53,21 @@ import { CourseCardComponent } from './course-card.component';
 
       <app-reprocess-banner section="courses" (done)="loadCourses()" />
 
+      <!-- UI-Sweep 2026-10-11 (r2-rp-course-warn): die Zahl der „Neu holen"-Markierungen steht neben dem Banner,
+           damit Banner-Zahl (aktualisierbar) und Markierungen (brauchen RepCheck) zusammenpassen. -->
+      @if (reimportCount > 0) {
+        <div class="reimport-legend">
+          <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
+          <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}</span>
+          <button mat-button type="button" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">
+            {{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}
+          </button>
+          @if (reimportOpen) {
+            <p class="reimport-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</p>
+          }
+        </div>
+      }
+
       @if (offlineList) {
         <div class="offline-banner">
           <mat-icon>cloud_off</mat-icon>
@@ -84,7 +99,7 @@ import { CourseCardComponent } from './course-card.component';
             <p class="section-hint">{{ 'courses.sectionInProgressHint' | translate }}</p>
             <div class="course-grid">
               @for (c of inProgressCourses; track c.bookId) {
-                <app-course-card [course]="c"
+                <app-course-card [course]="c" [origin]="originOf(c)"
                   [pinning]="pinning === c.bookId"
                   [savingOffline]="savingOffline === c.bookId"
                   [downloadingPgn]="downloadingPgn === c.bookId"
@@ -115,7 +130,7 @@ import { CourseCardComponent } from './course-card.component';
             <p class="section-hint">{{ 'courses.sectionSharedWithMeHint' | translate }}</p>
             <div class="course-grid">
               @for (c of sharedCourses; track c.bookId) {
-                <app-course-card [course]="c"
+                <app-course-card [course]="c" [origin]="originOf(c)"
                   [pinning]="pinning === c.bookId"
                   [savingOffline]="savingOffline === c.bookId"
                   [downloadingPgn]="downloadingPgn === c.bookId"
@@ -146,7 +161,7 @@ import { CourseCardComponent } from './course-card.component';
             <p class="section-hint">{{ 'courses.sectionPublicHint' | translate }}</p>
             <div class="course-grid">
               @for (c of publicCourses; track c.bookId) {
-                <app-course-card [course]="c"
+                <app-course-card [course]="c" [origin]="originOf(c)"
                   [pinning]="pinning === c.bookId"
                   [savingOffline]="savingOffline === c.bookId"
                   [downloadingPgn]="downloadingPgn === c.bookId"
@@ -177,7 +192,7 @@ import { CourseCardComponent } from './course-card.component';
             <p class="section-hint">{{ 'courses.sectionOwnHint' | translate }}</p>
             <div class="course-grid">
               @for (c of ownCourses; track c.bookId) {
-                <app-course-card [course]="c"
+                <app-course-card [course]="c" [origin]="originOf(c)"
                   [pinning]="pinning === c.bookId"
                   [savingOffline]="savingOffline === c.bookId"
                   [downloadingPgn]="downloadingPgn === c.bookId"
@@ -216,6 +231,12 @@ import { CourseCardComponent } from './course-card.component';
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
 
     .course-section { margin-bottom: 28px; }
+    .reimport-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 1rem;
+      padding: 6px 12px; border-radius: 8px; font-size: 0.88rem;
+      border: 1px solid color-mix(in srgb, #fb8c00 45%, transparent); }
+    .reimport-chip { border: 1px solid #fb8c00; color: #fb8c00; border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
+    .reimport-text { flex: 1 1 220px; }
+    .reimport-hint { flex-basis: 100%; margin: 0 0 4px; color: color-mix(in srgb, currentColor 70%, transparent); }
     .offline-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 1rem;
                       padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
                       background: color-mix(in srgb, currentColor 7%, transparent);
@@ -330,10 +351,43 @@ export class CourseListComponent implements OnInit {
       ...eligible.filter(c => c.isPinned),
       ...eligible.filter(c => !c.isPinned),
     ];
-    this.sharedCourses = this.filtered.filter(c => c.isShared);
-    this.publicCourses = this.filtered.filter(c => !c.isOwned && !c.isShared);
-    this.ownCourses = this.filtered.filter(c => c.isOwned);
+    // UI-Sweep 2026-10-11 (r2-rp-course-dupes): was unter „In Arbeit" steht, erscheint nicht ein zweites Mal
+    // als identische Karte in seiner normalen Sektion.
+    const inProgress = new Set(this.inProgressCourses.map(c => c.bookId));
+    const rest = this.filtered.filter(c => !inProgress.has(c.bookId));
+    this.sharedCourses = rest.filter(c => c.isShared);
+    this.publicCourses = rest.filter(c => !c.isOwned && !c.isShared);
+    this.ownCourses = rest.filter(c => c.isOwned);
+    // Gleichnamige Kurse (über die GANZE Liste, nicht nur die Suche) bekommen ihre Herkunft als Untertitel.
+    const byTitle = new Map<string, number>();
+    for (const c of this.courses) {
+      const key = (c.displayName || '').trim().toLowerCase();
+      byTitle.set(key, (byTitle.get(key) ?? 0) + 1);
+    }
+    this.duplicateTitles = new Set([...byTitle].filter(([, n]) => n > 1).map(([k]) => k));
+    this.reimportCount = this.courses.filter(c => c.needsReimport).length;
   }
+
+  /** UI-Sweep 2026-10-11: Titel, die mehrfach vorkommen (klein, getrimmt). */
+  private duplicateTitles = new Set<string>();
+  /** Zahl der Kurse mit „Neu holen"-Markierung (r2-rp-course-warn). */
+  reimportCount = 0;
+  /** Erklärung zur Markierung aufgeklappt? */
+  reimportOpen = false;
+
+  /** Herkunft für die Karte — nur bei gleichnamigen Kursen, sonst null (r2-rp-course-dupes). */
+  originOf(c: CourseListItem): { chessable: boolean; owner: string | null } | null {
+    if (!this.duplicateTitles.has((c.displayName || '').trim().toLowerCase())) return null;
+    const key = `${c.bookId}`;
+    let o = this.originCache.get(key);
+    if (!o || o.chessable !== !!c.isChessableImport || o.owner !== (c.ownerUsername ?? null)) {
+      o = { chessable: !!c.isChessableImport, owner: c.ownerUsername ?? null };
+      this.originCache.set(key, o);
+    }
+    return o;
+  }
+  /** Stabile Objekte je Kurs — sonst bekäme die Karte bei jedem Durchlauf ein neues Input-Objekt. */
+  private originCache = new Map<string, { chessable: boolean; owner: string | null }>();
 
   isOffline(c: CourseListItem): boolean {
     return this.offlineFiles.has(c.fileName);

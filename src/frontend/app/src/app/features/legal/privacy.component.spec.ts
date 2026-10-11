@@ -122,6 +122,17 @@ describe('PrivacyComponent', () => {
       expect(text).withContext(k).toContain('legal.privacy.' + k);
   });
 
+  // UI-Sweep 2026-10-11 (r2-t-privacy-intro): die Turnierseite begann mit „RookHub ist eine Schach-Trainingsplattform“,
+  // ihr eigener Abschnitt stand weit unten.
+  it('Turnierseite: eigene Einleitung, „Turnierdaten“ gleich nach dem Verantwortlichen', () => {
+    const el = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'turnier', accountHome: 'rookhub' });
+    expect(el.textContent).toContain('legal.privacy.introTurnier');
+    expect(Array.from(el.querySelectorAll('p')).some(p => p.textContent?.trim() === 'legal.privacy.intro')).toBeFalse();
+    const headings = Array.from(el.querySelectorAll('h2')).map(h => h.id);
+    expect(headings.slice(0, 2)).toEqual(['privacy-controller', 'privacy-tournament']);
+    expect(el.querySelectorAll('#privacy-tournament').length).toBe(1);
+  });
+
   it('nennt die KI-Dienste: Formular-Fotos gehen an Anthropic (Codereview A6-008)', () => {
     const el = render();
     // Ohne Sprachdateien stehen die Keys selbst da — sie muessen gerendert werden.
@@ -140,6 +151,7 @@ describe('PrivacyComponent', () => {
       ['RookHub', undefined],
       ['KidHub', { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' }],
       ['LeagueHub', { contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' }],
+      ['Turnierseite', { contactEmail: OPERATOR.email, imprint: true, kind: 'turnier', accountHome: 'rookhub' }],
     ];
 
     for (const [name, site] of variants) {

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
@@ -52,7 +53,7 @@ export function withSideToMove(fen: string, black: boolean): string {
   selector: 'app-reconstruct-detail',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule,
+    MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule, MatMenuModule,
     TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',

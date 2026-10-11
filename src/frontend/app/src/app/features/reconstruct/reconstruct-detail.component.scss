@@ -114,6 +114,9 @@
   .certain-toggle.unsure { opacity: 1; color: #e65100; }
 }
 
+/* UI-Sweep 2026-10-11 (r2-rg-recon-actions): Löschen im ⋮-Menü rot wie in den anderen Karten-Menüs. */
+.delete-item mat-icon { color: color-mix(in srgb, #e53935 80%, currentColor); }
+
 .part-body {
   display: flex;
   flex-direction: column;

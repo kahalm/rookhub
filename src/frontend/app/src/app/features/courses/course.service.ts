@@ -14,6 +14,8 @@ export interface CourseListItem {
   tags: string | null;
   description: string | null;
   puzzleCount: number;
+  /** UI-Sweep 2026-10-11 (r2-rp-empty-course): Info-/Partie-Linien — nur bei Kursen OHNE Quiz-Linie gefüllt. */
+  infoLineCount?: number;
   solvedCount: number;
   progressPercent: number;
   lastMode: string | null;
@@ -45,6 +47,10 @@ export interface CourseListItem {
   calcPoints?: number | null;
   /** Erreichbare Punkte (4 je Stellung). Fehlt der Wert, rechnet die Karte ihn aus `puzzleCount`. */
   calcMaxPoints?: number | null;
+  /** UI-Sweep 2026-10-11 (r2-rp-course-dupes): Chessable-Import (Dateiname/Tag) — Herkunft gleichnamiger Kurse. */
+  isChessableImport?: boolean;
+  /** Besitzer des persönlichen Buchs — nur für Admins gefüllt (Server). */
+  ownerUsername?: string | null;
 }
 
 /** Pro-Linien-Bearbeitungsstatus eines Kurs-Buchs (für die „Linien durchsehen"-Ansicht):

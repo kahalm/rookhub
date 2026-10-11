@@ -131,7 +131,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                       <div class="today-head">
                         <mat-icon class="day-star" [class]="'st-' + (today?.status ?? 'none')">{{ dayIcon(today?.status) }}</mat-icon>
                         <div class="today-summary">
-                          <div class="today-label">{{ ('trainingGoals.status.' + (today?.status ?? 'none')) | translate }}</div>
+                          <!-- UI-Sweep 2026-10-11 (r2-rk-goals-all-reached): der Tagesstatus zählt nur das Tagesziel —
+                               „Alle Ziele erreicht" widersprach dem offenen Wochenziel Spielen darunter. -->
+                          <div class="today-label">{{ (today?.status === 'full' ? 'trainingGoals.dailyReached' : ('trainingGoals.status.' + (today?.status ?? 'none'))) | translate }}</div>
                           @if ((today?.weeklyDaysTarget ?? 0) > 0) {
                             <div class="week-line">{{ 'trainingGoals.weekProgress' | translate:{ done: today?.weekDaysMet ?? 0, target: today?.weeklyDaysTarget ?? 0 } }}</div>
                           }
@@ -151,10 +153,11 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                         }
                         <!-- Spielen ist ein Wochenziel (Anzahl Rapid-/Classical-Partien dieser Woche). -->
                         @if ((today?.play?.targetGames ?? 0) > 0) {
-                          <div class="cat">
+                          <!-- UI-Sweep 2026-10-11 (r2-rk-goals-all-reached): als eigenes Wochenziel abgesetzt. -->
+                          <div class="cat cat-weekly">
                             <div class="cat-row">
                               <mat-icon [class.met]="today?.play?.met">{{ today?.play?.met ? 'check_circle' : 'sports_esports' }}</mat-icon>
-                              <span class="cat-name">{{ 'trainingGoals.cat.play' | translate }} <span class="weekly-tag">{{ 'trainingGoals.thisWeek' | translate }}</span></span>
+                              <span class="cat-name">{{ 'trainingGoals.weeklyPlay' | translate }}@if (!today?.play?.met) { <span class="weekly-tag">{{ 'trainingGoals.stillOpen' | translate }}</span> }</span>
                               <span class="cat-val">{{ today?.play?.doneGames ?? 0 }} / {{ today?.play?.targetGames ?? 0 }} {{ 'trainingGoals.games' | translate }}</span>
                             </div>
                             <mat-progress-bar mode="determinate" [value]="pctCount(today?.play?.doneGames ?? 0, today?.play?.targetGames ?? 0)"></mat-progress-bar>
@@ -359,6 +362,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .cat-row mat-icon { color: color-mix(in srgb, currentColor 25%, transparent); }
     .cat-row mat-icon.met { color: #2e7d32; }
     .cat-name { flex: 1; }
+    .cat-weekly { border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); padding-top: 10px; }
     .weekly-tag { color: color-mix(in srgb, currentColor 47%, transparent); font-size: .75rem; font-style: italic; }
     .cat-val { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .sync-btn { margin-top: 12px; }

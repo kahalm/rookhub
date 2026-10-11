@@ -1,6 +1,6 @@
 import { TranslateService } from '@ngx-translate/core';
 import { CalendarEvent } from '@rh/core/ics';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
 
 /** Die chess-results-Seite eines Turniers (englische Fassung). */
 export function directoryChessResultsUrl(chessResultsId: string): string {
@@ -38,7 +38,8 @@ export function directoryCalendarEvent(
     title: entry.name,
     start: entry.startDate,
     end: entry.endDate,
-    location: entry.location,
+    // „various" ist kein Ort fuer den Kalender (UI-Sweep 2026-10-11, r2-t-various).
+    location: isPlaceholderLocation(entry.location) ? null : entry.location,
     description: facts.join('\n'),
     url,
   };

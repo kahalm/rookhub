@@ -251,16 +251,22 @@ describe('TurnierNavbarComponent „Anmelden“ behält das Ziel (UX-020)', () =
     await TestBed.inject(Router).navigateByUrl(url);
     const fixture = TestBed.createComponent(TurnierNavbarComponent);
     fixture.detectChanges();
-    return (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar a[href^="/login"]')!.getAttribute('href');
+    return (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar a[href^="/login"]')?.getAttribute('href') ?? null;
   }
 
   it('auf dem geteilten Turnier /t/42: zurück dorthin', async () => {
     expect(await loginHrefAt('/t/42')).toBe('/login?returnUrl=%2Ft%2F42');
   });
 
-  it('auf der Registrierung mit Ziel: das Ziel, nicht die Registrierung; ohne Ziel „/“ (kein /dashboard hier)', async () => {
-    expect(await loginHrefAt('/register?returnUrl=%2Ft%2F42')).toBe('/login?returnUrl=%2Ft%2F42');
+  it('auf dem Kalender: zurück dorthin', async () => {
+    expect(await loginHrefAt('/tournaments/calendar')).toBe('/login?returnUrl=%2Ftournaments%2Fcalendar');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-t-login-headbtn): auf /login und /register zeigte der Kopf „Anmelden“ — ein Link auf die
+  // Seite, auf der man schon ist, bzw. neben „Bereits ein Konto? Anmelden“ doppelt.
+  it('auf /login und /register gibt es oben keinen „Anmelden“-Link', async () => {
+    expect(await loginHrefAt('/login')).toBeNull();
     TestBed.resetTestingModule();
-    expect(await loginHrefAt('/register')).toBe('/login?returnUrl=%2F');
+    expect(await loginHrefAt('/register?returnUrl=%2Ft%2F42')).toBeNull();
   });
 });

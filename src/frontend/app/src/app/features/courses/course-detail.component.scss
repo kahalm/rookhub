@@ -116,6 +116,15 @@
   font-size: 0.9rem;
 }
 
+/* UI-Sweep 2026-10-11 (r2-rp-chapter-mobile): Kurzform des Durchsehen-Knopfs nur am Handy; dort rückt der
+   Kalkulations-Schalter hinter das ⋮, damit das Menü nicht allein in einer Zeile steht. */
+.label-short { display: none; }
+@media (max-width: 599.98px) {
+  .label-long { display: none; }
+  .label-short { display: inline; }
+  .actions .calc-toggle { order: 10; margin-left: 0; }
+}
+
 .section-head {
   display: flex;
   align-items: center;
@@ -224,6 +233,15 @@
 }
 
 .chapter-actions { display: flex; align-items: center; }
+
+/* UI-Sweep 2026-10-11 (r2-rp-chapter-mobile): am Handy erste Zeile Name + ▶ ⋮ rechts, zweite Zeile Balken
+   (flexibel) + Zähler, eingerückt unter den Namen — statt einer linksbündigen Restzeile mit Leere rechts. */
+@media (max-width: 599.98px) {
+  .chapter-row > .chapter-name { order: 1; flex: 1 1 calc(100% - 9rem); }
+  .chapter-row > .chapter-actions { order: 2; margin-left: auto; }
+  .chapter-row > .chapter-progress { order: 3; flex: 1 1 0; min-width: 6rem; margin-left: 1.9rem; }
+  .chapter-row > .chapter-counts { order: 4; }
+}
 
 .rename-input {
   flex: 1 1 10rem;

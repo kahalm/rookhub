@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
@@ -20,7 +21,7 @@ describe('BroadcastsPageComponent', () => {
   function create(): void {
     TestBed.configureTestingModule({
       imports: [BroadcastsPageComponent],
-      providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } }],
+      providers: [provideRouter([]), { provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } }],
     });
     fixture = TestBed.createComponent(BroadcastsPageComponent);
     fixture.detectChanges();
@@ -48,6 +49,9 @@ describe('BroadcastsPageComponent', () => {
     perms.clear();
     create();
     expect(el().textContent).toContain('Nicht freigeschaltet');
+    // UI-Sweep 2026-10-11 (r2-l-gate-text): Weg zurück zu den Prognosen, kein Rechte-Schlüssel im Text
+    expect(el().querySelector('.gate a[href="/"]')?.textContent).toContain('Zu den Prognosen');
+    expect(el().textContent).not.toContain('league.manage');
     expect(api.broadcasts).not.toHaveBeenCalled();
   });
 

@@ -50,6 +50,23 @@ export class TournamentTablesComponent {
   @Input() teamColumns: string[] = [];
   @Input() pairingColumns: string[] = [];
 
+  /** Gemerkt je Eingabe: ein neues Array je Durchlauf liesse mat-table die Kopfzeile neu zeichnen. */
+  private columnsCache?: { columns: string[]; players: TournamentPlayer[]; result: string[] };
+
+  /**
+   * Die Spieler-Spalten der Desktop-Tabelle. Die Spalte „Titel" entfaellt, wenn KEIN Spieler einen echten
+   * Titel traegt — eine durchgehend leere Spalte („—" bei allen 222 Spielern der ECo-C Extraliga) kostet
+   * nur Breite (UI-Sweep 2026-10-11, r2-t-title-empty). Gilt fuer /tournaments/:id und /t/:id.
+   */
+  get shownPlayerColumns(): string[] {
+    const cache = this.columnsCache;
+    if (cache && cache.columns === this.playerColumns && cache.players === this.players) return cache.result;
+    const noTitles = this.players.length > 0 && this.players.every(p => !chessTitle(p.title));
+    const result = noTitles ? this.playerColumns.filter(c => c !== 'title') : this.playerColumns;
+    this.columnsCache = { columns: this.playerColumns, players: this.players, result };
+    return result;
+  }
+
   // --- Lade-Zustand ---
   @Input() playersLoading = false;
   @Input() teamsLoading = false;

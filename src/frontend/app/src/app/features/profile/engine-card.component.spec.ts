@@ -200,4 +200,19 @@ describe('EngineCardComponent', () => {
     http.expectNone(r => r.url === '/api/engine/credentials' && r.method === 'DELETE');
     expect(component.hasCredentials).toBeTrue();
   });
+
+  // UI-Sweep 2026-10-11 (r2-rk-engine-jargon): Adresse der Seite zum Kopieren statt einer nackten Variablen.
+  it('shows the own address and copies it to the clipboard', async () => {
+    const write = jasmine.createSpy('writeText').and.returnValue(Promise.resolve());
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: write } as any);
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+
+    expect(component.rookhubUrl).toBe(window.location.origin);
+    expect(fixture.nativeElement.querySelector('.direct-url code').textContent).toContain(window.location.origin);
+    component.copyUrl();
+    expect(write).toHaveBeenCalledWith(window.location.origin);
+  });
 });

@@ -22,7 +22,7 @@ import { TournamentDatePipe } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
-import { DIRECTORY_SOURCE_KINDS, DirectoryEntry } from './tournament-directory.model';
+import { DIRECTORY_SOURCE_KINDS, DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
 import { directoryCalendarEvent, directoryChessResultsUrl } from './directory-calendar-event';
 
 const KNOWN_SOURCE_KINDS: ReadonlySet<string> = new Set(DIRECTORY_SOURCE_KINDS);
@@ -101,6 +101,9 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   }
 
   readonly entry = signal<DirectoryEntry | null>(null);
+
+  /** Ort ist nur ein Platzhalter wie „various" (UI-Sweep 2026-10-11, r2-t-various). */
+  various(entry: DirectoryEntry): boolean { return isPlaceholderLocation(entry.location); }
   readonly loading = signal(true);
   readonly notFound = signal(false);
   /**

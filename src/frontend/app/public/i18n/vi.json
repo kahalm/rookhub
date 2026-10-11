@@ -312,6 +312,7 @@
       "title": "Kho repertoire của tôi",
       "new": "Repertoire mới",
       "fileCount": "{{count}} tệp",
+      "fileCountOne": "{{count}} tệp",
       "public": "Công khai",
       "private": "Riêng tư",
       "noDescription": "Không có mô tả",
@@ -522,7 +523,7 @@
     "title": "Khóa học",
     "intro": "Giải từng bài tập từ sách đã nhập — theo thứ tự hoặc ngẫu nhiên. Tiến trình của bạn được lưu lại.",
     "emptyHint": "Chưa có sách nào được nhập. Hãy nhập sách trong khu vực quản trị mục \"Sách\".",
-    "sectionPublic": "Khóa học công khai",
+    "sectionPublic": "Khóa học khả dụng",
     "sectionPublicHint": "Các khóa học được chia sẻ với bạn qua các nhóm của bạn.",
     "sectionOwn": "Khóa học của bạn",
     "sectionOwnHint": "Các khóa học bạn tự nhập hoặc tự tạo.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "Đang học",
-    "sectionInProgressHint": "Các khóa bạn đã bắt đầu nhưng chưa hoàn thành."
+    "sectionInProgressHint": "Các khóa bạn đã bắt đầu nhưng chưa hoàn thành.",
+    "origin": {
+      "chessable": "Nhập từ Chessable",
+      "pgn": "Nhập PGN",
+      "by": "bởi {{name}}"
+    },
+    "reimport": {
+      "chip": "Lấy lại",
+      "legend": "{{count}} khóa học cần nhập lại qua RepCheck",
+      "legendOne": "1 khóa học cần nhập lại qua RepCheck",
+      "more": "Thêm",
+      "less": "Thu gọn"
+    }
   },
   "weekly": {
     "title": "Tuần này",
@@ -635,6 +648,7 @@
       "settings": "Cài đặt",
       "highscore": "Điểm cao nhất: Xếp hạng {{rating}}",
       "sessionsPlayed": "{{count}} phiên đã chơi",
+      "sessionsPlayedOne": "{{count}} phiên đã chơi",
       "viewHistory": "Xem lịch sử",
       "unfinishedRun": "Lần chơi dở dang: Lv {{level}} | {{solved}} đã giải | {{lives}} mạng | {{max}} tối đa",
       "continue": "Tiếp tục",
@@ -936,7 +950,10 @@
     "byTheme": "Theo chủ đề",
     "byRating": "Theo xếp hạng (đã giải)",
     "byRatingHint": "Bài tập đã giải theo dải xếp hạng — di chuột để xem độ chính xác.",
-    "activity": "Hoạt động"
+    "activity": "Hoạt động",
+    "levelEmpty": "Cấp {{level}} chưa có lần thử nào",
+    "levelOther": "Cấp {{level}}: {{count}} lần thử",
+    "levelOtherOne": "Cấp {{level}}: 1 lần thử"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "ngày",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Ngày mỗi tuần",
     "weekProgress": "{{done}} trong {{target}} ngày tuần này",
     "fromGroup": "Mẫu từ nhóm \"{{group}}\" của bạn. Bạn có thể tự điều chỉnh cho bản thân.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Đã đạt mục tiêu hôm nay",
+    "weeklyPlay": "Mục tiêu tuần: chơi cờ",
+    "stillOpen": "chưa đạt"
   },
   "chessable": {
     "testing": "Testing…",

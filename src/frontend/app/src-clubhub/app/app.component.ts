@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
@@ -10,6 +10,7 @@ import { FooterPresenceService } from '@rh/shared/app-footer/footer-presence';
 import { environment } from '../../src/environments/environment';
 import { hasClubAccess } from './core/club-access';
 import { MemberPhotoStore } from './core/member-photo.store';
+import { LinkStateStore } from './core/link-state.store';
 
 /** Der Reiter „Kartei" gilt für die Liste UND für jedes Karteiblatt (`/kind/…`). */
 export function isCardIndexUrl(url: string): boolean {
@@ -52,7 +53,8 @@ export function isCardIndexUrl(url: string): boolean {
     <main class="wrap"><router-outlet /></main>
     <footer class="wrap foot">
       <span>v{{ version }}</span>
-      <a routerLink="/verknuepfen">Konto verknüpfen</a>
+      <!-- UI-Sweep 2026-10-11 (r2-c-footer-link): nur für Konten ohne Club-Recht; verknüpft heißt er „Verknüpfung (Lena)" -->
+      @if (!access()) { <a routerLink="/verknuepfen">{{ linkText() }}</a> }
       <a routerLink="/impressum">Impressum</a>
       <a routerLink="/privacy">Datenschutz</a>
     </footer>
@@ -66,6 +68,7 @@ export class ClubHubAppComponent implements OnInit {
   /** Nur injizieren genügt: hell/dunkel wie in RookHub (geteilter Design-Modus, setzt html.dark-theme). */
   private readonly theme = inject(ThemeService);
   private readonly photos = inject(MemberPhotoStore);
+  private readonly linkStore = inject(LinkStateStore);
   readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
   readonly version = environment.version;
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
@@ -73,6 +76,14 @@ export class ClubHubAppComponent implements OnInit {
     this.user();
     return hasClubAccess(this.auth);
   });
+
+  /** UI-Sweep 2026-10-11 (r2-c-footer-link): Text des Fußzeilenlinks je Verknüpfungsstand. */
+  readonly linkText = computed(() => {
+    const s = this.linkStore.state();
+    if (!s?.linked) return 'Konto verknüpfen';
+    return s.firstName ? `Verknüpfung (${s.firstName})` : 'Verknüpfung';
+  });
+  private linkUser: number | null = null;
 
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
@@ -84,6 +95,17 @@ export class ClubHubAppComponent implements OnInit {
     // Die Fusszeile zeigt Impressum und Datenschutz immer — die Anmeldemaske laesst ihre eigene Zeile dann weg
     // (UI-Sweep 2026-10-10, x-login-legal).
     inject(FooterPresenceService).presence.set('always');
+    // UI-Sweep 2026-10-11 (r2-c-footer-link): Verknüpfungsstand nur für angemeldete Konten ohne Club-Recht; ein anderes
+    // Konto (Abmelden, Wechsel) beginnt mit leerem Stand.
+    effect(() => {
+      const u = this.user();
+      const id = u?.userId ?? null;
+      if (id !== this.linkUser) {
+        this.linkUser = id;
+        this.linkStore.clear();
+      }
+      if (u && !this.access()) void this.linkStore.ensure();
+    });
   }
 
   ngOnInit(): void {

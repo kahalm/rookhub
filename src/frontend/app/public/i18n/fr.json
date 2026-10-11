@@ -312,6 +312,7 @@
       "title": "Mes répertoires",
       "new": "Nouveau répertoire",
       "fileCount": "{{count}} fichiers",
+      "fileCountOne": "{{count}} fichier",
       "public": "Public",
       "private": "Privé",
       "noDescription": "Pas de description",
@@ -522,7 +523,7 @@
     "title": "Cours",
     "intro": "Travaillez un livre importé puzzle par puzzle — de façon séquentielle ou aléatoire. Votre progression est sauvegardée.",
     "emptyHint": "Aucun livre importé pour l'instant. Importez des livres dans la zone d'administration sous « Livres ».",
-    "sectionPublic": "Cours publics",
+    "sectionPublic": "Cours disponibles",
     "sectionPublicHint": "Cours partagés avec vous via vos groupes.",
     "sectionOwn": "Vos cours",
     "sectionOwnHint": "Cours que vous avez importés ou créés vous-même.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "En cours",
-    "sectionInProgressHint": "Cours que tu as commencés et pas encore terminés."
+    "sectionInProgressHint": "Cours que tu as commencés et pas encore terminés.",
+    "origin": {
+      "chessable": "Import Chessable",
+      "pgn": "Import PGN",
+      "by": "par {{name}}"
+    },
+    "reimport": {
+      "chip": "À réimporter",
+      "legend": "{{count}} cours doivent être réimportés via RepCheck",
+      "legendOne": "1 cours doit être réimporté via RepCheck",
+      "more": "Plus",
+      "less": "Moins"
+    }
   },
   "weekly": {
     "title": "Hebdomadaire",
@@ -635,6 +648,7 @@
       "settings": "Paramètres",
       "highscore": "Meilleur score : {{rating}} de classement",
       "sessionsPlayed": "{{count}} parties jouées",
+      "sessionsPlayedOne": "{{count}} parties jouées",
       "viewHistory": "Voir l'historique",
       "unfinishedRun": "Partie inachevée : Nv {{level}} | {{solved}} résolus | {{lives}} vies | {{max}} max",
       "continue": "Continuer",
@@ -936,7 +950,10 @@
     "byTheme": "Par thème",
     "byRating": "Par classement (résolus)",
     "byRatingHint": "Puzzles résolus par tranche de classement — survolez pour voir la précision.",
-    "activity": "Activité"
+    "activity": "Activité",
+    "levelEmpty": "Le niveau {{level}} n’a pas encore de tentatives",
+    "levelOther": "Niveau {{level}} : {{count}} tentatives",
+    "levelOtherOne": "Niveau {{level}} : 1 tentative"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "j",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Jours par semaine",
     "weekProgress": "{{done}} sur {{target}} jours cette semaine",
     "fromGroup": "Modèle de votre groupe « {{group}} ». Vous pouvez l'ajuster pour vous-même.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Objectif du jour atteint",
+    "weeklyPlay": "Objectif de la semaine : jeu",
+    "stillOpen": "encore en cours"
   },
   "chessable": {
     "testing": "Testing…",

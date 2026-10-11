@@ -222,6 +222,38 @@ describe('TournamentCardComponent', () => {
     expect(component.dateText).toBe('tournamentDirectory.card.rounds');
   });
 
+  // UI-Sweep 2026-10-11 (r2-t-date-format): derselbe Bereichsstil wie ohne Spieltermine („… – …" statt „… bis …").
+  it('schreibt den Bereich der Spieltermine wie den Zeitraum', () => {
+    setup({
+      startDate: '2026-10-11', endDate: '2027-04-11',
+      roundDates: [{ round: 1, date: '2026-10-11', time: null }, { round: 11, date: '2027-04-11', time: null }],
+    }, { tournamentDirectory: { card: { rounds: '{{count}} Runden · {{range}}' } } });
+    expect(component.dateText.replace(/\s/g, ' ')).toBe('2 Runden · 11. Okt. 2026 – 11. Apr. 2027');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-t-various): „various" aus chess-results ist kein Ort.
+  it('zeigt „various" als uebersetztes „verschiedene Spielorte", kursiv und ohne Ungefaehr-Zeichen', () => {
+    setup({ location: 'various', geoSource: 'Region' });
+    const various = fixture.nativeElement.querySelector('.tc-various') as HTMLElement;
+    expect(various.textContent!.trim()).toBe('tournamentDirectory.variousVenues');
+    expect(getComputedStyle(various).fontStyle).toBe('italic');
+    expect(fixture.nativeElement.textContent).not.toContain('various ');
+    expect(fixture.nativeElement.querySelector('.approx')).toBeNull();
+  });
+
+  // UI-Sweep 2026-10-11 (r2-t-dup-cards): gleichnamiges Turnier am selben Tag als eigene Karte daneben.
+  it('kennzeichnet ein gleichnamiges Turnier am selben Tag, nicht aber eine schon zusammengefasste Karte', () => {
+    setup();
+    expect(fixture.nativeElement.querySelector('.badge.same-name')).toBeNull();
+    fixture.componentRef.setInput('sameNameSibling', true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.badge.same-name')?.textContent?.trim())
+      .toBe('tournamentDirectory.card.sameName');
+    fixture.componentRef.setInput('entry', entry({ groupSize: 3 }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.badge.same-name')).toBeNull();
+  });
+
   it('zeigt einen einzelnen Tag ohne Bis-Datum', () => {
     setup({ startDate: '2026-12-18', endDate: '2026-12-18' });
 

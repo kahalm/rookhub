@@ -72,9 +72,18 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
         <a class="tile courses" [routerLink]="courseLink()">
           <span class="icon" aria-hidden="true">📚</span>
           <span class="name">{{ 'kids.home.courses' | translate }}</span>
-          <span class="meta">
-            {{ courses().length === 1 ? courses()[0].title : ('kids.home.courseCount' | translate: { count: courses().length }) }}
-          </span>
+          <!-- UI-Sweep 2026-10-11 (r2-k-course-tile): Stand wie bei den Puzzles — ein Kurs „Titel · 8 von 287" mit Balken,
+               mehrere „1 von 3 Kursen angefangen". -->
+          @if (courses().length === 1) {
+            <span class="meta">{{ 'kids.home.courseProgress' | translate: { title: courses()[0].title, done: courseDone(courses()[0]), total: courses()[0].puzzleCount } }}</span>
+            <span class="tile-bar" aria-hidden="true">
+              <span [style.width.%]="coursePercent(courses()[0])"></span>
+            </span>
+          } @else if (coursesStarted() > 0) {
+            <span class="meta">{{ 'kids.home.coursesStarted' | translate: { started: coursesStarted(), count: courses().length } }}</span>
+          } @else {
+            <span class="meta">{{ 'kids.home.courseCount' | translate: { count: courses().length } }}</span>
+          }
         </a>
       }
     </section>
@@ -110,6 +119,10 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
     .icon { font-size: 3.4rem; line-height: 1.1; }
     .name { font-size: 1.7rem; font-weight: 800; }
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
+    /* Dünner Fortschrittsbalken der Kurs-Kachel (r2-k-course-tile). */
+    .tile-bar { display: block; width: min(220px, 80%); height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .12);
+                overflow: hidden; margin-top: 4px; }
+    .tile-bar span { display: block; height: 100%; border-radius: 3px; background: #e08a00; min-width: 0; }
     .saved { text-align: center; margin: 22px 0 0; font-size: .95rem; opacity: .8; }
     /* PC (UI-Sweep 2026-10-10, k-start-space): die Kacheln endeten bei y ≈ 550, darunter fast 500 px leer. Jetzt steht
        der Inhalt senkrecht mittig zwischen Kopf- und Fusszeile (~140 px), die Kacheln sind ~360 × 260 px gross. */
@@ -148,6 +161,8 @@ export class KidsHomeComponent {
   });
   /** Geschaffte Stufen der aktuellen Leiter — nie mehr als sie hat (F7-014). */
   readonly done = computed(() => this.progress.completedOf(this.levels().map(l => l.level)));
+  /** Angefangene Kurse (mindestens eine Linie gelöst; r2-k-course-tile). */
+  readonly coursesStarted = computed(() => this.courses().filter(c => this.courseDone(c) > 0).length);
   readonly courseLink = computed(() => {
     const list = this.courses();
     return list.length === 1 ? ['/courses', list[0].bookId] : ['/courses'];
@@ -155,6 +170,16 @@ export class KidsHomeComponent {
 
   constructor() {
     this.load();
+  }
+
+  /** Gelöste Linien eines Kurses, höchstens so viele, wie er hat (dieselbe Regel wie die Kursliste, F7-014). */
+  courseDone(c: KidsCourse): number {
+    return Math.min(this.progress.course(c.bookId).solved.length, c.puzzleCount);
+  }
+
+  /** Anteil in Prozent für den Balken. */
+  coursePercent(c: KidsCourse): number {
+    return c.puzzleCount > 0 ? Math.round((this.courseDone(c) / c.puzzleCount) * 1000) / 10 : 0;
   }
 
   /** Stufen und Kurse holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel (was schon kam, liefert der

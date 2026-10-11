@@ -312,6 +312,7 @@
       "title": "Мої репертуари",
       "new": "Новий репертуар",
       "fileCount": "{{count}} файлів",
+      "fileCountOne": "{{count}} файл",
       "public": "Публічний",
       "private": "Приватний",
       "noDescription": "Без опису",
@@ -522,7 +523,7 @@
     "title": "Курси",
     "intro": "Проходьте імпортовану книгу задача за задачею — послідовно або випадково. Прогрес зберігається.",
     "emptyHint": "Книг ще не імпортовано. Імпортуйте книги в адмін-панелі у розділі «Книги».",
-    "sectionPublic": "Публічні курси",
+    "sectionPublic": "Доступні курси",
     "sectionPublicHint": "Курси, доступні вам через ваші групи.",
     "sectionOwn": "Ваші курси",
     "sectionOwnHint": "Курси, імпортовані або створені вами самостійно.",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "У процесі",
-    "sectionInProgressHint": "Курси, які ви почали й ще не завершили."
+    "sectionInProgressHint": "Курси, які ви почали й ще не завершили.",
+    "origin": {
+      "chessable": "Імпорт із Chessable",
+      "pgn": "Імпорт PGN",
+      "by": "від {{name}}"
+    },
+    "reimport": {
+      "chip": "Завантажити знову",
+      "legend": "Курсів, які треба заново імпортувати через RepCheck: {{count}}",
+      "legendOne": "1 курс треба заново імпортувати через RepCheck",
+      "more": "Докладніше",
+      "less": "Згорнути"
+    }
   },
   "weekly": {
     "title": "Тижневик",
@@ -635,6 +648,7 @@
       "settings": "Налаштування",
       "highscore": "Рекорд: {{rating}} рейтингу",
       "sessionsPlayed": "{{count}} зіграних сесій",
+      "sessionsPlayedOne": "{{count}} зіграних сесій",
       "viewHistory": "Переглянути історію",
       "unfinishedRun": "Незавершена сесія: Рв {{level}} | {{solved}} розв'язано | {{lives}} жит. | {{max}} макс.",
       "continue": "Продовжити",
@@ -936,7 +950,10 @@
     "byTheme": "За темою",
     "byRating": "За рейтингом (розв'язано)",
     "byRatingHint": "Розв'язані задачі за діапазоном рейтингу — наведіть для точності.",
-    "activity": "Активність"
+    "activity": "Активність",
+    "levelEmpty": "На рівні {{level}} ще немає спроб",
+    "levelOther": "Рівень {{level}}: спроб — {{count}}",
+    "levelOtherOne": "Рівень {{level}}: 1 спроба"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "дн",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "Днів на тиждень",
     "weekProgress": "{{done}} з {{target}} днів цього тижня",
     "fromGroup": "Шаблон з вашої групи «{{group}}». Ви можете змінити його для себе.",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "Денну ціль досягнуто",
+    "weeklyPlay": "Тижнева ціль: гра",
+    "stillOpen": "ще не виконано"
   },
   "chessable": {
     "testing": "Testing…",

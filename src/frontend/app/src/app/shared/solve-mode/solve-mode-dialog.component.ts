@@ -11,6 +11,9 @@ export interface SolveModeDialogData {
   /** Eigene Überschrift (schlägt `scopeLabel`) — der Wochenpost: „Wie möchtest du diesen Wochenpost spielen?"
    *  (UI-Sweep 2026-10-11, r2-rk-weekly-mode-dialog). */
   title?: string;
+  /** Kleine Zeile unter der Überschrift — im Kurs der Buchtitel (UI-Sweep 2026-10-11, r2-rp-mode-title: lange
+   *  Buchtitel in der Überschrift brachen am Handy dreizeilig um). */
+  subtitle?: string;
   /** Eigener Hinweis unten (Vorgabe: Umschalten über das ⋮-Menü). */
   hint?: string;
   /** Erklärt, wie oft die Wahl gilt. Default: „einmalig, jederzeit umschaltbar". */
@@ -44,6 +47,7 @@ export interface SolveModeDialogResult {
   template: `
     <h2 mat-dialog-title class="sm-title">{{ data.title || ((data.scopeLabel ? 'solveMode.titleFor' : 'solveMode.title') | translate:{ scope: data.scopeLabel }) }}</h2>
     <mat-dialog-content>
+      @if (data.subtitle) { <p class="sm-subtitle">{{ data.subtitle }}</p> }
       <p class="sm-intro">{{ data.intro || ('solveMode.intro' | translate) }}</p>
 
       <div class="sm-choices">
@@ -70,6 +74,8 @@ export interface SolveModeDialogResult {
     </mat-dialog-content>
   `,
   styles: [`
+    .sm-subtitle { margin: -4px 0 8px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Zwei gleich große Kacheln nebeneinander (am Handy untereinander), Symbol im getönten Kreis. Texte unverändert. */
     .sm-intro { margin: 0 0 14px; color: color-mix(in srgb, currentColor 75%, transparent); }
     .sm-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { FavoritesService, FavoritePuzzle } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -19,13 +20,17 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, TranslatePipe, LoadErrorComponent,
+    MatProgressSpinnerModule, TranslatePipe, LoadErrorComponent, RouterModule, PuzzleThemePipe,
   ],
   template: `
     <div class="fav-page">
       <div class="head">
         <h1><mat-icon class="title-heart">favorite</mat-icon> {{ 'favorites.title' | translate }}</h1>
-        <p class="hint">{{ 'favorites.hint' | translate }}</p>
+        <!-- UI-Sweep 2026-10-11 (r2-rp-favorites-empty): der Untertitel wiederholte den Leertext fast wörtlich —
+             bei leerer Liste steht die Erklärung nur noch im Leerzustand. -->
+        @if (loading || loadError || favorites.length > 0) {
+          <p class="hint">{{ 'favorites.hint' | translate }}</p>
+        }
       </div>
 
       @if (loading) {
@@ -35,7 +40,11 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
       } @else if (favorites.length === 0) {
         <mat-card class="empty">
           <mat-icon>favorite_border</mat-icon>
-          <p>{{ 'favorites.empty' | translate }}</p>
+          <p class="empty-title">{{ 'favorites.empty' | translate }}</p>
+          <p class="empty-hint">{{ 'favorites.emptyHint' | translate }}</p>
+          <a mat-flat-button color="primary" routerLink="/puzzles">
+            <mat-icon>extension</mat-icon>{{ 'favorites.solvePuzzles' | translate }}
+          </a>
         </mat-card>
       } @else {
         <div class="list">
@@ -52,7 +61,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
                   </span>
                   @if (f.themes) {
                     <span class="themes">
-                      @for (t of themeList(f.themes); track t) { <span class="chip">{{ t }}</span> }
+                      @for (t of themeList(f.themes); track t) { <span class="chip">{{ t | puzzleTheme }}</span> }
                     </span>
                   }
                   <span class="date">{{ f.createdAt | date:'mediumDate' }}</span>
@@ -83,6 +92,10 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty a mat-icon { font-size: 20px; width: 20px; height: 20px; opacity: 1; }
+    .empty p { margin: 0; }
+    .empty-title { font-size: 1.05rem; }
+    .empty-hint { font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .list { display: flex; flex-direction: column; gap: 8px; }
     .fav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
     .info { display: flex; align-items: center; gap: 12px; min-width: 0; }

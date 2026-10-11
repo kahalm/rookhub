@@ -1664,9 +1664,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return !!this.solveModeScope && !this.solveModeSuppressed;
   }
 
-  /** Was im Dialog benannt wird: im Kurs der Kursname, sonst der Bereichsname. */
+  /** Was im Dialog benannt wird (außerhalb von Kursen): der Bereichsname. */
   private get solveModeLabel(): string {
-    if (this.inCourse && this.displayBookName) return this.displayBookName;
     return this.translate.instant(this.isDaily ? 'solveMode.scope.daily' : 'solveMode.scope.book');
   }
 
@@ -1694,7 +1693,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Bis zur Antwort die Aufgabe schon zeigen (ohne Uhr/Setup-Zug) statt Grundstellung + „lädt…".
     this.awaitingSolveMode = true;
     this.previewSetup(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
-    this.solveMode.ensure(scope, { scopeLabel: this.solveModeLabel }).subscribe(mode => {
+    // UI-Sweep 2026-10-11 (r2-rp-mode-title): im Kurs „Wie möchtest du Kurse spielen?", der Buchtitel nur als Unterzeile.
+    const courseDialog = this.inCourse
+      ? { title: this.translate.instant('solveMode.titleCourses'), subtitle: this.displayBookName || undefined }
+      : { scopeLabel: this.solveModeLabel };
+    this.solveMode.ensure(scope, courseDialog).subscribe(mode => {
       this.awaitingSolveMode = false;
       this.solveModeChoice = mode;
       // Jetzt mit der gewählten Spielweise aufsetzen (der Guard oben greift nicht mehr).

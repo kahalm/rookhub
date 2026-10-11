@@ -40,6 +40,16 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
 
       <h5>{{ 'profile.engine.directTitle' | translate }}</h5>
       <p class="engine-hint">{{ 'profile.engine.directHint' | translate }}</p>
+      <!-- UI-Sweep 2026-10-11 (r2-rk-engine-jargon): die Adresse zum Kopieren statt „ROOKHUB_URL", dazu die Anleitung. -->
+      <div class="engine-row direct-url">
+        <code class="url">{{ rookhubUrl }}</code>
+        <button mat-stroked-button type="button" (click)="copyUrl()">
+          <mat-icon>content_copy</mat-icon> {{ 'common.copy' | translate }}
+        </button>
+      </div>
+      <p class="engine-hint">
+        <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">{{ 'profile.engine.guide' | translate }}</a>
+      </p>
       @if (enginesLoaded) {
         @if (directEngines.length > 0) {
           <ul class="engine-list direct-list">
@@ -153,6 +163,8 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     .dot.on { background: #66bb6a; }
     .state { color: #9e9e9e; font-size: 0.8rem; }
     .del { margin-left: auto; }
+    .direct-url { margin-bottom: 0.25rem; }
+    .url { background: rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; overflow-wrap: anywhere; }
   `]
 })
 export class EngineCardComponent implements OnInit, OnDestroy {
@@ -177,6 +189,20 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   canShareHouseEngine = false;
   private listSub?: Subscription;
   private statusSub?: Subscription;
+
+  /** UI-Sweep 2026-10-11 (r2-rk-engine-jargon): Adresse für ROOKHUB_URL = die Seite, auf der man gerade ist. */
+  readonly rookhubUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  /** Anleitung des Engine-Providers (dieselbe wie auf der Punktepartie-Seite). */
+  readonly guideUrl = 'https://github.com/kahalm/rookhub/blob/master/engine-provider/README.md';
+
+  copyUrl(): void {
+    const clip = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (!clip) return; // unsicherer Kontext — die Adresse steht zum Abschreiben da
+    clip.writeText(this.rookhubUrl).then(
+      () => this.snackbar.copy(this.translate.instant('profile.engine.urlCopied')),
+      () => {},
+    );
+  }
 
   constructor(
     private externalEngines: ExternalEngineService,

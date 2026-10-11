@@ -312,6 +312,7 @@
       "title": "マイレパートリー",
       "new": "新規レパートリー",
       "fileCount": "{{count}} ファイル",
+      "fileCountOne": "{{count}} ファイル",
       "public": "公開",
       "private": "非公開",
       "noDescription": "説明なし",
@@ -522,7 +523,7 @@
     "title": "コース",
     "intro": "インポートされたブックのパズルを順番またはランダムに解いていきましょう。進捗は保存されます。",
     "emptyHint": "ブックがまだインポートされていません。管理画面の「ブック」からインポートしてください。",
-    "sectionPublic": "公開コース",
+    "sectionPublic": "利用可能なコース",
     "sectionPublicHint": "あなたのグループを通じて共有されたコース。",
     "sectionOwn": "自分のコース",
     "sectionOwnHint": "自分でインポートまたは作成したコース。",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "進行中",
-    "sectionInProgressHint": "開始したがまだ終えていないコース。"
+    "sectionInProgressHint": "開始したがまだ終えていないコース。",
+    "origin": {
+      "chessable": "Chessableから取り込み",
+      "pgn": "PGN取り込み",
+      "by": "{{name}}"
+    },
+    "reimport": {
+      "chip": "再取得",
+      "legend": "{{count}}件のコースはRepCheckで再取り込みが必要です",
+      "legendOne": "1件のコースはRepCheckで再取り込みが必要です",
+      "more": "詳細",
+      "less": "閉じる"
+    }
   },
   "weekly": {
     "title": "週刊",
@@ -635,6 +648,7 @@
       "settings": "設定",
       "highscore": "ハイスコア: {{rating}} レーティング",
       "sessionsPlayed": "{{count}} セッションプレイ済み",
+      "sessionsPlayedOne": "{{count}} セッションプレイ済み",
       "viewHistory": "履歴を見る",
       "unfinishedRun": "未完了のラン: Lv {{level}} | {{solved}} 問正解 | ライフ {{lives}} | 最高 {{max}}",
       "continue": "続ける",
@@ -936,7 +950,10 @@
     "byTheme": "テーマ別",
     "byRating": "レーティング別（正解数）",
     "byRatingHint": "レーティング帯ごとの正解数 — ホバーで正解率を確認。",
-    "activity": "アクティビティ"
+    "activity": "アクティビティ",
+    "levelEmpty": "レベル{{level}}にはまだ試行がありません",
+    "levelOther": "レベル{{level}}：{{count}}回",
+    "levelOtherOne": "レベル{{level}}：1回"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "日",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "週あたりの日数",
     "weekProgress": "今週 {{target}} 日中 {{done}} 日達成",
     "fromGroup": "グループ「{{group}}」のプリセットです。個人で上書き設定できます。",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "今日の目標達成",
+    "weeklyPlay": "週間目標：対局",
+    "stillOpen": "未達成"
   },
   "chessable": {
     "testing": "Testing…",

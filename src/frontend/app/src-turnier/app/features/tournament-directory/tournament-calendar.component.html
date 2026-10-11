@@ -54,7 +54,14 @@
         <button type="button" class="agenda-entry" [class.cancelled]="entry.cancelled"
                 (click)="entrySelected.emit(entry)">
           <span class="agenda-name">{{ entry.name }}</span>
-          @if (entry.location) { <span class="agenda-place">{{ entry.location }}</span> }
+          @if (entry.location) {
+            <!-- „various" ist kein Ort: uebersetzt und kursiv (UI-Sweep 2026-10-11, r2-t-various). -->
+            @if (isVarious(entry)) {
+              <span class="agenda-place agenda-various">{{ 'tournamentDirectory.variousVenues' | translate }}</span>
+            } @else {
+              <span class="agenda-place">{{ entry.location }}</span>
+            }
+          }
         </button>
       }
       @if (hiddenAgendaCount(day) > 0) {

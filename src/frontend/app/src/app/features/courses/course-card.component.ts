@@ -36,11 +36,24 @@ import { labelOr } from './course-language.util';
              [matTooltip]="'courses.detail.openTooltip' | translate">{{ course.displayName }}</a>
           @if (course.needsReimport) {
             <!-- Showstopper am KURS statt als anonyme Zahl im Banner: nur hier ist zu sehen, WELCHER
-                 Kurs gemeint ist (gemeldet 2026-09-20). -->
-            <mat-icon class="stale-badge" [matTooltip]="'reprocess.itemNeedsReimport.courses' | translate"
-                      [attr.aria-label]="'reprocess.itemNeedsReimport.courses' | translate">error_outline</mat-icon>
+                 Kurs gemeint ist (gemeldet 2026-09-20). UI-Sweep 2026-10-11 (r2-rp-course-warn): Text-Chip
+                 statt nacktem (!) — ein Tipp klappt die Erklärung auf (am Handy gibt es keinen Tooltip). -->
+            <button type="button" class="stale-chip" (click)="staleOpen = !staleOpen"
+                    [attr.aria-expanded]="staleOpen"
+                    [matTooltip]="'reprocess.itemNeedsReimport.courses' | translate">
+              {{ 'courses.reimport.chip' | translate }} <mat-icon>info_outline</mat-icon>
+            </button>
           }
           </div>
+          @if (course.needsReimport && staleOpen) {
+            <p class="stale-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</p>
+          }
+          <!-- UI-Sweep 2026-10-11 (r2-rp-course-dupes): gleichnamige Kurse bekommen ihre Herkunft als Untertitel. -->
+          @if (origin) {
+            <div class="origin-line">
+              {{ (origin.chessable ? 'courses.origin.chessable' : 'courses.origin.pgn') | translate }}@if (origin.owner) { · {{ 'courses.origin.by' | translate:{ name: origin.owner } }} }
+            </div>
+          }
           @if (course.isShared && course.sharedByUsername) {
             <div class="shared-badge">
               <mat-icon>group</mat-icon>{{ 'courses.share.sharedBy' | translate:{ name: course.sharedByUsername } }}
@@ -53,7 +66,9 @@ import { labelOr } from './course-language.util';
             </a>
           }
           <div class="card-meta">
-            <span>{{ 'courses.puzzleCount' | translate:{ count: course.puzzleCount } }}</span>
+            @if (!isEmptyQuiz) {
+              <span>{{ 'courses.puzzleCount' | translate:{ count: course.puzzleCount } }}</span>
+            }
             @if (course.difficulty) { <span class="meta-sep">·</span><span>{{ course.difficulty }}</span> }
             @if (course.rating) { <span class="meta-sep">·</span><span>{{ course.rating }}/10</span> }
             <!-- Kalkulationsbuch: Punkte der Selbstbewertung — IMMER mit dem Maximum, sonst ist
@@ -66,18 +81,25 @@ import { labelOr } from './course-language.util';
             }
           </div>
 
-          @if (course.themes?.length) {
+          @if (themeChipKeys.length) {
             <div class="theme-chips" [attr.aria-label]="'courses.themes.tooltip' | translate">
-              @for (t of course.themes; track t) {
-                <span class="theme-chip">{{ ('trainingGoals.theme.' + t) | translate }}</span>
+              @for (k of themeChipKeys; track k) {
+                <span class="theme-chip">{{ k | translate }}</span>
               }
             </div>
           }
 
-          <div class="progress-row">
-            <mat-progress-bar mode="determinate" [value]="course.progressPercent"></mat-progress-bar>
-            <span class="progress-label">{{ course.solvedCount }}/{{ course.puzzleCount }}</span>
-          </div>
+          @if (isEmptyQuiz) {
+            <!-- UI-Sweep 2026-10-11 (r2-rp-empty-course): statt „0 Puzzles · 0/0" und grauer Knöpfe sagen,
+                 was der Kurs ist — nur kommentierte Partien (durchsehen) oder noch leer. -->
+            <p class="empty-note">{{ (hasInfoLines ? 'courses.emptyCourse.gamesOnly'
+              : canManageThemes ? 'courses.emptyCourse.noLinesOwner' : 'courses.emptyCourse.noLines') | translate }}</p>
+          } @else {
+            <div class="progress-row">
+              <mat-progress-bar mode="determinate" [value]="course.progressPercent"></mat-progress-bar>
+              <span class="progress-label">{{ course.solvedCount }}/{{ course.puzzleCount }}</span>
+            </div>
+          }
 
           @if (course.puzzleCount > 0 && course.solvedCount >= course.puzzleCount) {
             <p class="done-hint"><mat-icon>emoji_events</mat-icon> {{ 'courses.completed' | translate }}</p>
@@ -87,7 +109,17 @@ import { labelOr } from './course-language.util';
         <div class="card-footer">
           <div class="action-row">
             <div class="primary-actions">
-              @if (course.isCalculation) {
+              @if (isEmptyQuiz) {
+                @if (hasInfoLines) {
+                  <button mat-flat-button color="primary" [routerLink]="['/courses', course.bookId, 'browse']">
+                    <mat-icon>auto_stories</mat-icon>{{ 'courses.emptyCourse.browseGames' | translate }}
+                  </button>
+                } @else if (canManageThemes) {
+                  <button mat-flat-button color="primary" [routerLink]="['/courses', course.bookId]">
+                    <mat-icon>playlist_add</mat-icon>{{ 'courses.emptyCourse.addLines' | translate }}
+                  </button>
+                }
+              } @else if (course.isCalculation) {
                 <!-- Kalkulationsbuch: reine Stellungen ohne Lösung → nur der Kalkulations-Modus. -->
                 <button mat-flat-button color="primary"
                         [routerLink]="['/courses', course.bookId, 'calc']" [disabled]="course.puzzleCount === 0">
@@ -120,7 +152,7 @@ import { labelOr } from './course-language.util';
                      (dort ist sie die Lösung) — beides entfällt deshalb, wie schon auf der
                      Detailseite, die „Durchsehen" bei Kalkulationsbüchern ebenfalls weglässt. -->
                 @if (!course.isCalculation) {
-                  <button mat-menu-item [disabled]="course.puzzleCount === 0"
+                  <button mat-menu-item [disabled]="course.puzzleCount === 0 && !hasInfoLines"
                           [routerLink]="['/courses', course.bookId, 'browse']">
                     <mat-icon>auto_stories</mat-icon>
                     <span>{{ 'courses.browseTooltip' | translate }}</span>
@@ -280,9 +312,14 @@ import { labelOr } from './course-language.util';
     .title-row { display: flex; align-items: flex-start; gap: 4px; }
     .title-row .card-title { flex: 1 1 auto; min-width: 0; }
     /* (!) am Eintrag: klein und warnfarben, aber nicht schreiend — es ist ein Hinweis, kein Fehler. */
-    .stale-badge {
-      flex: 0 0 auto; color: #ef6c00; font-size: 18px; width: 18px; height: 18px; cursor: help;
+    .stale-chip {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px; cursor: pointer;
+      border: 1px solid #fb8c00; color: #fb8c00; background: none; border-radius: 10px;
+      padding: 0 4px 0 7px; font: inherit; font-size: 0.7rem; line-height: 18px; white-space: nowrap;
     }
+    .stale-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .stale-hint { font-size: 0.78rem; margin: 2px 0 6px; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .origin-line { font-size: 0.75rem; color: color-mix(in srgb, currentColor 55%, transparent); margin-bottom: 2px; }
     .card-meta {
       display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
       font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);
@@ -291,6 +328,7 @@ import { labelOr } from './course-language.util';
     .meta-sep { opacity: 0.5; }
     .calc-points { font-variant-numeric: tabular-nums; font-weight: 600; }
     .progress-row { display: flex; align-items: center; gap: 8px; }
+    .empty-note { margin: 4px 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .progress-row mat-progress-bar { flex: 1; --mdc-linear-progress-track-height: 5px; --mdc-linear-progress-active-indicator-height: 5px; border-radius: 3px; }
     .progress-label { font-variant-numeric: tabular-nums; font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; min-width: 46px; text-align: right; }
     .done-hint { display: flex; align-items: center; gap: 4px; color: #4caf50; font-size: 0.82rem; font-weight: 500; margin: 6px 0 0; }
@@ -340,6 +378,10 @@ import { labelOr } from './course-language.util';
 })
 export class CourseCardComponent {
   @Input({ required: true }) course!: CourseListItem;
+  /** UI-Sweep 2026-10-11 (r2-rp-course-dupes): Herkunft, nur gesetzt, wenn der Titel mehrfach vorkommt. */
+  @Input() origin: { chessable: boolean; owner: string | null } | null = null;
+  /** Erklärung „Neu holen" aufgeklappt? (r2-rp-course-warn) */
+  staleOpen = false;
 
   /** Angezeigter Kapitelname: die Übersetzung (`label`, nur mit `?lang=`), sonst das Original. */
   chapterName(ch: CourseChapter): string | null {
@@ -388,6 +430,28 @@ export class CourseCardComponent {
    * bzw. Server ohne den Wert). Das Maximum gehört IMMER dazu — nackte Punkte sind ohne die Zahl
    * der Stellungen nicht lesbar; fehlt es, ergibt es sich aus den Stellungen (4 je Stellung).
    */
+  /** UI-Sweep 2026-10-11 (r2-rp-empty-course): normaler Kurs ohne eine einzige Quiz-Linie. */
+  get isEmptyQuiz(): boolean {
+    return !this.course.isCalculation && this.course.puzzleCount === 0;
+  }
+
+  /** Hat der Kurs Info-/Partie-Linien zum Durchsehen (nur bei Kursen ohne Quiz-Linie bekannt)? */
+  get hasInfoLines(): boolean {
+    return (this.course.infoLineCount ?? 0) > 0;
+  }
+
+  /**
+   * UI-Sweep 2026-10-11 (r2-rp-taktik-chip): Chips nur für GESETZTE Themen. Der Server liefert ohne
+   * gesetzte Themen die Vorgabe ["tactics"] — als Chip unterschied „Taktik" damit nichts (auch Eröffnungs-
+   * und Endspielkurse trugen ihn). Kalkulationsbücher heißen „Kalkulation".
+   */
+  get themeChipKeys(): string[] {
+    if (this.course.isCalculation) return ['courses.kindCalculation'];
+    const themes = this.course.themes ?? [];
+    if (themes.length === 0 || (themes.length === 1 && themes[0] === 'tactics')) return [];
+    return themes.map(t => 'trainingGoals.theme.' + t);
+  }
+
   get calcScore(): string {
     if (!this.course.isCalculation || this.course.calcPoints == null) return '';
     return formatScore(this.course.calcPoints, this.course.calcMaxPoints ?? maxPoints(this.course.puzzleCount));

@@ -415,6 +415,10 @@ describe('MemberPageComponent (Karteiblatt)', () => {
       [li.querySelector('.whose')!.textContent, li.querySelector('a')!.getAttribute('href')]);
     expect(rows).toEqual([['Mutter Daniela', 'tel:06601112233'], ['Vater Franz', 'tel:0512581234'], ['E-Mail', 'mailto:daniela@example.org']]);
     expect(el().textContent).toContain('8 von 10 Einheiten da.');
+    // UI-Sweep 2026-10-11 (r2-c-attendance-da): „✓ Fr 25.09. · Anfänger — Gabel" — der Stand nur als Zeichen (aria-label)
+    const att = Array.from(el().querySelectorAll('.notes li')).find(li => li.querySelector('.cell'))!;
+    expect(att.querySelector('.cell')!.getAttribute('aria-label')).toBe('da');
+    expect(att.textContent!.replace(/\s+/g, ' ').trim()).toBe('✓ Fr 25.09. · Anfänger — Gabel');
     expect(el().textContent).toContain('kann die Gabel');
     expect(api.progress).not.toHaveBeenCalled();                                         // nicht verknüpft → kein Abruf
   });

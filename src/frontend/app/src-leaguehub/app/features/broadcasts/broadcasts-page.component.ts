@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { Broadcast } from '../../core/league.models';
@@ -46,12 +47,15 @@ export function broadcastErrorText(reason: string | undefined): string {
 @Component({
   selector: 'lh-broadcasts-page',
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!allowed) {
       <section class="gate">
         <h2>Nicht freigeschaltet</h2>
+        <!-- UI-Sweep 2026-10-11 (r2-l-gate-text): Klartext statt Rechte-Schlüssel und ein Weg zurück zu den Prognosen -->
         <p>Die Übertragungen verwalten nur Liga-Verwalter.</p>
+        <p><a class="btn-sec" routerLink="/">← Zu den Prognosen</a></p>
       </section>
     } @else {
       <section class="bc-page">

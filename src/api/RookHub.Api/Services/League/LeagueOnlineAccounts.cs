@@ -236,12 +236,13 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
             ? new JsonObject
             {
                 ["id"] = x.Id, ["fide"] = x.FideId, ["hidden"] = true, ["site"] = null, ["user"] = null, ["url"] = null, ["score"] = x.Score,
-                ["evidence"] = x.Evidence, ["profileName"] = null, ["location"] = null, ["lastActive"] = null,
+                ["evidence"] = CountryNames.ExpandLand(x.Evidence), ["profileName"] = null, ["location"] = null, ["lastActive"] = null,
             }
             : new JsonObject
             {
                 ["id"] = x.Id, ["fide"] = x.FideId, ["site"] = x.Site, ["user"] = x.UserName, ["url"] = x.Url, ["score"] = x.Score,
-                ["evidence"] = x.Evidence, ["profileName"] = x.ProfileName, ["location"] = x.Location,
+                // UI-Sweep 2026-10-11 (r2-l-land-codes): auch ältere Hinweise mit „Land SK" ausgeschrieben
+                ["evidence"] = CountryNames.ExpandLand(x.Evidence), ["profileName"] = x.ProfileName, ["location"] = x.Location,
                 ["lastActive"] = x.LastActive is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null,
             };
         if (hidden && reveal) o["minor"] = true;
@@ -332,7 +333,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     {
         var x = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(s => s.Id == id && s.Status == LeagueSuggestionStatus.Open, ct);
         if (x is null) return (null, "notFound");
-        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + x.Evidence), ct, addedBy, prep: prep);
+        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + CountryNames.ExpandLand(x.Evidence)), ct, addedBy, prep: prep);
         if (r.Reason == "duplicate")
         {
             db.LeagueAccountSuggestions.Remove(x);                           // das Konto gibt es schon — Vorschlag erledigt

@@ -312,6 +312,7 @@
       "title": "मेरे रेपर्टोयर",
       "new": "नया रेपर्टोयर",
       "fileCount": "{{count}} फ़ाइलें",
+      "fileCountOne": "{{count}} फ़ाइल",
       "public": "सार्वजनिक",
       "private": "निजी",
       "noDescription": "कोई विवरण नहीं",
@@ -522,7 +523,7 @@
     "title": "पाठ्यक्रम",
     "intro": "एक आयातित किताब की पहेलियाँ क्रमिक या यादृच्छिक रूप से हल करें। आपकी प्रगति सहेजी जाती है।",
     "emptyHint": "अभी कोई किताब आयात नहीं हुई। एडमिन क्षेत्र में \"Books\" के अंतर्गत किताबें आयात करें।",
-    "sectionPublic": "सार्वजनिक कोर्स",
+    "sectionPublic": "उपलब्ध कोर्स",
     "sectionPublicHint": "आपके समूहों के माध्यम से आपके साथ साझा किए गए कोर्स।",
     "sectionOwn": "आपके कोर्स",
     "sectionOwnHint": "आपके द्वारा स्वयं आयात या बनाए गए कोर्स।",
@@ -544,7 +545,19 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "जारी",
-    "sectionInProgressHint": "वे कोर्स जो आपने शुरू किए और अभी पूरे नहीं किए."
+    "sectionInProgressHint": "वे कोर्स जो आपने शुरू किए और अभी पूरे नहीं किए.",
+    "origin": {
+      "chessable": "Chessable आयात",
+      "pgn": "PGN आयात",
+      "by": "{{name}} द्वारा"
+    },
+    "reimport": {
+      "chip": "फिर से लाएँ",
+      "legend": "{{count}} कोर्स को RepCheck से फिर से आयात करना होगा",
+      "legendOne": "1 कोर्स को RepCheck से फिर से आयात करना होगा",
+      "more": "और",
+      "less": "कम"
+    }
   },
   "weekly": {
     "title": "साप्ताहिक",
@@ -635,6 +648,7 @@
       "settings": "सेटिंग्स",
       "highscore": "हाईस्कोर: {{rating}} रेटिंग",
       "sessionsPlayed": "{{count}} सत्र खेले",
+      "sessionsPlayedOne": "{{count}} सत्र खेले",
       "viewHistory": "इतिहास देखें",
       "unfinishedRun": "अधूरा रन: Lv {{level}} | {{solved}} हल | {{lives}} जीवन | {{max}} अधिकतम",
       "continue": "जारी रखें",
@@ -936,7 +950,10 @@
     "byTheme": "थीम के अनुसार",
     "byRating": "रेटिंग के अनुसार (हल किए)",
     "byRatingHint": "रेटिंग बैंड के अनुसार हल की गई पहेलियाँ — सटीकता के लिए होवर करें।",
-    "activity": "गतिविधि"
+    "activity": "गतिविधि",
+    "levelEmpty": "स्तर {{level}} में अभी कोई प्रयास नहीं",
+    "levelOther": "स्तर {{level}}: {{count}} प्रयास",
+    "levelOtherOne": "स्तर {{level}}: 1 प्रयास"
   },
   "trainingGoals": {
     "manual": {
@@ -965,7 +982,6 @@
     "days": "दि",
     "games": "games",
     "gamesPerWeek": "games/week",
-    "thisWeek": "this week",
     "weeklyDays": "प्रति सप्ताह दिन",
     "weekProgress": "इस सप्ताह {{target}} में से {{done}} दिन",
     "fromGroup": "आपके समूह \"{{group}}\" का प्रीसेट। आप इसे अपने लिए बदल सकते हैं।",
@@ -1004,7 +1020,10 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
-    }
+    },
+    "dailyReached": "दैनिक लक्ष्य पूर्ण",
+    "weeklyPlay": "साप्ताहिक लक्ष्य: खेलना",
+    "stillOpen": "अभी बाकी"
   },
   "chessable": {
     "testing": "Testing…",

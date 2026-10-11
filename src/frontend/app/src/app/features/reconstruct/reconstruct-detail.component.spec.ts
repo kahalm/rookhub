@@ -148,6 +148,22 @@ describe('ReconstructDetailComponent', () => {
     await fixture.whenStable();                                    // Hinweis erst nach dem Kopieren, noch im Test
   });
 
+  // UI-Sweep 2026-10-11 (r2-rg-recon-actions): in der Kopfzeile nur ✓ und ⋮ — Verschieben/Löschen stehen im Menü.
+  it('legt Verschieben und Löschen eines Teils ins ⋮-Menü', () => {
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5').flush(data([part({ id: 1 }), part({ id: 2, ordinal: 1 })]));
+    fixture.detectChanges();
+    const head = (fixture.nativeElement as HTMLElement).querySelector('.part-head')!;
+    const icons = Array.from(head.querySelectorAll('button mat-icon')).map(i => i.textContent?.trim());
+    expect(icons).toEqual(['check_circle', 'more_vert']);
+    (head.querySelector('button.part-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item')).map(e => e.textContent ?? '');
+    expect(items.join('|')).toContain('reconstruct.moveDown');
+    expect(items.join('|')).toContain('common.delete');
+  });
+
   it('schlägt den Anschluss nur nach einer Stellung vor', () => {
     const afterMoves = open([part({ id: 1, kind: PartKind.Moves })]);
     afterMoves.startNew(PartKind.Moves);

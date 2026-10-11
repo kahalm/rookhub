@@ -8,7 +8,7 @@ import * as L from 'leaflet';
 import { formatTournamentDates } from '../../core/tournament-date';
 import { MapPinMarker, pinRadiusFor } from './map-pin-marker';
 import { TournamentCardComponent } from './tournament-card.component';
-import { DirectoryEntry, DirectoryVenue } from './tournament-directory.model';
+import { DirectoryEntry, DirectoryVenue, displayLocation, isPlaceholderLocation } from './tournament-directory.model';
 import {
   MIXED, PIN_COLOUR_SCHEMES, PinCategory, PinColourBy, commonCategory, legendOf,
 } from './pin-palette';
@@ -847,7 +847,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
         (place ? `<br>${escapeHtml(place)}` : '');
     }
     const { entry, spot } = group.members[0];
-    const place = entry.venues.length > 1 ? spot.name : (entry.location ?? '');
+    // „various" ist kein Ort: uebersetzt (UI-Sweep 2026-10-11, r2-t-various).
+    const place = entry.venues.length > 1 ? spot.name : displayLocation(entry.location, key => this.text(key));
     const when = dateRange(entry, this.translate.currentLang());
     return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(when)}` +
            (place ? `<br>${escapeHtml(place)}` : '');
@@ -998,7 +999,8 @@ function isVague(group: PinGroup): boolean {
 /** Der Ortsname des Punktes; alle seine Spielorte liegen ja auf derselben Koordinate. */
 function placeOf(group: PinGroup): string {
   const { entry, spot } = group.members[0];
-  return spot.name || entry.geoPlaceName || entry.location || '';
+  // Ein Platzhalter wie „various" ist kein Ortsname (r2-t-various) — dann lieber keiner.
+  return spot.name || entry.geoPlaceName || (isPlaceholderLocation(entry.location) ? '' : entry.location) || '';
 }
 
 function groupStyle(group: PinGroup): L.PathOptions {

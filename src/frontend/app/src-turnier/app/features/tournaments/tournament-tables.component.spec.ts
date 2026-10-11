@@ -206,15 +206,16 @@ describe('TournamentTablesComponent', () => {
 
     const card = fixture.nativeElement.querySelector('.player-card') as HTMLElement;
     expect(card.querySelector('.team-link')).toBeNull();
-    expect(card.querySelector('.player-details')!.textContent).toContain('SK Dornbirn');
+    expect(card.querySelector('.player-club')!.textContent).toContain('SK Dornbirn');
   });
 
   /**
-   * Der Trennpunkt zwischen Elo, Land, Verein und Brett ist ein CSS-Escape; mit doppeltem Backslash
-   * stand auf jedem Handy der Text "\00b7" in der Karte. Letztes Detail traegt keinen Punkt.
+   * Der Trennpunkt zwischen Elo, Land und Brett ist ein CSS-Escape; mit doppeltem Backslash stand auf jedem Handy der
+   * Text "\00b7" in der Karte. Seit UI-Sweep 2026-10-11 (r2-t-meta-dot) steht er VOR dem Folgeelement (::before) —
+   * so bleibt er beim Umbruch nie allein am Zeilenende —, und der Verein hat eine eigene Zeile mit „…".
    */
-  it('trennt die Kartendetails mit einem Mittelpunkt statt dem Text \\00b7', () => {
-    component.players = component.displayedPlayers = [player()];
+  it('trennt die Kartendetails mit einem Mittelpunkt davor, der Verein in eigener Zeile', () => {
+    component.players = component.displayedPlayers = [player({ teamName: 'ŠK Prakovce - www.sachovetreningy.sk' })];
     component.hasTeamPairings = true;
     fixture.detectChanges();
 
@@ -222,12 +223,33 @@ describe('TournamentTablesComponent', () => {
     const cards = fixture.nativeElement.querySelector('.player-cards') as HTMLElement;
     cards.style.display = 'block';
     const details = Array.from(cards.querySelectorAll('.player-details > span')) as HTMLElement[];
-    expect(details.length).toBe(4);
+    expect(details.map(d => d.textContent!.trim())).toEqual(['2105', 'AUT', 'tournaments.players.boardShort 3']);
 
-    const content = (el: HTMLElement) => getComputedStyle(el, '::after').content.replace(/["']/g, '');
-    expect(content(details[0])).toBe('·');
-    expect(content(details[2])).withContext('Wrapper des Team-Links traegt den Punkt').toBe('·');
-    expect(content(details[3])).toBe('none');
+    const before = (el: HTMLElement) => getComputedStyle(el, '::before').content.replace(/["']/g, '');
+    const after = (el: HTMLElement) => getComputedStyle(el, '::after').content.replace(/["']/g, '');
+    expect(before(details[0])).toBe('none');
+    expect(before(details[1])).toBe('·');
+    expect(before(details[2])).toBe('·');
+    expect(after(details[2])).withContext('kein Punkt am Zeilenende').toBe('none');
+
+    const club = cards.querySelector('.player-club') as HTMLElement;
+    expect(club.textContent).toContain('ŠK Prakovce');
+    expect(getComputedStyle(club).textOverflow).toBe('ellipsis');
+    expect(getComputedStyle(club).whiteSpace).toBe('nowrap');
+  });
+
+  // UI-Sweep 2026-10-11 (r2-t-title-empty): eine durchgehend leere Titelspalte kostet nur Breite.
+  it('blendet die Spalte „Titel" aus, wenn kein Spieler einen echten Titel traegt', () => {
+    component.players = component.displayedPlayers = [player({ title: 'Z56' }), player({ id: 2, snr: 2, title: null })];
+    fixture.detectChanges();
+    expect(component.shownPlayerColumns).not.toContain('title');
+    expect(fixture.nativeElement.querySelector('th.mat-column-title')).toBeNull();
+    expect(component.shownPlayerColumns).toBe(component.shownPlayerColumns);
+
+    component.players = component.displayedPlayers = [player({ title: 'GM' }), player({ id: 2, snr: 2 })];
+    fixture.detectChanges();
+    expect(component.shownPlayerColumns).toContain('title');
+    expect(fixture.nativeElement.querySelector('th.mat-column-title')).not.toBeNull();
   });
 
   /**

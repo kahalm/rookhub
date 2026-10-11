@@ -172,6 +172,9 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
   `,
   styles: [`
     .catalog { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    /* UI-Sweep 2026-10-11 (r2-rp-catalog-padding): die Karten trugen kein mat-card-content — Inhalt stand bündig
+       an der Kartenkante. 16 px Polster wie überall; oben übernimmt der h2-Abstand. */
+    .catalog > mat-card { padding: 0 16px 16px; }
     h2 { margin: 16px 0 8px; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 8px; }
     .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
