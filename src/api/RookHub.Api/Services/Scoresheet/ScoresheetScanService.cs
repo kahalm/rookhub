@@ -440,8 +440,13 @@ public class ScoresheetScanService
         string transcriptionJson, int? clubGameId, CancellationToken ct = default, int? clubId = null)
     {
         if (pages.Count == 0) return (null, "noFile");
-        if (pages.Count > MaxPages) return (null, "tooManyPages");
+        // Wie beim Hochladen (0.754.0): mit SheetPage gehören mehrere Fotos zu einer Seite, das erste ist ihr Hauptfoto
+        // (Kästen beziehen sich darauf), die weiteren werden Ansichten (z. B. das zweite Exemplar auf demselben Foto).
+        if (SheetGroups(pages) is not { } groups) return (null, "invalidLayout");
+        if (groups.Count > MaxPages) return (null, "tooManyPages");
+        if (groups.Any(g => g.Count > MaxPhotosPerPage)) return (null, "tooManyViews");
         if (pages.Any(p => p.Data.Length == 0 || !ScoresheetImage.CanDecode(p.Data))) return (null, "unsupportedImage");
+        var mains = groups.Select(g => g[0]).ToList();
         string? finalPgn = null;
         if (clubGameId is int cg)
         {
@@ -451,7 +456,7 @@ public class ScoresheetScanService
             clubId = game.ClubId;
         }
 
-        var sizes = pages.Select(p => ScoresheetImage.Prepare(p.Data, ModelEdge) is { } j ? ScoresheetImage.Size(j) : null).ToList();
+        var sizes = mains.Select(p => ScoresheetImage.Prepare(p.Data, ModelEdge) is { } j ? ScoresheetImage.Size(j) : null).ToList();
         var json = ScoresheetTranscription.WithImageSize(transcriptionJson,
             sizes.All(x => x != null) ? sizes.Select(x => x!.Value).ToList() : new List<(int Width, int Height)>());
         var t = ScoresheetTranscription.Parse(json);
@@ -460,21 +465,25 @@ public class ScoresheetScanService
         var r = ScoresheetResolver.Resolve(t.Scanned(), new ScoresheetResolver.Options(ScoresheetNotation.Find(language)));
         if (r.Plies.Count == 0) return (null, "noMoves");
 
-        var stored = pages.Select(p => p.Data.Length > MaxStoredBytes
-            ? (Photo: ScoresheetImage.Prepare(p.Data, StoredEdge, 90) ?? p.Data, Type: "image/jpeg")
-            : (Photo: p.Data, Type: p.ContentType ?? "image/jpeg")).ToList();
+        var stored = groups.Select(g => g.Select(p => p.Data.Length > MaxStoredBytes
+            ? (Photo: ScoresheetImage.Prepare(p.Data, StoredEdge, 90) ?? p.Data, Type: "image/jpeg", Name: CleanFileName(p.FileName))
+            : (Photo: p.Data, Type: p.ContentType ?? "image/jpeg", Name: CleanFileName(p.FileName))).ToList()).ToList();
         var now = DateTime.UtcNow;
         var scan = new ScoresheetScan
         {
             UserId = ownerUserId,
-            Photo = stored[0].Photo,
-            ContentType = stored[0].Type,
-            FileName = CleanFileName(pages[0].FileName),
-            PageCount = pages.Count,
+            Photo = stored[0][0].Photo,
+            ContentType = stored[0][0].Type,
+            FileName = stored[0][0].Name,
+            PageCount = stored.Count,
             Pages = stored.Skip(1).Select((p, i) => new ScoresheetScanPage
             {
-                Page = i + 2, Photo = p.Photo, ContentType = p.Type, FileName = CleanFileName(pages[i + 1].FileName),
+                Page = i + 2, Photo = p[0].Photo, ContentType = p[0].Type, FileName = p[0].Name,
             }).ToList(),
+            Views = stored.SelectMany((p, i) => p.Skip(1).Select((v, j) => new ScoresheetScanView
+            {
+                Page = i + 1, View = j + 1, Photo = v.Photo, ContentType = v.Type, FileName = v.Name,
+            })).ToList(),
             NotationLanguage = "auto",
             OwnerSide = "auto",
             Purpose = ScoresheetScan.PurposeLeague,

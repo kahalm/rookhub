@@ -93,6 +93,13 @@ Rollenverwaltung an).
   Liga-Einlesung des Besitzers mit `Model = "claude-manual"`, danach Auflösung + Engine-Prüfung wie gelesen, offen zum Prüfen
   in LeagueHub. Mit `clubGameId` sofort archiviert und an die schon übernommene Vereinspartie gehängt (`CloseLeagueScanAsync`) —
   „Korrigieren" zeigt dann Foto und Lesarten. Keine Tageszahl, keine Kostenbremse.
+  **Drehen, zuschneiden, zweites Exemplar** (0.754.0, Formular-Stapel 2: Landesliga-Fotos mit Weiß- und Schwarz-Exemplar
+  quer nebeneinander): statt `fileIds` geht `pages: [{ fileId, rotate?, crop?, views?: [{ fileId, rotate?, crop? }] }]`.
+  `rotate` ∈ 0/90/180/270 (im Uhrzeigersinn, nach EXIF), `crop` = `[links, oben, rechts, unten]` als Anteile 0…1 des
+  GEDREHTEN Bilds (`ScoresheetImage.Transform`). Das Ergebnis ist das gespeicherte Hauptfoto — die Kästen beziehen sich
+  darauf; `views` werden Ansichten derselben Seite (`ScoresheetScanView`, wie „weiteres Foto dieser Seite"), dieselbe
+  `fileId` darf mehrfach vorkommen (ein Foto, zwei Ausschnitte). 400 zusätzlich `invalidTransform`, `invalidLayout`,
+  `tooManyViews`.
 - **Formular-Archiv + Datums-Bias (0.655.0**, Wunsch 2026-10-04: „merk dir Bild und Erkennung für Optimierungen, vorerst
   365 Tage" / „beim Datum heavily bias zu heuer"): `ScoresheetScanService.CloseLeagueScanAsync(actor, id, finalPgn)` kopiert
   vor dem Leeren je Seite Foto + (Seite 1) TranscriptionJson/ResolutionJson/FinalPgn in `ScoresheetScanArchives`

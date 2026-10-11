@@ -150,6 +150,63 @@ public static class ScoresheetImage
     }
 
     /// <summary>
+    /// Das Bild aufrecht (EXIF), um <paramref name="degreesClockwise"/> (0/90/180/270) gedreht und danach auf
+    /// <paramref name="crop"/> zugeschnitten (Anteile 0…1 des GEDREHTEN Bilds: links, oben, rechts, unten), in voller
+    /// Größe als JPEG — für ein Foto, auf dem zwei Formulare quer nebeneinander liegen (0.754.0, Weiß- und Schwarz-Exemplar
+    /// derselben Partie): je Exemplar ein aufrechter Ausschnitt. <c>null</c>, wenn sich das Bild nicht lesen lässt, der
+    /// Winkel keiner davon ist oder der Ausschnitt leer/außerhalb liegt.
+    /// </summary>
+    public static byte[]? Transform(byte[] data, int degreesClockwise, (double Left, double Top, double Right, double Bottom)? crop,
+        int quality = 90)
+    {
+        SKEncodedOrigin? turn = degreesClockwise switch
+        {
+            0 => SKEncodedOrigin.TopLeft,
+            90 => SKEncodedOrigin.RightTop,
+            180 => SKEncodedOrigin.BottomRight,
+            270 => SKEncodedOrigin.LeftBottom,
+            _ => null,
+        };
+        if (turn == null) return null;
+        if (crop is { } c && !(c.Left >= 0 && c.Top >= 0 && c.Right <= 1 && c.Bottom <= 1 && c.Right > c.Left && c.Bottom > c.Top))
+            return null;
+        try
+        {
+            using var codec = SKCodec.Create(new SKMemoryStream(data));
+            if (codec == null) return null;
+            if (DecodeInfo(codec, MaxPixels, MaxDecodePixels) is not { } target) return null;
+            using var decoded = target.Width == codec.Info.Width && target.Height == codec.Info.Height
+                ? SKBitmap.Decode(codec)
+                : DecodeScaled(codec, target);
+            if (decoded == null) return null;
+            using var upright = Orient(decoded, codec.EncodedOrigin);
+            using var turned = Orient(upright ?? decoded, turn.Value);
+            var bmp = turned ?? upright ?? decoded;
+            if (crop is not { } r) return Encode(bmp, quality);
+            var left = (int)Math.Round(r.Left * bmp.Width);
+            var top = (int)Math.Round(r.Top * bmp.Height);
+            var width = Math.Min(bmp.Width - left, (int)Math.Round((r.Right - r.Left) * bmp.Width));
+            var height = Math.Min(bmp.Height - top, (int)Math.Round((r.Bottom - r.Top) * bmp.Height));
+            if (width < 1 || height < 1) return null;
+            using var cut = new SKBitmap(width, height);
+            using (var canvas = new SKCanvas(cut))
+                canvas.DrawBitmap(bmp, SKRect.Create(left, top, width, height), SKRect.Create(0, 0, width, height));
+            return Encode(cut, quality);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static byte[]? Encode(SKBitmap bmp, int quality)
+    {
+        using var image = SKImage.FromBitmap(bmp);
+        using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+        return encoded?.ToArray();
+    }
+
+    /// <summary>
     /// Ein QUADRAT aus einem (schon aufrechten) Bild schneiden, auf höchstens <paramref name="maxEdge"/> verkleinern, JPEG.
     /// Das Quadrat wird ins Bild geholt, falls es übersteht. <c>null</c>, wenn sich das Bild nicht lesen lässt.
     /// Gedacht für das von <see cref="Prepare"/> erzeugte JPEG — die EXIF-Drehung wird hier NICHT noch einmal angewandt.

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.754.0", date: "2026-10-11", changes: [
+    { en: "LeagueHub score sheets read without the model (admin): a photo can now be turned and cropped before it is stored, and the same photo can be used twice — for pictures showing the White and Black copy of a game side by side, one copy becomes the main photo and the other a further view of the same page.",
+      de: "LeagueHub-Partieformulare ohne Modell eingelesen (Admin): ein Foto lässt sich jetzt vor dem Speichern drehen und zuschneiden, und dasselbe Foto darf zweimal vorkommen – für Bilder, die das Weiß- und Schwarz-Exemplar einer Partie nebeneinander zeigen, wird ein Exemplar das Hauptfoto und das andere eine weitere Ansicht derselben Seite." },
+  ] },
   { version: "0.753.12", date: "2026-10-11", changes: [
     { en: "Developer tooling: automatic architecture checks keep the new folder structure of the server code from drifting (location, namespaces, dependency direction). No change to the app.",
       de: "Entwickler-Werkzeuge: automatische Architektur-Prüfungen halten die neue Ordnerstruktur des Server-Codes stabil (Ort, Namespaces, Abhängigkeitsrichtung). Keine Änderung an der App." },

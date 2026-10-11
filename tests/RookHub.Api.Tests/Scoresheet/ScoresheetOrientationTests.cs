@@ -72,4 +72,23 @@ public class ScoresheetOrientationTests
         Assert.True(back.GetPixel(5, 5).Red > 180);
         Assert.Null(ScoresheetImage.Rotate(jpeg, 45));
     }
+    /// <summary>Formular-Stapel 2 (0.754.0): zwei Exemplare quer nebeneinander — drehen, dann je eine Hälfte schneiden.</summary>
+    [Fact]
+    public void Transform_TurnsThenCrops()
+    {
+        using var bmp = new SKBitmap(40, 30);
+        using (var c = new SKCanvas(bmp)) { c.Clear(SKColors.White); c.DrawRect(0, 0, 10, 10, new SKPaint { Color = SKColors.Black }); }
+        using var img = SKImage.FromBitmap(bmp);
+        var jpeg = img.Encode(SKEncodedImageFormat.Jpeg, 95).ToArray();
+
+        var right = ScoresheetImage.Transform(jpeg, 90, (0.5, 0, 1, 0.5))!;  // gedreht 30×40, obere rechte Viertel 15×20
+        Assert.Equal((15, 20), ScoresheetImage.Size(right));
+        using var back = SKBitmap.Decode(right);
+        Assert.True(back.GetPixel(12, 3).Red < 80);                // die schwarze Ecke liegt im Ausschnitt oben rechts
+        Assert.True(back.GetPixel(2, 15).Red > 180);
+        Assert.Equal((40, 30), ScoresheetImage.Size(ScoresheetImage.Transform(jpeg, 0, null)!));
+        Assert.Null(ScoresheetImage.Transform(jpeg, 45, null));
+        Assert.Null(ScoresheetImage.Transform(jpeg, 0, (0.6, 0, 0.4, 1)));
+        Assert.Null(ScoresheetImage.Transform(jpeg, 0, (0, 0, 1.2, 1)));
+    }
 }

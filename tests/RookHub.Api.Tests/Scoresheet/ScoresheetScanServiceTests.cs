@@ -406,6 +406,26 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(Written.Length, state.Plies.Count);
     }
 
+    /// <summary>0.754.0: mit SheetPage werden weitere Fotos einer Seite Ansichten (zweites Exemplar auf demselben Foto).</summary>
+    [Fact]
+    public async Task CreateManual_WithSheetPages_StoresFurtherPhotosAsViews()
+    {
+        var u = await UserAsync();
+        var (scan, reason) = await _service.CreateManualAsync(u.Id, new[]
+        {
+            new ScoresheetUpload(Jpeg(), "image/jpeg", "weiss.jpg", 1), new ScoresheetUpload(Jpeg(), "image/jpeg", "schwarz.jpg", 1),
+        }, Answer(Written), null);
+
+        Assert.Null(reason);
+        var row = await _db.ScoresheetScans.Include(s => s.Views).SingleAsync();
+        Assert.Equal((1, "weiss.jpg"), (row.PageCount, row.FileName));
+        Assert.Equal((1, 1, "schwarz.jpg"), (row.Views.Single().Page, row.Views.Single().View, row.Views.Single().FileName));
+        Assert.Equal("invalidLayout", (await _service.CreateManualAsync(u.Id, new[]
+        {
+            new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg", 1), new ScoresheetUpload(Jpeg(), "image/jpeg", "b.jpg", 3),
+        }, Answer(Written), null)).Reason);
+    }
+
     [Fact]
     public async Task CreateManual_ForAClubGame_IsArchivedSoCorrectingShowsTheSheet()
     {
