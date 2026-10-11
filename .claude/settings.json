@@ -10,6 +10,9 @@
       "WebFetch(domain:ratings.fide.com)",
       "WebFetch(domain:app.fide.com)",
       "WebSearch"
+    ],
+    "deny": [
+      "Read(./**/Migrations/*.Designer.cs)"
     ]
   }
 }
