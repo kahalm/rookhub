@@ -1,7 +1,7 @@
 import { DEFAULT_FACE, clampFace, faceBox } from './face';
 
 describe('face (Kreis ums Gesicht)', () => {
-  // Dieselben LITERALEN Werte wie in tests/RookHub.Api.Tests/ClubFaceTests.cs (ClubFace.Normalize) — die Regel steht auf
+  // Dieselben LITERALEN Werte wie in tests/RookHub.Api.Tests/Club/ClubFaceTests.cs (ClubFace.Normalize) — die Regel steht auf
   // beiden Seiten, und keiner der Tests importiert die Gegenseite.
   it('clampFace holt den Kreis ins Bild', () => {
     expect(clampFace({ x: 0.5, y: 0.4, r: 0.28 }, 900, 1200)).toEqual({ x: 0.5, y: 0.4, r: 0.28 });          // passt: bleibt

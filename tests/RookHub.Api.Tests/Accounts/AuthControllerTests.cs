@@ -1,0 +1,855 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
+
+namespace RookHub.Api.Tests.Accounts;
+
+public class AuthControllerTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly AuthService _authService;
+    private readonly AuthController _controller;
+    private readonly SharedSessionService _shared;
+    private readonly DefaultHttpContext _http = new();
+
+    public AuthControllerTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "TestSecretKeyThatIsLongEnoughForHmacSha256!!",
+                ["Jwt:Issuer"] = "TestIssuer",
+                ["Jwt:Audience"] = "TestAudience",
+                // Die geteilte Anmeldung ueber beide Oberflaechen braucht eine Elterndomaene;
+                // ohne sie ist sie aus (siehe SharedSessionServiceTests).
+                ["Auth:SharedSessionDomain"] = ".example.test",
+            })
+            .Build();
+
+        _authService = new AuthService(_db, config, NullLogger<AuthService>.Instance, null, TestServices.Cache());
+        var resetService = new PasswordResetService(
+            _db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance);
+        var handoff = new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance);
+        _shared = new SharedSessionService(_db, _authService, config);
+        _controller = new AuthController(_authService, resetService, handoff, _shared, new CapturingTaskQueue())
+        {
+            // Ohne HttpContext gibt es weder Request.Cookies noch Response.Cookies — und der
+            // Controller schreibt beim Anmelden ein Cookie.
+            ControllerContext = new ControllerContext { HttpContext = _http },
+        };
+    }
+
+    /// <summary>Die Set-Cookie-Zeile, die der Controller geschrieben hat (oder null).</summary>
+    private string? SetCookieHeader(string name) =>
+        _http.Response.Headers.SetCookie.FirstOrDefault(h => h?.StartsWith(name + "=") == true);
+
+    /// <summary>Die Set-Cookie-Zeile fuer genau diesen Pfad (Cookies sind je Name+Domaene+PFAD eigene Eintraege).</summary>
+    private string? SetCookieHeader(string name, string path) =>
+        _http.Response.Headers.SetCookie.FirstOrDefault(h => h?.StartsWith(name + "=") == true
+            && h.Split(';').Any(part => string.Equals(part.Trim(), "path=" + path, StringComparison.OrdinalIgnoreCase)));
+
+    private static bool IsDeletion(string? setCookie) =>
+        setCookie != null && setCookie.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase);
+
+    public void Dispose() => _db.Dispose();
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public bool IsEnabled => true;
+        public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
+
+    /// <summary>Sammelt eingereihte Arbeiten, statt sie auszufuehren — der Test entscheidet, wann der
+    /// „Hintergrund" laeuft, und mit welchem ServiceProvider.</summary>
+    private sealed class CapturingTaskQueue : IWebhookTaskQueue
+    {
+        public List<Func<IServiceProvider, CancellationToken, Task>> Items { get; } = new();
+
+        public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+        {
+            Items.Add(workItem);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        /// <summary>Alle gesammelten Arbeiten so ausfuehren, wie es der Worker taete: mit einem Scope, der den
+        /// <paramref name="resetService"/> liefert.</summary>
+        public async Task RunAllAsync(PasswordResetService resetService)
+        {
+            using var sp = new ServiceCollection().AddSingleton(resetService).BuildServiceProvider();
+            foreach (var item in Items) await item(sp, CancellationToken.None);
+            Items.Clear();
+        }
+    }
+
+    // ---- Register ----
+
+    [Fact]
+    public async Task Register_ReturnsOk_WithToken()
+    {
+        var dto = new RegisterDto { Username = "newuser", Email = "new@test.com", Password = "Password1!" };
+
+        var result = await _controller.Register(dto);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = okResult.Value as AuthResponseDto;
+        Assert.NotNull(response);
+        Assert.Equal("newuser", response.Username);
+        Assert.False(string.IsNullOrEmpty(response.Token));
+    }
+
+    [Fact]
+    public async Task Register_ReturnsConflict_WhenUsernameExists()
+    {
+        _db.AppUsers.Add(new AppUser
+        {
+            Username = "existing",
+            Email = "exist@test.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass")
+        });
+        await _db.SaveChangesAsync();
+
+        var dto = new RegisterDto { Username = "existing", Email = "new@test.com", Password = "Password1!" };
+
+        var result = await _controller.Register(dto);
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Register_ReturnsConflict_WhenEmailExists()
+    {
+        _db.AppUsers.Add(new AppUser
+        {
+            Username = "user1",
+            Email = "taken@test.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass")
+        });
+        await _db.SaveChangesAsync();
+
+        var dto = new RegisterDto { Username = "user2", Email = "taken@test.com", Password = "Password1!" };
+
+        var result = await _controller.Register(dto);
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+    }
+
+    // ---- Login ----
+
+    [Fact]
+    public async Task Login_ReturnsOk_WithValidCredentials()
+    {
+        // Register first
+        await _controller.Register(new RegisterDto
+        {
+            Username = "loginuser",
+            Email = "login@test.com",
+            Password = "Password1!"
+        });
+
+        var result = await _controller.Login(new LoginDto
+        {
+            Username = "loginuser",
+            Password = "Password1!"
+        });
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = okResult.Value as AuthResponseDto;
+        Assert.NotNull(response);
+        Assert.Equal("loginuser", response.Username);
+    }
+
+    [Fact]
+    public async Task Login_ReturnsUnauthorized_WithWrongPassword()
+    {
+        await _controller.Register(new RegisterDto
+        {
+            Username = "loginuser",
+            Email = "login@test.com",
+            Password = "Password1!"
+        });
+
+        var result = await _controller.Login(new LoginDto
+        {
+            Username = "loginuser",
+            Password = "WrongPassword1!"
+        });
+
+        Assert.IsType<UnauthorizedObjectResult>(result.Result);
+        Assert.Equal("login_invalid", ApiErrorCodesTests.CodeOf(result.Result));   // F5-019
+    }
+
+    [Fact]
+    public async Task Login_LockedAccount_Returns403_WithTheEnd()
+    {
+        // F5-011: nur mit richtigem Passwort — sonst 401 wie jedes falsche Passwort.
+        await _controller.Register(new RegisterDto { Username = "gesperrt", Email = "g@test.com", Password = "Password1!" });
+        var user = await _db.AppUsers.SingleAsync(u => u.Username == "gesperrt");
+        var until = DateTime.UtcNow.AddDays(2);
+        user.LockedUntil = until;
+        await _db.SaveChangesAsync();
+
+        var wrong = await _controller.Login(new LoginDto { Username = "gesperrt", Password = "WrongPassword1!" });
+        Assert.IsType<UnauthorizedObjectResult>(wrong.Result);
+
+        var result = await _controller.Login(new LoginDto { Username = "gesperrt", Password = "Password1!" });
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+        var body = System.Text.Json.JsonSerializer.Serialize(status.Value);
+        Assert.Contains("\"lockedUntil\"", body);
+        Assert.Equal("account_locked", ApiErrorCodesTests.CodeOf(status));
+        Assert.Contains(until.ToString("yyyy-MM-ddTHH:mm:ss"), body);
+    }
+
+    [Fact]
+    public async Task Login_ReturnsUnauthorized_WithNonexistentUser()
+    {
+        var result = await _controller.Login(new LoginDto
+        {
+            Username = "nonexistent",
+            Password = "Password1!"
+        });
+
+        Assert.IsType<UnauthorizedObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Login_Returns429_WhileAThrottledCheckForTheSameAccountRuns()
+    {
+        // Konto-Bremse (W1 A1-004): läuft für ein gebremstes Konto schon eine Prüfung, wird ein
+        // weiterer Versuch sofort abgewiesen — als 429 mit Retry-After, nicht als „falsches Passwort".
+        await _controller.Register(new RegisterDto { Username = "busy", Password = "Password1!" });
+        for (var i = 0; i < 6; i++)
+            Assert.IsType<UnauthorizedObjectResult>(
+                (await _controller.Login(new LoginDto { Username = "busy", Password = "falsch" })).Result);
+
+        var running = _authService.LoginAsync(new LoginDto { Username = "busy", Password = "falsch" });  // hält das Tor
+        var result = await _controller.Login(new LoginDto { Username = "busy", Password = "Password1!" });
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, status.StatusCode);
+        Assert.Equal("5", _http.Response.Headers.RetryAfter.ToString());
+        Assert.Equal("login_throttled", ApiErrorCodesTests.CodeOf(status));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => running);
+    }
+
+    // ---- Forgot / Reset Password ----
+
+    [Fact]
+    public async Task ForgotPassword_ReturnsOk_EvenForUnknownEmail()
+    {
+        var result = await _controller.ForgotPassword(new ForgotPasswordDto { Email = "nobody@test.com" });
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_AnswersBeforeTheMailIsSent_SoTheResponseTimeRevealsNoAccount()
+    {
+        // A1-009: Bei bekannter Adresse wartete die Antwort auf die SMTP-Runde, bei unbekannter kam sie sofort —
+        // die Antwortzeit verriet, ob es das Konto gibt. Jetzt antwortet der Controller, bevor irgendetwas
+        // nachgeschlagen oder verschickt ist; der Versand laeuft als Hintergrundarbeit.
+        await _controller.Register(new RegisterDto { Username = "known", Email = "known@t.com", Password = "Password1!" });
+        var mails = new RecordingEmailSender();
+        var resetService = new PasswordResetService(_db, mails, new ConfigurationBuilder().Build(),
+            NullLogger<PasswordResetService>.Instance);
+        var queue = new CapturingTaskQueue();
+        var controller = new AuthController(_authService, resetService,
+            new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance), _shared, queue)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        var known = await controller.ForgotPassword(new ForgotPasswordDto { Email = "known@t.com" });
+        var unknown = await controller.ForgotPassword(new ForgotPasswordDto { Email = "nobody@t.com" });
+
+        Assert.IsType<OkObjectResult>(known);
+        Assert.IsType<OkObjectResult>(unknown);
+        Assert.Empty(mails.Sent);
+        Assert.Empty(_db.PasswordResetTokens);
+        // Beide Anfragen sehen gleich aus: je eine Hintergrundarbeit, egal ob es die Adresse gibt.
+        Assert.Equal(2, queue.Items.Count);
+
+        await queue.RunAllAsync(resetService);
+        Assert.Equal("known@t.com", Assert.Single(mails.Sent).To);
+        Assert.Single(_db.PasswordResetTokens);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_PassesSiteAndLanguageToTheMail()
+    {
+        // UX-031: KidHub schickt site/lang mit — der Controller muss sie bis zur Mail durchreichen.
+        await _controller.Register(new RegisterDto { Username = "kid", Email = "kid@t.com", Password = "Password1!" });
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["App:BaseUrl"] = "https://rookhub.example",
+                ["App:KidHubBaseUrl"] = "https://kidhub.example",
+            })
+            .Build();
+        var mails = new RecordingEmailSender();
+        var resetService = new PasswordResetService(_db, mails, config, NullLogger<PasswordResetService>.Instance);
+        var queue = new CapturingTaskQueue();
+        var controller = new AuthController(_authService, resetService,
+            new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance), _shared, queue)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        var result = await controller.ForgotPassword(new ForgotPasswordDto { Email = "kid@t.com", Site = "kidhub", Lang = "en" });
+
+        Assert.IsType<OkObjectResult>(result);
+        await queue.RunAllAsync(resetService);
+        var mail = Assert.Single(mails.Sent);
+        Assert.Equal("KidHub — Reset your password", mail.Subject);
+        Assert.Contains("https://kidhub.example/reset-password?token=", mail.Text);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ReturnsBadRequest_WithInvalidToken()
+    {
+        var result = await _controller.ResetPassword(new ResetPasswordDto
+        {
+            Token = "does-not-exist",
+            NewPassword = "BrandNew1!"
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Register_SetsIsAdmin_False()
+    {
+        var result = await _controller.Register(new RegisterDto
+        {
+            Username = "newuser",
+            Email = "new@test.com",
+            Password = "Password1!"
+        });
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = okResult.Value as AuthResponseDto;
+        Assert.False(response!.IsAdmin);
+    }
+
+    // ---- Anmelde-Uebergabe ----
+
+    /// <summary>Meldet den Controller als <paramref name="userId"/> an — mit <paramref name="impersonatedBy"/>
+    /// traegt das Token den <c>imp</c>-Claim wie ein Einstieg ueber <c>POST /api/admin/users/{id}/impersonate</c>.</summary>
+    private void SignIn(int userId, int? impersonatedBy = null)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (impersonatedBy is int adminId) claims.Add(new Claim("imp", adminId.ToString()));
+        _http.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
+    }
+
+    [Fact]
+    public async Task Handoff_ReturnsACode_ForAnOwnLogin()
+    {
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);
+
+        var result = await _controller.Handoff(CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(1, await _db.AuthHandoffTokens.CountAsync(t => t.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task Handoff_WhileImpersonating_Returns403_AndIssuesNoCode()
+    {
+        // Eingeloest wird der Code zu einer GEWOEHNLICHEN Anmeldung des Zielkontos (30 Tage, ohne imp-Claim,
+        // samt rh_session) — damit fielen alle Impersonations-Sperren (E-Mail aendern → Passwort vergessen →
+        // Konto dauerhaft uebernommen), und der Admin-Bezug im Log waere weg.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var target = await _db.AppUsers.FirstAsync();
+        SignIn(target.Id, impersonatedBy: 990001);
+
+        // Die Sperre ist ein Filter-Attribut ([DenyWhileImpersonating]) — also mit den Filtern aufrufen wie die Pipeline.
+        var result = await TestActionFilters.InvokeAsync(_controller, nameof(AuthController.Handoff),
+            () => _controller.Handoff(CancellationToken.None));
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
+        Assert.False(await _db.AuthHandoffTokens.AnyAsync());
+    }
+
+    // ---- Codereview F1-008: der Uebergabe-Code ist an den Browser gebunden (kein Login-CSRF) ----
+
+    private async Task<AppUser> AddUserAsync(string name)
+    {
+        await _controller.Register(new RegisterDto { Username = name, Email = name + "@t.com", Password = "Password1!" });
+        _http.Response.Headers.Remove("Set-Cookie");
+        return await _db.AppUsers.FirstAsync(u => u.Username == name);
+    }
+
+    private Task<string> IssueCodeAsync(int userId) =>
+        new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance).IssueAsync(userId);
+
+    [Fact]
+    public async Task Handoff_LeavesTheSharedCookieOfTheCaller_SoTheJumpCanBeRedeemedOverThere()
+    {
+        // Der Nachweis drueben ist das geteilte Cookie DESSELBEN Kontos — der Sprung legt es beim Holen des Codes an,
+        // auch wenn das alte (30 Tage) inzwischen abgelaufen ist.
+        var user = await AddUserAsync("u");
+        SignIn(user.Id);
+
+        await _controller.Handoff(CancellationToken.None);
+
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.NotNull(cookie);
+        Assert.False(IsDeletion(cookie));
+        Assert.Equal(user.Id, (await _shared.RedeemAsync(CookieValue(cookie)))?.UserId);
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithoutASharedCookie_IsRejected_AndLeavesNoCookie()
+    {
+        // Fund-Weg: der Angreifer holt sich serverseitig einen frischen Code fuer SEIN Konto und leitet das Opfer auf
+        // …?h=<Code>. Im Browser des Opfers liegt kein Cookie dieses Kontos — kein Tausch, keine Anmeldung, kein
+        // rh_session des Angreifers fuer RookHub, KidHub und LeagueHub.
+        var attacker = await AddUserAsync("attacker");
+        var code = await IssueCodeAsync(attacker.Id);
+
+        var result = await _controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithTheSharedCookieOfAnotherAccount_IsRejected_AndKeepsThatCookie()
+    {
+        // Das Opfer ist auf einer anderen Oberflaeche angemeldet (sein Cookie liegt) — der Code des Angreifers darf es
+        // weder anmelden noch das Cookie auf den Angreifer umschreiben.
+        var victim = await AddUserAsync("victim");
+        var attacker = await AddUserAsync("attacker");
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(victim.Id)}";
+        var code = await IssueCodeAsync(attacker.Id);
+
+        var result = await _controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
+    public async Task LegacyHandoffExchange_AppliesTheSameCheck()
+    {
+        // Der alte Pfad (Uebergang fuer Oberflaechen aus dem Browser-Cache) darf kein Weg an der Pruefung vorbei sein.
+        var attacker = await AddUserAsync("attacker");
+        var code = await IssueCodeAsync(attacker.Id);
+
+        var result = await _controller.LegacyHandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithTheSharedCookieOfTheSameAccount_TurnsTheCodeIntoALogin()
+    {
+        // Der gewoehnliche Sprung: derselbe Browser hat beim Holen des Codes das Cookie bekommen.
+        var user = await AddUserAsync("u");
+        _http.Request.Headers.Cookie = $"rh_session=alt.und.kaputt; rh_session={await _shared.IssueAsync(user.Id)}";
+        var code = await IssueCodeAsync(user.Id);
+
+        var result = await _controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+        Assert.False(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+    }
+
+    [Fact]
+    public void HandoffExchange_IsServedUnderTheCookiePath()
+    {
+        // Das Cookie traegt Path=/api/auth/rh-session (N6-001) — nur unter diesem Pfad schickt der Browser es mit.
+        var routes = typeof(AuthController).GetMethod(nameof(AuthController.HandoffExchange))!
+            .GetCustomAttributes(typeof(HttpPostAttribute), false).Cast<HttpPostAttribute>()
+            .Select(a => "/api/auth/" + a.Template).ToList();
+
+        Assert.Contains(routes, r => r.StartsWith(SharedSessionService.CookiePath + "/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithoutAParentDomain_StaysCodeOnly()
+    {
+        // localhost/IP: es gibt kein geteiltes Cookie — dann bleibt der Code der einzige Nachweis (unveraendert).
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "TestSecretKeyThatIsLongEnoughForHmacSha256!!",
+                ["Jwt:Issuer"] = "TestIssuer",
+                ["Jwt:Audience"] = "TestAudience",
+            })
+            .Build();
+        var auth = new AuthService(_db, config, NullLogger<AuthService>.Instance, null, TestServices.Cache());
+        var handoff = new AuthHandoffService(_db, auth, NullLogger<AuthHandoffService>.Instance);
+        var http = new DefaultHttpContext();
+        var controller = new AuthController(auth,
+            new PasswordResetService(_db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance),
+            handoff, new SharedSessionService(_db, auth, config), new CapturingTaskQueue())
+        {
+            ControllerContext = new ControllerContext { HttpContext = http },
+        };
+        var user = await AddUserAsync("u");
+        var code = await handoff.IssueAsync(user.Id);
+
+        var result = await controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+    }
+
+    // ---- Geteilte Anmeldung ueber beide Oberflaechen ----
+
+    [Fact]
+    public async Task Login_LeavesASharedSessionCookieOnTheParentDomain()
+    {
+        // Ohne dieses Cookie muesste man sich auf der Turnierseite ein zweites Mal anmelden:
+        // eigene Subdomain, eigener localStorage.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        await _controller.Login(new LoginDto { Username = "u", Password = "Password1!" });
+
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.NotNull(cookie);
+        Assert.False(IsDeletion(cookie));
+        Assert.Contains("domain=.example.test", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Login_ScopesTheSharedCookieToItsOwnPath_AndClearsTheOldOne()
+    {
+        // N6-001: mit Path=/api/auth schickte der Browser das 30-Tage-Cookie an JEDEN Host der Elterndomaene,
+        // der unter /api/auth eine eigene Anmeldung hat (Dev-Stacks, RCT, Lernkompass, Cal.com). Gueltig
+        // ausgegeben wird es nur noch fuer /api/auth/rh-session; ein altes Cookie mit /api/auth wird geloescht.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        await _controller.Login(new LoginDto { Username = "u", Password = "Password1!" });
+
+        var live = _http.Response.Headers.SetCookie
+            .Where(h => h?.StartsWith("rh_session=") == true && !IsDeletion(h)).ToList();
+        var only = Assert.Single(live);
+        Assert.Equal(only, SetCookieHeader("rh_session", "/api/auth/rh-session"));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")),
+            "Das alte Cookie (Path=/api/auth) muss mit abgelaufenem Datum geloescht werden.");
+        Assert.Contains("domain=.example.test", SetCookieHeader("rh_session", "/api/auth"), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SharedSession_RedeemsAnOldPathCookie_AndMovesItToTheNewPath()
+    {
+        // Uebergang: wer sich vor N6-001 angemeldet hat, hat nur das alte Cookie. Der Browser schickt es an
+        // /api/auth/rh-session mit (Pfad-Praefix) — der Tausch klappt, und danach liegt es am neuen Pfad.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await _controller.LegacySharedSession(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+        Assert.False(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+        Assert.NotNull(SetCookieHeader("rh_session", "/api/auth/rh-session"));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+    }
+
+    [Fact]
+    public async Task SharedSession_WithBothCookies_TakesTheNewPathOne()
+    {
+        // Browser listen Cookies mit laengerem Pfad zuerst (RFC 6265 5.4) — liegt noch ein altes, untaugliches
+        // daneben, darf das die gueltige neue Anmeldung nicht kippen.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}; rh_session=alt.und.kaputt";
+
+        var result = await _controller.SharedSession(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+    }
+
+    [Fact]
+    public async Task SharedSession_TurnsTheCookieIntoAnOwnLogin()
+    {
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
+
+        var result = await _controller.SharedSession(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var res = Assert.IsType<AuthResponseDto>(ok.Value);
+        Assert.Equal(user.Id, res.UserId);
+        Assert.False(string.IsNullOrWhiteSpace(res.Token));
+    }
+
+    [Fact]
+    public async Task SharedSession_WithoutACookieIsSimplyNoContent()
+    {
+        // Kein 401: jeder App-Start ohne Anmeldung fragt hier, und ein 401 zaehlt fuer die
+        // Ueberwachung als abgelehnter Anmeldeversuch.
+        var result = await _controller.SharedSession(CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result.Result);
+        // Und es wird auch nichts geloescht, was gar nicht da war.
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
+    public async Task SharedSession_ThrowsAwayACookieThatNoLongerWorks()
+    {
+        // Sonst fragt jede Seite bei jedem Start erneut danach und bekommt 30 Tage lang dieselbe
+        // Absage.
+        _http.Request.Headers.Cookie = "rh_session=voelliger.unsinn";
+
+        var result = await _controller.SharedSession(CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result.Result);
+        var cookie = SetCookieHeader("rh_session");
+        Assert.NotNull(cookie);
+        Assert.Contains("expires=", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void EndSharedSession_DeletesTheCookieOnTheSameDomainAndPath()
+    {
+        // Mit abweichender Domaene/Pfad legte der Browser ein ZWEITES an und das alte bliebe liegen.
+        var result = _controller.EndSharedSession();
+
+        Assert.IsType<NoContentResult>(result);
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.True(IsDeletion(cookie));
+        Assert.Contains("domain=.example.test", cookie, StringComparison.OrdinalIgnoreCase);
+        // ... und das alte Cookie (Pfad /api/auth, vor N6-001) gleich mit.
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+    }
+
+    [Fact]
+    public void LegacyEndSharedSession_DeletesBothCookies()
+    {
+        // Eine Oberflaeche aus dem Browser-Cache meldet sich ueber den alten Pfad ab — auch das neue Cookie muss
+        // dann weg, sonst meldete die naechste Seite den Nutzer gleich wieder an.
+        var result = _controller.LegacyEndSharedSession();
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+    }
+
+    // ---- Uebergang N6-001: Alt-Route /api/auth/session fuer Oberflaechen aus dem Browser-Cache ----
+
+    /// <summary>Der Wert einer Set-Cookie-Zeile (bis zum ersten Semikolon).</summary>
+    private static string CookieValue(string setCookie) => setCookie.Split(';')[0].Split('=', 2)[1];
+
+    [Fact]
+    public async Task Login_WritesTheMovedMarker_OnTheOldRoutePath_AndItIsNoCredential()
+    {
+        // Merker fuer die Alt-Route: liegt genau unter /api/auth/session (dorthin kommt das neue Cookie nicht mehr),
+        // und er darf dort auch an andere Anwendungen gehen — deshalb kein Nachweis und nicht die Nutzer-Id.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        await _controller.Login(new LoginDto { Username = "u", Password = "Password1!" });
+
+        var marker = SetCookieHeader("rh_session_moved", "/api/auth/session");
+        Assert.NotNull(marker);
+        Assert.False(IsDeletion(marker));
+        Assert.Contains("domain=.example.test", marker, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", marker, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", marker, StringComparison.OrdinalIgnoreCase);
+        var user = await _db.AppUsers.FirstAsync();
+        Assert.Equal(_shared.MovedMarkerFor(user.Id), CookieValue(marker));
+        Assert.Null(await _shared.RedeemAsync(CookieValue(marker)));
+    }
+
+    [Fact]
+    public async Task LegacySharedSession_SecondCheckAfterTheMove_Answers410_AndKeepsAllCookies()
+    {
+        // Review N6-001 (2): die alte Fassung gleicht beim Start UND bei jedem Tab-Wechsel ueber /api/auth/session ab.
+        // Der erste Abgleich traegt das alte Cookie und zieht es um; beim zweiten schickt der Browser das neue Cookie
+        // (Path=/api/auth/rh-session) dorthin NICHT mehr. Mit 204 meldete sich die alte Fassung ab (Offline-Inhalte weg)
+        // und loeschte ueber session/end auch das neue Cookie — alle anderen uebernommenen Sitzungen gleich mit.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);                                       // die alte Fassung schickt ihr uebernommenes Token mit
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var first = await _controller.LegacySharedSession(CancellationToken.None);
+        Assert.IsType<OkObjectResult>(first.Result);
+        var marker = SetCookieHeader("rh_session_moved", "/api/auth/session");
+        Assert.False(IsDeletion(marker));
+
+        // Zweiter Abgleich: was der Browser an /api/auth/session jetzt noch schickt, ist nur der Merker.
+        _http.Request.Headers.Cookie = $"rh_session_moved={CookieValue(marker!)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var second = await _controller.LegacySharedSession(CancellationToken.None);
+
+        var status = Assert.IsType<StatusCodeResult>(second.Result);
+        Assert.Equal(StatusCodes.Status410Gone, status.StatusCode);
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+    }
+
+    [Fact]
+    public async Task LegacySharedSession_AnonymousWithMarker_Answers410()
+    {
+        // Uebernahme beim Start (noch kein Token): hier ist nichts zu holen, die Anmeldung lebt am neuen Pfad. Fuer die
+        // alte Fassung ist 410 wie 204 ein „keine Uebernahme"; geloescht wird nichts.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        _http.Request.Headers.Cookie = $"rh_session_moved={_shared.MovedMarkerFor(user.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await _controller.LegacySharedSession(CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status410Gone, Assert.IsType<StatusCodeResult>(result.Result).StatusCode);
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+    }
+
+    [Fact]
+    public async Task LegacySharedSession_WithoutCookieAndMarker_StaysNoContent_SoALogoutStillReachesOldVersions()
+    {
+        // Abgemeldet heisst: Cookie UND Merker weg. Dann bleibt es bei 204 — die alte Fassung meldet sich ab, wie vor
+        // N6-001 (Vereins-PC: Abmelden in RookHub beendet auch die uebernommene Sitzung in KidHub).
+        SignIn(990101);
+
+        var result = await _controller.LegacySharedSession(CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result.Result);
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+    }
+
+    [Fact]
+    public async Task LegacySharedSession_MarkerOfAnotherAccount_IsNoContent()
+    {
+        // Am Geraet hat sich inzwischen jemand anderes angemeldet: die alte Fassung darf nicht im vorigen Konto
+        // weiterlaufen. Uebernehmen kann sie das andere Konto von hier aus nicht — also abmelden (204).
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);
+        _http.Request.Headers.Cookie = $"rh_session_moved={_shared.MovedMarkerFor(user.Id + 1)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await _controller.LegacySharedSession(CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result.Result);
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+    }
+
+    [Fact]
+    public async Task SharedSession_NewRouteIgnoresTheMarker_AndStaysNoContentWithoutCookie()
+    {
+        // Die neue Route bekommt den Merker im Browser nie (anderer Pfad) — und wertet ihn auch sonst nicht.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);
+        _http.Request.Headers.Cookie = $"rh_session_moved={_shared.MovedMarkerFor(user.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await _controller.SharedSession(CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result.Result);
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+    }
+
+    [Fact]
+    public void EndSharedSession_AlsoDeletesTheMarker()
+    {
+        // Sonst antwortete die Alt-Route nach dem Abmelden weiter 410, und eine alte Fassung bliebe angemeldet.
+        _controller.EndSharedSession();
+
+        Assert.True(IsDeletion(SetCookieHeader("rh_session_moved", "/api/auth/session")));
+    }
+
+    // ---- Uebergang N6-001: GET /api/auth/permissions zieht ein altes Cookie um ----
+
+    private Task<ActionResult<AuthPermissionsDto>> GetPermissions() =>
+        _controller.GetPermissions(new PermissionResolver(_db, TestServices.Cache()), CancellationToken.None);
+
+    [Fact]
+    public async Task GetPermissions_MovesAnOldCookieOfTheSameAccount()
+    {
+        // Wer nur selbst angemeldet ist, ruft den Tausch nie — das alte Cookie (Path=/api/auth) ginge sonst bis zu
+        // 30 Tage weiter an fremde Hosts. Die Rechte holt jede angemeldete Oberflaeche beim Start.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await GetPermissions();
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        var moved = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.False(IsDeletion(moved));
+        Assert.NotNull(await _shared.RedeemAsync(CookieValue(moved!)));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+        Assert.False(IsDeletion(SetCookieHeader("rh_session_moved", "/api/auth/session")));
+    }
+
+    [Fact]
+    public async Task GetPermissions_LeavesAnotherAccountsCookieAlone()
+    {
+        // Impersonation oder ein anderer Nutzer am Geraet: die geteilte Anmeldung des ANDEREN Kontos weder umziehen
+        // noch loeschen — das erledigt sein naechster Tausch.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        await _controller.Register(new RegisterDto { Username = "v", Email = "v@t.com", Password = "Password1!" });
+        var u = await _db.AppUsers.SingleAsync(x => x.Username == "u");
+        var v = await _db.AppUsers.SingleAsync(x => x.Username == "v");
+        SignIn(u.Id);
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(v.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await GetPermissions();
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+    }
+
+    [Fact]
+    public async Task GetPermissions_DeletesAnOldCookieThatNoLongerWorks_AndWithoutCookieWritesNothing()
+    {
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        await GetPermissions();
+        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
+
+        _http.Request.Headers.Cookie = "rh_session=voelliger.unsinn";
+        await GetPermissions();
+
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+        Assert.Null(SetCookieHeader("rh_session", "/api/auth/rh-session"));
+    }
+}

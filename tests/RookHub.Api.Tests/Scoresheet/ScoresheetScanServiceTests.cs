@@ -1,0 +1,1615 @@
+using System.Text.Json.Nodes;
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using SkiaSharp;
+using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Scoresheet;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.Scoresheet;
+
+public class ScoresheetScanServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly FakeVision _vision = new();
+    private readonly SavedGameService _games;
+    private ScoresheetScanService _service;
+
+    public ScoresheetScanServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        _db = new AppDbContext(options);
+        _games = TestServices.SavedGames(_db);
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    /// <summary>Dienst mit eigenen Budgets (Dollar) — die Vorgaben sind für Tests zu großzügig. Die Tageszahl steht
+    /// dabei hoch, damit die Tests das BUDGET prüfen und nicht an der einen Einlesung je Tag hängen bleiben.</summary>
+    private void WithBudgets(decimal userDaily, decimal userMonthly = 100m, decimal globalDaily = 1000m)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:DailyLimit"] = "20",
+            ["Scoresheet:UserDailyUsd"] = userDaily.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["Scoresheet:UserMonthlyUsd"] = userMonthly.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["Scoresheet:GlobalDailyUsd"] = globalDaily.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
+    /// <summary>Dienst mit eigener Tageszahl (<c>Scoresheet:DailyLimit</c>, Vorgabe 1).</summary>
+    private void WithDailyLimit(int limit)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:DailyLimit"] = limit.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
+    /// <summary>Dienst MIT Nachdenken (<c>Scoresheet:Thinking=true</c>) — die Vorgabe ist seit 0.533.2 „nur abschreiben".</summary>
+    private void WithThinking()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Thinking"] = "true",
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
+    /// <summary>Liefert der Reihe nach die hinterlegten Antworten und merkt sich die Aufträge.</summary>
+    private sealed class FakeVision : IScoresheetVisionClient
+    {
+        public bool IsConfigured { get; set; } = true;
+        public string Model => "fake-model";
+        public Queue<ScoresheetVisionResult> Answers { get; } = new();
+        public List<string> Instructions { get; } = new();
+
+        public List<int> MaxTokens { get; } = new();
+
+        public List<ScoresheetReadMode> Modes { get; } = new();
+
+        /// <summary>Hängen, bis abgebrochen wird — ein Aufruf, der den Laufzeit-Deckel reißt.</summary>
+        public bool Hang { get; set; }
+
+        /// <summary>Je Aufruf: wie viele Fotos kamen (mehrseitiges Formular).</summary>
+        public List<int> PageCounts { get; } = new();
+
+        public Task<ScoresheetVisionResult> ReadPagesAsync(IReadOnlyList<byte[]> pages, string instructions, int maxTokens,
+            CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
+        {
+            PageCounts.Add(pages.Count);
+            return ReadAsync(pages[0], instructions, maxTokens, ct, mode);
+        }
+
+        public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+            CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
+        {
+            Instructions.Add(instructions);
+            MaxTokens.Add(maxTokens);
+            Modes.Add(mode);
+            if (Hang) await Task.Delay(Timeout.Infinite, ct);
+            return Answers.Count > 0 ? Answers.Dequeue() : new ScoresheetVisionResult(null, "failed");
+        }
+    }
+
+    private static byte[] Jpeg(int width = 40, int height = 30)
+    {
+        using var bmp = new SKBitmap(width, height);
+        using var canvas = new SKCanvas(bmp);
+        canvas.Clear(SKColors.White);
+        using var img = SKImage.FromBitmap(bmp);
+        using var data = img.Encode(SKEncodedImageFormat.Jpeg, 80);
+        return data.ToArray();
+    }
+
+    private async Task<AppUser> UserAsync(string name = "reader")
+    {
+        var u = new AppUser { Username = name, Email = $"{name}@test.com", PasswordHash = "x" };
+        _db.AppUsers.Add(u);
+        await _db.SaveChangesAsync();
+        return u;
+    }
+
+    private static readonly string[] Written =
+    {
+        "Sf3", "d5", "g3", "Sf6", "Lg2", "e6", "0-0", "Le7", "b3", "0-0", "Lb2", "c5", "d4", "Sc6", "Sd2", "b5",
+        "dxc5", "Lxc5", "c4", "bxc4", "bxc4", "Le7", "Tc1", "Db6", "Lxf6", "Lxf6", "cxd5", "exd5", "e3", "Lf5",
+        "Sb3", "Tad8", "Sd4", "Sxd4", "Sxd4", "Le4", "Dd2", "Tc8", "h4", "h5", "Lh3", "Tc4", "Txc4", "dxc4",
+        "Tc1", "Ld3", "Lf1", "Lxd4", "Qxd4", "Dxd4", "Td1", "Td8", "Dg5", "Td5", "De7", "Tf5", "De8+", "Kh7",
+        "De1", "Tf3", "Lxd3", "Txd3", "Txd3", "Dxd3", "De7", "Df3",
+    };
+
+    /// <summary>Eine Antwort, wie das Modell sie schickt: nur die Einträge, ohne SAN-Lesart (die schwerste Form).</summary>
+    private static string Answer(IEnumerable<string> written, string? white = "Didi", string? black = "Patrick")
+        => JsonSerializer.Serialize(new
+        {
+            notationLanguage = "de", @event = "Simultan 2026", site = "Schwaz", date = "5.6.26", dateIso = "2026-06-05",
+            round = "1", white, black, result = "0-1",
+            moves = written.Select((w, i) => new
+            {
+                moveNumber = i / 2 + 1, color = i % 2 == 0 ? "w" : "b", written = w, san = "", alternatives = Array.Empty<string>(),
+                confidence = "high", note = "",
+            }),
+            remarks = "",
+        });
+
+    private async Task<ScoresheetScanDto> UploadAndProcessAsync(int userId)
+    {
+        var (scan, reason) = await _service.CreateAsync(userId, Jpeg(), "image/jpeg", "IMG_1.jpg", "de");
+        Assert.Null(reason);
+        Assert.Equal(scan!.Id, await _service.ClaimNextAsync(default));
+        await _service.ProcessAsync(scan.Id, default);
+        return (await _service.GetAsync(userId, scan.Id))!;
+    }
+
+    [Fact]
+    public async Task Create_WithoutApiKey_IsRefused()
+    {
+        var u = await UserAsync();
+        _vision.IsConfigured = false;
+        var (scan, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto");
+        Assert.Null(scan);
+        Assert.Equal("notConfigured", reason);
+    }
+
+    [Fact]
+    public async Task Create_NotAnImage_IsRefused()
+    {
+        var u = await UserAsync();
+        var (_, reason) = await _service.CreateAsync(u.Id, "hello"u8.ToArray(), "image/jpeg", "a.jpg", "auto");
+        Assert.Equal("unsupportedImage", reason);
+        var (_, reason2) = await _service.CreateAsync(u.Id, Jpeg(), "application/pdf", "a.pdf", "auto");
+        Assert.Equal("unsupportedImage", reason2);
+    }
+
+    [Fact]
+    public async Task Create_UnknownLanguage_IsRefused()
+    {
+        var u = await UserAsync();
+        var (_, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "klingon");
+        Assert.Equal("invalidLanguage", reason);
+    }
+
+    [Fact]
+    public async Task Create_CapsOpenScansPerUser()
+    {
+        WithDailyLimit(20);
+        var u = await UserAsync();
+        for (var i = 0; i < ScoresheetScanService.MaxOpenPerUser; i++)
+            Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto")).Reason);
+        var (_, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto");
+        Assert.Equal("tooManyOpen", reason);
+    }
+
+    [Fact]
+    public async Task Process_ReadsTheSheet_AndStoresAGameWithThePhoto()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(Written.Length, scan.MoveCount);
+        Assert.Equal(1, scan.Rounds);
+        Assert.Equal(0, scan.UnresolvedCount);
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId);
+        Assert.Equal(SavedGameService.ScoresheetSource, game.Source);
+        Assert.Equal("Didi", game.White);
+        Assert.Equal("0-1", game.Result);
+        Assert.Equal(new DateTime(2026, 6, 5), game.PlayedAt!.Value.Date);
+        Assert.Contains("[Event \"Simultan 2026\"]", game.Pgn);
+        Assert.Contains("[Round \"1\"]", game.Pgn);
+        Assert.Contains("25. exd4", game.Pgn);
+        // Der reparierte Lesefehler steht als Kommentar im PGN — mit dem, was auf dem Formular stand.
+        Assert.Contains("{sheet: Qxd4}", game.Pgn);
+
+        var photo = await _service.PhotoForGameAsync(u.Id, game.Id);
+        Assert.NotNull(photo);
+        Assert.Equal("IMG_1.jpg", photo!.Value.FileName);
+        Assert.True(photo.Value.Data.Length > 0);
+
+        // In der Partienliste trägt die Partie ihre Einlesung (⋮-Menü: Foto anzeigen/herunterladen).
+        var list = await _games.ListAsync(u.Id);
+        Assert.Equal(scan.Id, list.Single().ScanId);
+
+        // Glocke: fertig gelesen, mit Link direkt auf die Korrekturseite.
+        var note = await _db.Notifications.SingleAsync(n => n.UserId == u.Id);
+        Assert.Equal(NotificationType.ScoresheetRead, note.Type);
+        Assert.Equal($"/games/{game.Id}/edit", note.Link);
+        Assert.Contains("\"moves\":\"66\"", note.DataJson);
+    }
+
+    [Fact]
+    public async Task Process_WhenTheReadingGetsStuck_AsksAgainWithThePositionAndLegalMoves()
+    {
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[40] = "Zz9"; // 21. Lh3 unlesbar gelesen …
+        broken[41] = "Yy8"; // … und der Folgezug auch: kein Joker kann das überbrücken
+        _vision.Answers.Enqueue(new(Answer(broken), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(2, scan.Rounds);
+        Assert.Equal(Written.Length, scan.MoveCount);
+        Assert.Equal(2, _vision.Instructions.Count);
+        var repair = _vision.Instructions[1];
+        Assert.Contains("second look", repair);
+        Assert.Contains("Legal moves there are:", repair);
+        Assert.Contains("move 21", repair);
+    }
+
+    [Fact]
+    public async Task Process_KeepsTheBetterReading_WhenTheSecondLookIsWorse()
+    {
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[60] = "Zz9";
+        broken[61] = "Yy8";
+        _vision.Answers.Enqueue(new(Answer(broken), null));                 // bis Zug 30 gut
+        _vision.Answers.Enqueue(new(Answer(Written.Take(10)), null));       // Nachfrage: schlechter
+        _vision.Answers.Enqueue(new(null, "failed"));                       // dritte Runde scheitert
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(60, scan.MoveCount);
+        Assert.Equal(6, scan.UnresolvedCount);
+        var game = await _db.SavedGames.SingleAsync();
+        Assert.Contains("sheet, not resolved: Zz9 Yy8", game.Pgn);
+    }
+
+    [Fact]
+    public async Task Process_Refusal_FailsWithReason()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(null, "refused"));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("failed", scan.Status);
+        Assert.Equal("refused", scan.Error);
+        Assert.Empty(_db.SavedGames);
+        var note = await _db.Notifications.SingleAsync();
+        Assert.Equal(NotificationType.ScoresheetFailed, note.Type);
+        Assert.Contains("refused", note.DataJson);
+    }
+
+    [Fact]
+    public async Task Process_NoMoves_Fails()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Array.Empty<string>()), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("failed", scan.Status);
+        Assert.Equal("noMoves", scan.Error);
+    }
+
+    [Fact]
+    public async Task ClaimNext_GivesUpAfterMaxAttempts()
+    {
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto");
+        var row = await _db.ScoresheetScans.SingleAsync();
+        row.Attempts = ScoresheetScanService.MaxAttempts;
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await _service.ClaimNextAsync(default));
+        Assert.Equal("failed", (await _service.GetAsync(u.Id, scan!.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task RequeueInterrupted_PutsRunningScansBack()
+    {
+        var u = await UserAsync();
+        await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto");
+        await _service.ClaimNextAsync(default);
+        Assert.Equal(1, await _service.RequeueInterruptedAsync(default));
+        Assert.Equal(ScoresheetScanStatus.Pending, (await _db.ScoresheetScans.SingleAsync()).Status);
+    }
+
+    /// <summary>Die Korrekturseite zeigt je Eintrag einen Ausschnitt des Fotos. Das Modell liefert die Kästen in
+    /// PIXELN des Bildes, das es bekam (hier das 40×30-Test-JPEG); die Einlesung hängt die Maße an die gespeicherte
+    /// Antwort, und die Korrekturseite bekommt 0..1000 — am selben Index wie <c>Written</c>.</summary>
+    [Fact]
+    public async Task EditState_ConvertsPixelBoxesToPromille_AndDropsBrokenOnes()
+    {
+        var u = await UserAsync();
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        moves[0]!["box"] = new JsonArray(4, 3, 8, 6);            // → 100,100,200,200
+        moves[1]!["box"] = new JsonArray(20, 15, 10, 9);         // Ecken vertauscht → sortiert
+        moves[2]!["box"] = new JsonArray(10, 20, 30);            // drei Werte → unbrauchbar
+        moves[3]!["box"] = new JsonArray(4, 3, 400, 6);          // ragt weit aus dem Bild → anderes Bild, verworfen
+        moves[4]!["box"] = new JsonArray(10, 10, 10, 12);        // keine Breite → unbrauchbar
+        _vision.Answers.Enqueue(new(json.ToJsonString(), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        var state = (await _service.EditStateAsync(u.Id, scan.SavedGameId!.Value))!;
+
+        Assert.Equal(state.Written.Count, state.Boxes.Count);
+        Assert.Equal(new[] { 100, 100, 200, 200 }, state.Boxes[0]);
+        Assert.Equal(new[] { 250, 300, 500, 500 }, state.Boxes[1]);
+        Assert.Null(state.Boxes[2]);
+        Assert.Null(state.Boxes[3]);
+        Assert.Null(state.Boxes[4]);
+        Assert.Null(state.Boxes[5]);                              // ohne Kasten
+        var stored = JsonNode.Parse((await _db.ScoresheetScans.SingleAsync()).TranscriptionJson!)!;
+        Assert.Equal(40, (int)stored["imageWidth"]!);
+        Assert.Equal(30, (int)stored["imageHeight"]!);
+    }
+
+    /// <summary>Gemeldet 2026-10-05 (LeagueHub-Formular 24): quer fotografiert. Die Kästen der ersten Lesung verraten es —
+    /// das Foto wird aufrecht gedreht, noch einmal gelesen, und das GESPEICHERTE Foto ist danach das aufrechte.</summary>
+    [Fact]
+    public async Task Process_SidewaysPhoto_IsTurnedUpright_AndReadAgain()
+    {
+        var u = await UserAsync();
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        for (var i = 0; i < moves.Count; i++)
+        {
+            // Aufrecht stünde Zug n in Zeile n, Weiß links (x 100, Schwarz x 400); quer gedreht wie Formular 24: (x, y) → (2000 − y, x).
+            // Die Erkennung braucht nur die Richtungen, nicht die Maße des Test-Fotos.
+            var (x, y) = (100 + (i % 2) * 300, 100 + (i / 2) * 40);
+            var (px, py) = (2000 - y, x);
+            moves[i]!["box"] = new JsonArray(px - 10, py - 10, px + 10, py + 10);
+        }
+        _vision.Answers.Enqueue(new(json.ToJsonString(), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));             // die aufrechte Lesung
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(2, _vision.PageCounts.Count);                        // zweimal gelesen
+        var stored = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((30, 40), ScoresheetImage.Size(stored.Photo));        // aufrecht gespeichert
+    }
+
+    /// <summary>Wunsch 2026-10-06: die OCR macht Claude in der Sitzung statt des Modells (Skill /formulare). Die fertige
+    /// Lesung geht denselben Weg wie eine gelesene — offene Liga-Einlesung des Besitzers, ohne Modell-Aufruf.</summary>
+    [Fact]
+    public async Task CreateManual_UsesTheGivenReading_WithoutCallingTheModel()
+    {
+        var u = await UserAsync();
+        var (scan, reason) = await _service.CreateManualAsync(u.Id,
+            new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg"), new ScoresheetUpload(Jpeg(), "image/jpeg", "b.jpg") },
+            Answer(Written), null);
+
+        Assert.Null(reason);
+        Assert.Equal("done", scan!.Status);
+        Assert.Empty(_vision.PageCounts);
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((ScoresheetScan.PurposeLeague, ScoresheetScanService.ManualModel, 2), (row.Purpose, row.Model, row.PageCount));
+        var state = (await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.User(u.Id), row.Id))!;
+        Assert.Equal(Written.Length, state.Plies.Count);
+    }
+
+    [Fact]
+    public async Task CreateManual_ForAClubGame_IsArchivedSoCorrectingShowsTheSheet()
+    {
+        var u = await UserAsync();
+        var game = new LeagueClubGame { White = "A", Black = "B", Pgn = "1. Nf3 d5 *", MovesHash = "x", Result = "*" };
+        _db.LeagueClubGames.Add(game);
+        await _db.SaveChangesAsync();
+
+        var (_, reason) = await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") },
+            Answer(Written), game.Id);
+
+        Assert.Null(reason);
+        Assert.True(await _service.HasClubSheetAsync(game.Id));
+        var state = (await _service.ClubEditStateAsync(game.Id))!;
+        Assert.Equal("Sf3", state.Written[0]);
+        Assert.Equal(("clubGameNotFound", "invalidTranscription"),
+            ((await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "{}", 9999)).Reason,
+             (await _service.CreateManualAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "{}", null)).Reason));
+    }
+
+    /// <summary>Dienst im Modus „von außen" (<c>Scoresheet:Reader=external</c>, 0.687.0): der Watcher liest statt des
+    /// Modells — kein Schlüssel nötig.</summary>
+    private void WithExternalReader()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Reader"] = "external",
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
+    [Fact]
+    public void Reader_DefaultsToTheModel_ExternalOnlyWhenSet()
+    {
+        Assert.False(_service.External);
+        WithExternalReader();
+        Assert.True(_service.External);
+    }
+
+    /// <summary>Wunsch 2026-10-06 „Key ganz abschalten": ohne Schlüssel nimmt der Dienst Fotos trotzdem an, und eine
+    /// Einlesung mit Konto bleibt wartend für den Watcher.</summary>
+    [Fact]
+    public async Task External_AcceptsUploadsWithoutKey_AndListsThemAsPending()
+    {
+        WithExternalReader();
+        _vision.IsConfigured = false;
+        var u = await UserAsync();
+
+        var (scan, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Null(reason);
+        Assert.True((await _service.StatusAsync(u.Id)).Available);
+        var pending = Assert.Single(await _service.PendingForExternalAsync());
+        Assert.Equal((scan!.Id, "own", u.Id, false, 1), (pending.Id, pending.Purpose, pending.UserId, pending.Anonymous, pending.PageCount));
+        Assert.NotNull(await _service.PhotoForExternalAsync(scan.Id, 1));
+        Assert.Null(await _service.PhotoForExternalAsync(scan.Id, 2));
+    }
+
+    [Fact]
+    public async Task ProcessReading_OwnScan_CreatesTheGameAndRingsTheBell_WithoutTheModel()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        Assert.Empty(_vision.PageCounts);
+        var game = await _db.SavedGames.SingleAsync();
+        Assert.Equal(game.Id, done.SavedGameId);
+        Assert.Equal(NotificationType.ScoresheetRead, (await _db.Notifications.SingleAsync()).Type);
+        Assert.Equal(ScoresheetScanService.ManualModel, (await _db.ScoresheetScans.SingleAsync()).Model);
+        Assert.Empty(await _service.PendingForExternalAsync());
+        Assert.Equal("notPending", (await _service.ProcessReadingAsync(scan.Id, Answer(Written))).Reason);
+    }
+
+    [Fact]
+    public async Task ProcessReading_LeagueScan_IsOpenForReview_WithoutASavedGame()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto", purpose: ScoresheetScan.PurposeLeague);
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        Assert.Empty(await _db.SavedGames.ToListAsync());
+        var state = (await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.User(u.Id), scan.Id))!;
+        Assert.Equal(Written.Length, state.Plies.Count);
+    }
+
+    [Fact]
+    public async Task ProcessReading_BadInput_IsRejected_AndTheScanStaysPending()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Equal("invalidTranscription", (await _service.ProcessReadingAsync(scan!.Id, "nicht json")).Reason);
+        Assert.Equal("notFound", (await _service.ProcessReadingAsync(9999, Answer(Written))).Reason);
+        Assert.Single(await _service.PendingForExternalAsync());
+    }
+
+    /// <summary>Wunsch 2026-10-08: „erst wartet, dann reading" — der Watcher meldet den Beginn.</summary>
+    [Fact]
+    public async Task StartExternal_MarksTheScanAsRunning_AndTheReadingStillGoesThrough()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Null(await _service.StartExternalAsync(scan!.Id));
+        Assert.Null(await _service.StartExternalAsync(scan.Id));                 // zweimal schadet nicht
+        Assert.Equal("running", (await _service.GetAsync(u.Id, scan.Id))!.Status);
+        Assert.Equal("notFound", await _service.StartExternalAsync(9999));
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan.Id, Answer(Written));
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        Assert.Equal("notPending", await _service.StartExternalAsync(scan.Id));
+    }
+
+    [Fact]
+    public async Task FailExternal_EndsTheScanWithTheBell_OnlyForKnownReasons()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+
+        Assert.Equal("invalidReason", await _service.FailExternalAsync(scan!.Id, "irgendwas"));
+        Assert.Null(await _service.FailExternalAsync(scan.Id, "unreadable"));
+
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((ScoresheetScanStatus.Failed, "unreadable"), (row.Status, row.Error));
+        Assert.Equal(NotificationType.ScoresheetFailed, (await _db.Notifications.SingleAsync()).Type);
+        Assert.Equal("notPending", await _service.FailExternalAsync(scan.Id, "failed"));
+    }
+
+    /// <summary>Wunsch 2026-10-06: auch über einen LeagueHub-Teilen-Link geht ein Formular über mehrere Blätter.</summary>
+    [Fact]
+    public async Task CreateAnonymous_SeveralPhotos_AreOneScanWithPages()
+    {
+        var (scan, key, reason) = await _service.CreateAnonymousAsync(
+            new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "s1.jpg"), new ScoresheetUpload(Jpeg(), "image/jpeg", "s2.jpg") },
+            "auto", null, "iphash");
+
+        Assert.Null(reason);
+        Assert.NotNull(key);
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((2, ScoresheetScan.PurposeLeague), (row.PageCount, row.Purpose));
+        Assert.Equal(2, (await _db.ScoresheetScanPages.SingleAsync()).Page);
+        Assert.Equal(2, scan!.PageCount);
+        var anon = ScoresheetScanService.ScanActor.Anonymous(key!);
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(anon, null, 2));
+        Assert.Null(await _service.LeagueScanPhotoAsync(anon, null, 3));
+        Assert.Null(await _service.LeagueScanPhotoAsync(ScoresheetScanService.ScanActor.Anonymous("fremd"), null, 2));
+    }
+
+    [Fact]
+    public async Task Process_UprightPhoto_IsReadOnce()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        await UploadAndProcessAsync(u.Id);
+        Assert.Single(_vision.PageCounts);
+    }
+
+    // ── Mehrere Seiten (0.600.0, Wunsch 2026-09-29: „2. Bild für 2. Seite von Partieformular (+ 3. Seite)") ──────────
+
+    /// <summary>Beide Fotos gehen in EINEN Aufruf, jeder Eintrag kennt seine Seite, und jeder Kasten wird in den Pixeln
+    /// SEINER Seite umgerechnet (Seite 1: 40×30, Seite 2: 80×50).</summary>
+    [Fact]
+    public async Task MultiPage_ReadsAllPhotosInOneCall_AndBoxesFollowTheirPage()
+    {
+        var u = await UserAsync();
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        for (var i = 0; i < moves.Count; i++) moves[i]!["page"] = i < 40 ? 1 : 2;
+        moves[0]!["box"] = new JsonArray(4, 3, 8, 6);            // Seite 1 (40×30) → 100,100,200,200
+        moves[40]!["box"] = new JsonArray(8, 5, 16, 10);          // Seite 2 (80×50) → 100,100,200,200
+        moves[41]!["page"] = 7;                                   // Unsinn → auf die letzte Seite geklemmt
+        _vision.Answers.Enqueue(new(json.ToJsonString(), null));
+
+        var (created, reason) = await _service.CreateAsync(u.Id, new[]
+        {
+            new ScoresheetUpload(Jpeg(), "image/jpeg", "blatt1.jpg"),
+            new ScoresheetUpload(Jpeg(80, 50), "image/jpeg", "blatt2.jpg"),
+        }, "de");
+        Assert.Null(reason);
+        Assert.Equal(2, created!.PageCount);
+        Assert.Equal(created.Id, await _service.ClaimNextAsync(default));
+        await _service.ProcessAsync(created.Id, default);
+
+        Assert.Equal(new[] { 2 }, _vision.PageCounts);
+        Assert.Contains("continues over 2 photos", _vision.Instructions[0]);
+        Assert.Contains("page 2 is 80 × 50 pixels", _vision.Instructions[0]);
+        var scan = (await _service.GetAsync(u.Id, created.Id))!;
+        Assert.Equal("done", scan.Status);
+        var state = (await _service.EditStateAsync(u.Id, scan.SavedGameId!.Value))!;
+        Assert.Equal(2, state.PageCount);
+        Assert.Equal(state.Written.Count, state.Pages.Count);
+        Assert.Equal(1, state.Pages[39]);
+        Assert.Equal(2, state.Pages[40]);
+        Assert.Equal(2, state.Pages[41]);
+        Assert.Equal(new[] { 100, 100, 200, 200 }, state.Boxes[0]);
+        Assert.Equal(new[] { 100, 100, 200, 200 }, state.Boxes[40]);
+
+        // Das Foto je Seite; eine Seite, die es nicht gibt, ist keine.
+        var page2 = (await _service.PhotoForGameAsync(u.Id, scan.SavedGameId.Value, 2))!.Value;
+        Assert.Equal("blatt2.jpg", page2.FileName);
+        Assert.Equal(2, page2.PageCount);
+        Assert.Null(await _service.PhotoForGameAsync(u.Id, scan.SavedGameId.Value, 3));
+        // Der Foto-Dialog blättert über den Header — ohne die Einlesung abzufragen.
+        var ctrl = Controller(u.Id);
+        Assert.IsType<FileContentResult>(await ctrl.Photo(scan.SavedGameId.Value, page: 2));
+        Assert.Equal("2", ctrl.Response.Headers["X-Page-Count"].ToString());
+
+        // Partie löschen: alle Fotos gehen, die Einlesung bleibt fürs Kontingent.
+        Assert.True(await _games.DeleteAsync(u.Id, scan.SavedGameId.Value));
+        _db.ChangeTracker.Clear();
+        Assert.Empty(_db.ScoresheetScanPages);
+        Assert.Empty((await _db.ScoresheetScans.SingleAsync()).Photo);
+    }
+
+    [Fact]
+    public async Task MultiPage_AtMostThreePhotos_AndOneReadingForTheDay()
+    {
+        var u = await UserAsync();
+        var four = Enumerable.Range(1, 4).Select(i => new ScoresheetUpload(Jpeg(), "image/jpeg", $"{i}.jpg")).ToList();
+        Assert.Equal("tooManyPages", (await _service.CreateAsync(u.Id, four, "de")).Reason);
+        Assert.Null((await _service.CreateAsync(u.Id, four.Take(3).ToList(), "de")).Reason);
+        Assert.Equal(2, await _db.ScoresheetScanPages.CountAsync());
+        // Drei Seiten sind EINE Einlesung — die des Tages ist damit verbraucht.
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    [Fact]
+    public void MultiPage_PromptAndSchema_OnlyChangeWithMoreThanOnePage()
+    {
+        // Eine Seite: wörtlich der bisherige Auftrag und das bisherige Schema (die Referenz-Lesungen hängen daran).
+        Assert.Equal(ScoresheetPrompt.FirstRead("de", (1500, 2000)), ScoresheetPrompt.FirstRead("de", new[] { (1500, 2000) }, 1));
+        Assert.DoesNotContain("page", ScoresheetPrompt.FirstRead("de", (1500, 2000)));
+        var single = ScoresheetPrompt.Schema()["properties"].GetProperty("moves").GetProperty("items");
+        Assert.False(single.GetProperty("properties").TryGetProperty("page", out _));
+
+        var multi = ScoresheetPrompt.Schema(multiPage: true)["properties"].GetProperty("moves").GetProperty("items");
+        Assert.Equal("integer", multi.GetProperty("properties").GetProperty("page").GetProperty("type").GetString());
+        Assert.Contains("page", multi.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
+        var prompt = ScoresheetPrompt.FirstRead("de", new[] { (1500, 2000), (1500, 1900) }, 2);
+        Assert.Contains("ONE game continues over 2 photos", prompt);
+        Assert.Contains("page 1 is 1500 × 2000 pixels, page 2 is 1500 × 1900 pixels", prompt);
+        Assert.Contains("\"page\"", prompt);
+        var repair = ScoresheetPrompt.Repair("de", "{}", new[] { "e4" }, 1, new ScannedPly("e5", "e5"),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", new[] { "e5" }, new[] { (1500, 2000), (1500, 1900) }, 2);
+        Assert.Contains("ONE game continues over 2 photos", repair);
+    }
+
+    [Fact]
+    public void ClaudeContent_LabelsEachPage_OnlyWithMoreThanOnePhoto()
+    {
+        var one = ClaudeScoresheetVisionClient.Content(new[] { new byte[] { 1 } }, "read");
+        Assert.Equal(2, one.Count);                              // Foto, Auftrag — wie bisher
+        var two = ClaudeScoresheetVisionClient.Content(new[] { new byte[] { 1 }, new byte[] { 2 } }, "read");
+        Assert.Equal(5, two.Count);                              // „Page 1:", Foto, „Page 2:", Foto, Auftrag
+        Assert.True(two[0].TryPickText(out var label) && label.Text == "Page 1:");
+        Assert.True(two[2].TryPickText(out var label2) && label2.Text == "Page 2:");
+    }
+
+    /// <summary>Einlesungen von 0.550.0 haben keine Bildmaße: 0..1000 wird übernommen — greift aber ein Kasten über
+    /// 1000 hinaus, waren es Pixel eines unbekannten Bildes (Dev, y bis 1790), und alle Kästen fallen weg.</summary>
+    [Fact]
+    public void NormalizedBoxes_WithoutImageSize_TrustsPromilleOnly()
+    {
+        ScoresheetTranscription T(params int[][] boxes) => new()
+        {
+            Moves = boxes.Select(b => new ScoresheetTranscription.Entry { Written = "e4", Box = b.ToList() }).ToList(),
+        };
+        Assert.Equal(new[] { 100, 50, 180, 80 }, T(new[] { 100, 50, 180, 80 }, new[] { 400, 60, 470, 90 }).NormalizedBoxes()[0]);
+        Assert.All(T(new[] { 305, 470, 440, 540 }, new[] { 305, 1700, 440, 1790 }).NormalizedBoxes(), b => Assert.Null(b));
+    }
+
+    [Fact]
+    public void Prompts_NameThePhotoSize_ForThePixelBoxes()
+    {
+        Assert.Contains("1500 × 2000 pixels", ScoresheetPrompt.FirstRead("de", (1500, 2000)));
+        // Datum mit starkem Hang zu heuer (0.655.0) — auf jeder Lesung, ein- und mehrseitig
+        var dated = ScoresheetPrompt.FirstRead("de", new[] { (1500, 2000), (1500, 1900) }, 2, new DateOnly(2026, 10, 4));
+        Assert.Contains("Today is 2026-10-04", dated);
+        Assert.Contains("assume 2026", dated);
+        Assert.Contains("Today is", ScoresheetPrompt.FirstRead("de"));
+        Assert.DoesNotContain("pixels", ScoresheetPrompt.FirstRead("de"));
+        var repair = ScoresheetPrompt.Repair("de", "{}", new[] { "e4" }, 1, new ScannedPly("e5", "e5"),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", new[] { "e5" }, (1500, 2000));
+        Assert.Contains("1500 × 2000 pixels", repair);
+    }
+
+    [Fact]
+    public void Schema_AsksForABoxPerEntry_AndBothPromptsExplainIt()
+    {
+        var items = ScoresheetPrompt.Schema()["properties"].GetProperty("moves").GetProperty("items");
+        Assert.Equal("array", items.GetProperty("properties").GetProperty("box").GetProperty("type").GetString());
+        Assert.Contains("box", items.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
+        Assert.Contains("PIXELS of the photo", ScoresheetPrompt.System);
+        Assert.Contains("PIXELS of the photo", ScoresheetPrompt.TranscribeSystem);
+    }
+
+    /// <summary>Prod-Scan 8 (2026-09-28): „right column (21-35) … not included due to inconsistency" — das Modell ließ nach
+    /// einer Korrektur die ganze zweite Spalte weg. Beide Aufträge verbieten das ausdrücklich.</summary>
+    [Fact]
+    public void BothPrompts_ForbidLeavingOutColumnsOrEntries()
+    {
+        Assert.Contains("Transcribe EVERY written move", ScoresheetPrompt.TranscribeSystem);
+        Assert.Contains("ALWAYS all blocks that contain moves", ScoresheetPrompt.TranscribeSystem);
+        Assert.Contains("Never leave out written moves", ScoresheetPrompt.System);
+    }
+
+    [Fact]
+    public async Task EditState_AndResolveRest_WorkOnTheOwnGameOnly()
+    {
+        var u = await UserAsync();
+        var other = await UserAsync("other");
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+        var gameId = scan.SavedGameId!.Value;
+
+        var state = await _service.EditStateAsync(u.Id, gameId);
+        Assert.NotNull(state);
+        Assert.Equal(Written, state!.Written);
+        Assert.Equal(Written.Length, state.Plies.Count);
+        Assert.Null(await _service.EditStateAsync(other.Id, gameId));
+        Assert.Null(await _service.PhotoForGameAsync(other.Id, gameId));
+
+        // Der Nutzer legt 25. exd4 fest — der Rest ab Eintrag 49 wird neu aufbereitet.
+        var prefix = state.Plies.Take(49).Select(p => p.San).ToList();
+        var rest = await _service.ResolveRestAsync(u.Id, gameId, prefix, 49);
+        Assert.NotNull(rest);
+        Assert.Equal(Written.Length - 49, rest!.Plies.Count);
+        Assert.Equal("Qxd4", rest.Plies[0].San);
+    }
+
+    [Fact]
+    public async Task ResolveRest_RefusesPrefixesLongerThanAGame_LikeSaving()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var gameId = (await UploadAndProcessAsync(u.Id)).SavedGameId!.Value;
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (anon, key, _) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip");
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(anon!.Id, default);
+
+        // Pendelzüge sind legal und enden nie von selbst — ohne Deckel spielte der Server jede Länge nach (Codereview
+        // 2026-09-29, A6-014; Speichern der Partie deckelt bei 600).
+        var shuffle = new[] { "Nf3", "Nf6", "Ng1", "Ng8" };
+        var tooLong = Enumerable.Range(0, 601).Select(i => shuffle[i % 4]).ToList();
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.ResolveRestAsync(u.Id, gameId, tooLong, 0));
+        Assert.Contains("max 600", ex.Message);
+        ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.ResolveLeagueRestAsync(ScoresheetScanService.ScanActor.Anonymous(key!), null, tooLong, 0));
+        Assert.Contains("max 600", ex.Message);
+        Assert.Equal(600, ScoresheetScanService.MaxPrefixPlies);
+        // Eine ganze Partie bis 600 Halbzüge geht weiter (ab dem Ende des Formulars: nur das Präfix wird nachgespielt).
+        Assert.NotNull(await _service.ResolveRestAsync(u.Id, gameId, tooLong.Take(600).ToList(), Written.Length));
+    }
+
+    [Fact]
+    public async Task DeleteGame_TakesThePhotoAlong_ButTheScanStillCountsForTheDay()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.True(await _games.DeleteAsync(u.Id, scan.SavedGameId!.Value));
+        _db.ChangeTracker.Clear();
+
+        // Foto, Modell-Antwort und Stand sind weg, Zeitpunkt und Kosten bleiben.
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Null(row.SavedGameId);
+        Assert.Empty(row.Photo);
+        Assert.Null(row.TranscriptionJson);
+        Assert.Null(row.ResolutionJson);
+        Assert.Equal(ScoresheetScanStatus.Done, row.Status);
+        Assert.Empty(await _service.ListAsync(u.Id));
+
+        // Löschen ist kein zweiter Versuch: das Kontingent bleibt verbraucht.
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).UsedToday);
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    // Wunsch 2026-09-27: normale Nutzer lesen EIN Formular je Tag ein (vorher 20), Admins unbegrenzt.
+    [Fact]
+    public async Task Create_OneScanPer24Hours_StatusNamesWhenTheNextOneIsPossible_AdminsUnlimited()
+    {
+        var u = await UserAsync();
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).DailyLimit);
+        Assert.Null((await _service.StatusAsync(u.Id)).NextAllowedAt);
+
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+        var created = (await _db.ScoresheetScans.SingleAsync()).CreatedAt;
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+
+        var status = await _service.StatusAsync(u.Id);
+        Assert.Equal(1, status.UsedToday);
+        Assert.Equal(created.AddDays(1), status.NextAllowedAt);
+        Assert.Equal(DateTimeKind.Utc, status.NextAllowedAt!.Value.Kind);   // sonst liest der Browser Ortszeit
+
+        u.IsAdmin = true;
+        await _db.SaveChangesAsync();
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+        Assert.Null((await _service.StatusAsync(u.Id)).NextAllowedAt);
+    }
+
+    [Fact]
+    public async Task DailyLimit_IgnoresFreeFailuresAndScansOlderThanADay_ButCountsPaidFailures()
+    {
+        var u = await UserAsync();
+        _db.ScoresheetScans.AddRange(
+            // Modell nicht erreichbar, nichts gekostet — sperrt nicht für 24 h.
+            new ScoresheetScan { UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Failed, CostMicroUsd = 0 },
+            // Gestern.
+            new ScoresheetScan { UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done,
+                CostMicroUsd = 80_000, CreatedAt = DateTime.UtcNow.AddHours(-25) });
+        await _db.SaveChangesAsync();
+        Assert.Equal(0, (await _service.StatusAsync(u.Id)).UsedToday);
+
+        // Gescheitert NACH einem bezahlten Aufruf: zählt.
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Failed, CostMicroUsd = 50_000,
+        });
+        await _db.SaveChangesAsync();
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).UsedToday);
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    // ── Korrigieren (SavedGameService.UpdateAsync über den Controller) ─────────
+
+    private GameCorrectionController Controller(int userId)
+    {
+        var c = new GameCorrectionController(_games, _service);
+        c.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "Test")),
+            },
+        };
+        return c;
+    }
+
+    [Fact]
+    public async Task Update_ReplacesMovesAndHeaders_AndDropsTheAnalysisLink()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", "Nf3" }, White = "a", Black = "b", WhiteElo = 1800, ExternalId = "x1",
+        });
+        var row = await _db.SavedGames.SingleAsync();
+        row.GameAnalysisId = 42;
+        await _db.SaveChangesAsync();
+
+        var result = await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4" }, new() { San = "c5", Comment = "Sizilianisch" }, new() { San = "Nf3" } },
+            White = "Anna", Black = "Bert", Result = "1-0", Event = "Vereinsmeisterschaft", Date = "2026-06-05", Round = "3",
+        });
+
+        var dto = Assert.IsType<OkObjectResult>(result.Result).Value as SavedGameDetailDto;
+        Assert.NotNull(dto);
+        Assert.Contains("1. e4 c5 {Sizilianisch} 2. Nf3 1-0", dto!.Pgn);
+        Assert.Contains("[WhiteElo \"1800\"]", dto.Pgn);           // nicht bearbeitete Header bleiben
+        Assert.Contains("[Event \"Vereinsmeisterschaft\"]", dto.Pgn);
+        Assert.Equal("Anna", dto.White);
+        row = await _db.SavedGames.SingleAsync();
+        Assert.Null(row.GameAnalysisId);
+        Assert.Equal(3, row.MoveCount);
+    }
+
+    [Fact]
+    public async Task Update_SameMoves_KeepsTheAnalysisLink()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5" } });
+        var row = await _db.SavedGames.SingleAsync();
+        row.GameAnalysisId = 42;
+        await _db.SaveChangesAsync();
+
+        await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4" }, new() { San = "e5" } }, White = "Neu",
+        });
+        Assert.Equal(42, (await _db.SavedGames.SingleAsync()).GameAnalysisId);
+    }
+
+    [Fact]
+    public async Task Update_IllegalMove_Is400_AndNothingChanges()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5" } });
+        var before = (await _db.SavedGames.SingleAsync()).Pgn;
+
+        var result = await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4" }, new() { San = "Ke2" } },
+        });
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(before, (await _db.SavedGames.SingleAsync()).Pgn);
+    }
+
+    /// <summary>Korrigieren am Zeichendeckel des Kontos (A6-007): ein WACHSENDES PGN ist 400 <c>quota</c> und ändert
+    /// nichts — sonst blähte man viele kleine Partien hier einzeln auf. Ohne Wachstum geht Korrigieren weiter.</summary>
+    [Fact]
+    public async Task Update_GrowingPastTheCharsCap_Is400Quota_AndNothingChanges_ShrinkingStillWorks()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5" } });
+        var before = (await _db.SavedGames.SingleAsync()).Pgn;
+        _games.PgnCharsPerUserCap = before.Length;                    // das Konto steht genau am Deckel
+
+        var grown = await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4", Comment = new string('k', 200) }, new() { San = "e5" } },
+            Event = "RepCheck saved game",
+        });
+        var bad = Assert.IsType<BadRequestObjectResult>(grown.Result);
+        Assert.Equal("quota", bad.Value!.GetType().GetProperty("reason")!.GetValue(bad.Value));
+        Assert.Equal(before, (await _db.SavedGames.SingleAsync()).Pgn);
+
+        // Kürzer („?" statt des Event-Namens) geht auch am Deckel.
+        var shrunk = await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4" }, new() { San = "e5" } },
+        });
+        Assert.IsType<OkObjectResult>(shrunk.Result);
+        Assert.True((await _db.SavedGames.SingleAsync()).Pgn.Length < before.Length);
+    }
+
+    [Fact]
+    public async Task Update_ForeignGame_Is404()
+    {
+        var u = await UserAsync();
+        var other = await UserAsync("other");
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4" } });
+        var result = await Controller(other.Id).Update(saved.Id, new GameUpdateDto { Moves = new() { new() { San = "d4" } } });
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Photo_Download_HasTheFileName()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+        var c = Controller(u.Id);
+        var file = Assert.IsType<FileContentResult>(await c.Photo(scan.SavedGameId!.Value, download: true));
+        Assert.Equal("IMG_1.jpg", file.FileDownloadName);
+        Assert.Equal("image/jpeg", file.ContentType);
+        Assert.IsType<NotFoundResult>(await Controller(u.Id).Photo(999));
+    }
+    // ── Kostenbremse ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Budget_AnswerCap_ComesFromWhatIsLeft()
+    {
+        var b = new ScoresheetBudget(null);
+        // Opus 5.5: 4 $ bzw. 20 $ je Million Tokens = 4 bzw. 20 Millionstel Dollar je Token.
+        Assert.Equal(10_000 * 4 + 2_000 * 20, b.CostMicroUsd(10_000, 2_000));
+        Assert.Equal(2_000_000, b.UserDailyMicroUsd);
+        // Frisch: der volle Deckel (2 $ − 0,048 $ Eingabe-Reserve reicht für 97 600 Tokens → auf 64 000 gedeckelt).
+        Assert.Equal(new CallAllowance(ScoresheetBudget.MaxOutputTokens, null), b.Allowance(0, 0, 0, false));
+        // 1,5 $ verbraucht: (0,5 − 0,048) / 20e-6 = 22 600 Tokens.
+        Assert.Equal(new CallAllowance(22_600, null), b.Allowance(1_500_000, 1_500_000, 1_500_000, false));
+        // Unter 16 000 Tokens gesperrt — mit dem Grund des knappsten Budgets.
+        Assert.Equal("userDailyBudget", b.Allowance(1_700_000, 0, 0, false).Blocked);
+        Assert.Equal("userMonthlyBudget", b.Allowance(0, 9_700_000, 0, false).Blocked);
+        Assert.Equal("globalBudget", b.Allowance(0, 0, 14_700_000, false).Blocked);
+        // Admins: keine Nutzerbudgets, das Gesamtbudget gilt trotzdem.
+        Assert.Null(b.Allowance(50_000_000, 50_000_000, 0, true).Blocked);
+        Assert.Equal("globalBudget", b.Allowance(0, 0, 15_000_000, true).Blocked);
+    }
+
+    [Fact]
+    public async Task Process_BooksTheTokens_OfEveryCall()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null, 8_000, 12_000));
+        var scan = await UploadAndProcessAsync(u.Id);
+        var row = await _db.ScoresheetScans.SingleAsync(s => s.Id == scan.Id);
+        Assert.Equal(8_000, row.InputTokens);
+        Assert.Equal(12_000, row.OutputTokens);
+        Assert.Equal(8_000 * 4 + 12_000 * 20, row.CostMicroUsd);
+    }
+
+    [Fact]
+    public async Task Process_FailedCall_IsBookedToo()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(null, "truncated", 8_000, 24_000));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("failed", scan.Status);
+        Assert.Equal("truncated", scan.Error);
+        Assert.Equal([ScoresheetReadMode.Transcribe], _vision.Modes); // schon ohne Nachdenken: kein Rückfall mehr
+        Assert.Equal(8_000 * 4 + 24_000 * 20, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
+    }
+
+    [Fact]
+    public async Task Process_WithThinking_CutOffTwice_FailsTruncated_AndBooksBoth()
+    {
+        WithThinking();
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(null, "truncated", 8_000, 24_000));
+        _vision.Answers.Enqueue(new(null, "truncated", 8_000, 10_000)); // auch der Rückfall ohne Nachdenken
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("failed", scan.Status);
+        Assert.Equal("truncated", scan.Error);
+        Assert.Equal([ScoresheetReadMode.Full, ScoresheetReadMode.Transcribe], _vision.Modes);
+        Assert.Equal(16_000 * 4 + 34_000 * 20, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
+    }
+
+    // ── Festgedacht (Prod 25.09.: 64 000 Tokens Nachdenken, keine Antwort) ─────────────────────────
+
+    [Fact]
+    public async Task Process_ThinkingCutOff_ReadsAgainWithoutThinking_AndStaysThereForTheSecondLook()
+    {
+        WithThinking();
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[40] = "Zz9";
+        broken[41] = "Yy8";
+        _vision.Answers.Enqueue(new(null, "truncated", 5_500, 40_000));  // mit Nachdenken: nichts
+        _vision.Answers.Enqueue(new(Answer(broken), null, 5_500, 9_000)); // ohne: bleibt bei Zug 21 hängen
+        _vision.Answers.Enqueue(new(Answer(Written), null, 9_000, 9_000)); // Nachfrage, ebenfalls ohne
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(Written.Length, scan.MoveCount);
+        Assert.Equal(3, scan.Rounds);
+        Assert.Equal([ScoresheetReadMode.Full, ScoresheetReadMode.Transcribe, ScoresheetReadMode.Transcribe], _vision.Modes);
+        Assert.Equal(ScoresheetReader.FullCallMaxTokens, _vision.MaxTokens[0]);
+        Assert.Equal(ScoresheetReader.TranscribeCallMaxTokens, _vision.MaxTokens[1]);
+        Assert.DoesNotContain("second look", _vision.Instructions[1]); // derselbe erste Auftrag, nur ohne Nachdenken
+        Assert.Contains("second look", _vision.Instructions[2]);
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal(20_000 * 4 + 58_000 * 20, row.CostMicroUsd); // alle drei Aufrufe verbucht
+    }
+
+    [Fact]
+    public async Task Process_ByDefault_ReadsWithoutThinking_AlsoTheSecondLook()
+    {
+        // Vorgabe seit 0.533.2 (Scoresheet:Thinking nicht gesetzt): nur abschreiben, auch die Nachfrage.
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[40] = "Zz9";
+        broken[41] = "Yy8";
+        _vision.Answers.Enqueue(new(Answer(broken), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal([ScoresheetReadMode.Transcribe, ScoresheetReadMode.Transcribe], _vision.Modes);
+        Assert.Equal(ScoresheetReader.TranscribeCallMaxTokens, _vision.MaxTokens[0]);
+    }
+
+    [Fact]
+    public async Task Process_RuntimeCapMidCall_FailsWithTimeout_BooksTheWorstCase_AndRingsTheBell()
+    {
+        var u = await UserAsync();
+        _vision.Hang = true;
+        var (created, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        await _service.ClaimNextAsync(default);
+        using var cap = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await _service.ProcessAsync(created!.Id, cap.Token, shutdown: CancellationToken.None);
+
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal(ScoresheetScanStatus.Failed, row.Status);
+        Assert.Equal("timeout", row.Error);
+        // Was der abgebrochene Aufruf gekostet hat, meldet niemand mehr — verbucht wird sein Deckel.
+        Assert.Equal(ScoresheetReader.TranscribeCallMaxTokens, row.OutputTokens);
+        Assert.Equal(ScoresheetBudget.ReserveInputTokens * 4L + ScoresheetReader.TranscribeCallMaxTokens * 20L, row.CostMicroUsd);
+        var note = await _db.Notifications.SingleAsync(n => n.UserId == u.Id);
+        Assert.Equal(NotificationType.ScoresheetFailed, note.Type);
+        Assert.Contains("\"reason\":\"timeout\"", note.DataJson);
+    }
+
+    [Fact]
+    public async Task Process_Shutdown_LeavesTheScanRunning_ForTheNextStart()
+    {
+        var u = await UserAsync();
+        _vision.Hang = true;
+        var (created, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        await _service.ClaimNextAsync(default);
+        using var stop = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _service.ProcessAsync(created!.Id, stop.Token, stop.Token));
+
+        Assert.Equal(ScoresheetScanStatus.Running, (await _db.ScoresheetScans.SingleAsync()).Status);
+        Assert.Empty(_db.Notifications);
+    }
+
+    [Fact]
+    public async Task Create_OverTheDailyBudget_IsRefused_ButNotForAdmins()
+    {
+        WithBudgets(userDaily: 1m);
+        var u = await UserAsync();
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 700_000,
+        });
+        await _db.SaveChangesAsync();
+
+        var (_, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        Assert.Equal("userDailyBudget", reason); // 0,30 $ übrig reichen nicht für 16 000 Antwort-Tokens + Eingabe
+
+        var status = await _service.StatusAsync(u.Id);
+        Assert.Equal("userDailyBudget", status.Blocked);
+        Assert.Equal(70, status.BudgetUsedPercent);
+
+        u.IsAdmin = true;
+        await _db.SaveChangesAsync();
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+        Assert.True((await _service.StatusAsync(u.Id)).Unlimited);
+    }
+
+    [Fact]
+    public async Task Create_TheGlobalBudget_StopsEveryone()
+    {
+        WithBudgets(userDaily: 100m, globalDaily: 5m);
+        var rich = await UserAsync("rich");
+        var other = await UserAsync("other");
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            UserId = rich.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 4_700_000,
+        });
+        await _db.SaveChangesAsync();
+        Assert.Equal("globalBudget", (await _service.CreateAsync(other.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    [Fact]
+    public async Task Process_WhenTheBudgetRunsOut_SkipsTheSecondLook_AndKeepsTheFirstReading()
+    {
+        WithBudgets(userDaily: 0.6m);
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[60] = "Zz9";
+        broken[61] = "Yy8";
+        // Die erste Lesung kostet 0,28 $ — danach reicht der Rest nicht mehr für eine brauchbare Antwort.
+        _vision.Answers.Enqueue(new(Answer(broken), null, 20_000, 10_000));
+        _vision.Answers.Enqueue(new(Answer(Written), null, 1, 1));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Single(_vision.Instructions);           // keine Nachfrage
+        Assert.Equal(27_600, _vision.MaxTokens[0]);    // (0,6 $ − 0,048 $) / 20e-6 — der Deckel kam aus dem Budget
+        Assert.Equal(60, scan.MoveCount);              // die erste Lesung bleibt
+        Assert.Equal(6, scan.UnresolvedCount);
+    }
+
+    [Fact]
+    public async Task Process_WhenTheBudgetIsGoneBeforeTheFirstCall_FailsWithoutCalling()
+    {
+        WithBudgets(userDaily: 1m);
+        var u = await UserAsync();
+        var (scan, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        Assert.Null(reason);
+        // Zwischen Hochladen und Lesen hat eine andere Einlesung das Budget aufgebraucht.
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done, CostMicroUsd = 900_000,
+        });
+        await _db.SaveChangesAsync();
+
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+        var dto = await _service.GetAsync(u.Id, scan.Id);
+        Assert.Equal("failed", dto!.Status);
+        Assert.Equal("userDailyBudget", dto.Error);
+        Assert.Empty(_vision.Instructions);
+    }
+
+    // ── Meine Seite (0.531.0) ────────────────────────────────────────────
+
+    [Fact]
+    public async Task Process_ChosenSide_IsStored_AndTurnsTheSharedView()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", "black");
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+
+        var game = await _db.SavedGames.SingleAsync();
+        Assert.Equal("black", game.OwnerSide);
+        Assert.Equal("black", (await _games.GetAsync(u.Id, game.Id))!.OwnerSide);
+        Assert.Equal("black", (await _games.GetSharedAsync(game.ShareToken))!.OwnerSide);
+    }
+
+    [Fact]
+    public async Task Process_AutoSide_FindsTheProfileNameAmongThePlayers()
+    {
+        var u = await UserAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = u.Id, FirstName = "Patrick", LastName = "Oberschmid" });
+        await _db.SaveChangesAsync();
+        _vision.Answers.Enqueue(new(Answer(Written, white: "Didi", black: "P. Oberschmid"), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+        Assert.Equal("black", (await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId)).OwnerSide);
+    }
+
+    [Theory]
+    [InlineData("Didi", "Patrick", "white")]           // eigener Name „Didi" steht bei Weiß
+    [InlineData("Müller, Jörg", "Huber", "white")]
+    [InlineData("Huber", "Jorg Muller", "black")]      // Akzente egal
+    [InlineData("Muller", "Muller", null)]             // beide Seiten → keine Drehung
+    [InlineData("Maier", "Huber", null)]               // keine Seite
+    public void GuessOwnerSide_MatchesWholeWords_OnlyOneSide(string white, string black, string? expected)
+    {
+        var mine = white == "Didi" ? new[] { "Didi" } : new[] { "Müller", null, "Jörg" };
+        Assert.Equal(expected, ScoresheetScanService.GuessOwnerSide(white, black, mine));
+    }
+
+    [Fact]
+    public async Task Update_SetsAndClearsTheOwnSide()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5" } });
+        var c = Controller(u.Id);
+        var moves = new List<GameMoveInputDto> { new() { San = "e4" }, new() { San = "e5" } };
+
+        var r1 = Assert.IsType<OkObjectResult>((await c.Update(saved.Id, new GameUpdateDto { Moves = moves, OwnerSide = "black" })).Result);
+        Assert.Equal("black", ((SavedGameDetailDto)r1.Value!).OwnerSide);
+        await c.Update(saved.Id, new GameUpdateDto { Moves = moves });          // null = unverändert
+        Assert.Equal("black", (await _db.SavedGames.SingleAsync()).OwnerSide);
+        await c.Update(saved.Id, new GameUpdateDto { Moves = moves, OwnerSide = "" });
+        Assert.Null((await _db.SavedGames.SingleAsync()).OwnerSide);
+    }
+
+    // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
+
+    private static ScoresheetScanService.ScanActor As(int userId) => ScoresheetScanService.ScanActor.User(userId);
+
+    // ── Mehrere Fotos derselben Seite + zusammenführen (0.736.0) ────────────
+
+    [Fact]
+    public void SheetGroups_GroupsByPage_RejectsMixedAndGaps()
+    {
+        ScoresheetUpload U(int page) => new(Jpeg(), "image/jpeg", "a.jpg", page);
+        Assert.Equal(new[] { 1, 1 }, ScoresheetScanService.SheetGroups(new[] { U(0), U(0) })!.Select(g => g.Count));
+        Assert.Equal(new[] { 2, 1 }, ScoresheetScanService.SheetGroups(new[] { U(1), U(2), U(1) })!.Select(g => g.Count));
+        Assert.Null(ScoresheetScanService.SheetGroups(new[] { U(1), U(0) }));   // gemischt
+        Assert.Null(ScoresheetScanService.SheetGroups(new[] { U(1), U(3) }));   // Lücke
+    }
+
+    [Fact]
+    public async Task LeagueScan_SecondPhotoOfTheSamePage_IsAViewNotAPage()
+    {
+        var u = await UserAsync();
+        var (scan, reason) = await _service.CreateAsync(u.Id,
+            new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg", 1), new ScoresheetUpload(Jpeg(50, 30), "image/jpeg", "b.jpg", 1) },
+            "auto", null, ScoresheetScan.PurposeLeague);
+        Assert.Null(reason);
+        Assert.Equal(1, scan!.PageCount);
+        var state = await _service.LeagueScanStateAsync(As(u.Id), scan.Id);
+        Assert.Equal(new[] { 1 }, state!.ViewCounts);
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id, 1, 1));
+        Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id, 1, 2));
+        Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id + 1), scan.Id, 1, 1));   // fremd
+        Assert.Equal(1, (await _service.PendingForExternalAsync()).Single().ViewCount);
+        Assert.NotNull(await _service.PhotoForExternalAsync(scan.Id, 1, default, 1));
+
+        var five = Enumerable.Range(0, 5).Select(_ => new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg", 1)).ToList();
+        Assert.Equal("tooManyViews", (await _service.CreateAsync(u.Id, five, "auto", null, ScoresheetScan.PurposeLeague)).Reason);
+
+        // Verwerfen nimmt die weiteren Fotos mit
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id));
+        Assert.Empty(_db.ScoresheetScanViews);
+    }
+
+    [Fact]
+    public async Task MergeLeagueScans_MovesThePhotos_ClosesTheOther_AndReadsAgain()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (a, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        var (b, _) = await _service.CreateAsync(u.Id, Jpeg(50, 30), "image/jpeg", "b.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(a!.Id, default);
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(As(u.Id), a.Id))!.Scan.Status);
+
+        Assert.Equal("same", await _service.MergeLeagueScansAsync(As(u.Id), a.Id, a.Id));
+        Assert.Equal("notFound", await _service.MergeLeagueScansAsync(As(u.Id + 1), a.Id, b!.Id));   // fremd
+        Assert.Null(await _service.MergeLeagueScansAsync(As(u.Id), a.Id, b.Id));
+
+        var state = await _service.LeagueScanStateAsync(As(u.Id), a.Id);
+        Assert.Equal("pending", state!.Scan.Status);                     // wird mit beiden Fotos neu gelesen
+        Assert.InRange(DateTime.UtcNow - state.Scan.CreatedAt, TimeSpan.Zero, TimeSpan.FromMinutes(1));   // Uhr ab dem Zusammenführen
+        Assert.Equal(new[] { 1 }, state.ViewCounts);
+        var view = await _service.LeagueScanPhotoAsync(As(u.Id), a.Id, 1, 1);
+        Assert.Equal(await _db.ScoresheetScanArchives.AsNoTracking().Where(x => x.ScoresheetScanId == b.Id).Select(x => x.Photo).SingleAsync(),
+            view!.Value.Data);                                           // das Foto der anderen, unverändert
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id), b.Id)); // die andere ist geschlossen
+        Assert.Equal("notFound", await _service.MergeLeagueScansAsync(As(u.Id), a.Id, b.Id));
+    }
+
+    [Fact]
+    public async Task MergeLeagueScans_WhileOneIsBeingRead_IsBusy()
+    {
+        var u = await UserAsync();
+        var (a, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        var (b, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "b.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        await _service.ClaimNextAsync(default);                          // a läuft
+        Assert.Equal("busy", await _service.MergeLeagueScansAsync(As(u.Id), b!.Id, a!.Id));
+    }
+
+    [Fact]
+    public async Task LeagueScan_IsNoSavedGame_AndClosingDropsThePhotoButKeepsTheCount()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "IMG_2.jpg", "de", "black",
+            ScoresheetScan.PurposeLeague);
+        Assert.Null(reason);
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+
+        Assert.Empty(_db.SavedGames);                                    // nicht in „Meine Partien"
+        Assert.Empty(_db.Notifications);                                 // keine Glocke — LeagueHub fragt selbst nach
+        Assert.Empty(await _service.ListAsync(u.Id));                    // nicht in RookHubs Liste
+        var listed = (await _service.LeagueScansAsync(u.Id)).Single();
+        Assert.Equal(scan.Id, listed.Id);
+        Assert.Equal(("Didi", "Patrick"), (listed.White, listed.Black));   // Namen auch in der Liste (0.659.3), nicht „? – ?"
+
+        var state = await _service.LeagueScanStateAsync(As(u.Id), scan.Id);
+        Assert.Equal("done", state!.Scan.Status);
+        Assert.Equal(Written.Length, state.Plies.Count);
+        Assert.Equal(("Didi", "Patrick", "0-1", "black"), (state.White, state.Black, state.Result, state.OwnerSide));
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id + 1), scan.Id));   // fremd
+
+        var rest = await _service.ResolveLeagueRestAsync(As(u.Id), scan.Id, new[] { "Nf3", "d5" }, 2);
+        Assert.Equal(Written.Length, rest!.Plies.Count + 2);
+
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
+        // ein längst abgelaufener Archiv-Eintrag einer anderen Einlesung — geht beim nächsten Abschluss mit
+        var old = new ScoresheetScan { UserId = u.Id, Purpose = ScoresheetScan.PurposeLeague, ContentType = "image/jpeg", FileName = ScoresheetScanService.DiscardedMark, CreatedAt = DateTime.UtcNow.AddDays(-400) };
+        _db.ScoresheetScans.Add(old);
+        await _db.SaveChangesAsync();
+        _db.ScoresheetScanArchives.Add(new ScoresheetScanArchive { ScoresheetScanId = old.Id, Page = 1, ExpiresAt = DateTime.UtcNow.AddDays(-1) });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id, "[White \"Didi\"]\n\n1. Nf3 d5 0-1", clubGameId: 42));
+        Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id), scan.Id));
+        Assert.Empty(await _service.LeagueScansAsync(u.Id));
+        var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync(x => x.Id == scan.Id);
+        Assert.Null(row.TranscriptionJson);
+        Assert.Equal(1, (await _service.StatusAsync(u.Id, ScoresheetScan.PurposeLeague)).UsedToday);   // zählt weiter
+
+        // Wunsch 2026-10-04: Bild und Erkennung 365 Tage aufbewahren (0.655.0) — samt der PGN, die daraus wurde
+        var kept = await _db.ScoresheetScanArchives.AsNoTracking().SingleAsync();
+        Assert.Equal((scan.Id, 1, "saved"), (kept.ScoresheetScanId, kept.Page, kept.Outcome));
+        Assert.NotEmpty(kept.Photo);
+        Assert.NotNull(kept.TranscriptionJson);
+        Assert.Contains("1. Nf3 d5", kept.FinalPgn);
+        Assert.InRange(kept.ExpiresAt - kept.ArchivedAt, TimeSpan.FromDays(364.9), TimeSpan.FromDays(365.1));
+        // „Korrigieren" (0.660.0): das aufbewahrte Formular hängt an der Vereinspartie 42 und öffnet sich wie ein eigenes
+        Assert.Equal(42, kept.LeagueClubGameId);
+        var sheet = await _service.ClubEditStateAsync(42);
+        Assert.Equal(Written.Length, sheet!.Written.Count);
+        Assert.NotNull(await _service.ClubPhotoAsync(42, 1));
+        Assert.NotNull(await _service.ResolveClubRestAsync(42, new[] { "Nf3", "d5" }, 2));
+        Assert.Null(await _service.ClubEditStateAsync(43));
+        // ein zweiter Abschluss legt nichts doppelt ab
+        await _service.CloseLeagueScanAsync(As(u.Id), scan.Id);
+        Assert.Equal(1, await _db.ScoresheetScanArchives.CountAsync());
+    }
+
+    [Fact]
+    public async Task LeagueScans_HaveTheirOwnDailyLimitOfTen()
+    {
+        var u = await UserAsync();
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto")).Reason);   // RookHub: 1/Tag
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto")).Reason);
+        for (var i = 0; i < ScoresheetScanService.DefaultLeagueDailyLimit; i++)
+        {
+            // Offene Einlesungen sind je Nutzer auf drei gedeckelt — fertig markieren, dann zählt nur die Tageszahl.
+            var (sc, why) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto", null, ScoresheetScan.PurposeLeague);
+            Assert.Null(why);
+            var row = await _db.ScoresheetScans.SingleAsync(s => s.Id == sc!.Id);
+            row.Status = ScoresheetScanStatus.Done;
+            await _db.SaveChangesAsync();
+        }
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto", null, ScoresheetScan.PurposeLeague)).Reason);
+        var status = await _service.StatusAsync(u.Id, ScoresheetScan.PurposeLeague);
+        Assert.Equal((10, 10), (status.DailyLimit, status.UsedToday));
+        Assert.Equal((1, 1), ((await _service.StatusAsync(u.Id)).DailyLimit, (await _service.StatusAsync(u.Id)).UsedToday));
+    }
+
+    /// <summary>Wunsch 2026-09-28: „wenn ich übers Partieformular etwas hinzufüge und dann nicht auf Prüfen gehe, sollte das
+    /// auch für die Admins zur Verfügung stehen, damit die nicht im Limbo sind".</summary>
+    [Fact]
+    public async Task LeagueScans_NeverChecked_AreOpenToManagers_IncludingShareLinkOnes()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (mine, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        var (anon, key, _) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", "white", "ip");
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(mine!.Id, default);
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(anon!.Id, default);
+
+        var admin = ScoresheetScanService.ScanActor.ManagerOf(u.Id + 1);
+        var open = await _service.LeagueOpenScansAsync(u.Id + 1);
+        Assert.Equal(new[] { (anon.Id, true), (mine.Id, false) }.OrderBy(x => x.Item1),
+            open.Select(o => (o.Scan.Id, o.ViaShareLink)).OrderBy(x => x.Item1));
+        Assert.All(open, o => Assert.False(o.Mine));
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id + 1), mine.Id));          // ohne Verwalter-Recht: fremd
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(admin, mine.Id))!.Scan.Status);
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(admin, anon.Id))!.Scan.Status);   // ohne Schlüssel
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(admin, anon.Id));
+        Assert.True(await _service.CloseLeagueScanAsync(admin, anon.Id));
+        Assert.Null(await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.Anonymous(key!), null));
+        Assert.Single(await _service.LeagueOpenScansAsync(u.Id + 1));                       // verworfen = weg
+        Assert.True((await _service.LeagueOpenScansAsync(u.Id)).Single().Mine);
+    }
+
+    [Fact]
+    public async Task AnonymousScan_ReachableOnlyWithItsKey_LimitedPerIpAndPerDay()
+    {
+        var ip = _service.AnonIpHash(System.Net.IPAddress.Parse("203.0.113.7"));
+        Assert.NotEqual(ip, _service.AnonIpHash(System.Net.IPAddress.Parse("203.0.113.8")));
+        Assert.DoesNotContain("203", ip);                                        // die Adresse selbst steht nirgends
+
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, key, reason) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", "white", ip);
+        Assert.Null(reason);
+        Assert.NotNull(key);
+        var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync();
+        Assert.Null(row.UserId);
+        Assert.Equal((ScoresheetScan.PurposeLeague, ip), (row.Purpose, row.AnonIpHash));
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+
+        var anon = ScoresheetScanService.ScanActor.Anonymous(key!);
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(anon, null))!.Scan.Status);
+        Assert.Null(await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.Anonymous("falsch"), null));
+        Assert.Equal(key, (await _service.LeagueScansByKeysAsync(new[] { key!, "gibtsnicht" })).Single().Key);
+        Assert.True(await _service.CloseLeagueScanAsync(anon, null));
+        Assert.Null(await _service.LeagueScanStateAsync(anon, null));           // Schlüssel ist weg
+
+        // Je IP zehn in 24 h, alle zusammen hundert — nachgestellt mit fertigen Zeilen.
+        for (var i = 0; i < ScoresheetScanService.AnonPerIpDailyLimit - 1; i++)
+            _db.ScoresheetScans.Add(new ScoresheetScan { Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = ip, Status = ScoresheetScanStatus.Done, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal("dailyLimit", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, ip)).Reason);
+        var other = _service.AnonIpHash(System.Net.IPAddress.Parse("198.51.100.1"));
+        for (var i = 0; i < ScoresheetScanService.AnonDailyLimit - ScoresheetScanService.AnonPerIpDailyLimit; i++)
+            _db.ScoresheetScans.Add(new ScoresheetScan { Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = "x" + i, Status = ScoresheetScanStatus.Done, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal("anonDailyLimit", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, other)).Reason);
+        Assert.Equal("anonDailyLimit", (await _service.AnonStatusAsync(other)).Blocked);
+    }
+
+    // ── Einlesungen ohne Konto: eigenes Tagesbudget, IPv6 je /64, Annahme nacheinander (Codereview 2026-09-29, A6-003) ──
+
+    [Fact]
+    public void Budget_AnonymousScans_ShareTheirOwnDailyBudget_OnTopOfTheGlobalOne()
+    {
+        var b = new ScoresheetBudget(null);
+        Assert.Equal(3_000_000, b.AnonDailyMicroUsd);
+        // Frisch: (3 − 0,048) $ reichen für mehr als den obersten Deckel.
+        Assert.Equal(new CallAllowance(ScoresheetBudget.MaxOutputTokens, null), b.AnonAllowance(0, 0));
+        // 2,5 $ ohne Konto verbraucht: (0,5 − 0,048) / 20e-6 = 22 600 Tokens — egal, wie viel vom Gesamtbudget noch da ist.
+        Assert.Equal(new CallAllowance(22_600, null), b.AnonAllowance(2_500_000, 2_500_000));
+        Assert.Equal("globalBudget", b.AnonAllowance(2_700_000, 2_700_000).Blocked);
+        // Das Gesamtbudget gilt weiter, auch wenn ohne Konto noch nichts verbraucht ist.
+        Assert.Equal("globalBudget", b.AnonAllowance(0, 14_700_000).Blocked);
+        // Konten sind vom Tagesbudget ohne Konto nicht betroffen.
+        Assert.Null(b.Allowance(0, 0, 2_900_000, false).Blocked);
+    }
+
+    [Fact]
+    public async Task AnonymousScans_CannotEmptyTheGlobalBudget_AccountsKeepTheRest()
+    {
+        WithBudgets(userDaily: 2m, globalDaily: 15m);
+        // Ohne Konto heute schon 2,9 $ — deren Tagesbudget (3 $) reicht für keinen Aufruf mehr; vom Gesamtbudget sind 12,1 $ übrig.
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = "x", Status = ScoresheetScanStatus.Done, CostMicroUsd = 2_900_000,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        var ip = _service.AnonIpHash(System.Net.IPAddress.Parse("203.0.113.9"));
+        Assert.Equal("globalBudget", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, ip)).Reason);
+        Assert.Equal("globalBudget", (await _service.AnonStatusAsync(ip)).Blocked);
+
+        var u = await UserAsync();
+        Assert.Null((await _service.StatusAsync(u.Id)).Blocked);
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    [Fact]
+    public async Task AnonymousScan_AnswerCap_ComesFromTheAnonymousBudget()
+    {
+        // 2,5 $ ohne Konto verbraucht → 22 600 Tokens; ohne eigenes Budget bekam jede Einlesung den vollen Deckel (32 000).
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = "x", Status = ScoresheetScanStatus.Done, CostMicroUsd = 2_500_000,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, _, reason) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip");
+        Assert.Null(reason);
+        Assert.Equal(scan!.Id, await _service.ClaimNextAsync(default));
+        await _service.ProcessAsync(scan.Id, default);
+        Assert.Equal(22_600, _vision.MaxTokens.First());
+    }
+
+    [Fact]
+    public void AnonIpHash_CountsIPv6PerSlash64_AndMappedIPv4AsIPv4()
+    {
+        string H(string ip) => _service.AnonIpHash(System.Net.IPAddress.Parse(ip));
+        Assert.Equal(H("2001:db8:1:2::1"), H("2001:db8:1:2:ffff:ee:dd:5"));   // ein Anschluss, beliebige Adresse im /64
+        Assert.NotEqual(H("2001:db8:1:2::1"), H("2001:db8:1:3::1"));          // fremdes /64 mit demselben Ende
+        Assert.NotEqual(H("2001:db8:1:2::1"), H("0.0.0.1"));
+        Assert.Equal(H("203.0.113.7"), H("::ffff:203.0.113.7"));
+        Assert.NotEqual(H("203.0.113.7"), H("203.0.113.8"));
+    }
+
+    [Fact]
+    public async Task AnonymousUploads_SentInParallel_StillStopAtTheOpenLimit()
+    {
+        // Jeder Upload mit eigenem Kontext auf DERSELBEN Datenbank, alle gleichzeitig losgelassen — wie parallele Anfragen.
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var jpeg = Jpeg();
+        const int uploads = 8;
+        using var start = new Barrier(uploads);
+        var reasons = await Task.WhenAll(Enumerable.Range(0, uploads).Select(_ => Task.Run(async () =>
+        {
+            await using var db = new AppDbContext(options);
+            var service = new ScoresheetScanService(db, _vision, TestServices.SavedGames(db), new NotificationService(db),
+                NullLogger<ScoresheetScanService>.Instance);
+            start.SignalAndWait();
+            return (await service.CreateAnonymousAsync(jpeg, "image/jpeg", "b.jpg", "de", null, "ip-parallel")).Reason;
+        })));
+        Assert.Equal(ScoresheetScanService.MaxOpenPerUser, reasons.Count(r => r == null));
+        Assert.All(reasons.Where(r => r != null), r => Assert.Equal("tooManyOpen", r));
+    }
+
+    /// <summary>10.Tc1 als „Te1" gelesen (siehe <see cref="ScoresheetPlausibilityTests"/>): legal, also nimmt der Auflöser
+    /// ihn — die Engine-Attrappe sieht ab dort ein Zickzack (Turm auf e1 = Schwarz am Zug gewinnt ihn).</summary>
+    private static readonly string[] MisreadRookSheet =
+    {
+        "e4", "e5", "Sf3", "Sc6", "Lc4", "Lc5", "Sc3", "Sf6", "d3", "d6", "Lg5", "h6", "Lh4", "g5", "Lg3", "Lg4",
+        "0-0", "Dd7", "Te1", "0-0-0", "a3", "a6", "b4", "La7", "Sd5", "Sxd5", "Lxd5", "Thg8", "h3", "Le6", "c4", "f6",
+        "Da4", "Kb8",
+    };
+
+    private static int RookOnE1Loses(string fen)
+        => ScoresheetResolver.Squares(fen)[60] == 'R' && fen.Split(' ')[1] == "b" ? -900 : 0;
+
+    [Fact]
+    public async Task Process_WithEngine_CorrectsAMisreadMove_AndMarksIt()
+    {
+        var u = await UserAsync();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, engine: new FakeScoresheetEngine(RookOnE1Loses));
+        _vision.Answers.Enqueue(new(Answer(MisreadRookSheet), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId);
+        Assert.Contains("10. Rc1", game.Pgn);
+        Assert.Contains("{sheet: Te1}", game.Pgn);
+        var row = await _db.ScoresheetScans.SingleAsync(s => s.Id == scan.Id);
+        var ply = JsonNode.Parse(row.ResolutionJson!)!["plies"]![18]!;
+        Assert.Equal("Rc1", (string?)ply["san"]);
+        Assert.Equal("replaced", (string?)ply["check"]);
+        Assert.True((bool)ply["uncertain"]!);
+    }
+
+    [Fact]
+    public async Task Process_EngineCheckSwitchedOff_KeepsTheReading()
+    {
+        var u = await UserAsync();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Plausibility"] = "false",
+        }).Build();
+        var engine = new FakeScoresheetEngine(RookOnE1Loses);
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config, engine);
+        _vision.Answers.Enqueue(new(Answer(MisreadRookSheet), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId);
+        Assert.Contains("10. Re1", game.Pgn);
+        Assert.Equal(0, engine.Lines);
+    }
+}

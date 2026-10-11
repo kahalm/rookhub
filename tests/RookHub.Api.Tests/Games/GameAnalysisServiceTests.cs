@@ -1,0 +1,1699 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Engines;
+using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Library;
+
+namespace RookHub.Api.Tests.Games;
+
+/// <summary>
+/// Die Klammer um die Analyse-Aufträge: Partie zerlegen, in BLÖCKEN einreihen (offene Aufträge sind
+/// je Nutzer gedeckelt), fertige Ergebnisse KOPIEREN (der Auftrags-Trimmer räumt sonst die Analyse
+/// weg) und am Ende abschließen.
+/// </summary>
+public class GameAnalysisServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly GameAnalysisService _svc;
+    private readonly RecordingReviewTexts _reviewTexts = new();
+
+    /// <summary>Merkt sich, wann die Pumpe die Texte zur Partie anstößt (0.540.0) — ohne Sprachmodell.</summary>
+    private sealed class RecordingReviewTexts : IGameReviewTextScheduler
+    {
+        public List<(int AnalysisId, bool Refined)> Calls { get; } = new();
+        public void Schedule(int analysisId, bool refined) => Calls.Add((analysisId, refined));
+        public void ScheduleRecap(int savedGameId) { }
+    }
+
+    public GameAnalysisServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        _db = new AppDbContext(options);
+        var jobs = new AnalysisJobService(_db, null);
+        var comments = new CommentSetService(_db, NullLogger<CommentSetService>.Instance);
+        _svc = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance, _reviewTexts);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private const string Game = """
+[Event "Testpartie"]
+[White "Anderssen"]
+[Black "Kieseritzky"]
+[Result "1-0"]
+
+1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5 1-0
+""";
+
+    /// <summary>Dieselbe Partie, aber laenger als ein Auftragsblock (110 Halbzuege) — nur damit
+    /// sieht man, dass NICHT alles auf einmal eingereiht wird. Nach dem Eroeffnungsteil folgt eine
+    /// erzeugte, aber durchweg legale Zugfolge ohne Schlagzug und ohne Schach: an dieser Partie
+    /// zaehlt allein die LAENGE, und sie muss ueber <c>MaxOpenJobsPerGame</c> liegen.</summary>
+    private const string LongGame = """
+[Event "Testpartie"]
+[White "Anderssen"]
+[Black "Kieseritzky"]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O
+9. h3 Nb8 10. d4 Nbd7 11. Bg5 Rb8 12. Na3 c5 13. Be3 Qe8 14. g4 Ra8 15. Qd3 Qd8
+16. Rec1 Bb7 17. Nh2 Qe8 18. Re1 Bd5 19. Bc1 Ra7 20. Qd2 h6 21. Qe2 Kh7 22. Nf3 Kg8
+23. Nd2 Bc4 24. Rd1 Nh7 25. Bc2 Bd8 26. Qf3 Ba5 27. Nab1 f6 28. Qd3 Qf7 29. d5 Qg6
+30. Na3 b4 31. Rb1 Rb8 32. Qe3 Ng5 33. Ba4 Rd8 34. Kg2 Rf8 35. Nb3 Kh7 36. Rd4 Rfa8
+37. Nc2 Bd8 38. Kh1 Qe8 39. f3 Rc7 40. Nba1 g6 41. Qg1 Raa7 42. Na3 h5 43. Bb3 Bd3
+44. c4 Kh8 45. Bd1 Nf7 46. Qf1 Ra8 47. Bg5 Raa7 48. h4 Rc6 49. Kg1 Rcc7 50. Be3 Qg8
+51. Qe1 Rcb7 52. Bc1 f5 53. Qe2 Qh7 54. Ba4 Nf8 55. Bc6 Ra8 1/2-1/2
+""";
+
+    private async Task<AppUser> CreateUserWithEngineAsync()
+    {
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        // Ohne hinterlegte Hintergrund-Engine kann nichts eingereiht werden.
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential
+        {
+            UserId = user.Id, EncryptedToken = "enc", BackgroundEngineIds = "eei_test",
+        });
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    /// <summary>Wie viele Auftraege eine Partie dieser Laenge offen haelt — der Block, oder die
+    /// Partie, wenn sie kuerzer ist. Seit der Block 32 fasst, ist die 14-Halbzug-Testpartie
+    /// kuerzer als er.</summary>
+    private static int BlockFor(int plies) => Math.Min(GameAnalysisDefaults.MaxOpenJobsPerGame, plies);
+
+    [Fact]
+    public async Task Create_zerlegtDiePartie_undReihtNurEinenBlockEin()
+    {
+        var user = await CreateUserWithEngineAsync();
+
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = LongGame });
+
+        Assert.Equal(110, dto.PlyCount);                      // laenger als ein Auftragsblock
+        Assert.Equal("Anderssen – Kieseritzky", dto.Title);
+        Assert.Equal(GameAnalysisDefaults.TargetDepth, dto.TargetDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, dto.MultiPv);
+
+        var positions = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync();
+        Assert.Equal(111, positions.Count);
+
+        // NICHT alle 110 auf einmal: offene Aufträge sind je Nutzer gedeckelt, also blockweise.
+        var enqueued = positions.Count(p => p.AnalysisJobId != null);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, enqueued);
+        // Und zwar in Zugreihenfolge — man will die Partie von vorn ansehen können.
+        Assert.All(positions.Where(p => p.AnalysisJobId != null),
+            p => Assert.True(p.Ply < GameAnalysisDefaults.MaxOpenJobsPerGame));
+
+        var jobs = await _db.AnalysisJobs.Where(j => j.UserId == user.Id).ToListAsync();
+        Assert.Equal(GameAnalysisDefaults.MaxOpenJobsPerGame, jobs.Count);
+        Assert.All(jobs, j => Assert.Equal(GameAnalysisDefaults.TargetDepth, j.TargetDepth));
+        Assert.All(jobs, j => Assert.Equal("eei_test", j.EngineId));
+        Assert.Contains(jobs, j => j.Title!.Contains("1w e4"));   // sprechender Titel in der Auftragsliste
+    }
+
+    [Fact]
+    public async Task Pump_uebernimmtFertigeErgebnisse_undFuettertNach()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        // Die ersten drei Aufträge „fertig rechnen" lassen.
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .OrderBy(p => p.Ply).Take(3).ToListAsync();
+        foreach (var pos in positions)
+        {
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = 30;
+            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
+        }
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(dto.Id);
+
+        var after = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+
+        // Ergebnisse sind KOPIERT (nicht nur verlinkt) — der Auftrags-Trimmer darf sie wegräumen.
+        Assert.Equal(3, after.Count(p => p.CandidatesJson != null));
+        Assert.All(after.Where(p => p.CandidatesJson != null), p =>
+        {
+            Assert.Equal(30, p.Depth);
+            Assert.NotNull(p.EvalText);
+            Assert.NotNull(p.AnalyzedAt);
+        });
+
+        // … und es wurde nachgefüttert: nie mehr als ein Block offen, aber so viel wie möglich.
+        // (Diese Partie ist mit 14 Halbzügen kürzer als 3 + ein voller Block, also sind am Ende
+        // ALLE Stellungen entweder fertig oder eingereiht.)
+        var open = after.Count(p => p.CandidatesJson == null && p.AnalysisJobId != null);
+        Assert.True(open <= GameAnalysisDefaults.MaxOpenJobsPerGame, $"{open} offene Aufträge");
+        Assert.Equal(after.Count, after.Count(p => p.CandidatesJson != null || p.AnalysisJobId != null));
+
+        var head = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id);
+        Assert.Equal(GameAnalysisStatus.Running, head.Status);
+    }
+
+    [Fact]
+    public async Task Pump_reihtEineStellungNeuEin_wennIhrAuftragVerschwunden()
+    {
+        // Genau der Fall, gegen den kopiert wird: MaxJobsPerUser räumt fertige Aufträge weg.
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var pos = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null).OrderBy(p => p.Ply).FirstAsync();
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+        _db.AnalysisJobs.Remove(job);
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(dto.Id);
+
+        var again = await _db.GameAnalysisPositions.FirstAsync(p => p.Id == pos.Id);
+        Assert.Null(again.CandidatesJson);
+        Assert.NotNull(again.AnalysisJobId);
+        Assert.NotEqual(job.Id, again.AnalysisJobId);   // neuer Auftrag
+    }
+
+    [Fact]
+    public async Task Pump_schliesstAb_wennJedeStellungIhreListeHat()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        // Alles auf einmal „analysiert" setzen und pumpen.
+        var all = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync();
+        foreach (var p in all) p.CandidatesJson = "[{\"uci\":\"" + p.GameMoveUci + "\",\"cp\":10}]";
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(dto.Id);
+
+        var head = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);
+        Assert.NotNull(head.FinishedAt);
+        // Beim Fertigwerden wird die Genauigkeit beider Seiten gerechnet und abgelegt (0.515.0) — die
+        // Partienliste zeigt sie, ohne die Stellungen zu laden.
+        Assert.NotNull(head.AccuracyWhite);
+        Assert.NotNull(head.AccuracyBlack);
+        Assert.InRange(head.AccuracyWhite!.Value, 0, 100);
+        Assert.InRange(head.AccuracyBlack!.Value, 0, 100);
+    }
+
+    [Fact]
+    public async Task Pump_haengtNichtAnEinemGescheitertenAuftrag()
+    {
+        // Eine Stellung, an der jeder Anlauf scheitert, darf die Partie nicht aufhalten: nach
+        // MaxPositionAttempts bekommt sie eine leere Liste und wird spaeter uebersprungen. Die
+        // WIEDERHOLUNGEN davor sind der Punkt — ein einzelner Fehlschlag heisst nur, dass die
+        // Engine gerade nicht zu gebrauchen war (siehe GescheiterterAuftrag_reihtDieStellungErneutEin).
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var pos = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null).OrderBy(p => p.Ply).FirstAsync();
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxPositionAttempts; i++)
+        {
+            await _db.Entry(pos).ReloadAsync();
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Failed;
+            await _db.SaveChangesAsync();
+            await _svc.PumpOneAsync(dto.Id);
+        }
+
+        var again = await _db.GameAnalysisPositions.FirstAsync(p => p.Id == pos.Id);
+        Assert.Equal("[]", again.CandidatesJson);
+        Assert.Empty(BrokerCandidates.FromJson(again.CandidatesJson));
+    }
+
+    [Fact]
+    public async Task OhneHintergrundEngine_scheitertDiePartieMitKlarerMeldung()
+    {
+        var user = new AppUser { Username = "u2", Email = "u2@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var head = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id);
+        Assert.Equal(GameAnalysisStatus.Failed, head.Status);
+        Assert.Contains("Engine", head.LastError);
+    }
+
+    [Fact]
+    public async Task KaputtesPgn_wirdAbgelehnt_stattEineLeerePartieAnzulegen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "das ist kein PGN" }));
+        Assert.Empty(_db.GameAnalyses);
+    }
+
+    [Fact]
+    public async Task Delete_raeumtStellungenUndOffeneAuftraegeAb()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.True(await _svc.DeleteAsync(user.Id, dto.Id));
+
+        Assert.Empty(_db.GameAnalyses);
+        Assert.Empty(_db.GameAnalysisPositions);
+        // Die eingereihten Aufträge sind mitgegangen — sonst rechnete die Engine für nichts weiter.
+        Assert.Empty(_db.AnalysisJobs.Where(j => j.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task Create_schwemmtDieMerklisteNicht_zu()
+    {
+        // Regression: `AnalysisJobService.CreateAsync` legt jede eingereihte Stellung zusaetzlich unter
+        // „Gemerkte Stellungen" ab — sinnvoll fuer den von Hand eingereihten Einzelauftrag, aber eine
+        // Partie erzeugt je Halbzug einen Auftrag und haette die Merkliste des Nutzers geflutet.
+        var user = await CreateUserWithEngineAsync();
+
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Empty(_db.RememberedPositions.Where(r => r.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task Pump_raeumtUebernommeneAuftraegeAb()
+    {
+        // Der kopierte Auftrag hat seinen Zweck erfuellt. Bliebe er stehen, fuellte eine Partie 80 der
+        // 200 Zeilen von MaxJobsPerUser — nach drei Partien haette der Trimmer die von Hand
+        // eingereihten Auftraege des Nutzers verdraengt.
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var pos = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .OrderBy(p => p.Ply).FirstAsync();
+        var jobId = pos.AnalysisJobId!.Value;
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == jobId);
+        job.Status = AnalysisJobStatus.Done;
+        job.ReachedDepth = 30;
+        job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":35,\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(dto.Id);
+
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == jobId));
+        var again = await _db.GameAnalysisPositions.FirstAsync(p => p.Id == pos.Id);
+        Assert.NotNull(again.CandidatesJson);
+        Assert.Null(again.AnalysisJobId);   // kein Zeiger auf einen geloeschten Auftrag
+    }
+
+    [Fact]
+    public async Task Delete_nimmtDiePunktepartienMit()
+    {
+        // GuessSessions zeigen per RESTRICT auf die Analyse: ohne dieses Aufraeumen scheiterte das
+        // Loeschen in MySQL mit einem Fremdschluessel-Fehler (500 statt 204).
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+        pos.CandidatesJson = "[{\"uci\":\"" + pos.GameMoveUci + "\",\"cp\":10}]";
+        await _db.SaveChangesAsync();
+
+        var session = new GuessSession { UserId = user.Id, GameAnalysisId = dto.Id, StartPly = 0, CurrentPly = 0 };
+        session.Moves.Add(new GuessMove { Ply = 0, PlayedUci = pos.GameMoveUci, Grade = GuessGrade.GameMove });
+        _db.GuessSessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _svc.DeleteAsync(user.Id, dto.Id));
+
+        Assert.Empty(_db.GuessSessions);
+        Assert.Empty(_db.GuessMoves);
+        Assert.Empty(_db.GameAnalyses);
+    }
+
+    [Fact]
+    public async Task FremdeAnalyseIstUnsichtbar()
+    {
+        var owner = await CreateUserWithEngineAsync();
+        var other = new AppUser { Username = "other", Email = "o@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(other);
+        await _db.SaveChangesAsync();
+
+        var dto = await _svc.CreateAsync(owner.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Null(await _svc.GetAsync(other.Id, dto.Id));
+        Assert.False(await _svc.DeleteAsync(other.Id, dto.Id));
+        Assert.Empty(await _svc.ListAsync(other.Id));
+    }
+
+    // ===== Kuratierter Bestand ==========================================================
+
+    /// <summary>Nur der Kopf, ohne Engine — hier geht es um Sichtbarkeit, nicht um Aufträge.</summary>
+    private async Task<GameAnalysis> AddAnalysisAsync(int userId, bool isPublic, bool analyzed,
+        string title = "T", string pgn = "1. e4 e5 *")
+    {
+        var analysis = new GameAnalysis
+        {
+            UserId = userId, Title = title, Pgn = pgn, StartFen = GamePlies.StartFen(),
+            PlyCount = 2, IsPublic = isPublic, Status = GameAnalysisStatus.Done,
+        };
+        analysis.Positions.Add(new GameAnalysisPosition
+        {
+            Ply = 0, Fen = GamePlies.StartFen(), GameMoveUci = "e2e4", GameMoveSan = "e4",
+            CandidatesJson = analyzed ? "[{\"uci\":\"e2e4\",\"cp\":20}]" : null,
+        });
+        _db.GameAnalyses.Add(analysis);
+        await _db.SaveChangesAsync();
+        return analysis;
+    }
+
+    /// <summary>
+    /// Der Bestand zeigt nur, was freigegeben UND spielbar ist. Eine freigegebene Partie ohne eine
+    /// einzige gerechnete Stellung wäre in der Auswahl ein Knopf, der sofort „wird noch gerechnet"
+    /// sagt — die gehört noch nicht hinein.
+    /// </summary>
+    [Fact]
+    public async Task ListPublic_nurFreigegebeneUndFertige()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await AddAnalysisAsync(user.Id, isPublic: true, analyzed: true, title: "sichtbar");
+        await AddAnalysisAsync(user.Id, isPublic: true, analyzed: false, title: "noch nichts gerechnet");
+        await AddAnalysisAsync(user.Id, isPublic: false, analyzed: true, title: "privat");
+
+        var list = await _svc.ListPublicAsync();
+
+        var row = Assert.Single(list);
+        Assert.Equal("sichtbar", row.Title);
+        Assert.True(row.IsPublic);
+    }
+
+    /// <summary>
+    /// HALB gerechnet reicht nicht. Anspielen liesse sich so eine Partie zwar, sie ueberspraenge
+    /// dann aber stillschweigend jede Stellung ohne Kandidatenliste — man raet eine Partie mit
+    /// Loechern, ohne dass irgendwo steht, warum.
+    /// </summary>
+    [Fact]
+    public async Task ListPublic_halbGerechneteBleibenDraussen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var halb = await AddAnalysisAsync(user.Id, isPublic: true, analyzed: true, title: "halb fertig");
+        halb.Positions.Add(new GameAnalysisPosition
+        {
+            Ply = 1, Fen = GamePlies.StartFen(), GameMoveUci = "e7e5", GameMoveSan = "e5",
+            CandidatesJson = null,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Empty(await _svc.ListPublicAsync());
+    }
+
+    /// <summary>Der Stellungsfilter des Bestands (anonym, <c>?line=</c>): dieselbe Menge wie der Baum —
+    /// die Partie, die genau hier endet, und was danach weitergeht —, LIKE-Platzhalter maskiert (A6-017).</summary>
+    [Fact]
+    public async Task ListPublic_stellungsfilter_maskiertPlatzhalter()
+    {
+        var user = await CreateUserWithEngineAsync();
+        (await AddAnalysisAsync(user.Id, true, true, "e4")).OpeningLine = "e4 e5";
+        (await AddAnalysisAsync(user.Id, true, true, "d4")).OpeningLine = "d4 d5";
+        await _db.SaveChangesAsync();
+
+        Assert.Empty(await _svc.ListPublicAsync(line: "_4"));
+        Assert.Empty(await _svc.ListPublicAsync(line: "%"));
+        Assert.Equal("e4", Assert.Single(await _svc.ListPublicAsync(line: "e4")).Title);
+        Assert.Equal("e4", Assert.Single(await _svc.ListPublicAsync(line: "e4 e5")).Title);
+    }
+
+    /// <summary>Grundlage des Filters „alle / nur kommentierte": eine geschweifte Klammer im PGN
+    /// IST ein Kommentar.</summary>
+    [Fact]
+    public async Task ListPublic_meldetKommentierteAls_annotated()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await AddAnalysisAsync(user.Id, true, true, "mit", "1. e4 {ein guter Zug} e5 *");
+        await AddAnalysisAsync(user.Id, true, true, "ohne", "1. e4 e5 *");
+
+        var list = await _svc.ListPublicAsync();
+
+        Assert.True(list.Single(a => a.Title == "mit").Annotated);
+        Assert.False(list.Single(a => a.Title == "ohne").Annotated);
+    }
+
+    [Fact]
+    public async Task SetPublic_derBesitzerDarf()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var analysis = await AddAnalysisAsync(user.Id, isPublic: false, analyzed: true);
+
+        Assert.True(await _svc.SetPublicAsync(user.Id, isAdmin: false, analysis.Id, true));
+        Assert.True((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+
+        Assert.False(await _svc.SetPublicAsync(user.Id, isAdmin: false, analysis.Id, false));
+        Assert.False((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+    }
+
+    [Fact]
+    public async Task SetPublic_einFremderNicht_einAdminSchon()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var analysis = await AddAnalysisAsync(user.Id, isPublic: false, analyzed: true);
+        var other = new AppUser { Username = "o", Email = "o@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(other);
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await _svc.SetPublicAsync(other.Id, isAdmin: false, analysis.Id, true));
+        Assert.False((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+
+        Assert.True(await _svc.SetPublicAsync(other.Id, isAdmin: true, analysis.Id, true));
+        Assert.True((await _db.GameAnalyses.FindAsync(analysis.Id))!.IsPublic);
+    }
+
+    [Fact]
+    public async Task SetPublic_unbekanteAnalyse_istNull()
+    {
+        var user = await CreateUserWithEngineAsync();
+        Assert.Null(await _svc.SetPublicAsync(user.Id, isAdmin: true, 4711, true));
+    }
+
+    // ===== Gescheiterte Stellungen ======================================================
+
+    /// <summary>
+    /// Ein gescheiterter Auftrag heisst „die Engine war gerade nicht zu gebrauchen", nicht „diese
+    /// Stellung geht nicht". Frueher wurde sie sofort mit leerer Kandidatenliste abgeschlossen —
+    /// eine tote Engine loeschte damit Stellungen aus der Partie, die nie wieder gerechnet wurden.
+    /// </summary>
+    [Fact]
+    public async Task GescheiterterAuftrag_reihtDieStellungErneutEin()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+
+        job.Status = AnalysisJobStatus.Failed;
+        job.LastError = "Engine lieferte nichts";
+        await _db.SaveChangesAsync();
+        await _svc.PumpOneAsync(dto.Id);
+
+        await _db.Entry(pos).ReloadAsync();
+        Assert.Equal(1, pos.FailedAttempts);
+        Assert.Null(pos.CandidatesJson);                      // NICHT aufgegeben
+        Assert.NotNull(pos.AnalysisJobId);                    // schon wieder eingereiht
+    }
+
+    /// <summary>Aber nicht ewig: nach MaxPositionAttempts ist Schluss, sonst liefe eine wirklich
+    /// unloesbare Stellung im Kreis.</summary>
+    [Fact]
+    public async Task GescheiterterAuftrag_gibtNachDreiAnlaeufenAuf()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxPositionAttempts; i++)
+        {
+            await _db.Entry(pos).ReloadAsync();
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Failed;
+            await _db.SaveChangesAsync();
+            await _svc.PumpOneAsync(dto.Id);
+        }
+
+        await _db.Entry(pos).ReloadAsync();
+        Assert.Equal(GameAnalysisDefaults.MaxPositionAttempts, pos.FailedAttempts);
+        Assert.Equal("[]", pos.CandidatesJson);
+        Assert.Null(pos.AnalysisJobId);
+    }
+
+    // ===== Mehrere Hintergrund-Engines ==================================================
+
+    /// <summary>
+    /// Der Worker rechnet je ENGINE einen Auftrag — die Verteilung entscheidet also, wie viele
+    /// nebeneinander laufen. Neue Auftraege gehen deshalb auf die Engine mit der kuerzesten
+    /// Schlange, nicht immer auf dieselbe.
+    /// </summary>
+    [Fact]
+    public async Task NeueAuftraege_verteilenSichAufDieHinterlegtenEngines()
+    {
+        var user = new AppUser { Username = "m", Email = "m@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        var cred = new LichessEngineCredential { UserId = user.Id, EncryptedToken = "enc" };
+        cred.SetBackgroundEngines(["eei_a", "eei_b"]);
+        _db.LichessEngineCredentials.Add(cred);
+        await _db.SaveChangesAsync();
+
+        var jobs = new AnalysisJobService(_db, null);
+
+        var a = await jobs.CreateAsync(user.Id, new CreateAnalysisJobRequest
+        { Fen = GamePlies.StartFen(), TargetDepth = 20, MultiPv = 3 }, remember: false);
+        var b = await jobs.CreateAsync(user.Id, new CreateAnalysisJobRequest
+        { Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", TargetDepth = 20, MultiPv = 3 },
+            remember: false);
+
+        var used = await _db.AnalysisJobs.Where(j => j.Id == a.Id || j.Id == b.Id)
+            .Select(j => j.EngineId).ToListAsync();
+        Assert.Equal(2, used.Distinct().Count());
+    }
+
+    // ===== Tempo aus der Historie =============================================
+
+    /// <summary>
+    /// Der Kern: das Tempo kommt aus den ZEITSTEMPELN und nicht aus Proben im Browser. Es steht
+    /// deshalb beim ersten Abruf da — auch wenn der Reiter die ganze Nacht zu war.
+    /// </summary>
+    [Fact]
+    public async Task Throughput_rechnetAusDenZeitstempeln()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        // Zehn Stellungen in den letzten zehn Minuten fertig geworden.
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).Take(10).ToListAsync();
+        var start = DateTime.UtcNow.AddMinutes(-10);
+        for (var i = 0; i < positions.Count; i++)
+        {
+            positions[i].CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+            positions[i].AnalysisJobId = null;
+            positions[i].AnalyzedAt = start.AddMinutes(i);
+        }
+        await _db.SaveChangesAsync();
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(10, t.AnalyzedInWindow);
+        // Gemessen ab dem ERSTEN Zeitstempel (vor 10 min), nicht ueber die Fensterlaenge von 60.
+        Assert.InRange(t.WindowMinutes, 9, 11);
+        Assert.InRange(t.PerMinute, 0.8, 1.2);
+        Assert.Equal(5, t.Remaining);              // 14 Halbzuege + Endstellung minus 10 fertige
+        Assert.InRange(t.EtaMinutes!.Value, 3, 5);
+    }
+
+    /// <summary>Gemeldet 2026-09-24: eine Pause VOR dem aktuellen Lauf zaehlte als Rechenzeit („0,56 Stellungen/min ·
+    /// noch ca. 1 h 44 min"). Jetzt zaehlt nur der juengste zusammenhaengende Lauf.</summary>
+    [Fact]
+    public async Task Throughput_einePauseVorDemLauf_zaehltNicht()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).Take(10).ToListAsync();
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < positions.Count; i++)
+        {
+            positions[i].CandidatesJson = "[]";
+            positions[i].AnalysisJobId = null;
+            // Fuenf vor 55..51 Minuten, Pause, fuenf in den letzten fuenf Minuten (je eine pro Minute).
+            positions[i].AnalyzedAt = i < 5 ? now.AddMinutes(-55 + i) : now.AddMinutes(-5 + (i - 5));
+        }
+        await _db.SaveChangesAsync();
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(5, t.AnalyzedInWindow);
+        Assert.InRange(t.PerMinute, 0.9, 1.1);     // vorher: 10 in 55 min = 0,18/min
+        Assert.Equal(5, t.Remaining);
+        Assert.InRange(t.EtaMinutes!.Value, 3, 5);
+    }
+
+    /// <summary>Nach einer Nacht Pause sieht der Server weiter zurueck, statt „kein Tempo" zu
+    /// melden — die Zahl von gestern ist die beste Schaetzung, die es gibt.</summary>
+    [Fact]
+    public async Task Throughput_sichtWeiterZurueck_wennImFensterNichtsPassierteIst()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).Take(6).ToListAsync();
+        var start = DateTime.UtcNow.AddHours(-8);
+        for (var i = 0; i < positions.Count; i++)
+        {
+            positions[i].CandidatesJson = "[]";
+            positions[i].AnalysisJobId = null;
+            positions[i].AnalyzedAt = start.AddMinutes(i * 10);
+        }
+        await _db.SaveChangesAsync();
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(6, t.AnalyzedInWindow);
+        Assert.True(t.PerMinute > 0);
+    }
+
+    /// <summary>Ohne eine einzige gerechnete Stellung gibt es kein Tempo — und keine erfundene Zahl.</summary>
+    [Fact]
+    public async Task Throughput_ohneGerechneteStellungen_bleibtLeer()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var t = await _svc.ThroughputAsync(user.Id);
+
+        Assert.Equal(0, t.PerMinute);
+        Assert.Null(t.EtaMinutes);
+        Assert.Equal(15, t.Remaining);
+    }
+
+    // ===== Eine Partie nach der anderen =======================================
+
+    /// <summary>
+    /// Der Kern der Reihenfolge: die zweite Partie bekommt KEINE Auftraege, solange die erste noch
+    /// ungerechnete Stellungen hat. Frueher liefen vier bis fuenf nebeneinander und alle wurden
+    /// gleich langsam fertig — die Punktepartie braucht aber eine FERTIGE Partie.
+    /// </summary>
+    [Fact]
+    public async Task Pump_fuettertNurDieAeltesteUnfertigePartie()
+    {
+        var user = await CreateUserWithEngineAsync();
+
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(first.Id));
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+
+        // Auch ein Pump-Lauf aendert daran nichts, solange die erste nicht durch ist.
+        await _svc.PumpAllAsync();
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+    }
+
+    /// <summary>Ist die erste durch, rueckt die naechste nach — ohne dass jemand etwas anstoesst.</summary>
+    [Fact]
+    public async Task Pump_naechstePartieRuecktNach_wennDieErsteDurchIst()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        foreach (var pos in await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == first.Id).ToListAsync())
+        {
+            pos.CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+            pos.AnalysisJobId = null;
+            pos.AnalyzedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpAllAsync();
+
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(second.Id));
+        Assert.Equal(GameAnalysisStatus.Done,
+            (await _db.GameAnalyses.FirstAsync(g => g.Id == first.Id)).Status);
+    }
+
+    /// <summary>Je NUTZER, nicht global: zwei Leute bremsen sich nicht gegenseitig aus.</summary>
+    [Fact]
+    public async Task Pump_zweiNutzer_laufenNebeneinander()
+    {
+        var one = await CreateUserWithEngineAsync();
+        var two = await CreateUserAsync("zweiter");
+        await GiveEngineAsync(two);
+
+        var a = await _svc.CreateAsync(one.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var b = await _svc.CreateAsync(two.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(a.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(b.Id));
+    }
+
+    /// <summary>Eine gescheiterte Partie blockiert die Schlange nicht — die Pumpe fasst sie gar
+    /// nicht erst an, und die naechste muss trotzdem drankommen.</summary>
+    [Fact]
+    public async Task Pump_gescheitertePartie_blockiertNicht()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var stalled = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var next = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        var failed = await _db.GameAnalyses.FirstAsync(g => g.Id == stalled.Id);
+        failed.Status = GameAnalysisStatus.Failed;
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpAllAsync();
+
+        Assert.True(await OpenJobsAsync(next.Id) > 0);
+    }
+
+    // ===== Der Schwanz einer Partie (0.543.0) ==================================
+
+    /// <summary>Hat die aeltere Partie weniger offene Stellungen als Engines, stuenden Engines still —
+    /// dann bekommt die naechste schon Auftraege. Gemessen am 2026-09-26 auf Prod: 16 Engines, und
+    /// jede Partie endete mit 20–30 s, in denen 15 davon nichts taten.</summary>
+    [Fact]
+    public async Task Pump_naechstePartieRuecktNach_sobaldDieErsteWenigerOffeneStellungenHatAlsEngines()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 16);
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });   // 14 Halbzuege + Endstellung
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        // 15 offene Stellungen < 16 Engines: die zweite darf sofort mit — die erste bleibt vorn in der Schlange.
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(second.Id));
+    }
+
+    [Fact]
+    public async Task Pump_naechstePartieWartet_solangeDieErsteMehrOffeneStellungenHatAlsEngines()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 4);
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });   // 14 offen
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+
+        // Erst wenn von der ersten weniger als vier offen sind, rueckt die zweite nach.
+        await MarkAnalyzedAsync(first.Id, 12);   // 15 Stellungen (14 + Endstellung) − 12 = 3 offen
+        await _svc.PumpAllAsync();
+        Assert.Equal(3, await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(second.Id));
+    }
+
+    /// <summary>Die offenen Stellungen ALLER aelteren Partien zaehlen zusammen — drei kleine Reste
+    /// koennen die Engines genauso fuellen wie eine grosse Partie.</summary>
+    [Fact]
+    public async Task Pump_zaehltDieResteAllerAelterenPartienZusammen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 6);
+        var a = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var b = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "B" });
+        var c = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "C" });
+        await MarkAnalyzedAsync(a.Id, 11);   // 4 offen (14 Halbzuege + Endstellung)
+        await MarkAnalyzedAsync(b.Id, 15);   // b hat noch keine Auftraege — alle 15 markieren = fertig
+        await _svc.PumpAllAsync();
+
+        Assert.Equal(4, await OpenJobsAsync(a.Id));
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(c.Id));   // 4 + 0 < 6
+
+        // Waeren es a: 4 und b: 3 offen (= 7 ≥ 6), muesste c warten.
+        var d = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "D" });
+        Assert.Equal(0, await OpenJobsAsync(d.Id));   // a 4 + c 15 = 19 ≥ 6
+    }
+
+    /// <summary>Eine fest gewaehlte Engine ist EINE Schlange: da hilft Nachruecken nichts.</summary>
+    [Fact]
+    public async Task Pump_festeEngine_bleibtBeiEinerPartieNachDerAnderen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 16);
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, EngineId = "eei_test" });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite", EngineId = "eei_test" });
+
+        Assert.Equal(BlockFor(15), await OpenJobsAsync(first.Id));
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+    }
+
+    private async Task SetEnginesAsync(AppUser user, int count)
+    {
+        var cred = await _db.LichessEngineCredentials.FirstAsync(c => c.UserId == user.Id);
+        cred.SetBackgroundEngines(Enumerable.Range(1, count).Select(i => $"eei_test{i}"));
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Die ersten <paramref name="count"/> Stellungen (nach Halbzug) als gerechnet eintragen — der
+    /// Auftrag dazu faellt weg, wie nach dem Uebernehmen durch die Pumpe.</summary>
+    private async Task MarkAnalyzedAsync(int analysisId, int count)
+    {
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.CandidatesJson == null)
+            .OrderBy(p => p.Ply).Take(count).ToListAsync();
+        foreach (var pos in positions)
+        {
+            if (pos.AnalysisJobId is int jobId)
+            {
+                var job = await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId);
+                if (job is not null) _db.AnalysisJobs.Remove(job);
+            }
+            pos.CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+            pos.AnalysisJobId = null;
+            pos.AnalyzedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<int> OpenJobsAsync(int analysisId) =>
+        await _db.GameAnalysisPositions
+            .CountAsync(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null);
+
+    // ===== Neu anstossen ======================================================
+
+    /// <summary>
+    /// Der Knopf muss den ALTEN Auftrag loswerden. Ein Auftrag klebt an der Engine, die beim
+    /// Anlegen gewaehlt wurde, und wechselt nie wieder — bleibt er stehen, aendert der Reset nichts.
+    /// </summary>
+    [Fact]
+    public async Task Restart_verwirftDenSteckengebliebenenAuftrag_undReihtNeuEin()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        var before = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value).ToListAsync();
+        Assert.NotEmpty(before);
+
+        var after = await _svc.RestartAsync(user.Id, dto.Id);
+
+        Assert.NotNull(after);
+        var now = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value).ToListAsync();
+        Assert.NotEmpty(now);                      // wieder eingereiht …
+        Assert.Empty(now.Intersect(before));       // … aber mit NEUEN Auftraegen
+        Assert.Empty(await _db.AnalysisJobs.Where(j => before.Contains(j.Id)).ToListAsync());
+    }
+
+    /// <summary>Aufgegebene Stellungen zaehlen als „gerechnet" und sind der Grund, warum eine Partie
+    /// fertig aussehen kann und in der Punktepartie trotzdem Loecher hat. Genau die soll der Reset
+    /// schliessen.</summary>
+    [Fact]
+    public async Task Restart_holtAufgegebeneStellungenZurueck()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        // Eine Stellung hat die Engine aufgegeben, eine andere ist echt gerechnet.
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+        positions[0].CandidatesJson = "[]";
+        positions[0].AnalysisJobId = null;
+        positions[0].FailedAttempts = GameAnalysisDefaults.MaxPositionAttempts;
+        positions[0].AnalyzedAt = DateTime.UtcNow;
+        positions[1].CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+        positions[1].AnalysisJobId = null;
+        positions[1].AnalyzedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await _svc.RestartAsync(user.Id, dto.Id);
+
+        var reloaded = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+        Assert.Null(reloaded[0].CandidatesJson);            // aufgegeben → zurueck in die Schlange
+        Assert.Equal(0, reloaded[0].FailedAttempts);        // mit frischem Zaehler
+        Assert.NotNull(reloaded[1].CandidatesJson);         // echtes Ergebnis bleibt
+    }
+
+    /// <summary>Eine gescheiterte Partie darf der Knopf wieder in Gang setzen — sonst waere sie
+    /// nur ueber Loeschen und neu Einwerfen zu retten.</summary>
+    [Fact]
+    public async Task Restart_setztDenFehlerZurueck()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id);
+        analysis.Status = GameAnalysisStatus.Failed;
+        analysis.LastError = "Keine Hintergrund-Engine konfiguriert";
+        analysis.FinishedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var after = await _svc.RestartAsync(user.Id, dto.Id);
+
+        Assert.NotNull(after);
+        Assert.NotEqual("failed", after!.Status);
+        Assert.Null(after.LastError);
+        Assert.Null(after.FinishedAt);
+    }
+
+    /// <summary>Fremde Partien gehen niemanden etwas an — auch nicht ueber diesen Knopf.</summary>
+    [Fact]
+    public async Task Restart_fremdePartie_gibtNichts()
+    {
+        var owner = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(owner.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var other = await CreateUserAsync("fremd");
+
+        Assert.Null(await _svc.RestartAsync(other.Id, dto.Id));
+    }
+
+    // ===== Einwurf auf der Punktepartie-Seite =================================
+
+    private async Task<AppUser> CreateUserAsync(string name, bool admin = false)
+    {
+        var user = new AppUser { Username = name, Email = $"{name}@t.com", PasswordHash = "h", IsAdmin = admin };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    private async Task GiveEngineAsync(AppUser user, bool house = false)
+    {
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential
+        {
+            UserId = user.Id, User = user, EncryptedToken = "enc",
+            BackgroundEngineIds = $"eei_{user.Username}", ShareAsHouseEngine = house,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Die Tiefe steht in keinem Formular — und sie ist auch nicht zu erraten: der Einwurf
+    /// nimmt sie gar nicht erst entgegen.</summary>
+    [Fact]
+    public async Task CreateForGuess_rechnetMitFesterTiefe_aufDerEigenenEngine()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+
+        Assert.Null(result.Reason);
+        Assert.NotNull(result.Analysis);
+        Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, result.Analysis!.TargetDepth);
+        Assert.NotEqual(GameAnalysisDefaults.TargetDepth, result.Analysis.TargetDepth);
+
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis.Id);
+        Assert.Equal(GameAnalysisOrigin.Guess, analysis.Origin);
+        // Eigene Maschine: kein fremder Engine-Besitzer am Auftrag.
+        Assert.Null(analysis.EngineOwnerUserId);
+        Assert.All(await _db.AnalysisJobs.ToListAsync(), j => Assert.Null(j.EngineOwnerUserId));
+    }
+
+    /// <summary>Ohne eigene Engine rechnet die Haus-Engine — der Auftrag bleibt aber beim Einwerfer,
+    /// nur Token und Engine kommen vom Haus-Konto.</summary>
+    [Fact]
+    public async Task CreateForGuess_ohneEigeneEngine_nimmtDieHausEngine()
+    {
+        var admin = await CreateUserAsync("admin", admin: true);
+        await GiveEngineAsync(admin, house: true);
+        var user = await CreateUserAsync("u");
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+
+        Assert.Null(result.Reason);
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
+        Assert.Equal(admin.Id, analysis.EngineOwnerUserId);
+
+        var jobs = await _db.AnalysisJobs.ToListAsync();
+        Assert.NotEmpty(jobs);
+        Assert.All(jobs, j =>
+        {
+            Assert.Equal(user.Id, j.UserId);              // Deckel und Liste bleiben beim Einwerfer
+            Assert.Equal(admin.Id, j.EngineOwnerUserId);  // gerechnet wird auf der Haus-Engine
+            Assert.Equal("eei_admin", j.EngineId);
+        });
+    }
+
+    /// <summary>Eine Freigabe von jemandem OHNE Admin-Rechte zaehlt nicht — sonst liefe eine fremde
+    /// Maschine weiter fuer alle, nachdem dem Konto die Rechte entzogen wurden.</summary>
+    [Fact]
+    public async Task CreateForGuess_ohneEngine_sagtWarum()
+    {
+        var notAdmin = await CreateUserAsync("ex-admin");
+        await GiveEngineAsync(notAdmin, house: true);
+        var user = await CreateUserAsync("u");
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+
+        Assert.Equal(GuessUploadReason.NoEngine, result.Reason);
+        Assert.Null(result.Analysis);
+        Assert.Empty(await _db.GameAnalyses.ToListAsync());
+    }
+
+    /// <summary>Der Deckel gilt fuer eingeworfene Partien, nicht fuer von Hand eingereihte.</summary>
+    [Fact]
+    public async Task CreateForGuess_ueberDemDeckel_nimmtNichtsMehrAn()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxOpenGuessGamesPerUser; i++)
+            Assert.Null((await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game })).Reason);
+
+        var refused = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+        Assert.Equal(GuessUploadReason.TooManyOpen, refused.Reason);
+
+        var status = await _svc.GuessUploadStatusAsync(user.Id);
+        Assert.True(status.EngineAvailable);
+        Assert.True(status.OwnEngine);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenGuessGamesPerUser, status.OpenGames);
+
+        // Von Hand geht weiter — dort rechnet die eigene Maschine, und da zaehlt niemand mit.
+        var manual = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        Assert.Equal(GameAnalysisDefaults.TargetDepth, manual.TargetDepth);
+    }
+
+    /// <summary>Der Weg ueber die gespeicherte Partie ist DERSELBE Einwurf (feste Tiefe, fuenf Linien,
+    /// Haus-Engine), nur anders etikettiert — das Etikett entscheidet, in welcher Liste er erscheint.</summary>
+    [Fact]
+    public async Task CreateForGuess_mitUrsprungGespeichertePartie_vertieftSpaeter_aufDerselbenHausEngine()
+    {
+        var admin = await CreateUserAsync("admin", admin: true);
+        await GiveEngineAsync(admin, house: true);
+        var user = await CreateUserAsync("u");
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+
+        var analysis = await _db.GameAnalyses.FirstAsync(g => g.Id == result.Analysis!.Id);
+        Assert.Equal(GameAnalysisOrigin.SavedGame, analysis.Origin);
+        // Die Bewertung ist hier das Ergebnis — seit 0.523.0 in zwei Durchgaengen: erst schnell (20, eine Linie),
+        // dann die Vertiefung auf 25 mit fuenf Linien. Haus-Engine und Deckel bleiben dieselben.
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastDepth, analysis.TargetDepth);
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastMultiPv, analysis.MultiPv);
+        Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.RefineDepth);
+        Assert.NotEqual(GameAnalysisDefaults.GuessTargetDepth, analysis.RefineDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.RefineMultiPv);
+        Assert.Equal(admin.Id, analysis.EngineOwnerUserId);
+    }
+
+    /// <summary>Beide rechnen auf fremder Rechenzeit — der Deckel zaehlt sie ZUSAMMEN. Sonst kaeme
+    /// man ueber die Partienliste an ihm vorbei.</summary>
+    [Fact]
+    public async Task Deckel_zaehltEingeworfeneUNDPartienAusDerPartienliste()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxOpenGuessGamesPerUser - 1; i++)
+            Assert.Null((await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game })).Reason);
+        Assert.Null((await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame)).Reason);
+
+        var refused = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+        Assert.Equal(GuessUploadReason.TooManyOpen, refused.Reason);
+        var refusedToo = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+        Assert.Equal(GuessUploadReason.TooManyOpen, refusedToo.Reason);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenGuessGamesPerUser, (await _svc.GuessUploadStatusAsync(user.Id)).OpenGames);
+    }
+
+    /// <summary>„Eigene Analysen" (Punktepartie-Seite UND Partie-Analysen) zeigt die ueber eine
+    /// gespeicherte Partie angestossene nicht — die gehoert zur Partie. Von Hand eingereihte und
+    /// eingeworfene bleiben, wie sie waren.</summary>
+    [Fact]
+    public async Task List_laesstAnalysenAusDerPartienlisteWeg()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+        var manual = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var guess = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game });
+        var saved = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+
+        var ids = (await _svc.ListAsync(user.Id)).Select(a => a.Id).ToList();
+
+        Assert.Contains(manual.Id, ids);
+        Assert.Contains(guess.Analysis!.Id, ids);
+        Assert.DoesNotContain(saved.Analysis!.Id, ids);
+        // „Partie-Analysen" (includeSavedGames) zeigt sie MIT — dort steht der Fortschritt (0.515.0).
+        var withSaved = (await _svc.ListAsync(user.Id, includeSavedGames: true)).Select(a => a.Id).ToList();
+        Assert.Contains(saved.Analysis.Id, withSaved);
+        Assert.Contains(manual.Id, withSaved);
+        // Ueber die Id bleibt sie fuer den Besitzer lesbar — die Partie-Seite braucht das nicht, aber
+        // ein Verbergen in der Liste ist keine Sperre.
+        Assert.NotNull(await _svc.GetAsync(user.Id, saved.Analysis.Id));
+    }
+
+    /// <summary>Ein Text ohne spielbare Partie ist eine Absage mit Grund, keine Ausnahme.</summary>
+    [Fact]
+    public async Task CreateForGuess_ohneSpielbaresPgn_sagtWarum()
+    {
+        var user = await CreateUserAsync("u");
+        await GiveEngineAsync(user);
+
+        var result = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = "kein PGN" });
+
+        Assert.Equal(GuessUploadReason.InvalidPgn, result.Reason);
+        Assert.Empty(await _db.GameAnalyses.ToListAsync());
+    }
+
+    /// <summary>Die CSV-Zerlegung liegt am Modell — Duplikate und Leerwerte fallen raus.</summary>
+    [Fact]
+    public void SetBackgroundEngines_raeumtAuf()
+    {
+        var cred = new LichessEngineCredential();
+        cred.SetBackgroundEngines([" eei_a ", "eei_b", "eei_a", "", "  "]);
+        Assert.Equal(["eei_a", "eei_b"], cred.BackgroundEngines);
+
+        cred.SetBackgroundEngines([]);
+        Assert.Null(cred.BackgroundEngineIds);
+        Assert.Empty(cred.BackgroundEngines);
+    }
+
+    // ===== Zwei Durchgaenge fuer „Partie analysieren" (0.523.0) ==================
+
+    /// <summary>Alle offenen Auftraege der Partie „fertig rechnen" lassen — mit der Bewertung <paramref name="cp"/>.</summary>
+    private async Task FinishOpenJobsOfAsync(int analysisId, int cp, int depth)
+    {
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null).ToListAsync();
+        foreach (var pos in positions)
+        {
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = depth;
+            job.ResultJson = "{\"depth\":" + depth + ",\"pvs\":[{\"depth\":" + depth + ",\"cp\":" + cp + ",\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<List<AnalysisJob>> OpenJobsOfAsync(int analysisId)
+    {
+        var ids = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null)
+            .Select(p => p.AnalysisJobId!.Value).ToListAsync();
+        return await _db.AnalysisJobs.Where(j => ids.Contains(j.Id)).ToListAsync();
+    }
+
+    [Fact]
+    public async Task ZweiDurchgaenge_erstSchnellMitEinerLinie_dannVertiefungImHintergrund_bisAllesErsetztIst()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var created = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame);
+        var id = created.Analysis!.Id;
+
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisDefaults.SavedGameFastDepth, head.TargetDepth);
+        Assert.Equal(20, head.TargetDepth);
+        Assert.Equal(1, head.MultiPv);
+        Assert.Equal(30, head.RefineDepth);   // gewuenscht 2026-09-27: schnell 20/1, danach voll 30/5
+        Assert.Equal(5, head.RefineMultiPv);
+
+        // Erster Durchgang: normale Auftraege, Tiefe 20, eine Linie.
+        var first = await OpenJobsOfAsync(id);
+        Assert.NotEmpty(first);
+        Assert.All(first, j => { Assert.False(j.Background); Assert.Equal(20, j.TargetDepth); Assert.Equal(1, j.MultiPv); });
+
+        await FinishOpenJobsOfAsync(id, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(id);
+        _db.ChangeTracker.Clear();
+        head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);    // Kurve und Fehler stehen schon
+        Assert.Null(head.RefinedAt);
+        // Gleich danach entstehen Erklärungen und Roasts — einmal, nicht bei jedem weiteren Pumpen.
+        Assert.Equal([(id, false)], _reviewTexts.Calls);
+
+        // Vertiefung: Hintergrund-Auftraege, Tiefe 25, fuenf Linien, hoechstens ein kleiner Block offen.
+        await _svc.PumpOneAsync(id);
+        _db.ChangeTracker.Clear();
+        var refine = await OpenJobsOfAsync(id);
+        Assert.Equal(GameAnalysisDefaults.MaxOpenRefineJobsPerGame, refine.Count);
+        Assert.All(refine, j => { Assert.True(j.Background); Assert.Equal(30, j.TargetDepth); Assert.Equal(5, j.MultiPv); });
+
+        // Bis alles vertieft ist: die Ergebnisse ERSETZEN die des ersten Durchgangs.
+        for (var round = 0; round < 5 && (await OpenJobsOfAsync(id)).Count > 0; round++)
+        {
+            await FinishOpenJobsOfAsync(id, cp: 77, depth: 30);
+            await _svc.PumpOneAsync(id);
+            _db.ChangeTracker.Clear();
+        }
+        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
+        Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(30, p.Depth); Assert.Contains("77", p.CandidatesJson); });
+        head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.NotNull(head.RefinedAt);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);
+        Assert.False(await _svc.PumpOneAsync(id));             // fertig = Ruhe
+        // Nach der Vertiefung genau einmal neu — die genauere Rechnung kann Bestzüge verschieben.
+        Assert.Equal([(id, false), (id, true)], _reviewTexts.Calls);
+    }
+
+    [Fact]
+    public async Task Vertiefung_wartet_solangeEinePartieImErstenDurchgangSteckt()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var a = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game },
+            origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
+        await FinishOpenJobsOfAsync(a, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(a);                             // A: erster Durchgang fertig
+
+        // Eine zweite Partie kommt dazu — ihr schneller Durchgang geht vor.
+        var other = Game.Replace("[White \"", "[White \"X");
+        var b = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = other },
+            origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
+        await _svc.PumpOneAsync(b);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        Assert.Empty(await OpenJobsOfAsync(a));
+
+        await FinishOpenJobsOfAsync(b, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(b);                             // B fertig → A darf vertiefen
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        Assert.NotEmpty(await OpenJobsOfAsync(a));
+        Assert.All(await OpenJobsOfAsync(a), j => Assert.True(j.Background));
+    }
+
+    // ── Vertiefung: Schwanz und Zeitgrenze (0.647.0) ──────────────────────────────────────────────────────────
+    // Anlass 04.10.2026 auf Prod: Analyse 5540 hing eine Stunde an ihrer LETZTEN Stellung (Tiefe 26 von 30, zweimal
+    // verdraengt, jedes Mal von vorn), die geteilte Partie dahinter bekam keinen einzigen Vertiefungs-Auftrag.
+
+    /// <summary>„Partie analysieren" anlegen und den ersten Durchgang durchrechnen — die Vertiefung steht dann an.</summary>
+    private async Task<int> SavedGameFirstPassDoneAsync(AppUser user, string pgn)
+    {
+        var id = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = pgn },
+            origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
+        await FinishOpenJobsOfAsync(id, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(id);
+        _db.ChangeTracker.Clear();
+        Assert.Equal(GameAnalysisStatus.Done, (await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status);
+        return id;
+    }
+
+    private const string OtherGame = """
+[Event "Testpartie"]
+[White "XAnderssen"]
+[Black "Kieseritzky"]
+[Result "1-0"]
+
+1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5 1-0
+""";
+
+    [Fact]
+    public async Task Vertiefung_naechstePartieBeginntAmSchwanzDerAelteren_nichtErstNachIhremEnde()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        var b = await SavedGameFirstPassDoneAsync(user, OtherGame);
+
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        var refineA = await OpenJobsOfAsync(a);
+        Assert.Equal(15, refineA.Count);                         // die ganze Partie auf einmal (16 Engines)
+
+        // A hat nur noch 14 unvertiefte Stellungen, 16 Engines sind da: B faengt schon an.
+        await _svc.PumpOneAsync(b);
+        _db.ChangeTracker.Clear();
+        var refineB = await OpenJobsOfAsync(b);
+        Assert.NotEmpty(refineB);
+        Assert.All(refineB, j => { Assert.True(j.Background); Assert.Equal(30, j.TargetDepth); });
+        // A bleibt vorn in der Schlange (FIFO im Worker) — sie wird trotzdem zuerst fertig.
+        Assert.True(refineA.Max(j => j.CreatedAt) <= refineB.Min(j => j.CreatedAt));
+    }
+
+    [Fact]
+    public async Task Vertiefung_mitEinerEngine_wartetDieNaechsteBisDieAeltereFertigIst()
+    {
+        var user = await CreateUserWithEnginesAsync(1);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        var b = await SavedGameFirstPassDoneAsync(user, OtherGame);
+
+        await _svc.PumpOneAsync(a);
+        await _svc.PumpOneAsync(b);
+        _db.ChangeTracker.Clear();
+        Assert.NotEmpty(await OpenJobsOfAsync(a));
+        Assert.Empty(await OpenJobsOfAsync(b));                 // 14 Stellungen vor ihr, eine Engine
+
+        for (var round = 0; round < 5 && (await OpenJobsOfAsync(a)).Count > 0; round++)
+        {
+            await FinishOpenJobsOfAsync(a, cp: 77, depth: 30);
+            await _svc.PumpOneAsync(a);
+            _db.ChangeTracker.Clear();
+        }
+        Assert.NotNull((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+
+        await _svc.PumpOneAsync(b);
+        _db.ChangeTracker.Clear();
+        Assert.NotEmpty(await OpenJobsOfAsync(b));
+    }
+
+    /// <summary>Alle Vertiefungs-Auftraege fertig rechnen bis auf den letzten; der bekommt Tiefe, Ergebnis und
+    /// verbrauchte Sekunden. Liefert ihn samt Halbzug.</summary>
+    private async Task<(AnalysisJob Slow, int Ply)> RefineAllButOneAsync(int analysisId, int reached, int seconds, int cp)
+    {
+        var jobs = await OpenJobsOfAsync(analysisId);
+        var slow = jobs.OrderBy(j => j.Id).Last();
+        var slowPos = await _db.GameAnalysisPositions.FirstAsync(p => p.AnalysisJobId == slow.Id);
+        foreach (var pos in await _db.GameAnalysisPositions
+                     .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null && p.AnalysisJobId != slow.Id).ToListAsync())
+        {
+            var job = jobs.First(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = 30;
+            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":77,\"moves\":[\"" + TestMoves.MoveOf(pos) + "\"]}]}";
+        }
+        slow.Status = AnalysisJobStatus.Running;
+        slow.ReachedDepth = reached;
+        slow.SecondsSpent = seconds;
+        slow.ResultJson = "{\"depth\":" + reached + ",\"pvs\":[{\"depth\":" + reached + ",\"cp\":" + cp
+            + ",\"moves\":[\"" + TestMoves.MoveOf(slowPos) + "\"]}]}";
+        await _db.SaveChangesAsync();
+        return (slow, slowPos.Ply);
+    }
+
+    [Fact]
+    public async Task Vertiefung_nachDerZeitgrenze_giltDasErreichte_undDerAuftragVerschwindet()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        // Knapp unter der Grenze: die Stellung rechnet weiter.
+        var (slow, ply) = await RefineAllButOneAsync(a, reached: 26,
+            seconds: GameAnalysisDefaults.RefineMaxSecondsPerPosition - 1, cp: 123);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        Assert.Equal([slow.Id], (await OpenJobsOfAsync(a)).Select(j => j.Id));
+        Assert.Null((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+
+        // Grenze erreicht: Tiefe 26 ersetzt die 20 des ersten Durchgangs, der Auftrag ist weg, die Partie fertig.
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == slow.Id);
+        job.SecondsSpent = GameAnalysisDefaults.RefineMaxSecondsPerPosition;
+        await _db.SaveChangesAsync();
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        var pos = await _db.GameAnalysisPositions.AsNoTracking().FirstAsync(p => p.GameAnalysisId == a && p.Ply == ply);
+        Assert.True(pos.Refined);
+        Assert.Null(pos.AnalysisJobId);
+        Assert.Equal(26, pos.Depth);
+        Assert.Contains("123", pos.CandidatesJson);
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == slow.Id));
+        Assert.NotNull((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+    }
+
+    [Fact]
+    public async Task Vertiefung_nachDerZeitgrenze_nichtTieferAlsDerErsteDurchgang_dasErsteErgebnisBleibt()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        var (slow, ply) = await RefineAllButOneAsync(a, reached: 18,
+            seconds: GameAnalysisDefaults.RefineMaxSecondsPerPosition, cp: 123);
+        var before = await _db.GameAnalysisPositions.AsNoTracking().FirstAsync(p => p.GameAnalysisId == a && p.Ply == ply);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        var pos = await _db.GameAnalysisPositions.AsNoTracking().FirstAsync(p => p.GameAnalysisId == a && p.Ply == ply);
+        Assert.True(pos.Refined);
+        Assert.Equal(20, pos.Depth);
+        Assert.Equal(before.CandidatesJson, pos.CandidatesJson);
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == slow.Id));
+        Assert.NotNull((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+    }
+
+    [Fact]
+    public async Task Punktepartie_bleibtBeiEinemDurchgang()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var id = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game })).Analysis!.Id;
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Null(head.RefineDepth);
+        Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, head.TargetDepth);
+        Assert.Equal(GameAnalysisDefaults.MultiPv, head.MultiPv);
+    }
+
+    // ── Vertiefung: so viele Auftraege wie Engines, Fehler zuerst (27.09.) ─────────────────────────────────
+    // Anlass: auf Prod rechneten beim Vertiefen nur Hintergrund 1–8 (fester Deckel 8), vier weitere Engines und
+    // die vier Server-Engines standen online in der Liste und taten nichts.
+
+    private async Task<AppUser> CreateUserWithEnginesAsync(int engines)
+    {
+        var user = new AppUser { Username = $"e{engines}", Email = $"e{engines}@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential
+        {
+            UserId = user.Id, EncryptedToken = "enc",
+            BackgroundEngineIds = string.Join(",", Enumerable.Range(1, engines).Select(i => $"eei_t{i}")),
+        });
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    /// <summary>Offene Auftraege mit Ergebnis versehen; <paramref name="pick"/> liefert je Stellung Bewertung
+    /// (Sicht von WEISS, wie im Engine-Ergebnis — der Parser dreht sie fuer die Ablage selbst) und Bestzug.</summary>
+    private async Task FinishOpenJobsWithAsync(int analysisId, int depth, Func<GameAnalysisPosition, (int Cp, string BestUci)> pick)
+    {
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null).ToListAsync();
+        foreach (var pos in positions)
+        {
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            var (cp, best) = pick(pos);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = depth;
+            job.ResultJson = "{\"depth\":" + depth + ",\"pvs\":[{\"depth\":" + depth + ",\"cp\":" + cp + ",\"moves\":[\"" + best + "\"]}]}";
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Gespeicherte Partie anlegen, den ersten Durchgang komplett durchrechnen und die Vertiefung anstossen.
+    /// Liefert die Halbzuege, fuer die dann Vertiefungs-Auftraege offen stehen.</summary>
+    private async Task<(int Id, List<int> RefinePlies)> RefineBatchAfterFirstPassAsync(
+        AppUser user, Func<GameAnalysisPosition, (int Cp, string BestUci)> pick)
+    {
+        var created = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = LongGame },
+            origin: GameAnalysisOrigin.SavedGame);
+        var id = created.Analysis!.Id;
+        for (var round = 0; round < 10; round++)
+        {
+            _db.ChangeTracker.Clear();
+            if ((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status == GameAnalysisStatus.Done) break;
+            await FinishOpenJobsWithAsync(id, 20, pick);
+            await _svc.PumpOneAsync(id);
+        }
+        _db.ChangeTracker.Clear();
+        Assert.Equal(GameAnalysisStatus.Done, (await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status);
+
+        await _svc.PumpOneAsync(id);   // legt die Vertiefung an
+        _db.ChangeTracker.Clear();
+        var plies = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == id && p.AnalysisJobId != null && !p.Refined)
+            .OrderBy(p => p.Ply).Select(p => p.Ply).ToListAsync();
+        return (id, plies);
+    }
+
+    private static (int, string) Quiet(GameAnalysisPosition p) => (0, p.GameMoveUci);
+
+    /// <summary>Ein legaler Zug, der NICHT der gespielte ist — Kandidaten muessen legal sein, sonst verwirft sie der Parser.</summary>
+    private static string OtherLegalMove(GameAnalysisPosition p) =>
+        Chess.ChessBoard.LoadFromFen(p.Fen).Moves(generateSan: false)
+            .Select(GamePlies.ToUci)
+            .First(u => !string.Equals(u, p.GameMoveUci, StringComparison.OrdinalIgnoreCase));
+
+    [Theory]
+    [InlineData(0, 8)]      // ohne Engine-Liste: Untergrenze
+    [InlineData(1, 8)]      // eine Engine: wie bisher
+    [InlineData(16, 16)]    // Prod 27.09.: 12 Hintergrund + 4 Server-Engines — alle bekommen Arbeit
+    [InlineData(40, 32)]    // gedeckelt beim Block des ersten Durchgangs
+    public void RefineJobCap_soVieleWieHintergrundEngines_mindestens8_hoechstens32(int engines, int cap)
+    {
+        Assert.Equal(cap, GameAnalysisTurnRules.RefineJobCap(engines));
+    }
+
+    [Fact]
+    public async Task Vertiefung_gibtSechzehnEnginesSechzehnAuftraege_stattFest8()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var (_, plies) = await RefineBatchAfterFirstPassAsync(user, Quiet);
+        Assert.Equal(16, plies.Count);
+        Assert.Equal(Enumerable.Range(0, 16), plies);   // ohne Fehler: schlicht in Zugreihenfolge
+    }
+
+    [Fact]
+    public async Task Vertiefung_rechnetZuerstDieStellungenUmEinenPatzer_dannDenRest()
+    {
+        // Halbzug 60 (Weiss) ist ein Patzer: vorher ausgeglichen, danach steht Schwarz +4 — und der gespielte Zug
+        // ist nicht der Bestzug. Halbzug 61 selbst ist in Ordnung (Schwarz spielt den Bestzug).
+        var user = await CreateUserWithEnginesAsync(1);
+        var (_, plies) = await RefineBatchAfterFirstPassAsync(user, p => p.Ply switch
+        {
+            60 => (0, OtherLegalMove(p)),     // Bestzug ≠ gespielter Zug
+            61 => (-400, p.GameMoveUci),       // Sicht von Weiss: Schwarz steht +4
+            _ => Quiet(p),
+        });
+
+        // Vor und nach dem Patzer zuerst — beide Bewertungen entscheiden die Klasse —, dann von vorn.
+        Assert.Equal(GameAnalysisDefaults.MaxOpenRefineJobsPerGame, plies.Count);
+        Assert.Contains(60, plies);
+        Assert.Contains(61, plies);
+        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 60, 61 }, plies);
+    }
+
+    [Fact]
+    public void SuspectPlies_nimmtStellungVorUndNachDemFehler_nichtDenBestzug()
+    {
+        const string F0 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        const string F1 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+        const string F2 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2";
+        var positions = new List<GameAnalysisPosition>
+        {
+            new() { Ply = 0, Fen = F0, GameMoveUci = "e2e4", CandidatesJson = CandidatesOf(F0, 0, "d2d4") },
+            new() { Ply = 1, Fen = F1, GameMoveUci = "e7e5", CandidatesJson = CandidatesOf(F1, -400, "e7e5") },  // Schwarz +4: 1.e4 war (hier) ein Patzer
+            new() { Ply = 2, Fen = F2, GameMoveUci = "g1f3", CandidatesJson = CandidatesOf(F2, -400, "g1f3") },
+        };
+        Assert.Equal(new HashSet<int> { 0, 1 }, GameAnalysisTurnRules.SuspectPlies(positions, plyCount: 3));
+    }
+
+    private static string CandidatesOf(string fen, int cp, string uci)
+    {
+        var result = "{\"depth\":20,\"pvs\":[{\"depth\":20,\"cp\":" + cp + ",\"moves\":[\"" + uci + "\"]}]}";
+        return BrokerCandidates.ToJson(BrokerCandidates.Parse(result, fen)!);
+    }
+
+    // ── Haus-Engine: Freigabe gilt auch fuer schon angenommene Partien (Codereview 2026-09-29, A4-004) ─────────────
+
+    /// <summary>Eine Punktepartie auf der Haus-Engine des Admins anlegen; liefert Admin und Analyse-Id.</summary>
+    private async Task<(AppUser Admin, int AnalysisId, int UserId)> GuessOnHouseEngineAsync(
+        GameAnalysisOrigin origin = GameAnalysisOrigin.Guess)
+    {
+        var admin = await CreateUserAsync("admin", admin: true);
+        await GiveEngineAsync(admin, house: true);
+        var user = await CreateUserAsync("u");
+        var created = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game }, origin: origin);
+        Assert.Null(created.Reason);
+        return (admin, created.Analysis!.Id, user.Id);
+    }
+
+    [Fact]
+    public async Task HausEngineZurueckgenommen_fuettertNichtNach_diePartieScheitertMitGrund()
+    {
+        var (admin, id, _) = await GuessOnHouseEngineAsync();
+        var cred = await _db.LichessEngineCredentials.FirstAsync(c => c.UserId == admin.Id);
+        cred.ShareAsHouseEngine = false;   // der Admin nimmt das Haekchen weg
+        // Ein Auftrag scheitert — bisher reihte die Pumpe die Stellung sofort wieder auf der Haus-Engine ein.
+        var failed = (await OpenJobsOfAsync(id)).First();
+        failed.Status = AnalysisJobStatus.Failed;
+        await _db.SaveChangesAsync();
+        var jobsBefore = await _db.AnalysisJobs.CountAsync();
+
+        await _svc.PumpOneAsync(id);
+
+        _db.ChangeTracker.Clear();
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisStatus.Failed, head.Status);
+        Assert.Equal(EngineOwnerResolver.HouseEngineWithdrawnError, head.LastError);
+        Assert.Equal(jobsBefore, await _db.AnalysisJobs.CountAsync());   // kein neuer Auftrag auf der Maschine
+    }
+
+    [Fact]
+    public async Task HausEngine_AdminRolleWeg_NeustartReihtNichtsMehrEin()
+    {
+        var (admin, id, userId) = await GuessOnHouseEngineAsync();
+        var adminRow = await _db.AppUsers.FirstAsync(u => u.Id == admin.Id);
+        adminRow.IsAdmin = false;          // die Rolle ist weg, das Haekchen steht noch
+        await _db.SaveChangesAsync();
+
+        var after = await _svc.RestartAsync(userId, id);
+
+        Assert.NotNull(after);
+        Assert.Equal("failed", after!.Status);
+        Assert.Equal(EngineOwnerResolver.HouseEngineWithdrawnError, after.LastError);
+        Assert.Empty(await _db.AnalysisJobs.ToListAsync());   // die alten verworfen, keine neuen angelegt
+    }
+
+    [Fact]
+    public async Task HausEngineZurueckgenommen_keineVertiefung_dasErsteErgebnisBleibt()
+    {
+        var (admin, id, _) = await GuessOnHouseEngineAsync(GameAnalysisOrigin.SavedGame);
+        await FinishOpenJobsOfAsync(id, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(id);                             // erster Durchgang fertig
+        _db.ChangeTracker.Clear();
+        Assert.Equal(GameAnalysisStatus.Done, (await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status);
+
+        var cred = await _db.LichessEngineCredentials.FirstAsync(c => c.UserId == admin.Id);
+        cred.ShareAsHouseEngine = false;
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(id);   // hier legte die Vertiefung bisher Tiefe-30-Auftraege auf die Haus-Engine
+        await _svc.PumpOneAsync(id);
+
+        _db.ChangeTracker.Clear();
+        Assert.Empty(await _db.AnalysisJobs.ToListAsync());
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);     // die fertige Analyse bleibt brauchbar
+        Assert.NotNull(head.RefinedAt);                          // und haengt nicht ewig auf „wird vertieft"
+        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
+        Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(20, p.Depth); });
+    }
+
+    // ── Endstellung (0.689.0): „die letzte Stellung hat keine Linien" ──
+
+    [Fact]
+    public async Task Create_legtDieEndstellungOhnePartiezugAn()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "1. e4 e5 2. Nf3 *" });
+
+        var rows = await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).OrderBy(p => p.Ply).ToListAsync();
+        Assert.Equal(3, dto.PlyCount);
+        Assert.Equal(new[] { 0, 1, 2, 3 }, rows.Select(r => r.Ply));
+        Assert.Equal(("", ""), (rows[3].GameMoveUci, rows[3].GameMoveSan));
+        Assert.StartsWith("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b", rows[3].Fen);
+    }
+
+    [Fact]
+    public async Task Create_nachMatt_keineEndstellung()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "1. f3 e5 2. g4 Qh4# 0-1" });
+        Assert.Equal(4, await _db.GameAnalysisPositions.CountAsync(p => p.GameAnalysisId == dto.Id));
+    }
+
+    [Fact]
+    public async Task Evals_dieEndstellungTraegtLinienUndDieBewertungNachDemLetztenZug_zaehltAberNichtMit()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = "1. e4 e5 2. Nf3 *" });
+        foreach (var p in await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == dto.Id).ToListAsync())
+        {
+            p.CandidatesJson = $"[{{\"uci\":\"{TestMoves.MoveOf(p)}\",\"cp\":{(p.Ply == 3 ? -40 : 10)}}}]";
+            p.Depth = 20;
+        }
+        await _db.SaveChangesAsync();
+
+        var evals = await _svc.EvalsOfAsync(user.Id, dto.Id);
+
+        Assert.Equal((3, 3), (evals!.Analyzed, evals.Total));
+        Assert.Contains(evals.Plies, p => p.Ply == 3);
+        // Schwarz am Zug, −0,40 aus seiner Sicht = +0,40 für Weiß
+        Assert.Equal(40, evals.Final!.Cp);
+    }
+
+    // ── Dieselbe Partie in mehreren Analysen (0.682.0): Umschalter „Stockfish | Lc0 | beide" auf der Partieseite ──
+
+    /// <summary>Die Züge von <see cref="Game"/> als UCI — so schickt sie die Partieseite.</summary>
+    private static readonly string[] GameUcis =
+        ["e2e4", "e7e5", "f2f4", "e5f4", "f1c4", "d8h4", "e1f1", "b7b5", "c4b5", "g8f6", "g1f3", "h4h6", "d2d3", "f6h5"];
+
+    [Fact]
+    public async Task SameGame_findetDieEigenenAnalysenDerselbenZugfolge_neuesteZuerst_nichtFremdeOderAndere()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game.Replace("Testpartie", "Zweitanalyse") });
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = LongGame });            // andere Partie
+        var other = await CreateUserAsync("fremd");
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = other.Id, EncryptedToken = "enc", BackgroundEngineIds = "eei_fremd" });
+        await _db.SaveChangesAsync();
+        await _svc.CreateAsync(other.Id, new CreateGameAnalysisRequest { Pgn = Game });               // fremdes Konto
+
+        var found = await _svc.SameGameAsync(user.Id, GameUcis);
+
+        Assert.Equal([second.Id, first.Id], found.Select(f => f.Id));
+        Assert.All(found, f => Assert.Equal(GameUcis.Length, f.PlyCount));
+    }
+
+    [Fact]
+    public async Task SameGame_andereReihenfolgeOderLaengeIstNichtDieselbePartie()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+
+        Assert.Empty(await _svc.SameGameAsync(user.Id, GameUcis[..^1]));                 // ein Zug weniger
+        var swapped = (string[])GameUcis.Clone(); swapped[^1] = "h6h5";
+        Assert.Empty(await _svc.SameGameAsync(user.Id, swapped));                         // letzter Zug anders
+        Assert.Empty(await _svc.SameGameAsync(user.Id, []));
+        Assert.Single(await _svc.SameGameAsync(user.Id, GameUcis.Select(u => u.ToUpperInvariant()).ToList()));   // Schreibweise egal
+    }
+
+    [Fact]
+    public async Task EvalsOf_nurDieEigeneAnalyse()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var other = await CreateUserAsync("fremd");
+
+        Assert.NotNull(await _svc.EvalsOfAsync(user.Id, dto.Id));
+        Assert.Null(await _svc.EvalsOfAsync(other.Id, dto.Id));
+        Assert.Null(await _svc.EvalsOfAsync(user.Id, 999_999));
+    }
+}

@@ -9,7 +9,7 @@
 #   bash tools/emit-reference/run.sh > /tmp/out.json
 #
 # Wer den Pin anhebt oder cases.json erweitert: Ausgabe mit den LITERALEN Erwartungen in
-# tests/RookHub.Api.Tests/EmitBuilderVectorTests.cs vergleichen (ERR:… dort nur „ERR", und
+# tests/RookHub.Api.Tests/EngineBroker/EmitBuilderVectorTests.cs vergleichen (ERR:… dort nur „ERR", und
 # `,"bestmove":"(none)"` entfaellt — die eine bewusste Abweichung, siehe Kopf der Testklasse).
 set -euo pipefail
 LILA_ENGINE_SHA="${LILA_ENGINE_SHA:-60ea115c1be25541b0779abaa65c67a575d3df5b}"

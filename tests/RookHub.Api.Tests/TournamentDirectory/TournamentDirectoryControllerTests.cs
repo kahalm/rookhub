@@ -1,0 +1,1702 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.TournamentDirectory;
+using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.TournamentDirectory;
+
+/// <summary>
+/// Der lesende Teil des Turnierverzeichnisses: Filter, Umkreis, Kalender - und die Frage, ob ein
+/// Nutzer immer nur seine eigenen Suchprofile sieht.
+/// </summary>
+public class TournamentDirectoryControllerTests : IDisposable
+{
+    private readonly AppDbContext _db;
+
+    public TournamentDirectoryControllerTests()
+    {
+        _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    /// <summary>Ohne Anmeldung: kein Nutzer im HttpContext (die Turnierseite ist seit 0.643.0 ohne Konto benutzbar).</summary>
+    private TournamentDirectoryController CreateAnonymousController()
+    {
+        var controller = new TournamentDirectoryController(new TournamentDirectoryQueryService(_db), _db,
+            new AdminMessageService(_db, new NotificationService(_db)));
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        return controller;
+    }
+
+    private TournamentDirectoryController CreateController(int userId)
+    {
+        var controller = new TournamentDirectoryController(new TournamentDirectoryQueryService(_db), _db,
+            new AdminMessageService(_db, new NotificationService(_db)));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "test"))
+            }
+        };
+        return controller;
+    }
+
+    private async Task<int> CreateUserAsync(string username = "tester")
+    {
+        var user = new AppUser { Username = username, PasswordHash = "x", Email = $"{username}@example.com" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user.Id;
+    }
+
+    private async Task AddEntryAsync(string id, string name, DateOnly start, DateOnly end,
+        double? lat = null, double? lon = null, string fed = "AUT",
+        TournamentSpeed speed = TournamentSpeed.Standard, int players = 20,
+        string? location = null, DateTime? removedAt = null)
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = id, ChessResultsId = id, Name = name, Federation = fed,
+            StartDate = start, EndDate = end,
+            StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
+            Lat = lat, Lon = lon, Speed = speed, PlayerCount = players,
+            LocationText = location, RemovedAt = removedAt,
+            GeoSource = lat is null ? GeoSource.None : GeoSource.City,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    // ----- Filter -----------------------------------------------------------
+
+    /// <summary>A9-011: <c>page=int.MaxValue</c> ergab Skip(-100) — in MariaDB ein Syntaxfehler (500),
+    /// in InMemory still die erste Seite. Jetzt eine leere Seite mit richtiger Gesamtzahl.</summary>
+    [Fact]
+    public async Task Search_HugePage_ReturnsAnEmptyPageInsteadOfOverflowing()
+    {
+        await AddEntryAsync("1", "Erstes", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Zweites", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18));
+
+        var result = await CreateController(1).Search(page: int.MaxValue);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Empty(page.Items);
+        Assert.Equal(2, page.Total);
+    }
+
+    [Fact]
+    public async Task Search_DateWindow_KeepsOverlappingTournaments()
+    {
+        // Ein Langzeitturnier, das VOR dem Fenster beginnt und hineinragt, gehoert in die Liste.
+        await AddEntryAsync("1", "Langlaeufer", new DateOnly(2026, 8, 1), new DateOnly(2026, 11, 30));
+        await AddEntryAsync("2", "Im Fenster", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("3", "Danach", new DateOnly(2027, 3, 1), new DateOnly(2027, 3, 2));
+
+        var page = await SearchAsync(from: "2026-10-01", to: "2026-10-31");
+
+        Assert.Equal(2, page.Total);
+        Assert.DoesNotContain(page.Items, i => i.ChessResultsId == "3");
+    }
+
+    [Fact]
+    public async Task Search_CancelledEntries_AreHidden()
+    {
+        await AddEntryAsync("1", "Abgesagt", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            removedAt: DateTime.UtcNow);
+
+        Assert.Equal(0, (await SearchAsync()).Total);
+    }
+
+    [Fact]
+    public async Task Search_Radius_ReturnsOnlyNearbyEntriesWithDistance()
+    {
+        await AddEntryAsync("1", "Salzburg", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 47.80, 13.04);
+        await AddEntryAsync("2", "Wien", new DateOnly(2026, 10, 11), new DateOnly(2026, 10, 12), 48.21, 16.37);
+
+        var page = await SearchAsync(lat: 47.80, lon: 13.04, radiusKm: 50);
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal("1", item.ChessResultsId);
+        Assert.NotNull(item.DistanceKm);
+        Assert.InRange(item.DistanceKm!.Value, 0, 1);
+    }
+
+    [Fact]
+    public async Task Search_Radius_IgnoresEntriesWithoutCoordinates()
+    {
+        await AddEntryAsync("1", "Ohne Pin", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        Assert.Equal(0, (await SearchAsync(lat: 47.8, lon: 13.04, radiusKm: 500)).Total);
+    }
+
+    [Fact]
+    public async Task Search_TextMatchesNameAndLocation()
+    {
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            location: "Ranshofen");
+        await AddEntryAsync("2", "Stadtmeisterschaft", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            location: "Braunau am Inn");
+        await AddEntryAsync("3", "Blitzcup", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            location: "Graz");
+
+        var page = await SearchAsync(q: "Braunau");
+
+        Assert.Equal(2, page.Total);
+    }
+
+    [Fact]
+    public async Task Search_SpeedFilter()
+    {
+        await AddEntryAsync("1", "Standard", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Blitz", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            speed: TournamentSpeed.Blitz);
+
+        var page = await SearchAsync(speed: "blitz");
+
+        Assert.Equal("2", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    [Fact]
+    public async Task Search_WeekendOnly_UsesThePrecomputedFlag()
+    {
+        await AddEntryAsync("1", "Mittwoch", new DateOnly(2026, 10, 7), new DateOnly(2026, 10, 7));
+        await AddEntryAsync("2", "Samstag", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+
+        var page = await SearchAsync(weekendOnly: true);
+
+        Assert.Equal("2", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    [Fact]
+    public async Task Search_MarksSubscribedTournaments()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("1", "Gemerkt", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Nicht gemerkt", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = userId, CrawlerTournamentId = "1", TournamentName = "Gemerkt"
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(userId).Search(null, null, null, null, null, null, null, null);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.True(page.Items.Single(i => i.ChessResultsId == "1").Subscribed);
+        Assert.False(page.Items.Single(i => i.ChessResultsId == "2").Subscribed);
+    }
+
+    [Fact]
+    public async Task Search_AnotherUsersSubscription_DoesNotLeak()
+    {
+        var mine = await CreateUserAsync("mine");
+        var other = await CreateUserAsync("other");
+        await AddEntryAsync("1", "Turnier", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = other, CrawlerTournamentId = "1", TournamentName = "Turnier"
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(mine).Search(null, null, null, null, null, null, null, null);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.False(page.Items.Single().Subscribed);
+    }
+
+    // ----- Ohne Anmeldung (seit 0.643.0) -------------------------------------
+
+    /// <summary>
+    /// Suche, Karte, Monat und Eintrag funktionieren ohne Konto — vorher warf GetUserId() und die Antwort war 500.
+    /// Gemerkt und ausgeblendet sind dann einfach falsch, auch wenn ANDERE Konten das Turnier gemerkt haben.
+    /// </summary>
+    [Fact]
+    public async Task Anonymous_CanSearchBrowseAndOpen_WithNothingPersonal()
+    {
+        var someone = await CreateUserAsync("someone");
+        await AddEntryAsync("1", "Innsbrucker Open", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 47.26, 11.39);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = someone, CrawlerTournamentId = "1", TournamentName = "Innsbrucker Open"
+        });
+        _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore { UserId = someone, PublicId = "1" });
+        await _db.SaveChangesAsync();
+        var anon = CreateAnonymousController();
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await anon.Search(null, null, null, null, null, null, null, null)).Result).Value);
+        var item = Assert.Single(page.Items);
+        Assert.False(item.Subscribed);
+
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(
+            (await anon.Map("47.0,11.0,48.0,12.0", from: "2026-10-01", to: "2026-12-31")).Result).Value);
+        Assert.NotNull(map);
+        Assert.IsType<OkObjectResult>((await anon.Calendar(2026, 10)).Result);
+
+        var detail = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(
+            (await anon.Get("1", CancellationToken.None)).Result).Value);
+        Assert.Equal("Innsbrucker Open", detail.Name);
+        Assert.False(detail.Subscribed);
+    }
+
+    /// <summary>Ein Suchprofil gehört einem Konto — ohne Anmeldung gibt es keines.</summary>
+    [Fact]
+    public async Task Anonymous_WithAProfileId_IsRejectedInsteadOfLeakingSomeonesProfile()
+    {
+        var someone = await CreateUserAsync("someone");
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = someone, Name = "Daheim", Lat = 47.26, Lon = 11.39, RadiusKm = 50,
+        });
+        await _db.SaveChangesAsync();
+        var profileId = (await _db.TournamentSearchProfiles.SingleAsync()).Id;
+
+        var result = await CreateAnonymousController().Search(profileId: profileId);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    /// <summary>Was dem Nutzer gehört (ausblenden, melden, Quelle vorschlagen), verlangt weiter ein Konto.</summary>
+    [Fact]
+    public void PersonalActions_StillRequireAnAccount_ReadsDoNot()
+    {
+        var type = typeof(TournamentDirectoryController);
+        bool Anonymous(string name) => type.GetMethods().Where(m => m.Name == name).All(m =>
+            m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), false).Length > 0);
+        bool Authorized(string name) => type.GetMethods().Where(m => m.Name == name).All(m =>
+            m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false).Length > 0);
+
+        foreach (var read in new[] { "Search", "Map", "Calendar", "Get", "Places", "NearestPlace" })
+            Assert.True(Anonymous(read), read);
+        foreach (var write in new[] { "Ignore", "Unignore", "Report", "SuggestSource" })
+            Assert.True(Authorized(write), write);
+    }
+
+    // ----- Gruppen eines Turniers -------------------------------------------
+
+    [Fact]
+    public async Task Search_GroupsTheSectionsOfOneTournamentIntoOneEntry()
+    {
+        // chess-results fuehrt „Open Braunau 2026 A/B/C" als drei Zeilen mit eigenem dbkey.
+        await AddGroupedAsync("Open Braunau 2026 A", "111", players: 12);
+        await AddGroupedAsync("Open Braunau 2026 B", "112", players: 8);
+        await AddGroupedAsync("Open Braunau 2026 C", "113", players: 5);
+
+        var page = await SearchAsync();
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(1, page.Total);
+        Assert.Equal("Open Braunau 2026", item.Name);      // ohne Kuerzel
+        Assert.Equal(3, item.GroupSize);
+        Assert.Equal(25, item.PlayerCount);                 // Summe ueber alle Gruppen
+        Assert.Equal(["A", "B", "C"], item.Groups.Select(g => g.Label));
+        Assert.Equal(["111", "112", "113"], item.Groups.Select(g => g.ChessResultsId));
+    }
+
+    [Fact]
+    public async Task Search_GroupsIdenticallyNamedSections_WhenChessResultsTruncatedTheSuffix()
+    {
+        // Der echte Fall aus Suedtirol: der Name ist bei ~50 Zeichen abgeschnitten, alle drei
+        // Gruppen heissen deshalb gleich.
+        const string name = "5° Torneo Internazionale Ortisei \"ad Gredine\" - Op";
+        await AddGroupedAsync(name, "201");
+        await AddGroupedAsync(name, "202");
+        await AddGroupedAsync(name, "203");
+
+        var page = await SearchAsync();
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(3, item.GroupSize);
+        Assert.All(item.Groups, g => Assert.Equal("", g.Label));   // kein Kuerzel mehr da
+    }
+
+    [Fact]
+    public async Task Search_SameVenueAndDateButDifferentTournaments_StayApart()
+    {
+        // Vereinsabende am selben Ort mit Platzhalter-Datum: verschiedene Turniere, kein Verbund.
+        await AddGroupedAsync("KK Bardejov - 1.11.2025", "301");
+        await AddGroupedAsync("KK Bardejov - 25.10.2025", "302");
+        await AddGroupedAsync("PS Bardejov - 28.6.2025", "303");
+
+        var page = await SearchAsync();
+
+        Assert.Equal(3, page.Total);
+        Assert.All(page.Items, i => Assert.Equal(1, i.GroupSize));
+    }
+
+    [Fact]
+    public async Task Search_SameNameButDifferentDates_StayApart()
+    {
+        await AddGroupedAsync("Sommercup A", "401", start: new DateOnly(2026, 10, 10));
+        await AddGroupedAsync("Sommercup B", "402", start: new DateOnly(2026, 11, 14));
+
+        Assert.Equal(2, (await SearchAsync()).Total);
+    }
+
+    [Fact]
+    public async Task Search_PagingCountsTournaments_NotSections()
+    {
+        // Ein viergruppiges Open darf eine Seite nicht zu einem Viertel fuellen.
+        for (var i = 0; i < 4; i++)
+            await AddGroupedAsync($"Grosses Open 2026 {(char)('A' + i)}", $"50{i}");
+        await AddGroupedAsync("Ein anderes Turnier", "600");
+
+        var page = await SearchAsync();
+
+        Assert.Equal(2, page.Total);
+        Assert.Equal(2, page.Items.Count);
+    }
+
+    [Fact]
+    public async Task Search_RadiusPath_GroupsAsWell()
+    {
+        await AddGroupedAsync("Open Braunau 2026 A", "111", lat: 47.81, lon: 13.05);
+        await AddGroupedAsync("Open Braunau 2026 B", "112", lat: 47.81, lon: 13.05);
+
+        var page = await SearchAsync(lat: 47.80, lon: 13.04, radiusKm: 50);
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(2, item.GroupSize);
+        Assert.NotNull(item.DistanceKm);
+    }
+
+    [Fact]
+    public async Task Search_EntriesWithoutGroupKey_DoNotCollapseIntoOne()
+    {
+        // Altbestand aus der Zeit vor der Gruppierung: NULL == NULL waere ein einziger Riesen-Topf.
+        _db.TournamentDirectoryEntries.AddRange(
+            NewEntry("Turnier eins", "701", groupKey: null),
+            NewEntry("Turnier zwei", "702", groupKey: null));
+        await _db.SaveChangesAsync();
+
+        var page = await SearchAsync();
+
+        Assert.Equal(2, page.Total);
+    }
+
+    // ----- Reihenfolge und Plausibilitaet (UX-039) ---------------------------
+
+    private async Task AddRoundAsync(string publicId, DateOnly date)
+    {
+        var entry = _db.TournamentDirectoryEntries.Single(e => e.PublicId == publicId);
+        _db.TournamentDirectoryRounds.Add(new TournamentDirectoryRound
+        {
+            TournamentDirectoryEntryId = entry.Id, Number = 1, Date = date,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<DirectoryPageDto> SearchPageAsync(
+        string from, string to, int page, int pageSize, DirectoryAudienceQuery? audience = null)
+    {
+        var result = await CreateController(1).Search(
+            from, to, audience: audience, page: page, pageSize: pageSize);
+        return Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    /// <summary>
+    /// UX-039: Die Vorgabe „naechste 3 Monate" begann auf dem Dev-Stand mit 583 schon laufenden
+    /// Eintraegen, das erste kommende Turnier stand an Stelle 584 (Seite 12). Was im Zeitraum
+    /// BEGINNT, gehoert nach vorn; was schon laeuft, folgt als eigener, gekennzeichneter Block,
+    /// Eintraege ohne Beginn ganz am Ende.
+    /// </summary>
+    [Fact]
+    public async Task Search_Window_UpcomingTournamentsComeFirst_OngoingFollowAsMarkedBlock()
+    {
+        for (var i = 0; i < 60; i++)
+            await AddEntryAsync($"run{i}", $"Saisonliga {i}", new DateOnly(2026, 8, 1).AddDays(i),
+                new DateOnly(2026, 11, 30));
+        await AddEntryAsync("open", "Open am Wochenende", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18));
+        await AddEntryAsync("cup", "Novembercup", new DateOnly(2026, 11, 7), new DateOnly(2026, 11, 7));
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "nostart", ChessResultsId = "nostart", Name = "Nur ein Ende", Federation = "AUT",
+            EndDate = new DateOnly(2026, 10, 15),
+        });
+        await _db.SaveChangesAsync();
+
+        var first = await SearchAsync(from: "2026-10-01", to: "2026-12-31");
+
+        Assert.Equal(63, first.Total);
+        Assert.Equal(50, first.Items.Count);
+        Assert.Equal(["open", "cup"], first.Items.Take(2).Select(i => i.Id));
+        Assert.All(first.Items.Take(2), i => Assert.False(i.Ongoing));
+        // Danach der Block „laeuft bereits", wieder nach Beginn.
+        Assert.Equal("run0", first.Items[2].Id);
+        Assert.All(first.Items.Skip(2), i => Assert.True(i.Ongoing));
+
+        var second = await SearchPageAsync("2026-10-01", "2026-12-31", page: 2, pageSize: 50);
+        Assert.Equal(13, second.Items.Count);
+        Assert.Equal("nostart", second.Items[^1].Id);
+        Assert.False(second.Items[^1].Ongoing);
+    }
+
+    /// <summary>
+    /// Die Seiten bleiben ueberschneidungsfrei, auch wenn viele Eintraege denselben Rang und
+    /// denselben Beginn haben — der letzte Schluessel ist die Id.
+    /// </summary>
+    [Fact]
+    public async Task Search_Window_PagesNeitherOverlapNorSkip_WithEqualStartDates()
+    {
+        for (var i = 0; i < 7; i++)
+            await AddEntryAsync($"up{i}", $"Kommend {i}", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+        for (var i = 0; i < 4; i++)
+            await AddEntryAsync($"on{i}", $"Laufend {i}", new DateOnly(2026, 9, 1), new DateOnly(2026, 10, 31));
+
+        var seen = new List<string>();
+        for (var page = 1; page <= 4; page++)
+            seen.AddRange((await SearchPageAsync("2026-10-01", "2026-12-31", page, 3)).Items.Select(i => i.Id));
+
+        Assert.Equal(11, seen.Count);
+        Assert.Equal(11, seen.Distinct().Count());
+        Assert.All(seen.Take(7), id => Assert.StartsWith("up", id));
+    }
+
+    /// <summary>
+    /// UX-039: „2007-12-26 bis 2026-12-10", „2025-01-01 bis 2026-12-31" — Laufzeiten, die kein
+    /// Turnier hat. Unplausibel ist, was laenger als ein Jahr dauert UND keine Spieltermine hat
+    /// oder schon ueber ein Jahr vor dem Zeitraum begann. Standardmaessig ausgeblendet, auf Wunsch
+    /// gezeigt und gekennzeichnet.
+    /// </summary>
+    [Fact]
+    public async Task Search_ImplausibleRuntimes_AreHiddenByDefault_AndMarkedWhenIncluded()
+    {
+        await AddEntryAsync("namibia", "Qualifiers", new DateOnly(2007, 12, 26), new DateOnly(2026, 12, 10));
+        await AddEntryAsync("bardejov", "Bardejov", new DateOnly(2025, 1, 1), new DateOnly(2026, 12, 31));
+        await AddEntryAsync("liga-ohne", "Liga ohne Termine", new DateOnly(2026, 9, 1), new DateOnly(2027, 10, 15));
+        await AddEntryAsync("liga-mit", "Liga mit Terminen", new DateOnly(2026, 9, 1), new DateOnly(2027, 10, 15));
+        await AddRoundAsync("liga-mit", new DateOnly(2026, 10, 18));
+        await AddEntryAsync("alt-mit", "Seit Jahren", new DateOnly(2024, 6, 1), new DateOnly(2026, 12, 1));
+        await AddRoundAsync("alt-mit", new DateOnly(2026, 10, 25));
+        await AddEntryAsync("saison", "Saison", new DateOnly(2026, 9, 15), new DateOnly(2027, 5, 30));
+        await AddEntryAsync("open", "Open", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18));
+
+        var standard = await SearchAsync(from: "2026-10-01", to: "2026-12-31");
+        Assert.Equal(["liga-mit", "open", "saison"], standard.Items.Select(i => i.Id).Order());
+        Assert.Equal(3, standard.Total);
+        Assert.All(standard.Items, i => Assert.False(i.Implausible));
+
+        var all = await SearchAsync(from: "2026-10-01", to: "2026-12-31",
+            audience: new DirectoryAudienceQuery { IncludeImplausible = true });
+        Assert.Equal(7, all.Total);
+        Assert.Equal(["alt-mit", "bardejov", "liga-ohne", "namibia"],
+            all.Items.Where(i => i.Implausible).Select(i => i.Id).Order());
+        Assert.Equal("open", Assert.Single(all.Items, i => !i.Ongoing).Id);
+    }
+
+    [Fact]
+    public async Task Search_RadiusPath_UpcomingFirst_AndImplausibleHidden()
+    {
+        await AddEntryAsync("liga", "Landesliga", new DateOnly(2026, 9, 1), new DateOnly(2027, 4, 30), 47.80, 13.04);
+        await AddEntryAsync("open", "Open", new DateOnly(2026, 10, 20), new DateOnly(2026, 10, 21), 47.85, 13.10);
+        await AddEntryAsync("ewig", "Ewige Liga", new DateOnly(2016, 11, 12), new DateOnly(2026, 11, 12), 47.80, 13.04);
+
+        var page = await SearchAsync(from: "2026-10-01", to: "2026-12-31", lat: 47.80, lon: 13.04, radiusKm: 50);
+
+        Assert.Equal(["open", "liga"], page.Items.Select(i => i.Id));
+        Assert.False(page.Items[0].Ongoing);
+        Assert.True(page.Items[1].Ongoing);
+    }
+
+    [Fact]
+    public async Task MapAndCalendar_HideImplausibleByDefault_AndMarkThemWhenIncluded()
+    {
+        await AddEntryAsync("open", "Open", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18), 47.80, 13.04);
+        await AddEntryAsync("bardejov", "Bardejov", new DateOnly(2025, 1, 1), new DateOnly(2026, 12, 31), 47.81, 13.05);
+        var include = new DirectoryAudienceQuery { IncludeImplausible = true };
+
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Map("47.0,12.0,48.0,14.0", from: "2026-10-01", to: "2026-12-31")).Result).Value);
+        Assert.Equal("open", Assert.Single(map.Items).Id);
+
+        var mapAll = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Map("47.0,12.0,48.0,14.0", from: "2026-10-01", to: "2026-12-31",
+                audience: include)).Result).Value);
+        Assert.Equal("bardejov", Assert.Single(mapAll.Items, i => i.Implausible).Id);
+        Assert.Equal(2, mapAll.Items.Count);
+
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Calendar(2026, 10)).Result).Value);
+        Assert.Equal("open", Assert.Single(cal.Tournaments).Id);
+
+        var calAll = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Calendar(2026, 10, audience: include)).Result).Value);
+        var bardejov = Assert.Single(calAll.Tournaments, t => t.Id == "bardejov");
+        Assert.True(bardejov.Implausible);
+        Assert.True(bardejov.Ongoing);
+    }
+
+    /// <summary>Die Detailansicht filtert nicht — ein Link auf einen solchen Eintrag bleibt gueltig.</summary>
+    [Fact]
+    public async Task Get_ImplausibleEntry_IsStillReachable()
+    {
+        await AddEntryAsync("700123", "Qualifiers", new DateOnly(2007, 12, 26), new DateOnly(2026, 12, 10));
+
+        var result = await CreateController(1).Get("700123", default);
+
+        Assert.Equal("700123", Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value).Id);
+    }
+
+    // ----- Eingabepruefung --------------------------------------------------
+
+    [Theory]
+    [InlineData("01.10.2026", null)]
+    [InlineData(null, "31.10.2026")]
+    public async Task Search_NonIsoDates_AreRejected(string? from, string? to)
+    {
+        var result = await CreateController(1).Search(from, to, null, null, null, null, null, null);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Search_EndBeforeStart_IsRejected()
+    {
+        var result = await CreateController(1).Search("2026-10-31", "2026-10-01", null, null, null, null, null, null);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Theory]
+    [InlineData("AUSTRIA")]
+    [InlineData("A1")]
+    public async Task Search_InvalidFederation_IsRejected(string fed)
+    {
+        var result = await CreateController(1).Search(null, null, null, null, null, fed, null, null);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Search_UnknownSpeed_IsRejected()
+    {
+        var result = await CreateController(1).Search(null, null, null, null, null, null, "bullet", null);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Search_AbsurdRadius_IsRejected()
+    {
+        var result = await CreateController(1).Search(null, null, 47.8, 13.0, 99999, null, null, null);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Suchprofil als Filterquelle --------------------------------------
+
+    [Fact]
+    public async Task Search_WithProfileId_UsesTheProfilesCentreAndRadius()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = userId, Name = "Zuhause", Lat = 47.80, Lon = 13.04, RadiusKm = 50
+        });
+        await _db.SaveChangesAsync();
+        var profileId = _db.TournamentSearchProfiles.Single().Id;
+
+        await AddEntryAsync("1", "Nah", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 47.81, 13.05);
+        await AddEntryAsync("2", "Fern", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 48.21, 16.37);
+
+        var result = await CreateController(userId).Search(null, null, null, null, null, null, null, null,
+            profileId: profileId);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    [Fact]
+    public async Task Search_WithProfileId_HonoursALLFederationsAndSpeeds()
+    {
+        // Frueher wurde ein Profil mit MEHR als einem Wert beim Filtern uebergangen, waehrend die
+        // naechtliche Meldung die ganze Liste auswertet: die Ansicht zeigte dann Blitzturniere aus
+        // Italien, gemeldet wurde nur AUT/GER-Standard. Ein Profil muss beides gleich beantworten.
+        var userId = await CreateUserAsync();
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = userId, Name = "Nachbarn", Lat = 47.80, Lon = 13.04, RadiusKm = 2000,
+            Federations = "AUT,GER", Speeds = "Standard,Rapid",
+        });
+        await _db.SaveChangesAsync();
+        var profileId = _db.TournamentSearchProfiles.Single().Id;
+
+        await AddEntryAsync("1", "AUT Standard", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            47.81, 13.05, fed: "AUT", speed: TournamentSpeed.Standard);
+        await AddEntryAsync("2", "GER Rapid", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            48.13, 11.58, fed: "GER", speed: TournamentSpeed.Rapid);
+        await AddEntryAsync("3", "ITA Blitz", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            46.50, 11.35, fed: "ITA", speed: TournamentSpeed.Blitz);
+        await AddEntryAsync("4", "AUT Blitz", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12),
+            47.82, 13.06, fed: "AUT", speed: TournamentSpeed.Blitz);
+
+        var result = await CreateController(userId).Search(null, null, null, null, null, null, null, null,
+            profileId: profileId);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1", "2"], page.Items.Select(i => i.ChessResultsId).Order());
+    }
+
+    [Fact]
+    public async Task Search_ForeignProfileId_IsRejected()
+    {
+        var mine = await CreateUserAsync("mine");
+        var other = await CreateUserAsync("other");
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = other, Name = "Fremd", Lat = 47.8, Lon = 13.0, RadiusKm = 50
+        });
+        await _db.SaveChangesAsync();
+        var foreignId = _db.TournamentSearchProfiles.Single().Id;
+
+        var result = await CreateController(mine).Search(null, null, null, null, null, null, null, null,
+            profileId: foreignId);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Kalender ---------------------------------------------------------
+
+    [Fact]
+    public async Task Calendar_MultiDayTournament_AppearsOnEveryDay()
+    {
+        await AddEntryAsync("1", "Dreitaeger", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(31, cal.Days.Count);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 9).Ids);
+        foreach (var day in new[] { 10, 11, 12 })
+            Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == day).Ids);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 13).Ids);
+    }
+
+    /// <summary>
+    /// Gemeldet an tnr1474416 („II Vipiteno Chess Festival - 2° torneo rapid", 10min + 5sec,
+    /// 11.08. bis 20.09.): ein RAPID-Turnier belegte 41 Kalendertage und verdeckte, was an diesen
+    /// Tagen wirklich gespielt wird. Die Angabe stammt so von chess-results, und einen Rundenplan
+    /// gibt es dort nicht — es steht deshalb nur noch an seinem STARTtag.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_LongRapidWithoutRoundDates_AppearsOnlyOnItsFirstDay()
+    {
+        await AddEntryAsync("1", "Festival rapid", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31),
+            speed: TournamentSpeed.Rapid);
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == 1).Ids);
+        foreach (var day in new[] { 2, 15, 31 })
+            Assert.Empty(cal.Days.Single(d => d.Date.Day == day).Ids);
+    }
+
+    /// <summary>
+    /// Der Gegenfall, den die Regel NICHT treffen darf: ein ehrliches mehrtaegiges Open im
+    /// Turnierschach — neun Tage, eine Runde pro Tag, ohne hinterlegten Plan. Es an acht von neun
+    /// Tagen verschwinden zu lassen waere derselbe Schaden wie vorher, nur unauffaelliger.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_MultiDayStandardOpen_StillAppearsOnEveryDay()
+    {
+        await AddEntryAsync("1", "Neun-Tage-Open", new DateOnly(2026, 10, 3), new DateOnly(2026, 10, 11));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        foreach (var day in new[] { 3, 7, 11 })
+            Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == day).Ids);
+    }
+
+    /// <summary>
+    /// Auch im Turnierschach hat der Zeitraum eine Grenze: ueber drei Wochen wird nirgends am
+    /// Stueck gespielt.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_VeryLongStandardEntry_AppearsOnlyOnItsFirstDay()
+    {
+        await AddEntryAsync("1", "Vereinsmeisterschaft", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 30));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == 1).Ids);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 20).Ids);
+    }
+
+    /// <summary>Sind SPIELTERMINE bekannt, gelten weiterhin nur sie — die Grenze greift gar nicht.</summary>
+    [Fact]
+    public async Task Calendar_WithRoundDates_TheLimitDoesNotApply()
+    {
+        await AddEntryAsync("1", "Liga", new DateOnly(2026, 10, 1), new DateOnly(2027, 4, 30));
+        var entry = _db.TournamentDirectoryEntries.Single();
+        _db.TournamentDirectoryRounds.Add(new TournamentDirectoryRound
+        {
+            TournamentDirectoryEntryId = entry.Id, Number = 1, Date = new DateOnly(2026, 10, 18),
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Days.Single(d => d.Date.Day == 18).Ids);
+        Assert.Empty(cal.Days.Single(d => d.Date.Day == 1).Ids);
+    }
+
+    [Fact]
+    public async Task Calendar_SaysSoWhenItCouldNotShowEverything()
+    {
+        // Ein Deckel, den niemand sieht, ist schlimmer als ein Deckel: der Kalender saehe
+        // schlicht vollstaendig aus.
+        await AddEntryAsync("1", "Eins", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.False(cal.Truncated);
+    }
+
+    /// <summary>
+    /// Viele Turniere in einem Monat, beginnend an einem Tag im Oktober — Nummern ab 700000,
+    /// damit sie keinen der Einzeleintraege der Tests trifft.
+    /// </summary>
+    private async Task AddManyAsync(int count, double? lat = null, double? lon = null)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var id = (700000 + i).ToString();
+            var day = new DateOnly(2026, 10, 1 + i % 31);
+            _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+            {
+                PublicId = id, ChessResultsId = id, Name = $"Turnier {i}", Federation = "AUT",
+                StartDate = day, EndDate = day, Lat = lat, Lon = lon,
+                Speed = TournamentSpeed.Standard, PlayerCount = 20,
+                GeoSource = lat is null ? GeoSource.None : GeoSource.City,
+            });
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// A5-002: der Kalender forderte 1500 Turniere an, der Abfragedienst klemmte jede
+    /// Seitengroesse aber auf die 200 der Liste. Ein Monat ohne Umkreis (die Startseite der
+    /// Turnierseite) zeigte die 200 frueh beginnenden Turniere, die spaeteren Tage standen leer.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_MoreThan200TournamentsInAMonth_AllArrive()
+    {
+        await AddManyAsync(201);
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(201, cal.Tournaments.Count);
+        Assert.False(cal.Truncated);
+        // Auch das spaeteste Turnier steht an seinem Tag.
+        Assert.Contains("700200", cal.Days.Single(d => d.Date.Day == 15).Ids);
+    }
+
+    [Fact]
+    public async Task Calendar_WithRadius_MoreThan200TournamentsInAMonth_AllArrive()
+    {
+        // Der Umkreis-Weg klemmte mit derselben Zeile.
+        await AddManyAsync(201, 47.80, 13.04);
+
+        var result = await CreateController(1).Calendar(2026, 10, lat: 47.80, lon: 13.04, radiusKm: 50);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(201, cal.Tournaments.Count);
+        Assert.False(cal.Truncated);
+    }
+
+    [Fact]
+    public async Task Calendar_BeyondItsCap_SaysSo()
+    {
+        await AddManyAsync(TournamentDirectoryController.CalendarMaxTournaments + 1);
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(TournamentDirectoryController.CalendarMaxTournaments, cal.Tournaments.Count);
+        Assert.True(cal.Truncated);
+    }
+
+    [Fact]
+    public async Task Calendar_EntryWithoutAnyDate_TakesNoPlace()
+    {
+        // Ohne Termin steht ein Eintrag an keinem Tag — im Deckel belegte er trotzdem einen Platz.
+        await AddEntryAsync("1", "Mit Termin", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "2", ChessResultsId = "2", Name = "Ohne Termin", Federation = "AUT",
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Tournaments.Select(t => t.Id));
+    }
+
+    [Fact]
+    public async Task Search_ListPage_StaysCappedAt200()
+    {
+        // Der eigene Deckel des Kalenders darf die LISTE nicht mitziehen.
+        await AddManyAsync(201);
+
+        var result = await CreateController(1).Search(pageSize: 1000);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(TournamentDirectoryQueryService.MaxListPageSize, page.Items.Count);
+        Assert.Equal(201, page.Total);
+    }
+
+    [Fact]
+    public async Task Calendar_DescribesEachTournamentOnlyOnce()
+    {
+        // Der teure Teil war die Wiederholung: ein Monat auf dem Dev-Server hatte 5962 Eintraege
+        // fuer 200 verschiedene Turniere — 3 MB JSON, von denen 97 % dasselbe noch einmal sagten.
+        await AddEntryAsync("1", "Dreitaeger", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Eintaeger", new DateOnly(2026, 10, 11), new DateOnly(2026, 10, 11));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(2, cal.Tournaments.Count);
+        Assert.Equal(["1", "2"], cal.Tournaments.Select(t => t.ChessResultsId).Order());
+        // Jede Nummer eines Tages muss auch beschrieben sein, sonst laeuft die Anzeige ins Leere.
+        var known = cal.Tournaments.Select(t => t.ChessResultsId).ToHashSet();
+        Assert.All(cal.Days.SelectMany(d => d.Ids), id => Assert.Contains(id, known));
+        Assert.Equal(["1", "2"], cal.Days.Single(d => d.Date.Day == 11).Ids.Order());
+    }
+
+    [Theory]
+    [InlineData(2026, 13)]
+    [InlineData(2026, 0)]
+    [InlineData(1800, 5)]
+    public async Task Calendar_OutOfRange_IsRejected(int year, int month)
+    {
+        var result = await CreateController(1).Calendar(year, month);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Karte ------------------------------------------------------------
+
+    [Fact]
+    public async Task Map_ReturnsOnlyPinsInsideTheBox()
+    {
+        await AddEntryAsync("1", "Salzburg", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 47.80, 13.04);
+        await AddEntryAsync("2", "Wien", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 48.21, 16.37);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0");
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("1", Assert.Single(map.Items).ChessResultsId);
+        Assert.False(map.Truncated);
+    }
+
+    /// <summary>
+    /// F6-006: die Karte kappt nach Startdatum — und sagt es jetzt. Vorher kam eine nackte Liste,
+    /// die spaeten Monate fehlten still, und unter der Karte stand trotzdem „N Turniere im
+    /// Ausschnitt".
+    /// </summary>
+    [Fact]
+    public async Task Map_MoreRowsThanTheLimit_SaysTruncated_AndDropsTheLatest()
+    {
+        await AddEntryAsync("1", "Oktober", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddEntryAsync("2", "November", new DateOnly(2026, 11, 10), new DateOnly(2026, 11, 10), 47.81, 13.05);
+        await AddEntryAsync("3", "Dezember", new DateOnly(2026, 12, 10), new DateOnly(2026, 12, 10), 47.82, 13.06);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0", limit: 2);
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.True(map.Truncated);
+        Assert.Equal(["1", "2"], map.Items.Select(p => p.Id).Order());
+    }
+
+    [Fact]
+    public async Task Map_ExactlyAtTheLimit_IsNotTruncated()
+    {
+        await AddEntryAsync("1", "Oktober", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddEntryAsync("2", "November", new DateOnly(2026, 11, 10), new DateOnly(2026, 11, 10), 47.81, 13.05);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0", limit: 2);
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.False(map.Truncated);
+        Assert.Equal(2, map.Items.Count);
+    }
+
+    /// <summary>
+    /// Die Karte fasst die Gruppen EINES Turniers zu EINEM Punkt zusammen — genau wie die Liste.
+    ///
+    /// <para>Vorher tat sie es nicht, und damit widersprachen sich zwei Ansichten desselben
+    /// Bestandes: die Liste zeigte „24th ASEAN+ Age-Group Championships" als eine Zeile, die Karte
+    /// legte 19 Punkte uebereinander auf denselben Spielort — und weil deckungsgleiche Pins
+    /// einander verdecken, war davon genau einer erreichbar. Am Dev-Stand gemessen: 2952
+    /// verortete Zeilen sind 2344 Turniere.</para>
+    /// </summary>
+    [Fact]
+    public async Task Map_GroupsSectionsOfOneTournament_LikeTheList()
+    {
+        // Gleicher Name-Stamm, Termin und Ort => derselbe Gruppenschluessel (A/B/C).
+        await AddGroupedAsync("Open Ranshofen 2026 A", "801", new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddGroupedAsync("Open Ranshofen 2026 B", "802", new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddGroupedAsync("Open Ranshofen 2026 C", "803", new DateOnly(2026, 10, 10), 47.80, 13.04);
+        // Ein anderes Turnier am selben Ort bleibt ein eigener Punkt.
+        await AddGroupedAsync("Blitzabend", "804", new DateOnly(2026, 10, 11), 47.80, 13.04);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0");
+        var pins = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value).Items;
+
+        Assert.Equal(2, pins.Count);
+        var open = Assert.Single(pins, p => p.ChessResultsId == "801");
+        Assert.Equal(3, open.GroupSize);
+        // Alle drei Gruppen bleiben verlinkbar — zusammengefasst heisst nicht weggelassen.
+        Assert.Equal(["801", "802", "803"], open.Groups.Select(g => g.ChessResultsId!).Order());
+        Assert.Equal(1, Assert.Single(pins, p => p.ChessResultsId == "804").GroupSize);
+    }
+
+    [Theory]
+    [InlineData("47.0,12.0,48.0")]
+    [InlineData("nord,12.0,48.0,14.0")]
+    [InlineData("48.0,12.0,47.0,14.0")]   // maxLat < minLat
+    [InlineData("100.0,12.0,120.0,14.0")] // ausserhalb des Gradbereichs
+    public async Task Map_BadBoundingBox_IsRejected(string bbox)
+    {
+        var result = await CreateController(1).Map(bbox);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public void TryParseBoundingBox_ParsesInvariantDecimals()
+    {
+        Assert.True(TournamentDirectoryController.TryParseBoundingBox("47.5,12.25,48.5,14.75", out var box));
+        Assert.Equal(47.5, box.MinLat);
+        Assert.Equal(14.75, box.MaxLon);
+    }
+
+    // ----- Detail -----------------------------------------------------------
+
+    [Fact]
+    public async Task Get_ShowsTheWholeTournament_NotJustTheClickedSection()
+    {
+        // Die Liste fasst A/B/C zu einem Eintrag zusammen. Zeigte das Detail nur die angeklickte
+        // Gruppe, widerspraeche der Deep-Link aus einer Benachrichtigung genau der Liste, aus der
+        // er stammt.
+        await AddGroupedAsync("Open Braunau 2026 A", "111", players: 12);
+        await AddGroupedAsync("Open Braunau 2026 B", "112", players: 8);
+
+        var result = await CreateController(1).Get("112", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("112", dto.ChessResultsId);       // die angefragte Gruppe bleibt der Bezug
+        Assert.Equal("Open Braunau 2026", dto.Name);   // aber der Name ist der des Turniers
+        Assert.Equal(2, dto.GroupSize);
+        Assert.Equal(20, dto.PlayerCount);
+        Assert.Equal(["111", "112"], dto.Groups.Select(g => g.ChessResultsId));
+    }
+
+    [Fact]
+    public async Task Get_SingleTournament_StaysUngrouped()
+    {
+        await AddGroupedAsync("Ein einzelnes Turnier", "500", players: 9);
+
+        var result = await CreateController(1).Get("500", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(1, dto.GroupSize);
+        Assert.Empty(dto.Groups);
+        Assert.Equal(9, dto.PlayerCount);
+    }
+
+    [Fact]
+    public async Task Subscribing_ToOneSection_MarksTheWholeTournament()
+    {
+        // Gemerkt wird das TURNIER. Wer Gruppe B abonniert hat, soll nicht bei Gruppe A wieder
+        // „merken" angeboten bekommen.
+        var userId = await CreateUserAsync();
+        await AddGroupedAsync("Open Braunau 2026 A", "111");
+        await AddGroupedAsync("Open Braunau 2026 B", "112");
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = userId, CrawlerTournamentId = "112", TournamentName = "Open Braunau 2026 B"
+        });
+        await _db.SaveChangesAsync();
+
+        var list = await CreateController(userId).Search(null, null, null, null, null, null, null, null);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(list.Result).Value);
+        Assert.True(Assert.Single(page.Items).Subscribed);
+
+        var detail = await CreateController(userId).Get("111", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(detail.Result).Value);
+        Assert.True(dto.Subscribed);
+    }
+
+    [Fact]
+    public async Task Get_UnknownTournament_Is404()
+    {
+        var result = await CreateController(1).Get("123456", default);
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    /// <summary>
+    /// Die Identitaet eines Eintrags ist eine chess-results-Nummer oder ein Quellen-Kuerzel plus
+    /// Nummer („f14805" fuer den FIDE-Kalender). Alles andere wird abgewiesen — der Wert steht in
+    /// Adressen und wird als Schluessel verglichen.
+    /// </summary>
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("12345678901")]
+    [InlineData("f")]
+    [InlineData("fide-14805")]
+    [InlineData("../etc")]
+    public async Task Get_InvalidId_IsRejected(string id)
+    {
+        var result = await CreateController(1).Get(id, default);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Ortsvorschlaege --------------------------------------------------
+
+    [Fact]
+    public async Task Places_ByPostalCodePrefix()
+    {
+        SeedPlaces();
+        var result = await CreateController(1).Places("54", default);
+        var suggestions = Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("5400 Hallein (AT)", Assert.Single(suggestions).Label);
+    }
+
+    [Fact]
+    public async Task Places_ByNamePrefers_ExactThenLargest()
+    {
+        SeedPlaces();
+        var result = await CreateController(1).Places("Wien", default);
+        var suggestions = Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(2, suggestions.Count);
+        Assert.StartsWith("Wien ", suggestions[0].Label);   // exakter Treffer vor "Wiener Neudorf"
+    }
+
+    [Fact]
+    public async Task Places_TooShort_ReturnsEmpty()
+    {
+        SeedPlaces();
+        var result = await CreateController(1).Places("W", default);
+        Assert.Empty(Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value));
+    }
+
+    /// <summary>
+    /// Kyrillische oder griechische Eingabe: `Normalize` ergibt dafuer '', und StartsWith('')
+    /// traf frueher die ganze Tabelle — mit den PLZ-Zeilen mit LEEREM Normalnamen als „exakte
+    /// Treffer" vorn. Jetzt sucht die Umschrift-Spalte wie bei der Verortung.
+    /// </summary>
+    [Theory]
+    [InlineData("Київ", "Kyiv (UA)")]
+    [InlineData("Ки", "Kyiv (UA)")]
+    [InlineData("Αθήνα", "Αθήνα (GR)")]
+    public async Task Places_NonLatinInput_SearchesTheTranscription(string q, string expected)
+    {
+        SeedPlaces();
+        SeedNonLatinPlaces();
+
+        var result = await CreateController(1).Places(q, default);
+        var suggestions = Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(expected, Assert.Single(suggestions).Label);
+    }
+
+    /// <summary>Bleibt nach beiden Normalformen nichts uebrig, gibt es keinen Vorschlag — nicht zehn beliebige.</summary>
+    [Fact]
+    public async Task Places_NothingSearchableLeft_ReturnsEmpty()
+    {
+        SeedPlaces();
+        SeedNonLatinPlaces();
+
+        var result = await CreateController(1).Places("--", default);
+
+        Assert.Empty(Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value));
+    }
+
+    /// <summary>Umlaut-Eingabe findet weiter ueber den Normalnamen — die Umschrift kommt nur dazu.</summary>
+    [Fact]
+    public async Task Places_UmlautInput_StillFindsTheNormalizedName()
+    {
+        _db.GeoPlaces.Add(new GeoPlace
+        {
+            Country = "DE", Name = "Munchen", NameNormalized = "munchen", NameTranscribed = "munchen",
+            Lat = 48.14, Lon = 11.58, Kind = GeoPlaceKind.City, Population = 1_500_000,
+        });
+        _db.SaveChanges();
+
+        var result = await CreateController(1).Places("München", default);
+        var suggestions = Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("Munchen (DE)", Assert.Single(suggestions).Label);
+    }
+
+    /// <summary>
+    /// Wie im echten Lexikon: der Ort selbst lateinisch (GeoNames), die ukrainischen
+    /// PLZ-Zeilen kyrillisch — ihr Normalname ist LEER, nur die Umschrift traegt.
+    /// </summary>
+    private void SeedNonLatinPlaces()
+    {
+        _db.GeoPlaces.AddRange(
+            new GeoPlace { Country = "UA", Name = "Kyiv", NameNormalized = "kyiv", NameTranscribed = "kyiv", Lat = 50.45, Lon = 30.52, Kind = GeoPlaceKind.City, Population = 2_900_000 },
+            new GeoPlace { Country = "UA", PostalCode = "79000", Name = "Львів", NameNormalized = "", NameTranscribed = "lviv", Lat = 49.84, Lon = 24.03, Kind = GeoPlaceKind.PostalCode },
+            new GeoPlace { Country = "UA", PostalCode = "65000", Name = "Одеса", NameNormalized = "", NameTranscribed = "odesa", Lat = 46.48, Lon = 30.72, Kind = GeoPlaceKind.PostalCode },
+            new GeoPlace { Country = "GR", Name = "Αθήνα", NameNormalized = "", NameTranscribed = "athina", Lat = 37.98, Lon = 23.73, Kind = GeoPlaceKind.City, Population = 660_000 });
+        _db.SaveChanges();
+    }
+
+    private void SeedPlaces()
+    {
+        _db.GeoPlaces.AddRange(
+            new GeoPlace { Country = "AT", PostalCode = "5400", Name = "Hallein", NameNormalized = "hallein", Lat = 47.68, Lon = 13.1, Kind = GeoPlaceKind.PostalCode },
+            new GeoPlace { Country = "AT", Name = "Wien", NameNormalized = "wien", Lat = 48.21, Lon = 16.37, Kind = GeoPlaceKind.City, Population = 1_900_000 },
+            new GeoPlace { Country = "AT", Name = "Wiener Neudorf", NameNormalized = "wiener neudorf", Lat = 48.08, Lon = 16.32, Kind = GeoPlaceKind.City, Population = 9_000 });
+        _db.SaveChanges();
+    }
+
+    private TournamentDirectoryEntry NewEntry(
+        string name, string id, DateOnly? start = null, double? lat = null, double? lon = null,
+        int players = 10, string location = "Ranshofen", bool withKey = true, string? groupKey = "auto")
+    {
+        var entry = new TournamentDirectoryEntry
+        {
+            PublicId = id, ChessResultsId = id,
+            Name = name,
+            BaseName = TournamentNameGrouping.BaseName(name),
+            Federation = "AUT",
+            StartDate = start ?? new DateOnly(2026, 10, 10),
+            EndDate = start ?? new DateOnly(2026, 10, 10),
+            LocationText = location,
+            PlayerCount = players,
+            Lat = lat,
+            Lon = lon,
+            GeoSource = lat is null ? GeoSource.None : GeoSource.City,
+        };
+        entry.GroupKey = groupKey == "auto" ? TournamentDirectoryService.ComputeGroupKey(entry) : groupKey;
+        return entry;
+    }
+
+    private async Task AddGroupedAsync(
+        string name, string id, DateOnly? start = null, double? lat = null, double? lon = null,
+        int players = 10, string location = "Ranshofen")
+    {
+        _db.TournamentDirectoryEntries.Add(NewEntry(name, id, start, lat, lon, players, location));
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<DirectoryPageDto> SearchAsync(
+        string? from = null, string? to = null, double? lat = null, double? lon = null, int? radiusKm = null,
+        string? fed = null, string? speed = null, string? q = null, bool weekendOnly = false,
+        DirectoryAudienceQuery? audience = null, int userId = 1)
+    {
+        var result = await CreateController(userId).Search(
+            from, to, lat, lon, radiusKm, fed, speed, q, weekendOnly, audience: audience);
+        return Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    // ----- Publikum + Format ------------------------------------------------
+
+    /// <summary>
+    /// Ein Turnier mit Merkmalen. Die drei abgeleiteten Felder werden hier BEWUSST von Hand
+    /// gesetzt statt ueber den Klassifizierer: was aus einem Namen folgt, gehoert in dessen
+    /// eigene Tests — hier wird nur gefiltert.
+    /// </summary>
+    private async Task AddAudienceEntryAsync(
+        string id, string name, TournamentKind kind = TournamentKind.Individual,
+        TournamentAgeGroups ageGroups = TournamentAgeGroups.None,
+        TournamentGender gender = TournamentGender.Open, bool isLeague = false)
+    {
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = id, ChessResultsId = id, Name = name, Federation = "AUT",
+            StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 12),
+            Kind = kind, AgeGroups = ageGroups, Gender = gender, IsLeague = isLeague,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Search_KindFilter_KeepsOnlyTeamEvents()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau");
+        await AddAudienceEntryAsync("2", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Kinds = "team" });
+
+        Assert.Equal("2", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// „EINZEL" schliesst das Nicht-Eingeordnete mit ein.
+    ///
+    /// <para>Aus der Quelle kommt nur die Auskunft „ist eine MANNSCHAFTS-Turnierart"; alles andere
+    /// ist Einzel. `Unknown` heisst dabei „die Mannschafts-Abfrage lief hier noch nicht" (die
+    /// Foederationen rotieren ueber eine Woche) oder „sie fiel aus" — kein eigener Fall fuer
+    /// jemanden, der ein Turnier sucht. Als eigener Fall gefuehrt lieferte „Einzel" eine halb
+    /// leere Liste, obwohl der Bestand voll davon ist.</para>
+    /// </summary>
+    [Fact]
+    public async Task Search_KindIndividual_IncludesUnclassified()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau", TournamentKind.Individual);
+        await AddAudienceEntryAsync("2", "Noch nicht geklaert", TournamentKind.Unknown);
+        await AddAudienceEntryAsync("3", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Kinds = "individual" });
+
+        Assert.Equal(["1", "2"], page.Items.Select(i => i.ChessResultsId).Order());
+    }
+
+    /// <summary>Die Gegenprobe: „Mannschaft" bleibt exakt und zieht nichts Unklares herein.</summary>
+    [Fact]
+    public async Task Search_KindTeam_ExcludesUnclassified()
+    {
+        await AddAudienceEntryAsync("1", "Noch nicht geklaert", TournamentKind.Unknown);
+        await AddAudienceEntryAsync("2", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Kinds = "team" });
+
+        Assert.Equal("2", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// Ueberschneidung, nicht Gleichheit: „U12" muss die U8-U18-Meisterschaft finden. Waere hier
+    /// auf Gleichheit geprueft, fiele genau die grosse Ausschreibung durch, die ein Elternteil
+    /// sucht.
+    /// </summary>
+    [Fact]
+    public async Task Search_AgeGroupFilter_MatchesEventsCoveringSeveralClasses()
+    {
+        await AddAudienceEntryAsync("1", "Landesmeisterschaft U10 U12 U14",
+            ageGroups: TournamentAgeGroups.U10 | TournamentAgeGroups.U12 | TournamentAgeGroups.U14);
+        await AddAudienceEntryAsync("2", "U18 Cup", ageGroups: TournamentAgeGroups.U18);
+        await AddAudienceEntryAsync("3", "Open Braunau");
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { AgeGroups = "u12" });
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    [Fact]
+    public async Task Search_GenderFilter_KeepsFemaleSections()
+    {
+        await AddAudienceEntryAsync("1", "U12 weiblich",
+            ageGroups: TournamentAgeGroups.U12, gender: TournamentGender.Female);
+        await AddAudienceEntryAsync("2", "U12 maennlich",
+            ageGroups: TournamentAgeGroups.U12, gender: TournamentGender.Male);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { Genders = "female" });
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// „Nur Erwachsene" heisst: kein JUGENDmerkmal. Ein Seniorenturnier bleibt sichtbar —
+    /// Seniorenschach ist Erwachsenenschach, und das Gegenteil waere eine Alterssperre nach oben.
+    /// </summary>
+    [Fact]
+    public async Task Search_AdultsOnly_HidesYouthButKeepsSeniors()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau");
+        await AddAudienceEntryAsync("2", "Jugendmeisterschaft", ageGroups: TournamentAgeGroups.YouthUnspecified);
+        await AddAudienceEntryAsync("3", "U12 Cup", ageGroups: TournamentAgeGroups.U12);
+        await AddAudienceEntryAsync("4", "Seniorenmeisterschaft", ageGroups: TournamentAgeGroups.Senior);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { AdultsOnly = true });
+
+        Assert.Equal(["1", "4"], page.Items.Select(i => i.ChessResultsId).OrderBy(x => x).ToArray());
+    }
+
+    [Fact]
+    public async Task Search_HideLeagues_DropsSeasonCompetitions()
+    {
+        await AddAudienceEntryAsync("1", "Open Braunau");
+        await AddAudienceEntryAsync("2", "Landesliga", TournamentKind.Team, isLeague: true);
+
+        var page = await SearchAsync(audience: new DirectoryAudienceQuery { HideLeagues = true });
+
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// Ein unbekannter Wert ist ein FEHLER. Still zu ignorieren waere schlimmer als abzulehnen:
+    /// die Anzeige zeigte dann eine ungefilterte Liste und behauptete in der Filterleiste das
+    /// Gegenteil.
+    /// </summary>
+    [Theory]
+    [InlineData("u13", null, null)]
+    [InlineData(null, "mixed", null)]
+    [InlineData(null, null, "pairs")]
+    public async Task Search_UnknownAudienceValue_IsRejected(string? ages, string? genders, string? kinds)
+    {
+        var result = await CreateController(1).Search(audience: new DirectoryAudienceQuery
+        {
+            AgeGroups = ages, Genders = genders, Kinds = kinds,
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Search_AgeGroupNames_AreReportedOnTheEntry()
+    {
+        await AddAudienceEntryAsync("1", "Landesmeisterschaft U10 U12",
+            ageGroups: TournamentAgeGroups.U10 | TournamentAgeGroups.U12);
+
+        var page = await SearchAsync();
+
+        Assert.Equal(["U10", "U12"], Assert.Single(page.Items).AgeGroups);
+    }
+
+    // ----- Spieltermine im Kalender -----------------------------------------
+
+    /// <summary>
+    /// Sind Spieltermine bekannt, steht das Turnier NUR an ihnen. Eine Liga laeuft von September
+    /// bis April und wurde vorher an jedem Tag dazwischen gezeichnet — rund 200 Tage, an denen
+    /// nichts gespielt wird und die die Turniere verdeckten, die es wirklich gibt.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_EntryWithRoundDates_AppearsOnlyOnThoseDays()
+    {
+        var entry = new TournamentDirectoryEntry
+        {
+            PublicId = "1479344", ChessResultsId = "1479344", Name = "TMM 1.Klasse", Federation = "AUT",
+            StartDate = new DateOnly(2026, 9, 26), EndDate = new DateOnly(2027, 4, 17),
+            Rounds = 11,
+            RoundDates =
+            [
+                new TournamentDirectoryRound { Number = 1, Date = new DateOnly(2026, 10, 10) },
+                new TournamentDirectoryRound { Number = 2, Date = new DateOnly(2026, 10, 24) },
+            ],
+        };
+        _db.TournamentDirectoryEntries.Add(entry);
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var month = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        var withEntry = month.Days.Where(d => d.Ids.Count > 0).Select(d => d.Date).ToList();
+        Assert.Equal([new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 24)], withEntry);
+        // Das Turnier selbst steht EINMAL in der Liste, samt seinen Terminen.
+        Assert.Equal(2, Assert.Single(month.Tournaments).RoundDates.Count);
+    }
+
+    /// <summary>
+    /// Ohne Spieltermine gilt weiter der ganze Zeitraum. Bei einem mehrtaegigen Open ist das
+    /// richtig — dort wird an aufeinanderfolgenden Tagen gespielt.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_EntryWithoutRoundDates_StillSpansItsWholeRange()
+    {
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var month = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(3, month.Days.Count(d => d.Ids.Count > 0));
+    }
+
+    // ----- Naechster Ort zu Koordinaten -------------------------------------
+
+    [Fact]
+    public async Task NearestPlace_PrefersTheClosestPlace()
+    {
+        SeedPlaces();
+
+        var result = await CreateController(1).NearestPlace(48.09, 16.31, default);
+        var place = Assert.IsType<GeoPlaceSuggestionDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("Wiener Neudorf (AT)", place.Label);
+    }
+
+    /// <summary>
+    /// Kein Ort in Reichweite ist kein Fehler: die Koordinaten des Nutzers gelten trotzdem, nur
+    /// das Namensfeld bleibt leer. Ein 404 haette die Umkreissuche mitgerissen.
+    /// </summary>
+    [Fact]
+    public async Task NearestPlace_NothingWithinRange_IsNoContent()
+    {
+        SeedPlaces();
+
+        var result = await CreateController(1).NearestPlace(-33.86, 151.2, default);
+
+        Assert.IsType<NoContentResult>(result.Result);
+    }
+
+    [Theory]
+    [InlineData(91.0, 0.0)]
+    [InlineData(0.0, 181.0)]
+    public async Task NearestPlace_OutOfRange_IsRejected(double lat, double lon)
+    {
+        var result = await CreateController(1).NearestPlace(lat, lon, default);
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    // ----- Ausblenden je Nutzer ---------------------------------------------
+
+    /// <summary>
+    /// Ein ausgeblendetes Turnier verschwindet aus der Liste. Der Filter ist persoenlich: das
+    /// Verzeichnis kennt tausende Turniere, und ein Teil davon ist fuer einen bestimmten Menschen
+    /// dauerhaft uninteressant — die Liga, in der er nicht spielt.
+    /// </summary>
+    [Fact]
+    public async Task Search_IgnoredTournament_IsHidden()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Ignore("2", default));
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(userId).Search()).Result).Value);
+        Assert.Equal("1", Assert.Single(page.Items).ChessResultsId);
+    }
+
+    /// <summary>
+    /// Ausgeblendetes gilt NUR fuer den, der es ausgeblendet hat — sonst waere es eine
+    /// Moderation und keine persoenliche Auswahl.
+    /// </summary>
+    [Fact]
+    public async Task Search_IgnoredByOneUser_StaysVisibleForAnother()
+    {
+        var mine = await CreateUserAsync("ich");
+        var other = await CreateUserAsync("andere");
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(mine).Ignore("2", default);
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(other).Search()).Result).Value);
+        Assert.Single(page.Items);
+    }
+
+    /// <summary>
+    /// Ohne diesen Schalter waere ein weggeklicktes Turnier unwiederbringlich weg, und niemand
+    /// wuesste, was er einmal ausgeblendet hat. Die Antwort sagt dann auch, WELCHE es sind.
+    /// </summary>
+    [Fact]
+    public async Task Search_IncludeIgnored_ShowsThemAndMarksThem()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("1", "Open Braunau", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(userId).Ignore("2", default);
+
+        var page = await SearchAsync(userId: userId,
+            audience: new DirectoryAudienceQuery { IncludeIgnored = true });
+
+        Assert.Equal(2, page.Items.Count);
+        Assert.True(page.Items.Single(i => i.ChessResultsId == "2").Ignored);
+        Assert.False(page.Items.Single(i => i.ChessResultsId == "1").Ignored);
+    }
+
+    [Fact]
+    public async Task Unignore_BringsItBack()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(userId).Ignore("2", default);
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore("2", default));
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(userId).Search()).Result).Value);
+        Assert.Single(page.Items);
+    }
+
+    /// <summary>Zweimal ausblenden ist dasselbe wie einmal — und zweimal zeigen auch.</summary>
+    [Fact]
+    public async Task Ignore_Twice_IsTheSameAsOnce()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+
+        await CreateController(userId).Ignore("2", default);
+        await CreateController(userId).Ignore("2", default);
+        Assert.Single(await _db.TournamentDirectoryIgnores.ToListAsync());
+
+        await CreateController(userId).Unignore("2", default);
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore("2", default));
+    }
+
+    /// <summary>
+    /// Die DETAILseite zeigt ein ausgeblendetes Turnier trotzdem — dorthin ist man absichtlich
+    /// gegangen. Sie sagt nur, dass es ausgeblendet ist, damit man es zuruecknehmen kann.
+    /// </summary>
+    [Fact]
+    public async Task Get_IgnoredTournament_IsStillReturnedAndMarked()
+    {
+        var userId = await CreateUserAsync();
+        await AddEntryAsync("2", "Landesliga", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await CreateController(userId).Ignore("2", default);
+
+        var result = await CreateController(userId).Get("2", default);
+        var dto = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.True(dto.Ignored);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("12345678901")]
+    [InlineData("fide-14805")]
+    public async Task Ignore_InvalidId_IsRejected(string id)
+    {
+        Assert.IsType<BadRequestObjectResult>(await CreateController(1).Ignore(id, default));
+        Assert.IsType<BadRequestObjectResult>(await CreateController(1).Unignore(id, default));
+    }
+
+    /// <summary>
+    /// A5-003: die Kennungen der Verbandskalender (zwei Buchstaben plus Nummer, Polen mit Jahr und
+    /// Bindestrich, Kurzschluessel aus 12 Hex-Zeichen) fielen durch das alte Muster
+    /// <c>^[a-z]?\d{1,10}$</c> — Detailseite, Ausblenden und Melden antworteten 400, der Nutzer
+    /// konnte solche Eintraege weder oeffnen noch loswerden.
+    /// </summary>
+    [Theory]
+    [InlineData("ie12345")]
+    [InlineData("hu4711")]
+    [InlineData("pl2026-4711")]
+    [InlineData("de0123456789ab")]
+    [InlineData("f14805")]
+    public async Task FederationIds_CanBeOpenedIgnoredAndReported(string id)
+    {
+        var userId = await CreateUserAsync("melder");
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = id, ChessResultsId = null, Name = $"Verbandsturnier {id}", Federation = "IRL",
+            StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 11),
+        });
+        await _db.SaveChangesAsync();
+
+        var get = await CreateController(userId).Get(id, default);
+        Assert.Equal(id, Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(get.Result).Value).Id);
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Ignore(id, default));
+        Assert.Equal(id, Assert.Single(await _db.TournamentDirectoryIgnores.ToListAsync()).PublicId);
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore(id, default));
+        Assert.Empty(await _db.TournamentDirectoryIgnores.ToListAsync());
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Report(id, new DirectoryReportDto(), default));
+        Assert.Contains(id, Assert.Single(await _db.AdminMessages.ToListAsync()).Body);
+    }
+
+    // ----- Rueckmeldungen ---------------------------------------------------
+
+    /// <summary>
+    /// Die Falschmeldung geht in den ADMIN-Nachrichtenkanal — dort gibt es eine Oberflaeche, eine
+    /// Glocke und, das Entscheidende, einen Rueckweg zum Melder.
+    /// </summary>
+    [Fact]
+    public async Task Report_LandsInTheAdminMessageThread()
+    {
+        var userId = await CreateUserAsync("melder");
+        await AddAudienceEntryAsync("1405166", "Tiroler Landesliga", TournamentKind.Team, isLeague: true);
+
+        var result = await CreateController(userId).Report("1405166",
+            new DirectoryReportDto { Message = "Spielort ist Mayrhofen, nicht St. Veit." },
+            default);
+
+        Assert.IsType<NoContentResult>(result);
+        var message = Assert.Single(await _db.AdminMessages.ToListAsync());
+        Assert.Equal(userId, message.UserId);
+        Assert.False(message.FromAdmin);
+        Assert.Contains("1405166", message.Body);
+        Assert.Contains("Mayrhofen", message.Body);
+        // Der IST-Stand gehoert dazu, sonst muss der Admin fuer jede Meldung erst nachsehen.
+        Assert.Contains("Team", message.Body);
+    }
+
+    /// <summary>
+    /// Die beiden Lern-Fragen des Formulars. Sie sind der eigentliche Gewinn: „bei uns heissen die
+    /// Jugendturniere Schachrallye" ist eine Regel fuer ALLE kuenftigen Ausschreibungen dieser
+    /// Reihe, nicht bloss eine Korrektur an diesem einen Eintrag. Darum stehen sie benannt in der
+    /// Nachricht und nicht im Freitext, wo sie beim Durchsehen untergingen.
+    /// </summary>
+    [Fact]
+    public async Task Report_LearningAnswers_AreNamedInTheMessage()
+    {
+        var userId = await CreateUserAsync("melder");
+        await AddAudienceEntryAsync("1", "Schachrallye Telfs 2026 Gruppe B");
+
+        await CreateController(userId).Report("1", new DirectoryReportDto
+        {
+            NamePattern = "Schachrallye = immer Nachwuchs",
+            SourceLink = "https://www.tiroler-schachverband.at/jugend",
+        }, default);
+
+        var body = Assert.Single(await _db.AdminMessages.ToListAsync()).Body;
+        Assert.Contains("Solche Turniere heissen dort: Schachrallye = immer Nachwuchs", body);
+        Assert.Contains("Besser ersichtlich auf: https://www.tiroler-schachverband.at/jugend", body);
+    }
+
+    [Fact]
+    public async Task Report_UnknownTournament_IsNotFound()
+    {
+        var userId = await CreateUserAsync("melder");
+
+        var result = await CreateController(userId).Report("999", new DirectoryReportDto(), default);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    /// <summary>Ein Knopfdruck ohne ein Wort ist eine gueltige Meldung („hier stimmt was nicht").</summary>
+    [Fact]
+    public async Task Report_WithoutAnyText_IsStillAccepted()
+    {
+        var userId = await CreateUserAsync("melder");
+        await AddAudienceEntryAsync("1", "Open Braunau");
+
+        var result = await CreateController(userId).Report("1", new DirectoryReportDto(), default);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Single(await _db.AdminMessages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SuggestSource_StoresTheLink()
+    {
+        var userId = await CreateUserAsync("melder");
+
+        var result = await CreateController(userId).SuggestSource(new DirectorySourceSuggestionDto
+        {
+            Link = "https://www.tiroler-schachverband.at/termine",
+            Message = "Unsere Turniere stehen nicht auf chess-results.",
+        });
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Contains("tiroler-schachverband.at", Assert.Single(await _db.AdminMessages.ToListAsync()).Body);
+    }
+
+    /// <summary>
+    /// Ohne Link ist der Hinweis nicht verwertbar — ein Verbandskalender laesst sich crawlen, ein
+    /// Satz Freitext nicht. Und ein „javascript:"-Link waere nur eine Falle fuer den Admin, der
+    /// die Meldung spaeter anklickt.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("tiroler-schachverband.at")]
+    [InlineData("javascript:alert(1)")]
+    public async Task SuggestSource_WithoutAUsableLink_IsRejected(string? link)
+    {
+        var userId = await CreateUserAsync("melder");
+
+        var result = await CreateController(userId).SuggestSource(
+            new DirectorySourceSuggestionDto { Link = link, Message = "bitte crawlen" });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+}

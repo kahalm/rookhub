@@ -1,0 +1,1882 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.Chessable;
+
+/// <summary>
+/// Robustheit/Resume des async Chessable-Imports: gecheckpointetes PGN (kein erneuter Fetch),
+/// idempotente Schritte (kein Doppelt-Anlegen), Versuchs-Limit.
+/// Tests setzen FetchedPgn vor → der ChessableProxyService (HTTP) wird nie aufgerufen.
+/// </summary>
+public class ChessableImportServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly EncryptionService _encryption;
+    private readonly RepertoireService _repertoires;
+    private readonly FakeQueue _queue = new();
+    private readonly ChessableImportService _svc;
+
+    public ChessableImportServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        _db = new AppDbContext(options);
+
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!"
+        }).Build();
+        _encryption = new EncryptionService(config);
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        _repertoires = TestServices.Repertoire(_db, cache);
+        // Default-Proxy wird bei FetchedPgn-Tests nie aufgerufen → Handler wirft, falls doch.
+        _svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")));
+    }
+
+    private ChessableImportService BuildSvc(HttpMessageHandler handler, int? dailyLineLimit = null, AppDbContext? db = null)
+    {
+        var d = db ?? _db;
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
+        var breaker = new ChessableBearerBreaker(d, _queue, NullLogger<ChessableBearerBreaker>.Instance);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Chessable:DailyLineLimitPerUser"] = dailyLineLimit?.ToString(),
+        }).Build();
+        var rateLimiter = new ChessableRateLimiter(d, config);
+        var repertoires = ReferenceEquals(d, _db)
+            ? _repertoires
+            : TestServices.Repertoire(d);
+        return new ChessableImportService(d, _encryption, proxy, repertoires, new PgnImportService(d),
+            _queue, new NotificationService(d), breaker, rateLimiter, NullLogger<ChessableImportService>.Instance);
+    }
+
+    /// <summary>DbContext, der ab einem bestimmten asynchronen SaveChanges wirft — steht für „DB gerade
+    /// weg" (Ausfall/Timeout) und damit für den Zustand, in dem <c>FailAsync</c> den Fehlerstatus NICHT
+    /// mehr festschreiben kann.</summary>
+    private sealed class FlakyDbContext : AppDbContext
+    {
+        public FlakyDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+        /// <summary>Ab dem wievielten asynchronen SaveChanges geworfen wird (1 = ab dem ersten). null = nie.</summary>
+        public int? ThrowFromSaveNo { get; set; }
+        public int AsyncSaves { get; private set; }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            AsyncSaves++;
+            if (ThrowFromSaveNo is { } n && AsyncSaves >= n)
+                throw new InvalidOperationException("DB weg (simuliert)");
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+    }
+
+    /// <summary>Import mit ausgeschöpften Versuchen in einer eigenen (kaputt schaltbaren) DB — RunAsync
+    /// geht damit direkt in FailAsync, ohne dass vorher etwas gespeichert werden müsste.</summary>
+    private static (FlakyDbContext Db, int ImportId) SeedForFailAsync()
+    {
+        var db = new FlakyDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "Kurs", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, Attempts = ChessableImportService.MaxAttempts,
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.ChessableImports.Add(imp);
+        db.SaveChanges();   // synchron → von der Wurf-Logik nicht betroffen
+        return (db, imp.Id);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    // Chessable-Stil-Puzzle-PGN (FEN + [%tqu]) → erzeugt beim Buch-Import ein Kurs-Puzzle.
+    private const string PuzzlePgn = @"
+[Event ""Test Book""]
+[Round ""1.1""]
+[White ""Italian Idea""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""Finde den Zug""] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *
+";
+
+    [Fact]
+    public async Task ImportPgnDirect_Repertoire_CreatesRepertoireAndNotifies()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var import = await _svc.ImportPgnDirectAsync(7, "424242", "1. e4 e5 2. Nf3 Nc6 *", "My Course", "repertoire", 3);
+
+        Assert.Equal(ChessableImportStatus.Completed, import.Status);
+        Assert.NotNull(import.ResultId);
+        Assert.True(import.FullyCached);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        var rep = await _db.Repertoires.FirstAsync(r => r.UserId == 7);
+        Assert.False(rep.UseForExtension);                 // wie Server-Import: nicht für die Extension
+        Assert.Equal("424242", rep.ChessableCourseId);     // aus dem Dateinamen chessable-424242.pgn
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted));
+    }
+
+    [Fact]
+    public async Task ImportPgnDirect_Repertoire_ReSend_SameRepertoire_NoDuplicate()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var pgn = RepLineOid("A", "1. e4 e5 2. Nf3 *", "100");
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", pgn, "My Course", "repertoire", 1);
+        var repId = first.ResultId;
+        var before = (await _db.RepertoireFiles.SingleAsync(f => f.RepertoireId == repId)).PgnContent;
+
+        // Erneutes „Über meinen Browser holen" desselben Kurses → dasselbe Repertoire, nichts doppelt.
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", pgn, "My Course", "repertoire", 1);
+
+        Assert.Equal(repId, second.ResultId);                       // dieselbe Id (Fortschritt bleibt)
+        Assert.Equal(repId, second.TargetRepertoireId);
+        Assert.Equal(0, second.Imported);
+        Assert.Equal(1, second.Skipped);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));  // kein Duplikat
+        var file = await _db.RepertoireFiles.SingleAsync(f => f.RepertoireId == repId);
+        Assert.Equal(before, file.PgnContent);
+    }
+
+    /// <summary>
+    /// Regression (Prod, Repertoire 232 am 2026-08-12): „Mitschnitt importieren" schickt nur die gerade
+    /// mitgeschnittenen Linien. Bei einem schon vorhandenen Repertoire ersetzte der Browser-Import die ganze
+    /// Datei — dreimal hintereinander stand das Repertoire auf EINER Linie, alle übrigen Partien waren gelöscht.
+    /// Ein Browser-Import in ein vorhandenes Repertoire hängt jetzt an und löscht nie etwas, auch keine
+    /// ausgeblendeten Altlasten.
+    /// </summary>
+    [Fact]
+    public async Task ImportPgnDirect_Repertoire_PartialCaptureIntoExisting_AppendsAndKeepsEveryGame()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var hidden = "[Event \"Ch1\"]\n[White \"Kopie\"]\n[Black \"T\"]\n[Result \"*\"]\n[RookHubHidden \"Kopie von Partie 1\"]\n\n1. g3 d5 2. Bg2 *\n";
+        var full = RepLineOid("A", "1. e4 e5 2. Nf3 *", "100") + "\n"
+                 + RepLineOid("B", "1. d4 d5 2. c4 *", "101") + "\n"
+                 + RepLineOid("C", "1. c4 e5 2. Nc3 *", "102") + "\n"
+                 + hidden;
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", full, "My Course", "repertoire", 3);
+        var repId = first.ResultId;
+
+        // Mitschnitt: eine bekannte Linie (101) und eine neue (103).
+        var capture = RepLineOid("B", "1. d4 d5 2. c4 *", "101") + "\n" + RepLineOid("D", "1. Nf3 d5 2. g3 *", "103");
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", capture, "My Course", "repertoire", 2);
+
+        Assert.Equal(ChessableImportStatus.Completed, second.Status);
+        Assert.Equal(repId, second.ResultId);
+        Assert.Equal(1, second.Imported);
+        Assert.Equal(1, second.Skipped);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        var content = (await _db.RepertoireFiles.SingleAsync(f => f.RepertoireId == repId)).PgnContent;
+        foreach (var oid in new[] { "100", "101", "102", "103" })
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(content, $"\\[ChessableOid \"{oid}\"\\]"));
+        Assert.Contains("[RookHubHidden \"Kopie von Partie 1\"]", content);   // Altlast bleibt, ausgeblendet
+        Assert.Contains("1. g3 d5 2. Bg2", content);
+    }
+
+    // Buch-Puzzle-PGN mit Chessable-oid-Header (wie piratechess es ab v1.29.0 liefert).
+    private const string PuzzlePgnWithOid = @"
+[Event ""Test Book""]
+[Round ""002.002""]
+[White ""Idea""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+[ChessableOid ""500""]
+
+{ [%tqu ""En"",""Finde den Zug""] } 2.Nf3 Nc6 3. Bb5 *
+";
+
+    private static string RepLineOid(string white, string moves, string oid) =>
+        $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n\n{moves}\n";
+
+    [Fact]
+    public async Task GetImportedOids_Book_ReturnsStoredOid()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(7, "424242", PuzzlePgnWithOid, "Tactics", "book");
+        var (oids, book, rep) = await _svc.GetImportedOidsAsync(7, "424242");
+
+        Assert.True(book);
+        Assert.False(rep);
+        Assert.Contains("500", oids);
+    }
+
+    [Fact]
+    public async Task GetImportedOids_CachesTheOidsAndRebuildsThemWhenThePgnGrows()
+    {
+        // Der Extension-Poll darf nicht bei jedem Aufruf das ganze PGN durchsuchen. Nach dem
+        // ersten Aufruf steht die Kennungsliste in der Datei; waechst das PGN, MUSS sie neu
+        // gebaut werden - sonst fehlten frisch durchgeklickte Linien dauerhaft im Overlay.
+        _db.AppUsers.Add(new AppUser { Id = 31, Username = "u31", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(31, "70001", RepLineOid("A", "1. e4 e5 *", "901"), "C", "repertoire");
+        var (oids1, _, _) = await _svc.GetImportedOidsAsync(31, "70001");
+        Assert.Contains("901", oids1);
+
+        _db.ChangeTracker.Clear();
+        var file = await _db.RepertoireFiles.FirstAsync();
+        Assert.Equal("901", file.ChessableOidsCache);
+        Assert.Equal(file.PgnContent.Length, file.ChessableOidsPgnLength);
+
+        // Zweiter Aufruf ohne Aenderung: Zwischenspeicher bleibt, Ergebnis identisch.
+        _db.ChangeTracker.Clear();
+        var (oids2, _, _) = await _svc.GetImportedOidsAsync(31, "70001");
+        Assert.Contains("901", oids2);
+
+        // Neue Linie -> PGN laenger -> Zwischenspeicher veraltet und wird neu gebaut.
+        await _svc.AppendLiveAsync(31, "70001", RepLineOid("B", "1. d4 d5 *", "902"), "C", "repertoire");
+        _db.ChangeTracker.Clear();
+        var (oids3, _, _) = await _svc.GetImportedOidsAsync(31, "70001");
+        Assert.Contains("901", oids3);
+        Assert.Contains("902", oids3);
+
+        _db.ChangeTracker.Clear();
+        var after = await _db.RepertoireFiles.FirstAsync();
+        Assert.Equal(after.PgnContent.Length, after.ChessableOidsPgnLength);
+    }
+
+    [Fact]
+    public async Task GetImportedOids_Repertoire_ParsesOidsFromPgn()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(7, "424242", RepLineOid("Line A", "1. e4 e5 *", "601"), "My Course", "repertoire");
+        await _svc.AppendLiveAsync(7, "424242", RepLineOid("Line B", "1. d4 d5 *", "602"), "My Course", "repertoire");
+        var (oids, book, rep) = await _svc.GetImportedOidsAsync(7, "424242");
+
+        Assert.True(rep);
+        Assert.False(book);
+        Assert.Contains("601", oids);
+        Assert.Contains("602", oids);
+    }
+
+    [Fact]
+    public async Task GetImportedOids_CountsBothReviewAndGetGameLines()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var fileName = "chessable-u7-424242.pgn";
+        var book = new Book { FileName = fileName, DisplayName = "Course", OwnerUserId = 7, Source = new BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        // Eine aus getReview vorbelegte Lücken-Füller-Linie (Source="review") und eine vollwertige
+        // getGame-Linie (Source=null) im selben Buch — BEIDE zählen als gecacht.
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = $"{fileName}:900", BookFileName = fileName, BookId = book.Id, Round = "900",
+            Fen = "8/8/8/8/8/8/8/8 w - - 0 1", Moves = "e2e4", ChessableOid = "900", Source = "review",
+        });
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = $"{fileName}:901", BookFileName = fileName, BookId = book.Id, Round = "901",
+            Fen = "8/8/8/8/8/8/8/8 w - - 0 1", Moves = "d2d4", ChessableOid = "901", Source = null,
+        });
+        await _db.SaveChangesAsync();
+
+        var (oids, hasBook, _) = await _svc.GetImportedOidsAsync(7, "424242");
+
+        Assert.True(hasBook);
+        Assert.Contains("901", oids);   // getGame-Linie zählt als importiert
+        Assert.Contains("900", oids);   // Review-Linie zählt AUCH → Overlay-✓ + kein getGame-Re-Fetch
+    }
+
+    [Fact]
+    public async Task GetImportedOids_NothingImported_Empty()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        var (oids, book, rep) = await _svc.GetImportedOidsAsync(7, "111111");
+        Assert.Empty(oids);
+        Assert.False(book);
+        Assert.False(rep);
+    }
+
+    private static string RepLine(string white, string moves) =>
+        $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n\n{moves}\n";
+
+    [Fact]
+    public async Task AppendLive_DedupsOnTheWholeLine_NotOnASubstringOfIt()
+    {
+        // Frueher: existing.Contains(moves) - eine Teilzeichenketten-Suche ueber das GESAMTE PGN.
+        // In der Praxis grenzt das Ergebniszeichen (*) die Linien voneinander ab, der Unterschied
+        // faellt also selten auf; kommt eine Linie OHNE Ergebniszeichen herein, war sie eine
+        // echte Teilzeichenkette der gespeicherten und verschwand lautlos. Jetzt wird der
+        // vollstaendige Zugtext verglichen.
+        _db.AppUsers.Add(new AppUser { Id = 21, Username = "u21", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(21, "50001", RepLine("Mit", "1. e4 e5 *"), "C", "repertoire");
+        var (imp, repId, _) = await _svc.AppendLiveAsync(21, "50001", RepLine("Ohne", "1. e4 e5"), "C", "repertoire");
+
+        Assert.Equal(1, imp);
+        var content = (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == repId!.Value)).PgnContent;
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);
+    }
+
+    /// <summary>Linie im heutigen piratechess-Format: [ChessableOid] + Leerzeichen-Zeile vor den Zügen.</summary>
+    private static string OidRepLine(string white, string oid, string moves) =>
+        $"[Event \"Ch1\"]\n[Round \"002.001\"]\n[White \"{white}\"]\n[Black \"T\"]\n[Result \"*\"]\n[ChessableOid \"{oid}\"]\n                        \n{moves}\n";
+
+    private async Task<string> RepContentAsync(int? repId)
+        => (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == repId!.Value)).PgnContent;
+
+    [Fact]
+    public async Task AppendLive_OldLineWithoutOid_GetsTheOidBackfilled_InsteadOfADuplicate()
+    {
+        // Regression (Kurs 207313): Alt-Import ohne [ChessableOid], Header und Züge durch eine echte Leerzeile
+        // getrennt. Die neu geholte Linie trennt sie durch eine Leerzeichen-Zeile → die Signatur enthielt die
+        // Header, die Linie galt als neu und wurde als Dublette angehängt; die oid kam nie an.
+        _db.AppUsers.Add(new AppUser { Id = 31, Username = "u31", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(31, "60001",
+            RepLine("A", "1. e4 {[%cal Ge2e4]} e5 *") + "\n" + RepLine("B", "1. d4 d5 *"), "C", "repertoire");
+
+        var live = await _svc.AppendLiveAsync(31, "60001", OidRepLine("A", "777", "1. e4 {[%cal Ge2e4]} e5 *"), "C", "repertoire");
+        var (imp, repId, _) = live;
+
+        Assert.Equal(0, imp);
+        Assert.Equal(1, live.Linked);   // die Abschlussmeldung soll die verknüpfte Linie nennen
+        var content = await RepContentAsync(repId);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);
+        Assert.Equal(new[] { "777" }, (await _svc.GetImportedOidsAsync(31, "60001")).Oids);
+        // Der Header sitzt im Block von Linie A (die Trainings-Zuordnung findet deren Züge darüber) …
+        Assert.Equal(new[] { "e4", "e5" }, ChessableTrainedLineService.MainlineSansForOid(content, "777"));
+        // … und Linie B ist unverändert.
+        Assert.Contains("[White \"B\"]\n[Black \"T\"]\n[Result \"*\"]\n\n1. d4 d5 *", content);
+    }
+
+    [Fact]
+    public async Task AppendLive_SameMovesUnderAnotherOid_StaysAnOwnLine()
+    {
+        // Chessable wiederholt Linien (z. B. Quick-Starter-Kapitel) — eigene oid, eigener Fortschritt.
+        _db.AppUsers.Add(new AppUser { Id = 32, Username = "u32", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(32, "60002", OidRepLine("A", "801", "1. e4 e5 *"), "C", "repertoire");
+
+        var (imp, _, _) = await _svc.AppendLiveAsync(32, "60002", OidRepLine("QSG A", "802", "1. e4 e5 *"), "C", "repertoire");
+
+        Assert.Equal(1, imp);
+        Assert.Equal(new[] { "801", "802" }, (await _svc.GetImportedOidsAsync(32, "60002")).Oids.OrderBy(o => o));
+    }
+
+    [Fact]
+    public async Task AppendLive_KnownOid_IsNotAppendedAgain_EvenUnderOtherHeaders()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 33, Username = "u33", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(33, "60003", OidRepLine("A", "901", "1. e4 e5 *"), "C", "repertoire");
+
+        var (imp, repId, _) = await _svc.AppendLiveAsync(33, "60003", OidRepLine("A umbenannt", "901", "1. e4 e5 *"), "C", "repertoire");
+
+        Assert.Equal(0, imp);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(await RepContentAsync(repId), @"\[Event "));
+    }
+
+    [Fact]
+    public async Task AppendLive_LineWithoutOid_DedupsAgainstTheNewFormat()
+    {
+        // Alt-Client ohne oids: gleicher Zugtext wie eine Bestands-Linie im neuen Format → Dublette.
+        _db.AppUsers.Add(new AppUser { Id = 34, Username = "u34", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+        await _svc.AppendLiveAsync(34, "60004", OidRepLine("A", "1001", "1. c4 e5 *"), "C", "repertoire");
+
+        var (imp, _, _) = await _svc.AppendLiveAsync(34, "60004", RepLine("A", "1. c4 e5 *"), "C", "repertoire");
+
+        Assert.Equal(0, imp);
+    }
+
+    [Fact]
+    public async Task AppendLive_CleansUpLegacyCopies_AndServesThePgnWithoutThem()
+    {
+        // Altbestand mit einer Kopie des alten Fehlers; der nächste Live-Append bereinigt die Datei gleich mit.
+        _db.AppUsers.Add(new AppUser { Id = 35, Username = "u35", PasswordHash = "x" });
+        var legacy = RepLine("2", "1. e4 e5 *") + "\n" + OidRepLine("2", "501", "1. e4 e5 *");
+        _db.Repertoires.Add(new Repertoire { Id = 350, UserId = 35, Name = "Alt", ChessableCourseId = "60005" });
+        _db.RepertoireFiles.Add(new RepertoireFile { Id = 351, RepertoireId = 350, FileName = "chessable-60005.pgn", PgnContent = legacy });
+        await _db.SaveChangesAsync();
+
+        var (imp, repId, _) = await _svc.AppendLiveAsync(35, "60005", OidRepLine("Neu", "502", "1. d4 d5 *"), "C", "repertoire");
+
+        Assert.Equal(1, imp);
+        var content = await RepContentAsync(repId);
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(content, @"\[Event ").Count);   // nichts gelöscht
+        Assert.Contains("[RookHubHidden ", content);
+        var served = await _repertoires.GetCombinedPgnAsync(350, 35);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(served, @"\[Event ").Count);
+        Assert.Equal(new[] { "501", "502" }, (await _svc.GetImportedOidsAsync(35, "60005")).Oids.OrderBy(o => o));
+        Assert.Equal(RepertoirePgnCleanup.CurrentVersion, (await _db.RepertoireFiles.FindAsync(351))!.CleanupVersion);
+
+        // Dieselbe Linie ohne oid (Alt-Client) wird nicht wieder angehängt — auch nicht über die ausgeblendete Kopie.
+        var (imp2, _, _) = await _svc.AppendLiveAsync(35, "60005", RepLine("2", "1. e4 e5 *"), "C", "repertoire");
+        Assert.Equal(0, imp2);
+    }
+
+    [Fact]
+    public async Task AppendLive_FileSizeCountsBytesNotCharacters()
+    {
+        // Das PGN traegt Kommentare in de/hr - ein Zeichenzaehler weist die Datei kleiner aus,
+        // als sie tatsaechlich ist.
+        _db.AppUsers.Add(new AppUser { Id = 22, Username = "u22", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.AppendLiveAsync(22, "50002", RepLine("A", "1. e4 e5 *"), "C", "repertoire");
+        var (_, repId, _) = await _svc.AppendLiveAsync(
+            22, "50002", RepLine("B", "1. d4 d5 * { Königsläufer schlägt zurück \u2014 stärker }"), "C", "repertoire");
+
+        var file = await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == repId!.Value);
+        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(file.PgnContent), file.FileSize);
+        Assert.True(file.FileSize > file.PgnContent.Length);   // Umlaute/Gedankenstrich brauchen mehr Bytes
+    }
+
+    [Fact]
+    public async Task AppendLive_Repertoire_CreatesThenAppends_AndDedups()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        // Erste Linie → Repertoire wird angelegt.
+        var (imp1, rep1, t1) = await _svc.AppendLiveAsync(7, "424242", RepLine("Line A", "1. e4 e5 *"), "My Course", "repertoire");
+        Assert.Equal("repertoire", t1);
+        Assert.Equal(1, imp1);
+        Assert.NotNull(rep1);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        Assert.Equal("424242", (await _db.Repertoires.FindAsync(rep1!.Value))!.ChessableCourseId);
+
+        // Zweite (neue) Linie → wird angehängt, dasselbe Repertoire.
+        var (imp2, rep2, _) = await _svc.AppendLiveAsync(7, "424242", RepLine("Line B", "1. d4 d5 *"), "My Course", "repertoire");
+        Assert.Equal(1, imp2);
+        Assert.Equal(rep1, rep2);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+
+        var content = (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == rep1!.Value)).PgnContent;
+        Assert.Contains("1. e4 e5", content);
+        Assert.Contains("1. d4 d5", content);
+
+        // Dieselbe erste Linie erneut → KEINE Dublette.
+        var (imp3, _, _) = await _svc.AppendLiveAsync(7, "424242", RepLine("Line A", "1. e4 e5 *"), "My Course", "repertoire");
+        Assert.Equal(0, imp3);
+        var content2 = (await _db.RepertoireFiles.FirstAsync(f => f.RepertoireId == rep1!.Value)).PgnContent;
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(content2, @"\[Event ").Count);
+    }
+
+    [Fact]
+    public async Task AppendLock_SerialisesSameKey_ButNotDifferentKeys()
+    {
+        // Der Live-Append ist ein Read-Modify-Write auf dem PgnContent: zwei parallele Requests desselben
+        // (User, bid) dürfen sich NICHT überlappen (sonst überschreibt der zweite die Linie des ersten);
+        // ein anderer Kurs darf dabei nicht mitblockiert werden.
+        var key = $"7:{Guid.NewGuid()}";
+        var otherKey = $"7:{Guid.NewGuid()}";
+        var firstEntered = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var secondEntered = false;
+
+        var first = ChessableImportService.WithAppendLockAsync(key, async () =>
+        {
+            firstEntered.SetResult();
+            await release.Task;
+            return 1;
+        });
+        await firstEntered.Task;
+
+        var second = ChessableImportService.WithAppendLockAsync(key, () =>
+        {
+            secondEntered = true;
+            return Task.FromResult(2);
+        });
+        await Task.Delay(50);
+        Assert.False(secondEntered);                      // wartet auf das Schloss des ersten Aufrufs
+
+        // Anderer (User, bid) läuft ungehindert durch.
+        Assert.Equal(3, await ChessableImportService.WithAppendLockAsync(otherKey, () => Task.FromResult(3)));
+
+        release.SetResult();
+        Assert.Equal(1, await first);
+        Assert.Equal(2, await second);
+        Assert.True(secondEntered);
+    }
+
+    [Fact]
+    public async Task AppendLive_Book_AppendsAndDedupsByLineId()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var (imp1, bookId, t) = await _svc.AppendLiveAsync(7, "424242", PuzzlePgn, "Tactics", "book");
+        Assert.Equal("book", t);
+        Assert.NotNull(bookId);
+        var count = await _db.BookPuzzles.CountAsync(p => p.BookId == bookId!.Value);
+        Assert.True(count >= 1);
+        Assert.Equal("chessable", (await _db.Books.FindAsync(bookId!.Value))!.Tags);
+
+        // Dieselbe Linie erneut → dedup per LineId, kein zweites Puzzle.
+        await _svc.AppendLiveAsync(7, "424242", PuzzlePgn, "Tactics", "book");
+        Assert.Equal(count, await _db.BookPuzzles.CountAsync(p => p.BookId == bookId!.Value));
+        Assert.Equal(1, await _db.Books.CountAsync(b => b.OwnerUserId == 7));
+    }
+
+    [Fact]
+    public async Task ImportPgnDirect_Book_ImportsPuzzles_Idempotent()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var first = await _svc.ImportPgnDirectAsync(7, "424242", PuzzlePgn, "Tactics", "book", 1);
+        Assert.Equal(ChessableImportStatus.Completed, first.Status);
+        Assert.NotNull(first.ResultId);
+        var bookId = first.ResultId!.Value;
+        var puzzleCount = await _db.BookPuzzles.CountAsync(p => p.BookId == bookId);
+        Assert.True(puzzleCount >= 1);
+        var book = await _db.Books.FindAsync(bookId);
+        Assert.Equal(7, book!.OwnerUserId);
+        Assert.Equal("chessable", book.Tags);
+
+        // Erneuter Import desselben Kurses (gleicher stabiler Dateiname) → dedup per LineId, kein Duplikat-Buch.
+        var second = await _svc.ImportPgnDirectAsync(7, "424242", PuzzlePgn, "Tactics", "book", 1);
+        Assert.Equal(bookId, second.ResultId);
+        Assert.Equal(1, await _db.Books.CountAsync(b => b.OwnerUserId == 7));
+        Assert.Equal(puzzleCount, await _db.BookPuzzles.CountAsync(p => p.BookId == bookId));
+    }
+
+    private async Task<ChessableImport> SeedImportAsync(
+        string target, ChessableImportStatus status = ChessableImportStatus.Running, string? fetchedPgn = "1. e4 e5 2. Nf3 Nc6 *",
+        int attempts = 0, int? resultId = null)
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "Course X", Target = target,
+            Status = status, Phase = ChessableImportPhase.Queued, FetchedPgn = fetchedPgn, LineCount = 3,
+            Attempts = attempts, ResultId = resultId, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+        return imp;
+    }
+
+    [Fact]
+    public async Task RunAsync_RepertoireWithCachedPgn_Completes()
+    {
+        var imp = await SeedImportAsync("repertoire");
+
+        await _svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.NotNull(reloaded.ResultId);
+        Assert.Null(reloaded.FetchedPgn); // Checkpoint nach Erfolg geleert
+        Assert.Equal(3, reloaded.Imported); // LineCount
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        Assert.Equal(1, await _db.RepertoireFiles.CountAsync());
+        // Importierte Kurse sind standardmäßig NICHT von der RepCheck-Extension nutzbar.
+        Assert.False((await _db.Repertoires.FirstAsync(r => r.UserId == 7)).UseForExtension);
+        // Glocke: User wird über den fertigen Import benachrichtigt.
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted));
+    }
+
+    [Fact]
+    public async Task RunAsync_InPlaceRefetch_AlsoBumpsSiblingRepertoiresOfSameBid()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var rep1 = new Repertoire { UserId = 7, Name = "R1", ImportVersion = 0, ChessableCourseId = "b1" };
+        var rep2 = new Repertoire { UserId = 7, Name = "R2", ImportVersion = 0, ChessableCourseId = "b1" };
+        _db.Repertoires.AddRange(rep1, rep2);
+        await _db.SaveChangesAsync();
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep1.Id, FileName = "chessable-b1.pgn", PgnContent = "old", FileSize = 3 });
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep2.Id, FileName = "chessable-b1.pgn", PgnContent = "old", FileSize = 3 });
+        await _db.SaveChangesAsync();
+
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", TargetRepertoireId = rep1.Id,
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FetchedPgn = "1. e4 e5 2. Nf3 Nc6 *", LineCount = 3, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunAsync(imp.Id);
+
+        // Ziel-Repertoire in-place aktualisiert UND das Geschwister (gleiche bid) mit-hochgezogen.
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.FindAsync(rep1.Id))!.ImportVersion);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.FindAsync(rep2.Id))!.ImportVersion);
+    }
+
+    [Fact]
+    public async Task RunAsync_StampsStartedAt_AndNotifiesWithDurations()
+    {
+        var imp = await SeedImportAsync("repertoire");
+
+        await _svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.NotNull(reloaded!.StartedAt);   // Hol-Beginn gestempelt (für Wartezeit/Holzeit)
+        Assert.NotNull(reloaded.CompletedAt);
+        Assert.True(reloaded.StartedAt >= reloaded.CreatedAt);
+
+        // Fertig-Benachrichtigung trägt Hol-/Wartezeit als i18n-Parameter.
+        var notif = await _db.Notifications.SingleAsync(
+            n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted);
+        Assert.Contains("fetchTime", notif.DataJson);
+        Assert.Contains("queueTime", notif.DataJson);
+    }
+
+    [Theory]
+    [InlineData(0, "0 s")]
+    [InlineData(45, "45 s")]
+    [InlineData(90, "1 min")]
+    [InlineData(3661, "1 h 1 min")]
+    public void FormatDuration_FormatsCompactly(int seconds, string expected)
+        => Assert.Equal(expected, ChessableImportService.FormatDuration(TimeSpan.FromSeconds(seconds)));
+
+    [Fact]
+    public void FormatDuration_NullOrNegative_IsDash()
+    {
+        Assert.Equal("—", ChessableImportService.FormatDuration(null));
+        Assert.Equal("—", ChessableImportService.FormatDuration(TimeSpan.FromSeconds(-5)));
+    }
+
+    // ===== Faire Queue-Reihenfolge (Round-Robin über User) =====
+
+    private static ChessableImport Q(int id, int userId, int round, DateTime created) =>
+        new() { Id = id, UserId = userId, QueueRound = round, CreatedAt = created, Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued };
+
+    [Fact]
+    public void FairOrder_NewUserGoesSecond_ThenContinuesFirstUser()
+    {
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        // User1 reiht 3 ein (Runden 0,1,2), danach User2 einen (Runde 0).
+        var order = ChessableImportService.FairOrder(new[]
+        {
+            Q(1, 1, 0, t0), Q(2, 1, 1, t0.AddSeconds(1)), Q(3, 1, 2, t0.AddSeconds(2)),
+            Q(4, 2, 0, t0.AddSeconds(3)),
+        });
+        // U2 rückt auf Platz 2 (hinter U1s ersten), dann folgen U1s restliche.
+        Assert.Equal(new[] { 1, 4, 2, 3 }, order.Select(i => i.Id).ToArray());
+    }
+
+    [Fact]
+    public void FairOrder_StableWhenEarlierJobsCompleted()
+    {
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        // U1s erster (Runde 0) ist bereits fertig und raus → verbleiben U1b(1), U1c(2), U2a(0).
+        var order = ChessableImportService.FairOrder(new[]
+        {
+            Q(2, 1, 1, t0.AddSeconds(1)), Q(3, 1, 2, t0.AddSeconds(2)), Q(4, 2, 0, t0.AddSeconds(3)),
+        });
+        // Eingefrorene Runde ⇒ U2a (Runde 0) kommt weiterhin vor U1s Folge-Jobs.
+        Assert.Equal(new[] { 4, 2, 3 }, order.Select(i => i.Id).ToArray());
+    }
+
+    [Fact]
+    public void FairOrder_TwoUsersInterleave()
+    {
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        // U1: 3 Jobs (0,1,2), U2: 2 Jobs (0,1) → abwechselnd, U1 zuerst je Runde.
+        var order = ChessableImportService.FairOrder(new[]
+        {
+            Q(1, 1, 0, t0), Q(2, 1, 1, t0.AddSeconds(1)), Q(3, 1, 2, t0.AddSeconds(2)),
+            Q(4, 2, 0, t0.AddSeconds(3)), Q(5, 2, 1, t0.AddSeconds(4)),
+        });
+        Assert.Equal(new[] { 1, 4, 2, 5, 3 }, order.Select(i => i.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task RunNextAsync_ProcessesQueuedImportsInFairOrder()
+    {
+        // User 1 reiht zuerst 2 Kurse ein (Runden 0,1), dann User 2 einen (Runde 0).
+        // Faire Reihenfolge: U1a, U2a, U1b — der Kurs von User2 rückt vor U1s zweiten.
+        foreach (var uid in new[] { 1, 2 })
+            if (!await _db.AppUsers.AnyAsync(u => u.Id == uid))
+                _db.AppUsers.Add(new AppUser { Id = uid, Username = $"u{uid}", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        var u1a = new ChessableImport { UserId = 1, Bid = "u1a", CourseName = "U1A", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u1b = new ChessableImport { UserId = 1, Bid = "u1b", CourseName = "U1B", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u2a = new ChessableImport { UserId = 2, Bid = "u2a", CourseName = "U2A", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = t0.AddSeconds(2), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(u1a, u1b, u2a);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync();
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(u1a.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Running, (await _db.ChessableImports.FindAsync(u2a.Id))!.Status); // wartet noch
+
+        await _svc.RunNextAsync();
+        // User2 ist vor U1s zweitem Kurs dran.
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(u2a.Id))!.Status);
+        Assert.Equal(ChessableImportStatus.Running, (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
+
+        await _svc.RunNextAsync();
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task RunNextAsync_NoQueued_IsNoOp()
+    {
+        await _svc.RunNextAsync(); // keine wartenden Importe → kein Fehler
+        Assert.Equal(0, await _db.ChessableImports.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunNextAsync_FastLane_OnlyClaimsFullyCached()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        // Download-Job ist FAIR ZUERST dran (frühere CreatedAt), aber nicht gecacht.
+        var dl = new ChessableImport { UserId = 1, Bid = "dl", CourseName = "DL", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(dl, cached);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync(fastLane: true);
+
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(cached.Id))!.Status); // gecacht verarbeitet
+        Assert.Equal(ChessableImportPhase.Queued, (await _db.ChessableImports.FindAsync(dl.Id))!.Phase);        // Download unangetastet
+    }
+
+    [Fact]
+    public async Task RunNextAsync_FastLane_StaleCacheDemotesToDownloadLane()
+    {
+        // FullyCached wurde beim Enqueue klassifiziert; ist der piratechess-Cache zur LAUFZEIT nicht
+        // mehr gedeckt (und existiert noch kein FetchedPgn-Checkpoint), darf die Fast-Lane den Job
+        // NICHT netzfrei-gedacht ausführen (würde Gate + Bearer-Breaker umgehen), sondern stuft ihn
+        // in die Download-Lane zurück.
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var stale = new ChessableImport
+        {
+            UserId = 1, Bid = "stale", CourseName = "S", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, FetchedPgn = null,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(stale);
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/stale/cached")) return JsonOk(new { cached = false });
+            throw new InvalidOperationException($"Unerwarteter Proxy-Aufruf: {req.RequestUri}");
+        }));
+
+        await svc.RunNextAsync(fastLane: true);
+
+        var reloaded = await _db.ChessableImports.AsNoTracking().FirstAsync(i => i.Id == stale.Id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded.Status);
+        Assert.Equal(ChessableImportPhase.Queued, reloaded.Phase);      // wieder wartend — jetzt für die Download-Lane
+        Assert.False(reloaded.FullyCached);          // zurückgestuft
+        Assert.Null(reloaded.FetchJobId);            // KEIN Chessable-Fetch gestartet
+    }
+
+    /// <summary>Ein Browser-Import, der (Neustart, verwaiste Sitzung, Pausieren/Fortsetzen) auf „queued" geriet, sah
+    /// für die Lanes aus wie ein voll gecachter Server-Import: die Fast-Lane stufte ihn herab, die Download-Lane holte
+    /// den Kurs mit dem Bearer des Nutzers bzw. aus dem Kurs-Cache — an der Eigentumsprüfung vorbei.</summary>
+    [Fact]
+    public async Task RunNextAsync_NeverPicksABrowserImport_InEitherLane()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        var cached = new ChessableImport { UserId = 1, Bid = "91808", CourseName = "B1", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, FromBrowser = true, CreatedAt = t0, StartedAt = t0 };
+        var download = new ChessableImport { UserId = 1, Bid = "91809", CourseName = "B2", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, FromBrowser = true, CreatedAt = t0.AddSeconds(1), StartedAt = t0 };
+        _db.ChessableImports.AddRange(cached, download);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync(fastLane: true);
+        await _svc.RunNextAsync();
+
+        foreach (var (id, fullyCached) in new[] { (cached.Id, true), (download.Id, false) })
+        {
+            var job = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == id);
+            Assert.Equal(ChessableImportStatus.Running, job.Status);
+            Assert.Equal(ChessableImportPhase.Queued, job.Phase);
+            Assert.Equal(fullyCached, job.FullyCached);   // nicht herabgestuft
+            Assert.Equal(0, job.Attempts);                // RunAsync nie betreten
+            Assert.Null(job.FetchJobId);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_BrowserImport_IsNeverFetched()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var job = new ChessableImport { UserId = 1, Bid = "91808", CourseName = "B", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing, FullyCached = true, FromBrowser = true, CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(job);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunAsync(job.Id);   // der Proxy-Stub wirft bei jedem Aufruf
+
+        var reloaded = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == job.Id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded.Status);
+        Assert.Equal(ChessableImportPhase.Importing, reloaded.Phase);
+        Assert.Equal(0, reloaded.Attempts);
+        Assert.Null(reloaded.FetchJobId);
+    }
+
+    [Fact]
+    public async Task RunNextAsync_DownloadLane_ClaimsNonCachedIncludingUnclassified()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        // Unklassifiziert (null) gilt als Download und MUSS gegriffen werden (darf nie hängen bleiben).
+        var nullJob = new ChessableImport { UserId = 1, Bid = "n", CourseName = "N", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = null, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(nullJob, cached);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync(); // Download-Lane (Default)
+
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(nullJob.Id))!.Status); // null = Download verarbeitet
+        Assert.Equal(ChessableImportPhase.Queued, (await _db.ChessableImports.FindAsync(cached.Id))!.Phase);      // Fast-Lane-Job unangetastet
+    }
+
+    [Fact]
+    public async Task RunNextAsync_SkipsAlreadyClaimedJob_PicksGenuinelyQueuedOne()
+    {
+        // Atomarer Claim: ein bereits von einem anderen Worker übernommener Job (Phase != ChessableImportPhase.Queued)
+        // darf NICHT erneut gegriffen werden. Hier ist der fair zuerst dran befindliche Job bereits
+        // "fetching" → RunNextAsync überspringt ihn und bearbeitet den nächsten echten "queued"-Job.
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        var claimed = new ChessableImport { UserId = 7, Bid = "a", CourseName = "A", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching, QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var queued = new ChessableImport { UserId = 7, Bid = "b", CourseName = "B", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(claimed, queued);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync();
+
+        // Der schon übernommene Job bleibt unangetastet; der echte queued-Job wurde bearbeitet.
+        Assert.Equal(ChessableImportStatus.Running, (await _db.ChessableImports.FindAsync(claimed.Id))!.Status);
+        Assert.Equal(ChessableImportPhase.Fetching, (await _db.ChessableImports.FindAsync(claimed.Id))!.Phase);
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(queued.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task RunNextAsync_ClaimsExactlyOne_WhenInvokedConcurrently()
+    {
+        // Resume-Sturm: zwei parallele Tickets, EIN wartender Job. Der atomare Phase-Claim
+        // ("queued" → "claimed" per ExecuteUpdate) stellt sicher, dass nur ein Lauf den Job
+        // bearbeitet → keine Doppelverarbeitung (kein zweites Repertoire).
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var imp = new ChessableImport { UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, QueueRound = 0, CreatedAt = DateTime.UtcNow, FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        // Sequentiell zwei Ticket-Läufe (InMemory ist nicht echt nebenläufig, aber der zweite Lauf
+        // sieht den Job nicht mehr als "queued" → no-op statt Doppel-Import).
+        await _svc.RunNextAsync();
+        await _svc.RunNextAsync();
+
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7)); // nicht doppelt angelegt
+    }
+
+    [Fact]
+    public async Task RunNextAsync_DownloadLane_GateBlocksSecondConcurrentDrive()
+    {
+        // Regression (2026-06-29, zwei Kurse zogen gleichzeitig): die Download-Lane wird von ZWEI
+        // unabhängigen Treibern bedient — dem Queue-Worker UND dem Watchdog (ruft RunNextAsync an der
+        // Queue vorbei direkt). Der atomare Claim verhindert nur DOPPEL-Verarbeitung DESSELBEN Jobs,
+        // nicht, dass jeder Treiber einen ANDEREN wartenden Job greift und parallel herunterlädt.
+        // Das prozessweite Gate (SemaphoreSlim(1)) erzwingt höchstens EINEN gleichzeitigen Download:
+        // solange einer läuft, kehrt ein zweiter Drive SOFORT zurück (zweiter Job bleibt "queued").
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var t0 = DateTime.UtcNow;
+        var j1 = new ChessableImport { UserId = 7, Bid = "j1", CourseName = "", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, FetchedPgn = null, CreatedAt = t0 };
+        var j2 = new ChessableImport { UserId = 7, Bid = "j2", CourseName = "", Target = "repertoire", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, FetchedPgn = null, CreatedAt = t0.AddSeconds(1) };
+        _db.ChessableImports.AddRange(j1, j2);
+        await _db.SaveChangesAsync();
+
+        var inFlight = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            // Der (einzige) Fetch hängt im Progress-Poll fest → das Download-Gate bleibt gehalten.
+            inFlight.TrySetResult();
+            release.Task.GetAwaiter().GetResult();
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 1, chapterCount = 1, lineCount = 1, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0;
+
+        // Treiber 1 (z. B. Queue-Worker): hält das Gate, blockiert mitten im Fetch von j1 (fair zuerst dran).
+        var first = Task.Run(() => svc.RunNextAsync());
+        await inFlight.Task.WaitAsync(TimeSpan.FromSeconds(10)); // j1 ist jetzt "fetching", Gate gehalten
+
+        try
+        {
+            // Treiber 2 (z. B. Watchdog) feuert parallel — MUSS sofort zurückkehren, ohne j2 zu greifen.
+            await svc.RunNextAsync();
+            Assert.Equal(ChessableImportPhase.Queued, (await _db.ChessableImports.FindAsync(j2.Id))!.Phase); // Gate blockte den 2. Download
+        }
+        finally
+        {
+            release.TrySetResult();           // Fetch von j1 abschließen lassen → Gate wird freigegeben
+            await first.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.FindAsync(j1.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task RunAsync_AlreadyCompleted_IsNoOp()
+    {
+        var imp = await SeedImportAsync("repertoire", status: ChessableImportStatus.Completed);
+        await _svc.RunAsync(imp.Id);
+        Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_BearerBreakerOpen_PausesWithoutCallingProxy()
+    {
+        // Bearer von User 7 gesperrt → der Import darf Chessable GAR NICHT anfragen.
+        await SeedCredentialAsync(7, blocked: true);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null); // braucht Fetch → Bearer-Pfad
+
+        // _svc nutzt den Default-Handler, der bei JEDEM Proxy-Aufruf wirft. Kein Wurf = kein Request.
+        await _svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Paused, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.BearerBlocked, reloaded.Phase);
+        Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_BearerBreakerOpen_ButFullyCached_ProceedsFromCache()
+    {
+        // Bearer von User 7 gesperrt, ABER der Kurs liegt voll im piratechess-Cache (FullyCached) →
+        // der Abruf kommt netzfrei aus dem Cache, der tote Bearer darf ihn NICHT blockieren.
+        await SeedCredentialAsync(7, blocked: true);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        imp.FullyCached = true;
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 1,
+                chapterCount = 1, lineCount = 1, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.NotEqual(ChessableImportPhase.BearerBlocked, reloaded.Phase);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+    }
+
+    [Fact]
+    public async Task RunAsync_FetchFailsBanned_TripsBreaker()
+    {
+        await SeedCredentialAsync(7, blocked: false);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "failed", chaptersDone = 0, chaptersTotal = 0, linesDone = 0,
+                chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null,
+                error = "Chessable: User is banned or deleted" });
+        }));
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
+        // Der fatale Fehlschlag hat den Circuit-Breaker des Bearers geöffnet.
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.NotNull(cred.BlockedAt);
+    }
+
+    private async Task SeedCredentialAsync(int userId, bool blocked)
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
+            _db.AppUsers.Add(new AppUser { Id = userId, Username = $"u{userId}", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = userId,
+            EncryptedBearer = _encryption.Encrypt("dummy-bearer"),
+            BlockedAt = blocked ? DateTime.UtcNow : null,
+            BlockedReason = blocked ? "Chessable: User is banned or deleted" : null,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task RunAsync_DailyLineLimitExhausted_PausesWithoutCallingProxy()
+    {
+        // Tageslimit auf 5 gesetzt und schon voll ausgeschöpft → der Import darf Chessable NICHT anfragen.
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow;
+        cred.RateLimitLinesUsed = 5;
+        await _db.SaveChangesAsync();
+
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null); // braucht Fetch → Bearer-Pfad
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")), dailyLineLimit: 5);
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Paused, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.RateLimited, reloaded.Phase);
+        Assert.NotNull(reloaded.RateLimitedAt);
+        Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_DailyLineLimitWindowExpired_ResetsAndProceeds()
+    {
+        // Fenster ist älter als 24h → wird zurückgesetzt, obwohl es "voll" war; der Import läuft durch.
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow.AddHours(-25);
+        cred.RateLimitLinesUsed = 5;
+        await _db.SaveChangesAsync();
+
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 3,
+                chapterCount = 1, lineCount = 3, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }), dailyLineLimit: 5);
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        var reloadedCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.Equal(3, reloadedCred.RateLimitLinesUsed); // Fenster reset (0) + 3 frisch gefetchte Zeilen
+    }
+
+    [Fact]
+    public async Task RunAsync_SuccessfulFetch_RecordsLinesAgainstRateLimit()
+    {
+        await SeedCredentialAsync(7, blocked: false);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 7,
+                chapterCount = 1, lineCount = 7, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.Equal(7, cred.RateLimitLinesUsed);
+        Assert.NotNull(cred.RateLimitWindowStartedAt);
+    }
+
+    [Fact]
+    public async Task RunAsync_DailyLineLimitExhausted_ButFullyCached_ProceedsFromCache()
+    {
+        // Voll-gecachte Kurse kosten Chessable nichts → das Tageslimit blockt sie NICHT.
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow;
+        cred.RateLimitLinesUsed = 5;
+        await _db.SaveChangesAsync();
+
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        imp.FullyCached = true;
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 1,
+                chapterCount = 1, lineCount = 1, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }), dailyLineLimit: 5);
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.NotEqual(ChessableImportPhase.RateLimited, reloaded.Phase);
+        // Voll-gecachte Fetches werden nicht gegen das Limit verbucht.
+        var reloadedCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.Equal(5, reloadedCred.RateLimitLinesUsed);
+    }
+
+    [Fact]
+    public async Task RunAsync_Twice_DoesNotDuplicate()
+    {
+        var imp = await SeedImportAsync("repertoire");
+        await _svc.RunAsync(imp.Id);
+        await _svc.RunAsync(imp.Id); // zweiter Lauf → no-op (completed)
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        Assert.Equal(1, await _db.RepertoireFiles.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_ResumeWithExistingResult_DoesNotDuplicate()
+    {
+        // Simuliert Crash NACH Repertoire-Anlage (ResultId gesetzt), Status noch "running".
+        var rep = await _repertoires.CreateAsync(7, new CreateRepertoireDto { Name = "Course X" });
+        using (var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("1. e4 *")))
+            await _repertoires.UploadFileAsync(rep.Id, 7, "chessable-b1.pgn", ms);
+
+        var imp = await SeedImportAsync("repertoire", resultId: rep.Id);
+
+        await _svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.Equal(rep.Id, reloaded.ResultId);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7)); // kein zweites Repertoire
+        Assert.Equal(1, await _db.RepertoireFiles.CountAsync());              // keine zweite Datei
+    }
+
+    [Fact]
+    public async Task RunAsync_ExceedsMaxAttempts_Fails()
+    {
+        var imp = await SeedImportAsync("repertoire", attempts: ChessableImportService.MaxAttempts);
+        await _svc.RunAsync(imp.Id);
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
+        Assert.Equal(0, await _db.Repertoires.CountAsync());
+        // Glocke: User wird über den fehlgeschlagenen Import benachrichtigt.
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportFailed));
+    }
+
+    // --- Härtung von FailAsync (Auslöser der Zombie-Import-Kette): weder das gescheiterte
+    //     Fehler-Update noch die Nachbereitung dürfen aus RunAsync herausfliegen. ---
+
+    [Fact]
+    public async Task RunAsync_FailWhileDbIsDown_DoesNotThrow_LeavesJobForWatchdog()
+    {
+        // FALLE: Ist die DB weg, scheitert AUCH das Fehler-Update in FailAsync. Ohne die Härtung
+        // liefe die Exception bis in den BackgroundTaskWorker („Background task failed"), der Import
+        // bliebe im Lane-Slot hängen (Drain steht bis zum Neustart) und der Watchdog sähe ihn nie.
+        var (db, id) = SeedForFailAsync();
+        using var _ = db;
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet")), db: db);
+        db.ThrowFromSaveNo = 1;   // schon das Fehler-Update scheitert
+
+        await svc.RunAsync(id);   // darf NICHT werfen
+
+        // Nach dem gescheiterten Update KEINE weiteren Schreibversuche (Nachbereitung übersprungen) —
+        // der Job bleibt unangetastet, der Watchdog holt ihn als verwaisten Inflight-Job zurück.
+        Assert.Equal(1, db.AsyncSaves);
+        Assert.Empty(db.Notifications.Local);   // keine Benachrichtigung mehr angehängt
+    }
+
+    [Fact]
+    public async Task RunAsync_FailPostProcessingThrows_KeepsFailedStatus_AndDoesNotThrow()
+    {
+        // Der Fehlerstatus ist festgeschrieben; erst die NACHBEREITUNG (Breaker/Benachrichtigung)
+        // scheitert. Die darf den bereits gesicherten Zustand nicht mehr gefährden und nicht als
+        // Background-Task-Fehler hochblubbern (Fehlalarm im log-watcher).
+        var (db, id) = SeedForFailAsync();
+        using var _ = db;
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet")), db: db);
+        db.ThrowFromSaveNo = 2;   // Fehler-Update geht durch, die Benachrichtigung wirft
+
+        await svc.RunAsync(id);   // darf NICHT werfen
+
+        var reloaded = await db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
+        Assert.Equal($"Abgebrochen nach {ChessableImportService.MaxAttempts} Versuchen", reloaded.Error);
+        Assert.NotNull(reloaded.CompletedAt);
+        Assert.Equal(2, db.AsyncSaves);   // Status-Save + gescheiterter Benachrichtigungs-Save
+    }
+
+    [Fact]
+    public async Task RunAsync_NoCachedPgn_PollsFetchJobThenImports()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start"))
+                return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new
+            {
+                status = "completed", chaptersDone = 2, chaptersTotal = 2, linesDone = 5,
+                chapterCount = 2, lineCount = 5, courseName = "Real Name", pgn = "1. e4 e5 *", error = (string?)null
+            });
+        }));
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.Equal(5, reloaded.LinesDone);
+        Assert.Equal("Real Name", reloaded.CourseName); // aus dem Fetch übernommen
+        Assert.NotNull(reloaded.ResultId);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+    }
+
+    [Fact]
+    public async Task RunAsync_ShutdownDuringFetch_LeavesImportRunning_NotFailed()
+    {
+        // Regression: ein durch App-Shutdown (stoppingToken) abgebrochener Import wurde faelschlich
+        // als "failed" behandelt — und FailAsync konnte mit dem schon gecancelten Token nicht mehr
+        // speichern → OperationCanceledException blubberte als "Background task failed" (Error) hoch.
+        // Erwartung: KEIN Fehler, Job bleibt "running" → ChessableImportResumeService setzt ihn fort.
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        using var cts = new CancellationTokenSource();
+        // Simuliert Shutdown mitten in der Hol-Phase: Token canceln + Abbruch werfen.
+        var svc = BuildSvc(new ScriptedHandler(_ =>
+        {
+            cts.Cancel();
+            throw new OperationCanceledException(cts.Token);
+        }));
+
+        // Darf NICHT werfen (sauberer Shutdown, kein Background-Task-Fehler).
+        await svc.RunAsync(imp.Id, cts.Token);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);   // NICHT "failed"
+        Assert.Null(reloaded.Error);
+    }
+
+    // --- Fortschritts-bewusster Fetch-Timeout (Regression: fixe 15-min-Grenze killte langsame,
+    //     aber gesunde Abrufe großer Kurse → TimeoutException, prod-Importe 99/100) ---
+
+    private void SeedFetchUserAndImport(int attempts, out int importId)
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, Attempts = attempts, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        _db.SaveChanges();
+        importId = imp.Id;
+    }
+
+    /// <summary>Laufender Job ohne Fortschritt. Bis W5 I2-007 stand hier "fetching" — eine IMPORT-Phase von rookhub,
+    /// kein Status von piratechess; die Schleife wertete jeden unbekannten Status still als Stillstand.</summary>
+    private static HttpResponseMessage FetchingStatic() => JsonOk(new
+    {
+        status = ChessableCourseJobStatus.Running, chaptersDone = 1, chaptersTotal = 5, linesDone = 1,
+        chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null
+    });
+
+    [Fact]
+    public async Task RunAsync_FetchStallsBelowMaxAttempts_AutoReEnqueues()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        // Statischer „fetching"-Fortschritt → Stillstand. Kein harter Fehler, sondern Resume.
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic()));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);   // NICHT failed
+        Assert.Equal(1, reloaded.Attempts);
+        Assert.Equal(1, _queue.Count);               // automatisch neu eingereiht (Auto-Restart)
+    }
+
+    [Fact]
+    public async Task RunAsync_SlowButProgressing_DoesNotTimeOut()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        // Fortschritt über viele Polls hinweg (> FetchStallPolls): der Stall-Zähler wird durch
+        // jeden echten Fortschritt zurückgesetzt → KEIN Timeout, am Ende completed.
+        int n = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            n++;
+            return n < 5
+                ? JsonOk(new { status = ChessableCourseJobStatus.Running, chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null })
+                : JsonOk(new { status = "completed", chaptersDone = 5, chaptersTotal = 5, linesDone = 5, chapterCount = 5, lineCount = 5, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000; // 5 Polls > Stall-Fenster 2
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.Equal(0, _queue.Count);
+    }
+
+    [Fact]
+    public async Task RunAsync_FetchStallsAtMaxAttempts_Fails()
+    {
+        SeedFetchUserAndImport(attempts: ChessableImportService.MaxAttempts - 1, out var id);
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic()));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status); // letzter Versuch erschöpft → terminal
+        Assert.Equal(0, _queue.Count);            // kein weiterer Resume
+    }
+
+    // --- I2-007: Statuswerte des piratechess-Kurs-Jobs als Vertrag. Ein Status, den rookhub nicht kennt, lief bis
+    //     hierher als „kein Fortschritt" FetchStallPolls lang (≈ 10 min) je Versuch und scheiterte erst nach
+    //     MaxAttempts mit „Zeitüberschreitung". ---
+
+    /// <summary>Unbekannter Status → sofort gescheitert (ein Poll), Job angehalten, nicht neu eingereiht.</summary>
+    [Fact]
+    public async Task RunAsync_UnknownJobStatus_FailsAtOnce_AndCancelsTheJob()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var deletes = new List<string>();
+        var polls = 0;
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            polls++;
+            return JsonOk(new { status = "throttled", chaptersDone = 1, chaptersTotal = 5, linesDone = 1, chapterCount = 0,
+                lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null });
+        }, deletes)));
+        svc.PollDelayMs = 0;   // Stall-Fenster bleibt auf der Vorgabe (240): ohne die Regel liefe die Schleife so lange
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
+        Assert.Contains("throttled", reloaded.Error);
+        Assert.Equal(1, polls);
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        Assert.Equal(0, _queue.Count);
+    }
+
+    /// <summary>„cancelled", während der Import weiterläuft → wie ein verschwundener Job: neuen Job starten, weiter pollen.</summary>
+    [Fact]
+    public async Task RunAsync_CancelledJobStatus_StartsANewJob_AndCompletes()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var starts = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = $"job-{++starts}" });
+            return req.RequestUri.AbsolutePath.EndsWith("/course/job-1")
+                ? JsonOk(new { status = ChessableCourseJobStatus.Cancelled, chaptersDone = 1, chaptersTotal = 5, linesDone = 1,
+                    chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null })
+                : JsonOk(new { status = ChessableCourseJobStatus.Completed, chaptersDone = 5, chaptersTotal = 5, linesDone = 5,
+                    chapterCount = 5, lineCount = 5, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.Equal(2, starts);
+        Assert.Equal("job-2", reloaded.FetchJobId);
+    }
+
+    // --- S2-008: den piratechess-Job bei Abbruch, Pause und Stillstand mit anhalten. Vorher hörte rookhub nur auf zu
+    //     pollen, piratechess holte den ganzen Kurs trotzdem weiter über die VPN-IP. ---
+
+    /// <summary>Schreibt jeden Abbruch-Aufruf (DELETE course/{jobId}) mit und beantwortet ihn mit
+    /// <paramref name="cancelReply"/> (Vorgabe: piratechess hat abgebrochen); alles andere geht an <paramref name="inner"/>.</summary>
+    private static Func<HttpRequestMessage, HttpResponseMessage> CountingCancels(
+        Func<HttpRequestMessage, HttpResponseMessage> inner, List<string> deletes, Func<HttpResponseMessage>? cancelReply = null)
+        => req =>
+        {
+            if (req.Method != HttpMethod.Delete) return inner(req);
+            deletes.Add(req.RequestUri!.AbsolutePath);
+            return cancelReply?.Invoke() ?? JsonOk(new { cancelled = true });
+        };
+
+    /// <summary>Nutzer (bzw. Admin) bricht während der Hol-Phase ab oder pausiert — die Poll-Schleife sieht den
+    /// Status und hält den piratechess-Job genau einmal an.</summary>
+    [Theory]
+    [InlineData(ChessableImportStatus.Cancelled)]
+    [InlineData(ChessableImportStatus.Paused)]
+    public async Task RunAsync_CancelledOrPausedDuringFetch_CancelsThePiratechessJobOnce(ChessableImportStatus external)
+    {
+        const int importId = 990831;   // fest: RunAsync meldet den Import prozessweit als lokal getrieben
+        var opts = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        using var db = new AppDbContext(opts);
+        db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"), CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        db.ChessableImports.Add(new ChessableImport
+        {
+            Id = importId, UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow
+        });
+        db.SaveChanges();
+
+        var deletes = new List<string>();
+        var polls = 0;
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            if (++polls == 1)
+            {
+                // Beim ersten Poll kommt der Abbruch/die Pause über einen anderen Request (eigener DbContext).
+                using var other = new AppDbContext(opts);
+                other.ChessableImports.Single(i => i.Id == importId).Status = external;
+                other.SaveChanges();
+            }
+            return FetchingStatic();
+        }, deletes)), db: db);
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(importId);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        Assert.Equal(1, polls);                                   // danach kein weiterer Poll
+        var row = await db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == importId);
+        Assert.Equal(external, row.Status);
+        Assert.Null(row.Error);
+    }
+
+    /// <summary>Echter Stillstand: piratechess-Job abbrechen, egal was piratechess antwortet (404 = Job weg, 405 = älterer
+    /// Stand ohne Abbruch, Netzfehler) — der Import wird trotzdem wie bisher neu eingereiht.</summary>
+    [Theory]
+    [InlineData("ok")]
+    [InlineData("404")]
+    [InlineData("405")]
+    [InlineData("down")]
+    public async Task RunAsync_FetchStalls_CancelsThePiratechessJob_AndReEnqueuesWhateverItAnswers(string answer)
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var deletes = new List<string>();
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic(),
+            deletes, () => answer switch
+            {
+                "404" => new HttpResponseMessage(HttpStatusCode.NotFound),
+                "405" => new HttpResponseMessage(HttpStatusCode.MethodNotAllowed),
+                "down" => throw new HttpRequestException("Connection refused"),
+                _ => JsonOk(new { cancelled = true }),
+            })));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.Queued, reloaded.Phase);
+        Assert.Equal(1, _queue.Count);
+    }
+
+    [Fact]
+    public async Task RunAsync_FetchStallsAtMaxAttempts_CancelsThePiratechessJob_AndFails()
+    {
+        SeedFetchUserAndImport(attempts: ChessableImportService.MaxAttempts - 1, out var id);
+        var deletes = new List<string>();
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic(), deletes)));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        Assert.Equal(ChessableImportStatus.Failed, (await _db.ChessableImports.FindAsync(id))!.Status);
+    }
+
+    /// <summary>Die Absolut-Grenze greift, obwohl der Job noch Fortschritt macht: der Job läuft weiter, der nächste
+    /// Versuch pollt ihn wieder (kein Abbruch, sonst finge ein großer Kurs jedes Mal von vorn an).</summary>
+    [Fact]
+    public async Task RunAsync_AbsoluteBackstopWhileProgressing_LeavesThePiratechessJobRunning()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var deletes = new List<string>();
+        var n = 0;
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            n++;
+            return JsonOk(new { status = ChessableCourseJobStatus.Running, chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0,
+                lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null });
+        }, deletes)));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 1000; svc.FetchMaxPolls = 3;
+
+        await svc.RunAsync(id);
+
+        Assert.Empty(deletes);
+        Assert.Equal(1, _queue.Count);
+        Assert.Equal("job-1", (await _db.ChessableImports.FindAsync(id))!.FetchJobId);
+    }
+
+    /// <summary>Tageslimit erreicht, aber vom vorigen Versuch läuft noch ein piratechess-Job: der wird mit
+    /// angehalten, sonst holte er den Kurs am Limit vorbei zu Ende.</summary>
+    [Fact]
+    public async Task RunAsync_RateLimitPause_CancelsTheJobOfThePreviousAttempt()
+    {
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow;
+        cred.RateLimitLinesUsed = 5;
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null, attempts: 1);
+        imp.FetchJobId = "job-7";
+        await _db.SaveChangesAsync();
+        var deletes = new List<string>();
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(
+            _ => throw new InvalidOperationException("Proxy unerwartet aufgerufen"), deletes)), dailyLineLimit: 5);
+
+        await svc.RunAsync(imp.Id);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-7" }, deletes);
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Paused, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.RateLimited, reloaded.Phase);
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_CourseInOwnerLibrary_Enqueues()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"128648\",\"name\":\"Mine\"}]",   // Kurs in der Bibliothek
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        // Eigentum via Cache → kein /courses-Call; nur der /cached-Lane-Check fragt piratechess.
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "128648", "repertoire", "Mine");
+
+        Assert.NotNull(id);
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.Bid == "128648" && i.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_TrustOwnership_BypassesLibraryCheck()
+    {
+        // Kurs ist NICHT in der (Home-)Bibliothek des Users — mit trustOwnership (Admin-Reprocess)
+        // wird er trotzdem eingereiht, sonst würde er fälschlich als „nicht besessen" abgewiesen.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[]", // leere Bibliothek → Eigentumsprüfung würde scheitern
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "999", "book", "Fremd", trustOwnership: true);
+
+        Assert.NotNull(id);
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.Bid == "999" && i.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_NoBearerButCached_AdminTrust_EnqueuesFromCache()
+    {
+        // Owner OHNE Bearer, Kurs aber gecacht → im Admin-Reprocess (trustOwnership) trotzdem einreihbar;
+        // der Import läuft dann ohne Bearer aus dem piratechess-Cache (FullyCached).
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync(); // KEIN ChessableCredential
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = true }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "320357", "repertoire", "Cached", trustOwnership: true);
+
+        Assert.NotNull(id);
+        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "320357" && i.UserId == user.Id);
+        Assert.True(imp.FullyCached);
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_NoBearerNotCached_ReturnsNull()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync(); // KEIN ChessableCredential
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "999", "repertoire", "X", trustOwnership: true);
+
+        Assert.Null(id); // ohne Bearer und ohne Cache kein Weg → nicht eingereiht
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_ImportAlreadyRunning_SkipsSecond()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"128648\",\"name\":\"Mine\"}]",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        // Es läuft bereits ein Import für genau diesen Kurs.
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = user.Id, Bid = "128648", CourseName = "Mine", Target = "repertoire",
+            Status = ChessableImportStatus.Running, CreatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "128648", "repertoire", "Mine");
+
+        Assert.Null(id); // Dedup → kein zweiter Import
+        Assert.Equal(1, await _db.ChessableImports.CountAsync(i => i.Bid == "128648" && i.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_CourseNotInOwnerLibrary_ReturnsNull_NoImport()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"111\",\"name\":\"Mine\"}]",   // fremder bid 999 NICHT enthalten
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        // Fallback-Frischabruf /courses liefert ebenfalls NICHT 999 → Re-Fetch muss verweigert werden
+        // (schließt den Reprocess-Bypass über ein selbst angelegtes Repertoire mit fremdem bid).
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses"
+                ? JsonOk(new[] { new { bid = "111", name = "Mine" } })
+                : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "999", "repertoire", "Geklaut");
+
+        Assert.Null(id);
+        Assert.False(await _db.ChessableImports.AnyAsync(i => i.Bid == "999"));
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_UnbekannteBids_FragtChessableHoechstensEinmalJeFrist()
+    {
+        // A3-014: „Aktualisieren" über N Repertoires mit unbekannter bid (EnqueueRefetchesAsync → je Kandidat
+        // EnqueueReimportAsync) holte die Kursliste vorher N-mal live über den geteilten VPN-Pool — die Drossel
+        // CourseListRefreshCooldown galt nur für StartImport. Jetzt dieselbe Prüfung samt Drossel.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"111\",\"name\":\"Mine\"}]",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var courseCalls = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses")
+            {
+                courseCalls++;
+                return JsonOk(new[] { new { bid = "111", name = "Mine" } });
+            }
+            return JsonOk(new { cached = false });
+        }));
+
+        foreach (var bid in new[] { "901", "902", "903", "904" })
+            Assert.Null(await svc.EnqueueReimportAsync(user.Id, bid, "repertoire", "Erfunden " + bid));
+
+        Assert.Equal(1, courseCalls);
+        Assert.False(await _db.ChessableImports.AnyAsync(i => i.UserId == user.Id));
+        // Ein Kurs aus der (frisch geholten) Liste geht weiter ohne Abruf durch.
+        Assert.NotNull(await svc.EnqueueReimportAsync(user.Id, "111", "repertoire", "Mine"));
+        Assert.Equal(1, courseCalls);
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_KurslisteNachFristAbgelaufen_FragtWiederLive()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[]",
+            CoursesCachedAt = DateTime.UtcNow - ChessableImportQueueService.CourseListRefreshCooldown - TimeSpan.FromMinutes(1),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var courseCalls = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses")
+            {
+                courseCalls++;
+                return JsonOk(new[] { new { bid = "555", name = "Neu gekauft" } });
+            }
+            return JsonOk(new { cached = false });
+        }));
+
+        // Neu gekaufter Kurs: die alte Liste kennt ihn nicht, die Frist ist um → ein Live-Abruf findet ihn.
+        Assert.NotNull(await svc.EnqueueReimportAsync(user.Id, "555", "repertoire", "Neu gekauft"));
+        Assert.Equal(1, courseCalls);
+    }
+
+    private static HttpResponseMessage JsonOk(object payload) =>
+        new(HttpStatusCode.OK) { Content = JsonContent.Create(payload) };
+
+    // ===== FailAsync: die Zombie-Haertung (Ausloeser der Prod-Haenger-Kette) ================
+
+    [Fact]
+    public async Task FailAsync_HealthyDb_MarksFailedAndNotifies()
+    {
+        var imp = await SeedImportAsync("repertoire", status: ChessableImportStatus.Running);
+
+        await _svc.FailAsync(imp, "Kaputt");
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
+        Assert.Equal("Kaputt", reloaded.Error);
+        Assert.NotNull(reloaded.CompletedAt);
+        Assert.Single(_db.Notifications.Where(n => n.UserId == 7));
+    }
+
+    [Fact]
+    public async Task FailAsync_DeadDbContext_SwallowsInsteadOfThrowing()
+    {
+        // DIE Haertung: scheitert schon das Fehler-Update (DB weg/Timeout), darf die Exception
+        // nicht bis in den Worker laufen — der Import bliebe sonst fuer immer als Zombie im
+        // Lane-Slot ("fetching"/"importing"), der Drain stuende bis zum Neustart. Genau diese
+        // Kette hat Prod-Import-Haenger ausgeloest; der Watchdog reiht den Verwaisten neu ein.
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var deadDb = new AppDbContext(options);
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("kein Proxy")), db: deadDb);
+        var imp = new ChessableImport
+        {
+            Id = 991, UserId = 7, Bid = "b1", CourseName = "X", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing, CreatedAt = DateTime.UtcNow,
+        };
+        deadDb.ChessableImports.Add(imp);
+        await deadDb.SaveChangesAsync();
+
+        await deadDb.DisposeAsync();   // ab jetzt wirft jedes SaveChangesAsync ObjectDisposed
+
+        // Darf NICHT werfen — genau das ist der Vertrag der Haertung.
+        await svc.FailAsync(imp, "DB weg");
+
+        Assert.Equal(ChessableImportStatus.Failed, imp.Status);   // im Speicher gesetzt, nur nicht persistiert
+    }
+
+    [Fact]
+    public async Task FailAsync_BearerFatalError_TripsBreaker_AndBreakerFailureDoesNotPropagate()
+    {
+        // Zweites Fangnetz: die NACHGELAGERTEN Nebenwirkungen (Breaker, Notification) duerfen den
+        // bereits festgeschriebenen Fehlerstatus nicht mehr gefaehrden. Hier der Gutfall: ein
+        // bearer-fataler Fehler sperrt den Bearer (BlockedAt), damit Folge-Importe pausieren
+        // statt mit dem toten Token weiterzuhaemmern.
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential { UserId = 7, EncryptedBearer = "egal" });
+        await _db.SaveChangesAsync();
+        var imp = await SeedImportAsync("repertoire", status: ChessableImportStatus.Running);
+
+        await _svc.FailAsync(imp, "Dein Chessable-Konto wurde gesperrt (403 vom Kurs-Endpoint)");
+
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.NotNull(cred.BlockedAt);
+        Assert.Equal(ChessableImportStatus.Failed, (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+    }
+
+    private sealed class FakeQueue : IBackgroundTaskQueue
+    {
+        public int Count { get; private set; }
+        public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+        {
+            Count++;
+            return ValueTask.CompletedTask;
+        }
+        public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken ct)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class ScriptedHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _fn;
+        public ScriptedHandler(Func<HttpRequestMessage, HttpResponseMessage> fn) => _fn = fn;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => Task.FromResult(_fn(request));
+    }
+}

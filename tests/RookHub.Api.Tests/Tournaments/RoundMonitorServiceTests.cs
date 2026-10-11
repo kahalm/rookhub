@@ -1,0 +1,454 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.Tournaments;
+
+/// <summary>
+/// Tests for RoundMonitorService DB logic (cleanup and monitor state).
+/// The background service depends on CrawlerProxyService (HTTP calls),
+/// so we test the DB operations it performs in isolation.
+/// </summary>
+public class RoundMonitorServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+
+    public RoundMonitorServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public async Task FailedMonitorSave_DetachUnblocksSubsequentSaves()
+    {
+        // Regression zur CheckAllMonitorsAsync-Schleife: EIN DbContext für ALLE Monitore. Schlug
+        // SaveChanges für Monitor A fehl (z. B. parallel abbestellt/gelöscht →
+        // DbUpdateConcurrencyException), blieb As dirty Entity im Tracker liegen und ließ auch
+        // die Saves aller FOLGENDEN Monitore scheitern (LastCheckedAt nie persistiert →
+        // Benachrichtigungen feuerten im nächsten Durchlauf doppelt). Der Fix detacht die
+        // gescheiterte Entität; hier wird genau diese Schleifen-Semantik nachgestellt.
+        var dbName = Guid.NewGuid().ToString();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options;
+        using var db = new AppDbContext(options);
+        db.TournamentMonitors.AddRange(
+            new TournamentMonitor { CrawlerTournamentId = "A", CrawlerTournamentDbId = 1, ActiveUntil = DateTime.UtcNow.AddHours(1) },
+            new TournamentMonitor { CrawlerTournamentId = "B", CrawlerTournamentDbId = 2, ActiveUntil = DateTime.UtcNow.AddHours(1) });
+        await db.SaveChangesAsync();
+        var monitors = await db.TournamentMonitors.OrderBy(m => m.Id).ToListAsync();
+
+        // Paralleler Unsubscribe: Monitor A verschwindet über einen ZWEITEN Kontext.
+        using (var other = new AppDbContext(options))
+        {
+            other.TournamentMonitors.Remove(await other.TournamentMonitors.SingleAsync(m => m.CrawlerTournamentId == "A"));
+            await other.SaveChangesAsync();
+        }
+
+        monitors[0].LastCheckedAt = DateTime.UtcNow;
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db.SaveChangesAsync());
+        db.Entry(monitors[0]).State = EntityState.Detached;   // der Fix im catch der Schleife
+
+        monitors[1].LastCheckedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();                           // MUSS jetzt gelingen
+
+        var b = await db.TournamentMonitors.AsNoTracking().SingleAsync(m => m.CrawlerTournamentId == "B");
+        Assert.NotNull(b.LastCheckedAt);
+    }
+
+    [Fact]
+    public async Task ExpiredMonitors_AreRemoved()
+    {
+        _db.TournamentMonitors.AddRange(
+            new TournamentMonitor
+            {
+                CrawlerTournamentId = "100",
+                CrawlerTournamentDbId = 1,
+                ActiveUntil = DateTime.UtcNow.AddHours(-2) // expired
+            },
+            new TournamentMonitor
+            {
+                CrawlerTournamentId = "200",
+                CrawlerTournamentDbId = 2,
+                ActiveUntil = DateTime.UtcNow.AddHours(1) // active
+            }
+        );
+        await _db.SaveChangesAsync();
+
+        // Simulate cleanup logic from RoundMonitorService.CheckAllMonitorsAsync
+        var expired = await _db.TournamentMonitors
+            .Where(m => m.ActiveUntil < DateTime.UtcNow)
+            .ToListAsync();
+        _db.TournamentMonitors.RemoveRange(expired);
+        await _db.SaveChangesAsync();
+
+        var remaining = await _db.TournamentMonitors.ToListAsync();
+        Assert.Single(remaining);
+        Assert.Equal("200", remaining[0].CrawlerTournamentId);
+    }
+
+    [Fact]
+    public async Task ActiveMonitors_AreQueried()
+    {
+        _db.TournamentMonitors.AddRange(
+            new TournamentMonitor
+            {
+                CrawlerTournamentId = "100",
+                CrawlerTournamentDbId = 1,
+                ActiveUntil = DateTime.UtcNow.AddHours(1)
+            },
+            new TournamentMonitor
+            {
+                CrawlerTournamentId = "200",
+                CrawlerTournamentDbId = 2,
+                ActiveUntil = DateTime.UtcNow.AddHours(1)
+            },
+            new TournamentMonitor
+            {
+                CrawlerTournamentId = "300",
+                CrawlerTournamentDbId = 3,
+                ActiveUntil = DateTime.UtcNow.AddHours(-1) // expired
+            }
+        );
+        await _db.SaveChangesAsync();
+
+        var active = await _db.TournamentMonitors
+            .Where(m => m.ActiveUntil >= DateTime.UtcNow)
+            .ToListAsync();
+
+        Assert.Equal(2, active.Count);
+    }
+
+    [Fact]
+    public async Task Monitor_LastCheckedAt_Updates()
+    {
+        var monitor = new TournamentMonitor
+        {
+            CrawlerTournamentId = "100",
+            CrawlerTournamentDbId = 1,
+            ActiveUntil = DateTime.UtcNow.AddHours(1),
+            LastCheckedAt = null
+        };
+        _db.TournamentMonitors.Add(monitor);
+        await _db.SaveChangesAsync();
+
+        // Simulate what the service does after checking
+        monitor.LastCheckedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var updated = await _db.TournamentMonitors.FirstAsync();
+        Assert.NotNull(updated.LastCheckedAt);
+    }
+
+    [Fact]
+    public async Task Monitor_LastKnownRounds_UpdatesOnNewRound()
+    {
+        var monitor = new TournamentMonitor
+        {
+            CrawlerTournamentId = "100",
+            CrawlerTournamentDbId = 1,
+            ActiveUntil = DateTime.UtcNow.AddHours(1),
+            LastKnownRounds = 5
+        };
+        _db.TournamentMonitors.Add(monitor);
+        await _db.SaveChangesAsync();
+
+        // Simulate new round detection
+        monitor.LastKnownRounds = 6;
+        monitor.LastCheckedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var updated = await _db.TournamentMonitors.FirstAsync();
+        Assert.Equal(6, updated.LastKnownRounds);
+    }
+
+    [Fact]
+    public async Task NoActiveMonitors_QueryReturnsEmpty()
+    {
+        var active = await _db.TournamentMonitors
+            .Where(m => m.ActiveUntil >= DateTime.UtcNow)
+            .ToListAsync();
+
+        Assert.Empty(active);
+    }
+
+    [Fact]
+    public async Task PerIterationSave_PreservesFirstMonitorWhenSecondFails()
+    {
+        // Verifies the fix for Bug 8: SaveChanges inside the loop ensures that
+        // successfully processed monitors are persisted even if a later one fails.
+        var m1 = new TournamentMonitor { CrawlerTournamentId = "A1", CrawlerTournamentDbId = 1, ActiveUntil = DateTime.UtcNow.AddHours(1) };
+        var m2 = new TournamentMonitor { CrawlerTournamentId = "B2", CrawlerTournamentDbId = 2, ActiveUntil = DateTime.UtcNow.AddHours(1) };
+        _db.TournamentMonitors.AddRange(m1, m2);
+        await _db.SaveChangesAsync();
+
+        var monitors = await _db.TournamentMonitors.Where(m => m.ActiveUntil >= DateTime.UtcNow).ToListAsync();
+        foreach (var monitor in monitors)
+        {
+            try
+            {
+                monitor.LastCheckedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();   // per-iteration save (the fix)
+
+                if (monitor.CrawlerTournamentId == "B2")
+                    throw new InvalidOperationException("Simulated failure on second monitor");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // logged, continue — mirrors the service catch block
+            }
+        }
+
+        var saved = await _db.TournamentMonitors.ToListAsync();
+        // First monitor was saved before second one failed → its LastCheckedAt is set
+        Assert.NotNull(saved.First(m => m.CrawlerTournamentId == "A1").LastCheckedAt);
+        Assert.NotNull(saved.First(m => m.CrawlerTournamentId == "B2").LastCheckedAt);
+    }
+
+    [Fact]
+    public async Task NotifyNewRound_CreatesNotificationForEachSubscriber()
+    {
+        _db.AppUsers.AddRange(
+            new AppUser { Id = 1, Username = "a", PasswordHash = "h" },
+            new AppUser { Id = 2, Username = "b", PasswordHash = "h" });
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "T1", TournamentName = "Open 2026" },
+            new TournamentSubscription { UserId = 2, CrawlerTournamentId = "T1", TournamentName = "Open 2026" },
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "OTHER", TournamentName = "Andere" });
+        await _db.SaveChangesAsync();
+
+        await RoundMonitorService.NotifyNewRoundAsync(
+            _db, new NotificationService(_db), ["T1"], tournamentDbId: 42, round: 5, default);
+
+        var notes = await _db.Notifications.ToListAsync();
+        Assert.Equal(2, notes.Count);   // nur die beiden T1-Abonnenten
+        Assert.All(notes, n => Assert.Equal(NotificationType.TournamentNewRound, n.Type));
+        Assert.All(notes, n => Assert.Equal("/tournaments/42", n.Link));
+        Assert.All(notes, n => Assert.Contains("Open 2026", n.DataJson ?? ""));
+        Assert.Contains(notes, n => n.UserId == 1);
+        Assert.Contains(notes, n => n.UserId == 2);
+    }
+
+    [Fact]
+    public async Task NotifyNewRound_NoSubscribers_NoOp()
+    {
+        await RoundMonitorService.NotifyNewRoundAsync(
+            _db, new NotificationService(_db), ["NONE"], tournamentDbId: 1, round: 1, default);
+        Assert.Empty(await _db.Notifications.ToListAsync());
+    }
+
+    // --- Ein Durchlauf gegen einen Test-Crawler ---
+
+    private static CrawlerProxyService Proxy(RoutingHttpMessageHandler handler)
+        => new(new HttpClient(handler) { BaseAddress = new Uri("http://crawler") });
+
+    private static RoundMonitorService Service() => new(null!, NullLogger<RoundMonitorService>.Instance);
+
+    private static string? BodyOf(RoutingHttpMessageHandler handler, string path)
+        => handler.Requests.LastOrDefault(r => r.Method == HttpMethod.Post && r.Path == path).Body;
+
+    /// <summary>
+    /// A5-001: Die Turnierseite traegt die Crawler-DB-Id in der Route, und der Monitor speichert sie.
+    /// Der Crawl-Auftrag deutet jede Zahl als chess-results-Nummer — vorher holte der Crawler fuer den
+    /// Monitor „57" das fremde Turnier tnr57. Jetzt geht der Auftrag an die Nummer des Turniers
+    /// (ueber die DB-Id beim Crawler aufgeloest), und Abos und Favoriten unter BEIDEN Kennungen zaehlen.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_MonitorUnderDbId_CrawlsTheChessResultsNumber()
+    {
+        _db.AppUsers.AddRange(
+            new AppUser { Id = 1, Username = "seite", PasswordHash = "h" },
+            new AppUser { Id = 2, Username = "kalender", PasswordHash = "h" });
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = 1, CrawlerTournamentId = "57", CrawlerTournamentDbId = 57,
+            ActiveUntil = DateTime.UtcNow.AddHours(1), LastKnownRounds = 4,
+        });
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "57", TournamentName = "Open" },
+            new TournamentSubscription { UserId = 2, CrawlerTournamentId = "1234567", TournamentName = "Open" });
+        _db.TournamentFavorites.Add(new TournamentFavorite { UserId = 2, CrawlerTournamentId = "1234567", PlayerSnr = 12 });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57/rounds/check", """{"hasNewRound":true,"availableRounds":5,"newRoundNumbers":[5]}""")
+            .Map("/api/tournaments/57", """{"id":57,"chessResultsId":"1234567"}""")
+            .Map("/api/crawl/player-details", "{}")
+            .Map("/api/crawl", "{}");
+
+        await Service().CheckAllMonitorsAsync(_db, Proxy(handler), () => new NotificationService(_db), default);
+
+        Assert.Contains("\"chessResultsId\":\"1234567\"", BodyOf(handler, "/api/crawl"));
+        var details = BodyOf(handler, "/api/crawl/player-details");
+        Assert.Contains("\"chessResultsId\":\"1234567\"", details);
+        Assert.Contains("\"playerSnrs\":[12]", details);
+        var notified = await _db.Notifications.Select(n => n.UserId).OrderBy(u => u).ToListAsync();
+        Assert.Equal([1, 2], notified);
+    }
+
+    /// <summary>Kennt der Crawler die DB-Id nicht mehr, geht KEIN Auftrag raus (auch keiner an „57" als Nummer).</summary>
+    [Fact]
+    public async Task CheckAllMonitors_UnresolvableDbId_SendsNoCrawl()
+    {
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = 1, CrawlerTournamentId = "57", CrawlerTournamentDbId = 57,
+            ActiveUntil = DateTime.UtcNow.AddHours(1), LastKnownRounds = 4,
+        });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57/rounds/check", """{"hasNewRound":true,"availableRounds":5}""")
+            .Map("/api/tournaments/57", "{}", System.Net.HttpStatusCode.NotFound)
+            .Map("/api/crawl", "{}");
+
+        await Service().CheckAllMonitorsAsync(_db, Proxy(handler), () => new NotificationService(_db), default);
+
+        Assert.False(handler.Hits.ContainsKey("/api/crawl"));
+    }
+    // --- A5-007: eine Meldung je Runde, 409 = laeuft schon ---
+
+    private async Task SeedMonitoredTournamentAsync(params int[] monitorUserIds)
+    {
+        _db.AppUsers.AddRange(
+            new AppUser { Id = 1, Username = "eins", PasswordHash = "h" },
+            new AppUser { Id = 2, Username = "zwei", PasswordHash = "h" });
+        foreach (var userId in monitorUserIds)
+            _db.TournamentMonitors.Add(new TournamentMonitor
+            {
+                UserId = userId, CrawlerTournamentId = "1234567", CrawlerTournamentDbId = 57,
+                ActiveUntil = DateTime.UtcNow.AddHours(1), LastKnownRounds = 4,
+            });
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "1234567", TournamentName = "Open" },
+            new TournamentSubscription { UserId = 2, CrawlerTournamentId = "1234567", TournamentName = "Open" });
+        await _db.SaveChangesAsync();
+    }
+
+    private static RoutingHttpMessageHandler Crawler(string check,
+        System.Net.HttpStatusCode crawlStatus = System.Net.HttpStatusCode.Accepted)
+        => new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57/rounds/check", check)
+            .Map("/api/tournaments/57", """{"id":57,"chessResultsId":"1234567"}""")
+            .Map("/api/crawl", "{}", crawlStatus);
+
+    private Task RunPassAsync(RoutingHttpMessageHandler handler)
+        => Service().CheckAllMonitorsAsync(_db, Proxy(handler), () => new NotificationService(_db), default);
+
+    private int CrawlPosts(RoutingHttpMessageHandler handler)
+        => handler.Requests.Count(r => r.Method == HttpMethod.Post && r.Path == "/api/crawl");
+
+    /// <summary>
+    /// Der Crawler cached das Pruefergebnis 60 s, der Monitor fragt alle 30 s: der zweite Durchlauf sieht
+    /// noch einmal hasNewRound=true fuer dieselbe Runde 5. Vorher ging die Meldung dann zweimal an jeden
+    /// Abonnenten — jetzt nur, wenn mehr Runden da sind als zuletzt gemeldet.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_CachedNewRoundSeenTwice_NotifiesOnce()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5,"newRoundNumbers":[5]}""");
+
+        await RunPassAsync(handler);
+        await RunPassAsync(handler);
+
+        var notified = await _db.Notifications.Select(n => n.UserId).OrderBy(u => u).ToListAsync();
+        Assert.Equal([1, 2], notified);
+        Assert.Contains("\"round\":\"5\"", (await _db.Notifications.FirstAsync()).DataJson);
+        Assert.Equal(5, (await _db.TournamentMonitors.AsNoTracking().SingleAsync()).LastKnownRounds);
+    }
+
+    /// <summary>
+    /// Laeuft fuer das Turnier schon ein Crawl (Aktualisieren-Knopf, Abo-Abgleich), antwortet der Crawler 409.
+    /// Vorher warf der Monitor, verwarf den Stand und meldete nichts — und war der fremde Crawl fertig, sah der
+    /// naechste Durchlauf keine neue Runde mehr: die Meldung ging nie raus. 409 heisst „laeuft schon".
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_CrawlAlreadyRunning409_StillNotifiesOnce()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5}""", System.Net.HttpStatusCode.Conflict);
+
+        await RunPassAsync(handler);
+
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+        var monitor = await _db.TournamentMonitors.AsNoTracking().SingleAsync();
+        Assert.Equal(5, monitor.LastKnownRounds);
+        Assert.NotNull(monitor.LastCheckedAt);
+    }
+
+    /// <summary>
+    /// Volle Crawler-Warteschlange (429): die Meldung geht trotzdem genau einmal raus, der Crawl wird im
+    /// naechsten Durchlauf erneut angefragt (hasNewRound bleibt wahr, bis die Runde geholt ist).
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_QueueFull429_NotifiesOnceAndRetriesCrawl()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5}""", System.Net.HttpStatusCode.TooManyRequests);
+
+        await RunPassAsync(handler);
+        await RunPassAsync(handler);
+
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+        Assert.Equal(2, CrawlPosts(handler));
+    }
+
+    /// <summary>
+    /// Hat ein fremder Crawl die Runde schon geholt, meldet der Crawler hasNewRound=false — die Abonnenten
+    /// wissen aber noch nichts von Runde 5. Gemeldet wird ueber LastKnownRounds, ohne neuen Crawl.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_RoundAlreadyFetchedByOtherCrawl_NotifiesWithoutCrawl()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":false,"availableRounds":5}""");
+
+        await RunPassAsync(handler);
+
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+        Assert.Equal(0, CrawlPosts(handler));
+    }
+
+    /// <summary>
+    /// Zwei Nutzer mit Monitor auf demselben Turnier: vorher pruefte, crawlte und meldete jeder Monitor fuer
+    /// sich, jede Runde ging doppelt an alle Abonnenten. Jetzt ein Durchgang je Turnier.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_TwoMonitorsOnSameTournament_OneCheckOneCrawlOneNotification()
+    {
+        await SeedMonitoredTournamentAsync(1, 2);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5}""");
+
+        await RunPassAsync(handler);
+
+        Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/tournaments/57/rounds/check"));
+        Assert.Equal(1, CrawlPosts(handler));
+        var notified = await _db.Notifications.Select(n => n.UserId).OrderBy(u => u).ToListAsync();
+        Assert.Equal([1, 2], notified);
+        Assert.All(await _db.TournamentMonitors.AsNoTracking().ToListAsync(), m => Assert.Equal(5, m.LastKnownRounds));
+    }
+
+    /// <summary>CrawlQueueClient.RequestAsync: 409 ist „laeuft schon", 429 bleibt ein Fehler.</summary>
+    [Fact]
+    public async Task CrawlQueueClient_RequestAsync_409IsAlreadyRunning_429Throws()
+    {
+        var running = new CrawlQueueClient(Proxy(new RoutingHttpMessageHandler()
+            .Map("/api/crawl", "{}", System.Net.HttpStatusCode.Conflict)));
+        Assert.Equal(CrawlQueueClient.CrawlRequestOutcome.AlreadyRunning,
+            await running.RequestAsync("1234567", "Full", default));
+
+        var full = new CrawlQueueClient(Proxy(new RoutingHttpMessageHandler()
+            .Map("/api/crawl", "{}", System.Net.HttpStatusCode.TooManyRequests)));
+        var ex = await Assert.ThrowsAsync<RookHub.Api.Exceptions.CrawlerRequestException>(
+            () => full.RequestAsync("1234567", "Full", default));
+        Assert.Equal(System.Net.HttpStatusCode.TooManyRequests, ex.StatusCode);
+    }
+}

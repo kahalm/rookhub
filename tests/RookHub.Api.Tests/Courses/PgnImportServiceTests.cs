@@ -1,0 +1,1472 @@
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Courses;
+
+namespace RookHub.Api.Tests.Courses;
+
+public class PgnImportServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly PgnImportService _service;
+
+    public PgnImportServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+        _service = new PgnImportService(_db);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private const string SamplePgn = @"
+[Event ""Test Book""]
+[Round ""1.1""]
+[White ""Italian Idea""]
+[Black ""Kapitel 5""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""Finde den Zug""] Die Pointe ist Entwicklung. } 2.Nf3 Nc6 (2... d6 3. d4) 3. Bb5 $1 a6 *
+";
+
+    [Fact]
+    public void SplitGames_KeepsBracketStartingCommentContinuationLines()
+    {
+        // Regression: eine umbruch-bedingte Kommentar-Fortsetzungszeile, die mit '[' beginnt
+        // ([%cal ...]), wurde als „Tag-artige Zeile" verworfen — samt ggf. schließendem '}',
+        // wodurch der Kommentar-Scanner nachfolgende echte Züge fraß.
+        var pgn = "[Event \"X\"]\n[Round \"1\"]\n\n{ Kommentar mit Pfeil\n[%cal Gd8g8] und Ende }\n1. e4 e5 *\n";
+
+        var games = PgnParser.SplitGames(pgn).ToList();
+
+        var g = Assert.Single(games);
+        Assert.Contains("[%cal Gd8g8]", g.MoveText);
+        Assert.Contains("1. e4 e5", g.MoveText);
+    }
+
+    [Fact]
+    public void SplitGames_HeaderLikeLineInsideComment_IsCommentContentNotHeader()
+    {
+        var pgn = "[Event \"Echt\"]\n[Round \"1\"]\n\n{ Zitat:\n[White \"unecht\"]\nEnde } 1. e4 *\n";
+
+        var games = PgnParser.SplitGames(pgn).ToList();
+
+        var g = Assert.Single(games);                       // KEIN Spiel-Split mitten im Kommentar
+        Assert.False(g.Headers.ContainsKey("White"));       // Zitat wird nicht als Header übernommen
+        Assert.Contains("[White \"unecht\"]", g.MoveText);
+        Assert.Contains("1. e4", g.MoveText);
+    }
+
+    [Fact]
+    public void SplitGames_HeaderOnlyGame_DoesNotLeakHeadersIntoNextGame()
+    {
+        // Regression: ein Spiel nur aus Headern (kein Movetext) wurde nie geflusht — seine Header
+        // (z. B. die FEN) mischten sich still in das NÄCHSTE Spiel.
+        var pgn = "[Event \"Orphan\"]\n[FEN \"8/8/8/8/8/8/8/K6k w - - 0 1\"]\n\n[Event \"Real\"]\n[Round \"2\"]\n\n1. e4 *\n";
+
+        var games = PgnParser.SplitGames(pgn).ToList();
+
+        Assert.Equal(2, games.Count);
+        Assert.Equal("Orphan", games[0].Headers["Event"]);
+        Assert.True(string.IsNullOrWhiteSpace(games[0].MoveText));
+        Assert.Equal("Real", games[1].Headers["Event"]);
+        Assert.False(games[1].Headers.ContainsKey("FEN"));  // FEN des Orphans leakt nicht
+        Assert.Contains("1. e4", games[1].MoveText);
+    }
+
+    [Fact]
+    public void ParsePgn_ExtractsMainlineAsUci_StrippingVariationsNagsNumbers()
+    {
+        var (puzzles, invalid) = PgnImportService.ParsePgn("book.pgn", SamplePgn);
+
+        var p = Assert.Single(puzzles);
+        Assert.Equal(0, invalid);
+        Assert.Equal("book.pgn:1.1", p.LineId);
+        Assert.Equal("1.1", p.Round);
+        Assert.Equal("g1f3 b8c6 f1b5 a7a6", p.Moves);   // variation (2... d6) entfernt
+        Assert.Equal("Italian Idea", p.Title);
+        Assert.Equal("Kapitel 5", p.Chapter);
+        Assert.Equal("Die Pointe ist Entwicklung.", p.Comment); // [%tqu] entfernt
+        // Einleitungskommentar (vor dem ersten Zug) landet unter Schlüssel -1, [%tqu] entfernt.
+        Assert.NotNull(p.MoveComments);
+        Assert.Equal("Die Pointe ist Entwicklung.", p.MoveComments![-1]);
+    }
+
+    [Fact]
+    public void ParsePgn_CollectsPerMoveComments_KeyedByHalfMoveIndex_FoldingVariationsIntoTheirMove()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{Intro.} 2. Nf3 {Develops the knight.} Nc6 (2... d6 {Philidor — Nebenvariante.}) 3. Bb5 {The pin.} a6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+        Assert.Equal("g1f3 b8c6 f1b5 a7a6", p.Moves);
+        Assert.NotNull(p.MoveComments);
+        var mc = p.MoveComments!;
+        Assert.Equal("Intro.", mc[-1]);              // vor dem ersten Zug
+        Assert.Equal("Develops the knight.", mc[0]);  // nach Nf3 (Halbzug 0)
+        Assert.Equal("The pin.", mc[2]);              // nach Bb5 (Halbzug 2)
+        Assert.False(mc.ContainsKey(3));              // a6 hat keinen Kommentar
+        // Seit Pipeline 19: die Variante hinter Nc6 ist eine Alternative zu IHM und landet samt Zugnummer
+        // und Kommentar unter seinem Halbzug (das Frontend macht „2... d6" dort klickbar).
+        Assert.Equal("2... d6 Philidor — Nebenvariante.", mc[1]);
+    }
+
+    [Fact]
+    public void ParsePgn_FoldsEveryVariationIntoItsMove_RealChessableLine()
+    {
+        // Echte Chessable-Linie (Kurs 128648, oid 20733162, gekürzt): die Alternativen zu 3.e5 stehen
+        // direkt hinter dem Zug, die zu 4.b4 hinter einem reinen Pfeil-Kommentar. Bis Pipeline 18 gingen
+        // alle vier Varianten verloren; bei 3.e5 blieb nur der verwaiste Rest „2.d3 d5 3.Nf3 analysiert.".
+        var pgn = """
+            [Event "Lifetime Repertoires: Martinovićs Französisch"]
+            [Round "004.002"]
+            [FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+
+            1. e4 {[%tqu "En","find the move","","","e7e6","",10]} e6 2. Nf3 {Dieser Zug hat fast keine eigenständige Bedeutung.} d5 3. e5 (3.Nc3 Nf6 4.e5 Nfd7 5.d4 {werden wir in einem späteren Kapitel der Steinitz Variante sehen.}) (3.exd5 exd5 4.d4 {geht über in die Abtauschvariante.}) (3.d3 {ist hier in der Zugfolge }) {2.d3 d5 3.Nf3 analysiert.} c5 4. b4 {[%cal Bb4c5][%csl Rc5]} ({Dieses Gambit ist die einzige unabhängige Variante.} 4.c3 {ist ein viel besserer Zug:} 4...Nc6 5.d4 {würde zur Vorstoßvariante überleiten.}) cxb4 5. a3 *
+            """;
+
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+
+        Assert.Equal("e2e4 e7e6 g1f3 d7d5 e4e5 c7c5 b2b4 c5b4 a2a3", p.Moves);
+        Assert.Equal(0, p.StartPly);
+        var mc = p.MoveComments!;
+        Assert.Equal("Dieser Zug hat fast keine eigenständige Bedeutung.", mc[2]);
+        Assert.Equal("3.Nc3 Nf6 4.e5 Nfd7 5.d4 werden wir in einem späteren Kapitel der Steinitz Variante sehen. "
+            + "3.exd5 exd5 4.d4 geht über in die Abtauschvariante. "
+            + "3.d3 ist hier in der Zugfolge 2.d3 d5 3.Nf3 analysiert.", mc[4]);
+        Assert.Equal("Dieses Gambit ist die einzige unabhängige Variante. 4.c3 ist ein viel besserer Zug: "
+            + "4...Nc6 5.d4 würde zur Vorstoßvariante überleiten.", mc[6]);
+        Assert.False(mc.ContainsKey(5));
+        Assert.Equal(2, p.MoveShapes![6].Count);   // Pfeil + Feld von 4.b4 bleiben beim Zug
+    }
+
+    [Fact]
+    public void ExtractMoveComments_WithoutFoldAll_KeepsOldBehaviourForMasterGames()
+    {
+        // Rate-/Kommentar-Sessions (Meisterpartien) rufen ohne foldAllVariations auf: dort bleibt es dabei,
+        // dass nur eine Variante direkt nach einem Kommentar gefaltet wird.
+        const string moveText = "1. e4 e6 2. Nf3 d5 3. e5 (3.Nc3 Nf6) {Rest.} c5 4. b4 {[%cal Bb4c5]} (4.c3 Nc6) cxb4 *";
+
+        var mc = PgnParser.ExtractMoveComments(moveText)!;
+
+        Assert.Equal("Rest.", mc[4]);
+        Assert.False(mc.ContainsKey(6));
+    }
+
+    [Theory]
+    [InlineData("e6 {[%cal Gd7d5][%alt c5 e5 c6 d6]Bereits nach diesem Zug} 2. Nf3",
+                "e6 {[%cal Gd7d5]Bereits nach diesem Zug} 2. Nf3")]
+    [InlineData("e6 {[%cal Gd7d5] [%alt c5 e5]Bereits} 2. Nf3", "e6 {[%cal Gd7d5] Bereits} 2. Nf3")]
+    [InlineData("cxb4 {[%alt b6]Es gibt auch gute Alternativen} 5. a3", "cxb4 {Es gibt auch gute Alternativen} 5. a3")]
+    [InlineData("e5 {[%alt d5]} 2. Nf3", "e5 2. Nf3")]                                  // leer gewordener Kommentar fällt weg
+    [InlineData("{[%info]} 1. -- {Text} *", " 1. -- {Text} *")]
+    [InlineData("1. e4 {[%tqu \"En\",\"x\",\"\",\"\",\"e7e6\",\"\",10]} e6 {[%csl Rc5]}",
+                "1. e4 {[%tqu \"En\",\"x\",\"\",\"\",\"e7e6\",\"\",10]} e6 {[%csl Rc5]}")]  // bekannte Marker bleiben
+    public void StripInternalMarkers_RemovesAltAndInfo_KeepsEverythingElse(string input, string expected)
+        => Assert.Equal(expected, PgnParser.StripInternalMarkers(input));
+
+    [Fact]
+    public void StripInternalMarkers_KeepsHeadersAndLineBreaks()
+    {
+        var pgn = "[Event \"X\"]\n[Round \"1\"]\n\n1. e4 e6 {[%alt c5]Französisch}\n2. d4 *\n";
+        Assert.Equal("[Event \"X\"]\n[Round \"1\"]\n\n1. e4 e6 {Französisch}\n2. d4 *\n", PgnParser.StripInternalMarkers(pgn));
+    }
+
+    [Fact]
+    public void ForDownload_PrefixesWhiteOfInfoLines_AndStripsMarkers()
+    {
+        var pgn = "[Event \"R\"]\n[White \"Kapitel 1\"]\n[Black \"?\"]\n\n{[%info]} 1. -- {Erklärung} *\n\n"
+                + "[Event \"R\"]\n[White \"Kapitel 2\"]\n\n1. e4 e6 {[%alt c5]Französisch} 2. d4 *\n\n"
+                + "[Event \"R\"]\n[White \"Kapitel 3\"]\n\n1. d4 {[%info]Idee} d5 *\n";
+        Assert.Equal(
+            "[Event \"R\"]\n[White \"Info | Kapitel 1\"]\n[Black \"?\"]\n\n 1. -- {Erklärung} *\n\n"
+            + "[Event \"R\"]\n[White \"Kapitel 2\"]\n\n1. e4 e6 {Französisch} 2. d4 *\n\n"
+            + "[Event \"R\"]\n[White \"Info | Kapitel 3\"]\n\n1. d4 {Idee} d5 *\n",
+            PgnParser.ForDownload(pgn));
+    }
+
+    [Theory]
+    [InlineData("[White \"Info | A\"]\n\n{[%info]} 1. e4 *\n", "[White \"Info | A\"]\n\n 1. e4 *\n")]           // nicht doppelt
+    [InlineData("[White \"A\"]\r\n\r\n{[%info]} 1. e4 *\r\n", "[White \"Info | A\"]\r\n\r\n 1. e4 *\r\n")] // CRLF
+    public void ForDownload_EdgeCases(string input, string expected)
+        => Assert.Equal(expected, PgnParser.ForDownload(input));
+
+    [Fact]
+    public void SplitGameBlocks_ReturnsRawTextPerGame_WithVariationsAndLineBreaks()
+    {
+        var pgn = "[Event \"A\"]\n[Round \"1\"]\n\n1. e4 (1. d4 {Damen}) e5\n{zweite\nZeile} *\n\n\n"
+                + "[Event \"B\"]\n[Round \"2\"]\n\n1. c4 *\n";
+
+        var blocks = PgnParser.SplitGameBlocks(pgn).ToList();
+
+        Assert.Equal(PgnParser.SplitGames(pgn).Count(), blocks.Count);
+        Assert.Equal(2, blocks.Count);
+        Assert.Equal("1", blocks[0].Headers["Round"]);
+        Assert.Equal("[Event \"A\"]\n[Round \"1\"]\n\n1. e4 (1. d4 {Damen}) e5\n{zweite\nZeile} *", blocks[0].Raw);
+        Assert.Equal("[Event \"B\"]\n[Round \"2\"]\n\n1. c4 *", blocks[1].Raw);
+    }
+
+    [Fact]
+    public void ParsePgn_FoldsContinuationVariationIntoTrailingComment()
+    {
+        // Chessable-Stil: der Hauptlinien-Kommentar endet mit einem Verweis auf eine Fortsetzung,
+        // die direkt als Variante folgt. Diese Variante darf nicht verworfen werden (Kommentar sonst
+        // mitten im Satz abgeschnitten), sondern wird kompakt in den Kommentar gefaltet.
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 {A bad move. The most energetic continuation would have been} (2. Bc4 {, hitting f7.} 2... Nc6 3. Qh5 {with threats.}) Nc6 3. Bb5 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+        Assert.NotNull(p.MoveComments);
+        var c = p.MoveComments![0];
+        Assert.StartsWith("A bad move. The most energetic continuation would have been", c);
+        Assert.Contains("Bc4", c);            // Varianten-Zug gefaltet
+        Assert.Contains("hitting f7.", c);    // Varianten-Kommentar gefaltet
+        Assert.Contains("with threats.", c);
+        Assert.DoesNotContain("{", c);        // Klammern entfernt
+        Assert.DoesNotContain("(", c);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_PersistsMoveComments_RoundtripsThroughMapToDto()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{Intro.} 2. Nf3 {Develops the knight.} Nc6 3. Bb5 {The pin.} a6 *
+";
+        await _service.ImportFileAsync("rt.pgn", pgn, CancellationToken.None);
+
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.NotNull(bp.MoveComments);                       // als JSON-String in der DB
+
+        var dto = BookPuzzleService.MapToDto(bp);              // deserialisiert wieder zur Map
+        Assert.NotNull(dto.MoveComments);
+        Assert.Equal("Intro.", dto.MoveComments![-1]);
+        Assert.Equal("Develops the knight.", dto.MoveComments![0]);
+        Assert.Equal("The pin.", dto.MoveComments![2]);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_StoresSourcePgnAndCurrentVersion()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 Nc6 3. Bb5 a6 *
+";
+        var res = await _service.ImportFileAsync("v.pgn", pgn, CancellationToken.None);
+        var book = await _db.Books.Include(b => b.Source).SingleAsync();
+        Assert.Equal(pgn, book.Source.SourcePgn);
+        Assert.Equal(ImportPipeline.CurrentVersion, book.ImportVersion);
+        Assert.True(res.Imported > 0);
+        Assert.Equal(0, res.Updated);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_StaleBook_UpdatesExistingLinesInPlace_PreservingId()
+    {
+        const string lineId = "stale.pgn:1";
+        // Altbestand simulieren: Buch + Linie OHNE MoveComments, Version 0 (veraltet).
+        var book = new RookHub.Api.Models.Book { FileName = "stale.pgn", DisplayName = "Stale", ImportVersion = 0, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new RookHub.Api.Models.BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var old = new RookHub.Api.Models.BookPuzzle
+        {
+            LineId = lineId, BookFileName = "stale.pgn", BookId = book.Id, Round = "1",
+            Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+            Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1, MoveComments = null,
+        };
+        _db.BookPuzzles.Add(old);
+        await _db.SaveChangesAsync();
+        var originalId = old.Id;
+
+        // Re-Import derselben Datei MIT Pro-Zug-Kommentaren → muss die bestehende Linie aktualisieren.
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 {Develops.} Nc6 3. Bb5 {The pin.} a6 *
+";
+        var res = await _service.ImportFileAsync("stale.pgn", pgn, CancellationToken.None);
+
+        Assert.Equal(1, res.Updated);
+        Assert.Equal(0, res.Imported);
+        var refreshed = await _db.BookPuzzles.SingleAsync(bp => bp.LineId == lineId);
+        Assert.Equal(originalId, refreshed.Id);            // Id (und damit Fortschritt-FKs) erhalten
+        Assert.NotNull(refreshed.MoveComments);            // Kommentare nachgezogen
+        Assert.Contains("Develops.", refreshed.MoveComments!);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_SkipsExistingInsteadOfUpdating()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 Nc6 3. Bb5 a6 *
+";
+        await _service.ImportFileAsync("idem.pgn", pgn, CancellationToken.None);   // legt an, Version = current
+        var res2 = await _service.ImportFileAsync("idem.pgn", pgn, CancellationToken.None); // erneut → skip
+
+        Assert.Equal(0, res2.Imported);
+        Assert.Equal(0, res2.Updated);
+        Assert.True(res2.Skipped > 0);
+    }
+
+    private static string BookLine(string round, string? oid, string moves) =>
+        "\n[Event \"X\"]\n[Round \"" + round + "\"]\n[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n"
+        + (oid is null ? "" : "[ChessableOid \"" + oid + "\"]\n") + "\n" + moves + " *\n";
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_BackfillsAMissingOid_WhenTheLineMatches()
+    {
+        // Alt-Import ohne oid; dieselbe Linie (LineId + Züge) kommt mit oid herein → oid nachtragen, keine neue Linie.
+        await _service.ImportFileAsync("oid.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        var id = (await _db.BookPuzzles.SingleAsync(bp => bp.BookFileName == "oid.pgn")).Id;
+
+        var res = await _service.ImportFileAsync("oid.pgn", BookLine("1", "4711", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, res.Updated);
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "oid.pgn");
+        Assert.Equal(id, bp.Id);                 // dieselbe Zeile → Fortschritt bleibt
+        Assert.Equal("4711", bp.ChessableOid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_NoBackfill_WhenTheMovesDiffer()
+    {
+        await _service.ImportFileAsync("oid2.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("oid2.pgn", BookLine("1", "4712", "2. Nf3 Nf6 3. Nc3 Bb4"), CancellationToken.None);
+
+        Assert.Equal(0, res.Updated);
+        Assert.Null((await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "oid2.pgn")).ChessableOid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_NoBackfill_WhenTheOidAlreadyExistsInTheBook()
+    {
+        await _service.ImportFileAsync("oid3.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "4713", "2. d4 exd4 3. Qxd4 Nc6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("oid3.pgn", BookLine("1", "4713", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Updated);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "oid3.pgn" && b.ChessableOid == "4713"));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameOidUnderANewRound_IsTheSameLine_NotADuplicate()
+    {
+        // Die oid ist die Identitaet, die Rundennummer nur ein Etikett: wird ein Kapitel umsortiert oder
+        // eine Luecke davor gefuellt, kommt dieselbe Linie unter einer anderen Nummer herein. Vorher legte
+        // der LineId-Abgleich dafuer eine ZWEITE Zeile an — und der Fortschritt haette an der alten gehangen.
+        await _service.ImportFileAsync("move.pgn", BookLine("1", "5001", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        var id = (await _db.BookPuzzles.SingleAsync(bp => bp.BookFileName == "move.pgn")).Id;
+
+        var res = await _service.ImportFileAsync("move.pgn", BookLine("7", "5001", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, res.Updated);
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "move.pgn");
+        Assert.Equal(id, bp.Id);          // dieselbe Zeile → Fortschritt bleibt
+        Assert.Equal("7", bp.Round);      // Etikett nachgezogen
+        Assert.Equal("move.pgn:7", bp.LineId);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameOid_ContradictingMoves_LeavesTheLineAlone()
+    {
+        // Ein verrutschter oid-Header darf keine fremde Linie umetikettieren.
+        await _service.ImportFileAsync("clash.pgn", BookLine("1", "5002", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("clash.pgn", BookLine("9", "5002", "2. d4 exd4 3. Qxd4 Nc6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Updated);
+        var bp = await _db.BookPuzzles.SingleAsync(b => b.BookFileName == "clash.pgn");
+        Assert.Equal("1", bp.Round);      // unveraendert
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameOidTwiceInOneBatch_IsImportedOnce()
+    {
+        // Luecken-Fueller und echtes getGame derselben Linie koennen im selben Stapel liegen — unter
+        // verschiedenen Nummern. Ueber die oid ist das EIN Eintrag.
+        var res = await _service.ImportFileAsync("batch.pgn",
+            BookLine("1", "5003", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "5003", "2. Nf3 Nc6 3. Bb5 a6"),
+            CancellationToken.None);
+
+        Assert.Equal(1, res.Imported);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "batch.pgn"));
+    }
+
+    // ===== Kollisionssichere LineId (Vorarbeit „eine Import-Schiene") =========================
+    // Die LineId ist global eindeutig; ein Duplikat laesst SaveChanges auf MariaDB werfen und riss
+    // damit den GANZEN Import ab. Sobald ein Import nur die NEUEN Linien schickt, nummeriert
+    // piratechess nur die gesendeten — Nummern-Kollisionen werden dann der Normalfall.
+
+    [Fact]
+    public void FreeLineId_UsesTheGivenRound_WhenItIsFree()
+    {
+        var vergeben = new HashSet<string>(StringComparer.Ordinal);
+        var (id, round) = PgnImportService.FreeLineId("b.pgn", "002.001", vergeben);
+        Assert.Equal("b.pgn:002.001", id);
+        Assert.Equal("002.001", round);
+        Assert.Contains("b.pgn:002.001", vergeben);   // ist jetzt belegt
+    }
+
+    [Fact]
+    public void FreeLineId_MovesUpInsideTheChapter_KeepingTheDigitWidth()
+    {
+        var vergeben = new HashSet<string>(StringComparer.Ordinal) { "b.pgn:002.001", "b.pgn:002.002" };
+        var (id, round) = PgnImportService.FreeLineId("b.pgn", "002.001", vergeben);
+        // Kapitel bleibt 002, die Linie rueckt auf den naechsten freien Platz — und bleibt dreistellig,
+        // sonst wechselte die Schreibweise mitten im Kapitel.
+        Assert.Equal("002.003", round);
+        Assert.Equal("b.pgn:002.003", id);
+    }
+
+    [Fact]
+    public void FreeLineId_WithoutATrailingNumber_AppendsInstead()
+    {
+        // Altbestand („1" ohne Kapitel) faengt die Zahl-Regel noch; ein getReview-Fueller traegt die
+        // oid als Runde, auch das ist eine Zahl. Bleibt der Fall ohne jede Ziffer am Ende.
+        var vergeben = new HashSet<string>(StringComparer.Ordinal) { "b.pgn:intro" };
+        var (id, round) = PgnImportService.FreeLineId("b.pgn", "intro", vergeben);
+        Assert.Equal("intro-2", round);
+        Assert.Equal("b.pgn:intro-2", id);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_TwoLinesWithTheSameRound_BothLand()
+    {
+        // Zwei verschiedene oids koennen nicht dieselbe Linie sein. Vorher liefen beide in dieselbe
+        // LineId und der Import brach am eindeutigen Index ab.
+        var res = await _service.ImportFileAsync("clash2.pgn",
+            BookLine("1", "6001", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("1", "6002", "2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None);
+
+        Assert.Equal(2, res.Imported);
+        var rounds = await _db.BookPuzzles.Where(b => b.BookFileName == "clash2.pgn")
+            .OrderBy(b => b.Round).Select(b => b.Round).ToListAsync();
+        Assert.Equal(new[] { "1", "2" }, rounds);
+        var ids = await _db.BookPuzzles.Where(b => b.BookFileName == "clash2.pgn")
+            .Select(b => b.LineId).ToListAsync();
+        Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_SameRoundWithoutOid_IsStillSkipped()
+    {
+        // Ohne oid bleibt es beim idempotenten Resume — eine zweite Zeile waere hier eine Dublette.
+        await _service.ImportFileAsync("clash3.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        var res = await _service.ImportFileAsync("clash3.pgn", BookLine("1", null, "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "clash3.pgn"));
+    }
+
+    // ===== Teil-Import (partial) — „eine Import-Schiene" ======================================
+    // Schickt der Browser nur die NEUEN Linien, nummeriert piratechess nur die gesendeten. Eine
+    // Kollision der Positionsnummer mit dem Bestand sagt dann NICHTS ueber die Identitaet — die oid
+    // tut das. Ohne das Signal muss dieselbe Kollision umgekehrt gedeutet werden.
+
+    [Fact]
+    public async Task ImportFileAsync_Partial_NewOidOnATakenRound_BecomesItsOwnLine()
+    {
+        await _service.ImportFileAsync("part.pgn", BookLine("1", "7001", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("part.pgn", BookLine("1", "7002", "2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None, partial: true);
+
+        Assert.Equal(1, res.Imported);
+        var zeilen = await _db.BookPuzzles.Where(b => b.BookFileName == "part.pgn")
+            .OrderBy(b => b.Round).Select(b => new { b.Round, b.ChessableOid }).ToListAsync();
+        Assert.Equal(2, zeilen.Count);
+        Assert.Equal("1", zeilen[0].Round);
+        Assert.Equal("7001", zeilen[0].ChessableOid);   // Bestand unangetastet
+        Assert.Equal("2", zeilen[1].Round);             // neue Linie auf dem naechsten freien Platz
+        Assert.Equal("7002", zeilen[1].ChessableOid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_WithoutPartial_TheSameCollisionIsStillSkipped()
+    {
+        // Gegenprobe zum Test darueber: ohne das Signal ist dieselbe Nummer dieselbe Linie mit
+        // geaendertem Inhalt — dann darf KEINE zweite Zeile entstehen.
+        await _service.ImportFileAsync("full.pgn", BookLine("1", "7003", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+
+        var res = await _service.ImportFileAsync("full.pgn", BookLine("1", "7004", "2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync(b => b.BookFileName == "full.pgn"));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_Partial_DoesNotReplaceAFullSourcePgn()
+    {
+        // An Book.Source.SourcePgn haengt die lokale Neu-Aufbereitung. Ein Bruchstueck darf den vollen
+        // Stand nicht ersetzen.
+        var voll = BookLine("1", "7005", "2. Nf3 Nc6 3. Bb5 a6") + BookLine("2", "7006", "2. d4 exd4 3. Qxd4 Nc6");
+        await _service.ImportFileAsync("src.pgn", voll, CancellationToken.None);
+        var vorher = (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "src.pgn")).Source.SourcePgn;
+
+        await _service.ImportFileAsync("src.pgn", BookLine("3", "7007", "2. Nc3 Nf6 3. f4 d5"),
+            CancellationToken.None, partial: true);
+
+        Assert.Equal(vorher, (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "src.pgn")).Source.SourcePgn);
+    }
+
+    // ===== Browser-Teile ins SourcePgn zusammenführen (Codereview W2 A3-005) ==================
+    // Der kapitelweise Browser-Import schickt je Chunk EIN Kapitel. Ersetzte jeder Chunk das SourcePgn,
+    // stünde danach nur das letzte Kapitel darin — „Aktualisieren" erneuerte nur dessen Linien und
+    // setzte das Buch trotzdem auf die aktuelle Version.
+
+    [Fact]
+    public async Task ImportFileAsync_MergeSourcePgn_ChunksAccumulate_AndReprocessRenewsAllChapters()
+    {
+        var chunks = new[]
+        {
+            BookLine("002.001", "8001", "{Eins.} 2. Nf3 Nc6 3. Bb5 a6"),
+            BookLine("003.001", "8002", "{Zwei.} 2. d4 exd4 3. Qxd4 Nc6"),
+            BookLine("004.001", "8003", "{Drei.} 2. Nc3 Nf6 3. f4 d5"),
+        };
+        foreach (var chunk in chunks)
+            await _service.ImportFileAsync("merge.pgn", chunk, CancellationToken.None, mergeSourcePgn: true);
+
+        var book = await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "merge.pgn");
+        Assert.Equal(new[] { "8001", "8002", "8003" }, CachedSourceRebuild.OidsOf(book.Source.SourcePgn));
+
+        // Pipeline-Bump: alle drei Kapitel kommen aus der Quelle wieder, nicht nur das letzte.
+        book.ImportVersion = 0;
+        foreach (var bp in _db.BookPuzzles.Where(b => b.BookFileName == "merge.pgn")) bp.Comment = "veraltet";
+        await _db.SaveChangesAsync();
+
+        var res = await _service.ReprocessFromStoredSourceAsync(book.Id, playFromStartPosition: false, CancellationToken.None);
+
+        Assert.Equal(3, res.Updated);
+        var comments = await _db.BookPuzzles.Where(b => b.BookFileName == "merge.pgn")
+            .OrderBy(b => b.Round).Select(b => b.Comment).ToListAsync();
+        Assert.Equal(new[] { "Eins.", "Zwei.", "Drei." }, comments);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_MergeSourcePgn_StaleBook_BringsEveryLineOfTheSourceUpToDate()
+    {
+        await _service.ImportFileAsync("stale-merge.pgn", BookLine("002.001", "8101", "{Eins.} 2. Nf3 Nc6 3. Bb5 a6"),
+            CancellationToken.None, mergeSourcePgn: true);
+        await _service.ImportFileAsync("stale-merge.pgn", BookLine("003.001", "8102", "{Zwei.} 2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None, mergeSourcePgn: true);
+        var book = await _db.Books.SingleAsync(b => b.FileName == "stale-merge.pgn");
+        book.ImportVersion = 0;                                    // Pipeline-Bump, noch nicht „Aktualisieren" geklickt
+        foreach (var bp in _db.BookPuzzles.Where(b => b.BookFileName == "stale-merge.pgn")) bp.Comment = "veraltet";
+        await _db.SaveChangesAsync();
+
+        // „Kurs holen" liefert nur eine neue Linie — danach steht das Buch auf der aktuellen Version, also müssen
+        // auch die beiden alten Linien die aktuelle Aufbereitung haben (sonst kämen sie nie wieder dran).
+        await _service.ImportFileAsync("stale-merge.pgn", BookLine("004.001", "8103", "{Drei.} 2. Nc3 Nf6 3. f4 d5"),
+            CancellationToken.None, mergeSourcePgn: true);
+
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.FileName == "stale-merge.pgn")).ImportVersion);
+        var comments = await _db.BookPuzzles.Where(b => b.BookFileName == "stale-merge.pgn")
+            .OrderBy(b => b.Round).Select(b => b.Comment).ToListAsync();
+        Assert.Equal(new[] { "Eins.", "Zwei.", "Drei." }, comments);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_WithoutMerge_AFullImportStillReplacesTheSource()
+    {
+        // Gegenprobe: der Server-Abruf liefert immer den ganzen Kurs und ersetzt die Quelle wie bisher.
+        await _service.ImportFileAsync("full-src.pgn", BookLine("002.001", "8201", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        await _service.ImportFileAsync("full-src.pgn", BookLine("002.001", "8201", "2. Nf3 Nc6 3. Bb5 a6")
+            + BookLine("002.002", "8202", "2. d4 exd4 3. Qxd4 Nc6"), CancellationToken.None);
+
+        var src = (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "full-src.pgn")).Source.SourcePgn;
+        Assert.Equal(new[] { "8201", "8202" }, CachedSourceRebuild.OidsOf(src));
+        Assert.Equal(2, PgnParser.SplitGames(src!).Count());
+    }
+
+    [Fact]
+    public void ParsePgn_NoComments_LeavesMoveCommentsNull()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("n.pgn", pgn).Puzzles);
+        Assert.Null(p.MoveComments);
+    }
+
+    [Fact]
+    public void ParsePgn_HandlesPromotion()
+    {
+        var pgn = @"
+[Event ""P""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("p.pgn", pgn).Puzzles);
+        Assert.Equal("a7a8q a1b2", p.Moves);
+    }
+
+    // Regression: Chessable/piratechess exportieren Umwandlungen ohne "=" bzw. mit kleinem
+    // Figurbuchstaben ("a8Q+", "a8q", "bxa8N"). Gera.Chess akzeptiert SAN nur kanonisch ("a8=Q"),
+    // sonst warf board.Move → die ganze Linie fiel still in den zug-losen Info-Zweig (leere Moves,
+    // IsInfoOnly). CleanSan normalisiert die Umwandlung jetzt vor dem Nachspielen.
+    [Theory]
+    [InlineData("a8Q+")]   // ohne "="
+    [InlineData("a8q")]    // ohne "=", klein
+    [InlineData("a8=q")]   // mit "=", klein
+    [InlineData("a8=Q+")]  // kanonisch (Kontrollfall)
+    public void ParsePgn_HandlesPromotion_NonStandardChessableNotation(string promoSan)
+    {
+        var pgn = $@"
+[Event ""P""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. {promoSan} Kb2 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("p.pgn", pgn).Puzzles);
+        Assert.Equal("a7a8q a1b2", p.Moves);
+        Assert.False(p.IsInfoOnly);   // nicht zur statischen Info-Seite degradiert
+    }
+
+    // Regression (der konkrete Fall aus „100 Tactical Patterns", Round 009.004 / ChessableOid 47084790):
+    // Root-[%tqu] + Umwandlung "a1Q+" mitten in der Lösungslinie. Vor dem Fix wurde daraus IsInfoOnly
+    // mit leeren Moves; jetzt ein lösbares Puzzle ab moves[0].
+    [Fact]
+    public void ParsePgn_RootTqu_WithMidlinePromotion_StaysSolvable()
+    {
+        var pgn = @"
+[Event ""100 Tactical Patterns""]
+[Round ""9.4""]
+[FEN ""rnb2rk1/1p3ppp/4pn2/q1P5/1pPp4/3N2P1/PPQ1PPBP/RN2K2R b KQ - 0 11""]
+
+{[%tqu ""En"",""find the move"","""","""",""b4b3"","""",10]}
+11. b3+ 12. Qd2 Qxa2 13. Rxa2 bxa2 14. Na3 a1Q+ 15. Nc1 Rxa3 16. bxa3 Qxa3 17. O-O Qxc5 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.False(p.IsInfoOnly);
+        Assert.Equal(-1, p.StartPly);
+        Assert.Equal("b4b3 c2d2 a5a2 a1a2 b3a2 b1a3 a2a1q d3c1 a8a3 b2a3 a1a3 e1g1 a3c5", p.Moves);
+    }
+
+    // ---- Info-Linien mit ILLEGALER Diagramm-FEN: Züge fürs Durchklicken permissiv auflösen ----
+    [Fact]
+    public void PermissiveMainline_ResolvesMoves_OnIllegalKinglessDiagram()
+    {
+        // „📝65. The Lasker-Loman Tactic" — FEN ohne weißen König (illegal), Demozüge Rh8+ Kxh8 gxf7.
+        var moveText = "1. Rh8+ Kxh8 2. gxf7 *";
+        var uci = PgnParser.TryExtractUciMainlinePermissive("6k1/5pp1/6P1/8/8/8/8/7R w - - 0 1", moveText);
+        Assert.Equal(new[] { "h1h8", "g8h8", "g6f7" }, uci);
+    }
+
+    [Fact]
+    public void PermissiveMainline_HandlesUnderpromotion_LongAlgebraic_AndDisambiguation()
+    {
+        Assert.Equal(new[] { "f7f8n" }, PgnParser.TryExtractUciMainlinePermissive("6k1/5P2/8/8/8/8/8/8 w - - 0 1", "1. f8=N *"));
+        // Lange algebraische Notation (From explizit): d4-e5 (Bauer), Nc3xb5 (Springer schlägt).
+        Assert.Equal(new[] { "d4e5", "c3b5" }, PgnParser.TryExtractUciMainlinePermissive("8/1p6/8/1p6/3P4/2N5/8/8 w - - 0 1", "1. d4-e5 Nc3xb5 *"));
+        // Disambiguierung per Datei: zwei weiße Türme (a8/h8), Rag8 = a-Turm nach g8.
+        Assert.Equal(new[] { "a8g8" }, PgnParser.TryExtractUciMainlinePermissive("R6R/8/8/8/8/8/8/8 w - - 0 1", "1. Rag8 *"));
+    }
+
+    [Fact]
+    public void PermissiveMainline_ReturnsNull_ForLegalFen()
+    {
+        // Legale FEN → der permissive Parser hält sich raus (der strikte Parser ist zuständig).
+        Assert.Null(PgnParser.TryExtractUciMainlinePermissive("8/P7/8/8/8/8/8/k6K w - - 0 1", "1. a8=Q+ Kb2 *"));
+    }
+
+    [Fact]
+    public void ParsePgn_IllegalFenInfoLine_KeepsClickThroughMoves()
+    {
+        var pgn = @"
+[Event ""Patterns""]
+[Round ""9.8""]
+[White ""PATTERN 65. The Lasker-Loman Tactic""]
+[Black ""7. Promotion""]
+[FEN ""6k1/5pp1/6P1/8/8/8/8/7R w - - 0 1""]
+
+{[%info] The rook lures the king away.} 1. Rh8+ Kxh8 2. gxf7 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("b.pgn", pgn, keepCommentOnlyAsInfo: true).Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal(-1, p.StartPly);
+        Assert.Equal("h1h8 g8h8 g6f7", p.Moves);   // durchklickbar statt nur statisch
+    }
+
+    [Fact]
+    public void ParsePgn_InfoPrefixInWhite_MarksInfoLine_AndRestoresTitle()
+    {
+        // Rundreise: Kurs mit Info-Linie → Download (ForDownload: „Info | " statt [%info]) → wieder importiert.
+        var original = @"
+[Event ""B""]
+[Round ""1.1""]
+[White ""Idee""]
+[Black ""Kapitel 1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{[%info] Worum es geht.} 1. e4 e5 *
+
+[Event ""B""]
+[Round ""1.2""]
+[White ""Linie""]
+[Black ""Kapitel 1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. d4 {[%tqu ""En"","""","""","""",""d7d5"","""",10]} d5 *
+";
+        var downloaded = PgnParser.ForDownload(original);
+        Assert.Contains("[White \"Info | Idee\"]", downloaded);
+
+        var before = PgnImportService.ParsePgn("b.pgn", original, keepCommentOnlyAsInfo: true).Puzzles;
+        var after = PgnImportService.ParsePgn("b.pgn", downloaded, keepCommentOnlyAsInfo: true).Puzzles;
+        Assert.Equal(2, after.Count);
+        Assert.True(after[0].IsInfoOnly);
+        Assert.Equal(before[0].Title, after[0].Title);   // Präfix wieder abgenommen
+        Assert.False(after[1].IsInfoOnly);
+        Assert.Equal(before[1].Title, after[1].Title);
+    }
+
+    [Fact]
+    public void ParsePgn_HandlesCastling()
+    {
+        var pgn = @"
+[Event ""C""]
+[Round ""1""]
+[FEN ""r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1""]
+
+1. O-O O-O-O *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+        Assert.Equal("e1g1 e8c8", p.Moves);
+    }
+
+    [Fact]
+    public void ParsePgn_SkipsEntriesWithoutFenOrRound()
+    {
+        var pgn = @"
+[Event ""NoFen""]
+[Round ""1""]
+
+1. e4 e5 *
+
+[Event ""QuestionFen""]
+[Round ""2""]
+[FEN ""?""]
+
+1. e4 *
+
+[Event ""NoRound""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 *
+";
+        var skipResult = PgnImportService.ParsePgn("skip.pgn", pgn);
+        Assert.Empty(skipResult.Puzzles);
+        Assert.Equal(3, skipResult.Invalid); // alle drei Eintraege zaehlen als "Invalid"
+    }
+
+    [Fact]
+    public void ParsePgn_SkipsGameWithIllegalSan()
+    {
+        var pgn = @"
+[Event ""Bad""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. Qh5 *
+";
+        // Qh5 ist aus der Grundstellung illegal → Eintrag wird übersprungen, nicht geworfen.
+        var bad = PgnImportService.ParsePgn("bad.pgn", pgn);
+        Assert.Empty(bad.Puzzles);
+        Assert.Equal(1, bad.Invalid);
+    }
+
+    [Fact]
+    public void ParsePgn_MultipleGames()
+    {
+        // Nicht-Grundstellung (FEN = Puzzle-Stellung) → beide werden behalten (StartPly=-1).
+        var pgn = @"
+[Event ""A""]
+[Round ""1""]
+[FEN ""7k/8/8/8/8/8/6PP/7K w - - 0 1""]
+
+1. g4 *
+
+[Event ""A""]
+[Round ""2""]
+[FEN ""k7/8/8/8/8/8/PP6/K7 w - - 0 1""]
+
+1. a4 *
+";
+        var multi = PgnImportService.ParsePgn("multi.pgn", pgn);
+        Assert.Equal(2, multi.Puzzles.Count);
+        Assert.Equal(0, multi.Invalid);
+        Assert.Equal("g2g4", multi.Puzzles[0].Moves);
+        Assert.Equal("a2a4", multi.Puzzles[1].Moves);
+        Assert.Equal(-1, multi.Puzzles[0].StartPly);
+    }
+
+    [Fact]
+    public void ParsePgn_MidlineTqu_SetsStartPly_AndKeepsFullGame()
+    {
+        // [%tqu] hängt an 2...Nc6 (Index 3) → Setup-Zug, gelöst wird ab moves[4] (Bb5).
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 e5 2. Nf3 Nc6 {[%tqu ""En"",""find"","""","""",""f1b5"","""",10]} 3. Bb5 a6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        // Ganze Partie bleibt erhalten:
+        Assert.Equal("e2e4 e7e5 g1f3 b8c6 f1b5 a7a6", p.Moves);
+        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);
+        // Trainingsstart bei Index 3 (der [%tqu]-Zug Nc6); Lösung ab moves[4] = f1b5:
+        Assert.Equal(3, p.StartPly);
+    }
+
+    [Fact]
+    public void ParsePgn_RootTqu_StartPlyMinusOne()
+    {
+        // [%tqu] vor dem ersten Zug → FEN ist bereits die Trainingsstellung, lösen ab moves[0].
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1""]
+
+{[%tqu ""En"",""find"",""""]} 1. Ng5 d5 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.Equal("f3g5 d7d5", p.Moves);
+        Assert.Equal(-1, p.StartPly);
+    }
+
+    [Fact]
+    public void ParsePgn_NoTqu_NonStartFen_SolvesFromMove0()
+    {
+        // FEN ist die Puzzle-Stellung (kein Marker) → StartPly=-1, lösen ab moves[0].
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""1q5r/4kpp1/Q2p1n1p/1r2p3/8/4B3/1P3PPP/R2R2K1 w - - 0 1""]
+
+1. Bxa7 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.Equal(-1, p.StartPly);
+        Assert.Equal("e3a7", p.Moves);
+    }
+
+    [Fact]
+    public void ParsePgn_NoTqu_SolverColorIsOpponentOfFen_PrePlaysFirstMove()
+    {
+        // Chessable-Partie-Kurs: „der Gegner hat gerade 10...Nd4 gespielt, widerlege das".
+        // FEN = Schwarz am Zug, Solverfarbe Weiss ⇒ Nd4 wird vorgespielt (StartPly 0), gefragt ist Bg5.
+        var pgn = @"
+[Event ""Chess Olympiad 2026""]
+[Round ""003.003""]
+[FEN ""r1bqk2r/1ppp1ppp/p1n3n1/3Np2Q/2B1P3/3P4/PPP2PP1/R1B1K2R b KQkq - 0 10""]
+[ChessableColor ""white""]
+
+10... Nd4 11. Bg5 f6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.Equal(0, p.StartPly);
+        Assert.StartsWith("c6d4 c1g5", p.Moves);
+    }
+
+    [Fact]
+    public void ParsePgn_NoTqu_SolverColorMatchesFen_SolvesFromMove0()
+    {
+        // Dieselbe Linie, aber der Trainierende hat Schwarz ⇒ er zieht sofort (unveraendertes Verhalten).
+        var pgn = @"
+[Event ""Chess Olympiad 2026""]
+[Round ""003.003""]
+[FEN ""r1bqk2r/1ppp1ppp/p1n3n1/3Np2Q/2B1P3/3P4/PPP2PP1/R1B1K2R b KQkq - 0 10""]
+[ChessableColor ""black""]
+
+10... Nd4 11. Bg5 f6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.Equal(-1, p.StartPly);
+    }
+
+    [Theory]
+    // Solverfarbe = Zugfarbe der FEN ⇒ sofort loesen.
+    [InlineData("8/8/8/8/8/8/8/K6k w - - 0 1", "white", 2, -1)]
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "black", 2, -1)]
+    // Gegenfarbe ⇒ ersten Zug vorspielen.
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "white", 2, 0)]
+    [InlineData("8/8/8/8/8/8/8/K6k w - - 0 1", "black", 2, 0)]
+    // Ohne/mit unbekanntem Header bleibt es beim bisherigen Verhalten.
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "", 2, -1)]
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "grau", 2, -1)]
+    // Ein einziger Halbzug: vorgespielt bliebe nichts zu loesen.
+    [InlineData("8/8/8/8/8/8/8/K6k b - - 0 1", "white", 1, -1)]
+    public void StartPlyFromSolverColor_Cases(string fen, string color, int moveCount, int expected)
+        => Assert.Equal(expected, PgnImportService.StartPlyFromSolverColor(fen, color, moveCount));
+
+    [Fact]
+    public void ParsePgn_StartFenWithoutMarker_Skipped()
+    {
+        // Grundstellung ohne Trainingsmarker = ganze Partie ohne Puzzle → übersprungen.
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 e5 2. Nf3 *
+";
+        var startSkip = PgnImportService.ParsePgn("t.pgn", pgn);
+        Assert.Empty(startSkip.Puzzles);
+        Assert.Equal(1, startSkip.Invalid);
+    }
+
+    // ----- Eroeffnungsrepertoire als Kurs (playFromStartPosition) --------------
+
+    /// <summary>Ein Eroeffnungsrepertoire aus der GRUNDSTELLUNG ohne Trainingsmarker: fuer die
+    /// globalen Puzzle-Buecher bleibt das eine ganze Partie ohne Aufgabe (uebersprungen), fuer den
+    /// EIGENEN Kurs des Nutzers ist es genau sein Repertoire.
+    ///
+    /// <para>Anlass: ein Nutzer hat am 2026-09-05 auf Prod ein 5-MB-Chessable-Repertoire
+    /// („Lifetime Repertoires: Plichta's 1.e4") in einen Kurs umwandeln wollen. Alle 902 Linien
+    /// beginnen in der Grundstellung und keine traegt einen [%tqu]-Marker — die Umwandlung fand
+    /// also null spielbare Linien und antwortete mit 400. Er hat bis heute keinen Kurs.</para></summary>
+    [Fact]
+    public void ParsePgn_WeissesRepertoire_wirdAbZugEinsSpielbar()
+    {
+        // Beide Linien enden mit einem WEISSEN Zug → Weiss-Repertoire → der Nutzer zieht zuerst.
+        var pgn = @"
+[Event ""Plichta 1.e4""]
+[Round ""1.1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 c5 2. Nf3 *
+
+[Event ""Plichta 1.e4""]
+[Round ""1.2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 e6 2. d4 *
+";
+        var ohne = PgnImportService.ParsePgn("t.pgn", pgn);
+        Assert.Empty(ohne.Puzzles);          // globales Buch: unveraendert uebersprungen
+
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Equal(2, mit.Puzzles.Count);
+        Assert.All(mit.Puzzles, p => Assert.False(p.IsInfoOnly));
+        Assert.All(mit.Puzzles, p => Assert.Equal(-1, p.StartPly));   // geloest ab dem ersten Zug
+    }
+
+    /// <summary>Ein SCHWARZ-Repertoire beginnt ebenfalls in der Grundstellung, aber der erste Zug
+    /// gehoert dem Gegner. Erkannt an der Zuglaenge: die Linien enden mit einem schwarzen Zug.</summary>
+    [Fact]
+    public void ParsePgn_SchwarzesRepertoire_startetNachDemErstenZug()
+    {
+        var pgn = @"
+[Event ""Nimzoindisch fuer Schwarz""]
+[Round ""1.1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. d4 Nf6 2. c4 e6 *
+
+[Event ""Nimzoindisch fuer Schwarz""]
+[Round ""1.2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. d4 Nf6 2. Nf3 d5 *
+";
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Equal(2, mit.Puzzles.Count);
+        // StartPly 0 = der erste Zug wird vorgespielt, geloest wird ab dem zweiten.
+        Assert.All(mit.Puzzles, p => Assert.Equal(0, p.StartPly));
+    }
+
+    /// <summary>Gemischte Datei: die MEHRHEIT entscheidet, und zwar fuer alle Linien gemeinsam —
+    /// eine Linie fuer sich sagt nichts darueber, wem das Repertoire gehoert.</summary>
+    [Fact]
+    public void ParsePgn_GemischteZuglaengen_dieMehrheitEntscheidet()
+    {
+        var white = @"
+[Event ""X""]
+[Round ""{0}""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 c5 2. Nf3 *
+";
+        var black = @"
+[Event ""X""]
+[Round ""9""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 c5 *
+";
+        var pgn = string.Format(white, "1") + string.Format(white, "2") + black;
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Equal(3, mit.Puzzles.Count);
+        Assert.All(mit.Puzzles, p => Assert.Equal(-1, p.StartPly));   // 2 von 3 enden weiss
+    }
+
+    /// <summary>Mit Trainingsmarker aendert sich NICHTS: der Marker bestimmt weiter den Start.</summary>
+    [Fact]
+    public void ParsePgn_MitTrainingsmarker_bleibtUnberuehrt()
+    {
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 {[%tqu ""Frage""]} c5 2. Nf3 *
+";
+        var ohne = PgnImportService.ParsePgn("t.pgn", pgn);
+        var mit = PgnImportService.ParsePgn("t.pgn", pgn, playFromStartPosition: true);
+        Assert.Single(ohne.Puzzles);
+        Assert.Single(mit.Puzzles);
+        Assert.Equal(ohne.Puzzles[0].StartPly, mit.Puzzles[0].StartPly);
+    }
+
+    [Fact]
+    public void ParsePgn_InfoMarker_SetsIsInfoOnly_AndKeepsComment()
+    {
+        // piratechess markiert Chessable-Info-/Erklärlinien mit [%info] (im Kommentar vor dem 1. Zug).
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""1q5r/4kpp1/Q2p1n1p/1r2p3/8/4B3/1P3PPP/R2R2K1 w - - 0 1""]
+
+{[%info] Nur zur Erklärung.} 1. Bxa7 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal("Nur zur Erklärung.", p.Comment);   // [%info]-Annotation rausgefiltert
+    }
+
+    [Fact]
+    public void ParsePgn_NoInfoMarker_IsInfoOnlyFalse()
+    {
+        var p = Assert.Single(PgnImportService.ParsePgn("book.pgn", SamplePgn).Puzzles);
+        Assert.False(p.IsInfoOnly);
+    }
+
+    [Fact]
+    public void ParsePgn_InfoMarker_StartFen_NotSkipped()
+    {
+        // Anders als marker-lose Grundstellungen bleiben Info-Linien erhalten (zum Durchklicken).
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{[%info]} 1. e4 e5 2. Nf3 *
+";
+        var result = PgnImportService.ParsePgn("t.pgn", pgn);
+        var p = Assert.Single(result.Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal(0, result.Invalid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_InfoLine_RoundtripsIsInfoOnly()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""1q5r/4kpp1/Q2p1n1p/1r2p3/8/4B3/1P3PPP/R2R2K1 w - - 0 1""]
+
+{[%info] Erklärlinie.} 1. Bxa7 *
+";
+        await _service.ImportFileAsync("info.pgn", pgn, CancellationToken.None);
+
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.True(bp.IsInfoOnly);
+        Assert.True(BookPuzzleService.MapToDto(bp).IsInfoOnly);
+    }
+
+    // ---- Zug-lose Erklär-/Intro-Seiten (Kommentar, keine Züge) -------------
+    private const string CommentOnlyPgn = @"
+[Event ""Course""]
+[Round ""002.002""]
+[White ""Introduction #1""]
+[Black ""Introduction""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{Welcome to the course. This page only explains things — there are no moves.}
+";
+
+    [Fact]
+    public void ParsePgn_CommentOnlyLine_KeptAsInfoLine_WhenFlagSet()
+    {
+        var result = PgnImportService.ParsePgn("c.pgn", CommentOnlyPgn, keepCommentOnlyAsInfo: true);
+        var p = Assert.Single(result.Puzzles);
+        Assert.Equal(0, result.Invalid);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal("", p.Moves);                     // keine Züge — Info-Linie zeigt nur die Stellung
+        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);  // echte Header-FEN
+        Assert.Contains("only explains things", p.Comment);   // Erklärtext bleibt erhalten
+        Assert.Equal("Introduction #1", p.Title);
+    }
+
+    [Fact]
+    public void ParsePgn_InfoLine_KeepsRealFenFromHeader()
+    {
+        // Regression: „⏲Exercise #N - Introduction"/„Evaluate 11…Nxe5"-Seiten sind zug-lose [%info]-Linien
+        // MIT echter Stellung im Header. Früher wurde die Grundstellung + Fake-Zug e2e4 gespeichert →
+        // der User sah die Grundstellung statt der besprochenen Position. Jetzt: echte FEN, keine Züge.
+        const string realFen = "rnbqk2r/1p1n1ppp/p3p3/2b1P3/3pN1P1/7P/PPP1NPB1/R1BQK2R b KQkq - 0 11";
+        var pgn = $@"
+[Event ""Book""]
+[Round ""003.031""]
+[White ""⏲Exercise #21 - Introduction""]
+[Black ""1. Double Attack""]
+[FEN ""{realFen}""]
+[Result ""*""]
+
+{{[%info] Evaluate 11...Nxe5 .}} 11. --
+";
+        var result = PgnImportService.ParsePgn("ex.pgn", pgn, keepCommentOnlyAsInfo: true);
+        var p = Assert.Single(result.Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal(realFen, p.Fen);
+        Assert.Equal("", p.Moves);
+        Assert.Contains("Evaluate", p.Comment);
+    }
+
+    [Fact]
+    public void ParsePgn_CommentOnlyLine_DroppedByDefault()
+    {
+        // Default (z. B. Wochenpost) unverändert: zug-lose Linie wird verworfen.
+        var result = PgnImportService.ParsePgn("c.pgn", CommentOnlyPgn);
+        Assert.Empty(result.Puzzles);
+        Assert.Equal(1, result.Invalid);
+    }
+
+    [Fact]
+    public void ParsePgn_NoMoveNoComment_DroppedEvenWithFlag()
+    {
+        var pgn = @"
+[Event ""C""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+*
+";
+        var result = PgnImportService.ParsePgn("c.pgn", pgn, keepCommentOnlyAsInfo: true);
+        Assert.Empty(result.Puzzles);   // ohne Text nichts anzuzeigen → Skip
+        Assert.Equal(1, result.Invalid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_KeepsCommentOnlyLine_AsInfoLine()
+    {
+        await _service.ImportFileAsync("intro.pgn", CommentOnlyPgn, CancellationToken.None);
+
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.True(bp.IsInfoOnly);
+        Assert.Equal("", bp.Moves);
+        Assert.Contains("only explains things", bp.Comment);
+    }
+
+    [Fact]
+    public void CleanDisplayName_StripsSuffixes()
+    {
+        Assert.Equal("My Book", PgnImportService.CleanDisplayName("My Book_firstkey.pgn"));
+        Assert.Equal("Other", PgnImportService.CleanDisplayName("Other.pgn"));
+        Assert.Equal("Plain", PgnImportService.CleanDisplayName("Plain"));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CreatesBookAndPuzzles()
+    {
+        var item = await _service.ImportFileAsync("Test Book_firstkey.pgn", SamplePgn, default);
+
+        Assert.Equal(1, item.Imported);
+        Assert.Equal(0, item.Skipped);
+        Assert.Equal(0, item.Invalid);
+
+        var book = await _db.Books.SingleAsync();
+        Assert.Equal("Test Book_firstkey.pgn", book.FileName);
+        Assert.Equal("Test Book", book.DisplayName);
+
+        var puzzle = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal(book.Id, puzzle.BookId);
+        Assert.Equal("Test Book_firstkey.pgn:1.1", puzzle.LineId);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_DedupesOnReimport()
+    {
+        await _service.ImportFileAsync("Test Book_firstkey.pgn", SamplePgn, default);
+        var second = await _service.ImportFileAsync("Test Book_firstkey.pgn", SamplePgn, default);
+
+        Assert.Equal(0, second.Imported);
+        Assert.Equal(1, second.Skipped);
+        Assert.Equal(0, second.Invalid);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync());
+        Assert.Equal(1, await _db.Books.CountAsync()); // kein zweites Buch
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CountsParseSkipsAsInvalid()
+    {
+        // Mix: 1 gueltiges Puzzle + 2 parse-skipped (kein Round + Grundstellung-ohne-Marker)
+        // + 1 Duplikat des ersten Puzzles → Imported=1, Skipped=1, Invalid=2.
+        var pgn = @"
+[Event ""Mix""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ *
+
+[Event ""NoRound""]
+[FEN ""8/8/8/8/8/8/PP6/K7 w - - 0 1""]
+
+1. a4 *
+
+[Event ""StartFenNoMarker""]
+[Round ""2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 *
+
+[Event ""DupOfFirst""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ *
+";
+        var item = await _service.ImportFileAsync("mix.pgn", pgn, default);
+        Assert.Equal(1, item.Imported);
+        Assert.Equal(1, item.Skipped);  // Duplikat innerhalb des Batches
+        Assert.Equal(2, item.Invalid);  // NoRound + StartFenNoMarker
+    }
+
+    [Theory]
+    [InlineData("Chapter 2: Back-Rank Mates", "Chapter 2")]
+    [InlineData("Kapitel 3: Abzugsschach", "Kapitel 3")]
+    [InlineData("  chapter 10:   Smothered Mate  ", "chapter 10")]
+    [InlineData("Chapter 5", "Chapter 5")]                 // kein Spoiler-Doppelpunkt → unverändert
+    [InlineData("Tactics: Pins", "Tactics: Pins")]         // kein Chapter/Kapitel-Präfix → unverändert
+    [InlineData("Introduction", "Introduction")]
+    [InlineData("", "")]
+    public void StripChapterSpoiler_StripsOnlyChapterTitlePattern(string input, string expected)
+    {
+        Assert.Equal(expected, PgnImportService.StripChapterSpoiler(input));
+    }
+
+    [Fact]
+    public void StripChapterSpoiler_Null_ReturnsNull()
+    {
+        Assert.Null(PgnImportService.StripChapterSpoiler(null));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_PuzzleBook_StripsChapterSpoiler()
+    {
+        // [Black] wird zum Chapter; Default-Buchart ist Puzzle → Spoiler raus.
+        var pgn = @"
+[Event ""S""]
+[Round ""1""]
+[Black ""Chapter 2: Back-Rank Mates""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        await _service.ImportFileAsync("puzzles.pgn", pgn, default);
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal("Chapter 2", bp.Chapter);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_StudyBook_KeepsChapterName()
+    {
+        // Buch vorab als Study anlegen → Kapitelname bleibt erhalten.
+        _db.Books.Add(new Book { FileName = "study.pgn", DisplayName = "Study", Kind = BookKind.Study, Source = new BookSource() });
+        await _db.SaveChangesAsync();
+
+        var pgn = @"
+[Event ""S""]
+[Round ""1""]
+[Black ""Chapter 2: Back-Rank Mates""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        await _service.ImportFileAsync("study.pgn", pgn, default);
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal("Chapter 2: Back-Rank Mates", bp.Chapter);
+    }
+
+    [Fact]
+    public void ParsePgn_KeepsLongComment_NotTruncatedAt5000()
+    {
+        // Lange Chessable-Erklär-/Intro-Texte (> 5000 Zeichen) dürfen nicht mehr gekappt werden.
+        var longText = new string('x', 7000);
+        var pgn = $@"
+[Event ""Long""]
+[Round ""1.1""]
+[White ""Intro""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{{ [%tqu ""En"",""Finde den Zug""] {longText} }} 2.Nf3 Nc6 3. Bb5 a6 *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("book.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.Comment);
+        Assert.True(p.Comment!.Length > 5000, $"Comment wurde gekappt (len={p.Comment.Length})");
+        Assert.Contains(longText, p.Comment);
+    }
+
+    [Fact]
+    public void ParsePgn_NullMoveInfoLine_KeptAsInfoWithText()
+    {
+        // Chessable-Kapitel-Einleitung: [%info] + NULL-Zug "1. --", Erklärtext erst im Zug-Kommentar.
+        // Früher verworfen (kein UCI-Zug + erster Kommentar = leerer [%info]-Marker) → jetzt als Info-Linie.
+        const string pgn = @"
+[Event ""Book""]
+[Round ""3.2""]
+[White ""Introduction to Double Attack""]
+[Black ""1. Double Attack""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+[Result ""*""]
+
+{[%info]} 1. -- {Prepare to explore double attacks.}
+";
+        var (puzzles, invalid) = PgnImportService.ParsePgn("nm.pgn", pgn, keepCommentOnlyAsInfo: true);
+        var p = Assert.Single(puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal("Prepare to explore double attacks.", p.Comment);
+        Assert.Equal(0, invalid);
+    }
+
+    [Fact]
+    public void ParsePgn_NullMoveInfoLine_DroppedWhenNotKeepingInfo()
+    {
+        // Ohne keepCommentOnlyAsInfo (z. B. Wochenpost-Pfad) bleibt der NULL-Zug ein Skip.
+        const string pgn = @"
+[Event ""Book""]
+[Round ""3.2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+[Result ""*""]
+
+{[%info]} 1. -- {Intro.}
+";
+        var (puzzles, invalid) = PgnImportService.ParsePgn("nm.pgn", pgn, keepCommentOnlyAsInfo: false);
+        Assert.Empty(puzzles);
+        Assert.Equal(1, invalid);
+    }
+
+    [Fact]
+    public void ParsePgn_ExtractsMoveShapes_ArrowsAndSquares_PerPly()
+    {
+        // Chessable [%cal] (Pfeile) / [%csl] (Feld-Markierungen) je Halbzug extrahieren (Puzzle 103064).
+        const string pgn = @"
+[Event ""Book""]
+[Round ""2.4""]
+[White ""Gumularz - Wadsworth""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""2r3k1/4Qp2/2q4p/4PPp1/8/6P1/b5PK/1q1R1R2 w - - 0 35""]
+
+{[%tqu ""En"",""find the move"","""","""",""d1d8"","""",10]} 35. Rd8+ {[%cal Gd8g8][%csl Rg8]Direct play was stronger.} Rxd8 {King moves transpose at best,} 36. Qxd8+ Kg7 37. Rxb1 Bxb1 38. f6+ {[%cal Gf6g7][%csl Rg7]} Kg6 {[%cal Rg6f5,Rg6h5]} 39. g4 *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("chessable-x.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.MoveShapes);
+
+        // Zug 0 (35.Rd8+): grüner Pfeil d8→g8 + rotes Feld g8.
+        var s0 = p.MoveShapes![0];
+        Assert.Contains(s0, s => s.O == "d8" && s.D == "g8" && s.B == "green");
+        Assert.Contains(s0, s => s.O == "g8" && s.D == null && s.B == "red");
+
+        // Zug 6 (38.f6+): grüner Pfeil f6→g7 + rotes Feld g7.
+        var s6 = p.MoveShapes![6];
+        Assert.Contains(s6, s => s.O == "f6" && s.D == "g7" && s.B == "green");
+        Assert.Contains(s6, s => s.O == "g7" && s.D == null && s.B == "red");
+
+        // Zug 7 (…Kg6): zwei rote Pfeile g6→f5 und g6→h5.
+        var s7 = p.MoveShapes![7];
+        Assert.Contains(s7, s => s.O == "g6" && s.D == "f5" && s.B == "red");
+        Assert.Contains(s7, s => s.O == "g6" && s.D == "h5" && s.B == "red");
+
+        // Zwischenzüge ohne Annotation haben keine Shapes.
+        Assert.False(p.MoveShapes!.ContainsKey(2));
+    }
+
+    [Fact]
+    public void ParsePgn_ExtractsAltMoves_SoftFailAlternative_AsUci()
+    {
+        // Von Chessable geduldeter Alternativzug (softFail → [%alt]) am 2. Löserzug: Qd2 [%alt Qd3].
+        // Puzzle „255. Rooze vs. Buchäckert" (1001 Chess Exercises), Kapitel „5. Skewer".
+        const string pgn = @"
+[Event ""Book""]
+[Round ""006.017""]
+[White ""255. Rooze, J. vs. Buchäckert, J.""]
+[Result ""*""]
+[FEN ""r1r3k1/ppqnbb1p/2p2pp1/3Pp3/4P1P1/4BNNP/PPQ2P2/R2R2K1 w - - 0 1""]
+
+{Luring} 1. d6 Bxd6 2. Qd2 {[%alt Qd3]} {Or Qd3+- .} Bc5 3. Qxd7 {and White won.} *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("chessable-u5-21646.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.AltMoves);
+        // Halbzug-Index 2 = Qd2 (c2d2). Die Alternative Qd3 = c2d3.
+        Assert.Equal(new[] { "c2d3" }, p.AltMoves![2]);
+        // Hauptzug selbst steht NICHT in den Alternativen; andere Halbzüge haben keine.
+        Assert.False(p.AltMoves!.ContainsKey(0));
+        Assert.False(p.AltMoves!.ContainsKey(1));
+    }
+
+    [Fact]
+    public void ParsePgn_ExtractsAltMoves_PromotionAlternative()
+    {
+        // Alternative mit Umwandlung: d1=Q [%alt d1=R+] → UCI der Alternative trägt das Promo-Suffix.
+        const string pgn = @"
+[Event ""Book""]
+[Round ""006.018""]
+[White ""256. Navara vs. Bacrot""]
+[Result ""*""]
+[FEN ""8/8/p5p1/2k5/P7/2nK1P2/1r1pB3/7R b - - 0 1""]
+
+{Luring} 1... Nxe2 2. Kxe2 d1=Q {[%alt d1=R+]} 3. Kxd1 Rb1 *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("chessable-u5-21646.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.AltMoves);
+        // Halbzug-Index 2 = d1=Q (d2d1q). Alternative d1=R → d2d1r.
+        Assert.Equal(new[] { "d2d1r" }, p.AltMoves![2]);
+    }
+}

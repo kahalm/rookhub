@@ -1,0 +1,435 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Chessable;
+using RookHub.Api.Services.Courses;
+
+namespace RookHub.Api.Tests.Courses;
+
+/// <summary>
+/// Steht der RookHub-EIGENE Chessable-Weg auf <c>Chessable:Enabled=false</c> (PROD seit 2026-09-09),
+/// läuft keine Import-Lane. Ein veraltetes Buch darf dann nicht als „aktualisierbar" angeboten werden:
+/// gemeldet am 2026-09-20 stand „1 Kurs kann aktualisiert werden" dauerhaft im Banner, und jeder Klick
+/// meldete im Log nur „0 eingereiht, 6 übersprungen".
+/// </summary>
+public class ReprocessWithoutChessableTests : IDisposable
+{
+    private readonly AppDbContext _db;
+
+    public ReprocessWithoutChessableTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        _db = new AppDbContext(options);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private sealed class StubReimporter : ICourseReimporter
+    {
+        public List<string> Enqueued { get; } = new();
+        public Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default)
+            => Task.FromResult(new HashSet<string>());
+        public Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName,
+            int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
+        {
+            Enqueued.Add(bid);
+            return Task.FromResult<int?>(Enqueued.Count);
+        }
+    }
+
+    private ImportReprocessService Service(StubReimporter stub, bool chessableEnabled, ICachedLineSource? cachedLines = null)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Chessable:Enabled"] = chessableEnabled ? "true" : "false" })
+            .Build();
+        return new ImportReprocessService(_db, new PgnImportService(_db), stub,
+            NullLogger<ImportReprocessService>.Instance, config, cachedLines);
+    }
+
+    /// <summary>Chessable-Buch, veraltet, Quelle OHNE [ChessableOid] — der klassische Re-Fetch-Fall.</summary>
+    private async Task<Book> AddStaleChessableBookAsync(string? sourcePgn)
+    {
+        var book = new Book
+        {
+            FileName = "chessable-u5-91808.pgn",
+            DisplayName = "Lifetime Repertoires",
+            Tags = "chessable",
+            OwnerUserId = 5,
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Source = new BookSource { SourcePgn = sourcePgn },
+        };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        return book;
+    }
+
+    [Fact]
+    public async Task Status_WithChessableOff_OffersTheLocalPath_InsteadOfARefetchThatCannotRun()
+    {
+        await AddStaleChessableBookAsync("[Event \"x\"]\n\n1. e4 *\n");
+
+        var on = await Service(new StubReimporter(), chessableEnabled: true).GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, on.Refetchable);
+        Assert.Equal(0, on.ReprocessableLocally);
+
+        var off = await Service(new StubReimporter(), chessableEnabled: false).GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(0, off.Refetchable);
+        Assert.Equal(1, off.ReprocessableLocally);   // die gespeicherte Quelle trägt die Zug-Kommentare
+        Assert.Equal(0, off.NeedsReimport);
+    }
+
+    [Fact]
+    public async Task Status_WithChessableOff_AndNoSource_IsNotActionableAtAll()
+    {
+        await AddStaleChessableBookAsync(null);
+
+        var off = await Service(new StubReimporter(), chessableEnabled: false).GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(0, off.Refetchable);
+        Assert.Equal(0, off.ReprocessableLocally);
+        // Nur der (wegklickbare) Hinweis bleibt — das Banner verspricht keine Aktualisierung mehr.
+        Assert.Equal(1, off.NeedsReimport);
+    }
+
+    [Fact]
+    public async Task Reprocess_WithChessableOff_EnqueuesNothing()
+    {
+        await AddStaleChessableBookAsync(null);
+        var stub = new StubReimporter();
+
+        var res = await Service(stub, chessableEnabled: false).ReprocessCoursesAsync(5, isAdmin: true);
+
+        Assert.Empty(stub.Enqueued);   // ein Auftrag würde ohne Lane ewig auf „läuft" stehen
+        Assert.Equal(0, res.Enqueued);
+        Assert.Equal(1, res.Skipped);
+    }
+
+    [Fact]
+    public async Task Reprocess_WithChessableOn_StillEnqueuesTheRefetch()
+    {
+        await AddStaleChessableBookAsync(null);
+        var stub = new StubReimporter();
+
+        var res = await Service(stub, chessableEnabled: true).ReprocessCoursesAsync(5, isAdmin: true);
+
+        Assert.Equal(new[] { "91808" }, stub.Enqueued);
+        Assert.Equal(1, res.Enqueued);
+    }
+
+    [Fact]
+    public async Task Status_AndRun_AgreeOnEveryBook_SoTheBannerCanEmpty()
+    {
+        // Genau der gemeldete Zustand: die Anzeige zählt es als aktualisierbar, der Lauf überspringt es.
+        await AddStaleChessableBookAsync("[Event \"x\"]\n\n1. e4 *\n");
+        var svc = Service(new StubReimporter(), chessableEnabled: false);
+
+        var before = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, before.ReprocessableLocally + before.Refetchable);
+
+        var res = await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, res.Reprocessed);
+
+        var after = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(0, after.ReprocessableLocally + after.Refetchable);   // Banner ist danach leer
+        Assert.Equal(0, after.Stale);
+    }
+
+    [Fact]
+    public async Task Reprocess_WithChessableOff_StillRebuildsFromTheLineCache()
+    {
+        // Der Schalter schließt die eigenen Lanes und /api/chessable/*, NICHT den piratechess-Proxy: den
+        // brauchen die Extension-Wege ohnehin. Genau dafür ist der Cache-Weg da — PROD steht seit
+        // 2026-09-09 auf „aus", und die Fixes aus piratechess ≥ v1.0.47 kämen sonst nie in bestehende Kurse.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        var book = await AddStaleChessableBookAsync(
+            $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+            + "2. Nf3 (2. Nc3 {old side line}) Nc6 3. Bb5 a6 *\n");
+        var lines = new StubCachedLineSource();
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+            + "2. Nf3 {2. Nc3 is the side line} Nc6 3. Bb5 a6 *";
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        var before = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, before.FromCache);
+        Assert.Equal(1, before.ReprocessableLocally + before.Refetchable);
+
+        var res = await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, res.RebuiltFromCache);
+        Assert.Equal(1, res.Reprocessed);
+        Assert.Contains("{2. Nc3 is the side line}",
+            (await _db.BookSources.AsNoTracking().SingleAsync(s => s.Id == book.Id)).SourcePgn);
+
+        var after = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(0, after.Stale);   // Anzeige = Ausführung: das Banner ist danach leer
+    }
+
+    [Fact]
+    public async Task Reprocess_NoLineInTheCache_MarksTheBook_SoTheBannerStopsOfferingIt()
+    {
+        // Gemeldet 2026-10-05: 19 Chessable-Kurse aus der Zeit vor dem Linien-Cache (14.09.) tragen oids,
+        // der Status bot sie bei jedem Aufruf als „aus dem Cache aktualisierbar" an, und jeder Lauf meldete
+        // „keine der N Linien im Linien-Cache" — das Banner blieb für immer stehen.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        var book = await AddStaleChessableBookAsync(
+            $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 Nc6 *\n");
+        var lines = new StubCachedLineSource();   // leer: kein einziger Treffer
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        Assert.Equal(1, (await svc.GetCourseStatusAsync(5, isAdmin: true)).FromCache);
+        var res = await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, res.Skipped);
+
+        var after = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, after.Stale);
+        Assert.Equal(0, after.ReprocessableLocally + after.Refetchable);   // kein Banner mehr
+        Assert.Equal(1, after.NeedsReimport);
+        var courses = await TestServices.Course(_db, configuration: TestServices.ChessableSwitch(false))
+            .GetCoursesAsync(5, isAdmin: true);
+        Assert.True(courses.Single(c => c.BookId == book.Id).NeedsReimport);   // (!) am Kurs statt im Banner
+
+        // Füllt jemand den Cache später, erneuert der Lauf das Buch trotzdem (er fragt weiter).
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 {{new}} Nc6 *";
+        Assert.Equal(1, (await svc.ReprocessCoursesAsync(5, isAdmin: true)).RebuiltFromCache);
+        Assert.Equal(0, (await svc.GetCourseStatusAsync(5, isAdmin: true)).Stale);
+    }
+
+    [Fact]
+    public async Task CacheMissMarker_IsLiftedByANewImport()
+    {
+        var book = await AddStaleChessableBookAsync("[Event \"K\"]\n[ChessableOid \"77\"]\n\n1. e4 *\n");
+        var svc = Service(new StubReimporter(), chessableEnabled: false, new StubCachedLineSource());
+        await svc.ReprocessCoursesAsync(5, isAdmin: true);
+        Assert.Equal(1, (await svc.GetCourseStatusAsync(5, isAdmin: true)).NeedsReimport);
+
+        // Ein neuer Import (RepCheck hängt Linien an) setzt UpdatedAt → wieder ein Cache-Kandidat.
+        var tracked = await _db.Books.SingleAsync(b => b.Id == book.Id);
+        tracked.UpdatedAt = tracked.CacheMissAt!.Value.AddSeconds(1);
+        await _db.SaveChangesAsync();
+        var status = await svc.GetCourseStatusAsync(5, isAdmin: true);
+        Assert.Equal(1, status.FromCache);
+        Assert.Equal(0, status.NeedsReimport);
+    }
+
+    /// <summary>Kurs anlegen, den die Liste zeigt (Besitzer = User 5).</summary>
+    private async Task<Book> AddOwnedBookAsync(string fileName, string? tags, string? sourcePgn, int importVersion)
+    {
+        var book = new Book
+        {
+            FileName = fileName, DisplayName = fileName, Tags = tags, OwnerUserId = 5,
+            ImportVersion = importVersion, Source = new BookSource { SourcePgn = sourcePgn },
+        };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        return book;
+    }
+
+    [Fact]
+    public async Task CourseList_MarksExactlyTheCoursesTheUpdateButtonCannotFix()
+    {
+        // 1) Chessable-Kurs ohne moderne Marker, eigener Chessable-Weg AUS, KEINE gespeicherte Quelle
+        //    → Showstopper, bekommt das (!).
+        var stuck = await AddOwnedBookAsync("chessable-u5-91808.pgn", "chessable", null, ImportPipeline.CurrentVersion - 1);
+        // 2) Derselbe Fall MIT gespeicherter Quelle → der Knopf bereitet ihn lokal auf, kein (!).
+        var fixable = await AddOwnedBookAsync("chessable-u5-55720.pgn", "chessable", "[Event \"x\"]\n\n1. e4 *\n", ImportPipeline.CurrentVersion - 1);
+        // 3) Aktueller Kurs → nie ein (!).
+        var current = await AddOwnedBookAsync("chessable-u5-1.pgn", "chessable", null, ImportPipeline.CurrentVersion);
+        // 4) Von Hand hochgeladener, veralteter Kurs ohne Quelle → auch ohne Chessable ein Showstopper.
+        var manual = await AddOwnedBookAsync("eigene-partien.pgn", null, null, ImportPipeline.CurrentVersion - 1);
+
+        var courses = await TestServices.Course(_db, configuration: TestServices.ChessableSwitch(false))
+            .GetCoursesAsync(5, isAdmin: false);
+
+        Assert.True(courses.Single(c => c.BookId == stuck.Id).NeedsReimport);
+        Assert.False(courses.Single(c => c.BookId == fixable.Id).NeedsReimport);
+        Assert.False(courses.Single(c => c.BookId == current.Id).NeedsReimport);
+        Assert.True(courses.Single(c => c.BookId == manual.Id).NeedsReimport);
+    }
+
+    [Fact]
+    public async Task CourseList_WithChessableOn_MarksNothingThatCanStillBeFetched()
+    {
+        var refetchable = await AddOwnedBookAsync("chessable-u5-91808.pgn", "chessable", null, ImportPipeline.CurrentVersion - 1);
+
+        var courses = await TestServices.Course(_db, configuration: TestServices.ChessableSwitch(true))
+            .GetCoursesAsync(5, isAdmin: false);
+
+        Assert.False(courses.Single(c => c.BookId == refetchable.Id).NeedsReimport);
+    }
+
+    [Fact]
+    public async Task RepertoireList_MarksTheChessableRepertoireThatCannotBeFetchedAnyMore()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var stuck = new Repertoire
+        {
+            UserId = 5, Name = "Caro-Kann", ChessableCourseId = "163418",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-163418.pgn", PgnContent = "[Event \"x\"]\n\n1. e4 *\n" } },
+        };
+        var modern = new Repertoire
+        {
+            UserId = 5, Name = "Sizilianisch", ChessableCourseId = "1",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-1.pgn", PgnContent = "[ChessableOid \"9\"]\n\n1. e4 *\n" } },
+        };
+        var handmade = new Repertoire
+        {
+            UserId = 5, Name = "Eigenes", ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "eigenes.pgn", PgnContent = "1. e4 *" } },
+        };
+        _db.Repertoires.AddRange(stuck, modern, handmade);
+        await _db.SaveChangesAsync();
+
+        var list = await TestServices.Repertoire(_db, configuration: TestServices.ChessableSwitch(false)).GetAllAsync(5);
+
+        Assert.True(list.Single(r => r.Id == stuck.Id).NeedsReimport);
+        Assert.False(list.Single(r => r.Id == modern.Id).NeedsReimport);     // Marker schon drin
+        Assert.False(list.Single(r => r.Id == handmade.Id).NeedsReimport);   // nichts von Chessable
+
+        // Mit eigenem Chessable-Weg ist nichts davon ein Showstopper — der Knopf holt es.
+        var withChessable = await TestServices.Repertoire(_db, configuration: TestServices.ChessableSwitch(true)).GetAllAsync(5);
+        Assert.All(withChessable, r => Assert.False(r.NeedsReimport));
+    }
+
+    [Fact]
+    public async Task RepertoireReprocess_WithChessableOff_StillRebuildsFromTheLineCache()
+    {
+        // Gegenstück zu Reprocess_WithChessableOff_StillRebuildsFromTheLineCache (Kurse): derselbe Schalter,
+        // dieselbe Regel — ein Chessable-Repertoire mit oids bekommt seine Zugtexte aus dem Linien-Cache.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var rep = new Repertoire
+        {
+            UserId = 5, Name = "King's Indian", ChessableCourseId = "91808",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files =
+            {
+                new RepertoireFile
+                {
+                    FileName = "chessable-91808.pgn",
+                    PgnContent = $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+                        + "2. Nf3 (2. Nc3 {old side line}) Nc6 3. Bb5 a6 *\n",
+                },
+            },
+        };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        var lines = new StubCachedLineSource();
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n"
+            + "2. Nf3 {2. Nc3 is the side line} Nc6 3. Bb5 a6 *";
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        var before = await svc.GetRepertoireStatusAsync(5);
+        Assert.Equal(1, before.FromCache);
+        Assert.Equal(1, before.ReprocessableLocally + before.Refetchable);
+        Assert.Equal(0, before.NeedsReimport);
+        // Und die Liste trägt kein (!) — der Knopf kann es ja.
+        var list = await TestServices.Repertoire(_db, configuration: TestServices.ChessableSwitch(false)).GetAllAsync(5);
+        Assert.False(list.Single(r => r.Id == rep.Id).NeedsReimport);
+
+        var res = await svc.ReprocessRepertoiresAsync(5);
+        Assert.Equal(1, res.RebuiltFromCache);
+        Assert.Equal(1, res.Reprocessed);
+        Assert.Contains("{2. Nc3 is the side line}",
+            (await _db.RepertoireFiles.AsNoTracking().SingleAsync(f => f.RepertoireId == rep.Id)).PgnContent);
+
+        var after = await svc.GetRepertoireStatusAsync(5);
+        Assert.Equal(0, after.Stale);   // Anzeige = Ausführung: das Banner ist danach leer
+    }
+
+    [Fact]
+    public async Task RepertoireReprocess_WithChessableOff_LeavesTheStuckOneStale_SoTheMarkerStays()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var stuck = new Repertoire
+        {
+            UserId = 5, Name = "Caro-Kann", ChessableCourseId = "163418",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-163418.pgn", PgnContent = "1. e4 *" } },
+        };
+        var handmade = new Repertoire
+        {
+            UserId = 5, Name = "Eigenes", ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "eigenes.pgn", PgnContent = "1. e4 *" } },
+        };
+        _db.Repertoires.AddRange(stuck, handmade);
+        await _db.SaveChangesAsync();
+
+        var res = await Service(new StubReimporter(), chessableEnabled: false).ReprocessRepertoiresAsync(5);
+
+        // Das handgemachte bekommt den Versions-Mark, das Chessable-eigene bleibt ehrlich veraltet.
+        Assert.Equal(1, res.Reprocessed);
+        Assert.Equal(1, res.Skipped);
+        Assert.Equal(ImportPipeline.CurrentVersion - 1, (await _db.Repertoires.SingleAsync(r => r.Id == stuck.Id)).ImportVersion);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.SingleAsync(r => r.Id == handmade.Id)).ImportVersion);
+    }
+    [Fact]
+    public async Task RepertoireReprocess_NoLineInTheCache_MarksTheRepertoire_SoTheBannerStopsOfferingIt()
+    {
+        // Gegenstück zu Reprocess_NoLineInTheCache_MarksTheBook_… — gemeldet 2026-10-06: 5 Chessable-Repertoires mit
+        // oids (4 ohne Treffer im Cache, 1 ohne Kurs-Id), jeder Lauf übersprang sie, das Banner blieb stehen.
+        const string fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var missed = new Repertoire
+        {
+            UserId = 5, Name = "Grünfeld", ChessableCourseId = "252508",
+            ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-252508.pgn",
+                PgnContent = $"[Event \"Kapitel 1\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 Nc6 *\n" } },
+        };
+        var noBid = new Repertoire
+        {
+            // Chessable-Herkunft nur über einen Dateinamen, aus dem sich keine Kurs-Id lösen lässt.
+            UserId = 5, Name = "Tarrasch", ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-tarrasch-en.pgn",
+                PgnContent = "[Event \"K\"]\n[ChessableOid \"88\"]\n\n1. e4 *\n" } },
+        };
+        _db.Repertoires.AddRange(missed, noBid);
+        await _db.SaveChangesAsync();
+        var lines = new StubCachedLineSource();   // leer: kein einziger Treffer
+        var svc = Service(new StubReimporter(), chessableEnabled: false, lines);
+
+        Assert.Equal(2, (await svc.GetRepertoireStatusAsync(5, isAdmin: true)).FromCache);
+        Assert.Equal(2, (await svc.ReprocessRepertoiresAsync(5, isAdmin: true)).Skipped);
+
+        var after = await svc.GetRepertoireStatusAsync(5, isAdmin: true);
+        Assert.Equal(2, after.Stale);
+        Assert.Equal(0, after.ReprocessableLocally + after.Refetchable);   // kein Banner mehr
+        Assert.Equal(2, after.NeedsReimport);
+        var list = await TestServices.Repertoire(_db, configuration: TestServices.ChessableSwitch(false)).GetAllAsync(5);
+        Assert.True(list.Single(r => r.Id == missed.Id).NeedsReimport);   // (!) am Repertoire statt im Banner
+        Assert.True(list.Single(r => r.Id == noBid.Id).NeedsReimport);
+
+        // Füllt jemand den Cache später, erneuert der Lauf das Repertoire trotzdem (er fragt weiter).
+        lines.Lines["77"] = $"[Event \"x\"]\n[Round \"001.001\"]\n[FEN \"{fen}\"]\n[ChessableOid \"77\"]\n\n2. Nf3 {{new}} Nc6 *";
+        Assert.Equal(1, (await svc.ReprocessRepertoiresAsync(5, isAdmin: true)).RebuiltFromCache);
+        Assert.Equal(1, (await svc.GetRepertoireStatusAsync(5, isAdmin: true)).Stale);
+    }
+
+    [Fact]
+    public async Task RepertoireCacheMissMarker_IsLiftedByANewImport()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        var rep = new Repertoire
+        {
+            UserId = 5, Name = "So", ChessableCourseId = "59857", ImportVersion = ImportPipeline.CurrentVersion - 1,
+            Files = { new RepertoireFile { FileName = "chessable-59857.pgn", PgnContent = "[Event \"K\"]\n[ChessableOid \"77\"]\n\n1. e4 *\n" } },
+        };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        var svc = Service(new StubReimporter(), chessableEnabled: false, new StubCachedLineSource());
+        await svc.ReprocessRepertoiresAsync(5);
+        Assert.Equal(1, (await svc.GetRepertoireStatusAsync(5)).NeedsReimport);
+
+        // Ein neuer Import (die Extension hängt Linien an) setzt UpdatedAt → wieder ein Cache-Kandidat.
+        var tracked = await _db.Repertoires.SingleAsync(r => r.Id == rep.Id);
+        tracked.UpdatedAt = tracked.CacheMissAt!.Value.AddSeconds(1);
+        await _db.SaveChangesAsync();
+        var status = await svc.GetRepertoireStatusAsync(5);
+        Assert.Equal(1, status.FromCache);
+        Assert.Equal(0, status.NeedsReimport);
+    }
+}

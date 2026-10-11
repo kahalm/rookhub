@@ -1,0 +1,665 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.Accounts;
+
+public class AuthServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly AuthService _authService;
+    private readonly IConfiguration _config;
+    private readonly CapturingLogger<AuthService> _logger = new();
+
+    public AuthServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+
+        _config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "TestSecretKeyThatIsAtLeast32Characters!",
+                ["Jwt:Issuer"] = "TestIssuer",
+                ["Jwt:Audience"] = "TestAudience"
+            })
+            .Build();
+
+        _authService = new AuthService(_db, _config, _logger);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public void IsUniqueViolation_ClassifiesDuplicateKey_ButNotTransientFailures()
+    {
+        // Regression: JEDE DbUpdateException wurde als „Username or email already exists" (409)
+        // maskiert — auch Deadlocks/Timeouts/Verbindungsabrisse, bei denen ein Retry genügt hätte.
+        Assert.True(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Duplicate entry 'bob' for key 'IX_AppUsers_Username'"))));
+        Assert.True(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Cannot insert duplicate values for the unique index"))));
+
+        Assert.False(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Deadlock found when trying to get lock; try restarting transaction"))));
+        Assert.False(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Lock wait timeout exceeded; try restarting transaction"))));
+        Assert.False(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Connection reset by peer"))));
+    }
+
+    [Fact]
+    public async Task Register_CreatesUserAndReturnsToken()
+    {
+        var dto = new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" };
+
+        var result = await _authService.RegisterAsync(dto);
+
+        Assert.Equal("testuser", result.Username);
+        Assert.NotEmpty(result.Token);
+        Assert.True(result.UserId > 0);
+        Assert.Single(_db.AppUsers);
+    }
+
+    [Fact]
+    public async Task Register_NotifiesAllAdmins_WithUsername()
+    {
+        // Zwei Admins + ein Nicht-Admin -> nur die Admins sollen benachrichtigt werden.
+        _db.AppUsers.AddRange(
+            new RookHub.Api.Models.AppUser { Username = "admin1", PasswordHash = "x", IsAdmin = true },
+            new RookHub.Api.Models.AppUser { Username = "admin2", PasswordHash = "x", IsAdmin = true },
+            new RookHub.Api.Models.AppUser { Username = "plebs", PasswordHash = "x", IsAdmin = false });
+        await _db.SaveChangesAsync();
+        var adminIds = _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToList();
+
+        var sut = new AuthService(_db, _config, _logger, new NotificationService(_db));
+        await sut.RegisterAsync(new RegisterDto { Username = "newbie", Password = "password123" });
+
+        var notifs = _db.Notifications
+            .Where(n => n.Type == RookHub.Api.Models.NotificationType.NewUserRegistered).ToList();
+        Assert.Equal(2, notifs.Count);
+        Assert.All(notifs, n => Assert.Contains(n.UserId, adminIds));
+        Assert.All(notifs, n => Assert.Equal("/admin", n.Link));
+        Assert.All(notifs, n => Assert.Contains("newbie", n.DataJson));
+    }
+
+    [Fact]
+    public async Task Register_WithoutNotificationService_StillSucceeds()
+    {
+        // Best-effort: ohne NotificationService (optionaler Ctor-Param) bleibt Registrierung intakt.
+        var result = await _authService.RegisterAsync(
+            new RegisterDto { Username = "solo", Password = "password123" });
+        Assert.True(result.UserId > 0);
+    }
+
+    [Fact]
+    public async Task Register_DuplicateUsername_Throws()
+    {
+        var dto = new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" };
+        await _authService.RegisterAsync(dto);
+
+        var dto2 = new RegisterDto { Username = "testuser", Email = "test2@example.com", Password = "password123" };
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dto2));
+        Assert.Equal("Username or email already in use.", ex.Message); // generisch, kein Enumeration-Oracle
+    }
+
+    [Fact]
+    public async Task Register_DuplicateEmail_Throws()
+    {
+        var dto = new RegisterDto { Username = "user1", Email = "test@example.com", Password = "password123" };
+        await _authService.RegisterAsync(dto);
+
+        var dto2 = new RegisterDto { Username = "user2", Email = "test@example.com", Password = "password123" };
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dto2));
+        Assert.Equal("Username or email already in use.", ex.Message); // identisch zum Username-Fall -> kein Oracle
+    }
+
+    [Fact]
+    public async Task Register_UsernameEqualToAnotherAccountsEmail_Throws()
+    {
+        // A1-010: Der Login gibt dem Benutzernamen Vorrang vor der E-Mail. Ein Konto namens
+        // „opfer@example.org" fing sonst jeden E-Mail-Login des echten Inhabers ab.
+        await _authService.RegisterAsync(new RegisterDto { Username = "opfer", Email = "opfer@example.org", Password = "password123" });
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(
+            new RegisterDto { Username = " Opfer@Example.ORG ", Password = "password123" }));
+        Assert.Equal("Username or email already in use.", ex.Message);
+
+        var login = await _authService.LoginAsync(new LoginDto { Username = "opfer@example.org", Password = "password123" });
+        Assert.Equal("opfer", login.Username);
+    }
+
+    [Fact]
+    public async Task Register_EmailEqualToAnotherAccountsUsername_Throws()
+    {
+        // Gegenrichtung: die E-Mail-Anmeldung des neuen Kontos landete immer beim fremden Benutzernamen.
+        await _authService.RegisterAsync(new RegisterDto { Username = "Mail@Example.org", Password = "password123" });
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(
+            new RegisterDto { Username = "neu", Email = "mail@example.org", Password = "password123" }));
+        Assert.Equal("Username or email already in use.", ex.Message);
+    }
+
+    [Fact]
+    public async Task Register_OwnEmailAsUsername_StillWorks()
+    {
+        // Die eigene Adresse als Benutzername bleibt erlaubt — Name und E-Mail gehoeren demselben Konto.
+        var result = await _authService.RegisterAsync(
+            new RegisterDto { Username = "me@example.org", Email = "me@example.org", Password = "password123" });
+
+        Assert.True(result.UserId > 0);
+        var login = await _authService.LoginAsync(new LoginDto { Username = "me@example.org", Password = "password123" });
+        Assert.Equal(result.UserId, login.UserId);
+    }
+
+    [Fact]
+    public async Task Register_WithoutEmail_Succeeds()
+    {
+        var dto = new RegisterDto { Username = "noemail", Email = null, Password = "password123" };
+
+        var result = await _authService.RegisterAsync(dto);
+
+        Assert.Equal("noemail", result.Username);
+        Assert.NotEmpty(result.Token);
+        Assert.Null(_db.AppUsers.Single().Email); // leer -> null gespeichert
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Register_BlankEmail_StoresNull(string? email)
+    {
+        var dto = new RegisterDto { Username = "blank", Email = email, Password = "password123" };
+
+        await _authService.RegisterAsync(dto);
+
+        Assert.Null(_db.AppUsers.Single().Email);
+    }
+
+    [Fact]
+    public async Task Register_MultipleUsersWithoutEmail_AllSucceed()
+    {
+        // Ohne Email darf es keine Dublettenpruefung geben (mehrere NULLs erlaubt).
+        await _authService.RegisterAsync(new RegisterDto { Username = "a", Email = null, Password = "password123" });
+        await _authService.RegisterAsync(new RegisterDto { Username = "b", Email = "", Password = "password123" });
+
+        Assert.Equal(2, _db.AppUsers.Count());
+    }
+
+    [Fact]
+    public async Task Login_ValidCredentials_ReturnsToken()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123" });
+
+        Assert.Equal("testuser", result.Username);
+        Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public async Task Login_RememberMe_IssuesLongerLivedToken()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        var normal = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123", RememberMe = false });
+        var remember = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123", RememberMe = true });
+
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var normalExp = handler.ReadJwtToken(normal.Token).ValidTo;
+        var rememberExp = handler.ReadJwtToken(remember.Token).ValidTo;
+
+        // Ohne „Eingeloggt bleiben": ~30 Tage; mit: ~90 Tage.
+        Assert.True(normalExp > DateTime.UtcNow.AddDays(29), "normales Token sollte mindestens 29 Tage gültig sein");
+        Assert.True(normalExp < DateTime.UtcNow.AddDays(31), "normales Token sollte höchstens 31 Tage gültig sein");
+        Assert.True(rememberExp > DateTime.UtcNow.AddDays(89), "Remember-Me-Token sollte mindestens 89 Tage gültig sein");
+        Assert.True(rememberExp < DateTime.UtcNow.AddDays(91), "Remember-Me-Token sollte höchstens 91 Tage gültig sein");
+    }
+
+    [Fact]
+    public async Task Impersonate_ReturnsTargetIdentity_WithImpClaim_AndShortLifetime()
+    {
+        var target = await _authService.RegisterAsync(new RegisterDto { Username = "victim", Email = "v@example.com", Password = "password123" });
+        const int adminId = 999;
+
+        var res = await _authService.ImpersonateAsync(adminId, "rootadmin", target.UserId);
+
+        Assert.True(res.Impersonating);
+        Assert.Equal("rootadmin", res.ImpersonatorUsername);
+        Assert.Equal(target.UserId, res.UserId);
+        Assert.Equal("victim", res.Username);
+        Assert.False(res.IsAdmin);
+
+        var jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(res.Token);
+        // Token trägt die Zielidentität ...
+        Assert.Equal(target.UserId.ToString(), jwt.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+        // ... + den imp-Claim (Admin-Id) zur Nachvollziehbarkeit.
+        Assert.Equal(adminId.ToString(), jwt.Claims.First(c => c.Type == "imp").Value);
+        // Kurzlebig (~2 h), nicht 30 Tage.
+        Assert.True(jwt.ValidTo < DateTime.UtcNow.AddHours(3), "Impersonation-Token sollte kurzlebig sein");
+
+        // Audit-Log wird geschrieben, aber auf Information (nicht Warning) — sonst verfälscht
+        // der legitime Admin-Vorgang die Warn-Rate (log-watcher warn_spike).
+        var audit = Assert.Single(_logger.Events, e => e.Message.Contains("Impersonation"));
+        Assert.Equal(LogLevel.Information, audit.Level);
+    }
+
+    [Fact]
+    public async Task Impersonate_Self_Throws()
+    {
+        var u = await _authService.RegisterAsync(new RegisterDto { Username = "admin", Email = "a@example.com", Password = "password123" });
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _authService.ImpersonateAsync(u.UserId, "admin", u.UserId));
+    }
+
+    [Fact]
+    public async Task Impersonate_UnknownUser_Throws()
+    {
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _authService.ImpersonateAsync(1, "admin", 4242));
+    }
+
+    [Fact]
+    public async Task Login_InvalidPassword_Throws()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "wrongpassword" }));
+    }
+
+    [Fact]
+    public async Task Login_NonexistentUser_Throws()
+    {
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "nobody", Password = "password123" }));
+    }
+
+    [Fact]
+    public async Task Login_UsernameIsCaseInsensitive()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "TestUser", Email = "t@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123" });
+
+        Assert.Equal("TestUser", result.Username);
+        Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public async Task Login_WithEmail_ReturnsToken()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "Schachkobold", Email = "jonathan@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "jonathan@example.com", Password = "password123" });
+
+        Assert.Equal("Schachkobold", result.Username);
+        Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public async Task Login_WithEmail_IsCaseInsensitiveAndTrimmed()
+    {
+        // E-Mails liegen normalisiert (trim+lower) in der DB — die Eingabe beim Login
+        // darf trotzdem Grossbuchstaben/Whitespace enthalten (Mobil-Tastatur/Autofill).
+        await _authService.RegisterAsync(new RegisterDto { Username = "kobold", Email = "jonathan@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = " Jonathan@Example.COM ", Password = "password123" });
+
+        Assert.Equal("kobold", result.Username);
+    }
+
+    [Fact]
+    public async Task Login_WithUnknownEmail_Throws()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "kobold", Email = "jonathan@example.com", Password = "password123" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "wrong@example.com", Password = "password123" }));
+    }
+
+    [Fact]
+    public async Task Login_UsernameWithAtSign_WinsOverEmail()
+    {
+        // Usernames duerfen '@' enthalten — bei Kollision mit einer fremden E-Mail muss der
+        // Lookup deterministisch bleiben: Username gewinnt, die E-Mail-Anmeldung des anderen
+        // Kontos schlaegt dann fehl (statt je nach Query-Reihenfolge zu wechseln).
+        // Neu anlegen laesst sich so eine Kollision nicht mehr (A1-010) — sie stammt aus dem Bestand.
+        await _authService.RegisterAsync(new RegisterDto { Username = "taken@example.com", Email = "a@example.com", Password = "ownerPass123" });
+        var other = await _authService.RegisterAsync(new RegisterDto { Username = "other", Email = "b@example.com", Password = "otherPass123" });
+        (await _db.AppUsers.FindAsync(other.UserId))!.Email = "taken@example.com";
+        await _db.SaveChangesAsync();
+
+        var asOwner = await _authService.LoginAsync(new LoginDto { Username = "taken@example.com", Password = "ownerPass123" });
+        Assert.Equal("taken@example.com", asOwner.Username);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "taken@example.com", Password = "otherPass123" }));
+    }
+
+    [Fact]
+    public async Task Login_DeletedUser_WithEmail_Throws()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "gone", Email = "gone@example.com", Password = "password123" });
+        var user = await _db.AppUsers.FindAsync(reg.UserId);
+        user!.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "gone@example.com", Password = "password123" }));
+    }
+
+    // ---- Admin-Sperre (Codereview 2026-09-29, F5-011) ----
+
+    private async Task<int> LockedUserAsync(string name, DateTime until)
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = name, Email = $"{name}@example.com", Password = "password123" });
+        var user = await _db.AppUsers.FindAsync(reg.UserId);
+        user!.LockedUntil = until;
+        await _db.SaveChangesAsync();
+        return reg.UserId;
+    }
+
+    [Fact]
+    public async Task Login_LockedUser_CorrectPassword_ThrowsAccountLocked_WithTheEnd()
+    {
+        var until = DateTime.UtcNow.AddDays(3);
+        await LockedUserAsync("locked", until);
+
+        var ex = await Assert.ThrowsAsync<AccountLockedException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "locked", Password = "password123" }));
+
+        Assert.Equal(until, ex.LockedUntilForClient);
+    }
+
+    [Fact]
+    public async Task Login_LockedUser_WrongPassword_LooksLikeAnyWrongPassword()
+    {
+        // Kein Konto-Orakel: den Sperrzustand erfährt nur, wer das Passwort kennt.
+        await LockedUserAsync("locked2", Models.AppUser.LockedIndefinitely);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "locked2", Password = "wrong-password" }));
+    }
+
+    [Fact]
+    public async Task Login_IndefinitelyLocked_ReportsNoEnd_AndAnExpiredLockLetsTheUserIn()
+    {
+        await LockedUserAsync("forever", Models.AppUser.LockedIndefinitely);
+        var ex = await Assert.ThrowsAsync<AccountLockedException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "forever", Password = "password123" }));
+        Assert.Null(ex.LockedUntilForClient);
+
+        await LockedUserAsync("over", DateTime.UtcNow.AddMinutes(-1));
+        Assert.NotEmpty((await _authService.LoginAsync(new LoginDto { Username = "over", Password = "password123" })).Token);
+    }
+
+    [Fact]
+    public async Task Impersonate_LockedUser_Throws()
+    {
+        // Das Einstiegs-Token wäre sofort tot (AuthUserValidation), und der 401 würfe den Admin aus der Oberfläche.
+        var id = await LockedUserAsync("lockedvictim", DateTime.UtcNow.AddDays(1));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.ImpersonateAsync(999, "rootadmin", id));
+    }
+
+    [Fact]
+    public async Task Register_UsernameCollisionIsCaseInsensitive_Throws()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "Admin", Email = "a@example.com", Password = "password123" });
+
+        var dup = new RegisterDto { Username = "admin", Email = "other@example.com", Password = "password123" };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dup));
+    }
+
+    [Fact]
+    public async Task Login_ValidCredentials_LogsUserLoginWithUserIdAndName()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123" });
+
+        // Kibana zaehlt Logins ueber messageTemplate "UserLogin" und Unique Logins
+        // ueber fields.UserId -> beide Properties muessen im Log-Event stecken.
+        var ev = Assert.Single(_logger.Events, e => e.Message.Contains("UserLogin"));
+        Assert.Equal(reg.UserId, Assert.IsType<int>(ev.State["UserId"]));
+        Assert.Equal("testuser", ev.State["UserName"]);
+    }
+
+    [Fact]
+    public async Task Login_InvalidPassword_DoesNotLogUserLogin()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "wrongpassword" }));
+
+        Assert.DoesNotContain(_logger.Events, e => e.Message.Contains("UserLogin"));
+    }
+
+    [Fact]
+    public async Task ChangePassword_ValidCurrentPassword_UpdatesHash()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        var hashBefore = _db.AppUsers.Single().PasswordHash;
+
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        var hashAfter = _db.AppUsers.Single().PasswordHash;
+        Assert.NotEqual(hashBefore, hashAfter);
+        Assert.True(BCrypt.Net.BCrypt.Verify("newpass99", hashAfter));
+    }
+
+    [Fact]
+    public async Task Register_SetsSecurityStamp()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "stamped", Email = "s@example.com", Password = "password123" });
+        var stamp = _db.AppUsers.Single(u => u.Id == reg.UserId).SecurityStamp;
+        Assert.False(string.IsNullOrEmpty(stamp));
+    }
+
+    [Fact]
+    public async Task ChangePassword_RotatesSecurityStamp()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        var before = _db.AppUsers.Single().SecurityStamp;
+
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        var after = _db.AppUsers.Single().SecurityStamp;
+        Assert.False(string.IsNullOrEmpty(after));
+        Assert.NotEqual(before, after);
+    }
+
+    [Fact]
+    public async Task Login_BackfillsMissingSecurityStamp()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "legacy", Email = "l@example.com", Password = "password123" });
+        // Alt-Bestand simulieren: Stempel entfernen.
+        var u = _db.AppUsers.Single();
+        u.SecurityStamp = null;
+        await _db.SaveChangesAsync();
+
+        await _authService.LoginAsync(new LoginDto { Username = "legacy", Password = "password123" });
+
+        Assert.False(string.IsNullOrEmpty(_db.AppUsers.Single().SecurityStamp));
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongCurrentPassword_Throws()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "wrongpass", NewPassword = "newpass99" }));
+    }
+
+    [Fact]
+    public async Task ChangePassword_AfterChange_OldPasswordRejected()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "oldpass" }));
+    }
+
+    [Fact]
+    public async Task ChangePassword_AfterChange_NewPasswordAccepted()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "newpass99" });
+        Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public void LoginThrottleDelay_GrowsAfterFreeAttempts_AndIsCapped()
+    {
+        // Der Auth-Rate-Limiter bremst nur pro IP — pro KONTO wächst hier die Wartezeit,
+        // damit Raten über IP-Rotation nicht mehr durchgeht. Vertipper (≤5) bleiben ungebremst.
+        Assert.Equal(TimeSpan.Zero, AuthService.LoginThrottleDelay(0));
+        Assert.Equal(TimeSpan.Zero, AuthService.LoginThrottleDelay(5));
+        Assert.Equal(TimeSpan.FromMilliseconds(250), AuthService.LoginThrottleDelay(6));
+        Assert.Equal(TimeSpan.FromMilliseconds(500), AuthService.LoginThrottleDelay(7));
+        Assert.Equal(TimeSpan.FromSeconds(4), AuthService.LoginThrottleDelay(10));
+        Assert.Equal(TimeSpan.FromSeconds(4), AuthService.LoginThrottleDelay(5000));   // gedeckelt
+    }
+
+    [Fact]
+    public async Task Login_FailedAttempts_ThrottleAccount_AndSuccessResetsIt()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = new AuthService(_db, _config, _logger, null, cache);
+        await sut.RegisterAsync(new RegisterDto { Username = "bob", Password = "correct-horse" });
+
+        for (var i = 0; i < 6; i++)
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sut.LoginAsync(new LoginDto { Username = "BOB", Password = "wrong" }));
+
+        // Zählung ist konto-, nicht schreibweisen-bezogen (sonst umgeht „BoB" die Bremse).
+        Assert.Equal(6, AuthService.RecentLoginFailures(cache, "bob"));
+
+        await sut.LoginAsync(new LoginDto { Username = "bob", Password = "correct-horse" });
+        Assert.Equal(0, AuthService.RecentLoginFailures(cache, "bob"));
+    }
+
+    [Fact]
+    public async Task Login_ParallelFailures_AreAllCounted_AndOnlyOneThrottledCheckRuns()
+    {
+        // W1 A1-004: Zähler wurde VOR der Prüfung gelesen und danach per Get+Set erhöht. Ein Schwall
+        // gleichzeitiger Versuche (IP-Rotation, der IP-Limiter greift nicht) las überall 0, wartete nie
+        // und verlor beim Hochzählen Treffer. Jetzt: jeder Versuch wird vorab atomar gezählt, und ein
+        // gebremstes Konto prüft höchstens EIN Passwort zugleich — der Rest bekommt sofort 429.
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = new AuthService(_db, _config, _logger, null, cache);
+        await sut.RegisterAsync(new RegisterDto { Username = "alice", Password = "correct-horse" });
+
+        const int burst = 20;
+        var attempts = Enumerable.Range(0, burst)
+            .Select(_ => sut.LoginAsync(new LoginDto { Username = "alice", Password = "wrong" }))
+            .ToList();
+        var outcomes = await Task.WhenAll(attempts.Select(async t =>
+        {
+            try { await t; return "ok"; }
+            catch (LoginThrottledException) { return "throttled"; }
+            catch (UnauthorizedAccessException) { return "checked"; }
+        }));
+
+        Assert.DoesNotContain("ok", outcomes);
+        // 5 freie Vertipper + der 6. (noch ungebremst) + genau EINE gebremste Prüfung.
+        Assert.Equal(7, outcomes.Count(o => o == "checked"));
+        Assert.Equal(burst - 7, outcomes.Count(o => o == "throttled"));
+        Assert.Equal(burst, AuthService.RecentLoginFailures(cache, "alice"));   // nichts verloren
+    }
+
+    [Fact]
+    public async Task Login_ThrottledCheck_ReleasesTheGate_SoTheOwnerCanStillLogIn()
+    {
+        // Das Tor je Konto muss nach JEDER gebremsten Prüfung wieder aufgehen (auch nach einem
+        // Fehlschlag) — sonst würde aus der Bremse eine dauerhafte Sperre des Kontos.
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = new AuthService(_db, _config, _logger, null, cache);
+        await sut.RegisterAsync(new RegisterDto { Username = "carol", Password = "correct-horse" });
+
+        for (var i = 0; i < 7; i++)   // der 7. läuft schon gebremst durchs Tor
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sut.LoginAsync(new LoginDto { Username = "carol", Password = "wrong" }));
+
+        var result = await sut.LoginAsync(new LoginDto { Username = "carol", Password = "correct-horse" });
+        Assert.NotEmpty(result.Token);
+        Assert.Equal(0, AuthService.RecentLoginFailures(cache, "carol"));
+    }
+
+    [Theory]
+    [InlineData("1234", false)]              // vierstellige PIN: online komplett durchprobierbar
+    [InlineData("passwor", false)]           // 7 Zeichen
+    [InlineData("password", false)]          // Allerweltspasswort
+    [InlineData("aaaaaaaa", false)]          // nur ein Zeichen wiederholt
+    [InlineData("korrektes-pferd", true)]
+    public void PasswordPolicy_RejectsTooShortAndCommonPasswords(string password, bool expectValid)
+    {
+        var dto = new RegisterDto { Username = "bob", Password = password };
+        var results = new List<ValidationResult>();
+        var valid = Validator.TryValidateObject(dto, new ValidationContext(dto), results, validateAllProperties: true);
+        Assert.Equal(expectValid, valid);
+    }
+
+    // Minimaler ILogger, der Events samt strukturierter Properties mitschreibt.
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public sealed record Entry(LogLevel Level, string Message, IReadOnlyDictionary<string, object?> State);
+
+        public List<Entry> Events { get; } = new();
+
+        IDisposable? ILogger.BeginScope<TState>(TState state) => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var dict = new Dictionary<string, object?>();
+            if (state is IEnumerable<KeyValuePair<string, object?>> kvps)
+                foreach (var kv in kvps)
+                    dict[kv.Key] = kv.Value;
+            Events.Add(new Entry(logLevel, formatter(state, exception), dict));
+        }
+    }
+
+    [Fact]
+    public async Task ChangePassword_ReturnsFreshToken_AndRevokesApiTokens()
+    {
+        // Der rotierte Security-Stamp entwertet ALLE bisherigen JWTs — auch das der Sitzung, die das
+        // Passwort ändert. Ohne frisches Token flog der Nutzer eine Minute später (Cache-TTL der
+        // Token-Prüfung) ohne Erklärung raus. Und die `rkh_`-Tokens kennen den Stempel gar nicht: sie
+        // laufen ohne Angabe nie ab und überlebten damit den Wiederherstellungspfad.
+        await _authService.RegisterAsync(new RegisterDto { Username = "pwchange", Email = "pw@x.de", Password = "oldpass123" });
+        var user = await _db.AppUsers.FirstAsync(u => u.Username == "pwchange");
+        var stampBefore = user.SecurityStamp;
+        _db.UserApiTokens.Add(new RookHub.Api.Models.UserApiToken
+        {
+            UserId = user.Id, Name = "ext", TokenHash = "h", Prefix = "rkh_abc", Scope = "extension",
+        });
+        await _db.SaveChangesAsync();
+
+        var res = await _authService.ChangePasswordAsync(user.Id,
+            new ChangePasswordDto { CurrentPassword = "oldpass123", NewPassword = "newpass123" });
+
+        Assert.False(string.IsNullOrWhiteSpace(res.Token));
+        Assert.Equal(user.Id, res.UserId);
+        Assert.Equal("pwchange", res.Username);
+        var after = await _db.AppUsers.FirstAsync(u => u.Id == user.Id);
+        Assert.NotEqual(stampBefore, after.SecurityStamp);
+        Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == user.Id));
+    }
+}

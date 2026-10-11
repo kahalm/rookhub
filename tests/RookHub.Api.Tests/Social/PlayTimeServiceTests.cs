@@ -1,0 +1,357 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using System.Net;
+using System.Reflection;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using System.Threading.RateLimiting;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.Social;
+
+public class PlayTimeServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+
+    public PlayTimeServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    // 1700000000000 ms = 2023-11-14 22:13:20 UTC
+    private const long Created = 1_700_000_000_000;
+    private const long Last = 1_700_000_300_000; // +300 s
+
+    // ---- Lichess-Parsing (rein) ------------------------------------------
+
+    [Fact]
+    public void ParseLichess_CountsRapidAndClassical_IgnoresOthers_TracksCursor()
+    {
+        var ndjson = string.Join('\n', new[]
+        {
+            $"{{\"id\":\"a\",\"speed\":\"rapid\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            $"{{\"id\":\"b\",\"speed\":\"classical\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            $"{{\"id\":\"c\",\"speed\":\"blitz\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",            // zählt nicht
+            $"{{\"id\":\"d\",\"speed\":\"correspondence\",\"createdAt\":{Created},\"lastMoveAt\":{Last + 999999}}}", // zählt nicht
+            "", // Leerzeile wird ignoriert
+        });
+
+        var (perDay, cursor) = PlayTimeService.ParseLichess(ndjson);
+
+        var day = new DateOnly(2023, 11, 14);
+        Assert.Equal(2, perDay[day]);                   // rapid + classical
+        Assert.Single(perDay);
+        Assert.Equal(Last + 999999, cursor);            // Cursor = max(lastMoveAt) über ALLE Partien
+    }
+
+    [Fact]
+    public void ParseLichess_CountsClassicalAsOneGame_RegardlessOfDuration()
+    {
+        var ndjson = $"{{\"speed\":\"classical\",\"createdAt\":{Created},\"lastMoveAt\":{Created + 99_999_000}}}";
+        var (perDay, _) = PlayTimeService.ParseLichess(ndjson);
+        Assert.Equal(1, perDay[new DateOnly(2023, 11, 14)]); // eine Partie, Dauer egal
+    }
+
+    // ---- chess.com-Parsing (rein) ----------------------------------------
+
+    [Fact]
+    public void ParseChessCom_CountsRapid_IgnoresBlitzAndDaily_FiltersByCursor()
+    {
+        var pgn = "[UTCDate \"2023.11.14\"]\n[UTCTime \"22:08:20\"]\n[EndDate \"2023.11.14\"]\n[EndTime \"22:13:20\"]\n\n1. e4 e5 *";
+        var json = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            games = new[]
+            {
+                new { time_class = "rapid", end_time = 1700000300L, pgn },
+                new { time_class = "blitz", end_time = 1700000400L, pgn },  // zählt nicht
+                new { time_class = "daily", end_time = 1700000200L, pgn },  // zählt nicht (Korrespondenz)
+            }
+        });
+
+        var (perDay, cursor) = PlayTimeService.ParseChessCom(json, cursor: 0);
+
+        Assert.Equal(1, perDay[new DateOnly(2023, 11, 14)]); // nur die Rapid-Partie (Datum aus PGN UTCDate)
+        Assert.Single(perDay);
+        Assert.Equal(1700000400L * 1000, cursor);            // Cursor = max(end_time) über ALLE Partien
+    }
+
+    [Fact]
+    public void ParseChessCom_SkipsGamesAtOrBeforeCursor()
+    {
+        var json = @"{ ""games"": [ { ""time_class"": ""rapid"", ""end_time"": 1700000300, ""pgn"": ""x"" } ] }";
+        var cursorAfter = 1700000300L * 1000;
+        var (perDay, cursor) = PlayTimeService.ParseChessCom(json, cursor: cursorAfter);
+        Assert.Empty(perDay);                 // end_time·1000 <= cursor → übersprungen
+        Assert.Equal(cursorAfter, cursor);
+    }
+
+    // ---- SyncUserAsync (Integration mit Fake-HTTP) -----------------------
+
+    [Fact]
+    public async Task SyncUserAsync_Lichess_PersistsGameCountAndCursor()
+    {
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = "testuser" });
+        await _db.SaveChangesAsync();
+
+        var ndjson = string.Join('\n', new[]
+        {
+            $"{{\"speed\":\"rapid\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            $"{{\"speed\":\"blitz\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}", // zählt nicht
+        });
+        var http = new HttpClient(new FakeHandler(req =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(req.RequestUri!.Host.Contains("lichess") ? ndjson : "{\"games\":[]}", Encoding.UTF8),
+            }));
+
+        var service = new PlayTimeService(http, _db, new ConfigurationBuilder().Build(), NullLogger<PlayTimeService>.Instance);
+        await service.SyncUserAsync(user.Id);
+
+        var daily = await _db.PlayTimeDailies.SingleAsync(p => p.UserId == user.Id && p.Platform == PlayTimeService.Lichess);
+        Assert.Equal(1, daily.Games);          // nur die Rapid-Partie
+        Assert.Equal(new DateOnly(2023, 11, 14), daily.Date);
+
+        var sync = await _db.PlayTimeSyncs.SingleAsync(s => s.UserId == user.Id && s.Platform == PlayTimeService.Lichess);
+        Assert.Equal(Last, sync.LastGameTimestamp);
+        Assert.Null(sync.LastError);
+    }
+
+    [Fact]
+    public async Task SyncUserAsync_RecordsErrorOnHttpFailure()
+    {
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = "testuser" });
+        await _db.SaveChangesAsync();
+
+        var http = new HttpClient(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)));
+        var service = new PlayTimeService(http, _db, new ConfigurationBuilder().Build(), NullLogger<PlayTimeService>.Instance);
+
+        await service.SyncUserAsync(user.Id); // schluckt den Fehler, vermerkt ihn
+
+        var sync = await _db.PlayTimeSyncs.SingleAsync(s => s.UserId == user.Id && s.Platform == PlayTimeService.Lichess);
+        Assert.NotNull(sync.LastError);
+        Assert.Equal(0, sync.LastGameTimestamp);
+        Assert.False(await _db.PlayTimeDailies.AnyAsync(p => p.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task SyncUser_MoreGamesThanOnePage_FetchesEveryPage_OldestFirst()
+    {
+        // Regression: EIN Abruf mit `max=300` in der Lichess-Vorgabe-Sortierung (neueste zuerst).
+        // Wer seit dem letzten Lauf mehr Partien gespielt hatte, bekam nur die 300 jüngsten gezählt —
+        // und weil der Cursor auf deren Zeitstempel sprang, fehlten die älteren für immer.
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = "testuser" });
+        await _db.SaveChangesAsync();
+
+        // Zwei vollen Seiten folgt eine halbe — die Partien liegen auf drei verschiedenen Tagen.
+        // Sie müssen INNERHALB des Erstlauf-Rückblicks liegen (Default 30 Tage), sonst stünde die
+        // Startgrenze `since` schon hinter ihnen und das Weiterblättern bräche sofort ab.
+        var oneDay = 86_400_000L;
+        var day0 = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-3), TimeSpan.Zero).ToUnixTimeMilliseconds();
+        string Page(int index, int count) => string.Join('\n', Enumerable.Range(0, count).Select(i =>
+        {
+            var created = day0 + index * oneDay + i * 1000;
+            return $"{{\"speed\":\"rapid\",\"createdAt\":{created},\"lastMoveAt\":{created + 600_000}}}";
+        }));
+
+        var requested = new List<string>();
+        var pages = new[]
+        {
+            Page(0, PlayTimeService.LichessPageSize),
+            Page(1, PlayTimeService.LichessPageSize),
+            Page(2, 7),
+        };
+        var http = new HttpClient(new FakeHandler(req =>
+        {
+            var uri = req.RequestUri!.ToString();
+            requested.Add(uri);
+            var body = requested.Count <= pages.Length ? pages[requested.Count - 1] : string.Empty;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8) };
+        }));
+        var service = new PlayTimeService(http, _db, new ConfigurationBuilder().Build(), NullLogger<PlayTimeService>.Instance);
+
+        await service.SyncUserAsync(user.Id);
+
+        Assert.Equal(3, requested.Count);                             // zwei volle Seiten + Rest
+        Assert.All(requested, u => Assert.Contains("sort=dateAsc", u));  // älteste zuerst
+        // Seite 2 setzt genau hinter der jüngsten ANGELEGTEN Partie von Seite 1 an.
+        var lastCreatedOnPage1 = day0 + (PlayTimeService.LichessPageSize - 1) * 1000L;
+        Assert.Contains($"since={lastCreatedOnPage1 + 1}", requested[1]);
+
+        var total = await _db.PlayTimeDailies
+            .Where(d => d.UserId == user.Id && d.Platform == PlayTimeService.Lichess)
+            .SumAsync(d => d.Games);
+        Assert.Equal(2 * PlayTimeService.LichessPageSize + 7, total);  // KEINE Partie fällt weg
+        Assert.Equal(3, await _db.PlayTimeDailies.CountAsync(d => d.UserId == user.Id));
+    }
+
+    [Fact]
+    public void ParseLichessPage_ReportsTotalAndNewestCreatedAt()
+    {
+        var ndjson = string.Join('\n', new[]
+        {
+            $"{{\"speed\":\"rapid\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            // Bullet zählt nicht als Partie, ist aber eine geholte ZEILE — sonst bricht das
+            // Weiterblättern zu früh ab (Seite voll, aber „Total" kleiner als die Seitengröße).
+            $"{{\"speed\":\"bullet\",\"createdAt\":{Created + 5000},\"lastMoveAt\":{Last}}}",
+        });
+
+        var page = PlayTimeService.ParseLichessPage(ndjson);
+
+        Assert.Equal(2, page.Total);
+        Assert.Equal(Created + 5000, page.MaxCreatedAt);
+        Assert.Equal(1, page.PerDay[new DateOnly(2023, 11, 14)]);
+    }
+
+    // ---- Sperrfrist für den Knopf „Spielzeit aktualisieren" (Codereview 2026-09-29, F5-002) ----
+
+    private async Task<int> LinkedUserAsync(string? lichess = "testuser", string? chessCom = "testuser")
+    {
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = lichess, ChessComUsername = chessCom });
+        await _db.SaveChangesAsync();
+        return user.Id;
+    }
+
+    /// <summary>Zählt die Abrufe je Plattform; Lichess leer (ndjson), chess.com ein leeres Archiv.</summary>
+    private (PlayTimeService Service, List<string> Hosts) CountingService()
+    {
+        var hosts = new List<string>();
+        var http = new HttpClient(new FakeHandler(req =>
+        {
+            hosts.Add(req.RequestUri!.Host);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(req.RequestUri.Host.Contains("lichess") ? "" : "{\"games\":[]}", Encoding.UTF8),
+            };
+        }));
+        return (new PlayTimeService(http, _db, new ConfigurationBuilder().Build(), NullLogger<PlayTimeService>.Instance), hosts);
+    }
+
+    /// <summary>Vorher fragte JEDER Aufruf von sync-play bei Lichess und chess.com — 100/min je IP ließen die Server-IP
+    /// bei Lichess sperren. Jetzt fragt ein zweiter Aufruf innerhalb der Sperrfrist gar nicht erst.</summary>
+    [Fact]
+    public async Task SyncUserOnRequest_SecondCallWithinCooldown_DoesNotFetch()
+    {
+        var userId = await LinkedUserAsync();
+        var (service, hosts) = CountingService();
+
+        Assert.Null(await service.SyncUserOnRequestAsync(userId));
+        var afterFirst = hosts.Count;
+        Assert.Contains(hosts, h => h.Contains("lichess"));
+        Assert.Contains(hosts, h => h.Contains("chess.com"));
+
+        var wait = await service.SyncUserOnRequestAsync(userId);
+
+        Assert.Equal(afterFirst, hosts.Count);                 // kein weiterer Abruf
+        Assert.NotNull(wait);
+        Assert.InRange(wait!.Value, TimeSpan.FromMinutes(4), PlayTimeService.ManualSyncCooldown);
+    }
+
+    [Fact]
+    public async Task SyncUserOnRequest_CooldownIsPerPlatform_AndExpires()
+    {
+        var userId = await LinkedUserAsync();
+        _db.PlayTimeSyncs.Add(new PlayTimeSync { UserId = userId, Platform = PlayTimeService.Lichess, LastSyncedAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _db.SaveChangesAsync();
+        var (service, hosts) = CountingService();
+
+        // Lichess gerade erst abgefragt → nur chess.com (gerade verknüpft) wird geholt.
+        Assert.Null(await service.SyncUserOnRequestAsync(userId));
+        Assert.DoesNotContain(hosts, h => h.Contains("lichess"));
+        Assert.Contains(hosts, h => h.Contains("chess.com"));
+
+        // Nach Ablauf der Sperrfrist fragt der Knopf wieder.
+        hosts.Clear();
+        foreach (var sync in _db.PlayTimeSyncs.Where(s => s.UserId == userId))
+            sync.LastSyncedAt = DateTime.UtcNow - PlayTimeService.ManualSyncCooldown - TimeSpan.FromSeconds(5);
+        await _db.SaveChangesAsync();
+        Assert.Null(await service.SyncUserOnRequestAsync(userId));
+        Assert.Contains(hosts, h => h.Contains("lichess"));
+        Assert.Contains(hosts, h => h.Contains("chess.com"));
+    }
+
+    /// <summary>Die Sperrfrist gilt nur für den Knopf — der Hintergrund-Sync (alle 6 h) fragt immer.</summary>
+    [Fact]
+    public async Task SyncUserAsync_BackgroundIgnoresCooldown()
+    {
+        var userId = await LinkedUserAsync(chessCom: null);
+        var (service, hosts) = CountingService();
+        await service.SyncUserOnRequestAsync(userId);
+        hosts.Clear();
+
+        await service.SyncUserAsync(userId);
+
+        Assert.Contains(hosts, h => h.Contains("lichess"));
+    }
+
+    [Fact]
+    public async Task SyncPlayEndpoint_AnswersRetryAfter_InsteadOfFetchingAgain_AndIsRateLimitedPerAccount()
+    {
+        var userId = await LinkedUserAsync();
+        var (service, hosts) = CountingService();
+        var controller = new TrainingGoalController(null!, service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "test")),
+                },
+            },
+        };
+
+        var first = JsonSerializer.SerializeToElement(Assert.IsType<OkObjectResult>(await controller.SyncPlay(CancellationToken.None)).Value);
+        Assert.True(first.GetProperty("synced").GetBoolean());
+        var calls = hosts.Count;
+
+        var second = JsonSerializer.SerializeToElement(Assert.IsType<OkObjectResult>(await controller.SyncPlay(CancellationToken.None)).Value);
+        Assert.False(second.GetProperty("synced").GetBoolean());
+        Assert.InRange(second.GetProperty("retryAfterSeconds").GetInt32(), 1, (int)PlayTimeService.ManualSyncCooldown.TotalSeconds);
+        Assert.Equal(calls, hosts.Count);
+
+        var method = typeof(TrainingGoalController).GetMethod(nameof(TrainingGoalController.SyncPlay))!;
+        Assert.Equal("sync-play", method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.SyncPlay(c, 1));
+        var ctx = new DefaultHttpContext { User = controller.ControllerContext.HttpContext.User };
+        var ok = 0;
+        for (var i = 0; i < RateLimitPartitions.SyncPlayPermitPerMinute + 5; i++)
+        {
+            using var lease = limiter.AttemptAcquire(ctx);
+            if (lease.IsAcquired) ok++;
+        }
+        Assert.Equal(RateLimitPartitions.SyncPlayPermitPerMinute, ok);
+    }
+
+    private sealed class FakeHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+        public FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(_responder(request));
+    }
+}

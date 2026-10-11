@@ -1,0 +1,801 @@
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Puzzles;
+
+namespace RookHub.Api.Tests.Accounts;
+
+public class WeeklyPostControllerTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly WeeklyPostController _controller;
+
+    public WeeklyPostControllerTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+        _controller = new WeeklyPostController(_db, new WeeklyPostService(_db, NullLogger<WeeklyPostService>.Instance));
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private void SetUser(int userId, bool admin = false)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (admin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
+            }
+        };
+    }
+
+    private void SetAnonymous()
+    {
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() }
+        };
+    }
+
+    private const string ValidPgn = "[Event \"Test\"]\n[White \"A\"]\n[Black \"B\"]\n\n1. e4 e5 2. Nf3 *";
+
+    private static IFormFile MakePgnFile(string content, string name = "MyGame.pgn")
+    {
+        var bytes = Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(bytes);
+        return new FormFile(stream, 0, bytes.Length, "file", name)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/octet-stream",
+        };
+    }
+
+    private static T Unwrap<T>(IActionResult result) where T : class =>
+        Assert.IsType<T>(Assert.IsType<OkObjectResult>(result).Value!);
+
+    private static T Unwrap<T>(ActionResult<T> result) where T : class =>
+        Assert.IsType<T>(Assert.IsType<OkObjectResult>(result.Result).Value!);
+
+    [Fact]
+    public async Task GetAll_ReturnsPostsSortedByScheduledDesc()
+    {
+        await _controller.Create(MakePgnFile(ValidPgn, "alt.pgn"), new DateTime(2025, 6, 1, 19, 0, 0), null, default);
+        await _controller.Create(MakePgnFile(ValidPgn, "neu.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), null, default);
+
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+
+        Assert.Equal(2, list.Count);
+        Assert.Equal(new DateTime(2025, 6, 8, 19, 0, 0), list[0].ScheduledAt);   // neueste zuerst
+        Assert.Equal(new DateTime(2025, 6, 1, 19, 0, 0), list[1].ScheduledAt);
+    }
+
+    [Fact]
+    public async Task Create_ValidPgn_StoresWithDefaultTitleFromFileName()
+    {
+        var res = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(ValidPgn, "Taktik_Woche_1.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), null, default));
+
+        Assert.Equal("Taktik Woche 1", res.Title);            // .pgn entfernt, _ -> Leerzeichen
+        Assert.Equal(new DateTime(2025, 6, 8, 19, 0, 0), res.ScheduledAt);
+        Assert.True(res.FileSize > 0);
+
+        var detail = Unwrap<WeeklyPostDetailDto>(await _controller.GetById(res.Id));
+        Assert.Contains("1. e4", detail.PgnContent);
+    }
+
+    [Fact]
+    public async Task Create_ExplicitTitle_IsUsed()
+    {
+        var res = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), "Mein Titel", default));
+        Assert.Equal("Mein Titel", res.Title);
+    }
+
+    [Fact]
+    public async Task Create_InvalidPgn_ReturnsBadRequest()
+    {
+        var res = await _controller.Create(MakePgnFile("kein gueltiges pgn hier"), new DateTime(2025, 6, 8, 19, 0, 0), null, default);
+        Assert.IsType<BadRequestObjectResult>(res);
+        Assert.Equal(0, await _db.WeeklyPosts.CountAsync());
+    }
+
+    [Fact]
+    public async Task Create_NoFile_ReturnsBadRequest()
+    {
+        var res = await _controller.Create(null!, new DateTime(2025, 6, 8, 19, 0, 0), null, default);
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task GetById_NotFound_Returns404()
+    {
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetById(999));
+    }
+
+    // ChessBase-Trainings-PGN mit [%tqu]-Marker -> ergibt ein Puzzle (wie Bücher).
+    private const string TrainingPgn = "[Event \"WP\"]\n[Round \"1.1\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *";
+
+    [Fact]
+    public async Task GetPuzzles_ParsesPgnIntoSequence()
+    {
+        var created = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(TrainingPgn, "woche.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), "Woche 1", default));
+
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(created.Id));
+
+        Assert.Equal("Woche 1", play.Title);
+        var puzzle = Assert.Single(play.Puzzles);
+        Assert.Equal(0, puzzle.Id);                       // lokaler Index
+        Assert.False(string.IsNullOrEmpty(puzzle.Moves)); // UCI-Zugfolge vorhanden
+    }
+
+    [Fact]
+    public async Task GetPuzzles_NotFound_Returns404()
+    {
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetPuzzles(999));
+    }
+
+    [Fact]
+    public async Task Update_ChangesTitleAndSchedule()
+    {
+        var created = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), null, default));
+
+        var newDate = new DateTime(2025, 6, 15, 19, 0, 0);
+        var updated = Unwrap<WeeklyPostDto>(
+            await _controller.Update(created.Id, new UpdateWeeklyPostDto { Title = "Neu", ScheduledAt = newDate }));
+
+        Assert.Equal("Neu", updated.Title);
+        Assert.Equal(newDate, updated.ScheduledAt);
+    }
+
+    [Fact]
+    public async Task Update_NotFound_Returns404()
+    {
+        Assert.IsType<NotFoundObjectResult>(
+            await _controller.Update(999, new UpdateWeeklyPostDto { Title = "x" }));
+    }
+
+    [Fact]
+    public async Task Delete_RemovesPost()
+    {
+        var created = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), null, default));
+
+        Assert.IsType<NoContentResult>(await _controller.Delete(created.Id));
+        Assert.Equal(0, await _db.WeeklyPosts.CountAsync());
+        Assert.IsType<NotFoundObjectResult>(await _controller.Delete(created.Id));
+    }
+
+    // --- Per-User-Fortschritt -------------------------------------------------
+
+    // Zwei Trainings-Puzzles (je [%tqu]) → Sequenz mit 2 Puzzles.
+    private const string TwoPuzzlePgn =
+        "[Event \"WP\"]\n[Round \"1.1\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *\n\n" +
+        "[Event \"WP\"]\n[Round \"1.2\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *";
+
+    private async Task<int> CreateTwoPuzzlePostAsync()
+    {
+        var created = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(TwoPuzzlePgn, "woche.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), "Woche", default));
+        // Sicherstellen, dass wirklich 2 Puzzles geparst werden (sonst sagt der Test nichts aus).
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(created.Id));
+        Assert.Equal(2, play.Puzzles.Count);
+        return created.Id;
+    }
+
+    [Fact]
+    public async Task RecordAttempt_TracksPlayedSolvedAndCompletion()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        var p1 = Unwrap<WeeklyPostProgressDto>(
+            await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 30 }));
+        Assert.Equal(2, p1.Total);
+        Assert.Equal(1, p1.PlayedCount);
+        Assert.Equal(1, p1.SolvedCount);
+        Assert.False(p1.Completed);
+        Assert.Equal(new[] { 0 }, p1.PlayedIndices);   // für „zum ersten neuen Puzzle springen"
+
+        // Zweites Puzzle NICHT gelöst → trotzdem „gespielt" → erledigt (alle gespielt).
+        var p2 = Unwrap<WeeklyPostProgressDto>(
+            await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 12 }));
+        Assert.Equal(2, p2.PlayedCount);
+        Assert.Equal(1, p2.SolvedCount);
+        Assert.True(p2.Completed);
+        Assert.Equal(new[] { 0, 1 }, p2.PlayedIndices);
+        Assert.Equal(42, p2.TotalSeconds);   // 30 + 12 (eigene Gesamtzeit)
+    }
+
+    [Fact]
+    public async Task RecordAttempt_EmitsWeeklyPostAttemptLog_OncePerNewPuzzle()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(7);
+        var logger = new TestLogger<WeeklyPostService>();
+        var controller = new WeeklyPostController(_db, new WeeklyPostService(_db, logger))
+        {
+            ControllerContext = _controller.ControllerContext
+        };
+
+        await controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 20 });
+        // Idempotenter Wiederholungsversuch desselben Index → KEIN zweites Log (sonst Doppelzählung in Kibana).
+        await controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 9 });
+
+        var log = Assert.Single(logger.Messages, m => m.Contains("WeeklyPostAttempt"));
+        Assert.Contains("User 7", log);
+        Assert.Contains($"weekly-post {id}", log);
+        Assert.Contains("puzzle 0", log);
+        Assert.Contains("solved", log);
+        Assert.Contains("in 20s", log);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_IsIdempotentPerIndex_FirstResultWins()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5 });
+        // erneuter Versuch desselben Index (diesmal nicht gelöst) ändert nichts.
+        var p = Unwrap<WeeklyPostProgressDto>(
+            await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 5 }));
+        Assert.Equal(1, p.PlayedCount);
+        Assert.Equal(1, p.SolvedCount);   // erster (gelöster) Versuch bleibt
+    }
+
+    [Fact]
+    public async Task RecordAttempt_IndexOutOfRange_Returns404()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+        var res = await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 9, Solved = true });
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task GetProgress_UnknownPost_Returns404()
+    {
+        SetUser(1);
+        var res = await _controller.GetProgress(999);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task Progress_IsPerUser()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
+
+        SetUser(2);
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
+        Assert.Equal(0, p.PlayedCount);   // anderer User: kein Fortschritt
+    }
+
+    [Fact]
+    public async Task Create_CachesPuzzleCount()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var post = await _db.WeeklyPosts.FindAsync(id);
+        Assert.NotNull(post);
+        Assert.Equal(2, post!.PuzzleCount);   // beim Upload einmal berechnet + persistiert
+    }
+
+    [Fact]
+    public async Task GetProgress_BackfillsPuzzleCount_ForLegacyPostWithZero()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        // Alt-Datensatz simulieren: gecachte Anzahl zurücksetzen.
+        var post = await _db.WeeklyPosts.FindAsync(id);
+        post!.PuzzleCount = 0;
+        await _db.SaveChangesAsync();
+
+        SetUser(1);
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
+        Assert.Equal(2, p.Total);   // aus dem PGN nachberechnet
+
+        // … und für künftige Aufrufe persistiert (kein erneuter Parse).
+        var reloaded = await _db.WeeklyPosts.FindAsync(id);
+        Assert.Equal(2, reloaded!.PuzzleCount);
+    }
+
+    [Fact]
+    public async Task GetAllProgress_ReturnsOnlyPostsWithAttempts_PerUser()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 20 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 7 });
+
+        // User 1: genau ein Post mit Versuchen, played 2/2, solved 1, completed.
+        var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        var p = Assert.Single(list);
+        Assert.Equal(id, p.WeeklyPostId);
+        Assert.Equal(2, p.PlayedCount);
+        Assert.Equal(1, p.SolvedCount);
+        Assert.True(p.Completed);
+        Assert.Equal(27, p.TotalSeconds);   // 20 + 7 (Gesamtzeit in der Übersicht)
+
+        // User 2: keine Versuche → leere Liste.
+        SetUser(2);
+        var empty = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        Assert.Empty(empty);
+    }
+
+    [Fact]
+    public async Task GetResults_AggregatesPerUser_WithDiscordTimeAndCompleted()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var u = new AppUser
+        {
+            Username = "alice", Email = "a@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DiscordId = "d1", DiscordUsername = "alice#1", DisplayName = "Alice" },
+        };
+        _db.AppUsers.Add(u);
+        await _db.SaveChangesAsync();
+
+        SetUser(u.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 30 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 12 });
+
+        var res = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        Assert.Equal(2, res.Total);
+        Assert.Equal(1, res.CompletedCount);
+        var p = Assert.Single(res.Players);
+        Assert.Equal("Alice", p.Name);          // DisplayName bevorzugt
+        Assert.Equal("d1", p.DiscordId);
+        Assert.Equal(2, p.PlayedCount);
+        Assert.Equal(1, p.SolvedCount);
+        Assert.Equal(42, p.TotalSeconds);       // 30 + 12 (Gesamtzeit)
+        Assert.True(p.Completed);
+    }
+
+    [Fact]
+    public async Task GetResults_UnknownPost_Returns404()
+    {
+        var res = await _controller.GetResults(999);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task GetResults_HintsUsed_IsMaxOverAllPuzzlesOfTheUser()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var hinted = new AppUser { Username = "hinted", Email = "h@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Hinted" } };
+        var clean = new AppUser { Username = "clean", Email = "c@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Clean" } };
+        _db.AppUsers.AddRange(hinted, clean);
+        await _db.SaveChangesAsync();
+
+        SetUser(hinted.Id);
+        // Puzzle 0 ohne Tipps, Puzzle 1 mit Stufe 2 → Spieler-Aggregat = Max(0,2) = 2 (mit Tipps gelöst).
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 10, HintsUsed = 0 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 15, HintsUsed = 2 });
+
+        SetUser(clean.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 8, HintsUsed = 0 });
+
+        var res = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        Assert.Equal(2, res.Players.Single(p => p.Name == "Hinted").HintsUsed);
+        Assert.Equal(0, res.Players.Single(p => p.Name == "Clean").HintsUsed);
+    }
+
+    // --- Spielmodus („training" = Brett eingefroren / „easy" = Figuren ziehbar) ----------
+
+    [Fact]
+    public async Task RecordAttempt_StoresModeOnFirstAttempt()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+
+        var a = await _db.WeeklyPostAttempts.SingleAsync(x => x.UserId == 1 && x.PuzzleIndex == 0);
+        Assert.Equal(SolveMode.Easy, a.Mode);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_SecondAttempt_DoesNotChangeMode()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+        // Wiederholung desselben Index (jetzt im Trainings-Modus) ist idempotent → Modus bleibt „easy".
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 9, Mode = "training" });
+
+        var a = await _db.WeeklyPostAttempts.SingleAsync(x => x.UserId == 1 && x.PuzzleIndex == 0);
+        Assert.Equal(SolveMode.Easy, a.Mode);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_MissingOrUnknownMode_FallsBackToTraining()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        // Kein Modus im Body (Altes Frontend) …
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5 });
+        // … und ein unbekannter Wert.
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 5, Mode = "hyperspeed" });
+
+        var modes = await _db.WeeklyPostAttempts.Where(x => x.UserId == 1).OrderBy(x => x.PuzzleIndex)
+            .Select(x => x.Mode).ToListAsync();
+        Assert.Equal(new[] { SolveMode.Training, SolveMode.Training }, modes);
+    }
+
+    [Fact]
+    public async Task GetProgress_CountsPlayedPuzzlesPerMode()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 7, Mode = "training" });
+
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
+        Assert.Equal(2, p.PlayedCount);
+        Assert.Equal(1, p.TrainingCount);
+        Assert.Equal(1, p.EasyCount);
+
+        // Auch die Übersicht (Batch-Fortschritt) trägt die Aufteilung.
+        var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        var all = Assert.Single(list);
+        Assert.Equal(1, all.TrainingCount);
+        Assert.Equal(1, all.EasyCount);
+    }
+
+    [Fact]
+    public async Task GetResults_CountsPerModePerPlayer()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var easyPlayer = new AppUser { Username = "easy", Email = "e@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Easy" } };
+        var hardPlayer = new AppUser { Username = "hard", Email = "t@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Hard" } };
+        _db.AppUsers.AddRange(easyPlayer, hardPlayer);
+        await _db.SaveChangesAsync();
+
+        SetUser(easyPlayer.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 6, Mode = "training" });
+
+        SetUser(hardPlayer.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 8, Mode = "training" });
+
+        var res = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        var easy = res.Players.Single(p => p.Name == "Easy");
+        Assert.Equal(1, easy.EasyCount);
+        Assert.Equal(1, easy.TrainingCount);
+        var hard = res.Players.Single(p => p.Name == "Hard");
+        Assert.Equal(0, hard.EasyCount);
+        Assert.Equal(1, hard.TrainingCount);
+    }
+
+    // --- Terminierte Sichtbarkeit (scheduledAt in der Zukunft) -------------------
+
+    private async Task<int> CreateFuturePostAsync()
+    {
+        var future = DateTime.UtcNow.AddDays(7);
+        var res = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(ValidPgn, "future.pgn"), future, "Future Post", default));
+        return res.Id;
+    }
+
+    [Fact]
+    public async Task GetAll_FuturePost_HiddenForAnonymous()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+        Assert.DoesNotContain(list, p => p.Id == id);
+    }
+
+    [Fact]
+    public async Task GetAll_FuturePost_VisibleForAdmin()
+    {
+        SetUser(1, admin: true);
+        var id = await CreateFuturePostAsync();
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+        Assert.Contains(list, p => p.Id == id);
+    }
+
+    [Fact]
+    public async Task GetById_FuturePost_Returns404ForNonAdmin()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetById(id));
+    }
+
+    [Fact]
+    public async Task GetById_FuturePost_OkForAdmin()
+    {
+        SetUser(1, admin: true);
+        var id = await CreateFuturePostAsync();
+        Assert.IsType<OkObjectResult>(await _controller.GetById(id));
+    }
+
+    [Fact]
+    public async Task GetPuzzles_FuturePost_Returns404ForNonAdmin()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetPuzzles(id));
+    }
+
+    [Fact]
+    public async Task GetResults_FuturePost_Returns404ForNonAdmin()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        var res = await _controller.GetResults(id);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_FuturePost_Returns404ForNonAdmin()
+    {
+        SetUser(1);
+        var id = await CreateFuturePostAsync();
+        var res = await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    // --- Admin-Detailaufschlüsselung (i) -------------------------------------
+
+    [Fact]
+    public async Task GetResults_IncludesUserId_ForAdminBreakdownLinking()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(42);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 15 });
+
+        var results = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        var player = Assert.Single(results.Players);
+        Assert.Equal(42, player.UserId);
+    }
+
+    [Fact]
+    public async Task GetPlayerBreakdown_ReturnsRowPerPuzzle_WithWrongAndMouseslips()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(7);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto
+        { PuzzleIndex = 0, Solved = true, TimeSeconds = 30, HintsUsed = 2, WrongAttempts = 3, Mouseslips = 1 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto
+        { PuzzleIndex = 1, Solved = false, TimeSeconds = 12, HintsUsed = 0, WrongAttempts = 0, Mouseslips = 0 });
+
+        SetUser(99, admin: true);
+        var bd = Unwrap<WeeklyPlayerBreakdownDto>(await _controller.GetPlayerBreakdown(id, 7));
+
+        Assert.Equal(2, bd.Total);
+        Assert.Equal(7, bd.UserId);
+        Assert.Equal(2, bd.Rows.Count);
+        // Nach PuzzleIndex sortiert.
+        Assert.Equal(0, bd.Rows[0].PuzzleIndex);
+        Assert.Equal(1, bd.Rows[1].PuzzleIndex);
+        // Zeile 0 trägt die erfassten Fehlzüge/Mausrutscher/Tipps.
+        Assert.True(bd.Rows[0].Solved);
+        Assert.Equal(30, bd.Rows[0].TimeSeconds);
+        Assert.Equal(2, bd.Rows[0].HintsUsed);
+        Assert.Equal(3, bd.Rows[0].WrongAttempts);
+        Assert.Equal(1, bd.Rows[0].Mouseslips);
+        Assert.False(bd.Rows[1].Solved);
+        Assert.Equal(0, bd.Rows[1].WrongAttempts);
+    }
+
+    [Fact]
+    public async Task GetPlayerBreakdown_UnknownPost_Returns404()
+    {
+        SetUser(1, admin: true);
+        var res = await _controller.GetPlayerBreakdown(999, 1);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    // --- Beschreibung (optional, im Frontend angezeigt + vom Bot gepostet) -----------------
+
+    [Fact]
+    public async Task Create_WithDescription_StoresAndReturnsIt()
+    {
+        var res = Unwrap<WeeklyPostDto>(await _controller.Create(
+            MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), "Titel", "  Kurze Beschreibung  "));
+
+        Assert.Equal("Kurze Beschreibung", res.Description);   // getrimmt
+
+        // Auch in der Liste (der Bot pollt GET /api/weekly-posts) und im Detail vorhanden.
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+        Assert.Equal("Kurze Beschreibung", list.Single().Description);
+        var detail = Unwrap<WeeklyPostDetailDto>(await _controller.GetById(res.Id));
+        Assert.Equal("Kurze Beschreibung", detail.Description);
+    }
+
+    [Fact]
+    public async Task Update_SetsAndClearsDescription()
+    {
+        var created = Unwrap<WeeklyPostDto>(await _controller.Create(
+            MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), "Titel"));
+        Assert.Null(created.Description);
+
+        var set = Unwrap<WeeklyPostDto>(await _controller.Update(created.Id, new UpdateWeeklyPostDto { Description = "Neue Beschreibung" }));
+        Assert.Equal("Neue Beschreibung", set.Description);
+
+        // Leerstring → Beschreibung entfernen (null).
+        var cleared = Unwrap<WeeklyPostDto>(await _controller.Update(created.Id, new UpdateWeeklyPostDto { Description = "" }));
+        Assert.Null(cleared.Description);
+    }
+
+    // ---- Wochenpost aus Buch-Kapitel ----------------------------------------
+
+    /// <summary>Seedet ein Buch mit zwei Kapiteln (je Puzzle Fen+Moves) + optionaler Info-Linie und gibt die Book-Id zurück.</summary>
+    private async Task<int> SeedBookWithChaptersAsync()
+    {
+        var book = new Book { FileName = "book.pgn", DisplayName = "Mein Buch", Source = new BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        BookPuzzle P(string round, string? chapter, string fen, string moves, bool info = false) => new()
+        {
+            LineId = $"book:{round}", BookFileName = "book.pgn", BookId = book.Id,
+            Round = round, Chapter = chapter, Fen = fen, Moves = moves, StartPly = -1, IsInfoOnly = info,
+        };
+        _db.BookPuzzles.AddRange(
+            P("001.001", "Kapitel 1", "8/8/8/8/8/8/4K3/4k3 w - - 0 1", "e2e3"),
+            P("001.002", "Kapitel 1", "8/8/8/8/8/8/5K2/4k3 w - - 0 1", "f2f3"),
+            P("002.001", "Kapitel 2", "8/8/8/8/8/8/6K1/4k3 w - - 0 1", "g2g3"),
+            P("002.002", "Kapitel 2", "8/8/8/8/8/8/7K/4k3 w - - 0 1", "h2h3", info: true)   // Info-Linie: kein Quiz
+        );
+        await _db.SaveChangesAsync();
+        return book.Id;
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_ValidChapter_CreatesBookSourcedPostWithChapterPuzzles()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+
+        Assert.Equal(bookId, post.SourceBookId);
+        Assert.Equal("Kapitel 1", post.SourceChapter);
+        Assert.Equal("Mein Buch: Kapitel 1", post.Title);   // Default-Titel aus Buch + Kapitel
+
+        // Durchspielen: genau die zwei Quiz-Puzzles aus Kapitel 1, in Lesereihenfolge, index-basiert.
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+        Assert.Equal(2, play.Puzzles.Count);
+        Assert.Equal(new[] { 0, 1 }, play.Puzzles.Select(p => p.Id).ToArray());
+        Assert.Equal("e2e3", play.Puzzles[0].Moves);
+        Assert.All(play.Puzzles, p => Assert.Equal("Kapitel 1", p.Chapter));
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_RoundsBeyondNine_MatchCourseReadingOrder()
+    {
+        // Die Wochenpost sortierte rein ordinal — „010" nach „009" ist dort noch richtig, aber
+        // sobald ein Buch UNGEPADDETE Runden trägt („9", „10"), stellte die Textsortierung „10" vor
+        // „9". Die gespiegelte Reihenfolge wich damit von der Kurs-Reihenfolge ab, und weil der
+        // Wochenpost-Fortschritt am INDEX hängt, zeigten „gespielt"-Marken auf andere Puzzles.
+        var book = new Book { FileName = "flat.pgn", DisplayName = "Flach", Source = new BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        foreach (var round in new[] { "9", "10", "2" })
+            _db.BookPuzzles.Add(new BookPuzzle
+            {
+                LineId = $"flat:{round}", BookFileName = "flat.pgn", BookId = book.Id, Round = round,
+                Chapter = "K", Fen = "8/8/8/8/8/8/4K3/4k3 w - - 0 1", Moves = $"e2e3 {round}", StartPly = -1,
+            });
+        await _db.SaveChangesAsync();
+        SetUser(1, admin: true);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = book.Id, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+
+        // Erwartung = Lesereihenfolge des Kurses: 2, 9, 10 (Länge zuerst, dann ordinal).
+        Assert.Equal(new[] { "e2e3 2", "e2e3 9", "e2e3 10" }, play.Puzzles.Select(p => p.Moves).ToArray());
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_SecondChapter_ExcludesInfoOnlyLines()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 1, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+
+        // Kapitel 2 hat 2 Linien, davon 1 Info-only → nur 1 Quiz-Puzzle.
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+        Assert.Single(play.Puzzles);
+        Assert.Equal("g2g3", play.Puzzles[0].Moves);
+
+        // Fortschritts-Total nutzt dieselbe Quiz-Zählung.
+        var prog = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(post.Id));
+        Assert.Equal(1, prog.Total);
+    }
+
+    [Fact]
+    public async Task GetAllProgress_ChapterSourcedPost_UsesLiveTotal_NotStaleCachedCount()
+    {
+        // Regression: die Übersicht nahm den beim Anlegen gecachten PuzzleCount, während
+        // Per-Post-Fortschritt/RecordAttempt live zählen — wuchs das Quell-Kapitel durch einen
+        // Re-Fetch, meldete die Übersicht „erledigt", obwohl die Post-Ansicht offene Puzzles zeigte.
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+
+        // Beide (aktuellen) Kapitel-Puzzles spielen → wäre nach gecachtem Total „completed".
+        await _controller.RecordAttempt(post.Id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5 });
+        await _controller.RecordAttempt(post.Id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 5 });
+
+        // Re-Fetch vergrößert das Kapitel um eine dritte Quiz-Linie.
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = "book:001.003", BookFileName = "book.pgn", BookId = bookId,
+            Round = "001.003", Chapter = "Kapitel 1", Fen = "8/8/8/8/8/8/3K4/4k3 w - - 0 1", Moves = "d2d3", StartPly = -1,
+        });
+        await _db.SaveChangesAsync();
+
+        var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        var p = Assert.Single(list);
+        Assert.Equal(3, p.Total);        // live gezählt, nicht der gecachte Anlage-Stand (2)
+        Assert.False(p.Completed);       // 2 von 3 gespielt
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_InvalidChapterIndex_ReturnsBadRequest()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+
+        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 9, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        });
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_UnknownBook_ReturnsBadRequest()
+    {
+        SetUser(1, admin: true);
+        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = 999, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        });
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+}

@@ -1,0 +1,445 @@
+using System.Net;
+using System.Reflection;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Social;
+
+namespace RookHub.Api.Tests.Social;
+
+/// <summary>Admin↔User-Direktnachrichten: Service, beide Controller und die Glocken-Trigger.</summary>
+public class AdminMessageTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly NotificationService _notifications;
+    private readonly AdminMessageService _service;
+
+    public AdminMessageTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+        _notifications = new NotificationService(_db);
+        _service = new AdminMessageService(_db, _notifications);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private async Task<AppUser> UserAsync(int id, string name, bool admin = false)
+    {
+        var u = new AppUser { Id = id, Username = name, PasswordHash = "x", IsAdmin = admin };
+        _db.AppUsers.Add(u);
+        await _db.SaveChangesAsync();
+        return u;
+    }
+
+    // ---- Service: Admin sendet ----
+
+    [Fact]
+    public async Task SendFromAdmin_CreatesMessage_AndNotifiesUser()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+
+        var dto = await _service.SendFromAdminAsync(adminId: 1, targetUserId: 2, "Hallo Bob");
+
+        Assert.True(dto.FromAdmin);
+        Assert.Equal("Hallo Bob", dto.Body);
+        var msg = await _db.AdminMessages.SingleAsync();
+        Assert.Equal(2, msg.UserId);
+        Assert.Equal(1, msg.SenderId);
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.AdminMessageReceived && n.Link == "/messages"));
+    }
+
+    [Fact]
+    public async Task SendFromAdmin_UnknownUser_Throws()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.SendFromAdminAsync(1, 999, "hi"));
+    }
+
+    [Fact]
+    public async Task SendFromAdmin_EmptyBody_Throws()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.SendFromAdminAsync(1, 2, "   "));
+    }
+
+    [Fact]
+    public async Task SendFromAdmin_OverlongBody_IsTruncated()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        var dto = await _service.SendFromAdminAsync(1, 2, new string('x', AdminMessageService.MaxBodyLength + 500));
+        Assert.Equal(AdminMessageService.MaxBodyLength, dto.Body.Length);
+    }
+
+    // ---- Service: User schreibt/antwortet ----
+
+    [Fact]
+    public async Task SendFromUser_CanInitiate_CreatesThread_AndNotifiesAllAdmins()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "admin2", admin: true);
+
+        // Der User startet die Konversation SELBST (kein Admin hat vorher geschrieben).
+        var dto = await _service.SendFromUserAsync(2, "Hallo Admins");
+
+        Assert.False(dto.FromAdmin);
+        Assert.True(await _db.MessageThreads.AnyAsync(t => t.UserId == 2));   // Thread angelegt
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+        Assert.False(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    [Fact]
+    public async Task SendFromUser_AfterAdminStarted_NotifiesAllAdmins()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "admin2", admin: true);
+        await _service.SendFromAdminAsync(1, 2, "Hallo");
+
+        var dto = await _service.SendFromUserAsync(2, "Hi zurück");
+
+        Assert.False(dto.FromAdmin);
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+        Assert.False(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    [Fact]
+    public async Task EnsureThread_Idempotent_RepeatedMessages_KeepSingleThreadRow_AndClaim()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+
+        await _service.SendFromUserAsync(2, "erste");        // User startet → Thread wird angelegt
+        await _service.SendFromAdminAsync(1, 2, "antwort");  // findet Thread + übernimmt (Claim)
+        await _service.SendFromUserAsync(2, "nochmal");      // findet Thread erneut
+
+        // EnsureThreadAsync wurde 3× durchlaufen → trotzdem genau EINE Thread-Zeile (keine PK-Dubletten).
+        Assert.Equal(1, await _db.MessageThreads.CountAsync(t => t.UserId == 2));
+        Assert.Equal(3, await _db.AdminMessages.CountAsync(m => m.UserId == 2));
+        var thread = await _db.MessageThreads.SingleAsync(t => t.UserId == 2);
+        Assert.Equal(1, thread.ClaimedByAdminId);            // Claim der Admin-Antwort bleibt erhalten
+    }
+
+    [Fact]
+    public async Task SendFromAdmin_AutoClaimsUnassignedThread()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromUserAsync(2, "Hilfe!");   // User startet → unbearbeitet
+
+        await _service.SendFromAdminAsync(1, 2, "Klar, gerne");   // Admin antwortet → übernimmt
+
+        var thread = await _db.MessageThreads.FindAsync(2);
+        Assert.Equal(1, thread!.ClaimedByAdminId);
+    }
+
+    [Fact]
+    public async Task Claim_And_Release_Thread()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromUserAsync(2, "Frage");
+
+        await _service.ClaimThreadAsync(1, 2);
+        Assert.Equal(1, (await _db.MessageThreads.FindAsync(2))!.ClaimedByAdminId);
+
+        await _service.ReleaseThreadAsync(2);
+        Assert.Null((await _db.MessageThreads.FindAsync(2))!.ClaimedByAdminId);
+    }
+
+    [Fact]
+    public async Task GetThreads_IncludesClaimInfo()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromUserAsync(2, "hallo");
+        await _service.ClaimThreadAsync(1, 2);
+
+        var t = (await _service.GetThreadsAsync()).Single(x => x.UserId == 2);
+        Assert.Equal(1, t.ClaimedByAdminId);
+        Assert.Equal("admin1", t.ClaimedByAdminName);
+    }
+
+    // ---- Service: Thread + Read-Receipts ----
+
+    [Fact]
+    public async Task GetThread_IsChronological()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromAdminAsync(1, 2, "erste");
+        await _service.SendFromUserAsync(2, "zweite");
+        await _service.SendFromAdminAsync(1, 2, "dritte");
+
+        var thread = await _service.GetThreadAsync(2);
+        Assert.Equal(new[] { "erste", "zweite", "dritte" }, thread.Select(m => m.Body).ToArray());
+        Assert.Equal(new[] { true, false, true }, thread.Select(m => m.FromAdmin).ToArray());
+    }
+
+    [Fact]
+    public async Task UserUnread_And_MarkSeenByUser()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromAdminAsync(1, 2, "a");
+        await _service.SendFromAdminAsync(1, 2, "b");
+
+        Assert.Equal(2, await _service.CountUnreadForUserAsync(2));
+        await _service.MarkSeenByUserAsync(2);
+        Assert.Equal(0, await _service.CountUnreadForUserAsync(2));
+    }
+
+    [Fact]
+    public async Task AdminUnread_CountsOnlyUserReplies_And_MarkSeenByAdmin()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromAdminAsync(1, 2, "a");          // zählt NICHT (vom Admin)
+        await _service.SendFromUserAsync(2, "r1");
+        await _service.SendFromUserAsync(2, "r2");
+
+        Assert.Equal(2, await _service.CountUnreadForAdminAsync());
+        await _service.MarkSeenByAdminAsync(2);
+        Assert.Equal(0, await _service.CountUnreadForAdminAsync());
+    }
+
+    [Fact]
+    public async Task ReadByRecipient_ReflectsSeenState()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromAdminAsync(1, 2, "a");
+
+        Assert.False((await _service.GetThreadAsync(2)).Single().ReadByRecipient);
+        await _service.MarkSeenByUserAsync(2);
+        Assert.True((await _service.GetThreadAsync(2)).Single().ReadByRecipient);
+    }
+
+    [Fact]
+    public async Task GetThreads_SummarizesPerUser_WithLastMessageAndUnread()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "carol");
+        await _service.SendFromAdminAsync(1, 2, "an bob");
+        await _service.SendFromUserAsync(2, "bob antwortet");   // 1 ungelesen (Admin-Sicht)
+        await _service.SendFromAdminAsync(1, 3, "an carol");
+
+        var threads = await _service.GetThreadsAsync();
+
+        Assert.Equal(2, threads.Count);
+        var bob = threads.Single(t => t.UserId == 2);
+        Assert.Equal("bob", bob.Username);
+        Assert.Equal("bob antwortet", bob.LastMessagePreview);
+        Assert.False(bob.LastFromAdmin);
+        Assert.Equal(1, bob.UnreadFromUser);
+        var carol = threads.Single(t => t.UserId == 3);
+        Assert.True(carol.LastFromAdmin);
+        Assert.Equal(0, carol.UnreadFromUser);
+    }
+
+    [Fact]
+    public async Task GetThreads_IdenticalTimestampsAcrossThreads_DoNotCrossMatchPreview()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "carol");
+        // Zwei Threads mit EXAKT gleichem CreatedAt — früher matchte der CreatedAt-IN-Filter beide
+        // Bodies in beiden Threads (falsche/zufällige Vorschau). Mit Max(Id) ist es eindeutig.
+        var ts = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        _db.AdminMessages.Add(new RookHub.Api.Models.AdminMessage { UserId = 2, SenderId = 1, FromAdmin = true, Body = "an bob", CreatedAt = ts });
+        _db.AdminMessages.Add(new RookHub.Api.Models.AdminMessage { UserId = 3, SenderId = 1, FromAdmin = true, Body = "an carol", CreatedAt = ts });
+        await _db.SaveChangesAsync();
+
+        var threads = await _service.GetThreadsAsync();
+        Assert.Equal("an bob", threads.Single(t => t.UserId == 2).LastMessagePreview);
+        Assert.Equal("an carol", threads.Single(t => t.UserId == 3).LastMessagePreview);
+    }
+
+    // ---- Controller: User-Seite ----
+
+    private MessageController UserController(int userId)
+    {
+        var ctrl = new MessageController(_service);
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        ctrl.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test")) }
+        };
+        return ctrl;
+    }
+
+    private AdminMessageController AdminController(int adminId)
+    {
+        var ctrl = new AdminMessageController(_service);
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, adminId.ToString()) };
+        ctrl.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test")) }
+        };
+        return ctrl;
+    }
+
+    [Fact]
+    public async Task UserCanInitiate_WithoutExistingThread()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        var result = await UserController(2).Send(new SendMessageDto("Hallo Admins"));
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Single(await _service.GetThreadAsync(2));
+    }
+
+    [Fact]
+    public async Task UserSend_EmptyBody_Returns400()
+    {
+        await UserAsync(2, "bob");
+        Assert.IsType<BadRequestObjectResult>(await UserController(2).Send(new SendMessageDto("   ")));
+    }
+
+    [Fact]
+    public async Task FullRoundTrip_AdminSends_UserReplies_AdminReads()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+
+        // Admin schreibt
+        Assert.IsType<OkObjectResult>(await AdminController(1).Send(2, new SendMessageDto("Hallo Bob")));
+
+        // User sieht 1 ungelesen, lädt Thread, markiert gelesen
+        var unread = Assert.IsType<MessageUnreadCountDto>(Assert.IsType<OkObjectResult>(await UserController(2).GetUnreadCount()).Value);
+        Assert.Equal(1, unread.Count);
+        var thread = Assert.IsAssignableFrom<IEnumerable<AdminMessageDto>>(Assert.IsType<OkObjectResult>(await UserController(2).GetThread()).Value).ToList();
+        Assert.Single(thread);
+        Assert.IsType<NoContentResult>(await UserController(2).MarkSeen());
+        Assert.Equal(0, ((MessageUnreadCountDto)Assert.IsType<OkObjectResult>(await UserController(2).GetUnreadCount()).Value!).Count);
+
+        // User antwortet → Admin sieht ungelesen, liest, markiert
+        Assert.IsType<OkObjectResult>(await UserController(2).Send(new SendMessageDto("Hi!")));
+        Assert.Equal(1, ((MessageUnreadCountDto)Assert.IsType<OkObjectResult>(await AdminController(1).GetUnreadCount()).Value!).Count);
+        var threads = Assert.IsAssignableFrom<IEnumerable<AdminThreadSummaryDto>>(Assert.IsType<OkObjectResult>(await AdminController(1).GetThreads()).Value).ToList();
+        Assert.Single(threads);
+        Assert.IsType<NoContentResult>(await AdminController(1).MarkSeen(2));
+        Assert.Equal(0, ((MessageUnreadCountDto)Assert.IsType<OkObjectResult>(await AdminController(1).GetUnreadCount()).Value!).Count);
+    }
+
+    [Fact]
+    public async Task AdminSend_UnknownUser_Returns404()
+    {
+        await UserAsync(1, "admin", admin: true);
+        Assert.IsType<NotFoundResult>(await AdminController(1).Send(999, new SendMessageDto("hi")));
+    }
+
+    // ---- Drossel + Entprellung (Codereview 2026-09-29, F5-001) ----
+
+    /// <summary>Vorher legte JEDE Nachricht einer Serie bei allen Admins eine Glocke (und einen Web-Push) an —
+    /// 100 Nachrichten/min × Anzahl Admins. Jetzt klingelt es je Thread und Admin nur, solange keine ungesehene da ist.</summary>
+    [Fact]
+    public async Task SendFromUser_Series_RingsOncePerThreadAndAdmin_UntilSeen()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "admin2", admin: true);
+        await UserAsync(4, "eve");
+
+        for (var i = 0; i < 5; i++) await _service.SendFromUserAsync(2, $"Nachricht {i}");
+
+        Assert.Equal(5, await _db.AdminMessages.CountAsync(m => m.UserId == 2));
+        Assert.Equal(1, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(1, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+
+        // Ein anderer Thread klingelt für sich.
+        await _service.SendFromUserAsync(4, "Hallo");
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+
+        // Hat admin1 die Glocke gesehen, klingelt die nächste Nachricht bei ihm wieder — bei admin2 (ungesehen) nicht.
+        await _notifications.MarkAllSeenAsync(1);
+        await _service.SendFromUserAsync(2, "noch eine");
+        Assert.Equal(3, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    /// <summary>Nacharbeit F5-001: Lesen im Admin-Tab (bzw. Tippen auf den Web-Push) setzt nur SeenByAdminAt, nicht die
+    /// Glocke. Die alte ungesehene Glocke durfte die nächste Rückfrage nicht verschlucken — vorher 1 Glocke statt 2.</summary>
+    [Fact]
+    public async Task SendFromUser_AfterAdminReadThread_RingsAgain_DespiteOldUnseenBell()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "admin2", admin: true);
+
+        await _service.SendFromUserAsync(2, "Frage");
+        await _service.MarkSeenByAdminAsync(2);             // Thread gelesen — die Glocken bleiben ungesehen
+        await _service.SendFromAdminAsync(1, 2, "Antwort");
+        await _service.SendFromUserAsync(2, "Rückfrage");
+
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+
+        // Die Serie danach (ungelesen) fällt wieder auf die eine Glocke zusammen.
+        await _service.SendFromUserAsync(2, "und noch was");
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    /// <summary>Meldung und Quellen-Hinweis im Turnierverzeichnis schreiben in denselben Admin-Kanal (bis 4000 Zeichen)
+    /// und hatten keine Drossel je Konto — sie teilen jetzt den Topf von POST /api/messages/reply.</summary>
+    [Theory]
+    [InlineData(nameof(TournamentDirectoryController.Report))]
+    [InlineData(nameof(TournamentDirectoryController.SuggestSource))]
+    public void TournamentDirectoryMessages_ShareTheUserMessagePolicy(string action)
+    {
+        var method = typeof(TournamentDirectoryController).GetMethod(action)!;
+        Assert.Equal("user-message", method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+    }
+
+    /// <summary>POST /api/messages/reply hing nur am globalen 100/min-IP-Deckel. Jetzt eigene Partition je KONTO —
+    /// ein zweites Konto hinter derselben Adresse hat sein eigenes Fenster.</summary>
+    [Fact]
+    public void UserReply_IsRateLimitedPerAccount()
+    {
+        var method = typeof(MessageController).GetMethod(nameof(MessageController.Send))!;
+        Assert.Equal("user-message", method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.UserMessage(c, 1));
+        var permit = RateLimitPartitions.UserMessagePermitPerMinute;
+        Assert.Equal(permit, Acquired(limiter, Account(2), permit + 5));
+        Assert.Equal(permit, Acquired(limiter, Account(4), permit + 5));
+        Assert.True(permit < RateLimitPartitions.GlobalPermitPerMinute);
+    }
+
+    private static HttpContext Account(int userId)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.9");
+        ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "Test"));
+        return ctx;
+    }
+
+    private static int Acquired(PartitionedRateLimiter<HttpContext> limiter, HttpContext ctx, int tries)
+    {
+        var ok = 0;
+        for (var i = 0; i < tries; i++)
+        {
+            using var lease = limiter.AttemptAcquire(ctx);
+            if (lease.IsAcquired) ok++;
+        }
+        return ok;
+    }
+}

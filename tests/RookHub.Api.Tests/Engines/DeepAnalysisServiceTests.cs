@@ -1,0 +1,108 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Engines;
+using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Club;
+using RookHub.Api.Services.Library;
+
+namespace RookHub.Api.Tests.Engines;
+
+/// <summary>„Tiefe Analyse" (0.686.0): Stockfish bis Tiefe 40 auf der Haus-Engine, Lc0 bis 500k Knoten.</summary>
+public class DeepAnalysisServiceTests : IDisposable
+{
+    private const int House = 5;
+    private const int Member = 9;
+    private const string Lc0 = "rhe_lc0deep001";
+    private const string Fen1 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+    private const string Fen2 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+    private readonly AppDbContext _db;
+
+    public DeepAnalysisServiceTests()
+    {
+        _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        _db.AppUsers.Add(new AppUser { Id = House, Username = "haus", PasswordHash = "x", IsAdmin = true });
+        _db.AppUsers.Add(new AppUser { Id = Member, Username = "mitglied", PasswordHash = "x" });
+        var cred = new LichessEngineCredential { UserId = House, EncryptedToken = "enc", ShareAsHouseEngine = true };
+        cred.SetBackgroundEngines(["rhe_sf1"]);
+        _db.LichessEngineCredentials.Add(cred);
+        _db.ExternalEngineRegistrations.Add(new ExternalEngineRegistration
+        {
+            Id = Lc0, UserId = House, Name = ClubSecondEngineScheduler.DefaultEngineName, ClientSecret = "s",
+            ProviderSelector = "sel", MaxThreads = 1, MaxHash = 16, Variants = "chess",
+        });
+        _db.SaveChanges();
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private DeepAnalysisService Service()
+    {
+        var jobs = new AnalysisJobService(_db);
+        return new(_db, jobs, new ConfigurationBuilder().Build(), new GameAnalysisService(_db, jobs,
+            new CommentSetService(_db, NullLogger<CommentSetService>.Instance), NullLogger<GameAnalysisService>.Instance));
+    }
+
+    [Fact]
+    public async Task Start_legtStockfishTiefe40UndLc0MitKnotenzielAn()
+    {
+        var r = await Service().StartAsync(Member, Fen1);
+
+        Assert.Equal((40, (long?)null, 3), (r.Stockfish!.TargetDepth, r.Stockfish.TargetNodes, r.Stockfish.MultiPv));
+        Assert.Equal((Lc0, (long?)500_000), (r.Lc0!.EngineId, r.Lc0.TargetNodes));
+        var jobs = await _db.AnalysisJobs.ToListAsync();
+        Assert.All(jobs, j => Assert.Equal((Member, (int?)House), (j.UserId, j.EngineOwnerUserId)));
+        Assert.Equal("rhe_sf1", jobs.Single(j => j.Title == DeepAnalysisService.StockfishTitle).EngineId);
+    }
+
+    [Fact]
+    public async Task Start_dieselbeStellung_nimmtDieVorhandenenAuftraege()
+    {
+        var first = await Service().StartAsync(Member, Fen1);
+        var again = await Service().StartAsync(Member, Fen1);
+        Assert.Equal((first.Stockfish!.Id, first.Lc0!.Id), (again.Stockfish!.Id, again.Lc0!.Id));
+        Assert.Equal(2, await _db.AnalysisJobs.CountAsync());
+    }
+
+    [Fact]
+    public async Task Start_andereStellung_raeumtDieOffenenDerVorigenAb()
+    {
+        await Service().StartAsync(Member, Fen1);
+        await Service().StartAsync(Member, Fen2);
+        Assert.All(await _db.AnalysisJobs.ToListAsync(), j => Assert.Equal(Fen2, j.Fen));
+    }
+
+    [Fact]
+    public async Task Start_ungueltigeStellung_wirft()
+        => await Assert.ThrowsAnyAsync<ArgumentException>(() => Service().StartAsync(Member, "kein fen"));
+
+    [Fact]
+    public async Task List_liefertNurDieEigenenTiefenAnalysen()
+    {
+        await Service().StartAsync(Member, Fen1);
+        _db.AnalysisJobs.Add(new AnalysisJob { UserId = Member, Fen = Fen2, Title = "anderer Auftrag", EngineId = "rhe_sf1",
+            TargetDepth = 20, MultiPv = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var list = await Service().ListAsync(Member);
+        Assert.Equal(2, list.Count);
+        Assert.All(list, j => Assert.Equal(Fen1, j.Fen));
+        Assert.Empty(await Service().ListAsync(House));
+    }
+
+    [Fact]
+    public async Task Lc0Partie_legtEineEigeneKnotenanalyseAn_undNimmtBeimZweitenMalDieselbe()
+    {
+        const string pgn = "[White \"A\"]\n[Black \"B\"]\n\n1. e4 e5 2. Nf3 Nc6 *";
+        var first = await Service().StartLc0GameAsync(Member, pgn);
+        var again = await Service().StartLc0GameAsync(Member, pgn);
+
+        Assert.Equal(first.Id, again.Id);
+        var a = await _db.GameAnalyses.SingleAsync();
+        Assert.Equal((Member, Lc0, (long?)100_000, GameAnalysisOrigin.Manual, (int?)House),
+            (a.UserId, a.EngineId, a.TargetNodes, a.Origin, a.EngineOwnerUserId));
+    }
+}

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.9", date: "2026-10-11", changes: [
+    { en: "Code structure: the 346 server test files now live in the same area folders as the services they test. No change to the app.",
+      de: "Code-Struktur: die 346 Server-Testdateien liegen jetzt in denselben Bereichsordnern wie die Dienste, die sie prüfen. Keine Änderung an der App." },
+  ] },
   { version: "0.753.8", date: "2026-10-11", changes: [
     { en: "Developer documentation: the project notes describe the new folder layout of the server services by area. No change to the app.",
       de: "Entwickler-Doku: die Projektnotizen beschreiben die neue Ordnerstruktur der Server-Dienste nach Fachbereich. Keine Änderung an der App." },

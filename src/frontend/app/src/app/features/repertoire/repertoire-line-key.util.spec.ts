@@ -28,7 +28,7 @@ describe('lineKeyFromSans', () => {
   // (RepertoireCardState.CardKey, RepertoireFlashcardMark.LineKey) hängen daran. Ohne feste
   // Literale hier prüfen die Tests nur, dass die Implementierung mit sich selbst übereinstimmt:
   // eine Änderung an cyrb53/normSan bliebe auf BEIDEN Seiten grün und liefe still ins Leere.
-  // Dieselben Vektoren stehen in tests/RookHub.Api.Tests/ChessableTrainedLineServiceTests.cs —
+  // Dieselben Vektoren stehen in tests/RookHub.Api.Tests/Chessable/ChessableTrainedLineServiceTests.cs —
   // ändert sich hier einer, muss dort derselbe brechen.
   it('matches the pinned cross-language vectors (server mirror + stored keys)', () => {
     expect(lineKeyFromSans(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'])).toBe('l2eac1aan9n2');

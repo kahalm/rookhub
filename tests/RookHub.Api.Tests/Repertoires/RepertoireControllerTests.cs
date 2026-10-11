@@ -1,0 +1,477 @@
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using RookHub.Api.Controllers;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Courses;
+using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Engines;
+using RookHub.Api.Services.Accounts;
+
+namespace RookHub.Api.Tests.Repertoires;
+
+public class RepertoireControllerTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly RepertoireService _service;
+    private readonly RepertoireController _controller;
+
+    public RepertoireControllerTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new AppDbContext(options);
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        _service = TestServices.Repertoire(_db, cache);
+        var conversion = TestServices.Conversion(_db, repertoire: _service);
+        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db), new SharedLineService(_db), new RepertoirePositionLookupService(new RepertoireLineSource(_db, cache), cache), new FlashcardMarkService(_db), new RepertoireSimilarityService(new RepertoireLineSource(_db, cache)), conversion);
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private void SetUser(int userId)
+    {
+        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
+            }
+        };
+    }
+
+    private async Task<AppUser> CreateUserAsync(string username = "testuser")
+    {
+        var user = new AppUser
+        {
+            Username = username,
+            Email = $"{username}@test.com",
+            PasswordHash = "hash"
+        };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    private async Task<Repertoire> CreateRepertoireAsync(int userId, string name = "Test Rep")
+    {
+        var rep = new Repertoire { UserId = userId, Name = name };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        return rep;
+    }
+
+    // ---- Lochfinder ----
+
+    private RepertoireExplorerService Explorer()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" })
+            .Build();
+        var gate = new LichessExplorerGate(refillInterval: TimeSpan.Zero);
+        var client = new LichessExplorerClient(new HttpClient(), gate,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LichessExplorerClient>.Instance);
+        var local = new LocalExplorerClient(new HttpClient(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LocalExplorerClient>.Instance);
+        return new RepertoireExplorerService(_db, _service, client, local, new MemoryCache(new MemoryCacheOptions()), gate,
+            new EncryptionService(config), config,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RepertoireExplorerService>.Instance);
+    }
+
+    [Fact]
+    public async Task ExplorerAnalysis_ForeignRepertoire_IsNotFound()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var rep = await CreateRepertoireAsync(owner.Id);
+        SetUser(other.Id);
+
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.ExplorerAnalysis(rep.Id,
+            new ExplorerAnalysisRequestDto { Ratings = new() { 1800 }, Speeds = new() { "blitz" } },
+            Explorer(), CancellationToken.None)).Result);
+
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");   // vorher leerer 404 (A7-011)
+    }
+
+    [Fact]
+    public async Task ExplorerAnalysis_InvalidSelection_IsBadRequest()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.ExplorerAnalysis(rep.Id,
+            new ExplorerAnalysisRequestDto { Ratings = new() { 1750 }, Speeds = new() { "blitz" } },
+            Explorer(), CancellationToken.None)).Result);
+
+        DomainHttp.AssertError(result, 400, "Unbekannte Elo-Stufe.");
+    }
+
+    // ---- GetAll ----
+
+    [Fact]
+    public async Task GetAll_ReturnsOk_WithRepertoires()
+    {
+        var user = await CreateUserAsync();
+        await CreateRepertoireAsync(user.Id, "Rep1");
+        await CreateRepertoireAsync(user.Id, "Rep2");
+        SetUser(user.Id);
+
+        var result = await _controller.GetAll();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var reps = okResult.Value as List<RepertoireDto>;
+        Assert.Equal(2, reps!.Count);
+    }
+
+    [Fact]
+    public async Task GetAll_ReturnsEmpty_ForNewUser()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await _controller.GetAll();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var reps = okResult.Value as List<RepertoireDto>;
+        Assert.Empty(reps!);
+    }
+
+    // ---- Create ----
+
+    [Fact]
+    public async Task Create_ReturnsCreated()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await _controller.Create(new CreateRepertoireDto
+        {
+            Name = "New Rep",
+            Description = "Desc",
+            IsPublic = true
+        });
+
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var rep = createdResult.Value as RepertoireDto;
+        Assert.NotNull(rep);
+        Assert.Equal("New Rep", rep.Name);
+    }
+
+    // ---- GetById ----
+
+    [Fact]
+    public async Task GetById_ReturnsOk()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await _controller.GetById(rep.Id);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.NotNull(okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsNotFound_WhenWrongUser()
+    {
+        var user1 = await CreateUserAsync("user1");
+        var user2 = await CreateUserAsync("user2");
+        var rep = await CreateRepertoireAsync(user1.Id);
+        SetUser(user2.Id);
+
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.GetById(rep.Id)).Result);
+
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
+    }
+
+    // ---- Update ----
+
+    [Fact]
+    public async Task Update_ReturnsOk()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await _controller.Update(rep.Id, new UpdateRepertoireDto { Name = "Updated" });
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var updated = okResult.Value as RepertoireDto;
+        Assert.Equal("Updated", updated!.Name);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsNotFound_WhenMissing()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await DomainHttp.ResultAsync(async () =>
+            (await _controller.Update(99999, new UpdateRepertoireDto { Name = "x" })).Result);
+
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
+    }
+
+    // ---- Delete ----
+
+    [Fact]
+    public async Task Delete_ReturnsNoContent()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await _controller.Delete(rep.Id);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsNotFound_WhenMissing()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await DomainHttp.ResultAsync(async () => await _controller.Delete(99999));
+
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
+    }
+
+    // ---- UploadFile ----
+
+    [Fact]
+    public async Task UploadFile_ReturnsBadRequest_WhenNoFile()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await _controller.UploadFile(1, null!);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UploadFile_ReturnsBadRequest_WhenNotPgn()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var file = CreateFormFile("test.txt", "[Event \"Test\"] 1. e4 e5");
+
+        var result = await _controller.UploadFile(rep.Id, file);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UploadFile_ReturnsOk_WithValidPgn()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var file = CreateFormFile("game.pgn", "[Event \"Test\"] 1. e4 e5");
+
+        var result = await _controller.UploadFile(rep.Id, file);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.NotNull(okResult.Value);
+    }
+
+    [Fact]
+    public async Task UploadFile_ReturnsNotFound_WhenRepertoireMissing()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var file = CreateFormFile("game.pgn", "[Event \"Test\"] 1. e4 e5");
+
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.UploadFile(99999, file)).Result);
+
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
+    }
+
+    // ---- DownloadFile ----
+
+    [Fact]
+    public async Task DownloadFile_ReturnsFile()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        _db.RepertoireFiles.Add(new RepertoireFile
+        {
+            RepertoireId = rep.Id,
+            FileName = "game.pgn",
+            PgnContent = "[Event \"Test\"] 1. e4",
+            FileSize = 20
+        });
+        await _db.SaveChangesAsync();
+        var fileId = (await _db.RepertoireFiles.FirstAsync()).Id;
+        SetUser(user.Id);
+
+        var result = await _controller.DownloadFile(rep.Id, fileId);
+
+        Assert.IsType<FileContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DownloadFile_ReturnsNotFound_WhenMissing()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        SetUser(user.Id);
+
+        var result = await DomainHttp.ResultAsync(async () => await _controller.DownloadFile(rep.Id, 99999));
+
+        DomainHttp.AssertError(result, 404, "File not found.");
+    }
+
+    // ---- DeleteFile ----
+
+    [Fact]
+    public async Task DeleteFile_ReturnsNoContent()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        _db.RepertoireFiles.Add(new RepertoireFile
+        {
+            RepertoireId = rep.Id,
+            FileName = "game.pgn",
+            PgnContent = "[Event \"Test\"]",
+            FileSize = 14
+        });
+        await _db.SaveChangesAsync();
+        var fileId = (await _db.RepertoireFiles.FirstAsync()).Id;
+        SetUser(user.Id);
+
+        var result = await _controller.DeleteFile(rep.Id, fileId);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    // ---- GetCombinedPgn ----
+
+    [Fact]
+    public async Task GetCombinedPgn_ReturnsContent()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        _db.RepertoireFiles.Add(new RepertoireFile
+        {
+            RepertoireId = rep.Id,
+            FileName = "game.pgn",
+            PgnContent = "[Event \"Test\"] 1. e4",
+            FileSize = 20
+        });
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+
+        var result = await _controller.GetCombinedPgn(rep.Id);
+
+        Assert.IsType<ContentResult>(result);
+    }
+
+    [Fact]
+    public async Task GetCombinedPgn_ReturnsNotFound_WhenMissing()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await DomainHttp.ResultAsync(async () => await _controller.GetCombinedPgn(99999));
+
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
+    }
+
+    private static IFormFile CreateFormFile(string fileName, string content)
+    {
+        var bytes = Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(bytes);
+        return new FormFile(stream, 0, bytes.Length, "file", fileName)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/octet-stream"
+        };
+    }
+
+    // ---- ConvertToCourse (Verschieben: Original-Repertoire wird nach Erfolg entfernt) ----
+
+    private const string PuzzlePgn = @"
+[Event ""Book""]
+[Round ""1.1""]
+[White ""Idea""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""Finde den Zug""] Pointe. } 2.Nf3 Nc6 3. Bb5 a6 *
+";
+    private const string PlainConvertPgn = "[Event \"Opening\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 *";
+
+    [Fact]
+    public async Task ConvertToCourse_WithPuzzlePgn_CreatesCourse_AndDeletesRepertoire()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await _service.CreateFromPgnAsync(user.Id, "Puzzles", "p.pgn", PuzzlePgn);
+
+        var result = await _controller.ConvertToCourse(rep.Id);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.True(await _db.Books.AnyAsync(b => b.OwnerUserId == user.Id));   // neuer Kurs da
+        Assert.False(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));      // Original entfernt
+    }
+
+    [Fact]
+    public async Task ConvertToCourse_PlainPgn_BadRequest_KeepsRepertoire()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await _service.CreateFromPgnAsync(user.Id, "Opening", "o.pgn", PlainConvertPgn);
+
+        var result = await DomainHttp.ResultAsync(async () => await _controller.ConvertToCourse(rep.Id));
+
+        DomainHttp.AssertError(result, 400);
+        Assert.Contains("No playable lines found in the PGN.", System.Text.Json.JsonSerializer.Serialize(((ObjectResult)result).Value));
+        Assert.Equal("course_no_lines", CodeOf(result));                         // NICHT der Leer-Fall
+        Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt bei Fehlschlag
+    }
+
+    /// <summary>Angelegt, aber nie eine PGN importiert: eigener Code, damit das Frontend nicht
+    /// fälschlich „keine Puzzle-Linien" meldet, wo in Wahrheit noch gar nichts drin ist.
+    /// (Fund aus den Prod-Logs vom 2026-09-05, siehe TODO.md.)</summary>
+    [Fact]
+    public async Task ConvertToCourse_EmptyRepertoire_BadRequest_WithEmptyCode_KeepsRepertoire()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await CreateRepertoireAsync(user.Id, "Nimzo");                // ohne Dateien
+
+        var result = await DomainHttp.ResultAsync(async () => await _controller.ConvertToCourse(rep.Id));
+
+        Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        Assert.Equal("repertoire_empty", CodeOf(result));
+        Assert.Equal("{\"message\":\"Repertoire is empty - import a PGN first.\",\"code\":\"repertoire_empty\"}",
+            System.Text.Json.JsonSerializer.Serialize(((ObjectResult)result).Value));   // HTTP-Vertrag unverändert
+        Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt erhalten
+        Assert.False(await _db.Books.AnyAsync(b => b.OwnerUserId == user.Id));  // kein Kurs-Torso
+    }
+
+    /// <summary>Liest das optionale <c>code</c>-Feld aus dem anonymen Fehlerobjekt (null, wenn keins da).</summary>
+    private static string? CodeOf(IActionResult result)
+    {
+        var body = Assert.IsAssignableFrom<ObjectResult>(result).Value;
+        return body?.GetType().GetProperty("code")?.GetValue(body) as string;
+    }
+}

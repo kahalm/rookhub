@@ -1,0 +1,559 @@
+using System.Net;
+using System.Security.Claims;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Controllers;
+using RookHub.Api.Exceptions;
+using RookHub.Api.Services;
+using RookHub.Api.Services.Tournaments;
+
+namespace RookHub.Api.Tests.Tournaments;
+
+public class TournamentProxyControllerTests : IDisposable
+{
+    private readonly MockHttpMessageHandler _handler;
+    private readonly HttpClient _httpClient;
+    private readonly CrawlerProxyService _proxy;
+    private readonly TournamentProxyController _controller;
+
+    public TournamentProxyControllerTests()
+    {
+        _handler = new MockHttpMessageHandler();
+        _httpClient = new HttpClient(_handler) { BaseAddress = new Uri("http://crawler") };
+        _proxy = new CrawlerProxyService(_httpClient);
+        _controller = new TournamentProxyController(_proxy);
+    }
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
+        _handler.Dispose();
+    }
+
+    private void SetupResponse(string json, HttpStatusCode status = HttpStatusCode.OK)
+    {
+        _handler.ResponseMessage = new HttpResponseMessage(status)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+    }
+
+    private void SetupFailure()
+    {
+        _handler.ThrowOnSend = true;
+    }
+
+    private void SetupCrawlerError(HttpStatusCode status, string body = "{\"error\":\"test\"}")
+    {
+        _handler.ResponseMessage = new HttpResponseMessage(status)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+    }
+
+    // ---- GetAll ----
+
+    [Fact]
+    public async Task GetAll_ReturnsOk_WithCrawlerData()
+    {
+        SetupResponse("[{\"id\":1,\"name\":\"Test Tournament\"}]");
+
+        var result = await _controller.GetAll() as OkObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(200, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAll_PassesPaginationParams()
+    {
+        SetupResponse("[]");
+
+        await _controller.GetAll(page: 2, pageSize: 25);
+
+        Assert.Contains("page=2", _handler.LastRequestUri!);
+        Assert.Contains("pageSize=25", _handler.LastRequestUri!);
+    }
+
+    [Fact]
+    public async Task GetAll_ClampsPageSize()
+    {
+        SetupResponse("[]");
+
+        await _controller.GetAll(page: 0, pageSize: 999);
+
+        Assert.Contains("page=1", _handler.LastRequestUri!);
+        Assert.Contains("pageSize=200", _handler.LastRequestUri!);
+    }
+
+    [Fact]
+    public async Task GetAll_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        // Without the CrawlerExceptionFilter, the exception propagates
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetAll());
+    }
+
+    [Fact]
+    public async Task GetAll_ThrowsCrawlerRequestException_On4xx()
+    {
+        SetupCrawlerError(HttpStatusCode.BadRequest);
+
+        await Assert.ThrowsAsync<CrawlerRequestException>(() => _controller.GetAll());
+    }
+
+    // ---- ID Validation ----
+
+    [Theory]
+    [InlineData("../admin")]
+    [InlineData("../../etc/passwd")]
+    [InlineData("123/../../other")]
+    [InlineData("")]
+    [InlineData("a-b-c")]
+    [InlineData("id with spaces")]
+    [InlineData("123456789012345678901")] // 21 chars
+    public async Task GetById_ReturnsBadRequest_ForInvalidId(string id)
+    {
+        var result = await _controller.GetById(id) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("123")]
+    [InlineData("abc123")]
+    [InlineData("12345678901234567890")] // 20 chars = max
+    public async Task GetById_AcceptsValidId(string id)
+    {
+        SetupResponse("{\"id\":1,\"name\":\"Test\"}");
+
+        var result = await _controller.GetById(id) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    // ---- GetById ----
+
+    [Fact]
+    public async Task GetById_ReturnsOk_WithData()
+    {
+        SetupResponse("{\"id\":1,\"name\":\"Test\"}");
+
+        var result = await _controller.GetById("123") as OkObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(200, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetById("123"));
+    }
+
+    // ---- GetPlayers ----
+
+    [Fact]
+    public async Task GetPlayers_ReturnsOk()
+    {
+        SetupResponse("[{\"name\":\"Player1\"}]");
+
+        var result = await _controller.GetPlayers("123", null, null) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetPlayers_PassesQueryParams()
+    {
+        SetupResponse("[]");
+
+        await _controller.GetPlayers("123", "TeamA", "rating");
+
+        Assert.Contains("/api/tournaments/123/players?", _handler.LastRequestUri!);
+        Assert.Contains("team=TeamA", _handler.LastRequestUri!);
+        Assert.Contains("sortBy=rating", _handler.LastRequestUri!);
+    }
+
+    [Fact]
+    public async Task GetPlayers_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetPlayers("123", null, null));
+    }
+
+    // ---- GetTeams ----
+
+    [Fact]
+    public async Task GetTeams_ReturnsOk()
+    {
+        SetupResponse("[{\"name\":\"Team1\"}]");
+
+        var result = await _controller.GetTeams("123") as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetTeams_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetTeams("123"));
+    }
+
+    // ---- GetTeamDetail ----
+
+    [Fact]
+    public async Task GetTeamDetail_ReturnsOk()
+    {
+        SetupResponse("{\"snr\":1,\"name\":\"Team1\"}");
+
+        var result = await _controller.GetTeamDetail("123", 1) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetTeamDetail_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetTeamDetail("123", 1));
+    }
+
+    // ---- GetPairings ----
+
+    [Fact]
+    public async Task GetPairings_ReturnsOk()
+    {
+        SetupResponse("[]");
+
+        var result = await _controller.GetPairings("123", null) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetPairings_PassesRoundParam()
+    {
+        SetupResponse("[]");
+
+        await _controller.GetPairings("123", 3);
+
+        Assert.Contains("round=3", _handler.LastRequestUri!);
+    }
+
+    [Fact]
+    public async Task GetPairings_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetPairings("123", null));
+    }
+
+    // ---- GetPlayerResults ----
+
+    [Fact]
+    public async Task GetPlayerResults_ReturnsOk()
+    {
+        SetupResponse("[]");
+
+        var result = await _controller.GetPlayerResults("123", 5) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetPlayerResults_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetPlayerResults("123", 5));
+    }
+
+    // ---- CheckRounds ----
+
+    [Fact]
+    public async Task CheckRounds_ReturnsOk()
+    {
+        SetupResponse("{\"hasNewRound\":false}");
+
+        var result = await _controller.CheckRounds("123") as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task CheckRounds_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.CheckRounds("123"));
+    }
+
+    // ---- Vereine nachtragen ----
+
+    [Fact]
+    public async Task ClubStatus_And_FillClubs_PassThrough()
+    {
+        SetupResponse("{\"pending\":12,\"running\":false}");
+        Assert.NotNull(await _controller.GetClubStatus("123") as OkObjectResult);
+
+        SetupResponse("{\"queued\":12}", HttpStatusCode.Accepted);
+        Assert.NotNull(await _controller.FillClubs("123") as OkObjectResult);
+    }
+
+    [Fact]
+    public async Task FillClubs_InvalidId_IsRejected()
+    {
+        Assert.IsType<BadRequestObjectResult>(await _controller.FillClubs("../x"));
+    }
+
+    // ---- Crawl ----
+
+    [Fact]
+    public async Task Crawl_ReturnsOk_WithValidBody()
+    {
+        SetupResponse("{\"jobId\":1}");
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\"}");
+
+        var result = await _controller.Crawl(body) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Crawl_ReturnsBadRequest_WhenMissingChessResultsId()
+    {
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"foo\":\"bar\"}");
+
+        var result = await _controller.Crawl(body) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Crawl_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\"}");
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.Crawl(body));
+    }
+
+    [Fact]
+    public async Task Crawl_ReturnsBadRequest_ForInvalidJobType()
+    {
+        var body = JsonSerializer.Deserialize<JsonElement>(
+            "{\"chessResultsId\":\"100\",\"jobType\":\"DropAllTables\"}");
+
+        var result = await _controller.Crawl(body) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(400, result!.StatusCode);
+    }
+
+    [Fact]
+    public async Task Crawl_DropsUnknownFields_AndForwardsOnlyWhitelisted()
+    {
+        SetupResponse("{\"jobId\":1}");
+        var body = JsonSerializer.Deserialize<JsonElement>(
+            "{\"chessResultsId\":\"100\",\"jobType\":\"PairingsOnly\",\"evilField\":\"x\"}");
+
+        var result = await _controller.Crawl(body) as OkObjectResult;
+
+        Assert.NotNull(result);
+        // Nur bekannte Felder werden weitergereicht, nicht der Roh-Body.
+        Assert.DoesNotContain("evilField", _handler.LastRequestContent!);
+        Assert.Contains("PairingsOnly", _handler.LastRequestContent!);
+        Assert.Contains("100", _handler.LastRequestContent!);
+    }
+
+    // ---- CrawlPlayerDetails ----
+
+    [Fact]
+    public async Task CrawlPlayerDetails_ReturnsOk_WithValidBody()
+    {
+        SetupResponse("{\"jobId\":2}");
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\",\"playerSnrs\":[1,2]}");
+
+        var result = await _controller.CrawlPlayerDetails(body) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task CrawlPlayerDetails_ReturnsBadRequest_WhenMissingPlayerSnrs()
+    {
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\"}");
+
+        var result = await _controller.CrawlPlayerDetails(body) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task CrawlPlayerDetails_ReturnsBadRequest_WhenMissingChessResultsId()
+    {
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"playerSnrs\":[1]}");
+
+        var result = await _controller.CrawlPlayerDetails(body) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task CrawlPlayerDetails_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+        var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\",\"playerSnrs\":[1]}");
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.CrawlPlayerDetails(body));
+    }
+
+    // ---- GetCrawlStatus ----
+
+    [Fact]
+    public async Task GetCrawlStatus_ReturnsOk()
+    {
+        SetupResponse("{\"status\":\"completed\"}");
+
+        var result = await _controller.GetCrawlStatus(1) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetCrawlStatus_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetCrawlStatus(1));
+    }
+
+    // ---- GetCrawlerIp ----
+
+    [Fact]
+    public async Task GetCrawlerIp_ReturnsOk()
+    {
+        SetupResponse("{\"ip\":\"1.2.3.4\"}");
+        SetUserRole(isAdmin: true);   // der Endpoint ist admin-gegatet (verrät die VPN-Austritts-IP)
+
+        var result = await _controller.GetCrawlerIp() as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetCrawlerIp_ThrowsHttpRequestException_WhenCrawlerUnavailable()
+    {
+        SetupFailure();
+        SetUserRole(isAdmin: true);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetCrawlerIp());
+    }
+
+    // ---- Auth/Rate-Limit-Attribute (Code-Audit Finding #5) ----
+
+    private static MethodInfo M(string name) =>
+        typeof(TournamentProxyController).GetMethod(name)
+        ?? throw new InvalidOperationException($"Methode {name} nicht gefunden");
+
+    [Theory]
+    [InlineData(nameof(TournamentProxyController.GetById))]
+    [InlineData(nameof(TournamentProxyController.GetPlayers))]
+    [InlineData(nameof(TournamentProxyController.GetTeams))]
+    [InlineData(nameof(TournamentProxyController.GetTeamDetail))]
+    [InlineData(nameof(TournamentProxyController.GetPairings))]
+    [InlineData(nameof(TournamentProxyController.GetPlayerResults))]
+    public void AnonymousTournamentGets_StayPublicButRateLimited(string method)
+    {
+        var m = M(method);
+        // Bleibt oeffentlich (oeffentliche Turnierseite / Teilen-Feature) ...
+        Assert.NotNull(m.GetCustomAttribute<AllowAnonymousAttribute>());
+        // ... aber gedrosselt gegen DoS auf den Crawler.
+        var rl = m.GetCustomAttribute<EnableRateLimitingAttribute>();
+        Assert.NotNull(rl);
+        Assert.Equal("anonymous-tournament", rl!.PolicyName);
+    }
+
+    [Fact]
+    public void GetAll_RequiresAuth_NotAnonymous()
+    {
+        Assert.Null(M(nameof(TournamentProxyController.GetAll))
+            .GetCustomAttribute<AllowAnonymousAttribute>());
+    }
+    [Fact]
+    public void GetCrawlerIp_RequiresTournamentsManage()
+    {
+        // Der Endpoint verrät die Austritts-IP des Crawler-VPNs (Crawler-Identität gegenüber
+        // chess-results.com). Der Crawler selbst gatet ihn; RookHub reichte ihn einst an JEDEN
+        // angemeldeten Nutzer durch. Der Riegel steht als Attribut (Codereview N11-010) — eine
+        // Rollenprüfung im Rumpf sahen weder Inventur noch Swagger; Admin erfüllt jede Permission.
+        var perm = M(nameof(TournamentProxyController.GetCrawlerIp))
+            .GetCustomAttribute<RookHub.Api.Authorization.HasPermissionAttribute>();
+        Assert.NotNull(perm);
+        Assert.Equal(RookHub.Api.Authorization.PermissionPolicyProvider.Prefix + RookHub.Api.Models.Permissions.TournamentsManage,
+            perm!.Policy);
+    }
+
+    [Fact]
+    public async Task GetCrawlerIp_Admin_ReturnsIp()
+    {
+        SetupResponse("{\"ip\":\"203.0.113.7\"}");
+        SetUserRole(isAdmin: true);
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetCrawlerIp());
+        Assert.Contains("203.0.113.7", System.Text.Json.JsonSerializer.Serialize(ok.Value));
+    }
+
+    private void SetUserRole(bool isAdmin)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "5") };
+        if (isAdmin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test")),
+            },
+        };
+    }
+}
+
+/// <summary>
+/// Mock HTTP handler for testing CrawlerProxyService without a real HTTP server.
+/// </summary>
+public class MockHttpMessageHandler : HttpMessageHandler
+{
+    public HttpResponseMessage? ResponseMessage { get; set; }
+    public bool ThrowOnSend { get; set; }
+    public string? LastRequestUri { get; private set; }
+    public string? LastRequestContent { get; private set; }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        LastRequestUri = request.RequestUri?.ToString();
+        LastRequestContent = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
+
+        if (ThrowOnSend)
+            throw new HttpRequestException("Simulated connection failure");
+
+        return Task.FromResult(ResponseMessage ?? new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        });
+    }
+
+}

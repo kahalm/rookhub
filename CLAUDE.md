@@ -231,7 +231,8 @@ dotnet test
 
 **Tests gezielt** (schnelle Rückmeldung — erst den Bereich, die ganze Suite nur vor dem Push größerer Änderungen):
 ```bash
-dotnet test --filter "FullyQualifiedName~GameAccuracy"   # eine Klasse / ein Namensteil (Bereich: ~League)
+dotnet test --filter "FullyQualifiedName~GameAccuracy"              # eine Klasse / ein Namensteil
+dotnet test --filter "FullyQualifiedName~RookHub.Api.Tests.Courses"  # ein ganzer Bereich (Ordner)
 cd src/frontend/app && npx ng test app --watch=false --include='src/app/features/games/**/*.spec.ts'
 ```
 
@@ -287,6 +288,8 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   ein abgegrenzter Schritt als eigene Klasse) — eigener Commit, kein Verhalten geändert, Tests grün; erst danach die
   eigentliche Änderung. Kein eigener Zerlege-Durchgang, nur dort, wo ohnehin gearbeitet wird. Aufrufer über das
   LSP-Werkzeug (`findReferences`) suchen, nicht per grep.
+- **Tests spiegeln die Bereiche**: `tests/RookHub.Api.Tests/<Bereich>/`, Namespace `RookHub.Api.Tests.<Bereich>`; geteilte
+  Hilfen (`TestServices`, `TestLogger`, Fakes …) und Infrastruktur-Tests liegen direkt im Testordner.
 - **Dienste liegen nach Fachbereich in Unterordnern** (`Services/<Bereich>/`, Namespace `RookHub.Api.Services.<Bereich>`,
   Nutzer binden ihn per `using` ein — kein `global using`). Bereiche: Accounts, Chessable, ChessBase, Club, Courses,
   EngineBroker, Engines, Games, Kids, League, Library, Og, Prep, Puzzles, Repertoires, Scoresheet, Social, Tactics,
