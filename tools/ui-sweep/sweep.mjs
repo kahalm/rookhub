@@ -14,8 +14,8 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { APPS, AREAS, ROUTES, areaOf, routeId } from './routes.mjs';
 import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.mjs';
-import { pageChecks } from './checks.mjs';
-import { writeIndex } from './report.mjs';
+import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
+import { writeIndex, foldSummary } from './report.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -55,7 +55,7 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --app a,b              nur diese Oberflächen (rookhub, turnier, kidhub, leaguehub, clubhub)
   --area a,b             nur diese Bereiche, z. B. kurse, repertoire, partien (Liste: --areas)
   --route text           nur Routen, deren Pfad oder Name den Text enthält (mehrere mit Komma)
-  --viewport v,w         mobile (390), tablet (820), laptop (1366), wide (1920)     Vorgabe: mobile,wide
+  --viewport v,w         mobile (390), tablet (820), laptop (1366), wide (1920)     Vorgabe: mobile,laptop,wide
   --theme t,u            dark, light                                                 Vorgabe: dark
   --lang l,m             Oberflächensprache (de, en, hr, …; Cookie + localStorage rookhub_lang)  Vorgabe: de
   --auth a,b             anon, user (normales Konto mit Bestand), admin (claude-dev),
@@ -71,15 +71,20 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --compare run|none     mit diesem Lauf vergleichen (Ordnername unter runs/); Vorgabe: der vorige Lauf
   --local                die gebauten Oberflächen aus src/frontend/app/dist/<app>/browser ausliefern
                          (API-Aufrufe gehen an die gewählte Umgebung) — einen Umbau ansehen, bevor er deployt ist
+  --no-strips            keine „Gescrollt"-Streifen (schneller); Ganzseite + „Erster Blick" + Falz-Messung bleiben
   --list                 Katalog mit aufgelösten Adressen zeigen, keinen Browser starten
   --name text            Zusatz am Ordnernamen des Laufs
 
 Zugang: ~/.config/rookhub/dev-claude.env (ROOKHUB_DEV_USER/ROOKHUB_DEV_PASSWORD) oder UI_SWEEP_USER/UI_SWEEP_PASSWORD;
 die Konten user/empty/trainer werden beim ersten Gebrauch auf Dev registriert und dort eingetragen.
-Ergebnis: runs/<Zeitpunkt>/index.html (Übersicht), report.json, shots/*.png, diff/*.png.`;
+Je Aufnahme: Ganzseite (shots/<…>.png, Basis des Pixel-Vergleichs), „Erster Blick" (<…>__first.png, genau ein Fenster)
+und bei Seiten über 2 Bildschirmen „Gescrollt"-Streifen (<…>__s1.png …, Fensterhöhe, 10 % Überlappung, höchstens 8 +
+Seitenende). Falz-Prüfung (DESIGN.md 4.6): Hauptsache (routes.mjs \`main\`) über der Falz, Vorlauf ≤ 40 %, ≤ 1 Banner,
+klebende Leisten ≤ 64/72 px, unten nichts verdeckt, Seitenlänge (≥ 6 Hinweis, ≥ 12 Befund).
+Ergebnis: runs/<Zeitpunkt>/index.html (Übersicht), report.json, fold-summary.json, shots/*.png, diff/*.png.`;
 
 function parseArgs(argv) {
-  const o = { env: 'dev', viewport: ['mobile', 'wide'], theme: ['dark'], lang: ['de'], auth: ['anon', 'user'] };
+  const o = { env: 'dev', viewport: ['mobile', 'laptop', 'wide'], theme: ['dark'], lang: ['de'], auth: ['anon', 'user'] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]; const v = () => argv[++i];
     const csv = () => v().split(',').map(s => s.trim()).filter(Boolean);
@@ -99,6 +104,7 @@ function parseArgs(argv) {
       case '--compare': o.compare = v(); break;
       case '--local': o.local = true; break;
       case '--fast': o.fast = true; break;
+      case '--no-strips': o.noStrips = true; break;
       case '--list': o.list = true; break;
       case '--name': o.name = v(); break;
       default: throw new Error(`Unbekannte Option ${a} (--help)`);
@@ -425,13 +431,49 @@ async function main() {
         }
         record.finalUrl = page.url().replace(origin, '');
         record.findings = await page.evaluate(pageChecks, i18n);
+        // Erster Blick (DESIGN.md 4.6): Messung oben, bevor irgendetwas gescrollt wird.
+        const mainSel = job.route.main == null ? [] : [].concat(job.route.main);
+        const fold = await page.evaluate(foldTop, { main: mainSel });
         const h = await page.evaluate(() => document.documentElement.scrollHeight);
         // Deutsch ohne Zusatz im Namen — so bleiben die Bilder mit Läufen von vor der Sprach-Achse vergleichbar.
         // Auch mit --fast dieselben Namen: Vergleich mit normalen Läufen greift.
-        const file = `shots/${job.id}__${job.auth}__${viewport}__${job.theme}${job.lang === 'de' ? '' : '__' + job.lang}.png`;
+        const stem = `shots/${job.id}__${job.auth}__${viewport}__${job.theme}${job.lang === 'de' ? '' : '__' + job.lang}`;
+        const file = `${stem}.png`;
         await page.screenshot({ path: path.join(runDir, file), fullPage: true, clip: { x: 0, y: 0, width: vp.width, height: Math.min(h, MAX_SHOT_HEIGHT) } });
         record.file = file;
         record.truncated = h > MAX_SHOT_HEIGHT;
+        // „Erster Blick": genau ein Fenster, oben.
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(100);
+        record.firstShot = `${stem}__first.png`;
+        await page.screenshot({ path: path.join(runDir, record.firstShot) });
+        // Nach dem Scrollen: klebende Leisten, Verdeckung unten.
+        Object.assign(fold, await page.evaluate(foldScroll, { waitMs: FOLD.scrollWaitMs }));
+        // „Gescrollt": fensterhohe Streifen mit 10 % Überlappung, nur bei Seiten über 2 Bildschirmen. Klebende Leisten
+        // bleiben sichtbar — sie gehören zur Prüfung (Regel 9).
+        record.strips = [];
+        if (!opts.noStrips && fold.screens > FOLD.stripsMinScreens) {
+          const step = Math.round(fold.vh * (1 - FOLD.stripOverlap));
+          const maxY = Math.max(0, fold.scrollHeight - fold.vh);
+          const ys = [];
+          for (let y = step; y < maxY && ys.length < FOLD.maxStrips; y += step) ys.push(y);
+          if (!ys.length || ys.at(-1) < maxY) ys.push(maxY);   // immer auch das Seitenende
+          for (const [k, y] of ys.entries()) {
+            await page.evaluate(yy => window.scrollTo(0, yy), y);
+            await page.waitForTimeout(FOLD.scrollWaitMs);
+            const strip = `${stem}__s${k + 1}.png`;
+            await page.screenshot({ path: path.join(runDir, strip) });
+            record.strips.push(strip);
+          }
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.waitForTimeout(100);
+        }
+        fold.exempt = !!job.route.foldExempt;
+        record.fold = fold;
+        // Weitergeleitet (Anmeldung, fehlendes Recht, andere Oberfläche): die Hauptsache dieser Route ist gar nicht da —
+        // kein Katalog-Hinweis, „weitergeleitet" steht schon im Bericht.
+        const movedAway = stripQuery(record.finalUrl) !== stripQuery(job.url);
+        record.findings.push(...foldFindings(fold, viewport, { exempt: fold.exempt, mainDeclared: mainSel.length > 0 && !movedAway }));
       } catch (e) {
         record.error = String(e.message).split('\n')[0];
         record.findings = record.findings ?? [];
@@ -500,15 +542,20 @@ async function main() {
   };
   fs.writeFileSync(path.join(runDir, 'report.json'), JSON.stringify(report, null, 2));
   writeIndex(runDir, report);
+  const summary = foldSummary(report);
+  fs.writeFileSync(path.join(runDir, 'fold-summary.json'), JSON.stringify(summary, null, 2));
 
   const withFindings = shots.filter(hasProblems).length;
   const changed = shots.filter(s => s.diff && s.diff.status !== 'same').length;
   console.log(`\nFertig in ${report.seconds}s: ${shots.length} Aufnahmen, ${withFindings} mit Auffälligkeiten`
     + (compareName ? `, ${changed} verändert gegenüber ${compareName}` : '') + `, ${unresolved.length} Routen nicht auflösbar, ${pauses429} Pausen wegen 429.`);
+  console.log(`Falz: ${Object.entries(summary.byKind).map(([k, n]) => `${FOLD_KINDS[k] ?? k} ${n}`).join(', ') || 'keine Befunde'}; `
+    + `Bilder: ${summary.images.full} Ganzseite, ${summary.images.first} Erster Blick, ${summary.images.strips} Streifen.`);
   console.log(`Übersicht: ${path.join(runDir, 'index.html')}`);
 }
 
-export const hasProblems = s => !!(s.findings?.length || s.error || s.console?.length || s.failedRequests?.length);
+/** Auffällig = ein Befund (Hinweise mit level 'hint' zählen nicht), ein Fehler, Konsole oder fehlgeschlagene Anfrage. */
+export const hasProblems = s => !!(s.findings?.some(f => f.level !== 'hint') || s.error || s.console?.length || s.failedRequests?.length);
 const shortUrl = u => u.replace(/^https?:\/\/[^/]+/, '').slice(0, 140);
 const stripQuery = u => u.replace(/[?#].*$/, '').replace(/\/$/, '');
 

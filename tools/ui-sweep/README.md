@@ -6,7 +6,7 @@ was sieht jetzt anders aus, und ist irgendwo etwas kaputt?". Kein Teil der CI un
 
 ```bash
 cd tools/ui-sweep
-./sweep.sh                                    # Vorgabe: Dev, alle Oberflächen, Handy + breit, dunkel, ab- und angemeldet
+./sweep.sh                                    # Vorgabe: Dev, alle Oberflächen, Handy + Laptop + breit, dunkel, ab- und angemeldet
 ./sweep.sh --app rookhub --route games        # nur Routen mit „games" im Pfad
 ./sweep.sh --viewport mobile,laptop,wide --theme dark,light
 ./sweep.sh --theme light --lang en --viewport tablet   # Zusatzachsen: Design, Sprache, Tablet-Breite
@@ -14,12 +14,21 @@ cd tools/ui-sweep
 ./sweep.sh --local --app rookhub              # den lokalen Build (dist/) gegen die Dev-API — vor dem Deploy ansehen
 ./sweep.sh --fast --viewport mobile,tablet,laptop,wide # jede Seite einmal laden, Breiten durch Umstellen (schneller, ohne Touch)
 ./sweep.sh --compare 20261010_2215_stufe1     # gegen einen bestimmten Lauf vergleichen (Vorgabe: der vorige)
+./sweep.sh --no-strips                        # ohne „Gescrollt"-Streifen (schneller; Falz-Messung + Erster Blick bleiben)
 ./sweep.sh --list                             # Katalog + aufgelöste Adressen, kein Browser
 ./sweep.sh --help
 ```
 
-Ergebnis in `runs/<Zeitpunkt>[_name]/`: **`index.html`** (Übersicht, Filter „nur Auffällige" / „nur Veränderte"),
-`report.json`, `shots/*.png`, `diff/*.png`. `runs/` ist nicht im Repo.
+Ergebnis in `runs/<Zeitpunkt>[_name]/`: **`index.html`** (Übersicht, Filter „nur Auffällige" / „nur Veränderte" /
+„nur Falz-Befunde"), `report.json`, `fold-summary.json`, `shots/*.png`, `diff/*.png`. `runs/` ist nicht im Repo.
+
+Je Aufnahme entstehen bis zu drei Arten Bilder (alle in `shots/`):
+
+| Bild | Datei | Wofür |
+|------|-------|-------|
+| Ganzseite | `<route>__<konto>__<ansicht>__<design>.png` (≤ 4000 px hoch) | Pixel-Vergleich mit dem vorigen Lauf |
+| Erster Blick | `…__first.png` — genau ein Fenster, oben | Regeln 1–8 (DESIGN.md 4.6); Vorschau in `index.html` |
+| Gescrollt | `…__s1.png`, `…__s2.png` … — fensterhoch, 10 % Überlappung, Originalgröße | Regeln 9–13; nur bei Seiten über 2 Bildschirmen, höchstens 8 Streifen + einer am Seitenende; klebende Leisten bleiben sichtbar (gehören zur Prüfung). `--no-strips` lässt sie weg |
 
 ## Tempo: Vorgaben je Umgebung und `--fast`
 
@@ -57,14 +66,15 @@ wenige Pixel kürzer ohne Touch-Emulation).
 
 ## Vorgabe-Lauf und Vollständiger Lauf
 
-Die **Vorgabe** (`./sweep.sh` ohne Achsen-Optionen) ist der tägliche Blick: Handy + breit, dunkel, Deutsch, abgemeldet +
+Die **Vorgabe** (`./sweep.sh` ohne Achsen-Optionen) ist der tägliche Blick: Handy + Laptop + breit (seit der
+Falz-Prüfung, vorher Handy + breit — die Zeiten unten sind noch mit zwei Ansichten gemessen), dunkel, Deutsch, abgemeldet +
 normales Konto. Gemessen 11.10.2026 auf Dev (400/min, 4 gleichzeitig): `--auth anon,user,admin` = 568 Aufnahmen in
 10½ min (Bildteil 631 s, 0 Pausen wegen 429; 33 Bilder von der eigenen Bremse bis 43 s gehalten — die 400/min sind die Grenze),
 mit `--fast` 284 Seitenladungen in 6¼ min (371 s). Vorher (80/min, 2 gleichzeitig) ~35 min für ≈ 300 Aufnahmen. Alles Weitere sind Zusatzachsen, die nur auf Zuruf mitlaufen:
 
 | Achse | Werte | Vorgabe |
 |-------|-------|---------|
-| `--viewport` | `mobile` (390), `tablet` (820, Touch), `laptop` (1366), `wide` (1920) | `mobile,wide` |
+| `--viewport` | `mobile` (390 × 844), `tablet` (820, Touch), `laptop` (1366 × 768), `wide` (1920 × 1080) | `mobile,laptop,wide` (die drei Falz-Ansichten aus DESIGN.md 4.6) |
 | `--theme` | `dark`, `light` — RookHub/Turnier/LeagueHub/ClubHub über `rookhub_app_theme` + Cookie `rookhub_theme`; KidHub hat nur sein helles Design | `dark` |
 | `--lang` | `de`, `en`, `hr`, `hu` … — Cookie + localStorage `rookhub_lang` (so wählt `LocaleService`), Browser-Sprache passend. LeagueHub und ClubHub sind fest deutsch, KidHub zeigt nur seine Kindersprachen | `de` |
 | `--auth` | `anon`, `user`, `admin`, `empty`, `trainer` | `anon,user` |
@@ -90,6 +100,31 @@ Sprach-Achse, damit der Vergleich mit älteren Läufen weiter greift.
 - **lädt noch** — nach dem Laden steht noch ein Ladekreis.
 - **Konsole / Anfrage** — Konsolenfehler, Ausnahmen, API-Antworten ab 400, abgebrochene Anfragen.
 - **weitergeleitet** — die Seite landete woanders (z. B. auf der Anmeldung).
+
+### Erster Blick und Scrollen (DESIGN.md 4.6, ohne Modell gemessen)
+
+Je Aufnahme (in jeder Ansicht) misst der Sweep im Browser (`foldTop`/`foldScroll`) und bewertet in Node (`foldFindings`).
+Schwellen stehen als `FOLD` oben in `checks.mjs`, Messwerte im Bericht unter `fold`:
+
+| Art | Klartext | Regel | Messung |
+|-----|----------|-------|---------|
+| `fold-below` | Hauptsache unter der Falz | 2 | Oberkante der Hauptsache ≥ Fensterhöhe (Knopf: Unterkante > Fensterhöhe), Seite oben |
+| `fold-lead` | Vorlauf zu hoch | 3 | Oberkante der Hauptsache > 40 % der Fensterhöhe (`leadPct`) |
+| `fold-banners` | mehrere Banner über der Hauptsache | 6 | > 1 sichtbares Element über ihr mit Klasse `banner/notice/hint/alert/warn/gate` (als Wortteil) oder `role=alert/status`, mind. 20 px hoch und mit eigener Fläche (Hintergrund oder Rahmen — bloßer Erklärtext wie `p.hint` zählt nicht); Formularfeld-Hinweise und `app-help-hint` zählen nicht |
+| `fold-sticky` | klebende Leisten zu hoch | 9 | nach Scrollen um einen Bildschirm: zusammenhängendes Band fixer/klebender Elemente ab oben (≥ halbe Fensterbreite) > 64 px Handy/Tablet, > 72 px Laptop/breit (`stickyTop`) |
+| `fold-covered` | unten verdeckt | 10 | am Seitenende: ein fixes/klebendes Element in der unteren Fensterhälfte überdeckt Inhalt (Text, Knopf, Feld, Bild, Brett) |
+| `fold-long` | Seite lang | 11 | ≥ 6 Bildschirme (`screens` = scrollHeight / Fensterhöhe) — **Hinweis**, zählt nicht als Auffälligkeit |
+| `fold-too-long` | Seite zu lang | 11 | ≥ 12 Bildschirme |
+| `fold-main-missing` | Hauptsache nicht gefunden | 1 | kein `main`-Selektor trifft — **Katalog-Hinweis**, kein Fehler der Seite (Selektor in `routes.mjs` nachziehen); entfällt bei Weiterleitung (Anmeldung, fehlendes Recht) — dort steht „weitergeleitet" |
+
+Die **Hauptsache** je Route steht in `routes.mjs` als `main` (Selektor oder Liste, der erste mit sichtbarem Treffer gilt;
+Listen: der erste Eintrag, mit Rückfall auf Leer-/Fehlerzustand). `main: null` = bewusst ohne (reine Textseite) — dann
+nur Banner-unabhängige Messungen. `foldExempt: true` (Vollbild-Brett, Dialoge, Druckansicht Aufgabenblatt) misst und
+fotografiert, meldet aber nur die Seitenlänge. Gemessen wird nur das Scrollen des Dokuments; Seiten, die in einem eigenen
+Kasten scrollen, wirken „1 Bildschirm" lang.
+
+`fold-summary.json` zählt die Falz-Befunde je Art × Ansicht × Oberfläche, listet jede Aufnahme mit Falz-Befund (Route,
+Ansicht, Konto, Messwerte, Erster-Blick-Bild) und die Zahl der Bilder (Ganzseite, Erster Blick, Streifen).
 
 Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") sieht nur ein Mensch bzw. Claude.
 

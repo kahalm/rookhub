@@ -3,6 +3,35 @@
 //
 // Ergebnis: [{ kind, detail }] — kind ∈ overflow-x | offscreen | clipped-text | i18n-key | spinner
 // (Konsolenfehler und fehlgeschlagene Anfragen sammelt sweep.mjs außerhalb der Seite.)
+//
+// Dazu „Erster Blick und Scrollen" (docs/DESIGN.md 4.6): foldTop/foldScroll messen im Browser, foldFindings bewertet
+// die Messwerte in Node gegen die Schwellen unten. Befunde mit `level: 'hint'` sind Hinweise (Katalog, Seitenlänge ≥ 6),
+// keine Auffälligkeit der Seite.
+
+/** Schwellen aus DESIGN.md 4.6 (Regelnummer in Klammern). */
+export const FOLD = {
+  leadMaxRatio: 0.40,                                     // (3) Vorlauf höchstens 40 % der Fensterhöhe
+  maxBanners: 1,                                          // (6) höchstens ein Banner über der Hauptsache
+  stickyMaxPx: { mobile: 64, tablet: 64, laptop: 72, wide: 72 },   // (9) klebende Leisten oben zusammen
+  screensHint: 6,                                         // (11) ab 6 Bildschirmen: Gliederung nötig (Hinweis)
+  screensFinding: 12,                                     // (11) ab 12 Bildschirmen: Befund
+  stripsMinScreens: 2,                                    // Streifen erst bei Seiten über 2 Bildschirmen
+  stripOverlap: 0.10,                                     // Streifen überlappen sich um 10 %
+  maxStrips: 8,                                           // danach nur noch ein Streifen am Seitenende
+  scrollWaitMs: 200,                                      // nach dem Scrollen: Leisten (Scroll-Ereignisse) nachziehen lassen
+};
+
+/** Befund-Arten der Falz-Prüfung mit Klartext (report.mjs, fold-summary.json). */
+export const FOLD_KINDS = {
+  'fold-main-missing': 'Hauptsache nicht gefunden',
+  'fold-below': 'Hauptsache unter der Falz',
+  'fold-lead': 'Vorlauf zu hoch',
+  'fold-banners': 'mehrere Banner über der Hauptsache',
+  'fold-sticky': 'klebende Leisten zu hoch',
+  'fold-covered': 'unten verdeckt',
+  'fold-long': 'Seite lang (Gliederung nötig)',
+  'fold-too-long': 'Seite zu lang',
+};
 
 export function pageChecks(i18nNamespaces) {
   const findings = [];
@@ -92,4 +121,193 @@ export function pageChecks(i18nNamespaces) {
   if (spinner) findings.push({ kind: 'spinner', detail: `noch ein Ladekreis sichtbar: ${describe(spinner.parentElement || spinner)}` });
 
   return findings;
+}
+
+// ------------------------------------------------------------------------------- Erster Blick und Scrollen
+
+/** Im Browser, Seite oben (scrollY 0): Hauptsache, Vorlauf, Banner darüber, Seitenlänge.
+ *  arg = { main: string[] } — Selektoren der Hauptsache, der erste mit sichtbarem Treffer gilt. */
+export function foldTop(arg) {
+  window.scrollTo(0, 0);
+  const vh = window.innerHeight, vw = document.documentElement.clientWidth;
+  const describe = el => {
+    let s = el.tagName.toLowerCase();
+    if (el.id) s += `#${el.id}`;
+    const cls = [...el.classList].filter(c => !c.startsWith('ng-') && !c.startsWith('mat-mdc') && !c.startsWith('mdc-')).slice(0, 3);
+    if (cls.length) s += '.' + cls.join('.');
+    const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    return text ? `${s} „${text}"` : s;
+  };
+  const visible = el => {
+    const st = getComputedStyle(el);
+    if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) === 0) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight ?? 0);
+  const out = { vh, vw, scrollHeight, screens: Math.round(scrollHeight / vh * 100) / 100, main: null };
+
+  let mainEl = null;
+  for (const sel of arg.main ?? []) {
+    let list = [];
+    try { list = [...document.querySelectorAll(sel)]; } catch { out.badSelector = sel; continue; }
+    // Hosts mit `display: contents` (z. B. app-course-card) haben keinen eigenen Kasten — dann das erste Kind mit Fläche.
+    const boxed = el => getComputedStyle(el).display !== 'contents' ? el
+      : [...el.querySelectorAll('*')].find(c => getComputedStyle(c).display !== 'contents' && visible(c)) ?? el;
+    mainEl = list.map(boxed).find(el => visible(el) && !el.closest('.cdk-overlay-container'));
+    if (mainEl) { out.main = sel; break; }
+  }
+  if (mainEl) {
+    const r = mainEl.getBoundingClientRect();
+    out.mainTop = Math.round(r.top + window.scrollY);
+    out.mainBottom = Math.round(r.bottom + window.scrollY);
+    out.mainIsButton = mainEl.matches('button, [role=button], input[type=submit], a.mat-mdc-button-base');
+    out.mainDesc = describe(mainEl);
+    out.leadPct = Math.round(out.mainTop / vh * 1000) / 10;
+  }
+
+  // Banner/Hinweise über der Hauptsache (Regel 6): Klassen mit banner/notice/hint/alert/warn/gate als eigenem
+  // Wortteil oder role=alert/status, mit sichtbarer, getönter oder umrandeter Fläche, ganz über der Oberkante der Hauptsache.
+  // Nur die äußersten; Formularfeld-Hinweise und der kleine ⓘ-Knopf (app-help-hint) zählen nicht.
+  const word = /(^|[-_])(banner|notice|hint|alert|warn|warning|gate)([-_]|$)/i;
+  const limit = mainEl ? out.mainTop : null;
+  const banners = [];
+  if (limit != null) {
+    for (const el of document.body.querySelectorAll('*')) {
+      const isBanner = [...el.classList].some(c => word.test(c)) || ['alert', 'status'].includes(el.getAttribute('role'));
+      if (!isBanner) continue;
+      if (el.closest('mat-form-field, .mat-mdc-form-field, app-help-hint, .cdk-overlay-container, .cdk-visually-hidden, svg')) continue;
+      if (el.contains(mainEl) || mainEl.contains(el)) continue;
+      if (!visible(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height < 20 || r.width < Math.min(120, vw * 0.3)) continue;
+      // Banner = eigene Fläche (DESIGN.md 5.11: „Fläche getönt"): Hintergrund oder Rahmen. Bloßer Erklärtext
+      // (p.hint ohne Fläche) ist kein Banner — der fällt unter Regel 5 (Erklärtexte), die das Modell am Bild prüft.
+      const st = getComputedStyle(el);
+      const tinted = !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(st.backgroundColor) || st.backgroundImage !== 'none'
+        || ['Top', 'Right', 'Bottom', 'Left'].some(side => parseFloat(st[`border${side}Width`]) > 0 && st[`border${side}Style`] !== 'none');
+      if (!tinted) continue;
+      if (r.bottom + window.scrollY > limit + 1) continue;
+      if (banners.some(b => b.contains(el))) continue;
+      for (let i = banners.length - 1; i >= 0; i--) if (el.contains(banners[i])) banners.splice(i, 1);
+      banners.push(el);
+    }
+  }
+  out.banners = banners.length;
+  out.bannerList = banners.slice(0, 5).map(describe);
+  return out;
+}
+
+/** Im Browser, nach foldTop: um einen Bildschirm scrollen → klebende Leisten oben (Regel 9); ans Seitenende →
+ *  Verdeckung des letzten Inhalts durch schwebende/klebende Elemente unten (Regel 10). Danach wieder nach oben. */
+export async function foldScroll(arg) {
+  const wait = ms => new Promise(res => setTimeout(res, ms));
+  const frames = () => new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+  const vh = window.innerHeight, vw = document.documentElement.clientWidth;
+  const describe = el => {
+    let s = el.tagName.toLowerCase();
+    if (el.id) s += `#${el.id}`;
+    const cls = [...el.classList].filter(c => !c.startsWith('ng-') && !c.startsWith('mat-mdc') && !c.startsWith('mdc-')).slice(0, 3);
+    if (cls.length) s += '.' + cls.join('.');
+    const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    return text ? `${s} „${text}"` : s;
+  };
+  const visible = el => {
+    const st = getComputedStyle(el);
+    if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) === 0) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const pinned = () => [...document.body.querySelectorAll('*')].filter(el => {
+    const p = getComputedStyle(el).position;
+    return (p === 'fixed' || p === 'sticky') && !el.closest('.cdk-overlay-container, .cdk-visually-hidden') && visible(el);
+  });
+  const out = {};
+  const maxScroll = Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight ?? 0) - vh;
+  if (maxScroll <= 4) { out.scrollable = false; return out; }
+  out.scrollable = true;
+
+  // Klebende Leisten oben: um einen Bildschirm scrollen; fixe/klebende Elemente, die oben anliegen (oder an eine
+  // solche Leiste anschließen), mindestens halb so breit wie das Fenster, höchstens halb so hoch. Gemessen wird das
+  // zusammenhängende Band von 0 abwärts — verschachtelte Leisten zählen so nicht doppelt.
+  window.scrollTo(0, Math.min(vh, maxScroll));
+  await frames(); await wait(arg.waitMs ?? 200);
+  const tops = pinned().map(el => ({ el, r: el.getBoundingClientRect() }))
+    .filter(({ r }) => r.width >= vw * 0.5 && r.height < vh * 0.5 && r.bottom > 0 && r.top < vh * 0.5)
+    .sort((a, b) => a.r.top - b.r.top);
+  let band = 0; const used = [];
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const t of tops) {
+      if (used.includes(t)) continue;
+      if (t.r.top <= band + 12 && t.r.bottom > band) { band = t.r.bottom; used.push(t); changed = true; }
+    }
+  }
+  out.stickyTop = Math.round(Math.max(0, band));
+  out.stickyList = used.filter(u => !used.some(o => o !== u && o.el.contains(u.el))).slice(0, 5)
+    .map(u => `${describe(u.el)} ${Math.round(u.r.height)}px`);
+
+  // Unten: ans Ende scrollen; fixe/klebende Elemente in der unteren Fensterhälfte; deckt eines davon ein
+  // Inhaltselement (eigener Text, Knopf, Feld, Bild, Brett) ab, das nicht selbst darin oder in einer Leiste liegt?
+  window.scrollTo(0, maxScroll);
+  await frames(); await wait(arg.waitMs ?? 200);
+  const all = pinned();
+  const bottoms = all.map(el => ({ el, r: el.getBoundingClientRect() }))
+    .filter(({ r }) => r.top > vh * 0.5 && r.top < vh && r.height < vh * 0.5)
+    .filter(({ el }) => getComputedStyle(el).position === 'fixed' || el.getBoundingClientRect().bottom >= vh - 2);
+  const covered = [];
+  if (bottoms.length) {
+    const content = [...document.body.querySelectorAll('button, a, input, select, textarea, img, canvas, cg-board, p, li, td, th, h1, h2, h3, h4, span, div, label')]
+      .filter(el => {
+        if (el.closest('.cdk-overlay-container')) return false;
+        if (all.some(p => p.contains(el))) return false;
+        const own = el.matches('button, a, input, select, textarea, img, canvas, cg-board')
+          || [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length > 1);
+        // große Behälter mit etwas eigenem Text (Höhe ≥ halbes Fenster) laufen nur dahinter durch — zählen nicht
+        return own && visible(el) && el.getBoundingClientRect().height < vh * 0.5;
+      });
+    for (const b of bottoms) {
+      if (b.el.matches('footer, app-footer') && !b.el.querySelector('button, a')) continue;
+      for (const el of content) {
+        if (el.contains(b.el)) continue;
+        const r = el.getBoundingClientRect();
+        const ix = Math.min(r.right, b.r.right) - Math.max(r.left, b.r.left);
+        const iy = Math.min(r.bottom, b.r.bottom) - Math.max(r.top, b.r.top);
+        if (ix > 4 && iy > 4 && r.bottom > 0) {
+          covered.push(`${describe(el)} unter ${describe(b.el)} (${Math.round(iy)}px)`);
+          if (covered.length >= 5) break;
+        }
+      }
+      if (covered.length >= 5) break;
+    }
+  }
+  out.bottomPinned = bottoms.slice(0, 5).map(b => `${describe(b.el)} ${Math.round(b.r.height)}px`);
+  out.covered = covered;
+  window.scrollTo(0, 0);
+  await frames();
+  return out;
+}
+
+/** Bewertet die Messwerte einer Aufnahme (Node-Seite). viewport = mobile|tablet|laptop|wide. */
+export function foldFindings(fold, viewport, { exempt = false, mainDeclared = true } = {}) {
+  const f = [];
+  if (!fold) return f;
+  const pct = n => `${Math.round(n)} %`;
+  if (fold.screens >= FOLD.screensFinding) f.push({ kind: 'fold-too-long', detail: `${fold.screens} Bildschirme (${fold.scrollHeight}px bei ${fold.vh}px Fenster, Befund ab ${FOLD.screensFinding})` });
+  else if (fold.screens >= FOLD.screensHint) f.push({ kind: 'fold-long', level: 'hint', detail: `${fold.screens} Bildschirme — braucht Gliederung (ab ${FOLD.screensHint})` });
+  if (exempt) return f;
+  if (!mainDeclared) {
+    // bewusst ohne Hauptsache (reine Textseite) — nur die Messungen ohne Hauptsache
+  } else if (!fold.main) {
+    f.push({ kind: 'fold-main-missing', level: 'hint', detail: fold.badSelector ? `Selektor ungültig: ${fold.badSelector}` : 'kein Selektor aus dem Katalog trifft (routes.mjs `main`)' });
+  } else {
+    const below = fold.mainIsButton ? fold.mainBottom > fold.vh : fold.mainTop >= fold.vh;
+    if (below) f.push({ kind: 'fold-below', detail: `${fold.mainDesc} beginnt bei ${fold.mainTop}px${fold.mainIsButton ? ` (Unterkante ${fold.mainBottom}px)` : ''}, Fenster ${fold.vh}px` });
+    if (fold.mainTop > fold.vh * FOLD.leadMaxRatio) f.push({ kind: 'fold-lead', detail: `Vorlauf ${fold.mainTop}px = ${pct(fold.leadPct)} der Höhe (höchstens ${pct(FOLD.leadMaxRatio * 100)} ≈ ${Math.round(fold.vh * FOLD.leadMaxRatio)}px)` });
+    if (fold.banners > FOLD.maxBanners) f.push({ kind: 'fold-banners', detail: `${fold.banners} Banner über der Hauptsache: ${fold.bannerList.join(' · ')}` });
+  }
+  const maxSticky = FOLD.stickyMaxPx[viewport] ?? 72;
+  if (fold.stickyTop > maxSticky) f.push({ kind: 'fold-sticky', detail: `${fold.stickyTop}px klebend oben (höchstens ${maxSticky}): ${fold.stickyList.join(' · ')}` });
+  if (fold.covered?.length) f.push({ kind: 'fold-covered', detail: `${fold.covered.length > 4 ? '≥ 5' : fold.covered.length}× verdeckt: ${fold.covered.slice(0, 3).join(' · ')}` });
+  return f;
 }
