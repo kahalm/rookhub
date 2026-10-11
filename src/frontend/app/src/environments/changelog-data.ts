@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.752.1", date: "2026-10-11", changes: [
+    { en: "Developer tooling: automatic checks after edits catch broken changelog text, invalid translation files and empty database migrations right away; a written commit routine and shorter coordination notes for the coding assistant. No change to the app.",
+      de: "Entwickler-Werkzeuge: automatische Prüfungen nach jeder Änderung melden kaputten Changelog-Text, ungültige Übersetzungsdateien und leere Datenbank-Migrationen sofort; dazu ein festgeschriebener Commit-Ablauf und kürzere Koordinationsnotizen für den Code-Assistenten. Keine Änderung an der App." },
+  ] },
   { version: "0.752.0", date: "2026-10-11", changes: [
     { en: "Design cleanup across all five sites following the new design rules: status colours (error, success, warning, info) now come from the shared colour tokens and look right in light and dark mode, the old indigo leftovers are gone (browser bar in Azure blue), empty pages share one empty-state look, main buttons use one style, layouts switch at the same screen widths everywhere, counts use real singular/plural instead of “(s)”, and icon-only buttons have a name for screen readers. UI-sweep tool: much faster runs on the dev server, optional fast mode, more pages and test accounts.",
       de: "Gestaltung über alle fünf Oberflächen nach den neuen Gestaltungsregeln aufgeräumt: Zustandsfarben (Fehler, Erfolg, Warnung, Hinweis) kommen aus den gemeinsamen Farbwerten und passen im hellen wie im dunklen Modus, die alten Indigo-Reste sind weg (Browserleiste in Azurblau), leere Seiten sehen einheitlich aus, Hauptknöpfe haben einen Stil, Layouts wechseln überall bei denselben Breiten, Zahlen mit echter Einzahl/Mehrzahl statt „(n)“, und Knöpfe nur mit Symbol haben einen Namen für Screenreader. UI-Sweep-Werkzeug: deutlich schnellere Läufe auf Dev, optionaler Schnellmodus, mehr Seiten und Testkonten." },
