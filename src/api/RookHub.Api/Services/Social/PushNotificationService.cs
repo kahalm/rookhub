@@ -5,7 +5,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using WebPush;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>VAPID-Konfiguration für Web-Push (aus dem Abschnitt „WebPush" der Config/ENV).</summary>
 public sealed class WebPushOptions

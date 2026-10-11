@@ -8,6 +8,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
 using static RookHub.Api.Services.TournamentDirectory.DirectoryText;
 
 namespace RookHub.Api.Services.TournamentDirectory;

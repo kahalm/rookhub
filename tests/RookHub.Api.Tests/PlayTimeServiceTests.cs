@@ -14,6 +14,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.RateLimiting;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

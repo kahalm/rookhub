@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Verifiziert die vom schach-bot signierten Discord-Verknüpfungs-Tokens.

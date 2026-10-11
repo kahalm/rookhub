@@ -9,6 +9,7 @@ using RookHub.Api.Services;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Prep;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

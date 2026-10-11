@@ -7,6 +7,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.IntegrationTests;
 

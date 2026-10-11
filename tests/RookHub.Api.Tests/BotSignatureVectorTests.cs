@@ -1,5 +1,6 @@
 using RookHub.Api.Authorization;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

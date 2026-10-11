@@ -1,4 +1,4 @@
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Täglicher Lauf der Benachrichtigungs-Retention (<see cref="NotificationService.RunRetentionAsync"/>, Codereview

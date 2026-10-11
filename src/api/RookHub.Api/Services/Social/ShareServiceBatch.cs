@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Services.Accounts;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>Ein beim Teilen übersprungener Empfänger samt Grund (self/not_found/not_friends/duplicate).</summary>
 public sealed record ShareSkip(int UserId, string Reason);

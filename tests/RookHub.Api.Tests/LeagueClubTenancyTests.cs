@@ -14,6 +14,7 @@ using RookHub.Api.Services.Tactics;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
 using Uploader = RookHub.Api.Services.League.LeagueBatchUploadService.Uploader;
 
 namespace RookHub.Api.Tests;

@@ -10,6 +10,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

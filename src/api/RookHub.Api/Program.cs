@@ -28,6 +28,7 @@ using RookHub.Api.Services.Library;
 using RookHub.Api.Services.Kids;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -192,7 +193,7 @@ try
     builder.Services.AddScoped<NotificationService>();
     // Web-Push: VAPID-Konfig aus dem Abschnitt „WebPush" (ENV WebPush__Subject/PublicKey/PrivateKey);
     // ohne Schlüssel bleibt Push serverseitig deaktiviert (No-op).
-    builder.Services.Configure<RookHub.Api.Services.WebPushOptions>(builder.Configuration.GetSection("WebPush"));
+    builder.Services.Configure<RookHub.Api.Services.Social.WebPushOptions>(builder.Configuration.GetSection("WebPush"));
     builder.Services.AddSingleton<IWebPushSender, WebPushSender>();
     builder.Services.AddScoped<PushNotificationService>();
     builder.Services.AddScoped<AdminMessageService>();

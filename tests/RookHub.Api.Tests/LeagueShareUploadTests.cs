@@ -9,6 +9,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Scoresheet;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

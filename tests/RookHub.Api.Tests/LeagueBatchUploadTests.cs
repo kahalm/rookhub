@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.League;
+using RookHub.Api.Services.Social;
 using Uploader = RookHub.Api.Services.League.LeagueBatchUploadService.Uploader;
 
 namespace RookHub.Api.Tests;

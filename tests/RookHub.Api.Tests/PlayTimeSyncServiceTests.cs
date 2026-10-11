@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

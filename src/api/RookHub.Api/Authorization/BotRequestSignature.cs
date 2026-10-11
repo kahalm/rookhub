@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Authorization;
 

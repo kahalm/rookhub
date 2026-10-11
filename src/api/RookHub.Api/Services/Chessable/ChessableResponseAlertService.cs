@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using Serilog.Context;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.Chessable;
 

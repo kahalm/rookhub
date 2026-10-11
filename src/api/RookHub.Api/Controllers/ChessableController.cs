@@ -11,6 +11,7 @@ using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Controllers;
 

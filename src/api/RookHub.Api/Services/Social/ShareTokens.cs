@@ -1,6 +1,6 @@
 using RookHub.Api.Services.Accounts;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Oeffentliche Teilen-Links (<c>/g/</c> Partie, <c>/w/</c> Aufgabenblatt, <c>/l/</c> Linie, <c>/r/</c> Rekonstruktion,

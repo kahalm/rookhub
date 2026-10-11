@@ -5,7 +5,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Trainingsziele („Trainingsunterstützung"): pro User <b>ein</b> effektives Tageszeit-Ziel

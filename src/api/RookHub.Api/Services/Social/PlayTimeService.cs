@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Zählt die von einem User auf Lichess und chess.com gespielten Rapid-/Classical-Partien

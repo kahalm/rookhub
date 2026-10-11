@@ -18,7 +18,7 @@ interface HelpSection { id: string; icon: string; }
 
 /**
  * Welcher Hilfe-Abschnitt erklärt welchen Menüeintrag — je Schlüssel aus `MenuRegistry.Items`
- * (Backend, `Services/MenuRegistry.cs`). Ohne diese Zuordnung erschienen neue Menüpunkte
+ * (Backend, `Services/Accounts/MenuRegistry.cs`). Ohne diese Zuordnung erschienen neue Menüpunkte
  * (Punktepartie, Partien, Rekonstruieren, Aufgabenblätter …) ohne ein Wort auf /help
  * (Codereview UX-011). `MenuRegistryTests.EveryMenuItem_HasHelpSection` verlangt für JEDEN
  * Registry-Schlüssel einen Eintrag hier; das Spec prüft, dass jedes Ziel ein Abschnitt ist.

@@ -7,6 +7,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.TournamentDirectory;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

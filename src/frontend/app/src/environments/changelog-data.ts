@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.753.7", date: "2026-10-11", changes: [
+    { en: "Code structure: the 13 server services for friends, notifications, messages, bot, training goals, play time now live in their own folder. No change in behaviour.",
+      de: "Code-Struktur: die 13 Server-Dienste für Freunde, Benachrichtigungen, Nachrichten, Bot, Trainingsziele, Spielzeit liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.753.6", date: "2026-10-11", changes: [
     { en: "Code structure: the 23 server services for accounts, sign-in, roles, tokens, profile, menu now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 23 Server-Dienste für Konten, Anmeldung, Rollen, Tokens, Profil, Menü liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },

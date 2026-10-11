@@ -4,7 +4,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Accounts;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Admin↔User-Direktnachrichten. Der Admin startet einen Thread mit einem User; danach können beide

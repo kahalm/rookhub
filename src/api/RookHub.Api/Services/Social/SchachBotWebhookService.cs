@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using RookHub.Api.DTOs;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Schickt Solver-Stand-Updates an den schach-bot, damit dieser den Tagespuzzle-Post live

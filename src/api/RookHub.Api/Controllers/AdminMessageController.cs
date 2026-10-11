@@ -4,6 +4,7 @@ using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Controllers;
 

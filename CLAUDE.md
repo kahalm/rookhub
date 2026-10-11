@@ -41,7 +41,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 ### Kritische Abhängigkeiten zwischen den Projekten
 - `Services/Tournaments/CrawlerProxyService.cs` – HTTP-Client zum Crawler, muss Crawler-Routen kennen
 - `Controllers/TournamentProxyController.cs` – Mappt RookHub-Routen auf Crawler-Routen (RookHub-`/api/tournaments/crawl*` → Crawler-`/api/crawl*`)
-- `Services/SchachBotWebhookService.cs` – HMAC-signierte Webhooks an den Bot (Tagespuzzle + Wochenpost-Progress)
+- `Services/Social/SchachBotWebhookService.cs` – HMAC-signierte Webhooks an den Bot (Tagespuzzle + Wochenpost-Progress)
 - Crawler-Endpoint-Änderungen müssen in den beiden ersten Dateien nachgezogen werden
 - Crawler-Response-Strukturen werden als `JsonElement` durchgereicht (kein festes DTO-Mapping)
 

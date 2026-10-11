@@ -7,6 +7,7 @@ using RookHub.Api.Services;
 using Serilog.Events;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

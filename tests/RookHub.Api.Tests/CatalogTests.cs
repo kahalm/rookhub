@@ -6,6 +6,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

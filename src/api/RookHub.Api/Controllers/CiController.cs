@@ -116,13 +116,13 @@ public class CiBuildReportController : ControllerBase
     }
 
     /// <summary>Verifiziert GitHubs <c>X-Hub-Signature-256</c>. HMAC-Berechnung bewusst über den
-    /// geteilten <see cref="Services.SchachBotWebhookService.ComputeHmacHex"/> (eine Implementierung
+    /// geteilten <see cref="Services.Social.SchachBotWebhookService.ComputeHmacHex"/> (eine Implementierung
     /// im Repo, wie in BotStatsController — CLAUDE.md-Konvention) statt einer eigenen Kopie.</summary>
     private static bool VerifyGithubSignature(string secret, string body, string? header)
     {
         if (string.IsNullOrEmpty(header) || !header.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase))
             return false;
-        var computed = Services.SchachBotWebhookService.ComputeHmacHex(secret, body);
+        var computed = Services.Social.SchachBotWebhookService.ComputeHmacHex(secret, body);
         return FixedTimeEquals(computed, header.Substring("sha256=".Length).ToLowerInvariant());
     }
 

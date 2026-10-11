@@ -6,7 +6,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Tournaments;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Liefert dem Schach-Bot den Trainings-/Puzzle-Fortschritt eines über die Discord-ID verknüpften

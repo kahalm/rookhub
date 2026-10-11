@@ -22,7 +22,7 @@ public enum ManualActivityKind
 /// Manuell eingetragene Offline-Trainingsaktivität eines Users. Anders als die automatisch erfassten
 /// Quellen (PuzzleAttempt, CourseAttempt, ChessableActivity, PlayTimeDaily) wird das hier vom User
 /// selbst gemeldet — und ist daher korrigierbar (Bearbeiten/Löschen). Speist über
-/// <see cref="Services.TrainingGoalService"/> dieselben bestehenden Kategorien des Trackers
+/// <see cref="Services.Social.TrainingGoalService"/> dieselben bestehenden Kategorien des Trackers
 /// (Spielen / Puzzles / Buch-Kurs) und wird dort als „manuell" markiert.
 /// </summary>
 public class ManualActivity

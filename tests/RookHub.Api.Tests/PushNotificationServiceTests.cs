@@ -7,6 +7,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using WebPush;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Tests;
 

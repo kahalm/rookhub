@@ -266,7 +266,7 @@ rookhub/
 
 Die RookHub API leitet Turnier-Anfragen als Proxy an den ChessResults Crawler weiter:
 
-- `Services/CrawlerProxyService.cs` — HTTP-Client zum Crawler
+- `Services/Tournaments/CrawlerProxyService.cs` — HTTP-Client zum Crawler
 - `Controllers/TournamentProxyController.cs` — Mappt RookHub-Routen auf Crawler-Routen
 
 Crawler-Responses werden als `JsonElement` durchgereicht (kein festes DTO-Mapping). Bei Aenderungen an Crawler-Endpoints muessen diese beiden Dateien angepasst werden.

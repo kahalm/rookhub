@@ -5,6 +5,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.Services.Accounts;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Controllers;
 

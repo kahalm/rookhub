@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Puzzles;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Controllers;
 

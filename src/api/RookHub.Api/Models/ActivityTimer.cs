@@ -7,7 +7,7 @@ namespace RookHub.Api.Models;
 /// Ein neuer Start ersetzt einen bereits laufenden — der Client entscheidet, ob ein noch laufender
 /// erst gestoppt/verworfen werden muss.
 ///
-/// Beim Stoppen (<see cref="Services.TrainingGoalService.StopTimerAsync"/>) wird der Timer in einen
+/// Beim Stoppen (<see cref="Services.Social.TrainingGoalService.StopTimerAsync"/>) wird der Timer in einen
 /// <see cref="ManualActivity"/>-Eintrag umgewandelt und aus dieser Tabelle entfernt. Label + Kind
 /// werden hier gesnapshotet (statt via FK auf <see cref="ActivityPreset"/>), damit ein Rename/Delete
 /// der Vorlage einen laufenden Timer nicht bricht.

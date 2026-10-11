@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.League;
 

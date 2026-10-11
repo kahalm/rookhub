@@ -4,7 +4,7 @@ namespace RookHub.Api.Models;
 /// Thema (Partiephase bzw. Taktik), das ein User einem Chessable-Kurs oder einer manuellen
 /// Offline-Aktivität zuordnet, damit die Trainingszeit in der Themen-Aufschlüsselung des Trainingsziele-
 /// Trackers richtig einsortiert wird. Deckungsgleich mit der internen Themen-Klassifikation
-/// (<c>Thm</c>) des <see cref="Services.TrainingGoalService"/>.
+/// (<c>Thm</c>) des <see cref="Services.Social.TrainingGoalService"/>.
 /// <para><see cref="Other"/> = ausdrücklich unklassifiziert (v. a. manuelle Aktivitäten wie „Endspiel-
 /// Analyse mit Freund", die keiner der drei Phasen passt). Für Chessable-Kurs-Zuordnungen bleibt der
 /// unassigned-Default weiterhin Other, ohne dass der User Other explizit wählen muss.</para>

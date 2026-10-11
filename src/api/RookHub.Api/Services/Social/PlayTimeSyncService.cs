@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Services.Social;
 
 /// <summary>
 /// Periodischer Poller, der für alle User mit verknüpftem Lichess-/chess.com-Konto und einem

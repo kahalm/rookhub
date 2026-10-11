@@ -6,6 +6,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.Accounts;
 

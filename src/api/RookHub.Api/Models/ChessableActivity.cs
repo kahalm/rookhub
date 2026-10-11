@@ -6,7 +6,7 @@ namespace RookHub.Api.Models;
 /// misst auf chessable.com nur tatsächlich aktive Zeit (Brett vorhanden, Tab sichtbar, kürzliche
 /// Zug-/Klick-/XP-Aktivität — kein bloßes Offenlassen) und flusht sie in kleinen Häppchen.
 /// Grundlage für die eigene Kategorie „Chessable" im Trainingsziele-Tracker
-/// (<see cref="Services.TrainingGoalService"/>); Einzel-Häppchen werden beim Aggregieren gedeckelt.
+/// (<see cref="Services.Social.TrainingGoalService"/>); Einzel-Häppchen werden beim Aggregieren gedeckelt.
 /// </summary>
 public class ChessableActivity
 {

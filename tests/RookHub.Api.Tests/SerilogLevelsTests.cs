@@ -50,7 +50,7 @@ public class SerilogLevelsTests
         var (factory, sink) = Factory();
         using (factory)
         {
-            factory.CreateLogger("RookHub.Api.Services.PlayTimeService").LogInformation("eigene Zeile");
+            factory.CreateLogger("RookHub.Api.Services.Social.PlayTimeService").LogInformation("eigene Zeile");
             factory.CreateLogger("Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager").LogWarning("no XML encryptor");
             factory.CreateLogger("Microsoft.AspNetCore.Hosting.Diagnostics").LogInformation("Request starting");
         }
