@@ -40,11 +40,10 @@ interface ReprocessStatus {
                Chessable-Kurse per Re-Fetch (gecachte laufen dabei netzfrei über die Fast-Lane). -->
           <button mat-stroked-button (click)="run()" [disabled]="working"
                   [matTooltip]="'reprocess.updateTip' | translate">
-            @if (working) {
-              <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
-            } @else {
-              <mat-icon>refresh</mat-icon> {{ (status.allUsers ? 'reprocess.updateAll' : 'reprocess.update') | translate: { count: allCount } }}
-            }
+            <!-- UI-Sweep 2026-10-11 (d1-rk-update-all-icon-misaligned): Symbol und Text je in eigenem Zweig mit EINER Wurzel —
+                 mit beidem in einem Zweig landete das Symbol nicht im Icon-Platz des Knopfs und saß 8 px zu hoch. -->
+            @if (working) { <mat-spinner diameter="16" class="rb-spin"></mat-spinner> } @else { <mat-icon>refresh</mat-icon> }
+            {{ working ? ('reprocess.working' | translate) : ((status.allUsers ? 'reprocess.updateAll' : 'reprocess.update') | translate: { count: allCount }) }}
           </button>
         }
       </div>

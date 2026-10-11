@@ -43,7 +43,7 @@ describe('clubhub.scss', () => {
     expect(cs.getPropertyValue('--mat-sys-on-primary').trim()).toBe(rootVar('--primary-ink'));
     expect(cs.getPropertyValue('--mat-card-elevated-container-color').trim()).toBe(rootVar('--card'));
     expect(cs.getPropertyValue('--mat-card-title-text-font')).toContain('Zilla Slab');
-    expect(cs.getPropertyValue('--mat-button-protected-container-shape').trim()).toBe('8px');
+    expect(cs.getPropertyValue('--mat-button-filled-container-shape').trim()).toBe('8px');
     expect(cs.borderTopStyle).toBe('solid');
     // Der Hinweis-Kasten trägt die Primärfarbe als Kante statt Hellblau.
     const probe = document.createElement('span');

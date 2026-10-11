@@ -16,7 +16,9 @@ const MASKS = ':is(app-login, app-register, app-forgot-password, app-reset-passw
 
 /** In den Stilen der App-Hülle (`:host ::ng-deep`) — gilt nur auf der Kinderseite. */
 export const KID_AUTH_STYLES = `
-  :host ::ng-deep ${MASKS} .auth-container { min-height: 0; justify-content: flex-start; padding: 8px 16px 24px; }
+  :host ::ng-deep ${MASKS} .auth-container { min-height: 0; flex-direction: column; align-items: center; justify-content: flex-start; padding: 8px 16px 24px; }
+  /* UI-Sweep 2026-10-11 (d1-k-kid-auth-card-left-wide): Registrieren/Passwort-Masken sind Zeilen — als Spalte mit
+     align-items: center steht die Karte wie bei der Anmeldung mittig. */
   :host ::ng-deep ${MASKS} .mat-mdc-card {
     --mat-sys-primary: var(--kid-title);
     --mat-card-elevated-container-color: var(--kid-card);
@@ -29,16 +31,19 @@ export const KID_AUTH_STYLES = `
     color: #1f2d3d; box-shadow: 0 6px 0 var(--kid-shadow); padding: 6px 4px 10px;
   }
   :host ::ng-deep ${MASKS} .mat-mdc-card-title { color: var(--kid-title); }
+  /* UI-Sweep 2026-10-11 (d1-k-kid-primary-button-restyled): die geteilten Masken nutzen seit 0.752.0 mat-flat-button —
+     die Variablen heißen dort --mat-button-filled-*, die alten protected-* griffen nicht mehr (Knopf war blau und klein). */
   :host ::ng-deep ${MASKS} .auth-form button[type=submit] {
-    --mat-button-protected-container-color: var(--kid-green-strong);
-    --mat-button-protected-label-text-color: #fff;
-    --mat-button-protected-container-shape: 999px;
-    --mat-button-protected-container-height: 52px;
-    --mat-button-protected-label-text-size: 1.2rem;
-    --mat-button-protected-label-text-weight: 800;
+    --mat-button-filled-container-color: var(--kid-green-strong);
+    --mat-button-filled-label-text-color: #fff;
+    --mat-button-filled-container-shape: 999px;
+    --mat-button-filled-container-height: 52px;
+    --mat-button-filled-label-text-size: 1.2rem;
+    --mat-button-filled-label-text-weight: 800;
     width: 100%; min-height: 52px; box-shadow: 0 5px 0 var(--kid-shadow);
   }
-  :host ::ng-deep ${MASKS} .mat-mdc-card-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+  :host ::ng-deep ${MASKS} .mat-mdc-card-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 8px 16px; }
+  /* UI-Sweep 2026-10-11 (d1-k-kid-auth-pills-offset): 16 px seitlich wie mat-card-content — die Pillen fluchten mit Feldern und Knopf. */
   :host ::ng-deep ${MASKS} .mat-mdc-card-actions a {
     --mat-button-text-container-shape: 999px;
     --mat-button-text-label-text-color: var(--kid-title);

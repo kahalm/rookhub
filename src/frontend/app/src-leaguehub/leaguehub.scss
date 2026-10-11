@@ -242,10 +242,9 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password, ap
   --mat-card-title-text-size: 24px;
   --mat-card-title-text-weight: 600;
   --mat-card-title-text-line-height: 1.2;
-  --mat-button-protected-container-shape: 6px;
-  --mat-button-protected-container-color: var(--red);
-  --mat-button-protected-label-text-color: #fff;
   --mat-button-filled-container-shape: 6px;
+  --mat-button-filled-container-color: var(--red);
+  --mat-button-filled-label-text-color: #fff;
   --mat-button-outlined-container-shape: 6px;
   --mat-button-text-container-shape: 6px;
   --mat-button-text-label-text-color: var(--ink);

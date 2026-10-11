@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.752.3", date: "2026-10-11", changes: [
+    { en: "Design fixes from the first design check: on KidHub the sign-in, registration and password pages again show the big green round button, and the card sits centred near the top instead of stretched at the left edge; the bottom links have proper spacing. Sign-in pages of LeagueHub and ClubHub keep their own button colour and shape. In RookHub the “Update all” button of the reprocessing banner shows its icon in line with the text.",
+      de: "Gestaltungskorrekturen aus der ersten Design-Durchsicht: In KidHub zeigen Anmelde-, Registrier- und Passwortseiten wieder den großen grünen runden Knopf, und die Karte steht mittig oben statt breit am linken Rand; die Links darunter haben wieder Abstand. Die Anmeldeseiten von LeagueHub und ClubHub behalten ihre eigene Knopffarbe und -form. In RookHub steht das Symbol im Knopf „Alle aktualisieren“ des Aufbereitungs-Hinweises wieder auf einer Linie mit dem Text." },
+  ] },
   { version: "0.752.2", date: "2026-10-11", changes: [
     { en: "Code structure: the 31 server services of the tournament directory (calendar sources, place lookup, gazetteer) now live in their own folder. No change in behaviour.",
       de: "Code-Struktur: die 31 Server-Dienste des Turnierverzeichnisses (Kalenderquellen, Ortssuche, Ortslexikon) liegen jetzt in einem eigenen Ordner. Keine Änderung im Verhalten." },
