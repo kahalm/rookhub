@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -87,10 +86,10 @@ public class GameAnalysisService
         var (header, plies) = parsed;
 
         var title = string.IsNullOrWhiteSpace(req.Title)
-            ? BuildTitle(header)
+            ? GameAnalysisText.BuildTitle(header)
             : req.Title.Trim();
         // Zwei Analysen DERSELBEN Partie (Tiefe auf Stockfish, Knoten auf lc0) sollen in der Liste unterscheidbar sein.
-        var suffix = req.TargetNodes is { } nodes ? $" ({NodesLabel(nodes)} nodes)" : string.Empty;
+        var suffix = req.TargetNodes is { } nodes ? $" ({GameAnalysisText.NodesLabel(nodes)} nodes)" : string.Empty;
         if (title.Length + suffix.Length > 200) title = title[..(200 - suffix.Length)];
         title += suffix;
 
@@ -116,7 +115,7 @@ public class GameAnalysisService
             // Nur aus der Grundstellung — sonst stuende der erste Zug der Partie als Fortsetzung
             // an der Wurzel des Eroeffnungsbaums, wo es ihn gar nicht gibt (siehe LibraryGameReader).
             OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen)
-                ? OpeningLineOf(plies)
+                ? GameAnalysisText.OpeningLineOf(plies)
                 : null,
             PlyCount = plies.Count,
             Status = GameAnalysisStatus.Pending,
@@ -129,7 +128,7 @@ public class GameAnalysisService
         // Die Endstellung (0.689.0, Wunsch 2026-10-06: „die letzte Stellung hat keine Linien"): eine Zeile mehr mit
         // Ply = PlyCount und OHNE Partiezug — nur wenn dort noch gezogen werden kann (Aufgabe, Remis-Angebot, Zeit).
         // Leser, die je Zeile einen Partiezug brauchen, lassen sie weg (`GameMoveUci != ""` bzw. `Ply < PlyCount`).
-        if (plies.Count > 0 && FinalPositionOf(plies[^1]) is { } finalFen)
+        if (plies.Count > 0 && GameAnalysisText.FinalPositionOf(plies[^1]) is { } finalFen)
             analysis.Positions.Add(new GameAnalysisPosition { Ply = plies.Count, Fen = finalFen });
 
         _db.GameAnalyses.Add(analysis);
@@ -144,37 +143,6 @@ public class GameAnalysisService
         // Sofort die erste Fuhre einreihen, damit der Nutzer nicht auf den nächsten Pump-Lauf wartet.
         await PumpOneAsync(analysis.Id, ct);
         return await GetAsync(userId, analysis.Id, ct) ?? ToDto(analysis, 0);
-    }
-
-    /// <summary>Knotenzahl kurz für den Titel: 50000 → „50k", 1500000 → „1.5M", sonst die Zahl.</summary>
-    internal static string NodesLabel(long nodes)
-    {
-        string Trim(double v) => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
-        return nodes >= 1_000_000 ? Trim(nodes / 1_000_000.0) + "M"
-            : nodes >= 1_000 ? Trim(nodes / 1_000.0) + "k"
-            : nodes.ToString(System.Globalization.CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>
-    /// Die ersten Halbzuege als normalisierte Zeile („e4 e5 Nf3 Nc6") — dieselbe Form wie
-    /// <see cref="LibraryGame.OpeningLine"/>, damit der Stellungsfilter beide Quellen gleich
-    /// behandeln kann. Bewertungszeichen und Schach-Zeichen fallen weg: „Nf3+" und „Nf3" sind
-    /// derselbe Zug, und ein Baum, der sie trennt, hat zwei Aeste fuer eine Stellung.
-    /// </summary>
-    internal static string OpeningLineOf(IReadOnlyList<GamePlies.Ply> plies)
-    {
-        var sb = new StringBuilder(LibraryGameReader.OpeningPlies * 6);
-        foreach (var p in plies.Take(LibraryGameReader.OpeningPlies))
-        {
-            if (sb.Length > 0) sb.Append(' ');
-            // DIESELBE Funktion wie der Textweg der Bibliothek (LibraryGameReader.AppendOpeningSan):
-            // die beiden Spalten werden vom selben Praefix durchsucht, ihre Form darf nicht an zwei
-            // Stellen entstehen. Bis 0.499.12 stand hier eine zweite Fassung — sie entfernte die
-            // Schachzeichen, die der Textweg behielt.
-            LibraryGameReader.AppendOpeningSan(sb, p.San);
-        }
-        var line = sb.ToString();
-        return line.Length > 200 ? line[..200] : line;
     }
 
     // ===== Stapel: Meister- und Vereinspartien ================================
@@ -238,8 +206,8 @@ public class GameAnalysisService
             a.Black = header?.Black ?? game.Black;
             a.Result = header?.Result ?? game.Result;
             a.Event = header?.Event;
-            var title = header is { } h ? BuildTitle(h) : $"{game.White} – {game.Black}";
-            if (a.TargetNodes is { } nodes) title += $" ({NodesLabel(nodes)} nodes)";
+            var title = header is { } h ? GameAnalysisText.BuildTitle(h) : $"{game.White} – {game.Black}";
+            if (a.TargetNodes is { } nodes) title += $" ({GameAnalysisText.NodesLabel(nodes)} nodes)";
             a.Title = title.Length > 200 ? title[..200] : title;
             a.UpdatedAt = DateTime.UtcNow;
         }
@@ -277,7 +245,7 @@ public class GameAnalysisService
                 .GroupBy(p => Key(p.Fen)).ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Depth).First());
             var fresh = plies.Select(p => new GameAnalysisPosition { Ply = p.Index, Fen = p.Fen, GameMoveUci = p.Uci, GameMoveSan = p.San })
                 .ToList();
-            if (plies.Count > 0 && FinalPositionOf(plies[^1]) is { } finalFen)
+            if (plies.Count > 0 && GameAnalysisText.FinalPositionOf(plies[^1]) is { } finalFen)
                 fresh.Add(new GameAnalysisPosition { Ply = plies.Count, Fen = finalFen });
             foreach (var n in fresh)
             {
@@ -289,7 +257,7 @@ public class GameAnalysisService
             _db.GameAnalysisPositions.RemoveRange(a.Positions);
             a.Positions = fresh;
             a.PlyCount = plies.Count;
-            a.OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen) ? OpeningLineOf(plies) : null;
+            a.OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen) ? GameAnalysisText.OpeningLineOf(plies) : null;
             if (a.MovesHash != null) a.MovesHash = game.MovesHash;
             a.Status = GameAnalysisStatus.Pending;
             a.FinishedAt = null;
@@ -414,13 +382,6 @@ public class GameAnalysisService
             OpenGames = open,
             MaxGames = GameAnalysisDefaults.MaxOpenGuessGamesPerUser,
         };
-    }
-
-    private static string BuildTitle(GamePlies.GameHeader h)
-    {
-        var names = string.Join(" – ", new[] { h.White, h.Black }.Where(s => !string.IsNullOrWhiteSpace(s)));
-        if (names.Length > 0) return names;
-        return string.IsNullOrWhiteSpace(h.Event) ? "Partie" : h.Event!;
     }
 
     // ===== Lesen / Löschen ==================================================
@@ -1228,7 +1189,7 @@ public class GameAnalysisService
                 var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
                 {
                     Fen = pos.Fen,
-                    Title = JobTitle(analysis, pos),
+                    Title = GameAnalysisText.JobTitle(analysis, pos),
                     TargetDepth = analysis.RefineDepth!.Value,
                     MultiPv = analysis.RefineMultiPv ?? analysis.MultiPv,
                     EngineId = analysis.EngineId,
@@ -1287,7 +1248,7 @@ public class GameAnalysisService
                 var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
                 {
                     Fen = pos.Fen,
-                    Title = JobTitle(analysis, pos),
+                    Title = GameAnalysisText.JobTitle(analysis, pos),
                     TargetDepth = analysis.TargetDepth,
                     TargetNodes = analysis.TargetNodes,   // lc0-Analyse: Knoten statt Tiefe, auch nach Neustart
                     MultiPv = analysis.MultiPv,
@@ -1328,23 +1289,6 @@ public class GameAnalysisService
     private async Task<bool> HouseEngineWithdrawnAsync(GameAnalysis analysis, CancellationToken ct)
         => analysis.EngineOwnerUserId is int owner
            && !await EngineOwnerResolver.IsHouseEngineSharedAsync(_db, owner, ct);
-
-    /// <summary>Die Stellung nach dem letzten Zug — <c>null</c> bei Matt/Patt oder wenn sich der Zug nicht spielen lässt.</summary>
-    internal static string? FinalPositionOf(GamePlies.Ply last)
-    {
-        var fen = MoveComparisonService.PlayUci(last.Fen, last.Uci);
-        if (fen is null) return null;
-        try { return Chess.ChessBoard.LoadFromFen(fen).Moves().Length > 0 ? fen : null; }
-        catch { return null; }
-    }
-
-    private static string JobTitle(GameAnalysis analysis, GameAnalysisPosition pos)
-    {
-        var moveNo = pos.Ply / 2 + 1;
-        var side = pos.Ply % 2 == 0 ? "w" : "s";
-        var title = $"{analysis.Title} · {moveNo}{side} {pos.GameMoveSan}";
-        return title.Length > 200 ? title[..200] : title;
-    }
 
     // ===== Mapping ==========================================================
 

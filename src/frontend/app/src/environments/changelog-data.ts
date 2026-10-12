@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.758.6", date: "2026-10-12", changes: [
+    { en: "Code structure: the styles of the shared game page, the text helpers of game analyses and the line display of the repertoire trainer now live in their own files. No change in behaviour.",
+      de: "Code-Struktur: die Stile der Partieseite, die Texthelfer der Partie-Analysen und die Linienanzeige des Repertoire-Trainers liegen jetzt in eigenen Dateien. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.758.5", date: "2026-10-12", changes: [
     { en: "UI check tool: courses and repertoires are now captured in every variant (random mode, chapter random, marked flashcards, study course, own calculation course, public short link, unknown short link; repertoire tree, gap finder, edit, learn mode, Black and endgame repertoire).",
       de: "UI-Prüfwerkzeug: Kurse und Repertoires werden jetzt in allen Varianten fotografiert (Zufallsmodus, Kapitel-Zufall, markierte Karteikarten, Lern-Kurs, eigener Kalkulationskurs, öffentliche Kurz-URL, unbekannte Kurz-URL; Repertoire-Baum, Lochfinder, Bearbeiten, Lernmodus, Schwarz- und Endspiel-Repertoire)." },

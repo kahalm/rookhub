@@ -123,7 +123,7 @@ public class GameAnalysisNodesTests : IDisposable
     [InlineData(1_000_000L, "1M")]
     [InlineData(2_500_000L, "2.5M")]
     public void NodesLabel_kuerztDieZahl(long nodes, string expected) =>
-        Assert.Equal(expected, GameAnalysisService.NodesLabel(nodes));
+        Assert.Equal(expected, GameAnalysisText.NodesLabel(nodes));
 
     [Fact]
     public async Task Create_ohneKnoten_bleibtBeiTiefe_undTitelUnveraendert()

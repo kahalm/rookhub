@@ -8,7 +8,7 @@ namespace RookHub.Api.Tests.Library;
 /// <summary>
 /// Die <c>OpeningLine</c> entsteht an ZWEI Stellen — im Textdurchgang der Bibliothek
 /// (<see cref="LibraryGameReader.Analyse"/>) und aus den nachgespielten Halbzuegen der eigenen
-/// Analysen (<see cref="GameAnalysisService.OpeningLineOf"/>) —, und der Eroeffnungsbaum der
+/// Analysen (<see cref="GameAnalysisText.OpeningLineOf"/>) —, und der Eroeffnungsbaum der
 /// Punktepartie sucht mit EINEM Praefix ueber beide Spalten
 /// (<see cref="GuessOpeningTree"/>, Modus „nur spielbare" gegen <c>GameAnalyses</c>, sonst gegen
 /// <c>LibraryGames</c>). Laufen die Formen auseinander, findet derselbe Zug in der einen Quelle
@@ -37,7 +37,7 @@ public class OpeningLineMirrorTests
     {
         var parsed = GamePlies.Parse(pgn);
         Assert.NotNull(parsed);
-        return GameAnalysisService.OpeningLineOf(parsed!.Value.Plies);
+        return GameAnalysisText.OpeningLineOf(parsed!.Value.Plies);
     }
 
     [Fact]

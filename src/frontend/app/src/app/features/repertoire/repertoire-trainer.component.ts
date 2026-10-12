@@ -30,12 +30,12 @@ import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOffline
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { normalizeFen } from './position-filter.util';
 import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
+import { LineMoveToken, commentParagraphs, lineChapterTitle, lineLabel, lineMoveTokens, plyComment, plyPrettyLabel } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
@@ -758,46 +758,16 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return Math.round(((this.correct + this.wrong) / this.sessionUserMoves) * 100);
   }
 
-  get currentLineLabel(): string {
-    const line = this.queue[this.qIndex];
-    if (!line) return '';
-    return (line.headers['White'] || '').trim();
-  }
+  get currentLineLabel(): string { return lineLabel(this.queue[this.qIndex]); }
 
-  get currentLineChapter(): string {
-    const line = this.queue[this.qIndex];
-    if (!line) return '';
-    return (line.headers['Black'] || '').trim();
-  }
+  get currentLineChapter(): string { return lineChapterTitle(this.queue[this.qIndex]); }
 
-  /** Züge der aktuellen Linie als flache Tokens fürs Template. Nur bereits gespielte + aktueller
-   * Halbzug — die Zukunft wird bewusst NICHT vorweggenommen (Chessable-artig, spart Spoiler).
-   * `state` = `past` (vor currentPly) bzw. `current` (aktueller Halbzug). `num` ist gesetzt für
-   * den ersten Halbzug eines Zugpaares. `comment` ist der PGN-Kommentar zum Halbzug (falls einer
-   * hinterlegt ist) — im Template im Lern-Modus angezeigt. */
-  get movesInLine(): { num: number | null; san: string; ply: number; state: 'past' | 'current'; comment: string }[] {
-    const line = this.queue[this.qIndex];
-    if (!line || line.moves.length === 0) return [];
-    // Zug-Nummerierung stabil aus dem Start-FEN ableiten (fullmove counter + turn).
-    const { side, fullMove } = startNumbering(line.fens[0]);
-    const out: { num: number | null; san: string; ply: number; state: 'past' | 'current'; comment: string }[] = [];
-    let curSide = side;
-    let curMove = fullMove;
-    // Im Abfragen-Modus, solange der User seinen Zug noch SUCHT (PLAYING), darf der aktuelle
-    // (noch nicht gespielte) Halbzug NICHT erscheinen — sonst steht die Lösung in der Zug-Liste.
-    // Im Lern-Modus (führt den Zug ohnehin vor) und nach dem Zug (FEEDBACK/…) wird er gezeigt.
+  /** Züge der aktuellen Linie als flache Tokens fürs Template (`lineMoveTokens`). Im Abfragen-Modus, solange der
+   * User seinen Zug noch SUCHT (PLAYING), erscheint der aktuelle Halbzug NICHT — sonst stünde die Lösung in der
+   * Zugliste; im Lern-Modus und nach dem Zug (FEEDBACK/…) wird er gezeigt. */
+  get movesInLine(): LineMoveToken[] {
     const revealCurrent = this.mode === 'learn' || this.phase !== 'PLAYING';
-    const upto = revealCurrent ? Math.min(this.currentPly, line.moves.length - 1) : this.currentPly - 1;
-    for (let ply = 0; ply <= upto; ply++) {
-      const isFirstBlackHalfmove = ply === 0 && curSide === 'b';
-      const num = curSide === 'w' || isFirstBlackHalfmove ? curMove : null;
-      const state: 'past' | 'current' = ply < this.currentPly ? 'past' : 'current';
-      const comment = (line.comments?.[ply] || '').trim();
-      out.push({ num, san: line.moves[ply].san, ply, state, comment });
-      if (curSide === 'b') curMove++;
-      curSide = curSide === 'w' ? 'b' : 'w';
-    }
-    return out;
+    return lineMoveTokens(this.queue[this.qIndex], this.currentPly, revealCurrent);
   }
 
   private bumpStreak(): void {
@@ -807,25 +777,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** PGN-Kommentar zum AKTUELL zu spielenden Halbzug (nur relevant für Lern-Modus, wo wir dem
    * User Kontext geben — im Review-Modus bewusst nicht, weil er den Zug SELBST finden soll). */
-  get currentComment(): string {
-    const line = this.queue[this.qIndex];
-    if (!line) return '';
-    return (line.comments?.[this.currentPly] || '').trim();
-  }
+  get currentComment(): string { return plyComment(this.queue[this.qIndex], this.currentPly); }
 
   /** Kommentar in Absätze gesplittet (leere Zeile trennt) — für die Prosa-Anzeige im Lern-Modus. */
-  get currentCommentParagraphs(): string[] {
-    const c = this.currentComment;
-    if (!c) return [];
-    return c.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  }
+  get currentCommentParagraphs(): string[] { return commentParagraphs(this.currentComment); }
 
   /** Menschenlesbares Label des aktuellen Halbzugs, z. B. „3. exd5" (Weiß) oder „2… d6" (Schwarz). */
-  get currentMovePrettyLabel(): string {
-    const line = this.queue[this.qIndex];
-    if (!line || this.currentPly < 0 || this.currentPly >= line.moves.length) return '';
-    return prettyMoveLabel(line.fens[0], line.moves[this.currentPly].san, this.currentPly);
-  }
+  get currentMovePrettyLabel(): string { return plyPrettyLabel(this.queue[this.qIndex], this.currentPly); }
 
   /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
   get nextDueLabel(): string { return relDueLabel(this.nextDueAt); }

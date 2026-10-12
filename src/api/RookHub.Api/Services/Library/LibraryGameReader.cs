@@ -294,7 +294,7 @@ public static class LibraryGameReader
     /// Bewertungs- UND ohne Schachzeichen.
     ///
     /// <para><b>Diese eine Funktion benutzen BEIDE Erzeuger der Zeile</b> — der Textdurchgang hier
-    /// (Bibliothek) und der Brettweg in <see cref="GameAnalysisService.OpeningLineOf"/> (eigene
+    /// (Bibliothek) und der Brettweg in <see cref="GameAnalysisText.OpeningLineOf"/> (eigene
     /// Analysen). Der Eroeffnungsbaum der Punktepartie sucht per Praefix ueber beide Spalten und
     /// normalisiert die Anfrage seinerseits ohne <c>+</c>/<c>#</c>
     /// (<see cref="GuessOpeningTree.Normalize"/>); eine Seite, die sie BEHAELT, ist damit ab dem
