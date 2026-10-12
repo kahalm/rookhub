@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.756.2", date: "2026-10-12", changes: [
+    { en: "Code structure: the analysis board's template, styles, comparison mode and Maia sparring now live in their own files. No change in behaviour.",
+      de: "Code-Struktur: Vorlage, Stile, Vergleichsmodus und Maia-Sparring des Analysebretts liegen jetzt in eigenen Dateien. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.756.1", date: "2026-10-12", changes: [
     { en: "Courses: after the last move the solver now also moves on automatically when the final comment carries no content — e.g. „✔“ (Woodpecker), „1-0“, „Resigns.“, „CORRECT! Well done.“, „(1 point)“ or „Go to the lesson“ (about 2,500 lines in 117 courses). Real explanations still stop for reading.",
       de: "Kurse: Nach dem letzten Zug geht es jetzt auch dann automatisch weiter, wenn der Schlusskommentar nichts Inhaltliches sagt — z. B. „✔“ (Woodpecker), „1-0“, „Resigns.“, „CORRECT! Well done.“, „(1 point)“ oder „Go to the lesson“ (rund 2 500 Linien in 117 Kursen). Echte Erklärungen halten weiterhin zum Lesen an." },

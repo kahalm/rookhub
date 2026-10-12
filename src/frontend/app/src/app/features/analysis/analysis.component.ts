@@ -24,7 +24,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
-import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY, ANALYSIS_PROVIDER_KEY } from './analysis-settings';
+import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY, ANALYSIS_PROVIDER_KEY, EVAL_SETTLE_DEPTH } from './analysis-settings';
 import { PositionMenuComponent } from './position-menu.component';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
@@ -32,23 +32,19 @@ import { MatDialog } from '@angular/material/dialog';
 import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
 import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.component';
 import { AnalysisHistorySaver } from './analysis-history-saver';
+import { AnalysisCompare } from './analysis-compare';
 import {
   AnalysisNode, addMove, createRoot, fromDto, isWithin, lineThrough, mainline, makeMainline, numberedSan, parsePgnTree, pathTo,
   playSan, playUci, promote, removeNode, starredNodes,
 } from './analysis-tree';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
-import {
-  MAIA_CHECK_DEPTH, MAIA_DEFAULT_ELO, MAIA_ELO_KEY, MAIA_ELO_OPTIONS, MAIA_EVALBAR_KEY, MAIA_WARN_KEY,
-} from './maia/maia-model';
-import { BadMoveVerdict, EvalPoint, SparringWarning, badMoveVerdict } from './maia/sparring-check';
+import { MaiaSparring } from './maia/maia-sparring';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { TablebasePanelComponent, TablebaseVerdict } from './tablebase-panel.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
-import { buildSparringPgn } from './maia/sparring-pgn';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
-import { GuessUploadStatus } from './game-analysis.service';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
@@ -56,20 +52,12 @@ const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = ANALYSIS_DEPTH_KEY;
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
 const PROVIDER_KEY = ANALYSIS_PROVIDER_KEY;
-/** Vergleichsmodus: an/aus und die Wahl der zweiten Engine. */
-const COMPARE_KEY = 'rookhub_analysis_compare';
-const COMPARE_ENGINE_KEY = 'rookhub_analysis_compare_engine';
 // Bis 50: für eine externe Engine (mehrere Millionen Knoten/s) sind Tiefen jenseits von 30
 // gut erreichbar. Mit der Browser-Engine dauern sie sehr lange — sie bleiben trotzdem
 // wählbar, statt Optionen je nach Engine verschwinden zu lassen.
 // ACHTUNG: Jeder Wert hier muss den Clamp in AnalysisEngineService.setDepth überleben,
 // sonst wählt man 50 und bekommt stillschweigend weniger (Test hält das fest).
 export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
-/** Ab dieser Tiefe übernimmt die Bewertungsleiste den Wert einer neuen Suche. Darunter schwanken
- *  die Zahlen stark (Tiefe 1–5 liegt gern eine Figur daneben) — die Leiste bliebe sonst bei jedem
- *  Zug unruhig. Muss unter dem kleinsten DEPTH_OPTIONS-Wert liegen, sonst erreicht eine
- *  vollständige Suche die Schwelle nie (endet sie vorher, gilt ihr letzter Wert trotzdem). */
-const EVAL_SETTLE_DEPTH = 10;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -81,229 +69,8 @@ const EVAL_SETTLE_DEPTH = 10;
     PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
     IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent
   ],
-  template: `
-    <div class="analysis-page">
-      <div class="header">
-        <h1>{{ 'analysis.title' | translate }}</h1>
-        @if (auth.isLoggedIn) {
-          <button mat-stroked-button type="button" class="history-btn" (click)="openHistory()">
-            <mat-icon>history</mat-icon> {{ 'analysis.history.open' | translate }}
-          </button>
-        }
-      </div>
-      <div class="analysis-layout">
-        <div class="board-col" [class.editing]="editing">
-          @if (editing) {
-            <app-position-setup class="editor-full"
-              [initialFen]="currentFen" [orientation]="orientation"
-              (apply)="onSetupApply($event)" (cancel)="editing = false" />
-          } @else {
-            <!-- Mit Tablebase-Ergebnis zeigt die Leiste die Wahrheit statt der Schätzung der Engine (0.729.0). -->
-            <div class="eval-bar" [matTooltip]="tbVerdict?.fen === currentFen ? tbVerdict!.text : evalText">
-              <div class="eval-white" [style.height.%]="tbVerdict?.fen === currentFen ? tbVerdict!.whiteHeight : whiteHeight"></div>
-            </div>
-            <!-- Mobil: schmale, unsichtbare Tap-Zonen — links = Zug zurück (liegt als Overlay ÜBER der
-                 Bewertungsleiste, kostet keine Brettbreite), rechts = Zug vor. goTo() clampt selbst. -->
-            <div class="board-tap board-tap-prev" (click)="prev()" aria-hidden="true"></div>
-            <div class="board-wrap">
-              <app-analysis-board
-                [fen]="boardFen" [orientation]="orientation" [turnColor]="turnColor"
-                [dests]="dests" [lastMove]="lastMove" [check]="isCheck" [shapes]="shapes"
-                (moveMade)="onMove($event)" />
-            </div>
-            <div class="board-tap board-tap-next" (click)="next()" aria-hidden="true"></div>
-          }
-        </div>
-
-        <div class="side-col">
-          @if (returnTo) {
-            <button mat-stroked-button class="back-btn" (click)="backToPuzzle()">
-              <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
-            </button>
-          }
-          @if (engineCrashed) {
-            <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">
-              <mat-card-content style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <mat-icon>error_outline</mat-icon>
-                <span style="flex:1">{{ 'analysis.engineCrashed' | translate }}</span>
-                <button mat-stroked-button style="color:var(--mat-sys-on-error);border-color:var(--mat-sys-on-error)" (click)="reloadPage()">{{ 'analysis.engineCrashedReload' | translate }}</button>
-              </mat-card-content>
-            </mat-card>
-          }
-          <app-analysis-engine-card
-            [engineOn]="engineOn" [sparring]="!!sparring" [depth]="depth" [depthSetting]="depthSetting" [depthOptions]="depthOptions"
-            [linesCount]="linesCount" [searchTime]="searchTime" [speedHint]="speedHint" [engines]="externalEnginesList"
-            [selectedEngineId]="selectedEngineId" [engineChoices]="engineChoices" [terminal]="terminal" [terminalText]="terminalText"
-            [remoteFallback]="remoteFallback" [remoteCut]="remoteCut" [showThinking]="showThinking" [thinkingTime]="thinkingTime"
-            [slowConfigHint]="slowConfigHint" [displayLines]="displayLines" [mainEngineName]="mainEngineName"
-            [compareOn]="compareOn" [compareRunning]="compareRunning" [compareEngineId]="compareEngineId"
-            [compareEngineName]="compareEngineName" [compareDepth]="compareDepth" [compareSpeedHint]="compareSpeedHint"
-            [compareFallback]="compareFallback" [compareCrashed]="compareCrashed" [compareLines]="compareLines"
-            (engineToggle)="engineOn = $event; onEngineToggle()" (depthChange)="depthSetting = $event; onDepthChange()"
-            (linesChange)="linesCount = $event; onLinesChange()" (engineSelect)="selectedEngineId = $event; onEngineSelect()"
-            (compareToggle)="compareOn = !compareOn; onCompareToggle()"
-            (compareEngineSelect)="compareEngineId = $event; onCompareEngineSelect()">
-            <!-- Endspiel-Datenbank (0.729.0): ab 7 Steinen das genaue Ergebnis von Lichess, Stockfish rechnet daneben weiter.
-                 Nicht im Sparring gegen Maia (sie verriete den besten Zug). -->
-            @if (!terminal && !sparring && !editing) {
-              <app-tablebase-panel [fen]="currentFen" (playSan)="playRepertoireMoves([$event])" (verdict)="tbVerdict = $event" />
-            }
-          </app-analysis-engine-card>
-
-          <!-- Sparring gegen Maia: die Karte führt den Lade-Ablauf selbst und meldet „start" erst mit fertigem Modell.
-               Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte. -->
-          @if (!editing) {
-            <app-maia-sparring-card
-              [active]="!!sparring" [userColor]="sparring?.userColor ?? turnColor" [thinking]="maiaThinking"
-              [maiaToMove]="maiaToMove" [elo]="maiaElo"
-              [showAnalyze]="sparringAnalyzeVisible" [analyzing]="analyzingSparring"
-              [analyzeBlocked]="analyzeStatus?.engineAvailable === false"
-              [warnBadMoves]="warnBadMoves" [keepEvalBar]="keepEvalBar" [warning]="sparringWarning"
-              (start)="startSparring()" (stop)="stopSparring()" (switchSides)="switchSparringSides()"
-              (restart)="restartSparring()" (maiaMove)="requestMaiaMove()" (eloChange)="onMaiaEloChange($event)"
-              (analyze)="analyzeSparring()" (warnBadMovesChange)="onWarnBadMovesChange($event)"
-              (keepEvalBarChange)="onKeepEvalBarChange($event)" (analyzeWarning)="analyzeWarning()" />
-          }
-
-          <mat-card class="moves-card">
-            <mat-card-content>
-              <div class="controls">
-                <!-- appIconLabel statt matTooltip (Codereview UX-014): derselbe Text wird auch der zugängliche Name —
-                     mit Tooltip allein hießen die Knöpfe für Screenreader nur „Schaltfläche". -->
-                <button mat-icon-button (click)="goTo(0)" [disabled]="ply === 0" [appIconLabel]="'analysis.start' | translate"><mat-icon>first_page</mat-icon></button>
-                <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [appIconLabel]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
-                <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
-                <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
-                <button mat-icon-button class="star-btn" [class.on]="!!currentNode.starred" (click)="toggleStar()"
-                        [appIconLabel]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
-                  <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
-                </button>
-                <span class="spacer"></span>
-                <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
-                <button mat-icon-button (click)="reset()" [appIconLabel]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
-                <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
-                     die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
-                <!-- „+" (0.749.0): besonders gute Stellung markieren. -->
-                <app-mark-position-button [fen]="currentFen" [origin]="boardMarkOrigin" />
-                <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
-                                   [candidates]="engineCandidates"
-                                   [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
-              </div>
-              @if (starredList.length > 0) {
-                <div class="star-jumps" [attr.aria-label]="'analysis.star.jumps' | translate">
-                  <mat-icon class="star-icon">star</mat-icon>
-                  @for (n of starredList; track n) {
-                    <button type="button" class="jump" [class.active]="n === currentNode" (click)="goToNode(n)">{{ starLabel(n) }}</button>
-                  }
-                </div>
-              }
-              @if (root.children.length === 0) {
-                <p class="muted">{{ 'analysis.noMoves' | translate }}</p>
-              } @else {
-                <!-- Zugbaum wie auf Lichess (0.604.0): Hauptlinie als Tabelle mit Bewertung, Varianten als Block,
-                     Rechtsklick bzw. langer Druck: Stern, hochstufen, zur Hauptvariante, ab hier löschen. -->
-                <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion"
-                                        (select)="goToNode($event)" (action)="onTreeAction($event)" />
-                <p class="tree-hint">{{ 'analysis.tree.hint' | translate }}</p>
-              }
-            </mat-card-content>
-          </mat-card>
-
-          <!-- Eröffnungs-Explorer (Lichess/Meister, online oder lokal) — nur eingeloggt: die Online-Quelle
-               verbraucht das gemeinsame Kontingent des Server-Tokens. Ein Klick spielt den Zug. -->
-          @if (auth.isLoggedIn) {
-            <mat-card class="explorer-card">
-              <mat-card-content>
-                <app-opening-explorer [fen]="currentFen" (playMove)="playRepertoireMoves([$event])" />
-              </mat-card-content>
-            </mat-card>
-          }
-
-          <!-- „Stellung in meinen Repertoires" gibt es nur eingeloggt; ohne dieses @if stand hier
-               für anonyme Besucher eine leere graue Karte zwischen Zug- und FEN-Karte. -->
-          @if (auth.isLoggedIn) {
-            <mat-card class="reps-card">
-              <mat-card-content>
-                <app-position-repertoires [fen]="currentFen" (playMoves)="playRepertoireMoves($event)" />
-              </mat-card-content>
-            </mat-card>
-          }
-
-          <mat-card class="io-card">
-            <mat-card-content>
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>{{ 'analysis.fen' | translate }}</mat-label>
-                <input matInput [(ngModel)]="fenInput" (keyup.enter)="loadFen()">
-              </mat-form-field>
-              <div class="io-actions">
-                <button mat-stroked-button (click)="loadFen()"><mat-icon>input</mat-icon> {{ 'analysis.loadFen' | translate }}</button>
-                <button mat-stroked-button (click)="startEditing()"><mat-icon>grid_view</mat-icon> {{ 'analysis.setup.button' | translate }}</button>
-              </div>
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>{{ 'analysis.pgn' | translate }}</mat-label>
-                <textarea matInput rows="3" [(ngModel)]="pgnInput"></textarea>
-              </mat-form-field>
-              <button mat-stroked-button (click)="loadPgn()"><mat-icon>upload</mat-icon> {{ 'analysis.loadPgn' | translate }}</button>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    /* App-Vollbild (Host-Klasse auf app-root): Seitentitel weg — das Brett bekommt den Platz. */
-    :host-context(.app-fullscreen) h1 { display: none; }
-    .analysis-page { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
-    .analysis-layout { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
-    /* Brettgröße an die Fensterhöhe gebunden (d2-rk-analysis-brettspalte): groß wächst das Brett bis 820 px, am Laptop
-       passt es samt Kopf unter die Falz. */
-    .board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, calc(100vh - 170px), 820px); min-width: 280px; }
-    .board-col.editing { display: block; width: min(64vw, 560px); }
-    /* Ab 769 px klebt das Brett beim Scrollen (Explorer, Zugbaum laufen rechts weiter); die Navbar klebt nicht, daher 12 px. */
-    @media (min-width: 769px) {
-      .board-col:not(.editing) { position: sticky; top: 12px; align-self: flex-start; }
-    }
-    .editor-full { display: block; width: 100%; }
-    .eval-bar { width: 14px; align-self: stretch; background: #3a3a3a; border-radius: 3px; overflow: hidden; position: relative; min-height: 280px; }
-    .eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }
-    .board-wrap { flex: 1; min-width: 260px; }
-    .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
-    .back-btn { width: 100%; margin-bottom: 8px; }
-    .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
-    .controls { display: flex; align-items: center; gap: 2px; }
-    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .header h1 { margin: 0 0 8px; }
-    .star-btn.on mat-icon { color: #f9a825; }
-    .star-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 8px; }
-    .star-jumps .star-icon { color: #f9a825; font-size: 18px; width: 18px; height: 18px; }
-    .star-jumps .jump { font: inherit; font-family: 'Courier New', monospace; font-size: .85rem; padding: 1px 8px; border-radius: 999px;
-      border: 1px solid rgba(249, 168, 37, .6); background: transparent; color: inherit; cursor: pointer; }
-    .star-jumps .jump.active { background: rgba(249, 168, 37, .25); }
-    .controls .spacer { flex: 1; }
-    /* UI-Sweep 2026-10-11: neun Symbolknöpfe (seit dem „+" in 0.749.0) brauchen 432 px — am Handy ragte das ⋮ aus dem Fenster.
-       Unter 480 px rücken sie auf 36 px zusammen, auch die in app-mark-position-button und app-position-menu. */
-    @media (max-width: 480px) {
-      .controls { gap: 0; }
-      .controls ::ng-deep .mat-mdc-icon-button { width: 36px; height: 36px; padding: 6px; --mat-icon-button-state-layer-size: 36px; }
-      .controls ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target { width: 36px; height: 36px; }
-    }
-    .movetree { margin-top: 8px; }
-    .tree-hint { margin: 6px 0 0; font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); }
-    .io-card .full { width: 100%; }
-    .io-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-    .board-tap { display: none; }
-    @media (max-width: 768px) {
-      .board-col { width: 100%; min-width: 0; position: relative; }
-      .board-wrap { min-width: 0; }
-      /* Schmale (halb so breite), unsichtbare Tap-Streifen — kein Button-Look. */
-      .board-tap { display: block; flex: 0 0 auto; width: 15px; align-self: stretch; border-radius: 6px;
-        cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-      .board-tap:active { background: color-mix(in srgb, currentColor 12%, transparent); }
-      /* „Zurück" liegt als Overlay ÜBER der Bewertungsleiste (links), statt eine eigene Spalte zu
-         belegen → das Brett bekommt die gesparte Breite. */
-      .board-tap-prev { position: absolute; left: 0; top: 0; bottom: 0; width: 15px; z-index: 2; }
-    }
-  `]
+  templateUrl: './analysis.component.html',
+  styleUrl: './analysis.component.scss',
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
   /** Herkunft für den „+"-Knopf (0.749.0): das Analysebrett kennt keine Partie. */
@@ -344,43 +111,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   pgnInput = '';
   editing = false;
 
-  // ---- Sparring gegen Maia (0.632.0) — einfache Felder + markForCheck nach allem Asynchronen ----
-  /** Läuft ein Sparring: ab welcher Stellung, welche Seite der Nutzer spielt, und ob die Engine vorher an war. `tip` = der
-   *  zuletzt gespielte Zug im Teilbaum von `start` — die Partie fürs Analysieren ist die Linie `start` → `tip` (nicht die
-   *  Fortsetzung von `start`: mitten in einer geladenen Partie stehen dort deren Züge). */
-  sparring: { start: AnalysisNode; tip: AnalysisNode; userColor: Color; engineWasOn: boolean } | null = null;
-  /** Die zuletzt beendete Sparring-Partie mit mindestens zwei Halbzügen — „Partie analysieren" nimmt sie. Verfällt mit
-   *  jedem neuen Baum und wenn ihre Züge aus dem Baum gelöscht werden. */
-  lastSparring: { start: AnalysisNode; tip: AnalysisNode; userColor: Color; elo: number } | null = null;
-  /** „Partie analysieren" läuft (speichern + einreihen) — Doppelklick-Schutz. */
-  analyzingSparring = false;
-  /** Steht eine Engine bereit? Einmal gefragt, sobald der Knopf zum ersten Mal sichtbar würde; `null` = unbekannt. */
-  analyzeStatus: GuessUploadStatus | null = null;
-  private analyzeStatusAsked = false;
-  maiaThinking = false;
-  /** Gewählte Stärke (je Gerät gemerkt, nur Werte aus MAIA_ELO_OPTIONS). */
-  maiaElo: number = MAIA_DEFAULT_ELO;
-  /** Jede Navigation/jeder Abbruch zählt hoch — eine späte Maia-Antwort für eine verlassene Stellung verfällt. */
-  private maiaEpoch = 0;
-  /** Mindest-Bedenkzeit, damit Maias Zug nicht im selben Augenblick wie der eigene aufs Brett knallt (Specs: 0). */
-  protected maiaDelayMs = 500;
-  /** Schalter der Maia-Karte, je Gerät gemerkt (Vorgabe aus): eigene schlechte Züge melden / die Bewertungsleiste
-   *  während des Sparrings anlassen. Beide lassen die Analyse-Engine STILL mitlaufen (`sparringEngineQuiet`). */
-  warnBadMoves = false;
-  keepEvalBar = false;
-  /** Warnung zum zuletzt geprüften eigenen Zug — `before` = Stellung VOR dem Zug („Analysieren" springt dorthin). */
-  sparringWarning: (SparringWarning & { before: AnalysisNode; drop: number }) | null = null;
-  /** Spur der Bewertungen der aktuellen Stellung je Tiefe (Weiß-Sicht) — die Vorher-Werte der Zug-Prüfung. */
-  private evalTrack: { fen: string; points: EvalPoint[] } = { fen: '', points: [] };
-  /** Ein eigener Zug am Brett: die Stellung davor und ihre Spur — `requestMaiaMove` übernimmt sie. */
-  private pendingBefore: { node: AnalysisNode; points: EvalPoint[] } | null = null;
-  /** Die laufende Prüfung der Stellung NACH dem eigenen Zug, bedient aus onEngineUpdate. */
-  private pendingCheck: {
-    fen: string; mover: Color; before: EvalPoint[]; epoch: number;
-    resolve: (v: BadMoveVerdict | null) => void; timer: ReturnType<typeof setTimeout>;
-  } | null = null;
-  /** Spätestens so lange wartet Maias Antwort auf das Urteil (Specs: klein). */
-  protected maiaCheckTimeoutMs = 4000;
+
+  /** Sparring gegen Maia (0.632.0) — Zustand und Spiel in MaiaSparring. */
+  readonly spar: MaiaSparring;
 
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   private readonly historySaver: AnalysisHistorySaver;
@@ -420,27 +153,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Partie-Ende in der aktuellen Stellung (keine legalen Züge) — dort rechnet keine Engine. */
   terminal: 'mate-white-wins' | 'mate-black-wins' | 'stalemate' | null = null;
 
-  // ---- Vergleichsmodus: eine ZWEITE Engine rechnet dieselbe Stellung ----
-  // Möglich, weil AnalysisEngineService keine DI-Abhängigkeiten hat und sich schlicht ein
-  // zweites Mal instanziieren lässt — jede Instanz hat eigenen Worker, eigenen Zustand und
-  // eigene Generationszählung, die beiden Suchen kommen sich also nicht ins Gehege.
-  compareOn = false;
-  /** 'wasm' oder Engine-ID der Vergleichs-Engine. */
-  compareEngineId = 'wasm';
-  compareLines: EngineDisplayLine[] = [];
-  compareDepth = 0;
-  compareNps = 0;
-  /** True, wenn die VERGLEICHS-Engine auf die Browser-Engine zurückgefallen ist. Ohne diese
-   *  Anzeige verglichen zwei Etiketten („RookHub PC") etwas, das in Wahrheit die Browser-Engine
-   *  gerechnet hat — ein Vergleich, der genau das Gegenteil von dem zeigt, was draufsteht. */
-  compareFallback = false;
-  /** Die zweite Instanz hat aufgegeben (Worker-Absturz/Start gescheitert). Ohne diese Anzeige
-   *  stünde dort für immer „Berechne…", obwohl nichts mehr rechnet. */
-  compareCrashed = false;
-  private compareEngine?: AnalysisEngineService;
-  private compareSub?: Subscription;
-  private compareFallbackSub?: Subscription;
-  private compareErrorSub?: Subscription;
+  /** Vergleichsmodus: eine ZWEITE Engine rechnet dieselbe Stellung (Zustand + zweite Instanz in AnalysisCompare). */
+  readonly compare: AnalysisCompare;
 
   private sub?: Subscription;
   private errorSub?: Subscription;
@@ -451,12 +165,28 @@ export class AnalysisComponent implements OnInit, OnDestroy {
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
               @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog,
-              private maia: MaiaEngineService, private games: GamesService, private analyzeGame: AnalyzeGameService) {
+              maia: MaiaEngineService, games: GamesService, analyzeGame: AnalyzeGameService) {
     this.historySaver = new AnalysisHistorySaver({
       save: req => this.history.save(req),
       loggedIn: () => this.auth.isLoggedIn,
       snapshot: () => ({ root: this.root, current: this.currentNode }),
       blankFen: START_FEN,
+    });
+    this.spar = new MaiaSparring({
+      maia, games, analyzeGame, auth, snackbar, translate, router,
+      root: () => this.root, currentNode: () => this.currentNode, turnColor: () => this.turnColor,
+      hasMoves: () => this.dests.size > 0, editing: () => this.editing,
+      engineOn: () => this.engineOn, setEngineOn: on => { this.engineOn = on; },
+      setOrientation: color => { this.orientation = color; }, running: () => this.running,
+      depthSetting: () => this.depthSetting, goToNode: node => this.goToNode(node), refresh: () => this.refresh(),
+      treeChanged: () => { this.treeVersion++; }, changed: () => this.cdr.markForCheck(),
+    });
+    this.compare = new AnalysisCompare({
+      mainEngine: engine, externalEngines,
+      depthSetting: () => this.depthSetting, linesCount: () => this.linesCount,
+      engines: () => this.externalEnginesList, choices: () => this.engineChoices,
+      selectedEngineId: () => this.selectedEngineId, currentFen: () => this.currentFen,
+      canSearch: () => this.engineOn && this.dests.size > 0, changed: () => this.cdr.markForCheck(),
     });
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
@@ -464,12 +194,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.engineOn = localStorage.getItem(ENGINE_KEY) !== '0';
       const d = parseInt(localStorage.getItem(DEPTH_KEY) || '', 10);
       if (DEPTH_OPTIONS.includes(d)) this.depthSetting = d;
-      this.compareOn = localStorage.getItem(COMPARE_KEY) === '1';
-      this.compareEngineId = localStorage.getItem(COMPARE_ENGINE_KEY) || 'wasm';
-      const elo = parseInt(localStorage.getItem(MAIA_ELO_KEY) || '', 10);
-      if ((MAIA_ELO_OPTIONS as readonly number[]).includes(elo)) this.maiaElo = elo;
-      this.warnBadMoves = localStorage.getItem(MAIA_WARN_KEY) === '1';
-      this.keepEvalBar = localStorage.getItem(MAIA_EVALBAR_KEY) === '1';
     } catch {}
   }
 
@@ -558,7 +282,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
           // wenn Haupt- und Vergleichswahl kollidieren. Ohne diese Bedingung wuerde die eben
           // gebaute Instanz Millisekunden spaeter wieder zerstoert und neu aufgebaut — im
           // Browser-Fall eine 7-MB-WASM-Instanziierung fuer nichts.
-          if (this.compareOn && !this.compareEngine) this.startCompare();
+          if (this.compare.on && !this.compare.engine) this.compare.start();
           this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
         },
         error: () => {},
@@ -616,12 +340,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.cutSub?.unsubscribe();
     this.tickSub?.unsubscribe();
     this.enginesSub?.unsubscribe();
-    this.stopCompare();          // eigene Instanz + deren Worker/Streams beenden
+    this.compare.stop();         // eigene Instanz + deren Worker/Streams beenden
     this.engine.destroy();
-    // Maia freigeben (~150 MB: Modell + Sitzung im Worker) — beim nächsten Besuch kommt es in ~1 s aus dem Cache.
-    this.maiaEpoch++;
-    this.cancelMoveCheck();
-    this.maia.release();
+    this.spar.destroy();         // Maia freigeben, eine späte Antwort verfällt
   }
 
   // ---- Navigation ----
@@ -631,14 +352,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   get currentFen(): string { return this.currentNode.fen; }
 
   goTo(ply: number): void {
-    this.abortMaia();
+    this.spar.abortMaia();
     this.ply = Math.max(0, Math.min(ply, this.line.length));
     this.refresh();
   }
 
   /** Auf einen beliebigen Knoten springen (Klick in Zugliste, Variante, Sternliste) — die Linie läuft dann durch ihn. */
   goToNode(node: AnalysisNode): void {
-    this.abortMaia();
+    this.spar.abortMaia();
     this.line = lineThrough(node);
     this.ply = pathTo(node).length;
     this.refresh();
@@ -646,10 +367,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** Einen neuen Baum aufs Brett (Laden, Zurücksetzen) und dort auf `current` stehen. */
   private setTree(root: AnalysisNode, current: AnalysisNode = root): void {
-    // Ein neuer Baum beendet ein Sparring (Maia-Regel 9) — die Engine kommt zurück wie beim „Beenden". Die alte Partie
-    // gehört nicht mehr aufs Brett, „Partie analysieren" verfällt mit ihr.
-    if (this.sparring) this.endSparring();
-    this.lastSparring = null;
+    this.spar.onNewTree();   // beendet ein Sparring (Maia-Regel 9), „Partie analysieren" verfällt
     this.root = root;
     this.treeVersion++;
     this.goToNode(current);
@@ -682,19 +400,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     } catch { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
     if (!mv) { this.refresh(); return; }
 
-    // „Schlechte Züge melden": die Stellung davor samt ihrer Bewertungs-Spur merken, BEVOR goToNode sie verlässt — nur für
-    // eigene Züge am Brett (Explorer/Repertoire-Züge werden nicht geprüft).
-    if (this.sparring && this.warnBadMoves && mover === this.sparring.userColor) {
-      const before = this.currentNode;
-      this.pendingBefore = { node: before, points: this.evalTrack.fen === before.fen ? [...this.evalTrack.points] : [] };
-    }
+    // „Schlechte Züge melden": die Stellung davor samt ihrer Bewertungs-Spur merken, BEVOR goToNode sie verlässt.
+    this.spar.beforeBoardMove(this.currentNode, mover);
     // Zugbaum (0.604.0): ein anderer Zug als die Fortsetzung wird eine VARIANTE, derselbe Zug geht in die vorhandene.
     const node = addMove(this.currentNode, { san: mv.san, uci: mv.from + mv.to + (mv.promotion ?? ''), fen: c.fen() });
     this.treeVersion++;
     this.goToNode(node);
-    this.noteSparringMove(node);
-    // Sparring: auf den EIGENEN Zug antwortet Maia. Zieht der Nutzer für Maias Seite, kommt keine Antwort.
-    if (this.sparring && mover === this.sparring.userColor) this.requestMaiaMove();
+    this.spar.afterBoardMove(node, mover);   // Sparring: auf den EIGENEN Zug antwortet Maia
   }
 
   /** Baummodus des Repertoire-Panels bzw. Explorer: die geklickte Zugfolge ab der aktuellen Stellung aufs Brett
@@ -711,10 +423,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (node === this.currentNode) return;
     this.treeVersion++;
     this.goToNode(node);
-    this.noteSparringMove(node);
+    this.spar.noteSparringMove(node);
     // Sparring: ein Zug aus Explorer/Repertoire zählt wie ein eigener — steht danach Maia am Zug, antwortet sie. Zog die
     // Folge für Maias Seite, ist danach der Nutzer dran, und es kommt (wie in onMove) keine Anfrage.
-    if (this.maiaToMove) this.requestMaiaMove();
+    if (this.spar.maiaToMove) this.spar.requestMaiaMove();
   }
 
   // ---- Refresh board + engine for current ply ----
@@ -740,35 +452,22 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Das Ergebnis MUSS dann aber benannt werden: sonst stünde dort dauerhaft „Berechne…",
     // obwohl nichts mehr gerechnet wird und auch nichts mehr zu rechnen ist.
     this.terminal = this.dests.size > 0 ? null : this.terminalStateOf(c);
-    this.compareLines = [];
-    this.compareDepth = 0;
-    this.compareNps = 0;
-    // MUSS mit zurueck: sonst klebt die Absturzmeldung an einer Stellung, in der die Engine
-    // noch gar nicht gerechnet hat. Der Service setzt bei neuer FEN selbst crashStreak
-    // zurueck, die Suche kann also problemlos gelingen — die Karte behauptete trotzdem weiter,
-    // die Engine sei abgestuerzt, statt „Berechne…" zu zeigen.
-    this.compareCrashed = false;
+    this.compare.clearResults();
     // Die Bewertungs-Spur gehört zur Stellung — die der alten hat ein eigener Zug vorher übernommen (pendingBefore).
-    this.evalTrack = { fen, points: [] };
+    this.spar.evalTrack = { fen, points: [] };
     if (this.engineOn && this.dests.size > 0) {
       this.runAnalysis(this.engine, fen);
-      this.runAnalysis(this.compareEngine, fen);
-    } else if (this.sparringEngineQuiet && this.dests.size > 0) {
+      this.runAnalysis(this.compare.engine, fen);
+    } else if (this.spar.sparringEngineQuiet && this.dests.size > 0) {
       // Sparring mit „Schlechte Züge melden"/„Bewertungsleiste anlassen": nur die Haupt-Engine rechnet, still.
-      this.compareEngine?.stop();
+      this.compare.engine?.stop();
       this.runAnalysis(this.engine, fen);
-      if (!this.keepEvalBar) this.updateEval(null);
+      if (!this.spar.keepEvalBar) this.updateEval(null);
     } else {
       this.engine.stop();
-      this.compareEngine?.stop();
+      this.compare.engine?.stop();
       this.updateEval(null);
     }
-  }
-
-  /** Während des Sparrings rechnet die Engine still mit (keine Linien, Pfeile, Kandidaten), wenn einer der beiden
-   *  Maia-Schalter an ist — für die Zug-Prüfung bzw. die Bewertungsleiste. */
-  get sparringEngineQuiet(): boolean {
-    return !!this.sparring && (this.warnBadMoves || this.keepEvalBar);
   }
 
   /** Matt oder Patt? Nur aufrufen, wenn es keine legalen Züge gibt. Wirft nicht: bei einer
@@ -805,7 +504,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Engine updates ----
   private onEngineUpdate(fen: string, depth: number, lines: AnalysisLine[], nodes = 0, nps = 0): void {
-    const quiet = !this.engineOn && this.sparringEngineQuiet;
+    const quiet = !this.engineOn && this.spar.sparringEngineQuiet;
     if (!(this.engineOn || quiet) || fen !== this.currentFen) return;
     this.nodes = nodes;
     this.nps = nps;
@@ -816,7 +515,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     this.depth = depth;
     const best = lines[0];
-    if (best) this.trackEval(fen, best);
+    if (best) this.spar.trackEval(fen, best);
     // Stille Engine im Sparring: Linien, Kandidaten und Pfeile verrieten den besten Zug — sie bleiben leer.
     if (!quiet) {
       this.displayLines = this.toDisplayLines(fen, lines);
@@ -834,7 +533,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Matt ist auch flach verlässlich) und sobald die Suche endet, egal wie tief sie kam.
     // Engine aus / Partie-Ende setzen die Leiste weiterhin direkt über refresh() → updateEval(null).
     // Im Sparring bekommen Leiste und Zugliste die Bewertung nur mit „Bewertungsleiste anlassen".
-    if (best && (!quiet || this.keepEvalBar)
+    if (best && (!quiet || this.spar.keepEvalBar)
         && (best.depth >= EVAL_SETTLE_DEPTH || best.scoreType === 'mate' || !this.running)) {
       this.updateEval(best);
       // Die Bewertung wandert an den Zug in der Zugliste (wie auf Lichess) und mit dem Baum in den Verlauf.
@@ -845,22 +544,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         this.historySaver.schedule();
       }
     }
-    this.serveMoveCheck(fen);
-  }
-
-  /** Die Bewertung der besten Linie je Tiefe merken (nur die erste Zeile einer Tiefe zählt). */
-  private trackEval(fen: string, best: AnalysisLine): void {
-    if (this.evalTrack.fen !== fen) this.evalTrack = { fen, points: [] };
-    if (this.evalTrack.points.some(p => p.depth === best.depth)) return;
-    this.evalTrack.points.push({ depth: best.depth, score: best.score, scoreType: best.scoreType, evalText: best.evalText });
-  }
-
-  /** Der tiefste Punkt der Spur für `fen` (ab `minDepth`), sonst null. */
-  private deepestPoint(fen: string, minDepth = 0): EvalPoint | null {
-    if (this.evalTrack.fen !== fen) return null;
-    let deepest: EvalPoint | null = null;
-    for (const p of this.evalTrack.points) if (p.depth >= minDepth && (!deepest || p.depth > deepest.depth)) deepest = p;
-    return deepest;
+    this.spar.serveMoveCheck(fen);
   }
 
   /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
@@ -942,28 +626,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   onLinesChange(): void {
     try { localStorage.setItem(LINES_KEY, String(this.linesCount)); } catch {}
     this.engine.setMultiPv(this.linesCount);
-    this.compareEngine?.setMultiPv(this.linesCount);
+    this.compare.engine?.setMultiPv(this.linesCount);
     this.restartSearches();
   }
   onDepthChange(): void {
     try { localStorage.setItem(DEPTH_KEY, String(this.depthSetting)); } catch {}
     this.engine.setDepth(this.depthSetting);
-    this.compareEngine?.setDepth(this.depthSetting);
+    this.compare.engine?.setDepth(this.depthSetting);
     this.restartSearches();
   }
-  /** Vergleich ein/aus. Aus = zweite Instanz vollständig abräumen (Worker/Streams beenden). */
-  onCompareToggle(): void {
-    try { localStorage.setItem(COMPARE_KEY, this.compareOn ? '1' : '0'); } catch {}
-    if (this.compareOn) this.startCompare();
-    else this.stopCompare();
-  }
-
-  /** Läuft der Vergleich WIRKLICH (Schalter an UND zweite Instanz vorhanden)? Das Template
-   *  hängt daran statt an `compareOn` — sonst stünde ein Vergleichsblock da, hinter dem gar
-   *  keine Engine steckt (etwa abgemeldet, Engine-Liste nicht ladbar) und der ewig „Berechne…"
-   *  zeigt. */
-  get compareRunning(): boolean { return this.compareOn && !!this.compareEngine; }
-
   /** Startet beide Suchen neu — mit DEMSELBEN Vorbehalt wie refresh(): in einer terminalen
    *  Stellung (Matt/Patt) bekommt keine Engine ein `go`. Ohne diesen gemeinsamen Weg setzten
    *  Tiefen-/Linienwechsel den Matt-Fall wieder außer Kraft. */
@@ -971,8 +642,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (this.dests.size === 0) return;
     if (this.engineOn) {
       this.runAnalysis(this.engine, this.currentFen);
-      this.runAnalysis(this.compareEngine, this.currentFen);
-    } else if (this.sparringEngineQuiet) {
+      this.runAnalysis(this.compare.engine, this.currentFen);
+    } else if (this.spar.sparringEngineQuiet) {
       this.runAnalysis(this.engine, this.currentFen);   // stille Engine im Sparring: nur die Haupt-Engine
     }
   }
@@ -982,23 +653,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  noch schlucken, damit daraus kein „Uncaught (in promise)" in der Konsole wird. */
   private runAnalysis(engine: AnalysisEngineService | undefined, fen: string): void {
     engine?.analyze(fen).catch(() => {});
-  }
-
-  /** Sorgt dafür, dass die Vergleichs-Engine eine ANDERE ist als die Haupt-Engine, und merkt
-   *  sich die Korrektur. Muss an EINER Stelle passieren, die jeder Weg durchläuft — sonst
-   *  entsteht die Selbstvergleichs-Kombination über den Haupt-Picker oder nach einem Neuladen
-   *  doch wieder (zwei Instanzen rechnen dann dasselbe, im Browser-Fall zweimal 7 MB WASM). */
-  private ensureDistinctCompareEngine(): void {
-    if (this.compareEngineId !== this.selectedEngineId) return;
-    const other = this.engineChoices.find(c => c.id !== this.selectedEngineId);
-    if (!other) return;
-    this.compareEngineId = other.id;
-    try { localStorage.setItem(COMPARE_ENGINE_KEY, this.compareEngineId); } catch {}
-  }
-
-  onCompareEngineSelect(): void {
-    try { localStorage.setItem(COMPARE_ENGINE_KEY, this.compareEngineId); } catch {}
-    this.startCompare();
   }
 
   /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder.
@@ -1024,88 +678,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
    *  Engine genannt — ein Vergleich mit falschem Etikett wäre schlimmer als gar keiner. */
-  get compareEngineName(): string {
-    if (this.compareFallback) return this.translate.instant('analysis.engineBrowser');
-    return this.engineChoices.find(c => c.id === this.compareEngineId)?.name ?? '';
-  }
+  get compareEngineName(): string { return this.compare.name(this.translate.instant('analysis.engineBrowser')); }
   /** Anzeigename der Haupt-Engine — im Vergleichsmodus muss beschriftet sein, welche welche ist. */
   get mainEngineName(): string {
     if (this.remoteFallback && this.selectedEngineId !== 'wasm') return this.translate.instant('analysis.engineBrowser');
     return this.engineChoices.find(c => c.id === this.selectedEngineId)?.name ?? '';
   }
 
-  /** Erzeugung der Vergleichs-Engine als Seam (in Tests ueberschreibbar) — analog zu
-   *  createWorker() im Service. Ohne ihn lief in den Compare-Specs der ECHTE Service: auf dem
-   *  Remote-Pfad in einen TypeError (der analyse-Spy liefert kein Observable), auf dem
-   *  WASM-Pfad in einen echten 7-MB-Worker im Karma-Browser. Die Specs pruefte damit
-   *  Vergleichszustand, den nie jemand angetrieben hatte. */
-  protected createCompareEngine(): AnalysisEngineService { return new AnalysisEngineService(); }
-
-  /** Baut die zweite Engine-Instanz auf (bzw. richtet sie neu aus) und startet ihre Suche. */
-  private startCompare(): void {
-    this.stopCompare();
-    if (!this.compareOn) return;
-    // Gespeicherte Wahl kann veraltet sein (Engine abgemeldet, umbenannt): unbekannte ID auf
-    // „Browser" zurücksetzen, statt sie stumm als null durchzureichen — das ergäbe eine
-    // Browser-Suche unter leerem Etikett.
-    if (this.compareEngineId !== 'wasm' && !this.externalEnginesList.some(e => e.id === this.compareEngineId)) {
-      this.compareEngineId = 'wasm';
-    }
-    this.ensureDistinctCompareEngine();
-    // Blieb nur EINE Engine uebrig (keine externe registriert, Token abgelaufen, Liste leer),
-    // konnte ensureDistinctCompareEngine() nichts ausweichen lassen. Dann verglichen sich zwei
-    // Instanzen derselben Engine — im Browser-Fall zwei 7-MB-WASM-Kerne, die sich denselben
-    // Prozessorkern teilen und sich gegenseitig die Rechenleistung halbieren, fuer zwei
-    // garantiert identische Linienlisten. Lieber ehrlich abschalten als das anzubieten.
-    if (this.compareEngineId === this.selectedEngineId) {
-      this.compareOn = false;
-      try { localStorage.setItem(COMPARE_KEY, '0'); } catch {}
-      this.cdr.markForCheck();
-      return;
-    }
-    const engine = this.createCompareEngine();
-    // Die DI-Instanz bekommt ihren Telemetrie-Hook in app.component; diese hier wird von Hand
-    // gebaut und haette gar keinen. Ausgerechnet der Vergleichsmodus verdoppelt aber den
-    // WASM-Speicherdruck und ist damit die wahrscheinlichste Absturzquelle — seine Crashes
-    // duerfen nicht die einzigen sein, die nirgends auftauchen.
-    engine.reportEngineEvent = (kind, detail) => this.engine.reportEngineEvent?.('compare_' + kind, detail);
-    engine.setDepth(this.depthSetting);
-    engine.setMultiPv(this.linesCount);
-    const info = this.externalEnginesList.find(e => e.id === this.compareEngineId) ?? null;
-    engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
-    this.compareSub = engine.analysis$.subscribe(st => this.onCompareUpdate(st.fen, st.depth, st.lines, st.nps));
-    this.compareFallbackSub = engine.remoteFallback$.subscribe(f => { this.compareFallback = f; this.cdr.markForCheck(); });
-    this.compareErrorSub = engine.engineFatalError$.subscribe(e => { this.compareCrashed = e !== null; this.cdr.markForCheck(); });
-    this.compareEngine = engine;
-    if (this.engineOn && this.dests.size > 0) this.runAnalysis(engine, this.currentFen);
-  }
-
-  private stopCompare(): void {
-    this.compareSub?.unsubscribe();
-    this.compareSub = undefined;
-    this.compareFallbackSub?.unsubscribe();
-    this.compareFallbackSub = undefined;
-    this.compareErrorSub?.unsubscribe();
-    this.compareErrorSub = undefined;
-    this.compareFallback = false;
-    this.compareCrashed = false;
-    this.compareEngine?.destroy();
-    this.compareEngine = undefined;
-    this.compareLines = [];
-    this.compareDepth = 0;
-    this.compareNps = 0;
-  }
-
-  private onCompareUpdate(fen: string, depth: number, lines: AnalysisLine[], nps: number): void {
-    if (fen !== this.currentFen) return;   // Antwort einer bereits verlassenen Stellung
-    this.compareDepth = depth;
-    this.compareNps = nps;
-    this.compareLines = this.toDisplayLines(fen, lines);
-    this.cdr.markForCheck();
-  }
-
   /** Tempo der Vergleichs-Engine für deren (i) — gleiche Formatierung wie bei der Haupt-Engine. */
-  get compareSpeedHint(): string { return this.speedHintFor(this.compareNps, null); }
+  get compareSpeedHint(): string { return this.speedHintFor(this.compare.nps, null); }
 
   onEngineSelect(): void {
     try { localStorage.setItem(PROVIDER_KEY, this.selectedEngineId); } catch {}
@@ -1117,11 +698,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
     // Wandert die Haupt-Engine auf die, die gerade als Vergleich läuft, muss die Vergleichs-
     // seite ausweichen — sonst rechnen beide Instanzen dasselbe.
-    // ensureDistinctCompareEngine() NICHT hier aufrufen: startCompare() macht es als zweiten
+    // ensureDistinctEngine() NICHT hier aufrufen: compare.start() macht es als zweiten
     // Schritt ohnehin. Zwei Aufrufstellen fuer dieselbe Invariante lesen sich, als sicherten sie
     // Verschiedenes ab, und laden dazu ein, nur eine davon zu „reparieren".
-    if (this.compareOn && this.compareEngineId === this.selectedEngineId) this.startCompare();
-    if ((this.engineOn || this.sparringEngineQuiet) && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
+    if (this.compare.on && this.compare.engineId === this.selectedEngineId) this.compare.start();
+    if ((this.engineOn || this.spar.sparringEngineQuiet) && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
   }
 
   backToPuzzle(): void {
@@ -1134,7 +715,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private resetToStart(fen = this.startFen): void { this.setTree(createRoot(fen)); }
 
   // ---- Stellung aufbauen (Brett-Editor) ----
-  startEditing(): void { this.abortMaia(); this.editing = true; }
+  startEditing(): void { this.spar.abortMaia(); this.editing = true; }
   onSetupApply(fen: string): void {
     this.editing = false;
     this.historySaver.newSession();
@@ -1200,14 +781,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       case 'delete': {
         const within = isWithin(current, e.node);
         // Fällt die Ausgangsstellung des Sparrings weg, endet es (Maia-Regel 9).
-        const endsSparring = !!this.sparring && isWithin(this.sparring.start, e.node);
+        const endsSparring = this.spar.endedByRemoving(e.node);
         const parent = removeNode(e.node);
         if (!parent) return;
-        if (endsSparring) this.endSparring();
-        // Fiel nur ein Teil der laufenden Partie weg, ist ihr letzter Zug jetzt der Zug davor (er liegt noch unter `start`).
-        if (this.sparring && !this.isAttached(this.sparring.tip)) this.sparring.tip = parent;
-        // Hängt die zuletzt gespielte Partie nicht mehr am Baum, gibt es sie nicht mehr zu analysieren.
-        if (this.lastSparring && !this.isAttached(this.lastSparring.tip)) this.lastSparring = null;
+        this.spar.afterRemove(parent, endsSparring);
         this.treeVersion++;
         // Stand man in dem, was wegfällt, geht es beim Zug davor weiter.
         if (within) { this.goToNode(parent); return; }
@@ -1224,286 +801,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.treeVersion++;
     this.line = lineThrough(current);
     this.historySaver.schedule();
-  }
-
-  // ---- Sparring gegen Maia ----
-  //
-  // Maias Züge laufen über goToNode → refresh → historySaver.schedule: die gespielte Linie landet ohne weiteres Zutun im
-  // Zugbaum und im Analyse-Verlauf. Die Karte (MaiaSparringCardComponent) lädt das Modell; hier steht nur das Spiel.
-
-  /** Sparring läuft, Maia ist am Zug, und die Stellung ist nicht zu Ende — die Karte bietet dann „Maia zieht" an. */
-  get maiaToMove(): boolean {
-    return !!this.sparring && this.turnColor !== this.sparring.userColor && this.dests.size > 0;
-  }
-
-  /** Von der Karte, sobald das Modell bereit ist: ab HIER, der Nutzer spielt die Seite am Zug, die Engine geht aus
-   *  (ihr Zustand wird gemerkt, aber NICHT in localStorage — die Dauereinstellung des Nutzers bleibt). */
-  startSparring(): void {
-    if (this.sparring || this.editing || this.dests.size === 0) return;   // zu Ende: es gibt nichts zu spielen
-    this.sparring = { start: this.currentNode, tip: this.currentNode, userColor: this.turnColor, engineWasOn: this.engineOn };
-    this.engineOn = false;
-    this.orientation = this.sparring.userColor;
-    this.refresh();
-    this.cdr.markForCheck();
-  }
-
-  /** „Beenden": eine laufende Antwort verfällt, die Engine kommt in den Zustand von vorher zurück. */
-  stopSparring(): void {
-    if (!this.sparring) return;
-    this.endSparring();
-    if (this.sparringAnalyzeVisible) this.ensureAnalyzeStatus();
-    this.refresh();
-    this.cdr.markForCheck();
-  }
-
-  /** „Seite wechseln": ist jetzt Maia am Zug, zieht sie gleich. */
-  switchSparringSides(): void {
-    if (!this.sparring) return;
-    this.abortMaia();
-    const userColor: Color = this.sparring.userColor === 'white' ? 'black' : 'white';
-    this.sparring = { ...this.sparring, userColor };
-    this.sparringWarning = null;
-    this.orientation = userColor;
-    if (this.maiaToMove) this.requestMaiaMove();
-    this.cdr.markForCheck();
-  }
-
-  /** „Nochmal ab der Ausgangsstellung": zurück zum Start; ist dort Maia am Zug, zieht sie. */
-  restartSparring(): void {
-    if (!this.sparring) return;
-    this.sparringWarning = null;
-    this.goToNode(this.sparring.start);
-    if (this.maiaToMove) this.requestMaiaMove();
-    this.cdr.markForCheck();
-  }
-
-  /** Maia nach ihrem Zug in der aktuellen Stellung fragen und ihn — wenn er noch gefragt ist — wie einen eigenen Zug
-   *  in den Baum spielen. Eine Navigation, ein Abbruch oder das Ende des Sparrings dazwischen lassen ihn verfallen. */
-  requestMaiaMove(): void {
-    // Der eigene Zug davor (aus onMove) — nur dieser Aufruf darf ihn prüfen.
-    const before = this.pendingBefore;
-    this.pendingBefore = null;
-    if (!this.maiaToMove) return;
-    const epoch = ++this.maiaEpoch;
-    const node = this.currentNode;
-    this.maiaThinking = true;
-    this.cdr.markForCheck();
-    const pause = this.maiaDelayMs > 0
-      ? new Promise<void>(resolve => setTimeout(resolve, this.maiaDelayMs))
-      : Promise.resolve();
-    // „Schlechte Züge melden": Maias Antwort wartet auf das Urteil. So steht die Warnung schon da, wenn ihr Zug aufs Brett
-    // kommt, und die Suche der Stellung nach dem eigenen Zug wird nicht von Maias Zug abgewürgt.
-    const check = before && this.warnBadMoves && this.sparring
-      ? this.awaitMoveCheck(node.fen, this.sparring.userColor, before.points, epoch)
-      : Promise.resolve(null);
-    Promise.all([this.maia.chooseMove(node.fen, this.maiaElo), pause, check]).then(
-      ([uci, , verdict]) => {
-        if (!this.maiaStillWanted(epoch, node)) return;
-        this.maiaThinking = false;
-        if (before) {
-          this.sparringWarning = verdict
-            ? { san: numberedSan(node), before: before.node, beforeText: verdict.before.evalText,
-                afterText: verdict.after.evalText, drop: verdict.drop }
-            : null;
-        }
-        if (uci) {
-          const next = playUci(node, uci);
-          if (next) {
-            this.treeVersion++;
-            this.goToNode(next);   // zählt maiaEpoch selbst hoch — die Antwort ist da schon verbucht
-            this.noteSparringMove(next);
-          } else {
-            this.snackbar.warn(this.translate.instant('analysis.maia.moveFailed'));
-          }
-        }
-        this.cdr.markForCheck();
-      },
-      () => {
-        this.cancelMoveCheck(epoch);   // Maias Zug kam nicht — die Prüfung dieses Aufrufs braucht niemand mehr
-        if (!this.maiaStillWanted(epoch, node)) return;
-        this.maiaThinking = false;
-        this.snackbar.warn(this.translate.instant('analysis.maia.moveFailed'));   // das Sparring bleibt aktiv
-        // Ist die Sitzung selbst weg (Worker gestorben → Status `error`), im Hintergrund neu aufbauen: das Modell liegt
-        // im Cache, der nächste Klick auf „Maia zieht" geht dann wieder. War es nur diese eine Anfrage, bleibt alles.
-        if (this.maia.status() !== 'ready') this.maia.prepare().catch(() => {});
-        this.cdr.markForCheck();
-      },
-    );
-  }
-
-  onMaiaEloChange(elo: number): void {
-    if (!(MAIA_ELO_OPTIONS as readonly number[]).includes(elo)) return;
-    this.maiaElo = elo;   // gilt ab dem nächsten Maia-Zug
-    try { localStorage.setItem(MAIA_ELO_KEY, String(elo)); } catch {}
-  }
-
-  private maiaStillWanted(epoch: number, node: AnalysisNode): boolean {
-    return epoch === this.maiaEpoch && !!this.sparring && this.currentNode === node;
-  }
-
-  /** Eine laufende Maia-Antwort verfallen lassen (Navigation, Seite wechseln, Editor, Ende). */
-  private abortMaia(): void {
-    this.maiaEpoch++;
-    this.maiaThinking = false;
-    this.cancelMoveCheck();
-  }
-
-  /** Sparring beenden, ohne neu zu zeichnen — die Aufrufer tun es selbst (refresh bzw. goToNode). Die gespielte Partie
-   *  bleibt für „Partie analysieren" stehen, wenn sie mindestens zwei Halbzüge hat. */
-  private endSparring(): void {
-    const sparring = this.sparring;
-    if (!sparring) return;
-    this.abortMaia();
-    this.engineOn = sparring.engineWasOn;
-    this.sparring = null;
-    this.pendingBefore = null;
-    this.sparringWarning = null;
-    this.lastSparring = this.sparringPlies(sparring.start, sparring.tip) >= 2
-      ? { start: sparring.start, tip: sparring.tip, userColor: sparring.userColor, elo: this.maiaElo }
-      : null;
-  }
-
-  // ---- „Schlechte Züge melden" + „Bewertungsleiste anlassen" (0.645.0) ----
-
-  onWarnBadMovesChange(on: boolean): void {
-    this.warnBadMoves = on;
-    try { localStorage.setItem(MAIA_WARN_KEY, on ? '1' : '0'); } catch {}
-    if (!on) { this.pendingBefore = null; this.cancelMoveCheck(); this.sparringWarning = null; }
-    if (this.sparring) this.refresh();   // die stille Engine startet bzw. stoppt sofort
-    this.cdr.markForCheck();
-  }
-
-  onKeepEvalBarChange(on: boolean): void {
-    this.keepEvalBar = on;
-    try { localStorage.setItem(MAIA_EVALBAR_KEY, on ? '1' : '0'); } catch {}
-    if (this.sparring) this.refresh();   // aus → Leiste neutral; an → sie folgt ab der nächsten belastbaren Tiefe
-    this.cdr.markForCheck();
-  }
-
-  /** „Analysieren" an der Warnung: Sparring beenden (die Partie bleibt für „Partie analysieren"), Engine EIN — nur für
-   *  diese Sitzung, nicht in localStorage — und auf die Stellung VOR dem schlechten Zug; er steht dort als Fortsetzung im
-   *  Zugbaum, die Linien zeigen, was besser war. */
-  analyzeWarning(): void {
-    const w = this.sparringWarning;
-    if (!w || !this.sparring) return;
-    this.endSparring();
-    this.sparringWarning = null;
-    if (this.sparringAnalyzeVisible) this.ensureAnalyzeStatus();
-    this.engineOn = true;
-    if (this.isAttached(w.before)) this.goToNode(w.before);
-    else this.refresh();
-    this.cdr.markForCheck();
-  }
-
-  /** Urteil über den eigenen Zug: sobald die Suche der Stellung nach dem Zug `min(MAIA_CHECK_DEPTH, Tiefe)` erreicht oder
-   *  vorher endet; spätestens nach `maiaCheckTimeoutMs` mit dem besten Wert ab EVAL_SETTLE_DEPTH, sonst `null`. */
-  private awaitMoveCheck(fen: string, mover: Color, before: EvalPoint[], epoch: number): Promise<BadMoveVerdict | null> {
-    this.cancelMoveCheck();
-    return new Promise(resolve => {
-      const timer = setTimeout(() => this.finishMoveCheck(this.deepestPoint(fen, EVAL_SETTLE_DEPTH)), this.maiaCheckTimeoutMs);
-      this.pendingCheck = { fen, mover, before, epoch, resolve, timer };
-      this.serveMoveCheck(fen);   // die Spur der Stellung kann schon tief genug sein
-    });
-  }
-
-  /** Aus onEngineUpdate: ist die Prüfung dieser Stellung so weit? */
-  private serveMoveCheck(fen: string): void {
-    const check = this.pendingCheck;
-    if (!check || check.fen !== fen) return;
-    const after = this.deepestPoint(fen);
-    if (!after) return;
-    if (after.depth >= Math.min(MAIA_CHECK_DEPTH, this.depthSetting) || !this.running) this.finishMoveCheck(after);
-  }
-
-  private finishMoveCheck(after: EvalPoint | null): void {
-    const check = this.pendingCheck;
-    if (!check) return;
-    clearTimeout(check.timer);
-    this.pendingCheck = null;
-    check.resolve(after ? badMoveVerdict(check.before, after, check.mover) : null);
-  }
-
-  /** Eine offene Prüfung ohne Urteil beenden (Navigation, Abbruch, Ende) — nur die eines bestimmten Aufrufs, wenn
-   *  `epoch` angegeben ist. */
-  private cancelMoveCheck(epoch?: number): void {
-    const check = this.pendingCheck;
-    if (!check || (epoch !== undefined && check.epoch !== epoch)) return;
-    clearTimeout(check.timer);
-    this.pendingCheck = null;
-    check.resolve(null);
-  }
-
-  // ---- „Partie analysieren" nach dem Sparring ----
-  //
-  // Derselbe Weg wie in „Meine Partien": die Sparring-Partie wird eine gewöhnliche Partie (`POST /api/games/import`, mit
-  // der eigenen Seite) und läuft dann durch `AnalyzeGameService.submit` — keine eigene Analyse, keine eigene Engine-Wahl.
-
-  /** Ein Zug kam während des Sparrings aufs Brett (eigener, Maias, aus Explorer/Repertoire): liegt er unter `start`, ist
-   *  er der neue letzte Zug der Partie — auch nach Zurückgehen und anders Weiterspielen. */
-  private noteSparringMove(node: AnalysisNode): void {
-    if (!this.sparring || !isWithin(node, this.sparring.start)) return;
-    this.sparring.tip = node;
-    if (this.sparringAnalyzeVisible) this.ensureAnalyzeStatus();
-  }
-
-  /** Den Knopf zeigen: angemeldet, eine Partie mit mindestens zwei Halbzügen, und entweder ist das Sparring vorbei oder
-   *  seine Stellung zu Ende (mitten in der Partie hat die Karte schon vier Symbole). */
-  get sparringAnalyzeVisible(): boolean {
-    if (!this.auth.isLoggedIn) return false;
-    const s = this.sparring;
-    if (s) return this.sparringPlies(s.start, s.tip) >= 2 && this.currentNode === s.tip && this.dests.size === 0;
-    return !!this.lastSparring;
-  }
-
-  analyzeSparring(): void {
-    if (this.analyzingSparring || !this.sparringAnalyzeVisible) return;
-    if (this.sparring) this.stopSparring();   // läuft es noch (Stellung zu Ende), endet es wie mit „Beenden"
-    const game = this.lastSparring;
-    if (!game) return;
-    const startDepth = pathTo(game.start).length;
-    const pgn = buildSparringPgn({
-      startFen: game.start.fen,
-      sans: pathTo(game.tip).slice(startDepth).map(n => n.san),
-      userColor: game.userColor,
-      userName: this.auth.currentUser?.username ?? '',
-      elo: game.elo,
-      date: new Date(),
-    });
-    if (!pgn) { this.snackbar.warn(this.translate.instant('analysis.maia.saveFailed')); return; }
-    this.analyzingSparring = true;
-    this.cdr.markForCheck();
-    const done = () => { this.analyzingSparring = false; this.cdr.markForCheck(); };
-    this.games.importPgn(pgn, game.userColor).subscribe({
-      next: res => {
-        const id = res?.ids?.[0];
-        if (!id) { this.snackbar.warn(this.translate.instant('analysis.maia.saveFailed')); done(); return; }
-        // Absage (keine Engine, Deckel): die Snackbar nennt den Grund, die Partie liegt trotzdem in „Meine Partien".
-        this.analyzeGame.submit(this.games.analyzeUrl(id), this.analyzeStatus).subscribe(ok => {
-          done();
-          if (ok) void this.router.navigate(['/games', id]);
-        });
-      },
-      error: () => { this.snackbar.warn(this.translate.instant('analysis.maia.saveFailed')); done(); },
-    });
-  }
-
-  /** Halbzüge von `start` bis `tip` (`tip` liegt im Teilbaum von `start`). */
-  private sparringPlies(start: AnalysisNode, tip: AnalysisNode): number {
-    return pathTo(tip).length - pathTo(start).length;
-  }
-
-  /** Hängt der Knoten noch am aktuellen Baum? (Gelöschte Zweige verlieren ihren Elternknoten.) */
-  private isAttached(node: AnalysisNode): boolean {
-    let n: AnalysisNode | null = node;
-    while (n?.parent) n = n.parent;
-    return n === this.root;
-  }
-
-  /** Die Engine-Auskunft höchstens einmal holen — nur angemeldet. */
-  private ensureAnalyzeStatus(): void {
-    if (this.analyzeStatusAsked || !this.auth.isLoggedIn) return;
-    this.analyzeStatusAsked = true;
-    this.analyzeGame.status().subscribe(status => { this.analyzeStatus = status; this.cdr.markForCheck(); });
   }
 
   // ---- Analyse-Verlauf ----

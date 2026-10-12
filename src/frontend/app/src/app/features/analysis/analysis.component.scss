@@ -1,0 +1,52 @@
+/* App-Vollbild (Host-Klasse auf app-root): Seitentitel weg — das Brett bekommt den Platz. */
+:host-context(.app-fullscreen) h1 { display: none; }
+.analysis-page { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
+.analysis-layout { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
+/* Brettgröße an die Fensterhöhe gebunden (d2-rk-analysis-brettspalte): groß wächst das Brett bis 820 px, am Laptop
+   passt es samt Kopf unter die Falz. */
+.board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, calc(100vh - 170px), 820px); min-width: 280px; }
+.board-col.editing { display: block; width: min(64vw, 560px); }
+/* Ab 769 px klebt das Brett beim Scrollen (Explorer, Zugbaum laufen rechts weiter); die Navbar klebt nicht, daher 12 px. */
+@media (min-width: 769px) {
+  .board-col:not(.editing) { position: sticky; top: 12px; align-self: flex-start; }
+}
+.editor-full { display: block; width: 100%; }
+.eval-bar { width: 14px; align-self: stretch; background: #3a3a3a; border-radius: 3px; overflow: hidden; position: relative; min-height: 280px; }
+.eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }
+.board-wrap { flex: 1; min-width: 260px; }
+.side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
+.back-btn { width: 100%; margin-bottom: 8px; }
+.muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
+.controls { display: flex; align-items: center; gap: 2px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.header h1 { margin: 0 0 8px; }
+.star-btn.on mat-icon { color: #f9a825; }
+.star-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 8px; }
+.star-jumps .star-icon { color: #f9a825; font-size: 18px; width: 18px; height: 18px; }
+.star-jumps .jump { font: inherit; font-family: 'Courier New', monospace; font-size: .85rem; padding: 1px 8px; border-radius: 999px;
+  border: 1px solid rgba(249, 168, 37, .6); background: transparent; color: inherit; cursor: pointer; }
+.star-jumps .jump.active { background: rgba(249, 168, 37, .25); }
+.controls .spacer { flex: 1; }
+/* UI-Sweep 2026-10-11: neun Symbolknöpfe (seit dem „+" in 0.749.0) brauchen 432 px — am Handy ragte das ⋮ aus dem Fenster.
+   Unter 480 px rücken sie auf 36 px zusammen, auch die in app-mark-position-button und app-position-menu. */
+@media (max-width: 480px) {
+  .controls { gap: 0; }
+  .controls ::ng-deep .mat-mdc-icon-button { width: 36px; height: 36px; padding: 6px; --mat-icon-button-state-layer-size: 36px; }
+  .controls ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target { width: 36px; height: 36px; }
+}
+.movetree { margin-top: 8px; }
+.tree-hint { margin: 6px 0 0; font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); }
+.io-card .full { width: 100%; }
+.io-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.board-tap { display: none; }
+@media (max-width: 768px) {
+  .board-col { width: 100%; min-width: 0; position: relative; }
+  .board-wrap { min-width: 0; }
+  /* Schmale (halb so breite), unsichtbare Tap-Streifen — kein Button-Look. */
+  .board-tap { display: block; flex: 0 0 auto; width: 15px; align-self: stretch; border-radius: 6px;
+    cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .board-tap:active { background: color-mix(in srgb, currentColor 12%, transparent); }
+  /* „Zurück" liegt als Overlay ÜBER der Bewertungsleiste (links), statt eine eigene Spalte zu
+     belegen → das Brett bekommt die gesparte Breite. */
+  .board-tap-prev { position: absolute; left: 0; top: 0; bottom: 0; width: 15px; z-index: 2; }
+}

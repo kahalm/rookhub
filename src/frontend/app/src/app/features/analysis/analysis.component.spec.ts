@@ -98,7 +98,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
   };
   const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de', history, dialog, maia,
     games, analyzeGame);
-  c.maiaDelayMs = 0;
+  c.spar.maiaDelayMs = 0;
   c.__http = http;
   c.__analyzeGame = analyzeGame;
   c.__router = router;
@@ -106,10 +106,10 @@ function makeComponent(params: Record<string, string | null>, opts: {
   c.__snackbar = snackBar;
   c.__history = history;
   c.__dialog = dialog;
-  // Vergleichs-Engine ueber den Seam: sonst baut startCompare() den echten Service und
+  // Vergleichs-Engine ueber den Seam: sonst baut compare.start() den echten Service und
   // damit im Karma-Browser einen echten WASM-Worker bzw. laeuft in einen TypeError.
   c.__compareEngines = [] as any[];
-  c.createCompareEngine = () => {
+  c.compare.createEngine = () => {
     // Spiegelt die oeffentliche Flaeche des Service so weit, wie die Specs sie brauchen:
     // fatalError$ und engineFatalError$ sind DASSELBE Subject (im echten Service ist das eine
     // die private Quelle des anderen), depthLimit/linesRequested werden aus den Settern
@@ -495,8 +495,8 @@ describe('AnalysisComponent compare mode', () => {
   it('is off by default and creates no second engine', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
-    expect(c.compareOn).toBeFalse();
-    expect((c as any).compareEngine).toBeUndefined();
+    expect(c.compare.on).toBeFalse();
+    expect(c.compare.engine).toBeUndefined();
     c.ngOnDestroy();
   });
 
@@ -505,18 +505,18 @@ describe('AnalysisComponent compare mode', () => {
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
 
-    c.compareOn = true;
-    c.onCompareToggle();
-    const second = (c as any).compareEngine;
+    c.compare.on = true;
+    c.compare.onToggle();
+    const second = c.compare.engine;
     expect(second).toBeDefined();
     expect(second).not.toBe((c as any).engine);      // eigene Instanz, nicht der Singleton
     spyOn(second, 'destroy').and.callThrough();
 
-    c.compareOn = false;
-    c.onCompareToggle();
+    c.compare.on = false;
+    c.compare.onToggle();
     expect(second.destroy).toHaveBeenCalled();
-    expect((c as any).compareEngine).toBeUndefined();
-    expect(c.compareLines.length).toBe(0);
+    expect(c.compare.engine).toBeUndefined();
+    expect(c.compare.lines.length).toBe(0);
     c.ngOnDestroy();
   });
 
@@ -524,9 +524,9 @@ describe('AnalysisComponent compare mode', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
-    c.compareOn = true;
-    c.onCompareToggle();
-    const second = (c as any).compareEngine;
+    c.compare.on = true;
+    c.compare.onToggle();
+    const second = c.compare.engine;
     spyOn(second, 'destroy').and.callThrough();
 
     c.ngOnDestroy();
@@ -539,11 +539,11 @@ describe('AnalysisComponent compare mode', () => {
     await new Promise(r => setTimeout(r));
 
     c.selectedEngineId = 'eei_a';
-    c.compareEngineId = 'eei_a';                     // dieselbe wie die Haupt-Engine
-    c.compareOn = true;
-    c.onCompareToggle();
+    c.compare.engineId = 'eei_a';                     // dieselbe wie die Haupt-Engine
+    c.compare.on = true;
+    c.compare.onToggle();
 
-    expect(c.compareEngineId).not.toBe('eei_a');     // wurde auf eine andere umgestellt
+    expect(c.compare.engineId).not.toBe('eei_a');     // wurde auf eine andere umgestellt
     c.ngOnDestroy();
   });
 
@@ -552,7 +552,7 @@ describe('AnalysisComponent compare mode', () => {
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
     c.selectedEngineId = 'eei_a';
-    c.compareEngineId = 'eei_b';
+    c.compare.engineId = 'eei_b';
 
     expect(c.mainEngineName).toBe('RookHub Server');
     expect(c.compareEngineName).toBe('RookHub PC');
@@ -563,14 +563,14 @@ describe('AnalysisComponent compare mode', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
-    c.compareOn = true;
-    c.onCompareToggle();
+    c.compare.on = true;
+    c.compare.onToggle();
 
-    (c as any).onCompareUpdate('8/8/8/8/8/8/8/K6k w - - 0 1', 20, [
+    (c as any).compare.onUpdate('8/8/8/8/8/8/8/K6k w - - 0 1', 20, [
       { multipv: 1, depth: 20, scoreType: 'cp', score: 50, evalText: '+0.50', pvUci: ['a1b1'] },
     ], 1000);
 
-    expect(c.compareLines.length).toBe(0);           // fremde Stellung → verworfen
+    expect(c.compare.lines.length).toBe(0);           // fremde Stellung → verworfen
     c.ngOnDestroy();
   });
 
@@ -578,9 +578,9 @@ describe('AnalysisComponent compare mode', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
-    c.compareOn = true;
-    c.onCompareToggle();
-    const second = (c as any).compareEngine;
+    c.compare.on = true;
+    c.compare.onToggle();
+    const second = c.compare.engine;
 
     c.depthSetting = 35;
     c.onDepthChange();
@@ -614,12 +614,12 @@ describe('AnalysisComponent compare mode labelling on fallback', () => {
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
     c.selectedEngineId = 'eei_a';
-    c.compareEngineId = 'eei_b';
-    c.compareOn = true;
-    c.onCompareToggle();
+    c.compare.engineId = 'eei_b';
+    c.compare.on = true;
+    c.compare.onToggle();
 
     expect(c.compareEngineName).toBe('RookHub PC');
-    (c as any).compareFallback = true;
+    c.compare.fallback = true;
     expect(c.compareEngineName).toBe('analysis.engineBrowser');
     c.ngOnDestroy();
   });
@@ -640,13 +640,13 @@ describe('AnalysisComponent compare mode labelling on fallback', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
-    c.compareOn = true;
-    c.onCompareToggle();
-    (c as any).compareFallback = true;
+    c.compare.on = true;
+    c.compare.onToggle();
+    c.compare.fallback = true;
 
-    c.compareOn = false;
-    c.onCompareToggle();
-    expect(c.compareFallback).toBeFalse();
+    c.compare.on = false;
+    c.compare.onToggle();
+    expect(c.compare.fallback).toBeFalse();
     c.ngOnDestroy();
   });
 });
@@ -685,14 +685,14 @@ describe('AnalysisComponent compare mode hardening', () => {
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
     c.selectedEngineId = 'eei_a';
-    c.compareEngineId = 'eei_b';
-    c.compareOn = true;
-    c.onCompareToggle();
+    c.compare.engineId = 'eei_b';
+    c.compare.on = true;
+    c.compare.onToggle();
 
     c.selectedEngineId = 'eei_b';        // Haupt-Engine wandert auf die Vergleichs-Engine
     c.onEngineSelect();
 
-    expect(c.compareEngineId).not.toBe('eei_b');
+    expect(c.compare.engineId).not.toBe('eei_b');
     c.ngOnDestroy();
   });
 
@@ -706,7 +706,7 @@ describe('AnalysisComponent compare mode hardening', () => {
     await new Promise(r => setTimeout(r));
 
     expect(c.selectedEngineId).toBe('eei_a');
-    expect(c.compareEngineId).not.toBe('eei_a');
+    expect(c.compare.engineId).not.toBe('eei_a');
     c.ngOnDestroy();
   });
 
@@ -719,7 +719,7 @@ describe('AnalysisComponent compare mode hardening', () => {
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
 
-    expect(c.compareEngineId).toBe('wasm');
+    expect(c.compare.engineId).toBe('wasm');
     expect(c.compareEngineName).toBe('analysis.engineBrowser');   // nie ein leeres Etikett
     c.ngOnDestroy();
   });
@@ -735,7 +735,7 @@ describe('AnalysisComponent compare mode hardening', () => {
     await new Promise(r => setTimeout(r));
 
     expect(c.selectedEngineId).toBe('wasm');
-    expect(['eei_a', 'eei_b']).toContain(c.compareEngineId);
+    expect(['eei_a', 'eei_b']).toContain(c.compare.engineId);
     expect(c.compareEngineName).not.toBe('');
     c.ngOnDestroy();
   });
@@ -745,8 +745,8 @@ describe('AnalysisComponent compare mode hardening', () => {
     const c = makeComponent({ fen: START }, { loggedIn: false });   // keine Engine-Liste
     c.ngOnInit();
 
-    expect(c.compareOn).toBeTrue();
-    expect(c.compareRunning).toBeFalse();     // Template zeigt daran nichts an
+    expect(c.compare.on).toBeTrue();
+    expect(c.compare.running).toBeFalse();     // Template zeigt daran nichts an
     c.ngOnDestroy();
   });
 
@@ -754,16 +754,16 @@ describe('AnalysisComponent compare mode hardening', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
-    c.compareOn = true;
-    c.onCompareToggle();
-    expect(c.compareCrashed).toBeFalse();
+    c.compare.on = true;
+    c.compare.onToggle();
+    expect(c.compare.crashed).toBeFalse();
 
-    (c as any).compareEngine['fatalError$'].next('crash');
-    expect(c.compareCrashed).toBeTrue();
+    c.compare.engine['fatalError$'].next('crash');
+    expect(c.compare.crashed).toBeTrue();
 
-    c.compareOn = false;
-    c.onCompareToggle();
-    expect(c.compareCrashed).toBeFalse();     // beim Abschalten zurückgesetzt
+    c.compare.on = false;
+    c.compare.onToggle();
+    expect(c.compare.crashed).toBeFalse();     // beim Abschalten zurückgesetzt
     c.ngOnDestroy();
   });
 });
@@ -785,14 +785,14 @@ describe('AnalysisComponent compare mode invariants', () => {
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
 
-    c.compareOn = true;
-    c.onCompareToggle();
+    c.compare.on = true;
+    c.compare.onToggle();
 
     // Ohne den Fix baute startCompare() hier eine zweite WASM-Instanz: zwei 7-MB-Kerne auf
     // demselben Prozessorkern, fuer zwei garantiert identische Linienlisten.
-    expect((c as any).compareEngine).toBeUndefined();
+    expect(c.compare.engine).toBeUndefined();
     expect((c as any).__compareEngines.length).toBe(0);
-    expect(c.compareOn).toBeFalse();                       // ehrlich abgeschaltet
+    expect(c.compare.on).toBeFalse();                       // ehrlich abgeschaltet
     expect(localStorage.getItem('rookhub_analysis_compare')).toBe('0');
     c.ngOnDestroy();
   });
@@ -808,7 +808,7 @@ describe('AnalysisComponent compare mode invariants', () => {
     // Vorher lief startCompare() zweimal: applyEngineSelection() baute eine Instanz, die
     // naechste Zeile in ngOnInit zerstoerte sie sofort wieder und baute eine zweite.
     expect((c as any).__compareEngines.length).toBe(1);
-    expect((c as any).compareEngine).toBeDefined();
+    expect(c.compare.engine).toBeDefined();
     c.ngOnDestroy();
   });
 
@@ -816,16 +816,16 @@ describe('AnalysisComponent compare mode invariants', () => {
     const c = makeComponent({ fen: START }, { loggedIn: true, engines: ENGINES });
     c.ngOnInit();
     await new Promise(r => setTimeout(r));
-    c.compareOn = true;
-    c.onCompareToggle();
+    c.compare.on = true;
+    c.compare.onToggle();
 
-    (c as any).compareEngine['fatalError$'].next('crash');
-    expect(c.compareCrashed).toBeTrue();
+    c.compare.engine['fatalError$'].next('crash');
+    expect(c.compare.crashed).toBeTrue();
 
     (c as any).refresh();
     // Der Service setzt bei neuer FEN sein Crash-Budget selbst zurueck - die Karte darf dann
     // nicht weiter behaupten, die Engine sei abgestuerzt.
-    expect(c.compareCrashed).toBeFalse();
+    expect(c.compare.crashed).toBeFalse();
     c.ngOnDestroy();
   });
 
@@ -836,9 +836,9 @@ describe('AnalysisComponent compare mode invariants', () => {
     const sink = jasmine.createSpy('reportEngineEvent');
     (c as any).engine.reportEngineEvent = sink;
 
-    c.compareOn = true;
-    c.onCompareToggle();
-    (c as any).compareEngine.reportEngineEvent('crash', 'boom');
+    c.compare.on = true;
+    c.compare.onToggle();
+    c.compare.engine.reportEngineEvent('crash', 'boom');
 
     // Von Hand gebaute Instanz: ohne Verdrahtung waeren ihre Abstuerze die einzigen,
     // die nirgends im Log auftauchen - ausgerechnet die mit dem hoechsten Speicherdruck.
@@ -1220,7 +1220,7 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
 
   it('während des Sparrings: Engine-Schalter gesperrt, „Engine pausiert" statt „Engine aus"', async () => {
     const c: any = fixture.componentInstance;
-    c.sparring = { start: c.root, tip: c.root, userColor: 'white', engineWasOn: true };
+    c.spar.sparring = { start: c.root, tip: c.root, userColor: 'white', engineWasOn: true };
     c.engineOn = false;
     fixture.detectChanges();
     await new Promise(r => setTimeout(r));   // ngModel reicht disabled asynchron an den Schalter
@@ -1241,7 +1241,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     const c = makeComponent(params);
     c.ngOnInit();
     c.engineOn = true;
-    c.startSparring();
+    c.spar.startSparring();
     return c;
   }
 
@@ -1251,8 +1251,8 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     c.engineOn = true;
     const stop = spyOn(c.__engine, 'stop').and.callThrough();
     const setItem = spyOn(Storage.prototype, 'setItem').and.callThrough();
-    c.startSparring();
-    expect(c.sparring).toEqual({ start: c.root, tip: c.root, userColor: 'white', engineWasOn: true });
+    c.spar.startSparring();
+    expect(c.spar.sparring).toEqual({ start: c.root, tip: c.root, userColor: 'white', engineWasOn: true });
     expect(c.engineOn).toBeFalse();
     expect(c.orientation).toBe('white');
     expect(stop).toHaveBeenCalled();
@@ -1264,16 +1264,16 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('startet nicht in einer Stellung, die zu Ende ist (Matt)', () => {
     const c = makeComponent({ fen: START, moves: 'f2f3,e7e5,g2g4,d8h4' });
     c.ngOnInit();
-    c.startSparring();
-    expect(c.sparring).toBeNull();
+    c.spar.startSparring();
+    expect(c.spar.sparring).toBeNull();
     c.ngOnDestroy();
   });
 
   it('eigener Zug → Maia antwortet: ihr Zug steht als Kind im Baum und auf dem Brett', async () => {
     const c = sparringAtStart();
-    c.maiaElo = 1400;
+    c.spar.maiaElo = 1400;
     c.onMove({ orig: 'e2', dest: 'e4' });
-    expect(c.maiaThinking).toBeTrue();
+    expect(c.spar.maiaThinking).toBeTrue();
     expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(AFTER_E4, 1400);
     c.__maia.calls[0].resolve('e7e5');
     await flush();
@@ -1281,8 +1281,8 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     expect(e4.children.map((n: any) => n.san)).toEqual(['e5']);
     expect(c.currentNode).toBe(e4.children[0]);
     expect(c.boardFen).toBe(e4.children[0].fen);
-    expect(c.maiaThinking).toBeFalse();
-    expect(c.maiaToMove).toBeFalse();   // jetzt ist der Nutzer wieder dran
+    expect(c.spar.maiaThinking).toBeFalse();
+    expect(c.spar.maiaToMove).toBeFalse();   // jetzt ist der Nutzer wieder dran
     c.ngOnDestroy();
   });
 
@@ -1290,12 +1290,12 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     const c = sparringAtStart();
     c.onMove({ orig: 'e2', dest: 'e4' });
     c.goTo(0);
-    expect(c.maiaThinking).toBeFalse();
+    expect(c.spar.maiaThinking).toBeFalse();
     c.__maia.calls[0].resolve('e7e5');
     await flush();
     expect(c.root.children[0].children).toEqual([]);
     expect(c.currentNode).toBe(c.root);
-    expect(c.sparring).not.toBeNull();           // das Sparring bleibt aktiv
+    expect(c.spar.sparring).not.toBeNull();           // das Sparring bleibt aktiv
     expect(c.__maia.chooseMove).toHaveBeenCalledTimes(1);
     c.ngOnDestroy();
   });
@@ -1304,26 +1304,26 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     // Nach 1.e4 steht Schwarz am Zug: der Nutzer spielt Schwarz, Weiß ist Maia.
     const c = makeComponent({ fen: START, moves: 'e2e4' });
     c.ngOnInit();
-    c.startSparring();
-    expect(c.sparring.userColor).toBe('black');
+    c.spar.startSparring();
+    expect(c.spar.sparring.userColor).toBe('black');
     c.goTo(0);                                    // zurück: Weiß (= Maia) am Zug, aber kein automatischer Zug
     expect(c.__maia.chooseMove).not.toHaveBeenCalled();
     c.onMove({ orig: 'd2', dest: 'd4' });         // der Nutzer zieht für Maia
     expect(c.__maia.chooseMove).not.toHaveBeenCalled();
-    expect(c.maiaThinking).toBeFalse();
+    expect(c.spar.maiaThinking).toBeFalse();
     c.ngOnDestroy();
   });
 
   it('„Maia zieht" fordert in Maias Zugrecht einen Zug an, sonst nicht', async () => {
     const c = makeComponent({ fen: START, moves: 'e2e4' });
     c.ngOnInit();
-    c.startSparring();                            // Nutzer = Schwarz
-    c.requestMaiaMove();                          // Schwarz am Zug → nichts
+    c.spar.startSparring();                            // Nutzer = Schwarz
+    c.spar.requestMaiaMove();                          // Schwarz am Zug → nichts
     expect(c.__maia.chooseMove).not.toHaveBeenCalled();
     c.goTo(0);
-    expect(c.maiaToMove).toBeTrue();
-    c.requestMaiaMove();
-    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(START, c.maiaElo);
+    expect(c.spar.maiaToMove).toBeTrue();
+    c.spar.requestMaiaMove();
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(START, c.spar.maiaElo);
     c.__maia.calls[0].resolve('d2d4');
     await flush();
     expect(c.root.children.map((n: any) => n.san)).toEqual(['e4', 'd4']);   // als Variante
@@ -1333,10 +1333,10 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
 
   it('Seite wechseln in Maias Zugrecht fordert sofort einen Zug', async () => {
     const c = sparringAtStart();
-    c.switchSparringSides();
-    expect(c.sparring.userColor).toBe('black');
+    c.spar.switchSparringSides();
+    expect(c.spar.sparring.userColor).toBe('black');
     expect(c.orientation).toBe('black');
-    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(START, c.maiaElo);
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(START, c.spar.maiaElo);
     c.__maia.calls[0].resolve('e2e4');
     await flush();
     expect(c.currentNode.san).toBe('e4');
@@ -1348,15 +1348,15 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     c.onMove({ orig: 'e2', dest: 'e4' });
     c.__maia.calls[0].resolve('e7e5');
     await flush();
-    c.restartSparring();
+    c.spar.restartSparring();
     expect(c.currentNode).toBe(c.root);
     expect(c.__maia.chooseMove).toHaveBeenCalledTimes(1);   // Weiß = Nutzer am Zug
 
-    c.switchSparringSides();                                 // jetzt Maia = Weiß → sofort ein Zug
+    c.spar.switchSparringSides();                                 // jetzt Maia = Weiß → sofort ein Zug
     c.__maia.calls[1].resolve('d2d4');
     await flush();
     expect(c.currentNode.san).toBe('d4');
-    c.restartSparring();
+    c.spar.restartSparring();
     expect(c.currentNode).toBe(c.root);
     expect(c.__maia.chooseMove).toHaveBeenCalledTimes(3);
     c.ngOnDestroy();
@@ -1364,14 +1364,14 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
 
   it('Beenden stellt engineOn wieder her (an bleibt an, aus bleibt aus)', () => {
     const c = sparringAtStart();
-    c.stopSparring();
-    expect(c.sparring).toBeNull();
+    c.spar.stopSparring();
+    expect(c.spar.sparring).toBeNull();
     expect(c.engineOn).toBeTrue();
     expect(c.__engine.analyze).toHaveBeenCalledWith(c.currentFen);
 
     c.engineOn = false;
-    c.startSparring();
-    c.stopSparring();
+    c.spar.startSparring();
+    c.spar.stopSparring();
     expect(c.engineOn).toBeFalse();
     c.ngOnDestroy();
   });
@@ -1379,24 +1379,24 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('Beenden lässt eine laufende Antwort verfallen', async () => {
     const c = sparringAtStart();
     c.onMove({ orig: 'e2', dest: 'e4' });
-    c.stopSparring();
+    c.spar.stopSparring();
     c.__maia.calls[0].resolve('e7e5');
     await flush();
     expect(c.root.children[0].children).toEqual([]);
-    expect(c.maiaThinking).toBeFalse();
+    expect(c.spar.maiaThinking).toBeFalse();
     c.ngOnDestroy();
   });
 
   it('reset() und FEN laden beenden das Sparring', () => {
     const c = sparringAtStart();
     c.reset();
-    expect(c.sparring).toBeNull();
+    expect(c.spar.sparring).toBeNull();
     expect(c.engineOn).toBeTrue();
 
-    c.startSparring();
+    c.spar.startSparring();
     c.fenInput = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
     c.loadFen();
-    expect(c.sparring).toBeNull();
+    expect(c.spar.sparring).toBeNull();
     expect(c.engineOn).toBeTrue();
     c.ngOnDestroy();
   });
@@ -1406,16 +1406,16 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     c.ngOnInit();
     c.engineOn = true;
     c.goTo(1);
-    c.startSparring();                            // ab 1.e4, Nutzer = Schwarz
+    c.spar.startSparring();                            // ab 1.e4, Nutzer = Schwarz
     const e4 = c.root.children[0];
     c.goTo(0);
     c.onMove({ orig: 'd2', dest: 'd4' });         // Variante 1.d4 — Zug für Maias Seite, keine Antwort
     c.onTreeAction({ kind: 'delete', node: c.root.children[1] });
-    expect(c.sparring).not.toBeNull();
+    expect(c.spar.sparring).not.toBeNull();
 
     c.goTo(2);
     c.onTreeAction({ kind: 'delete', node: e4 });
-    expect(c.sparring).toBeNull();
+    expect(c.spar.sparring).toBeNull();
     expect(c.engineOn).toBeTrue();
     c.ngOnDestroy();
   });
@@ -1423,8 +1423,8 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('Maia wandelt um: a7a8q wird richtig gespielt', async () => {
     const c = makeComponent({ fen: '8/P5k1/8/8/8/8/6K1/8 w - - 0 1' });
     c.ngOnInit();
-    c.startSparring();
-    c.switchSparringSides();                      // Maia = Weiß
+    c.spar.startSparring();
+    c.spar.switchSparringSides();                      // Maia = Weiß
     c.__maia.calls[0].resolve('a7a8q');
     await flush();
     expect(c.currentNode.san).toBe('a8=Q');
@@ -1436,7 +1436,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('nach Matt/Patt keine Anfrage', () => {
     const c = makeComponent({ fen: START, moves: 'f2f3,e7e5,g2g4' });
     c.ngOnInit();
-    c.startSparring();                            // Nutzer = Schwarz
+    c.spar.startSparring();                            // Nutzer = Schwarz
     c.onMove({ orig: 'd8', dest: 'h4' });         // Qh4#
     expect(c.terminal).toBe('mate-black-wins');
     expect(c.__maia.chooseMove).not.toHaveBeenCalled();
@@ -1448,7 +1448,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     c.onMove({ orig: 'e2', dest: 'e4' });
     c.__maia.calls[0].resolve(null);
     await flush();
-    expect(c.maiaThinking).toBeFalse();
+    expect(c.spar.maiaThinking).toBeFalse();
     expect(c.currentNode.san).toBe('e4');
     expect(c.__snackbar.warn).not.toHaveBeenCalled();
     c.ngOnDestroy();
@@ -1460,8 +1460,8 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     c.__maia.calls[0].reject(new Error('worker gone'));
     await flush();
     expect(c.__snackbar.warn).toHaveBeenCalledWith('analysis.maia.moveFailed');
-    expect(c.maiaThinking).toBeFalse();
-    expect(c.sparring).not.toBeNull();
+    expect(c.spar.maiaThinking).toBeFalse();
+    expect(c.spar.sparring).not.toBeNull();
     c.ngOnDestroy();
   });
 
@@ -1473,7 +1473,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     await flush();
     expect(c.__snackbar.warn).toHaveBeenCalledWith('analysis.maia.moveFailed');
     expect(c.__maia.prepare).toHaveBeenCalledTimes(1);
-    expect(c.sparring).not.toBeNull();
+    expect(c.spar.sparring).not.toBeNull();
     c.ngOnDestroy();
   });
 
@@ -1490,7 +1490,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('ein Zug aus Explorer/Repertoire zählt wie ein eigener: Maia antwortet', async () => {
     const c = sparringAtStart();
     c.playRepertoireMoves(['e4']);
-    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(AFTER_E4, c.maiaElo);
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(AFTER_E4, c.spar.maiaElo);
     c.__maia.calls[0].resolve('c7c5');
     await flush();
     expect(c.root.children[0].children.map((n: any) => n.san)).toEqual(['c5']);
@@ -1501,7 +1501,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('Explorer/Repertoire-Zug für Maias Seite löst nichts aus', () => {
     const c = makeComponent({ fen: START, moves: 'e2e4' });
     c.ngOnInit();
-    c.startSparring();                            // Nutzer = Schwarz
+    c.spar.startSparring();                            // Nutzer = Schwarz
     c.goTo(0);                                    // Weiß (= Maia) am Zug
     c.playRepertoireMoves(['d4']);                // der Nutzer zieht für Maia → danach ist er selbst dran
     expect(c.currentNode.san).toBe('d4');
@@ -1512,11 +1512,11 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   it('die Stärke: nur Werte der Auswahl, je Gerät gemerkt', () => {
     try { localStorage.setItem('rookhub_analysis_maia_elo', '2000'); } catch {}
     const c = makeComponent({ fen: START });
-    expect(c.maiaElo).toBe(2000);
-    c.onMaiaEloChange(1234);
-    expect(c.maiaElo).toBe(2000);
-    c.onMaiaEloChange(1200);
-    expect(c.maiaElo).toBe(1200);
+    expect(c.spar.maiaElo).toBe(2000);
+    c.spar.onMaiaEloChange(1234);
+    expect(c.spar.maiaElo).toBe(2000);
+    c.spar.onMaiaEloChange(1200);
+    expect(c.spar.maiaElo).toBe(1200);
     expect(localStorage.getItem('rookhub_analysis_maia_elo')).toBe('1200');
     try { localStorage.removeItem('rookhub_analysis_maia_elo'); } catch {}
     c.ngOnInit();
@@ -1562,7 +1562,7 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     const c = makeComponent(o.params ?? { fen: START });
     c.ngOnInit();
     c.engineOn = o.engineOn ?? true;
-    c.startSparring();
+    c.spar.startSparring();
     return c;
   }
   const quietOutput = (c: any) => ({ lines: c.displayLines, shapes: c.shapes, candidates: c.engineCandidates });
@@ -1574,10 +1574,10 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     c.engineOn = true;
     const stop = spyOn(c.__engine, 'stop').and.callThrough();
     c.__engine.analyze.calls.reset();
-    c.startSparring();
-    expect(c.warnBadMoves).toBeFalse();
-    expect(c.keepEvalBar).toBeFalse();
-    expect(c.sparringEngineQuiet).toBeFalse();
+    c.spar.startSparring();
+    expect(c.spar.warnBadMoves).toBeFalse();
+    expect(c.spar.keepEvalBar).toBeFalse();
+    expect(c.spar.sparringEngineQuiet).toBeFalse();
     expect(stop).toHaveBeenCalled();
     expect(c.__engine.analyze).not.toHaveBeenCalled();
     emit(c, 14, 80);                              // ein Nachzügler der alten Suche ändert nichts
@@ -1588,7 +1588,7 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
 
   it('„Bewertungsleiste anlassen": die Engine rechnet still, die Leiste folgt ab der Settle-Tiefe, der Zug bekommt seine Bewertung', async () => {
     const c = sparring({ bar: true });
-    expect(c.sparringEngineQuiet).toBeTrue();
+    expect(c.spar.sparringEngineQuiet).toBeTrue();
     expect(c.__engine.analyze).toHaveBeenCalledWith(START);
     emit(c, 5, 35);                               // zu flach für die Leiste
     expect(c.evalText).toBe('0.00');
@@ -1609,7 +1609,7 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     c.__maia.calls[0].resolve('e7e5');
     await flush();
     expect(c.currentNode.san).toBe('e5');
-    expect(c.sparringWarning).toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
   });
 
@@ -1628,7 +1628,7 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     c.__maia.calls[0].resolve('e7e5');
     await flush();
     expect(c.currentNode.san).toBe('e5');
-    expect(c.sparringWarning).toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
   });
 
@@ -1638,28 +1638,28 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     emit(c, 14, 40);
     c.onMove({ orig: 'g2', dest: 'g4' });
     const g4 = c.currentNode;
-    expect(c.maiaThinking).toBeTrue();
+    expect(c.spar.maiaThinking).toBeTrue();
     c.__maia.calls[0].resolve('e7e5');            // Maia hat ihren Zug — er wartet auf das Urteil
     await flush();
     expect(c.currentNode).toBe(g4);
-    expect(c.maiaThinking).toBeTrue();
+    expect(c.spar.maiaThinking).toBeTrue();
     emit(c, 10, -10);                             // noch nicht tief genug
     await flush();
     expect(c.currentNode).toBe(g4);
 
     const goToNode = c.goToNode.bind(c);
     let warningWhenMaiaMoved: any = 'nicht gezogen';
-    spyOn(c, 'goToNode').and.callFake((n: any) => { warningWhenMaiaMoved = c.sparringWarning; goToNode(n); });
+    spyOn(c, 'goToNode').and.callFake((n: any) => { warningWhenMaiaMoved = c.spar.sparringWarning; goToNode(n); });
     emit(c, 14, -30);
     await flush();
-    expect(c.sparringWarning).toEqual({ san: '1.g4', before: c.root, beforeText: '+0.40', afterText: '-0.30', drop: 0.7 });
-    expect(warningWhenMaiaMoved).toBe(c.sparringWarning);   // die Warnung stand schon, als Maias Zug kam
+    expect(c.spar.sparringWarning).toEqual({ san: '1.g4', before: c.root, beforeText: '+0.40', afterText: '-0.30', drop: 0.7 });
+    expect(warningWhenMaiaMoved).toBe(c.spar.sparringWarning);   // die Warnung stand schon, als Maias Zug kam
     expect(c.currentNode.san).toBe('e5');
     expect(c.currentNode.parent).toBe(g4);
-    expect(c.maiaThinking).toBeFalse();
+    expect(c.spar.maiaThinking).toBeFalse();
 
     c.goTo(0);                                    // Navigation lässt die Warnung stehen
-    expect(c.sparringWarning).not.toBeNull();
+    expect(c.spar.sparringWarning).not.toBeNull();
     c.ngOnDestroy();
   });
 
@@ -1670,14 +1670,14 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     emit(c, 14, -30);
     c.__maia.calls[0].resolve('e7e5');
     await flush();
-    expect(c.sparringWarning?.san).toBe('1.g4');
+    expect(c.spar.sparringWarning?.san).toBe('1.g4');
 
     emit(c, 14, -20);                             // Stellung nach 1...e5 (Nutzer überlegt)
     c.onMove({ orig: 'g1', dest: 'f3' });
     c.__maia.calls[1].resolve('b8c6');
     emit(c, 16, -30);                             // −0,10 bei Tiefe 16 (Vorher-Wert: Tiefe 14)
     await flush();
-    expect(c.sparringWarning).toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
     expect(c.currentNode.san).toBe('Nc6');
     c.ngOnDestroy();
   });
@@ -1686,30 +1686,30 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     try { localStorage.setItem(WARN_KEY, '1'); } catch {}
     const d = makeComponent({ fen: START, moves: 'e2e4' });
     d.ngOnInit();
-    d.startSparring();                            // Nutzer = Schwarz
-    expect(d.sparring.userColor).toBe('black');
+    d.spar.startSparring();                            // Nutzer = Schwarz
+    expect(d.spar.sparring.userColor).toBe('black');
     emit(d, 10, 30);
     emit(d, 14, 30);
     d.onMove({ orig: 'f7', dest: 'f6' });
     d.__maia.calls[0].resolve('d2d4');
     emit(d, 6, 3, { type: 'mate', running: false });   // Weiß setzt in 3 matt — die Suche endet flach
     await flush();
-    expect(d.sparringWarning).toEqual(jasmine.objectContaining({ san: '1...f6', beforeText: '+0.30', afterText: '#3' }));
-    expect(d.sparringWarning.drop).toBeGreaterThan(900);
+    expect(d.spar.sparringWarning).toEqual(jasmine.objectContaining({ san: '1...f6', beforeText: '+0.30', afterText: '#3' }));
+    expect(d.spar.sparringWarning.drop).toBeGreaterThan(900);
     expect(d.currentNode.san).toBe('d4');
     d.ngOnDestroy();
   });
 
   it('Maias eigener Zug wird nie geprüft — sie zieht sofort, ohne auf die Engine zu warten', async () => {
     const c = sparring({ warn: true });
-    c.maiaCheckTimeoutMs = 60_000;                // würde geprüft, hinge der Test hier
-    c.switchSparringSides();                      // Maia = Weiß, am Zug
+    c.spar.maiaCheckTimeoutMs = 60_000;                // würde geprüft, hinge der Test hier
+    c.spar.switchSparringSides();                      // Maia = Weiß, am Zug
     expect(c.__maia.chooseMove).toHaveBeenCalledTimes(1);
     c.__maia.calls[0].resolve('g2g4');
     await flush();
     expect(c.currentNode.san).toBe('g4');
-    expect(c.sparringWarning).toBeNull();
-    expect(c.pendingCheck).toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
+    expect(c.spar.pendingCheck).toBeNull();
     c.ngOnDestroy();
   });
 
@@ -1717,19 +1717,19 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     try { localStorage.setItem(WARN_KEY, '1'); } catch {}
     const c = makeComponent({ fen: START, moves: 'e2e4' });
     c.ngOnInit();
-    c.startSparring();                            // Nutzer = Schwarz
+    c.spar.startSparring();                            // Nutzer = Schwarz
     c.goTo(0);                                    // Weiß (= Maia) am Zug
     emit(c, 14, 40);
     c.onMove({ orig: 'd2', dest: 'd4' });         // der Nutzer zieht für Maia
-    expect(c.pendingBefore).toBeNull();
-    expect(c.pendingCheck).toBeNull();
+    expect(c.spar.pendingBefore).toBeNull();
+    expect(c.spar.pendingCheck).toBeNull();
     expect(c.__maia.chooseMove).not.toHaveBeenCalled();
     c.ngOnDestroy();
   });
 
   it('Zeitüberschreitung ohne belastbaren Nachher-Wert: keine Warnung, Maia zieht trotzdem', async () => {
     const c = sparring({ warn: true });
-    c.maiaCheckTimeoutMs = 20;
+    c.spar.maiaCheckTimeoutMs = 20;
     emit(c, 14, 40);
     c.onMove({ orig: 'g2', dest: 'g4' });
     c.__maia.calls[0].resolve('e7e5');
@@ -1738,21 +1738,21 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     expect(c.currentNode.san).toBe('g4');
     await wait(60);
     expect(c.currentNode.san).toBe('e5');
-    expect(c.sparringWarning).toBeNull();
-    expect(c.maiaThinking).toBeFalse();
+    expect(c.spar.sparringWarning).toBeNull();
+    expect(c.spar.maiaThinking).toBeFalse();
     c.ngOnDestroy();
   });
 
   it('Zeitüberschreitung mit einem Wert ab der Settle-Tiefe: geurteilt wird mit ihm', async () => {
     const c = sparring({ warn: true });
-    c.maiaCheckTimeoutMs = 20;
+    c.spar.maiaCheckTimeoutMs = 20;
     emit(c, 10, 40);
     emit(c, 12, 40);
     c.onMove({ orig: 'g2', dest: 'g4' });
     c.__maia.calls[0].resolve('e7e5');
     emit(c, 11, -50);                             // Tiefe 11 < 14, die Suche läuft noch
     await wait(60);
-    expect(c.sparringWarning).toEqual(jasmine.objectContaining({ san: '1.g4', beforeText: '+0.40', afterText: '-0.50' }));
+    expect(c.spar.sparringWarning).toEqual(jasmine.objectContaining({ san: '1.g4', beforeText: '+0.40', afterText: '-0.50' }));
     expect(c.currentNode.san).toBe('e5');
     c.ngOnDestroy();
   });
@@ -1764,18 +1764,18 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     emit(c, 14, -30);
     c.__maia.calls[0].resolve('e7e5');
     await flush();
-    expect(c.sparringWarning).not.toBeNull();
+    expect(c.spar.sparringWarning).not.toBeNull();
     const setItem = spyOn(Storage.prototype, 'setItem').and.callThrough();
     c.__engine.analyze.calls.reset();
-    c.analyzeWarning();
-    expect(c.sparring).toBeNull();
+    c.spar.analyzeWarning();
+    expect(c.spar.sparring).toBeNull();
     expect(c.engineOn).toBeTrue();
     expect(setItem.calls.allArgs().filter(a => a[0] === 'rookhub_analysis_engine')).toEqual([]);
     expect(c.currentNode).toBe(c.root);
     expect(c.root.children[0].san).toBe('g4');    // der schlechte Zug steht als Fortsetzung da
     expect(c.line.map((n: any) => n.san)).toEqual(['g4', 'e5']);
-    expect(c.sparringWarning).toBeNull();
-    expect(c.lastSparring).not.toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
+    expect(c.spar.lastSparring).not.toBeNull();
     expect(c.__engine.analyze).toHaveBeenCalledWith(START);
     emit(c, 14, 40);                              // jetzt wieder mit Linien
     expect(c.displayLines.length).toBe(1);
@@ -1790,52 +1790,52 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
       emit(c, 14, -30);
       c.__maia.calls[0].resolve('e7e5');
       await flush();
-      expect(c.sparringWarning).not.toBeNull();
+      expect(c.spar.sparringWarning).not.toBeNull();
       return c;
     };
     let c = await warned();
-    c.switchSparringSides();
-    expect(c.sparringWarning).toBeNull();
+    c.spar.switchSparringSides();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
     c = await warned();
-    c.restartSparring();
-    expect(c.sparringWarning).toBeNull();
+    c.spar.restartSparring();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
     c = await warned();
-    c.stopSparring();
-    expect(c.sparringWarning).toBeNull();
+    c.spar.stopSparring();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
   });
 
   it('die Schalter werden je Gerät gemerkt und beim Bau gelesen', () => {
     const c = makeComponent({ fen: START });
-    expect(c.warnBadMoves).toBeFalse();
-    expect(c.keepEvalBar).toBeFalse();
-    c.onWarnBadMovesChange(true);
-    c.onKeepEvalBarChange(true);
+    expect(c.spar.warnBadMoves).toBeFalse();
+    expect(c.spar.keepEvalBar).toBeFalse();
+    c.spar.onWarnBadMovesChange(true);
+    c.spar.onKeepEvalBarChange(true);
     expect(localStorage.getItem(WARN_KEY)).toBe('1');
     expect(localStorage.getItem(BAR_KEY)).toBe('1');
     const d = makeComponent({ fen: START });
-    expect(d.warnBadMoves).toBeTrue();
-    expect(d.keepEvalBar).toBeTrue();
-    d.onWarnBadMovesChange(false);
+    expect(d.spar.warnBadMoves).toBeTrue();
+    expect(d.spar.keepEvalBar).toBeTrue();
+    d.spar.onWarnBadMovesChange(false);
     expect(localStorage.getItem(WARN_KEY)).toBe('0');
-    expect(makeComponent({ fen: START }).warnBadMoves).toBeFalse();
+    expect(makeComponent({ fen: START }).spar.warnBadMoves).toBeFalse();
   });
 
   it('Umschalten während des Sparrings startet bzw. stoppt die stille Engine sofort', () => {
     const c = sparring();
     const stop = spyOn(c.__engine, 'stop').and.callThrough();
     c.__engine.analyze.calls.reset();
-    c.onKeepEvalBarChange(true);
+    c.spar.onKeepEvalBarChange(true);
     expect(c.__engine.analyze).toHaveBeenCalledWith(START);
     emit(c, 12, 35);
     expect(c.evalText).toBe('+0.35');
-    c.onKeepEvalBarChange(false);                 // Leiste aus → neutral, Engine aus
+    c.spar.onKeepEvalBarChange(false);                 // Leiste aus → neutral, Engine aus
     expect(c.evalText).toBe('0.00');
     expect(stop).toHaveBeenCalled();
     c.__engine.analyze.calls.reset();
-    c.onWarnBadMovesChange(true);                 // nur prüfen: Engine wieder an, Leiste bleibt neutral
+    c.spar.onWarnBadMovesChange(true);                 // nur prüfen: Engine wieder an, Leiste bleibt neutral
     expect(c.__engine.analyze).toHaveBeenCalledWith(START);
     emit(c, 12, 35);
     expect(c.evalText).toBe('0.00');
@@ -1859,31 +1859,31 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
 
   it('„Schlechte Züge melden" aus während der Prüfung: Maia zieht sofort, keine Warnung', async () => {
     const c = sparring({ warn: true });
-    c.maiaCheckTimeoutMs = 60_000;
+    c.spar.maiaCheckTimeoutMs = 60_000;
     emit(c, 14, 40);
     c.onMove({ orig: 'g2', dest: 'g4' });
     c.__maia.calls[0].resolve('e7e5');
     await flush();
     expect(c.currentNode.san).toBe('g4');
-    c.onWarnBadMovesChange(false);
+    c.spar.onWarnBadMovesChange(false);
     await flush();
     expect(c.currentNode.san).toBe('e5');
-    expect(c.sparringWarning).toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
   });
 
   it('Beenden während der Prüfung: die offene Prüfung wird aufgelöst, Maias Zug verfällt', async () => {
     const c = sparring({ warn: true });
-    c.maiaCheckTimeoutMs = 60_000;
+    c.spar.maiaCheckTimeoutMs = 60_000;
     emit(c, 14, 40);
     c.onMove({ orig: 'g2', dest: 'g4' });
     c.__maia.calls[0].resolve('e7e5');
-    c.stopSparring();
-    expect(c.pendingCheck).toBeNull();
+    c.spar.stopSparring();
+    expect(c.spar.pendingCheck).toBeNull();
     await flush();
     expect(c.currentNode.san).toBe('g4');
     expect(c.root.children[0].children).toEqual([]);
-    expect(c.sparringWarning).toBeNull();
+    expect(c.spar.sparringWarning).toBeNull();
     c.ngOnDestroy();
   });
 });
@@ -2088,7 +2088,7 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     const c = makeComponent(params, { loggedIn });
     c.ngOnInit();
     c.engineOn = true;
-    c.startSparring();
+    c.spar.startSparring();
     return c;
   }
   /** Maias offene Anfrage auflösen (setTimeout(0) läuft mit installierter Uhr erst nach tick). */
@@ -2097,22 +2097,22 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     await Promise.resolve();
     await Promise.resolve();
   }
-  const sansOf = (c: any) => c.lastSparring
-    ? (() => { const out: string[] = []; for (let n = c.lastSparring.tip; n !== c.lastSparring.start; n = n.parent) out.unshift(n.san); return out; })()
+  const sansOf = (c: any) => c.spar.lastSparring
+    ? (() => { const out: string[] = []; for (let n = c.spar.lastSparring.tip; n !== c.spar.lastSparring.start; n = n.parent) out.unshift(n.san); return out; })()
     : null;
   const importBody = (c: any) => c.__http.post.calls.mostRecent().args[1];
 
   it('tip folgt eigenen Zügen und Maias Zügen', async () => {
     const c = sparring();
     c.onMove({ orig: 'e2', dest: 'e4' });
-    expect(c.sparring.tip.san).toBe('e4');
+    expect(c.spar.sparring.tip.san).toBe('e4');
     await maiaPlays(c, 'e7e5');
-    expect(c.sparring.tip.san).toBe('e5');
+    expect(c.spar.sparring.tip.san).toBe('e5');
     c.onMove({ orig: 'g1', dest: 'f3' });
-    expect(c.sparring.tip.san).toBe('Nf3');
-    c.stopSparring();
+    expect(c.spar.sparring.tip.san).toBe('Nf3');
+    c.spar.stopSparring();
     expect(sansOf(c)).toEqual(['e4', 'e5', 'Nf3']);
-    expect(c.lastSparring.userColor).toBe('white');
+    expect(c.spar.lastSparring.userColor).toBe('white');
     c.ngOnDestroy();
   });
 
@@ -2123,10 +2123,10 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     c.onMove({ orig: 'g1', dest: 'f3' });
     await maiaPlays(c, 'b8c6');
     c.goTo(2);                                    // zurück nach 1...e5
-    expect(c.sparring.tip.san).toBe('Nc6');       // Navigieren allein ändert nichts
+    expect(c.spar.sparring.tip.san).toBe('Nc6');       // Navigieren allein ändert nichts
     c.playRepertoireMoves(['Bc4']);               // anders weiter — als Variante
-    expect(c.sparring.tip.san).toBe('Bc4');
-    c.stopSparring();
+    expect(c.spar.sparring.tip.san).toBe('Bc4');
+    c.spar.stopSparring();
     expect(sansOf(c)).toEqual(['e4', 'e5', 'Bc4']);
     c.ngOnDestroy();
   });
@@ -2135,17 +2135,17 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3,b8c6,f1b5' }, { loggedIn: true });
     c.ngOnInit();
     c.goTo(2);                                    // nach 1.e4 e5, Weiß am Zug
-    c.startSparring();
-    expect(c.sparringAnalyzeVisible).toBeFalse();
+    c.spar.startSparring();
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();
     c.onMove({ orig: 'd2', dest: 'd4' });
     await maiaPlays(c, 'e5d4');
-    c.stopSparring();
+    c.spar.stopSparring();
     expect(sansOf(c)).toEqual(['d4', 'exd4']);
-    c.analyzeSparring();
+    c.spar.analyzeSparring();
     expect(importBody(c)).toEqual({
       pgn: '[Event "Sparring vs Maia"]\n[Site "RookHub"]\n[Date "2026.10.02"]\n[Round "-"]\n'
         + '[White "anna"]\n[Black "Maia 1600"]\n[Result "*"]\n[SetUp "1"]\n'
-        + `[FEN "${c.lastSparring.start.fen}"]\n\n2. d4 exd4 *`,
+        + `[FEN "${c.spar.lastSparring.start.fen}"]\n\n2. d4 exd4 *`,
       ownerSide: 'white',
     });
     c.ngOnDestroy();
@@ -2154,9 +2154,9 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
   it('unter zwei Halbzügen gibt es keinen Knopf', () => {
     const c = sparring();
     c.onMove({ orig: 'e2', dest: 'e4' });         // Maias Antwort bleibt aus
-    c.stopSparring();
-    expect(c.lastSparring).toBeNull();
-    expect(c.sparringAnalyzeVisible).toBeFalse();
+    c.spar.stopSparring();
+    expect(c.spar.lastSparring).toBeNull();
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();
     expect(c.__analyzeGame.status).not.toHaveBeenCalled();
     c.ngOnDestroy();
   });
@@ -2165,10 +2165,10 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     const c = sparring({ fen: START }, false);
     c.onMove({ orig: 'e2', dest: 'e4' });
     await maiaPlays(c, 'e7e5');
-    c.stopSparring();
-    expect(c.lastSparring).not.toBeNull();
-    expect(c.sparringAnalyzeVisible).toBeFalse();
-    c.analyzeSparring();
+    c.spar.stopSparring();
+    expect(c.spar.lastSparring).not.toBeNull();
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();
+    c.spar.analyzeSparring();
     expect(c.__http.post).not.toHaveBeenCalled();
     expect(c.__analyzeGame.status).not.toHaveBeenCalled();
     c.ngOnDestroy();
@@ -2176,19 +2176,19 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
 
   it('während des Sparrings nur am Partie-Ende — dann: beenden, speichern mit der eigenen Seite, einreihen, zur Partie', async () => {
     const c = sparring({ fen: START, moves: 'f2f3' });   // Nutzer = Schwarz
-    expect(c.sparring.userColor).toBe('black');
+    expect(c.spar.sparring.userColor).toBe('black');
     c.onMove({ orig: 'e7', dest: 'e5' });
-    expect(c.sparringAnalyzeVisible).toBeFalse();
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();
     await maiaPlays(c, 'g2g4');
-    expect(c.sparringAnalyzeVisible).toBeFalse();        // zwei Halbzüge, aber mitten in der Partie
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();        // zwei Halbzüge, aber mitten in der Partie
     expect(c.__analyzeGame.status).not.toHaveBeenCalled();
     c.onMove({ orig: 'd8', dest: 'h4' });                 // Qh4#
-    expect(c.sparringAnalyzeVisible).toBeTrue();
+    expect(c.spar.sparringAnalyzeVisible).toBeTrue();
     expect(c.__analyzeGame.status).toHaveBeenCalledTimes(1);
-    expect(c.analyzeStatus).toEqual({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    expect(c.spar.analyzeStatus).toEqual({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
 
-    c.analyzeSparring();
-    expect(c.sparring).toBeNull();                       // beendet wie mit „Beenden"
+    c.spar.analyzeSparring();
+    expect(c.spar.sparring).toBeNull();                       // beendet wie mit „Beenden"
     expect(c.engineOn).toBeTrue();                       // Engine-Zustand von vorher
     expect(c.__http.post).toHaveBeenCalledOnceWith('/api/games/import', {
       pgn: '[Event "Sparring vs Maia"]\n[Site "RookHub"]\n[Date "2026.10.02"]\n[Round "-"]\n'
@@ -2196,9 +2196,9 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
         + `[FEN "${AFTER_F3}"]\n\n1... e5 2. g4 Qh4# 0-1`,
       ownerSide: 'black',
     });
-    expect(c.__analyzeGame.submit).toHaveBeenCalledOnceWith('/api/games/7/analyze', c.analyzeStatus);
+    expect(c.__analyzeGame.submit).toHaveBeenCalledOnceWith('/api/games/7/analyze', c.spar.analyzeStatus);
     expect(c.__router.navigate).toHaveBeenCalledOnceWith(['/games', 7]);
-    expect(c.analyzingSparring).toBeFalse();
+    expect(c.spar.analyzingSparring).toBeFalse();
     c.ngOnDestroy();
   });
 
@@ -2207,36 +2207,36 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     const c = sparring();
     c.onMove({ orig: 'e2', dest: 'e4' });
     await maiaPlays(c, 'e7e5');
-    c.stopSparring();
-    expect(c.sparringAnalyzeVisible).toBeTrue();
+    c.spar.stopSparring();
+    expect(c.spar.sparringAnalyzeVisible).toBeTrue();
     return c;
   }
 
   it('Absage der Analyse: keine Navigation (die Partie liegt trotzdem in „Meine Partien")', async () => {
     const c = await finished();
     c.__analyzeGame.submit.and.returnValue(of(false));
-    c.analyzeSparring();
+    c.spar.analyzeSparring();
     expect(c.__http.post).toHaveBeenCalledTimes(1);
     expect(c.__analyzeGame.submit).toHaveBeenCalledTimes(1);
     expect(c.__router.navigate).not.toHaveBeenCalled();
     expect(c.__snackbar.warn).not.toHaveBeenCalled();     // den Grund nennt submit selbst
-    expect(c.analyzingSparring).toBeFalse();
+    expect(c.spar.analyzingSparring).toBeFalse();
     c.ngOnDestroy();
   });
 
   it('keine Id aus dem Import (Deckel) oder ein Fehler: Snackbar, kein Einreihen, hierbleiben', async () => {
     const c = await finished();
     c.__http.reply = () => of({ imported: 0, duplicates: 0, truncated: false, ids: [], failed: [{ index: 1, reason: 'quota' }] });
-    c.analyzeSparring();
+    c.spar.analyzeSparring();
     expect(c.__snackbar.warn).toHaveBeenCalledOnceWith('analysis.maia.saveFailed');
-    expect(c.analyzingSparring).toBeFalse();
+    expect(c.spar.analyzingSparring).toBeFalse();
 
     c.__http.reply = () => throwError(() => new Error('offline'));
-    c.analyzeSparring();
+    c.spar.analyzeSparring();
     expect(c.__snackbar.warn).toHaveBeenCalledTimes(2);
     expect(c.__analyzeGame.submit).not.toHaveBeenCalled();
     expect(c.__router.navigate).not.toHaveBeenCalled();
-    expect(c.analyzingSparring).toBeFalse();
+    expect(c.spar.analyzingSparring).toBeFalse();
     c.ngOnDestroy();
   });
 
@@ -2244,22 +2244,22 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     const c = await finished();
     const pending = new Subject<any>();
     c.__http.reply = () => pending;
-    c.analyzeSparring();
-    expect(c.analyzingSparring).toBeTrue();
-    c.analyzeSparring();
+    c.spar.analyzeSparring();
+    expect(c.spar.analyzingSparring).toBeTrue();
+    c.spar.analyzeSparring();
     expect(c.__http.post).toHaveBeenCalledTimes(1);
     pending.next({ imported: 1, duplicates: 0, truncated: false, ids: [9], failed: [] });
     pending.complete();
     expect(c.__router.navigate).toHaveBeenCalledOnceWith(['/games', 9]);
-    expect(c.analyzingSparring).toBeFalse();
+    expect(c.spar.analyzingSparring).toBeFalse();
     c.ngOnDestroy();
   });
 
   it('ein neuer Baum räumt die Partie weg', async () => {
     const c = await finished();
     c.reset();
-    expect(c.lastSparring).toBeNull();
-    expect(c.sparringAnalyzeVisible).toBeFalse();
+    expect(c.spar.lastSparring).toBeNull();
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();
     c.ngOnDestroy();
   });
 
@@ -2268,10 +2268,10 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     c.goTo(0);
     c.onMove({ orig: 'd2', dest: 'd4' });          // Variante neben der Partie
     c.onTreeAction({ kind: 'delete', node: c.root.children[1] });
-    expect(c.lastSparring).not.toBeNull();
+    expect(c.spar.lastSparring).not.toBeNull();
     c.onTreeAction({ kind: 'delete', node: c.root.children[0].children[0] });   // 1...e5
-    expect(c.lastSparring).toBeNull();
-    expect(c.sparringAnalyzeVisible).toBeFalse();
+    expect(c.spar.lastSparring).toBeNull();
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();
     c.ngOnDestroy();
   });
 
@@ -2281,22 +2281,22 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     await maiaPlays(c, 'e7e5');
     c.onMove({ orig: 'g1', dest: 'f3' });
     await maiaPlays(c, 'b8c6');
-    const nf3 = c.sparring.tip.parent;
-    c.onTreeAction({ kind: 'delete', node: c.sparring.tip });
-    expect(c.sparring.tip).toBe(nf3);
-    c.stopSparring();
+    const nf3 = c.spar.sparring.tip.parent;
+    c.onTreeAction({ kind: 'delete', node: c.spar.sparring.tip });
+    expect(c.spar.sparring.tip).toBe(nf3);
+    c.spar.stopSparring();
     expect(sansOf(c)).toEqual(['e4', 'e5', 'Nf3']);
     c.ngOnDestroy();
   });
 
   it('ein neues Sparring lässt die alte Partie stehen, bis es selbst endet', async () => {
     const c = await finished();
-    const first = c.lastSparring;
-    c.startSparring();
-    expect(c.lastSparring).toBe(first);
-    expect(c.sparringAnalyzeVisible).toBeFalse();   // während es läuft (mitten in der Partie) kein Knopf
-    c.stopSparring();                               // ohne Zug beendet → nichts mehr zu analysieren
-    expect(c.lastSparring).toBeNull();
+    const first = c.spar.lastSparring;
+    c.spar.startSparring();
+    expect(c.spar.lastSparring).toBe(first);
+    expect(c.spar.sparringAnalyzeVisible).toBeFalse();   // während es läuft (mitten in der Partie) kein Knopf
+    c.spar.stopSparring();                               // ohne Zug beendet → nichts mehr zu analysieren
+    expect(c.spar.lastSparring).toBeNull();
     c.ngOnDestroy();
   });
 
@@ -2305,13 +2305,13 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     c.__analyzeGame.status.and.returnValue(of({ engineAvailable: false, ownEngine: false, openGames: 0, maxGames: 5 }));
     c.onMove({ orig: 'e2', dest: 'e4' });
     await maiaPlays(c, 'e7e5');
-    c.stopSparring();
-    expect(c.analyzeStatus.engineAvailable).toBeFalse();
-    c.startSparring();
+    c.spar.stopSparring();
+    expect(c.spar.analyzeStatus.engineAvailable).toBeFalse();
+    c.spar.startSparring();
     c.onMove({ orig: 'g1', dest: 'f3' });
     await maiaPlays(c, 'b8c6');
-    c.stopSparring();
-    expect(c.sparringAnalyzeVisible).toBeTrue();
+    c.spar.stopSparring();
+    expect(c.spar.sparringAnalyzeVisible).toBeTrue();
     expect(c.__analyzeGame.status).toHaveBeenCalledTimes(1);
     c.ngOnDestroy();
   });

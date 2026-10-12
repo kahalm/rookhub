@@ -1,0 +1,167 @@
+<div class="analysis-page">
+  <div class="header">
+    <h1>{{ 'analysis.title' | translate }}</h1>
+    @if (auth.isLoggedIn) {
+      <button mat-stroked-button type="button" class="history-btn" (click)="openHistory()">
+        <mat-icon>history</mat-icon> {{ 'analysis.history.open' | translate }}
+      </button>
+    }
+  </div>
+  <div class="analysis-layout">
+    <div class="board-col" [class.editing]="editing">
+      @if (editing) {
+        <app-position-setup class="editor-full"
+          [initialFen]="currentFen" [orientation]="orientation"
+          (apply)="onSetupApply($event)" (cancel)="editing = false" />
+      } @else {
+        <!-- Mit Tablebase-Ergebnis zeigt die Leiste die Wahrheit statt der Schätzung der Engine (0.729.0). -->
+        <div class="eval-bar" [matTooltip]="tbVerdict?.fen === currentFen ? tbVerdict!.text : evalText">
+          <div class="eval-white" [style.height.%]="tbVerdict?.fen === currentFen ? tbVerdict!.whiteHeight : whiteHeight"></div>
+        </div>
+        <!-- Mobil: schmale, unsichtbare Tap-Zonen — links = Zug zurück (liegt als Overlay ÜBER der
+             Bewertungsleiste, kostet keine Brettbreite), rechts = Zug vor. goTo() clampt selbst. -->
+        <div class="board-tap board-tap-prev" (click)="prev()" aria-hidden="true"></div>
+        <div class="board-wrap">
+          <app-analysis-board
+            [fen]="boardFen" [orientation]="orientation" [turnColor]="turnColor"
+            [dests]="dests" [lastMove]="lastMove" [check]="isCheck" [shapes]="shapes"
+            (moveMade)="onMove($event)" />
+        </div>
+        <div class="board-tap board-tap-next" (click)="next()" aria-hidden="true"></div>
+      }
+    </div>
+
+    <div class="side-col">
+      @if (returnTo) {
+        <button mat-stroked-button class="back-btn" (click)="backToPuzzle()">
+          <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
+        </button>
+      }
+      @if (engineCrashed) {
+        <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">
+          <mat-card-content style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <mat-icon>error_outline</mat-icon>
+            <span style="flex:1">{{ 'analysis.engineCrashed' | translate }}</span>
+            <button mat-stroked-button style="color:var(--mat-sys-on-error);border-color:var(--mat-sys-on-error)" (click)="reloadPage()">{{ 'analysis.engineCrashedReload' | translate }}</button>
+          </mat-card-content>
+        </mat-card>
+      }
+      <app-analysis-engine-card
+        [engineOn]="engineOn" [sparring]="!!spar.sparring" [depth]="depth" [depthSetting]="depthSetting" [depthOptions]="depthOptions"
+        [linesCount]="linesCount" [searchTime]="searchTime" [speedHint]="speedHint" [engines]="externalEnginesList"
+        [selectedEngineId]="selectedEngineId" [engineChoices]="engineChoices" [terminal]="terminal" [terminalText]="terminalText"
+        [remoteFallback]="remoteFallback" [remoteCut]="remoteCut" [showThinking]="showThinking" [thinkingTime]="thinkingTime"
+        [slowConfigHint]="slowConfigHint" [displayLines]="displayLines" [mainEngineName]="mainEngineName"
+        [compareOn]="compare.on" [compareRunning]="compare.running" [compareEngineId]="compare.engineId"
+        [compareEngineName]="compareEngineName" [compareDepth]="compare.depth" [compareSpeedHint]="compareSpeedHint"
+        [compareFallback]="compare.fallback" [compareCrashed]="compare.crashed" [compareLines]="compare.lines"
+        (engineToggle)="engineOn = $event; onEngineToggle()" (depthChange)="depthSetting = $event; onDepthChange()"
+        (linesChange)="linesCount = $event; onLinesChange()" (engineSelect)="selectedEngineId = $event; onEngineSelect()"
+        (compareToggle)="compare.on = !compare.on; compare.onToggle()"
+        (compareEngineSelect)="compare.engineId = $event; compare.onEngineSelect()">
+        <!-- Endspiel-Datenbank (0.729.0): ab 7 Steinen das genaue Ergebnis von Lichess, Stockfish rechnet daneben weiter.
+             Nicht im Sparring gegen Maia (sie verriete den besten Zug). -->
+        @if (!terminal && !spar.sparring && !editing) {
+          <app-tablebase-panel [fen]="currentFen" (playSan)="playRepertoireMoves([$event])" (verdict)="tbVerdict = $event" />
+        }
+      </app-analysis-engine-card>
+
+      <!-- Sparring gegen Maia: die Karte führt den Lade-Ablauf selbst und meldet „start" erst mit fertigem Modell.
+           Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte. -->
+      @if (!editing) {
+        <app-maia-sparring-card
+          [active]="!!spar.sparring" [userColor]="spar.sparring?.userColor ?? turnColor" [thinking]="spar.maiaThinking"
+          [maiaToMove]="spar.maiaToMove" [elo]="spar.maiaElo"
+          [showAnalyze]="spar.sparringAnalyzeVisible" [analyzing]="spar.analyzingSparring"
+          [analyzeBlocked]="spar.analyzeStatus?.engineAvailable === false"
+          [warnBadMoves]="spar.warnBadMoves" [keepEvalBar]="spar.keepEvalBar" [warning]="spar.sparringWarning"
+          (start)="spar.startSparring()" (stop)="spar.stopSparring()" (switchSides)="spar.switchSparringSides()"
+          (restart)="spar.restartSparring()" (maiaMove)="spar.requestMaiaMove()" (eloChange)="spar.onMaiaEloChange($event)"
+          (analyze)="spar.analyzeSparring()" (warnBadMovesChange)="spar.onWarnBadMovesChange($event)"
+          (keepEvalBarChange)="spar.onKeepEvalBarChange($event)" (analyzeWarning)="spar.analyzeWarning()" />
+      }
+
+      <mat-card class="moves-card">
+        <mat-card-content>
+          <div class="controls">
+            <!-- appIconLabel statt matTooltip (Codereview UX-014): derselbe Text wird auch der zugängliche Name —
+                 mit Tooltip allein hießen die Knöpfe für Screenreader nur „Schaltfläche". -->
+            <button mat-icon-button (click)="goTo(0)" [disabled]="ply === 0" [appIconLabel]="'analysis.start' | translate"><mat-icon>first_page</mat-icon></button>
+            <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [appIconLabel]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
+            <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+            <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
+            <button mat-icon-button class="star-btn" [class.on]="!!currentNode.starred" (click)="toggleStar()"
+                    [appIconLabel]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
+              <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
+            </button>
+            <span class="spacer"></span>
+            <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
+            <button mat-icon-button (click)="reset()" [appIconLabel]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
+            <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
+                 die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
+            <!-- „+" (0.749.0): besonders gute Stellung markieren. -->
+            <app-mark-position-button [fen]="currentFen" [origin]="boardMarkOrigin" />
+            <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
+                               [candidates]="engineCandidates"
+                               [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
+          </div>
+          @if (starredList.length > 0) {
+            <div class="star-jumps" [attr.aria-label]="'analysis.star.jumps' | translate">
+              <mat-icon class="star-icon">star</mat-icon>
+              @for (n of starredList; track n) {
+                <button type="button" class="jump" [class.active]="n === currentNode" (click)="goToNode(n)">{{ starLabel(n) }}</button>
+              }
+            </div>
+          }
+          @if (root.children.length === 0) {
+            <p class="muted">{{ 'analysis.noMoves' | translate }}</p>
+          } @else {
+            <!-- Zugbaum wie auf Lichess (0.604.0): Hauptlinie als Tabelle mit Bewertung, Varianten als Block,
+                 Rechtsklick bzw. langer Druck: Stern, hochstufen, zur Hauptvariante, ab hier löschen. -->
+            <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion"
+                                    (select)="goToNode($event)" (action)="onTreeAction($event)" />
+            <p class="tree-hint">{{ 'analysis.tree.hint' | translate }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Eröffnungs-Explorer (Lichess/Meister, online oder lokal) — nur eingeloggt: die Online-Quelle
+           verbraucht das gemeinsame Kontingent des Server-Tokens. Ein Klick spielt den Zug. -->
+      @if (auth.isLoggedIn) {
+        <mat-card class="explorer-card">
+          <mat-card-content>
+            <app-opening-explorer [fen]="currentFen" (playMove)="playRepertoireMoves([$event])" />
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- „Stellung in meinen Repertoires" gibt es nur eingeloggt; ohne dieses @if stand hier
+           für anonyme Besucher eine leere graue Karte zwischen Zug- und FEN-Karte. -->
+      @if (auth.isLoggedIn) {
+        <mat-card class="reps-card">
+          <mat-card-content>
+            <app-position-repertoires [fen]="currentFen" (playMoves)="playRepertoireMoves($event)" />
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <mat-card class="io-card">
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>{{ 'analysis.fen' | translate }}</mat-label>
+            <input matInput [(ngModel)]="fenInput" (keyup.enter)="loadFen()">
+          </mat-form-field>
+          <div class="io-actions">
+            <button mat-stroked-button (click)="loadFen()"><mat-icon>input</mat-icon> {{ 'analysis.loadFen' | translate }}</button>
+            <button mat-stroked-button (click)="startEditing()"><mat-icon>grid_view</mat-icon> {{ 'analysis.setup.button' | translate }}</button>
+          </div>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>{{ 'analysis.pgn' | translate }}</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="pgnInput"></textarea>
+          </mat-form-field>
+          <button mat-stroked-button (click)="loadPgn()"><mat-icon>upload</mat-icon> {{ 'analysis.loadPgn' | translate }}</button>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
