@@ -1,4 +1,4 @@
-import { isGameCitationComment } from './game-citation.util';
+import { isFillerEndComment, isGameCitationComment } from './game-citation.util';
 
 describe('isGameCitationComment', () => {
   it('accepts pure game citations ending in a year', () => {
@@ -50,5 +50,24 @@ describe('isGameCitationComment', () => {
     expect(isGameCitationComment(null)).toBeFalse();
     expect(isGameCitationComment(undefined)).toBeFalse();
     expect(isGameCitationComment('   ')).toBeFalse();
+  });
+});
+
+/** Inhaltsleere Abschluss-Floskeln → Solver rückt automatisch weiter (Wunsch 2026-10-12). */
+describe('isFillerEndComment', () => {
+  it('erkennt Zeichen ohne Buchstaben, Ausgang, Lob, Punkte und Verweise', () => {
+    for (const c of ['✔', '1-0', '0-1 .', '½–½', '=', '+- ✔', 'and White won.', 'Resigns.', 'Draw agreed.',
+      'Checkmate!', 'Black is mated.', 'etc.', "and it's all over.", 'CORRECT! Well done.', 'Great job!',
+      '(1 point)', 'Another 1 point for this variation.', '2 points', 'Go to the lesson',
+      '____________ Full Game', 'Continued in the next variation.', 'See the relevant Theme.']) {
+      expect(isFillerEndComment(c)).withContext(c).toBeTrue();
+    }
+  });
+
+  it('lässt lehrreiche Kommentare und Zugnotation stehen', () => {
+    for (const c of ['Zugzwang.', 'Castle quickly!', 'White wins a piece.', 'Not 2.Qxe5? Rxe5', 'Greco\'s mate',
+      'Theme: domination.', 'The knight helps the queen.', '', null]) {
+      expect(isFillerEndComment(c)).withContext(String(c)).toBeFalse();
+    }
   });
 });

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.756.1", date: "2026-10-12", changes: [
+    { en: "Courses: after the last move the solver now also moves on automatically when the final comment carries no content — e.g. „✔“ (Woodpecker), „1-0“, „Resigns.“, „CORRECT! Well done.“, „(1 point)“ or „Go to the lesson“ (about 2,500 lines in 117 courses). Real explanations still stop for reading.",
+      de: "Kurse: Nach dem letzten Zug geht es jetzt auch dann automatisch weiter, wenn der Schlusskommentar nichts Inhaltliches sagt — z. B. „✔“ (Woodpecker), „1-0“, „Resigns.“, „CORRECT! Well done.“, „(1 point)“ oder „Go to the lesson“ (rund 2 500 Linien in 117 Kursen). Echte Erklärungen halten weiterhin zum Lesen an." },
+  ] },
   { version: "0.756.0", date: "2026-10-12", changes: [
     { en: "LeagueHub: correcting a club game now shows the evaluation curve of the saved game — a zigzag (a move throws the game away and the next one gives it straight back) almost always marks a misread move; clicking the curve jumps there.",
       de: "LeagueHub: beim Korrigieren einer Vereinspartie steht jetzt die Bewertungskurve der gespeicherten Partie – ein Zickzack (ein Zug verschenkt, der nächste gibt es gleich zurück) zeigt fast immer einen falsch gelesenen Zug; ein Klick auf die Kurve springt hin." },

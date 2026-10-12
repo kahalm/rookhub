@@ -1,4 +1,4 @@
-import { isGameCitationComment } from './game-citation.util';
+import { isFillerEndComment, isGameCitationComment } from './game-citation.util';
 
 /**
  * Reine (state-freie) Kommentar-/Review-Rendering-Logik des Buch-/Kurs-/Wochenpost-/Tagespuzzle-
@@ -94,13 +94,14 @@ export function buildCommentLines(s: CommentLinesState): string[] {
 
 /**
  * Gibt es nach dem letzten Zug der Linie noch einen LEHRREICHEN Abschlusskommentar? Reine Partie-/
- * Studien-Angaben (Zitate) zählen nicht — dann wird wie ohne Kommentar auto-weitergerückt.
+ * Studien-Angaben (Zitate) und inhaltsleere Floskeln („✔", „1-0", „Resigns.", „(1 point)" …) zählen
+ * nicht — dann wird wie ohne Kommentar auto-weitergerückt.
  */
 export function hasTrailingSolutionComment(moves: string | null | undefined, moveComments: MoveComments): boolean {
   const allMoves = (moves ?? '').split(' ').filter(m => m);
   if (allMoves.length === 0) return false;
   const c = commentForPlyPlayed(moveComments, allMoves.length - 1);
   if (!c) return false;
-  if (isGameCitationComment(c)) return false;
+  if (isGameCitationComment(c) || isFillerEndComment(c)) return false;
   return true;
 }

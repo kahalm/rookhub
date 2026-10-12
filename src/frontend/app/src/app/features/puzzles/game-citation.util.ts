@@ -67,3 +67,32 @@ export function isGameCitationComment(text: string | null | undefined): boolean 
   if (t.length <= 100 && NAME_PAIR.test(t) && NO_PROSE_ENDS_YEAR.test(t)) return true;
   return false;
 }
+
+/**
+ * Inhaltsleere Abschluss-Floskeln OHNE Quellenangabe, bei denen der Solver ebenfalls weiterrücken soll
+ * (Wunsch 2026-10-12, ausgewertet über die Endkommentare aller Kurse auf Prod):
+ *  - nur Zeichen ohne Buchstaben: „✔" (Woodpecker), „1-0", „0-1 .", „=", „." …
+ *  - Partie-Ausgang: „and White won.", „Resigns.", „Draw agreed.", „Checkmate!", „Black is mated." …
+ *  - Lob: „CORRECT! Well done.", „Great job!" …
+ *  - Punktwertung: „(1 point)", „Another 1 point for this variation." …
+ *  - Verweise: „Go to the lesson", „____ Full Game", „Continued in the next variation." …
+ */
+const FILLERS = new Set([
+  'white won', 'black won', 'white soon won', 'black soon won',
+  'white went on to win', 'black went on to win', 'white won the game', 'black won the game',
+  'resigns', 'resigned', 'draw agreed', 'a draw was soon agreed', 'draw by perpetual',
+  'checkmate', 'black is mated', 'white is mated', 'etc', "it's all over", 'the rest is easy',
+  'correct! well done', 'correct', 'well done', 'very well done', 'great job', 'good job', 'excellent',
+  'go to the lesson', 'continued in the next variation', 'see the relevant theme',
+]);
+const POINTS = /^\(?(?:another )?\d+ points?(?: for this variation)?\)?\.?$/i;
+const FULL_GAME = /^_+\s*full game$/i;
+const LETTER = /\p{L}/u;
+
+export function isFillerEndComment(text: string | null | undefined): boolean {
+  const t = (text ?? '').trim();
+  if (t.length === 0 || t.length > 60) return false;
+  if (!LETTER.test(t)) return true;   // ✔, 1-0, 0-1 ., =, ½-½ …
+  if (POINTS.test(t) || FULL_GAME.test(t)) return true;
+  return FILLERS.has(resultCore(t));
+}
