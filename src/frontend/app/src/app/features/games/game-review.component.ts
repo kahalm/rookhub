@@ -32,6 +32,7 @@ import { mapBrokerLine, toDisplayLines } from '../analysis/engine-lines.util';
 import type { EngineAnalyseLine } from '../analysis/external-engine.service';
 import type { ComputerLine } from './computer-lines.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
@@ -70,7 +71,7 @@ const MATE_GAP_PAWNS = 100;
   selector: 'app-game-review',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe],
+  imports: [IconLabelDirective, EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe, SanPipe],
   template: `
     @if (status() !== 'none') {
       <section class="review">
@@ -132,7 +133,7 @@ const MATE_GAP_PAWNS = 100;
             @for (l of lines(); track $index) {
               <li [class.played]="l.played">
                 <span class="line-eval" [class.white]="l.whiteBetter">{{ l.evalText }}</span>
-                <span class="line-san">{{ l.san }}</span>
+                <span class="line-san">{{ l.san | san:'text' }}</span>
               </li>
             }
           </ol>
@@ -144,7 +145,7 @@ const MATE_GAP_PAWNS = 100;
             @for (l of altLines(); track $index) {
               <li [class.played]="l.played">
                 <span class="line-eval" [class.white]="l.whiteBetter">{{ l.evalText }}</span>
-                <span class="line-san">{{ l.san }}</span>
+                <span class="line-san">{{ l.san | san:'text' }}</span>
               </li>
             }
           </ol>

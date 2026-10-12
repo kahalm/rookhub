@@ -109,6 +109,8 @@
       "rangeEmpty": "0 od {{length}}"
     },
     "moreActions": "Više radnji",
+    "showMore": "Više",
+    "showLess": "Manje",
     "save": "Spremi",
     "cancel": "Odustani",
     "delete": "Izbriši",
@@ -1461,7 +1463,6 @@
       "previous": "Prethodna zagonetka"
     },
     "bar": {
-      "more": "Više"
     },
     "keyboardMove": {
       "board": "Šahovska ploča",
@@ -1586,8 +1587,6 @@
       "skippedCountOne": "Preskočen red ({{count}}):",
       "startChapter": "Pokreni poglavlje",
       "tags": "Oznake",
-      "descMore": "Više",
-      "descLess": "Manje",
       "title": "Tečaj",
       "chapterPoints": "{{score}} bod.",
       "downloadChapterPgn": "Preuzmi poglavlje kao PGN",
@@ -1788,9 +1787,7 @@
     "reimport": {
       "chip": "Ponovno preuzmi",
       "legend": "{{count}} tečajeva treba ponovno uvesti putem RepChecka",
-      "legendOne": "1 tečaj treba ponovno uvesti putem RepChecka",
-      "more": "Više",
-      "less": "Manje"
+      "legendOne": "1 tečaj treba ponovno uvesti putem RepChecka"
     }
   },
   "calc": {
@@ -3639,8 +3636,6 @@
     "cachedHint": "Spremljeno u predmemoriju — dostupno gotovo odmah (nije potreban Chessable dohvat)",
     "useExtension": {
       "lead": "Chessable tečajeve sada dohvaćaš RepCheck proširenjem u vlastitom pregledniku.",
-      "more": "Više",
-      "less": "Manje",
       "title": "Molimo koristi RepCheck proširenje za preglednik",
       "body": "Uvoz Chessable tečajeva preko RookHuba je isključen. RookHub bi ih morao dohvaćati s Chessablea poslužiteljski preko IP adresa podatkovnih centara — upravo te adrese Chessable blokira, a takav obrazac može dovesti do blokade tvog Chessable računa. RepCheck umjesto toga radi u tvom vlastitom prijavljenom pregledniku s tvoje IP adrese: tečajevi stižu u RookHub bez čekanja u redu, rizik je znatno manji, a svoj Chessable token ne moraš pohraniti kod nas."
     }

@@ -10,6 +10,8 @@
       "rangeEmpty": "0 van {{length}}"
     },
     "moreActions": "Meer acties",
+    "showMore": "Meer",
+    "showLess": "Minder",
     "save": "Opslaan",
     "cancel": "Annuleren",
     "delete": "Verwijderen",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Opnieuw ophalen",
       "legend": "{{count}} cursussen moeten opnieuw via RepCheck worden geïmporteerd",
-      "legendOne": "1 cursus moet opnieuw via RepCheck worden geïmporteerd",
-      "more": "Meer",
-      "less": "Minder"
+      "legendOne": "1 cursus moet opnieuw via RepCheck worden geïmporteerd"
     }
   },
   "weekly": {

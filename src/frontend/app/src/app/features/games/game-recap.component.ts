@@ -1,9 +1,10 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, linkedSignal, signal, untracked,
+  ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, linkedSignal, signal, untracked, viewChild,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
+import { ClampMoreDirective } from '../../shared/clamp-more/clamp-more.directive';
 import { GameRoast, GamesService } from './games.service';
 
 /** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
@@ -21,21 +22,27 @@ const RECAP_RETRY_MS = 15_000;
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-game-recap',
   standalone: true,
-  imports: [MatIconModule, MatTooltipModule, TranslatePipe],
+  imports: [MatIconModule, MatTooltipModule, TranslatePipe, ClampMoreDirective],
   host: { '[class.has-text]': '!!roast() || !!recap()' },
   template: `
     <!-- Mit Roast geteilt (0.742.0, /g/{token}?roast={id}): der freigegebene Roast statt „Kurz erzählt". -->
     @if (roast(); as r) {
-      <p class="recap roast" [class.open]="open()" (click)="open.set(!open())">
+      <p class="recap roast" id="game-recap" [class.open]="open()" (click)="toggle()"
+         [appClampMore]="r.text" [clampLines]="3" [clampExpanded]="open()">
         <span class="roast-icon" [matTooltip]="'games.roast.title' | translate" [attr.aria-label]="'games.roast.title' | translate">🔥</span>
-        <span class="recap-text">{{ r.text }}</span>
+        <span class="recap-text"><span class="clamp-text"></span><button type="button" class="clamp-more"
+              aria-controls="game-recap" [attr.aria-expanded]="open()"
+              (click)="toggle($event)">{{ (open() ? 'common.showLess' : 'common.showMore') | translate }}</button></span>
       </p>
     } @else if (recap(); as text) {
       <!-- „Kurz erzählt" (0.541.0): dieselbe Zeile wie in der Link-Vorschau, vom Sprachmodell aus der Analyse. -->
-      <!-- Am Handy auf drei Zeilen gekürzt; Antippen zeigt alles (v1-rk-first-view-lead-long-mobile). -->
-      <p class="recap" [class.open]="open()" (click)="open.set(!open())">
+      <!-- Auf drei Zeilen gekürzt, „Mehr" sichtbar am Satzende (DESIGN 5.11); Antippen des Kastens zeigt ebenfalls alles. -->
+      <p class="recap" id="game-recap" [class.open]="open()" (click)="toggle()"
+         [appClampMore]="text" [clampLines]="3" [clampExpanded]="open()">
         <mat-icon [matTooltip]="'games.recap.hint' | translate" [attr.aria-label]="'games.recap.hint' | translate">auto_stories</mat-icon>
-        <span class="recap-text">{{ text }}</span>
+        <span class="recap-text"><span class="clamp-text"></span><button type="button" class="clamp-more"
+              aria-controls="game-recap" [attr.aria-expanded]="open()"
+              (click)="toggle($event)">{{ (open() ? 'common.showLess' : 'common.showMore') | translate }}</button></span>
       </p>
     }
   `,
@@ -52,12 +59,16 @@ const RECAP_RETRY_MS = 15_000;
     .recap.roast { background: color-mix(in srgb, #e64a19 9%, transparent); white-space: pre-wrap; }
     .roast-icon { flex: 0 0 auto; font-size: 18px; line-height: 1.3; }
     .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
+    .recap-text { flex: 1 1 auto; min-width: 0; }
+    /* „Kurz erzählt" höchstens drei Zeilen (4.6 Regel 5) — gemessen gekürzt (ClampMoreDirective), „Mehr"/„Weniger" als
+       sichtbarer Textknopf am Satzende (5.11; vorher nur Antippen ohne Hinweis). */
+    .clamp-more {
+      font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; margin-left: .3em;
+      color: var(--mat-sys-primary); background: none; border: none; padding: 0;
+    }
+    .clamp-more:hover, .clamp-more:focus-visible { text-decoration: underline; }
     @media (max-width: 768px) {
       .recap { margin: 0 16px 12px; width: auto; min-width: 0; cursor: pointer; }
-      /* „Kurz erzählt" höchstens drei Zeilen (4.6 Regel 5), Antippen zeigt alles. */
-      .recap:not(.open) > .recap-text {
-        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-      }
     }
   `],
 })
@@ -76,8 +87,17 @@ export class GameRecapComponent {
 
   /** Angezeigter Text: der mitgebrachte, bis ein Abruf ihn liefert. */
   readonly recap = linkedSignal<string | null>(() => this.text() ?? null);
-  /** Ganz zeigen — am Handy sonst auf drei Zeilen gekürzt (v1-rk-first-view-lead-long-mobile). */
+  /** Ganz zeigen — sonst auf drei Zeilen gekürzt (v1-rk-first-view-lead-long-mobile). */
   readonly open = signal(false);
+
+  /** Auf-/Zuklappen; der Knopf liegt im Kasten, der selbst auch umschaltet — sein Klick zählt nur einmal. */
+  toggle(e?: Event): void {
+    e?.stopPropagation();
+    // Passt der Text ganz, gibt es nichts aufzuklappen (kein „Weniger" unter einem vollständigen Satz).
+    if (!this.open() && !this.clamp()?.clamped) return;
+    this.open.set(!this.open());
+  }
+  private readonly clamp = viewChild(ClampMoreDirective);
 
   private tries = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;

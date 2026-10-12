@@ -268,6 +268,65 @@ describe('RepertoireDetailComponent Kopf', () => {
     });
   }
 
+  /** Regeln innerhalb `@media (max-width: …)` — Karma läuft mit 1400 px, Handy-Regeln greifen im Test also nie;
+   *  geprüft wird, dass sie DA sind und was sie setzen (Muster `app-footer.component.spec.ts`). */
+  function narrowRules(maxWidth: string, ...parts: string[]): CSSStyleRule[] {
+    const out: CSSStyleRule[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const r of Array.from(rules)) {
+        if (!(r instanceof CSSMediaRule) || r.conditionText.replace(/\s/g, '') !== `(max-width:${maxWidth})`) continue;
+        for (const inner of Array.from(r.cssRules)) {
+          if (inner instanceof CSSStyleRule && inner.selectorText.split(',').some(sel => parts.every(p => sel.includes(p)))) {
+            out.push(inner);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  // Nachrunde v1-rk-repertoire-abfragen-knopf-wandert (Handy): Abfragen + Moduswahl in EINER Zeile, rechtsbündig,
+  // Abfragen am Handy als Symbolknopf mit Namen im aria-label.
+  it('tree: Abfragen trägt seinen Namen als aria-label, die Beschriftung ist ein eigenes Stück', async () => {
+    const el = await render('tree');
+    const btn = el.querySelector('.header-actions .train-btn') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).toBe('repertoireTrainer.modeQuiz');
+    expect(btn.getAttribute('title')).toBe('repertoireTrainer.modeQuiz');
+    expect(btn.querySelector('.train-label')?.textContent?.trim()).toBe('repertoireTrainer.modeQuiz');
+  });
+
+  it('Handy: Kopfaktionen umbrechen nicht und stehen rechts; Abfragen-Beschriftung unter 600 px aus', async () => {
+    await render('tree');
+    const actions = narrowRules('899.98px', '.header-actions');
+    expect(actions.some(r => r.style.flexWrap === 'nowrap' && r.style.marginLeft === 'auto')).toBeTrue();
+    const label = narrowRules('599.98px', '.train-label');
+    expect(label.some(r => r.style.display === 'none')).toBeTrue();
+  });
+
+  it('Abfragen und Moduswahl stehen in derselben Zeile, der Kopf ist in Liste und Baum gleich hoch', async () => {
+    const heights: number[] = [];
+    for (const mode of ['lines', 'tree'] as const) {
+      TestBed.resetTestingModule();
+      const el = await render(mode);
+      document.body.appendChild(el);
+      try {
+        const head = el.querySelector('.detail-header') as HTMLElement;
+        heights.push(Math.round(head.getBoundingClientRect().height));
+        if (mode === 'tree') {
+          const b = (el.querySelector('.train-btn') as HTMLElement).getBoundingClientRect();
+          const g = (el.querySelector('mat-button-toggle-group') as HTMLElement).getBoundingClientRect();
+          // gleiche Zeile: senkrechte Mitten fast gleich
+          expect(Math.abs((b.top + b.bottom) / 2 - (g.top + g.bottom) / 2)).toBeLessThan(3);
+        }
+      } finally {
+        el.remove();
+      }
+    }
+    expect(heights[0]).toBe(heights[1]);
+  });
+
   it('lines: kein Abfragen-Knopf im Kopf (steht in der Linienleiste)', async () => {
     const el = await render('lines');
     expect(el.querySelector('.detail-header .train-btn')).toBeNull();

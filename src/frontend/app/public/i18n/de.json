@@ -109,6 +109,8 @@
       "rangeEmpty": "0 von {{length}}"
     },
     "moreActions": "Weitere Aktionen",
+    "showMore": "Mehr",
+    "showLess": "Weniger",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",
@@ -1461,7 +1463,6 @@
       "previous": "Vorheriges Puzzle"
     },
     "bar": {
-      "more": "Mehr"
     },
     "keyboardMove": {
       "board": "Schachbrett",
@@ -1586,8 +1587,6 @@
       "skippedCountOne": "{{count}} Zeile übersprungen:",
       "startChapter": "Kapitel starten",
       "tags": "Schlagwörter",
-      "descMore": "Mehr",
-      "descLess": "Weniger",
       "title": "Kurs",
       "chapterPoints": "{{score}} Pkt",
       "downloadChapterPgn": "Kapitel als PGN herunterladen",
@@ -1788,9 +1787,7 @@
     "reimport": {
       "chip": "Neu holen",
       "legend": "{{count}} Kurse brauchen einen neuen Import über RepCheck",
-      "legendOne": "1 Kurs braucht einen neuen Import über RepCheck",
-      "more": "Mehr",
-      "less": "Weniger"
+      "legendOne": "1 Kurs braucht einen neuen Import über RepCheck"
     }
   },
   "calc": {
@@ -3639,8 +3636,6 @@
     "cachedHint": "Zwischengespeichert — quasi sofort verfügbar (kein Chessable-Abruf nötig)",
     "useExtension": {
       "lead": "Chessable-Kurse holst du jetzt mit der RepCheck-Erweiterung in deinem eigenen Browser.",
-      "more": "Mehr",
-      "less": "Weniger",
       "title": "Bitte verwende die RepCheck-Browser-Erweiterung",
       "body": "Der Import von Chessable-Kursen über RookHub ist abgeschaltet. RookHub müsste sie dafür serverseitig über Rechenzentrums-IPs von Chessable holen — genau diese IPs blockt Chessable, und dieses Muster kann dein Chessable-Konto sperren lassen. RepCheck läuft stattdessen in deinem eigenen, eingeloggten Browser über deine eigene IP: Deine Kurse kommen ohne Warteschlange zu RookHub, das Risiko ist deutlich kleiner, und dein Chessable-Token muss nicht bei uns liegen."
     }

@@ -137,27 +137,32 @@ import { analysisTitle } from './analysis-title.util';
         @for (a of analyses; track a.id) {
           <mat-card class="ga">
             <mat-card-content>
+              <!-- Zwei Teile: links Titel/Status/Tiefe (bricht um), rechts die Knöpfe fest in der ersten Zeile —
+                   sonst rutscht am Handy der Papierkorb allein in eine eigene Zeile (v1-rk-analysis-jobs-percent-wrap). -->
               <div class="ga-head">
-                <a class="ga-title" [routerLink]="['/analysis/games', a.id]">{{ title(a) }}</a>
-                <span class="chip" [class]="'st-' + a.status">{{ 'gameAnalysis.status.' + a.status | translate }}</span>
-                <span class="spacer"></span>
-                @if (a.targetNodes) {
-                  <span class="muted small">
-                    @if (engineName(a.engineId); as en) { {{ en }} · }
-                    {{ (a.multiPv === 1 ? 'gameAnalysis.nodesLinesOne' : 'gameAnalysis.nodesLines') | translate:{ nodes: (a.targetNodes | number), lines: a.multiPv } }}
-                  </span>
-                } @else {
-                  <span class="muted small">{{ (a.multiPv === 1 ? 'gameAnalysis.depthLinesOne' : 'gameAnalysis.depthLines') | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
-                }
-                <button mat-icon-button [disabled]="restarting === a.id"
-                        [attr.aria-label]="'gameAnalysis.restart' | translate"
-                        [matTooltip]="'gameAnalysis.restartHint' | translate" (click)="restart(a)">
-                  <mat-icon>refresh</mat-icon>
-                </button>
-                <button mat-icon-button
-                        [appIconLabel]="'common.delete' | translate" (click)="remove(a)">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                <div class="ga-main">
+                  <a class="ga-title" [routerLink]="['/analysis/games', a.id]">{{ title(a) }}</a>
+                  <span class="chip" [class]="'st-' + a.status">{{ 'gameAnalysis.status.' + a.status | translate }}</span>
+                  @if (a.targetNodes) {
+                    <span class="ga-meta muted small">
+                      @if (engineName(a.engineId); as en) { {{ en }} · }
+                      {{ (a.multiPv === 1 ? 'gameAnalysis.nodesLinesOne' : 'gameAnalysis.nodesLines') | translate:{ nodes: (a.targetNodes | number), lines: a.multiPv } }}
+                    </span>
+                  } @else {
+                    <span class="ga-meta muted small">{{ (a.multiPv === 1 ? 'gameAnalysis.depthLinesOne' : 'gameAnalysis.depthLines') | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
+                  }
+                </div>
+                <div class="ga-actions">
+                  <button mat-icon-button [disabled]="restarting === a.id"
+                          [attr.aria-label]="'gameAnalysis.restart' | translate"
+                          [matTooltip]="'gameAnalysis.restartHint' | translate" (click)="restart(a)">
+                    <mat-icon>refresh</mat-icon>
+                  </button>
+                  <button mat-icon-button
+                          [appIconLabel]="'common.delete' | translate" (click)="remove(a)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
               </div>
               <mat-progress-bar mode="determinate" [value]="percent(a)"></mat-progress-bar>
               <div class="ga-foot muted small">
@@ -193,10 +198,15 @@ import { analysisTitle } from './analysis-title.util';
       .reason { text-align: left; }
     }
     .ga { margin-bottom: 10px; }
-    .ga-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
-    .ga-title { font-weight: 600; text-decoration: none; color: inherit; }
+    /* Kopf ohne Umbruch: der linke Teil schrumpft (min-width: 0) und bricht in sich um, die Knöpfe bleiben
+       rechts in der ersten Zeile (flex: none). */
+    .ga-head { display: flex; align-items: flex-start; gap: 8px; flex-wrap: nowrap; margin-bottom: 8px; }
+    .ga-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px;
+      min-height: 40px; }
+    .ga-meta { margin-left: auto; }
+    .ga-actions { flex: none; display: flex; align-items: center; }
+    .ga-title { font-weight: 600; text-decoration: none; color: inherit; min-width: 0; overflow-wrap: anywhere; }
     .ga-title:hover { text-decoration: underline; }
-    .spacer { flex: 1 1 auto; }
     .chip { font-size: .72rem; padding: 2px 8px; border-radius: 10px; border: 1px solid currentColor; }
     .st-done { color: var(--rh-success); }
     .st-failed { color: var(--rh-error); }

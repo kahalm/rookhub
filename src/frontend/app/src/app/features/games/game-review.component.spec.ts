@@ -158,6 +158,18 @@ describe('GameReviewComponent', () => {
       expect(el.querySelectorAll('.lines li.played').length).toBe(1);   // c5 wurde gespielt
     });
 
+    // Nebenbefund der Nachprüfung v1: Engine-Linien der Karte „Auswertung" standen auf Deutsch englisch (Nf3, Bb4+).
+    it('zeigt die Engine-Linien in den Figurenbuchstaben der Oberflächensprache (nur Anzeige)', () => {
+      const { fixture, http, el } = setup();
+      TestBed.inject(TranslateService).use('de');
+      flushEvals(http, withCandidates());
+      fixture.componentRef.setInput('currentIndex', 0);
+      fixture.detectChanges();
+      expect(el.querySelector('.lines .line-san')!.textContent!.trim()).toBe('1... e5 2. Sf3');
+      // die Linie selbst (für Pfeile, Klicks, Export) bleibt englisch
+      expect(fixture.componentInstance.lines()[0].san).toBe('1... e5 2. Nf3');
+    });
+
     it('Pfeil: an → der beste Zug der Stellung geht an die Seite; wechselt mit dem Zug', () => {
       const { fixture, http, el } = setup();
       const arrows: unknown[] = [];

@@ -10,6 +10,8 @@
       "rangeEmpty": "0 din {{length}}"
     },
     "moreActions": "Mai multe acțiuni",
+    "showMore": "Mai mult",
+    "showLess": "Mai puțin",
     "save": "Salvează",
     "cancel": "Anulează",
     "delete": "Șterge",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Reimportă",
       "legend": "{{count}} cursuri trebuie reimportate prin RepCheck",
-      "legendOne": "1 curs trebuie reimportat prin RepCheck",
-      "more": "Mai mult",
-      "less": "Mai puțin"
+      "legendOne": "1 curs trebuie reimportat prin RepCheck"
     }
   },
   "weekly": {

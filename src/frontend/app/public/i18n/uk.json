@@ -10,6 +10,8 @@
       "rangeEmpty": "0 з {{length}}"
     },
     "moreActions": "Інші дії",
+    "showMore": "Докладніше",
+    "showLess": "Згорнути",
     "save": "Зберегти",
     "cancel": "Скасувати",
     "delete": "Видалити",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Завантажити знову",
       "legend": "Курсів, які треба заново імпортувати через RepCheck: {{count}}",
-      "legendOne": "1 курс треба заново імпортувати через RepCheck",
-      "more": "Докладніше",
-      "less": "Згорнути"
+      "legendOne": "1 курс треба заново імпортувати через RepCheck"
     }
   },
   "weekly": {

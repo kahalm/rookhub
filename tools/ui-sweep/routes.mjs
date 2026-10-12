@@ -124,7 +124,7 @@ export const ROUTES = [
   // Kurs in allen Modi: Zufall (ganzes Buch + Kapitel), nur markierte Karteikarten, Detailseite des eigenen Kalkulationskurses.
   r('rookhub', '/courses/{bookId}/random', 'user', { label: 'courses-random', main: PUZZLE_BOARD }),
   r('rookhub', '/courses/{bookId}/chapter/{chapterIndex}/random', 'user', { label: 'courses-chapter-random', main: PUZZLE_BOARD }),
-  r('rookhub', '/courses/{bookId}/flashcards?marked=1', 'user', { label: 'courses-flashcards-marked', main: ['.fc-study .fc-study-card', '.fc-sheets:not(.fc-sheets--screen-hidden) .fc-card', '.fc-page .fc-center'] }),
+  r('rookhub', '/courses/{bookId}/flashcards?marked=1', 'user', { label: 'courses-flashcards-marked', main: ['.fc-study .fc-study-card', '.fc-sheets:not(.fc-sheets--screen-hidden) .fc-card', '.fc-page .fc-center', '.fc-page .empty-state'] }),
   r('rookhub', '/courses/{calcBookId}/calc', 'user', { main: ['.calc-board-wrap app-puzzle-board', '.calc-page .calc-loading', '.calc-page > mat-card'] }),
   r('rookhub', '/courses/{studyBookId}', 'user', { label: 'courses-study', main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
   r('rookhub', '/courses/{studyBookId}/browse', 'user', { label: 'courses-study-browse', main: COURSE_BROWSE }),

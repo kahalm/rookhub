@@ -10,6 +10,8 @@
       "rangeEmpty": "0 z {{length}}"
     },
     "moreActions": "Więcej akcji",
+    "showMore": "Więcej",
+    "showLess": "Mniej",
     "save": "Zapisz",
     "cancel": "Anuluj",
     "delete": "Usuń",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Pobierz ponownie",
       "legend": "{{count}} kursów wymaga ponownego importu przez RepCheck",
-      "legendOne": "1 kurs wymaga ponownego importu przez RepCheck",
-      "more": "Więcej",
-      "less": "Mniej"
+      "legendOne": "1 kurs wymaga ponownego importu przez RepCheck"
     }
   },
   "weekly": {

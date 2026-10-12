@@ -10,6 +10,8 @@
       "rangeEmpty": "0 de {{length}}"
     },
     "moreActions": "Mais ações",
+    "showMore": "Mais",
+    "showLess": "Menos",
     "save": "Guardar",
     "cancel": "Cancelar",
     "delete": "Eliminar",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Reimportar",
       "legend": "{{count}} cursos precisam de nova importação pelo RepCheck",
-      "legendOne": "1 curso precisa de nova importação pelo RepCheck",
-      "more": "Mais",
-      "less": "Menos"
+      "legendOne": "1 curso precisa de nova importação pelo RepCheck"
     }
   },
   "weekly": {

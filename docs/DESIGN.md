@@ -270,6 +270,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - Turnierkarte (`src-turnier/.../tournament-card.component.ts`): **eine** Kurzansicht für Liste, Karten-Popup und
   Kalender; Aktionen an **festen Plätzen** (Abschnitt 8.2).
 - Bearbeiten in Listen-Karten: Stift-Symbol, Inhalt nur lesend (Wochenpost, 0.740.0).
+- **Kopfzeile einer Listen-Karte mit Symbolknöpfen:** zwei Teile ohne Umbruch — links Titel/Status/Meta
+  (`flex: 1 1 auto; min-width: 0`, bricht in sich um), rechts die Knöpfe (`flex: none`) oben in der ersten Zeile; nie
+  ein Knopf allein in einer eigenen Zeile (Partie-Analysen, 0.759.2).
 
 ### 5.3 Listen und Tabellen
 
@@ -304,6 +307,8 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   sonst nicht. Hubs setzen die beiden Rollen auf ihrer Karte (LeagueHub `--red`/`--on-red`, ClubHub `--bad`/`--bad-ink`,
   KidHub `--kid-bad-fg`). Link-Regeln in Karten treffen Knöpfe nicht: `a:not(.mat-mdc-button-base)`.
 - Knopf = Symbol + kurze Beschriftung; ganz schmal (≤ 380 px) darf die Beschriftung wegfallen (r2-rg-rep-toolbar).
+  Steht ein Hauptknopf neben einer Moduswahl im Seitenkopf, wird er unter 600 px zum Symbolknopf (Name im `aria-label`
+  + `title`), damit beide in **einer** Zeile bleiben und der Kopf in allen Modi gleich hoch ist (Repertoire, 0.759.2).
   Symbole **in** Knöpfen behalten die Material-Größe (r2-rg-trainer-icons).
 - **Gesperrter Knopf → Grund sichtbar darunter** (leise Zeile), nicht nur im Tooltip (r2-rg-analyze-disabled) —
   am Handy gibt es keinen Hover.
@@ -410,6 +415,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   (Vorbild `shared/reprocess-banner/`); Offline-Banner, Impersonation-Banner (`shared/impersonation-banner/`).
 - **„Mehr“ steht im Satz:** als Textknopf am Satzende (`aria-expanded`), nicht als eigener Flex-Eintrag — sonst
   steht er am Handy allein in einer Zeile (0.751.2).
+  Zugeklappter Text wird **gemessen** auf höchstens 3 Zeilen gekürzt (`shared/clamp-more/clamp-more.directive.ts`:
+  Wortende + „…“, Knopf in der letzten Zeile, nur wenn der Text nicht ganz passt) — keine feste Zeichenzahl (passt
+  nur für eine Breite) und kein CSS-`line-clamp` (schneidet den Knopf mit ab bzw. lässt ihn ganz weg). Beschriftung
+  `common.showMore`/`common.showLess` (0.759.2).
 - **Lange Texte** werden nicht in einen eigenen Scrollkasten gesperrt, sondern mit „Weiterlesen“ aufgeklappt
   (r2-k-course-scroll).
 - **Sperrkarte** (Seite ohne Recht/Konto): **eine** Karte für alle betroffenen Seiten, Klartext statt
@@ -744,3 +753,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-12 | 0.759.0 | RookHub (v1, Repertoire): im Trainer-Lernmodus steht der Zugkommentar nur einmal (Kontextkarte), unter „Diesen Zug einprägen“ nur noch der Weiter-Hinweis; PGN-Platzhalter („?“, „-“) erscheinen auch im Trainer nicht als Linienname; Zahlenfelder in Werkzeugleisten (Lochfinder-Grenzwert) als outline-Formularfeld mit Einheit als Suffix, nie als Roh-Eingabe; Seitenaktionen im Kopf stehen rechts bei der Moduswahl, nicht als zusätzliche Zeile im Titelstapel (Kopf in allen Modi gleich hoch) | Varianten-Durchsicht v1 | v1-rk-trainer-learn-comment-doppelt, v1-rk-trainer-learn-platzhalter-fragezeichen, v1-rk-holes-grenzwert-eingabe-unstyled, v1-rk-repertoire-abfragen-knopf-wandert |
 | 2026-10-12 | 0.759.0 | RookHub (v1, Kurse): Zugleiste der Kurs-Durchsicht über `SanPipe` und ohne eigenen Scrollkasten (bricht ganz um); beim Import angeklebte Kapitelüberschriften im Kurskommentar werden wie in KidHub abgesetzt und fett gezeigt (`shared/course-text.ts`, nur Kommentare ohne eigene Umbrüche); Kursbeschreibung über 180 Zeichen bzw. 3 Zeilen zugeklappt mit „Mehr“/„Weniger“ als Textknopf im Satz; Schlagwörter als einzelne Abzeichen (technisches „personal“ ausgeblendet); leerer Flashcard-Stapel als `.empty-state` mit einem Knopf „Linien durchsehen“, ohne Bedienhinweis und Werkzeuge; „1 Puzzle“ per Schlüsselpaar `puzzleCount`/`puzzleCountOne` (Kurskarte, Wochenpost) | UI-Sweep v1 | v1-rk-browse-zugliste-*, v1-rk-course-comment-ueberschrift-angeklebt, v1-rk-kursseite-*, v1-rk-flashcards-marked-leer, v1-rk-falsche-mehrzahl-puzzles |
 | 2026-10-12 | 0.759.0 | RookHub (v1, Partien/Analyse): mehrzeiliger Spalten-Flex am Handy immer `flex-wrap: nowrap` (sonst wird die Spalte so breit wie ihr breitester Inhalt und die Seite scrollt waagerecht); Partieseite am Handy: Kopfaktionen in einer Zeile, „Originalpartie öffnen“/„Teilen-Link kopieren“ im ⋮, „Kurz erzählt“ höchstens drei Zeilen mit Antippen = ganz; gespeicherte Partien: Filter am Handy hinter „Filter ▾“ mit Chips für gesetzte Werte, Kopfknöpfe mit Kurztext; Analyse-Titel ohne PGN-Platzhalter („Ohne Titel“, „ohne Name“); „1 Variante“ per Schlüsselpaar; Züge in Partie-Analyse und „Züge vergleichen“ über `SanPipe`/`localizeSanText`; Grund unter gesperrtem „Analyse starten“; Zahl + % mit geschütztem Leerzeichen (5.13) | UI-Sweep v1 | v1-rk-analysis-card-overflow-mobile, v1-rk-first-view-lead-long-mobile, v1-rk-games-mobile-fold-lead-filters-open, v1-rk-analysis-pgn-placeholder-title, v1-rk-plural-1-varianten, v1-rk-san-english-in-de-ui, v1-rk-analysis-jobs-disabled-no-reason, v1-rk-analysis-jobs-percent-wrap |
+| 2026-10-12 | 0.759.2 | RookHub (v1-Nachrunde): Listen-Karten-Kopf zweiteilig (Text schrumpft/bricht um, Knöpfe `flex: none` rechts oben); Repertoire-Kopf am Handy: Abfragen als Symbolknopf neben der Moduswahl, beide rechtsbündig in einer Zeile; zugeklappte Texte („Mehr“ im Satz) gemessen auf 3 Zeilen gekürzt (`ClampMoreDirective`) statt fester Zeichenzahl oder `line-clamp`, gilt für Kursbeschreibung und „Kurz erzählt“/Roast — dort jetzt mit sichtbarem „Mehr“/„Weniger“; generische Beschriftung `common.showMore`/`common.showLess` (ersetzt `courses.detail.descMore/descLess`, `courses.reimport.more/less`, `chessable.useExtension.more/less`, `puzzles.bar.more`); Engine-Linien der Auswertung und der Live-Engine über `SanPipe` (5.14) | Nachprüfung v1 | v1-rk-analysis-jobs-percent-wrap, v1-rk-repertoire-abfragen-knopf-wandert, v1-rk-kursseite-beschreibung-vorlauf-handy, Nebenbefunde Engine-Linien englisch / „Kurz erzählt“ ohne „Mehr“ |

@@ -68,12 +68,13 @@
   margin: 0 0 0.6rem;
   white-space: pre-wrap;
   word-break: break-word;
+  line-height: 1.5;   /* feste Zeilenhöhe: ClampMoreDirective misst „3 Zeilen" daran */
 }
 
 /* „Mehr"/„Weniger" als Textknopf im Satz (DESIGN 5.11, v1-rk-kursseite-beschreibung-vorlauf-handy). */
 .desc-more {
   font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer;
-  color: var(--mat-sys-primary); background: none; border: none; padding: 0;
+  color: var(--mat-sys-primary); background: none; border: none; padding: 0; margin-left: .3em;
 }
 .desc-more:hover, .desc-more:focus-visible { text-decoration: underline; }
 

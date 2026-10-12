@@ -31,6 +31,8 @@
       "rangeEmpty": "0 / {{length}}"
     },
     "moreActions": "További műveletek",
+    "showMore": "Több",
+    "showLess": "Kevesebb",
     "save": "Mentés",
     "cancel": "Mégse",
     "delete": "Törlés",
@@ -1205,7 +1207,6 @@
       }
     },
     "bar": {
-      "more": "Több"
     },
     "keyboardMove": {
       "board": "Sakktábla",
@@ -1249,8 +1250,6 @@
       "skippedCountOne": "{{count}} sor kihagyva:",
       "startChapter": "Fejezet indítása",
       "tags": "Címkék",
-      "descMore": "Több",
-      "descLess": "Kevesebb",
       "title": "Tanfolyam",
       "chapterPoints": "{{score}} pont",
       "addChapter": "Fejezet hozzáadása",
@@ -1532,9 +1531,7 @@
     "reimport": {
       "chip": "Újra lekérni",
       "legend": "{{count}} kurzust újra kell importálni a RepCheckkel",
-      "legendOne": "1 kurzust újra kell importálni a RepCheckkel",
-      "more": "Részletek",
-      "less": "Kevesebb"
+      "legendOne": "1 kurzust újra kell importálni a RepCheckkel"
     }
   },
   "weekly": {
@@ -2560,8 +2557,6 @@
     "cachedHint": "Gyorsítótárazva — szinte azonnal elérhető (nem kell Chessable-lekérés)",
     "useExtension": {
       "lead": "A Chessable-tanfolyamokat mostantól a RepCheck bővítménnyel, a saját böngésződben töltheted le.",
-      "more": "Több",
-      "less": "Kevesebb",
       "title": "Kérjük, használd a RepCheck böngészőbővítményt",
       "body": "A Chessable-tanfolyamok importálása a RookHubon keresztül ki van kapcsolva. Ehhez a RookHubnak szerveroldalon, adatközponti IP-címekről kellene letöltenie őket a Chessable-ről — a Chessable éppen ezeket az IP-ket blokkolja, és ez a minta a Chessable-fiókod letiltásához vezethet. A RepCheck ezzel szemben a saját, bejelentkezett böngésződben, a saját IP-címedről fut: a tanfolyamaid várakozási sor nélkül kerülnek a RookHubba, a kockázat jóval kisebb, és a Chessable-tokenedet sem kell nálunk tárolnod."
     }

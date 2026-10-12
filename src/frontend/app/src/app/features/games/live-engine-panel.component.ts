@@ -7,6 +7,7 @@ import { Chess } from 'chess.js';
 import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
 import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /**
  * Leiste der Live-Engine unter dem Brett der Partieseite: welche Engine rechnet und wie tief, die eigene
@@ -17,7 +18,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   selector: 'app-live-engine-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, DecimalPipe, MatButtonModule, MatIconModule, TranslatePipe, TablebasePanelComponent],
+  imports: [IconLabelDirective, DecimalPipe, MatButtonModule, MatIconModule, TranslatePipe, TablebasePanelComponent, SanPipe],
   template: `
     @let s = session();
     <section class="live">
@@ -69,7 +70,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
           @if (s.lines()[i]; as l) {
             <li>
               <span class="line-eval" [class.white]="l.positive">{{ l.evalText }}</span>
-              <span class="line-san">{{ l.san }}</span>
+              <span class="line-san">{{ l.san | san:'text' }}</span>
             </li>
           } @else {
             <li class="empty" aria-hidden="true"><span class="line-eval">&nbsp;</span><span class="line-san">&nbsp;</span></li>

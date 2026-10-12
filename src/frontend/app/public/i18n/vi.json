@@ -10,6 +10,8 @@
       "rangeEmpty": "0 trên {{length}}"
     },
     "moreActions": "Thao tác khác",
+    "showMore": "Thêm",
+    "showLess": "Thu gọn",
     "save": "Lưu",
     "cancel": "Hủy",
     "delete": "Xóa",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Lấy lại",
       "legend": "{{count}} khóa học cần nhập lại qua RepCheck",
-      "legendOne": "1 khóa học cần nhập lại qua RepCheck",
-      "more": "Thêm",
-      "less": "Thu gọn"
+      "legendOne": "1 khóa học cần nhập lại qua RepCheck"
     }
   },
   "weekly": {

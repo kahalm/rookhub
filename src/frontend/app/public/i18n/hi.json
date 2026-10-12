@@ -10,6 +10,8 @@
       "rangeEmpty": "{{length}} में से 0"
     },
     "moreActions": "और कार्रवाइयाँ",
+    "showMore": "और",
+    "showLess": "कम",
     "save": "सहेजें",
     "cancel": "रद्द करें",
     "delete": "हटाएं",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "फिर से लाएँ",
       "legend": "{{count}} कोर्स को RepCheck से फिर से आयात करना होगा",
-      "legendOne": "1 कोर्स को RepCheck से फिर से आयात करना होगा",
-      "more": "और",
-      "less": "कम"
+      "legendOne": "1 कोर्स को RepCheck से फिर से आयात करना होगा"
     }
   },
   "weekly": {

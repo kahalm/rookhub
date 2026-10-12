@@ -487,7 +487,7 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     + 'Die Kommentare stammen aus dem Buch und wurden behutsam übertragen; jede Partie zeigt ein typisches Motiv.';
   afterEach(() => TestBed.resetTestingModule());
 
-  async function render(over: Partial<CourseDetail>): Promise<{ el: HTMLElement; detect: () => void }> {
+  async function render(over: Partial<CourseDetail>, width = 358): Promise<{ el: HTMLElement; detect: () => void }> {
     await TestBed.configureTestingModule({
       imports: [CourseDetailComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
@@ -495,8 +495,20 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
         { provide: CourseService, useValue: { getDetail: () => of(detail({ isCalculation: false, ...over })), getTranslations: () => throwError(() => ({ status: 404 })) } }],
     }).compileComponents();
     const fixture = TestBed.createComponent(CourseDetailComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    // Im Dokument und in Handybreite: die Beschreibung wird GEMESSEN gekürzt (ClampMoreDirective).
+    host.style.display = 'block';
+    host.style.width = `${width}px`;
+    document.body.appendChild(host);
     fixture.detectChanges();
-    return { el: fixture.nativeElement as HTMLElement, detect: () => fixture.detectChanges() };
+    return { el: host, detect: () => fixture.detectChanges() };
+  }
+
+  afterEach(() => document.querySelectorAll('app-course-detail').forEach(e => e.remove()));
+
+  function lines(p: Element): number {
+    const lh = parseFloat(getComputedStyle(p).lineHeight);
+    return Math.round(p.getBoundingClientRect().height / lh);
   }
 
   it('klappt eine lange Beschreibung zu und per „Mehr" (aria-expanded) auf', async () => {
@@ -504,18 +516,44 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     const p = el.querySelector('p.description')!;
     const more = p.querySelector('button.desc-more') as HTMLButtonElement;
     expect(more).withContext('Knopf steht im Absatz').not.toBeNull();
+    expect(more.hidden).toBeFalse();
     expect(more.getAttribute('aria-expanded')).toBe('false');
     expect(p.textContent).not.toContain('typisches Motiv');
     more.click();
     detect();
     expect(more.getAttribute('aria-expanded')).toBe('true');
     expect(el.querySelector('p.description')!.textContent).toContain('typisches Motiv');
+    expect(more.hidden).withContext('„Weniger" bleibt sichtbar').toBeFalse();
+  });
+
+  // Nachrunde v1-rk-kursseite-beschreibung-vorlauf-handy: am Handy waren es mit 180 Zeichen noch 5 Zeilen.
+  for (const width of [322, 358]) {
+    it(`zugeklappt höchstens drei Zeilen samt „Mehr" (${width} px)`, async () => {
+      const { el } = await render({ description: LONG }, width);
+      const p = el.querySelector('p.description')!;
+      expect(lines(p)).toBeLessThanOrEqual(3);
+      expect(lines(p)).toBeGreaterThanOrEqual(2);
+      const text = p.querySelector('.clamp-text')!.textContent!;
+      expect(text.endsWith(' …')).toBeTrue();
+      expect(LONG.startsWith(text.slice(0, -2))).withContext('am Wortende gekürzt').toBeTrue();
+      // „Mehr" steht in der letzten Zeile hinter dem Text
+      const more = p.querySelector('.desc-more')!.getBoundingClientRect();
+      expect(more.bottom).toBeLessThanOrEqual(p.getBoundingClientRect().bottom + 1);
+    });
+  }
+
+  it('breit: passt der Text in drei Zeilen, bleibt er ganz', async () => {
+    const { el } = await render({ description: LONG }, 900);
+    const p = el.querySelector('p.description')!;
+    expect(lines(p)).toBeLessThanOrEqual(3);
+    expect(p.querySelector('.clamp-text')!.textContent).toBe(LONG);
+    expect((p.querySelector('.desc-more') as HTMLElement).hidden).toBeTrue();
   });
 
   it('kurze Beschreibung ohne „Mehr"', async () => {
     const { el } = await render({ description: 'Kurz und knapp.' });
-    expect(el.querySelector('p.description')!.textContent!.trim()).toBe('Kurz und knapp.');
-    expect(el.querySelector('.desc-more')).toBeNull();
+    expect(el.querySelector('p.description .clamp-text')!.textContent!.trim()).toBe('Kurz und knapp.');
+    expect((el.querySelector('.desc-more') as HTMLElement).hidden).toBeTrue();
   });
 
   it('zeigt Schlagwörter einzeln als Abzeichen, nicht als Rohtext', async () => {

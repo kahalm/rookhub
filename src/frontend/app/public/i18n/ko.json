@@ -10,6 +10,8 @@
       "rangeEmpty": "0 / {{length}}"
     },
     "moreActions": "추가 작업",
+    "showMore": "자세히",
+    "showLess": "접기",
     "save": "저장",
     "cancel": "취소",
     "delete": "삭제",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "다시 가져오기",
       "legend": "{{count}}개 코스를 RepCheck로 다시 가져와야 합니다",
-      "legendOne": "1개 코스를 RepCheck로 다시 가져와야 합니다",
-      "more": "자세히",
-      "less": "접기"
+      "legendOne": "1개 코스를 RepCheck로 다시 가져와야 합니다"
     }
   },
   "weekly": {

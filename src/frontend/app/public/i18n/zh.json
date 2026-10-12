@@ -10,6 +10,8 @@
       "rangeEmpty": "0，共 {{length}} 条"
     },
     "moreActions": "更多操作",
+    "showMore": "更多",
+    "showLess": "收起",
     "save": "保存",
     "cancel": "取消",
     "delete": "删除",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "重新获取",
       "legend": "{{count}} 门课程需要通过 RepCheck 重新导入",
-      "legendOne": "1 门课程需要通过 RepCheck 重新导入",
-      "more": "更多",
-      "less": "收起"
+      "legendOne": "1 门课程需要通过 RepCheck 重新导入"
     }
   },
   "weekly": {

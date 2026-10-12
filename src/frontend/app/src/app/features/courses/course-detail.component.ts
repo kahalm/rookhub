@@ -35,7 +35,8 @@ import { CourseTranslationsComponent } from './course-translations.component';
 import { getBookOfflineLanguage, saveBookOffline } from '../puzzles/book-offline.util';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, nextWeeklySlot } from '../weekly/weekly.service';
-import { courseTagList, shortDescription } from './course-detail-text.util';
+import { courseTagList } from './course-detail-text.util';
+import { ClampMoreDirective } from '../../shared/clamp-more/clamp-more.directive';
 
 /**
  * Kurs-Detailseite (`/courses/:bookId`): Metadaten, eigener Fortschritt und — neu — die
@@ -54,7 +55,7 @@ import { courseTagList, shortDescription } from './course-detail-text.util';
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule,
     MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatSlideToggleModule,
     MatTooltipModule, IconLabelDirective, MatDialogModule, TranslatePipe, SendToWorksheetComponent,
-    CourseLangPickerComponent, CourseTranslationsComponent,
+    CourseLangPickerComponent, CourseTranslationsComponent, ClampMoreDirective,
   ],
   templateUrl: './course-detail.component.html',
   styleUrls: ['./course-detail.component.scss'],
@@ -316,9 +317,6 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
    */
   /** Beschreibung aufgeklappt? Zu Beginn zu, wenn sie lang ist (v1-rk-kursseite-beschreibung-vorlauf-handy). */
   descExpanded = false;
-
-  /** Gekürzte Beschreibung mit „…", oder null, wenn sie kurz genug ist und ganz dasteht. */
-  get descriptionShort(): string | null { return shortDescription(this.detail?.description); }
 
   /** Schlagwörter einzeln als Abzeichen statt des rohen Komma-Strings (v1-rk-kursseite-schlagwoerter-ohne-leerzeichen). */
   get tagList(): string[] { return courseTagList(this.detail?.tags); }

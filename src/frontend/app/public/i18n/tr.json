@@ -10,6 +10,8 @@
       "rangeEmpty": "0 / {{length}}"
     },
     "moreActions": "Diğer işlemler",
+    "showMore": "Daha fazla",
+    "showLess": "Daha az",
     "save": "Kaydet",
     "cancel": "İptal",
     "delete": "Sil",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Yeniden al",
       "legend": "{{count}} kursun RepCheck ile yeniden içe aktarılması gerekiyor",
-      "legendOne": "1 kursun RepCheck ile yeniden içe aktarılması gerekiyor",
-      "more": "Daha fazla",
-      "less": "Daha az"
+      "legendOne": "1 kursun RepCheck ile yeniden içe aktarılması gerekiyor"
     }
   },
   "weekly": {

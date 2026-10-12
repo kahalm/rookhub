@@ -10,6 +10,8 @@
       "rangeEmpty": "0 z {{length}}"
     },
     "moreActions": "Další akce",
+    "showMore": "Více",
+    "showLess": "Méně",
     "save": "Uložit",
     "cancel": "Zrušit",
     "delete": "Smazat",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Načíst znovu",
       "legend": "{{count}} kurzů potřebuje nový import přes RepCheck",
-      "legendOne": "1 kurz potřebuje nový import přes RepCheck",
-      "more": "Více",
-      "less": "Méně"
+      "legendOne": "1 kurz potřebuje nový import přes RepCheck"
     }
   },
   "weekly": {

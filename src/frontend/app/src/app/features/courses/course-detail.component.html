@@ -35,15 +35,13 @@
           }
         </div>
 
-        <!-- Lange Beschreibung zugeklappt, „Mehr" als Textknopf am Satzende (DESIGN 5.11, 4.6 Nr. 3). -->
+        <!-- Lange Beschreibung zugeklappt, „Mehr" als Textknopf am Satzende (DESIGN 5.11, 4.6 Nr. 3/5) — gemessen auf
+             drei Zeilen gekürzt (ClampMoreDirective), damit es in jeder Breite drei bleiben. -->
         @if (d.description) {
-          @if (descriptionShort; as short) {
-            <p class="description" id="course-desc">{{ descExpanded ? d.description : short }} <button type="button" class="desc-more"
+          <p class="description" id="course-desc" [appClampMore]="d.description" [clampLines]="3"
+             [clampExpanded]="descExpanded"><span class="clamp-text"></span><button type="button" class="desc-more clamp-more"
                 aria-controls="course-desc" [attr.aria-expanded]="descExpanded"
-                (click)="descExpanded = !descExpanded">{{ (descExpanded ? 'courses.detail.descLess' : 'courses.detail.descMore') | translate }}</button></p>
-          } @else {
-            <p class="description">{{ d.description }}</p>
-          }
+                (click)="descExpanded = !descExpanded">{{ (descExpanded ? 'common.showLess' : 'common.showMore') | translate }}</button></p>
         }
 
         <!-- Offline-Kopie in einer anderen Sprache als der gewählten (Kurs-Übersetzung). -->

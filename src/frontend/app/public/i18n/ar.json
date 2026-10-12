@@ -10,6 +10,8 @@
       "rangeEmpty": "0 من {{length}}"
     },
     "moreActions": "مزيد من الإجراءات",
+    "showMore": "المزيد",
+    "showLess": "أقل",
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "إعادة الجلب",
       "legend": "{{count}} دورات تحتاج إلى استيراد جديد عبر RepCheck",
-      "legendOne": "دورة واحدة تحتاج إلى استيراد جديد عبر RepCheck",
-      "more": "المزيد",
-      "less": "أقل"
+      "legendOne": "دورة واحدة تحتاج إلى استيراد جديد عبر RepCheck"
     }
   },
   "weekly": {

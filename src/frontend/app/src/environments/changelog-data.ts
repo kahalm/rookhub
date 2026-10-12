@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.759.2", date: "2026-10-12", changes: [
+    { en: "Follow-up on phones: the delete button of a game analysis stays in the first row, the repertoire header keeps “Quiz” (as an icon) and the view switch in one row in every view, long course descriptions fold to three lines with “More” at the end, and the “In short” story of a game shows a visible “More”/“Less”; engine lines on the game page in German notation.",
+      de: "Nachrunde am Handy: der Löschknopf einer Partie-Analyse bleibt in der ersten Zeile, der Repertoire-Kopf hält „Abfragen“ (als Symbol) und die Ansichtswahl in jeder Ansicht in einer Zeile, lange Kursbeschreibungen sind auf drei Zeilen mit „Mehr“ am Ende eingeklappt, und „Kurz erzählt“ einer Partie zeigt sichtbar „Mehr“/„Weniger“; Engine-Linien auf der Partieseite deutsch notiert." },
+  ] },
   { version: "0.759.1", date: "2026-10-12", changes: [
     { en: "Code structure: the “In short” story of a game is now its own component. No change in behaviour.",
       de: "Code-Struktur: „Kurz erzählt“ einer Partie ist jetzt eine eigene Komponente. Keine Änderung im Verhalten." },

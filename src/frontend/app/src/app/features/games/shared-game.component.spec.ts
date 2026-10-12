@@ -16,7 +16,6 @@ import { HandoffService } from '../../core/handoff.service';
 import { By } from '@angular/platform-browser';
 import { GameReviewComponent } from './game-review.component';
 import { SharedGameComponent } from './shared-game.component';
-import { GameRecapComponent } from './game-recap.component';
 
 /** Die Auswertung fragt zweimal: schnell ohne Buchzüge (`?book=0`), danach einmal voll (0.664.0) — beide bekommen dieselbe Antwort. */
 function flushEvals(http: HttpTestingController, url: string, body: object): void {
@@ -711,22 +710,7 @@ describe('SharedGameComponent', () => {
     http.expectNone(req => req.url.endsWith('/recap'));
   });
 
-  // UI-Sweep v1 (v1-rk-first-view-lead-long-mobile): am Handy „Kurz erzählt" auf drei Zeilen, Antippen zeigt alles.
-  it('the recap toggles between clamped and open on tap', async () => {
-    const { fixture, http } = await setup();
-    fixture.detectChanges();
-    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush({ ...sharedGame('white'), recap: 'b gewinnt nach 1...c5.' });
-    fixture.detectChanges();
-    const recap = fixture.nativeElement.querySelector('p.recap') as HTMLElement;
-    expect(recap.classList).not.toContain('open');
-    expect(recap.querySelector('.recap-text')).not.toBeNull();
-    recap.click();
-    fixture.detectChanges();
-    expect(recap.classList).toContain('open');
-    recap.click();
-    fixture.detectChanges();
-    expect(recap.classList).not.toContain('open');
-  });
+  // Auf-/Zuklappen samt sichtbarem „Mehr": game-recap.component.spec.ts.
 
   // UI-Sweep v1 (v1-rk-first-view-lead-long-mobile): „Originalpartie öffnen" und „Teilen-Link kopieren" stehen am Handy
   // im ⋮ statt als eigene Knöpfe; am PC bleiben die Knöpfe (die Menüpunkte sind dort ausgeblendet).
@@ -987,14 +971,11 @@ describe('SharedGameComponent Layout', () => {
   });
 
   // v1-rk-first-view-lead-long-mobile: Kopfknöpfe in einer Zeile, Seltenes im ⋮, „Kurz erzählt" höchstens drei Zeilen.
-  it('puts the header actions in one row on phones, moves rare ones to the ⋮ and clamps the recap', () => {
+  it('puts the header actions in one row on phones and moves rare ones to the ⋮', () => {
     expect(mobile).toMatch(/\.header-actions \{ ?grid-column: 1 \/ -1; flex-direction: row;/);
     expect(mobile).toMatch(/\.wide-only \{ ?display: none/);
     expect(mobile).toMatch(/\.narrow-only \{ ?display: flex/);
     expect(desk).toMatch(/\.narrow-only \{ ?display: none/);
-    const recapCss = ((GameRecapComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ')
-      .replace(/\[_ngcontent-%COMP%\]/g, '');
-    const recapMobile = recapCss.slice(recapCss.indexOf('@media (max-width: 768px)'));
-    expect(recapMobile).toMatch(/\.recap:not\(\.open\) > \.recap-text \{[^}]*-webkit-line-clamp: 3/);
+    // „Kurz erzählt" kürzt seit der Nachrunde gemessen auf drei Zeilen (game-recap.component.spec.ts).
   });
 });

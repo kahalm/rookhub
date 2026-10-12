@@ -43,7 +43,7 @@ import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.c
         <mat-icon>share</mat-icon>
       </button>
       <button mat-icon-button [matMenuTriggerFor]="moreMenu"
-              [appIconLabel]="'puzzles.bar.more' | translate">
+              [appIconLabel]="'common.showMore' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #moreMenu="matMenu">

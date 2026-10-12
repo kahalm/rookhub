@@ -27,7 +27,7 @@ export { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL };
           <!-- UI-Sweep 2026-10-11 (d2-rk-chessable-erklaertext): Kernsatz direkt über den Knöpfen, die Begründung
                (Rechenzentrums-IPs, Kontosperre, Token) hinter „Mehr" am Satzende (DESIGN 4.6/5, 5.11). -->
           <p>{{ 'chessable.useExtension.lead' | translate }}
-            <button type="button" class="more-toggle" (click)="whyOpen.set(!whyOpen())" [attr.aria-expanded]="whyOpen()">{{ (whyOpen() ? 'chessable.useExtension.less' : 'chessable.useExtension.more') | translate }}</button></p>
+            <button type="button" class="more-toggle" (click)="whyOpen.set(!whyOpen())" [attr.aria-expanded]="whyOpen()">{{ (whyOpen() ? 'common.showLess' : 'common.showMore') | translate }}</button></p>
           @if (whyOpen()) {
             <p class="why">{{ 'chessable.useExtension.body' | translate }}</p>
           }

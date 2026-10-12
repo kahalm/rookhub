@@ -109,6 +109,8 @@
       "rangeEmpty": "0 of {{length}}"
     },
     "moreActions": "More actions",
+    "showMore": "More",
+    "showLess": "Less",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -1461,7 +1463,6 @@
       "previous": "Previous puzzle"
     },
     "bar": {
-      "more": "More"
     },
     "keyboardMove": {
       "board": "Chessboard",
@@ -1586,8 +1587,6 @@
       "skippedCountOne": "{{count}} line skipped:",
       "startChapter": "Start chapter",
       "tags": "Tags",
-      "descMore": "More",
-      "descLess": "Less",
       "title": "Course",
       "chapterPoints": "{{score}} pts",
       "downloadChapterPgn": "Download chapter as PGN",
@@ -1788,9 +1787,7 @@
     "reimport": {
       "chip": "Re-fetch",
       "legend": "{{count}} courses need a new import via RepCheck",
-      "legendOne": "1 course needs a new import via RepCheck",
-      "more": "More",
-      "less": "Less"
+      "legendOne": "1 course needs a new import via RepCheck"
     }
   },
   "calc": {
@@ -3639,8 +3636,6 @@
     "cachedHint": "Cached — available almost instantly (no Chessable fetch needed)",
     "useExtension": {
       "lead": "You now get Chessable courses with the RepCheck extension in your own browser.",
-      "more": "More",
-      "less": "Less",
       "title": "Please use the RepCheck browser extension",
       "body": "Importing Chessable courses through RookHub is switched off. RookHub would have to fetch them from Chessable server-side over datacenter IPs, which Chessable blocks and which can get your Chessable account banned. RepCheck runs in your own logged-in browser on your own IP instead: your courses reach RookHub without waiting in a queue, the risk is far lower, and your Chessable token never has to be stored with us."
     }

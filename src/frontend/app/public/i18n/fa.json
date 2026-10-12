@@ -10,6 +10,8 @@
       "rangeEmpty": "0 از {{length}}"
     },
     "moreActions": "اقدامات بیشتر",
+    "showMore": "بیشتر",
+    "showLess": "کمتر",
     "save": "ذخیره",
     "cancel": "لغو",
     "delete": "حذف",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "دریافت دوباره",
       "legend": "{{count}} دوره نیاز به وارد کردن دوباره با RepCheck دارند",
-      "legendOne": "۱ دوره نیاز به وارد کردن دوباره با RepCheck دارد",
-      "more": "بیشتر",
-      "less": "کمتر"
+      "legendOne": "۱ دوره نیاز به وارد کردن دوباره با RepCheck دارد"
     }
   },
   "weekly": {

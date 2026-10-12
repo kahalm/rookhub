@@ -10,6 +10,8 @@
       "rangeEmpty": "0 / {{length}}"
     },
     "moreActions": "その他の操作",
+    "showMore": "詳細",
+    "showLess": "閉じる",
     "save": "保存",
     "cancel": "キャンセル",
     "delete": "削除",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "再取得",
       "legend": "{{count}}件のコースはRepCheckで再取り込みが必要です",
-      "legendOne": "1件のコースはRepCheckで再取り込みが必要です",
-      "more": "詳細",
-      "less": "閉じる"
+      "legendOne": "1件のコースはRepCheckで再取り込みが必要です"
     }
   },
   "weekly": {

@@ -96,7 +96,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
         <!-- UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
              allein in eine Zeile. -->
         <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}
-          <button type="button" class="reimport-toggle" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">{{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}</button></span>
+          <button type="button" class="reimport-toggle" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">{{ (reimportOpen ? 'common.showLess' : 'common.showMore') | translate }}</button></span>
         @if (reimportOpen) {
           <span class="reimport-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</span>
         }

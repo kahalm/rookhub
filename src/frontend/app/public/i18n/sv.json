@@ -10,6 +10,8 @@
       "rangeEmpty": "0 av {{length}}"
     },
     "moreActions": "Fler åtgärder",
+    "showMore": "Mer",
+    "showLess": "Mindre",
     "save": "Spara",
     "cancel": "Avbryt",
     "delete": "Ta bort",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Hämta igen",
       "legend": "{{count}} kurser behöver importeras igen via RepCheck",
-      "legendOne": "1 kurs behöver importeras igen via RepCheck",
-      "more": "Mer",
-      "less": "Mindre"
+      "legendOne": "1 kurs behöver importeras igen via RepCheck"
     }
   },
   "weekly": {

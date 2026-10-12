@@ -69,8 +69,12 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                  UI-Sweep 2026-10-12 (v1-rk-repertoire-abfragen-knopf-wandert): rechts neben der Moduswahl statt als
                  dritte Zeile unter dem Untertitel — der Kopf bleibt in allen Modi gleich hoch, Brett und Panel springen nicht. -->
             @if (mode !== 'lines') {
-              <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
-                <mat-icon>replay</mat-icon> {{ 'repertoireTrainer.modeQuiz' | translate }}
+              <!-- Nachrunde: am Handy nur das Symbol (Beschriftung als aria-label/Tooltip), damit Knopf und
+                   Moduswahl in EINER Zeile stehen und der Kopf in allen Modi gleich hoch bleibt. -->
+              <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']"
+                 [attr.aria-label]="'repertoireTrainer.modeQuiz' | translate"
+                 [attr.title]="'repertoireTrainer.modeQuiz' | translate">
+                <mat-icon>replay</mat-icon><span class="train-label">{{ 'repertoireTrainer.modeQuiz' | translate }}</span>
               </a>
             }
             <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
@@ -261,6 +265,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
 
     @media (max-width: 899.98px) {
       .detail-header { flex-wrap: wrap; }
+      /* Moduswahl (und in Baum/Lochfinder der Abfragen-Knopf) rechtsbündig in EINER Zeile — in allen Modi an derselben
+         Stelle und gleich hoch (v1-rk-repertoire-abfragen-knopf-wandert, Nachrunde). */
+      .header-actions { flex-wrap: nowrap; margin-left: auto; }
       .viewer-layout {
         flex-direction: column;
         align-items: center;
@@ -269,6 +276,13 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       .board-section app-chess-board { width: 100%; }
       .side-panel { width: 100%; min-width: 0; height: 400px; }
       .side-panel--fit { height: auto; max-height: 400px; }
+    }
+    /* Abfragen ist am Handy ein Symbolknopf; der Name steht im aria-label. */
+    .train-label { margin-left: 4px; }
+    @media (max-width: 599.98px) {
+      .train-label { display: none; }
+      .train-btn { min-width: 48px; padding: 0 12px; }
+      .train-btn mat-icon { margin: 0; }
     }
   `]
 })

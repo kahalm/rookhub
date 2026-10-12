@@ -10,6 +10,8 @@
       "rangeEmpty": "0 dari {{length}}"
     },
     "moreActions": "Tindakan lainnya",
+    "showMore": "Selengkapnya",
+    "showLess": "Lebih sedikit",
     "save": "Simpan",
     "cancel": "Batal",
     "delete": "Hapus",
@@ -556,9 +558,7 @@
     "reimport": {
       "chip": "Ambil ulang",
       "legend": "{{count}} kursus perlu diimpor ulang lewat RepCheck",
-      "legendOne": "1 kursus perlu diimpor ulang lewat RepCheck",
-      "more": "Selengkapnya",
-      "less": "Lebih sedikit"
+      "legendOne": "1 kursus perlu diimpor ulang lewat RepCheck"
     }
   },
   "weekly": {

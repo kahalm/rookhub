@@ -178,6 +178,39 @@ describe('GameAnalysesComponent', () => {
     expect(heads[1]).toContain('Tiefe 20 · 3 Varianten');
   });
 
+  // v1-rk-analysis-jobs-percent-wrap (Nachrunde): am Handy bleibt der Papierkorb rechts in der ersten Zeile,
+  // auch wenn Titel/Status/Tiefe umbrechen müssen.
+  it('hält am Handy beide Knöpfe der Karte rechts in der ersten Zeile', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '366px';
+    document.body.appendChild(host);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([
+      analysis({ id: 1, title: 'Ein ziemlich langer Partietitel – noch ein langer Name', multiPv: 1, targetDepth: 20 }),
+    ]);
+    fixture.detectChanges();
+    try {
+      const head = host.querySelector('.ga-head') as HTMLElement;
+      const buttons = Array.from(head.querySelectorAll('.ga-actions button')) as HTMLElement[];
+      expect(buttons.length).toBe(2);
+      const [r, d] = buttons.map(b => b.getBoundingClientRect());
+      const headBox = head.getBoundingClientRect();
+      // gleiche Zeile, oben im Kopf, rechts am Rand
+      expect(Math.abs(r.top - d.top)).toBeLessThan(2);
+      expect(d.top - headBox.top).toBeLessThan(4);
+      expect(headBox.right - d.right).toBeLessThan(2);
+      // der Titel bricht in sich um statt die Knöpfe zu verdrängen (Titel mehrzeilig, Knöpfe trotzdem oben)
+      const main = head.querySelector('.ga-main') as HTMLElement;
+      expect((head.querySelector('.ga-title') as HTMLElement).getBoundingClientRect().height).toBeGreaterThan(r.height);
+      const actions = head.querySelector('.ga-actions') as HTMLElement;
+      expect(main.getBoundingClientRect().right).toBeLessThanOrEqual(actions.getBoundingClientRect().left + 1);
+    } finally {
+      host.remove();
+    }
+  });
+
   // v1-rk-analysis-jobs-disabled-no-reason: gesperrte Knöpfe sagen sichtbar, warum.
   it('nennt unter den gesperrten Knöpfen den Grund, solange kein PGN eingefügt ist', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
