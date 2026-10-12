@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.754.2", date: "2026-10-12", changes: [
+    { en: "Code structure: the engine panel of the analysis board is now its own building block. No change in behaviour.",
+      de: "Code-Struktur: die Engine-Karte des Analysebretts ist jetzt ein eigener Baustein. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.754.1", date: "2026-10-12", changes: [
     { en: "Code structure: the LeagueHub scoresheet check page was split into smaller parts. No change in behaviour.",
       de: "Code-Struktur: die LeagueHub-Prüfseite für Partieformulare ist in kleinere Teile zerlegt. Keine Änderung im Verhalten." },

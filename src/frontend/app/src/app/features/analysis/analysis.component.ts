@@ -5,23 +5,20 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
-import { defaults as chessgroundDefaults } from 'chessground/state';
 import { Subscription, interval } from 'rxjs';
 import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
 import { AnalysisBoardComponent } from './analysis-board.component';
+import { AnalysisEngineCardComponent, EngineChoice, arrowBrush } from './analysis-engine-card.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
 import { ExternalEngineService, ExternalEngineInfo, engineTagKey } from './external-engine.service';
-import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
@@ -34,9 +31,10 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
 import { MatDialog } from '@angular/material/dialog';
 import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
 import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.component';
+import { AnalysisHistorySaver } from './analysis-history-saver';
 import {
   AnalysisNode, addMove, createRoot, fromDto, isWithin, lineThrough, mainline, makeMainline, numberedSan, parsePgnTree, pathTo,
-  playSan, playUci, promote, removeNode, starredNodes, toDto,
+  playSan, playUci, promote, removeNode, starredNodes,
 } from './analysis-tree';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
@@ -51,14 +49,11 @@ import { buildSparringPgn } from './maia/sparring-pgn';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 import { GuessUploadStatus } from './game-analysis.service';
-import { SanPipe } from '../../shared/chess/san.pipe';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
 const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = ANALYSIS_DEPTH_KEY;
-/** Analyse-Verlauf (0.603.0): so lange nach der letzten Änderung, bis der Stand zum Server geht. */
-const HISTORY_SAVE_MS = 1500;
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
 const PROVIDER_KEY = ANALYSIS_PROVIDER_KEY;
 /** Vergleichsmodus: an/aus und die Wahl der zweiten Engine. */
@@ -70,11 +65,6 @@ const COMPARE_ENGINE_KEY = 'rookhub_analysis_compare_engine';
 // ACHTUNG: Jeder Wert hier muss den Clamp in AnalysisEngineService.setDepth überleben,
 // sonst wählt man 50 und bekommt stillschweigend weniger (Test hält das fest).
 export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
-// Fünf verschiedene Pinsel (UX-049: die fünfte Linie war wieder Blau). Die Linienliste setzt dieselbe Farbe als Punkt vor
-// jede Linie — die Farben kommen aus den Standardpinseln von chessground, also genau die des Pfeils auf dem Brett.
-const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'purple'];
-const arrowBrush = (i: number): string => ARROW_BRUSHES[i] || 'blue';
-const BOARD_BRUSHES = chessgroundDefaults().drawable.brushes;
 /** Ab dieser Tiefe übernimmt die Bewertungsleiste den Wert einer neuen Suche. Darunter schwanken
  *  die Zahlen stark (Tiefe 1–5 liegt gern eine Figur daneben) — die Leiste bliebe sonst bei jedem
  *  Zug unruhig. Muss unter dem kleinsten DEPTH_OPTIONS-Wert liegen, sonst erreicht eine
@@ -86,11 +76,10 @@ const EVAL_SETTLE_DEPTH = 10;
   selector: 'app-analysis',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
-    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, SanPipe
+    CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
+    MatTooltipModule, TranslatePipe, AnalysisBoardComponent, AnalysisEngineCardComponent, PositionSetupComponent,
+    PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
+    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent
   ],
   template: `
     <div class="analysis-page">
@@ -141,130 +130,25 @@ const EVAL_SETTLE_DEPTH = 10;
               </mat-card-content>
             </mat-card>
           }
-          <mat-card class="engine-card">
-            <mat-card-content>
-              <div class="engine-head">
-                <!-- Während des Sparrings gesperrt: die Engine verriete Bewertung und Pfeile (Maia-Regel 2). -->
-                <mat-slide-toggle [(ngModel)]="engineOn" [disabled]="!!sparring" (change)="onEngineToggle()">{{ 'analysis.engine' | translate }}</mat-slide-toggle>
-                <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }} · <span class="search-time" [title]="'analysis.searchTime' | translate">{{ searchTime }}</span></span>
-                <span class="he-spacer"></span>
-                <span class="num-pair">
-                  <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
-                    <mat-label>{{ 'analysis.depth' | translate }}</mat-label>
-                    <mat-select [(ngModel)]="depthSetting" (selectionChange)="onDepthChange()">
-                      @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
-                    <mat-label>{{ 'analysis.lines' | translate }}</mat-label>
-                    <mat-select [(ngModel)]="linesCount" (selectionChange)="onLinesChange()">
-                      @for (n of [1,2,3,4,5]; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
-                    </mat-select>
-                  </mat-form-field>
-                </span>
-                @if (externalEnginesList.length > 0) {
-                  <mat-form-field appearance="outline" class="engine-field" subscriptSizing="dynamic">
-                    <mat-label>{{ 'analysis.engineProvider' | translate }}</mat-label>
-                    <mat-select [(ngModel)]="selectedEngineId" (selectionChange)="onEngineSelect()">
-                      <mat-option value="wasm">{{ 'analysis.engineBrowser' | translate }}</mat-option>
-                      @for (e of externalEnginesList; track e.id) {
-                        <mat-option [value]="e.id">{{ e.name }}@if (tagOf(e); as tag) { <span class="engine-tag">· {{ tag | translate }}</span> }</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                }
-                @if (engineOn && !terminal) {
-                  <app-help-hint icon="info_outline" [text]="speedHint" />
-                }
-                @if (engineOn && (externalEnginesList.length > 0 || compareOn)) {
-                  <button mat-icon-button class="cmp-btn" [class.on]="compareOn"
-                          [appIconLabel]="'analysis.compareToggle' | translate"
-                          (click)="compareOn = !compareOn; onCompareToggle()">
-                    <mat-icon>balance</mat-icon>
-                  </button>
-                }
-              </div>
-              @if (compareOn && engineOn && externalEnginesList.length > 0) {
-                <div class="cmp-pick">
-                  <mat-form-field appearance="outline" class="engine-field" subscriptSizing="dynamic">
-                    <mat-label>{{ 'analysis.compareWith' | translate }}</mat-label>
-                    <mat-select [(ngModel)]="compareEngineId" (selectionChange)="onCompareEngineSelect()">
-                      @for (c of engineChoices; track c.id) {
-                        <mat-option [value]="c.id" [disabled]="c.id === selectedEngineId">{{ c.name }}@if (c.tag) { <span class="engine-tag">· {{ c.tag | translate }}</span> }</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                </div>
-              }
-              @if (remoteFallback && selectedEngineId !== 'wasm') {
-                <p class="remote-fallback"><mat-icon>cloud_off</mat-icon> {{ 'analysis.remoteFallback' | translate }}</p>
-              }
-              @if (remoteCut && selectedEngineId !== 'wasm') {
-                <p class="remote-cut" [class.final]="!remoteCut.resuming">
-                  <mat-icon>{{ remoteCut.resuming ? 'sync' : 'link_off' }}</mat-icon>
-                  {{ (remoteCut.resuming ? 'analysis.remoteCutResuming' : 'analysis.remoteCutFinal') | translate:{ depth: remoteCut.depth, target: remoteCut.target } }}
-                </p>
-              }
-              @if (showThinking) {
-                <p class="thinking">
-                  <mat-icon>hourglass_top</mat-icon>
-                  <span>{{ 'analysis.thinkingSince' | translate:{ time: thinkingTime, depth: depth + 1 } }}@if (slowConfigHint) { — {{ 'analysis.slowMultiPvHint' | translate }}}</span>
-                </p>
-              }
-              @if (terminal) {
-                <p class="terminal-state"><mat-icon>flag</mat-icon> {{ terminalText }}</p>
-              } @else if (engineOn) {
-                @if (compareRunning) {
-                  <p class="eng-label">{{ mainEngineName }} <span class="eng-depth">· {{ 'analysis.depth' | translate }} {{ depth }}</span></p>
-                }
-                @if (displayLines.length === 0) {
-                  <p class="muted">{{ 'analysis.calculating' | translate }}</p>
-                } @else {
-                  <div class="lines">
-                    @for (l of displayLines; track $index; let i = $index) {
-                      <div class="line-row">
-                        <span class="line-mark" [style.background]="lineColor(i)" aria-hidden="true"></span>
-                        <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
-                        <span class="line-san">{{ l.san | san:'text' }}</span>
-                      </div>
-                    }
-                  </div>
-                }
-                @if (compareRunning) {
-                  <div class="cmp-block">
-                    <p class="eng-label">
-                      {{ compareEngineName }} <span class="eng-depth">· {{ 'analysis.depth' | translate }} {{ compareDepth }}</span>
-                      <app-help-hint icon="info_outline" [text]="compareSpeedHint" />
-                      @if (compareFallback) {
-                        <mat-icon class="cmp-warn" [matTooltip]="'analysis.remoteFallback' | translate">cloud_off</mat-icon>
-                      }
-                    </p>
-                    @if (compareCrashed) {
-                      <p class="cmp-err"><mat-icon>error_outline</mat-icon> {{ 'analysis.engineCrashed' | translate }}</p>
-                    } @else if (compareLines.length === 0) {
-                      <p class="muted">{{ 'analysis.calculating' | translate }}</p>
-                    } @else {
-                      <div class="lines">
-                        @for (l of compareLines; track $index) {
-                          <div class="line-row">
-                            <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
-                            <span class="line-san">{{ l.san | san:'text' }}</span>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              } @else {
-                <p class="muted">{{ (sparring ? 'analysis.maia.enginePaused' : 'analysis.engineOff') | translate }}</p>
-              }
-              <!-- Endspiel-Datenbank (0.729.0): ab 7 Steinen das genaue Ergebnis von Lichess, Stockfish rechnet daneben weiter.
-                   Nicht im Sparring gegen Maia (sie verriete den besten Zug). -->
-              @if (!terminal && !sparring && !editing) {
-                <app-tablebase-panel [fen]="currentFen" (playSan)="playRepertoireMoves([$event])" (verdict)="tbVerdict = $event" />
-              }
-            </mat-card-content>
-          </mat-card>
+          <app-analysis-engine-card
+            [engineOn]="engineOn" [sparring]="!!sparring" [depth]="depth" [depthSetting]="depthSetting" [depthOptions]="depthOptions"
+            [linesCount]="linesCount" [searchTime]="searchTime" [speedHint]="speedHint" [engines]="externalEnginesList"
+            [selectedEngineId]="selectedEngineId" [engineChoices]="engineChoices" [terminal]="terminal" [terminalText]="terminalText"
+            [remoteFallback]="remoteFallback" [remoteCut]="remoteCut" [showThinking]="showThinking" [thinkingTime]="thinkingTime"
+            [slowConfigHint]="slowConfigHint" [displayLines]="displayLines" [mainEngineName]="mainEngineName"
+            [compareOn]="compareOn" [compareRunning]="compareRunning" [compareEngineId]="compareEngineId"
+            [compareEngineName]="compareEngineName" [compareDepth]="compareDepth" [compareSpeedHint]="compareSpeedHint"
+            [compareFallback]="compareFallback" [compareCrashed]="compareCrashed" [compareLines]="compareLines"
+            (engineToggle)="engineOn = $event; onEngineToggle()" (depthChange)="depthSetting = $event; onDepthChange()"
+            (linesChange)="linesCount = $event; onLinesChange()" (engineSelect)="selectedEngineId = $event; onEngineSelect()"
+            (compareToggle)="compareOn = !compareOn; onCompareToggle()"
+            (compareEngineSelect)="compareEngineId = $event; onCompareEngineSelect()">
+            <!-- Endspiel-Datenbank (0.729.0): ab 7 Steinen das genaue Ergebnis von Lichess, Stockfish rechnet daneben weiter.
+                 Nicht im Sparring gegen Maia (sie verriete den besten Zug). -->
+            @if (!terminal && !sparring && !editing) {
+              <app-tablebase-panel [fen]="currentFen" (playSan)="playRepertoireMoves([$event])" (verdict)="tbVerdict = $event" />
+            }
+          </app-analysis-engine-card>
 
           <!-- Sparring gegen Maia: die Karte führt den Lade-Ablauf selbst und meldet „start" erst mit fertigem Modell.
                Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte. -->
@@ -378,46 +262,8 @@ const EVAL_SETTLE_DEPTH = 10;
     .eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }
     .board-wrap { flex: 1; min-width: 260px; }
     .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
-    .engine-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .depth { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .search-time { font-variant-numeric: tabular-nums; }
-    .he-spacer { flex: 1 1 auto; }
-    /* Tiefe + Linien als Paar (Nacharbeit UX-048): fehlt der Platz, rücken beide gemeinsam in die nächste Zeile, statt
-       „Linien" allein an den linken Rand zu schieben. 116 px: „Tiefe"/„Dubina"/„Mélység" passen ungekürzt, und bei der
-       520 px breiten Desktop-Seitenleiste bleibt das Paar in en/de/hr neben Schalter und Zähler (8 px Abstand = Reserve). */
-    .num-pair { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-    .num-field { width: 116px; }
-    .engine-field { width: 190px; }
-    .engine-tag { opacity: 0.65; font-size: 0.85em; }
-    .remote-fallback { display: flex; align-items: center; gap: 6px; color: var(--rh-warn); font-size: .85rem; margin: 6px 0 0; }
-    .cmp-btn { width: 34px; height: 34px; line-height: 34px; opacity: .55; }
-    .cmp-btn.on { opacity: 1; color: var(--rh-accent); }
-    .cmp-pick { margin-top: 8px; }
-    .cmp-block { margin-top: 10px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
-    .eng-label { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; margin: 6px 0 2px;
-      color: color-mix(in srgb, currentColor 75%, transparent); }
-    .cmp-err { display: flex; align-items: center; gap: 6px; color: var(--rh-error); font-size: .85rem; margin: 6px 0 0; }
-    .cmp-err mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .cmp-warn { font-size: 16px; width: 16px; height: 16px; color: var(--rh-warn); }
-    .eng-depth { font-weight: 400; color: color-mix(in srgb, currentColor 55%, transparent); }
-    .terminal-state { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 8px 0 0; }
-    .terminal-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .remote-fallback mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .remote-cut, .thinking { display: flex; align-items: center; gap: 6px; font-size: .85rem; margin: 6px 0 0;
-      color: color-mix(in srgb, currentColor 65%, transparent); }
-    .remote-cut.final { color: var(--rh-warn); }
-    .remote-cut mat-icon, .thinking mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .back-btn { width: 100%; margin-bottom: 8px; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
-    .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-    .line-row { display: flex; gap: 8px; font-size: .9rem; }
-    .line-mark { flex: 0 0 auto; align-self: center; width: 10px; height: 10px; border-radius: 50%;
-      box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent); }
-    /* Bewertung aus den Zustands-Tokens (UX-015): die festen Hellthema-Toene #1b5e20/#b71c1c hatten auf der dunklen
-       Karte 2,2:1 bzw. 2,6:1. */
-    .line-eval { font-weight: 700; min-width: 48px; font-variant-numeric: tabular-nums; color: var(--rh-success); }
-    .line-eval.neg { color: var(--rh-error); }
-    .line-san { font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .controls { display: flex; align-items: center; gap: 2px; }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .header h1 { margin: 0 0 8px; }
@@ -531,16 +377,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   protected maiaCheckTimeoutMs = 4000;
 
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
+  private readonly historySaver: AnalysisHistorySaver;
   /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
-  historyId: number | null = null;
-  /** Titel aus den PGN-Kopfdaten („Weiß – Schwarz"), sonst leer. */
-  private historyTitle: string | null = null;
-  private historyTimer: ReturnType<typeof setTimeout> | null = null;
-  private historySaving = false;
-  private historyAgain = false;
-  private lastHistorySig = '';
-  /** Zählt die Analysen dieser Seite — eine Antwort, die nach einem Wechsel eintrifft, gehört nicht mehr dazu. */
-  private historySession = 0;
+  get historyId(): number | null { return this.historySaver.id; }
 
   /** External Engines des Lichess-Kontos (leer = kein Picker); Auswahl 'wasm' = Browser. */
   externalEnginesList: ExternalEngineInfo[] = [];
@@ -607,6 +446,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
               private cdr: ChangeDetectorRef, private translate: TranslateService,
               @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog,
               private maia: MaiaEngineService, private games: GamesService, private analyzeGame: AnalyzeGameService) {
+    this.historySaver = new AnalysisHistorySaver({
+      save: req => this.history.save(req),
+      loggedIn: () => this.auth.isLoggedIn,
+      snapshot: () => ({ root: this.root, current: this.currentNode }),
+      blankFen: START_FEN,
+    });
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -758,7 +603,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // Wer die Seite verlässt, bevor die Drossel abläuft, soll den letzten Stand trotzdem im Verlauf haben.
-    if (this.historyTimer) { clearTimeout(this.historyTimer); this.historyTimer = null; this.saveHistoryNow(); }
+    this.historySaver.flush();
     this.sub?.unsubscribe();
     this.errorSub?.unsubscribe();
     this.fallbackSub?.unsubscribe();
@@ -868,7 +713,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Refresh board + engine for current ply ----
   private refresh(): void {
-    this.scheduleHistorySave();
+    this.historySaver.schedule();
     const fen = this.currentFen;
     let c: Chess;
     try { c = new Chess(fen); } catch { return; }
@@ -991,7 +836,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       if (node !== this.root && node.evalText !== best.evalText) {
         node.evalText = best.evalText;
         this.treeVersion++;
-        this.scheduleHistorySave();
+        this.historySaver.schedule();
       }
     }
     this.serveMoveCheck(fen);
@@ -1010,19 +855,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     let deepest: EvalPoint | null = null;
     for (const p of this.evalTrack.points) if (p.depth >= minDepth && (!deepest || p.depth > deepest.depth)) deepest = p;
     return deepest;
-  }
-
-  /** Farbe des Pfeils der i-ten Engine-Linie — der Punkt davor in der Linienliste (UX-049). Mit der Deckkraft des
-   *  Pinsels, wie chessground den Pfeil zeichnet: 'purple' deckt nur zu 65 %, voll deckend wirkte der Punkt dunkler als
-   *  sein Pfeil und läge nah am dunklen Rot der vierten Linie. */
-  lineColor(i: number): string {
-    const brush = BOARD_BRUSHES[arrowBrush(i)];
-    if (!brush) return 'transparent';
-    const alpha = brush.opacity || 1; // wie chessground: 0/fehlend zählt als voll deckend
-    const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(brush.color);
-    return hex && alpha < 1
-      ? `rgba(${parseInt(hex[1], 16)}, ${parseInt(hex[2], 16)}, ${parseInt(hex[3], 16)}, ${alpha})`
-      : brush.color;
   }
 
   /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
@@ -1170,8 +1002,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  und das mehrfach je Durchlauf, weil beide Namens-Getter ihn ebenfalls aufrufen. Der Cache
    *  haelt bewusst die Sprache mit fest, sonst bliebe die Beschriftung nach einem Sprachwechsel
    *  auf der alten stehen. */
-  private choicesCache?: { lang: string | null; list: ExternalEngineInfo[]; value: { id: string; name: string; tag: string | null }[] };
-  get engineChoices(): { id: string; name: string; tag: string | null }[] {
+  private choicesCache?: { lang: string | null; list: ExternalEngineInfo[]; value: EngineChoice[] };
+  get engineChoices(): EngineChoice[] {
     const lang = this.translate.currentLang();   // ngx-translate 18: Signal, kein String
     const c = this.choicesCache;
     if (c && c.lang === lang && c.list === this.externalEnginesList) return c.value;
@@ -1183,9 +1015,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.choicesCache = { lang, list: this.externalEnginesList, value };
     return value;
   }
-
-  /** Zusatz hinter dem Engine-Namen in der Auswahl (siehe `engineTagKey`). */
-  tagOf(e: ExternalEngineInfo): string | null { return engineTagKey(e); }
 
   /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
    *  Engine genannt — ein Vergleich mit falschem Etikett wäre schlimmer als gar keiner. */
@@ -1295,14 +1124,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   reloadPage(): void { window.location.reload(); }
   flip(): void { this.orientation = this.orientation === 'white' ? 'black' : 'white'; }
 
-  reset(): void { this.newSession(); this.resetToStart(START_FEN); }
+  reset(): void { this.historySaver.newSession(); this.resetToStart(START_FEN); }
   private resetToStart(fen = this.startFen): void { this.setTree(createRoot(fen)); }
 
   // ---- Stellung aufbauen (Brett-Editor) ----
   startEditing(): void { this.abortMaia(); this.editing = true; }
   onSetupApply(fen: string): void {
     this.editing = false;
-    this.newSession();
+    this.historySaver.newSession();
     this.fenInput = '';
     this.resetToStart(fen);
   }
@@ -1311,7 +1140,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const fen = this.fenInput.trim();
     if (!fen) return;
     if (!this.isValidFen(fen)) { this.snackbar.show(this.translate.instant('analysis.invalidFen'), { action: 'common.ok', duration: 2500 }); return; }
-    this.newSession();
+    this.historySaver.newSession();
     this.fenInput = '';
     this.resetToStart(fen);
   }
@@ -1323,7 +1152,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (!pgn) return;
     const parsed = parsePgnTree(pgn);
     if (!parsed) { this.snackbar.show(this.translate.instant('analysis.invalidPgn'), { action: 'common.ok', duration: 2500 }); return; }
-    this.newSession(pgnTitle(parsed.headers));
+    this.historySaver.newSession(pgnTitle(parsed.headers));
     if (!keepText) this.pgnInput = '';
     const main = mainline(parsed.root);
     this.setTree(parsed.root, main[main.length - 1] ?? parsed.root);
@@ -1347,7 +1176,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private toggleStarOn(node: AnalysisNode): void {
     if (node.starred) delete node.starred; else node.starred = true;
     this.treeVersion++;
-    this.scheduleHistorySave();
+    this.historySaver.schedule();
   }
 
   /** „12...Nf6" — der Zug, der zur markierten Stellung führte; die Wurzel = Ausgangsstellung. */
@@ -1388,12 +1217,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Brett und Engine bleiben, nur die Reihenfolge änderte sich: die Linie durch den aktuellen Zug neu ziehen.
     this.treeVersion++;
     this.line = lineThrough(current);
-    this.scheduleHistorySave();
+    this.historySaver.schedule();
   }
 
   // ---- Sparring gegen Maia ----
   //
-  // Maias Züge laufen über goToNode → refresh → scheduleHistorySave: die gespielte Linie landet ohne weiteres Zutun im
+  // Maias Züge laufen über goToNode → refresh → historySaver.schedule: die gespielte Linie landet ohne weiteres Zutun im
   // Zugbaum und im Analyse-Verlauf. Die Karte (MaiaSparringCardComponent) lädt das Modell; hier steht nur das Spiel.
 
   /** Sparring läuft, Maia ist am Zug, und die Stellung ist nicht zu Ende — die Karte bietet dann „Maia zieht" an. */
@@ -1689,62 +1518,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    this.flushHistory();
-    this.historySession++;
-    this.historyId = e.id;
-    this.historyTitle = e.title;
+    this.historySaver.openEntry(e);
     const { root, nodes } = fromDto(e.startFen, e.tree);
     this.setTree(root, (e.current >= 0 ? nodes[e.current] : null) ?? root);
-    this.lastHistorySig = this.historySignature();   // eben geladen = schon gespeichert
+    this.historySaver.markSaved();   // eben geladen = schon gespeichert
     this.cdr.markForCheck();
-  }
-
-  /** Eine neue Analyse beginnt (Zurücksetzen, FEN/PGN/Stellung geladen): der bisherige Stand geht noch raus, dann
-   *  ohne Kennung weiter (der neue Baum bringt keine Sterne mit). */
-  private newSession(title: string | null = null): void {
-    this.flushHistory();
-    this.historySession++;
-    this.historyId = null;
-    this.historyTitle = title;
-    this.lastHistorySig = '';
-  }
-
-  private flushHistory(): void {
-    if (this.historyTimer) { clearTimeout(this.historyTimer); this.historyTimer = null; this.saveHistoryNow(); }
-  }
-
-  /** Gedrosselt speichern — nur angemeldet, und nur, was eine Analyse IST (Züge, eigene Stellung oder Sterne). */
-  private scheduleHistorySave(): void {
-    if (!this.auth.isLoggedIn) return;
-    if (this.historyTimer) clearTimeout(this.historyTimer);
-    this.historyTimer = setTimeout(() => { this.historyTimer = null; this.saveHistoryNow(); }, HISTORY_SAVE_MS);
-  }
-
-  /** Was gespeichert würde, als Vergleichswert — gleich = nichts zu tun. */
-  private historySignature(): string {
-    const { tree, current } = toDto(this.root, this.currentNode);
-    return JSON.stringify([this.startFen, tree, current, this.historyTitle ?? '']);
-  }
-
-  private saveHistoryNow(): void {
-    if (!this.auth.isLoggedIn) return;
-    if (this.root.children.length === 0 && this.startFen === START_FEN && !this.root.starred) return;
-    const { tree, current } = toDto(this.root, this.currentNode);
-    const sig = JSON.stringify([this.startFen, tree, current, this.historyTitle ?? '']);
-    if (sig === this.lastHistorySig) return;
-    // Läuft noch ein Speichern (ohne Kennung), würde ein zweites einen zweiten Eintrag anlegen — danach nachholen.
-    if (this.historySaving) { this.historyAgain = true; return; }
-    this.historySaving = true;
-    const session = this.historySession;
-    this.history.save({ id: this.historyId, startFen: this.startFen, title: this.historyTitle, tree, current }).subscribe({
-      next: e => {
-        this.historySaving = false;
-        // Nur übernehmen, wenn inzwischen keine NEUE Analyse begonnen hat.
-        if (this.historySession === session) { this.historyId = e.id; this.lastHistorySig = sig; }
-        if (this.historyAgain) { this.historyAgain = false; this.saveHistoryNow(); }
-      },
-      error: () => { this.historySaving = false; this.historyAgain = false; },   // Hintergrund: der nächste Zug versucht es wieder
-    });
   }
 
   private isValidFen(fen: string): boolean {

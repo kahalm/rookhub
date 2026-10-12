@@ -1,4 +1,4 @@
-import { AnalysisComponent } from './analysis.component';
+import { AnalysisEngineCardComponent } from './analysis-engine-card.component';
 import { AnalysisJobsComponent } from './analysis-jobs.component';
 import { AnalysisJobViewDialogComponent } from './analysis-job-view-dialog.component';
 import { mountWithComponentStyles, setDarkTheme, textContrast } from '../../testing/contrast';
@@ -22,7 +22,7 @@ describe('Engine-Bewertungen in Theme-Farben: Analysebrett, Auftragsliste, Auftr
     + '<span class="line-san">e4 e5</span></div><div class="line-row"><span class="line-eval neg">-1.20</span>'
     + '<span class="line-san">d4</span></div></div>';
   const cases: { name: string; cmp: unknown; surface: string; html: string }[] = [
-    { name: 'Analysebrett', cmp: AnalysisComponent, surface: CARD, html: LINES },
+    { name: 'Analysebrett', cmp: AnalysisEngineCardComponent, surface: CARD, html: LINES },
     { name: 'Auftragsliste', cmp: AnalysisJobsComponent, surface: CARD,
       html: LINES + '<div class="job-meta"><span class="eval">+0.33</span> <span class="eval neg">-1.20</span></div>' },
     { name: 'Auftrags-Dialog', cmp: AnalysisJobViewDialogComponent, surface: DIALOG, html: LINES },
