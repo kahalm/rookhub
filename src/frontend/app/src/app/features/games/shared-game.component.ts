@@ -45,13 +45,11 @@ import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.se
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { SimilarGamesComponent } from './similar-games.component';
+import { GameRecapComponent } from './game-recap.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SHARED_GAME_STYLES } from './shared-game.styles';
 
-/** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
-const RECAP_TRIES = 8;
-const RECAP_RETRY_MS = 15_000;
 /** Ab so viel Bewegung (px) bzw. Dauer (ms) ist eine Berührung des Bretts kein Tipp mehr, sondern Ziehen/Halten. */
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 500;
@@ -72,7 +70,7 @@ const TAP_MAX_MS = 500;
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
-    SimilarGamesComponent,
+    SimilarGamesComponent, GameRecapComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -245,20 +243,9 @@ const TAP_MAX_MS = 500;
               }
             </div>
           </div>
-          <!-- Mit Roast geteilt (0.742.0, /g/{token}?roast={id}): der freigegebene Roast statt „Kurz erzählt". -->
-          @if (sharedRoast(); as r) {
-            <p class="recap roast" [class.open]="recapOpen()" (click)="recapOpen.set(!recapOpen())">
-              <span class="roast-icon" [matTooltip]="'games.roast.title' | translate" [attr.aria-label]="'games.roast.title' | translate">🔥</span>
-              <span class="recap-text">{{ r.text }}</span>
-            </p>
-          } @else if (recap(); as text) {
-            <!-- „Kurz erzählt" (0.541.0): dieselbe Zeile wie in der Link-Vorschau, vom Sprachmodell aus der Analyse. -->
-            <!-- Am Handy auf drei Zeilen gekürzt; Antippen zeigt alles (v1-rk-first-view-lead-long-mobile). -->
-            <p class="recap" [class.open]="recapOpen()" (click)="recapOpen.set(!recapOpen())">
-              <mat-icon [matTooltip]="'games.recap.hint' | translate" [attr.aria-label]="'games.recap.hint' | translate">auto_stories</mat-icon>
-              <span class="recap-text">{{ text }}</span>
-            </p>
-          }
+          <!-- „Kurz erzählt" bzw. der geteilte Roast über dem Brett (eigene Komponente, holt den Text selbst nach). -->
+          <app-game-recap [text]="game.recap" [roast]="sharedRoast()" [own]="own" [gameId]="gameId"
+                          [analysisDone]="reviewStatus() === 'done'" />
           <div class="body">
             <div class="board-section">
               <div class="board-wrap">
@@ -458,44 +445,13 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Klasse des aktuellen Zugs als Symbol am Zielfeld (vom Rückblick; im Training und mit Live-Engine leer). */
   readonly moveBadge = signal<BoardBadge | null>(null);
 
-  /**
-   * „Kurz erzählt" (0.541.0) über der Partie. Der Teilen-Link bringt den Text gleich mit; die eigene Seite holt ihn, sobald
-   * die Analyse fertig ist — er entsteht dann gerade (oder, bei einer älteren Analyse, durch genau diesen Abruf), deshalb
-   * fragt sie ein paar Mal nach.
-   */
-  readonly recap = signal<string | null>(null);
   /** Der freigegebene Roast hinter `?roast=` (0.742.0) — null ohne Parameter oder wenn nicht (mehr) freigegeben. */
   readonly sharedRoast = signal<GameRoast | null>(null);
-  /** „Kurz erzählt"/Roast ganz zeigen — am Handy sonst auf drei Zeilen gekürzt (v1-rk-first-view-lead-long-mobile). */
-  readonly recapOpen = signal(false);
   private roastId: number | null = null;
 
   private loadSharedRoast(token: string | null | undefined): void {
     if (!token || this.roastId == null) return;
     this.games.sharedRoast(token, this.roastId).subscribe({ next: r => this.sharedRoast.set(r), error: () => undefined });
-  }
-  private recapTries = 0;
-  private recapTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly loadRecap = effect(() => {
-    if (this.reviewStatus() !== 'done') return;
-    untracked(() => {
-      if (this.own && this.gameId && !this.recap() && this.recapTries === 0) this.fetchRecap();
-    });
-  });
-  private readonly stopRecapOnDestroy = inject(DestroyRef).onDestroy(() => {
-    if (this.recapTimer) clearTimeout(this.recapTimer);
-  });
-
-  private fetchRecap(): void {
-    if (!this.gameId) return;
-    this.recapTries++;
-    this.games.recap(this.gameId).subscribe({
-      next: r => {
-        if (r.text) { this.recap.set(r.text); return; }
-        if (r.pending && this.recapTries < RECAP_TRIES) this.recapTimer = setTimeout(() => this.fetchRecap(), RECAP_RETRY_MS);
-      },
-      error: () => { /* ohne Nacherzählung bleibt die Seite wie bisher */ },
-    });
   }
 
   /**
@@ -849,7 +805,6 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   private show(g: SharedGame): void {
     this.game = g;
-    this.recap.set(g.recap ?? null);
     this.ownerSide.set(g.ownerSide ?? null);
     // Aus der Sicht des Besitzers: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
     this.flipped = g.ownerSide === 'black';

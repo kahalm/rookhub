@@ -19,7 +19,7 @@ export const SHARED_GAME_STYLES = `
       border-radius: 14px;
     }
     /* „Kurz erzählt“ steht über dem Brett — sein Platz geht von der Höhe ab, sonst ragt das Brett samt Leiste unten raus. */
-    .viewer:has(> .recap) { --recap-room: 80px; }
+    .viewer:has(> app-game-recap.has-text) { --recap-room: 80px; }
     .header {
       display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
       gap: 8px 16px; margin-bottom: 14px;
@@ -37,17 +37,7 @@ export const SHARED_GAME_STYLES = `
     }
     .meta > .result { background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent); font-weight: 600; }
     .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    /* Breite 0 + Mindestbreite 100 %: der Satz trägt nichts zur Breite der Karte bei — sie umschließt Brett und Zugliste,
-       ein langer Absatz dehnte sie sonst auf die ganze Seite. */
-    .recap {
-      width: 0; min-width: 100%; box-sizing: border-box; margin: 0 0 14px; padding: 10px 14px;
-      display: flex; gap: 10px; align-items: flex-start; border-radius: 10px;
-      background: color-mix(in srgb, var(--rh-accent) 7%, transparent);
-      font-size: 0.92rem; line-height: 1.5; color: color-mix(in srgb, currentColor 85%, transparent);
-    }
-    .recap.roast { background: color-mix(in srgb, #e64a19 9%, transparent); white-space: pre-wrap; }
-    .roast-icon { flex: 0 0 auto; font-size: 18px; line-height: 1.3; }
-    .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
+    /* „Kurz erzählt“ samt Handy-Kürzung: game-recap.component.ts. */
     .original, .analyze { white-space: nowrap; }
     /* Am Handy wandern „Originalpartie öffnen" und „Teilen-Link kopieren" ins ⋮ (v1-rk-first-view-lead-long-mobile). */
     .narrow-only { display: none; }
@@ -123,11 +113,6 @@ export const SHARED_GAME_STYLES = `
       .header-actions:not(:has(> button:not(.game-menu):not(.wide-only), > a:not(.wide-only))) { margin-top: -8px; }
       /* Das ⋮ oben rechts neben den Namen statt allein in einer eigenen Zeile. */
       .header .game-menu { position: absolute; top: 8px; right: 8px; }
-      .recap { margin: 0 16px 12px; width: auto; min-width: 0; cursor: pointer; }
-      /* „Kurz erzählt" höchstens drei Zeilen (4.6 Regel 5), Antippen zeigt alles. */
-      .recap:not(.open) > .recap-text {
-        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-      }
       .side-section { padding: 0 12px; }
       /* nowrap: ein mehrzeiliger Spalten-Flex wird so breit wie sein breitester Inhalt (Genauigkeitstabelle) —
          die Seite war am Handy 438 statt 390 px breit (v1-rk-analysis-card-overflow-mobile). */

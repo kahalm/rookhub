@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.759.1", date: "2026-10-12", changes: [
+    { en: "Code structure: the “In short” story of a game is now its own component. No change in behaviour.",
+      de: "Code-Struktur: „Kurz erzählt“ einer Partie ist jetzt eine eigene Komponente. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.759.0", date: "2026-10-12", changes: [
     { en: "Analysed games on phones: the evaluation card no longer sticks out on the right, the buttons sit in one row (original game and share link in the ⋮ menu) and the short story folds to three lines; game list on phones with a “Filter” button and the active filters as chips.",
       de: "Analysierte Partie am Handy: die Auswertungskarte ragt nicht mehr rechts hinaus, die Knöpfe stehen in einer Zeile (Originalpartie und Teilen-Link im ⋮-Menü) und „Kurz erzählt“ ist auf drei Zeilen eingeklappt; Partienliste am Handy mit „Filter“-Knopf und den gesetzten Filtern als Chips." },

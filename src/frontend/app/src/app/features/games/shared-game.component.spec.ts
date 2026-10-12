@@ -16,6 +16,7 @@ import { HandoffService } from '../../core/handoff.service';
 import { By } from '@angular/platform-browser';
 import { GameReviewComponent } from './game-review.component';
 import { SharedGameComponent } from './shared-game.component';
+import { GameRecapComponent } from './game-recap.component';
 
 /** Die Auswertung fragt zweimal: schnell ohne Buchzüge (`?book=0`), danach einmal voll (0.664.0) — beide bekommen dieselbe Antwort. */
 function flushEvals(http: HttpTestingController, url: string, body: object): void {
@@ -991,6 +992,9 @@ describe('SharedGameComponent Layout', () => {
     expect(mobile).toMatch(/\.wide-only \{ ?display: none/);
     expect(mobile).toMatch(/\.narrow-only \{ ?display: flex/);
     expect(desk).toMatch(/\.narrow-only \{ ?display: none/);
-    expect(mobile).toMatch(/\.recap:not\(\.open\) > \.recap-text \{[^}]*-webkit-line-clamp: 3/);
+    const recapCss = ((GameRecapComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ')
+      .replace(/\[_ngcontent-%COMP%\]/g, '');
+    const recapMobile = recapCss.slice(recapCss.indexOf('@media (max-width: 768px)'));
+    expect(recapMobile).toMatch(/\.recap:not\(\.open\) > \.recap-text \{[^}]*-webkit-line-clamp: 3/);
   });
 });
