@@ -152,4 +152,25 @@ describe('PositionMenuComponent', () => {
       expect(dialog.open.calls.mostRecent().args[1]?.data).toEqual({ fen: FEN, stored });
     });
   });
+
+  describe('„Sparring gegen Maia" (0.760.0)', () => {
+    it('ohne sparring (Partieseite) gibt es den Eintrag nicht', () => {
+      setup();
+      open();
+      expect(item('pm-sparring')).toBeNull();
+    });
+
+    it('am Analysebrett meldet der Eintrag sparringOpen — auch abgemeldet', () => {
+      loggedIn = false;
+      setup({ sparring: true });
+      let opened = 0;
+      fixture.componentInstance.sparringOpen.subscribe(() => opened++);
+      open();
+      const entry = item('pm-sparring')!;
+      expect(entry.textContent).toContain('analysis.maia.title');
+      expect(entry.querySelector('mat-icon')!.textContent).toContain('smart_toy');
+      entry.click();
+      expect(opened).toBe(1);
+    });
+  });
 });

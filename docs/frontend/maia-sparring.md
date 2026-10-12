@@ -5,6 +5,12 @@
 
 Sparringsgegner im Analysebrett (Entscheidungen, Fallen, Pin und Regeln: Haupt-CLAUDE.md „Maia-Sparring im Analysebrett").
 
+**Sichtbarkeit (0.760.0):** Die Karte ist standardmäßig NICHT auf der Seite. `PositionMenuComponent` zeigt mit
+`[sparring]="!editing"` den Eintrag „Sparring gegen Maia" (`pm-sparring`, `analysis.maia.title`) und meldet `sparringOpen`;
+das Analysebrett setzt `maiaCardOpen` (nur im Speicher) und scrollt die Karte in Sicht. `maiaCardVisible` = offen ODER
+`spar.sparring`; die Karte bekommt `[closable]="true"` und zeigt ✕ (`maia-close` → `dismiss`) nur ohne laufendes Sparring.
+Spec: `analysis-maia-card.spec.ts` (eigene Datei, `analysis.component.spec.ts` ist > 2 000 Zeilen).
+
 - `maia-model.ts` — feste Werte: Modell-Adresse, `version`/`bytes` (Pin-Spiegel von `maia-model/fetch.sh`), Stärken, Vorgabe,
   localStorage-Schlüssel, `MAIA_TOP_P`.
 - `maia-encoding.ts` — rein, ohne Angular: Stellung → Tokens (Schwarz am Zug wird gespiegelt), Zug ↔ Index (Formel statt

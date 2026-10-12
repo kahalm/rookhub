@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -50,6 +50,12 @@ export interface PositionMenuEngines {
       <button mat-menu-item type="button" class="pm-share" (click)="share()">
         <mat-icon>share</mat-icon> {{ 'analysis.menu.share' | translate }}
       </button>
+      @if (sparring()) {
+        <!-- „Sparring gegen Maia" (0.760.0): nur am Analysebrett — blendet die sonst versteckte Karte ein. -->
+        <button mat-menu-item type="button" class="pm-sparring" (click)="sparringOpen.emit()">
+          <mat-icon>smart_toy</mat-icon> {{ 'analysis.maia.title' | translate }}
+        </button>
+      }
       <button mat-menu-item type="button" class="pm-copy" (click)="copyFen()">
         <mat-icon>content_copy</mat-icon> {{ 'analysis.copyFen' | translate }}
       </button>
@@ -96,6 +102,9 @@ export class PositionMenuComponent {
   readonly candidates = input<MoveCompareCandidate[]>([]);
   /** Partieseite (0.686.0): was die Partie-Analyse zur Stellung hinterlegt hat — schaltet „Tiefe Analyse" ein. */
   readonly deep = input<DeepStored | null>(null);
+  /** Analysebrett (0.760.0): Eintrag „Sparring gegen Maia" anbieten; der Klick meldet `sparringOpen`. */
+  readonly sparring = input(false);
+  readonly sparringOpen = output<void>();
 
   private readonly loaded = signal<PositionMenuEngines | null>(null);
   private loading = false;

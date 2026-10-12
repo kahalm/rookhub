@@ -499,4 +499,20 @@ describe('MaiaSparringCardComponent', () => {
     card.onStart();
     expect(maia.prepare).not.toHaveBeenCalled();
   });
+
+  it('✕ (0.760.0): nur mit closable und ohne laufendes Sparring; der Klick meldet dismiss', async () => {
+    let dismissed = 0;
+    card.dismiss.subscribe(() => dismissed++);
+    expect(button('maia-close')).withContext('ohne closable').toBeNull();
+
+    fixture.componentRef.setInput('closable', true);
+    fixture.detectChanges();
+    expect(button('maia-close')!.getAttribute('aria-label')).toBe('common.close');
+    await click('maia-close');
+    expect(dismissed).toBe(1);
+
+    fixture.componentRef.setInput('active', true);
+    fixture.detectChanges();
+    expect(button('maia-close')).withContext('während des Sparrings').toBeNull();
+  });
 });

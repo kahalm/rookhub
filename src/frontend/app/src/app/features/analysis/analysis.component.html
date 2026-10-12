@@ -67,9 +67,10 @@
       </app-analysis-engine-card>
 
       <!-- Sparring gegen Maia: die Karte führt den Lade-Ablauf selbst und meldet „start" erst mit fertigem Modell.
-           Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte. -->
-      @if (!editing) {
-        <app-maia-sparring-card
+           Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte.
+           Seit 0.760.0 standardmäßig zu: das ⋮ der Stellung blendet sie ein, ✕ wieder aus; läuft ein Sparring, bleibt sie. -->
+      @if (!editing && maiaCardVisible) {
+        <app-maia-sparring-card [closable]="true" (dismiss)="closeMaiaCard()"
           [active]="!!spar.sparring" [userColor]="spar.sparring?.userColor ?? turnColor" [thinking]="spar.maiaThinking"
           [maiaToMove]="spar.maiaToMove" [elo]="spar.maiaElo"
           [showAnalyze]="spar.sparringAnalyzeVisible" [analyzing]="spar.analyzingSparring"
@@ -102,7 +103,7 @@
             <!-- „+" (0.749.0): besonders gute Stellung markieren. -->
             <app-mark-position-button [fen]="currentFen" [origin]="boardMarkOrigin" />
             <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
-                               [candidates]="engineCandidates"
+                               [candidates]="engineCandidates" [sparring]="!editing" (sparringOpen)="openMaiaCard()"
                                [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
           </div>
           @if (starredList.length > 0) {

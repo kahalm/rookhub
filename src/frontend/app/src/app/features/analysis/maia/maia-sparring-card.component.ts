@@ -63,6 +63,13 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
               @for (e of eloOptions; track e) { <mat-option [value]="e">{{ e }}</mat-option> }
             </mat-select>
           </mat-form-field>
+          <!-- ✕ (0.760.0): die Karte ist im Analysebrett standardmäßig zu und kommt über das ⋮ der Stellung; solange ein
+               Sparring läuft, bleibt sie offen — dann kein ✕. -->
+          @if (closable && !active) {
+            <button mat-icon-button type="button" class="maia-close" (click)="dismiss.emit()" [appIconLabel]="'common.close' | translate">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
         </div>
 
         @if (active || phase() === 'rest') {
@@ -208,6 +215,8 @@ export class MaiaSparringCardComponent implements OnDestroy {
   @Input() keepEvalBar = false;
   /** Warnung zum zuletzt geprüften eigenen Zug — nur in der aktiven Ansicht. */
   @Input() warning: SparringWarning | null = null;
+  /** ✕ zum Ausblenden zeigen (Analysebrett, 0.760.0) — nur solange kein Sparring läuft. */
+  @Input() closable = false;
 
   /** Das Modell ist bereit — das Analysebrett beginnt das Sparring. */
   @Output() readonly start = new EventEmitter<void>();
@@ -222,6 +231,8 @@ export class MaiaSparringCardComponent implements OnDestroy {
   @Output() readonly keepEvalBarChange = new EventEmitter<boolean>();
   /** „Analysieren" an der Warnung. */
   @Output() readonly analyzeWarning = new EventEmitter<void>();
+  /** ✕ geklickt — das Analysebrett blendet die Karte aus. */
+  @Output() readonly dismiss = new EventEmitter<void>();
 
   readonly maia = inject(MaiaEngineService);
   readonly eloOptions = MAIA_ELO_OPTIONS;

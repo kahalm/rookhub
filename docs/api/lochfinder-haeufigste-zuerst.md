@@ -47,7 +47,8 @@ Regeln, die dabei nicht kippen dürfen:
 unter der Zugliste, nur angemeldet. Fragt `GET /api/explorer/position` erst 250 ms nach dem letzten
 Stellungswechsel (Durchklicken einer Partie mit den Pfeiltasten kostet online sonst Kontingent),
 merkt sich Antworten je Stellung + Auswahl im Speicher der Seite, verwirft eine späte Antwort für
-eine schon verlassene Stellung und fragt zugeklappt gar nicht (`rookhub_analysis_explorer_open`).
+eine schon verlassene Stellung und fragt zugeklappt gar nicht (`rookhub_analysis_explorer_open`; seit 0.760.0
+ohne gemerkten Wert ZUGEKLAPPT, nur `'1'` klappt auf).
 Die Auswahl ist DIESELBE wie im Lochfinder (`rookhub_explorer_settings`). **Vorgabe seit 0.504.1:
 lokal + Meister** (`DEFAULT_EXPLORER_SETTINGS`); ohne lokalen Explorer gilt online, und dieser
 Rückfall wird NICHT gespeichert (sonst bliebe ein Gerät nach einem Besuch auf einem Server ohne

@@ -31,8 +31,9 @@ interface Row {
   b: number;
 }
 
+/** Aufgeklappt nur, wenn der Nutzer es auf diesem Gerät so gemerkt hat — Vorgabe seit 0.760.0 „zu" (vorher „auf"). */
 function readOpen(): boolean {
-  try { return localStorage.getItem(OPEN_KEY) !== '0'; } catch { return true; }
+  try { return localStorage.getItem(OPEN_KEY) === '1'; } catch { return false; }
 }
 
 /**

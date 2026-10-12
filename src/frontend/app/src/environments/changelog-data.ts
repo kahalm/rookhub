@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.760.0", date: "2026-10-12", changes: [
+    { en: "Analysis board: “Sparring against Maia” now opens from the ⋮ menu instead of always taking space below the engine (✕ closes it again; while a sparring runs it stays visible), and the opening explorer starts collapsed — it loads only when you open it, and an explorer you opened before stays open.",
+      de: "Analysebrett: „Sparring gegen Maia“ öffnet jetzt über das ⋮-Menü, statt immer unter der Engine Platz zu belegen (✕ schließt es wieder; während eines Sparrings bleibt es sichtbar), und der Eröffnungsexplorer startet eingeklappt — er lädt erst beim Aufklappen, ein schon einmal aufgeklappter bleibt offen." },
+  ] },
   { version: "0.759.2", date: "2026-10-12", changes: [
     { en: "Follow-up on phones: the delete button of a game analysis stays in the first row, the repertoire header keeps “Quiz” (as an icon) and the view switch in one row in every view, long course descriptions fold to three lines with “More” at the end, and the “In short” story of a game shows a visible “More”/“Less”; engine lines on the game page in German notation.",
       de: "Nachrunde am Handy: der Löschknopf einer Partie-Analyse bleibt in der ersten Zeile, der Repertoire-Kopf hält „Abfragen“ (als Symbol) und die Ansichtswahl in jeder Ansicht in einer Zeile, lange Kursbeschreibungen sind auf drei Zeilen mit „Mehr“ am Ende eingeklappt, und „Kurz erzählt“ einer Partie zeigt sichtbar „Mehr“/„Weniger“; Engine-Linien auf der Partieseite deutsch notiert." },

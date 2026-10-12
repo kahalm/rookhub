@@ -114,6 +114,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** Sparring gegen Maia (0.632.0) — Zustand und Spiel in MaiaSparring. */
   readonly spar: MaiaSparring;
+  /** Karte „Sparring gegen Maia" eingeblendet (0.760.0: standardmäßig zu, über das ⋮ der Stellung; nicht gemerkt). */
+  maiaCardOpen = false;
+  /** Läuft ein Sparring, ist die Karte immer da — sonst nur, wenn über das ⋮ geöffnet. */
+  get maiaCardVisible(): boolean { return this.maiaCardOpen || !!this.spar.sparring; }
 
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   private readonly historySaver: AnalysisHistorySaver;
@@ -713,6 +717,19 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   reset(): void { this.historySaver.newSession(); this.resetToStart(START_FEN); }
   private resetToStart(fen = this.startFen): void { this.setTree(createRoot(fen)); }
+
+  // ---- Karte „Sparring gegen Maia" ein-/ausblenden (0.760.0) ----
+  openMaiaCard(): void {
+    this.maiaCardOpen = true;
+    this.cdr.markForCheck();
+    // Erst nach dem Zeichnen gibt es die Karte — dann in Sicht holen (am Handy liegt sie unter dem Brett).
+    setTimeout(() => document.querySelector('app-maia-sparring-card')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }));
+  }
+  closeMaiaCard(): void {
+    if (this.spar.sparring) return;   // ein laufendes Sparring braucht seine Knöpfe
+    this.maiaCardOpen = false;
+    this.cdr.markForCheck();
+  }
 
   // ---- Stellung aufbauen (Brett-Editor) ----
   startEditing(): void { this.spar.abortMaia(); this.editing = true; }

@@ -5,7 +5,9 @@
 
 Wunsch: „Maia-3 in unterschiedlicher Stärke für Sparring von Stellungen, Knopf im Analyse-Modus". Maia-3 (CSSLab,
 Universität Toronto, GPL-3.0) ist ein neuronales Netz, das den Zug eines MENSCHEN einer bestimmten Stärke vorhersagt —
-kein Rechner. Karte „Sparring gegen Maia" zwischen Engine-Karte und Zugliste; kein Backend, kein Endpunkt, keine
+kein Rechner. Karte „Sparring gegen Maia" zwischen Engine-Karte und Zugliste — seit 0.760.0 standardmäßig ausgeblendet,
+der Eintrag „Sparring gegen Maia" im ⋮ der Stellung blendet sie ein, ✕ wieder aus (nicht gemerkt), ein laufendes Sparring
+hält sie sichtbar; kein Backend, kein Endpunkt, keine
 Migration. Code: `features/analysis/maia/` (siehe `src/frontend/CLAUDE.md`). Entscheidungen und warum:
 1. **Läuft im Browser** (ONNX-Modell + `onnxruntime-web` WASM, eigener Worker) — kein Dienst, kein Container.
 2. **Modell `maia3_simplified.onnx` nicht im Repo** (45 MB): `src/frontend/app/maia-model/fetch.sh` holt es beim Docker-Build

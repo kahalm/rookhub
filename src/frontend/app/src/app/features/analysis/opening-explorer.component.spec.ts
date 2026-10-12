@@ -29,6 +29,9 @@ describe('OpeningExplorerComponent', () => {
   let positionSpy: jasmine.Spy;
   let gamesSpy: jasmine.Spy;
 
+  // Seit 0.760.0 ist die Karte ohne gemerkten Zustand zu — die Tests unten arbeiten mit aufgeklappter Karte.
+  beforeEach(() => localStorage.setItem('rookhub_analysis_explorer_open', '1'));
+
   afterEach(() => {
     localStorage.removeItem('rookhub_analysis_explorer_open');
     localStorage.removeItem('rookhub_explorer_settings');
@@ -131,6 +134,30 @@ describe('OpeningExplorerComponent', () => {
     tick(300);
     expect(positionSpy).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('rookhub_analysis_explorer_open')).toBe('1');
+  }));
+
+  it('without a remembered state it starts folded (0.760.0): title visible, no request until opened', fakeAsync(() => {
+    localStorage.removeItem('rookhub_analysis_explorer_open');
+    setup();
+    setFen(START); tick(300); fixture.detectChanges();
+    const title = fixture.nativeElement.querySelector('.head .title') as HTMLButtonElement;
+    expect(title).not.toBeNull();
+    expect(title.getAttribute('aria-expanded')).toBe('false');
+    expect(fixture.nativeElement.querySelector('.san-btn')).toBeNull();
+    expect(positionSpy).not.toHaveBeenCalled();
+
+    title.click();
+    tick(300); fixture.detectChanges();
+    expect(positionSpy).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.querySelectorAll('.san-btn').length).toBeGreaterThan(0);
+    expect(localStorage.getItem('rookhub_analysis_explorer_open')).toBe('1');
+  }));
+
+  it('a remembered "open" is respected', fakeAsync(() => {
+    setup();   // beforeEach merkte '1'
+    setFen(START); tick(300);
+    expect(fixture.componentInstance.open()).toBeTrue();
+    expect(positionSpy).toHaveBeenCalledTimes(1);
   }));
 
   it('a missing token is explained, and a rate limit is waited out by itself', fakeAsync(() => {
