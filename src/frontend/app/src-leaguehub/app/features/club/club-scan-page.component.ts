@@ -13,23 +13,22 @@ import { ScanEngineComponent } from './scan-engine.component';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { ClubGameDetail, ClubPairing, ClubSheetState, LeagueScanState, RosterPerson, ScanRef, SideMatch } from '../../core/club.models';
+import { ClubGameDetail, ClubSheetState, LeagueScanState, ScanRef } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ClubContextService } from '../../core/club-context.service';
-import { SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
+import { SheetPgnInput, isTransientError, loadErrorText, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
-import { pairingText } from './import-review';
+import { ScanHeaderForm, SIDES } from './scan-header-form';
+import { ScanPhotos } from './scan-photos';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 import { de } from '../../core/league-format';
 
-type Side = 'white' | 'black';
 const POLL_MS = 3000;
-const MATCH_DEBOUNCE_MS = 400;
 /** So viele Abrufe hintereinander dürfen still scheitern (Neustart, Funkloch), bevor die Seite es sagt (UX-034). */
 const SILENT_FAILURES = 3;
 
@@ -82,7 +81,7 @@ function readAutoMine(): boolean {
         @if (gameId != null) {
           <p><a class="back-link" routerLink="/verein">← Vereinspartien</a></p>
           <h2>Vereinspartie korrigieren</h2>
-          <p class="muted">{{ gameTitle() }}@if (!photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
+          <p class="muted">{{ gameTitle() }}@if (!ph.photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
         } @else {
           <p><a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
           <h2>Partieformular prüfen</h2>
@@ -107,30 +106,30 @@ function readAutoMine(): boolean {
       </section>
 
       @if (st.scan.status === 'done') {
-        <div class="scan-wrap"><div class="scan-layout" [class.with-photo]="!!photoUrl()">
-          @if (photoUrl(); as src) {
+        <div class="scan-wrap"><div class="scan-layout" [class.with-photo]="!!ph.photoUrl()">
+          @if (ph.photoUrl(); as src) {
             <section class="panel scan-photo" [class.open]="photoOpen()">
               <p class="photo-toggle"><button type="button" class="btn-link" [attr.aria-expanded]="photoOpen()" (click)="photoOpen.set(!photoOpen())">
                 {{ photoOpen() ? 'Ganzes Foto ausblenden' : 'Ganzes Foto zeigen' }}</button></p>
-              @if (pageCount() > 1) {
+              @if (ph.pageCount() > 1) {
                 <div class="seg pager" role="group" aria-label="Seite des Formulars">
-                  @for (n of pageNumbers(); track n) {
-                    <button type="button" [attr.aria-pressed]="shownPage() === n" (click)="showPage(n)">Seite {{ n }}</button>
+                  @for (n of ph.pageNumbers(); track n) {
+                    <button type="button" [attr.aria-pressed]="ph.shownPage() === n" (click)="ph.showPage(n)">Seite {{ n }}</button>
                   }
                 </div>
               }
-              @if (viewNumbers().length > 1) {
+              @if (ph.viewNumbers().length > 1) {
                 <!-- 0.736.0: weitere Fotos derselben Seite — Ausschnitt und Markierung gehören zum ersten -->
                 <div class="seg pager views" role="group" aria-label="Foto dieser Seite">
-                  @for (v of viewNumbers(); track v) {
-                    <button type="button" [attr.aria-pressed]="shownView() === v" (click)="showView(v)">Foto {{ v + 1 }}</button>
+                  @for (v of ph.viewNumbers(); track v) {
+                    <button type="button" [attr.aria-pressed]="ph.shownView() === v" (click)="ph.showView(v)">Foto {{ v + 1 }}</button>
                   }
                 </div>
               }
               <div class="photo-scroll" [class.zoom]="zoom()">
                 <div class="photo-frame">
                   <img [src]="src" alt="Foto des Partieformulars" (load)="onPhotoLoad($event)" />
-                  @if (s.mark(); as m) { @if (m.page === shownPage() && shownView() === 0) {
+                  @if (s.mark(); as m) { @if (m.page === ph.shownPage() && ph.shownView() === 0) {
                     <div class="photo-mark" [class.uncertain]="m.uncertain" [style.left.%]="m.left" [style.top.%]="m.top"
                          [style.width.%]="m.width" [style.height.%]="m.height" aria-hidden="true"></div>
                   } }
@@ -141,7 +140,7 @@ function readAutoMine(): boolean {
           }
 
           <section class="panel scan-board">
-            <app-chess-board [fen]="s.cursorFen()" [lastMove]="s.lastMove()" [arrows]="boardArrows()" [flipped]="ownerSide() === 'black'"
+            <app-chess-board [fen]="s.cursorFen()" [lastMove]="s.lastMove()" [arrows]="boardArrows()" [flipped]="f.ownerSide() === 'black'"
                              [playable]="!s.busy()" (userMove)="onBoardMove($event)" />
             <div class="board-nav">
               <button type="button" class="btn-sec" (click)="s.go(0)" [disabled]="s.cursor() === 0" aria-label="Zum Anfang">⏮</button>
@@ -165,11 +164,11 @@ function readAutoMine(): boolean {
                auf einem Bildschirm. -->
           <section class="panel scan-check">
             <div class="cursor-panel" aria-live="polite">
-              @if (photoUrl(); as src) {
+              @if (ph.photoUrl(); as src) {
                 @if (s.crop(); as c) {
                   <div class="crop">
                     <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
-                      <img [src]="pageUrl(c.page) ?? src" alt="Ausschnitt des Formulars" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
+                      <img [src]="ph.pageUrl(c.page) ?? src" alt="Ausschnitt des Formulars" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
                            [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
                       <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
                            [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
@@ -264,42 +263,42 @@ function readAutoMine(): boolean {
           <div class="save-grid">
             @for (k of sides; track k) {
               <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
-                <lh-player-search [client]="client" [text]="name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'" [searchMega]="false"
-                                  (textChange)="setName(k, $event)" (picked)="pickPerson(k, $event)" />
-                <span class="match" [class.ok]="(match(k)()?.league || match(k)()?.mega) && !replace(k)()">{{ matchText(k) }}</span>
-                @if (similarOf(k).length) {
+                <lh-player-search [client]="client" [text]="f.name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'" [searchMega]="false"
+                                  (textChange)="f.setName(k, $event)" (picked)="f.pickPerson(k, $event)" />
+                <span class="match" [class.ok]="(f.match(k)()?.league || f.match(k)()?.mega) && !f.replace(k)()">{{ f.matchText(k) }}</span>
+                @if (f.similarOf(k).length) {
                   <span class="quick-pick small"><span class="muted">Meintest du</span>
-                    @for (c of similarOf(k); track c.name + (c.fide ?? '')) {
-                      <button type="button" class="btn-chip" (click)="pickPerson(k, c)" [attr.title]="c.teams.join(', ')"
+                    @for (c of f.similarOf(k); track c.name + (c.fide ?? '')) {
+                      <button type="button" class="btn-chip" (click)="f.pickPerson(k, c)" [attr.title]="c.teams.join(', ')"
                               [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ': ' + c.name + ' übernehmen'">{{ c.name }}</button>
                     }
                   </span>
                 }
                 <label class="replace-row" [attr.title]="'Nach außen steht dann „' + anon + '“. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der Name aus der öffentlichen Paarung der Ligarunde.'">
-                  <input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
+                  <input type="checkbox" [checked]="f.replace(k)()" (change)="f.setReplace(k, $any($event.target).checked)" />
                   durch „{{ anon }}“ ersetzen</label>
               </div>
-              <label class="field narrow">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="elo(k)() ?? ''"
-                                               (input)="elo(k).set(num($any($event.target).value))" [disabled]="replace(k)()" /></label>
+              <label class="field narrow">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="f.elo(k)() ?? ''"
+                                               (input)="f.elo(k).set(num($any($event.target).value))" [disabled]="f.replace(k)()" /></label>
             }
-            <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="year() ?? ''"
-                                              (input)="year.set(num($any($event.target).value)); yearRead.set(null); schedulePairings()" />
-              @if (yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
+            <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="f.year() ?? ''"
+                                              (input)="f.year.set(num($any($event.target).value)); f.yearRead.set(null); f.schedulePairings()" />
+              @if (f.yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
             </label>
             <label class="field narrow">Ergebnis
-              <select (change)="result.set($any($event.target).value)">
-                @for (r of results; track r) { <option [value]="r" [selected]="result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
+              <select (change)="f.result.set($any($event.target).value)">
+                @for (r of results; track r) { <option [value]="r" [selected]="f.result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
               </select>
             </label>
             <label class="field wide">Veranstaltung <span class="muted small">(fällt weg, sobald jemand „{{ anon }}“ heißt)</span>
-              <input [value]="event()" (input)="event.set($any($event.target).value)" maxlength="200" [disabled]="anyReplaced()" />
+              <input [value]="f.event()" (input)="f.event.set($any($event.target).value)" maxlength="200" [disabled]="f.anyReplaced()" />
             </label>
-            @if (pairings().length) {
+            @if (f.pairings().length) {
               <label class="field wide">Ligapartie <span class="muted small">(Brett einer Ligarunde — Spieler und Jahr kommen dann aus dem Spielplan)</span>
-                <select class="pairing-pick" (change)="choosePairing($any($event.target).value)">
-                  <option value="" [selected]="pairingId() == null">keine Ligapartie</option>
-                  @for (p of pairings(); track p.id) {
-                    <option [value]="p.id" [selected]="pairingId() === p.id">{{ pairingText(p) }}</option>
+                <select class="pairing-pick" (change)="f.choosePairing($any($event.target).value)">
+                  <option value="" [selected]="f.pairingId() == null">keine Ligapartie</option>
+                  @for (p of f.pairings(); track p.id) {
+                    <option [value]="p.id" [selected]="f.pairingId() === p.id">{{ f.pairingText(p) }}</option>
                   }
                 </select>
               </label>
@@ -309,15 +308,15 @@ function readAutoMine(): boolean {
           <div class="field-row">
             <span class="muted small">Ich spiele</span>
             <div class="seg" role="group" aria-label="Ich spiele">
-              <button type="button" [attr.aria-pressed]="ownerSide() === 'white'" (click)="setOwner('white')">Weiß</button>
-              <button type="button" [attr.aria-pressed]="ownerSide() === 'black'" (click)="setOwner('black')">Schwarz</button>
+              <button type="button" [attr.aria-pressed]="f.ownerSide() === 'white'" (click)="f.setOwner('white')">Weiß</button>
+              <button type="button" [attr.aria-pressed]="f.ownerSide() === 'black'" (click)="f.setOwner('black')">Schwarz</button>
             </div>
             <span class="muted small">Spieler von {{ clubName() }} und deine Seite werden standardmäßig durch „{{ anon }}“ ersetzt — dann wird weder
               gespeichert, wer dahinter steht, noch wer hochgeladen hat.</span>
           </div>
 
-          <p class="preview"><span class="muted">Gespeichert wird:</span> <b>{{ preview() }}</b></p>
-          @if (problem(); as pr) { <p class="err small">{{ pr }}</p> }
+          <p class="preview"><span class="muted">Gespeichert wird:</span> <b>{{ f.preview() }}</b></p>
+          @if (f.problem(); as pr) { <p class="err small">{{ pr }}</p> }
 
           @if (saved()) {
             <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b>@if (replacedOld()) { Die schon vorhandene Fassung dieser Partie ist archiviert und erscheint nicht mehr. } Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
@@ -376,14 +375,14 @@ function readAutoMine(): boolean {
         <dialog #doneDlg class="card done-dlg" aria-labelledby="done-title">
           <div class="card-body">
             <h3 id="done-title">Alle unsicheren Stellen geprüft</h3>
-            @if (problem(); as pr) {
+            @if (f.problem(); as pr) {
               <p class="err small">{{ pr }}</p>
               <div class="actions">
                 <button type="button" class="btn-pri" (click)="closeDone(); toSave()">Zu den Namen</button>
                 <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
               </div>
             } @else {
-              <p>Gespeichert wird: <b>{{ gameId != null ? gameTitle() : preview() }}</b></p>
+              <p>Gespeichert wird: <b>{{ gameId != null ? gameTitle() : f.preview() }}</b></p>
               <div class="actions">
                 <button type="button" class="btn-pri" [disabled]="saving()" (click)="closeDone(); save()">{{ gameId != null ? 'Korrektur speichern' : 'In die Vereins-Datenbank übernehmen' }}</button>
                 <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
@@ -414,7 +413,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly canRead = this.auth.has('league.view');
   readonly backLink: unknown[] = this.share ? ['/s', this.share, 'hochladen'] : ['/verein/neu'];
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
-  readonly sides: Side[] = ['white', 'black'];
+  readonly sides = SIDES;
   readonly maxYear = new Date().getFullYear() + 1;
   private readonly clubCtx = inject(ClubContextService);
   /** Name anonymisierter Spieler und des Vereins — der angemeldete bzw. der des Teilen-Links (0.698.0). */
@@ -437,21 +436,10 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   /** Der Abruf scheitert (anderer Code als 404, oder vorübergehend mehrmals hintereinander) — Klartext statt „Lade …". */
   readonly loadError = signal<string | null>(null);
   private failures = 0;
-  /** Die Fotos des Formulars je Seite (Objekt-Adressen); ein Formular kann über bis zu drei Blätter gehen (0.690.1). */
-  readonly photoUrls = signal<(string | null)[]>([]);
-  readonly pageCount = signal(1);
-  readonly pageNumbers = computed(() => Array.from({ length: this.pageCount() }, (_, i) => i + 1));
-  /** Welche Seite im großen Foto steht — folgt dem gewählten Zug, lässt sich mit den Knöpfen wechseln. */
-  readonly shownPage = signal(1);
-  /** Weitere Fotos derselben Seite (0.736.0): je Seite ihre Zahl, `shownView` 0 = das Hauptfoto. */
-  readonly viewCounts = signal<number[]>([]);
-  readonly shownView = signal(0);
-  readonly viewNumbers = computed(() => Array.from({ length: 1 + (this.viewCounts()[this.shownPage() - 1] ?? 0) }, (_, i) => i));
-  private readonly viewUrls = signal<Record<string, string>>({});
-  private readonly mainUrl = computed(() => this.photoUrls()[this.shownPage() - 1] ?? this.photoUrls()[0] ?? null);
-  readonly photoUrl = computed(() => {
-    const view = this.shownView();
-    return (view > 0 ? this.viewUrls()[`${this.shownPage()}:${view}`] : null) ?? this.mainUrl();
+  /** Die Fotos des Formulars (Seiten, weitere Fotos je Seite). */
+  readonly ph = new ScanPhotos({
+    fetchView: (page, view) => this.api.photo(this.scanRef, page, view),
+    setPageSize: (page, w, h) => this.s.setPageSize(page, w, h),
   });
   /** Zusammenführen (nur angemeldet, beim Prüfen einer Einlesung): `null` = Auswahl zu. */
   readonly mergeCandidates = signal<ScanRef[] | null>(null);
@@ -459,7 +447,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly mergeError = signal<string | null>(null);
   private readonly followPage = effect(() => {
     const page = this.s.currentPage();
-    if (page) untracked(() => { const p = Math.min(page, this.pageCount()); if (p !== this.shownPage()) this.showPage(p); });
+    if (page) untracked(() => { const p = Math.min(page, this.ph.pageCount()); if (p !== this.ph.shownPage()) this.ph.showPage(p); });
   });
   readonly zoom = signal(false);
   /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
@@ -497,35 +485,13 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   }
   readonly rookHub = rookHubUrlForLeagueHub();
 
-  private readonly sideState = {
-    white: { name: signal(''), fide: signal<string | null>(null), elo: signal<number | null>(null),
-      match: signal<SideMatch | null>(null), replace: signal(false), touched: false },
-    black: { name: signal(''), fide: signal<string | null>(null), elo: signal<number | null>(null),
-      match: signal<SideMatch | null>(null), replace: signal(false), touched: false },
-  };
-  readonly name = (k: Side) => this.sideState[k].name;
-  readonly elo = (k: Side) => this.sideState[k].elo;
-  readonly match = (k: Side) => this.sideState[k].match;
-  readonly replace = (k: Side) => this.sideState[k].replace;
-  readonly year = signal<number | null>(null);
-  /** Die Erkennung las ein älteres Jahr, vorbelegt ist heuer (0.655.0) — Hinweis unter dem Feld, bis man es ändert. */
-  readonly yearRead = signal<number | null>(null);
-  readonly result = signal('*');
-  readonly event = signal('');
-  readonly ownerSide = signal<Side | null>(null);
-  readonly anyReplaced = computed(() => this.replace('white')() || this.replace('black')());
-  /** Der Tag laut Formular — nur für die Erkennung der Ligapaarung (gespeichert wird nur das Jahr). */
-  private sheetDate: string | null = null;
-  /** Brettpaarungen, die diese Partie sein könnten (0.678.0); `pairingId` = die gewählte. */
-  readonly pairings = signal<ClubPairing[]>([]);
-  readonly pairingId = signal<number | null>(null);
-  readonly pairingText = pairingText;
-  /** Der Nutzer hat selbst gewählt — dann ändert ein neuer Vorschlag die Wahl nicht mehr. */
-  private pairingTouched = false;
-  /** Vorschläge wurden geholt — erst dann heißt „keine" auch keine (sonst entscheidet der Server). */
-  private pairingsLoaded = false;
-  private pairingTimer: ReturnType<typeof setTimeout> | null = null;
-  private pairingSeq = 0;
+  /** Namen, Elo, Jahr, Ergebnis, Veranstaltung und Ligapaarung vor dem Übernehmen. */
+  readonly f = new ScanHeaderForm({
+    api: this.api,
+    anon: () => this.anon,
+    clubName: () => this.clubName(),
+    pairingsEnabled: this.gameId == null,
+  });
 
   /** Bester Zug der zugeschalteten Engine (blau) — zum gelben Pfeil des bisherigen Zugs dazu (0.722.0). */
   readonly engineArrows = signal<BoardArrow[]>([]);
@@ -539,34 +505,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     bind: o => o.pipe(takeUntilDestroyed(this.destroyRef)),
   });
 
-  /** Wie die Partie in der Datenbank steht (Jahr · Weiß – Schwarz · Ergebnis). */
-  readonly preview = computed(() => {
-    const shown = (k: Side) => this.replace(k)() ? this.anon : this.match(k)()?.name || this.name(k)().trim() || '?';
-    return [this.year() ?? 'ohne Jahr', `${shown('white')} – ${shown('black')}`, this.result() === '*' ? 'Ergebnis offen' : this.result()]
-      .join(' · ');
-  });
-
-  /** Was die Partie unübernehmbar macht — dieselbe Regel wie am Server (`LeagueClubService.Build`): bekannt ist, wer in
-   * der Liga ODER im Megabase-Verzeichnis steht. */
-  readonly problem = computed(() => {
-    const w = this.match('white')(), b = this.match('black')();
-    if (!w || !b) return null;
-    const known = (m: SideMatch) => m.league || !!m.mega;
-    if (!known(w) && !known(b))
-      return 'Kein Spieler erkannt (weder in der Liga noch in der Megabase) — so wird die Partie nicht angenommen. Namen prüfen (Vorschläge beim Tippen).';
-    if (!(known(w) && !this.replace('white')()) && !(known(b) && !this.replace('black')()))
-      return 'Nach dem Ersetzen bleibt kein bekannter Gegner übrig — so wird die Partie nicht angenommen.';
-    return null;
-  });
-
   /** Wartendes Nachfragen — `null`, sobald der Takt abgelaufen ist (dann läuft der Abruf schon). */
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   /** Nur der jüngste `load()` zählt: „Neu laden" mitten in einem laufenden Abruf (der retryInterceptor hält einen 502
    * über 3 s offen) startete sonst eine zweite Nachfrage-Kette — doppelte Last, und nach dem Lesen liefen loadSheet,
    * Namen und Foto zweimal (Korrekturen überschrieben). Ein überholter Abruf tut nichts mehr. */
   private loadSeq = 0;
-  private matchTimer: ReturnType<typeof setTimeout> | null = null;
-  private matchSeq = 0;
   private destroyed = false;
 
   ngOnInit(): void {
@@ -588,31 +532,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.ticker.stop();
     this.destroyed = true;
-    for (const t of [this.pollTimer, this.matchTimer, this.pairingTimer]) if (t) clearTimeout(t);
-    for (const url of this.photoUrls()) if (url) URL.revokeObjectURL(url);
-    for (const url of Object.values(this.viewUrls())) URL.revokeObjectURL(url);
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    this.f.dispose();
+    this.ph.dispose();
   }
 
   get canMerge(): boolean { return !this.share && this.loggedIn && this.gameId == null; }
-
-  showPage(n: number): void {
-    this.shownPage.set(n);
-    this.shownView.set(0);
-  }
-
-  /** Ein weiteres Foto der Seite erst bei Bedarf holen. */
-  async showView(v: number): Promise<void> {
-    this.shownView.set(v);
-    const page = this.shownPage();
-    const key = `${page}:${v}`;
-    if (v === 0 || this.viewUrls()[key]) return;
-    try {
-      const blob = await this.api.photo(this.scanRef, page, v);
-      if (this.destroyed) return;
-      const url = URL.createObjectURL(blob);
-      this.viewUrls.update(m => ({ ...m, [key]: url }));
-    } catch { /* dann bleibt das Hauptfoto stehen */ }
-  }
 
   async openMerge(): Promise<void> {
     this.mergeError.set(null);
@@ -650,33 +575,11 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  pageUrl(page: number): string | null {
-    return this.photoUrls()[page - 1] ?? null;
-  }
-
   onPhotoLoad(e: Event): void {
-    if (this.shownView() > 0) return;   // die Maße für den Ausschnitt kommen nur vom Hauptfoto
+    if (this.ph.shownView() > 0) return;   // die Maße für den Ausschnitt kommen nur vom Hauptfoto
     const img = e.target as HTMLImageElement;
-    if (this.shownPage() === 1) this.s.onPhotoLoad(e);
-    else this.s.setPageSize(this.shownPage(), img.naturalWidth, img.naturalHeight);
-  }
-
-  /** Alle Seiten holen; die Maße jeder Seite braucht der Ausschnitt, auch wenn sie gerade nicht groß angezeigt wird. */
-  private async loadPhotos(count: number, fetch: (page: number) => Promise<Blob>, still: () => boolean): Promise<void> {
-    this.pageCount.set(Math.max(1, count));
-    for (let page = 1; page <= Math.max(1, count); page++) {
-      try {
-        const blob = await fetch(page);
-        if (!still()) return;
-        const url = URL.createObjectURL(blob);
-        this.photoUrls.update(list => { const next = [...list]; next[page - 1] = url; return next; });
-        if (page > 1) {
-          const img = new Image();
-          img.onload = () => this.s.setPageSize(page, img.naturalWidth, img.naturalHeight);
-          img.src = url;
-        }
-      } catch { /* ohne Foto geht die Korrektur trotzdem */ }
-    }
+    if (this.ph.shownPage() === 1) this.s.onPhotoLoad(e);
+    else this.s.setPageSize(this.ph.shownPage(), img.naturalWidth, img.naturalHeight);
   }
 
   /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt, ein laufender Abruf ist überholt. */
@@ -712,7 +615,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.failures = 0;
     this.loadError.set(null);
     this.state.set(st);
-    this.viewCounts.set(st.viewCounts ?? []);
+    this.ph.viewCounts.set(st.viewCounts ?? []);
     const reading = st.scan.status === 'pending' || st.scan.status === 'running';
     this.ticker.run(reading);
     if (reading) {
@@ -722,17 +625,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (st.scan.status !== 'done') return;
     this.s.loadSheet({ plies: st.plies, unresolved: st.unresolved, unresolvedFrom: st.unresolvedFrom, boxes: st.boxes, written: st.written,
       pages: st.pages ?? [] });
-    this.name('white').set(st.white ?? '');
-    this.name('black').set(st.black ?? '');
-    const preset = presetYear(st.date);
-    this.sheetDate = st.date;
-    this.year.set(preset.year);
-    this.yearRead.set(preset.read);
-    this.result.set(normalizeResult(st.result));
-    this.event.set(st.event ?? '');
-    this.ownerSide.set(st.ownerSide);
-    void this.runMatch();
-    await this.loadPhotos(st.pageCount ?? 1, page => this.api.photo(this.scanRef, page), () => !this.destroyed && my === this.loadSeq);
+    this.f.fill(st);
+    await this.ph.load(st.pageCount ?? 1, page => this.api.photo(this.scanRef, page), () => !this.destroyed && my === this.loadSeq);
   }
 
   /**
@@ -763,119 +657,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
     }
     this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
-    if (sheet) await this.loadPhotos(sheet.pageCount ?? 1, page => this.api.clubSheetPhoto(id, page), () => !this.destroyed);
-  }
-
-  /** Vorgabe „ersetzen": Spieler von Schwaz und die eigene Seite — bis der Nutzer das Häkchen selbst anfasst. */
-  private applyDefault(k: Side): void {
-    const st = this.sideState[k];
-    if (st.touched) return;
-    st.replace.set(!!st.match()?.club || this.ownerSide() === k);
-  }
-
-  setOwner(k: Side): void {
-    this.ownerSide.set(k);
-    for (const x of this.sides) this.applyDefault(x);
-  }
-
-  setReplace(k: Side, on: boolean): void {
-    this.sideState[k].touched = true;
-    this.sideState[k].replace.set(on);
-  }
-
-  setName(k: Side, value: string): void {
-    const st = this.sideState[k];
-    st.name.set(value);
-    st.fide.set(null);
-    if (this.matchTimer) clearTimeout(this.matchTimer);
-    this.matchTimer = setTimeout(() => void this.runMatch(), MATCH_DEBOUNCE_MS);
-  }
-
-  /** Ein Treffer der Suche (Liga oder Megabase) bringt Namen und FIDE-ID mit — so ist der Spieler eindeutig. */
-  pickPerson(k: Side, p: RosterPerson): void {
-    const st = this.sideState[k];
-    if (this.matchTimer) clearTimeout(this.matchTimer);
-    st.name.set(p.name);
-    st.fide.set(p.fide);
-    // Die Elo des gewählten Spielers gleich mit (Wunsch 2026-10-05) — aus der jüngsten Meldeliste, sonst bleibt sie.
-    if (p.elo) st.elo.set(p.elo);
-    const league = p.league ?? true;
-    st.match.set({ league, ambiguous: false, name: p.name, fide: p.fide, club: p.club, candidates: [], mega: !league });
-    this.applyDefault(k);
-    this.schedulePairings();
-  }
-
-  /** Vorschläge für die Ligapaarung neu holen (gedrosselt) — nach jedem Abgleich der Namen und jedem Jahr. */
-  schedulePairings(): void {
-    if (this.gameId != null) return;
-    if (this.pairingTimer) clearTimeout(this.pairingTimer);
-    this.pairingTimer = setTimeout(() => void this.loadPairings(), MATCH_DEBOUNCE_MS);
-  }
-
-  private async loadPairings(): Promise<void> {
-    const my = ++this.pairingSeq;
-    const fide = (k: Side) => this.sideState[k].fide() ?? (this.match(k)()?.ambiguous ? null : this.match(k)()?.fide ?? null);
-    try {
-      const list = await this.api.pairings({
-        white: this.name('white')().trim() || null, whiteFide: fide('white'),
-        black: this.name('black')().trim() || null, blackFide: fide('black'),
-        date: this.sheetDate, year: this.year(),
-      });
-      if (my !== this.pairingSeq || this.destroyed) return;
-      // Eine schon gewählte Paarung bleibt in der Auswahl, auch wenn sie nach einer Namensänderung nicht mehr vorkäme.
-      const chosen = this.pairings().find(p => p.id === this.pairingId());
-      this.pairings.set(chosen && !list.some(p => p.id === chosen.id) ? [chosen, ...list] : list);
-      this.pairingsLoaded = true;
-      if (!this.pairingTouched) {
-        const exact = list.filter(p => p.exact);
-        this.pairingId.set(exact.length === 1 ? exact[0].id : null);
-      }
-    } catch { /* ohne Vorschläge entscheidet der Server beim Übernehmen selbst */ }
-  }
-
-  /** Eine Paarung gewählt: die Spieler kommen aus dem Spielplan (eine Seite von Schwaz wird wie sonst ersetzt). */
-  choosePairing(value: string): void {
-    this.pairingTouched = true;
-    const p = value ? this.pairings().find(x => x.id === Number(value)) : undefined;
-    this.pairingId.set(p?.id ?? null);
-    if (!p || p.open) return;   // leeres Brett der laufenden Runde: die Namen bleiben, wie sie sind
-    const person = (name: string, fide: string | null, club: boolean): RosterPerson => ({ name, fide, teams: [], club, league: true });
-    this.pickPerson('white', person(p.white, p.whiteFide, p.whiteOwnClub));
-    this.pickPerson('black', person(p.black, p.blackFide, p.blackOwnClub));
-    const year = Number(p.label.match(/\((\d\d)\.(\d\d)\.(\d{4})\)$/)?.[3]);
-    if (year) { this.year.set(year); this.yearRead.set(null); }
-  }
-
-  private async runMatch(): Promise<void> {
-    const my = ++this.matchSeq;
-    try {
-      const m = await this.api.match(this.name('white')(), this.name('black')());
-      if (my !== this.matchSeq) return;
-      for (const k of this.sides) {
-        if (this.sideState[k].fide()) continue;             // aus der Meldeliste gewählt: bleibt
-        this.sideState[k].match.set(m[k]);
-        this.applyDefault(k);
-      }
-      this.schedulePairings();
-    } catch { /* die Prüfung macht der Server beim Übernehmen ohnehin */ }
-  }
-
-  /** Nicht erkannt: ähnlich geschriebene Ligaspieler zum Anklicken (0.596.0, derselbe Abgleich wie in der PGN-Übersicht). */
-  similarOf(k: Side): RosterPerson[] {
-    const m = this.match(k)();
-    return m && !this.replace(k)() && !m.league && !m.mega && !m.ambiguous ? m.similar ?? [] : [];
-  }
-
-  matchText(k: Side): string {
-    const m = this.match(k)();
-    if (this.replace(k)()) return m?.club ? `Spieler von ${this.clubName()} — wird „${this.anon}“` : `wird „${this.anon}“`;
-    if (!m) return '';
-    if (m.ambiguous) return 'Ligaspieler (mehrere dieses Namens — bitte aus den Vorschlägen wählen)';
-    if (m.league && m.lastNameOnly) return `nur über den Nachnamen: ${m.name} — bitte prüfen`;
-    const kept = m.alias ? ' (gemerkt)' : '';
-    if (m.league) return `Ligaspieler: ${m.name}${m.fide ? '' : ' (ohne FIDE-ID)'}${m.club ? ` — ${this.anon}, nicht ersetzt` : ''}${kept}`;
-    if (m.mega) return `nicht in Liga — aus der Megabase: ${m.name}${m.fide ? ` (FIDE ${m.fide})` : ''}${kept}`;
-    return 'nicht erkannt';
+    if (sheet) await this.ph.load(sheet.pageCount ?? 1, page => this.api.clubSheetPhoto(id, page), () => !this.destroyed);
   }
 
   num(v: string): number | null {
@@ -927,21 +709,21 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     try {
       const added = await this.api.addGame({
         moves: legal.map(p => p.san),
-        white: this.name('white')().trim() || null,
-        black: this.name('black')().trim() || null,
-        whiteFide: this.sideState.white.fide(),
-        blackFide: this.sideState.black.fide(),
-        whiteElo: this.elo('white')(),
-        blackElo: this.elo('black')(),
-        whiteReplace: this.replace('white')(),
-        blackReplace: this.replace('black')(),
-        result: this.result(),
-        event: this.event().trim() || null,
-        year: this.year(),
+        white: this.f.name('white')().trim() || null,
+        black: this.f.name('black')().trim() || null,
+        whiteFide: this.f.fide('white')(),
+        blackFide: this.f.fide('black')(),
+        whiteElo: this.f.elo('white')(),
+        blackElo: this.f.elo('black')(),
+        whiteReplace: this.f.replace('white')(),
+        blackReplace: this.f.replace('black')(),
+        result: this.f.result(),
+        event: this.f.event().trim() || null,
+        year: this.f.year(),
         scanId: null,
         // Vorschläge geholt: die Wahl gilt (0 = keine); sonst entscheidet der Server über den eindeutigen Treffer.
-        leagueGameId: this.pairingsLoaded ? this.pairingId() ?? 0 : null,
-        date: this.sheetDate,
+        leagueGameId: this.f.pairingsLoaded ? this.f.pairingId() ?? 0 : null,
+        date: this.f.sheetDate,
         // Der Stand je Zug (Zuordnung zum Formular, Lesarten) geht ins Archiv — „Korrigieren" zeigt ihn wie beim ersten Mal.
         plies: toServer(legal),
       }, this.scanRef);
@@ -970,8 +752,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private pgnInput(): SheetPgnInput {
     return {
       moves: this.s.plies().filter(p => !p.illegal).map(p => p.san),
-      white: this.name('white')().trim() || null, black: this.name('black')().trim() || null,
-      result: this.result(), event: this.event().trim() || null, year: this.year(),
+      white: this.f.name('white')().trim() || null, black: this.f.name('black')().trim() || null,
+      result: this.f.result(), event: this.f.event().trim() || null, year: this.f.year(),
     };
   }
 

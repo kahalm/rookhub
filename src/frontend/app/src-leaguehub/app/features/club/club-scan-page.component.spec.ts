@@ -120,8 +120,8 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     const c = fixture.componentInstance;
     expect(c.s.cursor()).toBe(2);
-    expect(c.year()).toBe(2026);
-    expect(c.result()).toBe('0-1');
+    expect(c.f.year()).toBe(2026);
+    expect(c.f.result()).toBe('0-1');
     expect(el.querySelector('.where')?.textContent).toContain('Sf3');       // deutsche Figuren
     expect(el.querySelector('.preview')?.textContent).toContain('2026 · Testdorf – Hengl, Philip · 0-1');
     expect(el.textContent).toContain('Ligaspieler: Hengl, Philip');
@@ -272,14 +272,14 @@ describe('ClubScanPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     const c = fixture.componentInstance;
-    expect(c.replace('white')()).toBeTrue();                             // Oberschmid: Testdorf UND ich
+    expect(c.f.replace('white')()).toBeTrue();                             // Oberschmid: Testdorf UND ich
     expect(el.textContent).toContain('bleibt kein bekannter Gegner übrig');
-    c.setReplace('white', false);                                         // dann bleibe ich als Ligaspieler stehen
+    c.f.setReplace('white', false);                                         // dann bleibe ich als Ligaspieler stehen
     fixture.detectChanges();
     expect(el.textContent).not.toContain('bleibt kein Gegner');
-    c.setOwner('black');                                                  // „angefasst" — die Wahl bleibt
-    expect(c.replace('white')()).toBeFalse();
-    expect(c.replace('black')()).toBeTrue();
+    c.f.setOwner('black');                                                  // „angefasst" — die Wahl bleibt
+    expect(c.f.replace('white')()).toBeFalse();
+    expect(c.f.replace('black')()).toBeTrue();
   }));
 
   it('„Meintest du …": ein ähnlicher Ligaspieler unter einem unerkannten Namen, ein Klick setzt ihn (0.596.0)', fakeAsync(() => {
@@ -295,8 +295,8 @@ describe('ClubScanPageComponent', () => {
     chip.click();
     fixture.detectChanges();
     const c = fixture.componentInstance;
-    expect(c.name('black')()).toBe('Hengl, Philip');
-    expect(c.matchText('black')).toBe('Ligaspieler: Hengl, Philip');
+    expect(c.f.name('black')()).toBe('Hengl, Philip');
+    expect(c.f.matchText('black')).toBe('Ligaspieler: Hengl, Philip');
     expect(el.querySelector('.quick-pick')).toBeNull();
     tick(1000);
   }));
@@ -305,10 +305,10 @@ describe('ClubScanPageComponent', () => {
     create();
     flushMicrotasks();
     const c = fixture.componentInstance;
-    c.pickPerson('black', { name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' });
-    expect(c.name('black')()).toBe('Hengl, Peter');
-    expect(c.matchText('black')).toBe('nicht in Liga — aus der Megabase: Hengl, Peter (FIDE 777)');
-    expect(c.problem()).toBeNull();
+    c.f.pickPerson('black', { name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' });
+    expect(c.f.name('black')()).toBe('Hengl, Peter');
+    expect(c.f.matchText('black')).toBe('nicht in Liga — aus der Megabase: Hengl, Peter (FIDE 777)');
+    expect(c.f.problem()).toBeNull();
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate').and.resolveTo(true);
     api.addGame.and.resolveTo({ id: 13, anonymized: true });
@@ -370,7 +370,7 @@ describe('ClubScanPageComponent', () => {
     sel.dispatchEvent(new Event('change'));
     sel.value = '42';
     sel.dispatchEvent(new Event('change'));
-    expect(fixture.componentInstance.year()).toBe(2025);              // Jahr aus dem Rundentermin
+    expect(fixture.componentInstance.f.year()).toBe(2025);              // Jahr aus dem Rundentermin
     tick(1000); flushMicrotasks();
 
     api.addGame.and.resolveTo({ id: 11, anonymized: true });
@@ -378,8 +378,8 @@ describe('ClubScanPageComponent', () => {
     flushMicrotasks();
     expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({ leagueGameId: 42, whiteFide: '900', blackFide: '222', whiteReplace: true }), '7');
 
-    fixture.componentInstance.choosePairing('');
-    expect(fixture.componentInstance.pairingId()).toBeNull();
+    fixture.componentInstance.f.choosePairing('');
+    expect(fixture.componentInstance.f.pairingId()).toBeNull();
     tick(1000);
   }));
 
@@ -409,8 +409,8 @@ describe('ClubScanPageComponent', () => {
     create();
     flushMicrotasks();
     const c = fixture.componentInstance;
-    c.pickPerson('black', { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false, league: true, elo: 2172 });
-    expect(c.elo('black')()).toBe(2172);
+    c.f.pickPerson('black', { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false, league: true, elo: 2172 });
+    expect(c.f.elo('black')()).toBe(2172);
     tick(1000);
   }));
 
@@ -429,7 +429,7 @@ describe('ClubScanPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.photo).toHaveBeenCalledWith('7', 1, 1);
-    expect(fixture.componentInstance.shownView()).toBe(1);
+    expect(fixture.componentInstance.ph.shownView()).toBe(1);
     expect(el.querySelector('.photo-mark')).toBeNull();
   }));
 
