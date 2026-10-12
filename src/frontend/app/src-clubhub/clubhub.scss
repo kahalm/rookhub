@@ -561,8 +561,10 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { ma
   .sheet { padding: 14px 14px 4px; }
   /* EINE Reihe (d2-c-form-save-bar: zwei Reihen waren 111 px = 13 % der Höhe): „Kind anlegen" nimmt den Platz,
      „+ Weiteres" kurz, „Abbrechen" als schlanker Textknopf. */
-  .form-save { margin: 0 -14px; padding: 8px 14px 10px; display: flex; align-items: center; gap: 4px; }
-  .form-save .btn.primary { min-width: 0; padding: 10px 12px; }
+  .form-save { margin: 0 -14px; padding: 8px 14px 10px; display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+  /* Schriftbreiten schwanken je Browser (CI-Chromium bricht sonst um): Knöpfe nie umbrechen, der Hauptknopf kürzt mit „…“. */
+  .form-save .btn { white-space: nowrap; }
+  .form-save .btn.primary { flex: 1 1 0; min-width: 0; padding: 10px 12px; overflow: hidden; text-overflow: ellipsis; }
   .form-save .save-next, .form-save .cancel { font-size: 15px; }
   .form-save .save-next { flex: none; padding: 6px 8px; }
   .form-save .save-next .long { display: none; }

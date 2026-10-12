@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.757.2", date: "2026-10-12", changes: [
+    { en: "ClubHub: the save bar when adding a child stays on one line on phones in every browser.",
+      de: "ClubHub: die Speichern-Leiste beim Anlegen eines Kindes bleibt am Handy in jedem Browser einzeilig." },
+  ] },
   { version: "0.757.1", date: "2026-10-12", changes: [
     { en: "Courses: the solver also moves on automatically after short closing labels — mate-pattern names („Greco’s mate“), theme labels („Theme: domination.“), material wins („White wins a piece.“, „The queen is trapped.“) and short evaluations („White is clearly winning.“, „With equality.“, „Zugzwang.“); about 8,900 lines in 294 courses now continue on their own. Comments containing moves still stop for reading.",
       de: "Kurse: Auch nach kurzen Schluss-Etiketten geht es automatisch weiter — Mattbild-Namen („Greco’s mate“), Themen-Labels („Theme: domination.“), Materialgewinn („White wins a piece.“, „The queen is trapped.“) und knappe Bewertungen („White is clearly winning.“, „With equality.“, „Zugzwang.“); damit laufen rund 8 900 Linien in 294 Kursen von selbst weiter. Kommentare mit Zügen halten weiterhin zum Lesen an." },
