@@ -34,9 +34,34 @@ const PUZZLE_AREAS = new Set(['puzzles', 'kurse', 'wochenpost']);
 const SETTLE_MAX_MS = 60000;   // hoch, weil Anfragen in der eigenen Bremse warten können
 const QUIET_MS = 800;
 // Die API drosselt je Adresse (Prod global 100 Anfragen/min, anonyme Wege teils 60/min; Dev läuft mit
-// RateLimiting__PermitScale=5, also 500/min). Alle Aufnahmen kommen von EINER Adresse — ohne eigene Bremse lief der
+// RateLimiting__PermitScale=20, also 2000/min). Alle Aufnahmen kommen von EINER Adresse — ohne eigene Bremse lief der
 // erste Lauf in hunderte 429 und fotografierte Fehlerzustände. Vorgaben je Umgebung, --rate/--concurrency gehen vor.
-const ENV_DEFAULTS = { dev: { rate: 400, concurrency: 4 }, prod: { rate: 70, concurrency: 2 } };
+// Steht Dev noch auf PermitScale 5 (500/min), ausdrücklich `--rate 400 --concurrency 4` geben.
+const ENV_DEFAULTS = { dev: { rate: 1600, concurrency: 8 }, prod: { rate: 70, concurrency: 2 } };
+// Antwort-Zwischenspeicher (README „Zwischenspeicher"): GET-Antworten dieser Endpunkte sind innerhalb eines Laufs je
+// Konto + Sprache gleich und hängen nicht an der fotografierten Seite — die erste 200-Antwort wird gemerkt, jede weitere
+// Anfrage (auch auf anderen Seiten) direkt aus dem Speicher beantwortet, ohne die API und ohne die eigene Bremse.
+// Nur Pfade (ohne Abfrage) prüfen; der Schlüssel enthält die volle Adresse samt Abfrage. Konservativ halten: nichts, was
+// die Seite selbst ausmacht oder sich durch das Ansehen ändert.
+// Gemessen 12.10. (runs/…_api-messung, 323 Seiten laptop, --no-cache): diese Endpunkte waren 1 600 von 2 348 Anfragen.
+// Bewusst NICHT: Seiteninhalte (Kurs, Repertoire, Partie, Statistik …), Engine-Stand (game-analyses/guess/status),
+// alles mit Schreibzugriff in der Nähe (view-state, kids/progress, rh-session).
+const CACHEABLE = [
+  /^\/api\/menu$/,                         // Menü-Sichtbarkeit (jede Seite)
+  /^\/api\/auth\/permissions$/,             // Rechte (PermissionRefresher, jede Seite)
+  /^\/api\/notifications\/count$/,          // Glocke (Poller)
+  /^\/api\/messages\/unread-count$/,        // Nachrichten-Zähler (Poller)
+  /^\/api\/catalog\/access$/,               // Katalog-Freischaltungen
+  /^\/api\/courses\/access$/,               // Kurs-Zugang (Menü)
+  /^\/api\/puzzles\/rating-range$/,         // Wertungsspanne des Puzzle-Bestands
+  /^\/api\/league\/me$/,                    // LeagueHub-Mitgliedschaft
+  /^\/api\/club\/link$/,                    // verknüpftes ClubHub-Karteiblatt
+  /^\/api\/favorites\/count$/,              // Zähler Turnier-Favoriten
+  /^\/api\/subscriptions$/,                  // Turnier-Abos
+  /^\/api\/engine\/external$/,              // eingetragene externe Engine
+  /^\/api\/repertoires\/explorer\/sources$/, // Explorer-Quellen (Konfiguration)
+  /^\/api\/kids\/levels$/,                  // KidHub-Stufen (Katalog)
+];
 // --fast: nach dem Umstellen der Fenstergröße kurz warten (Breakpoint-Beobachter, Neuberechnung), dann wie nach dem Laden
 // auf Netzruhe warten — aber kürzer, weil keine Navigation mehr kommt.
 const RESIZE_WAIT_MS = 400;
@@ -61,9 +86,9 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --auth a,b             anon, user (normales Konto mit Bestand), admin (claude-dev),
                          empty (Konto ganz ohne Daten → Leerzustände), trainer (ClubHub-Trainer einer Gruppe)
                                                                                      Vorgabe: anon,user
-  --concurrency n        gleichzeitige Seiten (Vorgabe dev 4, prod 2 — mehr läuft in die Drossel der API)
-  --rate n               höchstens n API-Anfragen je Minute (Vorgabe dev 400 — Dev drosselt bei 500 je Adresse,
-                         PermitScale 5; prod 70 — Prod drosselt bei 100)
+  --concurrency n        gleichzeitige Seiten (Vorgabe dev 8, prod 2 — mehr läuft in die Drossel der API)
+  --rate n               höchstens n API-Anfragen je Minute (Vorgabe dev 1600 — Dev drosselt bei 2000 je Adresse,
+                         PermitScale 20; prod 70 — Prod drosselt bei 100). Antworten aus dem Zwischenspeicher zählen nicht
   --fast                 jede Seite (Route × Konto × Design × Sprache) nur EINMAL laden und alle Breiten durch Umstellen
                          der Fenstergröße fotografieren (schmalste zuerst). Grenze: Handy-Ansicht nur über die Breite,
                          ohne Touch — kein isMobile/hasTouch (lässt sich an einem offenen Kontext nicht umschalten),
@@ -72,6 +97,8 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --local                die gebauten Oberflächen aus src/frontend/app/dist/<app>/browser ausliefern
                          (API-Aufrufe gehen an die gewählte Umgebung) — einen Umbau ansehen, bevor er deployt ist
   --no-strips            keine „Gescrollt"-Streifen (schneller); Ganzseite + „Erster Blick" + Falz-Messung bleiben
+  --no-cache             Antworten nicht zwischenspeichern (sonst: wiederkehrende GETs wie Profil, Menü, Zähler je
+                         Konto + Sprache einmal holen, danach aus dem Speicher — zählen nicht gegen --rate)
   --list                 Katalog mit aufgelösten Adressen zeigen, keinen Browser starten
   --name text            Zusatz am Ordnernamen des Laufs
 
@@ -81,7 +108,8 @@ Je Aufnahme: Ganzseite (shots/<…>.png, Basis des Pixel-Vergleichs), „Erster 
 und bei Seiten über 2 Bildschirmen „Gescrollt"-Streifen (<…>__s1.png …, Fensterhöhe, 10 % Überlappung, höchstens 8 +
 Seitenende). Falz-Prüfung (DESIGN.md 4.6): Hauptsache (routes.mjs \`main\`) über der Falz, Vorlauf ≤ 40 %, ≤ 1 Banner,
 klebende Leisten ≤ 64/72 px, unten nichts verdeckt, Seitenlänge (≥ 6 Hinweis, ≥ 12 Befund).
-Ergebnis: runs/<Zeitpunkt>/index.html (Übersicht), report.json, fold-summary.json, shots/*.png, diff/*.png.`;
+Ergebnis: runs/<Zeitpunkt>/index.html (Übersicht), report.json, fold-summary.json, api-calls.json (jede API-Antwort:
+Seite, Konto, Adresse, Status, aus dem Speicher ja/nein), shots/*.png, diff/*.png.`;
 
 function parseArgs(argv) {
   const o = { env: 'dev', viewport: ['mobile', 'laptop', 'wide'], theme: ['dark'], lang: ['de'], auth: ['anon', 'user'] };
@@ -105,6 +133,7 @@ function parseArgs(argv) {
       case '--local': o.local = true; break;
       case '--fast': o.fast = true; break;
       case '--no-strips': o.noStrips = true; break;
+      case '--no-cache': o.noCache = true; break;
       case '--list': o.list = true; break;
       case '--name': o.name = v(); break;
       default: throw new Error(`Unbekannte Option ${a} (--help)`);
@@ -333,6 +362,18 @@ async function main() {
       await new Promise(res => setTimeout(res, 60000 - (now - stamps[0]) + 20));
     }
   };
+  // Zwischenspeicher: Schlüssel → Promise<Antwort|null>. Die erste Anfrage legt das Promise an, gleichzeitige warten
+  // darauf; endet sie nicht mit 200, wird der Eintrag entfernt und jede Wartende holt selbst.
+  const apiCache = new Map();
+  const cacheKeyOf = (job, req) => {
+    if (opts.noCache || req.method() !== 'GET') return null;
+    const u = new URL(req.url());
+    if (!CACHEABLE.some(re => re.test(u.pathname))) return null;
+    return `${job.auth}|${job.lang}|${u.host}${u.pathname}${u.search}`;
+  };
+  // Beim Wiedergeben: der Körper ist schon entpackt, Länge/Kodierung stimmen nicht mehr; Cookies nicht noch einmal setzen.
+  const DROP_HEADERS = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'set-cookie', 'connection']);
+  const apiLog = [];   // → api-calls.json
   const browser = await chromium.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const shots = [];
   let done = 0;
@@ -357,7 +398,7 @@ async function main() {
       deviceScaleFactor: 1, colorScheme: job.theme, reducedMotion: 'reduce', serviceWorkers: 'block',
       locale: BROWSER_LOCALE[job.lang] ?? job.lang, timezoneId: 'Europe/Vienna', ignoreHTTPSErrors: true,
     });
-    let toolDelayMs = 0; const apiCalls = [];
+    let toolDelayMs = 0; const apiCalls = []; let cacheHits = 0;
     const userJson = sessions[job.auth] ? JSON.stringify(sessions[job.auth]) : null;
     await ctx.addInitScript(([user, theme, lang]) => {
       try {
@@ -379,18 +420,46 @@ async function main() {
 
     // Diagnose-Meldungen der App nicht an die API schicken (kein Bild hängt daran, und sie zählen gegen die Drossel);
     // alle übrigen API-Aufrufe durch die gemeinsame Bremse.
+    // Wiederkehrende GETs (CACHEABLE) aus dem Zwischenspeicher — ohne Bremse, gezählt als cacheHits statt apiCalls.
     await ctx.route(u => u.pathname.startsWith('/api/'), async route => {
-      const reqUrl = route.request().url();
-      if (reqUrl.includes('/api/client-log')) return route.fulfill({ status: 204, body: '' });
+      const req = route.request();
+      const reqUrl = req.url();
+      if (reqUrl.includes('/api/client-log')) return route.fulfill({ status: 204, body: '', headers: { 'x-ui-sweep': 'stub' } });
       // Der Endlos-Vorrat lädt auch mit endlessRuns 0 (App ignoriert die Einstellung dort) — außerhalb der
       // Puzzle-Bereiche leer beantworten, dort braucht die Seite die Puzzles selbst.
       if (reqUrl.includes('/api/puzzles/random-batch') && !PUZZLE_AREAS.has(areaOf(job.route))) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]', headers: { 'x-ui-sweep': 'stub' } });
+      }
+      const key = cacheKeyOf(job, req);
+      for (let pending; key && (pending = apiCache.get(key));) {
+        const entry = await pending;
+        if (entry) {
+          cacheHits++;
+          return route.fulfill({ status: entry.status, headers: { ...entry.headers, 'x-ui-sweep': 'cache' }, body: entry.body });
+        }
+        // gescheitert: der Eintrag ist schon entfernt (oder neu angelegt) — nächste Runde
       }
       apiCalls.push(new URL(reqUrl).pathname);
+      let settleEntry = null;
+      if (key) { const p = new Promise(r => { settleEntry = r; }); apiCache.set(key, p); }
       const waited = await apiSlot();
       if (waited > DELAY_FLAG_MS) toolDelayMs = Math.max(toolDelayMs, waited);
-      return route.continue();
+      if (!key) return route.continue();
+      try {
+        const res = await route.fetch({ timeout: 60000 });
+        const body = await res.body();
+        if (res.status() === 200) {
+          const headers = Object.fromEntries(Object.entries(res.headers()).filter(([h]) => !DROP_HEADERS.has(h.toLowerCase())));
+          settleEntry({ status: 200, headers, body });
+        } else {
+          apiCache.delete(key); settleEntry(null);
+        }
+        return await route.fulfill({ response: res, body });
+      } catch (e) {
+        if (apiCache.get(key)) apiCache.delete(key);
+        settleEntry(null);
+        return route.abort('failed').catch(() => {});
+      }
     });
     const page = await ctx.newPage();
     const consoleErrors = []; const failed = [];
@@ -401,7 +470,13 @@ async function main() {
     const finish = () => { net.inflight = Math.max(0, net.inflight - 1); net.lastActivity = Date.now(); };
     page.on('requestfinished', finish);
     page.on('requestfailed', req => { finish(); if (!/favicon|\.woff/.test(req.url())) failed.push(`${req.method()} ${shortUrl(req.url())} — ${req.failure()?.errorText}`); });
-    page.on('response', res => { if (res.status() >= 400 && res.url().includes('/api/')) failed.push(`${res.request().method()} ${shortUrl(res.url())} → ${res.status()}`); });
+    page.on('response', res => {
+      if (!res.url().includes('/api/')) return;
+      if (res.status() >= 400) failed.push(`${res.request().method()} ${shortUrl(res.url())} → ${res.status()}`);
+      const mark = res.headers()['x-ui-sweep'];
+      if (mark !== 'stub') apiLog.push({ id: job.id, auth: job.auth, lang: job.lang, viewport: job.viewports.join(','),
+        method: res.request().method(), url: shortUrl(res.url()), status: res.status(), cached: mark === 'cache' });
+    });
 
     const records = [];
     let loadError = null;
@@ -418,6 +493,7 @@ async function main() {
       const record = { area: areaOf(job.route), id: job.id, app: job.route.app, path: job.route.url, url: job.url, auth: job.auth, viewport, theme: job.theme, lang: job.lang };
       if (opts.fast) record.fast = true;
       const callsBefore = i === 0 ? 0 : apiCalls.length;   // die erste Breite trägt das Laden
+      const hitsBefore = i === 0 ? 0 : cacheHits;
       try {
         if (loadError) throw new Error(loadError);
         if (i > 0) {
@@ -479,7 +555,9 @@ async function main() {
         record.findings = record.findings ?? [];
       }
       // Bei --fast: die Anfragen dieser Breite (die erste trägt das Laden); Konsole/Anfragen bis hierhin.
+      // apiCalls = echte Anfragen an die API (durch die Bremse), cacheHits = aus dem Zwischenspeicher beantwortet.
       record.apiCalls = apiCalls.length - (opts.fast ? callsBefore : 0);
+      record.cacheHits = cacheHits - (opts.fast ? hitsBefore : 0);
       if (toolDelayMs) record.toolDelayMs = toolDelayMs;   // Bild evtl. vor den Daten — vom Werkzeug, nicht von der App
       record.console = [...new Set(consoleErrors)].slice(0, 10);
       record.failedRequests = [...new Set(failed)].slice(0, 10);
@@ -536,11 +614,13 @@ async function main() {
     || a.auth.localeCompare(b.auth) || a.viewport.localeCompare(b.viewport) || a.theme.localeCompare(b.theme) || (a.lang ?? '').localeCompare(b.lang ?? ''));
   const report = {
     run: runName, env: opts.env, local: !!opts.local, fast: !!opts.fast, rate: opts.rate, concurrency: opts.concurrency,
+    cache: !opts.noCache, apiCalls: shots.reduce((n, s) => n + (s.apiCalls ?? 0), 0), cacheHits: shots.reduce((n, s) => n + (s.cacheHits ?? 0), 0),
     pauses429, startedAt: new Date(started).toISOString(),
     seconds: Math.round((Date.now() - started) / 1000), matrix: { viewport: opts.viewport, theme: opts.theme, lang: opts.lang, auth: opts.auth },
     comparedWith: compareName, params: resolveLog, unresolved, noDataSkipped, shots,
   };
   fs.writeFileSync(path.join(runDir, 'report.json'), JSON.stringify(report, null, 2));
+  fs.writeFileSync(path.join(runDir, 'api-calls.json'), '[\n' + apiLog.map(e => JSON.stringify(e)).join(',\n') + '\n]\n');
   writeIndex(runDir, report);
   const summary = foldSummary(report);
   fs.writeFileSync(path.join(runDir, 'fold-summary.json'), JSON.stringify(summary, null, 2));
@@ -549,6 +629,7 @@ async function main() {
   const changed = shots.filter(s => s.diff && s.diff.status !== 'same').length;
   console.log(`\nFertig in ${report.seconds}s: ${shots.length} Aufnahmen, ${withFindings} mit Auffälligkeiten`
     + (compareName ? `, ${changed} verändert gegenüber ${compareName}` : '') + `, ${unresolved.length} Routen nicht auflösbar, ${pauses429} Pausen wegen 429.`);
+  console.log(`API: ${report.apiCalls} Anfragen an den Server, ${opts.noCache ? 'Zwischenspeicher aus (--no-cache)' : `${report.cacheHits} aus dem Zwischenspeicher`}.`);
   console.log(`Falz: ${Object.entries(summary.byKind).map(([k, n]) => `${FOLD_KINDS[k] ?? k} ${n}`).join(', ') || 'keine Befunde'}; `
     + `Bilder: ${summary.images.full} Ganzseite, ${summary.images.first} Erster Blick, ${summary.images.strips} Streifen.`);
   console.log(`Übersicht: ${path.join(runDir, 'index.html')}`);

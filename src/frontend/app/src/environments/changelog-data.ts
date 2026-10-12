@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.760.1", date: "2026-10-12", changes: [
+    { en: "UI check tool: about twice as fast — recurring page-frame requests (menu, permissions, counters) are answered from a cache per account, and the dev server allows more requests per minute; full run now about 9 minutes.",
+      de: "UI-Prüfwerkzeug: etwa doppelt so schnell — wiederkehrende Rahmen-Anfragen (Menü, Rechte, Zähler) kommen je Konto aus einem Zwischenspeicher, und der Dev-Server erlaubt mehr Anfragen je Minute; ein Volllauf dauert jetzt etwa 9 Minuten." },
+  ] },
   { version: "0.760.0", date: "2026-10-12", changes: [
     { en: "Analysis board: “Sparring against Maia” now opens from the ⋮ menu instead of always taking space below the engine (✕ closes it again; while a sparring runs it stays visible), and the opening explorer starts collapsed — it loads only when you open it, and an explorer you opened before stays open.",
       de: "Analysebrett: „Sparring gegen Maia“ öffnet jetzt über das ⋮-Menü, statt immer unter der Engine Platz zu belegen (✕ schließt es wieder; während eines Sparrings bleibt es sichtbar), und der Eröffnungsexplorer startet eingeklappt — er lädt erst beim Aufklappen, ein schon einmal aufgeklappter bleibt offen." },

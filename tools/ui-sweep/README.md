@@ -34,11 +34,27 @@ Je Aufnahme entstehen bis zu drei Arten Bilder (alle in `shots/`):
 
 | Umgebung | Drossel der API je Adresse | `--rate` (Vorgabe) | `--concurrency` (Vorgabe) |
 |----------|----------------------------|--------------------|---------------------------|
-| `--env dev` | 500/min (`RateLimiting__PermitScale=5`) | 400/min | 4 |
+| `--env dev` | 2000/min (`RateLimiting__PermitScale=20`) | 1600/min | 8 |
 | `--env prod` | 100/min | 70/min | 2 |
 
 Ausdrückliche `--rate`/`--concurrency` gehen immer vor. Die Vorgabe bleibt mit Abstand unter der Drossel, weil die
-Server-Minute auch Anfragen von vorher mitzählt (Poller, Nachzügler).
+Server-Minute auch Anfragen von vorher mitzählt (Poller, Nachzügler). Steht Dev (noch) auf `PermitScale=5` (500/min),
+ausdrücklich `--rate 400 --concurrency 4` geben — die 429-Pause fängt sonst ab, kostet aber je Treffer eine Minute.
+
+### Zwischenspeicher für wiederkehrende Antworten (`--no-cache` schaltet ab)
+
+Jede Seite fragt beim Start dieselben Dinge (Profil/Rechte, Menü-Sichtbarkeit, Zähler der Glocke …), und jede Aufnahme
+ist ein frischer Browser-Kontext. Der Sweep merkt sich deshalb die erste **200-Antwort** einer **GET**-Anfrage, deren
+Pfad auf der Erlaubt-Liste `CACHEABLE` (oben in `sweep.mjs`) steht — je **Konto + Sprache + volle Adresse** (mit
+Abfrage) — und beantwortet jede weitere gleiche Anfrage, auf allen Seiten des Laufs, direkt aus dem Speicher
+(`route.fetch` → `route.fulfill`). Treffer gehen weder an die API noch durch die eigene Bremse; gleichzeitige erste
+Anfragen warten auf die eine, die holt. Fehlantworten (≠ 200) werden nie gemerkt.
+
+Auf die Liste gehört nur, was sich innerhalb eines Laufs nicht ändert und nicht die fotografierte Seite selbst
+ausmacht — keine Seiteninhalte, nichts, was sich durch das Ansehen ändert (Ansichtszustand, Fortschritt). Je Aufnahme
+stehen im Bericht `apiCalls` (echte Anfragen an die API) und `cacheHits` (aus dem Speicher); die Schlusszeile nennt die
+Summen. `api-calls.json` im Laufordner listet jede API-Antwort (Seite, Konto, Adresse, Status, `cached`) — Grundlage, um
+die Liste zu erweitern.
 
 **`--fast`** (nicht Vorgabe): jede Seite (Route × Konto × Design × Sprache) wird nur EINMAL geladen; alle gewünschten
 Breiten entstehen danach auf derselben Seite durch `page.setViewportSize` — kurz warten (400 ms), dann dieselbe
@@ -174,10 +190,10 @@ Benachrichtigungen) ändern sich auch ohne Umbau — das ist kein Fehler.
 - Jede Aufnahme (mit `--fast`: jede Seite) bekommt einen frischen Browser-Kontext: angemeldet = `rookhub_user` im localStorage
   (die Antwort von `POST /api/auth/login`), Sprache `de`, Design über `rookhub_app_theme` + Cookie, Service Worker aus,
   Animationen aus.
-- **Drossel**: die API begrenzt je Adresse (Prod 100 Anfragen/min global, anonyme Wege teils 60/min; Dev das Fünffache), und alle Aufnahmen
+- **Drossel**: die API begrenzt je Adresse (Prod 100 Anfragen/min global, anonyme Wege teils 60/min; Dev das Zwanzigfache), und alle Aufnahmen
   kommen von einer Adresse. Ohne Bremse lief der erste Lauf in hunderte 429 und fotografierte Fehlerzustände (und
   füllt nebenbei das Log). Deshalb laufen alle API-Aufrufe durch ein gemeinsames Fenster von `--rate` je Minute
-  (Vorgabe dev 400, prod 70 — Dev läuft mit 500/min, siehe „Tempo"); `POST /api/client-log` wird gar nicht erst
+  (Vorgabe dev 1600, prod 70 — Dev läuft mit 2000/min, siehe „Tempo"; Antworten aus dem Zwischenspeicher zählen nicht); `POST /api/client-log` wird gar nicht erst
   geschickt. Antwortet der Server trotzdem 429, pausieren alle eine Minute und die Seite wird neu aufgenommen; die Zahl
   der Pausen steht am Ende der Ausgabe und im Kopf der Übersicht.
 - Gewartet wird, bis 0,8 s keine Anfrage mehr läuft, höchstens 60 s (Poller halten das Netz nie ganz still).
