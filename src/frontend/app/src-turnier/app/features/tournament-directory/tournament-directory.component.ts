@@ -19,7 +19,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -29,7 +29,8 @@ import { requireAccount } from '../../core/require-account';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
-import { PIN_COLOUR_SCHEMES, PinColourBy } from './pin-palette';
+import { PinColourBy } from './pin-palette';
+import { DirectoryViewSync, ViewTab, applyStoredView, snapshotView } from './directory-view-state';
 import { SearchProfileService } from './search-profile.service';
 import { TournamentCalendarComponent } from './tournament-calendar.component';
 import { TournamentCardComponent } from './tournament-card.component';
@@ -43,8 +44,6 @@ import {
   DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
   TournamentGender, TournamentKind, TournamentSpeed, rangeFor, sameNameSiblings } from './tournament-directory.model';
-
-type ViewTab = 'list' | 'map' | 'calendar';
 
 /**
  * Turnierkalender: Liste, Karte und Monatsansicht auf DENSELBEN Filterzustand.
@@ -190,31 +189,8 @@ export class TournamentDirectoryComponent implements OnInit {
   /** Dieselbe Ansicht beim NUTZER (Server) — die Kennung muss in `ViewStateService.AllowedKeys` stehen. */
   static readonly StateKey = 'turnier.directory';
 
-  /**
-   * Wie lange nach der letzten Aenderung gewartet wird, bevor der Zustand zum Server geht.
-   * `storeView()` laeuft bei JEDER Aenderung der Leiste — eine Tastatureingabe im Suchfeld sind
-   * ein Dutzend davon, und die will niemand als ein Dutzend Schreibvorgaenge sehen.
-   */
-  private static readonly PersistDebounceMs = 1200;
-
-  /** Der gedrosselte Weg zum Server. */
-  private readonly persist = new Subject<Record<string, unknown>>();
-
-  /**
-   * Stand des Abgleichs mit dem Server (`syncStoredView`). Solange er aussteht, geht nichts hinauf:
-   * der Server-Stand kann juenger sein (am anderen Geraet eingestellt), und schon der erste Aufbau
-   * speichert die Ansicht. Scheitert der Abruf, geht nur hinauf, was der Nutzer DANACH geaendert hat —
-   * der unveraenderte, womoeglich alte lokale Stand ueberschreibt den Server nicht (`mayPersist`).
-   */
-  private remoteSync: 'pending' | 'done' | 'failed' = 'pending';
-
-  /**
-   * Nach gescheitertem Abruf: der Zustand des FERTIGEN ersten Aufbaus, gegen den eine Aenderung des
-   * Nutzers erkannt wird. `null`, solange der Aufbau noch laeuft — kommt der Fehler vor den
-   * Suchprofilen, setzt `applyQueryParams` danach noch Profil, Ort und Umkreis, und das ist keine
-   * Aenderung des Nutzers.
-   */
-  private stateAtSyncFailure: string | null = null;
+  /** Der gedrosselte Weg zum Server samt Abgleich-Stand (`DirectoryViewSync`). */
+  private readonly sync = new DirectoryViewSync(this.viewStates, TournamentDirectoryComponent.StateKey, this.destroyRef);
 
   /**
    * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
@@ -237,7 +213,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.applyRangePreset('quarter', false);
     this.restoreView();
     this.watchPlaceInput();
-    this.watchPersist();
+    this.sync.start();
 
     // Ohne Anmeldung (seit 0.643.0): kein Server-Stand und keine Suchprofile — beide gehoeren einem Konto, und die
     // Abrufe endeten nur in 401. Der Gast-Stand liegt geraetelokal (viewKeyFor).
@@ -890,10 +866,8 @@ export class TournamentDirectoryComponent implements OnInit {
 
     this.ready.set(true);
     // Scheiterte der Abruf schon vorher, ist erst JETZT der Stand da, an dem eine Aenderung des
-    // Nutzers zu messen ist (siehe `stateAtSyncFailure`).
-    if (this.remoteSync === 'failed' && this.stateAtSyncFailure === null) {
-      this.stateAtSyncFailure = JSON.stringify(this.viewState());
-    }
+    // Nutzers zu messen ist (siehe `DirectoryViewSync.stateAtSyncFailure`).
+    this.sync.captureBaselineIfFailed(() => JSON.stringify(this.viewState()));
 
     const tournamentId = params.get('t');
     if (tournamentId) {
@@ -908,68 +882,9 @@ export class TournamentDirectoryComponent implements OnInit {
 
   // ----- Gemerkte Ansicht ---------------------------------------------------
 
-  private watchPersist(): void {
-    this.persist.pipe(
-      debounceTime(TournamentDirectoryComponent.PersistDebounceMs),
-      filter(state => this.mayPersist(state)),
-      // Nichts schicken, was schon oben steht — das Umschalten zwischen zwei Reitern und zurueck
-      // ist kein neuer Zustand.
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-      switchMap(state => this.viewStates.save(TournamentDirectoryComponent.StateKey, state)),
-    ).subscribe();
-    // Beim Verlassen der Seite den gedrosselten Stand NICHT verwerfen: `debounceTime` gibt beim
-    // Abschluss seinen letzten Wert sofort heraus, und ein laufender Schreibvorgang darf zu Ende
-    // laufen (danach ist die Kette von selbst fertig). Vorher kappte takeUntilDestroyed beides —
-    // wer die Karte verschob und gleich ein Turnier oeffnete, fand beim Zurueckkommen den
-    // aelteren Server-Stand vor, und der ueberschrieb den lokalen (Codereview 2026-09-29, F6-018).
-    this.destroyRef.onDestroy(() => this.persist.complete());
-  }
-
-  /**
-   * Darf dieser (gedrosselte) Zustand zum Server? Ja, wenn der Abgleich fertig ist. Nach gescheitertem
-   * Abruf nur, wenn er vom fertigen ersten Aufbau abweicht — dann hat der Nutzer etwas geaendert, und
-   * das ist juenger als jeder Server-Stand. Ab dieser ersten Aenderung gilt der Normalfall: sonst
-   * ginge das Zuruecknehmen einer schon gesendeten Aenderung nie hinauf (es gliche ja wieder dem
-   * Aufbau), und der Server bliebe auf dem verworfenen Zwischenstand stehen.
-   */
-  private mayPersist(state: Record<string, unknown>): boolean {
-    if (this.remoteSync === 'done') return true;
-    if (this.remoteSync === 'pending' || this.stateAtSyncFailure === null) return false;
-    if (JSON.stringify(state) === this.stateAtSyncFailure) return false;
-    this.remoteSync = 'done';
-    this.stateAtSyncFailure = null;
-    return true;
-  }
-
   /** Was die Filterleiste zeigt — genug, um nach einem Seitenwechsel dasselbe Bild aufzubauen. */
   private viewState(): Record<string, unknown> {
-    return {
-      tab: this.tab,
-      rangePreset: this.rangePreset,
-      from: this.filter.from,
-      to: this.filter.to,
-      federation: this.filter.federation,
-      speed: this.filter.speed,
-      text: this.filter.text,
-      weekendOnly: this.filter.weekendOnly,
-      minPlayers: this.filter.minPlayers,
-      profileId: this.filter.profileId,
-      lat: this.filter.lat,
-      lon: this.filter.lon,
-      radiusKm: this.filter.radiusKm,
-      placeLabel: this.placeLabel,
-      kinds: this.filter.kinds,
-      ageGroups: this.filter.ageGroups,
-      genders: this.filter.genders,
-      adultsOnly: this.filter.adultsOnly,
-      hideLeagues: this.filter.hideLeagues,
-      includeIgnored: this.filter.includeIgnored,
-      includeImplausible: this.filter.includeImplausible,
-      calendarYear: this.calendarYear,
-      calendarMonth: this.calendarMonth,
-      mapColourBy: this.mapColourBy,
-      mapView: this.mapView,
-    };
+    return snapshotView(this);
   }
 
   /**
@@ -1002,7 +917,7 @@ export class TournamentDirectoryComponent implements OnInit {
   private queuePersist(state: Record<string, unknown>): void {
     // Gaeste haben keinen Server-Stand; Admins beim Einstieg als Nutzer schreiben nicht ins fremde Konto.
     if (!this.auth.isLoggedIn || this.auth.isImpersonating) return;
-    this.persist.next(state);
+    this.sync.queue(state);
   }
 
   private restoreView(): void {
@@ -1039,12 +954,11 @@ export class TournamentDirectoryComponent implements OnInit {
         // Server nicht erreichbar (nicht „hat nichts"): weder uebernehmen noch hinaufschieben — sein
         // Stand kann juenger sein. Spaetere Aenderungen des Nutzers gehen trotzdem hinauf (remoteSync).
         if (remote === undefined) {
-          this.remoteSync = 'failed';
           // Vor dem fertigen Aufbau zieht `applyQueryParams` die Basis nach.
-          this.stateAtSyncFailure = this.ready() ? JSON.stringify(this.viewState()) : null;
+          this.sync.markFailed(this.ready() ? JSON.stringify(this.viewState()) : null);
           return;
         }
-        this.remoteSync = 'done';
+        this.sync.markDone();
         if (!remote) {
           this.queuePersist(this.viewState());
           return;
@@ -1070,97 +984,13 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   private applyStoredView(stored: Record<string, unknown> | null): void {
-    if (!stored || typeof stored !== 'object') return;
-
-    const tab = stored['tab'];
-    if (tab === 'list' || tab === 'map' || tab === 'calendar') this.tab = tab;
-
-    const preset = stored['rangePreset'];
-    if (typeof preset === 'string' && (DIRECTORY_RANGE_PRESETS as string[]).includes(preset)) {
-      this.applyRangePreset(preset as DirectoryRangePreset, false);
-      // Ein selbst gewaehlter Zeitraum steht nicht in rangeFor — der kommt aus dem Speicher.
-      if (preset === 'custom') {
-        this.filter.from = str(stored['from']);
-        this.filter.to = str(stored['to']);
-      }
-    }
-
-    this.filter.federation = str(stored['federation']);
-    this.filter.text = str(stored['text']);
-    this.filter.weekendOnly = stored['weekendOnly'] === true;
-    this.filter.minPlayers = typeof stored['minPlayers'] === 'number' ? stored['minPlayers'] : null;
-    this.filter.adultsOnly = stored['adultsOnly'] === true;
-    this.filter.hideLeagues = stored['hideLeagues'] === true;
-    this.filter.includeIgnored = stored['includeIgnored'] === true;
-    this.filter.includeImplausible = stored['includeImplausible'] === true;
-
-    const speed = stored['speed'];
-    if (typeof speed === 'string' && this.speeds.includes(speed as TournamentSpeed)) {
-      this.filter.speed = speed as TournamentSpeed;
-    }
-
-    const colourBy = stored['mapColourBy'];
-    if (typeof colourBy === 'string' && (PIN_COLOUR_SCHEMES as string[]).includes(colourBy)) {
-      this.mapColourBy = colourBy as PinColourBy;
-    }
-    // Ein alter Zustand ohne Ausschnitt startet wie bisher bei der Vorgabe.
-    this.mapView = parseMapView(stored['mapView']);
-
-    this.filter.kinds = pick(stored['kinds'], DIRECTORY_KINDS);
-    this.filter.ageGroups = pick(stored['ageGroups'], DIRECTORY_AGE_GROUPS);
-    this.filter.genders = pick(stored['genders'], DIRECTORY_GENDERS);
-
-    // Ein selbst gesetzter Mittelpunkt gehoert zur Ansicht wie der Zeitraum — ihn nach jedem
-    // Turnierbesuch neu zu suchen war der Grund, dass es diesen Speicher ueberhaupt gibt.
-    const lat = stored['lat'];
-    const lon = stored['lon'];
-    const radiusKm = stored['radiusKm'];
-    if (typeof radiusKm === 'number') this.filter.radiusKm = radiusKm;
-    if (typeof lat === 'number' && typeof lon === 'number') {
-      this.filter.lat = lat;
-      this.filter.lon = lon;
-      this.placeLabel = str(stored['placeLabel']) ?? '';
-      this.chosenPlaceLabel = this.placeLabel || null;
-    }
-
-    // Das Profil wird erst uebernommen, wenn es die Liste noch kennt (applyQueryParams) —
-    // ein geloeschtes Profil darf die Umkreissuche nicht auf tote Koordinaten stellen.
-    this.storedProfileId = typeof stored['profileId'] === 'number' ? stored['profileId'] : null;
-    this.hasStoredProfile = 'profileId' in stored;
-
-    const year = stored['calendarYear'];
-    const month = stored['calendarMonth'];
-    if (typeof year === 'number' && typeof month === 'number' && month >= 1 && month <= 12) {
-      this.calendarYear = year;
-      this.calendarMonth = month;
-    }
+    const applied = applyStoredView(this, stored);
+    if (!applied) return;
+    if (applied.placeRestored) this.chosenPlaceLabel = this.placeLabel || null;
+    this.storedProfileId = applied.storedProfileId;
+    this.hasStoredProfile = applied.hasStoredProfile;
   }
 
   private storedProfileId: number | null = null;
   private hasStoredProfile = false;
-}
-
-/** Aus dem gemerkten Zustand: ein nicht leerer String oder `null`. Alles andere ist Muell. */
-function str(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null;
-}
-
-/** Aus dem gemerkten Zustand: ein brauchbarer Kartenausschnitt oder `null`. */
-function parseMapView(value: unknown): MapView | null {
-  if (!value || typeof value !== 'object') return null;
-  const v = value as Record<string, unknown>;
-  const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
-  if (!finite(v['lat']) || !finite(v['lon']) || !finite(v['zoom'])) return null;
-  if (Math.abs(v['lat']) > 90 || Math.abs(v['lon']) > 180 || v['zoom'] < 0 || v['zoom'] > 18) return null;
-  const centre = v['centre'];
-  return { lat: v['lat'], lon: v['lon'], zoom: v['zoom'], centre: typeof centre === 'string' ? centre : null };
-}
-
-/**
- * Aus dem gemerkten Zustand: die Werte einer Liste, die es noch GIBT. Ein Wert, den eine spaetere
- * Fassung nicht mehr kennt, wuerde sonst als Filter weiterlaufen und die Liste unerklaerlich leer
- * halten — und der Server wiese ihn mit 400 ab.
- */
-function pick<T extends string>(value: unknown, allowed: readonly T[]): T[] {
-  return Array.isArray(value) ? value.filter((v): v is T => allowed.includes(v as T)) : [];
 }

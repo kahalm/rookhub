@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.758.1", date: "2026-10-12", changes: [
+    { en: "Code structure: the tournament calendar's remembered view and the LeagueHub scoresheet styles now live in their own files. No change in behaviour.",
+      de: "Code-Struktur: die gemerkte Ansicht des Turnierkalenders und die Stile der LeagueHub-Formularprüfung liegen jetzt in eigenen Dateien. Keine Änderung im Verhalten." },
+  ] },
   { version: "0.758.0", date: "2026-10-12", changes: [
     { en: "KidHub star hunt: a stage can be sent as a link — kidhub.oberschmid.homes/stars/17/unlock unlocks stage 17 on that device and starts it; finishing it opens stage 18 as usual.",
       de: "KidHub-Sternenjagd: Stufen lassen sich als Link verschicken — kidhub.oberschmid.homes/stars/17/unlock schaltet Stufe 17 auf dem Gerät frei und startet sie; geschafft öffnet sie wie gewohnt Stufe 18." },
