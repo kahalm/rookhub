@@ -64,9 +64,18 @@ describe('isFillerEndComment', () => {
     }
   });
 
+  it('erkennt Mattbild-Namen, Themen-Labels, Materialgewinn und kurze Bewertungen (zweite Runde)', () => {
+    for (const c of ['Greco\'s mate', 'Railroad into Triangle mate', 'Theme: domination.', '(1 point) Theme: mate.',
+      'White wins a piece.', 'You won the queen.', 'Winning the queen.', 'The queen is trapped.', 'Black is a piece up.',
+      'White is clearly winning.', 'Black has no problems.', 'With a decisive advantage.', 'With equality.', 'Zugzwang.',
+      'Winning.', 'Black holds.']) {
+      expect(isFillerEndComment(c)).withContext(c).toBeTrue();
+    }
+  });
+
   it('lässt lehrreiche Kommentare und Zugnotation stehen', () => {
-    for (const c of ['Zugzwang.', 'Castle quickly!', 'White wins a piece.', 'Not 2.Qxe5? Rxe5', 'Greco\'s mate',
-      'Theme: domination.', 'The knight helps the queen.', '', null]) {
+    for (const c of ['Castle quickly!', 'Not 2.Qxe5? Rxe5', 'Mate after 2.Qh7+', 'The knight helps the queen.',
+      'White has to watch out for the queenside pawns, which are dangerous.', '', null]) {
       expect(isFillerEndComment(c)).withContext(String(c)).toBeFalse();
     }
   });

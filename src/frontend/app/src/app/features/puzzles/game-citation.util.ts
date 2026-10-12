@@ -94,5 +94,29 @@ export function isFillerEndComment(text: string | null | undefined): boolean {
   if (t.length === 0 || t.length > 60) return false;
   if (!LETTER.test(t)) return true;   // ✔, 1-0, 0-1 ., =, ½-½ …
   if (POINTS.test(t) || FULL_GAME.test(t)) return true;
-  return FILLERS.has(resultCore(t));
+  if (FILLERS.has(resultCore(t))) return true;
+  // Kurze Schluss-Etiketten (Wunsch 2026-10-12, zweite Runde) — nur ohne Zugnotation, damit eine
+  // knappe Varianten-Erklärung („Not 2.Qxe5? Rxe5") weiterhin anhält:
+  if (MOVE_NOTATION.test(t)) return false;
+  return MATE_NAME.test(t) || THEME_LABEL.test(t) || MATERIAL.some(r => r.test(t)) || EVALUATION.some(r => r.test(t));
 }
+
+/** Zugnotation: „2.Qxe5", „Nf3", „exd5", „e4", „O-O". */
+const MOVE_NOTATION = /\d+\.\s*\S|\b[KQRBN]x?[a-h][1-8]|\b[a-h]x?[a-h]?[1-8]\b|O-O/;
+/** Mattbild-Name: „Greco's mate", „Railroad into Triangle mate", „Black is mated", „and mate next move". */
+const MATE_NAME = /\bmate[ds]?\b/i;
+/** Themen-Label: „Theme: domination.", „(1 point) Theme: mate." */
+const THEME_LABEL = /^(?:\(\d+ points?\)\s*)?themes?:\s*[^.!?]{1,50}\.?$/i;
+const PIECE = String.raw`(?:piece|pawns?|queen|rook|bishop|knight|exchange|material)`;
+/** Materialgewinn: „White wins a piece.", „You won the queen.", „Winning the queen.", „The queen is trapped." */
+const MATERIAL = [
+  new RegExp(String.raw`^(?:and\s+)?(?:(?:white|black|you)\s+)?(?:wins?|won|winning|traps?|trapping|nets?|gains?|picks? up)\b.*\b${PIECE}\b`, 'i'),
+  new RegExp(String.raw`\b(?:queen|rook|bishop|knight) is (?:trapped|lost)\b`, 'i'),
+  new RegExp(String.raw`\b(?:is|are) (?:a |an |two )?${PIECE}s? up\b`, 'i'),
+];
+/** Kurze Bewertung: „White is clearly winning.", „Black has no problems.", „With equality.", „Zugzwang." */
+const EVALUATION = [
+  /^(?:and\s+)?(?:white|black)\s+(?:is|has|stands|remains|holds|keeps)\b[^.!?]{0,30}\b(?:winning|better|worse|equal|level|fine|ok|advantage|edge|problems?|attack|compensation|pressure|initiative|lost|drawn|draw|holds?)\b[^.!?]{0,15}[.!]?$/i,
+  /^(?:and\s+)?with\s+(?:a |an )?(?:decisive |winning |clear |big |large |slight |small |huge )?(?:advantage|edge|equality|attack|extra \w+)\b[^.!?]{0,15}[.!]?$/i,
+  /^(?:and\s+)?(?:winning|zugzwang|equal|unclear|black holds|white holds)(?: for (?:white|black))?[.!]?$/i,
+];
