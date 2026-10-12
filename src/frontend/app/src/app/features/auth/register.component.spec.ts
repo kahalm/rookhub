@@ -153,6 +153,14 @@ describe('RegisterComponent Template (Längen + Fehlerblock)', () => {
     expect(el.querySelector('input[name="username"]')!.getAttribute('minlength')).toBe('3');
   });
 
+  // z3-l-register-feldabstand: kein reservierter Leerraum unter dem Benutzernamen (fixed) — alle Felder im Takt des gap
+  it('Benutzername ohne reservierte Fehlerzeile, Felder im gleichen Abstand (gap 12 px)', async () => {
+    const el: HTMLElement = (await render()).nativeElement;
+    const fields = el.querySelectorAll('mat-form-field');
+    expect(fields[0].querySelector('.mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
+    expect(getComputedStyle(el.querySelector('.auth-form')!).rowGap).toBe('12px');
+  });
+
   it('zeigt beim vergebenen Namen einen bleibenden Hinweis mit Weg zur Anmeldung', async () => {
     const fixture = await render();
     fixture.componentInstance.error.set('taken');

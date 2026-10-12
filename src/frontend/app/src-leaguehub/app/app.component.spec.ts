@@ -85,6 +85,14 @@ describe('LeagueHubAppComponent Werbesatz auf „Formular prüfen" (UX-036)', ()
   it('abgemeldet als „anon" markiert (am Handy sichtbar)', async () => {
     expect((await ledeAt('/s/abc123')).classList).toContain('anon');
   });
+
+  // z3-l-kopf-lede-laptop: angemeldet fällt der Werbesatz in jeder Breite weg (vorher nur am Handy, Laptop-Vorlauf 45–47 %).
+  it('angemeldet ist der Werbesatz in jeder Breite ausgeblendet, abgemeldet sichtbar', async () => {
+    const lede = await ledeAt('/s/abc123');
+    expect(getComputedStyle(lede).display).not.toBe('none');
+    lede.classList.remove('anon');
+    expect(getComputedStyle(lede).display).toBe('none');
+  });
 });
 
 /** Vereine als Mandanten (0.698.0): bei mehreren Vereinen ein Umschalter im Kopf (gemerkt, Seite neu), sonst keiner. */
@@ -242,15 +250,33 @@ describe('LeagueHubAppComponent Kopf (UI-Sweep 2026-10-10)', () => {
     expect(await at('/s/abc123')).toEqual(Array(6).fill('mid'));
     expect(await at('/verein/partie/12/korrigieren')).toEqual(Array(6).fill('wide'));
     expect(await at('/verein/formular/7')).toEqual(Array(6).fill('wide'));
-    expect(await at('/vereine')).toEqual(Array(6).fill('-'));
+    expect(await at('/vereine')).toEqual(Array(6).fill('mid'));      // z3-l-reiter-springen
+    expect(await at('/verein/neu')).toEqual(Array(6).fill('mid'));
     expect(await at('/s/abc123/hochladen')).toEqual(Array(6).fill('-'));
   });
 
-  it('Vereinspartien bekommen die breitere Seite, andere Seiten nicht', async () => {
+  // z3-l-reiter-springen: alle Reiter-Seiten in derselben Breite, damit Wortmarke und Reiter beim Wechsel nicht springen;
+  // das Formular von „Partien hinzufügen" bleibt dabei schmal (leaguehub.scss).
+  it('alle Reiter-Seiten in derselben Breite, Unterseiten wie „Hochladen" nicht', async () => {
     let f = await create('/verein', { userId: 7, username: 'patrik' });
     expect((f.nativeElement as HTMLElement).querySelector('main')?.classList).toContain('mid');
     TestBed.resetTestingModule();
     f = await create('/verein/neu', { userId: 7, username: 'patrik' });
+    expect((f.nativeElement as HTMLElement).querySelector('main')?.classList).toContain('mid');
+    TestBed.resetTestingModule();
+    f = await create('/verein/neu/x', { userId: 7, username: 'patrik' });
     expect((f.nativeElement as HTMLElement).querySelector('main')?.classList).not.toContain('mid');
+  });
+
+  it('„Partien hinzufügen" bleibt in der mittleren Breite schmal (max. 748 px)', () => {
+    const main = document.createElement('main');
+    main.className = 'wrap mid';
+    const page = document.createElement('lh-club-add-page');
+    main.appendChild(page);
+    document.body.appendChild(main);
+    try {
+      expect(getComputedStyle(page).maxWidth).toBe('748px');
+      expect(getComputedStyle(page).display).toBe('block');
+    } finally { main.remove(); }
   });
 });

@@ -112,6 +112,31 @@ describe('EndlessPlayComponent', () => {
     expect(score.getAttribute('aria-label')).toBe('kids.endless.result');
   });
 
+  /** UI-Sweep 2026-10-12 (z3-k-endless-stand-ecke): am PC standen Herzen und Zähler ≈ 900 px vom Titel in der Ecke. */
+  for (const [w, h, where] of [[1366, 768, 'run'], [390, 844, 'head']] as const) {
+    it(`Herzen und Zähler bei ${w} px ${where === 'run' ? 'über der Aufgabe' : 'im Kopf'} — nur einmal sichtbar`, async () => {
+      const frame = window.frameElement as HTMLElement | null;
+      if (!frame) pending('Karma läuft nicht im iframe — der Viewport lässt sich nicht verstellen');
+      const prev = [frame!.style.width, frame!.style.height];
+      frame!.style.width = `${w}px`;
+      frame!.style.height = `${h}px`;
+      await new Promise<void>(r => requestAnimationFrame(() => r()));
+      try {
+        const f = TestBed.createComponent(EndlessPlayComponent);
+        f.detectChanges();
+        const el = f.nativeElement as HTMLElement;
+        const shown = (sel: string) => Array.from(el.querySelectorAll<HTMLElement>(sel)).filter(e => e.getClientRects().length > 0);
+        expect(shown('.hearts').length).withContext('Herzen einmal').toBe(1);
+        expect(shown('.score').length).withContext('Zähler einmal').toBe(1);
+        const box = where === 'run' ? '.side-text .run' : 'header.head';
+        expect(shown(`${box} .hearts`).length).toBe(1);
+        expect(shown(`${box} .score`)[0].textContent!.trim()).toBe('✓ 0');
+      } finally {
+        [frame!.style.width, frame!.style.height] = prev;
+      }
+    });
+  }
+
   it('drei Herzen weg: nach der Pause vorbei, Lauf mit erstem Fehler und bestem sauberen Rating gemerkt', fakeAsync(() => {
     const c = create();
     c.onSolved(); c.onNext();            // 700 sauber

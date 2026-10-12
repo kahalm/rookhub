@@ -307,11 +307,15 @@ describe('CourseBrowseComponent Layout', () => {
     expect(mobile).toMatch(/\.board-pane[^{]*\{ ?order: -1/);
     expect(mobile).toContain('text-overflow: ellipsis');
   });
-  // UI-Sweep z1 (z1-rk-browse-titel): unter 600 px Titel auf zwei Zeilen, Flashcards-Knopf nur als Symbol.
-  it('lässt dem Titel am Handy zwei Zeilen und zeigt Flashcards nur als Symbol', () => {
+  // UI-Sweep z1 (z1-rk-browse-titel) + z3 (z3-rk-browse-symbolknopf): unter 600 px Titel auf zwei Zeilen,
+  // die Flashcards-Knöpfe wandern ausgeschrieben ins ⋮-Menü.
+  it('lässt dem Titel am Handy zwei Zeilen und legt Flashcards ins ⋮-Menü', () => {
     const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
     expect(phone).toContain('-webkit-line-clamp: 2');
-    expect(phone).toMatch(/\.fc-btn[^{ ]* \.fc-label[^{]*\{ ?display: none/);
+    expect(phone).toMatch(/\.fc-btn[^{]*\{ ?display: none/);
+    expect(phone).toMatch(/\.fc-menu-btn[^{]*\{ ?display: inline-flex/);
+    const desk = css.slice(0, css.indexOf('@media (max-width: 599.98px)'));
+    expect(desk).toMatch(/\.fc-menu-btn[^{]*\{ ?display: none/);
   });
   it('bindet die Brettbreite an die Fensterhöhe (bis 820 px)', () => {
     expect(css).toMatch(/\.board-wrap[^{]*\{[^}]*max\(560px, (calc\()?100vh - 300px[^}]*820px/);

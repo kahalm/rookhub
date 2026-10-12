@@ -190,6 +190,29 @@ describe('TournamentTablesComponent', () => {
 
   // ----- d2-t-players-sticky-head -----
 
+  // UI-Sweep 2026-10-12 (z3-t-zahlenkopf-rechts): Köpfe der Zahlenspalten fluchten rechts mit den Ziffern.
+  it('stellt die Köpfe „Nr.", „Elo", „Br." rechtsbündig über die Ziffern (Pfeil links davor)', async () => {
+    grosseListe(10);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    fixture.detectChanges();
+    for (const col of ['snr', 'elo', 'board']) {
+      const th = fixture.nativeElement.querySelector(`.table-scroll th.mat-column-${col}`) as HTMLElement | null;
+      if (!th) continue;
+      const box = getComputedStyle(th.querySelector('.mat-sort-header-container')!);
+      expect(box.flexDirection).withContext(col).toBe('row-reverse');
+      expect(box.justifyContent).withContext(`${col}: in row-reverse heißt flex-start rechts`).toBe('flex-start');
+      const label = th.querySelector('.mat-sort-header-content') as HTMLElement | null;
+      const td = fixture.nativeElement.querySelector(`.table-scroll td.mat-column-${col}`) as HTMLElement | null;
+      if (label && td && th.getBoundingClientRect().width > 0) {
+        const pad = (e: HTMLElement) => parseFloat(getComputedStyle(e).paddingRight);
+        expect(Math.abs((label.getBoundingClientRect().right) - (td.getBoundingClientRect().right - pad(td))))
+          .withContext(`${col}: Kopf über den Ziffern`).toBeLessThan(3);
+      }
+    }
+  });
+
   it('haelt den Kopf der Tabellen beim Scrollen fest, auf Flaechenfarbe', async () => {
     grosseListe(10);
     fixture.detectChanges();

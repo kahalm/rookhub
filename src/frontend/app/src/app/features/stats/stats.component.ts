@@ -422,7 +422,9 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     </div>
   `,
   styles: [`
-    .stats-container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
+    /* UI-Sweep z3 (z3-rk-stats-seitenbreite): Seitenbreite wie /courses (DESIGN 4.1) statt 1000 px bzw. 1400 px ab 1280 px —
+       am Laptop lief der Inhalt sonst bis auf 12 px an den Rand, und die Breite sprang beim Seitenwechsel. */
+    .stats-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
     /* UI-Sweep z1 (z1-rk-stats-kacheln): Abstand der Kacheln nur über gap — sonst kamen die 16 px von mat-card dazu. */
     .cards mat-card { margin: 0; }
@@ -488,7 +490,6 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     }
     /* UI-Sweep z2 (z2-rk-stats-gross-einspaltig): großer Bildschirm nutzt die Breite. */
     @media (min-width: 1280px) {
-      .stats-container { max-width: 1400px; }
       .theme-pair.pair { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
     }
     /* Die Baender sind BREITER als ein Hochkant-Handy: 200er-Schritte ueber die ganze
@@ -515,6 +516,12 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .hm-cell.lvl2 { background: #7bc96f; }
     .hm-cell.lvl3 { background: #239a3b; }
     .hm-cell.lvl4 { background: #196127; }
+    /* UI-Sweep z3 (z3-rk-stats-heatmap-gross): am großen Bildschirm wachsen die Zellen mit (53 × 21 px ≈ 1110 px),
+       sonst stand das Raster in der linken Hälfte der Karte. */
+    @media (min-width: 1280px) {
+      .heatmap, .hm-col { gap: 4px; }
+      .hm-cell { width: 17px; height: 17px; }
+    }
     mat-card { margin-bottom: 16px; }
     .mode-toggle { margin-bottom: 16px; }
   `]

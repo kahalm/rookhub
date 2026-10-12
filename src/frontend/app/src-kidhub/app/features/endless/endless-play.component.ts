@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsEndlessPuzzle } from '../../core/kids-api.service';
@@ -22,11 +23,9 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
   selector: 'kid-endless-play',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
+  imports: [RouterLink, NgTemplateOutlet, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
   template: `
-    <header class="head">
-      <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
-      <h1><span aria-hidden="true">♾️</span> {{ 'kids.endless.title' | translate }}</h1>
+    <ng-template #run>
       <span class="hearts" role="img" [attr.aria-label]="'kids.endless.hearts' | translate: { count: lives() }">
         @for (h of heartSlots; track $index) {
           <span [class.lost]="$index >= lives()">{{ $index < lives() ? '❤️' : '🤍' }}</span>
@@ -37,6 +36,14 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       <!-- UI-Sweep 2026-10-11 (r2-k-counter): gemeinsame Zähler-Pille -->
       <span class="score kid-counter" role="img" [attr.aria-label]="'kids.endless.result' | translate: { count: solved() }"
             [title]="'kids.endless.result' | translate: { count: solved() }">✓ {{ solved() }}</span>
+    </ng-template>
+
+    <header class="head">
+      <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
+      <h1><span aria-hidden="true">♾️</span> {{ 'kids.endless.title' | translate }}</h1>
+      <!-- z3-k-endless-stand-ecke: Herzen und Zähler stehen am Handy (gestapelt/quer) im Kopf, am PC über der Aufgabe
+           neben dem Brett — sonst standen sie ≈ 900 px vom Titel entfernt in der rechten Ecke. -->
+      <ng-container [ngTemplateOutlet]="run" />
     </header>
 
     @if (over()) {
@@ -60,6 +67,7 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       <kid-puzzle [task]="t" [hintCost]="hintCost()" (mistake)="onMistake()" (hinted)="onHint($event)" (solved)="onSolved()"
                   (next)="onNext()">
         <div kidTask class="side-text">
+          <div class="run"><ng-container [ngTemplateOutlet]="run" /></div>
           <p class="task">{{ 'kids.endless.task' | translate }}</p>
           @if (store.best() > 0) { <p class="best">🏆 {{ 'kids.endless.best' | translate: { count: store.best() } }}</p> }
         </div>
@@ -75,6 +83,10 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .hearts { margin-left: auto; font-size: 1.5rem; letter-spacing: 2px; }
     .hearts .lost { opacity: .45; }
+    /* z3-k-endless-stand-ecke: am PC Herzen und Zähler über der Aufgabe (wie „Aufgabe x von 6" in der Sternenjagd). */
+    .head .hearts, .head .score { display: none; }
+    .run { display: flex; align-items: center; gap: 12px; }
+    .run .hearts { margin-left: 0; font-size: 1.8rem; letter-spacing: 2px; }
     .info { text-align: center; font-size: 1.2rem; }
     .side-text { display: flex; flex-direction: column; gap: 6px; }
     .task { margin: 0; font-size: 1.5rem; font-weight: 800; line-height: 1.3; color: var(--kid-title); }
@@ -92,6 +104,9 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     .btn.primary { background: var(--kid-green-strong); color: #fff; }
     @keyframes pop { 0% { transform: scale(.2) rotate(-30deg); } 70% { transform: scale(1.2); } }
     @media ${KID_STACKED} {
+      .head .hearts { display: inline; }
+      .head .score { display: inline-flex; }
+      .run { display: none; }
       /* Start, Titel, Herzen und Zähler in EINER Zeile (z2-k-endless-zaehler: der Zähler rutschte allein in Zeile 2);
          der Titel kürzt notfalls mit „…". */
       .head { flex-wrap: nowrap; gap: 8px; }
@@ -103,6 +118,9 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     }
     /* Handy quer: EINE Titelzeile ueber dem Brett (damit rechnet die App-Huelle) — der Titel wird notfalls gekuerzt. */
     @media ${KID_SHORT} {
+      .head .hearts { display: inline; }
+      .head .score { display: inline-flex; }
+      .run { display: none; }
       .head { flex-wrap: nowrap; gap: 12px; }
       .head h1 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1.25rem; }
       .back, .hearts, .score { flex-shrink: 0; white-space: nowrap; }

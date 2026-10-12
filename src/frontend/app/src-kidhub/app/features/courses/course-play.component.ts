@@ -118,12 +118,15 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     .intro {
       margin: 0 0 8px; padding: 0; font-size: 1.1rem; line-height: 1.45; white-space: pre-line;
       max-height: 40vh; overflow: hidden;
+      /* z3-k-kurs-einleitung-pc: 40vh auf ganze Zeilen abgerundet — sonst schnitt die Kante am PC mitten durch eine Zeile.
+         Ältere Browser ohne round() behalten 40vh. */
+      max-height: round(down, 40vh, 1.45em);
     }
     .intro.open { max-height: none; }
     /* Verlauf über die letzten Zeilen: zeigt, dass unten noch Text steht (statt einer halb abgeschnittenen Zeile). */
     .intro-wrap.clipped .intro:not(.open) {
-      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 3.2em), transparent);
-      mask-image: linear-gradient(to bottom, #000 calc(100% - 3.2em), transparent);
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.45em), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 1.45em), transparent);
     }
     .more {
       align-self: center; margin: 0 0 10px; font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer;

@@ -75,6 +75,8 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
     :host { display: block; width: 100%; }
     .se-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .se-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; min-height: 44px; cursor: pointer; }
+    /* z3-l-engine-haekchen: wie die übrigen LeagueHub-Häkchen (.anon-toggle input) statt des 13-px-Browserfelds. */
+    .se-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
     /* UI-Sweep 2026-10-11 (d2-l-korrigieren-engine-select): wie die Auswahlfelder von LeagueHub (.pick select) statt des hellen
        Browser-Felds im dunklen Brettblock. */
     .se-pick { font: 500 15px/1.2 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);

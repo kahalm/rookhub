@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -60,7 +61,7 @@ interface ChapterGroup {
   selector: 'app-course-browse',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, IconLabelDirective,
+    CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatMenuModule, IconLabelDirective,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
     SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent,
   ],
@@ -96,6 +97,24 @@ interface ChapterGroup {
           <mat-icon>style</mat-icon>
           <span class="fc-label">{{ 'courses.flashcards.button' | translate }}</span>
         </button>
+        <!-- UI-Sweep z3 (z3-rk-browse-symbolknopf): am Handy stehen die Flashcards-Aktionen ausgeschrieben im ⋮-Menü
+             statt als unbeschriftetes Symbol (das Symbol „style" war ohne Hover nicht zu deuten). -->
+        <button mat-icon-button class="fc-menu-btn" [matMenuTriggerFor]="fcMenu"
+                [attr.aria-label]="'common.moreActions' | translate">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #fcMenu="matMenu" xPosition="before">
+          <button mat-menu-item class="fc-menu-all" (click)="printFlashcards()" [disabled]="lines.length === 0">
+            <mat-icon>style</mat-icon>
+            <span>{{ 'courses.flashcards.button' | translate }}</span>
+          </button>
+          @if (marked.size > 0) {
+            <button mat-menu-item class="fc-menu-marked" (click)="openMarkedFlashcards()">
+              <mat-icon>star</mat-icon>
+              <span>{{ 'courses.flashcards.markedButton' | translate }} ({{ marked.size }})</span>
+            </button>
+          }
+        </mat-menu>
       </div>
 
       @if (loading) {
@@ -333,6 +352,7 @@ interface ChapterGroup {
       .board-pane { order: -1; }
       .head-text h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     }
+    .fc-menu-btn { display: none; }
     /* UI-Sweep z1 (z1-rk-browse-titel): am Handy darf der Kurstitel zwei Zeilen haben (sonst blieb nur „100 Endspiele, die …"),
        der Flashcards-Knopf wird zum Symbolknopf. */
     @media (max-width: 599.98px) {
@@ -340,9 +360,8 @@ interface ChapterGroup {
       .head-text h1 { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
         overflow: hidden; font-size: 1.1rem; line-height: 1.3; }
       .head-spacer { display: none; }
-      .fc-btn .fc-label { display: none; }
-      .fc-btn { min-width: 0; padding: 0 10px; }
-      .fc-btn mat-icon { margin: 0; }
+      .fc-btn { display: none; }
+      .fc-menu-btn { display: inline-flex; flex: 0 0 auto; }
     }
   `]
 })

@@ -47,9 +47,11 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
         <span class="icon" aria-hidden="true">🧩</span>
         <span class="name">{{ 'kids.home.puzzles' | translate }}</span>
         @if (levels().length > 0) {
+          <!-- z3-k-start-kachel-umbruch: Stand und Sterne als eigene Blöcke — bricht es um, dann zwischen ihnen
+               (vorher stand „⭐ 0" verwaist in Zeile 2). -->
           <span class="meta">
-            {{ 'kids.home.levelsDone' | translate: { done: done(), total: levels().length } }}
-            · ⭐ {{ progress.totalStars() }}
+            <span class="done">{{ 'kids.home.levelsDone' | translate: { done: done(), total: levels().length } }}</span>
+            <span class="nw">⭐ {{ progress.totalStars() }}</span>
           </span>
         }
       </a>
@@ -118,7 +120,9 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
     .tile.stars { background: #fff3c4; }
     .icon { font-size: 3.4rem; line-height: 1.1; }
     .name { font-size: 1.7rem; font-weight: 800; }
-    .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
+    .meta { font-size: 1.05rem; opacity: .85; text-align: center; text-wrap: balance; }
+    .meta .done { display: inline-block; max-width: 100%; }
+    .meta .nw { white-space: nowrap; }
     /* Dünner Fortschrittsbalken der Kurs-Kachel (r2-k-course-tile). */
     .tile-bar { display: block; width: min(220px, 80%); height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .12);
                 overflow: hidden; margin-top: 4px; }

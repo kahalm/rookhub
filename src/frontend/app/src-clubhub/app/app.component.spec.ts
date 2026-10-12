@@ -34,6 +34,10 @@ describe('ClubHubAppComponent', () => {
     store.set({ linked: true, firstName: 'Lena' });
     f.detectChanges();
     expect(link()!.textContent!.trim()).toBe('Verknüpfung (Lena)');
+    // z3-c-fuss-umbruch: alle Links in EINER Gruppe neben der Version (bricht geschlossen um, nie „Datenschutz" allein).
+    const group = (f.nativeElement as HTMLElement).querySelector('footer > .foot-links')!;
+    expect(Array.from(group.querySelectorAll('a')).map(a => a.getAttribute('href')))
+      .toEqual(['/verknuepfen', '/impressum', '/privacy']);
     spyOn(auth, 'has').and.callFake((p: string) => p === 'club.trainer');
     (auth as unknown as { currentUserSubject: { next(v: unknown): void } }).currentUserSubject.next(
       { token: 't', username: 'tina', userId: 5, isAdmin: false });

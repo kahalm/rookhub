@@ -218,13 +218,16 @@ import { DirectoryEntry, isPlaceholderLocation, SameNameMark } from './tournamen
     .tc-name:hover { text-decoration: underline; }
     .tc-name:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
 
+    /* z3-t-karte-ortssymbol: Symbol an der ersten Zeile und nie gequetscht — bei zweizeiliger Adresse rutschte es sonst
+       schmaler in die Mitte und die Textkante sprang von Karte zu Karte. */
     .tc-line {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 0.35rem;
       font-size: 0.85rem;
       color: color-mix(in srgb, currentColor 75%, transparent);
     }
+    .tc-line > mat-icon { flex: 0 0 auto; margin-top: 2px; }
 
     .approx { opacity: 0.65; }
     .tc-various { font-style: italic; }

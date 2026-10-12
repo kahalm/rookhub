@@ -78,7 +78,7 @@ export function tallyText(present: number, total: number): string {
           @if (dateError()) { <span class="hint err">So nicht lesbar — bitte als TT.MM.JJJJ, z. B. 09.10.2026.</span> }
         </label>
         <label class="field"><span class="sr-only">Thema</span>
-          <input name="topic" autocomplete="off" maxlength="200" placeholder="Thema, z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
+          <input name="topic" autocomplete="off" maxlength="200" placeholder="Thema, z. B. Gabel" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
       </div>
       @if (session()) { <p class="muted small existing">Für diesen Tag ist schon eine Einheit erfasst — du änderst sie.</p> }
 

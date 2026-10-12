@@ -89,6 +89,10 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
         <!-- UI-Sweep z1 (z1-rk-courses-banner-vorlauf): im Banner eine eigene Zeile, sonst klebte der zweite Hinweis am ersten Satz. -->
         <span class="reimport-part">
         <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
+        <!-- UI-Sweep z3 (z3-rk-courses-vorlauf): am Handy im Banner nur „Neu holen 13 ⓘ" — der Satz samt Hinweis liegt im ⓘ. -->
+        <span class="reimport-count">{{ reimportCount }}</span>
+        <app-help-hint class="reimport-info" icon="info_outline"
+          [text]="((reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount }) + '\\n\\n' + ('reprocess.itemNeedsReimport.courses' | translate)" />
         <!-- UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
              allein in eine Zeile. -->
         <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}
@@ -286,6 +290,16 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     /* Im Aufbereitungs-Banner steht die Legende als zweiter Satz im Fließtext. */
     app-reprocess-banner .reimport-part { display: block; margin-top: 4px; }
     .reimport-part { display: contents; }
+    .reimport-count, .reimport-info { display: none; }
+    /* UI-Sweep z3 (z3-rk-courses-vorlauf): am Handy im Banner nur Chip + Zahl + ⓘ, in einer Zeile mit dem Knopf. */
+    @media (max-width: 599.98px) {
+      app-reprocess-banner .reimport-part { display: flex; align-items: center; gap: 4px; flex: 1 1 auto;
+        min-width: 0; margin: 0 0 0 32px; }
+      app-reprocess-banner .reimport-chip { margin-right: 2px; }
+      app-reprocess-banner .reimport-count { display: inline; font-weight: 500; }
+      app-reprocess-banner .reimport-info { display: inline-flex; }
+      app-reprocess-banner .reimport-text, app-reprocess-banner .reimport-hint { display: none; }
+    }
     .reimport-chip { margin-right: 6px; }
     .reimport-chip { border: 1px solid var(--rh-warn); color: var(--rh-warn); border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
     .reimport-text { flex: 1 1 220px; }

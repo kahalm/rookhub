@@ -85,6 +85,12 @@ body {
 }
 .account .club-switch select:hover { border-color: var(--muted); }
 .lede { margin: 6px auto 0; color: var(--muted); }
+/* Werbesatz nur für Abgemeldete (d2-l-kopf-lede-mobile am Handy, z3-l-kopf-lede-laptop auch breit: am Laptop kostete er
+   auf jeder angemeldeten Seite ~36 px, Vorlauf 45–47 %). Breit dazu ein knapperer Kopf. */
+.lede:not(.anon) { display: none; }
+/* „Partien hinzufügen" steht seit z3-l-reiter-springen in der mittleren Breite (Kopf springt nicht) — das Formular bleibt schmal. */
+main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
+@media (min-width: 641px) { .top { padding: 20px 0 14px; } }
 
 /* Auswahl */
 .pick {
@@ -281,12 +287,13 @@ details.roster summary { cursor: pointer; font: 600 17px/1.3 var(--cond); }
    doppeln die Fußzeile, die hier immer da ist (und anders heißt). Spezifität (0,2,1) schlägt die gekapselten
    Komponenten-Regeln (0,2,0), RookHub selbst bleibt unberührt. */
 lh-root .wrap .auth-container { min-height: 0; padding-top: 8px; }
-lh-root .wrap .legal-container { padding: 16px 0; }
+lh-root .wrap .legal-container { padding: 16px 0; justify-content: flex-start; }
 /* Rechtsseiten-Karte füllt die .wrap (Flucht mit Kopf und Fuß, d2-l-kontoloeschen-flucht) — die geteilte Form ist seit
    z1-t-privacy-karte-rechts-leer nur so breit wie ihre Textspalte (seit z2 33em). Am Handy klappt die Datenschutzerklärung
    hier Abschnitte ab dem dritten zu (z2-l-datenschutz-laenge, PrivacyComponent.foldSections) — Pfeil und Linie kommen
-   über --mat-sys-primary/--mat-sys-outline unten in Rot bzw. --line. */
-lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: 760px; }
+   über --mat-sys-primary/--mat-sys-outline unten in Rot bzw. --line. z3-l-privacy-karte-rechts-leer: die Karte endet mit der
+   Textspalte (33em + Innenrand) statt bei 760 px — links fluchtet sie weiter mit Kopf und Fuß, rechts keine leere Fläche. */
+lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: calc(33em + 32px); }
 lh-root .wrap .legal-links { display: none; }
 
 /* UI-Sweep 2026-10-11 (r2-l-legal-style): Anmeldemasken und Rechtsseiten im LeagueHub-Look statt RookHub-Material —
@@ -342,6 +349,9 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .m
 lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card :is(.auth-required, p.site-note) {
   background: color-mix(in srgb, var(--focus) 10%, transparent); border-left-color: var(--focus); color: var(--ink);
 }
+/* z3-l-register-datenschutz-rot: der Datenschutz-Link unter „Registrieren" grau wie die Rechtslinks im Fuß — rot las er sich
+   direkt unter dem roten Knopf wie eine Fehlermeldung. Unterstreichung und Tippfläche bleiben. */
+lh-root app-register .privacy-note a { color: var(--muted); }
 lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 600 20px/1.2 var(--cond); color: var(--red); }
 /* Nur echte Links — nicht der Knopf „Konto in RookHub löschen", der ebenfalls ein <a> ist (d1-x-account-delete-warn-ignored). */
 lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a:not(.mat-mdc-button-base) { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
@@ -384,8 +394,8 @@ lh-game-sources { display: block; }
 
 @media (max-width: 640px) {
   .brand { font-size: 34px; }
-  /* Formular prüfen (UX-036) und jede angemeldete Seite (d2-l-kopf-lede-mobile): der Werbesatz nur für Abgemeldete. */
-  .lede.work, .lede:not(.anon) { display: none; }
+  /* Formular prüfen (UX-036): auch abgemeldet kein Werbesatz (angemeldet fällt er überall weg, s. o.). */
+  .lede.work { display: none; }
   .pick { grid-template-columns: 1fr; gap: 10px; }
   .fixture .match { font-size: 20px; }
   .fixture { padding: 14px 12px 6px; }
@@ -543,6 +553,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
    Tabelle wirklich hat (und der Test kann sie setzen). */
 .club-scroll { container-type: inline-size; }
 .club-table td.acts, .club-table th.acts { text-align: right; white-space: nowrap; }
+/* z3-l-verein-aktion-grundlinie: „Nachspielen" (.btn-link mit 4 px Polster oben) und ⋮ auf der Grundlinie des Zeilentexts. */
+.club-table tr.game > td { vertical-align: baseline; }
 .more-btn { font-size: 1.2rem; line-height: 1; padding: 0 6px; text-decoration: none; }
 .row-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 /* Breit (UI-Sweep 2026-10-10, l-club-table): Namen einzeilig, die Eröffnung mit „…" (ganz im Tooltip). */
@@ -719,7 +731,9 @@ lh-online-accounts { display: block; }
 .sugg-more { margin: 18px 0 0; }
 .sugg-group .sugg-list p { max-width: 68ch; }
 @media (min-width: 1280px) {
-  .sugg-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; align-items: start; }
+  /* dense (z3-l-konten-raster-loecher): steht eine Einzelkarte vor einem Mehrfach-Spieler, rückt die nächste Einzelkarte in
+     das Loch rechts daneben vor (Reihenfolge verschiebt sich höchstens um einen Platz). */
+  .sugg-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; align-items: start; grid-auto-flow: row dense; }
   .sugg-groups > p { grid-column: 1 / -1; }
   .sugg-group.multi { grid-column: 1 / -1; }
   .sugg-group.multi lh-account-suggestions .sugg-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

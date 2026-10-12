@@ -48,7 +48,9 @@
     th.mat-column-snr ::ng-deep .mat-sort-header-container,
     th.mat-column-elo ::ng-deep .mat-sort-header-container,
     th.mat-column-board ::ng-deep .mat-sort-header-container,
-    th.mat-column-points ::ng-deep .mat-sort-header-container { justify-content: flex-end; }
+    /* z3-t-zahlenkopf-rechts: mit arrowPosition="before" ist der Container row-reverse — dort heißt flex-START rechts
+       (flex-end schob die Köpfe 17–25 px nach links, weg von den Ziffern). */
+    th.mat-column-points ::ng-deep .mat-sort-header-container { justify-content: flex-start; }
     /* Schalter und ? bleiben zusammen — am Handy rutschte das ? sonst allein in eine eigene Zeile. */
     .fav-group { display: inline-flex; align-items: center; flex-wrap: nowrap; }
     /* Kein Minus-Rand: das ? klebte sonst an „Nur Favoriten" (z1-t-detail-fav-hilfe); das Knopfpolster gibt ≈ 8 px Luft. */

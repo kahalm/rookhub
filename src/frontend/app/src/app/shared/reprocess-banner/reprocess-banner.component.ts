@@ -70,6 +70,17 @@ interface ReprocessStatus {
     .rb-lead app-help-hint { margin-left: 2px; }
     .rb-btn { flex: 0 0 auto; }
     .rb-spin { display: inline-block; vertical-align: middle; margin-right: 6px; }
+    /* UI-Sweep z3 (z3-rk-courses-vorlauf): am Handy stand der Knopf als feste Spalte neben dem Text und ließ ihm
+       nur ~170 px — Kurzsatz und zweiter Satz brachen mehrzeilig um. Jetzt bekommt der Kurzsatz die volle Breite
+       (.rb-text löst sich auf, seine Teile werden Flex-Einträge); ein hineingereichter zweiter Satz und der Knopf
+       teilen sich eine flache zweite Zeile (Knopf rechts). */
+    @media (max-width: 599.98px) {
+      .reprocess-banner { flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 0; padding: 4px 6px 4px 12px; }
+      .rb-icon { margin-top: 0; }
+      .rb-text { display: contents; }
+      .rb-lead { flex: 1 1 calc(100% - 40px); min-width: 0; padding: 8px 0; line-height: 1.35; }
+      .rb-btn { order: 3; margin-left: auto; min-height: 36px; height: 36px; }
+    }
   `]
 })
 export class ReprocessBannerComponent implements OnInit {

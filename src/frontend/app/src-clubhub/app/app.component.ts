@@ -58,9 +58,12 @@ export function isCardIndexUrl(url: string): boolean {
     <footer class="wrap foot">
       <span>v{{ version }}</span>
       <!-- UI-Sweep 2026-10-11 (r2-c-footer-link): nur für Konten ohne Club-Recht; verknüpft heißt er „Verknüpfung (Lena)" -->
-      @if (!access()) { <a routerLink="/verknuepfen">{{ linkText() }}</a> }
-      <a routerLink="/impressum">Impressum</a>
-      <a routerLink="/privacy">Datenschutz</a>
+      <!-- z3-c-fuss-umbruch: Links als Gruppe — reicht die Zeile nicht, rückt die Gruppe geschlossen in Zeile 2. -->
+      <span class="foot-links">
+        @if (!access()) { <a routerLink="/verknuepfen">{{ linkText() }}</a> }
+        <a routerLink="/impressum">Impressum</a>
+        <a routerLink="/privacy">Datenschutz</a>
+      </span>
     </footer>
   `,
 })

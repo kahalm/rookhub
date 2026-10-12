@@ -58,6 +58,16 @@
   .wd-item-actions { width: 100%; justify-content: flex-end; margin-left: 0; }
 }
 
+/* UI-Sweep z3 (z3-rk-ws-detail-vorschau): am Handy stand das Brett als 88-px-Vorschau mit ~200 px Leere daneben,
+   die Knöpfe in einer eigenen Zeile am Kartenende. Jetzt: Brett 140 px, Knöpfe 2 × N rechts daneben, die Felder darunter
+   über die volle Breite — die Karte wird nicht höher, das Brett ist lesbar. */
+@media (max-width: 599.98px) {
+  .wd-board { width: 140px; }
+  .wd-item-actions { order: 1; width: auto; margin-left: auto; display: grid; grid-template-columns: repeat(2, auto);
+    justify-content: end; gap: 0; }
+  .wd-fields { order: 2; flex-basis: 100%; }
+}
+
 /* Teilen-Karte: QR links, Link + Hinweise rechts; am Handy untereinander. */
 .wd-share { margin: 1rem 0; }
 .wd-share-body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }

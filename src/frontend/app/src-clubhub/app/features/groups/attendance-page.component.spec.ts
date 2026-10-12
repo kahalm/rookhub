@@ -87,7 +87,8 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     const labels = Array.from(el().querySelectorAll('.roll-head .field > span:first-child'));
     expect(labels.map(l => l.textContent!.trim())).toEqual(['Tag der Einheit', 'Thema']);
     expect(labels.every(l => l.classList.contains('sr-only'))).toBeTrue();
-    expect(el().querySelector<HTMLInputElement>('input[name=topic]')!.placeholder).toContain('Thema');
+    // z3-c-thema-platzhalter: kurz genug für das ≈ 190 px schmale Feld am Handy (vorher „… Gabel unc" abgeschnitten).
+    expect(el().querySelector<HTMLInputElement>('input[name=topic]')!.placeholder).toBe('Thema, z. B. Gabel');
   });
 
   it('am Montag darauf für den vergangenen Freitag (nachtragen); ?datum= gewinnt', async () => {

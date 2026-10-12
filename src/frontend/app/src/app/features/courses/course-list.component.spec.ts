@@ -524,6 +524,21 @@ describe('CourseListComponent ein Banner', () => {
     expect(el.querySelector('.reimport-legend')).toBeNull();
   });
 
+  // UI-Sweep z3 (z3-rk-courses-vorlauf): am Handy im Banner nur „Neu holen 13 ⓘ" — Satz und Hinweis im ⓘ.
+  it('reicht Zahl und ⓘ für die kurze Handy-Zeile mit; Satz nur breit sichtbar', async () => {
+    const { fixture, http } = await setup();
+    http.expectOne('/api/courses/reprocess/status').flush({
+      currentVersion: 2, total: 5, stale: 4, reprocessableLocally: 4, refetchable: 0, needsReimport: 1 });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.reprocess-banner .reimport-count')?.textContent?.trim()).toBe('1');
+    expect(el.querySelector('.reprocess-banner app-help-hint.reimport-info')).not.toBeNull();
+    const css = ((CourseListComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+    const phone = css.slice(css.lastIndexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.reimport-text[^{]*\{ ?display: none/);
+    expect(phone).toMatch(/\.reimport-count[^{]*\{ ?display: inline/);
+  });
+
   it('ohne Aufbereitungs-Banner bleibt die Legende allein', async () => {
     const { fixture, http } = await setup();
     http.expectOne('/api/courses/reprocess/status').flush({

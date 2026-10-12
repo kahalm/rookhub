@@ -212,6 +212,42 @@ describe('KidsHomeComponent', () => {
     expect(phone.tile.height).toBeLessThan(220);
   });
 
+  /** z3-k-start-kachel-umbruch: am Laptop bricht die Puzzles-Unterzeile zwischen Stand und Sternen um, nie „⭐ 0" allein. */
+  it('am Laptop: Stand und Sterne der Puzzles-Kachel bleiben je in einem Stück', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { kids: { home: { levelsDone: '{{done}} von {{total}} Stufen geschafft' } } });
+    translate.use('de');
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([{ bookId: 7, title: 'Erste Endspiele', description: null, puzzleCount: 287 }]);
+    http.expectOne('/api/kids/levels').flush(Array.from({ length: 40 }, (_, i) => ({ level: i + 1, theme: 'mate1', puzzleCount: 10 })));
+    f.detectChanges();
+    const host = f.nativeElement as HTMLElement;
+    expect(host.querySelector('.tile.puzzles .meta .done')!.textContent).toMatch(/\d+ von 40 Stufen geschafft/);
+    expect(host.querySelector('.tile.puzzles .meta .nw')!.textContent!.trim()).toMatch(/^⭐ \d+$/);
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position: fixed; left: -1500px; top: 0; width: 1366px; height: 768px; border: 0;';
+    document.body.appendChild(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0">${host.outerHTML}</body></html>`);
+      doc.close();
+      const lines = (sel: string) => {
+        const range = doc.createRange();
+        range.selectNodeContents(doc.querySelector(sel)!);
+        return new Set(Array.from(range.getClientRects()).map(r => Math.round(r.top))).size;
+      };
+      expect(lines('.tile.puzzles .meta .nw')).withContext('Sterne in einem Stück').toBe(1);
+      expect(lines('.tile.puzzles .meta .done')).withContext('Stand in einem Stück').toBe(1);
+    } finally {
+      frame.remove();
+    }
+  });
+
   /** UI-Sweep d2-k-home-tiles: mit Kurskachel vier Kacheln in EINER Reihe, am Laptop alle über der Falz. */
   it('am Laptop stehen alle vier Kacheln (mit Kurs) in einer Reihe über der Falz', () => {
     const f = TestBed.createComponent(KidsHomeComponent);

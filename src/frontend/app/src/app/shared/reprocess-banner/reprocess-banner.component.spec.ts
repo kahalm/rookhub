@@ -139,3 +139,16 @@ describe('ReprocessBannerComponent', () => {
   });
 
 });
+
+/** UI-Sweep z3 (z3-rk-courses-vorlauf): am Handy bekommt der Kurzsatz die volle Breite, der Knopf rückt in eine flache
+ *  zweite Zeile rechts (statt als feste Spalte neben dem Text). */
+describe('ReprocessBannerComponent Handy-Layout', () => {
+  const css = ((ReprocessBannerComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('bricht unter 600 px um und stellt den Knopf rechts in die zweite Zeile', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.reprocess-banner[^{]*\{ ?flex-wrap: wrap/);
+    expect(phone).toMatch(/\.rb-text[^{]*\{ ?display: contents/);
+    expect(phone).toMatch(/\.rb-lead[^{]*\{ ?flex: 1 1 calc\(100% - 40px\)/);
+    expect(phone).toMatch(/\.rb-btn[^{]*\{ ?order: 3; margin-left: auto/);
+  });
+});

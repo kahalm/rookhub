@@ -94,9 +94,13 @@ html.dark-theme .prep-card-scope {
    Die Werkzeuge (Trainingslinien, PGN, Eröffnungsbaum) hinter ⋮ daneben, aufgeklappt als Liste über die volle Breite
    (z2-rk-prep-filter-aktionen) — unter „Filter" sucht sie niemand. */
 @media (max-width: 599.98px) {
+  /* z3-rk-prep-menue-zeile: Farbwahl, „Filter ▾" und ⋮ passen zusammen in EINE Zeile (≈ 190 + 70 + 40 + 16 px) —
+     vorher brach das ⋮ allein in eine zweite Zeile. Aufgeklappte Teile umbrechen weiter (flex-basis 100 %). */
   .prep-card-scope .card.inline .controls {
-    .ctl-toggle { display: inline-flex; order: 1; }
-    .ctl-tools { display: inline-flex; order: 1; min-width: 44px; padding: 0 12px; font-size: 18px; }
+    gap: 8px;
+    .seg button { padding: 0 10px; }
+    .ctl-toggle { display: inline-flex; order: 1; padding: 0 10px; }
+    .ctl-tools { display: inline-flex; order: 1; margin-left: auto; min-width: 40px; padding: 0; font-size: 18px; }
     &:not(.open) > lh-tree-filter-bar > .tree-filter > * { display: none; }
     &:not(.tools-open) {
       > .actions > .btn-sec:not(.ctl-toggle):not(.ctl-tools), > lh-training-lines > .tl-toggle { display: none; }

@@ -326,3 +326,14 @@ describe('WorksheetDetailComponent Themen + Teilen als eine Zeile', () => {
     expect(el.querySelector('.wd-share-toggle')).not.toBeNull();
   });
 });
+
+/** UI-Sweep z3 (z3-rk-ws-detail-vorschau): am Handy Brett 140 px, Knöpfe 2-spaltig daneben, Felder darunter. */
+describe('WorksheetDetailComponent Handy-Karte', () => {
+  const css = ((WorksheetDetailComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('setzt unter 600 px Brett 140 px, Knöpfe neben das Brett und die Felder darunter', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.wd-board[^{]*\{ ?width: 140px/);
+    expect(phone).toMatch(/\.wd-item-actions[^{]*\{ ?order: 1;[^}]*display: grid; grid-template-columns: repeat\(2, auto\)/);
+    expect(phone).toMatch(/\.wd-fields[^{]*\{ ?order: 2; flex-basis: 100%/);
+  });
+});

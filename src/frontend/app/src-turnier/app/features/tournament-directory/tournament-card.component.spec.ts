@@ -241,6 +241,20 @@ describe('TournamentCardComponent', () => {
     expect(fixture.nativeElement.querySelector('.approx')).toBeNull();
   });
 
+  // UI-Sweep 2026-10-12 (z3-t-karte-ortssymbol): bei zweizeiliger Adresse bleibt das Symbol voll breit an der ersten Zeile.
+  it('hält das Ortssymbol bei langer Adresse voll breit an der ersten Zeile', () => {
+    setup({ location: 'City of Bangor Chess Club, 30 Main Street, Groomsport, County Down, Northern Ireland' });
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.cssText = 'display: block; width: 260px;';
+    const line = host.querySelectorAll<HTMLElement>('.tc-line')[1];
+    const [icon, text] = [line.querySelector('mat-icon')!, line.querySelector('span')!];
+    expect(getComputedStyle(line).alignItems).toBe('flex-start');
+    expect(getComputedStyle(icon).flexShrink).toBe('0');
+    expect(icon.getBoundingClientRect().width).withContext('nicht gequetscht').toBeGreaterThanOrEqual(icon.scrollWidth - 0.5);
+    expect(icon.getBoundingClientRect().top).withContext('an der ersten Zeile').toBeLessThan(text.getBoundingClientRect().top + 8);
+    host.style.cssText = '';
+  });
+
   // UI-Sweep 2026-10-11 (r2-t-dup-cards): gleichnamiges Turnier am selben Tag als eigene Karte daneben.
   it('kennzeichnet ein gleichnamiges Turnier am selben Tag, nicht aber eine schon zusammengefasste Karte', () => {
     setup();

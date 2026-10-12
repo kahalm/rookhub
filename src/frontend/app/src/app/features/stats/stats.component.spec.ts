@@ -205,8 +205,17 @@ describe('StatsComponent Layout (z1)', () => {
   });
   it('legt ab 1280 px „Nach Thema" und „Schwächste Themen" nebeneinander (z2-rk-stats-gross-einspaltig)', () => {
     const wide = css.slice(css.indexOf('@media (min-width: 1280px)'));
-    expect(wide).toMatch(/\.stats-container[^{]*\{ ?max-width: 1400px/);
     expect(wide).toMatch(/\.theme-pair\.pair[^{]*\{ ?display: grid; grid-template-columns: 3fr 2fr/);
+  });
+  // UI-Sweep z3 (z3-rk-stats-seitenbreite): Seitenbreite wie die übrigen Inhaltsseiten, kein eigener 1400-px-Wert.
+  it('nutzt die gemeinsame Seitenbreite (z3-rk-stats-seitenbreite)', () => {
+    expect(css).toMatch(/\.stats-container[^{]*\{ ?max-width: min\(var\(--(%NS%)?page-max-width\), 96vw\)/);
+    expect(css).not.toContain('1400px');
+  });
+  // UI-Sweep z3 (z3-rk-stats-heatmap-gross): ab 1280 px wachsen die Raster-Zellen mit.
+  it('vergrößert die Aktivitäts-Zellen am großen Bildschirm (z3-rk-stats-heatmap-gross)', () => {
+    const wide = css.slice(css.lastIndexOf('@media (min-width: 1280px)'));
+    expect(wide).toMatch(/\.hm-cell[^{]*\{ ?width: 17px; height: 17px/);
   });
   it('nimmt den Kacheln den Karten-Außenabstand (z1-rk-stats-kacheln)', () => {
     expect(css).toMatch(/\.cards[^{]* mat-card[^{]*\{ ?margin: 0/);

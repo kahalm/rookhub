@@ -118,6 +118,9 @@ describe('CoursePlayComponent — langer Einleitungstext', () => {
     expect(getComputedStyle(intro).paddingBottom).toBe('0px');
     expect(getComputedStyle(el.querySelector('.intro-wrap')!).paddingTop).toBe('12px');
     expect(f.componentInstance.introClipped()).toBeTrue();
+    // z3-k-kurs-einleitung-pc: zugeklappt rastet die Höhe auf ganze Zeilen ein (PC: 40vh abgerundet, Handy: drei Zeilen).
+    const lines = parseFloat(getComputedStyle(intro).maxHeight) / parseFloat(getComputedStyle(intro).lineHeight);
+    expect(Math.abs(lines - Math.round(lines))).withContext(`${lines} Zeilen`).toBeLessThan(0.02);
     const more = el.querySelector<HTMLButtonElement>('button.more')!;
     expect(more.getAttribute('aria-expanded')).toBe('false');
     more.click();

@@ -14,8 +14,10 @@ import { ClubContextService } from './core/club-context.service';
 
 /** Seiten mit ~1240 px statt 780: Vereinspartien (l-club-table), Prognosen und geteilte Begegnung (d2-l-breit-bretter: Bretter
  *  ab 1280 px zweispaltig), Konto-Vorschläge (d2-l-konten-zeilen-breit: die Vorschläge eines Spielers nebeneinander) und
- *  Übertragungen (z1-l-uebertragungen-breite: vierspaltige Tabelle, lange Namen nicht zweizeilig). */
-const MID_PAGES = /^\/(?:verein|konten|uebertragungen|s\/[^/?#]+)?(?:[?#]|$)/;
+ *  Übertragungen (z1-l-uebertragungen-breite: vierspaltige Tabelle, lange Namen nicht zweizeilig). Auch „Partien hinzufügen"
+ *  und „Vereine" (z3-l-reiter-springen): sonst sprangen Wortmarke und Reiter beim Wechsel um ~230 px; das Formular von
+ *  „Partien hinzufügen" bleibt per leaguehub.scss linksbündig schmal, die Vereine-Tabelle nutzt die Breite. */
+const MID_PAGES = /^\/(?:verein(?:\/neu)?|vereine|konten|uebertragungen|s\/[^/?#]+)?(?:[?#]|$)/;
 
 /**
  * Hülle von LeagueHub: Wortmarke, rechts Anmelden bzw. Name + Abmelden, unten Version und Datenschutz.
@@ -66,8 +68,8 @@ const MID_PAGES = /^\/(?:verein|konten|uebertragungen|s\/[^/?#]+)?(?:[?#]|$)/;
       </div>
       <!-- UI-Sweep 2026-10-11 (r2-l-subtitle): allgemein statt „Tiroler Mannschaftsmeisterschaft" — LeagueHub zeigt auch die
            Bundesliga und bayerische Ligen, und die Zeile steht auch vor der Anmeldung, wo der Verein noch unbekannt ist. -->
-      <!-- UI-Sweep 2026-10-11 (d2-l-kopf-lede-mobile): am Handy nur abgemeldet — Angemeldete kennen LeagueHub, der Satz kostete
-           auf jeder Seite ~60 px über der Hauptsache. -->
+      <!-- UI-Sweep 2026-10-11 (d2-l-kopf-lede-mobile, z3-l-kopf-lede-laptop): nur abgemeldet, in allen Breiten — Angemeldete
+           kennen LeagueHub, der Satz kostete auf jeder Seite ~36–60 px über der Hauptsache. -->
       <p class="wrap lede" [class.work]="work()" [class.anon]="!user()" [class.wide]="wide()" [class.mid]="mid()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für eure Mannschaftskämpfe.</p>
       @if (user()) {
         <nav class="wrap tabs" aria-label="Bereiche" [class.wide]="wide()" [class.mid]="mid()">

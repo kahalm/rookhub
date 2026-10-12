@@ -82,7 +82,9 @@ const ERROR_KEYS: Record<RegisterError, string> = {
             <p class="site-note" role="note">{{ introKey | translate }}</p>
           }
           <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
-            <mat-form-field appearance="outline" [subscriptSizing]="kids ? 'dynamic' : 'fixed'">
+            <!-- dynamic auch ohne Kinder-Hinweis (z3-l-register-feldabstand): „fixed“ hielt unter dem Benutzernamen ~20 px
+                 leer für die Fehlermeldung (28 px gegen 8 px zu den anderen Feldern); der Takt kommt aus .auth-form gap. -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ 'auth.register.usernameLabel' | translate }}</mat-label>
               <!-- Handy-Tastatur: ohne autocapitalize="none" wurde der Benutzername als 'Kahalm' statt 'kahalm'
                    eingegeben und so gespeichert; new-password laesst den Passwort-Manager ein starkes Passwort vorschlagen. -->
@@ -148,7 +150,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
   styles: [`
     .auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
     mat-card { width: 400px; max-width: 90vw; }
-    .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
+    .auth-form { display: flex; flex-direction: column; gap: 12px; padding-top: 1rem; }
     mat-form-field { width: 100%; }
     .form-error { margin-top: 12px; padding: 12px; border-radius: 8px;
                   background: rgba(211, 47, 47, 0.08); border: 1px solid rgba(211, 47, 47, 0.35); }

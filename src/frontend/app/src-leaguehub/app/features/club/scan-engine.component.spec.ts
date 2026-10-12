@@ -81,6 +81,16 @@ describe('ScanEngineComponent', () => {
     expect(parseFloat(cs.minHeight)).toBe(44);
   });
 
+  // z3-l-engine-haekchen: Häkchen 18 px in --ink wie .anon-toggle, nicht das 13-px-Browserfeld
+  it('das Engine-Häkchen ist 18 px groß und in --ink', () => {
+    const f = create();
+    const box = (f.nativeElement as HTMLElement).querySelector('.se-toggle input') as HTMLInputElement;
+    const cs = getComputedStyle(box);
+    expect(cs.width).toBe('18px');
+    expect(cs.height).toBe('18px');
+    expect(cs.accentColor).not.toBe('auto');
+  });
+
   it('ist standardmäßig aus und rechnet nichts', () => {
     const f = create();
     expect(f.componentInstance.on()).toBeFalse();

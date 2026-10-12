@@ -180,10 +180,12 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(shown(doc, 'lu')).toBeTrue();
     expect(shown(doc, 'open')).toBeTrue();
     expect(shown(doc, 'form2')).toBeTrue();
-    const wide = await render(1000, `<p class="wrap lede" id="in">Satz</p><div class="pick-bar" id="bar"></div><div class="pick-area" id="closed">
-      <form class="pick" id="form"></form><div class="stand"><label class="all-leagues" id="all">alle Ligen</label><span id="at">Stand</span>
+    const wide = await render(1000, `<p class="wrap lede anon" id="in">Satz</p><p class="wrap lede" id="in2">Satz</p><div class="pick-bar" id="bar"></div><div class="pick-area" id="closed">
+      <header class="top" id="top"></header><form class="pick" id="form"></form><div class="stand"><label class="all-leagues" id="all">alle Ligen</label><span id="at">Stand</span>
       <div class="lineups-toggle" id="lu"><button class="btn-link">Alle Aufstellungen</button></div></div></div>`);
     expect(shown(wide, 'in')).toBeTrue();
+    expect(shown(wide, 'in2')).toBeFalse();                                  // z3-l-kopf-lede-laptop: angemeldet auch breit weg
+    expect(style(wide, 'top').paddingTop).toBe('20px');
     expect(shown(wide, 'bar')).toBeFalse();
     expect(shown(wide, 'form')).toBeTrue();
     // Schalter, Datenstand und Aufstellungen in einer Zeile
@@ -272,6 +274,35 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     frame!.remove();
     const phone = await render(390, body);
     expect(box(phone, 'b').top).toBeGreaterThan(box(phone, 'a').bottom - 1);
+  });
+
+  // z3-l-konten-raster-loecher: Einzelkarte vor einem Mehrfach-Spieler — die nächste Einzelkarte rückt ins Loch rechts (dense)
+  it('Konto-Vorschläge breit: kein Loch neben einer Einzelkarte vor einem Mehrfach-Spieler', async () => {
+    const group = (id: string, n: number) => `<article class="sugg-group${n > 1 ? ' multi' : ''}" id="${id}"><h3>Spieler</h3>
+      <lh-account-suggestions><ul class="sugg-list">${'<li>chess.com: konto</li>'.repeat(n)}</ul></lh-account-suggestions></article>`;
+    const doc = await render(1366, `<main class="wrap mid"><div class="sugg-groups">${group('a', 1)}${group('m', 2)}${group('b', 1)}</div></main>`);
+    expect(box(doc, 'b').top).toBe(box(doc, 'a').top);
+    expect(box(doc, 'm').top).toBeGreaterThan(box(doc, 'a').top);
+  });
+
+  // z3-l-verein-aktion-grundlinie: „Nachspielen" und ⋮ auf der Grundlinie des Zeilentexts
+  it('Vereinspartien breit: alle Zellen einer Partie auf einer Grundlinie', async () => {
+    const doc = await render(1240, `<main class="wrap mid"><div class="club-scroll"><table class="rtable club-table"><tbody>
+      <tr class="game"><td id="y">2026</td><td class="acts" id="a"><div class="row-acts"><button class="btn-link">Nachspielen</button></div></td></tr>
+      </tbody></table></div></main>`);
+    expect(style(doc, 'y').verticalAlign).toBe('baseline');
+    expect(style(doc, 'a').verticalAlign).toBe('baseline');
+  });
+
+  // z3-l-register-datenschutz-rot + z3-l-privacy-karte-rechts-leer
+  it('Registrieren: Datenschutz-Link grau; Rechtsseiten-Karte endet mit der Textspalte, linksbündig', async () => {
+    const doc = await render(1366, `<lh-root><main class="wrap"><app-register><div class="mat-mdc-card"><p class="privacy-note"><a id="p" href="#">Datenschutz</a></p></div></app-register>
+      <app-privacy><div class="legal-container" id="lc"><div class="mat-mdc-card" id="card">Text</div></div></app-privacy></main></lh-root>
+      <span id="m" style="color: var(--muted)">m</span><span id="r" style="color: var(--red)">r</span>`, true);
+    expect(style(doc, 'p').color).toBe(style(doc, 'm').color);
+    expect(style(doc, 'p').color).not.toBe(style(doc, 'r').color);
+    expect(parseFloat(style(doc, 'card').maxWidth)).toBeLessThan(700);
+    expect(style(doc, 'lc').justifyContent).toBe('flex-start');
   });
 
   // z2-l-register-hinweis: der Hinweis der Masken nicht im Fehlerrot, sondern in --focus

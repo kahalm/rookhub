@@ -88,10 +88,31 @@ describe('clubhub.scss', () => {
     const max = parseFloat(card.maxWidth);
     expect(max).toBeCloseTo(33 * fs + 32, 0);
     expect(max).toBeLessThan(660);
+    // z3-c-recht-kartenkante: dieselbe Einheit wie die Textspalte (16-px-Material-Schrift) — 560 px, rechts wie links 16 px.
+    expect(fs).toBe(16);
+    expect(max).toBe(560);
     const ctx = document.createElement('canvas').getContext('2d')!;
     ctx.font = `${card.fontWeight} ${card.fontSize} ${card.fontFamily}`;
     const sample = 'Der Knopf unten öffnet in deinem Profil die Karte „Konto löschen“ – bist du nicht angemeldet, meldest du dich zuerst an.';
     expect((max - 32) / (ctx.measureText(sample).width / sample.length)).withContext('Zeichen je Zeile').toBeLessThanOrEqual(76);
+  });
+
+  // UI-Sweep 2026-10-12 (z3-c-gruppen-karte-polster): der Absatz unter dem Gruppennamen bringt keinen Standardrand mit.
+  it('Gruppenkarte: Infozeile ohne Rand unten — Polster oben und unten gleich', () => {
+    const el = mount(`<ul class="groups"><li class="group"><div><h2>Anfänger</h2><p class="kid-meta">Freitag</p></div></li></ul>`);
+    const meta = getComputedStyle(el.querySelector('.kid-meta')!);
+    expect(meta.marginTop).toBe('4px');
+    expect(meta.marginBottom).toBe('0px');
+  });
+
+  // UI-Sweep 2026-10-12 (z3-c-fuss-umbruch): die Links bilden eine Gruppe mit demselben Abstand wie die Fußzeile.
+  it('Fußzeile: Linkgruppe umbricht geschlossen und übernimmt den Abstand der Fußzeile', () => {
+    const el = mount(`<footer class="wrap foot"><span>v1</span><span class="foot-links"><a>Impressum</a><a>Datenschutz</a></span></footer>`);
+    const foot = getComputedStyle(el.querySelector('.foot')!);
+    const links = getComputedStyle(el.querySelector('.foot-links')!);
+    expect(links.display).toBe('flex');
+    expect(links.flexWrap).toBe('wrap');
+    expect(links.columnGap).toBe(foot.columnGap);
   });
 
   it('Anmelde-Maske außerhalb der Anmeldung bleibt unberührt', () => {
