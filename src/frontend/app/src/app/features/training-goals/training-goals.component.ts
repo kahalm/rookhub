@@ -390,7 +390,10 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     /* 200px statt 160px: bei 160px passten auf dem Handy zwei Spalten à ~177px nebeneinander und
        das längste Label („Spielen (Partien/Woche)") wurde am Feldrand abgeschnitten. */
     .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 8px 0; }
-    .actions { display: flex; gap: 8px; margin-top: 8px; }
+    /* UI-Sweep z1 (z1-rk-goals-reset-umbruch): Knopftexte brechen nicht im Knopf um — am Handy rutscht der
+       Zurücksetzen-Knopf als Ganzes in die nächste Zeile. */
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+    .actions button { white-space: nowrap; }
     .heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
     .hm-col { display: flex; flex-direction: column; gap: 3px; }
     .hm-cell { width: 12px; height: 12px; border-radius: 2px; background: color-mix(in srgb, currentColor 10%, transparent); }

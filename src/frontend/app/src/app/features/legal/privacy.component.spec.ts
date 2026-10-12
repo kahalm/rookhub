@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { GUEST_START_URL } from '../../core/handoff.service';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -70,6 +71,40 @@ describe('PrivacyComponent', () => {
       expect(document.activeElement).toBe(head);
     });
 
+    // UI-Sweep Runde z1 (z1-rk-privacy-toc-offen): am Laptop (768 px hoch) schob das offene, einspaltige Verzeichnis
+    // den Text auf 70 % der Höhe — offen nur noch auf großen Bildschirmen, aufgeklappt immer zweispaltig.
+    it('offen nur ab 769 px Breite UND 900 px Höhe; aufgeklappt zweispaltig in jeder Breite', () => {
+      expect(PrivacyComponent.TOC_OPEN_QUERY).toContain('min-width: 769px');
+      expect(PrivacyComponent.TOC_OPEN_QUERY).toContain('min-height: 900px');
+      const f = renderAt(false);   // TestBed hängt die Seite ins Dokument — die Stile gelten
+      expect(getComputedStyle((f.nativeElement as HTMLElement).querySelector('nav.toc ul')!).columnCount).toBe('2');
+    });
+
+    // UI-Sweep Runde z1 (z1-rk-privacy-inhalt-knopf): der Knopf verdeckte Wörter und am Ende die Kontaktzeile.
+    it('„↑ Inhalt": rundes 44-px-Symbol mit Vorlese-Beschriftung, Leiste hinter dem Rücklink mit eigener Höhe', () => {
+      const f = renderAt(false);
+      f.componentInstance.tocAway.set(true);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      {
+        const bar = el.querySelector<HTMLElement>('.to-toc-bar')!;
+        const backP = el.querySelector('p.back')!;
+        expect(backP.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).withContext('Leiste nach dem letzten Absatz').toBeTruthy();
+        const link = bar.querySelector<HTMLElement>('.to-toc')!;
+        expect(link.getAttribute('aria-label')).toBe('legal.privacy.tocTitle');
+        expect(link.textContent!.trim()).toBe('↑');
+        const r = link.getBoundingClientRect();
+        expect(Math.round(r.width)).toBe(44);
+        expect(Math.round(r.height)).toBe(44);
+        expect(getComputedStyle(link).borderTopLeftRadius).toBe('50%');
+        if (window.innerWidth < 1200) {
+          // Unter dem Rücklink bleibt Platz für den Knopf — am Seitenende liegt er nicht auf dem Text.
+          expect(bar.getBoundingClientRect().height).toBeGreaterThanOrEqual(r.height);
+          expect(r.top).toBeGreaterThanOrEqual(backP.getBoundingClientRect().bottom);
+        }
+      }
+    });
+
     it('KidHub: kein „↑ Inhalt" (dort gibt es kein Verzeichnis)', () => {
       const f = renderAt(false, { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
       f.componentInstance.tocAway.set(true);
@@ -98,11 +133,12 @@ describe('PrivacyComponent', () => {
     expect(hrefs(el)).not.toContain('/impressum');
   });
 
-  it('RookHub: Erwachsenen-Einleitung, Ruecklink zur Anmeldung', () => {
+  it('RookHub: Erwachsenen-Einleitung, Ruecklink ohne Verlauf zur Startseite (z1-rk-legal-back-anon)', () => {
     const el = render();
     expect(el.textContent).toContain('legal.privacy.intro');
     expect(el.textContent).not.toContain('legal.privacy.kidIntro');
-    expect(hrefs(el)).toContain('/login');
+    expect(el.querySelector('.back a')!.getAttribute('href')).toBe(GUEST_START_URL);
+    expect(hrefs(el)).not.toContain('/login');
   });
 
   it('KidHub: einfache Sprache mit Elternhinweis, Verantwortlicher nur mit Kontaktadresse, Ruecklink zur Startseite (F7-003)', () => {

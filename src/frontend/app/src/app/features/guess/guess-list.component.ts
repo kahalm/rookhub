@@ -8,10 +8,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -49,8 +49,8 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
   selector: 'app-guess-list',
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatProgressBarModule, MatDialogModule, MatTabsModule,
+    MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule,
+    MatProgressBarModule, MatDialogModule, MatTabsModule, MatMenuModule,
     TranslatePipe, LoadingSpinnerComponent, HelpHintComponent],
   template: `
     <div class="gl-container">
@@ -79,26 +79,27 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
           </button>
         </div>
       </div>
-      <p class="muted intro">{{ 'guess.intro' | translate }}</p>
-      @if (!loggedIn) {
-        <p class="muted small">{{ 'guess.anonHint' | translate }}</p>
-      }
+      <!-- Ohne Konto: der Hinweis als zweiter Halbsatz im Untertitel statt eigener Zeile (z1-rk-guess-einzeltab). -->
+      <p class="muted intro">{{ 'guess.intro' | translate }}@if (!loggedIn) { <span class="anon-hint">{{ 'guess.anonHint' | translate }}</span>}</p>
 
       @if (loading) {
         <app-loading-spinner />
       } @else {
         <!-- Angefangene Durchläufe stehen oben (d2-rk-guess-durchlaeufe-unten): wer weiterspielen will, scrollt nicht ans Ende. -->
+        <!-- z1-rk-guess-vorlauf: EINE Zeile — Titel einzeilig mit „…", Seite + Punkte klein darunter, ▶ und Löschen rechts. -->
         @for (s of runningSessions; track s.id) {
           <mat-card class="run resume">
             <mat-card-content>
-              <div class="run-row">
-                <span class="resume-label">{{ 'guess.resume' | translate }}:</span>
-                <a class="g-title" [routerLink]="['/guess', s.id]">{{ s.title || ('guess.untitled' | translate) }}</a>
-                <span class="muted small">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }}</span>
-                <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span>
-                <span class="spacer"></span>
-                <a mat-flat-button color="primary" class="resume-btn" [routerLink]="['/guess', s.id]">
-                  <mat-icon>play_arrow</mat-icon> {{ 'guess.resume' | translate }}
+              <div class="run-row resume-row">
+                <div class="resume-main">
+                  <a class="g-title" [routerLink]="['/guess', s.id]" [title]="s.title || ''"><span class="resume-label">{{ 'guess.resume' | translate }}:</span>
+                    {{ s.title || ('guess.untitled' | translate) }}</a>
+                  <span class="muted small resume-meta">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }} ·
+                    <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span></span>
+                </div>
+                <a mat-flat-button color="primary" class="resume-btn" [routerLink]="['/guess', s.id]"
+                   [attr.aria-label]="'guess.resume' | translate">
+                  <mat-icon>play_arrow</mat-icon> <span class="resume-btn-label">{{ 'guess.resume' | translate }}</span>
                 </a>
                 <button mat-icon-button
                         [appIconLabel]="'common.delete' | translate" (click)="remove(s)">
@@ -108,24 +109,44 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
             </mat-card-content>
           </mat-card>
         }
-        <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
-          <mat-label>{{ 'guess.search.label' | translate }}</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [ngModel]="query" (ngModelChange)="setQuery($event)" name="guessSearch"
-                 [placeholder]="'guess.search.placeholder' | translate">
-          @if (query) {
-            <button matSuffix mat-icon-button (click)="setQuery('')"
-                    [attr.aria-label]="'guess.search.clear' | translate">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
+        <!-- Suchfeld in der Filterzeile der Liste statt eigener Zeile darüber (z1-rk-guess-vorlauf). -->
+        <ng-template #searchField>
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>{{ 'guess.search.label' | translate }}</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="query" (ngModelChange)="setQuery($event)" name="guessSearch"
+                   [placeholder]="'guess.search.placeholder' | translate">
+            @if (query) {
+              <button matSuffix mat-icon-button (click)="setQuery('')"
+                      [attr.aria-label]="'guess.search.clear' | translate">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        </ng-template>
 
-        <mat-tab-group class="lists" [(selectedIndex)]="tab" animationDuration="0ms">
-        <mat-tab [label]="('guess.curated' | translate) + ' (' + curatedShown.length + ')'">
+        <!-- Ohne Konto gibt es nur den Meisterpartien-Bestand: dann keine Reiterleiste mit einem einzigen Reiter,
+             die Anzahl steht in der Filterzeile (z1-rk-guess-einzeltab). -->
+        @if (loggedIn) {
+          <mat-tab-group class="lists" [(selectedIndex)]="tab" animationDuration="0ms">
+          <mat-tab [label]="('guess.curated' | translate) + ' (' + curatedShown.length + ')'">
+            <ng-container *ngTemplateOutlet="curatedList" />
+          </mat-tab>
+          <mat-tab [label]="('guess.ownGames' | translate) + ' (' + ownShown.length + ')'">
+            <ng-container *ngTemplateOutlet="ownList" />
+          </mat-tab>
+          </mat-tab-group>
+        } @else {
+          <div class="lists single">
+            <ng-container *ngTemplateOutlet="curatedList" />
+          </div>
+        }
+
+        <ng-template #curatedList>
         <mat-card class="start-card">
           <mat-card-content>
             <div class="sec-head">
+              <ng-container *ngTemplateOutlet="searchField" />
               @if (hasAnnotated) {
                 <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="onFilterChange()"
                                          [attr.aria-label]="'guess.filterLabel' | translate" class="small-toggle">
@@ -133,17 +154,24 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                   <mat-button-toggle [value]="true">{{ 'guess.filterAnnotated' | translate }}</mat-button-toggle>
                 </mat-button-toggle-group>
               }
+              @if (!loggedIn) {
+                <span class="muted small count">{{ 'guess.gamesCount' | translate:{ count: curatedShown.length } }}</span>
+              }
               <!-- Sortieren statt Scrollen: „eine kurze Partie" findet man ueber die Laenge, nicht
                    ueber 655 Titel (Codereview W5 UX-016). Die Vorgabe bleibt die Reihenfolge des
-                   Servers (nach Titel). -->
-              <mat-form-field appearance="outline" class="sort" subscriptSizing="dynamic">
-                <mat-label>{{ 'guess.sort.label' | translate }}</mat-label>
-                <mat-select [value]="sort" (selectionChange)="setSort($event.value)" name="guessSort">
-                  @for (o of sortOptions; track o) {
-                    <mat-option [value]="o">{{ ('guess.sort.' + o) | translate }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+                   Servers (nach Titel). Als Symbolknopf ⇅ mit Menü — passt am Handy neben Suche und Filter. -->
+              <button mat-icon-button class="sort-btn" [class.active]="sort !== 'title'" [matMenuTriggerFor]="sortMenu"
+                      [appIconLabel]="('guess.sort.label' | translate) + ': ' + (('guess.sort.' + sort) | translate)">
+                <mat-icon>swap_vert</mat-icon>
+              </button>
+              <mat-menu #sortMenu="matMenu">
+                @for (o of sortOptions; track o) {
+                  <button mat-menu-item class="sort-option" (click)="setSort(o)" [attr.aria-checked]="sort === o" role="menuitemradio">
+                    <mat-icon>{{ sort === o ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                    {{ ('guess.sort.' + o) | translate }}
+                  </button>
+                }
+              </mat-menu>
             </div>
             @if (curatedShown.length === 0) {
               <p class="muted">{{ (query ? 'guess.search.none' : 'guess.noCurated') | translate }}</p>
@@ -181,12 +209,14 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
             }
           </mat-card-content>
         </mat-card>
-        </mat-tab>
+        </ng-template>
 
-        @if (loggedIn) {
-          <mat-tab [label]="('guess.ownGames' | translate) + ' (' + ownShown.length + ')'">
+        <ng-template #ownList>
           <mat-card class="start-card">
             <mat-card-content>
+              <div class="sec-head">
+                <ng-container *ngTemplateOutlet="searchField" />
+              </div>
 
               @if (uploadStatus; as u) {
                 @if (u.engineAvailable) {
@@ -262,9 +292,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
               }
             </mat-card-content>
           </mat-card>
-          </mat-tab>
-        }
-        </mat-tab-group>
+        </ng-template>
 
         @if (finishedSessions.length) {
           <h2 class="sec">{{ 'guess.yourRuns' | translate }}</h2>
@@ -298,17 +326,23 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .intro { margin: 4px 0 14px; }
     .start-card { margin-bottom: 8px; }
     /* Filter und Sortieren in EINER Zeile, auch am Handy (d2-rk-guess-vorlauf). */
-    .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
-    .sort { width: 140px; flex: 0 0 140px; margin-left: auto; }
+    /* z1-rk-guess-vorlauf: Suche, Filter und ⇅ in EINER Zeile; am Handy darf sie notfalls umbrechen. */
+    .sec-head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .sec-head .search { flex: 1 1 140px; min-width: 120px; width: auto; margin: 0; }
+    .sec-head .count { white-space: nowrap; }
+    .sort-btn { flex: none; margin-left: auto; }
+    .sort-btn.active { color: var(--mat-sys-primary); }
     .more { display: block; margin: 12px auto 4px; }
     .small-toggle { font-size: .8rem; }
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .full { width: 100%; }
-    .search { width: 100%; margin-bottom: 12px; }
+    .search { width: 100%; }
     .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     /* Die Karte sitzt IM Reiter — ohne das doppelte sich der Rahmen mit dem des Reiters. */
     .lists .start-card { box-shadow: none; background: transparent; margin: 0; }
     .lists ::ng-deep .mat-mdc-tab-body-content { padding-top: 8px; }
+    .lists .start-card .mat-mdc-card-content { padding-top: 0; }
+    .lists.single .start-card .mat-mdc-card-content { padding-left: 0; padding-right: 0; }
     .search mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     .chip.err { color: var(--rh-error); }
@@ -332,9 +366,12 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
       .game-row .g-title { grid-area: title; align-self: center; }
       .game-row .g-meta { grid-area: meta; gap: 4px 8px; }
       .game-row .g-play { grid-area: play; min-width: 44px; padding: 0 10px; }
+      .game-row .spacer { display: none; }
+    }
+    /* „Spielen" bleibt beschriftet; erst ganz schmal nur ▶ (DESIGN 5.4, z1-rk-guess-spielen-label). */
+    @media (max-width: 380px) {
       .game-row .g-play mat-icon { margin: 0; }
       .game-row .g-play-label { display: none; }
-      .game-row .spacer { display: none; }
     }
     .g-title { font-weight: 600; text-decoration: none; color: inherit; }
     a.g-title:hover { text-decoration: underline; }
@@ -347,6 +384,16 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     h2.sec, .run:not(.resume) { margin-left: 16px; margin-right: 16px; }
     .resume { border-left: 4px solid var(--mat-sys-primary); }
     .resume-label { font-weight: 600; }
+    .resume .mat-mdc-card-content { padding-top: 6px; padding-bottom: 6px; }
+    .resume-row { flex-wrap: nowrap; gap: 8px; padding: 2px 0; }
+    .resume-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+    .resume .g-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .resume-btn { flex: none; }
+    @media (max-width: 599.98px) {
+      .resume-btn { min-width: 44px; padding: 0 10px; border-radius: 50%; }
+      .resume-btn mat-icon { margin: 0; }
+      .resume-btn-label { display: none; }
+    }
     /* Handy: Titel + drei Symbolknöpfe in einer Zeile, Beschriftungen nur als Tooltip/aria-label. */
     @media (max-width: 599.98px) {
       .header { flex-wrap: nowrap; }

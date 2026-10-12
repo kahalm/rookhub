@@ -37,7 +37,9 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       <a class="back" routerLink="/courses">← {{ 'kids.courses.title' | translate }}</a>
       @if (title()) { <h1>📚 {{ title() }}</h1> }
       @if (lines().length > 0) {
-        <span class="count">{{ 'kids.courses.progress' | translate: { done: solvedCount(), total: lines().length } }}</span>
+        <!-- z1-k-course-intro: am Handy steht der Stand kurz („8/287") rechts neben dem Kurstitel, der lange Text bleibt
+             für Vorleser. -->
+        <span class="count"><span class="count-long">{{ 'kids.courses.progress' | translate: { done: solvedCount(), total: lines().length } }}</span><span class="count-short" aria-hidden="true">{{ solvedCount() }}/{{ lines().length }}</span></span>
       }
     </header>
 
@@ -50,7 +52,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
         <kid-puzzle [task]="t" [moveComments]="line.moveComments" (solved)="onSolved()" (next)="onNext()">
           <!-- Neben dem Brett (am Handy darueber): so bekommt das Brett am PC die Fensterhoehe. -->
           <div kidTask class="line-text">
-            @if (line.chapterLabel ?? line.chapter; as chapter) { <p class="chapter">{{ chapter }}</p> }
+            @if (line.chapterLabel ?? line.chapter; as chapter) { <p class="chapter" [class.with-title]="!!(line.titleLabel ?? line.title)">{{ chapter }}</p> }
             @if (line.titleLabel ?? line.title; as heading) { <h2 class="line-title">{{ heading }}</h2> }
             <!-- UI-Sweep 2026-10-11 (r2-k-course-heading): Zwischenüberschriften aus dem Kommentar fett absetzen -->
             <!-- UI-Sweep 2026-10-11 (r2-k-course-scroll): kein eigener Scrollkasten mehr — ein langer Text wird unten
@@ -104,6 +106,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
             max-width: var(--kid-row, 1068px); }
     .head h1 { flex: 1; margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .count { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
+    .count-short { display: none; }
     .info { text-align: center; font-size: 1.2rem; }
     .line-text { display: flex; flex-direction: column; gap: 6px; }
     .chapter { margin: 0; font-weight: 700; opacity: .75; }
@@ -134,6 +137,19 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     .intro .hl + p { margin-top: 2px; }
     @media ${KID_STACKED} {
       .chapter, .line-title { text-align: center; }
+      /* z1-k-course-intro: Kopf in EINER Zeile (Titel gekürzt, Stand kurz rechts), Kapitel nur ohne Aufgabentitel —
+         das Brett begann sonst erst bei 47 % der Höhe, der Tipp-Knopf lag unter der Falz. */
+      .head { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
+      .head h1 { min-width: 0; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .back, .count { flex-shrink: 0; white-space: nowrap; }
+      .count { font-size: .95rem; }
+      .count-long {
+        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+      }
+      .count-short { display: inline; }
+      .chapter.with-title { display: none; }
+      .line-title { font-size: 1.1rem; }
       /* d2-k-course-intro: zugeklappt drei Zeilen statt 30vh (~8 Zeilen) — das Brett begann sonst erst bei 69 % der
          Höhe. Am PC (Text neben dem Brett) bleiben 40vh. */
       .intro { max-height: calc(3 * 1.45em); }   /* Inhaltshöhe: drei Zeilen, das Polster (2 × 12 px) kommt dazu */

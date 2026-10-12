@@ -1233,15 +1233,15 @@ describe('EndlessPuzzleComponent a11y: Auto-Knopf und Leben (UX-047)', () => {
     expect(reset).toHaveBeenCalledWith(1);
   });
 
-  it('Startbildschirm: die Herzen sagen, wie viele Leben es gibt', () => {
+  // UI-Sweep z1 (z1-rk-endless-leben): die Herzen tragen eine sichtbare Beschriftung (nicht nur aria-label).
+  it('Startbildschirm: die Herzen sagen sichtbar, wie viele Leben es gibt', () => {
     const lives = render(() => {}).querySelector('.config-lives')!;
-    expect(lives.getAttribute('role')).toBe('img');
-    expect(lives.getAttribute('aria-label')).toBe('3 of 3 lives');
+    expect(lives.getAttribute('role')).toBeNull();
+    expect(lives.querySelector('.config-lives-label')?.textContent?.trim()).toBe('endless.config.livesHint');
   });
 
-  it('Startbildschirm: Zahnrad in der Feineinstellungen-Zeile, Herzen ohne Beschriftung (UI-Sweep 10.10.)', () => {
+  it('Startbildschirm: Zahnrad in der Feineinstellungen-Zeile (UI-Sweep 10.10.)', () => {
     const el = render(() => {});
-    expect(el.querySelector('.config-lives-label')).toBeNull();
     const row = el.querySelector('.adv-row')!;
     expect(row.querySelector('.adv-toggle')).not.toBeNull();
     expect(row.querySelector('.settings-gear')).not.toBeNull();

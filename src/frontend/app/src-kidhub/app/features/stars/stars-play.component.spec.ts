@@ -234,6 +234,9 @@ describe('StarsPlayComponent – freier Modus', () => {
     c.stepCount(1);
     expect(c.shownCount()).toBe(31);                     // Läufer höchstens 31
     expect(f.nativeElement.querySelectorAll('.seg .seg-btn').length).toBe(4);
+    // z1-k-free-glyphs: gefüllte Figurenzeichen statt dünner Umrisse
+    expect(Array.from(f.nativeElement.querySelectorAll('.seg .seg-btn') as NodeListOf<HTMLElement>).map(b => b.textContent!.trim()))
+      .toEqual(['♜', '♝', '♞', '♛']);
     discardPeriodicTasks();
   }));
 

@@ -14,10 +14,10 @@ describe('kidPageWidth (k-logo: Kopfzeile in der Spalte des Inhalts)', () => {
     expect(kidPageWidth('/levels')).toBe('980px');
     expect(kidPageWidth('/stars')).toBe('980px');
     expect(kidPageWidth('/courses')).toBe('820px');
-    expect(kidPageWidth('/privacy#privacy-data')).toBe('840px');
-    expect(kidPageWidth('/account-deletion')).toBe('840px');   // d1-k-account-deletion-style
+    expect(kidPageWidth('/privacy#privacy-data')).toBe('620px');   // z1-k-legal-line: ≤ ~75 Zeichen je Zeile
+    expect(kidPageWidth('/account-deletion')).toBe('620px');   // d1-k-account-deletion-style
     expect(kidPageWidth('/login')).toBe('980px');
-    expect(KID_PAGE_WIDTH).toEqual({ home: 1160, map: 980, list: 820, legal: 840 });
+    expect(KID_PAGE_WIDTH).toEqual({ home: 1160, map: 980, list: 820, legal: 620 });
   });
 });
 

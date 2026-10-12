@@ -63,11 +63,22 @@ describe('EndlessHistoryComponent toRow precomputes display fields', () => {
       mistakeAtRatings: '1600,1700', isArchived: false,
     };
     const row = (c as any).toRow(dto);
-    expect(row.configText).toContain('1500');
-    expect(row.configText).toContain('T1 3');
+    // UI-Sweep z1 (z1-rk-endless-history-config): nur das Start-Rating, Schwellen getrennt (Tooltip).
+    expect(row.configText).toBe('1500');
+    expect(row.t1).toBe(3);
+    expect(row.t2).toBeNull();
     expect(row.mistakesText).toBe('1600, 1700');
     expect(row.eloText).toBe('+340');   // 1840 - 1500
     expect(row.eloClass).toBe('elo-pos');
     expect(row.dateText).not.toBe('-');
+  });
+});
+
+describe('EndlessHistoryComponent Start-Rating ohne Wert (z1-rk-endless-history-config)', () => {
+  it('zeigt „-“ statt „?“, wenn das Start-Rating fehlt', () => {
+    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+    expect(c.formatConfig(JSON.stringify({ fasttrackThreshold1: 3 }))).toBe('-');
+    expect(c.formatConfig('kaputt')).toBe('-');
+    expect(c.formatConfig(JSON.stringify({ startElo: 1200 }))).toBe('1200');
   });
 });

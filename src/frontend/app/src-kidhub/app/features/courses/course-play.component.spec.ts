@@ -190,3 +190,31 @@ describe('CoursePlayComponent — langer Einleitungstext', () => {
     }
   });
 });
+
+/** z1-k-course-intro: am Handy steht der Stand kurz neben dem Kurstitel; das Kapitel weicht dem Aufgabentitel. */
+describe('CoursePlayComponent — Kopf am Handy', () => {
+  it('zeigt den Stand kurz („0/2") neben dem langen Text und markiert das Kapitel neben einem Aufgabentitel', () => {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const mk = (id: number): KidsCourseLine => ({
+      id, bookTitle: 'Erste Endspiele', fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8', startPly: 0,
+      title: 'Bauer auf der sechsten Reihe', chapter: 'Endspiel 2', comment: null, moveComments: null, altMoves: null,
+    });
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.returnValue(of([mk(1), mk(2)]));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '7' })) } },
+      ],
+    });
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.count .count-short')!.textContent).toBe('0/2');
+    expect(el.querySelector('.count .count-short')!.getAttribute('aria-hidden')).toBe('true');
+    expect(el.querySelector('.count .count-long')).not.toBeNull();
+    expect(el.querySelector('.chapter')!.classList).toContain('with-title');
+  });
+});

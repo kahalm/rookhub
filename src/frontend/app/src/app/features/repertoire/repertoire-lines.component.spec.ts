@@ -199,3 +199,27 @@ describe('RepertoireLinesComponent klickbare Kommentar-Züge', () => {
     expect(c.commentSegments).toEqual({});
   });
 });
+
+/** UI-Sweep z1 (z1-rk-rep-abfragen-doppelt): „Abfragen“ ist der Hauptknopf der Linienleiste. */
+describe('RepertoireLinesComponent Abfragen-Knopf', () => {
+  it('zeigt „Abfragen“ als gefüllten Hauptknopf neben „Lernen“', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideRouter } = await import('@angular/router');
+    const { provideNoopAnimations } = await import('@angular/platform-browser/animations');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { RepertoireTrainingService } = await import('./repertoire-training.service');
+    TestBed.configureTestingModule({
+      imports: [RepertoireLinesComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireTrainingService, useValue: { getLineStates: () => of([]), getFlashcardMarks: () => of({ lineKeys: [] }) } }],
+    });
+    const fixture = TestBed.createComponent(RepertoireLinesComponent);
+    fixture.componentInstance.repertoireId = 3;
+    fixture.componentInstance.lines = [line('A', 0)];
+    fixture.detectChanges();
+    const quiz = fixture.nativeElement.querySelectorAll('.course-bar a[href="/repertoires/3/train"]');
+    expect(quiz.length).toBe(1);
+    expect(quiz[0].hasAttribute('mat-flat-button')).toBeTrue();
+    expect(quiz[0].textContent).toContain('repertoire.lines.sr.reviewShort');
+  });
+});

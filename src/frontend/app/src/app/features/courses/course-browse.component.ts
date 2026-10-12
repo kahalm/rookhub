@@ -82,16 +82,19 @@ interface ChapterGroup {
                                 [value]="courseLang.effective(langRef)"
                                 (picked)="pickLanguage($event)" />
         @if (marked.size > 0) {
+          <!-- UI-Sweep z1 (z1-rk-browse-titel): am Handy nur Symbol (Beschriftung als aria-label), damit der Kurstitel Platz hat. -->
           <button mat-stroked-button class="fc-btn fc-btn--marked" (click)="openMarkedFlashcards()"
+                  [attr.aria-label]="('courses.flashcards.markedButton' | translate) + ' (' + marked.size + ')'"
                   [matTooltip]="'courses.flashcards.markedTooltip' | translate">
             <mat-icon>style</mat-icon>
-            {{ 'courses.flashcards.markedButton' | translate }} ({{ marked.size }})
+            <span class="fc-label">{{ 'courses.flashcards.markedButton' | translate }} </span>({{ marked.size }})
           </button>
         }
         <button mat-stroked-button class="fc-btn" (click)="printFlashcards()" [disabled]="lines.length === 0"
+                [attr.aria-label]="'courses.flashcards.button' | translate"
                 [matTooltip]="'courses.flashcards.browseTooltip' | translate">
           <mat-icon>style</mat-icon>
-          {{ 'courses.flashcards.button' | translate }}
+          <span class="fc-label">{{ 'courses.flashcards.button' | translate }}</span>
         </button>
       </div>
 
@@ -329,6 +332,17 @@ interface ChapterGroup {
          vor der Linienliste, der Titel bleibt einzeilig mit „…". */
       .board-pane { order: -1; }
       .head-text h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    }
+    /* UI-Sweep z1 (z1-rk-browse-titel): am Handy darf der Kurstitel zwei Zeilen haben (sonst blieb nur „100 Endspiele, die …"),
+       der Flashcards-Knopf wird zum Symbolknopf. */
+    @media (max-width: 599.98px) {
+      .head-text { flex: 1 1 auto; }
+      .head-text h1 { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; font-size: 1.1rem; line-height: 1.3; }
+      .head-spacer { display: none; }
+      .fc-btn .fc-label { display: none; }
+      .fc-btn { min-width: 0; padding: 0 10px; }
+      .fc-btn mat-icon { margin: 0; }
     }
   `]
 })

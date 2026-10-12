@@ -81,5 +81,19 @@ describe('ClubHub-Routen', () => {
       expect(el.textContent).not.toContain('FREE');
       expect(el.querySelector('.site-note')?.textContent).toContain('CLUB INTRO');
     });
+
+    // UI-Sweep z1-c-login-intro: am Handy höchstens 3 Zeilen im Hinweiskasten (≈ 35 Zeichen je Zeile) — vorher 135
+    // Zeichen = 4 Zeilen. Karma serviert public/ → /i18n/<lang>.json.
+    it('Einleitung in allen gepflegten Sprachen höchstens 100 Zeichen (am Handy ≤ 3 Zeilen)', async () => {
+      for (const lang of ['en', 'de', 'hr', 'hu']) {
+        let text: string | undefined;
+        for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+          const res = await fetch(url);
+          if (res.ok) { text = (await res.json()).clubhub?.authIntro?.login; break; }
+        }
+        expect(text).withContext(lang).toBeTruthy();
+        expect(text!.length).withContext(`${lang}: ${text}`).toBeLessThanOrEqual(100);
+      }
+    });
   });
 });

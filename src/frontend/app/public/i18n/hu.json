@@ -665,6 +665,7 @@
       "you": "Te",
       "back": "Vissza az ismerősökhöz",
       "themes": "Témák összehasonlítása",
+      "overview": "Áttekintés",
       "theme": "Téma",
       "noThemes": "Még nincsenek közös téma-adatok.",
       "loadError": "A statisztikát nem sikerült betölteni"
@@ -978,6 +979,7 @@
       "searchNone": "Egy játékos sem felel meg ennek: „{{query}}”.",
       "sortBy": "Rendezés",
       "sortFilter": "Rendezés és szűrés",
+      "sortShort": "Rendezés",
       "sortReset": "Rendezés visszaállítása",
       "shownOf": "{{shown}} / {{total}} játékos",
       "showMore": "További {{count}} megjelenítése"
@@ -1651,6 +1653,7 @@
     },
     "config": {
       "title": "Végtelen feladványmód",
+      "livesHint": "3 élet – három hiba, és vége a futamnak",
       "subtitle": "Növekvő nehézség – meddig jutsz el?",
       "startRating": "Kezdő értékelés",
       "stockfishDepth": "Stockfish mélység",
@@ -1746,7 +1749,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Megoldva",
       "colDuration": "Időtartam",
-      "colConfig": "Konfiguráció",
       "colMistakes": "Hibák",
       "backToEndless": "Vissza a Végtelen módhoz"
     },
@@ -2701,6 +2703,8 @@
     "title": "Katalógus",
     "listTitle": "Elérhető tanfolyamok és repertoárok",
     "empty": "Még senki sem osztott meg veled katalógust.",
+    "emptyHint": "Az edzők megoszthatják veled a kurzusaikat és repertoárjaikat – kérdezd meg az edződet.",
+    "toCourses": "A kurzusaimhoz",
     "request": "Kérés",
     "requested": "Kérve — a tulajdonos dönt.",
     "requestFailed": "A kérés nem sikerült.",
@@ -3617,6 +3621,7 @@
     "showMore": "További {{count}} megjelenítése",
     "annotatedBadge": "kommentált",
     "anonHint": "Bejelentkezés nélkül is játszhatsz. A játszmád ebben a böngészőben marad.",
+    "gamesCount": "{{count}} játszma",
     "hasComment": "van hozzá megjegyzés — kattints az elolvasásához",
     "skipped": {
       "notScorable": "nem kérdeztük: a motor nem sorolja a játszmalépést a legjobbak közé, így nincs mihez mérni",
@@ -3976,7 +3981,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Taglista a klubvezetés és az edzők számára – jelentkezz be a RookHub-fiókoddal. Kódot kaptál az edződtől? A bejelentkezés után váltsd be."
+      "login": "Taglista a klubvezetés és az edzők számára. Kód az edzőtől? Bejelentkezés után váltsd be."
     }
   },
   "turnier": {
@@ -4086,6 +4091,7 @@
       "locked": "Még zárva",
       "lockedHint": "Ez a szint még zárva van. Előbb teljesítsd az előzőt!",
       "runAt": "{{n}}. feladat / {{total}}",
+      "runAtShort": "{{n}}/{{total}}",
       "empty": "A szintek éppen készülnek – nézz vissza egy kicsit később.",
       "progress": "{{done}}/{{total}} feladat",
       "completed": "Szint teljesítve!",
@@ -4496,6 +4502,7 @@
     "title": "Megjelölt állások",
     "hint": "Állások, amelyeket a RepCheck-bővítménnyel jelöltél meg a Chessable-ről („Remember line”).",
     "empty": "Még nincsenek megjelölt állások. Használd a „Remember line” funkciót a RepCheck-bővítményben a chessable.com oldalon.",
+    "setupRepCheck": "RepCheck beállítása",
     "unknownCourse": "Ismeretlen tanfolyam",
     "analyze": "Elemzés",
     "copyFen": "FEN másolása",
@@ -4656,6 +4663,7 @@
       "close": "Hézag kitöltése",
       "depth": "Keresés eddig:",
       "plies": "{{count}} féllépés",
+      "pliesLabel": "Féllépés",
       "searching": "Keresés…",
       "applied": "A hézag bezárult — a beszúrt lépések bizonytalanként vannak megjelölve.",
       "doesNotFit": "Ezek a lépések nem ehhez az álláshoz vezetnek.",
@@ -4698,6 +4706,7 @@
   },
   "scoresheet": {
     "title": "Játszmalap beolvasása",
+    "needPhoto": "Előbb készíts vagy válassz egy fényképet.",
     "hint": "Egy fénykép a játszmalapról — a játszmát beolvassuk, lépésenként ellenőrizzük és elmentjük a játszmáid közé. Az olvasás általában néhány percig tart.",
     "help": "Claude, az Anthropic (USA) MI-modellje olvassa el a fényképet — ehhez a fénykép oda kerül (lásd az adatvédelmi nyilatkozatot); a RookHub ezután minden lépést táblán ellenőriz, és a későbbi lépések alapján dönti el a korábbi bizonytalanokat. Ahol egy lépés bizonytalan marad, a javító oldal a legvalószínűbb olvasatokat mutatja.\n\nA fénykép a játszmánál marad (⋮ menü: megjelenítés / letöltés). Minden szokásos lejegyzési nyelv működik (K V B F H, K Q R B N, K D T L S …).",
     "notConfigured": "A játszmalapok beolvasása ezen a szerveren nincs beállítva (nincs MI-kulcs).",

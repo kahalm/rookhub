@@ -57,6 +57,10 @@ describe('clubhub.scss', () => {
     expect(cs.getPropertyValue('--mat-card-elevated-container-color').trim()).toBe(rootVar('--card'));
     expect(cs.getPropertyValue('--mat-card-title-text-font')).toContain('Zilla Slab');
     expect(cs.getPropertyValue('--mat-button-filled-container-shape').trim()).toBe('8px');
+    // Hauptknopf wie .btn (z1-c-login-btn): 44 px hoch, 16 px fett.
+    expect(cs.getPropertyValue('--mat-button-filled-container-height').trim()).toBe('44px');
+    expect(cs.getPropertyValue('--mat-button-filled-label-text-size').trim()).toBe('16px');
+    expect(cs.getPropertyValue('--mat-button-filled-label-text-weight').trim()).toBe('700');
     expect(cs.borderTopStyle).toBe('solid');
     // Der Hinweis-Kasten trägt die Primärfarbe als Kante statt Hellblau.
     const probe = document.createElement('span');

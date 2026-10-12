@@ -73,6 +73,31 @@ html.dark-theme .prep-card-scope {
   .prep-card-scope .card.inline .side > h3:first-child { margin-top: 0; }
 }
 
+/* z1-rk-prep-vorlauf: Farbwahl, Online-/Zeitraum-Filter, Trainingslinien, PGN und Eröffnungsbaum in EINER umbrechenden
+   Zeile statt fünf (die Hüllen .actions, lh-tree-filter-bar, lh-training-lines lösen sich darin auf); PGN und Baum als
+   Textknöpfe am Ende. Aufgeklappte Teile (Baum, Trainingslinien, „Gefiltert") nehmen die volle Breite. */
+.prep-card-scope .card.inline .controls {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px;
+  > .actions, > lh-tree-filter-bar, > lh-tree-filter-bar > .tree-filter, > lh-training-lines { display: contents; }
+  > .actions > .btn-sec:not(.ctl-toggle) { order: 3; border-color: transparent; padding: 0 12px; }
+  > .actions > .btn-sec:not(.ctl-toggle):hover:not(:disabled) { border-color: transparent; }
+  > lh-tree-filter-bar > .tree-filter > * { order: 1; }
+  > lh-training-lines > .tl-toggle { order: 2; margin-top: 0; }
+  > .filtered { order: 4; flex-basis: 100%; margin: 0; }
+  > lh-opening-tree, > lh-training-lines > .tl { order: 5; flex-basis: 100%; min-width: 0; }
+  .ctl-toggle { display: none; }
+}
+
+/* Am Handy nur die Farbwahl offen; Filter und Werkzeuge hinter „Filter ▾", der Filterstand als eine leise Zeile. */
+@media (max-width: 599.98px) {
+  .prep-card-scope .card.inline .controls {
+    .ctl-toggle { display: inline-flex; order: 1; }
+    &:not(.open) {
+      > .actions > .btn-sec:not(.ctl-toggle), > lh-tree-filter-bar > .tree-filter > *, > lh-training-lines > .tl-toggle { display: none; }
+    }
+  }
+}
+
 /* Breit (Vorbereitung als Seite): die Zugfolge in „Letzte Partien" in einer Zeile statt nach jedem Halbzug umgebrochen. */
 @media (min-width: 900px) {
   .prep-card-scope .card.inline table.recent td.opening { white-space: nowrap; }

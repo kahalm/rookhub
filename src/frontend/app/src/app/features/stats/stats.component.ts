@@ -419,6 +419,14 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   styles: [`
     .stats-container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    /* UI-Sweep z1 (z1-rk-stats-kacheln): Abstand der Kacheln nur über gap — sonst kamen die 16 px von mat-card dazu. */
+    .cards mat-card { margin: 0; }
+    @media (max-width: 599.98px) {
+      .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .stat .val { font-size: 1.35rem; }
+    }
+    /* UI-Sweep z1 (z1-rk-stats-titelabstand): einheitlicher Abstand zwischen Kartentitel und Inhalt. */
+    mat-card:not(.chart-card) > mat-card-header + mat-card-content { padding-top: 8px; }
     .stat { text-align: center; padding: 8px; }
     .stat .val { font-size: 1.6rem; font-weight: 700; color: var(--rh-accent); }
     .stat .lbl { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
@@ -452,8 +460,6 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     @media (max-width: 599.98px) {
       .recent-scroll { display: none; }
       .recent-list { display: block; }
-      .theme-name { width: 120px; }
-      .theme-val { width: 96px; }
     }
     .res-ok { color: var(--rh-success); } .res-fail { color: var(--rh-error); }
     .pos { color: var(--rh-success); } .neg { color: var(--rh-error); }
@@ -467,13 +473,19 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .theme-fill { height: 100%; background: var(--rh-accent); }
     .theme-fill.warn { background: var(--rh-error); }
     .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
+    /* UI-Sweep z1 (z1-rk-stats-themenbalken): Handy-Breiten NACH den Grundregeln — gleiche Spezifität, die spätere gewinnt
+       (vorher standen sie davor und wirkten nie; der Balken blieb ~44 px schmal). */
+    @media (max-width: 599.98px) {
+      .theme-name { width: 110px; }
+      .theme-val { width: 84px; }
+    }
     /* Die Baender sind BREITER als ein Hochkant-Handy: 200er-Schritte ueber die ganze
        Rating-Spanne ergeben schnell 14-18 Saeulen. Ohne eigenes overflow-x wuchs damit die SEITE
        (rund zwei Bildschirme Scroll nach rechts) - und weil CDK-Overlays gegen das verbreiterte
        Dokument rechnen, landeten die Untermenues des Hamburger-Menues unten rechts ausserhalb des
        Sichtfelds. Breite Inhalte scrollen deshalb IN IHREM Container, wie die Heatmap darunter.
        ACHTUNG: keine Backticks in diesen Kommentaren - der styles-Block ist ein Template-Literal. */
-    .bands { display: flex; align-items: stretch; gap: 6px; height: 140px; padding-top: 8px; overflow-x: auto; }
+    .bands { display: flex; align-items: stretch; gap: 6px; height: 140px; overflow-x: auto; }
     /* flex: 1 0 34px - fuellt die Karte, wenn Platz ist, schrumpft aber NICHT unter die
        Beschriftung (sonst ueberlappen Zahl und Rating-Grenze); dann scrollt der Streifen. */
     .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1 0 34px; height: 100%; }

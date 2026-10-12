@@ -65,7 +65,8 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
           <div class="course-bar">
             <!-- UI-Sweep 2026-10-11 (r2-rg-rep-toolbar): die Pillen tragen eine Beschriftung (vorher nur ein Icon,
                  die Bedeutung stand allein im Tooltip — am Handy gar nicht zu erfahren). -->
-            <a mat-stroked-button class="bar-btn" [routerLink]="['/repertoires', repertoireId, 'train']"
+            <!-- UI-Sweep z1 (z1-rk-rep-abfragen-doppelt): EIN „Abfragen“ — als Hauptknopf hier neben „Lernen“. -->
+            <a mat-flat-button color="primary" class="bar-btn bar-btn--quiz" [routerLink]="['/repertoires', repertoireId, 'train']"
                [matTooltip]="'repertoire.lines.sr.reviewAll' | translate">
               <mat-icon>replay</mat-icon><span class="bar-label">{{ 'repertoire.lines.sr.reviewShort' | translate }}</span>
             </a>

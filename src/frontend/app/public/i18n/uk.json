@@ -723,7 +723,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Розв'язано",
       "colDuration": "Тривалість",
-      "colConfig": "Конфіг",
       "colMistakes": "Помилки",
       "backToEndless": "До нескінченного режиму"
     }

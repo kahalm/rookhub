@@ -83,22 +83,28 @@ function readAutoMine(): boolean {
       <section class="club-intro">
         <!-- UI-Sweep 2026-10-11 (d2-l-korrigieren-layout): Überschrift, (i) und „Speichern ↓" in einer Zeile; der Hinweis zu den
              orangen Stellen hinter (i) — am Handy begann das Brett sonst erst bei ~770 px. -->
-        @if (gameId != null) {
-          <p><a class="back-link" routerLink="/verein">← Vereinspartien</a></p>
-        } @else {
-          <p><a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
-        }
+        <!-- z1-l-korrigieren-handy: „Speichern ↓" rechts in der Zeile des Rücklinks — neben der Überschrift brach er am Handy
+             in eine eigene Zeile um. -->
+        <p class="back-row">
+          @if (gameId != null) {
+            <a class="back-link" routerLink="/verein">← Vereinspartien</a>
+          } @else {
+            <a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a>
+          }
+          @if (st.scan.status === 'done') {
+            <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
+            <button type="button" class="btn-link to-save" (click)="toSave()">{{ gameId != null ? 'Speichern ↓' : 'Namen & Übernehmen ↓' }}</button>
+          }
+        </p>
         <div class="scan-head">
           <h2>{{ gameId != null ? 'Vereinspartie korrigieren' : 'Partieformular prüfen' }}</h2>
           @if (st.scan.status === 'done') {
             <button type="button" class="chk-btn" [attr.aria-expanded]="hintOpen()" aria-label="Wie geprüft wird"
                     title="Wie geprüft wird" (click)="hintOpen.set(!hintOpen())">i</button>
-            <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
-            <button type="button" class="btn-link to-save" (click)="toSave()">{{ gameId != null ? 'Speichern ↓' : 'Namen & Übernehmen ↓' }}</button>
           }
         </div>
         @if (gameId != null) {
-          <p class="muted">{{ gameTitle() }}@if (!ph.photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
+          <p class="muted game-title">{{ gameTitle() }}</p>
         }
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
@@ -113,8 +119,12 @@ function readAutoMine(): boolean {
           }
         } @else {
           @if (hintOpen()) {
-            <div class="info-panel scan-hint"><p class="note">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den
-              Zug am Brett spielen — danach wird der Rest neu gelesen. Pfeiltasten blättern.</p></div>
+            <!-- z1-l-korrigieren-handy: die Zusätze unter Titel und Zugkarte stehen hier statt über dem Brett -->
+            <div class="info-panel scan-hint">
+              @if (gameId != null && !ph.photoUrl()) { <p class="note">Das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett.</p> }
+              <p class="note">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den
+              Zug am Brett spielen — danach wird der Rest neu gelesen. Ein Zug am Brett ersetzt den gewählten Zug, mit „Davor einfügen“
+              kommt er davor. Pfeiltasten blättern.</p></div>
           }
         }
       </section>
@@ -216,6 +226,13 @@ function readAutoMine(): boolean {
                   }
                   @if (p.confirmed) { <span class="chip ok">bestätigt</span> }
                   @if (p.illegal) { <span class="chip bad">nicht legal</span> }
+                  <!-- z1-l-korrigieren-handy: „Stimmt so" und „Zug löschen" in der Zeile des Zugs statt in einer eigenen Zeile -->
+                  <span class="actions where-actions">
+                    @if (!p.illegal && !p.confirmed) { <button type="button" class="btn-sec" (click)="s.confirm()">Stimmt so</button> }
+                    <!-- Abgesetzt von „Stimmt so" (UX-070): Link-Optik in Rot, ganz rechts — „Stimmt so" ist die häufigste
+                         Aktion der Seite, ein Fehlgriff daneben nahm den Zug heraus. -->
+                    <button type="button" class="btn-link del" [disabled]="s.busy()" (click)="s.remove()">Zug löschen</button>
+                  </span>
                 </p>
                 @if (p.options?.length && !p.illegal) {
                   <div class="options">
@@ -228,13 +245,8 @@ function readAutoMine(): boolean {
                     }
                   </div>
                 }
-                <div class="actions">
-                  @if (!p.illegal && !p.confirmed) { <button type="button" class="btn-sec" (click)="s.confirm()">Stimmt so</button> }
-                  <!-- Abgesetzt von „Stimmt so" (UX-070): Link-Optik in Rot, ganz rechts — „Stimmt so" ist die häufigste
-                       Aktion der Seite, ein Fehlgriff daneben nahm den Zug heraus. -->
-                  <button type="button" class="btn-link del" [disabled]="s.busy()" (click)="s.remove()">Zug löschen</button>
-                </div>
-                <p class="muted small">{{ s.mode() === 'insert' ? 'Ein Zug am Brett wird VOR diesem eingefügt.' : 'Ein Zug am Brett ersetzt diesen.' }}</p>
+                <!-- „Ersetzen" ist die Vorgabe (steht im (i)); nur der seltene Einfügen-Modus bekommt seine Zeile -->
+                @if (s.mode() === 'insert') { <p class="muted small">Ein Zug am Brett wird VOR diesem eingefügt.</p> }
               } @else {
                 <p class="muted small">Ende der Partie — ein Zug am Brett hängt einen an.</p>
                 @if (s.unresolved().length) { <p class="small">Als Nächstes auf dem Formular: <b>{{ s.unresolved()[0] }}</b></p> }

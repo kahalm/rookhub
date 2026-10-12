@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LeagueApiService } from '@lh/core/league-api.service';
 import { PLAYER_CARD_API } from '@rh/shared/player-card/player-card-api';
@@ -40,35 +41,33 @@ export function loadCardStyles(doc: Document): void {
   // damit der Abschnitt „Online-Konten suchen“ die Absage einer (i)-Prüfung zeigen kann.
   providers: [PrepCardApi, { provide: PLAYER_CARD_API, useExisting: PrepCardApi },
     PrepLeagueApi, { provide: LeagueApiService, useExisting: PrepLeagueApi }],
-  imports: [RouterLink, TranslatePipe, MatButtonModule, MatCheckboxModule, PlayerCardComponent, PrepAccountsComponent],
+  imports: [RouterLink, TranslatePipe, MatButtonModule, MatCheckboxModule, MatTooltipModule, PlayerCardComponent, PrepAccountsComponent],
   styleUrl: './prep-player.component.scss',
   template: `
     <div class="prep prep-player">
       <a class="back" routerLink="/prep" [queryParams]="backQuery()">← {{ 'prep.back' | translate }}</a>
       @if (scope(); as s) {
+        <!-- Ladestand als EINE leise Zeile statt eigenem Kasten (z1-rk-prep-vorlauf); „kann dauern" und der Zwillings-Hinweis
+             stehen im Tooltip. -->
         <section class="prep-scope" aria-live="polite">
-          <p>
+          <span class="scope-text">
             @if (s.limited) {
               {{ 'prep.loadedSome' | translate: { loaded: fmt(s.loaded), total: fmt(s.games), since: s.since } }}
             } @else {
               {{ 'prep.loadedAll' | translate: { total: fmt(s.games) } }}
             }
-          </p>
+          </span>
           @if (s.limited && !options().all) {
-            <div class="row">
-              <button mat-stroked-button type="button" [disabled]="loading()" (click)="loadAll()">
-                {{ 'prep.loadAll' | translate: { max: fmt(s.max) } }}</button>
-              <span class="hint">{{ 'prep.loadAllHint' | translate }}</span>
-            </div>
+            <button mat-button type="button" class="load-all" [disabled]="loading()" (click)="loadAll()"
+                    [matTooltip]="'prep.loadAllHint' | translate" [attr.title]="'prep.loadAllHint' | translate">
+              {{ 'prep.loadAll' | translate: { max: fmt(s.max) } }}</button>
           } @else if (s.limited) {
-            <p class="hint">{{ 'prep.capped' | translate: { max: fmt(s.max) } }}</p>
+            <span class="scope-text">{{ 'prep.capped' | translate: { max: fmt(s.max) } }}</span>
           }
           @if (s.twin; as t) {
-            <div>
-              <mat-checkbox [checked]="options().twin" [disabled]="loading()" (change)="setTwin($event.checked)">
-                {{ 'prep.twin' | translate: { games: fmt(t.games) } }}</mat-checkbox>
-              <p class="hint">{{ 'prep.twinHint' | translate }}</p>
-            </div>
+            <mat-checkbox class="twin" [checked]="options().twin" [disabled]="loading()" (change)="setTwin($event.checked)"
+                          [matTooltip]="'prep.twinHint' | translate" [attr.title]="'prep.twinHint' | translate">
+              {{ 'prep.twin' | translate: { games: fmt(t.games) } }}</mat-checkbox>
           }
         </section>
       }

@@ -218,6 +218,9 @@ describe('FixtureViewComponent', () => {
     expect((first.querySelector('.bar i') as HTMLElement).style.width).toBe('70%');
     expect(boards[0].querySelector('.sq.s')).not.toBeNull();
     expect(boards[1].querySelector('.sq.w')).not.toBeNull();
+    // z1-l-farbquadrat: die Farbe wird einmal über den Brettern erklärt (am Handy gibt es keinen Tooltip)
+    expect(el.querySelector('.sq-legend')?.textContent).toContain('Gegner hat Weiß');
+    expect(el.querySelector('.sq-legend')?.textContent).toContain('Gegner hat Schwarz');
     // ohne FIDE-ID kein Knopf zur Spielerkarte
     expect(boards[0].querySelectorAll('button.pl').length).toBe(2);
     // der Erklärtext steht hinter dem (i) „Prognose" (0.650.0)

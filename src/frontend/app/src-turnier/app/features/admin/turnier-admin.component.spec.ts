@@ -199,6 +199,9 @@ describe('TurnierAdminComponent', () => {
     const rows = [...fixture.nativeElement.querySelectorAll('.ta-users li')] as HTMLElement[];
     expect(rows[0].querySelector('.ta-mail')).toBeNull();
     expect(rows[1].querySelector('.ta-mail')).not.toBeNull();
+    // z1-t-admin-knopf-springt: der Knopf steht mit und ohne Adresse rechtsbuendig in derselben Spalte
+    const right = (r: HTMLElement) => Math.round(r.querySelector('button')!.getBoundingClientRect().right);
+    expect(right(rows[0])).toBe(right(rows[1]));
   });
 
   // ----- Codereview UX-078 -----

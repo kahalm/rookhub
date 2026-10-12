@@ -9,9 +9,8 @@
 .prep .hint { color: var(--mat-sys-on-surface-variant); font-size: 14px; }
 .prep .err { color: var(--rh-error); }
 .prep-scope {
-  display: grid; gap: 8px; margin: 0 0 14px; padding: 12px 14px;
-  border: 1px solid var(--mat-sys-outline-variant); border-radius: 10px; background: var(--mat-sys-surface-container-low);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant); font-size: 14px;
 }
-.prep-scope p { margin: 0; }
-.prep-scope .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.prep-scope .hint { margin: 0; }
+.prep-scope .load-all { min-height: 32px; height: 32px; }
+.prep-scope .twin { flex-basis: 100%; margin-left: -8px; }

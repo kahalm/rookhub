@@ -35,6 +35,26 @@ describe('TurnierAppComponent', () => {
     });
   });
 
+  // UI-Sweep z1-t-auth-mobile-scroll: am Handy grundloser Mini-Scroll durch die 80vh-Zentrierung der Masken.
+  it('Anmeldemasken am Handy ohne 80vh-Zentrierung (Regel der Huelle unter 600 px)', () => {
+    const fixture = TestBed.createComponent(TurnierAppComponent);
+    fixture.detectChanges();
+    // Die Regel gilt erst unter 600 px — das Testfenster ist breiter; also die geladene Regel selbst pruefen.
+    const rules: CSSMediaRule[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let list: CSSRuleList;
+      try { list = sheet.cssRules; } catch { continue; }
+      for (const r of Array.from(list)) if (r instanceof CSSMediaRule && r.conditionText.includes('599.98px')) rules.push(r);
+    }
+    const auth = rules.flatMap(m => Array.from(m.cssRules) as CSSStyleRule[])
+      .filter(r => r.selectorText?.includes('app-login') && r.selectorText.includes('.auth-container'));
+    expect(auth.length).withContext('Regel fuer .auth-container in der Huelle').toBeGreaterThan(0);
+    for (const page of ['app-register', 'app-forgot-password', 'app-reset-password']) {
+      expect(auth.some(r => r.selectorText.includes(page))).withContext(page).toBeTrue();
+    }
+    expect(auth[0].style.minHeight).toBe('0px');
+  });
+
   it('zeigt dieselbe Fusszeile wie RookHub', () => {
     const fixture = TestBed.createComponent(TurnierAppComponent);
     fixture.detectChanges();

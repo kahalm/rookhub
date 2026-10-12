@@ -723,7 +723,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "풀음",
       "colDuration": "소요 시간",
-      "colConfig": "설정",
       "colMistakes": "실수",
       "backToEndless": "무한 모드로 돌아가기"
     }

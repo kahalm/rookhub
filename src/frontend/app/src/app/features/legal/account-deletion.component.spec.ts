@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { GUEST_START_URL } from '../../core/handoff.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
@@ -32,7 +33,7 @@ describe('AccountDeletionComponent', () => {
     expect((f.nativeElement as HTMLElement).querySelector('a[href="mailto:kidhub@oberschm.id"]')).not.toBeNull();
   });
 
-  it('Ruecklink je Oberflaeche: RookHub zur Anmeldung, KidHub zur Startseite (F7-003)', () => {
+  it('Ruecklink ohne Verlauf: RookHub zur Startseite (z1-rk-legal-back-anon), KidHub ebenso (F7-003)', () => {
     const render = (site?: object) => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
@@ -43,14 +44,18 @@ describe('AccountDeletionComponent', () => {
       f.detectChanges();
       return f.nativeElement as HTMLElement;
     };
-    expect(render().querySelector('.back a')?.getAttribute('href')).toBe('/login');
+    const rh = render().querySelector('.back a')!;
+    expect(rh.getAttribute('href')).toBe(GUEST_START_URL);
+    expect(rh.textContent).toContain('legal.backHome');
     const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
     expect(kid.querySelector('.back a')?.getAttribute('href')).toBe('/');
     expect(kid.textContent).toContain('legal.backHome');
   });
 
   // UI-Sweep 2026-10-11 (d2-l-kontoloeschen-flucht, d2-rk-legal-zeilenlaenge)
-  it('Karte so breit wie Datenschutz/Impressum (760 px), Fliesstext hoechstens 68ch; KidHub ohne Begrenzung', () => {
+  // Runde z1 (z1-t-privacy-karte-rechts-leer, z1-rk-privacy-zeilen): Karte = Textspalte + Polster statt 760 px mit
+  // ≈ 130 px leerem Rand rechts; Fließtext mit 1,55 Zeilenhöhe und Abstand zwischen den Aufzählungspunkten.
+  it('Karte so breit wie ihre 68ch-Textspalte (kein leerer Rand rechts), 1,55 Zeilenhöhe, Abstand zwischen Punkten; KidHub ohne Begrenzung', () => {
     const render = (site?: object) => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
@@ -62,11 +67,17 @@ describe('AccountDeletionComponent', () => {
       return f.nativeElement as HTMLElement;
     };
     const el = render();
-    expect(getComputedStyle(el.querySelector('mat-card')!).maxWidth).toBe('760px');
     const content = el.querySelector<HTMLElement>('mat-card-content')!;
     const ch = parseFloat(getComputedStyle(content).fontSize) * 0.4;   // 68ch liegt sicher unter 68 × Schriftgroesse
     expect(parseFloat(getComputedStyle(content).maxWidth)).toBeGreaterThan(68 * ch);
     expect(parseFloat(getComputedStyle(content).maxWidth)).toBeLessThan(68 * parseFloat(getComputedStyle(content).fontSize));
+    const cardMax = parseFloat(getComputedStyle(el.querySelector('mat-card')!).maxWidth);
+    expect(cardMax).toBeLessThan(760);
+    expect(Math.abs(cardMax - 32 - parseFloat(getComputedStyle(content).maxWidth))).toBeLessThan(1);
+    const p = el.querySelector<HTMLElement>('mat-card-content > p')!;
+    expect(parseFloat(getComputedStyle(p).lineHeight) / parseFloat(getComputedStyle(p).fontSize)).toBeCloseTo(1.55, 2);
+    const second = el.querySelector<HTMLElement>('mat-card-content > ul > li + li');
+    if (second) expect(getComputedStyle(second).marginTop).not.toBe('0px');
     const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
     expect(getComputedStyle(kid.querySelector('mat-card-content')!).maxWidth).toBe('none');
   });

@@ -315,8 +315,9 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
       margin-bottom: 12px; --mat-form-field-container-height: 44px; --mat-form-field-container-vertical-padding: 10px; }
     /* PC: EINE Zeile mit Gewichten — Namen breit, Ergebnis/Runde schmal, „Meine Seite" so breit, dass „nicht festgelegt" passt. */
     @media (min-width: 1101px) {
-      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(90px, 0.8fr) minmax(0, 1.6fr) minmax(0, 1.4fr)
-        minmax(80px, 0.7fr) minmax(150px, 1fr) minmax(180px, 1.2fr); }
+      /* z1-rk-edit-ergebnis: „Ergebnis" samt Auswahlpfeil braucht ~112 px; Ort und Runde geben dafür ab. */
+      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(112px, 0.9fr) minmax(0, 1.6fr) minmax(0, 1.2fr)
+        minmax(72px, 0.6fr) minmax(150px, 1fr) minmax(180px, 1.2fr); }
     }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
     .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }
@@ -389,6 +390,11 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
        halber Kartenbreite; Textschrift mit Tabellenziffern statt Monospace — der Rahmen liegt nur noch um den Zug. */
     .moves { display: grid; grid-template-columns: 32px 90px 90px; justify-content: start; align-content: start; gap: 2px 4px;
       max-height: 70vh; overflow-y: auto; font-size: 14px; font-variant-numeric: tabular-nums; }
+    /* z1-rk-edit-zugspalten: breite Karte → mehrere Zugblöcke nebeneinander (zeilenweise „1. e4 e5 | 2. Sf3 Sc6 …");
+       die breitere Nummernspalte trennt die Blöcke. Unter 900 px bleibt die eine Spalte. */
+    @media (min-width: 900px) {
+      .moves { grid-template-columns: repeat(auto-fill, 48px 90px 90px); }
+    }
     .no { text-align: right; padding-right: 4px; color: color-mix(in srgb, currentColor 55%, transparent); align-self: center; font-size: 0.85rem; }
     .ply { font: inherit; font-weight: 500; text-align: left; padding: 3px 8px; border-radius: 4px; cursor: pointer;
       border: 1px solid transparent; background: transparent; color: inherit; }

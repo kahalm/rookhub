@@ -3,6 +3,7 @@ import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { OPERATOR } from '../../../environments/operator';
 import { AuthService } from '../../core/auth.service';
+import { GUEST_START_URL } from '../../core/handoff.service';
 
 /**
  * Was die Rechtsseiten je Oberflaeche zeigen. RookHub und die Turnierseite nehmen die Vorgabe
@@ -19,9 +20,10 @@ export interface LegalSite {
    *  (auch die Turnierseite). KidHub bekommt eine Fassung in einfacher Sprache mit Elternhinweis (Codereview F7-003),
    *  LeagueHub den Abschnitt ueber die Daten der Ligaspieler ohne Konto (Art. 14 DSGVO, Codereview F7-006). */
   kind?: LegalSiteKind;
-  /** Ziel des Ruecklinks am Ende der Rechtsseiten, wenn es keinen Schritt zurueck gibt; fehlt = abgemeldet `/login`,
-   *  angemeldet `/`. KidHub: `/` — ein Kind soll zurueck zum Spiel, nicht auf die Anmeldemaske; Turnierseite: der
-   *  Kalender (ihre Startseite, auch abgemeldet offen). */
+  /** Ziel des Ruecklinks am Ende der Rechtsseiten, wenn es keinen Schritt zurueck gibt; fehlt = die Startseite
+   *  (angemeldet `/`, abgemeldet GUEST_START_URL — z1-rk-legal-back-anon; abgemeldet in LeagueHub/ClubHub `/login`,
+   *  dort die einzige offene Seite). KidHub: `/` — ein Kind soll zurueck zum Spiel, nicht auf die Anmeldemaske;
+   *  Turnierseite: der Kalender (ihre Startseite, auch abgemeldet offen). */
   back?: string;
   /** Wo das Konto gefuehrt wird, wenn nicht hier. KidHub, LeagueHub, ClubHub und die Turnierseite haben keine Karte
    *  „Konto loeschen" — es ist dasselbe RookHub-Konto, geloescht wird es in RookHubs Profil. Die Loeschseite sagt das
@@ -48,17 +50,25 @@ export function defaultLegalSite(): LegalSite {
   return { contactEmail: OPERATOR.email, imprint: true };
 }
 
-/** Ruecklink der Rechtsseiten: `/login` behaelt den Text der Seite („Zurueck zur Anmeldung"), jedes andere Ziel
- *  heisst „Zurueck zur Startseite". Angemeldet fuehrt er ohne eigenes Ziel der Oberflaeche auf ihre Startseite (`/`)
- *  statt auf die Anmeldemaske (UI-Sweep 2026-10-10, x-back-login). */
+/** Oberflaechen, die abgemeldet NUR die Anmeldung zeigen (jede andere Seite verlangt ein Konto): dort ist /login die
+ *  Startseite eines Gasts. */
+const LOGIN_ONLY_KINDS: readonly LegalSiteKind[] = ['leaguehub', 'clubhub'];
+
+/** Ersatz-Ruecklink der Rechtsseiten ohne Verlauf (Lesezeichen, Link aus einer Mail): die Startseite der Oberflaeche —
+ *  ihr eigenes Ziel `back`, sonst angemeldet `/`, abgemeldet RookHubs Gast-Startseite (GUEST_START_URL, wohin auch die
+ *  Route `''` Gaeste schickt) — mit „Zurueck zur Startseite". Abgemeldet fuehrt er nur in LeagueHub/ClubHub zur Anmeldung (dort ist sie die einzige
+ *  offene Seite, Text der Seite „Zurueck zur Anmeldung"); in RookHub stand das vorher auch ohne Verlauf da, obwohl man
+ *  nie auf /login war (UI-Sweep z1-rk-legal-back-anon, nach x-back-login). */
 export function legalBack(site: LegalSite, loginLabel: string, loggedIn = false): { link: string; label: string } {
-  const link = site.back ?? (loggedIn ? '/' : '/login');
+  const login = !loggedIn && !!site.kind && LOGIN_ONLY_KINDS.includes(site.kind);
+  // Abgemeldet direkt die Gast-Startseite statt `/` (die Route '' leitet nur weiter) — der Link trifft seinen Weg (UX-003).
+  const link = site.back ?? (login ? '/login' : loggedIn ? '/' : GUEST_START_URL);
   return { link, label: link === '/login' ? loginLabel : 'legal.backHome' };
 }
 
 /** Ruecklink am Ende einer Rechtsseite, wie ihn {@link legalBackLink} liefert. */
 export interface LegalBackLink {
-  /** Ersatzziel ohne Verlauf (`/login`, KidHub `/`) — als routerLink, damit die Routen-Specs es pruefen. */
+  /** Ersatzziel ohne Verlauf (`/` bzw. das `back` der Oberflaeche) — als routerLink, damit die Routen-Specs es pruefen. */
   link: string;
   /** Schon fertig gewaehlter i18n-Schluessel: „Zurueck" mit Verlauf (von /login aus „Zurueck zur Anmeldung"),
    *  sonst der Text des Ersatzziels. */

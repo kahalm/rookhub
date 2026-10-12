@@ -126,6 +126,10 @@ export const MAX_PAGES = 3;
                 <span class="quota">{{ 'scoresheet.quota' | translate: { used: st.usedToday, limit: st.dailyLimit } }}
                   · {{ 'scoresheet.budget' | translate: { percent: st.budgetUsedPercent ?? 0 } }}</span>
               }
+              <!-- Gesperrter Knopf → Grund daneben (DESIGN 5.4, z1-rk-scoresheet-grund). -->
+              @if (!pages().length && !uploading() && canRead()) {
+                <span class="quota need-photo">{{ 'scoresheet.needPhoto' | translate }}</span>
+              }
             </div>
             @if (nextTime(); as t) { <p class="error">{{ 'scoresheet.nextAt' | translate: { time: t } }}</p> }
             @if (st.blocked) { <p class="error">{{ 'scoresheet.error.' + st.blocked | translate }}</p> }

@@ -112,3 +112,12 @@ describe('FavoritesComponent', () => {
     expect(c.favorites.length).toBe(1);
   });
 });
+
+/** UI-Sweep z1 (z1-rk-favorites-abstand): der Abstand unter dem Titel hängt am Kopf, auch ohne Untertitel. */
+describe('FavoritesComponent Kopfabstand', () => {
+  it('trägt den unteren Abstand am Kopf, nicht am Untertitel', () => {
+    const css = ((FavoritesComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.header[^ {,]* ?\{ ?margin-bottom: 16px/);
+    expect(css).toMatch(/\.hint[^{]*\{[^}]*margin: 0;/);
+  });
+});

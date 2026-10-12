@@ -9,6 +9,7 @@ import { ImpressumComponent } from './impressum.component';
 import { LEGAL_SITE, LegalSite, legalBackLink } from './legal-site';
 import { PrivacyComponent } from './privacy.component';
 import { AuthService } from '../../core/auth.service';
+import { GUEST_START_URL } from '../../core/handoff.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -36,14 +37,21 @@ describe('legalBackLink (UX-017)', () => {
     ({ button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false,
       preventDefault: jasmine.createSpy('preventDefault'), ...init }) as unknown as MouseEvent & { preventDefault: jasmine.Spy };
 
-  it('direkt aufgerufen (kein Schritt zurueck in der App): Ersatzziel wie bisher', () => {
+  // UI-Sweep z1-rk-legal-back-anon: abgemeldet ohne Verlauf stand „Zurueck zur Anmeldung", obwohl man nie dort war.
+  it('direkt aufgerufen, abgemeldet (kein Schritt zurueck in der App): zur Startseite, nicht zur Anmeldung', () => {
     const back = setup();
     const link = TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back'));
-    expect(link).toEqual(jasmine.objectContaining({ history: false, link: '/login', label: 'legal.privacy.back', href: '/login' }));
+    expect(link).toEqual(jasmine.objectContaining({ history: false, link: GUEST_START_URL, label: 'legal.backHome', href: GUEST_START_URL }));
     const e = click();
     link.go(e);
     expect(back).not.toHaveBeenCalled();
     expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('LeagueHub/ClubHub abgemeldet ohne Verlauf: zur Anmeldung — dort die einzige offene Seite', () => {
+    setup({ contactEmail: 'x@y.z', imprint: true, kind: 'clubhub' });
+    const link = TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back'));
+    expect(link).toEqual(jasmine.objectContaining({ history: false, link: '/login', label: 'legal.privacy.back' }));
   });
 
   it('KidHub ohne Verlauf: zur Startseite', () => {
@@ -56,7 +64,7 @@ describe('legalBackLink (UX-017)', () => {
     const back = setup();
     await TestBed.inject(Router).navigateByUrl('/dashboard');       // die Seite davor
     const link = TestBed.runInInjectionContext(() => legalBackLink('legal.privacy.back'));
-    expect(link).toEqual(jasmine.objectContaining({ history: true, label: 'common.back', href: '/login' }));
+    expect(link).toEqual(jasmine.objectContaining({ history: true, label: 'common.back', href: GUEST_START_URL }));
 
     const ctrl = click({ ctrlKey: true });
     link.go(ctrl);
@@ -101,8 +109,8 @@ describe('legalBackLink (UX-017)', () => {
       const plain = TestBed.createComponent(page as never);
       plain.detectChanges();
       const fallback = (plain.nativeElement as HTMLElement).querySelector('.back a')!;
-      expect(fallback.getAttribute('href')).toBe('/login');
-      expect(fallback.textContent).not.toContain('common.back');
+      expect(fallback.getAttribute('href')).toBe(GUEST_START_URL);
+      expect(fallback.textContent).toContain('legal.backHome');
       plain.destroy();
 
       await TestBed.inject(Router).navigateByUrl('/dashboard');
@@ -110,7 +118,7 @@ describe('legalBackLink (UX-017)', () => {
       fromApp.detectChanges();
       const a = fromApp.debugElement.query(By.css('.back a'));
       expect(a.nativeElement.textContent).toContain('common.back');
-      expect(a.nativeElement.getAttribute('href')).toBe('/login');   // neuer Tab: Ersatzziel
+      expect(a.nativeElement.getAttribute('href')).toBe(GUEST_START_URL);   // neuer Tab: Ersatzziel
       // Ueber den Angular-Listener, ohne echtes DOM-Ereignis: ein nicht abgefangener Klick verliesse die Testseite.
       const e = click();
       a.triggerEventHandler('click', e);

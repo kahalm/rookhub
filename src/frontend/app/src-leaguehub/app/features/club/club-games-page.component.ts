@@ -64,7 +64,7 @@ type Side = 'white' | 'black';
         <!-- d2-l-vereinspartien-vorlauf: Herunterladen als Textknopf in der Zählerzeile; „Partien hinzufügen" am Handy nur „+"
              (der gleichnamige Reiter steht direkt darüber). -->
         @if (total()) { <button type="button" class="btn-link pgn-dl" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
-        @if (canContribute) { <a class="btn-pri add-games" routerLink="/verein/neu" title="Partien hinzufügen"><span aria-hidden="true" class="add-plus">+</span><span class="add-label">Partien hinzufügen</span></a> }
+        @if (canContribute) { <a class="btn-pri add-games" routerLink="/verein/neu" title="Partien hinzufügen"><span aria-hidden="true" class="add-plus">+</span><span class="add-label">Partien hinzufügen</span><span aria-hidden="true" class="add-short">Hinzufügen</span></a> }
         <span class="update-msg" [class.err]="!!error() && !firstLoadFailed()" role="status">{{ (firstLoadFailed() ? null : error()) ?? notice() ?? '' }}</span>
       </div>
 

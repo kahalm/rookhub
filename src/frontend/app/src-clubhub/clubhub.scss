@@ -201,6 +201,9 @@ main.wrap { padding-top: 22px; padding-bottom: 28px; min-height: 55vh; }
 .chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
 .chip-btn .n { font-weight: 400; opacity: .75; }
 .count { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
+/* Zähler der Kartei am Ende der Werkzeugzeile (z1-c-kartei-lead: spart am Handy eine Zeile vor der Liste). */
+.tools .count { margin: 0 0 0 auto; flex: none; }
+.kartei-head .short { display: none; }
 .register { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0 10px; margin: 0 0 14px; }
 .register > .letter {
   font: 700 38px/1 var(--slab); color: var(--linen); position: sticky; top: 8px; align-self: start; padding-top: 8px;
@@ -458,6 +461,10 @@ label.upload.disabled { opacity: .5; }
   --mat-card-title-text-weight: 700;
   --mat-card-title-text-line-height: 1.15;
   --mat-button-filled-container-shape: 8px;
+  /* Hauptknopf wie .btn: 44 px, 16 px fett (z1-c-login-btn; vorher ≈ 40 px mit 14 px normal). */
+  --mat-button-filled-container-height: 44px;
+  --mat-button-filled-label-text-size: 16px;
+  --mat-button-filled-label-text-weight: 700;
   --mat-button-text-label-text-color: var(--ink);
   --mat-form-field-outlined-container-shape: 8px;
   border: 1px solid var(--line);
@@ -534,10 +541,23 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { ma
   .note-form { grid-template-columns: 1fr; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
   .group { grid-template-columns: 1fr; }
-  .roll-head { grid-template-columns: 1fr; }
-  /* Kartei am Handy: Suche + Archiv in einer Zeile, die Gruppenchips darunter (d2-c-kartei-lead). */
+  /* Tag und Thema nebeneinander (z1-c-attendance-lead: untereinander begann die Abhakliste erst bei 53 % der Höhe);
+     9,75 rem fasst TT.MM.JJJJ samt Kalender-Knopf. */
+  .roll-head { grid-template-columns: 9.75rem minmax(0, 1fr); gap: 8px; margin: 10px 0 8px; }
+  /* Speichern-Leiste schlank: ≤ 64 px klebend (z1-c-attendance-savebar, vorher ≈ 77 px). */
+  .save-bar { padding: 8px 0; margin-top: 8px; }
+  .save-bar .btn.primary { min-height: 46px; font-size: 17px; }
+  /* Kartei am Handy: Suche + Archiv in einer Zeile, die Gruppenchips darunter, der Zähler rechts daneben
+     (d2-c-kartei-lead, z1-c-kartei-lead). */
   .tools .search { flex-basis: 10rem; }
-  .tools .filter-chips { order: 3; flex: 1 1 100%; }
+  .tools .filter-chips { order: 3; flex: 1 1 60%; }
+  .tools .count { order: 4; }
+  /* Titel und Anlege-Knöpfe in EINER Zeile, Knöpfe schlank mit Kurztext (z1-c-kartei-lead). */
+  .kartei-head { flex-wrap: nowrap; margin-bottom: 12px; }
+  .kartei-head .actions { flex-wrap: nowrap; gap: 6px; }
+  .kartei-head .btn { min-height: 36px; padding: 6px 12px; font-size: 15px; white-space: nowrap; }
+  .kartei-head .long { display: none; }
+  .kartei-head .short { display: inline; }
   .sheet { padding: 14px 14px 4px; }
   /* EINE Reihe (d2-c-form-save-bar: zwei Reihen waren 111 px = 13 % der Höhe): „Kind anlegen" nimmt den Platz,
      „+ Weiteres" kurz, „Abbrechen" als schlanker Textknopf. */

@@ -87,4 +87,14 @@ describe('FriendRevengeComponent (UI-Sweep 2026-10-11)', () => {
     el.querySelectorAll('button[mat-icon-button]').forEach(b =>
       expect(b.classList.contains('mdc-list-item__end')).toBeFalse());
   });
+  it('bricht die Themenzeile um statt sie mit „…“ abzuschneiden (z1-rk-revenge-themen-umbruch)', () => {
+    const el = render();
+    document.body.appendChild(el);
+    const line = el.querySelector('.themes') as HTMLElement;
+    const cs = getComputedStyle(line);
+    expect(cs.whiteSpace).toBe('normal');
+    expect(cs.textOverflow).toBe('clip');
+    expect(cs.overflow).toBe('visible');
+    el.remove();
+  });
 });

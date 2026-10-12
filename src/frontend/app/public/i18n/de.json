@@ -205,6 +205,8 @@
     "title": "Katalog",
     "listTitle": "Verfügbare Kurse & Repertoires",
     "empty": "Dir wurde noch kein Katalog freigegeben.",
+    "emptyHint": "Trainer können dir ihre Kurse und Repertoires freigeben – frag deinen Trainer.",
+    "toCourses": "Zu meinen Kursen",
     "request": "Anfordern",
     "requested": "Angefordert — der Besitzer entscheidet.",
     "requestFailed": "Anfrage fehlgeschlagen.",
@@ -909,6 +911,7 @@
       "you": "Du",
       "back": "Zurück zu Freunden",
       "themes": "Themen-Vergleich",
+      "overview": "Übersicht",
       "theme": "Thema",
       "noThemes": "Noch keine gemeinsamen Themen-Daten.",
       "loadError": "Statistik konnte nicht geladen werden"
@@ -1232,6 +1235,7 @@
       "searchNone": "Kein Spieler passt zu „{{query}}“.",
       "sortBy": "Sortieren nach",
       "sortFilter": "Sortieren und filtern",
+      "sortShort": "Sortieren",
       "sortReset": "Sortierung zurücksetzen",
       "shownOf": "{{shown}} von {{total}} Spielern",
       "showMore": "Weitere {{count}} anzeigen"
@@ -2067,6 +2071,7 @@
     },
     "config": {
       "title": "Endlos-Modus",
+      "livesHint": "3 Leben – drei Fehler, dann ist der Lauf vorbei",
       "subtitle": "Progressive Schwierigkeit — wie weit kommst du?",
       "startRating": "Start-Rating",
       "stockfishDepth": "Stockfish-Tiefe",
@@ -2162,7 +2167,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Gelöst",
       "colDuration": "Dauer",
-      "colConfig": "Konfiguration",
       "colMistakes": "Fehler",
       "backToEndless": "Zurück zum Endlos-Modus"
     },
@@ -3698,6 +3702,7 @@
     "title": "Gemerkte Stellungen",
     "hint": "Stellungen, die du über die RepCheck-Extension aus Chessable gemerkt hast („Remember line“).",
     "empty": "Noch keine gemerkten Stellungen. Nutze „Remember line“ in der RepCheck-Extension auf chessable.com.",
+    "setupRepCheck": "RepCheck einrichten",
     "unknownCourse": "Unbekannter Kurs",
     "analyze": "Analysieren",
     "copyFen": "FEN kopieren",
@@ -3959,6 +3964,7 @@
     "showMore": "{{count}} weitere anzeigen",
     "annotatedBadge": "kommentiert",
     "anonHint": "Du kannst ohne Konto spielen. Dein Durchlauf bleibt an diesem Browser.",
+    "gamesCount": "{{count}} Partien",
     "hasComment": "hat einen Kommentar — zum Lesen anklicken",
     "skipped": {
       "notScorable": "nicht abgefragt: die Engine führt den Partiezug nicht unter ihren besten — es gibt nichts, woran sich messen ließe",
@@ -4318,7 +4324,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Mitgliederkartei für Vereinsleitung und Trainer – melde dich mit deinem RookHub-Konto an. Code vom Trainer? Den löst du nach der Anmeldung ein."
+      "login": "Kartei für Vereinsleitung und Trainer. Code vom Trainer? Nach der Anmeldung einlösen."
     }
   },
   "turnier": {
@@ -4428,6 +4434,7 @@
       "locked": "Noch gesperrt",
       "lockedHint": "Diese Stufe ist noch gesperrt. Schaff zuerst die Stufe davor!",
       "runAt": "Aufgabe {{n}} von {{total}}",
+      "runAtShort": "{{n}} von {{total}}",
       "empty": "Die Stufen werden gerade vorbereitet – schau gleich noch einmal vorbei.",
       "progress": "{{done}} von {{total}} Aufgaben",
       "completed": "Stufe geschafft!",
@@ -4656,6 +4663,7 @@
       "close": "Lücke schließen",
       "depth": "Suchen bis",
       "plies": "{{count}} Halbzüge",
+      "pliesLabel": "Halbzüge",
       "searching": "Suche läuft…",
       "applied": "Die Lücke ist geschlossen — die eingesetzten Züge sind als unsicher markiert.",
       "doesNotFit": "Diese Züge führen nicht zu dieser Stellung.",
@@ -4698,6 +4706,7 @@
   },
   "scoresheet": {
     "title": "Partieformular einlesen",
+    "needPhoto": "Erst ein Foto aufnehmen oder auswählen.",
     "hint": "Ein Foto vom Partieformular — die Partie wird gelesen, Zug für Zug geprüft und in deinen Partien abgelegt. Das Lesen dauert meist ein paar Minuten.",
     "help": "Claude, ein KI-Modell von Anthropic (USA), liest das Foto — dafür wird es dorthin übertragen (siehe Datenschutzerklärung). RookHub prüft danach jeden Zug am Brett und entscheidet unklare frühere Züge anhand der späteren. Wo ein Zug unsicher bleibt, zeigt die Korrekturseite die wahrscheinlichsten Lesarten.\n\nDas Foto bleibt bei der Partie (⋮-Menü: anzeigen / herunterladen). Alle gängigen Notationssprachen gehen (K D T L S, K Q R B N, R D T F C …).",
     "notConfigured": "Das Einlesen von Partieformularen ist auf diesem Server nicht eingerichtet (kein KI-Schlüssel).",

@@ -252,16 +252,18 @@ describe('LeaguePageComponent', () => {
     expect(el.querySelector('.src-tbl thead')!.textContent).toContain('Gegner von Wörgl');
   });
 
-  // UI-Sweep 2026-10-11 (d2-l-prognosen-filter): am Handy die Auswahl als eine Zeile; offen nur ohne gemerkte Auswahl
-  it('Auswahl-Zeile: zeigt Liga · Runde · Verein; ohne gemerkte Auswahl offen, mit gemerkter zu; „Ändern" klappt auf', async () => {
+  // UI-Sweep 2026-10-11 (d2-l-prognosen-filter): am Handy die Auswahl als eine Zeile; z1-l-prognosen-filter-zu: auch beim
+  // ersten Besuch zu (die Vorwahl steht in der Zeile). z1-l-prognosen-vorlauf-laptop: Schalter, Datenstand und
+  // „Alle Aufstellungen" in EINER Zeile.
+  it('Auswahl-Zeile: zeigt Liga · Runde · Verein; auch ohne gemerkte Auswahl zu; „Ändern" klappt auf', async () => {
     let el = create();
     await settle();
     expect(el.querySelector('.pick-bar .pick-sum')?.textContent?.trim()).toBe('Landesliga · R2 · Testdorf');
-    expect(el.querySelector('.pick-area')?.classList).toContain('open');
+    expect(el.querySelector('.pick-area')?.classList).not.toContain('open');
     // die Felder, der Schalter und der Datenstand stehen IN der aufklappbaren Fläche
     expect(el.querySelector('.pick-area form.pick')).not.toBeNull();
-    expect(el.querySelector('.pick-area .all-leagues')).not.toBeNull();
-    expect(el.querySelector('.pick-area .stand')).not.toBeNull();
+    expect(el.querySelector('.pick-area .stand .all-leagues')).not.toBeNull();
+    expect(el.querySelector('.pick-area .stand .lineups-toggle button')).not.toBeNull();
 
     TestBed.resetTestingModule();
     localStorage.setItem('leaguehub', JSON.stringify({ liga: 10, verein: 'Testdorf' }));

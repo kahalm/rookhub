@@ -49,11 +49,12 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
           <a class="btn" [routerLink]="['/gruppen', g.id, 'anwesenheit']">Anwesenheit abhaken</a>
         </p>
       }
-      <div class="page-head">
+      <!-- Am Handy Titel und Knöpfe in EINER Zeile mit Kurztext (z1-c-kartei-lead). -->
+      <div class="page-head kartei-head">
         <h1>Kartei</h1>
         <div class="actions">
-          <a class="btn primary" routerLink="/kind/neu">Kind anlegen</a>
-          <a class="btn" routerLink="/kind/neu" [queryParams]="{ trainer: 1 }">Trainer anlegen</a>
+          <a class="btn primary" routerLink="/kind/neu" title="Kind anlegen" aria-label="Kind anlegen"><span class="long">Kind anlegen</span><span class="short" aria-hidden="true">+ Kind</span></a>
+          <a class="btn" routerLink="/kind/neu" [queryParams]="{ trainer: 1 }" title="Trainer anlegen" aria-label="Trainer anlegen"><span class="long">Trainer anlegen</span><span class="short" aria-hidden="true">+ Trainer</span></a>
         </div>
       </div>
       <!-- Suche, Gruppenchips und Archiv in EINER Zeile (ab 641 px), das Label „Suchen" nur für Vorleser
@@ -70,6 +71,7 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
           </div>
         }
         <label class="check"><input type="checkbox" [checked]="archived()" (change)="toggleArchived($any($event.target).checked)"> Archiv</label>
+        @if (rows().length) { <p class="count">{{ countText() }}</p> }
       </div>
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
       @if (loading() && !rows().length) { <p class="muted">Lade …</p> }
@@ -83,7 +85,6 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
         </div>
       }
       @if (rows().length) {
-        <p class="count">{{ countText() }}</p>
         @for (r of registers(); track r.letter) {
           <section class="register">
             <h2 class="letter" aria-hidden="true">{{ r.letter }}</h2>

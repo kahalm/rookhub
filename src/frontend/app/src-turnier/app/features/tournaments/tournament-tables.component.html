@@ -24,10 +24,11 @@
           }
         </mat-form-field>
         <!-- Handy (d2-t-detail-vorlauf): Sortierung und „Nur Favoriten" nicht als eigene 56-px-Zeile, sondern hinter
-             EINEM Knopf neben dem Suchfeld; eine vom Standard abweichende Wahl steht als Chip darunter. -->
+             EINEM Knopf neben dem Suchfeld; eine vom Standard abweichende Wahl steht als Chip darunter.
+             Sichtbar beschriftet (z1-t-detail-sortier-knopf, DESIGN 5.4: nackte Symbole erst ≤ 380 px). -->
         <button mat-stroked-button type="button" class="player-menu-btn" [matMenuTriggerFor]="playerMenu"
                 [appIconLabel]="'tournaments.players.sortFilter' | translate">
-          <mat-icon>swap_vert</mat-icon><mat-icon class="drop">arrow_drop_down</mat-icon>
+          <mat-icon>swap_vert</mat-icon><span class="btn-label">{{ 'tournaments.players.sortShort' | translate }}</span>
         </button>
         <mat-menu #playerMenu="matMenu" xPosition="before">
           <div class="menu-head" aria-hidden="true">{{ 'tournaments.players.sortBy' | translate }}</div>

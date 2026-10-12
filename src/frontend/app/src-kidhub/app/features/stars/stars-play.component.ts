@@ -22,6 +22,12 @@ export function pieceGlyph(piece: StarPiece): string {
   return { R: '♖', B: '♗', Q: '♕', N: '♘' }[piece];
 }
 
+/** Gefuellte Figurenzeichen fuer den Umschalter des freien Spiels: die Umrisszeichen waren dort duenn und blass
+ *  (UI-Sweep z1-k-free-glyphs). */
+export function solidPieceGlyph(piece: StarPiece): string {
+  return { R: '♜', B: '♝', Q: '♛', N: '♞' }[piece];
+}
+
 /** Deckel der Pruefung „geht es von hier noch auf?" bei Aufgaben mit mehreren Wegen. */
 const OPEN_CHECK_NODES = 60_000;
 
@@ -163,7 +169,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
               @for (pc of freePieces; track pc) {
                 <button type="button" class="seg-btn" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
                         [title]="'kids.stars.piece.' + pc | translate" [attr.aria-label]="'kids.stars.piece.' + pc | translate"
-                        (click)="chooseFree(pc, shownCount())">{{ glyph(pc) }}</button>
+                        (click)="chooseFree(pc, shownCount())">{{ solidGlyph(pc) }}</button>
               }
             </div>
             <div class="stepper" role="group" [attr.aria-label]="'kids.stars.free.count' | translate"
@@ -214,8 +220,8 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     .note { margin: 0; font-size: 1rem; opacity: .85; }
     .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 16px;
            background: var(--kid-card); box-shadow: 0 3px 0 var(--kid-shadow); }
-    .seg-btn { font: inherit; font-size: 1.8rem; line-height: 1; min-height: 48px; border: 0; border-radius: 12px;
-               background: transparent; color: inherit; cursor: pointer; }
+    .seg-btn { font: inherit; font-size: 2rem; line-height: 1; min-height: 48px; border: 0; border-radius: 12px;
+               background: transparent; color: var(--kid-title); cursor: pointer; font-variant-emoji: text; }
     .seg-btn.on { background: var(--kid-green-strong); color: #fff; }
     .stepper { display: flex; align-items: center; justify-content: center; gap: 16px; }
     .picker-row { display: flex; flex-direction: column; gap: 6px; }
@@ -293,7 +299,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       /* d2-k-free-lead: Figur und Sternzahl nebeneinander, Hinweiszeile weg (steht im Titel des Zaehlers). */
       .picker-row { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
       .picker-row .seg { grid-template-columns: repeat(4, 38px); }
-      .picker-row .seg-btn { font-size: 1.5rem; min-height: 44px; }
+      .picker-row .seg-btn { font-size: 1.75rem; min-height: 44px; }
       .picker-row .stepper { gap: 6px; }
       .picker-row .step { width: 44px; height: 44px; font-size: 1.6rem; }
       .picker-row .count { min-width: 2.6em; font-size: 1.6rem; }
@@ -316,6 +322,7 @@ export class StarsPlayComponent {
   /** Die Abschnitte des Fortschrittsbalkens (0 … Aufgaben−1). */
   readonly roundSlots = computed(() => Array.from({ length: this.stage()?.counts.length ?? STARS_PER_STAGE }, (_, i) => i));
   readonly glyph = pieceGlyph;
+  readonly solidGlyph = solidPieceGlyph;
   /** Zufall der Aufgaben — Tests setzen einen festen. */
   rng: Rng = Math.random;
 

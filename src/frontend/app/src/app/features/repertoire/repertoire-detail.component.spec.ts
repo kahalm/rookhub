@@ -224,3 +224,16 @@ describe('RepertoireDetailComponent ?trainColor= (Trainings-Repertoire, 2026-10-
     expect(localStorage.getItem('rookhub_rep_train_chaptercolor_77')).toBeNull();
   });
 });
+
+/** UI-Sweep z1 (z1-rk-rep-brett-gross): Brett wächst mit der Höhe, Linienkasten nur so hoch wie sein Inhalt. */
+describe('RepertoireDetailComponent Layout (z1)', () => {
+  const css = ((RepertoireDetailComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('bindet die Brettgröße an die Fensterhöhe (400–640 px)', () => {
+    expect(css).toMatch(/--(%NS%)?board-size: clamp\(400px, calc\(100vh - 300px\), 640px\)/);
+    expect(css).toMatch(/\.board-section[^{]*\{ ?width: var\(--(%NS%)?board-size\)/);
+  });
+  it('lässt die Linienliste nur so hoch wie ihren Inhalt, mit Rahmen als Token', () => {
+    expect(css).toMatch(/\.side-panel--fit[^{]*\{ ?height: auto; max-height:/);
+    expect(css).not.toContain('#e0e0e0');
+  });
+});

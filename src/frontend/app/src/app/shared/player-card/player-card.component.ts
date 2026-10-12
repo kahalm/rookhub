@@ -69,6 +69,10 @@ type Show = 'w' | 's' | 'b';
             <p class="hint">An Brett {{ board() }} spielt {{ lastName(c) }} mit <b>{{ color() === 'w' ? 'Weiß' : 'Schwarz' }}</b>.</p>
           }
           @if (c.n || c.online) {
+            <!-- Bedienzeile in einer Hülle: die Spielervorbereitung legt Farbwahl, Filter und Werkzeuge in EINE umbrechende
+                 Zeile und klappt am Handy alles außer der Farbwahl hinter „Filter ▾" (prep-card.scss, z1-rk-prep-vorlauf).
+                 In LeagueHub bleibt alles untereinander, den Klappknopf gibt es nur inline. -->
+            <div class="controls" [class.open]="controlsOpen()">
             <div class="actions">
               @if (c.n) {
                 <div class="seg" role="group" aria-label="Farbe">
@@ -76,6 +80,12 @@ type Show = 'w' | 's' | 'b';
                     <button type="button" [attr.aria-pressed]="show() === o.k" (click)="show.set(o.k)">{{ o.label }}</button>
                   }
                 </div>
+              }
+              @if (inline()) {
+                <button type="button" class="btn-sec ctl-toggle" [attr.aria-expanded]="controlsOpen()"
+                        (click)="controlsOpen.set(!controlsOpen())">Filter {{ controlsOpen() ? '▴' : '▾' }}</button>
+              }
+              @if (c.n) {
                 <button type="button" class="btn-sec" (click)="download(c)">PGN herunterladen ({{ c.n }} Partien)</button>
               }
               <button type="button" class="btn-sec tree-toggle" [attr.aria-expanded]="treeOpen()" (click)="treeOpen.set(!treeOpen())">
@@ -99,11 +109,13 @@ type Show = 'w' | 's' | 'b';
               <!-- Vorgabe der Farbe aus der Begegnung (Brett bekannt): color() = SEINE Farbe dort (2026-10-10) -->
               <lh-training-lines [key]="key(c)" [name]="c.name ?? ''" [filter]="active()" [opponentColor]="board() !== null ? color() : null" />
             }
+            </div>
           }
           @if (sections(); as sec) {
             @if (sec.n) {
-              <!-- Weiß und Schwarz je in einer Hülle: die Spielervorbereitung stellt sie breit nebeneinander
-                   (prep-card.scss, d2-rk-prep-wide); in LeagueHub bleiben sie untereinander. -->
+              <!-- Jeder Abschnitt in einer eigenen Hülle: die Spielervorbereitung füllt damit ein Zwei-Spalten-Raster
+                   paarweise (Weiß | gegen 1.e4, gegen 1.d4 | gegen andere — prep-card.scss, d2-rk-prep-wide,
+                   z1-rk-prep-spalten); in LeagueHub bleiben sie untereinander. -->
               <div class="sides">
               @if (show() !== 's') {
                 <div class="side side-white">
@@ -115,13 +127,17 @@ type Show = 'w' | 's' | 'b';
                 <div class="side side-black">
                 <h3>Mit Schwarz gegen 1.e4 <span class="muted">({{ sec.black_e4?.n || 0 }})</span></h3>
                 <ng-container *ngTemplateOutlet="first; context: { s: sec.black_e4, names: nameE4 }" />
+                </div>
+                <div class="side side-black">
                 <h3>Mit Schwarz gegen 1.d4 <span class="muted">({{ sec.black_d4?.n || 0 }})</span></h3>
                 <ng-container *ngTemplateOutlet="first; context: { s: sec.black_d4, names: nameD4 }" />
+                </div>
                 @if (sec.black_other?.n) {
+                  <div class="side side-black">
                   <h3>Mit Schwarz gegen andere <span class="muted">({{ sec.black_other?.n }})</span></h3>
                   <ng-container *ngTemplateOutlet="first; context: { s: sec.black_other, names: null }" />
+                  </div>
                 }
-                </div>
               }
               </div>
             } @else if (!storedProfile() && !profileLoading()) {
@@ -197,6 +213,8 @@ export class PlayerCardComponent {
   readonly canEdit = signal(false);
   /** Abschnitt „Trainingslinien": die API bietet ihn an, jemand ist angemeldet, kein Teilen-Link. */
   readonly training = signal(false);
+  /** Spielervorbereitung am Handy: Filter und Werkzeuge aufgeklappt (Vorgabe zu, z1-rk-prep-vorlauf). */
+  readonly controlsOpen = signal(false);
   /** Als Teil einer Seite statt als Dialog darüber (Spielervorbereitung): ohne Abdunkeln, schließt nicht beim Klick daneben. */
   readonly inline = input(false);
   /** Eigener Hinweis zu den Quellen statt des LeagueHub-Textes. */

@@ -55,7 +55,8 @@ export const SCROLL_FROM_LEVEL = 5;
                   <!-- UI-Sweep 2026-10-11 (r2-k-level-run): angefangene Stufe zeigt den Zwischenstand statt leerer Sterne -->
                   <span class="run">
                     <span class="bar" aria-hidden="true"><span class="fill" [style.width.%]="l.run * 100 / l.total"></span></span>
-                    <span class="run-text">{{ 'kids.levels.runAt' | translate: { n: l.run + 1, total: l.total } }}</span>
+                    <!-- z1-k-level-run-wrap: am Handy (dreispaltig) der Kurztext „5 von 10" — der lange brach um. -->
+                    <span class="run-text"><span class="run-long">{{ 'kids.levels.runAt' | translate: { n: l.run + 1, total: l.total } }}</span><span class="run-short">{{ 'kids.levels.runAtShort' | translate: { n: l.run + 1, total: l.total } }}</span></span>
                   </span>
                 } @else {
                   <span class="row" aria-hidden="true">
@@ -118,7 +119,8 @@ export const SCROLL_FROM_LEVEL = 5;
     .run { display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 4px 8px 0; box-sizing: border-box; }
     .bar { height: 8px; border-radius: 4px; background: var(--kid-shadow); overflow: hidden; }
     .fill { display: block; height: 100%; border-radius: 4px; background: var(--kid-green-strong); }
-    .run-text { margin-top: 2px; font-size: .8rem; font-weight: 700; text-align: center; }
+    .run-text { margin-top: 2px; font-size: .8rem; font-weight: 700; text-align: center; white-space: nowrap; }
+    .run-short { display: none; }
     /* UI-Sweep 2026-10-11 (r2-k-map-cols): am Handy drei statt zwei Spalten — 40 Stufen waren 20 Reihen, 3 300 px Wischen. */
     @media (max-width: 479.98px) {
       .grid { gap: 10px; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
@@ -128,6 +130,8 @@ export const SCROLL_FROM_LEVEL = 5;
       .row { font-size: 1.15rem; letter-spacing: 1px; }
       .num { top: 6px; left: 10px; font-size: .95rem; }
       .lock { top: 5px; right: 7px; font-size: 1rem; }
+      .run-long { display: none; }
+      .run-short { display: inline; }
     }
     @keyframes pulse { 50% { transform: scale(1.04); } }
     @keyframes wiggle { 25% { transform: translateX(-6px) rotate(-3deg); } 75% { transform: translateX(6px) rotate(3deg); } }

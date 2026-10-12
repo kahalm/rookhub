@@ -105,13 +105,14 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     }
   });
 
-  // l-account-btns: drei gleich breite Knöpfe, mindestens 40 px hoch.
-  it('Konto-Vorschläge: drei gleich breite Knöpfe ≥ 40 px', async () => {
+  // l-account-btns: drei gleich breite Knöpfe; z1-l-konten-knoepfe: am Handy 44 px hoch, 8 px Abstand.
+  it('Konto-Vorschläge: drei gleich breite Knöpfe ≥ 44 px am Handy', async () => {
     const doc = await render(390, `<div class="sugg-actions"><button class="btn-sec sa-btn" id="a">Unsicher</button>
       <button class="btn-pri sa-btn" id="b">Gesichert</button><button class="btn-sec sa-btn sa-reject" id="c">Verwerfen</button></div>`);
     const w = ['a', 'b', 'c'].map(id => Math.round(box(doc, id).width));
     expect(Math.max(...w) - Math.min(...w)).toBeLessThanOrEqual(1);
-    for (const id of ['a', 'b', 'c']) expect(box(doc, id).height).toBeGreaterThanOrEqual(40);
+    for (const id of ['a', 'b', 'c']) expect(box(doc, id).height).toBeGreaterThanOrEqual(44);
+    expect(box(doc, 'b').left - box(doc, 'a').right).toBeGreaterThanOrEqual(8);
   });
 
   // l-club-table / l-club-mobile: breit einzeilige Namen und Eröffnung mit „…", am Handy eine Karte je Partie.
@@ -167,16 +168,27 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
   it('am Handy: Werbesatz nur abgemeldet; Auswahl der Prognosen zugeklappt bis „Ändern"', async () => {
     const doc = await render(390, `<p class="wrap lede anon" id="anon">Satz</p><p class="wrap lede" id="in">Satz</p>
       <div class="pick-bar" id="bar"><span class="pick-sum">Landesliga · R2 · Testdorf</span><button class="btn-sec pick-change">Ändern ▾</button></div>
-      <div class="pick-area" id="closed"><form class="pick"></form></div><div class="pick-area open" id="open"></div>`);
+      <div class="pick-area" id="closed"><form class="pick" id="form"></form><div class="stand"><span id="at">Stand</span>
+        <div class="lineups-toggle" id="lu"><button class="btn-link">Alle Aufstellungen</button></div></div></div>
+      <div class="pick-area open" id="open"><form class="pick" id="form2"></form></div>`);
     expect(shown(doc, 'anon')).toBeTrue();
     expect(shown(doc, 'in')).toBeFalse();
     expect(shown(doc, 'bar')).toBeTrue();
-    expect(shown(doc, 'closed')).toBeFalse();
+    // z1-l-prognosen-vorlauf-laptop: zugeklappt bleibt nur „Alle Aufstellungen" aus der Datenstand-Zeile
+    expect(shown(doc, 'form')).toBeFalse();
+    expect(shown(doc, 'at')).toBeFalse();
+    expect(shown(doc, 'lu')).toBeTrue();
     expect(shown(doc, 'open')).toBeTrue();
-    const wide = await render(1000, `<p class="wrap lede" id="in">Satz</p><div class="pick-bar" id="bar"></div><div class="pick-area" id="closed"></div>`);
+    expect(shown(doc, 'form2')).toBeTrue();
+    const wide = await render(1000, `<p class="wrap lede" id="in">Satz</p><div class="pick-bar" id="bar"></div><div class="pick-area" id="closed">
+      <form class="pick" id="form"></form><div class="stand"><label class="all-leagues" id="all">alle Ligen</label><span id="at">Stand</span>
+      <div class="lineups-toggle" id="lu"><button class="btn-link">Alle Aufstellungen</button></div></div></div>`);
     expect(shown(wide, 'in')).toBeTrue();
     expect(shown(wide, 'bar')).toBeFalse();
-    expect(shown(wide, 'closed')).toBeTrue();
+    expect(shown(wide, 'form')).toBeTrue();
+    // Schalter, Datenstand und Aufstellungen in einer Zeile
+    expect(Math.abs(box(wide, 'all').top - box(wide, 'at').top)).toBeLessThan(12);
+    expect(Math.abs(box(wide, 'lu').top - box(wide, 'at').top)).toBeLessThan(12);
   });
 
   it('großer Bildschirm: Bretter zweispaltig, Konto-Vorschläge eines Spielers nebeneinander', async () => {
@@ -194,9 +206,56 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     const doc = await render(1000, `<div class="roster-scroll club-scroll" id="w1"><table class="rtable"><thead><tr><th id="th">Jahr</th></tr></thead></table></div>
       <div class="roster-scroll bc-scroll" id="w2"></div><div class="roster-scroll" id="w3"></div>`);
     expect(style(doc, 'th').position).toBe('sticky');
+    // z1-l-uebertragungen-kopf: die Unterlinie klebt als Schatten mit
+    expect(style(doc, 'th').boxShadow).toContain('inset');
     expect(style(doc, 'w1').overflowX).toBe('visible');
     expect(style(doc, 'w2').overflowX).toBe('visible');
     expect(style(doc, 'w3').overflowX).toBe('auto');
+    // Übertragungen bleiben am Handy eine Tabelle — auch dort ohne Scroll-Wrapper, damit der Kopf klebt
+    const mobile = await render(390, `<div class="roster-scroll bc-scroll" id="w2"></div><div class="roster-scroll club-scroll" id="w1"></div>`);
+    expect(style(mobile, 'w2').overflowX).toBe('visible');
+    expect(style(mobile, 'w1').overflowX).toBe('auto');
+  });
+
+  // z1-l-farbquadrat: das Farbzeichen je Brett ist ein rundes Steinchen, kein Kästchen
+  it('Begegnung: Farbe des Gegners als rundes Steinchen', async () => {
+    const doc = await render(390, `<ol class="boards"><li class="board"><span class="bno">1</span><span class="sq w" id="sq"></span></li></ol>`);
+    expect(style(doc, 'sq').borderTopLeftRadius).toBe('50%');
+  });
+
+  // z1-l-hinzufuegen-hinweisschrift: der Hinweis im Feld ist Textschrift, nicht fett wie die Beschriftung
+  it('Partien hinzufügen: Hinweis im Feld in normaler Schrift', async () => {
+    const doc = await render(1000, `<label class="field" id="f">… oder eine ChessBase-Datenbank<input type="file">
+      <span class="small muted" id="h">Alle Dateien der Datenbank auswählen …</span></label>`);
+    expect(Number(style(doc, 'h').fontWeight)).toBe(400);
+    expect(Number(style(doc, 'f').fontWeight)).toBeGreaterThanOrEqual(600);
+  });
+
+  // z1-l-korrigieren-luecke: die Zugliste schließt mit dem Spaltabstand an die Zugkarte an, auch neben einem hohen Brett
+  it('Korrigieren: keine Lücke zwischen Zugkarte und Zugliste neben dem Brett', async () => {
+    const doc = await render(1000, `<div class="scan-wrap"><div class="scan-layout">
+      <section class="panel scan-board" style="height:600px"></section>
+      <section class="panel scan-check" id="chk" style="height:150px"></section>
+      <section class="panel scan-moves" id="mv" style="height:100px"></section></div></div>`);
+    expect(box(doc, 'mv').top - box(doc, 'chk').bottom).toBeLessThanOrEqual(16);
+  });
+
+  // z1-l-verein-plus: „+ Hinzufügen" am Handy, nur „+" erst ≤ 380 px (dann groß)
+  it('Vereinspartien: Hinzufügen-Knopf am Handy mit Kurzbeschriftung, ≤ 380 px nur „+"', async () => {
+    const btn = `<div class="stand"><a class="btn-pri add-games" id="a"><span class="add-plus" id="p">+</span><span class="add-label" id="l">Partien hinzufügen</span><span class="add-short" id="s">Hinzufügen</span></a></div>`;
+    const wide = await render(1000, btn);
+    expect(shown(wide, 'p')).toBeFalse();
+    expect(shown(wide, 's')).toBeFalse();
+    expect(box(wide, 'l').width).toBeGreaterThan(40);
+    const phone = await render(390, btn);
+    expect(shown(phone, 'p')).toBeTrue();
+    expect(shown(phone, 's')).toBeTrue();
+    expect(box(phone, 'l').width).toBeLessThanOrEqual(1);
+    expect(box(phone, 'a').height).toBeGreaterThanOrEqual(44);
+    const small = await render(360, btn);
+    expect(shown(small, 's')).toBeFalse();
+    expect(style(small, 'a').fontSize).toBe('22px');
+    expect(box(small, 'a').height).toBeGreaterThanOrEqual(44);
   });
 
   it('Teilen-Link am Handy: Aufforderung höchstens 160 px, Knöpfe nebeneinander', async () => {

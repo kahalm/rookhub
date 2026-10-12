@@ -124,7 +124,10 @@ describe('BroadcastsPageComponent', () => {
     fixture.detectChanges();
     expect(el().querySelector('form.bc-add input[type=url]')).not.toBeNull();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    (el().querySelector('.bc-page .chk-btn') as HTMLButtonElement).click();
+    // z1-l-uebertragungen-vorlauf: kein Erklärsatz über der Liste — das (i) steht neben der Überschrift
+    expect(el().querySelector('.bc-page .info-line')).toBeNull();
+    expect(el().textContent).not.toContain('landen in den Spielerkarten');
+    (el().querySelector('.bc-page .bc-head .chk-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el().querySelector('.info-panel')?.textContent).toContain('FIDE-ID');
   });

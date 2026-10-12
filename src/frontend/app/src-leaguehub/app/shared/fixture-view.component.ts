@@ -157,7 +157,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   @if (e.status === 'played') { Pro Brett oben, wer tatsächlich gespielt hat, darunter die Prognose, die vor der Runde galt. }
                   @else { Prognose für {{ tn(e.opp) }}: pro Brett die drei wahrscheinlichsten Spieler. }
                   @if (e.hit) { In alten Saisonen lagen in dieser Lage ({{ phaseText() }}) im Schnitt {{ hitText() }} von {{ e.boards?.length }} vorhergesagten Spielern richtig. }
-                  Das Quadrat zeigt die Farbe des Gegners. In Klammer hinter dem Namen: Partien im Bestand.
+                  Der Kreis neben der Brettnummer zeigt die Farbe des Gegners. In Klammer hinter dem Namen: Partien im Bestand.
                 </p>
                 @if (e.eval; as v) {
                   @if (v.top1 != null) {
@@ -249,6 +249,12 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 </div>
               }
             </div>
+            <!-- z1-l-farbquadrat: die Farbe des Gegners als Steinchen (○/●) statt als Kästchen, einmal erklärt über den Brettern
+                 (der Tooltip fehlt am Handy) -->
+            @if (e.boards?.length) {
+              <p class="sq-legend muted small"><span class="sq mini w" aria-hidden="true"></span>Gegner hat Weiß ·
+                <span class="sq mini s" aria-hidden="true"></span>Gegner hat Schwarz</p>
+            }
             <ol class="boards">
               @for (b of e.boards; track b.board) {
                 <li class="board">

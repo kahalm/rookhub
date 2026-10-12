@@ -41,7 +41,11 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
       } @else if (loadError) {
         <app-load-error (retry)="loadList()" />
       } @else if (items.length === 0) {
-        <p class="empty-state">{{ 'catalog.empty' | translate }}</p>
+        <!-- UI-Sweep z1 (z1-rk-catalog-leer): Leerzustand mit Erklärung, wer freigibt, und einem Weg weiter. -->
+        <div class="catalog-empty">
+          <p class="catalog-empty-text">{{ 'catalog.empty' | translate }} {{ 'catalog.emptyHint' | translate }}</p>
+          <a mat-flat-button color="primary" routerLink="/courses">{{ 'catalog.toCourses' | translate }}</a>
+        </div>
       } @else {
         <div class="item-list">
           @for (i of items; track i.itemType + i.itemId) {
@@ -189,6 +193,8 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
     h2 { margin: 16px 0 8px; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 8px; }
     .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
+    .catalog-empty { padding: 0 0 4px; }
+    .catalog-empty-text { margin: 0 0 12px; max-width: 75ch; color: color-mix(in srgb, currentColor 65%, transparent); }
     h3 { margin: 12px 0 6px; font-size: 1rem; }
     .granted-users { display: block; margin-bottom: 8px; }
     .chip-sub { opacity: .65; margin-left: 4px; }

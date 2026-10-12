@@ -61,3 +61,35 @@ describe('friend-stats comparison logic', () => {
     });
   });
 });
+
+/** UI-Sweep z1 (z1-rk-friendstats-titel): beide Karten mit gleichem, bündigem Kopf. */
+describe('FriendStatsComponent Kartenköpfe', () => {
+  it('gibt „Übersicht“ und „Themen-Vergleich“ denselben schlichten Kopf statt mat-card-header', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideRouter, ActivatedRoute, convertToParamMap } = await import('@angular/router');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { FriendStatsComponent } = await import('./friend-stats.component');
+    const { FriendsService } = await import('../../core/friends.service');
+    const { PuzzleService } = await import('../puzzles/puzzle.service');
+    const { SnackbarService } = await import('../../core/snackbar.service');
+    TestBed.configureTestingModule({
+      imports: [FriendStatsComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: FriendsService, useValue: {} },
+        { provide: PuzzleService, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FriendStatsComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    c.friend = { userId: 7, username: 'bob', displayName: null, stats: {} as PuzzleStatsDto, themes: [] } as never;
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const titles = Array.from(el.querySelectorAll('mat-card h2.card-title')).map(h => h.textContent!.trim());
+    expect(titles).toEqual(['friends.stats.overview', 'friends.stats.themes']);
+    expect(el.querySelector('mat-card-header')).toBeNull();
+  });
+});

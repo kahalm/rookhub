@@ -87,7 +87,9 @@
 
 /* Suchprofil-Hinweis hinter der Trefferzahl (d2-t-calendar-filter-mobile): Textknopf + ⓘ statt Banner. */
 .profile-note { display: inline-flex; align-items: center; gap: 0.25rem; }
-.count:not(:empty) > .profile-note:not(:first-child)::before { content: '·'; margin: 0 0.4rem 0 0.4rem; }
+/* Der Zaehltext davor ist ein Textknoten — :not(:first-child) griff deshalb nie (z1-t-calendar-count-link). In der
+   .profile-line (Leerzustand) steht nichts davor, dort bleibt der Punkt weg. */
+.count > .profile-note::before { content: '·'; margin: 0 0.4rem; }
 .link-btn {
   padding: 0.25rem 0; border: 0; background: none; font: inherit; cursor: pointer;
   color: var(--rh-accent); text-decoration: underline;

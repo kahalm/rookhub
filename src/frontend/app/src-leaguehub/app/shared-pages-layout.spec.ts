@@ -83,6 +83,24 @@ describe('LeagueHub: geteilte Anmelde- und Rechtsseiten in der Hülle (UX-068)',
     });
   }
 
+  // UI-Sweep z1-l-masken-fokus-rot: das autofokussierte erste Feld trug Rot = Fehlerfarbe. Fokus jetzt --focus (Blau),
+  // Fehler und Knopf bleiben rot.
+  it('Anmeldemasken: Fokusrahmen, Beschriftung und Schreibmarke in --focus, Fehler bleibt rot', () => {
+    const host = document.createElement('app-login');
+    shell.querySelector('main')!.appendChild(host);
+    host.innerHTML = '<div class="mat-mdc-card"></div>';
+    const card = getComputedStyle(host.querySelector('.mat-mdc-card')!);
+    const focus = getComputedStyle(document.documentElement).getPropertyValue('--focus').trim();
+    const red = getComputedStyle(document.documentElement).getPropertyValue('--red').trim();
+    expect(focus).not.toBe('');
+    for (const v of ['--mat-form-field-outlined-focus-outline-color', '--mat-form-field-outlined-focus-label-text-color',
+      '--mat-form-field-outlined-caret-color']) {
+      expect(card.getPropertyValue(v).trim()).withContext(v).toBe(focus);
+    }
+    expect(card.getPropertyValue('--mat-sys-error').trim()).toBe(red);
+    expect(card.getPropertyValue('--mat-sys-primary').trim()).toBe(red);
+  });
+
   it('Anmeldung: keine zweiten Rechtslinks unter der Karte — die Fußzeile der Hülle zeigt sie immer', () => {
     const links = mount(LoginComponent).querySelector('.legal-links') as HTMLElement;
     expect(getComputedStyle(links).display).toBe('none');

@@ -723,7 +723,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Решено",
       "colDuration": "Длительность",
-      "colConfig": "Конфигурация",
       "colMistakes": "Ошибки",
       "backToEndless": "К бесконечному режиму"
     }

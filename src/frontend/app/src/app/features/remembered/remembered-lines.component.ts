@@ -71,6 +71,10 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
         <mat-card class="empty-state">
           <mat-icon>bookmark_border</mat-icon>
           <p>{{ 'remembered.empty' | translate }}</p>
+          <!-- UI-Sweep z1 (z1-rk-remembered-leer): ein Weg zur Erweiterung (Hilfe-Abschnitt mit Chrome-/Firefox-Link). -->
+          <a mat-stroked-button class="setup-repcheck" routerLink="/help" fragment="extension">
+            <mat-icon>extension</mat-icon> {{ 'remembered.setupRepCheck' | translate }}
+          </a>
         </mat-card>
       } @else {
         <div class="grid">
@@ -133,6 +137,7 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
     .header .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state .setup-repcheck mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 1; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
     .item { padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
     .item.selected { outline: 2px solid var(--mat-sys-primary); }

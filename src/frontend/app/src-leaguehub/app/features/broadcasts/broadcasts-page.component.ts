@@ -59,14 +59,16 @@ export function broadcastErrorText(reason: string | undefined): string {
       </section>
     } @else {
       <section class="bc-page">
-        <h2>Lichess-Übertragungen</h2>
-        <!-- UI-Sweep 2026-10-11 (d2-l-uebertragungen-vorlauf): ein Satz + (i); Hinzufügen ist die seltene Nebenaktion und klappt
-             erst auf Knopfdruck auf — vorher begann die Liste am Handy erst bei ~700 px. -->
-        <p class="muted info-line">Übertragungen mit Ligaspielern landen in den Spielerkarten.
+        <!-- UI-Sweep 2026-10-11 (d2-l-uebertragungen-vorlauf): Hinzufügen ist die seltene Nebenaktion und klappt erst auf
+             Knopfdruck auf. z1-l-uebertragungen-vorlauf: der Erklärsatz steht ganz hinter dem (i) neben der Überschrift. -->
+        <div class="bc-head">
+          <h2>Lichess-Übertragungen</h2>
           <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Wie Übertragungen zugeordnet werden"
-                  title="Wie Übertragungen zugeordnet werden" (click)="infoOpen.set(!infoOpen())">i</button></p>
+                  title="Wie Übertragungen zugeordnet werden" (click)="infoOpen.set(!infoOpen())">i</button>
+        </div>
         @if (infoOpen()) {
-          <div class="info-panel"><p class="note">Turniere am Brett, die auf Lichess live übertragen werden, landen in den Spielerkarten —
+          <div class="info-panel"><p class="note">Übertragungen mit Ligaspielern landen in den Spielerkarten.
+            Turniere am Brett, die auf Lichess live übertragen werden, landen in den Spielerkarten —
             zugeordnet über die FIDE-ID in jeder Partie. Österreichische Übertragungen findet LeagueHub selbst; ein Turnier im Ausland
             mit Tiroler Spielern fügst du per Link hinzu.</p></div>
         }

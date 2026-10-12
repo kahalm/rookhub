@@ -723,7 +723,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Resueltos",
       "colDuration": "Duración",
-      "colConfig": "Configuración",
       "colMistakes": "Errores",
       "backToEndless": "Volver al modo Sin fin"
     }

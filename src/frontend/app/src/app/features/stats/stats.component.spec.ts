@@ -188,3 +188,22 @@ describe('StatsComponent', () => {
     expect(item.textContent).toContain('+28');
   });
 });
+
+/** UI-Sweep z1: Handy-Regeln der Statistik greifen (Reihenfolge/Spezifität). */
+describe('StatsComponent Layout (z1)', () => {
+  const css = ((StatsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('setzt die Handy-Breiten der Themenzeile NACH den Grundregeln (z1-rk-stats-themenbalken)', () => {
+    const base = css.search(/\.theme-val[^{]*\{ ?width: 120px/);
+    const phone = css.search(/\.theme-val[^{]*\{ ?width: 84px/);
+    expect(base).toBeGreaterThan(-1);
+    expect(phone).toBeGreaterThan(base);
+    expect(css.search(/\.theme-name[^{]*\{ ?width: 110px/)).toBeGreaterThan(css.search(/\.theme-name[^{]*\{ ?width: 150px/));
+  });
+  it('nimmt den Kacheln den Karten-Außenabstand (z1-rk-stats-kacheln)', () => {
+    expect(css).toMatch(/\.cards[^{]* mat-card[^{]*\{ ?margin: 0/);
+  });
+  it('gibt jedem Karteninhalt unter einem Titel denselben Abstand (z1-rk-stats-titelabstand)', () => {
+    expect(css).toMatch(/mat-card-header[^{]*\+ ?mat-card-content[^{]*\{ ?padding-top: 8px/);
+    expect(css).not.toMatch(/\.bands[^{]*\{[^}]*padding-top/);
+  });
+});

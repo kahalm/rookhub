@@ -723,7 +723,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "正解数",
       "colDuration": "所要時間",
-      "colConfig": "設定",
       "colMistakes": "ミス",
       "backToEndless": "エンドレスモードに戻る"
     }

@@ -235,5 +235,9 @@
   .small { font-size: 0.85rem; }
 }
 
-.depth-btn { min-width: 0; padding: 0 0.5rem; }
-.depth-btn.chosen { font-weight: 700; text-decoration: underline; }
+/* Suchtiefe als kompakte Umschaltgruppe (2 · 4 · … · 12), passt mit „Lücke schließen" in eine Zeile. */
+.depth-toggle {
+  --mat-button-toggle-height: 32px;
+  font-size: 0.85rem;
+  ::ng-deep .mat-button-toggle-label-content { padding: 0 9px; line-height: 32px; }
+}

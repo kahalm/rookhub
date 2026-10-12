@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, AfterViewInit, ChangeDetectionStrategy, ElementRef, OnDestroy, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -63,7 +63,10 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
 
       <!-- UI-Sweep 2026-10-11 (d2-rk-help-inhalt-vorlauf): bis 1279 px zugeklappt („Inhalt · 27 Themen ▾“) — offen schob
            es den ersten Abschnitt am Handy auf 181 % der Hoehe; ab 1280 px klebende Spalte links neben den Abschnitten. -->
-      <nav class="help-toc" [attr.aria-label]="'help.tocTitle' | translate">
+      <!-- Runde z1 (z1-rk-help-toc-verborgen): als klebende Spalte scrollt das Verzeichnis in sich; reicht es unter den
+           Rand, blendet es unten aus (.more) — vorher endete es am Laptop glatt nach 13 von 27 Themen. -->
+      <nav class="help-toc" [class.more]="tocMore()" [attr.aria-label]="'help.tocTitle' | translate" #tocNav
+           (scroll)="updateTocMore()">
         <details [open]="tocOpen()" (toggle)="tocOpen.set(tocFold.open)" #tocFold>
           <summary id="help-toc">
             <h2>{{ 'help.tocTitle' | translate }}</h2>
@@ -178,15 +181,45 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
       .help-header { grid-column: 1 / -1; }
       .help-toc { position: sticky; top: 72px; max-height: calc(100vh - 88px); overflow-y: auto; margin: 0; }
       .help-toc ul { grid-template-columns: 1fr; gap: 0; }
+      /* Mehr darunter: unterer Rand blendet aus (z1-rk-help-toc-verborgen). */
+      .help-toc.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+                       mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
+    }
+    /* Mit Maus dichtere Zeilen (30 statt 44 px): am Laptop passen fast alle 27 Themen, gross alle; Touch behaelt 44 px. */
+    @media (min-width: 1280px) and (pointer: fine) {
+      .help-toc a { min-height: 30px; padding: 4px 8px; }
     }
     @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
   `]
 })
-export class HelpComponent implements AfterViewInit {
+export class HelpComponent implements AfterViewInit, OnDestroy {
   constructor(private route: ActivatedRoute) {}
+
+  /** Dekorator statt viewChild(): die Specs bauen die Komponente auch ohne Injektionskontext (`new HelpComponent`). */
+  @ViewChild('tocNav') private tocNav?: ElementRef<HTMLElement>;
+  private tocObserver?: ResizeObserver;
+  /** Reicht das (in sich scrollende) Verzeichnis unter seinen sichtbaren Rand? Dann blendet es unten aus. */
+  readonly tocMore = signal(false);
+
+  /** Prueft, ob unter dem sichtbaren Teil des Verzeichnisses noch Eintraege liegen (Groesse, Aufklappen, Scrollen). */
+  updateTocMore(): void {
+    const nav = this.tocNav?.nativeElement;
+    this.tocMore.set(!!nav && nav.scrollHeight - nav.scrollTop - nav.clientHeight > 1);
+  }
+
+  ngOnDestroy(): void {
+    this.tocObserver?.disconnect();
+  }
 
   /** Deep-Link wie /help#extension: nach dem Render zum Abschnitt scrollen. */
   ngAfterViewInit(): void {
+    const nav = this.tocNav?.nativeElement;
+    if (nav && typeof ResizeObserver === 'function') {
+      this.tocObserver = new ResizeObserver(() => this.updateTocMore());
+      this.tocObserver.observe(nav);
+      const list = nav.querySelector('ul');
+      if (list) this.tocObserver.observe(list);
+    }
     const fragment = this.route.snapshot.fragment;
     if (fragment) {
       setTimeout(() => this.scrollTo(fragment), 0);

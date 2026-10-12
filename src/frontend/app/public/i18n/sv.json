@@ -723,7 +723,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Lösta",
       "colDuration": "Varaktighet",
-      "colConfig": "Konfiguration",
       "colMistakes": "Misstag",
       "backToEndless": "Tillbaka till ändlöst läge"
     }

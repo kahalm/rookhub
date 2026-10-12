@@ -192,4 +192,24 @@ describe('CatalogComponent', () => {
     expect(el.querySelector('app-load-error')).toBeNull();
     expect(el.textContent).toContain('catalog.empty');
   });
+  // UI-Sweep z1 (z1-rk-catalog-leer): Leerzustand erklärt, wer freigibt, und bietet einen Weg weiter.
+  it('leere Liste → Erklärung + Knopf „Zu meinen Kursen“', () => {
+    TestBed.configureTestingModule({
+      imports: [CatalogComponent],
+      providers: [
+        provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CatalogService, useValue: { list: () => of([]) } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false } },
+        { provide: AdminService, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+      ],
+    });
+    const fixture = TestBed.createComponent(CatalogComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.catalog-empty-text')?.textContent).toContain('catalog.emptyHint');
+    const link = el.querySelector('.catalog-empty a') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/courses');
+    expect(link.textContent).toContain('catalog.toCourses');
+  });
 });

@@ -534,3 +534,56 @@ describe('CourseListComponent ein Banner', () => {
     expect(el.querySelector('.reimport-legend .reimport-chip')).not.toBeNull();
   });
 });
+
+/** UI-Sweep z1 (z1-rk-courses-banner-vorlauf): weniger Vorlauf vor der ersten Kurskarte. */
+describe('CourseListComponent Vorlauf', () => {
+  async function setup() {
+    const item = {
+      bookId: 7, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null, tags: null, description: null,
+      puzzleCount: 1, solvedCount: 0, progressPercent: 0, lastMode: null, lastActivityAt: null, isOwned: true,
+      isPinned: false, needsReimport: true,
+    } as CourseListItem;
+    await TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getCourses: () => of([item]) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseListComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    return { fixture, http: TestBed.inject(HttpTestingController) };
+  }
+
+  it('setzt den Neu-holen-Hinweis im Banner in eine eigene Zeile', async () => {
+    const { fixture, http } = await setup();
+    http.expectOne('/api/courses/reprocess/status').flush({
+      currentVersion: 2, total: 5, stale: 4, reprocessableLocally: 4, refetchable: 0, needsReimport: 1 });
+    fixture.detectChanges();
+    const part = fixture.nativeElement.querySelector('.reprocess-banner .reimport-part') as HTMLElement;
+    expect(part).not.toBeNull();
+    expect(getComputedStyle(part).display).toBe('block');
+    fixture.nativeElement.remove();
+  });
+
+  it('legt die Abschnitts-Unterzeile ins ⓘ des Abschnittskopfs', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.section-hint')).toBeNull();
+    expect(el.querySelector('.section-head app-help-hint')).not.toBeNull();
+    fixture.nativeElement.remove();
+  });
+
+  it('beschriftet die Kopfknöpfe per aria-label (am Handy nur Symbol)', async () => {
+    const { fixture } = await setup();
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.header-actions button') as NodeListOf<HTMLElement>);
+    expect(buttons.length).toBe(2);
+    for (const b of buttons) {
+      expect(b.getAttribute('aria-label')).toBeTruthy();
+      expect(b.querySelector('.btn-label')).not.toBeNull();
+    }
+    fixture.nativeElement.remove();
+  });
+});

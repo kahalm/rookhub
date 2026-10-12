@@ -56,7 +56,9 @@ describe('LevelMapComponent', () => {
     expect(tiles[0].querySelector('.row')).not.toBeNull();
     expect(tiles[0].querySelector('.run')).toBeNull();
     expect(tiles[1].querySelector('.row')).toBeNull();
-    expect(tiles[1].querySelector('.run-text')?.textContent).toContain('kids.levels.runAt');
+    expect(tiles[1].querySelector('.run-text .run-long')?.textContent).toContain('kids.levels.runAt');
+    // z1-k-level-run-wrap: Kurztext fürs Handy daneben (per CSS umgeschaltet)
+    expect(tiles[1].querySelector('.run-text .run-short')?.textContent).toContain('kids.levels.runAtShort');
     expect(tiles[1].querySelector<HTMLElement>('.fill')!.style.width).toBe('40%');
     expect(f.componentInstance.tiles()[1]).toEqual(jasmine.objectContaining({ run: 4, total: 10 }));
     expect(tiles[2].querySelector('.run')).toBeNull();

@@ -15,6 +15,15 @@
 .eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }
 .board-wrap { flex: 1; min-width: 260px; }
 .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
+/* z1-rk-analysis-seitenspalte: das große Brett darf die Seitenspalte nicht unter ~440 px drücken (Engine-Linien,
+   Explorer-Umschalter); ab 1600 px wird die Seite breiter, damit beide Platz haben. */
+@media (min-width: 1100px) {
+  .board-col:not(.editing) { width: min(64vw, calc(100vh - 170px), 820px, calc(100% - 460px)); }
+  .side-col { min-width: 440px; }
+}
+@media (min-width: 1600px) {
+  .analysis-page { max-width: min(1680px, 96vw); }
+}
 .back-btn { width: 100%; margin-bottom: 8px; }
 .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
 .controls { display: flex; align-items: center; gap: 2px; }

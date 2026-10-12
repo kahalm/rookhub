@@ -77,7 +77,8 @@ export const KID_COORDS = `
  * x = 336. Die Seiten setzen ihre `max-width` aus diesen Werten (Polsterung 16 px eingerechnet), die App-Huelle
  * gibt der Kopfzeile dieselbe Breite ({@link kidPageWidth}).
  */
-export const KID_PAGE_WIDTH = { home: 1160, map: 980, list: 820, legal: 840 } as const;
+// legal 620 (z1-k-legal-line): Karte 588 px, Text ≈ 556 px ≈ 75 Zeichen bei 16 px — mit 840 waren es rund 105.
+export const KID_PAGE_WIDTH = { home: 1160, map: 980, list: 820, legal: 620 } as const;
 
 /**
  * Breite der Kopfzeile fuer die Seite unter `url` (CSS-Wert). Aufgabenseiten (Stufe, Endlos, Sternenjagd, Kurs)

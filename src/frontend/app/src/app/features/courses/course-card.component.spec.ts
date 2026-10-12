@@ -290,3 +290,27 @@ describe('CourseCardComponent Aktionszeile unten', () => {
     expect(css).toMatch(/\.action-row[^{]*\{[^}]*margin-top: auto/);
   });
 });
+
+/** UI-Sweep z1 (z1-rk-course-card-buendig): einzeiliger Titel, Fortschritt unten im Inhalt. */
+describe('CourseCardComponent bündig', () => {
+  it('kürzt den Titel einzeilig mit „…" (voller Titel im title) und schiebt den Fortschritt nach unten', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    const long = 'Capablanca – Chess Fundamentals, ein sehr langer Titel über mehrere Zeilen';
+    fixture.componentInstance.course = { bookId: 1, displayName: long, puzzleCount: 10, solvedCount: 2, progressPercent: 20 } as never;
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const title = el.querySelector('.card-title') as HTMLElement;
+    expect(title.getAttribute('title')).toBe(long);
+    const cs = getComputedStyle(title);
+    expect(cs.whiteSpace).toBe('nowrap');
+    expect(cs.textOverflow).toBe('ellipsis');
+    expect(getComputedStyle(el.querySelector('mat-card-content') as HTMLElement).flexDirection).toBe('column');
+    el.remove();
+  });
+});

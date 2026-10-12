@@ -105,10 +105,15 @@
       {{ 'courses.calcPoints' | translate:{ score: scoreDisplay(totalPoints, totalMaxPoints) } }}
     </span>
 
-    <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. Einspaltig steht der Knopf in der
-         Leiste unter dem Brett (r2-rp-calc-fullscreen), sonst stand er allein in einer eigenen Zeile. -->
+    <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. UI-Sweep z1 (z1-rk-calc-werkzeugzeile):
+         einspaltig stehen Kopieren UND Einstellungen hier rechts in der Befehlsleiste; die Leiste unter dem Brett
+         entfällt dort (sie kostete eine eigene Zeile und schob „Ergebnis“ unter die Falz). -->
     <button mat-icon-button class="calc-copy-bar" (click)="copyFen()" [appIconLabel]="'calc.copyFen' | translate">
       <mat-icon>content_copy</mat-icon>
+    </button>
+    <button mat-icon-button class="calc-settings-bar" (click)="openSettings()"
+            [appIconLabel]="'calc.settings.title' | translate">
+      <mat-icon>settings</mat-icon>
     </button>
   </ng-template>
 
@@ -162,13 +167,9 @@
            Der Vollbild-Knopf hatte vorher eine eigene Zeile ÜBER dem Brett und kostete Höhe —
            hier kostet er nur Breite, von der genug da ist. -->
       <div class="calc-rail">
-        <!-- UI-Sweep 2026-10-11 (r2-rp-calc-fullscreen): einspaltig zeigt das Brett seinen eigenen
-             Vollbild-Knopf (styles.scss blendet ihn erst ab 900px aus) — der hier wäre der zweite. -->
+        <!-- Nur breit sichtbar (ab 900 px); einspaltig zeigt das Brett seinen eigenen Vollbild-Knopf und
+             Kopieren/Einstellungen stehen in der Befehlsleiste (z1-rk-calc-werkzeugzeile). -->
         <app-board-fullscreen-button class="calc-rail-fs" [target]="fsTarget" />
-        <button mat-icon-button class="calc-rail-btn calc-rail-copy" (click)="copyFen()"
-                [appIconLabel]="'calc.copyFen' | translate">
-          <mat-icon>content_copy</mat-icon>
-        </button>
         <button mat-icon-button class="calc-rail-btn" (click)="openSettings()"
                 [appIconLabel]="'calc.settings.title' | translate">
           <mat-icon>settings</mat-icon>

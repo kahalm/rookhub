@@ -128,12 +128,12 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
     const back = el.querySelector<HTMLAnchorElement>('.legal-top a.back')!;
     expect(back).withContext('„← Start" oben').not.toBeNull();
     expect(back.compareDocumentPosition(el.querySelector('app-account-deletion')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(el.querySelector<HTMLElement>('header.top')!.style.getPropertyValue('--kid-page-width')).toBe('840px');
+    expect(el.querySelector<HTMLElement>('header.top')!.style.getPropertyValue('--kid-page-width')).toBe('620px');
 
     const card = getComputedStyle(el.querySelector<HTMLElement>('app-account-deletion mat-card')!);
     expect(card.borderTopLeftRadius).toBe('22px');
     expect(card.backgroundColor).toBe('rgb(255, 255, 255)');
-    expect(card.maxWidth).toBe('808px');
+    expect(card.maxWidth).toBe('588px');                          // z1-k-legal-line
     const h1 = getComputedStyle(el.querySelector<HTMLElement>('app-account-deletion h1')!);
     expect(h1.fontWeight).toBe('800');
     expect(h1.color).toBe('rgb(29, 79, 145)');                        // --kid-title

@@ -238,6 +238,7 @@ describe('LeagueHubAppComponent Kopf (UI-Sweep 2026-10-10)', () => {
     expect(await at('/')).toEqual(Array(6).fill('mid'));
     expect(await at('/?liga=10&runde=2')).toEqual(Array(6).fill('mid'));
     expect(await at('/konten')).toEqual(Array(6).fill('mid'));
+    expect(await at('/uebertragungen')).toEqual(Array(6).fill('mid'));   // z1-l-uebertragungen-breite
     expect(await at('/s/abc123')).toEqual(Array(6).fill('mid'));
     expect(await at('/verein/partie/12/korrigieren')).toEqual(Array(6).fill('wide'));
     expect(await at('/verein/formular/7')).toEqual(Array(6).fill('wide'));

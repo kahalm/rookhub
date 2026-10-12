@@ -151,3 +151,12 @@ describe('TrainingGoalsComponent Wochenziel Spielen', () => {
     expect(getComputedStyle(tag!.querySelector('.weekly-sep')!).marginLeft).not.toBe('0px');
   });
 });
+
+/** UI-Sweep z1 (z1-rk-goals-reset-umbruch): Aktionszeile bricht zwischen, nicht in den Knöpfen um. */
+describe('TrainingGoalsComponent Aktionszeile', () => {
+  it('lässt die Zeile umbrechen, aber nicht den Knopftext', () => {
+    const css = ((TrainingGoalsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.actions[^{]*\{[^}]*flex-wrap: wrap/);
+    expect(css).toMatch(/\.actions[^{]* button[^{]*\{ ?white-space: nowrap/);
+  });
+});

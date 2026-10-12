@@ -10,6 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { LocaleService } from '../../core/locale.service';
@@ -33,6 +34,9 @@ interface EndlessSessionDto {
 interface SessionRow extends EndlessSessionDto {
   dateText: string;
   configText: string;
+  /** Schnellstart-Schwellen des Laufs (nur im Tooltip der Start-Rating-Zelle). */
+  t1: number | null;
+  t2: number | null;
   mistakesText: string;
   eloText: string;
   eloClass: string;
@@ -52,7 +56,7 @@ interface EndlessHistoryResponse {
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatPaginatorModule, MatProgressSpinnerModule,
-    MatCheckboxModule, MatButtonToggleModule, TranslatePipe
+    MatCheckboxModule, MatButtonToggleModule, MatTooltipModule, TranslatePipe
   ],
   template: `
     <div class="history-container">
@@ -144,8 +148,10 @@ interface EndlessHistoryResponse {
                     <td mat-cell *matCellDef="let s">{{ formatDuration(s.durationSeconds) }}</td>
                   </ng-container>
                   <ng-container matColumnDef="config">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colConfig' | translate }}</th>
-                    <td mat-cell *matCellDef="let s">{{ s.configText }}</td>
+                    <!-- UI-Sweep z1 (z1-rk-endless-history-config): Spalte heißt „Start-Rating“, fehlt es: „-“ wie bei den
+                         übrigen Spalten; die Schwellen stehen nur noch im Tooltip (statt Fachkürzel T1/T2). -->
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.config.startRating' | translate }}</th>
+                    <td mat-cell *matCellDef="let s" [matTooltip]="s.t1 ? (('endless.config.firstThreshold' | translate) + ': ' + s.t1 + (s.t2 ? ' · ' + ('endless.config.secondThreshold' | translate) + ': ' + s.t2 : '')) : ''">{{ s.configText }}</td>
                   </ng-container>
                   <ng-container matColumnDef="mistakes">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colMistakes' | translate }}</th>
@@ -195,7 +201,7 @@ interface EndlessHistoryResponse {
                       </div>
                       <div class="session-stat">
                         <span class="session-stat-value">{{ s.configText }}</span>
-                        <span class="session-stat-label">{{ 'endless.history.colConfig' | translate }}</span>
+                        <span class="session-stat-label">{{ 'endless.config.startRating' | translate }}</span>
                       </div>
                     </div>
                     @if (s.mistakesText !== '-') {
@@ -389,21 +395,30 @@ export class EndlessHistoryComponent implements OnInit {
       ...s,
       dateText: this.formatDate(s.timestamp),
       configText: this.formatConfig(s.configJson),
+      ...this.thresholds(s.configJson),
       mistakesText: this.formatMistakes(s.mistakeAtRatings),
       eloText: this.formatEloDelta(s),
       eloClass: this.eloDeltaClass(s),
     };
   }
 
+  /** Start-Rating des Laufs; ohne Wert „-“ wie die übrigen Spalten (kein nacktes „?“). */
   formatConfig(configJson: string): string {
     try {
       const c = JSON.parse(configJson);
-      const parts = [`${c.startElo ?? '?'}`];
-      if (c.fasttrackThreshold1) parts.push(`T1 ${c.fasttrackThreshold1}`);
-      if (c.fasttrackThreshold2) parts.push(`T2 ${c.fasttrackThreshold2}`);
-      return parts.join(' · ');
+      return typeof c?.startElo === 'number' ? `${c.startElo}` : '-';
     } catch {
       return '-';
+    }
+  }
+
+  /** Schnellstart-Schwellen (für den Tooltip). */
+  thresholds(configJson: string): { t1: number | null; t2: number | null } {
+    try {
+      const c = JSON.parse(configJson);
+      return { t1: c?.fasttrackThreshold1 || null, t2: c?.fasttrackThreshold2 || null };
+    } catch {
+      return { t1: null, t2: null };
     }
   }
 

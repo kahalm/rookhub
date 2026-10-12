@@ -72,9 +72,11 @@ describe('PlayerCardComponent', () => {
     fixture.detectChanges();
     expect(headings().some(h => h.startsWith('Mit Weiß'))).toBeTrue();
     expect(headings().some(h => h.startsWith('Mit Schwarz gegen 1.e4'))).toBeTrue();
-    // Weiß und Schwarz je in einer Hülle (.sides > .side): die Spielervorbereitung stellt sie groß nebeneinander (d2-rk-prep-wide).
-    expect(Array.from(el().querySelectorAll('.sides > .side')).map(s => s.querySelector('h3')?.textContent?.trim().slice(0, 10)))
-      .toEqual(['Mit Weiß (', 'Mit Schwar']);
+    // Jeder Abschnitt in einer eigenen Hülle (.sides > .side): die Spielervorbereitung füllt damit ihr Zwei-Spalten-Raster
+    // paarweise (d2-rk-prep-wide, z1-rk-prep-spalten) — nicht links Weiß allein und rechts alle Schwarz-Abschnitte.
+    expect(Array.from(el().querySelectorAll('.sides > .side')).map(s => s.querySelector('h3')?.textContent?.trim().slice(0, 22)))
+      .toEqual(['Mit Weiß (9 Partien)', 'Mit Schwarz gegen 1.e4', 'Mit Schwarz gegen 1.d4']);
+    expect(Array.from(el().querySelectorAll('.sides > .side')).every(s => s.querySelectorAll('h3').length === 1)).toBeTrue();
     expect(el().textContent).toContain('Sizilianisch');
     // Bei „Beide" fällt „mit Weiß" weg — der Zusatz klebt trotzdem nicht am Wort.
     expect(headings().some(h => h.replace(/\s+/g, ' ').trim() === 'Letzte Partien — zum Nachspielen anklicken')).toBeTrue();
@@ -345,6 +347,25 @@ describe('PlayerCardComponent', () => {
     await fixture.componentInstance.download((await other.card.calls.mostRecent().returnValue));
     expect(other.pgn).toHaveBeenCalledWith('4711', null);
     expect(api.card).not.toHaveBeenCalled();
+
+    // z1-rk-prep-vorlauf: Farbwahl, Filter und Werkzeuge in EINER Hülle; inline gibt es „Filter ▾", Vorgabe zu.
+    const controls = el().querySelector('.controls')!;
+    expect(controls.querySelector('.seg')).not.toBeNull();
+    expect(controls.querySelector('lh-tree-filter-bar')).not.toBeNull();
+    const toggle = controls.querySelector<HTMLButtonElement>('.ctl-toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(controls.classList).not.toContain('open');
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(controls.classList).toContain('open');
+  });
+
+  it('LeagueHub (nicht inline): kein „Filter ▾"-Klappknopf', async () => {
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    expect(el().querySelector('.controls .seg')).not.toBeNull();
+    expect(el().querySelector('.ctl-toggle')).toBeNull();
   });
 
   it('LeagueHub: das Token liefert ohne eigenen Eintrag den LeagueApiService', () => {

@@ -95,6 +95,9 @@ describe('TournamentTablesComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.player-tools .player-menu-btn'))
       .withContext('Sortier-/Filterknopf fuer die Kartenliste').not.toBeNull();
+    // z1-t-detail-sortier-knopf: sichtbar beschriftet, nicht nur ⇅ ▾
+    expect(fixture.nativeElement.querySelector('.player-menu-btn .btn-label').textContent).toContain('tournaments.players.sortShort');
+    expect(fixture.nativeElement.querySelector('.player-menu-btn .drop')).toBeNull();
     component.pickMobileSort('elo');
     component.pickMobileSort('team');
 
@@ -215,6 +218,8 @@ describe('TournamentTablesComponent', () => {
     expect(hint()).not.toBeNull();
     expect(hint()!.getAttribute('aria-label')).toBe('tournaments.favoritesOnlyHint');
     expect(fixture.nativeElement.querySelector('.player-tools .filter-hint')).toBeNull();
+    // z1-t-detail-fav-hilfe: kein Minus-Rand, das ? klebt nicht an der Beschriftung
+    expect(getComputedStyle(hint()!).marginLeft).toBe('0px');
 
     component.hasFavorites = true;
     fixture.detectChanges();

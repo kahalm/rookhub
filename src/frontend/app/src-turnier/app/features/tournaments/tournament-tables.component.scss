@@ -16,9 +16,9 @@
 
     /* Sortier-/Filterknopf und Chips: nur am Handy (d2-t-detail-vorlauf). */
     .player-menu-btn, .active-chips { display: none; }
-    .player-menu-btn { height: 56px; min-width: 0; padding: 0 8px; }
+    .player-menu-btn { height: 56px; min-width: 0; padding: 0 12px 0 8px; }
     .player-menu-btn .mat-icon { margin: 0; }
-    .player-menu-btn .drop { margin-left: -4px; }
+    .player-menu-btn .btn-label { margin-left: 4px; }
     .active-chips { flex-wrap: wrap; gap: 0.4rem; padding-top: 0.5rem; }
     .active-chip {
       display: inline-flex; align-items: center; gap: 0.3rem; min-height: 32px; padding: 0 0.75rem;
@@ -35,7 +35,8 @@
     .player-search { flex: 1 1 16rem; max-width: 24rem; }
     /* Schalter und ? bleiben zusammen — am Handy rutschte das ? sonst allein in eine eigene Zeile. */
     .fav-group { display: inline-flex; align-items: center; flex-wrap: nowrap; }
-    .filter-hint-btn { margin-left: -8px; color: color-mix(in srgb, currentColor 70%, transparent); }
+    /* Kein Minus-Rand: das ? klebte sonst an „Nur Favoriten" (z1-t-detail-fav-hilfe); das Knopfpolster gibt ≈ 8 px Luft. */
+    .filter-hint-btn { margin-left: 0; color: color-mix(in srgb, currentColor 70%, transparent); }
     .no-title { color: color-mix(in srgb, currentColor 45%, transparent); }
     .club-derived { font-style: italic; color: color-mix(in srgb, currentColor 70%, transparent); }
     /* Leerzustand: Form aus dem globalen .empty-state (DESIGN.md 5.10), hier nur die leise Farbe. */
@@ -135,6 +136,10 @@
       .player-tools { flex-wrap: nowrap; gap: 0.5rem; }
       .player-search { max-width: none; flex: 1 1 auto; min-width: 0; }
       .player-menu-btn { display: inline-flex; flex: none; }
+      @media (max-width: 380px) {
+        .player-menu-btn { padding: 0 8px; }
+        .player-menu-btn .btn-label { display: none; }
+      }
       .player-tools .fav-group { display: none; }
       .active-chips { display: flex; }
       .pairing-team { white-space: normal; }

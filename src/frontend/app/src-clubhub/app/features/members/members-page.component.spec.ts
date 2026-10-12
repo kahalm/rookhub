@@ -85,6 +85,14 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(el().querySelector('.count')!.textContent).toBe('3 Kinder');
   });
 
+  it('Kopf: Anlege-Knöpfe mit Kurztext fürs Handy und vollem Namen für Vorleser; der Zähler steht in der Werkzeugzeile (z1-c-kartei-lead)', async () => {
+    await create();
+    const links = Array.from(el().querySelectorAll<HTMLAnchorElement>('.kartei-head .actions a'));
+    expect(links.map(a => a.getAttribute('aria-label'))).toEqual(['Kind anlegen', 'Trainer anlegen']);
+    expect(links.map(a => a.querySelector('.short')!.textContent)).toEqual(['+ Kind', '+ Trainer']);
+    expect(el().querySelector('.tools > .count')!.textContent).toBe('3 Kinder');
+  });
+
   it('ein Kind ohne Nachnamen steht unter dem Buchstaben seines VORNAMENS, fett wie sonst der Nachname', async () => {
     api.members.and.resolveTo([KID(1, 'Anna', 'Auer'), KID(4, 'Emil', ''), KID(2, 'Ivo', 'Šarić')]);
     await create();

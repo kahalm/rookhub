@@ -78,6 +78,24 @@ describe('ScoresheetUploadComponent', () => {
     discardPeriodicTasks();
   }));
 
+  // z1-rk-scoresheet-grund: der gesperrte Hauptknopf sagt, dass erst ein Foto fehlt.
+  it('without a photo the read button is disabled and a quiet line says a photo is needed', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(status());
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector<HTMLButtonElement>('.actions button[color="primary"]')?.disabled).toBeTrue();
+    expect(el.querySelector('.actions .need-photo')?.textContent).toContain('scoresheet.needPhoto');
+
+    const file = new File([new Uint8Array([1, 2, 3])], 'sheet.jpg', { type: 'image/jpeg' });
+    fixture.componentInstance.onFile({ target: { files: [file], value: '' } } as unknown as Event);
+    fixture.detectChanges();
+    expect(el.querySelector('.actions .need-photo')).toBeNull();
+    expect(el.querySelector<HTMLButtonElement>('.actions button[color="primary"]')?.disabled).toBeFalse();
+  });
+
   it('an exhausted budget disables reading and says why', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

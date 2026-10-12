@@ -9,6 +9,10 @@
        bricht die Reihe unter den Titel. */
     .title-row { display: flex; align-items: center; flex-wrap: wrap; column-gap: 0.5rem; }
     .title-row mat-card-header { flex: 1 1 18rem; min-width: 0; }
+    /* Material polstert den Kopf 16 px oben / 0 unten — der Titel sass tiefer als die Knopfreihe (z1-t-detail-titel-versatz). */
+    @media (min-width: 769px) {
+      .title-row mat-card-header { padding-block: 8px; }
+    }
     .title-row .action-bar { flex: 0 1 auto; justify-content: flex-end; padding: 8px 16px; }
     .more-actions { display: none; flex: none; margin: 8px 4px 0 0; }
     .load-failed { padding: 1rem; }

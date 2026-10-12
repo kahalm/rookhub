@@ -36,5 +36,10 @@ describe('StarsMapComponent', () => {
       const [r, g, b, a] = parseColor(s.color);
       expect(contrast([r, g, b, a * Number(s.opacity)], bg)).withContext(part).toBeGreaterThanOrEqual(4.5);
     }
+    // z1-k-locked-glyph: die Figur ist bedeutungstragende Grafik — feste Farbe mit mindestens 3:1 statt 45 % Deckkraft
+    const glyph = getComputedStyle(second.querySelector('.glyph')!);
+    const [gr, gg, gb, ga] = parseColor(glyph.color);
+    expect(Number(glyph.opacity)).toBe(1);
+    expect(contrast([gr, gg, gb, ga], bg)).toBeGreaterThanOrEqual(3);
   });
 });

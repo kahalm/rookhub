@@ -102,7 +102,9 @@ describe('ApiTokensComponent', () => {
     http.expectOne('/api/profile/tokens').flush([]);
     await fixture.whenStable();
     expect(el.textContent).not.toContain('common.loading');
-    expect(el.querySelector('.empty-state')?.textContent).toContain('profile.tokens.empty');
+    // UI-Sweep z1 (z1-rk-profile-tokens): leise linksbündige Zeile statt zentrierter .empty-state.
+    expect(el.querySelector('.tokens-empty')?.textContent).toContain('profile.tokens.empty');
+    expect(el.querySelector('.empty-state')).toBeNull();
 
     fixture.componentInstance.load();
     http.expectOne('/api/profile/tokens').flush([
@@ -112,7 +114,7 @@ describe('ApiTokensComponent', () => {
     const rows = el.querySelectorAll('.tokens-table tbody tr');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Laptop');
-    expect(el.querySelector('.empty-state')).toBeNull();
+    expect(el.querySelector('.tokens-empty')).toBeNull();
     http.verify();
   });
 

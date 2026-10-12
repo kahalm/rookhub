@@ -214,10 +214,12 @@
                 </div>
                 }
 
-                <div class="lives-display config-lives" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: 3, max: 3 }">
+                <!-- UI-Sweep z1 (z1-rk-endless-leben): sichtbare Beschriftung statt nur aria-label. -->
+                <div class="lives-display config-lives">
                   @for (i of [1,2,3]; track i) {
-                    <mat-icon class="heart full">favorite</mat-icon>
+                    <mat-icon class="heart full" aria-hidden="true">favorite</mat-icon>
                   }
+                  <span class="config-lives-label">{{ 'endless.config.livesHint' | translate }}</span>
                 </div>
 
                 @if (highscore > 0) {

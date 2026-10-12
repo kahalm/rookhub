@@ -101,6 +101,11 @@ export interface RevengeList {
     /* Themen umbrechen statt am Handy mit „…“ abzuschneiden — die Zeile wächst mit. */
     .rev-item.mat-mdc-list-item { height: auto; padding-top: 8px; padding-bottom: 8px; }
     .themes { font-size: 0.8rem; white-space: normal; color: color-mix(in srgb, currentColor 50%, transparent); }
+    /* UI-Sweep z1 (z1-rk-revenge-themen-umbruch): die Zeilenregel der Material-Liste (nowrap + „…“) gezielt aufheben —
+       das einfache white-space oben verlor gegen sie. */
+    .rev-item .themes.mat-mdc-list-item-line {
+      white-space: normal; overflow: visible; text-overflow: clip; height: auto; -webkit-line-clamp: unset; display: block;
+    }
     .theme + .theme::before { content: ', '; }
     .rev-action { display: flex; align-items: center; height: 100%; }
     .fail { font-size: 0.75rem; color: color-mix(in srgb, currentColor 45%, transparent); }
@@ -110,6 +115,10 @@ export interface RevengeList {
     @media (max-width: 768px) {
       .rev-container { padding: 0.75rem; }
       h1 { font-size: 1.3rem; }
+    }
+    /* Am Handy nur das Listenpolster — sonst blieben den Themen neben dem Knopf ~170 px. */
+    @media (max-width: 599.98px) {
+      mat-card { padding: 4px 0; }
     }
   `]
 })

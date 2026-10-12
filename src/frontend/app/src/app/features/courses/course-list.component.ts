@@ -24,6 +24,7 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
 import { CourseThemesDialogComponent, CourseThemesDialogData } from './course-themes-dialog.component';
 import { AuthService } from '../../core/auth.service';
 import { CourseCardComponent } from './course-card.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 @Component({
   selector: 'app-course-list',
@@ -32,20 +33,27 @@ import { CourseCardComponent } from './course-card.component';
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatDialogModule,
-    LoadingSpinnerComponent, TranslatePipe, ReprocessBannerComponent, CourseCardComponent
+    LoadingSpinnerComponent, TranslatePipe, ReprocessBannerComponent, CourseCardComponent, HelpHintComponent
   ],
   template: `
     <div class="courses-container">
       <div class="header">
-        <h1>{{ 'courses.title' | translate }}</h1>
+        <!-- UI-Sweep z1 (z1-rk-courses-banner-vorlauf): am Handy steht der Erklärsatz hinter dem ⓘ am Titel und die
+             zwei Kopfknöpfe als Symbolknöpfe in der Titelzeile (Beschriftung als aria-label) — weniger Vorlauf. -->
+        <div class="title-row">
+          <h1>{{ 'courses.title' | translate }}</h1>
+          <app-help-hint class="intro-hint" icon="info_outline" [text]="'courses.intro' | translate" />
+        </div>
         <div class="header-actions">
-          <button mat-stroked-button [disabled]="creating" (click)="openImportDialog()">
+          <button mat-stroked-button [disabled]="creating" (click)="openImportDialog()"
+                  [attr.aria-label]="'courses.import.button' | translate">
             <mat-icon>upload_file</mat-icon>
-            {{ 'courses.import.button' | translate }}
+            <span class="btn-label">{{ 'courses.import.button' | translate }}</span>
           </button>
-          <button mat-flat-button color="primary" [disabled]="creating" (click)="openCreateDialog()">
+          <button mat-flat-button color="primary" [disabled]="creating" (click)="openCreateDialog()"
+                  [attr.aria-label]="(creating ? 'courses.create.creating' : 'courses.create.button') | translate">
             <mat-icon>{{ creating ? 'hourglass_empty' : 'add' }}</mat-icon>
-            {{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}
+            <span class="btn-label">{{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}</span>
           </button>
         </div>
       </div>
@@ -60,6 +68,8 @@ import { CourseCardComponent } from './course-card.component';
         <div class="reimport-legend"><ng-container [ngTemplateOutlet]="reimportTpl" /></div>
       }
       <ng-template #reimportTpl>
+        <!-- UI-Sweep z1 (z1-rk-courses-banner-vorlauf): im Banner eine eigene Zeile, sonst klebte der zweite Hinweis am ersten Satz. -->
+        <span class="reimport-part">
         <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
         <!-- UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
              allein in eine Zeile. -->
@@ -68,6 +78,7 @@ import { CourseCardComponent } from './course-card.component';
         @if (reimportOpen) {
           <span class="reimport-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</span>
         }
+        </span>
       </ng-template>
 
       @if (offlineList) {
@@ -97,8 +108,10 @@ import { CourseCardComponent } from './course-card.component';
         }
         @if (inProgressCourses.length > 0) {
           <section class="course-section">
-            <h2>{{ 'courses.sectionInProgress' | translate }}</h2>
-            <p class="section-hint">{{ 'courses.sectionInProgressHint' | translate }}</p>
+            <div class="section-head">
+              <h2>{{ 'courses.sectionInProgress' | translate }}</h2>
+              <app-help-hint icon="info_outline" [text]="'courses.sectionInProgressHint' | translate" />
+            </div>
             <div class="course-grid">
               @for (c of inProgressCourses; track c.bookId) {
                 <app-course-card [course]="c" [origin]="originOf(c)"
@@ -128,8 +141,10 @@ import { CourseCardComponent } from './course-card.component';
         }
         @if (sharedCourses.length > 0) {
           <section class="course-section">
-            <h2>{{ 'courses.sectionSharedWithMe' | translate }}</h2>
-            <p class="section-hint">{{ 'courses.sectionSharedWithMeHint' | translate }}</p>
+            <div class="section-head">
+              <h2>{{ 'courses.sectionSharedWithMe' | translate }}</h2>
+              <app-help-hint icon="info_outline" [text]="'courses.sectionSharedWithMeHint' | translate" />
+            </div>
             <div class="course-grid">
               @for (c of sharedCourses; track c.bookId) {
                 <app-course-card [course]="c" [origin]="originOf(c)"
@@ -159,8 +174,10 @@ import { CourseCardComponent } from './course-card.component';
         }
         @if (publicCourses.length > 0) {
           <section class="course-section">
-            <h2>{{ 'courses.sectionPublic' | translate }}</h2>
-            <p class="section-hint">{{ 'courses.sectionPublicHint' | translate }}</p>
+            <div class="section-head">
+              <h2>{{ 'courses.sectionPublic' | translate }}</h2>
+              <app-help-hint icon="info_outline" [text]="'courses.sectionPublicHint' | translate" />
+            </div>
             <div class="course-grid">
               @for (c of publicCourses; track c.bookId) {
                 <app-course-card [course]="c" [origin]="originOf(c)"
@@ -190,8 +207,10 @@ import { CourseCardComponent } from './course-card.component';
         }
         @if (ownCourses.length > 0) {
           <section class="course-section">
-            <h2>{{ 'courses.sectionOwn' | translate }}</h2>
-            <p class="section-hint">{{ 'courses.sectionOwnHint' | translate }}</p>
+            <div class="section-head">
+              <h2>{{ 'courses.sectionOwn' | translate }}</h2>
+              <app-help-hint icon="info_outline" [text]="'courses.sectionOwnHint' | translate" />
+            </div>
             <div class="course-grid">
               @for (c of ownCourses; track c.bookId) {
                 <app-course-card [course]="c" [origin]="originOf(c)"
@@ -230,9 +249,17 @@ import { CourseCardComponent } from './course-card.component';
     .header h1 { margin: 0; }
     /* UI-Sweep 2026-10-11 (Nachprüfung Runde 3): am Handy standen Titel und zwei Knöpfe gedrängt nebeneinander (Knöpfe übereinander) — die Knöpfe
        rücken in eine eigene Zeile unter den Titel. */
+    /* UI-Sweep z1 (z1-rk-courses-banner-vorlauf): am Handy bleiben die Knöpfe als Symbolknöpfe in der Titelzeile,
+       der Erklärsatz steht hinter dem ⓘ am Titel (Vorlauf ≤ 40 %, DESIGN 4.6). */
+    .title-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .intro-hint { display: none; }
     @media (max-width: 599.98px) {
-      .header { flex-wrap: wrap; }
-      .header-actions { flex-basis: 100%; }
+      .header-actions { flex-wrap: nowrap; }
+      .header-actions .btn-label { display: none; }
+      .header-actions button { min-width: 0; padding: 0 12px; }
+      .header-actions button mat-icon { margin: 0; }
+      .intro-hint { display: inline-flex; }
+      .intro { display: none; }
     }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
@@ -244,7 +271,9 @@ import { CourseCardComponent } from './course-card.component';
       padding: 6px 12px; border-radius: 8px; font-size: 0.88rem;
       border: 1px solid color-mix(in srgb, var(--rh-warn) 45%, transparent); }
     /* Im Aufbereitungs-Banner steht die Legende als zweiter Satz im Fließtext. */
-    app-reprocess-banner .reimport-chip { margin-left: 4px; }
+    app-reprocess-banner .reimport-part { display: block; margin-top: 4px; }
+    .reimport-part { display: contents; }
+    .reimport-chip { margin-right: 6px; }
     .reimport-chip { border: 1px solid var(--rh-warn); color: var(--rh-warn); border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
     .reimport-text { flex: 1 1 220px; }
     .reimport-toggle { font: inherit; font-weight: 500; color: var(--mat-sys-primary); background: none; border: 0;
@@ -257,8 +286,9 @@ import { CourseCardComponent } from './course-card.component';
                       background: color-mix(in srgb, currentColor 7%, transparent);
                       color: color-mix(in srgb, currentColor 80%, transparent); }
     .offline-banner mat-icon { flex: 0 0 auto; opacity: 0.7; }
-    .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
-    .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; margin: 0 0 10px; }
+    /* UI-Sweep z1: die Unterzeile je Abschnitt steht im ⓘ des Abschnittskopfs. */
+    .section-head { display: flex; align-items: center; gap: 4px; margin: 0 0 10px; }
+    .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0; letter-spacing: .01em; }
     .course-grid {
       display: grid; gap: 12px;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

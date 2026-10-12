@@ -73,7 +73,9 @@ import { pieceGlyph } from './stars-play.component';
        (UI-Sweep 2026-10-10, k-locked-contrast — vorher die ganze Kachel auf 55 %, Text unter 4,5:1). */
     .stage.locked { background: #f1f5f9; color: #5f6b7a; box-shadow: 0 4px 0 rgba(30, 70, 120, .14); }
     .stage.locked .num, .stage.locked .meta { opacity: 1; }
-    .stage.locked .glyph { opacity: .45; }
+    /* z1-k-locked-glyph: feste Farbe statt 45 % Deckkraft (≈ 3,3:1 auf dem hellen Grund statt ≈ 2:1) —
+       gesperrt zeigen Schloss und heller Grund. */
+    .stage.locked .glyph { opacity: 1; color: #7a8494; }
     .lock { position: absolute; top: 6px; right: 10px; font-size: 1.15rem; line-height: 1; }
     .num { position: absolute; top: 8px; left: 12px; font-weight: 800; opacity: .7; }
     .glyph { font-size: 2.8rem; line-height: 1.1; }

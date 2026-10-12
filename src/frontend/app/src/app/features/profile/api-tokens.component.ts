@@ -163,7 +163,9 @@ export class ShowTokenDialogComponent implements OnDestroy {
         @if (loading()) {
           <p>{{ 'common.loading' | translate }}</p>
         } @else if (tokens().length === 0) {
-          <p class="empty-state">{{ 'profile.tokens.empty' | translate }}</p>
+          <!-- UI-Sweep z1 (z1-rk-profile-tokens): leise linksbündige Zeile wie in den übrigen Abschnitten statt der
+               zentrierten globalen .empty-state mit großem Polster. -->
+          <p class="tokens-empty">{{ 'profile.tokens.empty' | translate }}</p>
         } @else {
           <div class="tokens-scroll">
           <table class="tokens-table">
@@ -204,7 +206,8 @@ export class ShowTokenDialogComponent implements OnDestroy {
     </div>
   `,
   styles: [`
-    .tokens-section h4 { margin: 0 0 0.25rem; color: var(--rh-info); }
+    .tokens-section h4 { margin: 0 0 0.25rem; color: var(--rh-accent); }
+    .tokens-empty { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .85rem; margin: 0 0 .5rem; text-align: left; }
     .tokens-hint { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; margin: 0 0 0.5rem; }
     .tokens-create { margin-top: 0.25rem; }
     .tokens-scroll { overflow-x: auto; }

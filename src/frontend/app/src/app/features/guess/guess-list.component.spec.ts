@@ -237,6 +237,63 @@ describe('GuessListComponent', () => {
     expect(below[0]).toContain('Lauf 5');
   });
 
+  /** z1-rk-guess-einzeltab: ohne Konto gibt es nur die Meisterpartien — keine Reiterleiste mit einem Reiter; die Anzahl
+   *  steht in der Filterzeile, der Konto-Hinweis im Untertitel. */
+  it('ohne Konto: keine Reiterleiste, Anzahl in der Filterzeile, Hinweis im Untertitel', () => {
+    const fixture = setup(false);
+    http.expectOne('/api/game-analyses/public').flush([
+      analysis({ id: 1, isPublic: true, analyzedPlies: 40, status: 'done' }),
+      analysis({ id: 2, isPublic: true, analyzedPlies: 40, status: 'done' }),
+    ]);
+    http.expectOne(r => r.url === '/api/guess-sessions/anonymous').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('mat-tab-group')).toBeNull();
+    expect(el.querySelectorAll('.start-card .game-row').length).toBe(2);
+    expect(el.querySelector('.sec-head .count')?.textContent).toContain('guess.gamesCount');
+    expect(el.querySelector('p.intro .anon-hint')?.textContent).toContain('guess.anonHint');
+    expect(el.querySelectorAll('p.small').length).withContext('keine eigene Hinweiszeile mehr').toBe(0);
+  });
+
+  /** z1-rk-guess-vorlauf: Suche, Filter und Sortieren (⇅ mit Menü) in EINER Zeile über der Liste; mit Konto in den Reitern. */
+  it('legt Suche und Sortieren in die Filterzeile der Liste; ⇅ öffnet das Sortiermenü', async () => {
+    const fixture = setup();
+    flushInitial();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('mat-tab-group')).not.toBeNull();
+    const head = el.querySelector('.start-card .sec-head')!;
+    expect(head.querySelector('mat-form-field.search')).not.toBeNull();
+    const sortBtn = head.querySelector<HTMLButtonElement>('button.sort-btn')!;
+    expect(sortBtn).not.toBeNull();
+    sortBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const items = Array.from(document.querySelectorAll<HTMLButtonElement>('.sort-option'));
+    expect(items.length).toBe(4);
+    items[1].click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.sort).toBe('short');
+    expect(sortBtn.classList).toContain('active');
+  });
+
+  /** z1-rk-guess-vorlauf: die Weiterspielen-Karte ist EINE Zeile — Titel + Meta links, ▶ und Löschen rechts, ohne Umbruch. */
+  it('verdichtet „Weiterspielen" zu einer Zeile mit Titel, Meta, ▶ und Löschen', () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([]);
+    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/guess-sessions').flush([{ id: 4, title: 'Lauf 4', guessWhite: true, status: 'running', points: 3, maxPoints: 10 } as GuessSession]);
+    fixture.detectChanges();
+    const row = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.resume .resume-row')!;
+    expect(getComputedStyle(row).flexWrap).toBe('nowrap');
+    const kinds = Array.from(row.children).map(c => c.classList.contains('resume-main') ? 'main' : c.tagName.toLowerCase());
+    expect(kinds).toEqual(['main', 'a', 'button']);
+    expect(row.querySelector('.resume-main .resume-meta')?.textContent).toContain('guess.score');
+    expect(row.querySelector('a.resume-btn')?.getAttribute('aria-label')).toBe('guess.resume');
+  });
+
   /** d2-rk-guess-vorlauf: Erklärtext ein Satz, Rest und „Seite des Gewinners" hinter dem ⓘ am Titel. */
   it('hält den Erklärtext kurz: Rest und Gewinner-Hinweis hinter dem ⓘ', () => {
     const fixture = setup();

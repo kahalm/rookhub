@@ -119,13 +119,18 @@
                 <button mat-stroked-button [disabled]="gapSearching() || busy()" (click)="closeGap(gapTarget)">
                   <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
                 </button>
-                @for (choice of gapPlyChoices; track choice) {
-                  <button mat-button class="depth-btn" [class.chosen]="gapPlies === choice"
-                          [disabled]="gapSearching() || busy()" (click)="gapPlies = choice; closeGap(gapTarget)"
-                          [matTooltip]="'reconstruct.gap.depth' | translate">
-                    {{ 'reconstruct.gap.plies' | translate:{ count: choice } }}
-                  </button>
-                }
+                <!-- Suchtiefe als Umschalter: wählt nur die Tiefe, gesucht wird allein über „Lücke schließen"
+                     (z1-rk-recon-lueckentiefe). -->
+                <span class="depth-label muted small">{{ 'reconstruct.gap.pliesLabel' | translate }}</span>
+                <mat-button-toggle-group class="depth-toggle" hideSingleSelectionIndicator
+                                         [value]="gapPlies" (change)="gapPlies = $event.value"
+                                         [disabled]="gapSearching() || busy()"
+                                         [attr.aria-label]="'reconstruct.gap.depth' | translate">
+                  @for (choice of gapPlyChoices; track choice) {
+                    <mat-button-toggle [value]="choice" [attr.aria-label]="'reconstruct.gap.plies' | translate:{ count: choice }"
+                                       [matTooltip]="'reconstruct.gap.plies' | translate:{ count: choice }">{{ choice }}</mat-button-toggle>
+                  }
+                </mat-button-toggle-group>
                 @if (hasProposalsBefore(gapTarget)) {
                   <button mat-button [disabled]="busy()" (click)="discardProposals(gapTarget)">
                     <mat-icon>close</mat-icon> {{ 'reconstruct.gap.discard' | translate }}

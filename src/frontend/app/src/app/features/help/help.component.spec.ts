@@ -251,6 +251,27 @@ describe('HelpComponent', () => {
       expect(el.querySelector('#welcome .more')!.textContent).toContain('Second paragraph.');
     });
 
+    // Runde z1 (z1-rk-help-toc-verborgen): die klebende Spalte endete am Laptop glatt nach 13 von 27 Themen.
+    it('in sich scrollendes Verzeichnis: „mehr darunter“ (.more), solange nicht ans Ende gescrollt', async () => {
+      const { el, cmp, fixture } = await render(false);
+      cmp.tocOpen.set(true);
+      fixture.detectChanges();
+      const nav = el.querySelector<HTMLElement>('nav.help-toc')!;
+      nav.style.maxHeight = '120px';
+      nav.style.overflowY = 'auto';
+      cmp.updateTocMore();
+      fixture.detectChanges();
+      expect(nav.classList).toContain('more');
+      nav.scrollTop = nav.scrollHeight;
+      nav.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+      expect(nav.classList).not.toContain('more');
+      nav.style.maxHeight = '';
+      cmp.updateTocMore();
+      fixture.detectChanges();
+      expect(nav.classList).not.toContain('more');
+    });
+
     it('Absätze höchstens 68ch breit (d2-rk-help-line)', async () => {
       const { el } = await render(false);
       expect(getComputedStyle(el.querySelector('#welcome p.lead')!).maxWidth).not.toBe('none');

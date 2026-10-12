@@ -205,6 +205,8 @@
     "title": "Katalog",
     "listTitle": "Dostupni tečajevi i repertoari",
     "empty": "Nijedan katalog ti još nije podijeljen.",
+    "emptyHint": "Treneri s tobom mogu podijeliti svoje tečajeve i repertoare – pitaj svog trenera.",
+    "toCourses": "Na moje tečajeve",
     "request": "Zatraži",
     "requested": "Zatraženo — vlasnik odlučuje.",
     "requestFailed": "Zahtjev nije uspio.",
@@ -909,6 +911,7 @@
       "you": "Ti",
       "back": "Natrag na prijatelje",
       "themes": "Usporedba tema",
+      "overview": "Pregled",
       "theme": "Tema",
       "noThemes": "Još nema zajedničkih podataka o temama.",
       "loadError": "Statistiku nije moguće učitati"
@@ -1232,6 +1235,7 @@
       "searchNone": "Nijedan igrač ne odgovara upitu „{{query}}“.",
       "sortBy": "Poredaj po",
       "sortFilter": "Poredaj i filtriraj",
+      "sortShort": "Poredaj",
       "sortReset": "Poništi poredak",
       "shownOf": "{{shown}} od {{total}} igrača",
       "showMore": "Prikaži još {{count}}"
@@ -2067,6 +2071,7 @@
     },
     "config": {
       "title": "Beskonačni način",
+      "livesHint": "3 života – tri pogreške i niz je gotov",
       "subtitle": "Progresivna težina — koliko daleko možeš doći?",
       "startRating": "Početni rejting",
       "stockfishDepth": "Stockfish dubina",
@@ -2162,7 +2167,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Riješeno",
       "colDuration": "Trajanje",
-      "colConfig": "Konfiguracija",
       "colMistakes": "Pogreške",
       "backToEndless": "Natrag na beskonačni način"
     },
@@ -3698,6 +3702,7 @@
     "title": "Zapamćene pozicije",
     "hint": "Pozicije koje si spremio s Chessablea preko RepCheck ekstenzije („Remember line“).",
     "empty": "Još nema zapamćenih pozicija. Koristi „Remember line“ u RepCheck ekstenziji na chessable.com.",
+    "setupRepCheck": "Postavi RepCheck",
     "unknownCourse": "Nepoznati tečaj",
     "analyze": "Analiziraj",
     "copyFen": "Kopiraj FEN",
@@ -3959,6 +3964,7 @@
     "showMore": "Prikaži još {{count}}",
     "annotatedBadge": "komentirana",
     "anonHint": "Možeš igrati bez računa. Tvoj prolaz ostaje na ovom pregledniku.",
+    "gamesCount": "{{count}} partija",
     "hasComment": "ima komentar — klikni za čitanje",
     "skipped": {
       "notScorable": "nije pitano: motor ne navodi potez iz partije među najboljima, pa nema mjerila",
@@ -4318,7 +4324,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Kartoteka članova za vodstvo kluba i trenere – prijavi se svojim RookHub računom. Imaš kod od trenera? Iskoristi ga nakon prijave."
+      "login": "Kartoteka za vodstvo kluba i trenere. Kod od trenera? Iskoristi ga nakon prijave."
     }
   },
   "turnier": {
@@ -4428,6 +4434,7 @@
       "locked": "Još zaključano",
       "lockedHint": "Ova razina je još zaključana. Najprije riješi prethodnu!",
       "runAt": "Zadatak {{n}} od {{total}}",
+      "runAtShort": "{{n}} od {{total}}",
       "empty": "Razine se upravo pripremaju – navrati za trenutak.",
       "progress": "{{done}} od {{total}} zadataka",
       "completed": "Razina riješena!",
@@ -4656,6 +4663,7 @@
       "close": "Zatvori prazninu",
       "depth": "Traži do",
       "plies": "{{count}} polupoteza",
+      "pliesLabel": "Polupoteza",
       "searching": "Tražim…",
       "applied": "Praznina je zatvorena — umetnuti potezi označeni su kao nesigurni.",
       "doesNotFit": "Ovi potezi ne vode do tog položaja.",
@@ -4698,6 +4706,7 @@
   },
   "scoresheet": {
     "title": "Učitaj zapisnik partije",
+    "needPhoto": "Najprije snimi ili odaberi fotografiju.",
     "hint": "Fotografija zapisnika — partija se pročita, provjeri potez po potez i spremi u tvoje partije. Čitanje obično traje nekoliko minuta.",
     "help": "Claude, AI model tvrtke Anthropic (SAD), čita fotografiju — za to se ona onamo prenosi (vidi pravila o privatnosti). RookHub zatim provjerava svaki potez na ploči i nejasne ranije poteze razrješava pomoću kasnijih. Gdje potez ostane nesiguran, stranica za ispravke prikazuje najvjerojatnija čitanja.\n\nFotografija ostaje uz partiju (⋮ izbornik: prikaži / preuzmi). Rade svi uobičajeni jezici notacije (K D T L S, K Q R B N, R D T F C …).",
     "notConfigured": "Učitavanje zapisnika nije postavljeno na ovom poslužitelju (nema AI ključa).",

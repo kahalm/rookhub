@@ -87,9 +87,11 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
   `,
   styles: [`
     .fav-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+    /* UI-Sweep z1 (z1-rk-favorites-abstand): der Abstand hängt am Kopf, nicht am (bei leerer Liste fehlenden) Untertitel. */
+    .header { margin-bottom: 16px; }
     .header h1 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
     .title-heart { color: #e91e63; }
-    .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
+    .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }

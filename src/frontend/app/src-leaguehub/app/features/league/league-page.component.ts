@@ -83,7 +83,6 @@ interface Pick { liga?: number; verein?: string }
                   (click)="pickOpen.set(!pickOpen())">{{ pickOpen() ? 'Fertig ▴' : 'Ändern ▾' }}</button>
         </div>
         <div class="pick-area" id="lh-pick" [class.open]="pickOpen()">
-        <ng-container *ngTemplateOutlet="allToggle" />
         <form class="pick" autocomplete="off" (submit)="$event.preventDefault()">
           <label>Liga
             <select (change)="pickLeague(+$any($event.target).value)">
@@ -102,26 +101,31 @@ interface Pick { liga?: number; verein?: string }
           </label>
         </form>
 
+        <!-- z1-l-prognosen-vorlauf-laptop: Schalter, Datenstand und „Alle Aufstellungen" in EINER leisen Zeile unter den Feldern.
+             Am Handy bleibt bei zugeklappter Auswahl nur „Alle Aufstellungen" sichtbar (leaguehub.scss .pick-area:not(.open)). -->
         <div class="stand">
-          <span>Stand der Daten: {{ ix.generated ?? '–' }}</span>
+          <ng-container *ngTemplateOutlet="allToggle" />
+          <span class="stand-at">Stand der Daten: {{ ix.generated ?? '–' }}</span>
           @if (canManage) {
             <button type="button" class="btn-sec" [disabled]="updating()" (click)="startUpdate()">Daten aktualisieren</button>
+          }
+          <!-- 2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde anzeigt" — aufklappbar,
+               der Zustand steht in der Adresse (&aufstellungen=1) und mit der gemerkten Runde im Tab. -->
+          @if (league()) {
+            <div class="lineups-toggle">
+              <!-- d2-l-prognosen-filter: als Textknopf statt als gerahmter Knopf -->
+              <button type="button" class="btn-link" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16M9 4v16"/></svg>
+                {{ showLineups() ? 'Aufstellungen ausblenden' : 'Alle Aufstellungen der Runde ' + round() }}
+              </button>
+            </div>
           }
           <span class="update-msg" [class.err]="updateErr()" role="status" aria-live="polite">{{ updateMsg() }}</span>
         </div>
         </div>
 
-        <!-- 2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde anzeigt" — aufklappbar,
-             der Zustand steht in der Adresse (&aufstellungen=1) und mit der gemerkten Runde im Tab. -->
         @if (league()) {
-          <div class="lineups-toggle">
-            <!-- d2-l-prognosen-filter: als Textknopf statt als gerahmter Knopf — eine leise Zeile über der Begegnung -->
-            <button type="button" class="btn-link" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16M9 4v16"/></svg>
-              {{ showLineups() ? 'Aufstellungen ausblenden' : 'Alle Aufstellungen der Runde ' + round() }}
-            </button>
-          </div>
           @if (showLineups()) {
             <div id="round-lineups"><lh-round-lineups [tnr]="tnr()" [round]="round()" [teamPrefix]="teamPrefix()" /></div>
           }
@@ -159,7 +163,7 @@ interface Pick { liga?: number; verein?: string }
     }
   `,
   styles: [`
-    .lineups-toggle { margin: 0 0 14px; }
+    .lineups-toggle { margin-left: auto; }
     .lineups-toggle .btn-link { display: inline-flex; align-items: center; gap: 6px; }
   `],
 })
@@ -200,7 +204,7 @@ export class LeaguePageComponent implements OnInit {
   readonly teamPrefix = computed(() => this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix ?? null);
 
   readonly fixture = computed(() => this.league()?.fixtures[this.team()]?.[String(this.round())]);
-  /** Auswahl am Handy aufgeklappt (d2-l-prognosen-filter) — zu, sobald eine Auswahl gemerkt ist (Adresse oder Gerät). */
+  /** Auswahl am Handy aufgeklappt (d2-l-prognosen-filter) — beim Öffnen immer zu (z1-l-prognosen-filter-zu). */
   readonly pickOpen = signal(false);
   /** „1. Bundesliga · R1 · Schachklub Schwaz" — die aktive Wahl in der zugeklappten Zeile. */
   readonly pickSummary = computed(() => {
@@ -259,7 +263,9 @@ export class LeaguePageComponent implements OnInit {
     this.loadError.set(null);
     const q = this.route.snapshot.queryParamMap;
     const saved = readJson<Pick>(localStore(), PICK_KEY) ?? {};
-    if (!keep) this.pickOpen.set(!q.get('liga') && !saved.liga);
+    // z1-l-prognosen-filter-zu: am Handy immer zugeklappt starten — eine Vorwahl (erste eigene Liga, Verein) gibt es immer,
+    // die Zeile „Liga · R1 · Verein" zeigt sie; wer anderes will, klappt auf.
+    if (!keep) this.pickOpen.set(false);
     const pref = keep ?? {
       liga: Number(q.get('liga')) || saved.liga || 0,
       runde: Number(q.get('runde')) || 0,

@@ -32,6 +32,14 @@ import { AppUpdateService } from '@rh/core/app-update.service';
        Die vh-Zeile davor ist der Rueckfall fuer Browser ohne svh. */
     :host { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
     main { display: block; flex: 1; }
+    /* Anmeldemasken am Handy ohne 80vh-Zentrierung (z1-t-auth-mobile-scroll): mit Kopf und dreizeiliger Fusszeile waren
+       sie 879 px hoch bei 844 px Fenster — oben 80–150 px leer, die Rechtszeile unten angeschnitten. Die Karte steht
+       direkt unter dem Kopf (wie ClubHub d2-c-auth-centered, LeagueHub UX-068); die geteilte Komponente bleibt (DESIGN 8.6). */
+    @media (max-width: 599.98px) {
+      :host ::ng-deep :is(app-login, app-register, app-forgot-password, app-reset-password) .auth-container {
+        min-height: 0; padding-top: 16px;
+      }
+    }
   `],
 })
 export class TurnierAppComponent implements OnInit {

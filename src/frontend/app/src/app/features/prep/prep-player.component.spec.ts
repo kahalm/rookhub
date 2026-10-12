@@ -64,6 +64,10 @@ describe('PrepPlayerComponent', () => {
     expect(el().querySelector('.card-meta a')?.getAttribute('href')).toBe('https://ratings.fide.com/profile/1503014');
     expect(el().querySelector('.prep-scope')?.textContent).toContain('prep.loadedSome');
     expect(el().querySelector('.prep-scope button')?.textContent).toContain('prep.loadAll');
+    // z1-rk-prep-vorlauf: eine Zeile ohne eigenen Hinweis-Absatz — „kann dauern" steht im Tooltip des Knopfs.
+    expect(el().querySelector('.prep-scope p')).toBeNull();
+    expect(el().querySelector('.prep-scope')?.textContent).not.toContain('prep.loadAllHint');
+    expect(el().querySelector('.prep-scope button')?.getAttribute('title')).toBe('prep.loadAllHint');
     expect(el().querySelector('mat-checkbox')).toBeNull();                                 // kein Zwilling, kein Schalter
     expect(el().querySelector('lh-online-accounts')).toBeNull();                           // keine Konten, nichts Leeres
     expect(el().querySelector('.check')).toBeNull();                                       // ohne prep.manage kein „unsichere"

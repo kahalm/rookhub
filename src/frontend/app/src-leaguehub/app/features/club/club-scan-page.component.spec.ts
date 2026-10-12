@@ -93,7 +93,15 @@ describe('ClubScanPageComponent', () => {
     const c = fixture.componentInstance;
     expect(el.querySelector('h2')?.textContent).toContain('Vereinspartie korrigieren');
     expect(el.textContent).toContain('Moser, Axel – Testdorf (2026)');
-    expect(el.textContent).toContain('korrigiert wird am Brett');
+    // z1-l-korrigieren-handy: der Zusatz steht hinter (i), „Speichern ↓" in der Zeile des Rücklinks, die Aktionen in der Zugzeile
+    expect(el.textContent).not.toContain('korrigiert wird am Brett');
+    expect(el.textContent).not.toContain('Ein Zug am Brett ersetzt');
+    expect(el.querySelector('.club-intro .back-row button.to-save')?.textContent).toContain('Speichern ↓');
+    expect(el.querySelector('.scan-check .where .where-actions')?.textContent).toContain('Stimmt so');
+    (el.querySelector('.club-intro .scan-head .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.club-intro .scan-hint')?.textContent).toContain('korrigiert wird am Brett');
+    expect(el.querySelector('.club-intro .scan-hint')?.textContent).toContain('Ein Zug am Brett ersetzt');
     expect(c.s.plies().map(p => p.san)).toEqual(['d4', 'Nf6', 'c4', 'e6']);
     expect(api.scan).not.toHaveBeenCalled();
     expect(el.querySelector('lh-player-search')).toBeNull();                       // Namen ändert man unter „Bearbeiten"
@@ -222,8 +230,8 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     const panel = el.querySelector('section.save-panel') as HTMLElement;
     const scroll = spyOn(panel, 'scrollIntoView');
-    // d2-l-korrigieren-layout: rechts neben der Überschrift, kürzer
-    const top = el.querySelector('.club-intro .scan-head button.to-save') as HTMLButtonElement;
+    // d2-l-korrigieren-layout: kürzer; z1-l-korrigieren-handy: rechts in der Zeile des Rücklinks
+    const top = el.querySelector('.club-intro .back-row button.to-save') as HTMLButtonElement;
     expect(top.textContent).toContain('Namen & Übernehmen ↓');
     top.click();
     expect(scroll).toHaveBeenCalledTimes(1);

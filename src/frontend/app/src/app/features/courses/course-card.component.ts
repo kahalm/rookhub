@@ -33,7 +33,7 @@ import { labelOr } from './course-language.util';
       <mat-card class="course-card">
         <mat-card-content>
           <div class="title-row">
-          <a class="card-title" [routerLink]="['/courses', course.bookId]"
+          <a class="card-title" [routerLink]="['/courses', course.bookId]" [attr.title]="course.displayName"
              [matTooltip]="'courses.detail.openTooltip' | translate">{{ course.displayName }}</a>
           @if (course.needsReimport) {
             <!-- Showstopper am KURS statt als anonyme Zahl im Banner: nur hier ist zu sehen, WELCHER
@@ -302,11 +302,17 @@ import { labelOr } from './course-language.util';
       padding: 0;
       /* UI-Sweep 2026-10-11 (d2-rk-course-card-aktionen): Inhalt wächst, damit Fußzeile (Aktionen, Kapitel) in jeder
          Karte einer Reihe auf derselben Höhe unten bündig sitzt (DESIGN 5.2). */
-      mat-card-content { padding: 14px 16px 8px; flex: 1 1 auto; }
+      /* UI-Sweep z1 (z1-rk-course-card-buendig): Inhalt als Flex-Spalte, der Fortschritt sitzt unten im Inhalt —
+         so stehen die Balken einer Reihe auf derselben Höhe, egal wie viele Zeilen darüber stehen. */
+      mat-card-content { padding: 14px 16px 8px; flex: 1 1 auto; display: flex; flex-direction: column; }
     }
+    .shared-badge, .linked-badge { align-self: flex-start; }
+    .progress-row, .empty-note { margin-top: auto; }
+    /* Titel einzeilig mit „…" (DESIGN 5.2), voller Titel im title-Attribut. */
     .card-title {
       font-size: 0.95rem; font-weight: 600; line-height: 1.35; margin-bottom: 2px;
       display: block; color: inherit; text-decoration: none; cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .card-title:hover { text-decoration: underline; }
     .title-row { display: flex; align-items: flex-start; gap: 4px; }
@@ -340,6 +346,9 @@ import { labelOr } from './course-language.util';
       color: var(--mat-sys-primary, #1565c0); font-weight: 600; }
 
     .card-footer { padding: 0 16px 12px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); margin-top: 2px; }
+    /* UI-Sweep z1 (z1-rk-course-card-buendig): Fuß so hoch wie mit Kapitel-Zeile — Aktionen beginnen in jeder Karte
+       einer Reihe auf derselben Höhe (am Handy einspaltig, dort nicht nötig). */
+    @media (min-width: 600px) { .card-footer { min-height: 76px; box-sizing: border-box; } }
 
     /* Zwei Primär-Buttons links, alle weiteren Aktionen im „⋮"-Überlaufmenü rechts.
        Nur noch drei Elemente in der Zeile → läuft auch auf schmalen Phones nicht über. */

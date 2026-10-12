@@ -122,3 +122,22 @@ describe('RememberedLinesComponent Loeschen', () => {
     expect(native).not.toHaveBeenCalled();
   });
 });
+
+/** UI-Sweep z1 (z1-rk-remembered-leer): der Leerzustand führt zur Einrichtung der Erweiterung. */
+describe('RememberedLinesComponent Leerzustand', () => {
+  it('bietet „RepCheck einrichten“ mit Sprung in den Hilfe-Abschnitt', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RememberedLinesComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: { isLoggedIn: true } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RememberedLinesComponent);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne(r => r.url.startsWith('/api/extension/remembered-lines')).flush([]);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.empty-state a.setup-repcheck') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/help#extension');
+    expect(link.textContent).toContain('remembered.setupRepCheck');
+  });
+});

@@ -26,7 +26,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
                (scrollIntoView + Fokus auf die Ueberschrift), nicht ueber den Router — KidHub/LeagueHub/ClubHub scrollen
                bei jeder Navigation nach oben (scrollPositionRestoration 'top'). -->
           <!-- UI-Sweep 2026-10-11 (d2-t-privacy-toc-mobile, d2-l-datenschutz-lang): am Handy zugeklappt — offen fuellten
-               die 11–12 Eintraege den ganzen ersten Bildschirm; ab 769 px offen. -->
+               die 11–12 Eintraege den ganzen ersten Bildschirm. Runde z1 (z1-rk-privacy-toc-offen): auch am Laptop
+               (unter 900 px Hoehe) zugeklappt — offen begann der Text erst bei 70 % der Hoehe; offen nur auf grossen
+               Bildschirmen, und aufgeklappt immer zweispaltig. -->
           <nav class="toc" aria-labelledby="privacy-toc-title" #tocNav>
             <details class="toc-fold" [open]="tocOpen()" (toggle)="tocOpen.set(tocFold.open)" #tocFold>
               <summary class="toc-title" id="privacy-toc-title">{{ 'legal.privacy.tocTitle' | translate }} ({{ toc.length }})</summary>
@@ -195,14 +197,6 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
           <h2 id="privacy-contact" tabindex="-1">{{ 'legal.privacy.contactTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
 
-          @if (kind !== 'kidhub' && tocAway()) {
-            <!-- Ruecksprung zum Inhaltsverzeichnis (d2-l-datenschutz-lang): EIN klebender Knopf unten rechts, sobald das
-                 Verzeichnis oben aus dem Bild ist — hoehenlos, damit die lange Seite nicht noch laenger wird. KidHub hat
-                 kein Verzeichnis (die Abschnitte sind dort selbst Aufklapper). -->
-            <div class="to-toc-bar">
-              <a class="to-toc" [href]="tocHref('privacy-toc-title')" (click)="toToc($event)">{{ 'legal.privacy.tocTitle' | translate }}</a>
-            </div>
-          }
           <p class="back">
             <!-- Aus der App gekommen: ein Schritt zurueck; direkt aufgerufen: das Ersatzziel (UX-017). -->
             @if (back.history) {
@@ -211,6 +205,22 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
               <a [routerLink]="back.link">{{ back.label | translate }}</a>
             }
           </p>
+          @if (kind !== 'kidhub') {
+            <!-- Ruecksprung zum Inhaltsverzeichnis (d2-l-datenschutz-lang): EIN klebender Knopf unten rechts, sobald das
+                 Verzeichnis oben aus dem Bild ist. KidHub hat kein Verzeichnis (die Abschnitte sind dort selbst
+                 Aufklapper). Runde z1 (z1-rk-privacy-inhalt-knopf): die Leiste steht HINTER dem letzten Abschnitt und
+                 haelt dort ihre eigene Hoehe frei — am Ende liegt der Knopf unter dem Text statt auf der Kontaktzeile;
+                 der Knopf ist ein rundes 44-px-„↑" am rechten Rand (Beschriftung fuer Vorleser), ab 1200 px steht er
+                 neben der Karte statt ueber dem Text. -->
+            <div class="to-toc-bar">
+              @if (tocAway()) {
+                <a class="to-toc" [href]="tocHref('privacy-toc-title')" (click)="toToc($event)"
+                   [attr.aria-label]="'legal.privacy.tocTitle' | translate" [title]="'legal.privacy.tocTitle' | translate">
+                  <span aria-hidden="true">↑</span>
+                </a>
+              }
+            </div>
+          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -228,19 +238,24 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
        umbrechenden Eintrag vor der LETZTEN Zeile (Grundlinie des Inline-Blocks). */
     .toc a { display: block; padding: 4px 0; }
     @media (pointer: coarse) { .toc a { padding: 10px 0; } }
-    /* Aufgeklappt am Handy zweispaltig — halb so hoch (d2-l-datenschutz-lang). */
-    @media (max-width: 768px) {
-      .toc ul { columns: 2; column-gap: 1rem; }
-      .toc li { break-inside: avoid; }
-    }
+    /* Aufgeklappt zweispaltig — halb so hoch (d2-l-datenschutz-lang; seit z1-rk-privacy-toc-offen in jeder Breite). */
+    .toc ul { columns: 2; column-gap: 1.5rem; }
+    .toc li { break-inside: avoid; }
     ul.sub { margin: 0.25rem 0 0; }
-    .to-toc-bar { position: sticky; bottom: 16px; height: 0; display: flex; justify-content: flex-end;
-                  align-items: flex-end; pointer-events: none; z-index: 1; }
-    .to-toc { pointer-events: auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
-              box-sizing: border-box; border-radius: 22px; text-decoration: none; font-size: 0.9rem;
+    /* Klebt unten; am Seitenende ruht die Leiste in ihrer eigenen Hoehe unter dem letzten Absatz (DESIGN 4.6 Regel 10). */
+    .to-toc-bar { position: sticky; bottom: 0; height: 60px; margin-right: -8px; display: flex; justify-content: flex-end;
+                  align-items: center; pointer-events: none; z-index: 1; }
+    .to-toc { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center;
+              width: 44px; height: 44px; box-sizing: border-box; border-radius: 50%; text-decoration: none;
+              font-size: 1.25rem; font-weight: bold; line-height: 1;
               background: var(--mat-sys-surface-container-high, #2b2f36); color: var(--mat-sys-primary);
               box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
-    .to-toc::before { content: '↑ ' / ''; }
+    /* Grosser Bildschirm: neben die Karte in den freien Rand (16 px Kartenpolster + 16 px Abstand), nicht ueber den
+       Text; die Leiste braucht dann keine eigene Hoehe. */
+    @media (min-width: 1200px) {
+      .to-toc-bar { height: 0; bottom: 16px; margin-right: 0; align-items: flex-end; }
+      .to-toc { transform: translateX(calc(100% + 32px)); }
+    }
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }
@@ -257,13 +272,16 @@ export class PrivacyComponent implements AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly tocNav = viewChild<ElementRef<HTMLElement>>('tocNav');
 
-  /** Inhaltsverzeichnis offen? Am Handy (bis 768 px) zugeklappt, breiter offen (d2-t-privacy-toc-mobile). */
+  /** Inhaltsverzeichnis offen? Nur auf grossen Bildschirmen (ab 769 px breit UND 900 px hoch) — am Handy
+   *  (d2-t-privacy-toc-mobile) und am Laptop (z1-rk-privacy-toc-offen) zugeklappt. */
   readonly tocOpen = signal(PrivacyComponent.wideScreen());
   /** Ist das Verzeichnis nach oben aus dem Bild gescrollt? Dann steht unten rechts „↑ Inhalt". */
   readonly tocAway = signal(false);
 
+  static readonly TOC_OPEN_QUERY = '(min-width: 769px) and (min-height: 900px)';
+
   private static wideScreen(): boolean {
-    return typeof matchMedia !== 'function' || matchMedia('(min-width: 769px)').matches;
+    return typeof matchMedia !== 'function' || matchMedia(PrivacyComponent.TOC_OPEN_QUERY).matches;
   }
 
   ngAfterViewInit(): void {

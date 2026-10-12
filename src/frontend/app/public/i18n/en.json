@@ -205,6 +205,8 @@
     "title": "Catalog",
     "listTitle": "Available courses & repertoires",
     "empty": "No catalog has been shared with you yet.",
+    "emptyHint": "Coaches can share their courses and repertoires with you – ask your coach.",
+    "toCourses": "Go to my courses",
     "request": "Request",
     "requested": "Requested — the owner will decide.",
     "requestFailed": "Request failed.",
@@ -909,6 +911,7 @@
       "you": "You",
       "back": "Back to friends",
       "themes": "Theme comparison",
+      "overview": "Overview",
       "theme": "Theme",
       "noThemes": "No shared theme data yet.",
       "loadError": "Could not load stats"
@@ -1232,6 +1235,7 @@
       "searchNone": "No player matches “{{query}}”.",
       "sortBy": "Sort by",
       "sortFilter": "Sort and filter",
+      "sortShort": "Sort",
       "sortReset": "Reset sorting",
       "shownOf": "{{shown}} of {{total}} players",
       "showMore": "Show {{count}} more"
@@ -2067,6 +2071,7 @@
     },
     "config": {
       "title": "Endless Puzzle Mode",
+      "livesHint": "3 lives – three mistakes and the run is over",
       "subtitle": "Progressive difficulty — how far can you go?",
       "startRating": "Start Rating",
       "stockfishDepth": "Stockfish Depth",
@@ -2162,7 +2167,6 @@
       "colEloDelta": "Elo ±",
       "colSolved": "Solved",
       "colDuration": "Duration",
-      "colConfig": "Config",
       "colMistakes": "Mistakes",
       "backToEndless": "Back to Endless Mode"
     },
@@ -3698,6 +3702,7 @@
     "title": "Remembered positions",
     "hint": "Positions you saved from Chessable via the RepCheck extension (“Remember line”).",
     "empty": "No remembered positions yet. Use “Remember line” in the RepCheck extension on chessable.com.",
+    "setupRepCheck": "Set up RepCheck",
     "unknownCourse": "Unknown course",
     "analyze": "Analyze",
     "copyFen": "Copy FEN",
@@ -3959,6 +3964,7 @@
     "showMore": "Show {{count}} more",
     "annotatedBadge": "annotated",
     "anonHint": "You can play without an account. Your run stays with this browser.",
+    "gamesCount": "{{count}} games",
     "hasComment": "has a comment — click to read it",
     "skipped": {
       "notScorable": "not asked: the engine does not list the game move among its best, so there is nothing to measure against",
@@ -4318,7 +4324,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Member register for club officials and coaches – sign in with your RookHub account. Got a code from your coach? Redeem it after signing in."
+      "login": "Register for club officials and coaches. Code from your coach? Redeem it after signing in."
     }
   },
   "turnier": {
@@ -4428,6 +4434,7 @@
       "locked": "Still locked",
       "lockedHint": "This level is still locked. Finish the one before it first!",
       "runAt": "Puzzle {{n}} of {{total}}",
+      "runAtShort": "{{n}} of {{total}}",
       "empty": "The levels are being prepared – check back in a moment.",
       "progress": "{{done}} of {{total}} puzzles",
       "completed": "Level complete!",
@@ -4656,6 +4663,7 @@
       "close": "Close the gap",
       "depth": "Search up to",
       "plies": "{{count}} half-moves",
+      "pliesLabel": "Half-moves",
       "searching": "Searching…",
       "applied": "The gap is closed — the inserted moves are marked as unsure.",
       "doesNotFit": "These moves do not lead to that position.",
@@ -4698,6 +4706,7 @@
   },
   "scoresheet": {
     "title": "Read a scoresheet",
+    "needPhoto": "Take or choose a photo first.",
     "hint": "Take a photo of a scoresheet — the game is read, checked move by move and stored in your games. Reading usually takes a few minutes.",
     "help": "Claude, an AI model by Anthropic (USA), reads the photo — it is sent there for this (see the privacy policy). RookHub then checks every move on a board and uses later moves to settle unclear earlier ones. Where a move stays uncertain, the correction page shows the most likely readings.\n\nThe photo is kept with the game (⋮ menu: show / download). All common notation languages work (K Q R B N, K D T L S, R D T F C …).",
     "notConfigured": "Reading scoresheets is not set up on this server (no AI key).",

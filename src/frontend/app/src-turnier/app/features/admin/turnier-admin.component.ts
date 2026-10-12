@@ -146,6 +146,8 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
     .muted { color: var(--mat-sys-on-surface-variant); }
     /* Die Adresse schiebt den Knopf nach rechts und bricht selbst um, statt die Zeile zu dehnen. */
     .ta-mail { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+    /* Ohne E-Mail schob nichts den Knopf nach rechts — er sprang von Zeile zu Zeile (z1-t-admin-knopf-springt). */
+    .ta-users li > button, .ta-self { margin-left: auto; }
     .ta-more { margin: 12px 0 0; }
   `],
 })

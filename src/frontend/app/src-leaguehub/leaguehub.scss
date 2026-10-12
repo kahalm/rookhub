@@ -109,7 +109,10 @@ body {
   .pick-bar { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
   .pick-sum { flex: 1 1 auto; min-width: 0; font: 600 16px/1.3 var(--cond); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pick-change { flex: 0 0 auto; }
-  .pick-area:not(.open) { display: none; }
+  /* z1-l-prognosen-vorlauf-laptop: „Alle Aufstellungen" steht in der .stand-Zeile — zugeklappt bleibt nur er sichtbar. */
+  .pick-area:not(.open) > :not(.stand),
+  .pick-area:not(.open) .stand > :not(.lineups-toggle) { display: none; }
+  .pick-area:not(.open) .stand { margin: 0 0 14px; }
 }
 
 /* Verwalter-Schalter „alle Ligen der Region" (0.710.0) */
@@ -117,6 +120,9 @@ body {
 
 /* Datenstand + Knopf „Daten aktualisieren" */
 .stand { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -8px 0 18px; color: var(--muted); font-size: 15px; }
+/* z1-l-prognosen-vorlauf-laptop: Schalter „alle Ligen" sitzt in der Datenstand-Zeile — leise, ohne eigenen Abstand. */
+.stand .all-leagues { margin: 0; }
+.pick-area .stand { font-size: 14px; margin-bottom: 14px; }
 .btn-sec {
   display: inline-block; text-decoration: none;
   font: 600 15px/1 var(--cond); color: var(--ink); background: transparent;
@@ -127,14 +133,20 @@ body {
 .update-msg { flex-basis: 100%; }
 .update-msg:empty { display: none; }
 .update-msg.err, .err { color: var(--red); }
-/* Vereinspartien (UI-Sweep 2026-10-11, d2-l-vereinspartien-vorlauf): „Partien hinzufügen" rechts in der Zählerzeile, am Handy
-   nur „+" (der Reiter heißt genauso); die Beschriftung bleibt für Vorleser. */
+/* Vereinspartien (UI-Sweep 2026-10-11, d2-l-vereinspartien-vorlauf): „Partien hinzufügen" rechts in der Zählerzeile.
+   z1-l-verein-plus: am Handy „+ Hinzufügen", erst ≤ 380 px nur „+" (DESIGN 5.4); die volle Beschriftung bleibt für Vorleser. */
 .stand .add-games { margin-left: auto; }
-.add-games .add-plus { display: none; }
+.add-games .add-plus, .add-games .add-short { display: none; }
 @media (max-width: 640px) {
-  .add-games { min-width: 44px; text-align: center; font-size: 20px; }
-  .add-games .add-plus { display: inline; }
+  .btn-pri.add-games { min-width: 44px; text-align: center; white-space: nowrap; }
+  .add-games .add-plus { display: inline; margin-right: 4px; }
+  .add-games .add-short { display: inline; }
   .add-games .add-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+@media (max-width: 380px) {
+  .btn-pri.add-games { font-size: 22px; padding-top: 10px; padding-bottom: 10px; }   /* 22 + 20 + Rand ≥ 44 */
+  .add-games .add-plus { margin-right: 0; }
+  .add-games .add-short { display: none; }
 }
 
 /* Begegnung */
@@ -174,7 +186,10 @@ body {
   border-top: 1px solid var(--line);
 }
 .bno { font: 700 26px/1 var(--cond); text-align: right; padding-top: 2px; }
-.sq { width: 16px; height: 16px; margin-top: 6px; border-radius: 2px; border: 1.5px solid var(--sq-border); }
+/* z1-l-farbquadrat: rundes Steinchen statt Quadrat — das Quadrat sah aus wie ein Kontrollkästchen. */
+.sq { width: 14px; height: 14px; margin-top: 7px; border-radius: 50%; border: 1.5px solid var(--sq-border); }
+.sq-legend { margin: 6px 0 0; }
+.sq-legend .sq.mini { margin-left: 2px; }
 .sq.w { background: var(--sq-white); }
 .sq.s { background: var(--sq-black); }
 .cands { display: grid; gap: 7px; min-width: 0; }
@@ -228,9 +243,12 @@ details.roster summary { cursor: pointer; font: 600 17px/1.3 var(--cond); }
 .rtable th { text-align: left; font: 600 14px/1.2 var(--cond); color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); }
 /* Lange Tabellen behalten ihren Kopf (UI-Sweep 2026-10-11, d2-l-tabellenkopf). Klebt nur, wo kein Scroll-Wrapper dazwischen
    liegt: Vereinspartien und Übertragungen heben ihr overflow-x ab 641 px auf (am Handy Karten bzw. waagrecht scrollbar). */
-.rtable thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); }
+/* z1-l-uebertragungen-kopf: die Unterlinie als Schatten — border-bottom am th klebt bei border-collapse nicht mit. */
+.rtable thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); box-shadow: inset 0 -1px 0 var(--line); }
 .panel .rtable thead th, .fixture .rtable thead th, .card .rtable thead th { background: var(--surface); }
-@media (min-width: 641px) { .roster-scroll.club-scroll, .roster-scroll.bc-scroll { overflow-x: visible; } }
+@media (min-width: 641px) { .roster-scroll.club-scroll { overflow-x: visible; } }
+/* Übertragungen bleiben auch am Handy eine Tabelle („Ort" ausgeblendet, passt) — Kopf klebt in allen Breiten. */
+.roster-scroll.bc-scroll { overflow-x: visible; }
 .rtable td { padding: 6px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .rtable td.num, .rtable th.num { text-align: right; white-space: nowrap; }
 .rtable .small { color: var(--muted); font-size: 14px; }
@@ -250,6 +268,9 @@ details.roster summary { cursor: pointer; font: 600 17px/1.3 var(--cond); }
    Komponenten-Regeln (0,2,0), RookHub selbst bleibt unberührt. */
 lh-root .wrap .auth-container { min-height: 0; padding-top: 8px; }
 lh-root .wrap .legal-container { padding: 16px 0; }
+/* Rechtsseiten-Karte füllt die .wrap (Flucht mit Kopf und Fuß, d2-l-kontoloeschen-flucht) — die geteilte Form ist seit
+   z1-t-privacy-karte-rechts-leer nur so breit wie ihre 68ch-Textspalte. */
+lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: 760px; }
 lh-root .wrap .legal-links { display: none; }
 
 /* UI-Sweep 2026-10-11 (r2-l-legal-style): Anmeldemasken und Rechtsseiten im LeagueHub-Look statt RookHub-Material —
@@ -288,6 +309,11 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password, ap
   --mat-button-text-container-shape: 6px;
   --mat-button-text-label-text-color: var(--ink);
   --mat-form-field-outlined-container-shape: 6px;
+  /* Fokus in Blau statt Rot (z1-l-masken-fokus-rot): Rot ist hier zugleich die Fehlerfarbe — das autofokussierte erste
+     Feld sah vor jeder Eingabe „ungültig“ aus. Knopf und Akzent bleiben rot, Fehler (--mat-sys-error) ebenso. */
+  --mat-form-field-outlined-focus-outline-color: var(--focus);
+  --mat-form-field-outlined-focus-label-text-color: var(--focus);
+  --mat-form-field-outlined-caret-color: var(--focus);
   border: 1px solid var(--line);
   color: var(--ink);
   font-family: var(--body);
@@ -468,6 +494,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .field textarea { font: 400 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
 .field input:disabled { opacity: .5; }
 .field { display: grid; gap: 4px; margin: 0 0 12px; font: 600 14px/1.2 var(--cond); color: var(--muted); min-width: 0; }
+/* z1-l-hinzufuegen-hinweisschrift: Hinweise im Feld in leiser Textschrift — Beschriftungen bleiben fett. */
+.field .small { font: 400 14px/1.4 var(--body); margin-top: 2px; }
 .field-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 4px 0 12px; }
 .field-row > .field { flex: 1 1 220px; margin: 0; }
 
@@ -531,15 +559,20 @@ button.pl:hover { text-decoration-color: var(--ink); }
 /* Formular-Korrektur: Foto | Brett | Zug + Zugliste — am PC nebeneinander, darunter die Partie-Daten */
 /* Formular prüfen: Foto | Brett | Prüfen + Zugliste. Am Handy zuerst „Prüfen" (Ausschnitt der Zeile, Lesarten, „Stimmt so"),
    dann Brett, Zugliste, ganzes Foto (Wunsch 2026-09-28). */
+/* z1-l-korrigieren-luecke: erste Zeile so hoch wie die Zugkarte, die Zugliste schließt direkt an (sonst verteilt der Browser
+   die Brett-Höhe auf beide auto-Zeilen und es klafft eine Lücke). */
 .scan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start;
-  grid-template-areas: "board check" "board moves"; }
+  grid-template-areas: "board check" "board moves"; grid-template-rows: auto 1fr; }
 .scan-layout.with-photo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .85fr);
   grid-template-areas: "photo board check" "photo board moves"; }
 .scan-layout > .panel { margin-bottom: 0; min-width: 0; }
 /* Kopf der Prüf-/Korrekturseite (UI-Sweep 2026-10-11, d2-l-korrigieren-layout): Überschrift, (i) und „Speichern ↓" in einer Zeile. */
 .scan-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .club-intro .scan-head h2 { margin: 6px 0 4px; }
-.scan-head .to-save { margin-left: auto; }
+/* z1-l-korrigieren-handy: „Speichern ↓" rechts in der Zeile des Rücklinks; Titelzeile der Partie ohne Zusatz. */
+.club-intro .back-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.back-row .to-save { margin-left: auto; }
+.club-intro .game-title { margin: 0 0 6px; }
 .club-intro .scan-hint { margin: 4px 0 10px; }
 /* Am Handy steht der Prüfteil ÜBER dem Brett und ändert je Zug seine Höhe (Lesarten ja/nein, Ausschnitt). Er darf deshalb
    kein Scroll-Anker sein — dann hält der Browser das BRETT an seiner Stelle, statt es mit jedem Zug zu verschieben
@@ -592,6 +625,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .cursor-panel { display: grid; gap: 8px; }
 .cursor-panel p { margin: 0; }
 .where { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+/* z1-l-korrigieren-handy: „Stimmt so" und „Zug löschen" (rechts abgesetzt, UX-070) in der Zeile des Zugs */
+.panel .where .where-actions { flex: 1 1 auto; margin-top: 0; align-self: center; }
 .san { font: 600 20px/1 var(--cond); }
 .san.bad { color: var(--red); text-decoration: line-through; }
 .chip { font-size: 12px; line-height: 1.4; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; white-space: nowrap; }
@@ -875,6 +910,9 @@ lh-online-accounts { display: block; }
 
 /* Lichess-Übertragungen (0.608.0) */
 .bc-page h2 { margin: 18px 0 6px; }
+/* z1-l-uebertragungen-vorlauf: Überschrift + (i) in einer Zeile */
+.bc-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 6px; }
+.bc-page .bc-head h2 { margin: 0; }
 .bc-add { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin: 12px 0; }
 .bc-add .field { flex: 1 1 320px; margin: 0; }
 /* Kompakte Zeilen statt Karten (UI-Sweep 2026-10-10, l-broadcasts). */
@@ -892,11 +930,14 @@ lh-online-accounts { display: block; }
 /* Bedienziele am Handy mindestens 44 px hoch (UX-069, Projektregel). Steht AM ENDE der Datei: die Grundregeln von .btn-pri,
    .btn-link, .seg und .ply kommen weiter oben NACH dem ersten Handy-Block und würden eine frühere Regel überschreiben.
    Höher wird es über Polster (Links haben keine senkrecht zentrierten Inhalte), Knöpfe mit min-height. Spezielle kleinere
-   Knöpfe (Filter der Spielerkarte, Vorschlags-Aktionen) behalten ihre eigenen, spezifischeren Regeln. */
+   Knöpfe (Filter der Spielerkarte) behalten ihre eigenen, spezifischeren Regeln; die Vorschlags-Aktionen sind seit
+   z1-l-konten-knoepfe ebenfalls 44 px hoch (Hunderte dicht untereinander). */
 @media (max-width: 640px) {
   .btn-sec, .btn-pri { padding-top: 14px; padding-bottom: 14px; }      /* 15 px Schrift + 28 + Rand (1,5 px, je nach Gerät gerundet) ≥ 44 */
   .btn-link { padding-top: 11px; padding-bottom: 11px; }               /* 22,5 px Zeile + 22 = 44,5 */
   .seg button, .ply { min-height: 44px; }
+  .sugg-actions { gap: 8px; }
+  .sugg-actions .sa-btn { min-height: 44px; }
   .foot a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
   .back-link { display: inline-block; padding: 12px 0; }
   /* Spielernamen öffnen die Karte, stehen aber im Fließtext der Bretter: die Trefferfläche wächst unsichtbar nach oben und

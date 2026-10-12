@@ -13,8 +13,9 @@ import { ClaimPromptComponent } from './shared/claim-prompt.component';
 import { ClubContextService } from './core/club-context.service';
 
 /** Seiten mit ~1240 px statt 780: Vereinspartien (l-club-table), Prognosen und geteilte Begegnung (d2-l-breit-bretter: Bretter
- *  ab 1280 px zweispaltig) und Konto-Vorschläge (d2-l-konten-zeilen-breit: die Vorschläge eines Spielers nebeneinander). */
-const MID_PAGES = /^\/(?:verein|konten|s\/[^/?#]+)?(?:[?#]|$)/;
+ *  ab 1280 px zweispaltig), Konto-Vorschläge (d2-l-konten-zeilen-breit: die Vorschläge eines Spielers nebeneinander) und
+ *  Übertragungen (z1-l-uebertragungen-breite: vierspaltige Tabelle, lange Namen nicht zweizeilig). */
+const MID_PAGES = /^\/(?:verein|konten|uebertragungen|s\/[^/?#]+)?(?:[?#]|$)/;
 
 /**
  * Hülle von LeagueHub: Wortmarke, rechts Anmelden bzw. Name + Abmelden, unten Version und Datenschutz.

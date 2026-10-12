@@ -145,7 +145,12 @@ describe('TournamentDirectoryComponent', () => {
     flushList([]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('tournamentDirectory.guestHint');
+    // z1-t-calendar-gast-vorlauf: kein Kasten ueber den Reitern, sondern „Anmelden ⓘ" (Satz im ⓘ)
+    expect(fixture.nativeElement.querySelector('.guest-hint')).toBeNull();
+    const guest = fixture.nativeElement.querySelector('.profile-note.guest-note') as HTMLElement;
+    expect(guest).not.toBeNull();
+    expect(guest.querySelector('[aria-label="tournamentDirectory.guestHint"]')).not.toBeNull();
+    expect(guest.querySelector('button.link-btn')!.textContent).toContain('nav.login');
     expect(localStorage.getItem(TournamentDirectoryComponent.viewKeyFor(null))).withContext('Gast-Stand').not.toBeNull();
     component.newProfile();
     expect(String(navigateByUrl.calls.mostRecent().args[0])).toContain('/login?returnUrl=');
@@ -908,6 +913,8 @@ describe('TournamentDirectoryComponent', () => {
 
     const count = fixture.nativeElement.querySelector('.tab-body .count') as HTMLElement;
     expect(count.querySelector('.profile-note')).not.toBeNull();
+    // z1-t-calendar-count-link: Trennpunkt zwischen Zaehltext und Link
+    expect(getComputedStyle(count.querySelector('.profile-note')!, '::before').content).toBe('"·"');
     http.verify();
   });
 

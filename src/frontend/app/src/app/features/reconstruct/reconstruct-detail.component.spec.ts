@@ -307,6 +307,30 @@ describe('ReconstructDetailComponent', () => {
     expect(c.canCloseGap({ ...position, kind: PartKind.Moves }, 1)).toBeFalse();    // kein Ziel
   });
 
+  /** z1-rk-recon-lueckentiefe: die Tiefe ist ein Umschalter (2 … 12) — er wählt nur, gesucht wird über „Lücke schließen". */
+  it('wählt die Suchtiefe per Umschalter ohne Suche; erst „Lücke schließen" sucht mit ihr', () => {
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5').flush(data([part({ id: 1 }), position]));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const toggles = Array.from(el.querySelectorAll<HTMLButtonElement>('.gap-row .depth-toggle button'));
+    expect(toggles.map(b => b.textContent!.trim())).toEqual(['2', '4', '6', '8', '10', '12']);
+    expect(el.querySelector('.gap-row .depth-label')?.textContent).toContain('reconstruct.gap.pliesLabel');
+
+    toggles[2].click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.gapPlies).toBe(6);
+    http.expectNone('/api/reconstructions/5/parts/2/gap/propose');
+
+    const close = Array.from(el.querySelectorAll<HTMLButtonElement>('.gap-row > button'))
+      .find(b => b.textContent!.includes('reconstruct.gap.close'))!;
+    close.click();
+    const req = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/propose', method: 'POST' });
+    expect(req.request.body).toEqual({ maxPlies: 6 });
+  });
+
   it('setzt die gefundenen Wege als VORSCHLÄGE in die Liste und öffnet den ersten', () => {
     const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null });
     const c = open([part({ id: 1 }), position]);

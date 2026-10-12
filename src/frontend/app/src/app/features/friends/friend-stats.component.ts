@@ -95,7 +95,10 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
       } @else if (friend) {
         <h1>{{ 'friends.stats.title' | translate }}</h1>
 
+        <!-- UI-Sweep z1 (z1-rk-friendstats-titel): beide Karten mit demselben schlichten Kopf, bündig mit den Zellen
+             (statt mat-card-header mit eigenem Polster in nur einer Karte). -->
         <mat-card class="compare-card">
+          <h2 class="card-title">{{ 'friends.stats.overview' | translate }}</h2>
           <table class="compare-table">
             <thead>
               <tr>
@@ -117,7 +120,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
         </mat-card>
 
         <mat-card class="themes-card">
-          <mat-card-header><mat-card-title>{{ 'friends.stats.themes' | translate }}</mat-card-title></mat-card-header>
+          <h2 class="card-title">{{ 'friends.stats.themes' | translate }}</h2>
           @if (themeRows.length > 0) {
             <table class="compare-table">
               <thead>
@@ -153,6 +156,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     .back-link { margin-bottom: 0.5rem; }
     h1 { font-size: 1.5rem; margin: 0.25rem 0 1rem; }
     mat-card { margin-bottom: 1rem; padding: 1rem; }
+    .card-title { margin: 0 0 8px; padding: 0 0.5rem; font-size: 1rem; font-weight: 600; }
     .compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .compare-table th, .compare-table td { overflow-wrap: anywhere; }
     /* UI-Sweep 2026-10-11 (r2-rp-themes-en): Themen-Namen nur an Wortgrenzen bzw. mit Silbentrennung umbrechen. */
@@ -167,6 +171,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     @media (max-width: 768px) {
       .fs-container { padding: 0.75rem; }
       .compare-table th, .compare-table td { padding: 0.5rem 0.35rem; }
+      .card-title { padding: 0 0.35rem; }
     }
   `]
 })

@@ -234,6 +234,8 @@
     .heart { font-size: 28px; width: 28px; height: 28px; }
     .heart.full { color: #f44336; }
     .heart.empty { color: color-mix(in srgb, currentColor 20%, transparent); }
+    .config-lives { align-items: center; flex-wrap: wrap; }
+    .config-lives-label { margin-left: 0.5rem; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .phase-indicator {
       text-align: center; font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent);
       margin-top: 0.25rem; font-style: italic;

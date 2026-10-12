@@ -62,9 +62,13 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
             <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
-            <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
-              <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.modeQuiz' | translate }}
-            </a>
+            <!-- UI-Sweep z1 (z1-rk-rep-abfragen-doppelt): in der Linien-Ansicht steht „Abfragen“ als Hauptknopf in der
+                 Linienleiste neben „Lernen“ — hier nur in Baum/Lochfinder, wo es die Leiste nicht gibt. -->
+            @if (mode !== 'lines') {
+              <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
+                <mat-icon>replay</mat-icon> {{ 'repertoireTrainer.modeQuiz' | translate }}
+              </a>
+            }
           </div>
           <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
             <mat-button-toggle value="lines" [attr.aria-label]="'repertoire.detail.modeLines' | translate" [attr.title]="'repertoire.detail.modeLines' | translate">
@@ -149,7 +153,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                 }
               }
             </div>
-            <div class="side-panel">
+            <!-- UI-Sweep z1 (z1-rk-rep-brett-gross): die Linienliste ist nur so hoch wie ihr Inhalt (scrollt erst ab
+                 Fensterhöhe); Zugansicht, Baum und Lochfinder behalten die feste Höhe (sie scrollen innen). -->
+            <div class="side-panel" [class.side-panel--fit]="mode === 'lines' && viewerService.selectedLineIndex < 0">
               @if (mode === 'lines') {
                 <app-repertoire-lines
                   [lines]="visibleLines"
@@ -204,14 +210,16 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     .subtitle { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 14px; }
     .train-btn { margin-top: 2px; }
 
+    /* UI-Sweep z1 (z1-rk-rep-brett-gross): das Brett wächst mit der Fensterhöhe (400–640 px) statt fest 400 px. */
     .viewer-layout {
+      --board-size: clamp(400px, calc(100vh - 300px), 640px);
       display: flex;
       flex-direction: row;
       gap: 1rem;
       align-items: flex-start;
     }
     .board-section {
-      width: 400px;
+      width: var(--board-size);
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
@@ -220,14 +228,14 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     }
     .board-section app-chess-board {
       display: block;
-      width: 400px;
+      width: var(--board-size);
     }
     .nav-buttons { display: flex; gap: 4px; }
     .cmt-variation-bar {
       display: flex; align-items: center; gap: 8px; margin-top: 6px;
       font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
     }
-    .filter-bar { display: flex; align-items: center; gap: 4px; width: 100%; max-width: 400px; min-height: 40px; }
+    .filter-bar { display: flex; align-items: center; gap: 4px; width: 100%; max-width: var(--board-size, 400px); min-height: 40px; }
     .filter-moves { flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .filter-hint { flex: 1; text-align: center; font-size: 12px;
@@ -236,12 +244,13 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     .side-panel {
       flex: 1;
       min-width: 250px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
       border-radius: 4px;
       /* mindestens Bretthöhe; am hohen Bildschirm wächst die Liste mit, statt die halbe Seite leer zu lassen */
       height: max(440px, calc(100vh - 330px));
       overflow: hidden;
     }
+    .side-panel--fit { height: auto; max-height: max(440px, calc(100vh - 330px)); overflow-y: auto; }
     .edit-panel {
       max-width: 800px;
     }
@@ -255,6 +264,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       .board-section { width: 100%; max-width: 400px; }
       .board-section app-chess-board { width: 100%; }
       .side-panel { width: 100%; min-width: 0; height: 400px; }
+      .side-panel--fit { height: auto; max-height: 400px; }
     }
   `]
 })
