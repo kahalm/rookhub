@@ -265,9 +265,16 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Null(await scans.LeagueScanStateAsync(me, other.Id));                     // die andere ist zu
         Assert.False(await Db.ScoresheetScanViews.AnyAsync(v => v.ScoresheetScanId == other.Id));
 
-        Assert.True(await scans.CloseLeagueScanAsync(me, target.Id));
+        // 0.756.0: übernommen (mit Vereinspartie) bleiben die weiteren Fotos im Archiv — „Korrigieren" zeigt sie wieder.
+        var game = new LeagueClubGame { ClubId = club.Id, White = "A", Black = "B", Pgn = "1. Nf3 *", MovesHash = "mergetest", Result = "*" };
+        Db.LeagueClubGames.Add(game);
+        await Db.SaveChangesAsync();
+        Assert.True(await scans.CloseLeagueScanAsync(me, target.Id, "1. Nf3 *", game.Id));
         Db.ChangeTracker.Clear();
         Assert.False(await Db.ScoresheetScanViews.AnyAsync());
+        Assert.Equal(new[] { 2 }, (await scans.ClubEditStateAsync(game.Id))!.ViewCounts);
+        Assert.Equal(new byte[] { 3 }, (await scans.ClubPhotoAsync(game.Id, 1, default, 2))!.Value.Data);
+        Assert.Equal(1, (await scans.ClubPhotoAsync(game.Id, 1))!.Value.PageCount);
     }
 
     [MySqlFact]

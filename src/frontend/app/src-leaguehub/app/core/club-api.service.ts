@@ -1,3 +1,4 @@
+import { GameEvals } from '@rh/features/games/game-review.util';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
@@ -55,6 +56,11 @@ export class ClubClient {
   /** Eine Partie mit PGN und Stand der Analyse (angemeldet, `league.view`). */
   game(id: number): Promise<ClubGameDetail> {
     return firstValueFrom(this.http.get<ClubGameDetail>(`${this.base}/games/${id}`));
+  }
+
+  /** Die Analyse einer Vereinspartie (Bewertung je Stellung) — für die Kurve beim Korrigieren (0.756.0). */
+  gameEvals(id: number): Promise<GameEvals> {
+    return firstValueFrom(this.http.get<GameEvals>(`${this.base}/games/${id}/evals`));
   }
 
   /** Adresse der Bewertungen aus der Hintergrund-Analyse — für RookHubs Rückblick (`GameReviewComponent`). */
@@ -251,8 +257,9 @@ export class ClubClient {
     return firstValueFrom(this.http.get<ClubSheetState>(`${this.base}/games/${id}/sheet`));
   }
 
-  clubSheetPhoto(id: number, page = 1): Promise<Blob> {
-    return firstValueFrom(this.http.get(`${this.base}/games/${id}/sheet/photo`, { params: { page }, responseType: 'blob' }));
+  clubSheetPhoto(id: number, page = 1, view = 0): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.base}/games/${id}/sheet/photo`,
+      { params: view > 0 ? { page, view } : { page }, responseType: 'blob' }));
   }
 
   clubResolve(id: number, prefix: string[], writtenFrom: number): Observable<ScoresheetResolveResult> {

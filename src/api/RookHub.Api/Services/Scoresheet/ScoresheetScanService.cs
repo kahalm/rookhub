@@ -1266,6 +1266,15 @@ public class ScoresheetScanService
                 ScoresheetScanId = scanId, Page = p.Page, Photo = p.Photo, ContentType = p.ContentType, Outcome = outcome,
                 Model = s.Model, NotationLanguage = s.NotationLanguage, ArchivedAt = now, ExpiresAt = now + ArchiveRetention,
             });
+        // Die weiteren Fotos je Seite (0.756.0) — z. B. das zweite Exemplar derselben Partie; „Korrigieren" zeigt sie wieder.
+        var views = await _db.ScoresheetScanViews.AsNoTracking().Where(v => v.ScoresheetScanId == scanId)
+            .Select(v => new { v.Page, v.View, v.Photo, v.ContentType }).ToListAsync();
+        foreach (var v in views)
+            _db.ScoresheetScanArchives.Add(new ScoresheetScanArchive
+            {
+                ScoresheetScanId = scanId, Page = v.Page, View = v.View, Photo = v.Photo, ContentType = v.ContentType, Outcome = outcome,
+                Model = s.Model, NotationLanguage = s.NotationLanguage, ArchivedAt = now, ExpiresAt = now + ArchiveRetention,
+            });
     }
 
     // ── Formular einer Vereinspartie wieder öffnen (0.660.0, „Korrigieren" wie beim ersten Beheben) ──
@@ -1273,9 +1282,20 @@ public class ScoresheetScanService
     private IQueryable<ScoresheetScanArchive> ClubArchive(int clubGameId)
     {
         var now = DateTime.UtcNow;
-        var scanIds = _db.ScoresheetScanArchives.Where(a => a.LeagueClubGameId == clubGameId && a.Page == 1 && a.ExpiresAt > now)
+        var scanIds = _db.ScoresheetScanArchives.Where(a => a.LeagueClubGameId == clubGameId && a.Page == 1 && a.View == 0 && a.ExpiresAt > now)
             .Select(a => a.ScoresheetScanId);
         return _db.ScoresheetScanArchives.Where(a => scanIds.Contains(a.ScoresheetScanId));
+    }
+
+    /// <summary>Die Hauptfotos (eine Zeile je Seite) des aufbewahrten Formulars — ohne die weiteren Fotos (0.756.0).</summary>
+    private IQueryable<ScoresheetScanArchive> ClubPages(int clubGameId) => ClubArchive(clubGameId).Where(a => a.View == 0);
+
+    /// <summary>Je Seite (Index = Seite − 1), wie viele weitere Fotos das aufbewahrte Formular hat (0.756.0).</summary>
+    private async Task<List<int>> ClubViewCountsAsync(int clubGameId, int pageCount, CancellationToken ct)
+    {
+        var counts = await ClubArchive(clubGameId).Where(a => a.View > 0).GroupBy(a => a.Page)
+            .Select(g => new { Page = g.Key, N = g.Count() }).ToListAsync(ct);
+        return Enumerable.Range(1, pageCount).Select(p => counts.FirstOrDefault(c => c.Page == p)?.N ?? 0).ToList();
     }
 
     /// <summary>Gibt es zur Vereinspartie noch das aufbewahrte Formular (Foto + Lesung)?</summary>
@@ -1288,7 +1308,7 @@ public class ScoresheetScanService
     /// </summary>
     public async Task<ScoresheetEditStateDto?> ClubEditStateAsync(int clubGameId, CancellationToken ct = default)
     {
-        var rows = await ClubArchive(clubGameId).AsNoTracking()
+        var rows = await ClubPages(clubGameId).AsNoTracking()
             .Select(a => new { a.Page, a.ScoresheetScanId, a.NotationLanguage, a.TranscriptionJson, a.ResolutionJson }).ToListAsync(ct);
         var first = rows.FirstOrDefault(r => r.Page == 1);
         if (first == null) return null;
@@ -1305,15 +1325,18 @@ public class ScoresheetScanService
             Plies = stored?.Plies ?? new(),
             Unresolved = stored?.Unresolved ?? new(),
             UnresolvedFrom = stored?.UnresolvedFrom,
+            ViewCounts = await ClubViewCountsAsync(clubGameId, Math.Max(1, rows.Count), ct),
         };
     }
 
-    /// <summary>Foto einer Seite (ab 1) des aufbewahrten Formulars der Vereinspartie.</summary>
-    public async Task<(byte[] Data, string ContentType, int PageCount)?> ClubPhotoAsync(int clubGameId, int page, CancellationToken ct = default)
+    /// <summary>Foto einer Seite (ab 1) des aufbewahrten Formulars der Vereinspartie; <paramref name="view"/> ab 1 = ein weiteres
+    /// Foto derselben Seite (0.756.0).</summary>
+    public async Task<(byte[] Data, string ContentType, int PageCount)?> ClubPhotoAsync(int clubGameId, int page, CancellationToken ct = default,
+        int view = 0)
     {
-        var count = await ClubArchive(clubGameId).CountAsync(ct);
+        var count = await ClubPages(clubGameId).CountAsync(ct);
         if (count == 0) return null;
-        var p = await ClubArchive(clubGameId).AsNoTracking().Where(a => a.Page == Math.Max(1, page))
+        var p = await ClubArchive(clubGameId).AsNoTracking().Where(a => a.Page == Math.Max(1, page) && a.View == Math.Max(0, view))
             .Select(a => new { a.Photo, a.ContentType }).FirstOrDefaultAsync(ct);
         return p == null || p.Photo.Length == 0 ? null : (p.Photo, p.ContentType, count);
     }
@@ -1323,7 +1346,7 @@ public class ScoresheetScanService
         CancellationToken ct = default)
     {
         CheckPrefix(prefix);
-        var a = await ClubArchive(clubGameId).AsNoTracking().Where(x => x.Page == 1)
+        var a = await ClubPages(clubGameId).AsNoTracking().Where(x => x.Page == 1)
             .Select(x => new { x.NotationLanguage, x.TranscriptionJson, x.ResolutionJson }).FirstOrDefaultAsync(ct);
         var t = ScoresheetTranscription.Parse(a?.TranscriptionJson);
         if (a == null || t == null) return null;
@@ -1337,7 +1360,7 @@ public class ScoresheetScanService
     /// <summary>Nach einer Korrektur den Stand je Halbzug und die PGN im Archiv nachziehen (die Lesung selbst bleibt).</summary>
     public async Task SaveClubEditStateAsync(int clubGameId, List<ScoresheetPly>? plies, string finalPgn, CancellationToken ct = default)
     {
-        var a = await ClubArchive(clubGameId).Where(x => x.Page == 1).FirstOrDefaultAsync(ct);
+        var a = await ClubPages(clubGameId).Where(x => x.Page == 1).FirstOrDefaultAsync(ct);
         if (a == null) return;
         a.FinalPgn = finalPgn;
         if (plies != null)

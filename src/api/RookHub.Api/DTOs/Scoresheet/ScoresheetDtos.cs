@@ -119,6 +119,9 @@ public class ScoresheetEditStateDto
     /// <summary>Je Formular-Eintrag (Index wie <see cref="Written"/>) seine Seite, ab 1 — die Kästen stehen in 0..1000
     /// DIESER Seite.</summary>
     public List<int> Pages { get; set; } = new();
+    /// <summary>Je Seite (Index = Seite − 1), wie viele weitere Fotos derselben Seite aufbewahrt sind (0.756.0, nur beim
+    /// Korrigieren einer Vereinspartie) — <c>GET …/sheet/photo?page=&amp;view=</c> holt sie.</summary>
+    public List<int> ViewCounts { get; set; } = new();
     /// <summary>Stand je Halbzug der gespeicherten Partie.</summary>
     public List<ScoresheetPly> Plies { get; set; } = new();
     /// <summary>Einträge am Ende ohne legalen Zug.</summary>

@@ -252,7 +252,13 @@ die letzte), die andere wird wie verworfen geschlossen (Archiv), die Ziel-Einles
 leer) und wird mit allen Fotos neu gelesen → neuer Stand; 400 `same`/`busy` (eine läuft)/`tooManyViews`, 404 fremd.
 `LeagueScanStateDto.ViewCounts` (je Seite), `ExternalPendingScanDto.ViewCount`, `?view=` an allen drei Foto-Endpunkten (Liga,
 Teilen-Link, Admin). Jeder Löschweg der Seiten räumt auch die weiteren Fotos ab (`RemoveViewsWithoutLoading`); das Archiv
-nimmt sie NICHT mit. Die Kästen der Lesung gehören immer zum Hauptfoto. Der Watcher (`~/claude/formulare-bot/bin/fetch-scan`,
+nimmt sie seit 0.756.0 MIT (`ScoresheetScanArchive.View`, 0 = Hauptfoto, eindeutig je Einlesung/Seite/View): „Korrigieren"
+einer Vereinspartie zeigt das zweite Exemplar wieder (`ScoresheetEditStateDto.ViewCounts`, `GET …/games/{id}/sheet/photo?page=&view=`).
+Vorher fielen sie beim Übernehmen weg (Stapel 2, 12.10.: 50 Partien ohne ihr zweites Exemplar übernommen).
+**Bewertungskurve beim Korrigieren** (0.756.0, Wunsch 2026-10-12): die Korrigieren-Seite holt `GET …/games/{id}/evals` und zeigt
+die Kurve der GESPEICHERTEN Partie (`scan-eval-curve.ts`, `correctionCurve`) mit Punkten für Fehler/Patzer/verpasst; ein
+Zickzack (verschenkt, gleich zurückgegeben) ist fast immer ein falsch gelesener Zug, ein Klick springt hin. Ab der ersten
+geänderten Stelle bleibt die Kurve leer (die Analyse gehört zur gespeicherten Partie). Die Kästen der Lesung gehören immer zum Hauptfoto. Der Watcher (`~/claude/formulare-bot/bin/fetch-scan`,
 außerhalb des Repos) legt sie als `img/s<id>-p<seite>-v<n>.jpg` ab; `instructions-scan.md` sagt, bei unklaren Einträgen dort
 nachzusehen. Gelesen durch das Modell (`Scoresheet:Reader=model`) werden sie nicht.
 

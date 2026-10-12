@@ -585,6 +585,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
    dann über die Prüf-Spalte (gemeldet 2026-09-28). */
 .scan-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; justify-items: center; }
 .scan-board app-chess-board { width: min(100%, 62vh); }
+.scan-board .eval-curve { width: min(100%, 62vh); }
+.scan-board .eval-curve p { margin: 4px 0 0; }
 .board-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .board-nav .btn-sec { min-width: 44px; }
 .cursor-panel { display: grid; gap: 8px; }

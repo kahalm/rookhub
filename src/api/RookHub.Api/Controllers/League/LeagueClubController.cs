@@ -81,10 +81,11 @@ public class LeagueClubController : BaseApiController
         await CorrectableAsync(club, id, ct) ?? (await _scans.ClubEditStateAsync(id, ct) is { } s ? Ok(s) : NotFound()));
 
     [HttpGet("games/{id:int}/sheet/photo")]
-    public Task<IActionResult> SheetPhoto(int id, [FromQuery] int page = 1, CancellationToken ct = default) => WithClubAsync(ct, async club =>
+    public Task<IActionResult> SheetPhoto(int id, [FromQuery] int page = 1, [FromQuery] int view = 0, CancellationToken ct = default) =>
+        WithClubAsync(ct, async club =>
     {
         if (await CorrectableAsync(club, id, ct) is { } denied) return denied;
-        if (await _scans.ClubPhotoAsync(id, page, ct) is not { } p) return NotFound();
+        if (await _scans.ClubPhotoAsync(id, page, ct, view) is not { } p) return NotFound();
         Response.Headers.CacheControl = "private, max-age=3600";
         Response.Headers["X-Page-Count"] = p.PageCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
         return File(p.Data, p.ContentType);

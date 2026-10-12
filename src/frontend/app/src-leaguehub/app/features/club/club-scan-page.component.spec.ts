@@ -51,8 +51,9 @@ describe('ClubScanPageComponent', () => {
     params = { id: '7' };
     routeData = {};
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard',
-      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves', 'pairings', 'scans', 'merge']);
+      'game', 'clubSheet', 'clubSheetPhoto', 'clubResolve', 'correctMoves', 'pairings', 'scans', 'merge', 'gameEvals']);
     api.pairings.and.resolveTo([]);
+    api.gameEvals.and.rejectWith(new Error('keine Analyse'));
     api.scan.and.resolveTo(structuredClone(STATE));
     api.photo.and.rejectWith(new Error('kein Foto'));
     api.match.and.resolveTo(MATCH(true));
@@ -102,6 +103,24 @@ describe('ClubScanPageComponent', () => {
     expect(api.correctMoves).toHaveBeenCalledWith(12, ['d4', 'Nf6', 'c4', 'e6'], jasmine.any(Array));
     expect(api.addGame).not.toHaveBeenCalled();
     expect(el.textContent).toContain('Korrektur gespeichert.');
+  }));
+
+  it('Korrigieren (0.756.0): zeigt die Bewertungskurve der gespeicherten Partie, ein Klick springt zum Zug', fakeAsync(() => {
+    params = { id: '12' };
+    routeData = { game: true };
+    api.game.and.resolveTo({ id: 12, year: 2026, white: 'A', black: 'B', result: '*', canDelete: true,
+      pgn: '1. d4 Nf6 2. c4 e6 *' } as never);
+    api.clubSheet.and.rejectWith(new Error('404'));
+    api.gameEvals.and.resolveTo({ status: 'done', analyzed: 4, total: 4, targetDepth: 20, final: { cp: 10, mate: null },
+      plies: [20, 15, 900, 10].map((cp, ply) => ({ ply, cp, mate: null, depth: 20, playedUci: '' })) } as never);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(api.gameEvals).toHaveBeenCalledWith(12);
+    expect(el.querySelector('.eval-curve app-eval-graph')).not.toBeNull();
+    expect(c.evalCurve()!.curve.length).toBe(5);
+    expect(c.evalCurve()!.marks.length).toBeGreaterThan(0);                   // das Zickzack ist markiert
   }));
 
   it('Korrigieren: fremde Partie (kein Recht) → „Partie nicht gefunden"', fakeAsync(() => {

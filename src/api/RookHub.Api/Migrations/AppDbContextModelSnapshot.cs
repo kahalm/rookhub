@@ -6351,13 +6351,16 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("TranscriptionJson")
                         .HasColumnType("LONGTEXT");
 
+                    b.Property<int>("View")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExpiresAt");
 
                     b.HasIndex("LeagueClubGameId");
 
-                    b.HasIndex("ScoresheetScanId", "Page")
+                    b.HasIndex("ScoresheetScanId", "Page", "View")
                         .IsUnique();
 
                     b.ToTable("ScoresheetScanArchives");

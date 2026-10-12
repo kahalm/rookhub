@@ -10,6 +10,9 @@ import { BoardArrow, ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-v
 import { scrollIntoContainer } from '@rh/shared/pgn-viewer/move-list.component';
 import { isBoardHotkey } from '@rh/shared/keyboard.util';
 import { ScanEngineComponent } from './scan-engine.component';
+import { EvalGraphComponent } from '@rh/shared/pgn-viewer/eval-graph.component';
+import { GameEvals } from '@rh/features/games/game-review.util';
+import { correctionCurve } from './scan-eval-curve';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -50,7 +53,7 @@ function readAutoMine(): boolean {
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent, AccessGateComponent, ScanEngineComponent],
+  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent, AccessGateComponent, ScanEngineComponent, EvalGraphComponent],
   template: `
     @if (!allowed) {
       <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
@@ -168,6 +171,16 @@ function readAutoMine(): boolean {
                 <button type="button" class="btn-sec warn" (click)="s.nextUncertain()">Nächste unsichere Stelle ({{ s.uncertainLeft() }})</button>
               }
             </div>
+            @if (evalCurve(); as c) {
+              <!-- Bewertungskurve der gespeicherten Partie (0.756.0): ein Zickzack zeigt fast immer einen falsch gelesenen Zug;
+                   ein Klick springt zu diesem Zug. Ab der ersten Änderung bleibt sie leer (die Analyse gehört zur gespeicherten Partie). -->
+              <div class="eval-curve">
+                <app-eval-graph [series]="c.curve" [marks]="c.marks" [currentIndex]="s.cursor()" (moveClicked)="s.go($event < 0 ? 0 : $event)" />
+                <p class="muted small">Bewertung der gespeicherten Partie — ein Zickzack (Punkt, und gleich danach wieder zurück) deutet auf
+                  einen falsch gelesenen Zug. Klick auf die Kurve springt hin.@if (c.same < s.plies().length) { Ab Zug {{ s.plyLabel(c.same) }}
+                  geändert — dort gibt es noch keine Bewertung.}</p>
+              </div>
+            }
             <lh-scan-engine [fen]="s.cursorFen()" (arrowsChange)="engineArrows.set($event)" />
           </section>
 
@@ -438,6 +451,11 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly gameId: number | null = this.route.snapshot.data['game'] ? Number(this.route.snapshot.paramMap.get('id')) : null;
   /** „Weiß – Schwarz (Jahr) · Ergebnis" der Vereinspartie (Korrektur-Modus). */
   readonly gameTitle = signal('');
+  /** Analyse und Züge der gespeicherten Vereinspartie (Korrektur-Modus) — daraus die Bewertungskurve (0.756.0). */
+  private readonly savedEvals = signal<GameEvals | null>(null);
+  private readonly savedSans = signal<string[]>([]);
+  readonly evalCurve = computed(() =>
+    correctionCurve(this.savedEvals(), this.savedSans(), this.s.plies(), this.s.fens()));
   readonly state = signal<LeagueScanState | null>(null);
   readonly perMove = SECONDS_PER_MOVE;
   /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
@@ -449,7 +467,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private failures = 0;
   /** Die Fotos des Formulars (Seiten, weitere Fotos je Seite). */
   readonly ph = new ScanPhotos({
-    fetchView: (page, view) => this.api.photo(this.scanRef, page, view),
+    fetchView: (page, view) => this.gameId != null ? this.api.clubSheetPhoto(this.gameId, page, view) : this.api.photo(this.scanRef, page, view),
     setPageSize: (page, w, h) => this.s.setPageSize(page, w, h),
   });
   /** Zusammenführen (nur angemeldet, beim Prüfen einer Einlesung): `null` = Auswahl zu. */
@@ -660,6 +678,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (!game.canDelete) { this.notFound.set(true); return; }
     this.gameTitle.set(`${game.white} – ${game.black}${game.year ? ` (${game.year})` : ''} · ${game.result === '*' ? 'Ergebnis offen' : game.result}`);
     const fromPgn = pliesOfPgn(game.pgn);
+    this.savedSans.set(fromPgn.map(p => p.san));
+    void this.api.gameEvals(id).then(e => this.savedEvals.set(e), () => { /* ohne Analyse keine Kurve */ });
     let sheet: ClubSheetState | null = null;
     try { sheet = await this.api.clubSheet(id); } catch { /* nichts aufbewahrt — Korrektur am Brett */ }
     const matches = !!sheet && sheet.plies.length === fromPgn.length && sheet.plies.every((p, i) => p.san === fromPgn[i].san);
@@ -670,6 +690,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
     }
     this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
+    if (sheet) this.ph.viewCounts.set(sheet.viewCounts ?? []);   // das zweite Exemplar derselben Seite (0.756.0)
     if (sheet) await this.ph.load(sheet.pageCount ?? 1, page => this.api.clubSheetPhoto(id, page), () => !this.destroyed);
   }
 

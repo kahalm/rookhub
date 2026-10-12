@@ -85,6 +85,8 @@ export interface ScoresheetEditState {
   pageCount?: number;
   /** Je Formular-Eintrag seine Seite (ab 1) — die Kästen stehen in 0..1000 DIESER Seite. */
   pages?: number[];
+  /** Je Seite, wie viele weitere Fotos aufbewahrt sind (0.756.0, nur beim Korrigieren einer Vereinspartie). */
+  viewCounts?: number[];
   plies: ScoresheetPly[];
   unresolved: string[];
   unresolvedFrom?: number | null;

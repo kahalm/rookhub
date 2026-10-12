@@ -154,6 +154,9 @@ public class ScoresheetScanArchive
     public ScoresheetScan? Scan { get; set; }
     /// <summary>Seite, ab 1.</summary>
     public int Page { get; set; }
+    /// <summary>0 = Hauptfoto der Seite, ab 1 die weiteren Fotos derselben Seite (<see cref="ScoresheetScanView"/>, 0.756.0) —
+    /// vorher fielen sie beim Übernehmen weg, und „Korrigieren" zeigte vom zweiten Exemplar nichts mehr.</summary>
+    public int View { get; set; }
     public byte[] Photo { get; set; } = Array.Empty<byte>();
     public string ContentType { get; set; } = "image/jpeg";
     /// <summary>Nur Seite 1: Antwort des Modells (wie <see cref="ScoresheetScan.TranscriptionJson"/>).</summary>

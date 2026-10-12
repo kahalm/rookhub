@@ -367,7 +367,7 @@ public class SavedGameService
         {
             var now = DateTime.UtcNow;
             dto.ClubSheet = await _db.LeagueClubGames.AnyAsync(c => c.Id == clubId && c.UploadedByUserId == g.UserId)
-                && await _db.ScoresheetScanArchives.AnyAsync(a => a.LeagueClubGameId == clubId && a.Page == 1 && a.ExpiresAt > now);
+                && await _db.ScoresheetScanArchives.AnyAsync(a => a.LeagueClubGameId == clubId && a.Page == 1 && a.View == 0 && a.ExpiresAt > now);
         }
         return dto;
     }

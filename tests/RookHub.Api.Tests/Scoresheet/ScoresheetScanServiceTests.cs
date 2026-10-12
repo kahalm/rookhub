@@ -426,6 +426,29 @@ public class ScoresheetScanServiceTests : IDisposable
         }, Answer(Written), null)).Reason);
     }
 
+    /// <summary>0.756.0: beim Übernehmen bleibt das zweite Exemplar (Ansicht) im Archiv — „Korrigieren" zeigt es wieder.</summary>
+    [Fact]
+    public async Task CreateManual_ForAClubGame_KeepsFurtherPhotosInTheArchive()
+    {
+        var u = await UserAsync();
+        var game = new LeagueClubGame { White = "A", Black = "B", Pgn = "1. Nf3 d5 *", MovesHash = "x", Result = "*" };
+        _db.LeagueClubGames.Add(game);
+        await _db.SaveChangesAsync();
+
+        var (_, reason) = await _service.CreateManualAsync(u.Id, new[]
+        {
+            new ScoresheetUpload(Jpeg(), "image/jpeg", "weiss.jpg", 1), new ScoresheetUpload(Jpeg(), "image/jpeg", "schwarz.jpg", 1),
+        }, Answer(Written), game.Id);
+
+        Assert.Null(reason);
+        var state = (await _service.ClubEditStateAsync(game.Id))!;
+        Assert.Equal(1, state.PageCount);
+        Assert.Equal(new[] { 1 }, state.ViewCounts);
+        Assert.Equal(1, (await _service.ClubPhotoAsync(game.Id, 1, view: 1))!.Value.PageCount);
+        Assert.Null(await _service.ClubPhotoAsync(game.Id, 1, view: 2));
+        Assert.Empty(await _db.ScoresheetScanViews.ToListAsync());
+    }
+
     [Fact]
     public async Task CreateManual_ForAClubGame_IsArchivedSoCorrectingShowsTheSheet()
     {

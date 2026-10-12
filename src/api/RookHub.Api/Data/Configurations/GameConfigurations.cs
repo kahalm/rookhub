@@ -107,7 +107,7 @@ internal sealed class ScoresheetScanArchiveConfiguration : IEntityTypeConfigurat
         e.Property(a => a.Model).HasMaxLength(60);
         e.Property(a => a.NotationLanguage).HasMaxLength(8);
         e.HasIndex(a => a.ExpiresAt);
-        e.HasIndex(a => new { a.ScoresheetScanId, a.Page }).IsUnique();
+        e.HasIndex(a => new { a.ScoresheetScanId, a.Page, a.View }).IsUnique();
         e.HasIndex(a => a.LeagueClubGameId);
     }
 }
