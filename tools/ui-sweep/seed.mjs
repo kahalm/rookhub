@@ -137,6 +137,14 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
   });
 
   await step(['repertoireId'], async () => ({ repertoireId: list(await a.get('/api/repertoires'))[0]?.id }));
+  // Repertoire-Varianten: ein Schwarz-Repertoire (Brett gedreht) und ein Endspiel-Repertoire — seed-user.mjs legt beide an.
+  await step(['repertoireBlackId', 'repertoireEndgameId'], async () => {
+    const reps = list(await a.get('/api/repertoires'));
+    return {
+      repertoireBlackId: reps.find(r => r.kind === 'Opening' && /schwarz|black/i.test(r.name))?.id,
+      repertoireEndgameId: reps.find(r => r.kind === 'Endgame')?.id,
+    };
+  });
 
   // Geteilte Linie (/l/{token}): eine Zugfolge aus einem EIGENEN Repertoire teilen. Dieselbe Linie erneut geteilt gibt
   // denselben Link (die API entdoppelt je Besitzer) — es wächst also nichts nach.
@@ -207,6 +215,23 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
       chapterIndex = (chapters.find(c => (c.puzzleCount ?? 0) > 0) ?? chapters[0])?.index;
     }
     return { bookId: book?.bookId, calcBookId: calc?.bookId, bookPuzzleId, chapterIndex };
+  });
+  // Lern-Kurs (Kind „Study", kein Aufgabenbuch) und Kurz-URL eines öffentlichen Kurses (/{slug}). Art, „öffentlich" und
+  // Alias stehen nur in der Detailantwort, nicht in der Liste. Hat kein öffentlicher Kurs einen Alias, macht das
+  // Admin-Konto den ersten Aufgabenkurs öffentlich mit dem Alias „ui-sweep" (Dev-Daten; das normale Konto darf das nicht).
+  await step(['studyBookId', 'courseSlug'], async () => {
+    const details = [];
+    for (const c of list(await a.get('/api/courses')).filter(c => !c.isCalculation)) details.push(await a.get(`/api/courses/${c.bookId}`));
+    const study = details.find(d => d.kind === 'Study');
+    let slug = details.find(d => d.isPublic && d.publicSlug)?.publicSlug;
+    const target = details.find(d => d.kind !== 'Study' && d.canManage && (d.puzzleCount ?? 0) > 20);
+    if (!slug && target && only === null) {
+      try {
+        await a.put(`/api/admin/books/${target.bookId}`, { isPublic: true, publicSlug: SWEEP_TAG });
+        slug = SWEEP_TAG;
+      } catch { /* kein Admin */ }
+    }
+    return { studyBookId: study?.bookId, courseSlug: slug, _why: study ? 'kein öffentlicher Kurs mit Alias' : 'kein Lern-Kurs sichtbar' };
   });
 
   // Zufallspuzzle nur beim ersten Mal ziehen — sonst wäre die Seite bei jedem Vergleich „verändert".

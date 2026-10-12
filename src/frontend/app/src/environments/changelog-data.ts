@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.758.5", date: "2026-10-12", changes: [
+    { en: "UI check tool: courses and repertoires are now captured in every variant (random mode, chapter random, marked flashcards, study course, own calculation course, public short link, unknown short link; repertoire tree, gap finder, edit, learn mode, Black and endgame repertoire).",
+      de: "UI-Prüfwerkzeug: Kurse und Repertoires werden jetzt in allen Varianten fotografiert (Zufallsmodus, Kapitel-Zufall, markierte Karteikarten, Lern-Kurs, eigener Kalkulationskurs, öffentliche Kurz-URL, unbekannte Kurz-URL; Repertoire-Baum, Lochfinder, Bearbeiten, Lernmodus, Schwarz- und Endspiel-Repertoire)." },
+  ] },
   { version: "0.758.4", date: "2026-10-12", changes: [
     { en: "Privacy pages: the “back to top” button sits clearly beside the card on large screens, the LeagueHub card no longer leaves an empty strip on the right; LeagueHub sign-up shows the privacy link in grey instead of red.",
       de: "Datenschutzseiten: der „Nach oben“-Knopf steht auf großen Bildschirmen klar neben der Karte, die LeagueHub-Karte lässt rechts keinen leeren Streifen mehr; LeagueHub-Registrieren zeigt den Datenschutz-Link grau statt rot." },

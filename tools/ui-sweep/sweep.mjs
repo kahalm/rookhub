@@ -169,8 +169,8 @@ async function accountCredentials(base, role) {
 /** Parameter, die an den EIGENEN Daten eines Kontos hängen — mit denen des Admin-Kontos sähe ein anderes Konto nur fremde
  *  404-Seiten. Das normale Konto bekommt eigene (seed.mjs legt sie an), das leere und das Trainer-Konto haben keine:
  *  ihre Routen mit diesen Platzhaltern entfallen still (gezählt als „ohne eigene Daten", nicht als „nicht auflösbar"). */
-const OWNED_PARAMS = new Set(['gameId', 'analyzedGameId', 'repertoireId', 'worksheetId', 'reconstructionId', 'guessId',
-  'analysisId', 'comparisonId', 'friendId', 'bookId', 'calcBookId', 'chapterIndex', 'bookPuzzleId', 'scanId']);
+const OWNED_PARAMS = new Set(['gameId', 'analyzedGameId', 'repertoireId', 'repertoireBlackId', 'repertoireEndgameId', 'worksheetId', 'reconstructionId', 'guessId',
+  'analysisId', 'comparisonId', 'friendId', 'bookId', 'calcBookId', 'studyBookId', 'chapterIndex', 'bookPuzzleId', 'scanId']);
 /** Parameter, die für das Trainer-Konto aus SEINER Sicht kommen (nur zugeteilte Gruppen/Kinder). */
 const TRAINER_PARAMS = new Set(['clubGroupId', 'clubMemberId']);
 /** Für abgemeldet ohne Sinn: die Punktepartie gehört einem Konto (anonym gäbe es nur ein 404). */

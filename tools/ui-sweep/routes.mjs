@@ -62,6 +62,15 @@ export const ROUTES = [
   r('rookhub', '/repertoires/{repertoireId}', 'user', { main: ['.viewer-layout app-chess-board', '.edit-panel app-repertoire-edit', '.detail-header .train-btn'] }),
   r('rookhub', '/repertoires/{repertoireId}/train', 'user', { main: ['.play app-puzzle-board', 'mat-card.msg'] }),
   r('rookhub', '/repertoires/{repertoireId}/flashcards', 'user', { main: ['.fc-study-card', '.fc-sheet .fc-card', '.fc-center'] }),
+  // Repertoire in allen Ansichten: Baum, Lochfinder, Bearbeiten, Lernmodus — dazu je ein Schwarz- und ein Endspiel-Repertoire.
+  r('rookhub', '/repertoires/{repertoireId}?mode=tree', 'user', { label: 'repertoires-tree', main: ['.viewer-layout app-repertoire-tree', '.viewer-layout app-chess-board'] }),
+  r('rookhub', '/repertoires/{repertoireId}?mode=holes', 'user', { label: 'repertoires-holes', main: ['.viewer-layout app-repertoire-holes', '.viewer-layout app-chess-board'] }),
+  r('rookhub', '/repertoires/{repertoireId}?mode=edit', 'user', { label: 'repertoires-edit', main: ['.edit-panel app-repertoire-edit', '.detail-header .train-btn'] }),
+  r('rookhub', '/repertoires/{repertoireId}/train?mode=learn', 'user', { label: 'repertoires-train-learn', main: ['.play app-puzzle-board', 'mat-card.msg'] }),
+  r('rookhub', '/repertoires/{repertoireBlackId}', 'user', { label: 'repertoires-black', main: ['.viewer-layout app-chess-board', '.detail-header .train-btn'] }),
+  r('rookhub', '/repertoires/{repertoireBlackId}/train', 'user', { label: 'repertoires-black-train', main: ['.play app-puzzle-board', 'mat-card.msg'] }),
+  r('rookhub', '/repertoires/{repertoireEndgameId}', 'user', { label: 'repertoires-endgame', main: ['.viewer-layout app-chess-board', '.detail-header .train-btn'] }),
+  r('rookhub', '/repertoires/{repertoireEndgameId}/train', 'user', { label: 'repertoires-endgame-train', main: ['.play app-puzzle-board', 'mat-card.msg'] }),
   r('rookhub', '/l/{lineToken}', 'any', { main: ['.viewer app-chess-board', '.shared-page .empty-state'] }),
   r('rookhub', '/puzzles', 'any', { main: PUZZLE_BOARD }),
   r('rookhub', '/puzzles/{puzzleId}', 'any', { main: PUZZLE_BOARD }),
@@ -112,7 +121,17 @@ export const ROUTES = [
   r('rookhub', '/courses/{bookId}/sequential', 'user', { main: PUZZLE_BOARD }),
   r('rookhub', '/courses/{bookId}/chapter/{chapterIndex}/browse', 'user', { main: COURSE_BROWSE }),
   r('rookhub', '/courses/{bookId}/chapter/{chapterIndex}/sequential', 'user', { main: PUZZLE_BOARD }),
+  // Kurs in allen Modi: Zufall (ganzes Buch + Kapitel), nur markierte Karteikarten, Detailseite des eigenen Kalkulationskurses.
+  r('rookhub', '/courses/{bookId}/random', 'user', { label: 'courses-random', main: PUZZLE_BOARD }),
+  r('rookhub', '/courses/{bookId}/chapter/{chapterIndex}/random', 'user', { label: 'courses-chapter-random', main: PUZZLE_BOARD }),
+  r('rookhub', '/courses/{bookId}/flashcards?marked=1', 'user', { label: 'courses-flashcards-marked', main: ['.fc-study .fc-study-card', '.fc-sheets:not(.fc-sheets--screen-hidden) .fc-card', '.fc-page .fc-center'] }),
   r('rookhub', '/courses/{calcBookId}/calc', 'user', { main: ['.calc-board-wrap app-puzzle-board', '.calc-page .calc-loading', '.calc-page > mat-card'] }),
+  r('rookhub', '/courses/{studyBookId}', 'user', { label: 'courses-study', main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
+  r('rookhub', '/courses/{studyBookId}/browse', 'user', { label: 'courses-study-browse', main: COURSE_BROWSE }),
+  r('rookhub', '/courses/{calcBookId}', 'user', { label: 'courses-calc-detail', main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
+  // Kurz-URL öffentlicher Kurse (/{slug}) leitet weiter; ein unbekannter einteiliger Alias zeigt „Seite nicht gefunden" (zweiteilig: not-found unten).
+  r('rookhub', '/{courseSlug}', 'any', { label: 'course-slug', main: PUZZLE_BOARD.concat(['.detail-page .head-card', '.browse-container']) }),
+  r('rookhub', '/ui-sweep-gibt-es-nicht', 'any', { label: 'slug-not-found', main: ['section.not-found .nf-actions', 'section.not-found'] }),
   r('rookhub', '/chessable', 'user', { main: ['.extension-note .store-links', '.extension-note'] }),
   r('rookhub', '/admin', 'user', { main: ['.admin-container table.users-table tr.mat-mdc-row', '.admin-container .users-table-wrap', '.admin-container mat-tab-group'] }),
   r('rookhub', '/help', 'any', { main: ['.help-container mat-card.help-section', '.help-container .help-toc'] }),
@@ -198,7 +217,7 @@ export const ROUTES = [
 // Bereiche: `./sweep.sh --area kurse,repertoire` prüft nur diese. Die ERSTE passende Regel gewinnt; eine Route
 // ohne Treffer gehört zu „sonstiges". Neue Seite → passt sie nicht in einen Bereich, hier eine Regel ergänzen.
 export const AREAS = [
-  ['kurse', r => r.app === 'rookhub' && /^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url)],
+  ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url) || /slug/.test(r.label ?? ''))],
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],
