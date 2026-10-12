@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameAnalysesComponent } from './game-analyses.component';
@@ -152,6 +152,43 @@ describe('GameAnalysesComponent', () => {
     openWith(null, fixture);
     http.expectNone(r => r.method === 'POST');
     expect(fixture.componentInstance.pgn).toBe('1. e4 e5');
+  });
+
+  // v1-rk-plural-1-varianten + v1-rk-analysis-pgn-placeholder-title: „1 Variante" statt „1 Varianten", kein „? – ?".
+  it('zeigt bei einer Linie die Einzahl und statt „? – ?" „Ohne Titel"', () => {
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', { gameAnalysis: {
+      depthLines: 'Tiefe {{depth}} · {{lines}} Varianten', depthLinesOne: 'Tiefe {{depth}} · 1 Variante',
+      untitled: 'Ohne Titel', noName: 'ohne Name',
+    } });
+    t.use('de');
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([
+      analysis({ id: 1, title: '? – ?', multiPv: 1, targetDepth: 20 }),
+      analysis({ id: 2, title: 'kahalm – ?', multiPv: 3, targetDepth: 20 }),
+    ]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const titles = Array.from(el.querySelectorAll('.ga-title')).map(x => x.textContent!.trim());
+    expect(titles).toEqual(['Ohne Titel', 'kahalm – ohne Name']);
+    const heads = Array.from(el.querySelectorAll('.ga-head')).map(x => x.textContent!);
+    expect(heads[0]).toContain('Tiefe 20 · 1 Variante');
+    expect(heads[0]).not.toContain('Varianten');
+    expect(heads[1]).toContain('Tiefe 20 · 3 Varianten');
+  });
+
+  // v1-rk-analysis-jobs-disabled-no-reason: gesperrte Knöpfe sagen sichtbar, warum.
+  it('nennt unter den gesperrten Knöpfen den Grund, solange kein PGN eingefügt ist', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.new-card .reason')?.textContent).toContain('gameAnalysis.pgnFirst');
+    fixture.componentInstance.pgn = '1. e4 e5';
+    fixture.detectChanges();
+    expect(el.querySelector('.new-card .reason')).toBeNull();
   });
 
   it('zeigt bei einer Knoten-Analyse den Engine-Namen und die Knoten statt der Tiefe', () => {

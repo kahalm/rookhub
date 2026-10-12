@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -38,7 +40,7 @@ export interface HoleBoardView {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, TranslatePipe, HelpHintComponent,
+    MatProgressBarModule, MatTooltipModule, MatFormFieldModule, MatInputModule, TranslatePipe, HelpHintComponent,
   ],
   template: `
     <div class="holes">
@@ -91,12 +93,14 @@ export interface HoleBoardView {
         }
 
         <div class="row">
-          <label class="threshold">
-            {{ 'repertoire.holes.threshold' | translate }}
-            <input type="number" [min]="minThreshold" [max]="maxThreshold" step="0.1"
+          <!-- UI-Sweep 2026-10-12 (v1-rk-holes-grenzwert-eingabe-unstyled): Feld als outline-Formularfeld (5.8). -->
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="threshold">
+            <mat-label>{{ 'repertoire.holes.threshold' | translate }}</mat-label>
+            <input matInput type="number" [min]="minThreshold" [max]="maxThreshold" step="0.1"
                    [ngModel]="settings().thresholdPercent" (ngModelChange)="setThreshold($event)"
-                   (blur)="normalizeThreshold()" /> %
-          </label>
+                   (blur)="normalizeThreshold()" />
+            <span matTextSuffix>%</span>
+          </mat-form-field>
           <app-help-hint [text]="'repertoire.holes.thresholdHelp' | translate" />
           <span class="spacer"></span>
           @if (running()) {
@@ -178,8 +182,7 @@ export interface HoleBoardView {
     .chip { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 12px; cursor: pointer;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
     .chip.on { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary, #fff); border-color: transparent; }
-    .threshold { font-size: 13px; display: flex; align-items: center; gap: 4px; }
-    .threshold input { width: 56px; font: inherit; padding: 2px 4px; }
+    .threshold { width: 120px; }
     .progress { padding: 6px 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
     .note { margin: 4px 8px; font-size: 12px; color: color-mix(in srgb, currentColor 70%, transparent); }
     .note.warn { color: var(--mat-sys-error, #b00020); }

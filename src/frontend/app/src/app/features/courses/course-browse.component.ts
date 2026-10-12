@@ -34,6 +34,7 @@ import { CourseLanguageService, CourseRef } from './course-language.service';
 import { labelOr } from './course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from './course-lang-picker.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 /** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). Die Gruppierung selbst
  *  liegt in `shared/lines/chapter-groups.util` — sie teilt sich diese Ansicht mit der
@@ -63,7 +64,7 @@ interface ChapterGroup {
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatMenuModule, IconLabelDirective,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
-    SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent,
+    SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent, SanPipe,
   ],
   template: `
     <div class="browse-container">
@@ -212,7 +213,7 @@ interface ChapterGroup {
                   @for (m of sanMoves; track $index) {
                     @if (moveNumbers[$index]; as no) { <span class="move-no">{{ no }}</span> }
                     <button class="san" [class.current]="plyIndex === $index + 1"
-                            (click)="goTo($index + 1)">{{ m }}</button>
+                            (click)="goTo($index + 1)">{{ m | san }}</button>
                   }
                 </div>
               }
@@ -221,7 +222,7 @@ interface ChapterGroup {
                 <mat-card class="comment-card">
                   <mat-card-content>
                     @for (block of commentBlocks; track $index) {
-                      <p>@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+                      <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
                     }
                     @if (variationPreview) {
                       <div class="cmt-variation-bar">
@@ -320,8 +321,10 @@ interface ChapterGroup {
     .controls { display: flex; align-items: center; gap: 6px; }
     .move-strip {
       display: flex; flex-wrap: wrap; gap: 2px 4px; align-items: baseline; width: 100%;
-      max-width: 560px; max-height: 120px; overflow-y: auto; font-size: 0.85rem;
+      max-width: 560px; font-size: 0.85rem;
     }
+    /* UI-Sweep v1 (v1-rk-browse-zugliste-handy-abgeschnitten): kein eigener Scrollkasten (DESIGN 5.11) — die
+       ganze Zugfolge bricht um, die Linienknöpfe rutschen nach unten statt eine halbe Zeile abzuschneiden. */
     .move-no { opacity: 0.5; font-variant-numeric: tabular-nums; margin-left: 4px; }
     .san { background: none; border: none; cursor: pointer; color: inherit; padding: 1px 4px; border-radius: 4px; font-size: 0.85rem; }
     .san:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
@@ -329,6 +332,7 @@ interface ChapterGroup {
     .comment-card { width: 100%; max-width: 560px; }
     .comment-card p { margin: 0 0 6px; }
     .comment-card p:last-child { margin-bottom: 0; }
+    .comment-card p.cmt-heading { font-weight: 700; margin-bottom: 2px; }
     .cmt-move {
       font: inherit; font-weight: 600; cursor: pointer;
       color: var(--mat-sys-primary, #1565c0);

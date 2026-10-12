@@ -19,6 +19,8 @@ import {
   MoveComparisonTest, numberedLine,
 } from './move-comparison.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { SanPipe } from '../../shared/chess/san.pipe';
+import { localizeSanText } from '../puzzles/keyboard-move.util';
 
 /** Was das Brett gerade zeigt: eine Stellung des Vergleichs samt Pfeil für den nächsten Zug. */
 interface BoardView { key: string; fen: string; arrows: BoardArrow[]; lastMove?: [string, string]; caption: string; }
@@ -35,7 +37,7 @@ const POLL_MS = 3_000;
   selector: 'app-move-comparison',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent],
+  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, SanPipe],
   template: `
     <div class="cmp-page">
       <div class="header">
@@ -171,9 +173,9 @@ const POLL_MS = 3_000;
             <h3>{{ 'moveCompare.page.history' | translate }}</h3>
             @for (h of history(); track h.id) {
               <div class="hist-row" [class.current]="h.id === currentId()">
-                <a [routerLink]="['/analysis/compare', h.id]">{{ h.moves.join(' · ') }}</a>
+                <a [routerLink]="['/analysis/compare', h.id]">{{ h.moves.join(' · ') | san:'text' }}</a>
                 <span class="muted small">{{ h.createdAt | date:'short' }}</span>
-                @if (h.bestSan) { <span class="best">{{ h.bestSan }}</span> }
+                @if (h.bestSan) { <span class="best">{{ h.bestSan | san }}</span> }
                 <span class="spacer"></span>
                 <button mat-icon-button type="button" (click)="remove(h)" [appIconLabel]="'moveCompare.page.delete' | translate">
                   <mat-icon>delete</mat-icon>
@@ -293,13 +295,19 @@ export class MoveComparisonComponent implements OnInit {
 
   // ── Beschriftung ─────────────────────────────────────────────────────────────────────────────
 
+  // Nur Anzeige: Figurenbuchstaben der Oberflächensprache (DESIGN 5.14, v1-rk-san-english-in-de-ui). Pfeile und
+  // Züge auf dem Brett (arrowOf/play) bekommen weiter englisches SAN.
   moveLabel(san: string): string {
     const d = this.data();
-    return d ? numberedLine(d.fen, [san]) : san;
+    return this.localized(d ? numberedLine(d.fen, [san]) : san);
   }
 
   lineLabel(fen: string | null, sans: readonly string[]): string {
-    return fen ? numberedLine(fen, sans, 6) : sans.slice(0, 6).join(' ');
+    return this.localized(fen ? numberedLine(fen, sans, 6) : sans.slice(0, 6).join(' '));
+  }
+
+  private localized(text: string): string {
+    return localizeSanText(text, this.translate.currentLang());
   }
 
   /** Die eigene Erwiderung auf die Antwort nach dem besten Zug, nummeriert ab der Stellung danach. */

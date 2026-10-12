@@ -163,7 +163,7 @@
                     <mat-icon>chat_bubble_outline</mat-icon>
                     <div class="ctx-comment-body" (click)="onCommentBodyClick($event)">
                       @for (block of commentBlocks; track $index) {
-                        <p>@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+                        <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
                       }
                       @if (variationPreview) {
                         <div class="cmt-variation-bar">

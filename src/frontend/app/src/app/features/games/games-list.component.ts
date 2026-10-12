@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -51,12 +51,17 @@ export type AnalysisState = 'none' | 'running' | 'done';
           <h1>{{ 'games.title' | translate }}</h1>
           <div class="header-actions">
             <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
-              <mat-icon>upload_file</mat-icon> {{ 'games.pgnUpload.button' | translate }}
+              <mat-icon>upload_file</mat-icon>
+              <!-- Am Handy Kurztext, damit beide Kopfknöpfe in eine Zeile passen (v1-rk-games-mobile-fold-lead-filters-open). -->
+              <span class="label-long">{{ 'games.pgnUpload.button' | translate }}</span>
+              <span class="label-short" aria-hidden="true">{{ 'games.pgnUpload.short' | translate }}</span>
             </button>
             <!-- Fehler mehrerer Partien am Stück (0.748.0) — übernimmt die gewählte Liga/Saison. -->
             @if (games.length > 0) {
               <a mat-stroked-button class="mistakes-collection" routerLink="/games/mistakes" [queryParams]="collectionParams()">
-                <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.button' | translate }}
+                <mat-icon>replay</mat-icon>
+                <span class="label-long">{{ 'games.mistakes.collection.button' | translate }}</span>
+                <span class="label-short" aria-hidden="true">{{ 'games.mistakes.collection.short' | translate }}</span>
               </a>
             }
           </div>
@@ -72,7 +77,23 @@ export type AnalysisState = 'none' | 'running' | 'done';
         <!-- Zwei Klassifizierer (0.661.0): Online-Partien Seite + Modus, Ligapartien Liga + Jahrgang. Ein Filter je
              Klassifizierer, erst wenn es überhaupt Werte gibt — sonst stünde ein Schalter da, der nichts tut. -->
         @if (firstOptions().length > 0 || secondOptions().length > 0 || tagOptions().length > 0) {
-          <div class="classifier-filters">
+          <!-- Am Handy (≤ 600 px) liegen die Filter hinter „Filter ▾" (zu als Vorgabe); gesetzte Filter stehen als Chips
+               mit ✕ daneben (v1-rk-games-mobile-fold-lead-filters-open, DESIGN 4.6 Regel 7). Am PC immer offen. -->
+          <div class="filters-bar">
+            <button type="button" mat-stroked-button class="filters-toggle" [attr.aria-expanded]="filtersOpen()"
+                    (click)="filtersOpen.set(!filtersOpen())">
+              {{ 'games.filtersToggle' | translate }} {{ filtersOpen() ? '▴' : '▾' }}
+            </button>
+            @if (!filtersOpen()) {
+              @for (c of activeFilters(); track c.which) {
+                <button type="button" class="filter-chip" (click)="clearFilter(c.which)"
+                        [attr.aria-label]="'games.filterRemove' | translate: { value: c.label }">
+                  {{ c.label }} <span aria-hidden="true">✕</span>
+                </button>
+              }
+            }
+          </div>
+          <div class="classifier-filters" [class.open]="filtersOpen()">
             @if (firstOptions().length > 0) {
               <label>{{ 'games.classifier.first' | translate }}
                 <select [(ngModel)]="filter1" name="filter1" [attr.aria-label]="'games.classifier.first' | translate">
@@ -248,6 +269,16 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .classifier-filters select { font: inherit; color: inherit; background: transparent; padding: 4px 8px;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 6px; max-width: 60vw; }
     .classifier-filters option { color: initial; }
+    .filters-bar { display: none; }
+    .label-short { display: none; }
+    @media (max-width: 600px) {
+      .filters-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+      .classifier-filters:not(.open) { display: none; }
+      .filter-chip { font: inherit; font-size: 0.8rem; color: inherit; cursor: pointer; min-height: 32px; padding: 2px 10px;
+        border: 0; border-radius: 16px; background: color-mix(in srgb, currentColor 10%, transparent); }
+      .label-long { display: none; }
+      .label-short { display: inline; }
+    }
     .classifiers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
     .chip.tag { background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
     .chip { font-size: 0.72rem; line-height: 1; padding: 3px 7px; border-radius: 10px;
@@ -362,6 +393,20 @@ export class GamesListComponent implements OnInit {
   filterTag = '';
   tagOptions(): string[] { return distinctTags(this.games); }
   readonly none = NO_CLASSIFIER;
+  /** Filter am Handy aufgeklappt? Vorgabe zu (v1-rk-games-mobile-fold-lead-filters-open); am PC immer offen. */
+  readonly filtersOpen = signal(false);
+
+  /** Gesetzte Filter als Chips neben „Filter ▾" (Handy, zugeklappt). */
+  activeFilters(): { which: 'filter1' | 'filter2' | 'filterTag'; label: string }[] {
+    const label = (v: string) => v === NO_CLASSIFIER ? this.translate.instant('games.classifier.none') : v;
+    const out: { which: 'filter1' | 'filter2' | 'filterTag'; label: string }[] = [];
+    if (this.filter1) out.push({ which: 'filter1', label: label(this.filter1) });
+    if (this.filter2) out.push({ which: 'filter2', label: label(this.filter2) });
+    if (this.filterTag) out.push({ which: 'filterTag', label: this.filterTag });
+    return out;
+  }
+
+  clearFilter(which: 'filter1' | 'filter2' | 'filterTag'): void { this[which] = ''; }
 
   /** Die gewählten Klassifizierer als Adresse für „Fehler nachspielen (Liga/Saison)". */
   collectionParams(): Record<string, string | null> {

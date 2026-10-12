@@ -190,4 +190,27 @@ describe('RepertoireHolesComponent', () => {
     // Mit lokaler Quelle steht der Umschalter über der Auswahl.
     expect(fixture.nativeElement.querySelectorAll('mat-button-toggle-group').length).toBe(2);
   });
+
+  it('der Grenzwert ist ein outline-Formularfeld mit Beschriftung und %-Suffix (UI-Sweep v1-rk-holes-grenzwert-eingabe-unstyled)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireHolesComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireExplorerService, useValue: { run: () => of(result()), sources: () => of(ONLINE_ONLY) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireHolesComponent);
+    fixture.componentRef.setInput('repertoireId', 5);
+    fixture.componentRef.setInput('games', games(PGN_BLACK));
+    fixture.detectChanges();
+
+    const field: HTMLElement = fixture.nativeElement.querySelector('mat-form-field.threshold');
+    expect(field).not.toBeNull();
+    expect(field.classList).toContain('mat-form-field-appearance-outline');
+    expect(field.querySelector('mat-label')).not.toBeNull();
+    expect(field.querySelector('input[matInput][type=number]')).not.toBeNull();
+    expect(field.querySelector('[matTextSuffix]')!.textContent!.trim()).toBe('%');
+    // Tippziel ≥ 44 px (DESIGN.md 2, Grundsatz 5) — die alte Roh-Eingabe war ≈ 22 px hoch.
+    expect(field.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+  });
 });

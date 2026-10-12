@@ -49,6 +49,8 @@ export const SHARED_GAME_STYLES = `
     .roast-icon { flex: 0 0 auto; font-size: 18px; line-height: 1.3; }
     .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
     .original, .analyze { white-space: nowrap; }
+    /* Am Handy wandern „Originalpartie öffnen" und „Teilen-Link kopieren" ins ⋮ (v1-rk-first-view-lead-long-mobile). */
+    .narrow-only { display: none; }
     /* UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): eigene Zeile unter den Knöpfen, leise. */
     .analyze-no-engine { flex: 1 1 100%; margin: -2px 0 0; text-align: right; font-size: 12px;
       color: color-mix(in srgb, currentColor 60%, transparent); }
@@ -110,15 +112,26 @@ export const SHARED_GAME_STYLES = `
       .shared-page { padding: 0; }
       .viewer { width: auto; padding: 0; border-radius: 0; }
       .header { position: relative; grid-template-columns: auto minmax(0, 1fr); padding: 12px 52px 12px 16px; margin-bottom: 4px; }
-      .header-actions { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
+      /* Eine Zeile statt einer 48-px-Zeile je Knopf (v1-rk-first-view-lead-long-mobile, DESIGN 4.6 Regel 3): das
+         Brett begann sonst erst bei 49 % der Höhe. Selten Gebrauchtes steht am Handy im ⋮ (.wide-only/.narrow-only). */
+      .header-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
+      .header-actions > .analyze, .header-actions > .mistakes { flex: 1 1 auto; }
+      .wide-only { display: none; }
+      .narrow-only { display: flex; }
       .analyze-no-engine { text-align: left; }
       /* Nur das ⋮ (es sitzt absolut oben rechts): die leere Zeile samt Abstand fällt weg. */
-      .header-actions:not(:has(> button:not(.game-menu), > a)) { margin-top: -8px; }
+      .header-actions:not(:has(> button:not(.game-menu):not(.wide-only), > a:not(.wide-only))) { margin-top: -8px; }
       /* Das ⋮ oben rechts neben den Namen statt allein in einer eigenen Zeile. */
       .header .game-menu { position: absolute; top: 8px; right: 8px; }
-      .recap { margin: 0 16px 12px; width: auto; min-width: 0; }
+      .recap { margin: 0 16px 12px; width: auto; min-width: 0; cursor: pointer; }
+      /* „Kurz erzählt" höchstens drei Zeilen (4.6 Regel 5), Antippen zeigt alles. */
+      .recap:not(.open) > .recap-text {
+        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+      }
       .side-section { padding: 0 12px; }
-      .body { flex-direction: column; align-items: stretch; }
+      /* nowrap: ein mehrzeiliger Spalten-Flex wird so breit wie sein breitester Inhalt (Genauigkeitstabelle) —
+         die Seite war am Handy 438 statt 390 px breit (v1-rk-analysis-card-overflow-mobile). */
+      .body { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
       .side-section { order: 1; }   /* am Handy: Auswertung vor der Zugliste, wie bisher */
       .moves-section { order: 2; }
       .board-section { width: 100%; max-width: 100%; align-items: center; }

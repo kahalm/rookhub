@@ -1505,6 +1505,7 @@
     "sectionOwn": "Vlastiti tečajevi",
     "sectionOwnHint": "Tečajevi koje si sam uvezao ili izradio.",
     "puzzleCount": "{{count}} zagonetki",
+    "puzzleCountOne": "{{count}} zagonetka",
     "completed": "Tečaj završen",
     "detail": {
       "addChapter": "Dodaj poglavlje",
@@ -1585,6 +1586,8 @@
       "skippedCountOne": "Preskočen red ({{count}}):",
       "startChapter": "Pokreni poglavlje",
       "tags": "Oznake",
+      "descMore": "Više",
+      "descLess": "Manje",
       "title": "Tečaj",
       "chapterPoints": "{{score}} bod.",
       "downloadChapterPgn": "Preuzmi poglavlje kao PGN",
@@ -1674,6 +1677,7 @@
       "digitalHint": "Klikni karticu (ili razmaknica/Enter) za okretanje; ←/→ listaju špil.",
       "markedOnly": "Samo označene",
       "markedEmpty": "Još nema linija označenih kao kartice. Označi linije kvačicom u pregledu.",
+      "browseLines": "Pregledaj linije",
       "markedButton": "Označene",
       "markedTooltip": "Samo linije koje si označio kao kartice",
       "markedMenu": "Kartice (označene linije)"
@@ -1754,8 +1758,8 @@
       "status": {
         "queued": "čeka · mjesto {{pos}}",
         "waiting": "čeka",
-        "running": "u tijeku · {{percent}} %",
-        "runningEta": "u tijeku · {{percent}} % · još oko {{eta}}",
+        "running": "u tijeku · {{percent}} %",
+        "runningEta": "u tijeku · {{percent}} % · još oko {{eta}}",
         "paused": "pauzirano do {{time}}",
         "failed": "neuspjelo"
       },
@@ -2030,6 +2034,7 @@
     },
     "titleLabel": "Tjedna objava {{title}}",
     "puzzleCount": "{{count}} zagonetki",
+    "puzzleCountOne": "{{count}} zagonetka",
     "schedulePreview": "Objavljuje se {{date}} u {{time}} (lokalno vrijeme)"
   },
   "endless": {
@@ -2734,6 +2739,8 @@
     }
   },
   "games": {
+    "filterRemove": "Ukloni filtar {{value}}",
+    "filtersToggle": "Filtri",
     "title": "Spremljene partije",
     "hint": "Partije koje spremiš s chess.com ili lichess pomoću RepCheck proširenja preglednika pojavljuju se ovdje.",
     "empty": "Još nema spremljenih partija. Na stranici analize na chess.com ili lichess klikni „Spremi partiju“ u RepCheck proširenju.",
@@ -2767,7 +2774,7 @@
       "playFailed": "Partiju nije moguće pokrenuti.",
       "view": "Pogledaj s komentarima",
       "viewFailed": "Partiju nije moguće učitati.",
-      "computing": "Računa se … {{percent}} %",
+      "computing": "Računa se … {{percent}} %",
       "computingHint": "Ponavljanje je moguće kad motor izračuna svaku poziciju.",
       "retry": "Ponovno zatraži",
       "queued": "Partija se računa — možeš je ponoviti kad bude gotova."
@@ -2875,7 +2882,7 @@
       "arrow": "Strelica za najbolji potez",
       "refining": "Dublja analiza — {{done}} od {{total}} pozicija"
     },
-    "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
+    "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
     "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",
     "movesCount": "Potezi: {{count}}",
     "mistakes": {
@@ -2909,6 +2916,7 @@
       "dismissHint": "Nikad više ne pitaj ovu pogrešku — npr. ako iz nje ništa ne naučiš. Na stranici partije može se ponovno prikazati.",
       "restore": "{{count}} skriveno — prikaži ponovno",
       "collection": {
+        "short": "Ponovi pogreške",
         "button": "Ponovi pogreške po ligi/sezoni",
         "title": "Ponovi pogreške po ligi/sezoni",
         "hint": "Odaberi ligu i/ili sezonu: sve otvorene pogreške tvojih analiziranih partija iz tog odabira dolaze jedna za drugom na jednoj ploči.",
@@ -3028,6 +3036,7 @@
     "pgnCopied": "PGN kopiran",
     "pgnCopyFailed": "PGN se nije mogao kopirati",
     "pgnUpload": {
+      "short": "Učitaj",
       "button": "Učitaj PGN",
       "title": "Učitaj PGN",
       "hint": "Odaberi datoteku ili zalijepi PGN — može i više partija odjednom.",
@@ -3190,7 +3199,7 @@
       "downloadInfo": "Maia jednom treba model (46 MB). Ostaje spremljen na ovom uređaju.",
       "downloadInfoNoStore": "Maia treba model (46 MB). Ovaj ga preglednik ne može spremiti — učitava se pri svakom posjetu.",
       "download": "Preuzmi",
-      "downloading": "Model se učitava … {{percent}} %",
+      "downloading": "Model se učitava … {{percent}} %",
       "loading": "Model se priprema …",
       "errorUnavailable": "Maia model nije dostupan na ovom poslužitelju.",
       "errorFailed": "Maiu nije bilo moguće učitati.",
@@ -3814,6 +3823,10 @@
     }
   },
   "gameAnalysis": {
+    "nodesLinesOne": "{{nodes}} čvorova · 1 varijanta",
+    "depthLinesOne": "Dubina {{depth}} · 1 varijanta",
+    "pgnFirst": "Najprije zalijepi PGN partije.",
+    "noName": "bez imena",
     "title": "Analize partija",
     "intro": "Ubaci cijelu partiju — pozadinski stroj proračunava svaku poziciju. To traje; partija pokazuje napredak i može se pogledati u svakom trenutku.",
     "pgnLabel": "PGN partije",
@@ -3877,7 +3890,7 @@
       "done": "gotovo",
       "failed": "neuspjelo"
     },
-    "overall": "Ukupno: {{done}} od {{total}} pozicija izračunano ({{percent}} %)",
+    "overall": "Ukupno: {{done}} od {{total}} pozicija izračunano ({{percent}} %)",
     "overallOpen": "{{count}} partija još je u redu čekanja",
     "overallFailed": "nije uračunato: {{count}} neuspjelih",
     "rate": "{{rate}} pozicija/min",
@@ -4755,7 +4768,7 @@
       "globalBudget": "Čitanje je za danas pauzirano — budžet za sve korisnike je potrošen.",
       "tooManyPages": "Najviše tri fotografije po obrascu."
     },
-    "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje",
+    "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje",
     "side": "Igrao sam",
     "sideWhite": "Bijeli",
     "sideBlack": "Crni",

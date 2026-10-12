@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { GameAnalysisDetailComponent } from './game-analysis-detail.component';
 
@@ -56,6 +56,41 @@ describe('GameAnalysisDetailComponent', () => {
     expect(c.index).toBe(-1);
     // Vor dem ersten Zug gibt es keinen letzten Zug zum Hervorheben.
     expect(c.lastMove).toBeUndefined();
+  });
+
+  // v1-rk-san-english-in-de-ui: auf Deutsch „Sf3" statt „Nf3" — in der Zugliste und unter dem Brett.
+  it('zeigt die Züge in den Figurenbuchstaben der Oberflächensprache', () => {
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', {});
+    t.use('de');
+    const fixture = load();
+    fixture.detectChanges();
+    const sans = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.move .san')).map(x => x.textContent!.trim());
+    expect(sans).toEqual(['e4', 'e5', 'Sf3']);
+    fixture.componentInstance.select(2);
+    expect(fixture.componentInstance.label).toBe('2. Sf3');
+  });
+
+  // v1-rk-plural-1-varianten + v1-rk-analysis-pgn-placeholder-title
+  it('Titel ohne PGN-Platzhalter und Einzahl bei einer Linie', () => {
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', { gameAnalysis: {
+      depthLines: 'Tiefe {{depth}} · {{lines}} Varianten', depthLinesOne: 'Tiefe {{depth}} · 1 Variante',
+      untitled: 'Ohne Titel', noName: 'ohne Name',
+    } });
+    t.use('de');
+    const fixture = TestBed.createComponent(GameAnalysisDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses/5').flush({
+      id: 5, title: '? – ?', white: '?', black: '?', result: '1-0', event: null,
+      targetDepth: 20, multiPv: 1, engineId: 'eei_x', status: 'done',
+      plyCount: 3, analyzedPlies: 3, lastError: null,
+      createdAt: '2026-09-05T10:00:00Z', finishedAt: null, positions: POSITIONS,
+    });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('h1')!.textContent!.trim()).toBe('Ohne Titel');
+    expect(el.querySelector('.header p')!.textContent).toContain('Tiefe 20 · 1 Variante');
   });
 
   it('laeuft nicht ueber die Partiegrenzen hinaus', () => {

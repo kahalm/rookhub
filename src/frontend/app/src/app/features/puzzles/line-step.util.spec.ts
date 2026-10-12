@@ -1,4 +1,4 @@
-import { CommentBlockCache, lineStepAt } from './line-step.util';
+import { CommentBlockCache, lineStepAt, splitGluedHeadings } from './line-step.util';
 
 /**
  * Vektor-Spec der geteilten Durchklick-Regel (Codereview F3-014): Brett-Stand nach `index` Halbzügen
@@ -72,5 +72,26 @@ describe('CommentBlockCache', () => {
     const cache = new CommentBlockCache();
     expect(cache.get(1, ['ab', 'c'], '', () => [])).toEqual([[{ text: 'ab' }], [{ text: 'c' }]]);
     expect(cache.get(1, ['a', 'bc'], '', () => [])).toEqual([[{ text: 'a' }], [{ text: 'bc' }]]);
+  });
+
+  // UI-Sweep v1 (v1-rk-course-comment-ueberschrift-angeklebt): Wortlaut aus Prod BookPuzzles 7410 (Buch 13).
+  it('setzt eine angeklebte Kapitelüberschrift als eigenen Überschrift-Block ab', () => {
+    const cache = new CommentBlockCache();
+    const blocks = cache.get(1, ['Den König auf ein bestimmtes Feld lockenDen gegnerischen König auf ein bestimmtes Feld zu locken, ist ein häufiges Ziel.'],
+      START, () => []);
+    expect(blocks).toEqual([
+      [{ text: 'Den König auf ein bestimmtes Feld locken', heading: true }],
+      [{ text: 'Den gegnerischen König auf ein bestimmtes Feld zu locken, ist ein häufiges Ziel.' }],
+    ]);
+  });
+
+  it('zerlegt Kommentare mit eigenen Umbrüchen nicht (keine Zugfolge wird zur Überschrift)', () => {
+    expect(splitGluedHeadings('1.e4 e5 2.Nf3\nWeiß entwickelt schnell.'))
+      .toEqual([{ text: '1.e4 e5 2.Nf3\nWeiß entwickelt schnell.', heading: false }]);
+    expect(splitGluedHeadings('Abschnitt 1: Verbundene BauernIm Unterschied zu isolierten Bauern schützen sie sich.'))
+      .toEqual([
+        { text: 'Abschnitt 1: Verbundene Bauern', heading: true },
+        { text: 'Im Unterschied zu isolierten Bauern schützen sie sich.', heading: false },
+      ]);
   });
 });

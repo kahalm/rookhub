@@ -1,3 +1,6 @@
+import { TestBed } from '@angular/core/testing';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
+import { SanPipe } from '../../shared/chess/san.pipe';
 import { CourseLanguageService } from './course-language.service';
 import { of, throwError } from 'rxjs';
 import { CourseBrowseComponent } from './course-browse.component';
@@ -316,6 +319,28 @@ describe('CourseBrowseComponent Layout', () => {
     expect(phone).toMatch(/\.fc-menu-btn[^{]*\{ ?display: inline-flex/);
     const desk = css.slice(0, css.indexOf('@media (max-width: 599.98px)'));
     expect(desk).toMatch(/\.fc-menu-btn[^{]*\{ ?display: none/);
+  });
+  // UI-Sweep v1 (v1-rk-browse-zugliste-handy-abgeschnitten): Zugleiste ohne eigenen Scrollkasten (DESIGN 5.11).
+  it('sperrt die Zugleiste nicht in einen Scrollkasten', () => {
+    const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '');
+    const strip = plain.match(/\.move-strip \{[^}]*\}/)![0];
+    expect(strip).not.toContain('max-height');
+    expect(strip).not.toContain('overflow');
+  });
+  // v1-rk-course-comment-ueberschrift-angeklebt: abgesetzte Kapitelüberschrift im Kommentar fett.
+  it('setzt eine Überschrift im Kommentar fett', () => {
+    expect(css.replace(/\[_ngcontent-%COMP%\]/g, '')).toMatch(/\.comment-card p\.cmt-heading[^{]*\{[^}]*font-weight: 700/);
+  });
+  // v1-rk-browse-zugliste-englische-notation: Zugleiste in den Figurenbuchstaben der Oberflächensprache (DESIGN 5.14).
+  it('gibt die Zugleiste über die SanPipe aus (deutsch „Sc3")', () => {
+    const deps = (CourseBrowseComponent as any).ɵcmp.dependencies;
+    const list = typeof deps === 'function' ? deps() : deps;
+    expect(list.some((d: any) => d === SanPipe || d?.ɵpipe?.name === 'san')).toBeTrue();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideTranslateService({ fallbackLang: 'en' })] });
+    TestBed.inject(TranslateService).use('de');
+    const pipe = TestBed.runInInjectionContext(() => new SanPipe());
+    expect(pipe.transform('Nc3')).toBe('Sc3');
   });
   it('bindet die Brettbreite an die Fensterhöhe (bis 820 px)', () => {
     expect(css).toMatch(/\.board-wrap[^{]*\{[^}]*max\(560px, (calc\()?100vh - 300px[^}]*820px/);

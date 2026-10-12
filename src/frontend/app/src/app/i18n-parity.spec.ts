@@ -65,6 +65,15 @@ describe('i18n Sprachdateien', () => {
     });
   }
 
+  // v1-rk-analysis-jobs-percent-wrap (DESIGN 5.13): „(100" / „%)" brach am Handy um — Zahl und % mit geschütztem Leerzeichen.
+  for (const lang of FORMAT_LOCALES) {
+    it(`${lang}: zwischen Zahl-Platzhalter und % steht ein geschütztes Leerzeichen`, async () => {
+      const l = await load(lang);
+      const loose = Object.entries(l).filter(([, v]) => /\}\} %/.test(v)).map(([k]) => k);
+      expect(loose).withContext(`${lang}: „}} %" mit normalem Leerzeichen`).toEqual([]);
+    });
+  }
+
   it('alle unterstützten Sprachen sind valides JSON ohne veraltete Keys', async () => {
     for (const lang of SUPPORTED_LANGS) {
       const l = await load(lang);

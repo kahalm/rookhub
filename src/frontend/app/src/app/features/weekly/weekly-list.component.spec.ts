@@ -2,7 +2,7 @@ import { of } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -208,3 +208,38 @@ describe('WeeklyListComponent Upload zugeklappt', () => {
     expect(el.querySelector('.upload-card')).toBeNull();
   });
 });
+
+/** UI-Sweep v1 (v1-rk-falsche-mehrzahl-puzzles, mitgeprüft): „1 Puzzle" statt „1 Puzzles" (DESIGN 5.13). */
+describe('WeeklyListComponent Puzzle-Anzahl', () => {
+  afterEach(() => TestBed.resetTestingModule());
+  async function sched(total: number): Promise<string> {
+    const weekly = {
+      getAll: () => of([{ id: 1, title: 'Wochenpost 1', scheduledAt: '2026-07-09T19:00:00', description: null }]),
+      getAllProgress: () => of([{ weeklyPostId: 1, total, solvedCount: 0 }]),
+    };
+    await TestBed.configureTestingModule({
+      imports: [WeeklyListComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'de' }),
+        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false, has: () => false } },
+        { provide: WeeklyService, useValue: weekly },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(false) } }],
+    }).compileComponents();
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', { weekly: { puzzleCount: '{{count}} Puzzles', puzzleCountOne: '{{count}} Puzzle' } });
+    t.use('de');
+    const fixture = TestBed.createComponent(WeeklyListComponent);
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector('.wp-sched')?.textContent ?? '';
+  }
+
+  it('Einzahl bei genau einem Puzzle, sonst Mehrzahl', async () => {
+    const one = await sched(1);
+    expect(one).toContain('1 Puzzle');
+    expect(one).not.toContain('1 Puzzles');
+    TestBed.resetTestingModule();
+    expect(await sched(5)).toContain('5 Puzzles');
+  });
+});
+

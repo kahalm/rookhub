@@ -72,7 +72,7 @@ import { labelOr } from './course-language.util';
           }
           <div class="card-meta">
             @if (!isEmptyQuiz) {
-              <span>{{ 'courses.puzzleCount' | translate:{ count: course.puzzleCount } }}</span>
+              <span>{{ (course.puzzleCount === 1 ? 'courses.puzzleCountOne' : 'courses.puzzleCount') | translate:{ count: course.puzzleCount } }}</span>
             }
             @if (course.difficulty) { <span class="meta-sep">·</span><span>{{ course.difficulty }}</span> }
             @if (course.rating) { <span class="meta-sep">·</span><span>{{ course.rating }}/10</span> }

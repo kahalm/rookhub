@@ -62,30 +62,34 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
             <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
+          </div>
+          <div class="header-actions">
             <!-- UI-Sweep z1 (z1-rk-rep-abfragen-doppelt): in der Linien-Ansicht steht „Abfragen“ als Hauptknopf in der
-                 Linienleiste neben „Lernen“ — hier nur in Baum/Lochfinder, wo es die Leiste nicht gibt. -->
+                 Linienleiste neben „Lernen“ — hier nur in Baum/Lochfinder, wo es die Leiste nicht gibt.
+                 UI-Sweep 2026-10-12 (v1-rk-repertoire-abfragen-knopf-wandert): rechts neben der Moduswahl statt als
+                 dritte Zeile unter dem Untertitel — der Kopf bleibt in allen Modi gleich hoch, Brett und Panel springen nicht. -->
             @if (mode !== 'lines') {
               <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
                 <mat-icon>replay</mat-icon> {{ 'repertoireTrainer.modeQuiz' | translate }}
               </a>
             }
-          </div>
-          <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
-            <mat-button-toggle value="lines" [attr.aria-label]="'repertoire.detail.modeLines' | translate" [attr.title]="'repertoire.detail.modeLines' | translate">
-              <mat-icon>list</mat-icon>
-            </mat-button-toggle>
-            <mat-button-toggle value="tree" [attr.aria-label]="'repertoire.detail.modeTree' | translate" [attr.title]="'repertoire.detail.modeTree' | translate">
-              <mat-icon>account_tree</mat-icon>
-            </mat-button-toggle>
-            <mat-button-toggle value="holes" [attr.aria-label]="'repertoire.detail.modeHoles' | translate" [attr.title]="'repertoire.detail.modeHoles' | translate">
-              <mat-icon>travel_explore</mat-icon>
-            </mat-button-toggle>
-            @if (repertoire.isOwner !== false) {
-              <mat-button-toggle value="edit" [attr.aria-label]="'common.edit' | translate" [attr.title]="'common.edit' | translate">
-                <mat-icon>edit</mat-icon>
+            <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
+              <mat-button-toggle value="lines" [attr.aria-label]="'repertoire.detail.modeLines' | translate" [attr.title]="'repertoire.detail.modeLines' | translate">
+                <mat-icon>list</mat-icon>
               </mat-button-toggle>
-            }
-          </mat-button-toggle-group>
+              <mat-button-toggle value="tree" [attr.aria-label]="'repertoire.detail.modeTree' | translate" [attr.title]="'repertoire.detail.modeTree' | translate">
+                <mat-icon>account_tree</mat-icon>
+              </mat-button-toggle>
+              <mat-button-toggle value="holes" [attr.aria-label]="'repertoire.detail.modeHoles' | translate" [attr.title]="'repertoire.detail.modeHoles' | translate">
+                <mat-icon>travel_explore</mat-icon>
+              </mat-button-toggle>
+              @if (repertoire.isOwner !== false) {
+                <mat-button-toggle value="edit" [attr.aria-label]="'common.edit' | translate" [attr.title]="'common.edit' | translate">
+                  <mat-icon>edit</mat-icon>
+                </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
         </div>
 
         @if (mode === 'edit') {
@@ -208,7 +212,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     .header-info { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
     .header-info h2 { margin: 0; }
     .subtitle { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 14px; }
-    .train-btn { margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
     /* UI-Sweep z1 (z1-rk-rep-brett-gross): das Brett wächst mit der Fensterhöhe (400–640 px) statt fest 400 px. */
     .viewer-layout {

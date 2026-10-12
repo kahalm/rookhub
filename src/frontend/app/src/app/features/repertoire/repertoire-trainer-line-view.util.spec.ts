@@ -11,6 +11,14 @@ describe('repertoire-trainer-line-view.util', () => {
     expect(lineChapterTitle(undefined)).toBe('');
   });
 
+  it('lineLabel / lineChapterTitle: PGN-Platzhalter („?", „-", leer) werden nicht angezeigt', () => {
+    const [ph] = parsePgnText('[Event "?"]\n[White "?"]\n[Black "-"]\n\n1. e4 *');
+    expect(lineLabel(ph)).toBe('');
+    expect(lineChapterTitle(ph)).toBe('');
+    const [none] = parsePgnText('[Event "x"]\n\n1. e4 *');
+    expect(lineLabel(none)).toBe('');
+  });
+
   it('lineMoveTokens: bis zum aktuellen Halbzug, nur mit revealCurrent auch der aktuelle', () => {
     expect(lineMoveTokens(line, 2, false).map(t => t.san)).toEqual(['e4', 'e6']);
     const shown = lineMoveTokens(line, 2, true);

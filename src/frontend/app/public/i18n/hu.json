@@ -1225,6 +1225,7 @@
     "sectionOwn": "Saját kurzusok",
     "sectionOwnHint": "Az általad importált vagy létrehozott kurzusok.",
     "puzzleCount": "{{count}} feladvány",
+    "puzzleCountOne": "{{count}} feladvány",
     "completed": "Tanfolyam teljesítve",
     "sequential": "Sorrendben",
     "random": "Véletlenszerűen",
@@ -1248,6 +1249,8 @@
       "skippedCountOne": "{{count}} sor kihagyva:",
       "startChapter": "Fejezet indítása",
       "tags": "Címkék",
+      "descMore": "Több",
+      "descLess": "Kevesebb",
       "title": "Tanfolyam",
       "chapterPoints": "{{score}} pont",
       "addChapter": "Fejezet hozzáadása",
@@ -1394,6 +1397,7 @@
       "digitalHint": "Kattints a kártyára (vagy Szóköz/Enter) a megfordításához; a ←/→ lapoz a pakliban.",
       "markedOnly": "Csak a megjelöltek",
       "markedEmpty": "Még egy változat sincs tanulókártyaként megjelölve. Az átnézés nézetben a jelölőnégyzettel jelölhetsz meg változatokat.",
+      "browseLines": "Változatok átnézése",
       "markedButton": "Megjelöltek",
       "markedTooltip": "Csak az általad tanulókártyaként megjelölt változatok",
       "markedMenu": "Tanulókártyák (megjelölt változatok)"
@@ -1498,8 +1502,8 @@
       "status": {
         "queued": "vár · {{pos}}. hely",
         "waiting": "vár",
-        "running": "fut · {{percent}} %",
-        "runningEta": "fut · {{percent}} % · még kb. {{eta}}",
+        "running": "fut · {{percent}} %",
+        "runningEta": "fut · {{percent}} % · még kb. {{eta}}",
         "paused": "szünetel eddig: {{time}}",
         "failed": "sikertelen"
       },
@@ -1621,6 +1625,7 @@
     },
     "titleLabel": "Heti {{title}}",
     "puzzleCount": "{{count}} feladvány",
+    "puzzleCountOne": "{{count}} feladvány",
     "schedulePreview": "Megjelenik: {{date}}, {{time}} (helyi idő)"
   },
   "endless": {
@@ -2343,7 +2348,7 @@
       "downloadInfo": "Maiának egyszer szüksége van egy modellre (46 MB). Ezen az eszközön tárolva marad.",
       "downloadInfoNoStore": "Maiának szüksége van egy modellre (46 MB). Ez a böngésző nem tudja tárolni — minden látogatáskor újra letöltődik.",
       "download": "Letöltés",
-      "downloading": "Modell betöltése … {{percent}} %",
+      "downloading": "Modell betöltése … {{percent}} %",
       "loading": "Modell előkészítése …",
       "errorUnavailable": "A Maia-modell nem érhető el ezen a szerveren.",
       "errorFailed": "Maiát nem sikerült betölteni.",
@@ -3090,6 +3095,8 @@
     }
   },
   "games": {
+    "filterRemove": "{{value}} szűrő eltávolítása",
+    "filtersToggle": "Szűrők",
     "title": "Mentett játszmák",
     "hint": "Azok a játszmák, amelyeket a chess.com-on vagy a lichessen a RepCheck böngészőbővítménnyel mentesz, itt jelennek meg.",
     "empty": "Még nincsenek mentett játszmák. Egy chess.com- vagy lichess-elemzőoldalon kattints a RepCheck bővítményben a „Játszma mentése” gombra.",
@@ -3123,7 +3130,7 @@
       "playFailed": "A játszmát nem sikerült elindítani.",
       "view": "Megtekintés megjegyzésekkel",
       "viewFailed": "A játszmát nem sikerült betölteni.",
-      "computing": "Elemzés folyamatban … {{percent}} %",
+      "computing": "Elemzés folyamatban … {{percent}} %",
       "computingHint": "Akkor játszhatod újra, amikor a motor minden állást kiértékelt.",
       "retry": "Újrakérés",
       "queued": "A játszma elemzése folyamatban — ha kész, újrajátszhatod."
@@ -3231,7 +3238,7 @@
       "arrow": "Nyíl a legjobb lépéshez",
       "refining": "Mélyebb elemzés — {{done}} / {{total}} állás"
     },
-    "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
+    "analyzing": "Elemzés folyamatban: {{pct}} % ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
     "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",
     "movesCount": "{{count}} lépés",
     "mistakes": {
@@ -3265,6 +3272,7 @@
       "dismissHint": "Ezt a hibát soha többé ne kérdezze — pl. ha semmit sem tanulsz belőle. A parti oldalán újra megjeleníthető.",
       "restore": "{{count}} elrejtve — mutasd újra",
       "collection": {
+        "short": "Hibák újrajátszása",
         "button": "Hibák újrajátszása liga/szezon szerint",
         "title": "Hibák újrajátszása liga/szezon szerint",
         "hint": "Válassz ligát és/vagy szezont: a kiválasztás elemzett partijainak összes nyitott hibája egymás után jön egy táblán.",
@@ -3384,6 +3392,7 @@
     "pgnCopied": "PGN másolva",
     "pgnCopyFailed": "A PGN-t nem sikerült másolni",
     "pgnUpload": {
+      "short": "Feltöltés",
       "button": "PGN feltöltése",
       "title": "PGN feltöltése",
       "hint": "Válassz fájlt, vagy illeszd be a PGN-t — egyszerre több játszma is mehet.",
@@ -3470,6 +3479,10 @@
     }
   },
   "gameAnalysis": {
+    "nodesLinesOne": "{{nodes}} csomópont · 1 változat",
+    "depthLinesOne": "Mélység {{depth}} · 1 változat",
+    "pgnFirst": "Először illeszd be egy játszma PGN-jét.",
+    "noName": "név nélkül",
     "title": "Játszmaelemzések",
     "intro": "Dobj be egy egész játszmát — a háttérmotor minden állást végigszámol. Ez eltart egy ideig; a játszma mutatja a haladását, és bármikor megnézheted.",
     "pgnLabel": "A játszma PGN-je",
@@ -3533,7 +3546,7 @@
       "done": "kész",
       "failed": "meghiúsult"
     },
-    "overall": "Összesen: {{done}} / {{total}} állás kiszámítva ({{percent}} %)",
+    "overall": "Összesen: {{done}} / {{total}} állás kiszámítva ({{percent}} %)",
     "overallOpen": "{{count}} játszma vár még a sorban",
     "overallFailed": "nincs beszámítva: {{count}} sikertelen",
     "rate": "{{rate}} állás/perc",
@@ -4755,7 +4768,7 @@
       "globalBudget": "A beolvasás mára szünetel — az összes felhasználó kerete elfogyott.",
       "tooManyPages": "Legfeljebb három fénykép lapuként."
     },
-    "budget": "az olvasási kereted {{percent}} %-a elfogyott",
+    "budget": "az olvasási kereted {{percent}} %-a elfogyott",
     "side": "Ezzel játszottam",
     "sideWhite": "Világos",
     "sideBlack": "Sötét",

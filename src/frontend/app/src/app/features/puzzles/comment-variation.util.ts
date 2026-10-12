@@ -41,6 +41,9 @@ export interface CommentSegment {
   /** Ausgangs-/Zielfeld für die lastMove-Markierung. */
   from?: string;
   to?: string;
+  /** Nur am ersten Segment eines Blocks: der Block ist eine Zwischenüberschrift (fett, ohne Zug-Chips) —
+   *  beim Import an den Satz geklebte Chessable-Überschrift (v1-rk-course-comment-ueberschrift-angeklebt). */
+  heading?: boolean;
 }
 
 /** Ein Zug-Schritt der aufgelösten Variante (Stellung nach dem Zug + Feldmarkierung). */

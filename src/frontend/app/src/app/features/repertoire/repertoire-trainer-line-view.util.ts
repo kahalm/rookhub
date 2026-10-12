@@ -1,5 +1,7 @@
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
+import { pgnHeaderText } from '../../shared/pgn-viewer/pgn-header.util';
 import { prettyMoveLabel, startNumbering } from './repertoire-move-format.util';
+import { lineChapter } from './repertoire-trainer.util';
 
 /**
  * Anzeige der aktuellen Linie im Repertoire-Trainer (Linienname, Zugleiste, Kommentar) — reine
@@ -22,14 +24,14 @@ export interface LineMoveToken {
  */
 export function lineLabel(line: ParsedGame | undefined): string {
   if (!line) return '';
-  return (line.headers['White'] || '').trim();
+  return pgnHeaderText(line.headers['White']);
 }
 
 /** Kapitel der Linie (Black-Header) für den Tooltip am Liniennamen; Platzhalter = kein Tooltip. Nur Anzeige — als
  * Filterschlüssel bleibt der rohe Wert (`lineChapter`). */
 export function lineChapterTitle(line: ParsedGame | undefined): string {
   if (!line) return '';
-  return (line.headers['Black'] || '').trim();
+  return pgnHeaderText(lineChapter(line));
 }
 
 /**

@@ -8,6 +8,16 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.759.0", date: "2026-10-12", changes: [
+    { en: "Analysed games on phones: the evaluation card no longer sticks out on the right, the buttons sit in one row (original game and share link in the ⋮ menu) and the short story folds to three lines; game list on phones with a “Filter” button and the active filters as chips.",
+      de: "Analysierte Partie am Handy: die Auswertungskarte ragt nicht mehr rechts hinaus, die Knöpfe stehen in einer Zeile (Originalpartie und Teilen-Link im ⋮-Menü) und „Kurz erzählt“ ist auf drei Zeilen eingeklappt; Partienliste am Handy mit „Filter“-Knopf und den gesetzten Filtern als Chips." },
+    { en: "Game analyses: no more “? – ?” as title, “1 line” in the singular, moves in German notation in the German interface (also in “Compare moves”), a hint why “Start analysis” is disabled, and percentages no longer break before the % sign.",
+      de: "Partie-Analysen: kein „? – ?“ mehr als Titel, „1 Variante“ in der Einzahl, Züge in der deutschen Oberfläche deutsch notiert (auch bei „Züge vergleichen“), ein Hinweis, warum „Analyse starten“ gesperrt ist, und Prozentangaben brechen nicht mehr vor dem %-Zeichen um." },
+    { en: "Courses: the line overview shows German notation and the full move list without its own scroll box, headings glued to comment text are set apart in bold, “1 puzzle” in the singular, an empty stack of marked flashcards offers a way back to the lines, long course descriptions fold on phones (“More”), and tags appear as badges.",
+      de: "Kurse: die Linienübersicht notiert deutsch und zeigt die ganze Zugliste ohne eigenen Scrollkasten, an den Kommentar geklebte Überschriften stehen fett abgesetzt, „1 Puzzle“ in der Einzahl, ein leerer Stapel markierter Karteikarten bietet den Weg zurück zu den Linien, lange Kursbeschreibungen sind am Handy eingeklappt („Mehr“), Schlagwörter erscheinen als Abzeichen." },
+    { en: "Repertoire: learn mode shows the comment only once and no lone “?” under the line counter; the gap finder threshold is a proper input field; the “Quiz” button stays in the header in tree and gap view, so the board no longer jumps.",
+      de: "Repertoire: der Lernmodus zeigt den Kommentar nur einmal und kein einsames „?“ unter dem Linienzähler; der Grenzwert im Lochfinder ist ein richtiges Eingabefeld; der Knopf „Abfragen“ bleibt in Baum- und Lochfinder-Ansicht im Kopf, das Brett springt nicht mehr." },
+  ] },
   { version: "0.758.6", date: "2026-10-12", changes: [
     { en: "Code structure: the styles of the shared game page, the text helpers of game analyses and the line display of the repertoire trainer now live in their own files. No change in behaviour.",
       de: "Code-Struktur: die Stile der Partieseite, die Texthelfer der Partie-Analysen und die Linienanzeige des Repertoire-Trainers liegen jetzt in eigenen Dateien. Keine Änderung im Verhalten." },

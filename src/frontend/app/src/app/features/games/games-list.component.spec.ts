@@ -224,6 +224,31 @@ describe('GamesListComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('.game').length).toBe(1);
   });
 
+  // v1-rk-games-mobile-fold-lead-filters-open: am Handy liegen die Filter hinter „Filter ▾"; gesetzte Filter als Chips mit ✕.
+  it('zeigt gesetzte Filter als Chips neben „Filter ▾" und nimmt sie per ✕ zurück', async () => {
+    const { fixture } = await setupMitPartien([
+      { ...partie(1), classifier1: 'Liga A', classifier2: '2025' },
+      { ...partie(2), classifier1: 'Liga B', classifier2: '2026' },
+    ]);
+    const c = fixture.componentInstance;
+    const el = fixture.nativeElement as HTMLElement;
+    expect(c.filtersOpen()).toBeFalse();
+    expect(el.querySelector('.classifier-filters.open')).toBeNull();
+    expect(el.querySelectorAll('.filter-chip').length).toBe(0);
+    c.filter1 = 'Liga A';
+    fixture.detectChanges();
+    const chips = Array.from(el.querySelectorAll('.filter-chip')) as HTMLButtonElement[];
+    expect(chips.map(x => x.textContent!.trim())).toEqual(['Liga A ✕']);
+    chips[0].click();
+    fixture.detectChanges();
+    expect(c.filter1).toBe('');
+    expect(el.querySelectorAll('.filter-chip').length).toBe(0);
+    (el.querySelector('.filters-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.classifier-filters.open')).not.toBeNull();
+    expect(el.querySelector('.filters-toggle')!.getAttribute('aria-expanded')).toBe('true');
+  });
+
   /** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm: die native Rueckfrage
    *  liegt im Vollbild hinter der Seite und laesst sich vom Browser stummschalten (Codereview W5 F4-013). */
   it('remove: asks via ConfirmService — declined sends no DELETE, confirmed deletes', async () => {
@@ -245,5 +270,20 @@ describe('GamesListComponent', () => {
     http.expectOne({ method: 'DELETE', url: '/api/games/4' }).flush(null);
     expect(c.games.length).toBe(0);
     expect(native).not.toHaveBeenCalled();
+  });
+});
+
+/** v1-rk-games-mobile-fold-lead-filters-open: Handy-Regeln (Karma läuft mit 1400 px, die Media-Query greift dort nicht). */
+describe('GamesListComponent Layout', () => {
+  const css = ((GamesListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
+  const desk = css.slice(0, css.indexOf('@media (max-width: 600px)'));
+  it('klappt die Filter am Handy zu und zeigt dort Kurztexte in den Kopfknöpfen', () => {
+    expect(desk).toMatch(/\.filters-bar \{ ?display: none/);
+    expect(phone).toMatch(/\.filters-bar \{ ?display: flex/);
+    expect(phone).toMatch(/\.classifier-filters:not\(\.open\) \{ ?display: none/);
+    expect(phone).toMatch(/\.label-long \{ ?display: none/);
+    expect(phone).toMatch(/\.label-short \{ ?display: inline/);
   });
 });

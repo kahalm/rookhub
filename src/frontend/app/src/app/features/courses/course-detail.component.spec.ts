@@ -6,7 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Observable, of, throwError } from 'rxjs';
 import { CourseDetailComponent } from './course-detail.component';
-import { CourseDetail, CourseLine, CourseManageChapter } from './course.service';
+import { CourseDetail, CourseLine, CourseManageChapter, CourseService } from './course.service';
 import { CourseLanguageService } from './course-language.service';
 import { saveBookOffline } from '../puzzles/book-offline.util';
 
@@ -479,3 +479,55 @@ describe('CourseDetailComponent Layout am Handy', () => {
     expect(phone).toMatch(/\.head-card[^{]* \.meta[^{]*\{ ?order: 1/);
   });
 });
+
+/** UI-Sweep v1: lange Beschreibung mit „Mehr" im Satz (v1-rk-kursseite-beschreibung-vorlauf-handy),
+ *  Schlagwörter als Abzeichen (v1-rk-kursseite-schlagwoerter-ohne-leerzeichen). */
+describe('CourseDetailComponent Kopf (gerendert)', () => {
+  const LONG = 'Zehn vollständig kommentierte Meisterpartien aus Capablancas „Chess Fundamentals" (1921, gemeinfrei). '
+    + 'Die Kommentare stammen aus dem Buch und wurden behutsam übertragen; jede Partie zeigt ein typisches Motiv.';
+  afterEach(() => TestBed.resetTestingModule());
+
+  async function render(over: Partial<CourseDetail>): Promise<{ el: HTMLElement; detect: () => void }> {
+    await TestBed.configureTestingModule({
+      imports: [CourseDetailComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getDetail: () => of(detail({ isCalculation: false, ...over })), getTranslations: () => throwError(() => ({ status: 404 })) } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseDetailComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, detect: () => fixture.detectChanges() };
+  }
+
+  it('klappt eine lange Beschreibung zu und per „Mehr" (aria-expanded) auf', async () => {
+    const { el, detect } = await render({ description: LONG });
+    const p = el.querySelector('p.description')!;
+    const more = p.querySelector('button.desc-more') as HTMLButtonElement;
+    expect(more).withContext('Knopf steht im Absatz').not.toBeNull();
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(p.textContent).not.toContain('typisches Motiv');
+    more.click();
+    detect();
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('p.description')!.textContent).toContain('typisches Motiv');
+  });
+
+  it('kurze Beschreibung ohne „Mehr"', async () => {
+    const { el } = await render({ description: 'Kurz und knapp.' });
+    expect(el.querySelector('p.description')!.textContent!.trim()).toBe('Kurz und knapp.');
+    expect(el.querySelector('.desc-more')).toBeNull();
+  });
+
+  it('zeigt Schlagwörter einzeln als Abzeichen, nicht als Rohtext', async () => {
+    const { el } = await render({ tags: 'Meisterpartien,kommentiert,gemeinfrei' });
+    const chips = Array.from(el.querySelectorAll('dd.tag-list .badge')).map(b => b.textContent!.trim());
+    expect(chips).toEqual(['Meisterpartien', 'kommentiert', 'gemeinfrei']);
+    expect(el.textContent).not.toContain('Meisterpartien,kommentiert');
+  });
+
+  it('nur technische Schlagwörter → keine Zeile „Schlagwörter"', async () => {
+    const { el } = await render({ tags: 'personal' });
+    expect(el.querySelector('dd.tag-list')).toBeNull();
+  });
+});
+

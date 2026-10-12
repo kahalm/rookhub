@@ -14,28 +14,34 @@
       </span>
     }
     <span class="fc-spacer"></span>
-    <button mat-stroked-button [class.fc-view-active]="view === 'digital'" (click)="view = 'digital'">
-      <mat-icon>style</mat-icon>{{ 'courses.flashcards.digital' | translate }}
-    </button>
-    <button mat-stroked-button [class.fc-view-active]="view === 'print'" (click)="view = 'print'">
-      <mat-icon>print</mat-icon>{{ 'courses.flashcards.printView' | translate }}
-    </button>
-    @if (view === 'digital') {
-      <button mat-icon-button (click)="toggleShuffle()" [disabled]="loading || cards.length < 2"
-              [class.fc-view-active]="shuffled"
-              [appIconLabel]="'courses.flashcards.shuffle' | translate">
-        <mat-icon>shuffle</mat-icon>
+    <!-- Leerer Stapel: keine Ansicht-/Misch-/Druck-Knöpfe, nur der Weg zum Markieren (v1-rk-flashcards-marked-leer). -->
+    @if (!isEmpty) {
+      <button mat-stroked-button [class.fc-view-active]="view === 'digital'" (click)="view = 'digital'">
+        <mat-icon>style</mat-icon>{{ 'courses.flashcards.digital' | translate }}
       </button>
-    } @else {
-      <button mat-flat-button color="primary" (click)="print()" [disabled]="loading || cards.length === 0">
-        <mat-icon>print</mat-icon>{{ 'courses.flashcards.print' | translate }}
+      <button mat-stroked-button [class.fc-view-active]="view === 'print'" (click)="view = 'print'">
+        <mat-icon>print</mat-icon>{{ 'courses.flashcards.printView' | translate }}
       </button>
+      @if (view === 'digital') {
+        <button mat-icon-button (click)="toggleShuffle()" [disabled]="loading || cards.length < 2"
+                [class.fc-view-active]="shuffled"
+                [appIconLabel]="'courses.flashcards.shuffle' | translate">
+          <mat-icon>shuffle</mat-icon>
+        </button>
+      } @else {
+        <button mat-flat-button color="primary" (click)="print()" [disabled]="loading || cards.length === 0">
+          <mat-icon>print</mat-icon>{{ 'courses.flashcards.print' | translate }}
+        </button>
+      }
     }
   </div>
-  @if (view === 'print') {
-    <p class="fc-hint">{{ 'courses.flashcards.duplexHint' | translate }}</p>
-  } @else {
-    <p class="fc-hint">{{ 'courses.flashcards.digitalHint' | translate }}</p>
+  <!-- Der Bedienhinweis gehört zu einem Stapel — im Leerzustand nicht. -->
+  @if (!isEmpty) {
+    @if (view === 'print') {
+      <p class="fc-hint">{{ 'courses.flashcards.duplexHint' | translate }}</p>
+    } @else {
+      <p class="fc-hint">{{ 'courses.flashcards.digitalHint' | translate }}</p>
+    }
   }
 
   @if (loading) {
@@ -43,7 +49,14 @@
   } @else if (error) {
     <p class="fc-center">{{ 'courses.loadFailed' | translate }}</p>
   } @else if (cards.length === 0) {
-    <p class="fc-center">{{ (markedOnly ? 'courses.flashcards.markedEmpty' : 'courses.flashcards.empty') | translate }}</p>
+    <!-- DESIGN 5.10 Leer: zentriert, Symbol, ein Satz, eine Aktion — dorthin, wo man Linien markiert. -->
+    <div class="empty-state">
+      <mat-icon class="empty-icon" aria-hidden="true">{{ markedOnly ? 'bookmark_border' : 'style' }}</mat-icon>
+      <p>{{ (markedOnly ? 'courses.flashcards.markedEmpty' : 'courses.flashcards.empty') | translate }}</p>
+      <a mat-flat-button color="primary" [routerLink]="browseLink">
+        <mat-icon>list</mat-icon>{{ 'courses.flashcards.browseLines' | translate }}
+      </a>
+    </div>
   } @else if (view === 'digital') {
     <!-- ===== Digitale Lern-Ansicht: eine Karte, klicken/Leertaste = umdrehen =====
          Die Sektion ist zugleich die Vollbild-Hülle: im Vollbild rendert der Browser NUR diesen

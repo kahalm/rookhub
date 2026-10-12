@@ -64,4 +64,9 @@ describe('splitCourseText', () => {
       expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
     }
   });
+
+  it('Engine-Namen in Binnenmajuskel bleiben stehen (v1-rk-course-comment-ueberschrift-angeklebt)', () => {
+    const t = 'Wie AlphaZero und LeelaZero zeigten, ist das Opfer korrekt.';
+    expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
+  });
 });

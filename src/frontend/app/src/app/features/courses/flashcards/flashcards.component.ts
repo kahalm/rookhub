@@ -50,6 +50,8 @@ export class FlashcardsComponent implements OnInit {
   /** Quelle: Kurs (Buch) oder Repertoire — steuert Laden, Auswahl-Filter und Zurück-Link. */
   source: 'course' | 'repertoire' = 'course';
   backLink: (string | number)[] = ['/courses'];
+  /** Wo man Linien markiert/auswählt — Ziel des Knopfs im leeren Stapel (Kurs: Durchsehen, Repertoire: Linienliste). */
+  browseLink: (string | number)[] = ['/courses'];
   loading = true;
   error = false;
   cards: Flashcard[] = [];
@@ -91,6 +93,7 @@ export class FlashcardsComponent implements OnInit {
       this.source = 'course';
       this.bookId = Number(pm.get('bookId'));
       this.backLink = ['/courses', this.bookId];
+      this.browseLink = ['/courses', this.bookId, 'browse'];
       const ids = rawLines.map(Number).filter(n => Number.isFinite(n) && n > 0);
       // In der gewählten Sprache des Kurses (Kurs-Übersetzung): Kommentare und Überschriften übersetzt,
       // das Kapitel-Filter bleibt auf dem Original-Schlüssel.
@@ -126,6 +129,7 @@ export class FlashcardsComponent implements OnInit {
     this.source = 'repertoire';
     this.bookId = Number(pm.get('id'));
     this.backLink = ['/repertoires', this.bookId];
+    this.browseLink = this.backLink;
     const loadRep = (markedKeys: Set<string> | null) => this.training.getPgn(this.bookId).subscribe({
       next: pgn => {
         // Trennen mit DEMSELBEN Zerleger wie Linienliste/Trainer (splitPgnGames: CRLF, BOM, ohne
@@ -164,6 +168,9 @@ export class FlashcardsComponent implements OnInit {
       loadRep(null);
     }
   }
+
+  /** Fertig geladen, aber kein einziger Stapel-Eintrag: Leerzustand statt Werkzeugen (v1-rk-flashcards-marked-leer). */
+  get isEmpty(): boolean { return !this.loading && !this.error && this.cards.length === 0; }
 
   private finish(cards: Flashcard[]): void {
     this.cards = cards;

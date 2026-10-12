@@ -3,6 +3,7 @@ import { Key } from 'chessground/types';
 import { replayIllegalFen } from './illegal-board.util';
 import { applyUci, tryLoadFen } from './puzzle-move.util';
 import { buildCommentSegments, CommentSegment } from './comment-variation.util';
+import { splitCourseText } from '../../shared/course-text';
 
 /**
  * Durchklick-Regeln einer Linie (Brett nach `index` Halbzügen, Kommentar-Segmente), geteilt von den
@@ -74,9 +75,27 @@ export class CommentBlockCache {
     // Trenner, der in keinem Kommentar vorkommt — sonst ergäben ["ab", "c"] und ["a", "bc"] denselben Schlüssel.
     const key = lineId + '|' + lines.join('\u0001');
     if (key !== this.key) {
-      this.blocks = fen ? lines.map(l => buildCommentSegments(l, fen, ucis())) : lines.map(l => [{ text: l }]);
+      let moves: string[] | null = null;
+      this.blocks = [];
+      for (const piece of lines.flatMap(splitGluedHeadings)) {
+        if (piece.heading) this.blocks.push([{ text: piece.text, heading: true }]);
+        else this.blocks.push(fen ? buildCommentSegments(piece.text, fen, moves ??= ucis()) : [{ text: piece.text }]);
+      }
       this.key = key;
     }
     return this.blocks;
   }
+}
+
+/**
+ * UI-Sweep v1 (v1-rk-course-comment-ueberschrift-angeklebt): Chessable-Zwischenüberschriften kamen beim Import ohne
+ * Trenner an den Satz danach („…ein bestimmtes Feld lockenDen gegnerischen König …"). Dieselbe Erkennung wie in KidHub
+ * (`shared/course-text`). Nur Kommentare OHNE eigene Umbrüche werden zerlegt — so wird eine Überschrift nur dort
+ * erkannt, wo ein Umbruch eingefügt wurde, nie eine vorhandene kurze Zeile (etwa eine Zugfolge) fett gesetzt.
+ */
+export function splitGluedHeadings(comment: string): { text: string; heading: boolean }[] {
+  if (comment.includes('\n')) return [{ text: comment, heading: false }];
+  const blocks = splitCourseText(comment);
+  if (blocks.length === 0) return [{ text: comment, heading: false }];
+  return blocks.map(b => ({ text: b.text, heading: b.kind === 'h' }));
 }

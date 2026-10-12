@@ -11,7 +11,7 @@ import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
 import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
-import { splitCourseText } from './course-text';
+import { splitCourseText } from '@rh/shared/course-text';
 
 /** Naechste ungeloeste Linie ab `from` (einschliesslich), am Ende von vorn — `-1`, wenn alle geloest sind. */
 export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number>, from: number): number {

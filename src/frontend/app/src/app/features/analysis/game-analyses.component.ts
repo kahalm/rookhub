@@ -26,6 +26,7 @@ import {
   GameAnalysisNodesDialogComponent, GameAnalysisNodesDialogData, GameAnalysisNodesDialogResult,
 } from './game-analysis-nodes-dialog.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { analysisTitle } from './analysis-title.util';
 
 /**
  * Seite „Partie-Analysen" (`/analysis/games`): eine ganze Partie einwerfen und von der
@@ -119,6 +120,10 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
               </button>
             }
           </div>
+          <!-- Gesperrte Knöpfe sagen sichtbar, warum (DESIGN 5.4, v1-rk-analysis-jobs-disabled-no-reason). -->
+          @if (!pgn.trim() && !creating) {
+            <p class="muted small reason">{{ 'gameAnalysis.pgnFirst' | translate }}</p>
+          }
         </mat-card-content>
       </mat-card>
 
@@ -133,16 +138,16 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
           <mat-card class="ga">
             <mat-card-content>
               <div class="ga-head">
-                <a class="ga-title" [routerLink]="['/analysis/games', a.id]">{{ a.title || ('gameAnalysis.untitled' | translate) }}</a>
+                <a class="ga-title" [routerLink]="['/analysis/games', a.id]">{{ title(a) }}</a>
                 <span class="chip" [class]="'st-' + a.status">{{ 'gameAnalysis.status.' + a.status | translate }}</span>
                 <span class="spacer"></span>
                 @if (a.targetNodes) {
                   <span class="muted small">
                     @if (engineName(a.engineId); as en) { {{ en }} · }
-                    {{ 'gameAnalysis.nodesLines' | translate:{ nodes: (a.targetNodes | number), lines: a.multiPv } }}
+                    {{ (a.multiPv === 1 ? 'gameAnalysis.nodesLinesOne' : 'gameAnalysis.nodesLines') | translate:{ nodes: (a.targetNodes | number), lines: a.multiPv } }}
                   </span>
                 } @else {
-                  <span class="muted small">{{ 'gameAnalysis.depthLines' | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
+                  <span class="muted small">{{ (a.multiPv === 1 ? 'gameAnalysis.depthLinesOne' : 'gameAnalysis.depthLines') | translate:{ depth: a.targetDepth, lines: a.multiPv } }}</span>
                 }
                 <button mat-icon-button [disabled]="restarting === a.id"
                         [attr.aria-label]="'gameAnalysis.restart' | translate"
@@ -177,12 +182,15 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     .new-card { margin-bottom: 16px; }
     .full { width: 100%; }
     .new-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    /* Grund unter gesperrten Knöpfen: leise, rechtsbündig unter ihnen (am Handy linksbündig). */
+    .reason { margin: 6px 0 0; text-align: right; }
     .depth { width: 120px; }
     .hint { flex: 1 1 220px; }
     .nodes-btn { white-space: nowrap; }
     /* Am Handy beide Knöpfe untereinander in voller Breite — nebeneinander reichte der Platz nicht für den ganzen Text. */
     @media (max-width: 599.98px) {
       .new-row > button { flex: 1 1 100%; }
+      .reason { text-align: left; }
     }
     .ga { margin-bottom: 10px; }
     .ga-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -477,9 +485,16 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
    * nimmt alle gerechneten Stellungen und alle Punktepartie-Laeufe darauf mit — bei einer
    * kuratierten (oeffentlichen) Partie auch die fremder Spieler. Nichts davon ist rueckholbar.
    */
+  /** Titel ohne PGN-Platzhalter („? – ?" → „Ohne Titel", v1-rk-analysis-pgn-placeholder-title). */
+  title(a: GameAnalysis): string {
+    return analysisTitle(a.title, {
+      untitled: this.translate.instant('gameAnalysis.untitled'), noName: this.translate.instant('gameAnalysis.noName'),
+    });
+  }
+
   remove(a: GameAnalysis): void {
     const key = a.isPublic ? 'gameAnalysis.deleteConfirmPublic' : 'gameAnalysis.deleteConfirm';
-    const title = a.title || this.translate.instant('gameAnalysis.untitled');
+    const title = this.title(a);
     this.confirm.ask(key, { title }).subscribe(ok => {
       if (!ok) return;
       this.service.delete(a.id).subscribe({

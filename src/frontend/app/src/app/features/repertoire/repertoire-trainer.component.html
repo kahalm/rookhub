@@ -174,11 +174,9 @@
           <div class="feedback learn">
             <p><mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.learnShow' | translate: { move: expectedDisplay } }}</p>
           </div>
+          <!-- UI-Sweep 2026-10-12 (v1-rk-trainer-learn-comment-doppelt): der Kommentar steht nur in der Kontextkarte
+               oben (ctx-comment); learnComment hält hier nur den Zug fest, bis weitergetippt wird. -->
           @if (learnComment) {
-            <div class="comment-box">
-              <mat-icon>chat_bubble</mat-icon>
-              <div class="comment-text">{{ learnComment }}</div>
-            </div>
             <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
           }
         }

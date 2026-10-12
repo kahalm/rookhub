@@ -1505,6 +1505,7 @@
     "sectionOwn": "Eigene Kurse",
     "sectionOwnHint": "Von dir selbst importierte oder angelegte Kurse.",
     "puzzleCount": "{{count}} Puzzles",
+    "puzzleCountOne": "{{count}} Puzzle",
     "completed": "Kurs abgeschlossen",
     "detail": {
       "addChapter": "Kapitel hinzufügen",
@@ -1585,6 +1586,8 @@
       "skippedCountOne": "{{count}} Zeile übersprungen:",
       "startChapter": "Kapitel starten",
       "tags": "Schlagwörter",
+      "descMore": "Mehr",
+      "descLess": "Weniger",
       "title": "Kurs",
       "chapterPoints": "{{score}} Pkt",
       "downloadChapterPgn": "Kapitel als PGN herunterladen",
@@ -1674,6 +1677,7 @@
       "digitalHint": "Karte anklicken (oder Leertaste/Enter) zum Umdrehen; ←/→ blättern durch den Stapel.",
       "markedOnly": "Nur markierte",
       "markedEmpty": "Noch keine Linien als Flashcards markiert. Markiere Linien über das Kästchen im Durchsehen.",
+      "browseLines": "Linien durchsehen",
       "markedButton": "Markierte",
       "markedTooltip": "Nur die von dir als Flashcards markierten Linien",
       "markedMenu": "Flashcards (markierte Linien)"
@@ -1754,8 +1758,8 @@
       "status": {
         "queued": "wartet · Platz {{pos}}",
         "waiting": "wartet",
-        "running": "läuft · {{percent}} %",
-        "runningEta": "läuft · {{percent}} % · noch ca. {{eta}}",
+        "running": "läuft · {{percent}} %",
+        "runningEta": "läuft · {{percent}} % · noch ca. {{eta}}",
         "paused": "pausiert bis {{time}}",
         "failed": "fehlgeschlagen"
       },
@@ -2030,6 +2034,7 @@
     },
     "titleLabel": "Wochenpost {{title}}",
     "puzzleCount": "{{count}} Puzzles",
+    "puzzleCountOne": "{{count}} Puzzle",
     "schedulePreview": "Erscheint am {{date}} um {{time}} (Ortszeit)"
   },
   "endless": {
@@ -2734,6 +2739,8 @@
     }
   },
   "games": {
+    "filterRemove": "Filter {{value}} entfernen",
+    "filtersToggle": "Filter",
     "title": "Gespeicherte Partien",
     "hint": "Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen hier.",
     "empty": "Noch keine gespeicherten Partien. Klicke auf einer chess.com- oder lichess-Analyseseite in der RepCheck-Erweiterung auf „Partie speichern“.",
@@ -2767,7 +2774,7 @@
       "playFailed": "Die Partie konnte nicht gestartet werden.",
       "view": "Mit Anmerkungen anschauen",
       "viewFailed": "Die Partie ließ sich nicht laden.",
-      "computing": "Wird gerechnet … {{percent}} %",
+      "computing": "Wird gerechnet … {{percent}} %",
       "computingHint": "Nachspielen geht, sobald die Engine jede Stellung gerechnet hat.",
       "retry": "Erneut anfordern",
       "queued": "Die Partie wird gerechnet — nachspielen kannst du sie, sobald sie fertig ist."
@@ -2875,7 +2882,7 @@
       "arrow": "Pfeil für den besten Zug",
       "refining": "Vertiefung läuft — {{done}} von {{total}} Stellungen"
     },
-    "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
+    "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
     "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)",
     "movesCount": "{{count}} Züge",
     "mistakes": {
@@ -2909,6 +2916,7 @@
       "dismissHint": "Diesen Fehler nie wieder abfragen — etwa, wenn du nichts daraus lernst. Auf der Partieseite lässt er sich wieder einblenden.",
       "restore": "{{count}} ausgeblendet — wieder zeigen",
       "collection": {
+        "short": "Fehler nachspielen",
         "button": "Fehler nach Liga/Saison nachspielen",
         "title": "Fehler nach Liga/Saison nachspielen",
         "hint": "Wähle Liga und/oder Saison: alle offenen Fehler deiner analysierten Partien dieser Auswahl kommen nacheinander auf einem Brett.",
@@ -3028,6 +3036,7 @@
     "pgnCopied": "PGN kopiert",
     "pgnCopyFailed": "PGN konnte nicht kopiert werden",
     "pgnUpload": {
+      "short": "Hochladen",
       "button": "PGN hochladen",
       "title": "PGN hochladen",
       "hint": "Eine Datei wählen oder das PGN einfügen — auch mehrere Partien auf einmal.",
@@ -3190,7 +3199,7 @@
       "downloadInfo": "Maia braucht einmalig ein Modell (46 MB). Es bleibt auf diesem Gerät gespeichert.",
       "downloadInfoNoStore": "Maia braucht ein Modell (46 MB). Dieser Browser kann es nicht speichern — es wird bei jedem Besuch neu geladen.",
       "download": "Herunterladen",
-      "downloading": "Modell wird geladen … {{percent}} %",
+      "downloading": "Modell wird geladen … {{percent}} %",
       "loading": "Modell wird vorbereitet …",
       "errorUnavailable": "Das Maia-Modell ist auf diesem Server nicht verfügbar.",
       "errorFailed": "Maia konnte nicht geladen werden.",
@@ -3814,6 +3823,10 @@
     }
   },
   "gameAnalysis": {
+    "nodesLinesOne": "{{nodes}} Knoten · 1 Variante",
+    "depthLinesOne": "Tiefe {{depth}} · 1 Variante",
+    "pgnFirst": "Füge zuerst das PGN einer Partie ein.",
+    "noName": "ohne Name",
     "title": "Partie-Analysen",
     "intro": "Eine ganze Partie einwerfen — die Hintergrund-Engine rechnet jede Stellung durch. Das dauert; die Partie zeigt ihren Fortschritt und lässt sich jederzeit ansehen.",
     "pgnLabel": "PGN der Partie",
@@ -3877,7 +3890,7 @@
       "done": "fertig",
       "failed": "gescheitert"
     },
-    "overall": "Insgesamt: {{done}} von {{total}} Stellungen gerechnet ({{percent}} %)",
+    "overall": "Insgesamt: {{done}} von {{total}} Stellungen gerechnet ({{percent}} %)",
     "overallOpen": "{{count}} Partien stehen noch in der Warteschlange",
     "overallFailed": "nicht mitgezählt: {{count}} gescheitert",
     "rate": "{{rate}} Stellungen/Min",
@@ -4755,7 +4768,7 @@
       "globalBudget": "Das Einlesen pausiert für heute — das Budget für alle Nutzer ist aufgebraucht.",
       "tooManyPages": "Höchstens drei Fotos je Formular."
     },
-    "budget": "{{percent}} % deines Lese-Budgets verbraucht",
+    "budget": "{{percent}} % deines Lese-Budgets verbraucht",
     "side": "Ich spielte",
     "sideWhite": "Weiß",
     "sideBlack": "Schwarz",

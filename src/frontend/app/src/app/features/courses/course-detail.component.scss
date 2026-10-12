@@ -70,6 +70,17 @@
   word-break: break-word;
 }
 
+/* „Mehr"/„Weniger" als Textknopf im Satz (DESIGN 5.11, v1-rk-kursseite-beschreibung-vorlauf-handy). */
+.desc-more {
+  font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer;
+  color: var(--mat-sys-primary); background: none; border: none; padding: 0;
+}
+.desc-more:hover, .desc-more:focus-visible { text-decoration: underline; }
+
+/* Schlagwörter als Anzeige-Abzeichen statt Rohtext (DESIGN 5.9, v1-rk-kursseite-schlagwoerter-ohne-leerzeichen). */
+.meta dd.tag-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; word-break: normal; }
+.badge--tag { background: color-mix(in srgb, currentColor 8%, transparent); font-weight: 500; }
+
 .progress-row {
   display: flex;
   align-items: center;

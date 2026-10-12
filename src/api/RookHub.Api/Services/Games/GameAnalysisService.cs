@@ -206,7 +206,7 @@ public class GameAnalysisService
             a.Black = header?.Black ?? game.Black;
             a.Result = header?.Result ?? game.Result;
             a.Event = header?.Event;
-            var title = header is { } h ? GameAnalysisText.BuildTitle(h) : $"{game.White} – {game.Black}";
+            var title = header is { } h ? GameAnalysisText.BuildTitle(h) : GameAnalysisText.BuildTitle(game.White, game.Black, null);
             if (a.TargetNodes is { } nodes) title += $" ({GameAnalysisText.NodesLabel(nodes)} nodes)";
             a.Title = title.Length > 200 ? title[..200] : title;
             a.UpdatedAt = DateTime.UtcNow;

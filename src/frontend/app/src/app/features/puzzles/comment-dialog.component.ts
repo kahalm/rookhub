@@ -46,7 +46,7 @@ export interface CommentDialogData {
     </div>
     <mat-dialog-content class="cd-body">
       @for (block of data.blocks; track $index) {
-        <p>@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="pick(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+        <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="pick(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -61,6 +61,7 @@ export interface CommentDialogData {
     .cd-sub { margin: 0.15rem 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .cd-body { max-width: 68ch; }
     .cd-body p { margin: 0 0 0.9rem; font-size: 1rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; }
+    .cd-body p.cmt-heading { font-weight: 700; margin-bottom: 0.3rem; }
     .cd-hint { flex: 1; font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .cmt-move {
       font: inherit; font-weight: 600; cursor: pointer; color: var(--mat-sys-primary, #1565c0);

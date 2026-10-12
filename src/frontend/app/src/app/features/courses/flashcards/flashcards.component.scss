@@ -21,6 +21,10 @@
 .fc-spacer { flex: 1; }
 .fc-hint { font-size: 0.85rem; opacity: 0.65; margin: 0.4rem 0 1rem; }
 .fc-center { display: flex; justify-content: center; padding: 2rem; }
+/* Leerer Stapel (DESIGN 5.10, v1-rk-flashcards-marked-leer): zentriert statt eingerückt-linksbündig, mit EINEM Knopf. */
+.empty-state { text-align: center; padding: 2rem 1rem; }
+.empty-state p { margin: 0.5rem auto 1rem; max-width: 46ch; }
+.empty-icon { font-size: 36px; width: 36px; height: 36px; opacity: 0.6; }
 
 /* 2×2-Raster je Blatt; Karte mit Schnittlinie. */
 .fc-sheet {

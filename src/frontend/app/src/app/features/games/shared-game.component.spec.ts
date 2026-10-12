@@ -710,6 +710,51 @@ describe('SharedGameComponent', () => {
     http.expectNone(req => req.url.endsWith('/recap'));
   });
 
+  // UI-Sweep v1 (v1-rk-first-view-lead-long-mobile): am Handy „Kurz erzählt" auf drei Zeilen, Antippen zeigt alles.
+  it('the recap toggles between clamped and open on tap', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush({ ...sharedGame('white'), recap: 'b gewinnt nach 1...c5.' });
+    fixture.detectChanges();
+    const recap = fixture.nativeElement.querySelector('p.recap') as HTMLElement;
+    expect(recap.classList).not.toContain('open');
+    expect(recap.querySelector('.recap-text')).not.toBeNull();
+    recap.click();
+    fixture.detectChanges();
+    expect(recap.classList).toContain('open');
+    recap.click();
+    fixture.detectChanges();
+    expect(recap.classList).not.toContain('open');
+  });
+
+  // UI-Sweep v1 (v1-rk-first-view-lead-long-mobile): „Originalpartie öffnen" und „Teilen-Link kopieren" stehen am Handy
+  // im ⋮ statt als eigene Knöpfe; am PC bleiben die Knöpfe (die Menüpunkte sind dort ausgeblendet).
+  it('also offers the original and the share link in the ⋮ menu (shown on phones only)', async () => {
+    const { fixture, http } = await setup(true, true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush({
+      id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', shareToken: 'tok4', moveCount: 2,
+      sourceUrl: 'https://lichess.org/abc',
+      pgn: '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1', createdAt: '2026-07-16T00:00:00Z', ownerSide: 'black',
+    });
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    flushEvals(http, '/api/games/4/evals', { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.header a.original.wide-only')).not.toBeNull();
+    expect(el.querySelector('.header button.share.wide-only')).not.toBeNull();
+    (el.querySelector('.game-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
+    const overlay = document.querySelector('.cdk-overlay-container') as HTMLElement;
+    const original = overlay.querySelector('a.original-item.narrow-only') as HTMLAnchorElement;
+    expect(original.getAttribute('href')).toBe('https://lichess.org/abc');
+    const share = spyOn(fixture.componentInstance, 'share');
+    (overlay.querySelector('button.share-item.narrow-only') as HTMLButtonElement).click();
+    expect(share).toHaveBeenCalled();
+  });
+
   it('own mode: fetches the recap once the analysis is done and asks again while it is being written', async () => {
     const { fixture, http } = await setup(true, true);
     fixture.detectChanges();
@@ -925,5 +970,27 @@ describe('SharedGameComponent', () => {
 
     key('ArrowLeft');                                 // auf der Seite blättert ← wie gewohnt
     expect(page.service.currentMoveIndex).toBe(end - 1);
+  });
+});
+
+/** UI-Sweep v1: Handy-Regeln der Partieseite (die Media-Queries greifen erst unter 768 px, Karma läuft mit 1400 px). */
+describe('SharedGameComponent Layout', () => {
+  const css = ((SharedGameComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  const mobile = css.slice(css.indexOf('@media (max-width: 768px)'));
+  const desk = css.slice(0, css.indexOf('@media (max-width: 768px)'));
+
+  // v1-rk-analysis-card-overflow-mobile: ein mehrzeiliger Spalten-Flex wurde so breit wie die Genauigkeitstabelle.
+  it('keeps the phone column single-line so the review card cannot widen the page', () => {
+    expect(mobile).toMatch(/\.body \{ ?flex-direction: column; flex-wrap: nowrap;/);
+  });
+
+  // v1-rk-first-view-lead-long-mobile: Kopfknöpfe in einer Zeile, Seltenes im ⋮, „Kurz erzählt" höchstens drei Zeilen.
+  it('puts the header actions in one row on phones, moves rare ones to the ⋮ and clamps the recap', () => {
+    expect(mobile).toMatch(/\.header-actions \{ ?grid-column: 1 \/ -1; flex-direction: row;/);
+    expect(mobile).toMatch(/\.wide-only \{ ?display: none/);
+    expect(mobile).toMatch(/\.narrow-only \{ ?display: flex/);
+    expect(desk).toMatch(/\.narrow-only \{ ?display: none/);
+    expect(mobile).toMatch(/\.recap:not\(\.open\) > \.recap-text \{[^}]*-webkit-line-clamp: 3/);
   });
 });

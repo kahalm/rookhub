@@ -13,7 +13,9 @@ const HEADING_MAX = 80;
  * großgeschriebenen Wort. „dem"/„der" (drei Buchstaben) und Markennamen wie „ChessBase" bleiben stehen.
  */
 const GLUED = /(?<!\p{L})(\p{Lu}\p{Ll}{3,}|\p{Ll}{4,})(?=\p{Lu}\p{Ll})/gu;
-const GLUE_KEEP = new Set(['Chess', 'You', 'Play']);
+// Engine-/Markennamen in Binnenmajuskel („AlphaZero", „LeelaZero", „DeepMind") sind keine angeklebte Überschrift —
+// seit v1-rk-course-comment-ueberschrift-angeklebt läuft die Erkennung auch über die RookHub-Kurskommentare.
+const GLUE_KEEP = new Set(['Chess', 'You', 'Play', 'Alpha', 'Leela', 'Deep']);
 /** Satzende (nicht „Abschnitt 5." — Ziffer davor) vor einer angeklebten Überschrift. */
 const SENTENCE_END = /(?<!\d)[.!?]\s+/g;
 

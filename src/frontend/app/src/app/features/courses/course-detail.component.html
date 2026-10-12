@@ -35,7 +35,16 @@
           }
         </div>
 
-        @if (d.description) { <p class="description">{{ d.description }}</p> }
+        <!-- Lange Beschreibung zugeklappt, „Mehr" als Textknopf am Satzende (DESIGN 5.11, 4.6 Nr. 3). -->
+        @if (d.description) {
+          @if (descriptionShort; as short) {
+            <p class="description" id="course-desc">{{ descExpanded ? d.description : short }} <button type="button" class="desc-more"
+                aria-controls="course-desc" [attr.aria-expanded]="descExpanded"
+                (click)="descExpanded = !descExpanded">{{ (descExpanded ? 'courses.detail.descLess' : 'courses.detail.descMore') | translate }}</button></p>
+          } @else {
+            <p class="description">{{ d.description }}</p>
+          }
+        }
 
         <!-- Offline-Kopie in einer anderen Sprache als der gewählten (Kurs-Übersetzung). -->
         @if (offlineStale) {
@@ -78,7 +87,12 @@
           @if (d.minElo || d.maxElo) {
             <div><dt>Elo</dt><dd>{{ d.minElo || '?' }}–{{ d.maxElo || '?' }}</dd></div>
           }
-          @if (d.tags) { <div><dt>{{ 'courses.detail.tags' | translate }}</dt><dd>{{ d.tags }}</dd></div> }
+          @if (tagList.length) {
+            <div>
+              <dt>{{ 'courses.detail.tags' | translate }}</dt>
+              <dd class="tag-list">@for (t of tagList; track t) { <span class="badge badge--tag">{{ t }}</span> }</dd>
+            </div>
+          }
           @if (d.linkedBookId) {
             <div>
               <dt>{{ 'courses.detail.linked' | translate }}</dt>

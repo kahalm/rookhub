@@ -128,7 +128,7 @@ const TAP_MAX_MS = 500;
                 }
               }
               @if (game.sourceUrl) {
-                <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original">
+                <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">
                   <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
                 </a>
               }
@@ -147,7 +147,7 @@ const TAP_MAX_MS = 500;
                 </button>
               }
               @if (own && shareToken) {
-                <button mat-stroked-button class="share" (click)="share()">
+                <button mat-stroked-button class="share wide-only" (click)="share()">
                   <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
                 </button>
               }
@@ -159,6 +159,17 @@ const TAP_MAX_MS = 500;
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #gameMenu="matMenu">
+                  <!-- Am Handy stehen diese zwei hier statt als Knöpfe in der Kopfzeile (v1-rk-first-view-lead-long-mobile). -->
+                  @if (game.sourceUrl) {
+                    <a mat-menu-item class="original-item narrow-only" [href]="game.sourceUrl" target="_blank" rel="noopener">
+                      <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
+                    </a>
+                  }
+                  @if (own && shareToken) {
+                    <button mat-menu-item class="share-item narrow-only" (click)="share()">
+                      <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
+                    </button>
+                  }
                   <!-- Fehler-Training teilen (0.740.0): Link öffnet für jeden direkt das Nachspielen der gewählten Farbe. -->
                   @if (own && shareToken) {
                     @for (side of trainSides; track side) {
@@ -236,15 +247,16 @@ const TAP_MAX_MS = 500;
           </div>
           <!-- Mit Roast geteilt (0.742.0, /g/{token}?roast={id}): der freigegebene Roast statt „Kurz erzählt". -->
           @if (sharedRoast(); as r) {
-            <p class="recap roast">
+            <p class="recap roast" [class.open]="recapOpen()" (click)="recapOpen.set(!recapOpen())">
               <span class="roast-icon" [matTooltip]="'games.roast.title' | translate" [attr.aria-label]="'games.roast.title' | translate">🔥</span>
-              <span>{{ r.text }}</span>
+              <span class="recap-text">{{ r.text }}</span>
             </p>
           } @else if (recap(); as text) {
             <!-- „Kurz erzählt" (0.541.0): dieselbe Zeile wie in der Link-Vorschau, vom Sprachmodell aus der Analyse. -->
-            <p class="recap">
+            <!-- Am Handy auf drei Zeilen gekürzt; Antippen zeigt alles (v1-rk-first-view-lead-long-mobile). -->
+            <p class="recap" [class.open]="recapOpen()" (click)="recapOpen.set(!recapOpen())">
               <mat-icon [matTooltip]="'games.recap.hint' | translate" [attr.aria-label]="'games.recap.hint' | translate">auto_stories</mat-icon>
-              <span>{{ text }}</span>
+              <span class="recap-text">{{ text }}</span>
             </p>
           }
           <div class="body">
@@ -454,6 +466,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   readonly recap = signal<string | null>(null);
   /** Der freigegebene Roast hinter `?roast=` (0.742.0) — null ohne Parameter oder wenn nicht (mehr) freigegeben. */
   readonly sharedRoast = signal<GameRoast | null>(null);
+  /** „Kurz erzählt"/Roast ganz zeigen — am Handy sonst auf drei Zeilen gekürzt (v1-rk-first-view-lead-long-mobile). */
+  readonly recapOpen = signal(false);
   private roastId: number | null = null;
 
   private loadSharedRoast(token: string | null | undefined): void {

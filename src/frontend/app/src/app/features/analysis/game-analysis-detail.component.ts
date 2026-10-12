@@ -15,6 +15,9 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { GameAnalysis, GameAnalysisPosition, GameAnalysisService, GameConvergence } from './game-analysis.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { SanPipe } from '../../shared/chess/san.pipe';
+import { localizeSan } from '../puzzles/keyboard-move.util';
+import { analysisTitle } from './analysis-title.util';
 
 /**
  * Eine Partie-Analyse durchblättern (`/analysis/games/:id`): Brett links, Zugliste rechts, je Zug
@@ -28,7 +31,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-game-analysis-detail',
   standalone: true,
-  imports: [IconLabelDirective, CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent],
+  imports: [IconLabelDirective, CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe],
   template: `
     <div class="gad-container">
       @if (loading) {
@@ -41,12 +44,12 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
       } @else {
         <div class="header">
           <div>
-            <h1>{{ analysis.title || ('gameAnalysis.untitled' | translate) }}</h1>
+            <h1>{{ title() }}</h1>
             <p class="muted small">
               @if (analysis.targetNodes) {
-                {{ 'gameAnalysis.nodesLines' | translate:{ nodes: (analysis.targetNodes | number), lines: analysis.multiPv } }}
+                {{ (analysis.multiPv === 1 ? 'gameAnalysis.nodesLinesOne' : 'gameAnalysis.nodesLines') | translate:{ nodes: (analysis.targetNodes | number), lines: analysis.multiPv } }}
               } @else {
-                {{ 'gameAnalysis.depthLines' | translate:{ depth: analysis.targetDepth, lines: analysis.multiPv } }}
+                {{ (analysis.multiPv === 1 ? 'gameAnalysis.depthLinesOne' : 'gameAnalysis.depthLines') | translate:{ depth: analysis.targetDepth, lines: analysis.multiPv } }}
               }
               @if (analysis.result) { <span>· {{ analysis.result }}</span> }
             </p>
@@ -89,7 +92,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
                   <button class="move" type="button" [class.current]="p.ply === index" [class.pending]="!p.analyzed"
                           (click)="select(p.ply)">
                     <span class="no">@if (p.white) { {{ p.moveNumber }}. } @else { {{ p.moveNumber }}… }</span>
-                    <span class="san">{{ p.san }}</span>
+                    <span class="san">{{ p.san | san }}</span>
                     <span class="ev">{{ p.analyzed ? (p.evalText || '') : '…' }}</span>
                   </button>
                 }
@@ -242,7 +245,14 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
   get label(): string {
     const p = this.positions[this.index];
     if (!p) return this.translate.instant('gameAnalysis.startPosition');
-    return `${p.moveNumber}${p.white ? '.' : '…'} ${p.san}`;
+    return `${p.moveNumber}${p.white ? '.' : '…'} ${localizeSan(p.san, this.translate.currentLang())}`;
+  }
+
+  /** Titel ohne PGN-Platzhalter („? – ?" → „Ohne Titel", v1-rk-analysis-pgn-placeholder-title). */
+  title(): string {
+    return analysisTitle(this.analysis?.title, {
+      untitled: this.translate.instant('gameAnalysis.untitled'), noName: this.translate.instant('gameAnalysis.noName'),
+    });
   }
 
   ngOnInit(): void {

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { MoveComparisonComponent, arrowOf, play } from './move-comparison.component';
 import { numberedLine } from './move-comparison.service';
@@ -80,6 +80,26 @@ describe('MoveComparisonComponent', () => {
     // Fertig: kein weiteres Nachfragen
     tick(10_000);
     http.verify();
+    discardPeriodicTasks();
+  }));
+
+  // v1-rk-san-english-in-de-ui: auf Deutsch „Sc3"/„2...Sf6" statt „Nc3"/„2...Nf6" — die Pfeile bleiben auf englischem SAN.
+  it('shows the moves in the piece letters of the UI language, arrows unaffected', fakeAsync(() => {
+    const { fixture, c, http } = make();
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', {});
+    t.use('de');
+    http.expectOne('/api/move-comparisons/7').flush(comparison());
+    http.expectOne('/api/move-comparisons').flush([]);
+    fixture.detectChanges();
+
+    expect(c.moveLabel('Nc3')).toBe('2.Sc3');
+    const sans = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.cand-row .san')).map(x => x.textContent!.trim());
+    expect(sans).toEqual(['2.exd5', '2.Sc3']);
+    expect(fixture.nativeElement.textContent).toContain('2...Sf6');
+    expect(fixture.nativeElement.textContent).not.toContain('Nf6');
+    expect(c.boardArrows()).toContain({ from: 'b1', to: 'c3', brush: 'paleBlue' });
+    tick(10_000);
     discardPeriodicTasks();
   }));
 

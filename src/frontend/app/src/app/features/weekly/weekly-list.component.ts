@@ -126,7 +126,7 @@ interface WeeklyPostRow extends WeeklyPost {
                     <div class="wp-meta">
                       <span class="wp-title">{{ titleLabel(r) }}</span>
                       <span class="wp-sched">
-                        {{ displayTime(r) | date:'EEE, dd.MM.yyyy' }} · {{ displayTime(r) | date:'HH:mm' }}@if (puzzleCount(r); as n) { · {{ 'weekly.puzzleCount' | translate:{ count: n } }}}
+                        {{ displayTime(r) | date:'EEE, dd.MM.yyyy' }} · {{ displayTime(r) | date:'HH:mm' }}@if (puzzleCount(r); as n) { · {{ (n === 1 ? 'weekly.puzzleCountOne' : 'weekly.puzzleCount') | translate:{ count: n } }}}
                       </span>
                       @if (r.description) { <span class="wp-desc">{{ r.description }}</span> }
                       @if (prog[r.id]; as p) {

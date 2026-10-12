@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, RouterLink } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { CourseCardComponent } from './course-card.component';
@@ -73,6 +73,33 @@ describe('CourseCardComponent Showstopper-Markierung', () => {
     const el = await render(true);
     expect(el.querySelector('.title-row .stale-chip')).toBeNull();
     expect(el.querySelector('.origin-line .stale-chip')).not.toBeNull();
+  });
+});
+
+/** UI-Sweep v1 (v1-rk-falsche-mehrzahl-puzzles): „1 Puzzle" statt „1 Puzzles" (DESIGN 5.13, Schlüsselpaar …/…One). */
+describe('CourseCardComponent Puzzle-Anzahl', () => {
+  afterEach(() => TestBed.resetTestingModule());
+  async function meta(puzzleCount: number): Promise<string> {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'de' })],
+    }).compileComponents();
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', { courses: { puzzleCount: '{{count}} Puzzles', puzzleCountOne: '{{count}} Puzzle' } });
+    t.use('de');
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    fixture.componentInstance.course = { bookId: 1, displayName: 'Kurs', puzzleCount, solvedCount: 0, progressPercent: 0 } as never;
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector('.card-meta')?.textContent ?? '';
+  }
+
+  it('Einzahl bei genau einem Puzzle, sonst Mehrzahl', async () => {
+    const one = await meta(1);
+    expect(one).toContain('1 Puzzle');
+    expect(one).not.toContain('1 Puzzles');
+    TestBed.resetTestingModule();
+    expect(await meta(7)).toContain('7 Puzzles');
   });
 });
 

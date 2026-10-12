@@ -43,11 +43,28 @@ internal static class GameAnalysisText
         return line.Length > 200 ? line[..200] : line;
     }
 
-    internal static string BuildTitle(GamePlies.GameHeader h)
+    /// <summary>
+    /// Titel aus den Kopfdaten: „Weiß – Schwarz". PGN-Platzhalter („?", „??", „-") gelten als fehlend
+    /// (v1-rk-analysis-pgn-placeholder-title: vorher hieß die Analyse „? – ?"). Fehlt ein Name, steht dort „?" —
+    /// das Frontend zeigt „ohne Name"; fehlen beide, gilt das Turnier, sonst bleibt der Titel leer („Ohne Titel"
+    /// in der Oberflächensprache statt des deutschen Festwerts „Partie").
+    /// </summary>
+    internal static string BuildTitle(GamePlies.GameHeader h) => BuildTitle(h.White, h.Black, h.Event);
+
+    internal static string BuildTitle(string? white, string? black, string? evt)
     {
-        var names = string.Join(" – ", new[] { h.White, h.Black }.Where(s => !string.IsNullOrWhiteSpace(s)));
-        if (names.Length > 0) return names;
-        return string.IsNullOrWhiteSpace(h.Event) ? "Partie" : h.Event!;
+        var w = IsPgnPlaceholder(white) ? null : white!.Trim();
+        var b = IsPgnPlaceholder(black) ? null : black!.Trim();
+        if (w is not null || b is not null) return $"{w ?? "?"} – {b ?? "?"}";
+        return IsPgnPlaceholder(evt) ? string.Empty : evt!.Trim();
+    }
+
+    /// <summary>Leer oder ein PGN-Platzhalter für „unbekannt" („?", „??", „-").</summary>
+    internal static bool IsPgnPlaceholder(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        var v = value.Trim();
+        return v == "-" || v.All(c => c == '?');
     }
 
     /// <summary>Die Stellung nach dem letzten Zug — <c>null</c> bei Matt/Patt oder wenn sich der Zug nicht spielen lässt.</summary>

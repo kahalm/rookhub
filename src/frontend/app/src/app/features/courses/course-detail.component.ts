@@ -35,6 +35,7 @@ import { CourseTranslationsComponent } from './course-translations.component';
 import { getBookOfflineLanguage, saveBookOffline } from '../puzzles/book-offline.util';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, nextWeeklySlot } from '../weekly/weekly.service';
+import { courseTagList, shortDescription } from './course-detail-text.util';
 
 /**
  * Kurs-Detailseite (`/courses/:bookId`): Metadaten, eigener Fortschritt und — neu — die
@@ -313,6 +314,15 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
    * Maximum gehört IMMER dazu — nackte Punkte sagen ohne die Zahl der Stellungen nichts; fehlt es
    * vom Server, ergibt es sich aus den Stellungen (4 je Stellung).
    */
+  /** Beschreibung aufgeklappt? Zu Beginn zu, wenn sie lang ist (v1-rk-kursseite-beschreibung-vorlauf-handy). */
+  descExpanded = false;
+
+  /** Gekürzte Beschreibung mit „…", oder null, wenn sie kurz genug ist und ganz dasteht. */
+  get descriptionShort(): string | null { return shortDescription(this.detail?.description); }
+
+  /** Schlagwörter einzeln als Abzeichen statt des rohen Komma-Strings (v1-rk-kursseite-schlagwoerter-ohne-leerzeichen). */
+  get tagList(): string[] { return courseTagList(this.detail?.tags); }
+
   get calcScore(): string {
     const d = this.detail;
     if (!d?.isCalculation || d.calcPoints == null) return '';

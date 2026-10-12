@@ -91,6 +91,29 @@ public class GameAnalysisServiceTests : IDisposable
     /// kuerzer als er.</summary>
     private static int BlockFor(int plies) => Math.Min(GameAnalysisDefaults.MaxOpenJobsPerGame, plies);
 
+    // v1-rk-analysis-pgn-placeholder-title: „?"-Namen aus dem PGN wurden zum Titel „? – ?" zusammengeklebt.
+    [Fact]
+    public async Task Create_pgnPlatzhalterNamen_landenNichtImTitel()
+    {
+        var user = await CreateUserWithEngineAsync();
+
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest
+        {
+            Pgn = "[Event \"?\"]\n[White \"?\"]\n[Black \"?\"]\n\n1. e4 e5 2. Nf3 Nc6 *",
+        });
+
+        Assert.Equal(string.Empty, dto.Title);
+    }
+
+    [Theory]
+    [InlineData("kahalm", "?", null, "kahalm – ?")]
+    [InlineData("??", "Gegner", null, "? – Gegner")]
+    [InlineData("?", "-", "Landesliga", "Landesliga")]
+    [InlineData(" ", null, "?", "")]
+    [InlineData("Anderssen", "Kieseritzky", "London", "Anderssen – Kieseritzky")]
+    public void BuildTitle_behandeltPgnPlatzhalterWieFehlend(string? white, string? black, string? evt, string expected)
+        => Assert.Equal(expected, GameAnalysisText.BuildTitle(white, black, evt));
+
     [Fact]
     public async Task Create_zerlegtDiePartie_undReihtNurEinenBlockEin()
     {

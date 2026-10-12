@@ -1505,6 +1505,7 @@
     "sectionOwn": "Your courses",
     "sectionOwnHint": "Courses you imported or created yourself.",
     "puzzleCount": "{{count}} puzzles",
+    "puzzleCountOne": "{{count}} puzzle",
     "completed": "Course completed",
     "detail": {
       "addChapter": "Add chapter",
@@ -1585,6 +1586,8 @@
       "skippedCountOne": "{{count}} line skipped:",
       "startChapter": "Start chapter",
       "tags": "Tags",
+      "descMore": "More",
+      "descLess": "Less",
       "title": "Course",
       "chapterPoints": "{{score}} pts",
       "downloadChapterPgn": "Download chapter as PGN",
@@ -1674,6 +1677,7 @@
       "digitalHint": "Click the card (or Space/Enter) to flip it; ←/→ move through the deck.",
       "markedOnly": "Marked only",
       "markedEmpty": "No lines are marked as flashcards yet. Mark lines via the checkbox in the browse view.",
+      "browseLines": "Browse lines",
       "markedButton": "Marked",
       "markedTooltip": "Only the lines you marked as flashcards",
       "markedMenu": "Flashcards (marked lines)"
@@ -1754,8 +1758,8 @@
       "status": {
         "queued": "waiting · place {{pos}}",
         "waiting": "waiting",
-        "running": "running · {{percent}} %",
-        "runningEta": "running · {{percent}} % · about {{eta}} left",
+        "running": "running · {{percent}} %",
+        "runningEta": "running · {{percent}} % · about {{eta}} left",
         "paused": "paused until {{time}}",
         "failed": "failed"
       },
@@ -2030,6 +2034,7 @@
     },
     "titleLabel": "Weekly {{title}}",
     "puzzleCount": "{{count}} puzzles",
+    "puzzleCountOne": "{{count}} puzzle",
     "schedulePreview": "Appears on {{date}} at {{time}} (local time)"
   },
   "endless": {
@@ -2734,6 +2739,8 @@
     }
   },
   "games": {
+    "filterRemove": "Remove filter {{value}}",
+    "filtersToggle": "Filter",
     "title": "Saved games",
     "hint": "Games you save from chess.com or lichess with the RepCheck browser extension show up here.",
     "empty": "No saved games yet. On a chess.com or lichess analysis page, click “Save game” in the RepCheck extension.",
@@ -2767,7 +2774,7 @@
       "playFailed": "The game could not be started.",
       "view": "View with annotations",
       "viewFailed": "The game could not be loaded.",
-      "computing": "Being analysed … {{percent}} %",
+      "computing": "Being analysed … {{percent}} %",
       "computingHint": "You can replay it once the engine has analysed every position.",
       "retry": "Request again",
       "queued": "The game is being analysed — you can replay it once it is done."
@@ -2875,7 +2882,7 @@
       "arrow": "Best-move arrow",
       "refining": "Deeper analysis — {{done}} of {{total}} positions"
     },
-    "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
+    "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
     "accuracyHint": "Accuracy white · black (from the game analysis)",
     "movesCount": "{{count}} moves",
     "mistakes": {
@@ -2909,6 +2916,7 @@
       "dismissHint": "Never ask this mistake again — e.g. if you learn nothing from it. It can be shown again on the game page.",
       "restore": "{{count}} hidden — show again",
       "collection": {
+        "short": "Replay mistakes",
         "button": "Replay mistakes by league/season",
         "title": "Replay mistakes by league/season",
         "hint": "Choose a league and/or season: all open mistakes of your analysed games in that selection come one after the other on one board.",
@@ -3028,6 +3036,7 @@
     "pgnCopied": "PGN copied",
     "pgnCopyFailed": "Could not copy the PGN",
     "pgnUpload": {
+      "short": "Upload",
       "button": "Upload PGN",
       "title": "Upload PGN",
       "hint": "Pick a file or paste the PGN — several games at once work too.",
@@ -3190,7 +3199,7 @@
       "downloadInfo": "Maia needs a model once (46 MB). It stays stored on this device.",
       "downloadInfoNoStore": "Maia needs a model (46 MB). This browser cannot store it — it is downloaded again on every visit.",
       "download": "Download",
-      "downloading": "Loading model … {{percent}} %",
+      "downloading": "Loading model … {{percent}} %",
       "loading": "Preparing model …",
       "errorUnavailable": "The Maia model is not available on this server.",
       "errorFailed": "Maia could not be loaded.",
@@ -3814,6 +3823,10 @@
     }
   },
   "gameAnalysis": {
+    "nodesLinesOne": "{{nodes}} nodes · 1 line",
+    "depthLinesOne": "Depth {{depth}} · 1 line",
+    "pgnFirst": "Paste the PGN of a game first.",
+    "noName": "no name",
     "title": "Game analyses",
     "intro": "Hand in a whole game — the background engine works through every position. That takes a while; the game shows its progress and can be viewed at any time.",
     "pgnLabel": "PGN of the game",
@@ -3877,7 +3890,7 @@
       "done": "done",
       "failed": "failed"
     },
-    "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}} %)",
+    "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}} %)",
     "overallOpen": "{{count}} games still in the queue",
     "overallFailed": "not counted: {{count}} failed",
     "rate": "{{rate}} positions/min",
@@ -4755,7 +4768,7 @@
       "globalBudget": "Reading is paused for today — the budget for all users is used up.",
       "tooManyPages": "At most three photos per scoresheet."
     },
-    "budget": "{{percent}} % of your reading budget used",
+    "budget": "{{percent}} % of your reading budget used",
     "side": "I played",
     "sideWhite": "White",
     "sideBlack": "Black",

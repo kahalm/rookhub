@@ -237,3 +237,40 @@ describe('RepertoireDetailComponent Layout (z1)', () => {
     expect(css).not.toContain('#e0e0e0');
   });
 });
+
+describe('RepertoireDetailComponent Kopf', () => {
+  async function render(mode: 'lines' | 'tree' | 'holes'): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireDetailComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();   // ngOnInit; die Lade-Anfrage bleibt unbeantwortet — der Kopf wird direkt befüllt
+    comp.loading = false;
+    comp.repertoire = { id: 7, name: 'Testrepertoire', description: null, isOwner: true, files: [] } as any;
+    comp.mode = mode;
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  // UI-Sweep 2026-10-12 (v1-rk-repertoire-abfragen-knopf-wandert): „Abfragen“ steht in Baum/Lochfinder rechts neben
+  // der Moduswahl, nicht als dritte Zeile im Titelstapel — der Kopf ist in allen Modi gleich hoch.
+  for (const mode of ['tree', 'holes'] as const) {
+    it(`${mode}: Abfragen-Knopf in der rechten Kopfgruppe, nicht unter dem Untertitel`, async () => {
+      const el = await render(mode);
+      expect(el.querySelector('.header-actions .train-btn')).not.toBeNull();
+      expect(el.querySelector('.header-actions mat-button-toggle-group')).not.toBeNull();
+      expect(el.querySelector('.header-info .train-btn')).toBeNull();
+    });
+  }
+
+  it('lines: kein Abfragen-Knopf im Kopf (steht in der Linienleiste)', async () => {
+    const el = await render('lines');
+    expect(el.querySelector('.detail-header .train-btn')).toBeNull();
+    expect(el.querySelector('.header-actions mat-button-toggle-group')).not.toBeNull();
+  });
+});

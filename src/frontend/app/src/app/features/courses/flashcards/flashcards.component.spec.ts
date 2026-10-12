@@ -105,6 +105,29 @@ describe('FlashcardsComponent', () => {
     expect(fixture.componentInstance.cards.length).toBe(0);
   });
 
+  // UI-Sweep v1 (v1-rk-flashcards-marked-leer): Leerzustand nach DESIGN 5.10 — zentriert, ein Knopf ins
+  // Durchsehen, kein Bedienhinweis und keine Misch-/Druck-Knöpfe ohne Karten.
+  it('leerer Stapel: Knopf „Linien durchsehen", keine Werkzeuge, kein Bedienhinweis', () => {
+    const fixture = make([puzzle(1)], { marked: '1' }, []);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.isEmpty).toBeTrue();
+    const empty = el.querySelector('.empty-state');
+    expect(empty).not.toBeNull();
+    const links = empty!.querySelectorAll('a');
+    expect(links.length).toBe(1);
+    expect(links[0].getAttribute('href')).toBe('/courses/58/browse');
+    expect(el.querySelector('.fc-hint')).toBeNull();
+    expect(el.querySelectorAll('.fc-toolbar button').length).toBe(0);
+  });
+
+  it('mit Karten bleiben Bedienhinweis und Werkzeuge', () => {
+    const fixture = make([puzzle(1), puzzle(2)], {});
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.empty-state')).toBeNull();
+    expect(el.querySelector('.fc-hint')).not.toBeNull();
+    expect(el.querySelectorAll('.fc-toolbar button').length).toBeGreaterThan(0);
+  });
+
   it('filtert per chapter=… (leer = „ohne Kapitel")', () => {
     const fixture = make([
       puzzle(1, { chapter: 'A' }), puzzle(2, { chapter: 'B' }), puzzle(3),
