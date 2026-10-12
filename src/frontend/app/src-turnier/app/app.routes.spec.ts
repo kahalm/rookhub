@@ -50,7 +50,8 @@ describe('Turnier-Routen', () => {
   it('die Anmeldemaske (hier die Startseite) erklaert das Angebot, die Registrierung das RookHub-Konto (UX-027)', () => {
     const intro = turnierConfig.providers.find(p => (p as { provide?: unknown }).provide === AUTH_INTRO) as
       { useValue: AuthIntro } | undefined;
-    expect(intro?.useValue).toEqual({ login: 'turnier.authIntro.login', register: 'turnier.authIntro.register' });
+    expect(intro?.useValue).toEqual({ login: 'turnier.authIntro.login', loginShort: 'turnier.authIntro.loginShort',
+      register: 'turnier.authIntro.register' });
   });
 
   it('laesst Passwort-Reset und Rechtsseiten ohne Anmeldung zu', () => {

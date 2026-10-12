@@ -8,7 +8,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { KidsStarsStore } from '../../core/kids-stars.store';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
-import { KID_PAGE_WIDTH } from '../../shared/kids-layout';
+import { KID_HOME_WIDTH } from '../../shared/kids-layout';
 
 /** Ab dieser Fensterbreite steht die Startseite senkrecht mittig mit grossen Kacheln (k-start-space). */
 export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
@@ -95,7 +95,7 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
 
   `,
   styles: [`
-    :host { display: block; max-width: ${KID_PAGE_WIDTH.home}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
+    :host { display: block; max-width: ${KID_HOME_WIDTH}; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .hero { text-align: center; padding: 24px 12px 8px; }
     h1 { font-size: clamp(2rem, 7vw, 3.4rem); margin: 0 0 6px; color: var(--kid-title); letter-spacing: .5px; }
     .hero p { font-size: 1.25rem; margin: 0 0 22px; }
@@ -133,10 +133,18 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
       /* d2-k-home-tiles: mit der Kurskachel sind es vier — bei minmax(300px, 360px) stand „Kurse" allein in Zeile 2, am
          Laptop unter der Falz. Jetzt teilen sich alle Kacheln eine Reihe (bei 1160 px je ~265 px), drei bleiben breit. */
       .tiles { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); justify-content: center; gap: 22px; }
-      .tile { min-height: 220px; box-sizing: border-box; justify-content: center; gap: 10px; padding: 28px 22px; }
+      /* Oben ausgerichtet statt mittig (z2-k-kacheln-versatz): Kacheln mit einzeiliger Unterzeile saßen sonst ≈ 10 px
+         tiefer; so stehen Symbole und Titel auf einer Linie, die gemeinsame Kachelhöhe gleicht unten aus. */
+      .tile { min-height: 220px; box-sizing: border-box; justify-content: flex-start; gap: 10px; padding: 28px 22px; }
       .icon { font-size: 64px; }
       .name { font-size: 32px; }
       .meta { font-size: 1.15rem; }
+    }
+    /* Großer Bildschirm: die Seite wächst bis 1520 px (KID_HOME_WIDTH), die Kacheln ≈ 360 × 260 px (z2-k-start-kacheln-breit). */
+    @media ${KID_HOME_WIDE} and (width >= 1600px) {
+      .tiles { gap: 28px; }
+      .tile { min-height: 260px; }
+      .icon { font-size: 72px; }
     }
   `],
 })

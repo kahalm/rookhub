@@ -112,6 +112,115 @@ describe('PrivacyComponent', () => {
       expect((f.nativeElement as HTMLElement).querySelector('.to-toc')).toBeNull();
     });
 
+    // UI-Sweep z2 (z2-l-datenschutz-laenge, vom User freigegeben): LeagueHub-Datenschutz war am Handy 12 Bildschirme lang.
+    describe('LeagueHub am Handy: Abschnitte ab dem dritten als Aufklapper', () => {
+      const league: LegalSite = { contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' };
+      const folds = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLDetailsElement>('mat-card-content > details.legal-fold'));
+
+      it('unter 600 px: Verantwortlicher und Liga-Abschnitt offen, jeder weitere zugeklappt mit der Überschrift als summary', () => {
+        expect(PrivacyComponent.SECTIONS_OPEN_QUERY).toBe('(min-width: 600px)');
+        const el = renderAt(false, league).nativeElement as HTMLElement;
+        const heads = Array.from(el.querySelectorAll('h2'));
+        const d = folds(el);
+        expect(d.length).toBe(heads.length - 2);
+        expect(heads.slice(0, 2).map(h => h.id)).toEqual(['privacy-controller', 'privacy-league']);
+        expect(heads.slice(0, 2).every(h => !h.closest('details'))).toBeTrue();
+        expect(el.textContent).toContain('legal.privacy.introLeagueHub');
+        for (const f of d) {
+          expect(f.open).withContext('zugeklappt').toBeFalse();
+          const summary = f.querySelector(':scope > summary')!;
+          expect(summary.querySelector(':scope > h2')).withContext('Überschrift im summary').not.toBeNull();
+          expect(summary.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+          expect(getComputedStyle(summary, '::before').content).toContain('▸');
+        }
+        // Inhalt steckt im Aufklapper, nichts geht verloren; Rücklink bleibt draußen.
+        expect(el.querySelector('#privacy-rights')!.closest('details')!.textContent).toContain('legal.privacy.rights');
+        expect(el.querySelector('p.back')!.closest('details')).toBeNull();
+        expect(Array.from(el.querySelectorAll<HTMLAnchorElement>('nav.toc a')).map(a => a.getAttribute('href')!.split('#')[1]))
+          .toEqual(heads.map(h => h.id));
+      });
+
+      it('Sprung aus dem Verzeichnis öffnet das Ziel vor dem Scrollen', () => {
+        const el = renderAt(false, league).nativeElement as HTMLElement;
+        const target = el.querySelector<HTMLElement>('#privacy-rights')!;
+        const fold = target.closest<HTMLDetailsElement>('details')!;
+        let openWhenScrolled: boolean | null = null;
+        spyOn(target, 'scrollIntoView').and.callFake(() => { openWhenScrolled = fold.open; });
+        const link = el.querySelector<HTMLAnchorElement>('nav.toc a[href$="#privacy-rights"]')!;
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+        expect(openWhenScrolled as boolean | null).toBe(true);
+        expect(document.activeElement).toBe(target);
+      });
+
+      it('eine Sprungmarke in der Adresse (#…) öffnet das Ziel', () => {
+        const el = renderAt(false, league).nativeElement as HTMLElement;
+        const target = el.querySelector<HTMLElement>('#privacy-storage')!;
+        spyOn(target, 'scrollIntoView');
+        const before = location.href;
+        history.replaceState(history.state, '', '#privacy-storage');
+        try {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          expect(target.closest<HTMLDetailsElement>('details')!.open).toBeTrue();
+          expect(target.scrollIntoView).toHaveBeenCalled();
+        } finally {
+          history.replaceState(history.state, '', before);
+        }
+      });
+
+      it('Druck: alle Abschnitte offen (beforeprint löst die Aufklapper auf, afterprint klappt wieder zu)', () => {
+        const el = renderAt(false, league).nativeElement as HTMLElement;
+        const order = () => Array.from(el.querySelectorAll('h2')).map(h => h.id);
+        const ids = order();
+        window.dispatchEvent(new Event('beforeprint'));
+        expect(folds(el).length).toBe(0);
+        expect(order()).toEqual(ids);
+        expect(el.querySelector('#privacy-rights')!.nextElementSibling!.textContent).toContain('legal.privacy.rights');
+        window.dispatchEvent(new Event('afterprint'));
+        expect(folds(el).length).toBeGreaterThan(0);
+      });
+
+      it('breit und in allen anderen Oberflächen unverändert offen', () => {
+        expect(folds(renderAt(true, league).nativeElement as HTMLElement).length).toBe(0);
+        const others: (LegalSite | undefined)[] = [
+          undefined,
+          { contactEmail: OPERATOR.email, imprint: true, kind: 'clubhub', accountHome: 'rookhub' },
+          { contactEmail: OPERATOR.email, imprint: true, kind: 'turnier', accountHome: 'rookhub' },
+          { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' },
+        ];
+        for (const site of others) {
+          const el = renderAt(false, site).nativeElement as HTMLElement;
+          expect(el.querySelectorAll('details.legal-fold').length).withContext(site?.kind ?? 'rookhub').toBe(0);
+          expect(el.querySelectorAll('mat-card-content > h2').length).toBeGreaterThan(5);
+        }
+      });
+    });
+
+    // UI-Sweep z2 (z2-rk-privacy-knopf-handy): „↑" verdeckte beim Lesen das letzte Wort der Zeile darunter.
+    it('„↑ Inhalt" ueber dem Text nur beim Hochscrollen (sonst .idle, ausgeblendet unter 1200 px)', () => {
+      const f = renderAt(false);
+      f.componentInstance.tocAway.set(true);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.to-toc')!.classList).toContain('idle');
+      const box = document.createElement('div');
+      box.style.cssText = 'height:100px;overflow:auto';
+      box.innerHTML = '<div style="height:2000px"></div>';
+      document.body.appendChild(box);
+      try {
+        const scrollTo = (y: number) => { box.scrollTop = y; box.dispatchEvent(new Event('scroll')); };
+        scrollTo(500);
+        scrollTo(300);
+        f.detectChanges();
+        expect(f.componentInstance.scrollingUp()).toBeTrue();
+        expect(el.querySelector('.to-toc')!.classList).not.toContain('idle');
+        scrollTo(600);
+        f.detectChanges();
+        expect(el.querySelector('.to-toc')!.classList).toContain('idle');
+      } finally {
+        box.remove();
+      }
+    });
+
     it('LeagueHub: die Quellen als Unterliste mit vier Punkten statt einer Textwand', () => {
       const el = renderAt(true, { contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' }).nativeElement as HTMLElement;
       const sub = el.querySelectorAll('#privacy-league ~ ul ul.sub > li');

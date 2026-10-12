@@ -57,7 +57,8 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
       <div class="header">
         <h1>{{ 'guess.title' | translate }}
           <!-- Rest der Erklärung + „Seite des Gewinners" hinter dem ⓘ (d2-rk-guess-vorlauf). -->
-          <app-help-hint [text]="('guess.introMore' | translate) + paraSep + ('guess.curatedHint' | translate)" /></h1>
+          <!-- z2-rk-guess-vorlauf: der ⓘ-Text beginnt mit dem Untertitel; angemeldet steht er nur noch dort. -->
+          <app-help-hint [text]="('guess.intro' | translate) + ' ' + ('guess.introMore' | translate) + paraSep + ('guess.curatedHint' | translate)" /></h1>
         <!-- Alle Knoepfe in EINEM Kasten: die Kopfzeile verteilt ihre Kinder ueber die ganze
              Breite (space-between), einzeln stuenden sie also auseinander statt nebeneinander
              am Rand. Und alle in derselben Form — ein gefuellter Knopf daneben behauptete eine
@@ -79,8 +80,12 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
           </button>
         </div>
       </div>
-      <!-- Ohne Konto: der Hinweis als zweiter Halbsatz im Untertitel statt eigener Zeile (z1-rk-guess-einzeltab). -->
-      <p class="muted intro">{{ 'guess.intro' | translate }}@if (!loggedIn) { <span class="anon-hint">{{ 'guess.anonHint' | translate }}</span>}</p>
+      <!-- Ohne Konto: der Hinweis als zweiter Halbsatz im Untertitel statt eigener Zeile (z1-rk-guess-einzeltab).
+           Angemeldet entfällt der Untertitel, er steht im ⓘ (z2-rk-guess-vorlauf). Das Leerzeichen steht IN der
+           Spanne: am Blockanfang entfernte es der Angular-Compiler („sammeln.Du kannst", z2-rk-guess-anon-leerzeichen). -->
+      @if (!loggedIn) {
+        <p class="muted intro">{{ 'guess.intro' | translate }}<span class="anon-hint"> {{ 'guess.anonHint' | translate }}</span></p>
+      }
 
       @if (loading) {
         <app-loading-spinner />
@@ -148,6 +153,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
             <div class="sec-head">
               <ng-container *ngTemplateOutlet="searchField" />
               @if (hasAnnotated) {
+                <!-- Am Handy steht der Umschalter als „Nur kommentierte" im ⇅-Menü (z2-rk-guess-vorlauf). -->
                 <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="onFilterChange()"
                                          [attr.aria-label]="'guess.filterLabel' | translate" class="small-toggle">
                   <mat-button-toggle [value]="false">{{ 'guess.filterAll' | translate }}</mat-button-toggle>
@@ -169,6 +175,13 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                   <button mat-menu-item class="sort-option" (click)="setSort(o)" [attr.aria-checked]="sort === o" role="menuitemradio">
                     <mat-icon>{{ sort === o ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
                     {{ ('guess.sort.' + o) | translate }}
+                  </button>
+                }
+                @if (hasAnnotated) {
+                  <button mat-menu-item class="annotated-option" (click)="toggleAnnotatedOnly()"
+                          [attr.aria-checked]="annotatedOnly" role="menuitemcheckbox">
+                    <mat-icon>{{ annotatedOnly ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                    {{ 'guess.filterAnnotatedOnly' | translate }}
                   </button>
                 }
               </mat-menu>
@@ -319,11 +332,12 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
   `,
   styles: [`
     .gl-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
-    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+               margin-bottom: 10px; }
     h1 { margin: 0; font-size: 1.5rem; }
     h2 { margin: 0 0 8px; font-size: 1.05rem; }
     h2.sec { margin: 18px 0 8px; }
-    .intro { margin: 4px 0 14px; }
+    .intro { margin: -4px 0 14px; }
     .start-card { margin-bottom: 8px; }
     /* Filter und Sortieren in EINER Zeile, auch am Handy (d2-rk-guess-vorlauf). */
     /* z1-rk-guess-vorlauf: Suche, Filter und ⇅ in EINER Zeile; am Handy darf sie notfalls umbrechen. */
@@ -402,6 +416,12 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
       .header-actions .mat-mdc-button-base { min-width: 44px; padding: 0 10px; }
       .header-actions .mat-mdc-button-base mat-icon { margin: 0; }
       .small-toggle .mat-button-toggle { font-size: .75rem; }
+      /* z2-rk-guess-vorlauf: Suchfeld volle Breite + ⇅ in EINER Zeile; „Alle/Kommentierte" steckt im ⇅-Menü. */
+      .sec-head { flex-wrap: nowrap; }
+      .sec-head .small-toggle { display: none; }
+    }
+    @media (min-width: 600px) {
+      .annotated-option { display: none; }
     }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
@@ -544,6 +564,12 @@ export class GuessListComponent implements OnInit, OnDestroy {
   setSort(sort: GuessSort): void {
     this.sort = sort;
     this.resetPaging();
+  }
+
+  /** Menüpunkt „Nur kommentierte" im ⇅-Menü (Handy, z2-rk-guess-vorlauf). */
+  toggleAnnotatedOnly(): void {
+    this.annotatedOnly = !this.annotatedOnly;
+    this.onFilterChange();
   }
 
   /** Vom Umschalter „alle / nur kommentierte" aufgerufen. */

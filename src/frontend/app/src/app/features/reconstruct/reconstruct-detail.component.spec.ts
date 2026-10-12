@@ -318,6 +318,11 @@ describe('ReconstructDetailComponent', () => {
     const toggles = Array.from(el.querySelectorAll<HTMLButtonElement>('.gap-row .depth-toggle button'));
     expect(toggles.map(b => b.textContent!.trim())).toEqual(['2', '4', '6', '8', '10', '12']);
     expect(el.querySelector('.gap-row .depth-label')?.textContent).toContain('reconstruct.gap.pliesLabel');
+    // z2-rk-recon-halbzuege-label: Etikett und Auswahl in einer Hülle, die als Ganzes umbricht.
+    const pick = el.querySelector<HTMLElement>('.gap-row .gap-depth-pick')!;
+    expect(pick.querySelector('.depth-label')).not.toBeNull();
+    expect(pick.querySelector('.depth-toggle')).not.toBeNull();
+    expect(getComputedStyle(pick).display).toMatch(/flex$/);   // im Flex-Elternteil wird inline-flex zu flex
 
     toggles[2].click();
     fixture.detectChanges();

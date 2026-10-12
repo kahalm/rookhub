@@ -373,7 +373,7 @@
       "passwordRejected": "That password can’t be used. Use at least {{min}} characters and nothing too common like “12345678”.",
       "invalid": "Please check your details – something isn’t right yet.",
       "privacyNote": "Your account is covered by our privacy policy.",
-      "leaguehubNote": "This creates a RookHub account. Only admins and the club groups of the participating clubs can see LeagueHub – an admin has to unlock your account afterwards.",
+      "leaguehubNote": "This creates a RookHub account; an admin then unlocks LeagueHub for you.",
       "kids": {
         "parentsTitle": "For parents",
         "parentsText": "You can play without an account. Please create an account together with a parent.",
@@ -614,6 +614,7 @@
     "lastName": "Last name",
     "searchPlayer": "Search player",
     "searchPlayerHint": "Finds your FIDE and ChessResults ID automatically.",
+    "searchPlayerNeedsName": "Enter your name first (at least the last name) – then the search finds your FIDE and ChessResults ID.",
     "noResults": "No results found.",
     "email": "Email",
     "emailHint": "Used to reset your password. Leave empty to remove it.",
@@ -1484,6 +1485,7 @@
       "pgnNote": "An attached PGN may contain your own games or a puzzle PGN in Chessable style (FEN plus training markers). Comments in braces are kept and shown while clicking through. Questions?",
       "button": "Create course",
       "creating": "Creating…",
+      "short": "New",
       "success": "“{{name}}” created ({{count}} puzzles)",
       "failed": "The course could not be created.",
       "toRepertoires": "Go to Repertoires"
@@ -3204,6 +3206,7 @@
     }
   },
   "stats": {
+    "puzzleRating": "Puzzle {{rating}}",
     "title": "Statistics",
     "modeStandard": "Standard",
     "modeCourse": "Courses",
@@ -3671,6 +3674,8 @@
     }
   },
   "reprocess": {
+    "short": { "courses": "{{count}} courses can be updated", "repertoires": "{{count}} repertoires can be updated" },
+    "shortOne": { "courses": "1 course can be updated", "repertoires": "1 repertoire can be updated" },
     "available": {
       "courses": "{{count}} courses use an older processing version and can be updated — e.g. to show the book's per-move comments.",
       "repertoires": "{{count}} repertoires use an older processing version and can be updated."
@@ -3692,7 +3697,6 @@
       "repertoires": "This repertoire comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date."
     },
     "update": "Update ({{count}})",
-    "updateAll": "Update all ({{count}})",
     "updateTip": "Reprocess items with a stored source and re-download Chessable items (cached ones update instantly, no download).",
     "working": "Updating…",
     "started": "Update started — running in the background.",
@@ -3953,6 +3957,7 @@
     "ownGames": "Your own analyses",
     "filterAll": "All",
     "filterAnnotated": "Annotated",
+    "filterAnnotatedOnly": "Annotated only",
     "filterLabel": "Filter games",
     "sort": {
       "label": "Sort",
@@ -4299,8 +4304,8 @@
         "show": "Show",
         "report": "Report"
       },
-      "sameName": "another group?",
-      "sameNameHint": "A tournament with the same name on the same day is shown as a separate card — probably another group of the same event. The number of players tells them apart."
+      "sameName": "{{index}} of {{total}} with this name",
+      "sameNameHint": "Listed right next to each other — probably another group of the same event; the number of players tells them apart."
     },
     "source": {
       "Unknown": "Unknown source",
@@ -4332,6 +4337,7 @@
     "toRookHub": "To RookHub",
     "authIntro": {
       "login": "Tournament calendar with radius search and alerts for new tournaments near you, favorites and your played tournaments – free. Already have a RookHub account? Sign in with it.",
+      "loginShort": "Free – your RookHub account works here too.",
       "register": "Your account also works on RookHub – puzzles, courses and analysis with the same sign-in."
     },
     "profile": {
@@ -4580,6 +4586,7 @@
     "intro": "Record what you still know of a game and close the gaps.",
     "introMore": "For example the opening moves, single positions or short move sequences — you close the gaps in between step by step.",
     "newTitle": "Title",
+    "createLabel": "New reconstruction – title",
     "newTitlePlaceholder": "Club championship, round 3",
     "create": "Create",
     "open": "Open",

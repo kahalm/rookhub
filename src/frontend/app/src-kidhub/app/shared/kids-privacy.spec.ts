@@ -1,4 +1,4 @@
-import { KID_PAGE_WIDTH, kidPageWidth } from './kids-layout';
+import { KID_HOME_WIDTH, KID_MAP_WIDTH, KID_PAGE_WIDTH, kidPageWidth } from './kids-layout';
 import { foldAccountDeletion, foldPrivacy, isAccountDeletionUrl, isLegalUrl, isPrivacyUrl, setAccountDeletionTexts } from './kids-privacy';
 
 describe('kidPageWidth (k-logo: Kopfzeile in der Spalte des Inhalts)', () => {
@@ -9,14 +9,18 @@ describe('kidPageWidth (k-logo: Kopfzeile in der Spalte des Inhalts)', () => {
     expect(kidPageWidth('/stars/12?x=1')).toBe(row);
     expect(kidPageWidth('/endless')).toBe(row);
     expect(kidPageWidth('/courses/339')).toBe(row);
-    expect(kidPageWidth('/')).toBe('1160px');
-    expect(kidPageWidth('/?quickstart=1')).toBe('1160px');
-    expect(kidPageWidth('/levels')).toBe('980px');
-    expect(kidPageWidth('/stars')).toBe('980px');
+    // z2-k-start-kacheln-breit / z2-k-karten-breit: Start und Karten wachsen am großen Bildschirm mit.
+    expect(kidPageWidth('/')).toBe(KID_HOME_WIDTH);
+    expect(kidPageWidth('/?quickstart=1')).toBe(KID_HOME_WIDTH);
+    expect(kidPageWidth('/levels')).toBe(KID_MAP_WIDTH);
+    expect(kidPageWidth('/stars')).toBe(KID_MAP_WIDTH);
     expect(kidPageWidth('/courses')).toBe('820px');
     expect(kidPageWidth('/privacy#privacy-data')).toBe('620px');   // z1-k-legal-line: ≤ ~75 Zeichen je Zeile
     expect(kidPageWidth('/account-deletion')).toBe('620px');   // d1-k-account-deletion-style
-    expect(kidPageWidth('/login')).toBe('980px');
+    // z2-k-auth-logo: Logo, „← Start" und Karte der Anmelde-Masken auf einer Kante.
+    expect(kidPageWidth('/login')).toBe('432px');
+    expect(kidPageWidth('/register?x=1')).toBe('432px');
+    expect(kidPageWidth('/reset-password?token=x')).toBe('432px');
     expect(KID_PAGE_WIDTH).toEqual({ home: 1160, map: 980, list: 820, legal: 620 });
   });
 });

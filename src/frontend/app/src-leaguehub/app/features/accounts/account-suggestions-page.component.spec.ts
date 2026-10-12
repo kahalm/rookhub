@@ -82,6 +82,18 @@ describe('AccountSuggestionsPageComponent', () => {
     expect(fixture.componentInstance.groups().map(g => g.fide)).toEqual(['301', '333']);
   });
 
+  // z2-l-konten-spalten: die Spieler stehen in .sugg-groups; wer mehrere Vorschläge hat, trägt .multi (volle Breite)
+  it('Spieler mit mehreren Vorschlägen sind als .multi markiert, alle stehen in .sugg-groups', async () => {
+    api.suggestions.and.resolveTo({ items: [S(1, '222', 'Muster, Max', 6), S(2, '222', 'Muster, Max', 5), S(3, '333', 'Huber, Franz', 4)],
+      scanned: 1, total: 1 });
+    create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const groups = Array.from(el().querySelectorAll('.sugg-groups > .sugg-group'));
+    expect(groups.length).toBe(2);
+    expect(groups.map(g => g.classList.contains('multi'))).toEqual([true, false]);
+  });
+
   // UI-Sweep 2026-10-11 (d2-l-konten-endlos): 20 Spieler je Seite, „Weitere", Suche nach Spieler oder Verein
   it('zeigt erst 20 Spieler, „Weitere" holt die nächsten; die Suche filtert nach Name und Mannschaft', async () => {
     const many = Array.from({ length: 45 }, (_, i) => ({ ...S(i + 1, String(1000 + i), `Spieler ${i + 1}`, 50 - i),

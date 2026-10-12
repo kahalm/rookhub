@@ -586,4 +586,27 @@ describe('CourseListComponent Vorlauf', () => {
     }
     fixture.nativeElement.remove();
   });
+
+  // UI-Sweep z2 (z2-rk-courses-vorlauf): Erklärsatz in jeder Breite hinter dem ⓘ, Suchfeld in der Kopfzeile.
+  it('zeigt den Erklärsatz nur im ⓘ und setzt das Suchfeld in die Kopfzeile', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('p.intro')).toBeNull();
+    const hint = el.querySelector('.title-row app-help-hint.intro-hint') as HTMLElement;
+    expect(getComputedStyle(hint).display).not.toBe('none');
+    expect(el.querySelector('.header > mat-form-field.list-search')).not.toBeNull();
+    fixture.nativeElement.remove();
+  });
+
+  // UI-Sweep z2 (z2-rk-courses-kopf-symbole): Hauptknopf behält am Handy einen Kurztext, erst ≤ 380 px nur „+".
+  it('hält am Handy einen Kurztext am Hauptknopf und nutzt fürs Importieren appIconLabel', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.header-actions button.mat-mdc-unelevated-button .btn-label-short')).not.toBeNull();
+    const css = ((CourseListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'), css.indexOf('@media (max-width: 380px)'));
+    expect(phone).toMatch(/\.btn-label-short[^{]*\{ ?display: inline/);
+    expect(css.slice(css.indexOf('@media (max-width: 380px)'))).toMatch(/\.btn-label-short[^{]*\{ ?display: none/);
+    fixture.nativeElement.remove();
+  });
 });

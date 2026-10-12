@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.758.2", date: "2026-10-12", changes: [
+    { en: "Third round of first-view fixes (56 follow-ups): on LeagueHub the privacy page folds into sections on phones (5 instead of 12 screens), the “back to top” button only appears while scrolling up, legal texts have comfortable line lengths everywhere; LeagueHub account suggestions use two columns on large screens and hints are blue instead of error-red; tournament site: numbers right-aligned, same-name tournaments listed together; KidHub home and maps use large screens; ClubHub footer stays at the bottom; RookHub: compact update banner, course search in the header, help with chapter highlighting, board coordinates easier to read, statistics side by side on large screens, guess-the-move and player preparation tidier on phones.",
+      de: "Dritte Runde „Erster Blick“ (56 Nachbesserungen): Die LeagueHub-Datenschutzseite ist am Handy in Abschnitte eingeklappt (5 statt 12 Bildschirme), der „Nach oben“-Knopf erscheint nur beim Hochscrollen, Rechtstexte haben überall angenehme Zeilenlängen; LeagueHub-Kontovorschläge zweispaltig auf großen Bildschirmen, Hinweise blau statt fehlerrot; Turnierseite: Zahlen rechtsbündig, gleichnamige Turniere nebeneinander; KidHub-Startseite und Karten nutzen große Bildschirme; ClubHub-Fußzeile bleibt unten; RookHub: kompakter Aktualisieren-Hinweis, Kurssuche im Kopf, Hilfe mit Abschnittsmarkierung, besser lesbare Brettkoordinaten, Statistik nebeneinander auf großen Bildschirmen, Punktepartie und Spielervorbereitung am Handy aufgeräumter." },
+  ] },
   { version: "0.758.1", date: "2026-10-12", changes: [
     { en: "Code structure: the tournament calendar's remembered view and the LeagueHub scoresheet styles now live in their own files. No change in behaviour.",
       de: "Code-Struktur: die gemerkte Ansicht des Turnierkalenders und die Stile der LeagueHub-Formularprüfung liegen jetzt in eigenen Dateien. Keine Änderung im Verhalten." },

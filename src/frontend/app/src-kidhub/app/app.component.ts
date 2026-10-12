@@ -13,7 +13,7 @@ import { catchError, filter, map, of, timeout } from 'rxjs';
 import { environment } from '../../src/environments/environment';
 import { KidsApiService } from './core/kids-api.service';
 import { KidsProgressSync } from './core/kids-progress-sync.service';
-import { KID_BACK, KID_PAGE_WIDTH, KID_SHORT, KID_STACKED, kidPageWidth } from './shared/kids-layout';
+import { KID_AUTH_WIDTH, KID_BACK, KID_PAGE_WIDTH, KID_SHORT, KID_STACKED, kidPageWidth } from './shared/kids-layout';
 import {
   KID_PRIVACY_STYLES, KidDeletionTexts, foldAccountDeletion, foldPrivacy, isAccountDeletionUrl, isLegalUrl, isPrivacyUrl,
   setAccountDeletionTexts,
@@ -64,7 +64,7 @@ export function isHomeUrl(url: string): boolean {
       @if (isHome()) {
         <nav class="account">
           @if (user(); as u) {
-            <span class="who">👋 {{ u.username }}</span>
+            <span class="who" [attr.title]="u.username">👋 {{ u.username }}</span>
             <button type="button" class="acct" (click)="logout()">{{ 'nav.logout' | translate }}</button>
           } @else {
             <a class="acct" routerLink="/login" [queryParams]="{ returnUrl: '/' }">{{ 'nav.login' | translate }}</a>
@@ -152,6 +152,15 @@ export function isHomeUrl(url: string): boolean {
            flex-wrap: wrap; gap: 8px 12px; }
     .account { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
     .who { font-weight: 700; color: var(--kid-title); }
+    /* Handy: Logo, Name und „Abmelden" in EINER Zeile (z2-k-kopf-umbruch: vorher rutschten Name und Knopf in eine
+       zweite Zeile, Kopf ≈ 105 statt 64 px). Der Name kürzt mit „…", voll steht er im title. */
+    @media (max-width: 479.98px) {
+      .top, .account { flex-wrap: nowrap; }
+      .logo { flex-shrink: 0; }
+      .account { min-width: 0; }
+      .who { min-width: 0; max-width: 38vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .acct { flex-shrink: 0; white-space: nowrap; }
+    }
     /* Tippziele mindestens 44 px hoch (Codereview 2026-09-29, UX-063: vorher 36 px Konto-Knoepfe, 24/16 px im Fuss). */
     .acct { font: inherit; font-weight: 800; font-size: .95rem; text-decoration: none; cursor: pointer;
             display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px;
@@ -179,7 +188,7 @@ export function isHomeUrl(url: string): boolean {
     /* Datenschutz: Ruecklink oben in derselben Spalte wie die Seite. */
     .legal-top { box-sizing: border-box; max-width: ${KID_PAGE_WIDTH.legal}px; margin: 0 auto; padding: 8px 16px 0; }
     /* Anmelde-Masken: der Knopf steht über der 400-px-Karte (r2-k-login). */
-    .legal-top.auth-top { max-width: 432px; }
+    .legal-top.auth-top { max-width: ${KID_AUTH_WIDTH}px; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   `],
 })

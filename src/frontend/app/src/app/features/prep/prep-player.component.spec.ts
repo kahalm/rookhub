@@ -68,7 +68,11 @@ describe('PrepPlayerComponent', () => {
     expect(el().querySelector('.prep-scope p')).toBeNull();
     expect(el().querySelector('.prep-scope')?.textContent).not.toContain('prep.loadAllHint');
     expect(el().querySelector('.prep-scope button')?.getAttribute('title')).toBe('prep.loadAllHint');
-    expect(el().querySelector('mat-checkbox')).toBeNull();                                 // kein Zwilling, kein Schalter
+    // z2-rk-prep-alle-laden: bricht die Zeile um, fluchtet „Alle laden" mit dem Text (Polster per Rand ausgeglichen).
+    const loadAll = getComputedStyle(el().querySelector('.prep-scope .load-all')!);
+    expect(loadAll.marginLeft).toBe('-4px');
+    expect(loadAll.paddingLeft).toBe('4px');
+    expect(el().querySelector('mat-checkbox')).toBeNull();                               // kein Zwilling, kein Schalter
     expect(el().querySelector('lh-online-accounts')).toBeNull();                           // keine Konten, nichts Leeres
     expect(el().querySelector('.check')).toBeNull();                                       // ohne prep.manage kein „unsichere"
     expect(el().querySelector('a.back')?.getAttribute('href')).toBe('/prep?q=Carlsen');

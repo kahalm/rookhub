@@ -359,6 +359,15 @@ describe('PlayerCardComponent', () => {
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(controls.classList).toContain('open');
+    // z2-rk-prep-filter-aktionen: Werkzeuge haben ein eigenes ⋮, unabhängig von „Filter ▾".
+    const tools = controls.querySelector<HTMLButtonElement>('.ctl-tools')!;
+    expect(tools).not.toBeNull();
+    expect(tools.getAttribute('aria-expanded')).toBe('false');
+    expect(controls.classList).not.toContain('tools-open');
+    tools.click();
+    fixture.detectChanges();
+    expect(tools.getAttribute('aria-expanded')).toBe('true');
+    expect(controls.classList).toContain('tools-open');
   });
 
   it('LeagueHub (nicht inline): kein „Filter ▾"-Klappknopf', async () => {
@@ -366,6 +375,7 @@ describe('PlayerCardComponent', () => {
     fixture.detectChanges();
     expect(el().querySelector('.controls .seg')).not.toBeNull();
     expect(el().querySelector('.ctl-toggle')).toBeNull();
+    expect(el().querySelector('.ctl-tools')).toBeNull();
   });
 
   it('LeagueHub: das Token liefert ohne eigenen Eintrag den LeagueApiService', () => {

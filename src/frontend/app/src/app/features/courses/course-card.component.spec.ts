@@ -67,6 +67,13 @@ describe('CourseCardComponent Showstopper-Markierung', () => {
     lastFixture!.detectChanges();
     expect(el.querySelector('.stale-hint')).not.toBeNull();
   });
+
+  // UI-Sweep z2 (z2-rk-course-card-chip-titel): der Chip steht in der Herkunftszeile, nicht neben dem Titel.
+  it('setzt den „Neu holen"-Chip unter den Titel (Titel behält die volle Breite)', async () => {
+    const el = await render(true);
+    expect(el.querySelector('.title-row .stale-chip')).toBeNull();
+    expect(el.querySelector('.origin-line .stale-chip')).not.toBeNull();
+  });
 });
 
 /**

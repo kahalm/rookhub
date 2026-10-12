@@ -8,7 +8,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { themeIcon, themeNameKey } from '../../core/kids-themes';
-import { KID_BACK, KID_COUNTER, KID_PAGE_WIDTH } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_MAP_WIDTH } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /** So lange wackelt eine gesperrte Stufe nach dem Tippen und steht der Hinweis da. */
@@ -85,7 +85,7 @@ export const SCROLL_FROM_LEVEL = 5;
     </div>
   `,
   styles: [KID_BACK, KID_COUNTER, `
-    :host { display: block; max-width: ${KID_PAGE_WIDTH.map}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
+    :host { display: block; max-width: ${KID_MAP_WIDTH}; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
     .info { text-align: center; font-size: 1.2rem; }

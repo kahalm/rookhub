@@ -121,6 +121,8 @@
                 </button>
                 <!-- Suchtiefe als Umschalter: wählt nur die Tiefe, gesucht wird allein über „Lücke schließen"
                      (z1-rk-recon-lueckentiefe). -->
+                <!-- Etikett und Auswahl in EINER Hülle: am Handy brechen sie zusammen um (z2-rk-recon-halbzuege-label). -->
+                <span class="gap-depth-pick">
                 <span class="depth-label muted small">{{ 'reconstruct.gap.pliesLabel' | translate }}</span>
                 <mat-button-toggle-group class="depth-toggle" hideSingleSelectionIndicator
                                          [value]="gapPlies" (change)="gapPlies = $event.value"
@@ -131,6 +133,7 @@
                                        [matTooltip]="'reconstruct.gap.plies' | translate:{ count: choice }">{{ choice }}</mat-button-toggle>
                   }
                 </mat-button-toggle-group>
+                </span>
                 @if (hasProposalsBefore(gapTarget)) {
                   <button mat-button [disabled]="busy()" (click)="discardProposals(gapTarget)">
                     <mat-icon>close</mat-icon> {{ 'reconstruct.gap.discard' | translate }}

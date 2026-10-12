@@ -138,6 +138,8 @@ import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .empty-state .setup-repcheck mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 1; }
+    /* UI-Sweep z2 (z2-rk-remembered-knopf-breit): kompakt und mittig unter dem Satz, nicht über die ganze Kartenbreite. */
+    .empty-state .setup-repcheck { align-self: center; margin-top: 8px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
     .item { padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
     .item.selected { outline: 2px solid var(--mat-sys-primary); }

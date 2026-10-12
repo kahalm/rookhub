@@ -45,6 +45,8 @@ describe('ReconstructListComponent', () => {
     const suffix = el.querySelector('.new-card mat-form-field button.create-suffix') as HTMLButtonElement;
     expect(suffix).not.toBeNull();
     expect(suffix.disabled).toBeTrue();
+    // z2-rk-recon-anlegen-plus: das Feld sagt, dass hier eine neue Rekonstruktion entsteht.
+    expect(el.querySelector('.new-card mat-label')?.textContent).toContain('reconstruct.createLabel');
     expect(el.querySelector('.header app-help-hint button')?.getAttribute('aria-label')).toBe('reconstruct.introMore');
   });
 

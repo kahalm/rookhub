@@ -65,26 +65,37 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
            es den ersten Abschnitt am Handy auf 181 % der Hoehe; ab 1280 px klebende Spalte links neben den Abschnitten. -->
       <!-- Runde z1 (z1-rk-help-toc-verborgen): als klebende Spalte scrollt das Verzeichnis in sich; reicht es unter den
            Rand, blendet es unten aus (.more) — vorher endete es am Laptop glatt nach 13 von 27 Themen. -->
-      <nav class="help-toc" [class.more]="tocMore()" [attr.aria-label]="'help.tocTitle' | translate" #tocNav
+      <!-- Runde z2 (z2-rk-help-toc): ab 1280 px ist das Verzeichnis eine Spalte ohne Aufklapper (schlichte Überschrift,
+           dichte Zeilen — alle 27 Themen passen) und hebt den sichtbaren Abschnitt hervor (aria-current). -->
+      <nav class="help-toc" [class.more]="tocMore()" [class.wide]="tocWide" [attr.aria-label]="'help.tocTitle' | translate" #tocNav
            (scroll)="updateTocMore()">
-        <details [open]="tocOpen()" (toggle)="tocOpen.set(tocFold.open)" #tocFold>
-          <summary id="help-toc">
-            <h2>{{ 'help.tocTitle' | translate }}</h2>
-            <span class="toc-count">{{ 'help.tocCount' | translate: { count: sections.length } }}</span>
-            <mat-icon class="chev" aria-hidden="true">expand_more</mat-icon>
-          </summary>
+        @if (tocWide) {
+          <h2 id="help-toc" class="toc-head" tabindex="-1">{{ 'help.tocTitle' | translate }}</h2>
+          <ng-container [ngTemplateOutlet]="tocList" />
+        } @else {
+          <details [open]="tocOpen()" (toggle)="tocOpen.set(tocFold.open)" #tocFold>
+            <summary id="help-toc">
+              <h2>{{ 'help.tocTitle' | translate }}</h2>
+              <span class="toc-count">{{ 'help.tocCount' | translate: { count: sections.length } }}</span>
+              <mat-icon class="chev" aria-hidden="true">expand_more</mat-icon>
+            </summary>
+            <ng-container [ngTemplateOutlet]="tocList" />
+          </details>
+        }
+        <ng-template #tocList>
           <ul>
             @for (s of sections; track s.id) {
               <li>
                 <!-- Echter Link (href = /help#id): per Tab erreichbar, als Link angesagt, kopierbar (UX-012). -->
-                <a [routerLink]="[]" [fragment]="s.id" (click)="onTocClick($event, s.id)">
+                <a [routerLink]="[]" [fragment]="s.id" (click)="onTocClick($event, s.id)"
+                   [class.current]="activeId() === s.id" [attr.aria-current]="activeId() === s.id ? 'true' : null">
                   <span class="toc-icon">{{ s.icon }}</span>
                   <span>{{ 'help.s.' + s.id + '.t' | translate }}</span>
                 </a>
               </li>
             }
           </ul>
-        </details>
+        </ng-template>
       </nav>
 
       <!-- UI-Sweep 2026-10-11 (d2-rk-help-seitenlaenge): Abschnitte zugeklappt mit Titel und erster Zeile — offen war die
@@ -95,8 +106,10 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
           @let paras = asParagraphs('help.s.' + s.id + '.p' | translate: textParams);
           @let open = isOpen(s.id);
           <mat-card [id]="s.id" class="help-section" [class.open]="open" tabindex="-1">
-            <mat-card-header>
-              <h2 mat-card-title class="sec-title">
+            <!-- Runde z2 (z2-rk-help-pfeil): eigener Kopf statt mat-card-header — dessen innerer Textblock war nur so
+                 breit wie der Titel, ▾ stand je nach Titellänge mal am Titel, mal am Rand. Jetzt immer rechts. -->
+            <div class="sec-head">
+              <h2 class="sec-title">
                 <button type="button" class="sec-toggle" [attr.aria-expanded]="open" [attr.aria-controls]="s.id + '-more'"
                         (click)="toggle(s.id)">
                   <span class="sec-icon">{{ s.icon }}</span>
@@ -104,10 +117,11 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
                   <mat-icon class="chev" aria-hidden="true">expand_more</mat-icon>
                 </button>
               </h2>
-            </mat-card-header>
+            </div>
             <mat-card-content>
               @if (paras.length) {
-                <p class="lead" [class.teaser]="!open" [innerHTML]="linkify(paras[0])" (click)="expand(s.id)"></p>
+                <!-- Runde z2 (z2-rk-help-vorschau): zugeklappt nur der erste Satz als Vorschau (am Handy zwei Zeilen). -->
+                <p class="lead" [class.teaser]="!open" [innerHTML]="linkify(open ? paras[0] : firstSentence(paras[0]))" (click)="expand(s.id)"></p>
               }
               <div class="more" [id]="s.id + '-more'" [attr.hidden]="open ? null : 'until-found'" (beforematch)="expand(s.id)">
                 @for (p of paras.slice(1); track $index) {
@@ -151,11 +165,12 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
 
     .help-section { margin-bottom: 0.75rem; scroll-margin-top: 80px; }
     /* Kopf = Aufklapper ueber die ganze Breite (≥ 44 px); 12 px Luft bis zum ersten Absatz (d2-rk-help-head-gap). */
-    .help-section mat-card-header { padding-bottom: 12px; }
-    .sec-title { margin: 0; width: 100%; }
+    .sec-head { padding: 16px 16px 12px; }
+    .sec-title { margin: 0; width: 100%; font-size: var(--mat-card-title-text-size, 1.375rem);
+                 line-height: var(--mat-card-title-text-line-height, 1.75rem); font-weight: var(--mat-card-title-text-weight, 400); }
     .sec-toggle { display: flex; align-items: center; gap: 0.5rem; width: 100%; min-height: 44px; padding: 0;
                   border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-    .sec-name { flex: 1; }
+    .sec-name { flex: 1; min-width: 0; }
     .sec-toggle .chev { color: color-mix(in srgb, currentColor 55%, transparent); }
     .help-section:not(.open) mat-card-content { padding-bottom: 4px; }
     /* Lange Adressen (Linktext) duerfen umbrechen — sonst machte EINE URL die ganze Seite am Handy
@@ -164,6 +179,8 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
     mat-card-content p { line-height: 1.55; margin: 0 0 0.75rem; overflow-wrap: anywhere; max-width: 68ch; }
     .teaser { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
               cursor: pointer; color: color-mix(in srgb, currentColor 65%, transparent); }
+    mat-card-content p.teaser { max-width: none; }
+    @media (max-width: 599.98px) { .teaser { -webkit-line-clamp: 2; } }
 
     /* Trefferflaeche ≥ 44 px (UX-012); der Text bleibt buendig mit den Absaetzen (negativer Rand). */
     .back-top { display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
@@ -181,13 +198,18 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
       .help-header { grid-column: 1 / -1; }
       .help-toc { position: sticky; top: 72px; max-height: calc(100vh - 88px); overflow-y: auto; margin: 0; }
       .help-toc ul { grid-template-columns: 1fr; gap: 0; }
+      .help-toc.wide ul { margin: 0; }
       /* Mehr darunter: unterer Rand blendet aus (z1-rk-help-toc-verborgen). */
       .help-toc.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
                        mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
     }
-    /* Mit Maus dichtere Zeilen (30 statt 44 px): am Laptop passen fast alle 27 Themen, gross alle; Touch behaelt 44 px. */
+    /* Ab 1280 px: schlichte Ueberschrift statt Aufklapper; der sichtbare Abschnitt ist hervorgehoben (z2-rk-help-toc). */
+    .help-toc .toc-head { font-size: 0.8rem; line-height: 20px; margin: 0 0 4px; padding: 4px 8px 0; outline: none; }
+    .help-toc a.current { color: var(--mat-sys-primary); font-weight: 600;
+                          background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
+    /* Mit Maus dichtere Zeilen (24 statt 44 px): am Laptop passen alle 27 Themen (z2-rk-help-toc); Touch behaelt 44 px. */
     @media (min-width: 1280px) and (pointer: fine) {
-      .help-toc a { min-height: 30px; padding: 4px 8px; }
+      .help-toc a { min-height: 24px; padding: 2px 8px; font-size: 0.875rem; }
     }
     @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
   `]
@@ -209,6 +231,49 @@ export class HelpComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.tocObserver?.disconnect();
+    this.sectionObserver?.disconnect();
+  }
+
+  /** Ab 1280 px steht das Verzeichnis als Spalte daneben — ohne Aufklapper (z2-rk-help-toc). */
+  readonly tocWide = typeof matchMedia === 'function' && matchMedia('(min-width: 1280px)').matches;
+  /** Abschnitt, der gerade oben im Bild steht — im Verzeichnis hervorgehoben (aria-current). */
+  readonly activeId = signal<string | null>(null);
+  private sectionObserver?: IntersectionObserver;
+  private readonly visibleIds = new Set<string>();
+
+  /** Beobachtet die Abschnitte und markiert den obersten sichtbaren im Verzeichnis (nur in der Spalten-Ansicht). */
+  private observeSections(): void {
+    if (!this.tocWide || typeof IntersectionObserver !== 'function') return;
+    this.sectionObserver = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (e.isIntersecting) this.visibleIds.add(e.target.id); else this.visibleIds.delete(e.target.id);
+      }
+      const first = this.sections.find(s => this.visibleIds.has(s.id));
+      if (first) this.setActive(first.id);
+    }, { rootMargin: '-72px 0px -55% 0px' });
+    for (const s of this.sections) {
+      const el = document.getElementById(s.id);
+      if (el) this.sectionObserver.observe(el);
+    }
+  }
+
+  /** Markiert den Eintrag und rollt NUR das Verzeichnis so, dass er sichtbar ist (nie die Seite). */
+  setActive(id: string): void {
+    if (this.activeId() === id) return;
+    this.activeId.set(id);
+    const nav = this.tocNav?.nativeElement;
+    const link = nav?.querySelector<HTMLElement>(`a[href$="#${id}"]`);
+    if (!nav || !link) return;
+    const top = link.offsetTop - nav.offsetTop;
+    if (top < nav.scrollTop) nav.scrollTop = top;
+    else if (top + link.offsetHeight > nav.scrollTop + nav.clientHeight) nav.scrollTop = top + link.offsetHeight - nav.clientHeight;
+  }
+
+  /** Erster Satz eines Absatzes als Vorschau (z2-rk-help-vorschau): bis zum ersten Satzende nach mindestens 20 Zeichen —
+   *  so bricht „z. B." am Anfang nicht ab. Ohne Satzende bleibt der Absatz ganz (die Zeilenbegrenzung kürzt). */
+  firstSentence(text: string): string {
+    const m = /^([\s\S]{20,}?[.!?…])\s/.exec(text ?? '');
+    return m ? m[1] : (text ?? '');
   }
 
   /** Deep-Link wie /help#extension: nach dem Render zum Abschnitt scrollen. */
@@ -220,6 +285,7 @@ export class HelpComponent implements AfterViewInit, OnDestroy {
       const list = nav.querySelector('ul');
       if (list) this.tocObserver.observe(list);
     }
+    this.observeSections();
     const fragment = this.route.snapshot.fragment;
     if (fragment) {
       setTimeout(() => this.scrollTo(fragment), 0);

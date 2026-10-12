@@ -225,6 +225,8 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     @media (max-width: 599.98px) {
       .new-long { display: none; }
       .new-short { display: inline; }
+      /* UI-Sweep z2 (z2-rk-rep-liste-vorlauf-admin): Titel einzeilig neben „Neu" (brach sonst zweizeilig um). */
+      .header h1 { font-size: 1.6rem; line-height: 1.2; }
     }
     .info-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
       padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; opacity: 0.6; cursor: pointer;

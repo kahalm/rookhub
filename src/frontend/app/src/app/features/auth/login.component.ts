@@ -92,7 +92,8 @@ export function loginRetryAfterSeconds(err: any): number {
               @if (leagueHub) {
                 <span class="site-note">{{ 'auth.login.leaguehubNote' | translate }}</span>
               }
-              @if (intro.login; as introKey) {
+              <!-- Nach Umleitung nur die Kurzform (z2-rk-turnier-login-hinweis): der Kasten bleibt bei ≤ 3 Zeilen. -->
+              @if (intro.loginShort ?? intro.login; as introKey) {
                 <span class="site-note">{{ introKey | translate }}</span>
               }
             </p>

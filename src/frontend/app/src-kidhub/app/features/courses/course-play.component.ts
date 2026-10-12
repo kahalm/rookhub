@@ -111,9 +111,12 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     .line-text { display: flex; flex-direction: column; gap: 6px; }
     .chapter { margin: 0; font-weight: 700; opacity: .75; }
     .line-title { margin: 0; font-size: 1.35rem; color: var(--kid-title); }
-    .intro-wrap { position: relative; display: flex; flex-direction: column; border-radius: 16px; background: var(--kid-card); }
+    /* Polster an der Hülle, nicht am Text (z2-k-course-intro-halbzeile): overflow: hidden schneidet am Rand des
+       Polsters ab — im unteren Polster des Texts lief sonst die halbe nächste Zeile sichtbar weiter. */
+    .intro-wrap { position: relative; display: flex; flex-direction: column; border-radius: 16px; background: var(--kid-card);
+                  padding: 12px 16px 4px; }
     .intro {
-      margin: 0; padding: 12px 16px; font-size: 1.1rem; line-height: 1.45; white-space: pre-line;
+      margin: 0 0 8px; padding: 0; font-size: 1.1rem; line-height: 1.45; white-space: pre-line;
       max-height: 40vh; overflow: hidden;
     }
     .intro.open { max-height: none; }
@@ -152,7 +155,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       .line-title { font-size: 1.1rem; }
       /* d2-k-course-intro: zugeklappt drei Zeilen statt 30vh (~8 Zeilen) — das Brett begann sonst erst bei 69 % der
          Höhe. Am PC (Text neben dem Brett) bleiben 40vh. */
-      .intro { max-height: calc(3 * 1.45em); }   /* Inhaltshöhe: drei Zeilen, das Polster (2 × 12 px) kommt dazu */
+      .intro { max-height: calc(3 * 1.45em); }   /* genau drei Zeilen — das Polster sitzt an .intro-wrap */
       .intro-wrap.clipped .intro:not(.open) {
         -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
         mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);

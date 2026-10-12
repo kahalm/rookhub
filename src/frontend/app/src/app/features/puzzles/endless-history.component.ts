@@ -246,7 +246,8 @@ interface EndlessHistoryResponse {
     th.mat-mdc-header-cell { font-weight: 600; }
     .elo-pos { color: var(--rh-success); font-weight: 600; }
     .elo-neg { color: var(--rh-error); font-weight: 600; }
-    .toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    /* UI-Sweep z2 (z2-rk-endless-verlauf-filter): 12 px Luft unter dem Kartenkopf, statt am Titel zu kleben. */
+    .toolbar { display: flex; align-items: center; gap: 1rem; margin: 12px 0 16px; flex-wrap: wrap; }
     .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .selection-count { font-size: 0.875rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .archived-row { opacity: 0.5; }

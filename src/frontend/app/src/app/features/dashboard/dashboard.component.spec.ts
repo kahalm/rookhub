@@ -437,6 +437,11 @@ describe('DashboardComponent angepinnte Kurse über die volle Breite', () => {
     const cards = Array.from(host.querySelectorAll('.dashboard-grid > mat-card')) as HTMLElement[];
     const wideTop = wide.getBoundingClientRect().top;
     expect(cards.filter(c => c !== wide && Math.abs(c.getBoundingClientRect().top - wideTop) < 1).length).toBe(0);
+    // UI-Sweep z2 (z2-rk-dash-kurse-raster): keine leere Spur rechts — der letzte Kurs endet am Rand des Rasters.
+    const list = wide.querySelector('.pinned-courses') as HTMLElement;
+    const items = Array.from(wide.querySelectorAll('.pinned-course')) as HTMLElement[];
+    const contentRight = list.getBoundingClientRect().right - parseFloat(getComputedStyle(list).paddingRight);
+    expect(items[2].getBoundingClientRect().right).toBeGreaterThan(contentRight - 24);
     host.remove();
   });
 });

@@ -186,6 +186,9 @@ describe('StatsComponent', () => {
     expect(item).toBeTruthy();
     expect(item.getAttribute('href')).toBe('/puzzles/1');
     expect(item.textContent).toContain('+28');
+    // z2 (z2-rk-stats-letzte-liste): die Zahl ist als Puzzle-Wertung beschriftet, ein Pfeil zeigt die antippbare Zeile.
+    expect(item.textContent).toContain('stats.puzzleRating');
+    expect(item.querySelector('mat-icon.ri-go')?.textContent?.trim()).toBe('chevron_right');
   });
 });
 
@@ -194,10 +197,16 @@ describe('StatsComponent Layout (z1)', () => {
   const css = ((StatsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
   it('setzt die Handy-Breiten der Themenzeile NACH den Grundregeln (z1-rk-stats-themenbalken)', () => {
     const base = css.search(/\.theme-val[^{]*\{ ?width: 120px/);
-    const phone = css.search(/\.theme-val[^{]*\{ ?width: 84px/);
+    // z2 (z2-rk-stats-themenname): Name 128 px, Zahl nur so breit wie nötig.
+    const phone = css.search(/\.theme-val[^{]*\{ ?width: auto; min-width: 64px/);
     expect(base).toBeGreaterThan(-1);
     expect(phone).toBeGreaterThan(base);
-    expect(css.search(/\.theme-name[^{]*\{ ?width: 110px/)).toBeGreaterThan(css.search(/\.theme-name[^{]*\{ ?width: 150px/));
+    expect(css.search(/\.theme-name[^{]*\{ ?width: 128px/)).toBeGreaterThan(css.search(/\.theme-name[^{]*\{ ?width: 150px/));
+  });
+  it('legt ab 1280 px „Nach Thema" und „Schwächste Themen" nebeneinander (z2-rk-stats-gross-einspaltig)', () => {
+    const wide = css.slice(css.indexOf('@media (min-width: 1280px)'));
+    expect(wide).toMatch(/\.stats-container[^{]*\{ ?max-width: 1400px/);
+    expect(wide).toMatch(/\.theme-pair\.pair[^{]*\{ ?display: grid; grid-template-columns: 3fr 2fr/);
   });
   it('nimmt den Kacheln den Karten-Außenabstand (z1-rk-stats-kacheln)', () => {
     expect(css).toMatch(/\.cards[^{]* mat-card[^{]*\{ ?margin: 0/);

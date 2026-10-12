@@ -139,5 +139,11 @@ describe('RememberedLinesComponent Leerzustand', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('/help#extension');
     expect(link.textContent).toContain('remembered.setupRepCheck');
+    // UI-Sweep z2 (z2-rk-remembered-knopf-breit): kompakt und mittig, nicht über die ganze Kartenbreite.
+    document.body.appendChild(fixture.nativeElement);
+    const card = fixture.nativeElement.querySelector('.empty-state') as HTMLElement;
+    expect(getComputedStyle(link).alignSelf).toBe('center');
+    expect(link.getBoundingClientRect().width).toBeLessThan(card.getBoundingClientRect().width - 40);
+    fixture.nativeElement.remove();
   });
 });

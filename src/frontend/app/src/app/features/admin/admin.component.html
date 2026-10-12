@@ -13,7 +13,8 @@
       <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">
         <mat-tab [label]="'admin.tabs.users' | translate">
           <div class="tab-content">
-            <mat-form-field appearance="outline" class="search-field">
+            <!-- UI-Sweep z2 (z2-rk-admin-suche-abstand): kein reservierter Hilfstext-Platz unter dem Suchfeld. -->
+            <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
               <mat-label>{{ 'admin.users.searchLabel' | translate }}</mat-label>
               <input matInput [(ngModel)]="userSearch" (keyup.enter)="loadUsers()">
               <button matSuffix mat-icon-button (click)="loadUsers()">

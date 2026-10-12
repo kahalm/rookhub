@@ -17,7 +17,7 @@
     /* Immer EINE Spalte (UX-044): in der 500-px-Karte drückte „Alle löschen" (nowrap) die Schnellauswahl links
        auf ~100 px, die Chips brachen mitten im Wort um und das Raster ragte über den Kartenrand. */
     .config-fields { display: grid; grid-template-columns: 1fr; gap: 0.5rem 1rem; margin-top: 1rem; }
-    .config-fields .worst-tags-row { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: -0.25rem; }
+    .config-fields .worst-tags-row { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 8px; } /* z2-rk-endless-schwaechste-eng: eigener Block, nicht Anhängsel des Themenfelds */
     .config-fields .worst-tags-hint { font-size: 0.8rem; opacity: 0.65; }
     .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
     .threshold-explain { font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent); margin: 0 0 0.5rem; }
@@ -70,7 +70,7 @@
     /* Aufklapper für die Feineinstellungen — gleiche Optik wie der Kapitel-Aufklapper der Kurs-Karte. */
     /* Aufklapper links, Zahnrad rechts — eine Zeile mit gemeinsamer Trennlinie. */
     .adv-row {
-      display: flex; align-items: center; gap: 4px; margin: 0.2rem 0 0.6rem;
+      display: flex; align-items: center; gap: 4px; margin: 16px 0 0.6rem; /* z2: 16 px Luft über der Trennlinie */
       border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     }
     .adv-toggle {

@@ -203,6 +203,8 @@
   border-left: 3px dashed color-mix(in srgb, var(--rh-warn) 60%, transparent);
 
   .gap-icon { opacity: 0.6; }
+  /* Etikett „Halbzüge" + Auswahl als ein Eintrag — brechen gemeinsam um (z2-rk-recon-halbzuege-label). */
+  .gap-depth-pick { display: inline-flex; align-items: center; gap: 6px; }
   .small { font-size: 0.85rem; }
 }
 

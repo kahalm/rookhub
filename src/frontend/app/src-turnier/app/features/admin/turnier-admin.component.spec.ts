@@ -221,6 +221,8 @@ describe('TurnierAdminComponent', () => {
     expect(rows.length).toBe(3);
     expect(rows[0].querySelector('button')).withContext('Knopf beim eigenen Konto').toBeNull();
     expect(rows[0].querySelector('.ta-self')).not.toBeNull();
+    // z2-t-admin-eigene-zeile: „Dein Konto" so hoch wie der 40-px-Knopf der übrigen Zeilen.
+    expect(rows[0].querySelector('.ta-self')!.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
     expect(rows[1].querySelector('button')).not.toBeNull();
 
     component.impersonate(component.users()[0]);

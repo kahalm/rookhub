@@ -285,7 +285,7 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
     translate.setTranslation('en', {
       auth: { login: { required: 'GENERIC', requiredFor: 'Then on to {{area}}.', freeNote: 'FREE' } },
       nav: { friends: 'Friends', tournaments: 'Tournaments' },
-      turnier: { authIntro: { login: 'TOURNAMENT INTRO' } },
+      turnier: { authIntro: { login: 'TOURNAMENT INTRO', loginShort: 'SHORT INTRO' } },
       clubhub: { authIntro: { login: 'CLUB INTRO' } },
     }, true);
     translate.use('en');
@@ -329,6 +329,22 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
     // Höchstens EIN Kasten über dem Formular (d2-rk-login-two-notes): die Einleitung ist die zweite Zeile des Hinweises.
     expect(el.querySelectorAll('.auth-required').length).toBe(1);
     expect(el.querySelector('.auth-required .site-note')?.textContent).toContain('TOURNAMENT INTRO');
+  });
+
+  // z2-rk-turnier-login-hinweis: nach Umleitung nur die Kurzform — der eine Kasten war sonst 6–7 Zeilen lang.
+  it('Turnierseite nach Umleitung mit Kurzform: nur der kurze Satz, nicht die ganze Vorstellung', async () => {
+    const el = await render({ returnUrl: '/tournaments/calendar', authRequired: '1' },
+      [{ provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login', loginShort: 'turnier.authIntro.loginShort' } }]);
+    const box = el.querySelectorAll('.auth-required');
+    expect(box.length).toBe(1);
+    expect(box[0].querySelector('.site-note')?.textContent).toContain('SHORT INTRO');
+    expect(el.textContent).not.toContain('TOURNAMENT INTRO');
+  });
+
+  it('Turnierseite ohne Umleitung: die ganze Vorstellung, nicht die Kurzform', async () => {
+    const el = await render({}, [{ provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login', loginShort: 'turnier.authIntro.loginShort' } }]);
+    expect(el.textContent).toContain('TOURNAMENT INTRO');
+    expect(el.textContent).not.toContain('SHORT INTRO');
   });
 
   it('ohne Umleitung steht die Einleitung allein in ihrem Kasten', async () => {

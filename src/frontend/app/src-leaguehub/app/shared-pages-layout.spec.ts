@@ -14,6 +14,7 @@ import { ImpressumComponent } from '@rh/features/legal/impressum.component';
 import { LEGAL_SITE } from '@rh/features/legal/legal-site';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { leaguehubConfig } from './app.config';
+import { parseColor } from '@rh/testing/contrast';
 
 /**
  * RookHubs geteilte Masken in der LeagueHub-Hülle (UX-068). Gemessen wurde vorher: alle vier Anmeldeseiten 919 px hoch
@@ -65,6 +66,29 @@ describe('LeagueHub: geteilte Anmelde- und Rechtsseiten in der Hülle (UX-068)',
       expect(Math.round((el.querySelector('mat-card') as HTMLElement).getBoundingClientRect().width)).toBe(358);
     });
   }
+
+  // UI-Sweep z2 (z2-l-datenschutz-laenge, vom User freigegeben): am Handy 12 Bildschirme lang — Abschnitte ab dem dritten
+  // als Aufklapper im LeagueHub-Look (roter Pfeil, Kopf in Barlow Condensed, 44-px-Zeile).
+  it('Datenschutz am Handy: Abschnitte ab dem dritten zugeklappt, Kopfzeile ≥ 44 px mit rotem Pfeil', () => {
+    spyOn(window, 'matchMedia').and.callFake((q: string) => ({ matches: false, media: q } as MediaQueryList));
+    const host = document.createElement('app-privacy');
+    shell.querySelector('main')!.appendChild(host);
+    const fixture = TestBed.createComponent(PrivacyComponent);
+    fixture.detectChanges();
+    host.appendChild(fixture.nativeElement);
+    const heads = Array.from(host.querySelectorAll('h2'));
+    const folds = Array.from(host.querySelectorAll<HTMLDetailsElement>('details.legal-fold'));
+    expect(folds.length).toBe(heads.length - 2);
+    expect(folds.every(d => !d.open)).toBeTrue();
+    const summary = folds[0].querySelector('summary')!;
+    expect(summary.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--red)';
+    shell.appendChild(probe);
+    const red = parseColor(getComputedStyle(probe).color);
+    expect(parseColor(getComputedStyle(summary, '::before').color)).toEqual(red);
+    expect(parseColor(getComputedStyle(summary.querySelector('h2')!).color)).toEqual(red);
+  });
 
   // UI-Sweep 2026-10-11 (d2-l-masken-knopf): Materials 40 px mit ~14-px-Beschriftung lag unter dem Tippziel.
   for (const page of [LoginComponent, RegisterComponent, ForgotPasswordComponent, ResetPasswordComponent] as Type<unknown>[]) {

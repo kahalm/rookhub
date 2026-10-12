@@ -245,7 +245,7 @@ describe('TournamentCardComponent', () => {
   it('kennzeichnet ein gleichnamiges Turnier am selben Tag, nicht aber eine schon zusammengefasste Karte', () => {
     setup();
     expect(fixture.nativeElement.querySelector('.badge.same-name')).toBeNull();
-    fixture.componentRef.setInput('sameNameSibling', true);
+    fixture.componentRef.setInput('sameName', { index: 1, total: 2 });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.badge.same-name')?.textContent?.trim())
       .toBe('tournamentDirectory.card.sameName');

@@ -108,7 +108,7 @@
             </td>
           </ng-container>
           <ng-container matColumnDef="snr">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.snr' | translate }}</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.snr' | translate }}</th>
             <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
           </ng-container>
           <ng-container matColumnDef="title">
@@ -127,7 +127,7 @@
             <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
           </ng-container>
           <ng-container matColumnDef="elo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.elo' | translate }}</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.elo' | translate }}</th>
             <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
           </ng-container>
           <ng-container matColumnDef="country">
@@ -148,7 +148,7 @@
             </td>
           </ng-container>
           <ng-container matColumnDef="board">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.boardShort' | translate }}</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.boardShort' | translate }}</th>
             <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
           </ng-container>
           <!-- Klebender Kopf (d2-t-players-sticky-head): ab Zeile 7 waren Nr., FIDE-ID, Elo und „Br." sonst nicht mehr deutbar. -->
@@ -242,7 +242,7 @@
             </td>
           </ng-container>
           <ng-container matColumnDef="points">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.points' | translate }}</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.teams.points' | translate }}</th>
             <td mat-cell *matCellDef="let t">{{ t.points }}</td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="teamColumns; sticky: true"></tr>
@@ -273,7 +273,7 @@
       <div class="table-scroll desktop-only">
         <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort.emit($event)" class="full-width">
           <ng-container matColumnDef="board">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.pairings.board' | translate }}</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.pairings.board' | translate }}</th>
             <td mat-cell *matCellDef="let p">{{ p.board }}</td>
           </ng-container>
           <ng-container matColumnDef="white">

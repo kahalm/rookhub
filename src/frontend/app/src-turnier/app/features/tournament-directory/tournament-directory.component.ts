@@ -43,7 +43,7 @@ import {
   DEFAULT_RADIUS_KM, DIRECTORY_AGE_GROUPS, DIRECTORY_GENDERS, DIRECTORY_KINDS, DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
-  TournamentGender, TournamentKind, TournamentSpeed, rangeFor, sameNameSiblings } from './tournament-directory.model';
+  TournamentGender, TournamentKind, TournamentSpeed, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
 
 /**
  * Turnierkalender: Liste, Karte und Monatsansicht auf DENSELBEN Filterzustand.
@@ -136,9 +136,10 @@ export class TournamentDirectoryComponent implements OnInit {
    * bekommt eine eigene Ueberschrift, damit die Saisonligen nicht wie Termine der naechsten
    * Wochen aussehen. Ohne `from` kennt der Server kein „laeuft bereits", dann bleibt es ein Block.
    */
-  readonly upcomingEntries = computed(() => this.entries().filter(e => !e.ongoing));
-  readonly ongoingEntries = computed(() => this.entries().filter(e => e.ongoing));
-  /** Gleichnamige Turniere am selben Tag als getrennte Karten (UI-Sweep 2026-10-11, r2-t-dup-cards). */
+  readonly upcomingEntries = computed(() => groupSameName(this.entries().filter(e => !e.ongoing)));
+  readonly ongoingEntries = computed(() => groupSameName(this.entries().filter(e => e.ongoing)));
+  /** Gleichnamige Turniere am selben Tag als getrennte Karten (r2-t-dup-cards), direkt hintereinander und
+   *  durchgezählt „1 von 2" (z2-t-cal-gleichnamig). */
   readonly sameNameIds = computed(() => sameNameSiblings(this.entries()));
 
   readonly pins = signal<DirectoryEntry[]>([]);

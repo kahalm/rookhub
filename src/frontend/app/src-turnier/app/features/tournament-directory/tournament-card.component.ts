@@ -17,7 +17,7 @@ import { TournamentListService } from '../../core/tournament-list.service';
 import { formatTournamentDates, formatTournamentDay } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import { DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
+import { DirectoryEntry, isPlaceholderLocation, SameNameMark } from './tournament-directory.model';
 
 /**
  * Die Kurzansicht EINES Turniers — Name, Termin, Ort, Merkmale und vier Aktionen.
@@ -111,8 +111,8 @@ import { DirectoryEntry, isPlaceholderLocation } from './tournament-directory.mo
         }
         <!-- Gleichnamiges Turnier am selben Tag als eigene Karte daneben (UI-Sweep 2026-10-11, r2-t-dup-cards): sagen,
              dass es vermutlich eine weitere Gruppe ist — sonst sind die beiden Karten nicht zu unterscheiden. -->
-        @if (sameNameSibling && entry.groupSize <= 1) {
-          <span class="badge same-name" [matTooltip]="'tournamentDirectory.card.sameNameHint' | translate">{{ 'tournamentDirectory.card.sameName' | translate }}</span>
+        @if (sameName && entry.groupSize <= 1) {
+          <span class="badge same-name" [matTooltip]="'tournamentDirectory.card.sameNameHint' | translate">{{ 'tournamentDirectory.card.sameName' | translate: sameName }}</span>
         }
         @if (entry.cancelled) {
           <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
@@ -309,8 +309,8 @@ export class TournamentCardComponent {
   /** Gedrängte Fassung für Karten-Popup und Kalender-Fenster. */
   @Input() overview = false;
 
-  /** Ein gleichnamiges Turnier am selben Tag steht als eigene Karte in derselben Liste (r2-t-dup-cards). */
-  @Input() sameNameSibling = false;
+  /** Gleichnamiges Turnier am selben Tag als eigene Karte: Stelle unter den Doppelgängern (z2-t-cal-gleichnamig). */
+  @Input() sameName: SameNameMark | null = null;
 
   /** Ort ist nur ein Platzhalter wie „various" (r2-t-various). */
   get various(): boolean { return isPlaceholderLocation(this.entry.location); }

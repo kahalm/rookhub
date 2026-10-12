@@ -284,6 +284,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
         }
         }
 
+        <!-- UI-Sweep z2 (z2-rk-stats-gross-einspaltig): ab 1280 px stehen „Nach Thema" und „Schwächste Themen" nebeneinander. -->
+        <div class="theme-pair" [class.pair]="worstThemes.length && themes.length > 5">
         @if (themes.length) {
           <mat-card>
             <mat-card-header><mat-card-title>{{ 'stats.byTheme' | translate }}</mat-card-title></mat-card-header>
@@ -317,6 +319,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             </mat-card-content>
           </mat-card>
         }
+        </div>
 
         @if (ratingBands.length) {
           <mat-card>
@@ -400,12 +403,14 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                 @for (a of recentRows; track $index) {
                   <a class="recent-item" [routerLink]="a.link">
                     <span class="ri-main">
-                      <span>{{ a.attemptedAt | date:'dd.MM. HH:mm' }} · {{ a.rating || '–' }}</span>
+                      <!-- UI-Sweep z2 (z2-rk-stats-letzte-liste): Zahl beschriftet, Pfeil zeigt die antippbare Zeile. -->
+                      <span>{{ a.attemptedAt | date:'dd.MM. HH:mm' }} · {{ 'stats.puzzleRating' | translate: { rating: a.rating || '–' } }}</span>
                       <span class="ri-sub">{{ a.time }} s</span>
                     </span>
                     <span class="ri-res" [class.res-ok]="a.solved" [class.res-fail]="!a.solved">
                       <mat-icon [attr.aria-label]="'stats.result' | translate">{{ a.solved ? 'check_circle' : 'cancel' }}</mat-icon>
                       @if (a.eloChange != null) { <span>{{ (a.eloChange >= 0 ? '+' : '−') + (a.eloChange >= 0 ? a.eloChange : -a.eloChange) }}</span> }
+                      <mat-icon class="ri-go" aria-hidden="true">chevron_right</mat-icon>
                     </span>
                   </a>
                 }
@@ -457,6 +462,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .ri-sub { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .ri-res { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
     .ri-res mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .ri-res mat-icon.ri-go { font-size: 18px; width: 18px; height: 18px; color: color-mix(in srgb, var(--mat-sys-on-surface, currentColor) 45%, transparent); }
     @media (max-width: 599.98px) {
       .recent-scroll { display: none; }
       .recent-list { display: block; }
@@ -476,8 +482,14 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     /* UI-Sweep z1 (z1-rk-stats-themenbalken): Handy-Breiten NACH den Grundregeln — gleiche Spezifität, die spätere gewinnt
        (vorher standen sie davor und wirkten nie; der Balken blieb ~44 px schmal). */
     @media (max-width: 599.98px) {
-      .theme-name { width: 110px; }
-      .theme-val { width: 84px; }
+      /* UI-Sweep z2 (z2-rk-stats-themenname): Name breiter („Vorgerückter Bauer"), Zahl nur so breit wie nötig. */
+      .theme-name { width: 128px; }
+      .theme-val { width: auto; min-width: 64px; }
+    }
+    /* UI-Sweep z2 (z2-rk-stats-gross-einspaltig): großer Bildschirm nutzt die Breite. */
+    @media (min-width: 1280px) {
+      .stats-container { max-width: 1400px; }
+      .theme-pair.pair { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
     }
     /* Die Baender sind BREITER als ein Hochkant-Handy: 200er-Schritte ueber die ganze
        Rating-Spanne ergeben schnell 14-18 Saeulen. Ohne eigenes overflow-x wuchs damit die SEITE

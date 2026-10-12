@@ -240,4 +240,45 @@ describe('KidsHomeComponent', () => {
       frame.remove();
     }
   });
+
+  /** z2-k-start-kacheln-breit + z2-k-kacheln-versatz: bei 1920 px wächst die Reihe, Symbole stehen auf einer Linie. */
+  it('am großen Bildschirm vier Kacheln ≈ 360 × 260 in einer Reihe, Symbole und Titel auf gleicher Höhe; Laptop bleibt 1160 px', () => {
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([{ bookId: 7, title: 'Erste Endspiele', description: null, puzzleCount: 287 }]);
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 10 }]);
+    f.detectChanges();
+    const host = f.nativeElement as HTMLElement;
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const at = (w: number, h: number) => {
+      const frame = document.createElement('iframe');
+      frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: ${h}px; border: 0;`;
+      document.body.appendChild(frame);
+      try {
+        const doc = frame.contentDocument!;
+        doc.open();
+        doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0">${host.outerHTML}</body></html>`);
+        doc.close();
+        const top = (sel: string) => Array.from(doc.querySelectorAll(sel)).map(e => Math.round(e.getBoundingClientRect().top));
+        return {
+          host: doc.body.firstElementChild!.getBoundingClientRect().width,
+          tiles: Array.from(doc.querySelectorAll('.tile')).map(t => t.getBoundingClientRect()),
+          icons: top('.tile .icon'), names: top('.tile .name'),
+        };
+      } finally {
+        frame.remove();
+      }
+    };
+    const wide = at(1920, 1080);
+    expect(new Set(wide.tiles.map(r => Math.round(r.top))).size).withContext('eine Reihe').toBe(1);
+    for (const r of wide.tiles) {
+      expect(r.width).withContext('Kachelbreite').toBeGreaterThanOrEqual(340);
+      expect(r.height).withContext('Kachelhöhe').toBeGreaterThanOrEqual(260);
+    }
+    expect(new Set(wide.icons).size).withContext('Symbole auf einer Linie').toBe(1);
+    expect(new Set(wide.names).size).withContext('Titel auf einer Linie').toBe(1);
+    expect(at(1366, 768).host).withContext('Laptop wie bisher').toBeLessThanOrEqual(1160);
+  });
 });

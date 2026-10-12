@@ -25,6 +25,7 @@ import { CourseThemesDialogComponent, CourseThemesDialogData } from './course-th
 import { AuthService } from '../../core/auth.service';
 import { CourseCardComponent } from './course-card.component';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 @Component({
   selector: 'app-course-list',
@@ -33,7 +34,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatDialogModule,
-    LoadingSpinnerComponent, TranslatePipe, ReprocessBannerComponent, CourseCardComponent, HelpHintComponent
+    LoadingSpinnerComponent, TranslatePipe, ReprocessBannerComponent, CourseCardComponent, HelpHintComponent,
+    IconLabelDirective
   ],
   template: `
     <div class="courses-container">
@@ -44,9 +46,25 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
           <h1>{{ 'courses.title' | translate }}</h1>
           <app-help-hint class="intro-hint" icon="info_outline" [text]="'courses.intro' | translate" />
         </div>
+        <!-- UI-Sweep z2 (z2-rk-courses-vorlauf): ab 600 px steht das Suchfeld in der Kopfzeile links neben den Knöpfen
+             (am Handy eigene Zeile darunter); der Erklärsatz liegt in jeder Breite hinter dem ⓘ am Titel. -->
+        @if (!loading && courses.length > 0) {
+          <mat-form-field appearance="outline" class="list-search" subscriptSizing="dynamic">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [(ngModel)]="search" [placeholder]="'courses.searchPlaceholder' | translate"
+                   [attr.aria-label]="'common.search' | translate">
+            @if (search) {
+              <button matSuffix mat-icon-button (click)="search = ''" [attr.aria-label]="'common.clear' | translate">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        }
         <div class="header-actions">
+          <!-- UI-Sweep z2 (z2-rk-courses-kopf-symbole): Import am Handy als Symbolknopf mit Tooltip (appIconLabel);
+               der Hauptknopf behält zwischen 381 und 599 px den Kurztext „Neu", erst ≤ 380 px nur „+" (DESIGN 5.4). -->
           <button mat-stroked-button [disabled]="creating" (click)="openImportDialog()"
-                  [attr.aria-label]="'courses.import.button' | translate">
+                  [appIconLabel]="'courses.import.button' | translate">
             <mat-icon>upload_file</mat-icon>
             <span class="btn-label">{{ 'courses.import.button' | translate }}</span>
           </button>
@@ -54,10 +72,10 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
                   [attr.aria-label]="(creating ? 'courses.create.creating' : 'courses.create.button') | translate">
             <mat-icon>{{ creating ? 'hourglass_empty' : 'add' }}</mat-icon>
             <span class="btn-label">{{ (creating ? 'courses.create.creating' : 'courses.create.button') | translate }}</span>
+            @if (!creating) { <span class="btn-label-short">{{ 'courses.create.short' | translate }}</span> }
           </button>
         </div>
       </div>
-      <p class="intro">{{ 'courses.intro' | translate }}</p>
 
       <!-- UI-Sweep 2026-10-11 (d2-rk-courses-zwei-banner): EIN Hinweis über der Liste — die „Neu holen"-Zahl ist der
            zweite Satz im Aufbereitungs-Banner; fehlt das Banner, steht sie allein als Legende. -->
@@ -93,16 +111,6 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       } @else if (courses.length === 0) {
         <p class="empty-state">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
-        <mat-form-field appearance="outline" class="list-search" subscriptSizing="dynamic">
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [(ngModel)]="search" [placeholder]="'courses.searchPlaceholder' | translate"
-                 [attr.aria-label]="'common.search' | translate">
-          @if (search) {
-            <button matSuffix mat-icon-button (click)="search = ''" [attr.aria-label]="'common.clear' | translate">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
         @if (filtered.length === 0) {
           <p class="empty-state">{{ 'courses.noMatch' | translate:{ query: search } }}</p>
         }
@@ -252,17 +260,22 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     /* UI-Sweep z1 (z1-rk-courses-banner-vorlauf): am Handy bleiben die Knöpfe als Symbolknöpfe in der Titelzeile,
        der Erklärsatz steht hinter dem ⓘ am Titel (Vorlauf ≤ 40 %, DESIGN 4.6). */
     .title-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
-    .intro-hint { display: none; }
+    /* UI-Sweep z2 (z2-rk-courses-vorlauf): Kopfzeile = Titel ⓘ | Suche | Knöpfe; darunter direkt Banner bzw. Liste. */
+    .header { flex-wrap: wrap; margin-bottom: 16px; }
+    .list-search { flex: 0 1 320px; margin: 0 0 0 auto; min-width: 200px; }
+    .btn-label-short { display: none; }
     @media (max-width: 599.98px) {
       .header-actions { flex-wrap: nowrap; }
       .header-actions .btn-label { display: none; }
+      .header-actions .btn-label-short { display: inline; }
       .header-actions button { min-width: 0; padding: 0 12px; }
       .header-actions button mat-icon { margin: 0; }
-      .intro-hint { display: inline-flex; }
-      .intro { display: none; }
+      .header-actions .btn-label-short { margin-left: 4px; }
+      .list-search { order: 3; flex: 1 1 100%; margin: 0; }
     }
-    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }
-    .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
+    @media (max-width: 380px) {
+      .header-actions .btn-label-short { display: none; }
+    }
     /* Leerzustand nach docs/DESIGN.md 5.10: globale .empty-state (zentriert, Polster) + leise Schrift. */
     .empty-state { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
 

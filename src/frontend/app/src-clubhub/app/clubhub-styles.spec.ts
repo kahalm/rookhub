@@ -78,11 +78,20 @@ describe('clubhub.scss', () => {
     expect(box.paddingTop).toBe('8px');
   });
 
-  // UI-Sweep 2026-10-11 (d2-c-legal-line): Karte 660 px ≈ 75 Zeichen je Zeile bei 17 px Schrift (vorher 90–95).
-  it('Rechtsseiten: Karte hoechstens 660 px breit', () => {
+  // UI-Sweep 2026-10-11 (d2-c-legal-line): Karte 660 px statt 760 (vorher 90–95 Zeichen). Runde z2
+  // (z2-rk-legal-zeilenlaenge): 660 px ergaben bei 17 px noch ~80 Zeichen — jetzt Textspalte 33em + Polster, ≤ ~75.
+  it('Rechtsseiten: Karte = 33em-Textspalte + 32 px Polster, höchstens ~75 Zeichen je Zeile', () => {
     const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card">
       </div></div></app-privacy></main></ch-root>`);
-    expect(getComputedStyle(el.querySelector('.mat-mdc-card')!).maxWidth).toBe('660px');
+    const card = getComputedStyle(el.querySelector('.mat-mdc-card')!);
+    const fs = parseFloat(card.fontSize);
+    const max = parseFloat(card.maxWidth);
+    expect(max).toBeCloseTo(33 * fs + 32, 0);
+    expect(max).toBeLessThan(660);
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    ctx.font = `${card.fontWeight} ${card.fontSize} ${card.fontFamily}`;
+    const sample = 'Der Knopf unten öffnet in deinem Profil die Karte „Konto löschen“ – bist du nicht angemeldet, meldest du dich zuerst an.';
+    expect((max - 32) / (ctx.measureText(sample).width / sample.length)).withContext('Zeichen je Zeile').toBeLessThanOrEqual(76);
   });
 
   it('Anmelde-Maske außerhalb der Anmeldung bleibt unberührt', () => {
@@ -183,6 +192,10 @@ describe('clubhub.scss', () => {
         expect(contrast(parseColor(s.color), parseColor(s.backgroundColor))).toBeGreaterThanOrEqual(4.5);
         expect(s.borderTopLeftRadius).toBe('8px');
         expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+        // z2-c-loeschknopf-schrift: Beschriftung wie .btn
+        const label = getComputedStyle(btn.querySelector('.mdc-button__label') ?? btn);
+        expect(parseFloat(label.fontSize)).toBeGreaterThanOrEqual(16);
+        expect(Number(label.fontWeight)).toBeGreaterThanOrEqual(700);
       } finally {
         document.documentElement.classList.remove('dark-theme');
         TestBed.resetTestingModule();

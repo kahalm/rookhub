@@ -373,7 +373,7 @@
       "passwordRejected": "Ta lozinka ne može. Uzmi najmanje {{min}} znakova i ništa previše poznato poput „12345678“.",
       "invalid": "Provjeri svoje podatke – nešto još nije u redu.",
       "privacyNote": "Za tvoj račun vrijede naša pravila o privatnosti.",
-      "leaguehubNote": "Time stvaraš RookHub račun. LeagueHub vide samo administratori i klupske grupe klubova sudionika – nakon toga te administrator mora otključati.",
+      "leaguehubNote": "Stvaraš RookHub račun; nakon toga ti administrator otključava LeagueHub.",
       "kids": {
         "parentsTitle": "Za roditelje",
         "parentsText": "Igrati se može i bez računa. Račun molimo otvorite zajedno s roditeljem.",
@@ -614,6 +614,7 @@
     "lastName": "Prezime",
     "searchPlayer": "Pretraži igrača",
     "searchPlayerHint": "Automatski pronalazi FIDE i ChessResults ID.",
+    "searchPlayerNeedsName": "Najprije upiši ime (barem prezime) – tada pretraga pronalazi FIDE i ChessResults ID.",
     "noResults": "Nema rezultata.",
     "email": "E-pošta",
     "emailHint": "Za ponovno postavljanje lozinke. Ostavi prazno za uklanjanje.",
@@ -1484,6 +1485,7 @@
       "pgnNote": "Priloženi PGN može sadržavati vlastite partije ili biti puzzle-PGN u Chessable stilu (FEN i oznake za trening). Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
       "button": "Stvori tečaj",
       "creating": "Stvara se…",
+      "short": "Novi",
       "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
       "failed": "Tečaj nije bilo moguće stvoriti.",
       "toRepertoires": "Na repertoare"
@@ -3204,6 +3206,7 @@
     }
   },
   "stats": {
+    "puzzleRating": "Zagonetka {{rating}}",
     "title": "Statistika",
     "modeStandard": "Standard",
     "modeCourse": "Tečajevi",
@@ -3671,6 +3674,8 @@
     "toConversations": "Na razgovore"
   },
   "reprocess": {
+    "short": { "courses": "{{count}} tečajeva može se ažurirati", "repertoires": "{{count}} repertoara može se ažurirati" },
+    "shortOne": { "courses": "1 tečaj može se ažurirati", "repertoires": "1 repertoar može se ažurirati" },
     "available": {
       "courses": "Tečajeva sa starijom obradom: {{count}} — mogu se ažurirati, npr. za prikaz komentara poteza iz knjige.",
       "repertoires": "Repertoara sa starijom obradom: {{count}} — mogu se ažurirati."
@@ -3692,7 +3697,6 @@
       "repertoires": "Ovaj repertoar potječe iz starije obrade i ovdje se ne može ažurirati. Dohvati ga ponovno pomoću proširenja RepCheck kako bi bio aktualan."
     },
     "update": "Ažuriraj ({{count}})",
-    "updateAll": "Ažuriraj sve ({{count}})",
     "updateTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (predmemorirane idu odmah, bez preuzimanja).",
     "working": "Ažuriranje…",
     "started": "Ažuriranje pokrenuto — radi u pozadini.",
@@ -3953,6 +3957,7 @@
     "ownGames": "Vlastite analize",
     "filterAll": "Sve",
     "filterAnnotated": "Komentirane",
+    "filterAnnotatedOnly": "Samo komentirane",
     "filterLabel": "Filtriraj partije",
     "sort": {
       "label": "Poredaj",
@@ -4299,8 +4304,8 @@
         "show": "Prikaži",
         "report": "Prijavi"
       },
-      "sameName": "još jedna skupina?",
-      "sameNameHint": "Turnir istog imena istog dana prikazan je kao zasebna kartica — vjerojatno još jedna skupina istog događaja. Razlikuju se po broju sudionika."
+      "sameName": "{{index}} od {{total}} istog imena",
+      "sameNameHint": "Stoje jedan uz drugi — vjerojatno još jedna skupina istog događaja; razlikuju se po broju sudionika."
     },
     "source": {
       "Unknown": "Nepoznat izvor",
@@ -4332,6 +4337,7 @@
     "toRookHub": "Na RookHub",
     "authIntro": {
       "login": "Kalendar turnira s pretragom po udaljenosti i obavijestima o novim turnirima u blizini, favoriti i tvoji odigrani turniri – besplatno. Već imaš RookHub račun? Prijavi se njime.",
+      "loginShort": "Besplatno – tvoj RookHub račun vrijedi i ovdje.",
       "register": "Tvoj račun vrijedi i za RookHub – zagonetke, tečajevi i analiza s istom prijavom."
     },
     "profile": {
@@ -4580,6 +4586,7 @@
     "intro": "Zabilježi ono čega se još sjećaš iz partije i zatvori praznine.",
     "introMore": "Na primjer prve poteze, pojedine pozicije ili kratke nizove poteza — praznine između zatvaraš korak po korak.",
     "newTitle": "Naslov",
+    "createLabel": "Nova rekonstrukcija – naslov",
     "newTitlePlaceholder": "Klupsko prvenstvo, 3. kolo",
     "create": "Stvori",
     "open": "Otvori",

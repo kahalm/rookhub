@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { HelpHintComponent } from '../help-hint/help-hint.component';
 
 interface ReprocessStatus {
   currentVersion: number; total: number; stale: number;
@@ -27,26 +28,31 @@ interface ReprocessStatus {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-reprocess-banner',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe, HelpHintComponent],
   template: `
     @if (visible) {
       <div class="reprocess-banner">
         <mat-icon class="rb-icon">auto_fix_high</mat-icon>
         <!-- UI-Sweep 2026-10-11 (d2-rk-courses-zwei-banner): Eltern können einen zweiten Satz hineinreichen
              (z. B. „N brauchen einen neuen Import"), damit über der Liste nur EIN Banner steht (DESIGN 4.6/6). -->
+        <!-- UI-Sweep z2 (z2-rk-courses-vorlauf, z2-rk-rep-liste-vorlauf-admin): sichtbar steht nur der Kurzsatz
+             („4 Kurse können aktualisiert werden"); der lange Satz samt Admin-Zusatz „aller Nutzer, davon eigene" liegt
+             im ⓘ. Der Knopf ist ein Textknopf rechts oben in der ersten Zeile (kein eigener umbrechender Eintrag). -->
         <span class="rb-text">
-          {{ textKey | translate: { count: actionableCount, own: status?.ownActionable ?? 0 } }}
+          <span class="rb-lead">{{ shortKey | translate: { count: actionableCount } }}
+            <app-help-hint icon="info_outline"
+              [text]="textKey | translate: { count: actionableCount, own: status?.ownActionable ?? 0 }" /></span>
           <ng-content />
         </span>
         @if (allCount > 0) {
           <!-- EIN Aktualisieren-Knopf: bereitet lokal aus der gespeicherten Quelle auf und holt
                Chessable-Kurse per Re-Fetch (gecachte laufen dabei netzfrei über die Fast-Lane). -->
-          <button mat-stroked-button (click)="run()" [disabled]="working"
+          <button mat-button class="rb-btn" (click)="run()" [disabled]="working"
                   [matTooltip]="'reprocess.updateTip' | translate">
             <!-- UI-Sweep 2026-10-11 (d1-rk-update-all-icon-misaligned): Symbol und Text je in eigenem Zweig mit EINER Wurzel —
                  mit beidem in einem Zweig landete das Symbol nicht im Icon-Platz des Knopfs und saß 8 px zu hoch. -->
             @if (working) { <mat-spinner diameter="16" class="rb-spin"></mat-spinner> } @else { <mat-icon>refresh</mat-icon> }
-            {{ working ? ('reprocess.working' | translate) : ((status?.allUsers ? 'reprocess.updateAll' : 'reprocess.update') | translate: { count: allCount }) }}
+            {{ working ? ('reprocess.working' | translate) : ('reprocess.update' | translate: { count: allCount }) }}
           </button>
         }
       </div>
@@ -54,13 +60,15 @@ interface ReprocessStatus {
   `,
   styles: [`
     .reprocess-banner {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      margin: 0 0 1.25rem; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem;
+      display: flex; align-items: flex-start; gap: 8px; flex-wrap: nowrap;
+      margin: 0 0 1rem; padding: 6px 6px 6px 12px; border-radius: 8px; font-size: 0.9rem;
       background: color-mix(in srgb, var(--rh-warn) 16%, transparent);
       border: 1px solid color-mix(in srgb, var(--rh-warn) 35%, transparent);
     }
-    .rb-icon { flex: 0 0 auto; color: var(--rh-warn); }
-    .rb-text { flex: 1 1 220px; }
+    .rb-icon { flex: 0 0 auto; color: var(--rh-warn); margin-top: 8px; }
+    .rb-text { flex: 1 1 auto; min-width: 0; padding: 9px 0; line-height: 1.35; }
+    .rb-lead app-help-hint { margin-left: 2px; }
+    .rb-btn { flex: 0 0 auto; }
     .rb-spin { display: inline-block; vertical-align: middle; margin-right: 6px; }
   `]
 })
@@ -88,6 +96,13 @@ export class ReprocessBannerComponent implements OnInit {
   get textKey(): string {
     const one = this.actionableCount === 1 ? 'One' : '';
     return `reprocess.available${this.status?.allUsers ? 'All' : ''}${one}.${this.section}`;
+  }
+
+  /** UI-Sweep z2: sichtbarer Kurzsatz (ohne Admin-Zusatz) — der lange Text steht im ⓘ. */
+  get shortKey(): string {
+    const one = this.actionableCount === 1;
+    if (this.section === 'repertoires') return one ? 'reprocess.shortOne.repertoires' : 'reprocess.short.repertoires';
+    return one ? 'reprocess.shortOne.courses' : 'reprocess.short.courses';
   }
 
   constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}

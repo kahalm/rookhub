@@ -148,6 +148,8 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
     .ta-mail { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
     /* Ohne E-Mail schob nichts den Knopf nach rechts — er sprang von Zeile zu Zeile (z1-t-admin-knopf-springt). */
     .ta-users li > button, .ta-self { margin-left: auto; }
+    /* So hoch wie der 40-px-Knopf der übrigen Zeilen — der Listentakt sprang sonst an der eigenen Zeile (z2-t-admin-eigene-zeile). */
+    .ta-self { min-height: 40px; display: inline-flex; align-items: center; }
     .ta-more { margin: 12px 0 0; }
   `],
 })

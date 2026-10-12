@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ChangeDetectionStrategy, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ChangeDetectionStrategy, DestroyRef, ElementRef, NgZone, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
@@ -214,7 +214,10 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
                  neben der Karte statt ueber dem Text. -->
             <div class="to-toc-bar">
               @if (tocAway()) {
-                <a class="to-toc" [href]="tocHref('privacy-toc-title')" (click)="toToc($event)"
+                <!-- UI-Sweep z2 (z2-rk-privacy-knopf-handy): unter 1200 px liegt der Knopf ueber dem Text und verdeckte beim
+                     Lesen das letzte Wort der Zeile — dort erst beim Hochscrollen sichtbar (Klasse idle blendet aus; mit
+                     Tastaturfokus immer sichtbar). -->
+                <a class="to-toc" [class.idle]="!scrollingUp()" [href]="tocHref('privacy-toc-title')" (click)="toToc($event)"
                    [attr.aria-label]="'legal.privacy.tocTitle' | translate" [title]="'legal.privacy.tocTitle' | translate">
                   <span aria-hidden="true">↑</span>
                 </a>
@@ -256,6 +259,37 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
       .to-toc-bar { height: 0; bottom: 16px; margin-right: 0; align-items: flex-end; }
       .to-toc { transform: translateX(calc(100% + 32px)); }
     }
+    /* z2-rk-privacy-knopf-handy: ueber dem Text (unter 1200 px) nur beim Hochscrollen; mit Tastaturfokus sichtbar. */
+    .to-toc { transition: opacity 150ms; }
+    @media (max-width: 1199px) {
+      .to-toc.idle:not(:focus-visible) { opacity: 0; pointer-events: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .to-toc { transition: none; } }
+    /* LeagueHub am Handy (z2-l-datenschutz-laenge): Abschnitte ab dem dritten als Aufklapper. Die <details> entstehen zur
+       Laufzeit (foldSections) und tragen kein _ngcontent — daher ::ng-deep unter :host. Farben ueber die Theme-Token,
+       die LeagueHub auf Rot/Linie setzt (leaguehub.scss, Rechtsseiten). */
+    :host ::ng-deep details.legal-fold { border-top: 1px solid var(--mat-sys-outline, #888); }
+    :host ::ng-deep details.legal-fold:last-of-type { border-bottom: 1px solid var(--mat-sys-outline, #888); }
+    :host ::ng-deep details.legal-fold > summary {
+      display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none;
+    }
+    :host ::ng-deep details.legal-fold > summary::-webkit-details-marker { display: none; }
+    :host ::ng-deep details.legal-fold > summary::before {
+      content: '▸' / ''; flex: none; width: 1em; color: var(--mat-sys-primary); font-weight: bold; transition: transform 150ms;
+    }
+    :host ::ng-deep details.legal-fold[open] > summary::before { transform: rotate(90deg); }
+    :host ::ng-deep details.legal-fold > summary h2 { margin: 0; flex: 1; }
+    :host ::ng-deep details.legal-fold > summary:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
+    :host ::ng-deep details.legal-fold[open] { padding-bottom: 0.5rem; }
+    :host ::ng-deep details.legal-fold > p, :host ::ng-deep details.legal-fold > ul li { line-height: 1.55; }
+    :host ::ng-deep details.legal-fold > ul > li + li { margin-top: 0.5rem; }
+    @media (prefers-reduced-motion: reduce) { :host ::ng-deep details.legal-fold > summary::before { transition: none; } }
+    /* Druck: alles offen (beforeprint klappt die Abschnitte ohnehin aus; das hier fuer Browser ohne das Ereignis). */
+    @media print {
+      :host ::ng-deep details.legal-fold::details-content { content-visibility: visible; display: contents; }
+      :host ::ng-deep details.legal-fold > summary::before { content: none; }
+      .to-toc-bar { display: none; }
+    }
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }
@@ -271,12 +305,23 @@ export class PrivacyComponent implements AfterViewInit {
   private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
   private readonly tocNav = viewChild<ElementRef<HTMLElement>>('tocNav');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly zone = inject(NgZone);
 
   /** Inhaltsverzeichnis offen? Nur auf grossen Bildschirmen (ab 769 px breit UND 900 px hoch) — am Handy
    *  (d2-t-privacy-toc-mobile) und am Laptop (z1-rk-privacy-toc-offen) zugeklappt. */
   readonly tocOpen = signal(PrivacyComponent.wideScreen());
   /** Ist das Verzeichnis nach oben aus dem Bild gescrollt? Dann steht unten rechts „↑ Inhalt". */
   readonly tocAway = signal(false);
+  /** Wird gerade nach oben gescrollt? Nur dann zeigt sich „↑ Inhalt" ueber dem Text (z2-rk-privacy-knopf-handy). */
+  readonly scrollingUp = signal(false);
+
+  /** Ab dieser Breite bleiben in LeagueHub alle Abschnitte offen; darunter klappt {@link foldSections} sie zu. */
+  static readonly SECTIONS_OPEN_QUERY = '(min-width: 600px)';
+  /** Wie viele Abschnitte (h2) am Handy offen bleiben: Verantwortlicher und der LeagueHub-Abschnitt (Einleitung hat keine h2). */
+  static readonly OPEN_SECTIONS = 2;
+  /** Klasse der zur Laufzeit erzeugten Aufklapper. */
+  static readonly FOLD_CLASS = 'legal-fold';
 
   static readonly TOC_OPEN_QUERY = '(min-width: 769px) and (min-height: 900px)';
 
@@ -285,11 +330,114 @@ export class PrivacyComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    this.setupSectionFolding();
+    this.watchScrollDirection();
     const nav = this.tocNav()?.nativeElement;
     if (!nav || typeof IntersectionObserver !== 'function') return;
     const io = new IntersectionObserver(([e]) => this.tocAway.set(!e.isIntersecting && e.boundingClientRect.top < 0));
     io.observe(nav);
     this.destroyRef.onDestroy(() => io.disconnect());
+  }
+
+  /** Scrollrichtung fuer „↑ Inhalt" — jeder Scroller (Fenster oder Huellen-Container), ausserhalb der Zone. */
+  private watchScrollDirection(): void {
+    if (typeof document === 'undefined') return;
+    let lastTarget: EventTarget | null = null;
+    let lastY = 0;
+    const onScroll = (e: Event) => {
+      const t = e.target;
+      const y = t === document || t === document.documentElement ? window.scrollY : (t as Element).scrollTop ?? 0;
+      if (t !== lastTarget) { lastTarget = t; lastY = y; return; }
+      const dy = y - lastY;
+      if (Math.abs(dy) < 6) return;
+      lastY = y;
+      const up = dy < 0;
+      if (up !== this.scrollingUp()) this.zone.run(() => this.scrollingUp.set(up));
+    };
+    this.zone.runOutsideAngular(() => document.addEventListener('scroll', onScroll, { capture: true, passive: true }));
+    this.destroyRef.onDestroy(() => document.removeEventListener('scroll', onScroll, { capture: true }));
+  }
+
+  /**
+   * LeagueHub am Handy (z2-l-datenschutz-laenge, vom User freigegeben): offen war die Seite auf 390 px 12 Bildschirme
+   * lang. Unter 600 px kommt jeder Abschnitt ab dem dritten in ein zugeklapptes `<details>`, seine Ueberschrift (h2 mit
+   * `id`) wird das `<summary>`. Verschoben werden die von Angular gezeichneten Knoten selbst (wie KidHubs foldPrivacy) —
+   * ihre Bindungen bleiben; die Bedingungen der Seite haengen nur an LEGAL_SITE. Breiter und in allen anderen
+   * Oberflaechen unveraendert offen; Wechsel der Breite und der Druck (beforeprint) klappen zurueck aus.
+   */
+  private setupSectionFolding(): void {
+    if (this.kind !== 'leaguehub' || typeof matchMedia !== 'function') return;
+    const mql = matchMedia(PrivacyComponent.SECTIONS_OPEN_QUERY);
+    const apply = () => (mql.matches ? this.unfoldSections() : this.foldSections());
+    apply();
+    const onHash = () => this.revealHash(true);
+    const onBefore = () => this.unfoldSections();
+    const onAfter = () => apply();
+    mql.addEventListener?.('change', apply);
+    window.addEventListener('hashchange', onHash);
+    window.addEventListener('beforeprint', onBefore);
+    window.addEventListener('afterprint', onAfter);
+    this.destroyRef.onDestroy(() => {
+      mql.removeEventListener?.('change', apply);
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener('beforeprint', onBefore);
+      window.removeEventListener('afterprint', onAfter);
+    });
+    // Mit Sprungmarke aufgerufen (#privacy-rights): erst aufklappen, dann hinscrollen — nach dem ersten Zeichnen.
+    setTimeout(() => this.revealHash(false));
+  }
+
+  private content(): HTMLElement | null {
+    return this.host.nativeElement.querySelector('mat-card-content');
+  }
+
+  /** Abschnitte ab dem dritten in zugeklappte `<details>`; ein zweiter Aufruf aendert nichts. */
+  foldSections(): void {
+    const content = this.content();
+    if (!content || content.querySelector(`:scope > details.${PrivacyComponent.FOLD_CLASS}`)) return;
+    const doc = content.ownerDocument;
+    const heads = Array.from(content.children).filter(el => el.tagName === 'H2').slice(PrivacyComponent.OPEN_SECTIONS);
+    for (const head of heads) {
+      const body: Node[] = [];
+      for (let n = head.nextSibling; n; n = n.nextSibling) {
+        if (n instanceof Element && (n.tagName === 'H2' || n.matches('.back, .to-toc-bar'))) break;
+        body.push(n);
+      }
+      const details = doc.createElement('details');
+      details.className = PrivacyComponent.FOLD_CLASS;
+      const summary = doc.createElement('summary');
+      head.before(details);
+      summary.append(head);
+      details.append(summary, ...body);
+    }
+  }
+
+  /** Aufklapper aufloesen: Ueberschrift und Inhalt wieder an ihre Stelle. */
+  unfoldSections(): void {
+    const content = this.content();
+    if (!content) return;
+    for (const d of Array.from(content.querySelectorAll<HTMLDetailsElement>(`:scope > details.${PrivacyComponent.FOLD_CLASS}`))) {
+      const summary = d.querySelector(':scope > summary');
+      d.replaceWith(...Array.from(summary?.childNodes ?? []), ...Array.from(d.childNodes).filter(n => n !== summary));
+    }
+  }
+
+  /** Oeffnet den Aufklapper, in dem `target` steht (falls zugeklappt). */
+  private openFor(target: Element): void {
+    const d = target.closest<HTMLDetailsElement>(`details.${PrivacyComponent.FOLD_CLASS}`);
+    if (d) d.open = true;
+  }
+
+  /** Sprungmarke der Adresse: Ziel aufklappen und hinscrollen (nur wenn es in einem Aufklapper steht oder `always`). */
+  private revealHash(always: boolean): void {
+    const id = decodeURIComponent((typeof location !== 'undefined' ? location.hash : '').replace(/^#/, ''));
+    const target = id ? document.getElementById(id) : null;
+    if (!target || !this.host.nativeElement.contains(target)) return;
+    const folded = !!target.closest(`details.${PrivacyComponent.FOLD_CLASS}`);
+    if (!folded && !always) return;
+    this.openFor(target);
+    target.scrollIntoView({ block: 'start' });
+    target.focus?.({ preventScroll: true });
   }
 
   /** „↑ Inhalt": zum Verzeichnis, aufgeklappt, Fokus auf seinen Kopf. */
@@ -335,6 +483,7 @@ export class PrivacyComponent implements AfterViewInit {
     const target = document.getElementById(id);
     if (!target) return;
     e.preventDefault();
+    this.openFor(target);
     target.scrollIntoView({ block: 'start' });
     target.focus({ preventScroll: true });
   }

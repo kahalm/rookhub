@@ -83,8 +83,12 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
         <mat-card class="headers" [class.open]="headersOpen()">
           <!-- Handy (d2-rk-edit-handy-angaben): Angaben als zugeklappte Zeile, damit das Brett über der Falz beginnt; offen nur,
                wenn ein Name fehlt. Ab 769 px stehen die Felder immer offen, der Knopf ist dort ausgeblendet. -->
-          <button type="button" class="headers-toggle" (click)="headersOpen.set(!headersOpen())" [attr.aria-expanded]="headersOpen()">
-            <span class="ht-text">{{ 'games.edit.headersSummary' | translate: { white: header.white || '?', black: header.black || '?', result: header.result } }}</span>
+          <!-- z2-rk-edit-angaben-ergebnis: Namen und Ergebnis getrennt — gekürzt werden nur die Namen, das Ergebnis bleibt
+               sichtbar; der volle Satz „Angaben: … · 1-0" bleibt als Vorlesetext. -->
+          <button type="button" class="headers-toggle" (click)="headersOpen.set(!headersOpen())" [attr.aria-expanded]="headersOpen()"
+                  [attr.aria-label]="'games.edit.headersSummary' | translate: { white: header.white || '?', black: header.black || '?', result: header.result }">
+            <span class="ht-names" [title]="(header.white || '?') + ' – ' + (header.black || '?')">{{ header.white || '?' }} – {{ header.black || '?' }}</span>
+            <span class="ht-result">{{ header.result }}</span>
             <mat-icon>{{ headersOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
           <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.white' | translate }}</mat-label>
@@ -334,7 +338,8 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     @media (max-width: 768px) {
       .headers-toggle { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px;
         padding: 4px 2px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-      .headers-toggle .ht-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .headers-toggle .ht-names { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .headers-toggle .ht-result { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
       .headers:not(.open) > :not(.headers-toggle) { display: none; }
     }
     @media (max-width: 768px) { .class-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .class-row .tags-input { grid-column: 1 / -1; } }

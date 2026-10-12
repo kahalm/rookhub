@@ -1,3 +1,5 @@
+import { isAuthUrl } from './kids-auth';
+
 /**
  * Aufbau der Aufgabenseite (Stufe, Endlos, Kurs) je Fenster — EINE Stelle fuer alle Komponenten, die daran
  * haengen: die App-Huelle setzt dazu die Groessen (`--kid-board`, `--kid-row`), `KidsPuzzleComponent` das Raster,
@@ -81,17 +83,28 @@ export const KID_COORDS = `
 export const KID_PAGE_WIDTH = { home: 1160, map: 980, list: 820, legal: 620 } as const;
 
 /**
+ * Startseite und Karten wachsen am großen Bildschirm mit (DESIGN 4.6 Regel 4): bis zum Laptop gelten die festen Werte
+ * oben, bei 1920 px wird die Startseite 1520 px breit (vier Kacheln ≈ 360 px, z2-k-start-kacheln-breit) und die
+ * Stufen-/Sternenkarte ≈ 1440 px (9 Spalten, 40 Stufen in 5 Reihen statt 7, z2-k-karten-breit).
+ */
+export const KID_HOME_WIDTH = `clamp(${KID_PAGE_WIDTH.home}px, calc(100vw - 400px), 1520px)`;
+export const KID_MAP_WIDTH = `clamp(${KID_PAGE_WIDTH.map}px, 75vw, 1480px)`;
+/** Anmelde-Masken: Kopfzeile so breit wie „← Start" und die 400-px-Karte darunter (z2-k-auth-logo). */
+export const KID_AUTH_WIDTH = 432;
+
+/**
  * Breite der Kopfzeile fuer die Seite unter `url` (CSS-Wert). Aufgabenseiten (Stufe, Endlos, Sternenjagd, Kurs)
  * richten ihre Titelzeile an `--kid-row` aus (Brett + Spalte daneben), dazu die 16 px Polsterung je Seite.
  */
 export function kidPageWidth(url: string): string {
   const path = url.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
   if (/^\/(levels|stars|courses)\/[^/]+$/.test(path) || path === '/endless') return 'calc(var(--kid-row, 1068px) + 32px)';
-  if (path === '/') return `${KID_PAGE_WIDTH.home}px`;
+  if (path === '/') return KID_HOME_WIDTH;
   if (path === '/courses') return `${KID_PAGE_WIDTH.list}px`;
+  if (isAuthUrl(path)) return `${KID_AUTH_WIDTH}px`;
   // Rechtsseiten (Datenschutz, Konto loeschen: d1-k-account-deletion-style) — Kopfzeile so breit wie ihre Karte.
   if (path === '/privacy' || path === '/account-deletion') return `${KID_PAGE_WIDTH.legal}px`;
-  return `${KID_PAGE_WIDTH.map}px`;
+  return KID_MAP_WIDTH;
 }
 
 /**

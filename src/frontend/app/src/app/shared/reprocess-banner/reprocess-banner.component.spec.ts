@@ -55,6 +55,29 @@ describe('ReprocessBannerComponent', () => {
     expect(c.textKey).toBe('reprocess.availableAllOne.courses');
   });
 
+  // UI-Sweep z2 (z2-rk-courses-vorlauf, z2-rk-rep-liste-vorlauf-admin): sichtbar nur der Kurzsatz, der lange Text
+  // (samt „aller Nutzer, davon eigene") im ⓘ; der Knopf ist ein Textknopf in derselben Zeile.
+  it('zeigt den Kurzsatz, legt den langen Text ins ⓘ und nutzt einen Textknopf', () => {
+    const fixture = TestBed.createComponent(ReprocessBannerComponent);
+    fixture.componentInstance.section = 'repertoires';
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/repertoires/reprocess/status').flush(
+      { currentVersion: 2, total: 13, stale: 13, reprocessableLocally: 13, refetchable: 0, needsReimport: 0,
+        allUsers: true, ownActionable: 1 });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const c = fixture.componentInstance;
+    expect(c.shortKey).toBe('reprocess.short.repertoires');
+    expect(el.querySelector('.rb-lead')!.textContent).toContain('reprocess.short.repertoires');
+    expect(el.querySelector('.rb-lead app-help-hint')).not.toBeNull();
+    const btn = el.querySelector('.reprocess-banner button.rb-btn') as HTMLElement;
+    expect(btn.classList).toContain('mat-mdc-button');
+    expect(btn.classList).not.toContain('mat-mdc-outlined-button');
+    expect(getComputedStyle(el.querySelector('.reprocess-banner')!).flexWrap).toBe('nowrap');
+    c.status = { ...c.status!, reprocessableLocally: 1 };
+    expect(c.shortKey).toBe('reprocess.shortOne.repertoires');
+  });
+
   it('Zählungen = 0 ohne Status', () => {
     const c = createComponent();
     expect(c.allCount).toBe(0);

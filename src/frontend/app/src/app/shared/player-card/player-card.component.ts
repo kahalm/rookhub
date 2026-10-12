@@ -72,7 +72,7 @@ type Show = 'w' | 's' | 'b';
             <!-- Bedienzeile in einer Hülle: die Spielervorbereitung legt Farbwahl, Filter und Werkzeuge in EINE umbrechende
                  Zeile und klappt am Handy alles außer der Farbwahl hinter „Filter ▾" (prep-card.scss, z1-rk-prep-vorlauf).
                  In LeagueHub bleibt alles untereinander, den Klappknopf gibt es nur inline. -->
-            <div class="controls" [class.open]="controlsOpen()">
+            <div class="controls" [class.open]="controlsOpen()" [class.tools-open]="toolsOpen()">
             <div class="actions">
               @if (c.n) {
                 <div class="seg" role="group" aria-label="Farbe">
@@ -84,6 +84,10 @@ type Show = 'w' | 's' | 'b';
               @if (inline()) {
                 <button type="button" class="btn-sec ctl-toggle" [attr.aria-expanded]="controlsOpen()"
                         (click)="controlsOpen.set(!controlsOpen())">Filter {{ controlsOpen() ? '▴' : '▾' }}</button>
+                <!-- z2-rk-prep-filter-aktionen: PGN, Eröffnungsbaum und Trainingslinien sind Werkzeuge, keine Filter — am
+                     Handy hinter einem eigenen ⋮ statt hinter „Filter ▾". -->
+                <button type="button" class="btn-sec ctl-tools" [attr.aria-expanded]="toolsOpen()" aria-label="Werkzeuge"
+                        title="Werkzeuge" (click)="toolsOpen.set(!toolsOpen())">⋮</button>
               }
               @if (c.n) {
                 <button type="button" class="btn-sec" (click)="download(c)">PGN herunterladen ({{ c.n }} Partien)</button>
@@ -215,6 +219,8 @@ export class PlayerCardComponent {
   readonly training = signal(false);
   /** Spielervorbereitung am Handy: Filter und Werkzeuge aufgeklappt (Vorgabe zu, z1-rk-prep-vorlauf). */
   readonly controlsOpen = signal(false);
+  /** Spielervorbereitung am Handy: Werkzeuge (PGN, Eröffnungsbaum, Trainingslinien) hinter ⋮ aufgeklappt (z2-rk-prep-filter-aktionen). */
+  readonly toolsOpen = signal(false);
   /** Als Teil einer Seite statt als Dialog darüber (Spielervorbereitung): ohne Abdunkeln, schließt nicht beim Klick daneben. */
   readonly inline = input(false);
   /** Eigener Hinweis zu den Quellen statt des LeagueHub-Textes. */

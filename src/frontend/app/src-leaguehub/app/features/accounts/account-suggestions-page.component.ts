@@ -71,15 +71,18 @@ export function filterGroups<T extends { name: string; team: string | null }>(gr
             @if (query()) { <span class="small muted">{{ filtered().length }} von {{ groups().length }} Spielern</span> }
           </div>
         }
-        @for (g of visible(); track g.fide) {
-          <article class="sugg-group">
-            <h3><button type="button" class="btn-link sugg-name" (click)="openCard(g.fide)">{{ g.name }}</button>
-              @if (g.team) { <span class="muted small">{{ g.team }}</span> }</h3>
-            <lh-account-suggestions [items]="g.items" (decided)="onDecided($event)" />
-          </article>
-        } @empty {
-          @if (!loading() && !error()) { <p class="muted">{{ query() && groups().length ? 'Kein Spieler passt zur Suche.' : 'Keine offenen Vorschläge.' }}</p> }
-        }
+        <!-- z2-l-konten-spalten: ab 1280 px fließen die Spieler in zwei Spalten; wer mehrere Vorschläge hat, nimmt die volle Breite. -->
+        <div class="sugg-groups">
+          @for (g of visible(); track g.fide) {
+            <article class="sugg-group" [class.multi]="g.items.length > 1">
+              <h3><button type="button" class="btn-link sugg-name" (click)="openCard(g.fide)">{{ g.name }}</button>
+                @if (g.team) { <span class="muted small">{{ g.team }}</span> }</h3>
+              <lh-account-suggestions [items]="g.items" (decided)="onDecided($event)" />
+            </article>
+          } @empty {
+            @if (!loading() && !error()) { <p class="muted">{{ query() && groups().length ? 'Kein Spieler passt zur Suche.' : 'Keine offenen Vorschläge.' }}</p> }
+          }
+        </div>
         @if (rest(); as r) {
           <p class="sugg-more"><button type="button" class="btn-sec" (click)="shown.set(shown() + pageSize)">Weitere {{ nextCount() }} von {{ r }}</button></p>
         }

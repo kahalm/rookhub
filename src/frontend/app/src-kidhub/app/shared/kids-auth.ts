@@ -28,9 +28,14 @@ export const KID_AUTH_STYLES = `
     --mat-card-title-text-weight: 800;
     --mat-card-title-text-line-height: 1.2;
     --mat-form-field-outlined-container-shape: 14px;
+    /* z2-k-register-hinweise: Feldhinweise („Ein Spitzname …") in Kinderschrift statt Materials 12 px. */
+    --mat-form-field-subscript-text-size: 1rem;
+    --mat-form-field-subscript-text-line-height: 1.35;
     color: #1f2d3d; box-shadow: 0 6px 0 var(--kid-shadow); padding: 6px 4px 10px;
   }
   :host ::ng-deep ${MASKS} .mat-mdc-card-title { color: var(--kid-title); }
+  /* z2-k-register-hinweise: „Für Eltern: Was wir speichern …" nicht in 0.8rem. */
+  :host ::ng-deep ${MASKS} .privacy-note { font-size: 1rem; }
   /* UI-Sweep 2026-10-11 (d1-k-kid-primary-button-restyled): die geteilten Masken nutzen seit 0.752.0 mat-flat-button —
      die Variablen heißen dort --mat-button-filled-*, die alten protected-* griffen nicht mehr (Knopf war blau und klein). */
   :host ::ng-deep ${MASKS} .auth-form button[type=submit] {

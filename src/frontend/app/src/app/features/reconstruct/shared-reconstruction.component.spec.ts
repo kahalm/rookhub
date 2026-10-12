@@ -117,6 +117,16 @@ describe('SharedReconstructionComponent', () => {
     expect(c.stepIndex).toBe(0);
   });
 
+  // z2-rk-shared-recon-blaettern: die Brettgröße rechnet Kopf UND Blätter-Leiste ab (330 px), sonst lag die Leiste am
+  // Laptop (768 px hoch) unter der Falz.
+  it('rechnet für die Brettgröße Kopf und Blätter-Leiste ab', async () => {
+    const { fixture } = await setup();
+    fixture.detectChanges();
+    const page = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.shared-page')!;
+    const size = getComputedStyle(page).getPropertyValue('--board-size').replace(/\s+/g, ' ');
+    expect(size).toContain('100svh - 330px');
+  });
+
   it('zeigt die Züge in den Figurenbuchstaben der Oberfläche und „1 Lücke" in der Einzahl', async () => {
     const { fixture, http } = await setup();
     const translate = TestBed.inject(TranslateService);

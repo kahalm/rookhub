@@ -44,7 +44,13 @@ export function tallyText(present: number, total: number): string {
       <!-- UI-Sweep 2026-10-11 (r2-c-gate-deadend): gemeinsame Sperrkarte mit Weg zur Startseite -->
       <ch-gate area="Die Anwesenheit erfassen nur Trainer und die Vereinsleitung." />
     } @else if (group(); as g) {
-      <h1>Wer ist da?</h1>
+      <!-- Zählstand rechts in der Titelzeile statt eigener Zeile über der Liste (z2-c-attendance-lead). -->
+      <div class="att-head">
+        <h1>Wer ist da?</h1>
+        @if (g.members.length || g.coaches.length) {
+          <p class="tally"><strong aria-live="polite">{{ tally() }}</strong></p>
+        }
+      </div>
       <!-- Gruppe/Datum und Blätterzeile in EINER Zeile, „Was wurde gemacht?" unter der Liste (d2-c-attendance-lead: die
            Abhakliste begann erst bei 70 % der Höhe). -->
       <div class="roll-meta">
@@ -59,7 +65,8 @@ export function tallyText(present: number, total: number): string {
       <div class="roll-head">
         <!-- TT.MM.JJJJ statt <input type="date">: das zeigt das Format des Browsers (en-US 10/09/2026 = der 10. September?).
              Der Kalender bleibt erreichbar — der Knopf öffnet ein verstecktes natives Datumsfeld. -->
-        <label class="field"><span>Tag der Einheit</span>
+        <!-- Feldnamen nur für Vorleser, sichtbar bleibt der Platzhalter (z2-c-attendance-lead). -->
+        <label class="field"><span class="sr-only">Tag der Einheit</span>
           <span class="day-input">
             <input name="date" inputmode="numeric" autocomplete="off" placeholder="TT.MM.JJJJ" [value]="day(date())"
               (change)="typeDate($any($event.target))" (keydown.enter)="$any($event.target).blur()">
@@ -70,8 +77,8 @@ export function tallyText(present: number, total: number): string {
           </span>
           @if (dateError()) { <span class="hint err">So nicht lesbar — bitte als TT.MM.JJJJ, z. B. 09.10.2026.</span> }
         </label>
-        <label class="field"><span>Thema</span>
-          <input name="topic" autocomplete="off" maxlength="200" placeholder="z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
+        <label class="field"><span class="sr-only">Thema</span>
+          <input name="topic" autocomplete="off" maxlength="200" placeholder="Thema, z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
       </div>
       @if (session()) { <p class="muted small existing">Für diesen Tag ist schon eine Einheit erfasst — du änderst sie.</p> }
 
@@ -81,9 +88,6 @@ export function tallyText(present: number, total: number): string {
           <a class="btn primary" routerLink="/kind/neu" [queryParams]="{ gruppe: g.id }">Kind anlegen</a>
         </div>
       } @else {
-        <div class="tally">
-          <strong aria-live="polite">{{ tally() }}</strong>
-        </div>
         <ul class="roll">
           @for (m of g.members; track m.id) {
             <li [class.present]="marks()[m.id] === 'present'">

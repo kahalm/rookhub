@@ -260,6 +260,25 @@ describe('KidHub: Aufgabenseite je Fenstergroesse', () => {
     });
   }
 
+  // z2-k-endless-zaehler: hochkant rutschte die Zähler-Pille „✓ 0" allein in eine zweite Zeile.
+  for (const lang of ['de', 'hu', 'hr']) {
+    it(`Handy hochkant, Endlos auf ${lang}: Start, Titel, Herzen und Zähler in EINER Zeile`, async () => {
+      const page = await renderPage('/endless', lang, {});
+      for (const [w, h] of [[360, 780], [390, 844]] as const) {
+        const l = layoutAt(page, w, h);
+        const label = `${lang} ${w}×${h}`;
+        expect(l.head.height).withContext(`${label}: Titelzeile ${l.head.height} px hoch`).toBeLessThanOrEqual(48);
+        let prevRight = l.head.left;
+        for (const { name, box } of l.headItems) {
+          expect(box.left).withContext(`${label}: ${name} ueberlappt seinen Vorgaenger`).toBeGreaterThanOrEqual(prevRight - 0.5);
+          expect(box.right).withContext(`${label}: ${name} ragt aus der Titelzeile`).toBeLessThanOrEqual(l.head.right + 0.5);
+          prevRight = box.right;
+        }
+        expect(l.headItems.find(i => i.name.includes('score'))).withContext(`${label}: Zähler da`).toBeDefined();
+      }
+    });
+  }
+
   it('Handy quer, Kurs mit langem Titel: einzeilige Kopfzeile, das ganze Brett im Bild', async () => {
     const page = await renderPage('/courses/7', 'hr', {
       course: courseLines('Prvi koraci u šahu – taktika za mlade igrače, svezak 2: viljuška, vezivanje i ražanj', 24),

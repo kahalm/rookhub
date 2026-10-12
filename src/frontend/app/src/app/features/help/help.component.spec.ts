@@ -224,9 +224,48 @@ describe('HelpComponent', () => {
       expect(el.querySelector('.help-toc summary')!.textContent).toContain(`${cmp.sections.length} topics`);
     });
 
-    it('ab 1280 px steht das Verzeichnis offen daneben', async () => {
-      const { el } = await render(true);
-      expect(el.querySelector<HTMLDetailsElement>('.help-toc details')!.open).toBeTrue();
+    // Runde z2 (z2-rk-help-toc): ab 1280 px schlichte Überschrift ohne Aufklapper, alle Einträge sichtbar.
+    it('ab 1280 px steht das Verzeichnis offen daneben — ohne Aufklapper', async () => {
+      const { el, cmp } = await render(true);
+      expect(el.querySelector('.help-toc details')).toBeNull();
+      expect(el.querySelector('.help-toc h2#help-toc.toc-head')).not.toBeNull();
+      expect(el.querySelectorAll('.help-toc a').length).toBe(cmp.sections.length);
+    });
+
+    it('ab 1280 px hebt das Verzeichnis den sichtbaren Abschnitt hervor (aria-current)', async () => {
+      const { el, cmp, fixture } = await render(true);
+      cmp.setActive('welcome');
+      fixture.detectChanges();
+      const a = el.querySelector<HTMLAnchorElement>('.help-toc a[href$="#welcome"]')!;
+      expect(a.getAttribute('aria-current')).toBe('true');
+      expect(a.classList).toContain('current');
+      expect(el.querySelectorAll('.help-toc a[aria-current]').length).toBe(1);
+    });
+
+    // Runde z2 (z2-rk-help-vorschau): zugeklappt nur der erste Satz; aufgeklappt der ganze Absatz.
+    it('zeigt zugeklappt nur den ersten Satz als Vorschau', async () => {
+      const { cmp } = await render(false);
+      expect(cmp.firstSentence('Registrieren kannst du dich per Discord. Danach geht es weiter.'))
+        .toBe('Registrieren kannst du dich per Discord.');
+      expect(cmp.firstSentence('Das geht z. B. so und noch viel mehr. Rest.')).toBe('Das geht z. B. so und noch viel mehr.');
+      expect(cmp.firstSentence('Ohne Satzende')).toBe('Ohne Satzende');
+    });
+
+    // Runde z2 (z2-rk-help-pfeil): ▾ steht in jeder Karte am rechten Rand, auch bei kurzem Titel.
+    it('setzt den Aufklapp-Pfeil unabhängig von der Titellänge an den rechten Rand', async () => {
+      const { el, fixture } = await render(false);
+      const host = fixture.nativeElement as HTMLElement;
+      host.style.display = 'block';
+      host.style.width = '900px';   // Karma-Fenster ist breit (Spalten-Layout): Karte ≈ 580 px
+      document.body.appendChild(host);
+      fixture.detectChanges();
+      const card = el.querySelector<HTMLElement>('#welcome')!;
+      const toggle = card.querySelector<HTMLElement>('.sec-toggle')!;
+      const chev = toggle.querySelector<HTMLElement>('.chev')!;
+      const head = card.querySelector<HTMLElement>('.sec-head')!;
+      expect(Math.round(toggle.getBoundingClientRect().width)).toBe(Math.round(head.getBoundingClientRect().width - 32));
+      expect(Math.round(chev.getBoundingClientRect().right)).toBe(Math.round(toggle.getBoundingClientRect().right));
+      host.remove();
     });
 
     it('Abschnitte zeigen zugeklappt Titel und erste Zeile; der Kopf klappt auf (aria-expanded)', async () => {
@@ -273,7 +312,9 @@ describe('HelpComponent', () => {
     });
 
     it('Absätze höchstens 68ch breit (d2-rk-help-line)', async () => {
-      const { el } = await render(false);
+      const { el, cmp, fixture } = await render(false);
+      cmp.expand('welcome');                             // zugeklappt ist die Vorschau absichtlich ohne Grenze (z2)
+      fixture.detectChanges();
       expect(getComputedStyle(el.querySelector('#welcome p.lead')!).maxWidth).not.toBe('none');
     });
   });

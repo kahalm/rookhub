@@ -653,6 +653,14 @@ describe('AdminComponent – Tabs mit eigenem Formular (F5-020)', () => {
     expect(RolesTabStub.created).toBe(1);
     expect(MenuTabStub.created).toBe(0);
   });
+
+  // UI-Sweep z2 (z2-rk-admin-suche-abstand): das Nutzer-Suchfeld reserviert keinen leeren Hilfstext-Platz.
+  it('das Nutzer-Suchfeld reserviert keinen Platz für Hilfstext', async () => {
+    const { fixture } = await render();
+    const field = (fixture.nativeElement as HTMLElement).querySelector('mat-form-field.search-field') as HTMLElement;
+    expect(field).not.toBeNull();
+    expect(field.querySelector('.mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
+  });
 });
 
 /**

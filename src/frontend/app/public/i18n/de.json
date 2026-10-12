@@ -373,7 +373,7 @@
       "passwordRejected": "Dieses Passwort geht nicht. Nimm mindestens {{min}} Zeichen und kein allzu bekanntes Passwort wie „12345678“.",
       "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht.",
       "privacyNote": "Für dein Konto gilt unsere Datenschutzerklärung.",
-      "leaguehubNote": "Damit legst du ein RookHub-Konto an. LeagueHub sehen nur Admins und die Vereinsgruppen der teilnehmenden Vereine – danach muss dich ein Admin freischalten.",
+      "leaguehubNote": "Du legst ein RookHub-Konto an; danach schaltet dich ein Admin für LeagueHub frei.",
       "kids": {
         "parentsTitle": "Für Eltern",
         "parentsText": "Spielen geht auch ohne Konto. Ein Konto bitte gemeinsam mit einem Elternteil anlegen.",
@@ -614,6 +614,7 @@
     "lastName": "Nachname",
     "searchPlayer": "Spieler suchen",
     "searchPlayerHint": "Findet FIDE- und ChessResults-ID automatisch.",
+    "searchPlayerNeedsName": "Erst den Namen eintragen (mindestens den Nachnamen) – dann findet die Suche FIDE- und ChessResults-ID.",
     "noResults": "Keine Ergebnisse gefunden.",
     "email": "E-Mail",
     "emailHint": "Für das Zurücksetzen des Passworts. Leer lassen, um sie zu entfernen.",
@@ -1484,6 +1485,7 @@
       "pgnNote": "Ein angehängtes PGN darf eigene Partien enthalten oder ein Puzzle-PGN im Chessable-Stil sein (FEN plus Trainingsmarker). Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
       "button": "Kurs erstellen",
       "creating": "Wird erstellt…",
+      "short": "Neu",
       "success": "„{{name}}“ angelegt ({{count}} Puzzles)",
       "failed": "Kurs konnte nicht erstellt werden.",
       "toRepertoires": "Zu Repertoires"
@@ -3204,6 +3206,7 @@
     }
   },
   "stats": {
+    "puzzleRating": "Puzzle {{rating}}",
     "title": "Statistik",
     "modeStandard": "Standard",
     "modeCourse": "Kurse",
@@ -3671,6 +3674,8 @@
     }
   },
   "reprocess": {
+    "short": { "courses": "{{count}} Kurse können aktualisiert werden", "repertoires": "{{count}} Repertoires können aktualisiert werden" },
+    "shortOne": { "courses": "1 Kurs kann aktualisiert werden", "repertoires": "1 Repertoire kann aktualisiert werden" },
     "available": {
       "courses": "{{count}} Kurse nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
       "repertoires": "{{count}} Repertoires nutzen eine ältere Aufbereitung und können aktualisiert werden."
@@ -3692,7 +3697,6 @@
       "repertoires": "Dieses Repertoire stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol es über die RepCheck-Erweiterung neu, dann ist es auf dem aktuellen Stand."
     },
     "update": "Aktualisieren ({{count}})",
-    "updateAll": "Alle aktualisieren ({{count}})",
     "updateTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu holen (gecachte gehen sofort, ohne Download).",
     "working": "Wird aktualisiert…",
     "started": "Aktualisierung gestartet — läuft im Hintergrund.",
@@ -3953,6 +3957,7 @@
     "ownGames": "Eigene Analysen",
     "filterAll": "Alle",
     "filterAnnotated": "Kommentierte",
+    "filterAnnotatedOnly": "Nur kommentierte",
     "filterLabel": "Partien filtern",
     "sort": {
       "label": "Sortieren",
@@ -4299,8 +4304,8 @@
         "show": "Zeigen",
         "report": "Melden"
       },
-      "sameName": "weitere Gruppe?",
-      "sameNameHint": "Ein gleichnamiges Turnier am selben Tag steht als eigene Karte daneben — vermutlich eine weitere Gruppe derselben Veranstaltung. Die Teilnehmerzahl unterscheidet sie."
+      "sameName": "{{index}} von {{total}} gleichen Namens",
+      "sameNameHint": "Steht direkt daneben — vermutlich eine weitere Gruppe derselben Veranstaltung; die Teilnehmerzahl unterscheidet sie."
     },
     "source": {
       "Unknown": "Unbekannte Quelle",
@@ -4332,6 +4337,7 @@
     "toRookHub": "Zu RookHub",
     "authIntro": {
       "login": "Turnierkalender mit Umkreissuche und Meldung über neue Turniere in deiner Nähe, Favoriten und deine gespielten Turniere – kostenlos. Du hast schon ein RookHub-Konto? Dann melde dich damit an.",
+      "loginShort": "Kostenlos – dein RookHub-Konto gilt auch hier.",
       "register": "Dein Konto gilt auch für RookHub – Puzzles, Kurse und Analyse mit derselben Anmeldung."
     },
     "profile": {
@@ -4580,6 +4586,7 @@
     "intro": "Halte fest, was du von einer Partie noch weißt, und schließe die Lücken.",
     "introMore": "Zum Beispiel die ersten Züge, einzelne Stellungen oder kurze Zugfolgen — die Lücken dazwischen schließt du nach und nach.",
     "newTitle": "Titel",
+    "createLabel": "Neue Rekonstruktion – Titel",
     "newTitlePlaceholder": "Vereinsmeisterschaft, Runde 3",
     "create": "Anlegen",
     "open": "Öffnen",

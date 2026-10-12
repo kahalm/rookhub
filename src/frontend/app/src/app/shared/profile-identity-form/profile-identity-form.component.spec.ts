@@ -178,6 +178,16 @@ describe('ProfileIdentityFormComponent', () => {
     expect(profile.chessResultsId).toBeNull();
   });
 
+  // UI-Sweep z2 (z2-rk-profile-suche-gesperrt): gesperrter Knopf nennt den Grund sichtbar darunter.
+  it('nennt unter dem gesperrten Such-Knopf, dass erst der Name fehlt', () => {
+    fixture.componentRef.setInput('profile', { ...profile, firstName: '', lastName: '' });
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('button.pif-search') as HTMLButtonElement;
+    const hint = fixture.nativeElement.querySelector('.pif-search-hint') as HTMLElement;
+    expect(button.disabled).toBeTrue();
+    expect(hint.textContent!.trim()).toBe('profile.searchPlayerNeedsName');
+  });
+
   it('stellt den Such-Knopf auf Feldhoehe und erklaert darunter, was er tut (UI-Sweep t-profile-search)', () => {
     const button = fixture.nativeElement.querySelector('button.pif-search') as HTMLElement;
     expect(button.getBoundingClientRect().height).toBe(56);

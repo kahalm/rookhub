@@ -15,6 +15,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatMenuModule } from '@angular/material/menu';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -30,7 +31,7 @@ import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -85,9 +86,18 @@ import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
                       <mat-icon [matBadge]="friend.openRevengeCount" [matBadgeHidden]="!friend.openRevengeCount"
                                 matBadgeColor="warn" matBadgeSize="small">sports_martial_arts</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="removeFriend(friend)" [appIconLabel]="'friends.aria.removeFriend' | translate">
-                      <mat-icon>person_remove</mat-icon>
+                    <!-- UI-Sweep z2 (z2-rk-freunde-entfernen): „Freund entfernen" ist gefährlich und steht deshalb
+                         zuletzt im ⋮-Menü statt als Symbol direkt neben Statistik und Duell (DESIGN 5.4/5.5). -->
+                    <button mat-icon-button class="friend-more" [matMenuTriggerFor]="friendMenu"
+                            [appIconLabel]="'common.moreActions' | translate">
+                      <mat-icon>more_vert</mat-icon>
                     </button>
+                    <mat-menu #friendMenu="matMenu" xPosition="before">
+                      <button mat-menu-item class="delete-item" (click)="removeFriend(friend)">
+                        <mat-icon>person_remove</mat-icon>
+                        <span>{{ 'friends.aria.removeFriend' | translate }}</span>
+                      </button>
+                    </mat-menu>
                   </div>
                 </mat-list-item>
               } @empty {

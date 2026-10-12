@@ -252,6 +252,8 @@ describe('GuessListComponent', () => {
     expect(el.querySelectorAll('.start-card .game-row').length).toBe(2);
     expect(el.querySelector('.sec-head .count')?.textContent).toContain('guess.gamesCount');
     expect(el.querySelector('p.intro .anon-hint')?.textContent).toContain('guess.anonHint');
+    // z2-rk-guess-anon-leerzeichen: zwischen den beiden Sätzen steht ein Leerzeichen.
+    expect(el.querySelector('p.intro')!.textContent!.replace(/\s+/g, ' ')).toContain('guess.intro guess.anonHint');
     expect(el.querySelectorAll('p.small').length).withContext('keine eigene Hinweiszeile mehr').toBe(0);
   });
 
@@ -275,6 +277,33 @@ describe('GuessListComponent', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.sort).toBe('short');
     expect(sortBtn.classList).toContain('active');
+  });
+
+  /** z2-rk-guess-vorlauf: am Handy steht „Alle/Kommentierte" als Häkchen „Nur kommentierte" im ⇅-Menü, damit Suchfeld und
+   *  ⇅ eine Zeile bleiben. */
+  it('bietet „Nur kommentierte" im ⇅-Menü an und schaltet damit den Filter', async () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([
+      analysis({ id: 1, status: 'done', analyzedPlies: 40, annotated: true, isPublic: true }),
+      analysis({ id: 2, status: 'done', analyzedPlies: 40, annotated: false, isPublic: true }),
+    ]);
+    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/guess-sessions').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('.start-card .sec-head button.sort-btn')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const item = document.querySelector<HTMLButtonElement>('.annotated-option')!;
+    expect(item).not.toBeNull();
+    expect(item.getAttribute('aria-checked')).toBe('false');
+    item.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.annotatedOnly).toBeTrue();
+    expect(fixture.componentInstance.curatedShown.length).toBe(1);
+    http.expectOne(r => r.method === 'PUT' && r.url === '/api/view-state/guess.list').flush({});
   });
 
   /** z1-rk-guess-vorlauf: die Weiterspielen-Karte ist EINE Zeile — Titel + Meta links, ▶ und Löschen rechts, ohne Umbruch. */
@@ -303,6 +332,9 @@ describe('GuessListComponent', () => {
     const hint = el.querySelector('h1 app-help-hint button')?.getAttribute('aria-label') ?? '';
     expect(hint).toContain('guess.introMore');
     expect(hint).toContain('guess.curatedHint');
+    // z2-rk-guess-vorlauf: angemeldet kein offener Untertitel mehr — der ⓘ-Text beginnt mit ihm.
+    expect(hint).toContain('guess.intro guess.introMore');
+    expect(el.querySelector('p.intro')).withContext('Untertitel nur ohne Konto').toBeNull();
     expect(el.textContent!.split('guess.curatedHint').length).withContext('nicht mehr als eigene Zeile').toBe(1);
   });
 

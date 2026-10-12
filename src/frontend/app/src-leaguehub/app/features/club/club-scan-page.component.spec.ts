@@ -97,6 +97,8 @@ describe('ClubScanPageComponent', () => {
     expect(el.textContent).not.toContain('korrigiert wird am Brett');
     expect(el.textContent).not.toContain('Ein Zug am Brett ersetzt');
     expect(el.querySelector('.club-intro .back-row button.to-save')?.textContent).toContain('Speichern ↓');
+    // z2-l-korrigieren-kopfzeile: Partietitel in der Zeile der Überschrift
+    expect(el.querySelector('.club-intro .scan-head .game-title')?.textContent).toContain('Moser, Axel – Testdorf (2026)');
     expect(el.querySelector('.scan-check .where .where-actions')?.textContent).toContain('Stimmt so');
     (el.querySelector('.club-intro .scan-head .chk-btn') as HTMLButtonElement).click();
     fixture.detectChanges();

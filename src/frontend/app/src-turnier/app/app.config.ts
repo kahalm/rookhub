@@ -45,7 +45,8 @@ export const turnierConfig: ApplicationConfig = {
     { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), kind: 'turnier', accountHome: 'rookhub', back: TURNIER_HOME }) },
     // Die Anmeldemaske ist hier die Startseite jedes neuen Besuchers: sie sagt, was die Seite bietet und dass das
     // RookHub-Konto gilt; die Registrierung, dass das neue Konto auch in RookHub gilt (Codereview UX-027).
-    { provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login', register: 'turnier.authIntro.register' } },
+    { provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login', loginShort: 'turnier.authIntro.loginShort',
+      register: 'turnier.authIntro.register' } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

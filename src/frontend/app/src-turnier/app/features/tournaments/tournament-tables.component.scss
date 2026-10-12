@@ -33,6 +33,22 @@
     .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
     .player-tools { flex-wrap: wrap; gap: 0.5rem 1rem; }
     .player-search { flex: 1 1 16rem; max-width: 24rem; }
+    /* Laptop/PC: Suchzeile kompakt (z2-t-detail-vorlauf-laptop: die erste Spielerzeile begann bei 45 % der Höhe) —
+       8 px statt 16 px über der Suche, Feld 40 statt 56 px hoch. */
+    @media (min-width: 769px) {
+      .player-tools { padding-top: 0.5rem; }
+      .player-search { --mat-form-field-container-height: 40px; --mat-form-field-container-vertical-padding: 8px; }
+      .player-search .search-clear { --mat-icon-button-state-layer-size: 32px; }
+    }
+    /* Zahlenspalten rechtsbündig mit gleich breiten Ziffern (z2-t-detail-zahlen-rechts); die Köpfe tragen den
+       Sortierpfeil vorne (arrowPosition="before"), damit auch ihr Text rechts abschließt. FIDE-ID bleibt als Kennung links. */
+    .mat-column-snr, .mat-column-elo, .mat-column-board, .mat-column-rank, .mat-column-points {
+      text-align: right; font-variant-numeric: tabular-nums;
+    }
+    th.mat-column-snr ::ng-deep .mat-sort-header-container,
+    th.mat-column-elo ::ng-deep .mat-sort-header-container,
+    th.mat-column-board ::ng-deep .mat-sort-header-container,
+    th.mat-column-points ::ng-deep .mat-sort-header-container { justify-content: flex-end; }
     /* Schalter und ? bleiben zusammen — am Handy rutschte das ? sonst allein in eine eigene Zeile. */
     .fav-group { display: inline-flex; align-items: center; flex-wrap: nowrap; }
     /* Kein Minus-Rand: das ? klebte sonst an „Nur Favoriten" (z1-t-detail-fav-hilfe); das Knopfpolster gibt ≈ 8 px Luft. */

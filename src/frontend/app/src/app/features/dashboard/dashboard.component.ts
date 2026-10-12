@@ -231,7 +231,8 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .dashboard-grid > mat-card > mat-card-actions { margin-top: auto; }
     /* UI-Sweep 2026-10-11 (r2-rk-dash-stretch): die hohe Kachel steht allein in ihrer Zeile, die Kurse darin im Raster. */
     .dashboard-grid > mat-card.tile-wide { grid-column: 1 / -1; }
-    mat-card.tile-wide .pinned-courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 1rem 1.5rem; }
+    /* UI-Sweep z2 (z2-rk-dash-kurse-raster): auto-fit statt auto-fill — keine leere vierte Spur, die Kurse teilen sich die Breite. */
+    mat-card.tile-wide .pinned-courses { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 1rem 1.5rem; }
     mat-card.tile-wide .pinned-course + .pinned-course { border-top: none; padding-top: 0; }
     /* Bearbeitungsmodus: gleiche Rasteransicht, nur Schild + Steuerelemente als Overlay. */
     mat-card.tile-editing { position: relative; }

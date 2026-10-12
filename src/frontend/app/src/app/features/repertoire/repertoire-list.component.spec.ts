@@ -367,3 +367,12 @@ describe('RepertoireListComponent Vorlauf', () => {
     expect(el.querySelector('.info-panel')?.textContent).not.toContain('repertoire.list.sectionExtensionHint');
   });
 });
+
+/** UI-Sweep z2 (z2-rk-rep-liste-vorlauf-admin): am Handy bleibt der Titel neben „Neu" einzeilig (kleinere Schrift). */
+describe('RepertoireListComponent Titel am Handy', () => {
+  it('verkleinert die Überschrift unter 600 px', () => {
+    const css = ((RepertoireListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.header[^{]* h1[^{]*\{ ?font-size: 1\.6rem/);
+  });
+});

@@ -120,6 +120,10 @@
    Kalkulations-Schalter hinter das ⋮, damit das Menü nicht allein in einer Zeile steht. */
 .label-short { display: none; }
 @media (max-width: 599.98px) {
+  /* UI-Sweep z2 (z2-rk-kursdetail-handy-vorlauf): am Handy steht die Aktionszeile direkt unter dem Fortschritt,
+     die Kennzahlen folgen darunter (Hauptknopf über 40 % der Höhe, DESIGN 4.6). */
+  .head-card mat-card-content { display: flex; flex-direction: column; }
+  .head-card .meta { order: 1; margin: 0.75rem 0 0; }
   .label-long { display: none; }
   .label-short { display: inline; }
   .actions .calc-toggle { order: 10; margin-left: 0; }

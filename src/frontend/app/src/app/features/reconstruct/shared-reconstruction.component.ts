@@ -206,8 +206,10 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     </div>
   `,
   styles: [`
-    /* Brettgröße wie auf der geteilten Partie (d2-rk-shared-board-fixed): wächst mit dem Fenster statt fest 400 px. */
-    .shared-page { --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 520px)), 680px);
+    /* Brettgröße wie auf der geteilten Partie (d2-rk-shared-board-fixed): wächst mit dem Fenster statt fest 400 px.
+       330 px = Kopf (~256 px: Titel, Spieler, Chips, Erklärzeile) + Blätter-Leiste unter dem Brett (~50 px) — sonst lag
+       die Leiste am Laptop unter der Falz (z2-rk-shared-recon-blaettern). svh: am Handy ohne die einblendbare Adressleiste. */
+    .shared-page { --board-size: clamp(360px, min(calc(100svh - 330px), calc(100vw - 520px)), 680px);
       max-width: calc(var(--board-size) + 520px); margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }

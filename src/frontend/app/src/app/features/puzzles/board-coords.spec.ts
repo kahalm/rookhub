@@ -67,4 +67,21 @@ describe('Brett-Koordinaten: Farbe passend zum Feld darunter (UX-060)', () => {
     // Linien klein wie in der Notation („a", nicht „A")
     expect(getComputedStyle(wrap.querySelector('coords.files')!).textTransform).toBe('none');
   });
+
+  // UI-Sweep z2 (z2-rk-brett-koordinaten): Lichthof in der Gegenfarbe der Schrift — lesbar auch über dem Figurenfuß.
+  for (const orientation of ['white', 'black'] as const) {
+    it(`Koordinaten tragen einen Lichthof in der Gegenfarbe der Schrift (${orientation})`, () => {
+      const wrap = mount('brown', orientation);
+      const coords = Array.from(wrap.querySelectorAll<HTMLElement>('coords.ranks coord, coords.files coord'));
+      expect(coords.length).toBe(16);
+      for (const c of coords) {
+        const cs = getComputedStyle(c);
+        const textLight = (cs.color.match(/\d+/g) ?? []).slice(0, 3).map(Number).reduce((a, b) => a + b, 0) > 3 * 128;
+        const halo = cs.textShadow;
+        expect(halo).withContext(`${c.textContent}`).not.toBe('none');
+        // helle Schrift → dunkler Hof (rgba(0, 0, 0 …)), dunkle Schrift → heller Hof (rgba(255, 255, 255 …))
+        expect(halo).withContext(`${c.textContent}: ${cs.color}`).toContain(textLight ? 'rgba(0, 0, 0' : 'rgba(255, 255, 255');
+      }
+    });
+  }
 });

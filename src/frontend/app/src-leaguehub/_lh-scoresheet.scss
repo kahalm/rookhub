@@ -19,6 +19,15 @@
 .club-intro .back-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
 .back-row .to-save { margin-left: auto; }
 .club-intro .game-title { margin: 0 0 6px; }
+/* z2-l-korrigieren-kopfzeile: die Rücklink-Zeile ist ein <p> und erbte max-width: 70ch — „Speichern ↓" hing mitten im Bild.
+   Ab 721 px rücken Rücklink, Überschrift und Partietitel (jetzt in .scan-head) zusammen, das Brett passt in den ersten Schirm. */
+.club-intro .back-row { max-width: none; }
+@media (min-width: 721px) {
+  .club-intro .back-row { margin: 0; }
+  .club-intro .scan-head { margin: 0 0 8px; }
+  .club-intro .scan-head h2 { margin: 2px 0 0; }
+  .club-intro .scan-head .game-title { margin: 0; }
+}
 .club-intro .scan-hint { margin: 4px 0 10px; }
 /* Am Handy steht der Prüfteil ÜBER dem Brett und ändert je Zug seine Höhe (Lesarten ja/nein, Ausschnitt). Er darf deshalb
    kein Scroll-Anker sein — dann hält der Browser das BRETT an seiner Stelle, statt es mit jedem Zug zu verschieben

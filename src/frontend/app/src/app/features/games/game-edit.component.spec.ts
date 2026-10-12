@@ -71,7 +71,10 @@ describe('GameEditComponent', () => {
     expect(toggle).not.toBeNull();
     expect(c.headersOpen()).toBeFalse();
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(toggle.textContent).toContain('games.edit.headersSummary');
+    expect(toggle.getAttribute('aria-label')).toContain('games.edit.headersSummary');
+    // z2-rk-edit-angaben-ergebnis: Ergebnis als eigener, nicht gekürzter Teil neben den (gekürzten) Namen.
+    expect(toggle.querySelector('.ht-names')).not.toBeNull();
+    expect(toggle.querySelector('.ht-result')?.textContent?.trim()).toBe(c.header.result);
     expect(el.querySelector('.class-hint')).withContext('Hinweis nicht mehr als eigene Zeile').toBeNull();
     expect(el.querySelector('.header app-help-hint button')?.getAttribute('aria-label')).toContain('games.edit.classifierHint');
     toggle.click();

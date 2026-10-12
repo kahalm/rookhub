@@ -102,10 +102,11 @@ function readAutoMine(): boolean {
             <button type="button" class="chk-btn" [attr.aria-expanded]="hintOpen()" aria-label="Wie geprüft wird"
                     title="Wie geprüft wird" (click)="hintOpen.set(!hintOpen())">i</button>
           }
+          <!-- z2-l-korrigieren-kopfzeile: der Partietitel in der Zeile der Überschrift (am Handy bricht er darunter um). -->
+          @if (gameId != null) {
+            <p class="muted game-title">{{ gameTitle() }}</p>
+          }
         </div>
-        @if (gameId != null) {
-          <p class="muted game-title">{{ gameTitle() }}</p>
-        }
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
           @else {

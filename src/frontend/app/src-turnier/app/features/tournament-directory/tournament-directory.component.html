@@ -298,7 +298,7 @@
             <div class="entry-grid">
               @for (entry of upcomingEntries(); track trackById($index, entry)) {
                 <mat-card class="entry-card">
-                  <app-tournament-card [entry]="entry" [sameNameSibling]="sameNameIds().has(entry.id)" (selected)="select($event)"
+                  <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
                                        (ignoredChanged)="onIgnoredChanged($event)" />
                 </mat-card>
               }
@@ -311,7 +311,7 @@
               <div class="entry-grid">
                 @for (entry of ongoingEntries(); track trackById($index, entry)) {
                   <mat-card class="entry-card">
-                    <app-tournament-card [entry]="entry" [sameNameSibling]="sameNameIds().has(entry.id)" (selected)="select($event)"
+                    <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
                                          (ignoredChanged)="onIgnoredChanged($event)" />
                   </mat-card>
                 }

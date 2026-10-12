@@ -79,6 +79,17 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     expect(el().querySelector('.existing')).toBeNull();
   });
 
+  it('z2-c-attendance-lead: Zählstand steht in der Titelzeile, Feldnamen Tag/Thema nur für Vorleser', async () => {
+    await create(new Date(2026, 8, 25, 17, 5));
+    const head = el().querySelector('.att-head')!;
+    expect(head.querySelector('h1')!.textContent).toBe('Wer ist da?');
+    expect(head.querySelector('.tally strong')!.textContent).toBe('0 von 3 da');
+    const labels = Array.from(el().querySelectorAll('.roll-head .field > span:first-child'));
+    expect(labels.map(l => l.textContent!.trim())).toEqual(['Tag der Einheit', 'Thema']);
+    expect(labels.every(l => l.classList.contains('sr-only'))).toBeTrue();
+    expect(el().querySelector<HTMLInputElement>('input[name=topic]')!.placeholder).toContain('Thema');
+  });
+
   it('am Montag darauf für den vergangenen Freitag (nachtragen); ?datum= gewinnt', async () => {
     await create(new Date(2026, 8, 28, 9, 0));
     expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-25');

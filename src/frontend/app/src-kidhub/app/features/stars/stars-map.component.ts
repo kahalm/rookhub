@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { STAR_STAGES } from '../../core/kids-stars';
 import { KidsStarsStore } from '../../core/kids-stars.store';
-import { KID_BACK, KID_COUNTER, KID_PAGE_WIDTH } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_MAP_WIDTH } from '../../shared/kids-layout';
 import { pieceGlyph } from './stars-play.component';
 
 /** Die Stufen der Sternenjagd: Figur und Zahl der Sterne; offen ist Stufe 1 und jede nach einer geschafften. */
@@ -49,7 +49,7 @@ import { pieceGlyph } from './stars-play.component';
     </ol>
   `,
   styles: [KID_BACK, KID_COUNTER, `
-    :host { display: block; max-width: ${KID_PAGE_WIDTH.map}px; box-sizing: border-box; margin: 0 auto; padding: 16px; }
+    :host { display: block; max-width: ${KID_MAP_WIDTH}; box-sizing: border-box; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
     .intro { text-align: center; font-size: 1.15rem; margin: 0 0 16px; }

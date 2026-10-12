@@ -42,7 +42,13 @@ type Side = 'white' | 'black';
       <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
     } @else {
       <section class="club-intro">
-        <h2>Vereinspartien</h2>
+        <!-- z2-l-verein-steuerzeilen: ab 641 px stehen Anzahl und „PGN herunterladen" in der Überschriftszeile und „Partien
+             hinzufügen" am Ende der Suchzeile — die eigene Zählerzeile entfällt; am Handy bleibt sie (.cg-narrow). -->
+        <div class="club-head">
+          <h2>Vereinspartien</h2>
+          @if (!firstLoadFailed()) { <span class="small muted cg-wide head-count">{{ total() === null ? 'Lade …' : countText() }}</span> }
+          @if (total()) { <button type="button" class="btn-link pgn-dl cg-wide" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
+        </div>
         <!-- UI-Sweep 2026-10-11 (d2-l-vereinspartien-vorlauf): ein Satz + (i) statt vier Zeilen über der Liste. -->
         <p class="muted info-line">„{{ anon }}“ steht für ein Mitglied ohne Namen.
           <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Mehr zu den Vereinspartien"
@@ -57,14 +63,15 @@ type Side = 'white' | 'black';
         <input #q type="search" name="q" placeholder="Spieler oder Veranstaltung" aria-label="Suchen" [value]="query()" />
         <button type="submit" class="btn-sec">Suchen</button>
         @if (query()) { <button type="button" class="btn-link" (click)="q.value = ''; search('')">Alle zeigen</button> }
+        @if (canContribute) { <a class="btn-pri search-add cg-wide" routerLink="/verein/neu">Partien hinzufügen</a> }
       </form>
 
-      <div class="stand">
-        @if (!firstLoadFailed()) { <span>{{ total() === null ? 'Lade …' : countText() }}</span> }
+      <div class="stand club-stand">
+        @if (!firstLoadFailed()) { <span class="cg-narrow">{{ total() === null ? 'Lade …' : countText() }}</span> }
         <!-- d2-l-vereinspartien-vorlauf: Herunterladen als Textknopf in der Zählerzeile; „Partien hinzufügen" am Handy nur „+"
              (der gleichnamige Reiter steht direkt darüber). -->
-        @if (total()) { <button type="button" class="btn-link pgn-dl" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
-        @if (canContribute) { <a class="btn-pri add-games" routerLink="/verein/neu" title="Partien hinzufügen"><span aria-hidden="true" class="add-plus">+</span><span class="add-label">Partien hinzufügen</span><span aria-hidden="true" class="add-short">Hinzufügen</span></a> }
+        @if (total()) { <button type="button" class="btn-link pgn-dl cg-narrow" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
+        @if (canContribute) { <a class="btn-pri add-games cg-narrow" routerLink="/verein/neu" title="Partien hinzufügen"><span aria-hidden="true" class="add-plus">+</span><span class="add-label">Partien hinzufügen</span><span aria-hidden="true" class="add-short">Hinzufügen</span></a> }
         <span class="update-msg" [class.err]="!!error() && !firstLoadFailed()" role="status">{{ (firstLoadFailed() ? null : error()) ?? notice() ?? '' }}</span>
       </div>
 
@@ -111,8 +118,11 @@ type Side = 'white' | 'black';
                         <span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'black' }" /></span></span>
                       <b class="gc-result">{{ resultText(g.result) }}</b>
                     </div>
-                    <div class="gc-meta muted small">{{ cardMeta(g) }}</div>
-                    <div class="row-acts gc-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
+                    <!-- z2-l-verein-karten-aktionen: Jahr · Eröffnung links, „Nachspielen" und ⋮ rechts in DERSELBEN Zeile. -->
+                    <div class="gc-foot">
+                      <div class="gc-meta muted small">{{ cardMeta(g) }}</div>
+                      <div class="row-acts gc-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
+                    </div>
                   </td>
                 </tr>
                 @if (g.duplicateIds?.length) {

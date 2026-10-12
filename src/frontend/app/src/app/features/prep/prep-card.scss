@@ -71,6 +71,8 @@ html.dark-theme .prep-card-scope {
   .prep-card-scope .card.inline .sides { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
   .prep-card-scope .card.inline .side:only-child { grid-column: 1 / -1; }
   .prep-card-scope .card.inline .side > h3:first-child { margin-top: 0; }
+  /* z2-rk-prep-werkzeugzeile-abstand: Abstand zur Werkzeugzeile darüber — sonst klebte sie an „Mit Weiß". */
+  .prep-card-scope .card.inline .sides { margin-top: 16px; }
 }
 
 /* z1-rk-prep-vorlauf: Farbwahl, Online-/Zeitraum-Filter, Trainingslinien, PGN und Eröffnungsbaum in EINER umbrechenden
@@ -79,21 +81,29 @@ html.dark-theme .prep-card-scope {
 .prep-card-scope .card.inline .controls {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px;
   > .actions, > lh-tree-filter-bar, > lh-tree-filter-bar > .tree-filter, > lh-training-lines { display: contents; }
-  > .actions > .btn-sec:not(.ctl-toggle) { order: 3; border-color: transparent; padding: 0 12px; }
-  > .actions > .btn-sec:not(.ctl-toggle):hover:not(:disabled) { border-color: transparent; }
+  > .actions > .btn-sec:not(.ctl-toggle):not(.ctl-tools) { order: 3; border-color: transparent; padding: 0 12px; }
+  > .actions > .btn-sec:not(.ctl-toggle):not(.ctl-tools):hover:not(:disabled) { border-color: transparent; }
   > lh-tree-filter-bar > .tree-filter > * { order: 1; }
   > lh-training-lines > .tl-toggle { order: 2; margin-top: 0; }
   > .filtered { order: 4; flex-basis: 100%; margin: 0; }
   > lh-opening-tree, > lh-training-lines > .tl { order: 5; flex-basis: 100%; min-width: 0; }
-  .ctl-toggle { display: none; }
+  .ctl-toggle, .ctl-tools { display: none; }
 }
 
-/* Am Handy nur die Farbwahl offen; Filter und Werkzeuge hinter „Filter ▾", der Filterstand als eine leise Zeile. */
+/* Am Handy nur die Farbwahl offen; Zeitraum-/Online-Filter hinter „Filter ▾", der Filterstand als eine leise Zeile.
+   Die Werkzeuge (Trainingslinien, PGN, Eröffnungsbaum) hinter ⋮ daneben, aufgeklappt als Liste über die volle Breite
+   (z2-rk-prep-filter-aktionen) — unter „Filter" sucht sie niemand. */
 @media (max-width: 599.98px) {
   .prep-card-scope .card.inline .controls {
     .ctl-toggle { display: inline-flex; order: 1; }
-    &:not(.open) {
-      > .actions > .btn-sec:not(.ctl-toggle), > lh-tree-filter-bar > .tree-filter > *, > lh-training-lines > .tl-toggle { display: none; }
+    .ctl-tools { display: inline-flex; order: 1; min-width: 44px; padding: 0 12px; font-size: 18px; }
+    &:not(.open) > lh-tree-filter-bar > .tree-filter > * { display: none; }
+    &:not(.tools-open) {
+      > .actions > .btn-sec:not(.ctl-toggle):not(.ctl-tools), > lh-training-lines > .tl-toggle { display: none; }
+    }
+    &.tools-open {
+      > .actions > .btn-sec:not(.ctl-toggle):not(.ctl-tools), > lh-training-lines > .tl-toggle {
+        flex-basis: 100%; justify-content: flex-start; text-align: left; }
     }
   }
 }

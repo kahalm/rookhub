@@ -191,10 +191,10 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(Math.abs(box(wide, 'lu').top - box(wide, 'at').top)).toBeLessThan(12);
   });
 
-  it('großer Bildschirm: Bretter zweispaltig, Konto-Vorschläge eines Spielers nebeneinander', async () => {
+  it('großer Bildschirm: Bretter zweispaltig, mehrere Konto-Vorschläge eines Spielers nebeneinander (.multi, z2-l-konten-spalten)', async () => {
     const li = (id: string) => `<li class="board" id="${id}"><span class="bno">1</span></li>`;
     const doc = await render(1400, `<main class="wrap mid"><ol class="boards">${li('b1')}${li('b2')}${li('b3')}</ol>
-      <article class="sugg-group"><lh-account-suggestions><ul class="sugg-list"><li id="s1">a</li><li id="s2">b</li></ul></lh-account-suggestions></article></main>`);
+      <article class="sugg-group multi"><lh-account-suggestions><ul class="sugg-list"><li id="s1">a</li><li id="s2">b</li></ul></lh-account-suggestions></article></main>`);
     expect(box(doc, 'b2').top).toBe(box(doc, 'b1').top);
     expect(box(doc, 'b3').top).toBeGreaterThan(box(doc, 'b1').top);
     expect(box(doc, 's2').top).toBe(box(doc, 's1').top);
@@ -256,6 +256,78 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(shown(small, 's')).toBeFalse();
     expect(style(small, 'a').fontSize).toBe('22px');
     expect(box(small, 'a').height).toBeGreaterThanOrEqual(44);
+  });
+
+  // z2-l-konten-spalten: ab 1280 px zwei Spieler nebeneinander; wer mehrere Vorschläge hat, nimmt die volle Breite.
+  it('Konto-Vorschläge breit: Spieler in zwei Spalten, mehrere Vorschläge über die volle Breite', async () => {
+    const group = (id: string, n: number) => `<article class="sugg-group${n > 1 ? ' multi' : ''}" id="${id}"><h3>Spieler</h3>
+      <lh-account-suggestions><ul class="sugg-list">${'<li>chess.com: konto · Nutzername aus dem Namen</li>'.repeat(n)}</ul></lh-account-suggestions></article>`;
+    const body = `<main class="wrap mid"><section class="sugg-page"><div class="sugg-groups" id="gs">${group('a', 1)}${group('b', 1)}${group('c', 2)}</div></section></main>`;
+    const doc = await render(1366, body);
+    expect(box(doc, 'b').top).toBe(box(doc, 'a').top);
+    expect(box(doc, 'b').left).toBeGreaterThan(box(doc, 'a').right);
+    expect(box(doc, 'c').width).toBeGreaterThan(box(doc, 'gs').width - 2);
+    const lis = doc.querySelectorAll('#c li');
+    expect(lis[1].getBoundingClientRect().top).toBe(lis[0].getBoundingClientRect().top);
+    frame!.remove();
+    const phone = await render(390, body);
+    expect(box(phone, 'b').top).toBeGreaterThan(box(phone, 'a').bottom - 1);
+  });
+
+  // z2-l-register-hinweis: der Hinweis der Masken nicht im Fehlerrot, sondern in --focus
+  it('Masken-Hinweis (Registrieren und Login) neutral in --focus statt Rot', async () => {
+    const doc = await render(1000, `<style>.site-note, .auth-required { border-left: 3px solid gray; }</style>
+      <lh-root><app-register><div class="mat-mdc-card"><p class="site-note" id="n">Hinweis</p></div></app-register>
+      <app-login><div class="mat-mdc-card"><p class="auth-required" id="l">Hinweis</p></div></app-login></lh-root>
+      <span id="f" style="color: var(--focus)">f</span><span id="r" style="color: var(--red)">r</span>`, true);
+    for (const id of ['n', 'l']) {
+      expect(style(doc, id).borderLeftColor).toBe(style(doc, 'f').color);
+      expect(style(doc, id).borderLeftColor).not.toBe(style(doc, 'r').color);
+    }
+  });
+
+  // z2-l-verein-steuerzeilen: breit keine eigene Zählerzeile; am Handy bleibt sie.
+  it('Vereinspartien: breit Anzahl/PGN neben der Überschrift und Hinzufügen in der Suchzeile, am Handy die Zählerzeile', async () => {
+    const body = `<main class="wrap"><section class="club-intro"><div class="club-head" id="hd"><h2 id="h2">Vereinspartien</h2>
+      <span class="small muted cg-wide" id="hc">170 Partien</span><button class="btn-link pgn-dl cg-wide" id="hp">PGN herunterladen</button></div></section>
+      <form class="club-search" id="fs"><input type="search" /><button class="btn-sec">Suchen</button><a class="btn-pri search-add cg-wide" id="sa">Partien hinzufügen</a></form>
+      <div class="stand club-stand" id="st"><span class="cg-narrow" id="sc">170 Partien</span><button class="btn-link pgn-dl cg-narrow">PGN herunterladen</button>
+      <a class="btn-pri add-games cg-narrow" id="ad"><span class="add-plus">+</span><span class="add-label">Partien hinzufügen</span><span class="add-short">Hinzufügen</span></a>
+      <span class="update-msg" role="status"></span></div></main>`;
+    const doc = await render(1366, body);
+    expect(shown(doc, 'st')).toBeFalse();
+    expect(shown(doc, 'hc')).toBeTrue();
+    expect(box(doc, 'hp').top).toBeLessThan(box(doc, 'h2').bottom);
+    expect(box(doc, 'sa').top).toBeLessThan(box(doc, 'fs').top + 10);         // in der Suchzeile
+    frame!.remove();
+    const phone = await render(390, body);
+    expect(shown(phone, 'st')).toBeTrue();
+    expect(shown(phone, 'sc')).toBeTrue();
+    expect(shown(phone, 'hc')).toBeFalse();
+    expect(shown(phone, 'sa')).toBeFalse();
+  });
+
+  // z2-l-korrigieren-kopfzeile: „Speichern ↓" rechtsbündig, nicht am Ende von 70ch
+  it('Korrigieren: „Speichern ↓" steht breit ganz rechts in der Rücklink-Zeile', async () => {
+    const doc = await render(1366, `<main class="wrap"><section class="club-intro" id="ci"><p class="back-row"><a class="back-link">← Vereinspartien</a>
+      <button type="button" class="btn-link to-save" id="ts">Speichern ↓</button></p>
+      <div class="scan-head"><h2 id="h">Vereinspartie korrigieren</h2><p class="muted game-title" id="gt">Schwaz – Gegner (2026) · 0–1</p></div></section></main>`);
+    expect(box(doc, 'ci').right - box(doc, 'ts').right).toBeLessThan(4);
+    expect(box(doc, 'gt').top).toBeLessThan(box(doc, 'h').bottom);           // Partietitel in der Zeile der Überschrift
+  });
+
+  // z2-l-uebertragungen-meta: am Handy „Zeitraum · Ort" unter dem Titel, die Spalten fallen weg
+  it('Übertragungen: am Handy Meta-Zeile statt Zeitraum-/Ort-Spalte', async () => {
+    const body = `<main class="wrap"><table class="rtable bc-list"><tbody><tr><td id="t"><a>28th Bavarian International Open</a>
+      <span class="bc-meta muted small" id="m">01.11.–09.11.2025 · Bad Wiessee</span></td>
+      <td class="muted nowrap hide-s" id="d">01.11.–09.11.2025</td><td class="muted hide-s">Bad Wiessee</td><td class="num">29</td></tr></tbody></table></main>`;
+    const phone = await render(390, body);
+    expect(shown(phone, 'm')).toBeTrue();
+    expect(shown(phone, 'd')).toBeFalse();
+    frame!.remove();
+    const wide = await render(1000, body);
+    expect(shown(wide, 'm')).toBeFalse();
+    expect(shown(wide, 'd')).toBeTrue();
   });
 
   it('Teilen-Link am Handy: Aufforderung höchstens 160 px, Knöpfe nebeneinander', async () => {

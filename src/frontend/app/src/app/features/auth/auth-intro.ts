@@ -12,6 +12,10 @@ export interface AuthIntro {
   /** Über dem Anmeldeformular: was die Seite bietet, welches Konto gilt. Ersetzt den Satz „Ein Konto ist kostenlos“ —
    *  sagt die Einleitung es nicht selbst, steht es nirgends (gewollt, wo ein Konto allein nichts öffnet). */
   login?: string;
+  /** Kurzform von `login` für die Maske nach einer Umleitung (`authRequired`): dort steht schon „Bitte melde dich an …“,
+   *  die volle Vorstellung machte den einen Hinweiskasten 6–7 Zeilen lang (z2-rk-turnier-login-hinweis). Fehlt sie,
+   *  gilt `login`. */
+  loginShort?: string;
   /** Über dem Registrierformular: wofür das neue Konto noch gilt. */
   register?: string;
 }

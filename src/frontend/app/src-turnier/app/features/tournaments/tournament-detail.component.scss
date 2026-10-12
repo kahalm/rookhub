@@ -1,37 +1,8 @@
-    .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
-    mat-card { margin-bottom: 1rem; }
-    // Handy (360/375px): unbrechbare Tokens im Turniernamen ('Bezirksblitzmannschaftsmeisterschaft')
-    // oder Maps-URLs im Untertitel liefen ueber Karten- und Bildschirmrand hinaus (mat-card: overflow visible).
-    // 'anywhere' statt 'break-word', weil nur das die min-content-Breite senkt und der Flex-Header so schrumpfen kann.
-    mat-card-title, mat-card-subtitle { overflow-wrap: anywhere; }
-    .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    /* Titel links, Knopfreihe rechts in EINER Zeile (DESIGN 5.1 .header, d2-t-detail-vorlauf); reicht der Platz nicht,
-       bricht die Reihe unter den Titel. */
-    .title-row { display: flex; align-items: center; flex-wrap: wrap; column-gap: 0.5rem; }
-    .title-row mat-card-header { flex: 1 1 18rem; min-width: 0; }
-    /* Material polstert den Kopf 16 px oben / 0 unten — der Titel sass tiefer als die Knopfreihe (z1-t-detail-titel-versatz). */
-    @media (min-width: 769px) {
-      .title-row mat-card-header { padding-block: 8px; }
-    }
-    .title-row .action-bar { flex: 0 1 auto; justify-content: flex-end; padding: 8px 16px; }
-    .more-actions { display: none; flex: none; margin: 8px 4px 0 0; }
-    .load-failed { padding: 1rem; }
-    .load-failed p { margin: 0 0 0.75rem; }
-    .load-failed-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+@use 'tournament-head';
 
-    @media (max-width: 768px) {
-      .detail-container { padding: 0.75rem; }
-      // UI-Sweep t-head-buttons: Merken (gefuellt) und Beobachten je halbe Breite; der Rest steht im ⋮-Menue.
-      .more-actions { display: inline-flex; }
-      .title-row { flex-wrap: wrap; align-items: flex-start; }
-      .title-row mat-card-header { flex: 1 1 0; }
-      .title-row .action-bar { flex: 1 1 100%; padding: 0 16px 8px; }
-      .action-bar .wide-only { display: none; }
-      .action-bar { display: grid; grid-template-columns: 1fr 1fr; }
-      // UX-042: Merken und Beobachten behalten am Handy ihren Text.
-      .action-bar .keep-label { height: 44px; min-width: 0; }
-      .action-bar .keep-label .btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    }
+.load-failed { padding: 1rem; }
+.load-failed p { margin: 0 0 0.75rem; }
+.load-failed-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 /* Gruppen-Umschaltung: am Handy darf die Leiste seitlich scrollen statt die Seite zu verbreitern. */
 .group-switch { padding: 0 16px 8px; overflow-x: auto; }

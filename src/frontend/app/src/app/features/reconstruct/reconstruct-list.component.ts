@@ -39,7 +39,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
       <mat-card class="new-card">
         <mat-form-field appearance="outline" class="grow">
-          <mat-label>{{ 'reconstruct.newTitle' | translate }}</mat-label>
+          <!-- z2-rk-recon-anlegen-plus: das Feld sagt selbst, dass hier eine neue Rekonstruktion entsteht. -->
+          <mat-label>{{ 'reconstruct.createLabel' | translate }}</mat-label>
           <input matInput [(ngModel)]="newTitle" (keyup.enter)="create()"
                  [placeholder]="'reconstruct.newTitlePlaceholder' | translate" maxlength="200">
           <!-- Handy (d2-rk-recon-list-lead): „Anlegen" als ＋ im Feld statt in einer eigenen Zeile. -->
@@ -108,6 +109,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .chip.warn { background: color-mix(in srgb, var(--rh-warn) 30%, transparent); }
     .actions { display: flex; align-items: center; justify-content: space-between; }
     .create-suffix { display: none; }
+    /* Freigegeben in der Hauptfarbe, nicht grau wie der Platzhalter (z2-rk-recon-anlegen-plus). */
+    .create-suffix:not(:disabled) { color: var(--mat-sys-primary); }
     @media (max-width: 599.98px) {
       .create-suffix { display: inline-flex; }
       .create-btn { display: none; }

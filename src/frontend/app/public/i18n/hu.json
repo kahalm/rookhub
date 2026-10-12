@@ -196,7 +196,7 @@
       "passwordRejected": "Ez a jelszó nem használható. Legalább {{min}} karakter legyen, és ne túl gyakori, mint a „12345678”.",
       "invalid": "Ellenőrizd az adataidat – valami még nem stimmel.",
       "privacyNote": "A fiókodra az adatvédelmi nyilatkozatunk vonatkozik.",
-      "leaguehubNote": "Ezzel RookHub-fiókot hozol létre. A LeagueHubot csak az adminok és a részt vevő klubok klubcsoportjai látják – utána egy adminnak kell feloldania a fiókodat.",
+      "leaguehubNote": "RookHub-fiókot hozol létre; utána egy admin feloldja számodra a LeagueHubot.",
       "kids": {
         "parentsTitle": "Szülőknek",
         "parentsText": "Fiók nélkül is lehet játszani. Fiókot kérjük, egy szülővel együtt hozzatok létre.",
@@ -358,6 +358,7 @@
     "lastName": "Vezetéknév",
     "searchPlayer": "Játékos keresése",
     "searchPlayerHint": "Automatikusan megtalálja a FIDE- és ChessResults-azonosítót.",
+    "searchPlayerNeedsName": "Előbb add meg a neved (legalább a vezetéknevet) – utána a keresés megtalálja a FIDE- és ChessResults-azonosítót.",
     "noResults": "Nincs találat.",
     "email": "E-mail",
     "emailHint": "A jelszó visszaállításához használatos. Hagyd üresen az eltávolításhoz.",
@@ -1442,6 +1443,7 @@
       "pgnNote": "A csatolt PGN tartalmazhatja a saját játszmáidat, vagy lehet Chessable-stílusú feladvány-PGN (FEN és tréningjelölők). A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
       "button": "Tanfolyam létrehozása",
       "creating": "Létrehozás…",
+      "short": "Új",
       "success": "„{{name}}” létrehozva ({{count}} feladvány)",
       "failed": "A tanfolyamot nem sikerült létrehozni.",
       "toRepertoires": "Repertoárokhoz"
@@ -2357,6 +2359,7 @@
     }
   },
   "stats": {
+    "puzzleRating": "Feladvány {{rating}}",
     "title": "Statisztikák",
     "currentElo": "Feladvány Elo",
     "totalSolved": "Megoldva",
@@ -3610,6 +3613,7 @@
     "ownGames": "Saját elemzések",
     "filterAll": "Mind",
     "filterAnnotated": "Kommentáltak",
+    "filterAnnotatedOnly": "Csak kommentáltak",
     "filterLabel": "Játszmák szűrése",
     "sort": {
       "label": "Rendezés",
@@ -3956,8 +3960,8 @@
         "show": "Mutasd",
         "report": "Jelentés"
       },
-      "sameName": "másik csoport?",
-      "sameNameHint": "Egy azonos nevű, azonos napi verseny külön kártyán szerepel — valószínűleg ugyanannak az eseménynek egy másik csoportja. A résztvevők száma megkülönbözteti őket."
+      "sameName": "{{index}}/{{total}} azonos nevű",
+      "sameNameHint": "Közvetlenül egymás mellett állnak — valószínűleg ugyanannak az eseménynek egy másik csoportja; a résztvevők száma megkülönbözteti őket."
     },
     "source": {
       "Unknown": "Ismeretlen forrás",
@@ -3989,6 +3993,7 @@
     "toRookHub": "A RookHubra",
     "authIntro": {
       "login": "Versenynaptár körzetkereséssel és értesítéssel a közeli új versenyekről, kedvencek és a lejátszott versenyeid – ingyen. Már van RookHub-fiókod? Jelentkezz be azzal.",
+      "loginShort": "Ingyenes – a RookHub-fiókod itt is érvényes.",
       "register": "A fiókod a RookHubon is érvényes – feladványok, kurzusok és elemzés ugyanazzal a bejelentkezéssel."
     },
     "profile": {
@@ -4471,6 +4476,8 @@
     }
   },
   "reprocess": {
+    "short": { "courses": "{{count}} kurzus frissíthető", "repertoires": "{{count}} repertoár frissíthető" },
+    "shortOne": { "courses": "1 kurzus frissíthető", "repertoires": "1 repertoár frissíthető" },
     "available": {
       "courses": "{{count}} tanfolyam régebbi feldolgozást használ, és frissíthető — pl. hogy megjelenjenek a könyv lépésenkénti megjegyzései.",
       "repertoires": "{{count}} repertoár régebbi feldolgozást használ, és frissíthető."
@@ -4492,7 +4499,6 @@
       "repertoires": "Ez a repertoár régebbi feldolgozásból származik, és itt nem frissíthető. Töltsd le újra a RepCheck bővítménnyel, hogy naprakész legyen."
     },
     "update": "Frissítés ({{count}})",
-    "updateAll": "Összes frissítése ({{count}})",
     "updateTip": "A tárolt forrással rendelkező elemek újrafeldolgozása és a Chessable-elemek újbóli letöltése (a gyorsítótárazottak azonnal frissülnek, letöltés nélkül).",
     "working": "Frissítés folyamatban…",
     "started": "A frissítés elindult — a háttérben fut.",
@@ -4580,6 +4586,7 @@
     "intro": "Rögzítsd, amire még emlékszel a játszmából, és zárd be a hézagokat.",
     "introMore": "Például a nyitólépéseket, egyes állásokat vagy rövid lépéssorokat — a köztük lévő hézagokat lépésről lépésre zárod be.",
     "newTitle": "Cím",
+    "createLabel": "Új rekonstrukció – cím",
     "newTitlePlaceholder": "Klubbajnokság, 3. forduló",
     "create": "Létrehozás",
     "open": "Megnyitás",

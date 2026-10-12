@@ -96,6 +96,10 @@ describe('BroadcastsPageComponent', () => {
     expect(rows().length).toBe(2);
     expect(rows()[0].querySelectorAll('td').length).toBe(4);
     expect(rows()[0].querySelector('td.num')?.textContent?.trim()).toBe('88');
+    // z2-l-uebertragungen-meta: Meta-Zeile „Zeitraum · Ort" unter dem Titel (am Handy sichtbar), beide Spalten hide-s
+    const kufstein = rows()[1];
+    expect(kufstein.querySelector('td:first-child .bc-meta')?.textContent?.trim()).toMatch(/ · Kufstein$/);
+    expect(kufstein.querySelectorAll('td.hide-s').length).toBe(2);
     expect(el().querySelector('.bc-tools')?.textContent).toContain('1 ausgeblendet');
     const only = el().querySelector('.bc-only input') as HTMLInputElement;
     expect(only.checked).toBeTrue();

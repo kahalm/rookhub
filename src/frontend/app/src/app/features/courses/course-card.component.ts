@@ -35,25 +35,29 @@ import { labelOr } from './course-language.util';
           <div class="title-row">
           <a class="card-title" [routerLink]="['/courses', course.bookId]" [attr.title]="course.displayName"
              [matTooltip]="'courses.detail.openTooltip' | translate">{{ course.displayName }}</a>
-          @if (course.needsReimport) {
-            <!-- Showstopper am KURS statt als anonyme Zahl im Banner: nur hier ist zu sehen, WELCHER
-                 Kurs gemeint ist (gemeldet 2026-09-20). UI-Sweep 2026-10-11 (r2-rp-course-warn): Text-Chip
-                 statt nacktem (!) — ein Tipp klappt die Erklärung auf (am Handy gibt es keinen Tooltip). -->
-            <button type="button" class="stale-chip" (click)="staleOpen = !staleOpen"
-                    [attr.aria-expanded]="staleOpen"
-                    [matTooltip]="'reprocess.itemNeedsReimport.courses' | translate">
-              {{ 'courses.reimport.chip' | translate }} <mat-icon>info_outline</mat-icon>
-            </button>
-          }
           </div>
+          <!-- UI-Sweep 2026-10-11 (r2-rp-course-dupes): gleichnamige Kurse bekommen ihre Herkunft als Untertitel.
+               UI-Sweep z2 (z2-rk-course-card-chip-titel): der „Neu holen"-Chip steht vorn in dieser Zeile statt neben
+               dem einzeiligen Titel — der Buchtitel bekommt die volle Kartenbreite. -->
+          @if (origin || course.needsReimport) {
+            <div class="origin-line">
+              @if (course.needsReimport) {
+                <!-- Showstopper am KURS statt als anonyme Zahl im Banner: nur hier ist zu sehen, WELCHER
+                     Kurs gemeint ist (gemeldet 2026-09-20). UI-Sweep 2026-10-11 (r2-rp-course-warn): Text-Chip
+                     statt nacktem (!) — ein Tipp klappt die Erklärung auf (am Handy gibt es keinen Tooltip). -->
+                <button type="button" class="stale-chip" (click)="staleOpen = !staleOpen"
+                        [attr.aria-expanded]="staleOpen"
+                        [matTooltip]="'reprocess.itemNeedsReimport.courses' | translate">
+                  {{ 'courses.reimport.chip' | translate }} <mat-icon>info_outline</mat-icon>
+                </button>
+              }
+              @if (origin) {
+                <span>{{ (origin.chessable ? 'courses.origin.chessable' : 'courses.origin.pgn') | translate }}@if (origin.owner) { · {{ 'courses.origin.by' | translate:{ name: origin.owner } }} }</span>
+              }
+            </div>
+          }
           @if (course.needsReimport && staleOpen) {
             <p class="stale-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</p>
-          }
-          <!-- UI-Sweep 2026-10-11 (r2-rp-course-dupes): gleichnamige Kurse bekommen ihre Herkunft als Untertitel. -->
-          @if (origin) {
-            <div class="origin-line">
-              {{ (origin.chessable ? 'courses.origin.chessable' : 'courses.origin.pgn') | translate }}@if (origin.owner) { · {{ 'courses.origin.by' | translate:{ name: origin.owner } }} }
-            </div>
           }
           @if (course.isShared && course.sharedByUsername) {
             <div class="shared-badge">
@@ -325,7 +329,8 @@ import { labelOr } from './course-language.util';
     }
     .stale-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .stale-hint { font-size: 0.78rem; margin: 2px 0 6px; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .origin-line { font-size: 0.75rem; color: color-mix(in srgb, currentColor 55%, transparent); margin-bottom: 2px; }
+    .origin-line { font-size: 0.75rem; color: color-mix(in srgb, currentColor 55%, transparent); margin-bottom: 2px;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .card-meta {
       display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
       font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);

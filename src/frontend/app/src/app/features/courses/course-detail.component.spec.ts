@@ -469,3 +469,13 @@ describe('CourseDetailComponent Sprache der Kommentare', () => {
     expect(component.offlineStale).toBeFalse();
   });
 });
+
+/** UI-Sweep z2 (z2-rk-kursdetail-handy-vorlauf): am Handy rückt die Aktionszeile vor die Kennzahlen. */
+describe('CourseDetailComponent Layout am Handy', () => {
+  const css = ((CourseDetailComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+  it('setzt die Kennzahlen am Handy hinter die Aktionszeile', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.head-card[^{]* mat-card-content[^{]*\{ ?display: flex; flex-direction: column/);
+    expect(phone).toMatch(/\.head-card[^{]* \.meta[^{]*\{ ?order: 1/);
+  });
+});

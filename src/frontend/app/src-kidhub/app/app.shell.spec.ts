@@ -9,6 +9,7 @@ import { SwUpdate } from '@angular/service-worker';
 import { Subject } from 'rxjs';
 import { KidHubAppComponent } from './app.component';
 import { kidhubConfig } from './app.config';
+import { KID_HOME_WIDTH, KID_MAP_WIDTH } from './shared/kids-layout';
 import { LEGAL_SITE } from '@rh/features/legal/legal-site';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { AccountDeletionComponent } from '@rh/features/legal/account-deletion.component';
@@ -34,6 +35,7 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
           { path: '', pathMatch: 'full', component: BlankComponent },
           { path: 'levels', component: BlankComponent },
           { path: 'levels/:level', component: BlankComponent },
+          { path: 'login', component: BlankComponent },
           { path: 'privacy', component: PrivacyComponent },
           { path: 'account-deletion', component: AccountDeletionComponent },
         ]),
@@ -64,12 +66,19 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
   it('k-logo: die Kopfzeile ist so breit wie die Spalte der Seite und mittig', async () => {
     const f = await at('/levels');
     const top = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('header.top')!;
-    expect(getComputedStyle(top).maxWidth).toBe('980px');
-    expect(top.style.getPropertyValue('--kid-page-width')).toBe('980px');
+    // z2-k-karten-breit: die Karte wächst mit dem Fenster (mindestens 980 px, ≈ 75 vw, höchstens 1480 px).
+    const vw = window.innerWidth;
+    expect(parseFloat(getComputedStyle(top).maxWidth)).toBeCloseTo(Math.min(Math.max(980, 0.75 * vw), 1480), 0);
+    expect(top.style.getPropertyValue('--kid-page-width')).toBe(KID_MAP_WIDTH);
 
     await TestBed.inject(Router).navigateByUrl('/');
     f.detectChanges();
-    expect(top.style.getPropertyValue('--kid-page-width')).toBe('1160px');
+    expect(top.style.getPropertyValue('--kid-page-width')).toBe(KID_HOME_WIDTH);
+
+    // z2-k-auth-logo: auf den Anmelde-Masken so breit wie „← Start" und Karte.
+    await TestBed.inject(Router).navigateByUrl('/login');
+    f.detectChanges();
+    expect(top.style.getPropertyValue('--kid-page-width')).toBe('432px');
 
     await TestBed.inject(Router).navigateByUrl('/levels/2');
     f.detectChanges();

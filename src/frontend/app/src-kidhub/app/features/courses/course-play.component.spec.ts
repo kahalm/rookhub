@@ -114,6 +114,9 @@ describe('CoursePlayComponent — langer Einleitungstext', () => {
     const el = f.nativeElement as HTMLElement;
     const intro = el.querySelector<HTMLElement>('.intro')!;
     expect(getComputedStyle(intro).overflowY).toBe('hidden');               // kein eigener Scrollbalken mehr
+    // z2-k-course-intro-halbzeile: kein Polster am Text — sonst läuft die nächste Zeile im Polster halb sichtbar weiter.
+    expect(getComputedStyle(intro).paddingBottom).toBe('0px');
+    expect(getComputedStyle(el.querySelector('.intro-wrap')!).paddingTop).toBe('12px');
     expect(f.componentInstance.introClipped()).toBeTrue();
     const more = el.querySelector<HTMLButtonElement>('button.more')!;
     expect(more.getAttribute('aria-expanded')).toBe('false');

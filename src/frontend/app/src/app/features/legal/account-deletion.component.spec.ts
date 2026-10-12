@@ -55,7 +55,7 @@ describe('AccountDeletionComponent', () => {
   // UI-Sweep 2026-10-11 (d2-l-kontoloeschen-flucht, d2-rk-legal-zeilenlaenge)
   // Runde z1 (z1-t-privacy-karte-rechts-leer, z1-rk-privacy-zeilen): Karte = Textspalte + Polster statt 760 px mit
   // ≈ 130 px leerem Rand rechts; Fließtext mit 1,55 Zeilenhöhe und Abstand zwischen den Aufzählungspunkten.
-  it('Karte so breit wie ihre 68ch-Textspalte (kein leerer Rand rechts), 1,55 Zeilenhöhe, Abstand zwischen Punkten; KidHub ohne Begrenzung', () => {
+  it('Karte so breit wie ihre 33em-Textspalte (≤ ~75 Zeichen) (kein leerer Rand rechts), 1,55 Zeilenhöhe, Abstand zwischen Punkten; KidHub ohne Begrenzung', () => {
     const render = (site?: object) => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
@@ -68,9 +68,16 @@ describe('AccountDeletionComponent', () => {
     };
     const el = render();
     const content = el.querySelector<HTMLElement>('mat-card-content')!;
-    const ch = parseFloat(getComputedStyle(content).fontSize) * 0.4;   // 68ch liegt sicher unter 68 × Schriftgroesse
-    expect(parseFloat(getComputedStyle(content).maxWidth)).toBeGreaterThan(68 * ch);
-    expect(parseFloat(getComputedStyle(content).maxWidth)).toBeLessThan(68 * parseFloat(getComputedStyle(content).fontSize));
+    // z2-rk-legal-zeilenlaenge: 33em statt 68ch (68ch ergab in Roboto noch 80–85 Zeichen). Gemessen an einem deutschen
+    // Satz in der Schrift der Karte: höchstens ~75 Zeichen je Zeile.
+    const cs = getComputedStyle(content);
+    const fs = parseFloat(cs.fontSize);
+    expect(parseFloat(cs.maxWidth)).toBeCloseTo(33 * fs, 0);
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const sample = 'Der Knopf unten öffnet in deinem Profil die Karte „Konto löschen“ – bist du nicht angemeldet, meldest du dich zuerst an.';
+    const perChar = ctx.measureText(sample).width / sample.length;
+    expect(parseFloat(cs.maxWidth) / perChar).withContext('Zeichen je Zeile').toBeLessThanOrEqual(76);
     const cardMax = parseFloat(getComputedStyle(el.querySelector('mat-card')!).maxWidth);
     expect(cardMax).toBeLessThan(760);
     expect(Math.abs(cardMax - 32 - parseFloat(getComputedStyle(content).maxWidth))).toBeLessThan(1);

@@ -92,7 +92,12 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     .btn.primary { background: var(--kid-green-strong); color: #fff; }
     @keyframes pop { 0% { transform: scale(.2) rotate(-30deg); } 70% { transform: scale(1.2); } }
     @media ${KID_STACKED} {
-      .hearts { margin-left: 0; }
+      /* Start, Titel, Herzen und Zähler in EINER Zeile (z2-k-endless-zaehler: der Zähler rutschte allein in Zeile 2);
+         der Titel kürzt notfalls mit „…". */
+      .head { flex-wrap: nowrap; gap: 8px; }
+      .head h1 { min-width: 0; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .hearts { margin-left: auto; font-size: 1.2rem; letter-spacing: 0; }
+      .back, .hearts, .score { flex-shrink: 0; white-space: nowrap; }
       .task { text-align: center; font-size: 1.3rem; }
       .best { text-align: center; }
     }

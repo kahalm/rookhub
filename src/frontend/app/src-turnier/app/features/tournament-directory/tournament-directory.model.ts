@@ -345,14 +345,43 @@ export function displayLocation(location: string | null | undefined, translate: 
  * Auf Prod (2026-10-11) waren das noch ~28 Turniere ab Oktober. Er erscheint nur, wo die Liste wirklich zwei gleich
  * aussehende Karten zeigt.
  */
-export function sameNameSiblings(entries: readonly DirectoryEntry[]): Set<string> {
+export function sameNameSiblings(entries: readonly DirectoryEntry[]): Map<string, SameNameMark> {
+  const result = new Map<string, SameNameMark>();
+  for (const ids of sameNameGroups(entries).values()) {
+    if (ids.length > 1) ids.forEach((id, i) => result.set(id, { index: i + 1, total: ids.length }));
+  }
+  return result;
+}
+
+/** Stelle einer Karte unter ihren Doppelgängern: „1 von 2 gleichen Namens" (z2-t-cal-gleichnamig). */
+export interface SameNameMark { index: number; total: number }
+
+function sameNameKey(entry: DirectoryEntry): string {
+  return `${entry.name.trim().toLowerCase()}|${entry.startDate ?? ''}`;
+}
+
+/** Ids je Schlüssel Name + Starttag, in der Reihenfolge des ersten Vorkommens. */
+function sameNameGroups(entries: readonly DirectoryEntry[]): Map<string, string[]> {
   const byKey = new Map<string, string[]>();
   for (const entry of entries) {
-    const key = `${entry.name.trim().toLowerCase()}|${entry.startDate ?? ''}`;
+    const key = sameNameKey(entry);
     const ids = byKey.get(key);
     if (ids) ids.push(entry.id); else byKey.set(key, [entry.id]);
   }
-  const result = new Set<string>();
-  for (const ids of byKey.values()) if (ids.length > 1) ids.forEach(id => result.add(id));
-  return result;
+  return byKey;
+}
+
+/**
+ * Gleichnamige Einträge desselben Tags direkt hintereinander (z2-t-cal-gleichnamig: die Doppelkarte stand zwölf
+ * Karten weiter unten, der Hinweis sagte „daneben"). Stabil: jede Gruppe steht dort, wo ihr erstes Mitglied stand;
+ * alles andere behält seine Reihenfolge.
+ */
+export function groupSameName<T extends DirectoryEntry>(entries: readonly T[]): T[] {
+  const byKey = new Map<string, T[]>();
+  for (const entry of entries) {
+    const key = sameNameKey(entry);
+    const group = byKey.get(key);
+    if (group) group.push(entry); else byKey.set(key, [entry]);
+  }
+  return [...byKey.values()].flat();
 }

@@ -111,7 +111,8 @@ export interface PlayerSearchResult {
           }
           {{ 'profile.searchPlayer' | translate }}
         </button>
-        <span class="pif-search-hint muted" id="pif-search-hint">{{ 'profile.searchPlayerHint' | translate }}</span>
+        <!-- UI-Sweep z2 (z2-rk-profile-suche-gesperrt): gesperrter Knopf → Grund sichtbar darunter (DESIGN 5.4). -->
+        <span class="pif-search-hint muted" id="pif-search-hint">{{ (searchable ? 'profile.searchPlayerHint' : 'profile.searchPlayerNeedsName') | translate }}</span>
       </div>
     </div>
 

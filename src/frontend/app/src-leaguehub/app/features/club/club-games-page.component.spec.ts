@@ -125,8 +125,12 @@ describe('ClubGamesPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(el.querySelector('.club-intro')?.textContent).not.toContain('Vom Datum bleibt nur das Jahr');
-    expect(el.querySelector('.stand .btn-link.pgn-dl')?.textContent).toContain('PGN herunterladen');
-    expect(el.querySelector('.stand a.add-games')).not.toBeNull();
+    // Handy-Fassung: Zählerzeile; breit (z2-l-verein-steuerzeilen): Anzahl + PGN neben der Überschrift, Hinzufügen in der Suchzeile.
+    expect(el.querySelector('.stand .btn-link.pgn-dl.cg-narrow')?.textContent).toContain('PGN herunterladen');
+    expect(el.querySelector('.stand a.add-games.cg-narrow')).not.toBeNull();
+    expect(el.querySelector('.club-head .head-count.cg-wide')?.textContent).toContain('2 Partien');
+    expect(el.querySelector('.club-head .btn-link.pgn-dl.cg-wide')?.textContent).toContain('PGN herunterladen');
+    expect(el.querySelector('.club-search a.search-add.cg-wide')?.textContent).toContain('Partien hinzufügen');
     (el.querySelector('.club-intro .chk-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.club-intro .info-panel')?.textContent).toContain('Vom Datum bleibt nur das Jahr');
@@ -193,6 +197,11 @@ describe('ClubGamesPageComponent', () => {
     expect(labels).toEqual(['Nachspielen', '⋮']);                         // der Rest steckt im Menü (0.678.0)
     expect(card.getBoundingClientRect().right - (card.querySelector('.gc-acts .more-btn') as HTMLElement).getBoundingClientRect().right)
       .toBeLessThan(12);                                                  // rechtsbündig
+    // z2-l-verein-karten-aktionen: „Nachspielen ⋮" in der Zeile von Jahr · Eröffnung, keine eigene Aktionszeile
+    const meta = (card.querySelector('.gc-meta') as HTMLElement).getBoundingClientRect();
+    const acts = (card.querySelector('.gc-acts') as HTMLElement).getBoundingClientRect();
+    expect(acts.top).toBeLessThan(meta.bottom);
+    expect(acts.left).toBeGreaterThanOrEqual(meta.right - 1);
     expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
     // breit wie bisher: Aktionen in der Spalte, keine Karte
     el.style.width = '900px';

@@ -177,6 +177,36 @@ describe('KidHubAppComponent', () => {
     expect(account(f)!.querySelectorAll('a').length).toBe(2);
   });
 
+  /** z2-k-kopf-umbruch: am Handy Logo, Name und „Abmelden" in EINER Zeile, ein langer Name wird gekürzt. */
+  it('angemeldet am Handy: Kopf einzeilig, langer Name gekürzt (voll im title)', async () => {
+    TestBed.inject(AuthService).adoptSession({ ...USER, username: 'ein-sehr-langer-spitzname-2026' });
+    const f = TestBed.createComponent(KidHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/');
+    f.detectChanges();
+    const who = account(f)!.querySelector('.who')!;
+    expect(who.getAttribute('title')).toBe('ein-sehr-langer-spitzname-2026');
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position: fixed; left: -500px; top: 0; width: 390px; height: 844px; border: 0;';
+    document.body.appendChild(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0">${(f.nativeElement as HTMLElement).outerHTML}</body></html>`);
+      doc.close();
+      const top = doc.querySelector('header.top')!.getBoundingClientRect();
+      const tops = ['.logo', '.who', '.acct'].map(s => doc.querySelector(s)!.getBoundingClientRect());
+      expect(top.height).withContext('Kopf eine Zeile').toBeLessThanOrEqual(70);
+      for (const r of tops) expect(r.right).withContext('nichts ragt hinaus').toBeLessThanOrEqual(390);
+      const w = doc.querySelector<HTMLElement>('.who')!;
+      expect(w.scrollWidth).withContext('Name gekürzt').toBeGreaterThan(w.clientWidth);
+    } finally {
+      frame.remove();
+    }
+  });
+
   it('in einer Stufe gibt es keinen Konto-Knopf', async () => {
     const f = TestBed.createComponent(KidHubAppComponent);
     await TestBed.inject(Router).navigateByUrl('/levels');

@@ -99,15 +99,17 @@ export function broadcastErrorText(reason: string | undefined): string {
         @if (loading() && !items().length) { <p class="muted">Lade …</p> }
         <div class="roster-scroll bc-scroll"><table class="rtable bc-list">
           @if (shown().length) {
-            <thead><tr><th>Übertragung</th><th>Zeitraum</th><th class="hide-s">Ort</th><th class="num">Partien</th></tr></thead>
+            <thead><tr><th>Übertragung</th><th class="hide-s">Zeitraum</th><th class="hide-s">Ort</th><th class="num">Partien</th></tr></thead>
           }
           <tbody>
             @for (b of shown(); track b.tourId) {
               <tr [attr.title]="status(b)">
+                <!-- z2-l-uebertragungen-meta: am Handy Zeitraum · Ort als Meta-Zeile unter dem Titel (beide Spalten ausgeblendet). -->
                 <td><a [href]="b.url" target="_blank" rel="noopener">{{ b.name }}</a>
                   @if (b.manual) { <span class="tag">per Link</span> }
+                  <span class="bc-meta muted small">{{ dates(b) }}@if (b.location) { · {{ b.location }}}</span>
                   @if (b.error || !b.finished) { <span class="bc-state small" [class.err]="!!b.error">{{ status(b) }}</span> }</td>
-                <td class="muted nowrap">{{ dates(b) }}</td>
+                <td class="muted nowrap hide-s">{{ dates(b) }}</td>
                 <td class="muted hide-s">{{ b.location }}</td>
                 <td class="num">{{ b.games }}</td>
               </tr>

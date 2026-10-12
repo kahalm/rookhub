@@ -12,5 +12,6 @@
   display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; margin: 0 0 8px;
   color: var(--mat-sys-on-surface-variant); font-size: 14px;
 }
-.prep-scope .load-all { min-height: 32px; height: 32px; }
+/* z2-rk-prep-alle-laden: bricht der Ladestand um, fluchtet der Textknopf mit dem Text darüber (Polster durch Rand ausgeglichen). */
+.prep-scope .load-all { min-height: 32px; height: 32px; padding: 0 4px; min-width: 0; margin-left: -4px; }
 .prep-scope .twin { flex-basis: 100%; margin-left: -8px; }

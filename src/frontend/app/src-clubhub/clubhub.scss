@@ -111,7 +111,12 @@ h3 { font-size: 19px; font-weight: 600; }
 .tabs a.on, .tabs a.on:hover { background: var(--paper); color: var(--ink); }
 .top.no-tabs { padding-bottom: 16px; }
 
-main.wrap { padding-top: 22px; padding-bottom: 28px; min-height: 55vh; }
+/* Hülle als Spalte über die volle Höhe: die Fußzeile sitzt auf kurzen Seiten am unteren Rand, auf langen unter dem
+   Inhalt (z2-c-footer-mitte; vorher hing sie dort, wo min-height: 55vh des Inhalts endete). */
+ch-root { display: flex; flex-direction: column; min-height: 100dvh; }
+ch-root > .top { flex: none; }
+main.wrap { flex: 1 0 auto; width: 100%; padding-top: 22px; padding-bottom: 28px; }
+ch-root > .foot { flex: none; width: 100%; }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 18px; padding-top: 14px; padding-bottom: 28px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
 
 /* ---- Knöpfe und Felder ------------------------------------------------------------------- */
@@ -367,7 +372,9 @@ h3.inline { display: inline; }
 .diary .notes li p:first-child a { font-weight: 700; text-decoration: none; }
 .diary .notes li p:first-child a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .diary .topic { font-size: 18px; }
-.tally { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; margin: 0 0 8px; }
+/* Titel „Wer ist da?" links, Zählstand rechts in EINER Zeile (z2-c-attendance-lead). */
+.att-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 14px; }
+.att-head .tally { margin: 0; flex: none; }
 /* Blättern zur Einheit davor / danach */
 .pager { display: flex; justify-content: space-between; gap: 10px; margin: 10px 0 0; }
 /* Gruppe/Datum links, Blättern rechts in EINER Zeile; „Was wurde gemacht?" steht unter der Liste (d2-c-attendance-lead). */
@@ -394,8 +401,10 @@ h3.inline { display: inline; }
   stroke-dasharray: 30; stroke-dashoffset: 30; }
 .tick[aria-pressed="true"] .box svg { stroke-dashoffset: 0; transition: stroke-dashoffset .18s ease-out; }
 .tick b { font-weight: 700; }
-.save-bar { position: sticky; bottom: 0; background: var(--paper); padding: 12px 0; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; border-top: 1px solid var(--line); }
-.save-bar .btn.primary { flex: 1 0 100%; min-height: 52px; font-size: 18px; }
+/* Schlank in allen Breiten: ≈ 65 px klebend (z1-c-attendance-savebar am Handy, z2-c-attendance-savebar-laptop am PC;
+   vorher 77 px > 72 px, DESIGN 4.6 Regel 9). */
+.save-bar { position: sticky; bottom: 0; background: var(--paper); padding: 8px 0; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; border-top: 1px solid var(--line); }
+.save-bar .btn.primary { flex: 1 0 100%; min-height: 48px; font-size: 18px; }
 /* Leere Meldungen nahmen mit ihrem Abstand 28 px — der Knopf endete vor der Inhaltskante (UI-Sweep 2026-10-10, c-save-btn). */
 .save-bar > span:empty { display: none; }
 
@@ -487,8 +496,9 @@ ch-root .wrap :is(app-login, app-register, app-forgot-password, app-reset-passwo
    Links in der Primärfarbe. Am Handy kein eigener 2rem-Rand mehr — .wrap gibt schon 16 px je Seite.
    Die Selektoren sind spezifischer als die der Komponenten (.legal-container[_ngcontent] / h2[_ngcontent]). */
 ch-root .wrap .legal-container { padding: 0; }
-/* Karte 660 px ≈ 75 Zeichen je Zeile bei der 17-px-Schrift (d2-c-legal-line; vorher 760/720 px mit 90–95). */
-ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: 660px; }
+/* Karte = Textspalte (33em + Polster, LEGAL_PAGE_STYLES) ≈ 72–75 Zeichen je Zeile bei der 17-px-Schrift (d2-c-legal-line;
+   vorher 760/720 px mit 90–95, dann 660 px mit noch ~80 — z2-rk-legal-zeilenlaenge). */
+ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: calc(33em + 32px); }
 :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card {
   --mat-sys-primary: var(--primary);
   --mat-sys-on-surface: var(--ink);
@@ -510,6 +520,9 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { ma
   --mat-button-filled-container-shape: 8px;
   --mat-button-filled-container-height: 44px;
   --mat-sys-label-large-font: var(--body);
+  /* z2-c-loeschknopf-schrift: Beschriftung wie .btn (16 px, fett) statt 13 px dünn. */
+  --mat-button-filled-label-text-size: 16px;
+  --mat-button-filled-label-text-weight: 700;
   border: 1px solid var(--line);
   color: var(--ink);
   font-family: var(--body);
@@ -544,14 +557,15 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { ma
   /* Tag und Thema nebeneinander (z1-c-attendance-lead: untereinander begann die Abhakliste erst bei 53 % der Höhe);
      9,75 rem fasst TT.MM.JJJJ samt Kalender-Knopf. */
   .roll-head { grid-template-columns: 9.75rem minmax(0, 1fr); gap: 8px; margin: 10px 0 8px; }
-  /* Speichern-Leiste schlank: ≤ 64 px klebend (z1-c-attendance-savebar, vorher ≈ 77 px). */
-  .save-bar { padding: 8px 0; margin-top: 8px; }
+  /* Speichern-Leiste ≤ 64 px klebend (z1-c-attendance-savebar); Polster stehen schon im Grundwert. */
   .save-bar .btn.primary { min-height: 46px; font-size: 17px; }
-  /* Kartei am Handy: Suche + Archiv in einer Zeile, die Gruppenchips darunter, der Zähler rechts daneben
-     (d2-c-kartei-lead, z1-c-kartei-lead). */
+  /* Kartei am Handy: Suche, Archiv und Zähler in einer Zeile, darunter die Gruppenchips in EINER waagrecht wischbaren
+     Zeile (d2-c-kartei-lead, z1-c-kartei-lead, z2-c-kartei-chips: zwei Chipzeilen schoben die Liste auf 43 %). */
   .tools .search { flex-basis: 10rem; }
-  .tools .filter-chips { order: 3; flex: 1 1 60%; }
-  .tools .count { order: 4; }
+  .tools .count { order: 2; margin-left: 0; }
+  .tools .filter-chips { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .tools .filter-chips::-webkit-scrollbar { display: none; }
+  .tools .filter-chips .chip-btn { flex: none; white-space: nowrap; }
   /* Titel und Anlege-Knöpfe in EINER Zeile, Knöpfe schlank mit Kurztext (z1-c-kartei-lead). */
   .kartei-head { flex-wrap: nowrap; margin-bottom: 12px; }
   .kartei-head .actions { flex-wrap: nowrap; gap: 6px; }

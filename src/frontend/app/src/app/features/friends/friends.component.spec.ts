@@ -436,3 +436,39 @@ describe('FriendsComponent Abstand über dem Titel', () => {
     expect(css).toMatch(/\.friends-container[^{]*> ?h1[^{]*\{ ?margin: 0 0 12px/);
   });
 });
+
+// UI-Sweep z2 (z2-rk-freunde-entfernen): „Freund entfernen" steht zuletzt im ⋮-Menü, nicht als Symbol neben Statistik/Duell.
+describe('FriendsComponent Freundeszeile', () => {
+  it('zeigt Statistik und Duell als Symbol, Entfernen nur im ⋮-Menü', async () => {
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne('/api/friends').flush([{ friendshipId: 1, userId: 7, username: 'anna', displayName: null, openRevengeCount: 0 }]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    httpMock.expectOne('/api/friends/requests/sent').flush([]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const meta = el.querySelector('mat-list-item [matListItemMeta]') as HTMLElement;
+    expect(meta).not.toBeNull();
+    const icons = Array.from(meta.querySelectorAll(':scope > button mat-icon')).map(i => (i.childNodes[0]?.textContent ?? '').trim());   // ohne Badge-Text
+    expect(icons).toEqual(['bar_chart', 'sports_martial_arts', 'more_vert']);
+    (meta.querySelector('button.friend-more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const del = document.querySelector('.mat-mdc-menu-panel button.delete-item') as HTMLElement;
+    expect(del).not.toBeNull();
+    expect(del.textContent).toContain('friends.aria.removeFriend');
+    httpMock.verify();
+  });
+});

@@ -114,6 +114,17 @@ body { background-color: var(--mat-sys-surface); }
 .cg-wrap coords.files coord {
   padding-right: 3px;
 }
+/* Lichthof (UI-Sweep z2, z2-rk-brett-koordinaten): am Handy liegen die Linienbuchstaben auf dem Fuss von Laeufer und
+   Springer — ein schmaler Hof in der Gegenfarbe der Schrift haelt sie auch ueber einer Figur lesbar. Dieselbe
+   Hell/Dunkel-Verteilung gilt in ALLEN Themen (siehe Farbregeln unten): dunkle Schrift → heller Hof, helle → dunkler. */
+.cg-wrap coords.ranks coord, .cg-wrap coords.files coord {
+  text-shadow: 0 0 2px var(--coord-halo), 0 0 2px var(--coord-halo);
+  --coord-halo: rgba(0, 0, 0, 0.6);
+}
+.cg-wrap.orientation-white coords.ranks coord:nth-child(even),
+.cg-wrap.orientation-white coords.files coord:nth-child(even),
+.cg-wrap.orientation-black coords.ranks coord:nth-child(odd),
+.cg-wrap.orientation-black coords.files coord:nth-child(odd) { --coord-halo: rgba(255, 255, 255, 0.7); }
 
 /* Board theme overrides — 2x2 checkerboard SVG tiled 4x4 = 8x8 board */
 .board-theme-blue cg-board {
