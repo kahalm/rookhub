@@ -71,6 +71,16 @@ describe('ScanEngineComponent', () => {
     expect(el.querySelectorAll('.se-lines li').length).toBe(5);
   });
 
+  // UI-Sweep 2026-10-11 (d2-l-korrigieren-engine-select): Auswahlfeld im LeagueHub-Stil (Fläche, 1 px Rahmen, Radius 6, 44 px)
+  it('die Engine-Auswahl ist gestaltet wie die übrigen Auswahlfelder', () => {
+    const f = create();
+    const sel = (f.nativeElement as HTMLElement).querySelector('select.se-pick') as HTMLSelectElement;
+    const cs = getComputedStyle(sel);
+    expect(cs.borderTopLeftRadius).toBe('6px');
+    expect(cs.borderTopWidth).toBe('1px');
+    expect(parseFloat(cs.minHeight)).toBe(44);
+  });
+
   it('ist standardmäßig aus und rechnet nichts', () => {
     const f = create();
     expect(f.componentInstance.on()).toBeFalse();

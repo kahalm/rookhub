@@ -1,9 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { AfterViewInit, Component, ChangeDetectionStrategy, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LEGAL_SITE, legalBackLink } from './legal-site';
+import { LEGAL_PAGE_STYLES } from './legal-page.styles';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -16,7 +17,7 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
   standalone: true,
   imports: [CommonModule, MatCardModule, RouterModule, TranslatePipe],
   template: `
-    <div class="legal-container">
+    <div class="legal-container" [class.legal-kid]="kind === 'kidhub'">
       <mat-card>
         <mat-card-header><h1 mat-card-title>{{ 'legal.privacy.title' | translate }}</h1></mat-card-header>
         <mat-card-content>
@@ -24,13 +25,17 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
           <!-- Inhaltsverzeichnis (UX-057): am Handy ist die Seite drei Bildschirmhoehen lang. Gesprungen wird per Klick
                (scrollIntoView + Fokus auf die Ueberschrift), nicht ueber den Router — KidHub/LeagueHub/ClubHub scrollen
                bei jeder Navigation nach oben (scrollPositionRestoration 'top'). -->
-          <nav class="toc" aria-labelledby="privacy-toc-title">
-            <p class="toc-title" id="privacy-toc-title">{{ 'legal.privacy.tocTitle' | translate }}</p>
-            <ul>
-              @for (s of toc; track s.id) {
-                <li><a [href]="tocHref(s.id)" (click)="jump($event, s.id)">{{ s.title | translate }}</a></li>
-              }
-            </ul>
+          <!-- UI-Sweep 2026-10-11 (d2-t-privacy-toc-mobile, d2-l-datenschutz-lang): am Handy zugeklappt — offen fuellten
+               die 11–12 Eintraege den ganzen ersten Bildschirm; ab 769 px offen. -->
+          <nav class="toc" aria-labelledby="privacy-toc-title" #tocNav>
+            <details class="toc-fold" [open]="tocOpen()" (toggle)="tocOpen.set(tocFold.open)" #tocFold>
+              <summary class="toc-title" id="privacy-toc-title">{{ 'legal.privacy.tocTitle' | translate }} ({{ toc.length }})</summary>
+              <ul>
+                @for (s of toc; track s.id) {
+                  <li><a [href]="tocHref(s.id)" (click)="jump($event, s.id)">{{ s.title | translate }}</a></li>
+                }
+              </ul>
+            </details>
           </nav>
           @if (kind === 'kidhub') {
             <!-- Kinderseite: das Wichtigste in einfacher Sprache vorneweg, die ausfuehrliche Fassung fuer Eltern
@@ -97,7 +102,16 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
             <p>{{ 'legal.privacy.leagueIntro' | translate }}</p>
             @if (site.leagueClub?.(); as club) { <p>{{ 'legal.privacy.leagueClub' | translate: { club } }}</p> }
             <ul>
-              <li>{{ 'legal.privacy.leagueSources' | translate }}</li>
+              <!-- UI-Sweep 2026-10-11 (d2-l-datenschutz-lang): die Quellen als Unterliste statt ~30 Zeilen am Stueck;
+                   Wortlaut unveraendert, nur an den Strichpunkten geteilt. -->
+              <li>{{ 'legal.privacy.leagueSourcesTitle' | translate }}
+                <ul class="sub">
+                  <li>{{ 'legal.privacy.leagueSourcesPairings' | translate }}</li>
+                  <li>{{ 'legal.privacy.leagueSourcesGames' | translate }}</li>
+                  <li>{{ 'legal.privacy.leagueSourcesClub' | translate }}</li>
+                  <li>{{ 'legal.privacy.leagueSourcesOnline' | translate }}</li>
+                </ul>
+              </li>
               <li>{{ 'legal.privacy.leagueData' | translate }}</li>
               <li>{{ 'legal.privacy.leagueBasis' | translate }}</li>
               <li>{{ 'legal.privacy.leagueRecipients' | translate }}</li>
@@ -181,6 +195,14 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
           <h2 id="privacy-contact" tabindex="-1">{{ 'legal.privacy.contactTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
 
+          @if (kind !== 'kidhub' && tocAway()) {
+            <!-- Ruecksprung zum Inhaltsverzeichnis (d2-l-datenschutz-lang): EIN klebender Knopf unten rechts, sobald das
+                 Verzeichnis oben aus dem Bild ist — hoehenlos, damit die lange Seite nicht noch laenger wird. KidHub hat
+                 kein Verzeichnis (die Abschnitte sind dort selbst Aufklapper). -->
+            <div class="to-toc-bar">
+              <a class="to-toc" [href]="tocHref('privacy-toc-title')" (click)="toToc($event)">{{ 'legal.privacy.tocTitle' | translate }}</a>
+            </div>
+          }
           <p class="back">
             <!-- Aus der App gekommen: ein Schritt zurueck; direkt aufgerufen: das Ersatzziel (UX-017). -->
             @if (back.history) {
@@ -193,34 +215,75 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
       </mat-card>
     </div>
   `,
-  styles: [`
-    .legal-container { padding: 2rem; display: flex; justify-content: center; }
-    mat-card { max-width: 760px; width: 100%; }
+  styles: [LEGAL_PAGE_STYLES, `
     /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
        immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
     /* Abschnitte als h2 unter dem h1-Titel (UX-057: vorher kein h1 und alles h4) — Aussehen wie vorher. */
     h2 { margin: 1.25rem 0 0.25rem; font-size: 1em; font-weight: bold; color: var(--mat-sys-primary); scroll-margin-top: 1rem; }
     h2:focus:not(:focus-visible) { outline: none; }
     .toc { margin: 0.25rem 0 0.5rem; }
-    .toc-title { margin: 0; font-weight: bold; }
-    .toc ul { margin: 0.25rem 0 0; padding-left: 1.25rem; }
+    .toc-title { margin: 0; font-weight: bold; cursor: pointer; min-height: 44px; display: list-item; line-height: 44px; }
+    .toc ul { margin: 0 0 0.25rem; padding-left: 1.25rem; }
     /* UI-Sweep 2026-10-11 (r2-c-privacy-toc-bullet): block statt inline-block — sonst sitzt der Listenpunkt bei einem
        umbrechenden Eintrag vor der LETZTEN Zeile (Grundlinie des Inline-Blocks). */
     .toc a { display: block; padding: 4px 0; }
     @media (pointer: coarse) { .toc a { padding: 10px 0; } }
+    /* Aufgeklappt am Handy zweispaltig — halb so hoch (d2-l-datenschutz-lang). */
+    @media (max-width: 768px) {
+      .toc ul { columns: 2; column-gap: 1rem; }
+      .toc li { break-inside: avoid; }
+    }
+    ul.sub { margin: 0.25rem 0 0; }
+    .to-toc-bar { position: sticky; bottom: 16px; height: 0; display: flex; justify-content: flex-end;
+                  align-items: flex-end; pointer-events: none; z-index: 1; }
+    .to-toc { pointer-events: auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+              box-sizing: border-box; border-radius: 22px; text-decoration: none; font-size: 0.9rem;
+              background: var(--mat-sys-surface-container-high, #2b2f36); color: var(--mat-sys-primary);
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+    .to-toc::before { content: '↑ ' / ''; }
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }
     .back a::before { content: '← ' / ''; }
   `]
 })
-export class PrivacyComponent {
+export class PrivacyComponent implements AfterViewInit {
   /** Kontakt und Impressum je Oberflaeche (KidHub: eigene Adresse, kein Impressum). */
   readonly site = inject(LEGAL_SITE);
   readonly kind = this.site.kind ?? 'rookhub';
   /** „Zurueck" dorthin, wo man herkam; direkt aufgerufen zur Anmeldung (KidHub: Startseite). */
   readonly back = legalBackLink('legal.privacy.back');
   private readonly location = inject(Location);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly tocNav = viewChild<ElementRef<HTMLElement>>('tocNav');
+
+  /** Inhaltsverzeichnis offen? Am Handy (bis 768 px) zugeklappt, breiter offen (d2-t-privacy-toc-mobile). */
+  readonly tocOpen = signal(PrivacyComponent.wideScreen());
+  /** Ist das Verzeichnis nach oben aus dem Bild gescrollt? Dann steht unten rechts „↑ Inhalt". */
+  readonly tocAway = signal(false);
+
+  private static wideScreen(): boolean {
+    return typeof matchMedia !== 'function' || matchMedia('(min-width: 769px)').matches;
+  }
+
+  ngAfterViewInit(): void {
+    const nav = this.tocNav()?.nativeElement;
+    if (!nav || typeof IntersectionObserver !== 'function') return;
+    const io = new IntersectionObserver(([e]) => this.tocAway.set(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(nav);
+    this.destroyRef.onDestroy(() => io.disconnect());
+  }
+
+  /** „↑ Inhalt": zum Verzeichnis, aufgeklappt, Fokus auf seinen Kopf. */
+  toToc(e: MouseEvent): void {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const head = document.getElementById('privacy-toc-title');
+    if (!head) return;
+    e.preventDefault();
+    this.tocOpen.set(true);
+    head.scrollIntoView({ block: 'start' });
+    head.focus({ preventScroll: true });
+  }
 
   /** Inhaltsverzeichnis — dieselben Abschnitte (Kennung = `id` der h2) in derselben Reihenfolge wie im Template. */
   readonly toc: readonly { id: string; title: string }[] = [

@@ -1,5 +1,6 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterRenderEffect, computed, inject, linkedSignal, signal, viewChild,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, afterNextRender, afterRenderEffect, computed, inject, linkedSignal,
+  signal, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -54,7 +55,13 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
             <!-- UI-Sweep 2026-10-11 (r2-k-course-heading): Zwischenüberschriften aus dem Kommentar fett absetzen -->
             <!-- UI-Sweep 2026-10-11 (r2-k-course-scroll): kein eigener Scrollkasten mehr — ein langer Text wird unten
                  ausgeblendet und lässt sich mit „Weiterlesen ▾" ganz aufklappen. -->
-            @if (introBlocks().length) {
+            <!-- d2-k-course-intro: am Handy zugeklappt nur 3 Zeilen; „Schließen" neben „Weiterlesen" blendet die Karte
+                 aus und holt das Brett ins Bild (Wunsch des Nutzers). „Text zeigen" holt sie zurück. -->
+            @if (introBlocks().length && introHidden()) {
+              <button type="button" class="more show-intro" (click)="introHidden.set(false)">
+                <span aria-hidden="true">📖</span> {{ 'kids.courses.showIntro' | translate }}
+              </button>
+            } @else if (introBlocks().length) {
               <div class="intro-wrap" [class.clipped]="introClipped()">
                 <div #intro class="intro" [class.open]="introOpen()" id="kid-course-intro">
                   @for (b of introBlocks(); track $index) {
@@ -62,11 +69,16 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
                   }
                 </div>
                 @if (introClipped() || introOpen()) {
-                  <button type="button" class="more" aria-controls="kid-course-intro" [attr.aria-expanded]="introOpen()"
-                          (click)="introOpen.set(!introOpen())">
-                    {{ (introOpen() ? 'kids.courses.readLess' : 'kids.courses.readMore') | translate }}
-                    <span aria-hidden="true">{{ introOpen() ? '▴' : '▾' }}</span>
-                  </button>
+                  <div class="intro-actions">
+                    <button type="button" class="more" aria-controls="kid-course-intro" [attr.aria-expanded]="introOpen()"
+                            (click)="introOpen.set(!introOpen())">
+                      {{ (introOpen() ? 'kids.courses.readLess' : 'kids.courses.readMore') | translate }}
+                      <span aria-hidden="true">{{ introOpen() ? '▴' : '▾' }}</span>
+                    </button>
+                    <button type="button" class="more close-intro" (click)="closeIntro()">
+                      <span aria-hidden="true">✕</span> {{ 'common.close' | translate }}
+                    </button>
+                  </div>
                 }
               </div>
             }
@@ -113,13 +125,24 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       background: var(--kid-card); color: var(--kid-title); box-shadow: 0 3px 0 var(--kid-shadow);
     }
     .more:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kid-shadow); }
+    .intro-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+    .intro-actions .more { margin: 0; }
+    .show-intro { align-self: center; margin: 0; font-size: 1rem; }
     .intro p { margin: 0; }
     .intro p + p { margin-top: 8px; }
     .intro .hl { font-weight: 800; color: var(--kid-title); }
     .intro .hl + p { margin-top: 2px; }
     @media ${KID_STACKED} {
       .chapter, .line-title { text-align: center; }
-      .intro { max-height: 30vh; }
+      /* d2-k-course-intro: zugeklappt drei Zeilen statt 30vh (~8 Zeilen) — das Brett begann sonst erst bei 69 % der
+         Höhe. Am PC (Text neben dem Brett) bleiben 40vh. */
+      .intro { max-height: calc(3 * 1.45em); }   /* Inhaltshöhe: drei Zeilen, das Polster (2 × 12 px) kommt dazu */
+      .intro-wrap.clipped .intro:not(.open) {
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
+      }
+      .intro-actions { margin: 0 0 6px; }
+      .intro-actions .more { padding: 4px 16px; }
     }
     /* Handy quer: EINE Titelzeile ueber dem Brett (damit rechnet die App-Huelle) — ein langer Kurstitel wird gekuerzt,
        statt umzubrechen und die unterste Reihe aus dem Bild zu schieben. */
@@ -155,6 +178,10 @@ export class CoursePlayComponent {
   readonly introBlocks = computed(() => splitCourseText(this.current()?.comment));
   /** UI-Sweep 2026-10-11 (r2-k-course-scroll): Einleitung ganz aufgeklappt? Jede neue Linie beginnt zugeklappt. */
   readonly introOpen = linkedSignal<KidsCourseLine | null, boolean>({ source: this.current, computation: () => false });
+  /** d2-k-course-intro: Einleitung per „Schließen" ausgeblendet? Jede neue Linie zeigt sie wieder. */
+  readonly introHidden = linkedSignal<KidsCourseLine | null, boolean>({ source: this.current, computation: () => false });
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   /** Ragt die (zugeklappte) Einleitung über ihre Höhe hinaus? Gemessen nach dem Zeichnen. */
   readonly introClipped = signal(false);
   private readonly introEl = viewChild<ElementRef<HTMLElement>>('intro');
@@ -185,6 +212,16 @@ export class CoursePlayComponent {
     route.paramMap.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe(params => {
       this.load(Number(params.get('bookId')));
     });
+  }
+
+  /** „Schließen": Erklärkarte weg und das Brett ins Bild holen (Wunsch zu d2-k-course-intro). */
+  closeIntro(): void {
+    this.introOpen.set(false);
+    this.introHidden.set(true);
+    afterNextRender(() => {
+      const board = this.host.nativeElement.querySelector<HTMLElement>('kid-puzzle .board');
+      board?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, { injector: this.injector });
   }
 
   /** Linien des Kurses holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel. */

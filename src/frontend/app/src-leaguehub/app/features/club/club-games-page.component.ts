@@ -43,8 +43,14 @@ type Side = 'white' | 'black';
     } @else {
       <section class="club-intro">
         <h2>Vereinspartien</h2>
-        <p class="muted">Partien, die Mitglieder von {{ clubName() }} hochgeladen haben — sie stehen auch auf den Spielerkarten der
-          Gegner. Vom Datum bleibt nur das Jahr; „{{ anon }}“ steht für ein Mitglied, das seinen Namen nicht zeigt.</p>
+        <!-- UI-Sweep 2026-10-11 (d2-l-vereinspartien-vorlauf): ein Satz + (i) statt vier Zeilen über der Liste. -->
+        <p class="muted info-line">„{{ anon }}“ steht für ein Mitglied ohne Namen.
+          <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Mehr zu den Vereinspartien"
+                  title="Mehr zu den Vereinspartien" (click)="infoOpen.set(!infoOpen())">i</button></p>
+        @if (infoOpen()) {
+          <div class="info-panel"><p class="note">Partien, die Mitglieder von {{ clubName() }} hochgeladen haben — sie stehen auch auf den
+            Spielerkarten der Gegner. Vom Datum bleibt nur das Jahr; „{{ anon }}“ steht für ein Mitglied, das seinen Namen nicht zeigt.</p></div>
+        }
       </section>
 
       <form class="club-search" role="search" (submit)="$event.preventDefault(); search(q.value)">
@@ -55,8 +61,10 @@ type Side = 'white' | 'black';
 
       <div class="stand">
         @if (!firstLoadFailed()) { <span>{{ total() === null ? 'Lade …' : countText() }}</span> }
-        @if (total()) { <button type="button" class="btn-sec" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
-        @if (canContribute) { <a class="btn-pri" routerLink="/verein/neu">Partien hinzufügen</a> }
+        <!-- d2-l-vereinspartien-vorlauf: Herunterladen als Textknopf in der Zählerzeile; „Partien hinzufügen" am Handy nur „+"
+             (der gleichnamige Reiter steht direkt darüber). -->
+        @if (total()) { <button type="button" class="btn-link pgn-dl" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
+        @if (canContribute) { <a class="btn-pri add-games" routerLink="/verein/neu" title="Partien hinzufügen"><span aria-hidden="true" class="add-plus">+</span><span class="add-label">Partien hinzufügen</span></a> }
         <span class="update-msg" [class.err]="!!error() && !firstLoadFailed()" role="status">{{ (firstLoadFailed() ? null : error()) ?? notice() ?? '' }}</span>
       </div>
 
@@ -229,6 +237,8 @@ export class ClubGamesPageComponent implements OnInit {
   /** Name anonymisierter Spieler und des Vereins (0.698.0, vorher fest „Schwaz"). */
   get anon(): string { return this.clubCtx.anonName(); }
   readonly clubName = this.clubCtx.clubName;
+  /** Erklärtext hinter (i), zu bis zum Tipp (d2-l-vereinspartien-vorlauf). */
+  readonly infoOpen = signal(false);
   readonly de = de;
 
   readonly items = signal<ClubGame[]>([]);

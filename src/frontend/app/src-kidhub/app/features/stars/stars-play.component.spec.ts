@@ -237,6 +237,29 @@ describe('StarsPlayComponent – freier Modus', () => {
     discardPeriodicTasks();
   }));
 
+  // UI-Sweep d2-k-free-lead: am Handy Figur und Zähler in einer Zeile, der Bereichshinweis nur im Titel des Zählers.
+  it('am Handy: Umschalter und Zähler in einer Zeile, Hinweiszeile ausgeblendet und am Zähler beschrieben', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe — der Viewport lässt sich nicht verstellen');
+    const prev = frame!.style.width;
+    frame!.style.width = '390px';
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    try {
+      const f = TestBed.createComponent(StarsPlayComponent);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      const stepper = el.querySelector<HTMLElement>('.picker-row .stepper')!;
+      const seg = el.querySelector<HTMLElement>('.picker-row .seg')!;
+      expect(stepper.getAttribute('title')).toContain('kids.stars.free.range');
+      expect(stepper.getAttribute('aria-description')).toContain('kids.stars.free.range');
+      expect(getComputedStyle(el.querySelector('.range')!).display).toBe('none');
+      const mid = (e: HTMLElement) => { const r = e.getBoundingClientRect(); return (r.top + r.bottom) / 2; };
+      expect(Math.abs(mid(seg) - mid(stepper))).withContext('eine Zeile').toBeLessThan(10);
+    } finally {
+      frame!.style.width = prev;
+    }
+  });
+
   it('gedrückt halten zählt weiter, der Klick danach zählt nicht doppelt', fakeAsync(() => {
     const f = TestBed.createComponent(StarsPlayComponent);
     f.detectChanges();

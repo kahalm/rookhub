@@ -21,6 +21,69 @@ describe('PrivacyComponent', () => {
     return f.nativeElement as HTMLElement;
   }
 
+  // UI-Sweep 2026-10-11, Runde d2 (d2-t-privacy-toc-mobile, d2-l-datenschutz-lang)
+  describe('Inhaltsverzeichnis am Handy und Ruecksprung', () => {
+    let wideScreen = false;
+    beforeEach(() => {
+      spyOn(window, 'matchMedia').and.callFake((q: string) => ({ matches: wideScreen, media: q } as MediaQueryList));
+    });
+
+    function renderAt(wide: boolean, site?: LegalSite) {
+      wideScreen = wide;
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [PrivacyComponent],
+        providers: [
+          provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
+          ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : []),
+        ],
+      });
+      const f = TestBed.createComponent(PrivacyComponent);
+      f.detectChanges();
+      return f;
+    }
+
+    it('am Handy zugeklappt mit der Zahl der Abschnitte, breiter offen', () => {
+      const narrow = renderAt(false).nativeElement as HTMLElement;
+      const fold = narrow.querySelector<HTMLDetailsElement>('nav.toc details')!;
+      expect(fold.open).toBeFalse();
+      const count = narrow.querySelectorAll('nav.toc li').length;
+      expect(narrow.querySelector('nav.toc summary')!.textContent).toContain(`(${count})`);
+      const wide = renderAt(true).nativeElement as HTMLElement;
+      expect(wide.querySelector<HTMLDetailsElement>('nav.toc details')!.open).toBeTrue();
+    });
+
+    it('„↑ Inhalt" erscheint erst, wenn das Verzeichnis aus dem Bild ist, und klappt es auf', () => {
+      const f = renderAt(false);
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.to-toc')).toBeNull();
+      f.componentInstance.tocAway.set(true);
+      f.detectChanges();
+      const link = el.querySelector<HTMLAnchorElement>('.to-toc')!;
+      expect(link.getAttribute('href')).toMatch(/#privacy-toc-title$/);
+      const head = el.querySelector<HTMLElement>('#privacy-toc-title')!;
+      spyOn(head, 'scrollIntoView');
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+      f.detectChanges();
+      expect(el.querySelector<HTMLDetailsElement>('nav.toc details')!.open).toBeTrue();
+      expect(head.scrollIntoView).toHaveBeenCalled();
+      expect(document.activeElement).toBe(head);
+    });
+
+    it('KidHub: kein „↑ Inhalt" (dort gibt es kein Verzeichnis)', () => {
+      const f = renderAt(false, { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
+      f.componentInstance.tocAway.set(true);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.to-toc')).toBeNull();
+    });
+
+    it('LeagueHub: die Quellen als Unterliste mit vier Punkten statt einer Textwand', () => {
+      const el = renderAt(true, { contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' }).nativeElement as HTMLElement;
+      const sub = el.querySelectorAll('#privacy-league ~ ul ul.sub > li');
+      expect(sub.length).toBe(4);
+    });
+  });
+
   const hrefs = (el: HTMLElement) =>
     Array.from(el.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
 
@@ -68,7 +131,8 @@ describe('PrivacyComponent', () => {
   });
 
   it('LeagueHub: Abschnitt ueber Ligaspieler ohne Konto, nur dort (F7-006)', () => {
-    const keys = ['leagueTitle', 'leagueIntro', 'leagueSources', 'leagueData', 'leagueBasis', 'leagueRecipients',
+    const keys = ['leagueTitle', 'leagueIntro', 'leagueSourcesTitle', 'leagueSourcesPairings', 'leagueSourcesGames',
+      'leagueSourcesClub', 'leagueSourcesOnline', 'leagueData', 'leagueBasis', 'leagueRecipients',
       'leagueRetention', 'leagueObjection'].map(k => 'legal.privacy.' + k);
     const league = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
     for (const k of keys) expect(league.textContent).withContext(k).toContain(k);
@@ -274,11 +338,11 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       // Foto geht erst beim Uebernehmen/Verwerfen, nicht „nach der Korrektur“ (wie aiScoresheet, A6-008).
       expect(p['leagueRetention']).not.toMatch(/nach der Korrektur gelöscht|deleted after the correction|brišu se nakon ispravka|javítás után töröljük/);
       // „Schwaz“ ist nur die Vorgabe je Seite, abwaehlbar (LeagueClubService: anonymized = w.Replace || b.Replace).
-      expect(p['leagueSources']).toMatch(/standardmäßig|by default|prema zadanim postavkama|alapértelmezés szerint/);
+      expect(p['leagueSourcesClub']).toMatch(/standardmäßig|by default|prema zadanim postavkama|alapértelmezés szerint/);
       // Der echte Name hinter „Schwaz“ bleibt intern (LeagueClubGame.WhiteRealName/BlackRealName, 0.648.0) — offen genannt.
-      expect(p['leagueSources']).toMatch(/intern|internally|interno|belsőleg/);
+      expect(p['leagueSourcesClub']).toMatch(/intern|internally|interno|belsőleg/);
       // Abruf der Online-Partien schickt Benutzernamen an chess.com (USA).
-      expect(p['leagueSources']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
+      expect(p['leagueSourcesOnline']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
       // Teilen-Link: gespielte Runde 7 Tage ab Teilen, ohne Datum 30 Tage (LeagueService.ExpiresFor).
       expect(p['leagueRecipients']).toMatch(/30/);
     });

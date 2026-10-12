@@ -40,4 +40,18 @@ describe('ClubHubAppComponent', () => {
     f.detectChanges();
     expect(link()).toBeNull();
   });
+
+  // UI-Sweep d2-c-kartei-lead / d2-c-attendance-lead: die Werbezeile nur ohne Club-Zugang
+  it('zeigt die Werbezeile nur ohne Club-Zugang', () => {
+    const f = TestBed.createComponent(ClubHubAppComponent);
+    const auth = TestBed.inject(AuthService);
+    const lede = () => (f.nativeElement as HTMLElement).querySelector('.lede');
+    f.detectChanges();
+    expect(lede()).not.toBeNull();
+    spyOn(auth, 'has').and.callFake((p: string) => p === 'club.trainer');
+    (auth as unknown as { currentUserSubject: { next(v: unknown): void } }).currentUserSubject.next(
+      { token: 't', username: 'tina', userId: 5, isAdmin: false });
+    f.detectChanges();
+    expect(lede()).toBeNull();
+  });
 });

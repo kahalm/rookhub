@@ -88,6 +88,18 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-11');
   });
 
+  // UI-Sweep d2-c-attendance-lead: die Abhakliste rückt nach oben
+  it('Blättern steht in der Zeile mit Gruppe und Datum; „Was wurde gemacht?" erst unter der Liste', async () => {
+    await create(new Date(2026, 8, 25, 17, 5));
+    expect(el().querySelector('.roll-meta .kid-meta')).not.toBeNull();
+    expect(el().querySelector('.roll-meta .pager')).not.toBeNull();
+    const roll = el().querySelector('.roll')!;
+    const notes = el().querySelector('textarea[name=notes]')!;
+    expect(roll.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).withContext('Notizfeld nach der Liste').toBeTruthy();
+    const photos = el().querySelector('.photos-section')!;
+    expect(notes.compareDocumentPosition(photos) & Node.DOCUMENT_POSITION_FOLLOWING).withContext('vor den Fotos').toBeTruthy();
+  });
+
   it('nur „da" oder „nicht da" — ein „entschuldigt" gibt es nicht', async () => {
     await create(new Date(2026, 8, 25, 17, 5));
     expect(el().textContent).not.toContain('entschuldigt');

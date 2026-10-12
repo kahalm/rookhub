@@ -72,7 +72,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     </div>
   `,
   styles: [`
-    .shared-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+    /* Brettgröße wie auf der geteilten Partie (d2-rk-shared-board-fixed): wächst mit dem Fenster statt fest 400 px. */
+    .shared-page { --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 520px)), 680px);
+      max-width: calc(var(--board-size) + 520px); margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
@@ -82,9 +84,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .rep { font-weight: 500; }
     .body { display: flex; gap: 16px; align-items: flex-start; }
-    .board-section { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
-    .board-wrap { position: relative; width: 400px; }
-    .board-wrap app-chess-board { display: block; width: 400px; }
+    .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .board-wrap { position: relative; width: var(--board-size); }
+    .board-wrap app-chess-board { display: block; width: var(--board-size); }
     .board-tap { display: none; position: absolute; top: 0; bottom: 0; width: 40%; z-index: 10; cursor: pointer; }
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }

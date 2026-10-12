@@ -83,82 +83,94 @@
       </mat-card>
     }
 
-    <!-- Themen: wonach man dieses Blatt in einem Jahr wiederfindet. Vorschläge kommen aus den
-         Aufgaben selbst, eigene Wörter sind erlaubt. -->
-    <mat-card class="wd-themes">
-      <mat-card-content>
-        <div class="wd-theme-label">{{ 'worksheets.themes.label' | translate }}</div>
-        @if (themes.length > 0) {
-          <div class="wd-chips">
-            @for (t of themes; track t) {
-              <span class="wd-chip wd-chip--set">
-                {{ t }}
-                <button type="button" class="wd-chip-x" (click)="removeTheme(t)"
-                        [attr.aria-label]="'worksheets.themes.remove' | translate">×</button>
-              </span>
-            }
-          </div>
-        } @else {
-          <p class="wd-hint">{{ 'worksheets.themes.none' | translate }}</p>
+    <!-- Themen und Teilen als EINE Zeile vor den Stellungen (d2-rk-ws-detail-lead): vorher schoben zwei Karten mit Feld,
+         QR-Code und Erklärtext die erste Stellung unter die Falz. Eingabe, Vorschläge und QR klappen erst auf Tipp auf.
+         Themen: wonach man dieses Blatt in einem Jahr wiederfindet. Teilen: EIN Link fürs ganze Blatt, auf dem Ausdruck als
+         QR-Code; die Zwischenablage bleibt außen vor — ihr Inhalt wechselt, ein Link darauf zeigte morgen etwas anderes. -->
+    <div class="wd-meta">
+      <div class="wd-meta-row">
+        <span class="wd-meta-label">{{ 'worksheets.themes.short' | translate }}</span>
+        @for (t of themes; track t) {
+          <span class="wd-chip wd-chip--set">
+            {{ t }}
+            <button type="button" class="wd-chip-x" (click)="removeTheme(t)"
+                    [attr.aria-label]="'worksheets.themes.remove' | translate">×</button>
+          </span>
         }
+        <button type="button" class="wd-chip wd-chip--add wd-theme-toggle" (click)="themesOpen.set(!themesOpen())"
+                [attr.aria-expanded]="themesOpen()">
+          + {{ 'worksheets.themes.addShort' | translate }}
+        </button>
 
-        @if (themeSuggestions.length > 0) {
-          <div class="wd-theme-label wd-theme-label--sub">
-            {{ 'worksheets.themes.suggested' | translate: { n: sheet.items.length } }}
-          </div>
-          <div class="wd-chips">
-            @for (s of themeSuggestions; track s.theme) {
-              <button type="button" class="wd-chip wd-chip--add" (click)="addTheme(s.theme)">
-                + {{ s.theme }} <span class="wd-chip-count">{{ s.count }}</span>
-              </button>
-            }
-          </div>
-        }
-
-        <div class="wd-save-row wd-theme-add">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ 'worksheets.themes.own' | translate }}</mat-label>
-            <input matInput [(ngModel)]="newTheme" maxlength="40" (keyup.enter)="addTheme(newTheme)" />
-          </mat-form-field>
-          <button mat-stroked-button (click)="addTheme(newTheme)" [disabled]="!newTheme.trim()">
-            <mat-icon>add</mat-icon>{{ 'common.add' | translate }}
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- Teilen: EIN Link fürs ganze Blatt, auf dem Ausdruck als QR-Code. Die Zwischenablage
-         bleibt außen vor — ihr Inhalt wechselt, ein Link darauf zeigte morgen etwas anderes. -->
-    @if (!sheet.isClipboard) {
-      <mat-card class="wd-share">
-        <mat-card-content>
-          <div class="wd-share-head">
-            <mat-slide-toggle [checked]="!!sheet.shareToken" (change)="toggleShare($event.checked, $event.source)"
-                              [disabled]="busy">
-              {{ 'worksheets.share.toggle' | translate }}
-            </mat-slide-toggle>
-          </div>
+        @if (!sheet.isClipboard) {
+          <span class="wd-meta-sep" aria-hidden="true">·</span>
+          <mat-slide-toggle class="wd-share-toggle" [checked]="!!sheet.shareToken"
+                            [matTooltip]="(sheet.shareToken ? 'worksheets.share.toggle' : 'worksheets.share.off') | translate"
+                            (change)="toggleShare($event.checked, $event.source)" [disabled]="busy">
+            {{ 'worksheets.share.short' | translate }}
+          </mat-slide-toggle>
           @if (sheet.shareToken) {
-            <div class="wd-share-body">
-              <app-qr-code class="wd-qr" [data]="shareUrl" [width]="132" />
-              <div class="wd-share-lines">
-                <p class="wd-hint">{{ 'worksheets.share.hint' | translate }}</p>
-                <div class="wd-share-row">
-                  <input class="wd-share-url" [value]="shareUrl" readonly />
-                  <button mat-icon-button (click)="copyShareUrl()"
-                          [appIconLabel]="'worksheets.share.copy' | translate">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </div>
-                <p class="wd-hint wd-warn">{{ 'worksheets.share.solutionWarning' | translate }}</p>
-              </div>
-            </div>
-          } @else {
-            <p class="wd-hint">{{ 'worksheets.share.off' | translate }}</p>
+            <button mat-stroked-button (click)="copyShareUrl()">
+              <mat-icon>content_copy</mat-icon>{{ 'worksheets.share.copy' | translate }}
+            </button>
+            <button mat-button class="wd-qr-toggle" (click)="qrOpen.set(!qrOpen())" [attr.aria-expanded]="qrOpen()">
+              {{ 'worksheets.share.qr' | translate }}<mat-icon iconPositionEnd>{{ qrOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
           }
-        </mat-card-content>
-      </mat-card>
-    }
+        }
+      </div>
+
+      @if (themesOpen()) {
+        <mat-card class="wd-themes">
+          <mat-card-content>
+            <div class="wd-theme-label">{{ 'worksheets.themes.label' | translate }}</div>
+            @if (themes.length === 0) {
+              <p class="wd-hint">{{ 'worksheets.themes.none' | translate }}</p>
+            }
+            @if (themeSuggestions.length > 0) {
+              <div class="wd-theme-label wd-theme-label--sub">
+                {{ 'worksheets.themes.suggested' | translate: { n: sheet.items.length } }}
+              </div>
+              <div class="wd-chips">
+                @for (s of themeSuggestions; track s.theme) {
+                  <button type="button" class="wd-chip wd-chip--add" (click)="addTheme(s.theme)">
+                    + {{ s.theme }} <span class="wd-chip-count">{{ s.count }}</span>
+                  </button>
+                }
+              </div>
+            }
+            <div class="wd-save-row wd-theme-add">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'worksheets.themes.own' | translate }}</mat-label>
+                <input matInput [(ngModel)]="newTheme" maxlength="40" (keyup.enter)="addTheme(newTheme)" />
+              </mat-form-field>
+              <button mat-stroked-button (click)="addTheme(newTheme)" [disabled]="!newTheme.trim()">
+                <mat-icon>add</mat-icon>{{ 'common.add' | translate }}
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      @if (!sheet.isClipboard && sheet.shareToken) {
+        @if (qrOpen()) {
+          <mat-card class="wd-share">
+            <mat-card-content>
+              <div class="wd-share-body">
+                <app-qr-code class="wd-qr" [data]="shareUrl" [width]="132" />
+                <div class="wd-share-lines">
+                  <p class="wd-hint">{{ 'worksheets.share.hint' | translate }}</p>
+                  <div class="wd-share-row">
+                    <input class="wd-share-url" [value]="shareUrl" readonly />
+                  </div>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+        <p class="wd-hint wd-warn">{{ 'worksheets.share.solutionWarning' | translate }}</p>
+      }
+    </div>
 
     @if (sheet.items.length === 0) {
       <mat-card class="wd-empty empty-state">

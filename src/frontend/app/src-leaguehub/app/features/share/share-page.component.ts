@@ -32,17 +32,25 @@ import { ClubContextService } from '../../core/club-context.service';
       </section>
     } @else if (data(); as d) {
       <!-- Ganz oben und auffällig (Wunsch des Nutzers): wer den Link bekommt, soll seine Partien beisteuern. -->
+      <!-- UI-Sweep 2026-10-11 (d2-l-teilen-cta): kurz statt ~360 px — Titel, (i) und zwei Knöpfe nebeneinander; der Erklärtext
+           hinter (i). Die Stand-Zeile am Handy einzeilig (Datenstand erst ab 641 px). -->
       <section class="cta" aria-labelledby="cta-title">
-        <h2 id="cta-title">Hast du gegen Spieler aus der Liga gespielt? Lade deine Partien hoch.</h2>
-        <p>Ein Foto vom Partieformular oder eine PGN-Datei genügt — ohne Anmeldung. Jede Partie hilft der Vorbereitung;
-          Spieler von {{ d.club?.name ?? 'unserem Verein' }} werden nach außen durch „{{ d.club?.anonName ?? 'Verein' }}“ ersetzt, und es wird
-          nicht gespeichert, wer hochgeladen hat.</p>
+        <div class="cta-head">
+          <h2 id="cta-title">Gegen die Liga gespielt? Partien hochladen</h2>
+          <button type="button" class="chk-btn" [attr.aria-expanded]="ctaInfo()" aria-label="Wie das Hochladen funktioniert"
+                  title="Wie das Hochladen funktioniert" (click)="ctaInfo.set(!ctaInfo())">i</button>
+        </div>
+        @if (ctaInfo()) {
+          <p class="cta-info">Ein Foto vom Partieformular oder eine PGN-Datei genügt — ohne Anmeldung. Jede Partie hilft der Vorbereitung;
+            Spieler von {{ d.club?.name ?? 'unserem Verein' }} werden nach außen durch „{{ d.club?.anonName ?? 'Verein' }}“ ersetzt, und es wird
+            nicht gespeichert, wer hochgeladen hat.</p>
+        }
         <div class="cta-actions">
-          <a class="btn-pri" [routerLink]="['/s', token, 'hochladen']" [queryParams]="{ art: 'formular' }">Partieformular fotografieren</a>
-          <a class="btn-sec" [routerLink]="['/s', token, 'hochladen']">PGN hochladen</a>
+          <a class="btn-pri" [routerLink]="['/s', token, 'hochladen']" [queryParams]="{ art: 'formular' }">Formular fotografieren</a>
+          <a class="btn-sec" [routerLink]="['/s', token, 'hochladen']" title="PGN-Datei hochladen">PGN</a>
         </div>
       </section>
-      <p class="stand">Geteilte Begegnung, nur zum Ansehen. Stand der Daten: {{ d.generated }}, Link gültig bis {{ until(d.expires) }}.</p>
+      <p class="stand share-stand">Nur zum Ansehen<span class="desk-only"> · Stand der Daten: {{ d.generated }}</span> · <span class="desk-only">Link </span>gültig bis {{ until(d.expires) }}</p>
       <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" [sources]="sources()" />
       <div class="foot-note">
         <p>Quelle: Paarungen und Meldelisten von chess-results.com bzw. dem Ligamanager des Bayerischen Schachbunds; Partien aus Lumbra's
@@ -66,6 +74,8 @@ export class SharePageComponent implements OnInit {
   readonly sources = signal<GameSources | null>(null);
   /** Vorübergehender Fehler (kein 404): der Link kann gültig sein — Klartext und „Neu laden" statt „Link ungültig". */
   readonly loadError = signal<string | null>(null);
+  /** Erklärtext der Aufforderung hinter (i) (d2-l-teilen-cta). */
+  readonly ctaInfo = signal(false);
 
   ngOnInit(): Promise<void> {
     return this.load();

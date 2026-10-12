@@ -206,7 +206,9 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     </div>
   `,
   styles: [`
-    .shared-page { max-width: 980px; margin: 0 auto; padding: 16px; }
+    /* Brettgröße wie auf der geteilten Partie (d2-rk-shared-board-fixed): wächst mit dem Fenster statt fest 400 px. */
+    .shared-page { --board-size: clamp(360px, min(calc(100vh - 260px), calc(100vw - 520px)), 680px);
+      max-width: calc(var(--board-size) + 520px); margin: 0 auto; padding: 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
@@ -222,9 +224,9 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: 0.85rem; }
     .body { display: flex; gap: 16px; align-items: stretch; }
-    .board-section { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
-    .board-wrap { width: 400px; }
-    .board-wrap app-chess-board { display: block; width: 400px; }
+    .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .board-wrap { width: var(--board-size); }
+    .board-wrap app-chess-board { display: block; width: var(--board-size); }
     .nav { display: flex; gap: 4px; align-items: center; }
     .ply-count { font-size: 0.8rem; }
     .moves-col { flex: 1; min-width: 200px; position: relative; }

@@ -119,6 +119,19 @@ describe('ClubGamesPageComponent', () => {
     expect(el.querySelector('a.btn-pri')?.textContent).toContain('Partien hinzufügen');
   }));
 
+  // UI-Sweep 2026-10-11 (d2-l-vereinspartien-vorlauf): ein Satz + (i), Herunterladen als Textknopf in der Zählerzeile
+  it('Erklärtext steht hinter (i); „PGN herunterladen" und „Partien hinzufügen" stehen in der Zählerzeile', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.club-intro')?.textContent).not.toContain('Vom Datum bleibt nur das Jahr');
+    expect(el.querySelector('.stand .btn-link.pgn-dl')?.textContent).toContain('PGN herunterladen');
+    expect(el.querySelector('.stand a.add-games')).not.toBeNull();
+    (el.querySelector('.club-intro .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.club-intro .info-panel')?.textContent).toContain('Vom Datum bleibt nur das Jahr');
+  }));
+
   // Wunsch 2026-09-28: „die Spieler sollen alle klickbar sein (Kinsiz, Atlas ist nicht klickbar), Ergebnis anpassbar".
   it('ein Name ohne FIDE-ID öffnet die Korrektur; Spieler wählen und Ergebnis ändern speichert, „Testdorf" bleibt', fakeAsync(() => {
     api.list.and.resolveTo({ total: 1, page: 1, pageSize: 50,

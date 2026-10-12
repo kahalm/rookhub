@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -24,7 +24,13 @@ export { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL };
         <mat-icon class="note-icon">extension</mat-icon>
         <div class="note-text">
           <h1>{{ 'chessable.useExtension.title' | translate }}</h1>
-          <p>{{ 'chessable.useExtension.body' | translate }}</p>
+          <!-- UI-Sweep 2026-10-11 (d2-rk-chessable-erklaertext): Kernsatz direkt über den Knöpfen, die Begründung
+               (Rechenzentrums-IPs, Kontosperre, Token) hinter „Mehr" am Satzende (DESIGN 4.6/5, 5.11). -->
+          <p>{{ 'chessable.useExtension.lead' | translate }}
+            <button type="button" class="more-toggle" (click)="whyOpen.set(!whyOpen())" [attr.aria-expanded]="whyOpen()">{{ (whyOpen() ? 'chessable.useExtension.less' : 'chessable.useExtension.more') | translate }}</button></p>
+          @if (whyOpen()) {
+            <p class="why">{{ 'chessable.useExtension.body' | translate }}</p>
+          }
           <div class="store-links">
             <a mat-stroked-button [href]="chromeUrl" target="_blank" rel="noopener noreferrer">
               <mat-icon>open_in_new</mat-icon> Chrome
@@ -50,9 +56,16 @@ export { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL };
     .note-text h1 { font-size: 1.35rem; margin: 0 0 0.5rem; }
     .note-text p { margin: 0 0 1rem; line-height: 1.5; }
     .store-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .why { color: color-mix(in srgb, currentColor 75%, transparent); max-width: 75ch; }
+    .more-toggle { font: inherit; font-weight: 500; color: var(--mat-sys-primary); background: none; border: 0;
+      padding: 6px 4px; margin: -6px 0; cursor: pointer; white-space: nowrap; text-decoration: underline;
+      text-underline-offset: 2px; }
+    .more-toggle:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; border-radius: 4px; }
   `]
 })
 export class ChessableComponent {
+  /** Begründung aufgeklappt? */
+  readonly whyOpen = signal(false);
   readonly chromeUrl = REPCHECK_CHROME_URL;
   readonly firefoxUrl = REPCHECK_FIREFOX_URL;
 }

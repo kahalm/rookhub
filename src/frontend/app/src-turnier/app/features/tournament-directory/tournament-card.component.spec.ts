@@ -314,6 +314,27 @@ describe('TournamentCardComponent', () => {
     expect(slots[3].querySelector('mat-icon')!.textContent!.trim()).toBe('flag');
   });
 
+  /** d2-t-card-slot-mobile: am Handy gleich breite Spalten statt space-between — die Regel selbst wird geprueft,
+      ein 390-px-Fenster laesst sich in Karma nicht herstellen. */
+  it('stellt die Aktionen am Handy in gleich breite Spalten (d2-t-card-slot-mobile)', () => {
+    setup();
+    const found: CSSStyleDeclaration[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const rule of Array.from(rules)) {
+        if (!(rule instanceof CSSMediaRule) || !rule.media.mediaText.includes('max-width: 599.98px')) continue;
+        for (const inner of Array.from(rule.cssRules)) {
+          if (inner instanceof CSSStyleRule && /^\.tc-actions(\[[^\]]+\])?$/.test(inner.selectorText)) found.push(inner.style);
+        }
+      }
+    }
+    const grid = found.find(st => st.display === 'grid');
+    expect(grid).withContext('Handy-Regel fuer .tc-actions').toBeDefined();
+    expect(grid!.gridAutoFlow).toBe('column');
+    expect(grid!.justifyContent).toBe('');
+  });
+
   it('fuellt die Zelle, damit die Aktionsleiste unten sitzt (t-card-actions)', () => {
     setup();
     const host = fixture.nativeElement as HTMLElement;

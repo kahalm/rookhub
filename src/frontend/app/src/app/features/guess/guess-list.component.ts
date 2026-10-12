@@ -23,6 +23,7 @@ import { GameAnalysis, GameAnalysisService, GuessUploadStatus } from '../analysi
 import { AuthService } from '../../core/auth.service';
 import { ViewStateService } from '../../core/view-state.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /** Reihenfolge des Bestands auf der Punktepartie-Seite. */
 export type GuessSort = 'title' | 'short' | 'long' | 'event';
@@ -50,11 +51,13 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatProgressBarModule, MatDialogModule, MatTabsModule,
-    TranslatePipe, LoadingSpinnerComponent],
+    TranslatePipe, LoadingSpinnerComponent, HelpHintComponent],
   template: `
     <div class="gl-container">
       <div class="header">
-        <h1>{{ 'guess.title' | translate }}</h1>
+        <h1>{{ 'guess.title' | translate }}
+          <!-- Rest der Erklärung + „Seite des Gewinners" hinter dem ⓘ (d2-rk-guess-vorlauf). -->
+          <app-help-hint [text]="('guess.introMore' | translate) + paraSep + ('guess.curatedHint' | translate)" /></h1>
         <!-- Alle Knoepfe in EINEM Kasten: die Kopfzeile verteilt ihre Kinder ueber die ganze
              Breite (space-between), einzeln stuenden sie also auseinander statt nebeneinander
              am Rand. Und alle in derselben Form — ein gefuellter Knopf daneben behauptete eine
@@ -64,15 +67,15 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
              braucht ein Konto, und das sagt der Dialog an der Stelle, wo der Knopf waere. -->
         <div class="header-actions">
           @if (loggedIn) {
-            <a mat-stroked-button routerLink="/analysis/games">
-              <mat-icon>insights</mat-icon> {{ 'guess.toAnalyses' | translate }}
+            <a mat-stroked-button routerLink="/analysis/games" [appIconLabel]="'guess.toAnalyses' | translate">
+              <mat-icon>insights</mat-icon> <span class="ha-label">{{ 'guess.toAnalyses' | translate }}</span>
             </a>
-            <button mat-stroked-button (click)="openLibrary()">
-              <mat-icon>library_books</mat-icon> {{ 'guess.library.open' | translate }}
+            <button mat-stroked-button (click)="openLibrary()" [appIconLabel]="'guess.library.open' | translate">
+              <mat-icon>library_books</mat-icon> <span class="ha-label">{{ 'guess.library.open' | translate }}</span>
             </button>
           }
-          <button mat-stroked-button (click)="openPositionFilter()">
-            <mat-icon>account_tree</mat-icon> {{ 'guess.tree.open' | translate }}
+          <button mat-stroked-button (click)="openPositionFilter()" [appIconLabel]="'guess.tree.open' | translate">
+            <mat-icon>account_tree</mat-icon> <span class="ha-label">{{ 'guess.tree.open' | translate }}</span>
           </button>
         </div>
       </div>
@@ -84,6 +87,27 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
       @if (loading) {
         <app-loading-spinner />
       } @else {
+        <!-- Angefangene Durchläufe stehen oben (d2-rk-guess-durchlaeufe-unten): wer weiterspielen will, scrollt nicht ans Ende. -->
+        @for (s of runningSessions; track s.id) {
+          <mat-card class="run resume">
+            <mat-card-content>
+              <div class="run-row">
+                <span class="resume-label">{{ 'guess.resume' | translate }}:</span>
+                <a class="g-title" [routerLink]="['/guess', s.id]">{{ s.title || ('guess.untitled' | translate) }}</a>
+                <span class="muted small">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }}</span>
+                <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span>
+                <span class="spacer"></span>
+                <a mat-flat-button color="primary" class="resume-btn" [routerLink]="['/guess', s.id]">
+                  <mat-icon>play_arrow</mat-icon> {{ 'guess.resume' | translate }}
+                </a>
+                <button mat-icon-button
+                        [appIconLabel]="'common.delete' | translate" (click)="remove(s)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
         <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
           <mat-label>{{ 'guess.search.label' | translate }}</mat-label>
           <mat-icon matPrefix>search</mat-icon>
@@ -121,7 +145,6 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                 </mat-select>
               </mat-form-field>
             </div>
-            <p class="muted small">{{ 'guess.curatedHint' | translate }}</p>
             @if (curatedShown.length === 0) {
               <p class="muted">{{ (query ? 'guess.search.none' : 'guess.noCurated') | translate }}</p>
             } @else {
@@ -243,9 +266,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
         }
         </mat-tab-group>
 
-        @if (sessions.length) {
+        @if (finishedSessions.length) {
           <h2 class="sec">{{ 'guess.yourRuns' | translate }}</h2>
-          @for (s of sessions; track s.id) {
+          @for (s of finishedSessions; track s.id) {
             <mat-card class="run">
               <mat-card-content>
                 <div class="run-row">
@@ -274,8 +297,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     h2.sec { margin: 18px 0 8px; }
     .intro { margin: 4px 0 14px; }
     .start-card { margin-bottom: 8px; }
-    .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .sort { width: 190px; margin-left: auto; }
+    /* Filter und Sortieren in EINER Zeile, auch am Handy (d2-rk-guess-vorlauf). */
+    .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
+    .sort { width: 140px; flex: 0 0 140px; margin-left: auto; }
     .more { display: block; margin: 12px auto 4px; }
     .small-toggle { font-size: .8rem; }
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -319,6 +343,19 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .chip { font-size: .72rem; padding: 2px 8px; border-radius: 10px; border: 1px solid currentColor;
             color: color-mix(in srgb, currentColor 65%, transparent); }
     .run { margin-bottom: 8px; }
+    /* Abgeschlossene Durchläufe am Inhaltsrand der Liste (die Liste sitzt ohne Rahmen 16 px eingerückt im Reiter). */
+    h2.sec, .run:not(.resume) { margin-left: 16px; margin-right: 16px; }
+    .resume { border-left: 4px solid var(--mat-sys-primary); }
+    .resume-label { font-weight: 600; }
+    /* Handy: Titel + drei Symbolknöpfe in einer Zeile, Beschriftungen nur als Tooltip/aria-label. */
+    @media (max-width: 599.98px) {
+      .header { flex-wrap: nowrap; }
+      .header-actions { flex-wrap: nowrap; gap: 4px; }
+      .header-actions .ha-label { display: none; }
+      .header-actions .mat-mdc-button-base { min-width: 44px; padding: 0 10px; }
+      .header-actions .mat-mdc-button-base mat-icon { margin: 0; }
+      .small-toggle .mat-button-toggle { font-size: .75rem; }
+    }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
   `],
@@ -336,6 +373,12 @@ export class GuessListComponent implements OnInit, OnDestroy {
   private confirm = inject(ConfirmService);
 
   sessions: GuessSession[] = [];
+  /** Angefangene Durchläufe — stehen als „Weiterspielen" über der Suche. */
+  get runningSessions(): GuessSession[] { return this.sessions.filter(s => s.status === 'running'); }
+  /** Beendete Durchläufe — bleiben unten unter „Deine Durchläufe". */
+  get finishedSessions(): GuessSession[] { return this.sessions.filter(s => s.status !== 'running'); }
+  /** Absatztrenner für zusammengesetzte Hilfetexte. */
+  readonly paraSep = '\n\n';
   /** Kuratierter Bestand — auch ohne Anmeldung. */
   curated: GameAnalysis[] = [];
   /** Eigene Analysen (nur angemeldet) — auch die noch rechnenden: wer gerade eine Partie

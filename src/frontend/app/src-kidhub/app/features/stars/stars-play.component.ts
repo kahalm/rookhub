@@ -156,6 +156,9 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     <ng-template #picker>
             <!-- Freies Spiel (UI-Sweep 2026-10-10, k-free-controls, zweiter Vorschlag): Figur als EIN Umschalter,
                  Sternzahl als grosser Zaehler mit − / + (2 bis Hoechstwert der Figur; gedrueckt halten zaehlt schneller). -->
+            <!-- Handy (d2-k-free-lead): Umschalter und Zaehler in EINER Zeile, der Bereichshinweis steht dort nur im
+                 Titel/der Beschreibung des Zaehlers — sonst begann das Brett erst bei 44 % der Hoehe. -->
+            <div class="picker-row">
             <div class="seg" role="group" [attr.aria-label]="'kids.stars.free.piece' | translate">
               @for (pc of freePieces; track pc) {
                 <button type="button" class="seg-btn" [class.on]="pc === freePiece()" [attr.aria-pressed]="pc === freePiece()"
@@ -163,7 +166,9 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
                         (click)="chooseFree(pc, shownCount())">{{ glyph(pc) }}</button>
               }
             </div>
-            <div class="stepper" role="group" [attr.aria-label]="'kids.stars.free.count' | translate">
+            <div class="stepper" role="group" [attr.aria-label]="'kids.stars.free.count' | translate"
+                 [title]="'kids.stars.free.range' | translate: { max: freeMax() }"
+                 [attr.aria-description]="'kids.stars.free.range' | translate: { max: freeMax() }">
               <button type="button" class="step" [disabled]="shownCount() <= 2" [attr.aria-label]="'kids.stars.free.less' | translate"
                       (pointerdown)="holdStep(-1, $event)" (pointerup)="releaseStep()" (pointerleave)="releaseStep()"
                       (pointercancel)="releaseStep()" (click)="clickStep(-1)">−</button>
@@ -171,6 +176,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
               <button type="button" class="step" [disabled]="shownCount() >= freeMax()" [attr.aria-label]="'kids.stars.free.more' | translate"
                       (pointerdown)="holdStep(1, $event)" (pointerup)="releaseStep()" (pointerleave)="releaseStep()"
                       (pointercancel)="releaseStep()" (click)="clickStep(1)">+</button>
+            </div>
             </div>
             <p class="range">{{ 'kids.stars.free.range' | translate: { max: freeMax() } }}</p>
     </ng-template>
@@ -212,6 +218,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
                background: transparent; color: inherit; cursor: pointer; }
     .seg-btn.on { background: var(--kid-green-strong); color: #fff; }
     .stepper { display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .picker-row { display: flex; flex-direction: column; gap: 6px; }
     .step { font: inherit; font-size: 1.8rem; font-weight: 800; width: 52px; height: 52px; border: 0; border-radius: 50%;
             background: var(--kid-card); color: inherit; cursor: pointer; box-shadow: 0 3px 0 var(--kid-shadow);
             touch-action: manipulation; user-select: none; }
@@ -283,6 +290,14 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       .rounds { align-self: center; width: 100%; }
       .rounds .round { text-align: center; }
       .pick { justify-content: center; }
+      /* d2-k-free-lead: Figur und Sternzahl nebeneinander, Hinweiszeile weg (steht im Titel des Zaehlers). */
+      .picker-row { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+      .picker-row .seg { grid-template-columns: repeat(4, 38px); }
+      .picker-row .seg-btn { font-size: 1.5rem; min-height: 44px; }
+      .picker-row .stepper { gap: 6px; }
+      .picker-row .step { width: 44px; height: 44px; font-size: 1.6rem; }
+      .picker-row .count { min-width: 2.6em; font-size: 1.6rem; }
+      .range { display: none; }
       .task { font-size: 1.3rem; }
       .head .round { margin-left: 0; }
     }

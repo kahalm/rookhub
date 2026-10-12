@@ -188,7 +188,8 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     api.createMember.and.callFake(async (input: MemberInput) => MEMBER({ id: ++id, firstName: input.firstName, lastName: input.lastName, contacts: [] }));
     await create(null, { gruppe: '1' });
     const next = () => el().querySelector<HTMLButtonElement>('.save-next')!;
-    expect(next().textContent).toBe('Weiteres Kind anlegen');
+    expect(next().querySelector('.long')!.textContent).toBe('Weiteres Kind anlegen');
+    expect(next().getAttribute('aria-label')).toBe('Weiteres Kind anlegen');
     type('input[name=firstName]', 'Anna');
     type('input[name=lastName]', 'Auer');
     type('input[name=birth]', '2016');

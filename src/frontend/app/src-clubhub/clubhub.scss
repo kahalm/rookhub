@@ -180,9 +180,18 @@ main.wrap { padding-top: 22px; padding-bottom: 28px; min-height: 55vh; }
 
 /* ---- Kartei: Register --------------------------------------------------------------------- */
 .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 16px; }
-.tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: end; margin: 0 0 12px; }
+/* Suche, Gruppenchips und Archiv in EINER Zeile (d2-c-kartei-lead); am Handy die Chips darunter (siehe @media). */
+.tools { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 0 0 12px; }
+.tools .search { flex: 1 1 14rem; }
+.tools .check { flex: none; }
 /* Gruppenfilter als Knöpfe: ein Tipp statt einer Auswahlliste. */
 .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.tools .filter-chips { margin: 0; flex: 0 1 auto; }
+/* Nur für Vorleser sichtbar (Label „Suchen" der Kartei). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 .chip-btn {
   display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
   font: 700 15px/1.1 var(--body); color: var(--ink); background: var(--card);
@@ -262,6 +271,7 @@ a.chip:hover { border-color: var(--ink); }
   flex-wrap: nowrap;
 }
 .form-save .btn.primary { flex: 1 1 auto; }
+.form-save .save-next .short { display: none; }
 /* Die Leiste klebt unten und deckt ab, was darunter liegt — ein fokussiertes Feld (Tab, Tastatur am Handy) soll ÜBER
    ihr stehen, nicht unter ihr (UI-Sweep 2026-10-10, c-form-mobile: nach der Personennummer verschwanden FIDE-Nummer und „Bild"
    unter der zweizeiligen Leiste). Abstand = Höhe der Leiste plus Luft. */
@@ -357,6 +367,11 @@ h3.inline { display: inline; }
 .tally { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; margin: 0 0 8px; }
 /* Blättern zur Einheit davor / danach */
 .pager { display: flex; justify-content: space-between; gap: 10px; margin: 10px 0 0; }
+/* Gruppe/Datum links, Blättern rechts in EINER Zeile; „Was wurde gemacht?" steht unter der Liste (d2-c-attendance-lead). */
+.roll-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 4px 0 0; }
+.roll-meta .kid-meta { margin: 0; }
+.roll-meta .pager { margin: 0; gap: 8px; }
+.roll + .field.done { margin: 16px 0; }
 .tally strong { font: 700 26px/1.1 var(--slab); }
 .roll { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .roll li { display: grid; border-top: 1px solid var(--line); }
@@ -449,6 +464,9 @@ label.upload.disabled { opacity: .5; }
   color: var(--ink);
   font-family: var(--body);
 }
+/* Keine 80vh-Zentrierung (d2-c-auth-centered): unter dem hohen Kopf lagen am Handy 240–280 px leer über der Karte,
+   und jede Maske war 60–85 px höher als das Fenster. Die Karte steht direkt unter dem Kopf (wie LeagueHub, UX-068). */
+ch-root .wrap :is(app-login, app-register, app-forgot-password, app-reset-password) .auth-container { min-height: 0; padding-top: 8px; }
 :is(app-login, app-register, app-forgot-password, app-reset-password) .mat-mdc-card .mat-mdc-card-actions a {
   text-decoration: underline; text-underline-offset: 3px;
 }
@@ -462,6 +480,8 @@ label.upload.disabled { opacity: .5; }
    Links in der Primärfarbe. Am Handy kein eigener 2rem-Rand mehr — .wrap gibt schon 16 px je Seite.
    Die Selektoren sind spezifischer als die der Komponenten (.legal-container[_ngcontent] / h2[_ngcontent]). */
 ch-root .wrap .legal-container { padding: 0; }
+/* Karte 660 px ≈ 75 Zeichen je Zeile bei der 17-px-Schrift (d2-c-legal-line; vorher 760/720 px mit 90–95). */
+ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: 660px; }
 :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card {
   --mat-sys-primary: var(--primary);
   --mat-sys-on-surface: var(--ink);
@@ -515,11 +535,20 @@ ch-root .wrap .legal-container { padding: 0; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
   .group { grid-template-columns: 1fr; }
   .roll-head { grid-template-columns: 1fr; }
+  /* Kartei am Handy: Suche + Archiv in einer Zeile, die Gruppenchips darunter (d2-c-kartei-lead). */
+  .tools .search { flex-basis: 10rem; }
+  .tools .filter-chips { order: 3; flex: 1 1 100%; }
   .sheet { padding: 14px 14px 4px; }
-  /* Beim Anlegen stehen drei Knöpfe in der Leiste: Speichern + Abbrechen oben, „Weiteres Kind anlegen" darunter. */
-  .form-save { margin: 0 -14px; padding: 10px 14px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; }
-  .form-save .save-next { grid-column: 1 / -1; grid-row: 2; }
-  html:has(.form-save) { scroll-padding-bottom: 140px; }               /* zwei Reihen Knöpfe */
+  /* EINE Reihe (d2-c-form-save-bar: zwei Reihen waren 111 px = 13 % der Höhe): „Kind anlegen" nimmt den Platz,
+     „+ Weiteres" kurz, „Abbrechen" als schlanker Textknopf. */
+  .form-save { margin: 0 -14px; padding: 8px 14px 10px; display: flex; align-items: center; gap: 4px; }
+  .form-save .btn.primary { min-width: 0; padding: 10px 12px; }
+  .form-save .save-next, .form-save .cancel { font-size: 15px; }
+  .form-save .save-next { flex: none; padding: 6px 8px; }
+  .form-save .save-next .long { display: none; }
+  .form-save .save-next .short { display: inline; }
+  .form-save .cancel { flex: none; padding: 6px 4px; border-color: transparent; background: none; }
+  html:has(.form-save) { scroll-padding-bottom: 80px; }
   .avatar.portrait { width: 76px; height: 76px; }
   .face-stage img { max-height: 360px; }
   .sheet-head.has-photo { gap: 4px 12px; }

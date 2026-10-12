@@ -130,8 +130,10 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
       :host { display: flex; flex-direction: column; justify-content: center;
               min-height: calc(var(--kid-vh, 1vh) * 100 - 140px); }
       .hero { padding-top: 0; }
-      .tiles { grid-template-columns: repeat(auto-fit, minmax(300px, 360px)); justify-content: center; gap: 22px; }
-      .tile { min-height: 260px; box-sizing: border-box; justify-content: center; gap: 10px; padding: 28px 22px; }
+      /* d2-k-home-tiles: mit der Kurskachel sind es vier — bei minmax(300px, 360px) stand „Kurse" allein in Zeile 2, am
+         Laptop unter der Falz. Jetzt teilen sich alle Kacheln eine Reihe (bei 1160 px je ~265 px), drei bleiben breit. */
+      .tiles { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); justify-content: center; gap: 22px; }
+      .tile { min-height: 220px; box-sizing: border-box; justify-content: center; gap: 10px; padding: 28px 22px; }
       .icon { font-size: 64px; }
       .name { font-size: 32px; }
       .meta { font-size: 1.15rem; }

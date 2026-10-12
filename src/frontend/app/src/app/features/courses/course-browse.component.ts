@@ -239,6 +239,7 @@ interface ChapterGroup {
     .browse-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .head-spacer { flex: 1; }
     .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary); }
+    .head-text { min-width: 0; }
     .head-text h1 { margin: 0; font-size: 1.25rem; }
     .sub { margin: 2px 0 0; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; }
     .dot { margin: 0 6px; opacity: 0.5; }
@@ -291,7 +292,9 @@ interface ChapterGroup {
     .line-action.faved mat-icon { color: #e53935; }
 
     .board-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-    .board-wrap { width: 100%; max-width: min(60vw, 560px); }
+    /* UI-Sweep 2026-10-11 (d2-rk-browse-gross-brett-klein): am großen Bildschirm wächst das Brett mit der Höhe
+       (bis 820 px), Zugleiste und Linienknöpfe bleiben über der Falz; am Laptop bleibt es mindestens 560 px. */
+    .board-wrap { width: 100%; max-width: min(60vw, max(560px, calc(100vh - 300px)), 820px); }
     .controls { display: flex; align-items: center; gap: 6px; }
     .move-strip {
       display: flex; flex-wrap: wrap; gap: 2px 4px; align-items: baseline; width: 100%;
@@ -322,6 +325,10 @@ interface ChapterGroup {
       .browse-body { flex-direction: column; }
       .line-list { flex: none; width: 100%; max-height: 260px; }
       .board-wrap { max-width: 100%; }
+      /* UI-Sweep 2026-10-11 (d2-rk-browse-handy-liste-vor-brett): am Handy ist das Brett die Hauptsache — es steht
+         vor der Linienliste, der Titel bleibt einzeilig mit „…". */
+      .board-pane { order: -1; }
+      .head-text h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     }
   `]
 })

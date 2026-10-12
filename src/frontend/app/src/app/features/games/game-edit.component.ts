@@ -67,7 +67,9 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
             <mat-icon>arrow_back</mat-icon>
           </a>
           <h1>{{ 'games.edit.title' | translate }}</h1>
-          <app-help-hint [text]="(isScoresheet() ? 'games.edit.helpScoresheet' : 'games.edit.help') | translate" />
+          <!-- Der Hinweis zu Seite/Liga und Tags steht mit hinter dem ⓘ (d2-rk-edit-handy-angaben). -->
+          <app-help-hint [text]="((isScoresheet() ? 'games.edit.helpScoresheet' : 'games.edit.help') | translate) + paraSep
+            + ('games.edit.classifierHint' | translate) + ' · ' + ('games.tags.hint' | translate: { max: maxTags })" />
           <span class="spacer"></span>
           <button mat-flat-button color="primary" (click)="save()" [disabled]="saving() || busy()">
             <mat-icon>{{ saving() ? 'hourglass_top' : 'save' }}</mat-icon> {{ 'common.save' | translate }}
@@ -78,7 +80,13 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
           <p class="club-linked">{{ 'games.edit.clubLinked' | translate }}</p>
         }
 
-        <mat-card class="headers">
+        <mat-card class="headers" [class.open]="headersOpen()">
+          <!-- Handy (d2-rk-edit-handy-angaben): Angaben als zugeklappte Zeile, damit das Brett über der Falz beginnt; offen nur,
+               wenn ein Name fehlt. Ab 769 px stehen die Felder immer offen, der Knopf ist dort ausgeblendet. -->
+          <button type="button" class="headers-toggle" (click)="headersOpen.set(!headersOpen())" [attr.aria-expanded]="headersOpen()">
+            <span class="ht-text">{{ 'games.edit.headersSummary' | translate: { white: header.white || '?', black: header.black || '?', result: header.result } }}</span>
+            <mat-icon>{{ headersOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
           <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.white' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.white" name="white" maxlength="120" (ngModelChange)="dirty.set(true)" /></mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.black' | translate }}</mat-label>
@@ -124,7 +132,6 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
                 }
               </span>
             }
-            <p class="class-hint">{{ 'games.edit.classifierHint' | translate }} · {{ 'games.tags.hint' | translate: { max: maxTags } }}</p>
           </div>
           <datalist id="tag-options">@for (v of tagSuggestions(); track v) { <option [value]="v"></option> }</datalist>
           <datalist id="cls1-options">@for (v of options1(); track v) { <option [value]="v"></option> }</datalist>
@@ -321,7 +328,14 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     .class-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) minmax(180px, 1fr);
       gap: 8px 12px; align-items: center; }
     .class-row .tag-chips { grid-column: 1 / -1; }
-    .class-hint { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* Angaben-Zeile nur am Handy; zugeklappt bleibt von der Karte nur sie (d2-rk-edit-handy-angaben). */
+    .headers-toggle { display: none; }
+    @media (max-width: 768px) {
+      .headers-toggle { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px;
+        padding: 4px 2px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+      .headers-toggle .ht-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .headers:not(.open) > :not(.headers-toggle) { display: none; }
+    }
     @media (max-width: 768px) { .class-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .class-row .tags-input { grid-column: 1 / -1; } }
     /* UI-Sweep 2026-10-11 (r2-rg-edit-fields): am schmalen Handy passt „Modus / Jahrgang" nicht in die halbe Breite. */
     @media (max-width: 420px) { .class-row { grid-template-columns: minmax(0, 1fr); } }
@@ -428,6 +442,10 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   readonly notFound = signal(false);
   readonly saving = signal(false);
   readonly dirty = signal(false);
+  /** Angaben-Karte am Handy aufgeklappt? Vorgabe zu; offen, wenn beim Laden ein Name fehlt. */
+  readonly headersOpen = signal(false);
+  /** Absatztrenner für zusammengesetzte Hilfetexte (app-help-hint: Absätze mit Leerzeile). */
+  readonly paraSep = '\n\n';
   readonly flipped = signal(false);
   readonly zoom = signal(false);
   /** Formular-Fotos je Seite (Index = Seite − 1), sobald geladen. */
@@ -583,6 +601,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       classifier1: game.classifier1Set ?? '', classifier2: game.classifier2Set ?? '',
     };
     this.headerDate.set(this.header.date);
+    this.headersOpen.set(!this.header.white.trim() || !this.header.black.trim());
     this.tags.set(game.tags ?? []);
     // Abgeleitet = geltender Wert, solange nichts gesetzt ist (der Server liefert nur den geltenden).
     this.derived1.set(game.classifier1Set ? '' : game.classifier1 ?? '');

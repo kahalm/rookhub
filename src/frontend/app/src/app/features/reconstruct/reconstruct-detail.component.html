@@ -12,6 +12,30 @@
               [appIconLabel]="'reconstruct.editHead' | translate">
         <mat-icon>{{ showHead ? 'expand_less' : 'edit_note' }}</mat-icon>
       </button>
+      <!-- Kopieren/Teilen im ⋮ (d2-rk-recon-detail-actions, DESIGN 5.5): als Text-Knöpfe in der Chip-Zeile standen sie am
+           Handy je in einer eigenen Zeile vor dem ersten Teil. -->
+      <button mat-icon-button class="head-menu" [matMenuTriggerFor]="headMenu"
+              [appIconLabel]="'common.moreActions' | translate">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #headMenu="matMenu">
+        @if (data()!.prefixSan) {
+          <button mat-menu-item (click)="copyPrefix()">
+            <mat-icon>content_copy</mat-icon><span>{{ 'reconstruct.copyPrefix' | translate }}</span>
+          </button>
+        }
+        <!-- Die ganze Partie weitergeben: ein Link auf DIESE Rekonstruktion, Lücken inbegriffen. -->
+        <button mat-menu-item class="share-item" [disabled]="busy()" (click)="shareGame()"
+                [matTooltip]="data()!.shareToken ? '' : ('reconstruct.share.hint' | translate)" matTooltipPosition="left">
+          <mat-icon>share</mat-icon>
+          <span>{{ (data()!.shareToken ? 'reconstruct.share.copyAgain' : 'reconstruct.share.action') | translate }}</span>
+        </button>
+        @if (data()!.shareToken) {
+          <button mat-menu-item class="stop-share-item" [disabled]="busy()" (click)="stopSharing()">
+            <mat-icon>link_off</mat-icon><span>{{ 'reconstruct.share.stop' | translate }}</span>
+          </button>
+        }
+      </mat-menu>
     </div>
 
     <div class="chips">
@@ -19,22 +43,6 @@
       <span class="chip ok">{{ 'reconstruct.knownPlies' | translate:{ count: data()!.knownPlies } }}</span>
       @if (data()!.gaps > 0) {
         <span class="chip warn">{{ (data()!.gaps === 1 ? 'reconstruct.gapsOne' : 'reconstruct.gaps') | translate:{ count: data()!.gaps } }}</span>
-      }
-      @if (data()!.prefixSan) {
-        <button mat-button (click)="copyPrefix()">
-          <mat-icon>content_copy</mat-icon> {{ 'reconstruct.copyPrefix' | translate }}
-        </button>
-      }
-      <!-- Die ganze Partie weitergeben: ein Link auf DIESE Rekonstruktion, Lücken inbegriffen. -->
-      <button mat-button [disabled]="busy()" (click)="shareGame()"
-              [matTooltip]="(data()!.shareToken ? 'reconstruct.share.copyAgain' : 'reconstruct.share.hint') | translate">
-        <mat-icon>share</mat-icon> {{ 'reconstruct.share.action' | translate }}
-      </button>
-      @if (data()!.shareToken) {
-        <button mat-icon-button [disabled]="busy()" (click)="stopSharing()"
-                [appIconLabel]="'reconstruct.share.stop' | translate">
-          <mat-icon>link_off</mat-icon>
-        </button>
       }
       @if (generatedCount() > 0) {
         <mat-checkbox [(ngModel)]="showGenerated">
@@ -88,10 +96,12 @@
       <section class="parts">
         <div class="add-row">
           <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Moves)">
-            <mat-icon>timeline</mat-icon> {{ 'reconstruct.addMoves' | translate }}
+            <mat-icon>timeline</mat-icon> <span class="lbl-long">{{ 'reconstruct.addMoves' | translate }}</span>
+            <span class="lbl-short">{{ 'reconstruct.addMovesShort' | translate }}</span>
           </button>
           <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Position)">
-            <mat-icon>grid_on</mat-icon> {{ 'reconstruct.addPosition' | translate }}
+            <mat-icon>grid_on</mat-icon> <span class="lbl-long">{{ 'reconstruct.addPosition' | translate }}</span>
+            <span class="lbl-short">{{ 'reconstruct.addPositionShort' | translate }}</span>
           </button>
         </div>
 

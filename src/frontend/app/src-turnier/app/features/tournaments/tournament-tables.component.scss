@@ -1,10 +1,38 @@
     .full-width { width: 100%; }
-    .table-scroll { overflow-x: auto; }
+    /* Kein eigener Scroll-Container ab 769 px (d2-t-players-sticky-head): sonst klebte der Tabellenkopf nur
+       innerhalb des Wrappers statt an der Seite. Am Handy (Karten) scrollt der Wrapper weiter seitlich (Teams). */
+    .table-scroll { overflow-x: visible; }
+    /* Klebender Kopf auf Flaechenfarbe, damit die Zeilen nicht durchscheinen. */
+    .table-scroll th.mat-mdc-header-cell { background: var(--mat-sys-surface); }
+    /* Die Reiter-Huelle von mat-tab-group schneidet (overflow: hidden/auto) und waere damit der Bezugsrahmen des
+       klebenden Kopfs. clip schneidet genauso, ist aber kein Scroll-Container — der Kopf klebt an der Seite. */
+    :host ::ng-deep .mat-mdc-tab-body-wrapper,
+    :host ::ng-deep .mat-mdc-tab-body.mat-mdc-tab-body-active,
+    :host ::ng-deep .mat-mdc-tab-body-active > .mat-mdc-tab-body-content { overflow: clip; }
+
+    /* „Weitere 50 anzeigen" unter der Spielerliste (d2-t-players-paging), Muster .more-row aus dem Kalender. */
+    .more-row { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; margin: 1rem 0; }
+    .more-count { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+
+    /* Sortier-/Filterknopf und Chips: nur am Handy (d2-t-detail-vorlauf). */
+    .player-menu-btn, .active-chips { display: none; }
+    .player-menu-btn { height: 56px; min-width: 0; padding: 0 8px; }
+    .player-menu-btn .mat-icon { margin: 0; }
+    .player-menu-btn .drop { margin-left: -4px; }
+    .active-chips { flex-wrap: wrap; gap: 0.4rem; padding-top: 0.5rem; }
+    .active-chip {
+      display: inline-flex; align-items: center; gap: 0.3rem; min-height: 32px; padding: 0 0.75rem;
+      border-radius: 8px; border: 1px solid var(--mat-sys-outline-variant); background: transparent;
+      color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer;
+    }
+    .menu-head, .menu-hint {
+      padding: 8px 16px; font-size: 0.8rem; color: var(--mat-sys-on-surface-variant);
+    }
+    .menu-hint { max-width: 16rem; }
     .round-selector { padding: 1rem 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
     .player-tools { flex-wrap: wrap; gap: 0.5rem 1rem; }
     .player-search { flex: 1 1 16rem; max-width: 24rem; }
-    .player-sort { flex: 0 1 10rem; }
     /* Schalter und ? bleiben zusammen — am Handy rutschte das ? sonst allein in eine eigene Zeile. */
     .fav-group { display: inline-flex; align-items: center; flex-wrap: nowrap; }
     .filter-hint-btn { margin-left: -8px; color: color-mix(in srgb, currentColor 70%, transparent); }
@@ -102,9 +130,13 @@
       :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
       .player-details, .player-club { padding-left: 1.5rem; }
-      .player-search { max-width: none; }
-      /* Ein Formularfeld ist inline-flex; das display:block von .mobile-only zerlegte sein Innenleben. */
-      .player-sort.mobile-only { display: inline-flex; flex-direction: column; }
+      .table-scroll { overflow-x: auto; }
+      /* EINE Zeile: Suchfeld volle Breite, daneben der Sortier-/Filterknopf; „Nur Favoriten" steht im Menue. */
+      .player-tools { flex-wrap: nowrap; gap: 0.5rem; }
+      .player-search { max-width: none; flex: 1 1 auto; min-width: 0; }
+      .player-menu-btn { display: inline-flex; flex: none; }
+      .player-tools .fav-group { display: none; }
+      .active-chips { display: flex; }
       .pairing-team { white-space: normal; }
       /* Team-Links waren Inline-Text (~18-22 px hoch); Heim- und Gastlink standen mit nur der Ergebniszeile
          dazwischen uebereinander -> Tipp auf das falsche Team. Padding statt Zeilenabstand: ~34 px Ziel,

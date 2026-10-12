@@ -102,11 +102,17 @@ type Show = 'w' | 's' | 'b';
           }
           @if (sections(); as sec) {
             @if (sec.n) {
+              <!-- Weiß und Schwarz je in einer Hülle: die Spielervorbereitung stellt sie breit nebeneinander
+                   (prep-card.scss, d2-rk-prep-wide); in LeagueHub bleiben sie untereinander. -->
+              <div class="sides">
               @if (show() !== 's') {
+                <div class="side side-white">
                 <h3>Mit Weiß <span class="muted">({{ sec.white?.n || 0 }} Partien)</span></h3>
                 <ng-container *ngTemplateOutlet="first; context: { s: sec.white, names: nameWhite }" />
+                </div>
               }
               @if (show() !== 'w') {
+                <div class="side side-black">
                 <h3>Mit Schwarz gegen 1.e4 <span class="muted">({{ sec.black_e4?.n || 0 }})</span></h3>
                 <ng-container *ngTemplateOutlet="first; context: { s: sec.black_e4, names: nameE4 }" />
                 <h3>Mit Schwarz gegen 1.d4 <span class="muted">({{ sec.black_d4?.n || 0 }})</span></h3>
@@ -115,7 +121,9 @@ type Show = 'w' | 's' | 'b';
                   <h3>Mit Schwarz gegen andere <span class="muted">({{ sec.black_other?.n }})</span></h3>
                   <ng-container *ngTemplateOutlet="first; context: { s: sec.black_other, names: null }" />
                 }
+                </div>
               }
+              </div>
             } @else if (!storedProfile() && !profileLoading()) {
               <p class="muted">Keine Partien mit diesem Filter.</p>
             }

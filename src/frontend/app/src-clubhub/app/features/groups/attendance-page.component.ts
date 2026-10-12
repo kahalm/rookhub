@@ -45,6 +45,9 @@ export function tallyText(present: number, total: number): string {
       <ch-gate area="Die Anwesenheit erfassen nur Trainer und die Vereinsleitung." />
     } @else if (group(); as g) {
       <h1>Wer ist da?</h1>
+      <!-- Gruppe/Datum und Blätterzeile in EINER Zeile, „Was wurde gemacht?" unter der Liste (d2-c-attendance-lead: die
+           Abhakliste begann erst bei 70 % der Höhe). -->
+      <div class="roll-meta">
       <p class="kid-meta"><a [routerLink]="['/gruppen', g.id]">{{ g.name }}</a><span>{{ long(date()) }}</span></p>
       <nav class="pager" aria-label="Einheiten blättern">
         <button type="button" class="btn slim prev" [disabled]="!around().prev || busy()" (click)="changeDate(around().prev ?? '')">
@@ -52,6 +55,7 @@ export function tallyText(present: number, total: number): string {
         <button type="button" class="btn slim next" [disabled]="!around().next || busy()" (click)="changeDate(around().next ?? '')">
           {{ around().next ? short(around().next!) : 'keine spätere' }} <span aria-hidden="true">›</span></button>
       </nav>
+      </div>
       <div class="roll-head">
         <!-- TT.MM.JJJJ statt <input type="date">: das zeigt das Format des Browsers (en-US 10/09/2026 = der 10. September?).
              Der Kalender bleibt erreichbar — der Knopf öffnet ein verstecktes natives Datumsfeld. -->
@@ -69,9 +73,6 @@ export function tallyText(present: number, total: number): string {
         <label class="field"><span>Thema</span>
           <input name="topic" autocomplete="off" maxlength="200" placeholder="z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
       </div>
-      <label class="field done"><span>Was wurde gemacht?</span>
-        <textarea name="notes" maxlength="2000" rows="3" placeholder="z. B. Gabel wiederholt, Arbeitsblatt 3, zum Schluss Simultan"
-          [value]="notes()" (input)="edit(notes, $any($event.target).value)"></textarea></label>
       @if (session()) { <p class="muted small existing">Für diesen Tag ist schon eine Einheit erfasst — du änderst sie.</p> }
 
       @if (!g.members.length && !g.coaches.length) {
@@ -106,6 +107,9 @@ export function tallyText(present: number, total: number): string {
             }
           }
         </ul>
+        <label class="field done"><span>Was wurde gemacht?</span>
+          <textarea name="notes" maxlength="2000" rows="3" placeholder="z. B. Gabel wiederholt, Arbeitsblatt 3, zum Schluss Simultan"
+            [value]="notes()" (input)="edit(notes, $any($event.target).value)"></textarea></label>
         <section class="photos-section">
           <h2>Fotos</h2>
           @if (session(); as s) {

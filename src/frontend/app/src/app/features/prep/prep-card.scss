@@ -66,6 +66,13 @@ html.dark-theme .prep-card-scope {
   .prep-card-scope .card table.recent td:nth-child(4) { grid-column: 3; grid-row: 1 / span 2; }
 }
 
+/* Großer Bildschirm (d2-rk-prep-wide): „Mit Weiß" links, „Mit Schwarz gegen …" rechts statt untereinander. */
+@media (min-width: 1280px) {
+  .prep-card-scope .card.inline .sides { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .prep-card-scope .card.inline .side:only-child { grid-column: 1 / -1; }
+  .prep-card-scope .card.inline .side > h3:first-child { margin-top: 0; }
+}
+
 /* Breit (Vorbereitung als Seite): die Zugfolge in „Letzte Partien" in einer Zeile statt nach jedem Halbzug umgebrochen. */
 @media (min-width: 900px) {
   .prep-card-scope .card.inline table.recent td.opening { white-space: nowrap; }

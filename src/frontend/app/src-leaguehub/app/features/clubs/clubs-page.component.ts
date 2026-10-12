@@ -68,9 +68,15 @@ const EMPTY: ClubInput = { name: '', teamPrefix: '', anonName: '', region: 'tiro
     } @else {
       <section class="clubs-page">
         <h2>Vereine</h2>
-        <p class="muted clubs-help">Ein Verein hat in LeagueHub seine eigene Vereins-Datenbank, eigene Partieformulare, Entwürfe und
-          Teilen-Links — kein Verein sieht die eines anderen. Wer in einer Gruppe des Vereins ist, arbeitet in diesem Verein; was er
-          darf (ansehen, beitragen, verwalten), kommt weiter aus den Rollen der Gruppe. Wer in keiner Vereinsgruppe ist, sieht nichts.</p>
+        <!-- UI-Sweep 2026-10-11 (d2-l-vereine-text): der erste Satz bleibt, Gruppen und Rollen hinter (i). -->
+        <p class="muted clubs-help info-line">Jeder Verein hat eigene Partien, Formulare und Teilen-Links — kein Verein sieht die eines anderen.
+          <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Gruppen und Rollen"
+                  title="Gruppen und Rollen" (click)="infoOpen.set(!infoOpen())">i</button></p>
+        @if (infoOpen()) {
+          <div class="info-panel clubs-info"><p class="note">Ein Verein hat in LeagueHub seine eigene Vereins-Datenbank, eigene Partieformulare,
+            Entwürfe und Teilen-Links. Wer in einer Gruppe des Vereins ist, arbeitet in diesem Verein; was er darf (ansehen, beitragen,
+            verwalten), kommt weiter aus den Rollen der Gruppe. Wer in keiner Vereinsgruppe ist, sieht nichts.</p></div>
+        }
 
         @if (msg(); as m) { <p class="update-msg" [class.err]="m.err" role="status">{{ m.text }}</p> }
         @if (loadError()) { <p class="err" role="alert">{{ loadError() }}</p> }
@@ -206,6 +212,8 @@ export class ClubsPageComponent implements OnInit {
   readonly clubs = signal<AdminClub[]>([]);
   readonly groups = signal<RhGroup[]>([]);
   readonly loading = signal(false);
+  /** Gruppen/Rollen-Erklärung hinter (i) (d2-l-vereine-text). */
+  readonly infoOpen = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly groupsError = signal<string | null>(null);
   readonly msg = signal<{ text: string; err: boolean } | null>(null);

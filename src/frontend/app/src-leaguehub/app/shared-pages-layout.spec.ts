@@ -1,4 +1,4 @@
-import { Type } from '@angular/core';
+import { Type, reflectComponentType } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient } from '@angular/common/http';
@@ -63,6 +63,23 @@ describe('LeagueHub: geteilte Anmelde- und Rechtsseiten in der Hülle (UX-068)',
       expect(getComputedStyle(box).paddingLeft).toBe('0px');
       expect(getComputedStyle(box).paddingRight).toBe('0px');
       expect(Math.round((el.querySelector('mat-card') as HTMLElement).getBoundingClientRect().width)).toBe(358);
+    });
+  }
+
+  // UI-Sweep 2026-10-11 (d2-l-masken-knopf): Materials 40 px mit ~14-px-Beschriftung lag unter dem Tippziel.
+  for (const page of [LoginComponent, RegisterComponent, ForgotPasswordComponent, ResetPasswordComponent] as Type<unknown>[]) {
+    it(`${page.name}: Hauptknopf mindestens 44 px hoch, Beschriftung 16 px`, () => {
+      // TestBed haengt die Seite in ein <div> — die Regel gilt dem Element der App (<app-login> …), also darin einhaengen.
+      const host = document.createElement(reflectComponentType(page)!.selector);
+      shell.querySelector('main')!.appendChild(host);
+      const fixture = TestBed.createComponent(page);
+      if (page === ResetPasswordComponent) (fixture.componentInstance as ResetPasswordComponent).token = 'tok';   // Formular nur mit Token
+      fixture.detectChanges();
+      host.appendChild(fixture.nativeElement);
+      const btn = host.querySelector<HTMLElement>('.mat-mdc-card button[type="submit"]')!;
+      expect(btn).withContext('Hauptknopf vorhanden').not.toBeNull();
+      expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      expect(getComputedStyle(btn).fontSize).toBe('16px');
     });
   }
 

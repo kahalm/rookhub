@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
@@ -31,7 +32,7 @@ interface Pick { liga?: number; verein?: string }
   selector: 'lh-league-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, AccessGateComponent, RoundLineupsComponent],
+  imports: [FixtureViewComponent, AccessGateComponent, RoundLineupsComponent, NgTemplateOutlet],
   template: `
     @if (!allowed) {
       <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
@@ -42,13 +43,16 @@ interface Pick { liga?: number; verein?: string }
         <div class="actions"><button type="button" class="btn-sec" (click)="loadIndex()">Neu laden</button></div>
       </section>
     } @else if (index(); as ix) {
-      @if (canManage) {
-        <label class="all-leagues">
-          <input type="checkbox" [checked]="showAll()" (change)="toggleAll($any($event.target).checked)" />
-          alle Ligen der Region@if (ix.total) { ({{ ix.total }})}
-        </label>
-      }
+      <ng-template #allToggle>
+        @if (canManage) {
+          <label class="all-leagues">
+            <input type="checkbox" [checked]="showAll()" (change)="toggleAll($any($event.target).checked)" />
+            alle Ligen der Region@if (ix.total) { ({{ ix.total }})}
+          </label>
+        }
+      </ng-template>
       @if (!ix.leagues.length) {
+        <ng-container *ngTemplateOutlet="allToggle" />
         @if (ix.filtered && ix.total) {
           <section class="gate no-own">
             <h2>Noch keine Liga mit einer Mannschaft von {{ clubName() }}</h2>
@@ -70,6 +74,16 @@ interface Pick { liga?: number; verein?: string }
           </section>
         }
       } @else {
+        <!-- UI-Sweep 2026-10-11 (d2-l-prognosen-filter): am Handy die Auswahl als EINE Zeile („Liga · R1 · Verein“ + „Ändern ▾“);
+             Schalter, drei Felder und Datenstand erst aufgeklappt — vorher 626 px Vorlauf, kein Brett im ersten Bildschirm.
+             Breit bleibt alles offen (.pick-bar nur am Handy). -->
+        <div class="pick-bar">
+          <span class="pick-sum">{{ pickSummary() }}</span>
+          <button type="button" class="btn-sec pick-change" [attr.aria-expanded]="pickOpen()" aria-controls="lh-pick"
+                  (click)="pickOpen.set(!pickOpen())">{{ pickOpen() ? 'Fertig ▴' : 'Ändern ▾' }}</button>
+        </div>
+        <div class="pick-area" id="lh-pick" [class.open]="pickOpen()">
+        <ng-container *ngTemplateOutlet="allToggle" />
         <form class="pick" autocomplete="off" (submit)="$event.preventDefault()">
           <label>Liga
             <select (change)="pickLeague(+$any($event.target).value)">
@@ -95,12 +109,14 @@ interface Pick { liga?: number; verein?: string }
           }
           <span class="update-msg" [class.err]="updateErr()" role="status" aria-live="polite">{{ updateMsg() }}</span>
         </div>
+        </div>
 
         <!-- 2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde anzeigt" — aufklappbar,
              der Zustand steht in der Adresse (&aufstellungen=1) und mit der gemerkten Runde im Tab. -->
         @if (league()) {
           <div class="lineups-toggle">
-            <button type="button" class="btn-sec" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
+            <!-- d2-l-prognosen-filter: als Textknopf statt als gerahmter Knopf — eine leise Zeile über der Begegnung -->
+            <button type="button" class="btn-link" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16M9 4v16"/></svg>
               {{ showLineups() ? 'Aufstellungen ausblenden' : 'Alle Aufstellungen der Runde ' + round() }}
@@ -144,7 +160,7 @@ interface Pick { liga?: number; verein?: string }
   `,
   styles: [`
     .lineups-toggle { margin: 0 0 14px; }
-    .lineups-toggle .btn-sec { display: inline-flex; align-items: center; gap: 6px; }
+    .lineups-toggle .btn-link { display: inline-flex; align-items: center; gap: 6px; }
   `],
 })
 export class LeaguePageComponent implements OnInit {
@@ -184,6 +200,14 @@ export class LeaguePageComponent implements OnInit {
   readonly teamPrefix = computed(() => this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix ?? null);
 
   readonly fixture = computed(() => this.league()?.fixtures[this.team()]?.[String(this.round())]);
+  /** Auswahl am Handy aufgeklappt (d2-l-prognosen-filter) — zu, sobald eine Auswahl gemerkt ist (Adresse oder Gerät). */
+  readonly pickOpen = signal(false);
+  /** „1. Bundesliga · R1 · Schachklub Schwaz" — die aktive Wahl in der zugeklappten Zeile. */
+  readonly pickSummary = computed(() => {
+    const L = this.league();
+    const name = L?.name ?? this.index()?.leagues.find(l => l.tnr === this.tnr())?.name ?? '';
+    return [name, this.round() ? `R${this.round()}` : '', this.team() ? tn(this.team()) : ''].filter(x => !!x).join(' · ');
+  });
   readonly tn = tn;
   readonly label = roundLabel;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -235,6 +259,7 @@ export class LeaguePageComponent implements OnInit {
     this.loadError.set(null);
     const q = this.route.snapshot.queryParamMap;
     const saved = readJson<Pick>(localStore(), PICK_KEY) ?? {};
+    if (!keep) this.pickOpen.set(!q.get('liga') && !saved.liga);
     const pref = keep ?? {
       liga: Number(q.get('liga')) || saved.liga || 0,
       runde: Number(q.get('runde')) || 0,

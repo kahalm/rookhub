@@ -1,4 +1,13 @@
 import { of } from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { MatDialog } from '@angular/material/dialog';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { WeeklyService } from './weekly.service';
 import { WeeklyListComponent } from './weekly-list.component';
 
 describe('WeeklyListComponent file validation', () => {
@@ -150,5 +159,52 @@ describe('WeeklyListComponent Lesemodus + Bearbeiten', () => {
   it('Vorschau des Termins nur bei Datum und Uhrzeit', () => {
     expect(component.previewAt('', '21:00')).toBeNull();
     expect(component.previewAt('2026-07-16', '21:00')).toBe(new Date(2026, 6, 16, 21, 0).getTime());
+  });
+});
+
+// d2-rk-weekly-upload: das offene Upload-Formular schob für Verwalter die Liste unter die Falz (Handy 99 % Vorlauf).
+// Jetzt zugeklappt hinter „＋ Neuer Wochenpost" im Seitenkopf; nach „Anlegen" klappt es wieder zu.
+describe('WeeklyListComponent Upload zugeklappt', () => {
+  async function render() {
+    const weekly = {
+      getAll: () => of([{ id: 1, title: 'Wochenpost 1', scheduledAt: '2026-07-09T19:00:00', description: null }]),
+      getAllProgress: () => of([]),
+      create: jasmine.createSpy('create').and.returnValue(of({})),
+    };
+    await TestBed.configureTestingModule({
+      imports: [WeeklyListComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false, has: (p: string) => p === 'weeklyposts.manage' } },
+        { provide: WeeklyService, useValue: weekly },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(false) } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WeeklyListComponent);
+    fixture.detectChanges();
+    return { fixture, weekly };
+  }
+
+  it('zeigt das Formular erst nach dem Knopf im Kopf und klappt es nach „Anlegen" wieder zu', async () => {
+    const { fixture, weekly } = await render();
+    const el = fixture.nativeElement as HTMLElement;
+    const c = fixture.componentInstance;
+    expect(el.querySelector('.upload-card')).withContext('Vorgabe zu').toBeNull();
+    expect(el.querySelector('.wp-list')).not.toBeNull();
+    const toggle = el.querySelector('.header .header-actions button.upload-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.upload-card')).not.toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    c.uploadFile = new File(['1. e4 *'], 'post.pgn');
+    c.uploadDate = '2026-07-16';
+    c.uploadTime = '19:00';
+    c.upload();
+    fixture.detectChanges();
+    expect(weekly.create).toHaveBeenCalled();
+    expect(c.showUpload()).toBeFalse();
+    expect(el.querySelector('.upload-card')).toBeNull();
   });
 });

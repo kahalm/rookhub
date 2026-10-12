@@ -118,7 +118,12 @@ describe('ClubsPageComponent (Vereine verwalten, 0.700.0)', () => {
     expect(rows[0].querySelector('td.region')?.firstChild?.textContent?.trim()).toBe('Tirol');
     expect(rows[0].querySelector('td.region .region-src')?.textContent).toBe('chess-results');
     expect(rows[1].querySelector('td.region .region-src')?.textContent).toBe('Ligamanager + Schachkreis Zugspitze');
-    expect(el().querySelector('.clubs-help')!.textContent).toContain('keiner Vereinsgruppe');
+    // UI-Sweep 2026-10-11 (d2-l-vereine-text): ein Satz, Gruppen und Rollen erst hinter (i)
+    expect(el().querySelector('.clubs-help')!.textContent).toContain('kein Verein sieht die eines anderen');
+    expect(el().textContent).not.toContain('keiner Vereinsgruppe');
+    (el().querySelector('.clubs-help .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el().querySelector('.clubs-info')!.textContent).toContain('keiner Vereinsgruppe');
   });
 
   it('Anlegen schickt den richtigen Rumpf und frischt den Vereins-Kontext auf', async () => {

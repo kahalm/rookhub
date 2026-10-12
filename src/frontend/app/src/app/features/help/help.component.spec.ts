@@ -158,7 +158,9 @@ describe('HelpComponent', () => {
     }
 
     it('jeder Eintrag ist ein echter Link mit Adresse #abschnitt und ≥ 44 px hoch', async () => {
-      const { el, cmp } = await render();
+      const { el, cmp, fixture } = await render();
+      cmp.tocOpen.set(true);                           // unter 1280 px zugeklappt (d2-rk-help-inhalt-vorlauf)
+      fixture.detectChanges();
       const links = [...el.querySelectorAll<HTMLAnchorElement>('.help-toc a')];
       expect(links.length).toBe(cmp.sections.length);
       links.forEach((a, i) => {
@@ -169,7 +171,9 @@ describe('HelpComponent', () => {
     });
 
     it('„Nach oben“ ist ein Knopf (Tastatur) mit ≥ 44 px Trefferfläche', async () => {
-      const { el, cmp } = await render();
+      const { el, cmp, fixture } = await render();
+      cmp.sections.forEach(s => cmp.expand(s.id));   // steht im aufgeklappten Teil
+      fixture.detectChanges();
       const backs = [...el.querySelectorAll<HTMLElement>('.back-top')];
       expect(backs.length).toBe(cmp.sections.length);
       for (const b of backs) {
@@ -191,6 +195,65 @@ describe('HelpComponent', () => {
       expect(document.activeElement).toBe(el.querySelector('#extension'));
       el.querySelector<HTMLButtonElement>('#extension .back-top')!.click();
       expect(document.activeElement).toBe(el.querySelector('#help-toc'));
+    });
+  });
+
+  // UI-Sweep 2026-10-11, Runde d2 „Erster Blick und Scrollen“
+  describe('Verzeichnis und Abschnitte zugeklappt (d2-rk-help-inhalt-vorlauf, d2-rk-help-seitenlaenge)', () => {
+    async function render(wide: boolean) {
+      spyOn(window, 'matchMedia').and.callFake((q: string) =>
+        ({ matches: wide && q.includes('1280'), media: q } as MediaQueryList));
+      await TestBed.configureTestingModule({
+        imports: [HelpComponent],
+        providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      }).compileComponents();
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('en', { help: { tocCount: '{{count}} topics', s: {
+        welcome: { t: 'Welcome', p: ['First line.', 'Second paragraph.'] },
+      } } });
+      translate.use('en');
+      const fixture = TestBed.createComponent(HelpComponent);
+      fixture.detectChanges();
+      return { fixture, el: fixture.nativeElement as HTMLElement, cmp: fixture.componentInstance };
+    }
+
+    it('unter 1280 px ist das Verzeichnis zugeklappt und nennt die Zahl der Themen', async () => {
+      const { el, cmp } = await render(false);
+      const details = el.querySelector<HTMLDetailsElement>('.help-toc details')!;
+      expect(details.open).toBeFalse();
+      expect(el.querySelector('.help-toc summary')!.textContent).toContain(`${cmp.sections.length} topics`);
+    });
+
+    it('ab 1280 px steht das Verzeichnis offen daneben', async () => {
+      const { el } = await render(true);
+      expect(el.querySelector<HTMLDetailsElement>('.help-toc details')!.open).toBeTrue();
+    });
+
+    it('Abschnitte zeigen zugeklappt Titel und erste Zeile; der Kopf klappt auf (aria-expanded)', async () => {
+      const { el, fixture } = await render(false);
+      const card = el.querySelector<HTMLElement>('#welcome')!;
+      const toggle = card.querySelector<HTMLButtonElement>('.sec-toggle')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(card.querySelector('p.lead.teaser')!.textContent).toContain('First line.');
+      expect(card.querySelector('.more')!.getAttribute('hidden')).toBe('until-found');
+      toggle.click();
+      fixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(card.querySelector('.more')!.hasAttribute('hidden')).toBeFalse();
+      expect(card.querySelector('p.lead.teaser')).toBeNull();
+    });
+
+    it('ein Sprung aus dem Verzeichnis (oder #anker) klappt den Zielabschnitt auf', async () => {
+      const { el, cmp, fixture } = await render(false);
+      cmp.scrollTo('welcome');
+      fixture.detectChanges();
+      expect(el.querySelector('#welcome .sec-toggle')!.getAttribute('aria-expanded')).toBe('true');
+      expect(el.querySelector('#welcome .more')!.textContent).toContain('Second paragraph.');
+    });
+
+    it('Absätze höchstens 68ch breit (d2-rk-help-line)', async () => {
+      const { el } = await render(false);
+      expect(getComputedStyle(el.querySelector('#welcome p.lead')!).maxWidth).not.toBe('none');
     });
   });
 

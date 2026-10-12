@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
@@ -128,5 +128,65 @@ describe('CoursePlayComponent — langer Einleitungstext', () => {
     f.detectChanges();
     expect(f.componentInstance.introOpen()).toBeFalse();
     expect(el.querySelector('button.more')).toBeNull();
+  });
+
+  function render(): ComponentFixture<CoursePlayComponent> {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.returnValue(of([line(1, long), line(2, long)]));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '7' })) } },
+      ],
+    });
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    f.detectChanges();
+    return f;
+  }
+
+  /** Wunsch zu d2-k-course-intro: „Schließen" neben „Weiterlesen" blendet die Karte aus und holt das Brett ins Bild. */
+  it('„Schließen" blendet die Erklärkarte aus und scrollt zum Brett; „Text zeigen" holt sie zurück, die nächste Linie zeigt sie wieder', async () => {
+    const scroll = spyOn(Element.prototype, 'scrollIntoView');
+    const f = render();
+    const el = f.nativeElement as HTMLElement;
+    const close = el.querySelector<HTMLButtonElement>('.intro-actions .close-intro')!;
+    expect(close).withContext('Schließen neben Weiterlesen').not.toBeNull();
+    expect(close.textContent).toContain('common.close');
+    close.click();
+    f.detectChanges();
+    await f.whenStable();
+    expect(el.querySelector('.intro')).toBeNull();
+    expect(scroll).toHaveBeenCalled();
+    expect((scroll.calls.mostRecent().object as HTMLElement).classList).toContain('board');
+
+    el.querySelector<HTMLButtonElement>('.show-intro')!.click();
+    f.detectChanges();
+    expect(el.querySelector('.intro')).not.toBeNull();
+
+    f.componentInstance.closeIntro();
+    f.componentInstance.index.set(1);
+    f.detectChanges();
+    expect(el.querySelector('.intro')).withContext('neue Linie: Karte wieder da').not.toBeNull();
+  });
+
+  /** d2-k-course-intro: am Handy zugeklappt nur drei Zeilen über dem Brett (vorher 30vh ≈ 8 Zeilen). */
+  it('zeigt am Handy zugeklappt höchstens drei Zeilen', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe — der Viewport lässt sich nicht verstellen');
+    const prev = frame!.style.width;
+    frame!.style.width = '390px';
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    try {
+      const f = render();
+      const intro = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.intro')!;
+      const lineH = parseFloat(getComputedStyle(intro).lineHeight);
+      expect(intro.getBoundingClientRect().height).toBeLessThanOrEqual(3 * lineH + 24 + 1);
+    } finally {
+      frame!.style.width = prev;
+    }
   });
 });

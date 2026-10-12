@@ -66,6 +66,12 @@ export function heatLevel(count: number): number {
   return 4;
 }
 
+/** UI-Sweep 2026-10-11 (d2-rk-stats-heatmap): ab Laptop-Breite ein ganzes Jahr (53 Wochen, ~800 px; der Server
+ *  liefert 365 Tage), darunter ein halbes Jahr — am Handy scrollt das Raster ohnehin nach rechts. */
+export function heatmapWeeksFor(viewportWidth: number): number {
+  return viewportWidth >= 1024 ? 53 : 27;
+}
+
 /** Baut ein Wochen-Raster (Spalten = Wochen Mo–So) für die Aktivitäts-Heatmap (rein, testbar). */
 export function buildHeatmap(activity: ActivityDay[], today: Date, weeks = 27): HeatCell[][] {
   const counts = new Map(activity.map(a => [a.date, a.count]));
@@ -626,7 +632,8 @@ export class StatsComponent implements OnInit {
       .slice(0, 5);
     this.ratingBands = breakdown.ratingBands;
     this.maxBandSolved = Math.max(1, ...this.ratingBands.map(b => b.solved));
-    this.heatmap = breakdown.activity.length ? buildHeatmap(breakdown.activity, new Date()) : [];
+    this.heatmap = breakdown.activity.length
+      ? buildHeatmap(breakdown.activity, new Date(), heatmapWeeksFor(window.innerWidth)) : [];
   }
 
   acc(solved: number, attempts: number): number {

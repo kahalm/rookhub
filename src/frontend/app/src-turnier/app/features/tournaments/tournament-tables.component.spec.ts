@@ -93,13 +93,113 @@ describe('TournamentTablesComponent', () => {
     component.playerSort.subscribe(s => sorts.push(s));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.player-sort mat-select'))
-      .withContext('Sortier-Menue fuer die Kartenliste').not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.player-tools .player-menu-btn'))
+      .withContext('Sortier-/Filterknopf fuer die Kartenliste').not.toBeNull();
     component.pickMobileSort('elo');
     component.pickMobileSort('team');
 
     expect(sorts).toEqual([{ active: 'elo', direction: 'desc' }, { active: 'team', direction: 'asc' }]);
     expect(component.mobileSortLabel('team')).toBe('tournaments.players.club');
+  });
+
+  // ----- d2-t-detail-vorlauf: Sortierung und Favoriten am Handy hinter EINEM Knopf -----
+
+  it('legt Sortierung und „Nur Favoriten" ins Menue neben dem Suchfeld; eine Abweichung steht als Chip darunter', () => {
+    liga();
+    component.hasFavorites = true;
+    const sorts: unknown[] = [];
+    const favs: boolean[] = [];
+    component.playerSort.subscribe(s => sorts.push(s));
+    component.favoritesToggle.subscribe(f => favs.push(f));
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.active-chips')).withContext('Standard: kein Chip').toBeNull();
+
+    (root.querySelector('.player-menu-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [mat-menu-item]')) as HTMLButtonElement[];
+    expect(items.map(i => i.getAttribute('role'))).toEqual(['menuitemradio', 'menuitemradio', 'menuitemradio', 'menuitemradio', 'menuitemcheckbox']);
+    items[2].click();   // Elo
+    fixture.detectChanges();
+    expect(sorts).toEqual([{ active: 'elo', direction: 'desc' }]);
+    const chip = root.querySelector('.active-chips .sort-chip') as HTMLButtonElement;
+    expect(chip.textContent).toContain('tournaments.players.elo');
+
+    chip.click();
+    fixture.detectChanges();
+    expect(component.mobileSort).toBe('snr');
+    expect(root.querySelector('.active-chips')).toBeNull();
+
+    component.showFavoritesOnly = true;
+    fixture.detectChanges();
+    (root.querySelector('.active-chips .fav-chip') as HTMLButtonElement).click();
+    expect(favs).toEqual([false]);
+  });
+
+  // ----- d2-t-players-paging: lange Startlisten in Portionen zu 50 -----
+
+  function grosseListe(n: number): void {
+    component.players = component.displayedPlayers =
+      Array.from({ length: n }, (_, i) => player({ id: i + 1, snr: i + 1, name: `Spieler ${i + 1}`, teamName: i % 2 ? 'SK Schwaz' : 'SK Wörgl' }));
+  }
+
+  it('zeigt erst 50 Spieler, „Weitere 50 anzeigen" haengt die naechsten an', () => {
+    grosseListe(122);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelectorAll('.player-card').length).toBe(50);
+    expect(root.querySelectorAll('tr.mat-mdc-row').length).toBe(50);
+    expect(root.querySelector('.more-count')!.textContent).toContain('tournaments.players.shownOf');
+    expect(component.nextPlayerPortion).toBe(50);
+
+    (root.querySelector('.more-players') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelectorAll('.player-card').length).toBe(100);
+    expect(component.nextPlayerPortion).toBe(22);
+
+    (root.querySelector('.more-players') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root.querySelectorAll('.player-card').length).toBe(122);
+    expect(root.querySelector('.more-players')).toBeNull();
+  });
+
+  it('begrenzt bei Suche und „Nur Favoriten" nicht und faengt nach neuer Suche/Sortierung wieder bei 50 an', async () => {
+    grosseListe(122);
+    fixture.detectChanges();
+    component.showMorePlayers();
+    fixture.detectChanges();
+    expect(component.visiblePlayers.length).toBe(100);
+
+    await type('schwaz');
+    expect(cardNames().length).withContext('Suche: alle 61 Treffer').toBe(61);
+    expect(fixture.nativeElement.querySelector('.more-players')).toBeNull();
+
+    await type('');
+    expect(component.visiblePlayers.length).withContext('nach der Suche wieder erste Portion').toBe(50);
+
+    component.showMorePlayers();
+    component.pickMobileSort('elo');
+    expect(component.visiblePlayers.length).withContext('neue Sortierung: erste Portion').toBe(50);
+
+    component.showFavoritesOnly = true;
+    expect(component.visiblePlayers.length).toBe(122);
+  });
+
+  // ----- d2-t-players-sticky-head -----
+
+  it('haelt den Kopf der Tabellen beim Scrollen fest, auf Flaechenfarbe', async () => {
+    grosseListe(10);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    fixture.detectChanges();
+    const th = fixture.nativeElement.querySelector('.table-scroll th.mat-mdc-header-cell') as HTMLElement;
+    expect(th.classList).toContain('mat-mdc-table-sticky');
+    expect(getComputedStyle(th).position).toBe('sticky');
+    if (window.innerWidth > 768) {
+      expect(getComputedStyle(fixture.nativeElement.querySelector('.table-scroll')).overflowX)
+        .withContext('Wrapper ist kein Scroll-Container').toBe('visible');
+    }
   });
 
   it('zeigt „Nur Favoriten" auch ohne Stern — gesperrt und mit Hinweis', () => {

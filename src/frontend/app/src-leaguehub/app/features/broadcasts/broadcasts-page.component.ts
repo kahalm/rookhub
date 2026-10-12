@@ -60,30 +60,42 @@ export function broadcastErrorText(reason: string | undefined): string {
     } @else {
       <section class="bc-page">
         <h2>Lichess-Übertragungen</h2>
-        <p class="muted">Turniere am Brett, die auf Lichess live übertragen werden, landen in den Spielerkarten — zugeordnet über
-          die FIDE-ID in jeder Partie. Österreichische Übertragungen findet LeagueHub selbst; ein Turnier im Ausland mit Tiroler
-          Spielern fügst du hier per Link hinzu.</p>
-        <form class="bc-add" (submit)="$event.preventDefault(); add()">
-          <label class="field">Link zur Übertragung (Turnier oder Runde)
-            <input type="url" autocomplete="off" placeholder="https://lichess.org/broadcast/…" [value]="link()"
-                   (input)="link.set($any($event.target).value)" />
-          </label>
-          <button type="submit" class="btn-pri" [disabled]="adding() || !link().trim()">{{ adding() ? 'Spielt ein …' : 'Hinzufügen und einspielen' }}</button>
-        </form>
+        <!-- UI-Sweep 2026-10-11 (d2-l-uebertragungen-vorlauf): ein Satz + (i); Hinzufügen ist die seltene Nebenaktion und klappt
+             erst auf Knopfdruck auf — vorher begann die Liste am Handy erst bei ~700 px. -->
+        <p class="muted info-line">Übertragungen mit Ligaspielern landen in den Spielerkarten.
+          <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Wie Übertragungen zugeordnet werden"
+                  title="Wie Übertragungen zugeordnet werden" (click)="infoOpen.set(!infoOpen())">i</button></p>
+        @if (infoOpen()) {
+          <div class="info-panel"><p class="note">Turniere am Brett, die auf Lichess live übertragen werden, landen in den Spielerkarten —
+            zugeordnet über die FIDE-ID in jeder Partie. Österreichische Übertragungen findet LeagueHub selbst; ein Turnier im Ausland
+            mit Tiroler Spielern fügst du per Link hinzu.</p></div>
+        }
+        <!-- UI-Sweep 2026-10-10 (l-broadcasts): kompakte Zeilen statt hoher Karten, oben Suche und „nur mit Ligaspielern" (an) -->
+        <div class="bc-tools">
+          @if (items().length) {
+            <input type="search" class="bc-search" placeholder="Suchen …" aria-label="Übertragungen suchen" [value]="query()"
+                   (input)="query.set($any($event.target).value)" />
+          }
+          <button type="button" class="btn-sec bc-add-toggle" [attr.aria-expanded]="addOpen()" (click)="addOpen.set(!addOpen())">+ Hinzufügen</button>
+          @if (items().length) {
+            <label class="bc-only"><input type="checkbox" [checked]="onlyLeague()" (change)="onlyLeague.set($any($event.target).checked)" />
+              nur mit Ligaspielern</label>
+            @if (hiddenCount()) { <span class="small muted">{{ hiddenCount() }} ausgeblendet</span> }
+          }
+        </div>
+        @if (addOpen()) {
+          <form class="bc-add" (submit)="$event.preventDefault(); add()">
+            <label class="field">Link zur Übertragung (Turnier oder Runde)
+              <input type="url" autocomplete="off" placeholder="https://lichess.org/broadcast/…" [value]="link()"
+                     (input)="link.set($any($event.target).value)" />
+            </label>
+            <button type="submit" class="btn-pri" [disabled]="adding() || !link().trim()">{{ adding() ? 'Spielt ein …' : 'Hinzufügen und einspielen' }}</button>
+          </form>
+        }
         @if (note(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
         @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
         @if (loading() && !items().length) { <p class="muted">Lade …</p> }
-        <!-- UI-Sweep 2026-10-10 (l-broadcasts): kompakte Zeilen statt hoher Karten, oben Suche und „nur mit Ligaspielern" (an) -->
-        @if (items().length) {
-          <div class="bc-tools">
-            <label class="bc-only"><input type="checkbox" [checked]="onlyLeague()" (change)="onlyLeague.set($any($event.target).checked)" />
-              nur mit Ligaspielern</label>
-            <input type="search" class="bc-search" placeholder="Suchen …" aria-label="Übertragungen suchen" [value]="query()"
-                   (input)="query.set($any($event.target).value)" />
-            @if (hiddenCount()) { <span class="small muted">{{ hiddenCount() }} ausgeblendet</span> }
-          </div>
-        }
-        <div class="roster-scroll"><table class="rtable bc-list">
+        <div class="roster-scroll bc-scroll"><table class="rtable bc-list">
           @if (shown().length) {
             <thead><tr><th>Übertragung</th><th>Zeitraum</th><th class="hide-s">Ort</th><th class="num">Partien</th></tr></thead>
           }
@@ -120,6 +132,9 @@ export class BroadcastsPageComponent implements OnInit {
   readonly link = signal('');
   readonly adding = signal(false);
   readonly note = signal<{ text: string; err: boolean } | null>(null);
+  /** Erklärung hinter (i) und das Hinzufügen-Formular — beide zu, bis man sie braucht (d2-l-uebertragungen-vorlauf). */
+  readonly infoOpen = signal(false);
+  readonly addOpen = signal(false);
   /** Vorgabe an: die vielen „0 Partien mit Ligaspielern" verdeckten die, um die es geht. */
   readonly onlyLeague = signal(true);
   readonly query = signal('');

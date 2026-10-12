@@ -314,3 +314,56 @@ describe('RepertoireListComponent PGN-Download', () => {
     expect(shown).toEqual(['common.downloadFailed']);
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-rep-list-lead): RepCheck-Tipp + Abschnittserklärung hinter EINEM ⓘ statt vor der Liste. */
+describe('RepertoireListComponent Vorlauf', () => {
+  const rep = (id: number, extra: object = {}): any =>
+    ({ id, name: `Rep ${id}`, description: null, kind: 0, fileCount: 1, isPublic: false,
+       useForExtension: false, isShared: false, ...extra });
+
+  async function render(repertoires: unknown[]) {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireListComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireService, useValue: { list: () => of(repertoires) } },
+        { provide: RepertoireTrainingService, useValue: {} },
+        { provide: MatDialog, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireListComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('Tipp und Abschnittserklärung zugeklappt; ⓘ am Abschnitt klappt beides mit Hilfe-Link auf', async () => {
+    const fixture = await render([rep(1, { useForExtension: true })]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('repertoire.list.extHint');
+    expect(el.textContent).not.toContain('repertoire.list.sectionExtensionHint');
+    const toggle = el.querySelector('.section-title .info-toggle') as HTMLButtonElement;
+    expect(toggle).withContext('ⓘ am Abschnittskopf').not.toBeNull();
+    expect(el.querySelector('h1 .info-toggle')).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    const panel = el.querySelector('.info-panel')!;
+    expect(panel.textContent).toContain('repertoire.list.sectionExtensionHint');
+    expect(panel.textContent).toContain('repertoire.list.extHint');
+    expect(panel.querySelector('a[href="/help#extension"]')).not.toBeNull();
+  });
+
+  it('ohne RepCheck-Abschnitt sitzt das ⓘ am Seitentitel', async () => {
+    const fixture = await render([rep(1)]);
+    const el = fixture.nativeElement as HTMLElement;
+    const toggle = el.querySelector('h1 .info-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    toggle.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.info-panel')?.textContent).toContain('repertoire.list.extHint');
+    expect(el.querySelector('.info-panel')?.textContent).not.toContain('repertoire.list.sectionExtensionHint');
+  });
+});

@@ -33,98 +33,6 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
   <div class="catalog">
     <h1>{{ 'catalog.title' | translate }}</h1>
 
-    <!-- Besitzer/Admin: Freigaben + offene Anforderungen -->
-    @if (isAdmin) {
-      <mat-card class="admin-card">
-        <h2>{{ 'catalog.admin.grantsTitle' | translate }}</h2>
-        <p class="hint">{{ 'catalog.admin.grantsHint' | translate }}</p>
-
-        <!-- User wie bei „Freunde" suchen (Name, Anzeigename, chess.com, lichess, FIDE, CR) statt einer langen Auswahlliste. -->
-        <h3>{{ 'catalog.admin.grantedUsers' | translate }}</h3>
-        @if (grantUsers.length === 0) {
-          <p class="empty-state">{{ 'catalog.admin.noGrantedUsers' | translate }}</p>
-        } @else {
-          <mat-chip-set class="granted-users">
-            @for (u of grantUsers; track u.userId) {
-              <mat-chip (removed)="removeUser(u.userId)">
-                {{ u.username }}@if (u.displayName) { <span class="chip-sub">· {{ u.displayName }}</span> }
-                <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
-              </mat-chip>
-            }
-          </mat-chip-set>
-        }
-        <div class="user-search">
-          <mat-form-field appearance="outline" class="search-field">
-            <mat-label>{{ 'catalog.admin.searchUsers' | translate }}</mat-label>
-            <mat-icon matPrefix>search</mat-icon>
-            <input matInput [(ngModel)]="searchQuery" (ngModelChange)="searchInput.next($event)" (keyup.enter)="search()">
-          </mat-form-field>
-          <button mat-stroked-button (click)="search()" [disabled]="searchQuery.trim().length < 2">{{ 'common.search' | translate }}</button>
-        </div>
-        @if (searched) {
-          @if (searchResults.length === 0) {
-            <p class="empty-state">{{ 'catalog.admin.noResults' | translate }}</p>
-          } @else {
-            <div class="search-results">
-              @for (u of searchResults; track u.userId) {
-                <div class="search-row">
-                  <span class="search-text">
-                    <strong>{{ u.username }}</strong>
-                    @if (u.displayName) { <span class="sub">{{ u.displayName }}</span> }
-                    @if (chessIdentities(u)) { <span class="sub ids">{{ chessIdentities(u) }}</span> }
-                  </span>
-                  @if (isGranted(u.userId)) {
-                    <mat-icon class="granted-mark">check_circle</mat-icon>
-                  } @else {
-                    <button mat-icon-button (click)="addUser(u)" [appIconLabel]="'catalog.admin.add' | translate">
-                      <mat-icon>person_add</mat-icon>
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-          }
-        }
-
-        <div class="grant-selects">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'catalog.admin.groups' | translate }}</mat-label>
-            <mat-select multiple [(ngModel)]="grantGroupIds">
-              @for (g of groups; track g.id) { <mat-option [value]="g.id">{{ g.name }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-          <button mat-flat-button color="primary" (click)="saveGrants()" [disabled]="savingGrants || !grantsLoaded">
-            <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
-          </button>
-        </div>
-
-        <h2>{{ 'catalog.admin.requestsTitle' | translate }}</h2>
-        @if (requests.length === 0) {
-          <p class="empty-state">{{ 'catalog.admin.noRequests' | translate }}</p>
-        } @else {
-          <div class="req-list">
-            @for (r of requests; track r.id) {
-              <div class="req-row">
-                <span class="req-text">
-                  <strong>{{ r.requesterName }}</strong>
-                  {{ (r.itemType === 'course' ? 'catalog.type.course' : 'catalog.type.repertoire') | translate }}:
-                  {{ r.itemName }}
-                </span>
-                <span class="req-actions">
-                  <button mat-flat-button color="primary" (click)="approve(r)" [disabled]="busyId === r.id">
-                    <mat-icon>check</mat-icon> {{ 'catalog.admin.approve' | translate }}
-                  </button>
-                  <button mat-stroked-button (click)="decline(r)" [disabled]="busyId === r.id">
-                    <mat-icon>close</mat-icon> {{ 'catalog.admin.decline' | translate }}
-                  </button>
-                </span>
-              </div>
-            }
-          </div>
-        }
-      </mat-card>
-    }
-
     <!-- Viewer: freigegebene Liste -->
     <mat-card>
       <h2>{{ 'catalog.listTitle' | translate }}</h2>
@@ -167,6 +75,110 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
         </div>
       }
     </mat-card>
+
+    <!-- Besitzer/Admin: Freigaben + offene Anforderungen -->
+    <!-- UI-Sweep 2026-10-11 (d2-rk-catalog-freigaben-zuerst): die Liste ist die Hauptsache und steht oben; die
+         Freigabe-Verwaltung liegt zugeklappt darunter (Kopfzeile mit Zählern), aufgeklappt nur bei offenen Anforderungen. -->
+    @if (isAdmin) {
+      <mat-card class="admin-card">
+        <button type="button" class="admin-toggle" (click)="adminOpen = !adminOpen" [attr.aria-expanded]="adminOpen">
+          <span class="admin-toggle-text">
+            <strong>{{ 'catalog.admin.manageTitle' | translate }}</strong>
+            <span class="admin-summary">· {{ (grantUsers.length === 1 ? 'catalog.admin.summaryUsersOne' : 'catalog.admin.summaryUsers') | translate:{ count: grantUsers.length } }}
+              · {{ 'catalog.admin.summaryOpen' | translate:{ count: requests.length } }}</span>
+          </span>
+          <mat-icon>{{ adminOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+        @if (adminOpen) {
+        <h2>{{ 'catalog.admin.grantsTitle' | translate }}</h2>
+        <p class="hint">{{ 'catalog.admin.grantsHint' | translate }}</p>
+
+        <!-- User wie bei „Freunde" suchen (Name, Anzeigename, chess.com, lichess, FIDE, CR) statt einer langen Auswahlliste. -->
+        <h3>{{ 'catalog.admin.grantedUsers' | translate }}</h3>
+        @if (grantUsers.length === 0) {
+          <p class="muted-line">{{ 'catalog.admin.noGrantedUsers' | translate }}</p>
+        } @else {
+          <mat-chip-set class="granted-users">
+            @for (u of grantUsers; track u.userId) {
+              <mat-chip (removed)="removeUser(u.userId)">
+                {{ u.username }}@if (u.displayName) { <span class="chip-sub">· {{ u.displayName }}</span> }
+                <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
+              </mat-chip>
+            }
+          </mat-chip-set>
+        }
+        <div class="user-search">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>{{ 'catalog.admin.searchUsers' | translate }}</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [(ngModel)]="searchQuery" (ngModelChange)="searchInput.next($event)" (keyup.enter)="search()">
+          </mat-form-field>
+          <button mat-stroked-button (click)="search()" [disabled]="searchQuery.trim().length < 2">{{ 'common.search' | translate }}</button>
+        </div>
+        @if (searched) {
+          @if (searchResults.length === 0) {
+            <p class="muted-line">{{ 'catalog.admin.noResults' | translate }}</p>
+          } @else {
+            <div class="search-results">
+              @for (u of searchResults; track u.userId) {
+                <div class="search-row">
+                  <span class="search-text">
+                    <strong>{{ u.username }}</strong>
+                    @if (u.displayName) { <span class="sub">{{ u.displayName }}</span> }
+                    @if (chessIdentities(u)) { <span class="sub ids">{{ chessIdentities(u) }}</span> }
+                  </span>
+                  @if (isGranted(u.userId)) {
+                    <mat-icon class="granted-mark">check_circle</mat-icon>
+                  } @else {
+                    <button mat-icon-button (click)="addUser(u)" [appIconLabel]="'catalog.admin.add' | translate">
+                      <mat-icon>person_add</mat-icon>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <div class="grant-selects">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'catalog.admin.groups' | translate }}</mat-label>
+            <mat-select multiple [(ngModel)]="grantGroupIds">
+              @for (g of groups; track g.id) { <mat-option [value]="g.id">{{ g.name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <button mat-flat-button color="primary" (click)="saveGrants()" [disabled]="savingGrants || !grantsLoaded">
+            <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+          </button>
+        </div>
+
+        <h2>{{ 'catalog.admin.requestsTitle' | translate }}</h2>
+        @if (requests.length === 0) {
+          <p class="muted-line">{{ 'catalog.admin.noRequests' | translate }}</p>
+        } @else {
+          <div class="req-list">
+            @for (r of requests; track r.id) {
+              <div class="req-row">
+                <span class="req-text">
+                  <strong>{{ r.requesterName }}</strong>
+                  {{ (r.itemType === 'course' ? 'catalog.type.course' : 'catalog.type.repertoire') | translate }}:
+                  {{ r.itemName }}
+                </span>
+                <span class="req-actions">
+                  <button mat-flat-button color="primary" (click)="approve(r)" [disabled]="busyId === r.id">
+                    <mat-icon>check</mat-icon> {{ 'catalog.admin.approve' | translate }}
+                  </button>
+                  <button mat-stroked-button (click)="decline(r)" [disabled]="busyId === r.id">
+                    <mat-icon>close</mat-icon> {{ 'catalog.admin.decline' | translate }}
+                  </button>
+                </span>
+              </div>
+            }
+          </div>
+        }
+        }
+      </mat-card>
+    }
   </div>
   `,
   styles: [`
@@ -191,7 +203,14 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
     .granted-mark { color: var(--mat-sys-primary, #2e7d32); margin: 0 8px; }
     .grant-selects { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .grant-selects mat-form-field { min-width: 220px; }
-    .admin-card { margin-bottom: 20px; }
+    .admin-card { margin-top: 16px; }
+    .catalog > mat-card.admin-card { padding: 0 16px; }
+    .admin-card > :last-child:not(.admin-toggle) { margin-bottom: 16px; }
+    .admin-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+      padding: 12px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+    .admin-toggle:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; border-radius: 4px; }
+    .admin-summary { color: color-mix(in srgb, currentColor 60%, transparent); margin-left: 4px; }
+    .muted-line { margin: 4px 0 8px; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; }
     .req-list, .item-list { display: flex; flex-direction: column; gap: 6px; }
     .req-row, .item-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px;
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 8px; }
@@ -212,6 +231,8 @@ export class CatalogComponent implements OnInit {
   private translate = inject(TranslateService);
 
   isAdmin = false;
+  /** Freigabe-Verwaltung aufgeklappt? Zu Beginn zu; offene Anforderungen klappen sie auf. */
+  adminOpen = false;
   loading = true;
   /** Laden der Liste gescheitert — sonst saehe sie aus wie „nichts freigegeben". */
   loadError = false;
@@ -243,7 +264,8 @@ export class CatalogComponent implements OnInit {
         next: g => { this.applyGrants(g); this.grantsLoaded = true; },
         error: () => this.snackbar.info(this.translate.instant('common.error')),
       });
-      this.svc.getRequests().subscribe(r => this.requests = r);
+      // Offene Anforderungen sind eine Aufgabe → dann die Verwaltung gleich aufgeklappt zeigen.
+      this.svc.getRequests().subscribe(r => { this.requests = r; if (r.length > 0) this.adminOpen = true; });
       this.adminService.getGroups().subscribe(g => this.groups = g);
       // Tippen sucht nach kurzer Pause, Enter/Knopf sofort; switchMap verwirft überholte Antworten.
       this.searchInput.pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))

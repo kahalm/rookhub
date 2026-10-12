@@ -201,15 +201,43 @@ describe('KidsHomeComponent', () => {
     const host = f.nativeElement as HTMLElement;
 
     const pc = measureAt(host, 1440, 900);
-    expect(pc.tile.height).toBeGreaterThanOrEqual(260);
-    expect(pc.tile.width).toBeGreaterThanOrEqual(300);
-    expect(pc.tile.width).toBeLessThanOrEqual(360);
+    expect(pc.tile.height).toBeGreaterThanOrEqual(220);
+    expect(pc.tile.width).toBeGreaterThanOrEqual(240);
     expect(pc.icon).toBe(64);
     expect(pc.name).toBe(32);
     expect(pc.hostHeight).withContext('fuellt die Hoehe zwischen Kopf- und Fusszeile').toBeGreaterThanOrEqual(900 - 140 - 1);
 
     const phone = measureAt(host, 390, 844);
     expect(phone.icon).toBeLessThan(64);
-    expect(phone.tile.height).toBeLessThan(260);
+    expect(phone.tile.height).toBeLessThan(220);
+  });
+
+  /** UI-Sweep d2-k-home-tiles: mit Kurskachel vier Kacheln in EINER Reihe, am Laptop alle über der Falz. */
+  it('am Laptop stehen alle vier Kacheln (mit Kurs) in einer Reihe über der Falz', () => {
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([{ bookId: 7, title: 'Erste Endspiele', description: null, puzzleCount: 287 }]);
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 10 }]);
+    f.detectChanges();
+    const host = f.nativeElement as HTMLElement;
+    expect(host.querySelectorAll('.tile').length).toBe(4);
+
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position: fixed; left: -1500px; top: 0; width: 1366px; height: 768px; border: 0;';
+    document.body.appendChild(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0">${host.outerHTML}</body></html>`);
+      doc.close();
+      const rects = Array.from(doc.querySelectorAll('.tile')).map(t => t.getBoundingClientRect());
+      expect(new Set(rects.map(r => Math.round(r.top))).size).withContext('eine Reihe').toBe(1);
+      expect(Math.max(...rects.map(r => r.bottom))).withContext('über der Falz (ohne Kopf ~70 px)').toBeLessThanOrEqual(768 - 70);
+    } finally {
+      frame.remove();
+    }
   });
 });

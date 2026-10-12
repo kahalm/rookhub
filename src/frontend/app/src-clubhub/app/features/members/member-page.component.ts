@@ -146,9 +146,12 @@ function orNull(value: string | null | undefined): string | null {
         <div class="actions form-save">
           <button type="submit" class="btn primary" [disabled]="busy()">{{ member() ? 'Änderungen speichern' : (form().isTrainer ? 'Trainer anlegen' : 'Kind anlegen') }}</button>
           @if (!member()) {
-            <button type="button" class="btn save-next" [disabled]="busy()" title="Speichert dieses Blatt und öffnet gleich ein leeres" (click)="save(true)">{{ form().isTrainer ? 'Weiteren Trainer anlegen' : 'Weiteres Kind anlegen' }}</button>
+            <!-- Am Handy steht nur „+ Weiteres" (d2-c-form-save-bar: die Leiste soll EINE Reihe sein); vorgelesen wird der
+                 volle Text. -->
+            <button type="button" class="btn save-next" [disabled]="busy()" title="Speichert dieses Blatt und öffnet gleich ein leeres"
+              [attr.aria-label]="form().isTrainer ? 'Weiteren Trainer anlegen' : 'Weiteres Kind anlegen'" (click)="save(true)"><span class="long">{{ form().isTrainer ? 'Weiteren Trainer anlegen' : 'Weiteres Kind anlegen' }}</span><span class="short" aria-hidden="true">+ Weiteres</span></button>
           }
-          <button type="button" class="btn" [disabled]="busy()" (click)="cancel()">{{ lastSaved() && !member() ? 'Fertig' : 'Abbrechen' }}</button>
+          <button type="button" class="btn cancel" [disabled]="busy()" (click)="cancel()">{{ lastSaved() && !member() ? 'Fertig' : 'Abbrechen' }}</button>
         </div>
       </form>
     } @else if (member(); as m) {

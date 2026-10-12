@@ -19,46 +19,52 @@
               <a mat-menu-item [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
                 <mat-icon>open_in_new</mat-icon><span>{{ 'tournamentDirectory.openChessResults' | translate }}</span>
               </a>
+              <!-- Am Handy steht „Volle Ansicht" hier statt als eigene Knopfzeile (d2-t-detail-vorlauf). -->
+              <a mat-menu-item class="full-view-item" [routerLink]="['/tournaments', id]">
+                <mat-icon>open_in_full</mat-icon><span>{{ 'tournaments.actions.openFull' | translate }}</span>
+              </a>
             </mat-menu>
+            <!-- Ab 769 px stehen Titel und Knopfreihe in EINER Zeile (DESIGN 5.1, d2-t-detail-vorlauf: zwei Zeilen kosteten
+                 am Laptop ~50 px Vorlauf vor der Spielerliste); am Handy bricht die Reihe unter den Titel. -->
+            <mat-card-actions class="action-bar">
+              @if (subscription()) {
+                <button mat-stroked-button class="keep-label" (click)="unsubscribe()" [disabled]="toggling()"
+                        [attr.aria-label]="'tournamentDirectory.bookmarkRemove' | translate">
+                  <mat-icon>bookmark</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmarkRemove' | translate }}</span>
+                </button>
+              } @else {
+                <button mat-flat-button class="keep-label" (click)="subscribe()" [disabled]="toggling()"
+                        [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
+                  <mat-icon>bookmark_add</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmark' | translate }}</span>
+                </button>
+              }
+              @if (monitor.monitoring()) {
+                <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
+                        [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') }">
+                  <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') } }}</span>
+                </button>
+              } @else {
+                <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
+                        [appIconLabel]="'tournaments.actions.monitor' | translate">
+                  <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
+                </button>
+              }
+              <a mat-stroked-button class="keep-label full-view" [routerLink]="['/tournaments', id]">
+                <mat-icon>open_in_full</mat-icon><span class="btn-label"> {{ 'tournaments.actions.openFull' | translate }}</span>
+              </a>
+              <button mat-stroked-button class="wide-only" (click)="share()">
+                <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
+              </button>
+              <a mat-button class="wide-only" [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
+                <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
+              </a>
+            </mat-card-actions>
           </div>
           <!-- UI-Sweep 2026-10-11 (r2-t-public-actions): dieselbe Knopfreihe wie in der Detailansicht — Merken primaer
                (abgemeldet fuehrt es zur Anmeldung und zurueck hierher), Beobachten (gleiche Logik wie dort, geteilter
                Baustein TournamentRoundMonitor; abgemeldet ebenfalls zur Anmeldung), „Volle Ansicht" (dort auch
                Aktualisieren) und Teilen umrandet, Chess-Results als Textlink zuletzt. Vorher zwei gefuellte Knoepfe in
                umgekehrter Reihenfolge, und wer einen geteilten Link oeffnete, konnte das Turnier nicht uebernehmen. -->
-          <mat-card-actions class="action-bar">
-            @if (subscription()) {
-              <button mat-stroked-button class="keep-label" (click)="unsubscribe()" [disabled]="toggling()"
-                      [attr.aria-label]="'tournamentDirectory.bookmarkRemove' | translate">
-                <mat-icon>bookmark</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmarkRemove' | translate }}</span>
-              </button>
-            } @else {
-              <button mat-flat-button class="keep-label" (click)="subscribe()" [disabled]="toggling()"
-                      [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
-                <mat-icon>bookmark_add</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmark' | translate }}</span>
-              </button>
-            }
-            @if (monitor.monitoring()) {
-              <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
-                      [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') }">
-                <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') } }}</span>
-              </button>
-            } @else {
-              <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
-                      [appIconLabel]="'tournaments.actions.monitor' | translate">
-                <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
-              </button>
-            }
-            <a mat-stroked-button class="keep-label full-view" [routerLink]="['/tournaments', id]">
-              <mat-icon>open_in_full</mat-icon><span class="btn-label"> {{ 'tournaments.actions.openFull' | translate }}</span>
-            </a>
-            <button mat-stroked-button class="wide-only" (click)="share()">
-              <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
-            </button>
-            <a mat-button class="wide-only" [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
-              <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
-            </a>
-          </mat-card-actions>
         </mat-card>
 
         <app-tournament-tables

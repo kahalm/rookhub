@@ -72,6 +72,9 @@ describe('PlayerCardComponent', () => {
     fixture.detectChanges();
     expect(headings().some(h => h.startsWith('Mit Weiß'))).toBeTrue();
     expect(headings().some(h => h.startsWith('Mit Schwarz gegen 1.e4'))).toBeTrue();
+    // Weiß und Schwarz je in einer Hülle (.sides > .side): die Spielervorbereitung stellt sie groß nebeneinander (d2-rk-prep-wide).
+    expect(Array.from(el().querySelectorAll('.sides > .side')).map(s => s.querySelector('h3')?.textContent?.trim().slice(0, 10)))
+      .toEqual(['Mit Weiß (', 'Mit Schwar']);
     expect(el().textContent).toContain('Sizilianisch');
     // Bei „Beide" fällt „mit Weiß" weg — der Zusatz klebt trotzdem nicht am Wort.
     expect(headings().some(h => h.replace(/\s+/g, ' ').trim() === 'Letzte Partien — zum Nachspielen anklicken')).toBeTrue();

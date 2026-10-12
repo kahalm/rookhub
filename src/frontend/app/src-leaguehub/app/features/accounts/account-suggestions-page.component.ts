@@ -17,6 +17,13 @@ export function groupByPlayer(items: AccountSuggestion[]): { fide: string; name:
   return [...groups.values()];
 }
 
+/** Gruppen, deren Spieler- oder Mannschaftsname den Suchbegriff enthält (ohne Groß/klein und Akzente). */
+export function filterGroups<T extends { name: string; team: string | null }>(groups: T[], query: string): T[] {
+  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const q = norm(query.trim());
+  return q ? groups.filter(g => norm(g.name).includes(q) || norm(g.team ?? '').includes(q)) : groups;
+}
+
 /**
  * Konto-Vorschläge (0.607.0, Wunsch 2026-09-30): alle offenen Vorschläge der Konto-Suche an einem Ort, je Spieler. Die
  * Suche läuft im Hintergrund über die Spieler der laufenden Saison; hier entscheidet ein Verwalter. Ein Klick auf den Namen
@@ -37,25 +44,44 @@ export function groupByPlayer(items: AccountSuggestion[]): { fide: string; name:
       </section>
     } @else {
       <section class="sugg-page">
-        <h2>Konto-Vorschläge</h2>
-        <!-- UI-Sweep 2026-10-11 (r2-l-minor-intro): seit 0.610.0 werden auch Minderjährige gesucht (nur für Admins sichtbar) -->
-        <p class="muted">LeagueHub sucht auf Lichess und chess.com nach Konten, deren Name zum Spieler passt. Ob ein Konto
-          wirklich ihm gehört, entscheidest du: übernehmen (unsicher oder gesichert) oder verwerfen; Verworfenes kommt nicht wieder.</p>
-        <p class="muted small">Konten Minderjähriger werden ebenfalls gesucht, sind aber nur für Admins sichtbar (Etikett
-          „minderjährig") und erscheinen nirgends sonst.</p>
-        @if (progress(); as p) {
-          <p class="small muted" role="status">{{ p }}</p>
+        <!-- UI-Sweep 2026-10-11 (d2-l-konten-vorlauf): Zähler neben der Überschrift, ein Satz + (i) statt drei Absätzen. -->
+        <div class="sugg-top">
+          <h2>Konto-Vorschläge</h2>
+          @if (progress(); as p) { <span class="small muted" role="status">{{ p }}</span> }
+        </div>
+        <p class="muted info-line">Gehört das Konto dem Spieler? Übernehmen oder verwerfen — Verworfenes kommt nicht wieder.
+          <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Wie gesucht wird"
+                  title="Wie gesucht wird" (click)="infoOpen.set(!infoOpen())">i</button></p>
+        @if (infoOpen()) {
+          <div class="info-panel sugg-info">
+            <p class="note">LeagueHub sucht auf Lichess und chess.com nach Konten, deren Name zum Spieler passt. Ob ein Konto
+              wirklich ihm gehört, entscheidest du: übernehmen (unsicher oder gesichert) oder verwerfen; Verworfenes kommt nicht wieder.</p>
+            <!-- UI-Sweep 2026-10-11 (r2-l-minor-intro): seit 0.610.0 werden auch Minderjährige gesucht (nur für Admins sichtbar) -->
+            <p class="note">Konten Minderjähriger werden ebenfalls gesucht, sind aber nur für Admins sichtbar (Etikett
+              „minderjährig") und erscheinen nirgends sonst.</p>
+          </div>
         }
         @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
         @if (loading() && !groups().length) { <p class="muted">Lade …</p> }
-        @for (g of groups(); track g.fide) {
+        <!-- d2-l-konten-endlos: Suche nach Spieler oder Verein, die Liste in Seiten zu je 20 Spielern (vorher 96 Bildschirme). -->
+        @if (groups().length) {
+          <div class="club-search sugg-filter">
+            <input type="search" placeholder="Spieler oder Verein" aria-label="Spieler oder Verein suchen" [value]="query()"
+                   (input)="setQuery($any($event.target).value)" />
+            @if (query()) { <span class="small muted">{{ filtered().length }} von {{ groups().length }} Spielern</span> }
+          </div>
+        }
+        @for (g of visible(); track g.fide) {
           <article class="sugg-group">
             <h3><button type="button" class="btn-link sugg-name" (click)="openCard(g.fide)">{{ g.name }}</button>
               @if (g.team) { <span class="muted small">{{ g.team }}</span> }</h3>
             <lh-account-suggestions [items]="g.items" (decided)="onDecided($event)" />
           </article>
         } @empty {
-          @if (!loading() && !error()) { <p class="muted">Keine offenen Vorschläge.</p> }
+          @if (!loading() && !error()) { <p class="muted">{{ query() && groups().length ? 'Kein Spieler passt zur Suche.' : 'Keine offenen Vorschläge.' }}</p> }
+        }
+        @if (rest(); as r) {
+          <p class="sugg-more"><button type="button" class="btn-sec" (click)="shown.set(shown() + pageSize)">Weitere {{ nextCount() }} von {{ r }}</button></p>
         }
       </section>
       <lh-player-card />
@@ -75,6 +101,16 @@ export class AccountSuggestionsPageComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly groups = computed(() => groupByPlayer(this.items()));
+  /** Erklärtext hinter (i) (d2-l-konten-vorlauf). */
+  readonly infoOpen = signal(false);
+  /** Suche und Seiten (d2-l-konten-endlos): erst 20 Spieler, „Weitere" holt die nächsten 20. */
+  readonly pageSize = 20;
+  readonly query = signal('');
+  readonly shown = signal(this.pageSize);
+  readonly filtered = computed(() => filterGroups(this.groups(), this.query()));
+  readonly visible = computed(() => this.filtered().slice(0, this.shown()));
+  readonly rest = computed(() => Math.max(0, this.filtered().length - this.shown()));
+  readonly nextCount = computed(() => Math.min(this.pageSize, this.rest()));
   readonly progress = computed(() => {
     const s = this.scanned(), t = this.total();
     if (s === null || !t) return null;
@@ -110,6 +146,11 @@ export class AccountSuggestionsPageComponent implements OnInit {
     // Server verworfen; sie verschwinden aus der Übersicht (auch aus den Gruppen der anderen Spieler).
     const twins = e?.accepted ? new Set((e.suggestion.alsoFor ?? []).map(t => t.id)) : null;
     if (twins?.size) this.items.update(list => list.filter(x => !twins.has(x.id)));
+  }
+
+  setQuery(q: string): void {
+    this.query.set(q);
+    this.shown.set(this.pageSize);
   }
 
   openCard(fide: string): void {

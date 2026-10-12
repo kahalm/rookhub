@@ -14,6 +14,7 @@ import { MenuService } from '@rh/core/menu.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
 
 /**
@@ -41,16 +42,23 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [
     FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, RookHubLinkComponent,
+    MatInputModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, RookHubLinkComponent, HelpHintComponent,
   ],
   template: `
     <div class="ta-page">
-      <h1>{{ 'turnierAdmin.title' | translate }}</h1>
-      <!-- „Alles Uebrige bleibt in RookHub" — mit dem Weg dorthin (Codereview UX-079). -->
-      <p class="muted">
-        {{ 'turnierAdmin.lead' | translate }}
-        <trn-rookhub-link path="admin">{{ 'turnierAdmin.rookhubAdmin' | translate }}</trn-rookhub-link>
-      </p>
+      <!-- Kopf nach DESIGN 5.1: der Weg zur RookHub-Verwaltung (Codereview UX-079) steht als Textlink rechts,
+           der Erklaertext ist EIN Satz, der Rest hinter ⓘ (UI-Sweep d2-t-admin-lead: am Handy waren es 5 Zeilen,
+           am grossen Bildschirm ~170 Zeichen je Zeile). -->
+      <div class="header">
+        <h1>
+          {{ 'turnierAdmin.title' | translate }}
+          <app-help-hint [text]="'turnierAdmin.leadMore' | translate" />
+        </h1>
+        <div class="header-actions">
+          <trn-rookhub-link path="admin">{{ 'turnierAdmin.rookhubAdmin' | translate }}</trn-rookhub-link>
+        </div>
+      </div>
+      <p class="muted ta-lead">{{ 'turnierAdmin.lead' | translate }}</p>
 
       <mat-card class="ta-card">
         <mat-form-field appearance="outline" class="ta-search">
@@ -78,7 +86,11 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
                               [matTooltip]="'admin.users.columns.admin' | translate">shield</mat-icon>
                   }
                 </span>
-                <span class="muted ta-mail">{{ u.email }}</span>
+                <!-- Ohne Adresse keine leere Spanne: sie brach am Handy als eigene Zeile um und schob den Knopf
+                     ~24 px tiefer als bei den anderen Konten (d2-t-admin-empty-mail). -->
+                @if (u.email) {
+                  <span class="muted ta-mail">{{ u.email }}</span>
+                }
                 <!-- Vorgelesen mit dem Benutzernamen: in der Schaltflaechenliste eines Screenreaders
                      stuenden sonst bis zu 50-mal dieselben Worte ohne Bezug. Der sichtbare Text steht
                      vorne, damit Sprachsteuerung ihn weiter trifft (WCAG 2.5.3). -->
@@ -110,7 +122,11 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
     .ta-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
     /* Dieselbe Seitenueberschrift wie Profil, Meine Turniere und Kalender (1,4 rem) — als nacktes h1 war sie
        mit ~32 px deutlich groesser und die Seite wirkte wie aus einer anderen App (UI-Sweep 2026-10-11, r2-t-admin-title). */
-    h1 { font-size: 1.4rem; margin: 0 0 0.75rem; }
+    h1 { font-size: 1.4rem; margin: 0; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    /* Ein Satz, hoechstens ~75 Zeichen je Zeile (DESIGN 4.6). */
+    .ta-lead { max-width: 75ch; margin: 0.5rem 0 0; }
     .ta-card { margin-top: 12px; padding: 16px; }
     .ta-search { width: 100%; max-width: 420px; }
     .ta-users { list-style: none; margin: 0; padding: 0; }

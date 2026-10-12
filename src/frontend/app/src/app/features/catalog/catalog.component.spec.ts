@@ -32,11 +32,11 @@ describe('CatalogComponent', () => {
   describe('Freigaben', () => {
     // Codereview F5-005: Besitzer ist, wer catalog.manage hat — hier bewusst KEIN Admin.
     function setup(getGrants: any, has: (p: string) => boolean = p => p === 'catalog.manage',
-                   search = jasmine.createSpy('search').and.returnValue(of([]))) {
+                   search = jasmine.createSpy('search').and.returnValue(of([])), open = true, requests: any[] = []) {
       const svc = {
         list: jasmine.createSpy('list').and.returnValue(of([])),
         getGrants,
-        getRequests: jasmine.createSpy('getRequests').and.returnValue(of([])),
+        getRequests: jasmine.createSpy('getRequests').and.returnValue(of(requests)),
         setGrants: jasmine.createSpy('setGrants').and.returnValue(of({ userIds: [], groupIds: [] })),
       };
       const snackbar = { info: jasmine.createSpy('info') };
@@ -56,6 +56,7 @@ describe('CatalogComponent', () => {
       });
       const fixture = TestBed.createComponent(CatalogComponent);
       fixture.detectChanges();
+      if (open) { fixture.componentInstance.adminOpen = true; fixture.detectChanges(); }
       return { fixture, c: fixture.componentInstance, svc, snackbar, search };
     }
 
@@ -112,6 +113,57 @@ describe('CatalogComponent', () => {
       expect(getGrants).not.toHaveBeenCalled();
       expect(svc.getRequests).not.toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('.grant-selects')).toBeNull();
+    });
+  });
+
+  // UI-Sweep 2026-10-11 (d2-rk-catalog-freigaben-zuerst): Liste zuerst, Verwaltung zugeklappt darunter.
+  describe('Freigabe-Verwaltung zugeklappt', () => {
+    function make(requests: any[]) {
+      const svc = {
+        list: () => of([]),
+        getGrants: () => of({ userIds: [3], groupIds: [], users: [{ userId: 3, username: 'bert', displayName: null }] }),
+        getRequests: () => of(requests),
+      };
+      TestBed.configureTestingModule({
+        imports: [CatalogComponent],
+        providers: [
+          provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+          { provide: CatalogService, useValue: svc },
+          { provide: AuthService, useValue: { isAdmin: true, has: () => true } },
+          { provide: AdminService, useValue: { getGroups: () => of([]) } },
+          { provide: SnackbarService, useValue: { info: () => {} } },
+          { provide: FriendsService, useValue: { search: () => of([]) } },
+        ],
+      });
+      const fixture = TestBed.createComponent(CatalogComponent);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('ohne offene Anforderungen: Liste vor der Verwaltung, Verwaltung zu, Kopf mit Zählern', () => {
+      const fixture = make([]);
+      const el: HTMLElement = fixture.nativeElement;
+      const cards = Array.from(el.querySelectorAll('.catalog > mat-card'));
+      expect(cards.length).toBe(2);
+      expect(cards[0].classList.contains('admin-card')).toBeFalse();
+      expect(cards[1].classList.contains('admin-card')).toBeTrue();
+      const toggle = el.querySelector('.admin-toggle') as HTMLButtonElement;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.textContent).toContain('catalog.admin.summaryUsersOne');
+      expect(toggle.textContent).toContain('catalog.admin.summaryOpen');
+      expect(el.querySelector('.grant-selects')).toBeNull();
+      toggle.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.grant-selects')).not.toBeNull();
+      expect(el.querySelector('.admin-card .empty-state')).toBeNull();   // Leerzustände einzeilig
+      expect(el.querySelector('.admin-card .muted-line')).not.toBeNull();
+    });
+
+    it('mit offenen Anforderungen gleich aufgeklappt', () => {
+      const fixture = make([{ id: 1, requesterName: 'anna', itemType: 'course', itemId: 2, itemName: 'K' }]);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(fixture.componentInstance.adminOpen).toBeTrue();
+      expect(el.querySelector('.req-row')).not.toBeNull();
     });
   });
 

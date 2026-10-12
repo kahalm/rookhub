@@ -2316,3 +2316,20 @@ describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
     c.ngOnDestroy();
   });
 });
+
+// d2-rk-analysis-brettspalte: am Laptop scrollte das Brett weg (Explorer rechts lief weiter, links leer), groß blieb es bei
+// 560 px in einer 1 100 px schmalen Mitte. Jetzt klebt die Brettspalte ab 769 px und richtet sich nach der Fensterhöhe.
+describe('AnalysisComponent Brettspalte (d2-rk-analysis-brettspalte)', () => {
+  it('klebt ab 769 px, passt in die Fensterhöhe und die Seite nutzt --page-max-width', async () => {
+    if (window.innerWidth < 769) { pending('Testfenster schmaler als 769 px'); return; }
+    const fixture = await renderAnalysis();
+    const el = fixture.nativeElement as HTMLElement;
+    const col = el.querySelector('.board-col') as HTMLElement;
+    const cs = getComputedStyle(col);
+    expect(cs.position).toBe('sticky');
+    expect(col.getBoundingClientRect().width).toBeLessThanOrEqual(Math.max(280, window.innerHeight - 170) + 1);
+    expect(col.getBoundingClientRect().width).toBeLessThanOrEqual(820 + 1);
+    expect(getComputedStyle(el.querySelector('.analysis-page')!).maxWidth).not.toBe('1100px');
+    fixture.destroy();
+  });
+});

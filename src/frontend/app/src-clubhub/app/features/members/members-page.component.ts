@@ -56,19 +56,21 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
           <a class="btn" routerLink="/kind/neu" [queryParams]="{ trainer: 1 }">Trainer anlegen</a>
         </div>
       </div>
-      <div class="tools">
-        <label class="field search"><span>Suchen</span>
-          <input type="search" placeholder="Name" [value]="q()" (input)="q.set($any($event.target).value)"></label>
+      <!-- Suche, Gruppenchips und Archiv in EINER Zeile (ab 641 px), das Label „Suchen" nur für Vorleser
+           (d2-c-kartei-lead: drei Zeilen vor der Liste). Am Handy rutschen die Chips unter Suche und Archiv. -->
+      <div class="tools" [class.with-chips]="chips().length > 0">
+        <label class="field search"><span class="sr-only">Suchen</span>
+          <input type="search" placeholder="Name suchen" aria-label="Suchen" [value]="q()" (input)="q.set($any($event.target).value)"></label>
+        @if (chips().length) {
+          <div class="filter-chips" role="group" aria-label="Nach Gruppe filtern">
+            <button type="button" class="chip-btn all" [attr.aria-pressed]="groupId() === null" (click)="groupId.set(null)">Alle</button>
+            @for (g of chips(); track g.id) {
+              <button type="button" class="chip-btn" [attr.aria-pressed]="groupId() === g.id" (click)="pickGroup(g.id)">{{ g.name }} <span class="n">{{ g.count }}</span></button>
+            }
+          </div>
+        }
         <label class="check"><input type="checkbox" [checked]="archived()" (change)="toggleArchived($any($event.target).checked)"> Archiv</label>
       </div>
-      @if (chips().length) {
-        <div class="filter-chips" role="group" aria-label="Nach Gruppe filtern">
-          <button type="button" class="chip-btn all" [attr.aria-pressed]="groupId() === null" (click)="groupId.set(null)">Alle</button>
-          @for (g of chips(); track g.id) {
-            <button type="button" class="chip-btn" [attr.aria-pressed]="groupId() === g.id" (click)="pickGroup(g.id)">{{ g.name }} <span class="n">{{ g.count }}</span></button>
-          }
-        </div>
-      }
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
       @if (loading() && !rows().length) { <p class="muted">Lade …</p> }
       @if (!loading() && !error() && !rows().length) {

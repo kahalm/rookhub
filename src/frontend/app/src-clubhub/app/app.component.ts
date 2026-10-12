@@ -42,7 +42,11 @@ export function isCardIndexUrl(url: string): boolean {
           }
         </nav>
       </div>
-      <p class="wrap lede">Die Kartei der Kinder und Jugendlichen im Verein: Kontakte, Gruppen, Anwesenheit, Lernstand.</p>
+      <!-- Die Werbezeile nur ohne Club-Zugang (d2-c-kartei-lead, d2-c-attendance-lead): wer arbeitet, kennt die Kartei —
+           die Zeile schob auf jeder Seite die Hauptsache (Liste, Abhakliste) nach unten. -->
+      @if (!access()) {
+        <p class="wrap lede">Die Kartei der Kinder und Jugendlichen im Verein: Kontakte, Gruppen, Anwesenheit, Lernstand.</p>
+      }
       @if (access()) {
         <nav class="wrap tabs" aria-label="Bereiche">
           <a routerLink="/" [class.on]="onCardIndex()" [attr.aria-current]="onCardIndex() ? 'page' : null">Kartei</a>

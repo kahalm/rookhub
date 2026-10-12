@@ -217,3 +217,50 @@ describe('NotificationsComponent', () => {
     });
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-notif-push-card): Push-Bereich steht unter der Liste; ohne Push nur eine leise Zeile. */
+describe('NotificationsComponent Push-Bereich unter der Liste', () => {
+  async function render(push: any) {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { provideNoopAnimations } = await import('@angular/platform-browser/animations');
+    const { InAppNotificationService } = await import('../../core/in-app-notification.service');
+    const { PushService } = await import('../../core/push.service');
+    const { AuthService } = await import('../../core/auth.service');
+    const { SnackbarService } = await import('../../core/snackbar.service');
+    const { Router } = await import('@angular/router');
+    TestBed.configureTestingModule({
+      imports: [NotificationsComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: InAppNotificationService, useValue: makeService({
+          history: () => of({ items: [notif(1)], total: 1 }) }) },
+        { provide: PushService, useValue: push },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false } },
+        { provide: SnackbarService, useValue: {} },
+        { provide: Router, useValue: { navigateByUrl: () => {} } },
+      ],
+    });
+    const fixture = TestBed.createComponent(NotificationsComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('ohne Push: keine Karte, nur eine Zeile nach der Liste', async () => {
+    const el = await render({ supported: false, permissionDenied: false });
+    expect(el.querySelector('.push-card')).toBeNull();
+    const note = el.querySelector('.push-note');
+    expect(note).not.toBeNull();
+    const list = el.querySelector('.list')!;
+    expect(list.compareDocumentPosition(note!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('mit Push: Karte mit Schaltern steht nach der Liste', async () => {
+    const el = await render({ supported: true, permissionDenied: false,
+      getConfig: () => of({ publicKey: 'vapid', enabledCategories: [] }) });
+    const card = el.querySelector('.push-card');
+    expect(card).not.toBeNull();
+    expect(el.querySelector('.push-note')).toBeNull();
+    expect(el.querySelector('.list')!.compareDocumentPosition(card!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

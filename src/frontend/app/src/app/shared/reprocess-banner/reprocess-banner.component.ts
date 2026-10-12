@@ -29,11 +29,14 @@ interface ReprocessStatus {
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],
   template: `
-    @if (status && actionableCount > 0) {
+    @if (visible) {
       <div class="reprocess-banner">
         <mat-icon class="rb-icon">auto_fix_high</mat-icon>
+        <!-- UI-Sweep 2026-10-11 (d2-rk-courses-zwei-banner): Eltern können einen zweiten Satz hineinreichen
+             (z. B. „N brauchen einen neuen Import"), damit über der Liste nur EIN Banner steht (DESIGN 4.6/6). -->
         <span class="rb-text">
-          {{ textKey | translate: { count: actionableCount, own: status.ownActionable ?? 0 } }}
+          {{ textKey | translate: { count: actionableCount, own: status?.ownActionable ?? 0 } }}
+          <ng-content />
         </span>
         @if (allCount > 0) {
           <!-- EIN Aktualisieren-Knopf: bereitet lokal aus der gespeicherten Quelle auf und holt
@@ -43,7 +46,7 @@ interface ReprocessStatus {
             <!-- UI-Sweep 2026-10-11 (d1-rk-update-all-icon-misaligned): Symbol und Text je in eigenem Zweig mit EINER Wurzel —
                  mit beidem in einem Zweig landete das Symbol nicht im Icon-Platz des Knopfs und saß 8 px zu hoch. -->
             @if (working) { <mat-spinner diameter="16" class="rb-spin"></mat-spinner> } @else { <mat-icon>refresh</mat-icon> }
-            {{ working ? ('reprocess.working' | translate) : ((status.allUsers ? 'reprocess.updateAll' : 'reprocess.update') | translate: { count: allCount }) }}
+            {{ working ? ('reprocess.working' | translate) : ((status?.allUsers ? 'reprocess.updateAll' : 'reprocess.update') | translate: { count: allCount }) }}
           </button>
         }
       </div>
@@ -77,6 +80,8 @@ export class ReprocessBannerComponent implements OnInit {
   }
   /** Irgendetwas aktualisierbar? (steuert das Banner). */
   get actionableCount(): number { return this.allCount; }
+  /** Banner sichtbar? Eltern zeigen eigene Hinweise nur dann getrennt, wenn das Banner fehlt. */
+  get visible(): boolean { return !!this.status && this.actionableCount > 0; }
 
   /** UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Bannertext mit echter Einzahl/Mehrzahl; in der Admin-Sicht
    *  sagt er dazu, dass die Zahl die Einträge ALLER Nutzer umfasst (und wie viele davon eigene sind). */

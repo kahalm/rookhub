@@ -34,20 +34,34 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
+      <!-- UI-Sweep 2026-10-11 (d2-rk-rep-list-lead): RepCheck-Tipp und Abschnittserklärung liegen hinter EINEM ⓘ
+           (am Abschnitt „Für RepCheck und Vorbereitung", ohne diesen Abschnitt am Seitentitel) — über der Liste steht
+           höchstens das Aufbereitungs-Banner. Am Handy kurze Knopfbeschriftung, damit die Titelzeile hält. -->
       <div class="header">
-        <h1>{{ 'repertoire.list.title' | translate }}</h1>
-        <button mat-flat-button color="primary" (click)="openCreateDialog()">
-          <mat-icon>add</mat-icon> {{ 'repertoire.list.new' | translate }}
+        <h1 class="title-with-info">{{ 'repertoire.list.title' | translate }}
+          @if (!loading && extensionRepertoires.length === 0) { <ng-container [ngTemplateOutlet]="infoToggle" /> }
+        </h1>
+        <button mat-flat-button color="primary" (click)="openCreateDialog()" [attr.aria-label]="'repertoire.list.new' | translate">
+          <mat-icon>add</mat-icon>
+          <span class="new-long">{{ 'repertoire.list.new' | translate }}</span>
+          <span class="new-short">{{ 'repertoire.list.newShort' | translate }}</span>
         </button>
       </div>
+      @if (!loading && extensionRepertoires.length === 0 && infoOpen) { <ng-container [ngTemplateOutlet]="infoPanel" /> }
 
-      <div class="ext-hint">
-        <mat-icon>extension</mat-icon>
-        <span>
-          {{ 'repertoire.list.extHint' | translate }}
-          <a routerLink="/help" fragment="extension">{{ 'repertoire.list.extHintLink' | translate }}</a>
-        </span>
-      </div>
+      <ng-template #infoToggle>
+        <button type="button" class="info-toggle" (click)="infoOpen = !infoOpen" [attr.aria-expanded]="infoOpen"
+                [attr.aria-label]="'repertoire.list.infoLabel' | translate">
+          <mat-icon>info_outline</mat-icon>
+        </button>
+      </ng-template>
+      <ng-template #infoPanel>
+        <div class="info-panel">
+          @if (extensionRepertoires.length > 0) { <p>{{ 'repertoire.list.sectionExtensionHint' | translate }}</p> }
+          <p>{{ 'repertoire.list.extHint' | translate }}
+            <a routerLink="/help" fragment="extension">{{ 'repertoire.list.extHintLink' | translate }}</a></p>
+        </div>
+      </ng-template>
 
       <app-reprocess-banner section="repertoires" (done)="loadRepertoires()" />
 
@@ -78,8 +92,9 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
             <h2 class="section-title">
               <mat-icon class="section-icon">extension</mat-icon>
               {{ 'repertoire.list.sectionExtension' | translate }}
+              <ng-container [ngTemplateOutlet]="infoToggle" />
             </h2>
-            <p class="section-hint">{{ 'repertoire.list.sectionExtensionHint' | translate }}</p>
+            @if (infoOpen) { <ng-container [ngTemplateOutlet]="infoPanel" /> }
             <div class="repertoire-grid">
               @for (rep of extensionRepertoires; track rep.id) {
                 <ng-container *ngTemplateOutlet="repCard; context: { $implicit: rep }"></ng-container>
@@ -203,12 +218,25 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   styles: [`
     .repertoire-container { padding: 16px; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; }
-    .ext-hint { display: flex; align-items: center; gap: 8px; margin: 0.5rem 0 1.25rem;
-                padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
-                background: color-mix(in srgb, currentColor 7%, transparent);
-                color: color-mix(in srgb, currentColor 80%, transparent); }
-    .ext-hint mat-icon { flex: 0 0 auto; opacity: 0.7; }
-    .ext-hint a { color: inherit; text-decoration: underline; cursor: pointer; }
+    .header { gap: 8px; margin-bottom: 0.75rem; }
+    .header h1 { margin: 0; }
+    .title-with-info { display: flex; align-items: center; gap: 4px; }
+    .new-short { display: none; }
+    @media (max-width: 599.98px) {
+      .new-long { display: none; }
+      .new-short { display: inline; }
+    }
+    .info-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+      padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; opacity: 0.6; cursor: pointer;
+      font-size: 1rem; font-weight: 400; }
+    .info-toggle:hover, .info-toggle:focus-visible, .info-toggle[aria-expanded="true"] { opacity: 1; }
+    .info-toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .info-panel { margin: 0 0 0.75rem; padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; max-width: 75ch;
+      background: color-mix(in srgb, currentColor 7%, transparent);
+      color: color-mix(in srgb, currentColor 80%, transparent); }
+    .info-panel p { margin: 0 0 6px; }
+    .info-panel p:last-child { margin-bottom: 0; }
+    .info-panel a { color: inherit; text-decoration: underline; cursor: pointer; }
     .offline-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 1rem;
                       padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
                       background: color-mix(in srgb, currentColor 7%, transparent);
@@ -280,6 +308,8 @@ export class RepertoireListComponent implements OnInit {
   savingOffline: number | null = null;
   /** true = Server nicht erreichbar; Anzeige aus dem Offline-Cache (nur heruntergeladene). */
   offlineList = false;
+  /** RepCheck-Tipp + Abschnittserklärung aufgeklappt (ⓘ)? */
+  infoOpen = false;
 
   constructor(private repertoireService: RepertoireService, private training: RepertoireTrainingService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
 

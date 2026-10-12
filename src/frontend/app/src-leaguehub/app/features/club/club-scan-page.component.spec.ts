@@ -186,14 +186,26 @@ describe('ClubScanPageComponent', () => {
     expect(shown('.scan-photo .photo-toggle')).toBeFalse();
   });
 
+  // UI-Sweep 2026-10-11 (d2-l-korrigieren-layout): der Hinweis zu den orangen Stellen steht hinter (i)
+  it('Hinweis „Orange markiert …" erst nach Tipp auf (i)', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.club-intro')?.textContent).not.toContain('Orange markiert');
+    (el.querySelector('.club-intro .scan-head .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.club-intro .scan-hint')?.textContent).toContain('Orange markiert');
+  }));
+
   it('„Weiter zu Namen & Übernehmen" oben und am Ende der Partie führen zum Speicherteil (UX-036)', fakeAsync(() => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
     const panel = el.querySelector('section.save-panel') as HTMLElement;
     const scroll = spyOn(panel, 'scrollIntoView');
-    const top = el.querySelector('.club-intro button.to-save') as HTMLButtonElement;
-    expect(top.textContent).toContain('Weiter zu Namen & Übernehmen');
+    // d2-l-korrigieren-layout: rechts neben der Überschrift, kürzer
+    const top = el.querySelector('.club-intro .scan-head button.to-save') as HTMLButtonElement;
+    expect(top.textContent).toContain('Namen & Übernehmen ↓');
     top.click();
     expect(scroll).toHaveBeenCalledTimes(1);
     expect(el.querySelector('.scan-check button.to-save')).toBeNull();            // mitten in der Partie: Prüfen geht vor

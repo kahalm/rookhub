@@ -69,6 +69,13 @@
 }
 
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+/* Handy (d2-rk-recon-detail-actions): kurze Beschriftungen, beide Knöpfe in einer Zeile. */
+.add-row .lbl-short { display: none; }
+@media (max-width: 599.98px) {
+  .add-row { flex-wrap: nowrap; }
+  .add-row .lbl-long { display: none; }
+  .add-row .lbl-short { display: inline; }
+}
 
 .part {
   padding: 0.5rem 0.75rem;

@@ -50,7 +50,13 @@ describe('SharePageComponent', () => {
     // Ganz oben die Aufforderung, Partien hochzuladen — ohne Anmeldung, beide Wege.
     const cta = el.querySelector('section.cta')!;
     expect(el.firstElementChild).toBe(cta);
-    expect(cta.textContent).toContain('Lade deine Partien hoch');
+    // UI-Sweep 2026-10-11 (d2-l-teilen-cta): kurzer Titel, Erklärtext hinter (i)
+    expect(cta.querySelector('h2')?.textContent).toBe('Gegen die Liga gespielt? Partien hochladen');
+    expect(cta.textContent).not.toContain('ohne Anmeldung');
+    (cta.querySelector('.chk-btn') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(cta.querySelector('.cta-info')?.textContent).toContain('ohne Anmeldung');
+    expect(el.querySelector('.share-stand')?.textContent).toContain('Nur zum Ansehen');
     const links = Array.from(cta.querySelectorAll('a')).map(a => a.getAttribute('href'));
     expect(links).toEqual(['/s/TOKEN123/hochladen?art=formular', '/s/TOKEN123/hochladen']);
     expect(TestBed.inject(Title).getTitle()).toBe('Schwaz – Runde 2 | LeagueHub');

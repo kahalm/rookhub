@@ -212,6 +212,43 @@ describe('GuessListComponent', () => {
     expect(ids()).toEqual([1, 2, 3]);
   });
 
+  /** d2-rk-guess-durchlaeufe-unten: ein angefangener Durchlauf stand erst am Seitenende (2–3 Bildschirme tief). Er steht
+   *  jetzt als „Weiterspielen" über dem Suchfeld; beendete bleiben unten unter „Deine Durchläufe". */
+  it('zeigt laufende Durchläufe als „Weiterspielen" über der Suche, beendete unten', () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([]);
+    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    const run = (id: number, status: 'running' | 'done') =>
+      ({ id, title: 'Lauf ' + id, guessWhite: true, status, points: 3, maxPoints: 10 } as GuessSession);
+    http.expectOne('/api/guess-sessions').flush([run(4, 'running'), run(5, 'done')]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const resume = el.querySelectorAll('mat-card.resume');
+    expect(resume.length).toBe(1);
+    expect(resume[0].textContent).toContain('Lauf 4');
+    expect(resume[0].querySelector('a.resume-btn')?.getAttribute('href')).toBe('/guess/4');
+    // vor dem Suchfeld
+    const search = el.querySelector('mat-form-field.search')!;
+    expect(resume[0].compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const below = Array.from(el.querySelectorAll('mat-card.run:not(.resume)')).map(e => e.textContent);
+    expect(below.length).toBe(1);
+    expect(below[0]).toContain('Lauf 5');
+  });
+
+  /** d2-rk-guess-vorlauf: Erklärtext ein Satz, Rest und „Seite des Gewinners" hinter dem ⓘ am Titel. */
+  it('hält den Erklärtext kurz: Rest und Gewinner-Hinweis hinter dem ⓘ', () => {
+    const fixture = setup();
+    flushInitial();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const hint = el.querySelector('h1 app-help-hint button')?.getAttribute('aria-label') ?? '';
+    expect(hint).toContain('guess.introMore');
+    expect(hint).toContain('guess.curatedHint');
+    expect(el.textContent!.split('guess.curatedHint').length).withContext('nicht mehr als eigene Zeile').toBe(1);
+  });
+
   /** Der Muelleimer an „Deine Durchlaeufe" loeschte einen Lauf samt Punkten mit einem Klick (Codereview
    *  W5 F4-013). Jetzt erst nach Ja — ueber den ConfirmService, nicht window.confirm. */
   it('loescht einen Durchlauf erst nach Rueckfrage — abgelehnt geht kein DELETE raus', () => {

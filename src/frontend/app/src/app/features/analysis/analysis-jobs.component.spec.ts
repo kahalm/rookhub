@@ -29,6 +29,17 @@ describe('AnalysisJobsComponent', () => {
     secondsSpent: 125, lastError: null, createdAt: '2026-08-26T10:00:00Z', updatedAt: '2026-08-26T10:02:00Z', lastRunAt: null, finishedAt: null, ...extra,
   });
 
+  it('keeps the intro to one sentence and puts the rest behind the help hint next to the title (d2-rk-analysis-jobs-intro)', async () => {
+    const { fixture, http } = await make();
+    http.expectOne('/api/analysis-jobs').flush([]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('h1 app-help-hint')).withContext('ⓘ neben dem Titel').not.toBeNull();
+    expect(el.querySelector('h1 app-help-hint button')?.getAttribute('aria-label')).toBe('analysisJobs.introMore');
+    expect(el.querySelector('p.intro')?.textContent?.trim()).toBe('analysisJobs.intro');
+  });
+
   it('lists jobs with status, depth and the main-line evaluation', async () => {
     const { fixture, c, http } = await make();
     http.expectOne('/api/analysis-jobs').flush([job(1), job(2, { status: 'done', resultJson: null })]);

@@ -210,7 +210,10 @@ import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
       0% { background: color-mix(in srgb, var(--mat-sys-primary) 38%, transparent); }
       100% { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
     }
-    .friends-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
+    /* UI-Sweep 2026-10-11 (d2-rk-friends-oberer-abstand): 16 px Seitenpolster wie die anderen Seiten, Titel ohne
+       Standard-Oberabstand — sonst ~56 px Leere über dem Titel und Vorlauf über 40 %. */
+    .friends-container { padding: 16px; max-width: 800px; margin: 0 auto; }
+    .friends-container > h1 { margin: 0 0 12px; }
     /* mat-card ist von Haus aus eine Spalte — ausdrücklich Zeile, sonst schrumpft das Feld auf Inhaltsbreite. */
     .search-card { display: flex; flex-direction: row; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; }
     .search-field { flex: 1; min-width: 0; margin-bottom: -1.25em; }

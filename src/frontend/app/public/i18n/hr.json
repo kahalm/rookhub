@@ -215,6 +215,10 @@
       "repertoire": "Repertoar"
     },
     "admin": {
+      "manageTitle": "Upravljaj pristupom",
+      "summaryUsers": "korisnika: {{count}}",
+      "summaryUsersOne": "1 korisnik",
+      "summaryOpen": "otvoreno: {{count}}",
       "grantsTitle": "Tko smije vidjeti moj katalog?",
       "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
       "grantedUsers": "Korisnici s pristupom",
@@ -823,7 +827,11 @@
       "leagueTitle": "LeagueHub (priprema ekipe)",
       "leagueIntro": "LeagueHub pomaže članovima šahovskih klubova sudionika da se pripreme za ekipne mečeve svojih liga (Tirol, Bavarska). Svaki klub ima vlastitu klupsku bazu koju nijedan drugi klub ne vidi. Za to obrađujemo i podatke igrača koji kod nas nemaju račun i čije podatke ne prikupljamo izravno od njih (čl. 14 GDPR-a).",
       "leagueClub": "Trenutačno koristiš LeagueHub za {{club}}.",
-      "leagueSources": "Izvori: parovi, rezultati i prijavne liste s chess-results.com i iz ligaškog sustava Bavarskog šahovskog saveza; partije iz Lumbra’s GigaBase, ChessBase Megabase i baze partija chess-results.com; klupske partije koje učitaju članovi ili koje se predaju bez prijave putem poveznice za dijeljenje (i kao fotografija zapisnika partije, vidi „AI usluge“) — igrači kluba koji učitava u njima se prema zadanim postavkama pojavljuju samo pod imenom kluba; njihovo pravo ime pritom se interno sprema za analize tog kluba i nigdje se ne prikazuje niti prosljeđuje (ako se zamjena pri učitavanju isključi za neku stranu, pravo ime sprema se vidljivo); javne partije online računa na Lichessu i chess.comu. Za taj dohvat naš poslužitelj šalje korisnička imena tih računa odgovarajućoj platformi; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Za razliku od tjednog cilja „partije“, ovdje se spremaju same partije.",
+      "leagueSourcesTitle": "Izvori:",
+      "leagueSourcesPairings": "parovi, rezultati i prijavne liste s chess-results.com i iz ligaškog sustava Bavarskog šahovskog saveza",
+      "leagueSourcesGames": "partije iz Lumbra’s GigaBase, ChessBase Megabase i baze partija chess-results.com",
+      "leagueSourcesClub": "klupske partije koje učitaju članovi ili koje se predaju bez prijave putem poveznice za dijeljenje (i kao fotografija zapisnika partije, vidi „AI usluge“) — igrači kluba koji učitava u njima se prema zadanim postavkama pojavljuju samo pod imenom kluba; njihovo pravo ime pritom se interno sprema za analize tog kluba i nigdje se ne prikazuje niti prosljeđuje (ako se zamjena pri učitavanju isključi za neku stranu, pravo ime sprema se vidljivo)",
+      "leagueSourcesOnline": "javne partije online računa na Lichessu i chess.comu. Za taj dohvat naš poslužitelj šalje korisnička imena tih računa odgovarajućoj platformi; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Za razliku od tjednog cilja „partije“, ovdje se spremaju same partije.",
       "leagueData": "Kategorije: ime, FIDE ID, klub, rejting i nastupi prema prijavnim listama; partije i iz njih izračunati profili otvaranja; izračunata vjerojatnost da igrač bude postavljen u nekom kolu (model naučen na prethodnim sezonama); online računi na Lichessu i chess.comu koje pripisujemo igraču — na temelju javnih podataka profila (npr. pravo ime i zemlja) ili ih unose odgovorne osobe kluba, označeni kao „potvrđeni“ ili samo pretpostavljeni — zajedno s komentarom o pripisivanju i javnim partijama tih računa.",
       "leagueBasis": "Svrha i pravna osnova: priprema za ekipne mečeve; legitimni interes kluba i njegovih članova (čl. 6(1)(f) GDPR-a). Podaci uglavnom potječu iz javno dostupnih izvora.",
       "leagueRecipients": "Primatelji: prijavljeni računi s pristupom LeagueHubu (klupska grupa i administratori). Putem poveznice za dijeljenje svatko tko ima poveznicu bez prijave vidi podijeljeni meč: prijavnu listu s prognozama, kartice igrača, stabla otvaranja i partije igrača navedenih ondje — online račune samo ako se smatraju „potvrđenima“. Poveznica za dijeljenje vrijedi do sedam dana nakon kola (za već odigrano kolo sedam dana od dijeljenja, bez poznatog datuma kola 30 dana) i može se ranije opozvati.",
@@ -997,6 +1005,8 @@
       "convertToCourseFailed": "Pretvaranje repertoara u tečaj nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
       "extHint": "Savjet: uz RepCheck proširenje preglednika (za Chrome i Firefox) odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
+      "newShort": "Novi",
+      "infoLabel": "O RepChecku i odjeljcima",
       "extHintLink": "Saznaj više u pomoći",
       "sectionExtension": "Za RepCheck i pripremu",
       "sectionExtensionHint": "Repertoari koje RepCheck ekstenzija provjerava na chess.com / lichess i koje priprema za igrača nudi kao linije za trening protiv protivnika.",
@@ -1220,7 +1230,11 @@
       "search": "Ime ili klub",
       "searchClear": "Očisti pretragu",
       "searchNone": "Nijedan igrač ne odgovara upitu „{{query}}“.",
-      "sortBy": "Poredaj po"
+      "sortBy": "Poredaj po",
+      "sortFilter": "Poredaj i filtriraj",
+      "sortReset": "Poništi poredak",
+      "shownOf": "{{shown}} od {{total}} igrača",
+      "showMore": "Prikaži još {{count}}"
     },
     "teams": {
       "rank": "Mjesto",
@@ -1924,7 +1938,7 @@
   },
   "weekly": {
     "title": "Tjedna objava",
-    "intro": "Tjedne šahovske objave za prelistavanje. Datum i vrijeme označavaju kada je objava zakazana.",
+    "intro": "Tjedne šahovske objave za prelistavanje.",
     "play": "Odigraj",
     "empty": "Još nema tjednih objava.",
     "deleteConfirm": "Izbrisati tjednu objavu „{{title}}“?",
@@ -1951,6 +1965,7 @@
     },
     "upload": {
       "title": "Učitaj novu tjednu objavu",
+      "toggle": "Nova tjedna objava",
       "choosePgn": "Odaberi PGN",
       "titlePlaceholder": "iz naziva datoteke",
       "descriptionPlaceholder": "kratka napomena, prikazuje se i objavljuje na Discordu",
@@ -2627,6 +2642,8 @@
     },
     "themes": {
       "label": "Teme ovog lista",
+      "addShort": "Tema",
+      "short": "Teme:",
       "none": "Još nema tema — po njima ćeš list kasnije opet naći.",
       "suggested": "Predloženo iz {{n}} zadataka:",
       "own": "Vlastita tema",
@@ -2636,6 +2653,8 @@
     },
     "share": {
       "toggle": "Podijeli list (poveznica + QR kod)",
+      "qr": "QR kod",
+      "short": "Dijeli",
       "hint": "Tko otvori poveznicu, može list proći za pločom bez prijave — na ispisu stoji u podnožju svake stranice kao QR kod.",
       "off": "Nije podijeljeno — tada ispis nema QR koda.",
       "copy": "Kopiraj poveznicu",
@@ -2661,7 +2680,8 @@
       "finish": "Gotovo"
     },
     "list": {
-      "hint": "Prvo skupi, pa posloži, pa ispiši: sve što pošalješ na radni list završava u međuspremniku. Ondje izbacuješ, presaguješ redoslijed i dopisuješ naslove — i sve to spremiš pod imenom.",
+      "hint": "Prvo skupi, pa posloži, pa ispiši.",
+      "hintMore": "Sve što pošalješ na radni list završava u međuspremniku. Ondje izbacuješ, presaguješ redoslijed i dopisuješ naslove — i sve to spremiš pod imenom.",
       "mine": "Moji radni listovi",
       "empty": "Još nema imenovanog radnog lista. Spremi međuspremnik pod imenom i naći ćeš ga ovdje.",
       "error": "Radni listovi se nisu mogli učitati.",
@@ -2672,6 +2692,7 @@
       "nameLabel": "Naziv radnog lista",
       "saveClipboard": "Spremi kao radni list",
       "createEmpty": "Napravi prazan list",
+      "newEmpty": "Prazan list",
       "saveError": "To nije uspjelo."
     },
     "detail": {
@@ -2948,6 +2969,7 @@
       "menu": "Ispravi partiju",
       "notFound": "Partija nije pronađena.",
       "title": "Ispravi partiju",
+      "headersSummary": "Podaci: {{white}} – {{black}} · {{result}}",
       "help": "Klik na potez postavlja ploču na poziciju PRIJE njega. Potez odigran na ploči ga zamjenjuje (ili se u načinu umetanja stavlja ispred njega); potezi nakon njega ostaju dok su legalni. „Obriši potez\" uklanja potez. Spremaju se samo legalni potezi.",
       "helpScoresheet": "Klik na potez postavlja ploču na poziciju PRIJE njega — dosadašnji potez je žuta strelica. Narančasti potezi su nesigurni: odaberi jedno od ponuđenih čitanja ili odigraj drugi potez na ploči. Nakon svake promjene ostatak partije ponovno se sastavlja iz zapisa na zapisniku.\n\nUmetanje: za potez koji nedostaje na zapisniku. Brisanje: za zapis koji je dvaput ili pogrešno upisan.",
       "white": "Bijeli",
@@ -3381,6 +3403,7 @@
     "title": "Pomoć i upute",
     "subtitle": "Sve što trebaš znati o RookHubu – korak po korak.",
     "tocTitle": "Sadržaj",
+    "tocCount": "{{count}} tema",
     "backToTop": "Na vrh",
     "s": {
       "welcome": {
@@ -3599,6 +3622,9 @@
     "etaRemaining": "još ~{{min}} min",
     "cachedHint": "Spremljeno u predmemoriju — dostupno gotovo odmah (nije potreban Chessable dohvat)",
     "useExtension": {
+      "lead": "Chessable tečajeve sada dohvaćaš RepCheck proširenjem u vlastitom pregledniku.",
+      "more": "Više",
+      "less": "Manje",
       "title": "Molimo koristi RepCheck proširenje za preglednik",
       "body": "Uvoz Chessable tečajeva preko RookHuba je isključen. RookHub bi ih morao dohvaćati s Chessablea poslužiteljski preko IP adresa podatkovnih centara — upravo te adrese Chessable blokira, a takav obrazac može dovesti do blokade tvog Chessable računa. RepCheck umjesto toga radi u tvom vlastitom prijavljenom pregledniku s tvoje IP adrese: tečajevi stižu u RookHub bez čekanja u redu, rizik je znatno manji, a svoj Chessable token ne moraš pohraniti kod nas."
     }
@@ -3720,7 +3746,8 @@
   "analysisJobs": {
     "title": "Analize u pozadini",
     "toAnalysis": "Na ploču za analizu",
-    "intro": "Pozicije koje pozadinski motor računa za tebe — jedan zadatak za drugim, pauzirano dok analiziraš uživo vanjskim motorom. Otvori zadatak da vidiš spremljene varijante.",
+    "intro": "Pozicije koje pozadinski motor računa za tebe.",
+    "introMore": "Jedan zadatak za drugim, pauzirano dok analiziraš uživo vanjskim motorom. Otvori zadatak da vidiš spremljene varijante.",
     "empty": "Još nema zadataka.",
     "emptyHint": "Na ploči za analizu ikonom sata „Analiziraj u pozadini“ dodaj poziciju u red.",
     "untitled": "Bez naslova",
@@ -3857,8 +3884,10 @@
   },
   "guess": {
     "title": "Bodovna partija",
-    "intro": "Pogodi analiziranu partiju potez po potez: preuzimaš jednu stranu, odigraš svoj potez i odmah dobiješ bodove — mjereno prema potezu koji je stvarno odigran.",
+    "intro": "Pogodi analiziranu partiju potez po potez i skupljaj bodove.",
+    "introMore": "Preuzimaš jednu stranu, odigraš svoj potez i odmah dobiješ bodove — mjereno prema potezu koji je stvarno odigran.",
     "yourRuns": "Tvoji prolazi",
+    "resume": "Nastavi igrati",
     "play": "Igraj",
     "toAnalyses": "Analize partija",
     "sideLabel": "Igraš",
@@ -3918,7 +3947,7 @@
     "noCurated": "U zbirci još nema ničega.",
     "ownGames": "Vlastite analize",
     "filterAll": "Sve",
-    "filterAnnotated": "Samo komentirane",
+    "filterAnnotated": "Komentirane",
     "filterLabel": "Filtriraj partije",
     "sort": {
       "label": "Poredaj",
@@ -4289,7 +4318,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "ClubHub je kartoteka članova za vodstvo kluba i trenere – pristup odobrava tvoj klub. Prijavi se svojim RookHub računom. Dobio si kod od trenera? Možeš ga iskoristiti s bilo kojim računom – novi je besplatan."
+      "login": "Kartoteka članova za vodstvo kluba i trenere – prijavi se svojim RookHub računom. Imaš kod od trenera? Iskoristi ga nakon prijave."
     }
   },
   "turnier": {
@@ -4416,7 +4445,8 @@
       "completed": "Tečaj završen!",
       "restart": "Ispočetka",
       "readMore": "Čitaj dalje",
-      "readLess": "Prikaži manje"
+      "readLess": "Prikaži manje",
+      "showIntro": "Prikaži tekst"
     },
     "themes": {
       "mate1": {
@@ -4522,7 +4552,8 @@
   },
   "turnierAdmin": {
     "title": "Prijavi se kao korisnik",
-    "lead": "Pogledaj turnirsku stranicu s računom druge osobe — način da odgovoriš na „zašto je njegov kalendar prazan?“. Crvena traka to govori cijelo vrijeme i vodi natrag. Sve ostalo iz administracije ostaje u RookHubu.",
+    "lead": "Pogledaj turnirsku stranicu s računom druge osobe; crvena traka vodi natrag.",
+    "leadMore": "Način da odgovoriš na „zašto je njegov kalendar prazan?“. Crvena traka stoji cijelo vrijeme i vodi natrag u vlastiti račun. Sve ostalo iz administracije ostaje u RookHubu.",
     "none": "Nijedan račun ne odgovara tome.",
     "loadFailed": "Popis računa nije se mogao učitati.",
     "impersonateAria": "{{action}}: {{name}}",
@@ -4539,7 +4570,8 @@
   },
   "reconstruct": {
     "title": "Rekonstruiraj partiju",
-    "intro": "Zabilježi ono čega se još sjećaš iz partije — prve poteze, pojedine pozicije, kratke nizove poteza — i zatvaraj praznine korak po korak.",
+    "intro": "Zabilježi ono čega se još sjećaš iz partije i zatvori praznine.",
+    "introMore": "Na primjer prve poteze, pojedine pozicije ili kratke nizove poteza — praznine između zatvaraš korak po korak.",
     "newTitle": "Naslov",
     "newTitlePlaceholder": "Klupsko prvenstvo, 3. kolo",
     "create": "Stvori",
@@ -4558,7 +4590,9 @@
     "result": "Rezultat",
     "note": "Bilješka",
     "addMoves": "Dodaj poteze",
+    "addMovesShort": "Potezi",
     "addPosition": "Dodaj poziciju",
+    "addPositionShort": "Pozicija",
     "noParts": "Još nema dijelova. Počni s potezima u koje si siguran.",
     "atMove": "Potez {{move}}",
     "continues": "Nastavlja se na prethodni dio",

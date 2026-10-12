@@ -12,6 +12,10 @@ import { environment } from '../../src/environments/environment';
 import { ClaimPromptComponent } from './shared/claim-prompt.component';
 import { ClubContextService } from './core/club-context.service';
 
+/** Seiten mit ~1240 px statt 780: Vereinspartien (l-club-table), Prognosen und geteilte Begegnung (d2-l-breit-bretter: Bretter
+ *  ab 1280 px zweispaltig) und Konto-Vorschläge (d2-l-konten-zeilen-breit: die Vorschläge eines Spielers nebeneinander). */
+const MID_PAGES = /^\/(?:verein|konten|s\/[^/?#]+)?(?:[?#]|$)/;
+
 /**
  * Hülle von LeagueHub: Wortmarke, rechts Anmelden bzw. Name + Abmelden, unten Version und Datenschutz.
  * Beim Start übernimmt `consumeIncoming()` eine Anmeldung aus RookHub (Sprung-Code oder geteiltes Cookie);
@@ -24,7 +28,7 @@ import { ClubContextService } from './core/club-context.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ClaimPromptComponent, MatMenuModule],
   template: `
     <header class="top">
-      <div class="wrap top-row">
+      <div class="wrap top-row" [class.wide]="wide()" [class.mid]="mid()">
         <a class="brand" routerLink="/">LeagueHub</a>
         <nav class="account">
           @if (user() && clubs.clubs().length > 1) {
@@ -61,9 +65,11 @@ import { ClubContextService } from './core/club-context.service';
       </div>
       <!-- UI-Sweep 2026-10-11 (r2-l-subtitle): allgemein statt „Tiroler Mannschaftsmeisterschaft" — LeagueHub zeigt auch die
            Bundesliga und bayerische Ligen, und die Zeile steht auch vor der Anmeldung, wo der Verein noch unbekannt ist. -->
-      <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für eure Mannschaftskämpfe.</p>
+      <!-- UI-Sweep 2026-10-11 (d2-l-kopf-lede-mobile): am Handy nur abgemeldet — Angemeldete kennen LeagueHub, der Satz kostete
+           auf jeder Seite ~60 px über der Hauptsache. -->
+      <p class="wrap lede" [class.work]="work()" [class.anon]="!user()" [class.wide]="wide()" [class.mid]="mid()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für eure Mannschaftskämpfe.</p>
       @if (user()) {
-        <nav class="wrap tabs" aria-label="Bereiche">
+        <nav class="wrap tabs" aria-label="Bereiche" [class.wide]="wide()" [class.mid]="mid()">
           @if (nav().view) {
             <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
             <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
@@ -79,9 +85,10 @@ import { ClubContextService } from './core/club-context.service';
     </header>
     <!-- Die Formular-Korrektur braucht Foto, Brett und Zugliste nebeneinander — dort ist die Seite breiter. -->
     <!-- nicht beim Einstieg als ein Nutzer: die Schlüssel dieses Browsers gehören dem Admin, nicht dem Nutzer -->
-    <lh-claim-prompt class="wrap" [userId]="user()?.impersonating ? null : user()?.userId ?? null" />
+    <lh-claim-prompt class="wrap" [class.wide]="wide()" [class.mid]="mid()" [userId]="user()?.impersonating ? null : user()?.userId ?? null" />
     <main class="wrap" [class.wide]="wide()" [class.mid]="mid()"><router-outlet /></main>
-    <footer class="wrap foot">
+    <!-- d2-l-breite-seiten-flucht: Kopf, Reiter, Inhalt und Fuß in derselben Breite — sonst sprang die linke Kante. -->
+    <footer class="wrap foot" [class.wide]="wide()" [class.mid]="mid()">
       <span>v{{ version }}</span>
       <a routerLink="/impressum">Impressum</a>
       <a routerLink="/privacy">Datenschutz</a>
@@ -109,15 +116,17 @@ export class LeagueHubAppComponent implements OnInit {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
-  readonly wide = computed(() => this.url().startsWith('/verein/formular/'));
+  /** Formular prüfen und die Korrektur einer Vereinspartie (d2-l-korrigieren-layout: dieselbe Seite, auch sie braucht Foto,
+   *  Brett und Zugliste nebeneinander). */
+  readonly wide = computed(() => /^\/verein\/(formular|partie)\//.test(this.url()));
   /** Vereinspartien (UI-Sweep 2026-10-10, l-club-table): die Tabelle bekommt ~1240 px statt 780 — Namen und Eröffnung
    *  brachen sonst auf zwei, drei Zeilen um. */
-  readonly mid = computed(() => /^\/verein(?:[?#]|$)/.test(this.url()));
+  readonly mid = computed(() => !this.wide() && MID_PAGES.test(this.url()));
   /** Auf der Anmeldemaske selbst gibt es oben keinen „Anmelden“-Knopf (UI-Sweep 2026-10-10, x-login-headbtn). */
   readonly onLogin = computed(() => this.url().split(/[?#]/)[0] === '/login');
   /** „Formular prüfen" (angemeldet und über den Teilen-Link): am Handy fällt dort der Werbesatz weg (UX-036) — er kostete
    *  drei Zeilen über Prüfteil und Brett, und vom Brett war im ersten Bildschirm nur die oberste Reihe zu sehen. */
-  readonly work = computed(() => /^\/(verein|s\/[^/?#]+)\/formular\//.test(this.url()));
+  readonly work = computed(() => /^\/(verein\/(formular|partie)|s\/[^/?#]+\/formular)\//.test(this.url()));
   /** „Anmelden“ fuehrt hierher zurueck (UX-020) — bisher fest „/“, auch von /verein/neu, /s/<token> oder der
    *  Registrierung mit eigenem Ziel. Rueckfall „/“: LeagueHub hat kein /dashboard. */
   readonly authQuery = computed(() => authLinkQuery(this.url(), '/'));

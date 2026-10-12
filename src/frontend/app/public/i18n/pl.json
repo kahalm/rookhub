@@ -563,7 +563,6 @@
   },
   "weekly": {
     "title": "Tygodniowy",
-    "intro": "Tygodniowe posty szachowe do przeglądania. Data i godzina wskazują zaplanowany czas publikacji.",
     "play": "Przegraj",
     "empty": "Brak tygodniowych postów.",
     "deleteConfirm": "Usunąć tygodniowy post „{{title}}”?",

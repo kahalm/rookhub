@@ -24,6 +24,7 @@ import { JOB_DEPTH_OPTIONS, JOB_LINE_OPTIONS } from './analysis-job-dialog.compo
 import type { EngineAnalyseLine } from './external-engine.service';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Seite „Analyse-Aufträge" (`/analysis/jobs`): alle Hintergrund-Aufträge des Users mit Status,
@@ -39,11 +40,12 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   selector: 'app-analysis-jobs',
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatFormFieldModule, MatSelectModule, MatProgressSpinnerModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe],
+    MatFormFieldModule, MatSelectModule, MatProgressSpinnerModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe, HelpHintComponent],
   template: `
     <div class="jobs-container">
       <div class="header">
-        <h1>{{ 'analysisJobs.title' | translate }}</h1>
+        <h1>{{ 'analysisJobs.title' | translate }}
+          <app-help-hint [text]="'analysisJobs.introMore' | translate" /></h1>
         <span class="head-actions">
           <a mat-stroked-button routerLink="/analysis/games">
             <mat-icon>sports_esports</mat-icon> {{ 'analysisJobs.toGames' | translate }}

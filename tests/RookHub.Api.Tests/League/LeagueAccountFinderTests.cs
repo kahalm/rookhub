@@ -530,4 +530,28 @@ public class LeagueAccountFinderTests : IDisposable
             ((int)o["id"]!, (string)o["user"]!, (int)o["score"]!, (string)o["profileName"]!, (string)o["lastActive"]!));
         Assert.Null(o["name"]);
     }
+
+    // UI-Sweep 2026-10-11 (d2-l-konten-entity): chess.com liefert Profilfelder HTML-kodiert — gespeichert und angezeigt wird Klartext.
+    [Fact]
+    public void ProfileFields_HtmlEntities_AreDecoded()
+    {
+        var cc = LeagueAccountFinder.ParseChessComPlayer("""
+            {"username":"fodorbalazs","name":"Fodor Bal&aacute;zs","location":"Nagyk&amp;aacute;ta","status":"basic"}
+            """)!;
+        Assert.Equal(("Fodor Balázs", "Nagykáta"), (cc.RealName, cc.Location));
+        var li = LeagueAccountFinder.ParseLichessUsers("""
+            [{"id":"x","username":"X","profile":{"realName":"J&oacute;zsef K&#337;v&aacute;r&oacute;","location":"Gy&#337;r"}}]
+            """)[0];
+        Assert.Equal(("József Kőváró", "Győr"), (li.RealName, li.Location));
+        Assert.Equal("A & B", LeagueAccountFinder.Unescape("A &amp; B"));
+        Assert.Null(LeagueAccountFinder.Unescape(null));
+
+        // schon gespeicherte Vorschläge: beim Ausliefern entschlüsselt
+        var o = LeagueOnlineAccountService.SuggestionJson(new LeagueAccountSuggestion
+        {
+            Id = 6, FideId = "333", Site = "chess.com", UserName = "FodorBalazs", Url = "u", Score = 3, Evidence = "e",
+            ProfileName = "Fodor Bal&aacute;zs", Location = "Nagyk&aacute;ta",
+        });
+        Assert.Equal(("Fodor Balázs", "Nagykáta"), ((string)o["profileName"]!, (string)o["location"]!));
+    }
 }

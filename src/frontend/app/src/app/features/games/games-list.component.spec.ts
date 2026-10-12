@@ -28,6 +28,22 @@ describe('GamesListComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  // d2-rk-games-kopfaktionen: „PGN hochladen" schwebte mitten in der Kopfzeile — beide Knöpfe stehen gruppiert rechts
+  // in .header-actions (DESIGN 5.1), sekundär zuerst.
+  it('groups the header buttons in .header-actions next to the title', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.method === 'GET' && req.url.startsWith('/api/games') && !req.url.startsWith('/api/games/'))
+      .flush([{ id: 4, source: 'lichess', white: 'a', black: 'b', result: '1-0', moveCount: 3, shareToken: 't', createdAt: '2026-07-16T00:00:00Z' }]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    const header = fixture.nativeElement.querySelector('.header') as HTMLElement;
+    expect(header.querySelector(':scope > h1')).not.toBeNull();
+    const actions = Array.from(header.querySelectorAll(':scope > .header-actions > *')) as HTMLElement[];
+    expect(actions.map(a => a.className.includes('pgn-upload') ? 'pgn' : a.className.includes('mistakes-collection') ? 'mistakes' : '?'))
+      .toEqual(['pgn', 'mistakes']);
+  });
+
   // „Partie analysieren" in der Liste (seit 0.512.0): kein PGN mehr nachladen — der Server hat es —, und man
   // bleibt auf der Seite; die Kurve steht danach im Nachspiel-Dialog. Vorher ging es auf /guess, wo eine
   // solche Analyse gar nicht mehr erscheint.

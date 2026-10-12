@@ -68,8 +68,15 @@ const SAVE_DEBOUNCE_MS = 1500;
       <section class="club-intro">
         @if (share) { <p><a class="back-link" [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
         <h2>Partien hinzufügen</h2>
-        <p class="muted">Angenommen wird jede Partie mit einem bekannten Gegner — geprüft an den Meldelisten aller Saisonen,
-          sonst am Spielerverzeichnis der Megabase. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung — gespeichert wird nicht, wer hochgeladen hat. }</p>
+        <!-- UI-Sweep 2026-10-11 (d2-l-hinzufuegen-anon-text): eine Zeile + (i) statt drei Zeilen über Umschalter und Dateiauswahl. -->
+        <p class="muted info-line">Angenommen wird jede Partie mit bekanntem Gegner.@if (share) { Ohne Anmeldung.}
+          <button type="button" class="chk-btn" [attr.aria-expanded]="introInfo()" aria-label="Was angenommen wird"
+                  title="Was angenommen wird" (click)="introInfo.set(!introInfo())">i</button></p>
+        @if (introInfo()) {
+          <div class="info-panel intro-info"><p class="note">Angenommen wird jede Partie mit einem bekannten Gegner — geprüft an den
+            Meldelisten aller Saisonen, sonst am Spielerverzeichnis der Megabase. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung —
+            gespeichert wird nicht, wer hochgeladen hat.}</p></div>
+        }
       </section>
 
       <!-- UX-071: ein Umschalter wie die übrigen von LeagueHub (role=group + aria-pressed). Vorher role=tab MIT aria-pressed
@@ -91,15 +98,25 @@ const SAVE_DEBOUNCE_MS = 1500;
             <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" [draftId]="share ? null : (draft()?.id ?? null)"
                                    (imported)="done($event)" (cancel)="closeCurrent()" (savedChange)="onSaved($event)" />
           } @else {
-            <label class="anon-toggle">
-              <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
-              <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
-                <span class="muted">Jeder, der in seiner jüngsten Saison für {{ clubName() }} gemeldet ist@if (!share) {, und du selbst}. Dann zeigt
-                  LeagueHub nach außen nirgends, wer dahinter steht (der echte Name bleibt nur intern für Auswertungen des Vereins), und es
-                  wird nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten. Nur im Kurs „Taktiken aus
-                  Vereinspartien“ (sieht nur der Verein) steht der eigene Spieler mit Namen, wenn die Partie einer Ligarunde zugeordnet
-                  ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je Partie ändern.</span></span>
-            </label>
+            <!-- d2-l-hinzufuegen-anon-text: am Schalter nur Beschriftung + ein Satz; der Rest hinter (i) — der Knopf steht NEBEN dem
+                 label, sonst schaltete ein Tipp darauf das Häkchen um. -->
+            <div class="anon-box">
+              <label class="anon-toggle">
+                <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
+                <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
+                  <span class="muted">Nach außen erscheint nur „{{ anon }}“.</span></span>
+              </label>
+              <button type="button" class="chk-btn" [attr.aria-expanded]="anonInfo()" aria-label="Was das Ersetzen bewirkt"
+                      title="Was das Ersetzen bewirkt" (click)="anonInfo.set(!anonInfo())">i</button>
+            </div>
+            @if (anonInfo()) {
+              <div class="info-panel anon-info"><p class="note">Ersetzt wird jeder, der in seiner jüngsten Saison für {{ clubName() }} gemeldet
+                ist@if (!share) {, und du selbst}. Dann zeigt LeagueHub nach außen nirgends, wer dahinter steht (der echte Name bleibt nur
+                intern für Auswertungen des Vereins), und es wird nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns
+                vorbereiten. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der eigene Spieler mit Namen, wenn die
+                Partie einer Ligarunde zugeordnet ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je
+                Partie ändern.</p></div>
+            }
             <label class="field">PGN-Datei
               <input type="file" lhFilePick accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
               @if (readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
@@ -314,6 +331,9 @@ export class ClubAddPageComponent implements OnInit {
 
   readonly kind = signal<Kind>('pgn');
   readonly replaceClub = signal(true);
+  /** Erklärtexte hinter (i) (d2-l-hinzufuegen-anon-text): Einleitung und Schalter „ersetzen". */
+  readonly introInfo = signal(false);
+  readonly anonInfo = signal(false);
   readonly pgn = signal('');
   readonly previewing = signal(false);
   readonly studyUrl = signal('');

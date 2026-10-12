@@ -237,6 +237,22 @@ describe('TournamentDetailComponent', () => {
     }
   });
 
+  /** d2-t-detail-vorlauf: am Laptop stehen Titel und Knopfreihe in EINER Zeile (DESIGN 5.1). */
+  it('stellt ab 769 px Titel und Knopfreihe in eine Zeile', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const el = fixture.nativeElement as HTMLElement;
+    const bar = el.querySelector('.action-bar') as HTMLElement;
+    expect(bar.parentElement!.classList).toContain('title-row');
+    if (window.innerWidth > 768) {
+      // Die Breite haengt an den (im Test ungeuebersetzten, langen) Beschriftungen — geprueft wird die Anordnung.
+      const row = getComputedStyle(bar.parentElement!);
+      expect(row.display).toBe('flex');
+      expect(row.flexWrap).toBe('wrap');
+      expect(getComputedStyle(bar).flexGrow).toBe('0');
+      expect(getComputedStyle(bar).justifyContent).toBe('flex-end');
+    }
+  });
+
   it('am Breitbild kein ⋮-Menue, alle Aktionen in der Leiste; das Menue enthaelt die drei Nebenaktionen', async () => {
     const fixture = await render({ active: false, activeUntil: null });
     const el = fixture.nativeElement as HTMLElement;

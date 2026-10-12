@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OPERATOR } from '../../../environments/operator';
 import { legalBackLink } from './legal-site';
+import { LEGAL_PAGE_STYLES } from './legal-page.styles';
 
 /**
  * Impressum. Route: /impressum
@@ -40,9 +41,7 @@ import { legalBackLink } from './legal-site';
       </mat-card>
     </div>
   `,
-  styles: [`
-    .legal-container { padding: 2rem; display: flex; justify-content: center; }
-    mat-card { max-width: 760px; width: 100%; }
+  styles: [LEGAL_PAGE_STYLES, `
     /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
        immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
     /* Abschnitte als h2 unter dem h1-Titel (UX-057) — Aussehen wie vorher als h4. */

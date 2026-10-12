@@ -298,3 +298,16 @@ describe('CourseBrowseComponent', () => {
     expect(comp.selected?.id).toBe(2);
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-browse-*): Brett ist die Hauptsache — am Handy vor der Liste, groß mit der Höhe wachsend. */
+describe('CourseBrowseComponent Layout', () => {
+  const css = ((CourseBrowseComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+  it('stellt am Handy das Brett vor die Linienliste und kürzt den Titel', () => {
+    const mobile = css.slice(css.indexOf('@media (max-width: 768px)'));
+    expect(mobile).toMatch(/\.board-pane[^{]*\{ ?order: -1/);
+    expect(mobile).toContain('text-overflow: ellipsis');
+  });
+  it('bindet die Brettbreite an die Fensterhöhe (bis 820 px)', () => {
+    expect(css).toMatch(/\.board-wrap[^{]*\{[^}]*max\(560px, (calc\()?100vh - 300px[^}]*820px/);
+  });
+});

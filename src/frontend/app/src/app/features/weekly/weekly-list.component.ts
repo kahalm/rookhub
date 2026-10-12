@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -37,10 +37,21 @@ interface WeeklyPostRow extends WeeklyPost {
   ],
   template: `
     <div class="weekly-container">
-      <h1>{{ 'weekly.title' | translate }}</h1>
+      <div class="header">
+        <h1>{{ 'weekly.title' | translate }}</h1>
+        <!-- Verwaltung zugeklappt (d2-rk-weekly-upload): das Formular verdrängte die Liste unter die Falz. -->
+        @if (canManage) {
+          <div class="header-actions">
+            <button mat-flat-button color="primary" class="upload-toggle" (click)="showUpload.set(!showUpload())"
+                    [attr.aria-expanded]="showUpload()">
+              <mat-icon>{{ showUpload() ? 'expand_less' : 'add' }}</mat-icon> {{ 'weekly.upload.toggle' | translate }}
+            </button>
+          </div>
+        }
+      </div>
       <p class="intro">{{ 'weekly.intro' | translate }}</p>
 
-      @if (canManage) {
+      @if (canManage && showUpload()) {
         <mat-card class="upload-card">
           <mat-card-header><mat-card-title>{{ 'weekly.upload.title' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
@@ -209,7 +220,10 @@ interface WeeklyPostRow extends WeeklyPost {
   `,
   styles: [`
     .weekly-container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
-    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .header h1 { margin: 0; }
+    .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }
     .upload-card { margin-bottom: 20px; }
     .upload-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .f-title { flex: 1; min-width: 180px; }
@@ -288,6 +302,8 @@ export class WeeklyListComponent implements OnInit {
   uploadTitle = '';
   uploadDescription = '';
   uploading = false;
+  /** Upload-Formular aufgeklappt? Vorgabe zu; nach „Anlegen" wieder zu. */
+  readonly showUpload = signal(false);
 
   /** Karte im Bearbeiten-Modus (eine zur Zeit) und ihr Entwurf — die Liste zeigt sonst nur Text. */
   editId: number | null = null;
@@ -470,6 +486,7 @@ export class WeeklyListComponent implements OnInit {
         this.uploadFileName = '';
         this.uploadTitle = '';
         this.uploadDescription = '';
+        this.showUpload.set(false);
         this.loadPosts();   // lädt neu + setzt nächsten Termin-Vorschlag
       },
       error: err => {

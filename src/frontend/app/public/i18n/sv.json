@@ -563,7 +563,6 @@
   },
   "weekly": {
     "title": "Veckoinlägg",
-    "intro": "Veckans schackinlägg att spela igenom. Datum och tid anger när inlägget är schemalagt.",
     "play": "Spela igenom",
     "empty": "Inga veckoinlägg ännu.",
     "deleteConfirm": "Ta bort veckoinlägg \"{{title}}\"?",

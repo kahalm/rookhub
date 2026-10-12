@@ -215,6 +215,10 @@
       "repertoire": "Repertoire"
     },
     "admin": {
+      "manageTitle": "Manage access",
+      "summaryUsers": "{{count}} users",
+      "summaryUsersOne": "1 user",
+      "summaryOpen": "{{count}} open",
       "grantsTitle": "Who can see my catalog?",
       "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
       "grantedUsers": "Users with access",
@@ -823,7 +827,11 @@
       "leagueTitle": "LeagueHub (team preparation)",
       "leagueIntro": "LeagueHub helps members of participating chess clubs prepare for team matches in their leagues (Tyrol, Bavaria). Each club has its own club database that no other club can see. For this we also process data of players who have no account with us and whose data we do not collect from them directly (Art. 14 GDPR).",
       "leagueClub": "You are currently using LeagueHub for {{club}}.",
-      "leagueSources": "Sources: pairings, results and team rosters from chess-results.com and from the league manager of the Bavarian Chess Federation; games from Lumbra’s GigaBase, the ChessBase Mega Database and the chess-results.com game database; club games uploaded by members or submitted without logging in via a share link (also as a scoresheet photo, see “AI services”) — players of the uploading club appear in them only under the club’s name by default; their real name is stored internally for that club’s own analyses and is never displayed or passed on (if the replacement is deselected for a side when uploading, the real name is stored visibly); public games of online accounts on Lichess and chess.com. To fetch these, our server sends the usernames of these accounts to the respective platform; chess.com is operated by a US provider (transfer to a third country). Unlike for the weekly “games” goal, the games themselves are stored here.",
+      "leagueSourcesTitle": "Sources:",
+      "leagueSourcesPairings": "pairings, results and team rosters from chess-results.com and from the league manager of the Bavarian Chess Federation",
+      "leagueSourcesGames": "games from Lumbra’s GigaBase, the ChessBase Mega Database and the chess-results.com game database",
+      "leagueSourcesClub": "club games uploaded by members or submitted without logging in via a share link (also as a scoresheet photo, see “AI services”) — players of the uploading club appear in them only under the club’s name by default; their real name is stored internally for that club’s own analyses and is never displayed or passed on (if the replacement is deselected for a side when uploading, the real name is stored visibly)",
+      "leagueSourcesOnline": "public games of online accounts on Lichess and chess.com. To fetch these, our server sends the usernames of these accounts to the respective platform; chess.com is operated by a US provider (transfer to a third country). Unlike for the weekly “games” goal, the games themselves are stored here.",
       "leagueData": "Categories: name, FIDE ID, club, rating and appearances according to the rosters; games and opening profiles calculated from them; a calculated probability of being lined up in a round (a model trained on previous seasons); online accounts on Lichess and chess.com that we assign to a player — from public profile information (such as real name and country) or entered by club officials, marked as “confirmed” or only presumed — together with a comment on the assignment and the public games of these accounts.",
       "leagueBasis": "Purpose and legal basis: preparing for team matches; legitimate interest of the club and its members (Art. 6(1)(f) GDPR). The data comes mostly from publicly accessible sources.",
       "leagueRecipients": "Recipients: logged-in accounts with LeagueHub access (the club group and administrators). Via a share link, anyone who has the link sees the shared match without logging in: the roster with predictions, player cards, opening trees and games of the players listed there — online accounts only if they are considered “confirmed”. A share link is valid until seven days after the round (for a round already played, seven days from sharing; without a known round date, 30 days) and can be revoked earlier.",
@@ -997,6 +1005,8 @@
       "convertToCourseFailed": "Could not convert the repertoire to a course",
       "updateFailed": "Repertoire could not be updated",
       "extHint": "Tip: with the RepCheck browser extension (for Chrome and Firefox) you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
+      "newShort": "New",
+      "infoLabel": "About RepCheck and these sections",
       "extHintLink": "Learn more in the help",
       "sectionExtension": "For RepCheck and preparation",
       "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on chess.com / lichess and that player preparation offers as training lines against an opponent.",
@@ -1220,7 +1230,11 @@
       "search": "Name or club",
       "searchClear": "Clear search",
       "searchNone": "No player matches “{{query}}”.",
-      "sortBy": "Sort by"
+      "sortBy": "Sort by",
+      "sortFilter": "Sort and filter",
+      "sortReset": "Reset sorting",
+      "shownOf": "{{shown}} of {{total}} players",
+      "showMore": "Show {{count}} more"
     },
     "teams": {
       "rank": "Rank",
@@ -1924,7 +1938,7 @@
   },
   "weekly": {
     "title": "Weekly",
-    "intro": "The weekly chess posts to click through. Date & time indicate when the post is scheduled.",
+    "intro": "The weekly chess posts to click through.",
     "play": "Play through",
     "empty": "No weekly posts yet.",
     "deleteConfirm": "Delete weekly post “{{title}}”?",
@@ -1951,6 +1965,7 @@
     },
     "upload": {
       "title": "Upload new weekly post",
+      "toggle": "New weekly post",
       "choosePgn": "Choose PGN",
       "titlePlaceholder": "from file name",
       "descriptionPlaceholder": "short note, shown & posted to Discord",
@@ -2627,6 +2642,8 @@
     },
     "themes": {
       "label": "Themes of this sheet",
+      "addShort": "Theme",
+      "short": "Themes:",
       "none": "No themes yet — they are how you find this sheet again later.",
       "suggested": "Suggested from the {{n}} tasks:",
       "own": "Own theme",
@@ -2636,6 +2653,8 @@
     },
     "share": {
       "toggle": "Share this sheet (link + QR code)",
+      "qr": "QR code",
+      "short": "Share",
       "hint": "Whoever opens the link can play the sheet through at the board without signing in — on the print-out it sits in the footer of every page as a QR code.",
       "off": "Not shared — then the print-out carries no QR code.",
       "copy": "Copy link",
@@ -2661,7 +2680,8 @@
       "finish": "Done"
     },
     "list": {
-      "hint": "Collect first, then arrange, then print: everything you send to a worksheet lands in the clipboard. There you throw things out, reorder them and add headings — and save the lot under a name.",
+      "hint": "Collect first, then arrange, then print.",
+      "hintMore": "Everything you send to a worksheet lands in the clipboard. There you throw things out, reorder them and add headings — and save the lot under a name.",
       "mine": "My worksheets",
       "empty": "No named worksheet yet. Save the clipboard under a name and you will find it here.",
       "error": "The worksheets could not be loaded.",
@@ -2672,6 +2692,7 @@
       "nameLabel": "Worksheet name",
       "saveClipboard": "Save as worksheet",
       "createEmpty": "Create empty sheet",
+      "newEmpty": "Empty sheet",
       "saveError": "That did not work."
     },
     "detail": {
@@ -2948,6 +2969,7 @@
       "menu": "Correct game",
       "notFound": "Game not found.",
       "title": "Correct game",
+      "headersSummary": "Details: {{white}} – {{black}} · {{result}}",
       "help": "Click a move to put the board on the position BEFORE it. A move played on the board replaces it (or, in insert mode, goes in front of it); moves after it are kept as long as they stay legal. Delete removes a move. Save keeps only legal moves.",
       "helpScoresheet": "Click a move to put the board on the position BEFORE it — the current move is the yellow arrow. Orange moves are uncertain: pick one of the offered readings or play a different move on the board. After every change the rest of the game is rebuilt from the scoresheet entries.\n\nInsert mode: for a move that is missing on the sheet. Delete: for an entry that was written twice or does not belong there.",
       "white": "White",
@@ -3381,6 +3403,7 @@
     "title": "Help & Guide",
     "subtitle": "Everything you need to know about RookHub – step by step.",
     "tocTitle": "Contents",
+    "tocCount": "{{count}} topics",
     "backToTop": "Back to top",
     "s": {
       "welcome": {
@@ -3599,6 +3622,9 @@
     "etaRemaining": "~{{min}} min left",
     "cachedHint": "Cached — available almost instantly (no Chessable fetch needed)",
     "useExtension": {
+      "lead": "You now get Chessable courses with the RepCheck extension in your own browser.",
+      "more": "More",
+      "less": "Less",
       "title": "Please use the RepCheck browser extension",
       "body": "Importing Chessable courses through RookHub is switched off. RookHub would have to fetch them from Chessable server-side over datacenter IPs, which Chessable blocks and which can get your Chessable account banned. RepCheck runs in your own logged-in browser on your own IP instead: your courses reach RookHub without waiting in a queue, the risk is far lower, and your Chessable token never has to be stored with us."
     }
@@ -3720,7 +3746,8 @@
   "analysisJobs": {
     "title": "Analysis jobs",
     "toAnalysis": "To the analysis board",
-    "intro": "Positions the background engine calculates for you — one job at a time, paused while you analyse live with an external engine. Expand a job to see the stored lines.",
+    "intro": "Positions the background engine calculates for you.",
+    "introMore": "One job at a time, paused while you analyse live with an external engine. Expand a job to see the stored lines.",
     "empty": "No jobs yet.",
     "emptyHint": "On the analysis board, use the clock icon „Analyse in the background“ to queue a position.",
     "untitled": "Untitled",
@@ -3857,8 +3884,10 @@
   },
   "guess": {
     "title": "Point game",
-    "intro": "Guess an analysed game move by move: you take one side, play your move and get points right away — measured against the move that was actually played.",
+    "intro": "Guess an analysed game move by move and collect points.",
+    "introMore": "You take one side, play your move and get points right away — measured against the move that was actually played.",
     "yourRuns": "Your runs",
+    "resume": "Continue",
     "play": "Play",
     "toAnalyses": "Game analyses",
     "sideLabel": "You play",
@@ -3918,7 +3947,7 @@
     "noCurated": "There is nothing in the collection yet.",
     "ownGames": "Your own analyses",
     "filterAll": "All",
-    "filterAnnotated": "Annotated only",
+    "filterAnnotated": "Annotated",
     "filterLabel": "Filter games",
     "sort": {
       "label": "Sort",
@@ -4289,7 +4318,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "ClubHub is the member register for club officials and coaches – access is granted by your club. Sign in with your RookHub account. Got a code from your coach? You can redeem it with any account – a new one is free."
+      "login": "Member register for club officials and coaches – sign in with your RookHub account. Got a code from your coach? Redeem it after signing in."
     }
   },
   "turnier": {
@@ -4416,7 +4445,8 @@
       "completed": "Course complete!",
       "restart": "Start over",
       "readMore": "Read more",
-      "readLess": "Show less"
+      "readLess": "Show less",
+      "showIntro": "Show text"
     },
     "themes": {
       "mate1": {
@@ -4522,7 +4552,8 @@
   },
   "turnierAdmin": {
     "title": "Sign in as a user",
-    "lead": "Open the tournament site with someone elses account — the way to answer „why is their calendar empty“. A red banner says so the whole time, and it takes you back. Everything else in administration stays in RookHub.",
+    "lead": "See the tournament site with someone else’s account; a red banner takes you back.",
+    "leadMore": "The way to answer “why is their calendar empty?”. The red banner stays the whole time and takes you back to your own account. Everything else in administration stays in RookHub.",
     "none": "No account matches that.",
     "loadFailed": "The account list could not be loaded.",
     "impersonateAria": "{{action}}: {{name}}",
@@ -4539,7 +4570,8 @@
   },
   "reconstruct": {
     "title": "Reconstruct a game",
-    "intro": "Record what you still know of a game — the opening moves, single positions, short move sequences — and close the gaps step by step.",
+    "intro": "Record what you still know of a game and close the gaps.",
+    "introMore": "For example the opening moves, single positions or short move sequences — you close the gaps in between step by step.",
     "newTitle": "Title",
     "newTitlePlaceholder": "Club championship, round 3",
     "create": "Create",
@@ -4558,7 +4590,9 @@
     "result": "Result",
     "note": "Note",
     "addMoves": "Add moves",
+    "addMovesShort": "Moves",
     "addPosition": "Add position",
+    "addPositionShort": "Position",
     "noParts": "No parts yet. Start with the moves you are sure about.",
     "atMove": "Move {{move}}",
     "continues": "Continues the previous part",

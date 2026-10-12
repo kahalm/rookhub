@@ -134,6 +134,10 @@ describe('MembersPageComponent (Kartei)', () => {
     await create();
     const chips = () => Array.from(el().querySelectorAll<HTMLButtonElement>('.chip-btn'));
     expect(el().querySelector('.tools select')).toBeNull();                               // keine Auswahlliste mehr
+    // d2-c-kartei-lead: die Chips stehen in der Werkzeugzeile neben Suche und Archiv, das Label „Suchen" nur für Vorleser
+    expect(el().querySelector('.tools > .filter-chips')).not.toBeNull();
+    expect(el().querySelector('.tools .search > span')!.classList).toContain('sr-only');
+    expect(el().querySelector<HTMLInputElement>('.tools .search input')!.placeholder).toBe('Name suchen');
     expect(chips().map(c => c.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Alle', 'Anfänger 2', 'Turnier 1']);
     expect(chips().map(c => c.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
 

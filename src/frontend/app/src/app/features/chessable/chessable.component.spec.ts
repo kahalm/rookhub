@@ -23,13 +23,29 @@ describe('ChessableComponent', () => {
   });
 
   it('offers no way to store a bearer or start an import', () => {
-    // Der Import über RookHub ist abgeschaltet — kein Eingabefeld, kein Knopf.
-    expect(render().querySelectorAll('input, textarea, button').length).toBe(0);
+    // Der Import über RookHub ist abgeschaltet — kein Eingabefeld, kein Knopf außer „Mehr".
+    const el = render();
+    expect(el.querySelectorAll('input, textarea').length).toBe(0);
+    expect(Array.from(el.querySelectorAll('button')).map(b => b.className)).toEqual(['more-toggle']);
   });
 
-  it('shows the explanation keys', () => {
-    const text = render().textContent ?? '';
-    expect(text).toContain('chessable.useExtension.title');
-    expect(text).toContain('chessable.useExtension.body');
+  // UI-Sweep 2026-10-11 (d2-rk-chessable-erklaertext): Kernsatz über den Knöpfen, Begründung hinter „Mehr".
+  it('shows the lead sentence and keeps the reasoning behind „Mehr"', () => {
+    TestBed.configureTestingModule({
+      imports: [ChessableComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(ChessableComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('chessable.useExtension.title');
+    expect(el.textContent).toContain('chessable.useExtension.lead');
+    expect(el.textContent).not.toContain('chessable.useExtension.body');
+    const toggle = el.querySelector('p > button.more-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('.why')?.textContent).toContain('chessable.useExtension.body');
   });
 });

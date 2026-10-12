@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -15,6 +15,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { WorksheetService, WorksheetSummary } from './worksheet.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Übersicht der AUFGABENBLÄTTER (`/worksheets`): oben die Zwischenablage — der Sammelkorb, in dem
@@ -29,7 +30,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-worksheet-list',
   standalone: true,
-  imports: [IconLabelDirective,
+  imports: [IconLabelDirective, HelpHintComponent,
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe,
@@ -45,6 +46,8 @@ export class WorksheetListComponent implements OnInit {
 
   /** Name für „Zwischenablage als Aufgabenblatt speichern" bzw. für ein neues leeres Blatt. */
   newName = '';
+  /** Leere Zwischenablage: Namensfeld für „Leeres Blatt“ erst nach Tipp (d2-rk-ws-list-clip). */
+  readonly emptyFormOpen = signal(false);
 
   /** Aktives Themen-Filter; `null` = alle Blätter. */
   themeFilter: string | null = null;

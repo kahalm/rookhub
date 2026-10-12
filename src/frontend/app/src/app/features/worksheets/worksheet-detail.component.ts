@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -57,6 +57,10 @@ export class WorksheetDetailComponent implements OnInit {
   saveName = '';
   /** Eingabe für ein eigenes Thema (was nicht aus den Aufgaben kommt). */
   newTheme = '';
+  /** Themen-Eingabe + Vorschläge aufgeklappt (d2-rk-ws-detail-lead). */
+  readonly themesOpen = signal(false);
+  /** QR-Code + Erklärtext zum Teilen aufgeklappt. */
+  readonly qrOpen = signal(false);
   renaming = false;
   renameDraft = '';
   newFen = '';

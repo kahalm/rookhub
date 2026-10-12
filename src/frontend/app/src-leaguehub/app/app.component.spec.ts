@@ -76,6 +76,14 @@ describe('LeagueHubAppComponent Werbesatz auf „Formular prüfen" (UX-036)', ()
     expect((await ledeAt('/verein')).classList).not.toContain('work');
     TestBed.resetTestingModule();
     expect((await ledeAt('/s/abc123')).classList).not.toContain('work');
+    // d2-l-korrigieren-layout: die Korrektur einer Vereinspartie ist dieselbe Prüfseite
+    TestBed.resetTestingModule();
+    expect((await ledeAt('/verein/partie/12/korrigieren')).classList).toContain('work');
+  });
+
+  // UI-Sweep 2026-10-11 (d2-l-kopf-lede-mobile): abgemeldet trägt der Satz „anon" (am Handy sichtbar), angemeldet nicht
+  it('abgemeldet als „anon" markiert (am Handy sichtbar)', async () => {
+    expect((await ledeAt('/s/abc123')).classList).toContain('anon');
   });
 });
 
@@ -209,6 +217,32 @@ describe('LeagueHubAppComponent Kopf (UI-Sweep 2026-10-10)', () => {
     const reload = spyOn(f.componentInstance, 'reload');
     (Array.from(document.querySelectorAll('.mat-mdc-menu-item')).find(b => b.textContent?.includes('SK Weiler')) as HTMLButtonElement).click();
     expect(reload).toHaveBeenCalled();
+  });
+
+  it('angemeldet: der Werbesatz ist nicht „anon" — am Handy ausgeblendet (d2-l-kopf-lede-mobile)', async () => {
+    const f = await create('/verein', { userId: 7, username: 'patrik' });
+    expect((f.nativeElement as HTMLElement).querySelector('p.lede')?.classList).not.toContain('anon');
+  });
+
+  // UI-Sweep 2026-10-11: Prognosen, geteilte Begegnung und Konto-Vorschläge breiter (d2-l-breit-bretter, d2-l-konten-zeilen-breit),
+  // die Korrektur einer Vereinspartie so breit wie „Formular prüfen" (d2-l-korrigieren-layout); Kopf, Reiter und Fuß ziehen mit
+  // (d2-l-breite-seiten-flucht).
+  it('Breite je Seite gilt für Kopf, Reiter, Inhalt und Fuß gleichermaßen', async () => {
+    const at = async (url: string) => {
+      TestBed.resetTestingModule();
+      const f = await create(url, { userId: 7, username: 'patrik' });
+      const el = f.nativeElement as HTMLElement;
+      return ['.top-row', 'p.lede', 'nav.tabs', 'lh-claim-prompt', 'main', 'footer.foot']
+        .map(sel => { const c = el.querySelector(sel)!.classList; return c.contains('wide') ? 'wide' : c.contains('mid') ? 'mid' : '-'; });
+    };
+    expect(await at('/')).toEqual(Array(6).fill('mid'));
+    expect(await at('/?liga=10&runde=2')).toEqual(Array(6).fill('mid'));
+    expect(await at('/konten')).toEqual(Array(6).fill('mid'));
+    expect(await at('/s/abc123')).toEqual(Array(6).fill('mid'));
+    expect(await at('/verein/partie/12/korrigieren')).toEqual(Array(6).fill('wide'));
+    expect(await at('/verein/formular/7')).toEqual(Array(6).fill('wide'));
+    expect(await at('/vereine')).toEqual(Array(6).fill('-'));
+    expect(await at('/s/abc123/hochladen')).toEqual(Array(6).fill('-'));
   });
 
   it('Vereinspartien bekommen die breitere Seite, andere Seiten nicht', async () => {

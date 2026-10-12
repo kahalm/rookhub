@@ -326,6 +326,17 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
     expect(el.querySelector('.auth-sub')).toBeNull();
     expect(el.textContent).not.toContain('FREE');
     expect(el.querySelector('.site-note')?.textContent).toContain('TOURNAMENT INTRO');
+    // Höchstens EIN Kasten über dem Formular (d2-rk-login-two-notes): die Einleitung ist die zweite Zeile des Hinweises.
+    expect(el.querySelectorAll('.auth-required').length).toBe(1);
+    expect(el.querySelector('.auth-required .site-note')?.textContent).toContain('TOURNAMENT INTRO');
+  });
+
+  it('ohne Umleitung steht die Einleitung allein in ihrem Kasten', async () => {
+    const el = await render({}, [{ provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login' } }]);
+    const boxes = el.querySelectorAll('.auth-required');
+    expect(boxes.length).toBe(1);
+    expect(boxes[0].classList).toContain('site-note');
+    expect(boxes[0].textContent).toContain('TOURNAMENT INTRO');
   });
 
   it('ClubHub: auf jeder geschützten Seite die Einleitung statt „kostenlos“ (die Kartei schaltet der Verein frei)', async () => {

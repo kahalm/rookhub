@@ -427,3 +427,12 @@ describe('FriendsComponent Herausforderungen (UI-Sweep 2026-10-11)', () => {
     http.verify();
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-friends-oberer-abstand): Seitenpolster 16 px, Titel ohne Standard-Oberabstand. */
+describe('FriendsComponent Abstand über dem Titel', () => {
+  it('nutzt 16 px Polster und h1 margin 0 0 12px', () => {
+    const css = ((FriendsComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.friends-container[^{]*\{ ?padding: 16px/);
+    expect(css).toMatch(/\.friends-container[^{]*> ?h1[^{]*\{ ?margin: 0 0 12px/);
+  });
+});

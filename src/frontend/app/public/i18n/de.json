@@ -215,6 +215,10 @@
       "repertoire": "Repertoire"
     },
     "admin": {
+      "manageTitle": "Freigaben verwalten",
+      "summaryUsers": "{{count}} User",
+      "summaryUsersOne": "1 User",
+      "summaryOpen": "{{count}} offen",
       "grantsTitle": "Wer darf meinen Katalog sehen?",
       "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
       "grantedUsers": "Freigegebene User",
@@ -823,7 +827,11 @@
       "leagueTitle": "LeagueHub (Mannschaftsvorbereitung)",
       "leagueIntro": "LeagueHub hilft Mitgliedern teilnehmender Schachvereine, sich auf Mannschaftskämpfe ihrer Ligen vorzubereiten (Tirol, Bayern). Jeder Verein hat seine eigene Vereins-Datenbank, die kein anderer Verein sieht. Dafür verarbeiten wir auch Daten von Spielerinnen und Spielern, die selbst kein Konto bei uns haben und deren Daten wir nicht bei ihnen selbst erheben (Art. 14 DSGVO).",
       "leagueClub": "Du nutzt LeagueHub gerade für {{club}}.",
-      "leagueSources": "Quellen: Paarungen, Ergebnisse und Meldelisten von chess-results.com und aus dem Ligamanager des Bayerischen Schachbunds; Partien aus Lumbra’s GigaBase, der ChessBase-Megabase und der Partiedatenbank von chess-results.com; Vereinspartien, die Mitglieder hochladen oder die ohne Anmeldung über einen Teilen-Link eingereicht werden (auch als Foto eines Partieformulars, siehe „KI-Dienste“) — Spieler des hochladenden Vereins erscheinen darin standardmäßig nur unter dem Namen des Vereins; ihr echter Name wird dabei intern für Auswertungen dieses Vereins gespeichert und nirgends angezeigt oder weitergegeben (wird das Ersetzen beim Hochladen für eine Seite abgewählt, bleibt der echte Name sichtbar gespeichert); öffentliche Partien von Online-Konten auf Lichess und chess.com. Für diesen Abruf überträgt unser Server die Benutzernamen dieser Konten an die jeweilige Plattform; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Anders als beim Wochenziel „Partien“ werden hier die Partien selbst gespeichert.",
+      "leagueSourcesTitle": "Quellen:",
+      "leagueSourcesPairings": "Paarungen, Ergebnisse und Meldelisten von chess-results.com und aus dem Ligamanager des Bayerischen Schachbunds",
+      "leagueSourcesGames": "Partien aus Lumbra’s GigaBase, der ChessBase-Megabase und der Partiedatenbank von chess-results.com",
+      "leagueSourcesClub": "Vereinspartien, die Mitglieder hochladen oder die ohne Anmeldung über einen Teilen-Link eingereicht werden (auch als Foto eines Partieformulars, siehe „KI-Dienste“) — Spieler des hochladenden Vereins erscheinen darin standardmäßig nur unter dem Namen des Vereins; ihr echter Name wird dabei intern für Auswertungen dieses Vereins gespeichert und nirgends angezeigt oder weitergegeben (wird das Ersetzen beim Hochladen für eine Seite abgewählt, bleibt der echte Name sichtbar gespeichert)",
+      "leagueSourcesOnline": "öffentliche Partien von Online-Konten auf Lichess und chess.com. Für diesen Abruf überträgt unser Server die Benutzernamen dieser Konten an die jeweilige Plattform; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Anders als beim Wochenziel „Partien“ werden hier die Partien selbst gespeichert.",
       "leagueData": "Kategorien: Name, FIDE-ID, Verein, Wertungszahl und Einsätze laut Meldelisten; Partien und daraus berechnete Eröffnungsprofile; eine berechnete Wahrscheinlichkeit, in einer Runde aufgestellt zu werden (ein Modell, das aus früheren Saisonen gelernt hat); Online-Konten auf Lichess und chess.com, die wir einem Spieler zuordnen — aus öffentlichen Profilangaben (etwa Klarname und Land) oder von Vereinsverantwortlichen eingetragen, als „gesichert“ oder nur vermutet —, samt Kommentar zur Zuordnung und den öffentlichen Partien dieser Konten.",
       "leagueBasis": "Zweck und Rechtsgrundlage: Vorbereitung auf Mannschaftskämpfe; berechtigtes Interesse des Vereins und seiner Mitglieder (Art. 6 Abs. 1 lit. f DSGVO). Die Daten stammen überwiegend aus öffentlich zugänglichen Quellen.",
       "leagueRecipients": "Empfänger: angemeldete Konten mit LeagueHub-Freischaltung (die Vereinsgruppe und Administratoren). Über einen Teilen-Link sieht jeder, der den Link hat, ohne Anmeldung die geteilte Begegnung: Meldeliste mit Prognosen, Spielerkarten, Eröffnungsbäume und Partien der dort gemeldeten Spieler — Online-Konten nur, wenn sie als „gesichert“ gelten. Ein Teilen-Link gilt bis sieben Tage nach der Runde (bei einer schon gespielten Runde sieben Tage ab dem Teilen, ohne bekanntes Rundendatum 30 Tage) und kann vorher widerrufen werden.",
@@ -997,6 +1005,8 @@
       "convertToCourseFailed": "Repertoire konnte nicht in einen Kurs umgewandelt werden",
       "updateFailed": "Repertoire konnte nicht aktualisiert werden",
       "extHint": "Tipp: Mit der Browser-Erweiterung RepCheck (für Chrome und Firefox) siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",
+      "newShort": "Neu",
+      "infoLabel": "Hinweise zu RepCheck und den Abschnitten",
       "extHintLink": "Mehr dazu in der Hilfe",
       "sectionExtension": "Für RepCheck und Vorbereitung",
       "sectionExtensionHint": "Repertoires, die die RepCheck-Extension auf chess.com / lichess abgleicht und die die Spielervorbereitung als Trainingslinien gegen einen Gegner anbietet.",
@@ -1220,7 +1230,11 @@
       "search": "Name oder Verein",
       "searchClear": "Suche leeren",
       "searchNone": "Kein Spieler passt zu „{{query}}“.",
-      "sortBy": "Sortieren nach"
+      "sortBy": "Sortieren nach",
+      "sortFilter": "Sortieren und filtern",
+      "sortReset": "Sortierung zurücksetzen",
+      "shownOf": "{{shown}} von {{total}} Spielern",
+      "showMore": "Weitere {{count}} anzeigen"
     },
     "teams": {
       "rank": "Rang",
@@ -1924,7 +1938,7 @@
   },
   "weekly": {
     "title": "Wochenpost",
-    "intro": "Die wöchentlichen Schach-Posts zum Durchklicken. Datum & Uhrzeit geben an, wann der Post geplant ist.",
+    "intro": "Die wöchentlichen Schach-Posts zum Durchklicken.",
     "play": "Durchspielen",
     "empty": "Noch keine Wochenposts vorhanden.",
     "deleteConfirm": "Wochenpost „{{title}}“ löschen?",
@@ -1951,6 +1965,7 @@
     },
     "upload": {
       "title": "Neuen Wochenpost hochladen",
+      "toggle": "Neuer Wochenpost",
       "choosePgn": "PGN wählen",
       "titlePlaceholder": "aus Dateinamen",
       "descriptionPlaceholder": "kurzer Hinweis, wird angezeigt & auf Discord gepostet",
@@ -2627,6 +2642,8 @@
     },
     "themes": {
       "label": "Themen dieses Blatts",
+      "addShort": "Thema",
+      "short": "Themen:",
       "none": "Noch keine Themen — danach findest du das Blatt später wieder.",
       "suggested": "Vorgeschlagen aus den {{n}} Aufgaben:",
       "own": "Eigenes Thema",
@@ -2636,6 +2653,8 @@
     },
     "share": {
       "toggle": "Blatt teilen (Link + QR-Code)",
+      "qr": "QR-Code",
+      "short": "Teilen",
       "hint": "Wer den Link öffnet, kann das Blatt ohne Anmeldung am Brett durchspielen — auf dem Ausdruck steht er in der Fußzeile jeder Seite als QR-Code.",
       "off": "Nicht geteilt — auf dem Ausdruck steht dann kein QR-Code.",
       "copy": "Link kopieren",
@@ -2661,7 +2680,8 @@
       "finish": "Fertig"
     },
     "list": {
-      "hint": "Erst sammeln, dann ordnen, dann drucken: In der Zwischenablage landet alles, was du an ein Aufgabenblatt schickst. Dort wirfst du raus, sortierst um und schreibst Überschriften dazu — und sicherst das Ganze unter einem Namen.",
+      "hint": "Erst sammeln, dann ordnen, dann drucken.",
+      "hintMore": "In der Zwischenablage landet alles, was du an ein Aufgabenblatt schickst. Dort wirfst du raus, sortierst um und schreibst Überschriften dazu — und sicherst das Ganze unter einem Namen.",
       "mine": "Meine Aufgabenblätter",
       "empty": "Noch kein benanntes Aufgabenblatt. Sichere die Zwischenablage unter einem Namen — dann findest du sie hier wieder.",
       "error": "Die Aufgabenblätter konnten nicht geladen werden.",
@@ -2672,6 +2692,7 @@
       "nameLabel": "Name des Aufgabenblatts",
       "saveClipboard": "Als Aufgabenblatt speichern",
       "createEmpty": "Leeres Blatt anlegen",
+      "newEmpty": "Leeres Blatt",
       "saveError": "Das hat nicht geklappt."
     },
     "detail": {
@@ -2948,6 +2969,7 @@
       "menu": "Partie korrigieren",
       "notFound": "Partie nicht gefunden.",
       "title": "Partie korrigieren",
+      "headersSummary": "Angaben: {{white}} – {{black}} · {{result}}",
       "help": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR. Ein Zug am Brett ersetzt ihn (oder kommt im Einfügen-Modus davor); die Züge danach bleiben, solange sie legal sind. „Zug löschen\" nimmt einen Zug heraus. Gespeichert werden nur legale Züge.",
       "helpScoresheet": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR — der bisherige Zug ist der gelbe Pfeil. Orange Züge sind unsicher: eine der angebotenen Lesarten wählen oder am Brett einen anderen Zug spielen. Nach jeder Änderung wird der Rest der Partie aus den Formular-Einträgen neu aufbereitet.\n\nEinfügen: für einen Zug, der auf dem Formular fehlt. Löschen: für einen doppelt oder falsch notierten Eintrag.",
       "white": "Weiß",
@@ -3381,6 +3403,7 @@
     "title": "Hilfe & Anleitung",
     "subtitle": "Alles, was du über RookHub wissen musst – Schritt für Schritt.",
     "tocTitle": "Inhalt",
+    "tocCount": "{{count}} Themen",
     "backToTop": "Nach oben",
     "s": {
       "welcome": {
@@ -3599,6 +3622,9 @@
     "etaRemaining": "noch ca. {{min}} Min",
     "cachedHint": "Zwischengespeichert — quasi sofort verfügbar (kein Chessable-Abruf nötig)",
     "useExtension": {
+      "lead": "Chessable-Kurse holst du jetzt mit der RepCheck-Erweiterung in deinem eigenen Browser.",
+      "more": "Mehr",
+      "less": "Weniger",
       "title": "Bitte verwende die RepCheck-Browser-Erweiterung",
       "body": "Der Import von Chessable-Kursen über RookHub ist abgeschaltet. RookHub müsste sie dafür serverseitig über Rechenzentrums-IPs von Chessable holen — genau diese IPs blockt Chessable, und dieses Muster kann dein Chessable-Konto sperren lassen. RepCheck läuft stattdessen in deinem eigenen, eingeloggten Browser über deine eigene IP: Deine Kurse kommen ohne Warteschlange zu RookHub, das Risiko ist deutlich kleiner, und dein Chessable-Token muss nicht bei uns liegen."
     }
@@ -3720,7 +3746,8 @@
   "analysisJobs": {
     "title": "Analyse-Aufträge",
     "toAnalysis": "Zum Analysebrett",
-    "intro": "Stellungen, die die Hintergrund-Engine für dich durchrechnet — einen Auftrag nach dem anderen, pausiert, solange du live extern analysierst. Aufklappen zeigt die gespeicherten Linien.",
+    "intro": "Stellungen, die die Hintergrund-Engine für dich durchrechnet.",
+    "introMore": "Ein Auftrag nach dem anderen; pausiert, solange du live extern analysierst. Aufklappen zeigt die gespeicherten Linien.",
     "empty": "Noch keine Aufträge.",
     "emptyHint": "Im Analysebrett über das Uhr-Symbol „Im Hintergrund analysieren“ eine Stellung vormerken.",
     "untitled": "Ohne Titel",
@@ -3857,8 +3884,10 @@
   },
   "guess": {
     "title": "Punktepartie",
-    "intro": "Eine analysierte Partie Zug für Zug erraten: Du übernimmst eine Seite, setzt deinen Zug und bekommst sofort Punkte — gemessen am Zug, der wirklich gespielt wurde.",
+    "intro": "Eine analysierte Partie Zug für Zug erraten und Punkte sammeln.",
+    "introMore": "Du übernimmst eine Seite, setzt deinen Zug und bekommst sofort Punkte — gemessen am Zug, der wirklich gespielt wurde.",
     "yourRuns": "Deine Durchläufe",
+    "resume": "Weiterspielen",
     "play": "Spielen",
     "toAnalyses": "Partie-Analysen",
     "sideLabel": "Du spielst",
@@ -3918,7 +3947,7 @@
     "noCurated": "Im Bestand liegt noch nichts.",
     "ownGames": "Eigene Analysen",
     "filterAll": "Alle",
-    "filterAnnotated": "Nur kommentierte",
+    "filterAnnotated": "Kommentierte",
     "filterLabel": "Partien filtern",
     "sort": {
       "label": "Sortieren",
@@ -4289,7 +4318,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "ClubHub ist die Mitgliederkartei für Vereinsleitung und Trainer – freischalten muss dich dein Verein. Melde dich mit deinem RookHub-Konto an. Du hast einen Code von deinem Trainer? Den löst du mit jedem Konto ein – ein neues ist kostenlos."
+      "login": "Mitgliederkartei für Vereinsleitung und Trainer – melde dich mit deinem RookHub-Konto an. Code vom Trainer? Den löst du nach der Anmeldung ein."
     }
   },
   "turnier": {
@@ -4416,7 +4445,8 @@
       "completed": "Kurs geschafft!",
       "restart": "Von vorn",
       "readMore": "Weiterlesen",
-      "readLess": "Weniger anzeigen"
+      "readLess": "Weniger anzeigen",
+      "showIntro": "Text zeigen"
     },
     "themes": {
       "mate1": {
@@ -4522,7 +4552,8 @@
   },
   "turnierAdmin": {
     "title": "Als Nutzer einsteigen",
-    "lead": "Die Turnierseite mit dem Konto eines anderen ansehen — der Weg, „warum ist dessen Kalender leer?“ zu beantworten. Ein roter Streifen sagt es die ganze Zeit und führt zurück. Alles Übrige der Verwaltung bleibt in RookHub.",
+    "lead": "Die Turnierseite mit dem Konto eines anderen ansehen; ein roter Streifen führt zurück.",
+    "leadMore": "Der Weg, „warum ist dessen Kalender leer?“ zu beantworten. Der rote Streifen steht die ganze Zeit da und führt zurück ins eigene Konto. Alles Übrige der Verwaltung bleibt in RookHub.",
     "none": "Kein Konto passt dazu.",
     "loadFailed": "Die Kontenliste konnte nicht geladen werden.",
     "impersonateAria": "{{action}}: {{name}}",
@@ -4539,7 +4570,8 @@
   },
   "reconstruct": {
     "title": "Partie rekonstruieren",
-    "intro": "Halte fest, was du von einer Partie noch weißt — die ersten Züge, einzelne Stellungen, kurze Zugfolgen — und schließe die Lücken nach und nach.",
+    "intro": "Halte fest, was du von einer Partie noch weißt, und schließe die Lücken.",
+    "introMore": "Zum Beispiel die ersten Züge, einzelne Stellungen oder kurze Zugfolgen — die Lücken dazwischen schließt du nach und nach.",
     "newTitle": "Titel",
     "newTitlePlaceholder": "Vereinsmeisterschaft, Runde 3",
     "create": "Anlegen",
@@ -4558,7 +4590,9 @@
     "result": "Ergebnis",
     "note": "Notiz",
     "addMoves": "Züge hinzufügen",
+    "addMovesShort": "Züge",
     "addPosition": "Stellung hinzufügen",
+    "addPositionShort": "Stellung",
     "noParts": "Noch keine Teile. Fang mit den Zügen an, bei denen du sicher bist.",
     "atMove": "Zug {{move}}",
     "continues": "Schließt an das vorige Teil an",

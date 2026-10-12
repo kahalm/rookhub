@@ -25,6 +25,46 @@
                 <mat-icon>open_in_new</mat-icon><span>{{ 'tournamentDirectory.openChessResults' | translate }}</span>
               </a>
             </mat-menu>
+            <!-- Ab 769 px stehen Titel und Knopfreihe in EINER Zeile (DESIGN 5.1, d2-t-detail-vorlauf: zwei Zeilen kosteten
+                 am Laptop ~50 px Vorlauf vor der Spielerliste); am Handy bricht die Reihe unter den Titel. -->
+            <mat-card-actions class="action-bar">
+              @if (subscription) {
+                <button mat-stroked-button class="keep-label" (click)="unsubscribe()" [disabled]="toggling"
+                        [appIconLabel]="'tournamentDirectory.bookmarkRemove' | translate">
+                  <mat-icon>bookmark</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmarkRemove' | translate }}</span>
+                </button>
+              } @else {
+                <button mat-flat-button class="keep-label" (click)="subscribe()" [disabled]="toggling"
+                        [appIconLabel]="'tournamentDirectory.bookmark' | translate">
+                  <mat-icon>bookmark_add</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmark' | translate }}</span>
+                </button>
+              }
+              @if (monitoring) {
+                <!-- notifications_off = Aktion 'Beobachtung beenden': ohne Beschriftung sahen an und aus mobil sonst
+                     identisch aus, die Endzeit steht dort nur noch im Tooltip/aria-label. -->
+                <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
+                        [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }">
+                  <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
+                </button>
+              } @else {
+                <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
+                        [appIconLabel]="'tournaments.actions.monitor' | translate">
+                  <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
+                </button>
+              }
+              <button mat-stroked-button class="wide-only" (click)="refresh()" [disabled]="refreshing"
+                      [appIconLabel]="'tournaments.actions.refresh' | translate">
+                <mat-icon>refresh</mat-icon><span class="btn-label"> {{ 'tournaments.actions.refresh' | translate }}</span>
+              </button>
+              <button mat-stroked-button class="wide-only" (click)="share()"
+                      [appIconLabel]="'tournaments.actions.share' | translate">
+                <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
+              </button>
+              <a mat-button class="wide-only" [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer"
+                 [appIconLabel]="'tournaments.actions.chessResults' | translate">
+                <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
+              </a>
+            </mat-card-actions>
           </div>
           <!-- Die Gruppen derselben Veranstaltung (chess-results „Turnierauswahl") — an einem
                Rallye-Tag vier Turniere, zwischen denen man sonst ueber den Kalender springen musste. -->
@@ -51,44 +91,6 @@
                Aktualisieren, Teilen sekundaer (umrandet), Chess-Results als Textlink. Die Glocke gehoert jetzt
                allein dem Beobachten (meldet neue Runden); das durchgestrichene Auge heisst in der Kurzansicht
                „Für mich ausblenden" und kommt hier nicht mehr vor. -->
-          <mat-card-actions class="action-bar">
-            @if (subscription) {
-              <button mat-stroked-button class="keep-label" (click)="unsubscribe()" [disabled]="toggling"
-                      [appIconLabel]="'tournamentDirectory.bookmarkRemove' | translate">
-                <mat-icon>bookmark</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmarkRemove' | translate }}</span>
-              </button>
-            } @else {
-              <button mat-flat-button class="keep-label" (click)="subscribe()" [disabled]="toggling"
-                      [appIconLabel]="'tournamentDirectory.bookmark' | translate">
-                <mat-icon>bookmark_add</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmark' | translate }}</span>
-              </button>
-            }
-            @if (monitoring) {
-              <!-- notifications_off = Aktion 'Beobachtung beenden': ohne Beschriftung sahen an und aus mobil sonst
-                   identisch aus, die Endzeit steht dort nur noch im Tooltip/aria-label. -->
-              <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
-                      [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }">
-                <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
-              </button>
-            } @else {
-              <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
-                      [appIconLabel]="'tournaments.actions.monitor' | translate">
-                <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
-              </button>
-            }
-            <button mat-stroked-button class="wide-only" (click)="refresh()" [disabled]="refreshing"
-                    [appIconLabel]="'tournaments.actions.refresh' | translate">
-              <mat-icon>refresh</mat-icon><span class="btn-label"> {{ 'tournaments.actions.refresh' | translate }}</span>
-            </button>
-            <button mat-stroked-button class="wide-only" (click)="share()"
-                    [appIconLabel]="'tournaments.actions.share' | translate">
-              <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
-            </button>
-            <a mat-button class="wide-only" [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer"
-               [appIconLabel]="'tournaments.actions.chessResults' | translate">
-              <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
-            </a>
-          </mat-card-actions>
           @if (refreshing) {
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
           }

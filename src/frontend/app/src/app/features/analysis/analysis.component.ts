@@ -253,10 +253,16 @@ const EVAL_SETTLE_DEPTH = 10;
   styles: [`
     /* App-Vollbild (Host-Klasse auf app-root): Seitentitel weg — das Brett bekommt den Platz. */
     :host-context(.app-fullscreen) h1 { display: none; }
-    .analysis-page { max-width: 1100px; margin: 16px auto; padding: 0 12px; }
+    .analysis-page { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
     .analysis-layout { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
-    .board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, 560px); min-width: 280px; }
-    .board-col.editing { display: block; }
+    /* Brettgröße an die Fensterhöhe gebunden (d2-rk-analysis-brettspalte): groß wächst das Brett bis 820 px, am Laptop
+       passt es samt Kopf unter die Falz. */
+    .board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, calc(100vh - 170px), 820px); min-width: 280px; }
+    .board-col.editing { display: block; width: min(64vw, 560px); }
+    /* Ab 769 px klebt das Brett beim Scrollen (Explorer, Zugbaum laufen rechts weiter); die Navbar klebt nicht, daher 12 px. */
+    @media (min-width: 769px) {
+      .board-col:not(.editing) { position: sticky; top: 12px; align-self: flex-start; }
+    }
     .editor-full { display: block; width: 100%; }
     .eval-bar { width: 14px; align-self: stretch; background: #3a3a3a; border-radius: 3px; overflow: hidden; position: relative; min-height: 280px; }
     .eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }

@@ -59,6 +59,35 @@ describe('GameEditComponent', () => {
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Bc4', 'Nc6', 'Nf3']);
   });
 
+  // d2-rk-edit-handy-angaben: am Handy verdrängten die offenen Kopffelder das Brett (68 % Vorlauf). Die Angaben sind eine
+  // zugeklappte Zeile „Angaben: Weiß – Schwarz · Ergebnis"; offen nur, wenn ein Name fehlt. Der Hinweis steht hinter dem ⓘ.
+  it('folds the header card into one summary line, open only when a name is missing', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const toggle = el.querySelector('.headers-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(c.headersOpen()).toBeFalse();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.textContent).toContain('games.edit.headersSummary');
+    expect(el.querySelector('.class-hint')).withContext('Hinweis nicht mehr als eigene Zeile').toBeNull();
+    expect(el.querySelector('.header app-help-hint button')?.getAttribute('aria-label')).toContain('games.edit.classifierHint');
+    toggle.click();
+    fixture.detectChanges();
+    expect(c.headersOpen()).toBeTrue();
+    expect(el.querySelector('.headers')!.classList).toContain('open');
+  });
+
+  it('opens the header card right away when white or black is missing', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ black: null }));
+    fixture.detectChanges();
+    expect(c.headersOpen()).toBeTrue();
+  });
+
   // UI-Sweep 2026-10-11 (r2-rg-notation): die Zugliste zeigt die Figurenbuchstaben der Sprache, gespeichert bleibt englisch.
   it('shows the moves in the user\'s piece letters (German: Sf3, Lb5) but keeps English SAN inside', async () => {
     const { fixture, c, http } = await setup();

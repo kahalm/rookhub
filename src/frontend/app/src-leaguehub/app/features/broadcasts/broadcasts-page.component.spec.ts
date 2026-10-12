@@ -108,4 +108,33 @@ describe('BroadcastsPageComponent', () => {
     fixture.detectChanges();
     expect(rows().map(r => r.querySelector('a')?.textContent)).toEqual(['Bavarian Open']);
   });
+
+  // UI-Sweep 2026-10-11 (d2-l-uebertragungen-vorlauf): ein Satz + (i), das Formular erst auf „+ Hinzufügen"
+  it('Erklärtext und Hinzufügen-Formular sind zugeklappt; Knopf und (i) klappen sie auf', async () => {
+    api.broadcasts.and.resolveTo([B()]);
+    create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('form.bc-add')).toBeNull();
+    expect(el().querySelector('.info-panel')).toBeNull();
+    expect(el().textContent).not.toContain('FIDE-ID');
+    const toggle = el().querySelector('.bc-tools .bc-add-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    expect(el().querySelector('form.bc-add input[type=url]')).not.toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    (el().querySelector('.bc-page .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el().querySelector('.info-panel')?.textContent).toContain('FIDE-ID');
+  });
+
+  it('ohne Übertragungen bleibt „+ Hinzufügen" erreichbar', async () => {
+    api.broadcasts.and.resolveTo([]);
+    create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.bc-add-toggle')).not.toBeNull();
+    expect(el().querySelector('.bc-search')).toBeNull();
+  });
 });

@@ -160,4 +160,51 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(box(doc, 'f').width).toBeLessThanOrEqual(1);
     expect(box(doc, 'b').width).toBeGreaterThan(40);
   });
+
+  // ── UI-Sweep 2026-10-11, Runde d2 „Erster Blick und Scrollen" ─────────────────────────────────────────────────────
+  const shown = (doc: Document, id: string) => style(doc, id).display !== 'none';
+
+  it('am Handy: Werbesatz nur abgemeldet; Auswahl der Prognosen zugeklappt bis „Ändern"', async () => {
+    const doc = await render(390, `<p class="wrap lede anon" id="anon">Satz</p><p class="wrap lede" id="in">Satz</p>
+      <div class="pick-bar" id="bar"><span class="pick-sum">Landesliga · R2 · Testdorf</span><button class="btn-sec pick-change">Ändern ▾</button></div>
+      <div class="pick-area" id="closed"><form class="pick"></form></div><div class="pick-area open" id="open"></div>`);
+    expect(shown(doc, 'anon')).toBeTrue();
+    expect(shown(doc, 'in')).toBeFalse();
+    expect(shown(doc, 'bar')).toBeTrue();
+    expect(shown(doc, 'closed')).toBeFalse();
+    expect(shown(doc, 'open')).toBeTrue();
+    const wide = await render(1000, `<p class="wrap lede" id="in">Satz</p><div class="pick-bar" id="bar"></div><div class="pick-area" id="closed"></div>`);
+    expect(shown(wide, 'in')).toBeTrue();
+    expect(shown(wide, 'bar')).toBeFalse();
+    expect(shown(wide, 'closed')).toBeTrue();
+  });
+
+  it('großer Bildschirm: Bretter zweispaltig, Konto-Vorschläge eines Spielers nebeneinander', async () => {
+    const li = (id: string) => `<li class="board" id="${id}"><span class="bno">1</span></li>`;
+    const doc = await render(1400, `<main class="wrap mid"><ol class="boards">${li('b1')}${li('b2')}${li('b3')}</ol>
+      <article class="sugg-group"><lh-account-suggestions><ul class="sugg-list"><li id="s1">a</li><li id="s2">b</li></ul></lh-account-suggestions></article></main>`);
+    expect(box(doc, 'b2').top).toBe(box(doc, 'b1').top);
+    expect(box(doc, 'b3').top).toBeGreaterThan(box(doc, 'b1').top);
+    expect(box(doc, 's2').top).toBe(box(doc, 's1').top);
+    const laptop = await render(1000, `<main class="wrap"><ol class="boards">${li('b1')}${li('b2')}</ol></main>`);
+    expect(box(laptop, 'b2').top).toBeGreaterThan(box(laptop, 'b1').top);
+  });
+
+  it('lange Tabellen: Kopf klebt; Vereinspartien und Übertragungen ohne eigenen Scroll-Wrapper ab 641 px', async () => {
+    const doc = await render(1000, `<div class="roster-scroll club-scroll" id="w1"><table class="rtable"><thead><tr><th id="th">Jahr</th></tr></thead></table></div>
+      <div class="roster-scroll bc-scroll" id="w2"></div><div class="roster-scroll" id="w3"></div>`);
+    expect(style(doc, 'th').position).toBe('sticky');
+    expect(style(doc, 'w1').overflowX).toBe('visible');
+    expect(style(doc, 'w2').overflowX).toBe('visible');
+    expect(style(doc, 'w3').overflowX).toBe('auto');
+  });
+
+  it('Teilen-Link am Handy: Aufforderung höchstens 160 px, Knöpfe nebeneinander', async () => {
+    const doc = await render(390, `<main class="wrap"><section class="cta" id="cta"><div class="cta-head"><h2>Gegen die Liga gespielt? Partien hochladen</h2>
+      <button class="chk-btn">i</button></div><div class="cta-actions"><a class="btn-pri" id="a1">Formular fotografieren</a><a class="btn-sec" id="a2">PGN</a></div></section>
+      <p class="stand share-stand" id="st">Nur zum Ansehen<span class="desk-only"> · Stand der Daten: 27.09.2026 21:00</span> · <span class="desk-only">Link </span>gültig bis 14.11.2026</p></main>`);
+    expect(box(doc, 'cta').height).toBeLessThanOrEqual(160);
+    expect(box(doc, 'a2').top).toBe(box(doc, 'a1').top);
+    expect(box(doc, 'st').height).toBeLessThan(30);
+  });
 });

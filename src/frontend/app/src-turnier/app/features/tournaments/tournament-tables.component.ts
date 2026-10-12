@@ -9,6 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatMenuModule } from '@angular/material/menu';
+import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -30,7 +32,7 @@ import { chessTitle } from './tournament-table.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, MatMenuModule, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent],
   templateUrl: './tournament-tables.component.html',
   styleUrls: ['./tournament-tables.component.scss'],
 })
@@ -138,6 +140,57 @@ export class TournamentTablesComponent {
     return result;
   }
 
+  // --- Portionen der Spielerliste (d2-t-players-paging) ---
+
+  /** So viele Spieler zeigt die Liste je Portion; „Weitere 50 anzeigen" haengt die naechste an. */
+  static readonly PLAYER_PAGE = 50;
+  playerLimit = TournamentTablesComponent.PLAYER_PAGE;
+
+  /** Bei Suche oder „Nur Favoriten" ist die Liste ohnehin kurz und gewollt — dann keine Grenze. */
+  private get playerLimitActive(): boolean {
+    return !this.playerQuery.trim() && !this.showFavoritesOnly;
+  }
+
+  private visibleCache?: { source: TournamentPlayer[]; limit: number; result: TournamentPlayer[] };
+
+  /** Was Tabelle und Karten wirklich zeigen: die ersten `playerLimit` der gesuchten/sortierten Liste. */
+  get visiblePlayers(): TournamentPlayer[] {
+    const source = this.shownPlayers;
+    const limit = this.playerLimitActive ? this.playerLimit : Number.POSITIVE_INFINITY;
+    const cache = this.visibleCache;
+    if (cache && cache.source === source && cache.limit === limit) return cache.result;
+    const result = source.length > limit ? source.slice(0, limit) : source;
+    this.visibleCache = { source, limit, result };
+    return result;
+  }
+
+  get hiddenPlayerCount(): number {
+    return this.shownPlayers.length - this.visiblePlayers.length;
+  }
+
+  get nextPlayerPortion(): number {
+    return Math.min(TournamentTablesComponent.PLAYER_PAGE, this.hiddenPlayerCount);
+  }
+
+  showMorePlayers(): void {
+    this.playerLimit += TournamentTablesComponent.PLAYER_PAGE;
+  }
+
+  /** Neue Suche oder Sortierung: wieder bei der ersten Portion anfangen. */
+  private resetPlayerLimit(): void {
+    this.playerLimit = TournamentTablesComponent.PLAYER_PAGE;
+  }
+
+  onPlayerQuery(query: string): void {
+    this.playerQuery = query ?? '';
+    this.resetPlayerLimit();
+  }
+
+  onDesktopPlayerSort(sort: Sort): void {
+    this.resetPlayerLimit();
+    this.playerSort.emit(sort);
+  }
+
   /** Beschriftung einer Handy-Sortierung — die Vereinsspalte ist in Mannschaftsturnieren die Mannschaft. */
   mobileSortLabel(key: MobileSortKey): string {
     if (key === 'team') return this.hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club';
@@ -146,6 +199,7 @@ export class TournamentTablesComponent {
 
   pickMobileSort(key: MobileSortKey): void {
     this.mobileSort = key;
+    this.resetPlayerLimit();
     // Elo absteigend: wer nach Wertung sortiert, sucht die Staerksten oben.
     this.playerSort.emit({ active: key, direction: key === 'elo' ? 'desc' : 'asc' });
   }

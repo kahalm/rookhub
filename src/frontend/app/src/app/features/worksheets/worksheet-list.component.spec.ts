@@ -1,7 +1,9 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { Router, provideRouter } from '@angular/router';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { WorksheetListComponent } from './worksheet-list.component';
@@ -63,5 +65,50 @@ describe('WorksheetListComponent', () => {
     c.themeFilter = 'gabel';
 
     expect(c.named.map(s => s.id)).toEqual([1]);
+  });
+});
+
+// d2-rk-ws-list-clip: die LEERE Zwischenablage stand in voller Größe (Hinweis, Namensfeld, zwei gesperrte Knöpfe) vor der
+// Blätterliste. Leer ist sie jetzt eine Zeile mit „＋ Leeres Blatt“; das Namensfeld kommt erst nach dem Tipp.
+describe('WorksheetListComponent Zwischenablage kompakt', () => {
+  async function render(list: WorksheetSummary[]) {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [WorksheetListComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WorksheetService, useValue: { list: () => of(list) } },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(false) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WorksheetListComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('leer: eine Zeile, das Namensfeld erst nach „Leeres Blatt“', async () => {
+    const fixture = await render([summary({ id: 9, isClipboard: true, name: '', itemCount: 0 })]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.wl-save')).toBeNull();
+    const btn = el.querySelector('.wl-new-empty') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.wl-save input')).not.toBeNull();
+    expect(el.querySelector('.wl-new-empty')).toBeNull();
+  });
+
+  it('mit Stellungen: Namensfeld und „Als Aufgabenblatt speichern“ stehen gleich da', async () => {
+    const fixture = await render([summary({ id: 9, isClipboard: true, name: '', itemCount: 2 })]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.wl-save input')).not.toBeNull();
+    expect(el.querySelector('.wl-new-empty')).toBeNull();
+  });
+
+  it('der Erklärtext ist ein Satz, der Rest steht hinter dem ⓘ', async () => {
+    const fixture = await render([]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.wl-head app-help-hint button')?.getAttribute('aria-label')).toBe('worksheets.list.hintMore');
   });
 });

@@ -272,3 +272,21 @@ describe('CourseCardComponent Themen-Chip + Leerzustand', () => {
     expect(make({ puzzleCount: 0 }).hasInfoLines).toBeFalse();
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-course-card-aktionen): Aktionszeile sitzt in jeder Karte unten bündig (DESIGN 5.2). */
+describe('CourseCardComponent Aktionszeile unten', () => {
+  it('Inhalt wächst, die Aktionszeile schiebt sich nach unten', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    fixture.componentInstance.course = { bookId: 1, displayName: 'Kurs', puzzleCount: 10, solvedCount: 0, progressPercent: 0 } as never;
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(getComputedStyle(el.querySelector('mat-card-content')!).flexGrow).toBe('1');
+    const css = ((CourseCardComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.action-row[^{]*\{[^}]*margin-top: auto/);
+  });
+});

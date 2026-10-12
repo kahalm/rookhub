@@ -300,7 +300,9 @@ import { labelOr } from './course-language.util';
     .course-card {
       display: flex; flex-direction: column;
       padding: 0;
-      mat-card-content { padding: 14px 16px 8px; }
+      /* UI-Sweep 2026-10-11 (d2-rk-course-card-aktionen): Inhalt wächst, damit Fußzeile (Aktionen, Kapitel) in jeder
+         Karte einer Reihe auf derselben Höhe unten bündig sitzt (DESIGN 5.2). */
+      mat-card-content { padding: 14px 16px 8px; flex: 1 1 auto; }
     }
     .card-title {
       font-size: 0.95rem; font-weight: 600; line-height: 1.35; margin-bottom: 2px;
@@ -341,7 +343,7 @@ import { labelOr } from './course-language.util';
 
     /* Zwei Primär-Buttons links, alle weiteren Aktionen im „⋮"-Überlaufmenü rechts.
        Nur noch drei Elemente in der Zeile → läuft auch auf schmalen Phones nicht über. */
-    .action-row { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+    .action-row { display: flex; align-items: center; gap: 8px; padding-top: 8px; margin-top: auto; }
     .primary-actions { display: flex; gap: 6px; flex: 1; min-width: 0; }
     .primary-actions button { font-size: 0.82rem; height: 32px; line-height: 32px; padding: 0 10px; }
     .primary-actions mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }

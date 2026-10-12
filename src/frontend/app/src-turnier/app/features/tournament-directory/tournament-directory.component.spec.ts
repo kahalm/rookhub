@@ -882,7 +882,7 @@ describe('TournamentDirectoryComponent', () => {
     fixture.detectChanges();
 
     expect(component.profilesLoaded()).toBeFalse();
-    expect(text()).not.toContain('tournamentDirectory.noProfileHint');
+    expect(fixture.nativeElement.querySelector('.profile-note')).toBeNull();
     http.verify();
   });
 
@@ -892,7 +892,57 @@ describe('TournamentDirectoryComponent', () => {
     flushList([]);
     fixture.detectChanges();
 
-    expect(text()).toContain('tournamentDirectory.noProfileHint');
+    // d2-t-calendar-filter-mobile: kein Banner mehr, sondern „Neues Suchprofil" + ⓘ (der Satz steht im ⓘ).
+    const note = fixture.nativeElement.querySelector('.profile-note') as HTMLElement;
+    expect(note).not.toBeNull();
+    expect(note.querySelector('[aria-label="tournamentDirectory.noProfileHint"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('p.hint')?.textContent ?? '').not.toContain('tournamentDirectory.noProfileHint');
+    http.verify();
+  });
+
+  it('haengt „Neues Suchprofil" an die Trefferzahl statt als Banner ueber die Reiter (d2-t-calendar-filter-mobile)', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1')], 10);
+    fixture.detectChanges();
+
+    const count = fixture.nativeElement.querySelector('.tab-body .count') as HTMLElement;
+    expect(count.querySelector('.profile-note')).not.toBeNull();
+    http.verify();
+  });
+
+  /** d2-t-calendar-filter-mobile: am Handy EINE Filterzeile; Zeitraum und Umkreis im Filterfeld, ihre Werte als Chips. */
+  it('zeigt am Handy Zeitraum und Umkreis als Chips und legt die Felder ins Filterfeld', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1')], 10);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const chips = [...root.querySelectorAll('.bar-chips .value-chip')].map(c => c.textContent!.trim());
+    expect(chips.length).toBe(2);
+    expect(chips[0]).toContain('tournamentDirectory.range.' + component.rangePreset);
+    expect(chips[1]).toContain('tournamentDirectory.radius.any');
+
+    (root.querySelector('.bar-chips .value-chip') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.filtersOpen).toBeTrue();
+    expect(root.querySelectorAll('.filter-extra .extra-narrow').length).toBe(2);
+
+    // Die Regel selbst (ein 390-px-Fenster laesst sich in Karma nicht herstellen).
+    const hidden: string[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const rule of Array.from(rules)) {
+        if (!(rule instanceof CSSMediaRule) || !rule.media.mediaText.includes('max-width: 768px')) continue;
+        for (const inner of Array.from(rule.cssRules)) {
+          if (inner instanceof CSSStyleRule && inner.selectorText.includes('.bar-wide') && inner.style.display === 'none') {
+            hidden.push(inner.selectorText);
+          }
+        }
+      }
+    }
+    expect(hidden.length).withContext('Zeitraum/Umkreis in der Leiste am Handy ausgeblendet').toBeGreaterThan(0);
     http.verify();
   });
 

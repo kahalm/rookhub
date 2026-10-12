@@ -1312,3 +1312,11 @@ describe('EndlessPuzzleComponent Hilfe als Dialog (UX-010)', () => {
     expect(document.querySelector('.cdk-overlay-container [role="dialog"]')).withContext('nach Esc geschlossen').toBeNull();
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-endless-start-gap): Start-Knopf hat oben Luft zum Untertitel. */
+describe('EndlessPuzzleComponent Start-Knopf-Abstand', () => {
+  it('setzt oben 12 px Abstand', () => {
+    const css = ((EndlessPuzzleComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.start-btn-top[^{]*\{ ?margin: 12px 0 1\.25rem/);
+  });
+});

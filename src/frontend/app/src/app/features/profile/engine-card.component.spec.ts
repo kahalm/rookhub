@@ -25,6 +25,16 @@ describe('EngineCardComponent', () => {
 
   afterEach(() => http.verify());
 
+  // UI-Sweep 2026-10-11 (d2-rk-engine-token-align): Token-Feld ohne reservierten Hinweisbereich — Knopf auf einer Linie.
+  it('token field sizes its subscript dynamically', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+    const field = (fixture.nativeElement as HTMLElement).querySelector('.token-field');
+    expect(field?.querySelector('.mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
+  });
+
   // Seit dem eigenen Broker gibt es Engines auch OHNE Lichess-Token („RookHub direkt") — die Liste wird
   // deshalb immer geholt; ohne Token bleibt nur der Lichess-Teil leer.
   it('queries the engine list even without a Lichess token and shows direct engines', () => {

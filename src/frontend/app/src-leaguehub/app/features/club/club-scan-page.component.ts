@@ -78,13 +78,24 @@ function readAutoMine(): boolean {
         </div></section>
     } @else if (state(); as st) {
       <section class="club-intro">
+        <!-- UI-Sweep 2026-10-11 (d2-l-korrigieren-layout): Überschrift, (i) und „Speichern ↓" in einer Zeile; der Hinweis zu den
+             orangen Stellen hinter (i) — am Handy begann das Brett sonst erst bei ~770 px. -->
         @if (gameId != null) {
           <p><a class="back-link" routerLink="/verein">← Vereinspartien</a></p>
-          <h2>Vereinspartie korrigieren</h2>
-          <p class="muted">{{ gameTitle() }}@if (!ph.photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
         } @else {
           <p><a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
-          <h2>Partieformular prüfen</h2>
+        }
+        <div class="scan-head">
+          <h2>{{ gameId != null ? 'Vereinspartie korrigieren' : 'Partieformular prüfen' }}</h2>
+          @if (st.scan.status === 'done') {
+            <button type="button" class="chk-btn" [attr.aria-expanded]="hintOpen()" aria-label="Wie geprüft wird"
+                    title="Wie geprüft wird" (click)="hintOpen.set(!hintOpen())">i</button>
+            <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
+            <button type="button" class="btn-link to-save" (click)="toSave()">{{ gameId != null ? 'Speichern ↓' : 'Namen & Übernehmen ↓' }}</button>
+          }
+        </div>
+        @if (gameId != null) {
+          <p class="muted">{{ gameTitle() }}@if (!ph.photoUrl()) { — das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett. }</p>
         }
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
@@ -98,10 +109,10 @@ function readAutoMine(): boolean {
             }
           }
         } @else {
-          <p class="muted">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den Zug am Brett spielen
-            — danach wird der Rest neu gelesen. Pfeiltasten blättern.</p>
-          <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
-          <p class="small"><button type="button" class="btn-link to-save" (click)="toSave()">{{ gameId != null ? 'Weiter zum Speichern ↓' : 'Weiter zu Namen & Übernehmen ↓' }}</button></p>
+          @if (hintOpen()) {
+            <div class="info-panel scan-hint"><p class="note">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den
+              Zug am Brett spielen — danach wird der Rest neu gelesen. Pfeiltasten blättern.</p></div>
+          }
         }
       </section>
 
@@ -452,6 +463,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly zoom = signal(false);
   /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
   readonly photoOpen = signal(false);
+  /** Hinweis zu den orangen Stellen hinter (i) (d2-l-korrigieren-layout). */
+  readonly hintOpen = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   /** Wie viele ältere Fassungen derselben Partie das Übernehmen archiviert hat (2026-10-06). */

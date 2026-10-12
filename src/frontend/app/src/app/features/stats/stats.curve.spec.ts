@@ -1,4 +1,4 @@
-import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatLevel, smoothPath, smoothSeries } from './stats.component';
+import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatmapWeeksFor, heatLevel, smoothPath, smoothSeries } from './stats.component';
 import { EloHistoryPoint } from '../puzzles/puzzle.service';
 
 function pt(elo: number, day: number, vizLevel = 0): EloHistoryPoint {
@@ -148,5 +148,15 @@ describe('buildHeatmap', () => {
       if (c.date > tk) expect(c.level).toBe(-1);
       else expect(c.level).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+/** UI-Sweep 2026-10-11 (d2-rk-stats-heatmap): Laptop/groß ein ganzes Jahr, schmal ein halbes. */
+describe('heatmapWeeksFor', () => {
+  it('zeigt ab 1024 px 53 Wochen, darunter 27', () => {
+    expect(heatmapWeeksFor(1366)).toBe(53);
+    expect(heatmapWeeksFor(1024)).toBe(53);
+    expect(heatmapWeeksFor(390)).toBe(27);
+    expect(buildHeatmap([], new Date(2026, 9, 11), heatmapWeeksFor(1920)).length).toBe(53);
   });
 });

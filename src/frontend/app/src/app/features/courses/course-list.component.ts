@@ -51,22 +51,24 @@ import { CourseCardComponent } from './course-card.component';
       </div>
       <p class="intro">{{ 'courses.intro' | translate }}</p>
 
-      <app-reprocess-banner section="courses" (done)="loadCourses()" />
-
-      <!-- UI-Sweep 2026-10-11 (r2-rp-course-warn): die Zahl der „Neu holen"-Markierungen steht neben dem Banner,
-           damit Banner-Zahl (aktualisierbar) und Markierungen (brauchen RepCheck) zusammenpassen. -->
-      @if (reimportCount > 0) {
-        <div class="reimport-legend">
-          <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
-          <!-- UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
-               allein in eine Zeile. -->
-          <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}
-            <button type="button" class="reimport-toggle" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">{{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}</button></span>
-          @if (reimportOpen) {
-            <p class="reimport-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</p>
-          }
-        </div>
+      <!-- UI-Sweep 2026-10-11 (d2-rk-courses-zwei-banner): EIN Hinweis über der Liste — die „Neu holen"-Zahl ist der
+           zweite Satz im Aufbereitungs-Banner; fehlt das Banner, steht sie allein als Legende. -->
+      <app-reprocess-banner #rb section="courses" (done)="loadCourses()">
+        @if (reimportCount > 0) { <ng-container [ngTemplateOutlet]="reimportTpl" /> }
+      </app-reprocess-banner>
+      @if (reimportCount > 0 && !rb.visible) {
+        <div class="reimport-legend"><ng-container [ngTemplateOutlet]="reimportTpl" /></div>
       }
+      <ng-template #reimportTpl>
+        <span class="reimport-chip">{{ 'courses.reimport.chip' | translate }}</span>
+        <!-- UI-Sweep 2026-10-11 (Nachprüfung Runde 3): „Mehr" als Textknopf am Satzende statt als eigener Flex-Eintrag — am Handy brach er sonst
+             allein in eine Zeile. -->
+        <span class="reimport-text">{{ (reimportCount === 1 ? 'courses.reimport.legendOne' : 'courses.reimport.legend') | translate:{ count: reimportCount } }}
+          <button type="button" class="reimport-toggle" (click)="reimportOpen = !reimportOpen" [attr.aria-expanded]="reimportOpen">{{ (reimportOpen ? 'courses.reimport.less' : 'courses.reimport.more') | translate }}</button></span>
+        @if (reimportOpen) {
+          <span class="reimport-hint">{{ 'reprocess.itemNeedsReimport.courses' | translate }}</span>
+        }
+      </ng-template>
 
       @if (offlineList) {
         <div class="offline-banner">
@@ -241,13 +243,15 @@ import { CourseCardComponent } from './course-card.component';
     .reimport-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 1rem;
       padding: 6px 12px; border-radius: 8px; font-size: 0.88rem;
       border: 1px solid color-mix(in srgb, var(--rh-warn) 45%, transparent); }
+    /* Im Aufbereitungs-Banner steht die Legende als zweiter Satz im Fließtext. */
+    app-reprocess-banner .reimport-chip { margin-left: 4px; }
     .reimport-chip { border: 1px solid var(--rh-warn); color: var(--rh-warn); border-radius: 10px; padding: 0 7px; font-size: 0.72rem; white-space: nowrap; }
     .reimport-text { flex: 1 1 220px; }
     .reimport-toggle { font: inherit; font-weight: 500; color: var(--mat-sys-primary); background: none; border: 0;
       padding: 6px 4px; margin: -6px 0; cursor: pointer; white-space: nowrap; text-decoration: underline;
       text-underline-offset: 2px; }
     .reimport-toggle:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; border-radius: 4px; }
-    .reimport-hint { flex-basis: 100%; margin: 0 0 4px; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .reimport-hint { display: block; flex-basis: 100%; margin: 4px 0; color: color-mix(in srgb, currentColor 70%, transparent); }
     .offline-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 1rem;
                       padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
                       background: color-mix(in srgb, currentColor 7%, transparent);

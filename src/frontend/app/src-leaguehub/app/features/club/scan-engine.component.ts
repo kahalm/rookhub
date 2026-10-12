@@ -75,7 +75,11 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
     :host { display: block; width: 100%; }
     .se-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .se-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; min-height: 44px; cursor: pointer; }
-    .se-pick { min-height: 36px; max-width: 100%; }
+    /* UI-Sweep 2026-10-11 (d2-l-korrigieren-engine-select): wie die Auswahlfelder von LeagueHub (.pick select) statt des hellen
+       Browser-Felds im dunklen Brettblock. */
+    .se-pick { font: 500 15px/1.2 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+      border-radius: 6px; padding: 8px 10px; min-height: 44px; max-width: 100%; }
+    .se-pick:hover { border-color: var(--muted); }
     .se-note { font-size: .85em; opacity: .75; }
     .se-note.warn { color: var(--warn); opacity: 1; }
     .se-lines { list-style: none; margin: 6px 0 0; padding: 0; font-variant-numeric: tabular-nums; }

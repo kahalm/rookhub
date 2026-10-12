@@ -102,6 +102,16 @@ body {
   min-width: 0;
 }
 
+/* Auswahl am Handy zugeklappt (UI-Sweep 2026-10-11, d2-l-prognosen-filter): eine Zeile mit der aktiven Wahl und „Ändern ▾";
+   Schalter, Felder und Datenstand erst aufgeklappt. Breit bleibt alles offen. */
+.pick-bar { display: none; }
+@media (max-width: 640px) {
+  .pick-bar { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+  .pick-sum { flex: 1 1 auto; min-width: 0; font: 600 16px/1.3 var(--cond); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick-change { flex: 0 0 auto; }
+  .pick-area:not(.open) { display: none; }
+}
+
 /* Verwalter-Schalter „alle Ligen der Region" (0.710.0) */
 .all-leagues { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; color: var(--muted); font-size: 14px; cursor: pointer; }
 
@@ -117,6 +127,15 @@ body {
 .update-msg { flex-basis: 100%; }
 .update-msg:empty { display: none; }
 .update-msg.err, .err { color: var(--red); }
+/* Vereinspartien (UI-Sweep 2026-10-11, d2-l-vereinspartien-vorlauf): „Partien hinzufügen" rechts in der Zählerzeile, am Handy
+   nur „+" (der Reiter heißt genauso); die Beschriftung bleibt für Vorleser. */
+.stand .add-games { margin-left: auto; }
+.add-games .add-plus { display: none; }
+@media (max-width: 640px) {
+  .add-games { min-width: 44px; text-align: center; font-size: 20px; }
+  .add-games .add-plus { display: inline; }
+  .add-games .add-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 
 /* Begegnung */
 .fixture { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 8px; }
@@ -145,6 +164,8 @@ body {
 .pairings .replay-row td { padding: 8px 0 14px; }
 .pairings .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .boards { list-style: none; margin: 0; padding: 0; }
+/* Großer Bildschirm (UI-Sweep 2026-10-11, d2-l-breit-bretter): die Bretter zweispaltig — die Nummer hält die Reihenfolge lesbar. */
+@media (min-width: 1280px) { .wrap.mid .boards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; } }
 .board {
   display: grid;
   grid-template-columns: 2.2rem 1.1rem 1fr;
@@ -205,6 +226,11 @@ details.roster summary { cursor: pointer; font: 600 17px/1.3 var(--cond); }
 .roster-scroll { overflow-x: auto; }
 .rtable { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
 .rtable th { text-align: left; font: 600 14px/1.2 var(--cond); color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); }
+/* Lange Tabellen behalten ihren Kopf (UI-Sweep 2026-10-11, d2-l-tabellenkopf). Klebt nur, wo kein Scroll-Wrapper dazwischen
+   liegt: Vereinspartien und Übertragungen heben ihr overflow-x ab 641 px auf (am Handy Karten bzw. waagrecht scrollbar). */
+.rtable thead th { position: sticky; top: 0; z-index: 2; background: var(--paper); }
+.panel .rtable thead th, .fixture .rtable thead th, .card .rtable thead th { background: var(--surface); }
+@media (min-width: 641px) { .roster-scroll.club-scroll, .roster-scroll.bc-scroll { overflow-x: visible; } }
 .rtable td { padding: 6px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .rtable td.num, .rtable th.num { text-align: right; white-space: nowrap; }
 .rtable .small { color: var(--muted); font-size: 14px; }
@@ -253,6 +279,11 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password, ap
   --mat-button-filled-container-shape: 6px;
   --mat-button-filled-container-color: var(--red);
   --mat-button-filled-label-text-color: var(--on-red);
+  /* Hauptknopf der Masken (d2-l-masken-knopf): 44 px Tippziel und 16-px-Beschriftung statt Materials 40 px / ~14 px —
+     „Anmelden" war kleiner als „Abmelden" im Kopf. */
+  --mat-button-filled-container-height: 44px;
+  --mat-button-filled-label-text-size: 16px;
+  --mat-button-filled-label-text-weight: 600;
   --mat-button-outlined-container-shape: 6px;
   --mat-button-text-container-shape: 6px;
   --mat-button-text-label-text-color: var(--ink);
@@ -309,7 +340,8 @@ lh-game-sources { display: block; }
 
 @media (max-width: 640px) {
   .brand { font-size: 34px; }
-  .lede.work { display: none; }   /* Formular prüfen: Platz für Prüfteil und Brett (UX-036) */
+  /* Formular prüfen (UX-036) und jede angemeldete Seite (d2-l-kopf-lede-mobile): der Werbesatz nur für Abgemeldete. */
+  .lede.work, .lede:not(.anon) { display: none; }
   .pick { grid-template-columns: 1fr; gap: 10px; }
   .fixture .match { font-size: 20px; }
   .fixture { padding: 14px 12px 6px; }
@@ -445,6 +477,12 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .anon-toggle input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--ink); }
 .anon-toggle > span { display: grid; gap: 2px; }
 .anon-toggle .muted { font-size: 14px; }
+/* Schalter + (i) nebeneinander (UI-Sweep 2026-10-11, d2-l-hinzufuegen-anon-text): die Fläche trägt der Rahmen, der Knopf steht
+   außerhalb des label (sonst schaltete ein Tipp darauf das Häkchen um). */
+.anon-box { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 10px 12px; background: var(--paper); border-radius: 8px; }
+.anon-box .anon-toggle { flex: 1 1 auto; margin: 0; padding: 0; background: none; }
+.anon-box .chk-btn { align-self: flex-start; flex: 0 0 auto; margin-top: 2px; }
+.club-intro .info-line { margin: 0 0 14px; }
 .result { margin: 14px 0 8px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
 .result a, .club-intro a, .gate a { color: var(--ink); }
 
@@ -498,6 +536,11 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .scan-layout.with-photo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .85fr);
   grid-template-areas: "photo board check" "photo board moves"; }
 .scan-layout > .panel { margin-bottom: 0; min-width: 0; }
+/* Kopf der Prüf-/Korrekturseite (UI-Sweep 2026-10-11, d2-l-korrigieren-layout): Überschrift, (i) und „Speichern ↓" in einer Zeile. */
+.scan-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.club-intro .scan-head h2 { margin: 6px 0 4px; }
+.scan-head .to-save { margin-left: auto; }
+.club-intro .scan-hint { margin: 4px 0 10px; }
 /* Am Handy steht der Prüfteil ÜBER dem Brett und ändert je Zug seine Höhe (Lesarten ja/nein, Ausschnitt). Er darf deshalb
    kein Scroll-Anker sein — dann hält der Browser das BRETT an seiner Stelle, statt es mit jedem Zug zu verschieben
    (gemeldet 2026-09-28: „das Brett wandert weiter nach oben"). */
@@ -595,6 +638,18 @@ span.match.ok { color: var(--ok); }
 .cta p { margin: 0 0 12px; max-width: 70ch; color: var(--muted); }
 .cta-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .cta .btn-pri { background: var(--red); border-color: var(--red); color: var(--on-red); }   /* d1-l-mask-red-contrast */
+/* Kurze Aufforderung (UI-Sweep 2026-10-11, d2-l-teilen-cta): Titel + (i) in einer Zeile, Erklärtext erst aufgeklappt, die
+   beiden Knöpfe auch am Handy nebeneinander — vorher ~360 px, kein Brett im ersten Bildschirm. */
+.cta { padding: 12px 16px 14px; }
+.cta-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.cta .cta-head h2 { margin: 0; font-size: 20px; }
+.cta .cta-info { margin: 0 0 10px; font-size: 15px; }
+.cta-actions { flex-wrap: nowrap; }
+.share-stand { display: block; margin-top: -10px; }
+@media (max-width: 640px) {
+  .cta .cta-head h2 { font-size: 18px; }
+  .share-stand .desk-only { display: none; }
+}
 
 /* Übersicht vor dem PGN-Import */
 .review-head { display: grid; gap: 8px; margin-bottom: 10px; }
@@ -701,6 +756,18 @@ lh-online-accounts { display: block; }
 .sugg-actions .sa-reject:hover { background: var(--red); color: var(--on-red); }   /* --on-red: d1-l-mask-red-contrast */
 .sugg-page h2 { margin: 18px 0 6px; }
 .sugg-group { margin-top: 16px; }
+/* Konto-Vorschläge (UI-Sweep 2026-10-11): Zähler neben der Überschrift (d2-l-konten-vorlauf), Suche + Seiten zu 20 Spielern
+   (d2-l-konten-endlos); ab 1280 px die Vorschläge eines Spielers nebeneinander — Begründungen bleiben bei ~70 Zeichen
+   (d2-l-konten-zeilen-breit, Seite in .wrap.mid). */
+.sugg-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.sugg-top h2 { margin: 18px 0 2px; }
+.sugg-page > .info-line { margin: 2px 0 10px; }
+.sugg-filter { margin: 10px 0 4px; align-items: center; }
+.sugg-filter input { max-width: 420px; }
+.sugg-more { margin: 18px 0 0; }
+@media (min-width: 1280px) {
+  .sugg-group lh-account-suggestions .sugg-list { grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 10px; }
+}
 
 /* Konto-Prüfung (i) (0.619.0) — ein Knopf in der Konto-Zeile, die Liste darunter */
 .chk-btn { width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--muted); border-radius: 50%; background: none;

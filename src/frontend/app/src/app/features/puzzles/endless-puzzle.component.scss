@@ -109,7 +109,8 @@
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
     // Wenn der Start-Button OBEN steht (statt am Ende der Card): visueller Abstand
     // nach unten, damit er sich klar von den Config-Feldern abhebt.
-    .start-btn-top { margin-bottom: 1.25rem; }
+    // UI-Sweep 2026-10-11 (d2-rk-endless-start-gap): auch oben Luft — der Knopf klebte am Untertitel.
+    .start-btn-top { margin: 12px 0 1.25rem; }
     .resume-banner {
       background: rgba(25,118,210,0.06); border: 1px solid rgba(25,118,210,0.2);
       border-radius: 12px; padding: 1rem; margin-bottom: 1rem;

@@ -327,3 +327,11 @@ describe('FlashcardsComponent Repertoire-Quelle', () => {
     expect(shapesOf(byMarks)).toEqual([['red:d5']]);
   });
 });
+
+/** UI-Sweep 2026-10-11 (d2-rk-flashcards-gross-schmal): Lernkarte wächst mit der Fensterhöhe bis 720 px. */
+describe('FlashcardsComponent Lernkarten-Breite', () => {
+  it('bindet die Kartenbreite an die Höhe statt fest 480 px', () => {
+    const css = ((FlashcardsComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.fc-study-card[^{]*\{ ?width: min\(92vw, max\(480px, (calc\()?100vh - 320px\)?\), 720px\)/);
+  });
+});

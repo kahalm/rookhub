@@ -35,6 +35,19 @@ describe('ReconstructListComponent', () => {
     expect(c.loading()).toBeFalse();
   });
 
+  // d2-rk-recon-list-lead: am Handy brach „Anlegen" in eine eigene Zeile — dort steht es als ＋ im Titelfeld.
+  it('bietet „Anlegen" auch als ＋ im Titelfeld an und hält den Erklärtext kurz', () => {
+    const fixture = TestBed.createComponent(ReconstructListComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const suffix = el.querySelector('.new-card mat-form-field button.create-suffix') as HTMLButtonElement;
+    expect(suffix).not.toBeNull();
+    expect(suffix.disabled).toBeTrue();
+    expect(el.querySelector('.header app-help-hint button')?.getAttribute('aria-label')).toBe('reconstruct.introMore');
+  });
+
   it('springt nach dem Anlegen in die neue Rekonstruktion', () => {
     const c = create();
     http.expectOne('/api/reconstructions').flush([]);

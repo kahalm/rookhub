@@ -132,6 +132,10 @@ span.group-link { color: inherit; }
   .group-link { padding: 6px 0; margin: 0 12px 0 0; }
   .sources { gap: 0 12px; }
   .sources > * { padding: 6px 0; }
+  /* d2-t-dir-sources-dot: im Umbruch stand der „·" am Anfang der zweiten Zeile. Am Handy steht jede Quelle in
+     ihrer eigenen Zeile, ohne Trennpunkt. */
+  .sources { flex-direction: column; align-items: flex-start; }
+  .source + .source::before { content: none; }
 
   /* Dichte: fuenf verschieden breite Pills untereinander waren eine 240 px hohe Treppe, je Zeile
      ein Knopf zwischen Angaben und Karte. Volle Zeilen gleicher Breite sind ruhiger und geben dem

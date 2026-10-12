@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -490,5 +490,47 @@ describe('CourseListComponent Neu-holen-Hinweis', () => {
     fixture.detectChanges();
     expect(toggle!.getAttribute('aria-expanded')).toBe('true');
     expect(el.querySelector('.reimport-hint')).not.toBeNull();
+  });
+});
+
+/** UI-Sweep 2026-10-11 (d2-rk-courses-zwei-banner): höchstens EIN Hinweis über der Liste. */
+describe('CourseListComponent ein Banner', () => {
+  async function setup() {
+    const item = {
+      bookId: 7, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null, tags: null, description: null,
+      puzzleCount: 1, solvedCount: 0, progressPercent: 0, lastMode: null, lastActivityAt: null, isOwned: true,
+      isPinned: false, needsReimport: true,
+    } as CourseListItem;
+    await TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getCourses: () => of([item]) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseListComponent);
+    fixture.detectChanges();
+    return { fixture, http: TestBed.inject(HttpTestingController) };
+  }
+
+  it('mit Aufbereitungs-Banner steht die Neu-holen-Zahl als zweiter Satz darin, keine eigene Legende', async () => {
+    const { fixture, http } = await setup();
+    http.expectOne('/api/courses/reprocess/status').flush({
+      currentVersion: 2, total: 5, stale: 4, reprocessableLocally: 4, refetchable: 0, needsReimport: 1 });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.reprocess-banner .reimport-chip')).not.toBeNull();
+    expect(el.querySelector('.reimport-legend')).toBeNull();
+  });
+
+  it('ohne Aufbereitungs-Banner bleibt die Legende allein', async () => {
+    const { fixture, http } = await setup();
+    http.expectOne('/api/courses/reprocess/status').flush({
+      currentVersion: 2, total: 5, stale: 0, reprocessableLocally: 0, refetchable: 0, needsReimport: 1 });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.reprocess-banner')).toBeNull();
+    expect(el.querySelector('.reimport-legend .reimport-chip')).not.toBeNull();
   });
 });

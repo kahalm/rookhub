@@ -81,9 +81,29 @@ describe('PublicTournamentComponent', () => {
     more.click();
     fixture.detectChanges();
     const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [mat-menu-item]')).map(i => i.textContent!);
-    expect(items.length).toBe(2);
+    expect(items.length).toBe(3);
     expect(items[0]).toContain('tournaments.actions.share');
     expect(items[1]).toContain('tournamentDirectory.openChessResults');
+    // d2-t-detail-vorlauf: „Volle Ansicht" steht am Handy im ⋮-Menue statt als eigene Knopfzeile.
+    expect(items[2]).toContain('tournaments.actions.openFull');
+  });
+
+  it('nimmt „Volle Ansicht" am Handy aus der Knopfreihe (d2-t-detail-vorlauf)', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma laeuft nicht im iframe — der Viewport laesst sich nicht verstellen');
+    const prev = frame!.style.width;
+    frame!.style.width = '360px';
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    try {
+      const { fixture, http } = await render();
+      http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+      http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+      fixture.detectChanges();
+      const full = (fixture.nativeElement as HTMLElement).querySelector('.action-bar .full-view') as HTMLElement;
+      expect(getComputedStyle(full).display).toBe('none');
+    } finally {
+      frame!.style.width = prev;
+    }
   });
 
   it('Teams vor Spielern geladen: das Team des favorisierten Spielers steht trotzdem in der Teamliste', async () => {

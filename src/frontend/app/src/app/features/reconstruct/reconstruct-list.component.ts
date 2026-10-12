@@ -12,6 +12,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ReconstructService, ReconstructionListItem } from './reconstruct.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Übersicht der Partien, die gerade rekonstruiert werden — anlegen, öffnen, löschen.
@@ -25,13 +26,14 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   selector: 'app-reconstruct-list',
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule,
-    MatFormFieldModule, MatIconModule, MatInputModule, TranslatePipe],
+    MatFormFieldModule, MatIconModule, MatInputModule, TranslatePipe, HelpHintComponent],
   template: `
     <div class="page">
       <div class="header">
         <div>
           <h1>{{ 'reconstruct.title' | translate }}</h1>
-          <p class="muted">{{ 'reconstruct.intro' | translate }}</p>
+          <p class="muted">{{ 'reconstruct.intro' | translate }}
+            <app-help-hint [text]="'reconstruct.introMore' | translate" /></p>
         </div>
       </div>
 
@@ -40,8 +42,13 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
           <mat-label>{{ 'reconstruct.newTitle' | translate }}</mat-label>
           <input matInput [(ngModel)]="newTitle" (keyup.enter)="create()"
                  [placeholder]="'reconstruct.newTitlePlaceholder' | translate" maxlength="200">
+          <!-- Handy (d2-rk-recon-list-lead): „Anlegen" als ＋ im Feld statt in einer eigenen Zeile. -->
+          <button matSuffix mat-icon-button class="create-suffix" [disabled]="busy() || !newTitle.trim()" (click)="create()"
+                  [appIconLabel]="'reconstruct.create' | translate">
+            <mat-icon>add</mat-icon>
+          </button>
         </mat-form-field>
-        <button mat-flat-button color="primary" [disabled]="busy() || !newTitle.trim()" (click)="create()">
+        <button mat-flat-button color="primary" class="create-btn" [disabled]="busy() || !newTitle.trim()" (click)="create()">
           <mat-icon>add</mat-icon> {{ 'reconstruct.create' | translate }}
         </button>
       </mat-card>
@@ -100,6 +107,11 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     .chip.ok { background: color-mix(in srgb, var(--rh-success) 28%, transparent); }
     .chip.warn { background: color-mix(in srgb, var(--rh-warn) 30%, transparent); }
     .actions { display: flex; align-items: center; justify-content: space-between; }
+    .create-suffix { display: none; }
+    @media (max-width: 599.98px) {
+      .create-suffix { display: inline-flex; }
+      .create-btn { display: none; }
+    }
   `],
 })
 export class ReconstructListComponent implements OnInit {

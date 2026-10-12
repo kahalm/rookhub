@@ -268,15 +268,19 @@ import { DirectoryEntry, isPlaceholderLocation } from './tournament-directory.mo
 
     /* Am Handy steht unter jedem Symbol ein kurzes Wort, Tippflaeche mindestens 44 x 44 (t-card-labels). */
     @media (max-width: 599.98px) {
-      .tc-actions { justify-content: space-between; }
+      /* Gleich breite Spalten statt space-between (d2-t-card-slot-mobile): „Ausblenden" ist breiter als die anderen,
+         mit space-between verteilten sich die Abstaende je Karte anders und ohne „Merken" rutschten Kalender und
+         Ausblenden seitlich. Je Karte gleich viele Plaetze (angemeldet vier, ohne Konto drei) — jedes Symbol steht
+         in jeder Karte an derselben Stelle. */
+      .tc-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.1rem; }
       .tc-actions .tc-act {
-        width: auto; min-width: 64px; height: auto; min-height: 48px; padding: 4px 6px;
+        width: 100%; min-width: 0; height: auto; min-height: 48px; padding: 4px 6px;
         border-radius: 12px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
       }
       .tc-actions .tc-act ::ng-deep .mat-mdc-button-persistent-ripple,
       .tc-actions .tc-act ::ng-deep .mat-mdc-button-ripple { border-radius: 12px; }
       .tc-act-label { display: block; font-size: 11px; line-height: 1.2; white-space: nowrap; }
-      .tc-slot { width: 64px; }
+      .tc-slot { width: 100%; }
     }
     .tc-actions button:has(.on) {
       background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent);

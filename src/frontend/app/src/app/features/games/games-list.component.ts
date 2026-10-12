@@ -45,18 +45,21 @@ export type AnalysisState = 'none' | 'running' | 'done';
   ],
   template: `
     <div class="games-page">
-      <div class="header">
-        <div class="title-row">
+      <div class="page-head">
+        <!-- Seitenkopf nach DESIGN 5.1: Titel links, Aktionen gruppiert rechts (d2-rk-games-kopfaktionen). -->
+        <div class="header">
           <h1>{{ 'games.title' | translate }}</h1>
-          <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
-            <mat-icon>upload_file</mat-icon> {{ 'games.pgnUpload.button' | translate }}
-          </button>
-          <!-- Fehler mehrerer Partien am Stück (0.748.0) — übernimmt die gewählte Liga/Saison. -->
-          @if (games.length > 0) {
-            <a mat-stroked-button class="mistakes-collection" routerLink="/games/mistakes" [queryParams]="collectionParams()">
-              <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.button' | translate }}
-            </a>
-          }
+          <div class="header-actions">
+            <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
+              <mat-icon>upload_file</mat-icon> {{ 'games.pgnUpload.button' | translate }}
+            </button>
+            <!-- Fehler mehrerer Partien am Stück (0.748.0) — übernimmt die gewählte Liga/Saison. -->
+            @if (games.length > 0) {
+              <a mat-stroked-button class="mistakes-collection" routerLink="/games/mistakes" [queryParams]="collectionParams()">
+                <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.button' | translate }}
+              </a>
+            }
+          </div>
         </div>
         <p class="hint">{{ 'games.hint' | translate }}</p>
         <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
@@ -232,8 +235,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
   `,
   styles: [`
     .games-page { max-width: 1040px; margin: 0 auto; padding: 16px; }
-    .header h1 { margin: 0 0 4px; }
-    .title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+    .header h1 { margin: 0; }
+    .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }

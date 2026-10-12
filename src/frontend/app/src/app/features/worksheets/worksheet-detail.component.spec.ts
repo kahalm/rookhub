@@ -1,7 +1,8 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -271,5 +272,57 @@ describe('WorksheetDetailComponent', () => {
     c.newFen = ' 8/8/8/8/8/8/8/8 b - - 0 1 ';
     c.addFen();
     expect(worksheets.addItems).toHaveBeenCalledWith(4, [{ fen: '8/8/8/8/8/8/8/8 b - - 0 1', orientation: 'black' }]);
+  });
+});
+
+// d2-rk-ws-detail-lead: Themen- und Teilen-Karte standen vor allen Stellungen (Handy: keine einzige sichtbar). Jetzt EINE
+// Zeile „Themen: … ＋ Thema · Teilen · Link kopieren · QR ▾"; Feld, Vorschläge und QR-Code klappen erst auf Tipp auf.
+describe('WorksheetDetailComponent Themen + Teilen als eine Zeile', () => {
+  async function render(loaded: Worksheet) {
+    const worksheets = {
+      get: () => of(loaded),
+      shareUrl: (token: string) => `https://rookhub.test/w/${token}`,
+    };
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [WorksheetDetailComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WorksheetService, useValue: worksheets },
+        { provide: ActivatedRoute, useValue: { paramMap: of({ get: (k: string) => (k === 'id' ? '4' : null) }),
+          snapshot: { paramMap: { get: () => '4' } } } },
+        { provide: SnackbarService, useValue: { warn: () => {}, info: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(true) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WorksheetDetailComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('zeigt Themen und Teilen als Zeile vor der Liste; Feld und QR erst nach Tipp', async () => {
+    const fixture = await render(sheet({ shareToken: 'Ux7f2K', themes: ['Gabel'] }));
+    const el = fixture.nativeElement as HTMLElement;
+    const row = el.querySelector('.wd-meta-row') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain('Gabel');
+    expect(row.compareDocumentPosition(el.querySelector('.wd-list')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(el.querySelector('.wd-themes')).withContext('Themen-Feld zu').toBeNull();
+    expect(el.querySelector('app-qr-code')).withContext('QR zu').toBeNull();
+    expect(el.querySelector('.wd-warn')).withContext('Lösungs-Warnung bleibt als leise Zeile').not.toBeNull();
+
+    (el.querySelector('.wd-theme-toggle') as HTMLButtonElement).click();
+    (el.querySelector('.wd-qr-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.wd-themes input')).not.toBeNull();
+    expect(el.querySelector('app-qr-code')).not.toBeNull();
+  });
+
+  it('ungeteilt: kein Kopieren, kein QR, keine Warnung', async () => {
+    const fixture = await render(sheet());
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.wd-qr-toggle')).toBeNull();
+    expect(el.querySelector('.wd-warn')).toBeNull();
+    expect(el.querySelector('.wd-share-toggle')).not.toBeNull();
   });
 });

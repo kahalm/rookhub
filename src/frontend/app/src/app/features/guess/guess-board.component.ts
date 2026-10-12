@@ -267,7 +267,8 @@ interface HistoryRow {
     h2 { margin: 0 0 4px; font-size: 1.1rem; }
     h3 { margin: 0 0 8px; font-size: 1rem; }
     .body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; }
-    .board-col { flex: 1 1 320px; max-width: 520px; }
+    /* Brett an die Fensterhöhe gebunden (d2-rk-guess-brett-gross-klein): groß bis 820 px statt fest 520 px. */
+    .board-col { flex: 1 1 320px; max-width: min(calc(100vh - 250px), 820px); }
     /* Breiter als das Brett-Feld: hier stehen die Zugliste UND die Kommentare, und Prosa braucht
        Zeilenlaenge. Zusammen mit der Brett-Spalte fuellt das den Container, statt rechts ein
        leeres Drittel zu lassen (auf dem Desktop gemeldet, 2026-09-10). */

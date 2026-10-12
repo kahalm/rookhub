@@ -1,7 +1,9 @@
 <div class="wl-page">
   <div class="wl-head">
     <h1><mat-icon>assignment</mat-icon> {{ 'worksheets.title' | translate }}</h1>
-    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}</p>
+    <!-- Ein Satz, der Rest hinter dem ⓘ (d2-rk-ws-list-clip). -->
+    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}
+      <app-help-hint [text]="'worksheets.list.hintMore' | translate" /></p>
   </div>
 
   @if (loading) {
@@ -17,34 +19,48 @@
             <mat-icon>content_paste</mat-icon>
             <span class="wl-clip-title">{{ 'worksheets.clipboard' | translate }}</span>
             <span class="wl-count">{{ 'worksheets.count' | translate: { n: clip.itemCount } }}</span>
+            @if (clip.itemCount === 0) {
+              <app-help-hint [text]="'worksheets.clipboardEmpty' | translate" />
+            }
             <span class="wl-spacer"></span>
-            <a mat-stroked-button [routerLink]="['/worksheets', clip.id]">
-              <mat-icon>edit</mat-icon>{{ 'worksheets.list.open' | translate }}
-            </a>
-            <button mat-icon-button (click)="clearClipboard()" [disabled]="clip.itemCount === 0"
-                    [appIconLabel]="'worksheets.list.clear' | translate">
-              <mat-icon>delete_sweep</mat-icon>
-            </button>
+            @if (clip.itemCount > 0) {
+              <a mat-stroked-button [routerLink]="['/worksheets', clip.id]">
+                <mat-icon>edit</mat-icon>{{ 'worksheets.list.open' | translate }}
+              </a>
+              <button mat-icon-button (click)="clearClipboard()"
+                      [appIconLabel]="'worksheets.list.clear' | translate">
+                <mat-icon>delete_sweep</mat-icon>
+              </button>
+            } @else if (!emptyFormOpen()) {
+              <!-- Leere Zwischenablage = eine Zeile (d2-rk-ws-list-clip); das Namensfeld klappt erst auf Tipp auf. -->
+              <button mat-stroked-button class="wl-new-empty" (click)="emptyFormOpen.set(true)">
+                <mat-icon>add</mat-icon>{{ 'worksheets.list.newEmpty' | translate }}
+              </button>
+            }
           </div>
 
-          @if (clip.itemCount === 0) {
-            <p class="wl-clip-empty">{{ 'worksheets.clipboardEmpty' | translate }}</p>
-          }
-
+          @if (clip.itemCount > 0 || emptyFormOpen()) {
           <div class="wl-save">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ 'worksheets.list.nameLabel' | translate }}</mat-label>
               <input matInput [(ngModel)]="newName" maxlength="120"
                      (keyup.enter)="clip.itemCount > 0 ? saveClipboard() : createEmpty()" />
             </mat-form-field>
-            <button mat-flat-button color="primary" (click)="saveClipboard()"
-                    [disabled]="busy || !newName.trim() || clip.itemCount === 0">
-              <mat-icon>save</mat-icon>{{ 'worksheets.list.saveClipboard' | translate }}
-            </button>
-            <button mat-stroked-button (click)="createEmpty()" [disabled]="busy || !newName.trim()">
-              <mat-icon>add</mat-icon>{{ 'worksheets.list.createEmpty' | translate }}
-            </button>
+            @if (clip.itemCount > 0) {
+              <button mat-flat-button color="primary" (click)="saveClipboard()"
+                      [disabled]="busy || !newName.trim()">
+                <mat-icon>save</mat-icon>{{ 'worksheets.list.saveClipboard' | translate }}
+              </button>
+              <button mat-stroked-button (click)="createEmpty()" [disabled]="busy || !newName.trim()">
+                <mat-icon>add</mat-icon>{{ 'worksheets.list.createEmpty' | translate }}
+              </button>
+            } @else {
+              <button mat-flat-button color="primary" (click)="createEmpty()" [disabled]="busy || !newName.trim()">
+                <mat-icon>add</mat-icon>{{ 'worksheets.list.createEmpty' | translate }}
+              </button>
+            }
           </div>
+          }
         </mat-card-content>
       </mat-card>
     }

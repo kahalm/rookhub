@@ -82,6 +82,24 @@
 }
 
 .count { margin: 0 0 0.5rem; font-size: 0.85rem; }
+.profile-line { margin: 0 0 0.5rem; font-size: 0.85rem; }
+.profile-line:empty { display: none; }
+
+/* Suchprofil-Hinweis hinter der Trefferzahl (d2-t-calendar-filter-mobile): Textknopf + ⓘ statt Banner. */
+.profile-note { display: inline-flex; align-items: center; gap: 0.25rem; }
+.count:not(:empty) > .profile-note:not(:first-child)::before { content: '·'; margin: 0 0.4rem 0 0.4rem; }
+.link-btn {
+  padding: 0.25rem 0; border: 0; background: none; font: inherit; cursor: pointer;
+  color: var(--rh-accent); text-decoration: underline;
+}
+
+/* Wertechips und die Handy-Fassungen von Zeitraum/Umkreis im Filterfeld: nur am Handy. */
+.bar-chips, .extra-narrow { display: none; }
+.value-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  min-height: 32px; padding: 0 0.75rem; border-radius: 8px; font: inherit; font-size: 0.85rem; cursor: pointer;
+  color: inherit; background: transparent; border: 1px solid var(--mat-sys-outline-variant);
+}
 
 .entry-grid {
   display: grid;
@@ -187,14 +205,15 @@
   .players-field,
   .date-field { width: 100%; min-width: 0; }
 
-  /* Drei statt fuenf Zeilen: vorher standen Ort, Umkreis, Zeitraum und der Filter-Knopf je
-     100 % breit untereinander und das Profil-Menue (⋮) allein in einer fuenften Zeile — auf
-     360x740 begann die erste Turnierkarte damit erst bei ~545 px, die Seite zeigte beim Oeffnen
-     Filter statt Turniere. Der Zeitraum rueckt per order vor den Umkreis (Zeile 2), Umkreis,
-     Filter-Knopf und ⋮ teilen sich Zeile 3. */
-  .radius-field { width: calc(40% - 0.25rem); min-width: 0; order: 1; }
-  .filter-toggle { flex: 1 1 auto; order: 1; }
-  .filter-bar > [mat-icon-button] { order: 1; }
+  /* EINE Zeile statt drei (d2-t-calendar-filter-mobile): Ort, „Filter (n)" und ⋮. Zeitraum und Umkreis stehen im
+     ausklappbaren Filterfeld, ihre Werte als Chips unter der Leiste — die erste Karte rueckt ~150 px nach oben.
+     (Davor: drei Zeilen, davor fuenf.) */
+  .filter-bar { flex-wrap: nowrap; }
+  .filter-bar > .place-field { flex: 1 1 auto; width: auto; min-width: 0; }
+  .filter-bar > .bar-wide { display: none; }
+  .filter-toggle { flex: none; }
+  .bar-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+  .filter-extra > .extra-narrow { display: inline-flex; width: calc(50% - 0.375rem); min-width: 0; }
 
   /* Der Erstnutzer-Hinweis behaelt seinen Text, verliert aber den Knopf: „Neues Suchprofil"
      liegt ohnehin im ⋮-Menue daneben, und ein zweiter Stroked-Button neben „Filter" kostete

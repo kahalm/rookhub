@@ -242,7 +242,9 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
             {
                 ["id"] = x.Id, ["fide"] = x.FideId, ["site"] = x.Site, ["user"] = x.UserName, ["url"] = x.Url, ["score"] = x.Score,
                 // UI-Sweep 2026-10-11 (r2-l-land-codes): auch ältere Hinweise mit „Land SK" ausgeschrieben
-                ["evidence"] = CountryNames.ExpandLand(x.Evidence), ["profileName"] = x.ProfileName, ["location"] = x.Location,
+                // d2-l-konten-entity: ältere Vorschläge tragen noch HTML-kodierte Profilfelder („Nagyk&aacute;ta“)
+                ["evidence"] = CountryNames.ExpandLand(x.Evidence), ["profileName"] = LeagueAccountFinder.Unescape(x.ProfileName),
+                ["location"] = LeagueAccountFinder.Unescape(x.Location),
                 ["lastActive"] = x.LastActive is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null,
             };
         if (hidden && reveal) o["minor"] = true;

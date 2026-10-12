@@ -87,16 +87,25 @@ export function loginRetryAfterSeconds(err: any): number {
               @if (showFreeNote) {
                 <span class="auth-sub">{{ 'auth.login.freeNote' | translate }}</span>
               }
+              <!-- UI-Sweep 2026-10-11 (d2-rk-login-two-notes): höchstens EIN Kasten über dem Formular — die Einleitung der
+                   Seite steht als zweite Zeile im Hinweis statt in einem zweiten gleichen Kasten. -->
+              @if (leagueHub) {
+                <span class="site-note">{{ 'auth.login.leaguehubNote' | translate }}</span>
+              }
+              @if (intro.login; as introKey) {
+                <span class="site-note">{{ introKey | translate }}</span>
+              }
             </p>
-          }
-          <!-- LeagueHub (UX-033): wer hier ist, soll wissen, dass es nur für eine Gruppe ist und welches Konto gilt. -->
-          @if (leagueHub) {
-            <p class="auth-required site-note">{{ 'auth.login.leaguehubNote' | translate }}</p>
-          }
-          <!-- Turnierseite, ClubHub (UX-027): was die Seite bietet und welches Konto gilt — auf der Turnierseite ist die
-               Maske die Startseite, auf ClubHub sagt sie, dass der Verein freischaltet. -->
-          @if (intro.login; as introKey) {
-            <p class="auth-required site-note">{{ introKey | translate }}</p>
+          } @else {
+            <!-- LeagueHub (UX-033): wer hier ist, soll wissen, dass es nur für eine Gruppe ist und welches Konto gilt. -->
+            @if (leagueHub) {
+              <p class="auth-required site-note">{{ 'auth.login.leaguehubNote' | translate }}</p>
+            }
+            <!-- Turnierseite, ClubHub (UX-027): was die Seite bietet und welches Konto gilt — auf der Turnierseite ist die
+                 Maske die Startseite, auf ClubHub sagt sie, dass der Verein freischaltet. -->
+            @if (intro.login; as introKey) {
+              <p class="auth-required site-note">{{ introKey | translate }}</p>
+            }
           }
           <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
             <mat-form-field appearance="outline">
@@ -156,7 +165,7 @@ export function loginRetryAfterSeconds(err: any): number {
     @media (min-width: 769px) { .legal-links.footer-wide { display: none; } }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-required { background: color-mix(in srgb, var(--rh-info) 15%, transparent); border-left: 3px solid var(--rh-info); padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
-    .auth-sub { display: block; margin-top: 0.3rem; opacity: 0.85; }
+    .auth-sub, .auth-required span.site-note { display: block; margin-top: 0.3rem; opacity: 0.85; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     mat-form-field { width: 100%; }
     .form-error { margin-top: 12px; padding: 12px; border-radius: 8px;

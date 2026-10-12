@@ -177,6 +177,30 @@ describe('TurnierAdminComponent', () => {
     expect(link?.getAttribute('path')).toBe('admin');
   });
 
+  /** d2-t-admin-lead: der Link steht rechts im Kopf, der Erklaertext ist kurz und schmal, der Rest hinter ⓘ. */
+  it('stellt den RookHub-Link in den Kopf und den Erklaertext hinter ⓘ', () => {
+    flushUsers();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.header .header-actions trn-rookhub-link')).not.toBeNull();
+    expect(host.querySelector('.header h1 app-help-hint')).not.toBeNull();
+    const lead = host.querySelector('.ta-lead') as HTMLElement;
+    expect(lead.querySelector('trn-rookhub-link')).toBeNull();
+    expect(getComputedStyle(lead).maxWidth).not.toBe('none');
+  });
+
+  /** d2-t-admin-empty-mail: ohne Adresse keine leere Spanne, die am Handy eine Leerzeile macht. */
+  it('rendert ohne E-Mail keine leere Adresszeile', () => {
+    http.expectOne(r => r.url === '/api/admin/users').flush({
+      items: [{ id: 9, username: 'leer', email: '', isAdmin: false, createdAt: '2026-01-01', groups: [] },
+              ...users().items],
+      totalCount: 3, page: 1, pageSize: 50,
+    });
+    fixture.detectChanges();
+    const rows = [...fixture.nativeElement.querySelectorAll('.ta-users li')] as HTMLElement[];
+    expect(rows[0].querySelector('.ta-mail')).toBeNull();
+    expect(rows[1].querySelector('.ta-mail')).not.toBeNull();
+  });
+
   // ----- Codereview UX-078 -----
 
   /** Ins eigene Konto lehnt der Server ab (400) — ein Knopf dafuer fuehrte nur zu „fehlgeschlagen". */

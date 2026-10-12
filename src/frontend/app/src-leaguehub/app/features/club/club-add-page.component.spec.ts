@@ -63,6 +63,24 @@ describe('ClubAddPageComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  // UI-Sweep 2026-10-11 (d2-l-hinzufuegen-anon-text): Schalter mit einem Satz, der lange Datenschutztext hinter (i)
+  it('Schalter „ersetzen": ein Satz, der Rest hinter (i) — der Knopf schaltet das Häkchen nicht um', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const box = el.querySelector('.anon-box')!;
+    expect(box.textContent).toContain('Nach außen erscheint nur');
+    expect(el.textContent).not.toContain('Taktiken aus Vereinspartien');
+    expect(el.querySelector('.club-intro')?.textContent).not.toContain('Vom Datum bleibt nur das Jahr');
+    (box.querySelector('.chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.anon-info')?.textContent).toContain('Taktiken aus Vereinspartien');
+    expect((el.querySelector('.anon-toggle input') as HTMLInputElement).checked).toBeTrue();
+    (el.querySelector('.club-intro .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.intro-info')?.textContent).toContain('Vom Datum bleibt nur das Jahr');
+  }));
+
   it('PGN: erst die Übersicht, gespeichert wird erst mit „Importieren"', fakeAsync(() => {
     const el = create();
     flushMicrotasks();

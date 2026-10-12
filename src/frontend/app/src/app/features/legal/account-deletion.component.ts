@@ -6,6 +6,7 @@ import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HandoffService } from '../../core/handoff.service';
 import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink } from './legal-site';
+import { LEGAL_PAGE_STYLES } from './legal-page.styles';
 
 /**
  * Öffentlich (ohne Login) erreichbare Info-Seite zur Konto-Löschung — erfüllt die
@@ -18,7 +19,7 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatCardModule, RouterModule, TranslatePipe],
   template: `
-    <div class="legal-container">
+    <div class="legal-container" [class.legal-kid]="site.kind === 'kidhub'">
       <mat-card>
         <mat-card-header>
           <h1 mat-card-title>{{ 'legal.accountDeletion.title' | translate }}</h1>
@@ -98,9 +99,7 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
       </mat-card>
     </div>
   `,
-  styles: [`
-    .legal-container { padding: 2rem; display: flex; justify-content: center; }
-    mat-card { max-width: 720px; width: 100%; }
+  styles: [LEGAL_PAGE_STYLES, `
     /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
        immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
     /* Abschnitte als h2 unter dem h1-Titel (UX-057) — Aussehen wie vorher als h4. */
@@ -110,7 +109,10 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
     .back a::before { content: '← ' / ''; }
     .action { margin: 0.75rem 0 0.25rem; }
     .backup-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: -0.25rem; }
-    .backup-links a, .league-kept a { display: inline-block; padding: 10px 0; }
+    .backup-links a { display: inline-block; padding: 10px 0; }
+    /* Link mitten im Satz (d2-l-kontoloeschen-flucht): inline — das Polster vergroessert die Trefferflaeche, nicht die
+       Zeile; als inline-block riss er den Absatz auf (35 statt 25 px Zeilenabstand, ~55 px Luecke danach). */
+    .league-kept a { display: inline; padding: 10px 0; }
   `]
 })
 export class AccountDeletionComponent {

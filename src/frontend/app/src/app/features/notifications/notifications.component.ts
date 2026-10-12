@@ -31,34 +31,6 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
     <div class="notif-container">
       <h1>{{ 'notifications.historyTitle' | translate }}</h1>
 
-      <mat-card class="push-card">
-        <mat-card-content>
-          <div class="push-head">
-            <mat-icon>notifications_active</mat-icon>
-            <span class="push-title">{{ 'notifications.push.title' | translate }}</span>
-          </div>
-          @if (!pushSupported) {
-            <p class="push-hint">{{ 'notifications.push.unsupported' | translate }}</p>
-          } @else if (!pushPublicKey) {
-            <p class="push-hint">{{ 'notifications.push.notConfigured' | translate }}</p>
-          } @else {
-            <p class="push-hint">{{ 'notifications.push.hint' | translate }}</p>
-            @if (pushDenied) {
-              <p class="push-hint push-denied">{{ 'notifications.push.denied' | translate }}</p>
-            }
-            <div class="push-cats">
-              @for (cat of pushCategories; track cat) {
-                <mat-slide-toggle color="primary"
-                    [checked]="isPushOn(cat)" [disabled]="pushBusy || pushDenied"
-                    (change)="togglePush(cat, $event.checked, $event.source)">
-                  {{ ('notifications.category.' + cat) | translate }}
-                </mat-slide-toggle>
-              }
-            </div>
-          }
-        </mat-card-content>
-      </mat-card>
-
       @if (loading && items.length === 0) {
         <app-loading-spinner />
       } @else if (loadError && items.length === 0) {
@@ -113,11 +85,45 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
         }
         <p class="count">{{ 'notifications.shownOf' | translate:{ shown: visibleItems.length, total: total } }}</p>
       }
+
+      <!-- UI-Sweep 2026-10-11 (d2-rk-notif-push-card): Push-Einstellungen sind Nebensache — unter der Liste; ohne
+           verfügbaren Push nur eine leise Zeile statt einer Karte ohne Handlung. -->
+      @if (!pushSupported || !pushPublicKey) {
+        <p class="push-note">
+          <mat-icon>notifications_off</mat-icon>
+          {{ (!pushSupported ? 'notifications.push.unsupported' : 'notifications.push.notConfigured') | translate }}
+        </p>
+      } @else {
+        <mat-card class="push-card">
+          <mat-card-content>
+            <div class="push-head">
+              <mat-icon>notifications_active</mat-icon>
+              <span class="push-title">{{ 'notifications.push.title' | translate }}</span>
+            </div>
+            <p class="push-hint">{{ 'notifications.push.hint' | translate }}</p>
+            @if (pushDenied) {
+              <p class="push-hint push-denied">{{ 'notifications.push.denied' | translate }}</p>
+            }
+            <div class="push-cats">
+              @for (cat of pushCategories; track cat) {
+                <mat-slide-toggle color="primary"
+                    [checked]="isPushOn(cat)" [disabled]="pushBusy || pushDenied"
+                    (change)="togglePush(cat, $event.checked, $event.source)">
+                  {{ ('notifications.category.' + cat) | translate }}
+                </mat-slide-toggle>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
     </div>
   `,
   styles: [`
     .notif-container { max-width: 760px; margin: 24px auto; padding: 0 16px; }
-    .push-card { margin-bottom: 16px; }
+    .push-card { margin-top: 16px; }
+    .push-note { display: flex; align-items: center; gap: 6px; margin: 16px 0 0; font-size: 0.85rem;
+      color: color-mix(in srgb, currentColor 60%, transparent); }
+    .push-note mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
     .push-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 6px; }
     .push-hint { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); margin: 0 0 10px; }
     .push-hint.push-denied { color: var(--rh-error); }

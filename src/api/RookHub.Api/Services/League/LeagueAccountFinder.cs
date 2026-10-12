@@ -308,12 +308,12 @@ public sealed partial class LeagueAccountFinder
             int? fide = null;
             if (u.TryGetProperty("profile", out var pr) && pr.ValueKind == JsonValueKind.Object)
             {
-                real = Str(pr, "realName");
+                real = Unescape(Str(pr, "realName"));
                 if (string.IsNullOrWhiteSpace(real))
-                    real = string.Join(' ', new[] { Str(pr, "firstName"), Str(pr, "lastName") }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    real = string.Join(' ', new[] { Unescape(Str(pr, "firstName")), Unescape(Str(pr, "lastName")) }.Where(x => !string.IsNullOrWhiteSpace(x)));
                 flag = Str(pr, "flag") ?? Str(pr, "country");
-                loc = Str(pr, "location");
-                bio = Str(pr, "bio");
+                loc = Unescape(Str(pr, "location"));
+                bio = Unescape(Str(pr, "bio"));
                 fide = Fide(Int(pr, "fideRating"));
             }
             DateTime? seen = u.TryGetProperty("seenAt", out var sa) && sa.TryGetInt64(out var ms)
@@ -402,7 +402,7 @@ public sealed partial class LeagueAccountFinder
         var url = Str(d, "url");
         var shown = url?.TrimEnd('/').Split('/')[^1] is { Length: > 0 } seg && seg.Equals(user, StringComparison.OrdinalIgnoreCase) ? seg : user;
         return new Profile(LeagueOnlineSites.ChessCom, shown, LeagueOnlineSites.ProfileUrl(LeagueOnlineSites.ChessCom, shown),
-            Str(d, "name"), country.Length == 2 ? country : null, Str(d, "location"), null, Fide(Int(d, "fide")), seen,
+            Unescape(Str(d, "name")), country.Length == 2 ? country : null, Unescape(Str(d, "location")), null, Fide(Int(d, "fide")), seen,
             status.StartsWith("closed", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -420,6 +420,15 @@ public sealed partial class LeagueAccountFinder
     {
         using var doc = JsonDocument.Parse(json);
         return (Int(doc.RootElement, "year"), Str(doc.RootElement, "federation"));
+    }
+
+    /// <summary>Profilfelder kommen teils HTML-kodiert (chess.com: „Nagyk&amp;aacute;ta“, manchmal doppelt) — als Klartext
+    /// speichern und anzeigen (UI-Sweep 2026-10-11, d2-l-konten-entity). Höchstens zwei Durchgänge.</summary>
+    public static string? Unescape(string? s)
+    {
+        if (string.IsNullOrEmpty(s) || !s.Contains('&')) return s;
+        var once = WebUtility.HtmlDecode(s);
+        return once.Contains('&') ? WebUtility.HtmlDecode(once) : once;
     }
 
     private static string? Str(JsonElement e, string name) =>

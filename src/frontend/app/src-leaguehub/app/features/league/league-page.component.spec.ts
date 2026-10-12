@@ -252,6 +252,31 @@ describe('LeaguePageComponent', () => {
     expect(el.querySelector('.src-tbl thead')!.textContent).toContain('Gegner von Wörgl');
   });
 
+  // UI-Sweep 2026-10-11 (d2-l-prognosen-filter): am Handy die Auswahl als eine Zeile; offen nur ohne gemerkte Auswahl
+  it('Auswahl-Zeile: zeigt Liga · Runde · Verein; ohne gemerkte Auswahl offen, mit gemerkter zu; „Ändern" klappt auf', async () => {
+    let el = create();
+    await settle();
+    expect(el.querySelector('.pick-bar .pick-sum')?.textContent?.trim()).toBe('Landesliga · R2 · Testdorf');
+    expect(el.querySelector('.pick-area')?.classList).toContain('open');
+    // die Felder, der Schalter und der Datenstand stehen IN der aufklappbaren Fläche
+    expect(el.querySelector('.pick-area form.pick')).not.toBeNull();
+    expect(el.querySelector('.pick-area .all-leagues')).not.toBeNull();
+    expect(el.querySelector('.pick-area .stand')).not.toBeNull();
+
+    TestBed.resetTestingModule();
+    localStorage.setItem('leaguehub', JSON.stringify({ liga: 10, verein: 'Testdorf' }));
+    el = create();
+    await settle();
+    const area = el.querySelector('.pick-area')!;
+    expect(area.classList).not.toContain('open');
+    const change = el.querySelector('.pick-bar .pick-change') as HTMLButtonElement;
+    expect(change.getAttribute('aria-expanded')).toBe('false');
+    change.click();
+    fixture.detectChanges();
+    expect(area.classList).toContain('open');
+    expect(change.getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('Knopf „Aufstellungen": klappt alle Aufstellungen der gewählten Runde auf, steht in der Adresse und im Tab (2026-10-08)', async () => {
     const el = create();
     await settle();

@@ -164,6 +164,24 @@ describe('ReconstructDetailComponent', () => {
     expect(items.join('|')).toContain('common.delete');
   });
 
+  // d2-rk-recon-detail-actions: Kopieren/Teilen standen als Text-Knöpfe je in eigener Zeile vor dem ersten Teil (41 %
+  // Vorlauf am Handy). Sie stehen jetzt im ⋮ des Seitenkopfs; die Chip-Zeile trägt nur noch Zahlen.
+  it('legt Kopieren, Teilen und Teilen beenden ins ⋮ des Seitenkopfs', () => {
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5').flush(data([part({ id: 1 })], { shareToken: 'abc' }));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.chips button').length).withContext('keine Knöpfe mehr in der Chip-Zeile').toBe(0);
+    (el.querySelector('.header button.head-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item')).map(e => e.textContent ?? '').join('|');
+    expect(items).toContain('reconstruct.copyPrefix');
+    expect(items).toContain('reconstruct.share.copyAgain');
+    expect(items).toContain('reconstruct.share.stop');
+    expect(el.querySelector('.add-row .lbl-short')?.textContent).toContain('reconstruct.addMovesShort');
+  });
+
   it('schlägt den Anschluss nur nach einer Stellung vor', () => {
     const afterMoves = open([part({ id: 1, kind: PartKind.Moves })]);
     afterMoves.startNew(PartKind.Moves);

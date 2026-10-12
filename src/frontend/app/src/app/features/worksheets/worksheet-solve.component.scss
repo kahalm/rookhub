@@ -11,7 +11,9 @@
 .wsv-turn { margin: 0 0 8px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
 /* Feste Breite statt nur max-width: mat-card ist ein Flex-Container, und die Auto-Ränder ließen das Brett dort auf
    seine Inhaltsbreite schrumpfen (16 px). So füllt es die Karte (quadratisch, chessground setzt die Höhe = Breite). */
-.wsv-board { width: min(100%, 560px); margin: 4px auto 0; }
+/* Höhe mitgedacht (d2-rk-wsolve-buttons): am Laptop (768 px) passen Brett, Statuszeile und „Lösung zeigen"/„Weiter" unter die
+   Falz (≈ 438 px); am Handy und groß bleibt die Breite maßgeblich. */
+.wsv-board { width: min(100%, 560px, calc(100dvh - 330px)); margin: 4px auto 0; }
 .wsv-text { margin: 10px 0 0; font-size: 0.95rem; line-height: 1.4; overflow-wrap: anywhere; }
 
 .wsv-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }

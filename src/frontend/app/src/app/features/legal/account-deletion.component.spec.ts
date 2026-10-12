@@ -49,6 +49,28 @@ describe('AccountDeletionComponent', () => {
     expect(kid.textContent).toContain('legal.backHome');
   });
 
+  // UI-Sweep 2026-10-11 (d2-l-kontoloeschen-flucht, d2-rk-legal-zeilenlaenge)
+  it('Karte so breit wie Datenschutz/Impressum (760 px), Fliesstext hoechstens 68ch; KidHub ohne Begrenzung', () => {
+    const render = (site?: object) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [AccountDeletionComponent],
+        providers: [...base(), ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
+      });
+      const f = TestBed.createComponent(AccountDeletionComponent);
+      f.detectChanges();
+      return f.nativeElement as HTMLElement;
+    };
+    const el = render();
+    expect(getComputedStyle(el.querySelector('mat-card')!).maxWidth).toBe('760px');
+    const content = el.querySelector<HTMLElement>('mat-card-content')!;
+    const ch = parseFloat(getComputedStyle(content).fontSize) * 0.4;   // 68ch liegt sicher unter 68 × Schriftgroesse
+    expect(parseFloat(getComputedStyle(content).maxWidth)).toBeGreaterThan(68 * ch);
+    expect(parseFloat(getComputedStyle(content).maxWidth)).toBeLessThan(68 * parseFloat(getComputedStyle(content).fontSize));
+    const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
+    expect(getComputedStyle(kid.querySelector('mat-card-content')!).maxWidth).toBe('none');
+  });
+
   it('Titel als h1, Abschnitte als h2 — keine uebersprungene Ebene (UX-057)', () => {
     TestBed.configureTestingModule({ imports: [AccountDeletionComponent], providers: base() });
     const f = TestBed.createComponent(AccountDeletionComponent);
@@ -188,6 +210,8 @@ describe('AccountDeletionComponent', () => {
       expect(el.textContent).toContain('legal.accountDeletion.keptLeague');
       expect(el.textContent).toContain('legal.accountDeletion.keptLeagueShares');
       expect(el.querySelector('.league-kept a')?.getAttribute('href')).toBe('/verein');
+      // Link mitten im Satz bleibt inline — als inline-block riss er den Absatz auf (d2-l-kontoloeschen-flucht).
+      expect(getComputedStyle(el.querySelector('.league-kept a')!).display).toBe('inline');
       // Die PGN-Exporte liegen in RookHub.
       expect([...el.querySelectorAll('.backup-links a')].map(a => a.getAttribute('href')))
         .toEqual(['https://rookhub.example/courses', 'https://rookhub.example/repertoires', 'https://rookhub.example/games']);

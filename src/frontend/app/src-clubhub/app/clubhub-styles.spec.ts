@@ -65,6 +65,22 @@ describe('clubhub.scss', () => {
     expect(getComputedStyle(card.querySelector('.auth-required')!).borderLeftColor).toBe(getComputedStyle(probe).color);
   });
 
+  // UI-Sweep 2026-10-11 (d2-c-auth-centered): die 80vh-Zentrierung liess am Handy 240–280 px leer über der Karte.
+  it('Anmelde-Masken: keine 80vh-Zentrierung — die Karte steht direkt unter dem Kopf', () => {
+    const el = mount(`<ch-root><main class="wrap"><app-forgot-password><div class="auth-container">
+      <div class="mat-mdc-card"></div></div></app-forgot-password></main></ch-root>`);
+    const box = getComputedStyle(el.querySelector('.auth-container')!);
+    expect(box.minHeight).toBe('0px');
+    expect(box.paddingTop).toBe('8px');
+  });
+
+  // UI-Sweep 2026-10-11 (d2-c-legal-line): Karte 660 px ≈ 75 Zeichen je Zeile bei 17 px Schrift (vorher 90–95).
+  it('Rechtsseiten: Karte hoechstens 660 px breit', () => {
+    const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card">
+      </div></div></app-privacy></main></ch-root>`);
+    expect(getComputedStyle(el.querySelector('.mat-mdc-card')!).maxWidth).toBe('660px');
+  });
+
   it('Anmelde-Maske außerhalb der Anmeldung bleibt unberührt', () => {
     const el = mount(`<div class="mat-mdc-card"></div>`);
     expect(getComputedStyle(el.querySelector('.mat-mdc-card')!).getPropertyValue('--mat-card-title-text-font').trim()).toBe('');
@@ -76,6 +92,52 @@ describe('clubhub.scss', () => {
     const bar = host.querySelector<HTMLElement>('.form-save')!;
     expect(pad).toBeGreaterThanOrEqual(bar.getBoundingClientRect().height);
   });
+  /** Viewport des Test-Dokuments (Karma-iframe) schmal stellen; Rückgabe = zurücksetzen (Muster turnier-navbar.spec). */
+  async function narrow(width: number): Promise<() => void> {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe — der Viewport lässt sich nicht verstellen');
+    const prev = frame!.style.width;
+    frame!.style.width = `${width}px`;
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    return () => { frame!.style.width = prev; };
+  }
+
+  // UI-Sweep d2-c-form-save-bar: am Handy EINE Reihe Knöpfe statt zwei (111 px)
+  it('Speichern-Leiste beim Anlegen am Handy: eine Reihe, höchstens 64 px, „+ Weiteres" kurz', async () => {
+    const restore = await narrow(390);
+    try {
+      mount(`<main class="wrap"><form class="sheet form"><input><div class="actions form-save">
+        <button class="btn primary">Kind anlegen</button>
+        <button class="btn save-next" aria-label="Weiteres Kind anlegen"><span class="long">Weiteres Kind anlegen</span><span class="short">+ Weiteres</span></button>
+        <button class="btn cancel">Abbrechen</button></div></form></main>`);
+      const bar = host.querySelector<HTMLElement>('.form-save')!;
+      expect(bar.getBoundingClientRect().height).toBeLessThanOrEqual(64);
+      const tops = Array.from(bar.querySelectorAll<HTMLElement>('.btn')).map(b => Math.round(b.getBoundingClientRect().top));
+      expect(new Set(tops).size).withContext('alle Knöpfe in einer Reihe').toBe(1);
+      expect(getComputedStyle(bar.querySelector('.long')!).display).toBe('none');
+      expect(bar.scrollWidth).toBeLessThanOrEqual(bar.clientWidth + 1);
+      const pad = parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom);
+      expect(pad).toBeGreaterThanOrEqual(bar.getBoundingClientRect().height);
+    } finally {
+      restore();
+    }
+  });
+
+  // UI-Sweep d2-c-kartei-lead: Suche, Gruppenchips und Archiv in einer Zeile (ab 641 px)
+  it('Kartei: Suche, Chips und Archiv in einer Zeile, das Label „Suchen" nur für Vorleser', () => {
+    mount(`<main class="wrap" style="width: 900px"><div class="tools with-chips">
+      <label class="field search"><span class="sr-only">Suchen</span><input type="search" placeholder="Name suchen"></label>
+      <div class="filter-chips"><button class="chip-btn">Alle</button><button class="chip-btn">Anfänger <span class="n">2</span></button></div>
+      <label class="check"><input type="checkbox"> Archiv</label></div></main>`);
+    const label = host.querySelector<HTMLElement>('.sr-only')!;
+    expect(label.getBoundingClientRect().height).toBeLessThanOrEqual(1);
+    if (window.innerWidth > 640) {
+      const mid = (sel: string) => { const r = host.querySelector(sel)!.getBoundingClientRect(); return (r.top + r.bottom) / 2; };
+      expect(Math.abs(mid('.filter-chips') - mid('.search input'))).toBeLessThan(12);
+      expect(Math.abs(mid('.check') - mid('.search input'))).toBeLessThan(12);
+    }
+  });
+
   // UI-Sweep 2026-10-11 (r2-c-privacy-style)
   it('Datenschutzseite: ClubHub-Karte, Slab-Köpfe in Kopflinienfarbe, Links in Primärfarbe, kein Extra-Rand im .wrap', () => {
     const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card">

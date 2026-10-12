@@ -81,4 +81,53 @@ describe('AccountSuggestionsPageComponent', () => {
     expect(fixture.componentInstance.items().map(x => x.id)).toEqual([1, 3]);
     expect(fixture.componentInstance.groups().map(g => g.fide)).toEqual(['301', '333']);
   });
+
+  // UI-Sweep 2026-10-11 (d2-l-konten-endlos): 20 Spieler je Seite, „Weitere", Suche nach Spieler oder Verein
+  it('zeigt erst 20 Spieler, „Weitere" holt die nächsten; die Suche filtert nach Name und Mannschaft', async () => {
+    const many = Array.from({ length: 45 }, (_, i) => ({ ...S(i + 1, String(1000 + i), `Spieler ${i + 1}`, 50 - i),
+      team: i === 30 ? 'SC Haar 1' : 'Kufstein 1' }));
+    api.suggestions.and.resolveTo({ items: many, scanned: 1, total: 1 });
+    create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const names = () => el().querySelectorAll('.sugg-group').length;
+    const more = () => el().querySelector('.sugg-more button') as HTMLButtonElement | null;
+    expect(names()).toBe(20);
+    expect(more()?.textContent).toContain('Weitere 20 von 25');
+    more()!.click();
+    fixture.detectChanges();
+    expect(names()).toBe(40);
+    expect(more()?.textContent).toContain('Weitere 5 von 5');
+    more()!.click();
+    fixture.detectChanges();
+    expect(names()).toBe(45);
+    expect(more()).toBeNull();
+
+    const search = el().querySelector('.sugg-filter input') as HTMLInputElement;
+    search.value = 'haar';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(Array.from(el().querySelectorAll('.sugg-name')).map(b => b.textContent?.trim())).toEqual(['Spieler 31']);
+    search.value = 'spieler';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(names()).toBe(20);   // neue Suche beginnt wieder bei der ersten Seite
+    search.value = 'niemand';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el().textContent).toContain('Kein Spieler passt zur Suche.');
+  });
+
+  // UI-Sweep 2026-10-11 (d2-l-konten-vorlauf): ein Satz + (i), Suchweise und Minderjährigen-Hinweis dahinter
+  it('Erklärtext zugeklappt, der Zähler steht in der Kopfzeile', async () => {
+    api.suggestions.and.resolveTo({ items: [S(1, '222', 'Muster, Max', 6)], scanned: 1, total: 1 });
+    create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.sugg-top [role=status]')?.textContent).toContain('1 offen.');
+    expect(el().textContent).not.toContain('Minderjähriger');
+    (el().querySelector('.sugg-page > .info-line .chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el().querySelector('.sugg-info')?.textContent).toContain('Minderjähriger');
+  });
 });

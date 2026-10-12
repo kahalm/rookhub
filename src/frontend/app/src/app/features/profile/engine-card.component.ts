@@ -88,7 +88,8 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
       }
 
       <div class="engine-row">
-        <mat-form-field appearance="outline" class="token-field">
+        <!-- UI-Sweep 2026-10-11 (d2-rk-engine-token-align): kein reservierter Hinweisbereich, sonst saß der Knopf 10 px tiefer. -->
+        <mat-form-field appearance="outline" class="token-field" subscriptSizing="dynamic">
           <mat-label>{{ 'profile.engine.tokenLabel' | translate }}</mat-label>
           <input matInput type="password" [(ngModel)]="tokenInput" name="lichessEngineToken"
                  autocomplete="off" (keyup.enter)="save()">
