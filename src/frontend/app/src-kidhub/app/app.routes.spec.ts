@@ -1,4 +1,8 @@
+import { EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { RedirectFunction } from '@angular/router';
 import { routes } from './app.routes';
+import { KidsStarsStore } from './core/kids-stars.store';
 import { kidhubConfig } from './app.config';
 import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
@@ -27,5 +31,17 @@ describe('KidHub-Routen und Rechtsseiten', () => {
     expect(report.links).toContain('/privacy → /');
     expect(report.links).not.toContain('/account-deletion → /profile');   // kein Profil hier (UX-023)
     expect(report.problems).toEqual([]);
+  });
+
+  it('/stars/:stage/unlock schaltet die Stufe frei und spielt sie, Unsinn geht zur Übersicht', () => {
+    localStorage.removeItem('rh-kids-stars-v1');
+    const redirect = routes.find(r => r.path === 'stars/:stage/unlock')?.redirectTo as RedirectFunction;
+    const run = (stage: string) => runInInjectionContext(TestBed.inject(EnvironmentInjector),
+      () => redirect({ params: { stage } } as unknown as Parameters<RedirectFunction>[0]));
+    expect(run('17')).toBe('/stars/17');
+    expect(TestBed.inject(KidsStarsStore).isOpen(17)).toBeTrue();
+    expect(run('99')).toBe('/stars');
+    expect(run('x')).toBe('/stars');
+    localStorage.removeItem('rh-kids-stars-v1');
   });
 });

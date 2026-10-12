@@ -9,7 +9,9 @@ const STORAGE_KEY = 'rh-kids-stars-v1';
  */
 @Injectable({ providedIn: 'root' })
 export class KidsStarsStore {
-  private readonly state = signal<ReadonlySet<number>>(this.load());
+  private readonly state = signal<ReadonlySet<number>>(this.load('done'));
+  /** Per Link (`/stars/:stage/unlock`) freigeschaltete Stufen — offen, ohne dass die davor geschafft sind. */
+  private readonly unlocked = signal<ReadonlySet<number>>(this.load('unlocked'));
 
   readonly done = computed(() => this.state().size);
   readonly total = STAR_STAGES.length;
@@ -20,24 +22,41 @@ export class KidsStarsStore {
     return this.state().has(stage);
   }
 
-  /** Offen ist Stufe 1 und jede, deren Vorgaengerin geschafft ist. */
+  /** Offen ist Stufe 1, jede, deren Vorgaengerin geschafft ist, und jede per Link freigeschaltete. */
   isOpen(stage: number): boolean {
-    return stage === 1 || this.state().has(stage - 1);
+    return stage === 1 || this.state().has(stage - 1) || this.unlocked().has(stage);
   }
 
   complete(stage: number): void {
     if (this.state().has(stage)) return;
     this.state.set(new Set([...this.state(), stage]));
+    this.save();
+  }
+
+  /** Schaltet eine Stufe frei (verschickter Link); unbekannte Stufen werden ignoriert. */
+  unlock(stage: number): boolean {
+    if (!STAR_STAGES.some(s => s.stage === stage)) return false;
+    if (!this.isOpen(stage)) {
+      this.unlocked.set(new Set([...this.unlocked(), stage]));
+      this.save();
+    }
+    return true;
+  }
+
+  private save(): void {
+    const sorted = (set: ReadonlySet<number>) => [...set].sort((a, b) => a - b);
+    const data: { done: number[]; unlocked?: number[] } = { done: sorted(this.state()) };
+    if (this.unlocked().size) data.unlocked = sorted(this.unlocked());
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ done: [...this.state()].sort((a, b) => a - b) }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch { /* Speicher voll/gesperrt: im Arbeitsspeicher weiter */ }
   }
 
-  private load(): ReadonlySet<number> {
+  private load(field: 'done' | 'unlocked'): ReadonlySet<number> {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      const done = raw ? (JSON.parse(raw) as { done?: unknown }).done : null;
-      if (Array.isArray(done)) return new Set(done.filter((n): n is number => Number.isInteger(n) && n >= 1));
+      const list = raw ? (JSON.parse(raw) as Record<string, unknown>)[field] : null;
+      if (Array.isArray(list)) return new Set(list.filter((n): n is number => Number.isInteger(n) && n >= 1));
     } catch { /* kein Speicher oder kaputter Eintrag */ }
     return new Set();
   }

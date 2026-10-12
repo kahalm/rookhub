@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.758.0", date: "2026-10-12", changes: [
+    { en: "KidHub star hunt: a stage can be sent as a link — kidhub.oberschmid.homes/stars/17/unlock unlocks stage 17 on that device and starts it; finishing it opens stage 18 as usual.",
+      de: "KidHub-Sternenjagd: Stufen lassen sich als Link verschicken — kidhub.oberschmid.homes/stars/17/unlock schaltet Stufe 17 auf dem Gerät frei und startet sie; geschafft öffnet sie wie gewohnt Stufe 18." },
+  ] },
   { version: "0.757.2", date: "2026-10-12", changes: [
     { en: "ClubHub: the save bar when adding a child stays on one line on phones in every browser.",
       de: "ClubHub: die Speichern-Leiste beim Anlegen eines Kindes bleibt am Handy in jedem Browser einzeilig." },

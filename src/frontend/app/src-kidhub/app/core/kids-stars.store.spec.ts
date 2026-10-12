@@ -25,4 +25,18 @@ describe('KidsStarsStore', () => {
     localStorage.setItem(KEY, '{kaputt');
     expect(TestBed.inject(KidsStarsStore).done()).toBe(0);
   });
+
+  it('schaltet per Link eine Stufe frei, geschafft öffnet sie die nächste', () => {
+    const store = TestBed.inject(KidsStarsStore);
+    expect(store.unlock(17)).toBeTrue();
+    expect(store.isOpen(17)).toBeTrue();
+    expect(store.isOpen(16)).toBeFalse();
+    expect(store.isOpen(18)).toBeFalse();
+    store.complete(17);
+    expect(store.isOpen(18)).toBeTrue();
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ done: [17], unlocked: [17] });
+    expect(store.unlock(999)).toBeFalse();
+    TestBed.resetTestingModule();
+    expect(TestBed.inject(KidsStarsStore).isOpen(17)).toBeTrue();
+  });
 });

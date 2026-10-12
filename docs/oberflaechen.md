@@ -208,6 +208,9 @@ Kinderseite" unter REST API.
   mit `solveStars` (Deckel 60 000, ohne Aussage = gilt) und führt die Restfolge (`route`). Die Figur ist immer
   ausgewählt: `PuzzleBoardComponent.autoSelect` wählt nach jeder Änderung und jedem Tippen wieder aus. Dafür
   zeichnet `PuzzleBoardComponent` `reviewShapes` jetzt auch beim Aufbau (vorher erst bei der nächsten Änderung).
+  Verschickbarer Link `/stars/:stage/unlock` (0.758.0): Weiterleitung als `redirectTo`-Funktion in `app.routes.ts`,
+  `KidsStarsStore.unlock` merkt die Stufe in `unlocked` (selber Schlüssel) — offen ohne die davor; geschafft öffnet sie
+  wie gewohnt die nächste. Unbekannte Stufe → `/stars`.
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);
   im LETZTEN Zug zählt jedes Matt; Kurs-`AltMoves` sind „auch gut, aber gesucht ist ein anderer" (kein Fehler);
