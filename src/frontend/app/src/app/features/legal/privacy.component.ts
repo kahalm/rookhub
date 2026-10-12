@@ -257,7 +257,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
        Text; die Leiste braucht dann keine eigene Hoehe. */
     @media (min-width: 1200px) {
       .to-toc-bar { height: 0; bottom: 16px; margin-right: 0; align-items: flex-end; }
-      .to-toc { transform: translateX(calc(100% + 32px)); }
+      .to-toc { transform: translateX(calc(100% + 64px)); } /* z3: sass am Kartenrand auf — weiter in den freien Rand */
     }
     /* z2-rk-privacy-knopf-handy: ueber dem Text (unter 1200 px) nur beim Hochscrollen; mit Tastaturfokus sichtbar. */
     .to-toc { transition: opacity 150ms; }

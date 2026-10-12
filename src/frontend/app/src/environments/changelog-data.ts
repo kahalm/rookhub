@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.758.4", date: "2026-10-12", changes: [
+    { en: "Privacy pages: the “back to top” button sits clearly beside the card on large screens, the LeagueHub card no longer leaves an empty strip on the right; LeagueHub sign-up shows the privacy link in grey instead of red.",
+      de: "Datenschutzseiten: der „Nach oben“-Knopf steht auf großen Bildschirmen klar neben der Karte, die LeagueHub-Karte lässt rechts keinen leeren Streifen mehr; LeagueHub-Registrieren zeigt den Datenschutz-Link grau statt rot." },
+  ] },
   { version: "0.758.3", date: "2026-10-12", changes: [
     { en: "Last round of first-view polish (23 small fixes): LeagueHub hides the promo line for signed-in users on every screen size, keeps the same width across tabs, fills gaps in the account suggestions and shows the sign-up privacy link in grey; tournament number columns have their headings right above the digits and the place icon no longer squeezes; ClubHub footer links wrap as one group; KidHub shows lives and counter next to the task on PCs; RookHub: compact update banner on phones, flashcards in the ⋮ menu, statistics in the normal page width with a larger activity grid, larger worksheet preview on phones; registration forms with even field spacing.",
       de: "Letzte Feinschliff-Runde „Erster Blick“ (23 kleine Korrekturen): LeagueHub blendet den Werbesatz für Angemeldete in jeder Breite aus, behält über alle Reiter dieselbe Breite, schließt Lücken bei den Kontovorschlägen und zeigt den Datenschutz-Link beim Registrieren grau; Turnier-Zahlenspalten mit Kopf direkt über den Ziffern, das Ortssymbol wird nicht mehr gequetscht; ClubHub-Fußzeilenlinks brechen als Gruppe um; KidHub zeigt Leben und Zähler am PC bei der Aufgabe; RookHub: kompakter Aktualisieren-Hinweis am Handy, Flashcards im ⋮-Menü, Statistik in normaler Seitenbreite mit größerem Aktivitätsraster, größere Aufgabenblatt-Vorschau am Handy; Registrieren mit gleichmäßigen Feldabständen." },

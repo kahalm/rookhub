@@ -293,7 +293,7 @@ lh-root .wrap .legal-container { padding: 16px 0; justify-content: flex-start; }
    hier Abschnitte ab dem dritten zu (z2-l-datenschutz-laenge, PrivacyComponent.foldSections) — Pfeil und Linie kommen
    über --mat-sys-primary/--mat-sys-outline unten in Rot bzw. --line. z3-l-privacy-karte-rechts-leer: die Karte endet mit der
    Textspalte (33em + Innenrand) statt bei 760 px — links fluchtet sie weiter mit Kopf und Fuß, rechts keine leere Fläche. */
-lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: calc(33em + 32px); }
+lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { max-width: calc(33em + 32px); font-size: 16px; } /* 16px: em wie die Textspalte (z3-l-privacy-karte-rechts-leer) */
 lh-root .wrap .legal-links { display: none; }
 
 /* UI-Sweep 2026-10-11 (r2-l-legal-style): Anmeldemasken und Rechtsseiten im LeagueHub-Look statt RookHub-Material —
@@ -351,6 +351,8 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .m
 }
 /* z3-l-register-datenschutz-rot: der Datenschutz-Link unter „Registrieren" grau wie die Rechtslinks im Fuß — rot las er sich
    direkt unter dem roten Knopf wie eine Fehlermeldung. Unterstreichung und Tippfläche bleiben. */
+/* Komponentenstil faerbt den Link mit --mat-sys-primary (hoehere Spezifitaet) — daher das Token umsetzen (z3-l-register-datenschutz-rot). */
+lh-root app-register .privacy-note { --mat-sys-primary: var(--muted); }
 lh-root app-register .privacy-note a { color: var(--muted); }
 lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 600 20px/1.2 var(--cond); color: var(--red); }
 /* Nur echte Links — nicht der Knopf „Konto in RookHub löschen", der ebenfalls ein <a> ist (d1-x-account-delete-warn-ignored). */
