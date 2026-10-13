@@ -78,7 +78,7 @@
               },
               {
                 "glob": "{pdf.min.mjs,pdf.worker.min.mjs}",
-                "input": "node_modules/pdfjs-dist/build",
+                "input": "node_modules/pdfjs-dist/legacy/build",
                 "output": "/assets/pdfjs"
               },
               {

@@ -154,6 +154,8 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
       wrap.className = 'pv-page';
       wrap.dataset['page'] = String(slot.index);
       const canvas = document.createElement('canvas');
+      canvas.width = 0;    // keine 300×150-Vorgabe-Bitmap je Seite — gezeichnet wird erst, was sichtbar ist
+      canvas.height = 0;
       canvas.setAttribute('role', 'img');
       canvas.setAttribute('aria-label', `${slot.index}`);
       wrap.appendChild(canvas);

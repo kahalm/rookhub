@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.764.1", date: "2026-10-13", changes: [
+    { en: "Fix: the e-book reader stayed on the loading bar in browsers without the newest JavaScript features (Chrome before 128, Safari before 18.2) — the PDF was never requested. The reader now ships the compatible build of its PDF engine.",
+      de: "Fix: Der E-Book-Leser blieb in Browsern ohne die neuesten JavaScript-Funktionen (Chrome vor 128, Safari vor 18.2) am Ladebalken hängen — das PDF wurde nie angefordert. Der Leser liefert jetzt den kompatiblen Build seiner PDF-Engine aus." },
+  ] },
   { version: "0.764.0", date: "2026-10-13", changes: [
     { en: "New: E-book library (menu „Analysis & collection“ → „E-books“). Chess books as PDF open right in the browser — scroll through the pages, zoom, and continue where you stopped (the page is remembered per book); EPUB, DJVU and comic archives are downloaded. Search by title, author or tag, filter with tag chips, sort by title, newest or recently read.",
       de: "Neu: E-Book-Bibliothek (Menü „Analyse & Sammlung“ → „E-Books“). Schachbücher als PDF öffnen sich direkt im Browser — durch die Seiten scrollen, zoomen und dort weiterlesen, wo du aufgehört hast (die Seite wird je Buch gemerkt); EPUB, DJVU und Comic-Archive werden heruntergeladen. Suche nach Titel, Autor oder Schlagwort, Filter über Schlagwort-Chips, Sortierung nach Titel, Neueste oder Zuletzt gelesen." },

@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import type * as PdfJs from 'pdfjs-dist';
 
-/** Wo die pdf.js-Dateien liegen (angular.json kopiert sie aus `node_modules/pdfjs-dist` dorthin). */
+/**
+ * Wo die pdf.js-Dateien liegen (angular.json kopiert sie aus `node_modules/pdfjs-dist` dorthin) — und zwar der
+ * LEGACY-Build (`legacy/build/`): der Standard-Build von pdf.js 6 ruft `Promise.try` und `Promise.withResolvers` ohne
+ * Rückfall auf, und in Browsern ohne die beiden (Chrome < 128, Safari < 18.2, Firefox < 134) stirbt `getDocument` still im
+ * Hintergrund — der Leser zeigte nur den Ladebalken, die Datei wurde nie angefordert (Dev, 13.10.2026). Der Legacy-Build
+ * bringt die Polyfills mit; geprüft im selben Headless-Chromium, in dem der Standard-Build hing.
+ */
 export const PDFJS_ASSET_BASE = '/assets/pdfjs';
 
 export type PdfJsLib = typeof PdfJs;

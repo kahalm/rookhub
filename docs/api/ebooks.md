@@ -54,8 +54,10 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 „Meine Uploads", 24 je Seite; Karte mit Titelbild 2:3, Formaten, Seitenzahl, Lesestand-Balken; Hauptaktion „Lesen" bei PDF,
 sonst „Herunterladen"; ⋮ mit Download je Format, Bearbeiten/Sichtbarkeit/Löschen für Verwaltbare; Auswahlmodus für die
 Sichtbarkeit vieler Bücher; Verwalter: „Bibliothek vom Server einlesen"). Leser `/ebooks/:id` (`PdfViewerComponent`): pdf.js
-kommt zur Laufzeit aus `/assets/pdfjs/` (angular.json kopiert `pdf.min.mjs`, Worker, `cmaps`, `standard_fonts`, `wasm`, `iccs`
-aus `node_modules/pdfjs-dist`) — bewusst NICHT im Bundle, sonst läge ~1 MB in jedem Vorab-Cache des Service Workers. Gezeichnet
+kommt zur Laufzeit aus `/assets/pdfjs/` (angular.json kopiert `pdf.min.mjs` + Worker aus dem **LEGACY-Build** `legacy/build/`
+sowie `cmaps`, `standard_fonts`, `wasm`, `iccs` aus `node_modules/pdfjs-dist`) — bewusst NICHT im Bundle, sonst läge ~1 MB in jedem
+Vorab-Cache des Service Workers. Legacy, weil der Standard-Build von pdf.js 6 `Promise.try`/`Promise.withResolvers` ohne Rückfall
+nutzt: in Browsern ohne diese (Chrome < 128, Safari < 18.2) hing der Leser still am Ladebalken (0.764.1). Gezeichnet
 werden nur sichtbare Seiten ± eine Sichtfeldhöhe (Leinwände weiter weg werden geleert), Bereichsanfragen à 256 KB
 (`disableAutoFetch`), „Breite füllen" als Vorgabe, Zoomstufen in `reader-progress.util.ts`; der Lesestand geht 1,5 s nach dem
 letzten Seitenwechsel an den Server und wird beim nächsten Öffnen angesprungen. EPUB/DJVU/CBZ/… zeigen eine Download-Karte
