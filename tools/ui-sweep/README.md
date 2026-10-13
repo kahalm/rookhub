@@ -179,6 +179,27 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   KidHub-Fortschritt und ein verknüpftes ClubHub-Karteiblatt. Wiederholbar, nur Dev.
 - **Browser**: das von Playwright gecachte Chromium (`~/.cache/ms-playwright/chromium-*`) oder `CHROME_BIN`.
 
+## Zustände nach einer Bedienung (`states.mjs`)
+
+Der Katalog fotografiert jede Seite so, wie sie nach dem Laden aussieht. `states.mjs` ergänzt Zustände, die erst durch
+Bedienen entstehen — offene Menüs und Dialoge, andere Reiter, Formularfehler, das Brett nach einem Zug. Jeder Zustand
+hängt an einer Katalog-Route (`of`), lädt dieselbe Adresse, führt seine Schritte aus (`click`, `fill`, `press`, `hover`,
+`blur`, `waitFor`, `wait`, `move: 'e2e4'`) und wird als eigene Aufnahme `<Route>--<name>` fotografiert; `expect` prüft,
+dass er erreicht ist (sonst Befund „Zustand nicht erreicht“, ein gescheiterter Schritt „Bedienschritt gescheitert“).
+Zustände laufen im normalen Lauf mit; `--no-states` lässt sie weg, `--states-only` nimmt nur sie. Sie schreiben nichts:
+Dialoge werden geöffnet, nie bestätigt; Formulare scheitern höchstens absichtlich. Mit `--fast` lädt jeder Zustand
+seine Seite selbst (Umstellen der Breite würde Menüs schließen).
+
+## Andere Browser (`--browser webkit|firefox`)
+
+WebKit (die Engine von Safari) und Firefox laufen im offiziellen Image `mcr.microsoft.com/playwright:v<Version>-noble`
+(Version = `playwright-core` aus `node_modules`): lokal fehlen dafür GTK-/GStreamer-Bibliotheken, die nur root
+installieren kann. Das Werkzeug startet dort `playwright run-server` (`--network host`, damit Dev und `--local`
+erreichbar sind), verbindet sich per WebSocket und räumt den Container am Ende weg. Firefox kennt keine Handy-Emulation
+(`isMobile`) — dort nur Breite und Touch. Bilder heißen gleich, der Ordner trägt `_webkit`/`_firefox`.
+Emoji: `sweep.sh` kopiert beim ersten Mal „Noto Color Emoji“ aus demselben Image nach `~/.local/share/fonts` — ohne
+Emoji-Schrift zeigte das lokale Chromium Medaillen und Sterne als leere Kästchen.
+
 ## Vergleich
 
 Je Bild ein Pixel-Vergleich (`pixelmatch`) mit dem vorigen Lauf derselben Art (dev/prod, lokal/deployt).

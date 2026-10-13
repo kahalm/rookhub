@@ -9,13 +9,15 @@ import https from 'node:https';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright-core';
+import { chromium, webkit, firefox } from 'playwright-core';
+import { execFileSync } from 'node:child_process';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { APPS, AREAS, ROUTES, areaOf, routeId } from './routes.mjs';
 import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.mjs';
 import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
 import { writeIndex, foldSummary } from './report.mjs';
+import { withStates, runSteps } from './states.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -68,6 +70,7 @@ const CACHEABLE = [
 // auf Netzruhe warten — aber kürzer, weil keine Navigation mehr kommt.
 const RESIZE_WAIT_MS = 400;
 const RESIZE_SETTLE_MAX_MS = 15000;
+const STEP_SETTLE_MAX_MS = 8000;    // nach jedem Bedienschritt (states.mjs) höchstens so lange auf Netzruhe warten
 // Wie lange eine Anfrage in der Bremse warten darf, bevor das Bild als „vom Werkzeug verzögert" gilt.
 const DELAY_FLAG_MS = 3000;
 /** Rollen: `anon` abgemeldet, `admin` = claude-dev, die übrigen sind eigene Dev-Konten (ACCOUNTS weiter unten). */
@@ -102,7 +105,13 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --no-cache             Antworten nicht zwischenspeichern (sonst: wiederkehrende GETs wie Profil, Menü, Zähler je
                          Konto + Sprache einmal holen, danach aus dem Speicher — zählen nicht gegen --rate)
   --list                 Katalog mit aufgelösten Adressen zeigen, keinen Browser starten
+  --no-states            ohne die Zustände aus states.mjs (Menüs, Dialoge, Reiter … nach einer Bedienung)
+  --states-only          NUR die Zustände (ohne die bloßen Seiten)
   --name text            Zusatz am Ordnernamen des Laufs
+  --browser b            chromium (Vorgabe, lokal), webkit (Safari-Engine) oder firefox. webkit/firefox laufen im
+                         offiziellen Playwright-Docker-Image (mcr.microsoft.com/playwright, passend zu playwright-core) —
+                         lokal fehlen dafür Systembibliotheken. Firefox kennt keine Handy-Emulation (isMobile): dort nur
+                         Breite + Touch. Bilder heißen gleich, der Ordner trägt _webkit/_firefox.
 
 Zugang: ~/.config/rookhub/dev-claude.env (ROOKHUB_DEV_USER/ROOKHUB_DEV_PASSWORD) oder UI_SWEEP_USER/UI_SWEEP_PASSWORD;
 die Konten user/empty/trainer werden beim ersten Gebrauch auf Dev registriert und dort eingetragen.
@@ -114,7 +123,7 @@ Ergebnis: runs/<Zeitpunkt>/index.html (Übersicht), report.json, fold-summary.js
 Seite, Konto, Adresse, Status, aus dem Speicher ja/nein), shots/*.png, diff/*.png.`;
 
 function parseArgs(argv) {
-  const o = { env: 'dev', viewport: ['mobile', 'laptop', 'wide'], theme: ['dark'], lang: ['de'], auth: ['anon', 'user'] };
+  const o = { browser: 'chromium', env: 'dev', viewport: ['mobile', 'laptop', 'wide'], theme: ['dark'], lang: ['de'], auth: ['anon', 'user'] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]; const v = () => argv[++i];
     const csv = () => v().split(',').map(s => s.trim()).filter(Boolean);
@@ -137,10 +146,14 @@ function parseArgs(argv) {
       case '--no-strips': o.noStrips = true; break;
       case '--no-cache': o.noCache = true; break;
       case '--list': o.list = true; break;
+      case '--no-states': o.states = 'none'; break;
+      case '--states-only': o.states = 'only'; break;
       case '--name': o.name = v(); break;
+      case '--browser': o.browser = v(); break;
       default: throw new Error(`Unbekannte Option ${a} (--help)`);
     }
   }
+  if (!['chromium', 'webkit', 'firefox'].includes(o.browser)) throw new Error(`Unbekannter Browser ${o.browser} (chromium, webkit, firefox)`);
   for (const vp of o.viewport) if (!VIEWPORTS[vp]) throw new Error(`Unbekannte Breite ${vp}`);
   if (!ENV_DEFAULTS[o.env]) throw new Error(`Unbekannte Umgebung ${o.env} (dev, prod)`);
   o.rate ??= ENV_DEFAULTS[o.env].rate;
@@ -218,6 +231,34 @@ function chromePath() {
   throw new Error('Kein Chromium gefunden — `npx playwright-core install chromium` oder CHROME_BIN setzen.');
 }
 
+/**
+ * WebKit/Firefox im Playwright-Docker-Image (lokal fehlen GTK/GStreamer & Co., Installation bräuchte root): dort läuft
+ * `playwright run-server`, wir verbinden uns per WebSocket. --network host, damit Dev-Adressen und --local erreichbar sind.
+ * Das Image passt zur Version von playwright-core (Protokoll muss gleich sein).
+ */
+async function dockerBrowser(name) {
+  const version = JSON.parse(fs.readFileSync(path.join(HERE, 'node_modules/playwright-core/package.json'), 'utf8')).version;
+  const port = 30000 + (process.pid % 20000);
+  const container = `ui-sweep-pw-${process.pid}`;
+  execFileSync('docker', ['run', '-d', '--rm', '--init', '--ipc=host', '--network', 'host', '--name', container,
+    `mcr.microsoft.com/playwright:v${version}-noble`, '/bin/sh', '-c',
+    `cd /tmp && npx -y playwright@${version} run-server --port ${port} --host 127.0.0.1`], { stdio: 'ignore' });
+  const stop = () => { try { execFileSync('docker', ['rm', '-f', container], { stdio: 'ignore' }); } catch { /* schon weg */ } };
+  process.on('exit', stop);
+  for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { stop(); process.exit(130); });
+  const type = { webkit, firefox }[name];
+  for (let i = 0; i < 120; i++) {   // npx lädt beim ersten Mal das Paket: bis zu 2 min
+    try {
+      const b = await type.connect(`ws://127.0.0.1:${port}/`, { timeout: 2000 });
+      const close = b.close.bind(b);
+      b.close = async () => { await close().catch(() => {}); stop(); };
+      return b;
+    } catch { await new Promise(r => setTimeout(r, 1000)); }
+  }
+  stop();
+  throw new Error(`${name} im Docker-Image nicht erreichbar (Port ${port}) — \`docker logs ${container}\``);
+}
+
 // ------------------------------------------------------------------------- lokale Auslieferung (--local)
 function startLocalServers(apps) {
   const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json',
@@ -251,7 +292,10 @@ function startLocalServers(apps) {
 // ------------------------------------------------------------------------------------------- Ablauf
 async function main() {
   if (opts.area) for (const a of opts.area) if (a !== 'sonstiges' && !AREAS.some(([n]) => n === a)) throw new Error(`Unbekannter Bereich ${a} (--areas)`);
-  const routes = ROUTES.filter(r => (!opts.app || opts.app.includes(r.app)) && (!opts.area || opts.area.includes(areaOf(r)))
+  // Zustände (states.mjs) hängen an Katalog-Routen und werden wie Routen gefiltert (--app, --area, --route auf ihre Id).
+  const catalog = opts.states === 'only' ? withStates(ROUTES, routeId)
+    : opts.states === 'none' ? ROUTES : [...ROUTES, ...withStates(ROUTES, routeId)];
+  const routes = catalog.filter(r => (!opts.app || opts.app.includes(r.app)) && (!opts.area || opts.area.includes(areaOf(r)))
     && (!opts.route || opts.route.some(t => r.url.includes(t) || routeId(r).includes(t))));
 
   const sessions = {};   // Rolle → AuthResponse (genau das legt die App als `rookhub_user` ab)
@@ -317,6 +361,7 @@ async function main() {
     const wanted = route.auth === 'any' ? opts.auth
       : route.auth === 'user' ? opts.auth.filter(a => a !== 'anon') : opts.auth.filter(a => a === route.auth);
     for (const auth of wanted) {
+      if (route.stateAuth && !route.stateAuth.includes(auth)) continue;
       if (auth === 'anon' && [...route.url.matchAll(/\{(\w+)\}/g)].some(m => ANON_SKIP.has(m[1]))) continue;
       const { url, missing, noData } = fill(route.url, auth);
       if (missing.length) { unresolved.push({ id: `${routeId(route)} (${auth})`, url: route.url, missing }); continue; }
@@ -343,7 +388,7 @@ async function main() {
   }
 
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 13);
-  const runName = `${stamp}${opts.env === 'prod' ? '_prod' : ''}${opts.local ? '_local' : ''}${opts.fast ? '_fast' : ''}${opts.name ? '_' + opts.name : ''}`;
+  const runName = `${stamp}${opts.env === 'prod' ? '_prod' : ''}${opts.local ? '_local' : ''}${opts.fast ? '_fast' : ''}${opts.browser === 'chromium' ? '' : '_' + opts.browser}${opts.name ? '_' + opts.name : ''}`;
   const runDir = path.join(RUNS, runName);
   fs.mkdirSync(path.join(runDir, 'shots'), { recursive: true });
 
@@ -376,7 +421,11 @@ async function main() {
   // Beim Wiedergeben: der Körper ist schon entpackt, Länge/Kodierung stimmen nicht mehr; Cookies nicht noch einmal setzen.
   const DROP_HEADERS = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'set-cookie', 'connection']);
   const apiLog = [];   // → api-calls.json
-  const browser = await chromium.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  const browser = opts.browser === 'chromium'
+    ? await chromium.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-dev-shm-usage'] })
+    : await dockerBrowser(opts.browser);
+  // Firefox kann keine Handy-Emulation (isMobile wirft) — dort nur Breite und Touch.
+  const canMobile = opts.browser !== 'firefox';
   const shots = [];
   let done = 0;
   const started = Date.now();
@@ -396,7 +445,7 @@ async function main() {
     const ctx = await browser.newContext({
       // --fast: ohne Handy-Emulation — isMobile/hasTouch lassen sich an einem offenen Kontext nicht umschalten.
       viewport: { width: first.width, height: first.height },
-      isMobile: !opts.fast && !!first.isMobile, hasTouch: !opts.fast && !!first.hasTouch,
+      isMobile: canMobile && !opts.fast && !!first.isMobile, hasTouch: !opts.fast && !!first.hasTouch,
       deviceScaleFactor: 1, colorScheme: job.theme, reducedMotion: 'reduce', serviceWorkers: 'block',
       locale: BROWSER_LOCALE[job.lang] ?? job.lang, timezoneId: 'Europe/Vienna', ignoreHTTPSErrors: true,
     });
@@ -490,10 +539,19 @@ async function main() {
     } catch (e) {
       loadError = String(e.message).split('\n')[0];
     }
+    // Zustand (states.mjs): Schritte ausführen, dann prüfen, ob er erreicht ist. Die Aufnahme gibt es in jedem Fall.
+    let stepError = null; let stateMissed = false;
+    if (!loadError && job.route.steps) {
+      stepError = await runSteps(page, job.route.steps, () => settle(page, net, STEP_SETTLE_MAX_MS));
+      if (!stepError && job.route.expect) {
+        stateMissed = !(await page.locator(job.route.expect).first().isVisible().catch(() => false));
+      }
+    }
     for (const [i, viewport] of job.viewports.entries()) {
       const vp = VIEWPORTS[viewport];
       const record = { area: areaOf(job.route), id: job.id, app: job.route.app, path: job.route.url, url: job.url, auth: job.auth, viewport, theme: job.theme, lang: job.lang };
       if (opts.fast) record.fast = true;
+      if (job.route.state) record.state = job.route.state;
       const callsBefore = i === 0 ? 0 : apiCalls.length;   // die erste Breite trägt das Laden
       const hitsBefore = i === 0 ? 0 : cacheHits;
       try {
@@ -509,6 +567,8 @@ async function main() {
         }
         record.finalUrl = page.url().replace(origin, '');
         record.findings = await page.evaluate(pageChecks, i18n);
+        if (stepError) record.findings.push({ kind: 'state-step', detail: stepError });
+        else if (stateMissed) record.findings.push({ kind: 'state-missed', detail: `nach den Schritten nicht sichtbar: ${job.route.expect}` });
         // Erster Blick (DESIGN.md 4.6): Messung oben, bevor irgendetwas gescrollt wird.
         const mainSel = job.route.main == null ? [] : [].concat(job.route.main);
         const fold = await page.evaluate(foldTop, { main: mainSel });
@@ -590,6 +650,8 @@ async function main() {
   if (opts.fast) {
     const byPage = new Map();
     for (const j of jobs) {
+      // Zustände nicht zusammenlegen: Umstellen der Breite schließt Menüs/Dialoge oder verschiebt sie.
+      if (j.route.steps) { units.push({ ...j, viewports: [j.viewport] }); continue; }
       const key = `${j.id}|${j.auth}|${j.theme}|${j.lang}`;
       if (!byPage.has(key)) { const u = { ...j, viewports: [] }; delete u.viewport; byPage.set(key, u); units.push(u); }
       byPage.get(key).viewports.push(j.viewport);

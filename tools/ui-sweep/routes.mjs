@@ -131,6 +131,8 @@ export const ROUTES = [
   r('rookhub', '/courses/{calcBookId}', 'user', { label: 'courses-calc-detail', main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
   // Kurz-URL öffentlicher Kurse (/{slug}) leitet weiter; ein unbekannter einteiliger Alias zeigt „Seite nicht gefunden" (zweiteilig: not-found unten).
   r('rookhub', '/{courseSlug}', 'any', { label: 'course-slug', main: PUZZLE_BOARD.concat(['.detail-page .head-card', '.browse-container']) }),
+  // Kapitel-Kurzlink /{slug}/{kapitel} (z. B. /noel/KW46): erstes Kapitel mit Aufgaben (Name aus seed.mjs).
+  r('rookhub', '/{courseSlug}/{courseSlugChapter}', 'any', { label: 'course-slug-chapter', main: PUZZLE_BOARD.concat(['.detail-page .head-card', '.browse-container']) }),
   r('rookhub', '/ui-sweep-gibt-es-nicht', 'any', { label: 'slug-not-found', main: ['section.not-found .nf-actions', 'section.not-found'] }),
   r('rookhub', '/chessable', 'user', { main: ['.extension-note .store-links', '.extension-note'] }),
   r('rookhub', '/admin', 'user', { main: ['.admin-container table.users-table tr.mat-mdc-row', '.admin-container .users-table-wrap', '.admin-container mat-tab-group'] }),
@@ -168,6 +170,8 @@ export const ROUTES = [
   r('kidhub', '/stars', 'any', { main: ['ol.grid .stage', 'a.free-btn'] }),
   r('kidhub', '/stars/1', 'any', { main: KID_STARS }),
   r('kidhub', '/stars/free', 'any', { main: KID_STARS }),
+  // Freischaltlink aus der Kindergruppe (0.758.0): schaltet Stufe 2 frei und leitet auf /stars/2 weiter.
+  r('kidhub', '/stars/2/unlock', 'any', { label: 'stars-unlock', main: KID_STARS }),
   r('kidhub', '/courses', 'any', { main: ['.list a.course', 'section.empty', 'p.info', 'kid-error'] }),
   r('kidhub', '/courses/{kidsBookId}', 'any', { main: KID_PUZZLE }),
   r('kidhub', '/login', 'anon', { main: AUTH_FORM }),
@@ -186,6 +190,8 @@ export const ROUTES = [
   r('leaguehub', '/konten', 'user', { main: ['article.sugg-group lh-account-suggestions li', 'article.sugg-group', 'section.sugg-page', 'section.gate'] }),
   r('leaguehub', '/uebertragungen', 'user', { main: ['table.bc-list tbody tr', 'form.bc-add', 'section.gate'] }),
   r('leaguehub', '/vereine', 'user', { main: ['table.clubs-tbl tbody tr', 'section.clubs-page', 'section.gate'] }),
+  // Unbekannte Adresse (UX-026): Hinweisseite statt Umleitung.
+  r('leaguehub', '/diese-seite-gibt-es-nicht', 'any', { label: 'not-found', main: ['section.not-found .nf-actions a', 'section.not-found'] }),
   r('leaguehub', '/s/{leagueShareToken}', 'any', { main: LH_FIXTURE }),
   r('leaguehub', '/s/{leagueShareToken}/hochladen', 'anon', { main: LH_UPLOAD }),
   r('leaguehub', '/s/{leagueShareToken}/formular/{shareScanKey}', 'anon', { main: LH_SCAN }),

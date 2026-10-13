@@ -22,6 +22,9 @@ const CALC_POSITIONS = [
 ].join('\n');
 
 /** Zugvergleich (/analysis/compare/{id}): Italienisch nach 3…Lc5, drei Kandidaten. */
+const BLACK_PGN = `[Event "${SWEEP_TAG}"]\n[Result "*"]\n\n1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6 5. Be2 c5 *\n\n[Event "${SWEEP_TAG}"]\n[Result "*"]\n\n1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 5. Ng3 Bg6 *\n`;
+// Endspiel-Repertoire: Stellung per FEN (Lucena-artig vereinfacht: König + Bauer gegen König, Opposition).
+const ENDGAME_PGN = `[Event "${SWEEP_TAG}"]\n[SetUp "1"]\n[FEN "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1"]\n[Result "*"]\n\n1. Kd6 Kd8 2. e6 Ke8 3. e7 Kf7 4. Kd7 *\n`;
 const COMPARE_FEN = 'r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4';
 
 const SAMPLE_PGN = `[Event "${SWEEP_TAG}"]
@@ -138,8 +141,23 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
 
   await step(['repertoireId'], async () => ({ repertoireId: list(await a.get('/api/repertoires'))[0]?.id }));
   // Repertoire-Varianten: ein Schwarz-Repertoire (Brett gedreht) und ein Endspiel-Repertoire — seed-user.mjs legt beide an.
+  // Das Admin-Konto bekommt beide hier selbst (kleine PGNs, „ui-sweep" im Namen) — sonst fehlten 4 Routen beim Admin.
   await step(['repertoireBlackId', 'repertoireEndgameId'], async () => {
-    const reps = list(await a.get('/api/repertoires'));
+    let reps = list(await a.get('/api/repertoires'));
+    const black = reps.find(r => r.kind === 'Opening' && /schwarz|black/i.test(r.name));
+    const endgame = reps.find(r => r.kind === 'Endgame');
+    if ((!black || !endgame) && only === null) {
+      for (const [name, kind, pgn] of [[`Schwarz: Caro-Kann (${SWEEP_TAG})`, 'Opening', BLACK_PGN], [`Endspiel (${SWEEP_TAG})`, 'Endgame', ENDGAME_PGN]]) {
+        if (kind === 'Opening' ? black : endgame) continue;
+        try {
+          const rep = await a.post('/api/repertoires', { name, description: '', isPublic: false, kind });
+          const fd = new FormData();
+          fd.append('file', new Blob([pgn], { type: 'application/x-chess-pgn' }), `${SWEEP_TAG}.pgn`);
+          await a.post(`/api/repertoires/${rep.id}/files`, fd);
+        } catch { /* anlegen gescheitert: Route bleibt „nicht auflösbar" */ }
+      }
+      reps = list(await a.get('/api/repertoires'));
+    }
     return {
       repertoireBlackId: reps.find(r => r.kind === 'Opening' && /schwarz|black/i.test(r.name))?.id,
       repertoireEndgameId: reps.find(r => r.kind === 'Endgame')?.id,
@@ -219,7 +237,7 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
   // Lern-Kurs (Kind „Study", kein Aufgabenbuch) und Kurz-URL eines öffentlichen Kurses (/{slug}). Art, „öffentlich" und
   // Alias stehen nur in der Detailantwort, nicht in der Liste. Hat kein öffentlicher Kurs einen Alias, macht das
   // Admin-Konto den ersten Aufgabenkurs öffentlich mit dem Alias „ui-sweep" (Dev-Daten; das normale Konto darf das nicht).
-  await step(['studyBookId', 'courseSlug'], async () => {
+  await step(['studyBookId', 'courseSlug', 'courseSlugChapter'], async () => {
     const details = [];
     for (const c of list(await a.get('/api/courses')).filter(c => !c.isCalculation)) details.push(await a.get(`/api/courses/${c.bookId}`));
     const study = details.find(d => d.kind === 'Study');
@@ -231,7 +249,17 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
         slug = SWEEP_TAG;
       } catch { /* kein Admin */ }
     }
-    return { studyBookId: study?.bookId, courseSlug: slug, _why: study ? 'kein öffentlicher Kurs mit Alias' : 'kein Lern-Kurs sichtbar' };
+    // Kapitel-Kurzlink /{slug}/{kapitel}: der Kapitel-Teil IST der Kapitelname — das erste Kapitel mit Aufgaben.
+    let courseSlugChapter;
+    if (slug) {
+      try {
+        const { bookId } = await a.get(`/api/courses/by-slug/${encodeURIComponent(slug)}`);
+        const chapters = list(await a.get(`/api/courses/${bookId}/chapters`));
+        const ch = chapters.find(c => (c.puzzleCount ?? 0) > 0) ?? chapters[0];
+        if (ch?.name) courseSlugChapter = encodeURIComponent(ch.name);
+      } catch { /* Kurs nicht lesbar */ }
+    }
+    return { studyBookId: study?.bookId, courseSlug: slug, courseSlugChapter, _why: study ? 'kein öffentlicher Kurs mit Alias' : 'kein Lern-Kurs sichtbar' };
   });
 
   // Zufallspuzzle nur beim ersten Mal ziehen — sonst wäre die Seite bei jedem Vergleich „verändert".
