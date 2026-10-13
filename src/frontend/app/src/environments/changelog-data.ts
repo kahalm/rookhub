@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.762.3", date: "2026-10-13", changes: [
+    { en: "Internal: LeagueHub styles for online accounts moved into their own file (no visible change).", de: "Intern: LeagueHub-Stile der Online-Konten in eine eigene Datei verschoben (keine sichtbare Änderung)." },
+  ] },
   { version: "0.762.2", date: "2026-10-13", changes: [
     { en: "Ultrawide screens (from 2400 px): the header lines up with the content, the tournament calendar no longer scrolls sideways and its map fits the window, repertoire cards are wider, the statistics switch is no longer stretched, and tournaments without pairings say so instead of showing an empty table.", de: "Sehr breite Bildschirme (ab 2400 px): Die Kopfleiste fluchtet mit dem Inhalt, der Turnierkalender scrollt nicht mehr seitlich und seine Karte passt ins Fenster, Repertoire-Karten sind breiter, der Statistik-Umschalter ist nicht mehr gestreckt, und Turniere ohne Paarungen sagen das statt eine leere Tabelle zu zeigen." },
   ] },

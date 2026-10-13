@@ -1,0 +1,87 @@
+// LeagueHub — Online-Konten auf der Spielerkarte, Vorschläge der Konto-Suche (/konten) und Konto-Prüfung (i).
+// Aus leaguehub.scss herausgezogen (Datei ging über 1 000 Zeilen); wird dort an DERSELBEN Stelle per meta.load-css
+// eingebunden, damit Reihenfolge und Spezifität der Regeln gleich bleiben.
+
+/* Online-Konten auf der Spielerkarte (0.605.0) */
+lh-online-accounts { display: block; }
+.acc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.acc-list li { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.acc-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.acc-row a { overflow-wrap: anywhere; }
+.acc-row .tag { margin-left: 0; }
+.acc-by { font-size: 13px; }
+.acc-thanks { color: var(--ok); margin: 6px 0 0; }
+.card .tag.tag-sure { color: var(--ok); border-color: currentColor; }
+.acc-comment { margin: 4px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+.acc-status { margin: 4px 0 0; }
+.acc-form { display: grid; gap: 10px; margin-top: 8px; }
+.acc-form-row { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.acc-form .field { margin: 0; }
+.acc-form-row .field { flex: 0 1 160px; }
+.acc-form-row .acc-user { flex: 1 1 220px; }
+.acc-form .field textarea { font: 400 14px/1.4 var(--body); }
+.acc-form .actions { margin-top: 0; }
+.acc-add { margin-top: 8px; }
+
+/* Vorschläge der Konto-Suche (0.607.0) — auf der Karte und unter /konten */
+.sugg { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.sugg-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.sugg-head h4 { margin: 0; font: 600 15px/1.2 var(--cond); }
+.sugg-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.sugg-list li { padding: 8px 10px; border: 1px dashed var(--line); border-radius: 6px; }
+.sugg-list li.done { opacity: .6; }
+.sugg-list p { margin: 4px 0 0; overflow-wrap: anywhere; }
+/* Drei gleich breite Knöpfe ≥ 40 px (UI-Sweep 2026-10-10, l-account-btns) — bei 400+ Vorschlägen am Handy war der
+   kleine „Verwerfen"-Link daneben fehleranfällig. */
+.sugg-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-width: 420px; margin-top: 8px; }
+.sugg-actions .sa-btn { min-height: 40px; padding: 8px 6px; font-size: 15px; text-align: center; display: inline-flex;
+  align-items: center; justify-content: center; }
+.sugg-actions .sa-reject { color: var(--red); border-color: var(--red); }
+.sugg-actions .sa-reject:hover { background: var(--red); color: var(--on-red); }   /* --on-red: d1-l-mask-red-contrast */
+.sugg-page h2 { margin: 18px 0 6px; }
+.sugg-group { margin-top: 16px; }
+/* Konto-Vorschläge (UI-Sweep 2026-10-11): Zähler neben der Überschrift (d2-l-konten-vorlauf), Suche + Seiten zu 20 Spielern
+   (d2-l-konten-endlos); ab 1280 px fließen die SPIELER in zwei Spalten, wer mehrere Vorschläge hat, nimmt die volle Breite
+   und stellt sie nebeneinander (z2-l-konten-spalten, ersetzt d2-l-konten-zeilen-breit); Begründungen ≤ 68ch. */
+.sugg-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.sugg-top h2 { margin: 18px 0 2px; }
+.sugg-page > .info-line { margin: 2px 0 10px; }
+.sugg-filter { margin: 10px 0 4px; align-items: center; }
+.sugg-filter input { max-width: 420px; }
+.sugg-more { margin: 18px 0 0; }
+.sugg-group .sugg-list p { max-width: 68ch; }
+@media (min-width: 1280px) {
+  /* dense (z3-l-konten-raster-loecher): steht eine Einzelkarte vor einem Mehrfach-Spieler, rückt die nächste Einzelkarte in
+     das Loch rechts daneben vor (Reihenfolge verschiebt sich höchstens um einen Platz). */
+  .sugg-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; align-items: start; grid-auto-flow: row dense; }
+  .sugg-groups > p { grid-column: 1 / -1; }
+  .sugg-group.multi { grid-column: 1 / -1; }
+  .sugg-group.multi lh-account-suggestions .sugg-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
+
+/* Konto-Prüfung (i) (0.619.0) — ein Knopf in der Konto-Zeile, die Liste darunter */
+.chk-btn { width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--muted); border-radius: 50%; background: none;
+  color: var(--muted); font: italic 700 13px/1 Georgia, "Times New Roman", serif; cursor: pointer; align-self: center; }
+.chk-btn:hover, .chk-btn[aria-expanded="true"] { color: var(--surface); background: var(--ink); border-color: var(--ink); }
+.chk-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.chk { margin-top: 8px; padding: 8px 10px; background: var(--paper); border-radius: 6px; }
+.chk > p { margin: 0 0 6px; }
+.chk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.chk .chk-list li { display: grid; grid-template-columns: 26px minmax(96px, 11em) 1fr; gap: 2px 8px; align-items: baseline;
+  padding: 0; border: 0; border-radius: 0; font-size: 14px; line-height: 1.35; }
+.chk-sym { font-weight: 700; text-align: center; }
+.chk-label { font-weight: 600; }
+.chk-text { overflow-wrap: anywhere; }
+.chk-ok .chk-sym { color: var(--ok); }
+.chk-weak .chk-sym { color: var(--ok); font-weight: 400; font-size: 12px; white-space: nowrap; }
+.chk-warn .chk-sym { color: var(--warn); }
+.chk-fail .chk-sym { color: var(--red); }
+.chk-fail .chk-text { color: var(--red); }
+.chk-none .chk-sym, .chk-none .chk-label, .chk-none .chk-text, .chk-info .chk-sym { color: var(--muted); }
+.chk .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 479.98px) {
+  .chk .chk-list li { grid-template-columns: 26px 1fr; }
+  .chk-text { grid-column: 2; }
+}
+.sugg-group h3 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0 0 4px; font: 600 18px/1.2 var(--cond); }
+.sugg-name { font: inherit; font-size: inherit; color: var(--ink); }
