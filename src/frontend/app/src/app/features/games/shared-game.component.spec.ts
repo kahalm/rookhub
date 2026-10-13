@@ -4,6 +4,7 @@ import { AnalysisEngineService, AnalysisState } from '../analysis/analysis-engin
 import { LiveEngineSession } from './live-engine-session';
 import { ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
 import { TestBed } from '@angular/core/testing';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -732,7 +733,8 @@ describe('SharedGameComponent', () => {
     (el.querySelector('.game-menu') as HTMLButtonElement).click();
     fixture.detectChanges();
     http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
-    const overlay = document.querySelector('.cdk-overlay-container') as HTMLElement;
+    // Eigener Container dieses Tests — ein liegengebliebener aus einem früheren Test ließ den Test kippen.
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
     const original = overlay.querySelector('a.original-item.narrow-only') as HTMLAnchorElement;
     expect(original.getAttribute('href')).toBe('https://lichess.org/abc');
     const share = spyOn(fixture.componentInstance, 'share');

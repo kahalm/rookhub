@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.762.1", date: "2026-10-13", changes: [
+    { en: "Internal: a test of the game menu no longer fails depending on test order, so new versions reach the test server again.", de: "Intern: Ein Test des Partie-Menüs scheitert nicht mehr je nach Testreihenfolge — neue Versionen kommen wieder auf den Testserver." },
+  ] },
   { version: "0.762.0", date: "2026-10-13", changes: [
     { en: "Ultrawide screens (from 2400 px): the analysis board gets three columns with a larger board and the opening explorer open, game and repertoire boards grow up to the window height, the dashboard shows five tile columns, course, repertoire, worksheet and admin lists use more width, statistics go two-column and the header moves towards the content.",
       de: "Ultrawide-Bildschirme (ab 2400 px): das Analysebrett bekommt drei Spalten mit größerem Brett und offenem Eröffnungsexplorer, Partie- und Repertoire-Brett wachsen bis zur Fensterhöhe, das Dashboard zeigt fünf Kachelspalten, Kurs-, Repertoire-, Aufgabenblatt- und Admin-Listen nutzen mehr Breite, die Statistik wird zweispaltig und die Kopfleiste rückt zum Inhalt." },
