@@ -69,6 +69,9 @@ public static class Permissions
     public const string PrepView = "prep.view";
     /// <summary>Spielervorbereitung: Partiebestand einspielen (und später die Konto-Suche).</summary>
     public const string PrepManage = "prep.manage";
+    /// <summary>E-Book-Bibliothek: die Bibliothek vom Server einlesen und JEDES E-Book bearbeiten/freigeben/löschen
+    /// (2026-10-13). Hochladen und das eigene Buch verwalten darf jeder Angemeldete — dafür braucht es kein Recht.</summary>
+    public const string EbooksManage = "ebooks.manage";
 
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
@@ -76,6 +79,6 @@ public static class Permissions
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
         GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
         TournamentsManage, RolesManage, LeagueView, LeagueManage, LeagueContribute,
-        ClubManage, ClubTrainer, PrepView, PrepManage,
+        ClubManage, ClubTrainer, PrepView, PrepManage, EbooksManage,
     };
 }

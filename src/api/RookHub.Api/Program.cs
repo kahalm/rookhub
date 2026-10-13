@@ -201,6 +201,15 @@ try
     builder.Services.AddScoped<ChallengeService>();
     builder.Services.AddScoped<FavoriteService>();
     builder.Services.AddScoped<WorksheetService>();
+    // E-Book-Bibliothek (0.764.0): Wurzeln aus dem Abschnitt „Ebooks" (ENV Ebooks__Root / Ebooks__LibraryRoot);
+    // ohne Root bleibt Hochladen aus, ohne LibraryRoot das Einlesen — Übersicht und Leser laufen trotzdem.
+    builder.Services.Configure<RookHub.Api.Services.Ebooks.EbookOptions>(builder.Configuration.GetSection(RookHub.Api.Services.Ebooks.EbookOptions.Section));
+    builder.Services.AddSingleton<RookHub.Api.Services.Ebooks.EbookStorage>();
+    builder.Services.AddSingleton<RookHub.Api.Services.Ebooks.EbookAccessTokens>();
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookService>();
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookLibraryImporter>();
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookCoverRenderer>();
+    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookCoverWorker>();
     builder.Services.AddScoped<RevengeNotificationService>();
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();

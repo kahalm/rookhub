@@ -1,0 +1,156 @@
+<div class="eb-page">
+  <div class="header">
+    <h1><mat-icon>menu_book</mat-icon> {{ 'ebooks.title' | translate }}</h1>
+    <div class="header-actions">
+      @if (list?.canManageAll || manageable.length > 0) {
+        <button mat-stroked-button type="button" (click)="toggleSelecting()" [attr.aria-pressed]="selecting()">
+          <mat-icon>{{ selecting() ? 'close' : 'checklist' }}</mat-icon>{{ (selecting() ? 'common.cancel' : 'ebooks.bulk.select') | translate }}
+        </button>
+      }
+      @if (list?.canImportLibrary) {
+        <button mat-icon-button type="button" [matMenuTriggerFor]="adminMenu" [appIconLabel]="'common.moreActions' | translate">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #adminMenu="matMenu">
+          <button mat-menu-item (click)="importLibrary()" [disabled]="importing()">
+            <mat-icon>library_add</mat-icon>
+            <span>{{ (importing() ? 'ebooks.library.importing' : 'ebooks.library.import') | translate }}</span>
+          </button>
+        </mat-menu>
+      }
+      <button mat-flat-button color="primary" type="button" class="eb-upload" (click)="openUpload()">
+        <mat-icon>upload</mat-icon><span class="eb-upload-text">{{ 'ebooks.upload' | translate }}</span>
+      </button>
+    </div>
+  </div>
+  <p class="intro">{{ 'ebooks.intro' | translate }} <app-help-hint [text]="'ebooks.introMore' | translate" /></p>
+
+  @if (loading) {
+    <app-loading-spinner />
+  } @else if (error || !list) {
+    <app-load-error (retry)="load()" />
+  } @else {
+    <div class="eb-filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-search">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput type="search" [ngModel]="search" (ngModelChange)="onSearch($event)"
+               [placeholder]="'ebooks.search' | translate" [attr.aria-label]="'ebooks.search' | translate" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-sort">
+        <mat-label>{{ 'ebooks.sort.label' | translate }}</mat-label>
+        <mat-select [value]="sort" (valueChange)="setSort($event)">
+          @for (s of sorts; track s) { <mat-option [value]="s">{{ ('ebooks.sort.' + s) | translate }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <button type="button" class="eb-chip" [class.eb-chip--on]="mine" [attr.aria-pressed]="mine" (click)="toggleMine()">
+        <mat-icon>person</mat-icon>{{ 'ebooks.filter.mine' | translate }}
+      </button>
+    </div>
+
+    @if (list.tags.length > 0) {
+      <div class="eb-tags" role="group" [attr.aria-label]="'ebooks.meta.tags' | translate">
+        @for (t of list.tags; track t.tag) {
+          <button type="button" class="eb-chip" [class.eb-chip--on]="tag === t.tag" [attr.aria-pressed]="tag === t.tag"
+                  (click)="setTag(t.tag)">{{ t.tag }} <span class="eb-chip-count">{{ t.count }}</span></button>
+        }
+      </div>
+    }
+
+    @if (selecting()) {
+      <div class="eb-bulk">
+        <span>{{ 'ebooks.bulk.selected' | translate: { n: selected().size } }}</span>
+        <button mat-button type="button" (click)="selectAllOnPage()">{{ 'ebooks.bulk.all' | translate }}</button>
+        <button mat-flat-button color="primary" type="button" (click)="setVisibilitySelected()" [disabled]="selected().size === 0">
+          <mat-icon>visibility</mat-icon>{{ 'ebooks.bulk.setVisibility' | translate }}
+        </button>
+      </div>
+    }
+
+    @if (items.length === 0) {
+      <div class="empty-state eb-empty">
+        <mat-icon>menu_book</mat-icon>
+        <p>{{ (filtered ? 'ebooks.emptyFiltered' : 'ebooks.empty') | translate }}</p>
+        @if (!filtered && list.uploadEnabled) {
+          <button mat-stroked-button type="button" (click)="openUpload()"><mat-icon>upload</mat-icon>{{ 'ebooks.upload' | translate }}</button>
+        }
+      </div>
+    } @else {
+      <div class="eb-grid">
+        @for (book of items; track book.id) {
+          <mat-card class="eb-card" [class.eb-card--selected]="selected().has(book.id)">
+            <a class="eb-cover" [routerLink]="['/ebooks', book.id]" [attr.aria-label]="book.title">
+              @if (coverUrl(book); as url) {
+                <img [src]="url" [alt]="''" loading="lazy" decoding="async" />
+              } @else {
+                <span class="eb-cover-fallback" aria-hidden="true">
+                  <mat-icon>{{ readable(book) ? 'picture_as_pdf' : 'book' }}</mat-icon>
+                  <span class="eb-cover-title">{{ book.title }}</span>
+                </span>
+              }
+              @if (progressPercent(book); as pct) {
+                <mat-progress-bar class="eb-progress" mode="determinate" [value]="pct"></mat-progress-bar>
+              }
+            </a>
+            @if (selecting() && book.canManage) {
+              <mat-checkbox class="eb-select" [checked]="selected().has(book.id)" (change)="toggleSelected(book, $event.checked)"
+                            [attr.aria-label]="book.title"></mat-checkbox>
+            }
+            <mat-card-content class="eb-body">
+              <a class="eb-title" [routerLink]="['/ebooks', book.id]" [title]="book.title">{{ book.title }}</a>
+              <div class="eb-meta">
+                @if (book.author) { <span class="eb-author">{{ book.author }}</span> }
+                @if (book.year) { <span class="eb-sep">·</span><span>{{ book.year }}</span> }
+              </div>
+              <div class="eb-badges">
+                @for (f of book.files; track f.id) { <span class="chip">{{ f.format | uppercase }}</span> }
+                @if (book.pageCount) { <span class="chip">{{ 'ebooks.pages' | translate: { n: book.pageCount } }}</span> }
+                @if (book.canManage) {
+                  <span class="chip eb-vis" [matTooltip]="'ebooks.visibilityLabel' | translate">
+                    <mat-icon>{{ visibilityKey(book) === 'onlyMe' ? 'lock' : visibilityKey(book) === 'everyone' ? 'public' : 'group' }}</mat-icon>
+                    {{ ('ebooks.visibility.' + visibilityKey(book)) | translate: { n: book.groupIds?.length ?? 0 } }}
+                  </span>
+                }
+              </div>
+            </mat-card-content>
+            <div class="eb-actions">
+              @if (readable(book)) {
+                <a mat-flat-button color="primary" [routerLink]="['/ebooks', book.id]">
+                  <mat-icon>auto_stories</mat-icon>{{ (book.progress ? 'ebooks.continue' : 'ebooks.read') | translate: { page: book.progress?.page ?? 1 } }}
+                </a>
+              } @else {
+                <a mat-flat-button color="primary" [href]="downloadUrl(book)" [download]="book.files.at(0)?.fileName ?? ''">
+                  <mat-icon>download</mat-icon>{{ 'ebooks.download' | translate }}
+                </a>
+              }
+              <span class="eb-spacer"></span>
+              <button mat-icon-button [matMenuTriggerFor]="cardMenu" [appIconLabel]="'common.moreActions' | translate">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #cardMenu="matMenu">
+                @for (f of book.files; track f.id) {
+                  <a mat-menu-item [href]="downloadUrl(book, f.id)" [download]="f.fileName">
+                    <mat-icon>download</mat-icon>
+                    <span>{{ 'ebooks.downloadFormat' | translate: { format: f.format.toUpperCase(), size: size(f.sizeBytes) } }}</span>
+                  </a>
+                }
+                @if (book.canManage) {
+                  <button mat-menu-item (click)="edit(book)"><mat-icon>edit</mat-icon><span>{{ 'common.edit' | translate }}</span></button>
+                  <button mat-menu-item (click)="setVisibility([book])"><mat-icon>visibility</mat-icon><span>{{ 'ebooks.bulk.setVisibility' | translate }}</span></button>
+                  <button mat-menu-item class="delete-item" (click)="remove(book)"><mat-icon>delete</mat-icon><span>{{ 'common.delete' | translate }}</span></button>
+                }
+              </mat-menu>
+            </div>
+          </mat-card>
+        }
+      </div>
+      @if (list.total > pageSize) {
+        <mat-paginator [length]="list.total" [pageSize]="pageSize" [pageIndex]="page - 1" [hidePageSize]="true"
+                       (page)="onPage($event)"></mat-paginator>
+      }
+    }
+
+    @if (list.quotaLimitBytes) {
+      <p class="eb-quota">{{ 'ebooks.quota' | translate: { used: size(list.quotaUsedBytes), limit: size(list.quotaLimitBytes) } }}</p>
+    }
+  }
+</div>

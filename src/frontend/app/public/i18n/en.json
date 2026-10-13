@@ -96,7 +96,14 @@
     "book_alias_reserved": "This alias is reserved.",
     "book_alias_taken": "This alias is already taken.",
     "course_pgn_is_repertoire": "This file is an opening repertoire (games from the starting position), not a course with puzzles. Upload it under “Repertoires”.",
-    "course_no_lines": "This PGN contains no playable course line. A course needs puzzles in Chessable style (position + solution)."
+    "course_no_lines": "This PGN contains no playable course line. A course needs puzzles in Chessable style (position + solution).",
+    "ebooks_not_configured": "The e-book library is not set up on this server yet.",
+    "ebook_format_unsupported": "This file type is not supported. Allowed: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
+    "ebook_file_too_large": "The file is too large.",
+    "ebook_file_empty": "The file is empty.",
+    "ebook_quota_exceeded": "Your upload quota is used up. Delete an e-book or ask an admin.",
+    "ebook_duplicate_file": "This file is already in the library.",
+    "ebook_file_missing": "The file is missing on the server."
   },
   "common": {
     "paginator": {
@@ -286,7 +293,8 @@
     "tournamentBookmarks": "Bookmarked",
     "reconstruct": "Reconstruct game",
     "scoresheet": "Read a scoresheet",
-    "prep": "Prepare for an opponent"
+    "prep": "Prepare for an opponent",
+    "ebooks": "E-books"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1467,8 +1475,7 @@
       "current": "Current puzzle",
       "previous": "Previous puzzle"
     },
-    "bar": {
-    },
+    "bar": {},
     "keyboardMove": {
       "board": "Chessboard",
       "label": "Enter a move",
@@ -2513,7 +2520,8 @@
         "help": "Help",
         "leaderboards": "Leaderboards",
         "tournament-calendar": "Tournament calendar",
-        "scoresheet": "Read a scoresheet (photo)"
+        "scoresheet": "Read a scoresheet (photo)",
+        "ebooks": "E-book library"
       }
     },
     "messages": {
@@ -2597,7 +2605,8 @@
         "club_manage": "ClubHub: whole card index of children and juniors (all children, groups, trainers, delete)",
         "club_trainer": "ClubHub: trainer — children of the own groups (contacts, attendance, progress)",
         "prep_view": "Player prep: search any player in the game database (Megabase, Lumbra)",
-        "prep_manage": "Player prep: import the game database"
+        "prep_manage": "Player prep: import the game database",
+        "ebooks_manage": "E-book library: import the server library, manage every e-book"
       },
       "groupTitle": "Assign roles to a group",
       "groupHint": "Every member of the group has these roles — whoever joins has the rights at once, whoever leaves loses them. The admin role and “Everyone” are not available here.",
@@ -3622,6 +3631,13 @@
           "Chessable courses come to RookHub via the RepCheck browser extension (see the RepCheck section) – it runs in your own, signed-in browser. Importing through RookHub itself is switched off: Chessable blocks data-centre IPs, and that pattern can get your Chessable account locked.",
           "With “Remember line” in RepCheck you keep a position from chessable.com; you find it under ☰ → Analysis & collection → Remembered, where you can analyse it or queue it for background analysis. Your active training time on chessable.com counts towards your training goals."
         ]
+      },
+      "ebooks": {
+        "t": "E-books",
+        "p": [
+          "The e-book library holds chess books as PDF, EPUB, DJVU and comic archives. PDFs open right in the browser: scroll through the pages, zoom, and jump back to where you stopped – the page you were on is remembered per book. Other formats are downloaded.",
+          "Anyone signed in can upload a book and decide who sees it: only you, one of your groups, or all signed-in users. The uploader (and admins) can edit title, author, year and tags, change the visibility later or delete the book."
+        ]
       }
     }
   },
@@ -3690,8 +3706,14 @@
     }
   },
   "reprocess": {
-    "short": { "courses": "{{count}} courses can be updated", "repertoires": "{{count}} repertoires can be updated" },
-    "shortOne": { "courses": "1 course can be updated", "repertoires": "1 repertoire can be updated" },
+    "short": {
+      "courses": "{{count}} courses can be updated",
+      "repertoires": "{{count}} repertoires can be updated"
+    },
+    "shortOne": {
+      "courses": "1 course can be updated",
+      "repertoires": "1 repertoire can be updated"
+    },
     "available": {
       "courses": "{{count}} courses use an older processing version and can be updated — e.g. to show the book's per-move comments.",
       "repertoires": "{{count}} repertoires use an older processing version and can be updated."
@@ -5198,5 +5220,86 @@
     "vukovicMate": "Vuković mate",
     "xRayAttack": "X-ray attack",
     "zugzwang": "Zugzwang"
+  },
+  "ebooks": {
+    "title": "E-books",
+    "intro": "Chess books to read in the browser or download; each book is shared with the groups its uploader chose.",
+    "introMore": "PDFs open in the reader with zoom and a remembered page. EPUB, DJVU and comic archives are downloaded.\n\nUpload a book with “Upload” and tick the groups that may see it – none ticked means only you. Tags make the library searchable; the tag chips filter the list.",
+    "upload": "Upload",
+    "uploaded": "“{{title}}” has been added.",
+    "search": "Search title, author or tag",
+    "sort": {
+      "label": "Sort by",
+      "title": "Title",
+      "newest": "Newest first",
+      "recent": "Recently read"
+    },
+    "filter": {
+      "mine": "My uploads"
+    },
+    "empty": "No e-books yet – upload the first one.",
+    "emptyFiltered": "Nothing matches this filter.",
+    "read": "Read",
+    "continue": "Continue on page {{page}}",
+    "download": "Download",
+    "downloadFormat": "Download {{format}} ({{size}})",
+    "deleteConfirm": "Delete “{{title}}”? The file is removed from the library for everyone.",
+    "deleted": "E-book deleted.",
+    "deleteFailed": "Deleting did not work.",
+    "saveFailed": "Saving did not work.",
+    "pages": "{{n}} pages",
+    "quota": "{{used}} of {{limit}} used",
+    "visibilityLabel": "Visibility",
+    "visibility": {
+      "onlyMe": "Only me",
+      "everyone": "All signed-in users",
+      "groups": "{{n}} groups",
+      "onlyMeHint": "No group ticked: only you (and admins) see this book.",
+      "groupsHint": "Members of the ticked groups see this book.",
+      "noGroups": "You are not in any group yet – the book stays visible to you only. An admin can add you to a group."
+    },
+    "meta": {
+      "title": "Title",
+      "author": "Author",
+      "year": "Year",
+      "tags": "Tags",
+      "tagsHint": "Endgame, Strategy, … (comma-separated)",
+      "description": "Description"
+    },
+    "dialog": {
+      "uploadTitle": "Upload e-book",
+      "editTitle": "Edit e-book",
+      "chooseFile": "Choose file",
+      "noFile": "No file chosen",
+      "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI or AZW3, up to {{max}}.",
+      "fileTooLarge": "The file is larger than {{max}}.",
+      "uploading": "Uploading … {{pct}}%"
+    },
+    "bulk": {
+      "select": "Select",
+      "selected": "{{n}} selected",
+      "all": "Select all on this page",
+      "setVisibility": "Set visibility",
+      "forCount": "Applies to {{n}} e-book(s).",
+      "done": "Visibility set for {{n}} e-book(s)."
+    },
+    "library": {
+      "import": "Import server library",
+      "importing": "Importing …",
+      "result": "Library imported: {{added}} new books, {{files}} files, {{skipped}} already known. Covers follow in the background.",
+      "failed": "Importing did not work."
+    },
+    "reader": {
+      "area": "Pages",
+      "back": "Back to the library",
+      "page": "Page",
+      "of": "of {{n}}",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fitWidth": "Fit width",
+      "notViewable": "This format cannot be shown in the browser – download it:",
+      "loadFailed": "The PDF could not be loaded. Go back and open it again.",
+      "saveProgressFailed": "Your reading position could not be saved."
+    }
   }
 }

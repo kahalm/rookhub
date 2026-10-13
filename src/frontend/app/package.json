@@ -31,6 +31,7 @@
     "chessground": "^9.2.1",
     "leaflet": "^1.9.4",
     "onnxruntime-web": "1.30.0",
+    "pdfjs-dist": "^6.4.299",
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "stockfish": "^18.0.8",

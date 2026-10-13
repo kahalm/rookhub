@@ -83,6 +83,9 @@ export const ROUTES = [
   r('rookhub', '/worksheets/{worksheetId}', 'user', { main: ['.wd-list .wd-item', '.wd-empty', '.wd-page .wd-hint'] }),
   // Druckansicht des Aufgabenblatts: fürs Papier gebaut — Ausnahme (DESIGN.md 4.6).
   r('rookhub', '/worksheets/{worksheetId}/print', 'user', { main: ['.ws-sheet .ws-task', '.ws-sheet', '.ws-empty'], foldExempt: true }),
+  r('rookhub', '/ebooks', 'user', { main: ['.eb-grid .eb-card', '.eb-empty', '.eb-page app-load-error'] }),
+  // Leser: Werkzeugleiste + Seiten in der Resthöhe — Sonderlayout wie das Brett (DESIGN.md 4.5).
+  r('rookhub', '/ebooks/{ebookId}', 'user', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
   r('rookhub', '/weekly', 'user', { main: ['.wp-list .wp-card', '.weekly-container .empty-state', '.upload-card'] }),
   r('rookhub', '/weekly/{weeklyId}', 'user', { main: PUZZLE_BOARD }),
   r('rookhub', '/guess', 'any', { main: ['.game-row', '.lists .start-card', '.gl-container .start-card'] }),
@@ -232,6 +235,7 @@ export const AREAS = [
   ['punktepartie', r => r.app === 'rookhub' && /^\/guess/.test(r.url)],
   ['vorbereitung', r => r.app === 'rookhub' && /^\/prep/.test(r.url)],
   ['aufgabenblaetter', r => r.app === 'rookhub' && /^\/(worksheets|w\/)/.test(r.url)],
+  ['ebooks', r => r.app === 'rookhub' && /^\/ebooks/.test(r.url)],
   ['rekonstruktion', r => r.app === 'rookhub' && /^\/(reconstruct|r\/)/.test(r.url)],
   ['anmeldung', r => /^\/(login|register|forgot-password|reset-password)/.test(r.url)],
   ['rechtliches', r => /^\/(privacy|impressum|account-deletion)/.test(r.url)],

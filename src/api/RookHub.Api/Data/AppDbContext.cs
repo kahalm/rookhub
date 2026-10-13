@@ -116,6 +116,11 @@ public partial class AppDbContext : DbContext
     public DbSet<CourseLineReset> CourseLineResets => Set<CourseLineReset>();
     public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
+    // E-Book-Bibliothek (/ebooks): Titel mit Dateien, Gruppen-Freigabe je Buch, Lesestand je Nutzer.
+    public DbSet<Ebook> Ebooks => Set<Ebook>();
+    public DbSet<EbookFile> EbookFiles => Set<EbookFile>();
+    public DbSet<EbookGroupAccess> EbookGroupAccesses => Set<EbookGroupAccess>();
+    public DbSet<EbookProgress> EbookProgresses => Set<EbookProgress>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
     public DbSet<WeeklyPostAttempt> WeeklyPostAttempts => Set<WeeklyPostAttempt>();
     public DbSet<DailyPuzzle> DailyPuzzles => Set<DailyPuzzle>();

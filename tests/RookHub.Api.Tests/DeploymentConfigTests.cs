@@ -848,6 +848,34 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void EbooksLocation_AllowsTheApiUploadLimit_AndStreamsUnbuffered()
+    {
+        // E-Book-Bibliothek (0.764.0): ein Buch kann 1 GB haben. Die generische /api/-Location deckelt auf 15 MB — ohne
+        // eigene Location käme kein Upload bei der API an (413 aus nginx). Das Limit muss über dem [RequestSizeLimit]
+        // des Upload-Endpunkts liegen; proxy_request_buffering off, damit nginx den Rumpf nicht erst ganz zwischenspeichert.
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/ebooks \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/ebooks fehlt in nginx.conf");
+        var body = loc.Groups["body"].Value;
+        var size = Regex.Match(body, @"client_max_body_size (?<n>\d+)(?<unit>[kKmMgG]?);");
+        Assert.True(size.Success, "client_max_body_size fehlt in der E-Book-Location");
+        var unit = size.Groups["unit"].Value.ToLowerInvariant() switch
+        {
+            "k" => 1024L,
+            "m" => 1024L * 1024,
+            "g" => 1024L * 1024 * 1024,
+            _ => 1L,
+        };
+        var nginxBytes = long.Parse(size.Groups["n"].Value) * unit;
+        var apiLimit = typeof(RookHub.Api.Controllers.Ebooks.EbooksController).GetMethod("Upload")!
+            .GetCustomAttributesData().Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute))
+            .ConstructorArguments[0].Value;
+        Assert.True(nginxBytes >= Convert.ToInt64(apiLimit), $"nginx erlaubt {nginxBytes} Bytes, die API bis {apiLimit}");
+        Assert.Contains("proxy_request_buffering off;", body);
+        Assert.Contains("proxy_buffering off;", body);
+    }
+
+    [Fact]
     public void ExtensionChessableLocation_AllowsTheApiRequestSizeLimits()
     {
         // Gemeldet 2026-09-14: „Mitschnitt importieren" bekam 413, obwohl die API bis 64 MB annimmt — die

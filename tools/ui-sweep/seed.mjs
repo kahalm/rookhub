@@ -193,6 +193,25 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { worksheetId: ws.id, worksheetToken: token };
   });
 
+  // E-Book-Bibliothek (0.764.0): ein winziges PDF mit dem Sweep-Namen — hochgeladen, wenn es fehlt (braucht Ebooks__Root auf Dev).
+  await step(['ebookId'], async () => {
+    const found = list(await a.get(`/api/ebooks?search=${encodeURIComponent(SWEEP_TAG)}`)).find(b => b.title === SWEEP_TAG);
+    if (found) return { ebookId: found.id };
+    const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+      + '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 300]>>endobj\nxref\n0 4\n0000000000 65535 f \n'
+      + '0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n166\n%%EOF\n';
+    const fd = new FormData();
+    fd.append('file', new Blob([pdf], { type: 'application/pdf' }), `${SWEEP_TAG}.pdf`);
+    fd.append('title', SWEEP_TAG);
+    fd.append('tags', 'ui-sweep');
+    try {
+      const created = await a.post('/api/ebooks', fd);
+      return { ebookId: created.id };
+    } catch (e) {
+      return { _why: `Hochladen gescheitert (Ebooks__Root auf Dev gesetzt?): ${String(e).slice(0, 120)}` };
+    }
+  });
+
   await step(['reconstructionId', 'reconstructionToken'], async () => {
     let rc = list(await a.get('/api/reconstructions')).find(x => x.title === SWEEP_TAG);
     if (!rc) {

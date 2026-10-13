@@ -1,0 +1,67 @@
+<div class="rd-page">
+  @if (loading) {
+    <app-loading-spinner />
+  } @else if (error || !ebook) {
+    <div class="rd-pad"><app-load-error (retry)="load()" /></div>
+  } @else {
+    <div class="rd-toolbar">
+      <a mat-icon-button routerLink="/ebooks" class="rd-back" [appIconLabel]="'ebooks.reader.back' | translate">
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <div class="rd-title" [matTooltip]="ebook.title">
+        <span class="rd-title-text">{{ ebook.title }}</span>
+        @if (ebook.author) { <span class="rd-author">{{ ebook.author }}</span> }
+      </div>
+      @if (readable) {
+        <div class="rd-pages">
+          <label class="rd-page-label">
+            <span class="sr-only">{{ 'ebooks.reader.page' | translate }}</span>
+            <input class="rd-page-input" type="number" min="1" [max]="pageCount() || 1" [value]="page()"
+                   (change)="jump(pageInput.value)" (keyup.enter)="jump(pageInput.value)" #pageInput
+                   [attr.aria-label]="'ebooks.reader.page' | translate" />
+          </label>
+          <span class="rd-page-count">{{ 'ebooks.reader.of' | translate: { n: pageCount() } }}</span>
+        </div>
+        <div class="rd-zoom">
+          <button mat-icon-button (click)="zoomBy(-1)" [appIconLabel]="'ebooks.reader.zoomOut' | translate"><mat-icon>remove</mat-icon></button>
+          <button mat-icon-button (click)="fitWidth()" [appIconLabel]="'ebooks.reader.fitWidth' | translate"
+                  [class.rd-zoom-active]="zoom() === null"><mat-icon>fit_screen</mat-icon></button>
+          <button mat-icon-button (click)="zoomBy(1)" [appIconLabel]="'ebooks.reader.zoomIn' | translate"><mat-icon>add</mat-icon></button>
+        </div>
+      }
+      <button mat-icon-button [matMenuTriggerFor]="moreMenu" [appIconLabel]="'common.moreActions' | translate">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #moreMenu="matMenu">
+        @for (f of ebook.files; track f.id) {
+          <a mat-menu-item [href]="downloadUrl(f.id)" [download]="f.fileName">
+            <mat-icon>download</mat-icon>
+            <span>{{ 'ebooks.downloadFormat' | translate: { format: f.format.toUpperCase(), size: size(f.sizeBytes) } }}</span>
+          </a>
+        }
+      </mat-menu>
+    </div>
+
+    @if (readable && fileUrl) {
+      <div class="rd-viewer">
+        <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
+                        (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
+                        (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
+      </div>
+    } @else {
+      <div class="rd-pad">
+        <div class="empty-state rd-download">
+          <mat-icon>download</mat-icon>
+          <p>{{ 'ebooks.reader.notViewable' | translate }}</p>
+          <div class="rd-download-actions">
+            @for (f of ebook.files; track f.id) {
+              <a mat-flat-button color="primary" [href]="downloadUrl(f.id)" [download]="f.fileName">
+                <mat-icon>download</mat-icon>{{ 'ebooks.downloadFormat' | translate: { format: f.format.toUpperCase(), size: size(f.sizeBytes) } }}
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

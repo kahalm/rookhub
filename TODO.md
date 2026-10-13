@@ -1916,3 +1916,5 @@ liegt vor allem bei Ligen, und die sind ein kleiner Teil des Bestands.
 **Reihenfolge, wenn es angegangen wird:** erst messen, bei wie vielen Turnieren mit mehreren
 Spielorten ueberhaupt eine Ausschreibung verlinkt ist und wie viele davon einen Ort je Runde
 nennen — vorher ist der Aufwand nicht einschaetzbar.
+
+- [ ] E-Book-Bibliothek: EPUB-Leser im Browser (epub.js zieht lodash/core-js/localforage mit — erst einmal nur Download); DJVU → PDF-Umwandlung beim Einlesen erwägen (122 DJVU in der Bibliothek) (2026-10-13)

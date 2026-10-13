@@ -96,7 +96,14 @@
     "book_alias_reserved": "Ovaj alias je rezerviran.",
     "book_alias_taken": "Ovaj alias je već zauzet.",
     "course_pgn_is_repertoire": "Ova datoteka je repertoar otvaranja (partije od početnog položaja), a ne tečaj sa zadacima. Učitaj je pod „Repertoari“.",
-    "course_no_lines": "Ovaj PGN ne sadrži nijednu igrivu liniju tečaja. Tečaj treba zadatke u Chessable stilu (pozicija + rješenje)."
+    "course_no_lines": "Ovaj PGN ne sadrži nijednu igrivu liniju tečaja. Tečaj treba zadatke u Chessable stilu (pozicija + rješenje).",
+    "ebooks_not_configured": "Knjižnica e-knjiga na ovom poslužitelju još nije postavljena.",
+    "ebook_format_unsupported": "Ova vrsta datoteke nije podržana. Dopušteno: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
+    "ebook_file_too_large": "Datoteka je prevelika.",
+    "ebook_file_empty": "Datoteka je prazna.",
+    "ebook_quota_exceeded": "Tvoj prostor za prijenos je potrošen. Izbriši neku e-knjigu ili pitaj administratora.",
+    "ebook_duplicate_file": "Ova je datoteka već u knjižnici.",
+    "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
   },
   "common": {
     "paginator": {
@@ -286,7 +293,8 @@
     "tournamentBookmarks": "Zabilježeno",
     "reconstruct": "Rekonstrukcija partije",
     "scoresheet": "Učitaj zapisnik partije",
-    "prep": "Priprema za protivnika"
+    "prep": "Priprema za protivnika",
+    "ebooks": "E-knjige"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -1467,8 +1475,7 @@
       "current": "Trenutna zagonetka",
       "previous": "Prethodna zagonetka"
     },
-    "bar": {
-    },
+    "bar": {},
     "keyboardMove": {
       "board": "Šahovska ploča",
       "label": "Unesi potez",
@@ -2513,7 +2520,8 @@
         "help": "Pomoć",
         "leaderboards": "Ljestvice",
         "tournament-calendar": "Kalendar turnira",
-        "scoresheet": "Učitaj zapisnik partije (fotografija)"
+        "scoresheet": "Učitaj zapisnik partije (fotografija)",
+        "ebooks": "Knjižnica e-knjiga"
       }
     },
     "messages": {
@@ -2597,7 +2605,8 @@
         "club_manage": "ClubHub: cijela kartoteka djece i mladih (sva djeca, grupe, treneri, brisanje)",
         "club_trainer": "ClubHub: trener — djeca vlastitih grupa (kontakti, prisutnost, napredak)",
         "prep_view": "Priprema protiv igrača: pretraži bilo kojeg igrača u bazi partija (Megabase, Lumbra)",
-        "prep_manage": "Priprema protiv igrača: uvoz baze partija"
+        "prep_manage": "Priprema protiv igrača: uvoz baze partija",
+        "ebooks_manage": "Knjižnica e-knjiga: uvoz knjižnice s poslužitelja, upravljanje svim e-knjigama"
       },
       "groupTitle": "Dodijeli uloge grupi",
       "groupHint": "Svaki član grupe ima ove uloge — tko se pridruži, odmah dobiva prava, tko ode, gubi ih. Administratorska uloga i „Everyone” ovdje nisu dostupni.",
@@ -3622,6 +3631,13 @@
           "Chessable tečajevi dolaze u RookHub putem RepCheck proširenja za preglednik (vidi odjeljak RepCheck) – ono radi u tvom vlastitom, prijavljenom pregledniku. Uvoz preko samog RookHuba je isključen: Chessable blokira IP adrese podatkovnih centara, a takav obrazac može dovesti do blokade tvog Chessable računa.",
           "Putem »Remember line« u RepChecku spremaš poziciju s chessable.com; nalaziš je pod ☰ → Analiza i zbirka → Zapamćeno i ondje je možeš analizirati ili predati analizi u pozadini. Tvoje aktivno vrijeme treninga na chessable.com broji se u tvoje ciljeve treninga."
         ]
+      },
+      "ebooks": {
+        "t": "E-knjige",
+        "p": [
+          "Knjižnica e-knjiga sadrži šahovske knjige kao PDF, EPUB, DJVU i stripovske arhive. PDF-ovi se otvaraju izravno u pregledniku: listaj stranice, zumiraj i nastavi gdje si stao – stranica se pamti za svaku knjigu. Ostale formate preuzimaš.",
+          "Svatko tko je prijavljen može prenijeti knjigu i odlučiti tko je vidi: samo ti, jedna od tvojih grupa ili svi prijavljeni. Tko je prenio (i administratori) može urediti naslov, autora, godinu i oznake, kasnije promijeniti vidljivost ili izbrisati knjigu."
+        ]
       }
     }
   },
@@ -3690,8 +3706,14 @@
     "toConversations": "Na razgovore"
   },
   "reprocess": {
-    "short": { "courses": "{{count}} tečajeva može se ažurirati", "repertoires": "{{count}} repertoara može se ažurirati" },
-    "shortOne": { "courses": "1 tečaj može se ažurirati", "repertoires": "1 repertoar može se ažurirati" },
+    "short": {
+      "courses": "{{count}} tečajeva može se ažurirati",
+      "repertoires": "{{count}} repertoara može se ažurirati"
+    },
+    "shortOne": {
+      "courses": "1 tečaj može se ažurirati",
+      "repertoires": "1 repertoar može se ažurirati"
+    },
     "available": {
       "courses": "Tečajeva sa starijom obradom: {{count}} — mogu se ažurirati, npr. za prikaz komentara poteza iz knjige.",
       "repertoires": "Repertoara sa starijom obradom: {{count}} — mogu se ažurirati."
@@ -5198,5 +5220,86 @@
     "vukovicMate": "Vukovićev mat",
     "xRayAttack": "Rendgenski napad",
     "zugzwang": "Iznuđeni potez"
+  },
+  "ebooks": {
+    "title": "E-knjige",
+    "intro": "Šahovske knjige za čitanje u pregledniku ili preuzimanje; svaka je knjiga podijeljena s grupama koje je odabrao onaj tko ju je prenio.",
+    "introMore": "PDF-ovi se otvaraju u čitaču sa zumom i zapamćenom stranicom. EPUB, DJVU i stripovski arhivi se preuzimaju.\n\n»Prenesi« dodaje knjigu; označi grupe koje je smiju vidjeti – ništa označeno znači samo ti. Oznake čine knjižnicu pretraživom; čipovi oznaka filtriraju popis.",
+    "upload": "Prenesi",
+    "uploaded": "»{{title}}« je dodana.",
+    "search": "Traži naslov, autora ili oznaku",
+    "sort": {
+      "label": "Sortiranje",
+      "title": "Naslov",
+      "newest": "Najnovije prvo",
+      "recent": "Nedavno čitano"
+    },
+    "filter": {
+      "mine": "Moji prijenosi"
+    },
+    "empty": "Još nema e-knjiga – prenesi prvu.",
+    "emptyFiltered": "Ništa ne odgovara ovom filtru.",
+    "read": "Čitaj",
+    "continue": "Nastavi na stranici {{page}}",
+    "download": "Preuzmi",
+    "downloadFormat": "Preuzmi {{format}} ({{size}})",
+    "deleteConfirm": "Izbrisati »{{title}}«? Datoteka nestaje iz knjižnice za sve.",
+    "deleted": "E-knjiga izbrisana.",
+    "deleteFailed": "Brisanje nije uspjelo.",
+    "saveFailed": "Spremanje nije uspjelo.",
+    "pages": "{{n}} stranica",
+    "quota": "Iskorišteno {{used}} od {{limit}}",
+    "visibilityLabel": "Vidljivost",
+    "visibility": {
+      "onlyMe": "Samo ja",
+      "everyone": "Svi prijavljeni",
+      "groups": "{{n}} grupa",
+      "onlyMeHint": "Nijedna grupa nije označena: ovu knjigu vidiš samo ti (i administratori).",
+      "groupsHint": "Članovi označenih grupa vide ovu knjigu.",
+      "noGroups": "Još nisi ni u jednoj grupi – knjiga ostaje vidljiva samo tebi. Administrator te može dodati u grupu."
+    },
+    "meta": {
+      "title": "Naslov",
+      "author": "Autor",
+      "year": "Godina",
+      "tags": "Oznake",
+      "tagsHint": "Završnica, Strategija, … (odvojeno zarezom)",
+      "description": "Opis"
+    },
+    "dialog": {
+      "uploadTitle": "Prenesi e-knjigu",
+      "editTitle": "Uredi e-knjigu",
+      "chooseFile": "Odaberi datoteku",
+      "noFile": "Nijedna datoteka nije odabrana",
+      "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI ili AZW3, do {{max}}.",
+      "fileTooLarge": "Datoteka je veća od {{max}}.",
+      "uploading": "Prijenos … {{pct}} %"
+    },
+    "bulk": {
+      "select": "Odaberi",
+      "selected": "Odabrano: {{n}}",
+      "all": "Sve na ovoj stranici",
+      "setVisibility": "Postavi vidljivost",
+      "forCount": "Vrijedi za {{n}} e-knjigu/e-knjiga.",
+      "done": "Vidljivost postavljena za {{n}} e-knjigu/e-knjiga."
+    },
+    "library": {
+      "import": "Uvezi knjižnicu s poslužitelja",
+      "importing": "Uvoz …",
+      "result": "Knjižnica uvezena: {{added}} novih knjiga, {{files}} datoteka, {{skipped}} već poznatih. Naslovnice slijede u pozadini.",
+      "failed": "Uvoz nije uspio."
+    },
+    "reader": {
+      "area": "Stranice",
+      "back": "Natrag u knjižnicu",
+      "page": "Stranica",
+      "of": "od {{n}}",
+      "zoomIn": "Povećaj",
+      "zoomOut": "Smanji",
+      "fitWidth": "Prilagodi širini",
+      "notViewable": "Ovaj se format ne može prikazati u pregledniku – preuzmi ga:",
+      "loadFailed": "PDF se nije mogao učitati. Vrati se i otvori ga ponovno.",
+      "saveProgressFailed": "Tvoj položaj čitanja nije se mogao spremiti."
+    }
   }
 }

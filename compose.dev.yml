@@ -182,6 +182,11 @@ services:
       # Optional: lokaler Eroeffnungs-Explorer (lila-openingexplorer im Stack), z. B.
       # http://rookhub-explorer:9002/ — leer = nur die Online-Quelle (explorer.lichess.ovh).
       LichessExplorer__LocalUrl: ${LICHESS_EXPLORER_LOCAL_URL:-}
+      # E-Book-Bibliothek (0.764.0): Ebooks__Root = beschreibbares Verzeichnis für Uploads + Titelbilder (das Volume
+      # unten); Ebooks__LibraryRoot = vorhandene Bibliothek auf dem Server, nur lesend eingehängt (Admin → „Bibliothek
+      # einlesen“; die Dateien bleiben dort). Leer = Hochladen bzw. Einlesen aus; Übersicht und Leser laufen trotzdem.
+      Ebooks__Root: ${EBOOKS_ROOT:-/data/ebooks}
+      Ebooks__LibraryRoot: ${EBOOKS_LIBRARY_HOST_PATH:+/data/ebooks-library}
       GitHub__Token: ${GITHUB_TOKEN:-}
       # Optional: VAPID-Schlüssel für Web-Push. Alle drei leer -> Push deaktiviert.
       WebPush__Subject: ${WEBPUSH_SUBJECT:-}
@@ -195,6 +200,10 @@ services:
       CI__GithubWebhookSecret: ${CI_GITHUB_WEBHOOK_SECRET:-}
     volumes:
       - dataprotection-keys:/keys
+      # E-Books: Uploads + Titelbilder (benanntes Volume); die Bibliothek des Hosts nur lesend, Pfad aus der .env
+      # (EBOOKS_LIBRARY_HOST_PATH leer → Platzhalter-Verzeichnis, damit Compose nicht stolpert).
+      - ebooks-data:/data/ebooks
+      - ${EBOOKS_LIBRARY_HOST_PATH:-./.ebooks-library-empty}:/data/ebooks-library:ro
     networks:
       - rookhub
       - chessable-bridge
@@ -403,6 +412,7 @@ networks:
     name: chessable-bridge
 
 volumes:
+  ebooks-data:
   mariadb-data:
   es-data:
   dataprotection-keys:

@@ -1,0 +1,62 @@
+# E-Book-Bibliothek (auth, 0.764.0) — Bücher lesen, hochladen, je Buch freigeben
+
+> Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md. Bereich `Ebooks` (`Services/Ebooks/`,
+> `Controllers/Ebooks/`, `DTOs/Ebooks/`, `tests/…/Ebooks/`); Oberfläche `features/ebooks/` (`/ebooks`, `/ebooks/:id`).
+
+Ein **E-Book** ist ein Titel mit einer oder mehreren Dateien (dasselbe Buch als PDF + EPUB + DJVU), Metadaten (Titel,
+Autor, Jahr, Schlagworte, Beschreibung, Ziel-Elo) und einer **Gruppen-Freigabe je Buch** (`EbookGroupAccess`, dasselbe
+Muster wie `BookGroupAccess` bei den Kursen). **Jeder Angemeldete darf hochladen** und steuert die Sichtbarkeit seines
+Buchs selbst — mit seinen eigenen Gruppen und „Everyone" (= alle Angemeldeten); Admins bzw. `ebooks.manage` sehen und
+verwalten alles. Sichtbar ist ein Buch für Besitzer, Verwalter und Mitglieder einer freigegebenen Gruppe; unsichtbar
+und unbekannt sehen gleich aus (404). Regel: `Services/Ebooks/EbookAccess.cs` (eine Stelle).
+
+**Zwei Wurzeln auf der Platte** (`EbookOptions`, ENV `Ebooks__Root` / `Ebooks__LibraryRoot`): `Root` (Volume, beschreibbar)
+nimmt Uploads unter `files/JJJJ/MM/<guid>.<ext>` und Titelbilder unter `covers/<id>.cover`; `LibraryRoot` ist die vorhandene
+Bibliothek des Hosts (28 GB, nur lesend eingehängt) — **„Bibliothek einlesen"** legt nur Datenbankzeilen an, die Dateien
+bleiben, wo sie sind (`Ebook.Source = Library`). Gespeichert wird immer ein RELATIVER Pfad; `EbookStorage.ResolvePath`
+weist alles ab, was die Wurzel verlässt. Ohne `Root` ist Hochladen aus (400 `ebooks_not_configured`), ohne `LibraryRoot`
+das Einlesen; Übersicht und Leser laufen trotzdem. Gelöscht werden nur Uploads und Titelbilder, nie Bibliotheksdateien.
+
+**Grenzen:** 1 GiB je Datei (`EbookOptions.MaxFileBytes`), Anfrage bis `EbookService.MaxUploadRequestBytes` (1,1 GB; nginx
+`location ^~ /api/ebooks` hält dieselbe Grenze ungepuffert, `DeploymentConfigTests`), Kontingent 5 GiB Uploads je Nutzer
+(`UserQuotaBytes`, 0 = aus; Verwalter ohne), Formate `pdf epub djvu cbz cbr mobi azw3` (`EbookFormats.Allowed`), höchstens
+20 Schlagworte à 40 Zeichen. Eine zweite Datei mit demselben SHA-256 → 409 `ebook_duplicate_file` (die Datei wird wieder
+gelöscht).
+
+**Titelbilder** rendert der `EbookCoverWorker` (alle 20 s, 4 Bücher je Durchlauf) nachträglich: PDF über `pdftoppm` (Seite 1,
+480 px, dazu die Seitenzahl aus `pdfinfo`), DJVU über `ddjvu` → Ein-Seiten-PDF → `pdftoppm`, EPUB/CBZ als Bild aus dem Zip
+(OPF-Cover bzw. erstes Bild). Werkzeuge liegen im API-Image (`poppler-utils`, `djvulibre-bin`); fehlen sie, bleibt das Buch
+auf `CoverState = Failed` (kein weiterer Versuch) und die Karte zeigt den Titel statt eines Bilds.
+
+**Datei-Endpunkte sind `[AllowAnonymous]` mit Ausweis**: `<img>`, Download-Links und der PDF-Leser (Bereichsanfragen) können
+keinen Bearer schicken. `GET /api/ebooks/access-token` gibt einen 12-h-Ausweis (`EbookAccessTokens`: DataProtection-
+versiegelte Nutzer-Id), der als `?t=` mitgeht; jede Anfrage prüft die Sichtbarkeit des Buchs für genau diesen Nutzer gegen
+die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Ausweis UND ohne Bearer: 401. Eingetragen in
+`EndpointAuthInventoryTests.ExpectedAnonymous`.
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/ebooks?search=&tag=&mine=&sort=&page=&pageSize=` | Auth | Sichtbare Bücher, eine Seite (`pageSize` ≤ 100, Vorgabe 24) + Rahmen: `tags[]` (Schlagwort-Facette über ALLE sichtbaren, unabhängig vom Filter), `uploadEnabled`, `quotaUsedBytes`/`quotaLimitBytes` (null = unbegrenzt), `maxFileBytes`, `canManageAll`, `canImportLibrary`. `sort`: `title` (Vorgabe) / `newest` / `recent` (zuletzt gelesen zuerst). `tag` trifft nur ganze Schlagworte. Je Buch `canManage`, `groupIds` (nur wenn verwaltbar), `files[]`, `primaryFormat` (PDF vor allem anderen), `progress` (Lesestand des Aufrufers), `hasCover` |
+| GET | `/api/ebooks/groups` | Auth | Gruppen, die der Aufrufer freigeben darf: Verwalter alle, sonst die eigenen + „Everyone" (`isEveryone`). Literal vor `{id}` |
+| GET | `/api/ebooks/access-token` | Auth | `{ token, expiresAt }` — der Ausweis für `…/file` und `…/cover` |
+| POST | `/api/ebooks` | Auth | Hochladen: Multipart `file` + `title?` (sonst aus dem Dateinamen), `author?`, `year?`, `tags?` (CSV), `description?`, `targetMinElo?`, `groupIds?` (CSV) → 201 + Buch. 400 `ebook_format_unsupported` / `ebook_file_too_large` / `ebook_file_empty` / `ebook_quota_exceeded` / `ebooks_not_configured`, 409 `ebook_duplicate_file`. Gruppen außerhalb der erlaubten werden still verworfen. Gesperrt in der Impersonation |
+| PUT | `/api/ebooks/groups` | Auth | Freigabe vieler Bücher auf einmal `{ ebookIds[], groupIds[] }` (ersetzt die bisherige; nicht verwaltbare Bücher werden übersprungen) → `{ updated }`. Literal vor `{id}` |
+| GET | `/api/ebooks/{id:int}` | Auth | Ein Buch (unsichtbar → 404) |
+| PUT | `/api/ebooks/{id:int}` | Besitzer/Verwalter | Metadaten + Freigabe; nur gesetzte Felder wirken (`year: 0` = keine Angabe, `groupIds: []` = nur ich). Leerer Titel → 400; fremd → 403; unsichtbar → 404 |
+| DELETE | `/api/ebooks/{id:int}` | Besitzer/Verwalter | Löscht Buch, Freigaben, Lesestände und die HOCHGELADENE Datei + Titelbild (Bibliotheksdateien bleiben) → 204 |
+| GET/PUT | `/api/ebooks/{id:int}/progress` | Auth | Lesestand `{ page, pageCount? }` (1-basiert; `pageCount` bleibt, wenn keiner mitkommt). Unsichtbar → 404 |
+| GET | `/api/ebooks/{id:int}/file?t=&fileId=&download=` | **AllowAnonymous** (Ausweis oder Bearer) | Die Hauptdatei bzw. `fileId`, mit Bereichsanfragen (`PhysicalFile(enableRangeProcessing)`) — der PDF-Leser holt nur die Seiten, die er zeigt. `download=true` → Anhang „<Titel>.<format>“ (Dateisystem-sichere Zeichen). Datei auf der Platte weg → 404 `ebook_file_missing` |
+| GET | `/api/ebooks/{id:int}/cover?t=` | **AllowAnonymous** (Ausweis oder Bearer) | Titelbild (JPEG/PNG, Typ an den Bytes erkannt) oder 404, solange keines da ist; `Cache-Control: private, max-age=86400` |
+| GET | `/api/admin/ebooks/library` | `ebooks.manage` | `{ configured, uploadsEnabled, imported, coversPending }` |
+| POST | `/api/admin/ebooks/library/import` | `ebooks.manage` | Bibliothek einlesen (synchron, Sekunden): gleichnamige Dateien eines Ordners (`Buch.pdf` + `Buch.djvu`) werden EIN Buch; Beiblatt `Buch.json` (`title`, `author` als Text oder Liste, `year`, `tags[]`, `targetMinElo`) liefert die Metadaten, sonst Ordner „Nachname, Vorname" + Dateiname (Ordner `AAA…`, `Unknown`, `.…` gelten nicht als Autor). Idempotent: bekannte Pfade werden übersprungen, ein neues Format neben einem bekannten Buch angehängt. Eingelesene Bücher gehören dem Admin und sind zunächst NUR für Verwalter sichtbar — Freigabe danach in der Übersicht (Auswahl → „Sichtbarkeit setzen"). Antwort `{ configured, filesSeen, added, filesAdded, skipped, unreadable }` |
+
+**Oberfläche** (`features/ebooks/`): Übersicht `/ebooks` (Suche mit 300 ms Verzögerung, Schlagwort-Chips, Sortierung,
+„Meine Uploads", 24 je Seite; Karte mit Titelbild 2:3, Formaten, Seitenzahl, Lesestand-Balken; Hauptaktion „Lesen" bei PDF,
+sonst „Herunterladen"; ⋮ mit Download je Format, Bearbeiten/Sichtbarkeit/Löschen für Verwaltbare; Auswahlmodus für die
+Sichtbarkeit vieler Bücher; Verwalter: „Bibliothek vom Server einlesen"). Leser `/ebooks/:id` (`PdfViewerComponent`): pdf.js
+kommt zur Laufzeit aus `/assets/pdfjs/` (angular.json kopiert `pdf.min.mjs`, Worker, `cmaps`, `standard_fonts`, `wasm`, `iccs`
+aus `node_modules/pdfjs-dist`) — bewusst NICHT im Bundle, sonst läge ~1 MB in jedem Vorab-Cache des Service Workers. Gezeichnet
+werden nur sichtbare Seiten ± eine Sichtfeldhöhe (Leinwände weiter weg werden geleert), Bereichsanfragen à 256 KB
+(`disableAutoFetch`), „Breite füllen" als Vorgabe, Zoomstufen in `reader-progress.util.ts`; der Lesestand geht 1,5 s nach dem
+letzten Seitenwechsel an den Server und wird beim nächsten Öffnen angesprungen. EPUB/DJVU/CBZ/… zeigen eine Download-Karte
+(ein EPUB-Leser im Browser ist offen, siehe TODO).

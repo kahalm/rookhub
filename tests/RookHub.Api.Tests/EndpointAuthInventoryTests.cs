@@ -42,6 +42,11 @@ public class EndpointAuthInventoryTests
         "GET /api/courses/by-slug/{slug}/{chapter}",                 // CourseController.ResolvePublicSlugChapter
         "GET /api/courses/{bookId}/public",                          // CourseController.GetPublicCourse
         "GET /api/courses/{bookId:int}/translations",                // CourseTranslationController: nur öffentliche Kurse anonym
+        // E-Book-Bibliothek (0.764.0): Datei und Titelbild sind anonym erreichbar, weil <img>, Download-Link und der
+        // PDF-Leser keinen Bearer schicken — der Ausweis ?t= (EbookAccessTokens, 12 h) ersetzt ihn; ohne beides 401,
+        // und die Sichtbarkeit des Buchs wird je Anfrage gegen die DB geprüft.
+        "GET /api/ebooks/{id:int}/cover",                            // EbooksController.GetCover
+        "GET /api/ebooks/{id:int}/file",                             // EbooksController.GetFile
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress
         // KidHub, die Kinderseite (0.554.0): ganz ohne Konto — Stufen aus markierten Lichess-Puzzles und
         // die Aufgaben der Kurse, die ein Admin mit Book.ForKids freigegeben hat (nie Kalkulationsbuecher).

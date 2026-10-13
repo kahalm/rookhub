@@ -587,6 +587,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   `prep-card`), ihre Variablen werden auf Material-Rollen abgebildet (`--ink: var(--mat-sys-on-surface)` …);
   Bedienelemente sprechen in RookHub Material (r2-rg-prep-style).
   Ihre Texte, Notation, Datum und Prozent folgen der Oberflächensprache (Abschnitt 6, e1-rk-prep-card-german).
+- E-Book-Bibliothek (`features/ebooks/`, 0.764.0): Karten als **Regal** — Titelbild im Verhältnis 2:3 oben (ohne Bild:
+  Symbol + Titel auf getönter Fläche), Lesestand als dünner Balken an der Bildunterkante, Titel zweizeilig mit „…“,
+  Formate/Seitenzahl/Sichtbarkeit als `.chip`-Abzeichen, Aktionszeile unten (Hauptaktion links, ⋮ rechts); Raster
+  `repeat(auto-fill, minmax(170px, 1fr))`, am Handy 150 px. Filter-Chips (`.eb-chip`, `aria-pressed`) wie 5.9. Der Leser
+  ist ein Sonderlayout (4.5): Werkzeugleiste + Seiten in der Resthöhe, eigener Scrollkasten, Seiten auf dunklem Grund.
+
 - `index.html` theme-color `#3f51b5`.
 
 ### 8.2 Turnierseite (`src-turnier/`)
@@ -781,6 +787,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-13 | 0.764.0 | E-Book-Karten als Regal (Titelbild 2:3, Lesestand-Balken, Abzeichen); Leser als Sonderlayout mit eigenem Scrollkasten | neuer Bereich, Buchtitel allein sagen wenig — das Titelbild ist die Wiedererkennung | E-Book-Bibliothek |
 | 2026-07-26 | 0.334.0 | UI-Dichte-Regel: eine primäre Aktion, ≤ 3 sekundäre, Rest ⋮; ein Satz je Karte, Rest hinter ? | Dichte wuchs mit jedem Feature | UI-Welle 2/3, `rookhub/CLAUDE.md` |
 | 2026-07-26 | 0.334.0 | Eine Seitenbreite `--page-max-width: 1240px` | page-eigene 1400px/96vw, tote Info-Spalten | UI-Welle 3, `styles.scss` |
 | 2026-09-29 | — | Semantische Zustands-Tokens `--rh-*` hell/dunkel, Vordergrund-only | Hex-Werte unter 4,5:1 im Dunkelmodus | Codereview F8-003 |

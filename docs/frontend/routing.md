@@ -27,6 +27,8 @@
 | `/stats` | StatsComponent | ja (Puzzle-Elo-Kurve + Stats; `GET /api/puzzles/elo-history`) |
 | `/training-goals` | TrainingGoalsComponent | `authGuard` (Tagesziele setzen, Heute-Fortschritt + Ziele-Heatmap; `/api/training-goals/*`) |
 | `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | `adminGuard` (vorerst nur Admin) |
+| `/ebooks` | EbookListComponent (E-Book-Bibliothek, 0.764.0: Suche, Schlagwort-Chips, Sortierung, Karten mit Titelbild und Lesestand; Hochladen für jeden Angemeldeten, Sichtbarkeit je Buch über Gruppen) | `authGuard` + `menuGuard('ebooks')` |
+| `/ebooks/:id` | EbookReaderComponent (PDF-Leser mit pdf.js aus `/assets/pdfjs/`, Seite x / N, Zoom, gemerkter Lesestand; andere Formate: Download-Karte) | `authGuard` + `menuGuard('ebooks')` |
 | `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
 | `/courses/:bookId` | CourseDetailComponent (Detailseite: Metadaten + Kapitel-Verwaltung, Stellungen per Memo einfügen) | `courseAccessGuard` |
 | `/courses/:bookId/flashcards` | FlashcardsComponent (Lern-/Druckansicht: AUSGANGSSTELLUNG vorn [Aufgabe], Lösung+Abschlusstext hinten; `?lines=<ids>`/`?chapter=`; MUSS vor der `:mode`-Route stehen) | `courseAccessGuard` |

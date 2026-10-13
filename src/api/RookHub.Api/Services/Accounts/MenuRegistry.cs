@@ -31,6 +31,8 @@ public static class MenuRegistry
         // Partieformular einlesen (0.529.0) — jede Einlesung kostet beim Modell; Tagesdeckel je Nutzer.
         new MenuItemDef("scoresheet", MenuVisibilityLevel.Registered),
         new MenuItemDef("remembered", MenuVisibilityLevel.Registered),
+        // E-Book-Bibliothek (0.764.0): Sichtbarkeit JE BUCH regeln Gruppen-Freigaben; der Menüpunkt öffnet nur den Bereich.
+        new MenuItemDef("ebooks", MenuVisibilityLevel.Registered),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),
         new MenuItemDef("catalog", MenuVisibilityLevel.Registered),

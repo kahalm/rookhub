@@ -111,6 +111,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Kurse (auth, gruppen-/admin-gated) → `docs/api/kurse.md`
 - Kurs-Detailseite + Inhaltspflege (auth) → `docs/api/kurs-detailseite-inhaltspflege.md`
 - Aufgabenblätter (auth) — Stellungen sammeln, ordnen, drucken → `docs/api/aufgabenblaetter.md`
+- E-Book-Bibliothek (auth, 0.764.0) — Bücher lesen (PDF im Browser), hochladen, je Buch für Gruppen freigeben → `docs/api/ebooks.md`
 - Kalkulations-Modus (auth) — Stellungen ohne Lösung → `docs/api/kalkulations-modus.md`
 - Wochenpost (öffentlich lesbar, durchspielbar mit Login, Admin verwaltet) → `docs/api/wochenpost.md`
 - Bot-Stats (Bot-intern, HMAC-signiert) → `docs/api/bot-stats.md`
@@ -289,7 +290,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **Dienste, Controller, DTOs und Tests liegen nach Fachbereich in Unterordnern** (`Services/<Bereich>/`,
   `Controllers/<Bereich>/`, `DTOs/<Bereich>/`, `tests/…/<Bereich>/`; Namespace jeweils `….<Bereich>`, z. B. `RookHub.Api.Services.<Bereich>`,
   Nutzer binden ihn per `using` ein — kein `global using`). Bereiche: Accounts, Chessable, ChessBase, Club, Courses,
-  EngineBroker, Engines, Games, Kids, League, Library, Og, Prep, Puzzles, Repertoires, Scoresheet, Social, Tactics,
+  Ebooks, EngineBroker, Engines, Games, Kids, League, Library, Og, Prep, Puzzles, Repertoires, Scoresheet, Social, Tactics,
   Tournaments, TournamentDirectory. **Gemeinsame Bausteine bleiben direkt in `Services/`** (PGN/FEN-Werkzeuge,
   `PeriodicWorker`, Rate-Limiter, `Paging`, LLM-Clients …): der Eltern-Namespace ist aus jedem Bereich ohne `using`
   sichtbar. Abgesichert durch `ArchitectureGuardTests` (Ort, Namespace = Ordner,

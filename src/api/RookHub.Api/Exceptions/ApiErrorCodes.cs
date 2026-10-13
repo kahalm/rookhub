@@ -28,6 +28,15 @@ public static class ApiErrorCodes
     public const string TokenLimitReached = "token_limit_reached";
 
     public const string AdminSelfDelete = "admin_self_delete";
+
+    // E-Book-Bibliothek (0.764.0)
+    public const string EbooksNotConfigured = "ebooks_not_configured";
+    public const string EbookFormatUnsupported = "ebook_format_unsupported";
+    public const string EbookFileTooLarge = "ebook_file_too_large";
+    public const string EbookFileEmpty = "ebook_file_empty";
+    public const string EbookQuotaExceeded = "ebook_quota_exceeded";
+    public const string EbookDuplicateFile = "ebook_duplicate_file";
+    public const string EbookFileMissing = "ebook_file_missing";
     public const string AdminSelfChange = "admin_self_change";
     public const string UserDeleteReferences = "user_delete_references";
 

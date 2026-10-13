@@ -2172,6 +2172,155 @@ namespace RookHub.Api.Migrations
                     b.ToTable("DailyPuzzles");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int>("CoverState")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<int?>("OwnerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("varchar(600)");
+
+                    b.Property<int?>("TargetMinElo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("CoverState", "Id");
+
+                    b.ToTable("Ebooks");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("RelativePath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookId");
+
+                    b.HasIndex("RelativePath")
+                        .IsUnique();
+
+                    b.HasIndex("Sha256");
+
+                    b.ToTable("EbookFiles");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookGroupAccess", b =>
+                {
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.HasKey("EbookId", "GroupId");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("EbookGroupAccesses");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookProgress", b =>
+                {
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("EbookId", "UserId");
+
+                    b.HasIndex("UserId", "UpdatedAt");
+
+                    b.ToTable("EbookProgresses");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EndlessProgress", b =>
                 {
                     b.Property<int>("Id")
@@ -8475,6 +8624,65 @@ namespace RookHub.Api.Migrations
                     b.Navigation("BookPuzzle");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany("Files")
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookGroupAccess", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany("GroupAccess")
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookProgress", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EndlessProgress", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
@@ -9605,6 +9813,13 @@ namespace RookHub.Api.Migrations
             modelBuilder.Entity("RookHub.Api.Models.CommentSet", b =>
                 {
                     b.Navigation("Texts");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>
+                {
+                    b.Navigation("Files");
+
+                    b.Navigation("GroupAccess");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.GameAnalysis", b =>

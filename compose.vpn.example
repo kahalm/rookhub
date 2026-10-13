@@ -240,6 +240,11 @@ services:
       # Optional: lokaler Eroeffnungs-Explorer (lila-openingexplorer im Stack), z. B.
       # http://rookhub-explorer:9002/ — leer = nur die Online-Quelle (explorer.lichess.ovh).
       LichessExplorer__LocalUrl: ${LICHESS_EXPLORER_LOCAL_URL:-}
+      # E-Book-Bibliothek (0.764.0): Ebooks__Root = beschreibbares Verzeichnis für Uploads + Titelbilder (Volume unten);
+      # Ebooks__LibraryRoot = vorhandene Bibliothek auf dem Server, nur lesend (gesetzt, sobald EBOOKS_LIBRARY_HOST_PATH
+      # steht). Leer = Hochladen bzw. Einlesen aus; Übersicht und Leser laufen trotzdem.
+      Ebooks__Root: ${EBOOKS_ROOT:-/data/ebooks}
+      Ebooks__LibraryRoot: ${EBOOKS_LIBRARY_HOST_PATH:+/data/ebooks-library}
       # Admin-Tab „CI / Actions": GitHub-PAT (actions:read) + Push-Modell. Leer -> Tab/Meldungen aus;
       # die CI-Endpoints antworten ohne Secret mit 401 (fail-closed).
       GitHub__Token: ${GITHUB_TOKEN:-}
@@ -256,6 +261,9 @@ services:
       # PFLICHT: ohne persistentes /keys haelt ASP.NET die DataProtection-Keys nur im
       # Speicher — jeder Container-Neustart entwertet Reset-Links/geschuetzte Payloads.
       - dataprotection-keys:/keys
+      # E-Books: Uploads + Titelbilder (benanntes Volume); die Bibliothek des Hosts nur lesend (Pfad aus der .env).
+      - ebooks-data:/data/ebooks
+      - ${EBOOKS_LIBRARY_HOST_PATH:-./.ebooks-library-empty}:/data/ebooks-library:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
       interval: 30s
@@ -291,5 +299,6 @@ networks:
   rookhub:
 
 volumes:
+  ebooks-data:
   mariadb-data:
   dataprotection-keys:

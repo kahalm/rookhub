@@ -413,6 +413,12 @@ public class ProfileService
         _db.GameMistakeProgresses.RemoveRange(await _db.GameMistakeProgresses.Where(m => m.UserId == userId).ToListAsync());
         _db.MarkedPositions.RemoveRange(await _db.MarkedPositions.Where(m => m.UserId == userId).ToListAsync());
         _db.Worksheets.RemoveRange(await _db.Worksheets.Where(w => w.UserId == userId).ToListAsync());
+        // E-Book-Bibliothek: der Lesestand ist persönlich und geht; die BÜCHER bleiben besitzerlos stehen (nur noch
+        // Verwalter pflegen sie) — ein Admin, der die 800-Bücher-Bibliothek eingelesen hat, nimmt sie beim Löschen seines
+        // Kontos nicht mit, und ein für die Gruppe freigegebenes Buch verschwindet nicht aus deren Regal.
+        _db.EbookProgresses.RemoveRange(await _db.EbookProgresses.Where(p => p.UserId == userId).ToListAsync());
+        foreach (var ebook in await _db.Ebooks.Where(b => b.OwnerUserId == userId).ToListAsync())
+            ebook.OwnerUserId = null;
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
         // API-Tokens (chess.com-Extension u. a.) widerrufen — ein gelöschtes Konto behält keinen Zugang.
         _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == userId).ToListAsync());

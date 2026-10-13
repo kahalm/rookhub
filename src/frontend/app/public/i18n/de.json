@@ -96,7 +96,14 @@
     "book_alias_reserved": "Dieser Alias ist reserviert.",
     "book_alias_taken": "Dieser Alias ist bereits vergeben.",
     "course_pgn_is_repertoire": "Diese Datei ist ein Eröffnungsrepertoire (Partien ab der Grundstellung), kein Kurs mit Aufgaben. Lade sie unter „Repertoires“ hoch.",
-    "course_no_lines": "In dieser PGN steckt keine spielbare Kurs-Linie. Ein Kurs braucht Aufgaben im Chessable-Stil (Stellung + Lösung)."
+    "course_no_lines": "In dieser PGN steckt keine spielbare Kurs-Linie. Ein Kurs braucht Aufgaben im Chessable-Stil (Stellung + Lösung).",
+    "ebooks_not_configured": "Die E-Book-Bibliothek ist auf diesem Server noch nicht eingerichtet.",
+    "ebook_format_unsupported": "Dieser Dateityp wird nicht unterstützt. Erlaubt: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
+    "ebook_file_too_large": "Die Datei ist zu groß.",
+    "ebook_file_empty": "Die Datei ist leer.",
+    "ebook_quota_exceeded": "Dein Speicherplatz ist aufgebraucht. Lösche ein E-Book oder frag einen Admin.",
+    "ebook_duplicate_file": "Diese Datei ist schon in der Bibliothek.",
+    "ebook_file_missing": "Die Datei fehlt auf dem Server."
   },
   "common": {
     "paginator": {
@@ -286,7 +293,8 @@
     "tournamentBookmarks": "Gemerkt",
     "reconstruct": "Partie rekonstruieren",
     "scoresheet": "Partieformular einlesen",
-    "prep": "Gegner vorbereiten"
+    "prep": "Gegner vorbereiten",
+    "ebooks": "E-Books"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1467,8 +1475,7 @@
       "current": "Aktuelles Puzzle",
       "previous": "Vorheriges Puzzle"
     },
-    "bar": {
-    },
+    "bar": {},
     "keyboardMove": {
       "board": "Schachbrett",
       "label": "Zug eingeben",
@@ -2513,7 +2520,8 @@
         "help": "Hilfe",
         "leaderboards": "Bestenlisten",
         "tournament-calendar": "Turnierkalender",
-        "scoresheet": "Partieformular einlesen (Foto)"
+        "scoresheet": "Partieformular einlesen (Foto)",
+        "ebooks": "E-Book-Bibliothek"
       }
     },
     "messages": {
@@ -2597,7 +2605,8 @@
         "club_manage": "ClubHub: ganze Kartei der Kinder und Jugendlichen (alle Kinder, Gruppen, Trainer, Löschen)",
         "club_trainer": "ClubHub: Trainer — Kinder der eigenen Gruppen (Kontakte, Anwesenheit, Lernstand)",
         "prep_view": "Spielervorbereitung: jeden Spieler im Partiebestand suchen (Megabase, Lumbra)",
-        "prep_manage": "Spielervorbereitung: Partiebestand einspielen"
+        "prep_manage": "Spielervorbereitung: Partiebestand einspielen",
+        "ebooks_manage": "E-Book-Bibliothek: Bibliothek vom Server einlesen, jedes E-Book verwalten"
       },
       "groupTitle": "Rollen einer Gruppe zuweisen",
       "groupHint": "Jedes Mitglied der Gruppe hat diese Rollen — wer dazukommt, hat die Rechte sofort, wer geht, verliert sie. Die Admin-Rolle und „Everyone“ gibt es hier nicht.",
@@ -3622,6 +3631,13 @@
           "Chessable-Kurse kommen über die RepCheck-Browser-Erweiterung zu RookHub (siehe Abschnitt RepCheck) – sie läuft in deinem eigenen, eingeloggten Browser. Der Import über RookHub selbst ist abgeschaltet: Chessable blockt Rechenzentrums-IPs, und dieses Muster kann dein Chessable-Konto sperren lassen.",
           "Mit „Remember line“ in RepCheck merkst du dir eine Stellung auf chessable.com; du findest sie unter ☰ → Analyse & Sammlung → Gemerkt und kannst sie dort analysieren oder im Hintergrund durchrechnen lassen. Deine aktive Trainingszeit auf chessable.com zählt auf deine Trainingsziele."
         ]
+      },
+      "ebooks": {
+        "t": "E-Books",
+        "p": [
+          "Die E-Book-Bibliothek sammelt Schachbücher als PDF, EPUB, DJVU und Comic-Archive. PDFs öffnen sich direkt im Browser: durch die Seiten scrollen, zoomen und dort weiterlesen, wo du aufgehört hast – die Seite wird je Buch gemerkt. Andere Formate lädst du herunter.",
+          "Jeder Angemeldete kann ein Buch hochladen und bestimmen, wer es sieht: nur du, eine deiner Gruppen oder alle Angemeldeten. Wer hochgeladen hat (und Admins), kann Titel, Autor, Jahr und Schlagworte bearbeiten, die Sichtbarkeit später ändern oder das Buch löschen."
+        ]
       }
     }
   },
@@ -3690,8 +3706,14 @@
     }
   },
   "reprocess": {
-    "short": { "courses": "{{count}} Kurse können aktualisiert werden", "repertoires": "{{count}} Repertoires können aktualisiert werden" },
-    "shortOne": { "courses": "1 Kurs kann aktualisiert werden", "repertoires": "1 Repertoire kann aktualisiert werden" },
+    "short": {
+      "courses": "{{count}} Kurse können aktualisiert werden",
+      "repertoires": "{{count}} Repertoires können aktualisiert werden"
+    },
+    "shortOne": {
+      "courses": "1 Kurs kann aktualisiert werden",
+      "repertoires": "1 Repertoire kann aktualisiert werden"
+    },
     "available": {
       "courses": "{{count}} Kurse nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
       "repertoires": "{{count}} Repertoires nutzen eine ältere Aufbereitung und können aktualisiert werden."
@@ -5198,5 +5220,86 @@
     "vukovicMate": "Vuković-Matt",
     "xRayAttack": "Röntgenangriff",
     "zugzwang": "Zugzwang"
+  },
+  "ebooks": {
+    "title": "E-Books",
+    "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",
+    "introMore": "PDFs öffnen sich im Leser mit Zoom und gemerkter Seite. EPUB, DJVU und Comic-Archive werden heruntergeladen.\n\nMit „Hochladen“ legst du ein Buch an und hakst die Gruppen an, die es sehen dürfen – nichts angehakt heißt nur du. Schlagworte machen die Bibliothek durchsuchbar; die Schlagwort-Chips filtern die Liste.",
+    "upload": "Hochladen",
+    "uploaded": "„{{title}}“ wurde hinzugefügt.",
+    "search": "Titel, Autor oder Schlagwort suchen",
+    "sort": {
+      "label": "Sortierung",
+      "title": "Titel",
+      "newest": "Neueste zuerst",
+      "recent": "Zuletzt gelesen"
+    },
+    "filter": {
+      "mine": "Meine Uploads"
+    },
+    "empty": "Noch keine E-Books – lade das erste hoch.",
+    "emptyFiltered": "Zu diesem Filter passt nichts.",
+    "read": "Lesen",
+    "continue": "Weiter auf Seite {{page}}",
+    "download": "Herunterladen",
+    "downloadFormat": "{{format}} herunterladen ({{size}})",
+    "deleteConfirm": "„{{title}}“ löschen? Die Datei verschwindet für alle aus der Bibliothek.",
+    "deleted": "E-Book gelöscht.",
+    "deleteFailed": "Löschen hat nicht geklappt.",
+    "saveFailed": "Speichern hat nicht geklappt.",
+    "pages": "{{n}} Seiten",
+    "quota": "{{used}} von {{limit}} belegt",
+    "visibilityLabel": "Sichtbarkeit",
+    "visibility": {
+      "onlyMe": "Nur ich",
+      "everyone": "Alle Angemeldeten",
+      "groups": "{{n}} Gruppen",
+      "onlyMeHint": "Keine Gruppe angehakt: nur du (und Admins) sehen dieses Buch.",
+      "groupsHint": "Mitglieder der angehakten Gruppen sehen dieses Buch.",
+      "noGroups": "Du bist noch in keiner Gruppe – das Buch bleibt nur für dich sichtbar. Ein Admin kann dich einer Gruppe zuordnen."
+    },
+    "meta": {
+      "title": "Titel",
+      "author": "Autor",
+      "year": "Jahr",
+      "tags": "Schlagworte",
+      "tagsHint": "Endspiel, Strategie, … (kommagetrennt)",
+      "description": "Beschreibung"
+    },
+    "dialog": {
+      "uploadTitle": "E-Book hochladen",
+      "editTitle": "E-Book bearbeiten",
+      "chooseFile": "Datei wählen",
+      "noFile": "Keine Datei gewählt",
+      "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI oder AZW3, bis {{max}}.",
+      "fileTooLarge": "Die Datei ist größer als {{max}}.",
+      "uploading": "Lädt hoch … {{pct}} %"
+    },
+    "bulk": {
+      "select": "Auswählen",
+      "selected": "{{n}} ausgewählt",
+      "all": "Alle auf dieser Seite",
+      "setVisibility": "Sichtbarkeit setzen",
+      "forCount": "Gilt für {{n}} E-Book(s).",
+      "done": "Sichtbarkeit für {{n}} E-Book(s) gesetzt."
+    },
+    "library": {
+      "import": "Bibliothek vom Server einlesen",
+      "importing": "Liest ein …",
+      "result": "Bibliothek eingelesen: {{added}} neue Bücher, {{files}} Dateien, {{skipped}} schon bekannt. Titelbilder folgen im Hintergrund.",
+      "failed": "Einlesen hat nicht geklappt."
+    },
+    "reader": {
+      "area": "Seiten",
+      "back": "Zurück zur Bibliothek",
+      "page": "Seite",
+      "of": "von {{n}}",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "fitWidth": "Breite füllen",
+      "notViewable": "Dieses Format lässt sich im Browser nicht anzeigen – lade es herunter:",
+      "loadFailed": "Das PDF konnte nicht geladen werden. Geh zurück und öffne es noch einmal.",
+      "saveProgressFailed": "Deine Leseposition konnte nicht gespeichert werden."
+    }
   }
 }

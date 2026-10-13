@@ -38,3 +38,5 @@ __pycache__/
 
 # Arbeitskopien anderer Claude-Sitzungen (git worktrees) — nie Teil des Repos.
 .claude/worktrees/
+# Platzhalter-Bind-Mount der E-Book-Bibliothek (compose ohne EBOOKS_LIBRARY_HOST_PATH)
+.ebooks-library-empty/

@@ -18,7 +18,14 @@
     "book_alias_reserved": "Ez az alias fenntartott.",
     "book_alias_taken": "Ez az alias már foglalt.",
     "course_pgn_is_repertoire": "Ez a fájl egy megnyitási repertoár (játszmák a kezdőállásból), nem feladatokat tartalmazó kurzus. Töltsd fel a „Repertoárok” alatt.",
-    "course_no_lines": "Ez a PGN nem tartalmaz játszható kurzusvonalat. Egy kurzushoz Chessable-stílusú feladatok kellenek (állás + megoldás)."
+    "course_no_lines": "Ez a PGN nem tartalmaz játszható kurzusvonalat. Egy kurzushoz Chessable-stílusú feladatok kellenek (állás + megoldás).",
+    "ebooks_not_configured": "Az e-könyvtár ezen a szerveren még nincs beállítva.",
+    "ebook_format_unsupported": "Ez a fájltípus nem támogatott. Engedélyezett: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
+    "ebook_file_too_large": "A fájl túl nagy.",
+    "ebook_file_empty": "A fájl üres.",
+    "ebook_quota_exceeded": "A feltöltési kereted elfogyott. Törölj egy e-könyvet, vagy kérj meg egy adminisztrátort.",
+    "ebook_duplicate_file": "Ez a fájl már a könyvtárban van.",
+    "ebook_file_missing": "A fájl hiányzik a szerverről."
   },
   "common": {
     "paginator": {
@@ -109,7 +116,8 @@
     "tournamentBookmarks": "Megjelölt",
     "reconstruct": "Játszma rekonstruálása",
     "scoresheet": "Játszmalap beolvasása",
-    "prep": "Felkészülés ellenfélre"
+    "prep": "Felkészülés ellenfélre",
+    "ebooks": "E-könyvek"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -1211,8 +1219,7 @@
         "piece": "bábu"
       }
     },
-    "bar": {
-    },
+    "bar": {},
     "keyboardMove": {
       "board": "Sakktábla",
       "label": "Lépés megadása",
@@ -2104,7 +2111,8 @@
         "help": "Súgó",
         "leaderboards": "Ranglisták",
         "tournament-calendar": "Versenynaptár",
-        "scoresheet": "Játszmalap beolvasása (fénykép)"
+        "scoresheet": "Játszmalap beolvasása (fénykép)",
+        "ebooks": "E-könyvtár"
       }
     },
     "messages": {
@@ -2188,7 +2196,8 @@
         "club_manage": "ClubHub: a gyerekek és fiatalok teljes kartotékja (minden gyerek, csoportok, edzők, törlés)",
         "club_trainer": "ClubHub: edző — a saját csoportok gyerekei (elérhetőségek, jelenlét, fejlődés)",
         "prep_view": "Felkészülés játékos ellen: bármely játékos keresése a játszmaadatbázisban (Megabase, Lumbra)",
-        "prep_manage": "Felkészülés játékos ellen: játszmaadatbázis importálása"
+        "prep_manage": "Felkészülés játékos ellen: játszmaadatbázis importálása",
+        "ebooks_manage": "E-könyvtár: a szerver könyvtárának beolvasása, minden e-könyv kezelése"
       },
       "groupTitle": "Szerepkörök hozzárendelése egy csoporthoz",
       "groupHint": "A csoport minden tagja megkapja ezeket a szerepköröket — aki csatlakozik, azonnal megkapja a jogokat, aki kilép, elveszíti őket. Az admin szerepkör és az „Everyone” itt nem érhető el.",
@@ -4455,6 +4464,13 @@
           "A Chessable-tanfolyamok a RepCheck böngészőbővítményen keresztül kerülnek a RookHubba (lásd a RepCheck részt) – a bővítmény a saját, bejelentkezett böngésződben fut. A RookHubon keresztüli importálás ki van kapcsolva: a Chessable blokkolja az adatközponti IP-címeket, és ez a minta a Chessable-fiókod letiltásához vezethet.",
           "A RepCheck „Remember line” gombjával elteszel egy állást a chessable.comról; a ☰ → Elemzés és gyűjtemény → Megjelöltek alatt találod, ahol elemezheted, vagy háttérelemzésre küldheted. A chessable.comon töltött aktív edzésidőd beleszámít az edzéscéljaidba."
         ]
+      },
+      "ebooks": {
+        "t": "E-könyvek",
+        "p": [
+          "Az e-könyvtár sakk-könyveket gyűjt PDF, EPUB, DJVU és képregény-archívum formában. A PDF-ek közvetlenül a böngészőben nyílnak meg: lapozz, nagyíts, és folytasd ott, ahol abbahagytad – az oldalt könyvenként megjegyezzük. A többi formátumot letöltheted.",
+          "Bárki, aki be van jelentkezve, feltölthet könyvet, és eldöntheti, ki látja: csak te, az egyik csoportod vagy minden bejelentkezett. A feltöltő (és az adminisztrátorok) szerkesztheti a címet, szerzőt, évet és címkéket, később módosíthatja a láthatóságot vagy törölheti a könyvet."
+        ]
       }
     },
     "title": "Súgó és útmutató",
@@ -4501,8 +4517,14 @@
     }
   },
   "reprocess": {
-    "short": { "courses": "{{count}} kurzus frissíthető", "repertoires": "{{count}} repertoár frissíthető" },
-    "shortOne": { "courses": "1 kurzus frissíthető", "repertoires": "1 repertoár frissíthető" },
+    "short": {
+      "courses": "{{count}} kurzus frissíthető",
+      "repertoires": "{{count}} repertoár frissíthető"
+    },
+    "shortOne": {
+      "courses": "1 kurzus frissíthető",
+      "repertoires": "1 repertoár frissíthető"
+    },
     "available": {
       "courses": "{{count}} tanfolyam régebbi feldolgozást használ, és frissíthető — pl. hogy megjelenjenek a könyv lépésenkénti megjegyzései.",
       "repertoires": "{{count}} repertoár régebbi feldolgozást használ, és frissíthető."
@@ -5198,5 +5220,86 @@
     "vukovicMate": "Vuković-matt",
     "xRayAttack": "Röntgentámadás",
     "zugzwang": "Lépéskényszer"
+  },
+  "ebooks": {
+    "title": "E-könyvek",
+    "intro": "Sakk-könyvek böngészőben olvasásra vagy letöltésre; minden könyv azokkal a csoportokkal van megosztva, amelyeket a feltöltője választott.",
+    "introMore": "A PDF-ek az olvasóban nyílnak meg nagyítással és megjegyzett oldallal. Az EPUB, DJVU és képregény-archívumok letöltődnek.\n\nA „Feltöltés” gombbal adsz hozzá könyvet, és bejelölöd a csoportokat, amelyek láthatják – ha semmit sem jelölsz be, csak te látod. A címkék kereshetővé teszik a könyvtárat; a címkecsipek szűrik a listát.",
+    "upload": "Feltöltés",
+    "uploaded": "„{{title}}” hozzáadva.",
+    "search": "Cím, szerző vagy címke keresése",
+    "sort": {
+      "label": "Rendezés",
+      "title": "Cím",
+      "newest": "Legújabb elöl",
+      "recent": "Nemrég olvasott"
+    },
+    "filter": {
+      "mine": "Saját feltöltéseim"
+    },
+    "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
+    "emptyFiltered": "Ehhez a szűrőhöz semmi sem illik.",
+    "read": "Olvasás",
+    "continue": "Folytatás a(z) {{page}}. oldalon",
+    "download": "Letöltés",
+    "downloadFormat": "{{format}} letöltése ({{size}})",
+    "deleteConfirm": "Törlöd a(z) „{{title}}” könyvet? A fájl mindenki számára eltűnik a könyvtárból.",
+    "deleted": "E-könyv törölve.",
+    "deleteFailed": "A törlés nem sikerült.",
+    "saveFailed": "A mentés nem sikerült.",
+    "pages": "{{n}} oldal",
+    "quota": "{{used}} / {{limit}} felhasználva",
+    "visibilityLabel": "Láthatóság",
+    "visibility": {
+      "onlyMe": "Csak én",
+      "everyone": "Minden bejelentkezett",
+      "groups": "{{n}} csoport",
+      "onlyMeHint": "Nincs csoport bejelölve: ezt a könyvet csak te (és az adminisztrátorok) látod.",
+      "groupsHint": "A bejelölt csoportok tagjai látják ezt a könyvet.",
+      "noGroups": "Még nem vagy tagja egy csoportnak sem – a könyv csak számodra marad látható. Egy adminisztrátor hozzáadhat egy csoporthoz."
+    },
+    "meta": {
+      "title": "Cím",
+      "author": "Szerző",
+      "year": "Év",
+      "tags": "Címkék",
+      "tagsHint": "Végjáték, Stratégia, … (vesszővel elválasztva)",
+      "description": "Leírás"
+    },
+    "dialog": {
+      "uploadTitle": "E-könyv feltöltése",
+      "editTitle": "E-könyv szerkesztése",
+      "chooseFile": "Fájl kiválasztása",
+      "noFile": "Nincs fájl kiválasztva",
+      "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI vagy AZW3, legfeljebb {{max}}.",
+      "fileTooLarge": "A fájl nagyobb, mint {{max}}.",
+      "uploading": "Feltöltés … {{pct}}%"
+    },
+    "bulk": {
+      "select": "Kijelölés",
+      "selected": "{{n}} kijelölve",
+      "all": "Minden ezen az oldalon",
+      "setVisibility": "Láthatóság beállítása",
+      "forCount": "{{n}} e-könyvre vonatkozik.",
+      "done": "Láthatóság beállítva {{n}} e-könyvhöz."
+    },
+    "library": {
+      "import": "Szerverkönyvtár beolvasása",
+      "importing": "Beolvasás …",
+      "result": "Könyvtár beolvasva: {{added}} új könyv, {{files}} fájl, {{skipped}} már ismert. A borítók a háttérben következnek.",
+      "failed": "A beolvasás nem sikerült."
+    },
+    "reader": {
+      "area": "Oldalak",
+      "back": "Vissza a könyvtárba",
+      "page": "Oldal",
+      "of": "/ {{n}}",
+      "zoomIn": "Nagyítás",
+      "zoomOut": "Kicsinyítés",
+      "fitWidth": "Szélességhez igazítás",
+      "notViewable": "Ez a formátum nem jeleníthető meg a böngészőben – töltsd le:",
+      "loadFailed": "A PDF-et nem sikerült betölteni. Lépj vissza, és nyisd meg újra.",
+      "saveProgressFailed": "Az olvasási pozíciót nem sikerült menteni."
+    }
   }
 }

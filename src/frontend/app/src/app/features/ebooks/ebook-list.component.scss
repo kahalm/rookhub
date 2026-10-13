@@ -1,0 +1,86 @@
+/* E-Book-Übersicht: Seitenkopf nach DESIGN.md 5.1, Karten als Regal (Titelbild 2:3), Chips nach 5.9. */
+.eb-page { max-width: var(--page-max-width, 1240px); margin: 0 auto; padding: 1rem; }
+
+.header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.header h1 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.header-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.intro { margin: 4px 0 12px; opacity: .8; }
+
+.eb-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.eb-search { flex: 1 1 240px; }
+.eb-sort { flex: 0 1 190px; }
+
+.eb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.eb-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 32px; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 25%, transparent);
+  background: transparent; color: inherit; font: inherit; font-size: .85rem; cursor: pointer;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+.eb-chip--on { background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent); border-color: var(--mat-sys-primary); }
+.eb-chip-count { opacity: .6; font-size: .75rem; }
+
+.eb-bulk {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; margin-bottom: 12px; border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+}
+
+.eb-empty { text-align: center; padding: 2rem 1rem; }
+.eb-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .5; }
+.eb-empty p { margin: 8px 0 12px; }
+
+.eb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.eb-card { display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.eb-card--selected { outline: 2px solid var(--mat-sys-primary); }
+
+.eb-cover {
+  display: block; position: relative; aspect-ratio: 2 / 3; overflow: hidden;
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+.eb-cover-fallback {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 12px; text-align: center;
+  mat-icon { font-size: 36px; width: 36px; height: 36px; opacity: .5; }
+}
+.eb-cover-title {
+  font-size: .85rem; line-height: 1.25; opacity: .8;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.eb-progress { position: absolute; left: 0; right: 0; bottom: 0; }
+.eb-select { position: absolute; top: 4px; left: 4px; background: color-mix(in srgb, var(--mat-sys-surface) 80%, transparent); border-radius: 6px; }
+
+.eb-body { padding: 10px 12px 4px !important; flex: 1 1 auto; min-width: 0; }
+.eb-title {
+  display: block; font-weight: 500; color: inherit; text-decoration: none; line-height: 1.25;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  &:hover { text-decoration: underline; }
+}
+.eb-meta { font-size: .85rem; opacity: .75; margin-top: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.eb-sep { margin: 0 4px; }
+.eb-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.chip {
+  font-size: .72rem; padding: 1px 7px; border-radius: 999px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  display: inline-flex; align-items: center; gap: 3px;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
+.eb-actions { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px 12px; }
+.eb-actions a[mat-flat-button] { min-width: 0; }
+.eb-spacer { flex: 1; }
+
+.eb-quota { text-align: right; font-size: .8rem; opacity: .6; margin: 12px 0 0; }
+
+@media (max-width: 599.98px) {
+  .eb-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .eb-upload-text { display: none; }
+  .eb-upload { min-width: 44px; padding: 0 10px; }
+}

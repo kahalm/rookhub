@@ -1,0 +1,60 @@
+/* Leser: Werkzeugleiste oben, Seiten darunter in der ganzen Resthöhe (DESIGN.md 4.5 Sonderlayout wie das Brett). */
+.rd-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--rh-navbar-height, 64px));
+  min-height: 420px;
+}
+
+.rd-pad { padding: 1rem; }
+
+.rd-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent);
+  background: var(--mat-sys-surface);
+  flex: none;
+}
+
+.rd-title {
+  flex: 1 1 120px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.rd-title-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 500; }
+.rd-author { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: .8rem; opacity: .7; }
+
+.rd-pages { display: flex; align-items: center; gap: 4px; flex: none; font-variant-numeric: tabular-nums; }
+.rd-page-input {
+  width: 4.2em;
+  padding: 6px 4px;
+  text-align: right;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 30%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  min-height: 36px;
+}
+.rd-page-count { white-space: nowrap; font-size: .9rem; opacity: .8; }
+.rd-zoom { display: flex; flex: none; }
+.rd-zoom-active { color: var(--mat-sys-primary); }
+
+.rd-viewer { flex: 1 1 auto; min-height: 0; }
+
+.rd-download { text-align: center; padding: 2rem 1rem; }
+.rd-download mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .6; }
+.rd-download-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (max-width: 599.98px) {
+  .rd-toolbar { flex-wrap: wrap; }
+  .rd-title { order: -1; flex-basis: calc(100% - 96px); }
+  .rd-back { order: -2; }
+  .rd-pages { margin-left: 4px; }
+}

@@ -8,9 +8,11 @@ RUN dotnet publish -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 # curl für den Docker-Healthcheck (GET /health); stockfish für den Tipp-Generator
-# (StockfishAnalyzer, nur Import-/Reprocess-Pfad). --no-install-recommends hält das Image schlank.
+# (StockfishAnalyzer, nur Import-/Reprocess-Pfad); poppler-utils (pdftoppm, pdfinfo) und djvulibre-bin (ddjvu)
+# für die Titelbilder und Seitenzahlen der E-Book-Bibliothek (EbookCoverRenderer, 0.764.0).
+# --no-install-recommends hält das Image schlank.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl stockfish \
+    && apt-get install -y --no-install-recommends curl stockfish poppler-utils djvulibre-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Ubuntu-24.04-Basis (.NET 10) hat kein adduser mehr — useradd nutzen
