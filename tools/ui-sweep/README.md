@@ -189,6 +189,11 @@ dass er erreicht ist (sonst Befund „Zustand nicht erreicht“, ein gescheitert
 Zustände laufen im normalen Lauf mit; `--no-states` lässt sie weg, `--states-only` nimmt nur sie. Sie schreiben nichts:
 Dialoge werden geöffnet, nie bestätigt; Formulare scheitern höchstens absichtlich. Mit `--fast` lädt jeder Zustand
 seine Seite selbst (Umstellen der Breite würde Menüs schließen).
+Sicherheitsnetz: während eines Zustands beantwortet das Werkzeug jede schreibende API-Anfrage (außer `/api/auth/*`)
+selbst mit 200 `{}` — „Aufgeben“, ein Zug angemeldet oder der Endlos-Start erreichen den Server nicht.
+Spielweise: jeder Lauf legt „Einfachmodus“ in `rookhub_solve_modes` — ohne die Wahl verdeckte der Spielweise-Dialog JEDE
+Aufnahme von Puzzle- und Kursseiten (frischer Speicher = erster Besuch). Den Dialog selbst zeigt der Zustand
+`rookhub__puzzles-puzzleId--spielweise` (`fresh: true`).
 
 ## Andere Browser (`--browser webkit|firefox`)
 

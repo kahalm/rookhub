@@ -9,8 +9,13 @@
 //   auth   — nur diese Rollen (Vorgabe: die der Route). Zustände, die etwas SCHREIBEN würden, gibt es hier nicht —
 //            Dialoge werden geöffnet, nie bestätigt; Formulare werden nie abgeschickt, außer sie scheitern absichtlich
 //            (falsches Kennwort).
+//            Sicherheitsnetz: solange ein Zustand läuft, beantwortet das Werkzeug JEDE schreibende API-Anfrage
+//            (POST/PUT/PATCH/DELETE außer /api/auth/*) selbst mit 200 „{}" — sie erreicht den Server nicht. „Aufgeben",
+//            ein Zug angemeldet auf dem Analysebrett oder der Endlos-Start verändern so keine Testdaten.
 //   steps  — der Reihe nach:
 //              { click: sel }           erstes passendes Element anklicken
+//              { clickIf: sel }         dito, aber nur wenn sichtbar (z. B. Spielweise-Dialog, der nur beim ersten Mal kommt)
+//              { select: sel, value }   Auswahlliste (natives <select>)
 //              { fill: sel, text }      Feld füllen
 //              { press: key }           Taste (z. B. 'Escape', 'Enter'); mit sel: auf diesem Element
 //              { hover: sel }
@@ -21,6 +26,8 @@
 //            Selektoren sind Playwright-Selektoren (CSS, `:has-text("…")`, `>> nth=1` …).
 //   expect — Selektor, der danach sichtbar sein muss; fehlt er, steht „Zustand nicht erreicht" im Bericht (die Aufnahme
 //            gibt es trotzdem — sie zeigt, was stattdessen da ist).
+//   fresh  — ohne vorbelegte Spielweise (sweep.mjs legt sonst „Einfachmodus" in den Speicher, damit der Dialog nicht
+//            jede Puzzle-/Kursaufnahme verdeckt) — nur für den Zustand, der genau diesen Dialog zeigt.
 //   main   — Hauptsache für die Falz-Prüfung (Vorgabe: keine; Zustände sind von der Falz-Prüfung ausgenommen).
 //
 // Ein Schritt, der scheitert (Selektor fehlt), bricht die Schritte ab; die Aufnahme zeigt den Stand bis dahin.
@@ -28,9 +35,119 @@
 const MENU = '.cdk-overlay-pane .mat-mdc-menu-panel';
 const DIALOG = 'mat-dialog-container';
 
+// Spielweise-Dialog (Trainings-/Einfachmodus): sweep.mjs belegt die Wahl vor; falls ein Bereich trotzdem fragt
+// (eigene Wahl je Kurs/Wochenpost), vor den eigentlichen Schritten wegklicken (Einfachmodus: schreibt nur localStorage).
+const EASY = { clickIf: '.solve-mode-panel .sm-choices > .sm-choice:nth-child(2)' };
+const SOLVE_MODE = '.cdk-overlay-pane.solve-mode-panel mat-dialog-container .sm-choices';
+const LOGGED_IN = ['user', 'admin'];
+// LeagueHub: nur Konten mit Vereinszugang (die anderen sehen die Sperrseite); ClubHub: Admin + Trainer der Gruppe.
+const LEAGUE = ['user', 'admin'];
+const CLUB = ['admin', 'trainer'];
+
 export const STATES = [
-  { of: 'rookhub__games-gameId', name: 'menue', steps: [{ click: '.game-menu' }], expect: MENU },
-  { of: 'rookhub__analysis', name: 'zug-e4', steps: [{ move: 'e2e4' }], expect: 'cg-board piece.white.pawn' },
+  // ---------------------------------------------------------------- RookHub: Kopfleiste
+  { of: 'rookhub__dashboard', name: 'menue', steps: [{ click: 'mat-toolbar button.msg-mail' }], expect: MENU },
+  { of: 'rookhub__dashboard', name: 'menue-konto', auth: LOGGED_IN,
+    steps: [{ click: 'mat-toolbar button.msg-mail' }, { click: '.mat-mdc-menu-panel button:has-text("Konto")' }],
+    expect: '.mat-mdc-menu-panel button:has-text("Abmelden")' },
+  { of: 'rookhub__dashboard', name: 'glocke', steps: [{ click: 'mat-toolbar button.notif-bell' }], expect: '.mat-mdc-menu-panel.notif-menu' },
+  { of: 'rookhub__puzzles', name: 'menue-gast', auth: ['anon'], steps: [EASY, { click: 'mat-toolbar button.anon-menu' }], expect: MENU },
+
+  // ---------------------------------------------------------------- RookHub: Partien
+  { of: 'rookhub__games-gameId', name: 'menue', steps: [{ click: '.shared-page .header button.game-menu' }], expect: MENU },
+  { of: 'rookhub__games', name: 'zeilenmenue', auth: LOGGED_IN,
+    steps: [{ click: '.games-page .row.game .actions button.mat-mdc-menu-trigger' }], expect: MENU },
+  { of: 'rookhub__games', name: 'loeschen-dialog', auth: LOGGED_IN,
+    steps: [{ click: '.games-page .row.game .actions button.mat-mdc-menu-trigger' },
+      { click: '.mat-mdc-menu-panel button.mat-mdc-menu-item:has-text("Löschen")' }],
+    expect: 'mat-dialog-container .confirm-text' },
+
+  // ---------------------------------------------------------------- RookHub: Puzzles + Kurse
+  { of: 'rookhub__puzzles-puzzleId', name: 'spielweise', fresh: true, steps: [{ waitFor: SOLVE_MODE }], expect: SOLVE_MODE },
+  { of: 'rookhub__puzzles-puzzleId', name: 'tipp',
+    steps: [EASY, { click: '.board-hint-slot--board button.board-hint-tip' }], expect: '.board-hint-slot--board ol.hint-list li' },
+  { of: 'rookhub__puzzles-puzzleId', name: 'aufgegeben',
+    steps: [EASY, { click: 'app-puzzle-status-card .ytp-actions button[color="warn"]' }], expect: 'app-puzzle-status-card .psc-failed' },
+  { of: 'rookhub__courses-bookId-sequential', name: 'aufgegeben',
+    steps: [EASY, { click: 'app-puzzle-status-card .ytp-actions button[color="warn"]' }], expect: 'app-puzzle-status-card .psc-failed' },
+  { of: 'rookhub__courses-bookId-sequential', name: 'uebersprungen',
+    steps: [EASY, { click: '.ctx-nav button.skip-quiet' }], expect: 'app-puzzle-status-card .psc-card' },
+  { of: 'rookhub__puzzles-endless', name: 'gestartet',
+    steps: [{ click: '.config-screen button.start-btn-top' }, EASY], expect: '.play-screen app-puzzle-board' },
+  { of: 'rookhub__stats', name: 'kurse', auth: [...LOGGED_IN, 'empty'],
+    steps: [{ click: '.stats-container .mode-toggle mat-button-toggle[value="course"] button' }],
+    expect: '.mode-toggle mat-button-toggle[value="course"].mat-button-toggle-checked' },
+
+  // ---------------------------------------------------------------- RookHub: Repertoire
+  { of: 'rookhub__repertoires-repertoireId', name: 'linienmenue', auth: LOGGED_IN,
+    steps: [{ click: 'app-repertoire-lines .line-item button.line-menu-btn' }], expect: MENU },
+  { of: 'rookhub__repertoires-train-learn', name: 'weiter', auth: LOGGED_IN,
+    // „Diesen Zug einprägen“ steht beim Laden schon da; ohne Kommentar zum Zug geht es nach 1 s von selbst weiter.
+    steps: [{ press: 'Space' }, { waitFor: 'p.hint' }], expect: 'p.hint' },
+
+  // ---------------------------------------------------------------- RookHub: Analyse
+  { of: 'rookhub__analysis', name: 'zug-e4', steps: [{ move: 'e2e4', board: 'app-analysis-board cg-board' }],
+    expect: 'app-analysis-board cg-board square.last-move' },
+  { of: 'rookhub__analysis', name: 'engine-aus',
+    steps: [{ click: '.engine-card .engine-head mat-slide-toggle button[role="switch"]' }],
+    expect: '.engine-card mat-slide-toggle button[aria-checked="false"]' },
+  { of: 'rookhub__analysis', name: 'hilfe', steps: [{ click: '.engine-card app-help-hint button.hh-btn' }], expect: '.mat-mdc-tooltip.hh-tooltip' },
+  { of: 'rookhub__analysis-games', name: 'hilfe', auth: LOGGED_IN,
+    steps: [{ click: '.ga-container .header h1 app-help-hint button.hh-btn' }], expect: '.mat-mdc-tooltip.hh-tooltip' },
+
+  // ---------------------------------------------------------------- RookHub: Konto, Freunde, Aufgabenblätter
+  { of: 'rookhub__friends', name: 'anfragen', auth: [...LOGGED_IN, 'empty'],
+    steps: [{ click: '.friends-tabs .mat-mdc-tab-labels > [role="tab"]:nth-child(2)' }],
+    expect: '.friends-tabs [role="tab"]:nth-child(2)[aria-selected="true"]' },
+  { of: 'rookhub__profile', name: 'pflichtfeld', auth: LOGGED_IN,
+    steps: [{ fill: '.profile-form input[name="email"]', text: 'ui-sweep-neu@example.org' },
+      { waitFor: '.profile-form input[name="currentPassword"]' }, { click: '.profile-form button[type="submit"]' }],
+    expect: '.profile-form mat-form-field.mat-form-field-invalid' },
+  { of: 'rookhub__worksheets-worksheetId', name: 'qr', auth: LOGGED_IN,
+    steps: [{ click: '.wd-meta button.wd-qr-toggle' }], expect: 'mat-card.wd-share app-qr-code' },
+  { of: 'rookhub__worksheets-worksheetId', name: 'menue', auth: LOGGED_IN,
+    steps: [{ click: '.wd-toolbar button.mat-mdc-menu-trigger' }], expect: MENU },
+
+  // ---------------------------------------------------------------- Anmeldung (dieselbe Komponente in allen Oberflächen)
+  // Falsches Kennwort mit einem Namen, den es nicht gibt — kein echtes Konto wird gedrosselt.
+  { of: 'rookhub__login', name: 'falsches-kennwort',
+    steps: [{ fill: 'form.auth-form input[name="username"]', text: 'ui-sweep-gibt-es-nicht' },
+      { fill: 'form.auth-form input[name="password"]', text: 'falsch123' }, { click: 'form.auth-form button[type="submit"]' }],
+    expect: '.form-error[role="alert"]' },
+  { of: 'rookhub__login', name: 'leer', steps: [{ click: 'form.auth-form button[type="submit"]' }], expect: 'form.auth-form mat-error' },
+  { of: 'rookhub__register', name: 'leer', steps: [{ click: 'form.auth-form button[type="submit"]' }], expect: 'form.auth-form mat-error' },
+
+  // ---------------------------------------------------------------- Turnierseite
+  { of: 'turnier__tournaments-calendar', name: 'filter', steps: [{ click: '.filter-bar button.filter-toggle' }], expect: '.filter-extra' },
+  { of: 'turnier__tournaments-tournamentId', name: 'teams',
+    steps: [{ click: 'app-tournament-tables .mat-mdc-tab-labels > [role="tab"]:nth-child(2)' }],
+    expect: 'app-tournament-tables [role="tab"]:nth-child(2)[aria-selected="true"]' },
+  { of: 'turnier__tournaments-tournamentId', name: 'paarungen',
+    steps: [{ click: 'app-tournament-tables .mat-mdc-tab-labels > [role="tab"]:nth-child(3)' }],
+    expect: 'app-tournament-tables [role="tab"]:nth-child(3)[aria-selected="true"]' },
+
+  // ---------------------------------------------------------------- KidHub
+  { of: 'kidhub__start', name: 'englisch', steps: [{ select: 'footer.foot label.lang select', value: 'en' }], expect: 'html[lang="en"]' },
+  { of: 'kidhub__levels-1', name: 'tipp',
+    steps: [{ click: 'kid-puzzle .actions button.big.hint:not([disabled])' }], expect: 'kid-puzzle cg-container svg.cg-shapes g' },
+
+  // ---------------------------------------------------------------- LeagueHub
+  { of: 'leaguehub__verein', name: 'zeilenmenue', auth: LEAGUE,
+    steps: [{ click: 'table.club-table tr.game td.acts button.more-btn:visible, .gc-acts button.more-btn:visible' }], expect: MENU },
+  { of: 'leaguehub__verein', name: 'info', auth: LEAGUE, steps: [{ click: 'p.info-line button.chk-btn' }], expect: '.info-panel .note' },
+  { of: 'leaguehub__konten', name: 'info', auth: ['admin'], steps: [{ click: 'p button.chk-btn' }], expect: '.info-panel.sugg-info' },
+  { of: 'leaguehub__start', name: 'prognose-info', auth: LEAGUE,
+    steps: [{ click: 'lh-fixture button.chk-btn[aria-label="Wie die Prognose zustande kommt"]' }], expect: 'lh-fixture .info-panel' },
+  { of: 'leaguehub__start', name: 'kader', auth: LEAGUE,
+    steps: [{ click: 'lh-fixture details.roster > summary' }], expect: 'lh-fixture details.roster[open] .rtable' },
+
+  // ---------------------------------------------------------------- ClubHub
+  { of: 'clubhub__gruppen-clubGroupId', name: 'kinder-verwalten', auth: CLUB,
+    steps: [{ click: 'details.manage-kids > summary' }], expect: 'details.manage-kids[open] section' },
+  { of: 'clubhub__gruppen-clubGroupId', name: 'gruppe-aendern', auth: ['admin'],
+    steps: [{ click: 'details.manage-group > summary' }], expect: 'details.manage-group[open] section.form' },
+  { of: 'clubhub__kind-neu', name: 'leer', auth: CLUB,
+    steps: [{ click: 'form.sheet.form .form-save button[type="submit"]' }], expect: 'form.sheet.form p.err.status-line' },
 ];
 
 /** Katalog-Routen um die Zustände erweitert: je Zustand eine abgeleitete Route mit `steps`. */
@@ -42,7 +159,7 @@ export function withStates(routes, routeId) {
     if (!base) throw new Error(`states.mjs: Zustand „${s.name}" hängt an unbekannter Route ${s.of}`);
     const baseLabel = s.of.slice(base.app.length + 2);
     out.push({ ...base, label: `${baseLabel}--${s.name}`, state: s.name, stateOf: s.of, steps: s.steps,
-      stateAuth: s.auth ?? null, expect: s.expect ?? null, main: s.main ?? null, foldExempt: s.main == null });
+      stateAuth: s.auth ?? null, fresh: !!s.fresh, expect: s.expect ?? null, main: s.main ?? null, foldExempt: s.main == null });
   }
   return out;
 }
@@ -56,6 +173,11 @@ export async function runSteps(page, steps, settle) {
     const what = Object.entries(st).map(([k, v]) => `${k} ${v}`).join(', ');
     try {
       if (st.click) await page.locator(st.click).first().click({ timeout: 8000 });
+      else if (st.clickIf) {
+        const el = page.locator(st.clickIf).first();
+        if (await el.isVisible().catch(() => false)) await el.click({ timeout: 8000 });
+      }
+      else if (st.select) await page.locator(st.select).first().selectOption(st.value, { timeout: 8000 });
       else if (st.fill) await page.locator(st.fill).first().fill(st.text ?? '', { timeout: 8000 });
       else if (st.press) await (st.sel ? page.locator(st.sel).first().press(st.press, { timeout: 8000 }) : page.keyboard.press(st.press));
       else if (st.hover) await page.locator(st.hover).first().hover({ timeout: 8000 });

@@ -27,6 +27,15 @@ test('Zustände sind von der Falz-Prüfung ausgenommen, außer sie nennen eine H
   for (const d of withStates(ROUTES, routeId)) assert.equal(d.foldExempt, d.main == null);
 });
 
+test('nur der Dialog-Zustand startet ohne vorbelegte Spielweise', () => {
+  const fresh = withStates(ROUTES, routeId).filter(d => d.fresh).map(routeId);
+  assert.deepEqual(fresh, ['rookhub__puzzles-puzzleId--spielweise']);
+});
+
+test('jeder Zustand prüft, ob er erreicht ist (expect)', () => {
+  for (const d of withStates(ROUTES, routeId)) assert.ok(d.expect, `${routeId(d)}: kein expect`);
+});
+
 test('unbekannte Route → Fehler mit Namen', () => {
   assert.throws(() => withStates([], routeId), STATES.length ? /unbekannter Route/ : /^$/);
 });

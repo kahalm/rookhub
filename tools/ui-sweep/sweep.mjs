@@ -451,7 +451,7 @@ async function main() {
     });
     let toolDelayMs = 0; const apiCalls = []; let cacheHits = 0;
     const userJson = sessions[job.auth] ? JSON.stringify(sessions[job.auth]) : null;
-    await ctx.addInitScript(([user, theme, lang]) => {
+    await ctx.addInitScript(([user, theme, lang, seedSolveMode]) => {
       try {
         if (user) localStorage.setItem('rookhub_user', user); else localStorage.removeItem('rookhub_user');
         localStorage.setItem('rookhub_app_theme', theme);
@@ -459,8 +459,14 @@ async function main() {
         localStorage.setItem('rookhub_lang', lang);
         // Offline-Vorräte nicht vorladen: jede Seite holte sonst ~8 zusätzliche Puzzle-Anfragen (Drossel!).
         localStorage.setItem('rookhub_offline_settings', JSON.stringify({ puzzleCount: 0, endlessRuns: 0 }));
+        // Spielweise (Trainings-/Einfachmodus) schon gewählt: sonst deckte der Dialog, der beim ersten Betreten eines
+        // Puzzle-/Kursbereichs kommt, JEDE Aufnahme dieser Seiten zu (jeder Lauf beginnt mit leerem Speicher). Den Dialog
+        // selbst zeigt der Zustand „spielweise" (states.mjs, fresh).
+        if (seedSolveMode && !localStorage.getItem('rookhub_solve_modes')) {
+          localStorage.setItem('rookhub_solve_modes', JSON.stringify({ '*': { mode: 'easy', at: 1 }, 'course:*': { mode: 'easy', at: 1 } }));
+        }
       } catch { /* kein Speicher */ }
-    }, [userJson, job.theme, job.lang]);
+    }, [userJson, job.theme, job.lang, !job.route.fresh]);
     const host = new URL(origin).hostname;
     if (host.endsWith('oberschmid.homes')) {
       await ctx.addCookies([
@@ -476,6 +482,11 @@ async function main() {
       const req = route.request();
       const reqUrl = req.url();
       if (reqUrl.includes('/api/client-log')) return route.fulfill({ status: 204, body: '', headers: { 'x-ui-sweep': 'stub' } });
+      // Zustände (states.mjs) schreiben nie: jede schreibende Anfrage beantwortet das Werkzeug selbst — außer /api/auth/*
+      // (Anmeldung, Sitzung erneuern: ein gestelltes „{}" auf refresh hielt die App für angemeldet und leitete weg).
+      if (job.route.steps && req.method() !== 'GET' && !/\/api\/auth\//.test(reqUrl)) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{}', headers: { 'x-ui-sweep': 'stub' } });
+      }
       // Der Endlos-Vorrat lädt auch mit endlessRuns 0 (App ignoriert die Einstellung dort) — außerhalb der
       // Puzzle-Bereiche leer beantworten, dort braucht die Seite die Puzzles selbst.
       if (reqUrl.includes('/api/puzzles/random-batch') && !PUZZLE_AREAS.has(areaOf(job.route))) {
