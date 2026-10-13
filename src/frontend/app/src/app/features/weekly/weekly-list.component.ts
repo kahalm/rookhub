@@ -20,6 +20,7 @@ import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.c
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { apiErrorText } from '../../core/api-error';
 import { formatSecondsClock } from '../../shared/clock-format.util';
+import { PctPipe } from '../../shared/format/pct';
 
 interface WeeklyPostRow extends WeeklyPost {
   editDate: string;   // YYYY-MM-DD (Admin-Edit)
@@ -33,7 +34,7 @@ interface WeeklyPostRow extends WeeklyPost {
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule,
-    TranslatePipe, LoadingSpinnerComponent, WeeklyScheduleFieldsComponent
+    TranslatePipe, LoadingSpinnerComponent, WeeklyScheduleFieldsComponent, PctPipe
   ],
   template: `
     <div class="weekly-container">
@@ -76,7 +77,7 @@ interface WeeklyPostRow extends WeeklyPost {
               </button>
             </div>
             @if (previewAt(uploadDate, uploadTime); as at) {
-              <p class="sched-preview">{{ 'weekly.schedulePreview' | translate:{ date: (at | date:'EEE, dd.MM.yyyy'), time: (at | date:'HH:mm') } }}</p>
+              <p class="sched-preview">{{ 'weekly.schedulePreview' | translate:{ date: (at | date:'EEE') + ', ' + (at | date:'mediumDate'), time: (at | date:'shortTime') } }}</p>
             }
             <p class="upload-hint">{{ 'weekly.upload.hint' | translate }}</p>
             <div class="or-chapter">
@@ -111,7 +112,7 @@ interface WeeklyPostRow extends WeeklyPost {
                     <app-weekly-schedule-fields [(date)]="d.date" [(time)]="d.time" />
                   </div>
                   @if (previewAt(d.date, d.time); as at) {
-                    <p class="sched-preview">{{ 'weekly.schedulePreview' | translate:{ date: (at | date:'EEE, dd.MM.yyyy'), time: (at | date:'HH:mm') } }}</p>
+                    <p class="sched-preview">{{ 'weekly.schedulePreview' | translate:{ date: (at | date:'EEE') + ', ' + (at | date:'mediumDate'), time: (at | date:'shortTime') } }}</p>
                   }
                   <div class="wp-edit-actions">
                     <button mat-button (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
@@ -126,7 +127,7 @@ interface WeeklyPostRow extends WeeklyPost {
                     <div class="wp-meta">
                       <span class="wp-title">{{ titleLabel(r) }}</span>
                       <span class="wp-sched">
-                        {{ displayTime(r) | date:'EEE, dd.MM.yyyy' }} · {{ displayTime(r) | date:'HH:mm' }}@if (puzzleCount(r); as n) { · {{ (n === 1 ? 'weekly.puzzleCountOne' : 'weekly.puzzleCount') | translate:{ count: n } }}}
+                        {{ displayTime(r) | date:'EEE' }}, {{ displayTime(r) | date:'mediumDate' }} · {{ displayTime(r) | date:'shortTime' }}@if (puzzleCount(r); as n) { · {{ (n === 1 ? 'weekly.puzzleCountOne' : 'weekly.puzzleCount') | translate:{ count: n } }}}
                       </span>
                       @if (r.description) { <span class="wp-desc">{{ r.description }}</span> }
                       @if (prog[r.id]; as p) {
@@ -134,7 +135,7 @@ interface WeeklyPostRow extends WeeklyPost {
                           <span class="wp-solved" [attr.title]="'weekly.progress.solvedLabel' | translate">✓ {{ p.solvedCount }}</span>
                           <span class="wp-slash">/</span>
                           <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
-                          <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
+                          <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) | pct }}</span>
                           @if (p.totalSeconds > 0) {
                             <span class="wp-time" [attr.title]="'weekly.progress.timeLabel' | translate">· ⏱ {{ fmtTime(p.totalSeconds) }}</span>
                           }
@@ -192,7 +193,7 @@ interface WeeklyPostRow extends WeeklyPost {
                             <tr>
                               <td class="lb-rank">{{ i + 1 }}</td>
                               <td class="lb-player">{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
-                              <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
+                              <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) | pct }}</td>
                               <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
                               @if (canManage) {
                                 <td class="lb-info">

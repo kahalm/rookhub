@@ -172,7 +172,9 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
     .maia-icon { color: var(--rh-accent); }
     .maia-title { font-weight: 600; }
     .maia-spacer { flex: 1 1 auto; }
-    .elo-field { width: 104px; }
+    /* e1-rk-maia-strength-cut: bei 104 px wurde das schwebende Label „Strength" zu „Streng" gekürzt — Breite nach Inhalt,
+       mindestens so viel, dass auch hr/hu passen. */
+    .elo-field { width: auto; min-width: 128px; }
     .maia-line { margin: 8px 0 0; font-size: .9rem; overflow-wrap: anywhere; }
     .maia-error { color: var(--rh-error); }
     .maia-thinking { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; font-size: .85rem;

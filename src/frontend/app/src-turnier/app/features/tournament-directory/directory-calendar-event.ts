@@ -28,7 +28,7 @@ export function directoryCalendarEvent(
   const facts = [
     entry.timeControl,
     entry.rounds ? translate.instant('tournamentDirectory.detail.rounds') + ': ' + entry.rounds : null,
-    entry.playerCount ? translate.instant('tournamentDirectory.players', { count: entry.playerCount }) : null,
+    entry.playerCount ? translate.instant(entry.playerCount === 1 ? 'tournamentDirectory.playersOne' : 'tournamentDirectory.players', { count: entry.playerCount }) : null,
     entry.organizer ? translate.instant('tournamentDirectory.detail.organizer') + ': ' + entry.organizer : null,
     url,
   ].filter((l): l is string => !!l);

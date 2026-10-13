@@ -11,6 +11,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { PuzzleService, PuzzleStatsDto, ThemeStat } from '../puzzles/puzzle.service';
 import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
+import { PctPipe } from '../../shared/format/pct';
 
 /** Antwort von GET /api/friends/{userId}/stats. */
 export interface FriendStats {
@@ -26,7 +27,8 @@ export interface CompareRow {
   label: string;
   mine: number;
   theirs: number;
-  suffix?: string;
+  /** Prozentwert — angezeigt über `pct` in der Schreibweise der Sprache (en „78.6%“, de „78,6 %“). */
+  percent?: boolean;
   winner: 'mine' | 'theirs' | 'tie';
 }
 
@@ -51,7 +53,7 @@ export function buildCompareRows(mine: PuzzleStatsDto, theirs: PuzzleStatsDto): 
     { label: 'stats.currentElo', mine: mine.puzzleElo, theirs: theirs.puzzleElo, winner: compareValues(mine.puzzleElo, theirs.puzzleElo) },
     { label: 'stats.totalSolved', mine: mine.solved, theirs: theirs.solved, winner: compareValues(mine.solved, theirs.solved) },
     { label: 'stats.attempts', mine: mine.totalAttempts, theirs: theirs.totalAttempts, winner: compareValues(mine.totalAttempts, theirs.totalAttempts) },
-    { label: 'stats.accuracy', mine: mine.accuracy, theirs: theirs.accuracy, suffix: '%', winner: compareValues(mine.accuracy, theirs.accuracy) },
+    { label: 'stats.accuracy', mine: mine.accuracy, theirs: theirs.accuracy, percent: true, winner: compareValues(mine.accuracy, theirs.accuracy) },
     { label: 'stats.currentStreak', mine: mine.currentStreak, theirs: theirs.currentStreak, winner: compareValues(mine.currentStreak, theirs.currentStreak) },
     { label: 'stats.bestStreak', mine: mine.bestStreak, theirs: theirs.bestStreak, winner: compareValues(mine.bestStreak, theirs.bestStreak) },
   ];
@@ -83,7 +85,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friend-stats',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe, PctPipe],
   template: `
     <div class="fs-container">
       <a mat-button routerLink="/friends" class="back-link">
@@ -111,8 +113,8 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
               @for (row of rows; track row.label) {
                 <tr>
                   <td class="metric">{{ row.label | translate }}</td>
-                  <td [class.win]="row.winner === 'mine'">{{ row.mine }}{{ row.suffix || '' }}</td>
-                  <td [class.win]="row.winner === 'theirs'">{{ row.theirs }}{{ row.suffix || '' }}</td>
+                  <td [class.win]="row.winner === 'mine'">{{ row.percent ? (row.mine | pct:1) : row.mine }}</td>
+                  <td [class.win]="row.winner === 'theirs'">{{ row.percent ? (row.theirs | pct:1) : row.theirs }}</td>
                 </tr>
               }
             </tbody>
@@ -135,10 +137,10 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
                   <tr>
                     <td class="metric theme-cell">{{ t.theme | puzzleTheme }}</td>
                     <td [class.win]="t.winner === 'mine'">
-                      @if (t.mine) { {{ t.mine.acc }}% <span class="sub">({{ t.mine.attempts }})</span> } @else { – }
+                      @if (t.mine) { {{ t.mine.acc | pct }} <span class="sub">({{ t.mine.attempts }})</span> } @else { – }
                     </td>
                     <td [class.win]="t.winner === 'theirs'">
-                      @if (t.theirs) { {{ t.theirs.acc }}% <span class="sub">({{ t.theirs.attempts }})</span> } @else { – }
+                      @if (t.theirs) { {{ t.theirs.acc | pct }} <span class="sub">({{ t.theirs.attempts }})</span> } @else { – }
                     </td>
                   </tr>
                 }

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
@@ -20,7 +21,7 @@ describe('AccountSuggestionsPageComponent', () => {
   function create(): void {
     TestBed.configureTestingModule({
       imports: [AccountSuggestionsPageComponent],
-      providers: [provideRouter([]), { provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } },
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } },
         { provide: MyGamesService, useValue: { available: false } }],
     });
     fixture = TestBed.createComponent(AccountSuggestionsPageComponent);

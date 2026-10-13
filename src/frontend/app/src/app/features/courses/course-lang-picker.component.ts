@@ -13,6 +13,20 @@ export function languageName(code: string | null | undefined, locale: LocaleServ
 }
 
 /**
+ * Sprachname im Satz (e1-rk-kurs-originalsprache-eigenname): in der Sprache der Oberfläche — „Original language: German",
+ * „Originalsprache: Deutsch". Die Eigenbezeichnung („Deutsch") gehört nur in Sprachauswahlen (`languageName`); ohne
+ * `Intl.DisplayNames` oder für unbekannte Kürzel fällt der Name auf sie zurück.
+ */
+export function languageNameInUi(code: string | null | undefined, uiLang: string, locale: LocaleService): string {
+  if (!code) return '';
+  try {
+    const shown = new Intl.DisplayNames([uiLang], { type: 'language', fallback: 'none' }).of(code);
+    if (shown) return shown;   // hr/hu klein wie im Satz üblich („njemački“, „német“)
+  } catch { /* unbekanntes Kürzel oder kein Intl.DisplayNames */ }
+  return languageName(code, locale);
+}
+
+/**
  * Sprachwahl der Kurs-Kommentare (Stufe C, 0.549.0) — ein kleiner Menü-Knopf für die Kursseite und
  * die Köpfe von Solver, Durchsehen und Kalkulation. Unsichtbar, solange der Kurs nur EINE Sprache hat.
  *

@@ -1,6 +1,7 @@
 import { HttpParams } from '@angular/common/http';
 import { TreeFilter } from '@lh/core/league.models';
-import { de } from '@lh/core/league-format';
+import { cardFormatLocale, cardSan } from './card-lang';
+import { formatPct } from '@rh/shared/format/pct';
 
 /**
  * Trainingslinien gegen einen Gegner (2026-10-07): Antwort von `GET /api/prep/player/{id}/training-lines` bzw.
@@ -72,8 +73,9 @@ export function trainingRepertoireBody(q: TrainingLinesQuery, extra: Record<stri
   };
 }
 
-/** Bis zu welchem Zug ein nicht voll getroffene Linie dabei ist: Zugnummer des letzten getroffenen Gegnerzugs („5…a6"), `null` = keiner. */
-export function matchedUntil(l: Pick<TrainingLine, 'moves' | 'start' | 'matched'>, color: 'w' | 'b'): string | null {
+/** Bis zu welchem Zug ein nicht voll getroffene Linie dabei ist: Zugnummer des letzten getroffenen Gegnerzugs („5…a6"), `null` = keiner.
+ *  Figurenbuchstaben nach `lang` (Vorgabe deutsch, e1-rk-prep-card-german). */
+export function matchedUntil(l: Pick<TrainingLine, 'moves' | 'start' | 'matched'>, color: 'w' | 'b', lang = 'de'): string | null {
   if (l.matched <= 0) return null;
   const parts = (l.start ?? '').split(' ');
   let black = parts[1] === 'b';
@@ -81,7 +83,7 @@ export function matchedUntil(l: Pick<TrainingLine, 'moves' | 'start' | 'matched'
   let seen = 0;
   for (const m of l.moves) {
     const opponent = black ? color === 'w' : color === 'b';
-    if (opponent && ++seen === l.matched) return black ? `${no}…${de(m)}` : `${no}.${de(m)}`;
+    if (opponent && ++seen === l.matched) return black ? `${no}…${cardSan(m, lang)}` : `${no}.${cardSan(m, lang)}`;
     if (black) no++;
     black = !black;
   }
@@ -165,35 +167,37 @@ export function trainingLinesUrl(opponent: string | null | undefined): string | 
 /** Was der Trainer an die Trainingslinien weiterreicht (Filter der Karte und — Spielervorbereitung — `all`/`twin`). */
 export const TRAINER_PASS_THROUGH = ['source', 'speeds', 'years', 'unsure', 'all', 'twin'] as const;
 
-/** Wahrscheinlichkeit in deutscher Schreibweise: „42 %", „3,5 %", „<0,1 %". */
-export function percent(p: number): string {
-  if (p <= 0) return '0 %';
+/** Wahrscheinlichkeit in der Schreibweise von `lang` (Vorgabe deutsch: „42 %", „3,5 %", „<0,1 %"; englisch „42%", „3.5%",
+ *  „<0.1%"). Leerzeichen vor % nur, wo die Sprache es setzt (de/hr, geschützt). */
+export function percent(p: number, lang = 'de'): string {
+  const fmt = (v: number, digits: number) => formatPct(v, cardFormatLocale(lang), digits, digits);
+  if (p <= 0) return fmt(0, 0);
   const v = p * 100;
-  if (v < 0.1) return '<0,1 %';
-  return (v >= 10 ? Math.round(v).toString() : v.toFixed(1).replace('.', ',')) + ' %';
+  if (v < 0.1) return '<' + fmt(0.1, 1);
+  return v >= 10 ? fmt(Math.round(v), 0) : fmt(v, 1);
 }
 
-/** Züge mit Zugnummern in deutscher Notation („1.e4 c5 2.Sf3"), ab einer eigenen Startstellung mit deren Zugnummer. */
-export function lineText(moves: string[], start: string | null): string {
+/** Züge mit Zugnummern in der Notation von `lang` (Vorgabe deutsch: „1.e4 c5 2.Sf3"), ab einer eigenen Startstellung mit deren Zugnummer. */
+export function lineText(moves: string[], start: string | null, lang = 'de'): string {
   const parts = (start ?? '').split(' ');
   let black = parts[1] === 'b';
   let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
   const out: string[] = [];
   moves.forEach((m, i) => {
-    if (!black) out.push(`${no}.${de(m)}`);
-    else { out.push(i === 0 ? `${no}…${de(m)}` : de(m)); no++; }
+    if (!black) out.push(`${no}.${cardSan(m, lang)}`);
+    else { out.push(i === 0 ? `${no}…${cardSan(m, lang)}` : cardSan(m, lang)); no++; }
     black = !black;
   });
   return out.join(' ');
 }
 
-/** Ein Halbzug als Zugangabe („1…c6", „2.d4"), deutsch notiert — für „ab 1…c6 geschätzt". */
-export function plyLabel(moves: string[], start: string | null, index: number): string {
+/** Ein Halbzug als Zugangabe („1…c6", „2.d4"), in der Notation von `lang` (Vorgabe deutsch) — für „ab 1…c6 geschätzt". */
+export function plyLabel(moves: string[], start: string | null, index: number, lang = 'de'): string {
   const parts = (start ?? '').split(' ');
   let black = parts[1] === 'b';
   let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
   for (let i = 0; i < moves.length; i++) {
-    if (i === index) return black ? `${no}…${de(moves[i])}` : `${no}.${de(moves[i])}`;
+    if (i === index) return black ? `${no}…${cardSan(moves[i], lang)}` : `${no}.${cardSan(moves[i], lang)}`;
     if (black) no++;
     black = !black;
   }
@@ -201,9 +205,9 @@ export function plyLabel(moves: string[], start: string | null, index: number): 
 }
 
 /** „2…c5": sein Zug an der Stelle, an der die Linie ihm widerspricht. */
-export function deviationLabel(l: { moves: string[]; start: string | null; deviationPly?: number | null; deviationSan?: string | null }): string {
+export function deviationLabel(l: { moves: string[]; start: string | null; deviationPly?: number | null; deviationSan?: string | null }, lang = 'de'): string {
   if (l.deviationPly == null || !l.deviationSan) return '';
   const moves = [...l.moves];
   moves[l.deviationPly] = l.deviationSan;
-  return plyLabel(moves, l.start, l.deviationPly);
+  return plyLabel(moves, l.start, l.deviationPly, lang);
 }

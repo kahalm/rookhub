@@ -3,13 +3,13 @@ import { TreeFilter, TreeSource } from '@lh/core/league.models';
 /** Gemerkte Auswahl des Eröffnungsbaums (je Gerät, für alle Spieler). */
 export const TREE_FILTER_KEY = 'lh-tree-filter';
 
-/** Tempo-Klassen der Online-Partien — SPIEGEL von `LeagueOnlineSync.Speeds` (Kürzel + Anzeige). */
+/** Tempo-Klassen der Online-Partien — SPIEGEL von `LeagueOnlineSync.Speeds` (Kürzel + Sprachschlüssel der Anzeige). */
 export const TREE_SPEEDS: { key: string; label: string }[] = [
-  { key: 'bullet', label: 'Bullet' },
-  { key: 'blitz', label: 'Blitz' },
-  { key: 'rapid', label: 'Schnell' },
-  { key: 'classical', label: 'Klassisch' },
-  { key: 'correspondence', label: 'Fernschach' },
+  { key: 'bullet', label: 'playerCard.speed.bullet' },
+  { key: 'blitz', label: 'playerCard.speed.blitz' },
+  { key: 'rapid', label: 'playerCard.speed.rapid' },
+  { key: 'classical', label: 'playerCard.speed.classical' },
+  { key: 'correspondence', label: 'playerCard.speed.correspondence' },
 ];
 
 /** Auswahl „nur die letzten x Jahre". */

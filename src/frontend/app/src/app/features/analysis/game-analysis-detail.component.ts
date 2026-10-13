@@ -18,6 +18,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { localizeSan } from '../puzzles/keyboard-move.util';
 import { analysisTitle } from './analysis-title.util';
+import { PctPipe } from '../../shared/format/pct';
 
 /**
  * Eine Partie-Analyse durchblättern (`/analysis/games/:id`): Brett links, Zugliste rechts, je Zug
@@ -31,7 +32,7 @@ import { analysisTitle } from './analysis-title.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-game-analysis-detail',
   standalone: true,
-  imports: [IconLabelDirective, CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe],
+  imports: [IconLabelDirective, CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, SanPipe, PctPipe],
   template: `
     <div class="gad-container">
       @if (loading) {
@@ -130,9 +131,9 @@ import { analysisTitle } from './analysis-title.util';
                         <tr>
                           <td>{{ r.threshold | number }}</td>
                           <td>{{ r.positions }}</td>
-                          <td>{{ r.sameMovePercent | number:'1.0-0' }} %</td>
-                          <td>{{ r.medianCp | number:'1.0-0' }} cp · {{ r.medianWinPct | number:'1.0-1' }} %</td>
-                          <td>{{ r.p90Cp | number:'1.0-0' }} cp · {{ r.p90WinPct | number:'1.0-1' }} %</td>
+                          <td>{{ r.sameMovePercent | pct }}</td>
+                          <td>{{ r.medianCp | number:'1.0-0' }} cp · {{ r.medianWinPct | pct:1 }}</td>
+                          <td>{{ r.p90Cp | number:'1.0-0' }} cp · {{ r.p90WinPct | pct:1 }}</td>
                           <td>{{ r.moveChanges }}</td>
                           <td>{{ r.meanNodes | number:'1.0-0' }}</td>
                         </tr>

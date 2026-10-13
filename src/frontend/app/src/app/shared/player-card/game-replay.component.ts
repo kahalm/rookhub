@@ -1,13 +1,15 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, computed, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BoardArrow, ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
 import { GameReviewComponent } from '@rh/features/games/game-review.component';
 import { BoardBadge } from '@rh/features/games/move-badge.util';
 import { ParsedGame, START_FEN, parsePgnText } from '@rh/shared/pgn-viewer/pgn-parser';
-import { de, pgnDate } from '@lh/core/league-format';
+import { cardDate, cardLang, cardSan } from './card-lang';
 
 /**
  * Eine Partie nachspielen (Spielerkarte → „Letzte Partien", Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar
- * sein"): Brett, Züge in deutscher Notation, Blättern mit Knöpfen, Pfeiltasten und Klick auf einen Zug. Das Brett steht
+ * sein"): Brett, Züge in der Notation der Kartensprache (LeagueHub deutsch), Blättern mit Knöpfen, Pfeiltasten und Klick auf einen Zug. Das Brett steht
  * aus Sicht des Spielers der Karte (`flipped`).
  *
  * <p>Mit `evalsUrl` (Vereinspartien, 0.593.0) steht darunter der Rückblick aus RookHub — Bewertungskurve, Genauigkeit,
@@ -18,9 +20,9 @@ import { de, pgnDate } from '@lh/core/league-format';
   selector: 'lh-game-replay',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, GameReviewComponent],
+  imports: [ChessBoardComponent, GameReviewComponent, TranslatePipe],
   template: `
-    <div class="replay" #box tabindex="0" (keydown)="key($event)" aria-label="Partie nachspielen">
+    <div class="replay" #box tabindex="0" (keydown)="key($event)" [attr.aria-label]="'playerCard.replayGame' | translate">
       <p class="replay-head"><b>{{ head('White') }} – {{ head('Black') }}</b>
         <span class="muted">{{ meta() }}</span></p>
       @if (game(); as g) {
@@ -29,11 +31,11 @@ import { de, pgnDate } from '@lh/core/league-format';
             <div class="replay-board">
               <app-chess-board [fen]="fen()" [lastMove]="last()" [flipped]="flipped"
                                [arrows]="evalsUrl ? arrows() : []" [badge]="evalsUrl ? badge() : null" />
-              <div class="replay-nav" role="group" aria-label="Züge">
-                <button type="button" class="btn-sec" aria-label="Zum Anfang" [disabled]="index() < 0" (click)="index.set(-1)">⏮</button>
-                <button type="button" class="btn-sec" aria-label="Zug zurück" [disabled]="index() < 0" (click)="step(-1)">◀</button>
-                <button type="button" class="btn-sec" aria-label="Zug vor" [disabled]="index() >= g.moves.length - 1" (click)="step(1)">▶</button>
-                <button type="button" class="btn-sec" aria-label="Zum Ende" [disabled]="index() >= g.moves.length - 1"
+              <div class="replay-nav" role="group" [attr.aria-label]="'playerCard.movesGroup' | translate">
+                <button type="button" class="btn-sec" [attr.aria-label]="'playerCard.toStart' | translate" [disabled]="index() < 0" (click)="index.set(-1)">⏮</button>
+                <button type="button" class="btn-sec" [attr.aria-label]="'playerCard.stepBack' | translate" [disabled]="index() < 0" (click)="step(-1)">◀</button>
+                <button type="button" class="btn-sec" [attr.aria-label]="'playerCard.stepForward' | translate" [disabled]="index() >= g.moves.length - 1" (click)="step(1)">▶</button>
+                <button type="button" class="btn-sec" [attr.aria-label]="'playerCard.toEnd' | translate" [disabled]="index() >= g.moves.length - 1"
                         (click)="index.set(g.moves.length - 1)">⏭</button>
               </div>
             </div>
@@ -59,10 +61,10 @@ import { de, pgnDate } from '@lh/core/league-format';
                              (badgeChange)="badge.set($event)" />
           }
         } @else {
-          <p class="muted">Diese Partie hat keine Züge.</p>
+          <p class="muted">{{ 'playerCard.noMovesGame' | translate }}</p>
         }
       } @else {
-        <p class="muted">Diese Partie lässt sich nicht lesen.</p>
+        <p class="muted">{{ 'playerCard.unreadable' | translate }}</p>
       }
     </div>
   `,
@@ -95,22 +97,28 @@ export class GameReplayComponent implements OnChanges {
   readonly pairs = computed(() => {
     const g = this.game();
     if (!g?.moves.length) return [];
+    const lang = this.lang();
     const blackFirst = g.moves[0].color === 'b';
     const firstNo = Number(g.fens[0].split(' ')[5]) || 1;
     const out: { n: number; w: number; ws: string; b: number; bs: string }[] = [];
     let i = 0;
     if (blackFirst) {
-      out.push({ n: firstNo, w: -1, ws: '…', b: 0, bs: de(g.moves[0].san) });
+      out.push({ n: firstNo, w: -1, ws: '…', b: 0, bs: cardSan(g.moves[0].san, lang) });
       i = 1;
     }
     for (; i < g.moves.length; i += 2) {
       out.push({
-        n: firstNo + out.length, w: i, ws: de(g.moves[i].san),
-        b: i + 1 < g.moves.length ? i + 1 : -1, bs: i + 1 < g.moves.length ? de(g.moves[i + 1].san) : '',
+        n: firstNo + out.length, w: i, ws: cardSan(g.moves[i].san, lang),
+        b: i + 1 < g.moves.length ? i + 1 : -1, bs: i + 1 < g.moves.length ? cardSan(g.moves[i + 1].san, lang) : '',
       });
     }
     return out;
   });
+
+  private readonly translate = inject(TranslateService, { optional: true });
+  /** Sprache der Karte als Signal: Züge und Datum folgen einem Sprachwechsel. */
+  private readonly lang = signal(cardLang(this.translate));
+  private readonly langSub = this.translate?.onLangChange.pipe(takeUntilDestroyed()).subscribe(() => this.lang.set(cardLang(this.translate)));
 
   readonly comment = computed(() => this.game()?.comments[this.index()] ?? '');
   readonly result = computed(() => {
@@ -119,7 +127,7 @@ export class GameReplayComponent implements OnChanges {
   });
   readonly meta = computed(() => {
     const h = this.game()?.headers ?? {};
-    return [h['Event'] && h['Event'] !== '?' ? h['Event'] : '', pgnDate(h['Date'] ?? '')].filter(x => x).join(' · ');
+    return [h['Event'] && h['Event'] !== '?' ? h['Event'] : '', cardDate(h['Date'] ?? '', this.lang())].filter(x => x).join(' · ');
   });
 
   ngOnChanges(): void {

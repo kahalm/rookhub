@@ -16,6 +16,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LatestRequest } from '../../shared/latest-request.util';
+import { PctPipe } from '../../shared/format/pct';
 import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
 
 export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
@@ -184,7 +185,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, PuzzleThemePipe
+    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, PuzzleThemePipe, PctPipe
   ],
   template: `
     <div class="stats-container">
@@ -206,7 +207,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           }
           <mat-card class="stat"><div class="val">{{ current?.solved ?? 0 }}</div><div class="lbl">{{ 'stats.totalSolved' | translate }}</div></mat-card>
           <mat-card class="stat"><div class="val">{{ current?.totalAttempts ?? 0 }}</div><div class="lbl">{{ 'stats.attempts' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ current?.accuracy ?? 0 }}%</div><div class="lbl">{{ 'stats.accuracy' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ (current?.accuracy ?? 0) | pct:1 }}</div><div class="lbl">{{ 'stats.accuracy' | translate }}</div></mat-card>
           <mat-card class="stat"><div class="val">{{ current?.currentStreak ?? 0 }}</div><div class="lbl">{{ 'stats.currentStreak' | translate }}</div></mat-card>
           <mat-card class="stat"><div class="val">{{ current?.bestStreak ?? 0 }}</div><div class="lbl">{{ 'stats.bestStreak' | translate }}</div></mat-card>
         </div>
@@ -295,7 +296,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <div class="theme-row">
                     <span class="theme-name" [title]="t.theme | puzzleTheme">{{ t.theme | puzzleTheme }}</span>
                     <div class="theme-bar"><div class="theme-fill" [style.width.%]="acc(t.solved, t.attempts)"></div></div>
-                    <span class="theme-val">{{ acc(t.solved, t.attempts) }}% · {{ t.solved }}/{{ t.attempts }}</span>
+                    <span class="theme-val">{{ acc(t.solved, t.attempts) | pct }} · {{ t.solved }}/{{ t.attempts }}</span>
                   </div>
                 }
               </div>
@@ -312,7 +313,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <div class="theme-row">
                     <span class="theme-name" [title]="t.theme | puzzleTheme">{{ t.theme | puzzleTheme }}</span>
                     <div class="theme-bar"><div class="theme-fill warn" [style.width.%]="acc(t.solved, t.attempts)"></div></div>
-                    <span class="theme-val">{{ acc(t.solved, t.attempts) }}% · {{ t.solved }}/{{ t.attempts }}</span>
+                    <span class="theme-val">{{ acc(t.solved, t.attempts) | pct }} · {{ t.solved }}/{{ t.attempts }}</span>
                   </div>
                 }
               </div>
@@ -327,7 +328,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             <mat-card-content>
               <div class="bands">
                 @for (b of ratingBands; track b.from) {
-                  <div class="band" [matTooltip]="b.solved + '/' + b.attempts + ' · ' + acc(b.solved, b.attempts) + '%'">
+                  <div class="band" [matTooltip]="b.solved + '/' + b.attempts + ' · ' + (acc(b.solved, b.attempts) | pct)">
                     <div class="band-bar"><div class="band-fill" [style.height.%]="barPct(b.solved)"></div></div>
                     <span class="band-lbl">{{ b.from }}</span>
                     <span class="band-cnt">{{ b.solved }}</span>
@@ -367,7 +368,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
               <table mat-table [dataSource]="recentRows" class="full-width recent-table">
                 <ng-container matColumnDef="date">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.date' | translate }}</th>
-                  <td mat-cell *matCellDef="let a">{{ a.attemptedAt | date:'dd.MM. HH:mm' }}</td>
+                  <td mat-cell *matCellDef="let a">{{ a.attemptedAt | date:'short' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="rating">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.rating' | translate }}</th>
@@ -404,7 +405,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <a class="recent-item" [routerLink]="a.link">
                     <span class="ri-main">
                       <!-- UI-Sweep z2 (z2-rk-stats-letzte-liste): Zahl beschriftet, Pfeil zeigt die antippbare Zeile. -->
-                      <span>{{ a.attemptedAt | date:'dd.MM. HH:mm' }} · {{ 'stats.puzzleRating' | translate: { rating: a.rating || '–' } }}</span>
+                      <span>{{ a.attemptedAt | date:'short' }} · {{ 'stats.puzzleRating' | translate: { rating: a.rating || '–' } }}</span>
                       <span class="ri-sub">{{ a.time }} s</span>
                     </span>
                     <span class="ri-res" [class.res-ok]="a.solved" [class.res-fail]="!a.solved">

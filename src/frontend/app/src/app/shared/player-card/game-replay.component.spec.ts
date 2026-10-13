@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslationObject, provideTranslateService } from '@ngx-translate/core';
+import { applyTranslations, loadTranslations } from '@rh/testing/real-translations';
 import { GameReplayComponent } from './game-replay.component';
 
 const PGN = '[Event "TMM Landesliga"]\n[Date "2024.05.12"]\n[White "Oberschmid, Patrik"]\n[Black "Hengl, Philip"]\n[Result "1-0"]\n\n'
@@ -10,10 +11,13 @@ const PGN = '[Event "TMM Landesliga"]\n[Date "2024.05.12"]\n[White "Oberschmid, 
 describe('GameReplayComponent', () => {
   let fixture: ComponentFixture<GameReplayComponent>;
   const el = () => fixture.nativeElement as HTMLElement;
+  let de: TranslationObject;
+  beforeAll(async () => { de = await loadTranslations('de'); });
 
   function create(pgn: string, flipped = false, evalsUrl: string | null = null): GameReplayComponent {
     TestBed.configureTestingModule({ imports: [GameReplayComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting()] });
+    applyTranslations('de', de);
     fixture = TestBed.createComponent(GameReplayComponent);
     fixture.componentRef.setInput('pgn', pgn);
     fixture.componentRef.setInput('flipped', flipped);

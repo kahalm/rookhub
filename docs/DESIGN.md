@@ -451,12 +451,20 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   keine Klammerform; beim Anfassen auf das Schlüsselpaar umstellen.
 - **Datum/Uhrzeit** in der App-Sprache (Locale-Daten für `en/de/hr/hu` registriert, `core/locale-data.ts`):
   deutsch „16.07.2026, 21:00“; Zeiträume „… – …“ (Halbgeviertstrich, r2-t-date-format); ClubHub TT.MM.JJJJ.
+  **Keine festen Muster** (`dd.MM.yyyy`, `HH:mm` …) in der DatePipe, nur Locale-Formate (`date-format-usage.spec`,
+  0.761.0): Datum mit Wochentag `EEE` + `, ` + `mediumDate` (+ ` · ` `shortTime`) — de „Do., 09.07.2026 · 21:00“,
+  en „Thu, Jul 9, 2026 · 9:00 PM“; knappe Zeitpunkte in Listen/Tabellen `short` — de „11.10.26, 00:20“, en
+  „10/11/26, 12:20 AM“; Uhrzeit allein `shortTime`/`mediumTime`.
 - **Trenner** zwischen Angaben: „ · “; als `::before` des folgenden Elements, damit er beim Umbruch nie allein am
   Zeilenende steht (r2-t-meta-dot). Leerzeichen zwischen Interpolation und `@if` fest ins Markup schreiben —
   Angular entfernt sie sonst („Spielennoch offen“, 0.751.2).
 - Ländernamen ausgeschrieben, nicht als Code (LeagueHub, 0.751.0).
 - **Zahl und Einheit/%** mit geschütztem Leerzeichen (U+00A0) zusammenhalten, auch in Übersetzungen hinter einem
   Platzhalter („{{percent}} %“) — sonst steht „%)“ allein in der nächsten Zeile (0.759.0, `i18n-parity.spec`).
+  **Sprachausnahme Prozent** (0.761.0): Englisch und Ungarisch schreiben „46%“ ohne Leerzeichen (en/hu-JSON
+  „{{percent}}%“), Deutsch und Kroatisch „46 %“ mit U+00A0. Prozent im Code immer über **`formatPct`/`| pct`**
+  (`shared/format/pct.ts`, `Intl.NumberFormat` `style: 'percent'` in der Oberflächensprache) — nie „ %“ oder „%“
+  anhängen, nie `toLocaleString(undefined)` (Browser- statt App-Sprache).
 
 ### 5.14 Notation
 
@@ -484,10 +492,18 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   verlangt gleiche Schlüssel und Platzhalter); 21 weitere Sprachen fallen schlüsselweise auf `en` zurück. Nach
   jeder Änderung alle 25 Dateien mit `JSON.parse` prüfen.
 - LeagueHub und ClubHub sind deutsch ohne Sprachwahl; KidHub bietet de/en/hr/hu (`KIDS_LANGUAGES`).
+- Geteilte Spielerkarte (`shared/player-card/`): Texte unter `playerCard.*`, Züge/Datum/Prozent über `card-lang.ts` —
+  in RookHub (Spielervorbereitung) in der Oberflächensprache, in LeagueHub deutsch (die App stellt `de` ein: S/L/T/D,
+  „24.05.2026“, „39 %“). Neue Texte der Karte nie als Klartext ins Template.
 - Nicht übersetzt: FEN/PGN, Eigennamen, „RookHub“, „Stockfish“, gecrawlte Daten (Züge siehe 5.14).
 - **Anrede „du“**, kurze Beschriftungen, keine Fachbegriffe ohne Not; KidHub in einfacher Sprache.
 - **Deutsche Anführungszeichen typografisch „…“** (in `de.json` 145 Werte, 5 noch mit geraden). Im deutschen
   Changelog-Text Pflicht: ein gerades `"` beendet den JS-String und bricht den Build.
+- **Englische Anführungszeichen typografisch “…”** (innen ‘…’) in `en.json` — keine »…«, „…“ oder geraden `"`
+  (ausgenommen Syntax: HTML-Attribute, PGN-Tags in Platzhaltern); `i18n-parity.spec` prüft es (0.761.0).
+- Ein deutsches Wort im englischen Text nur als erkennbarer Befehl/Name mit Erklärung („/motivation, option “aus”
+  (off)“); Sprachnamen im Satz in der Oberflächensprache (`Intl.DisplayNames`: „Original language: German“), die
+  Eigenbezeichnung („Deutsch“) nur in Sprachauswahlen (0.761.0).
 - Changelog-Einträge zweisprachig (`en`/`de`) in `src/environments/changelog-data.ts`.
 - Platzhalter aus Fremddaten nicht anzeigen: PGN-„?“ heißt „ohne Name/Kapitel“ (r2-rg-rep-question),
   chess-results-„various“ heißt „verschiedene Spielorte“ (kursiv, r2-t-various), keine internen Dateinamen
@@ -531,6 +547,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Spielervorbereitung: die Spielerkarte stammt aus LeagueHub (`features/prep/prep-card.scss`, eigenes Style-Bündel
   `prep-card`), ihre Variablen werden auf Material-Rollen abgebildet (`--ink: var(--mat-sys-on-surface)` …);
   Bedienelemente sprechen in RookHub Material (r2-rg-prep-style).
+  Ihre Texte, Notation, Datum und Prozent folgen der Oberflächensprache (Abschnitt 6, e1-rk-prep-card-german).
 - `index.html` theme-color `#3f51b5`.
 
 ### 8.2 Turnierseite (`src-turnier/`)
@@ -760,3 +777,6 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-12 | 0.759.0 | RookHub (v1, Partien/Analyse): mehrzeiliger Spalten-Flex am Handy immer `flex-wrap: nowrap` (sonst wird die Spalte so breit wie ihr breitester Inhalt und die Seite scrollt waagerecht); Partieseite am Handy: Kopfaktionen in einer Zeile, „Originalpartie öffnen“/„Teilen-Link kopieren“ im ⋮, „Kurz erzählt“ höchstens drei Zeilen mit Antippen = ganz; gespeicherte Partien: Filter am Handy hinter „Filter ▾“ mit Chips für gesetzte Werte, Kopfknöpfe mit Kurztext; Analyse-Titel ohne PGN-Platzhalter („Ohne Titel“, „ohne Name“); „1 Variante“ per Schlüsselpaar; Züge in Partie-Analyse und „Züge vergleichen“ über `SanPipe`/`localizeSanText`; Grund unter gesperrtem „Analyse starten“; Zahl + % mit geschütztem Leerzeichen (5.13) | UI-Sweep v1 | v1-rk-analysis-card-overflow-mobile, v1-rk-first-view-lead-long-mobile, v1-rk-games-mobile-fold-lead-filters-open, v1-rk-analysis-pgn-placeholder-title, v1-rk-plural-1-varianten, v1-rk-san-english-in-de-ui, v1-rk-analysis-jobs-disabled-no-reason, v1-rk-analysis-jobs-percent-wrap |
 | 2026-10-12 | 0.759.2 | RookHub (v1-Nachrunde): Listen-Karten-Kopf zweiteilig (Text schrumpft/bricht um, Knöpfe `flex: none` rechts oben); Repertoire-Kopf am Handy: Abfragen als Symbolknopf neben der Moduswahl, beide rechtsbündig in einer Zeile; zugeklappte Texte („Mehr“ im Satz) gemessen auf 3 Zeilen gekürzt (`ClampMoreDirective`) statt fester Zeichenzahl oder `line-clamp`, gilt für Kursbeschreibung und „Kurz erzählt“/Roast — dort jetzt mit sichtbarem „Mehr“/„Weniger“; generische Beschriftung `common.showMore`/`common.showLess` (ersetzt `courses.detail.descMore/descLess`, `courses.reimport.more/less`, `chessable.useExtension.more/less`, `puzzles.bar.more`); Engine-Linien der Auswertung und der Live-Engine über `SanPipe` (5.14) | Nachprüfung v1 | v1-rk-analysis-jobs-percent-wrap, v1-rk-repertoire-abfragen-knopf-wandert, v1-rk-kursseite-beschreibung-vorlauf-handy, Nebenbefunde Engine-Linien englisch / „Kurz erzählt“ ohne „Mehr“ |
 | 2026-10-12 | 0.760.0 | RookHub (Analysebrett): „Sparring gegen Maia“ nicht mehr als feste Karte, sondern über das ⋮ der Stellung einblenden, ✕ blendet aus, während eines Sparrings immer sichtbar (5.5); Eröffnungs-Explorer standardmäßig eingeklappt, gemerkter Aufklapp-Zustand je Gerät bleibt (5.12) | Nutzerwunsch: Analysebrett zu voll | Nutzerwunsch 2026-10-12 |
+| 2026-10-13 | 0.761.0 | RookHub/Turnier/KidHub (e1): Datum/Uhrzeit nur über Locale-Formate der DatePipe statt fester `dd.MM`/`HH:mm`-Muster (Wochenpost `EEE, mediumDate · shortTime`, Listen `short`, 5.13); Turnierkarte „1 Teilnehmer“ per Schlüsselpaar `tournamentDirectory.players`/`playersOne`; KidHub-Start: Weiter-Knopf zweiteilig (`kids.home.continue` + `kids.home.puzzleN`, Trenner als `::before`, `continueAt` entfällt), Puzzles-Kachel mit `&ngsp;` und „· “ als `::before` vor den Sternen | UI-Sweep e1 | e1-rk-date-fixed-pattern, e1-t-plural-1-players, e1-k-start-continue-dot-wrap, e1-k-start-levels-done-stars-glued |
+| 2026-10-13 | 0.761.0 | RookHub (e1): Spielerkarte der Spielervorbereitung zweisprachig — Texte `playerCard.*` (en/de/hr/hu), Züge in den Figurenbuchstaben der Sprache, Datum `mediumDate`, Prozent nach Sprache (en/hu „39%“, de/hr „39 %“); LeagueHub bleibt deutsch (Abschnitt 6); Maia-Stärkefeld mindestens 128 px; Partie korrigieren am PC: Runde mindestens 88 px (Ort 1fr); Segmente „Weiß | Schwarz | Automatisch“ alle groß | UI-Sweep e1 | e1-rk-prep-card-german, e1-rk-maia-strength-cut, e1-rk-edit-round-cut, e1-rk-scoresheet-side-auto-case |
+| 2026-10-13 | 0.761.0 | RookHub/Turnier (e1, Sprache): Prozent zentral über `formatPct`/`PctPipe` (`shared/format/pct.ts`) — en/hu „46%“, de/hr „46 %“ (5.13; Explorer, Zugbaum, Genauigkeit, Partien, Statistik, Freunde, Wochenpost); en.json-Anführungszeichen einheitlich “…” (6); Sprachnamen im Satz in der Oberflächensprache, Eigenbezeichnung nur in Sprachauswahlen; Hilfe-Sätze „Your games are under …“/„In … Catalog, you see …“; Datenschutz „/motivation, option “aus” (off)“ | UI-Sweep e1 | e1-rk-percent-space-en, e1-rk-en-anfuehrungszeichen-gemischt, e1-rk-kurs-originalsprache-eigenname, e1-rk-hilfe-partien-satz, e1-rk-datenschutz-motivation-aus |

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslationObject, provideTranslateService } from '@ngx-translate/core';
+import { applyTranslations, loadTranslations } from '@rh/testing/real-translations';
 import { LeagueApiService } from '@lh/core/league-api.service';
 import { OpeningTree, TreeFilter } from '@lh/core/league.models';
 import { OpeningTreeComponent, fenAfter, moveLabel } from './opening-tree.component';
@@ -12,6 +13,8 @@ const TREE = (line: string, moves: OpeningTree['moves'], total = 10): OpeningTre
 describe('OpeningTreeComponent', () => {
   let fixture: ComponentFixture<OpeningTreeComponent>;
   let api: jasmine.SpyObj<LeagueApiService>;
+  let de: TranslationObject;
+  beforeAll(async () => { de = await loadTranslations('de'); });
 
 
   function create(inputs: Record<string, unknown>): HTMLElement {
@@ -19,6 +22,7 @@ describe('OpeningTreeComponent', () => {
       imports: [OpeningTreeComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api }],
     });
+    applyTranslations('de', de);
     fixture = TestBed.createComponent(OpeningTreeComponent);
     for (const [k, v] of Object.entries(inputs)) fixture.componentRef.setInput(k, v);
     fixture.detectChanges();
@@ -43,6 +47,7 @@ describe('OpeningTreeComponent', () => {
       imports: [OpeningTreeComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api }],
     });
+    applyTranslations('de', de);
     fixture = TestBed.createComponent(OpeningTreeComponent);
     fixture.componentRef.setInput('fide', '222');
     fixture.componentRef.setInput('token', 'TOK');
@@ -54,8 +59,8 @@ describe('OpeningTreeComponent', () => {
     expect(api.tree).toHaveBeenCalledWith('222', 'w', [], 'TOK', BOARD);
     const rows = el.querySelectorAll('tbody tr');
     expect(rows[0].textContent).toContain('1.e4');
-    expect(rows[0].textContent).toContain('7 (70 %)');
-    expect(rows[0].textContent).toContain('64 %');
+    expect(rows[0].textContent).toContain('7 (70\u00a0%)');
+    expect(rows[0].textContent).toContain('64\u00a0%');
     (rows[0].querySelector('button.pl') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();

@@ -450,7 +450,11 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['botDmLog']).toMatch(/\b300\b/);
       expect(p['botDmLog']).toMatch(/\b30\b/);
       // Spiel-Status nur fuer /motivation-Abonnenten; Abbestellen ist der Ausweg.
-      expect(p['botActivity']).toContain('/motivation aus');
+      // Der Bot spricht nur deutsch: die Auswahl heisst „aus“ — englisch als Befehl + Option erklaert
+      // (e1-rk-datenschutz-motivation-aus), nicht als deutsches Wort im Fliesstext.
+      expect(p['botActivity']).toContain('/motivation');
+      expect(p['botActivity']).toMatch(/\baus\b/);
+      if (lang === 'en') expect(p['botActivity']).toContain('/motivation, option “aus” (off)');
       // Befehlsprotokoll und Motivations-Metadaten gehen nach Elasticsearch (ohne DM-Inhalt, schach-bot v2.83.14).
       expect(p['botLogs']).toContain('Elasticsearch');
     });

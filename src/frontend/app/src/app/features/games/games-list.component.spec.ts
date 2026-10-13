@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ANALYSIS_POLL_MS, GamesListComponent } from './games-list.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -20,6 +20,8 @@ describe('GamesListComponent', () => {
         provideTranslateService({ fallbackLang: 'en' }),
       ],
     }).compileComponents();
+    // Prozent in der Schreibweise der Oberfläche (e1-rk-percent-space-en): englisch „25%“ ohne Leerzeichen.
+    TestBed.inject(TranslateService).use('en');
     return { fixture: TestBed.createComponent(GamesListComponent), http: TestBed.inject(HttpTestingController) };
   }
 
@@ -87,13 +89,13 @@ describe('GamesListComponent', () => {
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('button.analyze')).toBeNull();
-    expect(el.querySelector('.progress')!.textContent!.trim()).toBe('25 %');
+    expect(el.querySelector('.progress')!.textContent!.trim()).toBe('25%');
     expect(el.querySelector('.accuracy')).toBeNull();
 
     tick(ANALYSIS_POLL_MS);
     http.expectOne(listRequest).flush([game({ status: 'running', analyzed: 30, total: 40 })]);
     fixture.detectChanges();
-    expect(el.querySelector('.progress')!.textContent!.trim()).toBe('75 %');
+    expect(el.querySelector('.progress')!.textContent!.trim()).toBe('75%');
 
     // Fertig: kein Nachfragen mehr, kein Knopf, die Genauigkeit beider Seiten bei den Partie-Daten.
     tick(ANALYSIS_POLL_MS);
@@ -102,7 +104,7 @@ describe('GamesListComponent', () => {
     expect(el.querySelector('.progress')).toBeNull();
     expect(el.querySelector('button.analyze')).toBeNull();
     // Je Seite eine Zeile, auf Höhe des Spielernamens daneben.
-    expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 87 %', '♚ 72 %']);
+    expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 87%', '♚ 72%']);
     tick(ANALYSIS_POLL_MS);
     http.expectNone(listRequest);
     discardPeriodicTasks();
@@ -122,7 +124,7 @@ describe('GamesListComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelectorAll('button.analyze').length).toBe(2);
     expect(el.querySelectorAll('.progress').length).toBe(0);
-    expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 100 %', '♚ —']);
+    expect(Array.from(el.querySelectorAll('.accuracy span')).map(e => e.textContent!.trim())).toEqual(['♔ 100%', '♚ —']);
     // Am Handy (ohne Spaltenkopf) stehen Genauigkeit als Etikett mit Trenner und die Zugzahl mit Einheit da.
     expect(el.querySelector('.accuracy .sep')!.textContent).toBe('·');
     expect(el.querySelectorAll('.moves .moves-num').length).toBe(3);

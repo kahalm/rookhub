@@ -6,7 +6,9 @@ import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LocaleService } from '../../core/locale.service';
 import { CourseLanguageService } from './course-language.service';
+import { languageNameInUi } from './course-lang-picker.component';
 import {
   CourseTranslationsComponent, EtaMinElapsedMs, isOpenJob, jobEtaMinutes, jobPercent, requestableLanguages,
 } from './course-translations.component';
@@ -249,6 +251,26 @@ describe('CourseTranslationsComponent', () => {
       expect(call).toBeTruthy();
       expect((call!.args[1] as { percent: number }).percent).toBe(6);
     });
+  });
+
+  // e1-rk-kurs-originalsprache-eigenname: im Satz der Sprachname der Oberfläche, nicht die Eigenbezeichnung.
+  it('nennt Quelle und Sprachzeilen in der Sprache der Oberfläche („German" statt „Deutsch")', () => {
+    const { c } = setup({ answers: [overview({ sourceLanguage: 'de', languages: [{ language: 'hr', linesTranslated: 5, linesTotal: 10 }] })] });
+    TestBed.inject(TranslateService).use('en');
+    expect(c.sourceName()).toBe('German');
+    expect(c.name('hr')).toBe('Croatian');
+    TestBed.inject(TranslateService).use('de');
+    expect(c.name('de')).toBe('Deutsch');
+    expect(c.name('hr')).toBe('Kroatisch');
+    // das Menü „Übersetzen in …" bleibt bei den Eigenbezeichnungen der Sprachauswahl
+    expect(c.requestOptions().find(o => o.code === 'fr')?.label).toBe('Français');
+  });
+
+  it('languageNameInUi: unbekanntes Kürzel fällt auf die Sprachauswahl bzw. das Kürzel zurück', () => {
+    setup();
+    const locale = TestBed.inject(LocaleService);
+    expect(languageNameInUi('xx', 'en', locale)).toBe('XX');
+    expect(languageNameInUi(null, 'en', locale)).toBe('');
   });
 
   it('requestableLanguages: ohne Quelle, ohne Vollständige, ohne Offene', () => {

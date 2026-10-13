@@ -231,6 +231,13 @@ describe('TournamentCardComponent', () => {
     expect(component.dateText.replace(/\s/g, ' ')).toBe('2 Runden · 11. Okt. 2026 – 11. Apr. 2027');
   });
 
+  // UI-Sweep e1-t-plural-1-players: „1 players" statt „1 player".
+  it('schreibt bei einem Teilnehmer die Einzahl', () => {
+    setup({ playerCount: 1 }, { tournamentDirectory: { players: '{{count}} players', playersOne: '{{count}} player' } });
+    expect(fixture.nativeElement.textContent).toContain('1 player');
+    expect(fixture.nativeElement.textContent).not.toContain('1 players');
+  });
+
   // UI-Sweep 2026-10-11 (r2-t-various): „various" aus chess-results ist kein Ort.
   it('zeigt „various" als uebersetztes „verschiedene Spielorte", kursiv und ohne Ungefaehr-Zeichen', () => {
     setup({ location: 'various', geoSource: 'Region' });

@@ -2,15 +2,23 @@ import { deviationLabel, lineText, percent, plyLabel, trainingFilterParams, trai
 
 describe('training-lines (Hilfen)', () => {
   it('percent: ganze Prozente ab 10, sonst eine Stelle mit Komma, winzig als „<0,1 %"', () => {
-    expect(percent(0.5)).toBe('50 %');
-    expect(percent(0.035)).toBe('3,5 %');
-    expect(percent(0.0004)).toBe('<0,1 %');
-    expect(percent(0)).toBe('0 %');
+    expect(percent(0.5)).toBe('50\u00a0%');
+    expect(percent(0.035)).toBe('3,5\u00a0%');
+    expect(percent(0.0004)).toBe('<0,1\u00a0%');
+    expect(percent(0)).toBe('0\u00a0%');
+    // e1-rk-prep-card-german: in RookHub in der Schreibweise der Oberfläche
+    expect(percent(0.035, 'en')).toBe('3.5%');
+    expect(percent(0.0004, 'en')).toBe('<0.1%');
+    expect(percent(0.5, 'hu')).toBe('50%');
   });
 
   it('lineText: deutsche Notation mit Zugnummern, auch ab einer Stellung mit Schwarz am Zug', () => {
     expect(lineText(['e4', 'c5', 'Nf3', 'Nc6', 'Bb5', 'Qb6', 'O-O'], null)).toBe('1.e4 c5 2.Sf3 Sc6 3.Lb5 Db6 4.O-O');
     expect(lineText(['e5', 'Nf3', 'Nc6'], 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1')).toBe('1…e5 2.Sf3 Sc6');
+    // e1-rk-prep-card-german: in RookHub die Figurenbuchstaben der Oberfläche
+    expect(lineText(['e4', 'c5', 'Nf3', 'Nc6', 'Bb5'], null, 'en')).toBe('1.e4 c5 2.Nf3 Nc6 3.Bb5');
+    expect(lineText(['e4', 'c5', 'Nf3'], null, 'hu')).toBe('1.e4 c5 2.Hf3');
+    expect(plyLabel(['e4', 'c6', 'Nf3'], null, 2, 'en')).toBe('2.Nf3');
   });
 
   it('trainingLinesUrl: nur prep:<Zahl> oder league:<FIDE>', () => {

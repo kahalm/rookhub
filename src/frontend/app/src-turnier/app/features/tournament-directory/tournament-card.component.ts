@@ -104,7 +104,7 @@ import { DirectoryEntry, isPlaceholderLocation, SameNameMark } from './tournamen
           <span class="badge">{{ 'tournamentDirectory.gender.' + entry.gender | translate }}</span>
         }
         @if (entry.playerCount) {
-          <span class="badge">{{ 'tournamentDirectory.players' | translate: { count: entry.playerCount } }}</span>
+          <span class="badge">{{ (entry.playerCount === 1 ? 'tournamentDirectory.playersOne' : 'tournamentDirectory.players') | translate: { count: entry.playerCount } }}</span>
         }
         @if (entry.groupSize > 1) {
           <span class="badge">{{ 'tournamentDirectory.groupCount' | translate: { count: entry.groupSize } }}</span>

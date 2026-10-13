@@ -9,6 +9,8 @@ import { PlayerCardComponent, ligaFotosUrl } from './player-card.component';
 import { PLAYER_CARD_API, PlayerCardApi } from './player-card-api';
 import { By } from '@angular/platform-browser';
 import { TrainingLinesComponent } from './training-lines.component';
+import { useRealTranslations } from '@rh/testing/real-translations';
+import { registerFormatLocaleData } from '@rh/core/locale-data';
 
 const CARD: PlayerCard = {
   fide: '1606921', name: 'Oberschmid, Patrik', n: 20, years: ['2019', '2026'], src: { Lumbra: 12, 'chess-results': 8 },
@@ -30,7 +32,9 @@ describe('PlayerCardComponent', () => {
   let perms: Set<string>;
   let auth: { has: (p: string) => boolean; isLoggedIn: boolean; isAdminLive: boolean };
 
-  beforeEach(() => {
+  beforeAll(() => registerFormatLocaleData());
+
+  beforeEach(async () => {
     perms = new Set();
     auth = { has: (p: string) => perms.has(p), isLoggedIn: false, isAdminLive: false };
     localStorage.removeItem(TREE_FILTER_KEY);
@@ -42,6 +46,8 @@ describe('PlayerCardComponent', () => {
     TestBed.configureTestingModule({ imports: [PlayerCardComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api },
         { provide: MyGamesService, useValue: myGames }, { provide: AuthService, useValue: auth }] });
+    // die echten deutschen Texte — so zeigt LeagueHub die Karte (e1-rk-prep-card-german)
+    await useRealTranslations('de');
     fixture = TestBed.createComponent(PlayerCardComponent);
     fixture.detectChanges();
   });
@@ -280,7 +286,8 @@ describe('PlayerCardComponent', () => {
     await fixture.componentInstance.download(CARD);
     fixture.detectChanges();
     expect(api.pgn).toHaveBeenCalledWith('1606921', null);
-    expect(fixture.componentInstance.error()).toBe('Die PGN-Datei konnte nicht geladen werden.');
+    expect(fixture.componentInstance.error()).toBe('playerCard.pgnError');
+    expect(el().textContent).toContain('Die PGN-Datei konnte nicht geladen werden.');
   });
 
   it('Filter auf der Karte: das Eröffnungsprofil kommt gefiltert vom Server, ohne Filter die gespeicherte Karte (0.617.0)', async () => {
@@ -319,6 +326,7 @@ describe('PlayerCardComponent', () => {
     TestBed.configureTestingModule({ imports: [PlayerCardComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: PLAYER_CARD_API, useValue: other },
         { provide: MyGamesService, useValue: myGames }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } }] });
+    await useRealTranslations('de');
     fixture = TestBed.createComponent(PlayerCardComponent);
     fixture.componentRef.setInput('inline', true);
     fixture.componentRef.setInput('note', 'Quellen: Megabase und Lumbra.');
@@ -380,6 +388,35 @@ describe('PlayerCardComponent', () => {
 
   it('LeagueHub: das Token liefert ohne eigenen Eintrag den LeagueApiService', () => {
     expect(TestBed.inject(PLAYER_CARD_API)).toBe(api as unknown as PlayerCardApi);
+  });
+
+  it('e1-rk-prep-card-german: in RookHub folgt die Karte der Oberflächensprache — Texte, Notation, Datum, Prozent', async () => {
+    await useRealTranslations('en');
+    api.card.and.resolveTo({ ...CARD, white: { n: 9, first: [['e4', 7, 57], ['c4', 2, null]], lines: [['1.e4 c5 2.Nf3 d6 3.d4 cxd4', 3, 50]] } });
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    const text = el().textContent!;
+    expect(headings().find(h => h.startsWith('With White'))).toContain('(9 games)');
+    expect(text).toContain('With Black against 1.e4');
+    expect(text).toContain('Sicilian');
+    expect(text).toContain('English (1.c4)');
+    expect(text).toContain('1.e4 c5 2.Nf3 d6');                                  // englische Figurenbuchstaben
+    expect(text).not.toContain('Sf3');
+    expect(text).toContain('78%');                                               // 7 von 9, ohne Leerzeichen
+    expect(text).toContain('Score 57%');
+    expect(el().querySelector('table.recent td.num')?.textContent).toContain('Apr 12, 2026');
+    expect(text).toContain('Latest games');
+    expect(text).not.toMatch(/Partien|Weiß|Schwarz|Häufigste/);
+  });
+
+  it('e1-rk-prep-card-german: LeagueHub (deutsch) bleibt bei S/L/T/D, deutschem Datum und „78 %"', async () => {
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    const text = el().textContent!;
+    expect(text).toContain('2.Sf3');
+    expect(text).toContain('78 %');
+    expect(el().querySelector('table.recent td.num')?.textContent).toContain('12.04.2026');
+    expect(text).toContain('Häufigste Zugfolgen');
   });
 
   describe('Link „📷 Fotos" nur für Admins (0.727.5)', () => {

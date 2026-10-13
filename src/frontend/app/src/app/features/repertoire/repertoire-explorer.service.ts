@@ -6,6 +6,7 @@ import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { startNumbering } from './repertoire-move-format.util';
 import { TrainColor } from './repertoire-color.util';
 import { localStore, readJson, writeJson } from '../../core/local-json-store';
+import { formatPct } from '../../shared/format/pct';
 
 /**
  * Lochfinder + Linien-Häufigkeiten aus dem Lichess-Explorer (`POST /api/repertoires/{id}/explorer-analysis`).
@@ -230,12 +231,13 @@ export function fitToLocal(s: ExplorerSettings, src: ExplorerSources): ExplorerS
   };
 }
 
-/** Anteil 0…1 als Prozent — mit so vielen Stellen, dass auch kleine Werte lesbar bleiben. */
-export function formatPercent(x: number): string {
+/** Anteil 0…1 als Prozent — mit so vielen Stellen, dass auch kleine Werte lesbar bleiben. Schreibweise der Sprache
+ *  (`formatPct`: en „46%“, de „46 %“); ohne `lang` die der Oberfläche, nicht die des Browsers. */
+export function formatPercent(x: number, lang?: string | null): string {
   const p = x * 100;
-  if (p > 0 && p < 0.01) return `<${(0.01).toLocaleString(undefined, { minimumFractionDigits: 2 })} %`;
+  if (p > 0 && p < 0.01) return `<${formatPct(0.01, lang, 2, 2)}`;
   const digits = p >= 10 ? 0 : p >= 1 ? 1 : 2;
-  return `${p.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} %`;
+  return formatPct(p, lang, digits, digits);
 }
 
 /** Beschriftung des fehlenden Zugs mit Nummer („5… g6"). */

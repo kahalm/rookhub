@@ -204,6 +204,20 @@ describe('ScoresheetUploadComponent', () => {
     discardPeriodicTasks();
   }));
 
+  it('the three segments of "I played" all start with a capital letter (e1-rk-scoresheet-side-auto-case)', async () => {
+    for (const lang of ['en', 'de', 'hr', 'hu']) {
+      let json: { scoresheet: Record<string, string> } | undefined;
+      for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { json = await res.json(); break; }
+      }
+      for (const k of ['sideWhite', 'sideBlack', 'sideAuto']) {
+        const v = json!.scoresheet[k];
+        expect(v[0]).withContext(`${lang}: scoresheet.${k} = ${v}`).toBe(v[0].toLocaleUpperCase(lang));
+      }
+    }
+  });
+
   it('coming back while a scoresheet is still being read follows it again', fakeAsync(async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

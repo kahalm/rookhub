@@ -319,9 +319,10 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
       margin-bottom: 12px; --mat-form-field-container-height: 44px; --mat-form-field-container-vertical-padding: 10px; }
     /* PC: EINE Zeile mit Gewichten — Namen breit, Ergebnis/Runde schmal, „Meine Seite" so breit, dass „nicht festgelegt" passt. */
     @media (min-width: 1101px) {
-      /* z1-rk-edit-ergebnis: „Ergebnis" samt Auswahlpfeil braucht ~112 px; Ort und Runde geben dafür ab. */
-      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(112px, 0.9fr) minmax(0, 1.6fr) minmax(0, 1.2fr)
-        minmax(72px, 0.6fr) minmax(150px, 1fr) minmax(180px, 1.2fr); }
+      /* z1-rk-edit-ergebnis: „Ergebnis" samt Auswahlpfeil braucht ~112 px; Ort und Runde geben dafür ab.
+         e1-rk-edit-round-cut: bei 72 px stand „Rou…" — die Runde bekommt 88 px, der Ort (1fr statt 1.2fr) gibt ab. */
+      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(112px, 0.9fr) minmax(0, 1.6fr) minmax(0, 1fr)
+        minmax(88px, 0.6fr) minmax(150px, 1fr) minmax(180px, 1.2fr); }
     }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
     .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }

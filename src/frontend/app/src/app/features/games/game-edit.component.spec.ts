@@ -425,4 +425,23 @@ describe('GameEditComponent', () => {
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']);
     expect(c.plies()[3].w).toBeNull();
   });
+
+  it('e1-rk-edit-round-cut: PC-Kopfzeile bei 1 366 px — Runde mindestens 88 px, Ergebnis weiter 112 px', () => {
+    const css = ((GameEditComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+    const m = /@media \(min-width: 1101px\) \{[^{}]*?\.headers(?:\[[^\]]*\])? \{ grid-template-columns: ([^;]+);/.exec(css);
+    expect(m).withContext('Raster der PC-Kopfzeile').not.toBeNull();
+    // Inhaltsbreite der Kopfzeile bei 1 366 px: Seite 98vw − 2×16 Polster, Kopfzeile − 2×12 Polster
+    const grid = document.createElement('div');
+    grid.style.cssText = `display: grid; gap: 8px 12px; width: ${Math.round(1366 * 0.98) - 32 - 24}px; grid-template-columns: ${m![1]}`;
+    for (let i = 0; i < 8; i++) grid.appendChild(document.createElement('div'));
+    document.body.appendChild(grid);
+    try {
+      const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').map(parseFloat);
+      expect(cols.length).toBe(8);
+      expect(cols[2]).withContext('Ergebnis').toBeGreaterThanOrEqual(112);
+      expect(cols[5]).withContext('Runde').toBeGreaterThanOrEqual(88);
+    } finally {
+      grid.remove();
+    }
+  });
 });

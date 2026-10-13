@@ -29,8 +29,10 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
       @if (current(); as level) {
         <a class="go" [routerLink]="['/levels', level]">
           <!-- UI-Sweep 2026-10-11 (r2-k-level-run): angefangener Durchgang mit der nächsten Aufgabe -->
+          <!-- e1-k-start-continue-dot-wrap: zwei Teile, der Trenner als ::before des zweiten — bricht der Knopf am Handy
+               um, steht „· Aufgabe 5 ▶" geschlossen in Zeile 2 statt „·" allein am Zeilenende (DESIGN 5.13). -->
           @if (currentRun() > 0) {
-            {{ 'kids.home.continueAt' | translate: { level, n: currentRun() + 1 } }} ▶
+            <span>{{ 'kids.home.continue' | translate: { level } }}</span>&ngsp;<span class="part">{{ 'kids.home.puzzleN' | translate: { n: currentRun() + 1 } }} ▶</span>
           } @else {
             {{ (done() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
           }
@@ -50,8 +52,9 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
           <!-- z3-k-start-kachel-umbruch: Stand und Sterne als eigene Blöcke — bricht es um, dann zwischen ihnen
                (vorher stand „⭐ 0" verwaist in Zeile 2). -->
           <span class="meta">
-            <span class="done">{{ 'kids.home.levelsDone' | translate: { done: done(), total: levels().length } }}</span>
-            <span class="nw">⭐ {{ progress.totalStars() }}</span>
+            <!-- e1-k-start-levels-done-stars-glued: &ngsp; hält das Leerzeichen (reiner Zeilenumbruch fällt weg), der Trenner
+                 kommt als ::before von .nw. -->
+            <span class="done">{{ 'kids.home.levelsDone' | translate: { done: done(), total: levels().length } }}</span>&ngsp;<span class="nw">⭐ {{ progress.totalStars() }}</span>
           </span>
         }
       </a>
@@ -106,6 +109,8 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
       font-size: 1.6rem; font-weight: 800; padding: 16px 32px; border-radius: 999px;
       box-shadow: 0 6px 0 var(--kid-shadow);
     }
+    .go .part { white-space: nowrap; }
+    .go .part::before { content: '· '; }
     .go:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--kid-shadow); }
     .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-top: 28px; }
     .tile {
@@ -123,6 +128,7 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; text-wrap: balance; }
     .meta .done { display: inline-block; max-width: 100%; }
     .meta .nw { white-space: nowrap; }
+    .meta .nw::before { content: '· '; }
     /* Dünner Fortschrittsbalken der Kurs-Kachel (r2-k-course-tile). */
     .tile-bar { display: block; width: min(220px, 80%); height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .12);
                 overflow: hidden; margin-top: 4px; }

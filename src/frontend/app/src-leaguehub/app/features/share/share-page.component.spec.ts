@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -12,7 +13,7 @@ describe('SharePageComponent', () => {
     TestBed.configureTestingModule({
       imports: [SharePageComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideTranslateService({ fallbackLang: 'de' }),
         { provide: LeagueApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }) } } },
       ],

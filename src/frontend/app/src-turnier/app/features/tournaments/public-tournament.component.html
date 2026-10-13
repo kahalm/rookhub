@@ -40,8 +40,8 @@
               }
               @if (monitor.monitoring()) {
                 <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"
-                        [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') }">
-                  <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'HH:mm') } }}</span>
+                        [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'shortTime') }">
+                  <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitor.activeUntil() | date:'shortTime') } }}</span>
                 </button>
               } @else {
                 <button mat-stroked-button class="keep-label monitor" (click)="monitor.toggle()" [disabled]="monitor.toggling()"

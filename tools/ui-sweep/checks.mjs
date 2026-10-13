@@ -12,7 +12,7 @@
 export const FOLD = {
   leadMaxRatio: 0.40,                                     // (3) Vorlauf höchstens 40 % der Fensterhöhe
   maxBanners: 1,                                          // (6) höchstens ein Banner über der Hauptsache
-  stickyMaxPx: { mobile: 64, tablet: 64, laptop: 72, wide: 72 },   // (9) klebende Leisten oben zusammen
+  stickyMaxPx: { mobile: 64, tablet: 64, laptop: 72, wide: 72, ultrawide: 72 },   // (9) klebende Leisten oben zusammen
   screensHint: 6,                                         // (11) ab 6 Bildschirmen: Gliederung nötig (Hinweis)
   screensFinding: 12,                                     // (11) ab 12 Bildschirmen: Befund
   stripsMinScreens: 2,                                    // Streifen erst bei Seiten über 2 Bildschirmen
@@ -288,7 +288,7 @@ export async function foldScroll(arg) {
   return out;
 }
 
-/** Bewertet die Messwerte einer Aufnahme (Node-Seite). viewport = mobile|tablet|laptop|wide. */
+/** Bewertet die Messwerte einer Aufnahme (Node-Seite). viewport = mobile|tablet|laptop|wide|ultrawide. */
 export function foldFindings(fold, viewport, { exempt = false, mainDeclared = true } = {}) {
   const f = [];
   if (!fold) return f;

@@ -472,7 +472,7 @@
                             @for (u of memberCandidates; track u.id) {
                               <li>
                                 <span class="cand-name">{{ u.username }}</span>
-                                <span class="cand-meta">{{ u.createdAt | date: 'dd.MM.yyyy' }}@if (u.groups?.length) { · {{ u.groups.join(', ') }} }</span>
+                                <span class="cand-meta">{{ u.createdAt | date:'mediumDate' }}@if (u.groups?.length) { · {{ u.groups.join(', ') }} }</span>
                                 <button mat-stroked-button color="primary" [disabled]="addingUserId === u.id" (click)="addMember(u)">
                                   <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
                                 </button>

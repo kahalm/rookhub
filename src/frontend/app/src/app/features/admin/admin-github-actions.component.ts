@@ -62,7 +62,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
         <h3>{{ 'admin.ci.title' | translate }}</h3>
         <span class="ci-sub">
           {{ 'admin.ci.subtitle' | translate }}
-          @if (lastUpdated) { · {{ 'admin.ci.updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }} }
+          @if (lastUpdated) { · {{ 'admin.ci.updated' | translate }} {{ lastUpdated | date:'mediumTime' }} }
           @if (buildSha) { · {{ 'admin.ci.runningBuild' | translate }} {{ buildSha.slice(0, 7) }} }
           @if (apiSha) { · {{ 'admin.ci.runningApi' | translate }} {{ apiSha.slice(0, 7) }} }
         </span>
@@ -125,7 +125,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                       <mat-icon class="ref-icon">{{ run.isTag ? 'sell' : 'call_split' }}</mat-icon>
                       <span class="run-ref" [class.is-tag]="run.isTag">{{ refLabel(run) }}</span>
                       · {{ run.name }} · #{{ run.runNumber }}
-                      · {{ 'admin.ci.started' | translate }} {{ run.createdAt | date:'dd.MM. HH:mm' }}
+                      · {{ 'admin.ci.started' | translate }} {{ run.createdAt | date:'short' }}
                       · {{ 'admin.ci.duration' | translate }} {{ durationLabel(run) }}
                       @if (run.actor) { · {{ run.actor }} }
                     </span>

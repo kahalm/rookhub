@@ -43,8 +43,8 @@
                 <!-- notifications_off = Aktion 'Beobachtung beenden': ohne Beschriftung sahen an und aus mobil sonst
                      identisch aus, die Endzeit steht dort nur noch im Tooltip/aria-label. -->
                 <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
-                        [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }">
-                  <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
+                        [appIconLabel]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'shortTime') }">
+                  <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'shortTime') } }}</span>
                 </button>
               } @else {
                 <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"

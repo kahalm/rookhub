@@ -135,7 +135,7 @@ describe('KidsHomeComponent', () => {
     progress.completeRun(1);
     for (let i = 0; i < 4; i++) progress.recordSolved(2, 0);
     const translate = TestBed.inject(TranslateService);
-    translate.setTranslation('en', { kids: { home: { continueAt: 'Level {{level}} · puzzle {{n}}', continue: 'Level {{level}}' } } });
+    translate.setTranslation('en', { kids: { home: { puzzleN: 'puzzle {{n}}', continue: 'Level {{level}}' } } });
     translate.use('en');
 
     const f = TestBed.createComponent(KidsHomeComponent);
@@ -146,7 +146,13 @@ describe('KidsHomeComponent', () => {
     ]);
     f.detectChanges();
 
-    expect((f.nativeElement as HTMLElement).querySelector('a.go')!.textContent).toContain('Level 2 · puzzle 5');
+    const go = (f.nativeElement as HTMLElement).querySelector('a.go')!;
+    expect(go.textContent!.replace(/\s+/g, ' ')).toContain('Level 2 puzzle 5 ▶');
+    // e1-k-start-continue-dot-wrap: der Trenner hängt als ::before am zweiten Teil, der nicht umbricht.
+    const part = go.querySelector('.part')!;
+    expect(part.textContent!.trim()).toBe('puzzle 5 ▶');
+    expect(getComputedStyle(part, '::before').content).toBe('"· "');
+    expect(getComputedStyle(part).whiteSpace).toBe('nowrap');
   }));
 
   /** Codereview 2026-09-29, UX-062: ohne Stufen fehlte der Startknopf ersatzlos, der Fehlersatz stand klein als letzte
@@ -225,6 +231,9 @@ describe('KidsHomeComponent', () => {
     const host = f.nativeElement as HTMLElement;
     expect(host.querySelector('.tile.puzzles .meta .done')!.textContent).toMatch(/\d+ von 40 Stufen geschafft/);
     expect(host.querySelector('.tile.puzzles .meta .nw')!.textContent!.trim()).toMatch(/^⭐ \d+$/);
+    // e1-k-start-levels-done-stars-glued: Leerzeichen zwischen den Teilen bleibt, Trenner als ::before von .nw.
+    expect(host.querySelector('.tile.puzzles .meta')!.textContent!.replace(/\s+/g, ' ')).toMatch(/Stufen geschafft ⭐ \d+/);
+    expect(getComputedStyle(host.querySelector('.tile.puzzles .meta .nw')!, '::before').content).toBe('"· "');
     const css = Array.from(document.styleSheets).map(sheet => {
       try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
     }).join('\n');

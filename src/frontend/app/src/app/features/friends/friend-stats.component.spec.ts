@@ -26,7 +26,7 @@ describe('friend-stats comparison logic', () => {
       expect(rows.find(r => r.label === 'stats.totalSolved')!.winner).toBe('tie');      // 100 == 100
       expect(rows.find(r => r.label === 'stats.attempts')!.winner).toBe('theirs');      // 150 > 120
       expect(rows.find(r => r.label === 'stats.accuracy')!.winner).toBe('theirs');      // 90 > 83
-      expect(rows.find(r => r.label === 'stats.accuracy')!.suffix).toBe('%');
+      expect(rows.find(r => r.label === 'stats.accuracy')!.percent).toBeTrue();
       expect(rows.find(r => r.label === 'stats.bestStreak')!.winner).toBe('theirs');    // 20 > 12
     });
   });

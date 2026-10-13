@@ -19,18 +19,6 @@ export function de(s: string | null | undefined): string {
     .replace(/=([NBRQ])/g, (_m, p: string) => '=' + DE[p]);
 }
 
-export const NAME_WHITE: Record<string, string> = {
-  e4: '1.e4', d4: '1.d4', c4: 'Englisch (1.c4)', Nf3: 'Réti (1.Sf3)', f4: 'Bird (1.f4)', g3: '1.g3', b3: 'Larsen (1.b3)',
-};
-export const NAME_VS_E4: Record<string, string> = {
-  c5: 'Sizilianisch', e5: '1…e5', e6: 'Französisch', c6: 'Caro-Kann', d6: 'Pirc/Philidor (1…d6)', g6: 'Modern (1…g6)',
-  d5: 'Skandinavisch', Nf6: 'Aljechin', b6: 'Owen', Nc6: 'Nimzowitsch',
-};
-export const NAME_VS_D4: Record<string, string> = {
-  Nf6: 'Indisch (1…Sf6)', d5: '1…d5', f5: 'Holländisch', e6: '1…e6', g6: 'Modern (1…g6)', d6: '1…d6',
-  c5: 'Benoni (1…c5)', b6: '1…b6', Nc6: 'Tschigorin (1…Sc6)',
-};
-
 export const PHASE_TEXT: Record<Phase, string> = {
   'R1': 'erste Runde der Saison, noch ohne Aufstellungen aus dieser Saison',
   'R2+': 'mit den bisherigen Runden dieser Saison',

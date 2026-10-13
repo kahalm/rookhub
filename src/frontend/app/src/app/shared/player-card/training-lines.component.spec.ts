@@ -77,6 +77,20 @@ describe('TrainingLinesComponent', () => {
     localStorage.removeItem('rookhub_rep_train_chaptercolor_9');
   });
 
+  it('e1-rk-prep-card-german: mit englischer Oberfläche englische Züge, Prozent ohne Leerzeichen, Texte aus der Sprachdatei', async () => {
+    lang = 'en';
+    build();
+    // die Attrappe kennt nur wenige Schlüssel — die übrigen fallen auf Deutsch zurück; hier zählt, dass t() fragt
+    expect(el().querySelector('button.tl-toggle')!.textContent).toContain('Trainingslinien gegen Huber');
+    await openSection();
+    const items = Array.from(el().querySelectorAll('.tl-list li'));
+    expect(items[0].textContent).toContain('1.e4 c5 2.Nf3 d6');
+    expect(items[0].textContent).toContain('50%');
+    expect(items[1].textContent).toContain('3.Bb5');
+    expect(items[1].textContent).toContain('<0.1%');
+    expect(items[2].textContent).toContain('4.Nxd4');
+  });
+
   it('lädt erst beim Aufklappen; Linien wahrscheinlichste zuerst, deutsch notiert, „nie erreicht" hinten, „weitere"', async () => {
     build();
     expect(trainingLines).not.toHaveBeenCalled();
@@ -88,14 +102,14 @@ describe('TrainingLinesComponent', () => {
     expect(items.length).toBe(4);
     expect(items[0].textContent).toContain('1.e4 c5 2.Sf3 d6');
     expect(items[0].textContent).toContain('Najdorf');
-    expect(items[0].textContent).toContain('50 %');
+    expect(items[0].textContent).toContain('50\u00a0%');
     expect(items[0].textContent).toContain('6 Partien, zuletzt 2025');
     expect(items[1].textContent).toContain('3.Lb5');
-    expect(items[1].textContent).toContain('<0,1 %');
+    expect(items[1].textContent).toContain('<0,1\u00a0%');
     expect(items[1].textContent).toContain('1 Partie, zuletzt 2019');
     // aufgefüllt: nur der Anfang getroffen — „bis Zug … dabei" mit der Wahrscheinlichkeit des Anfangs
     expect(items[2].textContent).toContain('bis 3…cxd4 dabei');
-    expect(items[2].textContent).toContain('Anfang 12 %, 4 Partien');
+    expect(items[2].textContent).toContain('Anfang 12\u00a0%, 4 Partien');
     expect(items[3].classList).toContain('never');
     expect(items[3].textContent).toContain('nie erreicht');
     expect(el().textContent).toContain('gezählt: 12 Partien von Huber mit Schwarz');
@@ -413,13 +427,13 @@ describe('TrainingLinesComponent', () => {
       expect(el().querySelector('.tl-incomplete')?.textContent).toContain('unvollständig');
       const items = Array.from(el().querySelectorAll('.tl-list li'));
       expect(items[0].querySelector('.tl-tag')?.textContent).toContain('ab 2…d5 geschätzt (Lichess 2000–2300)');
-      expect(items[0].textContent).toContain('62 %');
+      expect(items[0].textContent).toContain('62\u00a0%');
       expect(items[1].querySelector('.tl-tag')?.textContent?.trim()).toBe('geschätzt');
       expect(items[2].querySelector('.tl-tag-warn')?.textContent).toContain('Schätzung unvollständig');
       expect(items[2].textContent).toContain('bis 3…cxd4 dabei');            // ohne Quelle: Auffüllregel wie bisher
       // widerspricht ihm: „weicht ab: er spielt hier 1…c5 (1 Partie)" mit der Schätzung ab dort
       expect(items[3].querySelector('.tl-deviates')?.textContent).toContain('weicht ab: er spielt hier 1…c5 (1 Partie)');
-      expect(items[3].textContent).toContain('≈ 36 %');
+      expect(items[3].textContent).toContain('≈ 36\u00a0%');
     });
 
     it('der Server rechnet im Hintergrund: Fortschritt anzeigen und alle 3 s nachfragen, bis explorerRunning false', fakeAsync(() => {

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
@@ -69,6 +70,8 @@ describe('LeaguePageComponent', () => {
     TestBed.configureTestingModule({
       imports: [LeaguePageComponent],
       providers: [
+        // die Spielerkarte übersetzt (e1-rk-prep-card-german)
+        provideTranslateService({ fallbackLang: 'de' }),
         { provide: LeagueApiService, useValue: api },
         { provide: LineupsApiService, useValue: lineupsApi },
         { provide: Router, useValue: router },

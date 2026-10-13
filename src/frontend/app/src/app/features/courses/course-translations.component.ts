@@ -17,7 +17,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { formatQuietUntil } from '../games/quiet-hours.util';
 import { formatEta } from '../../shared/eta.util';
-import { languageName } from './course-lang-picker.component';
+import { languageNameInUi } from './course-lang-picker.component';
 import { CourseLanguageService } from './course-language.service';
 import { languagesFromOverview } from './course-language.util';
 import { CourseService, CourseTranslationJob, CourseTranslations } from './course.service';
@@ -282,8 +282,10 @@ export class CourseTranslationsComponent {
     return this.auth.isLoggedIn;
   }
 
+  /** Sprachname im Satz und in den Statuszeilen — in der Sprache der Oberfläche („Original language: German"); das Menü
+   *  „Übersetzen in …" behält die Eigenbezeichnungen der Sprachauswahl (`requestOptions`). */
   name(code: string | null | undefined): string {
-    return languageName(code, this.locale);
+    return languageNameInUi(code, this.courseLang.uiLanguage(), this.locale);
   }
 
   /** Zurückziehen: den eigenen WARTENDEN; ein Admin jeden offenen (ein laufender bricht dann ab). */

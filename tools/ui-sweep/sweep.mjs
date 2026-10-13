@@ -26,6 +26,8 @@ const VIEWPORTS = {
   tablet: { width: 820, height: 1180, isMobile: true, hasTouch: true },
   laptop: { width: 1366, height: 768 },
   wide: { width: 1920, height: 1080 },
+  // Ultrawide-Monitor des Betreibers (UWQHD 21:9). Nicht in der Vorgabe — nur mit --viewport ultrawide.
+  ultrawide: { width: 3440, height: 1440 },
 };
 const MAX_SHOT_HEIGHT = 4000;
 /** Browser-Sprache je Oberflächensprache (Datums-/Zahlenformat der Seite kommt aus der App, das hier ist navigator.language). */
@@ -80,7 +82,7 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
   --app a,b              nur diese Oberflächen (rookhub, turnier, kidhub, leaguehub, clubhub)
   --area a,b             nur diese Bereiche, z. B. kurse, repertoire, partien (Liste: --areas)
   --route text           nur Routen, deren Pfad oder Name den Text enthält (mehrere mit Komma)
-  --viewport v,w         mobile (390), tablet (820), laptop (1366), wide (1920)     Vorgabe: mobile,laptop,wide
+  --viewport v,w         mobile (390), tablet (820), laptop (1366), wide (1920), ultrawide (3440×1440)  Vorgabe: mobile,laptop,wide
   --theme t,u            dark, light                                                 Vorgabe: dark
   --lang l,m             Oberflächensprache (de, en, hr, …; Cookie + localStorage rookhub_lang)  Vorgabe: de
   --auth a,b             anon, user (normales Konto mit Bestand), admin (claude-dev),

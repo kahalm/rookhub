@@ -362,6 +362,15 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('.source-note').classList).toContain('muted');
   });
 
+  it('nimmt bei einem Teilnehmer den Einzahl-Schlüssel (e1-t-plural-1-players)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { playerCount: 1 }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const badges = fixture.nativeElement.querySelector('.badges').textContent;
+    expect(badges).toContain('tournamentDirectory.playersOne');
+  });
+
   it('zeigt keinen Bedenkzeit-Chip „Unbekannt" (t-chip-unknown)', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { speed: 'Unknown' }));

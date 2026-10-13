@@ -90,7 +90,7 @@ mit `--fast` 284 Seitenladungen in 6¼ min (371 s). Vorher (80/min, 2 gleichzeit
 
 | Achse | Werte | Vorgabe |
 |-------|-------|---------|
-| `--viewport` | `mobile` (390 × 844), `tablet` (820, Touch), `laptop` (1366 × 768), `wide` (1920 × 1080) | `mobile,laptop,wide` (die drei Falz-Ansichten aus DESIGN.md 4.6) |
+| `--viewport` | `mobile` (390 × 844), `tablet` (820, Touch), `laptop` (1366 × 768), `wide` (1920 × 1080), `ultrawide` (3440 × 1440, 21:9 — nur auf Anforderung) | `mobile,laptop,wide` (die drei Falz-Ansichten aus DESIGN.md 4.6) |
 | `--theme` | `dark`, `light` — RookHub/Turnier/LeagueHub/ClubHub über `rookhub_app_theme` + Cookie `rookhub_theme`; KidHub hat nur sein helles Design | `dark` |
 | `--lang` | `de`, `en`, `hr`, `hu` … — Cookie + localStorage `rookhub_lang` (so wählt `LocaleService`), Browser-Sprache passend. LeagueHub und ClubHub sind fest deutsch, KidHub zeigt nur seine Kindersprachen | `de` |
 | `--auth` | `anon`, `user`, `admin`, `empty`, `trainer` | `anon,user` |

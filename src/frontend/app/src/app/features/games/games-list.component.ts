@@ -28,6 +28,7 @@ import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.com
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { PctPipe, formatPct } from '../../shared/format/pct';
 
 /** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
 export const ANALYSIS_POLL_MS = 10_000;
@@ -41,7 +42,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
   standalone: true,
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, TranslatePipe,
+    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, TranslatePipe, PctPipe,
   ],
   template: `
     <div class="games-page">
@@ -179,7 +180,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   }
                   @case ('running') {
                     <!-- Statt des Knopfs der Fortschritt — er läuft mit dem 10-s-Nachfragen mit. -->
-                    <span class="progress" [matTooltip]="progressTip(g)">{{ progressPercent(g) }} %</span>
+                    <span class="progress" [matTooltip]="progressTip(g)">{{ progressPercent(g) | pct }}</span>
                   }
                   @case ('none') {
                     <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach auf der Partie-Seite. -->
@@ -487,9 +488,9 @@ export class GamesListComponent implements OnInit {
     });
   }
 
-  /** „87 %" oder „—", wenn die Seite keinen bewertbaren Zug hatte. */
+  /** „87%“ (en) / „87 %“ (de) oder „—“, wenn die Seite keinen bewertbaren Zug hatte. */
   pct(value: number | null | undefined): string {
-    return value == null ? '—' : `${Math.round(value)} %`;
+    return value == null ? '—' : formatPct(Math.round(value), this.translate.currentLang() || null);
   }
 
   /** Die Partie rechnen lassen — siehe {@link AnalyzeGameService}. Das PGN braucht es dafür nicht mehr,

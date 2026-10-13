@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { StatsComponent } from './stats.component';
 
@@ -81,6 +81,7 @@ describe('StatsComponent', () => {
       ],
     }).compileComponents();
 
+    TestBed.inject(TranslateService).use('en');   // Prozent englisch „75%“ (e1-rk-percent-space-en)
     const fixture = TestBed.createComponent(StatsComponent);
     const c = fixture.componentInstance;
     fixture.detectChanges();
@@ -105,6 +106,12 @@ describe('StatsComponent', () => {
     expect(c.current).toBe(c.courseStats);
     values = Array.from(fixture.nativeElement.querySelectorAll('.cards .stat .val')).map(e => (e as HTMLElement).textContent!.trim());
     expect(values).toEqual(['5', '7', '71.4%', '1', '2']);   // keine Elo-Kachel
+
+    // Deutsch mit geschütztem Leerzeichen und Komma (DESIGN 5.13)
+    TestBed.inject(TranslateService).use('de');
+    fixture.detectChanges();
+    values = Array.from(fixture.nativeElement.querySelectorAll('.cards .stat .val')).map(e => (e as HTMLElement).textContent!.trim());
+    expect(values[2]).toBe('71,4\u00a0%');
   });
 
   // W5 F5-017: scheitert das Laden, zeigten die Karten Nullen und „–" wie bei einem neuen Konto.

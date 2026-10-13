@@ -3,7 +3,9 @@ import { NgTemplateOutlet } from '@angular/common';
 import { AuthService } from '@rh/core/auth.service';
 import { PLAYER_CARD_API } from './player-card-api';
 import { MyGamesService } from '@lh/core/my-games.service';
-import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '@lh/core/league-format';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { SPEED } from '@lh/core/league-format';
+import { cardDate, cardLang, cardPct, cardSanText } from './card-lang';
 import { OpeningStats, PlayerCard, ProfileView, RecentGame, TreeFilter } from '@lh/core/league.models';
 import { TREE_FILTER_KEY, effectiveTreeFilter, normalizeTreeFilter } from './tree-filter';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
@@ -15,6 +17,20 @@ import { TreeFilterBarComponent } from './tree-filter-bar.component';
 import { TrainingLinesComponent } from './training-lines.component';
 
 type Show = 'w' | 's' | 'b';
+
+/** Eröffnungsnamen zum ersten Zug (Sprachschlüssel, e1-rk-prep-card-german); ohne Namen steht der Zug selbst da. */
+const OPENINGS_WHITE: Record<string, string> = {
+  c4: 'playerCard.opening.english', Nf3: 'playerCard.opening.reti', f4: 'playerCard.opening.bird', b3: 'playerCard.opening.larsen',
+};
+const OPENINGS_VS_E4: Record<string, string> = {
+  c5: 'playerCard.opening.sicilian', e6: 'playerCard.opening.french', c6: 'playerCard.opening.caroKann',
+  d6: 'playerCard.opening.pircPhilidor', g6: 'playerCard.opening.modern', d5: 'playerCard.opening.scandinavian',
+  Nf6: 'playerCard.opening.alekhine', b6: 'playerCard.opening.owen', Nc6: 'playerCard.opening.nimzowitsch',
+};
+const OPENINGS_VS_D4: Record<string, string> = {
+  Nf6: 'playerCard.opening.indian', f5: 'playerCard.opening.dutch', g6: 'playerCard.opening.modern',
+  c5: 'playerCard.opening.benoni', Nc6: 'playerCard.opening.chigorin',
+};
 
 /**
  * Spielerkarte als Dialog: Partien (Lumbra + chess-results + Vereins-Datenbank), Eröffnungsprofil, letzte Partien,
@@ -33,40 +49,40 @@ type Show = 'w' | 's' | 'b';
           <h2 id="card-name">{{ card()?.name || (loading() ? '…' : '') }}</h2>
           @if (card(); as c) {
             <p class="card-meta">
-              @if (c.n) { {{ c.n }} Partien @if (c.years) { ({{ c.years[0] }}–{{ c.years[1] }}) } }
-              @else { Keine Partien gefunden }
+              @if (c.n) { {{ (c.n === 1 ? 'playerCard.gamesOne' : 'playerCard.games') | translate: { n: c.n } }} @if (c.years) { ({{ c.years[0] }}–{{ c.years[1] }}) } }
+              @else { {{ 'playerCard.noGames' | translate }} }
               <span class="muted">{{ srcText(c) }}</span>@if (c.fide) { –
-              <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">FIDE-Profil</a> }
+              <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">{{ 'playerCard.fideProfile' | translate }}</a> }
               @if (photosUrl(c.name); as u) { –
               <a class="card-photos" [href]="u" target="_blank" rel="noopener"
-                 title="Alle Fotos dieses Spielers auf der Liga-Foto-Seite (nur Admins)">📷 Fotos</a> }
+                 [title]="'playerCard.photosTitle' | translate">{{ 'playerCard.photos' | translate }}</a> }
             </p>
           }
         </div>
-        <button type="button" class="card-close" aria-label="Schließen" (click)="close()">✕</button>
+        <button type="button" class="card-close" [attr.aria-label]="'common.close' | translate" (click)="close()">✕</button>
       </div>
       <div class="card-body">
-        @if (loading()) { <p class="muted">Lade Partien …</p> }
-        @if (error()) { <p>{{ error() }}</p> }
+        @if (loading()) { <p class="muted">{{ 'playerCard.loading' | translate }}</p> }
+        @if (error(); as e) { <p>{{ e | translate }}</p> }
         @if (card(); as c) {
           @if (replay(); as r) {
             <div class="actions">
-              <button type="button" class="btn-sec" (click)="replay.set(null)">← Zurück zur Karte</button>
+              <button type="button" class="btn-sec" (click)="replay.set(null)">{{ 'playerCard.backToCard' | translate }}</button>
               @if (myGames.available) {
                 <!-- Wunsch 2026-10-05 (0.663.0): die Partie gleich analysiert ansehen, wie auf RookHubs Partieseite -->
                 <button type="button" class="btn-pri" [disabled]="gameBusy()" (click)="analyzeGame(r.pgn)"
-                        title="Legt die Partie in deinen Partien ab, lässt sie analysieren und öffnet sie in RookHub mit Bewertungskurve">Analyse</button>
+                        [title]="'playerCard.analyzeTitle' | translate">{{ 'playerCard.analyze' | translate }}</button>
                 <button type="button" class="btn-sec" [disabled]="gameBusy()" (click)="toMyGames(r.pgn)"
-                        title="Legt die Partie in deinen Partien in RookHub ab und öffnet sie dort">Zu meinen Partien</button>
+                        [title]="'playerCard.toMyGamesTitle' | translate">{{ 'playerCard.toMyGames' | translate }}</button>
                 <button type="button" class="btn-sec" [disabled]="gameBusy()" (click)="shareGame(r.pgn)"
-                        title="Öffentlicher Link zur Partie in RookHub (sie liegt dafür in deinen Partien)">Partie teilen</button>
+                        [title]="'playerCard.shareGameTitle' | translate">{{ 'playerCard.shareGame' | translate }}</button>
               }
             </div>
-            @if (gameNote(); as n) { <p class="small game-note" [class.err]="n.err" role="status">{{ n.text }}</p> }
+            @if (gameNote(); as n) { <p class="small game-note" [class.err]="n.err" role="status">{{ n.key | translate: n.params }}</p> }
             <lh-game-replay [pgn]="r.pgn" [flipped]="r.flipped" />
           } @else {
           @if (color()) {
-            <p class="hint">An Brett {{ board() }} spielt {{ lastName(c) }} mit <b>{{ color() === 'w' ? 'Weiß' : 'Schwarz' }}</b>.</p>
+            <p class="hint">{{ (color() === 'w' ? 'playerCard.boardWhite' : 'playerCard.boardBlack') | translate: { board: board(), name: lastName(c) } }}</p>
           }
           @if (c.n || c.online) {
             <!-- Bedienzeile in einer Hülle: die Spielervorbereitung legt Farbwahl, Filter und Werkzeuge in EINE umbrechende
@@ -75,34 +91,34 @@ type Show = 'w' | 's' | 'b';
             <div class="controls" [class.open]="controlsOpen()" [class.tools-open]="toolsOpen()">
             <div class="actions">
               @if (c.n) {
-                <div class="seg" role="group" aria-label="Farbe">
+                <div class="seg" role="group" [attr.aria-label]="'playerCard.colorGroup' | translate">
                   @for (o of options; track o.k) {
-                    <button type="button" [attr.aria-pressed]="show() === o.k" (click)="show.set(o.k)">{{ o.label }}</button>
+                    <button type="button" [attr.aria-pressed]="show() === o.k" (click)="show.set(o.k)">{{ o.label | translate }}</button>
                   }
                 </div>
               }
               @if (inline()) {
                 <button type="button" class="btn-sec ctl-toggle" [attr.aria-expanded]="controlsOpen()"
-                        (click)="controlsOpen.set(!controlsOpen())">Filter {{ controlsOpen() ? '▴' : '▾' }}</button>
+                        (click)="controlsOpen.set(!controlsOpen())">{{ 'playerCard.filter' | translate }} {{ controlsOpen() ? '▴' : '▾' }}</button>
                 <!-- z2-rk-prep-filter-aktionen: PGN, Eröffnungsbaum und Trainingslinien sind Werkzeuge, keine Filter — am
                      Handy hinter einem eigenen ⋮ statt hinter „Filter ▾". -->
-                <button type="button" class="btn-sec ctl-tools" [attr.aria-expanded]="toolsOpen()" aria-label="Werkzeuge"
-                        title="Werkzeuge" (click)="toolsOpen.set(!toolsOpen())">⋮</button>
+                <button type="button" class="btn-sec ctl-tools" [attr.aria-expanded]="toolsOpen()" [attr.aria-label]="'playerCard.tools' | translate"
+                        [title]="'playerCard.tools' | translate" (click)="toolsOpen.set(!toolsOpen())">⋮</button>
               }
               @if (c.n) {
-                <button type="button" class="btn-sec" (click)="download(c)">PGN herunterladen ({{ c.n }} Partien)</button>
+                <button type="button" class="btn-sec" (click)="download(c)">{{ (c.n === 1 ? 'playerCard.downloadPgnOne' : 'playerCard.downloadPgn') | translate: { n: c.n } }}</button>
               }
               <button type="button" class="btn-sec tree-toggle" [attr.aria-expanded]="treeOpen()" (click)="treeOpen.set(!treeOpen())">
-                {{ treeOpen() ? 'Eröffnungsbaum schließen' : 'Eröffnungsbaum anzeigen' }}</button>
+                {{ (treeOpen() ? 'playerCard.treeHide' : 'playerCard.treeShow') | translate }}</button>
             </div>
             <lh-tree-filter-bar [filter]="filter()" [active]="active()" [boardGames]="c.n" [onlineGames]="c.online ?? 0"
                                 [unsureGames]="c.onlineUnsure ?? 0" [token]="token" [unsure]="unsureAllowed()" (changed)="setFilter($event)" />
             @if (!storedProfile()) {
               <p class="muted small filtered" role="status">
-                @if (profile(); as p) { Gefiltert: {{ p.n }} Partien@if (p.online) { ({{ p.board }} am Brett, {{ p.online }} online)}
+                @if (profile(); as p) { {{ (p.n === 1 ? 'playerCard.filteredOne' : 'playerCard.filtered') | translate: { n: p.n } }}@if (p.online) { {{ 'playerCard.filteredSplit' | translate: { board: p.board, online: p.online } }}}
                   @if (p.years) { · {{ p.years[0] }}–{{ p.years[1] }} } }
-                @if (profileLoading()) { — lade … }
-                @if (profileError()) { <span class="err">{{ profileError() }}</span> }
+                @if (profileLoading()) { {{ 'playerCard.loadingShort' | translate }} }
+                @if (profileError(); as e) { <span class="err">{{ e | translate }}</span> }
               </p>
             }
             @if (treeOpen()) {
@@ -123,91 +139,89 @@ type Show = 'w' | 's' | 'b';
               <div class="sides">
               @if (show() !== 's') {
                 <div class="side side-white">
-                <h3>Mit Weiß <span class="muted">({{ sec.white?.n || 0 }} Partien)</span></h3>
-                <ng-container *ngTemplateOutlet="first; context: { s: sec.white, names: nameWhite }" />
+                <h3>{{ 'playerCard.withWhite' | translate }} <span class="muted">({{ (sec.white?.n === 1 ? 'playerCard.gamesOne' : 'playerCard.games') | translate: { n: sec.white?.n || 0 } }})</span></h3>
+                <ng-container *ngTemplateOutlet="first; context: { s: sec.white, names: OPENINGS_WHITE }" />
                 </div>
               }
               @if (show() !== 'w') {
                 <div class="side side-black">
-                <h3>Mit Schwarz gegen 1.e4 <span class="muted">({{ sec.black_e4?.n || 0 }})</span></h3>
-                <ng-container *ngTemplateOutlet="first; context: { s: sec.black_e4, names: nameE4 }" />
+                <h3>{{ 'playerCard.vsE4' | translate }} <span class="muted">({{ sec.black_e4?.n || 0 }})</span></h3>
+                <ng-container *ngTemplateOutlet="first; context: { s: sec.black_e4, names: OPENINGS_VS_E4 }" />
                 </div>
                 <div class="side side-black">
-                <h3>Mit Schwarz gegen 1.d4 <span class="muted">({{ sec.black_d4?.n || 0 }})</span></h3>
-                <ng-container *ngTemplateOutlet="first; context: { s: sec.black_d4, names: nameD4 }" />
+                <h3>{{ 'playerCard.vsD4' | translate }} <span class="muted">({{ sec.black_d4?.n || 0 }})</span></h3>
+                <ng-container *ngTemplateOutlet="first; context: { s: sec.black_d4, names: OPENINGS_VS_D4 }" />
                 </div>
                 @if (sec.black_other?.n) {
                   <div class="side side-black">
-                  <h3>Mit Schwarz gegen andere <span class="muted">({{ sec.black_other?.n }})</span></h3>
+                  <h3>{{ 'playerCard.vsOther' | translate }} <span class="muted">({{ sec.black_other?.n }})</span></h3>
                   <ng-container *ngTemplateOutlet="first; context: { s: sec.black_other, names: null }" />
                   </div>
                 }
               }
               </div>
             } @else if (!storedProfile() && !profileLoading()) {
-              <p class="muted">Keine Partien mit diesem Filter.</p>
+              <p class="muted">{{ 'playerCard.noFilterGames' | translate }}</p>
             }
           }
           @if (c.recent?.length) {
-            <h3>Letzte Partien@if (show() !== 'b') { mit {{ show() === 'w' ? 'Weiß' : 'Schwarz' }} }
-              <span class="muted small"> — zum Nachspielen anklicken</span></h3>
-            @if (replayError()) { <p class="err small">{{ replayError() }}</p> }
+            <h3>{{ (show() === 'w' ? 'playerCard.recentWhite' : show() === 's' ? 'playerCard.recentBlack' : 'playerCard.recent') | translate }}
+              <span class="muted small"> {{ 'playerCard.recentHint' | translate }}</span></h3>
+            @if (replayError(); as e) { <p class="err small">{{ e | translate }}</p> }
             @if (recentShown(); as list) {
-              @if (!list.length) { <p class="muted small">Keine Partien mit {{ show() === 'w' ? 'Weiß' : 'Schwarz' }}.</p> }
-            } @else { <p class="muted small">Lade Partien …</p> }
+              @if (!list.length) { <p class="muted small">{{ (show() === 'w' ? 'playerCard.noGamesWhite' : 'playerCard.noGamesBlack') | translate }}</p> }
+            } @else { <p class="muted small">{{ 'playerCard.loading' | translate }}</p> }
             <table class="recent">
               @for (g of recentShown() ?? []; track $index) {
                 <tr tabindex="0" role="button" [class.busy]="replayLoading()"
-                    [attr.aria-label]="'Partie gegen ' + (g.vs || '?') + ' nachspielen'"
+                    [attr.aria-label]="'playerCard.replayAria' | translate: { name: g.vs || '?' }"
                     (click)="openGame(c, $index)" (keydown.enter)="openGame(c, $index)">
                   <td class="num muted">{{ date(g.date) }}</td>
                   <td><span class="sq mini" [class.w]="g.color === 'w'" [class.s]="g.color === 's'"
-                            [attr.aria-label]="g.color === 'w' ? 'Weiß' : 'Schwarz'"></span>{{ g.vs || '?' }}
+                            [attr.aria-label]="(g.color === 'w' ? 'playerCard.white' : 'playerCard.black') | translate"></span>{{ g.vs || '?' }}
                     @if (g.vs_elo) { <span class="muted">{{ g.vs_elo }}</span> }
                     <br><span class="muted">{{ g.event }}</span>
-                    @if (speed(g.event ?? "")) { <span class="tag">Blitz/Schnell</span> }</td>
-                  <td class="muted opening">{{ de(g.opening ?? '') }}</td>
+                    @if (speed(g.event ?? "")) { <span class="tag">{{ 'playerCard.blitzRapid' | translate }}</span> }</td>
+                  <td class="muted opening">{{ moves(g.opening) }}</td>
                   <td class="num"><b>{{ g.score === null ? '–' : g.score === 0.5 ? '½' : g.score }}</b></td>
                 </tr>
               }
             </table>
           }
           @if (c.accounts.length || canEdit() || token) {
-            <h3>Online-Konten</h3>
+            <h3>{{ 'playerCard.accountsTitle' | translate }}</h3>
             <lh-online-accounts class="acc" [fide]="accountsKey(c)" [accounts]="c.accounts" [canEdit]="canEdit()" [shareToken]="token"
                                 (changed)="reloadCard()" />
-            <p class="muted small-note">„gesichert": das Konto gehört sicher diesem Spieler, „unsicher": nur vermutet.
-              Über einen Teilen-Link erscheinen nur gesicherte. Ihre Partien holt LeagueHub im Hintergrund — im Eröffnungsbaum
-              wählbar.</p>
+            <p class="muted small-note">{{ 'playerCard.accountsNote' | translate }}</p>
           }
           }
-          <p class="muted small-note spaced">@if (note(); as n) { {{ n }} } @else {Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien der LeagueHub-Vereine (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt. }
-            @if (c.online) { Online-Partien der eingetragenen Konten zählen im Eröffnungsprofil und im Baum, wenn oben „Brett + online" oder „Online" gewählt ist (unsichere Konten nur mit dem Schalter). }</p>
+          <p class="muted small-note spaced">@if (note(); as n) { {{ n }} } @else { {{ 'playerCard.sources' | translate }} }
+            @if (c.online) { {{ 'playerCard.sourcesOnline' | translate }} }</p>
         }
       </div>
     </dialog>
 
     <ng-template #first let-s="s" let-names="names">
-      @if (!s?.first?.length) { <p class="muted">Keine Partien mit Zügen.</p> }
+      @if (!s?.first?.length) { <p class="muted">{{ 'playerCard.noMoves' | translate }}</p> }
       @else {
         <table class="stats">
           @for (r of s.first; track r[0]) {
-            <tr><td>{{ names?.[r[0]] || de(r[0]) }}</td><td class="num">{{ share(r[1], s.n) }} %</td>
-              <td class="num muted">{{ r[1] }}×</td><td class="num muted">{{ r[2] === null ? '' : 'Score ' + r[2] + ' %' }}</td></tr>
+            <tr><td>@if (names?.[r[0]]; as k) { {{ k | translate }} } @else { {{ firstMove(names, r[0]) }} }</td><td class="num">{{ pct(share(r[1], s.n)) }}</td>
+              <td class="num muted">{{ r[1] }}×</td><td class="num muted">{{ r[2] === null ? '' : ('playerCard.score' | translate: { p: pct(r[2]) }) }}</td></tr>
           }
         </table>
         @if (s.lines?.length) {
-          <p class="muted sub">Häufigste Zugfolgen</p>
+          <p class="muted sub">{{ 'playerCard.frequentLines' | translate }}</p>
           <table class="stats">
             @for (l of s.lines.slice(0, 4); track l[0]) {
-              <tr><td>{{ de(l[0]) }}</td><td class="num muted">{{ l[1] }}×</td><td class="num muted">{{ l[2] === null ? '' : l[2] + ' %' }}</td></tr>
+              <tr><td>{{ moves(l[0]) }}</td><td class="num muted">{{ l[1] }}×</td><td class="num muted">{{ l[2] === null ? '' : pct(l[2]) }}</td></tr>
             }
           </table>
         }
       }
     </ng-template>
   `,
-  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent, TreeFilterBarComponent, TrainingLinesComponent],
+  imports: [NgTemplateOutlet, TranslatePipe, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent, TreeFilterBarComponent, TrainingLinesComponent],
 })
 export class PlayerCardComponent {
   private readonly api = inject(PLAYER_CARD_API);
@@ -229,6 +243,7 @@ export class PlayerCardComponent {
 
   readonly card = signal<PlayerCard | null>(null);
   readonly loading = signal(false);
+  /** Fehler als Sprachschlüssel (`playerCard.*`), übersetzt im Template. */
   readonly error = signal<string | null>(null);
   readonly color = signal<'w' | 's' | null>(null);
   readonly board = signal<number | null>(null);
@@ -256,7 +271,7 @@ export class PlayerCardComponent {
   readonly replayError = signal<string | null>(null);
   /** „Zu meinen Partien" / „Partie teilen" läuft gerade bzw. was dabei herauskam. */
   readonly gameBusy = signal(false);
-  readonly gameNote = signal<{ text: string; err: boolean } | null>(null);
+  readonly gameNote = signal<{ key: string; params?: Record<string, unknown>; err: boolean } | null>(null);
   /** Schon abgelegte Partien dieser Karte (PGN → Id in RookHub) — Teilen nach dem Ablegen fragt nicht noch einmal. */
   private readonly savedIds = new Map<string, number>();
   /** Die letzten Partien samt PGN — einmal je geöffneter Karte geholt. */
@@ -297,7 +312,7 @@ export class PlayerCardComponent {
       const p = await this.api.profile(fide, this.token, f);
       if (key === this.profileKey) this.profile.set(p);
     } catch {
-      if (key === this.profileKey) this.profileError.set('Das gefilterte Profil konnte nicht geladen werden.');
+      if (key === this.profileKey) this.profileError.set('playerCard.profileError');
     } finally {
       if (key === this.profileKey) this.profileLoading.set(false);
     }
@@ -334,12 +349,23 @@ export class PlayerCardComponent {
   /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
   private seq = 0;
 
-  readonly options: { k: Show; label: string }[] = [{ k: 'w', label: 'Weiß' }, { k: 's', label: 'Schwarz' }, { k: 'b', label: 'Beide' }];
-  readonly nameWhite = NAME_WHITE;
-  readonly nameE4 = NAME_VS_E4;
-  readonly nameD4 = NAME_VS_D4;
-  readonly de = de;
-  readonly date = pgnDate;
+  readonly options: { k: Show; label: string }[] = [
+    { k: 'w', label: 'playerCard.white' }, { k: 's', label: 'playerCard.black' }, { k: 'b', label: 'playerCard.both' },
+  ];
+  readonly OPENINGS_WHITE = OPENINGS_WHITE;
+  readonly OPENINGS_VS_E4 = OPENINGS_VS_E4;
+  readonly OPENINGS_VS_D4 = OPENINGS_VS_D4;
+  /** Sprache der Karte: RookHub die der Oberfläche, LeagueHub deutsch (e1-rk-prep-card-german). */
+  private readonly translate = inject(TranslateService, { optional: true });
+  private get lang(): string { return cardLang(this.translate); }
+  /** Zugfolge in den Figurenbuchstaben der Sprache. */
+  moves(text: string | null | undefined): string { return cardSanText(text, this.lang); }
+  /** Erster Zug ohne eigenen Eröffnungsnamen: „1.e4" mit Weiß, „1…d6" mit Schwarz; „gegen andere" bringt die Nummern mit. */
+  firstMove(names: Record<string, string> | null, san: string): string {
+    return this.moves(names === OPENINGS_WHITE ? `1.${san}` : names ? `1…${san}` : san);
+  }
+  pct(p: number): string { return cardPct(p, this.lang); }
+  date(d: string | null | undefined): string { return cardDate(d, this.lang); }
   readonly speed = (e: string) => SPEED.test(e || '');
 
   /** Öffnet die Karte; <paramref name="token"/> = Teilen-Link (dann ohne Anmeldung). */
@@ -370,7 +396,7 @@ export class PlayerCardComponent {
       const c = await this.api.card(fide, token);
       if (my === this.seq) this.card.set(c);
     } catch {
-      if (my === this.seq) this.error.set('Keine Partien gefunden.');
+      if (my === this.seq) this.error.set('playerCard.notFound');
     } finally {
       if (my === this.seq) this.loading.set(false);
     }
@@ -419,7 +445,7 @@ export class PlayerCardComponent {
         if (my !== this.seq) return;
         this.recentGames = r.games;
       } catch {
-        if (my === this.seq) this.replayError.set('Die Partie konnte nicht geladen werden.');
+        if (my === this.seq) this.replayError.set('playerCard.gameError');
         return;
       } finally {
         if (my === this.seq) this.replayLoading.set(false);
@@ -428,7 +454,7 @@ export class PlayerCardComponent {
     const same = (g: RecentGame) => g.date === want.date && g.vs === want.vs && g.color === want.color;
     const list = this.recentGames;
     const hit = list[i] && same(list[i]) ? list[i] : list.find(same);
-    if (!hit) { this.replayError.set('Diese Partie ist nicht mehr da — bitte die Karte neu öffnen.'); return; }
+    if (!hit) { this.replayError.set('playerCard.gameGone'); return; }
     this.gameNote.set(null);
     this.replay.set({ pgn: hit.pgn, flipped: hit.color === 's' });
   }
@@ -438,7 +464,7 @@ export class PlayerCardComponent {
     const id = await this.saveGame(pgn);
     if (id === null) return;
     this.gameBusy.set(true);
-    this.gameNote.set({ text: 'Liegt in deinen Partien — RookHub wird geöffnet …', err: false });
+    this.gameNote.set({ key: 'playerCard.noteSaved', err: false });
     try {
       await this.myGames.open(id);
     } finally {
@@ -452,7 +478,7 @@ export class PlayerCardComponent {
     const id = await this.saveGame(pgn);
     if (id === null) return;
     this.gameBusy.set(true);
-    this.gameNote.set({ text: 'Analyse wird angestoßen — RookHub wird geöffnet …', err: false });
+    this.gameNote.set({ key: 'playerCard.noteAnalyze', err: false });
     try {
       await this.myGames.analyze(id);
       await this.myGames.open(id);
@@ -471,8 +497,8 @@ export class PlayerCardComponent {
       const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
       if (typeof nav.share === 'function' && matchMedia('(pointer: coarse)').matches) {
         try {
-          await nav.share({ url, title: 'Partie auf RookHub' });
-          this.gameNote.set({ text: 'Geteilt.', err: false });
+          await nav.share({ url, title: this.translate?.instant('playerCard.shareTitle') ?? 'RookHub' });
+          this.gameNote.set({ key: 'playerCard.shared', err: false });
           return;
         } catch (e) {
           if ((e as { name?: string })?.name === 'AbortError') return;     // im Teilen-Blatt abgebrochen
@@ -480,13 +506,13 @@ export class PlayerCardComponent {
       }
       try {
         await navigator.clipboard.writeText(url);
-        this.gameNote.set({ text: `Link kopiert: ${url}`, err: false });
+        this.gameNote.set({ key: 'playerCard.linkCopied', params: { url }, err: false });
       } catch {
         // Ohne Zwischenablage (verweigert, unsicherer Kontext) steht der Link da — man kann ihn abschreiben.
-        this.gameNote.set({ text: `Link zur Partie: ${url}`, err: false });
+        this.gameNote.set({ key: 'playerCard.linkShown', params: { url }, err: false });
       }
     } catch {
-      this.gameNote.set({ text: 'Der Link konnte nicht geholt werden.', err: true });
+      this.gameNote.set({ key: 'playerCard.linkFailed', err: true });
     } finally {
       this.gameBusy.set(false);
     }
@@ -500,13 +526,13 @@ export class PlayerCardComponent {
     try {
       const id = await this.myGames.save(pgn);
       if (id === null) {
-        this.gameNote.set({ text: 'Diese Partie lässt sich nicht übernehmen.', err: true });
+        this.gameNote.set({ key: 'playerCard.saveRejected', err: true });
         return null;
       }
       this.savedIds.set(pgn, id);
       return id;
     } catch {
-      this.gameNote.set({ text: 'Übernehmen hat nicht geklappt.', err: true });
+      this.gameNote.set({ key: 'playerCard.saveFailed', err: true });
       return null;
     } finally {
       this.gameBusy.set(false);
@@ -533,7 +559,7 @@ export class PlayerCardComponent {
   }
 
   lastName(c: PlayerCard): string {
-    return (c.name || '').split(',')[0] || 'der Spieler';
+    return (c.name || '').split(',')[0] || (this.translate?.instant('playerCard.thePlayer') ?? '');
   }
 
   share(n: number, total: number): number {
@@ -551,11 +577,11 @@ export class PlayerCardComponent {
     try {
       blob = await this.api.pgn(this.key(c), this.token);
     } catch {
-      this.error.set('Die PGN-Datei konnte nicht geladen werden.');
+      this.error.set('playerCard.pgnError');
       return;
     }
     const name = `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide || this.key(c)}.pgn`;
-    if (!downloadBlob(blob, name)) this.error.set('Die PGN-Datei konnte nicht geladen werden.');
+    if (!downloadBlob(blob, name)) this.error.set('playerCard.pgnError');
   }
 }
 

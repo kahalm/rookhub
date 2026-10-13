@@ -492,6 +492,17 @@ describe('MaiaSparringCardComponent', () => {
     host.remove();
   });
 
+  it('e1-rk-maia-strength-cut: das Stärke-Feld ist mindestens 128 px breit (sonst wird „Strength" zu „Streng")', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+    try {
+      const field = host.querySelector<HTMLElement>('.elo-field')!;
+      expect(field.getBoundingClientRect().width).toBeGreaterThanOrEqual(128);
+    } finally {
+      host.remove();
+    }
+  });
+
   it('a disabled card does not start', async () => {
     fixture.componentRef.setInput('disabled', true);
     fixture.detectChanges();

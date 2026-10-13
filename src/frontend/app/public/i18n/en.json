@@ -655,7 +655,7 @@
       "empty": "No tokens yet. Create one to connect the chess.com extension or your engine provider.",
       "create": "Create token",
       "revoke": "Revoke token",
-      "revokeConfirm": "Revoke token \"{{name}}\"? The client will no longer be able to connect.",
+      "revokeConfirm": "Revoke token “{{name}}”? The client will no longer be able to connect.",
       "revokeFailed": "Revoke failed",
       "loadFailed": "Failed to load tokens",
       "createFailed": "Failed to create token",
@@ -671,7 +671,7 @@
       "dialog": {
         "title": "New API token",
         "name": "Name",
-        "nameHint": "e.g. \"Chess.com extension (laptop)\"",
+        "nameHint": "e.g. “Chess.com extension (laptop)”",
         "expires": "Expires",
         "never": "never",
         "create": "Create",
@@ -771,7 +771,7 @@
       "light": "Light",
       "dark": "Dark"
     },
-    "displayNameHint": "Shown to others instead of „{{username}}“."
+    "displayNameHint": "Shown to others instead of “{{username}}”."
   },
   "legal": {
     "accountDeletion": {
@@ -779,8 +779,8 @@
       "intro": "This page explains how to delete your RookHub account and what happens to your data.",
       "introPartner": "Your account here is a RookHub account (same sign-in details). This page explains how to delete it and what happens to your data.",
       "inAppTitle": "How to delete your account",
-      "inApp": "The button below opens the \"Delete account\" card in your profile – if you are not signed in, you sign in first. By hand: ☰ → Account → Profile, at the very bottom. Confirm with your password there. The account is deleted immediately.",
-      "inPartner": "You can delete the account only in RookHub: sign in there (same details) and go to ☰ → Account → Profile, at the very bottom \"Delete account\" – or use the button directly. Confirm with your password; the account is deleted immediately, for this site too.",
+      "inApp": "The button below opens the “Delete account” card in your profile – if you are not signed in, you sign in first. By hand: ☰ → Account → Profile, at the very bottom. Confirm with your password there. The account is deleted immediately.",
+      "inPartner": "You can delete the account only in RookHub: sign in there (same details) and go to ☰ → Account → Profile, at the very bottom “Delete account” – or use the button directly. Confirm with your password; the account is deleted immediately, for this site too.",
       "deleteNow": "Delete account now",
       "deleteOnRookHub": "Delete account in RookHub",
       "backupTitle": "Back up first",
@@ -797,7 +797,7 @@
       "keptTitle": "What is kept anonymously",
       "kept": "Aggregated solving/play statistics (e.g. solved puzzles) are retained in anonymised form that cannot be traced back to you.",
       "keptLeagueTitle": "What stays in LeagueHub",
-      "keptLeague": "Club games you uploaded stay in the club database – they belong to the league. Afterwards it is no longer stored who uploaded them, and you can no longer delete them yourself. If you want that, delete them beforehand under \"Vereinspartien\" (club games).",
+      "keptLeague": "Club games you uploaded stay in the club database – they belong to the league. Afterwards it is no longer stored who uploaded them, and you can no longer delete them yourself. If you want that, delete them beforehand under “Vereinspartien” (club games).",
       "leagueGamesLink": "Go to club games",
       "keptLeagueShares": "Share links you created stay valid until their expiry date.",
       "contactTitle": "Contact",
@@ -867,7 +867,7 @@
       "botTitle": "Discord bot",
       "botIntro": "If you use our Discord bot, it also processes:",
       "botDmLog": "Direct messages: what you write to the bot and what it sends you is stored with a timestamp, shortened to 300 characters per message; personal account-linking links are made unrecognisable. The bot deletes entries older than 30 days the next time it saves. Only the bot’s admins and moderators can view them (for troubleshooting).",
-      "botActivity": "Motivation messages (/motivation): the bot evaluates your Discord status “Playing …” only if you are subscribed — you sign up yourself, or an admin or moderator signs you up. If a game other than chess has been running there for at least an hour, it may send you a reminder to train by direct message. For this it remembers the game name and start time while the game is running. You can unsubscribe at any time with /motivation aus.",
+      "botActivity": "Motivation messages (/motivation): the bot evaluates your Discord status “Playing …” only if you are subscribed — you sign up yourself, or an admin or moderator signs you up. If a game other than chess has been running there for at least an hour, it may send you a reminder to train by direct message. For this it remembers the game name and start time while the game is running. You can unsubscribe at any time with the bot command /motivation, option “aus” (off).",
       "botLogs": "Logs: every command sent to the bot is logged with your Discord ID and name, server and channel (or “direct message”), the shortened command parameters and the result, as are reactions to bot puzzles for the statistics. For motivation messages, the Discord name, game name and playing time are recorded — of the message itself only its length, not its content. These logs are kept month by month in our self-hosted Elasticsearch; there is currently no automatic deletion period for them.",
       "tournamentTitle": "Tournament data (chess-results.com)",
       "tournamentIntro": "For the tournament views in RookHub and on the tournament site, our server fetches public tournament data from chess-results.com and stores it in a separate database:",
@@ -1024,8 +1024,8 @@
       "offlineListHint": "You're offline — showing your downloaded repertoires; only training is available. Results sync once you're back online.",
       "offlineSaveTooltip": "Save repertoire offline (train without internet)",
       "offlineRemoveTooltip": "Remove offline copy",
-      "offlineSaved": "\"{{name}}\" saved offline",
-      "offlineRemoved": "\"{{name}}\" removed from offline",
+      "offlineSaved": "“{{name}}” saved offline",
+      "offlineRemoved": "“{{name}}” removed from offline",
       "offlineFailed": "Could not save repertoire offline"
     },
     "detail": {
@@ -1103,7 +1103,7 @@
       "popFrom": "Popularity: {{source}} · {{db}} · {{count}} games",
       "popNone": "There are no games for this position.",
       "popTip": "How often this move is played in this position",
-      "popToken": "lichess.org needs a Lichess token (profile) – or choose the source „Local“ in the hole finder.",
+      "popToken": "lichess.org needs a Lichess token (profile) – or choose the source “Local” in the hole finder.",
       "popRateLimited": "Lichess is slowing us down – the next click carries on.",
       "popFailed": "The popularity of the moves could not be fetched just now.",
       "lichess": "Lichess"
@@ -1167,7 +1167,7 @@
         "correspondence": "Correspondence"
       },
       "threshold": "Threshold",
-      "thresholdHelp": "The share of games in a position from which a missing opponent move counts as a hole. 1 % also finds sidelines, 5 % only the main moves. Allowed: 0.1 to 50 %.",
+      "thresholdHelp": "The share of games in a position from which a missing opponent move counts as a hole. 1% also finds sidelines, 5% only the main moves. Allowed: 0.1 to 50%.",
       "search": "Find holes",
       "progress": "{{done}} positions analysed, {{open}} pending",
       "rateLimited": "Lichess is slowing us down – continuing in {{seconds}} s.",
@@ -1497,7 +1497,7 @@
     "movedToRepertoire": "Course moved to repertoire: {{name}}",
     "convertMoveConfirm": "Convert your course “{{name}}” into a repertoire? The course is moved, not copied: it is deleted afterwards, and the progress and shares of ALL users of this course are lost.",
     "convertToRepertoireFailed": "Could not convert the course to a repertoire",
-    "deleteConfirm": "Delete the course \"{{name}}\"? Your progress will be lost.",
+    "deleteConfirm": "Delete the course “{{name}}”? Your progress will be lost.",
     "deleteFailed": "Could not delete course",
     "searchPlaceholder": "Search courses…",
     "noMatch": "No courses match “{{query}}”.",
@@ -1599,18 +1599,18 @@
     "resetTooltip": "Reset progress",
     "pinTooltip": "Pin to dashboard",
     "unpinTooltip": "Unpin from dashboard",
-    "pinned": "\"{{name}}\" pinned to your dashboard",
-    "unpinned": "\"{{name}}\" unpinned",
+    "pinned": "“{{name}}” pinned to your dashboard",
+    "unpinned": "“{{name}}” unpinned",
     "pinFailed": "Could not update the pin",
     "downloadPgnTooltip": "Download as PGN",
     "downloadFailed": "PGN download failed.",
-    "resetConfirm": "Reset progress for \"{{name}}\"?",
+    "resetConfirm": "Reset progress for “{{name}}”?",
     "loadFailed": "Could not load courses",
     "resetFailed": "Reset failed",
     "offlineSaveTooltip": "Save book offline",
     "offlineRemoveTooltip": "Remove offline copy",
-    "offlineSaved": "\"{{name}}\" saved offline ({{count}} puzzles)",
-    "offlineRemoved": "\"{{name}}\" removed from offline",
+    "offlineSaved": "“{{name}}” saved offline ({{count}} puzzles)",
+    "offlineRemoved": "“{{name}}” removed from offline",
     "offlineFailed": "Could not save book offline",
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
@@ -1757,8 +1757,8 @@
       "status": {
         "queued": "waiting · place {{pos}}",
         "waiting": "waiting",
-        "running": "running · {{percent}} %",
-        "runningEta": "running · {{percent}} % · about {{eta}} left",
+        "running": "running · {{percent}}%",
+        "runningEta": "running · {{percent}}% · about {{eta}} left",
         "paused": "paused until {{time}}",
         "failed": "failed"
       },
@@ -2065,13 +2065,13 @@
       "settingsHeading": "Settings",
       "settingsStartRating": "<strong>Start Rating</strong> — The puzzle rating you start at",
       "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Engine strength (1 = very weak, 24 = maximum strength)",
-      "settingsThemes": "<strong>Themes</strong> — Optional: only certain tactical themes (e.g. \"fork pin\")",
+      "settingsThemes": "<strong>Themes</strong> — Optional: only certain tactical themes (e.g. “fork pin”)",
       "fasttrackHeading": "Difficulty increase (Fasttrack)",
       "fasttrackP1": "The increase adapts to your past performance: it analyses your recent runs and calculates the rating at which you typically lose lives.",
       "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–{{p1End}})</strong> — Fast increase up to your 1st threshold",
       "fasttrackPhase2": "<strong>Phase 2 (Puzzles {{p2Start}}–{{p2End}})</strong> — Increase from the 1st to the 2nd threshold",
       "fasttrackPhase3": "<strong>Phase 3 (from Puzzle {{p3Start}})</strong> — Constant step of {{flatStep}}",
-      "fasttrackP2": "The threshold values (1st/2nd threshold) are calculated automatically but can be adjusted manually. Click \"Auto: …\" to reset the value."
+      "fasttrackP2": "The threshold values (1st/2nd threshold) are calculated automatically but can be adjusted manually. Click “Auto: …” to reset the value."
     },
     "config": {
       "title": "Endless Puzzle Mode",
@@ -2320,8 +2320,8 @@
       "confirmPromote": "Make user “{{username}}” an admin? The account gets every permission at once.",
       "confirmDemote": "Remove admin rights from user “{{username}}”? All sessions of this account end at once.",
       "deleteUser": "Delete user",
-      "deleteConfirm": "Delete user \"{{username}}\"? This cannot be undone.",
-      "deleted": "User \"{{username}}\" deleted",
+      "deleteConfirm": "Delete user “{{username}}”? This cannot be undone.",
+      "deleted": "User “{{username}}” deleted",
       "nowAdmin": "{{username}} is now admin",
       "noLongerAdmin": "{{username}} is no longer admin",
       "columns": {
@@ -2355,9 +2355,9 @@
       "eloTo": "to",
       "adminOnly": "admin only",
       "deleteBook": "Delete book",
-      "deleteConfirm": "Delete book \"{{name}}\" with {{count}} puzzles?",
-      "deleteConfirmOne": "Delete book \"{{name}}\" with {{count}} puzzle?",
-      "deleted": "Book \"{{name}}\" deleted",
+      "deleteConfirm": "Delete book “{{name}}” with {{count}} puzzles?",
+      "deleteConfirmOne": "Delete book “{{name}}” with {{count}} puzzle?",
+      "deleted": "Book “{{name}}” deleted",
       "importedCount": "{{count}} puzzles imported",
       "importedCountOne": "{{count}} puzzle imported",
       "duplicatesCount": "{{count}} duplicates",
@@ -2419,10 +2419,10 @@
       "membersOf": "Members · {{name}}",
       "addUser": "Add user",
       "noMembers": "No members.",
-      "created": "Group \"{{name}}\" created",
-      "deleteConfirm": "Delete group \"{{name}}\"?",
+      "created": "Group “{{name}}” created",
+      "deleteConfirm": "Delete group “{{name}}”?",
       "removeMemberConfirm": "Remove {{username}} from the group “{{group}}”?",
-      "deleted": "Group \"{{name}}\" deleted",
+      "deleted": "Group “{{name}}” deleted",
       "columns": {
         "group": "Group",
         "members": "Members",
@@ -2470,7 +2470,7 @@
     },
     "puzzles": {
       "title": "Puzzles",
-      "backfillHint": "Builds the normalized tag table (Tags / PuzzleTags) used by the fast theme filter (\"train worst themes\"). Run once after deploying — the import keeps tags up to date afterwards. Runs as a background job.",
+      "backfillHint": "Builds the normalized tag table (Tags / PuzzleTags) used by the fast theme filter (“train worst themes”). Run once after deploying — the import keeps tags up to date afterwards. Runs as a background job.",
       "backfillBtn": "Build tag table",
       "backfillRunning": "Starting…",
       "backfillConfirm": "Build / refresh the puzzle tag table now? This runs as a background job.",
@@ -2551,14 +2551,14 @@
     "roles": {
       "title": "Roles & permissions",
       "systemBadge": "System",
-      "intro": "Define roles from the fixed permission set and assign them to users. The \"admin\" role is the superuser (all permissions) and follows the admin toggle on the Users tab.",
+      "intro": "Define roles from the fixed permission set and assign them to users. The “admin” role is the superuser (all permissions) and follows the admin toggle on the Users tab.",
       "members": "{{count}} members",
       "loadError": "Could not load roles.",
       "saveError": "Could not save.",
       "created": "Role created.",
       "saved": "Role saved.",
       "deleted": "Role deleted.",
-      "confirmDelete": "Delete role \"{{name}}\"? Users lose it.",
+      "confirmDelete": "Delete role “{{name}}”? Users lose it.",
       "nameLabel": "Name",
       "keyLabel": "Key",
       "keyHint": "lowercase, e.g. trainer (cannot be changed later)",
@@ -2637,10 +2637,10 @@
   "worksheets": {
     "title": "Worksheets",
     "clipboard": "Clipboard",
-    "clipboardEmpty": "Nothing collected yet. Pick „Send to worksheet“ in a course, on a chapter or after solving a puzzle — this is where it lands.",
+    "clipboardEmpty": "Nothing collected yet. Pick “Send to worksheet” in a course, on a chapter or after solving a puzzle — this is where it lands.",
     "count": "{{n}} positions",
     "print": "Print / save as PDF",
-    "printHint": "{{n}} diagrams per page, with room for the solution. In the print dialog choose „Save as PDF“ as the destination.",
+    "printHint": "{{n}} diagrams per page, with room for the solution. In the print dialog choose “Save as PDF” as the destination.",
     "footer": "Solutions in RookHub",
     "nameLine": "Name: ______________________",
     "perPage": {
@@ -2657,7 +2657,7 @@
       "own": "Own theme",
       "remove": "Remove theme",
       "all": "All",
-      "noMatch": "No worksheet with the theme „{{theme}}“."
+      "noMatch": "No worksheet with the theme “{{theme}}”."
     },
     "share": {
       "toggle": "Share this sheet (link + QR code)",
@@ -2696,7 +2696,7 @@
       "open": "Open",
       "clear": "Remove all positions",
       "clearConfirm": "Take {{n}} positions off the sheet?",
-      "deleteConfirm": "Delete worksheet „{{name}}“ with all its positions?",
+      "deleteConfirm": "Delete worksheet “{{name}}” with all its positions?",
       "nameLabel": "Worksheet name",
       "saveClipboard": "Save as worksheet",
       "createEmpty": "Create empty sheet",
@@ -2771,7 +2771,7 @@
       "playFailed": "The game could not be started.",
       "view": "View with annotations",
       "viewFailed": "The game could not be loaded.",
-      "computing": "Being analysed … {{percent}} %",
+      "computing": "Being analysed … {{percent}}%",
       "computingHint": "You can replay it once the engine has analysed every position.",
       "retry": "Request again",
       "queued": "The game is being analysed — you can replay it once it is done."
@@ -2879,7 +2879,7 @@
       "arrow": "Best-move arrow",
       "refining": "Deeper analysis — {{done}} of {{total}} positions"
     },
-    "analyzing": "Analysis running: {{pct}} % ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
+    "analyzing": "Analysis running: {{pct}}% ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
     "accuracyHint": "Accuracy white · black (from the game analysis)",
     "movesCount": "{{count}} moves",
     "mistakes": {
@@ -3106,7 +3106,7 @@
     "explorer": {
       "title": "Opening explorer",
       "filters": "Rating and speed",
-      "orLocal": "Or choose the source „Local“ above.",
+      "orLocal": "Or choose the source “Local” above.",
       "failed": "The explorer did not answer just now.",
       "retry": "Try again",
       "noGames": "No games in this position.",
@@ -3196,7 +3196,7 @@
       "downloadInfo": "Maia needs a model once (46 MB). It stays stored on this device.",
       "downloadInfoNoStore": "Maia needs a model (46 MB). This browser cannot store it — it is downloaded again on every visit.",
       "download": "Download",
-      "downloading": "Loading model … {{percent}} %",
+      "downloading": "Loading model … {{percent}}%",
       "loading": "Preparing model …",
       "errorUnavailable": "The Maia model is not available on this server.",
       "errorFailed": "Maia could not be loaded.",
@@ -3271,7 +3271,7 @@
       "title": "Activity presets",
       "subtitle": "Reusable quick-start entries for the dashboard timer (offline puzzle training, offline study, coaching).",
       "labelLabel": "Name",
-      "labelPlaceholder": "e.g. \"Coaching Alice\" or \"Study Kramnik book\"",
+      "labelPlaceholder": "e.g. “Coaching Alice” or “Study Kramnik book”",
       "kindLabel": "Category",
       "add": "Add preset",
       "empty": "No presets yet — add one to unlock the dashboard timer's quick-start.",
@@ -3298,7 +3298,7 @@
       "endedAt": "Ended at",
       "startEndHint": "Editing one field updates the others automatically; the end can never be in the future.",
       "noteLabel": "Note (optional)",
-      "notePlaceholder": "e.g. \"lesson with Alice, opening drills\"",
+      "notePlaceholder": "e.g. “lesson with Alice, opening drills”",
       "saveEntry": "Save entry",
       "savedEntry": "Saved: {{minutes}} minutes",
       "stopFailed": "Could not save the timer entry."
@@ -3324,7 +3324,7 @@
     "gamesPerWeek": "games/week",
     "weeklyDays": "Days per week",
     "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
+    "fromGroup": "Preset from your group “{{group}}”. You can adjust it for yourself.",
     "personal": "Your personal goal.",
     "resetOverride": "Reset to group preset",
     "noGoalHint": "No goals set yet — set your daily targets below.",
@@ -3423,14 +3423,14 @@
         "t": "Welcome to RookHub",
         "p": [
           "RookHub is your central chess portal: puzzle training (standard, endless, daily puzzle), book courses and repertoires, the point game, your own games with engine review, worksheets, personal training goals, plus profile and friend features – all in one place. Tournaments have their own tournament site.",
-          "Much of it works without an account (puzzles, analysis, daily puzzle, point game). Sign in for personal progress, your games, friends and training goals – you then start on the dashboard, whose tiles you choose via »Customize«. Every area is reachable through the ☰ menu (grouped into Training, Analysis & collection, Community and Account); this page explains them – use the table of contents to jump directly."
+          "Much of it works without an account (puzzles, analysis, daily puzzle, point game). Sign in for personal progress, your games, friends and training goals – you then start on the dashboard, whose tiles you choose via “Customize”. Every area is reachable through the ☰ menu (grouped into Training, Analysis & collection, Community and Account); this page explains them – use the table of contents to jump directly."
         ]
       },
       "account": {
         "t": "Account & sign-in",
         "p": [
-          "You can register with a username and password; an email address is optional. Use »Register« in the top bar to create an account, then sign in with the same credentials.",
-          "Tick »Stay logged in« at login to remain logged in for 90 days instead of 30. You can sign out any time via ☰ → Account → Logout."
+          "You can register with a username and password; an email address is optional. Use “Register” in the top bar to create an account, then sign in with the same credentials.",
+          "Tick “Stay logged in” at login to remain logged in for 90 days instead of 30. You can sign out any time via ☰ → Account → Logout."
         ]
       },
       "profile": {
@@ -3453,7 +3453,7 @@
       "friends": {
         "t": "Friends",
         "p": [
-          "Under »Friends« you search for other users and send friend requests. Incoming requests appear on the »Requests« tab where you can accept or decline them.",
+          "Under “Friends” you search for other users and send friend requests. Incoming requests appear on the “Requests” tab where you can accept or decline them.",
           "Only the recipient of a request can confirm it. Existing friendships can be removed at any time."
         ]
       },
@@ -3482,7 +3482,7 @@
         "t": "Daily puzzle",
         "p": [
           "Every day (by UTC) there is a fixed daily puzzle that is the same for everyone – so you can compare directly.",
-          "After solving you see the leaderboard of all solvers. A »solver« is anyone who solves the puzzle on the first attempt. If you are linked with Discord, your name also appears in the bot's Discord embed."
+          "After solving you see the leaderboard of all solvers. A “solver” is anyone who solves the puzzle on the first attempt. If you are linked with Discord, your name also appears in the bot's Discord embed."
         ]
       },
       "courses": {
@@ -3490,15 +3490,15 @@
         "p": [
           "Courses are imported chess books you work through puzzle by puzzle. Which books you see depends on your group access; administrators see all of them.",
           "You choose between book order (sequential) and random order. Your progress is saved per book and shared across both modes; you can reset a course's progress.",
-          "The »Courses« menu item only appears once at least one book has been granted to you.",
-          "Under ☰ → Analysis & collection → Catalog you see the courses and repertoires others have made available to you, and can »Request« individual ones."
+          "The “Courses” menu item only appears once at least one book has been granted to you.",
+          "In ☰ → Analysis & collection → Catalog, you see the courses and repertoires others have made available to you, and can “Request” individual ones."
         ]
       },
       "weekly": {
         "t": "Weekly Post",
         "p": [
           "The Weekly Post mirrors the weekly chess-bot posts: a game or study with a date that you play through puzzle by puzzle. Via a post's link, reading and playing through also work without login; progress and the leaderboard only count signed-in attempts.",
-          "»Done« means you have played all puzzles (solved or not). Giving up or resetting after a move counts as a failed attempt. A live leaderboard shows all participants."
+          "“Done” means you have played all puzzles (solved or not). Giving up or resetting after a move counts as a failed attempt. A live leaderboard shows all participants."
         ]
       },
       "trainingGoals": {
@@ -3506,7 +3506,7 @@
         "p": [
           "Set one daily training-time goal (in minutes) plus weekly goals for games played (rapid/classical) and full training days. Coaches can provide a default per group; your personal goal takes precedence.",
           "The tracker colors each day by goal completion (none/partial/full) – the daily status comes from your training time (puzzles, courses, Chessable and logged offline activity), while playing is a weekly goal.",
-          "RookHub fetches rapid/classical games automatically from Lichess and chess.com (public, no login there). Use »Update playing time« to trigger it immediately. Bullet, blitz and correspondence do not count."
+          "RookHub fetches rapid/classical games automatically from Lichess and chess.com (public, no login there). Use “Update playing time” to trigger it immediately. Bullet, blitz and correspondence do not count."
         ]
       },
       "stats": {
@@ -3519,14 +3519,14 @@
         "t": "Analysis",
         "p": [
           "By default, analysis runs in your browser via Stockfish (WebAssembly) – also offline. You get several main lines (MultiPV), evaluations for any position and an opening explorer. Analysis works without login; on first start the browser engine downloads about 7 MB once.",
-          "Signed in, you can add a stronger engine in your profile under »External engine« (e.g. one registered on your Lichess account) and compare two engines. With »Analyse in the background« (clock icon) you queue a position for the background engine; the results are listed under »Analysis jobs«."
+          "Signed in, you can add a stronger engine in your profile under “External engine” (e.g. one registered on your Lichess account) and compare two engines. With “Analyse in the background” (clock icon) you queue a position for the background engine; the results are listed under “Analysis jobs”."
         ]
       },
       "repertoires": {
         "t": "Repertoires",
         "p": [
           "Repertoires are collections of PGN files (opening/middlegame/endgame) you upload and manage. You can add files via drag & drop, download them and fetch the combined PGN (max 10 MB per file).",
-          "With the optional RepCheck browser extension, your opening repertoires are checked right on chess.com and lichess.org analysis pages (see »Browser extension (RepCheck)«)."
+          "With the optional RepCheck browser extension, your opening repertoires are checked right on chess.com and lichess.org analysis pages (see “Browser extension (RepCheck)”)."
         ]
       },
       "offline": {
@@ -3539,13 +3539,13 @@
       "settings": {
         "t": "Theme & language",
         "p": [
-          "Theme: without an account you switch between light, dark and system theme directly in the ☰ menu; signed in, you choose it in your profile under »Appearance«. Language: ☰ → Language (signed in: ☰ → Account → Language) – RookHub speaks 25 languages and your choice is saved."
+          "Theme: without an account you switch between light, dark and system theme directly in the ☰ menu; signed in, you choose it in your profile under “Appearance”. Language: ☰ → Language (signed in: ☰ → Account → Language) – RookHub speaks 25 languages and your choice is saved."
         ]
       },
       "tokens": {
         "t": "API tokens",
         "p": [
-          "In your profile under »API tokens« you create personal tokens for tools that access RookHub on your behalf. RepCheck usually fetches its token itself via »Connect to RookHub«; a manually created token (scope “extension”) is the fallback. The raw token is shown only once at creation – copy it immediately.",
+          "In your profile under “API tokens” you create personal tokens for tools that access RookHub on your behalf. RepCheck usually fetches its token itself via “Connect to RookHub”; a manually created token (scope “extension”) is the fallback. The raw token is shown only once at creation – copy it immediately.",
           "Tokens have a scope and an optional expiry date and can be revoked at any time."
         ]
       },
@@ -3553,8 +3553,8 @@
         "t": "Browser extension (RepCheck)",
         "p": [
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
-          "RepCheck is a browser extension, available in the [Chrome Web Store]({{chromeUrl}}) and as a [signed Firefox add-on]({{firefoxUrl}}). Besides the repertoire check it saves games to RookHub, brings your Chessable courses over and keeps positions via »Remember line«.",
-          "Setup: in the extension popup choose »Settings« → »Connect to RookHub« – RepCheck opens RookHub, waits for your sign-in and creates its access token itself. Entering a token by hand (created under »API tokens« in your profile, scope “extension”) remains as a fallback.",
+          "RepCheck is a browser extension, available in the [Chrome Web Store]({{chromeUrl}}) and as a [signed Firefox add-on]({{firefoxUrl}}). Besides the repertoire check it saves games to RookHub, brings your Chessable courses over and keeps positions via “Remember line”.",
+          "Setup: in the extension popup choose “Settings” → “Connect to RookHub” – RepCheck opens RookHub, waits for your sign-in and creates its access token itself. Entering a token by hand (created under “API tokens” in your profile, scope “extension”) remains as a fallback.",
           "Source code, version history and details on [GitHub](https://github.com/kahalm/repcheck)."
         ]
       },
@@ -3567,35 +3567,35 @@
       "feedback": {
         "t": "Feedback & help",
         "p": [
-          "Found a bug or have a wish? »Feedback / Report a bug« in the footer takes you straight to the issue tracker on GitHub; questions are also welcome in our Discord community (☰ → Community). Without an account, ☰ → Info opens the quick-start overview."
+          "Found a bug or have a wish? “Feedback / Report a bug” in the footer takes you straight to the issue tracker on GitHub; questions are also welcome in our Discord community (☰ → Community). Without an account, ☰ → Info opens the quick-start overview."
         ]
       },
       "guess": {
         "t": "Point game",
         "p": [
           "In the point game you guess an analysed game move by move: you take one side, play your move and get points at once – measured against the move that was actually played, rated by the engine.",
-          "The »Master games« are open to everyone, even without an account; there you play the winner's side. Signed in, you can also play your own games under »Your own analyses« and choose the side – add a game as PGN and it is analysed in the background."
+          "The “Master games” are open to everyone, even without an account; there you play the winner's side. Signed in, you can also play your own games under “Your own analyses” and choose the side – add a game as PGN and it is analysed in the background."
         ]
       },
       "games": {
         "t": "Games & scoresheets",
         "p": [
-          "Under ☰ → Analysis & collection → Games you find your games: saved with the RepCheck extension on chess.com or lichess, added via »Upload PGN« or read from a scoresheet photo. »Analyse game« computes it in the background – afterwards the evaluation curve with accuracy and move classes appears under the board. You can also share a game via link or download its PGN.",
-          "»Read a scoresheet«: take a photo of your scoresheet; an AI model (Claude by Anthropic, USA) reads the moves, RookHub checks every move on the board and stores the game in your games. You fix uncertain moves via »Review and correct«. The number of scans per day is limited."
+          "Your games are under ☰ → Analysis & collection → Games – saved with the RepCheck extension on chess.com or lichess, added via “Upload PGN” or read from a scoresheet photo. “Analyse game” computes it in the background – afterwards the evaluation curve with accuracy and move classes appears under the board. You can also share a game via link or download its PGN.",
+          "“Read a scoresheet”: take a photo of your scoresheet; an AI model (Claude by Anthropic, USA) reads the moves, RookHub checks every move on the board and stores the game in your games. You fix uncertain moves via “Review and correct”. The number of scans per day is limited."
         ]
       },
       "reconstruct": {
         "t": "Reconstruct game",
         "p": [
-          "Write down what you still remember of a game – the first moves, single positions, short move sequences – and close the gaps step by step. »Close the gap« searches for move sequences leading from one part to the next; a suggestion only becomes part of the game once you confirm it.",
-          "»Share whole game« creates a link to the game including its open gaps; whoever opens it needs no account."
+          "Write down what you still remember of a game – the first moves, single positions, short move sequences – and close the gaps step by step. “Close the gap” searches for move sequences leading from one part to the next; a suggestion only becomes part of the game once you confirm it.",
+          "“Share whole game” creates a link to the game including its open gaps; whoever opens it needs no account."
         ]
       },
       "worksheets": {
         "t": "Worksheets",
         "p": [
-          "With »Send to worksheet« you collect positions from a course, a chapter or after a solved puzzle; they land on the clipboard. From there you print a sheet with several diagrams per page and room for the solution – or save it as a PDF.",
-          "Once shared (»Share this sheet (link + QR code)«), a sheet gets a link that is also printed as a QR code: whoever opens it can play the sheet through on the board without an account. Note: the solutions are behind the link too."
+          "With “Send to worksheet” you collect positions from a course, a chapter or after a solved puzzle; they land on the clipboard. From there you print a sheet with several diagrams per page and room for the solution – or save it as a PDF.",
+          "Once shared (“Share this sheet (link + QR code)”), a sheet gets a link that is also printed as a QR code: whoever opens it can play the sheet through on the board without an account. Note: the solutions are behind the link too."
         ]
       },
       "leaderboards": {
@@ -3608,7 +3608,7 @@
         "t": "Chessable",
         "p": [
           "Chessable courses come to RookHub via the RepCheck browser extension (see the RepCheck section) – it runs in your own, signed-in browser. Importing through RookHub itself is switched off: Chessable blocks data-centre IPs, and that pattern can get your Chessable account locked.",
-          "With »Remember line« in RepCheck you keep a position from chessable.com; you find it under ☰ → Analysis & collection → Remembered, where you can analyse it or queue it for background analysis. Your active training time on chessable.com counts towards your training goals."
+          "With “Remember line” in RepCheck you keep a position from chessable.com; you find it under ☰ → Analysis & collection → Remembered, where you can analyse it or queue it for background analysis. Your active training time on chessable.com counts towards your training goals."
         ]
       }
     }
@@ -3762,7 +3762,7 @@
     "intro": "Positions the background engine calculates for you.",
     "introMore": "One job at a time, paused while you analyse live with an external engine. Expand a job to see the stored lines.",
     "empty": "No jobs yet.",
-    "emptyHint": "On the analysis board, use the clock icon „Analyse in the background“ to queue a position.",
+    "emptyHint": "On the analysis board, use the clock icon “Analyse in the background” to queue a position.",
     "untitled": "Untitled",
     "status": {
       "queued": "queued",
@@ -3790,7 +3790,7 @@
       "depth": "Target depth",
       "lines": "Lines",
       "titleLabel": "Title (optional)",
-      "hint": "Runs as soon as the background engine is free and pauses while you analyse live with an external engine. You will find the result under „Analysis jobs“.",
+      "hint": "Runs as soon as the background engine is free and pauses while you analyse live with an external engine. You will find the result under “Analysis jobs”.",
       "costHint": "Rule of thumb: every depth beyond ~27 takes a multiple of the previous one; 4+ lines multiply the time again.",
       "noEngine": "No background engine is set in your profile.",
       "toProfile": "To the profile",
@@ -3866,7 +3866,7 @@
       "count": "Positions",
       "same": "Same move",
       "median": "Median gap",
-      "p90": "Gap (90 %)",
+      "p90": "Gap (90%)",
       "changes": "Move changes",
       "reached": "Reached",
       "note": "Gap to the final value in centipawns and win-chance percentage points; mate counts as ±10 pawns. Intermediate results come from the same search — a row is missing where the engine reported nothing in that range.",
@@ -3885,7 +3885,7 @@
       "done": "done",
       "failed": "failed"
     },
-    "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}} %)",
+    "overall": "Overall: {{done}} of {{total}} positions computed ({{percent}}%)",
     "overallOpen": "{{count}} games still in the queue",
     "overallFailed": "not counted: {{count}} failed",
     "rate": "{{rate}} positions/min",
@@ -4088,6 +4088,7 @@
     "truncated": "Too many tournaments in this area — reduce the radius to see all of them.",
     "distance": "{{km}} km",
     "players": "{{count}} players",
+    "playersOne": "{{count}} player",
     "cancelled": "Cancelled",
     "approximate": "Only roughly located: the venue could not be resolved, the pin shows the middle of the region.",
     "pins": "{{count}} tournaments in view",
@@ -4267,7 +4268,7 @@
       "title": "Already under way",
       "hint": "These competitions started before the chosen period and are still running into it — mostly leagues and season-long events."
     },
-    "audienceHelp": "Individual or team comes from chess-results itself — and anything not recognised as a team event counts as individual.\n\nAge group and gender section do not come from a field: there is none, so they are read from the tournament name. That works where the name states the class („U12 girls“, „UNDER 16 BOYS“) and not at all where it does not.\n\n„Adults only“ hides everything with a youth marker in its name. Seniors stay — seniors’ chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has „report wrong event“, and it asks what tournaments of that kind are called in your region. That is what improves it for everyone.",
+    "audienceHelp": "Individual or team comes from chess-results itself — and anything not recognised as a team event counts as individual.\n\nAge group and gender section do not come from a field: there is none, so they are read from the tournament name. That works where the name states the class (“U12 girls”, “UNDER 16 BOYS”) and not at all where it does not.\n\n“Adults only” hides everything with a youth marker in its name. Seniors stay — seniors’ chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has “report wrong event”, and it asks what tournaments of that kind are called in your region. That is what improves it for everyone.",
     "missing": {
       "cta": "Your event missing? Add it here",
       "blurb": "Not every organiser announces where this directory reads. A link to an official page can be added.",
@@ -4283,12 +4284,12 @@
     "report": {
       "cta": "Report wrong event",
       "title": "Report a wrong entry",
-      "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says \"something is off with this one\".",
+      "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says “something is off with this one”.",
       "current": "Currently stored",
       "message": "What is wrong?",
       "learnTitle": "Two questions that help beyond this one tournament",
       "namePattern": "What are tournaments like this called in your region?",
-      "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol the youth event is a \"Schachrallye\". Name such a pattern once and every future edition of that series is classified correctly.",
+      "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol the youth event is a “Schachrallye”. Name such a pattern once and every future edition of that series is classified correctly.",
       "sourceLink": "A page where this is easier to see",
       "thanks": "Thank you — the report has arrived and we can reply to it.",
       "sendError": "The report could not be sent. Please try again."
@@ -4434,7 +4435,7 @@
       "savedDevice": "Your progress stays on this device. Sign in to have it on every device.",
       "start": "Let's go: level {{level}}",
       "continue": "Continue with level {{level}}",
-      "continueAt": "Continue with level {{level}} · puzzle {{n}}",
+      "puzzleN": "puzzle {{n}}",
       "puzzles": "Puzzles",
       "courses": "Courses",
       "levelsDone": "{{done}} of {{total}} levels done",
@@ -4702,7 +4703,7 @@
       "acceptLine": "Take the whole line"
     },
     "enterPosition": "Enter a position",
-    "afterPositionHint": "Once you apply it, you carry on with moves from that position — or press „Enter a position“ there again to jump straight to the next one.",
+    "afterPositionHint": "Once you apply it, you carry on with moves from that position — or press “Enter a position” there again to jump straight to the next one.",
     "markCertain": "Mark as sure",
     "markUnsure": "Mark as unsure",
     "sideToMove": "To move:",
@@ -4763,11 +4764,11 @@
       "globalBudget": "Reading is paused for today — the budget for all users is used up.",
       "tooManyPages": "At most three photos per scoresheet."
     },
-    "budget": "{{percent}} % of your reading budget used",
+    "budget": "{{percent}}% of your reading budget used",
     "side": "I played",
     "sideWhite": "White",
     "sideBlack": "Black",
-    "sideAuto": "automatic",
+    "sideAuto": "Automatic",
     "nextAt": "Already read one today — the next scoresheet is possible from {{time}}.",
     "takePage": "Take page {{n}}",
     "choosePage": "Choose page {{n}}",
@@ -4839,6 +4840,181 @@
     "r": "Promote to rook",
     "b": "Promote to bishop",
     "n": "Promote to knight"
+  },
+  "playerCard": {
+    "games": "{{n}} games",
+    "gamesOne": "{{n}} game",
+    "noGames": "No games found",
+    "notFound": "No games found.",
+    "fideProfile": "FIDE profile",
+    "photos": "📷 Photos",
+    "photosTitle": "All photos of this player on the league photo site (admins only)",
+    "loading": "Loading games …",
+    "loadingShort": "— loading …",
+    "backToCard": "← Back to the card",
+    "analyze": "Analysis",
+    "analyzeTitle": "Saves the game in your games, has it analysed and opens it in RookHub with the evaluation graph",
+    "toMyGames": "To my games",
+    "toMyGamesTitle": "Saves the game in your games in RookHub and opens it there",
+    "shareGame": "Share game",
+    "shareGameTitle": "Public link to the game in RookHub (it is saved in your games for that)",
+    "shareTitle": "Game on RookHub",
+    "noteSaved": "Saved in your games — opening RookHub …",
+    "noteAnalyze": "Analysis started — opening RookHub …",
+    "shared": "Shared.",
+    "linkCopied": "Link copied: {{url}}",
+    "linkShown": "Link to the game: {{url}}",
+    "linkFailed": "The link could not be fetched.",
+    "saveRejected": "This game cannot be taken over.",
+    "saveFailed": "Taking it over did not work.",
+    "profileError": "The filtered profile could not be loaded.",
+    "gameError": "The game could not be loaded.",
+    "gameGone": "This game is no longer there — please reopen the card.",
+    "pgnError": "The PGN file could not be loaded.",
+    "thePlayer": "the player",
+    "boardWhite": "On board {{board}}, {{name}} plays White.",
+    "boardBlack": "On board {{board}}, {{name}} plays Black.",
+    "colorGroup": "Colour",
+    "white": "White",
+    "black": "Black",
+    "both": "Both",
+    "filter": "Filter",
+    "tools": "Tools",
+    "downloadPgn": "Download PGN ({{n}} games)",
+    "downloadPgnOne": "Download PGN ({{n}} game)",
+    "treeShow": "Show opening tree",
+    "treeHide": "Close opening tree",
+    "filtered": "Filtered: {{n}} games",
+    "filteredOne": "Filtered: {{n}} game",
+    "filteredSplit": "({{board}} over the board, {{online}} online)",
+    "withWhite": "With White",
+    "withBlack": "With Black",
+    "vsE4": "With Black against 1.e4",
+    "vsD4": "With Black against 1.d4",
+    "vsOther": "With Black against others",
+    "noFilterGames": "No games with this filter.",
+    "noMoves": "No games with moves.",
+    "frequentLines": "Most frequent lines",
+    "score": "Score {{p}}",
+    "lines": {
+      "close": "Close training lines",
+      "against": "Training lines against {{who}}",
+      "title": "Training lines",
+      "sub": "— your lines, most likely first",
+      "noRepertoire": "No repertoire is enabled for preparation. In RookHub under “Repertoires” → Edit, tick “Use for extension and preparation”.",
+      "repertoire": "Repertoire",
+      "basisWhite": "You with White — counted: {{n}} games of {{who}} with Black.",
+      "basisWhiteOne": "You with White — counted: {{n}} game of {{who}} with Black.",
+      "basisBlack": "You with Black — counted: {{n}} games of {{who}} with White.",
+      "basisBlackOne": "You with Black — counted: {{n}} game of {{who}} with White.",
+      "loading": "Loading …",
+      "trainAll": "Train all in this order",
+      "probTitle": "Probability that {{who}} plays this line",
+      "games": "{{n}} games",
+      "gamesOne": "{{n}} game",
+      "lastYear": ", last {{year}}",
+      "neverReached": "never reached",
+      "transposition": "only by transposition: {{n}} games",
+      "transpositionOne": "only by transposition: {{n}} game",
+      "untilTitle": "He plays the line up to {{move}}, after that he went a different way",
+      "until": "up to {{move}}",
+      "prefix": "start {{p}}, {{n}} games",
+      "prefixOne": "start {{p}}, {{n}} game",
+      "trainLine": "Train line {{line}}",
+      "train": "Train",
+      "more": "… and {{n}} more lines.",
+      "moreOne": "… and {{n}} more line.",
+      "noLines": "There are no lines for this colour.",
+      "loadingLines": "Loading training lines …",
+      "error": "The training lines could not be loaded.",
+      "thisOpponent": "this opponent"
+    },
+    "recent": "Latest games",
+    "recentWhite": "Latest games with White",
+    "recentBlack": "Latest games with Black",
+    "recentHint": "— click to replay",
+    "noGamesWhite": "No games with White.",
+    "noGamesBlack": "No games with Black.",
+    "replayAria": "Replay the game against {{name}}",
+    "accountsTitle": "Online accounts",
+    "blitzRapid": "Blitz/rapid",
+    "accounts": {
+      "confirmed": "confirmed",
+      "unsure": "unsure",
+      "hidden": "Online account (hidden – minor)",
+      "hiddenTitle": "LeagueHub shows accounts of minors to no one — their games only count in the opening tree",
+      "minor": "minor – visible to admins only",
+      "minorTitle": "Others only see that there is an account; it never appears via share links or in the entry list.",
+      "addedBy": "added by {{name}}",
+      "addedAnon": "added anonymously (share link)"
+    },
+    "accountsNote": "“confirmed”: the account surely belongs to this player, “unsure”: only suspected. Via a share link only confirmed ones appear. LeagueHub fetches their games in the background — selectable in the opening tree.",
+    "sources": "Sources: Lumbra's GigaBase (tournament games, as of July 2026), the ChessBase Megabase, the game database of chess-results.com, Lichess broadcasts of over-the-board tournaments and the club games of the LeagueHub clubs (year only). Matched by FIDE ID. Blitz and rapid games are included.",
+    "sourcesOnline": "Online games of the registered accounts count in the opening profile and the tree when “Board + online” or “Online” is selected above (unsure accounts only with the switch).",
+    "sourceGroup": "Which games",
+    "sourceBoard": "Board",
+    "sourceBoth": "Board + online",
+    "sourceOnline": "Online",
+    "speedGroup": "Time control of the online games",
+    "allSpeeds": "All time controls",
+    "unsure": "also unsure accounts",
+    "unsureTitle": "Accounts that may not belong to him — not included by default",
+    "period": "Period",
+    "allYears": "all years",
+    "lastYear": "last year",
+    "lastYears": "last {{n}} years",
+    "treeColorGroup": "Colour in the tree",
+    "treeTotal": "{{n}} games in this position",
+    "treeTotalOne": "{{n}} game in this position",
+    "treeSplit": "(of which {{board}} over the board, {{online}} online)",
+    "crumbs": "Move sequence",
+    "start": "Start",
+    "thMove": "Move",
+    "thGames": "Games",
+    "thScore": "Score",
+    "thLast": "last",
+    "noContinuation": "No game continued from here.",
+    "ended": "{{n}} games end here (shorter or without further moves).",
+    "endedOne": "{{n}} game ends here (shorter or without further moves).",
+    "scoreFrom": "Score from the point of view of {{name}}.",
+    "whiteGames": "White games.",
+    "blackGames": "Black games.",
+    "treeOnlineNote": "Online games of the confirmed accounts (unsure ones via the switch), at most from the last five years.",
+    "treeError": "The opening tree could not be loaded.",
+    "replayGame": "Replay the game",
+    "movesGroup": "Moves",
+    "toStart": "To the start",
+    "stepBack": "Move back",
+    "stepForward": "Move forward",
+    "toEnd": "To the end",
+    "noMovesGame": "This game has no moves.",
+    "unreadable": "This game cannot be read.",
+    "speed": {
+      "bullet": "Bullet",
+      "blitz": "Blitz",
+      "rapid": "Rapid",
+      "classical": "Classical",
+      "correspondence": "Correspondence"
+    },
+    "opening": {
+      "english": "English (1.c4)",
+      "reti": "Réti (1.Nf3)",
+      "bird": "Bird (1.f4)",
+      "larsen": "Larsen (1.b3)",
+      "sicilian": "Sicilian",
+      "french": "French",
+      "caroKann": "Caro-Kann",
+      "pircPhilidor": "Pirc/Philidor (1…d6)",
+      "modern": "Modern (1…g6)",
+      "scandinavian": "Scandinavian",
+      "alekhine": "Alekhine",
+      "owen": "Owen",
+      "nimzowitsch": "Nimzowitsch",
+      "indian": "Indian (1…Nf6)",
+      "dutch": "Dutch",
+      "benoni": "Benoni (1…c5)",
+      "chigorin": "Chigorin (1…Nc6)"
+    }
   },
   "prep": {
     "trainingRepertoire": {

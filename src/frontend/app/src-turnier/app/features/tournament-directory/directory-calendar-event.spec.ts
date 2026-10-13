@@ -29,7 +29,7 @@ describe('directoryCalendarEvent', () => {
     TestBed.configureTestingModule({ providers: [provideTranslateService({ fallbackLang: 'en' })] });
     translate = TestBed.inject(TranslateService);
     translate.setTranslation('de', {
-      tournamentDirectory: { players: '{{count}} Teilnehmer', detail: { rounds: 'Runden', organizer: 'Veranstalter' } },
+      tournamentDirectory: { players: '{{count}} Teilnehmer', playersOne: '{{count}} Teilnehmer (eins)', detail: { rounds: 'Runden', organizer: 'Veranstalter' } },
     });
     translate.use('de');
   });
@@ -66,6 +66,12 @@ describe('directoryCalendarEvent', () => {
     expect(event.url).toBeNull();
     // Ein-Tages-Termin: buildIcs setzt DTEND auf den Folgetag des Starts.
     expect(buildIcs({ ...event, stamp: new Date(Date.UTC(2026, 9, 1)) })).toContain('DTEND;VALUE=DATE:20261219');
+  });
+
+  // UI-Sweep e1-t-plural-1-players: „1 players" — bei einem Teilnehmer der Einzahl-Schlüssel.
+  it('nimmt bei einem Teilnehmer den Einzahl-Schlüssel', () => {
+    expect(directoryCalendarEvent(entry({ playerCount: 1 }), translate)!.description).toContain('1 Teilnehmer (eins)');
+    expect(directoryCalendarEvent(entry({ playerCount: 2 }), translate)!.description).not.toContain('(eins)');
   });
 
   it('bietet ohne Startdatum keinen Termin an', () => {

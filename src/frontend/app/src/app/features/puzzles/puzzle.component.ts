@@ -41,6 +41,7 @@ import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { of } from 'rxjs';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { PctPipe } from '../../shared/format/pct';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
@@ -55,7 +56,7 @@ const SOLVE_SCOPE = 'puzzles';
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
-    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
+    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, PctPipe
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { TreeFilter, TreeSource } from '@lh/core/league.models';
 import { TREE_SPEEDS, TREE_YEARS, normalizeTreeFilter, toggleSpeed } from './tree-filter';
 
@@ -12,33 +13,34 @@ import { TREE_SPEEDS, TREE_YEARS, normalizeTreeFilter, toggleSpeed } from './tre
   selector: 'lh-tree-filter-bar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslatePipe],
   template: `
     <div class="tree-filter">
       @if (onlineGames > 0) {
-        <div class="seg" role="group" aria-label="Welche Partien">
+        <div class="seg" role="group" [attr.aria-label]="'playerCard.sourceGroup' | translate">
           @for (o of sources; track o.k) {
             <button type="button" [attr.aria-pressed]="active.source === o.k" [disabled]="o.k === 'board' && !boardGames"
-                    (click)="setSource(o.k)">{{ o.label }}</button>
+                    (click)="setSource(o.k)">{{ o.label | translate }}</button>
           }
         </div>
         @if (active.source !== 'board') {
-          <div class="chips" role="group" aria-label="Zeitformat der Online-Partien">
-            <button type="button" class="fchip" [attr.aria-pressed]="!active.speeds.length" (click)="setSpeeds([])">Alle Tempi</button>
+          <div class="chips" role="group" [attr.aria-label]="'playerCard.speedGroup' | translate">
+            <button type="button" class="fchip" [attr.aria-pressed]="!active.speeds.length" (click)="setSpeeds([])">{{ 'playerCard.allSpeeds' | translate }}</button>
             @for (sp of speedOptions; track sp.key) {
-              <button type="button" class="fchip" [attr.aria-pressed]="active.speeds.includes(sp.key)" (click)="flipSpeed(sp.key)">{{ sp.label }}</button>
+              <button type="button" class="fchip" [attr.aria-pressed]="active.speeds.includes(sp.key)" (click)="flipSpeed(sp.key)">{{ sp.label | translate }}</button>
             }
           </div>
           @if (!token && unsure) {
-            <label class="check small" title="Konten, bei denen nicht sicher ist, dass sie ihm gehören — standardmäßig nicht dabei"><input type="checkbox" [checked]="active.withUnsure" (change)="setWithUnsure($any($event.target).checked)" />
-              auch unsichere Konten@if (unsureGames > 0) { ({{ unsureGames }} Partien) }</label>
+            <label class="check small" [title]="'playerCard.unsureTitle' | translate"><input type="checkbox" [checked]="active.withUnsure" (change)="setWithUnsure($any($event.target).checked)" />
+              {{ 'playerCard.unsure' | translate }}@if (unsureGames > 0) { ({{ (unsureGames === 1 ? 'playerCard.gamesOne' : 'playerCard.games') | translate: { n: unsureGames } }}) }</label>
           }
         }
       }
-      <label class="field inline small">Zeitraum
+      <label class="field inline small">{{ 'playerCard.period' | translate }}
         <select (change)="setYears($any($event.target).value)">
-          <option value="" [selected]="!active.years">alle Jahre</option>
+          <option value="" [selected]="!active.years">{{ 'playerCard.allYears' | translate }}</option>
           @for (y of yearOptions; track y) {
-            <option [value]="y" [selected]="active.years === y">{{ y === 1 ? 'letztes Jahr' : 'letzte ' + y + ' Jahre' }}</option>
+            <option [value]="y" [selected]="active.years === y">{{ (y === 1 ? 'playerCard.lastYear' : 'playerCard.lastYears') | translate: { n: y } }}</option>
           }
         </select>
       </label>
@@ -61,7 +63,7 @@ export class TreeFilterBarComponent {
   @Output() readonly changed = new EventEmitter<TreeFilter>();
 
   readonly sources: { k: TreeSource; label: string }[] = [
-    { k: 'board', label: 'Brett' }, { k: 'both', label: 'Brett + online' }, { k: 'online', label: 'Online' },
+    { k: 'board', label: 'playerCard.sourceBoard' }, { k: 'both', label: 'playerCard.sourceBoth' }, { k: 'online', label: 'playerCard.sourceOnline' },
   ];
   readonly speedOptions = TREE_SPEEDS;
   readonly yearOptions = TREE_YEARS;

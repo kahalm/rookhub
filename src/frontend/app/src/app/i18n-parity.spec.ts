@@ -66,13 +66,39 @@ describe('i18n Sprachdateien', () => {
   }
 
   // v1-rk-analysis-jobs-percent-wrap (DESIGN 5.13): „(100" / „%)" brach am Handy um — Zahl und % mit geschütztem Leerzeichen.
+  // e1-rk-percent-space-en: das gilt für de/hr; Englisch und Ungarisch schreiben „46%" ohne Leerzeichen.
+  const PCT_NO_SPACE = new Set(['en', 'hu']);
   for (const lang of FORMAT_LOCALES) {
-    it(`${lang}: zwischen Zahl-Platzhalter und % steht ein geschütztes Leerzeichen`, async () => {
-      const l = await load(lang);
-      const loose = Object.entries(l).filter(([, v]) => /\}\} %/.test(v)).map(([k]) => k);
-      expect(loose).withContext(`${lang}: „}} %" mit normalem Leerzeichen`).toEqual([]);
-    });
+    if (PCT_NO_SPACE.has(lang)) {
+      it(`${lang}: Prozent ohne Leerzeichen („46%", „{{percent}}%")`, async () => {
+        const l = await load(lang);
+        const spaced = Object.entries(l).filter(([, v]) => /(\d|\}\})[   ]%/.test(v)).map(([k]) => k);
+        expect(spaced).withContext(`${lang}: Leerzeichen vor %`).toEqual([]);
+      });
+    } else {
+      it(`${lang}: zwischen Zahl-Platzhalter und % steht ein geschütztes Leerzeichen`, async () => {
+        const l = await load(lang);
+        const loose = Object.entries(l).filter(([, v]) => /\}\}( ?%)/.test(v)).map(([k]) => k);
+        expect(loose).withContext(`${lang}: „}} %" mit normalem oder „}}%" ohne Leerzeichen`).toEqual([]);
+      });
+    }
   }
+
+  /**
+   * e1-rk-en-anfuehrungszeichen-gemischt (DESIGN 6): en.json mischte »…«, „…“, gerade "…" und “…”. Englisch zitiert
+   * typografisch mit “…” (bzw. ‘…’). Ausgenommen sind gerade " als Syntax: HTML-Attribute (href="…") und PGN-Tags
+   * ([Event "…"]) in Platzhaltern.
+   */
+  it('en: Anführungszeichen typografisch “…”, keine deutschen und keine geraden', () => {
+    const syntax = (v: string) => v.replace(/[\w-]+="[^"]*"/g, '').replace(/\[\w+ "[^"]*"\]/g, '');
+    const bad = Object.entries(en)
+      .filter(([, v]) => /[»«„]/.test(v) || syntax(v).includes('"'))
+      .map(([k, v]) => `${k} = ${v.slice(0, 80)}`);
+    expect(bad).withContext('en: »…«, „…“ oder gerade "…" statt “…”').toEqual([]);
+    const unbalanced = Object.entries(en).filter(([, v]) => (v.match(/“/g) ?? []).length !== (v.match(/”/g) ?? []).length)
+      .map(([k]) => k);
+    expect(unbalanced).withContext('en: “ ohne passendes ”').toEqual([]);
+  });
 
   it('alle unterstützten Sprachen sind valides JSON ohne veraltete Keys', async () => {
     for (const lang of SUPPORTED_LANGS) {

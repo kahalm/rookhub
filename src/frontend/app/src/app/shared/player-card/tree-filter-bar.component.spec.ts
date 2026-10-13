@@ -1,15 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TreeFilter } from '@lh/core/league.models';
 import { TreeFilterBarComponent } from './tree-filter-bar.component';
+import { TranslationObject, provideTranslateService } from '@ngx-translate/core';
+import { applyTranslations, loadTranslations } from '@rh/testing/real-translations';
 
 const BOARD: TreeFilter = { source: 'board', speeds: [], years: null, withUnsure: false };
 
 describe('TreeFilterBarComponent', () => {
   let fixture: ComponentFixture<TreeFilterBarComponent>;
   let emitted: TreeFilter[];
+  let de: TranslationObject;
+  beforeAll(async () => { de = await loadTranslations('de'); });
 
   function create(inputs: Record<string, unknown>): HTMLElement {
-    TestBed.configureTestingModule({ imports: [TreeFilterBarComponent] });
+    TestBed.configureTestingModule({ imports: [TreeFilterBarComponent], providers: [provideTranslateService({ fallbackLang: 'de' })] });
+    applyTranslations('de', de);
     fixture = TestBed.createComponent(TreeFilterBarComponent);
     for (const [k, v] of Object.entries({ filter: BOARD, active: BOARD, ...inputs })) fixture.componentRef.setInput(k, v);
     emitted = [];

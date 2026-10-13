@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.761.0", date: "2026-10-13", changes: [
+    { en: "English interface: the player card in player preparation now follows the interface language (texts, move notation, dates; it stays German in LeagueHub), dates everywhere use the language’s own format, percentages read “46%” in English, quotation marks are consistently English, “Strength” and “Round” are no longer cut off, “1 player” in the singular, and smaller wording fixes (privacy, help, course languages).",
+      de: "Englische Oberfläche: Die Spielerkarte der Spielervorbereitung folgt jetzt der Oberflächensprache (Texte, Zugnotation, Datum; in LeagueHub bleibt sie deutsch), Datumsangaben überall im Format der Sprache, Prozentzahlen im Englischen „46%“, Anführungszeichen einheitlich englisch, „Strength“ und „Round“ nicht mehr abgeschnitten, „1 player“ in der Einzahl und kleinere Textkorrekturen (Datenschutz, Hilfe, Kurssprachen)." },
+    { en: "KidHub home: the separator before the stars is back, and the “continue” button no longer leaves a lone dot at the end of a line. UI check tool: optional ultrawide viewport (3440 × 1440).",
+      de: "KidHub-Startseite: der Trenner vor den Sternen ist zurück, und der Weiter-Knopf lässt keinen einsamen Punkt mehr am Zeilenende. UI-Prüfwerkzeug: zusätzliche Ultrawide-Breite (3440 × 1440) auf Anforderung." },
+  ] },
   { version: "0.760.1", date: "2026-10-12", changes: [
     { en: "UI check tool: about twice as fast — recurring page-frame requests (menu, permissions, counters) are answered from a cache per account, and the dev server allows more requests per minute; full run now about 9 minutes.",
       de: "UI-Prüfwerkzeug: etwa doppelt so schnell — wiederkehrende Rahmen-Anfragen (Menü, Rechte, Zähler) kommen je Konto aus einem Zwischenspeicher, und der Dev-Server erlaubt mehr Anfragen je Minute; ein Volllauf dauert jetzt etwa 9 Minuten." },

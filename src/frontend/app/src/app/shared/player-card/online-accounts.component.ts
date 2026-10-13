@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -49,12 +50,12 @@ export function accountStatus(a: Account): string | null {
             } @else {
               <div class="acc-row">
                 @if (a.hidden) {
-                  <span class="acc-hidden" title="Konten Minderjähriger zeigt LeagueHub niemandem — ihre Partien zählen nur im Eröffnungsbaum">{{ hiddenLabel }}</span>
+                  <span class="acc-hidden" [title]="tx('playerCard.accounts.hiddenTitle', HIDDEN_TITLE)">{{ tx('playerCard.accounts.hidden', hiddenLabel) }}</span>
                 } @else {
                   <a [href]="a.url" target="_blank" rel="noopener">{{ label(a.site) }}: {{ a.user }}</a>
                 }
-                <span class="tag" [class.tag-sure]="a.conf === 'sicher'">{{ a.conf === 'sicher' ? 'gesichert' : 'unsicher' }}</span>
-                @if (a.minor) { <span class="tag tag-minor" [attr.title]="minorTitle">{{ minorLabel }}</span> }
+                <span class="tag" [class.tag-sure]="a.conf === 'sicher'">{{ a.conf === 'sicher' ? tx('playerCard.accounts.confirmed', 'gesichert') : tx('playerCard.accounts.unsure', 'unsicher') }}</span>
+                @if (a.minor) { <span class="tag tag-minor" [attr.title]="tx('playerCard.accounts.minorTitle', minorTitle)">{{ tx('playerCard.accounts.minor', minorLabel) }}</span> }
                 @if (a.addedBy) { <span class="small muted acc-by">{{ addedByText(a.addedBy) }}</span> }
                 @if (a.id !== undefined && !a.hidden) {
                   <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(a.id)" aria-label="Was geprüft wurde"
@@ -152,6 +153,16 @@ export class OnlineAccountsComponent {
   readonly minorLabel = MINOR_ACCOUNT;
   readonly minorTitle = MINOR_ACCOUNT_TITLE;
   readonly status = accountStatus;
+  readonly HIDDEN_TITLE = 'Konten Minderjähriger zeigt LeagueHub niemandem — ihre Partien zählen nur im Eröffnungsbaum';
+
+  /** Was die Spielervorbereitung (nur lesend) zeigt, folgt der Oberflächensprache (e1-rk-prep-card-german); LeagueHub stellt
+   *  `de` ein. Ohne Sprache (Specs) der deutsche Text. Das Pflegen der Konten gibt es nur in LeagueHub und bleibt deutsch. */
+  private readonly translate = inject(TranslateService, { optional: true });
+  tx(key: string, german: string, params: Record<string, unknown> = {}): string {
+    if (!this.translate?.getCurrentLang()) return german;
+    const v = this.translate.instant(key, params);
+    return v && v !== key ? v : german;
+  }
 
   readonly adding = signal(false);
   /** Kennung des Kontos, das gerade bearbeitet wird. */
@@ -220,7 +231,8 @@ export class OnlineAccountsComponent {
 
   /** „hinzugefügt von patrik" bzw. „anonym hinzugefügt (Teilen-Link)". */
   addedByText(by: string): string {
-    return by === 'anonym' ? 'anonym hinzugefügt (Teilen-Link)' : `hinzugefügt von ${by}`;
+    return by === 'anonym' ? this.tx('playerCard.accounts.addedAnon', 'anonym hinzugefügt (Teilen-Link)')
+      : this.tx('playerCard.accounts.addedBy', `hinzugefügt von ${by}`, { name: by });
   }
 
   startEdit(a: Account): void {

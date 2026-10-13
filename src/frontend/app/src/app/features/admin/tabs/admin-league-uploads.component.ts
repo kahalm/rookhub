@@ -45,7 +45,7 @@ export interface LeagueUploadBatch {
               @for (b of list; track b.id) {
                 <tr>
                   <td>{{ b.id }}</td>
-                  <td>{{ b.createdAt | date: 'dd.MM.yyyy HH:mm' }}@if (!b.finishedAt) { <span class="muted"> · {{ 'admin.uploads.open' | translate }}</span> }</td>
+                  <td>{{ b.createdAt | date:'mediumDate' }}, {{ b.createdAt | date:'shortTime' }}@if (!b.finishedAt) { <span class="muted"> · {{ 'admin.uploads.open' | translate }}</span> }</td>
                   <td>{{ b.viaShare ? ('admin.uploads.viaShare' | translate) : b.user }}@if (b.club) { <span class="muted club"> · {{ b.club }}</span> }</td>
                   <td class="num">{{ b.files }}</td>
                   <td class="num">{{ mb(b.bytes) }}</td>

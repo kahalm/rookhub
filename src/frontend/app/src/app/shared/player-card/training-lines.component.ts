@@ -8,6 +8,7 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
+import { cardLang } from './card-lang';
 import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
@@ -20,7 +21,7 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
  * Partien (Filter der Karte). Je Linie „Trainieren" (Trainer der Haupt-App mit `?line=`), dazu „Alle in dieser Reihenfolge
  * trainieren" (`?opponent=`: der Trainer holt dieselben Linien und sortiert danach). Von LeagueHub aus per Einmal-Code
  * hinüber (`HandoffService.jumpToRookHub`). Nur angemeldet und nie über einen Teilen-Link — das entscheidet die Karte.
- * Deutsch wie die übrige Karte (LeagueHub stellt keine Sprache ein).
+ * Texte über `t()`: in der Sprache der Oberfläche (LeagueHub stellt `de` ein); ohne Sprache (Specs) deutsch aus `GERMAN`.
  */
 @Component({
   selector: 'lh-training-lines',
@@ -28,14 +29,13 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button type="button" class="btn-sec tl-toggle" [attr.aria-expanded]="open()" (click)="toggle()">
-      {{ open() ? 'Trainingslinien schließen' : 'Trainingslinien gegen ' + who() }}</button>
+      {{ open() ? t('playerCard.lines.close') : t('playerCard.lines.against', { who: who() }) }}</button>
     @if (open()) {
-      <section class="tl" aria-label="Trainingslinien">
-        <h3>Trainingslinien <span class="muted small">— deine Linien, wahrscheinlichste zuerst</span></h3>
+      <section class="tl" [attr.aria-label]="t('playerCard.lines.title')">
+        <h3>{{ t('playerCard.lines.title') }} <span class="muted small">{{ t('playerCard.lines.sub') }}</span></h3>
         @if (data(); as d) {
           @if (!d.repertoires.length) {
-            <p class="muted small">Kein Repertoire ist für die Vorbereitung freigegeben. In RookHub unter „Repertoires“ → Bearbeiten
-              „Für Extension und Vorbereitung verwenden“ anhaken.</p>
+            <p class="muted small">{{ t('playerCard.lines.noRepertoire') }}</p>
           } @else {
             <div class="tl-pick">
               <!-- Vorgabe: alle markierten Repertoires der Farbe in EINER Reihung (Wunsch 2026-10-07); die Farbe ist die Wahl -->
@@ -48,7 +48,7 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
                   }
                 </div>
               }
-              <label>Repertoire
+              <label>{{ t('playerCard.lines.repertoire') }}
                 <select class="tl-rep" (change)="pickRepertoire($any($event.target).value)" [disabled]="loading()">
                   <option value="" [selected]="d.repertoire === null">{{ t('allMarked') }}</option>
                   @for (r of d.repertoires; track r.id) { <option [value]="r.id" [selected]="r.id === d.repertoire">{{ r.name }}</option> }
@@ -56,9 +56,9 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
               </label>
             </div>
             <p class="muted small tl-basis" role="status">
-              @if (d.color) { Du mit {{ d.color === 'w' ? 'Weiß' : 'Schwarz' }} — gezählt: {{ d.games }}
-                {{ d.games === 1 ? 'Partie' : 'Partien' }} von {{ who() }} mit {{ d.color === 'w' ? 'Schwarz' : 'Weiß' }}. }
-              @if (loading()) { Lade … }
+              @if (d.color) { {{ t(d.color === 'w' ? (d.games === 1 ? 'playerCard.lines.basisWhiteOne' : 'playerCard.lines.basisWhite')
+                : (d.games === 1 ? 'playerCard.lines.basisBlackOne' : 'playerCard.lines.basisBlack'), { n: d.games, who: who() }) }} }
+              @if (loading()) { {{ t('playerCard.lines.loading') }} }
             </p>
             @if (wanted(); as w) {
               @if (d.color && d.color !== w && !d.colors.includes(w) && !loading()) {
@@ -88,7 +88,7 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
                     {{ creating() ? t('busy') : t('button', { side: side(d) }) }}</button>
                 }
                 @if (d.repertoire !== null) {
-                  <button type="button" class="btn-sec tl-all" [disabled]="busy()" (click)="trainAll(d)">Alle in dieser Reihenfolge trainieren</button>
+                  <button type="button" class="btn-sec tl-all" [disabled]="busy()" (click)="trainAll(d)">{{ t('playerCard.lines.trainAll') }}</button>
                 }
               </div>
               @if (d.repertoire === null) { <p class="muted small tl-all-hint">{{ t('trainAllHint') }}</p> }
@@ -114,35 +114,35 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
                       @if (l.source === 'deviates') {
                         <span class="tl-p tl-partial" [title]="t('deviatesTip')">{{ l.probability ? '≈ ' + pct(l.probability) : '–' }}</span>
                       } @else if (l.source !== 'none') {
-                        <span class="tl-p" [title]="'Wahrscheinlichkeit, dass ' + who() + ' diese Linie spielt'">{{ pct(l.probability) }}</span>
+                        <span class="tl-p" [title]="t('playerCard.lines.probTitle', { who: who() })">{{ pct(l.probability) }}</span>
                         @if (l.ownMoves) {
-                          <span class="muted small">{{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}@if (l.lastYear) {, zuletzt {{ l.lastYear }}}</span>
+                          <span class="muted small">{{ reachedText(l.reached, l.lastYear) }}</span>
                         }
                       } @else if (l.neverReached) {
-                        <span class="tl-p muted">nie erreicht</span>
-                        @if (l.reached) { <span class="muted small">nur über Zugumstellung: {{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}</span> }
+                        <span class="tl-p muted">{{ t('playerCard.lines.neverReached') }}</span>
+                        @if (l.reached) { <span class="muted small">{{ t(l.reached === 1 ? 'playerCard.lines.transpositionOne' : 'playerCard.lines.transposition', { n: l.reached }) }}</span> }
                       } @else if (l.missing > 0) {
-                        <span class="tl-p tl-partial" [title]="'Er spielt die Linie bis ' + until(d, l) + ', danach ist er anders weitergegangen'">
-                          bis {{ until(d, l) }} dabei</span>
-                        <span class="muted small">Anfang {{ pct(l.prefixProbability) }}, {{ l.prefixReached }}
-                          {{ l.prefixReached === 1 ? 'Partie' : 'Partien' }}</span>
+                        <span class="tl-p tl-partial" [title]="t('playerCard.lines.untilTitle', { move: until(d, l) })">
+                          {{ t('playerCard.lines.until', { move: until(d, l) }) }}</span>
+                        <span class="muted small">{{ t(l.prefixReached === 1 ? 'playerCard.lines.prefixOne' : 'playerCard.lines.prefix',
+                          { p: pct(l.prefixProbability), n: l.prefixReached }) }}</span>
                       } @else {
-                        <span class="tl-p" [title]="'Wahrscheinlichkeit, dass ' + who() + ' diese Linie spielt'">{{ pct(l.probability) }}</span>
-                        <span class="muted small">{{ l.reached }} {{ l.reached === 1 ? 'Partie' : 'Partien' }}@if (l.lastYear) {, zuletzt {{ l.lastYear }}}</span>
+                        <span class="tl-p" [title]="t('playerCard.lines.probTitle', { who: who() })">{{ pct(l.probability) }}</span>
+                        <span class="muted small">{{ reachedText(l.reached, l.lastYear) }}</span>
                       }
                       <button type="button" class="btn-sec tl-train" [disabled]="busy()" (click)="train(d, l)"
-                              [attr.aria-label]="'Linie ' + text(l) + ' trainieren'">Trainieren</button>
+                              [attr.aria-label]="t('playerCard.lines.trainLine', { line: text(l) })">{{ t('playerCard.lines.train') }}</button>
                     </div>
                   </li>
                 }
               </ol>
-              @if (d.more) { <p class="muted small">… und {{ d.more }} weitere {{ d.more === 1 ? 'Linie' : 'Linien' }}.</p> }
+              @if (d.more) { <p class="muted small">{{ t(d.more === 1 ? 'playerCard.lines.moreOne' : 'playerCard.lines.more', { n: d.more }) }}</p> }
             } @else if (!loading()) {
-              <p class="muted small">Für diese Farbe gibt es keine Linien.</p>
+              <p class="muted small">{{ t('playerCard.lines.noLines') }}</p>
             }
           }
-        } @else if (loading()) { <p class="muted small">Lade Trainingslinien …</p> }
-        @if (error(); as e) { <p class="err small" role="alert">{{ e }}</p> }
+        } @else if (loading()) { <p class="muted small">{{ t('playerCard.lines.loadingLines') }}</p> }
+        @if (error(); as e) { <p class="err small" role="alert">{{ t(e) }}</p> }
       </section>
     }
   `,
@@ -198,29 +198,37 @@ export class TrainingLinesComponent {
   readonly createNote = signal<{ text: string; err: boolean } | null>(null);
   /** „Show me lines to train" anbieten: die API kann es (Spielervorbereitung, LeagueHub). */
   readonly canCreate = !!this.api.trainingRepertoire;
-  readonly who = computed(() => (this.name() || '').split(',')[0].trim() || 'diesen Gegner');
+  readonly who = computed(() => (this.name() || '').split(',')[0].trim() || this.t('playerCard.lines.thisOpponent'));
   private seq = 0;
   private loadedFor = '';
 
-  readonly text = (l: TrainingLine) => lineText(l.moves, l.start);
-  readonly until = (d: TrainingLines, l: TrainingLine) => matchedUntil(l, d.color ?? 'w') ?? '?';
+  /** Sprache für Züge und Prozent: die der Oberfläche, LeagueHub/ohne Sprache deutsch (e1-rk-prep-card-german). */
+  private get lang(): string { return cardLang(this.translate); }
+  readonly text = (l: TrainingLine) => lineText(l.moves, l.start, this.lang);
+  readonly until = (d: TrainingLines, l: TrainingLine) => matchedUntil(l, d.color ?? 'w', this.lang) ?? '?';
   /** Gibt es geschätzte Linien? */
   readonly estimated = (d: TrainingLines) => !!d.lichessBand && d.lines.some(l => l.source === 'lichess' || l.source === 'mixed');
-  readonly deviation = (l: TrainingLine) => deviationLabel(l);
-  readonly from = (l: TrainingLine) => l.lichessFrom === null ? '' : plyLabel(l.moves, l.start, l.lichessFrom);
+  readonly deviation = (l: TrainingLine) => deviationLabel(l, this.lang);
+  readonly from = (l: TrainingLine) => l.lichessFrom === null ? '' : plyLabel(l.moves, l.start, l.lichessFrom, this.lang);
+  /** „6 Partien, zuletzt 2025". */
+  reachedText(n: number, lastYear: number | null): string {
+    const games = this.t(n === 1 ? 'playerCard.lines.gamesOne' : 'playerCard.lines.games', { n });
+    return lastYear ? games + this.t('playerCard.lines.lastYear', { year: lastYear }) : games;
+  }
 
   /** Woher die Linie stammt: bei „Alle markierten" Repertoire · Kapitel, sonst das Kapitel. */
   readonly origin = (d: TrainingLines, l: TrainingLine) =>
     [d.repertoire === null ? l.repertoireName : '', l.chapter].filter(x => !!x).join(' · ');
 
-  /** Text des Knopfs „Show me lines to train" und seiner Meldungen: in RookHub in der Sprache der Oberfläche (en/de/hr/hu),
-   *  in LeagueHub (stellt keine Sprache ein) deutsch wie die übrige Karte. */
+  /** Texte des Abschnitts: in der Sprache der Oberfläche (en/de/hr/hu; LeagueHub stellt `de` ein), ohne Sprache deutsch.
+   *  Ein Schlüssel ohne Punkt gehört zu `prep.trainingRepertoire.*` (Knopf „Show me lines to train"), sonst voller Schlüssel. */
   t(key: string, params: Record<string, unknown> = {}): string {
     const name = trainingRepertoireName(this.name());
     const all = { name, max: TRAINING_REPERTOIRE_MAX, ...params };
+    const full = key.includes('.') ? key : `prep.trainingRepertoire.${key}`;
     if (this.translate?.getCurrentLang()) {
-      const v = this.translate.instant(`prep.trainingRepertoire.${key}`, all);
-      if (v && v !== `prep.trainingRepertoire.${key}`) return v;
+      const v = this.translate.instant(full, all);
+      if (v && v !== full) return v;
     }
     return GERMAN[key]?.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => String(all[k as keyof typeof all] ?? '')) ?? key;
   }
@@ -269,7 +277,7 @@ export class TrainingLinesComponent {
       this.busy.set(false);
     }
   }
-  readonly pct = percent;
+  readonly pct = (p: number) => percent(p, this.lang);
 
   /** „ich mit Weiß"/„ich mit Schwarz" für Knopf und Rückfrage — wer anlegt, sieht die Farbe. */
   readonly side = (d: TrainingLines) => d.color ? this.t(d.color === 'w' ? 'asWhite' : 'asBlack') : '';
@@ -369,7 +377,7 @@ export class TrainingLinesComponent {
         void this.load({ repertoire: null, color: want.color }, true);
         return;
       }
-      this.error.set('Die Trainingslinien konnten nicht geladen werden.');
+      this.error.set('playerCard.lines.error');
     } finally {
       if (my === this.seq) this.loading.set(false);
     }
@@ -418,7 +426,7 @@ export class TrainingLinesComponent {
   }
 }
 
-/** Die Texte des Knopfs in LeagueHub (ohne Sprache) — dieselben wie `prep.trainingRepertoire.*` in de.json. */
+/** Die Texte ohne gesetzte Sprache (Specs) — dieselben wie `prep.trainingRepertoire.*` bzw. `playerCard.lines.*` in de.json. */
 const GERMAN: Record<string, string> = {
   button: 'Trainings-Repertoire anlegen ({{side}})',
   hint: 'Legt dir ein eigenes Repertoire „{{name}}“ mit den (bis zu {{max}}) Linien an, die du gegen diesen Gegner am wahrscheinlichsten triffst.',
@@ -450,4 +458,36 @@ const GERMAN: Record<string, string> = {
   noLinesWhite: 'Für Weiß hast du keine markierten Linien — gezeigt werden deine Linien mit Schwarz.',
   noLinesBlack: 'Für Schwarz hast du keine markierten Linien — gezeigt werden deine Linien mit Weiß.',
   trainAllHint: '„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst.',
+  // Abschnitt selbst (e1-rk-prep-card-german) — dieselben wie `playerCard.lines.*` in de.json
+  'playerCard.lines.close': 'Trainingslinien schließen',
+  'playerCard.lines.against': 'Trainingslinien gegen {{who}}',
+  'playerCard.lines.title': 'Trainingslinien',
+  'playerCard.lines.sub': '— deine Linien, wahrscheinlichste zuerst',
+  'playerCard.lines.noRepertoire': 'Kein Repertoire ist für die Vorbereitung freigegeben. In RookHub unter „Repertoires“ → Bearbeiten „Für Extension und Vorbereitung verwenden“ anhaken.',
+  'playerCard.lines.repertoire': 'Repertoire',
+  'playerCard.lines.basisWhite': 'Du mit Weiß — gezählt: {{n}} Partien von {{who}} mit Schwarz.',
+  'playerCard.lines.basisWhiteOne': 'Du mit Weiß — gezählt: {{n}} Partie von {{who}} mit Schwarz.',
+  'playerCard.lines.basisBlack': 'Du mit Schwarz — gezählt: {{n}} Partien von {{who}} mit Weiß.',
+  'playerCard.lines.basisBlackOne': 'Du mit Schwarz — gezählt: {{n}} Partie von {{who}} mit Weiß.',
+  'playerCard.lines.loading': 'Lade …',
+  'playerCard.lines.trainAll': 'Alle in dieser Reihenfolge trainieren',
+  'playerCard.lines.probTitle': 'Wahrscheinlichkeit, dass {{who}} diese Linie spielt',
+  'playerCard.lines.games': '{{n}} Partien',
+  'playerCard.lines.gamesOne': '{{n}} Partie',
+  'playerCard.lines.lastYear': ', zuletzt {{year}}',
+  'playerCard.lines.neverReached': 'nie erreicht',
+  'playerCard.lines.transposition': 'nur über Zugumstellung: {{n}} Partien',
+  'playerCard.lines.transpositionOne': 'nur über Zugumstellung: {{n}} Partie',
+  'playerCard.lines.untilTitle': 'Er spielt die Linie bis {{move}}, danach ist er anders weitergegangen',
+  'playerCard.lines.until': 'bis {{move}} dabei',
+  'playerCard.lines.prefix': 'Anfang {{p}}, {{n}} Partien',
+  'playerCard.lines.prefixOne': 'Anfang {{p}}, {{n}} Partie',
+  'playerCard.lines.trainLine': 'Linie {{line}} trainieren',
+  'playerCard.lines.train': 'Trainieren',
+  'playerCard.lines.more': '… und {{n}} weitere Linien.',
+  'playerCard.lines.moreOne': '… und {{n}} weitere Linie.',
+  'playerCard.lines.noLines': 'Für diese Farbe gibt es keine Linien.',
+  'playerCard.lines.loadingLines': 'Lade Trainingslinien …',
+  'playerCard.lines.error': 'Die Trainingslinien konnten nicht geladen werden.',
+  'playerCard.lines.thisOpponent': 'diesen Gegner',
 };

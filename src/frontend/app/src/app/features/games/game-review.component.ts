@@ -33,6 +33,7 @@ import type { EngineAnalyseLine } from '../analysis/external-engine.service';
 import type { ComputerLine } from './computer-lines.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SanPipe } from '../../shared/chess/san.pipe';
+import { PctPipe } from '../../shared/format/pct';
 
 /** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
 const SYMBOLS = MOVE_CLASS_SYMBOLS;
@@ -71,7 +72,7 @@ const MATE_GAP_PAWNS = 100;
   selector: 'app-game-review',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe, SanPipe],
+  imports: [IconLabelDirective, EvalGraphComponent, TranslatePipe, MatTooltipModule, MatIconModule, MatButtonModule, MatButtonToggleModule, DecimalPipe, SanPipe, PctPipe],
   template: `
     @if (status() !== 'none') {
       <section class="review">
@@ -250,11 +251,11 @@ const MATE_GAP_PAWNS = 100;
                 <tr [class]="'row-' + row.key">
                   <th>{{ ('games.review.' + row.key) | translate }}</th>
                   <td class="acc">
-                    @if (row.summary.accuracy !== null) { {{ row.summary.accuracy | number:'1.1-1' }} % } @else { – }
+                    @if (row.summary.accuracy !== null) { {{ row.summary.accuracy | pct:1:1 }} } @else { – }
                   </td>
                   @if (altReview()) {
                     <td class="acc alt">
-                      @if (row.altAccuracy != null) { {{ row.altAccuracy | number:'1.1-1' }} % } @else { – }
+                      @if (row.altAccuracy != null) { {{ row.altAccuracy | pct:1:1 }} } @else { – }
                     </td>
                   }
                   @for (c of classes; track c) {
