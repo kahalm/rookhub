@@ -132,6 +132,39 @@ public class OpenAiJsonClientTests
     }
 
     [Fact]
+    public async Task Unreachable_AlsoWhenTheModelListFails_WithoutAConfiguredModel()
+    {
+        // 13.10.2026: ohne eingestelltes Modell fragt der Client zuerst /models — scheiterte schon das, blieb der Zähler
+        // stehen und ein Kurs-Lauf verbuchte bei abgeschalteter Spark jede Linie als gescheitert.
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1")));
+
+        _handler.Refuse().Fail(System.Net.HttpStatusCode.BadGateway);
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.False(client.IsUnreachable);
+        _handler.Fail(System.Net.HttpStatusCode.GatewayTimeout);
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.True(client.IsUnreachable);
+
+        // Eine Modellliste ist eine Antwort des Servers und hebt es auf.
+        _handler.Raw("{\"data\":[{\"id\":\"qwen\"}]}").Reply("{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}");
+        Assert.NotNull(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.False(client.IsUnreachable);
+    }
+
+    [Fact]
+    public async Task ModelListAnsweringWith404_IsNotAnOutage()
+    {
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1")));
+        _handler.Fail(System.Net.HttpStatusCode.NotFound).Fail(System.Net.HttpStatusCode.NotFound)
+            .Fail(System.Net.HttpStatusCode.NotFound);
+
+        for (var i = 0; i < 3; i++) Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+
+        Assert.False(client.IsUnreachable);
+    }
+
+    [Fact]
     public async Task ServerError_OrCutOff_IsNull()
     {
         _handler.Fail(System.Net.HttpStatusCode.InternalServerError).Reply("{\"hint1\":\"a\"", finish: "length");

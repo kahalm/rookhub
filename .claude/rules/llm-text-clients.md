@@ -46,7 +46,8 @@ paths:
   weg* — `OpenAiChat.IsTransportFailure` (keine Antwort, Strom abgerissen/verstummt, 502/503/504) zählt der
   `OpenAiJsonClient`; ab drei in Folge ist `IClaudeJsonClient.IsUnreachable` wahr, 60 s nach dem letzten Fehler verfällt
   es wieder (wer anhält, fragt nicht mehr — sonst käme es nie zurück), jede Antwort des Servers setzt es zurück. Ein
-  500 oder ein unbrauchbarer Text ist KEIN Ausfall. Serien-Arbeit hält dann an, statt Arbeit als gescheitert zu
+  500 oder ein unbrauchbarer Text ist KEIN Ausfall. Seit 0.761.1 zählt auch die Modellabfrage (`/models`, nur ohne `TextLlm:Model`) mit: keine Verbindung,
+  Zeitüberschreitung oder 502/503/504 dort ist ein Ausfall, jede andere Antwort setzt zurück. Serien-Arbeit hält dann an, statt Arbeit als gescheitert zu
   verbuchen: Kurs-Auftrag siehe „Hintergrunddienst", `tools/LibraryImport translate` legt die Partie zurück in die
   Reihe und wartet 75 s.
 - **Kurs-Übersetzung: zwei Einstellungen, Automatik nur auf Prod** (0.548.0) – `CourseTranslation:Parallel` (Vorgabe 4,

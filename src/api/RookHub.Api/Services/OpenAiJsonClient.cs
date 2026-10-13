@@ -92,9 +92,11 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
            && Environment.TickCount64 - Interlocked.Read(ref _lastTransportFailure) < (long)UnreachableFor.TotalMilliseconds;
 
     /// <summary>Jede Antwort des Servers (auch eine unbrauchbare) setzt den Zaehler zurueck; nur Transportfehler zaehlen.</summary>
-    private void Track(OpenAiChat.Reply reply)
+    private void Track(OpenAiChat.Reply reply) => Track(OpenAiChat.IsTransportFailure(reply));
+
+    private void Track(bool transportFailure)
     {
-        if (OpenAiChat.IsTransportFailure(reply))
+        if (transportFailure)
         {
             Interlocked.Exchange(ref _lastTransportFailure, Environment.TickCount64);
             Interlocked.Increment(ref _transportFailures);
@@ -231,6 +233,11 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
             if (_apiKey != null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             using var response = await _http.SendAsync(request, ct);
             var text = await response.Content.ReadAsStringAsync(ct);
+            // Auch die Modellabfrage zählt für IsUnreachable (13.10.2026): ohne gemerktes Modell — nach jedem Neustart —
+            // lief bei abgeschalteter Spark jeder Aufruf hier hinaus, ohne den Zähler zu berühren; Serien-Arbeit verbuchte
+            // dann jede Linie als gescheitert, statt anzuhalten.
+            Track(response.StatusCode is System.Net.HttpStatusCode.BadGateway or System.Net.HttpStatusCode.ServiceUnavailable
+                or System.Net.HttpStatusCode.GatewayTimeout);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("TextLlm: {Url}/models antwortet {Status}", _baseUrl, (int)response.StatusCode);
@@ -248,6 +255,7 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         }
         catch (Exception ex)
         {
+            if (ex is HttpRequestException or TaskCanceledException) Track(true);   // keine Verbindung / Zeitüberschreitung
             _logger.LogWarning(ex, "TextLlm: Modellliste von {Url} nicht lesbar", _baseUrl);
             return null;
         }

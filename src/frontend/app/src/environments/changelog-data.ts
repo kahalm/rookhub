@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.761.1", date: "2026-10-13", changes: [
+    { en: "Translations on our own server: if the server is switched off right after a restart, a course run now pauses instead of marking every line as failed.", de: "Übersetzungen auf dem eigenen Server: Ist der Server direkt nach einem Neustart abgeschaltet, hält ein Kurs-Lauf jetzt an, statt jede Linie als gescheitert zu verbuchen." },
+  ] },
   { version: "0.761.0", date: "2026-10-13", changes: [
     { en: "English interface: the player card in player preparation now follows the interface language (texts, move notation, dates; it stays German in LeagueHub), dates everywhere use the language’s own format, percentages read “46%” in English, quotation marks are consistently English, “Strength” and “Round” are no longer cut off, “1 player” in the singular, and smaller wording fixes (privacy, help, course languages).",
       de: "Englische Oberfläche: Die Spielerkarte der Spielervorbereitung folgt jetzt der Oberflächensprache (Texte, Zugnotation, Datum; in LeagueHub bleibt sie deutsch), Datumsangaben überall im Format der Sprache, Prozentzahlen im Englischen „46%“, Anführungszeichen einheitlich englisch, „Strength“ und „Round“ nicht mehr abgeschnitten, „1 player“ in der Einzahl und kleinere Textkorrekturen (Datenschutz, Hilfe, Kurssprachen)." },
