@@ -793,5 +793,21 @@ describe('AdminComponent – Kartenliste der Konten', () => {
     expect(cards[0].querySelector('.uc-meta')!.textContent).toContain('#3');
     expect(cards[0].querySelectorAll('.uc-group').length).toBe(1);
     expect(cards[1].querySelector('.uc-mail')).toBeNull();
+    // a1-rk-admin-nutzer-schmal: Einsteigen + ⋮ stehen rechts in der Kopfzeile, nie allein in einer eigenen Zeile;
+    // ohne Gruppen entfaellt die Gruppenzeile ganz.
+    for (const card of Array.from(cards)) {
+      expect(card.querySelectorAll('.uc-head > .uc-actions button').length).toBe(2);
+      expect(card.querySelector('.uc-row button')).toBeNull();
+    }
+    expect(cards[0].querySelector('.uc-row')).not.toBeNull();
+    expect(cards[1].querySelector('.uc-row')).toBeNull();
+  });
+
+  it('zeigt die Kartenfassung bis 899.98 px und laesst Datum/Aktionen der Tabelle nie umbrechen (a1-rk-admin-nutzer-schmal)', () => {
+    const css = (((AdminComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/@media \(max-width: ?899\.98px\) ?\{[^@]*\.users-table-wrap[^{]*\{ ?display: ?none/);
+    expect(css).not.toContain('599.98px');
+    expect(css).toMatch(/\.users-table td\.mat-column-actions[^{]*\{ ?white-space: ?nowrap/);
   });
 });

@@ -93,3 +93,59 @@ describe('FriendStatsComponent Kartenköpfe', () => {
     expect(el.querySelector('mat-card-header')).toBeNull();
   });
 });
+
+/** UI-Sweep a1: Spaltenbreiten am Handy und Breitbild-Stufe ab 2400 px. */
+describe('FriendStatsComponent a1 (Spalten, Breitbild)', () => {
+  async function render(width: string) {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideRouter, ActivatedRoute, convertToParamMap } = await import('@angular/router');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { FriendStatsComponent } = await import('./friend-stats.component');
+    const { FriendsService } = await import('../../core/friends.service');
+    const { PuzzleService } = await import('../puzzles/puzzle.service');
+    const { SnackbarService } = await import('../../core/snackbar.service');
+    TestBed.configureTestingModule({
+      imports: [FriendStatsComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: FriendsService, useValue: {} },
+        { provide: PuzzleService, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FriendStatsComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = width;
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    c.friend = { userId: 7, username: 'bob', displayName: null, stats: {} as PuzzleStatsDto, themes: [] } as never;
+    c.themeRows = [{ theme: 'discoveredAttack', mine: null, theirs: { acc: 67, attempts: 3 }, winner: 'tie' }] as never;
+    fixture.detectChanges();
+    return { host, FriendStatsComponent };
+  }
+
+  it('a1-rk-freundesvergleich-spalte: am Handy bekommt die Themenspalte den Rest, Zahlenspalten bleiben schmal', async () => {
+    const { host } = await render('480px');
+    const row = host.querySelector('.themes-card tbody tr') as HTMLElement;
+    const [theme, mine, theirs] = Array.from(row.children).map(td => td.getBoundingClientRect().width);
+    expect(theme).toBeGreaterThan(mine * 1.5);
+    expect(mine).toBeCloseTo(theirs, 0);
+    expect(mine).toBeLessThanOrEqual(6 * 16 + 1);   // Karma-Fenster 1400 px → 6rem (am Handy 5.5rem)
+    expect(getComputedStyle(host.querySelector('td.theme-cell')!).hyphens).toBe('manual');
+  });
+
+  it('a1-rk-freundesvergleich-breit: ab 2400 px beide Karten nebeneinander in der breiten Seitenspalte', async () => {
+    const { host, FriendStatsComponent } = await render('1400px');
+    expect(host.querySelectorAll('.fs-cards > mat-card').length).toBe(2);
+    const css = (((FriendStatsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    const wide = css.match(/@media \(min-width: ?2400px\) ?\{(.*?\}) ?\}/)?.[1] ?? '';
+    expect(wide).toContain('var(--page-max-width-wide, 1880px)');
+    expect(wide).toMatch(/\.fs-cards ?\{[^}]*grid-template-columns: ?1fr 1fr/);
+    // Unter 2400 px (Karma 1400 px) bleiben die Karten untereinander.
+    const [a, b] = Array.from(host.querySelectorAll('.fs-cards > mat-card')).map(c => c.getBoundingClientRect());
+    expect(b.top).toBeGreaterThanOrEqual(a.bottom);
+  });
+});

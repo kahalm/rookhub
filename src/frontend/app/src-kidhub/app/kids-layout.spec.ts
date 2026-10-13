@@ -111,7 +111,7 @@ function courseLines(bookTitle: string, count: number): KidsCourseLine[] {
  * Stile fuer `layoutAt` zurueck.
  */
 async function renderPage(url: string, lang: string,
-  data: { level?: KidsLevelDetail; course?: KidsCourseLine[] }): Promise<Page> {
+  data: { level?: KidsLevelDetail; course?: KidsCourseLine[] }, board = true): Promise<Page> {
   localStorage.setItem('rookhub_lang', lang);
   // Die Stufe davor geschafft — sonst zeigt eine spaete Stufe nur das Schloss.
   const before = (data.level?.level ?? 1) - 1;
@@ -119,7 +119,8 @@ async function renderPage(url: string, lang: string,
     levels: before > 0 ? { [before]: { stars: 1, runIndex: 0, runMistakes: 0 } } : {}, courses: {},
   }));
   const api = jasmine.createSpyObj<KidsApiService>('KidsApiService',
-    ['level', 'levels', 'languageHint', 'coursePuzzles', 'endlessBatch']);
+    ['level', 'levels', 'languageHint', 'coursePuzzles', 'endlessBatch', 'courses']);
+  api.courses.and.returnValue(of([]));
   const level = data.level ?? levelDetail(1, 'mate1');
   api.level.and.returnValue(of(level));
   api.levels.and.returnValue(of([{ level: level.level, theme: level.theme, puzzleCount: level.puzzles.length }]));
@@ -150,7 +151,7 @@ async function renderPage(url: string, lang: string,
   f.detectChanges();
   f.detectChanges();
   const html = (f.nativeElement as HTMLElement).outerHTML;
-  expect(html).toContain('class="board"');
+  if (board) expect(html).toContain('class="board"');
   return { html, css: pageCss() };
 }
 
@@ -296,6 +297,50 @@ describe('KidHub: Aufgabenseite je Fenstergroesse', () => {
       expect(l.task.left).toBeGreaterThanOrEqual(l.board.right);
       expect(l.board.width).toBeCloseTo(board, 0);
       expectHeadAligned(l, `${w}×${h}`);
+    });
+  }
+
+  /**
+   * Breitbild-Stufe (DESIGN 4.1, a1-k-ultrawide-board-small): bei 3440×1440 blieb das Brett 820 px, unter ihm ≈ 500 px
+   * leer. Ab 2400 px waechst es bis zur Fensterhoehe (hoechstens 1240 px); darunter (1920×1080) bleibt es bei 820 px.
+   */
+  for (const url of ['/levels/1', '/endless']) {
+    it(`Ultrawide 3440×1440, ${url}: Brett bis zur Fensterhoehe, Aufgabe daneben, nichts laeuft ueber`, async () => {
+      const page = await renderPage(url, 'de', {});
+      const l = layoutAt(page, 3440, 1440);
+      expect(l.board.width).withContext('Brettbreite').toBeGreaterThan(1000);
+      expect(l.board.width).withContext('hoechstens 1240 px').toBeLessThanOrEqual(1240.5);
+      expect(l.board.top + l.board.width).withContext('Unterkante im Fenster').toBeLessThanOrEqual(1440);
+      expect(l.task.left).withContext('Aufgabe rechts neben dem Brett').toBeGreaterThanOrEqual(l.board.right);
+      expect(Math.max(l.task.right, l.head.right)).withContext('nichts ragt rechts hinaus').toBeLessThanOrEqual(3440);
+      expectHeadAligned(l, '3440×1440');
+      const wide = layoutAt(page, 1920, 1080);
+      expect(wide.board.width).withContext('1920×1080 wie bisher').toBeCloseTo(820, 0);
+    });
+  }
+
+  /** a1-k-ultrawide-raster: Startseite und Stufenkarte ab 2400 px 1880 px breit (--kid-wide-max), darunter wie bisher. */
+  for (const [url, sel, below] of [['/', 'kid-home', 1520], ['/levels', 'kid-level-map', 1440]] as const) {
+    it(`Ultrawide: ${url} nimmt ab 2400 px die breite Spalte, Kopfzeile fluchtet`, async () => {
+      const page = await renderPage(url, 'de', {}, false);
+      const at = (w: number, h: number) => {
+        const frame = document.createElement('iframe');
+        frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: ${h}px; border: 0;`;
+        document.body.appendChild(frame);
+        try {
+          const doc = frame.contentDocument!;
+          doc.open();
+          doc.write(`<!doctype html><html><head><style>${page.css}</style></head><body style="margin:0">${page.html}</body></html>`);
+          doc.close();
+          return { page: doc.querySelector(sel)!.getBoundingClientRect().width, top: doc.querySelector('header.top')!.getBoundingClientRect().width };
+        } finally {
+          frame.remove();
+        }
+      };
+      const uw = at(3440, 1440);
+      expect(uw.page).withContext('3440 px').toBeCloseTo(1880, 0);
+      expect(uw.top).withContext('Kopfzeile so breit wie die Seite').toBeCloseTo(1880, 0);
+      expect(at(1920, 1080).page).withContext('1920 px wie bisher').toBeCloseTo(below, 0);
     });
   }
 

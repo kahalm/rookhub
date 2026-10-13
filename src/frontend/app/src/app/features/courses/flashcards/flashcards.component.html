@@ -1,4 +1,4 @@
-<div class="fc-page">
+<div class="fc-page" [class.fc-page--digital]="view === 'digital'">
   <!-- Werkzeugleiste — im Druck ausgeblendet. -->
   <div class="fc-toolbar">
     <a mat-stroked-button [routerLink]="backLink">
@@ -40,7 +40,8 @@
     @if (view === 'print') {
       <p class="fc-hint">{{ 'courses.flashcards.duplexHint' | translate }}</p>
     } @else {
-      <p class="fc-hint">{{ 'courses.flashcards.digitalHint' | translate }}</p>
+      <!-- a1-rk-flashcards-tastaturhinweis-handy: Tastaturhinweis nur mit Maus/Trackpad (CSS, pointer: coarse aus). -->
+      <p class="fc-hint fc-hint--keys">{{ 'courses.flashcards.digitalHint' | translate }}</p>
     }
   }
 

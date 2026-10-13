@@ -40,6 +40,28 @@ describe('AnalysisJobsComponent', () => {
     expect(el.querySelector('p.intro')?.textContent?.trim()).toBe('analysisJobs.intro');
   });
 
+  it('blasst die Hinweiszeile des Leerzustands nicht ein zweites Mal ab (a1-rk-leer-hinweis-blass)', async () => {
+    const { fixture, http } = await make();
+    http.expectOne('/api/analysis-jobs').flush([]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const box = el.querySelector('.empty-state') as HTMLElement;
+    const hint = box.querySelector('p.muted') as HTMLElement;
+    expect(hint).withContext('Hinweiszeile').not.toBeNull();
+    // Gleiche Farbe wie die Leerzustands-Fläche (die schon 60 % trägt), kleiner gesetzt.
+    expect(getComputedStyle(hint).color).toBe(getComputedStyle(box).color);
+    expect(parseFloat(getComputedStyle(hint).fontSize)).toBeLessThan(parseFloat(getComputedStyle(box).fontSize));
+  });
+
+  it('lässt 12 px Luft zwischen Kopfknöpfen und Einleitung (a1-rk-jobs-kopf-handy)', async () => {
+    const { fixture, http } = await make();
+    http.expectOne('/api/analysis-jobs').flush([]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+    expect(getComputedStyle((fixture.nativeElement as HTMLElement).querySelector('p.intro')!).marginTop).toBe('12px');
+  });
+
   it('lists jobs with status, depth and the main-line evaluation', async () => {
     const { fixture, c, http } = await make();
     http.expectOne('/api/analysis-jobs').flush([job(1), job(2, { status: 'done', resultJson: null })]);

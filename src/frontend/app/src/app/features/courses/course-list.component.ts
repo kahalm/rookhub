@@ -280,6 +280,13 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     @media (max-width: 380px) {
       .header-actions .btn-label-short { display: none; }
     }
+    /* a1-rk-kurse-tablet-kopf (DESIGN 5.1): zwischen 600 und 1023 px passten Titel, Suche und beide Knöpfe nicht in
+       eine Zeile — die Knöpfe rutschten linksbündig in eine zweite. Jetzt Titel links, Knöpfe rechts in Zeile 1,
+       die Suche in voller Breite darunter (wie am Handy). */
+    @media (min-width: 600px) and (max-width: 1023.98px) {
+      .list-search { order: 3; flex: 1 1 100%; margin: 0; }
+      .header-actions { margin-left: auto; }
+    }
     /* Leerzustand nach docs/DESIGN.md 5.10: globale .empty-state (zentriert, Polster) + leise Schrift. */
     .empty-state { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
 

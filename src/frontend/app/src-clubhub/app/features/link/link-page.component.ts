@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, inject, signal } from '@angular/core';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
@@ -35,9 +35,12 @@ import { LinkStateStore } from '../../core/link-state.store';
             <div class="code-row">
               <label class="field code-field"><span>Code</span>
                 <input name="code" class="code-input" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32"
-                  placeholder="ABCDE-FGHJK" [value]="code()" (input)="code.set($any($event.target).value)"></label>
-              <button type="submit" class="btn primary" [disabled]="busy() || !code().trim()">Konto verknüpfen</button>
+                  placeholder="ABCDE-FGHJK" [value]="code()" [attr.aria-describedby]="codeMissing() ? 'code-missing' : null"
+                  (input)="code.set($any($event.target).value); codeMissing.set(false)"></label>
+              <!-- a1-c-disabled-button-contrast: nicht gesperrt, solange der Code fehlt — ein Tipp sagt stattdessen, was fehlt. -->
+              <button type="submit" class="btn primary" [disabled]="busy()">Konto verknüpfen</button>
             </div>
+            @if (codeMissing()) { <p class="err need" id="code-missing">Bitte zuerst den Code eingeben.</p> }
           </form>
         }
       } @else if (!error()) {
@@ -58,6 +61,9 @@ export class LinkPageComponent implements OnInit {
   readonly code = signal('');
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** „Konto verknüpfen" ohne Code getippt: Feld fokussieren und darunter sagen, was fehlt (a1-c-disabled-button-contrast). */
+  readonly codeMissing = signal(false);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   ngOnInit(): void {
     this.code.set(this.route.snapshot.queryParamMap.get('code') ?? '');
@@ -66,7 +72,12 @@ export class LinkPageComponent implements OnInit {
 
   async redeem(): Promise<void> {
     const code = this.code().trim();
-    if (!code || this.busy()) return;
+    if (this.busy()) return;
+    if (!code) {
+      this.codeMissing.set(true);
+      this.host.querySelector<HTMLInputElement>('.code-input')?.focus();
+      return;
+    }
     await this.run(async () => this.setState(await this.api.redeem(code)), 'Verknüpfen hat nicht geklappt.');
   }
 

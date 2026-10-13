@@ -30,3 +30,47 @@ describe('AnalysisComponent Breitbild-Stufe (u1-rk-analyse-3spalten)', () => {
     expect(block).toMatch(/min-width: ?440px/);
   });
 });
+
+// a1-rk-analyse-tablet-brett: zwischen 769 und ~840 px passten Brett und Seitenspalte nicht nebeneinander, das Brett klebte
+// trotzdem (ab 769 px) mit ~539 px über Engine und Zügen und stand linksbündig. Jetzt klebt es erst ab 900 px (dort hält
+// die Brettspalte der Seitenspalte 300 px frei), darunter steht es mittig. Karma läuft 1 400 px breit → Regeln als Text.
+describe('AnalysisComponent Tablet-Brett (a1-rk-analyse-tablet-brett)', () => {
+  const css = ((AnalysisComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+
+  function block(query: string): string {
+    const start = css.indexOf(query);
+    expect(start).withContext(`${query} fehlt`).toBeGreaterThan(-1);
+    let depth = 0;
+    for (let i = css.indexOf('{', start); i < css.length; i++) {
+      if (css[i] === '{') depth++;
+      if (css[i] === '}' && --depth === 0) return css.slice(start, i + 1);
+    }
+    return '';
+  }
+
+  it('klebt erst ab 900 px und hält dort der Seitenspalte Platz frei', () => {
+    expect(css).not.toContain('@media(min-width:769px){');
+    const wide = block('@media(min-width:900px)');
+    expect(wide).toContain('position:sticky');
+    expect(wide).toMatch(/(calc\()?100%-300px\)?\)/);
+  });
+
+  it('769–899.98 px: Brett mittig in voller Breite, nicht klebend', () => {
+    const tab = block('@media(min-width:769px)and(max-width:899.98px)');
+    expect(tab).toContain('margin-inline:auto');
+    expect(tab).toMatch(/width:min\(100%,(calc\()?100vh-170px\)?\)/);
+    expect(tab).not.toContain('sticky');
+  });
+});
+
+// a1-rk-evalbar-hell: im hellen Design verschwand der weiße Teil der Bewertungsleiste auf der hellen Seite.
+describe('AnalysisComponent Bewertungsleiste (a1-rk-evalbar-hell)', () => {
+  const css = ((AnalysisComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+
+  it('hat einen Rahmen aus dem Umriss-Token (trägt hell und dunkel)', () => {
+    const m = /\.eval-bar(?:\[[^\]]*\])?\{([^}]*)\}/.exec(css);
+    expect(m).not.toBeNull();
+    expect(m![1]).toContain('border:1pxsolidvar(--mat-sys-outline)');
+    expect(m![1]).toContain('box-sizing:border-box');
+  });
+});

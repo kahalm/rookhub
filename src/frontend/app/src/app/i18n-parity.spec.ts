@@ -100,6 +100,25 @@ describe('i18n Sprachdateien', () => {
     expect(unbalanced).withContext('en: “ ohne passendes ”').toEqual([]);
   });
 
+  /** a1-rk-hilfe-guillemets (DESIGN 6): Deutsch zitiert typografisch „…“ — die Hilfe setzte Begriffe in »…«. */
+  it('de: Anführungszeichen „…“, keine Guillemets »…«', async () => {
+    const de = await load('de');
+    const bad = Object.entries(de).filter(([, v]) => /[»«]/.test(v)).map(([k, v]) => `${k} = ${v.slice(0, 80)}`);
+    expect(bad).withContext('de: »…« statt „…“').toEqual([]);
+  });
+
+  /**
+   * a1-rk-datenschutz-ergaenzungsstrich (DESIGN 5.13): „Fortschritt und -Statistiken“ brach nach dem Strich um („und -“
+   * am Zeilenende). Ergänzungsstrich nach „und/oder“ mit geschütztem Leerzeichen davor und Wortverbinder (U+2060) danach.
+   */
+  it('de: Ergänzungsstrich nach „und/oder“ bleibt am Wort', async () => {
+    const de = await load('de');
+    const bad = Object.entries(de).filter(([, v]) => /\b(?:und|oder|bzw\.|sowie)(?: -| -(?!⁠))\p{L}/u.test(v))
+      .map(([k]) => k);
+    expect(bad).withContext('de: „und -Wort“ ohne U+00A0/U+2060').toEqual([]);
+    expect(de['legal.privacy.dataUsage']).toContain('und -⁠Statistiken');
+  });
+
   /**
    * Englisch-Nachprüfung e1 (e1-rk-hilfe-partien-satz): die Hilfe übernahm die deutsche Satzstellung „Unter ☰ → … siehst
    * du …“ als „Under ☰ → Community → Leaderboards you see …“. Natürlich: „Your … are under ☰ → …“ / „The … under ☰ → …

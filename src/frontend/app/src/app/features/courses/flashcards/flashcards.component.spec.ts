@@ -217,6 +217,35 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
     expect(el.querySelector('.fc-flip')!.classList).not.toContain('fc-flip--flipped');
   });
 
+  // a1-rk-flashcards-tastaturhinweis-handy / a1-rk-flashcards-ultrawide
+  it('Tastaturhinweis trägt fc-hint--keys; Seite meldet die Digital-Ansicht (Breitbild nur dort)', () => {
+    const fixture = make([puzzle(1)], {});
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.fc-hint.fc-hint--keys')).toBeTruthy();
+    expect(el.querySelector('.fc-page')!.classList).toContain('fc-page--digital');
+    fixture.componentInstance.view = 'print';
+    fixture.detectChanges();
+    expect(el.querySelector('.fc-hint--keys')).toBeNull();   // Duplex-Hinweis bleibt auch am Touch-Gerät
+    expect(el.querySelector('.fc-page')!.classList).not.toContain('fc-page--digital');
+  });
+
+  it('CSS: Tastaturhinweis bei pointer: coarse aus; ab 2400 px Lernkarte bis Fensterhöhe (≤ 1 100 px)', () => {
+    const css = ((FlashcardsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
+      .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    const coarse = css.indexOf('@media(pointer:coarse)');
+    expect(coarse).toBeGreaterThan(-1);
+    expect(css.slice(coarse)).toMatch(/^@media\(pointer:coarse\)\{\.fc-hint--keys(\[[^\]]*\])?\{display:none/);
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    const wide = css.slice(at, css.indexOf('}}', at) + 2);
+    expect(wide).toMatch(/\.fc-page--digital(\[[^\]]*\])?\{max-width:min\(var\(--page-max-width-wide,1880px\),96vw\)/);
+    expect(wide).toMatch(/\.fc-study-card(\[[^\]]*\])?,\.fc-fs-btn(\[[^\]]*\])?\{width:min\((calc\()?100vh-320px\)?,1100px\)/);
+    expect(wide).toMatch(/\.fc-flip-face(\[[^\]]*\])?\{min-height:min\((calc\()?100vh-320px\)?,1100px\)/);
+    // Druckvorschau bleibt A4-breit
+    expect(css).toMatch(/\.fc-page(\[[^\]]*\])?\{max-width:1000px/);
+    expect(css.slice(0, at)).not.toContain('--page-max-width-wide');
+  });
+
   it('Vollbild-Knopf zielt auf die Lern-Sektion (Karte + Leiste = Vollbild-Teilbaum)', () => {
     const fixture = make([puzzle(1)], {});
     const el: HTMLElement = fixture.nativeElement;

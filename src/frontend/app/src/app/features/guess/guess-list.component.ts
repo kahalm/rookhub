@@ -373,6 +373,15 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .game-row, .run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
     .game-row + .game-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .g-meta { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    /* a1-rk-guess-tablet-spielen: ab 600 px dasselbe feste Raster wie am Handy, nur mit dem Knopf rechts über beide
+       Zeilen — vorher sprang „Spielen" je nach Titel-/Metalänge nach rechts, rechts unten oder allein in eine dritte
+       Zeile (DESIGN 5.2: Knopf rechts, nie allein in eigener Zeile). */
+    .game-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'title play' 'meta play';
+                gap: 2px 12px; align-items: center; }
+    .game-row .g-title { grid-area: title; }
+    .game-row .g-meta { grid-area: meta; }
+    .game-row .g-play { grid-area: play; }
+    .game-row .spacer { display: none; }
     /* Am Handy ein festes Raster: Titel ueber die volle Breite, darunter Metazeile links und
        Knopf rechts — in JEDER Zeile an derselben Stelle (Codereview W5 UX-016). */
     /* UI-Sweep 2026-10-11 (r2-rg-guess-rows): Knopf und Chips getrennt — der Spielen-Knopf (nur ▶) steht rechts neben

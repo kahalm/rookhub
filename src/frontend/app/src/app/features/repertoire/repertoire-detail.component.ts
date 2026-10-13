@@ -71,11 +71,21 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
             @if (mode !== 'lines') {
               <!-- Nachrunde: am Handy nur das Symbol (Beschriftung als aria-label/Tooltip), damit Knopf und
                    Moduswahl in EINER Zeile stehen und der Kopf in allen Modi gleich hoch bleibt. -->
-              <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']"
-                 [attr.aria-label]="'repertoireTrainer.modeQuiz' | translate"
-                 [attr.title]="'repertoireTrainer.modeQuiz' | translate">
-                <mat-icon>replay</mat-icon><span class="train-label">{{ 'repertoireTrainer.modeQuiz' | translate }}</span>
-              </a>
+              <!-- UI-Sweep a1 (a1-rk-holes-zwei-hauptknoepfe): im Lochfinder ist „Löcher suchen“ die Hauptaktion —
+                   „Abfragen“ tritt dort als Rahmenknopf zurück (5.4: genau ein Primärknopf je Ansicht). -->
+              @if (mode === 'holes') {
+                <a mat-stroked-button class="train-btn" [routerLink]="['/repertoires', id, 'train']"
+                   [attr.aria-label]="'repertoireTrainer.modeQuiz' | translate"
+                   [attr.title]="'repertoireTrainer.modeQuiz' | translate">
+                  <mat-icon>replay</mat-icon><span class="train-label">{{ 'repertoireTrainer.modeQuiz' | translate }}</span>
+                </a>
+              } @else {
+                <a mat-flat-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']"
+                   [attr.aria-label]="'repertoireTrainer.modeQuiz' | translate"
+                   [attr.title]="'repertoireTrainer.modeQuiz' | translate">
+                  <mat-icon>replay</mat-icon><span class="train-label">{{ 'repertoireTrainer.modeQuiz' | translate }}</span>
+                </a>
+              }
             }
             <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
               <mat-button-toggle value="lines" [attr.aria-label]="'repertoire.detail.modeLines' | translate" [attr.title]="'repertoire.detail.modeLines' | translate">
@@ -105,7 +115,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
               (fileDeleted)="onFileChanged()" />
           </div>
         } @else {
-          <div class="viewer-layout">
+          <!-- a1-rk-holes-handy-brett-vor-werkzeug: im Lochfinder ohne gewähltes Loch zeigt das Brett nur die
+               Grundstellung — am Handy steht dann das Werkzeug zuerst (.holes-idle, CSS unter 900 px). -->
+          <div class="viewer-layout" [class.holes-idle]="mode === 'holes' && !holeView">
             <div class="board-section">
               <app-chess-board
                 [fen]="boardFen"
@@ -162,8 +174,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
               }
             </div>
             <!-- UI-Sweep z1 (z1-rk-rep-brett-gross): die Linienliste ist nur so hoch wie ihr Inhalt (scrollt erst ab
-                 Fensterhöhe); Zugansicht, Baum und Lochfinder behalten die feste Höhe (sie scrollen innen). -->
-            <div class="side-panel" [class.side-panel--fit]="mode === 'lines' && viewerService.selectedLineIndex < 0">
+                 Fensterhöhe); Zugansicht, Baum und Lochfinder behalten die feste Höhe (sie scrollen innen).
+                 a1-rk-holes-karte-leer-hoch: der Lochfinder vor der ersten Suche ebenfalls nur so hoch wie sein Inhalt. -->
+            <div class="side-panel" [class.side-panel--fit]="sidePanelFits">
               @if (mode === 'lines') {
                 <app-repertoire-lines
                   [lines]="visibleLines"
@@ -182,7 +195,8 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                 <app-repertoire-holes
                   [repertoireId]="id"
                   [games]="trainableGames"
-                  (holeSelected)="holeView = $event" />
+                  (holeSelected)="holeView = $event"
+                  (searchActive)="holesSearchActive = $event" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
@@ -249,19 +263,29 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     .filter-hint { flex: 1; text-align: center; font-size: 12px;
       color: color-mix(in srgb, currentColor 55%, transparent); }
     .filter-count { font-size: 12px; color: color-mix(in srgb, currentColor 65%, transparent); }
+    /* a1-rk-linienliste-scrollkasten: mindestens so hoch wie Brett + Hinweiszeile (vorher fest 440 px, am Laptop
+       kürzer als das 468-px-Brett); am hohen Bildschirm wächst das Panel mit, statt die halbe Seite leer zu lassen. */
     .side-panel {
       flex: 1;
       min-width: 250px;
       border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
       border-radius: 4px;
-      /* mindestens Bretthöhe; am hohen Bildschirm wächst die Liste mit, statt die halbe Seite leer zu lassen */
-      height: max(440px, calc(100vh - 330px));
+      height: max(calc(var(--board-size) + 56px), calc(100vh - 260px));
       overflow: hidden;
     }
-    .side-panel--fit { height: auto; max-height: max(440px, calc(100vh - 330px)); overflow-y: auto; }
-    .edit-panel {
-      max-width: 800px;
+    /* Weiterscroll-Hinweis ohne Skript: ein Schatten am unteren Rand (fest), den eine mitlaufende Abdeckung in
+       Seitenfarbe am Listenende verdeckt — sichtbar also nur, solange unten noch etwas kommt. */
+    .side-panel--fit {
+      height: auto;
+      max-height: max(calc(var(--board-size) + 56px), calc(100vh - 260px));
+      overflow-y: auto;
+      background:
+        linear-gradient(to bottom, transparent, var(--mat-sys-surface) 70%) center bottom / 100% 32px no-repeat local,
+        radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, currentColor 30%, transparent), transparent)
+          center bottom / 100% 14px no-repeat scroll;
     }
+    /* a1-rk-repertoire-edit-breite: kein eigener 800-px-Deckel mehr — Ablage und Dateiliste nehmen die Kopfbreite
+       (ab 900 px zweispaltig, siehe repertoire-edit). */
 
     @media (max-width: 899.98px) {
       .detail-header { flex-wrap: wrap; }
@@ -272,10 +296,16 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
         flex-direction: column;
         align-items: center;
       }
-      .board-section { width: 100%; max-width: 400px; }
+      /* a1-rk-tablet-brett-400: Brett bis 640 px (Tablet), höchstens so hoch, dass darunter noch die Liste beginnt;
+         am Handy wie bisher volle Breite. */
+      .board-section { width: 100%; max-width: min(100%, 640px, calc(100vh - 480px)); }
       .board-section app-chess-board { width: 100%; }
+      .filter-bar { max-width: 100%; }
       .side-panel { width: 100%; min-width: 0; height: 400px; }
-      .side-panel--fit { height: auto; max-height: 400px; }
+      /* a1-rk-linienliste-scrollkasten: einspaltig läuft die Liste mit der Seite — kein Kasten im Kasten. */
+      .side-panel--fit { height: auto; max-height: none; overflow: visible; }
+      /* a1-rk-holes-handy-brett-vor-werkzeug: Lochfinder ohne gewähltes Loch — Werkzeug vor dem leeren Brett. */
+      .viewer-layout.holes-idle .side-panel { order: -1; }
     }
     /* u1-rk-repertoire-brett: ab 2400 px die gemeinsame Breitbild-Breite (1 880 px) und ein Brett bis 1 040 px
        (höchstens Fensterhöhe) — vorher 640 px in 1 240 px, 64 % der Fläche leer. Die Seitenspalte behält ≈ 790 px. */
@@ -357,6 +387,14 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   /** Lochfinder: die angewählte Stellung (nach dem fehlenden Gegnerzug), sonst Grundstellung. */
   holeView: HoleBoardView | null = null;
+  /** Lochfinder: Suche läuft oder hat ein Ergebnis — dann feste Panelhöhe (Trefferliste scrollt innen). */
+  holesSearchActive = false;
+
+  /** Panel so hoch wie sein Inhalt: Linienliste ohne gewählte Linie, Lochfinder vor der ersten Suche. */
+  get sidePanelFits(): boolean {
+    return (this.mode === 'lines' && this.viewerService.selectedLineIndex < 0)
+      || (this.mode === 'holes' && !this.holesSearchActive);
+  }
 
   /** Baum: Zugstatistik der aktuellen Stellung (wie oft wird welcher Zug dort gespielt) — dieselbe Quelle
    *  und Auswahl wie im Lochfinder und im Explorer des Analysebretts. Signale: HttpClient (fetch). */
@@ -512,6 +550,8 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   }
 
   setMode(mode: ViewMode): void {
+    // Der Lochfinder wird beim Moduswechsel neu aufgebaut — sein Ergebnis und das gewählte Loch gehen mit.
+    if (mode !== this.mode) { this.holeView = null; this.holesSearchActive = false; }
     this.mode = mode;
     if (mode === 'tree') this.loadTreePopularity();
     this.router.navigate([], {

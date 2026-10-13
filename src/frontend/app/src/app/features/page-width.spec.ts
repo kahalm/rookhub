@@ -10,6 +10,13 @@ import { GuessListComponent } from './guess/guess-list.component';
 import { AdminComponent } from './admin/admin.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { StatsComponent } from './stats/stats.component';
+import { GameAnalysisDetailComponent } from './analysis/game-analysis-detail.component';
+import { MoveComparisonComponent } from './analysis/move-comparison.component';
+import { GamesListComponent } from './games/games-list.component';
+import { GuessBoardComponent } from './guess/guess-board.component';
+import { PrepPlayerComponent } from './prep/prep-player.component';
+import { EndlessHistoryComponent } from './puzzles/endless-history.component';
+import { WorksheetDetailComponent } from './worksheets/worksheet-detail.component';
 
 /**
  * Codereview W5 F3-017: „EINE Seitenbreite für alle Inhaltsseiten" (styles.scss, --page-max-width) — in Kursen,
@@ -27,6 +34,10 @@ const PAGES: [string, Type<unknown>, string][] = [
   ['Repertoire-Detail', RepertoireDetailComponent, 'detail-container'],
   ['Repertoire-Trainer', RepertoireTrainerComponent, 'trainer'],
   ['Aufgabenblätter', WorksheetListComponent, 'wl-page'],
+  // a1-rk-games-ultrawide-schmal: vorher fest 1040 px.
+  ['Gespeicherte Partien', GamesListComponent, 'games-page'],
+  // a1-rk-endless-verlauf-ultrawide: vorher fest 900 px.
+  ['Endlos-Verlauf', EndlessHistoryComponent, 'history-container'],
 ];
 
 /** Der erste Regelblock, dessen Selektor genau mit `.<cls>` beginnt (gekapselt: `.cls[_ngcontent-%COMP%]`). */
@@ -64,6 +75,20 @@ const WIDE_PAGES: [string, Type<unknown>, string][] = [
   ['Admin', AdminComponent, 'admin-container'],
   ['Dashboard', DashboardComponent, 'dashboard'],
   ['Statistik', StatsComponent, 'stats-container'],
+  // a1-rk-analyse-unterseiten-ultrawide: Brettseiten Partie-Analyse und „Züge vergleichen".
+  ['Partie-Analyse', GameAnalysisDetailComponent, 'gad-container'],
+  ['Züge vergleichen', MoveComparisonComponent, 'cmp-page'],
+  // a1-rk-browse-breitstufe: Linien durchsehen (Gesamt, Kapitel, Studienbuch) ist eine Brettseite.
+  ['Durchsehen', CourseBrowseComponent, 'browse-container'],
+  // a1-rk-games-ultrawide-schmal / a1-rk-guess-brett-ultrawide / a1-rk-prep-ultrawide.
+  ['Gespeicherte Partien', GamesListComponent, 'games-page'],
+  ['Punktepartie-Brett', GuessBoardComponent, 'gb-container'],
+  ['Spielervorbereitung', PrepPlayerComponent, 'prep'],
+  // a1-rk-trainer-ultrawide-brett: Repertoire-Trainer ist eine Brettseite.
+  ['Repertoire-Trainer', RepertoireTrainerComponent, 'trainer'],
+  // a1-rk-endless-verlauf-ultrawide (Tabellenseite) / a1-rk-ws-detail-bretter-klein (Aufgabenblatt bearbeiten).
+  ['Endlos-Verlauf', EndlessHistoryComponent, 'history-container'],
+  ['Aufgabenblatt bearbeiten', WorksheetDetailComponent, 'wd-page'],
 ];
 /** Kompiliertes CSS ohne Leerraum und ohne %NS%-Platzhalter. */
 function compactCss(cmp: Type<unknown>): string {
@@ -108,5 +133,26 @@ describe('Breitbild-Stufe ≥ 2400 px (--page-max-width-wide, u1-x-breite-stufe)
       }
     }
     expect(wide).toBe('1880px');
+  });
+});
+
+// a1-rk-analyse-unterseiten-ultrawide: bei 3440 × 1440 stand das Brett mit 520 bzw. 375 px mitten in 3440 px. Ab 2400 px
+// wächst es — höchstens bis zur Fensterhöhe.
+describe('Partie-Analyse / Züge vergleichen: Brett ab 2400 px bis Fensterhöhe', () => {
+  function wide(cmp: Type<unknown>): string {
+    const css = compactCss(cmp);
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    return css.slice(at);
+  }
+
+  it('Partie-Analyse: Brettspalte min(1000px, 100vh - 220px), Zugliste 640 px', () => {
+    const css = wide(GameAnalysisDetailComponent);
+    expect(css).toMatch(/\.board-col(\[[^\]]*\])?\{max-width:min\(1000px,(calc\()?100vh-220px\)?\)/);
+    expect(css).toMatch(/\.moves-col(\[[^\]]*\])?\{max-width:640px/);
+  });
+
+  it('Züge vergleichen: Brettspalte bis min(900px, 100vh - 260px)', () => {
+    expect(wide(MoveComparisonComponent)).toMatch(/grid-template-columns:minmax\(380px,min\(900px,(calc\()?100vh-260px\)?\)\)1fr/);
   });
 });

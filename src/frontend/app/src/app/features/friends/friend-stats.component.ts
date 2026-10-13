@@ -99,9 +99,13 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
 
         <!-- UI-Sweep z1 (z1-rk-friendstats-titel): beide Karten mit demselben schlichten Kopf, bündig mit den Zellen
              (statt mat-card-header mit eigenem Polster in nur einer Karte). -->
+        <!-- a1-rk-freundesvergleich-breit: ab 2400 px stehen beide Karten nebeneinander (.fs-cards). -->
+        <div class="fs-cards">
         <mat-card class="compare-card">
           <h2 class="card-title">{{ 'friends.stats.overview' | translate }}</h2>
           <table class="compare-table">
+            <!-- a1-rk-freundesvergleich-spalte: Zahlenspalten fest schmal, die erste Spalte bekommt den Rest. -->
+            <colgroup><col><col class="num"><col class="num"></colgroup>
             <thead>
               <tr>
                 <th></th>
@@ -125,6 +129,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
           <h2 class="card-title">{{ 'friends.stats.themes' | translate }}</h2>
           @if (themeRows.length > 0) {
             <table class="compare-table">
+              <colgroup><col><col class="num"><col class="num"></colgroup>
               <thead>
                 <tr>
                   <th>{{ 'friends.stats.theme' | translate }}</th>
@@ -150,11 +155,19 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
             <p class="empty-state">{{ 'friends.stats.noThemes' | translate }}</p>
           }
         </mat-card>
+        </div>
       }
     </div>
   `,
   styles: [`
     .fs-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
+    /* UI-Sweep a1 (a1-rk-freundesvergleich-breit): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — Übersicht und
+       Themen-Vergleich nebeneinander statt untereinander in einer 800-px-Mitte. */
+    @media (min-width: 2400px) {
+      .fs-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .fs-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+      .fs-cards > mat-card { margin-bottom: 0; }
+    }
     .back-link { margin-bottom: 0.5rem; }
     h1 { font-size: 1.5rem; margin: 0.25rem 0 1rem; }
     mat-card { margin-bottom: 1rem; padding: 1rem; }
@@ -162,7 +175,10 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     .compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .compare-table th, .compare-table td { overflow-wrap: anywhere; }
     /* UI-Sweep 2026-10-11 (r2-rp-themes-en): Themen-Namen nur an Wortgrenzen bzw. mit Silbentrennung umbrechen. */
-    .compare-table td.theme-cell { overflow-wrap: normal; hyphens: auto; }
+    /* a1-rk-freundesvergleich-spalte: mit der breiteren ersten Spalte keine harte Trennung mehr („Abzugsan-griff“);
+       nur ein einzelnes überlanges Wort darf noch umbrechen. */
+    .compare-table td.theme-cell { overflow-wrap: break-word; hyphens: manual; }
+    .compare-table col.num { width: 6rem; }
     .compare-table th, .compare-table td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .compare-table th { font-size: 0.8rem; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .compare-table th:first-child, .compare-table td.metric { text-align: left; color: color-mix(in srgb, currentColor 70%, transparent); }
@@ -174,6 +190,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
       .fs-container { padding: 0.75rem; }
       .compare-table th, .compare-table td { padding: 0.5rem 0.35rem; }
       .card-title { padding: 0 0.35rem; }
+      .compare-table col.num { width: 5.5rem; }
     }
   `]
 })

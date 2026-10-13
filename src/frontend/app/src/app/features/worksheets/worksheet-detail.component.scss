@@ -31,7 +31,8 @@
 .wd-item { display: flex; flex-direction: row; align-items: flex-start; flex-wrap: wrap; gap: 12px; padding: 10px 12px; }
 .wd-grip { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: grab; color: color-mix(in srgb, currentColor 55%, transparent); }
 .wd-no { font-weight: 700; font-size: 0.9rem; }
-.wd-board { width: 132px; flex: 0 0 auto; }
+/* a1-rk-ws-detail-bretter-klein: die Stellung ist die Hauptsache — 168 px statt 132 px. */
+.wd-board { width: 168px; flex: 0 0 auto; }
 .wd-fields { display: flex; flex-direction: column; gap: 8px; flex: 1 1 320px; min-width: 0; }
 .wd-turn { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
 .wd-field { width: 100%; }
@@ -54,7 +55,8 @@
 .cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
 
 @media (max-width: 768px) {
-  .wd-board { width: 88px; }
+  /* Tablet nie kleiner als das Handy (140 px seit z3), vorher 88 px (a1-rk-ws-detail-bretter-klein). */
+  .wd-board { width: 140px; }
   .wd-item-actions { width: 100%; justify-content: flex-end; margin-left: 0; }
 }
 
@@ -66,6 +68,13 @@
   .wd-item-actions { order: 1; width: auto; margin-left: auto; display: grid; grid-template-columns: repeat(2, auto);
     justify-content: end; gap: 0; }
   .wd-fields { order: 2; flex-basis: 100%; }
+}
+
+/* UI-Sweep a1 (a1-rk-ws-detail-bretter-klein): Breitbild-Stufe ab 2400 px — breite Spalte, größere Diagramme
+   (DESIGN 4.1). Unter 2400 px ändert sich nichts. */
+@media (min-width: 2400px) {
+  .wd-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .wd-board { width: 220px; }
 }
 
 /* Teilen-Karte: QR links, Link + Hinweise rechts; am Handy untereinander. */

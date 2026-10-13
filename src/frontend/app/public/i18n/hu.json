@@ -247,7 +247,7 @@
     "subscribedAt": "Feliratkozva: {{date}}",
     "puzzles": {
       "title": "Feladványok",
-      "subtitle": "Elo {{elo}} | {{solved}} megoldva ({{accuracy}}%)",
+      "subtitle": "Elo {{elo}} | {{solved}} megoldva ({{accuracy}})",
       "solve": "Feladványok megoldása",
       "daily": "Napi feladvány",
       "endless": "Végtelen"
@@ -255,11 +255,13 @@
     "friends": {
       "title": "Barátok",
       "count": "{{count}} barát",
+      "countOne": "{{count}} barát",
       "manage": "Barátok kezelése"
     },
     "repertoires": {
       "title": "Repertoárok",
       "count": "{{count}} repertoár",
+      "countOne": "{{count}} repertoár",
       "viewAll": "Összes megtekintése"
     },
     "chessableQueue": {
@@ -284,7 +286,8 @@
     "courses": {
       "title": "Tanfolyamok",
       "open": "Tanfolyamok megnyitása",
-      "count": "{{count}} tanfolyam"
+      "count": "{{count}} tanfolyam",
+      "countOne": "{{count}} tanfolyam"
     },
     "pinnedCourses": {
       "title": "Kitűzött tanfolyamok",
@@ -305,6 +308,7 @@
     "favorites": {
       "title": "Kedvencek",
       "count": "{{count}} kedvelt feladvány",
+      "countOne": "{{count}} kedvelt feladvány",
       "open": "Kedvencek megnyitása"
     },
     "weekly": {
@@ -2391,7 +2395,10 @@
     "worstThemes": "Leggyengébb témák",
     "levelEmpty": "Szint {{level}}: még nincs kísérlet",
     "levelOther": "Szint {{level}}: {{count}} kísérlet",
-    "levelOtherOne": "Szint {{level}}: 1 kísérlet"
+    "levelOtherOne": "Szint {{level}}: 1 kísérlet",
+    "levelEmptySwitched": "A te szinteden ({{level}}) még nincs kísérlet, ezért minden szint látható",
+    "standardEmpty": "Még nem oldottál meg feladványt – a statisztikád az elsővel telik meg.",
+    "standardEmptyAction": "Feladványok megoldása"
   },
   "trainingGoals": {
     "manual": {
@@ -3071,6 +3078,7 @@
       "dragTooltip": "Húzd az átrendezéshez",
       "fenLabel": "Állás FEN-ként",
       "addFen": "Állás hozzáadása",
+      "addFenHint": "Illessz be egy FEN-t, majd add hozzá",
       "addRejected": "Nem került fel: az állás már a lapon van, vagy a FEN használhatatlan.",
       "saveError": "A módosítást nem sikerült menteni.",
       "rename": "Átnevezés"
@@ -3095,7 +3103,7 @@
     "filtersToggle": "Szűrők",
     "title": "Mentett játszmák",
     "hint": "Azok a játszmák, amelyeket a chess.com-on vagy a lichessen a RepCheck böngészőbővítménnyel mentesz, itt jelennek meg.",
-    "empty": "Még nincsenek mentett játszmák. Egy chess.com- vagy lichess-elemzőoldalon kattints a RepCheck bővítményben a „Játszma mentése” gombra.",
+    "empty": "Még nincsenek mentett játszmák.",
     "replay": "Újrajátszás",
     "openInAnalysis": "Megnyitás az elemzésben",
     "share": "Megosztási link másolása",
@@ -3111,6 +3119,9 @@
     "analyzeNoEngine": "Jelenleg nincs elérhető motor — próbáld újra később.",
     "analyzeLogin": "Az elemzéshez jelentkezz be.",
     "loadError": "A játszmát nem sikerült betölteni.",
+    "notFound": "Ez a játszma nem létezik, vagy törölték.",
+    "clubNoAccess": "Ezt a klubjátszmát csak a klub tagjai láthatják.",
+    "toMyGames": "A játszmáimhoz",
     "deleteConfirm": "Törlöd ezt a mentett játszmát?",
     "deleteError": "A játszmát nem sikerült törölni.",
     "shared": {
@@ -3480,7 +3491,9 @@
     "pgnFirst": "Először illeszd be egy játszma PGN-jét.",
     "noName": "név nélkül",
     "title": "Játszmaelemzések",
-    "intro": "Dobj be egy egész játszmát — a háttérmotor minden állást végigszámol. Ez eltart egy ideig; a játszma mutatja a haladását, és bármikor megnézheted.",
+    "intro": "Dobj be egy egész játszmát — a háttérmotor minden állást végigszámol.",
+    "introMore": "Ez eltart egy ideig; a játszma mutatja a haladását, és bármikor megnézheted.",
+    "addGame": "Játszma bedobása",
     "pgnLabel": "A játszma PGN-je",
     "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
     "depth": "Mélység",
@@ -4191,7 +4204,8 @@
     "language": "Nyelv",
     "accountDeletion": {
       "short": "Minden adatod törlődik: a csillagaid, a szintjeid és a kurzusaid.",
-      "parents": "Szülőknek: pontosan mi törlődik"
+      "parents": "Szülőknek: pontosan mi törlődik",
+      "parentsHowTo": "Szülőknek: így törölhető a fiók"
     },
     "stars": {
       "title": "Csillagvadászat",

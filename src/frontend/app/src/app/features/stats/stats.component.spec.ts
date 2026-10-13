@@ -248,3 +248,49 @@ describe('StatsComponent Layout (z1)', () => {
     expect(css).not.toMatch(/\.bands[^{]*\{[^}]*padding-top/);
   });
 });
+
+/** UI-Sweep a1: Leerzustand ohne Versuche und Hinweis nach dem automatischen Umschalten auf „Alle“. */
+describe('StatsComponent a1 (Leerzustand, Level-Hinweis)', () => {
+  function render() {
+    TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(StatsComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance as StatsComponent & { loading: boolean };
+    c.loading = false;
+    return { fixture, c, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('a1-rk-statistik-leer: ohne Versuch EINE Leerkarte mit „Puzzles lösen“ statt Verlauf, Level-Elo und Letzte Puzzles', () => {
+    const { fixture, c, el } = render();
+    c.stats = { totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0, puzzleElo: 1500 } as never;
+    c.perLevel = [{ level: 0, elo: 1500 }, { level: 1, elo: 1400 }];
+    fixture.detectChanges();
+    expect(el.querySelector('.stats-empty a[href="/puzzles"]')).not.toBeNull();
+    expect(el.querySelector('.chart-card')).toBeNull();
+    expect(el.querySelector('.perlevel-card')).toBeNull();
+    expect(el.querySelector('.recent-card')).toBeNull();
+
+    c.stats = { totalAttempts: 3, solved: 2, accuracy: 66, currentStreak: 1, bestStreak: 2, puzzleElo: 1510 } as never;
+    fixture.detectChanges();
+    expect(el.querySelector('.stats-empty')).toBeNull();
+    expect(el.querySelector('.chart-card')).not.toBeNull();
+    expect(el.querySelector('.recent-card')).not.toBeNull();
+  });
+
+  it('a1-rk-statistik-level-hinweis: nach dem Ausweichen auf „Alle“ sagt der Hinweis, warum', () => {
+    const { fixture, c, el } = render();
+    c.stats = { totalAttempts: 3, solved: 2, accuracy: 66, currentStreak: 1, bestStreak: 2, puzzleElo: 1510 } as never;
+    c.level = -1;
+    c.levelHint = { level: 1, other: 0, count: 14 };
+    fixture.detectChanges();
+    expect(el.querySelector('.level-hint')!.textContent).toContain('stats.levelEmptySwitched');
+    c.level = 1;
+    fixture.detectChanges();
+    expect(el.querySelector('.level-hint')!.textContent).toContain('stats.levelEmpty');
+    expect(el.querySelector('.level-hint')!.textContent).not.toContain('stats.levelEmptySwitched');
+  });
+});

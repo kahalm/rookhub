@@ -223,4 +223,92 @@ describe('clubhub.scss', () => {
       }
     });
   }
+
+  // a1-c-disabled-button-contrast: gesperrte Knöpfe waren pauschal 50 % durchsichtig (hell ≈ 2,4:1).
+  for (const dark of [false, true]) {
+    it(`gesperrte Knöpfe (${dark ? 'dunkel' : 'hell'}): volle Deckkraft, Schrift ≥ 4,5:1, Rahmen gestrichelt ≥ 3:1`, () => {
+      document.documentElement.classList.toggle('dark-theme', dark);
+      try {
+        const el = mount(`<div class="sheet"><button class="btn" disabled>keine spätere ›</button>
+          <button class="btn primary" disabled>Speichern</button><button class="btn danger" disabled>Trennen</button>
+          <label class="btn slim upload disabled">Bild wählen</label></div>`);
+        const card = parseColor(getComputedStyle(el.querySelector('.sheet')!).backgroundColor);
+        for (const btn of Array.from(el.querySelectorAll<HTMLElement>('.btn'))) {
+          const s = getComputedStyle(btn);
+          const label = btn.textContent!.trim();
+          expect(Number(s.opacity)).withContext(`${label}: Deckkraft`).toBe(1);
+          expect(s.borderTopStyle).withContext(`${label}: Rahmen`).toBe('dashed');
+          expect(contrast(parseColor(s.color), parseColor(s.backgroundColor))).withContext(`${label}: Schrift`).toBeGreaterThanOrEqual(4.5);
+          expect(contrast(parseColor(s.borderTopColor), card)).withContext(`${label}: Rahmen`).toBeGreaterThanOrEqual(3);
+        }
+      } finally {
+        document.documentElement.classList.remove('dark-theme');
+      }
+    });
+  }
+
+  // a1-c-groups-meta-separator: Zeitplan (Freitext), Kinderzahl und „zuletzt" liefen ohne Trenner ineinander.
+  it('Metazeile: „· " als ::before ab der zweiten Angabe, nicht vor Chips', () => {
+    const el = mount(`<p class="kid-meta"><span>Freitag, 17:00–18:00 neue Mittelschule Schwaz</span><span>2 Kinder</span>
+      <span>zuletzt Fr 25.09.</span><span class="chip">im Archiv</span></p>
+      <p class="kid-meta att"><a href="#">Anfänger</a><span>Freitag, 25.09.2026</span></p>`);
+    const before = (n: Element) => getComputedStyle(n, '::before').content;
+    const [first, second, third, chip] = Array.from(el.querySelectorAll('.kid-meta:not(.att) > *'));
+    expect(before(first)).toBe('none');
+    expect(before(second)).toBe('"· "');
+    expect(before(third)).toBe('"· "');
+    expect(before(chip)).toBe('none');
+    expect(before(el.querySelector('.att > span')!)).withContext('Anwesenheit: Link vorn').toBe('"· "');
+  });
+
+  // a1-c-fold-lead-group-detail-laptop: die Knöpfe rutschten unter Titel und lange Metazeile (Vorlauf 42 %).
+  it('Seitenkopf: Knöpfe bleiben rechts neben Titel und umbrechender Metazeile', () => {
+    const el = mount(`<main class="wrap"><div class="page-head"><div><h1>Anfänger</h1><p class="kid-meta">
+      <span>Freitag, 17:00–18:00 neue Mittelschule Schwaz, Turnsaal hinten links</span><span>Zugriff: claude-dev-trainer, tina</span></p></div>
+      <div class="actions"><a class="btn primary">Anwesenheit abhaken</a><a class="btn">Kind anlegen</a></div></div></main>`);
+    const left = el.querySelector('.page-head > div')!.getBoundingClientRect();
+    const actions = el.querySelector('.page-head > .actions')!.getBoundingClientRect();
+    expect(actions.top).withContext('eine Reihe').toBeLessThan(left.bottom);
+    expect(actions.left).toBeGreaterThanOrEqual(left.right);
+    expect(el.querySelector('.actions')!.getBoundingClientRect().height).withContext('Knöpfe nicht umgebrochen').toBeLessThan(60);
+  });
+
+  // a1-c-legal-card-vs-header-width: die 560-px-Karte stand mittig, Wortmarke und Reiter ≈ 150 px weiter links.
+  it('Rechtsseiten: Karte linksbündig an der Spaltenkante', () => {
+    const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card" style="width: 100%">
+      </div></div></app-privacy></main></ch-root>`);
+    const box = el.querySelector('.legal-container')!;
+    expect(getComputedStyle(box).justifyContent).toBe('flex-start');
+    expect(el.querySelector('.mat-mdc-card')!.getBoundingClientRect().left).toBeCloseTo(box.getBoundingClientRect().left, 0);
+  });
+
+  // a1-c-wide-matrix-ultrawide: ab 2400 px nur Seiten mit Anwesenheitsmatrix 1880 px breit, sonst 860 px; darunter unverändert.
+  it('Breitbild-Stufe: Gruppenseite mit Matrix ab 2400 px breit, andere Seiten und kleinere Fenster unverändert', () => {
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const widthAt = (w: number, matrix: boolean) => {
+      const frame = document.createElement('iframe');
+      frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: 900px; border: 0;`;
+      document.body.appendChild(frame);
+      try {
+        const doc = frame.contentDocument!;
+        doc.open();
+        doc.write(`<!doctype html><html><head><style>${css}</style></head><body><ch-root><main class="wrap">`
+          + (matrix ? '<div class="matrix-scroll"></div><section class="diary"><p>x</p></section>' : '<p>Kartei</p>')
+          + `</main></ch-root></body></html>`);
+        doc.close();
+        return {
+          wrap: doc.querySelector('main.wrap')!.getBoundingClientRect().width,
+          diary: doc.querySelector('.diary')?.getBoundingClientRect().width ?? 0,
+        };
+      } finally {
+        frame.remove();
+      }
+    };
+    expect(widthAt(3440, true).wrap).toBeCloseTo(1880, 0);
+    expect(widthAt(3440, true).diary).withContext('Verlauf ≈ 75 Zeichen').toBeLessThanOrEqual(46 * 17 + 1);
+    expect(widthAt(3440, false).wrap).withContext('Seite ohne Matrix').toBeCloseTo(860, 0);
+    expect(widthAt(1920, true).wrap).withContext('1920 px wie bisher').toBeCloseTo(860, 0);
+  });
 });

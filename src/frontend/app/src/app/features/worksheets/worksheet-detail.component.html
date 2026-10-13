@@ -240,6 +240,10 @@
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ 'worksheets.detail.fenLabel' | translate }}</mat-label>
             <input matInput [(ngModel)]="newFen" maxlength="120" (keyup.enter)="addFen()" />
+            <!-- Grund für den gesperrten Knopf sichtbar unter dem Feld (DESIGN 5.4, a1-rk-ws-hinzufuegen-gesperrt). -->
+            @if (!newFen.trim()) {
+              <mat-hint class="wd-add-hint">{{ 'worksheets.detail.addFenHint' | translate }}</mat-hint>
+            }
           </mat-form-field>
           <button mat-stroked-button (click)="addFen()" [disabled]="busy || !newFen.trim()">
             <mat-icon>add</mat-icon>{{ 'worksheets.detail.addFen' | translate }}

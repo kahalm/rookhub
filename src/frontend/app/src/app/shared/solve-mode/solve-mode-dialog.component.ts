@@ -74,10 +74,13 @@ export interface SolveModeDialogResult {
     </mat-dialog-content>
   `,
   styles: [`
-    .sm-subtitle { margin: -4px 0 8px; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent);
+    /* a1-rk-spielweise-dialog-hell: currentColor ist im Dialog schon der gedimmte Dialogtext (on-surface-variant) —
+       60–75 % davon fielen im hellen Design auf ≈ 3,4:1. Sekundärtexte jetzt direkt on-surface-variant (≥ 4,5:1 auf
+       Dialog und Kachel, hell und dunkel), Kachelnamen on-surface. */
+    .sm-subtitle { margin: -4px 0 8px; font-size: 0.8rem; color: var(--mat-sys-on-surface-variant);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Zwei gleich große Kacheln nebeneinander (am Handy untereinander), Symbol im getönten Kreis. Texte unverändert. */
-    .sm-intro { margin: 0 0 14px; color: color-mix(in srgb, currentColor 75%, transparent); }
+    .sm-intro { margin: 0 0 14px; color: var(--mat-sys-on-surface-variant); }
     .sm-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .sm-choice {
       display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
@@ -94,10 +97,10 @@ export interface SolveModeDialogResult {
       display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
       background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent);
     }
-    .sm-name { font-weight: 600; font-size: 1.02rem; }
-    .sm-desc { font-size: .85rem; line-height: 1.4; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .sm-name { font-weight: 600; font-size: 1.02rem; color: var(--mat-sys-on-surface); }
+    .sm-desc { font-size: .85rem; line-height: 1.4; color: var(--mat-sys-on-surface-variant); }
     .sm-all { display: block; margin: 0 0 4px; }
-    .sm-hint { margin: 4px 0 0; font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .sm-hint { margin: 4px 0 0; font-size: .82rem; color: var(--mat-sys-on-surface-variant); }
     @media (max-width: 599.98px) {
       .sm-choices { grid-template-columns: 1fr; }
       .sm-choice { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 12px; }

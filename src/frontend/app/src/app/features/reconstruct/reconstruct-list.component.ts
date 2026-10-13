@@ -101,7 +101,10 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .grow { flex: 1 1 260px; margin-bottom: -1.25em; }
     .grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
     .item { padding: 0.75rem 1rem; }
-    .item-title { font-weight: 600; font-size: 1.05rem; text-decoration: none; }
+    /* a1-rk-recon-titel-linkfarbe: Titel in der Textfarbe wie die übrigen Kartentitel (nicht Browser-Blau/-Lila);
+       der Link zeigt sich per Hover/Fokus in der Akzentfarbe (DESIGN 3.1). */
+    .item-title { color: inherit; font-weight: 600; font-size: 1.05rem; text-decoration: none; }
+    .item-title:hover, .item-title:focus-visible { color: var(--mat-sys-primary); text-decoration: underline; }
     .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
     .chip { font-size: 0.8rem; padding: 2px 8px; border-radius: 10px;
             background: color-mix(in srgb, currentColor 12%, transparent); }

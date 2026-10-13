@@ -108,8 +108,11 @@
   gap: 0.4rem 1rem;
   margin: 0 0 0.75rem;
 
-  div { display: flex; flex-direction: column; }
-  dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; opacity: 0.6; }
+  /* a1-rk-kennzahl-beschriftung-umbruch: jede Kennzahl belegt zwei Zeilen des Rasters (Subgrid) — bricht eine
+     Beschriftung um („POSITIONS WITHOUT A SOLUTION“), wachsen alle Beschriftungen der Zeile mit und die Werte
+     stehen weiter auf einer Linie; die Beschriftung sitzt unten, direkt über ihrem Wert. */
+  > div { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0; }
+  dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; opacity: 0.6; align-self: end; }
   dd { margin: 0; word-break: break-word; }
 }
 

@@ -624,4 +624,15 @@ describe('CourseListComponent Vorlauf', () => {
     expect(css.slice(css.indexOf('@media (max-width: 380px)'))).toMatch(/\.btn-label-short[^{]*\{ ?display: none/);
     fixture.nativeElement.remove();
   });
+
+  // a1-rk-kurse-tablet-kopf (DESIGN 5.1): am Tablet Titel links + Knöpfe rechts, Suche volle Breite darunter.
+  it('setzt am Tablet (600–1023 px) die Knöpfe rechts und die Suche in eine eigene Zeile', () => {
+    const css = ((CourseListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ')
+      .replace(/\[_ngcontent-%COMP%\]/g, '');
+    const at = css.indexOf('@media (min-width: 600px) and (max-width: 1023.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const tablet = css.slice(at, css.indexOf('}', css.indexOf('.header-actions', at)) + 1);
+    expect(tablet).toMatch(/\.list-search \{ ?order: 3; flex: 1 1 100%; margin: 0/);
+    expect(tablet).toMatch(/\.header-actions \{ ?margin-left: auto/);
+  });
 });

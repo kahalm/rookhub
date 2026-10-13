@@ -98,7 +98,8 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
     .empty-state a mat-icon { font-size: 20px; width: 20px; height: 20px; opacity: 1; }
     .empty-state p { margin: 0; }
     .empty-title { font-size: 1.05rem; }
-    .empty-hint { font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* a1-rk-leer-hinweis-blass: .empty-state blasst schon auf 60 % ab — nicht ein zweites Mal (36 %, hell ~2,5:1). */
+    .empty-hint { font-size: 0.85rem; color: inherit; }
     .list { display: flex; flex-direction: column; gap: 8px; }
     .fav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
     .info { display: flex; align-items: center; gap: 12px; min-width: 0; }

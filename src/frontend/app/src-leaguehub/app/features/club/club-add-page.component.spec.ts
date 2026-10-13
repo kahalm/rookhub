@@ -696,4 +696,19 @@ describe('ClubAddPageComponent', () => {
     expect(back?.getAttribute('href')).toBe('/verein');
     expect(api.scans).not.toHaveBeenCalled();
   });
+  // a1-l-partien-pruefen-gesperrt: gesperrtes „Partien prüfen" nennt den Grund; mit Text der Ablaufsatz
+  it('„Partien prüfen" gesperrt: Grund daneben, mit eingefügtem Text der Ablaufsatz', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const btn = Array.from(el.querySelectorAll('button.btn-pri')).find(b => b.textContent?.includes('Partien prüfen')) as HTMLButtonElement;
+    expect(btn.disabled).toBeTrue();
+    expect(el.querySelector('.pick-reason')?.textContent).toContain('Erst eine PGN-Datei wählen, eine Studie laden oder Partien einfügen.');
+    expect(el.textContent).not.toContain('Erst kommt eine Übersicht');
+    fixture.componentInstance.pgn.set('1. e4 e5 *');
+    fixture.detectChanges();
+    expect(btn.disabled).toBeFalse();
+    expect(el.querySelector('.pick-reason')).toBeNull();
+    expect(el.textContent).toContain('Erst kommt eine Übersicht');
+  }));
 });

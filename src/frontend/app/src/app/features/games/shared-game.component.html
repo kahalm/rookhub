@@ -2,10 +2,23 @@
   @if (loading) {
     <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
   } @else if (notFound) {
-    <mat-card class="empty-state">
-      <mat-icon>link_off</mat-icon>
-      <p>{{ notFoundKey | translate }}</p>
-    </mat-card>
+    <!-- a1-rk-vereinspartie-fehler-sackgasse: Sperre, „gibt es nicht" und Ladefehler sind drei verschiedene Dinge —
+         vorher stand für alle nur „Partie konnte nicht geladen werden." ohne Grund und ohne Weg weiter (DESIGN 5.10/5.11). -->
+    @if (errorKind === 'failed') {
+      <mat-card class="load-card"><app-load-error [messageKey]="'games.loadError'" (retry)="reload()" /></mat-card>
+    } @else {
+      <mat-card class="empty-state" [class.gate]="errorKind === 'locked'">
+        <mat-icon>{{ errorKind === 'locked' ? 'lock' : 'link_off' }}</mat-icon>
+        <p>{{ notFoundKey | translate }}</p>
+        <div class="gate-actions">
+          @if (own) {
+            <a mat-stroked-button routerLink="/games" class="to-games">{{ 'games.toMyGames' | translate }}</a>
+          } @else {
+            <a mat-stroked-button routerLink="/" class="to-home">{{ 'app.notFound.home' | translate }}</a>
+          }
+        </div>
+      </mat-card>
+    }
   } @else if (game) {
     <mat-card class="viewer">
       <div class="header">
@@ -16,9 +29,10 @@
         }
         <div class="header-main">
           <span class="players">
-            <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo"> (Elo {{ game.whiteElo }})</span> }
+            <!-- Name + Elo je Spieler zusammen (a1-rk-elo-verwaist): „(Elo 1689)" brach sonst allein oder in sich um. -->
+            <span class="pl"><strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo"> (Elo {{ game.whiteElo }})</span> }</span>
             –
-            <strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo"> (Elo {{ game.blackElo }})</span> }
+            <span class="pl"><strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo"> (Elo {{ game.blackElo }})</span> }</span>
           </span>
           <span class="meta">
             @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
@@ -38,16 +52,20 @@
                der Knopf bleibt sichtbar, damit man weiß, dass es den Weg gibt. Ist die Kurve fertig, entfällt
                er; solange sie rechnet, ist er gesperrt und sagt es. -->
           @if (!club && reviewStatus() !== 'done') {
-            <button mat-flat-button color="primary" class="analyze" (click)="analyze()"
-                    [disabled]="analyzing() || analysisRunning() || uploadStatus()?.engineAvailable === false"
-                    [matTooltip]="analyzeTooltip() | translate">
-              <mat-icon>{{ analyzing() ? 'hourglass_top' : 'insights' }}</mat-icon> {{ 'games.analyze' | translate }}
-            </button>
-            <!-- UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund steht sichtbar unter dem gesperrten Knopf —
-                 am Handy gibt es keinen Tooltip, der graue Knopf wirkte kaputt. -->
-            @if (uploadStatus()?.engineAvailable === false && !analysisRunning()) {
-              <p class="analyze-no-engine">{{ 'games.analyzeNoEngine' | translate }}</p>
-            }
+            <!-- Knopf und Grund in einer eigenen Hülle (a1-rk-shared-kopf-grund): als 100-%-Zeile im Aktionsblock
+                 schob der Grund das ⋮ allein in eine dritte Zeile und machte die Kopfspalte so breit wie den Satz. -->
+            <div class="analyze-wrap">
+              <button mat-flat-button color="primary" class="analyze" (click)="analyze()"
+                      [disabled]="analyzing() || analysisRunning() || uploadStatus()?.engineAvailable === false"
+                      [matTooltip]="analyzeTooltip() | translate">
+                <mat-icon>{{ analyzing() ? 'hourglass_top' : 'insights' }}</mat-icon> {{ 'games.analyze' | translate }}
+              </button>
+              <!-- UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund steht sichtbar unter dem gesperrten Knopf —
+                   am Handy gibt es keinen Tooltip, der graue Knopf wirkte kaputt. -->
+              @if (uploadStatus()?.engineAvailable === false && !analysisRunning()) {
+                <p class="analyze-no-engine">{{ 'games.analyzeNoEngine' | translate }}</p>
+              }
+            </div>
           }
           @if (game.sourceUrl) {
             <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">

@@ -69,18 +69,35 @@ export function foldPrivacy(root: ParentNode): boolean {
 
 /** Texte, die KidHub auf „Konto loeschen" selbst einsetzt (uebersetzt von der Huelle). */
 export interface KidDeletionTexts {
-  /** Kurzer Kindersatz ueber der zugeklappten Liste (`kids.accountDeletion.short`). */
+  /** Kurzer Kindersatz direkt unter der Einleitung (`kids.accountDeletion.short`). */
   short: string;
-  /** Beschriftung des Eltern-Aufklappers (`kids.accountDeletion.parents`). */
+  /** Beschriftung des Eltern-Aufklappers ueber der Liste „Was entfernt wird" (`kids.accountDeletion.parents`). */
   parents: string;
+  /** Beschriftung des Eltern-Aufklappers ueber der Anleitung (`kids.accountDeletion.parentsHowTo`). */
+  howTo: string;
+}
+
+/** Ein zugeklapptes `<details class="kid-parent">` mit leerem Beschriftungs-Span der Klasse `labelClass`. */
+function parentDetails(doc: Document, labelClass: string): HTMLDetailsElement {
+  const details = doc.createElement('details');
+  details.className = 'kid-parent';
+  const summary = doc.createElement('summary');
+  const label = doc.createElement('span');
+  label.className = labelClass;
+  summary.append(label);
+  details.append(summary);
+  return details;
 }
 
 /**
  * „Konto loeschen" in der Kinder-Fassung (UI-Sweep 2026-10-11, d1-k-account-deletion-jargon): die Liste unter „Was
  * entfernt wird" (`ul.removed`) nennt API-Tokens, Chessable, eigene Engines, PGN und Pfade — rechtlich richtig, aber
- * nichts fuer Kinder. Sie kommt wie beim Datenschutz in ein zugeklapptes `<details class="kid-parent">` „Fuer Eltern",
- * davor ein kurzer Kindersatz (`p.kid-short`). Die geteilte Komponente bleibt unberuehrt; verschoben wird nur die von
- * Angular gezeichnete Liste (ihre Bindungen bleiben). Gibt zurueck, ob umgebaut wurde.
+ * nichts fuer Kinder. Sie kommt wie beim Datenschutz in ein zugeklapptes `<details class="kid-parent">` „Fuer Eltern".
+ * a1-k-deletion-fachjargon: ebenso die Anleitung ueber dem Knopf (erstes `h2` „So loeschst du dein Konto" samt Absatz,
+ * `p.backup` und `p.backup-links` — ☰ → Konto → Profil, PGN, Repertoires) in ein zweites Eltern-Aufklapp „so wird das
+ * Konto geloescht"; der Kindersatz (`p.kid-short`) steht jetzt direkt unter der Einleitung, der Knopf (`p.action`)
+ * bleibt sichtbar. Die geteilte Komponente bleibt unberuehrt; verschoben werden nur die von Angular gezeichneten
+ * Elemente (ihre Bindungen bleiben). Gibt zurueck, ob umgebaut wurde.
  */
 export function foldAccountDeletion(root: ParentNode, texts: KidDeletionTexts): boolean {
   const content = root.querySelector('app-account-deletion mat-card-content');
@@ -88,16 +105,30 @@ export function foldAccountDeletion(root: ParentNode, texts: KidDeletionTexts): 
   if (!content || !list || content.hasAttribute(FOLDED)) return false;
   const doc = content.ownerDocument;
   content.setAttribute(FOLDED, '');
+
+  // Anleitung: erstes h2 bis vor den Knopf (bzw. die naechste Ueberschrift / Liste).
+  const children = Array.from(content.children);
+  const howHead = children.find(el => el.tagName === 'H2');
+  const how: Element[] = [];
+  if (howHead) {
+    for (let n: Element | null = howHead; n; n = n.nextElementSibling) {
+      if (n !== howHead && (n.tagName === 'H2' || n.classList.contains('action') || n.matches('ul.removed'))) break;
+      how.push(n);
+    }
+  }
   const short = doc.createElement('p');
   short.className = 'kid-short';
-  const details = doc.createElement('details');
-  details.className = 'kid-parent';
-  const summary = doc.createElement('summary');
-  const label = doc.createElement('span');
-  label.className = 'kid-parent-label';
-  summary.append(label);
-  list.before(short, details);
-  details.append(summary, list);
+  const intro = children.find(el => el.tagName === 'P' && (!howHead || children.indexOf(el) < children.indexOf(howHead)));
+  if (intro) intro.after(short); else content.prepend(short);
+  if (how.length > 0) {
+    const howDetails = parentDetails(doc, 'kid-parent-howto-label');
+    how[0].before(howDetails);
+    howDetails.append(...how);
+  }
+
+  const details = parentDetails(doc, 'kid-parent-label');
+  list.before(details);
+  details.append(list);
   setAccountDeletionTexts(root, texts);
   return true;
 }
@@ -106,8 +137,10 @@ export function foldAccountDeletion(root: ParentNode, texts: KidDeletionTexts): 
 export function setAccountDeletionTexts(root: ParentNode, texts: KidDeletionTexts): void {
   const short = root.querySelector('app-account-deletion .kid-short');
   const label = root.querySelector('app-account-deletion .kid-parent-label');
+  const howTo = root.querySelector('app-account-deletion .kid-parent-howto-label');
   if (short) short.textContent = texts.short;
   if (label) label.textContent = texts.parents;
+  if (howTo) howTo.textContent = texts.howTo;
 }
 
 /**
@@ -151,7 +184,9 @@ export const KID_PRIVACY_STYLES = `
   :host ::ng-deep app-account-deletion mat-card-content h2 { font-size: 1.05rem; font-weight: 800; color: var(--kid-title); }
   :host ::ng-deep app-account-deletion mat-card-content a:not(.mat-mdc-button-base) { color: var(--kid-title); font-weight: 700; }
   :host ::ng-deep app-account-deletion .kid-short { font-size: 17px; }
-  :host ::ng-deep app-account-deletion .kid-parent-label { font-weight: 700; color: var(--kid-title); }
+  :host ::ng-deep app-account-deletion :is(.kid-parent-label, .kid-parent-howto-label) { font-weight: 700; color: var(--kid-title); }
+  /* a1-k-deletion-fachjargon: Ueberschrift der zugeklappten Anleitung nicht so gross wie ein Abschnittskopf. */
+  :host ::ng-deep app-account-deletion details.kid-parent > h2 { margin-top: 8px; }
   /* Loeschknopf wie ein KidHub-Hauptknopf (.big: Radius 18, 52 px, 800, Schatten) in der Gefahrfarbe —
      #9b1c1c auf Weiss 8,3:1 — statt der kleinen blauen Material-Pille. */
   :host ::ng-deep app-account-deletion .delete-now {

@@ -76,7 +76,9 @@ export function filterGroups<T extends { name: string; team: string | null }>(gr
           @for (g of visible(); track g.fide) {
             <article class="sugg-group" [class.multi]="g.items.length > 1">
               <h3><button type="button" class="btn-link sugg-name" (click)="openCard(g.fide)">{{ g.name }}</button>
-                @if (g.team) { <span class="muted small">{{ g.team }}</span> }</h3>
+                @if (g.team) { <span class="muted small">{{ g.team }}</span> }
+                <!-- a1-l-konten-mehrfachgruppe: ein Spieler mit mehreren Konten ist eine umrahmte Fläche mit der Zahl im Kopf. -->
+                @if (g.items.length > 1) { <span class="muted small sugg-count">{{ g.items.length }} Konten</span> }</h3>
               <lh-account-suggestions [items]="g.items" (decided)="onDecided($event)" />
             </article>
           } @empty {

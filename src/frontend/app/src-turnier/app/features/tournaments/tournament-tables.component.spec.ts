@@ -7,6 +7,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { TournamentPlayer, TournamentTeam } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS } from './tournament-table.util';
 import { TournamentTablesComponent } from './tournament-tables.component';
+import { setDarkTheme, textContrast } from '@rh/testing/contrast';
 
 describe('TournamentTablesComponent', () => {
   let fixture: ComponentFixture<TournamentTablesComponent>;
@@ -437,6 +438,41 @@ describe('TournamentTablesComponent', () => {
     const star = fixture.nativeElement.querySelector('td.fav-cell .fav-icon') as HTMLElement;
     expect(star.getAttribute('aria-label')).toBe('SK Dornbirn als Favorit');
     expect(star.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  // ----- UI-Sweep a1 -----
+
+  // a1-t-fav-stern-hell: der leere Stern war fest #ccc (hell 1,53:1), der volle #ffc107 (hell ≈ 1,6:1).
+  for (const dark of [false, true]) {
+    it(`Favoriten-Sterne erreichen 3:1, leer und gesetzt (${dark ? 'dunkel' : 'hell'}) (a1-t-fav-stern-hell)`, () => {
+      const was = setDarkTheme(dark);
+      try {
+        component.players = component.displayedPlayers = [player({ snr: 1 }), player({ id: 2, snr: 2, name: 'Bert Beispiel' })];
+        component.favoriteSnrs = new Set([2]);
+        fixture.detectChanges();
+        const [off, on] = [...fixture.nativeElement.querySelectorAll('td .fav-icon')] as HTMLElement[];
+        expect(on.classList).toContain('fav-active');
+        for (const [name, el] of [['leer', off], ['gesetzt', on]] as const) {
+          const ratio = textContrast(el);
+          expect(ratio).withContext(`${name}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3);
+        }
+      } finally {
+        setDarkTheme(was);
+      }
+    });
+  }
+
+  it('Sterne ohne festes #ccc; Sternspalte schmal, Namen einzeilig mit vollem Namen im title (a1-t-namen-umbruch-tablet)', () => {
+    const css = ((TournamentTablesComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/%NS%/g, '').replace(/\s+/g, '');
+    expect(css).not.toContain('#ccc');
+    expect(css).toMatch(/\.mat-column-fav[^{]*\{width:40px;padding-right:0/);
+    expect(css).toMatch(/td\.mat-column-name[^{]*\{white-space:nowrap/);
+    component.players = component.displayedPlayers = [player({ name: 'Navara, David' })];
+    fixture.detectChanges();
+    const cell = fixture.nativeElement.querySelector('td.mat-column-name') as HTMLElement;
+    expect(cell.getAttribute('title')).toBe('Navara, David');
+    expect(getComputedStyle(cell).whiteSpace).toBe('nowrap');
   });
 
   // ----- UI-Sweep u1 (u1-t-turnier-paarungen): ab 2400 px Paarungen neben Spielern/Teams -----

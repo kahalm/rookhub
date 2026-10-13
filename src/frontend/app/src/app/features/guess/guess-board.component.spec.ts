@@ -696,3 +696,15 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.langLabel('und')).not.toBe('UND');
   });
 });
+
+/** a1-rk-guess-brett-ultrawide: ab 2400 px wächst das Brett bis zur Fensterhöhe (darunter höchstens 820 px). */
+describe('GuessBoardComponent Breitbild-Stufe', () => {
+  const css = ((GuessBoardComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s+/g, '')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  it('Brettspalte ab 2400 px calc(100vh - 250px), darunter min(…, 820px)', () => {
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.board-col\{flex:01calc\(100vh-250px\);max-width:calc\(100vh-250px\);\}/);
+    expect(css.slice(0, at)).toMatch(/\.board-col\{flex:11320px;max-width:min\((calc\()?100vh-250px\)?,820px\);\}/);
+  });
+});

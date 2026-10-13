@@ -113,6 +113,12 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
     .go .part::before { content: '· '; }
     .go:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--kid-shadow); }
     .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-top: 28px; }
+    /* Tablet (a1-k-home-tablet-orphan-card): bei 600–899 px passten drei Kacheln in eine Reihe, „Kurse" stand allein in
+       Zeile 2. Jetzt 2 × 2; ohne Kurs (drei Kacheln) nimmt die letzte die ganze Zeile. */
+    @media (600px <= width < 900px) {
+      .tiles { grid-template-columns: repeat(2, 1fr); }
+      .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    }
     .tile {
       display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 18px;
       border-radius: 28px; text-decoration: none; color: inherit; background: var(--kid-card);
@@ -155,6 +161,15 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
       .tiles { gap: 28px; }
       .tile { min-height: 260px; }
       .icon { font-size: 72px; }
+    }
+    /* Breitbild-Stufe (a1-k-ultrawide-raster): ab 2400 px ist die Seite 1880 px breit (--kid-wide-max der App-Huelle) —
+       die Kacheln werden groesser (≈ 450 × 320 px) statt nur breiter. */
+    @media ${KID_HOME_WIDE} and (width >= 2400px) {
+      .tiles { gap: 32px; }
+      .tile { min-height: 320px; padding: 36px 26px; }
+      .icon { font-size: 88px; }
+      .name { font-size: 38px; }
+      .meta { font-size: 1.3rem; }
     }
   `],
 })

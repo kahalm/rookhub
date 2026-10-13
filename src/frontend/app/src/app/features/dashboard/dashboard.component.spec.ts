@@ -555,3 +555,42 @@ describe('DashboardComponent admin cancel of a stuck Chessable import', () => {
     expect(component.chessableActive.length).toBe(2);
   });
 });
+
+/** UI-Sweep a1: Einzahl der Zähler-Kacheln, Prozent in der Oberflächensprache, Knopfzeile ohne Mindestbreite. */
+describe('DashboardComponent a1 (Mehrzahl, Prozent, Knopfzeile)', () => {
+  beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+
+  const subOf = (c: DashboardComponent, id: string) => c.tiles.find(t => t.id === id)!.subtitle();
+
+  it('a1-rk-dash-mehrzahl: bei genau 1 der …One-Schlüssel, sonst die Mehrzahl', () => {
+    const { component } = setup({ courses: [{}], friends: [{}] });
+    component.repertoireCount = 1;
+    component.favoriteCount = 1;
+    expect(subOf(component, 'courses').key).toBe('dashboard.courses.countOne');
+    expect(subOf(component, 'friends').key).toBe('dashboard.friends.countOne');
+    expect(subOf(component, 'repertoires').key).toBe('dashboard.repertoires.countOne');
+    component.courseCount = 2;
+    component.friendCount = 0;
+    component.repertoireCount = 3;
+    expect(subOf(component, 'courses').key).toBe('dashboard.courses.count');
+    expect(subOf(component, 'friends').key).toBe('dashboard.friends.count');
+    expect(subOf(component, 'repertoires').key).toBe('dashboard.repertoires.count');
+  });
+
+  it('a1-rk-dash-prozent-komma: Genauigkeit über formatPct („78,6 %“ de, „78.6%“ en)', () => {
+    const { component } = setup();
+    component.puzzleAccuracy = 78.6;
+    const translate = TestBed.inject(TranslateService);
+    translate.use('de');
+    expect(subOf(component, 'puzzles').params!['accuracy']).toBe('78,6 %');
+    translate.use('en');
+    expect(subOf(component, 'puzzles').params!['accuracy']).toBe('78.6%');
+  });
+
+  it('a1-rk-dash-play-versatz / -puzzles-knoepfe-umbruch: Kachelknöpfe ohne Mindestbreite, einzeilig, Zeile bricht um', () => {
+    const css = (((DashboardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?> ?button ?\{ ?min-width: ?0; ?white-space: ?nowrap/);
+    expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?\{ ?flex-wrap: ?wrap/);
+  });
+});

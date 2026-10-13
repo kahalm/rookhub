@@ -76,10 +76,15 @@ interface CategoryDef {
     .lb-page { max-width: 1100px; margin: 0 auto; padding: 1rem; }
     .lb-title { display: flex; align-items: center; gap: 0.5rem; }
     .lb-period { margin-bottom: 1rem; flex-wrap: wrap; }
-    .lb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .lb-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    /* UI-Sweep a1 (a1-rk-bestenlisten-raster): vier Kategorien als 1 / 2 / 4 Spalten — mit auto-fit stand am PC die
+       vierte Karte allein in der zweiten Zeile (3 + 1). */
+    @media (min-width: 600px) { .lb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (min-width: 1100px) { .lb-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
     .lb-card mat-card-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.1em; }
     .lb-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
-    .lb-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 6px; }
+    /* a1-rk-bestenlisten-eigene-zeile: rechts 12 px Polster — die Einheit klebte an der Kante der getönten eigenen Zeile. */
+    .lb-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.75rem 0.4rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 6px; }
     .lb-row:last-child { border-bottom: none; }
     .lb-row.lb-me { background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); font-weight: 600; }
     .lb-gap { text-align: center; color: color-mix(in srgb, currentColor 45%, transparent); letter-spacing: 0.2em; padding: 0.1rem 0; user-select: none; }

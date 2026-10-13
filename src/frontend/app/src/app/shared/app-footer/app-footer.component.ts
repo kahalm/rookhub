@@ -59,13 +59,19 @@ import { FooterPresenceService } from './footer-presence';
       </a>
       <!-- Impressum und Datenschutz fuer alle, auch eingeloggt (UX-017) — vorher nur unter der Anmeldekarte, die
            Eingeloggte nie sehen. Nur, wo die App die Route hat (wie der Hilfe-Link); KidHub-artig ohne Impressum. -->
-      @if (imprintRoute) {
-        <span class="footer-sep">·</span>
-        <a class="feedback-link legal-link" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
-      }
-      @if (privacyRoute) {
-        <span class="footer-sep">·</span>
-        <a class="feedback-link legal-link" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+      <!-- Beide Rechtslinks als EINE Gruppe (a1-t-fuss-rechtslinks-en): am Handy englisch stand „Imprint" hinten in der
+           Discord-Zeile, „Privacy Policy" allein darunter. Breit wirkt die Huelle nicht (display: contents). -->
+      @if (imprintRoute || privacyRoute) {
+        <span class="legal-group">
+          @if (imprintRoute) {
+            <span class="footer-sep">·</span>
+            <a class="feedback-link legal-link" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
+          }
+          @if (privacyRoute) {
+            <span class="footer-sep">·</span>
+            <a class="feedback-link legal-link" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+          }
+        </span>
       }
     </footer>
 
@@ -99,7 +105,9 @@ import { FooterPresenceService } from './footer-presence';
     }
   `,
   styles: [`
-    .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
+    /* 60 % statt 47 % (a1-t-fuss-kontrast): 47 % ergab hell 3,6:1 bei 12-px-Schrift, 60 % ≈ 5,7:1 (DESIGN 3.1/7). */
+    .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.75rem; }
+    .legal-group { display: contents; }
     /* Am Handy ausblenden ist RookHubs Vorgabe (das Menue traegt Hilfe/Changelog mit Version/
        Feedback/Discord selbst, UX-053). Die Turnierseite hat keinen solchen Ersatz und schaltet es per Input ab —
        die Klasse traegt die Absicht der Huelle, nicht ein Selektor auf ein Wurzel-Tag. */
@@ -119,9 +127,14 @@ import { FooterPresenceService } from './footer-presence';
          haengen („Discord-Community ·", darunter „Entwickler unterstuetzen" allein). */
       .app-footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 14px; }
       .app-footer .footer-sep { display: none; }
+      /* Impressum + Datenschutz immer gemeinsam in einer eigenen Zeile (a1-t-fuss-rechtslinks-en). */
+      .app-footer .legal-group {
+        display: inline-flex; flex-wrap: nowrap; flex-basis: 100%; justify-content: center; align-items: center; column-gap: 14px;
+      }
     }
     .version-link { cursor: pointer; }
-    .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
+    /* Hover voll deckend statt 65 % des schon gedaempften Tons — sonst waere Hover blasser als Ruhe (a1-t-fuss-kontrast). */
+    .version-link:hover { color: var(--mat-sys-on-surface); text-decoration: underline; }
     .footer-sep { margin: 0 6px; color: color-mix(in srgb, currentColor 40%, transparent); }
     /* Markenfarben je Modus abgestimmt (UX-055), jeweils mindestens 4,5:1 auf der Seite: Discord-Blau #5865F2
        hatte im Dunkeln 4,07:1, Ko-fi #ff5e5b im Hellen 3,0:1. Hell dunkler, dunkel heller getoent. */
@@ -147,7 +160,7 @@ import { FooterPresenceService } from './footer-presence';
       font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
     }
     .feedback-link { color: inherit; text-decoration: none; }
-    .feedback-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
+    .feedback-link:hover { color: var(--mat-sys-on-surface); text-decoration: underline; }
     .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
     /* Das Overlay liegt in DIESER Ansicht — die gleichnamigen Regeln in RookHubs AppComponent
        sind dort gekapselt und erreichen es nicht: der Changelog stand ungestylt im Seitenfluss

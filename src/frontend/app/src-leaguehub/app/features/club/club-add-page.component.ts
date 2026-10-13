@@ -7,8 +7,8 @@ import { AuthService } from '@rh/core/auth.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
-import { importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
-import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText, waitClock } from '../../core/club-format';
+import { SECONDS_PER_MOVE, SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubContextService } from '../../core/club-context.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
@@ -142,7 +142,12 @@ const SAVE_DEBOUNCE_MS = 1500;
             <div class="actions">
               <button type="button" class="btn-pri" [disabled]="busy() || !pgn().trim()" (click)="startPreview()">
                 {{ previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
-              <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
+              <!-- a1-l-partien-pruefen-gesperrt: solange nichts da ist, sagt die Zeile, WARUM der Knopf gesperrt ist (DESIGN 5.4). -->
+              @if (!busy() && !pgn().trim()) {
+                <span class="muted small pick-reason">Erst eine PGN-Datei wählen, eine Studie laden oder Partien einfügen.</span>
+              } @else {
+                <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
+              }
               <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
             </div>
           }
@@ -413,7 +418,7 @@ export class ClubAddPageComponent implements OnInit {
   private readonly ticker = new SecondsTicker();
   readonly isOpen = (s: { status: string }) => s.status === 'pending' || s.status === 'running';
   clockOf(s: { createdAt: string }): string {
-    return formatClock(readingSeconds(s.createdAt, this.ticker.now()));
+    return waitClock(readingSeconds(s.createdAt, this.ticker.now()));   // a1-l-formular-wartezeit
   }
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private destroyed = false;

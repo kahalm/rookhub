@@ -50,7 +50,19 @@ describe('LinkPageComponent (Konto verknüpfen)', () => {
   it('ein unbekannter oder abgelaufener Code: die Begründung des Servers, das Feld bleibt', async () => {
     api.redeem.and.rejectWith(new HttpErrorResponse({ status: 404, error: { message: 'Der Code ist unbekannt oder abgelaufen.' } }));
     await create();
-    expect(el().querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBeTrue();   // ohne Code nichts zu tun
+    // a1-c-disabled-button-contrast: ohne Code nicht gesperrt (grau, ohne Grund), sondern ein Hinweis beim Tippen.
+    expect(el().querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBeFalse();
+    el().querySelector('form')!.dispatchEvent(new Event('submit'));
+    await settle();
+    expect(api.redeem).not.toHaveBeenCalled();
+    expect(el().querySelector('.need')!.textContent).toContain('Bitte zuerst den Code eingeben');
+    expect(document.activeElement).toBe(el().querySelector('.code-input'));
+    expect(el().querySelector('.code-input')!.getAttribute('aria-describedby')).toBe('code-missing');
+    const input = el().querySelector<HTMLInputElement>('.code-input')!;
+    input.value = 'X';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el().querySelector('.need')).withContext('Hinweis weg, sobald getippt wird').toBeNull();
     fixture.componentInstance.code.set('XXXXX-XXXXX');
     await fixture.componentInstance.redeem();
     fixture.detectChanges();

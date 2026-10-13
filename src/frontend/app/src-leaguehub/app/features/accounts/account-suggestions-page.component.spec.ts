@@ -93,6 +93,11 @@ describe('AccountSuggestionsPageComponent', () => {
     const groups = Array.from(el().querySelectorAll('.sugg-groups > .sugg-group'));
     expect(groups.length).toBe(2);
     expect(groups.map(g => g.classList.contains('multi'))).toEqual([true, false]);
+    // a1-l-konten-mehrfachgruppe: die Zahl der Konten im Kopf, die Gruppe als umrahmte Fläche
+    expect(groups[0].querySelector('h3 .sugg-count')?.textContent?.trim()).toBe('2 Konten');
+    expect(groups[1].querySelector('h3 .sugg-count')).toBeNull();
+    expect(getComputedStyle(groups[0]).borderTopWidth).toBe('1px');
+    expect(getComputedStyle(groups[1]).borderTopWidth).toBe('0px');
   });
 
   // UI-Sweep 2026-10-11 (d2-l-konten-endlos): 20 Spieler je Seite, „Weitere", Suche nach Spieler oder Verein

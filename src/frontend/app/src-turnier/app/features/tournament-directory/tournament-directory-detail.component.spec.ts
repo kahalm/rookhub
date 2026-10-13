@@ -402,6 +402,47 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('.detail-actions .primary-mobile')?.textContent).toContain('tournamentDirectory.bookmark');
   });
 
+  // a1-t-quelle-link-standardfarbe: der Quell-Link stand in der Browser-Standardfarbe statt im Primaer.
+  it('faerbt den Quell-Link „Gefunden auf" im Primaer und unterstreicht ihn (a1-t-quelle-link-standardfarbe)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', {
+      sources: [{ kind: 'ChessResults', externalId: '1457129', url: 'https://chess-results.com/tnr1457129.aspx' }],
+    }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.sources a') as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--mat-sys-primary)';
+    document.body.appendChild(probe);
+    const primary = getComputedStyle(probe).color;
+    probe.remove();
+    expect(getComputedStyle(link).color).toBe(primary);
+    expect(getComputedStyle(link).textDecorationLine).toBe('underline');
+  });
+
+  // a1-t-melden-allein-tablet: zwischen 600 und 899 px die Kurzform „Melden", damit der Knopf nicht allein umbricht.
+  it('zeigt „Melden" zwischen 600 und 899 px in der Kurzform (a1-t-melden-allein-tablet)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('.icon-actions .report-btn') as HTMLElement;
+    expect(btn).withContext('Melden-Knopf traegt report-btn').not.toBeNull();
+    expect(btn.getAttribute('aria-label')).toBe('tournamentDirectory.report.cta');
+    const css = ((TournamentDirectoryDetailComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
+      .join('\n').replace(/\s+/g, ' ');
+    const at = css.indexOf('@media (min-width: 600px) and (max-width: 899.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const block = css.slice(at, css.indexOf('}', css.indexOf('.short', at)) + 1);
+    expect(block).toMatch(/\.report-btn[^{]*\.long[^{]*\{ ?display: none/);
+    expect(block).toMatch(/\.report-btn[^{]*\.short[^{]*\{ ?display: inline/);
+    // Karma (1400 px) liegt ausserhalb der Stufe: dort bleibt die Langform.
+    if (window.innerWidth >= 900) {
+      expect(getComputedStyle(btn.querySelector('.long')!).display).not.toBe('none');
+      expect(getComputedStyle(btn.querySelector('.short')!).display).toBe('none');
+    }
+  });
+
   /**
    * Bei einer Liga sagt der Zeitraum fast nichts (September bis April), die Runden sagen alles.
    */

@@ -10,6 +10,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -42,7 +44,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
   standalone: true,
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, TranslatePipe, PctPipe,
+    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
+    TranslatePipe, PctPipe,
   ],
   template: `
     <div class="games-page">
@@ -94,32 +97,36 @@ export type AnalysisState = 'none' | 'running' | 'done';
               }
             }
           </div>
+          <!-- a1-rk-games-native-auswahl: Filter als Material-Felder wie auf /games/mistakes (DESIGN 5.8), nicht nativ. -->
           <div class="classifier-filters" [class.open]="filtersOpen()">
             @if (firstOptions().length > 0) {
-              <label>{{ 'games.classifier.first' | translate }}
-                <select [(ngModel)]="filter1" name="filter1" [attr.aria-label]="'games.classifier.first' | translate">
-                  <option value="">{{ 'games.classifier.all' | translate }}</option>
-                  @for (v of firstOptions(); track v) { <option [value]="v">{{ v }}</option> }
-                  @if (unclassified1()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
-                </select>
-              </label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
+                <mat-label>{{ 'games.classifier.first' | translate }}</mat-label>
+                <mat-select [(ngModel)]="filter1" name="filter1" class="filter1">
+                  <mat-option value="">{{ 'games.classifier.all' | translate }}</mat-option>
+                  @for (v of firstOptions(); track v) { <mat-option [value]="v">{{ v }}</mat-option> }
+                  @if (unclassified1()) { <mat-option [value]="none">{{ 'games.classifier.none' | translate }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
             }
             @if (secondOptions().length > 0) {
-              <label>{{ 'games.classifier.second' | translate }}
-                <select [(ngModel)]="filter2" name="filter2" [attr.aria-label]="'games.classifier.second' | translate">
-                  <option value="">{{ 'games.classifier.all' | translate }}</option>
-                  @for (v of secondOptions(); track v) { <option [value]="v">{{ v }}</option> }
-                  @if (unclassified2()) { <option [value]="none">{{ 'games.classifier.none' | translate }}</option> }
-                </select>
-              </label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
+                <mat-label>{{ 'games.classifier.second' | translate }}</mat-label>
+                <mat-select [(ngModel)]="filter2" name="filter2" class="filter2">
+                  <mat-option value="">{{ 'games.classifier.all' | translate }}</mat-option>
+                  @for (v of secondOptions(); track v) { <mat-option [value]="v">{{ v }}</mat-option> }
+                  @if (unclassified2()) { <mat-option [value]="none">{{ 'games.classifier.none' | translate }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
             }
             @if (tagOptions().length > 0) {
-              <label>{{ 'games.tags.label' | translate }}
-                <select [(ngModel)]="filterTag" name="filterTag" [attr.aria-label]="'games.tags.label' | translate">
-                  <option value="">{{ 'games.classifier.all' | translate }}</option>
-                  @for (v of tagOptions(); track v) { <option [value]="v">{{ v }}</option> }
-                </select>
-              </label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
+                <mat-label>{{ 'games.tags.label' | translate }}</mat-label>
+                <mat-select [(ngModel)]="filterTag" name="filterTag" class="filter-tag">
+                  <mat-option value="">{{ 'games.classifier.all' | translate }}</mat-option>
+                  @for (v of tagOptions(); track v) { <mat-option [value]="v">{{ v }}</mat-option> }
+                </mat-select>
+              </mat-form-field>
             }
           </div>
         }
@@ -130,7 +137,11 @@ export type AnalysisState = 'none' | 'running' | 'done';
       } @else if (games.length === 0) {
         <mat-card class="empty-state">
           <mat-icon>sports_esports</mat-icon>
+          <!-- a1-rk-games-leer-zwei-saetze: ein Satz, eine Aktion (DESIGN 5.10); der RepCheck-Weg steht im .hint darüber. -->
           <p>{{ 'games.empty' | translate }}</p>
+          <button mat-stroked-button class="empty-upload" (click)="uploadPgn()">
+            <mat-icon>upload_file</mat-icon> {{ 'games.pgnUpload.button' | translate }}
+          </button>
         </mat-card>
       } @else {
         <!-- Tabelle im Schnitt der chess.com-Uebersicht (gewuenscht 24.09.2026): Spieler, Ergebnis,
@@ -256,25 +267,26 @@ export type AnalysisState = 'none' | 'running' | 'done';
     </div>
   `,
   styles: [`
-    .games-page { max-width: 1040px; margin: 0 auto; padding: 16px; }
+    /* a1-rk-games-ultrawide-schmal: Tabellenseite in der gemeinsamen Seitenbreite, ab 2400 px breiter (DESIGN 4.1). */
+    .games-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .header h1 { margin: 0; }
     .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
+    .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; text-wrap: pretty; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .only-open { margin-top: 4px; }
-    .classifier-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 0.9rem; }
-    .classifier-filters label { display: inline-flex; align-items: center; gap: 6px; }
-    .classifier-filters select { font: inherit; color: inherit; background: transparent; padding: 4px 8px;
-      border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 6px; max-width: 60vw; }
-    .classifier-filters option { color: initial; }
+    .classifier-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
+    .filter-field { width: 200px; max-width: 100%; }
     .filters-bar { display: none; }
     .label-short { display: none; }
     @media (max-width: 600px) {
-      .filters-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+      /* a1-rk-games-handy-filter-abstand: 12 px Luft zur ersten Partie (DESIGN 3.2), nicht 8 px wie im Zeilenraster. */
+      .filters-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 12px; }
       .classifier-filters:not(.open) { display: none; }
+      .classifier-filters.open { margin: 0 0 12px; }
+      .filter-field { width: auto; flex: 1 1 100%; }
       .filter-chip { font: inherit; font-size: 0.8rem; color: inherit; cursor: pointer; min-height: 32px; padding: 2px 10px;
         border: 0; border-radius: 16px; background: color-mix(in srgb, currentColor 10%, transparent); }
       .label-long { display: none; }
@@ -370,6 +382,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
       /* Die Fussnote ganz nach hinten, sonst draengt sie die Knoepfe in eine eigene leere Zeile. */
       .foot { order: 10; flex-basis: 100%; }
       .moves, .date, .foot { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    }
+    @media (min-width: 2400px) {
+      .games-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
     }
   `]
 })

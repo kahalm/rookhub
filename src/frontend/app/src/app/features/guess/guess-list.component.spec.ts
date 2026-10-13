@@ -369,3 +369,20 @@ describe('GuessListComponent', () => {
     expect(native).not.toHaveBeenCalled();
   });
 });
+
+/** a1-rk-guess-tablet-spielen: ab 600 px festes Raster, „Spielen“ rechts über Titel- und Metazeile (nie allein in einer Zeile). */
+describe('GuessListComponent Zeilenraster', () => {
+  const css = ((GuessListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s+/g, '')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  const phoneAt = css.indexOf('@media(max-width:599.98px)');
+  const base = css.slice(0, phoneAt);
+  it('außerhalb der Handy-Stufe: Raster „title play“ / „meta play“, kein Flex-Spacer', () => {
+    expect(phoneAt).toBeGreaterThan(-1);
+    expect(base).toMatch(/\.game-row\{display:grid;grid-template-columns:minmax\(0,1fr\)auto;grid-template-areas:["']titleplay["']["']metaplay["']/);
+    expect(base).toContain('.game-row.g-play{grid-area:play;}');
+    expect(base).toContain('.game-row.spacer{display:none;}');
+  });
+  it('am Handy bleibt die Metazeile unter Titel und Knopf über die volle Breite', () => {
+    expect(css.slice(phoneAt)).toMatch(/grid-template-areas:["']titleplay["']["']metameta["']/);
+  });
+});

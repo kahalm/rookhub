@@ -71,6 +71,14 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
   @ViewChild('board', { static: true }) boardEl!: ElementRef<HTMLDivElement>;
   private ground?: Api;
   private resizeObserver?: ResizeObserver;
+  /**
+   * a1-rk-svg-nan-pfeile: chessground rechnet Pfeil-Koordinaten aus den (gemerkten) Brettmaßen — bei 0 × 0 (noch nicht
+   * gelayoutet oder verborgen) ergibt das NaN, und der Browser meldet „<line> attribute x1: Expected length, NaN“.
+   * Pfeile werden deshalb erst gesetzt, wenn das Brett eine Breite hat und chessground sie frisch gemessen hat.
+   */
+  private boardMeasured = false;
+  private shapesPending = false;
+  private resizeRaf?: number;
 
   /** Offener Umwandlungs-Dialog (orig/dest des Zugs + Farbe des Bauern). */
   promo: { orig: Key; dest: Key; color: 'w' | 'b' } | null = null;
@@ -103,7 +111,12 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
 
     // chessground legt Figuren per Pixel-Transform ab: ändert sich die Brettgröße (Vollbild,
     // Fensterbreite), müssen sie neu gezeichnet werden — sonst kleben sie auf alten Koordinaten.
-    this.resizeObserver = new ResizeObserver(() => this.ground?.redrawAll());
+    // Neuzeichnen erst im nächsten Frame: synchron im Observer ändert es die beobachtete Größe noch einmal
+    // („ResizeObserver loop completed with undelivered notifications“).
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.resizeRaf !== undefined) cancelAnimationFrame(this.resizeRaf);
+      this.resizeRaf = requestAnimationFrame(() => { this.resizeRaf = undefined; this.onResize(); });
+    });
     this.resizeObserver.observe(this.boardEl.nativeElement);
   }
 
@@ -158,10 +171,45 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private applyShapes(): void {
-    this.ground?.setAutoShapes(this.shapes ?? []);
+    if (!this.ground) return;
+    if (!this.boardMeasured) {
+      if (this.boardWidth() === 0) {
+        // Ungemessenes Brett: nur merken, der ResizeObserver holt es nach.
+        this.shapesPending = true;
+        return;
+      }
+      // chessground merkt sich die Maße bis zum nächsten redrawAll — erst frisch messen lassen.
+      this.ground.redrawAll();
+      this.boardMeasured = true;
+    }
+    this.shapesPending = false;
+    this.ground.setAutoShapes(this.shapes ?? []);
+  }
+
+  private onResize(): void {
+    if (!this.ground) return;
+    if (this.boardWidth() === 0) {
+      // Verborgen: Pfeile wegnehmen, bis das Brett wieder eine Größe hat.
+      if (this.boardMeasured && (this.shapes?.length ?? 0) > 0) {
+        this.ground.setAutoShapes([]);
+        this.shapesPending = true;
+      }
+      this.boardMeasured = false;
+      return;
+    }
+    this.ground.redrawAll();
+    this.boardMeasured = true;
+    if (this.shapesPending) this.applyShapes();
+  }
+
+  private boardWidth(): number {
+    const el = this.boardEl.nativeElement;
+    const board = el.querySelector('cg-board') as HTMLElement | null;
+    return (board ?? el).getBoundingClientRect().width;
   }
 
   ngOnDestroy(): void {
+    if (this.resizeRaf !== undefined) cancelAnimationFrame(this.resizeRaf);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }

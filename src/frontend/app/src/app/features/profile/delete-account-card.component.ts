@@ -51,7 +51,7 @@ import { AuthService } from '../../core/auth.service';
   styles: [`
     mat-form-field { width: 100%; }
     .danger-section h4 { margin: 0 0 0.25rem; color: var(--rh-error); }
-    .danger-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
+    .danger-hint { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; margin: 0 0 0.5rem; }
     .danger-warn { color: var(--rh-error); font-size: 0.9rem; }
     .danger-confirm { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
     .danger-actions { display: flex; gap: 8px; justify-content: flex-end; }

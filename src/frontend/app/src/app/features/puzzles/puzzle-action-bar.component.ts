@@ -36,16 +36,19 @@ import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.c
       }
       @if (levelText) { <span class="pab-level">{{ levelText }}</span> }
       <app-puzzle-tags [tags]="tags" />
-      <span class="pab-spacer"></span>
       <ng-content />
-      <button mat-icon-button class="pab-share" (click)="shareClicked.emit()"
-              [appIconLabel]="shareLabelKey | translate">
-        <mat-icon>share</mat-icon>
-      </button>
-      <button mat-icon-button [matMenuTriggerFor]="moreMenu"
-              [appIconLabel]="'common.showMore' | translate">
-        <mat-icon>more_vert</mat-icon>
-      </button>
+      <!-- Teilen + ⋮ als EINE Einheit rechts: bricht die Zeile, wandern beide zusammen — das ⋮ steht nie allein
+           in einer Zeile (a1-rk-puzzle-menue-allein-tablet, DESIGN 5.5). -->
+      <span class="pab-actions">
+        <button mat-icon-button class="pab-share" (click)="shareClicked.emit()"
+                [appIconLabel]="shareLabelKey | translate">
+          <mat-icon>share</mat-icon>
+        </button>
+        <button mat-icon-button class="pab-more" [matMenuTriggerFor]="moreMenu"
+                [appIconLabel]="'common.showMore' | translate">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+      </span>
       <mat-menu #moreMenu="matMenu">
         @if (hasLast) {
           <button mat-menu-item (click)="reviewLastClicked.emit()">
@@ -107,7 +110,7 @@ import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.c
       color: color-mix(in srgb, currentColor 60%, transparent);
       white-space: nowrap;
     }
-    .pab-spacer { flex: 1; }
+    .pab-actions { display: inline-flex; align-items: center; flex: none; margin-left: auto; }
     .pab-loved mat-icon { color: #e91e63; }
   `],
 })

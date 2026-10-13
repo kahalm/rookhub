@@ -135,3 +135,15 @@ describe('PrepPlayerComponent', () => {
     expect(el().querySelector('lh-online-accounts .chk-btn')).toBeNull();                 // die Prüfung gehört zu LeagueHub
   });
 });
+
+/** a1-rk-prep-ultrawide: ab 2400 px stehen die Statistik-Blöcke der Spielerkarte nebeneinander statt 2 × 2. */
+describe('PrepPlayerComponent Breitbild-Stufe', () => {
+  const css = ((PrepPlayerComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s+/g, '')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  it('Blöcke ab 2400 px als auto-fit-Raster, darunter keine eigene Regel', () => {
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.prep\.card\.inline\.sides\{grid-template-columns:repeat\(auto-fit,minmax\(240px,1fr\)\)/);
+    expect(css.slice(0, at)).not.toContain('.sides');
+  });
+});

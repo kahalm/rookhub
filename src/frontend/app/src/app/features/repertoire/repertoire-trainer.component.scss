@@ -28,8 +28,24 @@
     /* Brett darf jetzt bis knapp Viewport-Höhe (minus Navbar + Toolbar) hochwachsen (Chessable-artig)
      * und außerdem breit werden — begrenzt zusätzlich über min(80vh, 96vw − Seitenleiste). Der
      * innere chess-board hat aspect-ratio 1/1, daher wird Höhe automatisch = Breite. */
-    app-puzzle-board { flex: 1 1 480px; max-width: min(820px, calc(100vh - 180px)); }
+    /* a1-rk-trainer-brett-hoehe: Abzug 200 px statt 180 px — am Laptop (1 366 × 768) passt die Seite samt Fußzeile
+     * ohne Mini-Scroll. */
+    app-puzzle-board { flex: 1 1 480px; max-width: min(820px, calc(100vh - 200px)); }
     .side { flex: 1 1 340px; min-width: 300px; max-width: 520px; }
+    /* a1-rk-trainer-brett-hoehe: einspaltig (Tablet hochkant) das Brett so hoch, dass Aufgabe und Einprägen-Knopf
+     * darunter noch über der Falz stehen; die Infospalte nimmt die volle Breite statt 520 px links. */
+    @media (max-width: 899.98px) {
+      app-puzzle-board { flex-basis: 100%; max-width: min(100%, calc(100vh - 420px)); margin: 0 auto; }
+      .side { max-width: none; }
+    }
+    /* a1-rk-trainer-ultrawide-brett: Breitbild-Stufe (DESIGN 4.1) — Seite im breiten Token, Brett bis zur
+     * Fensterhöhe (≤ 1 100 px), Seitenspalte daneben ≤ 640 px, beides mittig. */
+    @media (min-width: 2400px) {
+      .trainer { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .play { justify-content: center; }
+      app-puzzle-board { flex: 0 0 auto; width: min(calc(100vh - 200px), 1100px); max-width: none; }
+      .side { max-width: 640px; }
+    }
     .counts { display: flex; align-items: center; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
     .counts .ok { color: var(--rh-success); } .counts .bad { color: var(--rh-error); }
     .counts .streak { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border-radius: 999px;

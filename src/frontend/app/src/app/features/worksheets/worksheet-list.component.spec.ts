@@ -112,3 +112,20 @@ describe('WorksheetListComponent Zwischenablage kompakt', () => {
     expect(el.querySelector('.wl-head app-help-hint button')?.getAttribute('aria-label')).toBe('worksheets.list.hintMore');
   });
 });
+
+/** Kompilierte Komponenten-Styles, Leerraum vereinheitlicht. */
+function compiledCss(cmp: unknown): string {
+  return ((cmp as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/%NS%/g, '').replace(/\s+/g, ' ');
+}
+
+/** UI-Sweep a1 (a1-rk-ws-liste-aktionen-eigene-zeile): Knöpfe am Handy oben rechts in der Titelzeile, nicht darunter. */
+describe('WorksheetListComponent Handy-Karte', () => {
+  const css = compiledCss(WorksheetListComponent);
+  it('kein Spaltenumbruch der Karte, Meta wächst, Knöpfe schrumpfen nicht', () => {
+    expect(css).not.toMatch(/\.wl-sheet[^{]*\{ ?flex-direction: column/);
+    expect(css).toMatch(/\.wl-meta[^{]*\{ ?flex: 1 1 auto/);
+    expect(css).toMatch(/\.wl-actions[^{]*\{ ?flex: none/);
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.wl-sheet[^{]*\{ ?align-items: flex-start/);
+  });
+});

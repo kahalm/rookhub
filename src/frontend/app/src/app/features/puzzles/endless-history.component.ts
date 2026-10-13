@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, formatDate } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
@@ -13,7 +13,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SelectionModel } from '@angular/cdk/collections';
-import { LocaleService } from '../../core/locale.service';
+import { FORMAT_LOCALES, LocaleService } from '../../core/locale.service';
 
 interface EndlessSessionDto {
   id: number;
@@ -235,13 +235,23 @@ interface EndlessHistoryResponse {
     </div>
   `,
   styles: [`
-    .history-container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    /* UI-Sweep a1 (a1-rk-endless-verlauf-ultrawide): gemeinsame Seitenbreite statt fester 900 px; ab 2400 px die
+       Breitbild-Stufe der Tabellenseiten (DESIGN 4.1). */
+    .history-container { max-width: min(var(--page-max-width), 96vw); margin: 2rem auto; padding: 0 1rem; }
+    @media (min-width: 2400px) {
+      .history-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+    }
     mat-card-title { display: flex; align-items: center; gap: 0.5rem; }
     .loading { display: flex; justify-content: center; padding: 3rem 0; }
     .empty-state { text-align: center; padding: 3rem 1rem; }
-    .empty-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 30%, transparent); }
-    .empty-state p { color: color-mix(in srgb, currentColor 50%, transparent); margin: 1rem 0; }
+    /* UI-Sweep a1 (a1-rk-endless-verlauf-leer-kontrast): der Satz erklärt die ganze Seite → Sekundärtext-Token
+       (≥ 4,5:1 hell und dunkel); das Symbol ist Schmuck und darf leiser bleiben, aber sichtbar. */
+    .empty-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 45%, transparent); }
+    .empty-state p { color: var(--mat-sys-on-surface-variant); margin: 1rem 0; }
+    /* a1-rk-endless-verlauf-tabelle-datum: Zellen einzeilig, eine zu breite Tabelle scrollt in ihrem Kasten (4.4). */
+    .desktop-only { overflow-x: auto; }
     .history-table { width: 100%; }
+    .history-table th, .history-table td { white-space: nowrap; }
     .back-link { margin-top: 1rem; }
     th.mat-mdc-header-cell { font-weight: 600; }
     .elo-pos { color: var(--rh-success); font-weight: 600; }
@@ -269,7 +279,8 @@ interface EndlessHistoryResponse {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; text-align: center;
     }
     .session-stat-value { font-weight: 600; font-size: 0.95rem; display: block; }
-    .session-stat-label { font-size: 0.7rem; color: color-mix(in srgb, currentColor 50%, transparent); }
+    /* a1-rk-endless-verlauf-handykarte: Beschriftung lesbar (0,75 rem, 65 %), nicht 0,7 rem in 50 %. */
+    .session-stat-label { font-size: 0.75rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .session-mistakes {
       display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem;
       font-size: 0.8rem; color: var(--rh-error);
@@ -280,7 +291,8 @@ interface EndlessHistoryResponse {
       .history-container { margin: 0.75rem auto; }
       .desktop-only { display: none; }
       .mobile-only { display: block; }
-      .session-card-stats { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+      /* Fünf Kennzahlen als 3 + 2 statt 2 + 2 + 1 (kein verwaistes „Start-Rating“). */
+      .session-card-stats { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
     }
   `]
 })
@@ -375,12 +387,16 @@ export class EndlessHistoryComponent implements OnInit {
     });
   }
 
+  /**
+   * Knapper Zeitpunkt im Locale-Format `short` (DESIGN 5.13, a1-rk-endless-verlauf-tabelle-datum): de „10.10.26, 00:20“,
+   * en „10/10/26, 12:20 AM“. Nur FORMAT_LOCALES haben registrierte Locale-Daten — die übrigen Sprachen formatieren
+   * wie en (sonst wirft formatDate NG0701).
+   */
   formatDate(timestamp: number): string {
     const d = new Date(timestamp);
     if (isNaN(d.getTime())) return '-';
-    const loc = this.locale.current;
-    return d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' })
-      + ' ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+    const cur = this.locale.current;
+    return formatDate(d, 'short', FORMAT_LOCALES.includes(cur) ? cur : 'en');
   }
 
   formatDuration(seconds: number): string {

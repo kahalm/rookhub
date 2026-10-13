@@ -74,3 +74,13 @@ describe('ReconstructListComponent', () => {
     http.expectNone({ url: '/api/reconstructions', method: 'POST' });
   });
 });
+
+/** a1-rk-recon-titel-linkfarbe: der Kartentitel ist ein Link, aber in Textfarbe — Akzent erst bei Hover/Fokus. */
+describe('ReconstructListComponent Kartentitel', () => {
+  const css = ((ReconstructListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s+/g, '')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  it('erbt die Textfarbe und zeigt Hover/Fokus in --mat-sys-primary', () => {
+    expect(css).toMatch(/\.item-title\{color:inherit;/);
+    expect(css).toMatch(/\.item-title:hover,\.item-title:focus-visible\{color:var\(--mat-sys-primary\);text-decoration:underline;?\}/);
+  });
+});

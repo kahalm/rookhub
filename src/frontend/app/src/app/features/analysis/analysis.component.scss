@@ -6,12 +6,22 @@
    passt es samt Kopf unter die Falz. */
 .board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, calc(100vh - 170px), 820px); min-width: 280px; }
 .board-col.editing { display: block; width: min(64vw, 560px); }
-/* Ab 769 px klebt das Brett beim Scrollen (Explorer, Zugbaum laufen rechts weiter); die Navbar klebt nicht, daher 12 px. */
-@media (min-width: 769px) {
-  .board-col:not(.editing) { position: sticky; top: 12px; align-self: flex-start; }
+/* Ab 900 px (DESIGN 4.2: mehrspaltig) klebt das Brett beim Scrollen (Explorer, Zugbaum laufen rechts weiter); die
+   Navbar klebt nicht, daher 12 px. a1-rk-analyse-tablet-brett: ab 769 px klebte es auch dort, wo Brett und Seitenspalte
+   nicht nebeneinander passten (Tablet 820 px) — einspaltig klebte ein 539-px-Brett über Engine und Zügen. Deshalb hält
+   die Brettspalte ab 900 px der Seitenspalte immer 300 px frei (zweispaltig garantiert), darunter steht sie mittig. */
+@media (min-width: 900px) {
+  .board-col:not(.editing) { position: sticky; top: 12px; align-self: flex-start;
+    width: min(64vw, calc(100vh - 170px), 820px, calc(100% - 300px)); }
+}
+@media (min-width: 769px) and (max-width: 899.98px) {
+  .board-col:not(.editing) { width: min(100%, calc(100vh - 170px)); margin-inline: auto; }
 }
 .editor-full { display: block; width: 100%; }
-.eval-bar { width: 14px; align-self: stretch; background: #3a3a3a; border-radius: 3px; overflow: hidden; position: relative; min-height: 280px; }
+/* a1-rk-evalbar-hell: Rahmen aus dem Umriss-Token, sonst verschwindet der weiße Teil im hellen Design auf der hellen
+   Seite. Weiß/Schwarz selbst sind Figurenfarben (Weiß- und Schwarzanteil) und tragen in beiden Themen. */
+.eval-bar { width: 14px; align-self: stretch; background: #3a3a3a; border-radius: 3px; overflow: hidden; position: relative; min-height: 280px;
+  border: 1px solid var(--mat-sys-outline); box-sizing: border-box; }
 .eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }
 .board-wrap { flex: 1; min-width: 260px; }
 .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }

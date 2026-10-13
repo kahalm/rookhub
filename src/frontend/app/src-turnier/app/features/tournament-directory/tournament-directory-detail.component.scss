@@ -94,6 +94,9 @@ span.group-link { color: inherit; }
   gap: 4px 12px;
 }
 
+/* a1-t-quelle-link-standardfarbe: der Quell-Link stand in Browserblau (#0000ee) bzw. -lavendel — jetzt wie .group-link. */
+.sources a { color: var(--mat-sys-primary); text-decoration: underline; }
+
 .source-note { margin-left: 4px; }
 /* Zwei Quellen derselben Seite (chess-results + Ankuendigungskalender) standen sonst als „chess-results chess-results …“ da. */
 .source + .source::before { content: '·'; margin-right: 12px; color: color-mix(in srgb, currentColor 50%, transparent); }
@@ -111,6 +114,14 @@ span.group-link { color: inherit; }
 
 .icon-actions { display: contents; }
 .icon-actions .short { display: none; }
+
+/* Tablet-Zwischenbreite (a1-t-melden-allein-tablet): „Falsches Event melden" stand bei 820 px allein in der zweiten
+   Knopfzeile — dort die Kurzform „Melden" (Name bleibt per aria-label). Darunter greift die Handy-Zeile, darueber passt
+   die Langform. */
+@media (min-width: 600px) and (max-width: 899.98px) {
+  .icon-actions .report-btn .long { display: none; }
+  .icon-actions .report-btn .short { display: inline; }
+}
 
 .hint {
   margin: 12px 0 0;

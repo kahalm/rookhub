@@ -14,12 +14,12 @@ import { EvalGraphComponent } from '@rh/shared/pgn-viewer/eval-graph.component';
 import { GameEvals } from '@rh/features/games/game-review.util';
 import { correctionCurve } from './scan-eval-curve';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
-import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { SECONDS_PER_MOVE, SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubGameDetail, ClubSheetState, LeagueScanState, ScanRef } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ClubContextService } from '../../core/club-context.service';
-import { SheetPgnInput, isTransientError, loadErrorText, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
+import { LONG_WAIT_SECONDS, SheetPgnInput, isTransientError, loadErrorText, reasonText, sheetPgn, sheetPgnFileName, waitClock } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
@@ -111,11 +111,16 @@ function readAutoMine(): boolean {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
           @else {
             @if (st.scan.status === 'pending') {
+              <!-- a1-l-formular-wartezeit: der Nachsatz in Textgröße, der Strich als ::before (hängt nie allein am Zeilenende);
+                   wartet es ungewöhnlich lange, sagt eine Zeile, dass der Leser wohl gerade nicht läuft. -->
               <p class="muted" role="status">Das Formular wartet aufs Einlesen … <b class="scan-clock">{{ clock() }}</b>
-                <span class="small"> — der Leser schaut alle 5 Minuten nach neuen Formularen.</span></p>
+                <span class="scan-why">der Leser schaut alle 5 Minuten nach neuen Formularen.</span></p>
+              @if (longWait()) {
+                <p class="muted small scan-long">Länger als üblich — der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert.</p>
+              }
             } @else {
               <p class="muted" role="status">Das Formular wird gelesen … <b class="scan-clock">{{ clock() }}</b>
-                <span class="small"> — das dauert meist ein paar Minuten.</span></p>
+                <span class="scan-why">das dauert meist ein paar Minuten.</span></p>
             }
           }
         } @else {
@@ -473,7 +478,10 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly perMove = SECONDS_PER_MOVE;
   /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
   private readonly ticker = new SecondsTicker();
-  readonly clock = computed(() => formatClock(readingSeconds(this.state()?.scan.createdAt, this.ticker.now())));
+  private readonly waited = computed(() => readingSeconds(this.state()?.scan.createdAt, this.ticker.now()));
+  /** a1-l-formular-wartezeit: „1:02:05" bzw. „seit 1 Tag 18 Std." statt „2549:18". */
+  readonly clock = computed(() => waitClock(this.waited()));
+  readonly longWait = computed(() => this.waited() >= LONG_WAIT_SECONDS);
   readonly notFound = signal(false);
   /** Der Abruf scheitert (anderer Code als 404, oder vorübergehend mehrmals hintereinander) — Klartext statt „Lade …". */
   readonly loadError = signal<string | null>(null);

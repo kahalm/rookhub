@@ -29,13 +29,16 @@ import { DrawShape } from 'chessground/draw';
               [attr.stroke]="a.color" stroke-width="0.16" opacity="0.85" stroke-linecap="round" />
         <polygon [attr.points]="a.head" [attr.fill]="a.color" opacity="0.85" />
       }
+      <!-- Bezeichner liegen NEBEN dem Brett auf der Karte, nicht auf Feldern: Textfarbe der Umgebung (a1-rk-flashcard-
+           koordinaten-dunkel) — im dunklen Design hell, auf dem weißen Druckblatt schwarz. -->
       @if (coordinates) {
         @for (f of fileLabels; track f.text) {
-          <text [attr.x]="f.x" y="8.32" font-size="0.32" text-anchor="middle" fill="#3a352c">{{ f.text }}</text>
+          <text class="fb-coord" [attr.x]="f.x" y="8.32" font-size="0.32" text-anchor="middle"
+                fill="currentColor" opacity="0.7">{{ f.text }}</text>
         }
         @for (r of rankLabels; track r.text) {
-          <text x="-0.22" [attr.y]="r.y" font-size="0.32" text-anchor="middle"
-                dominant-baseline="central" fill="#3a352c">{{ r.text }}</text>
+          <text class="fb-coord" x="-0.22" [attr.y]="r.y" font-size="0.32" text-anchor="middle"
+                dominant-baseline="central" fill="currentColor" opacity="0.7">{{ r.text }}</text>
         }
       }
     </svg>

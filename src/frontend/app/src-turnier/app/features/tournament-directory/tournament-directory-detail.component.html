@@ -183,7 +183,7 @@
           }
           <!-- Leise, aber sichtbar: Ort und Einordnung sind an vielen Stellen erschlossen, nicht
                gemeldet — ohne einen Rueckweg bleibt jeder Fehlgriff unbemerkt stehen. -->
-          <button mat-button (click)="reportEntry()" [attr.aria-label]="'tournamentDirectory.report.cta' | translate">
+          <button mat-button class="report-btn" (click)="reportEntry()" [attr.aria-label]="'tournamentDirectory.report.cta' | translate">
             <mat-icon>flag</mat-icon>
             <span class="long">{{ 'tournamentDirectory.report.cta' | translate }}</span>
             <span class="short" aria-hidden="true">{{ 'tournamentDirectory.card.short.report' | translate }}</span>

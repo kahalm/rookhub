@@ -844,6 +844,20 @@ describe('TournamentHistoryComponent', () => {
     expect(host.querySelector('.track-add')).not.toBeNull();
   });
 
+  /** a1-t-verlauf-verfolgen-ort: ohne Reiter stand „Spieler verfolgen" links, mit Reitern rechts. */
+  it('stellt „Spieler verfolgen" auch ohne Reiter an den rechten Rand', async () => {
+    const req = await setup();
+    req.flush([history()]);
+    fixture.detectChanges();
+
+    const host: HTMLElement = fixture.nativeElement;
+    expect(host.querySelector('mat-tab-group')).toBeNull();
+    const button = host.querySelector('.track-add') as HTMLElement;
+    const row = button.parentElement as HTMLElement;
+    expect(getComputedStyle(button).marginLeft).not.toBe('0px');
+    expect(Math.abs(row.getBoundingClientRect().right - button.getBoundingClientRect().right)).toBeLessThan(2);
+  });
+
   /** UX-042: am Handy ist der Text des Knopfs ausgeblendet und das Symbol aria-hidden — er hatte keinen zugaenglichen Namen. */
   it('gibt dem Plus einen zugaenglichen Namen, auch wenn der Text am Handy fehlt', async () => {
     const req = await setup();

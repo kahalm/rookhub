@@ -208,6 +208,9 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
   /** Linien des Repertoires ohne Info-Linien — daraus die Farbe je Kapitel (wie im Trainer). */
   @Input() games: ParsedGame[] = [];
   @Output() holeSelected = new EventEmitter<HoleBoardView | null>();
+  /** true, sobald eine Suche läuft oder ein Ergebnis steht; false nach dem Verwerfen (a1-rk-holes-karte-leer-hoch:
+   *  vorher ist die Karte nur so hoch wie Auswahl + Suchknopf, danach braucht die Trefferliste die feste Höhe). */
+  @Output() searchActive = new EventEmitter<boolean>();
 
   readonly minThreshold = MIN_THRESHOLD_PERCENT;
   readonly maxThreshold = MAX_THRESHOLD_PERCENT;
@@ -314,6 +317,7 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
     this.result.set(null);
     this.select(null);
     this.running.set(true);
+    this.searchActive.emit(true);
     this.sub = this.explorer.run(this.repertoireId, {
       color: this.color(),
       chapterColors: Object.fromEntries(this.chapterColors),
@@ -368,6 +372,7 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
     this.cancel();
     this.result.set(null);
     this.select(null);
+    this.searchActive.emit(false);
   }
 }
 

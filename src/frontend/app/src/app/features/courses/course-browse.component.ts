@@ -211,9 +211,15 @@ interface ChapterGroup {
               @if (sanMoves.length) {
                 <div class="move-strip">
                   @for (m of sanMoves; track $index) {
-                    @if (moveNumbers[$index]; as no) { <span class="move-no">{{ no }}</span> }
-                    <button class="san" [class.current]="plyIndex === $index + 1"
-                            (click)="goTo($index + 1)">{{ m | san }}</button>
+                    <!-- a1-rk-zugnummer-allein: Zugnummer + weißer Zug als ein Stück — die Zeile bricht nie
+                         hinter „5.“ um (DESIGN 5.13). -->
+                    @if (moveNumbers[$index]; as no) {
+                      <span class="move-pair"><span class="move-no">{{ no }}</span><button class="san" [class.current]="plyIndex === $index + 1"
+                              (click)="goTo($index + 1)">{{ m | san }}</button></span>
+                    } @else {
+                      <button class="san" [class.current]="plyIndex === $index + 1"
+                              (click)="goTo($index + 1)">{{ m | san }}</button>
+                    }
                   }
                 </div>
               }
@@ -316,8 +322,10 @@ interface ChapterGroup {
 
     .board-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     /* UI-Sweep 2026-10-11 (d2-rk-browse-gross-brett-klein): am großen Bildschirm wächst das Brett mit der Höhe
-       (bis 820 px), Zugleiste und Linienknöpfe bleiben über der Falz; am Laptop bleibt es mindestens 560 px. */
-    .board-wrap { width: 100%; max-width: min(60vw, max(560px, calc(100vh - 300px)), 820px); }
+       (bis 820 px), Zugleiste und Linienknöpfe bleiben über der Falz. a1-rk-browse-laptop-linienknoepfe-falz: die
+       Untergrenze 560 px schob „Vorige/Nächste Linie“ am Laptop (1366 × 768) unter die Falz — jetzt 400 px, sodass
+       das Brett dort der Höhe folgt (≈ 468 px). */
+    .board-wrap { width: 100%; max-width: min(60vw, max(400px, calc(100vh - 300px)), 820px); }
     .controls { display: flex; align-items: center; gap: 6px; }
     .move-strip {
       display: flex; flex-wrap: wrap; gap: 2px 4px; align-items: baseline; width: 100%;
@@ -326,6 +334,7 @@ interface ChapterGroup {
     /* UI-Sweep v1 (v1-rk-browse-zugliste-handy-abgeschnitten): kein eigener Scrollkasten (DESIGN 5.11) — die
        ganze Zugfolge bricht um, die Linienknöpfe rutschen nach unten statt eine halbe Zeile abzuschneiden. */
     .move-no { opacity: 0.5; font-variant-numeric: tabular-nums; margin-left: 4px; }
+    .move-pair { display: inline-flex; align-items: baseline; white-space: nowrap; }
     .san { background: none; border: none; cursor: pointer; color: inherit; padding: 1px 4px; border-radius: 4px; font-size: 0.85rem; }
     .san:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .san.current { background: color-mix(in srgb, var(--mat-sys-primary, #1565c0) 22%, transparent); font-weight: 700; }
@@ -346,6 +355,13 @@ interface ChapterGroup {
       font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
     }
     .line-nav { display: flex; gap: 8px; }
+
+    /* a1-rk-browse-breitstufe (DESIGN 4.1): Brettseite ab 2400 px im breiten Token; das Brett wächst nur bis zur
+       Fensterhöhe, Zugleiste und Kommentar so breit wie das Brett. Darunter ändert sich nichts. */
+    @media (min-width: 2400px) {
+      .browse-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .board-wrap, .move-strip, .comment-card { max-width: min(60vw, calc(100vh - 300px)); }
+    }
 
     @media (max-width: 768px) {
       .browse-body { flex-direction: column; }

@@ -30,9 +30,12 @@
 .wl-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
 .wl-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
 
+/* UI-Sweep a1 (a1-rk-ws-liste-aktionen-eigene-zeile): auch am Handy bleiben Stift/PDF/Löschen oben rechts in der
+   Titelzeile (DESIGN 5.2) — Titel und Meta brechen in sich um, statt die Knöpfe in eine eigene Zeile zu schieben. */
+.wl-meta { flex: 1 1 auto; }
+.wl-actions { flex: none; }
 @media (max-width: 599.98px) {
-  .wl-sheet { flex-direction: column; align-items: stretch; }
-  .wl-actions { justify-content: flex-end; }
+  .wl-sheet { align-items: flex-start; }
 }
 
 /* Themen: Filterzeile über der Liste, kleine Marken am Blatt. */

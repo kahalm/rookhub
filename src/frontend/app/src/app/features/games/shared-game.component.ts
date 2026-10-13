@@ -49,6 +49,7 @@ import { GameRecapComponent } from './game-recap.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SHARED_GAME_STYLES } from './shared-game.styles';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 /** Ab so viel Bewegung (px) bzw. Dauer (ms) ist eine Berührung des Bretts kein Tipp mehr, sondern Ziehen/Halten. */
 const TAP_SLOP_PX = 10;
@@ -70,7 +71,7 @@ const TAP_MAX_MS = 500;
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
-    SimilarGamesComponent, GameRecapComponent,
+    SimilarGamesComponent, GameRecapComponent, LoadErrorComponent,
   ],
   providers: [PgnViewerService],
   templateUrl: './shared-game.component.html',
@@ -104,7 +105,30 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Teilen-Token der eigenen Partie (für „Teilen-Link kopieren"). */
   shareToken: string | null = null;
 
-  get notFoundKey(): string { return this.own || this.club ? 'games.loadError' : 'games.shared.notFound'; }
+  /** Warum die Partie fehlt (a1-rk-vereinspartie-fehler-sackgasse): `locked` = Vereinspartie ohne Mitgliedschaft (403),
+   *  `missing` = gibt es nicht (4xx), `failed` = Netz/Server — dann „Erneut versuchen" statt einer stummen Karte. */
+  errorKind: 'locked' | 'missing' | 'failed' = 'missing';
+
+  get notFoundKey(): string {
+    if (this.errorKind === 'locked') return 'games.clubNoAccess';
+    return this.own || this.club ? 'games.notFound' : 'games.shared.notFound';
+  }
+
+  /** Fehler beim Laden der Partie einordnen (siehe {@link errorKind}). */
+  private loadFailed(e: { status?: number } | null | undefined): void {
+    const status = e?.status ?? 0;
+    this.errorKind = status === 403 && this.club ? 'locked'
+      : status >= 400 && status < 500 && status !== 408 && status !== 429 ? 'missing' : 'failed';
+    this.notFound = true;
+    this.loading = false;
+  }
+
+  /** „Erneut versuchen" nach einem Ladefehler. */
+  reload(): void {
+    this.loading = true;
+    this.notFound = false;
+    this.ngOnInit();
+  }
   /** `GET …/evals` dieser Partie — anonym die Kurve des Teilenden, angemeldet ersatzweise die eigene. */
   evalsUrl: string | null = null;
   /** `GET …/similar` — ähnliche Meisterpartien (0.544.0). */
@@ -484,7 +508,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       this.evalsUrl = this.games.clubEvalsUrl(id);
       this.games.clubGame(id).subscribe({
         next: g => this.show(g),
-        error: () => { this.notFound = true; this.loading = false; },
+        error: e => this.loadFailed(e),
       });
       return;
     }
@@ -498,7 +522,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       this.games.mistakes(id).subscribe(p => this.dismissedPlies.set(p?.dismissedPlies ?? []));
       this.games.get(id).subscribe({
         next: g => { this.shareToken = g.shareToken; this.scanId = g.scanId ?? null; this.show(g); this.loadSharedRoast(g.shareToken); },
-        error: () => { this.notFound = true; this.loading = false; },
+        error: e => this.loadFailed(e),
       });
       return;
     }
@@ -523,7 +547,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
         this.show(g);
         this.loadSharedRoast(token);
       },
-      error: () => { this.notFound = true; this.loading = false; },
+      error: e => this.loadFailed(e),
     });
   }
 

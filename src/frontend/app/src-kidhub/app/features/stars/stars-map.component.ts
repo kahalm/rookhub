@@ -81,6 +81,15 @@ import { pieceGlyph } from './stars-play.component';
     .glyph { font-size: 2.8rem; line-height: 1.1; }
     .name { font-size: 1.1rem; font-weight: 800; }
     .meta { font-size: .95rem; opacity: .85; }
+    /* Breitbild-Stufe (a1-k-ultrawide-raster): ab 2400 px ist die Karte 1880 px breit (--kid-wide-max der App-Huelle);
+       groessere Kacheln statt nur mehr Spalten (≈ 10 je Reihe statt 13). */
+    @media (min-width: 2400px) {
+      .head h1 { font-size: 2.3rem; }
+      .grid { gap: 18px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+      .stage { min-height: 176px; }
+      .glyph { font-size: 3.4rem; }
+      .name { font-size: 1.2rem; }
+    }
     /* UI-Sweep 2026-10-11 (r2-k-map-cols): am Handy drei statt zwei Spalten, wie die Stufenkarte. */
     @media (max-width: 479.98px) {
       .grid { gap: 10px; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }

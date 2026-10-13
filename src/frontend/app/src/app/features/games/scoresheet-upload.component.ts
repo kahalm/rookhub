@@ -126,7 +126,8 @@ export const MAX_PAGES = 3;
                 <span class="quota">{{ 'scoresheet.quota' | translate: { used: st.usedToday, limit: st.dailyLimit } }}
                   · {{ 'scoresheet.budget' | translate: { percent: st.budgetUsedPercent ?? 0 } }}</span>
               }
-              <!-- Gesperrter Knopf → Grund daneben (DESIGN 5.4, z1-rk-scoresheet-grund). -->
+              <!-- Gesperrter Knopf → Grund DARUNTER in eigener leiser Zeile (DESIGN 5.4, z1-rk-scoresheet-grund,
+                   a1-rk-scoresheet-grund-trenner: neben der Budgetzeile liefen beide Sätze ineinander). -->
               @if (!pages().length && !uploading() && canRead()) {
                 <span class="quota need-photo">{{ 'scoresheet.needPhoto' | translate }}</span>
               }
@@ -233,6 +234,7 @@ export const MAX_PAGES = 3;
     .side { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .side-label { font-size: 0.9rem; }
     .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .actions .need-photo { flex-basis: 100%; }
     .quota { font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .error { color: var(--mat-sys-error, #c62828); margin: 0; }
     .progress { margin-top: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }

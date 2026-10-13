@@ -2,6 +2,14 @@
 .prep { max-width: 760px; margin: 0 auto; padding: 16px; }
 /* Großer Bildschirm (d2-rk-prep-wide): breiter, damit Weiß und Schwarz nebeneinander stehen (prep-card.scss .sides). */
 @media (min-width: 1280px) { .prep { max-width: 1240px; } }
+/* a1-rk-prep-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Seite breiter, die Statistik-Blöcke (Mit Weiß, gegen 1.e4,
+   gegen 1.d4, gegen andere) nebeneinander statt 2 × 2. Steht hier statt in prep-card.scss, weil es eine Regel der
+   SEITE ist (LeagueHub bleibt unberührt); ::ng-deep, weil .sides in der Spielerkarte liegt. auto-fit: drei Blöcke
+   (ohne „gegen andere") nehmen die Breite ganz. */
+@media (min-width: 2400px) {
+  .prep { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .prep ::ng-deep .card.inline .sides { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+}
 .prep h1 { margin: 4px 0 6px; font: 500 26px/1.2 Roboto, "Helvetica Neue", sans-serif; }
 .prep .lede { margin: 0 0 16px; color: var(--mat-sys-on-surface-variant); max-width: 64ch; }
 .prep .back { display: inline-block; margin: 0 0 12px; color: var(--mat-sys-primary); text-decoration: none; }

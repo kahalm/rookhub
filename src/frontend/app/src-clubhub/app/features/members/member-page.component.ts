@@ -189,9 +189,13 @@ function orNull(value: string | null | undefined): string | null {
           <h2>Lernstand</h2>
           <div class="note-form">
             <label class="field"><span>Neue Notiz</span>
-              <input class="note-input" maxlength="2000" placeholder="z. B. kann die Gabel" [value]="noteText()" (input)="noteText.set($any($event.target).value)" (keydown.enter)="addNote()"></label>
-            <button type="button" class="btn add-note" [disabled]="busy() || !noteText().trim()" (click)="addNote()">Notiz speichern</button>
+              <input class="note-input" maxlength="2000" placeholder="z. B. kann die Gabel" [value]="noteText()"
+                [attr.aria-describedby]="noteMissing() ? 'note-missing' : null"
+                (input)="noteText.set($any($event.target).value); noteMissing.set(false)" (keydown.enter)="addNote()"></label>
+            <!-- a1-c-disabled-button-contrast: nicht gesperrt, solange das Feld leer ist — ein Tipp sagt stattdessen, was fehlt. -->
+            <button type="button" class="btn add-note" [disabled]="busy()" (click)="addNote()">Notiz speichern</button>
           </div>
+          @if (noteMissing()) { <p class="err need" id="note-missing">Erst eine Notiz eintippen.</p> }
           @if (m.noteEntries.length) {
             <ul class="notes">
               @for (n of m.noteEntries; track n.id) {
@@ -271,6 +275,9 @@ export class MemberPageComponent implements OnInit {
   readonly form = signal<MemberInput>(emptyInput());
   readonly birthText = signal('');
   readonly noteText = signal('');
+  /** „Notiz speichern" mit leerem Feld getippt: Feld fokussieren, Hinweis darunter (a1-c-disabled-button-contrast). */
+  readonly noteMissing = signal(false);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   /** Nach „Weiteres Kind anlegen": wessen Blatt gerade gespeichert wurde (Zeile über dem leeren Formular). */
@@ -546,7 +553,12 @@ export class MemberPageComponent implements OnInit {
   async addNote(): Promise<void> {
     const m = this.member();
     const text = this.noteText().trim();
-    if (!m || !text || this.busy()) return;
+    if (!m || this.busy()) return;
+    if (!text) {
+      this.noteMissing.set(true);
+      this.host.querySelector<HTMLInputElement>('.note-input')?.focus();
+      return;
+    }
     await this.run(async () => {
       this.member.set(await this.api.addNote(m.id, text));
       this.noteText.set('');

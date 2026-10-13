@@ -68,6 +68,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .wrap { max-width: 780px; margin: 0 auto; padding: 0 16px; }
+/* a1-l-link-browserfarbe: Links ohne eigene Klasse in Tinte statt Browserblau/-lila (auch :visited) — Spezifität (0,1,1) wie die
+   Bereichsregeln (.foot a, .share-out a …), die weiter unten stehen und deshalb gewinnen. */
+:where(lh-root) a:not([class]) { color: var(--ink); text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--ink) 45%, transparent); }
 .muted { color: var(--muted); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
@@ -143,7 +146,7 @@ main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
   border: 1.5px solid var(--ink); border-radius: 6px; padding: 8px 12px; cursor: pointer;
 }
 .btn-sec:hover { background: var(--ink); color: var(--paper); }
-.btn-sec:disabled { opacity: .5; cursor: progress; background: transparent; color: var(--ink); }
+.btn-sec:disabled { cursor: progress; background: transparent; color: var(--muted); border-color: var(--line); }   /* a1-l-partien-pruefen-gesperrt: feste Farben statt Deckkraft (≥ 4,5:1) */
 .update-msg { flex-basis: 100%; }
 .update-msg:empty { display: none; }
 .update-msg.err, .err { color: var(--red); }
@@ -360,6 +363,9 @@ lh-root :is(app-login, app-register, app-forgot-password, app-reset-password) .m
 /* Komponentenstil faerbt den Link mit --mat-sys-primary (hoehere Spezifitaet) — daher das Token umsetzen (z3-l-register-datenschutz-rot). */
 lh-root app-register .privacy-note { --mat-sys-primary: var(--muted); }
 lh-root app-register .privacy-note a { color: var(--muted); }
+/* a1-l-passwort-mail-link-rot: ebenso die Kontaktadresse unter „Link senden" (grau statt Fehlerrot, ohne die Deckkraft .85). */
+lh-root app-forgot-password .no-email { --mat-sys-primary: var(--muted); opacity: 1; }
+lh-root app-forgot-password .no-email a { color: var(--muted); }
 lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 600 20px/1.2 var(--cond); color: var(--red); }
 /* Nur echte Links — nicht der Knopf „Konto in RookHub löschen", der ebenfalls ein <a> ist (d1-x-account-delete-warn-ignored). */
 lh-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a:not(.mat-mdc-button-base) { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
@@ -488,6 +494,15 @@ button.pl:hover { text-decoration-color: var(--ink); }
 @media (min-width: 2400px) {
   .wrap.mid { max-width: var(--page-max-width-wide, 1880px); }
   .wrap.mid .boards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  /* a1-l-prognose-ultrawide-6-bretter: 6 Bretter 3 + 3 (und 3 in einer Reihe) statt 4 + 2 mit leerer halber Reihe. */
+  .wrap.mid .boards:is(:has(> li.board:nth-child(6):last-child), :has(> li.board:nth-child(3):last-child)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* a1-l-uebertragungen-ultrawide: vier kurze Spalten nicht über 1 880 px ziehen — Tabelle so breit wie unter 2400 px, linksbündig. */
+  .wrap.mid .bc-list { width: min(100%, 1208px); }
+  /* a1-l-korrigieren-ultrawide: Formular prüfen / korrigieren auf der breiten Seite, das Brett bis zur Fensterhöhe (≤ 960 px). */
+  .wrap.wide { max-width: var(--page-max-width-wide, 1880px); }
+  .wrap.wide .scan-layout { grid-template-columns: minmax(0, min(calc(100vh - 240px), 960px)) minmax(0, 1fr); }
+  .wrap.wide .scan-layout.with-photo { grid-template-columns: minmax(0, .8fr) minmax(0, min(calc(100vh - 240px), 960px)) minmax(0, 1fr); }
+  .wrap.wide .scan-board :is(app-chess-board, .eval-curve) { width: min(100%, calc(100vh - 240px)); }
 }
 /* Kopf am Handy (UI-Sweep 2026-10-10, l-nav-mobile): Logo + EIN Konto-Knopf (Menü: Name, Verein wechseln, Abmelden), die
    Reiter in EINER waagrecht scrollbaren Zeile, je mindestens 44 px hoch. */
@@ -509,7 +524,9 @@ button.pl:hover { text-decoration-color: var(--ink); }
   font: 600 15px/1 var(--cond); color: var(--paper); background: var(--ink);
   border: 1.5px solid var(--ink); border-radius: 6px; padding: 9px 14px; cursor: pointer;
 }
-.btn-pri:disabled { opacity: .45; cursor: not-allowed; }
+/* a1-l-partien-pruefen-gesperrt: gesperrt mit festen Farben statt opacity .45 (Weiß auf Grau ≈ 2,6:1) — --muted auf --track
+   hell 4,8:1, dunkel 5,7:1; der Grund steht als leise Zeile daneben (DESIGN 5.4). */
+.btn-pri:disabled { background: var(--track); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .btn-link { font: inherit; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 4px 2px; cursor: pointer;
   text-decoration: underline; text-underline-offset: 3px; }
 .btn-link:hover { color: var(--ink); }
@@ -593,6 +610,13 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .club-table thead { display: none; }
   .club-table tr.game > td { display: none; }
   .club-table tr.game > td.card-cell { display: block; padding: 10px 2px 4px; }
+}
+/* a1-l-vereinspartien-tablet-eroeffnung: am Tablet (Tabelle 641–960 px) nahmen die einzeiligen Namen samt Elo den Platz und die
+   Eröffnung schrumpfte auf „1.d4 Sf…" — dort kürzen die Namen mit „…" (voller Name im title), die Eröffnung behält ≥ 14ch. */
+@container (min-width: 641px) and (max-width: 960px) {
+  .club-table td.side { max-width: 0; width: 22%; overflow: hidden; text-overflow: ellipsis; }
+  .club-table td.side > :is(button.pl, span) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+  .club-table td.opening { width: 26%; min-width: 14ch; }
 }
 /* UI-Sweep 2026-10-11 (r2-l-dup-game): Hinweis „möglicherweise doppelt" (nur Verwalter) direkt unter der Partie. */
 .club-table tr.dup-row td { padding: 2px 6px 8px; border-top: 0;
@@ -762,6 +786,9 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .review-table tr.edit-row, .review-table tr.edit-row > td { display: block; }
 }
 .scan-clock { font-variant-numeric: tabular-nums; }
+/* a1-l-formular-wartezeit: Nachsatz der Wartezeile in Textgröße, der Strich hängt am Folgewort (geschütztes Leerzeichen). */
+.scan-why::before { content: "–\00a0"; }
+.scan-long { margin-top: -6px; }
 .club-table .pl.unknown { text-decoration: underline dotted; text-underline-offset: 3px; color: inherit; }
 /* Großes Foto: die Zeile des gewählten Halbzugs markiert (0.584.0) */
 .photo-frame { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
@@ -845,7 +872,9 @@ lh-claim-prompt { display: block; }
 
 /* Vereine verwalten (0.700.0, /vereine) */
 .clubs-page h2 { margin: 18px 0 6px; }
-.clubs-help { max-width: 72ch; }
+/* a1-l-vereine-einleitung-info: ein Absatz statt Flex-Zeile (.info-line) — kein Umbruch in 72ch, das ⓘ am Satzende. */
+.clubs-help { display: block; max-width: none; }
+.clubs-help .chk-btn { display: inline-flex; align-items: center; justify-content: center; vertical-align: -3px; margin-left: 6px; }
 .clubs-bar { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 12px 0 4px; }
 .clubs-tbl { table-layout: auto; }
 .clubs-tbl .club-name { font-weight: 600; overflow-wrap: anywhere; }

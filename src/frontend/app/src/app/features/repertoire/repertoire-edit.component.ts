@@ -18,8 +18,9 @@ import { downloadBlob } from '../../shared/download.util';
   imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslatePipe],
   template: `
     <div class="edit-container">
-      <div class="upload-area"
+      <div class="upload-area" [class.dragover]="dragActive"
            (dragover)="onDragOver($event)"
+           (dragleave)="dragActive = false"
            (drop)="onDrop($event)"
            (click)="fileInput.click()">
         <mat-icon>cloud_upload</mat-icon>
@@ -27,6 +28,7 @@ import { downloadBlob } from '../../shared/download.util';
         <input #fileInput type="file" accept=".pgn" multiple (change)="onFileSelect($event)" hidden>
       </div>
 
+      <section class="files">
       <h3>{{ 'repertoire.edit.files' | translate: { count: files.length } }}</h3>
       <mat-list>
         @for (file of files; track file.id) {
@@ -47,17 +49,26 @@ import { downloadBlob } from '../../shared/download.util';
           <p class="empty-state">{{ 'repertoire.edit.empty' | translate }}</p>
         }
       </mat-list>
+      </section>
     </div>
   `,
   styles: [`
     .edit-container { padding: 8px; overflow-y: auto; height: 100%; }
+    /* a1-rk-dropzone-rahmen-hell: Rand aus der Textfarbe statt fest #ccc (hell vorher ≈ 1,5:1, jetzt 50 % ≈ 3,3:1 hell
+       und ≈ 4:1 dunkel); Symbol 60 % (55-%-Regel). Beim Darüberziehen Rand in Primär. */
     .upload-area {
-      border: 2px dashed #ccc; border-radius: 8px; padding: 2rem;
+      border: 2px dashed color-mix(in srgb, currentColor 50%, transparent); border-radius: 8px; padding: 2rem;
       text-align: center; cursor: pointer; margin: 0 0 1rem;
       transition: border-color 0.2s;
     }
-    .upload-area:hover { border-color: var(--mat-sys-primary); }
-    .upload-area mat-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .upload-area:hover, .upload-area.dragover { border-color: var(--mat-sys-primary); }
+    .upload-area mat-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .files h3 { margin-top: 0; }
+    /* a1-rk-repertoire-edit-breite: ab 900 px Ablage links, Dateiliste rechts — beide in der Kopfbreite. */
+    @media (min-width: 900px) {
+      .edit-container { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+      .upload-area { margin: 0; }
+    }
     .empty-state { color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
 })
@@ -70,12 +81,17 @@ export class RepertoireEditComponent {
 
   constructor(private repertoireService: RepertoireService, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
 
+  /** Datei wird gerade über die Ablage gezogen (Rand in Primär). */
+  dragActive = false;
+
   onDragOver(event: DragEvent): void {
     event.preventDefault();
+    this.dragActive = true;
   }
 
   onDrop(event: DragEvent): void {
     event.preventDefault();
+    this.dragActive = false;
     if (event.dataTransfer?.files) {
       this.uploadFiles(event.dataTransfer.files);
     }

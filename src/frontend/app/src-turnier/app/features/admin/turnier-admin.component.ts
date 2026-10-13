@@ -151,6 +151,11 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
     /* So hoch wie der 40-px-Knopf der übrigen Zeilen — der Listentakt sprang sonst an der eigenen Zeile (z2-t-admin-eigene-zeile). */
     .ta-self { min-height: 40px; display: inline-flex; align-items: center; }
     .ta-more { margin: 12px 0 0; }
+    /* Handy (a1-t-admin-handy-knopf): der Name steht immer allein in Zeile 1, E-Mail und Einstieg/„Dein Konto" darunter —
+       vorher passte der Knopf bei kurzen Namen daneben, bei langen nicht, die Zeilen sprangen 57/96 px. */
+    @media (max-width: 599.98px) {
+      .ta-name { flex-basis: 100%; }
+    }
   `],
 })
 export class TurnierAdminComponent implements OnInit {

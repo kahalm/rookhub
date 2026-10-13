@@ -79,6 +79,18 @@ describe('RepertoireHolesComponent', () => {
     expect(c.result()).toBeNull();
   });
 
+  // a1-rk-holes-karte-leer-hoch: die Detailseite hält die Karte vor der ersten Suche so hoch wie ihren Inhalt.
+  it('reports when a search is active (start) and when its result is discarded', () => {
+    const c = make(PGN_MIXED, { run: () => of(result()) });
+    const seen: boolean[] = [];
+    c.searchActive.subscribe(v => seen.push(v));
+
+    c.start();
+    expect(seen).toEqual([true]);
+    c.setColor(c.color() === 'w' ? 'b' : 'w');
+    expect(seen).toEqual([true, false]);
+  });
+
   it('the threshold is adjustable, clamped on blur and remembered', () => {
     const explorer = { run: jasmine.createSpy('run').and.returnValue(of(result())) };
     const c = make(PGN_BLACK, explorer);

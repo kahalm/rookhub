@@ -450,7 +450,16 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     await create('7');
     // Kurzer Platzhalter — der lange („…, übt Matt mit zwei Tü…") wurde am Handy mitten im Wort abgeschnitten.
     expect(el().querySelector<HTMLInputElement>('.note-input')!.placeholder).toBe('z. B. kann die Gabel');
+    // a1-c-disabled-button-contrast: leeres Feld sperrt den Knopf nicht, ein Tipp fokussiert das Feld und sagt, was fehlt.
+    expect(el().querySelector<HTMLButtonElement>('.add-note')!.disabled).toBeFalse();
+    el().querySelector<HTMLButtonElement>('.add-note')!.click();
+    await settle();
+    expect(api.addNote).not.toHaveBeenCalled();
+    expect(el().querySelector('.need')!.textContent).toContain('Erst eine Notiz eintippen');
+    expect(document.activeElement).toBe(el().querySelector('.note-input'));
     type('.note-input', ' rechnet zwei Züge ');
+    fixture.detectChanges();
+    expect(el().querySelector('.need')).toBeNull();
     el().querySelector<HTMLButtonElement>('.add-note')!.click();
     await settle();
     expect(api.addNote).toHaveBeenCalledWith(7, 'rechnet zwei Züge');

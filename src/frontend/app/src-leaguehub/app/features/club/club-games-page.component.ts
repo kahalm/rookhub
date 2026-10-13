@@ -203,14 +203,15 @@ type Side = 'white' | 'black';
          Stelle blendet das CSS aus (display: none, also weder sichtbar noch für Vorleser oder Tab erreichbar). -->
     <!-- Ein Spielername — in der Tabelle UND in der Karte am Handy derselbe Baustein. -->
     <ng-template #sideName let-g let-k="k">
-      @if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
+      <!-- a1-l-vereinspartien-tablet-eroeffnung: am Tablet kürzt die Tabelle Namen mit „…" — der volle Name im title. -->
+      @if (fideOf(g, k); as f) { <button type="button" class="pl" [attr.title]="nameOf(g, k)" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
       @else if (isAnon(g, k)) { <span class="anon">{{ nameOf(g, k) }}</span> }
       @else if (inRoster(g, k)) { <span class="pl-nofide" title="Ligaspieler ohne FIDE-ID — dazu gibt es keine Spielerkarte">{{ nameOf(g, k) }}
                 <span class="small muted">(ohne FIDE-ID)</span></span> }
       @else if (g.canDelete) { <button type="button" class="pl unknown" (click)="edit(g)"
                 [attr.title]="'Kein Spieler zugeordnet (keine FIDE-ID, also keine Spielerkarte) — zum Zuordnen klicken'">{{ nameOf(g, k) }}
                 <span class="small muted" aria-hidden="true">✎</span></button> }
-      @else { <span>{{ nameOf(g, k) }}</span> }
+      @else { <span [attr.title]="nameOf(g, k)">{{ nameOf(g, k) }}</span> }
       @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }
     </ng-template>
     <ng-template #rowActs let-g>

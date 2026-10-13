@@ -14,6 +14,12 @@
 /* Höhe mitgedacht (d2-rk-wsolve-buttons): am Laptop (768 px) passen Brett, Statuszeile und „Lösung zeigen"/„Weiter" unter die
    Falz (≈ 438 px); am Handy und groß bleibt die Breite maßgeblich. */
 .wsv-board { width: min(100%, 560px, calc(100dvh - 330px)); margin: 4px auto 0; }
+/* UI-Sweep a1 (a1-rk-w-loeser-ultrawide): ab 2400 px wächst die Karte mit dem Brett (DESIGN 4.1, Brett bis
+   Fensterhöhe); Knöpfe und Status bleiben darunter. Unter 2400 px ändert sich nichts. */
+@media (min-width: 2400px) {
+  .wsv-page { max-width: 1100px; }
+  .wsv-board { width: min(100%, 1000px, calc(100dvh - 330px)); }
+}
 .wsv-text { margin: 10px 0 0; font-size: 0.95rem; line-height: 1.4; overflow-wrap: anywhere; }
 
 .wsv-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }

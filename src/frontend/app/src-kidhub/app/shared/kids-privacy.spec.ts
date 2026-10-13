@@ -85,48 +85,80 @@ describe('foldPrivacy (k-privacy: Eltern-Abschnitte zum Aufklappen)', () => {
 
 // UI-Sweep 2026-10-11 (d1-k-account-deletion-jargon): Fachbegriff-Liste fuer Eltern zugeklappt, davor ein Kindersatz.
 describe('foldAccountDeletion (Konto loeschen in der Kinder-Fassung)', () => {
-  const texts = { short: 'Alles von dir wird geloescht.', parents: 'Fuer Eltern: was genau geloescht wird' };
+  const texts = {
+    short: 'Alles von dir wird geloescht.', parents: 'Fuer Eltern: was genau geloescht wird',
+    howTo: 'Fuer Eltern: so wird das Konto geloescht',
+  };
 
   function page(): HTMLElement {
     const root = document.createElement('div');
     root.innerHTML = `
       <app-account-deletion><mat-card-content>
         <p class="intro">Dasselbe Konto wie RookHub</p>
-        <h2>So loeschst du dein Konto</h2>
+        <h2 class="how-title">So loeschst du dein Konto</h2>
+        <p class="how">In RookHub anmelden, ☰ → Konto → Profil</p>
+        <p class="backup"><strong>Vorher sichern:</strong> PGN, Repertoires</p>
+        <p class="backup-links"><a>Kurse</a><a>Repertoires</a></p>
         <p class="action"><a class="delete-now">Loeschen</a></p>
         <h2 class="removed-title">Was entfernt wird</h2>
         <ul class="removed"><li>API-Tokens</li><li>Chessable-Zugang</li></ul>
-        <h2>Was bleibt</h2>
+        <h2 class="kept-title">Was bleibt</h2>
         <p class="kept">Anonym</p>
         <p class="back"><a>Zurueck</a></p>
       </mat-card-content></app-account-deletion>`;
     return root;
   }
 
-  it('Liste in ein zugeklapptes <details class="kid-parent">, Kindersatz direkt unter der Ueberschrift', () => {
+  it('Liste in ein zugeklapptes <details class="kid-parent">, Kindersatz direkt unter der Einleitung', () => {
     const root = page();
     expect(foldAccountDeletion(root, texts)).toBeTrue();
-    const details = root.querySelector('details.kid-parent')!;
+    const details = root.querySelector('details.kid-parent:has(ul.removed)')!;
     expect(details.hasAttribute('open')).withContext('zugeklappt').toBeFalse();
     expect(details.querySelector('ul.removed li')).not.toBeNull();
     expect(details.querySelector('summary .kid-parent-label')!.textContent).toBe(texts.parents);
+    expect(details.previousElementSibling!.classList).toContain('removed-title');
     const short = root.querySelector('p.kid-short')!;
     expect(short.textContent).toBe(texts.short);
-    expect(short.previousElementSibling!.classList).toContain('removed-title');
-    expect(short.nextElementSibling).toBe(details);
+    // a1-k-deletion-fachjargon: Kindersatz vor der Erwachsenen-Anleitung, nicht erst unter dem Knopf.
+    expect(short.previousElementSibling!.classList).toContain('intro');
     // Uebriges bleibt stehen: Knopf, „Was bleibt", Ruecklink am Ende.
     expect(root.querySelector('details .delete-now, details .kept, details .back')).toBeNull();
     expect(root.querySelector('mat-card-content')!.lastElementChild!.classList).toContain('back');
+  });
+
+  // a1-k-deletion-fachjargon: Anleitung + „Vorher sichern" (PGN, Repertoires, ☰-Pfad) über dem Knopf zugeklappt.
+  it('Anleitung samt „Vorher sichern" in ein zweites zugeklapptes Eltern-<details>, der Knopf bleibt sichtbar', () => {
+    const root = page();
+    foldAccountDeletion(root, texts);
+    const content = root.querySelector('mat-card-content')!;
+    const how = content.querySelector('details.kid-parent:has(.kid-parent-howto-label)')!;
+    expect(how).not.toBeNull();
+    expect(how.hasAttribute('open')).toBeFalse();
+    expect(how.querySelector('summary .kid-parent-howto-label')!.textContent).toBe(texts.howTo);
+    expect(Array.from(how.children).slice(1).map(c => c.className)).toEqual(['how-title', 'how', 'backup', 'backup-links']);
+    expect(Array.from(content.children).map(c => c.tagName === 'DETAILS' ? 'details' : c.className))
+      .toEqual(['intro', 'kid-short', 'details', 'action', 'removed-title', 'details', 'kept-title', 'kept', 'back']);
+    // Fachbegriffe sind nicht sichtbar, solange zu (gerendert im Dokument gemessen).
+    document.body.appendChild(root);
+    try {
+      for (const sel of ['.how', '.backup', '.backup-links', 'ul.removed']) {
+        expect((root.querySelector(sel) as HTMLElement).checkVisibility()).withContext(sel).toBeFalse();
+      }
+      expect((root.querySelector('.delete-now') as HTMLElement).checkVisibility()).toBeTrue();
+    } finally {
+      root.remove();
+    }
   });
 
   it('Sprachwechsel setzt die Texte neu; ein zweiter Aufruf aendert nichts; andere Seiten bleiben unberuehrt', () => {
     const root = page();
     foldAccountDeletion(root, texts);
     expect(foldAccountDeletion(root, texts)).toBeFalse();
-    expect(root.querySelectorAll('details').length).toBe(1);
-    setAccountDeletionTexts(root, { short: 'Everything is deleted.', parents: 'For parents' });
+    expect(root.querySelectorAll('details').length).toBe(2);
+    setAccountDeletionTexts(root, { short: 'Everything is deleted.', parents: 'For parents', howTo: 'For parents: how' });
     expect(root.querySelector('.kid-short')!.textContent).toBe('Everything is deleted.');
     expect(root.querySelector('.kid-parent-label')!.textContent).toBe('For parents');
+    expect(root.querySelector('.kid-parent-howto-label')!.textContent).toBe('For parents: how');
     expect(foldAccountDeletion(document.createElement('div'), texts)).toBeFalse();
   });
 

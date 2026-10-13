@@ -42,4 +42,46 @@ describe('StarsMapComponent', () => {
     expect(Number(glyph.opacity)).toBe(1);
     expect(contrast([gr, gg, gb, ga], bg)).toBeGreaterThanOrEqual(3);
   });
+
+  /** Karte in einem iframe `w`×`h` — `bodyStyle` setzt `--kid-wide-max` wie die App-Huelle ab 2400 px. */
+  function gridAt(host: HTMLElement, w: number, h: number, bodyStyle = '') {
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const frame = document.createElement('iframe');
+    frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: ${h}px; border: 0;`;
+    document.body.appendChild(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0;${bodyStyle}">${host.outerHTML}</body></html>`);
+      doc.close();
+      const tiles = Array.from(doc.querySelectorAll('.grid li')).map(t => t.getBoundingClientRect());
+      const top = Math.round(tiles[0].top);
+      return {
+        host: doc.body.firstElementChild!.getBoundingClientRect().width,
+        width: tiles[0].width,
+        perRow: tiles.filter(r => Math.round(r.top) === top).length,
+        name: parseFloat(frame.contentWindow!.getComputedStyle(doc.querySelector('.stage .name')!).fontSize),
+      };
+    } finally {
+      frame.remove();
+    }
+  }
+
+  /** a1-k-ultrawide-raster: ab 2400 px 1880 px breit und größere Kacheln (≥ 170 px, ≤ 10 je Reihe); 1920 px wie bisher. */
+  it('Breitbild-Stufe: größere Kacheln statt nur mehr Spalten, 1920 px unverändert', () => {
+    const f = TestBed.createComponent(StarsMapComponent);
+    f.detectChanges();
+    const host = f.nativeElement as HTMLElement;
+    const uw = gridAt(host, 3440, 1440, '--kid-wide-max: 1880px;');
+    expect(uw.host).toBeCloseTo(1880, 0);
+    expect(uw.width).toBeGreaterThanOrEqual(170);
+    expect(uw.perRow).toBeLessThanOrEqual(10);
+    expect(uw.name).toBeCloseTo(19.2, 1);
+    const hd = gridAt(host, 1920, 1080);
+    expect(hd.host).toBeCloseTo(1440, 0);
+    expect(hd.width).toBeLessThan(170);
+    expect(hd.name).toBeLessThan(19);
+  });
 });

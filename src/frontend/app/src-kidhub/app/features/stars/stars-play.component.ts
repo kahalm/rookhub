@@ -188,7 +188,9 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     </ng-template>
   `,
   styles: [KID_BACK, KID_COUNTER, KID_COORDS, `
-    :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
+    /* max(): ab 2400 px waechst --kid-row (Brett bis 1240 px + Spalte) ueber 1320 px hinaus (a1-k-ultrawide-board-small);
+       darunter bleibt es bei 1320 px. */
+    :host { display: block; max-width: max(1320px, calc(var(--kid-row, 1068px) + 32px)); margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }

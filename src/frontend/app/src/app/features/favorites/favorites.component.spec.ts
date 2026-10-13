@@ -121,3 +121,15 @@ describe('FavoritesComponent Kopfabstand', () => {
     expect(css).toMatch(/\.hint[^{]*\{[^}]*margin: 0;/);
   });
 });
+
+// a1-rk-leer-hinweis-blass: .empty-state (global) blasst schon auf 60 % ab; die Hinweiszeile mischte noch einmal 60 %
+// darauf (36 %, hell ~2,5:1). Sie erbt jetzt die Farbe und unterscheidet sich nur über die Größe.
+describe('FavoritesComponent Leerzustand (a1-rk-leer-hinweis-blass)', () => {
+  it('die Hinweiszeile erbt die Farbe des Leerzustands', () => {
+    const css = (((FavoritesComponent as any).ɵcmp.styles ?? []) as string[]).join('\n').replace(/\s/g, '');
+    const m = /\.empty-hint(?:\[[^\]]*\])?\{([^}]*)\}/.exec(css);
+    expect(m).not.toBeNull();
+    expect(m![1]).toContain('color:inherit');
+    expect(m![1]).not.toContain('color-mix');
+  });
+});

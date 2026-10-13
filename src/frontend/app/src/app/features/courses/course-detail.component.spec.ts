@@ -563,6 +563,21 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     expect(el.textContent).not.toContain('Meisterpartien,kommentiert');
   });
 
+  // a1-rk-kennzahl-beschriftung-umbruch: bricht eine Beschriftung um, bleiben die Werte der Zeile auf einer Linie.
+  it('hält die Kennzahl-Werte auf einer Linie, auch wenn eine Beschriftung umbricht', async () => {
+    const { el } = await render({}, 600);
+    const cells = Array.from(el.querySelectorAll('dl.meta > div')).slice(0, 3) as HTMLElement[];
+    expect(cells.length).toBe(3);
+    cells[0].querySelector('dt')!.textContent = 'Lines';
+    cells[1].querySelector('dt')!.textContent = 'Positions without a solution';
+    cells[2].querySelector('dt')!.textContent = 'Chapters';
+    const dt = cells.map(c => c.querySelector('dt')!.getBoundingClientRect());
+    expect(dt[1].height).withContext('die lange Beschriftung bricht um').toBeGreaterThan(dt[0].height * 1.5);
+    const tops = cells.map(c => Math.round(c.querySelector('dd')!.getBoundingClientRect().top));
+    expect(tops[0]).toBe(tops[1]);
+    expect(tops[2]).toBe(tops[1]);
+  });
+
   it('nur technische Schlagwörter → keine Zeile „Schlagwörter"', async () => {
     const { el } = await render({ tags: 'personal' });
     expect(el.querySelector('dd.tag-list')).toBeNull();

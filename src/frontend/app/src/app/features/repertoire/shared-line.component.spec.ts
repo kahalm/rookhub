@@ -53,3 +53,32 @@ describe('SharedLineComponent', () => {
     expect(step).toHaveBeenCalledTimes(1);
   });
 });
+
+/** UI-Sweep a1: Datum am Handy nie umbrechen (a1-rk-geteilte-linie-datum-handy), Tablet hochkant stapeln
+ *  (a1-rk-geteilt-recon-tablet), ab 2400 px Brett bis Fensterhöhe (a1-rk-geteilt-brett-ultrawide). */
+describe('SharedLineComponent Layout', () => {
+  const css = ((SharedLineComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s+/g, '')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  const block = (q: string) => {
+    const at = css.indexOf(`@media(${q})`);
+    expect(at).withContext(q).toBeGreaterThan(-1);
+    const next = css.indexOf('@media', at + 6);
+    return css.slice(at, next > -1 ? next : undefined);
+  };
+  it('Datum ohne Umbruch, Trenner „·“ vor dem Datum; am Handy eine Zeile mit gekürztem Namen', () => {
+    const base = css.slice(0, css.indexOf('@media'));
+    expect(base).toContain('.date{white-space:nowrap;}');
+    expect(base).toMatch(/\.rep\+\.date::before\{content:["']·["'];/);
+    const phone = block('max-width:768px');
+    expect(phone).toContain('.meta{flex-wrap:nowrap;}');
+    expect(phone).toContain('.rep{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}');
+  });
+  it('stapelt unter 900 px, Brett höchstens bis zur Fensterhöhe', () => {
+    const tab = block('max-width:899.98px');
+    expect(tab).toContain('.body{flex-direction:column;');
+    expect(tab).toMatch(/\.board-wrap\{width:min\(100%,max\(360px,(calc\()?100vh-260px\)?\)\);\}/);
+  });
+  it('ab 2400 px Brett bis Fensterhöhe (höchstens 1080 px)', () => {
+    expect(block('min-width:2400px')).toContain('--board-size:clamp(360px,calc(100vh-260px),1080px)');
+  });
+});

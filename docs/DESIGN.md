@@ -165,8 +165,9 @@ Dialoge: Material-Vorgabe; der Spielweise-Dialog 20 px, als Blatt am Handy `20px
 - **Breitbild-Stufe ≥ 2400 px** (UI-Sweep u1, 0.762.0): Token `--page-max-width-wide` (`styles.scss`; unter 2400 px
   = `--page-max-width`, ab 2400 px **1880 px**). **Nur** Raster-, Tabellen- und Brettseiten nehmen es — opt-in je Seite
   und ausschließlich innerhalb `@media (min-width: 2400px)`: `max-width: min(var(--page-max-width-wide, 1880px), 96vw)`.
-  Bisher: Dashboard (5 Kachelspalten), Kurse (6 Spalten), Repertoires, Aufgabenblätter, Punktepartie-Liste, Admin,
-  Statistik (zweispaltig), Turnier-Verlauf. **Lese- und Formularseiten bleiben** bei `--page-max-width` bzw. ihrer
+  Bisher: Dashboard (5 Kachelspalten), Kurse (6 Spalten), Linien durchsehen (Brett bis Fensterhöhe), Repertoires, Aufgabenblätter, Punktepartie-Liste, Admin,
+  Statistik (zweispaltig), Turnier-Verlauf, Gespeicherte Partien, Punktepartie-Brett, Spielervorbereitung (Statistik-Blöcke
+  nebeneinander), geteilte Linie `/l` und Rekonstruktion `/r` (Brett bis Fensterhöhe, ≤ 1 080 px), Puzzle-Löser (Standard, Endlos-Spielbrett, Buch/Kurs/Tagespuzzle/Wochenpost: Brett bis Fensterhöhe, daneben ≥ 360 px Seitenspalte). **Lese- und Formularseiten bleiben** bei `--page-max-width` bzw. ihrer
   schmaleren Breite. Unter 2400 px ändert sich dadurch nichts (Laptop/Handy/1920 pixelgleich). Bretter wachsen dort
   höchstens bis zur Fensterhöhe (`min(…, calc(100vh - Kopf/Leisten))`). Die Kopfleiste (RookHub + Turnier) bleibt
   randlos, ihr Inhalt rückt ab 2400 px auf die Kante des breiten Inhalts (`padding-inline: max(16px, calc((100% - var(--page-max-width-wide, 1880px)) / 2 + 16px))`, fluchtet mit Brett/Raster;
@@ -297,6 +298,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - Zahlen rechtsbündig, `tabular-nums`; Anteil und Anzahl als **getrennte** Spalten (r2-rg-explorer-cols).
 - Meta-Zeilen am Handy: „Wert · Wert“ kompakt unter dem Namen (l-names-mobile, r2-t-meta-dot).
 - Blätterleisten übersetzt (`core/translated-paginator-intl.ts`).
+- **Liste neben dem Brett** (Repertoire-Linien, a1-rk-linienliste-scrollkasten): zweispaltig darf sie in einem Kasten
+  scrollen, der mindestens so hoch ist wie Brett + Leiste darunter, mit Weiterscroll-Schatten am unteren Rand (nur
+  sichtbar, solange noch etwas kommt); einspaltig läuft sie mit der Seite — kein Kasten im Kasten.
 - `matListItemMeta` nie direkt auf einen Text-Knopf (`mat-flat-button`/`mat-stroked-button`), sondern auf ein
   umschließendes `<div>` — sonst übernimmt der Knopf Schrift, Farbe und Ausrichtung des Listen-Endbereichs
   (Beschriftung winzig und fast unsichtbar, d1-rk-revenge-loesen-knopf-kaputt).
@@ -322,8 +326,11 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   + `title`), damit beide in **einer** Zeile bleiben und der Kopf in allen Modi gleich hoch ist (Repertoire, 0.759.2).
   Symbole **in** Knöpfen behalten die Material-Größe (r2-rg-trainer-icons).
 - **Gesperrter Knopf → Grund sichtbar darunter** (leise Zeile), nicht nur im Tooltip (r2-rg-analyze-disabled) —
-  am Handy gibt es keinen Hover.
-- Kein zweiter gleicher Hauptknopf auf einer Seite (Punktepartie: nur ein „Zur Aufgabe“, 0.750.1).
+  am Handy gibt es keinen Hover. In einer Knopfzeile stehen Knopf und Grund in einer eigenen schmalen Spalte
+  (≤ 280 px), nie als 100-%-Zeile im Aktionsblock — sonst rutscht das ⋮ allein in eine Zeile (a1-rk-shared-kopf-grund).
+- Kein zweiter gleicher Hauptknopf auf einer Seite (Punktepartie: nur ein „Zur Aufgabe“, 0.750.1). Hat ein Modus
+  seine eigene Hauptaktion im Panel (Lochfinder „Löcher suchen“), tritt der Kopfknopf dort als `mat-stroked-button`
+  zurück (a1-rk-holes-zwei-hauptknoepfe).
 - LeagueHub: `.btn-pri` (gefüllt in `--ink`), `.btn-sec` (1.5 px Rahmen), `.btn-link`, `.icon-btn` (30 px);
   ClubHub: `.btn` (min. 44 px), `.btn.primary` (eine je Seite), `.btn.danger`, `.btn.slim`; KidHub: Pillen und
   `.big` (Abschnitt 8.3).
@@ -420,6 +427,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - Ist: Klassen `.empty` (75×), `.empty-hint`, `.empty-state`, `.empty-text`. **Regel ab jetzt:** `.empty-state`
   mit `text-align: center; padding: 2rem 1rem`; ein geteilter Baustein ist offen (Abschnitt 10).
 - Ein Ladekreis, der nach dem Laden stehen bleibt, ist ein Fehler (UI-Sweep-Prüfung „lädt noch“).
+- Hinweiszeilen **im** Leerzustand (`.muted`, `.empty-hint`) erben dessen 60 % und werden nicht ein zweites Mal
+  abgeblasst (sonst 36 %, hell ≈ 2,5:1) — Unterschied nur über die Größe (≈ .85–.9em) (a1-rk-leer-hinweis-blass).
 
 ### 5.11 Hinweise, Banner, Sperrkarten
 
@@ -435,6 +444,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   `common.showMore`/`common.showLess` (0.759.2).
 - **Lange Texte** werden nicht in einen eigenen Scrollkasten gesperrt, sondern mit „Weiterlesen“ aufgeklappt
   (r2-k-course-scroll).
+- **Tastaturhinweise** („Leertaste/Enter“, „←/→“) nur mit feiner Zeigesteuerung: Klasse + `@media (pointer: coarse)
+  { display: none }` — am Touch-Gerät verlängern sie nur den Vorlauf (a1-rk-flashcards-tastaturhinweis-handy).
 - **Sperrkarte** (Seite ohne Recht/Konto): **eine** Karte für alle betroffenen Seiten, Klartext statt
   Rechte-Schlüssel, **Weg zurück** (Startseite / Verknüpfen) als Knopfreihe mit Abstand
   (ClubHub `.gate` + `.gate-actions { gap: 8px }`, r2-c-gate-deadend; LeagueHub `.gate .actions`, r2-l-gate-text).
@@ -444,14 +455,28 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - Drei Bretter: `PuzzleBoardComponent` (Löser), `AnalysisBoardComponent`, `shared/pgn-viewer/chess-board.component.ts`;
   alle mit Vollbild-Knopf **im** Brett. Neue Brett-Ansichten benutzen eines davon.
 - Koordinaten global 11 px (≥ 900 px: 12 px), halbfett, Ränge links oben, Linien unten rechts, Farbe je Feld
-  (UX-060, `styles.scss`); KidHub ≈ 2,2 % der Brettbreite (`KID_COORDS`).
+  (UX-060, `styles.scss`); KidHub ≈ 2,2 % der Brettbreite (`KID_COORDS`). Lesbar heißt ≥ 4,5:1 zum eigenen Feld:
+  im Thema brown ist auch das dunkle Feld (#c0ae91) zu hell für helle Schrift — dort dunkle Schrift mit hellem Hof
+  auf beiden Feldfarben (a1-rk-brett-koordinaten-dunkle-felder).
 - Brettthemen (`board-theme-*`) und Figurensätze (`piece-set-*`) nur über `styles.scss`.
 - Tippzonen neben dem Brett: `.board-tap` (kein Markieren, kein Doppeltipp-Zoom); kein Tipp-Aufblinken.
 - Hinweiszeile unter dem Löser: bei `(pointer: coarse)` ≥ 44×44 px.
 - Analysebrett: Zusatzkarten unter der Zugliste starten zugeklappt — der Eröffnungs-Explorer zeigt nur die Kopfzeile
   (Titel + Aufklapp-Pfeil) und fragt erst aufgeklappt; ein auf dem Gerät gemerkter Zustand gilt weiter (0.760.0).
 - Stellung markieren: `app-mark-position-button` („+“, markiert grün gefüllt, `aria-pressed`).
+- Analysebrett: Brettspalte klebt erst ab **900 px**, wo Brett und Seitenspalte sicher nebeneinander stehen (Brettspalte
+  lässt dort 300 px frei); 769–899 px steht das Brett mittig einspaltig und scrollt mit. Bewertungsleiste mit 1-px-Rahmen
+  `--mat-sys-outline` (Weißanteil sonst im hellen Design unsichtbar). Pfeile (autoShapes) erst auf ein gemessenes Brett
+  (Breite > 0), sonst NaN-Koordinaten (a1-rk-analyse-tablet-brett, a1-rk-evalbar-hell, a1-rk-svg-nan-pfeile).
+- **Knopfleiste unter dem Brett nie breiter als das Brett** (`max-width: 100%`, ◀ ▶ schrumpfen bis 44 px, Abstände
+  wachsen mit dem Brett); am Handy (≤ 480 px) Nebenknöpfe 36 px, damit ◀ ▶ je ≥ 56 px bleiben (Partieseite,
+  a1-rk-brettleiste-plus; die 36 px auch im Analysebrett).
 - **FEN nie roh anzeigen:** Mini-Brett + „Weiß am Zug · Zug 5“ + Kopierknopf (r2-rg-recon-fen).
+- **Puzzle-Löser** (alle drei Modi): zweispaltig erst ab 900 px; 769–899 px einspaltig, Brett mittig bis Fensterhöhe
+  (`min(100%, 100vh - 180px)`), Seitenkarten volle Breite darunter. In der Seitenspalte zuerst die Bedienung
+  (Kontext-Card mit Fortschritt/„Überspringen“, Status-Card, Aktionsleiste), der ungekürzte Kurs-Kommentar als eigener
+  Block danach. Teilen + ⋮ der Aktionsleiste sind eine Einheit (`.pab-actions`), Kennzahlen-Raster `auto-fit` statt
+  fester Spaltenzahl; leise Textknöpfe („Überspringen“) über `--mat-sys-on-surface-variant`, nie über Deckkraft (a1).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
 ### 5.13 Zahlen, Mehrzahl, Datum
@@ -470,6 +495,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   Zeilenende steht (r2-t-meta-dot). Leerzeichen zwischen Interpolation und `@if` fest ins Markup schreiben —
   Angular entfernt sie sonst („Spielennoch offen“, 0.751.2).
 - Ländernamen ausgeschrieben, nicht als Code (LeagueHub, 0.751.0).
+- **Ergänzungsstrich** („Fortschritt und -Statistiken“) nie allein am Zeilenende: vor dem Strich U+00A0, danach
+  Wortverbinder U+2060 („und -⁠Statistiken“, 0.763.0, `i18n-parity.spec`).
 - **Zahl und Einheit/%** mit geschütztem Leerzeichen (U+00A0) zusammenhalten, auch in Übersetzungen hinter einem
   Platzhalter („{{percent}} %“) — sonst steht „%)“ allein in der nächsten Zeile (0.759.0, `i18n-parity.spec`).
   **Sprachausnahme Prozent** (0.761.0): Englisch und Ungarisch schreiben „46%“ ohne Leerzeichen (en/hu-JSON
@@ -508,7 +535,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   „24.05.2026“, „39 %“). Neue Texte der Karte nie als Klartext ins Template.
 - Nicht übersetzt: FEN/PGN, Eigennamen, „RookHub“, „Stockfish“, gecrawlte Daten (Züge siehe 5.14).
 - **Anrede „du“**, kurze Beschriftungen, keine Fachbegriffe ohne Not; KidHub in einfacher Sprache.
-- **Deutsche Anführungszeichen typografisch „…“** (in `de.json` 145 Werte, 5 noch mit geraden). Im deutschen
+- **Deutsche Anführungszeichen typografisch „…“** (in `de.json` 145 Werte, 5 noch mit geraden), keine »…«
+  (`i18n-parity.spec`, 0.763.0). Im deutschen
   Changelog-Text Pflicht: ein gerades `"` beendet den JS-String und bricht den Build.
 - **Englische Anführungszeichen typografisch “…”** (innen ‘…’) in `en.json` — keine »…«, „…“ oder geraden `"`
   (ausgenommen Syntax: HTML-Attribute, PGN-Tags in Platzhaltern); `i18n-parity.spec` prüft es (0.761.0).
@@ -564,7 +592,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 ### 8.2 Turnierseite (`src-turnier/`)
 
 - Gleiches Material-Thema und gleicher Design-Modus wie RookHub (Cookie geteilt); theme-color `#172345`.
-  Navbar `shell/turnier-navbar.component.ts`: ≤ 768 px Kopfknöpfe + ⋮; auf `/login`, `/register` kein „Anmelden“.
+  Navbar `shell/turnier-navbar.component.ts`: ≤ 768 px Kopfknöpfe + ⋮; 769–1023 px „Zu RookHub“ nur als Symbol;
+  auf `/login`, `/register`, `/forgot-password`, `/reset-password` kein „Anmelden“.
 - **Turnierkarte** (`features/tournament-directory/tournament-card.component.ts`): vier feste Plätze
   Merken | Kalender | Ausblenden | Melden (40 px); fehlt eine Aktion, hält `.tc-slot` den Platz. ≤ 600 px:
   Kurzwort unter jedem Symbol, Fläche ≥ 64×48, Radius 12, `justify-content: space-between`. Gemerkt =
@@ -612,6 +641,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Zahlknöpfe (0.747.0).
 - Stufen- und Sternenkarte am Handy dreispaltig; gesperrte Stufen lesbar; angefangene Stufen zeigen den
   Zwischenstand; Kurskachel mit Stand „8 von 287“ + dünnem Balken.
+- Breitbild ≥ 2400 px (4.1): die Hülle setzt `--kid-board` bis zur Fensterhöhe (≤ 1240 px; Aufgabenseiten wachsen mit
+  `--kid-row`) und `--kid-wide-max: 1880px` für Startseite und Karten — dort größere Kacheln statt mehr Spalten.
+  Tablet (600–899 px): Startkacheln 2 × 2, eine allein übrige nimmt die ganze Zeile. Kurs-Zähler ist die `.kid-counter`-Pille.
 - Sprachwahl als Pille mit 🌐 über einem nativen `select`; Anmeldemasken mit „← Start“ über der Karte;
   Datenschutz kindgerecht, kein Impressum.
 
@@ -641,7 +673,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   klebendem Kopf.
 - Auswahlfelder wie `.pick select` (Fläche, 1 px Rahmen, Radius 6), auch der Vereinswechsel (r2-l-club-select).
 - Fußzeile immer unten: `lh-root` ist eine Flex-Spalte über `100dvh`, `main.wrap` wächst (wie ClubHub; u1-l-fuss-schwebt).
-- Breitbild ≥ 2400 px: `.wrap.mid` auf `--page-max-width-wide`, Prognose-Bretter vierspaltig (u1-l-prognose-bretter).
+- Breitbild ≥ 2400 px: `.wrap.mid` und `.wrap.wide` (Formular prüfen/korrigieren, Brett ≤ `min(100vh - 240px, 960px)`) auf
+  `--page-max-width-wide`, Prognose-Bretter vierspaltig, bei 6 (bzw. 3) Brettern dreispaltig (u1-l-prognose-bretter,
+  a1-l-prognose-ultrawide-6-bretter); kurze Tabellen (Übertragungen) bleiben 1 208 px breit, linksbündig.
+- Links ohne eigene Klasse in `--ink` (unterstrichen), nie Browserblau; Bereichsregeln (`.foot a` …) gehen vor.
+- Gesperrte Knöpfe `.btn-pri`/`.btn-sec` mit festen Farben (`--muted` auf `--track` bzw. `--line`-Rahmen), nicht per Deckkraft.
+- Wer mehrere Konto-Vorschläge hat (`.sugg-group.multi`), steht als umrahmte Fläche mit „N Konten“ im Kopf, Knöpfe auf einer Höhe.
 
 ### 8.5 ClubHub (`src-clubhub/`, `clubhub.scss`)
 
@@ -667,6 +704,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   (Sperrkarte mit `.gate-actions`), `.empty` (gestrichelter Rahmen), klebende `.form-save` über die volle Breite.
 - Anwesenheit `.matrix`: eigener Scrollkasten, Namensspalte klebt links, Zellen ✓/✗ 26 px.
 - Datum TT.MM.JJJJ; der Verknüpfungsstand des Kontos steht in der Fußzeile (r2-c-footer-link).
+- Gesperrte `.btn` mit voller Deckkraft: Schrift `--muted`, Rahmen gestrichelt in `--muted`, `.btn.primary` auf 14 %
+  Primär-Tönung — nie pauschal `opacity`. Gesperrt bleibt ein Knopf nur, wenn seine Beschriftung den Grund nennt („keine
+  spätere ›") oder gerade gespeichert wird; fehlt eine Eingabe, fokussiert der Tipp das Feld und darunter steht, was fehlt
+  (`.need`, a1-c-disabled-button-contrast).
+- Metazeilen `.kid-meta`: Trenner „ · " als `::before` ab der zweiten Angabe, nicht vor Chips (5.13); Seitenkopf
+  `.page-head`: Titelblock schrumpft (`flex: 1 1 320px`), Knöpfe bleiben daneben. Rechtsseiten-Karte linksbündig an der
+  Logo-Kante. Ab 2400 px nur Seiten mit Anwesenheitsmatrix in `--page-max-width-wide` (Verlauf ≤ 46em), Rest 860 px.
 
 ### 8.6 Geteilte Masken (Anmeldung und Recht)
 
@@ -801,3 +845,14 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-13 | 0.762.0 | RookHub (u1, Bretter): Brettseiten wachsen ab 2400 px nur bis zur Fensterhöhe — Analyse drei Spalten (Brett ≤ 1 100 px | Engine + Züge | Explorer offen + Repertoires + FEN/PGN, Seite ≤ 2 560 px; offener Explorer dort nur für die Sitzung, der gemerkte Zustand für schmale Fenster bleibt), Partie-Ansicht vier Spalten (Brett ≤ 1 080 px, Zugliste 280 px, Auswertung zweispaltig je 400–520 px), Repertoire im Token `--page-max-width-wide` mit Brett ≤ 1 040 px; Breitbild-Abfrage im Code über `mediaSignal()` (`shared/layout/wide-media.ts`); Raster mit auto-Spalten neben einer gedeckelten Spalte immer `justify-content: center` (Kalkulations-Modus: kein Loch zwischen Brett und Seitenspalte, alle Breiten) | UI-Sweep u1 (Ultrawide) | u1-rk-analyse-3spalten, u1-rk-partie-brett, u1-rk-repertoire-brett, u1-rk-calc-luecke |
 | 2026-10-13 | 0.762.0 | Turnier/LeagueHub (u1, Hubs): Turnierkalender ab 2400 px Liste + Karte nebeneinander (Reiter „Liste & Karte“, Karte sticky); Turnier-Detail und `/t/:id` ab 2400 px Paarungen rechts neben Spielern/Teams (eigener Scroll-Kasten), Seite im Token; LeagueHub-Fußzeile in allen Breiten am Fensterende (Flex-Spalte wie ClubHub); LeagueHub ab 2400 px mittlere Seiten 1 880 px, Bretter vierspaltig (8.2/8.4) | UI-Sweep u1 (Ultrawide) | u1-t-kalender-karte, u1-t-turnier-paarungen, u1-l-fuss-schwebt, u1-l-prognose-bretter |
 | 2026-10-13 | 0.762.2 | RookHub/Turnier (u1-Nachprüfung, alles-voll-2): Kopfleiste ab 2400 px auf die Kante des 1 880-px-Inhalts statt auf 2 400 px; Turnierkalender „Liste & Karte“: Reiter-Hülle `overflow-x: clip` (kein waagrechtes Scrollen mehr, sticky bleibt), Karte `100vh - 16rem` (samt Legende im Fenster); Repertoireliste ab 2400 px Kartenspalten ≥ 420 px; Statistik ab 2400 px: Umschalter nicht gestreckt, ohne Themen-Paar alles volle Breite; Paarungen ohne Daten: Satz mit Grund statt leerem Tabellenkopf (`tournaments.pairings.none`) | UI-Sweep alles-voll-2 (Selbstprüfung u1) | u1-rk-navbar-raender, u1-t-kalender-karte, u1-x-breite-stufe, u1-rk-stats-2spalten, u1-t-turnier-paarungen |
+| 2026-10-13 | 0.763.0 | Turnier (a1): Favoriten-Stern leer in `--mat-sys-on-surface-variant`, gesetzt Bernstein mit der Textfarbe gemischt (≥ 3:1 hell und dunkel); Startliste: Sternspalte 40 px, Namen einzeilig mit `title`; Kopf 769–1023 px „Zu RookHub“ nur Symbol, Spacer ≥ 24 px; Passwort-Masken ohne „Anmelden“ im Kopf; Turnierdetail 600–899 px „Melden“ in Kurzform; Quell-Link im Primär; „Spieler verfolgen“ immer rechts; Admin-Nutzerliste am Handy Name allein in Zeile 1; Fußzeile 60 % statt 47 % (≈ 5,7:1), Hover voll deckend, Impressum + Datenschutz am Handy als gemeinsame Zeile | Kontrast < 3:1 bzw. < 4,5:1, springende Zeilen/Knöpfe, randvolle Kopfleiste | UI-Sweep a1: a1-t-fav-stern-hell, a1-t-namen-umbruch-tablet, a1-t-navbar-tablet-en, a1-t-reset-kopf-anmelden, a1-t-melden-allein-tablet, a1-t-quelle-link-standardfarbe, a1-t-verlauf-verfolgen-ort, a1-t-admin-handy-knopf, a1-t-fuss-kontrast, a1-t-fuss-rechtslinks-en |
+| 2026-10-13 | 0.763.0 | LeagueHub (a1): Breitbild ≥ 2400 px auch für `.wrap.wide` (Formular prüfen/korrigieren, Brett bis Fensterhöhe ≤ 960 px), 6 Prognose-Bretter 3 + 3, Übertragungen-Tabelle 1 208 px; Links ohne Klasse in `--ink`; gesperrte Knöpfe mit festen Farben statt Deckkraft + Grund unter „Partien prüfen“; Kontaktadresse unter „Link senden“ grau; Vereinspartien am Tablet (Container 641–960 px) Namen mit „…“, Eröffnung ≥ 14ch; Vereine-Einleitung ein Absatz mit ⓘ am Satzende; Mehrfach-Kontovorschläge als umrahmte Fläche; Wartezeit des Formulars „1:02:05“ / „seit 1 Tag 18 Std.“, ab 30 min Hinweis, Nachsatz in Textgröße mit Strich als `::before` | UI-Sweep a1 | a1-l-konten-mehrfachgruppe, a1-l-vereine-einleitung-info, a1-l-passwort-mail-link-rot, a1-l-vereinspartien-tablet-eroeffnung, a1-l-prognose-ultrawide-6-bretter, a1-l-formular-wartezeit, a1-l-link-browserfarbe, a1-l-partien-pruefen-gesperrt, a1-l-korrigieren-ultrawide, a1-l-uebertragungen-ultrawide |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Partieseite `/g`, `/games/:id`, `/club-games/:id`): „Partie analysieren“ + Grund in eigener Spalte ≤ 280 px (⋮ bleibt in der Knopfzeile, 5.4); 769–1279 px Knöpfe in eigener Zeile unter dem Titel, Meta-Abzeichen `nowrap`; Name + Elo je Spieler als Einheit, „(Elo n)“ ohne Umbruch (5.13); Brett-Abzug `100vw - 400px` (Tablet ≈ 420 statt 380 px); Brettleiste nie breiter als das Brett, Handy-Nebenknöpfe 36 px (5.12); ab 2400 px Auswertungsraster `min-content 1fr` (Meisterpartien direkt unter Repertoires); „Kurz erzählt“ ≤ 75ch je Zeile (4.6 Regel 4); Ladefehler dreigeteilt: 403 Vereinspartie → Sperrkarte mit Klartext + „Zur Startseite“, 4xx → „gibt es nicht“ + Weg zurück, Netz/5xx → `app-load-error` mit „Erneut versuchen“ (5.10/5.11) | ⋮ allein in einer Zeile, Titel Wort für Wort umbrochen, Leiste ragte übers Brett, Sackgasse ohne Grund | UI-Sweep a1: a1-rk-shared-kopf-grund, a1-rk-partie-kopf-tablet, a1-rk-elo-verwaist, a1-rk-partie-tablet-brett, a1-rk-brettleiste-plus, a1-rk-ultrawide-seitenspalten, a1-rk-recap-zeilenlaenge, a1-rk-vereinspartie-fehler-sackgasse |
+| 2026-10-13 | 0.763.0 | KidHub/ClubHub (a1): KidHub ab 2400 px Brett bis Fensterhöhe (≤ 1 240 px), Start/Karten 1 880 px mit größeren Kacheln (`--kid-wide-max`); Startkacheln am Tablet 2 × 2; Kurs-Zähler als `.kid-counter`; Masken-Pillenreihe 16 px Abstand nach oben; „Konto löschen“ auch die Anleitung für Eltern zugeklappt, Kindersatz unter der Einleitung (`kids.accountDeletion.parentsHowTo`). ClubHub: gesperrte Knöpfe ohne Deckkraft (gestrichelt, `--muted`), fehlende Eingabe als Hinweis statt Sperre; Trenner „ · “ in Metazeilen; Seitenkopf-Knöpfe neben dem Titelblock; Rechtsseiten-Karte linksbündig; Matrix-Seiten ab 2400 px 1 880 px | Ultrawide ungenutzt, verwaiste Kachel, Kontrast 2,4:1, Vorlauf 42 %, Kanten fluchteten nicht | UI-Sweep a1: a1-k-ultrawide-board-small, a1-k-ultrawide-raster, a1-k-home-tablet-orphan-card, a1-k-course-counter-plain, a1-k-auth-mail-link-button-gap, a1-k-deletion-fachjargon, a1-c-disabled-button-contrast, a1-c-groups-meta-separator, a1-c-fold-lead-group-detail-laptop, a1-c-legal-card-vs-header-width, a1-c-wide-matrix-ultrawide |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Analyse): Bewertungsleiste mit Rahmen `--mat-sys-outline`; Brettspalte klebt erst ab 900 px (dort 300 px für die Seitenspalte frei), 769–899 px mittig einspaltig (5.12); Pfeile erst auf ein gemessenes Brett (Analysebrett + `app-chess-board`, ResizeObserver-Arbeit im nächsten Frame); Leerzustand: Hinweiszeile ohne zweites Abblassen (5.10, Aufträge + Favoriten); Partie-Analysen: Einwurf-Formular bei vorhandenen Analysen zugeklappt hinter „Partie einwerfen“ (Hauptknopf im Kopf, im Leerzustand offen, PGN-Feld 3 Zeilen wachsend), Einleitung ein Satz ≤ 75ch + ⓘ, Knöpfe immer rechts über dem Grund, Karten-Meta am Handy eigene linksbündige Zeile; Partie-Analyse und „Züge vergleichen“ ab 2400 px in der 1 880-px-Spalte, Brett bis Fensterhöhe (4.1); Aufträge: 12 px zwischen Kopfknöpfen und Einleitung, en „Analysis board“ | Weißanteil unsichtbar, klebendes 539-px-Brett am Tablet, Konsolenfehler, Kontrast ≈ 2,5:1, Vorlauf 57–92 %, Brett 375–520 px in 3 440 px | UI-Sweep a1: a1-rk-evalbar-hell, a1-rk-analyse-tablet-brett, a1-rk-svg-nan-pfeile, a1-rk-leer-hinweis-blass, a1-rk-partie-analysen-vorlauf, a1-rk-ga-intro-zeile, a1-rk-ga-grund-abseits, a1-rk-ga-meta-umbruch, a1-rk-analyse-unterseiten-ultrawide, a1-rk-jobs-kopf-handy |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Partien/Prep/Teilen): `/games` in `--page-max-width` (statt fest 1 040 px) und ab 2400 px 1 880 px, Filter als `mat-select` outline wie `/games/mistakes` (5.8), Leerkarte ein Satz + „PGN hochladen“ (5.10), am Handy 12 px unter der Filterzeile, Einleitung `text-wrap: pretty`; Punktepartie-Liste ab 600 px festes Raster mit „Spielen“ rechts über Titel- und Metazeile (5.2); Punktepartie-Brett, Spielervorbereitung (Blöcke nebeneinander, `auto-fit`) und geteilte Linie/Rekonstruktion ab 2400 px breit bzw. Brett bis Fensterhöhe (4.1); geteilte Linie/Rekonstruktion stapeln unter 900 px (4.2, Brett ≤ Fensterhöhe); `permissionGuard` wie `menuGuard`: Hinweis „nicht freigeschaltet“ bzw. Anmeldung mit Rücksprung (5.11); Rekonstruktions-Kartentitel in Textfarbe, Akzent bei Hover/Fokus (3.1); Partieformular: Grund des gesperrten Knopfs in eigener Zeile darunter (5.4); geteilte Linie: Datum `nowrap`, Trenner „ · “ als `::before`, am Handy „Name · Datum“ einzeilig mit „…“ (5.13) | feste 1 040-px-Spalte, native Auswahl, doppelter Leertext, springender Knopf, stille Umleitung, Browser-Linkfarbe, ineinanderlaufende Sätze, Brett 360–680 px | UI-Sweep a1: a1-rk-games-ultrawide-schmal, a1-rk-games-native-auswahl, a1-rk-games-leer-zwei-saetze, a1-rk-games-handy-filter-abstand, a1-rk-guess-tablet-spielen, a1-rk-guess-brett-ultrawide, a1-rk-prep-ohne-recht-stumm, a1-rk-recon-titel-linkfarbe, a1-rk-geteilt-brett-ultrawide, a1-rk-geteilt-recon-tablet, a1-rk-prep-ultrawide, a1-rk-scoresheet-grund-trenner, a1-rk-geteilte-linie-datum-handy |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Kurse): Linien durchsehen ab 2400 px im Token `--page-max-width-wide`, Brett/Zugleiste/Kommentar bis Fensterhöhe; Brett-Untergrenze 400 px statt 560 px (Laptop: Linienknöpfe über der Falz); Zugnummer + weißer Zug als ein nicht umbrechendes Stück; Kursliste 600–1023 px: Titel links, Knöpfe rechts, Suche volle Breite darunter; Kennzahlen der Kursseite als Subgrid (Werte einer Zeile auf einer Linie, auch bei umbrechender Beschriftung); Fortschrittsspur global aus der Textfarbe (16 %, hell und dunkel sichtbar); „Schwarz am Zug“-Punkt global schwarz mit 2-px-Ring aus der Textfarbe (70 %); Spielweise-Dialog Sekundärtexte direkt `--mat-sys-on-surface-variant`, Kachelname `--mat-sys-on-surface` (nie Prozent von currentColor im Dialog — der ist schon gedimmt) | leere Breite, Knöpfe unter der Falz, Zugnummer allein am Zeilenende, Knöpfe links in eigener Zeile, Werte versetzt, Spur 1,17:1, Punkt ≈ 1,4:1, Dialogtext ≈ 3,4:1 | UI-Sweep a1: a1-rk-browse-breitstufe, a1-rk-zugnummer-allein, a1-rk-browse-laptop-linienknoepfe-falz, a1-rk-kennzahl-beschriftung-umbruch, a1-rk-kurse-tablet-kopf, a1-rk-fortschritt-spur-hell, a1-rk-spielweise-dialog-hell, a1-rk-am-zug-punkt-dunkel |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Endlos-Verlauf/Aufgabenblätter): Endlos-Verlauf in `--page-max-width` (statt fest 900 px), ab 2400 px 1 880 px; Datum `short` (5.13), Tabellenzellen `nowrap` mit eigenem `overflow-x`; Leersatz in `--mat-sys-on-surface-variant`, Symbol 45 %; Handy-Kennzahlen 3 + 2 mit Beschriftung 0,75 rem/65 %; Aufgabenblatt bearbeiten: Diagramme 168 px, Tablet 140 px (nie kleiner als Handy), ab 2400 px 220 px in 1 880 px; Grund unter gesperrtem „Stellung hinzufügen“ als `mat-hint` (5.4); Liste am Handy Knöpfe oben rechts in der Titelzeile (5.2); Druckvorschau ≤ 700 px Zugangabe unter der Überschrift, Überschrift `overflow-wrap: break-word`; Löser `/w/…` ab 2400 px Karte 1 100 px, Brett bis 1 000 px/Fensterhöhe; Flashcard-Koordinaten in `currentColor` 70 % statt festem Dunkelbraun | Kontrast 2,1:1 bzw. unsichtbar im Dunkeln, Datum/Köpfe umbrochen, verwaiste Kennzahl, 900-/640-px-Insel in 3 440 px, Diagramme 88–132 px, Knopf ohne Grund gesperrt, Knöpfe in eigener Zeile, „Grundreih / e“ | UI-Sweep a1: a1-rk-endless-verlauf-leer-kontrast, a1-rk-endless-verlauf-tabelle-datum, a1-rk-endless-verlauf-ultrawide, a1-rk-endless-verlauf-handykarte, a1-rk-ws-detail-bretter-klein, a1-rk-ws-hinzufuegen-gesperrt, a1-rk-ws-liste-aktionen-eigene-zeile, a1-rk-ws-druck-titel-umbruch, a1-rk-w-loeser-ultrawide, a1-rk-flashcard-koordinaten-dunkel |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Puzzle-Löser): ab 2400 px Seite im Token `--page-max-width-wide`, Brett ohne 820-px-Deckel bis Fensterhöhe (≥ 360 px Seitenspalte bleibt; Standard, Endlos-Spielbrett, Buch/Kurs/Tagespuzzle/Wochenpost); 769–899 px einspaltig mit Brett mittig bis Fensterhöhe (Seitenkarte vorher ~270 px); Kurs-Kommentar ungekürzt, aber als eigener Block hinter Kontext-Card, Status-Card und Aktionsleiste; „Überspringen“ in `--mat-sys-on-surface-variant` statt Deckkraft 0,7; Wochenpost 8 px zwischen Fortschrittszeile und Umschaltknopf; Statistik-Kennzahlen `auto-fit` (3 + 2) mit Ellipse; Teilen + ⋮ als Einheit (5.12); Endlos: Themen-Chips mit `font-family: inherit`, Sitzungszähler 65 % statt 50 %, Verlauf-Link 0,9 rem mit voller mat-button-Tippfläche (statt 28 px) | Brett 816 px in 3 440 px, Bedienung 3,4 Bildschirme unter der Falz, Kontrast 3,35:1, ⋮ allein in einer Zeile, Kennzahlen ragten aus der Karte | UI-Sweep a1: a1-rk-loeser-breitstufe, a1-rk-puzzle-brett-ultrawide, a1-rk-tablet-seitenspalte-eng, a1-rk-kommentar-schiebt-aktionen, a1-rk-skip-kontrast-hell, a1-rk-einfachmodus-knopf-umbruch, a1-rk-wochenpost-fortschritt-klebt, a1-rk-puzzle-statistik-tablet-ueberlauf, a1-rk-puzzle-menue-allein-tablet, a1-rk-endless-chips-schrift, a1-rk-endless-verlauf-link-klein |
+| 2026-10-13 | 0.763.0 | RookHub (a1, Repertoire): Bearbeiten ohne 800-px-Deckel, ab 900 px Ablage + Dateiliste zweispaltig; Ablage-Rand `currentColor` 50 % (hell ≈ 3,3:1), Symbol 60 %, Rand beim Darüberziehen in Primär; Brettkoordinaten brown auf dunklen Feldern dunkel mit hellem Hof (≈ 6:1, alle Bretter, 5.12); Brett einspaltig bis 640 px (`min(100%, 640px, 100vh - 480px)`); Seitenpanel mindestens Brett + 56 px hoch, Linienliste mit Weiterscroll-Schatten, einspaltig ohne eigenen Kasten (5.3); Lochfinder: Kopfknopf „Abfragen“ als Rahmenknopf (5.4), Karte vor der Suche so hoch wie ihr Inhalt, am Handy Werkzeug vor dem leeren Brett; Trainer: Brett `100vh - 200px`, einspaltig `min(100%, 100vh - 420px)` + Infospalte volle Breite, ab 2400 px Seite im Token, Brett ≤ 1 100 px bis Fensterhöhe, Seitenspalte ≤ 640 px (4.1); Flashcards: ab 2400 px Lernkarte bis Fensterhöhe (≤ 1 100 px, Digital-Ansicht im Token, Druckvorschau bleibt 1 000 px), Tastaturhinweis bei `pointer: coarse` aus (5.11) | Ultrawide/Tablet ungenutzt, Rahmen ≈ 1,5:1, Koordinaten ≈ 1,5:1, Kasten im Kasten, zwei Primärknöpfe, Vorlauf 71 % | UI-Sweep a1: a1-rk-repertoire-edit-breite, a1-rk-dropzone-rahmen-hell, a1-rk-brett-koordinaten-dunkle-felder, a1-rk-tablet-brett-400, a1-rk-linienliste-scrollkasten, a1-rk-holes-zwei-hauptknoepfe, a1-rk-holes-karte-leer-hoch, a1-rk-holes-handy-brett-vor-werkzeug, a1-rk-trainer-ultrawide-brett, a1-rk-trainer-brett-hoehe, a1-rk-flashcards-ultrawide, a1-rk-flashcards-tastaturhinweis-handy |
+| 2026-10-13 | 0.763.0 | RookHub/Turnier (a1, Profil, Dashboard, Admin, Bestenlisten, Statistik, Freundesvergleich, Hilfe, Datenschutz): Profil-Hinweise/Zwischentitel aus der Textfarbe (`color-mix` currentColor 70–80 %, `inherit`) bzw. `--rh-warn`/`--rh-success` statt fester Hellgrau-Werte; Profilformular (geteilt mit der Turnierseite): alle Felder `subscriptSizing="dynamic"`, Abstand einheitlich 16 px, Suchblock per Containerabfrage — < 680 px Knopf (40 px) und Hinweis nebeneinander über volle Breite, < 480 px untereinander mit Hinweis 16 px eingerückt wie `mat-hint`; Admin-Nutzerliste bis 899.98 px als Karten (Einsteigen + ⋮ rechts in der Kopfzeile, Gruppenzeile nur mit Gruppen), Tabelle: Datum/Aktionen `nowrap`; Dashboard: Zähler-Kacheln mit `…One`-Einzahl, Puzzle-Genauigkeit über `formatPct`, Kachelknöpfe ohne Mindestbreite, einzeilig, Zeile bricht um; Bestenlisten 1 / 2 (≥ 600 px) / 4 (≥ 1 100 px) Spalten, Zeile rechts 12 px Polster; Freundesvergleich: Zahlenspalten fest 6rem (Handy 5.5rem), ab 2400 px beide Karten nebeneinander in 1 880 px; Statistik ohne Versuch EINE Leerkarte + „Puzzles lösen“, Level-Hinweis nach Ausweichen auf „Alle“ mit Grund (`stats.levelEmptySwitched`); de: »…« → „…“, Ergänzungsstrich mit U+00A0/U+2060 | Kontrast ≈ 1,2–1,8:1 im hellen Design, springende Feldabstände, Speichern unter der Falz, verdeckte Aktionen am Tablet, „1 Kurse“, „78.6 %“, 3 + 1-Raster, harte Trennung „Abzugsan-griff“, Sackgassen-Leerkarten | UI-Sweep a1: a1-rk-profile-hell-blass, a1-t-profil-feldabstaende, a1-rk-profil-suche-falz, a1-rk-admin-nutzer-schmal, a1-rk-dash-mehrzahl, a1-rk-dash-prozent-komma, a1-rk-dash-play-versatz, a1-rk-dash-puzzles-knoepfe-umbruch, a1-rk-hilfe-guillemets, a1-rk-bestenlisten-raster, a1-rk-bestenlisten-eigene-zeile, a1-rk-datenschutz-ergaenzungsstrich, a1-rk-freundesvergleich-spalte, a1-rk-freundesvergleich-breit, a1-rk-statistik-leer, a1-rk-statistik-level-hinweis |

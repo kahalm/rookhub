@@ -385,3 +385,39 @@ describe('ChessBoardComponent Umwandlung mit Auswahl', () => {
     expect((picker.componentInstance as PromotionPickerComponent).color).toBe('w');
   });
 });
+
+// a1-rk-svg-nan-pfeile: Pfeile auf ein verborgenes Brett (Breite 0) ergaben NaN-Koordinaten in chessgrounds <line>.
+describe('ChessBoardComponent Pfeile auf ungemessenem Brett (a1-rk-svg-nan-pfeile)', () => {
+  it('hält Pfeile zurück, solange das Brett keine Breite hat, und setzt sie danach ohne NaN', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ChessBoardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    const wrap = document.createElement('div');
+    wrap.style.display = 'none';
+    wrap.style.width = '320px';
+    wrap.appendChild(host);
+    document.body.appendChild(wrap);
+    try {
+      fixture.componentRef.setInput('arrows', [{ from: 'e2', to: 'e4' }]);
+      fixture.detectChanges();
+      // Breite-0-Wiederholungen (höchstens zehn Frames) abwarten — danach baut das Brett mit Ersatzgröße auf.
+      for (let i = 0; i < 12; i++) await new Promise(r => requestAnimationFrame(() => r(null)));
+      const lines = () => Array.from(host.querySelectorAll('svg line'));
+      expect(lines().length).withContext('verborgen: kein Pfeil').toBe(0);
+
+      wrap.style.display = 'block';
+      await new Promise(r => setTimeout(r, 120));
+      expect(lines().length).withContext('sichtbar: Pfeil nachgeholt').toBeGreaterThan(0);
+      for (const l of lines()) {
+        for (const a of ['x1', 'y1', 'x2', 'y2']) expect(l.getAttribute(a) ?? '').not.toContain('NaN');
+      }
+    } finally {
+      fixture.destroy();
+      wrap.remove();
+    }
+  });
+});
+

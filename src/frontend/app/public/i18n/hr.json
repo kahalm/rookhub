@@ -424,7 +424,7 @@
     "subscribedAt": "Pretplaćeno {{date}}",
     "puzzles": {
       "title": "Zagonetke",
-      "subtitle": "Elo {{elo}} | {{solved}} riješeno ({{accuracy}} %)",
+      "subtitle": "Elo {{elo}} | {{solved}} riješeno ({{accuracy}})",
       "solve": "Rješavaj zagonetke",
       "daily": "Dnevna zagonetka",
       "endless": "Beskonačno"
@@ -432,11 +432,13 @@
     "friends": {
       "title": "Prijatelji",
       "count": "{{count}} prijatelja",
+      "countOne": "{{count}} prijatelj",
       "manage": "Upravljaj prijateljima"
     },
     "repertoires": {
       "title": "Repertoari",
       "count": "{{count}} repertoara",
+      "countOne": "{{count}} repertoar",
       "viewAll": "Prikaži sve"
     },
     "chessableQueue": {
@@ -461,7 +463,8 @@
     "courses": {
       "title": "Tečajevi",
       "open": "Otvori tečajeve",
-      "count": "{{count}} tečajeva"
+      "count": "{{count}} tečajeva",
+      "countOne": "{{count}} tečaj"
     },
     "pinnedCourses": {
       "title": "Prikvačeni tečajevi",
@@ -482,6 +485,7 @@
     "favorites": {
       "title": "Favoriti",
       "count": "{{count}} voljenih zagonetki",
+      "countOne": "{{count}} voljena zagonetka",
       "open": "Otvori favorite"
     },
     "weekly": {
@@ -2717,6 +2721,7 @@
       "dragTooltip": "Povuci za promjenu redoslijeda",
       "fenLabel": "Pozicija kao FEN",
       "addFen": "Dodaj poziciju",
+      "addFenHint": "Zalijepi FEN, zatim dodaj",
       "addRejected": "Nije dodano: pozicija je već na listu ili je FEN neupotrebljiv.",
       "saveError": "Promjena se nije mogla spremiti.",
       "rename": "Preimenuj"
@@ -2741,7 +2746,7 @@
     "filtersToggle": "Filtri",
     "title": "Spremljene partije",
     "hint": "Partije koje spremiš s chess.com ili lichess pomoću RepCheck proširenja preglednika pojavljuju se ovdje.",
-    "empty": "Još nema spremljenih partija. Na stranici analize na chess.com ili lichess klikni „Spremi partiju“ u RepCheck proširenju.",
+    "empty": "Još nema spremljenih partija.",
     "replay": "Ponovi",
     "openInAnalysis": "Otvori u analizi",
     "share": "Kopiraj poveznicu za dijeljenje",
@@ -2757,6 +2762,9 @@
     "analyzeNoEngine": "Trenutačno nijedan engine nije dostupan — pokušaj ponovno kasnije.",
     "analyzeLogin": "Za analizu se prijavi.",
     "loadError": "Partiju nije moguće učitati.",
+    "notFound": "Ova partija ne postoji ili je uklonjena.",
+    "clubNoAccess": "Ovu klupsku partiju vide samo članovi kluba.",
+    "toMyGames": "U moje partije",
     "deleteConfirm": "Izbrisati ovu spremljenu partiju?",
     "deleteError": "Partiju nije moguće izbrisati.",
     "shared": {
@@ -3242,7 +3250,10 @@
     "activity": "Aktivnost",
     "levelEmpty": "Razina {{level}} još nema pokušaja",
     "levelOther": "Razina {{level}}: {{count}} pokušaja",
-    "levelOtherOne": "Razina {{level}}: 1 pokušaj"
+    "levelOtherOne": "Razina {{level}}: 1 pokušaj",
+    "levelEmptySwitched": "Na tvojoj razini {{level}} još nema pokušaja, zato su prikazane sve razine",
+    "standardEmpty": "Još nisi riješio nijednu zagonetku – statistika se puni od prve.",
+    "standardEmptyAction": "Rješavaj zagonetke"
   },
   "trainingGoals": {
     "tabs": {
@@ -3824,7 +3835,9 @@
     "pgnFirst": "Najprije zalijepi PGN partije.",
     "noName": "bez imena",
     "title": "Analize partija",
-    "intro": "Ubaci cijelu partiju — pozadinski stroj proračunava svaku poziciju. To traje; partija pokazuje napredak i može se pogledati u svakom trenutku.",
+    "intro": "Ubaci cijelu partiju — pozadinski stroj proračunava svaku poziciju.",
+    "introMore": "To traje; partija pokazuje napredak i može se pogledati u svakom trenutku.",
+    "addGame": "Ubaci partiju",
     "pgnLabel": "PGN partije",
     "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
     "depth": "Dubina",
@@ -4535,7 +4548,8 @@
     "language": "Jezik",
     "accountDeletion": {
       "short": "Sve tvoje se briše: tvoje zvijezde, razine i tečajevi.",
-      "parents": "Za roditelje: što se točno briše"
+      "parents": "Za roditelje: što se točno briše",
+      "parentsHowTo": "Za roditelje: kako se račun briše"
     },
     "stars": {
       "title": "Lov na zvijezde",

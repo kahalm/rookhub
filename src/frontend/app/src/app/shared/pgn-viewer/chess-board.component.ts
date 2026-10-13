@@ -116,6 +116,13 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   /** Zuletzt gesetzte Kantenlaenge — verhindert unnoetiges Neuzeichnen (siehe fitToHost). */
   private appliedWidth = 0;
   private destroyed = false;
+  /**
+   * a1-rk-svg-nan-pfeile: Pfeile, die auf ein Brett ohne Breite (noch nicht gelayoutet, verborgen) gesetzt werden
+   * sollten. chessground rechnet sie aus den gemerkten Brettmaßen — 0 × 0 ergibt NaN-Koordinaten und die
+   * Konsolenmeldung „<line> attribute x1: Expected length, NaN“. Nachgeholt wird nach dem nächsten Messen (fitToHost).
+   */
+  private arrowsPending = false;
+  private roRafId?: number;
 
   ngAfterViewInit(): void {
     this.initBoard();
@@ -160,7 +167,12 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     });
     this.applyArrows();
 
-    this.resizeObserver = new ResizeObserver(() => this.fitToHost());
+    // Nachmessen erst im nächsten Frame: fitToHost setzt die Brettgröße, und synchron im Observer ändert das die
+    // beobachtete Hülle noch einmal („ResizeObserver loop completed with undelivered notifications“).
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.roRafId !== undefined) cancelAnimationFrame(this.roRafId);
+      this.roRafId = requestAnimationFrame(() => { this.roRafId = undefined; this.fitToHost(); });
+    });
     this.resizeObserver.observe(el.parentElement || el);
     // Nachmessen, bis die Groesse steht. Grund ist eine Falle, die JEDES Brett in einem DIALOG
     // trifft: Material faehrt den Dialog mit `transform: scale()` auf, und Chessground misst mit
@@ -199,7 +211,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     // das Nachmessen ruhig — ohne die Schranke rechnete jeder Anlauf 296 gegen 300 und zeichnete
     // das Brett endlos neu; ohne sie ganz wegzulassen bliebe ein wirklich verrutschtes Brett
     // (die 240 aus der Einblendung) fuer immer stehen.
-    if (w === this.appliedWidth && Math.abs(ist - w) <= 8) return;
+    if (w === this.appliedWidth && Math.abs(ist - w) <= 8) { this.flushPendingArrows(false); return; }
     this.appliedWidth = w;
     el.style.width = `${w}px`;
     el.style.height = `${w}px`;
@@ -208,6 +220,22 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       container.style.height = `${w}px`;
     }
     this.ground?.redrawAll();
+    this.flushPendingArrows(true);
+  }
+
+  /** Zurückgehaltene Pfeile setzen, sobald das Brett eine Breite hat (vorher frisch messen lassen). */
+  private flushPendingArrows(redrawn: boolean): void {
+    if (!this.arrowsPending || !this.ground || this.boardWidth() === 0) return;
+    if (!redrawn) this.ground.redrawAll();
+    this.applyArrows();
+  }
+
+  /** Gerenderte Breite des chessground-Bretts (0 = ungemessen oder verborgen). */
+  private boardWidth(): number {
+    const el = this.boardEl?.nativeElement;
+    if (!el || typeof el.getBoundingClientRect !== 'function') return 0;
+    const board = el.querySelector?.('cg-board') as HTMLElement | null;
+    return (board ?? el).getBoundingClientRect().width;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -240,6 +268,15 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
    */
   private applyArrows(): void {
     if (this.badgeTimer !== null) { clearTimeout(this.badgeTimer); this.badgeTimer = null; }
+    if (!this.ground) return;
+    const hasShapes = (this.arrows?.length ?? 0) > 0 || !!this.badge;
+    if (hasShapes && this.boardWidth() === 0) {
+      // Ungemessen/verborgen: alte Pfeile weg (sonst zeichnet chessground sie beim nächsten Rendern mit NaN), merken.
+      if (this.ground.state.drawable.autoShapes.length > 0) this.ground.setAutoShapes([]);
+      this.arrowsPending = true;
+      return;
+    }
+    this.arrowsPending = false;
     const shapes: DrawShape[] = (this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green' }));
     const badge = this.badge;
     const wait = badge ? this.fenChangedAt + ChessBoardComponent.AnimationMs + ChessBoardComponent.BadgeSettleMs - Date.now() : 0;
@@ -248,6 +285,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       this.badgeTimer = window.setTimeout(() => {
         this.badgeTimer = null;
         if (this.destroyed || this.badge !== badge) return;
+        if (this.boardWidth() === 0) { this.arrowsPending = true; return; }
         this.ground?.setAutoShapes([...shapes, { orig: badge.square as Key, customSvg: { html: badge.svg } }]);
       }, wait);
       return;
@@ -325,6 +363,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   ngOnDestroy(): void {
     this.destroyed = true;
     if (this.rafId !== undefined) cancelAnimationFrame(this.rafId);
+    if (this.roRafId !== undefined) cancelAnimationFrame(this.roRafId);
     this.settleTimers.forEach(t => clearTimeout(t));
     this.settleTimers = [];
     if (this.badgeTimer !== null) clearTimeout(this.badgeTimer);

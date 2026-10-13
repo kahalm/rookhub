@@ -85,3 +85,11 @@ lh-online-accounts { display: block; }
 }
 .sugg-group h3 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0 0 4px; font: 600 18px/1.2 var(--cond); }
 .sugg-name { font: inherit; font-size: inherit; color: var(--ink); }
+/* a1-l-konten-mehrfachgruppe: ein Spieler mit mehreren Vorschlägen ist EINE umrahmte Fläche (Zahl der Konten im Kopf), seine
+   Karten gleich hoch mit den Knöpfen auf einer Höhe — nebeneinander wirkte die rechte Karte wie ein Vorschlag des Nachbarn. */
+.sugg-group.multi { padding: 8px 12px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.sugg-group h3 .muted + .sugg-count::before { content: "· "; }
+.sugg-group.multi .sugg-list li { display: flex; flex-direction: column; }
+.sugg-group.multi .sugg-list li > .also-for { align-self: flex-start; }
+.sugg-group.multi .sugg-actions { margin-top: auto; padding-top: 8px; }

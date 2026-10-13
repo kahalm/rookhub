@@ -424,7 +424,7 @@
     "subscribedAt": "Abonniert am {{date}}",
     "puzzles": {
       "title": "Puzzles",
-      "subtitle": "Elo {{elo}} | {{solved}} gelöst ({{accuracy}} %)",
+      "subtitle": "Elo {{elo}} | {{solved}} gelöst ({{accuracy}})",
       "solve": "Puzzles lösen",
       "daily": "Tagespuzzle",
       "endless": "Endlos"
@@ -432,11 +432,13 @@
     "friends": {
       "title": "Freunde",
       "count": "{{count}} Freunde",
+      "countOne": "{{count}} Freund",
       "manage": "Freunde verwalten"
     },
     "repertoires": {
       "title": "Repertoires",
       "count": "{{count}} Repertoires",
+      "countOne": "{{count}} Repertoire",
       "viewAll": "Alle anzeigen"
     },
     "chessableQueue": {
@@ -461,7 +463,8 @@
     "courses": {
       "title": "Kurse",
       "open": "Kurse öffnen",
-      "count": "{{count}} Kurse"
+      "count": "{{count}} Kurse",
+      "countOne": "{{count}} Kurs"
     },
     "pinnedCourses": {
       "title": "Angepinnte Kurse",
@@ -482,6 +485,7 @@
     "favorites": {
       "title": "Favoriten",
       "count": "{{count}} geliebte Puzzles",
+      "countOne": "{{count}} geliebtes Puzzle",
       "open": "Favoriten öffnen"
     },
     "weekly": {
@@ -846,7 +850,7 @@
       "dataIntro": "Je nach Nutzung verarbeiten wir:",
       "dataAccount": "Kontodaten: Benutzername, E-Mail-Adresse, Passwort (nur als Hash gespeichert).",
       "dataProfile": "Profildaten (freiwillig): Anzeige-/Klarname, FIDE-ID, ChessResults-ID, Chess.com-/Lichess-Benutzername, optionale Discord-Verknüpfung.",
-      "dataUsage": "Nutzungsdaten: gelöste Puzzles, Endless-/Kurs-Fortschritt und -Statistiken, Spiel-Elo, Login-Zeitpunkte.",
+      "dataUsage": "Nutzungsdaten: gelöste Puzzles, Endless-/Kurs-Fortschritt und -⁠Statistiken, Spiel-Elo, Login-Zeitpunkte.",
       "dataTechnical": "Technische Daten: IP-Adresse, abgerufene Endpunkte mit Zeitstempel und eine pseudonyme Besucher-Kennung (Reichweitenmessung) in Server-Logs.",
       "dataIpCountry": "KidHub (Kinderseite): Ist die Sprache des Browsers keine der Sprachen der Seite, wird aus der IP-Adresse das Land bestimmt, um eine passende zu wählen — lokal auf unserem Server mit der Länderliste von DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Die Adresse wird dafür weder weitergegeben noch gespeichert.",
       "dataScoresheet": "Fotos von Partieformularen, wenn du eine Partie einlesen lässt — mit allem, was darauf steht, etwa den Namen beider Spieler, Turnier, Datum und Unterschriften.",
@@ -868,7 +872,7 @@
       "botIntro": "Nutzt du unseren Discord-Bot, verarbeitet er zusätzlich:",
       "botDmLog": "Direktnachrichten: Was du dem Bot schreibst und was er dir schickt, wird mit Zeitpunkt gespeichert, je Nachricht auf 300 Zeichen gekürzt; persönliche Links zur Konto-Verknüpfung werden dabei unkenntlich gemacht. Einträge, die älter als 30 Tage sind, löscht der Bot beim nächsten Speichern. Einsehen können sie nur Admins und Moderatoren des Bots (zur Fehlersuche).",
       "botActivity": "Motivations-Nachrichten (/motivation): Nur bei Abonnenten — du meldest dich selbst an, oder ein Admin bzw. Moderator meldet dich an — wertet der Bot deinen Discord-Status „Spielt …“ aus. Läuft dort seit mindestens einer Stunde ein Spiel, das kein Schach ist, kann er dir per Direktnachricht eine Erinnerung ans Training schicken. Dafür merkt er sich Spielname und Startzeitpunkt, solange das Spiel läuft. Abbestellen kannst du jederzeit mit /motivation aus.",
-      "botLogs": "Protokolle: Jeder Befehl an den Bot wird mit Discord-ID und -Name, Server und Kanal (bzw. „Direktnachricht“), den gekürzten Befehlsparametern und dem Ergebnis protokolliert, ebenso Reaktionen auf Bot-Puzzles für die Statistik. Zu Motivations-Nachrichten werden Discord-Name, Spielname und Spieldauer festgehalten, von der Nachricht selbst nur ihre Länge, nicht ihr Inhalt. Diese Protokolle liegen monatsweise in unserem selbst gehosteten Elasticsearch; eine automatische Löschfrist gibt es dafür derzeit nicht.",
+      "botLogs": "Protokolle: Jeder Befehl an den Bot wird mit Discord-ID und -⁠Name, Server und Kanal (bzw. „Direktnachricht“), den gekürzten Befehlsparametern und dem Ergebnis protokolliert, ebenso Reaktionen auf Bot-Puzzles für die Statistik. Zu Motivations-Nachrichten werden Discord-Name, Spielname und Spieldauer festgehalten, von der Nachricht selbst nur ihre Länge, nicht ihr Inhalt. Diese Protokolle liegen monatsweise in unserem selbst gehosteten Elasticsearch; eine automatische Löschfrist gibt es dafür derzeit nicht.",
       "tournamentTitle": "Turnierdaten (chess-results.com)",
       "tournamentIntro": "Für die Turnieransichten in RookHub und auf der Turnierseite ruft unser Server öffentliche Turnierdaten von chess-results.com ab und speichert sie in einer eigenen Datenbank:",
       "tournamentData": "Daten: Turnier (Name, Ort, Termin, Runden), Spielerinnen und Spieler mit Name, Titel, FIDE-ID, Elo, Land, Mannschaft und Brett sowie Paarungen und Ergebnisse — auch von Personen ohne Konto bei uns. Mit „Vereine nachtragen“ schlägt der Server zu FIDE-IDs außerdem den Verein in anderen Turnieren auf chess-results.com nach.",
@@ -2717,6 +2721,7 @@
       "dragTooltip": "Zum Umsortieren ziehen",
       "fenLabel": "Stellung als FEN",
       "addFen": "Stellung hinzufügen",
+      "addFenHint": "FEN einfügen, dann hinzufügen",
       "addRejected": "Nicht übernommen: Die Stellung steht schon auf dem Blatt, oder die FEN ist unbrauchbar.",
       "saveError": "Die Änderung konnte nicht gespeichert werden.",
       "rename": "Umbenennen"
@@ -2741,7 +2746,7 @@
     "filtersToggle": "Filter",
     "title": "Gespeicherte Partien",
     "hint": "Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen hier.",
-    "empty": "Noch keine gespeicherten Partien. Klicke auf einer chess.com- oder lichess-Analyseseite in der RepCheck-Erweiterung auf „Partie speichern“.",
+    "empty": "Noch keine gespeicherten Partien.",
     "replay": "Nachspielen",
     "openInAnalysis": "In Analyse öffnen",
     "share": "Teilen-Link kopieren",
@@ -2757,6 +2762,9 @@
     "analyzeNoEngine": "Gerade steht keine Engine bereit — versuch es später noch einmal.",
     "analyzeLogin": "Zum Analysieren bitte anmelden.",
     "loadError": "Partie konnte nicht geladen werden.",
+    "notFound": "Diese Partie gibt es nicht oder nicht mehr.",
+    "clubNoAccess": "Diese Vereinspartie sehen nur Mitglieder des Vereins.",
+    "toMyGames": "Zu meinen Partien",
     "deleteConfirm": "Diese gespeicherte Partie löschen?",
     "deleteError": "Partie konnte nicht gelöscht werden.",
     "shared": {
@@ -3242,7 +3250,10 @@
     "activity": "Aktivität",
     "levelEmpty": "Level {{level}} hat noch keine Versuche",
     "levelOther": "Level {{level}}: {{count}} Versuche",
-    "levelOtherOne": "Level {{level}}: 1 Versuch"
+    "levelOtherOne": "Level {{level}}: 1 Versuch",
+    "levelEmptySwitched": "Auf deinem Level {{level}} gibt es noch keine Versuche, darum siehst du alle Level",
+    "standardEmpty": "Noch keine Puzzles gelöst – deine Statistik füllt sich mit dem ersten.",
+    "standardEmptyAction": "Puzzles lösen"
   },
   "trainingGoals": {
     "tabs": {
@@ -3424,14 +3435,14 @@
         "t": "Willkommen bei RookHub",
         "p": [
           "RookHub ist dein zentrales Schach-Portal: Puzzle-Training (Standard, Endlos, Tagespuzzle), Buch-Kurse und Repertoires, die Punktepartie, deine eigenen Partien samt Engine-Auswertung, Aufgabenblätter, persönliche Trainingsziele sowie Profil- und Freundesfunktionen – alles an einem Ort. Turniere haben eine eigene Turnierseite.",
-          "Vieles funktioniert ohne Konto (Puzzles, Analyse, Tagespuzzle, Punktepartie). Für persönlichen Fortschritt, deine Partien, Freunde und Trainingsziele meldest du dich an – danach startest du auf dem Dashboard, dessen Kacheln du über »Anpassen« auswählst. Alle Bereiche erreichst du über das Menü ☰ (gruppiert in Training, Analyse & Sammlung, Community und Konto); diese Seite erklärt sie – nutze das Inhaltsverzeichnis, um direkt zu springen."
+          "Vieles funktioniert ohne Konto (Puzzles, Analyse, Tagespuzzle, Punktepartie). Für persönlichen Fortschritt, deine Partien, Freunde und Trainingsziele meldest du dich an – danach startest du auf dem Dashboard, dessen Kacheln du über „Anpassen“ auswählst. Alle Bereiche erreichst du über das Menü ☰ (gruppiert in Training, Analyse & Sammlung, Community und Konto); diese Seite erklärt sie – nutze das Inhaltsverzeichnis, um direkt zu springen."
         ]
       },
       "account": {
         "t": "Konto & Anmeldung",
         "p": [
-          "Registrieren kannst du dich mit Benutzername und Passwort; eine E-Mail-Adresse ist optional. Über »Registrieren« in der oberen Leiste legst du ein Konto an und meldest dich danach mit denselben Daten an.",
-          "Setze beim Login das Häkchen »Eingeloggt bleiben«, um 90 statt 30 Tage eingeloggt zu bleiben. Abmelden kannst du jederzeit über ☰ → Konto → Abmelden."
+          "Registrieren kannst du dich mit Benutzername und Passwort; eine E-Mail-Adresse ist optional. Über „Registrieren“ in der oberen Leiste legst du ein Konto an und meldest dich danach mit denselben Daten an.",
+          "Setze beim Login das Häkchen „Eingeloggt bleiben“, um 90 statt 30 Tage eingeloggt zu bleiben. Abmelden kannst du jederzeit über ☰ → Konto → Abmelden."
         ]
       },
       "profile": {
@@ -3454,7 +3465,7 @@
       "friends": {
         "t": "Freunde",
         "p": [
-          "Unter »Freunde« suchst du andere Nutzer und schickst Freundschaftsanfragen. Eingehende Anfragen findest du im Tab »Anfragen« und kannst sie annehmen oder ablehnen.",
+          "Unter „Freunde“ suchst du andere Nutzer und schickst Freundschaftsanfragen. Eingehende Anfragen findest du im Tab „Anfragen“ und kannst sie annehmen oder ablehnen.",
           "Nur der Empfänger einer Anfrage kann sie bestätigen. Bestehende Freundschaften lassen sich jederzeit wieder entfernen."
         ]
       },
@@ -3483,7 +3494,7 @@
         "t": "Tagespuzzle",
         "p": [
           "Jeden Tag (nach UTC) gibt es ein festes Tagespuzzle, das für alle gleich ist – so könnt ihr euch direkt vergleichen.",
-          "Nach dem Lösen siehst du die Bestenliste aller Löser. Als »Löser« zählt, wer das Puzzle im ersten Versuch löst. Bist du mit Discord verknüpft, erscheint dein Name auch im Discord-Embed des Bots."
+          "Nach dem Lösen siehst du die Bestenliste aller Löser. Als „Löser“ zählt, wer das Puzzle im ersten Versuch löst. Bist du mit Discord verknüpft, erscheint dein Name auch im Discord-Embed des Bots."
         ]
       },
       "courses": {
@@ -3491,15 +3502,15 @@
         "p": [
           "Kurse sind importierte Schachbücher, die du puzzleweise durcharbeitest. Welche Bücher du siehst, hängt von deinen Gruppen-Freigaben ab; Administratoren sehen alle.",
           "Du wählst zwischen der Buchreihenfolge (sequenziell) und zufälliger Reihenfolge. Dein Fortschritt wird pro Buch gespeichert und über beide Modi geteilt; den Fortschritt eines Kurses kannst du zurücksetzen.",
-          "Der Menüpunkt »Kurse« erscheint nur, wenn dir mindestens ein Buch freigegeben wurde.",
-          "Unter ☰ → Analyse & Sammlung → Katalog siehst du Kurse und Repertoires, die andere dir zur Auswahl freigegeben haben, und kannst einzelne »Anfordern«."
+          "Der Menüpunkt „Kurse“ erscheint nur, wenn dir mindestens ein Buch freigegeben wurde.",
+          "Unter ☰ → Analyse & Sammlung → Katalog siehst du Kurse und Repertoires, die andere dir zur Auswahl freigegeben haben, und kannst einzelne „Anfordern“."
         ]
       },
       "weekly": {
         "t": "Wochenpost",
         "p": [
           "Die Wochenpost bildet die wöchentlichen Schach-Bot-Posts ab: eine Partie oder Studie mit Termin, die du puzzleweise durchspielst. Über den Link eines Posts gehen Lesen und Durchspielen auch ohne Login; für Fortschritt und Bestenliste zählen nur angemeldete Versuche.",
-          "»Erledigt« bedeutet, dass du alle Puzzles gespielt hast (ob gelöst oder nicht). Aufgeben oder Zurücksetzen nach einem Zug zählt als Fehlversuch. Eine Live-Bestenliste zeigt alle Teilnehmer."
+          "„Erledigt“ bedeutet, dass du alle Puzzles gespielt hast (ob gelöst oder nicht). Aufgeben oder Zurücksetzen nach einem Zug zählt als Fehlversuch. Eine Live-Bestenliste zeigt alle Teilnehmer."
         ]
       },
       "trainingGoals": {
@@ -3507,7 +3518,7 @@
         "p": [
           "Setze dir ein tägliches Trainingszeit-Ziel (in Minuten) sowie Wochenziele für gespielte Partien (Rapid/Classical) und volle Trainingstage. Trainer können Vorlagen je Gruppe vorgeben; dein persönliches Ziel hat Vorrang.",
           "Der Tracker färbt jeden Tag nach Zielerreichung (keins/teilweise/voll) – der Tagesstatus ergibt sich aus deiner Trainingszeit (Puzzles, Kurse, Chessable und eingetragene Offline-Aktivitäten), das Spielen ist ein Wochenziel.",
-          "Gespielte Rapid-/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit »Spielzeit aktualisieren« stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
+          "Gespielte Rapid-/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit „Spielzeit aktualisieren“ stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
         ]
       },
       "stats": {
@@ -3520,14 +3531,14 @@
         "t": "Analyse",
         "p": [
           "Die Analyse läuft standardmäßig in deinem Browser über Stockfish (WebAssembly) – auch offline. Du erhältst mehrere Hauptvarianten (MultiPV), Bewertungen zu jeder Stellung und einen Eröffnungs-Explorer. Die Analyse ist ohne Login nutzbar; beim ersten Start lädt die Browser-Engine einmalig rund 7 MB.",
-          "Angemeldet kannst du im Profil unter »Externe Engine« eine stärkere Engine anbinden (z. B. eine in deinem Lichess-Konto registrierte) und zwei Engines vergleichen. Mit »Im Hintergrund analysieren« (Uhr-Symbol) merkst du eine Stellung für die Hintergrund-Engine vor; die Ergebnisse stehen unter »Analyse-Aufträge«."
+          "Angemeldet kannst du im Profil unter „Externe Engine“ eine stärkere Engine anbinden (z. B. eine in deinem Lichess-Konto registrierte) und zwei Engines vergleichen. Mit „Im Hintergrund analysieren“ (Uhr-Symbol) merkst du eine Stellung für die Hintergrund-Engine vor; die Ergebnisse stehen unter „Analyse-Aufträge“."
         ]
       },
       "repertoires": {
         "t": "Repertoires",
         "p": [
           "Repertoires sind Sammlungen von PGN-Dateien (Eröffnung/Mittelspiel/Endspiel), die du hochlädst und verwaltest. Du kannst Dateien per Drag & Drop hinzufügen, herunterladen und den kombinierten PGN abrufen (max. 10 MB pro Datei).",
-          "Mit der optionalen Browser-Erweiterung RepCheck werden deine Eröffnungsrepertoires direkt auf den Analyseseiten von chess.com und lichess.org abgeglichen (siehe »Browser-Erweiterung (RepCheck)«)."
+          "Mit der optionalen Browser-Erweiterung RepCheck werden deine Eröffnungsrepertoires direkt auf den Analyseseiten von chess.com und lichess.org abgeglichen (siehe „Browser-Erweiterung (RepCheck)“)."
         ]
       },
       "offline": {
@@ -3540,13 +3551,13 @@
       "settings": {
         "t": "Design & Sprache",
         "p": [
-          "Design: Ohne Konto wechselst du direkt im Menü ☰ zwischen hellem, dunklem und System-Design; angemeldet wählst du es im Profil unter »Erscheinungsbild«. Sprache: ☰ → Sprache (angemeldet: ☰ → Konto → Sprache) – RookHub spricht 25 Sprachen, und deine Auswahl wird gespeichert."
+          "Design: Ohne Konto wechselst du direkt im Menü ☰ zwischen hellem, dunklem und System-Design; angemeldet wählst du es im Profil unter „Erscheinungsbild“. Sprache: ☰ → Sprache (angemeldet: ☰ → Konto → Sprache) – RookHub spricht 25 Sprachen, und deine Auswahl wird gespeichert."
         ]
       },
       "tokens": {
         "t": "API-Tokens",
         "p": [
-          "Im Profil legst du unter »API-Tokens« persönliche Tokens für Werkzeuge an, die in deinem Namen auf RookHub zugreifen. RepCheck holt sich seinen Token meist selbst über »Mit RookHub verbinden«; ein von Hand angelegter Token (Scope „extension“) ist der Rückfall. Das Roh-Token wird nur einmalig beim Erstellen angezeigt – kopiere es sofort.",
+          "Im Profil legst du unter „API-Tokens“ persönliche Tokens für Werkzeuge an, die in deinem Namen auf RookHub zugreifen. RepCheck holt sich seinen Token meist selbst über „Mit RookHub verbinden“; ein von Hand angelegter Token (Scope „extension“) ist der Rückfall. Das Roh-Token wird nur einmalig beim Erstellen angezeigt – kopiere es sofort.",
           "Tokens haben einen Geltungsbereich (Scope) und ein optionales Ablaufdatum und lassen sich jederzeit widerrufen."
         ]
       },
@@ -3554,8 +3565,8 @@
         "t": "Browser-Erweiterung (RepCheck)",
         "p": [
           "RepCheck markiert auf chess.com- und lichess.org-Analyseseiten, ab welchem Zug deine Partie aus deinem hinterlegten Eröffnungsrepertoire herausläuft. Das Repertoire bleibt dabei auf dem Server – die Erweiterung schickt nur die Zugliste der aktuellen Partie und bekommt die Abweichung zurück.",
-          "RepCheck ist eine Browser-Erweiterung – erhältlich im [Chrome Web Store]({{chromeUrl}}) und als [signiertes Firefox-Add-on]({{firefoxUrl}}). Neben dem Repertoire-Abgleich speichert sie Partien in RookHub, bringt deine Chessable-Kurse herüber und merkt Stellungen per »Remember line«.",
-          "Einrichtung: Wähle im Popup der Erweiterung »Einstellungen« → »Mit RookHub verbinden« – RepCheck öffnet RookHub, wartet auf deine Anmeldung und legt seinen Zugangs-Token selbst an. Einen Token von Hand einzutragen (angelegt im Profil unter »API-Tokens«, Scope „extension“) bleibt als Rückfall.",
+          "RepCheck ist eine Browser-Erweiterung – erhältlich im [Chrome Web Store]({{chromeUrl}}) und als [signiertes Firefox-Add-on]({{firefoxUrl}}). Neben dem Repertoire-Abgleich speichert sie Partien in RookHub, bringt deine Chessable-Kurse herüber und merkt Stellungen per „Remember line“.",
+          "Einrichtung: Wähle im Popup der Erweiterung „Einstellungen“ → „Mit RookHub verbinden“ – RepCheck öffnet RookHub, wartet auf deine Anmeldung und legt seinen Zugangs-Token selbst an. Einen Token von Hand einzutragen (angelegt im Profil unter „API-Tokens“, Scope „extension“) bleibt als Rückfall.",
           "Quellcode, Versionsverlauf und Details auf [GitHub](https://github.com/kahalm/repcheck)."
         ]
       },
@@ -3568,35 +3579,35 @@
       "feedback": {
         "t": "Feedback & Hilfe",
         "p": [
-          "Einen Fehler gefunden oder einen Wunsch? Über »Feedback / Bug melden« in der Fußzeile gelangst du direkt zum Issue-Tracker auf GitHub; Fragen beantworten wir auch in der Discord-Community (☰ → Community). Ohne Konto öffnet ☰ → Info den Schnellstart-Überblick."
+          "Einen Fehler gefunden oder einen Wunsch? Über „Feedback / Bug melden“ in der Fußzeile gelangst du direkt zum Issue-Tracker auf GitHub; Fragen beantworten wir auch in der Discord-Community (☰ → Community). Ohne Konto öffnet ☰ → Info den Schnellstart-Überblick."
         ]
       },
       "guess": {
         "t": "Punktepartie",
         "p": [
           "In der Punktepartie errätst du eine analysierte Partie Zug für Zug: Du übernimmst eine Seite, setzt deinen Zug und bekommst sofort Punkte – gemessen am Zug, der wirklich gespielt wurde, bewertet von der Engine.",
-          "Die »Meisterpartien« stehen allen offen, auch ohne Konto; dort spielst du die Seite des Gewinners. Angemeldet spielst du unter »Eigene Analysen« auch deine eigenen Partien und wählst die Seite – wirf eine Partie als PGN ein, sie wird im Hintergrund analysiert."
+          "Die „Meisterpartien“ stehen allen offen, auch ohne Konto; dort spielst du die Seite des Gewinners. Angemeldet spielst du unter „Eigene Analysen“ auch deine eigenen Partien und wählst die Seite – wirf eine Partie als PGN ein, sie wird im Hintergrund analysiert."
         ]
       },
       "games": {
         "t": "Partien & Partieformulare",
         "p": [
-          "Unter ☰ → Analyse & Sammlung → Partien liegen deine Partien: mit der RepCheck-Erweiterung auf chess.com oder lichess gespeichert, per »PGN hochladen« übernommen oder von einem Partieformular-Foto eingelesen. »Partie analysieren« rechnet sie im Hintergrund – danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen. Teilen per Link und PGN-Download gibt es auch.",
-          "»Partieformular einlesen«: Fotografiere dein Partieformular; ein KI-Modell (Claude von Anthropic, USA) liest die Züge, RookHub prüft jeden Zug am Brett und legt die Partie in deinen Partien ab. Unsichere Züge korrigierst du über »Prüfen und korrigieren«. Die Zahl der Einlesungen pro Tag ist begrenzt."
+          "Unter ☰ → Analyse & Sammlung → Partien liegen deine Partien: mit der RepCheck-Erweiterung auf chess.com oder lichess gespeichert, per „PGN hochladen“ übernommen oder von einem Partieformular-Foto eingelesen. „Partie analysieren“ rechnet sie im Hintergrund – danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen. Teilen per Link und PGN-Download gibt es auch.",
+          "„Partieformular einlesen“: Fotografiere dein Partieformular; ein KI-Modell (Claude von Anthropic, USA) liest die Züge, RookHub prüft jeden Zug am Brett und legt die Partie in deinen Partien ab. Unsichere Züge korrigierst du über „Prüfen und korrigieren“. Die Zahl der Einlesungen pro Tag ist begrenzt."
         ]
       },
       "reconstruct": {
         "t": "Partie rekonstruieren",
         "p": [
-          "Halte fest, was du von einer Partie noch weißt – die ersten Züge, einzelne Stellungen, kurze Zugfolgen – und schließe die Lücken nach und nach. »Lücke schließen« sucht Zugfolgen, die von einem Teil zum nächsten führen; ein Vorschlag gehört erst zur Partie, wenn du ihn bestätigst.",
-          "»Ganze Partie teilen« erzeugt einen Link auf die Partie samt offenen Lücken; wer ihn öffnet, braucht kein Konto."
+          "Halte fest, was du von einer Partie noch weißt – die ersten Züge, einzelne Stellungen, kurze Zugfolgen – und schließe die Lücken nach und nach. „Lücke schließen“ sucht Zugfolgen, die von einem Teil zum nächsten führen; ein Vorschlag gehört erst zur Partie, wenn du ihn bestätigst.",
+          "„Ganze Partie teilen“ erzeugt einen Link auf die Partie samt offenen Lücken; wer ihn öffnet, braucht kein Konto."
         ]
       },
       "worksheets": {
         "t": "Aufgabenblätter",
         "p": [
-          "Mit »An Aufgabenblatt senden« sammelst du Stellungen aus einem Kurs, einem Kapitel oder nach einem gelösten Puzzle; sie landen in der Zwischenablage. Daraus druckst du ein Blatt mit mehreren Diagrammen je Seite und Platz für die Lösung – oder speicherst es als PDF.",
-          "Geteilt (»Blatt teilen (Link + QR-Code)«) bekommt das Blatt einen Link, der auf dem Ausdruck auch als QR-Code steht: Wer ihn öffnet, spielt das Blatt ohne Konto am Brett durch. Achtung: Hinter dem Link stehen auch die Lösungen."
+          "Mit „An Aufgabenblatt senden“ sammelst du Stellungen aus einem Kurs, einem Kapitel oder nach einem gelösten Puzzle; sie landen in der Zwischenablage. Daraus druckst du ein Blatt mit mehreren Diagrammen je Seite und Platz für die Lösung – oder speicherst es als PDF.",
+          "Geteilt („Blatt teilen (Link + QR-Code)“) bekommt das Blatt einen Link, der auf dem Ausdruck auch als QR-Code steht: Wer ihn öffnet, spielt das Blatt ohne Konto am Brett durch. Achtung: Hinter dem Link stehen auch die Lösungen."
         ]
       },
       "leaderboards": {
@@ -3609,7 +3620,7 @@
         "t": "Chessable",
         "p": [
           "Chessable-Kurse kommen über die RepCheck-Browser-Erweiterung zu RookHub (siehe Abschnitt RepCheck) – sie läuft in deinem eigenen, eingeloggten Browser. Der Import über RookHub selbst ist abgeschaltet: Chessable blockt Rechenzentrums-IPs, und dieses Muster kann dein Chessable-Konto sperren lassen.",
-          "Mit »Remember line« in RepCheck merkst du dir eine Stellung auf chessable.com; du findest sie unter ☰ → Analyse & Sammlung → Gemerkt und kannst sie dort analysieren oder im Hintergrund durchrechnen lassen. Deine aktive Trainingszeit auf chessable.com zählt auf deine Trainingsziele."
+          "Mit „Remember line“ in RepCheck merkst du dir eine Stellung auf chessable.com; du findest sie unter ☰ → Analyse & Sammlung → Gemerkt und kannst sie dort analysieren oder im Hintergrund durchrechnen lassen. Deine aktive Trainingszeit auf chessable.com zählt auf deine Trainingsziele."
         ]
       }
     }
@@ -3824,7 +3835,9 @@
     "pgnFirst": "Füge zuerst das PGN einer Partie ein.",
     "noName": "ohne Name",
     "title": "Partie-Analysen",
-    "intro": "Eine ganze Partie einwerfen — die Hintergrund-Engine rechnet jede Stellung durch. Das dauert; die Partie zeigt ihren Fortschritt und lässt sich jederzeit ansehen.",
+    "intro": "Eine ganze Partie einwerfen — die Hintergrund-Engine rechnet jede Stellung durch.",
+    "introMore": "Das dauert; die Partie zeigt ihren Fortschritt und lässt sich jederzeit ansehen.",
+    "addGame": "Partie einwerfen",
     "pgnLabel": "PGN der Partie",
     "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
     "depth": "Tiefe",
@@ -4535,7 +4548,8 @@
     "language": "Sprache",
     "accountDeletion": {
       "short": "Alles von dir wird gelöscht: deine Sterne, Stufen und Kurse.",
-      "parents": "Für Eltern: was genau gelöscht wird"
+      "parents": "Für Eltern: was genau gelöscht wird",
+      "parentsHowTo": "Für Eltern: so wird das Konto gelöscht"
     },
     "stars": {
       "title": "Sternenjagd",

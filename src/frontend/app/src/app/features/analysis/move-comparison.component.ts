@@ -226,6 +226,12 @@ const POLL_MS = 3_000;
     .hist-row { display: flex; align-items: center; gap: 10px; font-size: .88rem; }
     .hist-row.current a { font-weight: 600; }
     @media (max-width: 768px) { .body { grid-template-columns: 1fr; } .board-col { max-width: 420px; } }
+    /* a1-rk-analyse-unterseiten-ultrawide: Breitbild-Stufe (DESIGN 4.1) — ab 2400 px 1 880-px-Spalte, das Brett wächst
+       bis 900 px, höchstens bis zur Fensterhöhe. Darunter unverändert. */
+    @media (min-width: 2400px) {
+      .cmp-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .body { grid-template-columns: minmax(380px, min(900px, calc(100vh - 260px))) 1fr; }
+    }
   `],
 })
 export class MoveComparisonComponent implements OnInit {

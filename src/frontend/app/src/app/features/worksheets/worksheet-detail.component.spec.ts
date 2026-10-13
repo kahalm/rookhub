@@ -325,6 +325,18 @@ describe('WorksheetDetailComponent Themen + Teilen als eine Zeile', () => {
     expect(el.querySelector('.wd-warn')).toBeNull();
     expect(el.querySelector('.wd-share-toggle')).not.toBeNull();
   });
+
+  it('a1-rk-ws-hinzufuegen-gesperrt: leeres FEN-Feld nennt den Grund für den gesperrten Knopf darunter', async () => {
+    const fixture = await render(sheet());
+    const el = fixture.nativeElement as HTMLElement;
+    const add = el.querySelector('.wd-add') as HTMLElement;
+    expect(add.querySelector('button[disabled]')).withContext('Knopf gesperrt').not.toBeNull();
+    expect(add.querySelector('.wd-add-hint')?.textContent).toContain('worksheets.detail.addFenHint');
+
+    fixture.componentInstance.newFen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    fixture.detectChanges();
+    expect(add.querySelector('.wd-add-hint')).withContext('mit FEN kein Hinweis').toBeNull();
+  });
 });
 
 /** UI-Sweep z3 (z3-rk-ws-detail-vorschau): am Handy Brett 140 px, Knöpfe 2-spaltig daneben, Felder darunter. */
@@ -335,5 +347,27 @@ describe('WorksheetDetailComponent Handy-Karte', () => {
     expect(phone).toMatch(/\.wd-board[^{]*\{ ?width: 140px/);
     expect(phone).toMatch(/\.wd-item-actions[^{]*\{ ?order: 1;[^}]*display: grid; grid-template-columns: repeat\(2, auto\)/);
     expect(phone).toMatch(/\.wd-fields[^{]*\{ ?order: 2; flex-basis: 100%/);
+  });
+});
+
+/** UI-Sweep a1 (a1-rk-ws-detail-bretter-klein): Diagramme 168 px, Tablet 140 px (nie kleiner als am Handy), ab 2400 px 220 px. */
+describe('WorksheetDetailComponent Diagrammgröße', () => {
+  const css = ((WorksheetDetailComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/%NS%/g, '').replace(/\s+/g, ' ');
+  const block = (q: string) => { const i = css.indexOf(q); return i < 0 ? '' : css.slice(i, css.indexOf('@media', i + 6) >>> 0); };
+
+  it('Grundgröße 168 px statt 132 px', () => {
+    expect(css).toMatch(/\.wd-board[^{]*\{ ?width: 168px/);
+    expect(css).not.toContain('width: 132px');
+  });
+
+  it('Tablet (≤ 768 px) 140 px statt 88 px', () => {
+    expect(block('@media (max-width: 768px)')).toMatch(/\.wd-board[^{]*\{ ?width: 140px/);
+    expect(css).not.toContain('width: 88px');
+  });
+
+  it('ab 2400 px breite Spalte und 220-px-Diagramme', () => {
+    const wide = block('@media (min-width: 2400px)');
+    expect(wide).toMatch(/\.wd-page[^{]*\{ ?max-width: min\(var\(--page-max-width-wide, 1880px\), 96vw\)/);
+    expect(wide).toMatch(/\.wd-board[^{]*\{ ?width: 220px/);
   });
 });

@@ -20,6 +20,9 @@
 
 .fc-spacer { flex: 1; }
 .fc-hint { font-size: 0.85rem; opacity: 0.65; margin: 0.4rem 0 1rem; }
+/* a1-rk-flashcards-tastaturhinweis-handy: am Touch-Gerät gibt es weder Leertaste noch Pfeiltasten — Umdrehen und
+   Blättern stehen als Knöpfe unter der Karte; der Satz verlängerte nur den Vorlauf. */
+@media (pointer: coarse) { .fc-hint--keys { display: none; } }
 .fc-center { display: flex; justify-content: center; padding: 2rem; }
 /* Leerer Stapel (DESIGN 5.10, v1-rk-flashcards-marked-leer): zentriert statt eingerückt-linksbündig, mit EINEM Knopf. */
 .empty-state { text-align: center; padding: 2rem 1rem; }
@@ -146,6 +149,16 @@ $fc-study-size: min(92vw, max(480px, calc(100vh - 320px)), 720px);
 .fc-study-back .fc-closing { font-size: 0.95rem; }
 .fc-study-nav { display: flex; align-items: center; gap: 0.75rem; }
 .fc-study-pos { font-variant-numeric: tabular-nums; opacity: 0.75; min-width: 4.5rem; text-align: center; }
+
+/* a1-rk-flashcards-ultrawide: Breitbild-Stufe (DESIGN 4.1) — die Lernkarte wächst ab 2400 px bis zur Fensterhöhe
+   (≤ 1 100 px) statt bei 720 px zu enden; nur die Digital-Ansicht verlässt dafür die A4-Breite, die Druckvorschau
+   bleibt 1 000 px. Vollbild-Regeln (oben) sind spezifischer und gelten weiter. */
+$fc-study-size-wide: min(calc(100vh - 320px), 1100px);
+@media (min-width: 2400px) {
+  .fc-page--digital { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .fc-study-card, .fc-fs-btn { width: $fc-study-size-wide; }
+  .fc-flip-face { min-height: $fc-study-size-wide; }
+}
 
 /* Am Schirm zeigt der Digital-Modus keine Blätter — im Druck kommen sie IMMER (auch wenn man
    aus der Digital-Ansicht druckt), die Study-Karte nie. */

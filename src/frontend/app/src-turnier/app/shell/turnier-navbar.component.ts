@@ -76,9 +76,12 @@ import { authLinkQuery } from '@rh/core/return-url.util';
       </mat-menu>
 
       @if (partnerUrl) {
-        <button mat-button class="wide" (click)="toRookHub()" [attr.title]="'turnier.toRookHub' | translate">
+        <!-- a1-t-navbar-tablet-en: zwischen 769 und 1023 px nur das Symbol (Name bleibt per title/aria-label) — englisch
+             klebte „To RookHub" sonst wie ein vierter Menuepunkt an „My tournaments". -->
+        <button mat-button class="wide to-rh" (click)="toRookHub()" [attr.title]="'turnier.toRookHub' | translate"
+                [attr.aria-label]="'turnier.toRookHub' | translate">
           <mat-icon>open_in_new</mat-icon>
-          <span>{{ 'turnier.toRookHub' | translate }}</span>
+          <span class="to-rh-label">{{ 'turnier.toRookHub' | translate }}</span>
         </button>
       }
 
@@ -122,7 +125,8 @@ import { authLinkQuery } from '@rh/core/return-url.util';
           </button>
         </mat-menu>
       } @else if (!onAuthPage) {
-        <!-- UI-Sweep 2026-10-11 (r2-t-login-headbtn): auf /login und /register kein zweiter „Anmelden“-Link im Kopf. -->
+        <!-- UI-Sweep 2026-10-11 (r2-t-login-headbtn, a1-t-reset-kopf-anmelden): auf /login, /register und den beiden
+             Passwort-Masken kein zweiter „Anmelden“-Link im Kopf. -->
         <a mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
       }
     </mat-toolbar>
@@ -131,7 +135,8 @@ import { authLinkQuery } from '@rh/core/return-url.util';
     .tb { gap: 4px; }
     .brand { font-weight: 600; text-decoration: none; color: inherit; margin-right: 8px; }
     .links { display: flex; gap: 2px; }
-    .spacer { flex: 1 1 auto; }
+    /* Mindestabstand zwischen den Wegen und den Kopfknoepfen (a1-t-navbar-tablet-en). */
+    .spacer { flex: 1 1 auto; min-width: 24px; }
     .who { opacity: .7; font-size: .85rem; }
     /* Das ☰ gibt es nur am Handy; am Schreibtisch stehen alle Wege in der Zeile. */
     .narrow { display: none; }
@@ -142,6 +147,11 @@ import { authLinkQuery } from '@rh/core/return-url.util';
     @media (max-width: 768px) {
       .links, .wide { display: none; }
       .narrow { display: inline-block; }
+    }
+    /* Tablet-Zwischenbreite (a1-t-navbar-tablet-en): „Zu RookHub" nur als Symbol, damit die Zeile Luft behaelt. */
+    @media (min-width: 769px) and (max-width: 1023.98px) {
+      .to-rh .to-rh-label { display: none; }
+      .to-rh .mat-icon { margin: 0; }
     }
     /* UI-Sweep u1 (u1-rk-navbar-raender): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — der Hintergrund bleibt randlos,
        Marke und Symbole rücken auf die Kante des breiten Inhalts (1 880 px + Rand, fluchtet mit Brett/Raster) (statt 1 100 px vom Inhalt entfernt am Fensterrand). */
@@ -163,11 +173,12 @@ export class TurnierNavbarComponent {
    *  hat kein /dashboard, den Rueckfall der Maske. */
   get authQuery(): { returnUrl?: string } { return authLinkQuery(this.router.url, '/'); }
 
-  /** Anmeldemaske oder Registrierung offen? Dort fuehrt „Anmelden“ im Kopf nur auf die Seite, auf der man schon ist
-   *  (UI-Sweep 2026-10-11, r2-t-login-headbtn — gleiche Loesung wie x-login-headbtn in LeagueHub/ClubHub). */
+  /** Anmelde-, Registrierungs- oder Passwort-Maske offen? Dort fuehrt „Anmelden“ im Kopf nur auf die Seite, auf der man
+   *  schon ist, bzw. doppelt „Zurueck zur Anmeldung“ in der Karte (UI-Sweep 2026-10-11, r2-t-login-headbtn — gleiche
+   *  Loesung wie x-login-headbtn in LeagueHub/ClubHub; Passwort-Masken: a1-t-reset-kopf-anmelden). */
   get onAuthPage(): boolean {
     const path = this.router.url.split(/[?#]/)[0];
-    return path === '/login' || path === '/register';
+    return ['/login', '/register', '/forgot-password', '/reset-password'].includes(path);
   }
 
   get partnerUrl(): string | null { return this.handoff.partnerUrl; }

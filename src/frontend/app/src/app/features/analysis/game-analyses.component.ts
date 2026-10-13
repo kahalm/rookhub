@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TextFieldModule } from '@angular/cdk/text-field';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -27,6 +28,7 @@ import {
 } from './game-analysis-nodes-dialog.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { analysisTitle } from './analysis-title.util';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Seite „Partie-Analysen" (`/analysis/games`): eine ganze Partie einwerfen und von der
@@ -43,11 +45,13 @@ import { analysisTitle } from './analysis-title.util';
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressBarModule,
-    TranslatePipe, LoadingSpinnerComponent],
+    TextFieldModule, TranslatePipe, LoadingSpinnerComponent, HelpHintComponent],
   template: `
     <div class="ga-container">
       <div class="header">
-        <h1>{{ 'gameAnalysis.title' | translate }}</h1>
+        <!-- a1-rk-ga-intro-zeile / a1-rk-partie-analysen-vorlauf: ein Satz als Einleitung, der Rest im ⓘ am Titel. -->
+        <h1>{{ 'gameAnalysis.title' | translate }}
+          <app-help-hint [text]="'gameAnalysis.introMore' | translate" /></h1>
         <!-- Beide Sprünge in EINER Gruppe am rechten Rand: mit drei Kindern im
              space-between stand die Punktepartie zwischen Überschrift und Aufträgen. -->
         <div class="header-actions">
@@ -58,6 +62,13 @@ import { analysisTitle } from './analysis-title.util';
             <a mat-stroked-button routerLink="/analysis/jobs">
               <mat-icon>list</mat-icon> {{ 'gameAnalysis.toJobs' | translate }}
             </a>
+          }
+          <!-- a1-rk-partie-analysen-vorlauf: mit vorhandenen Analysen ist das Formular zugeklappt — die Liste steht
+               über der Falz, der Einwurf ist der Hauptknopf (rechts, zuletzt). -->
+          @if (!showForm && !loading) {
+            <button mat-flat-button color="primary" class="add-btn" (click)="formOpen = true">
+              <mat-icon>add</mat-icon> {{ 'gameAnalysis.addGame' | translate }}
+            </button>
           }
         </div>
       </div>
@@ -93,11 +104,13 @@ import { analysisTitle } from './analysis-title.util';
         </div>
       }
 
+      @if (showForm) {
       <mat-card class="new-card">
         <mat-card-content>
           <mat-form-field appearance="outline" class="full">
             <mat-label>{{ 'gameAnalysis.pgnLabel' | translate }}</mat-label>
-            <textarea matInput rows="5" [(ngModel)]="pgn" [disabled]="creating"
+            <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="3" cdkAutosizeMaxRows="12"
+                      [(ngModel)]="pgn" [disabled]="creating"
                       [placeholder]="'gameAnalysis.pgnPlaceholder' | translate"></textarea>
           </mat-form-field>
           <div class="new-row">
@@ -109,6 +122,11 @@ import { analysisTitle } from './analysis-title.util';
                 </mat-select>
               </mat-form-field>
               <span class="muted small hint">{{ 'gameAnalysis.depthHint' | translate }}</span>
+            }
+            @if (analyses.length > 0) {
+              <button mat-button class="cancel-btn" [disabled]="creating" (click)="formOpen = false">
+                {{ 'common.cancel' | translate }}
+              </button>
             }
             <button mat-flat-button color="primary" [disabled]="creating || !pgn.trim()" (click)="create()">
               <mat-icon>play_arrow</mat-icon> {{ 'gameAnalysis.start' | translate }}
@@ -126,6 +144,7 @@ import { analysisTitle } from './analysis-title.util';
           }
         </mat-card-content>
       </mat-card>
+      }
 
       @if (loading) {
         <app-loading-spinner />
@@ -183,10 +202,14 @@ import { analysisTitle } from './analysis-title.util';
     h1 { margin: 0; font-size: 1.5rem; }
     .overall { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
     .overall mat-progress-bar { border-radius: 3px; }
-    .intro { margin: 4px 0 14px; }
+    /* a1-rk-ga-intro-zeile: Fließtext ≤ ~75 Zeichen je Zeile (DESIGN 4.6 Regel 4). */
+    .intro { margin: 4px 0 14px; max-width: 75ch; }
     .new-card { margin-bottom: 16px; }
     .full { width: 100%; }
     .new-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    /* a1-rk-ga-grund-abseits: Knöpfe immer rechts — auch ohne Admin-Tiefenfeld (dort stand „Analyse starten“ links, der
+       Grund darunter am anderen Kartenrand). */
+    .new-row > button:first-of-type { margin-left: auto; }
     /* Grund unter gesperrten Knöpfen: leise, rechtsbündig unter ihnen (am Handy linksbündig). */
     .reason { margin: 6px 0 0; text-align: right; }
     .depth { width: 120px; }
@@ -203,7 +226,10 @@ import { analysisTitle } from './analysis-title.util';
     .ga-head { display: flex; align-items: flex-start; gap: 8px; flex-wrap: nowrap; margin-bottom: 8px; }
     .ga-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px;
       min-height: 40px; }
-    .ga-meta { margin-left: auto; }
+    /* a1-rk-ga-meta-umbruch: am Handy steht die Meta als eigene linksbündige Zeile unter Titel + Abzeichen (rechts
+       geschoben brach sie mittig unter das Abzeichen); erst ab 600 px rückt sie an den rechten Rand. */
+    @media (min-width: 600px) { .ga-meta { margin-left: auto; } }
+    @media (max-width: 599.98px) { .ga-meta { flex-basis: 100%; } }
     .ga-actions { flex: none; display: flex; align-items: center; }
     .ga-title { font-weight: 600; text-decoration: none; color: inherit; min-width: 0; overflow-wrap: anywhere; }
     .ga-title:hover { text-decoration: underline; }
@@ -240,6 +266,11 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   /** Id der Partie, die gerade neu angestossen wird (sperrt ihren Knopf). */
   restarting: number | null = null;
   pgn = '';
+  /**
+   * Einwurf-Formular aufgeklappt (a1-rk-partie-analysen-vorlauf): mit vorhandenen Analysen ist es zu — die Liste ist
+   * die Hauptsache; im Leerzustand steht es immer offen.
+   */
+  formOpen = false;
   depth = GameAnalysisService.DefaultDepth;
   readonly depthOptions = JOB_DEPTH_OPTIONS;
 
@@ -256,6 +287,10 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void { this.poll?.unsubscribe(); }
+
+  get showForm(): boolean {
+    return this.formOpen || (!this.loading && this.analyses.length === 0);
+  }
 
   hasOpen(): boolean {
     return this.analyses.some(a => a.status === 'pending' || a.status === 'running');
@@ -431,6 +466,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       next: second => {
         this.creating = false;
         this.pgn = '';
+        this.formOpen = false;
         if (second) this.analyses = [second, ...this.analyses];
         this.snackbar.success(this.translate.instant('gameAnalysis.started'));
         this.cdr.markForCheck();
@@ -451,6 +487,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       next: created => {
         this.creating = false;
         this.pgn = '';
+        this.formOpen = false;
         this.analyses = [created, ...this.analyses];
         this.snackbar.success(this.translate.instant('gameAnalysis.started'));
         this.cdr.markForCheck();

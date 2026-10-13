@@ -127,12 +127,20 @@ ch-root > .foot { flex: none; width: 100%; }
   border: 1.5px solid var(--ink); border-radius: 8px; padding: 10px 16px; min-height: 44px;
 }
 .btn:hover { background: var(--ink); color: var(--card); }
-.btn:disabled { opacity: .5; cursor: default; background: var(--card); color: var(--ink); }
+/* Gesperrt (a1-c-disabled-button-contrast): nicht mehr pauschal 50 % Deckkraft — hell wurde „Konto verknüpfen" weiß auf
+   ≈ #8fa6a1 (2,4:1). Jetzt volle Deckkraft, leise Schrift in --muted (hell 5,6:1, dunkel ≈ 6:1) und gestrichelter Rahmen;
+   gesperrt bleibt ein Knopf nur, wenn seine Beschriftung den Grund nennt („keine spätere ›") oder gerade gespeichert wird. */
+.btn:disabled, label.btn.disabled {
+  opacity: 1; cursor: default; background: var(--card); color: var(--muted); border-color: var(--muted); border-style: dashed;
+}
 .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
 .btn.primary:hover { filter: brightness(1.12); background: var(--primary); color: var(--primary-ink); }
-.btn.primary:disabled { background: var(--primary); color: var(--primary-ink); }
+.btn.primary:disabled {
+  filter: none; background: color-mix(in srgb, var(--primary) 14%, var(--card)); border-color: var(--primary); color: var(--ink);
+}
 .btn.danger { border-color: var(--bad); color: var(--bad); }
 .btn.danger:hover { background: var(--bad); color: #fff; }
+.btn.danger:disabled { background: var(--card); border-color: var(--muted); color: var(--muted); }
 .btn.slim { min-height: 36px; padding: 6px 12px; font-size: 15px; }
 .btn-link { font: inherit; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 6px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .btn-link:hover { color: var(--ink); }
@@ -156,6 +164,9 @@ ch-root > .foot { flex: none; width: 100%; }
 /* UI-Sweep 2026-10-11 (r2-c-code-field): Code-Feld nur so breit wie „ABCDE-FGHJK", in Festbreitenschrift und
    Großbuchstaben (der Server normalisiert ohnehin); der Knopf steht daneben, am Handy darunter. */
 .code-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding-bottom: 14px; }
+/* Hinweis unter Feld + Knopf, wenn ohne Eingabe getippt wurde (a1-c-disabled-button-contrast). */
+.need { margin: -6px 0 12px; font-size: 15px; }
+.note-form + .need { margin: 6px 0 0; }
 .code-field input.code-input {
   width: 19ch; max-width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 2px; text-transform: uppercase;
@@ -186,6 +197,11 @@ ch-root > .foot { flex: none; width: 100%; }
 
 /* ---- Kartei: Register --------------------------------------------------------------------- */
 .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 16px; }
+/* Titelblock links schrumpft und bricht in sich um, die Knöpfe bleiben rechts daneben (a1-c-fold-lead-group-detail-laptop:
+   die lange Metazeile schob „Anwesenheit abhaken / Kind anlegen" in eine eigene Zeile, Vorlauf 42 %). Wird es zu eng,
+   bricht die ganze Knopfgruppe darunter. */
+.page-head > div:first-child { flex: 1 1 320px; min-width: 0; }
+.page-head > .actions { flex: none; }
 /* Suche, Gruppenchips und Archiv in EINER Zeile (d2-c-kartei-lead); am Handy die Chips darunter (siehe @media). */
 .tools { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 0 0 12px; }
 .tools .search { flex: 1 1 14rem; }
@@ -226,7 +242,11 @@ html.dark-theme .register > .letter { color: var(--linen-muted); }
 .kid-main:hover .kid-name { text-decoration: underline; text-underline-offset: 3px; }
 .kid-name { font-size: 18px; overflow-wrap: anywhere; }
 .kid-name b { font-weight: 700; }
-.kid-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 15px; }
+.kid-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; color: var(--muted); font-size: 15px; }
+/* Trenner „ · " zwischen den Angaben (a1-c-groups-meta-separator, DESIGN 5.13): der Zeitplan ist Freitext, mit nur 12 px
+   Lücke sah man nicht, wo „… neue Mittelschule Schwaz" endet und „2 Kinder" beginnt. Als ::before des folgenden Teils,
+   damit er beim Umbruch nie allein am Zeilenende steht; Chips („im Archiv", Gruppen) brauchen keinen. */
+.kid-meta > :not(.chip) + :not(.chip)::before { content: "· "; color: var(--muted); }
 .kid-call { text-align: right; min-width: 0; }
 .kid-call a { font-weight: 700; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; min-height: 44px; }
 .kid-call a:hover { text-decoration: underline; }
@@ -331,6 +351,13 @@ h3.inline { display: inline; }
 
 /* Anwesenheitstabelle: eigener Scroll-Kasten — die SEITE darf nie seitlich laufen. */
 .matrix-scroll { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+/* Breitbild-Stufe (DESIGN 4.1, a1-c-wide-matrix-ultrawide): nur Seiten mit Anwesenheitsmatrix werden ab 2400 px 1880 px
+   breit — Kopf, Inhalt und Fuß gemeinsam; Kartei, Gruppen und Formulare bleiben 860 px. Der Verlauf darunter behält
+   ≈ 75 Zeichen je Zeile. Unter 2400 px ändert sich nichts. */
+@media (min-width: 2400px) {
+  ch-root:has(.matrix-scroll) .wrap { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  ch-root:has(.matrix-scroll) .diary { max-width: 46em; }
+}
 .matrix { border-collapse: collapse; width: 100%; font-size: 16px; }
 .matrix th, .matrix td { padding: 8px 8px; border-top: 1px solid var(--line); text-align: center; white-space: nowrap; }
 .matrix thead th { border-top: 0; font-weight: 400; color: var(--muted); font-size: 14px; vertical-align: baseline; }
@@ -430,7 +457,6 @@ h1, h2, h3, .brand, .tabs a, .today strong, .tally strong, .stats dd, .code, .re
 }
 .photo-del:hover { background: var(--bad); }
 label.upload { position: relative; }
-label.upload.disabled { opacity: .5; }
 /* ---- Bild am Karteiblatt ------------------------------------------------------------------
    Das Porträt ist RUND — der Kreis, der im Formular ums Gesicht gezogen wurde: klein in Kartei-Zeile und Abhak-Liste,
    größer am Kopf des Blatts. */
@@ -497,7 +523,10 @@ ch-root .wrap :is(app-login, app-register, app-forgot-password, app-reset-passwo
    r2-c-privacy-style): Karte wie .gate, Titel und Abschnittsköpfe in Zilla Slab, Köpfe mit der roten Kopflinienfarbe,
    Links in der Primärfarbe. Am Handy kein eigener 2rem-Rand mehr — .wrap gibt schon 16 px je Seite.
    Die Selektoren sind spezifischer als die der Komponenten (.legal-container[_ngcontent] / h2[_ngcontent]). */
-ch-root .wrap .legal-container { padding: 0; }
+/* Karte linksbündig an der Kante von Wortmarke und Reitern (a1-c-legal-card-vs-header-width): mittig in der 860-px-Spalte
+   stand sie ≈ 150 px eingerückt; alle anderen ClubHub-Seiten beginnen an der Logo-Kante. Rechts bleibt die Spalte frei
+   (dort steht ab 1200 px der „↑ Inhalt"-Knopf). */
+ch-root .wrap .legal-container { padding: 0; justify-content: flex-start; }
 /* Karte = Textspalte (33em + Polster, LEGAL_PAGE_STYLES) ≈ 72–75 Zeichen je Zeile bei der 17-px-Schrift (d2-c-legal-line;
    vorher 760/720 px mit 90–95, dann 660 px mit noch ~80 — z2-rk-legal-zeilenlaenge). */
 /* z3-c-recht-kartenkante: Karte in derselben Einheit wie die Textspalte (16-px-Material-Schrift; mit 17 px war die Karte

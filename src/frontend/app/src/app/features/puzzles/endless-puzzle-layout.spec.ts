@@ -11,6 +11,19 @@ describe('Endlos-Abstände (UI-Sweep z2)', () => {
     expect(s).toMatch(/\.adv-row[^{]*\{[^}]*margin: 16px 0/);
   });
 
+  it('Themen-Schnellwahl-Chips erben die App-Schrift (a1-rk-endless-chips-schrift)', () => {
+    expect(css(EndlessPuzzleComponent)).toMatch(/\.theme-preset-chip[^{:]*\{[^}]*font-family: inherit/);
+  });
+
+  it('Sitzungszähler lesbar, Verlauf-Link mit voller Tippfläche (a1-rk-endless-verlauf-link-klein)', () => {
+    const s = css(EndlessPuzzleComponent);
+    expect(s).toMatch(/\.session-count[^{]*\{[^}]*color: color-mix\(in srgb, currentColor 65%, transparent\)/);
+    const link = /\.history-link[^{ ]*\s?\{([^}]*)\}/.exec(s)![1];
+    expect(link).toContain('font-size: 0.9rem');
+    expect(link).not.toContain('min-height');
+    expect(link).not.toContain('line-height');
+  });
+
   it('der Umschalter Alle/Aktiv/Archiviert klebt nicht am Titel (z2-rk-endless-verlauf-filter)', () => {
     expect(css(EndlessHistoryComponent)).toMatch(/\.toolbar[^{]*\{[^}]*margin: 12px 0 16px/);
   });

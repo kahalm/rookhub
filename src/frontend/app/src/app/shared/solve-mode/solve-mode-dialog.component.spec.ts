@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideTranslateService } from '@ngx-translate/core';
 import { SolveModeDialogComponent, SolveModeDialogData } from './solve-mode-dialog.component';
+import { mountWithComponentStyles, setDarkTheme, textContrast } from '../../testing/contrast';
 
 // UX-004: „für alle Puzzle-Bereiche übernehmen“ — sonst kam dieselbe Frage in jedem Bereich einzeln.
 describe('SolveModeDialogComponent', () => {
@@ -63,4 +64,33 @@ describe('SolveModeDialogComponent', () => {
     expect(choices(el)[0].querySelector('.sm-desc')!.textContent).toBe('solveMode.trainingDesc');
     expect(choices(el)[1].querySelector('.sm-desc')!.textContent).toBe('solveMode.easyDesc');
   });
+});
+
+/**
+ * UI-Sweep a1 (a1-rk-spielweise-dialog-hell): Untertitel, Einleitung, Kachelbeschreibungen und Hinweis lagen im hellen
+ * Design bei ≈ 3,4:1 — currentColor ist im Dialog schon der gedimmte Dialogtext, 60–75 % davon reichten nicht. Gemessen
+ * wie im Dialog: Fläche surface-container-high, Textfarbe on-surface-variant, Kachel mit ihrer Tönung.
+ */
+describe('SolveModeDialogComponent Kontrast', () => {
+  let wasDark: boolean;
+  let dispose: (() => void) | undefined;
+  beforeEach(() => { wasDark = document.documentElement.classList.contains('dark-theme'); });
+  afterEach(() => { dispose?.(); dispose = undefined; setDarkTheme(wasDark); });
+
+  const HTML = '<div style="color: var(--mat-sys-on-surface-variant)">'
+    + '<p class="sm-subtitle">Buch</p><p class="sm-intro">Einmalig</p>'
+    + '<div class="sm-choices"><button type="button" class="sm-choice"><span class="sm-name">Training</span>'
+    + '<span class="sm-desc">Die Figuren bleiben stehen.</span></button></div>'
+    + '<p class="sm-hint">Umschalten über ⋮</p></div>';
+
+  for (const dark of [false, true]) {
+    for (const target of ['.sm-subtitle', '.sm-intro', '.sm-name', '.sm-desc', '.sm-hint']) {
+      it(`${target} erreicht 4,5:1 (${dark ? 'dunkel' : 'hell'})`, () => {
+        setDarkTheme(dark);
+        dispose = mountWithComponentStyles(SolveModeDialogComponent, HTML, 'var(--mat-sys-surface-container-high)');
+        const ratio = textContrast(document.querySelector(target)!);
+        expect(ratio).withContext(`${target}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+  }
 });

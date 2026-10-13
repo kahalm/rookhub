@@ -1,6 +1,9 @@
+import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
 import { LeaderboardsComponent } from './leaderboards.component';
-import { Leaderboards } from './leaderboard.service';
+import { LeaderboardService, Leaderboards } from './leaderboard.service';
 
 function data(period: string): Leaderboards {
   return {
@@ -64,5 +67,30 @@ describe('LeaderboardsComponent', () => {
     subjects['monthly'].next(data('monthly'));
     expect(c.data?.period).toBe('alltime');
     expect(c.loading).toBeFalse();
+  });
+
+  /** UI-Sweep a1: vier Karten in einer Zeile am PC (Karma 1400 px), eigene Zeile mit 12 px Polster rechts. */
+  it('a1-rk-bestenlisten-raster / -eigene-zeile: 4 Karten nebeneinander, rechtes Polster der Zeile 12 px', async () => {
+    TestBed.configureTestingModule({
+      imports: [LeaderboardsComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: LeaderboardService, useValue: { get: (p: string) => of(data(p)) } }],
+    });
+    const fixture = TestBed.createComponent(LeaderboardsComponent);
+    (fixture.nativeElement as HTMLElement).style.display = 'block';
+    (fixture.nativeElement as HTMLElement).style.width = '1100px';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const cards = [...el.querySelectorAll('.lb-grid > *')] as HTMLElement[];
+    expect(cards.length).toBe(4);
+    const tops = new Set(cards.map(c => Math.round(c.getBoundingClientRect().top)));
+    expect(tops.size).withContext('alle vier Karten in einer Zeile').toBe(1);
+    const me = el.querySelector('.lb-row.lb-me') as HTMLElement;
+    expect(getComputedStyle(me).paddingRight).toBe('12px');
+
+    const css = (((LeaderboardsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/@media \(min-width: ?600px\) ?\{ ?\.lb-grid ?\{ ?grid-template-columns: ?repeat\(2/);
   });
 });

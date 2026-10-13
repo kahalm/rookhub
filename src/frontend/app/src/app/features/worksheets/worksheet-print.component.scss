@@ -65,8 +65,9 @@
 .ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; overflow: hidden; }
 .ws-task-head { display: flex; justify-content: space-between; align-items: baseline; gap: 2mm; width: 100%; font-size: 9pt; margin-bottom: 1mm; }
 .ws-no { font-weight: 700; }
-/* Überschrift zwischen Nummer und Zugangabe: darf umbrechen, aber die Zeile nicht sprengen. */
-.ws-heading { font-weight: 600; flex: 1 1 auto; text-align: center; overflow-wrap: anywhere; }
+/* Überschrift zwischen Nummer und Zugangabe: darf umbrechen, aber die Zeile nicht sprengen — im Wort nur notfalls
+   (`break-word`, nicht `anywhere`: „Grundreih / e“, a1-rk-ws-druck-titel-umbruch). */
+.ws-heading { font-weight: 600; flex: 1 1 auto; text-align: center; overflow-wrap: break-word; }
 .ws-turn { color: #444; white-space: nowrap; }
 .ws-board { width: 58mm; }
 .ws-grid--4 .ws-board { width: 66mm; }
@@ -91,6 +92,11 @@
   .ws-sheet { width: 100%; padding: 4mm; min-height: 0; }
   .ws-grid--6, .ws-grid--4, .ws-grid--2 { grid-template-rows: auto; }
   .ws-board, .ws-grid--4 .ws-board, .ws-grid--2 .ws-board { width: 100%; max-width: 58mm; }
+  /* Zugangabe unter die Überschrift: in der schmalen Vorschau nahm „White to move“ (nowrap) der Überschrift den
+     Platz (a1-rk-ws-druck-titel-umbruch). */
+  .ws-grid { align-items: start; }
+  .ws-task-head { flex-wrap: wrap; }
+  .ws-turn { flex-basis: 100%; text-align: center; }
 }
 
 @media print {

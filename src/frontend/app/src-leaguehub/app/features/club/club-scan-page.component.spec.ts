@@ -1,6 +1,6 @@
 import { ExternalEngineService } from '@rh/features/analysis/external-engine.service';
 import { provideTestClub } from '../../core/club-context.testing';
-import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
@@ -649,4 +649,32 @@ describe('ClubScanPageComponent', () => {
     expect(gate.textContent).toContain('Angemeldet als patrik.');
     expect(gate.textContent).not.toContain('Zu den Vereinspartien');
   });
+  // a1-l-formular-wartezeit: nach 42 Stunden stand „2549:18", der Nachsatz klein mit „ — " im Text (Strich allein am Zeilenende)
+  it('wartendes Formular: Uhr in Tagen und Stunden, Nachsatz ohne Strich im Text, nach langer Wartezeit ein Hinweis', fakeAsync(() => {
+    const created = new Date(Date.now() - (42 * 3600 + 18 * 60 + 30) * 1000).toISOString();
+    api.scan.and.callFake(async () => ({ ...structuredClone(STATE), scan: { ...structuredClone(STATE).scan, status: 'pending', createdAt: created } }));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.scan-clock')?.textContent?.trim()).toBe('seit 1 Tag 18 Std.');
+    const why = el.querySelector('.scan-why')!;
+    expect(why.textContent?.trim()).toBe('der Leser schaut alle 5 Minuten nach neuen Formularen.');
+    expect(why.classList.contains('small')).toBeFalse();
+    expect(getComputedStyle(why, '::before').content).toContain('–');
+    expect(el.querySelector('.scan-long')?.textContent).toContain('Länger als üblich');
+    fixture.destroy();
+    discardPeriodicTasks();
+  }));
+
+  it('wartendes Formular nach kurzer Zeit: Minuten-Uhr, kein Hinweis „Länger als üblich"', fakeAsync(() => {
+    const created = new Date(Date.now() - 7_000).toISOString();
+    api.scan.and.callFake(async () => ({ ...structuredClone(STATE), scan: { ...structuredClone(STATE).scan, status: 'pending', createdAt: created } }));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.scan-clock')?.textContent?.trim()).toMatch(/^0:0\d$/);
+    expect(el.querySelector('.scan-long')).toBeNull();
+    fixture.destroy();
+    discardPeriodicTasks();
+  }));
 });

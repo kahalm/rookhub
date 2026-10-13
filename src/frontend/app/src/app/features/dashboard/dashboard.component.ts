@@ -25,6 +25,7 @@ import { chessableQueueLabel } from '../chessable/chessable-progress.util';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ActivityTimerTileComponent } from '../training-goals/activity-timer-tile.component';
+import { formatPct } from '../../shared/format/pct';
 
 /** Ein Schnellzugriff-Button auf einer Kachel. */
 interface TileButton { labelKey: string; link: string; }
@@ -234,6 +235,11 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .dashboard-grid { align-items: stretch; }
     .dashboard-grid > mat-card { display: flex; flex-direction: column; }
     .dashboard-grid > mat-card > mat-card-actions { margin-top: auto; }
+    /* UI-Sweep a1 (a1-rk-dash-puzzles-knoepfe-umbruch): Knöpfe brechen als Ganzes in die nächste Zeile statt in sich
+       (schmale Kachel der 5-Spalten-Breitstufe); (a1-rk-dash-play-versatz) ohne Material-Mindestbreite, damit ein
+       kurzes Wort („Play“) nicht zentriert eingerückt steht — linksbündig wie die Nachbarkacheln. */
+    .dashboard-grid > mat-card > mat-card-actions { flex-wrap: wrap; }
+    .dashboard-grid > mat-card > mat-card-actions > button { min-width: 0; white-space: nowrap; }
     /* UI-Sweep 2026-10-11 (r2-rk-dash-stretch): die hohe Kachel steht allein in ihrer Zeile, die Kurse darin im Raster. */
     .dashboard-grid > mat-card.tile-wide { grid-column: 1 / -1; }
     /* UI-Sweep z2 (z2-rk-dash-kurse-raster): auto-fit statt auto-fill — keine leere vierte Spur, die Kurse teilen sich die Breite. */
@@ -323,7 +329,9 @@ export class DashboardComponent implements OnInit {
     puzzles: {
       id: 'puzzles', icon: 'extension', titleKey: 'dashboard.puzzles.title',
       eligible: () => this.menuKeys.has('puzzles'),
-      subtitle: () => ({ key: 'dashboard.puzzles.subtitle', params: { elo: this.puzzleElo, solved: this.puzzleSolved, accuracy: this.puzzleAccuracy } }),
+      // a1-rk-dash-prozent-komma: Prozent in der Oberflächensprache („78,6 %“ / „78.6%“), nicht roh in den Text.
+      subtitle: () => ({ key: 'dashboard.puzzles.subtitle', params: { elo: this.puzzleElo, solved: this.puzzleSolved,
+        accuracy: formatPct(this.puzzleAccuracy, this.translate.currentLang() || null, 1) } }),
       buttons: [
         { labelKey: 'dashboard.puzzles.solve', link: '/puzzles' },
         { labelKey: 'dashboard.puzzles.daily', link: '/puzzles/daily/today' },
@@ -345,7 +353,8 @@ export class DashboardComponent implements OnInit {
     courses: {
       id: 'courses', icon: 'school', titleKey: 'dashboard.courses.title',
       eligible: () => this.menuKeys.has('courses'),
-      subtitle: () => ({ key: 'dashboard.courses.count', params: { count: this.courseCount } }),
+      // a1-rk-dash-mehrzahl: Einzahl über das Schlüsselpaar …/…One (DESIGN 5.13).
+      subtitle: () => ({ key: this.courseCount === 1 ? 'dashboard.courses.countOne' : 'dashboard.courses.count', params: { count: this.courseCount } }),
       buttons: [{ labelKey: 'dashboard.courses.open', link: '/courses' }],
     },
     pinnedCourses: {
@@ -366,13 +375,13 @@ export class DashboardComponent implements OnInit {
     friends: {
       id: 'friends', icon: 'people', titleKey: 'dashboard.friends.title',
       eligible: () => this.menuKeys.has('friends'),
-      subtitle: () => ({ key: 'dashboard.friends.count', params: { count: this.friendCount } }),
+      subtitle: () => ({ key: this.friendCount === 1 ? 'dashboard.friends.countOne' : 'dashboard.friends.count', params: { count: this.friendCount } }),
       buttons: [{ labelKey: 'dashboard.friends.manage', link: '/friends' }],
     },
     repertoires: {
       id: 'repertoires', icon: 'library_books', titleKey: 'dashboard.repertoires.title',
       eligible: () => this.menuKeys.has('repertoires'),
-      subtitle: () => ({ key: 'dashboard.repertoires.count', params: { count: this.repertoireCount } }),
+      subtitle: () => ({ key: this.repertoireCount === 1 ? 'dashboard.repertoires.countOne' : 'dashboard.repertoires.count', params: { count: this.repertoireCount } }),
       buttons: [{ labelKey: 'dashboard.repertoires.viewAll', link: '/repertoires' }],
     },
     games: {
@@ -384,7 +393,7 @@ export class DashboardComponent implements OnInit {
     favorites: {
       id: 'favorites', icon: 'favorite', titleKey: 'dashboard.favorites.title',
       eligible: () => this.menuKeys.has('favorites'),
-      subtitle: () => ({ key: 'dashboard.favorites.count', params: { count: this.favoriteCount } }),
+      subtitle: () => ({ key: this.favoriteCount === 1 ? 'dashboard.favorites.countOne' : 'dashboard.favorites.count', params: { count: this.favoriteCount } }),
       buttons: [{ labelKey: 'dashboard.favorites.open', link: '/favorites' }],
     },
     weekly: {

@@ -47,7 +47,9 @@ export const KID_AUTH_STYLES = `
     --mat-button-filled-label-text-weight: 800;
     width: 100%; min-height: 52px; box-shadow: 0 5px 0 var(--kid-shadow);
   }
-  :host ::ng-deep ${MASKS} .mat-mdc-card-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 8px 16px; }
+  :host ::ng-deep ${MASKS} .mat-mdc-card-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; padding: 16px 16px 8px; }
+  /* a1-k-auth-mail-link-button-gap: oben 16 px statt 8 — die Pillenreihe klebte an der Kontaktzeile („Keine E-Mail …“)
+     bzw. am Hauptknopf, Abschnittsabstand 16–24 px (DESIGN 3.2). */
   /* UI-Sweep 2026-10-11 (d1-k-kid-auth-pills-offset): 16 px seitlich wie mat-card-content — die Pillen fluchten mit Feldern und Knopf. */
   :host ::ng-deep ${MASKS} .mat-mdc-card-actions a {
     --mat-button-text-container-shape: 999px;

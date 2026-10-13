@@ -251,17 +251,29 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .gap-icon { opacity: 0.6; }
     .note { font-size: 0.8rem; line-height: 1.4; margin: 0 0 4px 4px; }
     .head-note { margin: 12px 0 0; white-space: pre-wrap; }
+    /* a1-rk-geteilt-recon-tablet: zweispaltig erst ab 900 px (DESIGN 4.2). Tablet hochkant (769–899 px) stapelt Brett
+       über Zugliste — nebeneinander blieb das Brett beim Mindestwert 360 px und die untere Hälfte leer. Das Brett nimmt
+       die Kartenbreite, höchstens bis zur Fensterhöhe (330 px Kopf + Blätter-Leiste wie oben). */
+    @media (max-width: 899.98px) {
+      .body { flex-direction: column; align-items: stretch; }
+      .board-section { width: 100%; }
+      .board-wrap { width: min(100%, max(360px, calc(100svh - 330px))); }
+      .board-wrap app-chess-board { width: 100%; }
+      .nav { justify-content: center; }
+      .moves-section { position: static; width: auto; max-height: 40vh; }
+    }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }
       .viewer { padding: 0; border-radius: 0; }
       .header { padding: 12px 16px 0; }
-      .body { flex-direction: column; align-items: stretch; padding: 8px; }
-      .board-section { width: 100%; }
+      .body { padding: 8px; }
       .board-wrap { width: 100%; }
-      .board-wrap app-chess-board { width: 100%; }
-      .nav { justify-content: center; }
-      .moves-section { position: static; width: auto; max-height: 40vh; }
       .head-note { padding: 0 16px 16px; }
+    }
+    /* a1-rk-geteilt-brett-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Brett bis zur Fensterhöhe statt höchstens 680 px;
+       die Seite rechnet weiter Brett + 520 px. */
+    @media (min-width: 2400px) {
+      .shared-page { --board-size: clamp(360px, calc(100svh - 330px), 1080px); }
     }
   `],
 })

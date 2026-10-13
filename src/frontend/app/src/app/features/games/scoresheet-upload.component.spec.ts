@@ -88,6 +88,11 @@ describe('ScoresheetUploadComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector<HTMLButtonElement>('.actions button[color="primary"]')?.disabled).toBeTrue();
     expect(el.querySelector('.actions .need-photo')?.textContent).toContain('scoresheet.needPhoto');
+    // a1-rk-scoresheet-grund-trenner: der Grund steht in einer eigenen Zeile UNTER Knopf und Budget, nicht daneben.
+    const btnRect = el.querySelector('.actions button[color="primary"]')!.getBoundingClientRect();
+    const needRect = el.querySelector('.actions .need-photo')!.getBoundingClientRect();
+    expect(btnRect.height).withContext('im DOM gerendert').toBeGreaterThan(0);
+    expect(needRect.top).toBeGreaterThanOrEqual(btnRect.bottom - 1);
 
     const file = new File([new Uint8Array([1, 2, 3])], 'sheet.jpg', { type: 'image/jpeg' });
     fixture.componentInstance.onFile({ target: { files: [file], value: '' } } as unknown as Event);

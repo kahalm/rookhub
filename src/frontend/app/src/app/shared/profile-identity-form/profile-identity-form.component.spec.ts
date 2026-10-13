@@ -197,6 +197,52 @@ describe('ProfileIdentityFormComponent', () => {
   });
 
   /**
+   * UI-Sweep a1 (a1-t-profil-feldabstaende): Felder ohne Hinweis trugen den festen Material-
+   * Reserveplatz (~32 px Abstand), Felder mit Hinweis ~12 px. Jetzt alle dynamic, Abstand 16 px.
+   */
+  it('setzt alle Felder auf dynamische Hinweisgroesse und haelt den Abstand einheitlich', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '360px';
+    fixture.detectChanges();
+    const fields = [...host.querySelectorAll('mat-form-field')] as HTMLElement[];
+    expect(fields.length).toBe(6);
+    for (const f of fields) {
+      expect(f.querySelector('.mat-mdc-form-field-subscript-dynamic-size')).withContext(f.textContent!).not.toBeNull();
+    }
+    // Vorname → Nachname (ohne Hinweis) stehen am Handy untereinander mit 16 px Luft.
+    const [first, last] = fields.map(f => f.querySelector('.mat-mdc-text-field-wrapper')!.getBoundingClientRect());
+    expect(last.top - first.bottom).toBeCloseTo(16, 0);
+    // FIDE → ChessResults ebenso.
+    const fide = fields[4].querySelector('.mat-mdc-text-field-wrapper')!.getBoundingClientRect();
+    const cr = fields[5].querySelector('.mat-mdc-text-field-wrapper')!.getBoundingClientRect();
+    expect(cr.top - fide.bottom).toBeCloseTo(16, 0);
+    // Hinweis unter „Spieler suchen“ eingerueckt wie die mat-hints (16 px).
+    const hint = host.querySelector('.pif-search-hint') as HTMLElement;
+    expect(getComputedStyle(hint).paddingLeft).toBe('16px');
+  });
+
+  /**
+   * UI-Sweep a1 (a1-rk-profil-suche-falz): in der 600-px-Karte des RookHub-Profils bricht der
+   * Suchblock um — dann Knopf (40 px) und Hinweis NEBENeinander ueber die volle Breite statt eines
+   * schmalen Blocks mit dreizeiligem Hinweis.
+   */
+  it('stellt Knopf und Hinweis in mittlerer Breite nebeneinander', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '568px';
+    fixture.detectChanges();
+    const button = host.querySelector('button.pif-search') as HTMLElement;
+    const hint = host.querySelector('.pif-search-hint') as HTMLElement;
+    const b = button.getBoundingClientRect();
+    const h = hint.getBoundingClientRect();
+    expect(b.height).toBe(40);
+    expect(h.left).toBeGreaterThanOrEqual(b.right);           // rechts neben dem Knopf
+    expect(h.top).toBeLessThan(b.bottom);                     // in derselben Zeile
+    const box = host.querySelector('.pif-search-box') as HTMLElement;
+    expect(box.getBoundingClientRect().width).toBeCloseTo(568, 0);
+    expect(box.getBoundingClientRect().height).toBeLessThanOrEqual(48);
+  });
+
+  /**
    * Lupe und Spinner gehoeren in den ICON-Slot des Knopfs (18 px, Aussenabstand), nicht in den
    * Text-Slot — dort war die Lupe 24 px gross, klebte am Text, und der Knopf sprang beim Suchen
    * in der Breite. MatButton projiziert einen @if-Zweig nur dann in den Icon-Slot, wenn er genau

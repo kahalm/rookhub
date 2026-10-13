@@ -337,6 +337,12 @@ interface HistoryRow {
             padding: 2px 6px; border-radius: 4px; color: inherit; opacity: .6; }
     .lang.on { opacity: 1; font-weight: 600; background: color-mix(in srgb, currentColor 12%, transparent); }
     .lang-tag { margin-left: 6px; font-size: .7rem; opacity: .6; text-transform: uppercase; }
+    /* a1-rk-guess-brett-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Seite breiter, Brett bis zur Fensterhöhe statt 820 px;
+       die 560-px-Seitenspalte steht daneben. Unter 2400 px unverändert. */
+    @media (min-width: 2400px) {
+      .gb-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .board-col { flex: 0 1 calc(100vh - 250px); max-width: calc(100vh - 250px); }
+    }
   `],
 })
 export class GuessBoardComponent implements OnInit, OnDestroy {

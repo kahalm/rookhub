@@ -119,6 +119,34 @@ describe('AppFooterComponent', () => {
     }
   });
 
+  // a1-t-fuss-kontrast: die gedaempfte Fusszeile (Version, Hilfe, Feedback, Rechtslinks) lag hell bei 47 % mit 3,6:1.
+  describe('Kontrast der Fusszeilen-Links (a1-t-fuss-kontrast)', () => {
+    let wasDark: boolean;
+    beforeEach(() => { wasDark = document.documentElement.classList.contains('dark-theme'); });
+    afterEach(() => setDarkTheme(wasDark));
+
+    for (const dark of [false, true]) {
+      it(`Version, Feedback und Rechtslinks erreichen 4,5:1 (${dark ? 'dunkel' : 'hell'})`, () => {
+        setDarkTheme(dark);
+        const fixture = buildFixture([{ path: 'privacy' }, { path: 'impressum' }]);
+        fixture.detectChanges();
+        const root = fixture.nativeElement as HTMLElement;
+        for (const sel of ['.version-link', '.feedback-link', 'a.legal-link']) {
+          const el = root.querySelector(sel)!;
+          const ratio = textContrast(el);
+          expect(ratio).withContext(`${sel} (${dark ? 'dunkel' : 'hell'}): ${ratio.toFixed(2)}:1`)
+            .toBeGreaterThanOrEqual(4.5);
+        }
+      });
+    }
+
+    it('wird beim Hover nicht blasser (kein 65-%-Mischwert auf dem schon gedaempften Ton)', () => {
+      const css = ((AppFooterComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n');
+      expect(css).toMatch(/\.app-footer[^{]*\{[^}]*currentColor 60%/);
+      expect(css).not.toMatch(/:hover[^{]*\{[^}]*currentColor 65%/);
+    });
+  });
+
   // ----- Ausblenden am Handy: Vorgabe ja, per Input abschaltbar (Turnierseite) --------------
 
   it('traegt hide-on-mobile nur, wenn hideOnMobile gesetzt ist', () => {
@@ -246,6 +274,25 @@ describe('AppFooterComponent am Handy (UX-072)', () => {
     render();
     expect(mobileRules('.footer-sep').some(r => r.style.display === 'none')).toBeTrue();
     expect(mobileRules('.app-footer').some(r => r.style.flexWrap === 'wrap')).toBeTrue();
+  });
+
+  it('haelt Impressum und Datenschutz am Handy als eigene, gemeinsame Zeile zusammen (a1-t-fuss-rechtslinks-en)', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ path: 'privacy', children: [] }, { path: 'impressum', children: [] }]),
+                  provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(AppFooterComponent);
+    fixture.componentRef.setInput('hideOnMobile', false);
+    fixture.detectChanges();
+    const group = (fixture.nativeElement as HTMLElement).querySelector('.legal-group');
+    expect(group).withContext('Huelle um die Rechtslinks').not.toBeNull();
+    expect(group!.querySelectorAll('a.legal-link').length).toBe(2);
+    // Breit (Karma 1400 px) wirkt die Huelle nicht: die Trenner bleiben wie bisher.
+    expect(getComputedStyle(group!).display).toBe('contents');
+    const rule = mobileRules('.legal-group').find(r => r.style.flexBasis === '100%');
+    expect(rule).withContext('Handy: eigene Zeile').toBeDefined();
+    expect(rule!.style.flexWrap).toBe('nowrap');
+    expect(rule!.style.display).toBe('inline-flex');
   });
 
   it('zeigt die Version ohne Changelog-Knopf, wenn changelogLink aus ist (Turnierseite)', () => {

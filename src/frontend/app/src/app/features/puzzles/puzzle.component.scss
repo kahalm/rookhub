@@ -26,9 +26,11 @@
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-puzzle-btn { margin-top: 0.25rem; }
-    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
+    /* Kennzahlen brechen in der schmalen Seitenspalte um (3 + 2) statt über den Kartenrand zu ragen; Abstand zum
+       Kartentitel (a1-rk-puzzle-statistik-tablet-ueberlauf, DESIGN 4.4). */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 0.5rem; row-gap: 0.75rem; margin-top: 8px; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
-    .stat-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .stat-label { display: block; font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     .filter-field { flex: 1; }
     .viz-radios { margin-bottom: 0.75rem; }
@@ -77,7 +79,6 @@
       background: #fff; border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
       box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
     }
-    .tomove-dot.black { background: #2b2b2b; border-color: color-mix(in srgb, currentColor 30%, transparent); }
     .board-hint-show {
       padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
       border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;
@@ -113,6 +114,14 @@
     .bottom-actions { display: flex; flex-direction: column; gap: 0.5rem; }
     .bottom-actions button, .share-full { width: 100%; }
 
+    /* Einspaltig bis 899.98 px wie Buch-/Kurs-Löser (a1-rk-tablet-seitenspalte-eng): Tablet-Brett mittig bis
+       Fensterhöhe, Seitenkarten in voller Breite darunter. */
+    @media (min-width: 769px) and (max-width: 899.98px) {
+      .puzzle-layout { flex-direction: column; }
+      .board-section { width: min(100%, calc(100vh - 180px)); align-self: center; }
+      .info-section { width: 100%; }
+    }
+
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
       // .info-section explizit auf 100 % — der .puzzle-layout-Container hat
@@ -120,7 +129,6 @@
       // Info-Spalte nicht horizontal. Ohne explizite width bleiben die Status-
       // /Info-Karten schmaler als das Brett darüber (Mobile-Bug, vor v0.186).
       .board-section, .info-section { width: 100%; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     /* --- Revanche-Runde abgeschlossen: Glückwunsch + Feuerwerk --- */
@@ -177,3 +185,9 @@
         .board-hint-slot--side { display: block; }
       }
     }
+
+/* Breitbild-Stufe ≥ 2400 px (DESIGN 4.1; a1-rk-puzzle-brett-ultrawide): wie Buch-/Kurs-Löser. */
+@media (min-width: 2400px) {
+  .puzzle-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .board-section { width: min(calc(100vh - 180px), calc(100% - 360px - 1.5rem)); }
+}

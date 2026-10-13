@@ -269,6 +269,44 @@ describe('TurnierNavbarComponent „Anmelden“ behält das Ziel (UX-020)', () =
     TestBed.resetTestingModule();
     expect(await loginHrefAt('/register?returnUrl=%2Ft%2F42')).toBeNull();
   });
+
+  // a1-t-reset-kopf-anmelden: die Passwort-Masken tragen „Zurück zur Anmeldung“ in der Karte — oben kein zweites „Anmelden“.
+  it('auf /forgot-password und /reset-password gibt es oben keinen „Anmelden“-Link', async () => {
+    expect(await loginHrefAt('/forgot-password')).toBeNull();
+    TestBed.resetTestingModule();
+    expect(await loginHrefAt('/reset-password?token=abc')).toBeNull();
+  });
+});
+
+/** a1-t-navbar-tablet-en: zwischen 769 und 1023 px „Zu RookHub“ nur als Symbol, Spacer mit Mindestabstand. */
+describe('TurnierNavbarComponent Tablet-Zwischenbreite (a1-t-navbar-tablet-en)', () => {
+  const css = ((TurnierNavbarComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('blendet nur zwischen 769 und 1023 px die Beschriftung des RookHub-Knopfs aus', () => {
+    const at = css.indexOf('@media (min-width: 769px) and (max-width: 1023.98px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.to-rh[^{]*\.to-rh-label[^{]*\{ ?display: none/);
+    // Ausserhalb der Stufe wird die Beschriftung nie versteckt.
+    expect(css.slice(0, at)).not.toContain('to-rh-label');
+  });
+  it('haelt mindestens 24 px zwischen den Wegen und den Kopfknoepfen', () => {
+    expect(css).toMatch(/\.spacer[^{]*\{ ?flex: 1 1 auto; min-width: 24px/);
+  });
+  it('der Knopf behaelt seinen Namen auch ohne sichtbaren Text (title + aria-label)', () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [TurnierNavbarComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: HandoffService, useValue: { partnerUrl: 'https://rookhub.test', jump: () => Promise.resolve() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(TurnierNavbarComponent);
+    fixture.detectChanges();
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('button.to-rh')!;
+    expect(btn.getAttribute('aria-label')).toBe('turnier.toRookHub');
+    expect(btn.getAttribute('title')).toBe('turnier.toRookHub');
+  });
 });
 
 /** UI-Sweep u1 (u1-rk-navbar-raender): ab 2400 px rückt der Leisteninhalt auf die Kante des breiten Inhalts (1 880 px). */

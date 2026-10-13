@@ -41,7 +41,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
           <div class="header">
             <span class="title">{{ line.title || ('repertoire.shareLine.defaultTitle' | translate) }}</span>
             <span class="meta">
-              @if (line.repertoireName) { <span class="rep">{{ line.repertoireName }}</span> }
+              @if (line.repertoireName) { <span class="rep" [attr.title]="line.repertoireName">{{ line.repertoireName }}</span> }
               <span class="date">{{ line.createdAt | date:'mediumDate' }}</span>
             </span>
           </div>
@@ -81,8 +81,11 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .viewer { padding: 16px; }
     .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .title { font-weight: 600; font-size: 1.1rem; }
-    .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* a1-rk-geteilte-linie-datum-handy: Datum bricht nie um, Trenner „ · “ als ::before des Datums (DESIGN 5.13). */
+    .meta { display: flex; flex-wrap: wrap; row-gap: 2px; min-width: 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .rep { font-weight: 500; }
+    .date { white-space: nowrap; }
+    .rep + .date::before { content: '·'; margin: 0 6px; }
     .body { display: flex; gap: 16px; align-items: flex-start; }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
@@ -92,17 +95,33 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
     .moves-section { flex: 1; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; min-width: 180px; overflow: auto; max-height: 60vh; }
+    /* a1-rk-geteilt-recon-tablet: zweispaltig erst ab 900 px (DESIGN 4.2). Tablet hochkant (769–899 px) stapelt Brett
+       über Zugliste — nebeneinander blieb das Brett beim Mindestwert 360 px und die untere Hälfte leer. Das Brett nimmt
+       die Kartenbreite, höchstens bis zur Fensterhöhe. */
+    @media (max-width: 899.98px) {
+      .body { flex-direction: column; align-items: stretch; }
+      .board-section { width: 100%; max-width: 100%; align-items: center; }
+      .board-wrap { width: min(100%, max(360px, calc(100vh - 260px))); }
+      .board-wrap app-chess-board { width: 100%; }
+      .nav { justify-content: center; padding: 4px 0; }
+      .moves-section { width: 100%; max-height: 40vh; }
+    }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }
       .viewer { padding: 0; border-radius: 0; }
       .header { padding: 12px 16px; }
-      .body { flex-direction: column; align-items: stretch; }
-      .board-section { width: 100%; max-width: 100%; align-items: center; }
+      /* Handy: „Name · Datum“ in EINER Zeile, der Name kürzt mit „…“ (5.3), das Datum bleibt ganz. */
+      .meta { flex-wrap: nowrap; }
+      .rep { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .date { flex: none; }
       .board-wrap { width: 100%; }
-      .board-wrap app-chess-board { width: 100%; }
       .board-tap { display: block; }
-      .nav { justify-content: center; padding: 4px 0; }
-      .moves-section { width: 100%; max-height: 40vh; border-left: none; border-right: none; border-radius: 0; border-bottom: none; }
+      .moves-section { border-left: none; border-right: none; border-radius: 0; border-bottom: none; }
+    }
+    /* a1-rk-geteilt-brett-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Brett bis zur Fensterhöhe statt höchstens 680 px;
+       die Seite rechnet weiter Brett + 520 px. */
+    @media (min-width: 2400px) {
+      .shared-page { --board-size: clamp(360px, calc(100vh - 260px), 1080px); }
     }
   `]
 })

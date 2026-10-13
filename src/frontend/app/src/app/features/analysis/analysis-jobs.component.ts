@@ -158,8 +158,12 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .jobs-container { padding: 1rem; max-width: min(var(--page-max-width, 1240px), 96vw); margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .header h1 { margin: 0; }
-    .intro { margin: .25rem 0 1rem; }
+    /* a1-rk-jobs-kopf-handy: 12 px Luft zu den Kopfknöpfen (am Handy klebte der Satz an der Knopfzeile). */
+    .intro { margin: 12px 0 1rem; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* a1-rk-leer-hinweis-blass: der Leerzustand blasst schon auf 60 % ab — die Hinweiszeile nicht ein zweites Mal
+       (sonst 36 %, hell ~2,5:1); sie unterscheidet sich über die Größe (DESIGN 5.10). */
+    .empty-state .muted { color: inherit; font-size: .9em; }
     .small { font-size: .8rem; }
     .fen { font-family: 'Roboto Mono', monospace; word-break: break-all; }
     .job { margin-bottom: 10px; }

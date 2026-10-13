@@ -251,6 +251,34 @@ describe('GamesListComponent', () => {
     expect(el.querySelector('.filters-toggle')!.getAttribute('aria-expanded')).toBe('true');
   });
 
+  // a1-rk-games-native-auswahl: dieselben Filter wie auf /games/mistakes als mat-select (DESIGN 5.8), kein natives <select>.
+  it('zeigt die Klassifizierer- und Tag-Filter als Material-Auswahl mit sichtbarem „Alle“', async () => {
+    const { fixture } = await setupMitPartien([
+      { ...partie(1), classifier1: 'Liga A', classifier2: '2025', tags: ['x'] },
+      { ...partie(2), classifier1: 'Liga B', classifier2: '2026' },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.classifier-filters select')).toBeNull();
+    const fields = el.querySelectorAll('.classifier-filters mat-form-field.mat-form-field-appearance-outline');
+    expect(fields.length).toBe(3);
+    expect(el.querySelectorAll('.classifier-filters mat-select').length).toBe(3);
+    expect(el.querySelector('.filter1 .mat-mdc-select-value')!.textContent!.trim()).toBe('games.classifier.all');
+  });
+
+  // a1-rk-games-leer-zwei-saetze: Leerkarte mit einem Satz und genau einer Aktion (DESIGN 5.10).
+  it('leer: ein Satz und „PGN hochladen“ als einzige Aktion in der Karte', async () => {
+    const { fixture } = await setupMitPartien([]);
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.empty-state') as HTMLElement;
+    expect(card.querySelectorAll('p').length).toBe(1);
+    const buttons = card.querySelectorAll('button');
+    expect(buttons.length).toBe(1);
+    const upload = spyOn(fixture.componentInstance, 'uploadPgn');
+    (buttons[0] as HTMLButtonElement).click();
+    expect(upload).toHaveBeenCalled();
+  });
+
   /** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm: die native Rueckfrage
    *  liegt im Vollbild hinter der Seite und laesst sich vom Browser stummschalten (Codereview W5 F4-013). */
   it('remove: asks via ConfirmService — declined sends no DELETE, confirmed deletes', async () => {
@@ -287,5 +315,12 @@ describe('GamesListComponent Layout', () => {
     expect(phone).toMatch(/\.classifier-filters:not\(\.open\) \{ ?display: none/);
     expect(phone).toMatch(/\.label-long \{ ?display: none/);
     expect(phone).toMatch(/\.label-short \{ ?display: inline/);
+  });
+
+  // a1-rk-games-handy-filter-abstand: 12 px zwischen „Filter ▾“ bzw. offenen Filtern und der ersten Partie; Einleitung ohne Waisenwort.
+  it('lässt am Handy 12 px Luft unter der Filterzeile und bricht die Einleitung ausgewogen um', () => {
+    expect(phone).toMatch(/\.filters-bar \{[^}]*margin: 8px 0 12px/);
+    expect(phone).toMatch(/\.classifier-filters\.open \{ ?margin: 0 0 12px/);
+    expect(desk).toMatch(/\.hint \{[^}]*text-wrap: pretty/);
   });
 });

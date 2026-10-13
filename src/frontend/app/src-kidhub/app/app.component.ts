@@ -137,6 +137,16 @@ export function isHomeUrl(url: string): boolean {
     @supports (height: 100svh) {
       :host { --kid-vh: 1svh; }
     }
+    /* Breitbild-Stufe (DESIGN 4.1, a1-k-ultrawide-board-small): ab 2400 px waechst das Brett bis zur Fensterhoehe
+       (hoechstens 1240 px statt 820), --kid-row, Kopfzeile und Koordinaten wachsen mit. Startseite und Karten nehmen
+       dort die breite Spalte (--kid-wide-max, siehe KID_HOME_WIDTH/KID_MAP_WIDTH). Steht VOR KID_SHORT/KID_STACKED,
+       damit ein flaches oder hochkant gestelltes breites Fenster weiter deren Aufbau bekommt. */
+    @media (min-width: 2400px) {
+      :host {
+        --kid-board: max(min(calc(var(--kid-vh) * 100 - 170px), calc(100vw - 500px), 1240px), 300px);
+        --kid-wide-max: 1880px;
+      }
+    }
     /* Handy quer: das Brett nimmt die Hoehe ganz (Kopfzeile + EINE Titelzeile ≈ 110px — die Seiten brechen ihre
        Titelzeile dort nicht um —, dazu der Schatten unter dem Brett), daneben die Spalte mit ihrer Mindestbreite
        (280px + Abstand + Rand = 340px). Ohne Untergrenze — 300px liefen bei 390px Fensterhoehe unten aus dem Bild. */
@@ -228,12 +238,13 @@ export class KidHubAppComponent implements OnInit {
   readonly lang = computed(() => this.translate.currentLang());
   /** Kindertexte fuer „Konto loeschen" — die geteilte Seite kennt sie nicht, die Huelle setzt sie ein. */
   private readonly deletionTexts = toSignal(
-    this.translate.stream(['kids.accountDeletion.short', 'kids.accountDeletion.parents']).pipe(
+    this.translate.stream(['kids.accountDeletion.short', 'kids.accountDeletion.parents', 'kids.accountDeletion.parentsHowTo']).pipe(
       map((t: Record<string, string>): KidDeletionTexts => ({
         short: t['kids.accountDeletion.short'], parents: t['kids.accountDeletion.parents'],
+        howTo: t['kids.accountDeletion.parentsHowTo'],
       })),
     ),
-    { initialValue: { short: '', parents: '' } },
+    { initialValue: { short: '', parents: '', howTo: '' } },
   );
 
   private readonly api = inject(KidsApiService);

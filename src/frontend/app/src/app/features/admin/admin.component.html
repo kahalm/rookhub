@@ -85,36 +85,44 @@
               </table>
               </div>
 
-              <!-- UI-Sweep 2026-10-11 (r2-rk-admin-users-mobile): am Handy Karten statt der breiten Tabelle —
-                   Name + Mail, darunter Gruppen, Einsteigen und ⋮ (Admin umschalten, löschen). -->
+              <!-- UI-Sweep 2026-10-11 (r2-rk-admin-users-mobile): unter 900 px Karten statt der breiten Tabelle.
+                   a1-rk-admin-nutzer-schmal: zwei Teile — links Name/Meta/Mail/Gruppen, rechts Einsteigen + ⋮ oben
+                   in der ersten Zeile (nie allein in einer eigenen Zeile, DESIGN 5.2). -->
               <div class="user-cards">
                 @for (u of users; track u.id) {
                   <div class="user-card">
                     <div class="uc-head">
-                      <strong class="uc-name">{{ u.username }}</strong>
-                      <span class="uc-meta">#{{ u.id }}@if (u.isAdmin) { · {{ 'admin.users.columns.admin' | translate }} }</span>
-                    </div>
-                    @if (u.email) { <div class="uc-mail">{{ u.email }}</div> }
-                    <div class="uc-row">
-                      @for (g of u.groups ?? []; track g) { <span class="uc-group">{{ g }}</span> }
-                      <span class="uc-spacer"></span>
-                      <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId === u.id" [appIconLabel]="'admin.users.impersonate' | translate">
-                        <mat-icon>login</mat-icon>
-                      </button>
-                      <button mat-icon-button [matMenuTriggerFor]="userMenu"
-                              [attr.aria-label]="'common.moreActions' | translate">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                      <mat-menu #userMenu="matMenu">
-                        <button mat-menu-item (click)="toggleAdmin(u)" [disabled]="adminBusyId === u.id">
-                          <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
-                          <span>{{ 'admin.users.toggleAdmin' | translate }}</span>
+                      <div class="uc-main">
+                        <div class="uc-title">
+                          <strong class="uc-name">{{ u.username }}</strong>
+                          <span class="uc-meta">#{{ u.id }}@if (u.isAdmin) { · {{ 'admin.users.columns.admin' | translate }} }</span>
+                        </div>
+                        @if (u.email) { <div class="uc-mail">{{ u.email }}</div> }
+                        @if (u.groups?.length) {
+                          <div class="uc-row">
+                            @for (g of u.groups ?? []; track g) { <span class="uc-group">{{ g }}</span> }
+                          </div>
+                        }
+                      </div>
+                      <div class="uc-actions">
+                        <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId === u.id" [appIconLabel]="'admin.users.impersonate' | translate">
+                          <mat-icon>login</mat-icon>
                         </button>
-                        <button mat-menu-item (click)="deleteUser(u)">
-                          <mat-icon color="warn">delete</mat-icon>
-                          <span>{{ 'admin.users.deleteUser' | translate }}</span>
+                        <button mat-icon-button [matMenuTriggerFor]="userMenu"
+                                [attr.aria-label]="'common.moreActions' | translate">
+                          <mat-icon>more_vert</mat-icon>
                         </button>
-                      </mat-menu>
+                        <mat-menu #userMenu="matMenu">
+                          <button mat-menu-item (click)="toggleAdmin(u)" [disabled]="adminBusyId === u.id">
+                            <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
+                            <span>{{ 'admin.users.toggleAdmin' | translate }}</span>
+                          </button>
+                          <button mat-menu-item (click)="deleteUser(u)">
+                            <mat-icon color="warn">delete</mat-icon>
+                            <span>{{ 'admin.users.deleteUser' | translate }}</span>
+                          </button>
+                        </mat-menu>
+                      </div>
                     </div>
                   </div>
                 }

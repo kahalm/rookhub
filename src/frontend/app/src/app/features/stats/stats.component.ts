@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -185,7 +186,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, PuzzleThemePipe, PctPipe
+    MatFormFieldModule, MatSelectModule, MatButtonModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, PuzzleThemePipe, PctPipe
   ],
   template: `
     <div class="stats-container">
@@ -216,7 +217,18 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           <mat-card><mat-card-content><p class="muted">{{ 'stats.courseEmpty' | translate }}</p></mat-card-content></mat-card>
         }
 
-        @if (mode === 'standard') {
+        <!-- UI-Sweep a1 (a1-rk-statistik-leer): ohne einen einzigen Versuch statt drei Leerkarten (Verlauf, Level-Elo
+             mit Startwerten, Letzte Puzzles) EINE Leerkarte mit Weg weiter (DESIGN 5.10). -->
+        @if (standardEmpty) {
+          <mat-card class="stats-empty">
+            <mat-card-content>
+              <p class="se-text">{{ 'stats.standardEmpty' | translate }}</p>
+              <a mat-flat-button color="primary" routerLink="/puzzles">{{ 'stats.standardEmptyAction' | translate }}</a>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (mode === 'standard' && !standardEmpty) {
         <mat-card class="chart-card">
           <mat-card-header>
             <mat-card-title>{{ 'stats.eloProgress' | translate }}</mat-card-title>
@@ -262,7 +274,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             <!-- UI-Sweep 2026-10-11 (r2-rp-elo-level): das bevorzugte Level ist leer — sagen, wo die Versuche liegen. -->
             @if (levelHint; as h) {
               <p class="level-hint">
-                {{ 'stats.levelEmpty' | translate:{ level: h.level } }} –
+                <!-- a1-rk-statistik-level-hinweis: selbst auf „Alle“ umgeschaltet → sagen, warum. -->
+                {{ (level === -1 ? 'stats.levelEmptySwitched' : 'stats.levelEmpty') | translate:{ level: h.level } }} –
                 <button type="button" class="level-link" (click)="showLevel(h.other)">
                   {{ (h.count === 1 ? 'stats.levelOtherOne' : 'stats.levelOther') | translate:{ level: h.other, count: h.count } }}
                 </button>
@@ -358,6 +371,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           </mat-card>
         }
 
+        @if (!standardEmpty) {
         <mat-card class="recent-card">
           <mat-card-header><mat-card-title>{{ 'stats.recentPuzzles' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
@@ -419,6 +433,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             }
           </mat-card-content>
         </mat-card>
+        }
       }
     </div>
   `,
@@ -429,6 +444,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
     /* UI-Sweep z1 (z1-rk-stats-kacheln): Abstand der Kacheln nur über gap — sonst kamen die 16 px von mat-card dazu. */
     .cards mat-card { margin: 0; }
+    .stats-empty mat-card-content { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .stats-empty .se-text { margin: 0; color: color-mix(in srgb, currentColor 70%, transparent); }
     @media (max-width: 599.98px) {
       .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
       .stat .val { font-size: 1.35rem; }
@@ -596,6 +613,11 @@ export class StatsComponent implements OnInit {
    * Das Elo bleibt draussen: es gibt es nur im Standard-Modus, und genau dafuer steht die
    * eigene Kachel hinter `mode === 'standard'`.
    */
+  /** a1-rk-statistik-leer: Standard-Modus ganz ohne Versuch — eine Leerkarte mit Weg zu den Puzzles. */
+  get standardEmpty(): boolean {
+    return this.mode === 'standard' && (this.current?.totalAttempts ?? 0) === 0 && this.recentRows.length === 0;
+  }
+
   get current(): AttemptStatsDto | null {
     return this.mode === 'course' ? this.courseStats : this.stats;
   }

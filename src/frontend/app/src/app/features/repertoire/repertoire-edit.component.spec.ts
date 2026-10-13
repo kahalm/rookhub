@@ -48,3 +48,39 @@ describe('RepertoireEditComponent batch upload', () => {
     http.verify();
   });
 });
+
+/** UI-Sweep a1: Ablage im hellen Design sichtbar (a1-rk-dropzone-rahmen-hell), ab 900 px zweispaltig
+ *  (a1-rk-repertoire-edit-breite). Geprüft am kompilierten CSS — Karma läuft 1 400 px breit. */
+describe('RepertoireEditComponent Gestaltung (a1)', () => {
+  const css = ((RepertoireEditComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+
+  it('Ablage-Rand aus der Textfarbe (≥ 50 %), kein fester Grauwert; Symbol 60 %', () => {
+    expect(css).not.toContain('#ccc');
+    expect(css).toMatch(/\.upload-area[^{]*\{ ?border: 2px dashed color-mix\(in srgb, currentColor 50%, transparent\)/);
+    expect(css).toMatch(/\.upload-area[^{]* mat-icon[^{]*\{[^}]*currentColor 60%/);
+  });
+
+  it('ab 900 px Ablage und Dateiliste nebeneinander', () => {
+    const at = css.indexOf('@media (min-width: 900px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.edit-container[^{]*\{ ?display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\)/);
+  });
+
+  it('Dateiliste steht in eigenem Abschnitt; Ziehen über die Ablage färbt den Rand', () => {
+    TestBed.configureTestingModule({
+      imports: [RepertoireEditComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideTranslateService()],
+    });
+    const fixture = TestBed.createComponent(RepertoireEditComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.edit-container > section.files > h3')).not.toBeNull();
+    const area = el.querySelector('.upload-area') as HTMLElement;
+    area.dispatchEvent(new Event('dragover', { cancelable: true }));
+    fixture.detectChanges();
+    expect(area.classList).toContain('dragover');
+    area.dispatchEvent(new Event('dragleave'));
+    fixture.detectChanges();
+    expect(area.classList).not.toContain('dragover');
+  });
+});

@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { SharedWorksheetItem } from './worksheet.service';
-import { WorksheetTask, sameText } from './worksheet-solve.component';
+import { WorksheetSolveComponent, WorksheetTask, sameText } from './worksheet-solve.component';
 
 /** Aufgabe: Weiß zieht 1.e4, Schwarz antwortet 1…e5, dann 2.Sf3 als zweiter Lösungszug. */
 const item = (over: Partial<SharedWorksheetItem> = {}): SharedWorksheetItem => ({
@@ -106,5 +106,25 @@ describe('sameText (Begleittext gleich Untertitel)', () => {
     expect(sameText('Weiß am Zug gewinnt eine Figur.', 'Weiß am Zug')).toBeFalse();
     expect(sameText('Schwarz am Zug', 'Weiß am Zug')).toBeFalse();
     expect(sameText('', '')).toBeFalse();
+  });
+});
+
+/** Kompilierte Komponenten-Styles, Leerraum vereinheitlicht. */
+function compiledCss(cmp: unknown): string {
+  return ((cmp as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/%NS%/g, '').replace(/\s+/g, ' ');
+}
+
+/** UI-Sweep a1 (a1-rk-w-loeser-ultrawide): Breitbild-Stufe ab 2400 px, Brett bis Fensterhöhe; darunter unverändert. */
+describe('WorksheetSolveComponent Breitbild', () => {
+  const css = compiledCss(WorksheetSolveComponent);
+  it('ab 2400 px Karte 1100 px, Brett bis 1000 px bzw. Fensterhöhe', () => {
+    const wide = css.slice(css.indexOf('@media (min-width: 2400px)'));
+    expect(wide).toMatch(/\.wsv-page[^{]*\{ ?max-width: 1100px/);
+    expect(wide).toMatch(/\.wsv-board[^{]*\{ ?width: min\(100%, 1000px, (?:calc\()?100dvh - 330px\)?\)/); // Sass löst calc() in min() auf
+  });
+  it('unter 2400 px bleibt die Handy-Spalte 640 px mit 560-px-Brett', () => {
+    const base = css.slice(0, css.indexOf('@media (min-width: 2400px)'));
+    expect(base).toMatch(/\.wsv-page[^{]*\{ ?max-width: 640px/);
+    expect(base).toMatch(/\.wsv-board[^{]*\{ ?width: min\(100%, 560px, (?:calc\()?100dvh - 330px\)?\)/); // Sass löst calc() in min() auf
   });
 });

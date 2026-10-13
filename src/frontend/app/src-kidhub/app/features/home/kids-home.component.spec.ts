@@ -326,4 +326,73 @@ describe('KidsHomeComponent', () => {
     expect(new Set(wide.names).size).withContext('Titel auf einer Linie').toBe(1);
     expect(at(1366, 768).host).withContext('Laptop wie bisher').toBeLessThanOrEqual(1160);
   });
+
+  /** Startseite in einem iframe `w`×`h` rendern; `bodyStyle` setzt z. B. `--kid-wide-max` wie die App-Huelle ab 2400 px. */
+  function tilesAt(host: HTMLElement, w: number, h: number, bodyStyle = '') {
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const frame = document.createElement('iframe');
+    frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: ${h}px; border: 0;`;
+    document.body.appendChild(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><html><head><style>${css}</style></head><body style="margin:0;${bodyStyle}">${host.outerHTML}</body></html>`);
+      doc.close();
+      const win = frame.contentWindow!;
+      return {
+        host: doc.body.firstElementChild!.getBoundingClientRect().width,
+        tiles: Array.from(doc.querySelectorAll('.tile')).map(t => t.getBoundingClientRect()),
+        icon: parseFloat(win.getComputedStyle(doc.querySelector('.tile .icon')!).fontSize),
+        name: parseFloat(win.getComputedStyle(doc.querySelector('.tile .name')!).fontSize),
+      };
+    } finally {
+      frame.remove();
+    }
+  }
+
+  function render(courses: number): HTMLElement {
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush(
+      Array.from({ length: courses }, (_, i) => ({ bookId: 7 + i, title: 'Erste Endspiele', description: null, puzzleCount: 287 })));
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 10 }]);
+    f.detectChanges();
+    return f.nativeElement as HTMLElement;
+  }
+
+  /** a1-k-home-tablet-orphan-card: bei 820 px stand „Kurse" allein in Zeile 2 — jetzt 2 × 2, ohne Kurs 2 + 1 (volle Breite). */
+  it('am Tablet zwei Kacheln je Reihe (2 × 2)', () => {
+    const four = tilesAt(render(1), 820, 1180);
+    expect(four.tiles.length).toBe(4);
+    expect(new Set(four.tiles.map(r => Math.round(r.top))).size).withContext('zwei Reihen').toBe(2);
+    expect(Math.round(four.tiles[0].top)).toBe(Math.round(four.tiles[1].top));
+    expect(Math.round(four.tiles[2].top)).toBe(Math.round(four.tiles[3].top));
+    expect(Math.abs(four.tiles[3].width - four.tiles[0].width)).withContext('gleich breit').toBeLessThanOrEqual(1);
+  });
+
+  it('am Tablet ohne Kurs: die dritte Kachel nimmt die ganze Zeile', () => {
+    const three = tilesAt(render(0), 820, 1180);
+    expect(three.tiles.length).toBe(3);
+    expect(three.tiles[2].width).withContext('letzte Kachel volle Breite')
+      .toBeCloseTo(three.tiles[1].right - three.tiles[0].left, 0);
+  });
+
+  /** a1-k-ultrawide-raster: ab 2400 px größere Kacheln (≈ 450 × 320) in der 1880-px-Spalte; 1920 px wie bisher. */
+  it('ab 2400 px vier große Kacheln in einer Reihe (Symbol 88, Titel 38 px); 1920 px unverändert', () => {
+    const host = render(1);
+    const uw = tilesAt(host, 3440, 1440, '--kid-wide-max: 1880px;');
+    expect(uw.host).toBeCloseTo(1880, 0);
+    expect(new Set(uw.tiles.map(r => Math.round(r.top))).size).withContext('eine Reihe').toBe(1);
+    for (const r of uw.tiles) {
+      expect(r.width).toBeGreaterThanOrEqual(420);
+      expect(r.height).toBeGreaterThanOrEqual(320);
+    }
+    expect(uw.icon).toBe(88);
+    expect(uw.name).toBe(38);
+    const hd = tilesAt(host, 1920, 1080);
+    expect(hd.icon).toBe(72);
+    expect(hd.name).toBe(32);
+  });
 });

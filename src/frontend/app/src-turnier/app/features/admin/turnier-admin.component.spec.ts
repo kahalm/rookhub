@@ -280,6 +280,17 @@ describe('TurnierAdminComponent', () => {
   });
 });
 
+/** a1-t-admin-handy-knopf: am Handy steht der Name immer allein in der ersten Zeile — jede Zeile hat dieselbe Form. */
+describe('TurnierAdminComponent am Handy (a1-t-admin-handy-knopf)', () => {
+  const css = ((TurnierAdminComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('gibt dem Namen unter 600 px die volle Zeile, darueber nicht', () => {
+    const at = css.indexOf('@media (max-width: 599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.ta-name[^{]*\{ ?flex-basis: 100%/);
+    expect(css.slice(0, at)).not.toContain('flex-basis');
+  });
+});
+
 /** Ein Token, das noch eine Stunde gilt — `AuthService` wirft abgelaufene sonst sofort weg. */
 function jwt(expSecondsFromNow = 3600): string {
   const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }));

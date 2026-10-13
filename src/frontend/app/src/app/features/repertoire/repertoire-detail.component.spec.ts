@@ -245,6 +245,83 @@ describe('RepertoireDetailComponent Layout (z1)', () => {
     expect(css).toMatch(/\.side-panel--fit[^{]*\{ ?height: auto; max-height:/);
     expect(css).not.toContain('#e0e0e0');
   });
+
+  /** Inhalt des ersten `@media (max-width: 899.98px)`-Blocks (Karma läuft 1 400 px breit, die Regeln greifen nie). */
+  function narrow(): string {
+    const start = css.indexOf('@media (max-width: 899.98px)');
+    expect(start).toBeGreaterThan(-1);
+    return css.slice(start, css.indexOf('} }', start) + 3);
+  }
+
+  // a1-rk-linienliste-scrollkasten: Panel mindestens Brett + Hinweiszeile hoch; einspaltig kein Kasten im Kasten.
+  it('Panel ab 900 px mindestens so hoch wie Brett + Hinweis; darunter läuft die Liste mit der Seite', () => {
+    expect(css).toMatch(/\.side-panel(\[[^\]]*\])? ?\{[^}]*height: max\((calc\()?var\(--(%NS%)?board-size\) \+ 56px\)?, (calc\()?100vh - 260px\)?\)/);
+    expect(css).toMatch(/\.side-panel--fit[^{]*\{[^}]*max-height: max\((calc\()?var\(--(%NS%)?board-size\) \+ 56px/);
+    expect(css).not.toContain('max(440px');
+    expect(narrow()).toMatch(/\.side-panel--fit[^{]*\{ ?height: auto; max-height: none; overflow: visible/);
+  });
+
+  it('Weiterscroll-Hinweis: Schatten unten, am Listenende von einer Abdeckung in Seitenfarbe verdeckt', () => {
+    const fit = /\.side-panel--fit[^{]*\{([^}]*)\}/.exec(css)![1];
+    expect(fit).toMatch(/var\(--(%NS%)?mat-sys-surface\)/);
+    expect(fit).toMatch(/no-repeat local/);
+    expect(fit).toMatch(/no-repeat scroll/);
+  });
+
+  // a1-rk-tablet-brett-400: einspaltig bis 640 px statt fest 400 px.
+  it('einspaltig Brett bis 640 px (höchstens Fensterhöhe − 480 px), Filterleiste nie breiter', () => {
+    const n = narrow();
+    expect(n).toMatch(/\.board-section[^{]*\{ ?width: 100%; max-width: min\(100%, 640px, (calc\()?100vh - 480px\)?\)/);
+    expect(n).not.toContain('max-width: 400px');
+    expect(n).toMatch(/\.filter-bar[^{]*\{ ?max-width: 100%/);
+  });
+
+  // a1-rk-holes-handy-brett-vor-werkzeug
+  it('einspaltig: im Lochfinder ohne Loch steht das Werkzeug vor dem Brett', () => {
+    expect(narrow()).toMatch(/\.viewer-layout\.holes-idle[^{]* \.side-panel[^{]*\{ ?order: -1/);
+  });
+
+  // a1-rk-repertoire-edit-breite
+  it('Bearbeiten hat keinen eigenen 800-px-Deckel mehr', () => {
+    expect(css).not.toContain('max-width: 800px');
+  });
+});
+
+describe('RepertoireDetailComponent Lochfinder-Layout (a1)', () => {
+  async function make() {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    return TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+  }
+
+  // a1-rk-holes-karte-leer-hoch
+  it('Panel so hoch wie der Inhalt: Linienliste und Lochfinder vor der Suche; mit Suche feste Höhe', async () => {
+    const comp = await make();
+    comp.mode = 'lines';
+    expect(comp.sidePanelFits).toBeTrue();
+    comp.mode = 'tree';
+    expect(comp.sidePanelFits).toBeFalse();
+    comp.mode = 'holes';
+    expect(comp.sidePanelFits).toBeTrue();
+    comp.holesSearchActive = true;
+    expect(comp.sidePanelFits).toBeFalse();
+  });
+
+  it('Moduswechsel verwirft Lochfinder-Ergebnis und gewähltes Loch', async () => {
+    const comp = await make();
+    comp.mode = 'holes';
+    comp.holesSearchActive = true;
+    comp.holeView = { fen: '8/8/8/8/8/8/8/8 w - - 0 1', lastMove: ['e2', 'e4'] };
+    comp.setMode('tree');
+    comp.setMode('holes');
+    expect(comp.holesSearchActive).toBeFalse();
+    expect(comp.holeView).toBeNull();
+  });
 });
 
 describe('RepertoireDetailComponent Kopf', () => {
@@ -334,6 +411,19 @@ describe('RepertoireDetailComponent Kopf', () => {
       }
     }
     expect(heights[0]).toBe(heights[1]);
+  });
+
+  // a1-rk-holes-zwei-hauptknoepfe: im Lochfinder ist „Löcher suchen“ der einzige Primärknopf.
+  it('holes: Abfragen als Rahmenknopf, im Baum gefüllt; Lochfinder-Werkzeug vorn, solange kein Loch gewählt ist', async () => {
+    const holes = await render('holes');
+    const hb = holes.querySelector('.header-actions .train-btn') as HTMLElement;
+    expect(hb.hasAttribute('mat-stroked-button')).toBeTrue();
+    expect(hb.hasAttribute('mat-flat-button')).toBeFalse();
+    expect(holes.querySelector('.viewer-layout')!.classList).toContain('holes-idle');
+    TestBed.resetTestingModule();
+    const tree = await render('tree');
+    expect((tree.querySelector('.header-actions .train-btn') as HTMLElement).hasAttribute('mat-flat-button')).toBeTrue();
+    expect(tree.querySelector('.viewer-layout')!.classList).not.toContain('holes-idle');
   });
 
   it('lines: kein Abfragen-Knopf im Kopf (steht in der Linienleiste)', async () => {

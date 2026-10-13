@@ -49,11 +49,27 @@ describe('Brett-Koordinaten: Farbe passend zum Feld darunter (UX-060)', () => {
         for (const r of readings) {
           const what = `${r.kind === 'rank' ? 'Rang' : 'Linie'} ${r.label} auf ${r.square} (${r.onDark ? 'dunkel' : 'hell'}): `
             + `${r.own.toFixed(2)}:1, zur anderen Feldfarbe ${r.other.toFixed(2)}:1`;
-          expect(r.own).withContext(`Farbe fuer das falsche Feld — ${what}`).toBeGreaterThan(r.other);
+          // brown: beide Feldfarben sind hell genug für dunkle Schrift — dort gilt Lesbarkeit statt „Gegenfarbe"
+          // (a1-rk-brett-koordinaten-dunkle-felder, eigener Test unten).
+          if (!(theme === 'brown' && r.onDark)) {
+            expect(r.own).withContext(`Farbe fuer das falsche Feld — ${what}`).toBeGreaterThan(r.other);
+          }
           expect(r.own).withContext(`kaum sichtbar — ${what}`).toBeGreaterThanOrEqual(1.5);
         }
       });
     }
+  }
+
+  // UI-Sweep a1 (a1-rk-brett-koordinaten-dunkle-felder): helle Schrift auf dem dunklen brown-Feld lag bei ≈ 1,5:1.
+  for (const orientation of ['white', 'black'] as const) {
+    it(`brown, ${orientation}: Koordinaten auf dunklen Feldern mindestens 4,5:1`, () => {
+      const [light, dark] = THEMES['brown'];
+      const onDark = readCoords(mount('brown', orientation), light, dark).filter(r => r.onDark);
+      expect(onDark.length).toBe(8);
+      for (const r of onDark) {
+        expect(r.own).withContext(`${r.kind} ${r.label} auf ${r.square}: ${r.own.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
   }
 
   it('Koordinaten sind lesbar gross und halbfett, volle Deckkraft (UI-Sweep 10.10.)', () => {

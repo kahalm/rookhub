@@ -59,7 +59,9 @@ const RECAP_RETRY_MS = 15_000;
     .recap.roast { background: color-mix(in srgb, #e64a19 9%, transparent); white-space: pre-wrap; }
     .roast-icon { flex: 0 0 auto; font-size: 18px; line-height: 1.3; }
     .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; color: var(--rh-accent); }
-    .recap-text { flex: 1 1 auto; min-width: 0; }
+    /* Fließtext höchstens ~75 Zeichen je Zeile (4.6 Regel 4, a1-rk-recap-zeilenlaenge): am breiten Schirm stand der Satz
+       sonst in einer einzigen ~190-Zeichen-Zeile; der Kasten bleibt kartenbreit. */
+    .recap-text { flex: 1 1 auto; min-width: 0; max-width: 75ch; }
     /* „Kurz erzählt" höchstens drei Zeilen (4.6 Regel 5) — gemessen gekürzt (ClampMoreDirective), „Mehr"/„Weniger" als
        sichtbarer Textknopf am Satzende (5.11; vorher nur Antippen ohne Hinweis). */
     .clamp-more {

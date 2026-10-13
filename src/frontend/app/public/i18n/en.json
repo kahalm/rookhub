@@ -424,7 +424,7 @@
     "subscribedAt": "Subscribed {{date}}",
     "puzzles": {
       "title": "Puzzles",
-      "subtitle": "Elo {{elo}} | {{solved}} solved ({{accuracy}}%)",
+      "subtitle": "Elo {{elo}} | {{solved}} solved ({{accuracy}})",
       "solve": "Solve Puzzles",
       "daily": "Daily puzzle",
       "endless": "Endless"
@@ -432,11 +432,13 @@
     "friends": {
       "title": "Friends",
       "count": "{{count}} friends",
+      "countOne": "{{count}} friend",
       "manage": "Manage Friends"
     },
     "repertoires": {
       "title": "Repertoires",
       "count": "{{count}} repertoires",
+      "countOne": "{{count}} repertoire",
       "viewAll": "View all"
     },
     "chessableQueue": {
@@ -461,7 +463,8 @@
     "courses": {
       "title": "Courses",
       "open": "Open courses",
-      "count": "{{count}} courses"
+      "count": "{{count}} courses",
+      "countOne": "{{count}} course"
     },
     "pinnedCourses": {
       "title": "Pinned courses",
@@ -482,6 +485,7 @@
     "favorites": {
       "title": "Favorites",
       "count": "{{count}} loved puzzles",
+      "countOne": "{{count}} loved puzzle",
       "open": "Open favorites"
     },
     "weekly": {
@@ -2717,6 +2721,7 @@
       "dragTooltip": "Drag to reorder",
       "fenLabel": "Position as FEN",
       "addFen": "Add position",
+      "addFenHint": "Paste a FEN, then add it",
       "addRejected": "Not added: the position is already on the sheet, or the FEN is unusable.",
       "saveError": "The change could not be saved.",
       "rename": "Rename"
@@ -2741,7 +2746,7 @@
     "filtersToggle": "Filter",
     "title": "Saved games",
     "hint": "Games you save from chess.com or lichess with the RepCheck browser extension show up here.",
-    "empty": "No saved games yet. On a chess.com or lichess analysis page, click “Save game” in the RepCheck extension.",
+    "empty": "No saved games yet.",
     "replay": "Replay",
     "openInAnalysis": "Open in analysis",
     "share": "Copy share link",
@@ -2757,6 +2762,9 @@
     "analyzeNoEngine": "No engine is available right now — please try again later.",
     "analyzeLogin": "Sign in to have this game analysed.",
     "loadError": "Could not load the game.",
+    "notFound": "This game doesn't exist or was removed.",
+    "clubNoAccess": "Only members of the club can see this club game.",
+    "toMyGames": "To my games",
     "deleteConfirm": "Delete this saved game?",
     "deleteError": "Could not delete the game.",
     "shared": {
@@ -3242,7 +3250,10 @@
     "activity": "Activity",
     "levelEmpty": "Level {{level}} has no attempts yet",
     "levelOther": "Level {{level}}: {{count}} attempts",
-    "levelOtherOne": "Level {{level}}: 1 attempt"
+    "levelOtherOne": "Level {{level}}: 1 attempt",
+    "levelEmptySwitched": "Your level {{level}} has no attempts yet, so all levels are shown",
+    "standardEmpty": "No puzzles solved yet – your statistics fill up with the first one.",
+    "standardEmptyAction": "Solve puzzles"
   },
   "trainingGoals": {
     "tabs": {
@@ -3759,7 +3770,7 @@
   },
   "analysisJobs": {
     "title": "Analysis jobs",
-    "toAnalysis": "To the analysis board",
+    "toAnalysis": "Analysis board",
     "intro": "Positions the background engine calculates for you.",
     "introMore": "One job at a time, paused while you analyse live with an external engine. Expand a job to see the stored lines.",
     "empty": "No jobs yet.",
@@ -3824,7 +3835,9 @@
     "pgnFirst": "Paste the PGN of a game first.",
     "noName": "no name",
     "title": "Game analyses",
-    "intro": "Hand in a whole game — the background engine works through every position. That takes a while; the game shows its progress and can be viewed at any time.",
+    "intro": "Hand in a whole game — the background engine works through every position.",
+    "introMore": "That takes a while; the game shows its progress and can be viewed at any time.",
+    "addGame": "Add game",
     "pgnLabel": "PGN of the game",
     "pgnPlaceholder": "[Event \"…\"]\n\n1. e4 e5 2. Nf3 …",
     "depth": "Depth",
@@ -4535,7 +4548,8 @@
     "language": "Language",
     "accountDeletion": {
       "short": "Everything of yours is deleted: your stars, levels and courses.",
-      "parents": "For parents: exactly what is deleted"
+      "parents": "For parents: exactly what is deleted",
+      "parentsHowTo": "For parents: how the account is deleted"
     },
     "stars": {
       "title": "Star Hunt",

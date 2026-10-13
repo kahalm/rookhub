@@ -149,11 +149,27 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
     expect(getComputedStyle(el.querySelector<HTMLElement>('app-account-deletion mat-card-content')!).fontSize).toBe('16px');
 
     // Fachbegriffe für Eltern zugeklappt, davor der Kindersatz.
-    const details = el.querySelector('app-account-deletion details.kid-parent')!;
+    const details = el.querySelector('app-account-deletion details.kid-parent:has(ul.removed)')!;
     expect(details).not.toBeNull();
     expect(details.hasAttribute('open')).toBeFalse();
-    expect(details.querySelector('ul.removed')).not.toBeNull();
     expect(el.querySelector('app-account-deletion .kid-short')).not.toBeNull();
+
+    // a1-k-deletion-fachjargon: auch die Anleitung (☰ → Konto → Profil, PGN, Repertoires) ist für Eltern zugeklappt,
+    // der Kindersatz steht direkt unter der Einleitung, der Knopf bleibt sichtbar.
+    const content = el.querySelector('app-account-deletion mat-card-content')!;
+    const howTo = content.querySelector('details.kid-parent:has(.kid-parent-howto-label)')!;
+    expect(howTo).withContext('Anleitung zugeklappt').not.toBeNull();
+    expect(howTo.hasAttribute('open')).toBeFalse();
+    expect(howTo.querySelector('h2')).not.toBeNull();
+    expect(howTo.querySelector('p.backup')).not.toBeNull();
+    for (const sel of ['p.backup', 'p.backup-links']) {
+      const n = content.querySelector<HTMLElement>(sel);
+      if (n) expect(n.checkVisibility()).withContext(`${sel} zu`).toBeFalse();
+    }
+    expect(content.firstElementChild!.nextElementSibling!.classList).withContext('Kindersatz unter der Einleitung').toContain('kid-short');
+    expect(el.querySelector('app-account-deletion details .delete-now')).withContext('Knopf nicht zugeklappt').toBeNull();
+    expect(howTo.compareDocumentPosition(el.querySelector('app-account-deletion p.action')!) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .withContext('Knopf unter der Anleitung').toBeTruthy();
 
     // Löschknopf: Gefahrfarbe --kid-bad-fg, weiße Schrift ≥ 4,5:1, Hauptknopf-Form (≥ 52 px, Radius 18, fett).
     const btn = el.querySelector<HTMLElement>('app-account-deletion .delete-now')!;

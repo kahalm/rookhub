@@ -52,11 +52,11 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
   `,
   styles: [`
     .offline-section h4 { margin: 0 0 0.25rem; color: var(--rh-accent); }
-    .offline-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
+    .offline-hint { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.85rem; margin: 0 0 0.5rem; }
     .offline-fields { display: flex; gap: 0.75rem; flex-wrap: wrap; }
     .offline-fields mat-form-field { width: 200px; max-width: 100%; }
     .offline-cache { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .offline-size { color: #ccc; font-size: 0.9rem; }
+    .offline-size { color: color-mix(in srgb, currentColor 80%, transparent); font-size: 0.9rem; }
     .offline-pending { display: flex; align-items: center; gap: 6px; color: var(--rh-warn); font-size: 0.85rem; margin: 6px 0 0; }
     .offline-pending mat-icon { font-size: 18px; width: 18px; height: 18px; }
   `]

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { importSummary, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf, presetYear } from './club-format';
+import { importSummary, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf, presetYear, waitClock } from './club-format';
 import { ScoresheetStatus } from './club.models';
 
 describe('club-format', () => {
@@ -89,5 +89,16 @@ describe('club-format', () => {
     // Nacharbeit UX-034: 403 ist kein „Problem des Servers" — Status-Abruf und Formular-Korrektur sagten das sonst.
     expect(loadErrorText(new HttpErrorResponse({ status: 403 }))).toBe('Dafür fehlt dir die Berechtigung (Vereinsmitglieder).');
     expect(loadErrorText(new Error('kaputt'))).toBe('Beim Laden ist etwas schiefgegangen.');
+  });
+});
+
+describe('club-format: waitClock (a1-l-formular-wartezeit)', () => {
+  it('Minuten:Sekunden, ab einer Stunde mit Stunden, ab einem Tag in Worten', () => {
+    expect(waitClock(7)).toBe('0:07');
+    expect(waitClock(62 * 60 + 5)).toBe('1:02:05');
+    expect(waitClock(23 * 3600 + 59 * 60 + 59)).toBe('23:59:59');
+    expect(waitClock(42 * 3600 + 18 * 60)).toBe('seit 1 Tag 18 Std.');
+    expect(waitClock(48 * 3600)).toBe('seit 2 Tagen');
+    expect(waitClock(-3)).toBe('0:00');
   });
 });

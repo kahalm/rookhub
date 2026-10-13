@@ -85,10 +85,12 @@ export const KID_PAGE_WIDTH = { home: 1160, map: 980, list: 820, legal: 620 } as
 /**
  * Startseite und Karten wachsen am großen Bildschirm mit (DESIGN 4.6 Regel 4): bis zum Laptop gelten die festen Werte
  * oben, bei 1920 px wird die Startseite 1520 px breit (vier Kacheln ≈ 360 px, z2-k-start-kacheln-breit) und die
- * Stufen-/Sternenkarte ≈ 1440 px (9 Spalten, 40 Stufen in 5 Reihen statt 7, z2-k-karten-breit).
+ * Stufen-/Sternenkarte ≈ 1440 px (9 Spalten, 40 Stufen in 5 Reihen statt 7, z2-k-karten-breit). Ab 2400 px hebt die
+ * App-Huelle die Obergrenze ueber `--kid-wide-max` auf 1880 px (Breitbild-Stufe, DESIGN 4.1, a1-k-ultrawide-raster);
+ * darunter gilt der Rueckfallwert, also pixelgleich wie bisher.
  */
-export const KID_HOME_WIDTH = `clamp(${KID_PAGE_WIDTH.home}px, calc(100vw - 400px), 1520px)`;
-export const KID_MAP_WIDTH = `clamp(${KID_PAGE_WIDTH.map}px, 75vw, 1480px)`;
+export const KID_HOME_WIDTH = `clamp(${KID_PAGE_WIDTH.home}px, calc(100vw - 400px), var(--kid-wide-max, 1520px))`;
+export const KID_MAP_WIDTH = `clamp(${KID_PAGE_WIDTH.map}px, 75vw, var(--kid-wide-max, 1480px))`;
 /** Anmelde-Masken: Kopfzeile so breit wie „← Start" und die 400-px-Karte darunter (z2-k-auth-logo). */
 export const KID_AUTH_WIDTH = 432;
 

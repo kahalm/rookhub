@@ -9,7 +9,7 @@ import { KidsApiService, KidsCourseLine } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
-import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 import { splitCourseText } from '@rh/shared/course-text';
 
@@ -38,8 +38,8 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       @if (title()) { <h1>📚 {{ title() }}</h1> }
       @if (lines().length > 0) {
         <!-- z1-k-course-intro: am Handy steht der Stand kurz („8/287") rechts neben dem Kurstitel, der lange Text bleibt
-             für Vorleser. -->
-        <span class="count"><span class="count-long">{{ 'kids.courses.progress' | translate: { done: solvedCount(), total: lines().length } }}</span><span class="count-short" aria-hidden="true">{{ solvedCount() }}/{{ lines().length }}</span></span>
+             für Vorleser. a1-k-course-counter-plain: als grüne Zählerpille wie Stufen, Endlos und Sternenjagd. -->
+        <span class="count kid-counter"><span class="tick" aria-hidden="true">✓</span><span class="count-long">{{ 'kids.courses.progress' | translate: { done: solvedCount(), total: lines().length } }}</span><span class="count-short" aria-hidden="true">{{ solvedCount() }}/{{ lines().length }}</span></span>
       }
     </header>
 
@@ -100,12 +100,14 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       <p class="info">{{ 'kids.courses.empty' | translate }}</p>
     }
   `,
-  styles: [KID_BACK, `
-    :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
+  styles: [KID_BACK, KID_COUNTER, `
+    /* max(): ab 2400 px waechst --kid-row (Brett bis 1240 px + Spalte) ueber 1320 px hinaus (a1-k-ultrawide-board-small);
+       darunter bleibt es bei 1320 px. */
+    :host { display: block; max-width: max(1320px, calc(var(--kid-row, 1068px) + 32px)); margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
     .head h1 { flex: 1; margin: 0; font-size: 1.5rem; color: var(--kid-title); }
-    .count { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
+    /* Pille, Farbe und Schrift aus KID_COUNTER (a1-k-course-counter-plain); hier nur die Teile. */
     .count-short { display: none; }
     .info { text-align: center; font-size: 1.2rem; }
     .line-text { display: flex; flex-direction: column; gap: 6px; }

@@ -662,6 +662,49 @@ describe('SharedGameComponent', () => {
     expect((fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).disabled).toBeTrue();
     // UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund steht sichtbar darunter, nicht nur im Tooltip.
     expect(fixture.nativeElement.querySelector('.analyze-no-engine')?.textContent).toContain('games.analyzeNoEngine');
+    // a1-rk-shared-kopf-grund: Knopf und Grund in einer Hülle — das ⋮ bleibt Geschwister in der Knopfzeile.
+    const wrap = fixture.nativeElement.querySelector('.header-actions > .analyze-wrap') as HTMLElement;
+    expect(wrap.querySelector('button.analyze')).not.toBeNull();
+    expect(wrap.querySelector('.analyze-no-engine')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.header-actions > .analyze-no-engine')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.header-actions > .game-menu')).not.toBeNull();
+    // Am PC (Karma 1 400 px) steht das ⋮ in derselben Zeile wie der Knopf, nicht darunter.
+    const btn = (wrap.querySelector('button.analyze') as HTMLElement).getBoundingClientRect();
+    const menu = (fixture.nativeElement.querySelector('.game-menu') as HTMLElement).getBoundingClientRect();
+    expect(menu.top).toBeLessThan(btn.bottom);
+  });
+
+  // a1-rk-elo-verwaist: Name und Elo je Spieler als Einheit — „(Elo 1689)" bricht nicht allein in die nächste Zeile.
+  it('wraps name and Elo of each player in one unit', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush({ ...sharedGame('white'), white: 'kahalm', whiteElo: 1706, black: 'ukker1992', blackElo: 1689 });
+    fixture.detectChanges();
+    const pls = Array.from(fixture.nativeElement.querySelectorAll('.players > .pl')) as HTMLElement[];
+    expect(pls.map(p => p.textContent!.trim())).toEqual(['kahalm (Elo 1706)', 'ukker1992 (Elo 1689)']);
+    expect(getComputedStyle(pls[1]).display).toBe('inline-block');
+    expect(getComputedStyle(pls[1].querySelector('.elo')!).whiteSpace).toBe('nowrap');
+  });
+
+  // a1-rk-brettleiste-plus: die Leiste unter dem Brett ragt nicht über das Brett hinaus (angemeldet, mit „+") — geprüft
+  // am kleinsten Brett (360 px, die Untergrenze des clamp), wo es am engsten wird.
+  it('keeps the button bar below the board within the board width', async () => {
+    const { fixture, http } = await setup(true);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.viewer') as HTMLElement).style.setProperty('--board-size', '360px');
+    const wrap = (fixture.nativeElement.querySelector('.board-wrap') as HTMLElement).getBoundingClientRect();
+    const nav = fixture.nativeElement.querySelector('.nav') as HTMLElement;
+    expect(nav.querySelector('.nav-mark button')).withContext('„+" fehlt').not.toBeNull();
+    const kids = Array.from(nav.children).map(c => c.getBoundingClientRect()).filter(r => r.width > 0);
+    expect(Math.min(...kids.map(r => r.left))).toBeGreaterThanOrEqual(wrap.left - 0.5);
+    expect(Math.max(...kids.map(r => r.right))).toBeLessThanOrEqual(wrap.right + 0.5);
+    expect(Math.max(...kids.map(r => r.top))).toBeLessThan(Math.min(...kids.map(r => r.bottom)));   // eine Zeile
+    const prev = (nav.querySelector('.nav-prev') as HTMLElement).getBoundingClientRect();
+    expect(prev.width).toBeGreaterThanOrEqual(44);
+    fixture.nativeElement.remove();
   });
   // ----- Eigene Partie als Seite (/games/:id, seit 0.513.0 — vorher ein Dialog) -----
 
@@ -688,13 +731,56 @@ describe('SharedGameComponent', () => {
     flushEvals(http, '/api/games/4/evals', { status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
   });
 
-  it('own mode: a missing game shows the load error, not the „shared link" text', async () => {
+  it('own mode: a missing game says so (not the „shared link" text) and leads back to my games', async () => {
     const { fixture, http } = await setup(true, true);
     fixture.detectChanges();
     http.expectOne('/api/games/4').flush('nope', { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
     expect(fixture.componentInstance.notFound).toBeTrue();
-    expect(fixture.componentInstance.notFoundKey).toBe('games.loadError');
+    expect(fixture.componentInstance.errorKind).toBe('missing');
+    expect(fixture.componentInstance.notFoundKey).toBe('games.notFound');
+    expect(fixture.nativeElement.querySelector('.gate-actions a.to-games')?.getAttribute('href')).toBe('/games');
+  });
+
+  // a1-rk-vereinspartie-fehler-sackgasse: ohne Vereinszugang (403) eine Sperrkarte mit Klartext und Weg zurück.
+  it('club game without access: lock card with plain text and a way home', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SharedGameComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: true, has: () => false } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '12' }), data: { mode: 'club' } } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedGameComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/league/club/games/12').flush('no', { status: 403, statusText: 'Forbidden' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.errorKind).toBe('locked');
+    expect(el.querySelector('.empty-state.gate mat-icon')?.textContent).toBe('lock');
+    expect(el.querySelector('.empty-state p')?.textContent).toContain('games.clubNoAccess');
+    expect(el.querySelector('.gate-actions a.to-home')?.getAttribute('href')).toBe('/');
+    expect(el.querySelector('app-load-error')).toBeNull();
+  });
+
+  // a1-rk-vereinspartie-fehler-sackgasse: Netz/Server-Fehler → „Erneut versuchen" statt einer stummen Karte.
+  it('server error: shows the load error with retry, and retry loads the game', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush('boom', { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.errorKind).toBe('failed');
+    expect(el.querySelector('app-load-error')?.textContent).toContain('games.loadError');
+    expect(el.querySelector('.empty-state')).toBeNull();
+    (el.querySelector('app-load-error button.retry') as HTMLButtonElement).click();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.notFound).toBeFalse();
+    expect(el.querySelector('.viewer')).not.toBeNull();
   });
   // ----- „Kurz erzählt" (0.541.0) -----
 

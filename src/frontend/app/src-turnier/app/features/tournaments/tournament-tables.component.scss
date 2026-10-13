@@ -60,15 +60,24 @@
     /* Leerzustand: Form aus dem globalen .empty-state (DESIGN.md 5.10), hier nur die leise Farbe. */
     .empty-state { color: color-mix(in srgb, currentColor 65%, transparent); }
 
-    .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }
-    .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
-    .fav-icon:hover { color: #ffc107; }
+    /* a1-t-fav-stern-hell: leerer Stern war fest #ccc — hell 1,53:1, die Aktion kaum zu sehen. Jetzt Material-Rolle
+       (hell ≈ 7:1, dunkel ebenso). Gesetzt: Bernstein, mit der Textfarbe abgedunkelt bzw. (dunkel) aufgehellt — hell
+       ≈ 3,5:1 statt 1,6:1 fuer reines #ffc107, im Dunkeln bleibt es Gold. */
+    :host { --fav-star-on: color-mix(in srgb, #ffc107 60%, var(--mat-sys-on-surface)); }
+    .fav-icon, .fav-icon-sm { cursor: pointer; color: var(--mat-sys-on-surface-variant); font-size: 20px; }
+    .fav-icon.fav-active, .fav-icon-sm.fav-active { color: var(--fav-star-on); }
+    .fav-icon:hover { color: var(--fav-star-on); }
     /* Sichtbarer Fokus für die jetzt tastaturbedienbaren Favoriten-Sterne. */
     .fav-icon:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; border-radius: 4px; }
     /* Teams-Tab hat keine Mobil-Karten: nur das 24-px-Icon trug den Klick, die 52-px-Zelle nicht.
        Jetzt klickt die ganze Zelle (siehe Template), der Hover-Effekt folgt ihr. */
     .fav-cell { cursor: pointer; }
-    .fav-cell:hover .fav-icon { color: #ffc107; }
+    .fav-cell:hover .fav-icon { color: var(--fav-star-on); }
+
+    /* a1-t-namen-umbruch-tablet: bei 820 px verteilte mat-table die Breite gleichmaessig — Sternspalte ~100 px, Namen
+       brachen zweizeilig, Zeilen ungleich hoch. Sternspalte schmal, Namen einzeilig (voller Name im title). */
+    .mat-column-fav { width: 40px; padding-right: 0; }
+    td.mat-column-name { white-space: nowrap; }
 
     .team-link { cursor: pointer; color: var(--rh-accent); text-decoration: underline; }
     .team-link:hover { color: color-mix(in srgb, var(--rh-accent) 75%, currentColor); }

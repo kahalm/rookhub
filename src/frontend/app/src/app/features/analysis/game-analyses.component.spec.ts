@@ -428,4 +428,93 @@ describe('GameAnalysesComponent', () => {
 
     expect(fixture.componentInstance.peak).toBeNull();
   });
+
+  // a1-rk-partie-analysen-vorlauf: mit Analysen ist das Formular zugeklappt, die Liste steht über der Falz.
+  it('klappt das Einwurf-Formular zu, sobald Analysen da sind, und öffnet es über „Partie einwerfen“', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis()]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.new-card')).withContext('zugeklappt').toBeNull();
+    const add = el.querySelector('.header-actions .add-btn') as HTMLButtonElement;
+    expect(add?.textContent).toContain('gameAnalysis.addGame');
+    // Hauptknopf zuletzt (rechts) in der Kopfzeile
+    expect(el.querySelector('.header-actions')!.lastElementChild).toBe(add);
+    add.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.new-card')).not.toBeNull();
+    expect(el.querySelector('.header-actions .add-btn')).toBeNull();
+    expect(el.querySelector('.new-card textarea')!.hasAttribute('cdkTextareaAutosize')
+      || el.querySelector('.new-card textarea')!.classList.contains('cdk-textarea-autosize')).toBeTrue();
+    (el.querySelector('.new-card .cancel-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.new-card')).toBeNull();
+  });
+
+  it('lässt das Formular im Leerzustand offen — ohne „Partie einwerfen“ und ohne Abbrechen', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.new-card')).not.toBeNull();
+    expect(el.querySelector('.add-btn')).toBeNull();
+    expect(el.querySelector('.cancel-btn')).toBeNull();
+  });
+
+  it('klappt nach dem Start einer Analyse wieder zu', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 3, status: 'done' })]);
+    const c = fixture.componentInstance;
+    c.formOpen = true;
+    c.pgn = '1. e4 e5';
+    c.create();
+    http.expectOne({ method: 'POST', url: '/api/game-analyses' }).flush(analysis({ id: 7, status: 'pending' }));
+    expect(c.formOpen).toBeFalse();
+    expect(c.showForm).toBeFalse();
+  });
+
+  // a1-rk-ga-intro-zeile: ein Satz, ≤ 75 Zeichen breit; der Rest im ⓘ am Titel.
+  it('kürzt die Einleitung auf einen Satz (Rest im ⓘ) und begrenzt sie auf 75ch', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('h1 app-help-hint')).not.toBeNull();
+    const css = ((GameAnalysesComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s/g, '');
+    expect(css).toMatch(/\.intro(\[[^\]]*\])?\{[^}]*max-width:75ch/);
+  });
+
+  // a1-rk-ga-grund-abseits: ohne Admin-Tiefenfeld stand „Analyse starten“ links, der Grund rechts am anderen Rand.
+  it('stellt „Analyse starten“ auch ohne Tiefenfeld rechts über den Grund', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '800px';
+    document.body.appendChild(host);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    fixture.detectChanges();
+    try {
+      expect(fixture.componentInstance.isAdmin).toBeFalse();
+      const row = host.querySelector('.new-row') as HTMLElement;
+      const start = row.querySelector('button') as HTMLElement;
+      expect(row.getBoundingClientRect().right - start.getBoundingClientRect().right).toBeLessThan(2);
+      expect(getComputedStyle(host.querySelector('.reason')!).textAlign).toBe('right');
+    } finally {
+      host.remove();
+    }
+  });
+
+  // a1-rk-ga-meta-umbruch: am Handy eigene linksbündige Zeile, erst ab 600 px rechts.
+  it('setzt die Meta der Karte am Handy als eigene linksbündige Zeile', () => {
+    const css = ((GameAnalysesComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s/g, '');
+    expect(css).toMatch(/@media\(min-width:600px\)\{\.ga-meta(\[[^\]]*\])?\{margin-left:auto/);
+    expect(css).toMatch(/@media\(max-width:599\.98px\)\{\.ga-meta(\[[^\]]*\])?\{flex-basis:100%/);
+    // außerhalb der Media-Queries kein margin-left:auto mehr auf .ga-meta
+    expect(css.replace(/@media[^{]*\{[^{}]*\{[^}]*\}\s*\}/g, '')).not.toMatch(/\.ga-meta(\[[^\]]*\])?\{margin-left:auto/);
+  });
 });

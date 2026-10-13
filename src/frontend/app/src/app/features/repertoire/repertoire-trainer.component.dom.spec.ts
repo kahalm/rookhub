@@ -51,3 +51,34 @@ describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
     expect(el.querySelector('.line-moves')).not.toBeNull();
   });
 });
+
+/** Brettgröße des Trainers (UI-Sweep a1). Karma läuft 1 400 px breit — Media-Query-Regeln als CSS-Text geprüft. */
+describe('RepertoireTrainerComponent Brettgröße (a1)', () => {
+  const css = ((RepertoireTrainerComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
+    .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+  function block(media: string): string {
+    const at = css.indexOf(media);
+    expect(at).withContext(media).toBeGreaterThan(-1);
+    return css.slice(at, css.indexOf('}}', at) + 2);
+  }
+
+  // a1-rk-trainer-brett-hoehe
+  it('Laptop: Brett höchstens Fensterhöhe − 200 px (keine Mini-Scrollleiste)', () => {
+    expect(css).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex:11480px;max-width:min\(820px,(calc\()?100vh-200px\)?\)/);
+  });
+
+  it('einspaltig: Brett volle Zeile bis Fensterhöhe − 420 px, Infospalte ohne 520-px-Deckel', () => {
+    const n = block('@media(max-width:899.98px)');
+    expect(n).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex-basis:100%;max-width:min\(100%,(calc\()?100vh-420px\)?\)/);
+    expect(n).toMatch(/\.side(\[[^\]]*\])?\{max-width:none/);
+  });
+
+  // a1-rk-trainer-ultrawide-brett
+  it('ab 2400 px Brett bis Fensterhöhe (≤ 1 100 px), Seitenspalte ≤ 640 px, mittig', () => {
+    const w = block('@media(min-width:2400px)');
+    expect(w).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex:00auto;width:min\((calc\()?100vh-200px\)?,1100px\);max-width:none/);
+    expect(w).toMatch(/\.side(\[[^\]]*\])?\{max-width:640px/);
+    expect(w).toMatch(/\.play(\[[^\]]*\])?\{justify-content:center/);
+    expect(css.slice(0, css.indexOf('@media(min-width:2400px)'))).not.toContain('1100px');
+  });
+});

@@ -185,6 +185,14 @@ import { PctPipe } from '../../shared/format/pct';
     .conv-table th, .conv-table td { padding: 4px 10px; text-align: right; white-space: nowrap;
                                      border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .conv-table th { font-weight: 600; font-size: .8rem; }
+    /* a1-rk-analyse-unterseiten-ultrawide: Breitbild-Stufe (DESIGN 4.1) — ab 2400 px 1 880-px-Spalte, das Brett wächst
+       bis 1 000 px, höchstens bis zur Fensterhöhe; Zugliste breiter und so hoch wie das Brett. Darunter unverändert. */
+    @media (min-width: 2400px) {
+      .gad-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .board-col { max-width: min(1000px, calc(100vh - 220px)); flex-basis: min(1000px, calc(100vh - 220px)); }
+      .moves-col { max-width: 640px; }
+      .moves { max-height: calc(100vh - 260px); }
+    }
   `],
 })
 export class GameAnalysisDetailComponent implements OnInit, OnDestroy {

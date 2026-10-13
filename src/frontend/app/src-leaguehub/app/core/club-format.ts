@@ -189,3 +189,19 @@ export function shortDateTime(iso: string | null | undefined): string {
   const two = (n: number) => String(n).padStart(2, '0');
   return `${two(d.getDate())}.${two(d.getMonth() + 1)}., ${two(d.getHours())}:${two(d.getMinutes())}`;
 }
+
+/** Ab so vielen Sekunden Wartezeit sagt „Formular prüfen", dass etwas klemmt (a1-l-formular-wartezeit). */
+export const LONG_WAIT_SECONDS = 30 * 60;
+
+/** Uhr seit dem Hochladen (a1-l-formular-wartezeit): „0:07", „1:02:05", ab einem Tag „seit 1 Tag 18 Std." — RookHubs
+ *  `formatClock` zählt nur Minuten und zeigte nach 42 Stunden „2549:18". */
+export function waitClock(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const two = (n: number) => String(n).padStart(2, '0');
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  if (h >= 24) {
+    const d = Math.floor(h / 24), rest = h % 24;
+    return `seit ${d} ${d === 1 ? 'Tag' : 'Tagen'}${rest ? ` ${rest} Std.` : ''}`;
+  }
+  return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
+}

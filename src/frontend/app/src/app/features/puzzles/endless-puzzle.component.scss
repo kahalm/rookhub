@@ -93,6 +93,7 @@
       padding: 5px 11px; border-radius: 16px; cursor: pointer;
       border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
       background: var(--mat-sys-surface-container, #fff); color: inherit;
+      font-family: inherit; /* a1-rk-endless-chips-schrift: <button> erbt sonst die Systemschrift */
       font-size: 0.85em; line-height: 1.2; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
     }
     .theme-preset-chip:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
@@ -103,8 +104,9 @@
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #ff9800; font-weight: 500; margin-bottom: 1rem;
     }
-    .session-count { text-align: center; font-size: 0.85em; color: color-mix(in srgb, currentColor 50%, transparent); margin: 0 0 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
-    .history-link { font-size: 0.85em; min-height: 0; padding: 0 8px; line-height: 28px; }
+    .session-count { text-align: center; font-size: 0.85em; color: color-mix(in srgb, currentColor 65%, transparent); margin: 0 0 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+    /* a1-rk-endless-verlauf-link-klein: Tippfläche des mat-button (≥ 40 px + Touch-Ziel 48 px) statt 28 px, lesbare Größe. */
+    .history-link { font-size: 0.9rem; padding: 0 8px; }
     .history-link mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
     // Wenn der Start-Button OBEN steht (statt am Ende der Card): visueller Abstand
@@ -147,7 +149,6 @@
       background: #fff; border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
       box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
     }
-    .tomove-dot.black { background: #2b2b2b; border-color: color-mix(in srgb, currentColor 30%, transparent); }
     .board-hint-show {
       padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
       border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;
@@ -293,6 +294,13 @@
     .review-icon.solved { color: var(--rh-success); }
     .review-icon.failed { color: var(--rh-error); }
 
+    /* Einspaltig bis 899.98 px wie die übrigen Löser (a1-rk-tablet-seitenspalte-eng). */
+    @media (min-width: 769px) and (max-width: 899.98px) {
+      .play-screen { flex-direction: column; }
+      .board-section { width: min(100%, calc(100vh - 180px)); align-self: center; }
+      .info-section { width: 100%; }
+    }
+
     @media (max-width: 768px) {
       .endless-page { padding: 0.5rem; }
       .play-screen { flex-direction: column; }
@@ -335,3 +343,10 @@
         .board-hint-slot--side { display: block; }
       }
     }
+
+/* Breitbild-Stufe ≥ 2400 px (DESIGN 4.1; a1-rk-puzzle-brett-ultrawide): nur das Spielbrett (Start- und
+   Verlaufsansicht bleiben in ihrer Breite). */
+@media (min-width: 2400px) {
+  .endless-page:has(.play-screen) { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .board-section { width: min(calc(100vh - 180px), calc(100% - 360px - 1.5rem)); }
+}

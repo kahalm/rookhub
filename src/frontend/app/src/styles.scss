@@ -73,6 +73,17 @@ body { background-color: var(--mat-sys-surface); }
   ));
 }
 
+/* UI-Sweep a1 (a1-rk-fortschritt-spur-hell): die Spur der Fortschrittsleiste (Material: surface-variant) verschwand im
+   hellen Design auf der Karte (1,17:1) — bei 0 % war gar keine Leiste zu sehen. Spur aus der Textfarbe gemischt:
+   hell und dunkel gleich sichtbar (~1,6:1; die Zahl „0/287“ daneben trägt den Wert). */
+mat-progress-bar { --mat-progress-bar-track-color: color-mix(in srgb, currentColor 16%, transparent); }
+
+/* UI-Sweep a1 (a1-rk-am-zug-punkt-dunkel): „Schwarz am Zug“-Punkt (Puzzle, Buch-Puzzle, Endless). #2b2b2b mit
+   schwachem Rand lag im dunklen Design bei ≈ 1,4:1 und wirkte wie ein Loch — jetzt schwarz mit kräftigem Ring aus der
+   Textfarbe (dunkel heller Ring ≈ 6:1, hell dunkler Ring). Zentral statt dreifach; `html:root` schlägt die
+   gleichnamigen Regeln in den Komponenten (gekapselt 0,3,0). */
+html:root .tomove-dot.black { background: #000; border: 2px solid color-mix(in srgb, currentColor 70%, transparent); }
+
 /* Chessground board styles */
 @import 'chessground/assets/chessground.base.css';
 @import 'chessground/assets/chessground.brown.css';
@@ -157,8 +168,14 @@ body { background-color: var(--mat-sys-surface); }
 /* brown (chessground.brown.css) und die Brett-Texturen, die dessen Farben erben */
 .orientation-white .ranks :nth-child(even),
 .orientation-black .ranks :nth-child(odd) { color: rgba(72, 72, 72, 0.8); }
+/* UI-Sweep a1 (a1-rk-brett-koordinaten-dunkle-felder): das dunkle brown-Feld (#c0ae91) ist zu hell für helle Schrift
+   (Weiß 80 % ≈ 1,5:1, auch mit dunklem Hof kaum lesbar). Dort jetzt dunkle Schrift mit hellem Hof (≈ 6:1) — Ränge
+   UND Linienbuchstaben auf dunklen Feldern (7/5/3/1 bzw. a/c/e/g bei Weiß unten). Die anderen Themen setzen Farbe
+   und Hof unten selbst zurück (höhere Spezifität). */
 .orientation-white .ranks :nth-child(odd),
-.orientation-black .ranks :nth-child(even) { color: rgba(255, 255, 255, 0.8); }
+.orientation-black .ranks :nth-child(even),
+.orientation-white .files :nth-child(odd),
+.orientation-black .files :nth-child(even) { color: rgba(40, 30, 20, 0.9); --coord-halo: rgba(255, 255, 255, 0.6); }
 
 /* Coordinate label colors for non-brown themes */
 .board-theme-blue .orientation-white .ranks :nth-child(even),
@@ -168,7 +185,7 @@ body { background-color: var(--mat-sys-surface); }
 .board-theme-blue .orientation-white .ranks :nth-child(odd),
 .board-theme-blue .orientation-white .files :nth-child(odd),
 .board-theme-blue .orientation-black .ranks :nth-child(even),
-.board-theme-blue .orientation-black .files :nth-child(even) { color: rgba(212, 227, 237, 0.9); }
+.board-theme-blue .orientation-black .files :nth-child(even) { color: rgba(212, 227, 237, 0.9); --coord-halo: rgba(0, 0, 0, 0.6); }
 
 .board-theme-green .orientation-white .ranks :nth-child(even),
 .board-theme-green .orientation-white .files :nth-child(even),
@@ -177,7 +194,7 @@ body { background-color: var(--mat-sys-surface); }
 .board-theme-green .orientation-white .ranks :nth-child(odd),
 .board-theme-green .orientation-white .files :nth-child(odd),
 .board-theme-green .orientation-black .ranks :nth-child(even),
-.board-theme-green .orientation-black .files :nth-child(even) { color: rgba(238, 238, 210, 0.9); }
+.board-theme-green .orientation-black .files :nth-child(even) { color: rgba(238, 238, 210, 0.9); --coord-halo: rgba(0, 0, 0, 0.6); }
 
 .board-theme-gray .orientation-white .ranks :nth-child(even),
 .board-theme-gray .orientation-white .files :nth-child(even),
@@ -186,7 +203,7 @@ body { background-color: var(--mat-sys-surface); }
 .board-theme-gray .orientation-white .ranks :nth-child(odd),
 .board-theme-gray .orientation-white .files :nth-child(odd),
 .board-theme-gray .orientation-black .ranks :nth-child(even),
-.board-theme-gray .orientation-black .files :nth-child(even) { color: rgba(240, 240, 240, 0.9); }
+.board-theme-gray .orientation-black .files :nth-child(even) { color: rgba(240, 240, 240, 0.9); --coord-halo: rgba(0, 0, 0, 0.6); }
 
 .board-theme-wood .orientation-white .ranks :nth-child(even),
 .board-theme-wood .orientation-white .files :nth-child(even),
@@ -195,7 +212,7 @@ body { background-color: var(--mat-sys-surface); }
 .board-theme-wood .orientation-white .ranks :nth-child(odd),
 .board-theme-wood .orientation-white .files :nth-child(odd),
 .board-theme-wood .orientation-black .ranks :nth-child(even),
-.board-theme-wood .orientation-black .files :nth-child(even) { color: rgba(230, 209, 160, 0.9); }
+.board-theme-wood .orientation-black .files :nth-child(even) { color: rgba(230, 209, 160, 0.9); --coord-halo: rgba(0, 0, 0, 0.6); }
 
 /* === Figuren-Sets (lokal gevendort: public/piece/<set>/, Lichess) ========= */
 /* Default = cburnett (chessground.cburnett.css). Andere Sets via Wrapper-Klasse

@@ -187,3 +187,25 @@ describe('SharedReconstructionComponent', () => {
     expect(c.stepIndex).toBe(start + 1);
   });
 });
+
+/** UI-Sweep a1: Tablet hochkant stapelt (a1-rk-geteilt-recon-tablet), ab 2400 px Brett bis Fensterhöhe (a1-rk-geteilt-brett-ultrawide). */
+describe('SharedReconstructionComponent Layout-Stufen', () => {
+  const css = ((SharedReconstructionComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s+/g, '')
+    .replace(/\[_ngcontent-%COMP%\]/g, '');
+  const block = (q: string) => {
+    const at = css.indexOf(`@media(${q})`);
+    expect(at).withContext(q).toBeGreaterThan(-1);
+    return css.slice(at, css.indexOf('@media', at + 6) > -1 ? css.indexOf('@media', at + 6) : undefined);
+  };
+  it('stapelt Brett über Zugliste schon unter 900 px, das Brett höchstens bis zur Fensterhöhe', () => {
+    const tab = block('max-width:899.98px');
+    expect(tab).toContain('.body{flex-direction:column;');
+    expect(tab).toMatch(/\.board-wrap\{width:min\(100%,max\(360px,(calc\()?100svh-330px\)?\)\);\}/);
+    // Rand-/Polster-Regeln fürs Handy bleiben bei 768 px.
+    expect(block('max-width:768px')).toContain('.shared-page{padding:0;}');
+  });
+  it('ab 2400 px wächst das Brett bis zur Fensterhöhe (höchstens 1080 px), darunter höchstens 680 px', () => {
+    expect(block('min-width:2400px')).toContain('--board-size:clamp(360px,calc(100svh - 330px),1080px)'.replace(/\s/g, ''));
+    expect(css.slice(0, css.indexOf('@media'))).toContain('680px)');
+  });
+});

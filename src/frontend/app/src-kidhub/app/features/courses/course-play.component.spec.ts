@@ -221,6 +221,14 @@ describe('CoursePlayComponent — Kopf am Handy', () => {
     expect(el.querySelector('.count .count-short')!.textContent).toBe('0/2');
     expect(el.querySelector('.count .count-short')!.getAttribute('aria-hidden')).toBe('true');
     expect(el.querySelector('.count .count-long')).not.toBeNull();
+    // a1-k-course-counter-plain: dieselbe grüne Zählerpille wie Stufen/Endlos/Sternenjagd, mit ✓ vorne.
+    const count = el.querySelector<HTMLElement>('.count')!;
+    expect(count.classList).toContain('kid-counter');
+    expect(count.querySelector('.tick')!.textContent).toBe('✓');
+    expect(count.querySelector('.tick')!.getAttribute('aria-hidden')).toBe('true');
+    const cs = getComputedStyle(count);
+    expect(cs.borderTopLeftRadius).withContext('Pille').toBe('999px');
+    expect(cs.boxShadow).withContext('kein Knopf-Schatten').toBe('none');
     expect(el.querySelector('.chapter')!.classList).toContain('with-title');
   });
 });

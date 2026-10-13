@@ -342,7 +342,28 @@ describe('CourseBrowseComponent Layout', () => {
     const pipe = TestBed.runInInjectionContext(() => new SanPipe());
     expect(pipe.transform('Nc3')).toBe('Sc3');
   });
-  it('bindet die Brettbreite an die Fensterhöhe (bis 820 px)', () => {
-    expect(css).toMatch(/\.board-wrap[^{]*\{[^}]*max\(560px, (calc\()?100vh - 300px[^}]*820px/);
+  // a1-rk-browse-laptop-linienknoepfe-falz: Untergrenze 400 px statt 560 px — am Laptop (768 px hoch) folgt das Brett
+  // der Höhe, „Vorige/Nächste Linie“ bleiben über der Falz.
+  it('bindet die Brettbreite an die Fensterhöhe (bis 820 px, Untergrenze 400 px)', () => {
+    expect(css).toMatch(/\.board-wrap[^{]*\{[^}]*max\(400px, (calc\()?100vh - 300px[^}]*820px/);
+    expect(css).not.toContain('max(560px');
+  });
+  // a1-rk-zugnummer-allein: Zugnummer und weißer Zug in einem nicht umbrechenden Stück (DESIGN 5.13).
+  it('hält Zugnummer und weißen Zug beim Umbruch zusammen', () => {
+    const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '');
+    expect(plain).toMatch(/\.move-pair \{[^}]*display: inline-flex[^}]*white-space: nowrap/);
+    const def = (CourseBrowseComponent as any).ɵcmp;
+    const consts = typeof def.consts === 'function' ? def.consts() : def.consts;
+    expect(JSON.stringify(consts)).toContain('move-pair');
+  });
+  // a1-rk-browse-breitstufe (DESIGN 4.1): ab 2400 px breites Token, Brett + Zugleiste + Kommentar bis Fensterhöhe.
+  it('nimmt ab 2400 px die Breitbild-Stufe, Brett höchstens bis zur Fensterhöhe', () => {
+    const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '').replace(/%NS%/g, '');
+    const at = plain.indexOf('@media (min-width: 2400px)');
+    expect(at).toBeGreaterThan(-1);
+    const wide = plain.slice(at);
+    expect(wide).toMatch(/\.browse-container \{ ?max-width: min\(var\(--page-max-width-wide, 1880px\), 96vw\)/);
+    expect(wide).toMatch(/\.board-wrap, \.move-strip, \.comment-card \{ ?max-width: min\(60vw, (calc\()?100vh - 300px\)?\)/);
+    expect(plain.slice(0, at)).not.toContain('--page-max-width-wide');
   });
 });

@@ -84,12 +84,12 @@ export interface PlayerSearchResult {
   ],
   template: `
     <div class="pif-names">
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ 'profile.firstName' | translate }}</mat-label>
         <input matInput [(ngModel)]="profile.firstName" [ngModelOptions]="{ standalone: true }"
                name="firstName" autocomplete="given-name">
       </mat-form-field>
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ 'profile.lastName' | translate }}</mat-label>
         <input matInput [(ngModel)]="profile.lastName" [ngModelOptions]="{ standalone: true }"
                name="lastName" autocomplete="family-name">
@@ -188,12 +188,12 @@ export interface PlayerSearchResult {
     }
 
     <div class="pif-ids">
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ 'profile.fideId' | translate }}</mat-label>
         <input matInput [(ngModel)]="profile.fideId" [ngModelOptions]="{ standalone: true }"
                name="fideId" inputmode="numeric">
       </mat-form-field>
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ 'profile.chessResultsId' | translate }}</mat-label>
         <input matInput [(ngModel)]="profile.chessResultsId" [ngModelOptions]="{ standalone: true }"
                name="chessResultsId" inputmode="numeric">
@@ -201,29 +201,41 @@ export interface PlayerSearchResult {
     </div>
   `,
   styles: [`
-    :host { display: block; }
-    .pif-names, .pif-ids { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+    /* Containerabfrage (DESIGN 4.3): die Karte ist je Seite unterschiedlich breit (RookHub 600 px,
+       Turnierseite Seitenbreite) — ob der Suchblock neben die Namen passt, entscheidet die Breite
+       der KOMPONENTE, nicht des Fensters. */
+    :host { display: block; container: pif / inline-size; }
+    /* UI-Sweep a1 (a1-t-profil-feldabstaende): alle Felder tragen subscriptSizing="dynamic", der
+       Abstand kommt EINHEITLICH aus den Containern (16 px) — vorher sprang er zwischen 12 px (Feld
+       mit Hinweis) und ~32 px (fester Material-Reserveplatz unter Feldern ohne Hinweis). */
+    .pif-names, .pif-ids { display: flex; gap: 16px 12px; flex-wrap: wrap; align-items: flex-start; }
+    .pif-names { margin-bottom: 16px; }
     .pif-names mat-form-field, .pif-ids mat-form-field { flex: 1 1 12rem; }
-    /* Der Knopf steht neben den Feldern und soll auf HOEHE der Eingabe liegen, nicht an deren
-       Oberkante — ein Material-Feld ist 56 px hoch, der Knopf 36 px. Der UNTERE Abstand ist fuer
-       den umgebrochenen Fall (Handy): dort ist der Knopf das letzte Kind der Zeile und hat keinen
-       Hinweis-Bereich unter sich wie die Felder, und das schwebende Label des Folgefelds
-       ("Anzeigename") ragt rund 7 px ueber dessen Oberkante — es lief durch die Unterkante des
-       Knopfs. Auf dem Desktop (eine Zeile, Felder 78 px hoch) aendert er nichts. */
-    .pif-search-box { display: flex; flex-direction: column; gap: 4px; flex: 0 1 auto; margin-bottom: 14px; }
+    /* Breit (Felder + Suchblock passen in eine Zeile, ab ~650 px): der Knopf steht auf HOEHE der
+       56-px-Eingabe neben dem Nachnamen, der Hinweis darunter. */
+    .pif-search-box { display: flex; flex-direction: column; gap: 4px; flex: 0 1 auto; }
     .pif-search { height: 56px; }
     .pif-search-hint { font-size: 12px; max-width: 16rem; }
-    /* Am Handy (umgebrochen) volle Breite statt einer kleinen Pille am Zeilenende. */
-    @media (max-width: 599.98px) {
-      .pif-search-box { flex: 1 1 100%; }
-      .pif-search-hint { max-width: none; }
+    /* Mittel (umgebrochen, z. B. RookHub-Profil 600 px am Laptop, a1-rk-profil-suche-falz): Knopf
+       und Hinweis NEBENeinander ueber die volle Breite statt eines 250-px-Blocks mit dreizeiligem
+       Hinweis — spart ~60 px, „Speichern“ bleibt ueber der Falz. */
+    @container pif (max-width: 679.98px) {
+      .pif-search-box { flex: 1 1 100%; flex-direction: row; align-items: center; gap: 12px; }
+      .pif-search { height: 40px; flex: none; }
+      .pif-search-hint { max-width: none; flex: 1 1 0; min-width: 0; }
+    }
+    /* Schmal (Handy): Knopf volle Breite, Hinweis darunter — eingerueckt wie die mat-hints (16 px). */
+    @container pif (max-width: 479.98px) {
+      .pif-search-box { flex-direction: column; align-items: stretch; gap: 4px; }
+      .pif-search { height: 56px; }
+      .pif-search-hint { padding-left: 16px; }
     }
     /* mat-spinner traegt keine .mat-icon-Klasse, die Icon-Offsets des Outlined-Knopfs (-8/8 px)
        greifen also nicht — nachgestellt, damit der Knopf beim Suchen nicht in der Breite springt. */
     .pif-search mat-spinner { margin: 0 8px 0 -8px; }
-    /* Die zwei Felder mit Hinweistext tragen subscriptSizing="dynamic": bei fester Groesse ist
-       nur EINE Zeile reserviert, und der laengere Hinweis (E-Mail) lief in das Feld darunter. */
-    .pif-full { width: 100%; margin-bottom: 1rem; }
+    /* Felder mit Hinweistext: bei fester Subscript-Groesse ist nur EINE Zeile reserviert, und der
+       laengere Hinweis (E-Mail) lief in das Feld darunter — daher dynamic + eigener Abstand. */
+    .pif-full { width: 100%; margin-bottom: 16px; }
     /* Bei vielen Namensgleichen (bis 50 je Quelle) schob die Trefferliste Anzeigename, E-Mail,
        Kennungen und Speichern auf dem Handy um rund drei Bildschirmhoehen nach unten — nach dem
        Antippen eines Treffers sah man die uebernommenen Kennungen nicht. Deshalb EIN Rollbereich
