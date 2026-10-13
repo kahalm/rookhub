@@ -162,6 +162,15 @@ Dialoge: Material-Vorgabe; der Spielweise-Dialog 20 px, als Blatt am Handy `20px
 - **Ist:** viele RookHub-Seiten haben noch feste Werte (768 px 18×, 760 px 12×, 600 px 9×). **Regel ab jetzt:**
   neue Inhaltsseiten nur über `--page-max-width`; schmaler nur für Formular-/Leseseiten (Anmeldekarte 400 px,
   Rechtstexte), dann begründet.
+- **Breitbild-Stufe ≥ 2400 px** (UI-Sweep u1, 0.762.0): Token `--page-max-width-wide` (`styles.scss`; unter 2400 px
+  = `--page-max-width`, ab 2400 px **1880 px**). **Nur** Raster-, Tabellen- und Brettseiten nehmen es — opt-in je Seite
+  und ausschließlich innerhalb `@media (min-width: 2400px)`: `max-width: min(var(--page-max-width-wide, 1880px), 96vw)`.
+  Bisher: Dashboard (5 Kachelspalten), Kurse (6 Spalten), Repertoires, Aufgabenblätter, Punktepartie-Liste, Admin,
+  Statistik (zweispaltig), Turnier-Verlauf. **Lese- und Formularseiten bleiben** bei `--page-max-width` bzw. ihrer
+  schmaleren Breite. Unter 2400 px ändert sich dadurch nichts (Laptop/Handy/1920 pixelgleich). Bretter wachsen dort
+  höchstens bis zur Fensterhöhe (`min(…, calc(100vh - Kopf/Leisten))`). Die Kopfleiste (RookHub + Turnier) bleibt
+  randlos, ihr Inhalt rückt ab 2400 px auf eine 2400 px breite Mitte (`padding-inline: max(16px, calc((100% - 2400px) / 2))`;
+  Kalkulations-Modus ausgenommen). Prüfung: `features/page-width.spec.ts`.
 
 ### 4.2 Breakpoints (gemessen: 157 `@media`-Regeln)
 
@@ -178,6 +187,8 @@ Dialoge: Material-Vorgabe; der Spielweise-Dialog 20 px, als Blatt am Handy `20px
 (mehrspaltig). Obergrenzen als `599.98px` / `899.98px` oder Bereichsschreibweise (`(width < 600px)`, wie
 `KID_STACKED`) — nie `599px`, sonst entstehen 1-px-Lücken. 480/380 px nur für Feinschliff einzelner
 Komponenten. LeagueHub/ClubHub behalten ihre 640-px-Stufe.
+Vierte Stufe nach oben: **≥ 2400 px** (`min-width: 2400px`, Breitbild 21:9/4K) — nur für die Breitbild-Regeln aus 4.1
+(Raster-, Tabellen- und Brettseiten, Kopfleiste); Lese- und Formularseiten bekommen dort keine eigenen Regeln.
 
 Weitere Medienabfragen: `(pointer: coarse)` für Touch-Vergrößerungen (8×), `(hover: hover) and (pointer: fine)`,
 `(prefers-reduced-motion: reduce)` für jede Animation (7×), `print` blendet Navbar/Fußzeile aus.
@@ -566,6 +577,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Geteilter Turnier-Link: dieselbe Knopfreihe wie die Detailseite — Merken (primär), Beobachten, Volle Ansicht,
   Teilen (r2-t-public-actions).
 - Datenschutz mit eigener Einleitung (`LegalSiteKind 'turnier'`).
+- **Breitbild ≥ 2400 px** (u1): Turnierkalender zeigt Liste (Karten zweispaltig) und Karte nebeneinander unter EINEM
+  Reiter „Liste & Karte“ (Karte klebt, Fensterhöhe), Kalender bleibt Reiter; Turnier-Detail und `/t/:id`: Spieler/Teams
+  als Reiter links, Paarungen der gewählten Runde rechts in eigenem klebendem Scroll-Kasten. Abfrage im Code über
+  `wideScreen()` (`src-turnier/app/core/wide-screen.ts`, mit Rückruf zum Nachladen). Darunter unverändert Reiter.
 
 ### 8.3 KidHub (`src-kidhub/`)
 
@@ -625,6 +640,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Knöpfe 5.4; Segmentschalter `.seg` (`aria-pressed`); Spielerkarte als natives `<dialog class="card">` mit
   klebendem Kopf.
 - Auswahlfelder wie `.pick select` (Fläche, 1 px Rahmen, Radius 6), auch der Vereinswechsel (r2-l-club-select).
+- Fußzeile immer unten: `lh-root` ist eine Flex-Spalte über `100dvh`, `main.wrap` wächst (wie ClubHub; u1-l-fuss-schwebt).
+- Breitbild ≥ 2400 px: `.wrap.mid` auf `--page-max-width-wide`, Prognose-Bretter vierspaltig (u1-l-prognose-bretter).
 
 ### 8.5 ClubHub (`src-clubhub/`, `clubhub.scss`)
 
@@ -780,3 +797,6 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-13 | 0.761.0 | RookHub/Turnier/KidHub (e1): Datum/Uhrzeit nur über Locale-Formate der DatePipe statt fester `dd.MM`/`HH:mm`-Muster (Wochenpost `EEE, mediumDate · shortTime`, Listen `short`, 5.13); Turnierkarte „1 Teilnehmer“ per Schlüsselpaar `tournamentDirectory.players`/`playersOne`; KidHub-Start: Weiter-Knopf zweiteilig (`kids.home.continue` + `kids.home.puzzleN`, Trenner als `::before`, `continueAt` entfällt), Puzzles-Kachel mit `&ngsp;` und „· “ als `::before` vor den Sternen | UI-Sweep e1 | e1-rk-date-fixed-pattern, e1-t-plural-1-players, e1-k-start-continue-dot-wrap, e1-k-start-levels-done-stars-glued |
 | 2026-10-13 | 0.761.0 | RookHub (e1): Spielerkarte der Spielervorbereitung zweisprachig — Texte `playerCard.*` (en/de/hr/hu), Züge in den Figurenbuchstaben der Sprache, Datum `mediumDate`, Prozent nach Sprache (en/hu „39%“, de/hr „39 %“); LeagueHub bleibt deutsch (Abschnitt 6); Maia-Stärkefeld mindestens 128 px; Partie korrigieren am PC: Runde mindestens 88 px (Ort 1fr); Segmente „Weiß | Schwarz | Automatisch“ alle groß | UI-Sweep e1 | e1-rk-prep-card-german, e1-rk-maia-strength-cut, e1-rk-edit-round-cut, e1-rk-scoresheet-side-auto-case |
 | 2026-10-13 | 0.761.0 | RookHub/Turnier (e1, Sprache): Prozent zentral über `formatPct`/`PctPipe` (`shared/format/pct.ts`) — en/hu „46%“, de/hr „46 %“ (5.13; Explorer, Zugbaum, Genauigkeit, Partien, Statistik, Freunde, Wochenpost); en.json-Anführungszeichen einheitlich “…” (6); Sprachnamen im Satz in der Oberflächensprache, Eigenbezeichnung nur in Sprachauswahlen; Hilfe-Sätze „Your games are under …“/„In … Catalog, you see …“; Datenschutz „/motivation, option “aus” (off)“ | UI-Sweep e1 | e1-rk-percent-space-en, e1-rk-en-anfuehrungszeichen-gemischt, e1-rk-kurs-originalsprache-eigenname, e1-rk-hilfe-partien-satz, e1-rk-datenschutz-motivation-aus |
+| 2026-10-13 | 0.762.0 | RookHub/Turnier (u1): Breitbild-Stufe ≥ 2400 px mit Token `--page-max-width-wide` (1880 px) nur für Raster-, Tabellen- und Brettseiten, opt-in in `@media (min-width: 2400px)`; Lese-/Formularseiten bleiben (4.1/4.2); Dashboard 5 Kachelspalten, Kurse 6 Spalten, Statistik zweispaltig (Themen-Paar rechts); Kopfleiste randlos, Inhalt auf 2400 px Mitte; Ladestand der Spielervorbereitung „seit …“ als Datum der Sprache; en-Hilfe ohne „Under ☰ → … you …“ | UI-Sweep u1 (ultrawide) + Englisch-Nachprüfung | u1-x-breite-stufe, u1-rk-dashboard-5spalten, u1-rk-navbar-raender, u1-rk-stats-2spalten |
+| 2026-10-13 | 0.762.0 | RookHub (u1, Bretter): Brettseiten wachsen ab 2400 px nur bis zur Fensterhöhe — Analyse drei Spalten (Brett ≤ 1 100 px | Engine + Züge | Explorer offen + Repertoires + FEN/PGN, Seite ≤ 2 560 px; offener Explorer dort nur für die Sitzung, der gemerkte Zustand für schmale Fenster bleibt), Partie-Ansicht vier Spalten (Brett ≤ 1 080 px, Zugliste 280 px, Auswertung zweispaltig je 400–520 px), Repertoire im Token `--page-max-width-wide` mit Brett ≤ 1 040 px; Breitbild-Abfrage im Code über `mediaSignal()` (`shared/layout/wide-media.ts`); Raster mit auto-Spalten neben einer gedeckelten Spalte immer `justify-content: center` (Kalkulations-Modus: kein Loch zwischen Brett und Seitenspalte, alle Breiten) | UI-Sweep u1 (Ultrawide) | u1-rk-analyse-3spalten, u1-rk-partie-brett, u1-rk-repertoire-brett, u1-rk-calc-luecke |
+| 2026-10-13 | 0.762.0 | Turnier/LeagueHub (u1, Hubs): Turnierkalender ab 2400 px Liste + Karte nebeneinander (Reiter „Liste & Karte“, Karte sticky); Turnier-Detail und `/t/:id` ab 2400 px Paarungen rechts neben Spielern/Teams (eigener Scroll-Kasten), Seite im Token; LeagueHub-Fußzeile in allen Breiten am Fensterende (Flex-Spalte wie ClubHub); LeagueHub ab 2400 px mittlere Seiten 1 880 px, Bretter vierspaltig (8.2/8.4) | UI-Sweep u1 (Ultrawide) | u1-t-kalender-karte, u1-t-turnier-paarungen, u1-l-fuss-schwebt, u1-l-prognose-bretter |

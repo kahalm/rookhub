@@ -589,4 +589,47 @@ describe('TournamentDetailComponent', () => {
     expect(c.displayedPlayers.map(p => p.name)).toEqual(['Alice', 'Bob']);
     expect(c.displayedTeams.map(t => t.name)).toEqual(['Red']);
   });
+
+  /** UI-Sweep u1 (u1-t-turnier-paarungen): ab 2400 px stehen die Paarungen neben den Spielern — gleich mitladen. */
+  async function openAt(wide: boolean) {
+    signedIn = false;
+    spyOn(window, 'matchMedia').and.callFake((q: string) => ({
+      matches: q === '(min-width: 2400px)' ? wide : false, media: q,
+      addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {},
+    }) as unknown as MediaQueryList);
+    await TestBed.configureTestingModule({
+      imports: [TournamentDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
+      ],
+    }).compileComponents();
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
+    const fixture = TestBed.createComponent(TournamentDetailComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/tournaments/4711').flush({
+      id: 1, name: 'Schach Tirol Open', chessResultsId: '4711', location: null, date: null, totalRounds: 5, knownRounds: 2, createdAt: '', updatedAt: '',
+    });
+    http.expectOne('/api/tournaments/4711/players').flush([]);
+    http.expectOne('/api/tournaments/4711/teams').flush([]);
+    return { fixture, http };
+  }
+
+  it('breit: lädt die Paarungen sofort und reicht die geteilte Ansicht an die Tabellen', async () => {
+    const { fixture, http } = await openAt(true);
+    http.expectOne(r => r.url.startsWith('/api/tournaments/4711/pairings')).flush([]);
+    fixture.detectChanges();
+    http.verify();
+    expect(fixture.componentInstance.split()).toBeTrue();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables .split-pairings')).not.toBeNull();
+  });
+
+  it('schmal: Paarungen erst beim Reiter, keine geteilte Ansicht', async () => {
+    const { fixture, http } = await openAt(false);
+    fixture.detectChanges();
+    http.verify();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables')).toBeNull();
+  });
 });

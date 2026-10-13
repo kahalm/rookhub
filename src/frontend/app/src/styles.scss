@@ -261,6 +261,15 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
    statt randloser Fläche mit toter Info-Spalte (gemessen 1440x900). */
 :root { --page-max-width: 1240px; }
 
+/* Breitbild-Stufe (UI-Sweep u1, 0.762.0): ab 2400 px Fensterbreite dürfen Raster-, Tabellen- und Brettseiten
+   breiter werden — opt-in je Seite über var(--page-max-width-wide) INNERHALB von @media (min-width: 2400px).
+   Lese- und Formularseiten bleiben bei --page-max-width. Unterhalb 2400 px ist das Token = --page-max-width,
+   eine versehentliche Verwendung außerhalb der Media-Query ändert also nichts. DESIGN.md 4.1/4.2. */
+:root { --page-max-width-wide: var(--page-max-width); }
+@media (min-width: 2400px) {
+  :root { --page-max-width-wide: 1880px; }
+}
+
 /* Hilfe-Icon-Tooltips (HelpHintComponent): mehrzeilige Erklärtexte lesbar halten. */
 .hh-tooltip .mdc-tooltip__surface {
   white-space: pre-line;

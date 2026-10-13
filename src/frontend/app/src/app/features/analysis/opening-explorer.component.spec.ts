@@ -153,6 +153,25 @@ describe('OpeningExplorerComponent', () => {
     expect(localStorage.getItem('rookhub_analysis_explorer_open')).toBe('1');
   }));
 
+  it('wide layout (u1, ≥ 2400 px) shows it open without touching the remembered narrow state', fakeAsync(() => {
+    localStorage.setItem('rookhub_analysis_explorer_open', '0');
+    setup();
+    fixture.componentRef.setInput('wide', true);
+    setFen(START); tick(300);
+    expect(fixture.componentInstance.open()).toBeTrue();
+    expect(positionSpy).toHaveBeenCalledTimes(1);
+
+    fixture.componentInstance.toggleOpen();   // zuklappen im Breitbild: nur diese Sitzung
+    expect(fixture.componentInstance.open()).toBeFalse();
+    expect(localStorage.getItem('rookhub_analysis_explorer_open')).toBe('0');
+    fixture.componentInstance.toggleOpen();
+    expect(localStorage.getItem('rookhub_analysis_explorer_open')).toBe('0');
+
+    fixture.componentRef.setInput('wide', false);   // Fenster wieder schmal → gemerkter Zustand „zu"
+    fixture.detectChanges();
+    expect(fixture.componentInstance.open()).toBeFalse();
+  }));
+
   it('a remembered "open" is respected', fakeAsync(() => {
     setup();   // beforeEach merkte '1'
     setFen(START); tick(300);

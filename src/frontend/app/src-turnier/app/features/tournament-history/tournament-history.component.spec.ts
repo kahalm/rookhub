@@ -924,3 +924,17 @@ describe('TournamentHistoryComponent', () => {
     expect(component.activeKey()).toBe('u:1');
   });
 });
+
+/** UI-Sweep u1 (u1-x-breite-stufe): Tabellenseite wird erst ab 2400 px breiter (--page-max-width-wide). */
+describe('TournamentHistoryComponent Breitbild-Stufe (u1-x-breite-stufe)', () => {
+  const css = ((TournamentHistoryComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+    .replace(/%NS%/g, '').replace(/\s+/g, '');
+  it('nimmt ab 2400 px die breite Seitenbreite, darunter --page-max-width', () => {
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.page[^{]*\{max-width:min\(var\(--page-max-width-wide,1880px\),96vw\)/);
+    expect(css.slice(0, at)).toContain('max-width:min(var(--page-max-width),96vw)');
+    expect(css.slice(0, at)).not.toContain('page-max-width-wide');
+  });
+});
+

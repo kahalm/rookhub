@@ -4107,6 +4107,7 @@
     "guestHint": "Pretraživanje i pregled rade bez računa. Za spremanje filtara kao profila pretrage, pamćenje turnira i označavanje igrača treba račun — besplatan je.",
     "tabs": {
       "list": "Popis",
+      "listAndMap": "Popis i karta",
       "map": "Karta",
       "calendar": "Kalendar"
     },

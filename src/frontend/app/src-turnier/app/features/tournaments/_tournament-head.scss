@@ -2,6 +2,11 @@
 // Knopfreihe. Vorher als Kopie in beiden Komponenten — der Titel-Fix z1-t-detail-titel-versatz kam nur in einer an
 // (z2-t-public-titel-versatz). Wird per @use in beide Komponenten-Stile geholt (View-Encapsulation je Komponente).
 .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+// Breitbild-Stufe (UI-Sweep u1, u1-t-turnier-paarungen): ab 2400 px Spieler und Paarungen nebeneinander — dafür die
+// zweite Seitenbreite. Darunter unverändert 1100 px.
+@media (min-width: 2400px) {
+  .detail-container { max-width: var(--page-max-width-wide, 1880px); }
+}
 mat-card { margin-bottom: 1rem; }
 // Handy (360/375px): unbrechbare Tokens im Turniernamen ('Bezirksblitzmannschaftsmeisterschaft')
 // oder Maps-URLs im Untertitel liefen ueber Karten- und Bildschirmrand hinaus (mat-card: overflow visible).

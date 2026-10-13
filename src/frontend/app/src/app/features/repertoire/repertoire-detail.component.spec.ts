@@ -232,6 +232,15 @@ describe('RepertoireDetailComponent Layout (z1)', () => {
     expect(css).toMatch(/--(%NS%)?board-size: clamp\(400px, calc\(100vh - 300px\), 640px\)/);
     expect(css).toMatch(/\.board-section[^{]*\{ ?width: var\(--(%NS%)?board-size\)/);
   });
+  // u1-rk-repertoire-brett: bei 3440 × 1440 blieb das Brett bei 640 px in 1 240 px Breite. Karma läuft 1 400 px breit.
+  it('ab 2400 px Breitbild-Breite und Brett bis 1 040 px in Fensterhöhe; darunter unverändert 640 px', () => {
+    const start = css.indexOf('@media (min-width: 2400px)');
+    expect(start).withContext('Breitbild-Media-Query fehlt').toBeGreaterThan(-1);
+    const wide = css.slice(start, css.indexOf('} }', start) + 3);
+    expect(wide).toMatch(/max-width: min\(var\(--(%NS%)?page-max-width-wide, 1880px\), 96vw\)/);
+    expect(wide).toMatch(/--(%NS%)?board-size: clamp\(400px, calc\(100vh - 300px\), 1040px\)/);
+    expect(css.slice(0, start)).not.toContain('1040px');
+  });
   it('lässt die Linienliste nur so hoch wie ihren Inhalt, mit Rahmen als Token', () => {
     expect(css).toMatch(/\.side-panel--fit[^{]*\{ ?height: auto; max-height:/);
     expect(css).not.toContain('#e0e0e0');

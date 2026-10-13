@@ -260,7 +260,15 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
   /** SAN des angeklickten Zugs — die Analyse spielt ihn aufs Brett. */
   @Output() playMove = new EventEmitter<string>();
 
-  readonly open = signal(readOpen());
+  /** Breitbild-Stufe der Analyse (≥ 2400 × 1200 px, u1-rk-analyse-3spalten): dort hat der Explorer eine eigene Spalte
+   *  und steht offen. Auf- und Zuklappen gilt dann nur für diese Sitzung — der gemerkte Zustand für schmale Fenster
+   *  (`rookhub_analysis_explorer_open`) bleibt unberührt. */
+  @Input() set wide(v: boolean) { this.wideMode.set(!!v); }
+
+  private readonly stored = signal(readOpen());
+  private readonly wideMode = signal(false);
+  private readonly wideOpen = signal(true);
+  readonly open = computed(() => this.wideMode() ? this.wideOpen() : this.stored());
   readonly showFilters = signal(false);
   readonly settings = signal<ExplorerSettings>(readExplorerSettings());
   readonly sources = signal<ExplorerSources | null>(null);
@@ -388,8 +396,12 @@ export class OpeningExplorerComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   toggleOpen(): void {
-    this.open.set(!this.open());
-    try { localStorage.setItem(OPEN_KEY, this.open() ? '1' : '0'); } catch { /* nur diese Sitzung */ }
+    if (this.wideMode()) {
+      this.wideOpen.set(!this.wideOpen());
+    } else {
+      this.stored.set(!this.stored());
+      try { localStorage.setItem(OPEN_KEY, this.stored() ? '1' : '0'); } catch { /* nur diese Sitzung */ }
+    }
     this.request();
   }
 

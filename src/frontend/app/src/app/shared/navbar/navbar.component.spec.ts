@@ -383,3 +383,18 @@ describe('NavbarComponent Anmelden/Registrieren behalten das Ziel (UX-020)', () 
     expect((await renderAt('/puzzles/daily/today')).login).toBe('/login?returnUrl=%2Fpuzzles%2Fdaily%2Ftoday');
   });
 });
+
+/** UI-Sweep u1 (u1-rk-navbar-raender): ab 2400 px rückt der Leisteninhalt auf eine 2 400 px breite Mitte. */
+describe('NavbarComponent Breitbild-Stufe (u1-rk-navbar-raender)', () => {
+  const css = ((NavbarComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  it('polstert die Toolbar erst ab 2400 px auf die Mitte, darunter unverändert', () => {
+    const at = css.indexOf('@media (min-width: 2400px)');
+    expect(at).toBeGreaterThan(-1);
+    // Sass schreibt calc() in max() als reinen Ausdruck aus — beides ist gültiges CSS.
+    const m = /mat-toolbar[^{]*\{ ?padding-inline: (max\(16px, (?:calc\()?\(100% - 2400px\) \/ 2\)?\))/.exec(css.slice(at));
+    expect(m).not.toBeNull();
+    expect(CSS.supports('padding-inline', m![1])).toBeTrue();
+    expect(css.slice(0, at)).not.toContain('padding-inline');
+  });
+});
+

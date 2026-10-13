@@ -143,6 +143,11 @@ import { authLinkQuery } from '@rh/core/return-url.util';
       .links, .wide { display: none; }
       .narrow { display: inline-block; }
     }
+    /* UI-Sweep u1 (u1-rk-navbar-raender): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — der Hintergrund bleibt randlos,
+       Marke und Symbole rücken auf eine 2 400 px breite Mitte (statt 1 100 px vom Inhalt entfernt am Fensterrand). */
+    @media (min-width: 2400px) {
+      .tb { padding-inline: max(16px, calc((100% - 2400px) / 2)); }
+    }
   `],
 })
 export class TurnierNavbarComponent {

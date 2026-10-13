@@ -85,6 +85,9 @@ export class TournamentTablesComponent {
   @Input() rounds: number[] = [];
   @Input() selectedRound = 1;
   @Input() selectedTabIndex = 0;
+  /** Breitbild-Stufe (ab 2400 px, u1-t-turnier-paarungen): Paarungen rechts neben Spielern/Teams statt eigenem Reiter.
+   *  Der Container entscheidet (er lädt die Paarungen dann sofort, nicht erst beim Reiterwechsel). */
+  @Input() split = false;
 
   // --- Interaktionen ---
   @Output() tabChange = new EventEmitter<{ index: number }>();

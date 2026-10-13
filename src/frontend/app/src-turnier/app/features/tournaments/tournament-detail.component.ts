@@ -21,6 +21,7 @@ import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentGroup, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 import { requireAccount } from '../../core/require-account';
+import { wideScreen } from '../../core/wide-screen';
 import { TournamentRoundMonitor } from './tournament-round-monitor';
 import { AuthService } from '@rh/core/auth.service';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
@@ -60,6 +61,10 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   favoriteSnrs: Set<number> = new Set();
   favoriteTeamSnrs: Set<number> = new Set();
   selectedTabIndex = 0;
+  /** Ab 2400 px stehen die Paarungen neben den Spielern (u1-t-turnier-paarungen) — dann gleich laden, nicht erst beim Reiter. */
+  readonly split = wideScreen(wide => { if (wide && this.tournament && this.pairings.length === 0) this.loadPairings(); });
+  /** Sind die Paarungen gerade zu sehen? Eigener Reiter oder (ab 2400 px) die rechte Spalte. */
+  private get pairingsShown(): boolean { return this.selectedTabIndex === 2 || this.split(); }
   hasTeamPairings = false;
 
   // Cached display data (refreshed via refreshDisplayed())
@@ -86,7 +91,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
    */
   readonly monitor = new TournamentRoundMonitor(() => this.id, (round) => {
     this.reloadAll();
-    if (this.selectedTabIndex === 2) {
+    if (this.pairingsShown) {
       this.selectedRound = round;
       this.loadPairings();
     }
@@ -166,7 +171,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         }
         this.loadPlayers();
         this.loadTeams();
-        if (this.selectedTabIndex === 2) this.loadPairings();
+        if (this.pairingsShown) this.loadPairings();
       },
       error: (err: unknown) => {
         this.loading = false;
@@ -313,7 +318,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.pairings = [];
     // Aktiven Tab sofort neu laden; inaktive Tabs laden via onTabChange (length === 0) neu.
     if (this.selectedTabIndex === 1) this.loadTeams();
-    else if (this.selectedTabIndex === 2) this.loadPairings();
+    if (this.pairingsShown) this.loadPairings();
   }
 
   onTabChange(event: { index: number }): void {

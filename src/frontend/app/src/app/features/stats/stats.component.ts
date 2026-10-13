@@ -323,7 +323,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
         </div>
 
         @if (ratingBands.length) {
-          <mat-card>
+          <mat-card class="bands-card">
             <mat-card-header><mat-card-title>{{ 'stats.byRating' | translate }}</mat-card-title></mat-card-header>
             <mat-card-content>
               <div class="bands">
@@ -525,6 +525,17 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     }
     mat-card { margin-bottom: 16px; }
     .mode-toggle { margin-bottom: 16px; }
+    /* UI-Sweep u1 (u1-rk-stats-2spalten): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — Seite breiter und zweispaltig:
+       links Elo-Verlauf, Elo pro Stufe und Rating-Histogramm, rechts das Themen-Paar; Kopf, Kennzahlen, Aktivität und
+       letzte Puzzles über die volle Breite. Alle Karten sind direkte Kinder des Containers, daher ohne Umbau des
+       Templates; „dense“ holt das Themen-Paar neben den Elo-Verlauf hoch. */
+    @media (min-width: 2400px) {
+      .stats-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-flow: row dense; column-gap: 16px; align-items: start; }
+      .stats-container > * { grid-column: 1 / -1; }
+      .stats-container > .chart-card, .stats-container > .perlevel-card, .stats-container > .bands-card { grid-column: 1; }
+      .stats-container > .theme-pair { grid-column: 2; grid-row: span 3; }
+    }
   `]
 })
 export class StatsComponent implements OnInit {

@@ -211,4 +211,19 @@ describe('PublicTournamentComponent', () => {
     http.expectNone('/api/subscriptions');
     fixture.destroy();
   });
+
+  // UI-Sweep u1 (u1-t-turnier-paarungen): auf /t/:id genauso — ab 2400 px Paarungen neben den Spielern, gleich geladen
+  it('breit: lädt die Paarungen sofort und zeigt sie neben den Spielern', async () => {
+    spyOn(window, 'matchMedia').and.callFake((q: string) => ({
+      matches: q === '(min-width: 2400px)', media: q,
+      addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {},
+    }) as unknown as MediaQueryList);
+    const { fixture, http, c } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    http.expectOne(r => r.url.startsWith(`/api/tournaments/${id}/pairings`)).flush([]);
+    fixture.detectChanges();
+    expect(c.split()).toBeTrue();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables .split-pairings')).not.toBeNull();
+  });
 });

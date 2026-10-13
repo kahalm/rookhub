@@ -320,6 +320,11 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
       display: grid; gap: 12px;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
+    /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Kartenraster mit 6 Spalten (DESIGN 4.1). */
+    @media (min-width: 2400px) {
+      .courses-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .course-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+    }
   `]
 })
 export class CourseListComponent implements OnInit {

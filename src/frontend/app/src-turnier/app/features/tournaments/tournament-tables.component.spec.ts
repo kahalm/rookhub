@@ -438,4 +438,51 @@ describe('TournamentTablesComponent', () => {
     expect(star.getAttribute('aria-label')).toBe('SK Dornbirn als Favorit');
     expect(star.getAttribute('aria-pressed')).toBe('true');
   });
+
+  // ----- UI-Sweep u1 (u1-t-turnier-paarungen): ab 2400 px Paarungen neben Spielern/Teams -----
+
+  const tabLabels = () => [...fixture.nativeElement.querySelectorAll('.mdc-tab__text-label')]
+    .map((t: Element) => t.textContent?.trim());
+
+  it('breit (split): Spieler und Teams als Reiter links, die Paarungen daneben in eigener Spalte', () => {
+    liga();
+    component.pairingColumns = ['board', 'white', 'result', 'black'];
+    component.displayedPairings = [{ board: 1, white: 'Oberschmid, Patrik', black: 'Muster, Anna', result: '1-0' }];
+    component.split = true;
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(tabLabels()).toEqual(['tournaments.tabs.players', 'tournaments.tabs.teams']);
+    const left = el.querySelector('.split-tables > mat-tab-group.split-left')!;
+    expect(left.querySelector('.player-search')).withContext('Spielerliste links').not.toBeNull();
+    const right = el.querySelector('.split-tables > section.split-pairings')!;
+    expect(right.querySelector('h2')!.textContent).toContain('tournaments.tabs.pairings');
+    expect(right.querySelector('.round-selector')).not.toBeNull();
+    expect(right.querySelector('td.result-cell')!.textContent).toContain('1-0');
+  });
+
+  it('breit: ein auf „Paarungen" stehender Reiter zeigt links die Spieler (die Paarungen stehen ja rechts)', () => {
+    liga();
+    component.split = true;
+    component.selectedTabIndex = 2;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.split-left .player-search')).not.toBeNull();
+  });
+
+  it('schmal (Vorgabe): drei Reiter wie bisher, keine geteilte Ansicht', () => {
+    liga();
+    fixture.detectChanges();
+    expect(tabLabels()).toEqual(['tournaments.tabs.players', 'tournaments.tabs.teams', 'tournaments.tabs.pairings']);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables')).toBeNull();
+  });
+
+  it('CSS: die Zweispalten-Regeln stehen nur in @media (min-width: 2400px)', () => {
+    const css = ((TournamentTablesComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/%NS%/g, '').replace(/\s+/g, '');
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/\.split-tables[^{]*\{display:grid;/);
+    expect(css.slice(at)).toMatch(/\.split-pairings[^{]*\{position:sticky;top:1rem;max-height:calc\(100vh-2rem\);overflow:auto/);
+    expect(css.slice(0, at)).not.toContain('split-');
+  });
 });

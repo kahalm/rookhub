@@ -169,3 +169,22 @@
       /* In der Spielerkarte ohne Layout-Sprung: das negative Margin frisst das Padding wieder auf. */
       .player-club .team-link { display: inline-block; padding: 0.35rem 0; margin: -0.35rem 0; }
     }
+
+    /* Breitbild-Stufe (UI-Sweep u1, u1-t-turnier-paarungen): links Spieler/Teams (Reiter), rechts die Paarungen der gewählten
+       Runde in einem eigenen, klebenden Scroll-Kasten — Tabellenkopf klebt darin. Nur ab 2400 px (Template: split). */
+    @media (min-width: 2400px) {
+      .split-tables {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: 1.5rem;
+        align-items: start;
+      }
+      .split-pairings {
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow: auto;
+      }
+      .split-title { margin: 0.75rem 0 0; font-size: 1.05rem; font-weight: 500; }
+    }
+

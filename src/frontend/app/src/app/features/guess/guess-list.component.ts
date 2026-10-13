@@ -332,6 +332,10 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
   `,
   styles: [`
     .gl-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
+    /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Tabellenseite breiter (DESIGN 4.1). */
+    @media (min-width: 2400px) {
+      .gl-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+    }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
                margin-bottom: 10px; }
     h1 { margin: 0; font-size: 1.5rem; }

@@ -325,6 +325,13 @@ import {
       .nav-login.mat-mdc-button { color: var(--mat-sys-on-primary); }
       .anon-menu { width: 44px; height: 44px; padding: 10px; }
     }
+    /* UI-Sweep u1 (u1-rk-navbar-raender): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — der Hintergrund bleibt randlos,
+       Logo und Symbole rücken auf eine 2 400 px breite Mitte (statt 1 100 px vom Inhalt entfernt am Fensterrand).
+       Kalkulations-Modus: die schwebende Leiste behält ihr 4-px-Polster — die Regel in styles.scss
+       (body.calc-mode app-navbar mat-toolbar) ist spezifischer und gewinnt. */
+    @media (min-width: 2400px) {
+      mat-toolbar { padding-inline: max(16px, calc((100% - 2400px) / 2)); }
+    }
   `]
 })
 export class NavbarComponent implements OnInit {

@@ -9,6 +9,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LeagueApiService } from '@lh/core/league-api.service';
 import { PLAYER_CARD_API } from '@rh/shared/player-card/player-card-api';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
+import { cardDate, cardLang } from '@rh/shared/player-card/card-lang';
 import { PrepAccountsComponent } from './prep-accounts.component';
 import { PrepApiService } from './prep-api.service';
 import { PrepCardApi } from './prep-card-api';
@@ -52,7 +53,7 @@ export function loadCardStyles(doc: Document): void {
         <section class="prep-scope" aria-live="polite">
           <span class="scope-text">
             @if (s.limited) {
-              {{ 'prep.loadedSome' | translate: { loaded: fmt(s.loaded), total: fmt(s.games), since: s.since } }}
+              {{ 'prep.loadedSome' | translate: { loaded: fmt(s.loaded), total: fmt(s.games), since: sinceText(s.since) } }}
             } @else {
               {{ 'prep.loadedAll' | translate: { total: fmt(s.games) } }}
             }
@@ -132,6 +133,12 @@ export class PrepPlayerComponent {
   private open(): void {
     const id = this.id();
     if (id !== null) void this.card().open(String(id), null, null, null);
+  }
+
+  /** „seit …" im Ladestand: das PGN-Datum der API („2003.02.15") über den Datumshelfer der Karte in der Sprache der
+   *  Oberfläche („Feb 15, 2003" / „15.02.2003"), wie die Daten in der Karte selbst (Englisch-Nachprüfung e1). */
+  sinceText(d: string | null | undefined): string {
+    return cardDate(d, cardLang(this.translate));
   }
 
   /** Zahlen in der Schreibweise der gewählten Sprache („3.000" / „3,000"). */

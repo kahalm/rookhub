@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { AuthService } from '@rh/core/auth.service';
 import { MyGamesService } from '@lh/core/my-games.service';
@@ -96,6 +96,20 @@ describe('PrepPlayerComponent', () => {
     expect(api.card).toHaveBeenCalledWith(31252, { all: true, twin: false });
     expect(el().querySelector('.prep-scope button')).toBeNull();
     expect(el().querySelector('.prep-scope')?.textContent).toContain('prep.capped');
+  });
+
+  it('„seit …" im Ladestand in der Sprache der Oberfläche, nicht im PGN-Format (Englisch-Nachprüfung e1)', async () => {
+    await create(card());
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { prep: { loadedSome: 'since {{since}}' } });
+    translate.use('en');
+    await settle();
+    expect(el().querySelector('.prep-scope')?.textContent).toContain('since Oct 11, 2015');
+    expect(el().querySelector('.prep-scope')?.textContent).not.toContain('2015.10.11');
+    translate.setTranslation('de', { prep: { loadedSome: 'seit {{since}}' } });
+    translate.use('de');
+    await settle();
+    expect(el().querySelector('.prep-scope')?.textContent).toContain('seit 11.10.2015');
   });
 
   it('alles geladen: kein Knopf', async () => {

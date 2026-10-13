@@ -32,6 +32,9 @@
     </div>
 
     <div class="side-col">
+      <!-- Ab 2400 px zwei Unterspalten (u1-rk-analyse-3spalten): Engine + Züge | Explorer, Repertoires, FEN/PGN.
+           Darunter sind die Hüllen `display: contents` — die Karten stehen wie bisher untereinander. -->
+      <div class="side-a">
       @if (returnTo) {
         <button mat-stroked-button class="back-btn" (click)="backToPuzzle()">
           <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
@@ -126,12 +129,15 @@
         </mat-card-content>
       </mat-card>
 
+      </div>
+
+      <div class="side-b">
       <!-- Eröffnungs-Explorer (Lichess/Meister, online oder lokal) — nur eingeloggt: die Online-Quelle
            verbraucht das gemeinsame Kontingent des Server-Tokens. Ein Klick spielt den Zug. -->
       @if (auth.isLoggedIn) {
         <mat-card class="explorer-card">
           <mat-card-content>
-            <app-opening-explorer [fen]="currentFen" (playMove)="playRepertoireMoves([$event])" />
+            <app-opening-explorer [fen]="currentFen" [wide]="wideLayout()" (playMove)="playRepertoireMoves([$event])" />
           </mat-card-content>
         </mat-card>
       }
@@ -163,6 +169,7 @@
           <button mat-stroked-button (click)="loadPgn()"><mat-icon>upload</mat-icon> {{ 'analysis.loadPgn' | translate }}</button>
         </mat-card-content>
       </mat-card>
+      </div>
     </div>
   </div>
 </div>

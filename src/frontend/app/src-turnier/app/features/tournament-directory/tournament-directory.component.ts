@@ -26,6 +26,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { ViewStateService } from '@rh/core/view-state.service';
 import { AuthService } from '@rh/core/auth.service';
 import { requireAccount } from '../../core/require-account';
+import { wideScreen } from '../../core/wide-screen';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
@@ -107,6 +108,7 @@ export class TournamentDirectoryComponent implements OnInit {
   filtersOpen = false;
 
   tab: ViewTab = 'list';
+  readonly split = wideScreen(() => this.reload()); // ab 2400 px Liste + Karte unter EINEM Reiter (u1-t-kalender-karte)
   filter: DirectoryFilter = { ...EMPTY_FILTER };
 
   readonly tilesFailed = signal(false);
@@ -530,7 +532,7 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   onTabChange(index: number): void {
-    this.tab = (['list', 'map', 'calendar'] as ViewTab[])[index] ?? 'list';
+    this.tab = ((this.split() ? ['list', 'calendar'] : ['list', 'map', 'calendar']) as ViewTab[])[index] ?? 'list';
     this.reload();
   }
 
@@ -538,8 +540,8 @@ export class TournamentDirectoryComponent implements OnInit {
     if (!this.ready()) return;
     this.page = 1;
     this.storeView();
-    if (this.tab === 'list') this.loadList();
-    if (this.tab === 'map' && this.lastBounds) this.loadPins(this.lastBounds);
+    if (this.tab === 'list' || this.split() && this.tab === 'map') this.loadList();
+    if ((this.tab === 'map' || this.split() && this.tab === 'list') && this.lastBounds) this.loadPins(this.lastBounds);
     if (this.tab === 'calendar') this.loadCalendar();
   }
 

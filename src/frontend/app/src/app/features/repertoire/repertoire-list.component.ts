@@ -217,6 +217,10 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   `,
   styles: [`
     .repertoire-container { padding: 16px; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
+    /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Kartenraster breiter (DESIGN 4.1). */
+    @media (min-width: 2400px) {
+      .repertoire-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+    }
     .header { display: flex; justify-content: space-between; align-items: center; }
     .header { gap: 8px; margin-bottom: 0.75rem; }
     .header h1 { margin: 0; }

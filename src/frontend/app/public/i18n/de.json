@@ -4107,6 +4107,7 @@
     "guestHint": "Suchen und Ansehen geht ohne Konto. Filter als Suchprofil speichern, Turniere merken und Spieler favorisieren braucht eins — es ist kostenlos.",
     "tabs": {
       "list": "Liste",
+      "listAndMap": "Liste & Karte",
       "map": "Karte",
       "calendar": "Kalender"
     },

@@ -3453,7 +3453,7 @@
       "friends": {
         "t": "Friends",
         "p": [
-          "Under “Friends” you search for other users and send friend requests. Incoming requests appear on the “Requests” tab where you can accept or decline them.",
+          "On the “Friends” page, you can search for other users and send friend requests. Incoming requests appear on the “Requests” tab where you can accept or decline them.",
           "Only the recipient of a request can confirm it. Existing friendships can be removed at any time."
         ]
       },
@@ -3512,7 +3512,7 @@
       "stats": {
         "t": "Statistics",
         "p": [
-          "Under ☰ → Account → Statistics you see your puzzle Elo curve and further analysis of your solved puzzles over time."
+          "Your puzzle Elo curve and further analysis of your solved puzzles over time are under ☰ → Account → Statistics."
         ]
       },
       "analysis": {
@@ -3601,7 +3601,7 @@
       "leaderboards": {
         "t": "Leaderboards",
         "p": [
-          "Under ☰ → Community → Leaderboards you see who solved the most puzzles, endless runs, course lines and daily puzzles this week, this month or overall."
+          "The leaderboards under ☰ → Community → Leaderboards show who solved the most puzzles, endless runs, course lines and daily puzzles this week, this month or overall."
         ]
       },
       "chessable": {
@@ -4107,6 +4107,7 @@
     "guestHint": "Searching and browsing works without an account. Saving filters as a search profile, bookmarking tournaments and starring players needs one — it is free.",
     "tabs": {
       "list": "List",
+      "listAndMap": "List & map",
       "map": "Map",
       "calendar": "Calendar"
     },

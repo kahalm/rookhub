@@ -3,6 +3,28 @@
   margin: 0 auto;
   padding: 1rem;
 }
+/* Breitbild-Stufe (UI-Sweep u1, u1-t-kalender-karte): ab 2400 px Liste und Karte nebeneinander unter EINEM Reiter —
+   links die Turnierkarten zweispaltig, rechts die Karte, die beim Scrollen der Liste stehen bleibt (sticky, so hoch wie
+   das Fenster abzüglich Rand). Unter 2400 px gibt es .split-view nicht (Template), die Seite bleibt pixelgleich. */
+@media (min-width: 2400px) {
+  .page { max-width: var(--page-max-width-wide, 1880px); }
+  .split-view {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .split-view .entry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .split-map { position: sticky; top: 1rem; }
+  /* Karte so hoch wie das Fenster abzüglich Rand und Trefferzeile. Die Karte setzt ihre Höhe als Inline-Stil
+     (Eingang `height`, Vorgabe min(70vh, 640px)) — daher !important, nur hier in der geteilten Ansicht. */
+  .split-map ::ng-deep .map-host { height: calc(100vh - 6rem) !important; }
+  /* sticky braucht das Fenster als Scroll-Bezug: die Reiter-Hüllen von mat-tab-group setzen overflow und würden die
+     Karte sonst mitscrollen lassen. Nur solange die geteilte Ansicht offen ist. */
+  mat-tab-group:has(.split-view) ::ng-deep :is(.mat-mdc-tab-body-wrapper, .mat-mdc-tab-body, .mat-mdc-tab-body-content) {
+    overflow: visible;
+  }
+}
 
 .header h1 {
   display: flex;

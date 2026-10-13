@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { requireAccount } from '../../core/require-account';
+import { wideScreen } from '../../core/wide-screen';
 import { TournamentDetailService } from './tournament-detail.service';
 import { PublicTournamentService } from '../../core/public-tournament.service';
 import { MatCardModule } from '@angular/material/card';
@@ -50,6 +51,10 @@ export class PublicTournamentComponent implements OnInit {
   favoriteSnrs: Set<number> = new Set();
   favoriteTeamSnrs: Set<number> = new Set();
   selectedTabIndex = 0;
+  /** Ab 2400 px stehen die Paarungen neben den Spielern (u1-t-turnier-paarungen) — dann gleich laden, nicht erst beim Reiter. */
+  readonly split = wideScreen(wide => { if (wide && this.tournament && this.pairings.length === 0) this.loadPairings(); });
+  /** Sind die Paarungen gerade zu sehen? Eigener Reiter oder (ab 2400 px) die rechte Spalte. */
+  private get pairingsShown(): boolean { return this.selectedTabIndex === 2 || this.split(); }
   hasTeamPairings = false;
 
   // Angezeigte Zeilen (gefiltert + sortiert), neu berechnet in refreshDisplayed()
@@ -104,7 +109,7 @@ export class PublicTournamentComponent implements OnInit {
         }
         this.loadPlayers();
         this.loadTeams();
-        if (this.selectedTabIndex === 2) this.loadPairings();
+        if (this.pairingsShown) this.loadPairings();
       },
       error: () => { this.loading = false; }
     });
@@ -176,7 +181,7 @@ export class PublicTournamentComponent implements OnInit {
     });
     this.loadPlayers();
     this.loadTeams();
-    if (this.selectedTabIndex === 2) {
+    if (this.pairingsShown) {
       this.selectedRound = round;
       this.loadPairings();
     }

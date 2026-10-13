@@ -224,6 +224,16 @@ describe('StatsComponent Layout (z1)', () => {
     const wide = css.slice(css.lastIndexOf('@media (min-width: 1280px)'));
     expect(wide).toMatch(/\.hm-cell[^{]*\{ ?width: 17px; height: 17px/);
   });
+  // UI-Sweep u1 (u1-rk-stats-2spalten): ab 2400 px breiter und zweispaltig, Themen-Paar rechts neben dem Elo-Verlauf.
+  it('wird ab 2400 px breit und zweispaltig (u1-rk-stats-2spalten)', () => {
+    const at = css.indexOf('@media (min-width: 2400px)');
+    expect(at).toBeGreaterThan(-1);
+    const wide = css.slice(at);
+    expect(wide).toMatch(/\.stats-container[^{]*\{ ?max-width: min\(var\(--(%NS%)?page-max-width-wide, 1880px\), 96vw\); display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\); grid-auto-flow: row dense/);
+    expect(wide).toMatch(/> ?\.bands-card[^{]*\{ ?grid-column: 1/);
+    expect(wide).toMatch(/> ?\.theme-pair[^{]*\{ ?grid-column: 2; grid-row: span 3/);
+    expect(css.slice(0, at)).not.toContain('page-max-width-wide');
+  });
   it('nimmt den Kacheln den Karten-Außenabstand (z1-rk-stats-kacheln)', () => {
     expect(css).toMatch(/\.cards[^{]* mat-card[^{]*\{ ?margin: 0/);
   });

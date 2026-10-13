@@ -277,6 +277,13 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       .side-panel { width: 100%; min-width: 0; height: 400px; }
       .side-panel--fit { height: auto; max-height: 400px; }
     }
+    /* u1-rk-repertoire-brett: ab 2400 px die gemeinsame Breitbild-Breite (1 880 px) und ein Brett bis 1 040 px
+       (höchstens Fensterhöhe) — vorher 640 px in 1 240 px, 64 % der Fläche leer. Die Seitenspalte behält ≈ 790 px. */
+    @media (min-width: 2400px) {
+      .detail-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .viewer-layout { --board-size: clamp(400px, calc(100vh - 300px), 1040px); }
+      .side-panel { min-width: 480px; }
+    }
     /* Abfragen ist am Handy ein Symbolknopf; der Name steht im aria-label. */
     .train-label { margin-left: 4px; }
     @media (max-width: 599.98px) {

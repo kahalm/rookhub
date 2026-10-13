@@ -217,6 +217,11 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
   `,
   styles: [`
     .dashboard { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    /* UI-Sweep u1 (u1-rk-dashboard-5spalten): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — 5 Kachelspalten statt 3 in
+       1 200 px; darunter bleibt die Breite unverändert. */
+    @media (min-width: 2400px) {
+      .dashboard { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+    }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .header-actions { display: flex; gap: 0.5rem; }
     .header-actions button mat-icon { margin-right: 0.25rem; }

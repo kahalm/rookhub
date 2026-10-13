@@ -278,91 +278,58 @@
     }
   </ng-template>
 
-  <mat-tab-group [selectedIndex]="tab === 'list' ? 0 : tab === 'map' ? 1 : 2"
+  <mat-tab-group [selectedIndex]="tab === 'calendar' ? (split() ? 1 : 2) : tab === 'map' && !split() ? 1 : 0"
                  (selectedIndexChange)="onTabChange($event)">
-    <mat-tab [label]="'tournamentDirectory.tabs.list' | translate">
-      <div class="tab-body">
-        @if (loading() && entries().length === 0) {
-          <app-loading-spinner />
-        } @else if (listFailed()) {
-          <ng-container *ngTemplateOutlet="loadFailed" />
-        } @else if (entries().length === 0) {
-          <p class="empty-state muted">{{ 'tournamentDirectory.empty' | translate }}</p>
-          <p class="muted profile-line"><ng-container *ngTemplateOutlet="profileNote" /></p>
-        } @else {
-          @if (truncated()) {
-            <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>
-          }
-          <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}<ng-container *ngTemplateOutlet="profileNote" /></p>
-          @if (upcomingEntries().length > 0) {
-            <div class="entry-grid">
-              @for (entry of upcomingEntries(); track trackById($index, entry)) {
-                <mat-card class="entry-card">
-                  <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
-                                       (ignoredChanged)="onIgnoredChanged($event)" />
-                </mat-card>
-              }
-            </div>
-          }
-          @if (ongoingEntries().length > 0) {
-            <section class="ongoing-block" aria-labelledby="ongoing-title">
-              <h2 id="ongoing-title" class="block-title">{{ 'tournamentDirectory.ongoing.title' | translate }}</h2>
-              <p class="muted block-hint">{{ 'tournamentDirectory.ongoing.hint' | translate }}</p>
-              <div class="entry-grid">
-                @for (entry of ongoingEntries(); track trackById($index, entry)) {
-                  <mat-card class="entry-card">
-                    <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
-                                         (ignoredChanged)="onIgnoredChanged($event)" />
-                  </mat-card>
-                }
-              </div>
-            </section>
-          }
-          @if (entries().length < total()) {
-            <div class="more-row">
-              <button mat-stroked-button (click)="loadMore()" [disabled]="loading()">
-                {{ 'tournamentDirectory.loadMore' | translate }}
-              </button>
-            </div>
-          }
-        }
-      </div>
-    </mat-tab>
+    @if (!split()) {
+      <mat-tab [label]="'tournamentDirectory.tabs.list' | translate">
+        <div class="tab-body"><ng-container *ngTemplateOutlet="listView" /></div>
+      </mat-tab>
+    }
 
-    <mat-tab [label]="'tournamentDirectory.tabs.map' | translate">
-      <div class="tab-body">
-        <!-- Die Karte erst, wenn der Umkreis aus dem Suchprofil feststeht: vorher gebaut, hielt sie
-             den gemerkten Ausschnitt fuer einen „ohne Umkreis" und passte beim Eintreffen des
-             Profils auf den ganzen Kreis ein (Codereview 2026-09-29, F6-018). -->
-        @if (tab === 'map' && !ready()) {
-          <app-loading-spinner />
-        } @else if (tab === 'map') {
-          @if (tilesFailed()) {
-            <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
-          }
-          <app-tournament-map [entries]="pins()" [centre]="mapCentre"
-                              [colourBy]="mapColourBy" [initialView]="mapView"
-                              (colourByChange)="onColourByChange($event)"
-                              (boundsChanged)="onBoundsChanged($event)"
-                              (viewChanged)="onMapViewChanged($event)"
-                              (tilesFailed)="onTilesFailed()"
-                              (entryIgnored)="onIgnoredFromMap()"
-                              (entrySelected)="select($event)" />
-          @if (mapTruncated()) {
-            <p class="hint map-truncated">{{ 'tournamentDirectory.mapTruncated' | translate }}</p>
-          }
-          @if (mapFailed()) {
-            <ng-container *ngTemplateOutlet="loadFailed" />
-          } @else {
-            <p class="muted count">
-              {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
-              <!-- Die Karte kennt nur verortete Turniere; ohne den Satz lasen sich „40 in der
-                   Liste, 0 auf der Karte" wie ein Fehler (Codereview F6-007). -->
-              <span class="located-only"> · {{ 'tournamentDirectory.pinsLocatedOnly' | translate }}</span>
-              @if (mapLoading()) { <span> · {{ 'common.loading' | translate }}</span> }
-            </p>
-          }
+    <!-- Ab 2400 px (UI-Sweep u1, u1-t-kalender-karte) ist dieser Reiter „Liste & Karte": links die Liste, rechts die
+         Karte, die beim Scrollen stehen bleibt. Die Karte steht nur HIER im Template (auch schmal), damit es genau
+         eine gibt. -->
+    <mat-tab [label]="split() ? ('tournamentDirectory.tabs.listAndMap' | translate) : ('tournamentDirectory.tabs.map' | translate)">
+      <div class="tab-body" [class.split-view]="split()">
+        @if (split()) {
+          <div class="split-list"><ng-container *ngTemplateOutlet="listView" /></div>
         }
+        <div class="split-map">
+          @if (tab === 'map' || split() && tab === 'list') {
+            <!-- Die Karte erst, wenn der Umkreis aus dem Suchprofil feststeht: vorher gebaut, hielt sie
+                 den gemerkten Ausschnitt fuer einen „ohne Umkreis" und passte beim Eintreffen des
+                 Profils auf den ganzen Kreis ein (Codereview 2026-09-29, F6-018). -->
+            @if (!ready()) {
+              <app-loading-spinner />
+            } @else {
+              @if (tilesFailed()) {
+                <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
+              }
+              <app-tournament-map [entries]="pins()" [centre]="mapCentre"
+                                  [colourBy]="mapColourBy" [initialView]="mapView"
+                                  (colourByChange)="onColourByChange($event)"
+                                  (boundsChanged)="onBoundsChanged($event)"
+                                  (viewChanged)="onMapViewChanged($event)"
+                                  (tilesFailed)="onTilesFailed()"
+                                  (entryIgnored)="onIgnoredFromMap()"
+                                  (entrySelected)="select($event)" />
+              @if (mapTruncated()) {
+                <p class="hint map-truncated">{{ 'tournamentDirectory.mapTruncated' | translate }}</p>
+              }
+              @if (mapFailed()) {
+                <ng-container *ngTemplateOutlet="loadFailed" />
+              } @else {
+                <p class="muted count">
+                  {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
+                  <!-- Die Karte kennt nur verortete Turniere; ohne den Satz lasen sich „40 in der
+                       Liste, 0 auf der Karte" wie ein Fehler (Codereview F6-007). -->
+                  <span class="located-only"> · {{ 'tournamentDirectory.pinsLocatedOnly' | translate }}</span>
+                  @if (mapLoading()) { <span> · {{ 'common.loading' | translate }}</span> }
+                </p>
+              }
+            }
+          }
+        </div>
       </div>
     </mat-tab>
 
@@ -381,6 +348,55 @@
       </div>
     </mat-tab>
   </mat-tab-group>
+
+  <!-- Die Liste als Vorlage: unter 2400 px eigener Reiter, ab 2400 px links neben der Karte (u1-t-kalender-karte) —
+       wer auf der Karte sucht, verliert die Liste nicht mehr. -->
+  <ng-template #listView>
+    @if (loading() && entries().length === 0) {
+      <app-loading-spinner />
+    } @else if (listFailed()) {
+      <ng-container *ngTemplateOutlet="loadFailed" />
+    } @else if (entries().length === 0) {
+      <p class="empty-state muted">{{ 'tournamentDirectory.empty' | translate }}</p>
+      <p class="muted profile-line"><ng-container *ngTemplateOutlet="profileNote" /></p>
+    } @else {
+      @if (truncated()) {
+        <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>
+      }
+      <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}<ng-container *ngTemplateOutlet="profileNote" /></p>
+      @if (upcomingEntries().length > 0) {
+        <div class="entry-grid">
+          @for (entry of upcomingEntries(); track trackById($index, entry)) {
+            <mat-card class="entry-card">
+              <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
+                                   (ignoredChanged)="onIgnoredChanged($event)" />
+            </mat-card>
+          }
+        </div>
+      }
+      @if (ongoingEntries().length > 0) {
+        <section class="ongoing-block" aria-labelledby="ongoing-title">
+          <h2 id="ongoing-title" class="block-title">{{ 'tournamentDirectory.ongoing.title' | translate }}</h2>
+          <p class="muted block-hint">{{ 'tournamentDirectory.ongoing.hint' | translate }}</p>
+          <div class="entry-grid">
+            @for (entry of ongoingEntries(); track trackById($index, entry)) {
+              <mat-card class="entry-card">
+                <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
+                                     (ignoredChanged)="onIgnoredChanged($event)" />
+              </mat-card>
+            }
+          </div>
+        </section>
+      }
+      @if (entries().length < total()) {
+        <div class="more-row">
+          <button mat-stroked-button (click)="loadMore()" [disabled]="loading()">
+            {{ 'tournamentDirectory.loadMore' | translate }}
+          </button>
+        </div>
+      }
+    }
+  </ng-template>
 
   <!-- Ein gescheitertes Laden darf nicht wie „es gibt nichts" aussehen (UX-040): Satz und
        „Wiederholen" statt des Leer-Textes, in Liste, Karte und Kalender gleich. -->

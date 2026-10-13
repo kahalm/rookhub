@@ -3,6 +3,10 @@
   margin: 0 auto;
   padding: 1rem;
 }
+/* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Tabellenseite breiter (DESIGN 4.1). */
+@media (min-width: 2400px) {
+  .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+}
 
 .header h1 {
   display: flex;

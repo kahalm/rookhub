@@ -3763,6 +3763,7 @@
     "guestHint": "Keresni és böngészni fiók nélkül is lehet. A szűrők keresési profilként való mentéséhez, a versenyek megjegyzéséhez és a játékosok kedvencnek jelöléséhez fiók kell — ingyenes.",
     "tabs": {
       "list": "Lista",
+      "listAndMap": "Lista és térkép",
       "map": "Térkép",
       "calendar": "Naptár"
     },

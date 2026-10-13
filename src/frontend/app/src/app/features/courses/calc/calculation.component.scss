@@ -172,9 +172,13 @@
 
   /* Der Spalt trägt jetzt den Vollbild-Knopf des Bretts (Regel in `styles.scss`) — er braucht
      etwas mehr als die üblichen 1rem. */
+  /* u1-rk-calc-luecke: ohne `justify-content` (normal = stretch) fiel der Restplatz eines breiten Fensters in die
+     beiden auto-Spalten — bei 3440 px klebte das Brett links, die Seitenspalte rechts, ≈ 1 070 px Loch dazwischen.
+     Zentriert stehen Brett | Leiste | Seitenspalte als Block zusammen; reicht die Breite nicht, ändert sich nichts. */
   .calc-layout {
     grid-template-columns: auto auto minmax(320px, 980px);
     gap: 0.6rem;
+    justify-content: center;
   }
 
   /* Abzug von der Fensterhöhe: Seitenpolster oben und unten (2 × 0.75rem), die Befehlszeile

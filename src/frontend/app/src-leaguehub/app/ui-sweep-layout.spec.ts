@@ -369,4 +369,37 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(box(doc, 'a2').top).toBe(box(doc, 'a1').top);
     expect(box(doc, 'st').height).toBeLessThan(30);
   });
+
+  // u1-l-fuss-schwebt: auf kurzen Seiten hing die Fußzeile mitten im Bild — jetzt unten am Fenster (wie ClubHub)
+  it('kurze Seite: Fußzeile an der Fensterunterkante, Inhalt und Fuß behalten ihre Breite', async () => {
+    const doc = await render(1400, `<lh-root id="r"><header class="top"><div class="wrap top-row">LeagueHub</div></header>
+      <lh-claim-prompt class="wrap"></lh-claim-prompt><main class="wrap" id="m"><p>Nicht freigeschaltet</p></main>
+      <footer class="wrap foot" id="f"><span>v1</span><a>Impressum</a></footer></lh-root>`);
+    expect(Math.abs(box(doc, 'f').bottom - doc.defaultView!.innerHeight)).toBeLessThan(1);
+    expect(box(doc, 'm').width).toBe(780);
+    expect(box(doc, 'f').width).toBe(780);
+    expect(box(doc, 'f').left).toBe(box(doc, 'm').left);
+  });
+
+  it('lange Seite: Fußzeile folgt dem Inhalt (kein Überlappen)', async () => {
+    const doc = await render(1400, `<lh-root><main class="wrap" id="m"><div style="height:1500px"></div></main>
+      <footer class="wrap foot" id="f"><span>v1</span></footer></lh-root>`);
+    expect(box(doc, 'f').top).toBeGreaterThanOrEqual(box(doc, 'm').bottom);
+  });
+
+  // u1-l-prognose-bretter: ab 2400 px die mittleren Seiten auf die zweite Seitenbreite, die Bretter vierspaltig; darunter
+  // unverändert (1 240 px, zwei Spalten)
+  it('Prognose: ab 2400 px vier Bretter nebeneinander auf 1 880 px, darunter zwei auf 1 240 px', async () => {
+    const boards = Array.from({ length: 8 }, (_, i) => `<li class="board" id="b${i + 1}"><span class="bno">${i + 1}</span></li>`).join('');
+    const body = `<main class="wrap mid" id="m"><ol class="boards">${boards}</ol></main>`;
+    const ultra = await render(2560, body);
+    expect(box(ultra, 'm').width).toBe(1880);
+    expect(box(ultra, 'b4').top).toBe(box(ultra, 'b1').top);
+    expect(box(ultra, 'b5').top).toBeGreaterThan(box(ultra, 'b1').top);
+    frame!.remove();
+    const desk = await render(1920, body);
+    expect(box(desk, 'm').width).toBe(1240);
+    expect(box(desk, 'b2').top).toBe(box(desk, 'b1').top);
+    expect(box(desk, 'b3').top).toBeGreaterThan(box(desk, 'b1').top);
+  });
 });

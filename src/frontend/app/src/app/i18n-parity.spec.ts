@@ -100,6 +100,17 @@ describe('i18n Sprachdateien', () => {
     expect(unbalanced).withContext('en: “ ohne passendes ”').toEqual([]);
   });
 
+  /**
+   * Englisch-Nachprüfung e1 (e1-rk-hilfe-partien-satz): die Hilfe übernahm die deutsche Satzstellung „Unter ☰ → … siehst
+   * du …“ als „Under ☰ → Community → Leaderboards you see …“. Natürlich: „Your … are under ☰ → …“ / „The … under ☰ → …
+   * show …“ — keine Ortsangabe am Satzanfang, an die ohne Komma „you …“ anschließt.
+   */
+  it('en: Hilfesätze ohne deutsche Satzstellung „Under ☰ → … you …“', () => {
+    const bad = Object.entries(en).filter(([, v]) => /\b(?:Under|In) (?:☰|“)[^,.]*? you\b/.test(v))
+      .map(([k, v]) => `${k} = ${v.slice(0, 80)}`);
+    expect(bad).toEqual([]);
+  });
+
   it('alle unterstützten Sprachen sind valides JSON ohne veraltete Keys', async () => {
     for (const lang of SUPPORTED_LANGS) {
       const l = await load(lang);

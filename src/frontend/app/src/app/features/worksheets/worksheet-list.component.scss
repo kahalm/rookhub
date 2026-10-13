@@ -1,4 +1,8 @@
 .wl-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
+/* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Liste breiter (DESIGN 4.1). */
+@media (min-width: 2400px) {
+  .wl-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+}
 .wl-head h1 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
 .wl-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
 .wl-center { display: flex; justify-content: center; padding: 40px; }

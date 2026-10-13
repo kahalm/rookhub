@@ -54,6 +54,12 @@ html.dark-theme {
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 html, body { height: auto; }
+/* Fuß unten (UI-Sweep 2026-10-13, u1-l-fuss-schwebt): wie ClubHub eine Flex-Spalte über die Fensterhöhe, der Inhalt
+   wächst — auf kurzen Seiten hing die Fußzeile sonst direkt unter dem Inhalt mitten im Bild. width: 100%, weil die
+   .wrap-Kinder mit margin: 0 auto sonst auf Inhaltsbreite schrumpfen. */
+lh-root { display: flex; flex-direction: column; min-height: 100dvh; }
+lh-root > .wrap { width: 100%; }
+lh-root > main.wrap { flex: 1 0 auto; }
 body {
   margin: 0;
   background: var(--paper);
@@ -476,6 +482,13 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .tabs a.on { color: var(--ink); border-bottom-color: var(--ink); }
 .wrap.wide { max-width: 1440px; }
 .wrap.mid { max-width: 1240px; }
+/* Breitbild (UI-Sweep 2026-10-13, u1-l-prognose-bretter): ab 2400 px die „mittleren" Seiten (Prognosen, Vereinspartien,
+   Konten …) samt Kopf und Fuß auf die zweite Seitenbreite, die Bretter vierspaltig — eine Begegnung mit 8 Brettern in
+   zwei Reihen statt vier. Darunter bleibt alles wie bisher. Steht bewusst HINTER .wrap.mid und der 1280-px-Regel. */
+@media (min-width: 2400px) {
+  .wrap.mid { max-width: var(--page-max-width-wide, 1880px); }
+  .wrap.mid .boards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 /* Kopf am Handy (UI-Sweep 2026-10-10, l-nav-mobile): Logo + EIN Konto-Knopf (Menü: Name, Verein wechseln, Abmelden), die
    Reiter in EINER waagrecht scrollbaren Zeile, je mindestens 44 px hoch. */
 .account .mob { display: none; }

@@ -24,6 +24,16 @@
 @media (min-width: 1600px) {
   .analysis-page { max-width: min(1680px, 96vw); }
 }
+/* Unterspalten der Seitenleiste: unter 2400 px nur Hüllen ohne eigenes Kästchen — Layout wie zuvor. */
+.side-a, .side-b { display: contents; }
+/* u1-rk-analyse-3spalten: ab 2400 px drei Spalten — Brett bis 1 100 px (höchstens Fensterhöhe), Engine + Züge,
+   Explorer (hier offen) + Repertoires + FEN/PGN. Jede Unterspalte mindestens 440 px. */
+@media (min-width: 2400px) {
+  .analysis-page { max-width: min(2560px, 96vw); }
+  .board-col:not(.editing) { width: min(64vw, calc(100vh - 170px), 1100px, calc(100% - 960px)); }
+  .side-col { flex-direction: row; align-items: flex-start; min-width: 900px; }
+  .side-a, .side-b { display: flex; flex-direction: column; gap: 12px; flex: 1 1 0; min-width: 440px; }
+}
 .back-btn { width: 100%; margin-bottom: 8px; }
 .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
 .controls { display: flex; align-items: center; gap: 2px; }

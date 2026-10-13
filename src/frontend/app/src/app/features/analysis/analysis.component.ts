@@ -19,6 +19,7 @@ import { AnalysisEngineCardComponent, EngineChoice, arrowBrush } from './analysi
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
 import { ExternalEngineService, ExternalEngineInfo, engineTagKey } from './external-engine.service';
+import { mediaSignal } from '../../shared/layout/wide-media';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
@@ -73,6 +74,8 @@ export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
   styleUrl: './analysis.component.scss',
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
+  /** Breitbild-Stufe (u1-rk-analyse-3spalten, ab 2400 px): drei Spalten, der Explorer steht offen in der dritten. */
+  readonly wideLayout = mediaSignal();
   /** Herkunft für den „+"-Knopf (0.749.0): das Analysebrett kennt keine Partie. */
   readonly boardMarkOrigin: MarkOrigin = { context: 'board' };
   /** Zugbaum der Analyse (0.604.0): die Wurzel ist die Ausgangsstellung, `children[0]` jeweils die Fortsetzung. */

@@ -69,6 +69,26 @@ export const SHARED_GAME_STYLES = `
         scrollbar-gutter: stable; padding-right: 2px;
       }
     }
+    /* u1-rk-partie-brett: ab 2400 px vier Spalten — Brett bis 1 080 px (höchstens Fensterhöhe), Zugliste 280 px, die
+       Auswertung zweispaltig (Kurve/Fehler | Repertoire/Meisterpartien, je 400–520 px). Breite: Brett + Zugliste +
+       2 × Seitenspalte + 140 px Abstände/Ränder ≤ 96vw bzw. 2 560 px. */
+    @media (min-width: 2400px) {
+      .shared-page { max-width: min(2560px, 96vw); }
+      .viewer {
+        --side-width: clamp(400px, 16vw, 520px);
+        --board-size: clamp(360px, min(calc(100vh - 250px - var(--recap-room, 0px)), calc(96vw - var(--moves-width) - 2 * var(--side-width) - 140px)), 1080px);
+      }
+      .body { grid-template-columns: var(--board-size) var(--moves-width) calc(2 * var(--side-width) + 20px); }
+      .side-section {
+        display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: min-content;
+        align-content: start; align-items: start; gap: 12px 20px;
+      }
+      .side-section > .review-slot { grid-column: 1; grid-row: 1 / span 2; }
+      .side-section > .pr-slot, .side-section > .similar-slot { grid-column: 2; }
+      /* Noch keine Auswertung: Repertoire und Meisterpartien nebeneinander statt einer leeren linken Hälfte. */
+      .side-section:has(> .review-slot:empty) > .pr-slot,
+      .side-section:has(> .review-slot:empty) > .similar-slot { grid-column: auto; }
+    }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
     .board-wrap app-chess-board { display: block; width: var(--board-size); }

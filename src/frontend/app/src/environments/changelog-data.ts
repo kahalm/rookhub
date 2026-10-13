@@ -8,6 +8,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.762.0", date: "2026-10-13", changes: [
+    { en: "Ultrawide screens (from 2400 px): the analysis board gets three columns with a larger board and the opening explorer open, game and repertoire boards grow up to the window height, the dashboard shows five tile columns, course, repertoire, worksheet and admin lists use more width, statistics go two-column and the header moves towards the content.",
+      de: "Ultrawide-Bildschirme (ab 2400 px): das Analysebrett bekommt drei Spalten mit größerem Brett und offenem Eröffnungsexplorer, Partie- und Repertoire-Brett wachsen bis zur Fensterhöhe, das Dashboard zeigt fünf Kachelspalten, Kurs-, Repertoire-, Aufgabenblatt- und Admin-Listen nutzen mehr Breite, die Statistik wird zweispaltig und die Kopfleiste rückt zum Inhalt." },
+    { en: "Tournament site on ultrawide screens: calendar with list and map side by side, tournament page with standings and pairings side by side. LeagueHub: the footer stays at the bottom on short pages, forecasts show four boards per row on ultrawide screens. Calculation mode: board and line list stay together on wide screens.",
+      de: "Turnierseite auf Ultrawide-Bildschirmen: Kalender mit Liste und Karte nebeneinander, Turnierseite mit Stand und Paarungen nebeneinander. LeagueHub: die Fußzeile bleibt auf kurzen Seiten unten, Prognosen zeigen auf Ultrawide vier Bretter je Zeile. Kalkulations-Modus: Brett und Linienliste bleiben auf breiten Bildschirmen beisammen." },
+    { en: "English: the “since” date in player preparation follows the interface language, and three help sentences read naturally.",
+      de: "Englisch: das „seit“-Datum in der Spielervorbereitung folgt der Oberflächensprache, drei Hilfesätze lesen sich natürlich." },
+  ] },
   { version: "0.761.1", date: "2026-10-13", changes: [
     { en: "Translations on our own server: if the server is switched off right after a restart, a course run now pauses instead of marking every line as failed.", de: "Übersetzungen auf dem eigenen Server: Ist der Server direkt nach einem Neustart abgeschaltet, hält ein Kurs-Lauf jetzt an, statt jede Linie als gescheitert zu verbuchen." },
   ] },

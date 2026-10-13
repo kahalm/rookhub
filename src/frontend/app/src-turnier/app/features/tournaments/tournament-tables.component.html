@@ -1,335 +1,366 @@
-<mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="tabChange.emit($event)">
-  <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
-    @if (playersLoading) {
-      <app-loading-spinner />
-    } @else if (players.length === 0) {
-      <!-- Keine leere Tabelle ohne Grund: vor dem Turnier (Schnellschach-Rallyes) steht auf
-           chess-results oft noch keine Startliste — die Schiedsrichter tragen sie am Morgen ein. -->
-      <p class="empty-state">{{ 'tournaments.players.none' | translate }}</p>
-    } @else {
-      <!-- Suche, Handy-Sortierung und „Nur Favoriten" (Codereview UX-080): bei 178 Spielern fand man
-           den eigenen Namen sonst nur durch Scrollen. Der Favoriten-Schalter steht IMMER da — ohne
-           Stern gesperrt und mit Hinweis, denn genau den Stern setzt man mit Hilfe der Suche. Bei
-           eingeschaltetem Filter bleibt er bedienbar, auch wenn der letzte Stern weg ist. -->
-      <div class="filter-bar player-tools">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="player-search">
-          <mat-label>{{ 'tournaments.players.search' | translate }}</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput type="search" autocomplete="off" [ngModel]="playerQuery" (ngModelChange)="onPlayerQuery($event)" />
-          @if (playerQuery) {
-            <button mat-icon-button matSuffix type="button" class="search-clear" (click)="onPlayerQuery('')"
-                    [attr.aria-label]="'tournaments.players.searchClear' | translate">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
-        <!-- Handy (d2-t-detail-vorlauf): Sortierung und „Nur Favoriten" nicht als eigene 56-px-Zeile, sondern hinter
-             EINEM Knopf neben dem Suchfeld; eine vom Standard abweichende Wahl steht als Chip darunter.
-             Sichtbar beschriftet (z1-t-detail-sortier-knopf, DESIGN 5.4: nackte Symbole erst ≤ 380 px). -->
-        <button mat-stroked-button type="button" class="player-menu-btn" [matMenuTriggerFor]="playerMenu"
-                [appIconLabel]="'tournaments.players.sortFilter' | translate">
-          <mat-icon>swap_vert</mat-icon><span class="btn-label">{{ 'tournaments.players.sortShort' | translate }}</span>
-        </button>
-        <mat-menu #playerMenu="matMenu" xPosition="before">
-          <div class="menu-head" aria-hidden="true">{{ 'tournaments.players.sortBy' | translate }}</div>
-          @for (key of mobileSortKeys; track key) {
-            <button mat-menu-item type="button" role="menuitemradio" class="sort-item" [attr.aria-checked]="mobileSort === key"
-                    (click)="pickMobileSort(key)">
-              <mat-icon>{{ mobileSort === key ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
-              <span>{{ mobileSortLabel(key) | translate }}</span>
-            </button>
-          }
-          <button mat-menu-item type="button" role="menuitemcheckbox" class="fav-item" [attr.aria-checked]="showFavoritesOnly"
-                  [disabled]="!hasFavorites && !showFavoritesOnly" (click)="favoritesToggle.emit(!showFavoritesOnly)">
-            <mat-icon>{{ showFavoritesOnly ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-            <span>{{ 'tournaments.favoritesOnly' | translate }}</span>
-          </button>
-          @if (!hasFavorites && !showFavoritesOnly) {
-            <div class="menu-hint">{{ 'tournaments.favoritesOnlyHint' | translate }}</div>
-          }
-        </mat-menu>
-        <span class="fav-group">
-        <mat-slide-toggle class="favorites-only" [checked]="showFavoritesOnly" [disabled]="!hasFavorites && !showFavoritesOnly"
-                          (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
-        @if (!hasFavorites && !showFavoritesOnly) {
-          <!-- Der Satz stand in 11 px bis an den Rand gequetscht daneben (UI-Sweep t-fav-hint): jetzt hinter „?".
-               Klick/Tipp schaltet den Hinweis, damit er auch am Handy ohne Hover erreichbar ist. -->
-          <button mat-icon-button type="button" class="filter-hint-btn" #favHint="matTooltip"
-                  [matTooltip]="'tournaments.favoritesOnlyHint' | translate"
-                  [attr.aria-label]="'tournaments.favoritesOnlyHint' | translate"
-                  (click)="favHint.toggle()">
-            <mat-icon>help_outline</mat-icon>
+<!-- Ab 2400 px (UI-Sweep u1, u1-t-turnier-paarungen) stehen die Paarungen der gewählten Runde RECHTS neben Spielern bzw.
+     Teams, mit eigenem Scroll-Kasten — bei Live-Turnieren Stand und laufende Runde auf einen Blick. Darunter drei Reiter
+     wie bisher. Die Inhalte stehen je einmal als Vorlage. -->
+@if (split) {
+  <div class="split-tables">
+    <mat-tab-group class="split-left" [selectedIndex]="selectedTabIndex === 2 ? 0 : selectedTabIndex"
+                   (selectedTabChange)="tabChange.emit($event)">
+      <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
+        <ng-container *ngTemplateOutlet="playersPane" />
+      </mat-tab>
+      <mat-tab [label]="'tournaments.tabs.teams' | translate:{ count: teams.length }">
+        <ng-container *ngTemplateOutlet="teamsPane" />
+      </mat-tab>
+    </mat-tab-group>
+    <section class="split-pairings" aria-labelledby="split-pairings-title">
+      <h2 id="split-pairings-title" class="split-title">{{ 'tournaments.tabs.pairings' | translate }}</h2>
+      <ng-container *ngTemplateOutlet="pairingsPane" />
+    </section>
+  </div>
+} @else {
+  <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="tabChange.emit($event)">
+    <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
+      <ng-container *ngTemplateOutlet="playersPane" />
+    </mat-tab>
+    <mat-tab [label]="'tournaments.tabs.teams' | translate:{ count: teams.length }">
+      <ng-container *ngTemplateOutlet="teamsPane" />
+    </mat-tab>
+    <mat-tab [label]="'tournaments.tabs.pairings' | translate">
+      <ng-container *ngTemplateOutlet="pairingsPane" />
+    </mat-tab>
+  </mat-tab-group>
+}
+
+<ng-template #playersPane>
+  @if (playersLoading) {
+    <app-loading-spinner />
+  } @else if (players.length === 0) {
+    <!-- Keine leere Tabelle ohne Grund: vor dem Turnier (Schnellschach-Rallyes) steht auf
+         chess-results oft noch keine Startliste — die Schiedsrichter tragen sie am Morgen ein. -->
+    <p class="empty-state">{{ 'tournaments.players.none' | translate }}</p>
+  } @else {
+    <!-- Suche, Handy-Sortierung und „Nur Favoriten" (Codereview UX-080): bei 178 Spielern fand man
+         den eigenen Namen sonst nur durch Scrollen. Der Favoriten-Schalter steht IMMER da — ohne
+         Stern gesperrt und mit Hinweis, denn genau den Stern setzt man mit Hilfe der Suche. Bei
+         eingeschaltetem Filter bleibt er bedienbar, auch wenn der letzte Stern weg ist. -->
+    <div class="filter-bar player-tools">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="player-search">
+        <mat-label>{{ 'tournaments.players.search' | translate }}</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput type="search" autocomplete="off" [ngModel]="playerQuery" (ngModelChange)="onPlayerQuery($event)" />
+        @if (playerQuery) {
+          <button mat-icon-button matSuffix type="button" class="search-clear" (click)="onPlayerQuery('')"
+                  [attr.aria-label]="'tournaments.players.searchClear' | translate">
+            <mat-icon>close</mat-icon>
           </button>
         }
-        </span>
-      </div>
-      @if (mobileSort !== 'snr' || showFavoritesOnly) {
-        <div class="active-chips">
-          @if (mobileSort !== 'snr') {
-            <button type="button" class="active-chip sort-chip" (click)="pickMobileSort('snr')"
-                    [attr.aria-label]="'tournaments.players.sortReset' | translate">
-              <mat-icon inline>swap_vert</mat-icon> {{ mobileSortLabel(mobileSort) | translate }} <mat-icon inline>close</mat-icon>
-            </button>
-          }
-          @if (showFavoritesOnly) {
-            <button type="button" class="active-chip fav-chip" (click)="favoritesToggle.emit(false)"
-                    [attr.aria-label]="'tournaments.favoritesOnly' | translate">
-              <mat-icon inline>star</mat-icon> {{ 'tournaments.favoritesOnly' | translate }} <mat-icon inline>close</mat-icon>
-            </button>
-          }
-        </div>
-      }
-      @if (playerQuery.trim() && shownPlayers.length === 0) {
-        <p class="empty-state search-none">{{ 'tournaments.players.searchNone' | translate: { query: playerQuery.trim() } }}</p>
-      }
-      <!-- Startlisten ohne Vereinsspalte: auf Knopfdruck ueber die chess-results-Spielersuche
-           nachtragen (ein Abruf je Spieler, dauert Minuten — deshalb nicht von selbst). -->
-      @if (playersWithoutClub > 0 || clubsBusy) {
-        <div class="filter-bar">
-          <button mat-stroked-button type="button" class="fill-clubs" (click)="fillClubs.emit()" [disabled]="clubsBusy"
-                  [matTooltip]="'tournaments.players.fillClubsHint' | translate">
-            <mat-icon>{{ clubsBusy ? 'hourglass_top' : 'group_add' }}</mat-icon>
-            {{ (clubsBusy ? 'tournaments.players.fillClubsRunning' : 'tournaments.players.fillClubs') | translate: { count: playersWithoutClub } }}
-          </button>
-        </div>
-      }
-      <!-- Desktop: full table -->
-      <div class="table-scroll desktop-only">
-        <table mat-table [dataSource]="visiblePlayers" matSort (matSortChange)="onDesktopPlayerSort($event)" class="full-width">
-          <ng-container matColumnDef="fav">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let p">
-              <mat-icon class="fav-icon" [class.fav-active]="isFavorite(p)" (click)="toggleFavorite.emit(p)"
-                        role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleNameAria' | translate: { name: p.name }"
-                        [attr.aria-pressed]="isFavorite(p)"
-                        (keydown.enter)="toggleFavorite.emit(p)" (keydown.space)="$event.preventDefault(); toggleFavorite.emit(p)">
-                {{ isFavorite(p) ? 'star' : 'star_border' }}
-              </mat-icon>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="snr">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.snr' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
-          </ng-container>
-          <ng-container matColumnDef="title">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.title' | translate }}</th>
-            <!-- Nur echte Titel: in manchen Startlisten steht in der Titelspalte etwas anderes („Z56", „N"). -->
-            <td mat-cell *matCellDef="let p">
-              @if (chessTitle(p.title); as t) { {{ t }} } @else { <span class="no-title" aria-hidden="true">—</span> }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.name' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.name }}</td>
-          </ng-container>
-          <ng-container matColumnDef="fideId">
-            <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.fideId' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
-          </ng-container>
-          <ng-container matColumnDef="elo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.elo' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
-          </ng-container>
-          <ng-container matColumnDef="country">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.country' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.country }}</td>
-          </ng-container>
-          <ng-container matColumnDef="team">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club') | translate }}</th>
-            <td mat-cell *matCellDef="let p">
-              @if (p.teamName && hasTeamPairings) {
-                <span class="team-link" (click)="showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span>
-              } @else if (p.teamName) {
-                {{ p.teamName }}
-              } @else if (p.club && !hasTeamPairings) {
-                <!-- Uebernommen, nicht aus DIESER Startliste: kursiv, mit Herkunft. -->
-                <span class="club-derived" [matTooltip]="'tournaments.players.clubFrom' | translate: { source: p.clubSource || '?' }">{{ p.club }}</span>
-              }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="board">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.boardShort' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
-          </ng-container>
-          <!-- Klebender Kopf (d2-t-players-sticky-head): ab Zeile 7 waren Nr., FIDE-ID, Elo und „Br." sonst nicht mehr deutbar. -->
-          <tr mat-header-row *matHeaderRowDef="shownPlayerColumns; sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: shownPlayerColumns;"></tr>
-        </table>
-      </div>
-
-      <!-- Mobile: card list -->
-      <div class="mobile-only player-cards">
-        @for (p of visiblePlayers; track p.snr) {
-          <div class="player-card" (click)="toggleFavorite.emit(p)"
-               role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleNameAria' | translate: { name: p.name }"
-               [attr.aria-pressed]="isFavorite(p)"
-               (keydown.enter)="toggleFavorite.emit(p)" (keydown.space)="$event.preventDefault(); toggleFavorite.emit(p)">
-            <div class="player-main">
-              <mat-icon class="fav-icon-sm" [class.fav-active]="isFavorite(p)">
-                {{ isFavorite(p) ? 'star' : 'star_border' }}
-              </mat-icon>
-              <span class="player-snr">{{ p.snr }}</span>
-              @if (chessTitle(p.title); as t) { <span class="player-title">{{ t }}</span> }
-              <span class="player-name">{{ p.name }}</span>
-            </div>
-            <!-- Elo, Land und Brett in einer Zeile, der Verein darunter in einer eigenen (abgeschnitten mit „…"): ein langer
-                 Vereinsname brach sonst um und liess den Trennpunkt allein am Zeilenende stehen
-                 (UI-Sweep 2026-10-11, r2-t-meta-dot). -->
-            @if (p.elo || p.country || p.boardNumber) {
-              <div class="player-details">
-                @if (p.elo) { <span>{{ p.elo }}</span> }
-                @if (p.country) { <span>{{ p.country }}</span> }
-                @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
-              </div>
-            }
-            <!-- Mobil war der Verein reiner Text: die Aufstellung liess sich auf dem Handy nicht oeffnen, jeder Tipp
-                 toggelte stattdessen den Favoriten (Snackbar + Server-Write). stopPropagation, weil die Karte selbst klickt. -->
-            @if (p.teamName && hasTeamPairings) {
-              <div class="player-club"><span class="team-link" (click)="$event.stopPropagation(); showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span></div>
-            } @else if (p.teamName) {
-              <div class="player-club">{{ p.teamName }}</div>
-            } @else if (p.club && !hasTeamPairings) {
-              <div class="player-club club-derived">{{ p.club }}</div>
-            }
-          </div>
-        }
-      </div>
-      <!-- Lange Startlisten in Portionen (d2-t-players-paging): 222 Spieler waren am Handy 23 Bildschirme, Paarungen
-           und Fuss erreichte man nur durch Dauerscrollen. Bei Suche oder „Nur Favoriten" gilt keine Grenze. -->
-      @if (hiddenPlayerCount > 0) {
-        <div class="more-row">
-          <span class="more-count">{{ 'tournaments.players.shownOf' | translate: { shown: visiblePlayers.length, total: shownPlayers.length } }}</span>
-          <button mat-stroked-button type="button" class="more-players" (click)="showMorePlayers()">
-            {{ 'tournaments.players.showMore' | translate: { count: nextPlayerPortion } }}
-          </button>
-        </div>
-      }
-    }
-  </mat-tab>
-
-  <mat-tab [label]="'tournaments.tabs.teams' | translate:{ count: teams.length }">
-    @if (teamsLoading) {
-      <app-loading-spinner />
-    } @else {
-      @if (hasFavorites) {
-        <div class="filter-bar">
-          <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
-        </div>
-      }
-      <div class="table-scroll">
-        <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort.emit($event)" class="full-width">
-          <ng-container matColumnDef="fav">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <!-- Klick auf der ganzen Zelle (~72x52 px) statt nur auf dem 24-px-Stern: der Teams-Tab hat keine Mobil-Karten.
-                 Tastatur bleibt am Icon (Enter/Space feuern auf einem td keinen click, ein keydown bubbelt keinen click). -->
-            <td mat-cell *matCellDef="let t" class="fav-cell" (click)="toggleTeamFavorite.emit(t)">
-              <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)"
-                        role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleNameAria' | translate: { name: t.name }"
-                        [attr.aria-pressed]="isTeamFavorite(t)"
-                        (keydown.enter)="toggleTeamFavorite.emit(t)" (keydown.space)="$event.preventDefault(); toggleTeamFavorite.emit(t)">
-                {{ isTeamFavorite(t) ? 'star' : 'star_border' }}
-              </mat-icon>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="rank">
-            <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.teams.rank' | translate }}</th>
-            <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
-          </ng-container>
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.team' | translate }}</th>
-            <td mat-cell *matCellDef="let t">
-              <span class="team-link" (click)="showTeamPlayers.emit(t.name)">{{ t.name }}</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="points">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.teams.points' | translate }}</th>
-            <td mat-cell *matCellDef="let t">{{ t.points }}</td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="teamColumns; sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: teamColumns;"></tr>
-        </table>
-      </div>
-    }
-  </mat-tab>
-
-  <mat-tab [label]="'tournaments.tabs.pairings' | translate">
-    <div class="round-selector">
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
-        <mat-select [ngModel]="selectedRound" (selectionChange)="roundChange.emit($event.value)">
-          @for (r of rounds; track r) {
-            <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
-          }
-        </mat-select>
       </mat-form-field>
-      @if (hasFavorites) {
-        <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
+      <!-- Handy (d2-t-detail-vorlauf): Sortierung und „Nur Favoriten" nicht als eigene 56-px-Zeile, sondern hinter
+           EINEM Knopf neben dem Suchfeld; eine vom Standard abweichende Wahl steht als Chip darunter.
+           Sichtbar beschriftet (z1-t-detail-sortier-knopf, DESIGN 5.4: nackte Symbole erst ≤ 380 px). -->
+      <button mat-stroked-button type="button" class="player-menu-btn" [matMenuTriggerFor]="playerMenu"
+              [appIconLabel]="'tournaments.players.sortFilter' | translate">
+        <mat-icon>swap_vert</mat-icon><span class="btn-label">{{ 'tournaments.players.sortShort' | translate }}</span>
+      </button>
+      <mat-menu #playerMenu="matMenu" xPosition="before">
+        <div class="menu-head" aria-hidden="true">{{ 'tournaments.players.sortBy' | translate }}</div>
+        @for (key of mobileSortKeys; track key) {
+          <button mat-menu-item type="button" role="menuitemradio" class="sort-item" [attr.aria-checked]="mobileSort === key"
+                  (click)="pickMobileSort(key)">
+            <mat-icon>{{ mobileSort === key ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+            <span>{{ mobileSortLabel(key) | translate }}</span>
+          </button>
+        }
+        <button mat-menu-item type="button" role="menuitemcheckbox" class="fav-item" [attr.aria-checked]="showFavoritesOnly"
+                [disabled]="!hasFavorites && !showFavoritesOnly" (click)="favoritesToggle.emit(!showFavoritesOnly)">
+          <mat-icon>{{ showFavoritesOnly ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+          <span>{{ 'tournaments.favoritesOnly' | translate }}</span>
+        </button>
+        @if (!hasFavorites && !showFavoritesOnly) {
+          <div class="menu-hint">{{ 'tournaments.favoritesOnlyHint' | translate }}</div>
+        }
+      </mat-menu>
+      <span class="fav-group">
+      <mat-slide-toggle class="favorites-only" [checked]="showFavoritesOnly" [disabled]="!hasFavorites && !showFavoritesOnly"
+                        (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
+      @if (!hasFavorites && !showFavoritesOnly) {
+        <!-- Der Satz stand in 11 px bis an den Rand gequetscht daneben (UI-Sweep t-fav-hint): jetzt hinter „?".
+             Klick/Tipp schaltet den Hinweis, damit er auch am Handy ohne Hover erreichbar ist. -->
+        <button mat-icon-button type="button" class="filter-hint-btn" #favHint="matTooltip"
+                [matTooltip]="'tournaments.favoritesOnlyHint' | translate"
+                [attr.aria-label]="'tournaments.favoritesOnlyHint' | translate"
+                (click)="favHint.toggle()">
+          <mat-icon>help_outline</mat-icon>
+        </button>
+      }
+      </span>
+    </div>
+    @if (mobileSort !== 'snr' || showFavoritesOnly) {
+      <div class="active-chips">
+        @if (mobileSort !== 'snr') {
+          <button type="button" class="active-chip sort-chip" (click)="pickMobileSort('snr')"
+                  [attr.aria-label]="'tournaments.players.sortReset' | translate">
+            <mat-icon inline>swap_vert</mat-icon> {{ mobileSortLabel(mobileSort) | translate }} <mat-icon inline>close</mat-icon>
+          </button>
+        }
+        @if (showFavoritesOnly) {
+          <button type="button" class="active-chip fav-chip" (click)="favoritesToggle.emit(false)"
+                  [attr.aria-label]="'tournaments.favoritesOnly' | translate">
+            <mat-icon inline>star</mat-icon> {{ 'tournaments.favoritesOnly' | translate }} <mat-icon inline>close</mat-icon>
+          </button>
+        }
+      </div>
+    }
+    @if (playerQuery.trim() && shownPlayers.length === 0) {
+      <p class="empty-state search-none">{{ 'tournaments.players.searchNone' | translate: { query: playerQuery.trim() } }}</p>
+    }
+    <!-- Startlisten ohne Vereinsspalte: auf Knopfdruck ueber die chess-results-Spielersuche
+         nachtragen (ein Abruf je Spieler, dauert Minuten — deshalb nicht von selbst). -->
+    @if (playersWithoutClub > 0 || clubsBusy) {
+      <div class="filter-bar">
+        <button mat-stroked-button type="button" class="fill-clubs" (click)="fillClubs.emit()" [disabled]="clubsBusy"
+                [matTooltip]="'tournaments.players.fillClubsHint' | translate">
+          <mat-icon>{{ clubsBusy ? 'hourglass_top' : 'group_add' }}</mat-icon>
+          {{ (clubsBusy ? 'tournaments.players.fillClubsRunning' : 'tournaments.players.fillClubs') | translate: { count: playersWithoutClub } }}
+        </button>
+      </div>
+    }
+    <!-- Desktop: full table -->
+    <div class="table-scroll desktop-only">
+      <table mat-table [dataSource]="visiblePlayers" matSort (matSortChange)="onDesktopPlayerSort($event)" class="full-width">
+        <ng-container matColumnDef="fav">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <mat-icon class="fav-icon" [class.fav-active]="isFavorite(p)" (click)="toggleFavorite.emit(p)"
+                      role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleNameAria' | translate: { name: p.name }"
+                      [attr.aria-pressed]="isFavorite(p)"
+                      (keydown.enter)="toggleFavorite.emit(p)" (keydown.space)="$event.preventDefault(); toggleFavorite.emit(p)">
+              {{ isFavorite(p) ? 'star' : 'star_border' }}
+            </mat-icon>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="snr">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.snr' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
+        </ng-container>
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.title' | translate }}</th>
+          <!-- Nur echte Titel: in manchen Startlisten steht in der Titelspalte etwas anderes („Z56", „N"). -->
+          <td mat-cell *matCellDef="let p">
+            @if (chessTitle(p.title); as t) { {{ t }} } @else { <span class="no-title" aria-hidden="true">—</span> }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.name' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="fideId">
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.fideId' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
+        </ng-container>
+        <ng-container matColumnDef="elo">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.elo' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
+        </ng-container>
+        <ng-container matColumnDef="country">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.country' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.country }}</td>
+        </ng-container>
+        <ng-container matColumnDef="team">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club') | translate }}</th>
+          <td mat-cell *matCellDef="let p">
+            @if (p.teamName && hasTeamPairings) {
+              <span class="team-link" (click)="showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span>
+            } @else if (p.teamName) {
+              {{ p.teamName }}
+            } @else if (p.club && !hasTeamPairings) {
+              <!-- Uebernommen, nicht aus DIESER Startliste: kursiv, mit Herkunft. -->
+              <span class="club-derived" [matTooltip]="'tournaments.players.clubFrom' | translate: { source: p.clubSource || '?' }">{{ p.club }}</span>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="board">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.players.boardShort' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
+        </ng-container>
+        <!-- Klebender Kopf (d2-t-players-sticky-head): ab Zeile 7 waren Nr., FIDE-ID, Elo und „Br." sonst nicht mehr deutbar. -->
+        <tr mat-header-row *matHeaderRowDef="shownPlayerColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: shownPlayerColumns;"></tr>
+      </table>
+    </div>
+
+    <!-- Mobile: card list -->
+    <div class="mobile-only player-cards">
+      @for (p of visiblePlayers; track p.snr) {
+        <div class="player-card" (click)="toggleFavorite.emit(p)"
+             role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleNameAria' | translate: { name: p.name }"
+             [attr.aria-pressed]="isFavorite(p)"
+             (keydown.enter)="toggleFavorite.emit(p)" (keydown.space)="$event.preventDefault(); toggleFavorite.emit(p)">
+          <div class="player-main">
+            <mat-icon class="fav-icon-sm" [class.fav-active]="isFavorite(p)">
+              {{ isFavorite(p) ? 'star' : 'star_border' }}
+            </mat-icon>
+            <span class="player-snr">{{ p.snr }}</span>
+            @if (chessTitle(p.title); as t) { <span class="player-title">{{ t }}</span> }
+            <span class="player-name">{{ p.name }}</span>
+          </div>
+          <!-- Elo, Land und Brett in einer Zeile, der Verein darunter in einer eigenen (abgeschnitten mit „…"): ein langer
+               Vereinsname brach sonst um und liess den Trennpunkt allein am Zeilenende stehen
+               (UI-Sweep 2026-10-11, r2-t-meta-dot). -->
+          @if (p.elo || p.country || p.boardNumber) {
+            <div class="player-details">
+              @if (p.elo) { <span>{{ p.elo }}</span> }
+              @if (p.country) { <span>{{ p.country }}</span> }
+              @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
+            </div>
+          }
+          <!-- Mobil war der Verein reiner Text: die Aufstellung liess sich auf dem Handy nicht oeffnen, jeder Tipp
+               toggelte stattdessen den Favoriten (Snackbar + Server-Write). stopPropagation, weil die Karte selbst klickt. -->
+          @if (p.teamName && hasTeamPairings) {
+            <div class="player-club"><span class="team-link" (click)="$event.stopPropagation(); showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span></div>
+          } @else if (p.teamName) {
+            <div class="player-club">{{ p.teamName }}</div>
+          } @else if (p.club && !hasTeamPairings) {
+            <div class="player-club club-derived">{{ p.club }}</div>
+          }
+        </div>
       }
     </div>
-    @if (pairingsLoading) {
-      <app-loading-spinner />
-    } @else {
-      <!-- Desktop: full table -->
-      <div class="table-scroll desktop-only">
-        <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort.emit($event)" class="full-width">
-          <ng-container matColumnDef="board">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.pairings.board' | translate }}</th>
-            <td mat-cell *matCellDef="let p">{{ p.board }}</td>
-          </ng-container>
-          <ng-container matColumnDef="white">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.home' : 'tournaments.pairings.white') | translate }}</th>
-            <td mat-cell *matCellDef="let p">
+    <!-- Lange Startlisten in Portionen (d2-t-players-paging): 222 Spieler waren am Handy 23 Bildschirme, Paarungen
+         und Fuss erreichte man nur durch Dauerscrollen. Bei Suche oder „Nur Favoriten" gilt keine Grenze. -->
+    @if (hiddenPlayerCount > 0) {
+      <div class="more-row">
+        <span class="more-count">{{ 'tournaments.players.shownOf' | translate: { shown: visiblePlayers.length, total: shownPlayers.length } }}</span>
+        <button mat-stroked-button type="button" class="more-players" (click)="showMorePlayers()">
+          {{ 'tournaments.players.showMore' | translate: { count: nextPlayerPortion } }}
+        </button>
+      </div>
+    }
+  }
+</ng-template>
+
+<ng-template #teamsPane>
+  @if (teamsLoading) {
+    <app-loading-spinner />
+  } @else {
+    @if (hasFavorites) {
+      <div class="filter-bar">
+        <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
+      </div>
+    }
+    <div class="table-scroll">
+      <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort.emit($event)" class="full-width">
+        <ng-container matColumnDef="fav">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <!-- Klick auf der ganzen Zelle (~72x52 px) statt nur auf dem 24-px-Stern: der Teams-Tab hat keine Mobil-Karten.
+               Tastatur bleibt am Icon (Enter/Space feuern auf einem td keinen click, ein keydown bubbelt keinen click). -->
+          <td mat-cell *matCellDef="let t" class="fav-cell" (click)="toggleTeamFavorite.emit(t)">
+            <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)"
+                      role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleNameAria' | translate: { name: t.name }"
+                      [attr.aria-pressed]="isTeamFavorite(t)"
+                      (keydown.enter)="toggleTeamFavorite.emit(t)" (keydown.space)="$event.preventDefault(); toggleTeamFavorite.emit(t)">
+              {{ isTeamFavorite(t) ? 'star' : 'star_border' }}
+            </mat-icon>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="rank">
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.teams.rank' | translate }}</th>
+          <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
+        </ng-container>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.team' | translate }}</th>
+          <td mat-cell *matCellDef="let t">
+            <span class="team-link" (click)="showTeamPlayers.emit(t.name)">{{ t.name }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="points">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.teams.points' | translate }}</th>
+          <td mat-cell *matCellDef="let t">{{ t.points }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="teamColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: teamColumns;"></tr>
+      </table>
+    </div>
+  }
+</ng-template>
+
+<ng-template #pairingsPane>
+  <div class="round-selector">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
+      <mat-select [ngModel]="selectedRound" (selectionChange)="roundChange.emit($event.value)">
+        @for (r of rounds; track r) {
+          <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    @if (hasFavorites) {
+      <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
+    }
+  </div>
+  @if (pairingsLoading) {
+    <app-loading-spinner />
+  } @else {
+    <!-- Desktop: full table -->
+    <div class="table-scroll desktop-only">
+      <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort.emit($event)" class="full-width">
+        <ng-container matColumnDef="board">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.pairings.board' | translate }}</th>
+          <td mat-cell *matCellDef="let p">{{ p.board }}</td>
+        </ng-container>
+        <ng-container matColumnDef="white">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.home' : 'tournaments.pairings.white') | translate }}</th>
+          <td mat-cell *matCellDef="let p">
+            @if (hasTeamPairings) {
+              <span class="team-link" (click)="showTeamPlayers.emit(p.white)">{{ p.white }}</span>
+            } @else {
+              {{ p.white }}
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="result">
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.pairings.result' | translate }}</th>
+          <td mat-cell *matCellDef="let p" class="result-cell">{{ p.result }}</td>
+        </ng-container>
+        <ng-container matColumnDef="black">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.away' : 'tournaments.pairings.black') | translate }}</th>
+          <td mat-cell *matCellDef="let p">
+            @if (hasTeamPairings) {
+              <span class="team-link" (click)="showTeamPlayers.emit(p.black)">{{ p.black }}</span>
+            } @else {
+              {{ p.black }}
+            }
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="pairingColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: pairingColumns;"></tr>
+      </table>
+    </div>
+
+    <!-- Mobile: card list -->
+    <div class="mobile-only pairing-cards">
+      @for (p of displayedPairings; track p.board) {
+        <div class="pairing-card">
+          <span class="pairing-board">{{ p.board }}</span>
+          <div class="pairing-teams">
+            <div class="pairing-team">
               @if (hasTeamPairings) {
                 <span class="team-link" (click)="showTeamPlayers.emit(p.white)">{{ p.white }}</span>
               } @else {
                 {{ p.white }}
               }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="result">
-            <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.pairings.result' | translate }}</th>
-            <td mat-cell *matCellDef="let p" class="result-cell">{{ p.result }}</td>
-          </ng-container>
-          <ng-container matColumnDef="black">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.away' : 'tournaments.pairings.black') | translate }}</th>
-            <td mat-cell *matCellDef="let p">
+            </div>
+            <span class="pairing-result">{{ p.result }}</span>
+            <div class="pairing-team">
               @if (hasTeamPairings) {
                 <span class="team-link" (click)="showTeamPlayers.emit(p.black)">{{ p.black }}</span>
               } @else {
                 {{ p.black }}
               }
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="pairingColumns; sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: pairingColumns;"></tr>
-        </table>
-      </div>
-
-      <!-- Mobile: card list -->
-      <div class="mobile-only pairing-cards">
-        @for (p of displayedPairings; track p.board) {
-          <div class="pairing-card">
-            <span class="pairing-board">{{ p.board }}</span>
-            <div class="pairing-teams">
-              <div class="pairing-team">
-                @if (hasTeamPairings) {
-                  <span class="team-link" (click)="showTeamPlayers.emit(p.white)">{{ p.white }}</span>
-                } @else {
-                  {{ p.white }}
-                }
-              </div>
-              <span class="pairing-result">{{ p.result }}</span>
-              <div class="pairing-team">
-                @if (hasTeamPairings) {
-                  <span class="team-link" (click)="showTeamPlayers.emit(p.black)">{{ p.black }}</span>
-                } @else {
-                  {{ p.black }}
-                }
-              </div>
             </div>
           </div>
-        }
-      </div>
-    }
-  </mat-tab>
-</mat-tab-group>
+        </div>
+      }
+    </div>
+  }
+</ng-template>
