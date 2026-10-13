@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.762.4", date: "2026-10-13", changes: [
+    { en: "Internal: the game page template moved into its own file (no visible change).", de: "Intern: Die Vorlage der Partieseite liegt in einer eigenen Datei (keine sichtbare Änderung)." },
+  ] },
   { version: "0.762.3", date: "2026-10-13", changes: [
     { en: "Internal: LeagueHub styles for online accounts moved into their own file (no visible change).", de: "Intern: LeagueHub-Stile der Online-Konten in eine eigene Datei verschoben (keine sichtbare Änderung)." },
   ] },
