@@ -234,6 +234,12 @@ describe('StatsComponent Layout (z1)', () => {
     expect(wide).toMatch(/> ?\.theme-pair[^{]*\{ ?grid-column: 2; grid-row: span 3/);
     expect(css.slice(0, at)).not.toContain('page-max-width-wide');
   });
+  // alles-voll-2: Umschalter nicht über die volle Breite gezogen; ohne Themen-Paar keine leere rechte Spalte.
+  it('streckt ab 2400 px den Umschalter nicht und nutzt ohne Themen-Paar die volle Breite', () => {
+    const wide = css.slice(css.indexOf('@media (min-width: 2400px)'));
+    expect(wide).toMatch(/> ?\.mode-toggle[^{]*\{ ?justify-self: start/);
+    expect(wide).toMatch(/:not\(:has\(> ?\.theme-pair[^)]*\)\) ?> ?\*[^{]*\{ ?grid-column: 1 ?\/ ?-1/);
+  });
   it('nimmt den Kacheln den Karten-Außenabstand (z1-rk-stats-kacheln)', () => {
     expect(css).toMatch(/\.cards[^{]* mat-card[^{]*\{ ?margin: 0/);
   });

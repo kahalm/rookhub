@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.762.2", date: "2026-10-13", changes: [
+    { en: "Ultrawide screens (from 2400 px): the header lines up with the content, the tournament calendar no longer scrolls sideways and its map fits the window, repertoire cards are wider, the statistics switch is no longer stretched, and tournaments without pairings say so instead of showing an empty table.", de: "Sehr breite Bildschirme (ab 2400 px): Die Kopfleiste fluchtet mit dem Inhalt, der Turnierkalender scrollt nicht mehr seitlich und seine Karte passt ins Fenster, Repertoire-Karten sind breiter, der Statistik-Umschalter ist nicht mehr gestreckt, und Turniere ohne Paarungen sagen das statt eine leere Tabelle zu zeigen." },
+  ] },
   { version: "0.762.1", date: "2026-10-13", changes: [
     { en: "Internal: a test of the game menu no longer fails depending on test order, so new versions reach the test server again.", de: "Intern: Ein Test des Partie-Menüs scheitert nicht mehr je nach Testreihenfolge — neue Versionen kommen wieder auf den Testserver." },
   ] },

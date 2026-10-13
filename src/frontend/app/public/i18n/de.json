@@ -1256,7 +1256,8 @@
       "black": "Schwarz",
       "home": "Heim",
       "away": "Gast",
-      "result": "Ergebnis"
+      "result": "Ergebnis",
+      "none": "chess-results führt für diese Runde noch keine Paarungen. Stehen sie dort, holt „Aktualisieren“ sie ab."
     },
     "monitor": {
       "stopped": "Beobachtung beendet",

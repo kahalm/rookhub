@@ -1256,7 +1256,8 @@
       "black": "Black",
       "home": "Home",
       "away": "Away",
-      "result": "Result"
+      "result": "Result",
+      "none": "chess-results has no pairings for this round yet. Once they are published there, “Refresh” fetches them."
     },
     "monitor": {
       "stopped": "Monitoring stopped",

@@ -460,6 +460,16 @@ describe('TournamentTablesComponent', () => {
     expect(right.querySelector('td.result-cell')!.textContent).toContain('1-0');
   });
 
+  it('breit ohne Paarungen: ein Satz mit Grund statt eines leeren Tabellenkopfs (alles-voll-2)', () => {
+    liga();
+    component.displayedPairings = [];
+    component.split = true;
+    fixture.detectChanges();
+    const right = (fixture.nativeElement as HTMLElement).querySelector('.split-tables > section.split-pairings')!;
+    expect(right.querySelector('.empty-state')!.textContent).toContain('tournaments.pairings.none');
+    expect(right.querySelector('table')).toBeNull();
+  });
+
   it('breit: ein auf „Paarungen" stehender Reiter zeigt links die Spieler (die Paarungen stehen ja rechts)', () => {
     liga();
     component.split = true;

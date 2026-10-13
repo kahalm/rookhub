@@ -16,13 +16,20 @@
   }
   .split-view .entry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split-map { position: sticky; top: 1rem; }
-  /* Karte so hoch wie das Fenster abzüglich Rand und Trefferzeile. Die Karte setzt ihre Höhe als Inline-Stil
+  /* Karte so hoch wie das Fenster abzüglich Kopf, Suchleiste, Reiter und Trefferzeile — auch ganz oben auf der Seite
+     liegen Karte und Legende damit vollständig im Fenster (alles-voll-2: mit 100vh - 6rem endete sie 150 px darunter). Die Karte setzt ihre Höhe als Inline-Stil
      (Eingang `height`, Vorgabe min(70vh, 640px)) — daher !important, nur hier in der geteilten Ansicht. */
-  .split-map ::ng-deep .map-host { height: calc(100vh - 6rem) !important; }
+  .split-map ::ng-deep .map-host { height: calc(100vh - 16rem) !important; }
   /* sticky braucht das Fenster als Scroll-Bezug: die Reiter-Hüllen von mat-tab-group setzen overflow und würden die
      Karte sonst mitscrollen lassen. Nur solange die geteilte Ansicht offen ist. */
-  mat-tab-group:has(.split-view) ::ng-deep :is(.mat-mdc-tab-body-wrapper, .mat-mdc-tab-body, .mat-mdc-tab-body-content) {
+  mat-tab-group:has(.split-view) ::ng-deep :is(.mat-mdc-tab-body, .mat-mdc-tab-body-content) {
     overflow: visible;
+  }
+  /* Die Hülle schneidet waagrecht weiter ab (clip, KEIN Scroll-Container — sticky bleibt am Fenster): sonst ragt der
+     inaktive Reiter „Kalender“ (translateX 100 %) aus der Seite, die dann 4 540 statt 3 440 px breit war. */
+  mat-tab-group:has(.split-view) ::ng-deep .mat-mdc-tab-body-wrapper {
+    overflow-x: clip;
+    overflow-y: visible;
   }
 }
 

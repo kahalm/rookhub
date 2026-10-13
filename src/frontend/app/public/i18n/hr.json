@@ -1256,7 +1256,8 @@
       "black": "Crni",
       "home": "Domaćin",
       "away": "Gost",
-      "result": "Rezultat"
+      "result": "Rezultat",
+      "none": "chess-results još nema parove za ovo kolo. Kad budu objavljeni, „Osvježi“ će ih preuzeti."
     },
     "monitor": {
       "stopped": "Praćenje zaustavljeno",

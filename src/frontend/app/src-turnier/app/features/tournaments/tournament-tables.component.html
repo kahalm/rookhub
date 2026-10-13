@@ -300,6 +300,10 @@
   </div>
   @if (pairingsLoading) {
     <app-loading-spinner />
+  } @else if (displayedPairings.length === 0) {
+    <!-- alles-voll-2: ohne Paarungen stand nur der Tabellenkopf da (ab 2400 px als ganze rechte Spalte) — wie bei den
+         Spielern ein Satz mit Grund und Weg weiter. -->
+    <p class="empty-state">{{ 'tournaments.pairings.none' | translate }}</p>
   } @else {
     <!-- Desktop: full table -->
     <div class="table-scroll desktop-only">

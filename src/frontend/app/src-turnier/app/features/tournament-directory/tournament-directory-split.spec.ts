@@ -127,3 +127,17 @@ describe('TournamentDirectoryComponent Liste + Karte nebeneinander ab 2400 px', 
     expect(css.slice(0, at)).not.toContain('split-');
   });
 });
+
+/** alles-voll-2: Die Seite war ab 2400 px 4 540 px breit (inaktiver Reiter ragte heraus), die Karte endete unter dem
+ *  Fenster. Karma läuft schmal — geprüft wird der CSS-Text der Breitbild-Stufe. */
+describe('TournamentDirectoryComponent Breitbild-CSS', () => {
+  const css = ((TournamentDirectoryComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+  const wide = css.slice(css.indexOf('@media (min-width: 2400px)'));
+  it('schneidet die Reiter-Hülle waagrecht ab (clip statt visible), damit kein Reiter die Seite verbreitert', () => {
+    expect(wide).toMatch(/mat-mdc-tab-body-wrapper[^{]*\{ ?overflow-x: clip; ?overflow-y: visible/);
+    expect(wide).not.toMatch(/:is\([^)]*mat-mdc-tab-body-wrapper/);
+  });
+  it('macht die Karte so hoch, dass sie samt Kopf ins Fenster passt', () => {
+    expect(wide).toContain('height: calc(100vh - 16rem) !important');
+  });
+});

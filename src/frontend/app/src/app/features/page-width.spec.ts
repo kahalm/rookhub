@@ -83,6 +83,13 @@ describe('Breitbild-Stufe ≥ 2400 px (--page-max-width-wide, u1-x-breite-stufe)
     });
   }
 
+  it('Repertoireliste: ab 2400 px breitere Kartenspalten (alles-voll-2: 300 px ergaben sechs Spalten, Titel abgeschnitten)', () => {
+    const css = compactCss(RepertoireListComponent);
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(css.slice(at)).toMatch(/\.repertoire-grid(?:\[[^\]]*\])?\{grid-template-columns:repeat\(auto-fill,minmax\(420px,1fr\)\)/);
+    expect(css).toContain('repeat(auto-fill,minmax(300px,1fr))'); // darunter unverändert
+  });
+
   it('styles.scss: Token = --page-max-width unter 2400 px, 1880 px ab 2400 px', () => {
     const root = getComputedStyle(document.documentElement);
     // Karma läuft 1400 px breit: das Token fällt auf die normale Seitenbreite zurück.

@@ -1000,7 +1000,8 @@
       "black": "Sötét",
       "home": "Hazai",
       "away": "Vendég",
-      "result": "Eredmény"
+      "result": "Eredmény",
+      "none": "A chess-results még nem tartalmaz párosítást ehhez a fordulóhoz. Ha ott megjelennek, a „Frissítés“ letölti őket."
     },
     "monitor": {
       "stopped": "Figyelés leállítva",

@@ -535,6 +535,10 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
       .stats-container > * { grid-column: 1 / -1; }
       .stats-container > .chart-card, .stats-container > .perlevel-card, .stats-container > .bands-card { grid-column: 1; }
       .stats-container > .theme-pair { grid-column: 2; grid-row: span 3; }
+      /* alles-voll-2: der Umschalter zog sich als Rasterkind über die ganze Breite; ohne Themen-Paar (keine Daten) blieb
+         die rechte Spalte leer — dann alles über die volle Breite. */
+      .stats-container > .mode-toggle { justify-self: start; }
+      .stats-container:not(:has(> .theme-pair)) > * { grid-column: 1 / -1; }
     }
   `]
 })
