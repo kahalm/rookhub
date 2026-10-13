@@ -203,7 +203,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .overall { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
     .overall mat-progress-bar { border-radius: 3px; }
     /* a1-rk-ga-intro-zeile: Fließtext ≤ ~75 Zeichen je Zeile (DESIGN 4.6 Regel 4). */
-    .intro { margin: 4px 0 14px; max-width: 75ch; }
+    .intro { margin: 12px 0 14px; max-width: 75ch; }
     .new-card { margin-bottom: 16px; }
     .full { width: 100%; }
     .new-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

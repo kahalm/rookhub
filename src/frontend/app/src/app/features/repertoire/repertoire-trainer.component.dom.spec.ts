@@ -67,9 +67,9 @@ describe('RepertoireTrainerComponent Brettgröße (a1)', () => {
     expect(css).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex:11480px;max-width:min\(820px,(calc\()?100vh-200px\)?\)/);
   });
 
-  it('einspaltig: Brett volle Zeile bis Fensterhöhe − 420 px, Infospalte ohne 520-px-Deckel', () => {
+  it('einspaltig: Brett volle Zeile bis Fensterhöhe − 540 px (Nachprüfung a1: Kommentar + Einprägen-Knopf über der Falz), Infospalte ohne 520-px-Deckel', () => {
     const n = block('@media(max-width:899.98px)');
-    expect(n).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex-basis:100%;max-width:min\(100%,(calc\()?100vh-420px\)?\)/);
+    expect(n).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex-basis:100%;max-width:min\(100%,(calc\()?100vh-540px\)?\)/);
     expect(n).toMatch(/\.side(\[[^\]]*\])?\{max-width:none/);
   });
 

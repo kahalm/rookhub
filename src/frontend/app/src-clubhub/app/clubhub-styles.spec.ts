@@ -248,17 +248,19 @@ describe('clubhub.scss', () => {
   }
 
   // a1-c-groups-meta-separator: Zeitplan (Freitext), Kinderzahl und „zuletzt" liefen ohne Trenner ineinander.
-  it('Metazeile: „· " als ::before ab der zweiten Angabe, nicht vor Chips', () => {
+  // Nachprüfung a1: als ::after am vorigen Element — bricht die Zeile um, steht der Punkt am Zeilenende statt am Anfang.
+  it('Metazeile: „ ·" als ::after vor der nächsten Angabe, nicht vor Chips', () => {
     const el = mount(`<p class="kid-meta"><span>Freitag, 17:00–18:00 neue Mittelschule Schwaz</span><span>2 Kinder</span>
       <span>zuletzt Fr 25.09.</span><span class="chip">im Archiv</span></p>
       <p class="kid-meta att"><a href="#">Anfänger</a><span>Freitag, 25.09.2026</span></p>`);
-    const before = (n: Element) => getComputedStyle(n, '::before').content;
+    const after = (n: Element) => getComputedStyle(n, '::after').content;
     const [first, second, third, chip] = Array.from(el.querySelectorAll('.kid-meta:not(.att) > *'));
-    expect(before(first)).toBe('none');
-    expect(before(second)).toBe('"· "');
-    expect(before(third)).toBe('"· "');
-    expect(before(chip)).toBe('none');
-    expect(before(el.querySelector('.att > span')!)).withContext('Anwesenheit: Link vorn').toBe('"· "');
+    expect(after(first)).toBe('" ·"');
+    expect(after(second)).toBe('" ·"');
+    expect(after(third)).withContext('vor dem Chip kein Trenner').toBe('none');
+    expect(after(chip)).toBe('none');
+    expect(getComputedStyle(second, '::before').content).toBe('none');
+    expect(after(el.querySelector('.att > a')!)).withContext('Anwesenheit: Link vorn').toBe('" ·"');
   });
 
   // a1-c-fold-lead-group-detail-laptop: die Knöpfe rutschten unter Titel und lange Metazeile (Vorlauf 42 %).

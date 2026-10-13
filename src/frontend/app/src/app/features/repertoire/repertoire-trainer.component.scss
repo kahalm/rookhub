@@ -35,7 +35,7 @@
     /* a1-rk-trainer-brett-hoehe: einspaltig (Tablet hochkant) das Brett so hoch, dass Aufgabe und Einprägen-Knopf
      * darunter noch über der Falz stehen; die Infospalte nimmt die volle Breite statt 520 px links. */
     @media (max-width: 899.98px) {
-      app-puzzle-board { flex-basis: 100%; max-width: min(100%, calc(100vh - 420px)); margin: 0 auto; }
+      app-puzzle-board { flex-basis: 100%; max-width: min(100%, calc(100vh - 540px)); margin: 0 auto; }
       .side { max-width: none; }
     }
     /* a1-rk-trainer-ultrawide-brett: Breitbild-Stufe (DESIGN 4.1) — Seite im breiten Token, Brett bis zur

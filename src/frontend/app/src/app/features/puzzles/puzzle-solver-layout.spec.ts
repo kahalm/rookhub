@@ -59,7 +59,8 @@ describe('Löser-Layout (UI-Sweep a1)', () => {
       expect(wide).withContext('Breitbild-Regel vorhanden').not.toBeNull();
       const w = wide!.replace(/\s/g, '');
       expect(w).toContain(`${page.replace(/\s/g, '')}{max-width:min(var(--page-max-width-wide,1880px),96vw)`);
-      expect(w).toContain('.board-section{width:min(100vh-180px,100%-360px-1.5rem)');
+      // Kurs-Löser 200 px (Nachprüfung a1: Zeile „Weiß am Zug“ darunter ließ die Seite 18 px scrollen), sonst 180 px.
+      expect(w).toMatch(/\.board-section\{width:min\(100vh-(180|200)px,100%-360px-1\.5rem\)/);
       expect(w).not.toContain('820px');
     });
 

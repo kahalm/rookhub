@@ -81,6 +81,8 @@ interface CategoryDef {
        vierte Karte allein in der zweiten Zeile (3 + 1). */
     @media (min-width: 600px) { .lb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (min-width: 1100px) { .lb-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    /* Nachprüfung a1: vier Spalten in 1 100 px kürzten die Namen — am PC darf die Seite dafür breiter werden. */
+    @media (min-width: 1400px) { .lb-page { max-width: min(1400px, 96vw); } }
     .lb-card mat-card-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.1em; }
     .lb-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
     /* a1-rk-bestenlisten-eigene-zeile: rechts 12 px Polster — die Einheit klebte an der Kante der getönten eigenen Zeile. */

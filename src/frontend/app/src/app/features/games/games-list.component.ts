@@ -275,7 +275,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; text-wrap: pretty; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
-    .empty-state mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+    .empty-state > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .only-open { margin-top: 4px; }
     .classifier-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
     .filter-field { width: 200px; max-width: 100%; }

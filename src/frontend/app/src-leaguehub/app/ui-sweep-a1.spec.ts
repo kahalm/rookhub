@@ -117,7 +117,7 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep a1', () => {
   // a1-l-vereinspartien-tablet-eroeffnung: am Tablet behielt die Eröffnung nur ≈ 55 px („1.d4 Sf…")
   it('Vereinspartien am Tablet: Eröffnung bleibt lesbar breit, Namen kürzen mit „…", nichts läuft quer', async () => {
     const row = (i: number) => `<tr class="game"><td class="num">2026</td>
-      <td class="side"><button type="button" class="pl" id="w${i}">Baumgartner-Hollenstein, Armin Mag.</button><span class="small"> 1904</span></td>
+      <td class="side"><button type="button" class="pl" id="w${i}">Baumgartner-Hollenstein, Armin Mag.</button><span class="small" id="e${i}"> 1904</span></td>
       <td class="side"><span class="anon">Schwaz</span></td><td class="num">1–0</td>
       <td class="hide-s small opening" id="o${i}">1.d4 Sf6 2.c4 e6 3.Sc3 Lb4 4.Dc2 O-O</td><td class="num hide-s small">46</td>
       <td class="acts"><button class="btn-link">Nachspielen</button></td><td class="card-cell">Karte</td></tr>`;
@@ -125,6 +125,11 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep a1', () => {
       <tbody>${row(1)}${row(2)}</tbody></table></div></main>`);
     expect(box(doc, 'o1').width).toBeGreaterThan(110);
     expect(style(doc, 'w1').textOverflow).toBe('ellipsis');
+    // Nachprüfung a1: die Elo kürzte mit („Name … .“) — sie bleibt ganz sichtbar neben dem gekürzten Namen.
+    expect(style(doc, 'e1').textOverflow).not.toBe('ellipsis');
+    const td = (el(doc, 'e1').parentElement as HTMLElement).getBoundingClientRect();
+    expect(box(doc, 'e1').right).toBeLessThanOrEqual(td.right + 0.5);
+    expect(box(doc, 'e1').width).toBeGreaterThan(20);
     const s = el(doc, 's');
     expect(s.scrollWidth).toBeLessThanOrEqual(s.clientWidth);
   });
@@ -162,5 +167,7 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep a1', () => {
       <b class="scan-clock">0:07</b> <span class="scan-why" id="w">der Leser schaut alle 5 Minuten nach neuen Formularen.</span></p></main>`);
     expect(style(doc, 'w').fontSize).toBe(style(doc, 'p').fontSize);
     expect(doc.defaultView!.getComputedStyle(el(doc, 'w'), '::before').content).toContain('–');
+    // Nachprüfung a1: Angular entfernt den Leerraum vor dem Span — der Strich bringt sein Leerzeichen davor selbst mit.
+    expect(doc.defaultView!.getComputedStyle(el(doc, 'w'), '::before').content).toBe('"\u00a0–\u00a0"');
   });
 });

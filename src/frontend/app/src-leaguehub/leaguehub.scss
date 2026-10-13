@@ -615,8 +615,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
    Eröffnung schrumpfte auf „1.d4 Sf…" — dort kürzen die Namen mit „…" (voller Name im title), die Eröffnung behält ≥ 14ch. */
 @container (min-width: 641px) and (max-width: 960px) {
   .club-table td.side { max-width: 0; width: 22%; overflow: hidden; text-overflow: ellipsis; }
-  .club-table td.side > :is(button.pl, span) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+  .club-table td.side > :is(button.pl, span:not(.small)) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
   .club-table td.opening { width: 26%; min-width: 14ch; }
+  /* Nachprüfung a1: die Elo kürzte mit („Name … .“) — der Name lässt ihr Platz, sie selbst kürzt nie. */
+  .club-table td.side:has(> span.small) > button.pl { max-width: calc(100% - 5.5ch); }
 }
 /* UI-Sweep 2026-10-11 (r2-l-dup-game): Hinweis „möglicherweise doppelt" (nur Verwalter) direkt unter der Partie. */
 .club-table tr.dup-row td { padding: 2px 6px 8px; border-top: 0;
@@ -787,7 +789,7 @@ button.pl:hover { text-decoration-color: var(--ink); }
 }
 .scan-clock { font-variant-numeric: tabular-nums; }
 /* a1-l-formular-wartezeit: Nachsatz der Wartezeile in Textgröße, der Strich hängt am Folgewort (geschütztes Leerzeichen). */
-.scan-why::before { content: "–\00a0"; }
+.scan-why::before { content: "\00a0–\00a0"; } /* Angular entfernt den Leerraum vor dem Span (Nachprüfung a1). */
 .scan-long { margin-top: -6px; }
 .club-table .pl.unknown { text-decoration: underline dotted; text-underline-offset: 3px; color: inherit; }
 /* Großes Foto: die Zeile des gewählten Halbzugs markiert (0.584.0) */

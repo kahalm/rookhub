@@ -246,7 +246,7 @@ html.dark-theme .register > .letter { color: var(--linen-muted); }
 /* Trenner „ · " zwischen den Angaben (a1-c-groups-meta-separator, DESIGN 5.13): der Zeitplan ist Freitext, mit nur 12 px
    Lücke sah man nicht, wo „… neue Mittelschule Schwaz" endet und „2 Kinder" beginnt. Als ::before des folgenden Teils,
    damit er beim Umbruch nie allein am Zeilenende steht; Chips („im Archiv", Gruppen) brauchen keinen. */
-.kid-meta > :not(.chip) + :not(.chip)::before { content: "· "; color: var(--muted); }
+.kid-meta > :not(.chip):has(+ :not(.chip))::after { content: " ·"; color: var(--muted); } /* Trenner am Zeilenende, nicht am Anfang der umgebrochenen Zeile (Nachprüfung a1). */
 .kid-call { text-align: right; min-width: 0; }
 .kid-call a { font-weight: 700; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; min-height: 44px; }
 .kid-call a:hover { text-decoration: underline; }

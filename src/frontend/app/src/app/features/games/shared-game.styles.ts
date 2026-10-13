@@ -62,6 +62,10 @@ export const SHARED_GAME_STYLES = `
       .header { grid-template-columns: auto minmax(0, 1fr); }
       .header:not(:has(.back)) { grid-template-columns: minmax(0, 1fr); }
       .header-actions { grid-column: 1 / -1; justify-content: flex-start; align-items: flex-start; }
+      /* Nachprüfung a1: steht dort nur das ⋮ (Vereinspartie), bleibt es rechts neben dem Titel statt eine eigene Zeile zu belegen. */
+      .header:not(:has(.header-actions > :not(.game-menu, mat-menu))) { grid-template-columns: auto minmax(0, 1fr) auto; }
+      .header:not(:has(.back)):not(:has(.header-actions > :not(.game-menu, mat-menu))) { grid-template-columns: minmax(0, 1fr) auto; }
+      .header-actions:not(:has(> :not(.game-menu, mat-menu))) { grid-column: auto; }
       .analyze-wrap { align-items: flex-start; }
       .analyze-no-engine { text-align: left; }
     }
