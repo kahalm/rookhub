@@ -296,7 +296,8 @@
     "reconstruct": "Partie rekonstruieren",
     "scoresheet": "Partieformular einlesen",
     "prep": "Gegner vorbereiten",
-    "ebooks": "E-Books"
+    "ebooks": "E-Books",
+    "woodpecker": "Woodpecker"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2529,7 +2530,8 @@
         "leaderboards": "Bestenlisten",
         "tournament-calendar": "Turnierkalender",
         "scoresheet": "Partieformular einlesen (Foto)",
-        "ebooks": "E-Book-Bibliothek"
+        "ebooks": "E-Book-Bibliothek",
+        "woodpecker": "Woodpecker-Training"
       }
     },
     "messages": {
@@ -3648,6 +3650,13 @@
         "p": [
           "Die E-Book-Bibliothek sammelt Schachbücher als PDF, EPUB, DJVU und Comic-Archive. PDFs öffnen sich direkt im Browser: durch die Seiten scrollen, zoomen und dort weiterlesen, wo du aufgehört hast – die Seite wird je Buch gemerkt. Andere Formate lädst du herunter.",
           "Jeder Angemeldete kann ein Buch hochladen und bestimmen, wer es sieht: nur du, eine deiner Gruppen oder alle Angemeldeten. Wer hochgeladen hat (und Admins), kann Titel, Autor, Jahr und Schlagworte bearbeiten, die Sichtbarkeit später ändern oder das Buch löschen."
+        ]
+      },
+      "woodpecker": {
+        "t": "Woodpecker",
+        "p": [
+          "Die Woodpecker-Methode (Smith & Tikkanen) trainiert das Erkennen taktischer Muster: dieselben Aufgaben immer wieder lösen, jedes Mal schneller. Wähle einen oder mehrere Kurse und starte ein Training – die Regeln stehen fest wie im Buch.",
+          "Zyklus 1: Du hast vier Wochen, um so viele Aufgaben wie möglich in Kursreihenfolge zu lösen; sie werden dein Satz. Den Beginn kannst du zurückdatieren – was du seitdem in diesen Kursen gelöst hast, zählt mit. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1 Tage). Je Zyklus zählt nur dein erster Versuch an einer Aufgabe. Fertig bist du, sobald du den Satz an einem Tag schaffst, sonst nach dem 7. Zyklus."
         ]
       }
     }
@@ -5359,5 +5368,67 @@
       "evalTitle": "Stockfish-Bewertung für die Seite am Zug"
     },
     "diagrams": "{{n}} Diagramme"
+  },
+  "woodpecker": {
+    "title": "Woodpecker",
+    "new": "Neues Training",
+    "intro": "Dieselben Aufgaben immer wieder, jedes Mal in der halben Zeit – nach der Methode von Smith und Tikkanen.",
+    "rules": "Zyklus 1: vier Wochen – so viele Aufgaben lösen wie möglich, sie werden dein Satz.\n\nDann mindestens einen Tag Pause. Jeder weitere Zyklus: derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1, 1 Tage).\n\nJe Zyklus zählt nur der erste Versuch an einer Aufgabe. Fertig, wenn ein Zyklus höchstens einen Tag dauert, sonst nach Zyklus 7.",
+    "empty": "Noch kein Woodpecker-Training. Wähle einen oder mehrere Kurse, um zu beginnen.",
+    "status": {
+      "solving": "Läuft",
+      "break": "Pause",
+      "ready": "Bereit",
+      "completed": "Abgeschlossen"
+    },
+    "cycleOf": "Zyklus {{n}} von {{max}}",
+    "target": "Ziel {{days}} Tage",
+    "targetOne": "Ziel {{days}} Tag",
+    "changeStart": "Beginn ändern",
+    "finishSet": "Satz jetzt abschließen",
+    "finishSetConfirm": "Den ersten Zyklus jetzt beenden? Dein Satz steht dann mit {{n}} Aufgaben fest.",
+    "deleteConfirm": "Das Training „{{name}}“ mit allen Zyklen löschen?",
+    "setGrowing": "Satz: {{n}} Aufgaben von {{total}}",
+    "setGrowingOne": "Satz: {{n}} Aufgabe von {{total}}",
+    "cycleProgress": "{{done}} von {{total}} erledigt",
+    "overdue": "Frist überschritten",
+    "daysLeft": "noch {{days}} Tage",
+    "daysLeftOne": "noch {{days}} Tag",
+    "breakUntil": "Pause – Zyklus {{n}} kann ab {{at}} beginnen.",
+    "ready": "Zyklus {{n}} ist bereit: {{size}} Aufgaben in {{days}} Tagen.",
+    "readyOne": "Zyklus {{n}} ist bereit: {{size}} Aufgaben in {{days}} Tag.",
+    "completedAt": "Abgeschlossen am {{at}}.",
+    "col": {
+      "cycle": "Zyklus",
+      "puzzles": "Aufgaben",
+      "solved": "Gelöst",
+      "time": "Zeit",
+      "days": "Tage"
+    },
+    "continue": "Weiter lösen",
+    "startCycle": "Zyklus {{n}} starten",
+    "breakReason": "Zwischen zwei Zyklen mindestens einen Tag Pause.",
+    "saveFailed": "Speichern fehlgeschlagen. Bitte noch einmal versuchen.",
+    "puzzles": "{{count}} Aufgaben",
+    "puzzlesOne": "{{count}} Aufgabe",
+    "inSet": "{{n}} im Satz",
+    "inSetOne": "{{n}} im Satz",
+    "toOverview": "Zur Übersicht",
+    "doneCompleted": "Woodpecker abgeschlossen – stark!",
+    "doneCycle": "Zyklus {{n}} ist geschafft. Mach Pause und starte danach den nächsten Zyklus in der Übersicht.",
+    "repeatHint": "Wiederholung – in diesem Zyklus zählt nur dein erster Versuch.",
+    "create": {
+      "title": "Neues Woodpecker-Training",
+      "coursesHint": "Kurse in der Reihenfolge des Ankreuzens – Zyklus 1 geht sie in dieser Reihenfolge durch.",
+      "noCourses": "Du hast noch keinen Kurs mit Aufgaben.",
+      "search": "Kurse suchen",
+      "start": "Beginn von Zyklus 1",
+      "startHint": "Wähle einen früheren Tag, wenn du schon angefangen hast – was du seitdem in diesen Kursen gelöst hast, zählt mit.",
+      "submit": "Training starten",
+      "chooseCourse": "Wähle mindestens einen Kurs."
+    },
+    "start": {
+      "title": "Beginn ändern"
+    }
   }
 }

@@ -110,6 +110,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Endless Puzzle Sync (auth + anon) → `docs/api/endless-puzzle-sync.md`
 - Kurse (auth, gruppen-/admin-gated) → `docs/api/kurse.md`
 - Kurs-Detailseite + Inhaltspflege (auth) → `docs/api/kurs-detailseite-inhaltspflege.md`
+- Woodpecker-Training über Kurse (auth, 0.773.0) — feste Zyklen wie im Buch → `docs/api/woodpecker.md`
 - Aufgabenblätter (auth) — Stellungen sammeln, ordnen, drucken → `docs/api/aufgabenblaetter.md`
 - E-Book-Bibliothek (auth, 0.764.0) — Bücher lesen (PDF im Browser), hochladen, je Buch für Gruppen freigeben → `docs/api/ebooks.md`
 - Kalkulations-Modus (auth) — Stellungen ohne Lösung → `docs/api/kalkulations-modus.md`

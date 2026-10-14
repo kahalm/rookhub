@@ -627,6 +627,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Leiste unten, erst nach dem ersten Doppelklick (0.766.0). Der Trenner dazwischen ist ziehbar (8-px-Griff, 44-px-Trefferfläche,
   ←/→, Doppelklick = Standard; 0.770.0). Diagrammzonen zeigen sich erst beim Überfahren/Fokus.
 
+- Woodpecker (`features/woodpecker/`, 0.773.0): Übersicht als Karten-Raster (`minmax(min(100%, 360px), 1fr)`) — je
+  Training eine Karte mit Status-Abzeichen, Frist und Fortschrittsbalken, die Zyklen als kleine Zahlentabelle (erst
+  nach dem ersten beendeten Zyklus) und genau einer Hauptaktion („Weiter lösen“ / „Zyklus N starten“); in der Pause ist
+  der Knopf gesperrt, der Grund steht darunter. Der Löser benutzt Brett und Status-Karte der Puzzle-Modi.
+
 - `index.html` theme-color `#3f51b5`.
 
 ### 8.2 Turnierseite (`src-turnier/`)
@@ -846,6 +851,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-14 | 0.773.0 | Woodpecker-Übersicht: Karte je Training, eine Hauptaktion je Zustand, gesperrter Start mit Grund darunter | neuer Bereich; die Pause zwischen Zyklen muss sichtbar begründet sein | Woodpecker-Training |
 | 2026-10-14 | 0.772.1 | Kopfleiste fluchtet ab 2400 px mit der Inhaltskante der jeweiligen Seite (gemessenes `--nav-edge`, Rückfall 1 880 px) | Partieseiten 2 510 px, /l /r 1 600, /prep 760 px — Kopf und Inhalt hatten keine gemeinsame Kante | UI-Sweep b1 · b1-rk-kopfleiste-ultrawide-flucht |
 | 2026-10-14 | 0.770.0 | Ziehbarer Trenner Buch | Brett (Breite je Gerät gemerkt) | Bretter und Bücher brauchen je nach Bildschirm andere Anteile | Nutzerwunsch |
 | 2026-10-14 | 0.766.0 | E-Book-Leser zweispaltig mit Brett rechts; Diagrammzonen nur beim Überfahren sichtbar, Doppelklick stellt auf | Buch bleibt ungestört lesbar, das Brett ist ein Werkzeug daneben | E-Book-Diagramme Stufe 1 |

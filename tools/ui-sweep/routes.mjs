@@ -117,6 +117,7 @@ export const ROUTES = [
   r('rookhub', '/notifications', 'user', { main: ['.notif-container .list button.row', '.notif-container .empty-state', '.notif-container app-load-error'] }),
   r('rookhub', '/messages', 'user', { main: ['.msg-container .thread .bubble-row', '.msg-container .empty-state', '.msg-container mat-card.admin-hint', '.msg-container .reply', '.msg-container app-load-error'] }),
   r('rookhub', '/courses', 'user', { main: ['.courses-container .course-grid mat-card.course-card', '.courses-container .empty-state', '.courses-container app-loading-spinner'] }),
+  r('rookhub', '/woodpecker', 'user', { main: ['.plans .plan', '.page .empty-state', '.page app-load-error'] }),
   r('rookhub', '/catalog', 'user', { main: ['.catalog .item-list .item-row', '.catalog mat-card:not(.admin-card) .empty-state', '.catalog mat-card:not(.admin-card) app-load-error', '.catalog mat-card:not(.admin-card) p.empty'] }),
   r('rookhub', '/courses/{bookId}', 'user', { main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
   r('rookhub', '/courses/{bookId}/browse', 'user', { main: COURSE_BROWSE }),
@@ -226,7 +227,7 @@ export const ROUTES = [
 // Bereiche: `./sweep.sh --area kurse,repertoire` prüft nur diese. Die ERSTE passende Regel gewinnt; eine Route
 // ohne Treffer gehört zu „sonstiges". Neue Seite → passt sie nicht in einen Bereich, hier eine Regel ergänzen.
 export const AREAS = [
-  ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url) || /slug/.test(r.label ?? ''))],
+  ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable|woodpecker)/.test(r.url) || /slug/.test(r.label ?? ''))],
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],

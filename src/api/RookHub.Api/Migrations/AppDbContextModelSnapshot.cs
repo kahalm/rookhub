@@ -7984,6 +7984,163 @@ namespace RookHub.Api.Migrations
                     b.ToTable("WeeklyPostAttempts");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerAttempt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AttemptedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BookPuzzleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Cycle")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Solved")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("TimeSeconds")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("BookPuzzleId");
+
+                    b.HasIndex("PlanId", "Cycle", "BookPuzzleId")
+                        .IsUnique();
+
+                    b.ToTable("WoodpeckerAttempts");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerCycle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("WoodpeckerCycles");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("WoodpeckerPlans");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerPlanBook", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("PlanId", "BookId")
+                        .IsUnique();
+
+                    b.ToTable("WoodpeckerPlanBooks");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerSetItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BookPuzzleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("BookPuzzleId");
+
+                    b.HasIndex("PlanId", "BookPuzzleId")
+                        .IsUnique();
+
+                    b.ToTable("WoodpeckerSetItems");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.Worksheet", b =>
                 {
                     b.Property<int>("Id")
@@ -9899,6 +10056,101 @@ namespace RookHub.Api.Migrations
                     b.Navigation("WeeklyPost");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerAttempt", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.BookPuzzle", "BookPuzzle")
+                        .WithMany()
+                        .HasForeignKey("BookPuzzleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.WoodpeckerPlan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("BookPuzzle");
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerCycle", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.WoodpeckerPlan", "Plan")
+                        .WithMany("Cycles")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerPlan", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerPlanBook", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.WoodpeckerPlan", "Plan")
+                        .WithMany("Books")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerSetItem", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.BookPuzzle", "BookPuzzle")
+                        .WithMany()
+                        .HasForeignKey("BookPuzzleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.WoodpeckerPlan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("BookPuzzle");
+
+                    b.Navigation("Plan");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.Worksheet", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
@@ -10061,6 +10313,13 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Sources");
 
                     b.Navigation("Venues");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.WoodpeckerPlan", b =>
+                {
+                    b.Navigation("Books");
+
+                    b.Navigation("Cycles");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Worksheet", b =>

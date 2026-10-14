@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.773.0", date: "2026-10-14", changes: [
+    { en: "New menu item „Woodpecker“ (Training): train with the Woodpecker Method by Smith and Tikkanen on one or more of your courses. The rules are fixed as in the book: in cycle 1 you have four weeks to solve as many puzzles as you can in course order – they become your set. After at least one day off, every further cycle brings the same set in random order in half the time (14, 7, 4, 2, 1, 1 days); only the first attempt per puzzle counts. You are done once a cycle takes one day or less, or after cycle 7.",
+      de: "Neuer Menüpunkt „Woodpecker“ (Training): Training nach der Woodpecker-Methode von Smith und Tikkanen mit einem oder mehreren deiner Kurse. Die Regeln stehen fest wie im Buch: In Zyklus 1 hast du vier Wochen, um in Kursreihenfolge so viele Aufgaben wie möglich zu lösen – sie werden dein Satz. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge in der halben Zeit (14, 7, 4, 2, 1, 1 Tage); je Aufgabe zählt nur der erste Versuch. Fertig, sobald ein Zyklus höchstens einen Tag dauert, sonst nach Zyklus 7." },
+    { en: "Woodpecker: the start can be backdated – everything you solved in the chosen courses since that day counts towards cycle 1, also what you solved in the normal course solver.",
+      de: "Woodpecker: Der Beginn lässt sich zurückdatieren – alles, was du seit diesem Tag in den gewählten Kursen gelöst hast, zählt für Zyklus 1, auch was du im normalen Kurs-Löser gelöst hast." },
+  ] },
   { version: "0.772.2", date: "2026-10-14", changes: [
     { en: "Docs: the design log now names the right version for the header alignment on very wide screens.",
       de: "Doku: das Gestaltungs-Protokoll nennt für die Kopfleisten-Flucht auf sehr breiten Bildschirmen die richtige Version." },

@@ -296,7 +296,8 @@
     "reconstruct": "Reconstruct game",
     "scoresheet": "Read a scoresheet",
     "prep": "Prepare for an opponent",
-    "ebooks": "E-books"
+    "ebooks": "E-books",
+    "woodpecker": "Woodpecker"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2529,7 +2530,8 @@
         "leaderboards": "Leaderboards",
         "tournament-calendar": "Tournament calendar",
         "scoresheet": "Read a scoresheet (photo)",
-        "ebooks": "E-book library"
+        "ebooks": "E-book library",
+        "woodpecker": "Woodpecker training"
       }
     },
     "messages": {
@@ -3648,6 +3650,13 @@
         "p": [
           "The e-book library holds chess books as PDF, EPUB, DJVU and comic archives. PDFs open right in the browser: scroll through the pages, zoom, and jump back to where you stopped – the page you were on is remembered per book. Other formats are downloaded.",
           "Anyone signed in can upload a book and decide who sees it: only you, one of your groups, or all signed-in users. The uploader (and admins) can edit title, author, year and tags, change the visibility later or delete the book."
+        ]
+      },
+      "woodpecker": {
+        "t": "Woodpecker",
+        "p": [
+          "The Woodpecker Method (Smith & Tikkanen) trains tactical pattern recognition by solving the same puzzles over and over, faster each time. Pick one or more courses and start a training – the rules are fixed as in the book.",
+          "Cycle 1: you have four weeks to solve as many puzzles as you can, in course order; they become your set. You may backdate the start – what you solved in these courses since then counts. After at least one day off, each further cycle brings the same set in random order and has half the time (14, 7, 4, 2, 1 days). Only your first attempt per puzzle counts in a cycle. You are done once you solve the set within one day, or after the 7th cycle."
         ]
       }
     }
@@ -5359,5 +5368,67 @@
       "evalTitle": "Stockfish evaluation for the side to move"
     },
     "diagrams": "{{n}} diagrams"
+  },
+  "woodpecker": {
+    "title": "Woodpecker",
+    "new": "New training",
+    "intro": "The same puzzles again and again, each time in half the time – after the method by Smith and Tikkanen.",
+    "rules": "Cycle 1: four weeks – solve as many puzzles as you can, they become your set.\n\nThen at least one day off. Each further cycle: the same set in random order, in half the time (14, 7, 4, 2, 1, 1 days).\n\nOnly the first attempt per puzzle counts in each cycle. Done when a cycle takes one day or less, or after cycle 7.",
+    "empty": "No Woodpecker training yet. Pick one or more courses to start.",
+    "status": {
+      "solving": "In progress",
+      "break": "Break",
+      "ready": "Ready",
+      "completed": "Completed"
+    },
+    "cycleOf": "Cycle {{n}} of {{max}}",
+    "target": "target {{days}} days",
+    "targetOne": "target {{days}} day",
+    "changeStart": "Change start",
+    "finishSet": "Close set now",
+    "finishSetConfirm": "Close the first cycle now? Your set will then be fixed at {{n}} puzzles.",
+    "deleteConfirm": "Delete the training “{{name}}” with all cycles?",
+    "setGrowing": "Set: {{n}} puzzles of {{total}}",
+    "setGrowingOne": "Set: {{n}} puzzle of {{total}}",
+    "cycleProgress": "{{done}} of {{total}} done",
+    "overdue": "Deadline passed",
+    "daysLeft": "{{days}} days left",
+    "daysLeftOne": "{{days}} day left",
+    "breakUntil": "Break – cycle {{n}} can start from {{at}}.",
+    "ready": "Cycle {{n}} is ready: {{size}} puzzles in {{days}} days.",
+    "readyOne": "Cycle {{n}} is ready: {{size}} puzzles in {{days}} day.",
+    "completedAt": "Completed on {{at}}.",
+    "col": {
+      "cycle": "Cycle",
+      "puzzles": "Puzzles",
+      "solved": "Solved",
+      "time": "Time",
+      "days": "Days"
+    },
+    "continue": "Continue",
+    "startCycle": "Start cycle {{n}}",
+    "breakReason": "Take at least one day off between cycles.",
+    "saveFailed": "Could not save. Please try again.",
+    "puzzles": "{{count}} puzzles",
+    "puzzlesOne": "{{count}} puzzle",
+    "inSet": "{{n}} in the set",
+    "inSetOne": "{{n}} in the set",
+    "toOverview": "To the overview",
+    "doneCompleted": "Woodpecker completed – well done!",
+    "doneCycle": "Cycle {{n}} is finished. Take a break, then start the next cycle in the overview.",
+    "repeatHint": "Repetition – only your first attempt counts in this cycle.",
+    "create": {
+      "title": "New Woodpecker training",
+      "coursesHint": "Courses in the order you tick them – cycle 1 goes through them in this order.",
+      "noCourses": "You have no course with puzzles yet.",
+      "search": "Search courses",
+      "start": "Start of cycle 1",
+      "startHint": "Choose an earlier day if you have already started – what you solved in these courses since then counts.",
+      "submit": "Start training",
+      "chooseCourse": "Choose at least one course."
+    },
+    "start": {
+      "title": "Change start"
+    }
   }
 }

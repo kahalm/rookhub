@@ -281,6 +281,7 @@ try
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<DailyLeaderboardService>();
     builder.Services.AddScoped<CourseService>();
+    builder.Services.AddScoped<WoodpeckerService>();
     builder.Services.AddScoped<CoursePgnExportService>();
     // Kinderseite: Stufen-Leiter aus besonders einfachen Lichess-Puzzles + Kinderkurse.
     builder.Services.AddScoped<KidsPuzzleService>();

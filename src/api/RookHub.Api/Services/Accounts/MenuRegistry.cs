@@ -35,6 +35,7 @@ public static class MenuRegistry
         new MenuItemDef("ebooks", MenuVisibilityLevel.Registered),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),
+        new MenuItemDef("woodpecker", MenuVisibilityLevel.Registered),
         new MenuItemDef("catalog", MenuVisibilityLevel.Registered),
         new MenuItemDef("leaderboards", MenuVisibilityLevel.Registered),
         new MenuItemDef("stats", MenuVisibilityLevel.Registered),

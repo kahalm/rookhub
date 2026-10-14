@@ -65,6 +65,7 @@ public class ProfileServiceTests : IDisposable
         ["CourseFlashcardMarks"] = "Markierungen ohne PII",
         ["RepertoireFlashcardMarks"] = "Markierungen ohne PII",
         ["CoursePins"] = "Markierungen ohne PII",
+        ["WoodpeckerPlans"] = "Trainingsplan ohne PII (Name = Kursnamen), Zyklen/Versuche hängen am Plan",
         ["AdminMessages"] = "Konversation mit dem Admin-Team (Nachweis; wird beim Löschen des Threads entfernt)",
         ["MessageThreads"] = "Metadaten der Admin-Konversation",
         ["CiBuildReports"] = "kein Nutzerbezug (Repo-Zeile)",

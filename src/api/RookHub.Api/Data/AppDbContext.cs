@@ -167,6 +167,11 @@ public partial class AppDbContext : DbContext
     public DbSet<AnonymousChessableReviewLine> AnonymousChessableReviewLines => Set<AnonymousChessableReviewLine>();
     public DbSet<ChessableSessionMove> ChessableSessionMoves => Set<ChessableSessionMove>();
     public DbSet<CourseFlashcardMark> CourseFlashcardMarks => Set<CourseFlashcardMark>();
+    public DbSet<WoodpeckerPlan> WoodpeckerPlans => Set<WoodpeckerPlan>();
+    public DbSet<WoodpeckerPlanBook> WoodpeckerPlanBooks => Set<WoodpeckerPlanBook>();
+    public DbSet<WoodpeckerCycle> WoodpeckerCycles => Set<WoodpeckerCycle>();
+    public DbSet<WoodpeckerSetItem> WoodpeckerSetItems => Set<WoodpeckerSetItem>();
+    public DbSet<WoodpeckerAttempt> WoodpeckerAttempts => Set<WoodpeckerAttempt>();
     public DbSet<RepertoireFlashcardMark> RepertoireFlashcardMarks => Set<RepertoireFlashcardMark>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<ActivityPreset> ActivityPresets => Set<ActivityPreset>();

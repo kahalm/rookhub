@@ -296,7 +296,8 @@
     "reconstruct": "Rekonstrukcija partije",
     "scoresheet": "Učitaj zapisnik partije",
     "prep": "Priprema za protivnika",
-    "ebooks": "E-knjige"
+    "ebooks": "E-knjige",
+    "woodpecker": "Woodpecker"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -2529,7 +2530,8 @@
         "leaderboards": "Ljestvice",
         "tournament-calendar": "Kalendar turnira",
         "scoresheet": "Učitaj zapisnik partije (fotografija)",
-        "ebooks": "Knjižnica e-knjiga"
+        "ebooks": "Knjižnica e-knjiga",
+        "woodpecker": "Woodpecker trening"
       }
     },
     "messages": {
@@ -3648,6 +3650,13 @@
         "p": [
           "Knjižnica e-knjiga sadrži šahovske knjige kao PDF, EPUB, DJVU i stripovske arhive. PDF-ovi se otvaraju izravno u pregledniku: listaj stranice, zumiraj i nastavi gdje si stao – stranica se pamti za svaku knjigu. Ostale formate preuzimaš.",
           "Svatko tko je prijavljen može prenijeti knjigu i odlučiti tko je vidi: samo ti, jedna od tvojih grupa ili svi prijavljeni. Tko je prenio (i administratori) može urediti naslov, autora, godinu i oznake, kasnije promijeniti vidljivost ili izbrisati knjigu."
+        ]
+      },
+      "woodpecker": {
+        "t": "Woodpecker",
+        "p": [
+          "Woodpecker metoda (Smith i Tikkanen) trenira prepoznavanje taktičkih uzoraka: iste zadatke rješavaš uvijek iznova, svaki put brže. Odaberi jedan ili više tečajeva i pokreni trening – pravila su fiksna kao u knjizi.",
+          "Ciklus 1: imaš četiri tjedna da riješiš što više zadataka redoslijedom tečaja; oni postaju tvoj set. Početak možeš pomaknuti unatrag – računa se ono što si od tada riješio u tim tečajevima. Nakon barem jednog dana pauze svaki sljedeći ciklus donosi isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1 dan). U ciklusu se računa samo tvoj prvi pokušaj po zadatku. Gotov si kad set riješiš unutar jednog dana, inače nakon 7. ciklusa."
         ]
       }
     }
@@ -5359,5 +5368,67 @@
       "evalTitle": "Ocjena Stockfisha za stranu na potezu"
     },
     "diagrams": "Dijagrama: {{n}}"
+  },
+  "woodpecker": {
+    "title": "Woodpecker",
+    "new": "Novi trening",
+    "intro": "Isti zadaci uvijek iznova, svaki put u pola vremena – po metodi Smitha i Tikkanena.",
+    "rules": "Ciklus 1: četiri tjedna – riješi što više zadataka, oni postaju tvoj set.\n\nZatim barem jedan dan pauze. Svaki sljedeći ciklus: isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1, 1 dan).\n\nU svakom ciklusu računa se samo prvi pokušaj po zadatku. Gotovo kad ciklus traje najviše jedan dan, inače nakon ciklusa 7.",
+    "empty": "Još nema Woodpecker treninga. Odaberi jedan ili više tečajeva za početak.",
+    "status": {
+      "solving": "U tijeku",
+      "break": "Pauza",
+      "ready": "Spremno",
+      "completed": "Završeno"
+    },
+    "cycleOf": "Ciklus {{n}} od {{max}}",
+    "target": "cilj {{days}} dana",
+    "targetOne": "cilj {{days}} dan",
+    "changeStart": "Promijeni početak",
+    "finishSet": "Zaključi set sada",
+    "finishSetConfirm": "Završiti prvi ciklus sada? Tvoj set tada ostaje na {{n}} zadataka.",
+    "deleteConfirm": "Obrisati trening „{{name}}“ sa svim ciklusima?",
+    "setGrowing": "Set: {{n}} zadataka od {{total}}",
+    "setGrowingOne": "Set: {{n}} zadatak od {{total}}",
+    "cycleProgress": "{{done}} od {{total}} riješeno",
+    "overdue": "Rok je prošao",
+    "daysLeft": "još {{days}} dana",
+    "daysLeftOne": "još {{days}} dan",
+    "breakUntil": "Pauza – ciklus {{n}} može početi od {{at}}.",
+    "ready": "Ciklus {{n}} je spreman: {{size}} zadataka u {{days}} dana.",
+    "readyOne": "Ciklus {{n}} je spreman: {{size}} zadataka u {{days}} dan.",
+    "completedAt": "Završeno {{at}}.",
+    "col": {
+      "cycle": "Ciklus",
+      "puzzles": "Zadaci",
+      "solved": "Riješeno",
+      "time": "Vrijeme",
+      "days": "Dani"
+    },
+    "continue": "Nastavi",
+    "startCycle": "Pokreni ciklus {{n}}",
+    "breakReason": "Između dva ciklusa barem jedan dan pauze.",
+    "saveFailed": "Spremanje nije uspjelo. Pokušaj ponovno.",
+    "puzzles": "{{count}} zadataka",
+    "puzzlesOne": "{{count}} zadatak",
+    "inSet": "{{n}} u setu",
+    "inSetOne": "{{n}} u setu",
+    "toOverview": "Na pregled",
+    "doneCompleted": "Woodpecker završen – bravo!",
+    "doneCycle": "Ciklus {{n}} je gotov. Odmori se, zatim pokreni sljedeći ciklus u pregledu.",
+    "repeatHint": "Ponavljanje – u ovom ciklusu računa se samo tvoj prvi pokušaj.",
+    "create": {
+      "title": "Novi Woodpecker trening",
+      "coursesHint": "Tečajevi redoslijedom označavanja – ciklus 1 prolazi ih tim redom.",
+      "noCourses": "Još nemaš tečaj sa zadacima.",
+      "search": "Traži tečajeve",
+      "start": "Početak ciklusa 1",
+      "startHint": "Odaberi raniji dan ako si već počeo – računa se ono što si od tada riješio u tim tečajevima.",
+      "submit": "Pokreni trening",
+      "chooseCourse": "Odaberi barem jedan tečaj."
+    },
+    "start": {
+      "title": "Promijeni početak"
+    }
   }
 }

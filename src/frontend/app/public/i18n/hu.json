@@ -119,7 +119,8 @@
     "reconstruct": "Játszma rekonstruálása",
     "scoresheet": "Játszmalap beolvasása",
     "prep": "Felkészülés ellenfélre",
-    "ebooks": "E-könyvek"
+    "ebooks": "E-könyvek",
+    "woodpecker": "Woodpecker"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -2120,7 +2121,8 @@
         "leaderboards": "Ranglisták",
         "tournament-calendar": "Versenynaptár",
         "scoresheet": "Játszmalap beolvasása (fénykép)",
-        "ebooks": "E-könyvtár"
+        "ebooks": "E-könyvtár",
+        "woodpecker": "Woodpecker-edzés"
       }
     },
     "messages": {
@@ -4482,6 +4484,13 @@
           "Az e-könyvtár sakk-könyveket gyűjt PDF, EPUB, DJVU és képregény-archívum formában. A PDF-ek közvetlenül a böngészőben nyílnak meg: lapozz, nagyíts, és folytasd ott, ahol abbahagytad – az oldalt könyvenként megjegyezzük. A többi formátumot letöltheted.",
           "Bárki, aki be van jelentkezve, feltölthet könyvet, és eldöntheti, ki látja: csak te, az egyik csoportod vagy minden bejelentkezett. A feltöltő (és az adminisztrátorok) szerkesztheti a címet, szerzőt, évet és címkéket, később módosíthatja a láthatóságot vagy törölheti a könyvet."
         ]
+      },
+      "woodpecker": {
+        "t": "Woodpecker",
+        "p": [
+          "A Woodpecker-módszer (Smith és Tikkanen) a taktikai minták felismerését edzi: ugyanazokat a feladatokat oldod meg újra és újra, minden alkalommal gyorsabban. Válassz egy vagy több tanfolyamot, és indíts edzést – a szabályok rögzítettek, mint a könyvben.",
+          "1. ciklus: négy heted van, hogy a tanfolyamok sorrendjében minél több feladatot megoldj; ezek lesznek a sorozatod. A kezdést visszadátumozhatod – ami azóta ezekben a tanfolyamokban megoldottál, beszámít. Legalább egy nap szünet után minden további ciklus ugyanazt a sorozatot hozza véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1 nap). Egy ciklusban feladatonként csak az első próbálkozásod számít. Akkor végzel, ha a sorozatot egy nap alatt megoldod, különben a 7. ciklus után."
+        ]
       }
     },
     "title": "Súgó és útmutató",
@@ -5359,5 +5368,67 @@
       "evalTitle": "A Stockfish értékelése a lépésre következő félnek"
     },
     "diagrams": "{{n}} diagram"
+  },
+  "woodpecker": {
+    "title": "Woodpecker",
+    "new": "Új edzés",
+    "intro": "Ugyanazok a feladatok újra és újra, mindig fele annyi idő alatt – Smith és Tikkanen módszere szerint.",
+    "rules": "1. ciklus: négy hét – oldj meg minél több feladatot, ezek lesznek a sorozatod.\n\nUtána legalább egy nap szünet. Minden további ciklus: ugyanaz a sorozat véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1, 1 nap).\n\nMinden ciklusban feladatonként csak az első próbálkozás számít. Kész, ha egy ciklus legfeljebb egy napig tart, különben a 7. ciklus után.",
+    "empty": "Még nincs Woodpecker-edzés. Válassz egy vagy több tanfolyamot a kezdéshez.",
+    "status": {
+      "solving": "Folyamatban",
+      "break": "Szünet",
+      "ready": "Kész az indításra",
+      "completed": "Befejezve"
+    },
+    "cycleOf": "{{n}}. ciklus / {{max}}",
+    "target": "cél: {{days}} nap",
+    "targetOne": "cél: {{days}} nap",
+    "changeStart": "Kezdés módosítása",
+    "finishSet": "Sorozat lezárása most",
+    "finishSetConfirm": "Lezárod most az első ciklust? A sorozatod ezután {{n}} feladattal rögzül.",
+    "deleteConfirm": "Törlöd a(z) „{{name}}” edzést az összes ciklusával?",
+    "setGrowing": "Sorozat: {{n}} feladat / {{total}}",
+    "setGrowingOne": "Sorozat: {{n}} feladat / {{total}}",
+    "cycleProgress": "{{done}} / {{total}} kész",
+    "overdue": "A határidő lejárt",
+    "daysLeft": "még {{days}} nap",
+    "daysLeftOne": "még {{days}} nap",
+    "breakUntil": "Szünet – a(z) {{n}}. ciklus {{at}} után kezdhető.",
+    "ready": "A(z) {{n}}. ciklus indítható: {{size}} feladat {{days}} nap alatt.",
+    "readyOne": "A(z) {{n}}. ciklus indítható: {{size}} feladat {{days}} nap alatt.",
+    "completedAt": "Befejezve: {{at}}.",
+    "col": {
+      "cycle": "Ciklus",
+      "puzzles": "Feladatok",
+      "solved": "Megoldva",
+      "time": "Idő",
+      "days": "Napok"
+    },
+    "continue": "Folytatás",
+    "startCycle": "{{n}}. ciklus indítása",
+    "breakReason": "Két ciklus között legalább egy nap szünet kell.",
+    "saveFailed": "A mentés nem sikerült. Próbáld újra.",
+    "puzzles": "{{count}} feladat",
+    "puzzlesOne": "{{count}} feladat",
+    "inSet": "{{n}} a sorozatban",
+    "inSetOne": "{{n}} a sorozatban",
+    "toOverview": "Az áttekintéshez",
+    "doneCompleted": "Woodpecker befejezve – szép munka!",
+    "doneCycle": "A(z) {{n}}. ciklus kész. Tarts szünetet, majd indítsd a következő ciklust az áttekintésben.",
+    "repeatHint": "Ismétlés – ebben a ciklusban csak az első próbálkozásod számít.",
+    "create": {
+      "title": "Új Woodpecker-edzés",
+      "coursesHint": "A tanfolyamok a bejelölés sorrendjében – az 1. ciklus ebben a sorrendben halad végig rajtuk.",
+      "noCourses": "Még nincs feladatokat tartalmazó tanfolyamod.",
+      "search": "Tanfolyamok keresése",
+      "start": "Az 1. ciklus kezdete",
+      "startHint": "Válassz korábbi napot, ha már elkezdted – ami azóta ezekben a tanfolyamokban megoldottál, beszámít.",
+      "submit": "Edzés indítása",
+      "chooseCourse": "Válassz legalább egy tanfolyamot."
+    },
+    "start": {
+      "title": "Kezdés módosítása"
+    }
   }
 }

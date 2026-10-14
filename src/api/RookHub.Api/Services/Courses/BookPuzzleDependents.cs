@@ -47,6 +47,10 @@ public static class BookPuzzleDependents
             await db.CalculationTrees.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
         (typeof(CourseFlashcardMark), async (db, ids, ct) => db.CourseFlashcardMarks.RemoveRange(
             await db.CourseFlashcardMarks.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
+        (typeof(WoodpeckerSetItem), async (db, ids, ct) => db.WoodpeckerSetItems.RemoveRange(
+            await db.WoodpeckerSetItems.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
+        (typeof(WoodpeckerAttempt), async (db, ids, ct) => db.WoodpeckerAttempts.RemoveRange(
+            await db.WoodpeckerAttempts.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
     };
 
     /// <summary>Die Tabellen mit Restrict-FK auf <see cref="BookPuzzle"/>, die <see cref="RemoveForLinesAsync"/>

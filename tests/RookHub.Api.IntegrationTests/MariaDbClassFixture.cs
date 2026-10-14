@@ -117,6 +117,7 @@ public abstract class MariaDbClassFixture : IAsyncLifetime
 // ApiFactoryCollection und laufen deshalb nacheinander — zwei WebApplicationFactory gleichzeitig
 // vertragen sich nicht (siehe dort).
 public sealed class CourseAccessFixture() : MariaDbClassFixture("acc", withApp: false);
+public sealed class WoodpeckerFixture() : MariaDbClassFixture("wp", withApp: false);
 public sealed class ImportStateFixture() : MariaDbClassFixture("wire", withApp: false);
 public sealed class CourseStatsFixture() : MariaDbClassFixture("stats", withApp: true);
 public sealed class QueryTranslationFixture() : MariaDbClassFixture("q", withApp: true);
