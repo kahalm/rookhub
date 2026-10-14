@@ -1745,11 +1745,11 @@
     "startChapterSequential": "Pokreni poglavlje (redom)",
     "startChapterRandom": "Pokreni poglavlje (nasumično)",
     "import": {
-      "title": "Uvezi vlastite partije",
+      "title": "Učitaj tečaj iz PGN-a",
       "hint": "Učitaj PGN s vlastitim partijama. Nakon toga možeš ih prolaziti potez po potez — komentari iz PGN-a pojavljuju se kod poteza na koji se odnose.",
       "attachPgn": "Odaberi PGN datoteku",
       "pgnNote": "Radi svaki PGN: vlastite partije, preuzeta zbirka ili puzzle-PGN u Chessable stilu. Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
-      "button": "Uvezi partije"
+      "button": "Učitaj tečaj"
     },
     "lang": {
       "label": "Jezik komentara",

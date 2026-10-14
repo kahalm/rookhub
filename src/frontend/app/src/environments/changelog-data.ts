@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.784.1", date: "2026-10-14", changes: [
+    { en: "Courses: the import button is now called “Upload course” (was “Import games”) — it creates a course from any PGN, your own games included.",
+      de: "Kurse: der Import-Knopf heißt jetzt „Kurs hochladen“ (vorher „Partien importieren“) — er legt aus jeder PGN einen Kurs an, auch aus eigenen Partien." },
+  ] },
   { version: "0.784.0", date: "2026-10-14", changes: [
     { en: "Admin → Groups: groups can now contain other groups — all members of the included group also count as members of the outer one (with its roles, course/book/e-book shares, LeagueHub club and menu items), across several levels. The member list shows inherited members with the group they come from; circular nesting is refused.",
       de: "Admin → Gruppen: Gruppen lassen sich jetzt anderen Gruppen zuweisen — alle Mitglieder der enthaltenen Gruppe gelten auch als Mitglieder der umfassenden (mit deren Rollen, Kurs-/Buch-/E-Book-Freigaben, LeagueHub-Verein und Menüpunkten), auch über mehrere Stufen. Die Mitgliederliste zeigt geerbte Mitglieder mit der Gruppe, über die sie kommen; Kreise werden abgelehnt." },

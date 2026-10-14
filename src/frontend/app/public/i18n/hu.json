@@ -1488,11 +1488,11 @@
     "searchPlaceholder": "Tanfolyamok keresése…",
     "noMatch": "Egy tanfolyam sem illik erre: „{{query}}”.",
     "import": {
-      "title": "Saját játszmák importálása",
+      "title": "Kurzus feltöltése PGN-ből",
       "hint": "Töltsd be a saját játszmáidat PGN-ben. Utána lépésenként végigkattinthatod őket — a PGN-ben lévő megjegyzések annál a lépésnél jelennek meg, amelyikhez tartoznak.",
       "attachPgn": "PGN-fájl kiválasztása",
       "pgnNote": "Bármilyen PGN működik: saját játszmák, letöltött gyűjtemény vagy Chessable-stílusú feladvány-PGN. A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
-      "button": "Játszmák importálása"
+      "button": "Kurzus feltöltése"
     },
     "lang": {
       "label": "A kommentárok nyelve",

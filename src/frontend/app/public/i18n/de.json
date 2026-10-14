@@ -1745,11 +1745,11 @@
     "startChapterSequential": "Kapitel starten (der Reihe nach)",
     "startChapterRandom": "Kapitel starten (zufällig)",
     "import": {
-      "title": "Eigene Partien importieren",
+      "title": "Kurs aus PGN hochladen",
       "hint": "Lade ein PGN mit deinen eigenen Partien. Du kannst sie danach Zug für Zug durchklicken — und Kommentare, die im PGN stehen, erscheinen an dem Zug, zu dem sie gehören.",
       "attachPgn": "PGN-Datei wählen",
       "pgnNote": "Jedes PGN geht: eigene Partien, eine heruntergeladene Sammlung oder ein Puzzle-PGN im Chessable-Stil. Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
-      "button": "Partien importieren"
+      "button": "Kurs hochladen"
     },
     "lang": {
       "label": "Sprache der Kommentare",

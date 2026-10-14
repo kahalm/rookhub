@@ -636,3 +636,16 @@ describe('CourseListComponent Vorlauf', () => {
     expect(tablet).toMatch(/\.header-actions \{ ?margin-left: auto/);
   });
 });
+
+/** Der Import-Knopf legt einen KURS aus einer beliebigen PGN an (eigene Partien, Sammlung, Chessable-PGN) — er heißt
+ *  deshalb „Kurs hochladen“, nicht „Partien importieren“ (User-Hinweis 2026-10-14). */
+describe('Kursliste: Import-Knopf heißt nach dem, was er anlegt', () => {
+  for (const [lang, word] of [['de', 'Kurs'], ['en', 'course'], ['hr', 'tečaj'], ['hu', 'Kurzus']] as const) {
+    it(`${lang}: Knopf und Dialogtitel nennen den Kurs`, async () => {
+      const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
+      const imp = (await res.json()).courses.import as { button: string; title: string };
+      expect(imp.button).toContain(word);
+      expect(imp.title).toContain(word);
+    });
+  }
+});

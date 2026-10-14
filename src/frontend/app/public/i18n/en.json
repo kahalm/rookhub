@@ -1745,11 +1745,11 @@
     "startChapterSequential": "Start chapter (in order)",
     "startChapterRandom": "Start chapter (random)",
     "import": {
-      "title": "Import your own games",
+      "title": "Upload a course from PGN",
       "hint": "Load a PGN with your own games. You can then click through them move by move — and comments contained in the PGN appear at the move they belong to.",
       "attachPgn": "Choose PGN file",
       "pgnNote": "Any PGN works: your own games, a downloaded collection or a puzzle PGN in Chessable style. Comments in braces are kept and shown while clicking through. Questions?",
-      "button": "Import games"
+      "button": "Upload course"
     },
     "lang": {
       "label": "Language of the comments",
