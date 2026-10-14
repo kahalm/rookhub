@@ -283,3 +283,6 @@ im Kapitel-iframe, dessen Ereignisse den Host nicht erreichen). Raddrehung wird 
 davor) aus Sicht des Ziehenden. Angenommen, wenn höchstens 50 cp schlechter, Remis bleibt Remis (beide ±80 cp) oder Gewinn
 bleibt Gewinn (beide ≥ 300) — `EbookBoardComponent.sameResult`. Danach antwortet Stockfish statt der Buchlinie (auch beim
 Vorspielen im Training). Die Lösungsanzeige nennt eine Remisstellung (`engineEval` ±80) als „nur ein Weg“.
+
+**Filter „Mit Diagrammen“** (0.780.4): nur Bücher mit mindestens 100 erkannten Diagrammen (`EbookService.MinDiagramsForFilter`) —
+Partiensammlungen und Lehrbücher mit wenigen Stellungen fallen heraus.

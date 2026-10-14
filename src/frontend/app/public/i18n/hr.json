@@ -5308,7 +5308,7 @@
     },
     "filter": {
       "mine": "Moji prijenosi",
-      "withDiagrams": "S dijagramima",
+      "withDiagrams": "S dijagramima (100+)",
       "toggle": "Filtar",
       "active": "Aktivni filtri",
       "allTags": "Sve oznake ({{n}})",

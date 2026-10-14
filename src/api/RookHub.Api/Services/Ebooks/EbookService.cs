@@ -19,6 +19,10 @@ public class EbookService
 
     public const int MaxPageSize = 100;
 
+    /// <summary>„Mit Diagrammen“ zeigt nur Bücher mit mindestens so vielen erkannten Diagrammen (0.780.4, Nutzerwunsch):
+    /// Partiensammlungen und Lehrbücher mit ein paar Stellungen sind keine Aufgabenbücher.</summary>
+    public const int MinDiagramsForFilter = 100;
+
     private readonly AppDbContext _db;
     private readonly EbookStorage _storage;
     private readonly ILogger<EbookService> _logger;
@@ -61,7 +65,7 @@ public class EbookService
             query = caller.IsAnonymous
                 ? query.Where(b => anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon)
                 : query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
-        if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount > 0);
+        if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount >= MinDiagramsForFilter);
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var term = q.Search.Trim().ToLowerInvariant();

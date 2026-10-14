@@ -5308,7 +5308,7 @@
     },
     "filter": {
       "mine": "Saját feltöltéseim",
-      "withDiagrams": "Diagramokkal",
+      "withDiagrams": "Diagramokkal (100+)",
       "toggle": "Szűrő",
       "active": "Aktív szűrők",
       "allTags": "Összes címke ({{n}})",

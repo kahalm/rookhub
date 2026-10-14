@@ -5308,7 +5308,7 @@
     },
     "filter": {
       "mine": "Meine Uploads",
-      "withDiagrams": "Mit Diagrammen",
+      "withDiagrams": "Mit Diagrammen (ab 100)",
       "toggle": "Filter",
       "active": "Aktive Filter",
       "allTags": "Alle Schlagwörter ({{n}})",

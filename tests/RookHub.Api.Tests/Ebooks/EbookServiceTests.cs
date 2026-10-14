@@ -399,13 +399,17 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task List_WithDiagrams_OnlyBooksWithRecognisedDiagrams()
+    public async Task List_WithDiagrams_OnlyBooksWithAtLeast100RecognisedDiagrams()
     {
         var owner = await _kit.UserAsync("owner");
         var a = await _kit.BookAsync("A", owner.Id);
         var b = await _kit.BookAsync("B", owner.Id);
-        a.DiagramState = EbookDiagramState.Done; a.DiagramCount = 12;
+        var c = await _kit.BookAsync("C", owner.Id);
+        var d = await _kit.BookAsync("D", owner.Id);
+        a.DiagramState = EbookDiagramState.Done; a.DiagramCount = 100;
         b.DiagramState = EbookDiagramState.Done; b.DiagramCount = 0;
+        c.DiagramState = EbookDiagramState.Done; c.DiagramCount = 99;
+        d.DiagramState = EbookDiagramState.Pending; d.DiagramCount = 500;
         await _kit.Db.SaveChangesAsync();
         var r = await _kit.Service.ListAsync(owner.Id, false, new EbookQuery { WithDiagrams = true });
         Assert.Equal(["A"], r.Items.Select(i => i.Title));

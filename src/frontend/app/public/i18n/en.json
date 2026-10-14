@@ -5308,7 +5308,7 @@
     },
     "filter": {
       "mine": "My uploads",
-      "withDiagrams": "With diagrams",
+      "withDiagrams": "With diagrams (100+)",
       "toggle": "Filter",
       "active": "Active filters",
       "allTags": "All tags ({{n}})",
