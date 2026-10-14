@@ -116,12 +116,14 @@
                 </p>
               }
               <app-ebook-board [diagram]="d" [ebookId]="ebook.id" (solutionPage)="goToSolutionPage($event)" />
+              @if (loggedIn) {
               <button mat-button type="button" class="rd-report" [class.rd-report--on]="d.reportedByMe" (click)="toggleReport(d)"
                       [attr.aria-pressed]="d.reportedByMe">
                 <mat-icon>{{ d.reportedByMe ? 'flag' : 'outlined_flag' }}</mat-icon>
                 {{ (d.reportedByMe ? 'ebooks.reader.reportedUndo' : 'ebooks.reader.report') | translate }}
                 @if (d.reportCount > 0) { <span class="rd-report-count">({{ d.reportCount }})</span> }
               </button>
+              }
             } @else {
               <div class="empty-state rd-panel-empty">
                 <mat-icon>touch_app</mat-icon>

@@ -24,6 +24,7 @@
     "ebook_file_too_large": "A fájl túl nagy.",
     "ebook_file_empty": "A fájl üres.",
     "ebook_quota_exceeded": "A feltöltési kereted elfogyott. Törölj egy e-könyvet, vagy kérj meg egy adminisztrátort.",
+    "ebook_anonymous_upload_disabled": "Fiók nélkül most nem lehet feltölteni – kérjük, jelentkezz be.",
     "ebook_duplicate_file": "Ez a fájl már a könyvtárban van.",
     "ebook_file_missing": "A fájl hiányzik a szerverről."
   },
@@ -5245,6 +5246,11 @@
     "zugzwang": "Lépéskényszer"
   },
   "ebooks": {
+    "anonymous": {
+      "banner": "Nem vagy bejelentkezve: a mindenkivel megosztott könyveket látod. Amit feltöltesz, a tiéd marad, és bejelentkezéskor átkerül a fiókodba.",
+      "signIn": "Bejelentkezés",
+      "uploadHint": "Fiók nélkül csak te látod a könyvet ezen az eszközön (legfeljebb 300 MB). Bejelentkezéskor átkerül a fiókodba; az át nem vett könyveket 30 nap után töröljük."
+    },
     "board": {
       "modes": "Tábla módok",
       "mode": {

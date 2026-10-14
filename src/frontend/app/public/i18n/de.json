@@ -102,6 +102,7 @@
     "ebook_file_too_large": "Die Datei ist zu groß.",
     "ebook_file_empty": "Die Datei ist leer.",
     "ebook_quota_exceeded": "Dein Speicherplatz ist aufgebraucht. Lösche ein E-Book oder frag einen Admin.",
+    "ebook_anonymous_upload_disabled": "Hochladen ohne Konto ist gerade nicht möglich – bitte melde dich an.",
     "ebook_duplicate_file": "Diese Datei ist schon in der Bibliothek.",
     "ebook_file_missing": "Die Datei fehlt auf dem Server."
   },
@@ -5245,6 +5246,11 @@
     "zugzwang": "Zugzwang"
   },
   "ebooks": {
+    "anonymous": {
+      "banner": "Du bist nicht angemeldet: Du siehst die für alle freigegebenen Bücher. Was du hochlädst, bleibt deins und wandert beim Anmelden in dein Konto.",
+      "signIn": "Anmelden",
+      "uploadHint": "Ohne Konto siehst nur du das Buch, auf diesem Gerät (bis 300 MB). Beim Anmelden wandert es in dein Konto; nicht übernommene Bücher werden nach 30 Tagen gelöscht."
+    },
     "board": {
       "modes": "Brett-Modi",
       "mode": {

@@ -43,8 +43,9 @@ export const routes: Routes = [
   { path: 'worksheets/:id/print', loadComponent: () => import('./features/worksheets/worksheet-print.component').then(m => m.WorksheetPrintComponent), canActivate: [authGuard, menuGuard('worksheets')] },
   { path: 'worksheets/:id', loadComponent: () => import('./features/worksheets/worksheet-detail.component').then(m => m.WorksheetDetailComponent), canActivate: [authGuard, menuGuard('worksheets')] },
   // E-Book-Bibliothek (0.764.0): Übersicht + Leser; Sichtbarkeit je Buch regelt die API (Gruppen), das Menü den Bereich.
-  { path: 'ebooks', loadComponent: () => import('./features/ebooks/ebook-list.component').then(m => m.EbookListComponent), canActivate: [authGuard, menuGuard('ebooks')] },
-  { path: 'ebooks/:id', loadComponent: () => import('./features/ebooks/ebook-reader.component').then(m => m.EbookReaderComponent), canActivate: [authGuard, menuGuard('ebooks')] },
+  // Ohne authGuard (0.778.0): auch ohne Anmeldung nutzbar — „Alle“-Bücher + eigene anonyme Uploads, beim Anmelden übernommen.
+  { path: 'ebooks', loadComponent: () => import('./features/ebooks/ebook-list.component').then(m => m.EbookListComponent), canActivate: [menuGuard('ebooks')] },
+  { path: 'ebooks/:id', loadComponent: () => import('./features/ebooks/ebook-reader.component').then(m => m.EbookReaderComponent), canActivate: [menuGuard('ebooks')] },
   { path: 'weekly', loadComponent: () => import('./features/weekly/weekly-list.component').then(m => m.WeeklyListComponent), canActivate: [authGuard, menuGuard('weekly')] },
   // Direkter Link auf EINE Wochenpost: bewusst ohne Guards. Der Server liefert Post, Puzzles
   // und Bestenliste ohnehin anonym aus (AllowAnonymous im WeeklyPostController); der Guard war

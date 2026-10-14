@@ -20,6 +20,8 @@ export interface EbookEditDialogData {
   ebook: Ebook | null;
   groups: EbookGroupOption[];
   maxFileBytes: number;
+  /** Ohne Anmeldung (0.778.0): keine Freigabe, stattdessen der Hinweis, dass das Buch beim Anmelden ins Konto wandert. */
+  anonymous?: boolean;
 }
 
 /**
@@ -71,6 +73,9 @@ export interface EbookEditDialogData {
         <textarea matInput [(ngModel)]="description" maxlength="2000" cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="6"></textarea>
       </mat-form-field>
 
+      @if (data.anonymous) {
+        <p class="hint anon-hint"><mat-icon>person_outline</mat-icon>{{ 'ebooks.anonymous.uploadHint' | translate }}</p>
+      } @else {
       <div class="groups">
         <div class="groups-title">{{ 'ebooks.visibilityLabel' | translate }}</div>
         @if (data.groups.length === 0) {
@@ -84,6 +89,7 @@ export interface EbookEditDialogData {
         }
         <p class="hint">{{ (selected.size === 0 ? 'ebooks.visibility.onlyMeHint' : 'ebooks.visibility.groupsHint') | translate }}</p>
       </div>
+      }
 
       @if (progress() !== null) {
         <mat-progress-bar [mode]="progress()! >= 100 ? 'indeterminate' : 'determinate'" [value]="progress()!"></mat-progress-bar>
@@ -110,6 +116,7 @@ export interface EbookEditDialogData {
     .file-name { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
     .hint { margin: 0 0 8px; font-size: .85rem; opacity: .7; }
     .groups { display: flex; flex-direction: column; margin-top: 4px; }
+    .anon-hint { display: flex; align-items: flex-start; gap: 6px; mat-icon { flex: 0 0 auto; font-size: 18px; width: 18px; height: 18px; } }
     .groups-title { font-weight: 500; margin-bottom: 2px; }
     /* Handy: Autor + Jahr bleiben nebeneinander, damit die Sichtbarkeit näher an die Falz rückt. */
     @media (max-width: 480px) { .two { grid-template-columns: 1fr minmax(88px, 110px); } }

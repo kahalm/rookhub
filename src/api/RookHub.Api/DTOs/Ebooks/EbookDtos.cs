@@ -234,3 +234,9 @@ public class EbookDiagramListDto
     public string State { get; set; } = "pending";
     public List<EbookDiagramDto> Items { get; set; } = new();
 }
+
+/// <summary>Anonyme Kennung (<c>X-Visitor-Id</c> der App), deren Uploads und Lesestände ins Konto wandern (0.778.0).</summary>
+public class ClaimEbookSessionDto
+{
+    [MaxLength(36)] public string? SessionId { get; set; }
+}

@@ -102,6 +102,7 @@
     "ebook_file_too_large": "Datoteka je prevelika.",
     "ebook_file_empty": "Datoteka je prazna.",
     "ebook_quota_exceeded": "Tvoj prostor za prijenos je potrošen. Izbriši neku e-knjigu ili pitaj administratora.",
+    "ebook_anonymous_upload_disabled": "Učitavanje bez računa trenutno nije moguće – prijavi se.",
     "ebook_duplicate_file": "Ova je datoteka već u knjižnici.",
     "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
   },
@@ -5245,6 +5246,11 @@
     "zugzwang": "Iznuđeni potez"
   },
   "ebooks": {
+    "anonymous": {
+      "banner": "Nisi prijavljen: vidiš knjige podijeljene sa svima. Ono što učitaš ostaje tvoje i prelazi u tvoj račun kad se prijaviš.",
+      "signIn": "Prijava",
+      "uploadHint": "Bez računa knjigu vidiš samo ti, na ovom uređaju (do 300 MB). Kad se prijaviš, prelazi u tvoj račun; nepreuzete knjige brišu se nakon 30 dana."
+    },
     "board": {
       "modes": "Načini ploče",
       "mode": {

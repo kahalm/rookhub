@@ -22,20 +22,29 @@ public class EbookService
     private readonly AppDbContext _db;
     private readonly EbookStorage _storage;
     private readonly ILogger<EbookService> _logger;
+    private readonly EbookOptions _options;
 
-    public EbookService(AppDbContext db, EbookStorage storage, ILogger<EbookService> logger)
+    public EbookService(AppDbContext db, EbookStorage storage, ILogger<EbookService> logger,
+        Microsoft.Extensions.Options.IOptions<EbookOptions>? options = null)
     {
         _db = db;
         _storage = storage;
         _logger = logger;
+        _options = options?.Value ?? new EbookOptions();
     }
+
+    /// <summary>Kontingent eines Besuchers ohne Anmeldung (0.778.0); 0 = anonymes Hochladen aus.</summary>
+    private long AnonQuota => _options.AnonymousUploads ? Math.Max(0, _options.AnonymousQuotaBytes) : 0;
 
     // ── Übersicht ──────────────────────────────────────────────────────────────────────────────
 
-    public async Task<EbookListDto> ListAsync(int userId, bool manageAll, EbookQuery q, CancellationToken ct = default)
+    public async Task<EbookListDto> ListAsync(EbookCaller caller, bool manageAll, EbookQuery q, CancellationToken ct = default)
     {
+        if (caller.IsAnonymous) manageAll = false;
         var (page, pageSize) = Paging.Normalize(q.Page, q.PageSize, MaxPageSize);
-        var visible = EbookAccess.Visible(_db, userId, manageAll);
+        var visible = EbookAccess.Visible(_db, caller, manageAll);
+        var userId = caller.UserId ?? 0;
+        var anon = caller.AnonId;
 
         // Schlagwort-Facette über ALLES Sichtbare — die Filterzeile soll auch nach einem Filter vollständig bleiben.
         var tagColumns = await visible.Select(b => b.Tags).ToListAsync(ct);
@@ -48,7 +57,10 @@ public class EbookService
             .ToList();
 
         var query = visible;
-        if (q.Mine) query = query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
+        if (q.Mine)
+            query = caller.IsAnonymous
+                ? query.Where(b => anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon)
+                : query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
         if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount > 0);
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -65,6 +77,11 @@ public class EbookService
         query = (q.Sort ?? "title").ToLowerInvariant() switch
         {
             "newest" => query.OrderByDescending(b => b.CreatedAt).ThenBy(b => b.Id),
+            "recent" when caller.IsAnonymous => query
+                .OrderByDescending(b => _db.EbookAnonymousProgresses
+                    .Where(p => p.EbookId == b.Id && p.SessionId == anon)
+                    .Select(p => (DateTime?)p.UpdatedAt).FirstOrDefault())
+                .ThenBy(b => b.Title),
             "recent" => query
                 .OrderByDescending(b => _db.EbookProgresses
                     .Where(p => p.EbookId == b.Id && p.UserId == userId)
@@ -75,9 +92,9 @@ public class EbookService
 
         var total = await query.CountAsync(ct);
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).Include(b => b.Files).ToListAsync(ct);
-        var dtos = await MapAsync(items, userId, manageAll, ct);
+        var dtos = await MapAsync(items, caller, manageAll, ct);
 
-        var used = await UsedBytesAsync(userId, ct);
+        var used = await UsedBytesAsync(caller, ct);
         return new EbookListDto
         {
             Items = dtos,
@@ -85,43 +102,55 @@ public class EbookService
             Page = page,
             PageSize = pageSize,
             Tags = facets,
-            UploadEnabled = _storage.UploadsEnabled,
+            UploadEnabled = _storage.UploadsEnabled && (!caller.IsAnonymous || (AnonQuota > 0 && anon != null)),
             QuotaUsedBytes = used,
-            QuotaLimitBytes = manageAll || _storage.UserQuotaBytes <= 0 ? null : _storage.UserQuotaBytes,
-            MaxFileBytes = _storage.MaxFileBytes,
+            QuotaLimitBytes = caller.IsAnonymous ? AnonQuota : manageAll || _storage.UserQuotaBytes <= 0 ? null : _storage.UserQuotaBytes,
+            MaxFileBytes = caller.IsAnonymous ? Math.Min(_storage.MaxFileBytes, AnonQuota) : _storage.MaxFileBytes,
             CanManageAll = manageAll,
             CanImportLibrary = manageAll && _storage.LibraryEnabled,
         };
     }
 
-    public async Task<EbookDto> GetAsync(int userId, bool manageAll, int id, CancellationToken ct = default)
+    public async Task<EbookDto> GetAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
     {
-        var ebook = await EbookAccess.Visible(_db, userId, manageAll)
+        if (caller.IsAnonymous) manageAll = false;
+        var ebook = await EbookAccess.Visible(_db, caller, manageAll)
             .Include(b => b.Files)
             .FirstOrDefaultAsync(b => b.Id == id, ct)
             ?? throw new NotFoundException("E-book not found.");
-        return (await MapAsync([ebook], userId, manageAll, ct))[0];
+        return (await MapAsync([ebook], caller, manageAll, ct))[0];
     }
 
-    /// <summary>Summe der eigenen Uploads (fürs Kontingent).</summary>
-    public Task<long> UsedBytesAsync(int userId, CancellationToken ct = default) =>
-        _db.EbookFiles
-            .Where(f => f.Ebook.OwnerUserId == userId && f.Ebook.Source == EbookSource.Upload)
-            .SumAsync(f => (long?)f.SizeBytes, ct)
-            .ContinueWith(t => t.Result ?? 0L, ct, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
-
-    private async Task<List<EbookDto>> MapAsync(List<Ebook> items, int userId, bool manageAll, CancellationToken ct)
+    /// <summary>Summe der eigenen Uploads (fürs Kontingent) — angemeldet je Konto, sonst je anonymer Kennung.</summary>
+    public async Task<long> UsedBytesAsync(EbookCaller caller, CancellationToken ct = default)
     {
+        IQueryable<EbookFile> files;
+        if (caller.UserId is int userId)
+            files = _db.EbookFiles.Where(f => f.Ebook.OwnerUserId == userId && f.Ebook.Source == EbookSource.Upload);
+        else if (caller.AnonId is string anon)
+            files = _db.EbookFiles.Where(f => f.Ebook.OwnerUserId == null && f.Ebook.AnonymousSessionId == anon);
+        else
+            return 0;
+        return await files.SumAsync(f => (long?)f.SizeBytes, ct) ?? 0L;
+    }
+
+    private async Task<List<EbookDto>> MapAsync(List<Ebook> items, EbookCaller caller, bool manageAll, CancellationToken ct)
+    {
+        var userId = caller.UserId ?? 0;
         if (items.Count == 0) return [];
         var ids = items.Select(b => b.Id).ToList();
         var ownerIds = items.Where(b => b.OwnerUserId != null).Select(b => b.OwnerUserId!.Value).Distinct().ToList();
         var owners = ownerIds.Count == 0
             ? new Dictionary<int, string>()
             : await _db.AppUsers.Where(u => ownerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
-        var progress = await _db.EbookProgresses
-            .Where(p => p.UserId == userId && ids.Contains(p.EbookId))
-            .ToDictionaryAsync(p => p.EbookId, ct);
-        var manageableIds = items.Where(b => EbookAccess.CanManage(b, userId, manageAll)).Select(b => b.Id).ToList();
+        var anon = caller.AnonId;
+        var progress = caller.IsAnonymous
+            ? anon == null ? new Dictionary<int, (int Page, int? PageCount, string? Locator, DateTime UpdatedAt)>()
+                : (await _db.EbookAnonymousProgresses.Where(p => p.SessionId == anon && ids.Contains(p.EbookId)).ToListAsync(ct))
+                    .ToDictionary(p => p.EbookId, p => (p.Page, p.PageCount, p.Locator, p.UpdatedAt))
+            : (await _db.EbookProgresses.Where(p => p.UserId == userId && ids.Contains(p.EbookId)).ToListAsync(ct))
+                .ToDictionary(p => p.EbookId, p => (p.Page, p.PageCount, p.Locator, p.UpdatedAt));
+        var manageableIds = items.Where(b => EbookAccess.CanManage(b, caller, manageAll)).Select(b => b.Id).ToList();
         var groups = manageableIds.Count == 0
             ? new Dictionary<int, List<int>>()
             : (await _db.EbookGroupAccesses.Where(a => manageableIds.Contains(a.EbookId)).ToListAsync(ct))
@@ -129,7 +158,7 @@ public class EbookService
 
         return items.Select(b =>
         {
-            var canManage = EbookAccess.CanManage(b, userId, manageAll);
+            var canManage = EbookAccess.CanManage(b, caller, manageAll);
             var files = b.Files.OrderBy(f => EbookFormats.Rank(f.Format)).ToList();
             return new EbookDto
             {
@@ -149,7 +178,7 @@ public class EbookService
                 Processing = EbookProcessing.IsProcessing(b, true),
                 OwnerUserId = b.OwnerUserId,
                 OwnerName = b.OwnerUserId is int oid && owners.TryGetValue(oid, out var n) ? n : null,
-                IsOwner = b.OwnerUserId == userId,
+                IsOwner = caller.IsAnonymous ? anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon : b.OwnerUserId == userId,
                 CanManage = canManage,
                 GroupIds = canManage ? (groups.TryGetValue(b.Id, out var g) ? g : []) : null,
                 Files = files.Select(f => new EbookFileDto { Id = f.Id, Format = f.Format, FileName = f.FileName, SizeBytes = f.SizeBytes }).ToList(),
@@ -169,28 +198,36 @@ public class EbookService
     /// Nimmt eine Datei an: Format geprüft, Grenze und Kontingent geprüft, auf die Platte geschrieben (mit Hash),
     /// Dublette erkannt (409), dann das Buch mit Metadaten und Freigabe angelegt. Ein Verwalter hat kein Kontingent.
     /// </summary>
-    public async Task<EbookDto> UploadAsync(int userId, bool manageAll, Stream content, string fileName, long declaredLength,
+    public async Task<EbookDto> UploadAsync(EbookCaller caller, bool manageAll, Stream content, string fileName, long declaredLength,
         EbookMetaDto meta, CancellationToken ct = default)
     {
         if (!_storage.UploadsEnabled)
             throw new DomainValidationException("Uploads are not configured on this server.") { Code = ApiErrorCodes.EbooksNotConfigured };
+        // Ohne Anmeldung (0.778.0): nur mit gültiger anonymer Kennung, eigenes kleines Kontingent, nie für Gruppen freigegeben.
+        if (caller.IsAnonymous)
+        {
+            manageAll = false;
+            if (caller.AnonId == null || AnonQuota <= 0)
+                throw new ForbiddenException("Sign in to upload e-books.") { Code = ApiErrorCodes.EbookAnonymousUploadDisabled };
+            meta.GroupIds = null;
+        }
+        var quota = caller.IsAnonymous ? AnonQuota : manageAll ? 0 : _storage.UserQuotaBytes;
+        var maxFile = caller.IsAnonymous ? Math.Min(_storage.MaxFileBytes, AnonQuota) : _storage.MaxFileBytes;
         var format = EbookFormats.FormatOf(fileName)
             ?? throw new DomainValidationException($"Allowed formats: {string.Join(", ", EbookFormats.Allowed)}.") { Code = ApiErrorCodes.EbookFormatUnsupported };
-        if (declaredLength > _storage.MaxFileBytes)
-            throw new DomainValidationException($"The file is larger than {_storage.MaxFileBytes / (1024 * 1024)} MB.") { Code = ApiErrorCodes.EbookFileTooLarge };
-        if (!manageAll && _storage.UserQuotaBytes > 0)
-        {
-            var used = await UsedBytesAsync(userId, ct);
-            if (used + Math.Max(declaredLength, 0) > _storage.UserQuotaBytes)
-                throw new DomainValidationException("Your upload quota is used up.") { Code = ApiErrorCodes.EbookQuotaExceeded };
-        }
+        if (declaredLength > maxFile)
+            throw new DomainValidationException($"The file is larger than {maxFile / (1024 * 1024)} MB.") { Code = ApiErrorCodes.EbookFileTooLarge };
+        if (quota > 0 && await UsedBytesAsync(caller, ct) + Math.Max(declaredLength, 0) > quota)
+            throw new DomainValidationException("Your upload quota is used up.") { Code = ApiErrorCodes.EbookQuotaExceeded };
+        if (caller.IsAnonymous && await AnonymousTotalBytesAsync(ct) + Math.Max(declaredLength, 0) > _options.AnonymousTotalBytes)
+            throw new DomainValidationException("Uploads without an account are full right now — please sign in.") { Code = ApiErrorCodes.EbookQuotaExceeded };
 
-        var saved = await _storage.SaveUploadAsync(content, format, _storage.MaxFileBytes, ct);
+        var saved = await _storage.SaveUploadAsync(content, format, maxFile, ct);
         try
         {
             if (await _db.EbookFiles.AnyAsync(f => f.Sha256 == saved.Sha256, ct))
                 throw new ConflictException("This file is already in the library.") { Code = ApiErrorCodes.EbookDuplicateFile };
-            if (!manageAll && _storage.UserQuotaBytes > 0 && await UsedBytesAsync(userId, ct) + saved.SizeBytes > _storage.UserQuotaBytes)
+            if (quota > 0 && await UsedBytesAsync(caller, ct) + saved.SizeBytes > quota)
                 throw new DomainValidationException("Your upload quota is used up.") { Code = ApiErrorCodes.EbookQuotaExceeded };
 
             var title = string.IsNullOrWhiteSpace(meta.Title) ? EbookFormats.TitleFromFileName(fileName) : meta.Title.Trim();
@@ -202,7 +239,8 @@ public class EbookService
                 Tags = EbookFormats.JoinTags(EbookFormats.NormalizeTags(meta.Tags)),
                 Description = string.IsNullOrWhiteSpace(meta.Description) ? null : Clip(meta.Description.Trim(), 2000),
                 TargetMinElo = ValidElo(meta.TargetMinElo),
-                OwnerUserId = userId,
+                OwnerUserId = caller.UserId,
+                AnonymousSessionId = caller.IsAnonymous ? caller.AnonId : null,
                 Source = EbookSource.Upload,
                 CoverState = EbookFormats.WithCover.Contains(format) ? EbookCoverState.Pending : EbookCoverState.Unsupported,
                 CreatedAt = DateTime.UtcNow,
@@ -219,13 +257,14 @@ public class EbookService
             if (EbookFormats.NeedsPdfConversion(ebook.Files)) ebook.ConversionState = EbookConversionState.Pending;
             _db.Ebooks.Add(ebook);
             await _db.SaveChangesAsync(ct);
-            if (meta.GroupIds != null)
+            if (meta.GroupIds != null && caller.UserId is int uid)
             {
-                await ApplyGroupsAsync([ebook], meta.GroupIds, userId, manageAll, ct);
+                await ApplyGroupsAsync([ebook], meta.GroupIds, uid, manageAll, ct);
                 await _db.SaveChangesAsync(ct);
             }
-            _logger.LogInformation("E-Book {EbookId} hochgeladen: {Format}, {Bytes} Bytes von Nutzer {UserId}", ebook.Id, format, saved.SizeBytes, userId);
-            return await GetAsync(userId, manageAll, ebook.Id, ct);
+            _logger.LogInformation("E-Book {EbookId} hochgeladen: {Format}, {Bytes} Bytes von {Caller}", ebook.Id, format, saved.SizeBytes,
+                caller.UserId is int u ? $"Nutzer {u}" : "anonym");
+            return await GetAsync(caller, manageAll, ebook.Id, ct);
         }
         catch
         {
@@ -234,9 +273,10 @@ public class EbookService
         }
     }
 
-    public async Task<EbookDto> UpdateAsync(int userId, bool manageAll, int id, EbookMetaDto meta, CancellationToken ct = default)
+    public async Task<EbookDto> UpdateAsync(EbookCaller caller, bool manageAll, int id, EbookMetaDto meta, CancellationToken ct = default)
     {
-        var ebook = await EbookAccess.LoadManageableAsync(_db, userId, id, manageAll, ct);
+        if (caller.IsAnonymous) manageAll = false;
+        var ebook = await EbookAccess.LoadManageableAsync(_db, caller, id, manageAll, ct);
         if (meta.Title != null)
         {
             var t = meta.Title.Trim();
@@ -248,10 +288,10 @@ public class EbookService
         if (meta.Tags != null) ebook.Tags = EbookFormats.JoinTags(EbookFormats.NormalizeTags(meta.Tags));
         if (meta.Description != null) ebook.Description = string.IsNullOrWhiteSpace(meta.Description) ? null : Clip(meta.Description.Trim(), 2000);
         if (meta.TargetMinElo != null) ebook.TargetMinElo = ValidElo(meta.TargetMinElo);
-        if (meta.GroupIds != null) await ApplyGroupsAsync([ebook], meta.GroupIds, userId, manageAll, ct);
+        if (meta.GroupIds != null && caller.UserId is int uid) await ApplyGroupsAsync([ebook], meta.GroupIds, uid, manageAll, ct);
         ebook.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return await GetAsync(userId, manageAll, id, ct);
+        return await GetAsync(caller, manageAll, id, ct);
     }
 
     /// <summary>Jahr 0 oder absurd → keine Angabe (Beiblätter der Bibliothek tragen auch <c>null</c>).</summary>
@@ -259,18 +299,30 @@ public class EbookService
     private static int? ValidElo(int? elo) => elo is >= 100 and <= 3500 ? elo : null;
     private static string Clip(string s, int max) => s.Length <= max ? s : s[..max];
 
-    public async Task DeleteAsync(int userId, bool manageAll, int id, CancellationToken ct = default)
+    public async Task DeleteAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
     {
-        var ebook = await EbookAccess.LoadManageableAsync(_db, userId, id, manageAll, ct);
+        if (caller.IsAnonymous) manageAll = false;
+        var ebook = await EbookAccess.LoadManageableAsync(_db, caller, id, manageAll, ct);
+        await RemoveBookAsync(ebook, ct);
+    }
+
+    /// <summary>Buch samt Dateien, Titelbild und allen abhängigen Zeilen löschen (Löschen-Knopf und Aufräumen anonymer Uploads).</summary>
+    internal async Task RemoveBookAsync(Ebook ebook, CancellationToken ct)
+    {
+        var id = ebook.Id;
+        await _db.Entry(ebook).Collection(b => b.Files).LoadAsync(ct);
+        await _db.Entry(ebook).Collection(b => b.GroupAccess).LoadAsync(ct);
+        var files = ebook.Files.ToList();
         // InMemory kaskadiert nicht — abhängige Zeilen ausdrücklich räumen (gilt auch für MariaDB: kein Schaden).
         _db.EbookProgresses.RemoveRange(_db.EbookProgresses.Where(p => p.EbookId == id));
+        _db.EbookAnonymousProgresses.RemoveRange(_db.EbookAnonymousProgresses.Where(p => p.EbookId == id));
         _db.EbookDiagrams.RemoveRange(_db.EbookDiagrams.Where(d => d.EbookId == id));
         _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
         _db.EbookGroupAccesses.RemoveRange(ebook.GroupAccess);
         _db.EbookFiles.RemoveRange(ebook.Files);
         _db.Ebooks.Remove(ebook);
         await _db.SaveChangesAsync(ct);
-        foreach (var f in ebook.Files) _storage.DeleteUpload(f, ebook.Source);
+        foreach (var f in files) _storage.DeleteUpload(f, ebook.Source);
         _storage.DeleteCover(id);
     }
 
@@ -330,17 +382,41 @@ public class EbookService
 
     // ── Lesestand ───────────────────────────────────────────────────────────────────────────────
 
-    public async Task<EbookProgressDto?> GetProgressAsync(int userId, bool manageAll, int id, CancellationToken ct = default)
+    public async Task<EbookProgressDto?> GetProgressAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
     {
-        if (!await EbookAccess.CanAccessAsync(_db, userId, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
+        if (caller.IsAnonymous) manageAll = false;
+        if (!await EbookAccess.CanAccessAsync(_db, caller, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
+        if (caller.UserId is not int userId)
+        {
+            var a = caller.AnonId == null ? null
+                : await _db.EbookAnonymousProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.SessionId == caller.AnonId, ct);
+            return a == null ? null : new EbookProgressDto { Page = a.Page, PageCount = a.PageCount, Locator = a.Locator, UpdatedAt = a.UpdatedAt };
+        }
         var p = await _db.EbookProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.UserId == userId, ct);
         return p == null ? null : new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
     }
 
-    public async Task<EbookProgressDto> SetProgressAsync(int userId, bool manageAll, int id, int page, int? pageCount, CancellationToken ct = default, string? locator = null)
+    public async Task<EbookProgressDto> SetProgressAsync(EbookCaller caller, bool manageAll, int id, int page, int? pageCount, CancellationToken ct = default, string? locator = null)
     {
-        if (!await EbookAccess.CanAccessAsync(_db, userId, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
+        if (caller.IsAnonymous) manageAll = false;
+        if (!await EbookAccess.CanAccessAsync(_db, caller, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
         if (page < 1) throw new DomainValidationException("Page must be at least 1.");
+        if (caller.UserId is not int userId)
+        {
+            if (caller.AnonId == null) throw new DomainValidationException("A visitor id is required to remember the reading position.");
+            var a = await _db.EbookAnonymousProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.SessionId == caller.AnonId, ct);
+            if (a == null)
+            {
+                a = new EbookAnonymousProgress { EbookId = id, SessionId = caller.AnonId };
+                _db.EbookAnonymousProgresses.Add(a);
+            }
+            a.Page = page;
+            if (pageCount is > 0) a.PageCount = pageCount;
+            if (locator != null) a.Locator = locator.Length > 300 ? null : locator;
+            a.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return new EbookProgressDto { Page = a.Page, PageCount = a.PageCount, Locator = a.Locator, UpdatedAt = a.UpdatedAt };
+        }
         var p = await _db.EbookProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.UserId == userId, ct);
         if (p == null)
         {
@@ -358,9 +434,11 @@ public class EbookService
     // ── Diagramme ──────────────────────────────────────────────────────────────────────────────
 
     /// <summary>Alle erkannten Diagramme eines sichtbaren Buchs in Lesereihenfolge (Seite, dann von oben nach unten).</summary>
-    public async Task<EbookDiagramListDto> GetDiagramsAsync(int userId, bool manageAll, int id, CancellationToken ct = default)
+    public async Task<EbookDiagramListDto> GetDiagramsAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
     {
-        var state = await EbookAccess.Visible(_db, userId, manageAll).Where(b => b.Id == id)
+        if (caller.IsAnonymous) manageAll = false;
+        var userId = caller.UserId ?? 0;
+        var state = await EbookAccess.Visible(_db, caller, manageAll).Where(b => b.Id == id)
             .Select(b => (EbookDiagramState?)b.DiagramState).FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("E-book not found.");
         var items = state == EbookDiagramState.Done
@@ -376,7 +454,7 @@ public class EbookService
         {
             var reports = await _db.EbookDiagramReports.Where(r => r.EbookId == id)
                 .Select(r => new { r.DiagramId, r.UserId }).ToListAsync(ct);
-            var mine = reports.Where(r => r.UserId == userId).Select(r => r.DiagramId).ToHashSet();
+            var mine = reports.Where(r => caller.UserId != null && r.UserId == userId).Select(r => r.DiagramId).ToHashSet();
             var counts = reports.GroupBy(r => r.DiagramId).ToDictionary(g => g.Key, g => g.Count());
             foreach (var d in items)
             {
@@ -445,9 +523,10 @@ public class EbookService
 
     /// <summary>Die Datei eines sichtbaren Buchs (ohne <paramref name="fileId"/> die Hauptdatei) samt vollem Pfad —
     /// unsichtbar/unbekannt → 404, auf der Platte verschwunden → 404 mit eigenem Code.</summary>
-    public async Task<(Ebook Ebook, EbookFile File, string FullPath)> ResolveFileAsync(int userId, bool manageAll, int id, int? fileId, CancellationToken ct = default)
+    public async Task<(Ebook Ebook, EbookFile File, string FullPath)> ResolveFileAsync(EbookCaller caller, bool manageAll, int id, int? fileId, CancellationToken ct = default)
     {
-        var ebook = await EbookAccess.Visible(_db, userId, manageAll)
+        if (caller.IsAnonymous) manageAll = false;
+        var ebook = await EbookAccess.Visible(_db, caller, manageAll)
             .Include(b => b.Files)
             .FirstOrDefaultAsync(b => b.Id == id, ct)
             ?? throw new NotFoundException("E-book not found.");
@@ -460,11 +539,80 @@ public class EbookService
     }
 
     /// <summary>Pfad des Titelbilds eines sichtbaren Buchs; <c>null</c>, wenn (noch) keines da ist.</summary>
-    public async Task<string?> ResolveCoverAsync(int userId, bool manageAll, int id, CancellationToken ct = default)
+    public async Task<string?> ResolveCoverAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
     {
-        var state = await EbookAccess.Visible(_db, userId, manageAll).Where(b => b.Id == id).Select(b => (EbookCoverState?)b.CoverState).FirstOrDefaultAsync(ct)
+        if (caller.IsAnonymous) manageAll = false;
+        var state = await EbookAccess.Visible(_db, caller, manageAll).Where(b => b.Id == id).Select(b => (EbookCoverState?)b.CoverState).FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("E-book not found.");
         if (state != EbookCoverState.Done || !_storage.CoverExists(id)) return null;
         return _storage.CoverPath(id);
+    }
+
+    // ── Ohne Anmeldung (0.778.0) ────────────────────────────────────────────────────────────────
+
+    /// <summary>Summe ALLER anonymen Uploads — Deckel gegen Missbrauch (<see cref="EbookOptions.AnonymousTotalBytes"/>).</summary>
+    public async Task<long> AnonymousTotalBytesAsync(CancellationToken ct = default)
+        => await _db.EbookFiles.Where(f => f.Ebook.OwnerUserId == null && f.Ebook.AnonymousSessionId != null)
+            .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0L;
+
+    /// <summary>
+    /// Beim Anmelden: die anonymen Uploads dieser Kennung gehören jetzt dem Konto, der anonyme Lesestand wird übernommen
+    /// (je Buch gewinnt der jüngere Stand) und gelöscht. Antwort = Zahl der übernommenen Bücher.
+    /// </summary>
+    public async Task<int> ClaimAnonymousAsync(int userId, string anonId, CancellationToken ct = default)
+    {
+        if (!EbookCaller.IsValidAnonId(anonId)) throw new DomainValidationException("Invalid visitor id.");
+        var books = await _db.Ebooks.Where(b => b.OwnerUserId == null && b.AnonymousSessionId == anonId).ToListAsync(ct);
+        foreach (var b in books)
+        {
+            b.OwnerUserId = userId;
+            b.AnonymousSessionId = null;
+            b.UpdatedAt = DateTime.UtcNow;
+        }
+        var anonProgress = await _db.EbookAnonymousProgresses.Where(p => p.SessionId == anonId).ToListAsync(ct);
+        if (anonProgress.Count > 0)
+        {
+            var ids = anonProgress.Select(p => p.EbookId).ToList();
+            var mine = await _db.EbookProgresses.Where(p => p.UserId == userId && ids.Contains(p.EbookId)).ToDictionaryAsync(p => p.EbookId, ct);
+            foreach (var a in anonProgress)
+            {
+                if (mine.TryGetValue(a.EbookId, out var p))
+                {
+                    if (a.UpdatedAt <= p.UpdatedAt) continue;
+                }
+                else
+                {
+                    p = new EbookProgress { EbookId = a.EbookId, UserId = userId };
+                    _db.EbookProgresses.Add(p);
+                }
+                p.Page = a.Page;
+                p.PageCount = a.PageCount;
+                p.Locator = a.Locator;
+                p.UpdatedAt = a.UpdatedAt;
+            }
+            _db.EbookAnonymousProgresses.RemoveRange(anonProgress);
+        }
+        await _db.SaveChangesAsync(ct);
+        if (books.Count > 0 || anonProgress.Count > 0)
+            _logger.LogInformation("E-Books ohne Anmeldung übernommen: {Books} Bücher, {Progress} Lesestände → Nutzer {UserId}", books.Count, anonProgress.Count, userId);
+        return books.Count;
+    }
+
+    /// <summary>Nie übernommene anonyme Uploads, älter als <paramref name="olderThan"/>, löschen (Dateien inklusive)
+    /// und verwaiste anonyme Lesestände gleich mit. Antwort = Zahl der gelöschten Bücher.</summary>
+    public async Task<int> CleanupAnonymousAsync(TimeSpan olderThan, CancellationToken ct = default)
+    {
+        var cutoff = DateTime.UtcNow - olderThan;
+        var books = await _db.Ebooks.Where(b => b.OwnerUserId == null && b.AnonymousSessionId != null && b.CreatedAt < cutoff)
+            .OrderBy(b => b.Id).Take(50).ToListAsync(ct);
+        foreach (var b in books) await RemoveBookAsync(b, ct);
+        var stale = await _db.EbookAnonymousProgresses.Where(p => p.UpdatedAt < cutoff).Take(1000).ToListAsync(ct);
+        if (stale.Count > 0)
+        {
+            _db.EbookAnonymousProgresses.RemoveRange(stale);
+            await _db.SaveChangesAsync(ct);
+        }
+        if (books.Count > 0) _logger.LogInformation("E-Books ohne Anmeldung aufgeräumt: {Count} Bücher", books.Count);
+        return books.Count;
     }
 }

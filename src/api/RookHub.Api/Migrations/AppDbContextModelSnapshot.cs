@@ -2180,6 +2180,10 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AnonymousSessionId")
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
                     b.Property<string>("Author")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -2240,6 +2244,8 @@ namespace RookHub.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AnonymousSessionId");
+
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("Title");
@@ -2249,6 +2255,35 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("DiagramState", "Id");
 
                     b.ToTable("Ebooks");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookAnonymousProgress", b =>
+                {
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
+                    b.Property<string>("Locator")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("EbookId", "SessionId");
+
+                    b.HasIndex("SessionId", "UpdatedAt");
+
+                    b.ToTable("EbookAnonymousProgresses");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
@@ -8939,6 +8974,17 @@ namespace RookHub.Api.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookAnonymousProgress", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>

@@ -2,7 +2,7 @@
   <div class="header">
     <h1><mat-icon>menu_book</mat-icon> {{ 'ebooks.title' | translate }}</h1>
     <div class="header-actions">
-      @if (list?.canManageAll || manageable.length > 0) {
+      @if (!anonymous && (list?.canManageAll || manageable.length > 0)) {
         <button mat-stroked-button type="button" (click)="toggleSelecting()" [attr.aria-pressed]="selecting()">
           <mat-icon>{{ selecting() ? 'close' : 'checklist' }}</mat-icon>{{ (selecting() ? 'common.cancel' : 'ebooks.bulk.select') | translate }}
         </button>
@@ -24,6 +24,13 @@
     </div>
   </div>
   <p class="intro">{{ 'ebooks.intro' | translate }} <app-help-hint [text]="'ebooks.introMore' | translate" /></p>
+  @if (anonymous) {
+    <div class="eb-anon" role="note">
+      <mat-icon>person_outline</mat-icon>
+      <span>{{ 'ebooks.anonymous.banner' | translate }}</span>
+      <a mat-button routerLink="/login" [queryParams]="loginQuery">{{ 'ebooks.anonymous.signIn' | translate }}</a>
+    </div>
+  }
 
   @if (loading) {
     <app-loading-spinner />
@@ -186,7 +193,9 @@
                 }
                 @if (book.canManage) {
                   <button mat-menu-item (click)="edit(book)"><mat-icon>edit</mat-icon><span>{{ 'common.edit' | translate }}</span></button>
-                  <button mat-menu-item (click)="setVisibility([book])"><mat-icon>visibility</mat-icon><span>{{ 'ebooks.bulk.setVisibility' | translate }}</span></button>
+                  @if (!anonymous) {
+                    <button mat-menu-item (click)="setVisibility([book])"><mat-icon>visibility</mat-icon><span>{{ 'ebooks.bulk.setVisibility' | translate }}</span></button>
+                  }
                   <button mat-menu-item class="delete-item" (click)="remove(book)"><mat-icon>delete</mat-icon><span>{{ 'common.delete' | translate }}</span></button>
                 }
               </mat-menu>

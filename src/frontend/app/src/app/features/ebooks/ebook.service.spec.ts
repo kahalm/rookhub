@@ -1,14 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { BehaviorSubject } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 import { EbookService, formatBytes } from './ebook.service';
 
 describe('EbookService', () => {
   let service: EbookService;
   let http: HttpTestingController;
+  let user$: BehaviorSubject<{ userId: number } | null>;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    user$ = new BehaviorSubject<{ userId: number } | null>(null);
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(),
+      { provide: AuthService, useValue: { currentUser$: user$ } }] });
     service = TestBed.inject(EbookService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -28,6 +33,26 @@ describe('EbookService', () => {
 
     service.list().subscribe();
     expect(http.expectOne(r => r.url === '/api/ebooks').request.params.keys().length).toBe(0);
+  });
+
+  it('ohne Anmeldung (0.778.0): Ausweis wird bei An-/Abmelden vergessen, die Übernahme schickt die Kennung', () => {
+    const later = new Date(Date.now() + 3_600_000).toISOString();
+    service.accessToken().subscribe();
+    http.expectOne('/api/ebooks/access-token').flush({ token: 'anon', expiresAt: later });
+    service.accessToken().subscribe();
+    http.expectNone('/api/ebooks/access-token');   // noch zwischengespeichert
+    user$.next({ userId: 7 });                      // angemeldet → anderer Aufrufer
+    let t = '';
+    service.accessToken().subscribe(v => t = v);
+    http.expectOne('/api/ebooks/access-token').flush({ token: 'user7', expiresAt: later });
+    expect(t).toBe('user7');
+
+    service.claimSession('0123456789abcdef0123456789abcdef').subscribe();
+    const req = http.expectOne('/api/ebooks/claim-session');
+    expect(req.request.body).toEqual({ sessionId: '0123456789abcdef0123456789abcdef' });
+    req.flush({ claimed: 1 });
+    service.accessToken().subscribe();
+    http.expectOne('/api/ebooks/access-token').flush({ token: 'user7b', expiresAt: later });   // nach der Übernahme frisch
   });
 
   it('holt den Ausweis einmal und teilt ihn, bis er fast abgelaufen ist', () => {

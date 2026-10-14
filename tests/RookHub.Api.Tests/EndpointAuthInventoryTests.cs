@@ -45,6 +45,16 @@ public class EndpointAuthInventoryTests
         // E-Book-Bibliothek (0.764.0): Datei und Titelbild sind anonym erreichbar, weil <img>, Download-Link und der
         // PDF-Leser keinen Bearer schicken — der Ausweis ?t= (EbookAccessTokens, 12 h) ersetzt ihn; ohne beides 401,
         // und die Sichtbarkeit des Buchs wird je Anfrage gegen die DB geprüft.
+        // E-Books ohne Anmeldung (0.778.0): „Alle“-Bücher + eigene anonyme Uploads, Kennung aus X-Visitor-Id.
+        "DELETE /api/ebooks/{id:int}",                               // EbooksController.Delete (nur eigene anonyme)
+        "GET /api/ebooks",                                           // EbooksController.List
+        "GET /api/ebooks/access-token",                              // EbooksController.AccessToken
+        "GET /api/ebooks/{id:int}",                                  // EbooksController.Get
+        "GET /api/ebooks/{id:int}/diagrams",                         // EbooksController.GetDiagrams
+        "GET /api/ebooks/{id:int}/progress",                         // EbooksController.GetProgress
+        "POST /api/ebooks",                                          // EbooksController.Upload (Kontingent + Gesamtdeckel)
+        "PUT /api/ebooks/{id:int}",                                  // EbooksController.Update (nur eigene anonyme)
+        "PUT /api/ebooks/{id:int}/progress",                         // EbooksController.SetProgress
         "GET /api/ebooks/{id:int}/cover",                            // EbooksController.GetCover
         "GET /api/ebooks/{id:int}/file",                             // EbooksController.GetFile
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress

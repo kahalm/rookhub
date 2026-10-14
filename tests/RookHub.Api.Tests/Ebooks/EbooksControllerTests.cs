@@ -18,7 +18,7 @@ public class EbooksControllerTests : IDisposable
     private readonly EbookAccessTokens _tokens = new(new EphemeralDataProtectionProvider());
     public void Dispose() => _kit.Dispose();
 
-    private EbooksController Controller(int? userId, bool admin = false)
+    private EbooksController Controller(int? userId, bool admin = false, string? visitorId = null)
     {
         var c = new EbooksController(_kit.Service, _tokens, _kit.Db);
         var claims = new List<Claim>();
@@ -28,8 +28,44 @@ public class EbooksControllerTests : IDisposable
             if (admin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
         }
         var identity = userId != null ? new ClaimsIdentity(claims, "Test") : new ClaimsIdentity();
-        c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) } };
+        var http = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
+        if (visitorId != null) http.Request.Headers["X-Visitor-Id"] = visitorId;
+        c.ControllerContext = new ControllerContext { HttpContext = http };
         return c;
+    }
+
+    [Fact]
+    public async Task WithoutLogin_VisitorUploadsReadsAndGetsAFileToken_ThenClaimsIntoAccount()
+    {
+        const string visitor = "0123456789abcdef0123456789abcdef";
+        var owner = await _kit.UserAsync("owner");
+        var everyone = await _kit.GroupAsync("Everyone", everyone: true);
+        var pub = await _kit.UploadAsync(owner.Id, false, EbookTestKit.TinyPdf(), "alle.pdf", new EbookMetaDto { GroupIds = [everyone.Id] });
+        await _kit.UploadAsync(owner.Id, false, [.. EbookTestKit.TinyPdf(), 32], "privat.pdf", new EbookMetaDto());
+
+        var anon = Controller(null, visitorId: visitor);
+        var list = Assert.IsType<EbookListDto>(Assert.IsType<OkObjectResult>((await anon.List(new EbookQuery(), CancellationToken.None)).Result).Value);
+        Assert.Equal([pub.Id], list.Items.Select(i => i.Id).ToArray());
+        Assert.True(list.UploadEnabled);
+
+        // Eigener Upload ohne Konto.
+        var form = new EbookUploadForm { File = new FormFile(new MemoryStream([.. EbookTestKit.TinyPdf(), 7]), 0, EbookTestKit.TinyPdf().Length + 1, "file", "mein.pdf") };
+        var created = Assert.IsType<EbookDto>(Assert.IsType<CreatedAtActionResult>((await anon.Upload(form, CancellationToken.None)).Result).Value);
+        Assert.True(created.IsOwner);
+
+        // Ausweis ohne Konto öffnet die Datei des „Alle“-Buchs und die eigene, nicht die fremde.
+        var token = Assert.IsType<EbookAccessTokenDto>(Assert.IsType<OkObjectResult>(anon.AccessToken().Result).Value).Token;
+        Assert.IsType<PhysicalFileResult>(await Controller(null).GetFile(pub.Id, null, token, false, CancellationToken.None));
+        Assert.IsType<PhysicalFileResult>(await Controller(null).GetFile(created.Id, null, token, false, CancellationToken.None));
+
+        await anon.SetProgress(pub.Id, new EbookProgressUpdateDto { Page = 3 }, CancellationToken.None);
+
+        // Anmelden: Upload + Lesestand wandern ins Konto.
+        var me = await _kit.UserAsync("me");
+        var claim = Assert.IsType<OkObjectResult>(await Controller(me.Id).ClaimSession(new ClaimEbookSessionDto { SessionId = visitor }, CancellationToken.None));
+        Assert.Contains("claimed = 1", claim.Value!.ToString());
+        Assert.Equal(me.Id, (await _kit.Db.Ebooks.SingleAsync(b => b.Id == created.Id)).OwnerUserId);
+        Assert.Equal(3, (await _kit.Service.GetProgressAsync(me.Id, false, pub.Id))!.Page);
     }
 
     [Fact]
@@ -37,7 +73,12 @@ public class EbooksControllerTests : IDisposable
     {
         var (token, expires) = _tokens.Issue(42);
         Assert.True(_tokens.TryRead(token, out var id));
-        Assert.Equal(42, id);
+        Assert.Equal(42, id.UserId);
+        // Besucher ohne Anmeldung (0.778.0): der Ausweis trägt die anonyme Kennung.
+        var (anonToken, _) = _tokens.Issue(EbookCaller.Anonymous("0123456789abcdef0123456789abcdef"));
+        Assert.True(_tokens.TryRead(anonToken, out var anon));
+        Assert.Null(anon.UserId);
+        Assert.Equal("0123456789abcdef0123456789abcdef", anon.AnonId);
         Assert.True(expires > DateTime.UtcNow.AddHours(11));
         Assert.False(_tokens.TryRead(token + "x", out _));
         Assert.False(_tokens.TryRead(null, out _));
@@ -137,7 +178,7 @@ public class EbooksControllerTests : IDisposable
 
         var token = c.AccessToken();
         Assert.True(_tokens.TryRead(Assert.IsType<EbookAccessTokenDto>(Assert.IsType<OkObjectResult>(token.Result).Value).Token, out var uid));
-        Assert.Equal(owner.Id, uid);
+        Assert.Equal(owner.Id, uid.UserId);
     }
 
     [Fact]

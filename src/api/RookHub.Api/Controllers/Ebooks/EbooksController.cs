@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Authorization;
 using RookHub.Api.Data;
@@ -15,6 +16,11 @@ namespace RookHub.Api.Controllers.Ebooks;
 /// Titelbild. Die beiden DATEI-Endpunkte sind <c>[AllowAnonymous]</c>, weil Bild-Tags, Download-Links und der
 /// PDF-Leser keinen Bearer schicken können — sie weisen sich mit <c>?t=</c> aus (<see cref="EbookAccessTokens"/>),
 /// und jede Anfrage prüft die Sichtbarkeit des Buchs für genau diesen Nutzer. Ohne Ausweis UND ohne Bearer: 401.
+///
+/// <para><b>Ohne Anmeldung</b> (0.778.0): Übersicht, Buch, Diagramme, Lesestand, Ausweis, Hochladen und das Verwalten
+/// der eigenen anonymen Uploads gehen auch ohne Konto — der Aufrufer ist dann die anonyme Kennung aus <c>X-Visitor-Id</c>
+/// (<see cref="EbookCaller"/>). Freigaben und Meldungen bleiben angemeldeten Nutzern vorbehalten. Beim Anmelden holt
+/// <c>POST claim-session</c> die anonymen Uploads und Lesestände ins Konto.</para>
 /// </summary>
 [ApiController]
 [Route("api/ebooks")]
@@ -34,12 +40,19 @@ public class EbooksController : BaseApiController
         _permissions = permissions;
     }
 
-    /// <summary>Admin oder <c>ebooks.manage</c>: sieht und verwaltet alles.</summary>
-    private Task<bool> ManageAllAsync() => HasPermissionAsync(_permissions, Permissions.EbooksManage);
+    /// <summary>Admin oder <c>ebooks.manage</c>: sieht und verwaltet alles (nur angemeldet).</summary>
+    private async Task<bool> ManageAllAsync() => IsSignedIn && await HasPermissionAsync(_permissions, Permissions.EbooksManage);
+
+    private bool IsSignedIn => User?.Identity?.IsAuthenticated == true;
+
+    /// <summary>Angemeldet = Konto, sonst die anonyme Kennung aus <c>X-Visitor-Id</c> (ungültige Form = keine).</summary>
+    private EbookCaller Caller =>
+        IsSignedIn ? GetUserId() : EbookCaller.Anonymous(Request?.Headers["X-Visitor-Id"].FirstOrDefault());
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<EbookListDto>> List([FromQuery] EbookQuery query, CancellationToken ct)
-        => Ok(await _service.ListAsync(GetUserId(), await ManageAllAsync(), query, ct));
+        => Ok(await _service.ListAsync(Caller, await ManageAllAsync(), query, ct));
 
     /// <summary>Gruppen, die der Aufrufer freigeben kann (Verwalter alle, sonst die eigenen + „Everyone"). Literal vor <c>{id}</c>.</summary>
     [HttpGet("groups")]
@@ -48,15 +61,18 @@ public class EbooksController : BaseApiController
 
     /// <summary>Kurzlebiger Ausweis für <c>…/file</c> und <c>…/cover</c> (12 h).</summary>
     [HttpGet("access-token")]
+    [AllowAnonymous]
     public ActionResult<EbookAccessTokenDto> AccessToken()
     {
-        var (token, expires) = _tokens.Issue(GetUserId());
+        var (token, expires) = _tokens.Issue(Caller);
         return Ok(new EbookAccessTokenDto { Token = token, ExpiresAt = expires });
     }
 
     /// <summary>Hochladen (Multipart: <c>file</c> + Metadaten). Grenze 1 GiB je Datei — nginx hält dieselbe
     /// (<c>location ^~ /api/ebooks</c>, DeploymentConfigTests).</summary>
     [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-write")]
     [RequestSizeLimit(EbookService.MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = EbookService.MaxUploadRequestBytes)]
     public async Task<ActionResult<EbookDto>> Upload([FromForm] EbookUploadForm form, CancellationToken ct)
@@ -74,7 +90,7 @@ public class EbooksController : BaseApiController
             GroupIds = ParseIds(form.GroupIds),
         };
         await using var stream = form.File.OpenReadStream();
-        var dto = await _service.UploadAsync(GetUserId(), await ManageAllAsync(), stream, form.File.FileName, form.File.Length, meta, ct);
+        var dto = await _service.UploadAsync(Caller, await ManageAllAsync(), stream, form.File.FileName, form.File.Length, meta, ct);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
@@ -90,25 +106,37 @@ public class EbooksController : BaseApiController
     public async Task<IActionResult> SetGroups([FromBody] SetEbookGroupsDto dto, CancellationToken ct)
         => Ok(new { updated = await _service.SetGroupsAsync(GetUserId(), await ManageAllAsync(), dto.EbookIds, dto.GroupIds, ct) });
 
+    /// <summary>Anonyme Uploads und Lesestände dieser Kennung ins Konto übernehmen (beim Anmelden) → <c>{ claimed }</c>.
+    /// Literal vor <c>{id}</c>.</summary>
+    [HttpPost("claim-session")]
+    public async Task<IActionResult> ClaimSession([FromBody] ClaimEbookSessionDto dto, CancellationToken ct)
+        => Ok(new { claimed = await _service.ClaimAnonymousAsync(GetUserId(), dto.SessionId ?? string.Empty, ct) });
+
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<EbookDto>> Get(int id, CancellationToken ct)
-        => Ok(await _service.GetAsync(GetUserId(), await ManageAllAsync(), id, ct));
+        => Ok(await _service.GetAsync(Caller, await ManageAllAsync(), id, ct));
 
     [HttpPut("{id:int}")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-write")]
     public async Task<ActionResult<EbookDto>> Update(int id, [FromBody] EbookMetaDto meta, CancellationToken ct)
-        => Ok(await _service.UpdateAsync(GetUserId(), await ManageAllAsync(), id, meta, ct));
+        => Ok(await _service.UpdateAsync(Caller, await ManageAllAsync(), id, meta, ct));
 
     [HttpDelete("{id:int}")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-write")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        await _service.DeleteAsync(GetUserId(), await ManageAllAsync(), id, ct);
+        await _service.DeleteAsync(Caller, await ManageAllAsync(), id, ct);
         return NoContent();
     }
 
     /// <summary>Erkannte Diagramme (Lage als Seitenanteil, FEN, Nummer, Überschrift) — für die Doppelklick-Zonen des Lesers.</summary>
     [HttpGet("{id:int}/diagrams")]
+    [AllowAnonymous]
     public async Task<ActionResult<EbookDiagramListDto>> GetDiagrams(int id, CancellationToken ct)
-        => Ok(await _service.GetDiagramsAsync(GetUserId(), await ManageAllAsync(), id, ct));
+        => Ok(await _service.GetDiagramsAsync(Caller, await ManageAllAsync(), id, ct));
 
     /// <summary>„Diagramm falsch" melden → <c>{ reported: true }</c>; optional <c>{ note }</c>.</summary>
     [HttpPost("{id:int}/diagrams/{diagramId:int}/report")]
@@ -121,19 +149,23 @@ public class EbooksController : BaseApiController
         => Ok(new { reported = await _service.ReportDiagramAsync(GetUserId(), await ManageAllAsync(), id, diagramId, false, null, ct) });
 
     [HttpGet("{id:int}/progress")]
+    [AllowAnonymous]
     public async Task<ActionResult<EbookProgressDto?>> GetProgress(int id, CancellationToken ct)
-        => Ok(await _service.GetProgressAsync(GetUserId(), await ManageAllAsync(), id, ct));
+        => Ok(await _service.GetProgressAsync(Caller, await ManageAllAsync(), id, ct));
 
     [HttpPut("{id:int}/progress")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-write")]
     public async Task<ActionResult<EbookProgressDto>> SetProgress(int id, [FromBody] EbookProgressUpdateDto dto, CancellationToken ct)
-        => Ok(await _service.SetProgressAsync(GetUserId(), await ManageAllAsync(), id, dto.Page, dto.PageCount, ct, dto.Locator));
+        => Ok(await _service.SetProgressAsync(Caller, await ManageAllAsync(), id, dto.Page, dto.PageCount, ct, dto.Locator));
 
-    /// <summary>Wer fragt: Bearer (angemeldet) oder Ausweis <c>?t=</c>; <c>null</c> = weder noch.</summary>
-    private async Task<(int UserId, bool ManageAll)?> ResolveCallerAsync(string? token, CancellationToken ct)
+    /// <summary>Wer fragt: Bearer (angemeldet) oder Ausweis <c>?t=</c> (Konto oder anonyme Kennung); <c>null</c> = weder noch.</summary>
+    private async Task<(EbookCaller Caller, bool ManageAll)?> ResolveCallerAsync(string? token, CancellationToken ct)
     {
-        if (User?.Identity?.IsAuthenticated == true)
+        if (IsSignedIn)
             return (GetUserId(), await ManageAllAsync());
-        if (!_tokens.TryRead(token, out var userId)) return null;
+        if (!_tokens.TryRead(token, out var tokenCaller)) return null;
+        if (tokenCaller.UserId is not int userId) return (tokenCaller, false);
         var user = await _db.AppUsers.Where(u => u.Id == userId && u.DeletedAt == null).Select(u => new { u.IsAdmin }).FirstOrDefaultAsync(ct);
         if (user == null) return null;
         var manageAll = user.IsAdmin || (_permissions != null && (await _permissions.GetAsync(userId)).Has(Permissions.EbooksManage));
@@ -149,7 +181,7 @@ public class EbooksController : BaseApiController
     {
         var caller = await ResolveCallerAsync(token, ct);
         if (caller == null) return Unauthorized();
-        var (ebook, file, fullPath) = await _service.ResolveFileAsync(caller.Value.UserId, caller.Value.ManageAll, id, fileId, ct);
+        var (ebook, file, fullPath) = await _service.ResolveFileAsync(caller.Value.Caller, caller.Value.ManageAll, id, fileId, ct);
         Response.Headers.CacheControl = "private, max-age=3600";
         var contentType = EbookFormats.ContentType(file.Format);
         if (download)
@@ -179,7 +211,7 @@ public class EbooksController : BaseApiController
     {
         var caller = await ResolveCallerAsync(token, ct);
         if (caller == null) return Unauthorized();
-        var path = await _service.ResolveCoverAsync(caller.Value.UserId, caller.Value.ManageAll, id, ct);
+        var path = await _service.ResolveCoverAsync(caller.Value.Caller, caller.Value.ManageAll, id, ct);
         if (path == null) return NotFound();
         Response.Headers.CacheControl = "private, max-age=86400";
         return PhysicalFile(path, SniffImageType(path));

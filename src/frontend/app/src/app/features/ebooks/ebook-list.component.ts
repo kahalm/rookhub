@@ -19,6 +19,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { apiErrorText } from '../../core/api-error';
 import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
@@ -85,6 +86,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   private search$ = new Subject<string>();
   private destroy$ = new Subject<void>();
   private ebooks = inject(EbookService);
+  private auth = inject(AuthService);
   private dialog = inject(MatDialog);
   private confirm = inject(ConfirmService);
   private snackbar = inject(SnackbarService);
@@ -251,7 +253,14 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   // ── Aktionen ────────────────────────────────────────────────────────────────────────────────
 
+  /** Ohne Anmeldung (0.778.0): „Alle“-Bücher + eigene Uploads, keine Freigaben. */
+  get anonymous(): boolean { return !this.auth.isLoggedIn; }
+
+  /** Zur Anmeldung, danach zurück in die Bibliothek (die anonymen Uploads wandern dabei ins Konto). */
+  get loginQuery(): Record<string, string> { return { returnUrl: '/ebooks' }; }
+
   private withGroups(fn: (groups: EbookGroupOption[]) => void): void {
+    if (this.anonymous) { fn([]); return; }   // Freigabe-Gruppen gibt es nur mit Konto
     if (this.groups) { fn(this.groups); return; }
     this.ebooks.groupOptions().subscribe({
       next: g => { this.groups = g; fn(g); },
@@ -265,7 +274,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
       return;
     }
     this.withGroups(groups => {
-      const data: EbookEditDialogData = { ebook: null, groups, maxFileBytes: this.list?.maxFileBytes ?? 0 };
+      const data: EbookEditDialogData = { ebook: null, groups, maxFileBytes: this.list?.maxFileBytes ?? 0, anonymous: this.anonymous };
       this.dialog.open(EbookEditDialogComponent, { data, width: '560px', maxWidth: '94vw', disableClose: true })
         .afterClosed().subscribe((saved: Ebook | null | undefined) => {
           if (!saved) return;
@@ -278,7 +287,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   edit(book: Ebook): void {
     this.withGroups(groups => {
-      const data: EbookEditDialogData = { ebook: book, groups, maxFileBytes: this.list?.maxFileBytes ?? 0 };
+      const data: EbookEditDialogData = { ebook: book, groups, maxFileBytes: this.list?.maxFileBytes ?? 0, anonymous: this.anonymous };
       this.dialog.open(EbookEditDialogComponent, { data, width: '560px', maxWidth: '94vw' })
         .afterClosed().subscribe((saved: Ebook | null | undefined) => { if (saved) this.load(); });
     });

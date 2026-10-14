@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
-import { Observable, map, of, shareReplay, tap } from 'rxjs';
+import { Observable, distinctUntilChanged, map, of, shareReplay, skip, tap } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 
 /** Eine Datei (ein Format) eines E-Books. */
 export interface EbookFile {
@@ -161,6 +162,13 @@ export class EbookService {
   private token: { value: string; expiresAt: number } | null = null;
   private tokenRequest: Observable<string> | null = null;
 
+  constructor() {
+    // Der Ausweis gehört zu genau einem Aufrufer (Konto oder anonyme Kennung, 0.778.0): bei An-/Abmelden oder
+    // Kontowechsel vergessen, sonst sähe ein Abgemeldeter am selben Gerät noch die Bücher des Kontos.
+    inject(AuthService).currentUser$.pipe(map(u => u?.userId ?? null), distinctUntilChanged(), skip(1))
+      .subscribe(() => this.forgetToken());
+  }
+
   list(q: EbookQuery = {}): Observable<EbookList> {
     let params = new HttpParams();
     if (q.search) params = params.set('search', q.search);
@@ -242,6 +250,13 @@ export class EbookService {
       );
     }
     return this.tokenRequest;
+  }
+
+  /** Anonyme Uploads + Lesestände dieser Kennung ins Konto übernehmen (beim Anmelden, 0.778.0). Danach gehört der
+   *  zwischengespeicherte Ausweis zum alten (anonymen) Aufrufer — weg damit. */
+  claimSession(sessionId: string): Observable<{ claimed: number }> {
+    this.forgetToken();
+    return this.http.post<{ claimed: number }>('/api/ebooks/claim-session', { sessionId }).pipe(tap({ finalize: () => this.forgetToken() }));
   }
 
   /** Vergessen (z. B. nach einem 401 an der Datei) — der nächste Aufruf holt einen frischen. */

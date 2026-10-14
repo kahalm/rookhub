@@ -238,3 +238,27 @@ Prüfung) oder „Stockfish jetzt“ (7 Halbzüge, `StockfishService.getBestMove
 voreingestellt); **Maia** (man spielt die Seite am Zug, Maia antwortet über `MaiaEngineService.chooseMove` in wählbarer
 Stärke; Modell wird erst auf Knopfdruck geladen, ~46 MB). Engine-Knopf: `LiveEngineSession` + `app-live-engine-panel`
 rechnet jede Brettstellung, in jedem Modus. Der Modus bleibt beim Blättern zu anderen Diagrammen.
+
+## Ohne Anmeldung (0.778.0)
+
+Bibliothek und Leser gehen auch ohne Konto (Routen ohne `authGuard`, Menüpunkt `ebooks` steht standardmäßig auf `All` —
+ein Admin-Override in der Menü-Sichtbarkeit hat Vorrang). Der Aufrufer ist dann die anonyme Kennung der App
+(`X-Visitor-Id`, dieselbe wie Puzzles/Endlos, `ANON_PUZZLE_SESSION_KEY`; strenge Form `ValidationConstants.SessionIdPattern`),
+im Backend `EbookCaller` (ein `int` wird implizit zum angemeldeten Aufrufer):
+- **Sichtbar** (`EbookAccess.Visible`): Bücher mit Freigabe für die Gruppe „Everyone“ und die eigenen anonymen Uploads
+  (`Ebook.AnonymousSessionId`, `OwnerUserId = null`). Verwalten (Bearbeiten/Löschen) nur die eigenen; Freigaben und
+  „Diagramm falsch“ melden bleiben angemeldet (`[Authorize]`), `manageAll` gilt anonym nie.
+- **Hochladen** (`POST /api/ebooks`, `[AllowAnonymous]` + `anonymous-write`): nur mit gültiger Kennung, Kontingent
+  `Ebooks__AnonymousQuotaBytes` (300 MB, zugleich Dateigrenze), Gesamtdeckel aller anonymen Uploads `Ebooks__AnonymousTotalBytes`
+  (10 GB), abschaltbar mit `Ebooks__AnonymousUploads=false` (→ 403 `ebook_anonymous_upload_disabled`). Nie für Gruppen freigegeben.
+- **Lesestand**: eigene Tabelle `EbookAnonymousProgresses` (EbookId + SessionId).
+- **Ausweis** für Datei/Titelbild: `GET access-token` gibt anonym einen Ausweis mit „a:“ + Kennung aus
+  (`EbookAccessTokens`); die Sichtbarkeit wird je Anfrage neu geprüft. Das Frontend vergisst den Ausweis bei jedem
+  Wechsel des Nutzers (An-/Abmelden), sonst sähe ein Abgemeldeter am selben Gerät noch die Bücher des Kontos.
+- **Übernahme** beim Anmelden/Registrieren (`AuthService.claimAnonymousPuzzleSession` → `POST /api/ebooks/claim-session
+  { sessionId }`, `[Authorize]`): die anonymen Uploads gehören dem Konto, anonyme Lesestände werden übernommen (je Buch
+  gewinnt der jüngere) und gelöscht. Antwort `{ claimed }` = Zahl der Bücher.
+- **Aufräumen**: `EbookAnonymousCleanupWorker` (stündlich) löscht nie übernommene anonyme Uploads nach
+  `Ebooks__AnonymousRetentionDays` (30) Tagen samt Dateien, Titelbild und alten anonymen Leseständen.
+- Oberfläche: Banner „nicht angemeldet“ mit Anmelden-Knopf (`returnUrl=/ebooks`), Hochladen-Dialog ohne Sichtbarkeit,
+  stattdessen der Hinweis (nur du, bis 300 MB, wandert beim Anmelden ins Konto); Auswahl/Sichtbarkeit und Melden ausgeblendet.

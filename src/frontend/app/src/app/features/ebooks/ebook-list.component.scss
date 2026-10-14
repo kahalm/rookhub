@@ -5,6 +5,13 @@
 .header h1 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 .intro { margin: 4px 0 12px; opacity: .8; }
+/* Ohne Anmeldung (0.778.0): Banner nach DESIGN 5.11 — getönt, Symbol links, Text flexibel, ein Knopf rechts. */
+.eb-anon {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; border-radius: 8px;
+  background: color-mix(in srgb, var(--rh-info) 12%, transparent);
+  > mat-icon { flex: 0 0 auto; color: var(--rh-info); }
+  > span { flex: 1 1 220px; }
+}
 
 .eb-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .eb-search { flex: 1 1 240px; }

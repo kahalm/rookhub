@@ -29,7 +29,7 @@ public sealed class EbookTestKit : IDisposable
         if (quota != null) Options.UserQuotaBytes = quota.Value;
         if (maxFile != null) Options.MaxFileBytes = maxFile.Value;
         Storage = new EbookStorage(Microsoft.Extensions.Options.Options.Create(Options), NullLogger<EbookStorage>.Instance);
-        Service = new EbookService(Db, Storage, NullLogger<EbookService>.Instance);
+        Service = new EbookService(Db, Storage, NullLogger<EbookService>.Instance, Microsoft.Extensions.Options.Options.Create(Options));
     }
 
     public async Task<AppUser> UserAsync(string name, bool admin = false)

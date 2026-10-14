@@ -21,20 +21,30 @@ public class EbookAccessTokens
         _protector = provider.CreateProtector("RookHub.Ebooks.Access.v1").ToTimeLimitedDataProtector();
     }
 
-    public (string Token, DateTime ExpiresAt) Issue(int userId)
+    /// <summary>Ausweis für einen Nutzer oder (0.778.0) einen Besucher ohne Anmeldung — dann trägt er „a:“ + Kennung.</summary>
+    public (string Token, DateTime ExpiresAt) Issue(EbookCaller caller)
     {
         var expires = DateTime.UtcNow.Add(Lifetime);
-        return (_protector.Protect(userId.ToString(), expires), expires);
+        var payload = caller.UserId is int uid ? uid.ToString() : "a:" + (caller.AnonId ?? string.Empty);
+        return (_protector.Protect(payload, expires), expires);
     }
 
-    /// <summary><c>true</c> mit der Nutzer-Id, wenn der Ausweis echt und noch gültig ist.</summary>
-    public bool TryRead(string? token, out int userId)
+    /// <summary><c>true</c> mit dem Aufrufer, wenn der Ausweis echt und noch gültig ist.</summary>
+    public bool TryRead(string? token, out EbookCaller caller)
     {
-        userId = 0;
+        caller = default;
         if (string.IsNullOrWhiteSpace(token)) return false;
         try
         {
-            return int.TryParse(_protector.Unprotect(token), out userId);
+            var payload = _protector.Unprotect(token);
+            if (payload.StartsWith("a:", StringComparison.Ordinal))
+            {
+                caller = EbookCaller.Anonymous(payload.Length > 2 ? payload[2..] : null);
+                return true;
+            }
+            if (!int.TryParse(payload, out var userId)) return false;
+            caller = userId;
+            return true;
         }
         catch (System.Security.Cryptography.CryptographicException)
         {

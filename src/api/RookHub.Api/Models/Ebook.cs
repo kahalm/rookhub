@@ -61,6 +61,12 @@ public class Ebook
     public int? OwnerUserId { get; set; }
     public AppUser? Owner { get; set; }
 
+    /// <summary>Hochgeladen OHNE Anmeldung (0.778.0): die anonyme Kennung des Besuchers (<c>X-Visitor-Id</c>);
+    /// <see cref="OwnerUserId"/> ist dann leer. Beim Anmelden wandert das Buch ins Konto (Kennung wird geleert);
+    /// nie übernommene Bücher räumt der <c>EbookAnonymousCleanupWorker</c> nach 30 Tagen weg.</summary>
+    [MaxLength(36)]
+    public string? AnonymousSessionId { get; set; }
+
     public EbookSource Source { get; set; } = EbookSource.Upload;
 
     /// <summary>Seitenzahl der PDF-Datei (vom Cover-Worker ermittelt); <c>null</c> = unbekannt/kein PDF.</summary>
@@ -154,6 +160,26 @@ public class EbookProgress
     public string? Locator { get; set; }
 
     /// <summary>Seitenzahl, wie der Leser sie beim Speichern kannte (für den Prozentbalken, auch wenn der Server keine hat).</summary>
+    public int? PageCount { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Lesestand eines Besuchers OHNE Anmeldung (0.778.0) — eigene Tabelle, weil <see cref="EbookProgress"/> am Konto
+/// hängt; beim Anmelden übernommen (der jüngere Stand gewinnt) und gelöscht.</summary>
+public class EbookAnonymousProgress
+{
+    public int EbookId { get; set; }
+    public Ebook? Ebook { get; set; }
+
+    [MaxLength(36)]
+    public string SessionId { get; set; } = string.Empty;
+
+    public int Page { get; set; }
+
+    [MaxLength(300)]
+    public string? Locator { get; set; }
+
     public int? PageCount { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

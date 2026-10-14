@@ -6,6 +6,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EBOOK_TAGS_COLLAPSED, EbookListComponent } from './ebook-list.component';
 import { Ebook, EbookList, EbookService } from './ebook.service';
@@ -30,7 +31,7 @@ describe('EbookListComponent', () => {
   beforeEach(() => sessionStorage.removeItem('rh.ebooks.listState'));
   afterEach(() => sessionStorage.removeItem('rh.ebooks.listState'));
 
-  function make(items: Ebook[], over: Partial<EbookList> = {}): EbookListComponent {
+  function make(items: Ebook[], over: Partial<EbookList> = {}, loggedIn = true): EbookListComponent {
     calls = [];
     service = jasmine.createSpyObj<EbookService>('EbookService', ['list', 'accessToken', 'coverUrl', 'fileUrl', 'groupOptions', 'delete', 'setGroups', 'importLibrary']);
     service.list.and.callFake(q => { calls.push(q); return of(list(items, over)); });
@@ -46,6 +47,7 @@ describe('EbookListComponent', () => {
         { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of(null) }) } },
         { provide: SnackbarService, useValue: { warn: () => {}, success: () => {}, quick: () => {}, info: () => {} } },
         { provide: ConfirmService, useValue: { ask: () => of(true) } },
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
         { provide: TranslateService, useValue: { instant: (k: string) => k, currentLang: () => 'en' } },
         { provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } },
       ],
@@ -115,6 +117,17 @@ describe('EbookListComponent', () => {
     expect(c.visibilityKey(book({ groupIds: [] }))).toBe('onlyMe');
     expect(c.visibilityKey(book({ groupIds: [5, 7] }))).toBe('everyone');
     expect(c.visibilityKey(book({ groupIds: [7] }))).toBe('groups');
+  });
+
+  it('ohne Anmeldung: keine Freigabe-Gruppen vom Server, Hochladen-Dialog mit Hinweis statt Sichtbarkeit', () => {
+    const c = make([book()], {}, false);
+    expect(c.anonymous).toBeTrue();
+    const dialog = TestBed.inject(MatDialog) as unknown as { open: jasmine.Spy };
+    spyOn(dialog, 'open').and.callThrough();
+    c.openUpload();
+    expect(service.groupOptions).not.toHaveBeenCalled();
+    expect(dialog.open.calls.mostRecent().args[1].data).toEqual(jasmine.objectContaining({ anonymous: true, groups: [] }));
+    expect(c.loginQuery).toEqual({ returnUrl: '/ebooks' });
   });
 
   it('Hochladen ohne eingerichteten Speicher öffnet keinen Dialog, sondern erklärt es', () => {

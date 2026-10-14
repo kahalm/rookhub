@@ -102,6 +102,7 @@
     "ebook_file_too_large": "The file is too large.",
     "ebook_file_empty": "The file is empty.",
     "ebook_quota_exceeded": "Your upload quota is used up. Delete an e-book or ask an admin.",
+    "ebook_anonymous_upload_disabled": "Uploading without an account is not possible right now – please sign in.",
     "ebook_duplicate_file": "This file is already in the library.",
     "ebook_file_missing": "The file is missing on the server."
   },
@@ -5245,6 +5246,11 @@
     "zugzwang": "Zugzwang"
   },
   "ebooks": {
+    "anonymous": {
+      "banner": "You are not signed in: you see the books shared with everyone. Books you upload stay yours and move into your account when you sign in.",
+      "signIn": "Sign in",
+      "uploadHint": "Without an account the book is visible only to you on this device (up to 300 MB). When you sign in, it moves into your account; books not taken over are deleted after 30 days."
+    },
     "board": {
       "modes": "Board modes",
       "mode": {

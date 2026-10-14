@@ -562,6 +562,9 @@ export class AuthService {
     import('../features/puzzles/endless-storage.service').then(m =>
       this.withService(() => this.injector.get(m.EndlessStorageService),
         endlessStorage => endlessStorage.claimEndlessSession().subscribe()));
+    // E-Books ohne Anmeldung (0.778.0): eigene Uploads + Lesestände derselben Kennung ins Konto.
+    import('../features/ebooks/ebook.service').then(m =>
+      this.withService(() => this.injector.get(m.EbookService), ebooks => ebooks.claimSession(sessionId).subscribe()));
   }
 
   private getStoredUser(): AuthResponse | null {

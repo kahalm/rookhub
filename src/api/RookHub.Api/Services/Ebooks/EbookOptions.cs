@@ -44,6 +44,13 @@ public class EbookOptions
     /// durchsucht; <c>false</c> schaltet das ab (die Bücher bleiben dann „Unsupported“).</summary>
     public bool ScanDiagrams { get; set; } = true;
 
+    /// <summary>Hochladen OHNE Anmeldung (0.778.0): erlaubt, eigenes Kontingent je anonymer Kennung, Gesamtdeckel über alle
+    /// anonymen Uploads, nie übernommene Bücher werden nach <see cref="AnonymousRetentionDays"/> gelöscht.</summary>
+    public bool AnonymousUploads { get; set; } = true;
+    public long AnonymousQuotaBytes { get; set; } = 300L * 1024 * 1024;
+    public long AnonymousTotalBytes { get; set; } = 10L * 1024 * 1024 * 1024;
+    public int AnonymousRetentionDays { get; set; } = 30;
+
     /// <summary>Titelbilder je Worker-Durchlauf (alle 20 s) — klein, damit ein Einlesen von 800 Büchern die API nicht lahmlegt.</summary>
     public int CoverBatchSize { get; set; } = 4;
 

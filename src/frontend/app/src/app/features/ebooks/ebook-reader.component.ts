@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -80,6 +81,9 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private ebooks = inject(EbookService);
   private snackbar = inject(SnackbarService);
+  private auth = inject(AuthService);
+  /** Melden („Diagramm falsch“) gibt es nur mit Konto (0.778.0: der Leser geht auch ohne Anmeldung). */
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
   private progress$ = new Subject<number>();
