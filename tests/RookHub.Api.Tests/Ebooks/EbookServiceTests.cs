@@ -193,7 +193,7 @@ public class EbookServiceTests : IDisposable
         await _kit.BookAsync("Endspielstudien", owner.Id, "djvu", "Endspielstudien,Lehrbuch", everyone.Id);
         await _kit.BookAsync("Geheim", owner.Id, "pdf", "Endspiel");   // nicht freigegeben
 
-        var all = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery());
+        var all = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Sort = "title" });
         Assert.Equal(3, all.Total);
         Assert.Equal(["Amateur's Mind", "Endgame Course", "Endspielstudien"], all.Items.Select(i => i.Title));
         Assert.Equal(["Lehrbuch", "Endspiel", "Endspielstudien", "Strategie"], all.Tags.Select(t => t.Tag));
@@ -208,7 +208,7 @@ public class EbookServiceTests : IDisposable
         var tag = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Tag = "Endspiel" });
         Assert.Equal(["Endgame Course"], tag.Items.Select(i => i.Title));   // kein Teilwort-Treffer auf „Endspielstudien"
 
-        var page2 = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Page = 2, PageSize = 2 });
+        var page2 = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Sort = "title", Page = 2, PageSize = 2 });
         Assert.Equal(["Endspielstudien"], page2.Items.Select(i => i.Title));
         Assert.Equal(2, page2.Page);
 
@@ -234,6 +234,27 @@ public class EbookServiceTests : IDisposable
         Assert.Equal(20, recent.Items[0].Progress!.PageCount);
         Assert.Null(recent.Items[2].Progress);
         _ = b;
+    }
+
+    [Fact]
+    public async Task Sort_Newest_ByPublicationYear_WithoutYearLast()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var old = await _kit.BookAsync("Alt 1902", owner.Id);
+        old.Year = 1902;
+        var none = await _kit.BookAsync("Ohne Jahr", owner.Id);
+        var recent = await _kit.BookAsync("Neu 2021", owner.Id);
+        recent.Year = 2021;
+        var mid = await _kit.BookAsync("Mitte 1990", owner.Id);
+        mid.Year = 1990;
+        old.CreatedAt = DateTime.UtcNow.AddMinutes(5);   // zuletzt aufgenommen — zählt erst nach dem Jahr
+        await _kit.Db.SaveChangesAsync();
+        var list = await _kit.Service.ListAsync(owner.Id, false, new EbookQuery { Sort = "newest" });
+        Assert.Equal(["Neu 2021", "Mitte 1990", "Alt 1902", "Ohne Jahr"], list.Items.Select(i => i.Title));
+        // Ohne Angabe ist das auch der Standard (0.778.1).
+        var plain = await _kit.Service.ListAsync(owner.Id, false, new EbookQuery());
+        Assert.Equal(["Neu 2021", "Mitte 1990", "Alt 1902", "Ohne Jahr"], plain.Items.Select(i => i.Title));
+        _ = none;
     }
 
     [Fact]

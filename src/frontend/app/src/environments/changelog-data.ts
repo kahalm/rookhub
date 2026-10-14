@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.778.1", date: "2026-10-14", changes: [
+    { en: "E-books: „Newest first“ now sorts by publication year (books without a year at the end), no longer by when a book was added – and it is the default sort everywhere.",
+      de: "E-Books: „Neueste zuerst“ sortiert jetzt nach Erscheinungsjahr (Bücher ohne Jahr ans Ende), nicht mehr danach, wann ein Buch aufgenommen wurde – und ist überall die Standard-Sortierung." },
+  ] },
   { version: "0.778.0", date: "2026-10-14", changes: [
     { en: "E-books without an account: the library and the reader (with board, engines and Maia) now work without signing in. Visitors see the books shared with everyone and can upload their own books (up to 300 MB, visible only to them); reading positions are remembered. When you sign in or register, your uploads and reading positions move into your account; books never taken over are deleted after 30 days.",
       de: "E-Books ohne Konto: Bibliothek und Leser (mit Brett, Engine und Maia) gehen jetzt auch ohne Anmeldung. Besucher sehen die für alle freigegebenen Bücher und können eigene hochladen (bis 300 MB, nur für sie sichtbar); der Lesestand wird gemerkt. Beim Anmelden oder Registrieren wandern die eigenen Uploads und Lesestände ins Konto; nie übernommene Bücher werden nach 30 Tagen gelöscht." },

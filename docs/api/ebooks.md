@@ -127,7 +127,8 @@ Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne Kön
   `EbookFormats.Primary` nimmt bei gleichem Format die abgeleitete Datei — der Leser zeigt die Lesefassung, der Download bietet
   beide. Ausgelöst vom Titelbild-Worker (erst dann ist die Seitenzahl bekannt); Migration `EbookHeavyPdfReadingCopy` reiht
   die vorhandenen ein (Dev 14.10.: 21 Bücher, u. a. „'64' Chess Review“ 296 MB → 16 MB in 43 s).
-- **Übersicht** sortiert ab 0.775.4 standardmäßig „Neueste zuerst“ (Aufnahmedatum).
+- **Übersicht** sortiert ab 0.775.4 standardmäßig „Neueste zuerst“ — seit 0.778.1 nach Erscheinungsjahr (`Ebook.Year`, ohne
+  Jahr ans Ende, Gleichstand nach Aufnahmedatum).
 - **Trenner** zwischen Buch und Brett (`.rd-split`, `role=separator`): ziehen (Pointer-Capture), ←/→ um 24 px, Doppelklick =
   Standardbreite; 260 px bis 70 % des Fensters, je Gerät in `localStorage` `rh.ebooks.panelWidth`. Unter 900 px ausgeblendet.
 

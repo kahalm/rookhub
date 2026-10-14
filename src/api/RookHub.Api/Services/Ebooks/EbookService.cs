@@ -74,9 +74,11 @@ public class EbookService
             query = query.Where(b => ("," + b.Tags.ToLower() + ",").Contains(needle));
         }
 
-        query = (q.Sort ?? "title").ToLowerInvariant() switch
+        query = (string.IsNullOrWhiteSpace(q.Sort) ? "newest" : q.Sort).ToLowerInvariant() switch   // Standard „Neueste zuerst“
         {
-            "newest" => query.OrderByDescending(b => b.CreatedAt).ThenBy(b => b.Id),
+            // „Neueste zuerst“ = Erscheinungsjahr (0.778.1, Nutzerwunsch); ohne Jahr ans Ende, sonst nach Aufnahme.
+            "newest" => query.OrderByDescending(b => b.Year != null).ThenByDescending(b => b.Year)
+                .ThenByDescending(b => b.CreatedAt).ThenBy(b => b.Id),
             "recent" when caller.IsAnonymous => query
                 .OrderByDescending(b => _db.EbookAnonymousProgresses
                     .Where(p => p.EbookId == b.Id && p.SessionId == anon)

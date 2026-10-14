@@ -5299,7 +5299,7 @@
     "sort": {
       "label": "Rendezés",
       "title": "Cím",
-      "newest": "Legújabb elöl",
+      "newest": "Legújabb elöl (kiadás éve)",
       "recent": "Nemrég olvasott"
     },
     "filter": {

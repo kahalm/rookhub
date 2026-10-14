@@ -5299,7 +5299,7 @@
     "sort": {
       "label": "Sortiranje",
       "title": "Naslov",
-      "newest": "Najnovije prvo",
+      "newest": "Najnovije prvo (godina izdanja)",
       "recent": "Nedavno čitano"
     },
     "filter": {

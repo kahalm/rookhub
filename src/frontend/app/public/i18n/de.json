@@ -5299,7 +5299,7 @@
     "sort": {
       "label": "Sortierung",
       "title": "Titel",
-      "newest": "Neueste zuerst",
+      "newest": "Neueste zuerst (Erscheinungsjahr)",
       "recent": "Zuletzt gelesen"
     },
     "filter": {
