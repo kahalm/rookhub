@@ -28,6 +28,11 @@ public static class RateLimitPartitions
     /// <summary>Policy-Name der EPUB-Einträge (der EPUB-Leser holt ein Buch Eintrag für Eintrag: Kapitel, Bilder, CSS,
     /// Schriften — ein Kapitel mit 50 Diagrammbildern sind 50+ Anfragen auf einmal); der globale Limiter nimmt ihn aus.</summary>
     public const string EbookEntriesPolicy = "ebook-entries";
+    /// <summary>Datei und Titelbild der E-Book-Bibliothek (0.781.1): pdf.js lädt große Bücher in vielen Bereichsanfragen
+    /// (64-KB-Stücke), die Übersicht 24 Titelbilder je Seite — im globalen 100er-Topf sperrte ein einziges Buch die Adresse
+    /// eine Minute lang für ALLES („Could not load“).</summary>
+    public const string EbookFilePolicy = "ebook-file";
+    public const int EbookFilePermitPerMinute = 1500;
 
     public const int GlobalPermitPerMinute = 100;
     /// <summary>Eine Klasse von 30 Kindern braucht beim Start rund 90 (levels, courses, ggf. language-hint), danach je
@@ -116,13 +121,16 @@ public static class RateLimitPartitions
     /// <summary>Trägt der angesteuerte Endpunkt eine Policy mit eigenem Deckel je Adresse (<see cref="KidsReadPolicy"/>,
     /// <see cref="EbookEntriesPolicy"/>)? (Das Routing läuft vor dem Rate-Limiter, der Endpunkt ist hier also schon bekannt.)</summary>
     public static bool HasOwnIpCeiling(HttpContext ctx) =>
-        ctx.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName is KidsReadPolicy or EbookEntriesPolicy;
+        ctx.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName is KidsReadPolicy or EbookEntriesPolicy or EbookFilePolicy;
 
     public static RateLimitPartition<string> KidsRead(HttpContext ctx, int scale) =>
         FixedWindow("ip:" + ClientIp(ctx), KidsReadPermitPerMinute * scale);
 
     public static RateLimitPartition<string> EbookEntries(HttpContext ctx, int scale) =>
         FixedWindow("ip:" + ClientIp(ctx), EbookEntriesPermitPerMinute * scale);
+
+    public static RateLimitPartition<string> EbookFile(HttpContext ctx, int scale) =>
+        FixedWindow("file:" + ClientIp(ctx), EbookFilePermitPerMinute * scale);
 
     public static RateLimitPartition<string> AnonymousRead(HttpContext ctx, int scale) =>
         FixedWindow(UserVisitorOrIp(ctx), AnonymousReadPermitPerMinute * scale);

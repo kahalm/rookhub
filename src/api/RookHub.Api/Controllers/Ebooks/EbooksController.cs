@@ -178,6 +178,7 @@ public class EbooksController : BaseApiController
     /// als Anhang mit dem ursprünglichen Namen.</summary>
     [HttpGet("{id:int}/file")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.EbookFilePolicy)]
     public async Task<IActionResult> GetFile(int id, [FromQuery] int? fileId, [FromQuery(Name = "t")] string? token,
         [FromQuery] bool download = false, CancellationToken ct = default)
     {
@@ -231,6 +232,7 @@ public class EbooksController : BaseApiController
     /// <summary>Titelbild (JPEG/PNG, wie es gerendert wurde) oder 404, solange keines da ist.</summary>
     [HttpGet("{id:int}/cover")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.EbookFilePolicy)]
     public async Task<IActionResult> GetCover(int id, [FromQuery(Name = "t")] string? token, CancellationToken ct)
     {
         var caller = await ResolveCallerAsync(token, ct);

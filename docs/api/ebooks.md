@@ -295,3 +295,7 @@ sonst ein zweites, verschobenes Raster. Pongó „Tactical Targets 1“ bleibt t
 **Startmodus des Bretts je Buch** (0.781.0): `Ebook.DefaultBoardMode` (view/free/calc/solve/maia, `null` = Standard „solve“,
 `EbookFormats.NormalizeBoardMode`), im Bearbeiten-/Hochladen-Dialog wählbar, im DTO immer gesetzt. Die Brett-Komponente
 startet beim ersten Diagramm damit; danach bleibt der selbst gewählte Modus beim Blättern.
+
+**Drosselung Datei/Titelbild** (0.781.1): `GET …/file` und `…/cover` tragen die Policy `ebook-file` (1 500/min je Adresse,
+`RateLimitPartitions.EbookFilePolicy`) und sind vom globalen 100/min-Topf ausgenommen (`HasOwnIpCeiling`) — pdf.js lud ein
+großes Buch in Hunderten Bereichsanfragen, die Adresse war danach eine Minute lang für alles gesperrt (429 → „Could not load“).

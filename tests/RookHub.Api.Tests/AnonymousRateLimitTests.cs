@@ -96,6 +96,19 @@ public class AnonymousRateLimitTests
         Assert.True(RateLimitPartitions.EbookEntriesPermitPerMinute > RateLimitPartitions.GlobalPermitPerMinute);
     }
 
+    /// <summary>Ein großes PDF im Leser (Hunderte Bereichsanfragen) sperrt die Adresse nicht mehr für alles andere (0.781.1).</summary>
+    [Fact]
+    public void EbookFile_RangeRequestsDoNotDrainTheGlobalBucket()
+    {
+        using var global = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.Global(c, 1));
+        using var files = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.EbookFile(c, 1));
+        var file = Context(policy: RateLimitPartitions.EbookFilePolicy);
+        Assert.Equal(500, Acquired(global, file, 500));   // Datei-Anfragen zählen nicht im globalen Topf
+        Assert.Equal(500, Acquired(files, file, 500));
+        Assert.Equal(RateLimitPartitions.GlobalPermitPerMinute, Acquired(global, Context(), RateLimitPartitions.GlobalPermitPerMinute));   // Liste geht noch
+        Assert.Equal(RateLimitPartitions.EbookFilePermitPerMinute - 500, Acquired(files, file, RateLimitPartitions.EbookFilePermitPerMinute));
+    }
+
     private static HttpContext Context(string? visitor = null, int? userId = null, string? policy = null)
     {
         var ctx = new DefaultHttpContext();
@@ -147,10 +160,11 @@ public class AnonymousRateLimitTests
     }
 
     [Fact]
-    public void Global_ExemptsOnlyKidsReadAndEbookEntries()
+    public void Global_ExemptsOnlyKidsReadAndEbookEntriesAndFiles()
     {
         Assert.True(RateLimitPartitions.HasOwnIpCeiling(Context(policy: "kids-read")));
         Assert.True(RateLimitPartitions.HasOwnIpCeiling(Context(policy: "ebook-entries")));
+        Assert.True(RateLimitPartitions.HasOwnIpCeiling(Context(policy: "ebook-file")));
         foreach (var other in new[] { "anonymous-read", "anonymous-write", "anonymous-puzzle", "auth" })
             Assert.False(RateLimitPartitions.HasOwnIpCeiling(Context(policy: other)));
         Assert.False(RateLimitPartitions.HasOwnIpCeiling(Context()));

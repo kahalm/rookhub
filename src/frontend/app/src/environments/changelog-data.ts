@@ -9,6 +9,10 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   { version: "0.781.1", date: "2026-10-14", changes: [
+    { en: "E-books: opening a large PDF no longer blocks the site for a minute („Could not load“) – the many partial downloads of the reader and the covers now have their own limit instead of counting against the general one.",
+      de: "E-Books: Ein großes PDF zu öffnen sperrt die Seite nicht mehr für eine Minute („Could not load“) – die vielen Teil-Downloads des Lesers und die Titelbilder haben jetzt einen eigenen Deckel statt den allgemeinen aufzubrauchen." },
+  ] },
+  { version: "0.781.1", date: "2026-10-14", changes: [
     { en: "Internal: the design check now also covers the board in the e-book reader (free, calculate, solve, Maia) and the e-book library without signing in.",
       de: "Intern: die Gestaltungs-Prüfung deckt jetzt auch das Brett im E-Book-Leser ab (Frei, Kalkulieren, Lösen, Maia) und die E-Book-Bibliothek ohne Anmeldung." },
   ] },
