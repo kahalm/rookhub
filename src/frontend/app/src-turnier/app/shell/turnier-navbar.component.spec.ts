@@ -312,13 +312,13 @@ describe('TurnierNavbarComponent Tablet-Zwischenbreite (a1-t-navbar-tablet-en)',
 /** UI-Sweep u1 (u1-rk-navbar-raender): ab 2400 px rückt der Leisteninhalt auf die Kante des breiten Inhalts (1 880 px). */
 describe('TurnierNavbarComponent Breitbild-Stufe (u1-rk-navbar-raender)', () => {
   const css = ((TurnierNavbarComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
-  it('polstert die Leiste erst ab 2400 px auf die Mitte, darunter unverändert', () => {
+  it('polstert die Leiste erst ab 2400 px auf die Inhaltskante (--nav-edge, Rückfall 1 880 px), darunter unverändert', () => {
     const at = css.indexOf('@media (min-width: 2400px)');
     expect(at).toBeGreaterThan(-1);
     // Sass schreibt calc() in max() als reinen Ausdruck aus — beides ist gültiges CSS.
-    const m = /\.tb[^{]*\{ ?padding-inline: (max\(16px, (?:calc\()?\(100% - var\(--(?:%NS%)?page-max-width-wide, 1880px\)\) \/ 2 \+ 16px\)?\))/.exec(css.slice(at));
+    const m = /\.tb[^{]*\{ ?padding-inline: (max\(16px, (?:calc\()?\(100% - var\(--(?:%NS%)?nav-edge, var\(--(?:%NS%)?page-max-width-wide, 1880px\)\)\) \/ 2 \+ 16px\)?\))/.exec(css.slice(at));
     expect(m).not.toBeNull();
-    expect(CSS.supports('padding-inline', m![1].replace('%NS%', ''))).toBeTrue();
+    expect(CSS.supports('padding-inline', m![1].replace(/%NS%/g, ''))).toBeTrue();
     expect(css.slice(0, at)).not.toContain('padding-inline');
   });
 });

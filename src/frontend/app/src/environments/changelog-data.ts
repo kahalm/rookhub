@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.772.1", date: "2026-10-14", changes: [
+    { en: "Very wide screens (from 2400 px): the header now lines up with the content of each page — on narrow pages like player preparation as well as on wide ones like the game page — instead of always sitting at a fixed 1880 px edge. Applies to RookHub and the tournament site; below 2400 px nothing changes.",
+      de: "Sehr breite Bildschirme (ab 2400 px): die Kopfleiste fluchtet jetzt mit dem Inhalt der jeweiligen Seite — auf schmalen Seiten wie der Spielervorbereitung ebenso wie auf breiten wie der Partieseite — statt immer an einer festen 1880-px-Kante zu stehen. Gilt für RookHub und die Turnierseite; unter 2400 px ändert sich nichts." },
+  ] },
   { version: "0.772.0", date: "2026-10-14", changes: [
     { en: "E-books: Stockfish now checks every solution read from a book. If the first move turns out to be a side line, another move from the same paragraph is taken; if none fits, the solution is marked as doubtful. Diagrams without a printed solution (most classic problem collections) get one from Stockfish when the position is decisive — e.g. 755 of Baird’s 764 problems.",
       de: "E-Books: Stockfish prüft jetzt jede aus einem Buch gelesene Lösung. Erweist sich der erste Zug als Nebenvariante, wird ein anderer Zug aus demselben Absatz genommen; passt keiner, wird die Lösung als fraglich markiert. Diagramme ohne gedruckte Lösung (die meisten klassischen Problemsammlungen) bekommen eine von Stockfish, wenn die Stellung entscheidend ist — z. B. 755 von Bairds 764 Problemen." },

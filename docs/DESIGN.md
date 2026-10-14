@@ -170,8 +170,13 @@ Dialoge: Material-Vorgabe; der Spielweise-Dialog 20 px, als Blatt am Handy `20px
   nebeneinander), geteilte Linie `/l` und Rekonstruktion `/r` (Brett bis Fensterhöhe, ≤ 1 080 px), Puzzle-Löser (Standard, Endlos-Spielbrett, Buch/Kurs/Tagespuzzle/Wochenpost: Brett bis Fensterhöhe, daneben ≥ 360 px Seitenspalte), Rekonstruktion (Liste + Bearbeiten: Brett-Editor bis 900 px, Brett bis Fensterhöhe). Listen in der breiten Seite dürfen die Zeile nicht auseinanderziehen: Zahlenspalten wachsen mit, schmale Zeilen laufen zweispaltig (Punktepartie-Liste), Datum/Gegner auf Inhaltsbreite (b1). Sperr-/Fehlerkarten einer breiten Seite bleiben bei `--page-max-width`. **Lese- und Formularseiten bleiben** bei `--page-max-width` bzw. ihrer
   schmaleren Breite. Unter 2400 px ändert sich dadurch nichts (Laptop/Handy/1920 pixelgleich). Bretter wachsen dort
   höchstens bis zur Fensterhöhe (`min(…, calc(100vh - Kopf/Leisten))`). Die Kopfleiste (RookHub + Turnier) bleibt
-  randlos, ihr Inhalt rückt ab 2400 px auf die Kante des breiten Inhalts (`padding-inline: max(16px, calc((100% - var(--page-max-width-wide, 1880px)) / 2 + 16px))`, fluchtet mit Brett/Raster;
-  Kalkulations-Modus ausgenommen). Prüfung: `features/page-width.spec.ts`.
+  randlos, ihr Inhalt rückt ab 2400 px auf die Inhaltskante **der jeweiligen Seite** (Logo-Kante = Inhalt-Kante + 16 px, ☰ ebenso
+  rechts; b1): `padding-inline: max(16px, calc((100% - var(--nav-edge, var(--page-max-width-wide, 1880px))) / 2 + 16px))`.
+  `--nav-edge` misst die Kopfleiste selbst (`shared/navbar/nav-edge.ts`, RookHub + Turnier): vom Seiten-Host in `<main>`
+  abwärts der erste Kasten, der schmaler als `<main>` ist (Seitencontainer mit `max-width`/`fit-content`); nach Navigation,
+  Größen- und Inhaltswechsel neu. **Keine Liste je Seite** — neue Seiten fluchten von selbst. Randloser Inhalt oder ein
+  Kasten unter 560 px (Ladekreis) → Rückfall `--page-max-width-wide`. Unter 2400 px wird nichts gemessen.
+  Kalkulations-Modus ausgenommen. Prüfung: `features/page-width.spec.ts`, `shared/navbar/nav-edge.spec.ts` (iframe 2 560 px).
 
 ### 4.2 Breakpoints (gemessen: 157 `@media`-Regeln)
 
@@ -841,6 +846,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-14 | 0.771.1 | Kopfleiste fluchtet ab 2400 px mit der Inhaltskante der jeweiligen Seite (gemessenes `--nav-edge`, Rückfall 1 880 px) | Partieseiten 2 510 px, /l /r 1 600, /prep 760 px — Kopf und Inhalt hatten keine gemeinsame Kante | UI-Sweep b1 · b1-rk-kopfleiste-ultrawide-flucht |
 | 2026-10-14 | 0.770.0 | Ziehbarer Trenner Buch | Brett (Breite je Gerät gemerkt) | Bretter und Bücher brauchen je nach Bildschirm andere Anteile | Nutzerwunsch |
 | 2026-10-14 | 0.766.0 | E-Book-Leser zweispaltig mit Brett rechts; Diagrammzonen nur beim Überfahren sichtbar, Doppelklick stellt auf | Buch bleibt ungestört lesbar, das Brett ist ein Werkzeug daneben | E-Book-Diagramme Stufe 1 |
 | 2026-10-13 | 0.764.0 | E-Book-Karten als Regal (Titelbild 2:3, Lesestand-Balken, Abzeichen); Leser als Sonderlayout mit eigenem Scrollkasten | neuer Bereich, Buchtitel allein sagen wenig — das Titelbild ist die Wiedererkennung | E-Book-Bibliothek |

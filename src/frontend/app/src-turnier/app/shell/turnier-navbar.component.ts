@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, ElementRef, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -12,6 +12,7 @@ import { LocaleService } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { authLinkQuery } from '@rh/core/return-url.util';
+import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
 
 /**
  * Kopfzeile der Turnierseite. Bewusst schmal: drei Wege (Kalender, Gemerkt, Meine Turniere), Sprache, Konto — und
@@ -154,9 +155,11 @@ import { authLinkQuery } from '@rh/core/return-url.util';
       .to-rh .mat-icon { margin: 0; }
     }
     /* UI-Sweep u1 (u1-rk-navbar-raender): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — der Hintergrund bleibt randlos,
-       Marke und Symbole rücken auf die Kante des breiten Inhalts (1 880 px + Rand, fluchtet mit Brett/Raster) (statt 1 100 px vom Inhalt entfernt am Fensterrand). */
+       Marke und Symbole rücken auf die Inhaltskante (statt 1 100 px vom Inhalt entfernt am Fensterrand).
+       b1-rk-kopfleiste-ultrawide-flucht: Kante der JEWEILIGEN Seite (--nav-edge, gemessen von trackNavEdge);
+       Rückfall --page-max-width-wide (1 880 px). */
     @media (min-width: 2400px) {
-      .tb { padding-inline: max(16px, calc((100% - var(--page-max-width-wide, 1880px)) / 2 + 16px)); }
+      .tb { padding-inline: max(16px, calc((100% - var(--nav-edge, var(--page-max-width-wide, 1880px))) / 2 + 16px)); }
     }
   `],
 })
@@ -168,6 +171,11 @@ export class TurnierNavbarComponent {
   readonly theme = inject(ThemeService);
 
   private router = inject(Router);
+
+  constructor() {
+    // b1-rk-kopfleiste-ultrawide-flucht: ab 2400 px fluchtet der Kopfinhalt mit der Inhaltskante der Seite.
+    trackNavEdge(inject<ElementRef<HTMLElement>>(ElementRef).nativeElement, this.router, inject(NgZone), inject(DestroyRef));
+  }
 
   /** „Anmelden“ fuehrt hierher zurueck, z. B. auf das geteilte Turnier /t/42 (UX-020). Rueckfall „/“: die Turnierseite
    *  hat kein /dashboard, den Rueckfall der Maske. */

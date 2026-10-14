@@ -1,5 +1,5 @@
 import { HandoffService } from '../../core/handoff.service';
-import { Component, EventEmitter, Output, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, DestroyRef, ElementRef, NgZone, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of, switchMap, catchError, merge, map, timer } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -28,6 +28,7 @@ import { authLinkQuery, isAuthPage } from '../../core/return-url.util';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
 } from '../fullscreen/fullscreen.util';
+import { trackNavEdge } from './nav-edge';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -333,11 +334,13 @@ import {
       .anon-menu { width: 44px; height: 44px; padding: 10px; }
     }
     /* UI-Sweep u1 (u1-rk-navbar-raender): Breitbild-Stufe ab 2400 px (DESIGN 4.1) — der Hintergrund bleibt randlos,
-       Logo und Symbole rücken auf die Kante des breiten Inhalts (1 880 px + Rand, fluchtet mit Brett/Raster) (statt 1 100 px vom Inhalt entfernt am Fensterrand).
+       Logo und Symbole rücken auf die Inhaltskante (statt 1 100 px vom Inhalt entfernt am Fensterrand).
+       b1-rk-kopfleiste-ultrawide-flucht: die Kante ist die der JEWEILIGEN Seite — --nav-edge misst trackNavEdge
+       (nav-edge.ts) am Seiteninhalt in <main>; Rückfall --page-max-width-wide (1 880 px).
        Kalkulations-Modus: die schwebende Leiste behält ihr 4-px-Polster — die Regel in styles.scss
        (body.calc-mode app-navbar mat-toolbar) ist spezifischer und gewinnt. */
     @media (min-width: 2400px) {
-      mat-toolbar { padding-inline: max(16px, calc((100% - var(--page-max-width-wide, 1880px)) / 2 + 16px)); }
+      mat-toolbar { padding-inline: max(16px, calc((100% - var(--nav-edge, var(--page-max-width-wide, 1880px))) / 2 + 16px)); }
     }
   `]
 })
@@ -389,6 +392,9 @@ export class NavbarComponent implements OnInit {
   messagesUnread = 0;
 
   private destroyRef = inject(DestroyRef);
+  /** Optional: einige Specs bauen die Navbar ohne Host-Element (reiner Injektor). */
+  private host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
+  private zone = inject(NgZone);
 
   /** Einladungslink zum öffentlichen RookHub-Discord (Community). */
   readonly discordUrl = DISCORD_INVITE_URL;
@@ -441,6 +447,9 @@ export class NavbarComponent implements OnInit {
       const off = onFullscreenChange(() => this.fsActive = isFullscreen(document.documentElement));
       this.destroyRef.onDestroy(off);
     }
+
+    // b1-rk-kopfleiste-ultrawide-flucht: ab 2400 px fluchtet der Kopfinhalt mit der Inhaltskante der Seite.
+    if (this.host) trackNavEdge(this.host.nativeElement, this.router, this.zone, this.destroyRef);
 
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(set => this.visible = set);
