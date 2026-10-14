@@ -118,6 +118,13 @@ export const STATES = [
   { of: 'rookhub__ebooks', name: 'mit-diagrammen', steps: [{ click: '.eb-filters button.eb-chip >> nth=1' }],
     expect: '.eb-filters button.eb-chip--on' },
   { of: 'rookhub__ebooks-ebookId', name: 'menue', auth: ['admin'], steps: [{ click: '.rd-toolbar > button[mat-icon-button]' }], expect: MENU },
+  // Brett im Leser (0.777.0 ff.): erstes Diagramm aufs Brett (am Handy erst den Brett-Knopf), dann die Modi.
+  ...[['brett', null], ['frei', 1], ['kalkulieren', 2], ['loesen', 3], ['maia', 4]].map(([name, nth]) => ({
+    of: 'rookhub__ebooks-diagramme', name,
+    steps: [{ clickIf: '.rd-toolbar .rd-diag-btn' }, { click: '.rd-panel-head button.rd-jump >> nth=0' },
+      { waitFor: '.rd-panel app-ebook-board' }, ...(nth == null ? [] : [{ click: `.rd-panel .eb-modes .eb-mode >> nth=${nth}` }])],
+    expect: nth == null ? '.rd-panel app-ebook-board' : `.rd-panel .eb-modes .eb-mode:nth-child(${nth + 1}).eb-mode--on`,
+  })),
   { of: 'rookhub__woodpecker', name: 'anlegen',
     steps: [{ click: '.page .header-actions button, .page .empty-state button' }], expect: DIALOG },
   { of: 'rookhub__woodpecker', name: 'plan-menue', auth: ['admin'], steps: [{ click: '.plans .plan .plan-head button[mat-icon-button]' }], expect: MENU },

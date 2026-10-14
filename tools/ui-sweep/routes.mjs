@@ -83,7 +83,8 @@ export const ROUTES = [
   r('rookhub', '/worksheets/{worksheetId}', 'user', { main: ['.wd-list .wd-item', '.wd-empty', '.wd-page .wd-hint'] }),
   // Druckansicht des Aufgabenblatts: fürs Papier gebaut — Ausnahme (DESIGN.md 4.6).
   r('rookhub', '/worksheets/{worksheetId}/print', 'user', { main: ['.ws-sheet .ws-task', '.ws-sheet', '.ws-empty'], foldExempt: true }),
-  r('rookhub', '/ebooks', 'user', { main: ['.eb-grid .eb-card', '.eb-empty', '.eb-page app-load-error'] }),
+  // Seit 0.778.0 auch ohne Anmeldung (für alle freigegebene Bücher + eigene Uploads).
+  r('rookhub', '/ebooks', 'any', { main: ['.eb-grid .eb-card', '.eb-empty', '.eb-page app-load-error'] }),
   // Leser: Werkzeugleiste + Seiten in der Resthöhe — Sonderlayout wie das Brett (DESIGN.md 4.5).
   r('rookhub', '/ebooks/{ebookId}', 'user', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
   // Leser mit erkannten Diagrammen: Buch links, Brett rechts (0.766.0 ff.) — ein Buch, das das Konto sehen darf.

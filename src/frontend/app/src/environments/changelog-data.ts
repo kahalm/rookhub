@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.781.1", date: "2026-10-14", changes: [
+    { en: "Internal: the design check now also covers the board in the e-book reader (free, calculate, solve, Maia) and the e-book library without signing in.",
+      de: "Intern: die Gestaltungs-Prüfung deckt jetzt auch das Brett im E-Book-Leser ab (Frei, Kalkulieren, Lösen, Maia) und die E-Book-Bibliothek ohne Anmeldung." },
+  ] },
   { version: "0.781.0", date: "2026-10-14", changes: [
     { en: "E-books: each book can set which mode the board starts in (Edit → „Board mode at start“); the default is now Solve.",
       de: "E-Books: Je Buch lässt sich festlegen, mit welchem Modus das Brett startet (Bearbeiten → „Brett-Modus beim Öffnen“); Standard ist jetzt Lösen." },
