@@ -80,7 +80,7 @@
            [style.--rd-panel-w.px]="panelWidth()">
         <div class="rd-viewer">
           @if (isEpub) {
-            <app-epub-viewer [src]="fileUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
+            <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
                              [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)"
                              (toc)="epubToc.set($event)" (failed)="onViewerFailed()" />
           } @else {

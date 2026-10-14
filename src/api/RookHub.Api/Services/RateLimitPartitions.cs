@@ -25,11 +25,18 @@ public static class RateLimitPartitions
     /// <summary>Policy-Name der Kinderseiten-Lesezugriffe; der globale Limiter nimmt ihn aus (siehe <see cref="Global"/>).</summary>
     public const string KidsReadPolicy = "kids-read";
 
+    /// <summary>Policy-Name der EPUB-Einträge (der EPUB-Leser holt ein Buch Eintrag für Eintrag: Kapitel, Bilder, CSS,
+    /// Schriften — ein Kapitel mit 50 Diagrammbildern sind 50+ Anfragen auf einmal); der globale Limiter nimmt ihn aus.</summary>
+    public const string EbookEntriesPolicy = "ebook-entries";
+
     public const int GlobalPermitPerMinute = 100;
     /// <summary>Eine Klasse von 30 Kindern braucht beim Start rund 90 (levels, courses, ggf. language-hint), danach je
     /// Stufenstart eine bis zwei — 240 lässt auch zwei Gruppen hinter derselben Adresse Luft.</summary>
     public const int KidsReadPermitPerMinute = 240;
     public const int AnonymousReadPermitPerMinute = 60;
+    /// <summary>EPUB-Einträge je Adresse: mehrere diagrammreiche Kapitel und das Vermessen (alle Kapitel einmal) in einer
+    /// Minute. Jede Anfrage braucht trotzdem einen gültigen Ausweis und besteht die Sichtbarkeitsprüfung.</summary>
+    public const int EbookEntriesPermitPerMinute = 600;
     /// <summary>Unverändert zum früheren Topf — jetzt aber je Spieler statt je Adresse (Endless speichert alle 3 s).</summary>
     public const int AnonymousWritePermitPerMinute = 30;
     /// <summary>Die übrigen offenen Endpunkte (Client-Log, Bot-Statistik, Token-Test, Bestandssuche, Extension-Senke).</summary>
@@ -99,19 +106,23 @@ public static class RateLimitPartitions
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
-    /// ist und höher liegt (<see cref="KidsReadPolicy"/>); sonst schnitte der globale Topf sie doch wieder bei 100 ab.</summary>
+    /// ist und höher liegt (<see cref="KidsReadPolicy"/>, <see cref="EbookEntriesPolicy"/>); sonst schnitte der globale
+    /// Topf sie doch wieder bei 100 ab.</summary>
     public static RateLimitPartition<string> Global(HttpContext ctx, int scale) =>
         HasOwnIpCeiling(ctx)
             ? RateLimitPartition.GetNoLimiter(KidsReadPolicy)
             : FixedWindow(ClientIp(ctx), GlobalPermitPerMinute * scale);
 
-    /// <summary>Trägt der angesteuerte Endpunkt die Policy <see cref="KidsReadPolicy"/>? (Das Routing läuft vor dem
-    /// Rate-Limiter, der Endpunkt ist hier also schon bekannt.)</summary>
+    /// <summary>Trägt der angesteuerte Endpunkt eine Policy mit eigenem Deckel je Adresse (<see cref="KidsReadPolicy"/>,
+    /// <see cref="EbookEntriesPolicy"/>)? (Das Routing läuft vor dem Rate-Limiter, der Endpunkt ist hier also schon bekannt.)</summary>
     public static bool HasOwnIpCeiling(HttpContext ctx) =>
-        ctx.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == KidsReadPolicy;
+        ctx.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName is KidsReadPolicy or EbookEntriesPolicy;
 
     public static RateLimitPartition<string> KidsRead(HttpContext ctx, int scale) =>
         FixedWindow("ip:" + ClientIp(ctx), KidsReadPermitPerMinute * scale);
+
+    public static RateLimitPartition<string> EbookEntries(HttpContext ctx, int scale) =>
+        FixedWindow("ip:" + ClientIp(ctx), EbookEntriesPermitPerMinute * scale);
 
     public static RateLimitPartition<string> AnonymousRead(HttpContext ctx, int scale) =>
         FixedWindow(UserVisitorOrIp(ctx), AnonymousReadPermitPerMinute * scale);

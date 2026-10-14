@@ -49,6 +49,8 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   notFound = false;
   /** Adresse der Hauptdatei (mit Ausweis), wenn sie der Browser zeigen kann. */
   fileUrl: string | null = null;
+  /** EPUB „als Ordner“ (nur Container/OPF/Kapitel/Bilder einzeln laden); null bei PDF. */
+  epubDirUrl: string | null = null;
   readonly page = signal(1);
   readonly pageCount = signal(0);
   /** `null` = Breite füllen. */
@@ -125,6 +127,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
           next: token => {
             this.token = token;
             this.fileUrl = book.primaryFormat && READABLE_FORMATS.has(book.primaryFormat) ? this.ebooks.fileUrl(book.id, token) : null;
+            this.epubDirUrl = book.primaryFormat === 'epub' ? this.ebooks.epubBaseUrl(book.id, token) : null;
             this.loading = false;
             this.cdr.markForCheck();
           },

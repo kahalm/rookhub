@@ -83,6 +83,7 @@ describe('EbookService', () => {
     expect(service.fileUrl(7, 'a b')).toBe('/api/ebooks/7/file?t=a%20b');
     expect(service.fileUrl(7, 'x', { fileId: 3, download: true })).toBe('/api/ebooks/7/file?t=x&fileId=3&download=true');
     expect(service.coverUrl(7, 'x', 'v1')).toBe('/api/ebooks/7/cover?t=x&v=v1');
+    expect(service.epubBaseUrl(7, 'a/b')).toBe('/api/ebooks/7/epub/a%2Fb/');
   });
 
   it('lädt als Multipart mit Metadaten als CSV hoch', () => {

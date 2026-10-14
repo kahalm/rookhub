@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.780.0", date: "2026-10-14", changes: [
+    { en: "E-book reader: EPUB books open much faster — instead of downloading the whole book first (e.g. 84 MB), the reader now fetches only the current chapter and its pictures; reading progress is measured in the background afterwards.",
+      de: "E-Book-Leser: EPUB-Bücher öffnen viel schneller — statt erst das ganze Buch herunterzuladen (z. B. 84 MB), holt der Leser nur das aktuelle Kapitel und seine Bilder; der Lesefortschritt wird danach im Hintergrund vermessen." },
+  ] },
   { version: "0.779.1", date: "2026-10-14", changes: [
     { en: "E-book reader: the arrow and page keys turn the book's pages again after you played on the board – before, the keys only reached the board.",
       de: "E-Book-Leser: Pfeil- und Bildtasten blättern wieder im Buch, nachdem du am Brett gezogen hast – vorher kamen die Tasten nur beim Brett an." },

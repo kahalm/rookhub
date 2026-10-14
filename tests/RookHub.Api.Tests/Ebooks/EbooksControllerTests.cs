@@ -143,6 +143,39 @@ public class EbooksControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task EpubEntry_NeedsBearerOrToken_ChecksVisibility_AndServesSingleEntries()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var other = await _kit.UserAsync("other");
+        var epub = await _kit.UploadAsync(owner.Id, false, EbookEpubEntriesTests.TinyEpub(), "b.epub");
+        var pdfOnly = await _kit.UploadAsync(owner.Id, false, EbookTestKit.TinyPdf(), "a.pdf");
+        var (token, _) = _tokens.Issue(owner.Id);
+
+        Assert.IsType<UnauthorizedResult>(await Controller(null).GetEpubEntry(epub.Id, "kaputt", "META-INF/container.xml", CancellationToken.None));
+
+        var ok = Assert.IsType<FileContentResult>(await Controller(null).GetEpubEntry(epub.Id, token, "META-INF/container.xml", CancellationToken.None));
+        Assert.Equal("application/xml", ok.ContentType);
+        var img = Assert.IsType<FileContentResult>(await Controller(null).GetEpubEntry(epub.Id, token, "OEBPS/Images/Board 1.png", CancellationToken.None));
+        Assert.Equal("image/png", img.ContentType);
+        // Bearer genügt ebenfalls (Ausweis im Pfad wird dann nicht ausgewertet).
+        Assert.IsType<FileContentResult>(await Controller(owner.Id).GetEpubEntry(epub.Id, "-", "OEBPS/Text/ch1.xhtml", CancellationToken.None));
+
+        Assert.IsType<NotFoundResult>(await Controller(null).GetEpubEntry(epub.Id, token, "OEBPS/fehlt.xhtml", CancellationToken.None));
+        Assert.IsType<NotFoundResult>(await Controller(null).GetEpubEntry(epub.Id, token, "../b.epub", CancellationToken.None));
+        // Buch ohne EPUB und fremde Bücher: 404 (unsichtbar sieht aus wie unbekannt).
+        await Assert.ThrowsAsync<NotFoundException>(() => Controller(null).GetEpubEntry(pdfOnly.Id, token, "META-INF/container.xml", CancellationToken.None));
+        var (foreignToken, _) = _tokens.Issue(other.Id);
+        await Assert.ThrowsAsync<NotFoundException>(() => Controller(null).GetEpubEntry(epub.Id, foreignToken, "META-INF/container.xml", CancellationToken.None));
+        // Anonymer Ausweis („a:“ + Kennung) sieht ein Buch nur mit Freigabe „Everyone“.
+        var (anonToken, _) = _tokens.Issue(EbookCaller.Anonymous("0123456789abcdef0123456789abcdef"));
+        await Assert.ThrowsAsync<NotFoundException>(() => Controller(null).GetEpubEntry(epub.Id, anonToken, "META-INF/container.xml", CancellationToken.None));
+        var everyone = await _kit.GroupAsync("Everyone", everyone: true);
+        _kit.Db.EbookGroupAccesses.Add(new EbookGroupAccess { EbookId = epub.Id, GroupId = everyone.Id });
+        await _kit.Db.SaveChangesAsync();
+        Assert.IsType<FileContentResult>(await Controller(null).GetEpubEntry(epub.Id, anonToken, "META-INF/container.xml", CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Cover_Is404UntilRendered_Then200WithSniffedType()
     {
         var owner = await _kit.UserAsync("owner");

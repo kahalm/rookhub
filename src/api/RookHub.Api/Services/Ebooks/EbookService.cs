@@ -540,6 +540,22 @@ public class EbookService
         return (ebook, file, full);
     }
 
+    /// <summary>Pfad der EPUB-Datei eines sichtbaren Buchs (für den Leser „als Ordner“); kein EPUB → 404.</summary>
+    public async Task<string> ResolveEpubAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
+    {
+        if (caller.IsAnonymous) manageAll = false;
+        var ebook = await EbookAccess.Visible(_db, caller, manageAll)
+            .Include(b => b.Files)
+            .FirstOrDefaultAsync(b => b.Id == id, ct)
+            ?? throw new NotFoundException("E-book not found.");
+        var file = EbookFormats.Primary(ebook.Files.Where(f => f.Format == "epub"))
+            ?? throw new NotFoundException("This book has no EPUB file.");
+        var full = _storage.ResolveFile(ebook, file);
+        if (!System.IO.File.Exists(full))
+            throw new NotFoundException("The file is missing on the server.") { Code = ApiErrorCodes.EbookFileMissing };
+        return full;
+    }
+
     /// <summary>Pfad des Titelbilds eines sichtbaren Buchs; <c>null</c>, wenn (noch) keines da ist.</summary>
     public async Task<string?> ResolveCoverAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)
     {

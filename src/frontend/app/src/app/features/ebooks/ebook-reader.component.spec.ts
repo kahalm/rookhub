@@ -30,11 +30,12 @@ describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
   async function make(b: Ebook) {
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram']);
     service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
     service.accessToken.and.returnValue(of('tok'));
     service.fileUrl.and.callFake((id, t, o) => `/api/ebooks/${id}/file?t=${t}${o?.download ? '&download=true' : ''}${o?.fileId ? '&fileId=' + o.fileId : ''}`);
+    service.epubBaseUrl.and.callFake((id, t) => `/api/ebooks/${id}/epub/${t}/`);
     service.setProgress.and.returnValue(of({ page: 1, pageCount: null, updatedAt: '' }));
     await TestBed.configureTestingModule({
       imports: [EbookReaderComponent],
@@ -57,6 +58,7 @@ describe('EbookReaderComponent', () => {
     const c = fixture.componentInstance;
     expect(c.readable).toBeTrue();
     expect(c.fileUrl).toBe('/api/ebooks/9/file?t=tok');
+    expect(c.epubDirUrl).toBeNull();
     expect(c.initialPage).toBe(42);
     expect(c.pageCount()).toBe(120);
 
@@ -201,6 +203,9 @@ describe('EbookReaderComponent', () => {
     const c = fixture.componentInstance;
     expect(c.readable).toBeTrue();
     expect(c.isEpub).toBeTrue();
+    // Als Ordner (nur Container/OPF/Kapitel einzeln), das Archiv bleibt der Rückfall.
+    expect(c.epubDirUrl).toBe('/api/ebooks/9/epub/tok/');
+    expect(c.fileUrl).toBe('/api/ebooks/9/file?t=tok');
     expect(c.epubLocator).toBe('epubcfi(/6/4!/4/2)');
     c.onEpubLocated({ fraction: 0.523, cfi: 'epubcfi(/6/8!/4/2)' });
     expect(c.epubPercent()).toBe(52);

@@ -14,6 +14,7 @@ export interface EpubDiagramImage { id: number; chapter: number; ref: string; ti
 /** Minimal-Schnittstelle von epub.js, die hier gebraucht wird (das Paket bringt eigene, sehr breite Typen mit). */
 interface EpubBook {
   ready: Promise<unknown>;
+  open(input: string, what?: string): Promise<unknown>;
   loaded: { navigation: Promise<{ toc: { label: string; href: string }[] }> };
   locations: { generate(chars: number): Promise<unknown>; percentageFromCfi(cfi: string): number; length(): number };
   renderTo(el: HTMLElement, opts: Record<string, unknown>): EpubRendition;
@@ -35,14 +36,25 @@ interface EpubRendition {
 
 interface EpubContents { document: Document; cfiFromNode(node: Node): string; }
 
+/** `ePub(data)` (Archiv) bzw. `ePub(options)` (leeres Buch, danach `open`). */
+type EpubFactory = (input: ArrayBuffer | Record<string, unknown>) => EpubBook;
+
+/** Wie lange das Öffnen als Ordner (container.xml + OPF) höchstens dauern darf, bevor das ganze Archiv geladen wird. */
+const DIRECTORY_OPEN_TIMEOUT_MS = 20_000;
+/** Das Vermessen (`locations.generate`) lädt JEDES Kapitel einmal — erst eine Weile nach der ersten Seite. */
+const LOCATIONS_DELAY_MS = 4_000;
+
 /**
- * EPUB-Leser (0.770.0) auf epub.js: Seitenweise (paginiert), ‹ ›, Pfeiltasten und Wischen; Lesestelle als CFI. Die Datei
- * wird als ArrayBuffer geholt (die Datei-Adresse trägt keine Endung, epub.js würde sie sonst als Ordner behandeln).
+ * EPUB-Leser (0.770.0) auf epub.js: Seitenweise (paginiert), ‹ ›, Pfeiltasten und Wischen; Lesestelle als CFI.
+ * Öffnen: mit `dirSrc` (Basis `…/api/ebooks/{id}/epub/{token}/`) „als Ordner“ — epub.js holt nur container.xml, OPF,
+ * Navigation, das gezeigte Kapitel und dessen Bilder einzeln vom Server statt des ganzen Archivs (Dvoretsky: 84 MB vor der
+ * ersten Seite). Schlägt das fehl, wie früher die ganze Datei (`src`) als ArrayBuffer.
  * epub.js kommt per dynamischem Import — eigener Lazy-Chunk, nur wenn ein EPUB geöffnet wird. Skripte im Buch bleiben aus
  * (epub.js-Vorgabe), gerendert wird in ein about:blank-iframe, das die CSP der Seite erbt.
  * Erkannte Diagrammbilder (0.775.0, `images`) bekommen im Kapitel eine Markierung; Doppelklick (oder Enter) meldet
- * `imagePick`. Zuordnung über den Bildpfad im Buch — epub.js tauscht die Adressen gegen blob:-URLs, daher die Rückübersetzung
- * über `book.resources`, zur Not über den Dateinamen.
+ * `imagePick`. Zuordnung über den Bildpfad im Buch (`epubImagePath`): im Archiv tauscht epub.js die Adressen gegen
+ * blob:-URLs (Rückübersetzung über `book.resources`), als Ordner bleiben sie relativ zum Kapitel und werden gegen die
+ * Basis aufgelöst; zur Not über den Dateinamen.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +75,8 @@ interface EpubContents { document: Document; cfiFromNode(node: Node): string; }
 })
 export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) src = '';
+  /** Basis-Adresse des Buchs „als Ordner“ (mit Schrägstrich am Ende); leer = ganzes Archiv aus `src`. */
+  @Input() dirSrc: string | null = null;
   @Input() initialLocator: string | null = null;
   @Output() located = new EventEmitter<EpubLocation>();
   @Output() toc = new EventEmitter<EpubTocEntry[]>();
@@ -82,15 +96,16 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   private rendition: EpubRendition | null = null;
   private destroyed = false;
   private touchX: number | null = null;
+  /** Absolute Basis, wenn das Buch als Ordner offen ist (für die Bildzuordnung). */
+  private dirBase: string | null = null;
+  private locationsTimer: ReturnType<typeof setTimeout> | null = null;
 
   async ngAfterViewInit(): Promise<void> {
     try {
-      const [mod, res] = await Promise.all([import('epubjs'), fetch(this.src, { credentials: 'same-origin' })]);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.arrayBuffer();
+      const mod = await import('epubjs');
       if (this.destroyed) return;
-      const ePub = (mod as unknown as { default: (d: ArrayBuffer) => EpubBook }).default;
-      const book = ePub(data);
+      const book = await this.openBook((mod as unknown as { default: EpubFactory }).default);
+      if (!book) return;
       this.book = book;
       const rendition = book.renderTo(this.area.nativeElement, { width: '100%', height: '100%', flow: 'paginated', spread: 'auto' });
       this.rendition = rendition;
@@ -110,12 +125,43 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       this.zone.run(() => this.loading.set(false));
       book.loaded.navigation.then(nav => this.zone.run(() => this.toc.emit(nav.toc.map(t => ({ label: t.label.trim(), href: t.href })))))
         .catch(() => {});
-      // Anteile genau erst nach dem Vermessen (im Hintergrund, Sekunden bei großen Büchern).
-      void book.locations.generate(1600).catch(() => {});
+      // Anteile genau erst nach dem Vermessen (im Hintergrund, Sekunden bei großen Büchern). Es lädt jedes Kapitel einmal
+      // (als Ordner: je Kapitel eine Anfrage, ohne Bilder) — darum erst nach der ersten Seite und mit Abstand.
+      this.locationsTimer = setTimeout(() => {
+        this.locationsTimer = null;
+        if (!this.destroyed) void book.locations.generate(1600).catch(() => {});
+      }, LOCATIONS_DELAY_MS);
     } catch (e) {
       if (this.destroyed) return;
       this.zone.run(() => { this.loading.set(false); this.error.set(true); this.failed.emit(e); });
     }
+  }
+
+  /**
+   * Buch öffnen: zuerst als Ordner (`dirSrc`), sonst/bei Fehler das ganze Archiv aus `src`. `null` = Komponente schon weg.
+   * Als Ordner ohne Ersetzungen (`replacements: 'none'`): Bilder, CSS und Schriften lädt das Kapitel-iframe selbst über
+   * die `<base>` des Kapitels — gleiche Herkunft, die CSP braucht dafür nichts Neues.
+   */
+  async openBook(ePub: EpubFactory): Promise<EpubBook | null> {
+    if (this.dirSrc) {
+      const base = new URL(this.dirSrc, document.baseURI).href;
+      const book = ePub({ replacements: 'none' });
+      try {
+        await withTimeout(book.open(base, 'directory'), DIRECTORY_OPEN_TIMEOUT_MS);
+        if (this.destroyed) { book.destroy(); return null; }
+        this.dirBase = base;
+        return book;
+      } catch {
+        try { book.destroy(); } catch { /* halb offen */ }
+        if (this.destroyed) return null;
+      }
+    }
+    const res = await fetch(this.src, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.arrayBuffer();
+    if (this.destroyed) return null;
+    this.dirBase = null;
+    return ePub(data);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -161,7 +207,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
     doc.querySelectorAll<Element>('img, image').forEach(el => {
       const raw = el.getAttribute('src') ?? el.getAttribute('xlink:href') ?? el.getAttribute('href') ?? '';
-      const path = normalizePath(blobs.get(raw) ?? raw);
+      const path = epubImagePath(raw, doc.baseURI, this.dirBase, blobs);
       const img = byRef.get(path) ?? byName.get(baseName(path)) ?? null;
       if (!img) return;
       el.classList.add('rh-diagram');
@@ -177,6 +223,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    if (this.locationsTimer) clearTimeout(this.locationsTimer);
     try { this.rendition?.destroy(); this.book?.destroy(); } catch { /* schon weg */ }
   }
 
@@ -202,6 +249,32 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (Math.abs(dx) < 50) return;
     if (dx < 0) this.next(); else this.prev();
   }
+}
+
+/**
+ * Bildadresse im Kapitel → Pfad im EPUB-ZIP (wie `EbookDiagram.ImageRef`). Archiv: blob:-URL über die Ersetzungs-Tabelle
+ * von epub.js. Ordner: Adresse gegen die Basis des Kapitels (`<base>`) auflösen und die Buch-Basis
+ * (`…/epub/{token}/`) abschneiden. Sonst der rohe Pfad.
+ */
+export function epubImagePath(raw: string, baseUri: string | null, bookBase: string | null, blobs: ReadonlyMap<string, string>): string {
+  const blob = blobs.get(raw);
+  if (blob) return normalizePath(blob);
+  if (bookBase && baseUri && raw) {
+    try {
+      const abs = new URL(raw, baseUri);
+      abs.hash = '';
+      abs.search = '';
+      if (abs.href.startsWith(bookBase)) return normalizePath(abs.href.slice(bookBase.length));
+    } catch { /* keine gültige Adresse */ }
+  }
+  return normalizePath(raw);
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    p.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+  });
 }
 
 function normalizePath(p: string): string {

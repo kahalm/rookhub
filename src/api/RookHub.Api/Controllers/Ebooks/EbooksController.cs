@@ -6,6 +6,7 @@ using RookHub.Api.Authorization;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Ebooks;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Ebooks;
 
@@ -189,6 +190,28 @@ public class EbooksController : BaseApiController
         // Inline: PDF zeigt der Browser/der Leser; der Dateiname steht trotzdem im Header (Speichern-unter).
         Response.Headers.ContentDisposition = $"inline; filename*=UTF-8''{Uri.EscapeDataString(DownloadName(ebook, file))}";
         return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Ein einzelner Eintrag aus dem EPUB-ZIP (<see cref="EbookEpubEntries"/>): der EPUB-Leser öffnet das Buch als Ordner
+    /// unter <c>…/epub/{token}/</c> und holt nur Container, OPF, Navigation, das gezeigte Kapitel und dessen Bilder. Der
+    /// Ausweis steht im PFAD, damit epub.js relative Adressen (Bilder, CSS, Kapitel) ohne Query-Parameter auflösen kann;
+    /// Prüfung wie bei <see cref="GetFile"/> (Bearer oder Ausweis, Sichtbarkeit je Anfrage). Fehlender Eintrag → 404.
+    /// </summary>
+    [HttpGet("{id:int}/epub/{token}/{**path}")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.EbookEntriesPolicy)]
+    public async Task<IActionResult> GetEpubEntry(int id, string token, string? path, CancellationToken ct)
+    {
+        var caller = await ResolveCallerAsync(token, ct);
+        if (caller == null) return Unauthorized();
+        var file = await _service.ResolveEpubAsync(caller.Value.Caller, caller.Value.ManageAll, id, ct);
+        var entry = await EbookEpubEntries.ReadAsync(file, path, ct);
+        if (entry == null) return NotFound();
+        // Der Inhalt eines Buchs ändert sich nicht; der Ausweis im Pfad wechselt ohnehin alle 12 h.
+        Response.Headers.CacheControl = "private, max-age=86400";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(entry.Bytes, entry.ContentType);
     }
 
     private const string UnsafeNameChars = "<>:\"/\\|?*";

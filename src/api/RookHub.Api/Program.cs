@@ -860,6 +860,7 @@ try
         // Bestandssuche, Extension-Senke) bleibt „anonymous-puzzle", angemeldet jetzt je Konto statt je IP.
         options.AddPolicy("anonymous-puzzle", ctx => RookHub.Api.Services.RateLimitPartitions.AnonymousMisc(ctx, permitScale));
         options.AddPolicy("kids-read", ctx => RookHub.Api.Services.RateLimitPartitions.KidsRead(ctx, permitScale));
+        options.AddPolicy("ebook-entries", ctx => RookHub.Api.Services.RateLimitPartitions.EbookEntries(ctx, permitScale));
         options.AddPolicy("anonymous-read", ctx => RookHub.Api.Services.RateLimitPartitions.AnonymousRead(ctx, permitScale));
         options.AddPolicy("anonymous-write", ctx => RookHub.Api.Services.RateLimitPartitions.AnonymousWrite(ctx, permitScale));
         // Community-Review-Flags (flag-hints): jeder eingeloggte User darf setzen/aufheben — aber

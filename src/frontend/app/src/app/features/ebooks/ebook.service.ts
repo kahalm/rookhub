@@ -272,6 +272,12 @@ export class EbookService {
     return url;
   }
 
+  /** Basis des EPUB-Lesers „als Ordner“: einzelne Einträge des ZIPs, Ausweis im PFAD (epub.js löst relative Adressen
+   *  von Kapiteln, Bildern und CSS dagegen auf und kann keine Query-Parameter anhängen). Endet mit „/“. */
+  epubBaseUrl(id: number, token: string): string {
+    return `/api/ebooks/${id}/epub/${encodeURIComponent(token)}/`;
+  }
+
   coverUrl(id: number, token: string, version: string | number = ''): string {
     return `/api/ebooks/${id}/cover?t=${encodeURIComponent(token)}${version ? `&v=${encodeURIComponent(String(version))}` : ''}`;
   }

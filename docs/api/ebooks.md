@@ -48,6 +48,7 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 | DELETE | `/api/ebooks/{id:int}` | Besitzer/Verwalter | Löscht Buch, Freigaben, Lesestände und die HOCHGELADENE Datei + Titelbild (Bibliotheksdateien bleiben) → 204 |
 | GET/PUT | `/api/ebooks/{id:int}/progress` | Auth | Lesestand `{ page, pageCount? }` (1-basiert; `pageCount` bleibt, wenn keiner mitkommt). Unsichtbar → 404 |
 | GET | `/api/ebooks/{id:int}/file?t=&fileId=&download=` | **AllowAnonymous** (Ausweis oder Bearer) | Die Hauptdatei bzw. `fileId`, mit Bereichsanfragen (`PhysicalFile(enableRangeProcessing)`) — der PDF-Leser holt nur die Seiten, die er zeigt. `download=true` → Anhang „<Titel>.<format>“ (Dateisystem-sichere Zeichen). Datei auf der Platte weg → 404 `ebook_file_missing` |
+| GET | `/api/ebooks/{id:int}/epub/{token}/{**path}` | **AllowAnonymous** (Ausweis im PFAD oder Bearer), Rate-Limit `ebook-entries` | EIN Eintrag aus dem EPUB-ZIP (`EbookEpubEntries`) für den EPUB-Leser „als Ordner“. Ausweis im Pfad, damit epub.js relative Adressen (Kapitel, Bilder, CSS) ohne Query auflösen kann; Sichtbarkeit wie `…/file`, gewählt wird die EPUB-Datei des Buchs (kein EPUB → 404). Pfad nur als ZIP-Eintrag (nie Dateisystem), `..`/absolut/Backslash → 404, Schreibweise wie im ZIP, Content-Type nach Endung, `Cache-Control: private, max-age=86400`, Einträge > 64 MB → 404. Eigener Deckel 600/min je Adresse statt des globalen 100/min-Topfs (ein Kapitel mit 50 Diagrammbildern = 50+ Anfragen) |
 | GET | `/api/ebooks/{id:int}/cover?t=` | **AllowAnonymous** (Ausweis oder Bearer) | Titelbild (JPEG/PNG, Typ an den Bytes erkannt) oder 404, solange keines da ist; `Cache-Control: private, max-age=86400` |
 | GET | `/api/admin/ebooks/library` | `ebooks.manage` | `{ configured, uploadsEnabled, imported, coversPending }` |
 | POST | `/api/admin/ebooks/library/import` | `ebooks.manage` | Bibliothek einlesen (synchron, Sekunden): gleichnamige Dateien eines Ordners (`Buch.pdf` + `Buch.djvu`) werden EIN Buch; Beiblatt `Buch.json` (`title`, `author` als Text oder Liste, `year`, `tags[]`, `targetMinElo`) liefert die Metadaten, sonst Ordner „Nachname, Vorname" + Dateiname (Ordner `AAA…`, `Unknown`, `.…` gelten nicht als Autor). Idempotent: bekannte Pfade werden übersprungen, ein neues Format neben einem bekannten Buch angehängt. Eingelesene Bücher gehören dem Admin und sind zunächst NUR für Verwalter sichtbar — Freigabe danach in der Übersicht (Auswahl → „Sichtbarkeit setzen"). Antwort `{ configured, filesSeen, added, filesAdded, skipped, unreadable }` |
@@ -111,8 +112,12 @@ Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne Kön
 
 ## EPUB-Leser, DJVU → PDF, Trenner (0.770.0)
 
-- **EPUB** (`EpubViewerComponent`, epub.js 0.3.93 als Lazy-Chunk): Datei als ArrayBuffer (die Datei-Adresse hat keine Endung),
-  paginiert, ‹ › / Pfeiltasten / Wischen, Inhaltsverzeichnis im Kopf. Lesestand: `EbookProgress.Locator` = CFI, `Page` =
+- **EPUB** (`EpubViewerComponent`, epub.js 0.3.93 als Lazy-Chunk): öffnet das Buch „als Ordner“ unter
+  `…/epub/{token}/` (`EbookService.epubBaseUrl`, `openAs: 'directory'`, `replacements: 'none'`) — geladen werden nur
+  container.xml, OPF, Navigation, das gezeigte Kapitel und dessen Bilder/CSS (Dvoretsky's Endgame Manual, 84 MB: erste Seite
+  nach ~18 kleinen Anfragen statt nach dem ganzen Archiv). Scheitert das (20 s Deckel), wie früher die ganze Datei als
+  ArrayBuffer über `…/file`. Das Vermessen für genaue Prozent (`locations.generate`, lädt jedes Kapitel einmal, ohne Bilder)
+  startet erst 4 s nach der ersten Seite. Paginiert, ‹ › / Pfeiltasten / Wischen, Inhaltsverzeichnis im Kopf. Lesestand: `EbookProgress.Locator` = CFI, `Page` =
   Prozent (1–100) bei `PageCount` 100 — so funktioniert der Fortschrittsbalken der Karten unverändert. Die CSP des
   Frontend-nginx erlaubt dafür `blob:` bei `style-src` und `font-src` (epub.js reicht Buch-CSS und -Schriften als blob: ins
   iframe; vorher: Buch ungestaltet, CSP-Fehler). Buch-Skripte bleiben aus (epub.js-Vorgabe).
@@ -194,7 +199,8 @@ ohne PDF die EPUB-Datei und ruft `EbookEpubDiagramExtractor`:
 - **Ablage**: `EbookDiagram.Page` = Kapitel (Spine, 1-basiert), `ImageRef` = Bildpfad im EPUB (DTO `imageRef`), Lage 0,
   `FontFamily = image`. Die Migration `EbookDiagramImageRef` setzt EPUB-Bücher ohne PDF von `Unsupported` zurück auf Pending.
 - **Leser**: `EpubViewerComponent` markiert erkannte Bilder im Kapitel (`rendition.hooks.content`; epub.js ersetzt die
-  Adressen durch blob:-URLs → Rückübersetzung über `book.resources`, zur Not über den Dateinamen); Doppelklick/Enter holt die
+  Adressen im Archiv-Modus durch blob:-URLs → Rückübersetzung über `book.resources`; als Ordner wird die relative Adresse
+  gegen die `<base>` des Kapitels aufgelöst und die Buch-Basis abgeschnitten — `epubImagePath`; zur Not über den Dateinamen); Doppelklick/Enter holt die
   Stellung aufs Brett, ‹/› springt kapitelweise zum Bild (`revealImage`, CFI des Elements). Brett-Leiste wie beim PDF.
 - **Zugnummern ohne Punkt** (0.775.1): `EbookSolutionFinder` nimmt auch „1 Kc5 Kc7 2 Ke6“ und „1…Kc7“ — eine nackte Zahl gilt
   nur, wenn direkt ein vollständiger SAN-Zug folgt. Dvoretsky 3 → 937 Lösungen, Swindler 720 → 754, PDF-Bücher unverändert.

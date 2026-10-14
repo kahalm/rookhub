@@ -80,6 +80,20 @@ public class AnonymousRateLimitTests
             Assert.Equal("directory-read", p["TournamentDirectory." + a]);
         Assert.Equal("directory-read", p["TournamentProxy.GetCrawlStatus"]);
         Assert.Equal("user-crawl", p["TournamentProxy.Crawl"]);
+
+        // EPUB-Leser „als Ordner“: viele kleine Einträge je Kapitel — eigener Deckel je Adresse statt des globalen Topfs.
+        Assert.Equal("ebook-entries", p["Ebooks.GetEpubEntry"]);
+    }
+
+    [Fact]
+    public void EbookEntries_LetsADiagramHeavyChapterThrough_ButStillCapsOneAddress()
+    {
+        using var global = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.Global(c, 1));
+        using var entries = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.EbookEntries(c, 1));
+        var ctx = Context(policy: "ebook-entries");
+        Assert.Equal(300, Acquired(global, ctx, 300));
+        Assert.Equal(RateLimitPartitions.EbookEntriesPermitPerMinute, Acquired(entries, ctx, RateLimitPartitions.EbookEntriesPermitPerMinute + 20));
+        Assert.True(RateLimitPartitions.EbookEntriesPermitPerMinute > RateLimitPartitions.GlobalPermitPerMinute);
     }
 
     private static HttpContext Context(string? visitor = null, int? userId = null, string? policy = null)
@@ -133,9 +147,10 @@ public class AnonymousRateLimitTests
     }
 
     [Fact]
-    public void Global_ExemptsOnlyKidsRead()
+    public void Global_ExemptsOnlyKidsReadAndEbookEntries()
     {
         Assert.True(RateLimitPartitions.HasOwnIpCeiling(Context(policy: "kids-read")));
+        Assert.True(RateLimitPartitions.HasOwnIpCeiling(Context(policy: "ebook-entries")));
         foreach (var other in new[] { "anonymous-read", "anonymous-write", "anonymous-puzzle", "auth" })
             Assert.False(RateLimitPartitions.HasOwnIpCeiling(Context(policy: other)));
         Assert.False(RateLimitPartitions.HasOwnIpCeiling(Context()));
