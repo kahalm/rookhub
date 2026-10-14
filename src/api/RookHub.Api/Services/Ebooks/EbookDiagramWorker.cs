@@ -30,7 +30,10 @@ public class EbookDiagramWorker : PeriodicWorker
         {
             ct.ThrowIfCancellationRequested();
             // PDF (Schach-Font) vor EPUB (Brettbilder, 0.775.0); DJVU-Scans erst mit Stufe 2.
-            var file = ebook.Files.FirstOrDefault(f => f.Format == "pdf") ?? ebook.Files.FirstOrDefault(f => f.Format == "epub");
+            // Schach-Fonts stehen nur im ORIGINAL-PDF; gerendert (Scans) wird die leichte Lesefassung, falls es eine gibt.
+            var file = ebook.Files.FirstOrDefault(f => f.Format == "pdf" && !f.Derived) ?? ebook.Files.FirstOrDefault(f => f.Format == "pdf")
+                ?? ebook.Files.FirstOrDefault(f => f.Format == "epub");
+            var reading = EbookFormats.ReadingPdf(ebook.Files);
             if (file == null)
             {
                 ebook.DiagramState = EbookDiagramState.Unsupported;
@@ -44,7 +47,8 @@ public class EbookDiagramWorker : PeriodicWorker
                 if (!File.Exists(path)) { ebook.DiagramState = EbookDiagramState.Failed; await db.SaveChangesAsync(ct); continue; }
                 var result = file.Format == "epub"
                     ? await Task.Run(() => services.GetRequiredService<EbookEpubDiagramExtractor>().Extract(path, ebook.Id, ct), ct)
-                    : await Task.Run(() => extractor.Extract(path, ebook.Id, ct), ct);
+                    : await Task.Run(() => extractor.Extract(path, ebook.Id, ct,
+                        reading != null && reading != file ? storage.ResolveFile(ebook, reading) : null), ct);
                 db.EbookDiagrams.RemoveRange(db.EbookDiagrams.Where(d => d.EbookId == ebook.Id));
                 db.EbookDiagrams.AddRange(result.Diagrams);
                 ebook.DiagramCount = result.Diagrams.Count;

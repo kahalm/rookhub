@@ -19,6 +19,17 @@ public static class EbookBoardImage
         using var bmp = SKBitmap.Decode(data);
         if (bmp == null || bmp.Width < 64 || bmp.Height < 64 || bmp.Width > maxSide || bmp.Height > maxSide) return null;
         var g = new float[bmp.Height, bmp.Width];
+        if (bmp.ColorType == SKColorType.Gray8)
+        {
+            // Schneller Weg für Graubilder (gerenderte Scan-Seiten) — dieselbe Formel wie unten mit R = G = B.
+            var span = bmp.GetPixelSpan();
+            var row = bmp.RowBytes;
+            var lut = new float[256];
+            for (var k = 0; k < 256; k++) lut[k] = (float)((k * 0.299 + k * 0.587 + k * 0.114) / 255.0);
+            for (var y = 0; y < bmp.Height; y++)
+                for (var x = 0; x < bmp.Width; x++) g[y, x] = lut[span[y * row + x]];
+            return g;
+        }
         for (var y = 0; y < bmp.Height; y++)
             for (var x = 0; x < bmp.Width; x++)
             {
@@ -64,6 +75,18 @@ public static class EbookBoardImage
         var (_, y0, y1, x0, x1) = best.Value;
         int w = x1 - x0, h = y1 - y0;
         if (w < 80 || h < 80 || !(0.85 < (double)w / h && (double)w / h < 1.18)) return null;
+        var peeled = Peel(g, x0, y0, x1, y1);
+        if (peeled == null) return null;
+        (x0, y0, x1, y1) = peeled.Value;
+        w = x1 - x0; h = y1 - y0;
+        if (w < 64 || h < 64 || !(0.9 < (double)w / h && (double)w / h < 1.1)) return null;
+        return (x0, y0, x1, y1);
+    }
+
+    /// <summary>Rahmenlinien (Zeile/Spalte zu &gt; 80 % schwarz) und weiße Ränder (&gt; 97 % weiß) abschälen.</summary>
+    private static (int X0, int Y0, int X1, int Y1)? Peel(float[,] g, int x0, int y0, int x1, int y1)
+    {
+        const float light = 235f / 255f;
         for (var it = 0; it < 40; it++)
         {
             var changed = false;
@@ -87,9 +110,166 @@ public static class EbookBoardImage
             }
             if (!changed) break;
         }
-        w = x1 - x0; h = y1 - y0;
-        if (w < 64 || h < 64 || !(0.9 < (double)w / h && (double)w / h < 1.1)) return null;
-        return (x0, y0, x1, y1);
+        return x1 > x0 && y1 > y0 ? (x0, y0, x1, y1) : null;
+    }
+
+    /// <summary>
+    /// Alle Bretter einer gescannten SEITE (0.776.0): jede dunkle Komponente (8er-Nachbarschaft, &lt; 235/255) mit annähernd
+    /// quadratischem Rechteck ab 100 px, abgeschält. Fehlt im Scan eine Rahmenlinie, endet die Komponente an der ersten
+    /// Schraffur — das Rechteck wird dann auf ein Quadrat ergänzt, auf der Seite, deren Schachbrettmuster am besten passt
+    /// (<see cref="GridScore"/>). Ob es wirklich ein Brett ist, entscheidet der Aufrufer über <see cref="GridScore"/>.
+    /// </summary>
+    public static List<(int X0, int Y0, int X1, int Y1)> FindBoards(float[,] g)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        const float light = 235f / 255f;
+        var lab = new bool[H, W];
+        var result = new List<(int, int, int, int)>();
+        var stack = new Stack<(int, int)>();
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++)
+            {
+                if (!(g[y, x] < light) || lab[y, x]) continue;
+                lab[y, x] = true; stack.Push((y, x));
+                int ymin = y, ymax = y, xmin = x, xmax = x;
+                while (stack.Count > 0)
+                {
+                    var (cy, cx) = stack.Pop();
+                    if (cy < ymin) ymin = cy; if (cy > ymax) ymax = cy;
+                    if (cx < xmin) xmin = cx; if (cx > xmax) xmax = cx;
+                    for (var dy = -1; dy <= 1; dy++)
+                        for (var dx = -1; dx <= 1; dx++)
+                        {
+                            int ny = cy + dy, nx = cx + dx;
+                            if (ny >= 0 && ny < H && nx >= 0 && nx < W && g[ny, nx] < light && !lab[ny, nx]) { lab[ny, nx] = true; stack.Push((ny, nx)); }
+                        }
+                }
+                int w = xmax + 1 - xmin, h = ymax + 1 - ymin;
+                if (w < 100 || h < 100 || !(0.85 < (double)w / h && (double)w / h < 1.18)) continue;
+                var p = Peel(g, xmin, ymin, xmax + 1, ymax + 1);
+                if (p == null) continue;
+                var (x0, y0, x1, y1) = p.Value;
+                w = x1 - x0; h = y1 - y0;
+                if (w < 96 || h < 96 || !(0.85 < (double)w / h && (double)w / h < 1.18)) continue;
+                var d = Math.Abs(w - h);
+                var cands = new List<(int, int, int, int)> { (x0, y0, x1, y1) };
+                if (w < h) cands = [(Math.Max(0, x0 - d), y0, x1, y1), (x0, y0, Math.Min(W, x1 + d), y1), (Math.Max(0, x0 - d / 2), y0, Math.Min(W, x1 + d - d / 2), y1)];
+                else if (h < w) cands = [(x0, Math.Max(0, y0 - d), x1, y1), (x0, y0, x1, Math.Min(H, y1 + d)), (x0, Math.Max(0, y0 - d / 2), x1, Math.Min(H, y1 + d - d / 2))];
+                var best = cands[0]; var bestScore = double.MinValue;
+                foreach (var c in cands)
+                {
+                    var sc = GridFit(Cells(g, c));
+                    if (sc > bestScore) { bestScore = sc; best = c; }
+                }
+                result.Add(best);
+            }
+        return result;
+    }
+
+    /// <summary>
+    /// Zugrecht-Marker links neben einem gescannten Brett (Gambit/Batsford: kursives „W“ bzw. „B“), gelesen auf der Seite in
+    /// voller Auflösung (300 dpi; <paramref name="box"/> in deren Koordinaten). Im Streifen links (¼ Brettbreite) werden
+    /// dunkle Striche, die höchstens 4 px auseinanderliegen, zu Zeichen zusammengefasst (dünne kursive Lettern zerfallen
+    /// sonst in Einzelstriche); das größte Zeichen mit 3–12 % der Brettbreite Höhe zählt. „B“ hat geschlossene Innenräume,
+    /// „W“ keine — das trennt beide sicher (Hansen/Beim 23 von 23), anders als das Seitenverhältnis allein. Ohne Innenraum
+    /// muss das Zeichen deutlich breiter als hoch sein (≥ 1,05), sonst <c>null</c>.
+    /// </summary>
+    public static char? SideMarker(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0);
+        var bw = box.X1 - box.X0;
+        int sx0 = Math.Max(0, box.X0 - bw / 4), sx1 = box.X0 - 6, sy0 = Math.Max(0, box.Y0), sy1 = Math.Min(H, box.Y1);
+        if (sx1 - sx0 < 8 || sy1 <= sy0) return null;
+        int sw = sx1 - sx0, sh = sy1 - sy0;
+        var ink = new bool[sh, sw];
+        for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) ink[y, x] = g[sy0 + y, sx0 + x] < 0.5f;
+        var seen = new bool[sh, sw];
+        var stack = new Stack<(int, int)>();
+        List<(int Y, int X)>? best = null;
+        const int reach = 4;
+        for (var y = 0; y < sh; y++)
+            for (var x = 0; x < sw; x++)
+            {
+                if (!ink[y, x] || seen[y, x]) continue;
+                var comp = new List<(int Y, int X)>();
+                seen[y, x] = true; stack.Push((y, x));
+                while (stack.Count > 0)
+                {
+                    var (cy, cx) = stack.Pop(); comp.Add((cy, cx));
+                    for (var ny = Math.Max(0, cy - reach); ny <= Math.Min(sh - 1, cy + reach); ny++)
+                        for (var nx = Math.Max(0, cx - reach); nx <= Math.Min(sw - 1, cx + reach); nx++)
+                            if (ink[ny, nx] && !seen[ny, nx]) { seen[ny, nx] = true; stack.Push((ny, nx)); }
+                }
+                int h = comp.Max(p => p.Y) - comp.Min(p => p.Y) + 1, w = comp.Max(p => p.X) - comp.Min(p => p.X) + 1;
+                if (h < bw * 0.03 || h > bw * 0.12 || w > bw * 0.15) continue;
+                if (best == null || comp.Count > best.Count) best = comp;
+            }
+        if (best == null) return null;
+        int y0 = best.Min(p => p.Y), x0 = best.Min(p => p.X);
+        int bh = best.Max(p => p.Y) - y0 + 1, bwid = best.Max(p => p.X) - x0 + 1;
+        // Innenräume: weiße Bereiche im (um 1 Pixel gepolsterten) Rechteck, die den Rand nicht erreichen (4er-Nachbarschaft).
+        var m = new bool[bh + 2, bwid + 2];
+        foreach (var (py, px) in best) m[py - y0 + 1, px - x0 + 1] = true;
+        var lab = new int[bh + 2, bwid + 2];
+        var holes = 0; var id = 0;
+        for (var y = 0; y < bh + 2; y++)
+            for (var x = 0; x < bwid + 2; x++)
+            {
+                if (m[y, x] || lab[y, x] != 0) continue;
+                id++; var size = 0; var border = false;
+                lab[y, x] = id; stack.Push((y, x));
+                while (stack.Count > 0)
+                {
+                    var (cy, cx) = stack.Pop(); size++;
+                    if (cy == 0 || cx == 0 || cy == bh + 1 || cx == bwid + 1) border = true;
+                    foreach (var (ny, nx) in new[] { (cy - 1, cx), (cy + 1, cx), (cy, cx - 1), (cy, cx + 1) })
+                        if (ny >= 0 && nx >= 0 && ny < bh + 2 && nx < bwid + 2 && !m[ny, nx] && lab[ny, nx] == 0) { lab[ny, nx] = id; stack.Push((ny, nx)); }
+                }
+                if (!border && size >= 3) holes++;
+            }
+        if (holes > 0) return 'b';
+        return (double)bwid / bh >= 1.05 ? 'w' : null;
+    }
+
+    /// <summary>Hintergrund je Brett (Scans): Median der eigenen hellen bzw. dunklen Felder.</summary>
+    public static (float[,] Light, float[,] Dark) ParityBackgrounds(float[][,] cells)
+    {
+        static bool Even(int i) => (i / 8 + i % 8) % 2 == 0;
+        return (BoardImageMath.Median(Enumerable.Range(0, 64).Where(Even).Select(i => cells[i]).ToList()),
+                BoardImageMath.Median(Enumerable.Range(0, 64).Where(i => !Even(i)).Select(i => cells[i]).ToList()));
+    }
+
+    /// <summary>
+    /// Wie gut passt ein Schachbrettmuster: Zahl der Felder (0–64), deren Randzone (außerhalb 6…26) näher am eigenen als am
+    /// anderen Paritäts-Hintergrund liegt; −100 extra, wenn helle und dunkle Felder sich kaum unterscheiden. Ein echtes Brett
+    /// kommt auf ≥ 52, ein als Brett gefundener Ausschnitt aus 3 × 3 Feldern nicht.
+    /// </summary>
+    public static int GridScore(float[][,] cells) => Grid(cells).Hits;
+
+    /// <summary>Stetiges Maß für dasselbe Muster (mittlerer Vorsprung des eigenen vor dem fremden Hintergrund in der
+    /// Randzone) — entscheidet zwischen fast gleich guten Rechtecken, wo die Trefferzahl gleich ist.</summary>
+    public static double GridFit(float[][,] cells) => Grid(cells).Fit;
+
+    private static (int Hits, double Fit) Grid(float[][,] cells)
+    {
+        var (light, dark) = ParityBackgrounds(cells);
+        var hits = 0; double fit = 0;
+        for (var i = 0; i < 64; i++)
+        {
+            var even = (i / 8 + i % 8) % 2 == 0;
+            var own = even ? light : dark; var other = even ? dark : light;
+            double a = 0, b = 0; var n = 0;
+            for (var y = 0; y < Cell; y++)
+                for (var x = 0; x < Cell; x++)
+                {
+                    if (y >= 6 && y < 26 && x >= 6 && x < 26) continue;
+                    a += Math.Abs(cells[i][y, x] - own[y, x]); b += Math.Abs(cells[i][y, x] - other[y, x]); n++;
+                }
+            if (a / n < b / n) hits++;
+            fit += (b - a) / n / 64;
+        }
+        var contrast = Math.Abs(Mean(light) - Mean(dark)) >= 0.08;
+        return (hits + (contrast ? 0 : -100), contrast ? fit : fit - 100);
     }
 
     /// <summary>64 Felder (a8 zuerst, zeilenweise), je 6 % Rand weg und auf 32×32 gemittelt.</summary>

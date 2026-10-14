@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.776.0", date: "2026-10-14", changes: [
+    { en: "E-books: diagrams are now also recognised in scanned books (scanned PDFs and DJVU books) – the board is read from the page image, side to move from the „W“/„B“ mark next to the diagram. Double-click a diagram in the reader to put it on the board; Stockfish supplies solutions where the book text is not available.",
+      de: "E-Books: Diagramme werden jetzt auch in gescannten Büchern erkannt (Scan-PDFs und DJVU-Bücher) – das Brett wird aus dem Seitenbild gelesen, das Zugrecht aus dem „W“/„B“ neben dem Diagramm. Doppelklick auf ein Diagramm im Leser stellt es aufs Brett; wo der Buchtext fehlt, liefert Stockfish die Lösung." },
+  ] },
   { version: "0.775.5", date: "2026-10-14", changes: [
     { en: "E-books and Woodpecker, follow-up after the image check: the “Filter” button of the e-book library only shows on phones again; in the reader on phones the ⋮ menu stays in the title row; the Woodpecker help icon no longer drops onto its own line on tablets.",
       de: "E-Books und Woodpecker, Nacharbeit nach der Bildprüfung: der Knopf „Filter“ der E-Book-Bibliothek steht wieder nur am Handy; im Leser bleibt das ⋮-Menü am Handy in der Titelzeile; das Hilfe-Zeichen bei Woodpecker rutscht am Tablet nicht mehr allein in eine Zeile." },

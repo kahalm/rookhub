@@ -211,8 +211,12 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookCoverRenderer>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookCoverWorker>();
     // Diagramme aus Schach-Font-PDFs (0.766.0): Text-Diagramme → FEN je Diagramm, im Hintergrund je Buch.
-    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookDiagramExtractor>();
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.Ebooks.EbookDiagramExtractor(
+        sp.GetRequiredService<ILogger<RookHub.Api.Services.Ebooks.EbookDiagramExtractor>>(),
+        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RookHub.Api.Services.Ebooks.EbookOptions>>().Value.ScanDiagrams
+            ? sp.GetRequiredService<RookHub.Api.Services.Ebooks.EbookScanDiagramExtractor>() : null));
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookEpubDiagramExtractor>();
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookScanDiagramExtractor>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDiagramWorker>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDjvuConverter>();
     // Stockfish prüft die Buchlösungen und löst Aufgaben ohne Buchlösung (0.772.0); Ebooks__EngineCheck=false schaltet ab.

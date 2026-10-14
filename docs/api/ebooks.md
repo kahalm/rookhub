@@ -200,3 +200,29 @@ ohne PDF die EPUB-Datei und ruft `EbookEpubDiagramExtractor`:
 - Gemessen (Python-Referenz, plausibel erkannt): Swindler 905/906, Kuljasevic 456/459, Srokovski 490/501, Dvoretsky 513/544,
   100 Endgame Studies ~290/321, Perpetual Chess ~85/103; erster Buchzug legal bei Srokovski 96 %. Scans (DJVU, Scan-PDFs) =
   Stufe 2, offen.
+
+## Diagramme aus Scans (Stufe 2, 0.776.0)
+
+Findet `EbookDiagramExtractor` im PDF keinen Schach-Font, übernimmt `EbookScanDiagramExtractor` (`Ebooks__ScanDiagrams=false`
+schaltet ab): Seiten mit `pdftoppm -r 300 -gray` als PGM (zehnmal schneller als PNG), 2 × 2 gemittelt, Gauß σ 1 — DJVU-Scans
+sind schwarz-weiß und pdftoppm glättet Bilder nicht; ohne den Weichzeichner zerfällt die Schraffur der dunklen Felder in lose
+Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, wenn es eine gibt (`EbookFormats.ReadingPdf`).
+- **Bretter je Seite** (`EbookBoardImage.FindBoards`): jede dunkle Komponente ab 100 px, annähernd quadratisch, abgeschält;
+  fehlt eine Rahmenlinie, wird auf ein Quadrat ergänzt — auf der Seite, deren Schachbrettmuster am besten passt (`GridFit`).
+  Nur `GridScore` ≥ 52 (Randzone von ≥ 52 der 64 Felder näher am eigenen als am fremden Paritäts-Hintergrund) zählt — das
+  verwirft Ausschnitte aus 3 × 3 Feldern, Fotos, Tabellen.
+- **Hintergrund je Brett** (Median der eigenen hellen/dunklen Felder), nicht je Buch: die Schraffur liegt in jedem Scan anders.
+- **Zwei Scan-Modelle**: `ebook-board-model-scan.bin` (`EbookBoardClassifier.Scan`, Font-Diagramme „gescannt“: weichgezeichnet,
+  verrauscht, meist binarisiert — Gambit/Batsford-Figuren, Beim 95 % plausibel) und `ebook-board-model-scan2.bin` (`ScanAlt`,
+  zusätzlich synthetische Bretter aus den App-Figurensätzen, doppelt fein gerendert und wie die Pipeline verkleinert — besser
+  bei fremden dünnen Figuren, Buckley 10 → 28 %, sonst schlechter). Je Buch gewinnt das Modell mit mehr plausiblen Brettern,
+  ein Brett, das es nicht lesen kann, nimmt das andere (`EbookScanDiagramExtractor.Choose`). Training außerhalb des Repos
+  (`~/claude/ebook-board-training`).
+- **Zugrecht**: Marker links neben dem Brett (Gambit/Batsford „W“/„B“), gelesen in 300 dpi: Striche ≤ 4 px auseinander werden
+  ein Zeichen (dünne Kursive zerfällt sonst), das größte mit 3–12 % der Brettbreite Höhe zählt; „B“ hat Innenräume, „W“ nicht
+  (`EbookBoardImage.SideMarker`, Hansen/Beim 23/23 — das Seitenverhältnis allein trennt bei Hansen nicht). Sonst Weiß,
+  `SideKnown=false`. Hat das PDF eine OCR-Textebene, sucht `EbookSolutionFinder` dort Lösungen; sonst übernimmt Stockfish.
+- Ablage wie Font-Diagramme (Seite, Lage als Seitenanteil → Zonen im PDF-Leser), `FontFamily = scan`. Migration
+  `EbookScanDiagrams` setzt PDF-Bücher von `Unsupported` zurück auf Pending.
+- Parität C# = Python-Referenz (Beim, 157/157 Stellungen). Laufzeit ~0,5 s je Seite. Gemessen: Beim 162, Hansen 46, Buckley 31
+  Diagramme (Buckley: fremder Figurensatz, viele Bretter unlesbar — offen).

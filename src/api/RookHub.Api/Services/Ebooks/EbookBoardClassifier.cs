@@ -21,6 +21,24 @@ public sealed class EbookBoardClassifier
 
     public static EbookBoardClassifier Instance => Default.Value;
 
+    private static Lazy<EbookBoardClassifier> Load(string name) => new(() =>
+    {
+        using var s = typeof(EbookBoardClassifier).Assembly.GetManifestResourceStream("RookHub.Api.Assets." + name)
+            ?? throw new InvalidOperationException(name + " fehlt");
+        return new EbookBoardClassifier(s);
+    });
+
+    private static readonly Lazy<EbookBoardClassifier> ScanModel = Load("ebook-board-model-scan.bin");
+    private static readonly Lazy<EbookBoardClassifier> ScanAltModel = Load("ebook-board-model-scan2.bin");
+
+    /// <summary>Modell für Scans (0.776.0): dieselbe Form, trainiert auf „gescannten“ Font-Diagrammen mit Hintergrund je Brett
+    /// (Gambit-/Batsford-Figuren: Beim 95 % plausibel).</summary>
+    public static EbookBoardClassifier Scan => ScanModel.Value;
+
+    /// <summary>Zweites Scan-Modell: zusätzlich synthetische Bretter aus den App-Figurensätzen — besser bei fremden, dünnen
+    /// Figuren (Buckley 10 → 28 %), schlechter bei den üblichen. Je Buch gewinnt das Modell mit mehr plausiblen Brettern.</summary>
+    public static EbookBoardClassifier ScanAlt => ScanAltModel.Value;
+
     public EbookBoardClassifier(Stream stream)
     {
         using var r = new BinaryReader(stream);

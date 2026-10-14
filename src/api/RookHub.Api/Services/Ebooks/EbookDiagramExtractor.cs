@@ -9,17 +9,24 @@ namespace RookHub.Api.Services.Ebooks;
 /// Schriftname, Unicode-Wert und Glyph-Rechteck; Zeichen eines bekannten Diagramm-Fonts werden zu Feldern
 /// (<see cref="ChessDiagramFonts"/>), der <see cref="DiagramGridBuilder"/> macht daraus Bretter. Normaler Text liefert
 /// Nummer, Überschrift und Zugrecht. Koordinaten: PdfPig rechnet vom linken UNTEREN Rand; hier wird auf links OBEN
-/// gespiegelt und am Ende als Anteil der Seite abgelegt.
+/// gespiegelt und am Ende als Anteil der Seite abgelegt. Ohne Schach-Font übernimmt der
+/// <see cref="EbookScanDiagramExtractor"/> (Scans, 0.776.0); eine OCR-Textebene dient dann der Lösungssuche.
 /// </summary>
 public class EbookDiagramExtractor
 {
     private readonly ILogger<EbookDiagramExtractor> _logger;
+    private readonly EbookScanDiagramExtractor? _scanner;
 
-    public EbookDiagramExtractor(ILogger<EbookDiagramExtractor> logger) => _logger = logger;
+    public EbookDiagramExtractor(ILogger<EbookDiagramExtractor> logger, EbookScanDiagramExtractor? scanner = null)
+    {
+        _logger = logger;
+        _scanner = scanner;
+    }
 
     public sealed record Result(List<EbookDiagram> Diagrams, bool FontFound, int Pages, int Solutions = 0);
 
-    public Result Extract(string pdfPath, int ebookId, CancellationToken ct)
+    /// <param name="scanPdfPath">PDF für die Scan-Erkennung (die leichte Lesefassung, falls es eine gibt); <c>null</c> = <paramref name="pdfPath"/>.</param>
+    public Result Extract(string pdfPath, int ebookId, CancellationToken ct, string? scanPdfPath = null)
     {
         var diagrams = new List<EbookDiagram>();
         var fontFound = false;
@@ -28,12 +35,14 @@ public class EbookDiagramExtractor
         var meta = new List<(int Index, int Page, int Column, double Bottom, string Fen, bool SideKnown, string? Label)>();
         using var doc = PdfDocument.Open(pdfPath, new ParsingOptions { UseLenientParsing = true, SkipMissingFonts = true });
         var pages = 0;
+        var sizes = new Dictionary<int, (double W, double H)>();
         foreach (var page in doc.GetPages())
         {
             ct.ThrowIfCancellationRequested();
             pages++;
             var width = page.Width;
             var height = page.Height;
+            sizes[page.Number] = (width, height);
             if (width <= 0 || height <= 0) continue;
             var glyphs = new List<DiagramGlyph>();
             foreach (var letter in page.Letters)
@@ -89,6 +98,26 @@ public class EbookDiagramExtractor
             }
         }
 
+        // Kein Schach-Font: vielleicht ein Scan (0.776.0) — Bretter aus den gerenderten Seiten, OCR-Text (falls da) für Lösungen.
+        var scanned = false;
+        if (!fontFound && _scanner != null && pages > 0)
+        {
+            scanned = true;
+            foreach (var b in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct))
+            {
+                var (pw, ph) = sizes.GetValueOrDefault(b.Page, (1.0, 1.0));
+                var side = b.Side ?? 'w';
+                var fen = $"{b.Board} {side} {DiagramGridBuilder.GuessCastling(b.Board)} - 0 1";
+                meta.Add((diagrams.Count, b.Page, b.X >= 0.48 ? 1 : 0, (b.Y + b.H) * ph, fen, b.Side != null, null));
+                diagrams.Add(new EbookDiagram
+                {
+                    EbookId = ebookId, Page = b.Page,
+                    X = Clamp(b.X), Y = Clamp(b.Y), W = Clamp(b.W), H = Clamp(b.H),
+                    Fen = fen, SideKnown = b.Side != null, FontFamily = "scan",
+                });
+            }
+        }
+
         var solutions = diagrams.Count == 0 ? new Dictionary<int, FoundSolution>() : EbookSolutionFinder.Match(meta, lines);
         foreach (var (index, sol) in solutions)
         {
@@ -105,7 +134,7 @@ public class EbookDiagramExtractor
         }
         _logger.LogInformation("E-Book {EbookId}: {Count} Diagramme auf {Pages} Seiten, {Solutions} mit Lösung (Schach-Font {Found})",
             ebookId, diagrams.Count, pages, solutions.Count, fontFound);
-        return new Result(diagrams, fontFound, pages, solutions.Count);
+        return new Result(diagrams, fontFound || scanned, pages, solutions.Count);
     }
 
     /// <summary>Wörter einer Seite → Zeilenabschnitte: gleiche Höhe (± halbe Schrifthöhe), getrennt an großen Lücken;
