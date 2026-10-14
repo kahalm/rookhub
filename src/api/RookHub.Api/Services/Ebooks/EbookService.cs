@@ -145,6 +145,7 @@ public class EbookService
                 HasCover = b.CoverState == EbookCoverState.Done,
                 DiagramState = b.DiagramState.ToString().ToLowerInvariant(),
                 DiagramCount = b.DiagramState == EbookDiagramState.Done ? b.DiagramCount : 0,
+                ConversionState = b.ConversionState.ToString().ToLowerInvariant(),
                 OwnerUserId = b.OwnerUserId,
                 OwnerName = b.OwnerUserId is int oid && owners.TryGetValue(oid, out var n) ? n : null,
                 IsOwner = b.OwnerUserId == userId,
@@ -153,7 +154,7 @@ public class EbookService
                 Files = files.Select(f => new EbookFileDto { Id = f.Id, Format = f.Format, FileName = f.FileName, SizeBytes = f.SizeBytes }).ToList(),
                 PrimaryFormat = EbookFormats.Primary(files)?.Format,
                 Progress = progress.TryGetValue(b.Id, out var p)
-                    ? new EbookProgressDto { Page = p.Page, PageCount = p.PageCount ?? b.PageCount, UpdatedAt = p.UpdatedAt }
+                    ? new EbookProgressDto { Page = p.Page, PageCount = p.PageCount ?? b.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt }
                     : null,
                 CreatedAt = b.CreatedAt,
                 UpdatedAt = b.UpdatedAt,
@@ -214,6 +215,7 @@ public class EbookService
                 SizeBytes = saved.SizeBytes,
                 Sha256 = saved.Sha256,
             });
+            if (EbookFormats.NeedsPdfConversion(ebook.Files)) ebook.ConversionState = EbookConversionState.Pending;
             _db.Ebooks.Add(ebook);
             await _db.SaveChangesAsync(ct);
             if (meta.GroupIds != null)
@@ -331,10 +333,10 @@ public class EbookService
     {
         if (!await EbookAccess.CanAccessAsync(_db, userId, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
         var p = await _db.EbookProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.UserId == userId, ct);
-        return p == null ? null : new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, UpdatedAt = p.UpdatedAt };
+        return p == null ? null : new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
     }
 
-    public async Task<EbookProgressDto> SetProgressAsync(int userId, bool manageAll, int id, int page, int? pageCount, CancellationToken ct = default)
+    public async Task<EbookProgressDto> SetProgressAsync(int userId, bool manageAll, int id, int page, int? pageCount, CancellationToken ct = default, string? locator = null)
     {
         if (!await EbookAccess.CanAccessAsync(_db, userId, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
         if (page < 1) throw new DomainValidationException("Page must be at least 1.");
@@ -346,9 +348,10 @@ public class EbookService
         }
         p.Page = page;
         if (pageCount is > 0) p.PageCount = pageCount;
+        if (locator != null) p.Locator = locator.Length > 300 ? null : locator;
         p.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, UpdatedAt = p.UpdatedAt };
+        return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
     }
 
     // ── Diagramme ──────────────────────────────────────────────────────────────────────────────
@@ -447,7 +450,7 @@ public class EbookService
             ?? throw new NotFoundException("E-book not found.");
         var file = (fileId == null ? EbookFormats.Primary(ebook.Files) : ebook.Files.FirstOrDefault(f => f.Id == fileId))
             ?? throw new NotFoundException("File not found.");
-        var full = _storage.ResolvePath(ebook.Source, file.RelativePath);
+        var full = _storage.ResolveFile(ebook, file);
         if (!System.IO.File.Exists(full))
             throw new NotFoundException("The file is missing on the server.") { Code = ApiErrorCodes.EbookFileMissing };
         return (ebook, file, full);

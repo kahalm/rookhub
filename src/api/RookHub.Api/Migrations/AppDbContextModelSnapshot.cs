@@ -2185,6 +2185,9 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<int>("ConversionState")
+                        .HasColumnType("int");
+
                     b.Property<int>("CoverState")
                         .HasColumnType("int");
 
@@ -2350,6 +2353,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("Derived")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("EbookId")
                         .HasColumnType("int");
 
@@ -2409,6 +2415,10 @@ namespace RookHub.Api.Migrations
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Locator")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
 
                     b.Property<int>("Page")
                         .HasColumnType("int");

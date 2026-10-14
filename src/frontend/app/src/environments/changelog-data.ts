@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.770.0", date: "2026-10-14", changes: [
+    { en: "E-books: EPUB books now open in the browser — page with ‹ ›, arrow keys or a swipe, contents menu, reading position remembered. Books that exist only as DJVU are converted to PDF in the background and then open in the normal reader.",
+      de: "E-Books: EPUB-Bücher öffnen sich jetzt im Browser — blättern mit ‹ ›, Pfeiltasten oder Wischen, Inhaltsverzeichnis, die Lesestelle wird gemerkt. Bücher, die es nur als DJVU gibt, werden im Hintergrund in PDF umgewandelt und öffnen sich danach im normalen Leser." },
+    { en: "E-book reader: the divider between book and board can be dragged (or moved with the arrow keys); the width is remembered on this device, a double-click restores the default.",
+      de: "E-Book-Leser: Der Trenner zwischen Buch und Brett lässt sich ziehen (oder mit den Pfeiltasten verschieben); die Breite wird auf diesem Gerät gemerkt, ein Doppelklick stellt die Standardbreite wieder her." },
+  ] },
   { version: "0.769.0", date: "2026-10-14", changes: [
     { en: "E-book reader: the hand button next to the board makes it playable — continue the book position with your own moves, take them back or return to the book position; „Analyse“ and „Copy FEN“ use the position on the board.",
       de: "E-Book-Leser: Der Hand-Knopf neben dem Brett macht es spielbar — die Buchstellung mit eigenen Zügen weiterspielen, Züge zurücknehmen oder zur Buchstellung zurück; „Analysieren“ und „FEN kopieren“ nehmen die Stellung auf dem Brett." },

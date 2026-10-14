@@ -5322,8 +5322,6 @@
       "diagramAt": "Dijagram na stranici {{page}}",
       "diagramCount": "Dijagrama: {{n}}",
       "pickHint": "Dvostruki klik na dijagram u knjizi postavlja ga ovdje.",
-      "whiteToMove": "Bijeli je na potezu",
-      "blackToMove": "Crni je na potezu",
       "sideUnknown": "Knjiga ne navodi tko je na potezu",
       "analyse": "Analiziraj",
       "flip": "Okreni ploču",
@@ -5340,7 +5338,9 @@
       "playHint": "Igraj poteze na ploči.",
       "undo": "Vrati potez",
       "resetPosition": "Natrag na poziciju iz knjige",
-      "notPlayable": "Ova pozicija nije prema pravilima (npr. studija bez kralja) — može se samo pregledati."
+      "notPlayable": "Ova pozicija nije prema pravilima (npr. studija bez kralja) — može se samo pregledati.",
+      "toc": "Sadržaj",
+      "resize": "Povuci za promjenu širine (dvostruki klik: zadana širina)"
     },
     "diagrams": "Dijagrama: {{n}}"
   }

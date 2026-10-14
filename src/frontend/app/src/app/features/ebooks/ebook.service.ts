@@ -13,6 +13,8 @@ export interface EbookFile {
 export interface EbookProgress {
   page: number;
   pageCount: number | null;
+  /** EPUB: CFI der Lesestelle. */
+  locator?: string | null;
   updatedAt: string;
 }
 
@@ -31,6 +33,7 @@ export interface Ebook {
   /** Stand der Diagramm-Erkennung: `pending` / `done` / `failed` / `unsupported` (Scan ohne Schach-Font). */
   diagramState: 'pending' | 'done' | 'failed' | 'unsupported';
   diagramCount: number;
+  conversionState?: 'notneeded' | 'pending' | 'done' | 'failed';
   ownerUserId: number | null;
   ownerName: string | null;
   isOwner: boolean;
@@ -121,7 +124,7 @@ export interface EbookLibraryImportResult {
 export const EBOOK_ACCEPT = '.pdf,.epub,.djvu,.cbz,.cbr,.mobi,.azw3';
 
 /** Formate, die der Browser zeigt (alles andere ist Download). */
-export const READABLE_FORMATS: ReadonlySet<string> = new Set(['pdf']);
+export const READABLE_FORMATS: ReadonlySet<string> = new Set(['pdf', 'epub']);
 
 /** „1,2 MB" — Bytes lesbar, ohne Nachkommastelle unter 10 in der Einheit. */
 export function formatBytes(bytes: number, lang: string = 'en'): string {
@@ -200,8 +203,8 @@ export class EbookService {
     return this.http.put<{ updated: number }>('/api/ebooks/groups', { ebookIds, groupIds });
   }
 
-  setProgress(id: number, page: number, pageCount: number | null): Observable<EbookProgress> {
-    return this.http.put<EbookProgress>(`/api/ebooks/${id}/progress`, { page, pageCount });
+  setProgress(id: number, page: number, pageCount: number | null, locator?: string | null): Observable<EbookProgress> {
+    return this.http.put<EbookProgress>(`/api/ebooks/${id}/progress`, { page, pageCount, locator: locator ?? null });
   }
 
   importLibrary(): Observable<EbookLibraryImportResult> {

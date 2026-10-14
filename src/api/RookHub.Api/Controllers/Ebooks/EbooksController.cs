@@ -126,7 +126,7 @@ public class EbooksController : BaseApiController
 
     [HttpPut("{id:int}/progress")]
     public async Task<ActionResult<EbookProgressDto>> SetProgress(int id, [FromBody] EbookProgressUpdateDto dto, CancellationToken ct)
-        => Ok(await _service.SetProgressAsync(GetUserId(), await ManageAllAsync(), id, dto.Page, dto.PageCount, ct));
+        => Ok(await _service.SetProgressAsync(GetUserId(), await ManageAllAsync(), id, dto.Page, dto.PageCount, ct, dto.Locator));
 
     /// <summary>Wer fragt: Bearer (angemeldet) oder Ausweis <c>?t=</c>; <c>null</c> = weder noch.</summary>
     private async Task<(int UserId, bool ManageAll)?> ResolveCallerAsync(string? token, CancellationToken ct)

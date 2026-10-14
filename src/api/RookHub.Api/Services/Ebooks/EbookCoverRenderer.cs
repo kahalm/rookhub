@@ -47,7 +47,7 @@ public class EbookCoverRenderer
         var source = PickSource(ebook.Files);
         if (source == null) return CoverResult.Failed("no file with a cover");
         string input;
-        try { input = _storage.ResolvePath(ebook.Source, source.RelativePath); }
+        try { input = _storage.ResolveFile(ebook, source); }
         catch (Exception ex) when (ex is InvalidOperationException or Exceptions.DomainValidationException) { return CoverResult.Failed(ex.Message); }
         if (!File.Exists(input)) return CoverResult.Failed("file missing");
         var output = _storage.CoverPath(ebook.Id);

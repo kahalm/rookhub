@@ -32,7 +32,7 @@ public class EbookDiagramWorker : PeriodicWorker
             if (pdf == null) { ebook.DiagramState = EbookDiagramState.Unsupported; await db.SaveChangesAsync(ct); continue; }
             try
             {
-                var path = storage.ResolvePath(ebook.Source, pdf.RelativePath);
+                var path = storage.ResolveFile(ebook, pdf);
                 if (!File.Exists(path)) { ebook.DiagramState = EbookDiagramState.Failed; await db.SaveChangesAsync(ct); continue; }
                 var result = await Task.Run(() => extractor.Extract(path, ebook.Id, ct), ct);
                 db.EbookDiagrams.RemoveRange(db.EbookDiagrams.Where(d => d.EbookId == ebook.Id));

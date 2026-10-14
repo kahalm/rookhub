@@ -79,6 +79,13 @@ public class EbookStorage
         return full;
     }
 
+    /// <summary>Voller Pfad einer Datei eines Buchs: erzeugte Dateien liegen immer unter der beschreibbaren Wurzel.</summary>
+    public string ResolveFile(Ebook ebook, EbookFile file) =>
+        ResolvePath(file.Derived ? EbookSource.Upload : ebook.Source, file.RelativePath);
+
+    /// <summary>Relativer Zielpfad der PDF-Fassung eines DJVU-Buchs.</summary>
+    public static string ConvertedPdfPath(int ebookId) => $"converted/{ebookId}.pdf";
+
     /// <summary>Relativer Pfad (mit „/“) einer Datei unter der Bibliothek; <c>null</c>, wenn sie nicht darunter liegt.</summary>
     public string? LibraryRelativePath(string fullPath)
     {
@@ -143,7 +150,7 @@ public class EbookStorage
     /// <summary>Löscht eine HOCHGELADENE Datei (Bibliotheksdateien bleiben immer).</summary>
     public void DeleteUpload(EbookFile file, EbookSource source)
     {
-        if (source != EbookSource.Upload || Root == null) return;
+        if ((source != EbookSource.Upload && !file.Derived) || Root == null) return;
         try { TryDelete(ResolvePath(EbookSource.Upload, file.RelativePath)); }
         catch (InvalidOperationException ex) { _logger.LogWarning(ex, "E-Books: Pfad nicht löschbar {Path}", file.RelativePath); }
     }

@@ -5322,8 +5322,6 @@
       "diagramAt": "Diagram a(z) {{page}}. oldalon",
       "diagramCount": "{{n}} diagram",
       "pickHint": "Kattints duplán egy diagramra a könyvben, és itt felállítjuk.",
-      "whiteToMove": "Világos lép",
-      "blackToMove": "Sötét lép",
       "sideUnknown": "A könyv nem jelzi, ki lép",
       "analyse": "Elemzés",
       "flip": "Tábla forgatása",
@@ -5340,7 +5338,9 @@
       "playHint": "Lépj a táblán.",
       "undo": "Lépés visszavonása",
       "resetPosition": "Vissza a könyv állásához",
-      "notPlayable": "Ez az állás nem szabályos (pl. király nélküli tanulmány) — csak megtekinthető."
+      "notPlayable": "Ez az állás nem szabályos (pl. király nélküli tanulmány) — csak megtekinthető.",
+      "toc": "Tartalom",
+      "resize": "Húzással átméretezhető (dupla kattintás: alapszélesség)"
     },
     "diagrams": "{{n}} diagram"
   }

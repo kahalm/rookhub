@@ -150,6 +150,8 @@ public class EbookLibraryImporter
                 known[rel!] = ebook.Id;
                 result.FilesAdded++;
             }
+            if (EbookFormats.NeedsPdfConversion(ebook.Files) && ebook.ConversionState == EbookConversionState.NotNeeded)
+                ebook.ConversionState = EbookConversionState.Pending;
             ebook.CoverState = ebook.CoverState == EbookCoverState.Done ? EbookCoverState.Done
                 : ebook.Files.Any(f => EbookFormats.WithCover.Contains(f.Format)) ? EbookCoverState.Pending : EbookCoverState.Unsupported;
 

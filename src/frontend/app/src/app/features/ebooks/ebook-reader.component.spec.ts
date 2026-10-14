@@ -64,8 +64,8 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   }));
 
-  it('EPUB bekommt keine Leseansicht, sondern den Download', async () => {
-    const fixture = await make(book({ primaryFormat: 'epub', files: [{ id: 2, format: 'epub', fileName: 'b.epub', sizeBytes: 5 }], progress: null }));
+  it('DJVU (noch nicht umgewandelt) bekommt keine Leseansicht, sondern den Download', async () => {
+    const fixture = await make(book({ primaryFormat: 'djvu', files: [{ id: 2, format: 'djvu', fileName: 'b.djvu', sizeBytes: 5 }], progress: null }));
     const c = fixture.componentInstance;
     expect(c.readable).toBeFalse();
     expect(c.downloadUrl(2)).toBe('/api/ebooks/9/file?t=tok&download=true&fileId=2');
@@ -180,4 +180,33 @@ describe('EbookReaderComponent', () => {
     c.pick(99);
     expect(c.legal()).toBeFalse();
   });
+
+  it('Trenner: Breite bleibt zwischen 260 px und 70 % des Fensters und wird gemerkt', async () => {
+    localStorage.removeItem('rh.ebooks.panelWidth');
+    expect(EbookReaderComponent.clampPanel(100, 1600)).toBe(260);
+    expect(EbookReaderComponent.clampPanel(5000, 1600)).toBe(1120);
+    expect(EbookReaderComponent.clampPanel(500, 1600)).toBe(500);
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.setPanelWidth(420);
+    expect(c.panelWidth()).toBe(420);
+    expect(localStorage.getItem('rh.ebooks.panelWidth')).toBe('420');
+    c.resetPanelWidth();
+    expect(c.panelWidth()).toBeNull();
+    localStorage.removeItem('rh.ebooks.panelWidth');
+  });
+
+  it('EPUB ohne PDF öffnet den EPUB-Leser und speichert Prozent + CFI', fakeAsync(async () => {
+    const fixture = await make(book({ primaryFormat: 'epub', files: [{ id: 2, format: 'epub', fileName: 'b.epub', sizeBytes: 5 }],
+      progress: { page: 40, pageCount: 100, locator: 'epubcfi(/6/4!/4/2)', updatedAt: '' } }));
+    const c = fixture.componentInstance;
+    expect(c.readable).toBeTrue();
+    expect(c.isEpub).toBeTrue();
+    expect(c.epubLocator).toBe('epubcfi(/6/4!/4/2)');
+    c.onEpubLocated({ fraction: 0.523, cfi: 'epubcfi(/6/8!/4/2)' });
+    expect(c.epubPercent()).toBe(52);
+    tick(1600);
+    expect(service.setProgress).toHaveBeenCalledWith(9, 52, 100, 'epubcfi(/6/8!/4/2)');
+    fixture.destroy();
+  }));
 });

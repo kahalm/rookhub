@@ -29,6 +29,7 @@
     "@ngx-translate/http-loader": "^18.0.0",
     "chess.js": "^1.4.0",
     "chessground": "^9.2.1",
+    "epubjs": "0.3.93",
     "leaflet": "^1.9.4",
     "onnxruntime-web": "1.30.0",
     "pdfjs-dist": "^6.4.299",

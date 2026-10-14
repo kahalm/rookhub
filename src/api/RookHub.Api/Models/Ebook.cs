@@ -74,6 +74,10 @@ public class Ebook
     /// <summary>Erkannte Diagramme (nur gültig bei <see cref="EbookDiagramState.Done"/>).</summary>
     public int DiagramCount { get; set; }
 
+    /// <summary>Umwandlung DJVU → PDF (0.770.0): Bücher, die NUR als DJVU vorliegen, bekommen eine lesbare PDF-Fassung
+    /// (<see cref="EbookFile.Derived"/>), die der Browser-Leser zeigen kann.</summary>
+    public EbookConversionState ConversionState { get; set; } = EbookConversionState.NotNeeded;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -109,6 +113,10 @@ public class EbookFile
     [MaxLength(64)]
     public string? Sha256 { get; set; }
 
+    /// <summary>Von RookHub ERZEUGT (z. B. PDF aus DJVU, 0.770.0): liegt immer unter der beschreibbaren Wurzel
+    /// (<c>Ebooks:Root</c>, <c>converted/</c>), auch wenn das Buch aus der Bibliothek stammt, und wird mit dem Buch gelöscht.</summary>
+    public bool Derived { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -133,6 +141,10 @@ public class EbookProgress
 
     /// <summary>1-basierte Seite.</summary>
     public int Page { get; set; }
+
+    /// <summary>Genaue Stelle für Formate ohne feste Seiten (EPUB: CFI), 0.770.0; bei PDF leer.</summary>
+    [MaxLength(300)]
+    public string? Locator { get; set; }
 
     /// <summary>Seitenzahl, wie der Leser sie beim Speichern kannte (für den Prozentbalken, auch wenn der Server keine hat).</summary>
     public int? PageCount { get; set; }
@@ -223,4 +235,14 @@ public class EbookDiagramReport
     public string? Note { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Stand der DJVU→PDF-Umwandlung eines Buchs.</summary>
+public enum EbookConversionState
+{
+    /// <summary>Nichts zu tun (es gibt schon ein PDF oder kein DJVU).</summary>
+    NotNeeded = 0,
+    Pending = 1,
+    Done = 2,
+    Failed = 3,
 }

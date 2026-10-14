@@ -5322,8 +5322,6 @@
       "diagramAt": "Diagramm auf Seite {{page}}",
       "diagramCount": "{{n}} Diagramme",
       "pickHint": "Doppelklick auf ein Diagramm im Buch stellt es hier auf.",
-      "whiteToMove": "Weiß am Zug",
-      "blackToMove": "Schwarz am Zug",
       "sideUnknown": "Zugrecht steht nicht im Buch",
       "analyse": "Analysieren",
       "flip": "Brett drehen",
@@ -5340,7 +5338,9 @@
       "playHint": "Züge auf dem Brett spielen.",
       "undo": "Zug zurücknehmen",
       "resetPosition": "Zurück zur Buchstellung",
-      "notPlayable": "Diese Stellung ist nicht regelgerecht (z. B. Studie ohne König) — sie lässt sich nur ansehen."
+      "notPlayable": "Diese Stellung ist nicht regelgerecht (z. B. Studie ohne König) — sie lässt sich nur ansehen.",
+      "toc": "Inhalt",
+      "resize": "Ziehen ändert die Breite (Doppelklick: Standardbreite)"
     },
     "diagrams": "{{n}} Diagramme"
   }

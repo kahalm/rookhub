@@ -113,7 +113,15 @@
             ],
             "scripts": [],
             "allowedCommonJsDependencies": [
-              "leaflet"
+              "leaflet",
+              "event-emitter",
+              "@xmldom/xmldom",
+              "path-webpack",
+              "jszip/dist/jszip",
+              "localforage",
+              "marks-pane",
+              "lodash/debounce",
+              "lodash/throttle"
             ]
           },
           "configurations": {

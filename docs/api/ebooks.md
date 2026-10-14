@@ -106,3 +106,18 @@ der Zurück-Pfeil im Leser führt auf das nackte `/ebooks` und landet trotzdem i
 **Brett spielbar** (0.769.0): Hand-Knopf neben dem Brett schaltet `playable` ein; gespielte Züge (SAN + FEN) stehen unter dem
 Brett mit Zugnummern ab der Buchstellung, Zurücknehmen / Buchstellung, „Analysieren“ und „FEN kopieren“ nehmen die aktuelle
 Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne König) bleiben nur zum Ansehen.
+
+## EPUB-Leser, DJVU → PDF, Trenner (0.770.0)
+
+- **EPUB** (`EpubViewerComponent`, epub.js 0.3.93 als Lazy-Chunk): Datei als ArrayBuffer (die Datei-Adresse hat keine Endung),
+  paginiert, ‹ › / Pfeiltasten / Wischen, Inhaltsverzeichnis im Kopf. Lesestand: `EbookProgress.Locator` = CFI, `Page` =
+  Prozent (1–100) bei `PageCount` 100 — so funktioniert der Fortschrittsbalken der Karten unverändert. Die CSP des
+  Frontend-nginx erlaubt dafür `blob:` bei `style-src` und `font-src` (epub.js reicht Buch-CSS und -Schriften als blob: ins
+  iframe; vorher: Buch ungestaltet, CSP-Fehler). Buch-Skripte bleiben aus (epub.js-Vorgabe).
+- **DJVU → PDF** (`EbookDjvuConverter`, alle 30 s ein Buch, `ddjvu -format=pdf`, Deckel 30 min): Bücher NUR mit DJVU
+  (`EbookFormats.NeedsPdfConversion`) bekommen `converted/<id>.pdf` unter `Ebooks:Root` als `EbookFile` mit `Derived = true`
+  (liegt immer unter der beschreibbaren Wurzel, wird mit dem Buch gelöscht; `EbookStorage.ResolveFile` wählt die Wurzel).
+  Stand am Buch `ConversionState` (NotNeeded/Pending/Done/Failed); Upload/Import/Migration setzen Pending. Gemessen: 227
+  Seiten in 13 s, ~6× die DJVU-Größe (Bibliothek: 66 Bücher nur als DJVU). Danach Titelbild + Diagramme neu vorgemerkt.
+- **Trenner** zwischen Buch und Brett (`.rd-split`, `role=separator`): ziehen (Pointer-Capture), ←/→ um 24 px, Doppelklick =
+  Standardbreite; 260 px bis 70 % des Fensters, je Gerät in `localStorage` `rh.ebooks.panelWidth`. Unter 900 px ausgeblendet.

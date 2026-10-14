@@ -12,7 +12,19 @@
         <span class="rd-title-text">{{ ebook.title }}</span>
         @if (ebook.author) { <span class="rd-author">{{ ebook.author }}</span> }
       </div>
-      @if (readable) {
+      @if (readable && isEpub) {
+        <div class="rd-pages">
+          <button mat-icon-button (click)="epubPrev()" [appIconLabel]="'common.paginator.previousPage' | translate"><mat-icon>chevron_left</mat-icon></button>
+          <span class="rd-page-count">{{ epubPercent() }}&nbsp;%</span>
+          <button mat-icon-button (click)="epubNext()" [appIconLabel]="'common.paginator.nextPage' | translate"><mat-icon>chevron_right</mat-icon></button>
+          @if (epubToc().length > 0) {
+            <button mat-icon-button [matMenuTriggerFor]="tocMenu" [appIconLabel]="'ebooks.reader.toc' | translate"><mat-icon>toc</mat-icon></button>
+            <mat-menu #tocMenu="matMenu">
+              @for (t of epubToc(); track t.href) { <button mat-menu-item (click)="epubGo(t.href)">{{ t.label }}</button> }
+            </mat-menu>
+          }
+        </div>
+      } @else if (readable) {
         <div class="rd-pages">
           <label class="rd-page-label">
             <span class="sr-only">{{ 'ebooks.reader.page' | translate }}</span>
@@ -42,8 +54,16 @@
       </mat-menu>
     </div>
 
-    @if (readable && fileUrl) {
-      <div class="rd-body" [class.rd-body--split]="hasDiagrams" [class.rd-body--panel-open]="panelOpen()">
+    @if (readable && fileUrl && isEpub) {
+      <div class="rd-body">
+        <div class="rd-viewer">
+          <app-epub-viewer [src]="fileUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
+                           (toc)="epubToc.set($event)" (failed)="onViewerFailed()" />
+        </div>
+      </div>
+    } @else if (readable && fileUrl) {
+      <div class="rd-body" [class.rd-body--split]="hasDiagrams" [class.rd-body--panel-open]="panelOpen()"
+           [style.--rd-panel-w.px]="panelWidth()">
         <div class="rd-viewer">
           <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
                           [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)"
@@ -51,6 +71,9 @@
                           (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
         </div>
         @if (hasDiagrams) {
+          <div class="rd-split" role="separator" aria-orientation="vertical" tabindex="0"
+               [attr.aria-label]="'ebooks.reader.resize' | translate" [attr.title]="'ebooks.reader.resize' | translate"
+               (pointerdown)="startResize($event)" (keydown)="resizeKey($event)" (dblclick)="resetPanelWidth()"></div>
           <aside class="rd-panel" [attr.aria-label]="'ebooks.reader.boardPanel' | translate">
             <div class="rd-panel-head">
               <button mat-icon-button (click)="step(-1)" [appIconLabel]="'ebooks.reader.prevDiagram' | translate"><mat-icon>chevron_left</mat-icon></button>

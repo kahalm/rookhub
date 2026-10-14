@@ -13,6 +13,10 @@ public static class EbookFormats
     /// <summary>Reihenfolge, in der eine Datei als „Hauptdatei" gilt: PDF liest der Browser, der Rest ist Download.</summary>
     public static readonly string[] Preference = ["pdf", "epub", "djvu", "cbz", "cbr", "mobi", "azw3"];
 
+    /// <summary>Braucht dieses Buch eine PDF-Fassung? (DJVU vorhanden, PDF nicht.)</summary>
+    public static bool NeedsPdfConversion(IEnumerable<Models.EbookFile> files) =>
+        files.Any(f => f.Format == "djvu") && !files.Any(f => f.Format == "pdf");
+
     public const int MaxTags = 20;
     public const int MaxTagLength = 40;
 

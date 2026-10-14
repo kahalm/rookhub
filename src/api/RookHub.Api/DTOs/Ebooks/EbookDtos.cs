@@ -16,6 +16,8 @@ public class EbookProgressDto
 {
     public int Page { get; set; }
     public int? PageCount { get; set; }
+    /// <summary>EPUB: CFI der Lesestelle; PDF: leer.</summary>
+    public string? Locator { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
 
@@ -36,6 +38,8 @@ public class EbookDto
     /// <summary><c>pending</c> / <c>done</c> / <c>failed</c> / <c>unsupported</c> — Stand der Diagramm-Erkennung.</summary>
     public string DiagramState { get; set; } = "pending";
     public int DiagramCount { get; set; }
+    /// <summary><c>notneeded</c> / <c>pending</c> / <c>done</c> / <c>failed</c> — DJVU→PDF-Umwandlung.</summary>
+    public string ConversionState { get; set; } = "notneeded";
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public bool IsOwner { get; set; }
@@ -146,6 +150,7 @@ public class EbookProgressUpdateDto
 {
     [Range(1, 100000)] public int Page { get; set; }
     [Range(1, 100000)] public int? PageCount { get; set; }
+    [MaxLength(300)] public string? Locator { get; set; }
 }
 
 /// <summary>Ergebnis von „Bibliothek einlesen".</summary>

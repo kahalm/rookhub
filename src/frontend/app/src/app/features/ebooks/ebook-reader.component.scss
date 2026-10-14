@@ -49,13 +49,25 @@
 
 /* Buch links, Brett rechts (0.766.0). Die Leiste ist so breit wie ein gut lesbares Brett, das Buch nimmt den Rest. */
 .rd-panel {
-  flex: 0 0 clamp(300px, 32vw, 460px);
+  flex: 0 0 var(--rd-panel-w, clamp(300px, 32vw, 460px));
   display: flex; flex-direction: column; gap: 8px;
   padding: 8px 12px 12px;
-  border-left: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent);
   background: var(--mat-sys-surface);
   overflow-y: auto;
 }
+
+/* Trenner Buch | Brett: 8 px Griff (44 px Trefferfläche über Pseudo-Element), ziehen oder ←/→. */
+.rd-split {
+  flex: 0 0 8px; position: relative; cursor: col-resize; touch-action: none;
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 10%, transparent);
+  &::before { content: ''; position: absolute; inset: 0 -18px; }
+  &::after {
+    content: ''; position: absolute; top: 50%; left: 2px; width: 4px; height: 36px; margin-top: -18px; border-radius: 2px;
+    background: color-mix(in srgb, var(--mat-sys-on-surface) 35%, transparent);
+  }
+  &:hover, &:focus-visible { background: color-mix(in srgb, var(--mat-sys-primary) 30%, transparent); outline: none; }
+}
+:host-context(body.rd-resizing) .rd-viewer { pointer-events: none; }
 .rd-panel-head { display: flex; align-items: center; gap: 2px; }
 .rd-panel-pos { flex: 1 1 auto; text-align: center; font-variant-numeric: tabular-nums; font-weight: 500; }
 .rd-panel-close { display: none; }
@@ -75,8 +87,9 @@
 /* Schmal: Brett als Leiste unten, erst nach einem Doppelklick sichtbar (sonst gehört der Platz dem Buch). */
 @media (max-width: 899.98px) {
   .rd-body--split { flex-direction: column; }
+  .rd-split { display: none; }
   .rd-panel {
-    display: none; flex: 0 0 auto; max-height: 62dvh;
+    display: none; flex: 0 0 auto !important; max-height: 62dvh;
     border-left: 0; border-top: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent);
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }

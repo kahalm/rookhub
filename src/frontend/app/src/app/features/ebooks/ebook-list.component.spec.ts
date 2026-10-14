@@ -89,10 +89,11 @@ describe('EbookListComponent', () => {
     expect(c.progressPercent(book({ progress: { page: 50, pageCount: null, updatedAt: '' }, pageCount: null }))).toBeNull();
   });
 
-  it('nur PDF ist lesbar, alles andere wird heruntergeladen', () => {
+  it('PDF und EPUB sind lesbar, alles andere wird heruntergeladen', () => {
     const c = make([]);
     expect(c.readable(book({ primaryFormat: 'pdf' }))).toBeTrue();
-    expect(c.readable(book({ primaryFormat: 'epub' }))).toBeFalse();
+    expect(c.readable(book({ primaryFormat: 'epub' }))).toBeTrue();
+    expect(c.readable(book({ primaryFormat: 'djvu' }))).toBeFalse();
     expect(c.readable(book({ primaryFormat: null }))).toBeFalse();
   });
 

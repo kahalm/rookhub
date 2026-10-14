@@ -5322,8 +5322,6 @@
       "diagramAt": "Diagram on page {{page}}",
       "diagramCount": "{{n}} diagrams",
       "pickHint": "Double-click a diagram in the book to set it up here.",
-      "whiteToMove": "White to move",
-      "blackToMove": "Black to move",
       "sideUnknown": "Side to move not given in the book",
       "analyse": "Analyse",
       "flip": "Flip board",
@@ -5340,7 +5338,9 @@
       "playHint": "Play moves on the board.",
       "undo": "Take back move",
       "resetPosition": "Back to the book position",
-      "notPlayable": "This position is not legal (e.g. a study without a king) — it can only be viewed."
+      "notPlayable": "This position is not legal (e.g. a study without a king) — it can only be viewed.",
+      "toc": "Contents",
+      "resize": "Drag to resize (double-click: default width)"
     },
     "diagrams": "{{n}} diagrams"
   }

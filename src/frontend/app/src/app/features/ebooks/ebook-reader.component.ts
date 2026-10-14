@@ -13,6 +13,8 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Ebook, EbookDiagram, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
+import { EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
+import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { Chess } from 'chess.js';
 import { nextZoom, parsePageInput } from './reader-progress.util';
@@ -30,12 +32,13 @@ import { nextZoom, parsePageInput } from './reader-progress.util';
   selector: 'app-ebook-reader',
   standalone: true,
   imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, TranslatePipe,
-    IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent, PdfViewerComponent, ChessBoardComponent],
+    IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent, PdfViewerComponent, EpubViewerComponent, ChessBoardComponent],
   templateUrl: './ebook-reader.component.html',
   styleUrls: ['./ebook-reader.component.scss'],
 })
 export class EbookReaderComponent implements OnInit, OnDestroy {
   @ViewChild(PdfViewerComponent) private viewer?: PdfViewerComponent;
+  @ViewChild(EpubViewerComponent) private epub?: EpubViewerComponent;
 
   ebook: Ebook | null = null;
   token = '';
@@ -70,6 +73,17 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     try { new Chess(d.fen); return true; } catch { return false; }
   });
 
+  /** EPUB: Lesestelle in Prozent und Inhaltsverzeichnis. */
+  readonly epubPercent = signal(0);
+  readonly epubToc = signal<EpubTocEntry[]>([]);
+  epubLocator: string | null = null;
+  private epubSave$ = new Subject<EpubLocation>();
+
+  /** Breite der Brettleiste (Desktop), per Trenner verschiebbar, je Gerät gemerkt. */
+  readonly panelWidth = signal<number | null>(EbookReaderComponent.loadPanelWidth());
+  static readonly PANEL_WIDTH_KEY = 'rh.ebooks.panelWidth';
+  static readonly PANEL_MIN = 260;
+
   /** Schmale Ansicht: Brettleiste ein-/ausgeklappt. */
   readonly panelOpen = signal(false);
 
@@ -83,6 +97,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.progress$.pipe(debounceTime(1500), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(p => this.saveProgress(p));
+    this.epubSave$.pipe(debounceTime(1500), takeUntil(this.destroy$)).subscribe(l => this.saveEpubProgress(l));
     this.load();
   }
 
@@ -99,6 +114,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
       next: book => {
         this.ebook = book;
         this.initialPage = book.progress?.page ?? 1;
+        this.epubLocator = book.progress?.locator ?? null;
         this.page.set(this.initialPage);
         if (book.pageCount) this.pageCount.set(book.pageCount);
         if (book.diagramState === 'done' && book.diagramCount > 0) this.loadDiagrams(book.id);
@@ -117,6 +133,75 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   }
 
   get readable(): boolean { return this.fileUrl != null; }
+
+  /** Liest der Browser ein EPUB (kein PDF da)? */
+  get isEpub(): boolean { return this.ebook?.primaryFormat === 'epub'; }
+
+  onEpubLocated(l: EpubLocation): void {
+    this.epubPercent.set(Math.round(l.fraction * 100));
+    this.epubSave$.next(l);
+  }
+
+  private saveEpubProgress(l: EpubLocation): void {
+    if (!this.ebook) return;
+    const page = Math.max(1, Math.min(100, Math.round(l.fraction * 100)));
+    this.ebooks.setProgress(this.ebook.id, page, 100, l.cfi).subscribe({
+      error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.saveProgressFailed')),
+    });
+  }
+
+  epubPrev(): void { this.epub?.prev(); }
+  epubNext(): void { this.epub?.next(); }
+  epubGo(href: string): void { this.epub?.goTo(href); }
+
+  // ── Trenner Buch | Brett ───────────────────────────────────────────────────────────────────
+
+  private static loadPanelWidth(): number | null {
+    const raw = readRaw(localStore(), EbookReaderComponent.PANEL_WIDTH_KEY);
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= EbookReaderComponent.PANEL_MIN ? n : null;
+  }
+
+  /** Breite begrenzen: mindestens 260 px, das Buch behält mindestens 30 % des Fensters. */
+  static clampPanel(width: number, viewport: number): number {
+    return Math.round(Math.max(EbookReaderComponent.PANEL_MIN, Math.min(width, viewport * 0.7)));
+  }
+
+  setPanelWidth(width: number): void {
+    const w = EbookReaderComponent.clampPanel(width, window.innerWidth);
+    this.panelWidth.set(w);
+    writeRaw(localStore(), EbookReaderComponent.PANEL_WIDTH_KEY, String(w));
+  }
+
+  /** Ziehen am Trenner: Breite = Abstand des Zeigers vom rechten Rand. */
+  startResize(ev: PointerEvent): void {
+    ev.preventDefault();
+    const handle = ev.currentTarget as HTMLElement;
+    handle.setPointerCapture?.(ev.pointerId);
+    document.body.classList.add('rd-resizing');
+    const move = (e: PointerEvent) => this.setPanelWidth(window.innerWidth - e.clientX);
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      document.body.classList.remove('rd-resizing');
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  }
+
+  /** Tastatur am Trenner: ←/→ verschieben um 24 px, Doppelklick setzt zurück. */
+  resizeKey(ev: KeyboardEvent): void {
+    const cur = this.panelWidth() ?? 380;
+    if (ev.key === 'ArrowLeft') { this.setPanelWidth(cur + 24); ev.preventDefault(); }
+    else if (ev.key === 'ArrowRight') { this.setPanelWidth(cur - 24); ev.preventDefault(); }
+  }
+
+  resetPanelWidth(): void {
+    this.panelWidth.set(null);
+    writeRaw(localStore(), EbookReaderComponent.PANEL_WIDTH_KEY, '');
+  }
 
   get hasDiagrams(): boolean { return this.diagrams().length > 0; }
 
@@ -167,7 +252,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
 
   sideKey(d: EbookDiagram): string {
     if (!d.sideKnown) return 'ebooks.reader.sideUnknown';
-    return d.fen.split(' ')[1] === 'b' ? 'ebooks.reader.blackToMove' : 'ebooks.reader.whiteToMove';
+    return d.fen.split(' ')[1] === 'b' ? 'common.blackToMove' : 'common.whiteToMove';
   }
 
   togglePlay(): void { this.playMode.update(v => !v); }
