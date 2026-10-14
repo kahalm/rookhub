@@ -5252,6 +5252,10 @@
       "uploadHint": "Ohne Konto siehst nur du das Buch, auf diesem Gerät (bis 300 MB). Beim Anmelden wandert es in dein Konto; nicht übernommene Bücher werden nach 30 Tagen gelöscht."
     },
     "board": {
+      "drawNote": "Remisstellung – das ist nur ein Weg; jeder Zug, der das Remis hält, ist richtig.",
+      "checking": "Stockfish prüft deinen Zug …",
+      "alternativeOk": "Auch richtig – dein Zug hält das Ergebnis (Stockfish). Die Antworten kommen jetzt von Stockfish.",
+      "anyMoveHint": "Jeder Zug, der das Ergebnis hält, zählt – nicht nur der aus dem Buch.",
       "modes": "Brett-Modi",
       "mode": {
         "view": "Ansehen",

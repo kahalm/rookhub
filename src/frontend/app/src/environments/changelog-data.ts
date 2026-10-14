@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.780.3", date: "2026-10-14", changes: [
+    { en: "E-book board, Solve: a move that differs from the book now also counts if it keeps the result – a draw stays a draw, a win stays a win (Stockfish checks it in the browser); the replies then come from Stockfish. In drawn positions the solution is shown as one way among several.",
+      de: "E-Book-Brett, Lösen: Ein Zug, der vom Buch abweicht, zählt jetzt auch, wenn er das Ergebnis hält – Remis bleibt Remis, Gewinn bleibt Gewinn (Stockfish prüft im Browser); die Antworten kommen dann von Stockfish. Bei Remisstellungen steht die Lösung als ein Weg unter mehreren da." },
+  ] },
   { version: "0.780.2", date: "2026-10-14", changes: [
     { en: "E-book reader on the phone: the board now opens full screen over the book instead of as a small strip at the bottom – bigger board, the controls stay at the top; close returns to the page.",
       de: "E-Book-Leser am Handy: Das Brett öffnet jetzt als Vollbild über dem Buch statt als kleine Leiste unten – größeres Brett, die Knöpfe bleiben oben; Schließen führt zurück zur Seite." },

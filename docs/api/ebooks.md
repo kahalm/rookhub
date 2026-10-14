@@ -277,3 +277,9 @@ Seiten-Scrollkasten des PDF und der EPUB-Leser selbst (bekommen die Taste ohnehi
 **Mausrad im EPUB** (0.780.1): `EpubViewerComponent.onWheel` blättert seitenweise (Host und — per `rendition.hooks.content` —
 im Kapitel-iframe, dessen Ereignisse den Host nicht erreichen). Raddrehung wird gesammelt (≥ 40 px = eine Seite: Chrome-Raste
 100 px, Firefox 3 Zeilen ≈ 48 px), danach 350 ms Pause gegen Doppelblättern bei Touchpads.
+
+**Lösen: gleichwertige Züge zählen** (0.780.3): Weicht der Zug von der Linie ab, bewertet Stockfish im Browser
+(`StockfishService`, Tiefe 14) die Stellung danach gegen die nach dem Buchzug (nach einer Abweichung: gegen die Stellung
+davor) aus Sicht des Ziehenden. Angenommen, wenn höchstens 50 cp schlechter, Remis bleibt Remis (beide ±80 cp) oder Gewinn
+bleibt Gewinn (beide ≥ 300) — `EbookBoardComponent.sameResult`. Danach antwortet Stockfish statt der Buchlinie (auch beim
+Vorspielen im Training). Die Lösungsanzeige nennt eine Remisstellung (`engineEval` ±80) als „nur ein Weg“.

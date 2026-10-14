@@ -91,6 +91,10 @@ export class EbookBoardComponent implements OnChanges {
   readonly engineLine = signal<string[] | null>(null);
   readonly engineLineBusy = signal(false);
   readonly showSolution = signal(false);
+  /** Stockfish prüft gerade einen abweichenden Zug. */
+  readonly checking = signal(false);
+  /** Vom Buch (bzw. der gespeicherten Linie) abgewichen, aber gleichwertig — Antworten kommen jetzt von Stockfish. */
+  readonly deviated = signal(false);
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   /** Maia. */
@@ -125,7 +129,7 @@ export class EbookBoardComponent implements OnChanges {
     if (!this.legal()) return false;
     switch (this.mode()) {
       case 'view': return false;
-      case 'solve': return this.solveState() === 'running' && this.isUserTurn();
+      case 'solve': return this.solveState() === 'running' && !this.checking() && this.isUserTurn();
       case 'maia': return !this.maiaThinking() && this.isUserTurn() && this.maia.status() === 'ready';
       default: return true;
     }
@@ -285,6 +289,8 @@ export class EbookBoardComponent implements OnChanges {
   startSolving(): void {
     this.clearTimer();
     this.played.set([]);
+    this.deviated.set(false);
+    this.checking.set(false);
     if (this.solveSource() === 'engine' && this.engineLine() == null) {
       this.solveState.set('idle');
       void this.computeEngineLine().then(() => { if (this.mode() === 'solve' && this.engineLine()?.length) this.startSolving(); });
@@ -320,17 +326,43 @@ export class EbookBoardComponent implements OnChanges {
   private solveMove(m: UserBoardMove, uci: string): void {
     const line = this.solutionLine;
     const idx = this.played().length;
-    if (idx >= line.length || this.solveState() !== 'running') return;
-    const ok = uci === line[idx] || (line[idx].length === 4 && uci.startsWith(line[idx]));
+    if (idx >= line.length || this.solveState() !== 'running' || this.checking()) return;
+    const before = this.boardFen();
+    const onBook = !this.deviated() && (uci === line[idx] || (line[idx].length === 4 && uci.startsWith(line[idx])));
     this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
-    if (ok) { this.advance(); return; }
+    if (onBook) { this.advance(); return; }
+    // Abweichung (0.780.3): zählt, wenn der Zug das Ergebnis hält — Remis bleibt Remis, Gewinn bleibt Gewinn. Viele
+    // Buchstellungen haben mehrere richtige Züge (z. B. ein Remis, das das Buch nur mit einer Linie belegt).
+    const reference = this.deviated() ? null : (() => {
+      try {
+        const c = new Chess(before); const u = line[idx];
+        c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined });
+        return c.fen();
+      } catch { return null; }
+    })();
+    const id = this.diagram.id;
+    this.checking.set(true);
+    void this.holdsResult(before, m.fen, reference).then(ok => {
+      if (this.diagram.id !== id || this.mode() !== 'solve') return;
+      this.checking.set(false);
+      if (ok) {
+        this.deviated.set(true);
+        this.snackbar.quick(this.translate.instant('ebooks.board.alternativeOk'));
+        this.advance();
+      } else {
+        this.rejectMove();
+      }
+      this.cdr.markForCheck();
+    });
+  }
+
+  /** Falscher Zug: „Einfach“ nimmt ihn zurück, „Training“ wertet ihn als Fehler und spielt die Lösung vor. */
+  private rejectMove(): void {
     if (this.solveStyle() === 'easy') {
-      // Kurz zeigen, dann zurücknehmen — nochmal versuchen.
       this.snackbar.quick(this.translate.instant('ebooks.reader.notBookMove'));
       this.timer = setTimeout(() => { this.played.update(l => l.slice(0, -1)); this.cdr.markForCheck(); }, 600);
       return;
     }
-    // Training: der erste Versuch zählt — falsch, dann spielt das Brett die Lösung vor.
     this.solveState.set('failed');
     this.timer = setTimeout(() => {
       this.played.update(l => l.slice(0, -1));
@@ -338,13 +370,57 @@ export class EbookBoardComponent implements OnChanges {
     }, 700);
   }
 
-  /** Nach einem richtigen Zug: Antwort aus der Linie nachziehen, am Ende „gelöst“. */
+  /**
+   * Hält der gespielte Zug das Ergebnis? Stockfish bewertet die Stellung nach dem Zug und die Vergleichsstellung (nach dem
+   * Buchzug; nach einer Abweichung die Stellung davor mit bestem Spiel) — jeweils aus Sicht des Ziehenden. Gilt, wenn er
+   * höchstens 50 cp schlechter ist, ein Remis ein Remis bleibt (beide ±80 cp) oder ein Gewinn ein Gewinn (beide ≥ 300).
+   */
+  private async holdsResult(before: string, after: string, reference: string | null): Promise<boolean> {
+    const mover = before.split(' ')[1] === 'b' ? -1 : 1;
+    try {
+      const mine = await this.stockfish.getBestMove(after, EbookBoardComponent.CHECK_DEPTH);
+      const ref = await this.stockfish.getBestMove(reference ?? before, EbookBoardComponent.CHECK_DEPTH);
+      const a = EbookBoardComponent.scoreCp(mine.score, after) * mover;
+      const b = EbookBoardComponent.scoreCp(ref.score, reference ?? before) * mover;
+      return EbookBoardComponent.sameResult(b, a);
+    } catch {
+      return false;   // Engine nicht verfügbar: wie bisher nur der Buchzug
+    }
+  }
+
+  static readonly CHECK_DEPTH = 14;
+
+  /** Weiß-Sicht in Centipawns; Matt in n = ±(10000 − n). Ohne Bewertung (Partieende): Matt/Patt aus der Stellung. */
+  static scoreCp(score: { cp?: number; mate?: number } | undefined, fen: string): number {
+    if (score?.mate != null) return score.mate > 0 ? 10000 - score.mate : -10000 - score.mate;
+    if (score?.cp != null) return score.cp;
+    try {
+      const c = new Chess(fen);
+      if (c.isCheckmate()) return c.turn() === 'w' ? -10000 : 10000;
+    } catch { /* unten */ }
+    return 0;   // Patt, Remis, unbekannt
+  }
+
+  /** Gleiches Ergebnis aus Sicht des Ziehenden (Vergleich `reference`, eigener Zug `mine`). */
+  static sameResult(reference: number, mine: number): boolean {
+    if (mine >= reference - 50) return true;
+    if (Math.abs(reference) <= 80 && mine >= -80) return true;   // Remis bleibt Remis
+    if (reference >= 300 && mine >= 300) return true;            // Gewinn bleibt Gewinn
+    return false;
+  }
+
+  /** Nach einem richtigen Zug: Antwort nachziehen (aus der Linie, nach einer Abweichung von Stockfish), am Ende „gelöst“. */
   private advance(): void {
     const line = this.solutionLine;
     if (this.played().length >= line.length) { this.solveState.set('solved'); return; }
-    this.timer = setTimeout(() => {
-      this.pushUci(line[this.played().length]);
-      if (this.played().length >= line.length) this.solveState.set('solved');
+    const id = this.diagram.id;
+    this.timer = setTimeout(async () => {
+      let u: string | null = line[this.played().length];
+      if (this.deviated()) {
+        try { u = (await this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH)).move || null; } catch { u = null; }
+      }
+      if (this.diagram.id !== id || this.mode() !== 'solve') return;
+      if (!u || !this.pushUci(u) || this.played().length >= line.length) this.solveState.set('solved');
       this.cdr.markForCheck();
     }, 450);
   }
@@ -353,6 +429,16 @@ export class EbookBoardComponent implements OnChanges {
   private playOutSolution(): void {
     const line = this.solutionLine;
     if (this.played().length >= line.length) { this.cdr.markForCheck(); return; }
+    if (this.deviated()) {
+      // Nach einer gleichwertigen Abweichung passt die Buchlinie nicht mehr — Stockfish spielt vor.
+      const id = this.diagram.id;
+      void this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH).then(r => {
+        if (this.diagram.id !== id || this.mode() !== 'solve' || !r?.move || !this.pushUci(r.move)) return;
+        this.cdr.markForCheck();
+        this.timer = setTimeout(() => this.playOutSolution(), 700);
+      }).catch(() => {});
+      return;
+    }
     this.pushUci(line[this.played().length]);
     this.cdr.markForCheck();
     this.timer = setTimeout(() => this.playOutSolution(), 700);
@@ -419,6 +505,12 @@ export class EbookBoardComponent implements OnChanges {
 
   get movesText(): string {
     return this.diagram ? EbookBoardComponent.numbered(this.diagram.fen, this.played().map(m => m.san)) : '';
+  }
+
+  /** Remisstellung laut Stockfish-Prüfung (±80 cp) — dann ist die gezeigte Linie nur eine von mehreren (0.780.3). */
+  get drawish(): boolean {
+    const e = this.diagram?.engineEval;
+    return e != null && Math.abs(e) <= 80;
   }
 
   /** Die Lösung zum Lesen (gespeichert: SAN aus dem Buch; Stockfish: aus der gerechneten Linie). */

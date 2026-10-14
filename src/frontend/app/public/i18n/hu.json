@@ -5252,6 +5252,10 @@
       "uploadHint": "Fiók nélkül csak te látod a könyvet ezen az eszközön (legfeljebb 300 MB). Bejelentkezéskor átkerül a fiókodba; az át nem vett könyveket 30 nap után töröljük."
     },
     "board": {
+      "drawNote": "Döntetlen állás – ez csak egy lehetőség; minden lépés jó, amely tartja a döntetlent.",
+      "checking": "A Stockfish ellenőrzi a lépésedet …",
+      "alternativeOk": "Ez is jó – a lépésed megtartja az eredményt (Stockfish). A válaszok most a Stockfishtől jönnek.",
+      "anyMoveHint": "Minden lépés számít, amely megtartja az eredményt – nem csak a könyvbeli.",
       "modes": "Tábla módok",
       "mode": {
         "view": "Nézet",

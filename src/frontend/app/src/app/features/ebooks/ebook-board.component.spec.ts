@@ -106,11 +106,44 @@ describe('EbookBoardComponent', () => {
     expect(c.solveState()).toBe('running');
   }));
 
+  it('Lösen: ein abweichender Zug, der das Ergebnis hält, zählt auch — die Antworten kommen dann von Stockfish', fakeAsync(() => {
+    const c = make().componentInstance;
+    c.setMode('solve');
+    // Stockfish: nach Sh3 wie nach Txh2+ beides klar für Schwarz (Weiß-Sicht −500 bzw. −520), dann Antwort „h1h2“.
+    let n = 0;
+    stockfish.getBestMove.and.callFake(() => Promise.resolve(
+      (n++ < 2 ? { move: 'e1e2', eval: '-5', score: { cp: n === 1 ? -500 : -520 } } : { move: 'h1g2', eval: '0', score: { cp: 0 } }) as never));
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    expect(c.checking()).toBeTrue();
+    expect(c.playable()).toBeFalse();
+    flushMicrotasks();
+    expect(c.checking()).toBeFalse();
+    expect(c.deviated()).toBeTrue();
+    expect(c.played().length).toBe(1);   // Sh3 bleibt stehen
+    tick(500); flushMicrotasks();
+    expect(stockfish.getBestMove.calls.count()).toBe(3);
+    expect(c.solveState()).toBe('running');
+  }));
+
+  it('gleiches Ergebnis: Remis bleibt Remis, Gewinn bleibt Gewinn, sonst höchstens 50 cp schlechter', () => {
+    expect(EbookBoardComponent.sameResult(0, -60)).toBeTrue();     // beides Remis
+    expect(EbookBoardComponent.sameResult(0, -120)).toBeFalse();   // Remis verspielt
+    expect(EbookBoardComponent.sameResult(900, 350)).toBeTrue();   // gewinnt weiter
+    expect(EbookBoardComponent.sameResult(900, 150)).toBeFalse();
+    expect(EbookBoardComponent.sameResult(150, 110)).toBeTrue();   // 40 cp schlechter
+    expect(EbookBoardComponent.scoreCp({ mate: 2 }, D.fen)).toBe(9998);
+    expect(EbookBoardComponent.scoreCp({ mate: -3 }, D.fen)).toBe(-9997);
+  });
+
   it('Lösen Training: der erste Fehler zählt, danach spielt das Brett die Lösung vor', fakeAsync(() => {
     const c = make().componentInstance;
     c.setMode('solve');
     c.setSolveStyle('training');
+    // Stockfish hält Sh3 für deutlich schlechter als Txh2+ → falsch.
+    let n = 0;
+    stockfish.getBestMove.and.callFake(() => Promise.resolve({ move: 'a1a2', eval: '0', score: { cp: n++ === 0 ? 0 : -900 } } as never));
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    flushMicrotasks();
     expect(c.solveState()).toBe('failed');
     expect(c.playable()).toBeFalse();
     tick(700 * 4);

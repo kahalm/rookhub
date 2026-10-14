@@ -5252,6 +5252,10 @@
       "uploadHint": "Bez računa knjigu vidiš samo ti, na ovom uređaju (do 300 MB). Kad se prijaviš, prelazi u tvoj račun; nepreuzete knjige brišu se nakon 30 dana."
     },
     "board": {
+      "drawNote": "Remi pozicija – ovo je samo jedan put; svaki potez koji drži remi je dobar.",
+      "checking": "Stockfish provjerava tvoj potez …",
+      "alternativeOk": "Također točno – tvoj potez zadržava rezultat (Stockfish). Odgovori sada dolaze od Stockfisha.",
+      "anyMoveHint": "Vrijedi svaki potez koji zadržava rezultat – ne samo onaj iz knjige.",
       "modes": "Načini ploče",
       "mode": {
         "view": "Pregled",
