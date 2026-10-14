@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.770.1", date: "2026-10-14", changes: [
+    { en: "Design round b1, follow-up after the image check: on very wide screens (from 2400 px) KidHub tasks fit the window height, the LeagueHub club games table no longer leaves wide gaps, recent games in player preparation stay compact, repertoire card titles wrap onto two lines and the dashboard uses five even columns; on tablets the ⋮ sits right next to „Analyse game“; the move list on the game page shows a scroll shadow on laptops too.",
+      de: "Gestaltungsrunde b1, Nacharbeit nach der Bildprüfung: auf sehr breiten Bildschirmen (ab 2400 px) passen KidHub-Aufgaben in die Fensterhöhe, die LeagueHub-Vereinspartien haben keine breiten Lücken mehr, die letzten Partien in der Spielervorbereitung bleiben kompakt, Repertoire-Titel brechen auf zwei Zeilen um und das Dashboard nutzt fünf gleichmäßige Spalten; am Tablet steht das ⋮ direkt neben „Partie analysieren“; die Zugliste der Partieseite zeigt auch am Laptop den Weiterscroll-Schatten." },
+  ] },
   { version: "0.770.0", date: "2026-10-14", changes: [
     { en: "E-books: EPUB books now open in the browser — page with ‹ ›, arrow keys or a swipe, contents menu, reading position remembered. Books that exist only as DJVU are converted to PDF in the background and then open in the normal reader.",
       de: "E-Books: EPUB-Bücher öffnen sich jetzt im Browser — blättern mit ‹ ›, Pfeiltasten oder Wischen, Inhaltsverzeichnis, die Lesestelle wird gemerkt. Bücher, die es nur als DJVU gibt, werden im Hintergrund in PDF umgewandelt und öffnen sich danach im normalen Leser." },

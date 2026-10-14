@@ -533,7 +533,11 @@ button.pl:hover { text-decoration-color: var(--ink); }
   /* a1-l-uebertragungen-ultrawide: vier kurze Spalten nicht über 1 880 px ziehen — Tabelle so breit wie unter 2400 px, linksbündig. */
   .wrap.mid .bc-list { width: min(100%, 1208px); }
   /* b1-l-vereinspartien-ultrawide: ebenso die Vereinspartien — Suchzeile und Kopf bleiben 1 880 px, die Tabelle 1 440 px. */
-  .wrap.mid .club-table { width: min(100%, 1440px); }
+  /* b1-l-vereinspartien-ultrawide (Nachprüfung): mit 34 % blieben zwischen Eröffnung (6 Halbzüge ≈ 160 px) und „Züge“
+     ~340 px leer, die übrige Breite verteilte sich als Lücke Schwarz → Ergebnis. Die Tabelle nimmt nur ihren Inhalt
+     (höchstens 1 440 px), die Eröffnung eine feste Spalte nach Inhalt (≈ 6 Halbzüge, Rest weiter mit „…“). */
+  .wrap.mid .club-table { width: auto; max-width: min(100%, 1440px); }
+  .wrap.mid .club-table td.opening { width: 30ch; }
   /* a1-l-korrigieren-ultrawide: Formular prüfen / korrigieren auf der breiten Seite, das Brett bis zur Fensterhöhe (≤ 960 px). */
   .wrap.wide { max-width: var(--page-max-width-wide, 1880px); }
   .wrap.wide .scan-layout { grid-template-columns: minmax(0, min(calc(100vh - 240px), 960px)) minmax(0, 1fr); }

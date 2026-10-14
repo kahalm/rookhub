@@ -333,6 +333,19 @@ describe('KidHub: Aufgabenseite je Fenstergroesse', () => {
     });
   }
 
+  /**
+   * b1-k-ultrawide-seitenspalte (Nachprüfung): in der echten Seite sind Kopf ≈ 125 px und Fuß ≈ 97 px hoch — mit 200 px
+   * Abzug war sie bei 3440×1440 1462 px hoch. Im Testrahmen fehlen Schrift/Fuß-Inhalte, daher Prüfung am CSS-Text:
+   * ab 2400 px zieht das Brett mindestens 225 px von der Fensterhöhe ab; darunter bleibt es bei 170 px.
+   */
+  it('Ultrawide: Brett zieht ab 2400 px ≥ 225 px für Kopf und Fuß ab (ganze Seite in 1440 px Höhe)', () => {
+    const css = (((KidHubAppComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    const wide = css.match(/@media\(min-width:2400px\)\{[^{]*\{[^}]*--kid-board:max\(min\(calc\(var\(--kid-vh\)\*100-(\d+)px\)/);
+    expect(wide).withContext('2400-px-Block mit --kid-board').not.toBeNull();
+    expect(Number(wide![1])).toBeGreaterThanOrEqual(225);
+    expect(css).toContain('--kid-board:max(min(calc(var(--kid-vh)*100-170px),calc(100vw-500px),820px),300px)');
+  });
+
   /** a1-k-ultrawide-raster: Startseite und Stufenkarte ab 2400 px 1880 px breit (--kid-wide-max), darunter wie bisher. */
   for (const [url, sel, below] of [['/', 'kid-home', 1520], ['/levels', 'kid-level-map', 1440]] as const) {
     it(`Ultrawide: ${url} nimmt ab 2400 px die breite Spalte, Kopfzeile fluchtet`, async () => {

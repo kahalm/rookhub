@@ -274,6 +274,11 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     .rep-title { display: flex; align-items: center; min-width: 0; }
     .rep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .rep-title mat-icon { flex: 0 0 auto; }
+    /* b1-rk-repertoire-karten-ultrawide-300 (Nachprüfung): in der Breitbild-Stufe bricht ein langer Titel auf zwei Zeilen
+       um (erst danach „…“) statt einzeilig gekürzt zu werden — die Karten haben dort Höhe übrig. Darunter wie bisher. */
+    @media (min-width: 2400px) {
+      .rep-name { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+    }
     .kind-chip { display: inline-block; font-size: 0.72rem; line-height: 18px; padding: 0 8px; margin-right: 6px;
                  border-radius: 9px; vertical-align: middle; font-weight: 500;
                  background: color-mix(in srgb, currentColor 14%, transparent); }

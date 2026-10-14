@@ -398,3 +398,12 @@ describe('RepertoireListComponent Kartenraster ab 2400 px', () => {
     expect(css.match(/minmax\(420px/g)?.length).toBe(1);
   });
 });
+
+/** b1-rk-repertoire-karten-ultrawide-300 (Nachprüfung): lange Kartentitel brechen ab 2400 px auf zwei Zeilen um. */
+describe('RepertoireListComponent Kartentitel ab 2400 px', () => {
+  it('zweizeilig (line-clamp 2) nur in der Breitbild-Stufe, darunter einzeilig mit „…“', () => {
+    const css = ((RepertoireListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, '');
+    expect(css).toMatch(/\.rep-name(\[[^\]]*\])?\{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;?\}/);
+    expect(css).toMatch(/@media\(min-width:2400px\)\{\.rep-name(\[[^\]]*\])?\{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;?\}/);
+  });
+});

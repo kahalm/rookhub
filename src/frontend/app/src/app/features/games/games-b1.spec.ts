@@ -73,6 +73,17 @@ describe('UI-Sweep b1 — Partie-Seite (SharedGameComponent)', () => {
     expect(moves).toContain('var(--mat-sys-surface-container-low) 70%) center bottom / 100% 32px no-repeat local');
     expect(moves).toMatch(/radial-gradient\(farthest-side at 50% 100%, color-mix\(in srgb, currentColor 30%, transparent\), transparent\) center bottom \/ 100% 14px no-repeat scroll/);
   });
+
+  it('b1-rk-partie-zugliste-schatten (Nachprüfung): .moves-section scrollt selbst — die Zugliste darin als Block ohne feste Höhe', () => {
+    expect(all).toMatch(/\.moves-section > app-move-list(\[[^\]]*\])? \{ display: block; \}/);
+    expect(all).toMatch(/\.moves-section \{[^}]*overflow: auto/);
+  });
+
+  it('b1-rk-partie-grund-unter-knopf (Nachprüfung): am Tablet Hülle so breit wie der Knopf, ⋮ direkt daneben', () => {
+    const tablet = block(all, '@media (min-width: 769px) and (max-width: 1279.98px)');
+    expect(tablet).toContain('.analyze-wrap { align-items: flex-start; width: max-content; min-width: 0; }');
+    expect(tablet).toContain('.analyze-wrap + .game-menu { margin-left: -4px; }');
+  });
 });
 
 describe('UI-Sweep b1 — Gespeicherte Partien (GamesListComponent)', () => {

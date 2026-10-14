@@ -173,6 +173,24 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep b1', () => {
     expect(box(desk, 't').width).toBe(1208);
   });
 
+  // b1-l-vereinspartien-ultrawide (Nachprüfung): keine Lücken mehr — Eröffnung → „Züge“ und Schwarz → Ergebnis dicht
+  it('Vereinspartien ab 2400 px: Spalten nach Inhalt, keine Lücke hinter Eröffnung und Schwarz-Namen', async () => {
+    const body = `<main class="wrap mid" id="m"><div class="roster-scroll club-scroll"><table class="rtable club-table" id="t"><tbody>
+      <tr class="game"><td class="num">2026</td>
+      <td class="side">Frolik, Michael <span class="small">1904</span></td>
+      <td class="side"><span id="b">Wirtenberger, Markus</span> <span class="small">1850</span></td><td class="num" id="r">1–0</td>
+      <td class="hide-s small opening" id="o"><span id="ot">1.d4 Sf6 2.c4 e6 3.Sc3 Lb4</span></td>
+      <td class="num hide-s small" id="z">46</td><td class="acts">Nachspielen</td><td class="card-cell">Karte</td></tr>
+      </tbody></table></div></main>`;
+    const ultra = await render(2560, body);
+    expect(box(ultra, 't').width).toBeLessThanOrEqual(1440);
+    expect(box(ultra, 'z').left - box(ultra, 'ot').right).withContext('Eröffnung → Züge').toBeLessThan(120);
+    expect(box(ultra, 'r').left - box(ultra, 'b').right).withContext('Schwarz → Ergebnis').toBeLessThan(120);
+    expect(style(ultra, 'o').textOverflow).toBe('ellipsis');
+    const desk = await render(1920, body);
+    expect(box(desk, 't').width).withContext('1920 px wie bisher').toBe(1208);
+  });
+
   // b1-l-korrigieren-zugliste-kasten: einspaltig läuft die Zugliste mit der Seite statt als Kasten mit 52vh
   it('Formular-Korrektur: Zugliste einspaltig ohne eigenen Rollbereich, zweispaltig weiter als Kasten', async () => {
     const list = (w: number) => `<div class="scan-wrap" style="width: ${w}px"><div class="moves" id="mv">

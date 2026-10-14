@@ -605,11 +605,14 @@ describe('DashboardComponent a1 (Mehrzahl, Prozent, Knopfzeile)', () => {
     const css = (((DashboardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
       .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
     expect(css).toMatch(/\.dashboard-grid:not\(\.grid-editing\) ?\{ ?grid-auto-flow: ?row dense/);
-    const wide = /@media \(min-width: ?2400px\) ?\{(.*?)\} ?\}/.exec(css);
-    expect(wide).not.toBeNull();
-    expect(wide![1]).toMatch(/\.dashboard-grid ?\{ ?grid-template-columns: ?repeat\(5, ?minmax\(0, ?1fr\)\)/);
+    expect(css).toMatch(/@media \(min-width: ?2400px\) ?\{ ?\.dashboard-grid ?\{ ?grid-template-columns: ?repeat\(5, ?minmax\(0, ?1fr\)\)/);
     // Unter 2400 px bleibt auto-fit.
     expect(css).toMatch(/\.dashboard-grid ?\{ ?display: ?grid; ?grid-template-columns: ?repeat\(auto-fit/);
+    // Nachprüfung: die 5-Spuren-Regel steht HINTER der gleich spezifischen Grundregel (sonst gewinnt auto-fit).
+    const base = css.search(/\.dashboard-grid ?\{ ?display: ?grid; ?grid-template-columns: ?repeat\(auto-fit/);
+    const five = css.search(/@media \(min-width: ?2400px\) ?\{ ?\.dashboard-grid ?\{ ?grid-template-columns: ?repeat\(5/);
+    expect(five).toBeGreaterThan(base);
+    expect(css.match(/repeat\(5, ?minmax/g)?.length).toBe(1);
   });
 
   it('a1-rk-dash-play-versatz / -puzzles-knoepfe-umbruch: Kachelknöpfe ohne Mindestbreite, einzeilig, Zeile bricht um', () => {

@@ -74,7 +74,11 @@ export const SHARED_GAME_STYLES = `
       .header:not(:has(.header-actions > :not(.game-menu, mat-menu))) { grid-template-columns: auto minmax(0, 1fr) auto; }
       .header:not(:has(.back)):not(:has(.header-actions > :not(.game-menu, mat-menu))) { grid-template-columns: minmax(0, 1fr) auto; }
       .header-actions:not(:has(> :not(.game-menu, mat-menu))) { grid-column: auto; }
-      .analyze-wrap { align-items: flex-start; }
+      /* b1-rk-partie-grund-unter-knopf (Nachprüfung): die Mindestbreite 220 px machte die Hülle breiter als den Knopf —
+         das ⋮ stand ~65 px rechts der Knopfkante. Hier so breit wie der Knopf, der Grund bricht darunter in seiner
+         Breite; das ⋮ rückt auf 4 px an den Knopf heran. */
+      .analyze-wrap { align-items: flex-start; width: max-content; min-width: 0; }
+      .analyze-wrap + .game-menu { margin-left: -4px; }
       .analyze-no-engine { text-align: left; }
     }
     .body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
@@ -163,6 +167,10 @@ export const SHARED_GAME_STYLES = `
         radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, currentColor 30%, transparent), transparent)
           center bottom / 100% 14px no-repeat scroll;
     }
+    /* b1-rk-partie-zugliste-schatten (Nachprüfung): die innere .move-list (height 100 %, overflow auto) war der eigentliche
+       Scroller, der Schatten auf .moves-section griff so nur am Handy. Als Block ohne feste Höhe bleibt die Liste so hoch
+       wie ihr Inhalt — es scrollt .moves-section samt Schattenmuster (Laptop, PC, Breitbild). */
+    .moves-section > app-move-list { display: block; }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }
       .viewer { width: auto; padding: 0; border-radius: 0; }

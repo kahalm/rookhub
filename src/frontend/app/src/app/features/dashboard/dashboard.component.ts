@@ -237,15 +237,18 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
        1 200 px; darunter bleibt die Breite unverändert. */
     @media (min-width: 2400px) {
       .dashboard { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
-      /* b1-rk-dash-raster-angepinnte-kurse: feste 5 Spuren — die volle Zeile der Kurs-Kachel hielt sonst alle
-         auto-fit-Spuren offen (6 schmale Spalten statt 5, Zeilen endeten halb). */
-      .dashboard-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .header-actions { display: flex; gap: 0.5rem; }
     .header-actions button mat-icon { margin-right: 0.25rem; }
     .edit-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0.25rem 0 0.5rem; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
+    /* b1-rk-dash-raster-angepinnte-kurse: ab 2400 px feste 5 Spuren — die volle Zeile der Kurs-Kachel hielt sonst alle
+       auto-fit-Spuren offen (6 schmale Spalten statt 5, Zeilen endeten halb). Steht HINTER der Grundregel (gleiche
+       Spezifität — davor gewann auto-fit, Nachprüfung b1). */
+    @media (min-width: 2400px) {
+      .dashboard-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
     /* b1-rk-dash-puzzles-pipe (DESIGN 5.13): Trenner „ · “ als ::before der folgenden Angabe; das Leerzeichen davor
        steht im Markup (&ngsp;), dort bricht die Zeile — der Punkt beginnt dann die neue Zeile, hängt nie am Ende. */
