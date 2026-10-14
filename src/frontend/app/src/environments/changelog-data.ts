@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.783.2", date: "2026-10-14", changes: [
+    { en: "E-books and Woodpecker, design round c2 (13 fixes): on laptops the board in the reader leaves room for its controls; on phones the board modes fit in one row and the reader fills the screen; the reader lines up with the header on very wide screens; the upload dialog names one size limit (300 MB); the sort menu shows its full label; “1 page” / “1 diagram” in the singular; shorter search hint on phones; numbers and units such as “Cycle 1” and “46 MB” no longer break apart; no spin arrows in the year field; Maia shows its move line only once it is ready; a clearer empty text under “My lines”.",
+      de: "E-Books und Woodpecker, Gestaltungsrunde c2 (13 Korrekturen): am Laptop lässt das Brett im Leser Platz für seine Bedienelemente; am Handy passen die Brett-Modi in eine Zeile und der Leser füllt den Bildschirm; der Leser fluchtet auf sehr breiten Bildschirmen mit der Kopfleiste; der Hochladen-Dialog nennt eine Grenze (300 MB); die Sortierung zeigt ihren vollen Text; „1 Seite“ / „1 Diagramm“ in der Einzahl; kürzerer Suchhinweis am Handy; Zahl und Einheit wie „Zyklus 1“ und „46 MB“ brechen nicht mehr auseinander; keine Drehpfeile im Feld „Jahr“; Maia zeigt die Zugzeile erst, wenn es bereit ist; deutlicherer Leersatz unter „Meine Linien“." },
+  ] },
   { version: "0.783.1", date: "2026-10-14", changes: [
     { en: "E-books: the Stockfish check of book solutions no longer gets stuck – a misread diagram where the side not to move is in check used to crash the engine, so the check of every following book stopped.", de: "E-Books: Die Stockfish-Prüfung der Buchlösungen bleibt nicht mehr hängen – ein falsch erkanntes Diagramm, in dem die Seite ohne Zugrecht im Schach steht, brachte die Engine zum Absturz, und damit stand die Prüfung aller folgenden Bücher." },
   ] },

@@ -3226,8 +3226,8 @@
       "status": "Maia {{elo}} · {{side}}",
       "youWhite": "You play White",
       "youBlack": "You play Black",
-      "downloadInfo": "Maia needs a model once (46 MB). It stays stored on this device.",
-      "downloadInfoNoStore": "Maia needs a model (46 MB). This browser cannot store it — it is downloaded again on every visit.",
+      "downloadInfo": "Maia needs a model once (46 MB). It stays stored on this device.",
+      "downloadInfoNoStore": "Maia needs a model (46 MB). This browser cannot store it — it is downloaded again on every visit.",
       "download": "Download",
       "downloading": "Loading model … {{percent}}%",
       "loading": "Preparing model …",
@@ -3661,7 +3661,7 @@
         "t": "Woodpecker",
         "p": [
           "The Woodpecker Method (Smith & Tikkanen) trains tactical pattern recognition by solving the same puzzles over and over, faster each time. Pick one or more courses and start a training – the rules are fixed as in the book.",
-          "Cycle 1: you have four weeks to solve as many puzzles as you can, in course order; they become your set. You may backdate the start – what you solved in these courses since then counts. After at least one day off, each further cycle brings the same set in random order and has half the time (14, 7, 4, 2, 1 days). Only your first attempt per puzzle counts in a cycle. You are done once you solve the set within one day, or after the 7th cycle."
+          "Cycle 1: you have four weeks to solve as many puzzles as you can, in course order; they become your set. You may backdate the start – what you solved in these courses since then counts. After at least one day off, each further cycle brings the same set in random order and has half the time (14, 7, 4, 2, 1 days). Only your first attempt per puzzle counts in a cycle. You are done once you solve the set within one day, or after the 7th cycle."
         ]
       }
     }
@@ -5252,7 +5252,7 @@
     "anonymous": {
       "banner": "You are not signed in: you see the books shared with everyone. Books you upload stay yours and move into your account when you sign in.",
       "signIn": "Sign in",
-      "uploadHint": "Without an account the book is visible only to you on this device (up to 300 MB). When you sign in, it moves into your account; books not taken over are deleted after 30 days."
+      "uploadHint": "Without an account the book is visible only to you on this device (up to {{max}}). When you sign in, it moves into your account; books not taken over are deleted after 30 days."
     },
     "board": {
       "drawNote": "Drawn position – this is only one way; every move that keeps the draw is fine.",
@@ -5287,7 +5287,7 @@
       "engineFailed": "Stockfish could not compute a solution.",
       "trainingFailed": "Not the solution – here is how it goes.",
       "noSolution": "No solution available for this position.",
-      "maiaMissing": "Maia (a human-like engine) has to be loaded once (about 46 MB).",
+      "maiaMissing": "Maia (a human-like engine) has to be loaded once (about 46 MB).",
       "maiaLoad": "Load Maia",
       "maiaLoading": "Loading Maia …",
       "maiaFailed": "Maia is not available right now.",
@@ -5303,6 +5303,7 @@
     "upload": "Upload",
     "uploaded": "“{{title}}” has been added.",
     "search": "Search title, author or tag",
+    "searchShort": "Search books",
     "sort": {
       "label": "Sort by",
       "title": "Title",
@@ -5330,6 +5331,7 @@
     "deleteFailed": "Deleting did not work.",
     "saveFailed": "Saving did not work.",
     "pages": "{{n}} pages",
+    "pagesOne": "1 page",
     "quota": "{{used}} of {{limit}} used",
     "visibilityLabel": "Visibility",
     "visibility": {
@@ -5432,6 +5434,7 @@
       "openBoardOne": "Board: 1 diagram"
     },
     "diagrams": "{{n}} diagrams",
+    "diagramsOne": "1 diagram",
     "uploadedProcessing": "“{{title}}” is uploaded. Processing (cover, diagrams, solutions) takes a few minutes up to about a quarter of an hour — you will get a notification when it is done.",
     "processing": "Processing …",
     "processingHint": "Cover, diagrams and solutions are being prepared — you will get a notification."
@@ -5440,7 +5443,7 @@
     "title": "Woodpecker",
     "new": "New training",
     "intro": "The same puzzles again and again, each time in half the time – after the method by Smith and Tikkanen.",
-    "rules": "Cycle 1: four weeks – solve as many puzzles as you can, they become your set.\n\nThen at least one day off. Each further cycle: the same set in random order, in half the time (14, 7, 4, 2, 1, 1 days).\n\nOnly the first attempt per puzzle counts in each cycle. Done when a cycle takes one day or less, or after cycle 7.",
+    "rules": "Cycle 1: four weeks – solve as many puzzles as you can, they become your set.\n\nThen at least one day off. Each further cycle: the same set in random order, in half the time (14, 7, 4, 2, 1, 1 days).\n\nOnly the first attempt per puzzle counts in each cycle. Done when a cycle takes one day or less, or after cycle 7.",
     "empty": "No Woodpecker training yet. Pick one or more courses to start.",
     "status": {
       "solving": "In progress",
@@ -5487,11 +5490,11 @@
     "repeatHint": "Repetition – only your first attempt counts in this cycle.",
     "create": {
       "title": "New Woodpecker training",
-      "coursesHint": "Courses in the order you tick them – cycle 1 goes through them in this order.",
+      "coursesHint": "Courses in the order you tick them – cycle 1 goes through them in this order.",
       "noCourses": "You have no course with puzzles yet.",
       "toCourses": "Go to courses",
       "search": "Search courses",
-      "start": "Start of cycle 1",
+      "start": "Start of cycle 1",
       "startHint": "Choose an earlier day if you have already started – what you solved in these courses since then counts.",
       "submit": "Start training",
       "chooseCourse": "Choose at least one course."

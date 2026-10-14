@@ -104,8 +104,11 @@ describe('EbookService', () => {
     expect(formatBytes(0)).toBe('0 B');
     expect(formatBytes(999)).toBe('999 B');
     expect(formatBytes(1_500)).toBe('1.5 kB');
-    expect(formatBytes(25_000_000)).toBe('25 MB');
-    expect(formatBytes(1_470_585_020)).toBe('1.5 GB');
+    // Binär (c2-eb-upload-limit-315-300): 300 MiB = die Server-Grenze = „300 MB“, nicht „315 MB“.
+    expect(formatBytes(300 * 1024 * 1024)).toBe('300 MB');
+    expect(formatBytes(25_000_000)).toBe('24 MB');
+    expect(formatBytes(1023)).toBe('1,023 B');
+    expect(formatBytes(1_470_585_020)).toBe('1.4 GB');
     expect(formatBytes(-1)).toBe('');
   });
 });

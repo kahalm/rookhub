@@ -3226,8 +3226,8 @@
       "status": "Maia {{elo}} · {{side}}",
       "youWhite": "Du spielst Weiß",
       "youBlack": "Du spielst Schwarz",
-      "downloadInfo": "Maia braucht einmalig ein Modell (46 MB). Es bleibt auf diesem Gerät gespeichert.",
-      "downloadInfoNoStore": "Maia braucht ein Modell (46 MB). Dieser Browser kann es nicht speichern — es wird bei jedem Besuch neu geladen.",
+      "downloadInfo": "Maia braucht einmalig ein Modell (46 MB). Es bleibt auf diesem Gerät gespeichert.",
+      "downloadInfoNoStore": "Maia braucht ein Modell (46 MB). Dieser Browser kann es nicht speichern — es wird bei jedem Besuch neu geladen.",
       "download": "Herunterladen",
       "downloading": "Modell wird geladen … {{percent}} %",
       "loading": "Modell wird vorbereitet …",
@@ -3661,7 +3661,7 @@
         "t": "Woodpecker",
         "p": [
           "Die Woodpecker-Methode (Smith & Tikkanen) trainiert das Erkennen taktischer Muster: dieselben Aufgaben immer wieder lösen, jedes Mal schneller. Wähle einen oder mehrere Kurse und starte ein Training – die Regeln stehen fest wie im Buch.",
-          "Zyklus 1: Du hast vier Wochen, um so viele Aufgaben wie möglich in Kursreihenfolge zu lösen; sie werden dein Satz. Den Beginn kannst du zurückdatieren – was du seitdem in diesen Kursen gelöst hast, zählt mit. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1 Tage). Je Zyklus zählt nur dein erster Versuch an einer Aufgabe. Fertig bist du, sobald du den Satz an einem Tag schaffst, sonst nach dem 7. Zyklus."
+          "Zyklus 1: Du hast vier Wochen, um so viele Aufgaben wie möglich in Kursreihenfolge zu lösen; sie werden dein Satz. Den Beginn kannst du zurückdatieren – was du seitdem in diesen Kursen gelöst hast, zählt mit. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1 Tage). Je Zyklus zählt nur dein erster Versuch an einer Aufgabe. Fertig bist du, sobald du den Satz an einem Tag schaffst, sonst nach dem 7. Zyklus."
         ]
       }
     }
@@ -5252,7 +5252,7 @@
     "anonymous": {
       "banner": "Du bist nicht angemeldet: Du siehst die für alle freigegebenen Bücher. Was du hochlädst, bleibt deins und wandert beim Anmelden in dein Konto.",
       "signIn": "Anmelden",
-      "uploadHint": "Ohne Konto siehst nur du das Buch, auf diesem Gerät (bis 300 MB). Beim Anmelden wandert es in dein Konto; nicht übernommene Bücher werden nach 30 Tagen gelöscht."
+      "uploadHint": "Ohne Konto siehst nur du das Buch, auf diesem Gerät (bis {{max}}). Beim Anmelden wandert es in dein Konto; nicht übernommene Bücher werden nach 30 Tagen gelöscht."
     },
     "board": {
       "drawNote": "Remisstellung – das ist nur ein Weg; jeder Zug, der das Remis hält, ist richtig.",
@@ -5287,7 +5287,7 @@
       "engineFailed": "Stockfish konnte keine Lösung rechnen.",
       "trainingFailed": "Nicht die Lösung – so geht es.",
       "noSolution": "Für diese Stellung gibt es keine Lösung.",
-      "maiaMissing": "Maia (eine menschenähnliche Engine) muss einmal geladen werden (etwa 46 MB).",
+      "maiaMissing": "Maia (eine menschenähnliche Engine) muss einmal geladen werden (etwa 46 MB).",
       "maiaLoad": "Maia laden",
       "maiaLoading": "Maia wird geladen …",
       "maiaFailed": "Maia ist gerade nicht verfügbar.",
@@ -5303,6 +5303,7 @@
     "upload": "Hochladen",
     "uploaded": "„{{title}}“ wurde hinzugefügt.",
     "search": "Titel, Autor oder Schlagwort suchen",
+    "searchShort": "Bücher suchen",
     "sort": {
       "label": "Sortierung",
       "title": "Titel",
@@ -5330,6 +5331,7 @@
     "deleteFailed": "Löschen hat nicht geklappt.",
     "saveFailed": "Speichern hat nicht geklappt.",
     "pages": "{{n}} Seiten",
+    "pagesOne": "1 Seite",
     "quota": "{{used}} von {{limit}} belegt",
     "visibilityLabel": "Sichtbarkeit",
     "visibility": {
@@ -5432,6 +5434,7 @@
       "openBoardOne": "Brett: 1 Diagramm"
     },
     "diagrams": "{{n}} Diagramme",
+    "diagramsOne": "1 Diagramm",
     "uploadedProcessing": "„{{title}}“ ist hochgeladen. Die Verarbeitung (Titelbild, Diagramme, Lösungen) dauert ein paar Minuten bis etwa eine Viertelstunde — du bekommst eine Benachrichtigung, sobald sie fertig ist.",
     "processing": "Wird verarbeitet …",
     "processingHint": "Titelbild, Diagramme und Lösungen werden vorbereitet — du bekommst eine Benachrichtigung."
@@ -5440,7 +5443,7 @@
     "title": "Woodpecker",
     "new": "Neues Training",
     "intro": "Dieselben Aufgaben immer wieder, jedes Mal in der halben Zeit – nach der Methode von Smith und Tikkanen.",
-    "rules": "Zyklus 1: vier Wochen – so viele Aufgaben lösen wie möglich, sie werden dein Satz.\n\nDann mindestens einen Tag Pause. Jeder weitere Zyklus: derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1, 1 Tage).\n\nJe Zyklus zählt nur der erste Versuch an einer Aufgabe. Fertig, wenn ein Zyklus höchstens einen Tag dauert, sonst nach Zyklus 7.",
+    "rules": "Zyklus 1: vier Wochen – so viele Aufgaben lösen wie möglich, sie werden dein Satz.\n\nDann mindestens einen Tag Pause. Jeder weitere Zyklus: derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1, 1 Tage).\n\nJe Zyklus zählt nur der erste Versuch an einer Aufgabe. Fertig, wenn ein Zyklus höchstens einen Tag dauert, sonst nach Zyklus 7.",
     "empty": "Noch kein Woodpecker-Training. Wähle einen oder mehrere Kurse, um zu beginnen.",
     "status": {
       "solving": "Läuft",
@@ -5487,11 +5490,11 @@
     "repeatHint": "Wiederholung – in diesem Zyklus zählt nur dein erster Versuch.",
     "create": {
       "title": "Neues Woodpecker-Training",
-      "coursesHint": "Kurse in der Reihenfolge des Ankreuzens – Zyklus 1 geht sie in dieser Reihenfolge durch.",
+      "coursesHint": "Kurse in der Reihenfolge des Ankreuzens – Zyklus 1 geht sie in dieser Reihenfolge durch.",
       "noCourses": "Du hast noch keinen Kurs mit Aufgaben.",
       "toCourses": "Zu den Kursen",
       "search": "Kurse suchen",
-      "start": "Beginn von Zyklus 1",
+      "start": "Beginn von Zyklus 1",
       "startHint": "Wähle einen früheren Tag, wenn du schon angefangen hast – was du seitdem in diesen Kursen gelöst hast, zählt mit.",
       "submit": "Training starten",
       "chooseCourse": "Wähle mindestens einen Kurs."

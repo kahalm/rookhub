@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Type } from '@angular/core';
+import { ChangeDetectorRef, Signal, Type, signal } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -308,5 +308,55 @@ describe('EbookListComponent', () => {
     expect(at).toBeGreaterThan(-1);
     expect(css.slice(at)).toMatch(/\.eb-empty(\[[^\]]*\])?\{max-width:var\(--page-max-width,1240px\)/);
     expect(css.slice(0, at)).not.toContain('--page-max-width-wide');
+  });
+  // ── UI-Sweep c2 ─────────────────────────────────────────────────────────────────────────────
+
+  it('c2-eb-plural-1-seiten: „1 Seite“/„1 Diagramm“ über *One-Schlüssel, sonst Mehrzahl', () => {
+    const fixture = render([book({ pageCount: 1, diagramCount: 1 }), book({ id: 2, pageCount: 3, diagramCount: 5 })]);
+    const badges = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.eb-badges')).map(b => b.textContent ?? '');
+    expect(badges[0]).toContain('ebooks.pagesOne');
+    expect(badges[0]).toContain('ebooks.diagramsOne');
+    expect(badges[1]).toContain('ebooks.pages');
+    expect(badges[1]).not.toContain('ebooks.pagesOne');
+    expect(badges[1]).not.toContain('ebooks.diagramsOne');
+    fixture.destroy();
+  });
+
+  it('c2-eb-search-placeholder-truncated: am Handy kurzer Platzhalter, aria-label behält den langen Text', () => {
+    const fixture = render([book()]);
+    const input = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.eb-search input')!;
+    expect(input().placeholder).toBe('ebooks.search');
+    (fixture.componentInstance as unknown as { narrow: Signal<boolean> }).narrow = signal(true);
+    fixture.detectChanges();
+    expect(input().placeholder).toBe('ebooks.searchShort');
+    expect(input().getAttribute('aria-label')).toBe('ebooks.search');
+    fixture.destroy();
+  });
+
+  it('c2-eb-sort-select-truncated: Sortierung so breit wie ihre Voreinstellung, Suchfeld höchstens 640 px (am Handy frei)', () => {
+    const css = compactCss(EbookListComponent);
+    expect(css).toMatch(/\.eb-sort(\[[^\]]*\])?\{flex:00320px;max-width:100%/);
+    expect(css).toMatch(/\.eb-search(\[[^\]]*\])?\{flex:11240px;max-width:640px/);
+    const mobile = css.slice(css.indexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/\.eb-search(\[[^\]]*\])?\{flex:110;min-width:0;max-width:none/);
+  });
+  it('c2-eb-sort-select-truncated: „Neueste zuerst (Erscheinungsjahr)“ passt ungekürzt in die Auswahl (de + en)', async () => {
+    for (const [lang, text] of [['de', 'Neueste zuerst (Erscheinungsjahr)'], ['en', 'Newest first (publication year)']]) {
+      const fixture = render([book()]);
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(lang, { ebooks: { sort: { label: 'Sortierung', newest: text } } });
+      translate.use(lang);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+      host.style.display = 'block';
+      host.style.width = '1300px';
+      const value = host.querySelector<HTMLElement>('.eb-sort .mat-mdc-select-value-text')!;
+      expect(value.textContent?.trim()).withContext(lang).toBe(text);
+      const inner = value.querySelector<HTMLElement>('.mat-mdc-select-min-line') ?? value;
+      expect(inner.scrollWidth).withContext(lang).toBeLessThanOrEqual(inner.clientWidth);
+      fixture.destroy();
+    }
   });
 });

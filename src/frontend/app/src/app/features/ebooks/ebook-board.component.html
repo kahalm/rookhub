@@ -115,13 +115,14 @@
           </mat-menu>
           <span class="eb-note">{{ (maiaThinking() ? 'ebooks.board.maiaThinking' : 'ebooks.board.maiaYourMove') | translate }}</span>
         </div>
+        <!-- c2-eb-brett-maia-leere-zugzeile: Zugzeile erst, wenn Maia bereit ist — vorher wäre sie leer mit zwei gesperrten Knöpfen. -->
+        <div class="eb-moves">
+          <span class="eb-moves-text">{{ movesText }}</span>
+          <button mat-icon-button (click)="undo()" [disabled]="played().length === 0 || maiaThinking()" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
+          <button mat-icon-button (click)="reset()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.resetPosition' | translate"><mat-icon>restart_alt</mat-icon></button>
+        </div>
       }
     }
-    <div class="eb-moves">
-      <span class="eb-moves-text">{{ movesText }}</span>
-      <button mat-icon-button (click)="undo()" [disabled]="played().length === 0 || maiaThinking()" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
-      <button mat-icon-button (click)="reset()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.resetPosition' | translate"><mat-icon>restart_alt</mat-icon></button>
-    </div>
   }
 }
 

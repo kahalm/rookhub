@@ -360,6 +360,23 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   });
 
+  it('c2-eb-reader-ultrawide-kopfkante: geladener Leser markiert sich randlos (data-nav-edge="full"), Fehlerzustand nicht', async () => {
+    const fixture = await make(book());
+    expect((fixture.nativeElement as HTMLElement).querySelector('.rd-page')!.getAttribute('data-nav-edge')).toBe('full');
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    const failing = await makeFailing(new HttpErrorResponse({ status: 500 }));
+    expect((failing.nativeElement as HTMLElement).querySelector('.rd-page')!.hasAttribute('data-nav-edge')).toBeFalse();
+    failing.destroy();
+  });
+
+  it('c2-eb-reader-handy-streifen-unten: unter 600 px rechnet der Leser mit der 56-px-Kopfleiste, darüber mit 64 px', () => {
+    const css = compactCss(EbookReaderComponent);
+    expect(css).toMatch(/\.rd-page(\[[^\]]*\])?\{[^}]*height:calc\(100dvh-var\(--rh-navbar-height,64px\)\)/);
+    const mobile = css.slice(css.indexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/^@media\(max-width:599\.98px\)\{\.rd-page(\[[^\]]*\])?\{height:calc\(100dvh-var\(--rh-navbar-height,56px\)\)/);
+  });
+
   it('c1-eb-ebook-leser-seitenfeld-spinner: Seitenfeld ohne Drehknöpfe (auch WebKit) und mit Ziffern-Tastatur', async () => {
     const fixture = await make(book());
     const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.rd-page-input')!;

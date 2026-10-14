@@ -6,7 +6,10 @@
   mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; } }
 .eb-mode--on { opacity: 1; color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
 
-.eb-board { width: 100%; }
+/* c2-eb-board-leiste-laptop-falz: ab 900 px ist das Brett höchstens so groß, dass unter ihm noch die Bedienzeile des
+   gewählten Modus („Maia laden“, Umschalter, Aktionszeile) sichtbar bleibt — 330 px ≈ Leser-Leiste + Panel-Kopf +
+   Zugseite + Modus-Leiste + eine Bedienzeile. Auf hohen Fenstern greift 100 % wie bisher; nie schmaler als 280 px. */
+.eb-board { width: clamp(min(280px, 100%), calc(100dvh - var(--rh-navbar-height, 64px) - 330px), 100%); margin-inline: auto; }
 .eb-note { margin: 0; font-size: .85rem; opacity: .75; }
 .eb-note--warn { color: var(--rh-warn); opacity: 1; }
 .eb-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -28,6 +31,15 @@
 .eb-maia-load { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .eb-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .eb-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+
+/* Handy (c2-eb-board-modus-leiste-maia-allein): alle fünf Modi in EINER Zeile — Symbol über dem Wort, gleich breite
+   Spalten; sonst rutscht in de „Maia“ allein in eine zweite Zeile und kostet 40 px über dem Brett. */
+@media (max-width: 599.98px) {
+  .eb-modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .eb-mode { flex-direction: column; justify-content: center; height: auto; min-height: 44px; padding: 4px 0; font-size: .72rem; line-height: 1.1;
+    mat-icon { margin: 0 0 2px; }
+    span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+}
 
 /* Schmal (Brett als Vollbild, 0.780.2): Brett so breit wie möglich, aber Platz für Modi und Knöpfe darunter lassen. */
 @media (max-width: 899.98px) {

@@ -14,8 +14,10 @@
 }
 
 .eb-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
-.eb-search { flex: 1 1 240px; }
-.eb-sort { flex: 0 1 190px; }
+/* c2-eb-sort-select-truncated: die Sortierung ist so breit wie ihre längste Voreinstellung („Neueste zuerst
+   (Erscheinungsjahr)“), das Suchfeld wächst höchstens auf 640 px (Breitbild: sonst ≈ 1 330 px). */
+.eb-search { flex: 1 1 240px; max-width: 640px; }
+.eb-sort { flex: 0 0 320px; max-width: 100%; }
 /* Ab 600 px stehen Sortierung und Schalter direkt in der Zeile (die Hülle zählt nicht); „Filter ▾“ nur am Handy. */
 .eb-filter-more { display: contents; }
 .eb-chip.eb-filter-toggle { display: none; } /* vor .eb-chip gleich stark → sonst gewinnt dessen inline-flex */
@@ -106,7 +108,7 @@
   .eb-upload-text { display: none; }
   .eb-upload { min-width: 44px; padding: 0 10px; }
   /* Handy (DESIGN 4.6 Nr. 7): Suche + „Filter ▾“ in einer Zeile, der Rest zugeklappt; aktive Filter als Chips. */
-  .eb-search { flex: 1 1 0; min-width: 0; }
+  .eb-search { flex: 1 1 0; min-width: 0; max-width: none; }
   .eb-chip.eb-filter-toggle { display: inline-flex; min-height: 44px; }
   .eb-filter-more { display: none; }
   .eb-filter-more--open { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }

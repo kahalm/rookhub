@@ -115,8 +115,10 @@ export const STATES = [
   { of: 'rookhub__ebooks', name: 'hochladen', steps: [{ click: '.eb-page .header-actions button.eb-upload' }], expect: DIALOG },
   { of: 'rookhub__ebooks', name: 'admin-menue', auth: ['admin'],
     steps: [{ click: '.eb-page .header-actions button[mat-icon-button]' }], expect: MENU },
-  { of: 'rookhub__ebooks', name: 'mit-diagrammen', steps: [{ click: '.eb-filters button.eb-chip >> nth=1' }],
-    expect: '.eb-filters button.eb-chip--on' },
+  // Seit c1 steht der Schalter in .eb-filter-more (am Handy hinter „Filter ▾“, ab 600 px offen in der Zeile).
+  { of: 'rookhub__ebooks', name: 'mit-diagrammen',
+    steps: [{ clickIf: '.eb-filters button.eb-filter-toggle' }, { click: '.eb-filter-more button.eb-chip:has(mat-icon:text-is("grid_on"))' }],
+    expect: '.eb-filter-more button.eb-chip--on:has(mat-icon:text-is("grid_on"))' },
   { of: 'rookhub__ebooks-ebookId', name: 'menue', auth: ['admin'], steps: [{ click: '.rd-toolbar > button[mat-icon-button]' }], expect: MENU },
   // Brett im Leser (0.777.0 ff.): erstes Diagramm aufs Brett (am Handy erst den Brett-Knopf), dann die Modi.
   ...[['brett', null], ['frei', 1], ['kalkulieren', 2], ['loesen', 3], ['maia', 4]].map(([name, nth]) => ({

@@ -3226,8 +3226,8 @@
       "status": "Maia {{elo}} · {{side}}",
       "youWhite": "Igraš bijelima",
       "youBlack": "Igraš crnima",
-      "downloadInfo": "Maia jednom treba model (46 MB). Ostaje spremljen na ovom uređaju.",
-      "downloadInfoNoStore": "Maia treba model (46 MB). Ovaj ga preglednik ne može spremiti — učitava se pri svakom posjetu.",
+      "downloadInfo": "Maia jednom treba model (46 MB). Ostaje spremljen na ovom uređaju.",
+      "downloadInfoNoStore": "Maia treba model (46 MB). Ovaj ga preglednik ne može spremiti — učitava se pri svakom posjetu.",
       "download": "Preuzmi",
       "downloading": "Model se učitava … {{percent}} %",
       "loading": "Model se priprema …",
@@ -3661,7 +3661,7 @@
         "t": "Woodpecker",
         "p": [
           "Woodpecker metoda (Smith i Tikkanen) trenira prepoznavanje taktičkih uzoraka: iste zadatke rješavaš uvijek iznova, svaki put brže. Odaberi jedan ili više tečajeva i pokreni trening – pravila su fiksna kao u knjizi.",
-          "Ciklus 1: imaš četiri tjedna da riješiš što više zadataka redoslijedom tečaja; oni postaju tvoj set. Početak možeš pomaknuti unatrag – računa se ono što si od tada riješio u tim tečajevima. Nakon barem jednog dana pauze svaki sljedeći ciklus donosi isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1 dan). U ciklusu se računa samo tvoj prvi pokušaj po zadatku. Gotov si kad set riješiš unutar jednog dana, inače nakon 7. ciklusa."
+          "Ciklus 1: imaš četiri tjedna da riješiš što više zadataka redoslijedom tečaja; oni postaju tvoj set. Početak možeš pomaknuti unatrag – računa se ono što si od tada riješio u tim tečajevima. Nakon barem jednog dana pauze svaki sljedeći ciklus donosi isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1 dan). U ciklusu se računa samo tvoj prvi pokušaj po zadatku. Gotov si kad set riješiš unutar jednog dana, inače nakon 7. ciklusa."
         ]
       }
     }
@@ -5252,7 +5252,7 @@
     "anonymous": {
       "banner": "Nisi prijavljen: vidiš knjige podijeljene sa svima. Ono što učitaš ostaje tvoje i prelazi u tvoj račun kad se prijaviš.",
       "signIn": "Prijava",
-      "uploadHint": "Bez računa knjigu vidiš samo ti, na ovom uređaju (do 300 MB). Kad se prijaviš, prelazi u tvoj račun; nepreuzete knjige brišu se nakon 30 dana."
+      "uploadHint": "Bez računa knjigu vidiš samo ti, na ovom uređaju (do {{max}}). Kad se prijaviš, prelazi u tvoj račun; nepreuzete knjige brišu se nakon 30 dana."
     },
     "board": {
       "drawNote": "Remi pozicija – ovo je samo jedan put; svaki potez koji drži remi je dobar.",
@@ -5287,7 +5287,7 @@
       "engineFailed": "Stockfish nije mogao izračunati rješenje.",
       "trainingFailed": "To nije rješenje – evo kako ide.",
       "noSolution": "Za ovu poziciju nema rješenja.",
-      "maiaMissing": "Maia (engine nalik čovjeku) mora se jednom učitati (oko 46 MB).",
+      "maiaMissing": "Maia (engine nalik čovjeku) mora se jednom učitati (oko 46 MB).",
       "maiaLoad": "Učitaj Maiu",
       "maiaLoading": "Maia se učitava …",
       "maiaFailed": "Maia trenutno nije dostupna.",
@@ -5303,6 +5303,7 @@
     "upload": "Prenesi",
     "uploaded": "»{{title}}« je dodana.",
     "search": "Traži naslov, autora ili oznaku",
+    "searchShort": "Traži knjige",
     "sort": {
       "label": "Sortiranje",
       "title": "Naslov",
@@ -5330,6 +5331,7 @@
     "deleteFailed": "Brisanje nije uspjelo.",
     "saveFailed": "Spremanje nije uspjelo.",
     "pages": "{{n}} stranica",
+    "pagesOne": "1 stranica",
     "quota": "Iskorišteno {{used}} od {{limit}}",
     "visibilityLabel": "Vidljivost",
     "visibility": {
@@ -5432,6 +5434,7 @@
       "openBoardOne": "Ploča: 1 dijagram"
     },
     "diagrams": "Dijagrama: {{n}}",
+    "diagramsOne": "1 dijagram",
     "uploadedProcessing": "»{{title}}« je preneseno. Obrada (naslovnica, dijagrami, rješenja) traje nekoliko minuta do otprilike četvrt sata — dobit ćeš obavijest kad bude gotova.",
     "processing": "Obrađuje se …",
     "processingHint": "Pripremaju se naslovnica, dijagrami i rješenja — dobit ćeš obavijest."
@@ -5440,7 +5443,7 @@
     "title": "Woodpecker",
     "new": "Novi trening",
     "intro": "Isti zadaci uvijek iznova, svaki put u pola vremena – po metodi Smitha i Tikkanena.",
-    "rules": "Ciklus 1: četiri tjedna – riješi što više zadataka, oni postaju tvoj set.\n\nZatim barem jedan dan pauze. Svaki sljedeći ciklus: isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1, 1 dan).\n\nU svakom ciklusu računa se samo prvi pokušaj po zadatku. Gotovo kad ciklus traje najviše jedan dan, inače nakon ciklusa 7.",
+    "rules": "Ciklus 1: četiri tjedna – riješi što više zadataka, oni postaju tvoj set.\n\nZatim barem jedan dan pauze. Svaki sljedeći ciklus: isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1, 1 dan).\n\nU svakom ciklusu računa se samo prvi pokušaj po zadatku. Gotovo kad ciklus traje najviše jedan dan, inače nakon ciklusa 7.",
     "empty": "Još nema Woodpecker treninga. Odaberi jedan ili više tečajeva za početak.",
     "status": {
       "solving": "U tijeku",
@@ -5487,11 +5490,11 @@
     "repeatHint": "Ponavljanje – u ovom ciklusu računa se samo tvoj prvi pokušaj.",
     "create": {
       "title": "Novi Woodpecker trening",
-      "coursesHint": "Tečajevi redoslijedom označavanja – ciklus 1 prolazi ih tim redom.",
+      "coursesHint": "Tečajevi redoslijedom označavanja – ciklus 1 prolazi ih tim redom.",
       "noCourses": "Još nemaš tečaj sa zadacima.",
       "toCourses": "Na tečajeve",
       "search": "Traži tečajeve",
-      "start": "Početak ciklusa 1",
+      "start": "Početak ciklusa 1",
       "startHint": "Odaberi raniji dan ako si već počeo – računa se ono što si od tada riješio u tim tečajevima.",
       "submit": "Pokreni trening",
       "chooseCourse": "Odaberi barem jedan tečaj."

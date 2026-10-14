@@ -5,6 +5,11 @@
   height: calc(100dvh - var(--rh-navbar-height, 64px));
   min-height: 420px;
 }
+/* Handy (c2-eb-reader-handy-streifen-unten): die Material-Kopfleiste ist unter 600 px nur 56 px hoch — mit 64 px
+   blieb unter dem Lesebereich ein 8-px-Streifen Seitengrund. */
+@media (max-width: 599.98px) {
+  .rd-page { height: calc(100dvh - var(--rh-navbar-height, 56px)); }
+}
 
 /* Fehler-/Leerzustände in der Seitenbreite statt am Rand (Ultrawide: Text bei x 30, Knopf bei x 3 400). */
 .rd-pad { padding: 1rem; max-width: min(var(--page-max-width, 1240px), 96vw); width: 100%; margin: 0 auto; box-sizing: border-box; }

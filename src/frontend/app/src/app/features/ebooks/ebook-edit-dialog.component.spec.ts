@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
 
@@ -88,5 +88,27 @@ describe('EbookEditDialogComponent', () => {
     const css = (((EbookEditDialogComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
     expect(css).toMatch(/mat-dialog-content(\[[^\]]*\])?\{[^}]*border-bottom:1pxsolidvar\(--mat-sys-outline-variant\)/);
     expect(css.slice(css.indexOf('@media(max-width:480px)'))).toMatch(/\.two(\[[^\]]*\])?\{grid-template-columns:1frminmax\(88px,110px\)/);
+  });
+  it('c2-eb-upload-limit-315-300: Grenze oben und im Hinweis ohne Konto aus derselben Zahl (300 MiB = „300 MB“)', async () => {
+    await make({ ebook: null, groups: [], maxFileBytes: 300 * 1024 * 1024, anonymous: true });
+    const fixture = TestBed.createComponent(EbookEditDialogComponent);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { ebooks: { dialog: { fileHint: 'up to {{max}}' }, anonymous: { uploadHint: 'device ({{max}})' } } });
+    translate.use('en');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('p.hint')?.textContent?.trim()).toBe('up to 300 MB');
+    expect(el.querySelector('.anon-hint')?.textContent?.trim()).toBe('person_outlinedevice (300 MB)');
+  });
+
+  it('c2-eb-upload-jahr-drehpfeile: Jahr ohne Drehpfeile (WebKit) und mit Ziffernblock', async () => {
+    await make({ ebook: null, groups: [], maxFileBytes: 1 });
+    const fixture = TestBed.createComponent(EbookEditDialogComponent);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.year input')?.getAttribute('inputmode')).toBe('numeric');
+    const css = (((EbookEditDialogComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    expect(css).toMatch(/\.year(\[[^\]]*\])?input(\[[^\]]*\])?::-webkit-inner-spin-button/);
+    expect(css).toMatch(/::-webkit-inner-spin-button[^{]*\{[^}]*appearance:none/);
+    expect(css).toMatch(/\.year(\[[^\]]*\])?input(\[[^\]]*\])?\{[^}]*appearance:textfield/);
   });
 });

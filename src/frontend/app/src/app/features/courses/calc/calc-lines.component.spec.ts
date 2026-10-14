@@ -153,3 +153,13 @@ describe('CalcLinesComponent Festlegung (Stern am ersten Zug)', () => {
     expect(emitted).toEqual([firstId]);
   });
 });
+
+describe('CalcLinesComponent Leersatz (c2-eb-calc-leersatz-kontrast)', () => {
+  it('„Noch keine Linie …“ in on-surface-variant (≥ 4,5:1) statt 45 % der Textfarbe', () => {
+    const css = (((CalcLinesComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    const m = /\.cl-empty(\[[^\]]*\])?\{([^}]*)\}/.exec(css);
+    expect(m).not.toBeNull();
+    expect(m![2]).toContain('color:var(--mat-sys-on-surface-variant)');
+    expect(m![2]).not.toContain('45%');
+  });
+});

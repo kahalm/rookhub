@@ -144,13 +144,17 @@ export const EBOOK_ACCEPT = '.pdf,.epub,.djvu,.cbz,.cbr,.mobi,.azw3';
 /** Formate, die der Browser zeigt (alles andere ist Download). */
 export const READABLE_FORMATS: ReadonlySet<string> = new Set(['pdf', 'epub']);
 
-/** „1,2 MB" — Bytes lesbar, ohne Nachkommastelle unter 10 in der Einheit. */
+/**
+ * „1,2 MB" — Bytes lesbar, ohne Nachkommastelle unter 10 in der Einheit. Binär gerechnet (÷ 1024, Einheiten wie im
+ * Betriebssystem „kB/MB/GB“): die Upload-Grenze des Servers ist 300 MiB und soll überall als „300 MB“ erscheinen,
+ * nicht als „315 MB“ neben einem Hinweis „bis 300 MB“ (UI-Sweep c2-eb-upload-limit-315-300).
+ */
 export function formatBytes(bytes: number, lang: string = 'en'): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '';
   const units = ['B', 'kB', 'MB', 'GB'];
   let value = bytes;
   let unit = 0;
-  while (value >= 1000 && unit < units.length - 1) { value /= 1000; unit++; }
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
   const digits = unit === 0 ? 0 : value < 10 ? 1 : 0;
   return `${value.toLocaleString(lang, { maximumFractionDigits: digits, minimumFractionDigits: digits })} ${units[unit]}`;
 }

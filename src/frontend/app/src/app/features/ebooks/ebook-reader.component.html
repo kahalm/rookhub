@@ -1,4 +1,6 @@
-<div class="rd-page">
+<!-- c2-eb-reader-ultrawide-kopfkante: der geladene Leser ist randlos (DESIGN 4.5) — die Kopfleiste fluchtet mit seiner
+     Leiste bei 16 px (nav-edge.ts); Lade-/Fehlerzustände stehen in der Seitenbreite und werden normal gemessen. -->
+<div class="rd-page" [attr.data-nav-edge]="!loading && !notFound && !error && ebook ? 'full' : null">
   @if (loading) {
     <app-loading-spinner />
   } @else if (notFound) {

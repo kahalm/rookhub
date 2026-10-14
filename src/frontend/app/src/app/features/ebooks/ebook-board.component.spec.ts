@@ -236,4 +236,49 @@ describe('EbookBoardComponent', () => {
     btn.click();
     expect(maia.download).toHaveBeenCalled();
   });
+  it('c2-eb-brett-maia-leere-zugzeile: vor dem Laden keine leere Zugzeile, mit bereitem Maia schon', () => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    maiaStatus.set('missing');
+    c.setMode('maia');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.eb-moves')).toBeNull();
+    maiaStatus.set('ready');
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-moves')).not.toBeNull();
+  });
+
+  const css = () => (((EbookBoardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+
+  it('c2-eb-board-leiste-laptop-falz: Brett ab 900 px höchstens Fensterhöhe minus Kopf und Bedienzeile, mind. 280 px', () => {
+    const c = css();
+    const base = c.slice(0, c.indexOf('@media'));
+    expect(base).toMatch(/\.eb-board(\[[^\]]*\])?\{width:clamp\(min\(280px,100%\),(?:calc\()?100dvh-var\(--rh-navbar-height,64px\)-330px\)?,100%\);margin-inline:auto/);
+    expect(CSS.supports('width', 'clamp(min(280px, 100%), calc(100dvh - 64px - 330px), 100%)')).toBeTrue();
+    // Unter 900 px (Vollbild am Handy) bleibt die eigene Regel.
+    expect(c.slice(c.indexOf('@media(max-width:899.98px)'))).toMatch(/\.eb-board(\[[^\]]*\])?\{width:min\(100%,62dvh\)/);
+  });
+
+  it('c2-eb-board-modus-leiste-maia-allein: am Handy alle fünf Modi in einer Zeile (Symbol über Wort), darüber unverändert', () => {
+    const c = css();
+    const at = c.indexOf('@media(max-width:599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const mobile = c.slice(at, c.indexOf('@media(max-width:899.98px)'));
+    expect(mobile).toMatch(/\.eb-modes(\[[^\]]*\])?\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+    expect(mobile).toMatch(/\.eb-mode(\[[^\]]*\])?\{flex-direction:column;[^}]*min-height:44px/);
+    expect(c.slice(0, at)).toMatch(/\.eb-modes(\[[^\]]*\])?\{display:flex;flex-wrap:wrap/);
+  });
+});
+
+describe('Maia-Hinweis hält „etwa 46 MB“ zusammen (c2-eb-maia-46mb-umbruch)', () => {
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(`${lang}: Ungefähr-Wort, Zahl und Einheit mit U+00A0`, async () => {
+      const d = await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json() as
+        { ebooks: { board: { maiaMissing: string } }; analysis: { maia: { downloadInfo: string; downloadInfoNoStore: string } } };
+      expect(d.ebooks.board.maiaMissing).toMatch(/\S 46 MB/);
+      expect(d.analysis.maia.downloadInfo).toContain('46 MB');
+      expect(d.analysis.maia.downloadInfoNoStore).toContain('46 MB');
+    });
+  }
 });

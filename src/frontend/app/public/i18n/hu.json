@@ -2370,8 +2370,8 @@
       "status": "Maia {{elo}} · {{side}}",
       "youWhite": "Te vagy a világos",
       "youBlack": "Te vagy a sötét",
-      "downloadInfo": "Maiának egyszer szüksége van egy modellre (46 MB). Ezen az eszközön tárolva marad.",
-      "downloadInfoNoStore": "Maiának szüksége van egy modellre (46 MB). Ez a böngésző nem tudja tárolni — minden látogatáskor újra letöltődik.",
+      "downloadInfo": "Maiának egyszer szüksége van egy modellre (46 MB). Ezen az eszközön tárolva marad.",
+      "downloadInfoNoStore": "Maiának szüksége van egy modellre (46 MB). Ez a böngésző nem tudja tárolni — minden látogatáskor újra letöltődik.",
       "download": "Letöltés",
       "downloading": "Modell betöltése … {{percent}}%",
       "loading": "Modell előkészítése …",
@@ -4494,7 +4494,7 @@
         "t": "Woodpecker",
         "p": [
           "A Woodpecker-módszer (Smith és Tikkanen) a taktikai minták felismerését edzi: ugyanazokat a feladatokat oldod meg újra és újra, minden alkalommal gyorsabban. Válassz egy vagy több tanfolyamot, és indíts edzést – a szabályok rögzítettek, mint a könyvben.",
-          "1. ciklus: négy heted van, hogy a tanfolyamok sorrendjében minél több feladatot megoldj; ezek lesznek a sorozatod. A kezdést visszadátumozhatod – ami azóta ezekben a tanfolyamokban megoldottál, beszámít. Legalább egy nap szünet után minden további ciklus ugyanazt a sorozatot hozza véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1 nap). Egy ciklusban feladatonként csak az első próbálkozásod számít. Akkor végzel, ha a sorozatot egy nap alatt megoldod, különben a 7. ciklus után."
+          "1. ciklus: négy heted van, hogy a tanfolyamok sorrendjében minél több feladatot megoldj; ezek lesznek a sorozatod. A kezdést visszadátumozhatod – ami azóta ezekben a tanfolyamokban megoldottál, beszámít. Legalább egy nap szünet után minden további ciklus ugyanazt a sorozatot hozza véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1 nap). Egy ciklusban feladatonként csak az első próbálkozásod számít. Akkor végzel, ha a sorozatot egy nap alatt megoldod, különben a 7. ciklus után."
         ]
       }
     },
@@ -5252,7 +5252,7 @@
     "anonymous": {
       "banner": "Nem vagy bejelentkezve: a mindenkivel megosztott könyveket látod. Amit feltöltesz, a tiéd marad, és bejelentkezéskor átkerül a fiókodba.",
       "signIn": "Bejelentkezés",
-      "uploadHint": "Fiók nélkül csak te látod a könyvet ezen az eszközön (legfeljebb 300 MB). Bejelentkezéskor átkerül a fiókodba; az át nem vett könyveket 30 nap után töröljük."
+      "uploadHint": "Fiók nélkül csak te látod a könyvet ezen az eszközön (legfeljebb {{max}}). Bejelentkezéskor átkerül a fiókodba; az át nem vett könyveket 30 nap után töröljük."
     },
     "board": {
       "drawNote": "Döntetlen állás – ez csak egy lehetőség; minden lépés jó, amely tartja a döntetlent.",
@@ -5287,7 +5287,7 @@
       "engineFailed": "A Stockfish nem tudott megoldást számolni.",
       "trainingFailed": "Nem ez a megoldás – így megy.",
       "noSolution": "Ehhez az álláshoz nincs megoldás.",
-      "maiaMissing": "A Maiát (emberszerű motor) egyszer be kell tölteni (kb. 46 MB).",
+      "maiaMissing": "A Maiát (emberszerű motor) egyszer be kell tölteni (kb. 46 MB).",
       "maiaLoad": "Maia betöltése",
       "maiaLoading": "Maia betöltése …",
       "maiaFailed": "A Maia most nem érhető el.",
@@ -5303,6 +5303,7 @@
     "upload": "Feltöltés",
     "uploaded": "„{{title}}” hozzáadva.",
     "search": "Cím, szerző vagy címke keresése",
+    "searchShort": "Könyvek keresése",
     "sort": {
       "label": "Rendezés",
       "title": "Cím",
@@ -5330,6 +5331,7 @@
     "deleteFailed": "A törlés nem sikerült.",
     "saveFailed": "A mentés nem sikerült.",
     "pages": "{{n}} oldal",
+    "pagesOne": "1 oldal",
     "quota": "{{used}} / {{limit}} felhasználva",
     "visibilityLabel": "Láthatóság",
     "visibility": {
@@ -5432,6 +5434,7 @@
       "openBoardOne": "Tábla: 1 diagram"
     },
     "diagrams": "{{n}} diagram",
+    "diagramsOne": "1 diagram",
     "uploadedProcessing": "„{{title}}” feltöltve. A feldolgozás (borító, diagramok, megoldások) néhány perctől kb. negyed óráig tart — értesítést kapsz, ha kész.",
     "processing": "Feldolgozás …",
     "processingHint": "A borító, a diagramok és a megoldások előkészítése folyik — értesítést kapsz."
@@ -5440,7 +5443,7 @@
     "title": "Woodpecker",
     "new": "Új edzés",
     "intro": "Ugyanazok a feladatok újra és újra, mindig fele annyi idő alatt – Smith és Tikkanen módszere szerint.",
-    "rules": "1. ciklus: négy hét – oldj meg minél több feladatot, ezek lesznek a sorozatod.\n\nUtána legalább egy nap szünet. Minden további ciklus: ugyanaz a sorozat véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1, 1 nap).\n\nMinden ciklusban feladatonként csak az első próbálkozás számít. Kész, ha egy ciklus legfeljebb egy napig tart, különben a 7. ciklus után.",
+    "rules": "1. ciklus: négy hét – oldj meg minél több feladatot, ezek lesznek a sorozatod.\n\nUtána legalább egy nap szünet. Minden további ciklus: ugyanaz a sorozat véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1, 1 nap).\n\nMinden ciklusban feladatonként csak az első próbálkozás számít. Kész, ha egy ciklus legfeljebb egy napig tart, különben a 7. ciklus után.",
     "empty": "Még nincs Woodpecker-edzés. Válassz egy vagy több tanfolyamot a kezdéshez.",
     "status": {
       "solving": "Folyamatban",
@@ -5487,11 +5490,11 @@
     "repeatHint": "Ismétlés – ebben a ciklusban csak az első próbálkozásod számít.",
     "create": {
       "title": "Új Woodpecker-edzés",
-      "coursesHint": "A tanfolyamok a bejelölés sorrendjében – az 1. ciklus ebben a sorrendben halad végig rajtuk.",
+      "coursesHint": "A tanfolyamok a bejelölés sorrendjében – az 1. ciklus ebben a sorrendben halad végig rajtuk.",
       "noCourses": "Még nincs feladatokat tartalmazó tanfolyamod.",
       "toCourses": "A tanfolyamokhoz",
       "search": "Tanfolyamok keresése",
-      "start": "Az 1. ciklus kezdete",
+      "start": "Az 1. ciklus kezdete",
       "startHint": "Válassz korábbi napot, ha már elkezdted – ami azóta ezekben a tanfolyamokban megoldottál, beszámít.",
       "submit": "Edzés indítása",
       "chooseCourse": "Válassz legalább egy tanfolyamot."

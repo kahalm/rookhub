@@ -62,7 +62,7 @@ export interface EbookEditDialogData {
         </mat-form-field>
         <mat-form-field appearance="outline" class="year">
           <mat-label>{{ 'ebooks.meta.year' | translate }}</mat-label>
-          <input matInput type="number" [(ngModel)]="year" min="1400" max="2200" />
+          <input matInput type="number" inputmode="numeric" [(ngModel)]="year" min="1400" max="2200" />
         </mat-form-field>
       </div>
       <mat-form-field appearance="outline" class="full">
@@ -82,7 +82,7 @@ export interface EbookEditDialogData {
       </mat-form-field>
 
       @if (data.anonymous) {
-        <p class="hint anon-hint"><mat-icon>person_outline</mat-icon>{{ 'ebooks.anonymous.uploadHint' | translate }}</p>
+        <p class="hint anon-hint"><mat-icon>person_outline</mat-icon>{{ 'ebooks.anonymous.uploadHint' | translate: { max: size(data.maxFileBytes) } }}</p>
       } @else {
       <div class="groups">
         <div class="groups-title">{{ 'ebooks.visibilityLabel' | translate }}</div>
@@ -126,6 +126,10 @@ export interface EbookEditDialogData {
     .groups { display: flex; flex-direction: column; margin-top: 4px; }
     .anon-hint { display: flex; align-items: flex-start; gap: 6px; mat-icon { flex: 0 0 auto; font-size: 18px; width: 18px; height: 18px; } }
     .groups-title { font-weight: 500; margin-bottom: 2px; }
+    /* c2-eb-upload-jahr-drehpfeile: Safari zeichnet im Jahr dauerhaft winzige Drehpfeile (auf Touch nicht treffbar,
+       für eine Jahreszahl sinnlos) — weg wie im Seitenfeld des Lesers (c1-eb-ebook-leser-seitenfeld-spinner). */
+    .year input { appearance: textfield; -moz-appearance: textfield; }
+    .year input::-webkit-inner-spin-button, .year input::-webkit-outer-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
     /* Handy: Autor + Jahr bleiben nebeneinander, damit die Sichtbarkeit näher an die Falz rückt. */
     @media (max-width: 480px) { .two { grid-template-columns: 1fr minmax(88px, 110px); } }
   `],

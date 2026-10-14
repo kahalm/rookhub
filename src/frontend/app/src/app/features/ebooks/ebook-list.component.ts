@@ -25,6 +25,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { mediaSignal } from '../../shared/layout/wide-media';
 import { Ebook, EbookGroupOption, EbookList, EbookTagFacet, EbookService, EbookSort, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
@@ -72,6 +73,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
   readonly pageSize = EBOOK_PAGE_SIZE;
   readonly sorts: EbookSort[] = ['title', 'newest', 'recent'];
 
+  /** Handy (c2-eb-search-placeholder-truncated): kurzer Platzhalter „Bücher suchen“ neben „Filter ▾“; aria-label bleibt lang. */
+  readonly narrow = mediaSignal('(max-width: 599.98px)');
   /** Auswahlmodus für „Sichtbarkeit setzen" (nur verwaltbare Bücher lassen sich ankreuzen). */
   readonly selecting = signal(false);
   readonly selected = signal<Set<number>>(new Set());

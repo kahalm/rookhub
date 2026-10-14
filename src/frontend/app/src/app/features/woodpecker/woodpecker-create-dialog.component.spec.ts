@@ -88,3 +88,20 @@ describe('WoodpeckerCreateDialogComponent (UI-Sweep c1)', () => {
     expect(compactCss()).toMatch(/\.empty-state\{color:var\(--mat-sys-on-surface-variant\)/);
   });
 });
+
+describe('Woodpecker-Texte halten Zyklus und Zahl zusammen (c2-wp-dialog-zyklus-zahl-umbruch)', () => {
+  const load = async (lang: string) =>
+    (await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json()) as
+      { woodpecker: { rules: string; create: { coursesHint: string; start: string } } };
+  // Wort + Zahl (bzw. hu „1. ciklus“) mit geschütztem Leerzeichen U+00A0 — nie „Zyklus“ am Zeilenende, „1“ in der nächsten.
+  const PAIR: Record<string, RegExp> = { de: /Zyklus 1/, en: /[Cc]ycle 1/, hr: /[Cc]iklusa? 1/, hu: /1\. ciklus/ };
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(`${lang}: Hinweis, Beginn und Regeln ohne normales Leerzeichen zwischen Zyklus und Zahl`, async () => {
+      const wp = (await load(lang)).woodpecker;
+      for (const text of [wp.create.coursesHint, wp.create.start, wp.rules]) {
+        expect(text).withContext(text).not.toMatch(PAIR[lang]);
+        expect(text).withContext(text).toMatch(/ /);
+      }
+    });
+  }
+});

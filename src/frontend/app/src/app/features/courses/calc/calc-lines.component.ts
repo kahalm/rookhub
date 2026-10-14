@@ -120,7 +120,8 @@ import {
     /* Alle vier Werkzeuge der Kopfzeile sollen als GESCHWISTER lesbar sein: gleiche Größe,
        gleiche Strichstärke. Das gefüllte, größere Plus fiel aus der Reihe. */
     .cl-add mat-icon { font-size: 24px; width: 24px; height: 24px; }
-    .cl-empty { margin: 0.2rem 0; font-style: italic; color: color-mix(in srgb, currentColor 45%, transparent); }
+    /* c2-eb-calc-leersatz-kontrast: Satz statt Bedienfarbe — on-surface-variant (≥ 4,5:1 hell und dunkel) statt 45 % der Textfarbe (≈ 3,3:1). */
+    .cl-empty { margin: 0.2rem 0; font-style: italic; color: var(--mat-sys-on-surface-variant); }
     .cl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
     .cl-line {
       /* Die beiden Knöpfe stehen MITTIG zur Zeile — mit align-items: start hingen sie sichtbar

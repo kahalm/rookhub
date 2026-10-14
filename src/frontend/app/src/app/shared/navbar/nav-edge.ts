@@ -12,6 +12,12 @@ import { filter } from 'rxjs';
 export const NAV_EDGE_MEDIA = '(min-width: 2400px)';
 /** Schmaler gemessene Kästen (Ladekreis, leere Seite im Wechsel) zählen nicht — dann gilt der Rückfall. */
 export const NAV_EDGE_MIN = 560;
+/**
+ * Markierung für randlose Seiten mit eigener Werkzeugleiste (E-Book-Leser, DESIGN 4.5): ein Kasten mit
+ * `data-nav-edge="full"` beendet die Suche und liefert die volle Breite von `<main>` — der Kopfinhalt steht dann bei
+ * 16 px wie die Leiste der Seite, statt an einem zufällig gefundenen inneren Kasten (c2-eb-reader-ultrawide-kopfkante).
+ */
+export const NAV_EDGE_FULL_ATTR = 'data-nav-edge';
 const MAX_DEPTH = 10;
 
 function inFlow(el: Element): boolean {
@@ -23,7 +29,8 @@ function inFlow(el: Element): boolean {
  * Breite eines symmetrisch um den Seiteninhalt gelegten Kastens in px (oder null = Rückfall). Gesucht wird von der
  * Routen-Komponente in `<main>` abwärts, immer im breitesten Kind im Fluss, bis ein Kasten schmaler als `<main>` ist —
  * das ist der Seitencontainer (`max-width: …; margin: 0 auto`, auch `fit-content`-Karten). Nicht mittig stehender
- * Inhalt: der Kasten reicht bis zur äußeren der beiden Kanten.
+ * Inhalt: der Kasten reicht bis zur äußeren der beiden Kanten. Ein Kasten mit `data-nav-edge="full"` auf dem Weg
+ * liefert die volle Breite (randlose Seite).
  */
 export function measureContentEdge(main: Element | null): number | null {
   if (!main) return null;
@@ -37,6 +44,7 @@ export function measureContentEdge(main: Element | null): number | null {
     if (c.tagName !== 'ROUTER-OUTLET' && inFlow(c)) { el = c; break; }
   }
   for (let depth = 0; el && depth < MAX_DEPTH; depth++) {
+    if (el.getAttribute(NAV_EDGE_FULL_ATTR) === 'full') return Math.round(full);
     const r = el.getBoundingClientRect();
     if (r.width > 0 && r.width < full - 2) {
       const inset = Math.max(0, Math.min(r.left - outer.left, outer.right - r.right));

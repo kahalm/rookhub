@@ -101,6 +101,23 @@ describe('Kopfleiste fluchtet ab 2400 px mit der Inhaltskante (b1-rk-kopfleiste-
     expect(Math.round(box(spin, 'logo').left)).toBe((2560 - 1880) / 2 + 16);
   });
 
+  it('c2-eb-reader-ultrawide-kopfkante: data-nav-edge="full" (randloser Leser) beendet die Suche — Logo bei 16 px wie die Leser-Leiste', async () => {
+    // Wie der E-Book-Leser: randlose Seite, darin ein schmalerer innerer Kasten (Scrollkasten/Seitenhülle), der ohne
+    // Markierung als Inhaltskante gefunden würde.
+    const page = `<app-ebook-reader><div class="rd-page" data-nav-edge="full">`
+      + `<div style="display:flex"><div style="width:2050px;margin:0 auto;height:600px"></div></div></div></app-ebook-reader>`;
+    const doc = await render(2560, page);
+    expect(measureContentEdge(doc.getElementById('main'))).toBe(2560);
+    trackNavEdge(doc.getElementById('nav')!, { events: new Subject() } as unknown as Router, zone, destroyRef);
+    await frames();
+    expect(doc.getElementById('nav')!.style.getPropertyValue('--nav-edge')).toBe('2560px');
+    expect(Math.round(box(doc, 'logo').left)).toBe(16);
+    expect(Math.round(doc.defaultView!.innerWidth - box(doc, 'menu').right)).toBe(16);
+    // Ohne Markierung fände die Suche den inneren Kasten (der Fehler aus dem Fund).
+    doc.querySelector('.rd-page')!.removeAttribute('data-nav-edge');
+    expect(measureContentEdge(doc.getElementById('main'))).toBe(2050);
+  });
+
   it('nicht mittiger Inhalt: der Kasten reicht bis zur äußeren Kante (Kopf ragt nie in den Inhalt)', async () => {
     const doc = await render(2560, `<app-x><div id="c" style="width:1200px;margin-left:300px;height:300px"></div></app-x>`);
     // links 300 px Abstand, rechts 1 060 px → symmetrischer Kasten 2 560 − 2·300.
