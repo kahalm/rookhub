@@ -2210,6 +2210,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("PageCount")
                         .HasColumnType("int");
 
+                    b.Property<int>("SolutionCheckState")
+                        .HasColumnType("int");
+
                     b.Property<int>("Source")
                         .HasColumnType("int");
 
@@ -2260,6 +2263,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("EbookId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("EngineEval")
+                        .HasColumnType("int");
+
                     b.Property<string>("Fen")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2282,12 +2288,19 @@ namespace RookHub.Api.Migrations
                     b.Property<bool>("SideKnown")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("SolutionCheck")
+                        .HasColumnType("int");
+
                     b.Property<int?>("SolutionPage")
                         .HasColumnType("int");
 
                     b.Property<string>("SolutionSan")
                         .HasMaxLength(1500)
                         .HasColumnType("varchar(1500)");
+
+                    b.Property<string>("SolutionSource")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
 
                     b.Property<string>("SolutionText")
                         .HasMaxLength(3000)

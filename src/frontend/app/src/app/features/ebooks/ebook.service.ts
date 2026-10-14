@@ -64,6 +64,11 @@ export interface EbookDiagram {
   solutionSan?: string | null;
   solutionText?: string | null;
   solutionPage?: number | null;
+  /** Woher die Lösung stammt (`book` / `engine`) und was Stockfish dazu sagt. */
+  solutionSource?: 'book' | 'engine' | null;
+  solutionCheck?: 'unchecked' | 'confirmed' | 'doubtful' | 'replaced' | 'engine' | 'nopuzzle';
+  /** Stockfish-Bewertung für die Seite am Zug (cp; Matt in n = ±(10000 − n)). */
+  engineEval?: number | null;
   reportedByMe: boolean;
   /** Nur für Verwalter gefüllt. */
   reportCount: number;

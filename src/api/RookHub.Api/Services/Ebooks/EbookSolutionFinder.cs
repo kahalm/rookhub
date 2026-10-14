@@ -92,31 +92,48 @@ public static class EbookSolutionFinder
     /// der ersten Zugnummer nehmen („34...“ = Schwarz). <c>null</c>, wenn kein erster Zug regelgerecht spielbar ist.
     /// </summary>
     public static FoundSolution? TryParse(string fen, bool sideKnown, string rawText, int page)
+        => TryParseAll(fen, sideKnown, rawText, page, 1).FirstOrDefault();
+
+    /// <summary>
+    /// Alle spielbaren Lösungskandidaten eines Textes in Textreihenfolge (höchstens <paramref name="max"/>) — der erste ist
+    /// <see cref="TryParse"/>; die weiteren braucht die Engine-Prüfung, wenn der erste Zug sich als Nebenvariante erweist.
+    /// </summary>
+    public static List<FoundSolution> TryParseAll(string fen, bool sideKnown, string rawText, int page, int max = 6)
     {
+        var result = new List<FoundSolution>();
         var text = Normalize(rawText);
         var parts = fen.Split(' ');
-        if (parts.Length < 2) return null;
+        if (parts.Length < 2) return result;
         var tokens = Token.Matches(text).Cast<Match>().ToList();
+        var seen = new HashSet<string>();
 
-        // Ersten passenden Startzug suchen: Zugnummer + Punkte passend zur Seite am Zug, direkt gefolgt von einem SAN.
+        // Startzüge: Zugnummer + Punkte passend zur Seite am Zug, direkt gefolgt von einem SAN.
         int? doubted = null;   // Nummer eines angezweifelten Startzugs — die echte Lösung hat dieselbe Nummer
-        for (var i = 0; i < tokens.Count - 1; i++)
+        for (var i = 0; i < tokens.Count - 1 && result.Count < max; i++)
         {
             var t = tokens[i];
             if (!t.Groups["num"].Success || !tokens[i + 1].Groups["san"].Success) continue;
             var side = t.Groups["dots"].Success ? 'b' : 'w';
             if (sideKnown && side != parts[1][0]) continue;
-            // Ein angezweifelter Startzug („36.Sxf7+?! sieht wie eine Kombination aus …") ist nicht die Lösung — weitersuchen.
             var num = int.Parse(t.Groups["num"].Value);
-            if (doubted != null && num != doubted) continue;
-            if (tokens[i + 1].Groups["ann"].Value.Contains('?')) { doubted ??= num; continue; }
-            var startFen = $"{parts[0]} {side} {(parts.Length > 2 ? parts[2] : "-")} - 0 {t.Groups["num"].Value}";
-            var line = Follow(startFen, tokens, i, int.Parse(t.Groups["num"].Value), side);
-            if (line != null)
-                return new FoundSolution(line.Value.Uci, line.Value.San, Clip(text.Trim(), 3000), page, int.Parse(t.Groups["num"].Value), side);
-            if (sideKnown) return null;   // die Nummer passte, der Zug nicht → kein Raten mit späteren Zügen
+            if (result.Count == 0)
+            {
+                // Ein angezweifelter Startzug („36.Sxf7+?! sieht wie eine Kombination aus …") ist nicht die Lösung — weitersuchen.
+                if (doubted != null && num != doubted) continue;
+                if (tokens[i + 1].Groups["ann"].Value.Contains('?')) { doubted ??= num; continue; }
+            }
+            else if (num != result[0].FirstMoveNumber || side != result[0].Side) continue;   // Alternativen: derselbe Zug
+            var startFen = $"{parts[0]} {side} {(parts.Length > 2 ? parts[2] : "-")} - 0 {num}";
+            var line = Follow(startFen, tokens, i, num, side);
+            if (line == null)
+            {
+                if (sideKnown && result.Count == 0) return result;   // die Nummer passte, der Zug nicht → kein Raten
+                continue;
+            }
+            if (!seen.Add(line.Value.Uci[0])) continue;
+            result.Add(new FoundSolution(line.Value.Uci, line.Value.San, Clip(text.Trim(), 3000), page, num, side));
         }
-        return null;
+        return result;
     }
 
     private static (List<string> Uci, List<string> San)? Follow(string fen, List<Match> tokens, int start, int number, char side)

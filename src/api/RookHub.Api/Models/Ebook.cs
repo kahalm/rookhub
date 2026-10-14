@@ -74,6 +74,9 @@ public class Ebook
     /// <summary>Erkannte Diagramme (nur gültig bei <see cref="EbookDiagramState.Done"/>).</summary>
     public int DiagramCount { get; set; }
 
+    /// <summary>Stand der Stockfish-Prüfung der Diagramm-Lösungen (0.772.0); läuft nach der Erkennung.</summary>
+    public EbookDiagramState SolutionCheckState { get; set; } = EbookDiagramState.Pending;
+
     /// <summary>Umwandlung DJVU → PDF (0.770.0): Bücher, die NUR als DJVU vorliegen, bekommen eine lesbare PDF-Fassung
     /// (<see cref="EbookFile.Derived"/>), die der Browser-Leser zeigen kann.</summary>
     public EbookConversionState ConversionState { get; set; } = EbookConversionState.NotNeeded;
@@ -221,6 +224,16 @@ public class EbookDiagram
 
     /// <summary>Seite des Lösungsabsatzes (Sprung im Leser).</summary>
     public int? SolutionPage { get; set; }
+
+    /// <summary>Woher die Lösung stammt: <c>book</c> oder <c>engine</c> (Stockfish, wenn das Buch keine hat), 0.772.0.</summary>
+    [MaxLength(10)]
+    public string? SolutionSource { get; set; }
+
+    /// <summary>Ergebnis der Stockfish-Prüfung (<c>EbookSolutionChecker</c>).</summary>
+    public EbookSolutionCheck SolutionCheck { get; set; } = EbookSolutionCheck.Unchecked;
+
+    /// <summary>Engine-Bewertung der Diagrammstellung für die Seite am Zug in Centipawns (Matt in n = ±(10000 − n)).</summary>
+    public int? EngineEval { get; set; }
 }
 
 /// <summary>
@@ -261,4 +274,20 @@ public enum EbookConversionState
     Pending = 1,
     Done = 2,
     Failed = 3,
+}
+
+/// <summary>Ergebnis der Stockfish-Prüfung einer Diagramm-Lösung.</summary>
+public enum EbookSolutionCheck
+{
+    Unchecked = 0,
+    /// <summary>Buchlösung bestätigt (erster Zug bester oder gleichwertig gewinnend).</summary>
+    Confirmed = 1,
+    /// <summary>Buchlösung behalten, aber die Engine bewertet den ersten Zug deutlich schlechter — im Leser als fraglich markiert.</summary>
+    Doubtful = 2,
+    /// <summary>Der zuerst gelesene Zug war eine Nebenvariante; ein anderer Kandidat aus demselben Absatz wurde genommen.</summary>
+    Replaced = 3,
+    /// <summary>Keine Buchlösung; Stockfish hat eine (entscheidende Stellung, Matt oder klarer Vorteil).</summary>
+    Engine = 4,
+    /// <summary>Keine Buchlösung und keine entscheidende Fortsetzung — keine Aufgabe (z. B. Eröffnungs- oder Ausgleichsstellung).</summary>
+    NoPuzzle = 5,
 }

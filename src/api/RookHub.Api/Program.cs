@@ -214,6 +214,8 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookDiagramExtractor>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDiagramWorker>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDjvuConverter>();
+    // Stockfish prüft die Buchlösungen und löst Aufgaben ohne Buchlösung (0.772.0); Ebooks__EngineCheck=false schaltet ab.
+    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookSolutionCheckWorker>();
     builder.Services.AddScoped<RevengeNotificationService>();
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();

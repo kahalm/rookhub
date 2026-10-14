@@ -101,6 +101,7 @@ public class EbookDiagramExtractor
             d.SolutionSan = Clip(string.Join(' ', sol.San), 1500);
             d.SolutionText = sol.Text;
             d.SolutionPage = sol.Page;
+            d.SolutionSource = "book";
         }
         _logger.LogInformation("E-Book {EbookId}: {Count} Diagramme auf {Pages} Seiten, {Solutions} mit Lösung (Schach-Font {Found})",
             ebookId, diagrams.Count, pages, solutions.Count, fontFound);

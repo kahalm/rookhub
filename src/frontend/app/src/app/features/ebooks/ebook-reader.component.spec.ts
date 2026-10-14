@@ -234,4 +234,16 @@ describe('EbookReaderComponent', () => {
     c.stopSolving();
     fixture.destroy();
   }));
+
+  it('Herkunft der Lösung und Engine-Bewertung werden benannt', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    const d = { ...DIAGRAMS[0], solutionCheck: 'doubtful' as const, engineEval: 312 };
+    expect(c.solutionNoteKey(d)).toBe('ebooks.reader.solutionDoubtful');
+    expect(c.solutionNoteKey({ ...d, solutionCheck: 'engine' })).toBe('ebooks.reader.solutionEngine');
+    expect(c.solutionNoteKey({ ...d, solutionCheck: 'nopuzzle' })).toBeNull();
+    expect(c.evalText(d)).toMatch(/^\+3[.,]1$/);
+    expect(c.evalText({ ...d, engineEval: 9998 })).toBe('ebooks.reader.mateIn');
+    expect(c.evalText({ ...d, engineEval: null })).toBeNull();
+  });
 });

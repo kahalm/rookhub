@@ -191,6 +191,11 @@ public class EbookDiagramDto
     public string? SolutionSan { get; set; }
     public string? SolutionText { get; set; }
     public int? SolutionPage { get; set; }
+    /// <summary><c>book</c> / <c>engine</c>.</summary>
+    public string? SolutionSource { get; set; }
+    /// <summary><c>unchecked</c> / <c>confirmed</c> / <c>doubtful</c> / <c>replaced</c> / <c>engine</c> / <c>nopuzzle</c>.</summary>
+    public string SolutionCheck { get; set; } = "unchecked";
+    public int? EngineEval { get; set; }
     /// <summary>Der Aufrufer hat dieses Diagramm als falsch gemeldet.</summary>
     public bool ReportedByMe { get; set; }
     /// <summary>Meldungen insgesamt — nur für Verwalter gefüllt, sonst 0.</summary>

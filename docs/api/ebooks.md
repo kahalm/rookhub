@@ -137,3 +137,18 @@ erste muss legal sein, sonst KEINE Lösung. Gespeichert: `SolutionUci`, `Solutio
 Gemessen 14.10.: Woodpecker 1 117 von 1 128 mit Lösung, erster Zug = Kurs 88 bei 1 113; Grooten 824 von 995 (Weg 2).
 **Leser**: „Lösen“ (Hauptaktion, wenn eine Lösung da ist) — Züge gegen die Linie geprüft, Antworten nach 450 ms, falscher Zug
 600 ms sichtbar, dann zurück; „Lösung zeigen“ mit Linie, Absatz und Sprung zur Lösungsseite.
+
+## Stockfish-Prüfung + Engine-Lösungen (0.772.0)
+
+`EbookSolutionCheckWorker` (alle 30 s ein Buch mit `DiagramState = Done` und `SolutionCheckState = Pending`; die Erkennung setzt
+Pending neu) startet EINE Stockfish-Sitzung je Buch (`UciEngineSession`: Threads 1, Hash 64 MB, niedrige Priorität, Pfad wie der
+Tipp-Generator, `Ebooks__StockfishPath`) und prüft jedes regelgerechte Diagramm (`EbookSolutionChecker`, Bedenkzeit
+`Ebooks__EngineMoveTimeMs` = 400 ms, Engine-Lösungen ×3; `Ebooks__EngineCheck=false` schaltet ab):
+- **Buchlösung:** erster Zug = bester oder höchstens 120 cp schlechter oder gewinnt noch ≥ 400 → `Confirmed`. Sonst die übrigen
+  Startzüge derselben Nummer aus dem Lösungsabsatz (`EbookSolutionFinder.TryParseAll`) → der erste vertretbare ersetzt die Linie
+  (`Replaced`); keiner → `Doubtful` (Linie bleibt, Leser warnt).
+- **Keine Buchlösung:** Bewertung ≥ 200 cp oder Matt → Engine-Hauptvariante wird die Lösung (`SolutionSource = engine`, bis zum
+  Matt bzw. 7 Halbzüge, `Engine`); sonst `NoPuzzle`. Studien ohne König u. Ä. (Gera.Chess lehnt ab) bleiben `Unchecked`.
+- Feld `EngineEval` (cp für die Seite am Zug, Matt in n = ±(10000 − n)) im Diagramm-DTO, ebenso `solutionSource`, `solutionCheck`.
+Gemessen 14.10. (300 ms): Woodpecker 1 129 bestätigt, 3 ersetzt (u. a. Nr. 631 jetzt = Kurs), 8 Engine-Lösungen, erster Zug = Kurs
+1 118 von 1 124; Baird 755 Engine-Lösungen von 764 (Matt in 2/3), 7,7 min für beide Bücher.

@@ -5349,7 +5349,14 @@
       "notBookMove": "To nije potez iz knjige — pokušaj ponovno.",
       "showSolution": "Prikaži rješenje",
       "hideSolution": "Sakrij rješenje",
-      "toSolutionPage": "Na rješenje (stranica {{page}})"
+      "toSolutionPage": "Na rješenje (stranica {{page}})",
+      "solutionEngine": "Rješenje od Stockfisha — knjiga ga nema.",
+      "solutionDoubtful": "Rješenje upitno: Stockfish prvi potez iz knjige ocjenjuje znatno lošije.",
+      "solutionReplaced": "Rješenje iz knjige, prava varijanta odabrana Stockfishom.",
+      "solutionConfirmed": "Rješenje iz knjige, potvrdio ga je Stockfish.",
+      "mateIn": "mat u {{n}}",
+      "matedIn": "dobiva mat u {{n}}",
+      "evalTitle": "Ocjena Stockfisha za stranu na potezu"
     },
     "diagrams": "Dijagrama: {{n}}"
   }

@@ -5349,7 +5349,14 @@
       "notBookMove": "Nem a könyv lépése — próbáld újra.",
       "showSolution": "Megoldás mutatása",
       "hideSolution": "Megoldás elrejtése",
-      "toSolutionPage": "A megoldáshoz ({{page}}. oldal)"
+      "toSolutionPage": "A megoldáshoz ({{page}}. oldal)",
+      "solutionEngine": "A megoldás a Stockfishtől — a könyvben nincs.",
+      "solutionDoubtful": "Kétes megoldás: a Stockfish a könyv első lépését jóval gyengébbnek értékeli.",
+      "solutionReplaced": "A könyv megoldása, a helyes változatot a Stockfish választotta ki.",
+      "solutionConfirmed": "A könyv megoldása, a Stockfish megerősítette.",
+      "mateIn": "matt {{n}} lépésben",
+      "matedIn": "mattot kap {{n}} lépésben",
+      "evalTitle": "A Stockfish értékelése a lépésre következő félnek"
     },
     "diagrams": "{{n}} diagram"
   }

@@ -5349,7 +5349,14 @@
       "notBookMove": "Not the book move — try again.",
       "showSolution": "Show solution",
       "hideSolution": "Hide solution",
-      "toSolutionPage": "To the solution (page {{page}})"
+      "toSolutionPage": "To the solution (page {{page}})",
+      "solutionEngine": "Solution by Stockfish — the book has none.",
+      "solutionDoubtful": "Solution doubtful: Stockfish rates the book’s first move clearly worse.",
+      "solutionReplaced": "Book solution, the right line chosen with Stockfish.",
+      "solutionConfirmed": "Book solution, confirmed by Stockfish.",
+      "mateIn": "mate in {{n}}",
+      "matedIn": "mated in {{n}}",
+      "evalTitle": "Stockfish evaluation for the side to move"
     },
     "diagrams": "{{n}} diagrams"
   }

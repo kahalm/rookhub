@@ -31,6 +31,15 @@ public class EbookOptions
     public string PdfinfoPath { get; set; } = "pdfinfo";
     public string DdjvuPath { get; set; } = "ddjvu";
 
+    /// <summary>Stockfish-Prüfung der Lösungen + Engine-Lösungen (0.772.0); <c>false</c> schaltet den Dienst ab.</summary>
+    public bool EngineCheck { get; set; } = true;
+
+    /// <summary>Bedenkzeit je Stellung in ms (Prüfung); Engine-Lösungen bekommen das Dreifache.</summary>
+    public int EngineMoveTimeMs { get; set; } = 400;
+
+    /// <summary>Pfad zu Stockfish; leer = wie der Tipp-Generator (<c>/usr/games/stockfish</c> aus dem Image).</summary>
+    public string? StockfishPath { get; set; }
+
     /// <summary>Titelbilder je Worker-Durchlauf (alle 20 s) — klein, damit ein Einlesen von 800 Büchern die API nicht lahmlegt.</summary>
     public int CoverBatchSize { get; set; } = 4;
 

@@ -345,6 +345,29 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     return d ? EbookReaderComponent.numbered(d.fen, sans) : '';
   }
 
+  /** Hinweis zur Herkunft/Prüfung der Lösung (i18n-Schlüssel) oder `null`. */
+  solutionNoteKey(d: EbookDiagram): string | null {
+    switch (d.solutionCheck) {
+      case 'engine': return 'ebooks.reader.solutionEngine';
+      case 'doubtful': return 'ebooks.reader.solutionDoubtful';
+      case 'replaced': return 'ebooks.reader.solutionReplaced';
+      case 'confirmed': return 'ebooks.reader.solutionConfirmed';
+      default: return null;
+    }
+  }
+
+  /** „+3,2“ / „Matt in 2“ für die Seite am Zug — `null` ohne Bewertung. */
+  evalText(d: EbookDiagram): string | null {
+    const v = d.engineEval;
+    if (v == null) return null;
+    if (Math.abs(v) >= 9000) {
+      const n = 10000 - Math.abs(v);
+      return this.translate.instant(v > 0 ? 'ebooks.reader.mateIn' : 'ebooks.reader.matedIn', { n });
+    }
+    const lang = this.translate.currentLang() ?? undefined;
+    return (v > 0 ? '+' : '') + (v / 100).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
   goToSolutionPage(): void {
     const page = this.picked()?.solutionPage;
     if (page) this.viewer?.goTo(page);

@@ -5349,7 +5349,14 @@
       "notBookMove": "Nicht der Buchzug — versuch es noch einmal.",
       "showSolution": "Lösung zeigen",
       "hideSolution": "Lösung ausblenden",
-      "toSolutionPage": "Zur Lösung (Seite {{page}})"
+      "toSolutionPage": "Zur Lösung (Seite {{page}})",
+      "solutionEngine": "Lösung von Stockfish — das Buch hat keine.",
+      "solutionDoubtful": "Lösung fraglich: Stockfish bewertet den ersten Buchzug deutlich schlechter.",
+      "solutionReplaced": "Lösung aus dem Buch, die richtige Linie mit Stockfish gewählt.",
+      "solutionConfirmed": "Lösung aus dem Buch, von Stockfish bestätigt.",
+      "mateIn": "Matt in {{n}}",
+      "matedIn": "wird in {{n}} matt",
+      "evalTitle": "Stockfish-Bewertung für die Seite am Zug"
     },
     "diagrams": "{{n}} Diagramme"
   }

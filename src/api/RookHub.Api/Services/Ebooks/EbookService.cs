@@ -368,6 +368,7 @@ public class EbookService
                 {
                     Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown,
                     SolutionUci = d.SolutionUci, SolutionSan = d.SolutionSan, SolutionText = d.SolutionText, SolutionPage = d.SolutionPage,
+                    SolutionSource = d.SolutionSource, SolutionCheck = d.SolutionCheck.ToString().ToLower(), EngineEval = d.EngineEval,
                 }).ToListAsync(ct)
             : [];
         if (items.Count > 0)

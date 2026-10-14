@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.772.0", date: "2026-10-14", changes: [
+    { en: "E-books: Stockfish now checks every solution read from a book. If the first move turns out to be a side line, another move from the same paragraph is taken; if none fits, the solution is marked as doubtful. Diagrams without a printed solution (most classic problem collections) get one from Stockfish when the position is decisive — e.g. 755 of Baird’s 764 problems.",
+      de: "E-Books: Stockfish prüft jetzt jede aus einem Buch gelesene Lösung. Erweist sich der erste Zug als Nebenvariante, wird ein anderer Zug aus demselben Absatz genommen; passt keiner, wird die Lösung als fraglich markiert. Diagramme ohne gedruckte Lösung (die meisten klassischen Problemsammlungen) bekommen eine von Stockfish, wenn die Stellung entscheidend ist — z. B. 755 von Bairds 764 Problemen." },
+    { en: "E-book reader: next to the side to move the Stockfish evaluation is shown, and a short note says whether the solution comes from the book (confirmed or chosen with Stockfish), is doubtful, or comes from Stockfish.",
+      de: "E-Book-Leser: Neben dem Zugrecht steht die Stockfish-Bewertung, und ein kurzer Hinweis sagt, ob die Lösung aus dem Buch kommt (bestätigt oder mit Stockfish gewählt), fraglich ist oder von Stockfish stammt." },
+  ] },
   { version: "0.771.0", date: "2026-10-14", changes: [
     { en: "E-books: solutions are now read from the books themselves — from the numbered solutions section (e.g. Woodpecker: 1 113 of 1 117 first moves identical to the Chessable course) or from the text right below a diagram. Only lines that can be played legally from the diagram are kept.",
       de: "E-Books: Lösungen werden jetzt aus den Büchern selbst gelesen — aus dem nummerierten Lösungsteil (z. B. Woodpecker: 1 113 von 1 117 ersten Zügen gleich dem Chessable-Kurs) oder aus dem Text direkt unter einem Diagramm. Übernommen wird nur, was sich ab dem Diagramm regelgerecht nachspielen lässt." },

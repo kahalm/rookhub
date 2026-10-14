@@ -110,7 +110,12 @@
                 }
               }
               @if (d.caption) { <p class="rd-caption" [title]="d.caption">{{ d.caption }}</p> }
-              <p class="rd-side">{{ sideKey(d) | translate }}</p>
+              <p class="rd-side">{{ sideKey(d) | translate }}@if (evalText(d); as ev) { · <span class="rd-eval" [title]="'ebooks.reader.evalTitle' | translate">{{ ev }}</span> }</p>
+              @if (solutionNoteKey(d); as note) {
+                <p class="rd-sol-note" [class.rd-sol-note--warn]="d.solutionCheck === 'doubtful'">
+                  <mat-icon>{{ d.solutionCheck === 'doubtful' ? 'warning_amber' : d.solutionCheck === 'engine' ? 'memory' : 'verified' }}</mat-icon>{{ note | translate }}
+                </p>
+              }
               <div class="rd-panel-actions">
                 @if (d.solutionUci && legal()) {
                   <button mat-flat-button color="primary" type="button" (click)="startSolving()" [disabled]="solving() && solveState() === 'running'">

@@ -84,6 +84,10 @@
   span { flex: 1 1 auto; }
 }
 .rd-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
+.rd-eval { font-variant-numeric: tabular-nums; }
+.rd-sol-note { display: flex; align-items: center; gap: 4px; margin: 0; font-size: .82rem; opacity: .8;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+.rd-sol-note--warn { color: var(--rh-warn); opacity: 1; }
 .rd-sol-toggle { align-self: flex-start; }
 .rd-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
 .rd-solution-line { margin: 0 0 4px; font-weight: 500; }
