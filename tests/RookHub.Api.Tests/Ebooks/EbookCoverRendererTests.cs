@@ -95,6 +95,50 @@ public class EbookCoverRendererTests : IDisposable
         Assert.Equal("image/jpeg", RookHub.Api.Controllers.Ebooks.EbooksController.SniffImageType(_kit.Storage.CoverPath(book.Id)));
     }
 
+    /// <summary>PDF mit leeren Seiten vorn; nur die letzte Seite trägt ein schwarzes Rechteck.</summary>
+    private static byte[] PdfWithBlankFirstPages(int blank)
+    {
+        var objs = new List<string> { "<</Type/Catalog/Pages 2 0 R>>" };
+        var n = blank + 1;
+        var kids = string.Join(' ', Enumerable.Range(0, n).Select(i => $"{3 + i} 0 R"));
+        objs.Add($"<</Type/Pages/Kids[{kids}]/Count {n}>>");
+        var content = 3 + n;
+        for (var i = 0; i < n; i++)
+            objs.Add(i < blank ? "<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 300]>>"
+                : $"<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 300]/Contents {content} 0 R>>");
+        const string draw = "0 0 0 rg 20 20 160 260 re f";
+        objs.Add($"<</Length {draw.Length}>>stream\n{draw}\nendstream");
+        var sb = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objs.Count; i++) { offsets.Add(sb.Length); sb.Append($"{i + 1} 0 obj{objs[i]}endobj\n"); }
+        var xref = sb.Length;
+        sb.Append($"xref\n0 {objs.Count + 1}\n0000000000 65535 f \n");
+        foreach (var o in offsets) sb.Append($"{o:D10} 00000 n \n");
+        sb.Append($"trailer<</Size {objs.Count + 1}/Root 1 0 R>>\nstartxref\n{xref}\n%%EOF\n");
+        return Encoding.ASCII.GetBytes(sb.ToString());
+    }
+
+    [Fact]
+    public async Task Pdf_SkipsBlankFirstPages_WhenToolsExist()
+    {
+        if (!ToolExists("pdftoppm") || !ToolExists("pdfinfo")) return;   // CI ohne poppler: nichts zu prüfen
+        var book = await UploadedAsync(PdfWithBlankFirstPages(2), "blank-start.pdf");
+        var r = await Renderer.RenderAsync(book, CancellationToken.None);
+        Assert.True(r.Success, r.Error);
+        Assert.Equal(3, r.PageCount);
+        Assert.True(EbookCoverRenderer.InkFraction(_kit.Storage.CoverPath(book.Id)) > 0.5);
+    }
+
+    [Fact]
+    public async Task Pdf_AllPagesBlank_FallsBackToPageOne_WhenToolsExist()
+    {
+        if (!ToolExists("pdftoppm") || !ToolExists("pdfinfo")) return;
+        var book = await UploadedAsync(EbookTestKit.TinyPdf(), "tiny.pdf");
+        var r = await Renderer.RenderAsync(book, CancellationToken.None);
+        Assert.True(r.Success, r.Error);
+        Assert.True(EbookCoverRenderer.InkFraction(_kit.Storage.CoverPath(book.Id)) < EbookCoverRenderer.MinCoverInk);
+    }
+
     [Fact]
     public async Task MissingTool_FailsSoftly_InsteadOfThrowing()
     {

@@ -8,8 +8,9 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services.Ebooks;
 
 /// <summary>
-/// Rendert das Titelbild eines Buchs nach <c>covers/&lt;Id&gt;.cover</c>: PDF über <c>pdftoppm</c> (Seite 1, 480 px
-/// breit, JPEG), DJVU über <c>ddjvu</c> (Seite 1 als PDF, dann wie PDF), EPUB und CBZ als Bild aus dem Zip (EPUB:
+/// Rendert das Titelbild eines Buchs nach <c>covers/&lt;Id&gt;.cover</c>: PDF über <c>pdftoppm</c> (die erste NICHT leere
+/// der ersten 8 Seiten, 0.776.0 — alte Bücher und Scans beginnen oft mit Vorsatzblättern; 480 px breit, JPEG), DJVU über
+/// <c>ddjvu</c> (die ersten 8 Seiten als PDF, dann wie PDF), EPUB und CBZ als Bild aus dem Zip (EPUB:
 /// das im OPF ausgewiesene Cover, CBZ: das erste Bild). Nebenbei die Seitenzahl des PDFs (<c>pdfinfo</c>).
 /// Werkzeuge fehlen → <see cref="CoverResult.Failed"/>, kein weiterer Versuch (<see cref="EbookCoverState.Failed"/>).
 /// </summary>
@@ -75,34 +76,77 @@ public class EbookCoverRenderer
         }
     }
 
+    /// <summary>Höchstens so viele Seiten werden nach einer nicht leeren Titelseite durchsucht (0.776.0).</summary>
+    public const int MaxCoverPages = 8;
+
+    /// <summary>Anteil dunkler Pixel (Grau &lt; 0,6), ab dem eine Seite als „nicht leer“ gilt. Leere Vorsatzblätter alter
+    /// Bücher und Scans liegen bei 0, eine Titelseite mit wenig Text bei ≥ 0,5 %.</summary>
+    public const double MinCoverInk = 0.002;
+
     private async Task<CoverResult> FromPdfAsync(string pdf, string output, CancellationToken ct)
     {
-        var prefix = output + ".tmp";
-        var run = await RunAsync(_options.PdftoppmPath,
-            ["-singlefile", "-f", "1", "-l", "1", "-jpeg", "-jpegopt", "quality=82", "-scale-to", "480", pdf, prefix], ct);
-        var produced = prefix + ".jpg";
-        if (run.ExitCode != 0 || !File.Exists(produced))
-        {
-            if (File.Exists(produced)) File.Delete(produced);
-            return CoverResult.Failed($"pdftoppm exit {run.ExitCode}: {Trim(run.StdErr)}");
-        }
-        File.Move(produced, output, overwrite: true);
         int? pages = null;
         var info = await RunAsync(_options.PdfinfoPath, [pdf], ct);
         if (info.ExitCode == 0) pages = ParsePdfinfoPages(info.StdOut);
+        // Viele alte Bücher und Scans beginnen mit leeren Seiten — die erste Seite mit Inhalt wird das Titelbild.
+        var last = Math.Max(1, Math.Min(MaxCoverPages, pages ?? 1));
+        string? fallback = null;
+        for (var page = 1; page <= last; page++)
+        {
+            var prefix = output + ".p" + page;
+            var run = await RunAsync(_options.PdftoppmPath,
+                ["-singlefile", "-f", page.ToString(), "-l", page.ToString(), "-jpeg", "-jpegopt", "quality=82", "-scale-to", "480", pdf, prefix], ct);
+            var produced = prefix + ".jpg";
+            if (run.ExitCode != 0 || !File.Exists(produced))
+            {
+                if (File.Exists(produced)) File.Delete(produced);
+                if (page == 1) return CoverResult.Failed($"pdftoppm exit {run.ExitCode}: {Trim(run.StdErr)}");
+                break;
+            }
+            if (InkFraction(produced) >= MinCoverInk)
+            {
+                File.Move(produced, output, overwrite: true);
+                if (fallback != null) File.Delete(fallback);
+                return new CoverResult(true, pages, null);
+            }
+            if (fallback == null) fallback = produced; else File.Delete(produced);
+        }
+        if (fallback == null) return CoverResult.Failed("no page rendered");
+        File.Move(fallback, output, overwrite: true);
         return new CoverResult(true, pages, null);
+    }
+
+    /// <summary>Anteil dunkler Pixel eines Bilds (0–1); nicht lesbar = 1 (gilt als Inhalt).</summary>
+    internal static double InkFraction(string imagePath)
+    {
+        using var bmp = SkiaSharp.SKBitmap.Decode(imagePath);
+        if (bmp == null || bmp.Width == 0 || bmp.Height == 0) return 1;
+        long dark = 0;
+        for (var y = 0; y < bmp.Height; y++)
+            for (var x = 0; x < bmp.Width; x++)
+            {
+                var c = bmp.GetPixel(x, y);
+                if (c.Red * 0.299 + c.Green * 0.587 + c.Blue * 0.114 < 153) dark++;
+            }
+        return (double)dark / ((long)bmp.Width * bmp.Height);
     }
 
     private async Task<CoverResult> FromDjvuAsync(string djvu, string output, CancellationToken ct)
     {
-        var tmpPdf = output + ".page1.pdf";
+        var tmpPdf = output + ".head.pdf";
         try
         {
-            var run = await RunAsync(_options.DdjvuPath, ["-format=pdf", "-page=1", djvu, tmpPdf], ct);
+            // Die ersten Seiten als ein PDF, dann wie beim PDF die erste nicht leere Seite.
+            var run = await RunAsync(_options.DdjvuPath, ["-format=pdf", $"-page=1-{MaxCoverPages}", djvu, tmpPdf], ct);
             if (run.ExitCode != 0 || !File.Exists(tmpPdf))
-                return CoverResult.Failed($"ddjvu exit {run.ExitCode}: {Trim(run.StdErr)}");
+            {
+                // Kürzere Bücher: „1-8“ gibt es nicht — nur Seite 1.
+                run = await RunAsync(_options.DdjvuPath, ["-format=pdf", "-page=1", djvu, tmpPdf], ct);
+                if (run.ExitCode != 0 || !File.Exists(tmpPdf))
+                    return CoverResult.Failed($"ddjvu exit {run.ExitCode}: {Trim(run.StdErr)}");
+            }
             var r = await FromPdfAsync(tmpPdf, output, ct);
-            return r.Success ? new CoverResult(true, null, null) : r;   // Seitenzahl des Ein-Seiten-PDFs ist keine Buchseitenzahl
+            return r.Success ? new CoverResult(true, null, null) : r;   // Seitenzahl des Ausschnitts ist keine Buchseitenzahl
         }
         finally
         {

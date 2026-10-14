@@ -23,8 +23,10 @@ das Einlesen; Übersicht und Leser laufen trotzdem. Gelöscht werden nur Uploads
 20 Schlagworte à 40 Zeichen. Eine zweite Datei mit demselben SHA-256 → 409 `ebook_duplicate_file` (die Datei wird wieder
 gelöscht).
 
-**Titelbilder** rendert der `EbookCoverWorker` (alle 20 s, 4 Bücher je Durchlauf) nachträglich: PDF über `pdftoppm` (Seite 1,
-480 px, dazu die Seitenzahl aus `pdfinfo`), DJVU über `ddjvu` → Ein-Seiten-PDF → `pdftoppm`, EPUB/CBZ als Bild aus dem Zip
+**Titelbilder** rendert der `EbookCoverWorker` (alle 20 s, 4 Bücher je Durchlauf) nachträglich: PDF über `pdftoppm` (die erste
+NICHT leere der ersten 8 Seiten — ≥ 0,2 % dunkle Pixel, `EbookCoverRenderer.MinCoverInk`; 0.775.3, alte Bücher und Scans
+beginnen oft mit leeren Vorsatzblättern; 480 px, dazu die Seitenzahl aus `pdfinfo`), DJVU über `ddjvu` → PDF der ersten 8
+Seiten → `pdftoppm`; Migration `EbookCoverSkipBlankPages` rendert vorhandene PDF-/DJVU-Titelbilder neu, EPUB/CBZ als Bild aus dem Zip
 (OPF-Cover bzw. erstes Bild). Werkzeuge liegen im API-Image (`poppler-utils`, `djvulibre-bin`); fehlen sie, bleibt das Buch
 auf `CoverState = Failed` (kein weiterer Versuch) und die Karte zeigt den Titel statt eines Bilds.
 
