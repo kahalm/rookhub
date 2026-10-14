@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,7 +13,8 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Ebook, EbookDiagram, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
-import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { Chess } from 'chess.js';
 import { nextZoom, parsePageInput } from './reader-progress.util';
 
 /**
@@ -56,6 +57,19 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   /** Das Diagramm auf dem Brett. */
   readonly picked = signal<EbookDiagram | null>(null);
   readonly flipped = signal(false);
+  /** „Brett spielbar": Züge auf dem Brett erlaubt (Stellung aus dem Buch weiterspielen). */
+  readonly playMode = signal(false);
+  /** Gespielte Züge ab der Buchstellung (SAN + FEN danach); leer = Buchstellung. */
+  readonly played = signal<{ san: string; fen: string }[]>([]);
+  /** Stellung auf dem Brett: die letzte gespielte oder die des Diagramms. */
+  readonly boardFen = computed(() => this.played().at(-1)?.fen ?? this.picked()?.fen ?? '');
+  /** Ob die Buchstellung regelgerecht ist (chess.js) — Bücher drucken auch Studien ohne König o. Ä.; dann nur ansehen. */
+  readonly legal = computed(() => {
+    const d = this.picked();
+    if (!d) return false;
+    try { new Chess(d.fen); return true; } catch { return false; }
+  });
+
   /** Schmale Ansicht: Brettleiste ein-/ausgeklappt. */
   readonly panelOpen = signal(false);
 
@@ -127,6 +141,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     const d = this.diagrams().find(x => x.id === id);
     if (!d) return;
     this.picked.set(d);
+    this.played.set([]);
     this.flipped.set(d.fen.split(' ')[1] === 'b');
     this.panelOpen.set(true);
   }
@@ -155,8 +170,35 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     return d.fen.split(' ')[1] === 'b' ? 'ebooks.reader.blackToMove' : 'ebooks.reader.whiteToMove';
   }
 
+  togglePlay(): void { this.playMode.update(v => !v); }
+
+  /** Zug auf dem spielbaren Brett: das Brett liefert SAN + neue FEN, die Liste wächst. */
+  onBoardMove(m: UserBoardMove): void {
+    this.played.update(list => [...list, { san: m.san, fen: m.fen }]);
+  }
+
+  undoMove(): void { this.played.update(list => list.slice(0, -1)); }
+  resetMoves(): void { this.played.set([]); }
+
+  /** „12… Txd2 13. Df4" — Zugnummern ab der Buchstellung. */
+  get movesText(): string {
+    const d = this.picked();
+    const list = this.played();
+    if (!d || list.length === 0) return '';
+    const parts = d.fen.split(' ');
+    let n = Number(parts[5]) || 1;
+    let white = parts[1] !== 'b';
+    const out: string[] = [];
+    list.forEach((m, i) => {
+      if (white) out.push(`${n}. ${m.san}`);
+      else { out.push(i === 0 ? `${n}… ${m.san}` : m.san); n++; }
+      white = !white;
+    });
+    return out.join(' ');
+  }
+
   analysisParams(d: EbookDiagram): Record<string, string> {
-    return { fen: d.fen, orientation: this.flipped() ? 'black' : 'white', from: `/ebooks/${this.ebook?.id ?? ''}` };
+    return { fen: this.boardFen() || d.fen, orientation: this.flipped() ? 'black' : 'white', from: `/ebooks/${this.ebook?.id ?? ''}` };
   }
 
   /** „Diagramm falsch": melden bzw. zweiter Klick nimmt die Meldung zurück. */
@@ -175,7 +217,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   }
 
   copyFen(d: EbookDiagram): void {
-    navigator.clipboard?.writeText(d.fen).then(
+    navigator.clipboard?.writeText(this.boardFen() || d.fen).then(
       () => this.snackbar.quick(this.translate.instant('ebooks.reader.fenCopied')),
       () => this.snackbar.warn(this.translate.instant('ebooks.reader.copyFailed')),
     );

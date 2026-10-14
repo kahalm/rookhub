@@ -5334,7 +5334,13 @@
       "reportedUndo": "Als falsch gemeldet — zurücknehmen",
       "reported": "Danke — das Diagramm ist als falsch markiert.",
       "reportWithdrawn": "Meldung zurückgenommen.",
-      "reportFailed": "Melden hat nicht geklappt."
+      "reportFailed": "Melden hat nicht geklappt.",
+      "playOn": "Brett spielbar machen",
+      "playOff": "Brett wieder nur zeigen",
+      "playHint": "Züge auf dem Brett spielen.",
+      "undo": "Zug zurücknehmen",
+      "resetPosition": "Zurück zur Buchstellung",
+      "notPlayable": "Diese Stellung ist nicht regelgerecht (z. B. Studie ohne König) — sie lässt sich nur ansehen."
     },
     "diagrams": "{{n}} Diagramme"
   }

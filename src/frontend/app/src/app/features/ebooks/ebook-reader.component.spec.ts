@@ -153,4 +153,31 @@ describe('EbookReaderComponent', () => {
     expect(service.reportDiagram).toHaveBeenCalledWith(9, 12, false);
     expect(c.picked()!.reportedByMe).toBeFalse();
   });
+
+  it('„Brett spielbar": Züge werden mitgeschrieben, Rücknahme und Buchstellung, Analyse nimmt die aktuelle Stellung', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.pick(11);   // Schwarz am Zug
+    expect(c.legal()).toBeTrue();
+    c.togglePlay();
+    expect(c.playMode()).toBeTrue();
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5r/4RR1K w - - 0 2' });
+    c.onBoardMove({ from: 'h1', to: 'h2', san: 'Kxh2', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5K/4RR2 b - - 0 2' });
+    expect(c.movesText).toBe('1… Rxh2+ 2. Kxh2');
+    expect(c.analysisParams(c.picked()!)['fen']).toContain('BP5K');
+    c.undoMove();
+    expect(c.boardFen()).toContain('BP5r');
+    c.resetMoves();
+    expect(c.boardFen()).toBe(DIAGRAMS[0].fen);
+    c.step(1);   // neues Diagramm: Züge weg
+    expect(c.played().length).toBe(0);
+  });
+
+  it('eine regelwidrige Buchstellung bleibt nur zum Ansehen', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.diagrams.update(l => [...l, { ...DIAGRAMS[2], id: 99, fen: '8/8/8/8/8/8/8/8 w - - 0 1' }]);
+    c.pick(99);
+    expect(c.legal()).toBeFalse();
+  });
 });

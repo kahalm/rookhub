@@ -65,13 +65,27 @@
               <button mat-icon-button class="rd-panel-close" (click)="panelOpen.set(false)" [appIconLabel]="'common.close' | translate"><mat-icon>close</mat-icon></button>
             </div>
             @if (picked(); as d) {
-              <div class="rd-board"><app-chess-board [fen]="d.fen" [flipped]="flipped()" /></div>
+              <div class="rd-board"><app-chess-board [fen]="boardFen()" [flipped]="flipped()"
+                   [playable]="playMode() && legal()" (userMove)="onBoardMove($event)" /></div>
+              @if (playMode()) {
+                @if (!legal()) {
+                  <p class="rd-side">{{ 'ebooks.reader.notPlayable' | translate }}</p>
+                } @else {
+                  <div class="rd-moves">
+                    <span class="rd-moves-text">{{ movesText || ('ebooks.reader.playHint' | translate) }}</span>
+                    <button mat-icon-button (click)="undoMove()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
+                    <button mat-icon-button (click)="resetMoves()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.resetPosition' | translate"><mat-icon>restart_alt</mat-icon></button>
+                  </div>
+                }
+              }
               @if (d.caption) { <p class="rd-caption" [title]="d.caption">{{ d.caption }}</p> }
               <p class="rd-side">{{ sideKey(d) | translate }}</p>
               <div class="rd-panel-actions">
                 <a mat-flat-button color="primary" routerLink="/analysis" [queryParams]="analysisParams(d)">
                   <mat-icon>biotech</mat-icon>{{ 'ebooks.reader.analyse' | translate }}
                 </a>
+                <button mat-icon-button (click)="togglePlay()" [class.rd-play-on]="playMode()" [attr.aria-pressed]="playMode()"
+                        [appIconLabel]="(playMode() ? 'ebooks.reader.playOff' : 'ebooks.reader.playOn') | translate"><mat-icon>{{ playMode() ? 'pan_tool' : 'pan_tool_alt' }}</mat-icon></button>
                 <button mat-icon-button (click)="flipped.set(!flipped())" [appIconLabel]="'ebooks.reader.flip' | translate"><mat-icon>swap_vert</mat-icon></button>
                 <button mat-icon-button (click)="copyFen(d)" [appIconLabel]="'ebooks.reader.copyFen' | translate"><mat-icon>content_copy</mat-icon></button>
               </div>

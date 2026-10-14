@@ -5334,7 +5334,13 @@
       "reportedUndo": "Hibásnak jelölve — visszavonás",
       "reported": "Köszönjük — a diagram hibásnak jelölve.",
       "reportWithdrawn": "Jelzés visszavonva.",
-      "reportFailed": "A jelzés nem sikerült."
+      "reportFailed": "A jelzés nem sikerült.",
+      "playOn": "Tábla játszhatóvá tétele",
+      "playOff": "Tábla ismét csak megjelenítés",
+      "playHint": "Lépj a táblán.",
+      "undo": "Lépés visszavonása",
+      "resetPosition": "Vissza a könyv állásához",
+      "notPlayable": "Ez az állás nem szabályos (pl. király nélküli tanulmány) — csak megtekinthető."
     },
     "diagrams": "{{n}} diagram"
   }

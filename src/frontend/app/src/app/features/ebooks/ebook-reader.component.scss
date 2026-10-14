@@ -63,6 +63,9 @@
 .rd-caption { margin: 0; font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .rd-side { margin: 0; font-size: .85rem; opacity: .75; }
 .rd-panel-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.rd-play-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+.rd-moves { display: flex; align-items: center; gap: 2px; }
+.rd-moves-text { flex: 1 1 auto; min-width: 0; font-size: .9rem; overflow-wrap: anywhere; }
 .rd-report { align-self: flex-start; opacity: .8; }
 .rd-report--on { color: var(--rh-warn); opacity: 1; }
 .rd-report-count { margin-left: 4px; font-variant-numeric: tabular-nums; }

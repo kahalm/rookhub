@@ -102,3 +102,7 @@ ersten Doppelklick.
 **Übersicht merkt sich die Ansicht** (0.768.0): Suche, Schlagwort, Sortierung, „Meine Uploads“, „Mit Diagrammen“ und Seite
 stehen in der Adresse (`?q=&tag=&sort=&mine=1&diagrams=1&page=`, `replaceUrl`) und in der Sitzung (`rh.ebooks.listState`) —
 der Zurück-Pfeil im Leser führt auf das nackte `/ebooks` und landet trotzdem in derselben Ansicht.
+
+**Brett spielbar** (0.769.0): Hand-Knopf neben dem Brett schaltet `playable` ein; gespielte Züge (SAN + FEN) stehen unter dem
+Brett mit Zugnummern ab der Buchstellung, Zurücknehmen / Buchstellung, „Analysieren“ und „FEN kopieren“ nehmen die aktuelle
+Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne König) bleiben nur zum Ansehen.

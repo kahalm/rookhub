@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.769.0", date: "2026-10-14", changes: [
+    { en: "E-book reader: the hand button next to the board makes it playable — continue the book position with your own moves, take them back or return to the book position; „Analyse“ and „Copy FEN“ use the position on the board.",
+      de: "E-Book-Leser: Der Hand-Knopf neben dem Brett macht es spielbar — die Buchstellung mit eigenen Zügen weiterspielen, Züge zurücknehmen oder zur Buchstellung zurück; „Analysieren“ und „FEN kopieren“ nehmen die Stellung auf dem Brett." },
+  ] },
   { version: "0.768.0", date: "2026-10-14", changes: [
     { en: "E-books: below the board there is now „Diagram wrong“ — it marks a misread diagram (a second click withdraws it). Admins see how often a diagram was reported and get a list of all reports, which is what font fixes are based on.",
       de: "E-Books: Unter dem Brett gibt es jetzt „Diagramm falsch“ — das markiert ein falsch gelesenes Diagramm (ein zweiter Klick nimmt es zurück). Admins sehen, wie oft ein Diagramm gemeldet wurde, und bekommen eine Liste aller Meldungen als Grundlage für Korrekturen." },

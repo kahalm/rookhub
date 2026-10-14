@@ -5334,7 +5334,13 @@
       "reportedUndo": "Prijavljeno kao pogrešno — poništi",
       "reported": "Hvala — dijagram je označen kao pogrešan.",
       "reportWithdrawn": "Prijava povučena.",
-      "reportFailed": "Prijava nije uspjela."
+      "reportFailed": "Prijava nije uspjela.",
+      "playOn": "Omogući igranje na ploči",
+      "playOff": "Ploča ponovno samo za prikaz",
+      "playHint": "Igraj poteze na ploči.",
+      "undo": "Vrati potez",
+      "resetPosition": "Natrag na poziciju iz knjige",
+      "notPlayable": "Ova pozicija nije prema pravilima (npr. studija bez kralja) — može se samo pregledati."
     },
     "diagrams": "Dijagrama: {{n}}"
   }
