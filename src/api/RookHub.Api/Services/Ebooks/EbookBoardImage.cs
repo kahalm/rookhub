@@ -124,7 +124,8 @@ public static class EbookBoardImage
         int H = g.GetLength(0), W = g.GetLength(1);
         const float light = 235f / 255f;
         var lab = new bool[H, W];
-        var result = new List<(int, int, int, int)>();
+        var result = new List<(int X0, int Y0, int X1, int Y1)>();
+        var found = new List<((int X0, int Y0, int X1, int Y1) Box, double Fit)>();
         var stack = new Stack<(int, int)>();
         for (var y = 0; y < H; y++)
             for (var x = 0; x < W; x++)
@@ -161,9 +162,22 @@ public static class EbookBoardImage
                     var sc = GridFit(Cells(g, c));
                     if (sc > bestScore) { bestScore = sc; best = c; }
                 }
-                result.Add(best);
+                found.Add((best, bestScore));
             }
-        return result;
+        // Dasselbe Brett zweimal (doppelter Rahmen: äußere Linie + inneres Brett, 0.780.5): von überlappenden Treffern
+        // bleibt der mit dem besseren Schachbrettmuster — der äußere liest sonst mit verschobenem Raster lauter Figuren.
+        foreach (var (box, _) in found.OrderByDescending(f => f.Fit))
+            if (!result.Any(r => Overlap(r, box) > 0.5)) result.Add(box);
+        return result.OrderBy(b => b.Y0).ThenBy(b => b.X0).ToList();
+    }
+
+    /// <summary>Überdeckung zweier Rechtecke, bezogen auf das kleinere (0–1).</summary>
+    internal static double Overlap((int X0, int Y0, int X1, int Y1) a, (int X0, int Y0, int X1, int Y1) b)
+    {
+        long w = Math.Min(a.X1, b.X1) - Math.Max(a.X0, b.X0), h = Math.Min(a.Y1, b.Y1) - Math.Max(a.Y0, b.Y0);
+        if (w <= 0 || h <= 0) return 0;
+        long small = Math.Min((long)(a.X1 - a.X0) * (a.Y1 - a.Y0), (long)(b.X1 - b.X0) * (b.Y1 - b.Y0));
+        return small <= 0 ? 0 : (double)(w * h) / small;
     }
 
     /// <summary>
@@ -381,6 +395,7 @@ public static class EbookBoardImage
         }
         if (grid.Count(c => c == 'K') != 1 || grid.Count(c => c == 'k') != 1) return null;
         for (var i = 0; i < 8; i++) if (grid[i] is 'P' or 'p' || grid[56 + i] is 'P' or 'p') return null;
+        if (!PossibleMaterial(grid)) return null;
         var rows = new List<string>();
         for (var r = 0; r < 8; r++)
         {
@@ -396,6 +411,24 @@ public static class EbookBoardImage
             rows.Add(row.ToString());
         }
         return string.Join('/', rows);
+    }
+
+    /// <summary>
+    /// Kann das Material in einer Partie vorkommen (0.780.5)? Je Farbe höchstens 8 Bauern, und alles über der
+    /// Grundausstattung (D 1, T/L/S je 2) muss durch umgewandelte Bauern erklärbar sein. Fünf weiße Springer und vier weiße
+    /// Türme neben sechs Bauern heißt: das Bild wurde falsch gelesen.
+    /// </summary>
+    public static bool PossibleMaterial(IReadOnlyList<char> grid)
+    {
+        foreach (var white in new[] { true, false })
+        {
+            int Count(char c) => grid.Count(x => x == (white ? char.ToUpperInvariant(c) : c));
+            int pawns = Count('p');
+            if (pawns > 8) return false;
+            var extra = Math.Max(0, Count('q') - 1) + Math.Max(0, Count('r') - 2) + Math.Max(0, Count('b') - 2) + Math.Max(0, Count('n') - 2);
+            if (extra > 8 - pawns) return false;
+        }
+        return true;
     }
 
     private static double Mean(float[,] a) { double s = 0; foreach (var v in a) s += v; return s / a.Length; }

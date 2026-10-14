@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.780.5", date: "2026-10-14", changes: [
+    { en: "E-books, scanned diagrams: positions with impossible material (e.g. five white knights and four white rooks) are discarded, and a board with a double frame is no longer read twice with a shifted grid.",
+      de: "E-Books, gescannte Diagramme: Stellungen mit unmöglichem Material (z. B. fünf weiße Springer und vier weiße Türme) werden verworfen, und ein Brett mit doppeltem Rahmen wird nicht mehr zweimal mit verschobenem Raster gelesen." },
+  ] },
   { version: "0.780.4", date: "2026-10-14", changes: [
     { en: "E-books: the filter „With diagrams“ now only shows books with at least 100 recognised diagrams.",
       de: "E-Books: Der Filter „Mit Diagrammen“ zeigt jetzt nur Bücher mit mindestens 100 erkannten Diagrammen." },

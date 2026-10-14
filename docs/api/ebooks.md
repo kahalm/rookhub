@@ -286,3 +286,8 @@ Vorspielen im Training). Die Lösungsanzeige nennt eine Remisstellung (`engineEv
 
 **Filter „Mit Diagrammen“** (0.780.4): nur Bücher mit mindestens 100 erkannten Diagrammen (`EbookService.MinDiagramsForFilter`) —
 Partiensammlungen und Lehrbücher mit wenigen Stellungen fallen heraus.
+
+**Scan-Plausibilität** (0.780.5): `EbookBoardImage.PossibleMaterial` — je Farbe ≤ 8 Bauern, Überzählige (D>1, T/L/S>2) nur so
+viele wie fehlende Bauern; sonst wird das Brett verworfen (gilt für Scans und EPUB-Bilder). `FindBoards` entdoppelt
+überlappende Treffer (Überdeckung > 50 % des kleineren, der mit besserem `GridFit` bleibt) — doppelte Rahmen (Pongó) lieferten
+sonst ein zweites, verschobenes Raster. Pongó „Tactical Targets 1“ bleibt trotzdem schlecht (sehr feine Schraffur).

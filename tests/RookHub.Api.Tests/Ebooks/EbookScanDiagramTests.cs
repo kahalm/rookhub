@@ -91,6 +91,29 @@ public class EbookScanDiagramTests
         Assert.Equal(["A1", "A2"], boards.Select(b => b.Board).ToArray());
     }
 
+    private static char[] Grid(string boardFen)
+    {
+        var g = new List<char>();
+        foreach (var ch in boardFen.Replace("/", "")) g.AddRange(char.IsDigit(ch) ? Enumerable.Repeat('.', ch - '0') : [ch]);
+        return g.ToArray();
+    }
+
+    [Fact]
+    public void PossibleMaterial_RejectsImpossibleArmies()
+    {
+        Assert.True(EbookBoardImage.PossibleMaterial(Grid("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")));
+        Assert.True(EbookBoardImage.PossibleMaterial(Grid("QQQQk3/8/8/8/8/8/PPPPP3/4K3")));   // 3 Umwandlungen bei 5 Bauern
+        Assert.False(EbookBoardImage.PossibleMaterial(Grid("NNNNNk2/RRRR4/8/8/8/8/PPPPPP2/4K3")));   // 5 S + 4 T + 6 B
+        Assert.False(EbookBoardImage.PossibleMaterial(Grid("4k3/pppppppp/p7/8/8/8/8/4K3")));   // 9 Bauern
+    }
+
+    [Fact]
+    public void Overlap_RelativeToTheSmallerBox()
+    {
+        Assert.Equal(1.0, EbookBoardImage.Overlap((102, 409, 461, 768), (110, 421, 453, 764)), 3);   // Rahmen außen + Brett innen
+        Assert.Equal(0.0, EbookBoardImage.Overlap((0, 0, 100, 100), (200, 0, 300, 100)));
+    }
+
     [Fact]
     public void ReadPgm_ParsesBinaryGraymap_WithComment()
     {
