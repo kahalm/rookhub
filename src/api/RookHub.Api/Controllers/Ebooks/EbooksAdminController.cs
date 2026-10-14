@@ -17,13 +17,20 @@ public class EbooksAdminController : BaseApiController
     private readonly EbookLibraryImporter _importer;
     private readonly EbookStorage _storage;
     private readonly AppDbContext _db;
+    private readonly EbookService _service;
 
-    public EbooksAdminController(EbookLibraryImporter importer, EbookStorage storage, AppDbContext db)
+    public EbooksAdminController(EbookLibraryImporter importer, EbookStorage storage, AppDbContext db, EbookService service)
     {
         _importer = importer;
         _storage = storage;
         _db = db;
+        _service = service;
     }
+
+    /// <summary>Diagramm-Erkennung aller PDF-Bücher neu anstoßen (nach neuen Font-Belegungen) → <c>{ queued }</c>.</summary>
+    [HttpPost("diagrams/rescan")]
+    public async Task<IActionResult> RescanDiagrams(CancellationToken ct)
+        => Ok(new { queued = await _service.RescanDiagramsAsync(ct) });
 
     /// <summary>Ist die Bibliothek konfiguriert, wie viel ist eingelesen, wie viele Titelbilder stehen noch aus.</summary>
     [HttpGet("library")]
@@ -34,6 +41,7 @@ public class EbooksAdminController : BaseApiController
             UploadsEnabled = _storage.UploadsEnabled,
             Imported = await _db.Ebooks.CountAsync(b => b.Source == EbookSource.Library, ct),
             CoversPending = await _db.Ebooks.CountAsync(b => b.CoverState == EbookCoverState.Pending, ct),
+            DiagramsPending = await _db.Ebooks.CountAsync(b => b.DiagramState == EbookDiagramState.Pending, ct),
         });
 
     /// <summary>Bibliothek einlesen (idempotent; Dateien bleiben an Ort und Stelle). Titelbilder folgen im Hintergrund.</summary>

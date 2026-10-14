@@ -10,16 +10,23 @@ import { PdfEngineLoader } from './pdf-engine';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
   id: 9, title: 'Buch', author: 'Autor', year: null, tags: [], description: null, targetMinElo: null, source: 'upload',
-  pageCount: 120, hasCover: false, ownerUserId: 1, ownerName: null, isOwner: true, canManage: true, groupIds: [],
+  pageCount: 120, hasCover: false, diagramState: 'unsupported', diagramCount: 0, ownerUserId: 1, ownerName: null, isOwner: true, canManage: true, groupIds: [],
   files: [{ id: 1, format: 'pdf', fileName: 'b.pdf', sizeBytes: 1000 }], primaryFormat: 'pdf',
   progress: { page: 42, pageCount: 120, updatedAt: '' }, createdAt: '', updatedAt: '', ...over,
 });
+
+const DIAGRAMS = [
+  { id: 11, page: 33, x: 0.1, y: 0.1, w: 0.3, h: 0.2, fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b - - 0 1', label: '1', caption: 'Hamppe – Steinitz', sideKnown: true },
+  { id: 12, page: 33, x: 0.1, y: 0.4, w: 0.3, h: 0.2, fen: 'rnb3kr/ppp4p/3b3B/3Pp2n/2BP4/3K1Rp1/PPP3q1/RN1Q4 w - - 0 1', label: '2', caption: null, sideKnown: true },
+  { id: 13, page: 40, x: 0.5, y: 0.1, w: 0.3, h: 0.2, fen: '8/8/8/8/8/8/8/K6k w - - 0 1', label: null, caption: null, sideKnown: false },
+];
 
 describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
   async function make(b: Ebook) {
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'setProgress', 'forgetToken']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'setProgress', 'forgetToken', 'diagrams']);
+    service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
     service.accessToken.and.returnValue(of('tok'));
     service.fileUrl.and.callFake((id, t, o) => `/api/ebooks/${id}/file?t=${t}${o?.download ? '&download=true' : ''}${o?.fileId ? '&fileId=' + o.fileId : ''}`);
@@ -97,5 +104,39 @@ describe('EbookReaderComponent', () => {
     const fixture = TestBed.createComponent(EbookReaderComponent);
     fixture.detectChanges();
     expect(fixture.componentInstance.error).toBeTrue();
+  });
+
+  it('ohne erkannte Diagramme wird keine Liste geholt und der Leser bleibt einspaltig', async () => {
+    const fixture = await make(book());
+    expect(service.diagrams).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.hasDiagrams).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.rd-panel')).toBeNull();
+  });
+
+  it('mit Diagrammen: Zonen je Diagramm, Doppelklick stellt auf, Schwarz am Zug dreht das Brett', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    expect(c.zones().map(z => z.id)).toEqual([11, 12, 13]);
+    c.pick(11);
+    expect(c.picked()!.id).toBe(11);
+    expect(c.flipped()).toBeTrue();
+    expect(c.panelOpen()).toBeTrue();
+    expect(c.analysisParams(c.picked()!)).toEqual({ fen: DIAGRAMS[0].fen, orientation: 'black', from: '/ebooks/9' });
+    c.step(1);
+    expect(c.picked()!.id).toBe(12);
+    expect(c.flipped()).toBeFalse();
+    expect(c.pickedIndex).toBe(2);
+    c.step(1); c.step(1);
+    expect(c.picked()!.id).toBe(13);   // bleibt am Ende stehen
+    expect(c.sideKey(c.picked()!)).toBe('ebooks.reader.sideUnknown');
+    c.step(-1);
+    expect(c.picked()!.id).toBe(12);
+  });
+
+  it('der erste Schritt ohne Auswahl beginnt beim ersten Diagramm ab der aktuellen Seite', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3, progress: { page: 35, pageCount: 120, updatedAt: '' } }));
+    const c = fixture.componentInstance;
+    c.step(1);
+    expect(c.picked()!.id).toBe(13);
   });
 });

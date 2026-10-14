@@ -618,6 +618,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Formate/Seitenzahl/Sichtbarkeit als `.chip`-Abzeichen, Aktionszeile unten (Hauptaktion links, ⋮ rechts); Raster
   `repeat(auto-fill, minmax(170px, 1fr))`, am Handy 150 px. Filter-Chips (`.eb-chip`, `aria-pressed`) wie 5.9. Der Leser
   ist ein Sonderlayout (4.5): Werkzeugleiste + Seiten in der Resthöhe, eigener Scrollkasten, Seiten auf dunklem Grund.
+  Mit erkannten Diagrammen zweispaltig: Buch links, Brett rechts (`clamp(300px, 32vw, 460px)`); unter 900 px Brett als
+  Leiste unten, erst nach dem ersten Doppelklick (0.766.0). Diagrammzonen zeigen sich erst beim Überfahren/Fokus.
 
 - `index.html` theme-color `#3f51b5`.
 
@@ -838,6 +840,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-14 | 0.766.0 | E-Book-Leser zweispaltig mit Brett rechts; Diagrammzonen nur beim Überfahren sichtbar, Doppelklick stellt auf | Buch bleibt ungestört lesbar, das Brett ist ein Werkzeug daneben | E-Book-Diagramme Stufe 1 |
 | 2026-10-13 | 0.764.0 | E-Book-Karten als Regal (Titelbild 2:3, Lesestand-Balken, Abzeichen); Leser als Sonderlayout mit eigenem Scrollkasten | neuer Bereich, Buchtitel allein sagen wenig — das Titelbild ist die Wiedererkennung | E-Book-Bibliothek |
 | 2026-07-26 | 0.334.0 | UI-Dichte-Regel: eine primäre Aktion, ≤ 3 sekundäre, Rest ⋮; ein Satz je Karte, Rest hinter ? | Dichte wuchs mit jedem Feature | UI-Welle 2/3, `rookhub/CLAUDE.md` |
 | 2026-07-26 | 0.334.0 | Eine Seitenbreite `--page-max-width: 1240px` | page-eigene 1400px/96vw, tote Info-Spalten | UI-Welle 3, `styles.scss` |

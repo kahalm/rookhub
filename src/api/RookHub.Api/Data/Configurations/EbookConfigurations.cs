@@ -14,6 +14,7 @@ internal sealed class EbookConfiguration : IEntityTypeConfiguration<Ebook>
         e.HasIndex(b => b.Title);
         // „Welche Bücher braucht der Cover-Worker noch?" — ältestes zuerst.
         e.HasIndex(b => new { b.CoverState, b.Id });
+        e.HasIndex(b => new { b.DiagramState, b.Id });
         e.HasOne(b => b.Owner)
          .WithMany()
          .HasForeignKey(b => b.OwnerUserId)
@@ -69,5 +70,18 @@ internal sealed class EbookProgressConfiguration : IEntityTypeConfiguration<Eboo
          .OnDelete(DeleteBehavior.Cascade);
         // „Zuletzt gelesen" des Nutzers in der Übersicht.
         e.HasIndex(p => new { p.UserId, p.UpdatedAt });
+    }
+}
+
+internal sealed class EbookDiagramConfiguration : IEntityTypeConfiguration<EbookDiagram>
+{
+    public void Configure(EntityTypeBuilder<EbookDiagram> e)
+    {
+        e.HasOne(d => d.Ebook)
+         .WithMany()
+         .HasForeignKey(d => d.EbookId)
+         .OnDelete(DeleteBehavior.Cascade);
+        // „Alle Diagramme eines Buchs in Lesereihenfolge" — die Abfrage des Lesers.
+        e.HasIndex(d => new { d.EbookId, d.Page, d.Y });
     }
 }

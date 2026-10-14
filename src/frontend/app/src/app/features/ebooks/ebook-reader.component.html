@@ -43,10 +43,46 @@
     </div>
 
     @if (readable && fileUrl) {
-      <div class="rd-viewer">
-        <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
-                        (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
-                        (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
+      <div class="rd-body" [class.rd-body--split]="hasDiagrams" [class.rd-body--panel-open]="panelOpen()">
+        <div class="rd-viewer">
+          <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
+                          [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)"
+                          (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
+                          (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
+        </div>
+        @if (hasDiagrams) {
+          <aside class="rd-panel" [attr.aria-label]="'ebooks.reader.boardPanel' | translate">
+            <div class="rd-panel-head">
+              <button mat-icon-button (click)="step(-1)" [appIconLabel]="'ebooks.reader.prevDiagram' | translate"><mat-icon>chevron_left</mat-icon></button>
+              <span class="rd-panel-pos">
+                @if (picked(); as d) {
+                  {{ d.label ? ('ebooks.reader.diagramNo' | translate: { n: d.label }) : ('ebooks.reader.diagramAt' | translate: { page: d.page }) }}
+                } @else {
+                  {{ 'ebooks.reader.diagramCount' | translate: { n: diagrams().length } }}
+                }
+              </span>
+              <button mat-icon-button (click)="step(1)" [appIconLabel]="'ebooks.reader.nextDiagram' | translate"><mat-icon>chevron_right</mat-icon></button>
+              <button mat-icon-button class="rd-panel-close" (click)="panelOpen.set(false)" [appIconLabel]="'common.close' | translate"><mat-icon>close</mat-icon></button>
+            </div>
+            @if (picked(); as d) {
+              <div class="rd-board"><app-chess-board [fen]="d.fen" [flipped]="flipped()" /></div>
+              @if (d.caption) { <p class="rd-caption" [title]="d.caption">{{ d.caption }}</p> }
+              <p class="rd-side">{{ sideKey(d) | translate }}</p>
+              <div class="rd-panel-actions">
+                <a mat-flat-button color="primary" routerLink="/analysis" [queryParams]="analysisParams(d)">
+                  <mat-icon>biotech</mat-icon>{{ 'ebooks.reader.analyse' | translate }}
+                </a>
+                <button mat-icon-button (click)="flipped.set(!flipped())" [appIconLabel]="'ebooks.reader.flip' | translate"><mat-icon>swap_vert</mat-icon></button>
+                <button mat-icon-button (click)="copyFen(d)" [appIconLabel]="'ebooks.reader.copyFen' | translate"><mat-icon>content_copy</mat-icon></button>
+              </div>
+            } @else {
+              <div class="empty-state rd-panel-empty">
+                <mat-icon>touch_app</mat-icon>
+                <p>{{ 'ebooks.reader.pickHint' | translate }}</p>
+              </div>
+            }
+          </aside>
+        }
       </div>
     } @else {
       <div class="rd-pad">

@@ -28,6 +28,9 @@ export interface Ebook {
   source: 'upload' | 'library';
   pageCount: number | null;
   hasCover: boolean;
+  /** Stand der Diagramm-Erkennung: `pending` / `done` / `failed` / `unsupported` (Scan ohne Schach-Font). */
+  diagramState: 'pending' | 'done' | 'failed' | 'unsupported';
+  diagramCount: number;
   ownerUserId: number | null;
   ownerName: string | null;
   isOwner: boolean;
@@ -39,6 +42,25 @@ export interface Ebook {
   progress: EbookProgress | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Ein erkanntes Diagramm: Lage als Anteil der Seite (0–1, Ursprung links oben), FEN, Nummer, Überschrift. */
+export interface EbookDiagram {
+  id: number;
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  fen: string;
+  label: string | null;
+  caption: string | null;
+  sideKnown: boolean;
+}
+
+export interface EbookDiagramList {
+  state: Ebook['diagramState'];
+  items: EbookDiagram[];
 }
 
 export interface EbookTagFacet { tag: string; count: number; }
@@ -130,6 +152,10 @@ export class EbookService {
 
   get(id: number): Observable<Ebook> {
     return this.http.get<Ebook>(`/api/ebooks/${id}`);
+  }
+
+  diagrams(id: number): Observable<EbookDiagramList> {
+    return this.http.get<EbookDiagramList>(`/api/ebooks/${id}/diagrams`);
   }
 
   groupOptions(): Observable<EbookGroupOption[]> {

@@ -68,6 +68,12 @@ public class Ebook
 
     public EbookCoverState CoverState { get; set; } = EbookCoverState.Pending;
 
+    /// <summary>Stand der Diagramm-Erkennung (<see cref="EbookDiagram"/>), die der <c>EbookDiagramWorker</c> nachträglich macht.</summary>
+    public EbookDiagramState DiagramState { get; set; } = EbookDiagramState.Pending;
+
+    /// <summary>Erkannte Diagramme (nur gültig bei <see cref="EbookDiagramState.Done"/>).</summary>
+    public int DiagramCount { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -132,4 +138,59 @@ public class EbookProgress
     public int? PageCount { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Stand der Diagramm-Erkennung eines Buchs.</summary>
+public enum EbookDiagramState
+{
+    /// <summary>Noch nicht versucht — der Worker nimmt sich das Buch beim nächsten Durchlauf.</summary>
+    Pending = 0,
+    Done = 1,
+    /// <summary>Datei kaputt, Zeitüberschreitung — kein weiterer Versuch.</summary>
+    Failed = 2,
+    /// <summary>Kein PDF oder kein bekannter Schach-Font darin (reiner Scan): nichts zu erkennen (Stufe 1).</summary>
+    Unsupported = 3,
+}
+
+/// <summary>
+/// Ein im PDF erkanntes SCHACHDIAGRAMM (0.766.0): digital gesetzte Bücher zeichnen Diagramme als Text in einem
+/// Schach-Font (Chess Merida, ChessBase DiagramTT, Hastings …) — jedes Feld ein Buchstabe. Die Erkennung liest die
+/// Buchstaben samt Lage und baut daraus Brett und FEN, exakt und ohne Bildverfahren
+/// (<c>Services/Ebooks/EbookDiagramExtractor</c>). Die Lage ist als ANTEIL der Seite gespeichert (0–1, Ursprung links
+/// oben), damit der Leser sie bei jedem Zoom ohne PDF-Wissen über die Leinwand legen kann.
+/// </summary>
+public class EbookDiagram
+{
+    public int Id { get; set; }
+
+    public int EbookId { get; set; }
+    public Ebook Ebook { get; set; } = null!;
+
+    /// <summary>1-basierte Seite der PDF-Datei.</summary>
+    public int Page { get; set; }
+
+    /// <summary>Lage auf der Seite als Anteil (0–1), Ursprung links oben.</summary>
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double W { get; set; }
+    public double H { get; set; }
+
+    /// <summary>Vollständige FEN: Brett, Zugrecht, Rochade geschätzt (König + Turm auf Ausgangsfeldern), En-passant „-“.</summary>
+    [Required, MaxLength(100)]
+    public string Fen { get; set; } = string.Empty;
+
+    /// <summary>Nummer/Beschriftung neben dem Diagramm (Aufgabennummer), wenn gefunden.</summary>
+    [MaxLength(40)]
+    public string? Label { get; set; }
+
+    /// <summary>Textzeile direkt über dem Diagramm (Spieler, Ort, Jahr), wenn vorhanden.</summary>
+    [MaxLength(200)]
+    public string? Caption { get; set; }
+
+    /// <summary>Ob das Zugrecht aus einem Marker/Text kam (<c>true</c>) oder nur die Vorgabe Weiß ist.</summary>
+    public bool SideKnown { get; set; }
+
+    /// <summary>Welche Font-Familie das Diagramm gesetzt hat (zum Nachvollziehen von Lesefehlern).</summary>
+    [MaxLength(60)]
+    public string? FontFamily { get; set; }
 }

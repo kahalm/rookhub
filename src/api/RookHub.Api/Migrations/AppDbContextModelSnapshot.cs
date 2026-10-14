@@ -2195,6 +2195,12 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("varchar(2000)");
 
+                    b.Property<int>("DiagramCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DiagramState")
+                        .HasColumnType("int");
+
                     b.Property<int?>("OwnerUserId")
                         .HasColumnType("int");
 
@@ -2231,7 +2237,62 @@ namespace RookHub.Api.Migrations
 
                     b.HasIndex("CoverState", "Id");
 
+                    b.HasIndex("DiagramState", "Id");
+
                     b.ToTable("Ebooks");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Fen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("FontFamily")
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<double>("H")
+                        .HasColumnType("double");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SideKnown")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<double>("W")
+                        .HasColumnType("double");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookId", "Page", "Y");
+
+                    b.ToTable("EbookDiagrams");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>
@@ -8632,6 +8693,17 @@ namespace RookHub.Api.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>

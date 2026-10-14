@@ -12,7 +12,7 @@ import { Ebook, EbookList, EbookService } from './ebook.service';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
   id: 1, title: 'Buch', author: 'Autor', year: 2000, tags: [], description: null, targetMinElo: null, source: 'upload',
-  pageCount: 100, hasCover: false, ownerUserId: 1, ownerName: 'owner', isOwner: true, canManage: true, groupIds: [],
+  pageCount: 100, hasCover: false, diagramState: 'unsupported', diagramCount: 0, ownerUserId: 1, ownerName: 'owner', isOwner: true, canManage: true, groupIds: [],
   files: [{ id: 1, format: 'pdf', fileName: 'b.pdf', sizeBytes: 1000 }], primaryFormat: 'pdf', progress: null,
   createdAt: '', updatedAt: '2026-10-13T00:00:00Z', ...over,
 });

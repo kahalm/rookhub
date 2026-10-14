@@ -5312,7 +5312,23 @@
       "fitWidth": "Breite füllen",
       "notViewable": "Dieses Format lässt sich im Browser nicht anzeigen – lade es herunter:",
       "loadFailed": "Das PDF konnte nicht geladen werden. Geh zurück und öffne es noch einmal.",
-      "saveProgressFailed": "Deine Leseposition konnte nicht gespeichert werden."
+      "saveProgressFailed": "Deine Leseposition konnte nicht gespeichert werden.",
+      "diagramZone": "Doppelklick: Diagramm aufs Brett holen",
+      "boardPanel": "Brett",
+      "prevDiagram": "Voriges Diagramm",
+      "nextDiagram": "Nächstes Diagramm",
+      "diagramNo": "Diagramm {{n}}",
+      "diagramAt": "Diagramm auf Seite {{page}}",
+      "diagramCount": "{{n}} Diagramme",
+      "pickHint": "Doppelklick auf ein Diagramm im Buch stellt es hier auf.",
+      "whiteToMove": "Weiß am Zug",
+      "blackToMove": "Schwarz am Zug",
+      "sideUnknown": "Zugrecht steht nicht im Buch",
+      "analyse": "Analysieren",
+      "flip": "Brett drehen",
+      "copyFen": "FEN kopieren",
+      "fenCopied": "FEN kopiert.",
+      "copyFailed": "Kopieren hat nicht geklappt."
     }
   }
 }

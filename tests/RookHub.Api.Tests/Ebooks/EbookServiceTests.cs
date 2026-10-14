@@ -306,4 +306,38 @@ public class EbookServiceTests : IDisposable
         Assert.Null(EbookFormats.FormatOf("x.exe"));
         Assert.Null(EbookFormats.FormatOf("noext"));
     }
+
+    [Fact]
+    public async Task Diagrams_OnlyWhenDone_InReadingOrder_AndHiddenForStrangers()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var other = await _kit.UserAsync("other");
+        var book = await _kit.BookAsync("Buch", owner.Id);
+        _kit.Db.EbookDiagrams.AddRange(
+            new EbookDiagram { EbookId = book.Id, Page = 5, Y = 0.6, Fen = "8/8/8/8/8/8/8/K6k w - - 0 1" },
+            new EbookDiagram { EbookId = book.Id, Page = 5, Y = 0.1, Fen = "8/8/8/8/8/8/8/K5k1 b - - 0 1", Label = "7" },
+            new EbookDiagram { EbookId = book.Id, Page = 2, Y = 0.5, Fen = "8/8/8/8/8/8/8/K4k2 w - - 0 1" });
+        await _kit.Db.SaveChangesAsync();
+
+        var pending = await _kit.Service.GetDiagramsAsync(owner.Id, false, book.Id);
+        Assert.Equal("pending", pending.State);
+        Assert.Empty(pending.Items);
+
+        book.DiagramState = EbookDiagramState.Done;
+        book.DiagramCount = 3;
+        await _kit.Db.SaveChangesAsync();
+        var done = await _kit.Service.GetDiagramsAsync(owner.Id, false, book.Id);
+        Assert.Equal("done", done.State);
+        Assert.Equal([2, 5, 5], done.Items.Select(d => d.Page));
+        Assert.Equal("7", done.Items[1].Label);
+        Assert.Equal(3, (await _kit.Service.GetAsync(owner.Id, false, book.Id)).DiagramCount);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _kit.Service.GetDiagramsAsync(other.Id, false, book.Id));
+
+        Assert.Equal(1, await _kit.Service.RescanDiagramsAsync());
+        Assert.Equal(EbookDiagramState.Pending, (await _kit.Db.Ebooks.SingleAsync()).DiagramState);
+
+        await _kit.Service.DeleteAsync(owner.Id, false, book.Id);
+        Assert.Empty(_kit.Db.EbookDiagrams);
+    }
 }

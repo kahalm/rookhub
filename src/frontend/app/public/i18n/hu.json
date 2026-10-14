@@ -5312,7 +5312,23 @@
       "fitWidth": "Szélességhez igazítás",
       "notViewable": "Ez a formátum nem jeleníthető meg a böngészőben – töltsd le:",
       "loadFailed": "A PDF-et nem sikerült betölteni. Lépj vissza, és nyisd meg újra.",
-      "saveProgressFailed": "Az olvasási pozíciót nem sikerült menteni."
+      "saveProgressFailed": "Az olvasási pozíciót nem sikerült menteni.",
+      "diagramZone": "Dupla kattintás: a diagram a táblára kerül",
+      "boardPanel": "Tábla",
+      "prevDiagram": "Előző diagram",
+      "nextDiagram": "Következő diagram",
+      "diagramNo": "{{n}}. diagram",
+      "diagramAt": "Diagram a(z) {{page}}. oldalon",
+      "diagramCount": "{{n}} diagram",
+      "pickHint": "Kattints duplán egy diagramra a könyvben, és itt felállítjuk.",
+      "whiteToMove": "Világos lép",
+      "blackToMove": "Sötét lép",
+      "sideUnknown": "A könyv nem jelzi, ki lép",
+      "analyse": "Elemzés",
+      "flip": "Tábla forgatása",
+      "copyFen": "FEN másolása",
+      "fenCopied": "FEN másolva.",
+      "copyFailed": "A másolás nem sikerült."
     }
   }
 }

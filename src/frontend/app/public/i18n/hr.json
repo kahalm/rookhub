@@ -5312,7 +5312,23 @@
       "fitWidth": "Prilagodi širini",
       "notViewable": "Ovaj se format ne može prikazati u pregledniku – preuzmi ga:",
       "loadFailed": "PDF se nije mogao učitati. Vrati se i otvori ga ponovno.",
-      "saveProgressFailed": "Tvoj položaj čitanja nije se mogao spremiti."
+      "saveProgressFailed": "Tvoj položaj čitanja nije se mogao spremiti.",
+      "diagramZone": "Dvostruki klik: prenesi dijagram na ploču",
+      "boardPanel": "Ploča",
+      "prevDiagram": "Prethodni dijagram",
+      "nextDiagram": "Sljedeći dijagram",
+      "diagramNo": "Dijagram {{n}}",
+      "diagramAt": "Dijagram na stranici {{page}}",
+      "diagramCount": "Dijagrama: {{n}}",
+      "pickHint": "Dvostruki klik na dijagram u knjizi postavlja ga ovdje.",
+      "whiteToMove": "Bijeli je na potezu",
+      "blackToMove": "Crni je na potezu",
+      "sideUnknown": "Knjiga ne navodi tko je na potezu",
+      "analyse": "Analiziraj",
+      "flip": "Okreni ploču",
+      "copyFen": "Kopiraj FEN",
+      "fenCopied": "FEN kopiran.",
+      "copyFailed": "Kopiranje nije uspjelo."
     }
   }
 }

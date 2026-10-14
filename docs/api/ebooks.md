@@ -62,3 +62,34 @@ werden nur sichtbare Seiten ± eine Sichtfeldhöhe (Leinwände weiter weg werden
 (`disableAutoFetch`), „Breite füllen" als Vorgabe, Zoomstufen in `reader-progress.util.ts`; der Lesestand geht 1,5 s nach dem
 letzten Seitenwechsel an den Server und wird beim nächsten Öffnen angesprungen. EPUB/DJVU/CBZ/… zeigen eine Download-Karte
 (ein EPUB-Leser im Browser ist offen, siehe TODO).
+
+## Diagramm-Erkennung (Stufe 1, 0.766.0)
+
+Digital gesetzte Bücher zeichnen Diagramme als TEXT in einem Schach-Font — jedes Feld ein Buchstabe. `EbookDiagramWorker`
+(alle 30 s, 2 Bücher je Durchlauf) liest jedes PDF mit **PdfPig** (`EbookDiagramExtractor`): Buchstaben eines bekannten
+Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht daraus Bretter (Gruppen, die genau 8 × 8 Zellen
+überspannen; fehlende Zellen = leer, weil PDF-Bibliotheken Leerzeichen unterschlagen; Lage über Grundlinie + Vorschub, nicht
+über das je Figur verschiedene Tintenrechteck). Ergebnis in `EbookDiagrams` (Seite, Lage als Seitenanteil 0–1, FEN, Nummer,
+Überschrift, `SideKnown`), Stand am Buch (`DiagramState` pending/done/failed/unsupported, `DiagramCount`).
+
+- **Font-Belegungen** (nie raten, nur verifizierte): Marroquin-Familie (Chess Merida u. a.: klein = helles Feld, groß =
+  dunkles, `pnbrqk` weiß, `omvtwl` schwarz) und ChessBase DiagramTT (groß weiß, klein schwarz, Läufer `L`, Schraffur-Overlays
+  `s t v w z m` ignoriert). Hastings, Linares, CAChess … fehlen noch (Umfrage 14.10.: 58 von 473 PDFs haben einen
+  Diagramm-Font, 271 sind reine Scans). Nach einer neuen Belegung: `POST /api/admin/ebooks/diagrams/rescan`.
+- **Nummer**: Zahl links der Oberkante (Kreis, Quality Chess) oder ALLEIN auf der Zeile darüber (sonst wären Jahreszahlen
+  Nummern). **Zugrecht**: Wingdings3-Dreieck rechts neben DIESEM Brett (U+F072 Weiß, U+F071 Schwarz), sonst „White/Black to
+  move“ direkt darüber/darunter, sonst Weiß mit `SideKnown=false`. **Rochade** geschätzt (König + Turm auf Ausgangsfeldern).
+- Prüfung „The Woodpecker Method“ gegen Chessable-Kurs 88: 1 140 Diagramme, 1 128 nummeriert, Brett 1 118 gleich (die 10
+  übrigen weichen im KURS ab, visuell geprüft), Zugrecht 1 127, Rochade 1 114. Test `EbookDiagramExtractionTests` liest das
+  echte Buch, wenn der Rechner es hat (CI überspringt).
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/ebooks/{id:int}/diagrams` | Auth | `{ state, items[{ id, page, x, y, w, h, fen, label, caption, sideKnown }] }` in Lesereihenfolge; leer, solange nicht `done`. Unsichtbar → 404 |
+| POST | `/api/admin/ebooks/diagrams/rescan` | `ebooks.manage` | alle PDF-Bücher neu vormerken → `{ queued }` |
+
+**Leser**: hat das Buch Diagramme, wird er zweispaltig — Buch links, Brett rechts (`clamp(300px, 32vw, 460px)`). Über jedem
+Diagramm liegt eine Zone (`PdfViewerComponent.zones`, Prozent der Seite → zoomfest); Doppelklick (oder Fokus + Enter) holt die
+Stellung aufs Brett, Schwarz am Zug dreht es. ‹/› gehen alle Diagramme durch und scrollen das Buch mit, „Analysieren“ öffnet
+`/analysis?fen=…&from=/ebooks/:id`, FEN kopieren. Unter 900 px liegt das Brett als Leiste unten und erscheint erst nach dem
+ersten Doppelklick.

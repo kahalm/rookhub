@@ -46,7 +46,7 @@ describe('EbookEditDialogComponent', () => {
     const c = await make({
       ebook: {
         id: 3, title: 'T', author: 'A', year: 1999, tags: ['x', 'y'], description: 'd', targetMinElo: null, source: 'upload',
-        pageCount: null, hasCover: false, ownerUserId: 1, ownerName: null, isOwner: true, canManage: true, groupIds: [7],
+        pageCount: null, hasCover: false, diagramState: 'unsupported', diagramCount: 0, ownerUserId: 1, ownerName: null, isOwner: true, canManage: true, groupIds: [7],
         files: [], primaryFormat: null, progress: null, createdAt: '', updatedAt: '',
       },
       groups: [{ id: 7, name: 'G', isEveryone: false }], maxFileBytes: 1,

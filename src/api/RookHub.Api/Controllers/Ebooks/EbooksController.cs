@@ -105,6 +105,11 @@ public class EbooksController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>Erkannte Diagramme (Lage als Seitenanteil, FEN, Nummer, Überschrift) — für die Doppelklick-Zonen des Lesers.</summary>
+    [HttpGet("{id:int}/diagrams")]
+    public async Task<ActionResult<EbookDiagramListDto>> GetDiagrams(int id, CancellationToken ct)
+        => Ok(await _service.GetDiagramsAsync(GetUserId(), await ManageAllAsync(), id, ct));
+
     [HttpGet("{id:int}/progress")]
     public async Task<ActionResult<EbookProgressDto?>> GetProgress(int id, CancellationToken ct)
         => Ok(await _service.GetProgressAsync(GetUserId(), await ManageAllAsync(), id, ct));

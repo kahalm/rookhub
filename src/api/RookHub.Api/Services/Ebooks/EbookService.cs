@@ -142,6 +142,8 @@ public class EbookService
                 Source = b.Source == EbookSource.Library ? "library" : "upload",
                 PageCount = b.PageCount,
                 HasCover = b.CoverState == EbookCoverState.Done,
+                DiagramState = b.DiagramState.ToString().ToLowerInvariant(),
+                DiagramCount = b.DiagramState == EbookDiagramState.Done ? b.DiagramCount : 0,
                 OwnerUserId = b.OwnerUserId,
                 OwnerName = b.OwnerUserId is int oid && owners.TryGetValue(oid, out var n) ? n : null,
                 IsOwner = b.OwnerUserId == userId,
@@ -258,6 +260,7 @@ public class EbookService
         var ebook = await EbookAccess.LoadManageableAsync(_db, userId, id, manageAll, ct);
         // InMemory kaskadiert nicht — abhängige Zeilen ausdrücklich räumen (gilt auch für MariaDB: kein Schaden).
         _db.EbookProgresses.RemoveRange(_db.EbookProgresses.Where(p => p.EbookId == id));
+        _db.EbookDiagrams.RemoveRange(_db.EbookDiagrams.Where(d => d.EbookId == id));
         _db.EbookGroupAccesses.RemoveRange(ebook.GroupAccess);
         _db.EbookFiles.RemoveRange(ebook.Files);
         _db.Ebooks.Remove(ebook);
@@ -344,6 +347,33 @@ public class EbookService
         p.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, UpdatedAt = p.UpdatedAt };
+    }
+
+    // ── Diagramme ──────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Alle erkannten Diagramme eines sichtbaren Buchs in Lesereihenfolge (Seite, dann von oben nach unten).</summary>
+    public async Task<EbookDiagramListDto> GetDiagramsAsync(int userId, bool manageAll, int id, CancellationToken ct = default)
+    {
+        var state = await EbookAccess.Visible(_db, userId, manageAll).Where(b => b.Id == id)
+            .Select(b => (EbookDiagramState?)b.DiagramState).FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException("E-book not found.");
+        var items = state == EbookDiagramState.Done
+            ? await _db.EbookDiagrams.Where(d => d.EbookId == id).OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
+                .Select(d => new EbookDiagramDto
+                {
+                    Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown,
+                }).ToListAsync(ct)
+            : [];
+        return new EbookDiagramListDto { State = state.ToString().ToLowerInvariant(), Items = items };
+    }
+
+    /// <summary>Diagramm-Erkennung aller PDF-Bücher neu anstoßen (nach neuen Font-Belegungen); Antwort = Zahl der Bücher.</summary>
+    public async Task<int> RescanDiagramsAsync(CancellationToken ct = default)
+    {
+        var books = await _db.Ebooks.Where(b => b.DiagramState != EbookDiagramState.Pending && b.Files.Any(f => f.Format == "pdf")).ToListAsync(ct);
+        foreach (var b in books) b.DiagramState = EbookDiagramState.Pending;
+        await _db.SaveChangesAsync(ct);
+        return books.Count;
     }
 
     // ── Dateien ────────────────────────────────────────────────────────────────────────────────

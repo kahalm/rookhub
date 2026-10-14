@@ -7,6 +7,9 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { PdfDocument, PdfEngineLoader, PdfLoadingTask, PdfPage } from './pdf-engine';
 import { currentPage, fitWidthZoom, pagesToRender } from './reader-progress.util';
 
+/** Eine anklickbare Zone über der Seite (Lage als Anteil der Seite, 0–1). */
+export interface PdfZone { id: number; page: number; x: number; y: number; w: number; h: number; title?: string; }
+
 interface PageSlot {
   index: number;            // 1-basiert
   width: number;            // bei Faktor 1 (72 dpi)
@@ -43,6 +46,17 @@ interface PageSlot {
     .pv-scroll { height: 100%; overflow: auto; background: color-mix(in srgb, var(--mat-sys-surface) 85%, black); outline: none; }
     .pv-pages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 8px 40px; }
     .pv-pages canvas { display: block; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+    /* Seiten-Hülle + Diagrammzonen werden per DOM-API angelegt — ohne die Kapselung des Templates, daher ::ng-deep. */
+    :host ::ng-deep .pv-page { position: relative; }
+    :host ::ng-deep .pv-zone {
+      position: absolute; padding: 0; margin: 0; border: 2px solid transparent; border-radius: 3px;
+      background: transparent; cursor: zoom-in;
+    }
+    :host ::ng-deep .pv-zone:hover, :host ::ng-deep .pv-zone:focus-visible {
+      border-color: color-mix(in srgb, var(--mat-sys-primary) 70%, transparent);
+      background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent); outline: none;
+    }
+    :host ::ng-deep .pv-zone--active { border-color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
     .pv-error { text-align: center; padding: 2rem 1rem; color: var(--rh-error); }
   `],
 })
@@ -59,6 +73,11 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Output() failed = new EventEmitter<unknown>();
   /** Der tatsächlich benutzte Faktor (nach „Breite füllen"), damit die Werkzeugleiste ihn anzeigen kann. */
   @Output() zoomApplied = new EventEmitter<number>();
+  /** Zonen über den Seiten (erkannte Diagramme) — Doppelklick meldet `zonePick`. */
+  @Input() zones: readonly PdfZone[] = [];
+  /** Hervorgehobene Zone (das Diagramm, das gerade auf dem Brett steht). */
+  @Input() activeZone: number | null = null;
+  @Output() zonePick = new EventEmitter<number>();
 
   @ViewChild('scroll', { static: true }) private scrollRef!: ElementRef<HTMLDivElement>;
   @ViewChild('pages', { static: true }) private pagesRef!: ElementRef<HTMLDivElement>;
@@ -73,6 +92,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   private task: PdfLoadingTask | null = null;
   private slots: PageSlot[] = [];
   private canvases: HTMLCanvasElement[] = [];
+  private wraps: HTMLDivElement[] = [];
   private pageCache = new Map<number, PdfPage>();
   private scale = 1;
   private current = 0;
@@ -90,6 +110,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['src'] && !changes['src'].firstChange) void this.open();
     if (changes['zoom'] && !changes['zoom'].firstChange && this.doc) this.applyZoom();
+    if ((changes['zones'] && !changes['zones'].firstChange) || changes['activeZone']) this.placeZones();
   }
 
   ngOnDestroy(): void {
@@ -116,6 +137,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.pagesRef.nativeElement.replaceChildren();
     this.slots = [];
     this.canvases = [];
+    this.wraps = [];
     this.current = 0;
     try {
       const lib = await this.engine.load();
@@ -135,6 +157,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
         this.slots.push({ index: i, width: base.width, height: base.height, rendered: 0, rendering: null });
       this.buildCanvases();
       this.applyZoom();
+      this.placeZones();
       this.loading.set(false);
       this.loaded.emit({ pageCount: doc.numPages, fitZoom: this.fitZoom(base.width) });
       if (this.initialPage > 1) requestAnimationFrame(() => this.goTo(this.initialPage));
@@ -160,9 +183,41 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
       canvas.setAttribute('aria-label', `${slot.index}`);
       wrap.appendChild(canvas);
       frag.appendChild(wrap);
+      this.wraps.push(wrap);
       this.canvases.push(canvas);
     }
     this.pagesRef.nativeElement.appendChild(frag);
+  }
+
+  /**
+   * Legt je Zone ein Element über die Seite (Prozent der Seite → passt bei jedem Zoom ohne Neurechnen). Doppelklick
+   * holt das Diagramm aufs Brett; per Tastatur Fokus + Enter. Bestehende Zonen werden ersetzt.
+   */
+  private placeZones(): void {
+    for (const wrap of this.wraps) wrap.querySelectorAll('.pv-zone').forEach(z => z.remove());
+    for (const zone of this.zones) {
+      const wrap = this.wraps[zone.page - 1];
+      if (!wrap) continue;
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'pv-zone' + (zone.id === this.activeZone ? ' pv-zone--active' : '');
+      el.style.left = `${zone.x * 100}%`;
+      el.style.top = `${zone.y * 100}%`;
+      el.style.width = `${zone.w * 100}%`;
+      el.style.height = `${zone.h * 100}%`;
+      if (zone.title) { el.title = zone.title; el.setAttribute('aria-label', zone.title); }
+      el.addEventListener('dblclick', ev => { ev.preventDefault(); this.zone.run(() => this.zonePick.emit(zone.id)); });
+      el.addEventListener('keydown', ev => { if (ev.key === 'Enter') this.zone.run(() => this.zonePick.emit(zone.id)); });
+      wrap.appendChild(el);
+    }
+  }
+
+  /** Zur Seite einer Zone scrollen, sodass das Diagramm sichtbar ist. */
+  revealZone(z: PdfZone): void {
+    const wrap = this.wraps[z.page - 1];
+    if (!wrap) return;
+    const top = wrap.offsetTop + z.y * wrap.offsetHeight - 24;
+    this.scrollRef.nativeElement.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 
   private fitZoom(pageWidth: number): number {

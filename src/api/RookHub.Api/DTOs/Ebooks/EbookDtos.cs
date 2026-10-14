@@ -33,6 +33,9 @@ public class EbookDto
     public string Source { get; set; } = "upload";
     public int? PageCount { get; set; }
     public bool HasCover { get; set; }
+    /// <summary><c>pending</c> / <c>done</c> / <c>failed</c> / <c>unsupported</c> — Stand der Diagramm-Erkennung.</summary>
+    public string DiagramState { get; set; } = "pending";
+    public int DiagramCount { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public bool IsOwner { get; set; }
@@ -160,4 +163,27 @@ public class EbookLibraryStatusDto
     public bool UploadsEnabled { get; set; }
     public int Imported { get; set; }
     public int CoversPending { get; set; }
+    public int DiagramsPending { get; set; }
+}
+
+/// <summary>Ein erkanntes Diagramm; Lage als Anteil der Seite (0–1, Ursprung links oben).</summary>
+public class EbookDiagramDto
+{
+    public int Id { get; set; }
+    public int Page { get; set; }
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double W { get; set; }
+    public double H { get; set; }
+    public string Fen { get; set; } = string.Empty;
+    public string? Label { get; set; }
+    public string? Caption { get; set; }
+    public bool SideKnown { get; set; }
+}
+
+/// <summary>Antwort von <c>GET /api/ebooks/{id}/diagrams</c>.</summary>
+public class EbookDiagramListDto
+{
+    public string State { get; set; } = "pending";
+    public List<EbookDiagramDto> Items { get; set; } = new();
 }

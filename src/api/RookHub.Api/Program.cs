@@ -210,6 +210,9 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookLibraryImporter>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookCoverRenderer>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookCoverWorker>();
+    // Diagramme aus Schach-Font-PDFs (0.766.0): Text-Diagramme → FEN je Diagramm, im Hintergrund je Buch.
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookDiagramExtractor>();
+    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDiagramWorker>();
     builder.Services.AddScoped<RevengeNotificationService>();
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();

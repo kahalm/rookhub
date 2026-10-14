@@ -35,6 +35,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microting.EntityFrameworkCore.MySql" Version="10.0.10" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <!-- Fest gepinnt (war "8.*"): ein Floating-Range zieht bei jedem Restore stillschweigend
          eine neue Sink-Version — Bootstrap/ECS-Templates koennen sich damit ohne Commit aendern. -->

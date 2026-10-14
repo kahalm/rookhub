@@ -5312,7 +5312,23 @@
       "fitWidth": "Fit width",
       "notViewable": "This format cannot be shown in the browser – download it:",
       "loadFailed": "The PDF could not be loaded. Go back and open it again.",
-      "saveProgressFailed": "Your reading position could not be saved."
+      "saveProgressFailed": "Your reading position could not be saved.",
+      "diagramZone": "Double-click: put this diagram on the board",
+      "boardPanel": "Board",
+      "prevDiagram": "Previous diagram",
+      "nextDiagram": "Next diagram",
+      "diagramNo": "Diagram {{n}}",
+      "diagramAt": "Diagram on page {{page}}",
+      "diagramCount": "{{n}} diagrams",
+      "pickHint": "Double-click a diagram in the book to set it up here.",
+      "whiteToMove": "White to move",
+      "blackToMove": "Black to move",
+      "sideUnknown": "Side to move not given in the book",
+      "analyse": "Analyse",
+      "flip": "Flip board",
+      "copyFen": "Copy FEN",
+      "fenCopied": "FEN copied.",
+      "copyFailed": "Copying did not work."
     }
   }
 }

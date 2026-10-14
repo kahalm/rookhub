@@ -11,13 +11,16 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Ebook, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
-import { PdfViewerComponent } from './pdf-viewer.component';
+import { Ebook, EbookDiagram, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
+import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
+import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { nextZoom, parsePageInput } from './reader-progress.util';
 
 /**
  * Leser-Seite (`/ebooks/:id`): Werkzeugleiste (zurück, Titel, Seite x / N, Zoom, Download) und darunter der
- * PDF-Leser mit der ganzen Resthöhe. Der Lesestand wird 1,5 s nach dem letzten Seitenwechsel gespeichert und beim
+ * PDF-Leser mit der ganzen Resthöhe. Hat das Buch erkannte Diagramme (0.766.0), steht rechts ein Brett: Doppelklick auf
+ * ein Diagramm im Buch holt die Stellung herüber, ‹/› springen zum vorigen/nächsten Diagramm, „Analysieren" öffnet sie
+ * im Analysebrett. Unter 900 px liegt das Brett als Leiste unten und erscheint erst mit dem ersten Doppelklick. Der Lesestand wird 1,5 s nach dem letzten Seitenwechsel gespeichert und beim
  * nächsten Öffnen angesprungen. Formate, die der Browser nicht zeigt (EPUB, DJVU …), bekommen eine Download-Karte.
  */
 @Component({
@@ -26,7 +29,7 @@ import { nextZoom, parsePageInput } from './reader-progress.util';
   selector: 'app-ebook-reader',
   standalone: true,
   imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, TranslatePipe,
-    IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent, PdfViewerComponent],
+    IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent, PdfViewerComponent, ChessBoardComponent],
   templateUrl: './ebook-reader.component.html',
   styleUrls: ['./ebook-reader.component.scss'],
 })
@@ -46,6 +49,15 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   readonly appliedZoom = signal(1);
   readonly viewerFailed = signal(false);
   initialPage = 1;
+
+  /** Erkannte Diagramme in Lesereihenfolge (leer, solange die Erkennung läuft oder das Buch ein Scan ist). */
+  readonly diagrams = signal<EbookDiagram[]>([]);
+  readonly zones = signal<PdfZone[]>([]);
+  /** Das Diagramm auf dem Brett. */
+  readonly picked = signal<EbookDiagram | null>(null);
+  readonly flipped = signal(false);
+  /** Schmale Ansicht: Brettleiste ein-/ausgeklappt. */
+  readonly panelOpen = signal(false);
 
   private route = inject(ActivatedRoute);
   private ebooks = inject(EbookService);
@@ -75,6 +87,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
         this.initialPage = book.progress?.page ?? 1;
         this.page.set(this.initialPage);
         if (book.pageCount) this.pageCount.set(book.pageCount);
+        if (book.diagramState === 'done' && book.diagramCount > 0) this.loadDiagrams(book.id);
         this.ebooks.accessToken().subscribe({
           next: token => {
             this.token = token;
@@ -90,6 +103,68 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   }
 
   get readable(): boolean { return this.fileUrl != null; }
+
+  get hasDiagrams(): boolean { return this.diagrams().length > 0; }
+
+  private loadDiagrams(id: number): void {
+    this.ebooks.diagrams(id).subscribe({
+      next: list => {
+        this.diagrams.set(list.items);
+        const title = this.translate.instant('ebooks.reader.diagramZone');
+        this.zones.set(list.items.map(d => ({
+          id: d.id, page: d.page, x: d.x, y: d.y, w: d.w, h: d.h,
+          title: d.label ? `${d.label} · ${title}` : title,
+        })));
+        this.cdr.markForCheck();
+      },
+      // Ohne Diagramme bleibt der Leser einspaltig — das Buch ist trotzdem lesbar, kein Fehlerhinweis nötig.
+      error: () => {},
+    });
+  }
+
+  /** Doppelklick im Buch: Stellung aufs Brett. */
+  pick(id: number): void {
+    const d = this.diagrams().find(x => x.id === id);
+    if (!d) return;
+    this.picked.set(d);
+    this.flipped.set(d.fen.split(' ')[1] === 'b');
+    this.panelOpen.set(true);
+  }
+
+  /** ‹ / › — voriges/nächstes Diagramm, das Buch scrollt mit. */
+  step(delta: 1 | -1): void {
+    const list = this.diagrams();
+    if (list.length === 0) return;
+    const cur = this.picked();
+    let idx = cur ? list.findIndex(d => d.id === cur.id) + delta : (delta > 0 ? list.findIndex(d => d.page >= this.page()) : -1);
+    if (idx < 0) idx = delta > 0 ? 0 : list.length - 1;
+    if (idx >= list.length) idx = list.length - 1;
+    const d = list[idx];
+    this.pick(d.id);
+    this.viewer?.revealZone(d);
+  }
+
+  /** Position in der Liste (für „3 / 1 144"). */
+  get pickedIndex(): number {
+    const cur = this.picked();
+    return cur ? this.diagrams().findIndex(d => d.id === cur.id) + 1 : 0;
+  }
+
+  sideKey(d: EbookDiagram): string {
+    if (!d.sideKnown) return 'ebooks.reader.sideUnknown';
+    return d.fen.split(' ')[1] === 'b' ? 'ebooks.reader.blackToMove' : 'ebooks.reader.whiteToMove';
+  }
+
+  analysisParams(d: EbookDiagram): Record<string, string> {
+    return { fen: d.fen, orientation: this.flipped() ? 'black' : 'white', from: `/ebooks/${this.ebook?.id ?? ''}` };
+  }
+
+  copyFen(d: EbookDiagram): void {
+    navigator.clipboard?.writeText(d.fen).then(
+      () => this.snackbar.quick(this.translate.instant('ebooks.reader.fenCopied')),
+      () => this.snackbar.warn(this.translate.instant('ebooks.reader.copyFailed')),
+    );
+  }
 
   onLoaded(e: { pageCount: number; fitZoom: number }): void {
     this.pageCount.set(e.pageCount);
