@@ -72,10 +72,13 @@ Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht d
 über das je Figur verschiedene Tintenrechteck). Ergebnis in `EbookDiagrams` (Seite, Lage als Seitenanteil 0–1, FEN, Nummer,
 Überschrift, `SideKnown`), Stand am Buch (`DiagramState` pending/done/failed/unsupported, `DiagramCount`).
 
-- **Font-Belegungen** (nie raten, nur verifizierte): Marroquin-Familie (Chess Merida u. a.: klein = helles Feld, groß =
-  dunkles, `pnbrqk` weiß, `omvtwl` schwarz) und ChessBase DiagramTT (groß weiß, klein schwarz, Läufer `L`, Schraffur-Overlays
-  `s t v w z m` ignoriert). Hastings, Linares, CAChess … fehlen noch (Umfrage 14.10.: 58 von 473 PDFs haben einen
-  Diagramm-Font, 271 sind reine Scans). Nach einer neuen Belegung: `POST /api/admin/ebooks/diagrams/rescan`.
+- **Font-Belegungen** (nie raten, nur am Seitenbild bzw. gegen Kurs verifizierte): Marroquin-Familie (Chess Merida, ChessCases,
+  CHESSBOARD …: klein = helles Feld, groß = dunkles, `pnbrqk` weiß, `omvtwl` schwarz), ChessBase DiagramTT + UDiagramm (groß
+  weiß, klein schwarz, Läufer `L`, Schraffur-Overlays `s t v w z m` ignoriert), Hastings/Linares (helles Feld `PNBRQK`/`pnbrqk`,
+  dunkles `) H G $ ! I` / `0 h g 4 1 i`, leer `W w D d`). Nicht lesbar: Figurinen-Schriften (LinaresFigurine, CAChess,
+  FigurineCB), umkodierte Untermengen ohne ToUnicode (Dejascacchi), gedrehte Seiten (Ponentz). Abdeckung 14.10.: rund 50 der
+  58 Font-Bücher liefern Diagramme (Woodpecker 1 140, Grooten 992, Cook 970, Baird 764 …). Nach einer neuen Belegung:
+  `POST /api/admin/ebooks/diagrams/rescan` oder eine Daten-Migration (0.767.0 setzt Unsupported/Failed zurück auf Pending).
 - **Nummer**: Zahl links der Oberkante (Kreis, Quality Chess) oder ALLEIN auf der Zeile darüber (sonst wären Jahreszahlen
   Nummern). **Zugrecht**: Wingdings3-Dreieck rechts neben DIESEM Brett (U+F072 Weiß, U+F071 Schwarz), sonst „White/Black to
   move“ direkt darüber/darunter, sonst Weiß mit `SideKnown=false`. **Rochade** geschätzt (König + Turm auf Ausgangsfeldern).

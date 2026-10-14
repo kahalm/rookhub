@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.767.0", date: "2026-10-14", changes: [
+    { en: "E-books: diagram recognition now also reads the Hastings/Linares diagram fonts (most of the classic problem collections), ChessBase’s UDiagramm and the CHESSBOARD font. Across the library about 50 books now offer the board next to the book — several thousand diagrams. Books already checked are re-checked automatically.",
+      de: "E-Books: Die Diagramm-Erkennung liest jetzt auch die Diagramm-Schriften Hastings/Linares (die meisten klassischen Problemsammlungen), ChessBase-UDiagramm und CHESSBOARD. In der Bibliothek bieten damit rund 50 Bücher das Brett neben dem Buch an — mehrere tausend Diagramme. Schon geprüfte Bücher werden automatisch neu geprüft." },
+  ] },
   { version: "0.766.0", date: "2026-10-14", changes: [
     { en: "E-books: chess diagrams in digitally typeset books are now recognised exactly (every square is read from the book’s chess font, no image guessing). The reader shows the book on the left and a board on the right — double-click a diagram to set it up, step through all diagrams with ‹ and ›, open the position in the analysis board or copy the FEN. On phones the board slides up from the bottom after a double-click.",
       de: "E-Books: Schachdiagramme in digital gesetzten Büchern werden jetzt exakt erkannt (jedes Feld wird aus der Schach-Schrift des Buchs gelesen, kein Bildraten). Der Leser zeigt links das Buch und rechts ein Brett — Doppelklick auf ein Diagramm stellt es auf, ‹ und › gehen alle Diagramme durch, „Analysieren“ öffnet die Stellung im Analysebrett, die FEN lässt sich kopieren. Am Handy schiebt sich das Brett nach dem Doppelklick von unten ein." },

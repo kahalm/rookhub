@@ -29,12 +29,17 @@ public static class ChessDiagramFonts
         "merida", "chess alpha", "chessalpha", "chess-alpha", "berlin", "chess cases", "chesscases", "condal", "harlequin",
         "kingdom", "leipzig", "lucena", "magnetic", "marroquin", "chess maya", "mediaeval", "millennia", "chess motif",
         "chess smart", "chess usual", "utrecht", "chess line",
+        // „CHESSBOARD“ (Problemsammlungen, Taylor/White): Marroquin-Belegung, am Seitenbild geprüft 14.10.
+        "chessboard",
     ];
 
     public static readonly IReadOnlyList<Family> Families =
     [
         new("Marroquin", name => MarroquinNames.Any(n => name.Contains(n, StringComparison.OrdinalIgnoreCase)), MapMarroquin),
-        new("ChessBase", name => name.Contains("DiagramTT", StringComparison.OrdinalIgnoreCase), MapChessBase),
+        new("ChessBase", name => name.Contains("DiagramTT", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("UDiagramm", StringComparison.OrdinalIgnoreCase), MapChessBase),
+        new("Hastings", name => name.Contains("HastingsDiagram", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("LinaresDiagram", StringComparison.OrdinalIgnoreCase), MapHastings),
     ];
 
     /// <summary>Die Familie zu einem PDF-Fontnamen (mit oder ohne Subset-Präfix „ABCDEF+") — <c>null</c> = kein bekannter Diagramm-Font.</summary>
@@ -81,6 +86,21 @@ public static class ChessDiagramFonts
             'L' => new Square(false, 'B'),
             'k' or 'q' or 'r' or 'n' or 'p' => new Square(false, c),
             'l' => new Square(false, 'b'),
+            _ => null,
+        };
+    }
+
+    private static Square? MapHastings(char raw)
+    {
+        var c = Fold(raw);
+        return c switch
+        {
+            'W' or 'w' or 'D' or 'd' => Square.EmptySquare,
+            'P' or 'N' or 'B' or 'R' or 'Q' or 'K' or 'p' or 'n' or 'b' or 'r' or 'q' or 'k' => new Square(false, c),
+            ')' => new Square(false, 'P'), 'H' => new Square(false, 'N'), 'G' => new Square(false, 'B'),
+            '$' => new Square(false, 'R'), '!' => new Square(false, 'Q'), 'I' => new Square(false, 'K'),
+            '0' => new Square(false, 'p'), 'h' => new Square(false, 'n'), 'g' => new Square(false, 'b'),
+            '4' => new Square(false, 'r'), '1' => new Square(false, 'q'), 'i' => new Square(false, 'k'),
             _ => null,
         };
     }

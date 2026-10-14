@@ -11,11 +11,16 @@ public class EbookDiagramExtractionTests
     [InlineData("Chess Alpha", "Marroquin")]
     [InlineData("ABCDEF+DiagramTTFritz", "ChessBase")]
     [InlineData("DiagramTTHabsburg", "ChessBase")]
+    [InlineData("UDiagrammB", "ChessBase")]
+    [InlineData("HastingsDiagramA", "Hastings")]
+    [InlineData("XYZABC+LinaresDiagram", "Hastings")]
+    [InlineData("CHESSBOARD", "Marroquin")]
     public void Detect_KnownFamilies(string font, string family) => Assert.Equal(family, ChessDiagramFonts.Detect(font)!.Name);
 
     [Theory]
     [InlineData("AGaramondPro-Regular")]
-    [InlineData("HastingsDiagramA")]   // Belegung noch nicht verifiziert → bewusst unbekannt
+    [InlineData("LinaresFigurine")]   // Figurinen im Text, keine Diagramme
+    [InlineData("CAChess")]
     [InlineData(null)]
     public void Detect_UnknownFontsAreNull(string? font) => Assert.Null(ChessDiagramFonts.Detect(font));
 
@@ -39,6 +44,16 @@ public class EbookDiagramExtractionTests
         Assert.Equal('n', f.Map('n')!.Value.Piece);
         Assert.True(f.Map('-')!.Value.Empty);
         foreach (var overlay in "stvwzmxy8aA") Assert.Null(f.Map(overlay));
+    }
+
+    [Fact]
+    public void Hastings_LightSquaresAreLetters_DarkSquaresOwnGlyphs()
+    {
+        var f = ChessDiagramFonts.Detect("HastingsDiagram")!;
+        Assert.Equal("PNBRQKpnbrqk", string.Concat("PNBRQKpnbrqk".Select(c => f.Map(c)!.Value.Piece)));
+        Assert.Equal("PNBRQKpnbrqk", string.Concat(")HG$!I0hg41i".Select(c => f.Map(c)!.Value.Piece)));
+        foreach (var e in "WwDd") Assert.True(f.Map(e)!.Value.Empty);
+        foreach (var frame in "{}uvlcCV") Assert.Null(f.Map(frame));
     }
 
     private static List<DiagramGlyph> Grid(string board, double x0, double y0, double cell = 16)
@@ -132,5 +147,21 @@ public class EbookDiagramExtractionTests
         var r = new EbookDiagramExtractor(NullLogger<EbookDiagramExtractor>.Instance).Extract(MartinKid, 1, CancellationToken.None);
         Assert.True(r.FontFound);
         Assert.StartsWith("rnbq1rk1/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP3PPP/R1BQKB1R ", r.Diagrams[0].Fen);
+    }
+
+    private const string Baird = "/srv/media/sftp/kahalm2/Schach/schachbücher/Baird, W. J/700 Chess Problems [Baird, 1902].pdf";
+    private const string Yusupov = "/srv/media/sftp/kahalm2/Schach/schachbücher/Yusupov, Artur/Artur Yusupov Chess Lesso.Pdf";
+    private const string Taylor = "/srv/media/sftp/kahalm2/Schach/schachbücher/Taylor, Paul/J Paul Taylor Problemes .Pdf";
+
+    [Theory]
+    [InlineData(Baird, 11, "8/3R4/2n4B/2PBP3/K2kP3/2p3P1/2P5/6N1")]           // Hastings, Seitenbild geprüft
+    [InlineData(Yusupov, 1, "2r4k/R1n2p1p/3p2pP/1ppPp3/4P2N/8/1PP2PP1/4K3")]   // UDiagramm (ChessBase-Belegung)
+    [InlineData(Taylor, 13, "4R3/3p4/1N1pn1QN/1K1Pk3/1p2p2P/1P2n3/3BP3/8")]     // CHESSBOARD (Marroquin)
+    public void RealBooks_FirstDiagramOnPage(string path, int page, string board)
+    {
+        if (!File.Exists(path)) return;
+        var r = new EbookDiagramExtractor(NullLogger<EbookDiagramExtractor>.Instance).Extract(path, 1, CancellationToken.None);
+        var first = r.Diagrams.Where(d => d.Page == page).OrderBy(d => d.X).ThenBy(d => d.Y).First();
+        Assert.Equal(board, first.Fen.Split(' ')[0]);
     }
 }
