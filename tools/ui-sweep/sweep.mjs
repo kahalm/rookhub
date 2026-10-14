@@ -34,7 +34,7 @@ const VIEWPORTS = {
 const MAX_SHOT_HEIGHT = 4000;
 /** Browser-Sprache je Oberflächensprache (Datums-/Zahlenformat der Seite kommt aus der App, das hier ist navigator.language). */
 const BROWSER_LOCALE = { de: 'de-DE', en: 'en-US', hr: 'hr-HR', hu: 'hu-HU' };
-const PUZZLE_AREAS = new Set(['puzzles', 'kurse', 'wochenpost']);
+const PUZZLE_AREAS = new Set(['puzzles', 'kurse', 'wochenpost', 'woodpecker']);
 const SETTLE_MAX_MS = 60000;   // hoch, weil Anfragen in der eigenen Bremse warten können
 const QUIET_MS = 800;
 // Die API drosselt je Adresse (Prod global 100 Anfragen/min, anonyme Wege teils 60/min; Dev läuft mit

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.774.1", date: "2026-10-14", changes: [
+    { en: "Internal: the design check now also covers the e-book library (reader with diagram board) and Woodpecker training, including their dialogs and menus.",
+      de: "Intern: die Gestaltungs-Prüfung deckt jetzt auch die E-Book-Bibliothek (Leser mit Diagramm-Brett) und das Woodpecker-Training ab, samt Dialogen und Menüs." },
+  ] },
   { version: "0.774.0", date: "2026-10-14", changes: [
     { en: "E-books: after an upload you are told that processing (cover, diagrams, solutions, Stockfish check) takes a few minutes up to about a quarter of an hour; the card shows „Processing …“ meanwhile, and the bell notifies you when the book is ready, with the number of diagrams found.",
       de: "E-Books: Nach dem Hochladen steht da, dass die Verarbeitung (Titelbild, Diagramme, Lösungen, Stockfish-Prüfung) ein paar Minuten bis etwa eine Viertelstunde dauert; die Karte zeigt solange „Wird verarbeitet …“, und die Glocke meldet, wenn das Buch fertig ist, samt Zahl der gefundenen Diagramme." },

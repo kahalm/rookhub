@@ -212,6 +212,13 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     }
   });
 
+  // E-Book mit erkannten Diagrammen (Leser mit Brett rechts): das erste sichtbare Buch mit diagramCount > 0.
+  await step(['ebookDiagramId'], async () => {
+    const res = await a.get('/api/ebooks?withDiagrams=true&pageSize=20');
+    const hit = list(res).find(b => (b.diagramCount ?? 0) > 0);
+    return hit ? { ebookDiagramId: hit.id } : { _why: 'kein sichtbares E-Book mit erkannten Diagrammen' };
+  });
+
   await step(['reconstructionId', 'reconstructionToken'], async () => {
     let rc = list(await a.get('/api/reconstructions')).find(x => x.title === SWEEP_TAG);
     if (!rc) {
@@ -252,6 +259,12 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
       chapterIndex = (chapters.find(c => (c.puzzleCount ?? 0) > 0) ?? chapters[0])?.index;
     }
     return { bookId: book?.bookId, calcBookId: calc?.bookId, bookPuzzleId, chapterIndex };
+  });
+  // Woodpecker-Plan (0.773.0) über den Aufgabenkurs — angelegt, wenn das Konto noch keinen hat.
+  await step(['woodpeckerPlanId'], async () => {
+    let plan = list(await a.get('/api/woodpecker'))[0];
+    if (!plan && p.bookId) plan = await a.post('/api/woodpecker', { bookIds: [Number(p.bookId)], startedAt: null });
+    return plan ? { woodpeckerPlanId: plan.id } : { _why: 'kein Aufgabenkurs für einen Plan' };
   });
   // Lern-Kurs (Kind „Study", kein Aufgabenbuch) und Kurz-URL eines öffentlichen Kurses (/{slug}). Art, „öffentlich" und
   // Alias stehen nur in der Detailantwort, nicht in der Liste. Hat kein öffentlicher Kurs einen Alias, macht das

@@ -86,6 +86,8 @@ export const ROUTES = [
   r('rookhub', '/ebooks', 'user', { main: ['.eb-grid .eb-card', '.eb-empty', '.eb-page app-load-error'] }),
   // Leser: Werkzeugleiste + Seiten in der Resthöhe — Sonderlayout wie das Brett (DESIGN.md 4.5).
   r('rookhub', '/ebooks/{ebookId}', 'user', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
+  // Leser mit erkannten Diagrammen: Buch links, Brett rechts (0.766.0 ff.) — ein Buch, das das Konto sehen darf.
+  r('rookhub', '/ebooks/{ebookDiagramId}', 'user', { label: 'ebooks-diagramme', main: ['.rd-panel app-chess-board', '.rd-viewer', '.rd-page app-load-error'], foldExempt: true }),
   r('rookhub', '/weekly', 'user', { main: ['.wp-list .wp-card', '.weekly-container .empty-state', '.upload-card'] }),
   r('rookhub', '/weekly/{weeklyId}', 'user', { main: PUZZLE_BOARD }),
   r('rookhub', '/guess', 'any', { main: ['.game-row', '.lists .start-card', '.gl-container .start-card'] }),
@@ -118,6 +120,7 @@ export const ROUTES = [
   r('rookhub', '/messages', 'user', { main: ['.msg-container .thread .bubble-row', '.msg-container .empty-state', '.msg-container mat-card.admin-hint', '.msg-container .reply', '.msg-container app-load-error'] }),
   r('rookhub', '/courses', 'user', { main: ['.courses-container .course-grid mat-card.course-card', '.courses-container .empty-state', '.courses-container app-loading-spinner'] }),
   r('rookhub', '/woodpecker', 'user', { main: ['.plans .plan', '.page .empty-state', '.page app-load-error'] }),
+  r('rookhub', '/woodpecker/{woodpeckerPlanId}/solve', 'user', { main: ['.solver app-puzzle-board', '.page mat-card.done', '.page app-load-error'] }),
   r('rookhub', '/catalog', 'user', { main: ['.catalog .item-list .item-row', '.catalog mat-card:not(.admin-card) .empty-state', '.catalog mat-card:not(.admin-card) app-load-error', '.catalog mat-card:not(.admin-card) p.empty'] }),
   r('rookhub', '/courses/{bookId}', 'user', { main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
   r('rookhub', '/courses/{bookId}/browse', 'user', { main: COURSE_BROWSE }),
@@ -227,7 +230,8 @@ export const ROUTES = [
 // Bereiche: `./sweep.sh --area kurse,repertoire` prüft nur diese. Die ERSTE passende Regel gewinnt; eine Route
 // ohne Treffer gehört zu „sonstiges". Neue Seite → passt sie nicht in einen Bereich, hier eine Regel ergänzen.
 export const AREAS = [
-  ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable|woodpecker)/.test(r.url) || /slug/.test(r.label ?? ''))],
+  ['woodpecker', r => r.app === 'rookhub' && /^\/woodpecker/.test(r.url)],
+  ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url) || /slug/.test(r.label ?? ''))],
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],

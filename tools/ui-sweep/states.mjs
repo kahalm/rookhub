@@ -111,6 +111,17 @@ export const STATES = [
   { of: 'rookhub__worksheets-worksheetId', name: 'menue', auth: LOGGED_IN,
     steps: [{ click: '.wd-toolbar button.mat-mdc-menu-trigger' }], expect: MENU },
 
+  // ---------------------------------------------------------------- E-Books + Woodpecker
+  { of: 'rookhub__ebooks', name: 'hochladen', steps: [{ click: '.eb-page .header-actions button.eb-upload' }], expect: DIALOG },
+  { of: 'rookhub__ebooks', name: 'admin-menue', auth: ['admin'],
+    steps: [{ click: '.eb-page .header-actions button[mat-icon-button]' }], expect: MENU },
+  { of: 'rookhub__ebooks', name: 'mit-diagrammen', steps: [{ click: '.eb-filters button.eb-chip >> nth=1' }],
+    expect: '.eb-filters button.eb-chip--on' },
+  { of: 'rookhub__ebooks-ebookId', name: 'menue', auth: ['admin'], steps: [{ click: '.rd-toolbar > button[mat-icon-button]' }], expect: MENU },
+  { of: 'rookhub__woodpecker', name: 'anlegen',
+    steps: [{ click: '.page .header-actions button, .page .empty-state button' }], expect: DIALOG },
+  { of: 'rookhub__woodpecker', name: 'plan-menue', auth: ['admin'], steps: [{ click: '.plans .plan .plan-head button[mat-icon-button]' }], expect: MENU },
+
   // ---------------------------------------------------------------- Anmeldung (dieselbe Komponente in allen Oberflächen)
   // Falsches Kennwort mit einem Namen, den es nicht gibt — kein echtes Konto wird gedrosselt.
   { of: 'rookhub__login', name: 'falsches-kennwort',
