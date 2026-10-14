@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.777.1", date: "2026-10-14", changes: [
+    { en: "Internal: removed four texts of the old e-book board buttons that the new board modes no longer use (the build check failed on them).",
+      de: "Intern: vier Texte der alten E-Book-Brettknöpfe entfernt, die die neuen Brett-Modi nicht mehr brauchen (die Build-Prüfung schlug deshalb fehl)." },
+  ] },
   { version: "0.777.0", date: "2026-10-14", changes: [
     { en: "E-book reader: the board next to the book now has modes – View, Move (pieces move freely), Calculate (note variations as lines like in the course calculation mode and check them later in the analysis board), Solve (easy: wrong moves are taken back; training: the first try counts – against the stored solution or a Stockfish solution computed now) and Maia (play the position out against Maia at a chosen strength).",
       de: "E-Book-Leser: Das Brett neben dem Buch hat jetzt Modi – Ansehen, Ziehen (Figuren frei bewegen), Kalkulieren (Varianten wie im Kalkulations-Modus der Kurse als Linien notieren und später im Analysebrett prüfen), Lösen (einfach: falsche Züge werden zurückgenommen; Training: der erste Versuch zählt – gegen die gespeicherte Lösung oder eine jetzt gerechnete Stockfish-Lösung) und Maia (die Stellung gegen Maia in wählbarer Stärke ausspielen)." },
