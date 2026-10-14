@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.775.5", date: "2026-10-14", changes: [
+    { en: "E-books and Woodpecker, follow-up after the image check: the “Filter” button of the e-book library only shows on phones again; in the reader on phones the ⋮ menu stays in the title row; the Woodpecker help icon no longer drops onto its own line on tablets.",
+      de: "E-Books und Woodpecker, Nacharbeit nach der Bildprüfung: der Knopf „Filter“ der E-Book-Bibliothek steht wieder nur am Handy; im Leser bleibt das ⋮-Menü am Handy in der Titelzeile; das Hilfe-Zeichen bei Woodpecker rutscht am Tablet nicht mehr allein in eine Zeile." },
+  ] },
   { version: "0.775.4", date: "2026-10-14", changes: [
     { en: "E-books: the library now lists the newest books first by default (title order is still available under „Sort by“).",
       de: "E-Books: Die Bibliothek zeigt jetzt standardmäßig die neuesten Bücher zuerst (nach Titel sortieren geht weiterhin über „Sortieren“)." },

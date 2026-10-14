@@ -11,7 +11,7 @@
 .eb-sort { flex: 0 1 190px; }
 /* Ab 600 px stehen Sortierung und Schalter direkt in der Zeile (die Hülle zählt nicht); „Filter ▾“ nur am Handy. */
 .eb-filter-more { display: contents; }
-.eb-filter-toggle { display: none; }
+.eb-chip.eb-filter-toggle { display: none; } /* vor .eb-chip gleich stark → sonst gewinnt dessen inline-flex */
 .eb-active { display: none; }
 
 .eb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -100,7 +100,7 @@
   .eb-upload { min-width: 44px; padding: 0 10px; }
   /* Handy (DESIGN 4.6 Nr. 7): Suche + „Filter ▾“ in einer Zeile, der Rest zugeklappt; aktive Filter als Chips. */
   .eb-search { flex: 1 1 0; min-width: 0; }
-  .eb-filter-toggle { display: inline-flex; min-height: 44px; }
+  .eb-chip.eb-filter-toggle { display: inline-flex; min-height: 44px; }
   .eb-filter-more { display: none; }
   .eb-filter-more--open { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
   .eb-active { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }

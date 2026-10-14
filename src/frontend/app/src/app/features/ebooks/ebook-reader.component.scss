@@ -142,5 +142,7 @@
   .rd-toolbar { flex-wrap: wrap; }
   .rd-title { order: -1; flex-basis: calc(100% - 96px); }
   .rd-back { order: -2; }
+  /* ⋮ in die Titelzeile (dort sind 96 px für Zurück + ⋮ frei) — sonst rutscht es mit dem Diagramm-Knopf in eine dritte Zeile. */
+  .rd-more { order: -1; }
   .rd-pages { margin-left: 4px; }
 }

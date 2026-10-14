@@ -40,7 +40,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
           }
         </div>
       </div>
-      <p class="intro">{{ 'woodpecker.intro' | translate }} <app-help-hint [text]="'woodpecker.rules' | translate" /></p>
+      <p class="intro">{{ 'woodpecker.intro' | translate }}&nbsp;<app-help-hint [text]="'woodpecker.rules' | translate" /></p>
 
       @if (loading()) {
         <app-loading-spinner />

@@ -94,6 +94,13 @@ describe('WoodpeckerListComponent', () => {
     expect(el.querySelector('.plan')).toBeNull();
   });
 
+  it('c1-Nachprüfung: das (?) hängt mit geschütztem Leerzeichen am letzten Wort (Tablet brach es allein um)', () => {
+    const { el } = render([]);
+    const intro = el.querySelector('p.intro')!;
+    const before = intro.querySelector('app-help-hint')!.previousSibling?.textContent ?? '';
+    expect(before.endsWith('\u00a0')).withContext(JSON.stringify(before.slice(-3))).toBeTrue();
+  });
+
   it('Zieltage des nächsten Zyklus halbiert und aufgerundet', () => {
     const { c } = render([]);
     expect([28, 14, 7, 4, 2, 1].map(d => c.nextDays(cycle({ targetDays: d })))).toEqual([14, 7, 4, 2, 1, 1]);
