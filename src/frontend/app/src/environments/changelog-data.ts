@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.783.0", date: "2026-10-14", changes: [
+    { en: "Courses: „Continue with remaining“ after a finished round no longer resets the whole course — it only brings the failed, still unsolved lines back (solved ones stay solved), now in sequential mode too. Before, the button wiped all solved lines.",
+      de: "Kurse: „Mit den restlichen weiter“ nach einer fertigen Runde setzt nicht mehr den ganzen Kurs zurück, sondern holt nur die gescheiterten, noch ungelösten Linien zurück (gelöste bleiben gelöst) — jetzt auch im sequenziellen Modus. Vorher löschte der Knopf alle gelösten Linien." },
+    { en: "Courses: new personal option „Skip info lines“ in the ⋮ menu of the course page — the course then only shows lines to solve.",
+      de: "Kurse: neue persönliche Einstellung „Infolinien überspringen“ im ⋮-Menü der Kursseite — der Kurs zeigt dann nur noch Linien zum Lösen." },
+  ] },
   { version: "0.782.1", date: "2026-10-14", changes: [
     { en: "Build fix: the rate limit for e-book files is registered in the form the safety test checks.", de: "Build-Fix: Das Rate-Limit für E-Book-Dateien ist in der Form eingetragen, die der Sicherheitstest prüft." },
   ] },

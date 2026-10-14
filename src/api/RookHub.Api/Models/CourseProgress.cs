@@ -31,4 +31,17 @@ public class CourseProgress
     /// „erster Versuch". Die CourseAttempts selbst bleiben erhalten (Trainingsziel-Zeit-Tracker).
     /// </summary>
     public DateTime? ResetAt { get; set; }
+
+    /// <summary>
+    /// Info-/Erklärlinien (<see cref="BookPuzzle.IsInfoOnly"/>) im sequenziellen Durchlauf überspringen
+    /// (Wunsch 2026-10-14) — der Kurs zeigt dann nur noch Quiz-Linien. Persönlich je (User, Kurs).
+    /// </summary>
+    public bool SkipInfoLines { get; set; }
+
+    /// <summary>
+    /// „Offene nochmal" (Wunsch 2026-10-14): Zeitpunkt, ab dem gescheiterte, ungelöste Linien wieder in den
+    /// Topf dürfen, OHNE dass die gelösten zurückgesetzt werden. Der Pool schließt nur Versuche nach
+    /// <c>max(ResetAt, RetryFailedAt)</c> aus; Zeit/Trefferquote zählen weiter ab <see cref="ResetAt"/>.
+    /// </summary>
+    public DateTime? RetryFailedAt { get; set; }
 }

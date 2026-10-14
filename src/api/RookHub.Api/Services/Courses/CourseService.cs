@@ -563,6 +563,31 @@ public class CourseService
         await _db.SaveIgnoringUniqueRaceAsync(_logger);
     }
 
+    /// <summary>Schaltet „Info-Linien überspringen" für (User, Kurs) — persönlich, legt den
+    /// <see cref="CourseProgress"/> bei Bedarf an. 404 wenn nicht zugänglich. Gibt den neuen Zustand zurück.</summary>
+    public async Task<bool> SetSkipInfoLinesAsync(int userId, int bookId, bool skip, bool isAdmin)
+    {
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        await UpsertProgressAsync(userId, bookId, null);
+        var progress = _db.CourseProgresses.Local.FirstOrDefault(cp => cp.UserId == userId && cp.BookId == bookId)
+            ?? await _db.CourseProgresses.FirstAsync(cp => cp.UserId == userId && cp.BookId == bookId);
+        progress.SkipInfoLines = skip;
+        await _db.SaveChangesAsync();
+        return skip;
+    }
+
+    /// <summary>„Offene nochmal": gescheiterte, ungelöste Linien kommen wieder in den Topf (beide Modi),
+    /// gelöste bleiben gelöst. 404 wenn nicht zugänglich.</summary>
+    public async Task RetryFailedAsync(int userId, int bookId, bool isAdmin)
+    {
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        await UpsertProgressAsync(userId, bookId, null);
+        var progress = _db.CourseProgresses.Local.FirstOrDefault(cp => cp.UserId == userId && cp.BookId == bookId)
+            ?? await _db.CourseProgresses.FirstAsync(cp => cp.UserId == userId && cp.BookId == bookId);
+        progress.RetryFailedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
     /// <summary>Löst einen angepinnten Kurs wieder. Idempotent (kein Pin → No-op).</summary>
     public async Task UnpinCourseAsync(int userId, int bookId)
     {
@@ -955,10 +980,15 @@ public class CourseService
         // Seit dem letzten Reset GESCHEITERTE (aufgegebene) Quiz-Linien fallen bis zum nächsten Reset aus
         // dem Pool — in BEIDEN Modi. Erst nach `POST /reset` (ResetAt rückt vor + gelöste Menge geleert)
         // tauchen sie wieder auf. ResetAt == null (nie zurückgesetzt) ⇒ jeder bisherige Versuch zählt.
-        var resetAt = await _db.CourseProgresses
+        var progressRow = await _db.CourseProgresses
             .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => cp.ResetAt)
-            .FirstOrDefaultAsync() ?? DateTime.MinValue;
+            .Select(cp => new { cp.ResetAt, cp.SkipInfoLines, cp.RetryFailedAt })
+            .FirstOrDefaultAsync();
+        var resetAt = progressRow?.ResetAt ?? DateTime.MinValue;
+        // „Offene nochmal": gescheiterte Linien zählen für den Pool erst ab diesem Zeitpunkt wieder als erledigt.
+        var poolSince = progressRow?.RetryFailedAt is DateTime retry && retry > resetAt ? retry : resetAt;
+        // Persönliche Kurs-Einstellung „Info-Linien überspringen": der sequenzielle Pool zeigt nur Quiz-Linien.
+        var skipInfo = progressRow?.SkipInfoLines ?? false;
 
         BookPuzzle? puzzle;
         if (mode == "random")
@@ -970,7 +1000,7 @@ public class CourseService
             // Random-Pool: bis zum Reset jedes Puzzle nur EINMAL. Gelöste sind über CoursePuzzleResults
             // ohnehin raus; zusätzlich auch GESCHEITERTE seit dem letzten Reset ausschließen (resetAt oben).
             var fresh = unsolved.Where(bp =>
-                !AttemptsSinceReset(userId, bookId, resetAt).Any(a => a.BookPuzzleId == bp.Id));
+                !AttemptsSinceReset(userId, bookId, poolSince).Any(a => a.BookPuzzleId == bp.Id));
 
             var pool = exclude.HasValue ? fresh.Where(bp => bp.Id != exclude.Value) : fresh;
             var count = await pool.CountAsync();
@@ -996,14 +1026,14 @@ public class CourseService
             // in Buchreihenfolge. Gelöste Quiz-Linien fallen raus; eine bereits durchgeklickte
             // Info-Linie (CourseInfoView) wird beim Wiedereinstieg übersprungen, sodass der Kurs
             // hinter der zuletzt gesehenen Info-Linie fortsetzt statt sie erneut zu zeigen.
-            IQueryable<BookPuzzle> seqPool = scope
+            IQueryable<BookPuzzle> seqPool = (skipInfo ? quizScope : scope)
                 .Include(bp => bp.Book)
                 .Where(bp => bp.IsInfoOnly
                     ? !_db.CourseInfoViews.Any(iv => iv.UserId == userId && iv.BookPuzzleId == bp.Id)
                     // Quiz-Linien: gelöste UND seit dem letzten Reset gescheiterte (aufgegebene) raus, damit
                     // ein aufgegebenes Puzzle beim Neustart/Wiedereinstieg nicht sofort wieder erscheint.
                     : (!_db.CoursePuzzleResults.Any(cr => cr.UserId == userId && cr.BookPuzzleId == bp.Id)
-                       && !AttemptsSinceReset(userId, bookId, resetAt).Any(a => a.BookPuzzleId == bp.Id)));
+                       && !AttemptsSinceReset(userId, bookId, poolSince).Any(a => a.BookPuzzleId == bp.Id)));
             // Lesereihenfolge = Round (Chessable-Zeilennummer), dann Id. Der „Weiter"-Cursor (after)
             // ist die zuletzt gezeigte Puzzle-Id; sie kann selbst schon aus dem Pool raus sein (gelöst/
             // gesehen), daher wird ihr (Round, Id) separat aufgelöst und die erste Pool-Linie danach

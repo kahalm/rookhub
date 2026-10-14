@@ -104,4 +104,43 @@ public class CourseServiceGiveUpTests : IDisposable
         Assert.NotNull(next.Puzzle);
         Assert.Equal(p1.LineId, next.Puzzle!.LineId);   // nach Reset wieder ganz vorne
     }
+
+    [Theory]
+    [InlineData("sequential")]
+    [InlineData("random")]
+    public async Task RetryFailed_FailedLineReturns_SolvedStaysSolved(string mode)
+    {
+        var (book, p1, p2) = await SeedAsync();
+        await _svc.RecordResultAsync(UserId, book.Id, new RecordCourseResultDto { BookPuzzleId = p1.Id, Solved = true, Mode = mode }, isAdmin: false);
+        await GiveUpAsync(book.Id, p2.Id);
+        var done = await _svc.GetNextAsync(UserId, book.Id, mode, after: null, exclude: null, isAdmin: false, chapterIndex: null);
+        Assert.Null(done.Puzzle);   // Runde durch, p2 gesperrt
+
+        // „Mit den restlichen weiter" (Kurs 18: 946 gelöst, 55 gescheitert) — darf NICHT zurücksetzen.
+        await _svc.RetryFailedAsync(UserId, book.Id, isAdmin: false);
+
+        var next = await _svc.GetNextAsync(UserId, book.Id, mode, after: null, exclude: null, isAdmin: false, chapterIndex: null);
+        Assert.Equal(p2.LineId, next.Puzzle?.LineId);
+        Assert.Equal(1, next.SolvedCount);   // p1 bleibt gelöst
+    }
+
+    [Fact]
+    public async Task SkipInfoLines_SequentialShowsOnlyQuizLines()
+    {
+        var (book, p1, _) = await SeedAsync();
+        var info = await AddPuzzleAsync(book, "info", "000");
+        info.IsInfoOnly = true;
+        await _db.SaveChangesAsync();
+
+        var withInfo = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: null);
+        Assert.Equal("info", withInfo.Puzzle?.LineId);
+
+        Assert.True(await _svc.SetSkipInfoLinesAsync(UserId, book.Id, true, isAdmin: false));
+        var skipped = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: null);
+        Assert.Equal(p1.LineId, skipped.Puzzle?.LineId);
+
+        Assert.False(await _svc.SetSkipInfoLinesAsync(UserId, book.Id, false, isAdmin: false));
+        var again = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: null);
+        Assert.Equal("info", again.Puzzle?.LineId);
+    }
 }

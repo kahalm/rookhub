@@ -161,6 +161,13 @@
               <mat-icon>push_pin</mat-icon>
               <span>{{ (d.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate }}</span>
             </button>
+            <!-- Persönlich: Info-/Erklärlinien im Durchlauf überspringen (nur wenn es welche gibt). -->
+            @if (!d.isCalculation && d.infoLineCount > 0) {
+              <button mat-menu-item class="skip-info-lines" (click)="toggleSkipInfoLines()">
+                <mat-icon>{{ d.skipInfoLines ? 'visibility' : 'visibility_off' }}</mat-icon>
+                <span>{{ (d.skipInfoLines ? 'courses.showInfoLines' : 'courses.skipInfoLines') | translate }}</span>
+              </button>
+            }
             <!-- Kalkulationsbuch: kein PGN-Download (Server-Sperre, alle Wochen samt Lösung). -->
             @if (!d.isCalculation) {
               <button mat-menu-item (click)="downloadPgn()" [disabled]="d.totalLines === 0">

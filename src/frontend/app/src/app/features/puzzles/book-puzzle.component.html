@@ -290,9 +290,15 @@
                     <p class="ctx-done"><mat-icon>replay</mat-icon> {{ 'book.course.roundFinished' | translate:{remaining: courseRemaining} }}</p>
                   }
                   <div class="ctx-nav">
-                    @if (courseModeKind === 'random') {
+                    @if (!courseFullyDone) {
+                      <!-- „Offene nochmal": nur die gescheiterten Linien zurück in den Topf — gelöste bleiben gelöst
+                           (vorher setzte dieser Knopf den ganzen Kurs zurück). In beiden Modi. -->
+                      <button mat-flat-button color="primary" class="retry-failed" (click)="retryFailedCourse()">
+                        <mat-icon>replay</mat-icon> {{ 'book.course.continueRemaining' | translate }}
+                      </button>
+                    } @else if (courseModeKind === 'random') {
                       <button mat-flat-button color="primary" (click)="restartCourse()">
-                        <mat-icon>replay</mat-icon> {{ (courseFullyDone ? 'book.course.restart' : 'book.course.continueRemaining') | translate }}
+                        <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
                       </button>
                     }
                     <button mat-stroked-button (click)="backToCourses()">{{ courseBackKey('book.course.toOverview') | translate }}</button>

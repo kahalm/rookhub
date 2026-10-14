@@ -142,7 +142,7 @@ public class CourseAuthoringService
 
         var progress = await _db.CourseProgresses
             .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => new { cp.LastMode, cp.UpdatedAt })
+            .Select(cp => new { cp.LastMode, cp.UpdatedAt, cp.SkipInfoLines })
             .FirstOrDefaultAsync(ct);
         var sharedBy = await _db.CourseShares
             .Where(cs => cs.BookId == bookId && cs.RecipientId == userId)
@@ -202,6 +202,7 @@ public class CourseAuthoringService
             // Summe immer MIT Maximum: 4 Punkte × ALLE Stellungen des Kurses.
             CalcMaxPoints = isCalc ? CalculationGrades.MaxPointsFor(total) : null,
             LastMode = progress?.LastMode,
+            SkipInfoLines = progress?.SkipInfoLines ?? false,
             LastActivityAt = progress?.UpdatedAt,
             LinkedBookId = link == 0 ? null : link,
             LinkedDisplayName = linkedName,

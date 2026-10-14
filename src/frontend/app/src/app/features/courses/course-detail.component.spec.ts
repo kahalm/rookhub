@@ -65,6 +65,7 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     reset: () => { calls.push('reset'); return of({}); },
     pinCourse: () => { calls.push('pinCourse'); return of(undefined); },
     unpinCourse: () => { calls.push('unpinCourse'); return of(undefined); },
+    setSkipInfoLines: (_id: number, v: boolean) => { calls.push(`skipInfo:${v}`); return of({ skipInfoLines: v }); },
     downloadPgn: () => of(new Blob(['x'])),
     ...api,
   };
@@ -319,6 +320,20 @@ describe('CourseDetailComponent Anpinnen', () => {
     component.togglePin();
     expect(calls).toContain('unpinCourse');
     expect(component.detail!.isPinned).toBeFalse();
+  });
+});
+
+describe('CourseDetailComponent Infolinien überspringen', () => {
+  it('schaltet die persönliche Einstellung um und übernimmt den Serverzustand', () => {
+    const { component, calls } = make();
+    component.ngOnInit();
+    expect(component.detail!.skipInfoLines).toBeFalsy();
+    component.toggleSkipInfoLines();
+    expect(calls).toContain('skipInfo:true');
+    expect(component.detail!.skipInfoLines).toBeTrue();
+    component.toggleSkipInfoLines();
+    expect(calls).toContain('skipInfo:false');
+    expect(component.detail!.skipInfoLines).toBeFalse();
   });
 });
 

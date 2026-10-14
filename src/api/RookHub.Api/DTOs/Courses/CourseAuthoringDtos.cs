@@ -48,6 +48,9 @@ public class CourseDetailDto
     public int? CalcMaxPoints { get; set; }
 
     public string? LastMode { get; set; }
+    /// <summary>Persönlich: Info-Linien im sequenziellen Durchlauf überspringen
+    /// (<see cref="Models.CourseProgress.SkipInfoLines"/>).</summary>
+    public bool SkipInfoLines { get; set; }
     public DateTime? LastActivityAt { get; set; }
     public int? LinkedBookId { get; set; }
     public string? LinkedDisplayName { get; set; }
@@ -121,6 +124,12 @@ public class RenameCourseChapterDto
 public class CourseChapterRefDto
 {
     public string? Chapter { get; set; }
+}
+
+/// <summary>Eingabe: Info-Linien des Kurses überspringen (persönlich, <c>CourseProgress.SkipInfoLines</c>).</summary>
+public class SetSkipInfoLinesDto
+{
+    public bool Skip { get; set; }
 }
 
 /// <summary>Eingabe: Kalkulations-Modus des Kurses ein-/ausschalten (<c>Book.IsCalculation</c>).</summary>

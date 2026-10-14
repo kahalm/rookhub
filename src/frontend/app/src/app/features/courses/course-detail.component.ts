@@ -535,6 +535,15 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     }));
   }
 
+  toggleSkipInfoLines(): void {
+    if (!this.detail) return;
+    const skip = !this.detail.skipInfoLines;
+    this.subs.add(this.courses.setSkipInfoLines(this.bookId, skip).subscribe({
+      next: r => { if (this.detail) this.detail.skipInfoLines = r.skipInfoLines; },
+      error: () => this.fail('courses.skipInfoLinesFailed'),
+    }));
+  }
+
   downloadPgn(): void {
     if (!this.detail) return;
     const name = this.detail.fileName || `course-${this.bookId}.pgn`;

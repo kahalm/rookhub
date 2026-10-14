@@ -1323,6 +1323,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Kurs zurücksetzen und von vorn beginnen — bringt im Random-Modus auch die falsch gelösten
    * Puzzles wieder in den Pool. Direkt vom „abgeschlossen"-Panel aus erreichbar. */
+  /** „Mit den restlichen weiter": gescheiterte, ungelöste Linien wieder in den Topf, OHNE die gelösten
+   *  zurückzusetzen. Anonym gibt es keine serverseitige Sperre → einfach weiterladen. */
+  retryFailedCourse(): void {
+    if (this.courseBookId == null) return;
+    if (this.isAnonCourse) { this.courseCompleted = false; this.loadCourseNext(); return; }
+    this.courseService.retryFailed(this.courseBookId).subscribe({
+      next: () => { this.courseCompleted = false; this.loadCourseNext(); },
+      error: () => this.snackbar.warn(this.translate.instant('book.course.restartFailed'), { duration: 3000 }),
+    });
+  }
+
   restartCourse(): void {
     if (this.courseBookId == null) return;
     // Anonym: nur den lokalen Fortschritt verwerfen, kein Server-Reset.

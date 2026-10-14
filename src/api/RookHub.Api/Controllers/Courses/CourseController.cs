@@ -344,6 +344,14 @@ public class CourseController : BaseApiController
         return Ok(await _service.ResetAsync(GetUserId(), bookId, IsAdmin));
     }
 
+    /// <summary>„Offene nochmal": gescheiterte, ungelöste Linien wieder in den Topf, ohne Reset der gelösten.</summary>
+    [HttpPost("{bookId}/retry-failed")]
+    public async Task<IActionResult> RetryFailed(int bookId)
+    {
+        await _service.RetryFailedAsync(GetUserId(), bookId, IsAdmin);
+        return NoContent();
+    }
+
     /// <summary>Pinnt den Kurs fürs Dashboard an (persönlich, idempotent). 404 wenn nicht zugänglich.</summary>
     [HttpPost("{bookId}/pin")]
     public async Task<IActionResult> Pin(int bookId)
@@ -358,6 +366,14 @@ public class CourseController : BaseApiController
     {
         await _service.UnpinCourseAsync(GetUserId(), bookId);
         return NoContent();
+    }
+
+    /// <summary>Persönlich: Info-Linien dieses Kurses im sequenziellen Durchlauf überspringen (an/aus).
+    /// 404 wenn nicht zugänglich.</summary>
+    [HttpPut("{bookId:int}/skip-info-lines")]
+    public async Task<IActionResult> SetSkipInfoLines(int bookId, [FromBody] SetSkipInfoLinesDto dto)
+    {
+        return Ok(new { skipInfoLines = await _service.SetSkipInfoLinesAsync(GetUserId(), bookId, dto.Skip, IsAdmin) });
     }
 
     /// <summary>Setzt die Themen-Tags des Kurs-Buchs (Admin/Besitzer). 404 unzugänglich, 403 nicht

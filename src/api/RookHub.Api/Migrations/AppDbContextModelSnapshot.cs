@@ -2016,6 +2016,12 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime?>("ResetAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("RetryFailedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("SkipInfoLines")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
 

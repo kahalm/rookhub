@@ -205,6 +205,8 @@ export interface CourseDetail {
   /** Erreichbare Punkte (4 je Stellung); fehlt der Wert, wird er aus `puzzleCount` gerechnet. */
   calcMaxPoints?: number | null;
   lastMode: string | null;
+  /** Persönlich: Info-Linien im sequenziellen Durchlauf überspringen. */
+  skipInfoLines?: boolean;
   lastActivityAt: string | null;
   linkedBookId: number | null;
   linkedDisplayName: string | null;
@@ -496,6 +498,16 @@ export class CourseService {
     // `mode` = Durchlaufart (sequential/random), `solveMode` = Spielweise ('training'/'easy');
     // fehlt letztere, fällt der Server auf 'training' zurück.
     return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode, timeSeconds, chapterIndex, hintsUsed, solveMode });
+  }
+
+  /** „Offene nochmal": gescheiterte, ungelöste Linien wieder in den Topf (gelöste bleiben gelöst). */
+  retryFailed(bookId: number): Observable<void> {
+    return this.http.post<void>(`/api/courses/${bookId}/retry-failed`, {});
+  }
+
+  /** Persönlich: Info-Linien dieses Kurses im sequenziellen Durchlauf überspringen. */
+  setSkipInfoLines(bookId: number, skip: boolean): Observable<{ skipInfoLines: boolean }> {
+    return this.http.put<{ skipInfoLines: boolean }>(`/api/courses/${bookId}/skip-info-lines`, { skip });
   }
 
   reset(bookId: number): Observable<CourseProgress> {
