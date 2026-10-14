@@ -340,4 +340,53 @@ public class EbookServiceTests : IDisposable
         await _kit.Service.DeleteAsync(owner.Id, false, book.Id);
         Assert.Empty(_kit.Db.EbookDiagrams);
     }
+
+    [Fact]
+    public async Task ReportDiagram_ToggleCountsForManagers_AndListSurvivesRescan()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var reader = await _kit.UserAsync("reader");
+        var stranger = await _kit.UserAsync("stranger");
+        var g = await _kit.GroupAsync("G", false, reader.Id);
+        var book = await _kit.BookAsync("Buch", owner.Id, "pdf", null, g.Id);
+        book.DiagramState = EbookDiagramState.Done; book.DiagramCount = 1;
+        var d = new EbookDiagram { EbookId = book.Id, Page = 3, Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", FontFamily = "Hastings" };
+        _kit.Db.EbookDiagrams.Add(d);
+        await _kit.Db.SaveChangesAsync();
+
+        Assert.True(await _kit.Service.ReportDiagramAsync(reader.Id, false, book.Id, d.Id, true, " Dame fehlt "));
+        Assert.True(await _kit.Service.ReportDiagramAsync(reader.Id, false, book.Id, d.Id, true, null));   // idempotent
+        Assert.Single(_kit.Db.EbookDiagramReports);
+        await Assert.ThrowsAsync<NotFoundException>(() => _kit.Service.ReportDiagramAsync(stranger.Id, false, book.Id, d.Id, true, null));
+        await Assert.ThrowsAsync<NotFoundException>(() => _kit.Service.ReportDiagramAsync(reader.Id, false, book.Id, 999, true, null));
+
+        var asReader = (await _kit.Service.GetDiagramsAsync(reader.Id, false, book.Id)).Items.Single();
+        Assert.True(asReader.ReportedByMe);
+        Assert.Equal(0, asReader.ReportCount);   // Zahl nur für Verwalter
+        Assert.Equal(1, (await _kit.Service.GetDiagramsAsync(owner.Id, true, book.Id)).Items.Single().ReportCount);
+
+        Assert.False(await _kit.Service.ReportDiagramAsync(reader.Id, false, book.Id, d.Id, false, null));
+        Assert.Empty(_kit.Db.EbookDiagramReports);
+        await _kit.Service.ReportDiagramAsync(reader.Id, false, book.Id, d.Id, true, " Dame fehlt ");
+
+        var list = await _kit.Service.ListDiagramReportsAsync();
+        Assert.Equal("Dame fehlt", list.Single().Note);
+        Assert.Equal("Hastings", list.Single().FontFamily);
+        _kit.Db.EbookDiagrams.Remove(d); await _kit.Db.SaveChangesAsync();   // Neuerkennung ersetzt die Zeilen
+        Assert.False((await _kit.Service.ListDiagramReportsAsync()).Single().DiagramExists);
+
+    }
+
+    [Fact]
+    public async Task List_WithDiagrams_OnlyBooksWithRecognisedDiagrams()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var a = await _kit.BookAsync("A", owner.Id);
+        var b = await _kit.BookAsync("B", owner.Id);
+        a.DiagramState = EbookDiagramState.Done; a.DiagramCount = 12;
+        b.DiagramState = EbookDiagramState.Done; b.DiagramCount = 0;
+        await _kit.Db.SaveChangesAsync();
+        var r = await _kit.Service.ListAsync(owner.Id, false, new EbookQuery { WithDiagrams = true });
+        Assert.Equal(["A"], r.Items.Select(i => i.Title));
+    }
 }

@@ -27,6 +27,11 @@ public class EbooksAdminController : BaseApiController
         _service = service;
     }
 
+    /// <summary>Gemeldete falsche Diagramme (neueste zuerst, höchstens 500) — Grundlage für Font-Korrekturen.</summary>
+    [HttpGet("diagram-reports")]
+    public async Task<ActionResult<List<EbookDiagramReportDto>>> DiagramReports(CancellationToken ct)
+        => Ok(await _service.ListDiagramReportsAsync(ct));
+
     /// <summary>Diagramm-Erkennung aller PDF-Bücher neu anstoßen (nach neuen Font-Belegungen) → <c>{ queued }</c>.</summary>
     [HttpPost("diagrams/rescan")]
     public async Task<IActionResult> RescanDiagrams(CancellationToken ct)

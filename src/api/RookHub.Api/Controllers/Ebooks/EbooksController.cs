@@ -110,6 +110,16 @@ public class EbooksController : BaseApiController
     public async Task<ActionResult<EbookDiagramListDto>> GetDiagrams(int id, CancellationToken ct)
         => Ok(await _service.GetDiagramsAsync(GetUserId(), await ManageAllAsync(), id, ct));
 
+    /// <summary>„Diagramm falsch" melden → <c>{ reported: true }</c>; optional <c>{ note }</c>.</summary>
+    [HttpPost("{id:int}/diagrams/{diagramId:int}/report")]
+    public async Task<IActionResult> ReportDiagram(int id, int diagramId, [FromBody] EbookDiagramReportRequest? body, CancellationToken ct)
+        => Ok(new { reported = await _service.ReportDiagramAsync(GetUserId(), await ManageAllAsync(), id, diagramId, true, body?.Note, ct) });
+
+    /// <summary>Eigene Meldung zurücknehmen → <c>{ reported: false }</c>.</summary>
+    [HttpDelete("{id:int}/diagrams/{diagramId:int}/report")]
+    public async Task<IActionResult> WithdrawDiagramReport(int id, int diagramId, CancellationToken ct)
+        => Ok(new { reported = await _service.ReportDiagramAsync(GetUserId(), await ManageAllAsync(), id, diagramId, false, null, ct) });
+
     [HttpGet("{id:int}/progress")]
     public async Task<ActionResult<EbookProgressDto?>> GetProgress(int id, CancellationToken ct)
         => Ok(await _service.GetProgressAsync(GetUserId(), await ManageAllAsync(), id, ct));

@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.768.0", date: "2026-10-14", changes: [
+    { en: "E-books: below the board there is now „Diagram wrong“ — it marks a misread diagram (a second click withdraws it). Admins see how often a diagram was reported and get a list of all reports, which is what font fixes are based on.",
+      de: "E-Books: Unter dem Brett gibt es jetzt „Diagramm falsch“ — das markiert ein falsch gelesenes Diagramm (ein zweiter Klick nimmt es zurück). Admins sehen, wie oft ein Diagramm gemeldet wurde, und bekommen eine Liste aller Meldungen als Grundlage für Korrekturen." },
+    { en: "E-book library: new filter „With diagrams“ shows only books whose diagrams can be put on the board; cards show the number of diagrams. Search, filters, sorting and page are kept when you open a book and go back.",
+      de: "E-Book-Bibliothek: Der neue Filter „Mit Diagrammen“ zeigt nur Bücher, deren Diagramme sich aufs Brett holen lassen; die Karten nennen die Anzahl der Diagramme. Suche, Filter, Sortierung und Seite bleiben erhalten, wenn du ein Buch öffnest und zurückgehst." },
+  ] },
   { version: "0.767.0", date: "2026-10-14", changes: [
     { en: "E-books: diagram recognition now also reads the Hastings/Linares diagram fonts (most of the classic problem collections), ChessBase’s UDiagramm and the CHESSBOARD font. Across the library about 50 books now offer the board next to the book — several thousand diagrams. Books already checked are re-checked automatically.",
       de: "E-Books: Die Diagramm-Erkennung liest jetzt auch die Diagramm-Schriften Hastings/Linares (die meisten klassischen Problemsammlungen), ChessBase-UDiagramm und CHESSBOARD. In der Bibliothek bieten damit rund 50 Bücher das Brett neben dem Buch an — mehrere tausend Diagramme. Schon geprüfte Bücher werden automatisch neu geprüft." },

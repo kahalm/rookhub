@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { readJson, sessionStore, writeJson } from '../../core/local-json-store';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -28,6 +29,11 @@ import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dial
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
 
 export const EBOOK_PAGE_SIZE = 24;
+
+/** Sitzungs-Schlüssel der Listen-Ansicht (Suche, Filter, Seite) — „zurück" aus dem Leser landet wieder dort. */
+export const EBOOK_LIST_STATE_KEY = 'rh.ebooks.listState';
+
+export interface EbookListState { search: string; tag: string | null; sort: EbookSort; mine: boolean; withDiagrams: boolean; page: number; }
 
 /**
  * Übersicht der E-Book-Bibliothek (`/ebooks`): Suche, Schlagwort-Filter, Sortierung, Seiten; je Buch eine Karte mit
@@ -56,6 +62,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   tag: string | null = null;
   sort: EbookSort = 'title';
   mine = false;
+  withDiagrams = false;
   page = 1;
   readonly pageSize = EBOOK_PAGE_SIZE;
   readonly sorts: EbookSort[] = ['title', 'newest', 'recent'];
@@ -74,10 +81,13 @@ export class EbookListComponent implements OnInit, OnDestroy {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  private route = inject(ActivatedRoute, { optional: true });
+  private router = inject(Router, { optional: true });
 
   ngOnInit(): void {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => { this.page = 1; this.load(); });
     this.ebooks.accessToken().subscribe({ next: t => { this.token = t; this.cdr.markForCheck(); }, error: () => {} });
+    this.restoreState();
     this.load();
   }
 
@@ -86,10 +96,46 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /**
+   * Ansicht wiederherstellen: zuerst aus der Adresse (Lesezeichen, Zurück-Taste des Browsers), sonst aus der Sitzung
+   * (Zurück-Pfeil im Leser führt auf das nackte /ebooks).
+   */
+  private restoreState(): void {
+    const q = this.route?.snapshot.queryParamMap;
+    let st: Partial<EbookListState> | null = null;
+    if (q && q.keys.length > 0) {
+      st = { search: q.get('q') ?? '', tag: q.get('tag'), sort: (q.get('sort') as EbookSort) ?? 'title',
+        mine: q.get('mine') === '1', withDiagrams: q.get('diagrams') === '1', page: Number(q.get('page')) || 1 };
+    } else {
+      const store = sessionStore();
+      st = store ? readJson<Partial<EbookListState>>(store, EBOOK_LIST_STATE_KEY) : null;
+    }
+    if (!st) return;
+    this.search = st.search ?? '';
+    this.tag = st.tag ?? null;
+    this.sort = this.sorts.includes(st.sort as EbookSort) ? st.sort as EbookSort : 'title';
+    this.mine = !!st.mine;
+    this.withDiagrams = !!st.withDiagrams;
+    this.page = Math.max(1, Math.floor(st.page ?? 1));
+  }
+
+  /** Aktuelle Ansicht in Sitzung + Adresse (replaceUrl: kein neuer Verlaufseintrag je Tastendruck). */
+  private saveState(): void {
+    const st: EbookListState = { search: this.search.trim(), tag: this.tag, sort: this.sort, mine: this.mine, withDiagrams: this.withDiagrams, page: this.page };
+    const store = sessionStore();
+    if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
+    const queryParams: Record<string, string | null> = {
+      q: st.search || null, tag: st.tag, sort: st.sort !== 'title' ? st.sort : null,
+      mine: st.mine ? '1' : null, diagrams: st.withDiagrams ? '1' : null, page: st.page > 1 ? String(st.page) : null,
+    };
+    void this.router?.navigate([], { relativeTo: this.route ?? undefined, queryParams, replaceUrl: true });
+  }
+
   load(): void {
+    this.saveState();
     this.loading = this.list == null;
     this.error = false;
-    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, mine: this.mine, sort: this.sort, page: this.page, pageSize: this.pageSize })
+    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, mine: this.mine, withDiagrams: this.withDiagrams, sort: this.sort, page: this.page, pageSize: this.pageSize })
       .subscribe({
         next: list => {
           this.list = list;
@@ -104,7 +150,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   get items(): Ebook[] { return this.list?.items ?? []; }
-  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.mine); }
+  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.mine || this.withDiagrams); }
 
   onSearch(value: string): void {
     this.search = value;
@@ -119,6 +165,12 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   setSort(sort: EbookSort): void {
     this.sort = sort;
+    this.page = 1;
+    this.load();
+  }
+
+  toggleWithDiagrams(): void {
+    this.withDiagrams = !this.withDiagrams;
     this.page = 1;
     this.load();
   }

@@ -5248,7 +5248,8 @@
       "recent": "Zuletzt gelesen"
     },
     "filter": {
-      "mine": "Meine Uploads"
+      "mine": "Meine Uploads",
+      "withDiagrams": "Mit Diagrammen"
     },
     "empty": "Noch keine E-Books – lade das erste hoch.",
     "emptyFiltered": "Zu diesem Filter passt nichts.",
@@ -5328,7 +5329,13 @@
       "flip": "Brett drehen",
       "copyFen": "FEN kopieren",
       "fenCopied": "FEN kopiert.",
-      "copyFailed": "Kopieren hat nicht geklappt."
-    }
+      "copyFailed": "Kopieren hat nicht geklappt.",
+      "report": "Diagramm falsch",
+      "reportedUndo": "Als falsch gemeldet — zurücknehmen",
+      "reported": "Danke — das Diagramm ist als falsch markiert.",
+      "reportWithdrawn": "Meldung zurückgenommen.",
+      "reportFailed": "Melden hat nicht geklappt."
+    },
+    "diagrams": "{{n}} Diagramme"
   }
 }

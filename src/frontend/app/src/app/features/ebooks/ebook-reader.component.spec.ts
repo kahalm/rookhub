@@ -16,16 +16,16 @@ const book = (over: Partial<Ebook> = {}): Ebook => ({
 });
 
 const DIAGRAMS = [
-  { id: 11, page: 33, x: 0.1, y: 0.1, w: 0.3, h: 0.2, fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b - - 0 1', label: '1', caption: 'Hamppe – Steinitz', sideKnown: true },
-  { id: 12, page: 33, x: 0.1, y: 0.4, w: 0.3, h: 0.2, fen: 'rnb3kr/ppp4p/3b3B/3Pp2n/2BP4/3K1Rp1/PPP3q1/RN1Q4 w - - 0 1', label: '2', caption: null, sideKnown: true },
-  { id: 13, page: 40, x: 0.5, y: 0.1, w: 0.3, h: 0.2, fen: '8/8/8/8/8/8/8/K6k w - - 0 1', label: null, caption: null, sideKnown: false },
+  { id: 11, page: 33, x: 0.1, y: 0.1, w: 0.3, h: 0.2, fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b - - 0 1', label: '1', caption: 'Hamppe – Steinitz', sideKnown: true, reportedByMe: false, reportCount: 0 },
+  { id: 12, page: 33, x: 0.1, y: 0.4, w: 0.3, h: 0.2, fen: 'rnb3kr/ppp4p/3b3B/3Pp2n/2BP4/3K1Rp1/PPP3q1/RN1Q4 w - - 0 1', label: '2', caption: null, sideKnown: true, reportedByMe: false, reportCount: 0 },
+  { id: 13, page: 40, x: 0.5, y: 0.1, w: 0.3, h: 0.2, fen: '8/8/8/8/8/8/8/K6k w - - 0 1', label: null, caption: null, sideKnown: false, reportedByMe: false, reportCount: 0 },
 ];
 
 describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
   async function make(b: Ebook) {
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'setProgress', 'forgetToken', 'diagrams']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram']);
     service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
     service.accessToken.and.returnValue(of('tok'));
@@ -37,7 +37,7 @@ describe('EbookReaderComponent', () => {
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: EbookService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', '9']]) } } },
-        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: SnackbarService, useValue: { warn: () => {}, quick: () => {} } },
         // pdf.js läuft im Test nicht — der Leser bekommt einen Lader, der nie fertig wird.
         { provide: PdfEngineLoader, useValue: { load: () => new Promise(() => {}), documentParams: (url: string) => ({ url }) } },
       ],
@@ -98,7 +98,7 @@ describe('EbookReaderComponent', () => {
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: EbookService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', '9']]) } } },
-        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: SnackbarService, useValue: { warn: () => {}, quick: () => {} } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(EbookReaderComponent);
@@ -138,5 +138,19 @@ describe('EbookReaderComponent', () => {
     const c = fixture.componentInstance;
     c.step(1);
     expect(c.picked()!.id).toBe(13);
+  });
+
+  it('„Diagramm falsch" meldet, ein zweiter Klick nimmt zurück', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    service.reportDiagram.and.callFake((_e: number, _d: number, r: boolean) => of({ reported: r }));
+    c.pick(12);
+    c.toggleReport(c.picked()!);
+    expect(service.reportDiagram).toHaveBeenCalledWith(9, 12, true);
+    expect(c.picked()!.reportedByMe).toBeTrue();
+    expect(c.diagrams().find(d => d.id === 12)!.reportedByMe).toBeTrue();
+    c.toggleReport(c.picked()!);
+    expect(service.reportDiagram).toHaveBeenCalledWith(9, 12, false);
+    expect(c.picked()!.reportedByMe).toBeFalse();
   });
 });

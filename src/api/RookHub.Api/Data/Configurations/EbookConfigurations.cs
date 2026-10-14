@@ -85,3 +85,15 @@ internal sealed class EbookDiagramConfiguration : IEntityTypeConfiguration<Ebook
         e.HasIndex(d => new { d.EbookId, d.Page, d.Y });
     }
 }
+
+internal sealed class EbookDiagramReportConfiguration : IEntityTypeConfiguration<EbookDiagramReport>
+{
+    public void Configure(EntityTypeBuilder<EbookDiagramReport> e)
+    {
+        e.HasOne(r => r.Ebook).WithMany().HasForeignKey(r => r.EbookId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        // Je Nutzer und Diagramm höchstens eine Meldung (zweiter Klick nimmt sie zurück).
+        e.HasIndex(r => new { r.DiagramId, r.UserId }).IsUnique();
+        e.HasIndex(r => new { r.EbookId, r.CreatedAt });
+    }
+}

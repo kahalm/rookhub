@@ -49,6 +49,7 @@ public class EbookService
 
         var query = visible;
         if (q.Mine) query = query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
+        if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount > 0);
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var term = q.Search.Trim().ToLowerInvariant();
@@ -261,6 +262,7 @@ public class EbookService
         // InMemory kaskadiert nicht — abhängige Zeilen ausdrücklich räumen (gilt auch für MariaDB: kein Schaden).
         _db.EbookProgresses.RemoveRange(_db.EbookProgresses.Where(p => p.EbookId == id));
         _db.EbookDiagrams.RemoveRange(_db.EbookDiagrams.Where(d => d.EbookId == id));
+        _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
         _db.EbookGroupAccesses.RemoveRange(ebook.GroupAccess);
         _db.EbookFiles.RemoveRange(ebook.Files);
         _db.Ebooks.Remove(ebook);
@@ -364,7 +366,64 @@ public class EbookService
                     Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown,
                 }).ToListAsync(ct)
             : [];
+        if (items.Count > 0)
+        {
+            var reports = await _db.EbookDiagramReports.Where(r => r.EbookId == id)
+                .Select(r => new { r.DiagramId, r.UserId }).ToListAsync(ct);
+            var mine = reports.Where(r => r.UserId == userId).Select(r => r.DiagramId).ToHashSet();
+            var counts = reports.GroupBy(r => r.DiagramId).ToDictionary(g => g.Key, g => g.Count());
+            foreach (var d in items)
+            {
+                d.ReportedByMe = mine.Contains(d.Id);
+                if (manageAll) d.ReportCount = counts.GetValueOrDefault(d.Id);
+            }
+        }
         return new EbookDiagramListDto { State = state.ToString().ToLowerInvariant(), Items = items };
+    }
+
+    /// <summary>„Diagramm falsch": Meldung setzen (idempotent) bzw. mit <paramref name="reported"/>=false zurücknehmen.
+    /// Nur für Diagramme eines sichtbaren Buchs; unbekannt → 404.</summary>
+    public async Task<bool> ReportDiagramAsync(int userId, bool manageAll, int ebookId, int diagramId, bool reported, string? note, CancellationToken ct = default)
+    {
+        if (!await EbookAccess.CanAccessAsync(_db, userId, ebookId, manageAll, ct)) throw new NotFoundException("E-book not found.");
+        var diagram = await _db.EbookDiagrams.FirstOrDefaultAsync(d => d.Id == diagramId && d.EbookId == ebookId, ct)
+            ?? throw new NotFoundException("Diagram not found.");
+        var existing = await _db.EbookDiagramReports.FirstOrDefaultAsync(r => r.DiagramId == diagramId && r.UserId == userId, ct);
+        if (reported)
+        {
+            var trimmed = string.IsNullOrWhiteSpace(note) ? null : note.Trim()[..Math.Min(300, note.Trim().Length)];
+            if (existing == null)
+            {
+                _db.EbookDiagramReports.Add(new EbookDiagramReport
+                {
+                    EbookId = ebookId, DiagramId = diagramId, UserId = userId, Page = diagram.Page, Fen = diagram.Fen, Note = trimmed,
+                });
+                _logger.LogInformation("E-Book {EbookId}: Diagramm {DiagramId} (S. {Page}, {Font}) als falsch gemeldet", ebookId, diagramId, diagram.Page, diagram.FontFamily);
+            }
+            else if (trimmed != null) existing.Note = trimmed;
+        }
+        else if (existing != null) _db.EbookDiagramReports.Remove(existing);
+        await _db.SaveChangesAsync(ct);
+        return reported;
+    }
+
+    /// <summary>Alle Meldungen (Verwalter), neueste zuerst.</summary>
+    public async Task<List<EbookDiagramReportDto>> ListDiagramReportsAsync(CancellationToken ct = default)
+    {
+        var list = await _db.EbookDiagramReports.OrderByDescending(r => r.CreatedAt).Take(500)
+            .Select(r => new EbookDiagramReportDto
+            {
+                Id = r.Id, EbookId = r.EbookId, EbookTitle = r.Ebook.Title, DiagramId = r.DiagramId, Page = r.Page, Fen = r.Fen,
+                Note = r.Note, Username = r.User.Username, CreatedAt = r.CreatedAt,
+            }).ToListAsync(ct);
+        var ids = list.Select(r => r.DiagramId).Distinct().ToList();
+        var fonts = await _db.EbookDiagrams.Where(d => ids.Contains(d.Id)).ToDictionaryAsync(d => d.Id, d => d.FontFamily, ct);
+        foreach (var r in list)
+        {
+            r.DiagramExists = fonts.ContainsKey(r.DiagramId);
+            r.FontFamily = fonts.GetValueOrDefault(r.DiagramId);
+        }
+        return list;
     }
 
     /// <summary>Diagramm-Erkennung aller PDF-Bücher neu anstoßen (nach neuen Font-Belegungen); Antwort = Zahl der Bücher.</summary>

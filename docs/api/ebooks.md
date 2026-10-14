@@ -36,7 +36,7 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/ebooks?search=&tag=&mine=&sort=&page=&pageSize=` | Auth | Sichtbare Bücher, eine Seite (`pageSize` ≤ 100, Vorgabe 24) + Rahmen: `tags[]` (Schlagwort-Facette über ALLE sichtbaren, unabhängig vom Filter), `uploadEnabled`, `quotaUsedBytes`/`quotaLimitBytes` (null = unbegrenzt), `maxFileBytes`, `canManageAll`, `canImportLibrary`. `sort`: `title` (Vorgabe) / `newest` / `recent` (zuletzt gelesen zuerst). `tag` trifft nur ganze Schlagworte. Je Buch `canManage`, `groupIds` (nur wenn verwaltbar), `files[]`, `primaryFormat` (PDF vor allem anderen), `progress` (Lesestand des Aufrufers), `hasCover` |
+| GET | `/api/ebooks?search=&tag=&mine=&withDiagrams=&sort=&page=&pageSize=` | Auth | Sichtbare Bücher, eine Seite (`pageSize` ≤ 100, Vorgabe 24) + Rahmen: `tags[]` (Schlagwort-Facette über ALLE sichtbaren, unabhängig vom Filter), `uploadEnabled`, `quotaUsedBytes`/`quotaLimitBytes` (null = unbegrenzt), `maxFileBytes`, `canManageAll`, `canImportLibrary`. `sort`: `title` (Vorgabe) / `newest` / `recent` (zuletzt gelesen zuerst). `tag` trifft nur ganze Schlagworte. Je Buch `canManage`, `groupIds` (nur wenn verwaltbar), `files[]`, `primaryFormat` (PDF vor allem anderen), `progress` (Lesestand des Aufrufers), `hasCover` |
 | GET | `/api/ebooks/groups` | Auth | Gruppen, die der Aufrufer freigeben darf: Verwalter alle, sonst die eigenen + „Everyone" (`isEveryone`). Literal vor `{id}` |
 | GET | `/api/ebooks/access-token` | Auth | `{ token, expiresAt }` — der Ausweis für `…/file` und `…/cover` |
 | POST | `/api/ebooks` | Auth | Hochladen: Multipart `file` + `title?` (sonst aus dem Dateinamen), `author?`, `year?`, `tags?` (CSV), `description?`, `targetMinElo?`, `groupIds?` (CSV) → 201 + Buch. 400 `ebook_format_unsupported` / `ebook_file_too_large` / `ebook_file_empty` / `ebook_quota_exceeded` / `ebooks_not_configured`, 409 `ebook_duplicate_file`. Gruppen außerhalb der erlaubten werden still verworfen. Gesperrt in der Impersonation |
@@ -90,9 +90,15 @@ Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht d
 |---------|----------|------|-------|
 | GET | `/api/ebooks/{id:int}/diagrams` | Auth | `{ state, items[{ id, page, x, y, w, h, fen, label, caption, sideKnown }] }` in Lesereihenfolge; leer, solange nicht `done`. Unsichtbar → 404 |
 | POST | `/api/admin/ebooks/diagrams/rescan` | `ebooks.manage` | alle PDF-Bücher neu vormerken → `{ queued }` |
+| POST / DELETE | `/api/ebooks/{id:int}/diagrams/{diagramId:int}/report` | Auth | „Diagramm falsch“ melden (`{ note? }`, idempotent) bzw. eigene Meldung zurücknehmen → `{ reported }`. Tabelle `EbookDiagramReports` (Seite + FEN mitgeschrieben, `DiagramId` ohne FK — überlebt eine Neuerkennung, die die Diagramm-Zeilen ersetzt; unique je Nutzer + Diagramm). Im Diagramm-DTO `reportedByMe`, `reportCount` (nur Verwalter) |
+| GET | `/api/admin/ebooks/diagram-reports` | `ebooks.manage` | Meldungen, neueste zuerst (≤ 500) mit Buchtitel, Seite, FEN, Font-Familie, Hinweis, Nutzer, `diagramExists` |
 
 **Leser**: hat das Buch Diagramme, wird er zweispaltig — Buch links, Brett rechts (`clamp(300px, 32vw, 460px)`). Über jedem
 Diagramm liegt eine Zone (`PdfViewerComponent.zones`, Prozent der Seite → zoomfest); Doppelklick (oder Fokus + Enter) holt die
 Stellung aufs Brett, Schwarz am Zug dreht es. ‹/› gehen alle Diagramme durch und scrollen das Buch mit, „Analysieren“ öffnet
 `/analysis?fen=…&from=/ebooks/:id`, FEN kopieren. Unter 900 px liegt das Brett als Leiste unten und erscheint erst nach dem
 ersten Doppelklick.
+
+**Übersicht merkt sich die Ansicht** (0.768.0): Suche, Schlagwort, Sortierung, „Meine Uploads“, „Mit Diagrammen“ und Seite
+stehen in der Adresse (`?q=&tag=&sort=&mine=1&diagrams=1&page=`, `replaceUrl`) und in der Sitzung (`rh.ebooks.listState`) —
+der Zurück-Pfeil im Leser führt auf das nackte `/ebooks` und landet trotzdem in derselben Ansicht.

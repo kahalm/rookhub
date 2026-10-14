@@ -5248,7 +5248,8 @@
       "recent": "Nemrég olvasott"
     },
     "filter": {
-      "mine": "Saját feltöltéseim"
+      "mine": "Saját feltöltéseim",
+      "withDiagrams": "Diagramokkal"
     },
     "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
     "emptyFiltered": "Ehhez a szűrőhöz semmi sem illik.",
@@ -5328,7 +5329,13 @@
       "flip": "Tábla forgatása",
       "copyFen": "FEN másolása",
       "fenCopied": "FEN másolva.",
-      "copyFailed": "A másolás nem sikerült."
-    }
+      "copyFailed": "A másolás nem sikerült.",
+      "report": "Hibás diagram",
+      "reportedUndo": "Hibásnak jelölve — visszavonás",
+      "reported": "Köszönjük — a diagram hibásnak jelölve.",
+      "reportWithdrawn": "Jelzés visszavonva.",
+      "reportFailed": "A jelzés nem sikerült."
+    },
+    "diagrams": "{{n}} diagram"
   }
 }

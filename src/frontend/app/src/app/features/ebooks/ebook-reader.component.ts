@@ -159,6 +159,21 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     return { fen: d.fen, orientation: this.flipped() ? 'black' : 'white', from: `/ebooks/${this.ebook?.id ?? ''}` };
   }
 
+  /** „Diagramm falsch": melden bzw. zweiter Klick nimmt die Meldung zurück. */
+  toggleReport(d: EbookDiagram): void {
+    if (!this.ebook) return;
+    const next = !d.reportedByMe;
+    this.ebooks.reportDiagram(this.ebook.id, d.id, next).subscribe({
+      next: r => {
+        const updated = { ...d, reportedByMe: r.reported, reportCount: Math.max(0, d.reportCount + (r.reported ? 1 : -1)) };
+        this.diagrams.update(list => list.map(x => x.id === d.id ? updated : x));
+        if (this.picked()?.id === d.id) this.picked.set(updated);
+        this.snackbar.quick(this.translate.instant(r.reported ? 'ebooks.reader.reported' : 'ebooks.reader.reportWithdrawn'));
+      },
+      error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.reportFailed')),
+    });
+  }
+
   copyFen(d: EbookDiagram): void {
     navigator.clipboard?.writeText(d.fen).then(
       () => this.snackbar.quick(this.translate.instant('ebooks.reader.fenCopied')),

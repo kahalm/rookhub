@@ -2295,6 +2295,50 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookDiagrams");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("DiagramId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Fen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("DiagramId", "UserId")
+                        .IsUnique();
+
+                    b.HasIndex("EbookId", "CreatedAt");
+
+                    b.ToTable("EbookDiagramReports");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>
                 {
                     b.Property<int>("Id")
@@ -8704,6 +8748,25 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Ebook");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramReport", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>

@@ -5248,7 +5248,8 @@
       "recent": "Nedavno čitano"
     },
     "filter": {
-      "mine": "Moji prijenosi"
+      "mine": "Moji prijenosi",
+      "withDiagrams": "S dijagramima"
     },
     "empty": "Još nema e-knjiga – prenesi prvu.",
     "emptyFiltered": "Ništa ne odgovara ovom filtru.",
@@ -5328,7 +5329,13 @@
       "flip": "Okreni ploču",
       "copyFen": "Kopiraj FEN",
       "fenCopied": "FEN kopiran.",
-      "copyFailed": "Kopiranje nije uspjelo."
-    }
+      "copyFailed": "Kopiranje nije uspjelo.",
+      "report": "Dijagram je pogrešan",
+      "reportedUndo": "Prijavljeno kao pogrešno — poništi",
+      "reported": "Hvala — dijagram je označen kao pogrešan.",
+      "reportWithdrawn": "Prijava povučena.",
+      "reportFailed": "Prijava nije uspjela."
+    },
+    "diagrams": "Dijagrama: {{n}}"
   }
 }

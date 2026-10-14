@@ -194,3 +194,33 @@ public class EbookDiagram
     [MaxLength(60)]
     public string? FontFamily { get; set; }
 }
+
+/// <summary>
+/// Ein Nutzer meldet ein erkanntes Diagramm als FALSCH (0.768.0, Knopf „Diagramm falsch" unter dem Brett). Die Stellung wird
+/// mitgeschrieben (<see cref="Page"/>, <see cref="Fen"/>), weil eine Neuerkennung die Diagramm-Zeilen ersetzt — die Meldung
+/// bleibt so auswertbar (welcher Font, welche Seite) und hängt nur lose an <see cref="DiagramId"/> (kein FK).
+/// </summary>
+public class EbookDiagramReport
+{
+    public int Id { get; set; }
+
+    public int EbookId { get; set; }
+    public Ebook Ebook { get; set; } = null!;
+
+    /// <summary>Id des gemeldeten <see cref="EbookDiagram"/> zum Zeitpunkt der Meldung (nach einem Rescan evtl. verwaist).</summary>
+    public int DiagramId { get; set; }
+
+    public int UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+
+    public int Page { get; set; }
+
+    [Required, MaxLength(100)]
+    public string Fen { get; set; } = string.Empty;
+
+    /// <summary>Optionaler Hinweis des Nutzers („Dame auf d1 fehlt").</summary>
+    [MaxLength(300)]
+    public string? Note { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}

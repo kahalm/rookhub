@@ -56,6 +56,9 @@ export interface EbookDiagram {
   label: string | null;
   caption: string | null;
   sideKnown: boolean;
+  reportedByMe: boolean;
+  /** Nur für Verwalter gefüllt. */
+  reportCount: number;
 }
 
 export interface EbookDiagramList {
@@ -85,6 +88,8 @@ export interface EbookQuery {
   search?: string;
   tag?: string | null;
   mine?: boolean;
+  /** Nur Bücher mit erkannten Diagrammen. */
+  withDiagrams?: boolean;
   sort?: EbookSort;
   page?: number;
   pageSize?: number;
@@ -144,6 +149,7 @@ export class EbookService {
     if (q.search) params = params.set('search', q.search);
     if (q.tag) params = params.set('tag', q.tag);
     if (q.mine) params = params.set('mine', 'true');
+    if (q.withDiagrams) params = params.set('withDiagrams', 'true');
     if (q.sort) params = params.set('sort', q.sort);
     if (q.page) params = params.set('page', String(q.page));
     if (q.pageSize) params = params.set('pageSize', String(q.pageSize));
@@ -156,6 +162,12 @@ export class EbookService {
 
   diagrams(id: number): Observable<EbookDiagramList> {
     return this.http.get<EbookDiagramList>(`/api/ebooks/${id}/diagrams`);
+  }
+
+  /** „Diagramm falsch" melden bzw. zurücknehmen. */
+  reportDiagram(ebookId: number, diagramId: number, reported: boolean): Observable<{ reported: boolean }> {
+    const url = `/api/ebooks/${ebookId}/diagrams/${diagramId}/report`;
+    return reported ? this.http.post<{ reported: boolean }>(url, {}) : this.http.delete<{ reported: boolean }>(url);
   }
 
   groupOptions(): Observable<EbookGroupOption[]> {

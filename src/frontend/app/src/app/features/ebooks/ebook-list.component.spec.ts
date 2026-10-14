@@ -26,6 +26,10 @@ describe('EbookListComponent', () => {
   let calls: unknown[];
   let service: jasmine.SpyObj<EbookService>;
 
+  // Die Listen-Ansicht liegt in der Sitzung — jeder Test beginnt ohne gemerkte Filter.
+  beforeEach(() => sessionStorage.removeItem('rh.ebooks.listState'));
+  afterEach(() => sessionStorage.removeItem('rh.ebooks.listState'));
+
   function make(items: Ebook[], over: Partial<EbookList> = {}): EbookListComponent {
     calls = [];
     service = jasmine.createSpyObj<EbookService>('EbookService', ['list', 'accessToken', 'coverUrl', 'fileUrl', 'groupOptions', 'delete', 'setGroups', 'importLibrary']);
@@ -121,5 +125,27 @@ describe('EbookListComponent', () => {
     c.openUpload();
     expect(dialog.open).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith('apiErrors.ebooks_not_configured');
+  });
+
+  it('„Mit Diagrammen" filtert und springt auf Seite 1', () => {
+    const c = make([book()]);
+    c.page = 2;
+    c.toggleWithDiagrams();
+    expect(calls[1]).toEqual(jasmine.objectContaining({ withDiagrams: true, page: 1 }));
+    expect(c.filtered).toBeTrue();
+  });
+
+  it('merkt sich Suche und Filter in der Sitzung und stellt sie beim nächsten Öffnen wieder her', () => {
+    sessionStorage.removeItem('rh.ebooks.listState');
+    const c = make([book()]);
+    c.onSearch('woodpecker');
+    c.setTag('Taktik');
+    c.toggleWithDiagrams();
+    const again = make([book()]);
+    expect(again.tag).toBe('Taktik');
+    expect(again.withDiagrams).toBeTrue();
+    expect(again.search).toBe('woodpecker');
+    expect(calls[0]).toEqual(jasmine.objectContaining({ tag: 'Taktik', withDiagrams: true, search: 'woodpecker' }));
+    sessionStorage.removeItem('rh.ebooks.listState');
   });
 });

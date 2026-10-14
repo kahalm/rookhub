@@ -5248,7 +5248,8 @@
       "recent": "Recently read"
     },
     "filter": {
-      "mine": "My uploads"
+      "mine": "My uploads",
+      "withDiagrams": "With diagrams"
     },
     "empty": "No e-books yet – upload the first one.",
     "emptyFiltered": "Nothing matches this filter.",
@@ -5328,7 +5329,13 @@
       "flip": "Flip board",
       "copyFen": "Copy FEN",
       "fenCopied": "FEN copied.",
-      "copyFailed": "Copying did not work."
-    }
+      "copyFailed": "Copying did not work.",
+      "report": "Diagram wrong",
+      "reportedUndo": "Reported as wrong — undo",
+      "reported": "Thanks — the diagram is marked as wrong.",
+      "reportWithdrawn": "Report withdrawn.",
+      "reportFailed": "Reporting did not work."
+    },
+    "diagrams": "{{n}} diagrams"
   }
 }

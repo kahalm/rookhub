@@ -84,6 +84,8 @@ public class EbookQuery
     public string? Tag { get; set; }
     /// <summary>Nur eigene Uploads.</summary>
     public bool Mine { get; set; }
+    /// <summary>Nur Bücher mit erkannten Diagrammen (Brett neben dem Buch).</summary>
+    public bool WithDiagrams { get; set; }
     /// <summary><c>title</c> (Vorgabe), <c>newest</c>, <c>recent</c> (zuletzt gelesen zuerst).</summary>
     public string? Sort { get; set; }
     public int Page { get; set; } = 1;
@@ -179,6 +181,32 @@ public class EbookDiagramDto
     public string? Label { get; set; }
     public string? Caption { get; set; }
     public bool SideKnown { get; set; }
+    /// <summary>Der Aufrufer hat dieses Diagramm als falsch gemeldet.</summary>
+    public bool ReportedByMe { get; set; }
+    /// <summary>Meldungen insgesamt — nur für Verwalter gefüllt, sonst 0.</summary>
+    public int ReportCount { get; set; }
+}
+
+public class EbookDiagramReportRequest
+{
+    [MaxLength(300)] public string? Note { get; set; }
+}
+
+/// <summary>Eine Meldung in der Verwalter-Liste.</summary>
+public class EbookDiagramReportDto
+{
+    public int Id { get; set; }
+    public int EbookId { get; set; }
+    public string EbookTitle { get; set; } = string.Empty;
+    public int DiagramId { get; set; }
+    /// <summary>Gibt es das Diagramm noch (nach einer Neuerkennung evtl. nicht)?</summary>
+    public bool DiagramExists { get; set; }
+    public int Page { get; set; }
+    public string Fen { get; set; } = string.Empty;
+    public string? Note { get; set; }
+    public string? Username { get; set; }
+    public string? FontFamily { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>Antwort von <c>GET /api/ebooks/{id}/diagrams</c>.</summary>

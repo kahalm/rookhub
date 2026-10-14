@@ -417,6 +417,7 @@ public class ProfileService
         // Verwalter pflegen sie) — ein Admin, der die 800-Bücher-Bibliothek eingelesen hat, nimmt sie beim Löschen seines
         // Kontos nicht mit, und ein für die Gruppe freigegebenes Buch verschwindet nicht aus deren Regal.
         _db.EbookProgresses.RemoveRange(await _db.EbookProgresses.Where(p => p.UserId == userId).ToListAsync());
+        _db.EbookDiagramReports.RemoveRange(await _db.EbookDiagramReports.Where(r => r.UserId == userId).ToListAsync());
         foreach (var ebook in await _db.Ebooks.Where(b => b.OwnerUserId == userId).ToListAsync())
             ebook.OwnerUserId = null;
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
