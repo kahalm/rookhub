@@ -140,6 +140,11 @@ public class EbooksController : BaseApiController
     public async Task<ActionResult<EbookDiagramListDto>> GetDiagrams(int id, CancellationToken ct)
         => Ok(await _service.GetDiagramsAsync(Caller, await ManageAllAsync(), id, ct));
 
+    /// <summary>„Als Kurs anlegen“ (0.785.0): persönlicher Kurs aus den Diagrammen des Buchs → der neue Kurs.</summary>
+    [HttpPost("{id:int}/course")]
+    public async Task<ActionResult<RookHub.Api.DTOs.Courses.CourseListItemDto>> CreateCourse(int id, [FromServices] EbookCourseBuilder builder, CancellationToken ct)
+        => Ok(await builder.CreateCourseAsync(Caller, await ManageAllAsync(), id, ct));
+
     /// <summary>„Diagramm falsch" melden → <c>{ reported: true }</c>; optional <c>{ note }</c>.</summary>
     [HttpPost("{id:int}/diagrams/{diagramId:int}/report")]
     public async Task<IActionResult> ReportDiagram(int id, int diagramId, [FromBody] EbookDiagramReportRequest? body, CancellationToken ct)

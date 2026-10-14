@@ -74,6 +74,11 @@
             <span>{{ 'ebooks.downloadFormat' | translate: { format: f.format.toUpperCase(), size: size(f.sizeBytes) } }}</span>
           </a>
         }
+        @if (loggedIn && diagrams().length > 0) {
+          <button mat-menu-item (click)="createCourse(ebook)" [disabled]="creatingCourse()">
+            <mat-icon>school</mat-icon><span>{{ 'ebooks.reader.createCourse' | translate }}</span>
+          </button>
+        }
       </mat-menu>
     </div>
 

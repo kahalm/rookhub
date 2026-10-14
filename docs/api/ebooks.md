@@ -308,3 +308,11 @@ startet beim ersten Diagramm damit; danach bleibt der selbst gewählte Modus bei
 **Drosselung Datei/Titelbild** (0.781.1): `GET …/file` und `…/cover` tragen die Policy `ebook-file` (1 500/min je Adresse,
 `RateLimitPartitions.EbookFilePolicy`) und sind vom globalen 100/min-Topf ausgenommen (`HasOwnIpCeiling`) — pdf.js lud ein
 großes Buch in Hunderten Bereichsanfragen, die Adresse war danach eine Minute lang für alles gesperrt (429 → „Could not load“).
+
+## Buch → Kurs (0.785.0)
+
+`POST /api/ebooks/{id}/course` (angemeldet, Buch sichtbar) legt aus den Diagrammen einen PERSÖNLICHEN Kurs an
+(`EbookCourseBuilder`): Diagramme mit Lösung (`SolutionSan`, aus dem Buch oder von Stockfish) werden Aufgaben, Diagramme
+ohne Lösung Info-Linien (Stellung + Bildunterschrift); unspielbare Lehrbilder (ohne König u. Ä.) fallen weg. Titel der
+Linie „Diagramm {Label}“, Reihenfolge wie im Buch. Läuft über den normalen PGN-Import (`UploadPersonalCourseAsync`).
+Keine einzige Lösung → 400 (erst die Stockfish-Prüfung abwarten). Oberfläche: ⋮-Menü im Leser „Als Kurs anlegen“.

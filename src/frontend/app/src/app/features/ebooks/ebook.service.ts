@@ -196,6 +196,11 @@ export class EbookService {
     return this.http.get<EbookDiagramList>(`/api/ebooks/${id}/diagrams`);
   }
 
+  /** „Als Kurs anlegen“: persönlicher Kurs aus den Diagrammen des Buchs → Id des neuen Kurses. */
+  createCourse(id: number): Observable<{ bookId: number; displayName: string }> {
+    return this.http.post<{ bookId: number; displayName: string }>(`/api/ebooks/${id}/course`, {});
+  }
+
   /** „Diagramm falsch" melden bzw. zurücknehmen. */
   reportDiagram(ebookId: number, diagramId: number, reported: boolean): Observable<{ reported: boolean }> {
     const url = `/api/ebooks/${ebookId}/diagrams/${diagramId}/report`;

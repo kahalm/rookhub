@@ -5439,6 +5439,10 @@
       "matedIn": "wird in {{n}} matt",
       "evalTitle": "Stockfish-Bewertung für die Seite am Zug",
       "notFound": "Dieses Buch gibt es nicht oder es ist nicht für dich freigegeben.",
+      "createCourse": "Als Kurs anlegen",
+      "courseCreated": "Kurs angelegt – die Diagramme mit Lösung sind seine Aufgaben.",
+      "courseNoSolutions": "Noch kein Diagramm hat eine Lösung – warte, bis Stockfish das Buch geprüft hat.",
+      "courseFailed": "Der Kurs konnte nicht angelegt werden.",
       "openBoard": "Brett: {{n}} Diagramme",
       "openBoardOne": "Brett: 1 Diagramm"
     },

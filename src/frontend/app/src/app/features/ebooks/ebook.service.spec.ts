@@ -20,6 +20,15 @@ describe('EbookService', () => {
 
   afterEach(() => http.verify());
 
+  it('„Als Kurs anlegen“ schickt POST an /api/ebooks/{id}/course', () => {
+    let id = 0;
+    service.createCourse(42).subscribe(c => id = c.bookId);
+    const req = http.expectOne('/api/ebooks/42/course');
+    expect(req.request.method).toBe('POST');
+    req.flush({ bookId: 7, displayName: 'Awerbach' });
+    expect(id).toBe(7);
+  });
+
   it('schickt nur gesetzte Filter als Query', () => {
     service.list({ search: 'endgame', tag: 'Endspiel', mine: true, sort: 'recent', page: 2 }).subscribe();
     const req = http.expectOne(r => r.url === '/api/ebooks');

@@ -5439,6 +5439,10 @@
       "matedIn": "mattot kap {{n}} lépésben",
       "evalTitle": "A Stockfish értékelése a lépésre következő félnek",
       "notFound": "Ez a könyv nem létezik, vagy nincs megosztva veled.",
+      "createCourse": "Tanfolyam készítése a diagramokból",
+      "courseCreated": "A tanfolyam elkészült – a megoldással rendelkező diagramok a feladatai.",
+      "courseNoSolutions": "Még egyik diagramnak sincs megoldása – várd meg, amíg a Stockfish ellenőrzi a könyvet.",
+      "courseFailed": "A tanfolyamot nem sikerült létrehozni.",
       "openBoard": "Tábla: {{n}} diagram",
       "openBoardOne": "Tábla: 1 diagram"
     },

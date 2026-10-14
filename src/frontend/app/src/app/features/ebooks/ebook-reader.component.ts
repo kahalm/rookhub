@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -81,6 +81,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   readonly panelOpen = signal(false);
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private ebooks = inject(EbookService);
   private snackbar = inject(SnackbarService);
   private auth = inject(AuthService);
@@ -393,4 +394,22 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   }
 
   size(bytes: number): string { return formatBytes(bytes, this.translate.currentLang() ?? undefined); }
+
+  /** „Als Kurs anlegen“: Diagramme mit Lösung werden Aufgaben eines persönlichen Kurses, danach dorthin. */
+  readonly creatingCourse = signal(false);
+  createCourse(ebook: Ebook): void {
+    if (this.creatingCourse()) return;
+    this.creatingCourse.set(true);
+    this.ebooks.createCourse(ebook.id).subscribe({
+      next: c => {
+        this.creatingCourse.set(false);
+        this.snackbar.quick(this.translate.instant('ebooks.reader.courseCreated'));
+        void this.router.navigate(['/courses', c.bookId]);
+      },
+      error: (e: HttpErrorResponse) => {
+        this.creatingCourse.set(false);
+        this.snackbar.warn(this.translate.instant(e.status === 400 ? 'ebooks.reader.courseNoSolutions' : 'ebooks.reader.courseFailed'));
+      },
+    });
+  }
 }

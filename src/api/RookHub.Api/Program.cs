@@ -207,6 +207,7 @@ try
     builder.Services.AddSingleton<RookHub.Api.Services.Ebooks.EbookStorage>();
     builder.Services.AddSingleton<RookHub.Api.Services.Ebooks.EbookAccessTokens>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookService>();
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookCourseBuilder>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookLibraryImporter>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookCoverRenderer>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookCoverWorker>();

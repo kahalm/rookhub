@@ -5439,6 +5439,10 @@
       "matedIn": "mated in {{n}}",
       "evalTitle": "Stockfish evaluation for the side to move",
       "notFound": "This book does not exist or has not been shared with you.",
+      "createCourse": "Create a course from the diagrams",
+      "courseCreated": "Course created – the diagrams with a solution are its tasks.",
+      "courseNoSolutions": "No diagram has a solution yet – wait until Stockfish has checked the book.",
+      "courseFailed": "The course could not be created.",
       "openBoard": "Board: {{n}} diagrams",
       "openBoardOne": "Board: 1 diagram"
     },

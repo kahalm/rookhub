@@ -5439,6 +5439,10 @@
       "matedIn": "dobiva mat u {{n}}",
       "evalTitle": "Ocjena Stockfisha za stranu na potezu",
       "notFound": "Ova knjiga ne postoji ili nije podijeljena s tobom.",
+      "createCourse": "Napravi tečaj iz dijagrama",
+      "courseCreated": "Tečaj je napravljen – dijagrami s rješenjem su njegovi zadaci.",
+      "courseNoSolutions": "Još nijedan dijagram nema rješenje – pričekaj da Stockfish provjeri knjigu.",
+      "courseFailed": "Tečaj nije moguće napraviti.",
       "openBoard": "Ploča: {{n}} dijagrama",
       "openBoardOne": "Ploča: 1 dijagram"
     },

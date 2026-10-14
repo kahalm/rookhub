@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.785.0", date: "2026-10-14", changes: [
+    { en: "E-books: „Create a course from the diagrams“ in the reader’s ⋮ menu turns a book’s recognised diagrams into a personal course – diagrams with a solution (from the book or from Stockfish) become tasks, the rest are shown as positions in book order.", de: "E-Books: „Als Kurs anlegen“ im ⋮-Menü des Lesers macht aus den erkannten Diagrammen eines Buchs einen persönlichen Kurs – Diagramme mit Lösung (aus dem Buch oder von Stockfish) werden Aufgaben, die übrigen erscheinen als Stellungen in der Reihenfolge des Buchs." },
+  ] },
   { version: "0.784.1", date: "2026-10-14", changes: [
     { en: "Courses: the import button is now called “Upload course” (was “Import games”) — it creates a course from any PGN, your own games included.",
       de: "Kurse: der Import-Knopf heißt jetzt „Kurs hochladen“ (vorher „Partien importieren“) — er legt aus jeder PGN einen Kurs an, auch aus eigenen Partien." },
