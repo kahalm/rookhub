@@ -98,10 +98,16 @@
 @media (max-width: 899.98px) {
   .rd-body--split { flex-direction: column; }
   .rd-split { display: none; }
+  /* Handy (0.780.2, Nutzerwunsch): das Brett öffnet als Vollbild über dem Buch statt als kleine Leiste unten —
+     Kopf mit ‹ › und Schließen bleibt oben stehen. z-index unter den CDK-Overlays (1000), damit Menüs/Snackbars darüber liegen. */
   .rd-panel {
-    display: none; flex: 0 0 auto !important; max-height: 62dvh;
-    border-left: 0; border-top: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent);
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    display: none; position: fixed; inset: 0; z-index: 900; flex: none !important; max-height: none; border: 0;
+    padding: env(safe-area-inset-top, 0px) max(12px, env(safe-area-inset-right, 0px))
+      calc(16px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  }
+  .rd-panel-head {
+    position: sticky; top: 0; z-index: 1; padding: 8px 0 4px; background: var(--mat-sys-surface);
+    border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent);
   }
   .rd-body--panel-open .rd-panel { display: flex; }
   .rd-panel-close { display: inline-flex; }

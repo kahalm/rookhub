@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.780.2", date: "2026-10-14", changes: [
+    { en: "E-book reader on the phone: the board now opens full screen over the book instead of as a small strip at the bottom – bigger board, the controls stay at the top; close returns to the page.",
+      de: "E-Book-Leser am Handy: Das Brett öffnet jetzt als Vollbild über dem Buch statt als kleine Leiste unten – größeres Brett, die Knöpfe bleiben oben; Schließen führt zurück zur Seite." },
+  ] },
   { version: "0.780.1", date: "2026-10-14", changes: [
     { en: "E-book reader: the mouse wheel (and touchpad) turns the pages of EPUB books; one notch is one page.",
       de: "E-Book-Leser: Mausrad (und Touchpad) blättern in EPUB-Büchern; eine Raste ist eine Seite." },

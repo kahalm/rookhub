@@ -283,6 +283,21 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   });
 
+  it('Handy: Brett als Vollbild über dem Buch (fixed, ganze Fläche), Escape schließt es', async () => {
+    const css = compactCss(EbookReaderComponent);
+    const narrow = css.slice(css.indexOf('@media(max-width:899.98px)'));
+    expect(narrow).toMatch(/\.rd-panel(\[[^\]]*\])?\{display:none;position:fixed;inset:0/);
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.pick(11);
+    expect(c.panelOpen()).toBeTrue();
+    const e = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    Object.defineProperty(e, 'target', { value: document.createElement('div') });
+    c.onDocumentKey(e);
+    expect(c.panelOpen()).toBeFalse();
+    fixture.destroy();
+  });
+
   it('Herkunft der Lösung und Engine-Bewertung werden benannt', async () => {
     const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
     const c = fixture.componentInstance;

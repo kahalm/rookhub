@@ -99,8 +99,8 @@ Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht d
 **Leser**: hat das Buch Diagramme, wird er zweispaltig — Buch links, Brett rechts (`clamp(300px, 32vw, 460px)`). Über jedem
 Diagramm liegt eine Zone (`PdfViewerComponent.zones`, Prozent der Seite → zoomfest); Doppelklick (oder Fokus + Enter) holt die
 Stellung aufs Brett, Schwarz am Zug dreht es. ‹/› gehen alle Diagramme durch und scrollen das Buch mit, „Analysieren“ öffnet
-`/analysis?fen=…&from=/ebooks/:id`, FEN kopieren. Unter 900 px liegt das Brett als Leiste unten und erscheint erst nach dem
-ersten Doppelklick.
+`/analysis?fen=…&from=/ebooks/:id`, FEN kopieren. Unter 900 px öffnet das Brett nach dem ersten Doppelklick als Vollbild über dem Buch (0.780.2, vorher Leiste unten mit
+höchstens 62 % Höhe); Kopf mit ‹ › und Schließen bleibt oben stehen, Escape schließt.
 
 **Übersicht merkt sich die Ansicht** (0.768.0): Suche, Schlagwort, Sortierung, „Meine Uploads“, „Mit Diagrammen“ und Seite
 stehen in der Adresse (`?q=&tag=&sort=&mine=1&diagrams=1&page=`, `replaceUrl`) und in der Sitzung (`rh.ebooks.listState`) —

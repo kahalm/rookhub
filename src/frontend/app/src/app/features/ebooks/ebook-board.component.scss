@@ -29,7 +29,7 @@
 .eb-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .eb-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
 
-/* Schmal (Brett als Leiste unten): Brett nicht höher als knapp die halbe Bildschirmhöhe. */
+/* Schmal (Brett als Vollbild, 0.780.2): Brett so breit wie möglich, aber Platz für Modi und Knöpfe darunter lassen. */
 @media (max-width: 899.98px) {
-  .eb-board { width: min(100%, 44dvh); margin: 0 auto; }
+  .eb-board { width: min(100%, 62dvh); margin: 0 auto; }
 }

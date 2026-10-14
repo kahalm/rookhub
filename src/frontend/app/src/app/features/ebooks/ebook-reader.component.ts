@@ -24,7 +24,7 @@ import { nextZoom, parsePageInput } from './reader-progress.util';
  * Leser-Seite (`/ebooks/:id`): Werkzeugleiste (zurück, Titel, Seite x / N, Zoom, Download) und darunter der
  * PDF-Leser mit der ganzen Resthöhe. Hat das Buch erkannte Diagramme (0.766.0), steht rechts ein Brett: Doppelklick auf
  * ein Diagramm im Buch holt die Stellung herüber, ‹/› springen zum vorigen/nächsten Diagramm, „Analysieren" öffnet sie
- * im Analysebrett. Unter 900 px liegt das Brett als Leiste unten und erscheint erst mit dem ersten Doppelklick. Der Lesestand wird 1,5 s nach dem letzten Seitenwechsel gespeichert und beim
+ * im Analysebrett. Unter 900 px öffnet das Brett mit dem ersten Doppelklick als Vollbild über dem Buch (0.780.2; Schließen-Knopf, Escape). Der Lesestand wird 1,5 s nach dem letzten Seitenwechsel gespeichert und beim
  * nächsten Öffnen angesprungen. Formate, die der Browser nicht zeigt (EPUB, DJVU …), bekommen eine Download-Karte.
  */
 @Component({
@@ -169,6 +169,11 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   @HostListener('document:keydown', ['$event'])
   onDocumentKey(e: KeyboardEvent): void {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || !this.readable) return;
+    // Handy: das Brett liegt als Vollbild über dem Buch — Escape schließt es (0.780.2).
+    if (e.key === 'Escape' && this.panelOpen() && !(e.target as HTMLElement | null)?.closest?.('.cdk-overlay-container')) {
+      this.panelOpen.set(false);
+      return;
+    }
     const t = e.target as HTMLElement | null;
     if (t?.closest?.('input, textarea, select, [contenteditable="true"], .cdk-overlay-container, .pv-scroll, app-epub-viewer, .rd-split')) return;
     const forward = e.key === 'ArrowRight' || e.key === 'PageDown';
