@@ -234,6 +234,15 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
 - Parität C# = Python-Referenz (Beim, 157/157 Stellungen). Laufzeit ~0,5 s je Seite. Gemessen: Beim 162, Hansen 46, Buckley 31
   Diagramme (Buckley: fremder Figurensatz, viele Bretter unlesbar — offen).
 
+## Nachgetragene Diagramme schützen (0.782.0)
+
+Scheitert die Erkennung (Pongó „Tactical Targets 1“: 118 von 978), werden die Stellungen außerhalb der App gelesen (Opus-Vision,
+`FontFamily = opus`, `Label` = Aufgabennummer) und per SQL eingespielt. `Ebook.DiagramsCurated = true` markiert solche Bücher:
+`RescanDiagramsAsync` lässt sie aus, und der `EbookDiagramWorker` setzt ein trotzdem vorgemerktes Buch (Recheck-Migration,
+DJVU-Umwandlung) nur zurück auf Done und lässt die Diagramme stehen. Die Migration `EbookDiagramsCurated` markiert alle
+Bücher mit `opus`-Diagrammen. Einspielen: alte Zeilen löschen, neue einfügen, `DiagramState=1`, `DiagramCount`,
+`SolutionCheckState=0` (Stockfish prüft neu), `DiagramsCurated=1`.
+
 ## Brett-Modi im Leser (0.777.0)
 
 Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das

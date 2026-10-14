@@ -522,7 +522,7 @@ public class EbookService
     /// <summary>Diagramm-Erkennung aller PDF-Bücher neu anstoßen (nach neuen Font-Belegungen); Antwort = Zahl der Bücher.</summary>
     public async Task<int> RescanDiagramsAsync(CancellationToken ct = default)
     {
-        var books = await _db.Ebooks.Where(b => b.DiagramState != EbookDiagramState.Pending && b.Files.Any(f => f.Format == "pdf")).ToListAsync(ct);
+        var books = await _db.Ebooks.Where(b => b.DiagramState != EbookDiagramState.Pending && !b.DiagramsCurated && b.Files.Any(f => f.Format == "pdf")).ToListAsync(ct);
         foreach (var b in books) b.DiagramState = EbookDiagramState.Pending;
         await _db.SaveChangesAsync(ct);
         return books.Count;

@@ -2212,6 +2212,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("DiagramState")
                         .HasColumnType("int");
 
+                    b.Property<bool>("DiagramsCurated")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int?>("OwnerUserId")
                         .HasColumnType("int");
 

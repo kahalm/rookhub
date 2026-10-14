@@ -85,6 +85,11 @@ public class Ebook
     /// <summary>Erkannte Diagramme (nur gültig bei <see cref="EbookDiagramState.Done"/>).</summary>
     public int DiagramCount { get; set; }
 
+    /// <summary>Diagramme von Hand bzw. per Vision-Modell nachgetragen (0.782.0, z. B. Pongó per Opus, <c>FontFamily = "opus"</c>):
+    /// der <c>EbookDiagramWorker</c> ersetzt sie NIE — ein Neuerkennen (Rescan, Recheck-Migration, DJVU-Umwandlung) setzt nur
+    /// den Stand zurück auf <see cref="EbookDiagramState.Done"/>. Zurücksetzen nur von Hand in der DB.</summary>
+    public bool DiagramsCurated { get; set; }
+
     /// <summary>Wann der Hochladende benachrichtigt wurde, dass die Verarbeitung (Titelbild, Umwandlung, Diagramme, Prüfung)
     /// fertig ist (0.773.0); <c>null</c> = noch nicht. Nur für Uploads — eingelesene Bibliotheksbücher melden sich nicht.</summary>
     public DateTime? ReadyNotifiedAt { get; set; }

@@ -29,6 +29,15 @@ public class EbookDiagramWorker : PeriodicWorker
         foreach (var ebook in batch)
         {
             ct.ThrowIfCancellationRequested();
+            if (ebook.DiagramsCurated)
+            {
+                // Nachgetragene Diagramme (Opus/Hand) nie überschreiben — nur den Stand zurücksetzen.
+                ebook.DiagramCount = await db.EbookDiagrams.CountAsync(d => d.EbookId == ebook.Id, ct);
+                ebook.DiagramState = EbookDiagramState.Done;
+                await db.SaveChangesAsync(ct);
+                Logger.LogInformation("E-Book {EbookId}: Diagramme nachgetragen, Neuerkennung übersprungen", ebook.Id);
+                continue;
+            }
             // PDF (Schach-Font) vor EPUB (Brettbilder, 0.775.0); DJVU-Scans erst mit Stufe 2.
             // Schach-Fonts stehen nur im ORIGINAL-PDF; gerendert (Scans) wird die leichte Lesefassung, falls es eine gibt.
             var file = ebook.Files.FirstOrDefault(f => f.Format == "pdf" && !f.Derived) ?? ebook.Files.FirstOrDefault(f => f.Format == "pdf")

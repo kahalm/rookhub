@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.782.0", date: "2026-10-14", changes: [
+    { en: "E-books: diagrams added by hand or read by AI (e.g. all 978 positions of Pongó’s „Tactical Targets 1“) are now marked and are no longer replaced when the automatic recognition runs again.", de: "E-Books: Von Hand oder per KI nachgetragene Diagramme (z. B. alle 978 Stellungen aus Pongós „Tactical Targets 1“) sind jetzt markiert und werden von einer neuen automatischen Erkennung nicht mehr überschrieben." },
+  ] },
   { version: "0.781.1", date: "2026-10-14", changes: [
     { en: "E-books: opening a large PDF no longer blocks the site for a minute („Could not load“) – the many partial downloads of the reader and the covers now have their own limit instead of counting against the general one.",
       de: "E-Books: Ein großes PDF zu öffnen sperrt die Seite nicht mehr für eine Minute („Could not load“) – die vielen Teil-Downloads des Lesers und die Titelbilder haben jetzt einen eigenen Deckel statt den allgemeinen aufzubrauchen." },
