@@ -30,10 +30,13 @@ public static class EbookSolutionChecker
     public static bool BookMoveOk(int best, int book) =>
         best - book <= ToleranceCp || book >= Math.Min(best, StillWinningCp) && book >= StillWinningCp;
 
+    /// <summary>Kann Stockfish die Stellung bewerten? Erkannte Diagramme haben oft das falsche Zugrecht (Gegner steht im
+    /// Schach) — daran stürzt Stockfish ab, und vor 0.783.1 blieb dadurch die Prüfung ALLER Bücher am ersten hängen.</summary>
     public static bool IsLegal(string fen)
     {
-        try { ChessBoard.LoadFromFen(fen); return true; }
+        try { ChessBoard.LoadFromFen(fen); }
         catch { return false; }
+        return EngineBroker.WorkSanitizer.IsEngineSafe(fen);
     }
 
     /// <summary>Prüft EIN Diagramm und setzt Lösung/Prüfstand/Bewertung daran.</summary>
@@ -134,7 +137,7 @@ public class EbookSolutionCheckWorker : PeriodicWorker
             .OrderBy(b => b.Id).FirstOrDefaultAsync(ct);
         if (ebook == null) return;
         var path = StockfishPath.Resolve(_options.StockfishPath);
-        await using var engine = await UciEngineSession.StartAsync(path, Logger, ct);
+        var engine = await UciEngineSession.StartAsync(path, Logger, ct);
         if (engine == null)
         {
             ebook.SolutionCheckState = EbookDiagramState.Failed;
@@ -144,12 +147,25 @@ public class EbookSolutionCheckWorker : PeriodicWorker
         }
         var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebook.Id).OrderBy(d => d.Page).ThenBy(d => d.Y).ToListAsync(ct);
         var n = 0;
-        foreach (var d in diagrams)
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            await EbookSolutionChecker.CheckAsync(engine, d, _options.EngineMoveTimeMs, ct);
-            if (++n % 25 == 0) await db.SaveChangesAsync(ct);
+            foreach (var d in diagrams)
+            {
+                ct.ThrowIfCancellationRequested();
+                try { await EbookSolutionChecker.CheckAsync(engine, d, _options.EngineMoveTimeMs, ct); }
+                catch (IOException ex)
+                {
+                    // Stockfish ist an dieser Stellung abgestürzt: Diagramm auslassen, Engine neu starten, weiter —
+                    // sonst scheitert das Buch bei jedem Durchlauf an derselben Stelle und blockiert alle dahinter.
+                    Logger.LogWarning(ex, "E-Book {EbookId}: Stockfish an Diagramm {DiagramId} abgestürzt ({Fen})", ebook.Id, d.Id, d.Fen);
+                    await engine.DisposeAsync();
+                    engine = await UciEngineSession.StartAsync(path, Logger, ct)
+                        ?? throw new IOException("Stockfish startet nach Absturz nicht neu");
+                }
+                if (++n % 25 == 0) await db.SaveChangesAsync(ct);
+            }
         }
+        finally { await engine.DisposeAsync(); }
         ebook.SolutionCheckState = EbookDiagramState.Done;
         await db.SaveChangesAsync(ct);
         await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);

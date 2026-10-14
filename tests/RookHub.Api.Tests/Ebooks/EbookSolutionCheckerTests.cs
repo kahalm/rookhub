@@ -28,6 +28,22 @@ public class EbookSolutionCheckerTests
     [InlineData(9997, 200, false)]
     public void BookMoveOk_ToleranceAndStillWinning(int best, int book, bool ok) => Assert.Equal(ok, EbookSolutionChecker.BookMoveOk(best, book));
 
+    [Theory]
+    [InlineData("2kr3r/1pp4p/pQ2pP2/4p3/3bP3/2KP4/PPP3PP/2BR4 b - - 0 17")]   // Weiß (nicht am Zug) im Schach — Prod-Buch 1
+    [InlineData("4k3/8/8/8/8/8/8/4K2p w - - 0 1")]                          // Bauer auf der Grundreihe
+    public async Task EngineUnsafePosition_IsSkipped_WithoutCallingTheEngine(string fen)
+    {
+        Assert.False(EbookSolutionChecker.IsLegal(fen));
+        var d = new EbookDiagram { Fen = fen };
+        var e = new FakeEngine(new() { ["root"] = new UciResult(0, false, ["a1a2"]) });
+        await EbookSolutionChecker.CheckAsync(e, d, 100, default);
+        Assert.Empty(e.Calls);
+        Assert.Equal(EbookSolutionCheck.Unchecked, d.SolutionCheck);
+    }
+
+    [Fact]
+    public void LegalPosition_IsAccepted() => Assert.True(EbookSolutionChecker.IsLegal(Fen));
+
     [Fact]
     public async Task BookSolution_BestMove_IsConfirmed()
     {

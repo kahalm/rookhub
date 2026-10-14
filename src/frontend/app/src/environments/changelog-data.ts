@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.783.1", date: "2026-10-14", changes: [
+    { en: "E-books: the Stockfish check of book solutions no longer gets stuck – a misread diagram where the side not to move is in check used to crash the engine, so the check of every following book stopped.", de: "E-Books: Die Stockfish-Prüfung der Buchlösungen bleibt nicht mehr hängen – ein falsch erkanntes Diagramm, in dem die Seite ohne Zugrecht im Schach steht, brachte die Engine zum Absturz, und damit stand die Prüfung aller folgenden Bücher." },
+  ] },
   { version: "0.783.0", date: "2026-10-14", changes: [
     { en: "Courses: „Continue with remaining“ after a finished round no longer resets the whole course — it only brings the failed, still unsolved lines back (solved ones stay solved), now in sequential mode too. Before, the button wiped all solved lines.",
       de: "Kurse: „Mit den restlichen weiter“ nach einer fertigen Runde setzt nicht mehr den ganzen Kurs zurück, sondern holt nur die gescheiterten, noch ungelösten Linien zurück (gelöste bleiben gelöst) — jetzt auch im sequenziellen Modus. Vorher löschte der Knopf alle gelösten Linien." },

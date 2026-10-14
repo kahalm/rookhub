@@ -105,6 +105,14 @@ public static class WorkSanitizer
         return string.Join(' ', list);
     }
 
+    /// <summary>Darf eine Engine diese Stellung bekommen? Gleiche Regeln wie für Broker-Aufträge (Gegner im Schach,
+    /// Bauern auf der Grundreihe, Rochade, en passant) — Stockfish stürzt an solchen Stellungen ab.</summary>
+    public static bool IsEngineSafe(string fen)
+    {
+        try { LoadStrict(NormalizeFen(fen)); return true; }
+        catch (InvalidWorkException) { return false; }
+    }
+
     private static ChessBoard LoadStrict(string fen)
     {
         ChessBoard board;
