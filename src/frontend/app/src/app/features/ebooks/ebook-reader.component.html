@@ -1,8 +1,20 @@
 <div class="rd-page">
   @if (loading) {
     <app-loading-spinner />
+  } @else if (notFound) {
+    <!-- c1-eb-reader-404-misleading: gelöscht/nicht freigegeben ist kein Netzfehler — Klartext und Weg zurück. -->
+    <div class="rd-pad">
+      <div class="empty-state rd-missing">
+        <mat-icon>menu_book</mat-icon>
+        <p>{{ 'ebooks.reader.notFound' | translate }}</p>
+        <a mat-flat-button color="primary" routerLink="/ebooks"><mat-icon>arrow_back</mat-icon>{{ 'ebooks.reader.back' | translate }}</a>
+      </div>
+    </div>
   } @else if (error || !ebook) {
-    <div class="rd-pad"><app-load-error (retry)="load()" /></div>
+    <div class="rd-pad">
+      <app-load-error (retry)="load()" />
+      <a mat-button routerLink="/ebooks" class="rd-pad-back"><mat-icon>arrow_back</mat-icon>{{ 'ebooks.reader.back' | translate }}</a>
+    </div>
   } @else {
     <div class="rd-toolbar">
       <a mat-icon-button routerLink="/ebooks" class="rd-back" [appIconLabel]="'ebooks.reader.back' | translate">
@@ -28,7 +40,7 @@
         <div class="rd-pages">
           <label class="rd-page-label">
             <span class="sr-only">{{ 'ebooks.reader.page' | translate }}</span>
-            <input class="rd-page-input" type="number" min="1" [max]="pageCount() || 1" [value]="page()"
+            <input class="rd-page-input" type="number" inputmode="numeric" min="1" [max]="pageCount() || 1" [value]="page()"
                    (change)="jump(pageInput.value)" (keyup.enter)="jump(pageInput.value)" #pageInput
                    [attr.aria-label]="'ebooks.reader.page' | translate" />
           </label>
@@ -41,6 +53,15 @@
           <button mat-icon-button (click)="zoomBy(1)" [appIconLabel]="'ebooks.reader.zoomIn' | translate"><mat-icon>add</mat-icon></button>
         </div>
       }
+      <!-- Unter 900 px ist das Brett zu, bis man es holt — der Knopf macht die Diagramme auffindbar (PDF und EPUB). -->
+      @if (hasDiagrams) {
+        <button mat-button type="button" class="rd-diag-btn" (click)="panelOpen.set(!panelOpen())" [attr.aria-expanded]="panelOpen()"
+                [attr.aria-label]="(diagrams().length === 1 ? 'ebooks.reader.openBoardOne' : 'ebooks.reader.openBoard') | translate: { n: diagrams().length }"
+                [matTooltip]="(diagrams().length === 1 ? 'ebooks.reader.openBoardOne' : 'ebooks.reader.openBoard') | translate: { n: diagrams().length }">
+          <mat-icon>grid_on</mat-icon>{{ diagrams().length }}
+        </button>
+      }
+      <span class="rd-toolbar-spacer"></span>
       <button mat-icon-button [matMenuTriggerFor]="moreMenu" [appIconLabel]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>

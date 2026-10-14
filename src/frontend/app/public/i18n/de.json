@@ -5259,12 +5259,18 @@
     },
     "filter": {
       "mine": "Meine Uploads",
-      "withDiagrams": "Mit Diagrammen"
+      "withDiagrams": "Mit Diagrammen",
+      "toggle": "Filter",
+      "active": "Aktive Filter",
+      "allTags": "Alle Schlagwörter ({{n}})",
+      "fewerTags": "Weniger Schlagwörter",
+      "reset": "Filter zurücksetzen"
     },
     "empty": "Noch keine E-Books – lade das erste hoch.",
     "emptyFiltered": "Zu diesem Filter passt nichts.",
     "read": "Lesen",
     "continue": "Weiter auf Seite {{page}}",
+    "continueShort": "Weiter",
     "download": "Herunterladen",
     "downloadFormat": "{{format}} herunterladen ({{size}})",
     "deleteConfirm": "„{{title}}“ löschen? Die Datei verschwindet für alle aus der Bibliothek.",
@@ -5297,7 +5303,9 @@
       "noFile": "Keine Datei gewählt",
       "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI oder AZW3, bis {{max}}.",
       "fileTooLarge": "Die Datei ist größer als {{max}}.",
-      "uploading": "Lädt hoch … {{pct}} %"
+      "uploading": "Lädt hoch … {{pct}} %",
+      "needFile": "Erst eine Datei wählen.",
+      "needTitle": "Erst einen Titel eingeben."
     },
     "bulk": {
       "select": "Auswählen",
@@ -5366,7 +5374,10 @@
       "solutionConfirmed": "Lösung aus dem Buch, von Stockfish bestätigt.",
       "mateIn": "Matt in {{n}}",
       "matedIn": "wird in {{n}} matt",
-      "evalTitle": "Stockfish-Bewertung für die Seite am Zug"
+      "evalTitle": "Stockfish-Bewertung für die Seite am Zug",
+      "notFound": "Dieses Buch gibt es nicht oder es ist nicht für dich freigegeben.",
+      "openBoard": "Brett: {{n}} Diagramme",
+      "openBoardOne": "Brett: 1 Diagramm"
     },
     "diagrams": "{{n}} Diagramme",
     "uploadedProcessing": "„{{title}}“ ist hochgeladen. Die Verarbeitung (Titelbild, Diagramme, Lösungen) dauert ein paar Minuten bis etwa eine Viertelstunde — du bekommst eine Benachrichtigung, sobald sie fertig ist.",
@@ -5413,11 +5424,12 @@
     "startCycle": "Zyklus {{n}} starten",
     "breakReason": "Zwischen zwei Zyklen mindestens einen Tag Pause.",
     "saveFailed": "Speichern fehlgeschlagen. Bitte noch einmal versuchen.",
-    "puzzles": "{{count}} Aufgaben",
-    "puzzlesOne": "{{count}} Aufgabe",
+    "puzzles": "{{count}} Aufgaben",
+    "puzzlesOne": "{{count}} Aufgabe",
     "inSet": "{{n}} im Satz",
     "inSetOne": "{{n}} im Satz",
     "toOverview": "Zur Übersicht",
+    "notFound": "Dieses Training gibt es nicht (mehr).",
     "doneCompleted": "Woodpecker abgeschlossen – stark!",
     "doneCycle": "Zyklus {{n}} ist geschafft. Mach Pause und starte danach den nächsten Zyklus in der Übersicht.",
     "repeatHint": "Wiederholung – in diesem Zyklus zählt nur dein erster Versuch.",
@@ -5425,6 +5437,7 @@
       "title": "Neues Woodpecker-Training",
       "coursesHint": "Kurse in der Reihenfolge des Ankreuzens – Zyklus 1 geht sie in dieser Reihenfolge durch.",
       "noCourses": "Du hast noch keinen Kurs mit Aufgaben.",
+      "toCourses": "Zu den Kursen",
       "search": "Kurse suchen",
       "start": "Beginn von Zyklus 1",
       "startHint": "Wähle einen früheren Tag, wenn du schon angefangen hast – was du seitdem in diesen Kursen gelöst hast, zählt mit.",

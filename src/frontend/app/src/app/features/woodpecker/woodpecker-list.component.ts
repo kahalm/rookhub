@@ -152,11 +152,15 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
     </div>
   `,
   styles: [`
-    .page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; box-sizing: border-box; }
+    /* c1-wp-woodpecker-seitenpolster-96vw: ohne 96vw — das zog am Handy/Tablet zusätzlich 2 vw je Seite ab (24/32 px
+       statt 16 px, DESIGN 3.2); den Rand gibt das Polster. */
+    .page { max-width: var(--page-max-width); margin: 0 auto; padding: 16px; box-sizing: border-box; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     .header h1 { margin: 0; }
     .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .intro { margin: 8px 0 16px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    /* c1-wp-intro-hilfe-eigene-zeile: (?) steht im Satz (inline-flex, Abstand = das Leerzeichen im Markup; DESIGN 5.11),
+       nicht als eigener Flex-Eintrag, der am Handy allein in eine Zeile rutscht. */
+    .intro { margin: 8px 0 16px; }
     .empty-state { text-align: center; padding: 2rem 1rem; }
     .plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; }
     .plan { display: flex; flex-direction: column; padding: 16px; gap: 8px; }
@@ -179,6 +183,10 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
     .actions { margin-top: auto; display: flex; gap: 8px; align-items: center; }
     .locked { display: flex; flex-direction: column; gap: 4px; max-width: 280px; }
     .reason { font-size: .8rem; color: var(--mat-sys-on-surface-variant); }
+    /* c1-wp-uebersicht-ultrawide: Kartenraster nimmt die Breitbild-Stufe (DESIGN 4.1); darunter unverändert. */
+    @media (min-width: 2400px) {
+      .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+    }
   `],
 })
 export class WoodpeckerListComponent implements OnInit {
@@ -227,7 +235,7 @@ export class WoodpeckerListComponent implements OnInit {
 
   create(): void {
     const data: WoodpeckerDialogData = { mode: 'create' };
-    this.dialog.open(WoodpeckerCreateDialogComponent, { data, width: '32rem', maxWidth: '96vw' })
+    this.dialog.open(WoodpeckerCreateDialogComponent, { data, width: '560px', maxWidth: '94vw', autoFocus: 'dialog' })
       .afterClosed().subscribe((plan: WoodpeckerPlan | null | undefined) => {
         if (plan) this.plans.update(list => [plan, ...list]);
       });
@@ -235,7 +243,7 @@ export class WoodpeckerListComponent implements OnInit {
 
   changeStart(p: WoodpeckerPlan): void {
     const data: WoodpeckerDialogData = { mode: 'start', plan: p };
-    this.dialog.open(WoodpeckerCreateDialogComponent, { data, width: '28rem', maxWidth: '96vw' })
+    this.dialog.open(WoodpeckerCreateDialogComponent, { data, width: '440px', maxWidth: '94vw', autoFocus: 'dialog' })
       .afterClosed().subscribe((plan: WoodpeckerPlan | null | undefined) => { if (plan) this.replace(plan); });
   }
 

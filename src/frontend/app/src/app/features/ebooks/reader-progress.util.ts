@@ -12,10 +12,19 @@ export function nextZoom(current: number, direction: 1 | -1): number {
   return current;
 }
 
-/** Faktor, mit dem eine Seite von `pageWidth` (bei Faktor 1) genau `containerWidth` breit wird — abzüglich Rand. */
-export function fitWidthZoom(containerWidth: number, pageWidth: number, padding = 16): number {
+/**
+ * Größte Kastenbreite für „Breite füllen“ ab der Breitbild-Stufe (≥ 2400 px, c1-eb-reader-ultrawide-layout): eine
+ * Seite über 2 300 px war ~3 000 px hoch, man sah nur ihr oberes Drittel. Darunter gilt die volle Kastenbreite.
+ */
+export const WIDE_FIT_MAX_WIDTH = 1400;
+
+/**
+ * Faktor, mit dem eine Seite von `pageWidth` (bei Faktor 1) genau `containerWidth` breit wird — abzüglich Rand.
+ * `maxWidth` deckelt die Kastenbreite (Breitbild); die Seite steht dann mittig.
+ */
+export function fitWidthZoom(containerWidth: number, pageWidth: number, padding = 16, maxWidth = Infinity): number {
   if (pageWidth <= 0 || containerWidth <= 0) return 1;
-  const z = (containerWidth - 2 * padding) / pageWidth;
+  const z = (Math.min(containerWidth, maxWidth) - 2 * padding) / pageWidth;
   return Math.max(0.2, Math.min(6, Math.round(z * 1000) / 1000));
 }
 

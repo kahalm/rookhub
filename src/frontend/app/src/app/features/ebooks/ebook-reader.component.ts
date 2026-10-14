@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -44,6 +45,8 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   token = '';
   loading = true;
   error = false;
+  /** 404/403: Buch gelöscht oder nicht freigegeben — kein Netzfehler, „Wiederholen“ hülfe nie. */
+  notFound = false;
   /** Adresse der Hauptdatei (mit Ausweis), wenn sie der Browser zeigen kann. */
   fileUrl: string | null = null;
   readonly page = signal(1);
@@ -103,13 +106,21 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   private progress$ = new Subject<number>();
   private destroy$ = new Subject<void>();
 
+  /**
+   * Body-Klasse des Lesers: blendet die App-Fußzeile aus (styles.scss), damit die Seite genau fensterhoch ist und nur
+   * der eigene Scrollkasten scrollt (c1-eb-ebook-leser-seite-scrollt-um-fusszeile, DESIGN 4.5).
+   */
+  static readonly BODY_CLASS = 'rd-reader-mode';
+
   ngOnInit(): void {
+    document.body.classList.add(EbookReaderComponent.BODY_CLASS);
     this.progress$.pipe(debounceTime(1500), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(p => this.saveProgress(p));
     this.epubSave$.pipe(debounceTime(1500), takeUntil(this.destroy$)).subscribe(l => this.saveEpubProgress(l));
     this.load();
   }
 
   ngOnDestroy(): void {
+    document.body.classList.remove(EbookReaderComponent.BODY_CLASS);
     this.stopSolving();
     this.destroy$.next();
     this.destroy$.complete();
@@ -119,6 +130,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loading = true;
     this.error = false;
+    this.notFound = false;
     this.ebooks.get(id).subscribe({
       next: book => {
         this.ebook = book;
@@ -137,7 +149,12 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
           error: () => { this.loading = false; this.error = true; this.cdr.markForCheck(); },
         });
       },
-      error: () => { this.loading = false; this.error = true; this.cdr.markForCheck(); },
+      error: (err: unknown) => {
+        this.loading = false;
+        const status = err instanceof HttpErrorResponse ? err.status : 0;
+        if (status === 404 || status === 403) this.notFound = true; else this.error = true;
+        this.cdr.markForCheck();
+      },
     });
   }
 

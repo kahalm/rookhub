@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -28,59 +30,83 @@ export type WoodpeckerDialogData =
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-woodpecker-create-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule,
+  imports: [DecimalPipe, RouterLink, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule,
     TranslatePipe, IsoDateFieldComponent, LoadErrorComponent, LoadingSpinnerComponent],
   template: `
     <h2 mat-dialog-title>{{ (data.mode === 'create' ? 'woodpecker.create.title' : 'woodpecker.start.title') | translate }}</h2>
-    <mat-dialog-content>
+    <!-- c1-wp-dialog-kasten-im-kasten: EIN Scrollbereich (mat-dialog-content) mit Weiterscroll-Schatten; der Beginn
+         steht vorn, damit Feld und Hinweis nie unter einer halb angeschnittenen Kurszeile verschwinden. -->
+    <mat-dialog-content class="wp-content">
       @if (data.mode === 'create') {
-        <p class="hint">{{ 'woodpecker.create.coursesHint' | translate }}</p>
         @if (loading()) {
           <app-loading-spinner />
         } @else if (loadFailed()) {
           <app-load-error (retry)="load()" />
-        } @else if (courses().length === 0) {
-          <p class="empty-state">{{ 'woodpecker.create.noCourses' | translate }}</p>
-        } @else {
-          @if (courses().length > 8) {
-            <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
-              <mat-label>{{ 'woodpecker.create.search' | translate }}</mat-label>
-              <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
-            </mat-form-field>
-          }
-          <div class="courses">
-            @for (c of filtered(); track c.bookId) {
-              <mat-checkbox [checked]="isSelected(c.bookId)" (change)="toggle(c.bookId, $event.checked)">
-                <span class="c-name">{{ c.displayName }}</span>
-                <span class="c-count">{{ (c.puzzleCount === 1 ? 'woodpecker.puzzlesOne' : 'woodpecker.puzzles') | translate: { count: c.puzzleCount } }}</span>
-              </mat-checkbox>
-            }
+        } @else if (noCourses()) {
+          <!-- c1-wp-dialog-ohne-kurs-sackgasse: Leersatz + genau ein Weg weiter, kein unerfüllbares Formular. -->
+          <div class="empty-state">
+            <p>{{ 'woodpecker.create.noCourses' | translate }}</p>
+            <a mat-flat-button color="primary" routerLink="/courses" mat-dialog-close>{{ 'woodpecker.create.toCourses' | translate }}</a>
           </div>
         }
       }
-      <app-iso-date-field class="date" [label]="'woodpecker.create.start' | translate"
-        [value]="startYmd()" (valueChange)="startYmd.set($event)" [max]="today" />
-      <p class="hint">{{ 'woodpecker.create.startHint' | translate }}</p>
+      @if (showForm()) {
+        <app-iso-date-field class="date" [label]="'woodpecker.create.start' | translate"
+          [value]="startYmd()" (valueChange)="startYmd.set($event)" [max]="today" />
+        <p class="hint">{{ 'woodpecker.create.startHint' | translate }}</p>
+      }
+      @if (data.mode === 'create' && showForm()) {
+        <p class="hint courses-hint">{{ 'woodpecker.create.coursesHint' | translate }}</p>
+        @if (courses().length > 8) {
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>{{ 'woodpecker.create.search' | translate }}</mat-label>
+            <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
+          </mat-form-field>
+        }
+        <div class="courses">
+          @for (c of filtered(); track c.bookId) {
+            <mat-checkbox [checked]="isSelected(c.bookId)" (change)="toggle(c.bookId, $event.checked)">
+              <span class="c-name">{{ c.displayName }}</span>
+              <span class="c-count">{{ (c.puzzleCount === 1 ? 'woodpecker.puzzlesOne' : 'woodpecker.puzzles') | translate: { count: (c.puzzleCount | number) } }}</span>
+            </mat-checkbox>
+          }
+        </div>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close [disabled]="busy()">{{ 'common.cancel' | translate }}</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
-        {{ (data.mode === 'create' ? 'woodpecker.create.submit' : 'common.save') | translate }}
-      </button>
+      @if (showForm()) {
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
+          {{ (data.mode === 'create' ? 'woodpecker.create.submit' : 'common.save') | translate }}
+        </button>
+      }
     </mat-dialog-actions>
-    @if (data.mode === 'create' && selected().length === 0 && !loading()) {
+    @if (data.mode === 'create' && showForm() && selected().length === 0) {
       <p class="reason">{{ 'woodpecker.create.chooseCourse' | translate }}</p>
     }
   `,
   styles: [`
     :host { display: block; }
     .hint { margin: 0 0 8px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    .courses-hint { margin-top: 8px; }
     .search { width: 100%; margin-bottom: 4px; }
-    .courses { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; margin-bottom: 12px; }
+    /* c1-wp-dialog-kasten-im-kasten: kein eigener Scrollkasten mehr — es scrollt nur mat-dialog-content. Weiterscroll-
+       Schatten skriptlos wie die Repertoire-Linienliste (DESIGN 5.3): die Abdeckung (local) in Dialogfarbe wandert mit
+       dem Inhaltsende, der Schatten (scroll) bleibt am unteren Rand — sichtbar nur, solange noch etwas kommt. */
+    .wp-content {
+      background:
+        linear-gradient(to bottom, transparent, var(--mat-dialog-container-color, var(--mat-sys-surface)) 70%) center bottom / 100% 32px no-repeat local,
+        radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, currentColor 30%, transparent), transparent)
+          center bottom / 100% 14px no-repeat scroll;
+    }
+    .courses { display: flex; flex-direction: column; }
     .c-name { margin-right: .5em; }
-    .c-count { font-size: .85em; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
-    .date { margin-top: 8px; }
-    .empty-state { text-align: center; padding: 2rem 1rem; }
+    /* c1-wp-dialog-zahlformat: Zahl + Einheit bleiben zusammen (U+00A0 im Text, nowrap hier). */
+    .c-count { font-size: .85em; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .date { display: block; margin-top: 8px; }
+    /* c1-wp-dialog-leersatz-blass-hell: im Dialog ist currentColor schon on-surface-variant — nicht ein zweites Mal
+       abblassen (DESIGN 5.10; hell sonst ≈ 3,1:1). */
+    .empty-state { color: var(--mat-sys-on-surface-variant); }
     .reason { margin: 0 24px 12px; text-align: right; font-size: .8rem; color: var(--mat-sys-on-surface-variant); }
   `],
 })
@@ -106,6 +132,10 @@ export class WoodpeckerCreateDialogComponent implements OnInit {
     const q = this.query().trim().toLowerCase();
     return q ? this.courses().filter(c => c.displayName.toLowerCase().includes(q)) : this.courses();
   });
+  /** Kursliste geladen, aber kein lösbarer Kurs — dann nur Leersatz + Weg zu den Kursen. */
+  readonly noCourses = computed(() => this.data.mode === 'create' && !this.loading() && !this.loadFailed() && this.courses().length === 0);
+  /** Datum, Kursliste und „Training starten“ nur, wenn es etwas zu wählen gibt (Modus `start`: immer). */
+  readonly showForm = computed(() => this.data.mode === 'start' || (!this.loading() && !this.loadFailed() && this.courses().length > 0));
   readonly canSave = computed(() => !this.busy() && !!this.startYmd() && this.startYmd() <= this.today
     && (this.data.mode === 'start' || this.selected().length > 0));
 

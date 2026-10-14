@@ -100,6 +100,46 @@ describe('WoodpeckerListComponent', () => {
   });
 });
 
+/** Kompiliertes CSS ohne Leerraum und ohne %NS%-Platzhalter (Muster features/page-width.spec.ts). */
+const listCss = () =>
+  (((WoodpeckerListComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n')
+    .replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s/g, '');
+
+describe('WoodpeckerListComponent (UI-Sweep c1)', () => {
+  it('c1-wp-intro-hilfe-eigene-zeile: Einleitung ist kein Flex-Container, das (?) steht im Satz', () => {
+    const intro = /\.intro\{[^}]*\}/.exec(listCss())![0];
+    expect(intro).not.toContain('display:flex');
+    expect(intro).not.toContain('flex-wrap');
+  });
+
+  it('c1-wp-woodpecker-seitenpolster-96vw: Seite ohne 96vw, Rand = 16-px-Polster', () => {
+    const page = /\.page\{[^}]*\}/.exec(listCss())![0];
+    expect(page).toContain('max-width:var(--page-max-width)');
+    expect(page).not.toContain('96vw');
+    expect(page).toContain('padding:16px');
+  });
+
+  it('c1-wp-dialog-fokus-datum: Dialoge öffnen mit Fokus auf dem Dialog, Breiten nach DESIGN 5.6', () => {
+    TestBed.resetTestingModule();
+    const dialogOpen = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(null) });
+    TestBed.configureTestingModule({
+      imports: [WoodpeckerListComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WoodpeckerService, useValue: { list: () => of([]) } },
+        { provide: MatDialog, useValue: { open: dialogOpen } },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(true) } },
+      ],
+    });
+    const c = TestBed.createComponent(WoodpeckerListComponent).componentInstance;
+    c.create();
+    expect(dialogOpen.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ width: '560px', maxWidth: '94vw', autoFocus: 'dialog' }));
+    c.changeStart(plan());
+    expect(dialogOpen.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ width: '440px', maxWidth: '94vw', autoFocus: 'dialog' }));
+  });
+});
+
 describe('woodpecker.service helpers', () => {
   it('startOfLocalDayIso = lokale Mitternacht des Tages', () => {
     const d = new Date(startOfLocalDayIso('2026-10-14'));

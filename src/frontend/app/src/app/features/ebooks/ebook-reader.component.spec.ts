@@ -3,6 +3,9 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Type } from '@angular/core';
+import { PdfViewerComponent } from './pdf-viewer.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { EbookReaderComponent } from './ebook-reader.component';
 import { Ebook, EbookService } from './ebook.service';
@@ -264,5 +267,121 @@ describe('EbookReaderComponent', () => {
     expect(c.evalText(d)).toMatch(/^\+3[.,]1$/);
     expect(c.evalText({ ...d, engineEval: 9998 })).toBe('ebooks.reader.mateIn');
     expect(c.evalText({ ...d, engineEval: null })).toBeNull();
+  });
+
+  // ── UI-Sweep c1 ─────────────────────────────────────────────────────────────────────────────
+  async function makeFailing(err: unknown) {
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken']);
+    service.get.and.returnValue(throwError(() => err));
+    await TestBed.configureTestingModule({
+      imports: [EbookReaderComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: EbookService, useValue: service },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', '9']]) } } },
+        { provide: SnackbarService, useValue: { warn: () => {}, quick: () => {} } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(EbookReaderComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  /** Kompiliertes CSS ohne Leerraum und ohne %NS%-Platzhalter (Muster page-width.spec.ts). */
+  function compactCss(cmp: Type<unknown>): string {
+    return (((cmp as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+  }
+
+  it('c1-eb-reader-404-misleading: 404/403 = „gibt es nicht“ mit Weg zur Bibliothek, kein „Wiederholen“', async () => {
+    for (const status of [404, 403]) {
+      TestBed.resetTestingModule();
+      const fixture = await makeFailing(new HttpErrorResponse({ status }));
+      const c = fixture.componentInstance;
+      expect(c.notFound).withContext(`Status ${status}`).toBeTrue();
+      expect(c.error).toBeFalse();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('ebooks.reader.notFound');
+      expect(el.querySelector('app-load-error')).toBeNull();
+      expect(el.querySelector('a[href="/ebooks"]')).not.toBeNull();
+      fixture.destroy();
+    }
+  });
+
+  it('c1-eb-reader-404-misleading: Netz-/Serverfehler bleibt Ladefehler mit „Wiederholen“ und Zurück-Link', async () => {
+    const fixture = await makeFailing(new HttpErrorResponse({ status: 500 }));
+    expect(fixture.componentInstance.error).toBeTrue();
+    expect(fixture.componentInstance.notFound).toBeFalse();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.querySelector('a[href="/ebooks"]')).not.toBeNull();
+    // Die Zeile steht in der Seitenbreite, nicht am Fensterrand.
+    expect(compactCss(EbookReaderComponent)).toMatch(/\.rd-pad(\[[^\]]*\])?\{[^}]*max-width:min\(var\(--page-max-width,1240px\),96vw\)[^}]*margin:0auto/);
+    fixture.destroy();
+  });
+
+  it('c1-eb-ebook-leser-seitenfeld-spinner: Seitenfeld ohne Drehknöpfe (auch WebKit) und mit Ziffern-Tastatur', async () => {
+    const fixture = await make(book());
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.rd-page-input')!;
+    expect(input.getAttribute('inputmode')).toBe('numeric');
+    const css = compactCss(EbookReaderComponent);
+    expect(css).toMatch(/\.rd-page-input(\[[^\]]*\])?\{[^}]*appearance:textfield/);
+    expect(css).toMatch(/\.rd-page-input(\[[^\]]*\])?::-webkit-inner-spin-button[^{]*\{[^}]*appearance:none/);
+    fixture.destroy();
+  });
+
+  it('c1-eb-ebook-leser-seite-scrollt-um-fusszeile: Body-Klasse blendet die Fußzeile aus, solange der Leser offen ist', async () => {
+    const fixture = await make(book());
+    expect(document.body.classList.contains('rd-reader-mode')).toBeTrue();
+    fixture.destroy();
+    expect(document.body.classList.contains('rd-reader-mode')).toBeFalse();
+    // Die globale Regel dazu steht in styles.scss (Karma lädt sie).
+    let found = false;
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const r of Array.from(rules)) {
+        if (r instanceof CSSStyleRule && r.selectorText === 'body.rd-reader-mode app-footer' && r.style.display === 'none') found = true;
+      }
+    }
+    expect(found).withContext('styles.scss: body.rd-reader-mode app-footer { display: none }').toBeTrue();
+  });
+
+  it('c1-eb-reader-mobile-diagrams-undiscoverable: Diagramm-Knopf in der Leiste klappt das Brett auf (nur < 900 px sichtbar)', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const btn = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.rd-diag-btn')!;
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toContain('3');
+    expect(btn.getAttribute('aria-label')).toBe('ebooks.reader.openBoard');
+    expect(c.panelOpen()).toBeFalse();
+    btn.click();
+    expect(c.panelOpen()).toBeTrue();
+    const css = compactCss(EbookReaderComponent);
+    expect(css).toMatch(/\.rd-diag-btn(\[[^\]]*\])?\{display:none/);
+    const narrow = css.slice(css.indexOf('@media(max-width:899.98px)'));
+    expect(narrow).toMatch(/\.rd-diag-btn(\[[^\]]*\])?\{display:inline-flex/);
+    // Touch: Zonen dauerhaft sichtbar (kein Überfahren).
+    const pv = compactCss(PdfViewerComponent);
+    expect(pv.slice(pv.indexOf('@media(hover:none)'))).toMatch(/\.pv-zone\{border:2pxdashedvar\(--mat-sys-primary\)/);
+    fixture.destroy();
+  });
+
+  it('ohne Diagramme kein Diagramm-Knopf', async () => {
+    const fixture = await make(book());
+    expect((fixture.nativeElement as HTMLElement).querySelector('.rd-diag-btn')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('c1-eb-reader-ultrawide-layout: ab 2400 px Seite/Zoom neben dem Titel, Brett-Leiste bis 720 px — darunter unverändert', () => {
+    const css = compactCss(EbookReaderComponent);
+    const at = css.indexOf('@media(min-width:2400px)');
+    expect(at).toBeGreaterThan(-1);
+    const wide = css.slice(at);
+    expect(wide).toMatch(/\.rd-title(\[[^\]]*\])?\{flex:01auto/);
+    expect(wide).toMatch(/\.rd-toolbar-spacer(\[[^\]]*\])?\{display:block;flex:1/);
+    expect(wide).toMatch(/\.rd-panel(\[[^\]]*\])?\{flex:00var\(--rd-panel-w,clamp\(460px,24vw,720px\)\)/);
+    expect(css.slice(0, at)).toMatch(/\.rd-toolbar-spacer(\[[^\]]*\])?\{display:none/);
+    expect(css.slice(0, at)).toContain('clamp(300px,32vw,460px)');
   });
 });

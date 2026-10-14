@@ -5259,12 +5259,18 @@
     },
     "filter": {
       "mine": "My uploads",
-      "withDiagrams": "With diagrams"
+      "withDiagrams": "With diagrams",
+      "toggle": "Filter",
+      "active": "Active filters",
+      "allTags": "All tags ({{n}})",
+      "fewerTags": "Fewer tags",
+      "reset": "Reset filters"
     },
     "empty": "No e-books yet – upload the first one.",
     "emptyFiltered": "Nothing matches this filter.",
     "read": "Read",
     "continue": "Continue on page {{page}}",
+    "continueShort": "Continue",
     "download": "Download",
     "downloadFormat": "Download {{format}} ({{size}})",
     "deleteConfirm": "Delete “{{title}}”? The file is removed from the library for everyone.",
@@ -5297,7 +5303,9 @@
       "noFile": "No file chosen",
       "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI or AZW3, up to {{max}}.",
       "fileTooLarge": "The file is larger than {{max}}.",
-      "uploading": "Uploading … {{pct}}%"
+      "uploading": "Uploading … {{pct}}%",
+      "needFile": "Choose a file first.",
+      "needTitle": "Enter a title first."
     },
     "bulk": {
       "select": "Select",
@@ -5366,7 +5374,10 @@
       "solutionConfirmed": "Book solution, confirmed by Stockfish.",
       "mateIn": "mate in {{n}}",
       "matedIn": "mated in {{n}}",
-      "evalTitle": "Stockfish evaluation for the side to move"
+      "evalTitle": "Stockfish evaluation for the side to move",
+      "notFound": "This book does not exist or has not been shared with you.",
+      "openBoard": "Board: {{n}} diagrams",
+      "openBoardOne": "Board: 1 diagram"
     },
     "diagrams": "{{n}} diagrams",
     "uploadedProcessing": "“{{title}}” is uploaded. Processing (cover, diagrams, solutions) takes a few minutes up to about a quarter of an hour — you will get a notification when it is done.",
@@ -5413,11 +5424,12 @@
     "startCycle": "Start cycle {{n}}",
     "breakReason": "Take at least one day off between cycles.",
     "saveFailed": "Could not save. Please try again.",
-    "puzzles": "{{count}} puzzles",
-    "puzzlesOne": "{{count}} puzzle",
+    "puzzles": "{{count}} puzzles",
+    "puzzlesOne": "{{count}} puzzle",
     "inSet": "{{n}} in the set",
     "inSetOne": "{{n}} in the set",
     "toOverview": "To the overview",
+    "notFound": "This training does not exist (any more).",
     "doneCompleted": "Woodpecker completed – well done!",
     "doneCycle": "Cycle {{n}} is finished. Take a break, then start the next cycle in the overview.",
     "repeatHint": "Repetition – only your first attempt counts in this cycle.",
@@ -5425,6 +5437,7 @@
       "title": "New Woodpecker training",
       "coursesHint": "Courses in the order you tick them – cycle 1 goes through them in this order.",
       "noCourses": "You have no course with puzzles yet.",
+      "toCourses": "Go to courses",
       "search": "Search courses",
       "start": "Start of cycle 1",
       "startHint": "Choose an earlier day if you have already started – what you solved in these courses since then counts.",

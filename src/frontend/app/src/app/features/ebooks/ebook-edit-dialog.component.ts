@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TextFieldModule } from '@angular/cdk/text-field';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { apiErrorText } from '../../core/api-error';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -30,7 +31,7 @@ export interface EbookEditDialogData {
   selector: 'app-ebook-edit-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, MatProgressBarModule, TranslatePipe],
+    MatInputModule, MatProgressBarModule, TextFieldModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ (isNew ? 'ebooks.dialog.uploadTitle' : 'ebooks.dialog.editTitle') | translate }}</h2>
     <mat-dialog-content>
@@ -67,7 +68,7 @@ export interface EbookEditDialogData {
       </mat-form-field>
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'ebooks.meta.description' | translate }}</mat-label>
-        <textarea matInput [(ngModel)]="description" maxlength="2000" rows="2"></textarea>
+        <textarea matInput [(ngModel)]="description" maxlength="2000" cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="6"></textarea>
       </mat-form-field>
 
       <div class="groups">
@@ -90,6 +91,8 @@ export interface EbookEditDialogData {
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <!-- c1-eb-upload-disabled-no-reason: gesperrter Hauptknopf sagt, was fehlt (DESIGN 5.4). -->
+      @if (blockReason && !busy()) { <span class="why" role="status">{{ blockReason | translate }}</span> }
       <button mat-button mat-dialog-close [disabled]="busy()">{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button color="primary" (click)="save()" [disabled]="busy() || !canSave">
         <mat-icon>{{ isNew ? 'upload' : 'save' }}</mat-icon>{{ (isNew ? 'ebooks.upload' : 'common.save') | translate }}
@@ -97,7 +100,10 @@ export interface EbookEditDialogData {
     </mat-dialog-actions>
   `,
   styles: [`
-    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; }
+    /* Scrollkante sichtbar (c1-eb-upload-disabled-no-reason): was unter der Linie liegt, ist nur weggescrollt. */
+    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; border-bottom: 1px solid var(--mat-sys-outline-variant); }
+    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
+    .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .full { width: 100%; }
     .two { display: grid; grid-template-columns: 1fr minmax(110px, 140px); gap: 8px; }
     .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -105,7 +111,8 @@ export interface EbookEditDialogData {
     .hint { margin: 0 0 8px; font-size: .85rem; opacity: .7; }
     .groups { display: flex; flex-direction: column; margin-top: 4px; }
     .groups-title { font-weight: 500; margin-bottom: 2px; }
-    @media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
+    /* Handy: Autor + Jahr bleiben nebeneinander, damit die Sichtbarkeit näher an die Falz rückt. */
+    @media (max-width: 480px) { .two { grid-template-columns: 1fr minmax(88px, 110px); } }
   `],
 })
 export class EbookEditDialogComponent {
@@ -129,6 +136,13 @@ export class EbookEditDialogComponent {
 
   get canSave(): boolean {
     return this.title.trim().length > 0 && (!this.isNew || this.file != null);
+  }
+
+  /** Was zum Speichern fehlt (i18n-Schlüssel) — steht neben dem gesperrten Knopf; `null`, wenn nichts fehlt. */
+  get blockReason(): string | null {
+    if (this.isNew && this.file == null) return 'ebooks.dialog.needFile';
+    if (this.title.trim().length === 0) return 'ebooks.dialog.needTitle';
+    return null;
   }
 
   onFile(event: Event): void {

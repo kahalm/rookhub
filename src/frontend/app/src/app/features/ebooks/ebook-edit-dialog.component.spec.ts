@@ -58,4 +58,35 @@ describe('EbookEditDialogComponent', () => {
     expect(c.selected.size).toBe(0);
     expect(c.canSave).toBeTrue();
   });
+
+  it('c1-eb-upload-disabled-no-reason: der gesperrte Knopf nennt, was fehlt — erst die Datei, dann der Titel', async () => {
+    const c = await make({ ebook: null, groups: [], maxFileBytes: 10_000 });
+    const fixture = TestBed.createComponent(EbookEditDialogComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.blockReason).toBe('ebooks.dialog.needFile');
+    expect(el.querySelector('.why')?.textContent).toContain('ebooks.dialog.needFile');
+    c.file = new File([new Uint8Array(1)], 'a.pdf');
+    c.title = '  ';
+    expect(c.blockReason).toBe('ebooks.dialog.needTitle');
+    c.title = 'A';
+    expect(c.blockReason).toBeNull();
+    // Bearbeiten ohne Datei: nur der Titel zählt.
+    TestBed.resetTestingModule();
+    const edit = await make({
+      ebook: {
+        id: 3, title: '', author: '', year: null, tags: [], description: null, targetMinElo: null, source: 'upload',
+        pageCount: null, hasCover: false, diagramState: 'unsupported', diagramCount: 0, ownerUserId: 1, ownerName: null, isOwner: true, canManage: true, groupIds: [],
+        files: [], primaryFormat: null, progress: null, createdAt: '', updatedAt: '',
+      },
+      groups: [], maxFileBytes: 1,
+    });
+    expect(edit.blockReason).toBe('ebooks.dialog.needTitle');
+  });
+
+  it('c1-eb-upload-disabled-no-reason: Scrollkante sichtbar, Autor + Jahr am Handy nebeneinander', () => {
+    const css = (((EbookEditDialogComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    expect(css).toMatch(/mat-dialog-content(\[[^\]]*\])?\{[^}]*border-bottom:1pxsolidvar\(--mat-sys-outline-variant\)/);
+    expect(css.slice(css.indexOf('@media(max-width:480px)'))).toMatch(/\.two(\[[^\]]*\])?\{grid-template-columns:1frminmax\(88px,110px\)/);
+  });
 });

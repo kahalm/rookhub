@@ -154,7 +154,9 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       const st = doc.createElement('style');
       st.id = 'rh-diagram-style';
       st.textContent = '.rh-diagram{cursor:zoom-in;outline:2px dashed transparent;outline-offset:2px}'
-        + '.rh-diagram:hover,.rh-diagram:focus{outline-color:#6750a4}.rh-diagram--active{outline:3px solid #6750a4}';
+        + '.rh-diagram:hover,.rh-diagram:focus{outline-color:#6750a4}.rh-diagram--active{outline:3px solid #6750a4}'
+        // Touch: kein Überfahren — Diagramme dauerhaft gestrichelt (c1-eb-reader-mobile-diagrams-undiscoverable).
+        + '@media (hover:none){.rh-diagram{outline-color:#6750a4}}';
       doc.head?.appendChild(st);
     }
     doc.querySelectorAll<Element>('img, image').forEach(el => {

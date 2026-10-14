@@ -5259,12 +5259,18 @@
     },
     "filter": {
       "mine": "Saját feltöltéseim",
-      "withDiagrams": "Diagramokkal"
+      "withDiagrams": "Diagramokkal",
+      "toggle": "Szűrő",
+      "active": "Aktív szűrők",
+      "allTags": "Összes címke ({{n}})",
+      "fewerTags": "Kevesebb címke",
+      "reset": "Szűrők törlése"
     },
     "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
     "emptyFiltered": "Ehhez a szűrőhöz semmi sem illik.",
     "read": "Olvasás",
     "continue": "Folytatás a(z) {{page}}. oldalon",
+    "continueShort": "Folytatás",
     "download": "Letöltés",
     "downloadFormat": "{{format}} letöltése ({{size}})",
     "deleteConfirm": "Törlöd a(z) „{{title}}” könyvet? A fájl mindenki számára eltűnik a könyvtárból.",
@@ -5297,7 +5303,9 @@
       "noFile": "Nincs fájl kiválasztva",
       "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI vagy AZW3, legfeljebb {{max}}.",
       "fileTooLarge": "A fájl nagyobb, mint {{max}}.",
-      "uploading": "Feltöltés … {{pct}}%"
+      "uploading": "Feltöltés … {{pct}}%",
+      "needFile": "Előbb válassz fájlt.",
+      "needTitle": "Előbb adj meg címet."
     },
     "bulk": {
       "select": "Kijelölés",
@@ -5366,7 +5374,10 @@
       "solutionConfirmed": "A könyv megoldása, a Stockfish megerősítette.",
       "mateIn": "matt {{n}} lépésben",
       "matedIn": "mattot kap {{n}} lépésben",
-      "evalTitle": "A Stockfish értékelése a lépésre következő félnek"
+      "evalTitle": "A Stockfish értékelése a lépésre következő félnek",
+      "notFound": "Ez a könyv nem létezik, vagy nincs megosztva veled.",
+      "openBoard": "Tábla: {{n}} diagram",
+      "openBoardOne": "Tábla: 1 diagram"
     },
     "diagrams": "{{n}} diagram",
     "uploadedProcessing": "„{{title}}” feltöltve. A feldolgozás (borító, diagramok, megoldások) néhány perctől kb. negyed óráig tart — értesítést kapsz, ha kész.",
@@ -5413,11 +5424,12 @@
     "startCycle": "{{n}}. ciklus indítása",
     "breakReason": "Két ciklus között legalább egy nap szünet kell.",
     "saveFailed": "A mentés nem sikerült. Próbáld újra.",
-    "puzzles": "{{count}} feladat",
-    "puzzlesOne": "{{count}} feladat",
+    "puzzles": "{{count}} feladat",
+    "puzzlesOne": "{{count}} feladat",
     "inSet": "{{n}} a sorozatban",
     "inSetOne": "{{n}} a sorozatban",
     "toOverview": "Az áttekintéshez",
+    "notFound": "Ez az edzés nem létezik (már).",
     "doneCompleted": "Woodpecker befejezve – szép munka!",
     "doneCycle": "A(z) {{n}}. ciklus kész. Tarts szünetet, majd indítsd a következő ciklust az áttekintésben.",
     "repeatHint": "Ismétlés – ebben a ciklusban csak az első próbálkozásod számít.",
@@ -5425,6 +5437,7 @@
       "title": "Új Woodpecker-edzés",
       "coursesHint": "A tanfolyamok a bejelölés sorrendjében – az 1. ciklus ebben a sorrendben halad végig rajtuk.",
       "noCourses": "Még nincs feladatokat tartalmazó tanfolyamod.",
+      "toCourses": "A tanfolyamokhoz",
       "search": "Tanfolyamok keresése",
       "start": "Az 1. ciklus kezdete",
       "startHint": "Válassz korábbi napot, ha már elkezdted – ami azóta ezekben a tanfolyamokban megoldottál, beszámít.",

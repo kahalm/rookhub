@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.775.2", date: "2026-10-14", changes: [
+    { en: "E-book library and Woodpecker, design round c1 (22 fixes): the book card button no longer wraps (“Continue”, full page in the tooltip); tags are collapsed to the most frequent ones, on phones behind a “Filter” button; an empty filter result offers “Reset filters”; the upload dialog says why “Upload” is still disabled; a missing or unshared book or training now says so and leads back instead of “Check your connection”; on phones a board button shows that a book has diagrams; very wide screens use the wide layout. Woodpecker: the new-training dialog has one scroll area, a way to the courses when there are none, numbers with thousands separators and a readable empty text; the solver board grows on very wide screens.",
+      de: "E-Book-Bibliothek und Woodpecker, Gestaltungsrunde c1 (22 Korrekturen): der Knopf der Buchkarte bricht nicht mehr um („Weiter“, volle Seite im Tooltip); Schlagwörter sind auf die häufigsten eingeklappt, am Handy hinter „Filter“; ein leeres Filterergebnis bietet „Filter zurücksetzen“; der Hochladen-Dialog sagt, warum „Hochladen“ noch gesperrt ist; ein fehlendes oder nicht freigegebenes Buch bzw. Training sagt das und führt zurück statt „Prüfe die Verbindung“; am Handy zeigt ein Brett-Knopf, dass ein Buch Diagramme hat; sehr breite Bildschirme nutzen die breite Stufe. Woodpecker: der Dialog „Neues Training“ hat einen Scrollbereich, einen Weg zu den Kursen, wenn es keine gibt, Zahlen mit Tausenderpunkt und einen lesbaren Leersatz; das Brett im Löser wächst auf sehr breiten Bildschirmen." },
+  ] },
   { version: "0.775.1", date: "2026-10-14", changes: [
     { en: "E-books: solutions are now also found in books that write move numbers without a dot („1 Kc5 Kc7 2 Ke6“, „1…Kc7“), e.g. Dvoretsky’s Endgame Manual (from 3 to 937 diagrams with a solution).",
       de: "E-Books: Lösungen werden jetzt auch in Büchern gefunden, die Zugnummern ohne Punkt schreiben („1 Kc5 Kc7 2 Ke6“, „1…Kc7“), etwa Dvoretskys Endspiel-Handbuch (von 3 auf 937 Diagramme mit Lösung)." },

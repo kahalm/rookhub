@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -64,6 +65,13 @@ const STOCKFISH_DEPTH = 12;
 
       @if (phase() === 'loading') {
         <app-loading-spinner />
+      } @else if (phase() === 'missing') {
+        <!-- c1-wp-loeser-404-verbindung: fremdes/gelöschtes Training — „Wiederholen“ hülfe nie; Weg zurück statt
+             Verbindungsfehler (DESIGN 5.10/5.11). -->
+        <mat-card appearance="outlined" class="done missing">
+          <p>{{ 'woodpecker.notFound' | translate }}</p>
+          <a mat-flat-button color="primary" routerLink="/woodpecker">{{ 'woodpecker.toOverview' | translate }}</a>
+        </mat-card>
       } @else if (phase() === 'error') {
         <app-load-error (retry)="loadNext()" />
       } @else if (phase() === 'done') {
@@ -132,7 +140,8 @@ const STOCKFISH_DEPTH = 12;
     </div>
   `,
   styles: [`
-    .page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 8px 16px 16px; box-sizing: border-box; }
+    /* c1-wp-woodpecker-seitenpolster-96vw: ohne 96vw — der Rand ist das 16-px-Polster (DESIGN 3.2). */
+    .page { max-width: var(--page-max-width); margin: 0 auto; padding: 8px 16px 16px; box-sizing: border-box; }
     .top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .top-text { flex: 1 1 auto; min-width: 0; }
     .top h1 { margin: 0; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -150,6 +159,15 @@ const STOCKFISH_DEPTH = 12;
       .solver { grid-template-columns: minmax(0, 1fr) minmax(360px, 400px); align-items: start; }
       .board-section { width: min(100%, calc(100vh - 160px)); }
     }
+    /* c1-wp-loeser-ultrawide-brett: Breitbild-Stufe wie die übrigen Puzzle-Löser (DESIGN 4.1/5.12) — Seite im breiten
+       Token, Brett bis Fensterhöhe, daneben 360–400 px Seitenspalte, beides mittig. Unter 2400 px unverändert. */
+    @media (min-width: 2400px) {
+      .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      .solver { justify-content: center; grid-template-columns: minmax(0, calc(100vh - 160px)) minmax(360px, 400px); }
+      .board-section { width: min(100%, calc(100vh - 160px)); }
+      /* Abschluss-/Fehlkarte bleibt bei der Seitenbreite (DESIGN 4.1). */
+      .done { max-width: var(--page-max-width); margin-inline: auto; box-sizing: border-box; }
+    }
   `],
 })
 export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit, OnDestroy {
@@ -162,7 +180,8 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
   private translate = inject(TranslateService);
 
   readonly plan = signal<WoodpeckerPlan | null>(null);
-  readonly phase = signal<'loading' | 'error' | 'solving' | 'done'>('loading');
+  /** `missing`: Training gibt es nicht (mehr) oder gehört jemand anderem (404/403) — kein Verbindungsfehler. */
+  readonly phase = signal<'loading' | 'error' | 'missing' | 'solving' | 'done'>('loading');
   /** Nach einem Wiederholen: der erste Versuch ist schon gewertet. */
   readonly repeatHint = signal(false);
 
@@ -216,7 +235,10 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
         this.phase.set('solving');
         this.setupPuzzle(r.puzzle);
       },
-      error: () => { if (epoch === this.loadEpoch) this.phase.set('error'); },
+      error: (e: HttpErrorResponse) => {
+        if (epoch !== this.loadEpoch) return;
+        this.phase.set(e?.status === 404 || e?.status === 403 ? 'missing' : 'error');
+      },
     });
   }
 

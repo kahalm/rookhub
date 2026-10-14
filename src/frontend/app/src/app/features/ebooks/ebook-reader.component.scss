@@ -6,7 +6,11 @@
   min-height: 420px;
 }
 
-.rd-pad { padding: 1rem; }
+/* Fehler-/Leerzustände in der Seitenbreite statt am Rand (Ultrawide: Text bei x 30, Knopf bei x 3 400). */
+.rd-pad { padding: 1rem; max-width: min(var(--page-max-width, 1240px), 96vw); width: 100%; margin: 0 auto; box-sizing: border-box; }
+.rd-pad-back { margin-top: 8px; }
+.rd-missing { text-align: center; padding: 2rem 1rem; }
+.rd-missing > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .6; }
 
 .rd-toolbar {
   display: flex;
@@ -39,10 +43,17 @@
   color: inherit;
   font: inherit;
   min-height: 36px;
+  /* Safari zeichnet die Drehknöpfe dauerhaft über die Zahl (c1-eb-ebook-leser-seitenfeld-spinner). */
+  appearance: textfield;
+  -moz-appearance: textfield;
+  &::-webkit-inner-spin-button, &::-webkit-outer-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
 }
 .rd-page-count { white-space: nowrap; font-size: .9rem; opacity: .8; }
 .rd-zoom { display: flex; flex: none; }
 .rd-zoom-active { color: var(--mat-sys-primary); }
+/* Diagramm-Knopf nur, wo das Brett zugeklappt ist (< 900 px); Abstandhalter nur ab 2400 px (siehe unten). */
+.rd-diag-btn { display: none; min-width: 0; padding-inline: 8px; font-variant-numeric: tabular-nums; }
+.rd-toolbar-spacer { display: none; }
 
 .rd-body { flex: 1 1 auto; min-height: 0; display: flex; }
 .rd-viewer { flex: 1 1 auto; min-width: 0; min-height: 0; }
@@ -109,14 +120,23 @@
   }
   .rd-body--panel-open .rd-panel { display: flex; }
   .rd-panel-close { display: inline-flex; }
+  .rd-diag-btn { display: inline-flex; }
   .rd-board { width: min(100%, 44dvh); margin: 0 auto; }
 }
 
 .rd-download { text-align: center; padding: 2rem 1rem; }
-.rd-download mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .6; }
+.rd-download > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .6; }
 .rd-download-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Breitbild (c1-eb-reader-ultrawide-layout, DESIGN 4.1): Seitenzahl/Zoom direkt neben dem Titel statt 3 000 px
+   entfernt, ⋮ rechts; Brett-Leiste breiter. Die Seite selbst deckelt „Breite füllen“ (WIDE_FIT_MAX_WIDTH). */
+@media (min-width: 2400px) {
+  .rd-title { flex: 0 1 auto; max-width: 40vw; margin-right: 16px; }
+  .rd-toolbar-spacer { display: block; flex: 1 1 auto; }
+  .rd-panel { flex: 0 0 var(--rd-panel-w, clamp(460px, 24vw, 720px)); }
+}
 
 @media (max-width: 599.98px) {
   .rd-toolbar { flex-wrap: wrap; }

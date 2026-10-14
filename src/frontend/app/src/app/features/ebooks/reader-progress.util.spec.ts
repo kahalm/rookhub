@@ -1,4 +1,4 @@
-import { ZOOM_STEPS, currentPage, fitWidthZoom, nextZoom, pagesToRender, parsePageInput } from './reader-progress.util';
+import { WIDE_FIT_MAX_WIDTH, ZOOM_STEPS, currentPage, fitWidthZoom, nextZoom, pagesToRender, parsePageInput } from './reader-progress.util';
 
 describe('reader-progress.util', () => {
   it('nextZoom geht stufenweise und bleibt am Rand stehen', () => {
@@ -15,6 +15,12 @@ describe('reader-progress.util', () => {
     expect(fitWidthZoom(390, 612)).toBeCloseTo(0.585, 3);
     expect(fitWidthZoom(0, 612)).toBe(1);
     expect(fitWidthZoom(100000, 10)).toBe(6);
+  });
+
+  it('fitWidthZoom deckelt die Kastenbreite (Breitbild, c1-eb-reader-ultrawide-layout)', () => {
+    expect(WIDE_FIT_MAX_WIDTH).toBe(1400);
+    expect(fitWidthZoom(2700, 684, 16, WIDE_FIT_MAX_WIDTH)).toBeCloseTo((1400 - 32) / 684, 3);
+    expect(fitWidthZoom(900, 684, 16, WIDE_FIT_MAX_WIDTH)).toBe(fitWidthZoom(900, 684));   // schmaler: kein Unterschied
   });
 
   it('currentPage nimmt die Seite in der Sichtfeldmitte, die erste solange sie oben steht', () => {

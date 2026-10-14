@@ -24,11 +24,14 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Ebook, EbookGroupOption, EbookList, EbookService, EbookSort, READABLE_FORMATS, formatBytes } from './ebook.service';
+import { Ebook, EbookGroupOption, EbookList, EbookTagFacet, EbookService, EbookSort, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
 
 export const EBOOK_PAGE_SIZE = 24;
+
+/** Zugeklappt zeigt die Schlagwort-Leiste nur die häufigsten (der Server liefert sie nach Anzahl), c1-eb-tag-filter-lead. */
+export const EBOOK_TAGS_COLLAPSED = 8;
 
 /** Sitzungs-Schlüssel der Listen-Ansicht (Suche, Filter, Seite) — „zurück" aus dem Leser landet wieder dort. */
 export const EBOOK_LIST_STATE_KEY = 'rh.ebooks.listState';
@@ -71,6 +74,11 @@ export class EbookListComponent implements OnInit, OnDestroy {
   readonly selecting = signal(false);
   readonly selected = signal<Set<number>>(new Set());
   readonly importing = signal(false);
+  /** Schlagwort-Leiste ganz aufgeklappt (sonst nur die häufigsten + das aktive). */
+  readonly tagsOpen = signal(false);
+  /** Handy: Sortierung, Schalter und Schlagwörter aufgeklappt (ab 600 px stehen sie immer da). */
+  readonly filtersOpen = signal(false);
+  readonly tagsCollapsedCount = EBOOK_TAGS_COLLAPSED;
 
   private groups: EbookGroupOption[] | null = null;
   private search$ = new Subject<string>();
@@ -151,6 +159,29 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   get items(): Ebook[] { return this.list?.items ?? []; }
   get filtered(): boolean { return !!(this.search.trim() || this.tag || this.mine || this.withDiagrams); }
+
+  /** Schlagwörter, die die Leiste gerade zeigt: aufgeklappt alle, sonst die häufigsten plus das aktive. */
+  get visibleTags(): EbookTagFacet[] {
+    const all = this.list?.tags ?? [];
+    if (this.tagsOpen() || all.length <= EBOOK_TAGS_COLLAPSED) return all;
+    return all.filter((t, i) => i < EBOOK_TAGS_COLLAPSED || t.tag === this.tag);
+  }
+
+  /** Zahl der aktiven Filter hinter „Filter ▾“ (Handy). Die Suche steht sichtbar daneben und zählt nicht. */
+  get activeFilterCount(): number {
+    return (this.tag ? 1 : 0) + (this.mine ? 1 : 0) + (this.withDiagrams ? 1 : 0);
+  }
+
+  /** Alle Filter weg (Leerzustand „Zu diesem Filter passt nichts.“, c1-eb-filter-empty-no-reset). Sortierung bleibt. */
+  resetFilters(): void {
+    const hadSearch = this.search.trim().length > 0;
+    this.tag = null;
+    this.mine = false;
+    this.withDiagrams = false;
+    this.page = 1;
+    // Über den Such-Strom, damit distinctUntilChanged den alten Suchbegriff vergisst (sonst lädt dieselbe Suche nie wieder).
+    if (hadSearch) this.onSearch(''); else this.load();
+  }
 
   onSearch(value: string): void {
     this.search = value;

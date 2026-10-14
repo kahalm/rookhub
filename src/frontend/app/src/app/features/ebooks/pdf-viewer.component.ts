@@ -5,7 +5,8 @@ import {
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PdfDocument, PdfEngineLoader, PdfLoadingTask, PdfPage } from './pdf-engine';
-import { currentPage, fitWidthZoom, pagesToRender } from './reader-progress.util';
+import { WIDE_FIT_MAX_WIDTH, currentPage, fitWidthZoom, pagesToRender } from './reader-progress.util';
+import { mediaSignal } from '../../shared/layout/wide-media';
 
 /** Eine anklickbare Zone über der Seite (Lage als Anteil der Seite, 0–1). */
 export interface PdfZone { id: number; page: number; x: number; y: number; w: number; h: number; title?: string; }
@@ -56,6 +57,13 @@ interface PageSlot {
       border-color: color-mix(in srgb, var(--mat-sys-primary) 70%, transparent);
       background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent); outline: none;
     }
+    /* Touch (kein Überfahren, c1-eb-reader-mobile-diagrams-undiscoverable): Zonen dauerhaft gestrichelt, mit Hof aus
+       on-primary — die Seite ist in beiden Designs weiß, der Hof hält den Rand sichtbar. */
+    @media (hover: none) {
+      :host ::ng-deep .pv-zone {
+        border: 2px dashed var(--mat-sys-primary); box-shadow: 0 0 0 1px var(--mat-sys-on-primary);
+      }
+    }
     :host ::ng-deep .pv-zone--active { border-color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
     .pv-error { text-align: center; padding: 2rem 1rem; color: var(--rh-error); }
   `],
@@ -84,6 +92,8 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   readonly loading = signal(false);
   readonly error = signal(false);
+  /** Breitbild-Stufe: „Breite füllen“ höchstens WIDE_FIT_MAX_WIDTH breit. */
+  private readonly wide = mediaSignal();
 
   private engine = inject(PdfEngineLoader);
   private zone = inject(NgZone);
@@ -221,7 +231,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private fitZoom(pageWidth: number): number {
-    return fitWidthZoom(this.scrollRef.nativeElement.clientWidth, pageWidth);
+    return fitWidthZoom(this.scrollRef.nativeElement.clientWidth, pageWidth, 16, this.wide() ? WIDE_FIT_MAX_WIDTH : Infinity);
   }
 
   private applyZoom(): void {

@@ -19,6 +19,9 @@ import { EndlessHistoryComponent } from './puzzles/endless-history.component';
 import { WorksheetDetailComponent } from './worksheets/worksheet-detail.component';
 import { ReconstructListComponent } from './reconstruct/reconstruct-list.component';
 import { ReconstructDetailComponent } from './reconstruct/reconstruct-detail.component';
+import { WoodpeckerListComponent } from './woodpecker/woodpecker-list.component';
+import { WoodpeckerSolveComponent } from './woodpecker/woodpecker-solve.component';
+import { EbookListComponent } from './ebooks/ebook-list.component';
 
 /**
  * Codereview W5 F3-017: „EINE Seitenbreite für alle Inhaltsseiten" (styles.scss, --page-max-width) — in Kursen,
@@ -94,6 +97,11 @@ const WIDE_PAGES: [string, Type<unknown>, string][] = [
   // b1-rk-recon-breitstufe: Rekonstruktion — Kartenraster (Liste) und Brett-Editor (Bearbeiten).
   ['Rekonstruktionen', ReconstructListComponent, 'page'],
   ['Rekonstruktion bearbeiten', ReconstructDetailComponent, 'page'],
+  // c1-wp-uebersicht-ultrawide / c1-wp-loeser-ultrawide-brett: Woodpecker-Kartenraster und -Löser.
+  ['Woodpecker', WoodpeckerListComponent, 'page'],
+  ['Woodpecker-Löser', WoodpeckerSolveComponent, 'page'],
+  // c1-eb-ultrawide-not-wide: E-Book-Bibliothek (Regal = Kartenraster).
+  ['E-Book-Bibliothek', EbookListComponent, 'eb-page'],
 ];
 /** Kompiliertes CSS ohne Leerraum und ohne %NS%-Platzhalter. */
 function compactCss(cmp: Type<unknown>): string {

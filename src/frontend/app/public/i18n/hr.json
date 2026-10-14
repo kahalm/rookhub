@@ -5259,12 +5259,18 @@
     },
     "filter": {
       "mine": "Moji prijenosi",
-      "withDiagrams": "S dijagramima"
+      "withDiagrams": "S dijagramima",
+      "toggle": "Filtar",
+      "active": "Aktivni filtri",
+      "allTags": "Sve oznake ({{n}})",
+      "fewerTags": "Manje oznaka",
+      "reset": "Poništi filtre"
     },
     "empty": "Još nema e-knjiga – prenesi prvu.",
     "emptyFiltered": "Ništa ne odgovara ovom filtru.",
     "read": "Čitaj",
     "continue": "Nastavi na stranici {{page}}",
+    "continueShort": "Nastavi",
     "download": "Preuzmi",
     "downloadFormat": "Preuzmi {{format}} ({{size}})",
     "deleteConfirm": "Izbrisati »{{title}}«? Datoteka nestaje iz knjižnice za sve.",
@@ -5297,7 +5303,9 @@
       "noFile": "Nijedna datoteka nije odabrana",
       "fileHint": "PDF, EPUB, DJVU, CBZ, CBR, MOBI ili AZW3, do {{max}}.",
       "fileTooLarge": "Datoteka je veća od {{max}}.",
-      "uploading": "Prijenos … {{pct}} %"
+      "uploading": "Prijenos … {{pct}} %",
+      "needFile": "Najprije odaberi datoteku.",
+      "needTitle": "Najprije unesi naslov."
     },
     "bulk": {
       "select": "Odaberi",
@@ -5366,7 +5374,10 @@
       "solutionConfirmed": "Rješenje iz knjige, potvrdio ga je Stockfish.",
       "mateIn": "mat u {{n}}",
       "matedIn": "dobiva mat u {{n}}",
-      "evalTitle": "Ocjena Stockfisha za stranu na potezu"
+      "evalTitle": "Ocjena Stockfisha za stranu na potezu",
+      "notFound": "Ova knjiga ne postoji ili nije podijeljena s tobom.",
+      "openBoard": "Ploča: {{n}} dijagrama",
+      "openBoardOne": "Ploča: 1 dijagram"
     },
     "diagrams": "Dijagrama: {{n}}",
     "uploadedProcessing": "»{{title}}« je preneseno. Obrada (naslovnica, dijagrami, rješenja) traje nekoliko minuta do otprilike četvrt sata — dobit ćeš obavijest kad bude gotova.",
@@ -5413,11 +5424,12 @@
     "startCycle": "Pokreni ciklus {{n}}",
     "breakReason": "Između dva ciklusa barem jedan dan pauze.",
     "saveFailed": "Spremanje nije uspjelo. Pokušaj ponovno.",
-    "puzzles": "{{count}} zadataka",
-    "puzzlesOne": "{{count}} zadatak",
+    "puzzles": "{{count}} zadataka",
+    "puzzlesOne": "{{count}} zadatak",
     "inSet": "{{n}} u setu",
     "inSetOne": "{{n}} u setu",
     "toOverview": "Na pregled",
+    "notFound": "Ovaj trening ne postoji (više).",
     "doneCompleted": "Woodpecker završen – bravo!",
     "doneCycle": "Ciklus {{n}} je gotov. Odmori se, zatim pokreni sljedeći ciklus u pregledu.",
     "repeatHint": "Ponavljanje – u ovom ciklusu računa se samo tvoj prvi pokušaj.",
@@ -5425,6 +5437,7 @@
       "title": "Novi Woodpecker trening",
       "coursesHint": "Tečajevi redoslijedom označavanja – ciklus 1 prolazi ih tim redom.",
       "noCourses": "Još nemaš tečaj sa zadacima.",
+      "toCourses": "Na tečajeve",
       "search": "Traži tečajeve",
       "start": "Početak ciklusa 1",
       "startHint": "Odaberi raniji dan ako si već počeo – računa se ono što si od tada riješio u tim tečajevima.",

@@ -30,33 +30,72 @@
   } @else if (error || !list) {
     <app-load-error (retry)="load()" />
   } @else {
-    <div class="eb-filters">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-search">
-        <mat-icon matPrefix>search</mat-icon>
-        <input matInput type="search" [ngModel]="search" (ngModelChange)="onSearch($event)"
-               [placeholder]="'ebooks.search' | translate" [attr.aria-label]="'ebooks.search' | translate" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-sort">
-        <mat-label>{{ 'ebooks.sort.label' | translate }}</mat-label>
-        <mat-select [value]="sort" (valueChange)="setSort($event)">
-          @for (s of sorts; track s) { <mat-option [value]="s">{{ ('ebooks.sort.' + s) | translate }}</mat-option> }
-        </mat-select>
-      </mat-form-field>
-      <button type="button" class="eb-chip" [class.eb-chip--on]="mine" [attr.aria-pressed]="mine" (click)="toggleMine()">
-        <mat-icon>person</mat-icon>{{ 'ebooks.filter.mine' | translate }}
-      </button>
-      <button type="button" class="eb-chip" [class.eb-chip--on]="withDiagrams" [attr.aria-pressed]="withDiagrams" (click)="toggleWithDiagrams()">
-        <mat-icon>grid_on</mat-icon>{{ 'ebooks.filter.withDiagrams' | translate }}
-      </button>
-    </div>
-
-    @if (list.tags.length > 0) {
-      <div class="eb-tags" role="group" [attr.aria-label]="'ebooks.meta.tags' | translate">
-        @for (t of list.tags; track t.tag) {
-          <button type="button" class="eb-chip" [class.eb-chip--on]="tag === t.tag" [attr.aria-pressed]="tag === t.tag"
-                  (click)="setTag(t.tag)">{{ t.tag }} <span class="eb-chip-count">{{ t.count }}</span></button>
-        }
+    <!-- Filterzeile nur, wenn es etwas zu filtern gibt (c1-eb-empty-lead-mobile): ohne ein Buch rückt der Leerhinweis hoch. -->
+    @if (list.total > 0 || filtered) {
+      <div class="eb-filters">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-search">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput type="search" [ngModel]="search" (ngModelChange)="onSearch($event)"
+                 [placeholder]="'ebooks.search' | translate" [attr.aria-label]="'ebooks.search' | translate" />
+        </mat-form-field>
+        <!-- Handy (DESIGN 4.6 Nr. 7): Sortierung, Schalter und Schlagwörter hinter „Filter ▾“ (c1-eb-tag-filter-lead). -->
+        <button type="button" class="eb-chip eb-filter-toggle" [class.eb-chip--on]="activeFilterCount > 0"
+                [attr.aria-expanded]="filtersOpen()" aria-controls="eb-filter-panel" (click)="filtersOpen.set(!filtersOpen())">
+          <mat-icon>tune</mat-icon>{{ 'ebooks.filter.toggle' | translate }}
+          @if (activeFilterCount > 0) { <span class="eb-chip-count">{{ activeFilterCount }}</span> }
+          <mat-icon>{{ filtersOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+        <div class="eb-filter-more" id="eb-filter-panel" [class.eb-filter-more--open]="filtersOpen()">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-sort">
+            <mat-label>{{ 'ebooks.sort.label' | translate }}</mat-label>
+            <mat-select [value]="sort" (valueChange)="setSort($event)">
+              @for (s of sorts; track s) { <mat-option [value]="s">{{ ('ebooks.sort.' + s) | translate }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <button type="button" class="eb-chip" [class.eb-chip--on]="mine" [attr.aria-pressed]="mine" (click)="toggleMine()">
+            <mat-icon>person</mat-icon>{{ 'ebooks.filter.mine' | translate }}
+          </button>
+          <button type="button" class="eb-chip" [class.eb-chip--on]="withDiagrams" [attr.aria-pressed]="withDiagrams" (click)="toggleWithDiagrams()">
+            <mat-icon>grid_on</mat-icon>{{ 'ebooks.filter.withDiagrams' | translate }}
+          </button>
+        </div>
       </div>
+
+      <!-- Handy, zugeklappt: aktive Filter als Chips (ein Tipp nimmt sie zurück). -->
+      @if (!filtersOpen() && (mine || withDiagrams || tag)) {
+        <div class="eb-active" role="group" [attr.aria-label]="'ebooks.filter.active' | translate">
+          @if (mine) {
+            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="toggleMine()">
+              <mat-icon>person</mat-icon>{{ 'ebooks.filter.mine' | translate }}<mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (withDiagrams) {
+            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="toggleWithDiagrams()">
+              <mat-icon>grid_on</mat-icon>{{ 'ebooks.filter.withDiagrams' | translate }}<mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (tag) {
+            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setTag(tag)">
+              {{ tag }}<mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+      }
+
+      @if (list.tags.length > 0) {
+        <div class="eb-tags" [class.eb-tags--open]="filtersOpen()" role="group" [attr.aria-label]="'ebooks.meta.tags' | translate">
+          @for (t of visibleTags; track t.tag) {
+            <button type="button" class="eb-chip" [class.eb-chip--on]="tag === t.tag" [attr.aria-pressed]="tag === t.tag"
+                    (click)="setTag(t.tag)">{{ t.tag }} <span class="eb-chip-count">{{ t.count }}</span></button>
+          }
+          @if (list.tags.length > tagsCollapsedCount) {
+            <button type="button" class="eb-chip eb-tags-more" [attr.aria-expanded]="tagsOpen()" (click)="tagsOpen.set(!tagsOpen())">
+              {{ (tagsOpen() ? 'ebooks.filter.fewerTags' : 'ebooks.filter.allTags') | translate: { n: list.tags.length } }}
+              <mat-icon>{{ tagsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+        </div>
+      }
     }
 
     @if (selecting()) {
@@ -73,7 +112,10 @@
       <div class="empty-state eb-empty">
         <mat-icon>menu_book</mat-icon>
         <p>{{ (filtered ? 'ebooks.emptyFiltered' : 'ebooks.empty') | translate }}</p>
-        @if (!filtered && list.uploadEnabled) {
+        @if (filtered) {
+          <!-- c1-eb-filter-empty-no-reset: der Leerzustand bietet immer einen Weg weiter (DESIGN 5.10). -->
+          <button mat-stroked-button type="button" class="eb-reset" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>{{ 'ebooks.filter.reset' | translate }}</button>
+        } @else if (list.uploadEnabled) {
           <button mat-stroked-button type="button" (click)="openUpload()"><mat-icon>upload</mat-icon>{{ 'ebooks.upload' | translate }}</button>
         }
       </div>
@@ -119,12 +161,16 @@
             </mat-card-content>
             <div class="eb-actions">
               @if (readable(book)) {
-                <a mat-flat-button color="primary" [routerLink]="['/ebooks', book.id]">
-                  <mat-icon>auto_stories</mat-icon>{{ (book.progress ? 'ebooks.continue' : 'ebooks.read') | translate: { page: book.progress?.page ?? 1 } }}
+                <!-- c1-eb-card-action-button: kurzer Text einzeilig im Knopf, die Seite steht im Tooltip/Namen. -->
+                <a mat-flat-button color="primary" class="eb-act" [routerLink]="['/ebooks', book.id]"
+                   [matTooltip]="book.progress ? ('ebooks.continue' | translate: { page: book.progress.page }) : ''"
+                   [attr.aria-label]="book.progress ? ('ebooks.continue' | translate: { page: book.progress.page }) : null">
+                  <mat-icon>auto_stories</mat-icon><span class="eb-act-label">{{ (book.progress ? 'ebooks.continueShort' : 'ebooks.read') | translate }}</span>
                 </a>
               } @else {
-                <a mat-flat-button color="primary" [href]="downloadUrl(book)" [download]="book.files.at(0)?.fileName ?? ''">
-                  <mat-icon>download</mat-icon>{{ 'ebooks.download' | translate }}
+                <a mat-flat-button color="primary" class="eb-act eb-act--download" [href]="downloadUrl(book)" [download]="book.files.at(0)?.fileName ?? ''"
+                   [attr.aria-label]="'ebooks.download' | translate">
+                  <mat-icon>download</mat-icon><span class="eb-act-label">{{ 'ebooks.download' | translate }}</span>
                 </a>
               }
               <span class="eb-spacer"></span>

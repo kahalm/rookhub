@@ -277,6 +277,10 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   main { margin: 0 !important; padding: 0 !important; }
 }
 
+/* E-Book-Leser (Sonderlayout 4.5, c1-eb-ebook-leser-seite-scrollt-um-fusszeile): die Seite ist genau fensterhoch mit
+   eigenem Scrollkasten — die Fußzeile darunter ließ die ganze Seite um 33 px mitscrollen. Die Klasse setzt der Leser. */
+body.rd-reader-mode app-footer { display: none; }
+
 /* UI-Welle 3: EINE Seitenbreite für alle Inhaltsseiten (statt page-individueller 1400px/96vw-
    Werte). Seiten binden ihren Container an var(--page-max-width) — zentriert, ruhige Ränder
    statt randloser Fläche mit toter Info-Spalte (gemessen 1440x900). */

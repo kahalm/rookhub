@@ -9,6 +9,10 @@
 .eb-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .eb-search { flex: 1 1 240px; }
 .eb-sort { flex: 0 1 190px; }
+/* Ab 600 px stehen Sortierung und Schalter direkt in der Zeile (die Hülle zählt nicht); „Filter ▾“ nur am Handy. */
+.eb-filter-more { display: contents; }
+.eb-filter-toggle { display: none; }
+.eb-active { display: none; }
 
 .eb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .eb-chip {
@@ -20,6 +24,7 @@
 }
 .eb-chip--on { background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent); border-color: var(--mat-sys-primary); }
 .eb-chip-count { opacity: .6; font-size: .75rem; }
+.eb-tags-more { border-style: dashed; }
 
 .eb-bulk {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -28,7 +33,8 @@
 }
 
 .eb-empty { text-align: center; padding: 2rem 1rem; }
-.eb-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .5; }
+/* Nur das Leerzustands-Symbol, nicht das im Knopf (c1-eb-empty-upload-icon, wie .empty-state > mat-icon). */
+.eb-empty > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .5; }
 .eb-empty p { margin: 8px 0 12px; }
 
 .eb-grid {
@@ -74,8 +80,17 @@
 }
 
 .eb-actions { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px 12px; }
-.eb-actions a[mat-flat-button] { min-width: 0; }
+/* Hauptknopf nimmt den Platz neben ⋮, Text einzeilig im Knopf, notfalls mit „…“ (c1-eb-card-action-button, DESIGN 5.4). */
+.eb-act { flex: 1 1 auto; min-width: 0; white-space: nowrap; padding-inline: 12px 14px; }
+/* Material legt den Text in EIN .mdc-button__label (eigene Ansicht des Knopfs) — das muss schrumpfen dürfen. */
+.eb-act ::ng-deep .mdc-button__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .eb-spacer { flex: 1; }
+
+/* Breitbild-Stufe (DESIGN 4.1, c1-eb-ultrawide-not-wide): das Regal ist eine Rasterseite. Der Leerzustand bleibt schmal. */
+@media (min-width: 2400px) {
+  .eb-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .eb-empty { max-width: var(--page-max-width, 1240px); margin-inline: auto; }
+}
 
 .eb-quota { text-align: right; font-size: .8rem; opacity: .6; margin: 12px 0 0; }
 
@@ -83,4 +98,15 @@
   .eb-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .eb-upload-text { display: none; }
   .eb-upload { min-width: 44px; padding: 0 10px; }
+  /* Handy (DESIGN 4.6 Nr. 7): Suche + „Filter ▾“ in einer Zeile, der Rest zugeklappt; aktive Filter als Chips. */
+  .eb-search { flex: 1 1 0; min-width: 0; }
+  .eb-filter-toggle { display: inline-flex; min-height: 44px; }
+  .eb-filter-more { display: none; }
+  .eb-filter-more--open { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+  .eb-active { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .eb-tags { display: none; }
+  .eb-tags--open { display: flex; }
+  /* Download nur als Symbol (der Name steht im aria-label): „Herunterladen“ passt nicht in 110 px. */
+  .eb-act--download .eb-act-label { display: none; }
+  .eb-act--download mat-icon { margin: 0; }
 }
