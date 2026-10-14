@@ -31,6 +31,8 @@ public class EbookDto
     public List<string> Tags { get; set; } = new();
     public string? Description { get; set; }
     public int? TargetMinElo { get; set; }
+    /// <summary>Startmodus des Bretts (0.781.0): view/free/calc/solve/maia — wirksam, Standard „solve“.</summary>
+    public string DefaultBoardMode { get; set; } = "solve";
     /// <summary><c>upload</c> oder <c>library</c>.</summary>
     public string Source { get; set; } = "upload";
     public int? PageCount { get; set; }
@@ -107,6 +109,8 @@ public class EbookMetaDto
     public List<string>? Tags { get; set; }
     [MaxLength(2000)] public string? Description { get; set; }
     public int? TargetMinElo { get; set; }
+    /// <summary>Startmodus des Bretts (view/free/calc/solve/maia); <c>null</c> = unverändert, leer = Standard.</summary>
+    [MaxLength(10)] public string? DefaultBoardMode { get; set; }
     /// <summary>Vollständige Liste der freigegebenen Gruppen; <c>null</c> = unverändert. Nicht-Verwalter können nur
     /// ihre eigenen Gruppen (und „Everyone") wählen, anderes wird still verworfen.</summary>
     public List<int>? GroupIds { get; set; }
@@ -123,6 +127,7 @@ public class EbookUploadForm
     [MaxLength(1000)] public string? Tags { get; set; }
     [MaxLength(2000)] public string? Description { get; set; }
     public int? TargetMinElo { get; set; }
+    [MaxLength(10)] public string? DefaultBoardMode { get; set; }
     /// <summary>Gruppen-Ids, kommagetrennt.</summary>
     [MaxLength(500)] public string? GroupIds { get; set; }
 }

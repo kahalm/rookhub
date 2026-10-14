@@ -28,6 +28,8 @@ export interface Ebook {
   tags: string[];
   description: string | null;
   targetMinElo: number | null;
+  /** Startmodus des Bretts neben dem Buch (0.781.0); der Server liefert immer einen, Standard „solve“. */
+  defaultBoardMode?: 'view' | 'free' | 'calc' | 'solve' | 'maia';
   source: 'upload' | 'library';
   pageCount: number | null;
   hasCover: boolean;
@@ -121,6 +123,7 @@ export interface EbookMeta {
   tags?: string[];
   description?: string;
   targetMinElo?: number | null;
+  defaultBoardMode?: string;
   groupIds?: number[];
 }
 
@@ -209,6 +212,7 @@ export class EbookService {
     if (meta.tags?.length) form.append('tags', meta.tags.join(','));
     if (meta.description) form.append('description', meta.description);
     if (meta.targetMinElo != null) form.append('targetMinElo', String(meta.targetMinElo));
+    if (meta.defaultBoardMode) form.append('defaultBoardMode', meta.defaultBoardMode);
     if (meta.groupIds) form.append('groupIds', meta.groupIds.join(','));
     return this.http.post<Ebook>('/api/ebooks', form, { reportProgress: true, observe: 'events' });
   }

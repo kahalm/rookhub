@@ -175,6 +175,7 @@ public class EbookService
                 Tags = EbookFormats.ParseTagCsv(b.Tags),
                 Description = b.Description,
                 TargetMinElo = b.TargetMinElo,
+                DefaultBoardMode = b.DefaultBoardMode ?? EbookFormats.DefaultBoardMode,
                 Source = b.Source == EbookSource.Library ? "library" : "upload",
                 PageCount = b.PageCount,
                 HasCover = b.CoverState == EbookCoverState.Done,
@@ -245,6 +246,7 @@ public class EbookService
                 Tags = EbookFormats.JoinTags(EbookFormats.NormalizeTags(meta.Tags)),
                 Description = string.IsNullOrWhiteSpace(meta.Description) ? null : Clip(meta.Description.Trim(), 2000),
                 TargetMinElo = ValidElo(meta.TargetMinElo),
+                DefaultBoardMode = EbookFormats.NormalizeBoardMode(meta.DefaultBoardMode),
                 OwnerUserId = caller.UserId,
                 AnonymousSessionId = caller.IsAnonymous ? caller.AnonId : null,
                 Source = EbookSource.Upload,
@@ -294,6 +296,7 @@ public class EbookService
         if (meta.Tags != null) ebook.Tags = EbookFormats.JoinTags(EbookFormats.NormalizeTags(meta.Tags));
         if (meta.Description != null) ebook.Description = string.IsNullOrWhiteSpace(meta.Description) ? null : Clip(meta.Description.Trim(), 2000);
         if (meta.TargetMinElo != null) ebook.TargetMinElo = ValidElo(meta.TargetMinElo);
+        if (meta.DefaultBoardMode != null) ebook.DefaultBoardMode = EbookFormats.NormalizeBoardMode(meta.DefaultBoardMode);
         if (meta.GroupIds != null && caller.UserId is int uid) await ApplyGroupsAsync([ebook], meta.GroupIds, uid, manageAll, ct);
         ebook.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);

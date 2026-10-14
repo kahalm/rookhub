@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TextFieldModule } from '@angular/cdk/text-field';
@@ -32,7 +33,7 @@ export interface EbookEditDialogData {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-ebook-edit-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule,
+  imports: [CommonModule, FormsModule, MatSelectModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule,
     MatInputModule, MatProgressBarModule, TextFieldModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ (isNew ? 'ebooks.dialog.uploadTitle' : 'ebooks.dialog.editTitle') | translate }}</h2>
@@ -67,6 +68,13 @@ export interface EbookEditDialogData {
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'ebooks.meta.tags' | translate }}</mat-label>
         <input matInput [(ngModel)]="tags" maxlength="600" [placeholder]="'ebooks.meta.tagsHint' | translate" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>{{ 'ebooks.meta.boardMode' | translate }}</mat-label>
+        <mat-select [(ngModel)]="boardMode">
+          @for (m of boardModes; track m) { <mat-option [value]="m">{{ ('ebooks.board.mode.' + m) | translate }}</mat-option> }
+        </mat-select>
+        <mat-hint>{{ 'ebooks.meta.boardModeHint' | translate }}</mat-hint>
       </mat-form-field>
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'ebooks.meta.description' | translate }}</mat-label>
@@ -138,6 +146,9 @@ export class EbookEditDialogComponent {
   tags = (this.data.ebook?.tags ?? []).join(', ');
   description = this.data.ebook?.description ?? '';
   selected = new Set<number>(this.data.ebook?.groupIds ?? []);
+  /** Startmodus des Bretts (0.781.0), Standard „Lösen“. */
+  boardMode: string = this.data.ebook?.defaultBoardMode ?? 'solve';
+  readonly boardModes = ['solve', 'view', 'free', 'calc', 'maia'];
   readonly busy = signal(false);
   readonly progress = signal<number | null>(null);
 
@@ -178,6 +189,7 @@ export class EbookEditDialogComponent {
       year: this.year ?? null,
       tags: this.tags.split(/[,;]/).map(t => t.trim()).filter(t => t.length > 0),
       description: this.description.trim(),
+      defaultBoardMode: this.boardMode,
       groupIds: [...this.selected],
     };
   }

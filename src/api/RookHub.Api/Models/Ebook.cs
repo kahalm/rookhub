@@ -56,6 +56,11 @@ public class Ebook
     /// <summary>Ab welcher Spielstärke das Buch gedacht ist (aus den Beiblättern der Bibliothek); <c>null</c> = keine Angabe.</summary>
     public int? TargetMinElo { get; set; }
 
+    /// <summary>Mit welchem Modus das Brett neben dem Buch startet (0.781.0): view/free/calc/solve/maia;
+    /// <c>null</c> = <see cref="EbookFormats.DefaultBoardMode"/> („solve“).</summary>
+    [MaxLength(10)]
+    public string? DefaultBoardMode { get; set; }
+
     /// <summary>Wer es hochgeladen bzw. eingelesen hat — darf es bearbeiten und löschen. <c>null</c>, wenn das Konto
     /// gelöscht wurde (dann nur noch Admins).</summary>
     public int? OwnerUserId { get; set; }

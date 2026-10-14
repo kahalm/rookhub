@@ -33,6 +33,17 @@ public static class EbookFormats
     public static Models.EbookFile? ReadingPdf(IEnumerable<Models.EbookFile> files) =>
         files.Where(f => f.Format == "pdf").OrderByDescending(f => f.Derived).FirstOrDefault();
 
+    /// <summary>Brett-Modi im Leser (0.781.0) und der Standard, wenn das Buch keinen festlegt.</summary>
+    public static readonly IReadOnlyList<string> BoardModes = ["view", "free", "calc", "solve", "maia"];
+    public const string DefaultBoardMode = "solve";
+
+    /// <summary>Gültiger Modus oder <c>null</c> (leer/unbekannt = Standard).</summary>
+    public static string? NormalizeBoardMode(string? mode)
+    {
+        var m = mode?.Trim().ToLowerInvariant();
+        return m != null && BoardModes.Contains(m) ? m : null;
+    }
+
     public const int MaxTags = 20;
     public const int MaxTagLength = 40;
 

@@ -237,6 +237,17 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DefaultBoardMode_DefaultsToSolve_CanBeSetAndReset()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var b = await _kit.BookAsync("B", owner.Id);
+        Assert.Equal("solve", (await _kit.Service.GetAsync(owner.Id, false, b.Id)).DefaultBoardMode);
+        Assert.Equal("calc", (await _kit.Service.UpdateAsync(owner.Id, false, b.Id, new EbookMetaDto { DefaultBoardMode = "CALC" })).DefaultBoardMode);
+        Assert.Equal("calc", (await _kit.Service.UpdateAsync(owner.Id, false, b.Id, new EbookMetaDto { Title = "B2" })).DefaultBoardMode);   // null = unverändert
+        Assert.Equal("solve", (await _kit.Service.UpdateAsync(owner.Id, false, b.Id, new EbookMetaDto { DefaultBoardMode = "quatsch" })).DefaultBoardMode);
+    }
+
+    [Fact]
     public async Task Sort_Newest_ByPublicationYear_WithoutYearLast()
     {
         var owner = await _kit.UserAsync("owner");

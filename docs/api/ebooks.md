@@ -291,3 +291,7 @@ Partiensammlungen und Lehrbücher mit wenigen Stellungen fallen heraus.
 viele wie fehlende Bauern; sonst wird das Brett verworfen (gilt für Scans und EPUB-Bilder). `FindBoards` entdoppelt
 überlappende Treffer (Überdeckung > 50 % des kleineren, der mit besserem `GridFit` bleibt) — doppelte Rahmen (Pongó) lieferten
 sonst ein zweites, verschobenes Raster. Pongó „Tactical Targets 1“ bleibt trotzdem schlecht (sehr feine Schraffur).
+
+**Startmodus des Bretts je Buch** (0.781.0): `Ebook.DefaultBoardMode` (view/free/calc/solve/maia, `null` = Standard „solve“,
+`EbookFormats.NormalizeBoardMode`), im Bearbeiten-/Hochladen-Dialog wählbar, im DTO immer gesetzt. Die Brett-Komponente
+startet beim ersten Diagramm damit; danach bleibt der selbst gewählte Modus beim Blättern.

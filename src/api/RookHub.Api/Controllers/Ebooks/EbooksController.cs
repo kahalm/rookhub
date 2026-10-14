@@ -88,6 +88,7 @@ public class EbooksController : BaseApiController
             Tags = EbookFormats.ParseTagCsv(form.Tags),
             Description = form.Description,
             TargetMinElo = form.TargetMinElo,
+            DefaultBoardMode = form.DefaultBoardMode,
             GroupIds = ParseIds(form.GroupIds),
         };
         await using var stream = form.File.OpenReadStream();

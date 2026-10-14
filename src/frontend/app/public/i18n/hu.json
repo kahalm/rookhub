@@ -5338,6 +5338,8 @@
       "noGroups": "Még nem vagy tagja egy csoportnak sem – a könyv csak számodra marad látható. Egy adminisztrátor hozzáadhat egy csoporthoz."
     },
     "meta": {
+      "boardMode": "Tábla mód megnyitáskor",
+      "boardModeHint": "Melyik módban indul a könyv melletti tábla (alapértelmezés: Megoldás).",
       "title": "Cím",
       "author": "Szerző",
       "year": "Év",

@@ -5338,6 +5338,8 @@
       "noGroups": "Du bist noch in keiner Gruppe – das Buch bleibt nur für dich sichtbar. Ein Admin kann dich einer Gruppe zuordnen."
     },
     "meta": {
+      "boardMode": "Brett-Modus beim Öffnen",
+      "boardModeHint": "Mit welchem Modus das Brett neben dem Buch startet (Standard: Lösen).",
       "title": "Titel",
       "author": "Autor",
       "year": "Jahr",

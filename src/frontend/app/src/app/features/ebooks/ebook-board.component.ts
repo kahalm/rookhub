@@ -59,6 +59,9 @@ export const ENGINE_SOLUTION_PLIES = 7;
 export class EbookBoardComponent implements OnChanges {
   @Input({ required: true }) diagram!: EbookDiagram;
   @Input() ebookId = 0;
+  /** Startmodus fürs Buch (0.781.0, im Bearbeiten-Dialog wählbar, Standard „Lösen“). Gilt beim ersten Diagramm; danach
+   *  bleibt, was der Leser selbst wählt. */
+  @Input() defaultMode: EbookBoardMode | null | undefined = 'solve';
   /** „Zur Lösungsseite“ — der Leser springt dorthin. */
   @Output() solutionPage = new EventEmitter<number>();
 
@@ -70,7 +73,7 @@ export class EbookBoardComponent implements OnChanges {
   readonly maia = inject(MaiaEngineService);
 
   readonly modes: EbookBoardMode[] = ['view', 'free', 'calc', 'solve', 'maia'];
-  readonly mode = signal<EbookBoardMode>('view');
+  readonly mode = signal<EbookBoardMode>('solve');
   readonly flipped = signal(false);
   /** Die Buchstellung als Signal (für computed/effect). */
   readonly start = signal<EbookDiagram | null>(null);
@@ -151,6 +154,7 @@ export class EbookBoardComponent implements OnChanges {
     if (prev?.id === this.diagram.id) { this.start.set(this.diagram); return; }   // nur Meldung o. Ä. geändert
     this.clearTimer();
     this.start.set(this.diagram);
+    if (!prev) this.mode.set(this.defaultMode && this.modes.includes(this.defaultMode) ? this.defaultMode : 'solve');
     this.played.set([]);
     this.engineLine.set(null);
     this.showSolution.set(false);
@@ -161,6 +165,7 @@ export class EbookBoardComponent implements OnChanges {
     if (!this.hasStoredSolution) this.solveSource.set('engine');
     if (this.mode() === 'calc') this.loadCalc();
     if (this.mode() === 'solve') this.startSolving();
+    if (this.mode() === 'maia') void this.maia.prepare();
   }
 
   // ---------------------------------------------------------------- Modus

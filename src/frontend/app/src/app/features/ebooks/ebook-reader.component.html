@@ -117,7 +117,7 @@
                   <mat-icon>{{ d.solutionCheck === 'doubtful' ? 'warning_amber' : d.solutionCheck === 'engine' ? 'memory' : 'verified' }}</mat-icon>{{ note | translate }}
                 </p>
               }
-              <app-ebook-board [diagram]="d" [ebookId]="ebook.id" (solutionPage)="goToSolutionPage($event)" />
+              <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)" />
               @if (loggedIn) {
               <button mat-button type="button" class="rd-report" [class.rd-report--on]="d.reportedByMe" (click)="toggleReport(d)"
                       [attr.aria-pressed]="d.reportedByMe">

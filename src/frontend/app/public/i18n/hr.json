@@ -5338,6 +5338,8 @@
       "noGroups": "Još nisi ni u jednoj grupi – knjiga ostaje vidljiva samo tebi. Administrator te može dodati u grupu."
     },
     "meta": {
+      "boardMode": "Način ploče pri otvaranju",
+      "boardModeHint": "U kojem načinu počinje ploča uz knjigu (zadano: Rješavanje).",
       "title": "Naslov",
       "author": "Autor",
       "year": "Godina",

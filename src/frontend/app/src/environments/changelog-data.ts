@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.781.0", date: "2026-10-14", changes: [
+    { en: "E-books: each book can set which mode the board starts in (Edit → „Board mode at start“); the default is now Solve.",
+      de: "E-Books: Je Buch lässt sich festlegen, mit welchem Modus das Brett startet (Bearbeiten → „Brett-Modus beim Öffnen“); Standard ist jetzt Lösen." },
+  ] },
   { version: "0.780.5", date: "2026-10-14", changes: [
     { en: "E-books, scanned diagrams: positions with impossible material (e.g. five white knights and four white rooks) are discarded, and a board with a double frame is no longer read twice with a shifted grid.",
       de: "E-Books, gescannte Diagramme: Stellungen mit unmöglichem Material (z. B. fünf weiße Springer und vier weiße Türme) werden verworfen, und ein Brett mit doppeltem Rahmen wird nicht mehr zweimal mit verschobenem Raster gelesen." },

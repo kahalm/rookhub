@@ -2198,6 +2198,10 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("DefaultBoardMode")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("varchar(2000)");

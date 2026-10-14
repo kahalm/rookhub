@@ -24,7 +24,7 @@ describe('EbookBoardComponent', () => {
   let maia: { status: () => string; progress: () => number; prepare: jasmine.Spy; download: jasmine.Spy; chooseMove: jasmine.Spy };
   let stockfish: jasmine.SpyObj<StockfishService>;
 
-  function make(d: EbookDiagram = D): ComponentFixture<EbookBoardComponent> {
+  function make(d: EbookDiagram = D, defaultMode?: 'view' | 'free' | 'calc' | 'solve' | 'maia'): ComponentFixture<EbookBoardComponent> {
     maiaStatus = signal('ready');
     maia = {
       status: () => maiaStatus(), progress: () => 0,
@@ -45,18 +45,31 @@ describe('EbookBoardComponent', () => {
     const fixture = TestBed.createComponent(EbookBoardComponent);
     fixture.componentRef.setInput('diagram', d);
     fixture.componentRef.setInput('ebookId', 9);
+    if (defaultMode) fixture.componentRef.setInput('defaultMode', defaultMode);
     fixture.detectChanges();
     return fixture;
   }
 
   beforeEach(() => { try { localStorage.removeItem('rh.ebooks.calc.11'); } catch { /* egal */ } });
 
-  it('startet im Ansehen-Modus, Schwarz am Zug dreht das Brett, Brett nicht spielbar', () => {
+  it('startet standardmäßig im Lösen-Modus; Schwarz am Zug dreht das Brett', () => {
     const c = make().componentInstance;
-    expect(c.mode()).toBe('view');
+    expect(c.mode()).toBe('solve');
+    expect(c.solveState()).toBe('running');
     expect(c.flipped()).toBeTrue();
-    expect(c.playable()).toBeFalse();
     expect(c.analysisParams()).toEqual({ fen: D.fen, orientation: 'black', from: '/ebooks/9' });
+  });
+
+  it('der Startmodus des Buchs gilt beim ersten Diagramm, danach bleibt die eigene Wahl', () => {
+    TestBed.resetTestingModule();
+    const fixture = make(D, 'view');
+    const c = fixture.componentInstance;
+    expect(c.mode()).toBe('view');
+    expect(c.playable()).toBeFalse();
+    c.setMode('free');
+    fixture.componentRef.setInput('diagram', { ...D, id: 12 });
+    fixture.detectChanges();
+    expect(c.mode()).toBe('free');
   });
 
   it('Frei ziehen: Züge mitgeschrieben, zurücknehmen, Buchstellung; neues Diagramm leert', () => {
