@@ -157,3 +157,35 @@ Gemessen 14.10. (300 ms): Woodpecker 1 129 bestätigt, 3 ersetzt (u. a. Nr. 631 
 mit Diagrammen und eingeschalteter Prüfung) → DTO `processing` (Karte „Wird verarbeitet …“). Jeder Worker ruft nach seinem
 Schritt `NotifyIfReadyAsync`: bei Uploads (nicht bei Bibliotheksimporten) genau EINE Glocken-Meldung `ebook_ready`
 (`title`, `diagrams`, Link `/ebooks/{id}`), Merker `Ebook.ReadyNotifiedAt`. Push-Kategorie „other“.
+
+## EPUB-Diagramme aus Bildern (0.775.0)
+
+In EPUBs sind Diagramme BILDER (Bibliothek 14.10.: ~3 100 Brettbilder in 27 EPUBs). Der `EbookDiagramWorker` nimmt bei Büchern
+ohne PDF die EPUB-Datei und ruft `EbookEpubDiagramExtractor`:
+- **Lesen** (`EbookEpubContent`): `container.xml` → OPF → Spine; je Kapitel Absätze (Block-Tags trennen, Inline-Tags nicht —
+  „33.<span>♖</span>d1“ bleibt ein Zug) und Bilder (`<img src>`, SVG `<image href>`) als ZIP-Pfad, in Lesereihenfolge. Ohne
+  XML-Parser für Kapitel (viele EPUBs sind kein wohlgeformtes XHTML).
+- **Brett finden + Felder** (`EbookBoardImage`): Grau (0,299 R + 0,587 G + 0,114 B, Alpha auf Weiß), größte dunkle Komponente
+  (&lt; 235/255, 8er-Nachbarschaft), annähernd quadratisch, Rahmen + weißen Rand abschälen; 8 × 8 Felder mit 6 % Rand,
+  Flächenmittel auf 32 × 32 (`BoardImageMath`). Hintergrund je Feldposition = Median der LEEREN Felder des Buchs (höchstens
+  240 Bretter, gleichmäßig verteilt) — ein Buch hat einen Brettstil, darum erst alle Bretter sammeln, dann erkennen.
+- **Besetzt?** Abweichung vom Hintergrund nach Gauß σ 1,6: &gt; 6 % der Innenpixel über 0,18 = sicher besetzt; sonst Spitze
+  &gt; 0,12 = Kandidat, den Modell 2 („leer“ ≤ 0,5) bestätigen muss. **Welche Figur?** Modell 1 auf dem Vordergrund, zentriert
+  auf den Tintenschwerpunkt, 24 × 24.
+- **Modelle** (`EbookBoardClassifier`, `Assets/ebook-board-model.bin`, je eine verdeckte Schicht 128 ReLU + Softmax): trainiert
+  auf den Feldern der Font-Bücher (Stellung bekannt, Seite als Bild gerendert, 10 Bücher, ~1 000 Bretter). Training + Export
+  laufen außerhalb des Repos in Python (`ref.py` = dieselben Operationen; Abweichungen in `BoardImageMath` verschieben die
+  Merkmale gegenüber dem Training — keine Bibliotheks-Resize/Blur verwenden). Synthetische Bretter aus den App-Figurensätzen
+  verschlechterten die echten Bücher (100 Endgame Studies 91 → 79 %) und sind nicht drin.
+- **Nur plausible Stellungen** (je ein König, keine Bauern auf 1./8. Reihe) werden Diagramme. **Zugrecht** aus „White/Black to
+  move|play“ / „Weiß/Schwarz am Zug“ im Absatz davor/danach, sonst aus der Lösung (Zugnummer). **Nummer**: kurzer Absatz aus nur
+  einer Zahl (auch „Exercise 12“) bis drei Absätze vor dem Bild. **Lösung**: `EbookSolutionFinder` über die Absätze (Kapitel =
+  „Seite“, Absatz-Reihenfolge = „Höhe“); die Stockfish-Prüfung läuft danach wie beim PDF.
+- **Ablage**: `EbookDiagram.Page` = Kapitel (Spine, 1-basiert), `ImageRef` = Bildpfad im EPUB (DTO `imageRef`), Lage 0,
+  `FontFamily = image`. Die Migration `EbookDiagramImageRef` setzt EPUB-Bücher ohne PDF von `Unsupported` zurück auf Pending.
+- **Leser**: `EpubViewerComponent` markiert erkannte Bilder im Kapitel (`rendition.hooks.content`; epub.js ersetzt die
+  Adressen durch blob:-URLs → Rückübersetzung über `book.resources`, zur Not über den Dateinamen); Doppelklick/Enter holt die
+  Stellung aufs Brett, ‹/› springt kapitelweise zum Bild (`revealImage`, CFI des Elements). Brett-Leiste wie beim PDF.
+- Gemessen (Python-Referenz, plausibel erkannt): Swindler 905/906, Kuljasevic 456/459, Srokovski 490/501, Dvoretsky 513/544,
+  100 Endgame Studies ~290/321, Perpetual Chess ~85/103; erster Buchzug legal bei Srokovski 96 %. Scans (DJVU, Scan-PDFs) =
+  Stufe 2, offen.

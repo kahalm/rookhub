@@ -2281,6 +2281,10 @@ namespace RookHub.Api.Migrations
                     b.Property<double>("H")
                         .HasColumnType("double");
 
+                    b.Property<string>("ImageRef")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
                     b.Property<string>("Label")
                         .HasMaxLength(40)
                         .HasColumnType("varchar(40)");

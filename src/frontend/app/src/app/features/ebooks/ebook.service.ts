@@ -61,6 +61,8 @@ export interface EbookDiagram {
   label: string | null;
   caption: string | null;
   sideKnown: boolean;
+  /** EPUB (0.775.0): Bildpfad im Buch; `page` ist dann das Kapitel (Spine, 1-basiert). PDF: `null`. */
+  imageRef?: string | null;
   /** Lösung aus dem Buch: Hauptlinie (UCI/SAN, leerzeichengetrennt), Absatz, Seite — `null`, wenn keine gefunden. */
   solutionUci?: string | null;
   solutionSan?: string | null;

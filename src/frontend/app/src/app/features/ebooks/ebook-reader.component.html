@@ -54,21 +54,20 @@
       </mat-menu>
     </div>
 
-    @if (readable && fileUrl && isEpub) {
-      <div class="rd-body">
-        <div class="rd-viewer">
-          <app-epub-viewer [src]="fileUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
-                           (toc)="epubToc.set($event)" (failed)="onViewerFailed()" />
-        </div>
-      </div>
-    } @else if (readable && fileUrl) {
+    @if (readable && fileUrl) {
       <div class="rd-body" [class.rd-body--split]="hasDiagrams" [class.rd-body--panel-open]="panelOpen()"
            [style.--rd-panel-w.px]="panelWidth()">
         <div class="rd-viewer">
-          <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
-                          [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)"
-                          (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
-                          (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
+          @if (isEpub) {
+            <app-epub-viewer [src]="fileUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
+                             [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)"
+                             (toc)="epubToc.set($event)" (failed)="onViewerFailed()" />
+          } @else {
+            <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
+                            [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)"
+                            (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
+                            (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
+          }
         </div>
         @if (hasDiagrams) {
           <div class="rd-split" role="separator" aria-orientation="vertical" tabindex="0"
@@ -79,7 +78,7 @@
               <button mat-icon-button (click)="step(-1)" [appIconLabel]="'ebooks.reader.prevDiagram' | translate"><mat-icon>chevron_left</mat-icon></button>
               <span class="rd-panel-pos">
                 @if (picked(); as d) {
-                  {{ d.label ? ('ebooks.reader.diagramNo' | translate: { n: d.label }) : ('ebooks.reader.diagramAt' | translate: { page: d.page }) }}
+                  {{ d.label ? ('ebooks.reader.diagramNo' | translate: { n: d.label }) : d.imageRef ? ('ebooks.reader.diagramNo' | translate: { n: pickedIndex }) : ('ebooks.reader.diagramAt' | translate: { page: d.page }) }}
                 } @else {
                   {{ 'ebooks.reader.diagramCount' | translate: { n: diagrams().length } }}
                 }
@@ -143,7 +142,7 @@
                   <div class="rd-solution">
                     <p class="rd-solution-line">{{ solutionText }}</p>
                     @if (d.solutionText) { <p class="rd-solution-text">{{ d.solutionText }}</p> }
-                    @if (d.solutionPage && d.solutionPage !== d.page) {
+                    @if (d.solutionPage && d.solutionPage !== d.page && !d.imageRef) {
                       <button mat-button type="button" (click)="goToSolutionPage()">
                         <mat-icon>menu_book</mat-icon>{{ 'ebooks.reader.toSolutionPage' | translate: { page: d.solutionPage } }}
                       </button>

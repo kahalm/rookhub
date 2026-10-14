@@ -367,7 +367,7 @@ public class EbookService
             ? await _db.EbookDiagrams.Where(d => d.EbookId == id).OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
                 .Select(d => new EbookDiagramDto
                 {
-                    Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown,
+                    Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown, ImageRef = d.ImageRef,
                     SolutionUci = d.SolutionUci, SolutionSan = d.SolutionSan, SolutionText = d.SolutionText, SolutionPage = d.SolutionPage,
                     SolutionSource = d.SolutionSource, SolutionCheck = d.SolutionCheck.ToString().ToLower(), EngineEval = d.EngineEval,
                 }).ToListAsync(ct)

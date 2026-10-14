@@ -6,8 +6,9 @@ namespace RookHub.Api.Services.Ebooks;
 
 /// <summary>
 /// Erkennt in kleinen Portionen die Diagramme der Bücher (<see cref="EbookDiagramExtractor"/>), die Upload und Import nur
-/// VORMERKEN (<see cref="EbookDiagramState.Pending"/>). Ein 400-Seiten-Buch braucht Sekunden; ein Buch ohne PDF oder ohne
-/// bekannten Schach-Font wird <see cref="EbookDiagramState.Unsupported"/> (Stufe 2: Bildverfahren).
+/// VORMERKEN (<see cref="EbookDiagramState.Pending"/>). Ein 400-Seiten-Buch braucht Sekunden. EPUBs (0.775.0) liest der
+/// <see cref="EbookEpubDiagramExtractor"/> aus den Brettbildern; ein PDF ohne bekannten Schach-Font, ein EPUB ohne Brettbilder
+/// oder ein reines DJVU wird <see cref="EbookDiagramState.Unsupported"/> (Scans: Stufe 2).
 /// </summary>
 public class EbookDiagramWorker : PeriodicWorker
 {
@@ -28,8 +29,9 @@ public class EbookDiagramWorker : PeriodicWorker
         foreach (var ebook in batch)
         {
             ct.ThrowIfCancellationRequested();
-            var pdf = ebook.Files.FirstOrDefault(f => f.Format == "pdf");
-            if (pdf == null)
+            // PDF (Schach-Font) vor EPUB (Brettbilder, 0.775.0); DJVU-Scans erst mit Stufe 2.
+            var file = ebook.Files.FirstOrDefault(f => f.Format == "pdf") ?? ebook.Files.FirstOrDefault(f => f.Format == "epub");
+            if (file == null)
             {
                 ebook.DiagramState = EbookDiagramState.Unsupported;
                 await db.SaveChangesAsync(ct);
@@ -38,9 +40,11 @@ public class EbookDiagramWorker : PeriodicWorker
             }
             try
             {
-                var path = storage.ResolveFile(ebook, pdf);
+                var path = storage.ResolveFile(ebook, file);
                 if (!File.Exists(path)) { ebook.DiagramState = EbookDiagramState.Failed; await db.SaveChangesAsync(ct); continue; }
-                var result = await Task.Run(() => extractor.Extract(path, ebook.Id, ct), ct);
+                var result = file.Format == "epub"
+                    ? await Task.Run(() => services.GetRequiredService<EbookEpubDiagramExtractor>().Extract(path, ebook.Id, ct), ct)
+                    : await Task.Run(() => extractor.Extract(path, ebook.Id, ct), ct);
                 db.EbookDiagrams.RemoveRange(db.EbookDiagrams.Where(d => d.EbookId == ebook.Id));
                 db.EbookDiagrams.AddRange(result.Diagrams);
                 ebook.DiagramCount = result.Diagrams.Count;

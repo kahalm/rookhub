@@ -188,6 +188,8 @@ public class EbookDiagramDto
     public string? Label { get; set; }
     public string? Caption { get; set; }
     public bool SideKnown { get; set; }
+    /// <summary>EPUB: Bildpfad im Buch (der Leser findet so das &lt;img&gt;); <see cref="Page"/> = Kapitel. PDF: <c>null</c>.</summary>
+    public string? ImageRef { get; set; }
     /// <summary>Lösung aus dem Buch (UCI/SAN leerzeichengetrennt, Absatz, Seite) — <c>null</c>, wenn keine gefunden.</summary>
     public string? SolutionUci { get; set; }
     public string? SolutionSan { get; set; }

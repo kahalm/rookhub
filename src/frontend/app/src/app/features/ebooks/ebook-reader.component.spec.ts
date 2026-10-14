@@ -210,6 +210,25 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   }));
 
+  it('EPUB-Diagramme werden Bildanker statt Seitenzonen; Doppelklick stellt auf', async () => {
+    const epubDiagrams = [
+      { ...DIAGRAMS[1], id: 21, page: 4, x: 0, y: 0, w: 0, h: 0, label: null, imageRef: 'OEBPS/images/d1.png' },
+      { ...DIAGRAMS[2], id: 22, page: 7, x: 0, y: 0, w: 0, h: 0, imageRef: 'OEBPS/images/d2.png' },
+    ];
+    const fixture = await make(book({ primaryFormat: 'epub', diagramState: 'done', diagramCount: 2,
+      files: [{ id: 2, format: 'epub', fileName: 'b.epub', sizeBytes: 5 }], progress: null }));
+    service.diagrams.and.returnValue(of({ state: 'done', items: epubDiagrams }));
+    const c = fixture.componentInstance;
+    (c as unknown as { loadDiagrams(id: number): void }).loadDiagrams(9);
+    expect(c.zones()).toEqual([]);
+    expect(c.epubImages().map(i => [i.id, i.chapter, i.ref])).toEqual([[21, 4, 'OEBPS/images/d1.png'], [22, 7, 'OEBPS/images/d2.png']]);
+    expect(c.hasDiagrams).toBeTrue();
+    c.pick(22);
+    expect(c.picked()?.id).toBe(22);
+    expect(c.pickedIndex).toBe(2);
+    fixture.destroy();
+  });
+
   it('„Lösen“: Buchzug wird angenommen, die Antwort kommt von selbst, falscher Zug wird zurückgenommen', fakeAsync(async () => {
     const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
     const c = fixture.componentInstance;

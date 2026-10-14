@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.775.0", date: "2026-10-14", changes: [
+    { en: "E-books: diagrams in EPUB books are now recognised too – there they are pictures, so RookHub reads the board from the image (pieces trained on the diagrams of the font books). Double-click a diagram picture in the reader to put the position on the board; ‹ › jump from diagram to diagram. Solutions are taken from the book text as with PDFs, and Stockfish checks them.",
+      de: "E-Books: Diagramme in EPUB-Büchern werden jetzt auch erkannt – dort sind sie Bilder, RookHub liest das Brett also aus dem Bild (Figuren gelernt an den Diagrammen der Font-Bücher). Doppelklick auf ein Diagrammbild im Leser stellt die Stellung aufs Brett; ‹ › springen von Diagramm zu Diagramm. Lösungen kommen wie beim PDF aus dem Buchtext, Stockfish prüft sie." },
+  ] },
   { version: "0.774.1", date: "2026-10-14", changes: [
     { en: "Internal: the design check now also covers the e-book library (reader with diagram board) and Woodpecker training, including their dialogs and menus.",
       de: "Intern: die Gestaltungs-Prüfung deckt jetzt auch die E-Book-Bibliothek (Leser mit Diagramm-Brett) und das Woodpecker-Training ab, samt Dialogen und Menüs." },

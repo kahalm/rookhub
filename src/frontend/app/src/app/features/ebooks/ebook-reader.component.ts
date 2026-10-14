@@ -13,7 +13,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Ebook, EbookDiagram, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
-import { EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
+import { EpubDiagramImage, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { Chess } from 'chess.js';
@@ -76,6 +76,8 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   /** EPUB: Lesestelle in Prozent und Inhaltsverzeichnis. */
   readonly epubPercent = signal(0);
   readonly epubToc = signal<EpubTocEntry[]>([]);
+  /** EPUB-Diagramme als Bildanker (0.775.0): Doppelklick aufs Bild im Buch holt die Stellung. */
+  readonly epubImages = signal<EpubDiagramImage[]>([]);
   epubLocator: string | null = null;
   private epubSave$ = new Subject<EpubLocation>();
 
@@ -217,9 +219,12 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
       next: list => {
         this.diagrams.set(list.items);
         const title = this.translate.instant('ebooks.reader.diagramZone');
-        this.zones.set(list.items.map(d => ({
+        this.zones.set(list.items.filter(d => !d.imageRef).map(d => ({
           id: d.id, page: d.page, x: d.x, y: d.y, w: d.w, h: d.h,
           title: d.label ? `${d.label} · ${title}` : title,
+        })));
+        this.epubImages.set(list.items.filter(d => !!d.imageRef).map(d => ({
+          id: d.id, chapter: d.page, ref: d.imageRef!, title: d.label ? `${d.label} · ${title}` : title,
         })));
         this.cdr.markForCheck();
       },
@@ -244,12 +249,14 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     const list = this.diagrams();
     if (list.length === 0) return;
     const cur = this.picked();
-    let idx = cur ? list.findIndex(d => d.id === cur.id) + delta : (delta > 0 ? list.findIndex(d => d.page >= this.page()) : -1);
+    const here = this.isEpub ? this.epub?.chapter() ?? 1 : this.page();
+    let idx = cur ? list.findIndex(d => d.id === cur.id) + delta : (delta > 0 ? list.findIndex(d => d.page >= here) : -1);
     if (idx < 0) idx = delta > 0 ? 0 : list.length - 1;
     if (idx >= list.length) idx = list.length - 1;
     const d = list[idx];
     this.pick(d.id);
-    this.viewer?.revealZone(d);
+    if (d.imageRef) this.epub?.revealImage(d.page, d.imageRef);
+    else this.viewer?.revealZone(d);
   }
 
   /** Position in der Liste (für „3 / 1 144"). */

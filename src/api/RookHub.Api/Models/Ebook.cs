@@ -209,6 +209,11 @@ public class EbookDiagram
     /// <summary>Ob das Zugrecht aus einem Marker/Text kam (<c>true</c>) oder nur die Vorgabe Weiß ist.</summary>
     public bool SideKnown { get; set; }
 
+    /// <summary>EPUB (0.775.0): Pfad des Diagrammbilds im Buch; <see cref="Page"/> ist dann das Kapitel (Spine, 1-basiert) und
+    /// die Lage (<see cref="X"/> …) bleibt 0. <c>null</c> bei PDF-Diagrammen.</summary>
+    [MaxLength(300)]
+    public string? ImageRef { get; set; }
+
     /// <summary>Welche Font-Familie das Diagramm gesetzt hat (zum Nachvollziehen von Lesefehlern).</summary>
     [MaxLength(60)]
     public string? FontFamily { get; set; }
