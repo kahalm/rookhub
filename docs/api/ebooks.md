@@ -263,3 +263,7 @@ im Backend `EbookCaller` (ein `int` wird implizit zum angemeldeten Aufrufer):
   `Ebooks__AnonymousRetentionDays` (30) Tagen samt Dateien, Titelbild und alten anonymen Leseständen.
 - Oberfläche: Banner „nicht angemeldet“ mit Anmelden-Knopf (`returnUrl=/ebooks`), Hochladen-Dialog ohne Sichtbarkeit,
   stattdessen der Hinweis (nur du, bis 300 MB, wandert beim Anmelden ins Konto); Auswahl/Sichtbarkeit und Melden ausgeblendet.
+
+**Blättern per Tastatur** (0.779.1): Der Leser hört dokumentweit auf ←/→/Bild↑/Bild↓ (PDF: Seite; ↑/↓: 80 px) bzw. im EPUB
+auf Seiten — auch wenn der Fokus im Brett liegt. Ausgenommen: Eingabefelder, Menüs (`.cdk-overlay-container`), der
+Seiten-Scrollkasten des PDF und der EPUB-Leser selbst (bekommen die Taste ohnehin), der Trenner, bereits verarbeitete Tasten.

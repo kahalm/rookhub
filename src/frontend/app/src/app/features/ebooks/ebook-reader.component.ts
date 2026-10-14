@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -156,6 +156,30 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     this.ebooks.setProgress(this.ebook.id, page, 100, l.cfi).subscribe({
       error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.saveProgressFailed')),
     });
+  }
+
+  /**
+   * Blättern per Tastatur, egal wo der Fokus liegt (0.779.1): nach einem Zug am Brett liegt er dort, und die Tasten kamen
+   * im Buch nicht mehr an. Nicht in Eingabefeldern, Menüs und dort, wo das Buch die Taste selbst bekommt (Seiten-Scroll-
+   * kasten des PDF, EPUB-Leser), und nicht, wenn jemand die Taste schon verarbeitet hat (Trenner, Menüs).
+   */
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKey(e: KeyboardEvent): void {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || !this.readable) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest?.('input, textarea, select, [contenteditable="true"], .cdk-overlay-container, .pv-scroll, app-epub-viewer, .rd-split')) return;
+    const forward = e.key === 'ArrowRight' || e.key === 'PageDown';
+    const back = e.key === 'ArrowLeft' || e.key === 'PageUp';
+    const down = e.key === 'ArrowDown', up = e.key === 'ArrowUp';
+    if (!forward && !back && !down && !up) return;
+    if (this.isEpub) {
+      if (forward || down) this.epubNext(); else this.epubPrev();
+    } else if (forward || back) {
+      this.viewer?.goTo(Math.max(1, Math.min(this.pageCount() || 1, this.page() + (forward ? 1 : -1))));
+    } else {
+      this.viewer?.scrollByPx(down ? 80 : -80);
+    }
+    e.preventDefault();
   }
 
   epubPrev(): void { this.epub?.prev(); }

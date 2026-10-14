@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.779.1", date: "2026-10-14", changes: [
+    { en: "E-book reader: the arrow and page keys turn the book's pages again after you played on the board – before, the keys only reached the board.",
+      de: "E-Book-Leser: Pfeil- und Bildtasten blättern wieder im Buch, nachdem du am Brett gezogen hast – vorher kamen die Tasten nur beim Brett an." },
+  ] },
   { version: "0.779.0", date: "2026-10-14", changes: [
     { en: "E-book reader: stepping through diagrams now wraps around — “next” after the last one goes to the first, “previous” before the first goes to the last; new buttons jump to the first and the last diagram.",
       de: "E-Book-Leser: das Blättern durch die Diagramme läuft im Kreis — „Nächstes“ nach dem letzten springt zum ersten, „Voriges“ vor dem ersten zum letzten; neue Knöpfe springen zum ersten und zum letzten Diagramm." },

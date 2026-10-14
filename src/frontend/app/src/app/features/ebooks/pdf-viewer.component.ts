@@ -130,6 +130,12 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     void this.task?.destroy();
   }
 
+  /** Um ein Stück scrollen (Pfeiltasten aus dem Leser, wenn der Fokus woanders liegt — z. B. im Brett, 0.779.1). */
+  scrollByPx(dy: number): void {
+    this.scrollRef.nativeElement.scrollBy({ top: dy });
+    this.onScroll();
+  }
+
   /** Zu einer Seite springen (1-basiert). */
   goTo(page: number): void {
     const slot = this.slots[page - 1];

@@ -239,6 +239,42 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   });
 
+  it('blättert per Tastatur auch, wenn der Fokus im Brett liegt — nicht aus Eingabefeldern heraus', async () => {
+    const fixture = await make(book());
+    const c = fixture.componentInstance;
+    const viewer = { goTo: jasmine.createSpy('goTo'), scrollByPx: jasmine.createSpy('scrollByPx') };
+    (c as unknown as { viewer: unknown }).viewer = viewer;
+    c.pageCount.set(120);
+    c.page.set(42);
+    const key = (k: string, target: HTMLElement) => {
+      const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'target', { value: target });
+      c.onDocumentKey(e);
+      return e;
+    };
+    const board = document.createElement('div');
+    expect(key('ArrowRight', board).defaultPrevented).toBeTrue();
+    expect(viewer.goTo).toHaveBeenCalledWith(43);
+    key('PageUp', board);
+    expect(viewer.goTo).toHaveBeenCalledWith(41);
+    key('ArrowDown', board);
+    expect(viewer.scrollByPx).toHaveBeenCalledWith(80);
+    const input = document.createElement('input');
+    viewer.goTo.calls.reset();
+    expect(key('ArrowRight', input).defaultPrevented).toBeFalse();
+    expect(viewer.goTo).not.toHaveBeenCalled();
+
+    // EPUB: dieselben Tasten blättern Seiten.
+    const epub = { next: jasmine.createSpy('next'), prev: jasmine.createSpy('prev') };
+    (c as unknown as { epub: unknown }).epub = epub;
+    c.ebook = { ...c.ebook!, primaryFormat: 'epub' };
+    key('ArrowRight', board);
+    key('ArrowLeft', board);
+    expect(epub.next).toHaveBeenCalledTimes(1);
+    expect(epub.prev).toHaveBeenCalledTimes(1);
+    fixture.destroy();
+  });
+
   it('Herkunft der Lösung und Engine-Bewertung werden benannt', async () => {
     const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
     const c = fixture.componentInstance;
