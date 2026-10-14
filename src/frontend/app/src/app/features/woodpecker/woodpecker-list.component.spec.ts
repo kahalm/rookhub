@@ -94,11 +94,17 @@ describe('WoodpeckerListComponent', () => {
     expect(el.querySelector('.plan')).toBeNull();
   });
 
-  it('c1-Nachprüfung: das (?) hängt mit geschütztem Leerzeichen am letzten Wort (Tablet brach es allein um)', () => {
-    const { el } = render([]);
-    const intro = el.querySelector('p.intro')!;
-    const before = intro.querySelector('app-help-hint')!.previousSibling?.textContent ?? '';
-    expect(before.endsWith('\u00a0')).withContext(JSON.stringify(before.slice(-3))).toBeTrue();
+  it('c1-Nachprüfung: letztes Wort + (?) in einem nicht umbrechenden Teil (Tablet brach das (?) allein um)', () => {
+    const { el, c } = render([]);
+    const tail = el.querySelector('p.intro .intro-tail') as HTMLElement;
+    expect(tail).not.toBeNull();
+    expect(tail.querySelector('app-help-hint')).not.toBeNull();
+    expect(getComputedStyle(tail).whiteSpace).toBe('nowrap');
+    // Kopf + Schwanz ergeben den ganzen Satz, der Schwanz ist genau ein Wort.
+    expect(c.introHead('Nach Smith und Tikkanen.') + c.introTail('Nach Smith und Tikkanen.')).toBe('Nach Smith und Tikkanen.');
+    expect(c.introTail('Nach Smith und Tikkanen.')).toBe('Tikkanen.');
+    expect(c.introTail('Einwort')).toBe('Einwort');
+    expect(c.introHead('Einwort')).toBe('');
   });
 
   it('Zieltage des nächsten Zyklus halbiert und aufgerundet', () => {

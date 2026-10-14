@@ -40,7 +40,9 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
           }
         </div>
       </div>
-      <p class="intro">{{ 'woodpecker.intro' | translate }}&nbsp;<app-help-hint [text]="'woodpecker.rules' | translate" /></p>
+      @let intro = 'woodpecker.intro' | translate;
+      <!-- Letztes Wort + (?) untrennbar: ein geschütztes Leerzeichen vor dem Inline-Block-Hinweis hält in Chrome NICHT (Tablet brach das (?) allein um). -->
+      <p class="intro">{{ introHead(intro) }}<span class="intro-tail">{{ introTail(intro) }}&nbsp;<app-help-hint [text]="'woodpecker.rules' | translate" /></span></p>
 
       @if (loading()) {
         <app-loading-spinner />
@@ -161,6 +163,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
     /* c1-wp-intro-hilfe-eigene-zeile: (?) steht im Satz (inline-flex, Abstand = das Leerzeichen im Markup; DESIGN 5.11),
        nicht als eigener Flex-Eintrag, der am Handy allein in eine Zeile rutscht. */
     .intro { margin: 8px 0 16px; }
+    .intro-tail { white-space: nowrap; }
     .empty-state { text-align: center; padding: 2rem 1rem; }
     .plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; }
     .plan { display: flex; flex-direction: column; padding: 16px; gap: 8px; }
@@ -190,6 +193,11 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
   `],
 })
 export class WoodpeckerListComponent implements OnInit {
+  /** Einleitung ohne ihr letztes Wort (das hängt mit dem (?) in .intro-tail). */
+  introHead(text: string): string { const i = text.trimEnd().lastIndexOf(' '); return i < 0 ? '' : text.slice(0, i + 1); }
+  /** Letztes Wort der Einleitung. */
+  introTail(text: string): string { const t = text.trimEnd(); const i = t.lastIndexOf(' '); return i < 0 ? t : t.slice(i + 1); }
+
   private service = inject(WoodpeckerService);
   private dialog = inject(MatDialog);
   private confirm = inject(ConfirmService);

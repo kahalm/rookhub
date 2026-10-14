@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.777.2", date: "2026-10-14", changes: [
+    { en: "Woodpecker: the help icon now really stays next to the last word of the introduction on tablets.",
+      de: "Woodpecker: das Hilfe-Zeichen bleibt am Tablet jetzt wirklich beim letzten Wort der Einleitung." },
+  ] },
   { version: "0.777.1", date: "2026-10-14", changes: [
     { en: "Internal: removed four texts of the old e-book board buttons that the new board modes no longer use (the build check failed on them).",
       de: "Intern: vier Texte der alten E-Book-Brettknöpfe entfernt, die die neuen Brett-Modi nicht mehr brauchen (die Build-Prüfung schlug deshalb fehl)." },
