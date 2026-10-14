@@ -7,7 +7,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Type } from '@angular/core';
 import { PdfViewerComponent } from './pdf-viewer.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { By } from '@angular/platform-browser';
 import { EbookReaderComponent } from './ebook-reader.component';
+import { EbookBoardComponent } from './ebook-board.component';
 import { Ebook, EbookService } from './ebook.service';
 import { PdfEngineLoader } from './pdf-engine';
 
@@ -122,12 +124,9 @@ describe('EbookReaderComponent', () => {
     expect(c.zones().map(z => z.id)).toEqual([11, 12, 13]);
     c.pick(11);
     expect(c.picked()!.id).toBe(11);
-    expect(c.flipped()).toBeTrue();
     expect(c.panelOpen()).toBeTrue();
-    expect(c.analysisParams(c.picked()!)).toEqual({ fen: DIAGRAMS[0].fen, orientation: 'black', from: '/ebooks/9' });
     c.step(1);
     expect(c.picked()!.id).toBe(12);
-    expect(c.flipped()).toBeFalse();
     expect(c.pickedIndex).toBe(2);
     c.step(1); c.step(1);
     expect(c.picked()!.id).toBe(13);   // bleibt am Ende stehen
@@ -155,33 +154,6 @@ describe('EbookReaderComponent', () => {
     c.toggleReport(c.picked()!);
     expect(service.reportDiagram).toHaveBeenCalledWith(9, 12, false);
     expect(c.picked()!.reportedByMe).toBeFalse();
-  });
-
-  it('„Brett spielbar": Züge werden mitgeschrieben, Rücknahme und Buchstellung, Analyse nimmt die aktuelle Stellung', async () => {
-    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
-    const c = fixture.componentInstance;
-    c.pick(11);   // Schwarz am Zug
-    expect(c.legal()).toBeTrue();
-    c.togglePlay();
-    expect(c.playMode()).toBeTrue();
-    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5r/4RR1K w - - 0 2' });
-    c.onBoardMove({ from: 'h1', to: 'h2', san: 'Kxh2', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5K/4RR2 b - - 0 2' });
-    expect(c.movesText).toBe('17… Rxh2+ 18. Kxh2');
-    expect(c.analysisParams(c.picked()!)['fen']).toContain('BP5K');
-    c.undoMove();
-    expect(c.boardFen()).toContain('BP5r');
-    c.resetMoves();
-    expect(c.boardFen()).toBe(DIAGRAMS[0].fen);
-    c.step(1);   // neues Diagramm: Züge weg
-    expect(c.played().length).toBe(0);
-  });
-
-  it('eine regelwidrige Buchstellung bleibt nur zum Ansehen', async () => {
-    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
-    const c = fixture.componentInstance;
-    c.diagrams.update(l => [...l, { ...DIAGRAMS[2], id: 99, fen: '8/8/8/8/8/8/8/8 w - - 0 1' }]);
-    c.pick(99);
-    expect(c.legal()).toBeFalse();
   });
 
   it('Trenner: Breite bleibt zwischen 260 px und 70 % des Fensters und wird gemerkt', async () => {
@@ -232,30 +204,16 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   });
 
-  it('„Lösen“: Buchzug wird angenommen, die Antwort kommt von selbst, falscher Zug wird zurückgenommen', fakeAsync(async () => {
+  it('die Brett-Leiste bekommt das gewählte Diagramm (Modi siehe ebook-board.component.spec.ts)', async () => {
     const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
     const c = fixture.componentInstance;
     c.pick(11);
-    expect(c.solutionText).toBe('17… Rxh2+ 18. Kxh2 Rh8+');
-    c.startSolving();
-    expect(c.solving()).toBeTrue();
-    expect(c.playMode()).toBeTrue();
-
-    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1p3/2P2PPn/BP5P/4RR1K w - - 1 18' });
-    expect(c.played().length).toBe(1);
-    tick(700);
-    expect(c.played().length).toBe(0);   // falscher Zug zurückgenommen
-
-    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5r/4RR1K w - - 0 18' });
-    tick(500);
-    expect(c.played().map(m => m.san)).toEqual(['Rxh2+', 'Kxh2']);
-    c.onBoardMove({ from: 'a8', to: 'h8', san: 'Rh8+', fen: '7r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5K/4RR2 w - - 1 19' });
-    expect(c.solveState()).toBe('solved');
-    c.resetMoves();
-    expect(c.solveState()).toBe('running');
-    c.stopSolving();
+    fixture.detectChanges();
+    const board = fixture.debugElement.query(By.directive(EbookBoardComponent));
+    expect(board).not.toBeNull();
+    expect((board.componentInstance as EbookBoardComponent).diagram.id).toBe(11);
     fixture.destroy();
-  }));
+  });
 
   it('Herkunft der Lösung und Engine-Bewertung werden benannt', async () => {
     const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));

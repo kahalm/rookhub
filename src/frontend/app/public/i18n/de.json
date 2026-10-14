@@ -5245,6 +5245,45 @@
     "zugzwang": "Zugzwang"
   },
   "ebooks": {
+    "board": {
+      "modes": "Brett-Modi",
+      "mode": {
+        "view": "Ansehen",
+        "free": "Ziehen",
+        "calc": "Kalkulieren",
+        "solve": "Lösen",
+        "maia": "Maia"
+      },
+      "modeHint": {
+        "view": "Nur die Stellung aus dem Buch",
+        "free": "Figuren frei ziehen",
+        "calc": "Varianten notieren, ohne die Figuren endgültig zu ziehen – später prüfen",
+        "solve": "Die Lösung ziehen: gespeichert (Buch oder Engine) oder Stockfish jetzt",
+        "maia": "Die Stellung gegen Maia ausspielen"
+      },
+      "calcHint": "Spiel Varianten auf dem Brett – sie werden als Linien notiert (auf diesem Gerät gemerkt). Eine Linie im Analysebrett prüfen oder die Engine zuschalten.",
+      "calcSaveFailed": "Varianten ließen sich auf diesem Gerät nicht speichern.",
+      "solveStyle": "Art des Lösens",
+      "solveEasy": "Einfach",
+      "solveTraining": "Training",
+      "solveSource": "Lösung",
+      "sourceBook": "Buch",
+      "sourceStoredEngine": "Gespeichert (Engine)",
+      "sourceStockfish": "Stockfish jetzt",
+      "engineComputing": "Stockfish rechnet die Lösung …",
+      "engineFailed": "Stockfish konnte keine Lösung rechnen.",
+      "trainingFailed": "Nicht die Lösung – so geht es.",
+      "noSolution": "Für diese Stellung gibt es keine Lösung.",
+      "maiaMissing": "Maia (eine menschenähnliche Engine) muss einmal geladen werden (etwa 46 MB).",
+      "maiaLoad": "Maia laden",
+      "maiaLoading": "Maia wird geladen …",
+      "maiaFailed": "Maia ist gerade nicht verfügbar.",
+      "maiaElo": "Stärke {{elo}}",
+      "maiaThinking": "Maia überlegt …",
+      "maiaYourMove": "Du bist am Zug",
+      "engineOn": "Engine zuschalten",
+      "engineOff": "Engine ausschalten"
+    },
     "title": "E-Books",
     "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",
     "introMore": "PDFs öffnen sich im Leser mit Zoom und gemerkter Seite. EPUB, DJVU und Comic-Archive werden heruntergeladen.\n\nMit „Hochladen“ legst du ein Buch an und hakst die Gruppen an, die es sehen dürfen – nichts angehakt heißt nur du. Schlagworte machen die Bibliothek durchsuchbar; die Schlagwort-Chips filtern die Liste.",

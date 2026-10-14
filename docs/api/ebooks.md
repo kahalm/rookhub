@@ -226,3 +226,15 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
   `EbookScanDiagrams` setzt PDF-Bücher von `Unsupported` zurück auf Pending.
 - Parität C# = Python-Referenz (Beim, 157/157 Stellungen). Laufzeit ~0,5 s je Seite. Gemessen: Beim 162, Hansen 46, Buckley 31
   Diagramme (Buckley: fremder Figurensatz, viele Bretter unlesbar — offen).
+
+## Brett-Modi im Leser (0.777.0)
+
+Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das
+gewählte Diagramm). Modi: **Ansehen**; **Ziehen** (Figuren frei, Liste mit Zurücknehmen); **Kalkulieren** (Variantenbaum wie
+der Kalkulations-Modus der Kurse — `calc-tree.util` + `app-calc-lines`, je Diagramm in `localStorage` `rh.ebooks.calc.<id>`,
+eine Linie öffnet `/analysis?fen=&moves=`); **Lösen** — Art „Einfach“ (falscher Zug wird zurückgenommen) oder „Training“
+(erster Fehler = nicht gelöst, das Brett spielt die Lösung vor), Quelle „gespeichert“ (Buch- bzw. Engine-Linie der
+Prüfung) oder „Stockfish jetzt“ (7 Halbzüge, `StockfishService.getBestMove` Tiefe 16 im Browser; ohne gespeicherte Lösung
+voreingestellt); **Maia** (man spielt die Seite am Zug, Maia antwortet über `MaiaEngineService.chooseMove` in wählbarer
+Stärke; Modell wird erst auf Knopfdruck geladen, ~46 MB). Engine-Knopf: `LiveEngineSession` + `app-live-engine-panel`
+rechnet jede Brettstellung, in jedem Modus. Der Modus bleibt beim Blättern zu anderen Diagrammen.

@@ -5245,6 +5245,45 @@
     "zugzwang": "Zugzwang"
   },
   "ebooks": {
+    "board": {
+      "modes": "Board modes",
+      "mode": {
+        "view": "View",
+        "free": "Move",
+        "calc": "Calculate",
+        "solve": "Solve",
+        "maia": "Maia"
+      },
+      "modeHint": {
+        "view": "Only the position from the book",
+        "free": "Move the pieces freely",
+        "calc": "Write down variations without moving the pieces for good – check them later",
+        "solve": "Play the solution: stored (book or engine) or Stockfish now",
+        "maia": "Play the position out against Maia"
+      },
+      "calcHint": "Play variations on the board – they are noted as lines (kept on this device). Check a line in the analysis board or switch on the engine.",
+      "calcSaveFailed": "Variations could not be saved on this device.",
+      "solveStyle": "Way of solving",
+      "solveEasy": "Easy",
+      "solveTraining": "Training",
+      "solveSource": "Solution",
+      "sourceBook": "Book",
+      "sourceStoredEngine": "Stored (engine)",
+      "sourceStockfish": "Stockfish now",
+      "engineComputing": "Stockfish is computing the solution …",
+      "engineFailed": "Stockfish could not compute a solution.",
+      "trainingFailed": "Not the solution – here is how it goes.",
+      "noSolution": "No solution available for this position.",
+      "maiaMissing": "Maia (a human-like engine) has to be loaded once (about 46 MB).",
+      "maiaLoad": "Load Maia",
+      "maiaLoading": "Loading Maia …",
+      "maiaFailed": "Maia is not available right now.",
+      "maiaElo": "Strength {{elo}}",
+      "maiaThinking": "Maia is thinking …",
+      "maiaYourMove": "Your move",
+      "engineOn": "Switch engine on",
+      "engineOff": "Switch engine off"
+    },
     "title": "E-books",
     "intro": "Chess books to read in the browser or download; each book is shared with the groups its uploader chose.",
     "introMore": "PDFs open in the reader with zoom and a remembered page. EPUB, DJVU and comic archives are downloaded.\n\nUpload a book with “Upload” and tick the groups that may see it – none ticked means only you. Tags make the library searchable; the tag chips filter the list.",

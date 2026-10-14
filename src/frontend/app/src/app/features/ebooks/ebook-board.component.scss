@@ -1,0 +1,35 @@
+:host { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+/* Modus-Leiste: fünf kompakte Knöpfe, umbrechend statt über den Rand. */
+.eb-modes { display: flex; flex-wrap: wrap; gap: 2px; }
+.eb-mode { min-width: 0; padding: 0 8px; font-size: .82rem; opacity: .8;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; } }
+.eb-mode--on { opacity: 1; color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+
+.eb-board { width: 100%; }
+.eb-note { margin: 0; font-size: .85rem; opacity: .75; }
+.eb-note--warn { color: var(--rh-warn); opacity: 1; }
+.eb-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.eb-options mat-button-toggle-group { font-size: .82rem; }
+.eb-busy { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; opacity: .85; }
+.eb-moves { display: flex; align-items: center; gap: 2px; }
+.eb-moves-text { flex: 1 1 auto; min-width: 0; margin: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.eb-solve {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px;
+  background: color-mix(in srgb, var(--rh-info) 14%, transparent);
+  span { flex: 1 1 auto; }
+}
+.eb-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
+.eb-solve--failed { background: color-mix(in srgb, var(--rh-warn) 16%, transparent); mat-icon { color: var(--rh-warn); } }
+.eb-sol-toggle { align-self: flex-start; }
+.eb-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
+.eb-solution-line { margin: 0 0 4px; font-weight: 500; }
+.eb-solution-text { margin: 0; font-size: .85rem; opacity: .85; white-space: pre-line; max-height: 14em; overflow-y: auto; }
+.eb-maia-load { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.eb-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.eb-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+
+/* Schmal (Brett als Leiste unten): Brett nicht höher als knapp die halbe Bildschirmhöhe. */
+@media (max-width: 899.98px) {
+  .eb-board { width: min(100%, 44dvh); margin: 0 auto; }
+}

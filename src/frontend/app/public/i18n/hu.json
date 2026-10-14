@@ -5245,6 +5245,45 @@
     "zugzwang": "Lépéskényszer"
   },
   "ebooks": {
+    "board": {
+      "modes": "Tábla módok",
+      "mode": {
+        "view": "Nézet",
+        "free": "Lépés",
+        "calc": "Számolás",
+        "solve": "Megoldás",
+        "maia": "Maia"
+      },
+      "modeHint": {
+        "view": "Csak a könyv állása",
+        "free": "Szabadon lépni a bábukkal",
+        "calc": "Változatok lejegyzése a bábuk végleges mozgatása nélkül – később ellenőrizhető",
+        "solve": "A megoldás lejátszása: mentett (könyv vagy motor) vagy most a Stockfish",
+        "maia": "Az állás lejátszása Maia ellen"
+      },
+      "calcHint": "Játssz változatokat a táblán – vonalakként jegyzi fel (ezen az eszközön tárolva). Ellenőrizz egy vonalat az elemzőtáblán, vagy kapcsold be a motort.",
+      "calcSaveFailed": "A változatokat nem sikerült ezen az eszközön menteni.",
+      "solveStyle": "Megoldás módja",
+      "solveEasy": "Egyszerű",
+      "solveTraining": "Edzés",
+      "solveSource": "Megoldás",
+      "sourceBook": "Könyv",
+      "sourceStoredEngine": "Mentett (motor)",
+      "sourceStockfish": "Stockfish most",
+      "engineComputing": "A Stockfish számolja a megoldást …",
+      "engineFailed": "A Stockfish nem tudott megoldást számolni.",
+      "trainingFailed": "Nem ez a megoldás – így megy.",
+      "noSolution": "Ehhez az álláshoz nincs megoldás.",
+      "maiaMissing": "A Maiát (emberszerű motor) egyszer be kell tölteni (kb. 46 MB).",
+      "maiaLoad": "Maia betöltése",
+      "maiaLoading": "Maia betöltése …",
+      "maiaFailed": "A Maia most nem érhető el.",
+      "maiaElo": "Erősség {{elo}}",
+      "maiaThinking": "Maia gondolkodik …",
+      "maiaYourMove": "Te következel",
+      "engineOn": "Motor bekapcsolása",
+      "engineOff": "Motor kikapcsolása"
+    },
     "title": "E-könyvek",
     "intro": "Sakk-könyvek böngészőben olvasásra vagy letöltésre; minden könyv azokkal a csoportokkal van megosztva, amelyeket a feltöltője választott.",
     "introMore": "A PDF-ek az olvasóban nyílnak meg nagyítással és megjegyzett oldallal. Az EPUB, DJVU és képregény-archívumok letöltődnek.\n\nA „Feltöltés” gombbal adsz hozzá könyvet, és bejelölöd a csoportokat, amelyek láthatják – ha semmit sem jelölsz be, csak te látod. A címkék kereshetővé teszik a könyvtárat; a címkecsipek szűrik a listát.",

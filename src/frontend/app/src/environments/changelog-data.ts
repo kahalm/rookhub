@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.777.0", date: "2026-10-14", changes: [
+    { en: "E-book reader: the board next to the book now has modes – View, Move (pieces move freely), Calculate (note variations as lines like in the course calculation mode and check them later in the analysis board), Solve (easy: wrong moves are taken back; training: the first try counts – against the stored solution or a Stockfish solution computed now) and Maia (play the position out against Maia at a chosen strength).",
+      de: "E-Book-Leser: Das Brett neben dem Buch hat jetzt Modi – Ansehen, Ziehen (Figuren frei bewegen), Kalkulieren (Varianten wie im Kalkulations-Modus der Kurse als Linien notieren und später im Analysebrett prüfen), Lösen (einfach: falsche Züge werden zurückgenommen; Training: der erste Versuch zählt – gegen die gespeicherte Lösung oder eine jetzt gerechnete Stockfish-Lösung) und Maia (die Stellung gegen Maia in wählbarer Stärke ausspielen)." },
+    { en: "E-book reader: a Stockfish engine can be switched on next to the board in every mode; it shows the best lines of the current position.",
+      de: "E-Book-Leser: Neben dem Brett lässt sich in jedem Modus Stockfish zuschalten; es zeigt die besten Linien der aktuellen Stellung." },
+  ] },
   { version: "0.776.0", date: "2026-10-14", changes: [
     { en: "E-books: diagrams are now also recognised in scanned books (scanned PDFs and DJVU books) – the board is read from the page image, side to move from the „W“/„B“ mark next to the diagram. Double-click a diagram in the reader to put it on the board; Stockfish supplies solutions where the book text is not available.",
       de: "E-Books: Diagramme werden jetzt auch in gescannten Büchern erkannt (Scan-PDFs und DJVU-Bücher) – das Brett wird aus dem Seitenbild gelesen, das Zugrecht aus dem „W“/„B“ neben dem Diagramm. Doppelklick auf ein Diagramm im Leser stellt es aufs Brett; wo der Buchtext fehlt, liefert Stockfish die Lösung." },

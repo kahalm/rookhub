@@ -5245,6 +5245,45 @@
     "zugzwang": "Iznuđeni potez"
   },
   "ebooks": {
+    "board": {
+      "modes": "Načini ploče",
+      "mode": {
+        "view": "Pregled",
+        "free": "Potezi",
+        "calc": "Računanje",
+        "solve": "Rješavanje",
+        "maia": "Maia"
+      },
+      "modeHint": {
+        "view": "Samo pozicija iz knjige",
+        "free": "Slobodno pomiči figure",
+        "calc": "Zapiši varijante bez konačnog pomicanja figura – provjeri ih kasnije",
+        "solve": "Odigraj rješenje: spremljeno (knjiga ili engine) ili Stockfish sada",
+        "maia": "Odigraj poziciju protiv Maie"
+      },
+      "calcHint": "Igraj varijante na ploči – bilježe se kao linije (spremljene na ovom uređaju). Provjeri liniju na ploči za analizu ili uključi engine.",
+      "calcSaveFailed": "Varijante se nisu mogle spremiti na ovom uređaju.",
+      "solveStyle": "Način rješavanja",
+      "solveEasy": "Jednostavno",
+      "solveTraining": "Trening",
+      "solveSource": "Rješenje",
+      "sourceBook": "Knjiga",
+      "sourceStoredEngine": "Spremljeno (engine)",
+      "sourceStockfish": "Stockfish sada",
+      "engineComputing": "Stockfish računa rješenje …",
+      "engineFailed": "Stockfish nije mogao izračunati rješenje.",
+      "trainingFailed": "To nije rješenje – evo kako ide.",
+      "noSolution": "Za ovu poziciju nema rješenja.",
+      "maiaMissing": "Maia (engine nalik čovjeku) mora se jednom učitati (oko 46 MB).",
+      "maiaLoad": "Učitaj Maiu",
+      "maiaLoading": "Maia se učitava …",
+      "maiaFailed": "Maia trenutno nije dostupna.",
+      "maiaElo": "Jačina {{elo}}",
+      "maiaThinking": "Maia razmišlja …",
+      "maiaYourMove": "Ti si na potezu",
+      "engineOn": "Uključi engine",
+      "engineOff": "Isključi engine"
+    },
     "title": "E-knjige",
     "intro": "Šahovske knjige za čitanje u pregledniku ili preuzimanje; svaka je knjiga podijeljena s grupama koje je odabrao onaj tko ju je prenio.",
     "introMore": "PDF-ovi se otvaraju u čitaču sa zumom i zapamćenom stranicom. EPUB, DJVU i stripovski arhivi se preuzimaju.\n\n»Prenesi« dodaje knjigu; označi grupe koje je smiju vidjeti – ništa označeno znači samo ti. Oznake čine knjižnicu pretraživom; čipovi oznaka filtriraju popis.",
