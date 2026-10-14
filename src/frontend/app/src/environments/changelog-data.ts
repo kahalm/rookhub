@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.782.1", date: "2026-10-14", changes: [
+    { en: "Build fix: the rate limit for e-book files is registered in the form the safety test checks.", de: "Build-Fix: Das Rate-Limit für E-Book-Dateien ist in der Form eingetragen, die der Sicherheitstest prüft." },
+  ] },
   { version: "0.782.0", date: "2026-10-14", changes: [
     { en: "E-books: diagrams added by hand or read by AI (e.g. all 978 positions of Pongó’s „Tactical Targets 1“) are now marked and are no longer replaced when the automatic recognition runs again.", de: "E-Books: Von Hand oder per KI nachgetragene Diagramme (z. B. alle 978 Stellungen aus Pongós „Tactical Targets 1“) sind jetzt markiert und werden von einer neuen automatischen Erkennung nicht mehr überschrieben." },
   ] },
