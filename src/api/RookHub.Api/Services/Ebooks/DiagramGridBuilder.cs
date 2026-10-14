@@ -7,7 +7,7 @@ namespace RookHub.Api.Services.Ebooks;
 public readonly record struct DiagramGlyph(double X, double Y, double W, double H, ChessDiagramFonts.Square Square, string Family);
 
 /// <summary>Ein Wort des normalen Texts (Rechteck in PDF-Punkten, Ursprung links oben) — für Beschriftung und Zugrecht.</summary>
-public readonly record struct PageWord(double X0, double Y0, double X1, double Y1, string Text, string FontName);
+public readonly record struct PageWord(double X0, double Y0, double X1, double Y1, string Text, string FontName, double Baseline = double.NaN);
 
 /// <summary>Ein erkanntes Diagramm: Rechteck in PDF-Punkten (Ursprung links oben), FEN, Beschriftung.</summary>
 public sealed record ExtractedDiagram(double X0, double Y0, double X1, double Y1, string Board, char Side, bool SideKnown,

@@ -5340,7 +5340,16 @@
       "resetPosition": "Zurück zur Buchstellung",
       "notPlayable": "Diese Stellung ist nicht regelgerecht (z. B. Studie ohne König) — sie lässt sich nur ansehen.",
       "toc": "Inhalt",
-      "resize": "Ziehen ändert die Breite (Doppelklick: Standardbreite)"
+      "resize": "Ziehen ändert die Breite (Doppelklick: Standardbreite)",
+      "solve": "Lösen",
+      "yourMove": "Du bist am Zug — finde die Buchlösung.",
+      "solved": "Gelöst — das ist die Linie aus dem Buch.",
+      "again": "Nochmal",
+      "stopSolving": "Lösen beenden",
+      "notBookMove": "Nicht der Buchzug — versuch es noch einmal.",
+      "showSolution": "Lösung zeigen",
+      "hideSolution": "Lösung ausblenden",
+      "toSolutionPage": "Zur Lösung (Seite {{page}})"
     },
     "diagrams": "{{n}} Diagramme"
   }

@@ -16,7 +16,7 @@ const book = (over: Partial<Ebook> = {}): Ebook => ({
 });
 
 const DIAGRAMS = [
-  { id: 11, page: 33, x: 0.1, y: 0.1, w: 0.3, h: 0.2, fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b - - 0 1', label: '1', caption: 'Hamppe – Steinitz', sideKnown: true, reportedByMe: false, reportCount: 0 },
+  { id: 11, page: 33, x: 0.1, y: 0.1, w: 0.3, h: 0.2, fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b - - 0 17', label: '1', caption: 'Hamppe – Steinitz', sideKnown: true, reportedByMe: false, reportCount: 0, solutionUci: 'h8h2 h1h2 a8h8', solutionSan: 'Rxh2+ Kxh2 Rh8+', solutionText: '17...Rxh2+! 18.Kxh2 Rh8+', solutionPage: 230 },
   { id: 12, page: 33, x: 0.1, y: 0.4, w: 0.3, h: 0.2, fen: 'rnb3kr/ppp4p/3b3B/3Pp2n/2BP4/3K1Rp1/PPP3q1/RN1Q4 w - - 0 1', label: '2', caption: null, sideKnown: true, reportedByMe: false, reportCount: 0 },
   { id: 13, page: 40, x: 0.5, y: 0.1, w: 0.3, h: 0.2, fen: '8/8/8/8/8/8/8/K6k w - - 0 1', label: null, caption: null, sideKnown: false, reportedByMe: false, reportCount: 0 },
 ];
@@ -163,7 +163,7 @@ describe('EbookReaderComponent', () => {
     expect(c.playMode()).toBeTrue();
     c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5r/4RR1K w - - 0 2' });
     c.onBoardMove({ from: 'h1', to: 'h2', san: 'Kxh2', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5K/4RR2 b - - 0 2' });
-    expect(c.movesText).toBe('1… Rxh2+ 2. Kxh2');
+    expect(c.movesText).toBe('17… Rxh2+ 18. Kxh2');
     expect(c.analysisParams(c.picked()!)['fen']).toContain('BP5K');
     c.undoMove();
     expect(c.boardFen()).toContain('BP5r');
@@ -207,6 +207,31 @@ describe('EbookReaderComponent', () => {
     expect(c.epubPercent()).toBe(52);
     tick(1600);
     expect(service.setProgress).toHaveBeenCalledWith(9, 52, 100, 'epubcfi(/6/8!/4/2)');
+    fixture.destroy();
+  }));
+
+  it('„Lösen“: Buchzug wird angenommen, die Antwort kommt von selbst, falscher Zug wird zurückgenommen', fakeAsync(async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.pick(11);
+    expect(c.solutionText).toBe('17… Rxh2+ 18. Kxh2 Rh8+');
+    c.startSolving();
+    expect(c.solving()).toBeTrue();
+    expect(c.playMode()).toBeTrue();
+
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: 'r6r/1pp3k1/1b6/p2P1p2/P1N1p3/2P2PPn/BP5P/4RR1K w - - 1 18' });
+    expect(c.played().length).toBe(1);
+    tick(700);
+    expect(c.played().length).toBe(0);   // falscher Zug zurückgenommen
+
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: 'r7/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5r/4RR1K w - - 0 18' });
+    tick(500);
+    expect(c.played().map(m => m.san)).toEqual(['Rxh2+', 'Kxh2']);
+    c.onBoardMove({ from: 'a8', to: 'h8', san: 'Rh8+', fen: '7r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5K/4RR2 w - - 1 19' });
+    expect(c.solveState()).toBe('solved');
+    c.resetMoves();
+    expect(c.solveState()).toBe('running');
+    c.stopSolving();
     fixture.destroy();
   }));
 });

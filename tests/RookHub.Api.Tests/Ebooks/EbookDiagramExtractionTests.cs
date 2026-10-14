@@ -133,9 +133,15 @@ public class EbookDiagramExtractionTests
         Assert.True(r.FontFound);
         Assert.InRange(r.Diagrams.Count, 1140, 1150);
         var byLabel = r.Diagrams.Where(d => d.Label != null).GroupBy(d => d.Label!).ToDictionary(g => g.Key, g => g.First());
-        Assert.Equal("r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b - - 0 1", byLabel["1"].Fen);
-        Assert.Equal("rnb3kr/ppp4p/3b3B/3Pp2n/2BP4/3K1Rp1/PPP3q1/RN1Q4 w - - 0 1", byLabel["2"].Fen);
-        Assert.Equal("rn2rk2/5pp1/p7/2pb1qN1/7Q/2P5/5PPP/1R3RK1 w - - 0 1", byLabel["1128"].Fen);
+        // Brett + Zugrecht; die Zugnummer kommt seit 0.771.0 aus der Lösung („17...“ → Zug 17).
+        static string Head(string fen) => string.Join(' ', fen.Split(' ').Take(2));
+        Assert.Equal("r6r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5P/4RR1K b", Head(byLabel["1"].Fen));
+        Assert.Equal("rnb3kr/ppp4p/3b3B/3Pp2n/2BP4/3K1Rp1/PPP3q1/RN1Q4 w", Head(byLabel["2"].Fen));
+        Assert.Equal("rn2rk2/5pp1/p7/2pb1qN1/7Q/2P5/5PPP/1R3RK1 w", Head(byLabel["1128"].Fen));
+        // Lösungen aus dem Lösungsteil (gemessen 14.10.: 1 113 von 1 117 erste Züge = Chessable-Kurs).
+        Assert.Equal("h8h2", byLabel["1"].SolutionUci!.Split(' ')[0]);
+        Assert.StartsWith("d3a6", byLabel["44"].SolutionUci);
+        Assert.True(r.Diagrams.Count(d => d.SolutionUci != null) > 1100);
         var d1 = byLabel["1"];
         Assert.InRange(d1.X, 0.0, 1.0); Assert.InRange(d1.W, 0.2, 0.5);
     }

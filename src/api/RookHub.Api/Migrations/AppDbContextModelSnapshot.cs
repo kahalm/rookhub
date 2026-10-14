@@ -2282,6 +2282,21 @@ namespace RookHub.Api.Migrations
                     b.Property<bool>("SideKnown")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("SolutionPage")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SolutionSan")
+                        .HasMaxLength(1500)
+                        .HasColumnType("varchar(1500)");
+
+                    b.Property<string>("SolutionText")
+                        .HasMaxLength(3000)
+                        .HasColumnType("varchar(3000)");
+
+                    b.Property<string>("SolutionUci")
+                        .HasMaxLength(1200)
+                        .HasColumnType("varchar(1200)");
+
                     b.Property<double>("W")
                         .HasColumnType("double");
 

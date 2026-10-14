@@ -90,7 +90,15 @@
             @if (picked(); as d) {
               <div class="rd-board"><app-chess-board [fen]="boardFen()" [flipped]="flipped()"
                    [playable]="playMode() && legal()" (userMove)="onBoardMove($event)" /></div>
-              @if (playMode()) {
+              @if (solving()) {
+                <div class="rd-solve" [class.rd-solve--done]="solveState() === 'solved'" role="status">
+                  <mat-icon>{{ solveState() === 'solved' ? 'check_circle' : 'psychology' }}</mat-icon>
+                  <span>{{ (solveState() === 'solved' ? 'ebooks.reader.solved' : 'ebooks.reader.yourMove') | translate }}</span>
+                  <button mat-button type="button" (click)="resetMoves()">{{ 'ebooks.reader.again' | translate }}</button>
+                  <button mat-icon-button type="button" (click)="stopSolving(); playMode.set(false)" [appIconLabel]="'ebooks.reader.stopSolving' | translate"><mat-icon>close</mat-icon></button>
+                </div>
+                @if (movesText) { <p class="rd-moves-text">{{ movesText }}</p> }
+              } @else if (playMode()) {
                 @if (!legal()) {
                   <p class="rd-side">{{ 'ebooks.reader.notPlayable' | translate }}</p>
                 } @else {
@@ -104,14 +112,40 @@
               @if (d.caption) { <p class="rd-caption" [title]="d.caption">{{ d.caption }}</p> }
               <p class="rd-side">{{ sideKey(d) | translate }}</p>
               <div class="rd-panel-actions">
-                <a mat-flat-button color="primary" routerLink="/analysis" [queryParams]="analysisParams(d)">
-                  <mat-icon>biotech</mat-icon>{{ 'ebooks.reader.analyse' | translate }}
-                </a>
+                @if (d.solutionUci && legal()) {
+                  <button mat-flat-button color="primary" type="button" (click)="startSolving()" [disabled]="solving() && solveState() === 'running'">
+                    <mat-icon>extension</mat-icon>{{ 'ebooks.reader.solve' | translate }}
+                  </button>
+                  <a mat-stroked-button routerLink="/analysis" [queryParams]="analysisParams(d)">
+                    <mat-icon>biotech</mat-icon>{{ 'ebooks.reader.analyse' | translate }}
+                  </a>
+                } @else {
+                  <a mat-flat-button color="primary" routerLink="/analysis" [queryParams]="analysisParams(d)">
+                    <mat-icon>biotech</mat-icon>{{ 'ebooks.reader.analyse' | translate }}
+                  </a>
+                }
                 <button mat-icon-button (click)="togglePlay()" [class.rd-play-on]="playMode()" [attr.aria-pressed]="playMode()"
                         [appIconLabel]="(playMode() ? 'ebooks.reader.playOff' : 'ebooks.reader.playOn') | translate"><mat-icon>{{ playMode() ? 'pan_tool' : 'pan_tool_alt' }}</mat-icon></button>
                 <button mat-icon-button (click)="flipped.set(!flipped())" [appIconLabel]="'ebooks.reader.flip' | translate"><mat-icon>swap_vert</mat-icon></button>
                 <button mat-icon-button (click)="copyFen(d)" [appIconLabel]="'ebooks.reader.copyFen' | translate"><mat-icon>content_copy</mat-icon></button>
               </div>
+              @if (d.solutionUci) {
+                <button mat-button type="button" class="rd-sol-toggle" (click)="showSolution.set(!showSolution())" [attr.aria-expanded]="showSolution()">
+                  <mat-icon>{{ showSolution() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  {{ (showSolution() ? 'ebooks.reader.hideSolution' : 'ebooks.reader.showSolution') | translate }}
+                </button>
+                @if (showSolution()) {
+                  <div class="rd-solution">
+                    <p class="rd-solution-line">{{ solutionText }}</p>
+                    @if (d.solutionText) { <p class="rd-solution-text">{{ d.solutionText }}</p> }
+                    @if (d.solutionPage && d.solutionPage !== d.page) {
+                      <button mat-button type="button" (click)="goToSolutionPage()">
+                        <mat-icon>menu_book</mat-icon>{{ 'ebooks.reader.toSolutionPage' | translate: { page: d.solutionPage } }}
+                      </button>
+                    }
+                  </div>
+                }
+              }
               <button mat-button type="button" class="rd-report" [class.rd-report--on]="d.reportedByMe" (click)="toggleReport(d)"
                       [attr.aria-pressed]="d.reportedByMe">
                 <mat-icon>{{ d.reportedByMe ? 'flag' : 'outlined_flag' }}</mat-icon>

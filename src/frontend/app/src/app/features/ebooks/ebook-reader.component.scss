@@ -78,6 +78,16 @@
 .rd-play-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
 .rd-moves { display: flex; align-items: center; gap: 2px; }
 .rd-moves-text { flex: 1 1 auto; min-width: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.rd-solve {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px;
+  background: color-mix(in srgb, var(--rh-info) 14%, transparent);
+  span { flex: 1 1 auto; }
+}
+.rd-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
+.rd-sol-toggle { align-self: flex-start; }
+.rd-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
+.rd-solution-line { margin: 0 0 4px; font-weight: 500; }
+.rd-solution-text { margin: 0; font-size: .85rem; opacity: .85; white-space: pre-line; max-height: 14em; overflow-y: auto; }
 .rd-report { align-self: flex-start; opacity: .8; }
 .rd-report--on { color: var(--rh-warn); opacity: 1; }
 .rd-report-count { margin-left: 4px; font-variant-numeric: tabular-nums; }

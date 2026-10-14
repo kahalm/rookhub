@@ -121,3 +121,19 @@ Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne Kön
   Seiten in 13 s, ~6× die DJVU-Größe (Bibliothek: 66 Bücher nur als DJVU). Danach Titelbild + Diagramme neu vorgemerkt.
 - **Trenner** zwischen Buch und Brett (`.rd-split`, `role=separator`): ziehen (Pointer-Capture), ←/→ um 24 px, Doppelklick =
   Standardbreite; 260 px bis 70 % des Fensters, je Gerät in `localStorage` `rh.ebooks.panelWidth`. Unter 900 px ausgeblendet.
+
+## Lösungen aus dem Buch (0.771.0)
+
+`EbookSolutionFinder` läuft im Diagramm-Durchgang mit (`EbookDiagramExtractor` liest dafür den Text JEDER Seite als Zeilen —
+gruppiert über die Grundlinie, nicht das Wortrechteck, sonst rutschen fette Züge/Figurinen in die Nachbarzeile; Spalte =
+Seitenhälfte). Zwei Wege: (1) nummerierter Absatz („31. “ mit Leerzeichen; „31.Txh4“ ist ein Zug) auf einer ANDEREN Seite als
+das Diagramm, Lösungsteil zuerst; (2) Text unter dem Brett in derselben Spalte + nächste Seite, bis „X to move“ des nächsten
+Diagramms. Figurinen (SP-Fonts `¢£¦¥¤`, U+F0xx gefaltet, Unicode, RookHub U+E024…) → `KQRBN`, `†`→`+`, `‡`→`#`.
+Hauptlinie: erster Zug mit passender Nummer/Seite („34...“ = Schwarz; mit `SideKnown=false` bestimmt die Nummer das Zugrecht),
+ein angezweifelter Startzug (`?`, `?!`) wird übersprungen und nur dieselbe Zugnummer zählt danach; Prosa und Nebenvarianten
+(falsche Nummer, Klammern) werden übersprungen, weiter geht es bei der erwarteten Nummer; Gera.Chess spielt jeden Zug — der
+erste muss legal sein, sonst KEINE Lösung. Gespeichert: `SolutionUci`, `SolutionSan`, `SolutionText` (Absatz, ≤3000),
+`SolutionPage`; die FEN bekommt Zugrecht + Zugnummer der Lösung. Migration setzt erkannte Bücher zurück auf Pending.
+Gemessen 14.10.: Woodpecker 1 117 von 1 128 mit Lösung, erster Zug = Kurs 88 bei 1 113; Grooten 824 von 995 (Weg 2).
+**Leser**: „Lösen“ (Hauptaktion, wenn eine Lösung da ist) — Züge gegen die Linie geprüft, Antworten nach 450 ms, falscher Zug
+600 ms sichtbar, dann zurück; „Lösung zeigen“ mit Linie, Absatz und Sprung zur Lösungsseite.

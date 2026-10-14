@@ -205,6 +205,22 @@ public class EbookDiagram
     /// <summary>Welche Font-Familie das Diagramm gesetzt hat (zum Nachvollziehen von Lesefehlern).</summary>
     [MaxLength(60)]
     public string? FontFamily { get; set; }
+
+    /// <summary>Lösung aus dem Buch (0.771.0): Hauptlinie als UCI (leerzeichengetrennt) — nur, wenn sie sich ab
+    /// <see cref="Fen"/> regelgerecht nachspielen ließ (<c>EbookSolutionFinder</c>).</summary>
+    [MaxLength(1200)]
+    public string? SolutionUci { get; set; }
+
+    /// <summary>Dieselbe Hauptlinie als SAN (leerzeichengetrennt).</summary>
+    [MaxLength(1500)]
+    public string? SolutionSan { get; set; }
+
+    /// <summary>Der Lösungsabsatz aus dem Buch (Figurinen als Buchstaben), für „Lösung zeigen“.</summary>
+    [MaxLength(3000)]
+    public string? SolutionText { get; set; }
+
+    /// <summary>Seite des Lösungsabsatzes (Sprung im Leser).</summary>
+    public int? SolutionPage { get; set; }
 }
 
 /// <summary>

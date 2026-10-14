@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.771.0", date: "2026-10-14", changes: [
+    { en: "E-books: solutions are now read from the books themselves — from the numbered solutions section (e.g. Woodpecker: 1 113 of 1 117 first moves identical to the Chessable course) or from the text right below a diagram. Only lines that can be played legally from the diagram are kept.",
+      de: "E-Books: Lösungen werden jetzt aus den Büchern selbst gelesen — aus dem nummerierten Lösungsteil (z. B. Woodpecker: 1 113 von 1 117 ersten Zügen gleich dem Chessable-Kurs) oder aus dem Text direkt unter einem Diagramm. Übernommen wird nur, was sich ab dem Diagramm regelgerecht nachspielen lässt." },
+    { en: "E-book reader: „Solve“ next to the board — you play, the book’s replies come automatically, a wrong move is taken back. „Show solution“ shows the line and the book’s paragraph and jumps to the solution page.",
+      de: "E-Book-Leser: „Lösen“ neben dem Brett — du ziehst, die Antworten aus dem Buch kommen von selbst, ein falscher Zug wird zurückgenommen. „Lösung zeigen“ zeigt die Linie und den Absatz aus dem Buch und springt zur Lösungsseite." },
+  ] },
   { version: "0.770.1", date: "2026-10-14", changes: [
     { en: "Design round b1, follow-up after the image check: on very wide screens (from 2400 px) KidHub tasks fit the window height, the LeagueHub club games table no longer leaves wide gaps, recent games in player preparation stay compact, repertoire card titles wrap onto two lines and the dashboard uses five even columns; on tablets the ⋮ sits right next to „Analyse game“; the move list on the game page shows a scroll shadow on laptops too.",
       de: "Gestaltungsrunde b1, Nacharbeit nach der Bildprüfung: auf sehr breiten Bildschirmen (ab 2400 px) passen KidHub-Aufgaben in die Fensterhöhe, die LeagueHub-Vereinspartien haben keine breiten Lücken mehr, die letzten Partien in der Spielervorbereitung bleiben kompakt, Repertoire-Titel brechen auf zwei Zeilen um und das Dashboard nutzt fünf gleichmäßige Spalten; am Tablet steht das ⋮ direkt neben „Partie analysieren“; die Zugliste der Partieseite zeigt auch am Laptop den Weiterscroll-Schatten." },

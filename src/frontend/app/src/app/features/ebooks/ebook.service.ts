@@ -59,6 +59,11 @@ export interface EbookDiagram {
   label: string | null;
   caption: string | null;
   sideKnown: boolean;
+  /** Lösung aus dem Buch: Hauptlinie (UCI/SAN, leerzeichengetrennt), Absatz, Seite — `null`, wenn keine gefunden. */
+  solutionUci?: string | null;
+  solutionSan?: string | null;
+  solutionText?: string | null;
+  solutionPage?: number | null;
   reportedByMe: boolean;
   /** Nur für Verwalter gefüllt. */
   reportCount: number;

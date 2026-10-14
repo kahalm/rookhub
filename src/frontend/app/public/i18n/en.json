@@ -5340,7 +5340,16 @@
       "resetPosition": "Back to the book position",
       "notPlayable": "This position is not legal (e.g. a study without a king) — it can only be viewed.",
       "toc": "Contents",
-      "resize": "Drag to resize (double-click: default width)"
+      "resize": "Drag to resize (double-click: default width)",
+      "solve": "Solve",
+      "yourMove": "Your move — find the book solution.",
+      "solved": "Solved — that is the book line.",
+      "again": "Again",
+      "stopSolving": "Stop solving",
+      "notBookMove": "Not the book move — try again.",
+      "showSolution": "Show solution",
+      "hideSolution": "Hide solution",
+      "toSolutionPage": "To the solution (page {{page}})"
     },
     "diagrams": "{{n}} diagrams"
   }

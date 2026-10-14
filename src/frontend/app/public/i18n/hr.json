@@ -5340,7 +5340,16 @@
       "resetPosition": "Natrag na poziciju iz knjige",
       "notPlayable": "Ova pozicija nije prema pravilima (npr. studija bez kralja) — može se samo pregledati.",
       "toc": "Sadržaj",
-      "resize": "Povuci za promjenu širine (dvostruki klik: zadana širina)"
+      "resize": "Povuci za promjenu širine (dvostruki klik: zadana širina)",
+      "solve": "Riješi",
+      "yourMove": "Na potezu si — pronađi rješenje iz knjige.",
+      "solved": "Riješeno — to je varijanta iz knjige.",
+      "again": "Ponovno",
+      "stopSolving": "Prekini rješavanje",
+      "notBookMove": "To nije potez iz knjige — pokušaj ponovno.",
+      "showSolution": "Prikaži rješenje",
+      "hideSolution": "Sakrij rješenje",
+      "toSolutionPage": "Na rješenje (stranica {{page}})"
     },
     "diagrams": "Dijagrama: {{n}}"
   }

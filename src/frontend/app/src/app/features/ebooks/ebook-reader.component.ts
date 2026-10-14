@@ -84,6 +84,12 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   static readonly PANEL_WIDTH_KEY = 'rh.ebooks.panelWidth';
   static readonly PANEL_MIN = 260;
 
+  /** „Lösen“ (0.771.0): Züge werden gegen die Buchlösung geprüft, die Antworten kommen von selbst. */
+  readonly solving = signal(false);
+  readonly solveState = signal<'running' | 'solved'>('running');
+  readonly showSolution = signal(false);
+  private solveTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** Schmale Ansicht: Brettleiste ein-/ausgeklappt. */
   readonly panelOpen = signal(false);
 
@@ -102,6 +108,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopSolving();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -227,6 +234,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     if (!d) return;
     this.picked.set(d);
     this.played.set([]);
+    this.stopSolving();
     this.flipped.set(d.fen.split(' ')[1] === 'b');
     this.panelOpen.set(true);
   }
@@ -255,31 +263,112 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     return d.fen.split(' ')[1] === 'b' ? 'common.blackToMove' : 'common.whiteToMove';
   }
 
-  togglePlay(): void { this.playMode.update(v => !v); }
-
-  /** Zug auf dem spielbaren Brett: das Brett liefert SAN + neue FEN, die Liste wächst. */
-  onBoardMove(m: UserBoardMove): void {
-    this.played.update(list => [...list, { san: m.san, fen: m.fen }]);
+  togglePlay(): void {
+    this.stopSolving();
+    this.playMode.update(v => !v);
   }
 
-  undoMove(): void { this.played.update(list => list.slice(0, -1)); }
-  resetMoves(): void { this.played.set([]); }
+  /** Lösungslinie des gewählten Diagramms als UCI-Liste (leer = keine). */
+  get solutionLine(): string[] {
+    return (this.picked()?.solutionUci ?? '').split(' ').filter(x => x.length >= 4);
+  }
+
+  /** „Lösen“: ab der Buchstellung, Brett spielbar, jeder Zug wird gegen das Buch geprüft. */
+  startSolving(): void {
+    if (this.solutionLine.length === 0) return;
+    this.played.set([]);
+    this.showSolution.set(false);
+    this.solveState.set('running');
+    this.solving.set(true);
+    this.playMode.set(true);
+  }
+
+  stopSolving(): void {
+    if (this.solveTimer) { clearTimeout(this.solveTimer); this.solveTimer = null; }
+    this.solving.set(false);
+  }
+
+  /** Zug auf dem spielbaren Brett: frei (Liste wächst) oder beim Lösen gegen die Buchlinie geprüft. */
+  onBoardMove(m: UserBoardMove): void {
+    if (!this.solving()) {
+      this.played.update(list => [...list, { san: m.san, fen: m.fen }]);
+      return;
+    }
+    const line = this.solutionLine;
+    const idx = this.played().length;
+    const uci = m.from + m.to + (m.promotion ?? '');
+    if (idx >= line.length || this.solveState() !== 'running') return;
+    if (uci !== line[idx] && !(line[idx].length === 4 && uci.startsWith(line[idx]))) {
+      // Kurz zeigen, dann zurücknehmen — das Brett bleibt sonst auf dem falschen Zug stehen.
+      this.played.update(list => [...list, { san: m.san, fen: m.fen }]);
+      this.snackbar.quick(this.translate.instant('ebooks.reader.notBookMove'));
+      this.solveTimer = setTimeout(() => { this.played.update(list => list.slice(0, -1)); this.cdr.markForCheck(); }, 600);
+      return;
+    }
+    this.played.update(list => [...list, { san: m.san, fen: m.fen }]);
+    this.advanceOpponent();
+  }
+
+  /** Antwort aus der Buchlinie nachziehen (nach kurzer Pause), am Ende „gelöst“. */
+  private advanceOpponent(): void {
+    const line = this.solutionLine;
+    const idx = this.played().length;
+    if (idx >= line.length) { this.solveState.set('solved'); return; }
+    this.solveTimer = setTimeout(() => {
+      const fen = this.boardFen();
+      try {
+        const chess = new Chess(fen);
+        const u = line[idx];
+        const mv = chess.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined });
+        this.played.update(list => [...list, { san: mv.san, fen: chess.fen() }]);
+        if (this.played().length >= line.length) this.solveState.set('solved');
+      } catch {
+        this.solveState.set('solved');   // Linie endet unerwartet — als gelöst werten, Lösung ist sichtbar
+      }
+      this.cdr.markForCheck();
+    }, 450);
+  }
+
+  undoMove(): void {
+    if (this.solving()) return;
+    this.played.update(list => list.slice(0, -1));
+  }
+  resetMoves(): void {
+    this.played.set([]);
+    if (this.solving()) this.solveState.set('running');
+  }
+
+  /** Lösungslinie zum Lesen: „17… Txh2+ 18. Kxh2 Th8+“. */
+  get solutionText(): string {
+    const d = this.picked();
+    const sans = (d?.solutionSan ?? '').split(' ').filter(Boolean);
+    return d ? EbookReaderComponent.numbered(d.fen, sans) : '';
+  }
+
+  goToSolutionPage(): void {
+    const page = this.picked()?.solutionPage;
+    if (page) this.viewer?.goTo(page);
+  }
+
+  /** Zugnummern ab einer Stellung vor eine SAN-Folge setzen. */
+  static numbered(fen: string, sans: readonly string[]): string {
+    if (sans.length === 0) return '';
+    const parts = fen.split(' ');
+    let n = Number(parts[5]) || 1;
+    let white = parts[1] !== 'b';
+    const out: string[] = [];
+    sans.forEach((san, i) => {
+      if (white) out.push(`${n}. ${san}`);
+      else { out.push(i === 0 ? `${n}… ${san}` : san); n++; }
+      white = !white;
+    });
+    return out.join(' ');
+  }
 
   /** „12… Txd2 13. Df4" — Zugnummern ab der Buchstellung. */
   get movesText(): string {
     const d = this.picked();
-    const list = this.played();
-    if (!d || list.length === 0) return '';
-    const parts = d.fen.split(' ');
-    let n = Number(parts[5]) || 1;
-    let white = parts[1] !== 'b';
-    const out: string[] = [];
-    list.forEach((m, i) => {
-      if (white) out.push(`${n}. ${m.san}`);
-      else { out.push(i === 0 ? `${n}… ${m.san}` : m.san); n++; }
-      white = !white;
-    });
-    return out.join(' ');
+    return d ? EbookReaderComponent.numbered(d.fen, this.played().map(m => m.san)) : '';
   }
 
   analysisParams(d: EbookDiagram): Record<string, string> {

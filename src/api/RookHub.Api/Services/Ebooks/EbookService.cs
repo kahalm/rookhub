@@ -367,6 +367,7 @@ public class EbookService
                 .Select(d => new EbookDiagramDto
                 {
                     Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown,
+                    SolutionUci = d.SolutionUci, SolutionSan = d.SolutionSan, SolutionText = d.SolutionText, SolutionPage = d.SolutionPage,
                 }).ToListAsync(ct)
             : [];
         if (items.Count > 0)

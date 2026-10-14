@@ -5340,7 +5340,16 @@
       "resetPosition": "Vissza a könyv állásához",
       "notPlayable": "Ez az állás nem szabályos (pl. király nélküli tanulmány) — csak megtekinthető.",
       "toc": "Tartalom",
-      "resize": "Húzással átméretezhető (dupla kattintás: alapszélesség)"
+      "resize": "Húzással átméretezhető (dupla kattintás: alapszélesség)",
+      "solve": "Megoldás",
+      "yourMove": "Te lépsz — keresd meg a könyv megoldását.",
+      "solved": "Megoldva — ez a könyv változata.",
+      "again": "Újra",
+      "stopSolving": "Megoldás befejezése",
+      "notBookMove": "Nem a könyv lépése — próbáld újra.",
+      "showSolution": "Megoldás mutatása",
+      "hideSolution": "Megoldás elrejtése",
+      "toSolutionPage": "A megoldáshoz ({{page}}. oldal)"
     },
     "diagrams": "{{n}} diagram"
   }
