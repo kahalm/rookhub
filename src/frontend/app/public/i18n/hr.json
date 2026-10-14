@@ -5381,6 +5381,8 @@
       "boardPanel": "Ploča",
       "prevDiagram": "Prethodni dijagram",
       "nextDiagram": "Sljedeći dijagram",
+      "firstDiagram": "Prvi dijagram",
+      "lastDiagram": "Posljednji dijagram",
       "diagramNo": "Dijagram {{n}}",
       "diagramAt": "Dijagram na stranici {{page}}",
       "diagramCount": "Dijagrama: {{n}}",

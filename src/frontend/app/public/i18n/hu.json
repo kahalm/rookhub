@@ -5381,6 +5381,8 @@
       "boardPanel": "Tábla",
       "prevDiagram": "Előző diagram",
       "nextDiagram": "Következő diagram",
+      "firstDiagram": "Első diagram",
+      "lastDiagram": "Utolsó diagram",
       "diagramNo": "{{n}}. diagram",
       "diagramAt": "Diagram a(z) {{page}}. oldalon",
       "diagramCount": "{{n}} diagram",

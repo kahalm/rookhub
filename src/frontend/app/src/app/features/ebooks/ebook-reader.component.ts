@@ -240,7 +240,7 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     this.panelOpen.set(true);
   }
 
-  /** ‹ / › — voriges/nächstes Diagramm, das Buch scrollt mit. */
+  /** ‹ / › — voriges/nächstes Diagramm, das Buch scrollt mit. Im Kreis: nach dem letzten kommt das erste, vor dem ersten das letzte. */
   step(delta: 1 | -1): void {
     const list = this.diagrams();
     if (list.length === 0) return;
@@ -248,8 +248,20 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     const here = this.isEpub ? this.epub?.chapter() ?? 1 : this.page();
     let idx = cur ? list.findIndex(d => d.id === cur.id) + delta : (delta > 0 ? list.findIndex(d => d.page >= here) : -1);
     if (idx < 0) idx = delta > 0 ? 0 : list.length - 1;
-    if (idx >= list.length) idx = list.length - 1;
-    const d = list[idx];
+    if (idx >= list.length) idx = 0;
+    this.showAt(idx);
+  }
+
+  /** ⏮ / ⏭ — erstes bzw. letztes Diagramm des Buchs. */
+  jumpDiagram(to: 'first' | 'last'): void {
+    const n = this.diagrams().length;
+    if (n === 0) return;
+    this.showAt(to === 'first' ? 0 : n - 1);
+  }
+
+  private showAt(idx: number): void {
+    const d = this.diagrams()[idx];
+    if (!d) return;
     this.pick(d.id);
     if (d.imageRef) this.epub?.revealImage(d.page, d.imageRef);
     else this.viewer?.revealZone(d);

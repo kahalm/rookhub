@@ -128,11 +128,35 @@ describe('EbookReaderComponent', () => {
     c.step(1);
     expect(c.picked()!.id).toBe(12);
     expect(c.pickedIndex).toBe(2);
-    c.step(1); c.step(1);
-    expect(c.picked()!.id).toBe(13);   // bleibt am Ende stehen
+    c.step(1);
+    expect(c.picked()!.id).toBe(13);
     expect(c.sideKey(c.picked()!)).toBe('ebooks.reader.sideUnknown');
     c.step(-1);
     expect(c.picked()!.id).toBe(12);
+  });
+
+  it('› nach dem letzten Diagramm springt zum ersten, ‹ vor dem ersten zum letzten (im Kreis)', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.pick(13);
+    c.step(1);
+    expect(c.picked()!.id).toBe(11);
+    c.step(-1);
+    expect(c.picked()!.id).toBe(13);
+  });
+
+  it('⏮ / ⏭ springen zum ersten bzw. letzten Diagramm — Knöpfe in der Brett-Leiste', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.pick(12);
+    c.jumpDiagram('last');
+    expect(c.picked()!.id).toBe(13);
+    c.jumpDiagram('first');
+    expect(c.picked()!.id).toBe(11);
+    fixture.detectChanges();
+    const head = fixture.nativeElement.querySelector('.rd-panel-head') as HTMLElement;
+    const icons = Array.from(head.querySelectorAll('button mat-icon')).map(i => i.textContent!.trim());
+    expect(icons.slice(0, 4)).toEqual(['first_page', 'chevron_left', 'chevron_right', 'last_page']);
   });
 
   it('der erste Schritt ohne Auswahl beginnt beim ersten Diagramm ab der aktuellen Seite', async () => {

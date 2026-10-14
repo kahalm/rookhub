@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.779.0", date: "2026-10-14", changes: [
+    { en: "E-book reader: stepping through diagrams now wraps around — “next” after the last one goes to the first, “previous” before the first goes to the last; new buttons jump to the first and the last diagram.",
+      de: "E-Book-Leser: das Blättern durch die Diagramme läuft im Kreis — „Nächstes“ nach dem letzten springt zum ersten, „Voriges“ vor dem ersten zum letzten; neue Knöpfe springen zum ersten und zum letzten Diagramm." },
+  ] },
   { version: "0.778.1", date: "2026-10-14", changes: [
     { en: "E-books: „Newest first“ now sorts by publication year (books without a year at the end), no longer by when a book was added – and it is the default sort everywhere.",
       de: "E-Books: „Neueste zuerst“ sortiert jetzt nach Erscheinungsjahr (Bücher ohne Jahr ans Ende), nicht mehr danach, wann ein Buch aufgenommen wurde – und ist überall die Standard-Sortierung." },

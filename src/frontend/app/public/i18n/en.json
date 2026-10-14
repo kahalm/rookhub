@@ -5381,6 +5381,8 @@
       "boardPanel": "Board",
       "prevDiagram": "Previous diagram",
       "nextDiagram": "Next diagram",
+      "firstDiagram": "First diagram",
+      "lastDiagram": "Last diagram",
       "diagramNo": "Diagram {{n}}",
       "diagramAt": "Diagram on page {{page}}",
       "diagramCount": "{{n}} diagrams",
