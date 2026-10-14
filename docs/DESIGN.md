@@ -846,7 +846,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
-| 2026-10-14 | 0.771.1 | Kopfleiste fluchtet ab 2400 px mit der Inhaltskante der jeweiligen Seite (gemessenes `--nav-edge`, Rückfall 1 880 px) | Partieseiten 2 510 px, /l /r 1 600, /prep 760 px — Kopf und Inhalt hatten keine gemeinsame Kante | UI-Sweep b1 · b1-rk-kopfleiste-ultrawide-flucht |
+| 2026-10-14 | 0.772.1 | Kopfleiste fluchtet ab 2400 px mit der Inhaltskante der jeweiligen Seite (gemessenes `--nav-edge`, Rückfall 1 880 px) | Partieseiten 2 510 px, /l /r 1 600, /prep 760 px — Kopf und Inhalt hatten keine gemeinsame Kante | UI-Sweep b1 · b1-rk-kopfleiste-ultrawide-flucht |
 | 2026-10-14 | 0.770.0 | Ziehbarer Trenner Buch | Brett (Breite je Gerät gemerkt) | Bretter und Bücher brauchen je nach Bildschirm andere Anteile | Nutzerwunsch |
 | 2026-10-14 | 0.766.0 | E-Book-Leser zweispaltig mit Brett rechts; Diagrammzonen nur beim Überfahren sichtbar, Doppelklick stellt auf | Buch bleibt ungestört lesbar, das Brett ist ein Werkzeug daneben | E-Book-Diagramme Stufe 1 |
 | 2026-10-13 | 0.764.0 | E-Book-Karten als Regal (Titelbild 2:3, Lesestand-Balken, Abzeichen); Leser als Sonderlayout mit eigenem Scrollkasten | neuer Bereich, Buchtitel allein sagen wenig — das Titelbild ist die Wiedererkennung | E-Book-Bibliothek |

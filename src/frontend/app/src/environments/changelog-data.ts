@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.772.2", date: "2026-10-14", changes: [
+    { en: "Docs: the design log now names the right version for the header alignment on very wide screens.",
+      de: "Doku: das Gestaltungs-Protokoll nennt für die Kopfleisten-Flucht auf sehr breiten Bildschirmen die richtige Version." },
+  ] },
   { version: "0.772.1", date: "2026-10-14", changes: [
     { en: "Very wide screens (from 2400 px): the header now lines up with the content of each page — on narrow pages like player preparation as well as on wide ones like the game page — instead of always sitting at a fixed 1880 px edge. Applies to RookHub and the tournament site; below 2400 px nothing changes.",
       de: "Sehr breite Bildschirme (ab 2400 px): die Kopfleiste fluchtet jetzt mit dem Inhalt der jeweiligen Seite — auf schmalen Seiten wie der Spielervorbereitung ebenso wie auf breiten wie der Partieseite — statt immer an einer festen 1880-px-Kante zu stehen. Gilt für RookHub und die Turnierseite; unter 2400 px ändert sich nichts." },
