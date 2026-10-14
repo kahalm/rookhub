@@ -179,7 +179,8 @@
       "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) ist von chess-results verschwunden — vermutlich abgesagt",
       "scoresheet_read": "Partieformular gelesen: {{white}} – {{black}}, {{moves}} Halbzüge, {{uncertain}} unsicher",
       "scoresheet_failed": "Partieformular konnte nicht gelesen werden: {{reason}}",
-      "league_batch_uploaded": "Über einen LeagueHub-Teilen-Link wurden {{count}} Formular-Bilder abgelegt"
+      "league_batch_uploaded": "Über einen LeagueHub-Teilen-Link wurden {{count}} Formular-Bilder abgelegt",
+      "ebook_ready": "„{{title}}“ ist fertig verarbeitet — {{diagrams}} Diagramme erkannt."
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -5367,7 +5368,10 @@
       "matedIn": "wird in {{n}} matt",
       "evalTitle": "Stockfish-Bewertung für die Seite am Zug"
     },
-    "diagrams": "{{n}} Diagramme"
+    "diagrams": "{{n}} Diagramme",
+    "uploadedProcessing": "„{{title}}“ ist hochgeladen. Die Verarbeitung (Titelbild, Diagramme, Lösungen) dauert ein paar Minuten bis etwa eine Viertelstunde — du bekommst eine Benachrichtigung, sobald sie fertig ist.",
+    "processing": "Wird verarbeitet …",
+    "processingHint": "Titelbild, Diagramme und Lösungen werden vorbereitet — du bekommst eine Benachrichtigung."
   },
   "woodpecker": {
     "title": "Woodpecker",

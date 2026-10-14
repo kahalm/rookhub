@@ -74,6 +74,7 @@ export function notificationCategory(type: string): NotificationCategory {
 export function notificationIcon(n: AppNotification): string {
   switch (n.type) {
     case 'chessable_import_completed': return 'menu_book';
+    case 'ebook_ready': return 'auto_stories';
     case 'chessable_import_failed': return 'error_outline';
     case 'friend_request_received': return 'person_add';
     case 'friend_request_accepted': return 'how_to_reg';

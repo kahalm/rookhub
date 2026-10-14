@@ -2626,7 +2626,8 @@
       "tournament_cancelled": "„{{tournamentName}}” ({{date}}) eltűnt a chess-resultsról — valószínűleg elmarad",
       "scoresheet_read": "Játszmalap beolvasva: {{white}} – {{black}}, {{moves}} féllépés, {{uncertain}} bizonytalan",
       "scoresheet_failed": "A játszmalapot nem sikerült beolvasni: {{reason}}",
-      "league_batch_uploaded": "Egy LeagueHub megosztási linken {{count}} lapkép lett feltöltve"
+      "league_batch_uploaded": "Egy LeagueHub megosztási linken {{count}} lapkép lett feltöltve",
+      "ebook_ready": "„{{title}}” feldolgozva — {{diagrams}} diagram felismerve."
     },
     "markAllRead": "Mind megjelölése olvasottként",
     "filter": {
@@ -5367,7 +5368,10 @@
       "matedIn": "mattot kap {{n}} lépésben",
       "evalTitle": "A Stockfish értékelése a lépésre következő félnek"
     },
-    "diagrams": "{{n}} diagram"
+    "diagrams": "{{n}} diagram",
+    "uploadedProcessing": "„{{title}}” feltöltve. A feldolgozás (borító, diagramok, megoldások) néhány perctől kb. negyed óráig tart — értesítést kapsz, ha kész.",
+    "processing": "Feldolgozás …",
+    "processingHint": "A borító, a diagramok és a megoldások előkészítése folyik — értesítést kapsz."
   },
   "woodpecker": {
     "title": "Woodpecker",

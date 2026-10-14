@@ -107,6 +107,7 @@
               <div class="eb-badges">
                 @for (f of book.files; track f.id) { <span class="chip">{{ f.format | uppercase }}</span> }
                 @if (book.pageCount) { <span class="chip">{{ 'ebooks.pages' | translate: { n: book.pageCount } }}</span> }
+                @if (book.processing) { <span class="chip eb-processing" [matTooltip]="'ebooks.processingHint' | translate"><mat-icon>hourglass_top</mat-icon>{{ 'ebooks.processing' | translate }}</span> }
                 @if (book.diagramCount > 0) { <span class="chip"><mat-icon>grid_on</mat-icon>{{ 'ebooks.diagrams' | translate: { n: book.diagramCount } }}</span> }
                 @if (book.canManage) {
                   <span class="chip eb-vis" [matTooltip]="'ebooks.visibilityLabel' | translate">

@@ -29,7 +29,13 @@ public class EbookDiagramWorker : PeriodicWorker
         {
             ct.ThrowIfCancellationRequested();
             var pdf = ebook.Files.FirstOrDefault(f => f.Format == "pdf");
-            if (pdf == null) { ebook.DiagramState = EbookDiagramState.Unsupported; await db.SaveChangesAsync(ct); continue; }
+            if (pdf == null)
+            {
+                ebook.DiagramState = EbookDiagramState.Unsupported;
+                await db.SaveChangesAsync(ct);
+                await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
+                continue;
+            }
             try
             {
                 var path = storage.ResolveFile(ebook, pdf);
@@ -49,6 +55,7 @@ public class EbookDiagramWorker : PeriodicWorker
                 ebook.DiagramState = EbookDiagramState.Failed;
             }
             await db.SaveChangesAsync(ct);
+            await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
         }
     }
 }

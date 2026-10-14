@@ -38,6 +38,8 @@ public class EbookDto
     /// <summary><c>pending</c> / <c>done</c> / <c>failed</c> / <c>unsupported</c> — Stand der Diagramm-Erkennung.</summary>
     public string DiagramState { get; set; } = "pending";
     public int DiagramCount { get; set; }
+    /// <summary>Hintergrundschritte stehen noch aus (Titelbild, Umwandlung, Diagramme, Prüfung) — Karte zeigt „wird verarbeitet“.</summary>
+    public bool Processing { get; set; }
     /// <summary><c>notneeded</c> / <c>pending</c> / <c>done</c> / <c>failed</c> — DJVU→PDF-Umwandlung.</summary>
     public string ConversionState { get; set; } = "notneeded";
     public int? OwnerUserId { get; set; }

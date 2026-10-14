@@ -51,6 +51,7 @@ public class EbookDjvuConverter : PeriodicWorker
             ebook.ConversionState = EbookConversionState.Failed;
             Logger.LogWarning("E-Book {EbookId}: DJVU→PDF fehlgeschlagen", ebook.Id);
             await db.SaveChangesAsync(ct);
+            await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
             return;
         }
         File.Move(tmp, target, overwrite: true);

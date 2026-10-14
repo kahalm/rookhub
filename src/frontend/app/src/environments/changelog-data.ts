@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.774.0", date: "2026-10-14", changes: [
+    { en: "E-books: after an upload you are told that processing (cover, diagrams, solutions, Stockfish check) takes a few minutes up to about a quarter of an hour; the card shows „Processing …“ meanwhile, and the bell notifies you when the book is ready, with the number of diagrams found.",
+      de: "E-Books: Nach dem Hochladen steht da, dass die Verarbeitung (Titelbild, Diagramme, Lösungen, Stockfish-Prüfung) ein paar Minuten bis etwa eine Viertelstunde dauert; die Karte zeigt solange „Wird verarbeitet …“, und die Glocke meldet, wenn das Buch fertig ist, samt Zahl der gefundenen Diagramme." },
+  ] },
   { version: "0.773.0", date: "2026-10-14", changes: [
     { en: "New menu item „Woodpecker“ (Training): train with the Woodpecker Method by Smith and Tikkanen on one or more of your courses. The rules are fixed as in the book: in cycle 1 you have four weeks to solve as many puzzles as you can in course order – they become your set. After at least one day off, every further cycle brings the same set in random order in half the time (14, 7, 4, 2, 1, 1 days); only the first attempt per puzzle counts. You are done once a cycle takes one day or less, or after cycle 7.",
       de: "Neuer Menüpunkt „Woodpecker“ (Training): Training nach der Woodpecker-Methode von Smith und Tikkanen mit einem oder mehreren deiner Kurse. Die Regeln stehen fest wie im Buch: In Zyklus 1 hast du vier Wochen, um in Kursreihenfolge so viele Aufgaben wie möglich zu lösen – sie werden dein Satz. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge in der halben Zeit (14, 7, 4, 2, 1, 1 Tage); je Aufgabe zählt nur der erste Versuch. Fertig, sobald ein Zyklus höchstens einen Tag dauert, sonst nach Zyklus 7." },

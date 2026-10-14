@@ -2210,6 +2210,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("PageCount")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("ReadyNotifiedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("SolutionCheckState")
                         .HasColumnType("int");
 

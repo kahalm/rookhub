@@ -33,6 +33,8 @@ export interface Ebook {
   /** Stand der Diagramm-Erkennung: `pending` / `done` / `failed` / `unsupported` (Scan ohne Schach-Font). */
   diagramState: 'pending' | 'done' | 'failed' | 'unsupported';
   diagramCount: number;
+  /** Hintergrundschritte laufen noch (Titelbild, Umwandlung, Diagramme, Prüfung). */
+  processing?: boolean;
   conversionState?: 'notneeded' | 'pending' | 'done' | 'failed';
   ownerUserId: number | null;
   ownerName: string | null;

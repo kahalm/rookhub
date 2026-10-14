@@ -74,6 +74,10 @@ public class Ebook
     /// <summary>Erkannte Diagramme (nur gültig bei <see cref="EbookDiagramState.Done"/>).</summary>
     public int DiagramCount { get; set; }
 
+    /// <summary>Wann der Hochladende benachrichtigt wurde, dass die Verarbeitung (Titelbild, Umwandlung, Diagramme, Prüfung)
+    /// fertig ist (0.773.0); <c>null</c> = noch nicht. Nur für Uploads — eingelesene Bibliotheksbücher melden sich nicht.</summary>
+    public DateTime? ReadyNotifiedAt { get; set; }
+
     /// <summary>Stand der Stockfish-Prüfung der Diagramm-Lösungen (0.772.0); läuft nach der Erkennung.</summary>
     public EbookDiagramState SolutionCheckState { get; set; } = EbookDiagramState.Pending;
 

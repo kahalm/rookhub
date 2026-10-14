@@ -179,7 +179,8 @@
       "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) je nestao s chess-resultsa — vjerojatno otkazan",
       "scoresheet_read": "Zapisnik učitan: {{white}} – {{black}}, {{moves}} polupoteza, nesigurno: {{uncertain}}",
       "scoresheet_failed": "Zapisnik nije bilo moguće učitati: {{reason}}",
-      "league_batch_uploaded": "Putem LeagueHub poveznice za dijeljenje preneseno je {{count}} slika obrazaca"
+      "league_batch_uploaded": "Putem LeagueHub poveznice za dijeljenje preneseno je {{count}} slika obrazaca",
+      "ebook_ready": "»{{title}}« je obrađeno — prepoznato dijagrama: {{diagrams}}."
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -5367,7 +5368,10 @@
       "matedIn": "dobiva mat u {{n}}",
       "evalTitle": "Ocjena Stockfisha za stranu na potezu"
     },
-    "diagrams": "Dijagrama: {{n}}"
+    "diagrams": "Dijagrama: {{n}}",
+    "uploadedProcessing": "»{{title}}« je preneseno. Obrada (naslovnica, dijagrami, rješenja) traje nekoliko minuta do otprilike četvrt sata — dobit ćeš obavijest kad bude gotova.",
+    "processing": "Obrađuje se …",
+    "processingHint": "Pripremaju se naslovnica, dijagrami i rješenja — dobit ćeš obavijest."
   },
   "woodpecker": {
     "title": "Woodpecker",

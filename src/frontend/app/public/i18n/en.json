@@ -179,7 +179,8 @@
       "tournament_cancelled": "“{{tournamentName}}” ({{date}}) has disappeared from chess-results — probably cancelled",
       "scoresheet_read": "Scoresheet read: {{white}} – {{black}}, {{moves}} half-moves, {{uncertain}} uncertain",
       "scoresheet_failed": "Scoresheet could not be read: {{reason}}",
-      "league_batch_uploaded": "{{count}} scoresheet images were uploaded via a LeagueHub share link"
+      "league_batch_uploaded": "{{count}} scoresheet images were uploaded via a LeagueHub share link",
+      "ebook_ready": "“{{title}}” is ready — {{diagrams}} diagrams recognised."
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -5367,7 +5368,10 @@
       "matedIn": "mated in {{n}}",
       "evalTitle": "Stockfish evaluation for the side to move"
     },
-    "diagrams": "{{n}} diagrams"
+    "diagrams": "{{n}} diagrams",
+    "uploadedProcessing": "“{{title}}” is uploaded. Processing (cover, diagrams, solutions) takes a few minutes up to about a quarter of an hour — you will get a notification when it is done.",
+    "processing": "Processing …",
+    "processingHint": "Cover, diagrams and solutions are being prepared — you will get a notification."
   },
   "woodpecker": {
     "title": "Woodpecker",

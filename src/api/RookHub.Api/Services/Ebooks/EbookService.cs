@@ -146,6 +146,7 @@ public class EbookService
                 DiagramState = b.DiagramState.ToString().ToLowerInvariant(),
                 DiagramCount = b.DiagramState == EbookDiagramState.Done ? b.DiagramCount : 0,
                 ConversionState = b.ConversionState.ToString().ToLowerInvariant(),
+                Processing = EbookProcessing.IsProcessing(b, true),
                 OwnerUserId = b.OwnerUserId,
                 OwnerName = b.OwnerUserId is int oid && owners.TryGetValue(oid, out var n) ? n : null,
                 IsOwner = b.OwnerUserId == userId,

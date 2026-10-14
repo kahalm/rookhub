@@ -237,7 +237,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
       this.dialog.open(EbookEditDialogComponent, { data, width: '560px', maxWidth: '94vw', disableClose: true })
         .afterClosed().subscribe((saved: Ebook | null | undefined) => {
           if (!saved) return;
-          this.snackbar.success(this.translate.instant('ebooks.uploaded', { title: saved.title }));
+          // Verarbeitung dauert (Titelbild, DJVU→PDF, Diagramme, Lösungen, Stockfish) — sagen, dass eine Meldung kommt.
+          this.snackbar.success(this.translate.instant(saved.processing ? 'ebooks.uploadedProcessing' : 'ebooks.uploaded', { title: saved.title }), { duration: 9000 });
           this.load();
         });
     });

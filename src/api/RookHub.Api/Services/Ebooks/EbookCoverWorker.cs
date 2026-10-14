@@ -44,6 +44,7 @@ public class EbookCoverWorker : PeriodicWorker
             if (!result.Success)
                 Logger.LogInformation("E-Book {EbookId}: kein Titelbild ({Error})", ebook.Id, result.Error);
             await db.SaveChangesAsync(ct);
+            await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
         }
     }
 }

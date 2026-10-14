@@ -139,6 +139,7 @@ public class EbookSolutionCheckWorker : PeriodicWorker
         {
             ebook.SolutionCheckState = EbookDiagramState.Failed;
             await db.SaveChangesAsync(ct);
+            await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
             return;
         }
         var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebook.Id).OrderBy(d => d.Page).ThenBy(d => d.Y).ToListAsync(ct);
@@ -151,6 +152,7 @@ public class EbookSolutionCheckWorker : PeriodicWorker
         }
         ebook.SolutionCheckState = EbookDiagramState.Done;
         await db.SaveChangesAsync(ct);
+        await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
         Logger.LogInformation("E-Book {EbookId}: Lösungen geprüft — {Confirmed} bestätigt, {Replaced} ersetzt, {Doubtful} fraglich, {Engine} von Stockfish",
             ebook.Id, diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Confirmed), diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Replaced),
             diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Doubtful), diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Engine));
