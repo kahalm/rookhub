@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.775.1", date: "2026-10-14", changes: [
+    { en: "E-books: solutions are now also found in books that write move numbers without a dot („1 Kc5 Kc7 2 Ke6“, „1…Kc7“), e.g. Dvoretsky’s Endgame Manual (from 3 to 937 diagrams with a solution).",
+      de: "E-Books: Lösungen werden jetzt auch in Büchern gefunden, die Zugnummern ohne Punkt schreiben („1 Kc5 Kc7 2 Ke6“, „1…Kc7“), etwa Dvoretskys Endspiel-Handbuch (von 3 auf 937 Diagramme mit Lösung)." },
+  ] },
   { version: "0.775.0", date: "2026-10-14", changes: [
     { en: "E-books: diagrams in EPUB books are now recognised too – there they are pictures, so RookHub reads the board from the image (pieces trained on the diagrams of the font books). Double-click a diagram picture in the reader to put the position on the board; ‹ › jump from diagram to diagram. Solutions are taken from the book text as with PDFs, and Stockfish checks them.",
       de: "E-Books: Diagramme in EPUB-Büchern werden jetzt auch erkannt – dort sind sie Bilder, RookHub liest das Brett also aus dem Bild (Figuren gelernt an den Diagrammen der Font-Bücher). Doppelklick auf ein Diagrammbild im Leser stellt die Stellung aufs Brett; ‹ › springen von Diagramm zu Diagramm. Lösungen kommen wie beim PDF aus dem Buchtext, Stockfish prüft sie." },

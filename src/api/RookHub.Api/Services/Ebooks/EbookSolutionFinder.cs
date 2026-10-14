@@ -21,13 +21,15 @@ public sealed record FoundSolution(IReadOnlyList<string> Uci, IReadOnlyList<stri
 /// </list>
 /// Hauptlinie: ab dem ersten Zug, dessen Nummer zur Seite am Zug passt („34...“ bei Schwarz), weiter mit jeder Zugnummer,
 /// die genau die erwartete ist; dazwischenliegende Prosa und Nebenvarianten (falsche Nummer, Klammern) werden übersprungen.
+/// Zugnummern auch ohne Punkt (0.775.1, Dvoretsky/Russell: „1 Kc5 Kc7 2 Ke6“, „1…Kc7“) — eine nackte Zahl zählt nur, wenn
+/// direkt ein Zug folgt.
 /// Figurinen (SP-Fonts: ¢ £ ¦ ¥ ¤; Unicode ♔–♘; RookHub-Figurinen U+E024…) werden zu K Q R B N.
 /// </summary>
 public static class EbookSolutionFinder
 {
     private static readonly Regex EntryStart = new(@"^\s*(\d{1,4})\.\s+(?=\D)", RegexOptions.Compiled);
     private static readonly Regex Token = new(
-        @"\(|\)|(?<num>\d{1,3})\.(?<dots>\s*(?:\.\.\.?|…))?|(?<san>(?:O-O-O|O-O|0-0-0|0-0|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=?[QRBN])?))(?<ann>[+#]?[!?]*)(?=[^a-zA-Z0-9]|$)|(?<word>[A-Za-zÄÖÜäöüß]{2,})",
+        @"\(|\)|(?<num>\d{1,3})(?:\.(?<dots>\s*(?:\.\.\.?|…))?|(?<dots>\s*(?:\.\.\.?|…))|\s+(?=(?:[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=?[QRBN])?|O-O(?:-O)?|0-0(?:-0)?)(?![a-zA-Z0-9])))|(?<san>(?:O-O-O|O-O|0-0-0|0-0|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=?[QRBN])?))(?<ann>[+#]?[!?]*)(?=[^a-zA-Z0-9]|$)|(?<word>[A-Za-zÄÖÜäöüß]{2,})",
         RegexOptions.Compiled);
 
     /// <summary>Figurinen und Schachzeichen → ASCII-Notation.</summary>

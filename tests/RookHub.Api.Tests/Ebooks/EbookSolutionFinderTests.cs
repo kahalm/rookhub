@@ -27,6 +27,19 @@ public class EbookSolutionFinderTests
     }
 
     [Fact]
+    public void Parse_MoveNumbersWithoutDot_DvoretskyStyle()
+    {
+        const string fen = "3k4/8/8/3K4/3P4/8/8/8 w - - 0 1";
+        var w = EbookSolutionFinder.TryParse(fen, false, "With White to move, there is no win after 25 moves: 1 Kc5 Kc7; or 1 Ke5 Ke7.", 3);
+        Assert.NotNull(w);
+        Assert.Equal('w', w!.Side);
+        Assert.Equal("Kc5 Kc7", string.Join(' ', w.San));
+        var b = EbookSolutionFinder.TryParse("3k4/8/8/3K4/3P4/8/8/8 b - - 0 1", true, "Black to move loses: 1…Kc7 2 Ke6; or 1...Ke7 2 Kc6.", 3);
+        Assert.NotNull(b);
+        Assert.Equal("Kc7 Ke6", string.Join(' ', b!.San));
+    }
+
+    [Fact]
     public void Parse_DoubtedFirstMoveIsSkipped_AndOnlyTheSameMoveNumberCounts()
     {
         const string fen = "4k3/8/8/8/8/8/4P3/R3K3 w - - 0 1";

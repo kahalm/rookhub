@@ -186,6 +186,8 @@ ohne PDF die EPUB-Datei und ruft `EbookEpubDiagramExtractor`:
 - **Leser**: `EpubViewerComponent` markiert erkannte Bilder im Kapitel (`rendition.hooks.content`; epub.js ersetzt die
   Adressen durch blob:-URLs → Rückübersetzung über `book.resources`, zur Not über den Dateinamen); Doppelklick/Enter holt die
   Stellung aufs Brett, ‹/› springt kapitelweise zum Bild (`revealImage`, CFI des Elements). Brett-Leiste wie beim PDF.
+- **Zugnummern ohne Punkt** (0.775.1): `EbookSolutionFinder` nimmt auch „1 Kc5 Kc7 2 Ke6“ und „1…Kc7“ — eine nackte Zahl gilt
+  nur, wenn direkt ein vollständiger SAN-Zug folgt. Dvoretsky 3 → 937 Lösungen, Swindler 720 → 754, PDF-Bücher unverändert.
 - Gemessen (Python-Referenz, plausibel erkannt): Swindler 905/906, Kuljasevic 456/459, Srokovski 490/501, Dvoretsky 513/544,
   100 Endgame Studies ~290/321, Perpetual Chess ~85/103; erster Buchzug legal bei Srokovski 96 %. Scans (DJVU, Scan-PDFs) =
   Stufe 2, offen.
