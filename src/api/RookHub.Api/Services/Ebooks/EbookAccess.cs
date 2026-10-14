@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
@@ -30,11 +31,12 @@ public static class EbookAccess
                 (anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon)
                 || db.EbookGroupAccesses.Any(a => a.EbookId == b.Id && everyoneIds.Contains(a.GroupId)));
         }
+        var myGroups = GroupMembership.GroupIdsOf(db, userId);   // auch über enthaltene Gruppen
         return db.Ebooks.Where(b =>
             b.OwnerUserId == userId
             || db.EbookGroupAccesses.Any(a => a.EbookId == b.Id &&
                    (everyoneIds.Contains(a.GroupId)
-                    || db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId))));
+                    || myGroups.Contains(a.GroupId))));
     }
 
     public static Task<bool> CanAccessAsync(AppDbContext db, EbookCaller caller, int ebookId, bool manageAll, CancellationToken ct = default)

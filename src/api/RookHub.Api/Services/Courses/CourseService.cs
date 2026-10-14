@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -350,6 +351,7 @@ public class CourseService
     {
         if (isAdmin) return _db.Books;
         var everyoneIds = _db.Groups.Where(g => g.IsEveryone).Select(g => g.Id);
+        var myGroups = GroupMembership.GroupIdsOf(_db, userId);   // auch über enthaltene Gruppen
         return _db.Books.Where(b => b.OwnerUserId == userId
             || _db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == userId)
             // Verteiler der Kalkulations-Serie: genau dieser Pfad TRÄGT das „privat" der Serie
@@ -363,7 +365,7 @@ public class CourseService
             || (b.IsPublic && _db.CoursePins.Any(p => p.BookId == b.Id && p.UserId == userId))
             || _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
                 (everyoneIds.Contains(a.GroupId) ||
-                 _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId))));
+                 myGroups.Contains(a.GroupId))));
     }
 
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle).</summary>

@@ -192,6 +192,46 @@ describe('AdminComponent', () => {
     expect(adminService.getGroups).toHaveBeenCalled();
   });
 
+  // Gruppe in Gruppe (2026-10-14): enthaltene/umfassende Gruppen aus der Liste, Aufnehmen lädt Mitglieder + Zahlen neu.
+  it('Gruppe in Gruppe: zeigt enthaltene und umfassende Gruppen, bietet nur Aufnehmbare an und nimmt auf', () => {
+    const addGroupInclusion = jasmine.createSpy('addGroupInclusion').and.returnValue(of(null));
+    const { c, adminService } = make({ addGroupInclusion });
+    c.groups = [
+      { id: 1, name: 'Everyone', isEveryone: true, memberCount: 9, includedGroupIds: [] },
+      { id: 2, name: 'Jugend', memberCount: 3, includedGroupIds: [] },
+      { id: 3, name: 'Verein', memberCount: 5, includedGroupIds: [2] },
+      { id: 4, name: 'Tirol', memberCount: 5, includedGroupIds: [3] },
+      { id: 5, name: 'Trainer', memberCount: 1, includedGroupIds: [] },
+    ] as any;
+    c.selectedGroup = c.groups[2];
+
+    expect(c.includedGroups().map(g => g.name)).toEqual(['Jugend']);
+    expect(c.enclosingNames()).toBe('Tirol');
+    expect(c.includableGroups().map(g => g.name)).toEqual(['Tirol', 'Trainer']);   // nicht sich selbst, Everyone, Jugend
+    expect(c.includedNames(c.groups[3])).toBe('Verein');
+
+    c.addInclusion(5);
+    expect(addGroupInclusion).toHaveBeenCalledWith(3, 5);
+    expect(adminService.getGroupMembers).toHaveBeenCalledWith(3);
+    expect(adminService.getGroups).toHaveBeenCalled();
+  });
+
+  it('Gruppe in Gruppe: Entfernen fragt nach und nimmt erst nach Bestätigung heraus', () => {
+    const removeGroupInclusion = jasmine.createSpy('removeGroupInclusion').and.returnValue(of(null));
+    const { c } = make({ removeGroupInclusion });
+    c.selectedGroup = { id: 3, name: 'Verein', memberCount: 5, includedGroupIds: [2] } as any;
+    const jugend = { id: 2, name: 'Jugend', memberCount: 3 } as any;
+
+    confirmStub.answer = false;
+    c.removeInclusion(jugend);
+    expect(confirmStub.ask).toHaveBeenCalledWith('admin.groups.removeIncludeConfirm', { included: 'Jugend', group: 'Verein' });
+    expect(removeGroupInclusion).not.toHaveBeenCalled();
+
+    confirmStub.answer = true;
+    c.removeInclusion(jugend);
+    expect(removeGroupInclusion).toHaveBeenCalledWith(3, 2);
+  });
+
   it('Mitglieder hinzufügen (0.591.0): Liste ohne Mitglieder, neueste zuerst; ein Klick fügt genau dieses Konto hinzu', () => {
     const users = [
       { id: 1, username: 'alt', createdAt: '2026-01-01T00:00:00Z', groups: [] },

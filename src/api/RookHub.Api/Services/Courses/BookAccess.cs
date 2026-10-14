@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -45,13 +46,14 @@ public static class BookAccess
         if (isAdmin) return db.Books;
         if (userId is not int uid) return PubliclyExposed(db);
         var everyoneIds = db.Groups.Where(g => g.IsEveryone).Select(g => g.Id);
+        var myGroups = GroupMembership.GroupIdsOf(db, uid);   // auch über enthaltene Gruppen
         return db.Books.Where(b =>
             b.IsPublic || b.ForDaily || b.ForRandom || b.ForBlind
             || b.OwnerUserId == uid
             || db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == uid)
             || db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
                 (everyoneIds.Contains(a.GroupId) ||
-                 db.UserGroups.Any(ug => ug.UserId == uid && ug.GroupId == a.GroupId))));
+                 myGroups.Contains(a.GroupId))));
     }
 
     /// <summary>Darf der (ggf. anonyme) Aufrufer dieses Buch lesen? <c>false</c> auch für unbekannte Ids.</summary>

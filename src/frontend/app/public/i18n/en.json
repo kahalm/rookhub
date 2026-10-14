@@ -92,6 +92,7 @@
     "role_key_taken": "A role with this key already exists.",
     "role_system_protected": "System roles cannot be deleted.",
     "group_name_taken": "A group with this name already exists.",
+    "group_inclusion_cycle": "A group cannot contain a group it is itself part of.",
     "book_alias_invalid": "Invalid alias: only lowercase letters, digits and hyphens, 2–40 characters, starting with a letter.",
     "book_alias_reserved": "This alias is reserved.",
     "book_alias_taken": "This alias is already taken.",
@@ -2460,7 +2461,8 @@
         "delete": "Delete failed",
         "loadMembers": "Failed to load members",
         "addMember": "Failed to add member",
-        "removeMember": "Failed to remove member"
+        "removeMember": "Failed to remove member",
+        "include": "Changing the included groups failed"
       },
       "goal": {
         "title": "Training goal preset",
@@ -2475,7 +2477,14 @@
       },
       "searchUser": "Name or part of it",
       "noCandidates": "No matching user who is not already a member.",
-      "added": "{{name}} added to the group."
+      "added": "{{name}} added to the group.",
+      "includesShort": "includes: {{names}}",
+      "includesTitle": "Included groups",
+      "includesHint": "All members of these groups also count as members of “{{name}}” — with its roles, shares and clubs.",
+      "includeAdd": "Include group",
+      "includedIn": "This group is itself included in: {{names}}",
+      "via": "Member via {{names}}",
+      "removeIncludeConfirm": "Remove “{{included}}” from “{{group}}”? Its members then no longer count there."
     },
     "daily": {
       "intro": "Regenerate the daily puzzle for a date. The link stays the same — only the puzzle behind it changes. The previously assigned puzzle is retired and will never be drawn again for daily, random or blind puzzles.",

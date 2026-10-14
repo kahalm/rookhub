@@ -3415,6 +3415,36 @@ namespace RookHub.Api.Migrations
                     b.ToTable("Groups");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.GroupClosure", b =>
+                {
+                    b.Property<int>("AncestorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DescendantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AncestorId", "DescendantId");
+
+                    b.HasIndex("DescendantId");
+
+                    b.ToTable("GroupClosures");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.GroupInclusion", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncludedGroupId")
+                        .HasColumnType("int");
+
+                    b.HasKey("GroupId", "IncludedGroupId");
+
+                    b.HasIndex("IncludedGroupId");
+
+                    b.ToTable("GroupInclusions");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.GroupRole", b =>
                 {
                     b.Property<int>("GroupId")
@@ -9243,6 +9273,40 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("SavedGame");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.GroupClosure", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Group", null)
+                        .WithMany()
+                        .HasForeignKey("AncestorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.Group", null)
+                        .WithMany()
+                        .HasForeignKey("DescendantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.GroupInclusion", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.Group", "IncludedGroup")
+                        .WithMany()
+                        .HasForeignKey("IncludedGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("IncludedGroup");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.GroupRole", b =>

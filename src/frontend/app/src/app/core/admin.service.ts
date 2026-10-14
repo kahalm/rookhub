@@ -118,11 +118,17 @@ export interface Group {
   createdAt: string;
   /** System-Gruppe „Everyone": jeder implizit Mitglied; nicht löschbar/mitgliedsänderbar. */
   isEveryone?: boolean;
+  /** Direkt enthaltene Gruppen — deren Mitglieder zählen hier mit (auch in {@link memberCount}). */
+  includedGroupIds?: number[];
 }
 
 export interface GroupMember {
   userId: number;
   username: string;
+  /** Direkt eingetragen (entfernbar); `false` = nur über {@link via} geerbt. */
+  direct?: boolean;
+  /** Enthaltene Gruppen, über die das Konto (auch) dazugehört. */
+  via?: string[];
 }
 
 export interface AdminConfig {
@@ -298,6 +304,15 @@ export class AdminService {
 
   removeGroupMember(groupId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`/api/admin/groups/${groupId}/members/${userId}`);
+  }
+
+  /** Gruppe `includedId` in Gruppe `groupId` aufnehmen: deren Mitglieder gelten dann auch dort. */
+  addGroupInclusion(groupId: number, includedId: number): Observable<void> {
+    return this.http.post<void>(`/api/admin/groups/${groupId}/includes/${includedId}`, {});
+  }
+
+  removeGroupInclusion(groupId: number, includedId: number): Observable<void> {
+    return this.http.delete<void>(`/api/admin/groups/${groupId}/includes/${includedId}`);
   }
 
   // --- Trainingsziel-Vorlage je Gruppe ----------------------------------

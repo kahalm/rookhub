@@ -670,6 +670,64 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  // --- Gruppe in Gruppe ---------------------------------------------------
+  /** Die direkt in der gewählten Gruppe enthaltenen Gruppen. */
+  includedGroups(): Group[] {
+    const ids = new Set(this.selectedGroup?.includedGroupIds ?? []);
+    return this.groups.filter(g => ids.has(g.id));
+  }
+
+  /** Namen der direkt enthaltenen Gruppen einer Zeile (Tabelle). */
+  includedNames(g: Group): string {
+    const ids = new Set(g.includedGroupIds ?? []);
+    return this.groups.filter(o => ids.has(o.id)).map(o => o.name).join(', ');
+  }
+
+  enclosingNames(): string {
+    return this.enclosingGroups().map(g => g.name).join(', ');
+  }
+
+  /** Gruppen, die die gewählte Gruppe direkt enthalten. */
+  enclosingGroups(): Group[] {
+    const id = this.selectedGroup?.id;
+    return this.groups.filter(g => id != null && (g.includedGroupIds ?? []).includes(id));
+  }
+
+  /** Aufnehmbare Gruppen: nicht sie selbst, nicht „Everyone", nicht schon enthalten (Kreise lehnt der Server ab). */
+  includableGroups(): Group[] {
+    const g = this.selectedGroup;
+    if (!g) return [];
+    const ids = new Set(g.includedGroupIds ?? []);
+    return this.groups.filter(o => o.id !== g.id && !o.isEveryone && !ids.has(o.id));
+  }
+
+  addInclusion(includedId: number | null): void {
+    if (!this.selectedGroup || includedId == null) return;
+    const groupId = this.selectedGroup.id;
+    this.adminService.addGroupInclusion(groupId, includedId).subscribe({
+      next: () => {
+        if (this.selectedGroup?.id === groupId) this.loadMembers(groupId);
+        this.loadGroups();
+      },
+      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.include')),
+    });
+  }
+
+  removeInclusion(included: Group): void {
+    if (!this.selectedGroup) return;
+    const group = this.selectedGroup;
+    this.confirm.ask('admin.groups.removeIncludeConfirm', { included: included.name, group: group.name }).subscribe(ok => {
+      if (!ok) return;
+      this.adminService.removeGroupInclusion(group.id, included.id).subscribe({
+        next: () => {
+          if (this.selectedGroup?.id === group.id) this.loadMembers(group.id);
+          this.loadGroups();
+        },
+        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.include')),
+      });
+    });
+  }
+
   /** Mitglied aus der Gruppe nehmen — erst nach Rückfrage (F5-016): das ✕ am Chip liegt klein neben dem Namen. */
   removeMember(member: GroupMember): void {
     if (!this.selectedGroup) return;

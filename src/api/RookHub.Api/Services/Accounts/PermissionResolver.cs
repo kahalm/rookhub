@@ -6,7 +6,7 @@ namespace RookHub.Api.Services.Accounts;
 
 /// <summary>
 /// Die EFFEKTIVEN Rechte eines Kontos, live aus der Datenbank: seine eigenen Rollen (<c>UserRoles</c>) plus die Rollen
-/// seiner Gruppen (<c>GroupRoles</c> über <c>UserGroups</c>), dazu das Admin-Flag (0.589.0). Vorher standen die Rechte
+/// seiner Gruppen (<c>GroupRoles</c> über <see cref="GroupMembership"/>, auch geerbte), dazu das Admin-Flag (0.589.0). Vorher standen die Rechte
 /// nur als <c>perm</c>-Claims im Token — eine neue Rolle wirkte erst nach dem nächsten Anmelden (Token bis 30 Tage
 /// gültig). Wunsch des Nutzers: „das ist doch scheiße — sollte immer wieder neue Infos holen".
 ///
@@ -44,7 +44,7 @@ public sealed class PermissionResolver(AppDbContext db, IMemoryCache cache)
     public static async Task<Effective> LoadAsync(AppDbContext db, int userId, CancellationToken ct = default)
     {
         var isAdmin = await db.AppUsers.Where(u => u.Id == userId && u.DeletedAt == null).Select(u => u.IsAdmin).FirstOrDefaultAsync(ct);
-        var groupIds = await db.UserGroups.Where(ug => ug.UserId == userId).Select(ug => ug.GroupId).ToListAsync(ct);
+        var groupIds = (await GroupMembership.GroupIdsOfAsync(db, userId, ct)).ToList();
         var roleIds = await db.UserRoles.Where(ur => ur.UserId == userId).Select(ur => ur.RoleId).ToListAsync(ct);
         if (groupIds.Count > 0)
             roleIds.AddRange(await db.GroupRoles.Where(gr => groupIds.Contains(gr.GroupId)).Select(gr => gr.RoleId).ToListAsync(ct));
@@ -67,7 +67,12 @@ public sealed class PermissionResolver(AppDbContext db, IMemoryCache cache)
             holders.UnionWith(await db.UserRoles.Where(ur => roleIds.Contains(ur.RoleId)).Select(ur => ur.UserId).ToListAsync(ct));
             var groupIds = await db.GroupRoles.Where(gr => roleIds.Contains(gr.RoleId)).Select(gr => gr.GroupId).Distinct().ToListAsync(ct);
             if (groupIds.Count > 0)
-                holders.UnionWith(await db.UserGroups.Where(ug => groupIds.Contains(ug.GroupId)).Select(ug => ug.UserId).ToListAsync(ct));
+                {
+                // Auch Konten aus Gruppen, die in einer dieser Gruppen stecken.
+                var withIncluded = groupIds.Concat(await db.GroupClosures.Where(c => groupIds.Contains(c.AncestorId))
+                    .Select(c => c.DescendantId).ToListAsync(ct)).Distinct().ToList();
+                holders.UnionWith(await db.UserGroups.Where(ug => withIncluded.Contains(ug.GroupId)).Select(ug => ug.UserId).ToListAsync(ct));
+            }
         }
         var candidates = holders.ToList();
         return await db.AppUsers.Where(u => u.DeletedAt == null && (u.IsAdmin || candidates.Contains(u.Id)))

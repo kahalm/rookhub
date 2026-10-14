@@ -44,6 +44,8 @@ public static class ApiErrorCodes
     public const string RoleKeyTaken = "role_key_taken";
     public const string RoleSystemProtected = "role_system_protected";
     public const string GroupNameTaken = "group_name_taken";
+    /// <summary>Gruppe-in-Gruppe würde einen Kreis schließen (A in B in A).</summary>
+    public const string GroupInclusionCycle = "group_inclusion_cycle";
 
     public const string BookAliasInvalid = "book_alias_invalid";
     public const string BookAliasReserved = "book_alias_reserved";

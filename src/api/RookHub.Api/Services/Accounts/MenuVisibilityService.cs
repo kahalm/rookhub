@@ -68,7 +68,7 @@ public class MenuVisibilityService
         var config = await GetConfigAsync();
 
         var userGroupIds = userId is int uid
-            ? (await _db.UserGroups.Where(ug => ug.UserId == uid).Select(ug => ug.GroupId).ToListAsync()).ToHashSet()
+            ? await GroupMembership.GroupIdsOfAsync(_db, uid)
             : new HashSet<int>();
         // Jeder eingeloggte Nutzer ist implizit Mitglied der System-Gruppe „Everyone".
         if (userId != null)

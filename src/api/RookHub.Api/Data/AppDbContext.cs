@@ -105,6 +105,8 @@ public partial class AppDbContext : DbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<GroupRole> GroupRoles => Set<GroupRole>();
+    public DbSet<GroupInclusion> GroupInclusions => Set<GroupInclusion>();
+    public DbSet<GroupClosure> GroupClosures => Set<GroupClosure>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();

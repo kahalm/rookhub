@@ -92,6 +92,7 @@
     "role_key_taken": "Eine Rolle mit diesem Key existiert bereits.",
     "role_system_protected": "System-Rollen können nicht gelöscht werden.",
     "group_name_taken": "Eine Gruppe mit diesem Namen existiert bereits.",
+    "group_inclusion_cycle": "Eine Gruppe kann keine Gruppe enthalten, in der sie selbst steckt.",
     "book_alias_invalid": "Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.",
     "book_alias_reserved": "Dieser Alias ist reserviert.",
     "book_alias_taken": "Dieser Alias ist bereits vergeben.",
@@ -2460,7 +2461,8 @@
         "delete": "Löschen fehlgeschlagen",
         "loadMembers": "Mitglieder konnten nicht geladen werden",
         "addMember": "Hinzufügen fehlgeschlagen",
-        "removeMember": "Entfernen fehlgeschlagen"
+        "removeMember": "Entfernen fehlgeschlagen",
+        "include": "Enthaltene Gruppen konnten nicht geändert werden"
       },
       "goal": {
         "title": "Trainingsziel-Vorlage",
@@ -2475,7 +2477,14 @@
       },
       "searchUser": "Name oder ein Teil davon",
       "noCandidates": "Kein passender Nutzer, der nicht schon Mitglied ist.",
-      "added": "{{name}} zur Gruppe hinzugefügt."
+      "added": "{{name}} zur Gruppe hinzugefügt.",
+      "includesShort": "enthält: {{names}}",
+      "includesTitle": "Enthaltene Gruppen",
+      "includesHint": "Alle Mitglieder dieser Gruppen gelten auch als Mitglieder von „{{name}}“ — mit deren Rollen, Freigaben und Vereinen.",
+      "includeAdd": "Gruppe aufnehmen",
+      "includedIn": "Diese Gruppe steckt selbst in: {{names}}",
+      "via": "Mitglied über {{names}}",
+      "removeIncludeConfirm": "„{{included}}“ aus „{{group}}“ entfernen? Ihre Mitglieder zählen dort dann nicht mehr."
     },
     "daily": {
       "intro": "Tagespuzzle für ein Datum neu generieren. Der Link bleibt gleich — nur das dahinterliegende Puzzle wechselt. Das bisher zugeordnete Puzzle wird ausgemustert und nie wieder als Tages-, Zufalls- oder Blindpuzzle gezogen.",

@@ -1394,6 +1394,48 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(other.Id, await club.ClubOfGameAsync(otherGame.Id));
     }
 
+    /// <summary>Gruppe in Gruppe (2026-10-14): die effektive Mitgliedschaft ist eine UNION aus <c>UserGroups</c> und dem Join über
+    /// <c>GroupClosures</c>, eingesetzt als <c>IN (…)</c>-Unterabfrage in Kurs-, Buch-, E-Book- und Vereins-Abfragen — nur gegen SQL
+    /// prüfbar. Jugend ⊂ Verein ⊂ Tirol; das Konto steht nur in Jugend.</summary>
+    [MySqlFact]
+    public async Task GruppeInGruppe_EffektiveMitgliedschaft_uebersetztSichNachMariaDb()
+    {
+        var kid = await SeedUserAsync("kid");
+        Db.Groups.AddRange(new Group { Id = 601, Name = "Jugend", CreatedAt = DateTime.UtcNow },
+            new Group { Id = 602, Name = "Verein", CreatedAt = DateTime.UtcNow },
+            new Group { Id = 603, Name = "Tirol", CreatedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+        Db.UserGroups.Add(new UserGroup { UserId = kid, GroupId = 601 });
+        Db.GroupInclusions.AddRange(new GroupInclusion { GroupId = 602, IncludedGroupId = 601 },
+            new GroupInclusion { GroupId = 603, IncludedGroupId = 602 });
+        await Db.SaveChangesAsync();
+        await RookHub.Api.Services.Accounts.GroupMembership.RebuildClosureAsync(Db);
+
+        Assert.Equal(new HashSet<int> { 601, 602, 603 }, await RookHub.Api.Services.Accounts.GroupMembership.GroupIdsOfAsync(Db, kid));
+        Assert.Equal(1, await RookHub.Api.Services.Accounts.GroupMembership.CountAsync(Db, 603));
+        Assert.True(await RookHub.Api.Services.Accounts.GroupMembership.WouldCycleAsync(Db, 601, 603));
+
+        var club = await ClubAsync();
+        Db.LeagueClubMembers.Add(new LeagueClubMember { ClubId = club.Id, GroupId = 603 });
+        var book = new Book { FileName = "tirol.pgn", DisplayName = "Tirol", Source = new BookSource() };
+        Db.Books.Add(book);
+        await Db.SaveChangesAsync();
+        Db.BookGroupAccesses.Add(new BookGroupAccess { BookId = book.Id, GroupId = 602 });
+        await Db.SaveChangesAsync();
+
+        Assert.Equal(new HashSet<int> { club.Id }, await RookHub.Api.Services.League.LeagueClubResolver.ClubIdsOfAsync(Db, kid));
+        Assert.True(await CourseAccess.CanAccessAsync(Db, kid, book.Id, false));
+        Assert.True(await BookAccess.ReadableBy(Db, kid, false).AnyAsync(b => b.Id == book.Id));
+        var role = new Role { Key = "tirol-it", Name = "Tirol" };
+        Db.Roles.Add(role);
+        await Db.SaveChangesAsync();
+        Db.RolePermissions.Add(new RolePermission { RoleId = role.Id, Permission = Permissions.LeagueView });
+        Db.GroupRoles.Add(new GroupRole { GroupId = 603, RoleId = role.Id });
+        await Db.SaveChangesAsync();
+        Assert.True((await RookHub.Api.Services.Accounts.PermissionResolver.LoadAsync(Db, kid)).Has(Permissions.LeagueView));
+        Assert.Contains(kid, await RookHub.Api.Services.Accounts.PermissionResolver.UserIdsWithPermissionAsync(Db, Permissions.LeagueView));
+    }
+
     /// <summary>Ligapaarung einer Vereinspartie (0.678.0): Vorschläge über einen Join samt Left-Join auf den Rundentermin und
     /// eine IN-Liste der FIDE-IDs, die feste Zuordnung über eine IN-Liste der Brettpartien — beides nur gegen SQL prüfbar.</summary>
     [MySqlFact]

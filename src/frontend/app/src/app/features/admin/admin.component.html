@@ -434,6 +434,9 @@
                         <mat-chip class="everyone-chip" disabled>{{ 'admin.groups.everyoneBadge' | translate }}</mat-chip>
                       }
                       @if (g.description) { <div class="group-desc">{{ g.description }}</div> }
+                      @if (g.includedGroupIds?.length) {
+                        <div class="group-desc">{{ 'admin.groups.includesShort' | translate: { names: includedNames(g) } }}</div>
+                      }
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="memberCount">
@@ -499,14 +502,43 @@
                       } @else {
                         <mat-chip-set>
                           @for (m of groupMembers; track m.userId) {
-                            <mat-chip (removed)="removeMember(m)">
+                            <mat-chip (removed)="removeMember(m)" [class.inherited-member]="m.direct === false"
+                                      [attr.title]="m.via?.length ? ('admin.groups.via' | translate: { names: m.via!.join(', ') }) : null">
                               {{ m.username }}
-                              @if (!selectedGroup.isEveryone) {
+                              @if (m.via?.length) { <span class="member-via">· {{ m.via!.join(', ') }}</span> }
+                              @if (!selectedGroup.isEveryone && m.direct !== false) {
                                 <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
                               }
                             </mat-chip>
                           }
                         </mat-chip-set>
+                      }
+
+                      @if (!selectedGroup.isEveryone) {
+                        <!-- Gruppe in Gruppe (2026-10-14): Mitglieder enthaltener Gruppen gehören hier mit dazu -->
+                        <h4 class="include-title">{{ 'admin.groups.includesTitle' | translate }}</h4>
+                        <p class="group-desc">{{ 'admin.groups.includesHint' | translate: { name: selectedGroup.name } }}</p>
+                        <mat-chip-set>
+                          @for (inc of includedGroups(); track inc.id) {
+                            <mat-chip (removed)="removeInclusion(inc)">
+                              {{ inc.name }}
+                              <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
+                            </mat-chip>
+                          }
+                        </mat-chip-set>
+                        @if (includableGroups().length) {
+                          <mat-form-field appearance="outline" class="include-select" subscriptSizing="dynamic">
+                            <mat-label>{{ 'admin.groups.includeAdd' | translate }}</mat-label>
+                            <mat-select [value]="null" (selectionChange)="addInclusion($event.value); $event.source.writeValue(null)">
+                              @for (o of includableGroups(); track o.id) {
+                                <mat-option [value]="o.id">{{ o.name }}</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                        }
+                        @if (enclosingGroups().length) {
+                          <p class="group-desc">{{ 'admin.groups.includedIn' | translate: { names: enclosingNames() } }}</p>
+                        }
                       }
                     </mat-card-content>
                   </mat-card>

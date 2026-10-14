@@ -14,6 +14,7 @@
     "role_key_taken": "Már létezik szerepkör ezzel a kulccsal.",
     "role_system_protected": "A rendszerszerepkörök nem törölhetők.",
     "group_name_taken": "Már létezik csoport ezzel a névvel.",
+    "group_inclusion_cycle": "Egy csoport nem tartalmazhat olyan csoportot, amelynek maga is része.",
     "book_alias_invalid": "Érvénytelen alias: csak kisbetűk, számjegyek és kötőjelek, 2–40 karakter, betűvel kezdődik.",
     "book_alias_reserved": "Ez az alias fenntartott.",
     "book_alias_taken": "Ez az alias már foglalt.",
@@ -2024,7 +2025,8 @@
         "delete": "Sikertelen törlés",
         "loadMembers": "Nem sikerült betölteni a tagokat",
         "addMember": "Nem sikerült hozzáadni a tagot",
-        "removeMember": "Nem sikerült eltávolítani a tagot"
+        "removeMember": "Nem sikerült eltávolítani a tagot",
+        "include": "A tartalmazott csoportok módosítása nem sikerült"
       },
       "goal": {
         "title": "Edzéscél-sablon",
@@ -2041,7 +2043,14 @@
       "everyoneHint": "Minden felhasználó automatikusan tagja ennek a csoportnak. A tagság nem szerkeszthető. Ossz meg egy könyvet/tanfolyamot ezzel a csoporttal, hogy mindenki számára látható legyen.",
       "searchUser": "Név vagy annak egy része",
       "noCandidates": "Nincs olyan találat, aki még nem tag.",
-      "added": "{{name}} hozzáadva a csoporthoz."
+      "added": "{{name}} hozzáadva a csoporthoz.",
+      "includesShort": "tartalmazza: {{names}}",
+      "includesTitle": "Tartalmazott csoportok",
+      "includesHint": "Ezeknek a csoportoknak minden tagja „{{name}}” tagjának is számít — annak szerepköreivel, megosztásaival és klubjaival.",
+      "includeAdd": "Csoport felvétele",
+      "includedIn": "Ez a csoport maga is benne van: {{names}}",
+      "via": "Tag ezen keresztül: {{names}}",
+      "removeIncludeConfirm": "Eltávolítod „{{included}}” csoportot innen: „{{group}}”? A tagjai ott többé nem számítanak."
     },
     "daily": {
       "intro": "Regenerate the daily puzzle for a date. The link stays the same — only the puzzle behind it changes. The previously assigned puzzle is retired and will never be drawn again for daily, random or blind puzzles.",

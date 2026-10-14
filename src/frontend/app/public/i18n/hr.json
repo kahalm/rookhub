@@ -92,6 +92,7 @@
     "role_key_taken": "Uloga s tim ključem već postoji.",
     "role_system_protected": "Sustavske uloge ne mogu se izbrisati.",
     "group_name_taken": "Grupa s tim imenom već postoji.",
+    "group_inclusion_cycle": "Grupa ne može sadržavati grupu u kojoj se i sama nalazi.",
     "book_alias_invalid": "Neispravan alias: samo mala slova, znamenke i crtice, 2–40 znakova, na početku slovo.",
     "book_alias_reserved": "Ovaj alias je rezerviran.",
     "book_alias_taken": "Ovaj alias je već zauzet.",
@@ -2460,7 +2461,8 @@
         "delete": "Brisanje nije uspjelo",
         "loadMembers": "Učitavanje članova nije uspjelo",
         "addMember": "Dodavanje nije uspjelo",
-        "removeMember": "Uklanjanje nije uspjelo"
+        "removeMember": "Uklanjanje nije uspjelo",
+        "include": "Promjena uključenih grupa nije uspjela"
       },
       "goal": {
         "title": "Predložak trening cilja",
@@ -2475,7 +2477,14 @@
       },
       "searchUser": "Ime ili dio imena",
       "noCandidates": "Nema odgovarajućeg korisnika koji već nije član.",
-      "added": "{{name}} dodan u grupu."
+      "added": "{{name}} dodan u grupu.",
+      "includesShort": "sadrži: {{names}}",
+      "includesTitle": "Uključene grupe",
+      "includesHint": "Svi članovi ovih grupa ujedno su članovi grupe „{{name}}“ — s njezinim ulogama, dijeljenjima i klubovima.",
+      "includeAdd": "Uključi grupu",
+      "includedIn": "Ova je grupa i sama uključena u: {{names}}",
+      "via": "Član preko {{names}}",
+      "removeIncludeConfirm": "Ukloniti „{{included}}“ iz „{{group}}“? Njezini članovi tamo se više neće računati."
     },
     "daily": {
       "intro": "Ponovno generiraj dnevnu zagonetku za odabrani datum. Poveznica ostaje ista — mijenja se samo zagonetka iza nje. Dosad dodijeljena zagonetka se umirovljuje i više se nikada neće izvući kao dnevna, nasumična ili slijepa zagonetka.",

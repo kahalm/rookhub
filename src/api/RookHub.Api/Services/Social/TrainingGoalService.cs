@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
@@ -69,8 +70,9 @@ public class TrainingGoalService
         if (personal != null)
             return Map(personal.DailyMinutes, personal.PlayGames, personal.WeeklyDaysTarget, "personal", null);
 
+        var mine = GroupMembership.GroupIdsOf(_db, userId);
         var tmpl = await _db.GroupTrainingGoals.AsNoTracking()
-            .Where(g => _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == g.GroupId))
+            .Where(g => mine.Contains(g.GroupId))
             .OrderByDescending(g => g.UpdatedAt)
             .Select(g => new { g.DailyMinutes, g.PlayGames, g.WeeklyDaysTarget, GroupName = g.Group!.Name })
             .FirstOrDefaultAsync();

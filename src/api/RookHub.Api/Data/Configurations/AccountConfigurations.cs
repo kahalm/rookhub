@@ -89,6 +89,28 @@ internal sealed class GroupRoleConfiguration : IEntityTypeConfiguration<GroupRol
     }
 }
 
+internal sealed class GroupInclusionConfiguration : IEntityTypeConfiguration<GroupInclusion>
+{
+    public void Configure(EntityTypeBuilder<GroupInclusion> e)
+    {
+        e.HasKey(gi => new { gi.GroupId, gi.IncludedGroupId });
+        e.HasOne(gi => gi.Group).WithMany().HasForeignKey(gi => gi.GroupId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(gi => gi.IncludedGroup).WithMany().HasForeignKey(gi => gi.IncludedGroupId).OnDelete(DeleteBehavior.Cascade);
+        e.HasIndex(gi => gi.IncludedGroupId);
+    }
+}
+
+internal sealed class GroupClosureConfiguration : IEntityTypeConfiguration<GroupClosure>
+{
+    public void Configure(EntityTypeBuilder<GroupClosure> e)
+    {
+        e.HasKey(c => new { c.AncestorId, c.DescendantId });
+        e.HasOne<Group>().WithMany().HasForeignKey(c => c.AncestorId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne<Group>().WithMany().HasForeignKey(c => c.DescendantId).OnDelete(DeleteBehavior.Cascade);
+        e.HasIndex(c => c.DescendantId);
+    }
+}
+
 internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermission>
 {
     public void Configure(EntityTypeBuilder<RolePermission> e)

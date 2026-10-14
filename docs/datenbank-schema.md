@@ -46,6 +46,8 @@
 | DailyPuzzles | Persistierte Tagespuzzle-Zuordnung je UTC-Datum | Date (PK, DATE), BookPuzzleId (Restrict), CreatedAt; vom `DailyPuzzleScheduler` (00:00 UTC) gesetzt oder on-demand bei `/daily/{date}` (nur heute/gestern); Admin-Regenerate ändert nur `BookPuzzleId` (Datum bleibt) |
 | Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
 | UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |
+| GroupInclusions | Gruppe in Gruppe: Mitglieder von IncludedGroupId zählen in GroupId mit (2026-10-14) | PK (GroupId, IncludedGroupId), Cascade von beiden Groups, Index IncludedGroupId |
+| GroupClosures | Transitive Hülle von GroupInclusions (ohne Selbst-Zeilen), nur von `GroupMembership.RebuildClosureAsync` geschrieben | PK (AncestorId, DescendantId), Cascade von beiden Groups, Index DescendantId |
 | EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Themes, FasttrackThreshold1/2, StockfishDepth, Highscore, ActiveGameState (LONGTEXT) |
 | EndlessSessions | Abgeschlossene Endless Sessions | UserId (nullable), AnonymousSessionId, Timestamp, TotalSolved, MaxRating, DurationSeconds, ConfigJson (TEXT), MistakeAtRatings |
 | CourseLineResets | Kapitel-Reset je Linie und User (0.672.3): Versuche davor zählen im Kurs nicht mehr, das Zeit-Log `CourseAttempts` bleibt | UserId (Cascade) + BookId (Cascade) + BookPuzzleId (**Restrict**, abgeräumt über `BookPuzzleDependents`), ResetAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId). Der buchweite Reset löscht die Zeilen des Buchs |

@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -78,7 +79,7 @@ public class CatalogService
     /// <summary>Besitzer, die dem Viewer (direkt oder über eine seiner Gruppen) Katalog-Zugriff geben.</summary>
     private async Task<List<int>> GrantingOwnerIdsAsync(int viewerId)
     {
-        var myGroups = await _db.UserGroups.Where(ug => ug.UserId == viewerId).Select(ug => ug.GroupId).ToListAsync();
+        var myGroups = (await GroupMembership.GroupIdsOfAsync(_db, viewerId)).ToList();
         return await _db.CatalogGrants
             .Where(g => g.SubjectUserId == viewerId || (g.SubjectGroupId != null && myGroups.Contains(g.SubjectGroupId.Value)))
             .Select(g => g.OwnerUserId)

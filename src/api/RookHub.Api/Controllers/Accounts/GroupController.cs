@@ -38,11 +38,23 @@ public class GroupController : BaseApiController
                 Id = g.Id,
                 Name = g.Name,
                 Description = g.Description,
-                MemberCount = g.Members.Count,
                 CreatedAt = g.CreatedAt,
                 IsEveryone = g.IsEveryone,
             })
             .ToListAsync();
+        // Mitglieder zählen MIT den geerbten aus enthaltenen Gruppen (jedes Konto einmal) — die Tabellen sind klein.
+        var rows = await _db.UserGroups.AsNoTracking().Select(ug => new { ug.GroupId, ug.UserId }).ToListAsync();
+        var closure = await _db.GroupClosures.AsNoTracking().ToListAsync();
+        var links = await _db.GroupInclusions.AsNoTracking().ToListAsync();
+        var usersOf = rows.GroupBy(r => r.GroupId).ToDictionary(g => g.Key, g => g.Select(r => r.UserId).ToList());
+        foreach (var g in groups)
+        {
+            var ids = new HashSet<int>(usersOf.GetValueOrDefault(g.Id) ?? []);
+            foreach (var c in closure.Where(c => c.AncestorId == g.Id))
+                ids.UnionWith(usersOf.GetValueOrDefault(c.DescendantId) ?? []);
+            g.MemberCount = ids.Count;
+            g.IncludedGroupIds = links.Where(l => l.GroupId == g.Id).Select(l => l.IncludedGroupId).OrderBy(i => i).ToList();
+        }
         // „Everyone" hat keine expliziten Mitgliedszeilen — jeder ist implizit Mitglied.
         if (groups.Any(g => g.IsEveryone))
         {
@@ -94,8 +106,10 @@ public class GroupController : BaseApiController
         if (dto.Description != null) group.Description = dto.Description;
         await _db.SaveChangesAsync();
 
-        var count = await _db.UserGroups.CountAsync(ug => ug.GroupId == id);
-        return Ok(new GroupDto { Id = group.Id, Name = group.Name, Description = group.Description, MemberCount = count, CreatedAt = group.CreatedAt });
+        var count = await GroupMembership.CountAsync(_db, id);
+        var included = await _db.GroupInclusions.Where(l => l.GroupId == id).Select(l => l.IncludedGroupId).OrderBy(i => i).ToListAsync();
+        return Ok(new GroupDto { Id = group.Id, Name = group.Name, Description = group.Description, MemberCount = count,
+            CreatedAt = group.CreatedAt, IncludedGroupIds = included });
     }
 
     [HttpDelete("{id}")]
@@ -111,9 +125,10 @@ public class GroupController : BaseApiController
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.GroupId == id));
         _db.GroupTrainingGoals.RemoveRange(_db.GroupTrainingGoals.Where(g => g.GroupId == id));
         _db.GroupRoles.RemoveRange(_db.GroupRoles.Where(gr => gr.GroupId == id));
+        _db.GroupInclusions.RemoveRange(_db.GroupInclusions.Where(l => l.GroupId == id || l.IncludedGroupId == id));
         _db.Groups.Remove(group);
         await _db.SaveChangesAsync();
-        PermissionResolver.InvalidateAll();
+        await GroupMembership.RebuildClosureAsync(_db);   // invalidiert auch die Rechte
         return NoContent();
     }
 
@@ -132,12 +147,24 @@ public class GroupController : BaseApiController
                 .ToListAsync();
             return Ok(all);
         }
-        var members = await _db.UserGroups
+        var direct = await _db.UserGroups
             .Where(ug => ug.GroupId == id)
             .Select(ug => new GroupMemberDto { UserId = ug.UserId, Username = ug.User!.Username })
-            .OrderBy(m => m.Username)
             .ToListAsync();
-        return Ok(members);
+        // Geerbte: Mitglieder aller (auch mittelbar) enthaltenen Gruppen, mit den Gruppennamen, über die sie kommen.
+        var inherited = await (from c in _db.GroupClosures
+                               where c.AncestorId == id
+                               join ug in _db.UserGroups on c.DescendantId equals ug.GroupId
+                               select new { ug.UserId, ug.User!.Username, Via = ug.Group!.Name }).ToListAsync();
+        var byId = direct.ToDictionary(m => m.UserId);
+        foreach (var row in inherited)
+        {
+            if (!byId.TryGetValue(row.UserId, out var m))
+                byId[row.UserId] = m = new GroupMemberDto { UserId = row.UserId, Username = row.Username, Direct = false };
+            if (!m.Via.Contains(row.Via)) m.Via.Add(row.Via);
+        }
+        foreach (var m in byId.Values) m.Via.Sort(StringComparer.OrdinalIgnoreCase);
+        return Ok(byId.Values.OrderBy(m => m.Username).ToList());
     }
 
     [HttpPost("{id}/members/{userId}")]
@@ -170,6 +197,39 @@ public class GroupController : BaseApiController
         _db.UserGroups.Remove(membership);
         await _db.SaveChangesAsync();
         PermissionResolver.InvalidateAll();       // … und fallen sofort weg
+        return NoContent();
+    }
+
+    /// <summary>Gruppe <paramref name="includedId"/> in Gruppe <paramref name="id"/> aufnehmen: alle ihre Mitglieder gelten
+    /// dann auch hier (Rollen, Freigaben, Vereine …). Idempotent; 400 bei „Everyone" oder einem Kreis.</summary>
+    [HttpPost("{id}/includes/{includedId}")]
+    public async Task<IActionResult> AddInclusion(int id, int includedId)
+    {
+        var both = await _db.Groups.Where(g => g.Id == id || g.Id == includedId).ToListAsync();
+        if (both.All(g => g.Id != id) || both.All(g => g.Id != includedId))
+            return NotFound(new { message = "Group not found." });
+        if (both.Any(g => g.IsEveryone))
+            return BadRequest(new { message = "The Everyone group cannot contain or be contained in other groups." });
+        if (await GroupMembership.WouldCycleAsync(_db, id, includedId))
+            return BadRequest(new { message = "This would make the groups contain each other.", code = ApiErrorCodes.GroupInclusionCycle });
+        if (!await _db.GroupInclusions.AnyAsync(l => l.GroupId == id && l.IncludedGroupId == includedId))
+        {
+            _db.GroupInclusions.Add(new GroupInclusion { GroupId = id, IncludedGroupId = includedId });
+            await _db.SaveChangesAsync();
+            await GroupMembership.RebuildClosureAsync(_db);
+        }
+        return NoContent();
+    }
+
+    [HttpDelete("{id}/includes/{includedId}")]
+    public async Task<IActionResult> RemoveInclusion(int id, int includedId)
+    {
+        var link = await _db.GroupInclusions.FirstOrDefaultAsync(l => l.GroupId == id && l.IncludedGroupId == includedId);
+        if (link == null)
+            return NotFound(new { message = "Inclusion not found." });
+        _db.GroupInclusions.Remove(link);
+        await _db.SaveChangesAsync();
+        await GroupMembership.RebuildClosureAsync(_db);
         return NoContent();
     }
 

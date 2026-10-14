@@ -57,6 +57,11 @@
     .member-panel { flex: 1; min-width: 300px; }
     .member-add { margin-bottom: 12px; }
     .member-search { width: 100%; max-width: 420px; }
+    /* Gruppe in Gruppe (2026-10-14): geerbte Mitglieder ohne ✕ und gedämpft, darunter die enthaltenen Gruppen. */
+    .inherited-member { opacity: 0.7; }
+    .member-via { font-size: 0.75rem; margin-left: 4px; opacity: 0.8; }
+    .include-title { margin: 16px 0 2px; font-size: 0.95rem; font-weight: 500; }
+    .include-select { width: 100%; max-width: 320px; margin-top: 8px; }
     /* Kandidaten zum Hinzufügen (0.591.0): eine Zeile je Konto, der Knopf rechts — am Handy darunter. */
     .member-candidates { list-style: none; margin: 4px 0 0; padding: 0; max-height: 320px; overflow-y: auto;
       border: 1px solid var(--mat-sys-outline-variant, rgba(127, 127, 127, .3)); border-radius: 8px; }

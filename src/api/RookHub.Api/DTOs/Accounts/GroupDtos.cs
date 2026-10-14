@@ -7,8 +7,11 @@ public class GroupDto
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    /// <summary>Konten der Gruppe — direkte UND über enthaltene Gruppen geerbte, jedes einmal.</summary>
     public int MemberCount { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>Direkt enthaltene Gruppen: deren Mitglieder zählen hier mit (2026-10-14).</summary>
+    public List<int> IncludedGroupIds { get; set; } = new();
     /// <summary>System-Gruppe „Everyone" (jeder implizit Mitglied; nicht löschbar/mitgliedsänderbar).</summary>
     public bool IsEveryone { get; set; }
 }
@@ -33,4 +36,8 @@ public class GroupMemberDto
 {
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
+    /// <summary>Direkt eingetragen (entfernbar). <c>false</c> = nur über <see cref="Via"/> geerbt.</summary>
+    public bool Direct { get; set; } = true;
+    /// <summary>Die enthaltenen Gruppen, über die das Konto (auch) dazugehört.</summary>
+    public List<string> Via { get; set; } = new();
 }

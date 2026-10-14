@@ -88,11 +88,11 @@ public sealed class LeagueClubResolver(AppDbContext db, PermissionResolver? perm
     }
 
     /// <summary>Die Vereins-Ids der Gruppen eines Kontos (ohne Admin-Sonderrecht) als Abfrage.</summary>
-    private static IQueryable<int> GroupClubIdsQuery(AppDbContext db, int userId) =>
-        from ug in db.UserGroups
-        join m in db.LeagueClubMembers on ug.GroupId equals m.GroupId
-        where ug.UserId == userId
-        select m.ClubId;
+    private static IQueryable<int> GroupClubIdsQuery(AppDbContext db, int userId)
+    {
+        var mine = GroupMembership.GroupIdsOf(db, userId);   // auch über enthaltene Gruppen
+        return db.LeagueClubMembers.Where(m => mine.Contains(m.GroupId)).Select(m => m.ClubId);
+    }
 
     /// <summary>Die Vereine eines Kontos ohne Dienst-Instanz (RookHubs „Meine Partien": eine Kopie wird nur mit Vereinspartien
     /// DEINER Vereine verbunden) — Admin: alle.</summary>

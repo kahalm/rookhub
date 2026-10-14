@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Ebooks;
@@ -340,9 +341,10 @@ public class EbookService
     /// <summary>Gruppen, die der Aufrufer freigeben darf: Verwalter alle, sonst die eigenen plus „Everyone".</summary>
     public async Task<List<EbookGroupOptionDto>> GroupOptionsAsync(int userId, bool manageAll, CancellationToken ct = default)
     {
+        var myGroups = GroupMembership.GroupIdsOf(_db, userId);
         var groups = manageAll
             ? _db.Groups
-            : _db.Groups.Where(g => g.IsEveryone || _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == g.Id));
+            : _db.Groups.Where(g => g.IsEveryone || myGroups.Contains(g.Id));
         var list = await groups.OrderBy(g => g.Name).ToListAsync(ct);
         return list.OrderByDescending(g => g.IsEveryone).ThenBy(g => g.Name)
             .Select(g => new EbookGroupOptionDto { Id = g.Id, Name = g.Name, IsEveryone = g.IsEveryone }).ToList();
@@ -370,7 +372,8 @@ public class EbookService
         var wanted = requested.Distinct().ToList();
         if (wanted.Count == 0) return [];
         var q = _db.Groups.Where(g => wanted.Contains(g.Id));
-        if (!manageAll) q = q.Where(g => g.IsEveryone || _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == g.Id));
+        var myGroups = GroupMembership.GroupIdsOf(_db, userId);
+        if (!manageAll) q = q.Where(g => g.IsEveryone || myGroups.Contains(g.Id));
         return await q.Select(g => g.Id).ToListAsync(ct);
     }
 

@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
@@ -32,6 +33,7 @@ public static class CourseAccess
         // nie einen Grund, sie nacheinander zu fragen — und die Prüfung hängt an jedem
         // Kurs-Endpunkt (allein CourseService ruft sie an 17 Stellen). Vorbild: BookAccess.ReadableBy.
         var everyoneIds = db.Groups.Where(g => g.IsEveryone).Select(g => g.Id);
+        var myGroups = GroupMembership.GroupIdsOf(db, userId);   // auch über enthaltene Gruppen
         return db.Books.AnyAsync(b => b.Id == bookId && (
             // Öffentlicher Kurs: für JEDEN (auch eingeloggt ohne Gruppen-Freigabe) über den
             // Direkt-Link nutzbar — der eingeloggte Nutzer bekommt dabei serverseitigen Fortschritt.
@@ -48,7 +50,7 @@ public static class CourseAccess
             // Über eine Gruppe freigegeben — „Everyone" eingeschlossen.
             || db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
                    (everyoneIds.Contains(a.GroupId)
-                    || db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)))
+                    || myGroups.Contains(a.GroupId)))
         ), ct);
     }
 
