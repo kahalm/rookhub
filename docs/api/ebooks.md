@@ -273,3 +273,7 @@ im Backend `EbookCaller` (ein `int` wird implizit zum angemeldeten Aufrufer):
 **Blättern per Tastatur** (0.779.1): Der Leser hört dokumentweit auf ←/→/Bild↑/Bild↓ (PDF: Seite; ↑/↓: 80 px) bzw. im EPUB
 auf Seiten — auch wenn der Fokus im Brett liegt. Ausgenommen: Eingabefelder, Menüs (`.cdk-overlay-container`), der
 Seiten-Scrollkasten des PDF und der EPUB-Leser selbst (bekommen die Taste ohnehin), der Trenner, bereits verarbeitete Tasten.
+
+**Mausrad im EPUB** (0.780.1): `EpubViewerComponent.onWheel` blättert seitenweise (Host und — per `rendition.hooks.content` —
+im Kapitel-iframe, dessen Ereignisse den Host nicht erreichen). Raddrehung wird gesammelt (≥ 40 px = eine Seite: Chrome-Raste
+100 px, Firefox 3 Zeilen ≈ 48 px), danach 350 ms Pause gegen Doppelblättern bei Touchpads.

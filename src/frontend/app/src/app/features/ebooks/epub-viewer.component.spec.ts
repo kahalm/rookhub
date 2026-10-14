@@ -36,6 +36,23 @@ describe('EpubViewerComponent', () => {
     return { open: jasmine.createSpy('open').and.callFake(open), destroy: jasmine.createSpy('destroy') };
   }
 
+  it('Mausrad blättert seitenweise — kleine Schritte sammeln, dann kurze Pause gegen Doppelblättern', () => {
+    const c = make(null);
+    const next = spyOn(c, 'next');
+    const prev = spyOn(c, 'prev');
+    let now = 10_000;
+    spyOn(Date, 'now').and.callFake(() => now);
+    const wheel = (dy: number, mode = 0) => c.onWheel(new WheelEvent('wheel', { deltaY: dy, deltaMode: mode }));
+    wheel(15); wheel(15);
+    expect(next).not.toHaveBeenCalled();          // 30 px (Touchpad): noch kein Umblättern
+    wheel(20);
+    expect(next).toHaveBeenCalledTimes(1);        // 50 px
+    now += 100; wheel(200);
+    expect(next).toHaveBeenCalledTimes(1);        // Pause läuft noch
+    now += 400; wheel(-3, 1);                     // 3 Zeilen hoch (Firefox)
+    expect(prev).toHaveBeenCalledTimes(1);
+  });
+
   it('öffnet als Ordner (absolute Basis, ohne Ersetzungen) und lädt das Archiv NICHT', async () => {
     const c = make('/api/ebooks/9/epub/tok/');
     const book = fakeBook(() => Promise.resolve());

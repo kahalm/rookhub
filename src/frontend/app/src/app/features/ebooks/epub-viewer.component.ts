@@ -111,6 +111,9 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       this.rendition = rendition;
       rendition.themes.default({ body: { 'line-height': '1.5' }, img: { 'max-width': '100%' } });
       rendition.hooks.content.register(c => this.markImages(c));
+      // Mausrad im Kapitel (iframe): Ereignisse von dort erreichen den Host nicht (0.780.1).
+      rendition.hooks.content.register((c: { document?: Document }) => c.document?.addEventListener('wheel',
+        (ev: WheelEvent) => this.zone.run(() => this.onWheel(ev)), { passive: true }));
       rendition.on('relocated', (loc: unknown) => {
         const l = loc as { start?: { cfi?: string; percentage?: number; index?: number } };
         if (typeof l.start?.index === 'number') this.chapter.set(l.start.index + 1);
@@ -235,6 +238,29 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   onKey(e: KeyboardEvent): void {
     if (e.key === 'ArrowRight' || e.key === 'PageDown') this.next();
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') this.prev();
+  }
+
+  /** Gesammelte Raddrehung seit dem letzten Umblättern und dessen Zeitpunkt (Touchpads liefern viele kleine Schritte). */
+  private wheelAcc = 0;
+  private lastWheelTurn = 0;
+  static readonly WHEEL_STEP = 40;   // eine Raste: Chrome 100 px, Firefox 3 Zeilen ≈ 48 px
+  static readonly WHEEL_PAUSE_MS = 350;
+
+  /** Mausrad blättert seitenweise (0.780.1): das Buch ist paginiert, Scrollen gäbe es sonst nicht. Runter/rechts = weiter. */
+  @HostListener('wheel', ['$event'])
+  onWheel(e: WheelEvent): void {
+    const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (!d) return;
+    const now = Date.now();
+    if (now - this.lastWheelTurn < EpubViewerComponent.WHEEL_PAUSE_MS) { this.wheelAcc = 0; return; }
+    // Zeilen-/Seitenmodus (Firefox) in Pixel umrechnen.
+    const px = e.deltaMode === 1 ? d * 16 : e.deltaMode === 2 ? d * 400 : d;
+    if (Math.sign(px) !== Math.sign(this.wheelAcc)) this.wheelAcc = 0;
+    this.wheelAcc += px;
+    if (Math.abs(this.wheelAcc) < EpubViewerComponent.WHEEL_STEP) return;
+    if (this.wheelAcc > 0) this.next(); else this.prev();
+    this.wheelAcc = 0;
+    this.lastWheelTurn = now;
   }
 
   @HostListener('touchstart', ['$event'])

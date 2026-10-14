@@ -12,6 +12,7 @@ import { EbookReaderComponent } from './ebook-reader.component';
 import { EbookBoardComponent } from './ebook-board.component';
 import { Ebook, EbookService } from './ebook.service';
 import { PdfEngineLoader } from './pdf-engine';
+import { EpubViewerComponent } from './epub-viewer.component';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
   id: 9, title: 'Buch', author: 'Autor', year: null, tags: [], description: null, targetMinElo: null, source: 'upload',
@@ -198,6 +199,8 @@ describe('EbookReaderComponent', () => {
   });
 
   it('EPUB ohne PDF öffnet den EPUB-Leser und speichert Prozent + CFI', fakeAsync(async () => {
+    // epub.js lädt im Ordner-Modus per XHR (0.780.0) — in fakeAsync verboten; das Öffnen selbst prüft epub-viewer.spec.
+    spyOn(EpubViewerComponent.prototype, 'ngAfterViewInit').and.resolveTo();
     const fixture = await make(book({ primaryFormat: 'epub', files: [{ id: 2, format: 'epub', fileName: 'b.epub', sizeBytes: 5 }],
       progress: { page: 40, pageCount: 100, locator: 'epubcfi(/6/4!/4/2)', updatedAt: '' } }));
     const c = fixture.componentInstance;
