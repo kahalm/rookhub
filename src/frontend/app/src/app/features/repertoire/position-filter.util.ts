@@ -37,11 +37,28 @@ export function findPositionInGames(games: ParsedGame[], fen: string): PositionF
   return { gameIndices, plyByGame };
 }
 
-/** SAN-Folge mit Zugnummern („1. e4 e5 2. Nf3 …") — das Filterbrett startet aus der Grundstellung. */
-export function formatSansWithNumbers(sans: string[]): string {
+/**
+ * Gemeinsame Ausgangsstellung aller Linien (b1-rk-repertoire-filterbrett-fen-start): ein Endspiel-Repertoire startet
+ * ab einer FEN — das Filterbrett muss dort stehen, sonst trifft es nie eine Linie. Ohne Linien `fallback`;
+ * starten die Linien aus verschiedenen Stellungen, `null` (dann gibt es keinen gemeinsamen Filter).
+ */
+export function commonStartFen(startFens: readonly string[], fallback: string): string | null {
+  if (!startFens.length) return fallback;
+  const first = normalizeFen(startFens[0]);
+  return startFens.every(f => normalizeFen(f) === first) ? startFens[0] : null;
+}
+
+/** SAN-Folge mit Zugnummern („1. e4 e5 2. Nf3 …"); ab einer FEN mit deren Zugnummer, Schwarz am Zug „1… Kd8". */
+export function formatSansWithNumbers(sans: string[], startFen?: string): string {
+  const f = (startFen ?? '').split(' ');
+  const blackFirst = f[1] === 'b';
+  const firstNo = Math.max(1, parseInt(f[5] ?? '', 10) || 1);
   const parts: string[] = [];
   sans.forEach((san, i) => {
-    if (i % 2 === 0) parts.push(`${i / 2 + 1}.`);
+    const ply = i + (blackFirst ? 1 : 0);          // 0 = Weiß am Zug im ersten Zug
+    const no = firstNo + Math.floor(ply / 2);
+    if (ply % 2 === 0) parts.push(`${no}.`);
+    else if (i === 0) parts.push(`${no}…`);
     parts.push(san);
   });
   return parts.join(' ');

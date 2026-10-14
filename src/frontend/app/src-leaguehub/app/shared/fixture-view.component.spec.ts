@@ -231,6 +231,9 @@ describe('FixtureViewComponent', () => {
     // Partien im Bestand in Klammer hinter dem Namen (0.649.0); ohne Partien nichts
     expect(first.querySelector('.name .g')?.textContent?.trim()).toBe('(12)');
     expect(boards[0].querySelectorAll('.name .g').length).toBe(1);
+    // b1-l-partienzahl-format: mit Tausenderpunkt wie „3.115 Partien“ am Handy
+    expect(fixture.componentInstance.thousands(3115)).toBe('3.115');
+    expect(first.querySelector('.name .g')?.getAttribute('title')).toBe('12 Partien im Bestand');
   });
 
   it('0.730.0: Spieler ohne FIDE-ID öffnen die Karte über ihren n-Schlüssel (Meldeliste und Kandidat)', async () => {

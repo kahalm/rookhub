@@ -231,6 +231,11 @@ describe('ClubGamesPageComponent', () => {
     api.deleteGame.and.resolveTo({});
     (el.querySelectorAll('tbody tr.game')[1].querySelector('.more-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
+    // b1-l-zeilenmenue-material: Menü im LeagueHub-Stil, „Löschen“ zuletzt und als Gefahr markiert
+    expect(document.querySelector('.mat-mdc-menu-panel.lh-menu')).not.toBeNull();
+    const items = Array.from(document.querySelectorAll('.lh-menu .mat-mdc-menu-item'));
+    expect(items[items.length - 1].classList).toContain('delete-item');
+    expect(items[items.length - 1].textContent?.trim()).toBe('Löschen');
     (Array.from(document.querySelectorAll('.mat-mdc-menu-item')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();

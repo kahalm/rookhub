@@ -97,8 +97,9 @@ describe('club-format: waitClock (a1-l-formular-wartezeit)', () => {
     expect(waitClock(7)).toBe('0:07');
     expect(waitClock(62 * 60 + 5)).toBe('1:02:05');
     expect(waitClock(23 * 3600 + 59 * 60 + 59)).toBe('23:59:59');
-    expect(waitClock(42 * 3600 + 18 * 60)).toBe('seit 1 Tag 18 Std.');
-    expect(waitClock(48 * 3600)).toBe('seit 2 Tagen');
+    // b1-l-formular-wartezeit-umbruch: geschützte Leerzeichen zwischen Zahl und Einheit, nur vor der Stundenangabe ein Umbruch
+    expect(waitClock(42 * 3600 + 18 * 60)).toBe('seit\u00A01\u00A0Tag 18\u00A0Std.');
+    expect(waitClock(48 * 3600)).toBe('seit\u00A02\u00A0Tagen');
     expect(waitClock(-3)).toBe('0:00');
   });
 });

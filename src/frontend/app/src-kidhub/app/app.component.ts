@@ -141,9 +141,13 @@ export function isHomeUrl(url: string): boolean {
        (hoechstens 1240 px statt 820), --kid-row, Kopfzeile und Koordinaten wachsen mit. Startseite und Karten nehmen
        dort die breite Spalte (--kid-wide-max, siehe KID_HOME_WIDTH/KID_MAP_WIDTH). Steht VOR KID_SHORT/KID_STACKED,
        damit ein flaches oder hochkant gestelltes breites Fenster weiter deren Aufbau bekommt. */
+    /* b1-k-ultrawide-seitenspalte: die Spalte daneben wächst mit (--kid-side 480 statt 400 px, Schrift größer über
+       KID_SIDE_WIDE), Kopf und Fuß bekommen 200 px statt 170 — bei 3440×1440 rutschte die Fußzeile 22 px unter die Falz. */
     @media (min-width: 2400px) {
       :host {
-        --kid-board: max(min(calc(var(--kid-vh) * 100 - 170px), calc(100vw - 500px), 1240px), 300px);
+        --kid-board: max(min(calc(var(--kid-vh) * 100 - 200px), calc(100vw - 600px), 1240px), 300px);
+        --kid-side: 480px;
+        --kid-row: calc(var(--kid-board) + 508px);
         --kid-wide-max: 1880px;
       }
     }

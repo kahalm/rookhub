@@ -273,6 +273,14 @@ interface HistoryRow {
        Zeilenlaenge. Zusammen mit der Brett-Spalte fuellt das den Container, statt rechts ein
        leeres Drittel zu lassen (auf dem Desktop gemeldet, 2026-09-10). */
     .side-col { flex: 1 1 320px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
+    /* b1-rk-guess-brett-tablet: zweispaltig erst ab 900 px (DESIGN 5.12) — am Tablet standen Brett (~384 px) und Zugliste
+       nebeneinander, die halbe Seite blieb leer. Einspaltig: Brett mittig bis Fensterhöhe (Platz für Kopf + Knöpfe
+       darunter), Zugliste/Fortschritt in voller Breite darunter. */
+    @media (min-width: 600px) and (max-width: 899.98px) {
+      .body { flex-direction: column; align-items: center; flex-wrap: nowrap; }
+      .board-col { flex: none; width: min(100%, max(320px, calc(100vh - 300px))); max-width: none; }
+      .side-col { flex: none; width: 100%; max-width: none; }
+    }
     .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     /* UI-Sweep 2026-10-11 (r2-rg-guess-start): Hinweis + Hauptknopf zur Aufgabe direkt unter dem Brett. */
     .browse-actions .to-task { margin-left: auto; }

@@ -138,13 +138,16 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                 }
               </div>
               @if (group.expanded) {
-                @for (line of group.lines; track line.gameIndex; let li = $index) {
+                <!-- b1-rk-repertoire-linien-handy-lang: je Kapitel höchstens LINES_PER_CHAPTER Linien, Rest auf Tipp. -->
+                @for (line of shownLines(group); track line.gameIndex; let li = $index) {
                   <div class="line-item">
-                    <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend). -->
-                    <input type="checkbox" class="line-pick" [checked]="marked.has(line.lineKey)"
-                           (click)="toggleMark(line, $event)"
-                           [matTooltip]="'courses.flashcards.pick' | translate"
-                           [attr.aria-label]="'courses.flashcards.pick' | translate" />
+                    <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend).
+                         b1-rk-linienliste-auswahl-klein: 44-px-Trefferfläche um das Kästchen (vorher ~13 px am Rand). -->
+                    <label class="line-pick-hit" [matTooltip]="'courses.flashcards.pick' | translate" (click)="$event.stopPropagation()">
+                      <input type="checkbox" class="line-pick" [checked]="marked.has(line.lineKey)"
+                             (click)="toggleMark(line, $event)"
+                             [attr.aria-label]="'courses.flashcards.pick' | translate" />
+                    </label>
                     <div class="line-main" role="button" tabindex="0"
                          (click)="lineSelected.emit(line.gameIndex)"
                          (keydown.enter)="lineSelected.emit(line.gameIndex)"
@@ -186,6 +189,11 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                     }
                   </div>
                 }
+                @if (hiddenCount(group) > 0) {
+                  <button mat-button type="button" class="show-more" (click)="showAll(group.chapter)">
+                    {{ (hiddenCount(group) === 1 ? 'repertoire.lines.showMoreOne' : 'repertoire.lines.showMore') | translate: { count: hiddenCount(group) } }}
+                  </button>
+                }
               }
             </div>
           }
@@ -194,7 +202,11 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     }
   `,
   styles: [`
-    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary); flex: 0 0 auto; }
+    /* b1-rk-linienliste-auswahl-klein: Tippziel 44 px (DESIGN 1.5), Kästchen 18 px mittig darin. */
+    .line-pick-hit { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+      min-width: 44px; min-height: 44px; cursor: pointer; }
+    .line-pick { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--mat-sys-primary); }
+    .show-more { display: block; margin: 4px auto 8px; }
     :host { display: block; height: 100%; }
     .lines-list { overflow-y: auto; height: 100%; }
     .course-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px;
@@ -224,8 +236,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .menu-label { padding: 6px 16px 2px; font-size: 11px; font-weight: 700; text-transform: uppercase;
       letter-spacing: .04em; opacity: .6; }
     .line-item { display: flex; align-items: center; border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
-    /* Titel direkt neben der Checkbox (8 px) — der frühere 32-px-Einzug ließ am Handy eine Lücke. */
-    .line-main { flex: 1; padding: 10px 8px 10px 6px; cursor: pointer; transition: background 0.15s; min-width: 0; }
+    /* Titel direkt neben der Checkbox — der frühere 32-px-Einzug ließ am Handy eine Lücke; die 44-px-Trefferfläche
+       des Kästchens bringt den Abstand schon mit. */
+    .line-main { flex: 1; padding: 10px 8px 10px 0; cursor: pointer; transition: background 0.15s; min-width: 0; }
     .line-main:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .line-menu-btn { flex: 0 0 auto; margin: 4px 2px 0 0; }
     .line-players { font-weight: 500; font-size: 14px; overflow-wrap: anywhere; }
@@ -259,9 +272,16 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   // `lines` liegt hinter einem Signal, damit das `chapterGroups`-computed darauf reagiert (die
   // Linien werden async nachgeladen; ein plain @Input() würde das computed nicht invalidieren).
   private linesSig = signal<RepertoireLine[]>([]);
-  @Input() set lines(v: RepertoireLine[]) { this.linesSig.set(v ?? []); }
+  @Input() set lines(v: RepertoireLine[]) {
+    this.linesSig.set(v ?? []);
+    this.initCollapsed();
+  }
   get lines(): RepertoireLine[] { return this.linesSig(); }
   @Input() selectedIndex = -1;
+  /** Stellungsfilter aktiv: dann alle Treffer offen, ohne Kapitel-Zuklappen und ohne „Weitere …“. */
+  private filteredSig = signal(false);
+  @Input() set filtered(v: boolean) { this.filteredSig.set(!!v); }
+  get filtered(): boolean { return this.filteredSig(); }
 
   /** PERSISTENT als Flashcard markierte Linien (Linien-Schlüssel, Server-Zustand). */
   marked = new MarkSet<string>();
@@ -305,6 +325,10 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   busy = false;
   private states = signal<Map<string, LineStateDto>>(new Map());
   private collapsed = signal<Set<string>>(new Set());
+  /** Startzustand der Kapitel schon gesetzt (einmal je Komponente, beim ersten vollen Linienstand). */
+  private collapsedInit = false;
+  /** Kapitel, in denen der Nutzer „Weitere … anzeigen“ getippt hat. */
+  private showAllIn = signal<Set<string>>(new Set());
   /** Manuelle Trainingsfarb-Overrides je Kapitel (localStorage, pro Gerät). */
   private colorOverrides = signal<Record<string, TrainColor>>({});
 
@@ -345,9 +369,40 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
 
   readonly chapterGroups = computed<ChapterGroup[]>(() => {
     const collapsed = this.collapsed();
+    const filtered = this.filteredSig();
     return groupByChapter(this.lines, line => line.chapter || '')
-      .map(g => ({ chapter: g.key, lines: g.lines, expanded: !collapsed.has(g.key) }));
+      .map(g => ({ chapter: g.key, lines: g.lines, expanded: filtered || !collapsed.has(g.key) }));
   });
+
+  /**
+   * b1-rk-repertoire-linien-handy-lang (DESIGN 4.6 Regel 11): ein großes Repertoire lief seit der Liste ohne eigenen
+   * Scrollkasten am Handy über ≈ 14 Bildschirme. Ab COLLAPSE_FROM Linien in mehreren Kapiteln startet nur das erste
+   * Kapitel offen (der Zähler im Kopf zeigt die Menge); einmalig — danach gilt, was der Nutzer auf-/zuklappt.
+   */
+  private initCollapsed(): void {
+    if (this.collapsedInit || this.filteredSig() || !this.lines.length) return;
+    this.collapsedInit = true;
+    if (this.lines.length <= RepertoireLinesComponent.COLLAPSE_FROM) return;
+    const keys = groupByChapter(this.lines, line => line.chapter || '').map(g => g.key);
+    if (keys.length > 1) this.collapsed.set(new Set(keys.slice(1)));
+  }
+
+  static readonly COLLAPSE_FROM = 20;
+  static readonly LINES_PER_CHAPTER = 15;
+
+  /** Sichtbare Linien eines Kapitels: höchstens LINES_PER_CHAPTER, außer bei Filter oder nach „Weitere …“. */
+  shownLines(group: ChapterGroup): RepertoireLine[] {
+    if (this.filteredSig() || this.showAllIn().has(group.chapter)) return group.lines;
+    return group.lines.slice(0, RepertoireLinesComponent.LINES_PER_CHAPTER);
+  }
+
+  hiddenCount(group: ChapterGroup): number {
+    return group.lines.length - this.shownLines(group).length;
+  }
+
+  showAll(chapter: string): void {
+    this.showAllIn.set(new Set(this.showAllIn()).add(chapter));
+  }
 
   toggleChapter(chapter: string): void {
     const next = new Set(this.collapsed());

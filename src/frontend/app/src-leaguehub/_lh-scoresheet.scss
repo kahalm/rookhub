@@ -98,6 +98,11 @@
 .option .muted { flex-basis: 100%; }
 .moves { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) minmax(0, 1fr); gap: 2px 4px;
   max-height: 52vh; overflow-y: auto; position: relative; }
+/* b1-l-korrigieren-zugliste-kasten: einspaltig läuft die Zugliste mit der Seite — kein Kasten im Kasten mit halb abgeschnittener
+   Zeile. Steht HINTER der Grundregel (gleiche Spezifität). revealCursor rollt nur echte Rollbereiche, nie die Seite. */
+@container (max-width: 720px) {
+  .moves { max-height: none; overflow-y: visible; }
+}
 .moves .no { text-align: right; padding-right: 4px; color: var(--muted); align-self: center; font-size: 14px; }
 .ply { font: 500 16px/1.2 var(--body); text-align: left; padding: 4px 6px; border-radius: 4px; cursor: pointer;
   border: 1px solid transparent; background: transparent; color: inherit; }

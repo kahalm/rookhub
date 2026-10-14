@@ -10,6 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
+import { IsoDateFieldComponent } from '../../../shared/date-field/iso-date-field.component';
 import { AdminService, DailyPuzzleInfo } from '../../../core/admin.service';
 import { apiErrorText } from '../../../core/api-error';
 
@@ -23,7 +24,7 @@ import { apiErrorText } from '../../../core/api-error';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent,
+    MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent, IsoDateFieldComponent,
   ],
   templateUrl: './admin-daily-puzzle.component.html',
   styleUrl: './admin-daily-puzzle.component.scss',

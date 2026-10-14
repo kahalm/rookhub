@@ -26,11 +26,19 @@
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-puzzle-btn { margin-top: 0.25rem; }
-    /* Kennzahlen brechen in der schmalen Seitenspalte um (3 + 2) statt über den Kartenrand zu ragen; Abstand zum
-       Kartentitel (a1-rk-puzzle-statistik-tablet-ueberlauf, DESIGN 4.4). */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 0.5rem; row-gap: 0.75rem; margin-top: 8px; text-align: center; }
+    /* Kennzahlen brechen in der schmalen Seitenspalte um statt über den Kartenrand zu ragen; Abstand zum Kartentitel
+       (a1-rk-puzzle-statistik-tablet-ueberlauf, DESIGN 4.4). b1-rk-puzzle-kennzahlen-raster: Breite nach Inhalt statt
+       fester 64-px-Mindestspalte — fünf Kennzahlen brauchen ≈ 260 px und stehen am Handy und in der 396-px-Spalte
+       (1 920 px) in EINER Zeile, ohne „Genauigk…“; erst eine Karte unter 330 px bekommt drei Spalten (3 + 2) statt 4 + 1. */
+    .stats-card { container-type: inline-size; }
+    .stats-grid { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem 0.5rem; margin-top: 8px; text-align: center; }
+    .stat { flex: 1 0 auto; min-width: 0; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
-    .stat-label { display: block; font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-label { display: block; font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; }
+    @container (max-width: 329.98px) {
+      .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .stat-label { overflow: hidden; text-overflow: ellipsis; }
+    }
     .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     .filter-field { flex: 1; }
     .viz-radios { margin-bottom: 0.75rem; }
@@ -98,17 +106,30 @@
     .board-hint-tip mat-icon { font-size: 18px; width: 18px; height: 18px; color: #c8881f; }
     .hint-list { margin: 0.5rem 0 0; padding-left: 1.3rem; text-align: left; max-width: 32rem; }
     .hint-list li { margin: 0.15rem 0; }
+    /* b1-rk-puzzle-tipptext-unter-falz: ab 900 px (zweispaltig) steht der Tipp-Text in der Seitenspalte unter der
+       Status-Karte — unter dem Brett rutschte er bei 768 px Fensterhöhe unter die Falz. */
+    .hint-list--side { display: none; margin: 0; }
+    @media (min-width: 900px) {
+      .hint-list--board { display: none; }
+      .hint-list--side { display: block; }
+    }
+    /* b1-rk-puzzle-dumme-tipps-knopf: leiser Knopf über --mat-sys-on-surface-variant und durchgezogenen Rahmen in
+       --mat-sys-outline (≥ 3:1), nie über Deckkraft — gedimmt (≈ 45 %) wirkte er gesperrt (hell ≈ 3,5:1, DESIGN 5.12/7). */
     .board-hint-flag {
       display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.7rem; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+      padding: 0.2rem 0.7rem; border: 1px solid var(--mat-sys-outline);
       border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer;
-      font-size: 0.9em; user-select: none; touch-action: manipulation; color: inherit; opacity: 0.75;
+      font-size: 0.9em; user-select: none; touch-action: manipulation; color: var(--mat-sys-on-surface-variant);
     }
-    .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
+    .board-hint-flag:disabled { cursor: progress; }
     .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    @media (max-width: 599.98px) {
+      .board-hint-flag { padding: 0.2rem 0.45rem; }
+      .board-hint-flag-label { display: none; }
+    }
     .board-hint-flag.flagged {
-      border-style: solid; border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
-      background: color-mix(in srgb, var(--rh-error) 12%, transparent); opacity: 1;
+      border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
+      background: color-mix(in srgb, var(--rh-error) 12%, transparent); color: var(--mat-sys-on-surface);
     }
     .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
     .bottom-actions { display: flex; flex-direction: column; gap: 0.5rem; }

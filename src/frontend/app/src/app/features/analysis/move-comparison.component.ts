@@ -40,27 +40,32 @@ const POLL_MS = 3_000;
   imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, SanPipe],
   template: `
     <div class="cmp-page">
+      <!-- b1-rk-zuege-vergleichen-zwei-knoepfe: „Zum Analysebrett" ist ein Rücklink über dem Titel (Textknopf), nicht ein
+           zweiter gleicher Knopf neben „Im Analysebrett öffnen" — so bleibt im Kopf genau eine Aktion. -->
+      <a mat-button routerLink="/analysis" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.back' | translate }}</a>
       <div class="header">
         <h1>{{ 'moveCompare.page.title' | translate }}</h1>
-        <span class="head-actions">
-          @if (data(); as d) {
+        @if (data(); as d) {
+          <span class="head-actions">
             <a mat-stroked-button routerLink="/analysis" [queryParams]="{ fen: boardFen() }">
               <mat-icon>science</mat-icon> {{ 'moveCompare.page.openInBoard' | translate }}
             </a>
-          }
-          <a mat-stroked-button routerLink="/analysis"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.back' | translate }}</a>
-        </span>
+          </span>
+        }
       </div>
 
       @if (notFound()) {
         <mat-card><mat-card-content><p>{{ 'moveCompare.page.notFound' | translate }}</p></mat-card-content></mat-card>
       } @else if (data(); as d) {
-        <div class="status" [class.failed]="d.status === 'failed'">
-          <span>{{ ('moveCompare.page.status.' + d.status) | translate:{ error: d.error ?? '' } }}</span>
-          @if (running()) {
-            <span class="muted">· {{ 'moveCompare.page.progress' | translate:{ pending: d.pending, total: d.total } }}</span>
-          }
-        </div>
+        <!-- Statuszeile nur, solange sie etwas sagt — fertig steht allein „Fertig." über dem Brett (b1). -->
+        @if (d.status !== 'done') {
+          <div class="status" [class.failed]="d.status === 'failed'">
+            <span>{{ ('moveCompare.page.status.' + d.status) | translate:{ error: d.error ?? '' } }}</span>
+            @if (running()) {
+              <span class="muted">· {{ 'moveCompare.page.progress' | translate:{ pending: d.pending, total: d.total } }}</span>
+            }
+          </div>
+        }
         @if (running()) { <mat-progress-bar mode="indeterminate" /> }
 
         <div class="body">
@@ -191,6 +196,7 @@ const POLL_MS = 3_000;
     .cmp-page { padding: 1rem; max-width: min(var(--page-max-width, 1240px), 96vw); margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .header h1 { margin: 0; }
+    .back-link { margin-bottom: 4px; }
     .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .status { margin: .5rem 0; display: flex; gap: 6px; flex-wrap: wrap; }
     .status.failed { color: var(--rh-error); }
@@ -226,6 +232,11 @@ const POLL_MS = 3_000;
     .hist-row { display: flex; align-items: center; gap: 10px; font-size: .88rem; }
     .hist-row.current a { font-weight: 600; }
     @media (max-width: 768px) { .body { grid-template-columns: 1fr; } .board-col { max-width: 420px; } }
+    /* b1-rk-analyse-unterseiten-brett-1920: ab 1200 px wächst das Brett bis 620 px, höchstens bis zur Fensterhöhe
+       (vorher 376 px bei 1920 × 1080, die halbe Höhe leer). Seite bleibt in --page-max-width. */
+    @media (min-width: 1200px) {
+      .body { grid-template-columns: minmax(260px, min(620px, calc(100vh - 260px))) 1fr; }
+    }
     /* a1-rk-analyse-unterseiten-ultrawide: Breitbild-Stufe (DESIGN 4.1) — ab 2400 px 1 880-px-Spalte, das Brett wächst
        bis 900 px, höchstens bis zur Fensterhöhe. Darunter unverändert. */
     @media (min-width: 2400px) {

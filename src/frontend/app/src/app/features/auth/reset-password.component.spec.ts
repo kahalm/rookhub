@@ -157,6 +157,8 @@ describe('ResetPasswordComponent Template (Länge + Fehlerblock, UX-018)', () =>
     expect(box).not.toBeNull();
     expect(box.getAttribute('role')).toBe('alert');
     expect(box.querySelector('a[href="/forgot-password"]')).not.toBeNull();
+    // b1: „Neuen Link anfordern“ nur einmal — nicht zusätzlich in der Linkzeile darunter.
+    expect(fixture.nativeElement.querySelectorAll('a[href="/forgot-password"]').length).toBe(1);
   });
 
   it('bietet beim abgelehnten Passwort keinen neuen Link an', async () => {
@@ -166,5 +168,7 @@ describe('ResetPasswordComponent Template (Länge + Fehlerblock, UX-018)', () =>
     const box: HTMLElement = fixture.nativeElement.querySelector('.form-error');
     expect(box).not.toBeNull();
     expect(box.querySelector('a[href="/forgot-password"]')).toBeNull();
+    // Ohne Angebot im Kasten bleibt der Weg zu einem neuen Link in der Linkzeile.
+    expect(fixture.nativeElement.querySelector('mat-card-actions a[href="/forgot-password"]')).not.toBeNull();
   });
 });

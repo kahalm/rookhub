@@ -122,7 +122,8 @@
     "subscribedAt": "Subskrybowany {{date}}",
     "puzzles": {
       "title": "Zadania",
-      "subtitle": "Elo {{elo}} | {{solved}} rozwiązanych ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} rozwiązanych ({{accuracy}})",
       "solve": "Rozwiązuj zadania",
       "daily": "Zadanie dnia",
       "endless": "Tryb nieskończony"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} plik",
       "public": "Publiczny",
       "private": "Prywatny",
-      "noDescription": "Brak opisu",
       "open": "Otwórz",
       "empty": "Nie masz jeszcze żadnych repertuarów. Utwórz pierwszy!",
       "loadFailed": "Nie udało się załadować repertuarów",
@@ -327,7 +327,6 @@
       "updateFailed": "Nie udało się zaktualizować repertuaru"
     },
     "detail": {
-      "noDescription": "Brak opisu",
       "modeLines": "Linie",
       "modeTree": "Drzewo"
     },

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { CoursePlayComponent, nextUnsolved } from './course-play.component';
 import { KidsApiService, KidsCourseLine } from '../../core/kids-api.service';
@@ -57,6 +57,43 @@ describe('CoursePlayComponent — Ladefehler', () => {
     expect(api.coursePuzzles.calls.mostRecent().args[0]).toBe(7);
     expect(el.querySelector('kid-error')).toBeNull();
     expect(f.componentInstance.current()?.id).toBe(1);
+  });
+});
+
+/** b1-k-kursname-sprachwechsel: Kurstitel und Texte folgen der Sprachpille, die laufende Aufgabe bleibt. */
+describe('CoursePlayComponent — Sprachwechsel', () => {
+  it('holt die Linien in der neuen Sprache, Titel neu, Aufgabe auf dem Brett unverändert', async () => {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const make = (title: string, id: number): KidsCourseLine => ({
+      id, bookTitle: title, fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8', startPly: 0,
+      title: null, chapter: null, comment: null, moveComments: null, altMoves: null,
+    });
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.callFake((_id: number, lang?: string) =>
+      of([make(lang === 'en' ? 'First endgames' : 'Erste Endspiele', 1), make(lang === 'en' ? 'First endgames' : 'Erste Endspiele', 2)]));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '7' })) } },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    await translate.use('de');
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    f.componentInstance.index.set(1);
+    f.detectChanges();
+    const task = f.componentInstance.task();
+    expect(f.componentInstance.title()).toBe('Erste Endspiele');
+
+    await translate.use('en');
+    f.detectChanges();
+    expect(api.coursePuzzles.calls.mostRecent().args).toEqual([7, 'en']);
+    expect(f.componentInstance.title()).toBe('First endgames');
+    expect(f.componentInstance.index()).withContext('dieselbe Aufgabe').toBe(1);
+    expect(f.componentInstance.task()).withContext('Brett beginnt nicht neu').toBe(task);
   });
 });
 
@@ -230,5 +267,58 @@ describe('CoursePlayComponent — Kopf am Handy', () => {
     expect(cs.borderTopLeftRadius).withContext('Pille').toBe('999px');
     expect(cs.boxShadow).withContext('kein Knopf-Schatten').toBe('none');
     expect(el.querySelector('.chapter')!.classList).toContain('with-title');
+  });
+});
+
+/** b1-k-kurstitel-handy-gekuerzt: am Handy (en) ließ „← Courses" vom Titel nur „First endga…". */
+describe('CoursePlayComponent — Kurstitel am Handy', () => {
+  it('Zurück-Pille nur „←" (44 px, Text für Vorleser), der Titel steht ganz da — lange Titel auf zwei Zeilen', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe — der Viewport lässt sich nicht verstellen');
+    localStorage.removeItem('rh-kids-progress-v1');
+    const mk = (title: string): KidsCourseLine => ({
+      id: 1, bookTitle: title, fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8', startPly: 0,
+      title: null, chapter: null, comment: null, moveComments: null, altMoves: null,
+    });
+    const lines = new BehaviorSubject<KidsCourseLine[]>([mk('First endgames')]);
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.callFake(() => of(lines.value));
+    const prev = frame!.style.width;
+    frame!.style.width = '390px';
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    try {
+      TestBed.configureTestingModule({
+        imports: [CoursePlayComponent],
+        providers: [
+          provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+          { provide: KidsApiService, useValue: api },
+          { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '7' })) } },
+        ],
+      });
+      TestBed.inject(TranslateService).setTranslation('en', { kids: { courses: { title: 'Courses', progress: '{{done}} of {{total}} done' } } });
+      await TestBed.inject(TranslateService).use('en');
+      const f = TestBed.createComponent(CoursePlayComponent);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      const back = el.querySelector<HTMLElement>('.head .back')!;
+      expect(back.textContent!.replace(/\s+/g, ' ').trim()).withContext('Vorleser hören „← Courses"').toBe('← Courses');
+      expect(back.querySelector('.back-label')!.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+      expect(back.getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
+      expect(back.getBoundingClientRect().width).toBeLessThan(60);
+      const h1 = el.querySelector<HTMLElement>('.head h1')!;
+      expect(h1.scrollWidth).withContext('„First endgames" nicht gekürzt').toBeLessThanOrEqual(h1.clientWidth);
+      const lineH = parseFloat(getComputedStyle(h1).lineHeight);
+      expect(h1.getBoundingClientRect().height).toBeLessThan(lineH * 1.5);
+
+      lines.next([mk('Endspiele mit Turm und Bauer gegen Turm — die wichtigsten Stellungen für Einsteiger')]);
+      f.componentInstance.load(7);
+      f.detectChanges();
+      const h1Long = el.querySelector<HTMLElement>('.head h1')!;
+      expect(h1Long.textContent).toContain('Endspiele mit Turm');
+      expect(h1Long.getBoundingClientRect().height).withContext('umgebrochen').toBeGreaterThan(lineH * 1.5);
+      expect(h1Long.getBoundingClientRect().height).withContext('höchstens zwei Zeilen').toBeLessThanOrEqual(lineH * 2 + 1);
+    } finally {
+      frame!.style.width = prev;
+    }
   });
 });

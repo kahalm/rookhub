@@ -47,8 +47,10 @@
 .back-btn { width: 100%; margin-bottom: 8px; }
 .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
 .controls { display: flex; align-items: center; gap: 2px; }
-.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.header h1 { margin: 0 0 8px; }
+/* b1-w-analyse-verlauf-klebt: den Abstand zum Brett trägt der Kopf selbst — am h1 wirkte er bei zentrierter Ausrichtung
+   nur halb, und ohne Vollbild-Knopf (Safari/iOS) klebte „Verlauf" 4 px über dem Brett. */
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.header h1 { margin: 0; }
 .star-btn.on mat-icon { color: #f9a825; }
 .star-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 8px; }
 .star-jumps .star-icon { color: #f9a825; font-size: 18px; width: 18px; height: 18px; }

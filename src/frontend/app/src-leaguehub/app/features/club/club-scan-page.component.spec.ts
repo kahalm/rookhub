@@ -656,12 +656,14 @@ describe('ClubScanPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    expect(el.querySelector('.scan-clock')?.textContent?.trim()).toBe('seit 1 Tag 18 Std.');
+    expect(el.querySelector('.scan-clock')?.textContent?.trim()).toBe('seit\u00A01\u00A0Tag 18\u00A0Std.');
     const why = el.querySelector('.scan-why')!;
     expect(why.textContent?.trim()).toBe('der Leser schaut alle 5 Minuten nach neuen Formularen.');
     expect(why.classList.contains('small')).toBeFalse();
     expect(getComputedStyle(why, '::before').content).toContain('–');
     expect(el.querySelector('.scan-long')?.textContent).toContain('Länger als üblich');
+    // b1-l-formular-wartezeit-umbruch: derselbe Halbgeviertstrich wie im Satz darüber (.scan-why::before)
+    expect(el.querySelector('.scan-long')?.textContent).toContain('Länger als üblich – der Leser');
     fixture.destroy();
     discardPeriodicTasks();
   }));

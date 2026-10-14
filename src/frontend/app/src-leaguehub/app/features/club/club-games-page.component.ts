@@ -223,14 +223,15 @@ type Side = 'white' | 'black';
                 [attr.aria-label]="'Weitere Aktionen für ' + g.white + ' – ' + g.black" title="Weitere Aktionen">⋮</button>
       }
     </ng-template>
-    <mat-menu #moreMenu="matMenu" xPosition="before">
+    <!-- b1-l-zeilenmenue-material: Fläche/Rahmen/Schrift im LeagueHub-Stil (leaguehub.scss .lh-menu), „Löschen“ rot -->
+    <mat-menu #moreMenu="matMenu" xPosition="before" class="lh-menu">
       <ng-template matMenuContent let-g="g">
         @if (rookHub) { <button mat-menu-item type="button" (click)="openInRookHub(g)">Analyse</button> }
         @if (g.canDelete) {
           <button mat-menu-item type="button" (click)="edit(g)">Bearbeiten</button>
           <!-- 0.660.0: Züge nachbessern wie beim ersten Prüfen (mit dem aufbewahrten Formular) — gilt auch für alle Kopien -->
           <a mat-menu-item [routerLink]="['/verein/partie', g.id, 'korrigieren']">Korrigieren</a>
-          <button mat-menu-item type="button" [disabled]="deleting() === g.id" (click)="remove(g)">Löschen</button>
+          <button mat-menu-item type="button" class="delete-item" [disabled]="deleting() === g.id" (click)="remove(g)">Löschen</button>
         }
       </ng-template>
     </mat-menu>

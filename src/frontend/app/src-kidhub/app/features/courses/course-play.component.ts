@@ -1,6 +1,6 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, afterNextRender, afterRenderEffect, computed, inject, linkedSignal,
-  signal, viewChild,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, afterNextRender, afterRenderEffect, computed, effect, inject,
+  linkedSignal, signal, untracked, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -9,7 +9,7 @@ import { KidsApiService, KidsCourseLine } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
-import { KID_BACK, KID_COUNTER, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_SHORT, KID_STACKED, KID_WIDE_SIDE } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 import { splitCourseText } from '@rh/shared/course-text';
 
@@ -34,7 +34,8 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
   imports: [RouterLink, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
   template: `
     <header class="head">
-      <a class="back" routerLink="/courses">← {{ 'kids.courses.title' | translate }}</a>
+      <!-- b1-k-kurstitel-handy-gekuerzt: am Handy nur „←" (Text bleibt für Vorleser), damit der Kurstitel Platz hat. -->
+      <a class="back" routerLink="/courses"><span aria-hidden="true">←</span><span class="back-label"> {{ 'kids.courses.title' | translate }}</span></a>
       @if (title()) { <h1>📚 {{ title() }}</h1> }
       @if (lines().length > 0) {
         <!-- z1-k-course-intro: am Handy steht der Stand kurz („8/287") rechts neben dem Kurstitel, der lange Text bleibt
@@ -143,12 +144,28 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     .intro p + p { margin-top: 8px; }
     .intro .hl { font-weight: 800; color: var(--kid-title); }
     .intro .hl + p { margin-top: 2px; }
+    /* b1-k-ultrawide-seitenspalte: Kurstext neben dem 1240-px-Brett in größerer Schrift (Spalte 480 px). */
+    @media ${KID_WIDE_SIDE} {
+      .intro { font-size: 1.3rem; }
+      .line-title { font-size: 1.6rem; }
+      .chapter { font-size: 1.15rem; }
+    }
     @media ${KID_STACKED} {
       .chapter, .line-title { text-align: center; }
       /* z1-k-course-intro: Kopf in EINER Zeile (Titel gekürzt, Stand kurz rechts), Kapitel nur ohne Aufgabentitel —
          das Brett begann sonst erst bei 47 % der Höhe, der Tipp-Knopf lag unter der Falz. */
       .head { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
-      .head h1 { min-width: 0; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      /* b1-k-kurstitel-handy-gekuerzt: „← Courses" ließ dem Titel nur „First endga…" — die Pille zeigt am Handy nur den
+         Pfeil (44 × 44, Text für Vorleser), ein langer Titel bricht auf höchstens zwei Zeilen um, statt zu kürzen. */
+      .back { min-width: 44px; justify-content: center; padding: 6px 12px; }
+      .back-label {
+        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+      }
+      .head h1 {
+        min-width: 0; font-size: 1.15rem; line-height: 1.2; white-space: normal; overflow: hidden; overflow-wrap: break-word;
+        display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+      }
       .back, .count { flex-shrink: 0; white-space: nowrap; }
       .count { font-size: .95rem; }
       .count-long {
@@ -213,6 +230,8 @@ export class CoursePlayComponent {
     const solved = new Set(this.progress.course(this.bookId()).solved);
     return this.lines().filter(l => solved.has(l.id)).length;
   });
+  /** Gleiche Stellung und Züge = gleiche Aufgabe: ein Sprachwechsel bringt neue Linien-Objekte (übersetzte Texte),
+   *  die laufende Aufgabe auf dem Brett darf dabei nicht von vorn beginnen. */
   readonly task = computed<KidsTask | null>(() => {
     const line = this.current();
     return line ? {
@@ -221,7 +240,9 @@ export class CoursePlayComponent {
       startPly: line.startPly,
       altMoves: parseAltMoves(line.altMoves),
     } : null;
-  });
+  }, { equal: (a, b) => a === b || (!!a && !!b && JSON.stringify(a) === JSON.stringify(b)) });
+  /** Sprache des letzten Abrufs (b1-k-kursname-sprachwechsel). */
+  private lang: string | undefined;
 
   constructor() {
     // Nach jedem Zeichnen nachmessen (neue Linie, Sprache, Fenstergröße beim nächsten Zeichnen): nur zugeklappt
@@ -235,6 +256,27 @@ export class CoursePlayComponent {
     const route = inject(ActivatedRoute);
     route.paramMap.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe(params => {
       this.load(Number(params.get('bookId')));
+    });
+    // b1-k-kursname-sprachwechsel: Kurstitel, Kapitel und Kommentare kommen in der angefragten Sprache — nach einem
+    // Wechsel in der Sprachpille neu holen; die Aufgabe auf dem Brett und der Stand bleiben.
+    effect(() => {
+      const lang = this.translate.currentLang() || undefined;
+      untracked(() => { if (lang !== this.lang && this.bookId() > 0 && !this.loading()) this.reloadTexts(); });
+    });
+  }
+
+  /** Dieselben Linien in der neuen Sprache — ersetzt nur die Texte; scheitert es, bleibt die alte Sprache stehen. */
+  private reloadTexts(): void {
+    const [bookId, lang] = [this.bookId(), this.translate.currentLang() || undefined];
+    this.lang = lang;
+    this.api.coursePuzzles(bookId, lang).subscribe({
+      next: lines => {
+        if (lang !== this.lang || bookId !== this.bookId()) return;
+        const sameLines = lines.length === this.lines().length && lines.every((l, i) => l.id === this.lines()[i].id);
+        this.lines.set(lines);
+        if (!sameLines) this.index.set(nextUnsolved(lines, new Set(this.progress.course(bookId).solved), 0));
+      },
+      error: () => {},
     });
   }
 
@@ -254,6 +296,7 @@ export class CoursePlayComponent {
     this.loading.set(true);
     this.failed.set(false);
     const lang = this.translate.currentLang() || undefined;
+    this.lang = lang;
     this.api.coursePuzzles(bookId, lang).subscribe({
       next: lines => {
         this.lines.set(lines);

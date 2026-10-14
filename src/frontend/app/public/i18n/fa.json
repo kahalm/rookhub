@@ -122,7 +122,8 @@
     "subscribedAt": "عضویت در {{date}}",
     "puzzles": {
       "title": "تاکتیک‌ها",
-      "subtitle": "Elo {{elo}} | {{solved}} حل شده ({{accuracy}}٪)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} حل شده ({{accuracy}})",
       "solve": "حل تاکتیک",
       "daily": "تاکتیک روزانه",
       "endless": "بی‌پایان"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} فایل",
       "public": "عمومی",
       "private": "خصوصی",
-      "noDescription": "بدون توضیحات",
       "open": "باز کردن",
       "empty": "هنوز رپرتواری ندارید. یکی بسازید تا شروع کنید!",
       "loadFailed": "بارگذاری رپرتوارها ناموفق بود",
@@ -327,7 +327,6 @@
       "updateFailed": "به‌روزرسانی رپرتوار ممکن نشد"
     },
     "detail": {
-      "noDescription": "بدون توضیحات",
       "modeLines": "خطوط",
       "modeTree": "درخت"
     },

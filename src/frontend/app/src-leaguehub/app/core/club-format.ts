@@ -201,7 +201,8 @@ export function waitClock(seconds: number): string {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   if (h >= 24) {
     const d = Math.floor(h / 24), rest = h % 24;
-    return `seit ${d} ${d === 1 ? 'Tag' : 'Tagen'}${rest ? ` ${rest} Std.` : ''}`;
+    // b1-l-formular-wartezeit-umbruch: Zahl und Einheit mit U+00A0 zusammen — sonst stand „seit 2“ am Zeilenende.
+    return `seit\u00A0${d}\u00A0${d === 1 ? 'Tag' : 'Tagen'}${rest ? ` ${rest}\u00A0Std.` : ''}`;
   }
   return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
 }

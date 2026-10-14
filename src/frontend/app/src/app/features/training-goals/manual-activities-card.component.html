@@ -15,10 +15,8 @@
           }
         </mat-select>
       </mat-form-field>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>{{ 'trainingGoals.dateCol' | translate }}</mat-label>
-        <input matInput type="date" [max]="todayDate" [(ngModel)]="manualEdit.date" />
-      </mat-form-field>
+      <!-- b1-rk-edit-datum-us-format: Datum in der App-Sprache statt im Browserformat (DESIGN 5.13). -->
+      <app-iso-date-field [label]="'trainingGoals.dateCol' | translate" [max]="todayDate" [(value)]="manualEdit.date" />
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ (manualMinutes ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</mat-label>
         <input matInput type="number" min="1" [max]="manualMinutes ? 600 : 50" [(ngModel)]="manualEdit.amount" />

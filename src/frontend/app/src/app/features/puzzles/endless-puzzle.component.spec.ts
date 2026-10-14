@@ -1320,3 +1320,29 @@ describe('EndlessPuzzleComponent Start-Knopf-Abstand', () => {
     expect(css).toMatch(/\.start-btn-top[^{]*\{ ?margin: 12px 0 1\.25rem/);
   });
 });
+
+/** UI-Sweep b1: offener Lauf mit EINER Hauptaktion, keine interne Phasen-Zählung im Statuskasten. */
+describe('EndlessPuzzleComponent b1 (Fortsetzen, Phase)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
+
+  it('b1-rk-endless-fortsetzen-kasten: bei offenem Lauf kein zweiter gefüllter Startknopf', () => {
+    const el = renderEndless(c => { c.activeGameState = { level: 0, solved: 4, lives: 2, maxRatingReached: 1720 }; });
+    expect(el.querySelector('.resume-banner')).not.toBeNull();
+    expect(el.querySelector('.start-btn-top')).withContext('„Neues Spiel“ nur über „Archivieren & neues Spiel“').toBeNull();
+    expect(el.querySelectorAll('.resume-actions button').length).toBe(2);
+  });
+
+  it('b1-rk-endless-fortsetzen-kasten: ohne offenen Lauf (oder ohne Leben) bleibt der Startknopf', () => {
+    expect(renderEndless(() => {}).querySelector('.start-btn-top')).not.toBeNull();
+    TestBed.resetTestingModule();
+    expect(renderEndless(c => { c.activeGameState = { level: 3, solved: 9, lives: 0, maxRatingReached: 1800 }; })
+      .querySelector('.start-btn-top')).not.toBeNull();
+  });
+
+  it('b1-rk-endless-phase-jargon: im Lauf keine Zeile „Phase 1 (Schritt 63)“', () => {
+    const el = renderEndless(c => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.lives = 3; });
+    expect(el.querySelector('.stats-card')).not.toBeNull();
+    expect(el.querySelector('.phase-indicator')).toBeNull();
+    expect(el.textContent).not.toContain('endless.game.phaseLabel');
+  });
+});

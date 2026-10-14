@@ -40,6 +40,18 @@ interface SessionRow extends EndlessSessionDto {
   mistakesText: string;
   eloText: string;
   eloClass: string;
+  /** Dauer als Übersetzungsschlüssel + Werte (b1-rk-endless-verlauf-dauer), null = keine Angabe. */
+  dur: DurationText | null;
+}
+
+export interface DurationText { key: 'common.durationMinSec' | 'common.durationSec'; m: number; s: number; }
+
+/** b1-rk-endless-verlauf-dauer: Dauer in der App-Sprache („21 min 0 s“) statt fest „21m 0s“ (im Deutschen „m“ = Meter). */
+export function durationText(seconds: number): DurationText | null {
+  if (!seconds) return null;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return { key: m > 0 ? 'common.durationMinSec' : 'common.durationSec', m, s };
 }
 
 interface EndlessHistoryResponse {
@@ -145,7 +157,7 @@ interface EndlessHistoryResponse {
                   </ng-container>
                   <ng-container matColumnDef="duration">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colDuration' | translate }}</th>
-                    <td mat-cell *matCellDef="let s">{{ formatDuration(s.durationSeconds) }}</td>
+                    <td mat-cell *matCellDef="let s">{{ s.dur ? (s.dur.key | translate: s.dur) : '-' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="config">
                     <!-- UI-Sweep z1 (z1-rk-endless-history-config): Spalte heißt „Start-Rating“, fehlt es: „-“ wie bei den
@@ -196,7 +208,7 @@ interface EndlessHistoryResponse {
                         <span class="session-stat-label">{{ 'endless.history.colSolved' | translate }}</span>
                       </div>
                       <div class="session-stat">
-                        <span class="session-stat-value">{{ formatDuration(s.durationSeconds) }}</span>
+                        <span class="session-stat-value">{{ s.dur ? (s.dur.key | translate: s.dur) : '-' }}</span>
                         <span class="session-stat-label">{{ 'endless.history.colDuration' | translate }}</span>
                       </div>
                       <div class="session-stat">
@@ -399,13 +411,6 @@ export class EndlessHistoryComponent implements OnInit {
     return formatDate(d, 'short', FORMAT_LOCALES.includes(cur) ? cur : 'en');
   }
 
-  formatDuration(seconds: number): string {
-    if (!seconds) return '-';
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}m ${s}s` : `${s}s`;
-  }
-
   /** Baut die einmal-berechnete Anzeigezeile (siehe {@link SessionRow}). */
   private toRow(s: EndlessSessionDto): SessionRow {
     return {
@@ -416,6 +421,7 @@ export class EndlessHistoryComponent implements OnInit {
       mistakesText: this.formatMistakes(s.mistakeAtRatings),
       eloText: this.formatEloDelta(s),
       eloClass: this.eloDeltaClass(s),
+      dur: durationText(s.durationSeconds),
     };
   }
 

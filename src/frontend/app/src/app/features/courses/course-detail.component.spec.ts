@@ -470,13 +470,18 @@ describe('CourseDetailComponent Sprache der Kommentare', () => {
   });
 });
 
-/** UI-Sweep z2 (z2-rk-kursdetail-handy-vorlauf): am Handy rückt die Aktionszeile vor die Kennzahlen. */
-describe('CourseDetailComponent Layout am Handy', () => {
+/** UI-Sweep z2 (z2-rk-kursdetail-handy-vorlauf) + b1 (b1-rk-kursdetail-vorlauf-laptop): die Aktionszeile steht in
+ *  ALLEN Breiten vor den Kennzahlen — am Laptop lag der Hauptknopf sonst bei 45–48 % der Höhe. */
+describe('CourseDetailComponent Layout Kopf', () => {
   const css = ((CourseDetailComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
-  it('setzt die Kennzahlen am Handy hinter die Aktionszeile', () => {
-    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
-    expect(phone).toMatch(/\.head-card[^{]* mat-card-content[^{]*\{ ?display: flex; flex-direction: column/);
-    expect(phone).toMatch(/\.head-card[^{]* \.meta[^{]*\{ ?order: 1/);
+  const beforeMedia = css.slice(0, css.indexOf('@media'));
+  it('setzt die Kennzahlen hinter die Aktionszeile — außerhalb jeder Media-Query', () => {
+    expect(beforeMedia).toMatch(/\.head-card[^{]* mat-card-content[^{]*\{ ?display: flex; flex-direction: column/);
+    expect(beforeMedia).toMatch(/\.head-card[^{]* \.meta[^{]*\{ ?order: 1/);
+  });
+
+  it('Kapitelzähler in fester, rechtsbündiger Breite (b1-rk-kapitel-balken-versatz)', () => {
+    expect(css).toMatch(/\.chapter-label[^{]*\{[^}]*min-width: 7ch;[^}]*text-align: right/);
   });
 });
 
@@ -581,6 +586,52 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
   it('nur technische Schlagwörter → keine Zeile „Schlagwörter"', async () => {
     const { el } = await render({ tags: 'personal' });
     expect(el.querySelector('dd.tag-list')).toBeNull();
+  });
+
+  // b1-rk-kursdetail-vorlauf-laptop: am Laptop steht der Hauptknopf über den Kennzahlen.
+  it('Laptop: Aktionszeile über den Kennzahlen', async () => {
+    const { el } = await render({ description: LONG }, 1240);
+    const actions = el.querySelector('.head-card .actions')!.getBoundingClientRect();
+    const meta = el.querySelector('.head-card dl.meta')!.getBoundingClientRect();
+    expect(actions.bottom).toBeLessThanOrEqual(meta.top);
+  });
+
+  // b1-rk-studienbuch-fortschritt-0-0: Studienbuch (nur Partien) ohne „0/0", „Linien durchsehen" ist der Hauptknopf.
+  it('Studienbuch ohne Aufgaben: kein Fortschritt, leiser Satz, Durchsehen gefüllt', async () => {
+    const { el } = await render({
+      puzzleCount: 0, solvedCount: 0, progressPercent: 0, totalLines: 10, infoLineCount: 10,
+      chapters: [chapter({ quizCount: 0, lineCount: 6, solvedCount: 0, progressPercent: 0 })],
+    });
+    expect(el.querySelector('.head-card .progress-row')).toBeNull();
+    expect(el.querySelector('.head-card .progress-note')).toBeNull();
+    expect(el.querySelector('.head-card .empty-note')!.textContent).toContain('courses.emptyCourse.gamesOnly');
+    expect(el.querySelector('.chapter-progress')).withContext('kein Kapitelbalken').toBeNull();
+    const primary = el.querySelectorAll('.head-card .actions [mat-flat-button]');
+    expect(primary.length).withContext('genau ein Hauptknopf').toBe(1);
+    expect(primary[0].classList).toContain('browse-btn');
+    expect(el.querySelector('.head-card .actions .start-btn')!.hasAttribute('mat-flat-button')).toBeFalse();
+  });
+
+  it('Kurs mit Aufgaben: Fortschritt und „Sequenziell" als Hauptknopf bleiben', async () => {
+    const { el } = await render({ chapters: [chapter({ quizCount: 3 }), chapter({ name: 'Info', quizCount: 0 })] });
+    expect(el.querySelector('.head-card .progress-label')!.textContent).toContain('1/3');
+    expect(el.querySelector('.head-card .empty-note')).toBeNull();
+    const primary = el.querySelectorAll('.head-card .actions [mat-flat-button]');
+    expect(primary.length).toBe(1);
+    expect(primary[0].classList).toContain('start-btn');
+    // Kapitel ohne Aufgaben: leerer Platzhalter statt „0/0"
+    expect(el.querySelectorAll('.chapter-progress mat-progress-bar').length).toBe(1);
+    expect(el.querySelectorAll('.chapter-progress--none').length).toBe(1);
+  });
+
+  it('Kapitelbalken sind gleich lang, egal wie breit der Zähler ist (b1-rk-kapitel-balken-versatz)', async () => {
+    const { el } = await render({
+      chapters: [chapter({ quizCount: 6, solvedCount: 0 }), chapter({ name: 'Lang', quizCount: 119, solvedCount: 112 })],
+    }, 820);
+    const bars = Array.from(el.querySelectorAll('.chapter-progress mat-progress-bar')).map(b => b.getBoundingClientRect());
+    expect(bars.length).toBe(2);
+    expect(Math.round(bars[0].width)).toBe(Math.round(bars[1].width));
+    expect(Math.round(bars[0].right)).toBe(Math.round(bars[1].right));
   });
 });
 

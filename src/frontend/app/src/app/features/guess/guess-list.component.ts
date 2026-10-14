@@ -193,6 +193,8 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                    (Codereview W5 UX-016). Die Metazeile ist EIN Kasten, damit der Knopf am Handy
                    immer rechts in der zweiten Zeile steht — mit losen Chips sprang er je nach
                    Zeile nach links unten. -->
+              <!-- b1-rk-breitstufe-zeilen-auseinander: .g-list stellt die Zeilen ab 2400 px zweispaltig. -->
+              <div class="g-list">
               @for (g of curatedVisible; track g.id) {
                 <div class="game-row">
                   <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
@@ -214,6 +216,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                   </button>
                 </div>
               }
+              </div>
               @if (curatedRemaining > 0) {
                 <button mat-stroked-button class="more" (click)="showMore()">
                   {{ 'guess.showMore' | translate:{ count: nextPageSize } }}
@@ -274,7 +277,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                     <mat-button-toggle [value]="false">{{ 'guess.black' | translate }}</mat-button-toggle>
                   </mat-button-toggle-group>
                 </div>
+                <div class="g-list">
                 @for (g of ownShown; track g.id) {
+                  <div class="g-item">
                   <div class="game-row">
                     <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
                     <span class="g-meta">
@@ -301,7 +306,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                   @if (g.status === 'pending' || g.status === 'running') {
                     <mat-progress-bar mode="determinate" [value]="percent(g)" />
                   }
+                  </div>
                 }
+                </div>
               }
             </mat-card-content>
           </mat-card>
@@ -335,6 +342,11 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Tabellenseite breiter (DESIGN 4.1). */
     @media (min-width: 2400px) {
       .gl-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      /* b1-rk-breitstufe-zeilen-auseinander: in 1 880 px stand „Spielen" 800–1 000 px rechts vom Titel — die Zeilen
+         laufen zweispaltig, Trennlinie je Zeile unten statt zwischen zwei Zeilen. */
+      .g-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+      .g-list > .game-row + .game-row, .g-list > .g-item + .g-item { border-top: 0; }
+      .g-list > .game-row, .g-list > .g-item { border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
                margin-bottom: 10px; }
@@ -371,7 +383,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .side-black::before { content: '○'; }
     mat-progress-bar { margin: 0 0 8px; border-radius: 3px; }
     .game-row, .run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
-    .game-row + .game-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+    .game-row + .game-row, .g-item + .g-item { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .g-meta { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     /* a1-rk-guess-tablet-spielen: ab 600 px dasselbe feste Raster wie am Handy, nur mit dem Knopf rechts über beide
        Zeilen — vorher sprang „Spielen" je nach Titel-/Metalänge nach rechts, rechts unten oder allein in eine dritte

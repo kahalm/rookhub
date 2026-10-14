@@ -26,7 +26,7 @@ import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
 import { MoveTreeService } from './move-tree.service';
 import { exceedsSyncLimits } from '../../shared/pgn-viewer/pgn-parser';
-import { findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
+import { commonStartFen, findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
 import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
@@ -61,7 +61,10 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
         <div class="detail-header">
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
-            <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
+            <!-- b1-rk-keine-beschreibung: Untertitel nur mit Inhalt (keine Füllzeile „Keine Beschreibung“). -->
+            @if (repertoire.description) {
+              <span class="subtitle">{{ repertoire.description }}</span>
+            }
           </div>
           <div class="header-actions">
             <!-- UI-Sweep z1 (z1-rk-rep-abfragen-doppelt): in der Linien-Ansicht steht „Abfragen“ als Hauptknopf in der
@@ -180,6 +183,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
               @if (mode === 'lines') {
                 <app-repertoire-lines
                   [lines]="visibleLines"
+                  [filtered]="filterStack.length > 0"
                   [selectedIndex]="viewerService.selectedLineIndex"
                   [moves]="viewerService.currentMoves"
                   [currentMoveIndex]="viewerService.currentMoveIndex"
@@ -342,9 +346,13 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   /** Je gameIndex der Halbzug (fens-Index) des Treffers — fürs Vorspulen beim Anwählen. */
   private filterPlyByGame = new Map<number, number>();
 
+  /** Ausgangsstellung des Filterbretts = gemeinsame Startstellung der Linien (Endspiel-Repertoire: deren FEN);
+   *  null = die Linien starten aus verschiedenen Stellungen, dann kein Filter (b1-rk-repertoire-filterbrett-fen-start). */
+  filterRootFen: string | null = START_FEN;
+
   /** Brett spielbar = Linien-Ansicht ohne ausgewählte Linie (dann filtert es die Liste). */
   get filterBoardActive(): boolean {
-    return this.mode === 'lines' && this.viewerService.selectedLineIndex < 0;
+    return this.mode === 'lines' && this.viewerService.selectedLineIndex < 0 && this.filterRootFen != null;
   }
 
   /** Brett-Vorschau eines angeklickten Kommentar-Zugs; gilt nur für die Linie + Stellung, in der geklickt wurde. */
@@ -374,7 +382,8 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     if (this.mode === 'holes') return this.holeView?.fen ?? START_FEN;
     if (this.mode !== 'lines') return this.treeService.currentFen;
     if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.currentFen;
-    return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].fen : START_FEN;
+    if (this.filterStack.length) return this.filterStack[this.filterStack.length - 1].fen;
+    return this.filterRootFen ?? this.viewerService.lines[0]?.startFen ?? START_FEN;
   }
 
   get boardLastMove(): [string, string] | undefined {
@@ -415,7 +424,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   }
 
   get filterMovesText(): string {
-    return formatSansWithNumbers(this.filterStack.map(s => s.san));
+    return formatSansWithNumbers(this.filterStack.map(s => s.san), this.filterRootFen ?? undefined);
   }
 
   onFilterMove(move: UserBoardMove): void {
@@ -444,6 +453,10 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   /** Treffer einmal je Zug berechnen (nicht im Getter — der läuft in jedem CD-Zyklus). */
   private recomputeFilter(): void {
+    const root = commonStartFen(this.viewerService.lines.map(l => l.startFen), START_FEN);
+    // Andere Ausgangsstellung (frisch geladenes Repertoire) → alte Filterzüge passen nicht mehr.
+    if (root == null || this.filterRootFen == null || normalizeFen(root) !== normalizeFen(this.filterRootFen)) this.filterStack = [];
+    this.filterRootFen = root;
     if (!this.filterStack.length) {
       this.filteredLines = [];
       this.filterPlyByGame = new Map();

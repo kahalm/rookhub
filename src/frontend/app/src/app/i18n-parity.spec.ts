@@ -120,6 +120,21 @@ describe('i18n Sprachdateien', () => {
   });
 
   /**
+   * b1-w-privacy-strich-slash (DESIGN 5.13): WebKit brach „Chess.com-/Lichess-Benutzername“ zwischen Strich und
+   * Schrägstrich — die neue Zeile begann mit „/Lichess…“. Ergänzungsstrich vor „/“ mit Wortverbinder (U+2060).
+   */
+  it('de/hu: „Wort-/Wort“ hält Strich und Schrägstrich zusammen (U+2060)', async () => {
+    for (const lang of ['de', 'hu']) {
+      const all = await load(lang);
+      const bad = Object.entries(all).filter(([, v]) => /\p{L}-\/\p{L}/u.test(v)).map(([k]) => k);
+      expect(bad).withContext(`${lang}: „-/“ ohne U+2060`).toEqual([]);
+    }
+    const de = await load('de');
+    expect(de['legal.privacy.dataProfile']).toContain('Chess.com-\u2060/Lichess-Benutzername');
+    expect(de['legal.privacy.dataUsage']).toContain('Endless-\u2060/Kurs-Fortschritt');
+  });
+
+  /**
    * Englisch-Nachprüfung e1 (e1-rk-hilfe-partien-satz): die Hilfe übernahm die deutsche Satzstellung „Unter ☰ → … siehst
    * du …“ als „Under ☰ → Community → Leaderboards you see …“. Natürlich: „Your … are under ☰ → …“ / „The … under ☰ → …
    * show …“ — keine Ortsangabe am Satzanfang, an die ohne Komma „you …“ anschließt.

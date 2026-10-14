@@ -28,6 +28,8 @@
     "ebook_file_missing": "A fájl hiányzik a szerverről."
   },
   "common": {
+    "durationMinSec": "{{m}} perc {{s}} mp",
+    "durationSec": "{{s}} mp",
     "paginator": {
       "itemsPerPage": "Elem oldalanként:",
       "firstPage": "Első oldal",
@@ -255,7 +257,8 @@
     "subscribedAt": "Feliratkozva: {{date}}",
     "puzzles": {
       "title": "Feladványok",
-      "subtitle": "Elo {{elo}} | {{solved}} megoldva ({{accuracy}})",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} megoldva ({{accuracy}})",
       "solve": "Feladványok megoldása",
       "daily": "Napi feladvány",
       "endless": "Végtelen"
@@ -407,8 +410,9 @@
     },
     "tokens": {
       "title": "API-tokenek",
-      "subtitle": "Személyes hozzáférési tokenek gépi klienseknek: a chess.com kiterjesztés („Extension” hatókör) vagy a gépeden futó motor-provider („Engine” hatókör).",
-      "empty": "Még nincsenek tokenek. Hozz létre egyet, ha a chess.com kiterjesztést vagy a motor-providered csatlakoztatnád.",
+      "subtitle": "A chess.com kiterjesztéshez vagy a saját motoros gépedhez.",
+      "subtitleHelp": "Minden token csak a saját hatókörében érvényes: „Extension” a böngészőkiterjesztéshez (chess.com, lichess.org, Chessable), „Engine” a gépeden futó motor-providerhez.",
+      "empty": "Még nincsenek tokenek.",
       "create": "Token létrehozása",
       "revoke": "Token visszavonása",
       "revokeConfirm": "Visszavonja a(z) \"{{name}}\" tokent? A kliens többé nem tud csatlakozni.",
@@ -479,8 +483,9 @@
     },
     "engine": {
       "title": "Külső motor",
-      "hint": "Erősebb motor az elemzőtáblához — a saját géped vagy egy bérelt felhőmotor. Kétféleképpen csatlakoztathatod; minden motorod egy közös listában jelenik meg.",
-      "createToken": "Lichess-token létrehozása (engine:read)",
+      "hint": "Erősebb motor az elemzőtáblához — a saját géped vagy egy felhőmotor.",
+      "setup": "Beállítás",
+      "createToken": "Lichess-token létrehozása",
       "tokenLabel": "Lichess API-token",
       "stored": "Mentett token",
       "removeTokenConfirm": "Törlöd a mentett Lichess-tokent? A Lichess-motorok eltűnnek a listáról; újbóli használatukhoz új tokenre van szükséged a Lichesstől.",
@@ -744,7 +749,6 @@
       "fileCountOne": "{{count}} fájl",
       "public": "Nyilvános",
       "private": "Privát",
-      "noDescription": "Nincs leírás",
       "open": "Megnyitás",
       "empty": "Még nincsenek repertoárjaid. Hozz létre egyet a kezdéshez!",
       "loadFailed": "Nem sikerült betölteni a repertoárokat",
@@ -780,7 +784,6 @@
     },
     "detail": {
       "parsing": "Repertoár beolvasása … {{done}} / {{total}} sor",
-      "noDescription": "Nincs leírás",
       "modeLines": "Vonalak",
       "modeTree": "Fa",
       "modeHoles": "Lyukkereső"
@@ -811,7 +814,9 @@
       "empty": "Nincs vonal ebben a repertoárban.",
       "noChapter": "(Fejezet nélkül)",
       "lineN": "{{n}}. változat",
-      "toggleChapter": "Fejezet ki-/becsukása",
+      "toggleChapter": "Fejezet ki-⁠/becsukása",
+      "showMore": "További {{count}} vonal megjelenítése",
+      "showMoreOne": "További 1 vonal megjelenítése",
       "color": {
         "title": "Edzésszín",
         "white": "Világos",
@@ -911,7 +916,7 @@
       "asBlack": "Fejezetek sötéttel",
       "database": "Adatbázis",
       "masters": "Mesterek",
-      "help": "A lyukkereső végigmegy a repertoárodon, és minden olyan állásban, ahol az ellenfeled lép és neked van előkészített válaszod, megkérdezi a Lichess explorert, mit játszanak ott.\n\nLyuk az az ellenféllépés, amelyet legalább a küszöbértéknyi gyakorisággal játszanak, és olyan állásba vezet, amely sehol sem szerepel a repertoárodban – más lépéssorrenden keresztül sem.\n\nA lyukak aszerint vannak rendezve, milyen gyakran jutsz el hozzájuk valódi játszmákban. Egy változat vége nem lyuk.",
+      "help": "A lyukkereső végigmegy a repertoárodon, és minden olyan állásban, ahol az ellenfeled lép és neked van előkészített válaszod, megkérdezi a Lichess explorert, mit játszanak ott.\n\nLyuk az az ellenféllépés, amelyet legalább a küszöbértéknyi gyakorisággal játszanak, és olyan állásba vezet, amely sehol sem szerepel a repertoárodban – más lépéssorrenden keresztül sem.\n\nA lyukak aszerint vannak rendezve, milyen gyakran jutsz el hozzájuk valódi játszmákban. Egy változat vége nem lyuk.\n\nA lichess.org percenként csak kb. 15 lekérdezést enged, ezért nagy repertoárnál az első alkalom eltart egy ideig; a már lekérdezett állásokat a RookHub megjegyzi, a megszakított keresés pedig legközelebb ott folytatja, ahol abbahagyta. A helyi adatbázisnak nincs ilyen korlátja.",
       "ratings": "Élő-pont",
       "speeds": "Tempó",
       "speed": {
@@ -939,7 +944,9 @@
       "frequency": "≈ {{value}} a játszmáidból",
       "startPosition": "Kiinduló állás",
       "games": "{{count}} játszma",
-      "intro": "Válaszd ki az ellenfeleid adatbázisát, Élő-pontszámát és tempóját, majd indítsd a keresést. A Lichess percenként csak kb. 15 lekérdezést enged, ezért nagy repertoárnál az első alkalom eltart egy ideig; a már lekérdezett állásokat a RookHub megjegyzi, a megszakított keresés pedig legközelebb ott folytatja, ahol abbahagyta.",
+      "intro": "Válaszd ki az ellenfeleid Élő-pontszámát és tempóját, majd indítsd a keresést.",
+      "introLocal": "Válaszd ki az ellenfeleid Élő-pontszámát és tempóját – a helyi adatbázis azonnal válaszol.",
+      "introMasters": "Indítsd a keresést a mesterjátszmákban.",
       "source": "Forrás",
       "sourceOnline": "Lichess.org",
       "sourceLocal": "Helyi",
@@ -1013,7 +1020,8 @@
       "home": "Hazai",
       "away": "Vendég",
       "result": "Eredmény",
-      "none": "A chess-results még nem tartalmaz párosítást ehhez a fordulóhoz. Ha ott megjelennek, a „Frissítés“ letölti őket."
+      "none": "A chess-results még nem tartalmaz párosítást ehhez a fordulóhoz.",
+      "noneTournament": "A chess-results még nem tartalmaz párosítást ehhez a versenyhez."
     },
     "monitor": {
       "stopped": "Figyelés leállítva",
@@ -1203,8 +1211,8 @@
       "t1Quiet": "Nincs sakk, nincs ütés — találd meg a csendes lépést, amely döntő fenyegetést hoz (a sakk–ütés–fenyegetés lista „F”-je).",
       "t2Piece": "A {{piece}} lép.",
       "t3Move": "Játszd: {{move}}.",
-      "flag": "Rossz tippek",
-      "flagged": "Rossz tippek ✓",
+      "flag": "Tippek jelentése",
+      "flagged": "Tippek jelentve ✓",
       "flagTitle": "Jelöld meg rossznak ezeket a tippeket",
       "flagSaved": "Tippek rossznak megjelölve.",
       "flagCleared": "Megjelölés eltávolítva.",
@@ -1688,7 +1696,7 @@
       "sessionsPlayed": "{{count}} menet játszva",
       "sessionsPlayedOne": "{{count}} menet játszva",
       "viewHistory": "Előzmények megtekintése",
-      "unfinishedRun": "Befejezetlen futam: {{level}}. szint | {{solved}} megoldva | {{lives}} élet | {{max}} max",
+      "unfinishedRun": "Befejezetlen futam: {{level}}. szint · {{solved}} megoldva · {{lives}} élet · legjobb értékelés {{max}}",
       "continue": "Folytatás",
       "archiveAndNew": "Archiválás és új játék",
       "newGame": "Új játék",
@@ -1853,8 +1861,8 @@
     "hints": {
       "show": "Tipp",
       "next": "Következő tipp",
-      "flag": "Buta tippek",
-      "flagged": "Buta tippek ✓",
+      "flag": "Tippek jelentése",
+      "flagged": "Tippek jelentve ✓",
       "flagTitle": "Ezeknek a tippeknek a rossznak jelölése (admin)",
       "flagSaved": "Tippek rossznak jelölve.",
       "flagCleared": "Jelölés eltávolítva.",
@@ -2407,7 +2415,10 @@
     "levelOtherOne": "Szint {{level}}: 1 kísérlet",
     "levelEmptySwitched": "A te szinteden ({{level}}) még nincs kísérlet, ezért minden szint látható",
     "standardEmpty": "Még nem oldottál meg feladványt – a statisztikád az elsővel telik meg.",
-    "standardEmptyAction": "Feladványok megoldása"
+    "standardEmptyAction": "Feladványok megoldása",
+    "courseEmptyAction": "Tovább a tanfolyamokhoz",
+    "task": "Feladat",
+    "courseTask": "Tanfolyami feladat"
   },
   "trainingGoals": {
     "manual": {
@@ -2784,7 +2795,7 @@
       "linesThrough": "{{count}} változat halad át ezen a lépésen",
       "lineEnd": "Itt véget ér egy változat",
       "playHint": "Lépés lejátszása a táblán",
-      "expandHint": "Ki-/becsukás",
+      "expandHint": "Ki-⁠/becsukás",
       "expandNode": "Kinyitás",
       "collapseNode": "Becsukás"
     },
@@ -2998,7 +3009,7 @@
     "removeConfirm": "Eltávolítod ezt a feladványt a kedvencek közül?",
     "removeError": "A kedvencet nem sikerült eltávolítani.",
     "sourceStandard": "Standard feladvány",
-    "sourceBook": "Tanfolyam-/könyvfeladvány",
+    "sourceBook": "Tanfolyam-⁠/könyvfeladvány",
     "love": "Szeretem",
     "loved": "Kedvenc",
     "loveLast": "Utolsó feladvány",
@@ -4486,6 +4497,7 @@
     "replyLabel": "A válaszod",
     "sendError": "Az üzenetet nem sikerült elküldeni.",
     "emptyUserCanWrite": "Még nincsenek üzenetek. Írj lent az admin-csapatnak — a választ itt kapod meg.",
+    "emptyDraft": "Előbb írj egy üzenetet.",
     "writeLabel": "Az üzeneted",
     "adminHint": "Adminisztrátor vagy – a felhasználók üzeneteit az admin felületen találod.",
     "toConversations": "Ugrás a beszélgetésekhez"
@@ -4634,6 +4646,7 @@
     "introMore": "Például a nyitólépéseket, egyes állásokat vagy rövid lépéssorokat — a köztük lévő hézagokat lépésről lépésre zárod be.",
     "newTitle": "Cím",
     "createLabel": "Új rekonstrukció – cím",
+    "createHint": "Adj meg egy címet, és létrehozhatod.",
     "newTitlePlaceholder": "Klubbajnokság, 3. forduló",
     "create": "Létrehozás",
     "open": "Megnyitás",

@@ -28,6 +28,9 @@
 //            gibt es trotzdem — sie zeigt, was stattdessen da ist).
 //   fresh  — ohne vorbelegte Spielweise (sweep.mjs legt sonst „Einfachmodus" in den Speicher, damit der Dialog nicht
 //            jede Puzzle-/Kursaufnahme verdeckt) — nur für den Zustand, der genau diesen Dialog zeigt.
+//   once   — schreibende Adressen (RegExp auf den Pfad), die EINMAL je Rolle/Sprache wirklich zum Server gehen; die
+//            Antwort (auch ein Fehler) wird für alle übrigen Varianten wiedergegeben. Für die gewollt scheiternde
+//            Anmeldung: 20 echte Fehlversuche liefen sonst in die Anmelde-Drossel (429) statt in „Kennwort falsch".
 //   main   — Hauptsache für die Falz-Prüfung (Vorgabe: keine; Zustände sind von der Falz-Prüfung ausgenommen).
 //
 // Ein Schritt, der scheitert (Selektor fehlt), bricht die Schritte ab; die Aufnahme zeigt den Stand bis dahin.
@@ -113,7 +116,7 @@ export const STATES = [
   { of: 'rookhub__login', name: 'falsches-kennwort',
     steps: [{ fill: 'form.auth-form input[name="username"]', text: 'ui-sweep-gibt-es-nicht' },
       { fill: 'form.auth-form input[name="password"]', text: 'falsch123' }, { click: 'form.auth-form button[type="submit"]' }],
-    expect: '.form-error[role="alert"]' },
+    once: [/^\/api\/auth\/login$/], expect: '.form-error[role="alert"]' },
   { of: 'rookhub__login', name: 'leer', steps: [{ click: 'form.auth-form button[type="submit"]' }], expect: 'form.auth-form mat-error' },
   { of: 'rookhub__register', name: 'leer', steps: [{ click: 'form.auth-form button[type="submit"]' }], expect: 'form.auth-form mat-error' },
 
@@ -150,6 +153,33 @@ export const STATES = [
     steps: [{ click: 'form.sheet.form .form-save button[type="submit"]' }], expect: 'form.sheet.form p.err.status-line' },
 ];
 
+/**
+ * POSTs, die nur LESEN (Puzzle-Vorrat für Endlos, KidHub-Endlos): sie gehen auch in Zuständen zum Server. Mit dem
+ * gestellten „{}" wartete der Endlos-Start ewig auf Puzzles (Spinner im Bild).
+ */
+export const READ_POSTS = [/^\/api\/puzzles\/random-batch$/, /^\/api\/kids\/endless\/batch$/];
+
+/**
+ * Was das Werkzeug in einem Zustand mit einer Anfrage tut: 'pass' (zum Server), 'once' (einmal zum Server, dann aus dem
+ * Zwischenspeicher) oder 'stub' (selbst beantworten, Körper aus `stubBody`).
+ */
+export function writeDecision(route, method, pathname) {
+  if (!route.steps || method === 'GET') return 'pass';
+  if ((route.once ?? []).some(re => re.test(pathname))) return 'once';
+  if (/^\/api\/auth\//.test(pathname)) return 'pass';
+  if (method === 'POST' && READ_POSTS.some(re => re.test(pathname))) return 'pass';
+  return 'stub';
+}
+
+/**
+ * Antwort auf eine abgefangene schreibende Anfrage: der gesendete JSON-Körper zurück (PUT /api/kids/progress liefert den
+ * Stand zurück — mit „{}" warf KidHub „e.levels is not iterable"), sonst „{}".
+ */
+export function stubBody(postData) {
+  try { const v = JSON.parse(postData ?? ''); if (v && typeof v === 'object') return JSON.stringify(v); } catch { /* kein JSON */ }
+  return '{}';
+}
+
 /** Katalog-Routen um die Zustände erweitert: je Zustand eine abgeleitete Route mit `steps`. */
 export function withStates(routes, routeId) {
   const byId = new Map(routes.map(r => [routeId(r), r]));
@@ -159,7 +189,7 @@ export function withStates(routes, routeId) {
     if (!base) throw new Error(`states.mjs: Zustand „${s.name}" hängt an unbekannter Route ${s.of}`);
     const baseLabel = s.of.slice(base.app.length + 2);
     out.push({ ...base, label: `${baseLabel}--${s.name}`, state: s.name, stateOf: s.of, steps: s.steps,
-      stateAuth: s.auth ?? null, fresh: !!s.fresh, expect: s.expect ?? null, main: s.main ?? null, foldExempt: s.main == null });
+      stateAuth: s.auth ?? null, fresh: !!s.fresh, once: s.once ?? [], expect: s.expect ?? null, main: s.main ?? null, foldExempt: s.main == null });
   }
   return out;
 }

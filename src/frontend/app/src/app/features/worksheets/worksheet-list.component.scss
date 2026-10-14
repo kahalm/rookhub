@@ -26,6 +26,11 @@
 /* Geteilte Blätter tragen den QR-Hinweis — man sieht auf einen Blick, was draußen ist. */
 .wl-shared { font-size: 18px; width: 18px; height: 18px; opacity: 0.65; }
 .wl-sub { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
+/* b1-rk-aufgabenblaetter-datum-umbruch: Angaben umbrechen nur zwischen den Teilen (Flex-Umbruch, Angular entfernt den
+   Leerraum zwischen den Spans), der Trenner hängt vorn am Folgeteil. */
+.wl-sub { display: flex; flex-wrap: wrap; }
+.wl-part { white-space: nowrap; }
+.wl-part + .wl-part::before { content: '·'; padding: 0 0.35em; }
 .wl-actions { display: flex; flex-shrink: 0; align-items: center; }
 .wl-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
 .wl-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }

@@ -117,4 +117,34 @@ describe('ChallengeFriendsComponent', () => {
     c.send();
     httpMock.expectNone('/api/challenges');
   });
+  /** b1-rk-puzzle-teilen-eigene-zeile: in einer schmalen Aktionsleiste (Container „pab“) nur das Symbol. */
+  function inBar(width: number) {
+    const fixture = create();
+    fixture.detectChanges();
+    const bar = document.createElement('div');
+    bar.style.container = 'pab / inline-size';
+    bar.style.width = `${width}px`;
+    bar.appendChild(fixture.nativeElement);
+    document.body.appendChild(bar);
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('.challenge-btn') as HTMLElement;
+    const label = btn.querySelector('.challenge-label') as HTMLElement;
+    return { btn, label, done: () => bar.remove() };
+  }
+
+  it('zeigt in einer schmalen Leiste (< 420 px) nur das Symbol, benannt per aria-label', () => {
+    const { btn, label, done } = inBar(396);
+    try {
+      expect(getComputedStyle(label).display).toBe('none');
+      expect(btn.getAttribute('aria-label')).toBe('puzzles.actions.challengeFriend');
+      expect(btn.getBoundingClientRect().width).toBeLessThan(64);
+    } finally { done(); }
+  });
+
+  it('zeigt in einer breiten Leiste die Beschriftung', () => {
+    const { label, done } = inBar(640);
+    try {
+      expect(getComputedStyle(label).display).not.toBe('none');
+      expect(label.textContent!.trim()).toBe('puzzles.actions.challengeFriend');
+    } finally { done(); }
+  });
 });

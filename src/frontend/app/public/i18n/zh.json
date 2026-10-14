@@ -122,7 +122,8 @@
     "subscribedAt": "订阅于 {{date}}",
     "puzzles": {
       "title": "战术题",
-      "subtitle": "Elo {{elo}} | 已解 {{solved}} 题（{{accuracy}}%）",
+      "elo": "Elo {{elo}}",
+      "solved": "已解 {{solved}} 题（{{accuracy}}）",
       "solve": "做题",
       "daily": "每日一题",
       "endless": "无尽模式"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} 个文件",
       "public": "公开",
       "private": "私密",
-      "noDescription": "暂无描述",
       "open": "打开",
       "empty": "暂无开局库。创建一个开始吧！",
       "loadFailed": "加载开局库失败",
@@ -327,7 +327,6 @@
       "updateFailed": "开局库更新失败"
     },
     "detail": {
-      "noDescription": "暂无描述",
       "modeLines": "变化线",
       "modeTree": "树形图"
     },

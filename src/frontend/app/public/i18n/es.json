@@ -122,7 +122,8 @@
     "subscribedAt": "Suscrito el {{date}}",
     "puzzles": {
       "title": "Ejercicios",
-      "subtitle": "Elo {{elo}} | {{solved}} resueltos ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} resueltos ({{accuracy}})",
       "solve": "Resolver ejercicios",
       "daily": "Ejercicio del día",
       "endless": "Sin fin"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} archivo",
       "public": "Público",
       "private": "Privado",
-      "noDescription": "Sin descripción",
       "open": "Abrir",
       "empty": "Aún no hay repertorios. ¡Crea uno para empezar!",
       "loadFailed": "Error al cargar repertorios",
@@ -327,7 +327,6 @@
       "updateFailed": "No se pudo actualizar el repertorio"
     },
     "detail": {
-      "noDescription": "Sin descripción",
       "modeLines": "Líneas",
       "modeTree": "Árbol"
     },

@@ -1,3 +1,5 @@
+import { TournamentTablesComponent } from './tournament-tables.component';
+import { By } from '@angular/platform-browser';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthService } from '@rh/core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
@@ -107,6 +109,17 @@ describe('TournamentDetailComponent', () => {
 
   const actionsOf = (fixture: ComponentFixture<TournamentDetailComponent>): HTMLElement[] =>
     Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.action-bar a, .action-bar button'));
+
+  /** b1-t-paarungen-leer-ohne-weg: die Detailseite gibt „Aktualisieren" an den leeren Paarungen frei und verdrahtet es. */
+  it('reicht „Aktualisieren" an die Tabellen weiter (leere Paarungen bieten den Knopf selbst an)', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const tables = fixture.debugElement.query(By.directive(TournamentTablesComponent)).componentInstance as TournamentTablesComponent;
+    expect(tables.canRefresh).toBeTrue();
+    expect(tables.fullViewLink).toBeNull();
+    const refresh = spyOn(fixture.componentInstance, 'refresh');
+    tables.refresh.emit();
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
 
   /**
    * Mobil sind die Aktionen nackte Icon-Kreise (.btn-label display:none nimmt den Text auch aus dem

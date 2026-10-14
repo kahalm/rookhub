@@ -129,3 +129,35 @@ describe('WorksheetListComponent Handy-Karte', () => {
     expect(phone).toMatch(/\.wl-sheet[^{]*\{ ?align-items: flex-start/);
   });
 });
+
+/** UI-Sweep b1 (b1-rk-aufgabenblaetter-datum-umbruch): die Meta-Zeile bricht nur zwischen den Angaben um. */
+describe('WorksheetListComponent Meta-Zeile', () => {
+  it('jede Angabe ist eine ungeteilte Einheit, das Datum bleibt am Handy in einer Zeile', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [WorksheetListComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WorksheetService, useValue: { list: () => of([summary({ id: 3, name: 'Gabeln', updatedAt: '2026-10-11T10:00:00Z' })]) } },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(false) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WorksheetListComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '230px';
+    fixture.detectChanges();
+    const parts = Array.from(host.querySelectorAll('.wl-sub > .wl-part')) as HTMLElement[];
+    expect(parts.length).toBe(3);
+    for (const p of parts) {
+      expect(getComputedStyle(p).whiteSpace).toBe('nowrap');
+      expect(p.getClientRects().length).withContext(p.textContent ?? '').toBe(1);
+    }
+    expect(getComputedStyle(parts[0], '::before').content).toBe('none');
+    expect(getComputedStyle(parts[2], '::before').content).toContain('·');
+    // Der Umbruch fällt zwischen die Teile: das Datum steht ganz in einer Zeile (Höhe = eine Zeile).
+    const date = parts[2].getBoundingClientRect();
+    expect(date.height).toBeLessThan(parseFloat(getComputedStyle(parts[2]).fontSize) * 2);
+  });
+});

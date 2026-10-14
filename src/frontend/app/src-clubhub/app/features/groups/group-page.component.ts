@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
@@ -93,7 +93,7 @@ export function statusMark(status: Status | null): string {
             <span>Ein Datum antippen, um die Einheit zu ändern.</span>
           </p>
         } @else {
-          <p class="muted small">Noch keine Einheit erfasst — mit „Anwesenheit abhaken" entsteht die erste.</p>
+          <p class="muted small">Noch keine Einheit erfasst — mit „Anwesenheit abhaken“ entsteht die erste.</p>
         }
       }
 
@@ -123,12 +123,14 @@ export function statusMark(status: Status | null): string {
           @if (candidates().length) {
             <div class="note-form">
               <label class="field"><span>Kind aus der Kartei dazunehmen</span>
-                <select class="add-kid" (change)="pick.set(+$any($event.target).value || null)">
+                <select class="add-kid" [attr.aria-describedby]="kidMissing() ? 'kid-missing' : null"
+                  (change)="pick.set(+$any($event.target).value || null); kidMissing.set(false)">
                   <option value="">auswählen …</option>
                   @for (c of candidates(); track c.id) { <option [value]="c.id" [selected]="c.id === pick()">{{ head(c) }}{{ tail(c) }}</option> }
                 </select></label>
-              <button type="button" class="btn" [disabled]="busy() || !pick()" (click)="addKid()">Dazunehmen</button>
+              <button type="button" class="btn" [disabled]="busy()" (click)="addKid()">Dazunehmen</button>
             </div>
+            @if (kidMissing()) { <p class="err need" id="kid-missing">Erst ein Kind auswählen.</p> }
           } @else if (allLoaded()) { <p class="muted">Alle Kinder, die du siehst, sind schon in der Gruppe.</p> }
           @if (g.members.length) {
             <ul class="notes">
@@ -173,11 +175,14 @@ export function statusMark(status: Status | null): string {
             } @else { <p class="muted">Noch kein Konto zugeteilt — die Gruppe sieht nur die Leitung.</p> }
             <div class="note-form mt">
               <label class="field"><span>Benutzername des Kontos</span>
-                <input class="trainer-name" autocomplete="off" maxlength="100" [value]="trainerName()" (input)="trainerName.set($any($event.target).value)" (keydown.enter)="addTrainer()"></label>
-              <button type="button" class="btn" [disabled]="busy() || !trainerName().trim()" (click)="addTrainer()">Zugriff geben</button>
+                <input class="trainer-name" autocomplete="off" maxlength="100" [value]="trainerName()"
+                  [attr.aria-describedby]="trainerMissing() ? 'trainer-missing' : null"
+                  (input)="trainerName.set($any($event.target).value); trainerMissing.set(false)" (keydown.enter)="addTrainer()"></label>
+              <button type="button" class="btn" [disabled]="busy()" (click)="addTrainer()">Zugriff geben</button>
             </div>
+            @if (trainerMissing()) { <p class="err need" id="trainer-missing">Erst den Benutzernamen eintippen.</p> }
             <p class="muted small">Wer die Gruppe in ClubHub bedienen darf. Das Konto braucht zusätzlich eine Rolle mit dem Recht
-              „ClubHub: Trainer" (in RookHub unter Rollen). Die Trainer als PERSONEN stehen in der Kartei und in jeder Anwesenheitsliste.</p>
+              „ClubHub: Trainer“ (in RookHub unter Rollen). Die Trainer als PERSONEN stehen in der Kartei und in jeder Anwesenheitsliste.</p>
           </section>
         </details>
       }
@@ -194,6 +199,7 @@ export class GroupPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   readonly allowed = hasClubAccess(this.auth);
   readonly group = signal<Group | null>(null);
@@ -205,6 +211,9 @@ export class GroupPageComponent implements OnInit {
   readonly all = signal<MemberRow[]>([]);
   readonly allLoaded = signal(false);
   readonly pick = signal<number | null>(null);
+  /** Tipp auf „Dazunehmen" ohne Kind bzw. „Zugriff geben" ohne Namen: Hinweis unter dem Feld statt gesperrtem Knopf (b1). */
+  readonly kidMissing = signal(false);
+  readonly trainerMissing = signal(false);
 
   readonly candidates = computed(() => {
     const inGroup = new Set(this.group()?.members.map(m => m.id) ?? []);
@@ -247,7 +256,12 @@ export class GroupPageComponent implements OnInit {
 
   async addKid(): Promise<void> {
     const [g, id] = [this.group(), this.pick()];
-    if (!g || !id) return;
+    if (!g || this.busy()) return;
+    if (!id) {
+      this.kidMissing.set(true);
+      this.host.querySelector<HTMLSelectElement>('.add-kid')?.focus();
+      return;
+    }
     await this.run(async () => {
       this.show(await this.api.addGroupMember(g.id, id));
       this.pick.set(null);
@@ -282,7 +296,12 @@ export class GroupPageComponent implements OnInit {
 
   async addTrainer(): Promise<void> {
     const [g, name] = [this.group(), this.trainerName().trim()];
-    if (!g || !name || this.busy()) return;
+    if (!g || this.busy()) return;
+    if (!name) {
+      this.trainerMissing.set(true);
+      this.host.querySelector<HTMLInputElement>('.trainer-name')?.focus();
+      return;
+    }
     await this.run(async () => {
       this.show(await this.api.addTrainer(g.id, name));
       this.trainerName.set('');

@@ -122,7 +122,8 @@
     "subscribedAt": "Prenumererade {{date}}",
     "puzzles": {
       "title": "Uppgifter",
-      "subtitle": "Elo {{elo}} | {{solved}} lösta ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} lösta ({{accuracy}})",
       "solve": "Lös uppgifter",
       "daily": "Dagens uppgift",
       "endless": "Ändlöst"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} fil",
       "public": "Offentlig",
       "private": "Privat",
-      "noDescription": "Ingen beskrivning",
       "open": "Öppna",
       "empty": "Inga repertoarer ännu. Skapa en för att komma igång!",
       "loadFailed": "Det gick inte att läsa in repertoarer",
@@ -327,7 +327,6 @@
       "updateFailed": "Repertoaren kunde inte uppdateras"
     },
     "detail": {
-      "noDescription": "Ingen beskrivning",
       "modeLines": "Linjer",
       "modeTree": "Träd"
     },

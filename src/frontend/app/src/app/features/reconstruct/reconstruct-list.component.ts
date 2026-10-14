@@ -38,7 +38,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       </div>
 
       <mat-card class="new-card">
-        <mat-form-field appearance="outline" class="grow">
+        <mat-form-field appearance="outline" class="grow" subscriptSizing="dynamic">
           <!-- z2-rk-recon-anlegen-plus: das Feld sagt selbst, dass hier eine neue Rekonstruktion entsteht. -->
           <mat-label>{{ 'reconstruct.createLabel' | translate }}</mat-label>
           <input matInput [(ngModel)]="newTitle" (keyup.enter)="create()"
@@ -48,6 +48,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
                   [appIconLabel]="'reconstruct.create' | translate">
             <mat-icon>add</mat-icon>
           </button>
+          <!-- b1-rk-recon-anlegen-ohne-grund: gesperrtes „Anlegen" nennt seinen Grund sichtbar (DESIGN 5.4). -->
+          @if (!newTitle.trim()) { <mat-hint class="create-hint">{{ 'reconstruct.createHint' | translate }}</mat-hint> }
         </mat-form-field>
         <button mat-flat-button color="primary" class="create-btn" [disabled]="busy() || !newTitle.trim()" (click)="create()">
           <mat-icon>add</mat-icon> {{ 'reconstruct.create' | translate }}
@@ -57,7 +59,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       @if (loading()) {
         <p class="muted">{{ 'common.loading' | translate }}</p>
       } @else if (items().length === 0) {
-        <p class="muted empty-state">{{ 'reconstruct.empty' | translate }}</p>
+        <!-- b1-rk-recon-leer-kontrast: ohne .muted — .empty-state blasst selbst ab (DESIGN 5.10, sonst 45 %). -->
+        <p class="empty-state">{{ 'reconstruct.empty' | translate }}</p>
       } @else {
         <div class="grid">
           @for (item of items(); track item.id) {
@@ -90,15 +93,22 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
   `,
   styles: [`
     .page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 1rem; }
+    /* b1-rk-recon-breitstufe: Kartenraster ab 2400 px in der breiten Seitenbreite (DESIGN 4.1). */
+    @media (min-width: 2400px) {
+      .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+    }
     h1 { margin: 0 0 0.25rem; }
     .muted { opacity: 0.75; }
     .empty-state { margin-top: 1rem; }
     /* flex-direction MUSS hier stehen: mat-card ist selbst ein Flexbox in SPALTEN-Richtung, und
        ohne diese Zeile wirkte \`flex: 1 1 260px\` unten auf die HOEHE — das Titelfeld stand als
        212 x 260 px grosser Kasten da statt als Textzeile. */
-    .new-card { display: flex; flex-direction: row; gap: 0.75rem; align-items: center;
+    /* b1-rk-recon-anlegen-ohne-grund: Feld mit dynamischem Hinweis (statt fester Hinweiszeile, die per negativem Rand
+       versteckt war); der Knopf richtet sich am 56-px-Feld aus, nicht an Feld + Hinweis. */
+    .new-card { display: flex; flex-direction: row; gap: 0.75rem; align-items: flex-start;
                 padding: 0.75rem 1rem; margin: 1rem 0; flex-wrap: wrap; }
-    .grow { flex: 1 1 260px; margin-bottom: -1.25em; }
+    .grow { flex: 1 1 260px; }
+    .create-btn { margin-top: 8px; }
     .grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
     .item { padding: 0.75rem 1rem; }
     /* a1-rk-recon-titel-linkfarbe: Titel in der Textfarbe wie die übrigen Kartentitel (nicht Browser-Blau/-Lila);

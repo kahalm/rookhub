@@ -61,13 +61,16 @@ describe('Brett-Koordinaten: Farbe passend zum Feld darunter (UX-060)', () => {
   }
 
   // UI-Sweep a1 (a1-rk-brett-koordinaten-dunkle-felder): helle Schrift auf dem dunklen brown-Feld lag bei ≈ 1,5:1.
+  // UI-Sweep b1 (b1-rk-brett-koordinaten-helle-felder): auf den hellen Feldern blieb das alte Grau mit 3,9:1.
   for (const orientation of ['white', 'black'] as const) {
-    it(`brown, ${orientation}: Koordinaten auf dunklen Feldern mindestens 4,5:1`, () => {
+    it(`brown, ${orientation}: Koordinaten auf hellen UND dunklen Feldern mindestens 4,5:1`, () => {
       const [light, dark] = THEMES['brown'];
-      const onDark = readCoords(mount('brown', orientation), light, dark).filter(r => r.onDark);
-      expect(onDark.length).toBe(8);
-      for (const r of onDark) {
-        expect(r.own).withContext(`${r.kind} ${r.label} auf ${r.square}: ${r.own.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      const all = readCoords(mount('brown', orientation), light, dark);
+      expect(all.filter(r => r.onDark).length).toBe(8);
+      expect(all.filter(r => !r.onDark).length).toBe(8);
+      for (const r of all) {
+        expect(r.own).withContext(`${r.kind} ${r.label} auf ${r.square} (${r.onDark ? 'dunkel' : 'hell'}): ${r.own.toFixed(2)}:1`)
+          .toBeGreaterThanOrEqual(4.5);
       }
     });
   }

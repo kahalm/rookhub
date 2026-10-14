@@ -14,6 +14,9 @@ export function isAuthUrl(url: string): boolean {
 
 const MASKS = ':is(app-login, app-register, app-forgot-password, app-reset-password)';
 
+/** Farbe der Feldhinweise auf der weißen Karte — leiser als der Text (#1f2d3d), aber ≥ 4,5:1 (b1-k-register-hinweise-abstand). */
+export const KID_AUTH_HINT_COLOR = '#4a6380';
+
 /** In den Stilen der App-Hülle (`:host ::ng-deep`) — gilt nur auf der Kinderseite. */
 export const KID_AUTH_STYLES = `
   :host ::ng-deep ${MASKS} .auth-container { min-height: 0; flex-direction: column; align-items: center; justify-content: flex-start; padding: 8px 16px 24px; }
@@ -34,6 +37,13 @@ export const KID_AUTH_STYLES = `
     color: #1f2d3d; box-shadow: 0 6px 0 var(--kid-shadow); padding: 6px 4px 10px;
   }
   :host ::ng-deep ${MASKS} .mat-mdc-card-title { color: var(--kid-title); }
+  /* b1-k-register-hinweise-abstand: die 1rem großen Hinweise klebten dunkel und 16 px eingerückt unter dem Feld, nur
+     4–6 px über dem nächsten Feld bzw. dem Knopf — sie wirkten wie eigener Text. Jetzt an der Feldkante, leiser
+     (KID_AUTH_HINT_COLOR, 6,1:1 auf Weiß) und mit 14 px Luft nach unten: klar der Hinweis zum Feld darüber. */
+  :host ::ng-deep ${MASKS} .mat-mdc-form-field-subscript-wrapper { margin-bottom: 14px; }
+  :host ::ng-deep ${MASKS} .mat-mdc-form-field-hint-wrapper,
+  :host ::ng-deep ${MASKS} .mat-mdc-form-field-error-wrapper { padding: 4px 4px 0; }
+  :host ::ng-deep ${MASKS} .mat-mdc-form-field-hint { color: ${KID_AUTH_HINT_COLOR}; }
   /* z2-k-register-hinweise: „Für Eltern: Was wir speichern …" nicht in 0.8rem. */
   :host ::ng-deep ${MASKS} .privacy-note { font-size: 1rem; }
   /* UI-Sweep 2026-10-11 (d1-k-kid-primary-button-restyled): die geteilten Masken nutzen seit 0.752.0 mat-flat-button —

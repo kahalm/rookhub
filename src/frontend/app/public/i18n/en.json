@@ -106,6 +106,8 @@
     "ebook_file_missing": "The file is missing on the server."
   },
   "common": {
+    "durationMinSec": "{{m}} min {{s}} s",
+    "durationSec": "{{s}} s",
     "paginator": {
       "itemsPerPage": "Items per page:",
       "firstPage": "First page",
@@ -432,7 +434,8 @@
     "subscribedAt": "Subscribed {{date}}",
     "puzzles": {
       "title": "Puzzles",
-      "subtitle": "Elo {{elo}} | {{solved}} solved ({{accuracy}})",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} solved ({{accuracy}})",
       "solve": "Solve Puzzles",
       "daily": "Daily puzzle",
       "endless": "Endless"
@@ -663,8 +666,9 @@
     },
     "tokens": {
       "title": "API tokens",
-      "subtitle": "Personal access tokens for machine clients: the chess.com extension (scope “Extension”) or the engine provider on your computer (scope “Engine”).",
-      "empty": "No tokens yet. Create one to connect the chess.com extension or your engine provider.",
+      "subtitle": "For the chess.com extension or your own engine computer.",
+      "subtitleHelp": "Each token only works for its scope: “Extension” for the browser extension (chess.com, lichess.org, Chessable), “Engine” for the engine provider on your computer.",
+      "empty": "No tokens yet.",
       "create": "Create token",
       "revoke": "Revoke token",
       "revokeConfirm": "Revoke token “{{name}}”? The client will no longer be able to connect.",
@@ -704,8 +708,9 @@
     },
     "engine": {
       "title": "External engine",
-      "hint": "Use a stronger engine on the analysis board — your own computer or a rented cloud engine. There are two ways to connect one; all your engines appear together in one list.",
-      "createToken": "Create a Lichess token (engine:read)",
+      "hint": "A stronger engine for the analysis board — your own computer or a cloud engine.",
+      "setup": "Set up",
+      "createToken": "Create a Lichess token",
       "tokenLabel": "Lichess API token",
       "stored": "Stored token",
       "removeTokenConfirm": "Delete the stored Lichess token? The Lichess engines disappear from the list; to use them again you need a new token from Lichess.",
@@ -1006,7 +1011,6 @@
       "fileCountOne": "{{count}} file",
       "public": "Public",
       "private": "Private",
-      "noDescription": "No description",
       "searchPlaceholder": "Search repertoires…",
       "noMatch": "No repertoires match “{{query}}”.",
       "open": "Open",
@@ -1042,7 +1046,6 @@
     },
     "detail": {
       "parsing": "Reading the repertoire … {{done}} of {{total}} lines",
-      "noDescription": "No description",
       "modeLines": "Lines",
       "modeTree": "Tree",
       "modeHoles": "Hole finder"
@@ -1074,6 +1077,8 @@
       "noChapter": "(No chapter)",
       "lineN": "Line {{n}}",
       "toggleChapter": "Expand / collapse chapter",
+      "showMore": "Show {{count}} more lines",
+      "showMoreOne": "Show 1 more line",
       "color": {
         "title": "Trained side",
         "white": "White",
@@ -1167,7 +1172,7 @@
       "asBlack": "Chapters as Black",
       "database": "Database",
       "masters": "Masters",
-      "help": "The hole finder walks through your repertoire and, in every position where your opponent is to move and you have prepared a reply, asks the Lichess explorer what is played there.\n\nA hole is an opponent move that is played at least as often as the threshold and leads to a position that appears nowhere in your repertoire – not even via another move order.\n\nHoles are sorted by how often you reach them in real games. The end of a line is not a hole.",
+      "help": "The hole finder walks through your repertoire and, in every position where your opponent is to move and you have prepared a reply, asks the Lichess explorer what is played there.\n\nA hole is an opponent move that is played at least as often as the threshold and leads to a position that appears nowhere in your repertoire – not even via another move order.\n\nHoles are sorted by how often you reach them in real games. The end of a line is not a hole.\n\nLichess.org allows only about 15 lookups per minute, so the first run over a large repertoire takes a while; RookHub remembers positions it has already looked up, and a stopped search picks up where it left off. The local database has no such limit.",
       "ratings": "Rating",
       "speeds": "Speed",
       "speed": {
@@ -1195,7 +1200,9 @@
       "frequency": "≈ {{value}} of your games",
       "startPosition": "Starting position",
       "games": "{{count}} games",
-      "intro": "Choose the database, rating and speed of your opponents and start the search. Lichess allows only about 15 lookups per minute, so the first run over a large repertoire takes a while; RookHub remembers positions it has already looked up, and a stopped search picks up where it left off.",
+      "intro": "Choose the rating and speed of your opponents and start the search.",
+      "introLocal": "Choose the rating and speed of your opponents – the local database answers right away.",
+      "introMasters": "Start the search in the master games.",
       "source": "Source",
       "sourceOnline": "Lichess.org",
       "sourceLocal": "Local",
@@ -1269,7 +1276,8 @@
       "home": "Home",
       "away": "Away",
       "result": "Result",
-      "none": "chess-results has no pairings for this round yet. Once they are published there, “Refresh” fetches them."
+      "none": "chess-results has no pairings for this round yet.",
+      "noneTournament": "chess-results has no pairings for this tournament yet."
     },
     "monitor": {
       "stopped": "Monitoring stopped",
@@ -1437,8 +1445,8 @@
       "t1Quiet": "No check or capture — find the quiet move that makes a decisive threat (the “T” in Checks–Captures–Threats).",
       "t2Piece": "Move your {{piece}}.",
       "t3Move": "Play {{move}}.",
-      "flag": "Bad hints",
-      "flagged": "Bad hints ✓",
+      "flag": "Report hints",
+      "flagged": "Hints reported ✓",
       "flagTitle": "Mark these hints as bad",
       "flagSaved": "Hints marked as bad.",
       "flagCleared": "Mark removed.",
@@ -2107,7 +2115,7 @@
       "sessionsPlayed": "{{count}} runs played",
       "sessionsPlayedOne": "{{count}} run played",
       "viewHistory": "View History",
-      "unfinishedRun": "Unfinished run: Lv {{level}} | {{solved}} solved | {{lives}} lives | {{max}} max",
+      "unfinishedRun": "Unfinished run: level {{level}} · {{solved}} solved · {{lives}} lives · best rating {{max}}",
       "continue": "Continue",
       "archiveAndNew": "Archive & New Game",
       "newGame": "New Game",
@@ -2194,8 +2202,8 @@
     "hints": {
       "show": "Hint",
       "next": "Next hint",
-      "flag": "Bad hints",
-      "flagged": "Bad hints ✓",
+      "flag": "Report hints",
+      "flagged": "Hints reported ✓",
       "flagTitle": "Mark these hints as bad (admin)",
       "flagSaved": "Hints marked as bad.",
       "flagCleared": "Mark removed.",
@@ -3262,7 +3270,10 @@
     "levelOtherOne": "Level {{level}}: 1 attempt",
     "levelEmptySwitched": "Your level {{level}} has no attempts yet, so all levels are shown",
     "standardEmpty": "No puzzles solved yet – your statistics fill up with the first one.",
-    "standardEmptyAction": "Solve puzzles"
+    "standardEmptyAction": "Solve puzzles",
+    "courseEmptyAction": "Go to courses",
+    "task": "Exercise",
+    "courseTask": "Course exercise"
   },
   "trainingGoals": {
     "tabs": {
@@ -3675,6 +3686,7 @@
     "replyLabel": "Your reply",
     "sendError": "Could not send the message.",
     "emptyUserCanWrite": "No messages yet. Write to the admin team below — they will get back to you here.",
+    "emptyDraft": "Write a message first.",
     "writeLabel": "Your message",
     "adminHint": "You're an admin — users' messages are in the admin area.",
     "toConversations": "Go to conversations"
@@ -4634,6 +4646,7 @@
     "introMore": "For example the opening moves, single positions or short move sequences — you close the gaps in between step by step.",
     "newTitle": "Title",
     "createLabel": "New reconstruction – title",
+    "createHint": "Enter a title, then you can create it.",
     "newTitlePlaceholder": "Club championship, round 3",
     "create": "Create",
     "open": "Open",

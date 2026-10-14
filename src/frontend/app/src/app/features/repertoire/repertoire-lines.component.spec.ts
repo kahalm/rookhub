@@ -223,3 +223,81 @@ describe('RepertoireLinesComponent Abfragen-Knopf', () => {
     expect(quiz[0].textContent).toContain('repertoire.lines.sr.reviewShort');
   });
 });
+
+/** b1-rk-repertoire-linien-handy-lang: großes Repertoire startet gegliedert statt ≈ 14 Bildschirme lang. */
+describe('RepertoireLinesComponent viele Linien', () => {
+  const many = (perChapter: number[]): RepertoireLine[] => {
+    const out: RepertoireLine[] = [];
+    perChapter.forEach((n, ci) => { for (let i = 0; i < n; i++) out.push(line('K' + ci, out.length)); });
+    return out;
+  };
+
+  it('über 20 Linien in mehreren Kapiteln: nur das erste Kapitel offen', () => {
+    const c = makeComponent();
+    c.lines = many([2, 40, 9]);
+    expect(c.chapterGroups().map(g => g.expanded)).toEqual([true, false, false]);
+    c.toggleChapter('K1');
+    expect(c.chapterGroups()[1].expanded).toBeTrue();
+    // Neuer Linienstand (z. B. Filter zurückgesetzt) setzt den Zustand des Nutzers nicht zurück.
+    c.lines = many([2, 40, 9]);
+    expect(c.chapterGroups().map(g => g.expanded)).toEqual([true, true, false]);
+  });
+
+  it('wenige Linien oder ein einziges Kapitel: alles offen', () => {
+    const a = makeComponent();
+    a.lines = many([5, 10, 5]);
+    expect(a.chapterGroups().every(g => g.expanded)).toBeTrue();
+    const b = makeComponent();
+    b.lines = many([60]);
+    expect(b.chapterGroups()[0].expanded).toBeTrue();
+  });
+
+  it('je Kapitel höchstens 15 Linien, „Weitere …“ zeigt den Rest; bei aktivem Filter alles offen', () => {
+    const c = makeComponent();
+    c.lines = many([40, 3]);
+    const g = c.chapterGroups()[0];
+    expect(c.shownLines(g).length).toBe(15);
+    expect(c.hiddenCount(g)).toBe(25);
+    c.showAll('K0');
+    expect(c.shownLines(c.chapterGroups()[0]).length).toBe(40);
+
+    const f = makeComponent();
+    f.lines = many([40, 3]);
+    f.filtered = true;
+    expect(f.chapterGroups().every(gr => gr.expanded)).toBeTrue();
+    expect(f.hiddenCount(f.chapterGroups()[0])).toBe(0);
+  });
+
+  it('rendert „Weitere N Linien anzeigen“ (Einzahl bei einer) und das Kästchen in 44-px-Trefferfläche', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideRouter } = await import('@angular/router');
+    const { provideNoopAnimations } = await import('@angular/platform-browser/animations');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { RepertoireTrainingService } = await import('./repertoire-training.service');
+    TestBed.configureTestingModule({
+      imports: [RepertoireLinesComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireTrainingService, useValue: { getLineStates: () => of([]), getFlashcardMarks: () => of({ lineKeys: [] }) } }],
+    });
+    const fixture = TestBed.createComponent(RepertoireLinesComponent);
+    fixture.componentInstance.repertoireId = 3;
+    fixture.componentInstance.lines = many([16, 1]);   // 17 Linien → nicht zugeklappt
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const more = el.querySelectorAll('.show-more');
+    expect(more.length).toBe(1);
+    expect(more[0].textContent).toContain('repertoire.lines.showMoreOne');
+    expect(el.querySelectorAll('.line-item').length).toBe(16);
+
+    const hit = el.querySelector('.line-pick-hit') as HTMLElement;
+    expect(hit.querySelector('input.line-pick')).not.toBeNull();
+    const r = hit.getBoundingClientRect();
+    expect(r.width).toBeGreaterThanOrEqual(44);
+    expect(r.height).toBeGreaterThanOrEqual(44);
+
+    (more[0] as HTMLElement).click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.line-item').length).toBe(17);
+    expect(el.querySelector('.show-more')).toBeNull();
+  });
+});

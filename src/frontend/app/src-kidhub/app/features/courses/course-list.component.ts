@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse } from '../../core/kids-api.service';
@@ -94,17 +94,27 @@ export class CourseListComponent {
   /** Abruf gescheitert — eigener Zustand, damit ein Fehler nicht wie „Noch keine Kurse" aussieht. */
   readonly failed = signal(false);
 
+  /** Sprache des letzten Abrufs — ein Wechsel in der Sprachpille holt die Kursnamen neu (b1-k-kursname-sprachwechsel). */
+  private lang: string | undefined;
+
   constructor() {
     this.load();
+    effect(() => {
+      const lang = this.translate.currentLang() ?? undefined;
+      untracked(() => { if (lang !== this.lang) this.load(); });
+    });
   }
 
-  /** Kurse holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel. */
+  /** Kurse holen — beim Oeffnen, nach einem Sprachwechsel und ueber „Nochmal" der Fehlerkachel. Nach einem
+   *  Sprachwechsel bleibt die Liste stehen, bis die neuen Namen da sind (kein Aufblitzen von „Lade …"). */
   load(): void {
-    this.loading.set(true);
+    const lang = this.translate.currentLang() ?? undefined;
+    this.lang = lang;
+    if (!this.courses().length) this.loading.set(true);
     this.failed.set(false);
-    this.api.courses(this.translate.currentLang() ?? undefined).subscribe({
-      next: courses => { this.courses.set(courses); this.loading.set(false); },
-      error: () => { this.failed.set(true); this.loading.set(false); },
+    this.api.courses(lang).subscribe({
+      next: courses => { if (lang !== this.lang) return; this.courses.set(courses); this.loading.set(false); },
+      error: () => { if (lang !== this.lang) return; this.failed.set(true); this.loading.set(false); },
     });
   }
 

@@ -116,7 +116,9 @@ const LONG_PRESS_SLOP_PX = 10;
       touch-action: manipulation; }
     .move:hover, .vmove:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
     .move.active, .vmove.active { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
-    .move.active .ev { color: rgba(255, 255, 255, .85); }
+    /* b1-rk-zugbaum-bewertung-aktiv-dunkel: die Bewertung im gewählten Zug folgt der Schrift der Markierung (on-primary),
+       statt fest weiß — dunkel ist die Markierung hellblau, dort war Weiß kaum lesbar (≈ 1,6:1). */
+    .move.active .ev { color: color-mix(in srgb, var(--mat-sys-on-primary) 85%, transparent); }
     .san { font-weight: 600; white-space: nowrap; }
     .ev { font-size: .78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }
     .star { color: #f9a825; font-size: .75rem; margin-left: 2px; }

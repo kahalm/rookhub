@@ -127,7 +127,10 @@
           (toggleTeamFavorite)="toggleTeamFavorite($event)"
           (showTeamPlayers)="showTeamPlayers($event)"
           [clubsBusy]="clubsBusy"
-          (fillClubs)="fillClubs()">
+          (fillClubs)="fillClubs()"
+          [canRefresh]="true"
+          [refreshing]="refreshing"
+          (refresh)="refresh()">
         </app-tournament-tables>
       </div>
     } @else {

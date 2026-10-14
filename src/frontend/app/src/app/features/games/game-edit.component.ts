@@ -37,6 +37,7 @@ import { LeaveConfirm } from '../../core/unsaved-changes.guard';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -53,7 +54,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   standalone: true,
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, ChessBoardComponent, HelpHintComponent, GameReviewComponent, SanPipe,
+    MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, IsoDateFieldComponent, ChessBoardComponent, HelpHintComponent, GameReviewComponent, SanPipe,
   ],
   template: `
     <div class="edit-page">
@@ -105,8 +106,10 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
             <input matInput [(ngModel)]="header.site" name="site" maxlength="200" (ngModelChange)="dirty.set(true)" /></mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.round' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.round" name="round" maxlength="40" (ngModelChange)="dirty.set(true)" /></mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.date' | translate }}</mat-label>
-            <input matInput type="date" [(ngModel)]="header.date" name="date" (ngModelChange)="dirty.set(true); headerDate.set($event)" /></mat-form-field>
+          <!-- b1-rk-edit-datum-us-format: Material-Datepicker in der App-Sprache („10.10.2026“) statt <input type="date">,
+               das nach der Browsersprache formatierte („10/10/2026“). header.date bleibt "YYYY-MM-DD". -->
+          <app-iso-date-field class="date-field" [label]="'games.edit.date' | translate" [value]="header.date"
+                              (valueChange)="header.date = $event; dirty.set(true); headerDate.set($event)" />
           <!-- Meine Seite: dreht Partieseite, Teilen-Link und Vorschaubild — und hier gleich das Brett. -->
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.ownerSide' | translate }}</mat-label>
             <mat-select [(ngModel)]="header.ownerSide" name="ownerSide" (ngModelChange)="onSide($event)">
@@ -320,9 +323,11 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     /* PC: EINE Zeile mit Gewichten — Namen breit, Ergebnis/Runde schmal, „Meine Seite" so breit, dass „nicht festgelegt" passt. */
     @media (min-width: 1101px) {
       /* z1-rk-edit-ergebnis: „Ergebnis" samt Auswahlpfeil braucht ~112 px; Ort und Runde geben dafür ab.
-         e1-rk-edit-round-cut: bei 72 px stand „Rou…" — die Runde bekommt 88 px, der Ort (1fr statt 1.2fr) gibt ab. */
-      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(112px, 0.9fr) minmax(0, 1.6fr) minmax(0, 1fr)
-        minmax(88px, 0.6fr) minmax(150px, 1fr) minmax(180px, 1.2fr); }
+         e1-rk-edit-round-cut: bei 72 px stand „Rou…" — die Runde bekommt 88 px, der Ort (1fr statt 1.2fr) gibt ab.
+         b1-rk-edit-ergebnis-regression: 112 px reichten bei 1 366 px nicht („Ergebni“) — 128 px, die Veranstaltung gibt ab
+         (1.4fr statt 1.6fr). Datum 164 px: Material-Datumsfeld mit Kalenderknopf (b1-rk-edit-datum-us-format). */
+      .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(128px, 0.9fr) minmax(0, 1.4fr) minmax(0, 1fr)
+        minmax(88px, 0.6fr) minmax(164px, 1fr) minmax(180px, 1.2fr); }
     }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
     .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }

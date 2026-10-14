@@ -116,6 +116,18 @@
   dd { margin: 0; word-break: break-word; }
 }
 
+/* Aktionszeile direkt unter dem Fortschritt, die Kennzahlen folgen darunter — in allen Breiten (z2 am Handy,
+   b1-rk-kursdetail-vorlauf-laptop am Laptop: Hauptknopf sonst erst bei 45–48 % der Höhe, DESIGN 4.6 Nr. 3). */
+.head-card mat-card-content { display: flex; flex-direction: column; }
+.head-card .meta { order: 1; margin: 0.75rem 0 0; }
+
+/* Kurs ohne Aufgaben: leiser Satz statt „0/0" (b1-rk-studienbuch-fortschritt-0-0, wie die Kurskarte). */
+.empty-note {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82em; }
 
 .actions {
@@ -135,10 +147,6 @@
    Kalkulations-Schalter hinter das ⋮, damit das Menü nicht allein in einer Zeile steht. */
 .label-short { display: none; }
 @media (max-width: 599.98px) {
-  /* UI-Sweep z2 (z2-rk-kursdetail-handy-vorlauf): am Handy steht die Aktionszeile direkt unter dem Fortschritt,
-     die Kennzahlen folgen darunter (Hauptknopf über 40 % der Höhe, DESIGN 4.6). */
-  .head-card mat-card-content { display: flex; flex-direction: column; }
-  .head-card .meta { order: 1; margin: 0.75rem 0 0; }
   .label-long { display: none; }
   .label-short { display: inline; }
   .actions .calc-toggle { order: 10; margin-left: 0; }
@@ -269,10 +277,15 @@
   mat-progress-bar { flex: 1; }
 }
 
+/* Zähler in fester Breite, rechtsbündig: alle Balken gleich lang, Balkenenden und Zähler in einer Spalte
+   (b1-rk-kapitel-balken-versatz, DESIGN 5.3) — „0/6" und „12/119" verschoben sie sonst je Zeile. */
 .chapter-label {
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  flex: none;
+  min-width: 7ch;
+  text-align: right;
 }
 
 .chapter-actions { display: flex; align-items: center; }
@@ -284,6 +297,7 @@
   .chapter-row > .chapter-actions { order: 2; margin-left: auto; }
   .chapter-row > .chapter-progress { order: 3; flex: 1 1 0; min-width: 6rem; margin-left: 1.9rem; }
   .chapter-row > .chapter-counts { order: 4; }
+  .chapter-row > .chapter-progress--none { display: none; }
 }
 
 .rename-input {

@@ -272,6 +272,15 @@ describe('RepertoireListComponent Karten-Aktionen (⋮-Menü)', () => {
     expect(cards[1].textContent).not.toContain('repertoire.list.fileCountOne');
   });
 
+  // b1-rk-keine-beschreibung: ohne Beschreibung keine Füllzeile.
+  it('Beschreibung nur mit Inhalt, keine Zeile „Keine Beschreibung“', async () => {
+    const fixture = await render([rep(1), rep(2, { description: 'Meine Eröffnungen' })]);
+    const cards = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-card'));
+    expect(cards[0].querySelector('mat-card-content')).toBeNull();
+    expect(cards[1].querySelector('mat-card-content')?.textContent).toContain('Meine Eröffnungen');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('noDescription');
+  });
+
   it('geteilte Karte: im Menü nur der PGN-Download', async () => {
     const fixture = await render([rep(2, { isShared: true, sharedByUsername: 'noel' })]);
     const trigger = fixture.debugElement.query(By.directive(MatMenuTrigger));
@@ -374,5 +383,18 @@ describe('RepertoireListComponent Titel am Handy', () => {
     const css = ((RepertoireListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
     const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
     expect(phone).toMatch(/\.header[^{]* h1[^{]*\{ ?font-size: 1\.6rem/);
+  });
+});
+
+/** b1-rk-repertoire-karten-ultrawide-300: die 420-px-Spalten ab 2400 px wirkten nicht — die gleich spezifische
+ *  Grundregel (300 px) stand dahinter und gewann. Karma läuft 1 400 px breit → Reihenfolge im CSS-Text prüfen. */
+describe('RepertoireListComponent Kartenraster ab 2400 px', () => {
+  it('die 420-px-Rasterregel steht in der Breitbild-Stufe HINTER der 300-px-Grundregel', () => {
+    const css = ((RepertoireListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, '');
+    const base = css.search(/\.repertoire-grid(\[[^\]]*\])?\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(300px,1fr\)\)/);
+    const wide = css.search(/@media\(min-width:2400px\)\{\.repertoire-grid(\[[^\]]*\])?\{grid-template-columns:repeat\(auto-fill,minmax\(420px,1fr\)\)/);
+    expect(base).toBeGreaterThan(-1);
+    expect(wide).toBeGreaterThan(base);
+    expect(css.match(/minmax\(420px/g)?.length).toBe(1);
   });
 });

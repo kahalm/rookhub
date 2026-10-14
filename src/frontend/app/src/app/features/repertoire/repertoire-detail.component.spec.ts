@@ -432,3 +432,83 @@ describe('RepertoireDetailComponent Kopf', () => {
     expect(el.querySelector('.header-actions mat-button-toggle-group')).not.toBeNull();
   });
 });
+
+/** b1-rk-repertoire-filterbrett-fen-start: Endspiel-Repertoire (Linien ab einer FEN) — das Filterbrett steht in deren
+ *  Ausgangsstellung statt in der Grundstellung (von dort traf der Filter nie eine Linie). */
+describe('RepertoireDetailComponent Stellungsfilter ab FEN', () => {
+  const FEN = '4k3/8/3K4/3P4/8/8/8/8 w - - 0 1';
+  const game = (moves: string, fen = FEN) => `[Event "End"]\n[SetUp "1"]\n[FEN "${fen}"]\n[Result "*"]\n\n${moves} *\n`;
+
+  async function make(pgn: string) {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+    comp.mode = 'lines';
+    comp.viewerService.loadPgn(pgn);
+    (comp as any).recomputeFilter();
+    return comp;
+  }
+
+  it('Brett zeigt die gemeinsame Start-FEN, Filterzüge treffen die Linien, Zugnummern ab der FEN', async () => {
+    const comp = await make(game('1. Kc6 Kd8 2. d6') + '\n' + game('1. Ke6 Kd8 2. d6'));
+    expect(comp.boardFen).toBe(FEN);
+    expect(comp.filterBoardActive).toBeTrue();
+    comp.onFilterMove({ san: 'Ke6', from: 'd6', to: 'e6', fen: '4k3/8/4K3/3P4/8/8/8/8 b - - 1 1' } as any);
+    expect(comp.visibleLines.length).toBe(1);
+    expect(comp.filterMovesText).toBe('1. Ke6');
+    comp.resetFilter();
+    expect(comp.boardFen).toBe(FEN);
+  });
+
+  it('Linien aus verschiedenen Startstellungen: kein Filter, Brett zeigt die erste Startstellung', async () => {
+    const other = '4k3/8/3K4/8/3P4/8/8/8 w - - 0 1';
+    const comp = await make(game('1. Kc6 Kd8') + '\n' + game('1. Ke6 Kd8', other));
+    expect(comp.filterBoardActive).toBeFalse();
+    expect(comp.boardFen).toBe(FEN);
+  });
+
+  it('normales Repertoire bleibt bei der Grundstellung', async () => {
+    const comp = await make('[Event "Rep"]\n[Result "*"]\n\n1. e4 e5 *\n');
+    expect(comp.filterBoardActive).toBeTrue();
+    expect(comp.boardFen.startsWith('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w')).toBeTrue();
+  });
+});
+
+/** b1-rk-keine-beschreibung: der Detailkopf trägt keinen Untertitel „Keine Beschreibung“. */
+describe('RepertoireDetailComponent Kopf ohne Beschreibung', () => {
+  async function render(description: string | null) {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireExplorerService, useValue: { sources: () => of(null), run: () => of(null), effectiveSettings: () => of(null) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireDetailComponent);
+    const comp = fixture.componentInstance;
+    fixture.detectChanges();   // ngOnInit (lädt per HttpClientTesting — bleibt offen)
+    comp.loading = false;
+    comp.mode = 'edit';
+    comp.repertoire = { id: 1, name: 'Endspiel', description, files: [], isOwner: true } as any;
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('ohne Beschreibung kein Untertitel', async () => {
+    const el = await render(null);
+    expect(el.querySelector('.header-info h2')?.textContent).toContain('Endspiel');
+    expect(el.querySelector('.header-info .subtitle')).toBeNull();
+    expect(el.textContent).not.toContain('noDescription');
+  });
+
+  it('mit Beschreibung steht sie als Untertitel', async () => {
+    const el = await render('Bauernendspiele');
+    expect(el.querySelector('.header-info .subtitle')?.textContent).toContain('Bauernendspiele');
+  });
+});

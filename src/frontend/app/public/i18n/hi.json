@@ -122,7 +122,8 @@
     "subscribedAt": "{{date}} को सदस्यता ली",
     "puzzles": {
       "title": "पहेलियाँ",
-      "subtitle": "Elo {{elo}} | {{solved}} हल ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} हल ({{accuracy}})",
       "solve": "पहेलियाँ हल करें",
       "daily": "दैनिक पहेली",
       "endless": "अनंत"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} फ़ाइल",
       "public": "सार्वजनिक",
       "private": "निजी",
-      "noDescription": "कोई विवरण नहीं",
       "open": "खोलें",
       "empty": "अभी कोई रेपर्टोयर नहीं। शुरू करने के लिए एक बनाएं!",
       "loadFailed": "रेपर्टोयर लोड करने में विफल",
@@ -327,7 +327,6 @@
       "updateFailed": "रेपर्टोयर अपडेट नहीं हो सका"
     },
     "detail": {
-      "noDescription": "कोई विवरण नहीं",
       "modeLines": "लाइनें",
       "modeTree": "ट्री"
     },

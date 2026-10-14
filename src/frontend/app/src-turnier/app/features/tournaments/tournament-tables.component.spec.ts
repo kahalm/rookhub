@@ -484,6 +484,7 @@ describe('TournamentTablesComponent', () => {
     liga();
     component.pairingColumns = ['board', 'white', 'result', 'black'];
     component.displayedPairings = [{ board: 1, white: 'Oberschmid, Patrik', black: 'Muster, Anna', result: '1-0' }];
+    component.rounds = [1];
     component.split = true;
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
@@ -530,5 +531,106 @@ describe('TournamentTablesComponent', () => {
     expect(css.slice(at)).toMatch(/\.split-tables[^{]*\{display:grid;/);
     expect(css.slice(at)).toMatch(/\.split-pairings[^{]*\{position:sticky;top:1rem;max-height:calc\(100vh-2rem\);overflow:auto/);
     expect(css.slice(0, at)).not.toContain('split-');
+  });
+
+  // ----- UI-Sweep b1 -----
+
+  const tablesCss = () => ((TournamentTablesComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+    .replace(/%NS%/g, '').replace(/\s+/g, ' ');
+
+  it('blendet die Spalte „Punkte" aus, solange kein Team Punkte hat (b1-t-teams-punkte-leer)', () => {
+    component.teams = component.displayedTeams = [team(), team({ id: 2, snr: 2, name: 'ŠK Prakovce - www.sachovetreningy.sk' })];
+    component.selectedTabIndex = 1;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    expect(component.shownTeamColumns).toEqual(['fav', 'rank', 'name']);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('th.mat-column-points')).toBeNull();
+    // Voller Name im title, die Zelle kuerzt am Handy mit „…"
+    const names = [...el.querySelectorAll('.teams-table td.mat-column-name')] as HTMLElement[];
+    expect(names[1].getAttribute('title')).toBe('ŠK Prakovce - www.sachovetreningy.sk');
+    // gemerkt: gleiche Eingabe, gleiches Array (sonst zeichnet mat-table die Kopfzeile je Durchlauf neu)
+    expect(component.shownTeamColumns).toBe(component.shownTeamColumns);
+
+    // Liefert der Crawler einmal Punkte, erscheint die Spalte von selbst.
+    component.teams = component.displayedTeams = [{ ...team(), points: 7 } as TournamentTeam];
+    fixture.detectChanges();
+    expect(component.shownTeamColumns).toEqual(TEAM_COLUMNS);
+    expect(el.querySelector('th.mat-column-points')).not.toBeNull();
+  });
+
+  it('kuerzt am Handy den Teamnamen einzeilig mit „…" (b1-t-teams-punkte-leer)', () => {
+    const css = tablesCss();
+    const mobile = css.slice(css.indexOf('@media (max-width: 768px)'));
+    expect(mobile).toMatch(/\.teams-table[^{]*td\.mat-column-name[^{]*\{ ?max-width: 0; ?width: 100%/);
+    expect(mobile).toMatch(/\.teams-table[^{]*\.team-link[^{]*\{ ?display: block; ?overflow: hidden; ?text-overflow: ellipsis; ?white-space: nowrap/);
+  });
+
+  it('ohne Runden: keine leere Rundenauswahl, Satz fuer das Turnier und „Aktualisieren" daneben (b1-t-paarungen-leer-ohne-weg)', () => {
+    component.rounds = [];
+    component.displayedPairings = [];
+    component.canRefresh = true;
+    component.selectedTabIndex = 2;
+    const spy = jasmine.createSpy('refresh');
+    component.refresh.subscribe(spy);
+    fixture.detectChanges();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.round-selector')).toBeNull();
+    const empty = el.querySelector('.pairings-empty')!;
+    expect(empty.querySelector('p')!.textContent!.trim()).toBe('tournaments.pairings.noneTournament');
+    expect(empty.querySelector('.pairings-full-view')).toBeNull();
+    const button = empty.querySelector('button.pairings-refresh') as HTMLButtonElement;
+    expect(button.textContent).toContain('tournaments.actions.refresh');
+    button.click();
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    component.refreshing = true;
+    fixture.detectChanges();
+    expect(button.disabled).toBeTrue();
+  });
+
+  it('mit Runden, aber leerer Runde: Auswahl bleibt, Satz fuer die Runde (b1-t-paarungen-leer-ohne-weg)', () => {
+    component.rounds = [1, 2];
+    component.selectedRound = 2;
+    component.displayedPairings = [];
+    component.selectedTabIndex = 2;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.round-selector')).not.toBeNull();
+    expect(el.querySelector('.pairings-empty p')!.textContent!.trim()).toBe('tournaments.pairings.none');
+    // Ohne Freigabe und ohne Link (Vorgabe): keine Aktion
+    expect(el.querySelector('.pairings-empty button, .pairings-empty a')).toBeNull();
+  });
+
+  it('geteilte Ansicht: statt „Aktualisieren" der Weg zur vollen Ansicht (b1-t-paarungen-leer-ohne-weg)', () => {
+    component.rounds = [];
+    component.displayedPairings = [];
+    component.fullViewLink = ['/tournaments', '42'];
+    component.selectedTabIndex = 2;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    const link = (fixture.nativeElement as HTMLElement).querySelector('.pairings-empty a.pairings-full-view') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/tournaments/42');
+    expect(link.textContent).toContain('tournaments.actions.openFull');
+    expect((fixture.nativeElement as HTMLElement).querySelector('.pairings-refresh')).toBeNull();
+  });
+
+  it('Tablet 769–1023 px: FIDE-ID aus, Verein einzeilig bis 12rem, voller Name im title (b1-t-spieler-brettspalte-tablet-en)', () => {
+    const css = tablesCss();
+    const at = css.indexOf('@media (min-width: 769px) and (max-width: 1023.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const tablet = css.slice(at, css.indexOf('}', css.indexOf('cell-clip', at)) + 1);
+    expect(tablet).toMatch(/\.mat-column-fideId[^{]*\{ ?display: none/);
+    expect(tablet).toMatch(/\.mat-column-team[^{]*\.cell-clip[^{]*\{ ?display: block; ?max-width: 12rem; ?overflow: hidden; ?text-overflow: ellipsis/);
+    // Ausserhalb der Tablet-Stufe bleibt die FIDE-ID sichtbar.
+    expect(css.slice(0, at)).not.toMatch(/\.mat-column-fideId[^{]*\{ ?display: none/);
+    component.players = component.displayedPlayers = [player({ teamName: 'ŠK Prakovce - www.sachovetreningy.sk' })];
+    fixture.detectChanges();
+    const cell = (fixture.nativeElement as HTMLElement).querySelector('td.mat-column-team') as HTMLElement;
+    expect(cell.getAttribute('title')).toBe('ŠK Prakovce - www.sachovetreningy.sk');
+    expect(cell.querySelector('.cell-clip')!.textContent).toContain('ŠK Prakovce');
   });
 });

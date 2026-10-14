@@ -69,7 +69,7 @@ const SAVE_DEBOUNCE_MS = 1500;
         @if (share) { <p><a class="back-link" [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
         <h2>Partien hinzufügen</h2>
         <!-- UI-Sweep 2026-10-11 (d2-l-hinzufuegen-anon-text): eine Zeile + (i) statt drei Zeilen über Umschalter und Dateiauswahl. -->
-        <p class="muted info-line">Angenommen wird jede Partie mit bekanntem Gegner.@if (share) { Ohne Anmeldung.}
+        <p class="muted info-line info-inline">Angenommen wird jede Partie mit bekanntem Gegner.@if (share) { Ohne Anmeldung.}
           <button type="button" class="chk-btn" [attr.aria-expanded]="introInfo()" aria-label="Was angenommen wird"
                   title="Was angenommen wird" (click)="introInfo.set(!introInfo())">i</button></p>
         @if (introInfo()) {

@@ -1,6 +1,12 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { MessagesComponent } from './messages.component';
-import { ChatMessage } from '../../core/message.service';
+import { ChatMessage, MessageService } from '../../core/message.service';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
 
 /** Direkt instanziiert (ohne TestBed/Template) — testet die Komponenten-Logik. */
 function msg(id: number, fromAdmin: boolean, readByRecipient = false, body = 'hi'): ChatMessage {
@@ -67,6 +73,16 @@ describe('MessagesComponent', () => {
     c.send();
 
     expect(svc.send).not.toHaveBeenCalled();
+    // b1-rk-messages-senden-gesperrt: statt eines grauen Knopfs ohne Grund ein Hinweis unter dem Feld.
+    expect(c.emptyHint).toBeTrue();
+  });
+
+  it('a successful send clears the empty-draft hint', () => {
+    const c = newComp(makeService());
+    c.emptyHint = true;
+    c.draft = 'hallo';
+    c.send();
+    expect(c.emptyHint).toBeFalse();
   });
 
   it('send clears the sending flag on error', () => {
@@ -141,5 +157,40 @@ describe('MessagesComponent', () => {
   it('isAdmin follows the auth service', () => {
     const c = new MessagesComponent(makeService(), snackbar as any, translate as any, { isAdmin: true } as any);
     expect(c.isAdmin).toBeTrue();
+  });
+});
+
+describe('MessagesComponent Template (b1-rk-messages-senden-gesperrt)', () => {
+  it('„Senden“ ist bei leerem Feld nicht gesperrt; Antippen zeigt den Hinweis, Tippen räumt ihn weg', async () => {
+    const svc = makeService();
+    await TestBed.configureTestingModule({
+      imports: [MessagesComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MessageService, useValue: svc },
+        { provide: SnackbarService, useValue: snackbar },
+        { provide: AuthService, useValue: { isAdmin: false } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(MessagesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const button = el.querySelector('.reply button') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    expect(button.disabled).toBeFalse();
+    expect(el.querySelector('.empty-draft')).toBeNull();
+
+    button.click();
+    fixture.detectChanges();
+    expect(svc.send).not.toHaveBeenCalled();
+    expect(el.querySelector('.empty-draft')?.textContent).toContain('messages.emptyDraft');
+
+    const area = el.querySelector('textarea') as HTMLTextAreaElement;
+    area.value = 'hallo';
+    area.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.querySelector('.empty-draft')).toBeNull();
   });
 });

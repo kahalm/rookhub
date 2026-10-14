@@ -168,15 +168,18 @@
         </ng-container>
         <ng-container matColumnDef="team">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club') | translate }}</th>
-          <td mat-cell *matCellDef="let p">
-            @if (p.teamName && hasTeamPairings) {
-              <span class="team-link" (click)="showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span>
-            } @else if (p.teamName) {
-              {{ p.teamName }}
-            } @else if (p.club && !hasTeamPairings) {
-              <!-- Uebernommen, nicht aus DIESER Startliste: kursiv, mit Herkunft. -->
-              <span class="club-derived" [matTooltip]="'tournaments.players.clubFrom' | translate: { source: p.clubSource || '?' }">{{ p.club }}</span>
-            }
+          <!-- .cell-clip: am Tablet (769–1023 px) einzeilig mit „…" (b1-t-spieler-brettspalte-tablet-en), voller Name im title. -->
+          <td mat-cell *matCellDef="let p" [attr.title]="p.teamName || p.club || null">
+            <span class="cell-clip">
+              @if (p.teamName && hasTeamPairings) {
+                <span class="team-link" (click)="showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span>
+              } @else if (p.teamName) {
+                {{ p.teamName }}
+              } @else if (p.club && !hasTeamPairings) {
+                <!-- Uebernommen, nicht aus DIESER Startliste: kursiv, mit Herkunft. -->
+                <span class="club-derived" [matTooltip]="'tournaments.players.clubFrom' | translate: { source: p.clubSource || '?' }">{{ p.club }}</span>
+              }
+            </span>
           </td>
         </ng-container>
         <ng-container matColumnDef="board">
@@ -249,7 +252,7 @@
       </div>
     }
     <div class="table-scroll">
-      <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort.emit($event)" class="full-width">
+      <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort.emit($event)" class="full-width teams-table">
         <ng-container matColumnDef="fav">
           <th mat-header-cell *matHeaderCellDef></th>
           <!-- Klick auf der ganzen Zelle (~72x52 px) statt nur auf dem 24-px-Stern: der Teams-Tab hat keine Mobil-Karten.
@@ -269,7 +272,8 @@
         </ng-container>
         <ng-container matColumnDef="name">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.team' | translate }}</th>
-          <td mat-cell *matCellDef="let t">
+          <!-- Am Handy einzeilig mit „…", voller Name im title (b1-t-teams-punkte-leer). -->
+          <td mat-cell *matCellDef="let t" [attr.title]="t.name">
             <span class="team-link" (click)="showTeamPlayers.emit(t.name)">{{ t.name }}</span>
           </td>
         </ng-container>
@@ -277,33 +281,48 @@
           <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before">{{ 'tournaments.teams.points' | translate }}</th>
           <td mat-cell *matCellDef="let t">{{ t.points }}</td>
         </ng-container>
-        <tr mat-header-row *matHeaderRowDef="teamColumns; sticky: true"></tr>
-        <tr mat-row *matRowDef="let row; columns: teamColumns;"></tr>
+        <tr mat-header-row *matHeaderRowDef="shownTeamColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: shownTeamColumns;"></tr>
       </table>
     </div>
   }
 </ng-template>
 
 <ng-template #pairingsPane>
-  <div class="round-selector">
-    <mat-form-field appearance="outline">
-      <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
-      <mat-select [ngModel]="selectedRound" (selectionChange)="roundChange.emit($event.value)">
-        @for (r of rounds; track r) {
-          <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    @if (hasFavorites) {
-      <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
-    }
-  </div>
+  <!-- Ohne Runden keine Rundenauswahl (b1-t-paarungen-leer-ohne-weg): sie zeigte nur „Runde" ohne Wert und Eintraege. -->
+  @if (rounds.length > 0) {
+    <div class="round-selector">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
+        <mat-select [ngModel]="selectedRound" (selectionChange)="roundChange.emit($event.value)">
+          @for (r of rounds; track r) {
+            <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (hasFavorites) {
+        <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
+      }
+    </div>
+  }
   @if (pairingsLoading) {
     <app-loading-spinner />
   } @else if (displayedPairings.length === 0) {
     <!-- alles-voll-2: ohne Paarungen stand nur der Tabellenkopf da (ab 2400 px als ganze rechte Spalte) — wie bei den
-         Spielern ein Satz mit Grund und Weg weiter. -->
-    <p class="empty-state">{{ 'tournaments.pairings.none' | translate }}</p>
+         Spielern ein Satz mit Grund und Weg weiter. b1-t-paarungen-leer-ohne-weg: der Weg steht hier als EINE Aktion —
+         „Aktualisieren" auf der Detailseite, „Volle Ansicht" auf /t/:id (dort gibt es den Knopf nicht). -->
+    <div class="empty-state pairings-empty">
+      <p>{{ (rounds.length > 0 ? 'tournaments.pairings.none' : 'tournaments.pairings.noneTournament') | translate }}</p>
+      @if (canRefresh) {
+        <button mat-stroked-button type="button" class="pairings-refresh" (click)="refresh.emit()" [disabled]="refreshing">
+          <mat-icon>refresh</mat-icon> {{ 'tournaments.actions.refresh' | translate }}
+        </button>
+      } @else if (fullViewLink) {
+        <a mat-stroked-button class="pairings-full-view" [routerLink]="fullViewLink">
+          <mat-icon>open_in_full</mat-icon> {{ 'tournaments.actions.openFull' | translate }}
+        </a>
+      }
+    </div>
   } @else {
     <!-- Desktop: full table -->
     <div class="table-scroll desktop-only">

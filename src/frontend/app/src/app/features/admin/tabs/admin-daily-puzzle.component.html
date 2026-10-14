@@ -2,10 +2,9 @@
   <p class="daily-intro">{{ 'admin.daily.intro' | translate }}</p>
 
   <div class="daily-controls">
-    <mat-form-field appearance="outline" class="daily-date-field" subscriptSizing="dynamic">
-      <mat-label>{{ 'admin.daily.dateLabel' | translate }}</mat-label>
-      <input matInput type="date" [(ngModel)]="dailyDate" [max]="today" (change)="loadDailyPuzzle()">
-    </mat-form-field>
+    <!-- b1-rk-edit-datum-us-format: Datum in der App-Sprache statt im Browserformat (DESIGN 5.13). -->
+    <app-iso-date-field class="daily-date-field" [label]="'admin.daily.dateLabel' | translate" [max]="today"
+                        [value]="dailyDate" (valueChange)="dailyDate = $event; $event && loadDailyPuzzle()" />
     <button mat-stroked-button (click)="loadDailyPuzzle()" [disabled]="dailyLoading">
       <mat-icon>refresh</mat-icon> {{ 'admin.daily.reload' | translate }}
     </button>

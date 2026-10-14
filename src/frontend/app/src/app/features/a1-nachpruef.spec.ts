@@ -16,9 +16,10 @@ describe('Nachprüfung a1 (0.763.1)', () => {
     expect(c).not.toMatch(/\.empty-state(\[[^\]]*\])?mat-icon/);
   });
 
-  it('Bestenlisten: vier Spalten ab 1 100 px, Seite ab 1 400 px bis 1 400 px breit (Namen nicht gekürzt)', () => {
+  // b1-rk-bestenlisten-namen-laptop: die breite Seite greift schon ab 1 280 px (Laptop 1 366 px kürzte die Namen noch).
+  it('Bestenlisten: vier Spalten ab 1 100 px, Seite ab 1 280 px bis 1 400 px breit (Namen nicht gekürzt)', () => {
     const c = css(LeaderboardsComponent);
-    expect(c).toMatch(/@media\(min-width:1400px\)\{\.lb-page(\[[^\]]*\])?\{max-width:min\(1400px,96vw\)/);
+    expect(c).toMatch(/@media\(min-width:1280px\)\{\.lb-page(\[[^\]]*\])?\{max-width:min\(1400px,96vw\)/);
   });
 
   it('Partie-Kopf am Tablet: steht nur das ⋮, bleibt es neben dem Titel (keine eigene Zeile)', () => {

@@ -199,7 +199,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .ga-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    h1 { margin: 0; font-size: 1.5rem; }
+    /* b1-rk-h1-uneinheitlich: Seitentitel in der Material-Größe wie die Geschwister (Analyse, Katalog, Statistik). */
+    h1 { margin: 0; }
     .overall { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
     .overall mat-progress-bar { border-radius: 3px; }
     /* a1-rk-ga-intro-zeile: Fließtext ≤ ~75 Zeichen je Zeile (DESIGN 4.6 Regel 4). */

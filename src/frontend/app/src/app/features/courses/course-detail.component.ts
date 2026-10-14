@@ -333,6 +333,12 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     return /chessable|_firstkey\.pgn$/i.test(d.fileName) || /chessable/i.test(d.tags ?? '');
   }
 
+  /** Kurs ohne lösbare Aufgaben (Studienbuch: nur kommentierte Partien) — kein „0/0"-Fortschritt, „Linien
+   *  durchsehen" wird der Hauptknopf (b1-rk-studienbuch-fortschritt-0-0). Kalkulationsbücher zählen Stellungen. */
+  get isEmptyQuiz(): boolean {
+    return !!this.detail && !this.detail.isCalculation && this.detail.puzzleCount === 0;
+  }
+
   // ===== Starten ============================================================
 
   /** Wohin der Start-Knopf führt: Kalkulationsbuch → Kalkulations-Modus, sonst der letzte Modus. */

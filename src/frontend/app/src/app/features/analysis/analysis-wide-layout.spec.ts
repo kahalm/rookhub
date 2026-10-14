@@ -74,3 +74,15 @@ describe('AnalysisComponent Bewertungsleiste (a1-rk-evalbar-hell)', () => {
     expect(m![1]).toContain('box-sizing:border-box');
   });
 });
+
+// b1-w-analyse-verlauf-klebt: der Abstand zwischen Seitenkopf und Brett hing am h1 (margin-bottom 8 px), wirkte bei
+// zentrierter Ausrichtung nur halb — ohne Vollbild-Knopf (Safari) klebte „Verlauf" 4 px über dem Brett. Jetzt trägt
+// der Kopf 12 px selbst, das h1 hat keinen Rand.
+describe('AnalysisComponent Seitenkopf (b1-w-analyse-verlauf-klebt)', () => {
+  const css = ((AnalysisComponent as any).ɵcmp.styles as string[]).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+
+  it('der Kopf trägt den Abstand zum Brett, nicht das h1', () => {
+    expect(css).toMatch(/\.header(\[[^\]]*\])?\{[^}]*margin-bottom:12px/);
+    expect(css).toMatch(/\.header(\[[^\]]*\])?h1(\[[^\]]*\])?\{margin:0;?\}/);
+  });
+});

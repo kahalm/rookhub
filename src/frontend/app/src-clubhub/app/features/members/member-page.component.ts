@@ -12,6 +12,9 @@ import { MemberPhotoComponent } from '../../shared/member-photo.component';
 import { STATUS_LABEL, ageClass, attendanceText, emptyInput, formatBirth, formatLinkCode, fullName, parseBirth, shortDate, telHref, toInput } from '../../core/club-format';
 import { ClubGateComponent } from '../../shared/club-gate.component';
 
+/** Felder, unter denen das Formular selbst einen Hinweis zeigt (Wert = `name` des Eingabefelds). */
+type FormField = 'firstName' | 'birth' | 'fideId';
+
 /** „30.09.2026" aus einem Zeitstempel der API (Ortszeit des Betrachters). */
 export function formatDay(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -63,24 +66,33 @@ function orNull(value: string | null | undefined): string | null {
         </div>
         <div class="grid-2">
           <label class="field"><span>Vorname</span>
-            <input #firstName name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName" (input)="set('firstName', $any($event.target).value)"></label>
+            <input #firstName name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName"
+              [attr.aria-invalid]="fieldError()?.field === 'firstName' || null" [attr.aria-describedby]="fieldError()?.field === 'firstName' ? 'firstName-need' : null"
+              (input)="set('firstName', $any($event.target).value)"></label>
           <label class="field"><span>Nachname (wenn bekannt)</span>
             <input name="lastName" autocomplete="off" maxlength="80" [value]="form().lastName" (input)="set('lastName', $any($event.target).value)"></label>
         </div>
+        @if (fieldError(); as fe) { @if (fe.field === 'firstName') { <p class="err need" id="firstName-need">{{ fe.text }}</p> } }
         <div class="grid-2">
           <label class="field"><span>Geburtsdatum oder Jahrgang</span>
-            <input name="birth" inputmode="numeric" autocomplete="off" placeholder="12.3.2015 oder 2015" [value]="birthText()" (input)="birthText.set($any($event.target).value)"></label>
+            <input name="birth" inputmode="numeric" autocomplete="off" placeholder="12.3.2015 oder 2015" [value]="birthText()"
+              [attr.aria-invalid]="fieldError()?.field === 'birth' || null" [attr.aria-describedby]="fieldError()?.field === 'birth' ? 'birth-need' : null"
+              (input)="birthText.set($any($event.target).value); clearFieldError('birth')"></label>
           @if (!form().isTrainer) {
             <label class="field"><span>Stufe oder Diplom</span>
               <input name="level" autocomplete="off" maxlength="60" placeholder="z. B. Bauerndiplom" [value]="form().level ?? ''" (input)="set('level', $any($event.target).value)"></label>
           }
         </div>
+        @if (fieldError(); as fe) { @if (fe.field === 'birth') { <p class="err need" id="birth-need">{{ fe.text }}</p> } }
         <div class="grid-2">
           <label class="field"><span>Personennummer (ÖSB)</span>
             <input name="nationalId" autocomplete="off" maxlength="16" [value]="form().nationalId ?? ''" (input)="set('nationalId', $any($event.target).value)"></label>
           <label class="field"><span>FIDE-Nummer</span>
-            <input name="fideId" inputmode="numeric" autocomplete="off" maxlength="16" [value]="form().fideId ?? ''" (input)="set('fideId', $any($event.target).value)"></label>
+            <input name="fideId" inputmode="numeric" autocomplete="off" maxlength="16" [value]="form().fideId ?? ''"
+              [attr.aria-invalid]="fieldError()?.field === 'fideId' || null" [attr.aria-describedby]="fieldError()?.field === 'fideId' ? 'fideId-need' : null"
+              (input)="set('fideId', $any($event.target).value)"></label>
         </div>
+        @if (fieldError(); as fe) { @if (fe.field === 'fideId') { <p class="err need" id="fideId-need">{{ fe.text }}</p> } }
         <div class="photo-field">
           <span class="photo-label">Bild</span>
           @if (pickerSrc(); as src) {
@@ -130,7 +142,7 @@ function orNull(value: string | null | undefined): string | null {
                 <label class="check"><input type="checkbox" [checked]="form().groupIds.includes(g.id)" (change)="toggleGroup(g.id, $any($event.target).checked)"> {{ g.name }}</label>
               }
             </div>
-          } @else { <p class="muted">Noch keine Gruppe. Gruppen legt die Leitung unter „Gruppen" an.</p> }
+          } @else { <p class="muted">Noch keine Gruppe. Gruppen legt die Leitung unter „Gruppen“ an.</p> }
         </section>
 
         <section>
@@ -182,7 +194,7 @@ function orNull(value: string | null | undefined): string | null {
                 </li>
               }
             </ul>
-          } @else { <p class="muted">Noch kein Kontakt eingetragen. Über „Bearbeiten" kommen Telefonnummern und E-Mail-Adressen dazu.</p> }
+          } @else { <p class="muted">Noch kein Kontakt eingetragen. Über „Bearbeiten“ kommen Telefonnummern und E‑Mail-Adressen dazu.</p> }
         </section>
 
         <section [hidden]="m.isTrainer">
@@ -240,7 +252,7 @@ function orNull(value: string | null | undefined): string | null {
               <p class="muted small">{{ p.lastActive ? 'Zuletzt trainiert am ' + short(p.lastActive) : 'In den letzten 4 Wochen nicht trainiert.' }}</p>
             }
           } @else if (m.linkCode) {
-            <p>Das Kind meldet sich mit seinem RookHub- oder KidHub-Konto hier an und gibt unter „Konto verknüpfen" diesen Code ein:</p>
+            <p>Das Kind meldet sich mit seinem RookHub- oder KidHub-Konto hier an und gibt unter „Konto verknüpfen“ diesen Code ein:</p>
             <p><span class="code">{{ code(m.linkCode) }}</span></p>
             <p class="small">Oder es öffnet diesen Link: <a [href]="linkUrl(m.linkCode)">{{ linkUrl(m.linkCode) }}</a></p>
             <p class="muted small">Gültig bis {{ day(m.linkCodeExpires) }}, einmal einlösbar.
@@ -280,6 +292,12 @@ export class MemberPageComponent implements OnInit {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /**
+   * Eingabefehler, die das Formular selbst findet (Vorname leer, Geburtsdatum unlesbar, FIDE-Nummer mit Buchstaben):
+   * der Hinweis steht unter dem Feld, das Feld bekommt den Fokus — die Statuszeile am Formularende lag unter der Falz bzw.
+   * hinter der klebenden Speichern-Leiste (b1-c-kind-neu-fehler-unter-falz). Die Statuszeile bleibt für Serverfehler.
+   */
+  readonly fieldError = signal<{ field: FormField; text: string } | null>(null);
   /** Nach „Weiteres Kind anlegen": wessen Blatt gerade gespeichert wurde (Zeile über dem leeren Formular). */
   readonly lastSaved = signal<{ id: number; name: string } | null>(null);
 
@@ -369,6 +387,7 @@ export class MemberPageComponent implements OnInit {
     this.clearPhotoDraft();
     this.face.set(m.photoFace ?? null);
     this.error.set(null);
+    this.fieldError.set(null);
     this.editing.set(true);
     void this.loadGroups();
     void this.loadExistingPhoto(m);
@@ -393,6 +412,7 @@ export class MemberPageComponent implements OnInit {
 
   cancel(): void {
     this.error.set(null);
+    this.fieldError.set(null);
     this.clearPhotoDraft();
     if (this.member()) this.editing.set(false);
     else void this.router.navigateByUrl('/');
@@ -400,6 +420,19 @@ export class MemberPageComponent implements OnInit {
 
   set<K extends keyof MemberInput>(key: K, value: MemberInput[K]): void {
     this.form.update(f => ({ ...f, [key]: value }));
+    if (key === 'firstName' || key === 'fideId') this.clearFieldError(key);
+  }
+
+  /** Der Hinweis unter einem Feld geht, sobald man dort tippt. */
+  clearFieldError(field: FormField): void {
+    if (this.fieldError()?.field === field) this.fieldError.set(null);
+  }
+
+  /** Hinweis unter das Feld, Fokus aufs Feld (scrollt es dank scroll-padding über die klebende Leiste). */
+  private needField(field: FormField, text: string): void {
+    this.error.set(null);
+    this.fieldError.set({ field, text });
+    this.host.querySelector<HTMLInputElement>(`input[name="${field}"]`)?.focus();
   }
 
   setContact(index: number, patch: Partial<Contact>): void {
@@ -478,19 +511,20 @@ export class MemberPageComponent implements OnInit {
     if (this.busy()) return;
     const f = this.form();
     if (!f.firstName.trim()) {
-      this.error.set('Der Vorname fehlt noch.');
+      this.needField('firstName', 'Der Vorname fehlt noch.');
       return;
     }
     const birth = parseBirth(this.birthText());
     if (!birth) {
-      this.error.set('Das Geburtsdatum ist so nicht lesbar. Schreib es wie 12.3.2015 — oder nur den Jahrgang, 2015.');
+      this.needField('birth', 'Das Geburtsdatum ist so nicht lesbar. Schreib es wie 12.3.2015 — oder nur den Jahrgang, 2015.');
       return;
     }
     const fideId = orNull(f.fideId);
     if (fideId && !/^\d+$/.test(fideId)) {
-      this.error.set('Die FIDE-Nummer besteht nur aus Ziffern.');
+      this.needField('fideId', 'Die FIDE-Nummer besteht nur aus Ziffern.');
       return;
     }
+    this.fieldError.set(null);
     const input: MemberInput = {
       ...f, ...birth, firstName: f.firstName.trim(), lastName: f.lastName.trim(),
       level: orNull(f.level), fideId, nationalId: orNull(f.nationalId),
@@ -537,6 +571,7 @@ export class MemberPageComponent implements OnInit {
     this.progress.set(null);
     this.form.set({ ...emptyInput(), isTrainer: previous.isTrainer, groupIds: previous.isTrainer ? [] : [...previous.groupIds] });
     this.birthText.set('');
+    this.fieldError.set(null);
     this.clearPhotoDraft();
     setTimeout(() => this.firstNameInput()?.nativeElement.focus());
   }

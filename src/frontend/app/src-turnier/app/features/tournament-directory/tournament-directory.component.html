@@ -118,16 +118,19 @@
     </mat-menu>
   </div>
 
-  <!-- Handy: die aktuell gueltigen Werte von Zeitraum und Umkreis; ein Tipp oeffnet die Filter. -->
-  <div class="bar-chips">
-    <button type="button" class="value-chip range-chip" (click)="filtersOpen = true" [attr.aria-expanded]="filtersOpen">
-      <mat-icon inline>date_range</mat-icon> {{ 'tournamentDirectory.range.' + rangePreset | translate }}
-    </button>
-    <button type="button" class="value-chip radius-chip" (click)="filtersOpen = true" [attr.aria-expanded]="filtersOpen">
-      <mat-icon inline>radar</mat-icon>
-      @if (filter.radiusKm) { {{ 'tournamentDirectory.radius.km' | translate: { km: filter.radiusKm } }} } @else { {{ 'tournamentDirectory.radius.any' | translate }} }
-    </button>
-  </div>
+  <!-- Handy: die aktuell gueltigen Werte von Zeitraum und Umkreis; ein Tipp oeffnet die Filter. Nur bei zugeklapptem
+       Filter (b1-t-filter-chips-doppelt-offen): offen stehen dieselben Werte direkt darunter als Auswahlfelder. -->
+  @if (!filtersOpen) {
+    <div class="bar-chips">
+      <button type="button" class="value-chip range-chip" (click)="filtersOpen = true" [attr.aria-expanded]="filtersOpen">
+        <mat-icon inline>date_range</mat-icon> {{ 'tournamentDirectory.range.' + rangePreset | translate }}
+      </button>
+      <button type="button" class="value-chip radius-chip" (click)="filtersOpen = true" [attr.aria-expanded]="filtersOpen">
+        <mat-icon inline>radar</mat-icon>
+        @if (filter.radiusKm) { {{ 'tournamentDirectory.radius.km' | translate: { km: filter.radiusKm } }} } @else { {{ 'tournamentDirectory.radius.any' | translate }} }
+      </button>
+    </div>
+  }
 
   @if (locationError(); as failure) {
     <p class="hint warn">
@@ -137,125 +140,138 @@
   }
 
   @if (filtersOpen) {
+    <!-- In Zeilen nach Sinn statt als ein Fliessblock (b1-t-filter-feldbreiten): vorher brach die Reihe je nach Breite
+         irgendwo um — eine Zeile hielt einen einzelnen Schalter, „Zuruecksetzen" stand verwaist. Jetzt: Zeitraum/Umkreis
+         (nur Handy bzw. eigener Zeitraum), Suche, Wer (Art/Alter/Geschlecht), Schalter, Bedenkzeit + Rest. -->
     <div class="filter-extra">
-      <mat-form-field appearance="outline" class="range-field extra-narrow" subscriptSizing="dynamic">
-        <mat-label>{{ 'tournamentDirectory.range.label' | translate }}</mat-label>
-        <mat-select [ngModel]="rangePreset" (ngModelChange)="applyRangePreset($event)">
-          @for (preset of rangePresets; track preset) {
-            <mat-option [value]="preset">{{ 'tournamentDirectory.range.' + preset | translate }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="radius-field extra-narrow" subscriptSizing="dynamic">
-        <mat-label>{{ 'tournamentDirectory.radius.label' | translate }}</mat-label>
-        <mat-select [ngModel]="filter.radiusKm ?? 0" (ngModelChange)="onRadiusChange($event)">
-          <mat-option [value]="0">{{ 'tournamentDirectory.radius.any' | translate }}</mat-option>
-          @for (km of radii; track km) {
-            <mat-option [value]="km">{{ 'tournamentDirectory.radius.km' | translate: { km: km } }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      @if (rangePreset === 'custom') {
-        <mat-form-field appearance="outline" class="date-field">
-          <mat-label>{{ 'tournamentDirectory.from' | translate }}</mat-label>
-          <input matInput type="date" [(ngModel)]="filter.from" (change)="reload()" />
+      <div class="extra-row period-row">
+        <mat-form-field appearance="outline" class="range-field extra-narrow" subscriptSizing="dynamic">
+          <mat-label>{{ 'tournamentDirectory.range.label' | translate }}</mat-label>
+          <mat-select [ngModel]="rangePreset" (ngModelChange)="applyRangePreset($event)">
+            @for (preset of rangePresets; track preset) {
+              <mat-option [value]="preset">{{ 'tournamentDirectory.range.' + preset | translate }}</mat-option>
+            }
+          </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="date-field">
-          <mat-label>{{ 'tournamentDirectory.to' | translate }}</mat-label>
-          <input matInput type="date" [(ngModel)]="filter.to" (change)="reload()" />
+        <mat-form-field appearance="outline" class="radius-field extra-narrow" subscriptSizing="dynamic">
+          <mat-label>{{ 'tournamentDirectory.radius.label' | translate }}</mat-label>
+          <mat-select [ngModel]="filter.radiusKm ?? 0" (ngModelChange)="onRadiusChange($event)">
+            <mat-option [value]="0">{{ 'tournamentDirectory.radius.any' | translate }}</mat-option>
+            @for (km of radii; track km) {
+              <mat-option [value]="km">{{ 'tournamentDirectory.radius.km' | translate: { km: km } }}</mat-option>
+            }
+          </mat-select>
         </mat-form-field>
-      }
-
-      <!-- Die Textsuche steht hier und nicht in der Hauptleiste: sie ist der seltenere Fall.
-           Wer die Seite oeffnet, sucht „was ist demnaechst in meiner Naehe", nicht ein Turnier,
-           dessen Namen er schon kennt. -->
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-icon matPrefix>search</mat-icon>
-        <mat-label>{{ 'tournamentDirectory.search' | translate }}</mat-label>
-        <input matInput [(ngModel)]="searchText" (keyup.enter)="reload()" />
-        @if (searchText) {
-          <button matSuffix mat-icon-button (click)="searchText = ''; reload()"
-                  [attr.aria-label]="'common.clear' | translate">
-            <mat-icon>close</mat-icon>
-          </button>
+        @if (rangePreset === 'custom') {
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>{{ 'tournamentDirectory.from' | translate }}</mat-label>
+            <input matInput type="date" [(ngModel)]="filter.from" (change)="reload()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>{{ 'tournamentDirectory.to' | translate }}</mat-label>
+            <input matInput type="date" [(ngModel)]="filter.to" (change)="reload()" />
+          </mat-form-field>
         }
-      </mat-form-field>
+      </div>
 
-      <mat-chip-listbox class="speed-chips" [ngModel]="filter.kinds" (ngModelChange)="onKindsChange($event)"
-                        multiple [attr.aria-label]="'tournamentDirectory.kindFilter' | translate">
-        @for (kind of kinds; track kind) {
-          <mat-chip-option [value]="kind">
-            {{ 'tournamentDirectory.kind.' + kind | translate }}
-          </mat-chip-option>
-        }
-      </mat-chip-listbox>
+      <div class="extra-row search-row">
+        <!-- Die Textsuche steht hier und nicht in der Hauptleiste: sie ist der seltenere Fall.
+             Wer die Seite oeffnet, sucht „was ist demnaechst in meiner Naehe", nicht ein Turnier,
+             dessen Namen er schon kennt. -->
+        <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>{{ 'tournamentDirectory.search' | translate }}</mat-label>
+          <input matInput [(ngModel)]="searchText" (keyup.enter)="reload()" />
+          @if (searchText) {
+            <button matSuffix mat-icon-button (click)="searchText = ''; reload()"
+                    [attr.aria-label]="'common.clear' | translate">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+      </div>
 
-      <!-- Alter und Geschlecht liest der Server aus dem TURNIERNAMEN — es gibt keine Spalte
-           dafuer. Der Hinweis sagt das, statt Genauigkeit vorzutaeuschen. -->
-      <mat-chip-listbox class="speed-chips" [ngModel]="filter.ageGroups"
-                        (ngModelChange)="onAgeGroupsChange($event)" multiple
-                        [attr.aria-label]="'tournamentDirectory.ageFilter' | translate">
-        @for (group of ageGroups; track group) {
-          <mat-chip-option [value]="group">
-            {{ 'tournamentDirectory.age.' + group | translate }}
-          </mat-chip-option>
-        }
-      </mat-chip-listbox>
+      <div class="extra-row chip-row">
+        <mat-chip-listbox class="speed-chips" [ngModel]="filter.kinds" (ngModelChange)="onKindsChange($event)"
+                          multiple [attr.aria-label]="'tournamentDirectory.kindFilter' | translate">
+          @for (kind of kinds; track kind) {
+            <mat-chip-option [value]="kind">
+              {{ 'tournamentDirectory.kind.' + kind | translate }}
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
 
-      <mat-chip-listbox class="speed-chips" [ngModel]="filter.genders"
-                        (ngModelChange)="onGendersChange($event)" multiple
-                        [attr.aria-label]="'tournamentDirectory.genderFilter' | translate">
-        @for (gender of genders; track gender) {
-          <mat-chip-option [value]="gender">
-            {{ 'tournamentDirectory.gender.' + gender | translate }}
-          </mat-chip-option>
-        }
-      </mat-chip-listbox>
+        <!-- Alter und Geschlecht liest der Server aus dem TURNIERNAMEN — es gibt keine Spalte
+             dafuer. Der Hinweis sagt das, statt Genauigkeit vorzutaeuschen. -->
+        <mat-chip-listbox class="speed-chips" [ngModel]="filter.ageGroups"
+                          (ngModelChange)="onAgeGroupsChange($event)" multiple
+                          [attr.aria-label]="'tournamentDirectory.ageFilter' | translate">
+          @for (group of ageGroups; track group) {
+            <mat-chip-option [value]="group">
+              {{ 'tournamentDirectory.age.' + group | translate }}
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
 
-      <mat-slide-toggle [ngModel]="filter.adultsOnly" (ngModelChange)="onAdultsOnlyChange($event)">
-        {{ 'tournamentDirectory.adultsOnly' | translate }}
-      </mat-slide-toggle>
+        <mat-chip-listbox class="speed-chips" [ngModel]="filter.genders"
+                          (ngModelChange)="onGendersChange($event)" multiple
+                          [attr.aria-label]="'tournamentDirectory.genderFilter' | translate">
+          @for (gender of genders; track gender) {
+            <mat-chip-option [value]="gender">
+              {{ 'tournamentDirectory.gender.' + gender | translate }}
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
+      </div>
 
-      <mat-slide-toggle [(ngModel)]="filter.hideLeagues" (change)="reload()">
-        {{ 'tournamentDirectory.hideLeagues' | translate }}
-      </mat-slide-toggle>
-
-      <!-- Ausgeblendet hat nur ein Konto etwas. -->
-      @if (loggedIn) {
-        <mat-slide-toggle [ngModel]="filter.includeIgnored" (ngModelChange)="onIncludeIgnoredChange($event)">
-          {{ 'tournamentDirectory.card.showIgnored' | translate }}
+      <div class="extra-row toggle-row">
+        <mat-slide-toggle [ngModel]="filter.adultsOnly" (ngModelChange)="onAdultsOnlyChange($event)">
+          {{ 'tournamentDirectory.adultsOnly' | translate }}
         </mat-slide-toggle>
-      }
 
-      <!-- Unplausible Laufzeiten („2007 bis 2026") blendet der Server standardmaessig aus; der
-           Schalter holt sie zurueck — sie koennen echte Langzeitwettbewerbe sein. -->
-      <mat-slide-toggle class="implausible-toggle" [ngModel]="filter.includeImplausible"
-                        (ngModelChange)="onIncludeImplausibleChange($event)"
-                        [matTooltip]="'tournamentDirectory.showImplausibleHint' | translate">
-        {{ 'tournamentDirectory.showImplausible' | translate }}
-      </mat-slide-toggle>
+        <mat-slide-toggle [(ngModel)]="filter.hideLeagues" (change)="reload()">
+          {{ 'tournamentDirectory.hideLeagues' | translate }}
+        </mat-slide-toggle>
 
-      <app-help-hint [text]="'tournamentDirectory.audienceHelp' | translate" />
-
-      <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
-                        [attr.aria-label]="'tournamentDirectory.speedFilter' | translate">
-        @for (speed of speeds; track speed) {
-          <mat-chip-option [value]="speed">
-            {{ 'tournamentDirectory.speed.' + speed | translate }}
-          </mat-chip-option>
+        <!-- Ausgeblendet hat nur ein Konto etwas. -->
+        @if (loggedIn) {
+          <mat-slide-toggle [ngModel]="filter.includeIgnored" (ngModelChange)="onIncludeIgnoredChange($event)">
+            {{ 'tournamentDirectory.card.showIgnored' | translate }}
+          </mat-slide-toggle>
         }
-      </mat-chip-listbox>
 
-      <mat-slide-toggle [(ngModel)]="filter.weekendOnly" (change)="reload()">
-        {{ 'tournamentDirectory.weekendOnly' | translate }}
-      </mat-slide-toggle>
+        <!-- Unplausible Laufzeiten („2007 bis 2026") blendet der Server standardmaessig aus; der
+             Schalter holt sie zurueck — sie koennen echte Langzeitwettbewerbe sein. -->
+        <mat-slide-toggle class="implausible-toggle" [ngModel]="filter.includeImplausible"
+                          (ngModelChange)="onIncludeImplausibleChange($event)"
+                          [matTooltip]="'tournamentDirectory.showImplausibleHint' | translate">
+          {{ 'tournamentDirectory.showImplausible' | translate }}
+        </mat-slide-toggle>
 
-      <mat-form-field appearance="outline" class="players-field">
-        <mat-label>{{ 'tournamentDirectory.minPlayers' | translate }}</mat-label>
-        <input matInput type="number" min="0" [(ngModel)]="filter.minPlayers" (change)="reload()" />
-      </mat-form-field>
+        <app-help-hint [text]="'tournamentDirectory.audienceHelp' | translate" />
+      </div>
 
-      <button mat-button (click)="resetFilter()">{{ 'tournamentDirectory.reset' | translate }}</button>
+      <div class="extra-row end-row">
+        <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
+                          [attr.aria-label]="'tournamentDirectory.speedFilter' | translate">
+          @for (speed of speeds; track speed) {
+            <mat-chip-option [value]="speed">
+              {{ 'tournamentDirectory.speed.' + speed | translate }}
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
+
+        <mat-slide-toggle [(ngModel)]="filter.weekendOnly" (change)="reload()">
+          {{ 'tournamentDirectory.weekendOnly' | translate }}
+        </mat-slide-toggle>
+
+        <mat-form-field appearance="outline" class="players-field" subscriptSizing="dynamic">
+          <mat-label>{{ 'tournamentDirectory.minPlayers' | translate }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="filter.minPlayers" (change)="reload()" />
+        </mat-form-field>
+
+        <button mat-button (click)="resetFilter()">{{ 'tournamentDirectory.reset' | translate }}</button>
+      </div>
     </div>
   }
 

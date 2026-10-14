@@ -17,7 +17,7 @@ import { APPS, AREAS, ROUTES, areaOf, routeId } from './routes.mjs';
 import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.mjs';
 import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
 import { writeIndex, foldSummary } from './report.mjs';
-import { withStates, runSteps } from './states.mjs';
+import { withStates, runSteps, writeDecision, stubBody } from './states.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -421,6 +421,7 @@ async function main() {
   // Beim Wiedergeben: der Körper ist schon entpackt, Länge/Kodierung stimmen nicht mehr; Cookies nicht noch einmal setzen.
   const DROP_HEADERS = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'set-cookie', 'connection']);
   const apiLog = [];   // → api-calls.json
+  const onceCache = new Map(); // Zustände mit `once` (states.mjs): eine echte Antwort je Rolle/Sprache
   const browser = opts.browser === 'chromium'
     ? await chromium.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-dev-shm-usage'] })
     : await dockerBrowser(opts.browser);
@@ -482,10 +483,28 @@ async function main() {
       const req = route.request();
       const reqUrl = req.url();
       if (reqUrl.includes('/api/client-log')) return route.fulfill({ status: 204, body: '', headers: { 'x-ui-sweep': 'stub' } });
-      // Zustände (states.mjs) schreiben nie: jede schreibende Anfrage beantwortet das Werkzeug selbst — außer /api/auth/*
-      // (Anmeldung, Sitzung erneuern: ein gestelltes „{}" auf refresh hielt die App für angemeldet und leitete weg).
-      if (job.route.steps && req.method() !== 'GET' && !/\/api\/auth\//.test(reqUrl)) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: '{}', headers: { 'x-ui-sweep': 'stub' } });
+      // Zustände (states.mjs) schreiben nie: jede schreibende Anfrage beantwortet das Werkzeug selbst (writeDecision) — außer
+      // /api/auth/* (ein gestelltes „{}" auf refresh hielt die App für angemeldet) und Lese-POSTs (READ_POSTS).
+      const decision = writeDecision(job.route, req.method(), new URL(reqUrl).pathname);
+      if (decision === 'stub') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: stubBody(req.postData()), headers: { 'x-ui-sweep': 'stub' } });
+      }
+      if (decision === 'once') {
+        // Einmal echt je Rolle/Sprache, dann dieselbe Antwort (auch 4xx) für alle Varianten.
+        const onceKey = `once|${job.auth}|${job.lang}|${req.method()}|${new URL(reqUrl).pathname}`;
+        let pending = onceCache.get(onceKey);
+        if (!pending) {
+          pending = (async () => {
+            await apiSlot();
+            const res = await route.fetch({ timeout: 60000 });
+            const headers = Object.fromEntries(Object.entries(res.headers()).filter(([h]) => !DROP_HEADERS.has(h.toLowerCase())));
+            return { status: res.status(), headers, body: await res.body() };
+          })().catch(() => null);
+          onceCache.set(onceKey, pending);
+        }
+        const entry = await pending;
+        if (!entry) { onceCache.delete(onceKey); return route.abort('failed').catch(() => {}); }
+        return route.fulfill({ status: entry.status, headers: { ...entry.headers, 'x-ui-sweep': 'cache' }, body: entry.body });
       }
       // Der Endlos-Vorrat lädt auch mit endlessRuns 0 (App ignoriert die Einstellung dort) — außerhalb der
       // Puzzle-Bereiche leer beantworten, dort braucht die Seite die Puzzles selbst.

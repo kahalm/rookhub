@@ -96,10 +96,12 @@
                             [attr.aria-label]="'worksheets.share.toggle' | translate">qr_code_2</mat-icon>
                 }
               </span>
+              <!-- b1-rk-aufgabenblaetter-datum-umbruch: jede Angabe eine ungeteilte Einheit, „ · “ als ::before (DESIGN 5.13) —
+                   sonst brach am Handy das Datum mitten im Wert um („Oct 11,“ / „2026“). -->
               <span class="wl-sub">
-                {{ 'worksheets.count' | translate: { n: sheet.itemCount } }}
-                · {{ 'worksheets.perPage.short' | translate: { n: sheet.perPage } }}
-                · {{ sheet.updatedAt | date:'mediumDate' }}
+                <span class="wl-part">{{ 'worksheets.count' | translate: { n: sheet.itemCount } }}</span>
+                <span class="wl-part">{{ 'worksheets.perPage.short' | translate: { n: sheet.perPage } }}</span>
+                <span class="wl-part">{{ sheet.updatedAt | date:'mediumDate' }}</span>
               </span>
               @if (sheet.themes.length > 0) {
                 <span class="wl-themes">

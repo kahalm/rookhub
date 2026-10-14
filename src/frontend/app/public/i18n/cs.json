@@ -122,7 +122,8 @@
     "subscribedAt": "Přihlášeno {{date}}",
     "puzzles": {
       "title": "Úlohy",
-      "subtitle": "Elo {{elo}} | {{solved}} vyřešeno ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} vyřešeno ({{accuracy}})",
       "solve": "Řešit úlohy",
       "daily": "Denní úloha",
       "endless": "Nekonečný mód"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} soubor",
       "public": "Veřejný",
       "private": "Soukromý",
-      "noDescription": "Bez popisu",
       "open": "Otevřít",
       "empty": "Zatím žádné repertoáry. Vytvořte jeden a začněte!",
       "loadFailed": "Načtení repertoárů se nezdařilo",
@@ -327,7 +327,6 @@
       "updateFailed": "Repertoár nebylo možné aktualizovat"
     },
     "detail": {
-      "noDescription": "Bez popisu",
       "modeLines": "Linie",
       "modeTree": "Strom"
     },

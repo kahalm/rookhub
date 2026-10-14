@@ -190,6 +190,30 @@ describe('KidHub: Kontrast der Knoepfe mit Schrift', () => {
     }
   });
 
+  // b1-k-koordinate-auf-auswahlfeld: dunkle Koordinate auf dem grünen Auswahlfeld (blau-hell + rgba(20,85,30,.5)
+  // ≈ #749c85) nur ≈ 2,8:1 — jetzt mit deckendem Hof in der Gegenfarbe; Schrift gegen ihren Hof ≥ 4,5:1.
+  it('Brett-Koordinaten: deckender Hof in der Gegenfarbe — lesbar auch auf Auswahl- und Zugfeldern', async () => {
+    await go('/levels/1');
+    const wrap = el('app-puzzle-board .cg-wrap');
+    const selected = over([20, 85, 30, 0.5], [212, 227, 237, 1]);
+    const coords = Array.from(wrap.querySelectorAll<HTMLElement>('coords coord'));
+    expect(coords.length).toBe(16);
+    for (const c of coords) {
+      const style = getComputedStyle(c);
+      const text = parseColor(style.color);
+      const halo = /^(rgba?\([^)]*\))/.exec(style.textShadow)?.[1];
+      expect(halo).withContext(`${c.textContent}: Hof`).toBeDefined();
+      const haloColor = parseColor(halo!);
+      expect(haloColor[3]).withContext(`${c.textContent}: Hof deckend`).toBe(1);
+      expect(contrast(text, haloColor)).withContext(`${c.textContent}: Schrift gegen Hof`).toBeGreaterThanOrEqual(4.5);
+      const dark = luminance(text) < 0.2;
+      if (dark) {
+        expect(contrast(text, selected)).withContext('ohne Hof wäre es zu wenig (Anlass)').toBeLessThan(4.5);
+        expect(contrast(haloColor, selected)).withContext(`${c.textContent}: Hof hebt sich vom Auswahlfeld ab`).toBeGreaterThan(2);
+      }
+    }
+  });
+
   it('Stufenkarte: der Rahmen der aktuellen Stufe hebt sich ab (3:1, WCAG 1.4.11)', async () => {
     await go('/levels');
     const outline = parseColor(getComputedStyle(el('.level.current')).outlineColor);

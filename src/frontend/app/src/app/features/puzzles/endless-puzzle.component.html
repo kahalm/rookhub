@@ -78,10 +78,14 @@
                     </div>
                   </div>
                 }
-                <button mat-flat-button color="primary" class="start-btn start-btn-top" (click)="startGame()">
-                  <mat-icon>play_arrow</mat-icon>
-                  {{ (activeGameState ? 'endless.config.newGame' : 'endless.config.start') | translate }}
-                </button>
+                <!-- b1-rk-endless-fortsetzen-kasten: bei offenem Lauf ist „Fortsetzen“ die eine Hauptaktion und
+                     „Archivieren & neues Spiel“ der Weg zum Neustart — kein zweiter gefüllter Startknopf (DESIGN 5.4). -->
+                @if (!activeGameState || activeGameState.lives <= 0) {
+                  <button mat-flat-button color="primary" class="start-btn start-btn-top" (click)="startGame()">
+                    <mat-icon>play_arrow</mat-icon>
+                    {{ (activeGameState ? 'endless.config.newGame' : 'endless.config.start') | translate }}
+                  </button>
+                }
 
                 <div class="config-fields">
                   <mat-form-field appearance="outline">
@@ -322,24 +326,27 @@
                     </button>
                   }
                   @if (isLoggedIn && onSolutionPath && hasHints && hintLevel > 0) {
+                    <!-- b1-rk-puzzle-dumme-tipps-knopf: „Tipp melden“ leise, aber nicht gedimmt; am Handy nur das Fähnchen. -->
                     <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                             [disabled]="flagSaving" (click)="toggleHintsFlag()"
-                            [attr.title]="'puzzles.hints.flagTitle' | translate">
+                            [attr.title]="'puzzles.hints.flagTitle' | translate"
+                            [attr.aria-label]="(puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate">
                       <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
-                      {{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}
+                      <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}</span>
                     </button>
                   }
                 </div>
-                @if (shownHints.length) {
-                  <ol class="hint-list">
-                    @for (h of shownHints; track $index) { <li>{{ h }}</li> }
-                  </ol>
-                }
               }
               </ng-template>
               <div class="board-hint-slot board-hint-slot--board">
                 <ng-container [ngTemplateOutlet]="boardHintTpl" />
               </div>
+              <!-- b1-rk-puzzle-tipptext-unter-falz: Tipp-Text ab 900 px in der Seitenspalte unter der Status-Karte. -->
+              @if (shownHints.length && !reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+                <ol class="hint-list hint-list--board">
+                  @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+                </ol>
+              }
             </div>
 
             <div class="info-section">
@@ -397,6 +404,11 @@
                 (reviewNext)="reviewNext()"
                 (showOriginalSolutionClicked)="showOriginalSolution()"
               />
+              @if (shownHints.length && !reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+                <ol class="hint-list hint-list--side">
+                  @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+                </ol>
+              }
 
               <!-- UI-Welle 2: EINE Aktionszeile (Rating/Level stehen schon in den Quick-Stats;
                    Level-Fenster bleibt als Zusatztext); Seltenes im ⋮-Menü. -->
@@ -450,7 +462,7 @@
                       </mat-icon>
                     }
                   </div>
-                  <div class="phase-indicator">{{ currentPhaseLabel }}</div>
+                  <!-- b1-rk-endless-phase-jargon: keine interne Zählung „Phase 1 (Schritt 63)“ mehr (DESIGN 2.7). -->
                   <div class="depth-control">
                     <mat-icon>psychology</mat-icon>
                     <input type="range" [min]="1" [max]="24" [(ngModel)]="config.stockfishDepth" (change)="onDepthChange()">

@@ -347,6 +347,10 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     expect(service.client).toHaveBeenCalledWith('TOK');
     expect(el.textContent).not.toContain('Nicht freigeschaltet');
+    // b1-l-hinzufuegen-info-abgesetzt: Einleitung als Absatz mit dem ⓘ am Satzende (.info-inline), nicht als Flex-Zeile
+    const intro = el.querySelector('.club-intro p.info-inline')!;
+    expect(intro.textContent).toContain('Ohne Anmeldung.');
+    expect(intro.querySelector('.chk-btn')).not.toBeNull();
     api.upload.and.resolveTo({ ref: 'geheim', scan: SCAN('done') });
     fixture.componentInstance.photo.set(new File(['x'], 'b.jpg', { type: 'image/jpeg' }));
     void fixture.componentInstance.upload();

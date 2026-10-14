@@ -81,7 +81,11 @@ const ERROR_KEYS: Record<ResetError, string> = {
           }
         </mat-card-content>
         <mat-card-actions>
-          <a mat-button routerLink="/forgot-password">{{ 'auth.reset.requestNew' | translate }}</a>
+          <!-- UI-Sweep b1 (b1-rk-login-passwort-vergessen-doppelt): beim abgelaufenen Link bietet der Fehlerkasten
+               „Neuen Link anfordern“ schon an — nicht noch einmal direkt darunter. -->
+          @if (error() !== 'expired') {
+            <a mat-button routerLink="/forgot-password">{{ 'auth.reset.requestNew' | translate }}</a>
+          }
           <a mat-button routerLink="/login">{{ 'auth.forgot.backToLogin' | translate }}</a>
         </mat-card-actions>
       </mat-card>

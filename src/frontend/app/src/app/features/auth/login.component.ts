@@ -140,7 +140,11 @@ export function loginRetryAfterSeconds(err: any): number {
         </mat-card-content>
         <mat-card-actions>
           <a mat-button routerLink="/register" [queryParams]="{ returnUrl: returnUrl }">{{ 'auth.login.registerLink' | translate }}</a>
-          <a mat-button routerLink="/forgot-password">{{ 'auth.login.forgotLink' | translate }}</a>
+          <!-- UI-Sweep b1 (b1-rk-login-passwort-vergessen-doppelt): bietet der Fehlerkasten „Passwort vergessen?“ schon an,
+               steht der Link nicht ein zweites Mal direkt darunter. -->
+          @if (error()?.kind !== 'credentials') {
+            <a mat-button routerLink="/forgot-password">{{ 'auth.login.forgotLink' | translate }}</a>
+          }
         </mat-card-actions>
       </mat-card>
       <!-- Nur, wo keine Fusszeile dieselben Links zeigt: am PC steht sie bei RookHub darunter, auf der Turnierseite

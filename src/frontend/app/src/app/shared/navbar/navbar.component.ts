@@ -119,7 +119,7 @@ import {
             </button>
           }
         </mat-menu>
-        <mat-menu #trainingMenu="matMenu">
+        <mat-menu #trainingMenu="matMenu" class="nav-submenu">
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (showCourses && can('courses')) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
@@ -131,7 +131,7 @@ import {
           @if (can('favorites')) { <button mat-menu-item routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
           @if (can('worksheets')) { <button mat-menu-item routerLink="/worksheets">{{ 'nav.worksheets' | translate }}</button> }
         </mat-menu>
-        <mat-menu #libraryMenu="matMenu">
+        <mat-menu #libraryMenu="matMenu" class="nav-submenu">
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (auth.has('prep.view')) { <button mat-menu-item routerLink="/prep">{{ 'nav.prep' | translate }}</button> }
           @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
@@ -143,7 +143,7 @@ import {
             <button mat-menu-item routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
           }
         </mat-menu>
-        <mat-menu #communityMenu="matMenu">
+        <mat-menu #communityMenu="matMenu" class="nav-submenu">
           @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
           <!-- Turniere leben seit der Herausloesung auf der eigenen Seite; der Sprung nimmt die
                Anmeldung mit (Einmal-Code, siehe HandoffService). -->
@@ -163,7 +163,7 @@ import {
           </a>
         </mat-menu>
         <!-- Konto-Untermenü — einziger Ort für Profil/Statistik/Einstellungen/Abmelden. -->
-        <mat-menu #userMenu="matMenu">
+        <mat-menu #userMenu="matMenu" class="nav-submenu">
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
           @if (can('stats')) { <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button> }
           <button mat-menu-item routerLink="/puzzles/endless/history">{{ 'nav.puzzleHistory' | translate }}</button>
@@ -200,6 +200,9 @@ import {
              im ☰-Menue (.anon-narrow) — vier Ziele drängten sich sonst ohne Abstand bis an den Rand. -->
         @if (!onAuthPage) {
           <a mat-button class="nav-login" routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
+          <!-- color="primary": die Einladung an Gaeste ist die Primaeraktion der Leiste (gefuellt, styles.scss).
+               b1-rk-navbar-gast-menue-mitte: steht direkt neben „Anmelden", das ☰ ganz am Rand (wie angemeldet). -->
+          <a mat-flat-button color="primary" class="anon-wide nav-register" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
         }
         <button mat-icon-button class="anon-menu" [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
@@ -256,12 +259,8 @@ import {
             <span>{{ 'nav.language' | translate }}</span>
           </button>
         </mat-menu>
-        @if (!onAuthPage) {
-          <!-- color="primary": die Einladung an Gaeste ist die Primaeraktion der Leiste (gefuellt, styles.scss). -->
-          <a mat-flat-button color="primary" class="anon-wide nav-register" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
-        }
       }
-      <mat-menu #langMenu="matMenu">
+      <mat-menu #langMenu="matMenu" class="nav-submenu">
         <div class="lang-menu-label">{{ 'nav.language' | translate }}</div>
         @for (l of locale.languages; track l.code) {
           <button mat-menu-item (click)="locale.use(l.code)">
@@ -311,7 +310,14 @@ import {
     }
     /* Gast-Leiste am Handy: „Registrieren" und Vollbild wandern ins ☰ (dort .anon-narrow, breiter ausgeblendet),
        „Anmelden" wird der eine gefuellte Knopf — Tippziele 44px, 8px Abstand, Rand zum Bildschirm. */
-    @media (min-width: 481px) { .anon-narrow { display: none; } }
+    /* b1-rk-nav-konto-untermenue-handy: am Handy passt ein Untermenü weder links noch rechts neben das ☰-Menü — die CDK
+       schob es an x = 0 und es schnitt die Symbole des Hauptmenüs an. Unter 600 px liegt es deckungsgleich über dem
+       Hauptmenü (8 px vom Rand, gleiche Breite). Die Regel greift nur, wenn die CDK die Lage fest setzt (geschoben). */
+    @media (max-width: 599.98px) {
+      ::ng-deep .cdk-overlay-pane:has(> .nav-submenu) { left: auto !important; right: 8px !important; }
+      ::ng-deep .nav-submenu.mat-mdc-menu-panel { min-width: 232px; }
+    }
+    @media (min-width: 481px) { .anon-narrow { display: none; } .nav-register { margin-inline: 8px 4px; } }
     @media (max-width: 480px) {
       .anon-wide { display: none; }
       mat-toolbar { padding: 0 8px 0 14px; }

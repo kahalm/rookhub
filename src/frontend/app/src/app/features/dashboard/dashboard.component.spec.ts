@@ -581,10 +581,35 @@ describe('DashboardComponent a1 (Mehrzahl, Prozent, Knopfzeile)', () => {
     const { component } = setup();
     component.puzzleAccuracy = 78.6;
     const translate = TestBed.inject(TranslateService);
+    const acc = () => subOf(component, 'puzzles').parts![1].params!['accuracy'];
     translate.use('de');
-    expect(subOf(component, 'puzzles').params!['accuracy']).toBe('78,6 %');
+    expect(acc()).toBe('78,6 %');
     translate.use('en');
-    expect(subOf(component, 'puzzles').params!['accuracy']).toBe('78.6%');
+    expect(acc()).toBe('78.6%');
+  });
+
+  it('b1-rk-dash-puzzles-pipe: Puzzles-Untertitel in zwei Angaben, Trenner „ · “ per CSS statt „|“ im Text', () => {
+    const { component } = setup();
+    component.puzzleElo = 1630;
+    component.puzzleSolved = 11;
+    const parts = subOf(component, 'puzzles').parts!;
+    expect(parts.map(p => p.key)).toEqual(['dashboard.puzzles.elo', 'dashboard.puzzles.solved']);
+    expect(parts[0].params).toEqual({ elo: 1630 });
+    expect(parts[1].params!['solved']).toBe(11);
+    const css = (((DashboardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.sub-part ?\+ ?\.sub-part::before ?\{ ?content: ?["']· ["']/);
+  });
+
+  it('b1-rk-dash-raster-angepinnte-kurse: Lücken vor der breiten Kurs-Kachel füllen (nicht beim Anpassen), ab 2400 px feste 5 Spuren', () => {
+    const css = (((DashboardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.dashboard-grid:not\(\.grid-editing\) ?\{ ?grid-auto-flow: ?row dense/);
+    const wide = /@media \(min-width: ?2400px\) ?\{(.*?)\} ?\}/.exec(css);
+    expect(wide).not.toBeNull();
+    expect(wide![1]).toMatch(/\.dashboard-grid ?\{ ?grid-template-columns: ?repeat\(5, ?minmax\(0, ?1fr\)\)/);
+    // Unter 2400 px bleibt auto-fit.
+    expect(css).toMatch(/\.dashboard-grid ?\{ ?display: ?grid; ?grid-template-columns: ?repeat\(auto-fit/);
   });
 
   it('a1-rk-dash-play-versatz / -puzzles-knoepfe-umbruch: Kachelknöpfe ohne Mindestbreite, einzeilig, Zeile bricht um', () => {

@@ -248,19 +248,35 @@ describe('clubhub.scss', () => {
   }
 
   // a1-c-groups-meta-separator: Zeitplan (Freitext), Kinderzahl und „zuletzt" liefen ohne Trenner ineinander.
-  // Nachprüfung a1: als ::after am vorigen Element — bricht die Zeile um, steht der Punkt am Zeilenende statt am Anfang.
-  it('Metazeile: „ ·" als ::after vor der nächsten Angabe, nicht vor Chips', () => {
+  // b1-c-meta-trenner-zeilenende: als ::after (0.763.1) hing der Punkt am Zeilenende (am Handy allein in einer Zeile),
+  // als gewöhnliches ::before (a1) am Zeilenanfang. Jetzt: ::before absolut in der Lücke, am Zeilenanfang weggeschnitten.
+  it('Metazeile: „·" als ::before in der Lücke vor der nächsten Angabe, nicht vor Chips, nie am Zeilenende', () => {
     const el = mount(`<p class="kid-meta"><span>Freitag, 17:00–18:00 neue Mittelschule Schwaz</span><span>2 Kinder</span>
       <span>zuletzt Fr 25.09.</span><span class="chip">im Archiv</span></p>
       <p class="kid-meta att"><a href="#">Anfänger</a><span>Freitag, 25.09.2026</span></p>`);
-    const after = (n: Element) => getComputedStyle(n, '::after').content;
-    const [first, second, third, chip] = Array.from(el.querySelectorAll('.kid-meta:not(.att) > *'));
-    expect(after(first)).toBe('" ·"');
-    expect(after(second)).toBe('" ·"');
-    expect(after(third)).withContext('vor dem Chip kein Trenner').toBe('none');
-    expect(after(chip)).toBe('none');
-    expect(getComputedStyle(second, '::before').content).toBe('none');
-    expect(after(el.querySelector('.att > a')!)).withContext('Anwesenheit: Link vorn').toBe('" ·"');
+    const before = (n: Element) => getComputedStyle(n, '::before');
+    const meta = el.querySelector('.kid-meta:not(.att)')!;
+    const [first, second, third, chip] = Array.from(meta.children);
+    expect(before(first).content).withContext('erste Angabe ohne Trenner').toBe('none');
+    expect(before(second).content).toBe('"·"');
+    expect(before(third).content).toBe('"·"');
+    expect(before(chip).content).withContext('vor dem Chip kein Trenner').toBe('none');
+    for (const n of [first, second, third, chip]) expect(getComputedStyle(n, '::after').content).toBe('none');
+    // Der Punkt nimmt keinen Platz (absolut) und sitzt links vor seiner Angabe, also in der Lücke.
+    expect(before(second).position).toBe('absolute');
+    expect(getComputedStyle(second).position).toBe('relative');
+    expect(parseFloat(getComputedStyle(meta).columnGap)).toBeGreaterThanOrEqual(12);
+    expect(getComputedStyle(meta).overflowX).toBe('clip');
+    expect(before(el.querySelector('.att > span')!).content).withContext('Anwesenheit: Trenner nach dem Link').toBe('"·"');
+
+    // Umbruch (390-px-Handy, Liste mit schmaler Spalte): die umgebrochene Angabe beginnt an der Kante der Metazeile —
+    // ihr Punkt läge links außerhalb und wird vom Clip abgeschnitten; am Ende der Zeile davor steht nichts.
+    (meta as HTMLElement).style.width = '260px';
+    const metaLeft = meta.getBoundingClientRect().left;
+    const wrapped = Array.from(meta.children).filter(n => n !== first && Math.abs(n.getBoundingClientRect().left - metaLeft) < 1);
+    expect(wrapped.length).withContext('mindestens eine Angabe bricht um').toBeGreaterThan(0);
+    const dotWidth = 6;                                                     // „·" in 15 px ≈ 4 px, plus 5 px Abstand
+    expect(parseFloat(before(wrapped[0]).marginRight) + dotWidth).toBeLessThanOrEqual(parseFloat(getComputedStyle(meta).columnGap) + 1);
   });
 
   // a1-c-fold-lead-group-detail-laptop: die Knöpfe rutschten unter Titel und lange Metazeile (Vorlauf 42 %).
@@ -312,5 +328,43 @@ describe('clubhub.scss', () => {
     expect(widthAt(3440, true).diary).withContext('Verlauf ≈ 75 Zeichen').toBeLessThanOrEqual(46 * 17 + 1);
     expect(widthAt(3440, false).wrap).withContext('Seite ohne Matrix').toBeCloseTo(860, 0);
     expect(widthAt(1920, true).wrap).withContext('1920 px wie bisher').toBeCloseTo(860, 0);
+  });
+
+  // b1-c-ultrawide-matrix-formular-gestreckt: ab 2400 px ist die Matrix nur so breit wie ihre Spalten (≥ 828 px wie
+  // darunter), die Klappkästen „Kinder verwalten"/„Gruppe ändern" und die Statuszeile bleiben 828 px; unter 2400 px gleich.
+  it('Breitbild-Stufe: Matrix so breit wie ihre Spalten, Formular-Klappkästen bleiben schmal', () => {
+    const css = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); } catch { return ''; }
+    }).join('\n');
+    const measure = (w: number, sessions: number) => {
+      const frame = document.createElement('iframe');
+      frame.style.cssText = `position: fixed; left: ${-w - 50}px; top: 0; width: ${w}px; height: 900px; border: 0;`;
+      document.body.appendChild(frame);
+      try {
+        const doc = frame.contentDocument!;
+        const heads = Array.from({ length: sessions }, (_, i) => `<th><a>Fr ${10 + i}.09.</a></th>`).join('');
+        const cells = Array.from({ length: sessions }, () => '<td><span class="cell present">✓</span></td>').join('');
+        doc.open();
+        doc.write(`<!doctype html><html><head><style>${css}</style></head><body><ch-root><main class="wrap">`
+          + `<div class="matrix-scroll"><table class="matrix"><thead><tr><th class="name">Kind</th>${heads}<th class="rate">da</th></tr></thead>`
+          + `<tbody><tr><th class="name">Auer Anna</th>${cells}<td class="rate">1 von 1</td></tr></tbody></table></div>`
+          + `<p class="err status-line">Fehler</p><details class="sheet manage-group" open><summary>Gruppe ändern</summary><section>x</section></details>`
+          + `</main></ch-root></body></html>`);
+        doc.close();
+        const width = (sel: string) => doc.querySelector(sel)!.getBoundingClientRect().width;
+        return { matrix: width('.matrix-scroll'), sheet: width('details.sheet'), status: width('.status-line'), wrap: width('main.wrap') };
+      } finally {
+        frame.remove();
+      }
+    };
+    const one = measure(3440, 1);
+    expect(one.wrap).toBeCloseTo(1880, 0);
+    expect(one.matrix).withContext('ein Termin: nicht mehr 1 848 px').toBeCloseTo(828, 0);
+    expect(one.sheet).toBeCloseTo(828, 0);
+    expect(one.status).toBeLessThanOrEqual(828);
+    const many = measure(3440, 40);
+    expect(many.matrix).withContext('viele Termine: wächst bis zur Seitenbreite').toBeCloseTo(1848, 0);
+    const laptop = measure(1920, 1);
+    expect([laptop.matrix, laptop.sheet]).withContext('unter 2400 px wie bisher').toEqual([828, 828]);
   });
 });

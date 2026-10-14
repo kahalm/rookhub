@@ -219,10 +219,39 @@ describe('EngineCardComponent', () => {
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
     http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
     fixture.detectChanges();
+    // b1: Adresse/Anleitung stehen hinter „Einrichten“ (zu Beginn zugeklappt).
+    (fixture.nativeElement.querySelector('.setup-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
 
     expect(component.rookhubUrl).toBe(window.location.origin);
     expect(fixture.nativeElement.querySelector('.direct-url code').textContent).toContain(window.location.origin);
     component.copyUrl();
     expect(write).toHaveBeenCalledWith(window.location.origin);
+  });
+
+  // UI-Sweep b1 (b1-rk-profil-tokens-engine-textwand): ein Satz sichtbar, die Einrichtung zugeklappt.
+  it('keeps the direct setup collapsed behind „Einrichten“ until opened', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const toggle = el.querySelector('.setup-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.direct-setup')).toBeNull();
+    expect(el.textContent).not.toContain('profile.engine.directHint');
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('.direct-setup .direct-url')).not.toBeNull();
+    expect(el.querySelector('.direct-setup')!.textContent).toContain('profile.engine.directHint');
+  });
+
+  // UI-Sweep b1 (b1-rk-profil-lichess-token-feld-schmal): am Handy volle Breite wie die übrigen Profilfelder.
+  it('token field spans the full width on phones (< 600 px)', () => {
+    const css = (((EngineCardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/@media \(max-width: ?599\.98px\) ?\{ ?\.token-field, ?\.bg-field ?\{ ?width: ?100%/);
+    expect(css).toMatch(/\.token-field ?\{ ?width: ?320px/);
   });
 });

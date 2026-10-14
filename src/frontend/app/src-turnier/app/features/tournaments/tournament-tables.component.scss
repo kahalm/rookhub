@@ -59,6 +59,7 @@
     .club-derived { font-style: italic; color: color-mix(in srgb, currentColor 70%, transparent); }
     /* Leerzustand: Form aus dem globalen .empty-state (DESIGN.md 5.10), hier nur die leise Farbe. */
     .empty-state { color: color-mix(in srgb, currentColor 65%, transparent); }
+    .pairings-empty p { margin: 0 0 0.75rem; }
 
     /* a1-t-fav-stern-hell: leerer Stern war fest #ccc — hell 1,53:1, die Aktion kaum zu sehen. Jetzt Material-Rolle
        (hell ≈ 7:1, dunkel ebenso). Gesetzt: Bernstein, mit der Textfarbe abgedunkelt bzw. (dunkel) aufgehellt — hell
@@ -78,6 +79,17 @@
        brachen zweizeilig, Zeilen ungleich hoch. Sternspalte schmal, Namen einzeilig (voller Name im title). */
     .mat-column-fav { width: 40px; padding-right: 0; }
     td.mat-column-name { white-space: nowrap; }
+
+    /* Geteilte Ansicht am Tablet, englisch (b1-t-spieler-brettspalte-tablet-en): mit „FIDE ID", „Country" und langen
+       Vereinsnamen war die Spielertabelle breiter als der Reiter; die Huelle schneidet (clip, wegen des klebenden
+       Kopfs), „Bd." war unerreichbar. 769–1023 px: FIDE-ID ausblenden (steht im Spielerdetail), Verein einzeilig
+       bis 12rem mit „…". Darunter Karten, darueber reicht die Breite. */
+    @media (min-width: 769px) and (max-width: 1023.98px) {
+      .mat-column-fideId { display: none; }
+      .mat-column-team .cell-clip {
+        display: block; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+    }
 
     .team-link { cursor: pointer; color: var(--rh-accent); text-decoration: underline; }
     .team-link:hover { color: color-mix(in srgb, var(--rh-accent) 75%, currentColor); }
@@ -177,6 +189,12 @@
       .pairing-result { padding: 0; }
       /* In der Spielerkarte ohne Layout-Sprung: das negative Margin frisst das Padding wieder auf. */
       .player-club .team-link { display: inline-block; padding: 0.35rem 0; margin: -0.35rem 0; }
+      /* Teams-Tabelle (b1-t-teams-punkte-leer): die Namensspalte nimmt den Rest und kuerzt mit „…" (voller Name im
+         title) — lange Namen („ŠK Prakovce - www.sachovetreningy.sk") liefen sonst hart ueber den Rand. */
+      .teams-table td.mat-column-name { max-width: 0; width: 100%; }
+      .teams-table td.mat-column-name .team-link {
+        display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
     }
 
     /* Breitbild-Stufe (UI-Sweep u1, u1-t-turnier-paarungen): links Spieler/Teams (Reiter), rechts die Paarungen der gewählten

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -88,16 +88,28 @@ import { PctPipe } from '../../shared/format/pct';
 
           <mat-card class="moves-col">
             <mat-card-content>
-              <div class="moves">
-                @for (p of positions; track p.ply) {
+              <!-- b1-rk-analyse-zugliste-halbzuege: eine Zeile je Vollzug (Nr. | Weiß | Schwarz) statt eines Halbzug-
+                   Rasters, das Weiß und Schwarz in wechselnde Spalten warf. b1-rk-analyse-zugliste-scrollkasten: zweispaltig
+                   scrollt die Liste in sich und blendet unten aus, solange noch etwas kommt (.more); einspaltig läuft sie
+                   mit der Seite. -->
+              <div class="moves" #movesBox [class.more]="movesMore()" (scroll)="updateMovesMore()">
+                @for (r of moveRows; track r.no) {
+                  <span class="no">{{ r.no }}.</span>
+                  <ng-container *ngTemplateOutlet="cell; context: { $implicit: r.white }" />
+                  <ng-container *ngTemplateOutlet="cell; context: { $implicit: r.black }" />
+                }
+              </div>
+              <ng-template #cell let-p>
+                @if (p) {
                   <button class="move" type="button" [class.current]="p.ply === index" [class.pending]="!p.analyzed"
                           (click)="select(p.ply)">
-                    <span class="no">@if (p.white) { {{ p.moveNumber }}. } @else { {{ p.moveNumber }}… }</span>
                     <span class="san">{{ p.san | san }}</span>
                     <span class="ev">{{ p.analyzed ? (p.evalText || '') : '…' }}</span>
                   </button>
+                } @else {
+                  <span class="gap" aria-hidden="true"></span>
                 }
-              </div>
+              </ng-template>
             </mat-card-content>
           </mat-card>
         </div>
@@ -163,19 +175,32 @@ import { PctPipe } from '../../shared/format/pct';
     .nav { display: flex; align-items: center; gap: 4px; justify-content: center; margin-top: 6px; }
     .pos-label { min-width: 90px; text-align: center; font-variant-numeric: tabular-nums; }
     .moves-col { flex: 1 1 260px; max-width: 420px; }
-    /* Die Zugliste kann länger sein als der Bildschirm hoch ist — sie scrollt IN SICH,
-       damit die Seite im Hochformat nicht seitlich oder endlos wächst. */
-    .moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 2px;
-             max-height: 60vh; overflow-y: auto; }
-    .move { display: flex; align-items: baseline; gap: 6px; background: none; border: 1px solid transparent;
+    /* Eine Zeile je Vollzug: Nr. | Weiß + Bewertung | Schwarz + Bewertung (wie der Zugbaum im Analysebrett). Neben dem
+       Brett scrollt die Liste in sich und blendet unten aus, solange noch etwas kommt (DESIGN 5.3). */
+    .moves { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) minmax(0, 1fr); gap: 2px 8px; align-items: baseline;
+             max-height: 60vh; overflow-y: auto; font-variant-numeric: tabular-nums; }
+    .moves.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+                  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
+    .move { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0;
+            background: none; border: 1px solid transparent;
             border-radius: 4px; padding: 3px 6px; font: inherit; color: inherit; cursor: pointer; text-align: left; }
     .move:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
     .move.current { border-color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 12%, transparent); }
     .move.pending .ev { opacity: .5; }
-    .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem; min-width: 34px; }
-    .san { font-weight: 600; }
-    .ev { margin-left: auto; font-size: .8rem; font-variant-numeric: tabular-nums;
+    .no { color: color-mix(in srgb, currentColor 65%, transparent); font-size: .8rem; text-align: right; }
+    .san { font-weight: 600; white-space: nowrap; }
+    .ev { min-width: 5ch; padding-left: 8px; text-align: right; font-size: .8rem; white-space: nowrap;
           color: color-mix(in srgb, currentColor 70%, transparent); }
+    /* Einspaltig (Liste unter dem Brett) läuft die Zugliste mit der Seite — kein Kasten im Kasten. */
+    @media (max-width: 768.98px) {
+      .moves { max-height: none; overflow: visible; }
+    }
+    /* b1-rk-analyse-unterseiten-brett-1920: ab 1200 px wächst das Brett bis 760 px, höchstens bis zur Fensterhöhe; die
+       Zugliste ist so hoch wie Brett + Leiste darunter (Seite bleibt in --page-max-width). */
+    @media (min-width: 1200px) {
+      .board-col { max-width: min(760px, calc(100vh - 240px)); flex-basis: min(760px, calc(100vh - 240px)); }
+      .moves { max-height: calc(100vh - 260px); }
+    }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
     .conv { margin-top: 16px; }
@@ -213,6 +238,31 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
   index = -1;
 
   private poll?: Subscription;
+  private movesObserver?: ResizeObserver;
+  private movesEl?: HTMLElement;
+
+  /** Vollzüge der Zugliste: je Zeile Nummer, Weiß- und Schwarzzug (fehlt einer, bleibt die Zelle leer). */
+  moveRows: { no: number; white?: GameAnalysisPosition; black?: GameAnalysisPosition }[] = [];
+  /** Liegen unter dem sichtbaren Teil der (in sich scrollenden) Zugliste noch Züge? Dann blendet sie unten aus. */
+  readonly movesMore = signal(false);
+
+  @ViewChild('movesBox') set movesBox(ref: ElementRef<HTMLElement> | undefined) {
+    const el = ref?.nativeElement;
+    if (el === this.movesEl) return;
+    this.movesObserver?.disconnect();
+    this.movesEl = el;
+    if (el && typeof ResizeObserver === 'function') {
+      this.movesObserver = new ResizeObserver(() => this.updateMovesMore());
+      this.movesObserver.observe(el);
+    }
+    this.updateMovesMore();
+  }
+
+  /** Prüft beim Scrollen und bei Größenänderung, ob unter dem sichtbaren Rand noch Züge liegen. */
+  updateMovesMore(): void {
+    const el = this.movesEl;
+    this.movesMore.set(!!el && el.scrollHeight - el.scrollTop - el.clientHeight > 1);
+  }
 
   get boardTheme(): string { return this.prefs.boardTheme; }
   get pieceSet(): string { return this.prefs.pieceSet; }
@@ -272,7 +322,7 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.poll?.unsubscribe(); }
+  ngOnDestroy(): void { this.poll?.unsubscribe(); this.movesObserver?.disconnect(); }
 
   @HostListener('window:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
@@ -294,6 +344,8 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
       next: a => {
         this.analysis = a;
         this.positions = a.positions ?? [];
+        this.moveRows = toMoveRows(this.positions);
+        setTimeout(() => this.updateMovesMore());
         const last = this.positions[this.positions.length - 1];
         this.endFen = last ? fenAfterUci(last.fen, last.uci) : null;
         this.loading = false;
@@ -315,4 +367,18 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
       error: () => { this.cdr.markForCheck(); },
     });
   }
+}
+
+/** Halbzüge → Vollzug-Zeilen. Beginnt die Partie mit Schwarz am Zug, bleibt die Weiß-Zelle der ersten Zeile leer. */
+export function toMoveRows(positions: GameAnalysisPosition[]): { no: number; white?: GameAnalysisPosition; black?: GameAnalysisPosition }[] {
+  const rows: { no: number; white?: GameAnalysisPosition; black?: GameAnalysisPosition }[] = [];
+  for (const p of positions) {
+    let row = rows[rows.length - 1];
+    if (!row || row.no !== p.moveNumber || (p.white && row.white) || (!p.white && row.black)) {
+      row = { no: p.moveNumber };
+      rows.push(row);
+    }
+    if (p.white) row.white = p; else row.black = p;
+  }
+  return rows;
 }

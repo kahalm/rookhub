@@ -82,24 +82,27 @@
                 </button>
               }
               @if (canFlagHints) {
+                <!-- b1-rk-puzzle-dumme-tipps-knopf: „Tipps melden“ leise, aber nicht gedimmt; am Handy nur das Fähnchen. -->
                 <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                         [disabled]="flagSaving" (click)="toggleHintsFlag()"
-                        [attr.title]="'book.hints.flagTitle' | translate">
+                        [attr.title]="'book.hints.flagTitle' | translate"
+                        [attr.aria-label]="(puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flag') | translate">
                   <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
-                  {{ (puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flag') | translate }}
+                  <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flag') | translate }}</span>
                 </button>
               }
             </div>
-            @if (shownHints.length) {
-              <ol class="hint-list">
-                @for (h of shownHints; track $index) { <li>{{ h }}</li> }
-              </ol>
-            }
           }
           </ng-template>
           <div class="board-hint-slot board-hint-slot--board">
             <ng-container [ngTemplateOutlet]="boardHintTpl" />
           </div>
+          <!-- b1-rk-puzzle-tipptext-unter-falz: Tipp-Text ab 900 px in der Seitenspalte unter der Status-Karte. -->
+          @if (shownHints.length && !reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+            <ol class="hint-list hint-list--board">
+              @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+            </ol>
+          }
         </div>
 
         <!-- Info-Spalte -->
@@ -139,6 +142,19 @@
                         <mat-icon>open_in_new</mat-icon> {{ 'book.sourceGame' | translate }}
                       </a>
                     }
+                    <!-- Abzeichen + „Tags anzeigen" in der Textspalte, fluchtend mit Titel/Kapitel neben dem Pfeil
+                         (b1-rk-loeser-tags-link-versatz) — nicht am Kartenrand unter dem Pfeil. -->
+                    @if (puzzle.difficulty || puzzle.bookRating || puzzle.tags) {
+                      <div class="ctx-badges">
+                        @if (puzzle.difficulty) {
+                          <span class="difficulty-badge" [class]="'diff-' + puzzle.difficulty.toLowerCase()">{{ puzzle.difficulty }}</span>
+                        }
+                        @if (puzzle.bookRating) {
+                          <span class="rating-badge">{{ 'book.difficulty' | translate }}: {{ puzzle.bookRating }}/10</span>
+                        }
+                        <app-puzzle-tags [tags]="puzzle.tags" />
+                      </div>
+                    }
                   </div>
                   @if (langEnabled) {
                     <app-course-lang-picker class="ctx-lang" [languages]="courseLang.languages(langRef)"
@@ -155,18 +171,6 @@
                 </div>
 
                 <!-- Der Erklär-/Zug-Kommentar steht als eigener Block am Ende der Seitenspalte (s. u.). -->
-
-                @if (puzzle.difficulty || puzzle.bookRating || puzzle.tags) {
-                  <div class="ctx-badges">
-                    @if (puzzle.difficulty) {
-                      <span class="difficulty-badge" [class]="'diff-' + puzzle.difficulty.toLowerCase()">{{ puzzle.difficulty }}</span>
-                    }
-                    @if (puzzle.bookRating) {
-                      <span class="rating-badge">{{ 'book.difficulty' | translate }}: {{ puzzle.bookRating }}/10</span>
-                    }
-                    <app-puzzle-tags [tags]="puzzle.tags" />
-                  </div>
-                }
 
                 <!-- Spielweise (Kurs/Tagespuzzle/Buch-Puzzle) umschalten: wirkt ab dem nächsten
                      Puzzle (siehe toggleSolveMode). Der Wochenpost hat seinen eigenen Knopf.
@@ -309,18 +313,11 @@
                       </button>
                     }
                   </div>
-                } @else if (state === 'SOLVED') {
+                } @else if (state === 'SOLVED' || state === 'FAILED') {
+                  <!-- Gelöst/aufgegeben: „Nächstes Puzzle" (Kurs/Wochenpost) bringt die Statuskarte als EINEN
+                       Hauptknopf mit (DESIGN 5.4, b1-rk-seq-doppelt-naechstes-puzzle) — hier nur Tages-/Buch-Navigation. -->
+                  @if (isDaily || browseInBook) {
                   <div class="ctx-nav">
-                    @if (inWeekly) {
-                      <button mat-flat-button color="primary" (click)="weeklyNext()">
-                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
-                      </button>
-                    }
-                    @if (inCourse) {
-                      <button mat-flat-button color="primary" (click)="courseNext()">
-                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
-                      </button>
-                    }
                     @if (isDaily) {
                       <button mat-stroked-button (click)="prevDaily()">
                         <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
@@ -340,33 +337,7 @@
                       </button>
                     }
                   </div>
-                } @else if (state === 'FAILED') {
-                  <div class="ctx-nav">
-                    @if (inWeekly) {
-                      <button mat-flat-button color="primary" (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
-                    }
-                    @if (inCourse) {
-                      <button mat-flat-button color="primary" (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
-                    }
-                    @if (isDaily) {
-                      <button mat-stroked-button (click)="prevDaily()">
-                        <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
-                      </button>
-                      @if (canGoForwardDaily) {
-                        <button mat-stroked-button (click)="nextDaily()">
-                          {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
-                        </button>
-                      }
-                    }
-                    @if (browseInBook) {
-                      <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
-                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
-                      </button>
-                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
-                        <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
-                      </button>
-                    }
-                  </div>
+                  }
                 } @else if (inWeekly || inCourse) {
                   <div class="ctx-nav">
                     <button mat-button class="skip-quiet" (click)="inWeekly ? weeklyNext() : courseNext()">
@@ -488,6 +459,11 @@
               (exitReviewClicked)="exitReview()"
               (showOriginalSolutionClicked)="showOriginalSolution()"
             />
+          }
+          @if (shownHints.length && !reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+            <ol class="hint-list hint-list--side">
+              @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+            </ol>
           }
 
           <!-- „Track solves": Erstversuch-Zähler unter dem geteilten Puzzle -->

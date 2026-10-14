@@ -952,3 +952,14 @@ describe('TournamentHistoryComponent Breitbild-Stufe (u1-x-breite-stufe)', () =>
   });
 });
 
+
+/** UI-Sweep b1 (b1-t-seitenpolster-handy-8px): am Handy 16 px Seitenpolster statt 8 px (DESIGN 3.2). */
+describe('TournamentHistoryComponent Seitenpolster am Handy (b1)', () => {
+  it('setzt unter 769 px .page auf 16 px seitlich', () => {
+    const css = ((TournamentHistoryComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/%NS%/g, '').replace(/\s+/g, '');
+    const mobile = css.slice(css.indexOf('@media(max-width:768px)'));
+    expect(mobile).toMatch(/\.page[^{]*\{padding:0\.75rem1rem;?\}/);
+    expect(css).not.toContain('padding:0.75rem0.5rem');
+  });
+});

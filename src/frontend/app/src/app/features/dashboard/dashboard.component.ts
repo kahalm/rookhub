@@ -30,6 +30,17 @@ import { formatPct } from '../../shared/format/pct';
 /** Ein Schnellzugriff-Button auf einer Kachel. */
 interface TileButton { labelKey: string; link: string; }
 
+/**
+ * Untertitel einer Kachel: ein Schlüssel, oder mehrere Angaben (`parts`), die das Template mit „ · “ als `::before`
+ * der folgenden Angabe trennt (DESIGN 5.13) — der Trenner steht so nie im Übersetzungstext und hängt beim Umbruch
+ * nie allein am Zeilenende (UI-Sweep b1, b1-rk-dash-puzzles-pipe).
+ */
+export interface TileSubtitle {
+  key: string;
+  params?: Record<string, unknown>;
+  parts?: { key: string; params?: Record<string, unknown> }[];
+}
+
 /** Definition einer Dashboard-Kachel (Modul). Inhalt/Eignung/Untertitel werden lazy ausgewertet. */
 interface TileDef {
   id: string;
@@ -38,7 +49,7 @@ interface TileDef {
   /** Ob die Kachel für diesen Nutzer überhaupt in Frage kommt (Menü-Sichtbarkeit / Admin). */
   eligible: () => boolean;
   /** Untertitel-i18n-Key + optionale Parameter (z. B. Zähler), live ausgewertet. */
-  subtitle: () => { key: string; params?: Record<string, unknown> };
+  subtitle: () => TileSubtitle;
   buttons: TileButton[];
 }
 
@@ -96,7 +107,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
         <p class="edit-hint">{{ 'dashboard.edit.hint' | translate }}</p>
       }
 
-      <div class="dashboard-grid"
+      <div class="dashboard-grid" [class.grid-editing]="editing"
            cdkDropList cdkDropListOrientation="mixed" [cdkDropListDisabled]="!editing" (cdkDropListDropped)="drop($event)">
         @for (tile of visibleTiles; track tile.id; let first = $first; let last = $last) {
           @let sub = tile.subtitle();
@@ -133,7 +144,11 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
             <mat-card-header>
               <mat-icon mat-card-avatar>{{ tile.icon }}</mat-icon>
               <mat-card-title>{{ tile.titleKey | translate }}</mat-card-title>
-              <mat-card-subtitle>{{ sub.key | translate:sub.params }}</mat-card-subtitle>
+              @if (sub.parts; as parts) {
+                <mat-card-subtitle>@for (p of parts; track p.key; let pFirst = $first) {@if (!pFirst) {&ngsp;}<span class="sub-part">{{ p.key | translate:p.params }}</span>}</mat-card-subtitle>
+              } @else {
+                <mat-card-subtitle>{{ sub.key | translate:sub.params }}</mat-card-subtitle>
+              }
             </mat-card-header>
             @if (tile.id === 'pinnedCourses') {
               <mat-card-content class="pinned-courses">
@@ -222,6 +237,9 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
        1 200 px; darunter bleibt die Breite unverändert. */
     @media (min-width: 2400px) {
       .dashboard { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      /* b1-rk-dash-raster-angepinnte-kurse: feste 5 Spuren — die volle Zeile der Kurs-Kachel hielt sonst alle
+         auto-fit-Spuren offen (6 schmale Spalten statt 5, Zeilen endeten halb). */
+      .dashboard-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .header-actions { display: flex; gap: 0.5rem; }
@@ -229,6 +247,9 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .edit-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0.25rem 0 0.5rem; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
+    /* b1-rk-dash-puzzles-pipe (DESIGN 5.13): Trenner „ · “ als ::before der folgenden Angabe; das Leerzeichen davor
+       steht im Markup (&ngsp;), dort bricht die Zeile — der Punkt beginnt dann die neue Zeile, hängt nie am Ende. */
+    .sub-part + .sub-part::before { content: '· '; }
     /* Kacheln einer Rasterzeile sind gleich hoch (stretch), die Aktionszeile sitzt am Kartenboden — sonst stehen
        „Spielen“ und „Puzzles lösen“ verschieden tief, sobald eine Beschreibung zweizeilig ist (UI-Review dash-links).
        Bewusst kein grid-auto-rows: 1fr — die Kurs-Kachel ist hoch und zöge jede Zeile mit. */
@@ -242,6 +263,10 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .dashboard-grid > mat-card > mat-card-actions > button { min-width: 0; white-space: nowrap; }
     /* UI-Sweep 2026-10-11 (r2-rk-dash-stretch): die hohe Kachel steht allein in ihrer Zeile, die Kurse darin im Raster. */
     .dashboard-grid > mat-card.tile-wide { grid-column: 1 / -1; }
+    /* b1-rk-dash-raster-angepinnte-kurse: kleine Kacheln füllen die Lücke vor der breiten Kurs-Kachel (Tablet: sonst
+       „Wochenpost“ allein mit leerer Zelle daneben). Nicht beim Anpassen — dort zählt die gespeicherte Reihenfolge,
+       und das Ziehen braucht Bild = DOM-Reihenfolge. */
+    .dashboard-grid:not(.grid-editing) { grid-auto-flow: row dense; }
     /* UI-Sweep z2 (z2-rk-dash-kurse-raster): auto-fit statt auto-fill — keine leere vierte Spur, die Kurse teilen sich die Breite. */
     mat-card.tile-wide .pinned-courses { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 1rem 1.5rem; }
     mat-card.tile-wide .pinned-course + .pinned-course { border-top: none; padding-top: 0; }
@@ -330,8 +355,12 @@ export class DashboardComponent implements OnInit {
       id: 'puzzles', icon: 'extension', titleKey: 'dashboard.puzzles.title',
       eligible: () => this.menuKeys.has('puzzles'),
       // a1-rk-dash-prozent-komma: Prozent in der Oberflächensprache („78,6 %“ / „78.6%“), nicht roh in den Text.
-      subtitle: () => ({ key: 'dashboard.puzzles.subtitle', params: { elo: this.puzzleElo, solved: this.puzzleSolved,
-        accuracy: formatPct(this.puzzleAccuracy, this.translate.currentLang() || null, 1) } }),
+      // b1-rk-dash-puzzles-pipe: zwei Angaben statt „Elo … | … gelöst“ in einem Text — Trenner „ · “ per CSS.
+      subtitle: () => ({ key: 'dashboard.puzzles.elo', parts: [
+        { key: 'dashboard.puzzles.elo', params: { elo: this.puzzleElo } },
+        { key: 'dashboard.puzzles.solved', params: { solved: this.puzzleSolved,
+          accuracy: formatPct(this.puzzleAccuracy, this.translate.currentLang() || null, 1) } },
+      ] }),
       buttons: [
         { labelKey: 'dashboard.puzzles.solve', link: '/puzzles' },
         { labelKey: 'dashboard.puzzles.daily', link: '/puzzles/daily/today' },

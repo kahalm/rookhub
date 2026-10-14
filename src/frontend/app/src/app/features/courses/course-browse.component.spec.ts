@@ -305,10 +305,27 @@ describe('CourseBrowseComponent', () => {
 /** UI-Sweep 2026-10-11 (d2-rk-browse-*): Brett ist die Hauptsache — am Handy vor der Liste, groß mit der Höhe wachsend. */
 describe('CourseBrowseComponent Layout', () => {
   const css = ((CourseBrowseComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
-  it('stellt am Handy das Brett vor die Linienliste und kürzt den Titel', () => {
+  it('stellt einspaltig das Brett vor die Linienliste und kürzt am Handy den Titel', () => {
+    const single = css.slice(css.indexOf('@media (max-width: 899.98px)'));
+    expect(single).toMatch(/\.board-pane[^{]*\{ ?order: -1/);
     const mobile = css.slice(css.indexOf('@media (max-width: 768px)'));
-    expect(mobile).toMatch(/\.board-pane[^{]*\{ ?order: -1/);
     expect(mobile).toContain('text-overflow: ellipsis');
+  });
+  // b1-rk-browse-tablet-eng (DESIGN 4.2/5.12): einspaltig bis 899.98 px, Brett mittig bis Fensterhöhe.
+  // b1-rk-browse-liste-kasten-einspaltig (DESIGN 5.3): einspaltig läuft die Liste mit der Seite, Kapitelköpfe kleben.
+  it('einspaltig bis 899.98 px: Liste ohne eigenen Kasten, Brett bis Fensterhöhe, Kapitelköpfe kleben', () => {
+    const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '');
+    const at = plain.indexOf('@media (max-width: 899.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const single = plain.slice(at, plain.indexOf('@media', at + 10));
+    expect(single).toMatch(/\.browse-body \{ ?flex-direction: column/);
+    expect(single).toMatch(/\.line-list \{[^}]*max-height: none;[^}]*overflow: visible/);
+    expect(single).not.toContain('260px');
+    expect(single).toMatch(/\.chapter-head \{[^}]*position: sticky; top: 0/);
+    expect(single).toMatch(/\.board-wrap \{ ?max-width: min\(100%, max\(320px, (calc\()?100vh - 300px\)?\)\)/);
+    // die 768-px-Stufe stellt das Layout nicht mehr um
+    const tab = plain.slice(plain.indexOf('@media (max-width: 768px)'));
+    expect(tab.slice(0, tab.indexOf('}', tab.indexOf('}') + 1))).not.toContain('flex-direction');
   });
   // UI-Sweep z1 (z1-rk-browse-titel) + z3 (z3-rk-browse-symbolknopf): unter 600 px Titel auf zwei Zeilen,
   // die Flashcards-Knöpfe wandern ausgeschrieben ins ⋮-Menü.

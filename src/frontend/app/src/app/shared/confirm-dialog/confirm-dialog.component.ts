@@ -59,6 +59,15 @@ export class ConfirmDialogComponent {
   readonly ref = inject<MatDialogRef<ConfirmDialogComponent, boolean>>(MatDialogRef);
 }
 
+/**
+ * Ist `key` der i18n-Schlüssel einer Lösch-Rückfrage? Letztes Segment beginnt mit `delete` und endet auf `Confirm`
+ * (bzw. `ConfirmOne`): `games.deleteConfirm`, `courses.detail.deleteLineConfirm`, `admin.books.deleteConfirmOne`.
+ * Bereits übersetzte Texte (Leerzeichen) und andere Rückfragen fallen nicht darunter.
+ */
+export function isDeleteConfirmKey(key: string): boolean {
+  return /^[\w.]*(?:^|\.)delete\w*Confirm(?:One)?$/.test(key);
+}
+
 /** Der oberste offene MODALE `<dialog>` (mit `showModal()` geöffnet), sonst `null`. */
 export function topModalDialog(doc: Document = document): HTMLDialogElement | null {
   const open = Array.from(doc.querySelectorAll('dialog[open]')) as HTMLDialogElement[];
@@ -84,11 +93,14 @@ export class ConfirmService {
   private overlays = inject(OverlayContainer);
 
   /** `messageKey` ist ein i18n-Schlüssel; ein bereits übersetzter Text geht genauso durch. `labels`: eigene Knopftexte
-   *  (z. B. „Ersetzen"), sonst die der Oberfläche. */
+   *  (z. B. „Ersetzen"), sonst die der Oberfläche. Lösch-Rückfragen (Schlüssel `….delete…Confirm`) benennen die
+   *  Handlung von selbst mit „Löschen“ statt „OK“ (b1-rk-games-loeschen-ok, DESIGN 5.6). */
   ask(messageKey: string, params?: Record<string, unknown>, labels?: { confirm?: string; cancel?: string }): Observable<boolean> {
     const data: ConfirmData = {
       message: this.translate.instant(messageKey, params),
-      confirmLabel: labels?.confirm ?? this.labels?.confirm,
+      confirmLabel: labels?.confirm
+        ?? (isDeleteConfirmKey(messageKey) ? this.translate.instant('common.delete') : undefined)
+        ?? this.labels?.confirm,
       cancelLabel: labels?.cancel ?? this.labels?.cancel,
     };
     const restore = this.intoModalDialog();

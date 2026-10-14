@@ -122,7 +122,8 @@
     "subscribedAt": "Dilanggani {{date}}",
     "puzzles": {
       "title": "Puzzle",
-      "subtitle": "Elo {{elo}} | {{solved}} diselesaikan ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} diselesaikan ({{accuracy}})",
       "solve": "Selesaikan Puzzle",
       "daily": "Puzzle harian",
       "endless": "Tanpa Batas"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} berkas",
       "public": "Publik",
       "private": "Privat",
-      "noDescription": "Tidak ada deskripsi",
       "open": "Buka",
       "empty": "Belum ada repertoir. Buat satu untuk memulai!",
       "loadFailed": "Gagal memuat repertoir",
@@ -327,7 +327,6 @@
       "updateFailed": "Repertoar tidak dapat diperbarui"
     },
     "detail": {
-      "noDescription": "Tidak ada deskripsi",
       "modeLines": "Baris",
       "modeTree": "Pohon"
     },

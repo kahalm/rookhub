@@ -488,6 +488,14 @@ describe('GameAnalysesComponent', () => {
     expect(css).toMatch(/\.intro(\[[^\]]*\])?\{[^}]*max-width:75ch/);
   });
 
+  // b1-rk-h1-uneinheitlich: der Seitentitel war auf 1.5rem verkleinert — die Geschwisterseiten nutzen das Material-h1.
+  it('setzt keine eigene Titelgröße (Material-h1 wie Analyse, Katalog, Statistik)', () => {
+    const css = ((GameAnalysesComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s/g, '');
+    const h1 = /(?:^|[}])h1(\[[^\]]*\])?\{([^}]*)\}/.exec(css);
+    expect(h1).withContext('h1-Regel').not.toBeNull();
+    expect(h1![2]).not.toMatch(/font/);
+  });
+
   // a1-rk-ga-grund-abseits: ohne Admin-Tiefenfeld stand „Analyse starten“ links, der Grund rechts am anderen Rand.
   it('stellt „Analyse starten“ auch ohne Tiefenfeld rechts über den Grund', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);

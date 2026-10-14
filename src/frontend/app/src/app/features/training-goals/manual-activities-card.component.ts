@@ -16,6 +16,7 @@ import {
 } from './training-goals.service';
 import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 /**
@@ -30,7 +31,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, TranslatePipe, HelpHintComponent,
+    MatFormFieldModule, MatInputModule, MatSelectModule, TranslatePipe, HelpHintComponent, IsoDateFieldComponent,
   ],
   templateUrl: './manual-activities-card.component.html',
   styles: [`

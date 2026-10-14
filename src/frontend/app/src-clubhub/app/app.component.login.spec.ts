@@ -25,11 +25,16 @@ describe('ClubHubAppComponent „Anmelden“ im Kopf', () => {
     return (f.nativeElement as HTMLElement).querySelector('header nav.account a.btn');
   }
 
-  it('auf /login ausgeblendet, auf /register und der Startseite da', async () => {
-    expect(await headLoginAt('/login')).toBeNull();
-    TestBed.resetTestingModule();
-    expect((await headLoginAt('/register'))?.textContent).toContain('Anmelden');
-    TestBed.resetTestingModule();
+  // b1-c-passwort-masken-kopf-anmelden: auch auf Registrieren und den Passwort-Masken (wie die Turnierseite).
+  for (const url of ['/login', '/register', '/forgot-password', '/reset-password?token=abc']) {
+    it(`auf ${url} ausgeblendet`, async () => {
+      expect(await headLoginAt(url)).toBeNull();
+    });
+  }
+
+  it('auf der Startseite und anderen Seiten da', async () => {
     expect((await headLoginAt('/'))?.textContent).toContain('Anmelden');
+    TestBed.resetTestingModule();
+    expect((await headLoginAt('/privacy'))?.textContent).toContain('Anmelden');
   });
 });

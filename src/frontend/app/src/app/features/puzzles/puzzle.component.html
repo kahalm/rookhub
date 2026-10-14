@@ -89,24 +89,29 @@
                 </button>
               }
               @if (isLoggedIn && onSolutionPath && hasHints && hintLevel > 0) {
+                <!-- b1-rk-puzzle-dumme-tipps-knopf: „Tipp melden“ in leiser, voller Farbe (nicht gedimmt wie gesperrt);
+                     am Handy nur das Fähnchen, damit die Zeile einzeilig bleibt. -->
                 <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                         [disabled]="flagSaving" (click)="toggleHintsFlag()"
-                        [attr.title]="'puzzles.hints.flagTitle' | translate">
+                        [attr.title]="'puzzles.hints.flagTitle' | translate"
+                        [attr.aria-label]="(puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate">
                   <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
-                  {{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}
+                  <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}</span>
                 </button>
               }
             </div>
-            @if (shownHints.length) {
-              <ol class="hint-list">
-                @for (h of shownHints; track $index) { <li>{{ h }}</li> }
-              </ol>
-            }
           }
           </ng-template>
           <div class="board-hint-slot board-hint-slot--board">
             <ng-container [ngTemplateOutlet]="boardHintTpl" />
           </div>
+          <!-- b1-rk-puzzle-tipptext-unter-falz: der aufgedeckte Tipp-Text steht ab 900 px in der Seitenspalte unter der
+               Status-Karte (dort ist Platz), darunter weiter unter dem Brett. -->
+          @if (shownHints.length && !reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+            <ol class="hint-list hint-list--board">
+              @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+            </ol>
+          }
         </div>
 
         <div class="info-section">
@@ -177,6 +182,11 @@
               (showOriginalSolutionClicked)="showOriginalSolution()"
             />
           }
+          @if (shownHints.length && !reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+            <ol class="hint-list hint-list--side">
+              @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+            </ol>
+          }
 
           <!-- UI-Welle 2: EINE Aktionszeile statt Rating-Card + Last-Actions + Endlos-Knopf;
                Seltenes (Letztes ansehen/lieben, Endlos, Einstellungen) im ⋮-Menü. -->
@@ -211,6 +221,8 @@
                 <mat-card-title>{{ 'puzzles.stats.title' | translate }}</mat-card-title>
               </mat-card-header>
               <mat-card-content>
+                <!-- b1-rk-puzzle-kennzahlen-raster: Kennzahlen nach Inhaltsbreite (eine Zeile, keine gekürzte Beschriftung);
+                     erst in einer schmalen Karte (< 330 px) drei Spalten, 3 + 2. -->
                 <div class="stats-grid">
                   <div class="stat">
                     <span class="stat-value">{{ stats.puzzleElo }}</span>

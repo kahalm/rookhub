@@ -13,6 +13,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
@@ -32,7 +33,7 @@ import { chessTitle } from './tournament-table.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, MatMenuModule, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, MatMenuModule, RouterLink, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent],
   templateUrl: './tournament-tables.component.html',
   styleUrls: ['./tournament-tables.component.scss'],
 })
@@ -69,6 +70,25 @@ export class TournamentTablesComponent {
     return result;
   }
 
+  private teamColumnsCache?: { columns: string[]; teams: TournamentTeam[]; result: string[] };
+
+  /**
+   * Die Team-Spalten. „Punkte" entfaellt, solange kein Team einen Wert hat — der Crawler liefert fuer Teams bisher gar
+   * keine Punkte, die Spalte war in jedem Turnier leer und drueckte am Handy lange Teamnamen ueber den Rand
+   * (UI-Sweep b1, b1-t-teams-punkte-leer). Kommt der Wert spaeter, erscheint die Spalte von selbst.
+   */
+  get shownTeamColumns(): string[] {
+    const cache = this.teamColumnsCache;
+    if (cache && cache.columns === this.teamColumns && cache.teams === this.teams) return cache.result;
+    const hasPoints = this.teams.some(t => {
+      const points = (t as TournamentTeam & { points?: unknown }).points;
+      return points != null && points !== '';
+    });
+    const result = hasPoints ? this.teamColumns : this.teamColumns.filter(c => c !== 'points');
+    this.teamColumnsCache = { columns: this.teamColumns, teams: this.teams, result };
+    return result;
+  }
+
   // --- Lade-Zustand ---
   @Input() playersLoading = false;
   @Input() teamsLoading = false;
@@ -99,6 +119,16 @@ export class TournamentTablesComponent {
   @Output() toggleFavorite = new EventEmitter<TournamentPlayer>();
   @Output() toggleTeamFavorite = new EventEmitter<TournamentTeam>();
   @Output() showTeamPlayers = new EventEmitter<string>();
+
+  /**
+   * Leere Paarungen (b1-t-paarungen-leer-ohne-weg): der Weg weiter steht im Leerzustand selbst. Die Detailseite gibt
+   * „Aktualisieren" frei (`canRefresh`), die geteilte Ansicht /t/:id verweist stattdessen auf die volle Ansicht
+   * (`fullViewLink`) — dort steht der Knopf. Vorher verwies der Satz auf einen Knopf weit oben bzw. im ⋮-Menue.
+   */
+  @Input() canRefresh = false;
+  @Input() refreshing = false;
+  @Output() refresh = new EventEmitter<void>();
+  @Input() fullViewLink: (string | number)[] | null = null;
 
   /** Laeuft „Vereine nachtragen" gerade? Sperrt den Knopf und zeigt es an. */
   @Input() clubsBusy = false;

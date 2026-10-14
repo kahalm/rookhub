@@ -179,6 +179,20 @@ describe('RepertoireHolesComponent', () => {
     expect(req.database).toBe('masters');
   });
 
+  // b1-rk-holes-intro-lokal: der Erklärsatz nennt nur, was es bei der Auswahl gibt (kein Lichess-Limit bei „lokal“,
+  // keine Elo/Tempo bei „Meister“); das Limit steht im ⓘ.
+  it('wählt den Einleitungssatz nach Quelle und Datenbank', () => {
+    const c = make(PGN_BLACK, { run: () => of(result()) }, WITH_LOCAL);
+    c.setDatabase('masters');
+    expect(c.introKey()).toBe('repertoire.holes.introMasters');
+    c.setDatabase('lichess');
+    expect(c.introKey()).toBe('repertoire.holes.introLocal');
+    c.setSource('online');
+    expect(c.introKey()).toBe('repertoire.holes.intro');
+    c.setDatabase('masters');
+    expect(c.introKey()).toBe('repertoire.holes.introMasters');
+  });
+
   it('renders the hole list', async () => {
     await TestBed.configureTestingModule({
       imports: [RepertoireHolesComponent],

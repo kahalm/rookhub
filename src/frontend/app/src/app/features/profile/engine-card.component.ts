@@ -39,17 +39,28 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
       <p class="engine-hint">{{ 'profile.engine.hint' | translate }}</p>
 
       <h5>{{ 'profile.engine.directTitle' | translate }}</h5>
-      <p class="engine-hint">{{ 'profile.engine.directHint' | translate }}</p>
-      <!-- UI-Sweep 2026-10-11 (r2-rk-engine-jargon): die Adresse zum Kopieren statt „ROOKHUB_URL", dazu die Anleitung. -->
-      <div class="engine-row direct-url">
-        <code class="url">{{ rookhubUrl }}</code>
-        <button mat-stroked-button type="button" (click)="copyUrl()">
-          <mat-icon>content_copy</mat-icon> {{ 'common.copy' | translate }}
-        </button>
-      </div>
-      <p class="engine-hint">
-        <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">{{ 'profile.engine.guide' | translate }}</a>
-      </p>
+      <!-- UI-Sweep b1 (b1-rk-profil-tokens-engine-textwand): Anleitung, Adresse und Token-Bereich zugeklappt hinter
+           „Einrichten“ — wer keinen eigenen Rechner anbindet, sieht nur Titel und Liste (DESIGN 2 Nr. 2/7). -->
+      <button mat-button type="button" class="setup-toggle" (click)="setupOpen = !setupOpen"
+              [attr.aria-expanded]="setupOpen" aria-controls="engine-direct-setup">
+        {{ 'profile.engine.setup' | translate }}
+        <mat-icon iconPositionEnd>{{ setupOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+      @if (setupOpen) {
+        <div id="engine-direct-setup" class="direct-setup">
+          <p class="engine-hint">{{ 'profile.engine.directHint' | translate }}</p>
+          <!-- UI-Sweep 2026-10-11 (r2-rk-engine-jargon): die Adresse zum Kopieren statt „ROOKHUB_URL", dazu die Anleitung. -->
+          <div class="engine-row direct-url">
+            <code class="url">{{ rookhubUrl }}</code>
+            <button mat-stroked-button type="button" (click)="copyUrl()">
+              <mat-icon>content_copy</mat-icon> {{ 'common.copy' | translate }}
+            </button>
+          </div>
+          <p class="engine-hint">
+            <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">{{ 'profile.engine.guide' | translate }}</a>
+          </p>
+        </div>
+      }
       @if (enginesLoaded) {
         @if (directEngines.length > 0) {
           <ul class="engine-list direct-list">
@@ -151,6 +162,13 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     .engine-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .token-field { width: 320px; max-width: 100%; }
     .bg-field { width: 320px; max-width: 100%; margin-top: 8px; }
+    /* b1-rk-profil-lichess-token-feld-schmal: am Handy so breit wie alle anderen Profilfelder (der Knopf bricht
+       ohnehin in die nächste Zeile) — vorher endete das Feld 15 px früher. */
+    @media (max-width: 599.98px) {
+      .token-field, .bg-field { width: 100%; }
+    }
+    .setup-toggle { margin: 0 0 4px -12px; }
+    .direct-setup { margin-bottom: 0.25rem; }
     .masked { color: color-mix(in srgb, currentColor 80%, transparent); font-size: 0.9rem; }
     .masked code { background: color-mix(in srgb, currentColor 8%, transparent); padding: 1px 6px; border-radius: 4px; }
     .engine-warn { display: flex; align-items: center; gap: 6px; color: var(--rh-error); font-size: 0.85rem; margin: 4px 0 0; }
@@ -188,6 +206,8 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   shareAsHouseEngine = false;
   /** Nur ein Admin bekommt das Häkchen überhaupt zu sehen. */
   canShareHouseEngine = false;
+  /** „Einrichten“ der direkten Anbindung aufgeklappt (b1-rk-profil-tokens-engine-textwand) — zu Beginn zu. */
+  setupOpen = false;
   private listSub?: Subscription;
   private statusSub?: Subscription;
 

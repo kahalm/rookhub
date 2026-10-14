@@ -122,7 +122,8 @@
     "subscribedAt": "Đã đăng ký {{date}}",
     "puzzles": {
       "title": "Bài tập",
-      "subtitle": "Elo {{elo}} | {{solved}} đã giải ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} đã giải ({{accuracy}})",
       "solve": "Giải bài tập",
       "daily": "Bài tập hàng ngày",
       "endless": "Vô tận"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} tệp",
       "public": "Công khai",
       "private": "Riêng tư",
-      "noDescription": "Không có mô tả",
       "open": "Mở",
       "empty": "Chưa có repertoire. Tạo một cái để bắt đầu!",
       "loadFailed": "Không thể tải kho repertoire",
@@ -327,7 +327,6 @@
       "updateFailed": "Không thể cập nhật hệ thống nước đi"
     },
     "detail": {
-      "noDescription": "Không có mô tả",
       "modeLines": "Đường nước",
       "modeTree": "Cây nước"
     },

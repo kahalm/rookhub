@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { GameAnalysisDetailComponent } from './game-analysis-detail.component';
+import { GameAnalysisDetailComponent, toMoveRows } from './game-analysis-detail.component';
 
 const POSITIONS = [
   { ply: 0, moveNumber: 1, white: true,  san: 'e4',  uci: 'e2e4', fen: 'start-fen', evalText: '+0.30', depth: 30, analyzed: true },
@@ -218,5 +218,68 @@ describe('GameAnalysisDetailComponent', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.convergence).toBeNull();
     expect(fixture.componentInstance.positions.length).toBe(3);
+  });
+
+  // b1-rk-analyse-zugliste-halbzuege: die Zugliste war ein auto-fill-Raster aus Halbzügen — Weiß und Schwarz standen in
+  // wechselnden Spalten, lange Bewertungen stießen an die nächste Zugnummer. Jetzt eine Zeile je Vollzug.
+  it('zeigt die Zugliste als Vollzug-Zeilen: Nr. | Weiß | Schwarz', () => {
+    const fixture = load();
+    fixture.detectChanges();
+    const box = (fixture.nativeElement as HTMLElement).querySelector('.moves')!;
+    const cells = Array.from(box.children).map(c => c.classList.contains('no') ? c.textContent!.trim()
+      : c.classList.contains('gap') ? '_' : c.querySelector('.san')!.textContent!.trim());
+    expect(cells).toEqual(['1.', 'e4', 'e5', '2.', 'Nf3', '_']);
+    expect(getComputedStyle(box).gridTemplateColumns.split(' ').length).toBe(3);
+  });
+
+  it('toMoveRows: Schwarz am Zug zuerst lässt die erste Weiß-Zelle leer', () => {
+    const rows = toMoveRows([
+      { ...POSITIONS[1], ply: 0, moveNumber: 5 } as any,
+      { ...POSITIONS[0], ply: 1, moveNumber: 6 } as any,
+      { ...POSITIONS[1], ply: 2, moveNumber: 6 } as any,
+    ]);
+    expect(rows.map(r => [r.no, r.white?.ply ?? null, r.black?.ply ?? null])).toEqual([[5, null, 0], [6, 1, 2]]);
+  });
+
+  // b1-rk-analyse-zugliste-scrollkasten + b1-rk-analyse-unterseiten-brett-1920. Karma läuft 1 400 px breit → die
+  // Media-Regeln als CSS-Text.
+  describe('Layout-Regeln', () => {
+    const css = (((GameAnalysisDetailComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    function block(query: string): string {
+      const at = css.indexOf(query);
+      expect(at).withContext(query).toBeGreaterThan(-1);
+      return css.slice(at, css.indexOf('}}', at) + 2);
+    }
+
+    it('einspaltig (< 769 px) läuft die Zugliste mit der Seite', () => {
+      expect(block('@media(max-width:768.98px)')).toMatch(/\.moves(\[[^\]]*\])?\{max-height:none;overflow:visible/);
+    });
+
+    it('neben dem Brett blendet die Liste unten aus, solange mehr kommt', () => {
+      expect(css).toMatch(/\.moves\.more(\[[^\]]*\])?\{[^}]*mask-image:linear-gradient\(tobottom,#000calc\(100%-24px\),transparent\)/);
+    });
+
+    it('ab 1200 px wächst das Brett bis 760 px bzw. Fensterhöhe, die Liste so hoch wie das Brett', () => {
+      const b = block('@media(min-width:1200px)');
+      expect(b).toMatch(/\.board-col(\[[^\]]*\])?\{max-width:min\(760px,(calc\()?100vh-240px\)?\)/);
+      expect(b).toMatch(/\.moves(\[[^\]]*\])?\{max-height:calc\(100vh-260px\)/);
+    });
+  });
+
+  it('setzt .more nur, solange unter dem sichtbaren Rand noch Züge liegen', () => {
+    const fixture = load();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const box = (fixture.nativeElement as HTMLElement).querySelector('.moves') as HTMLElement;
+    box.style.maxHeight = '20px';
+    box.style.overflowY = 'auto';
+    c.updateMovesMore();
+    fixture.detectChanges();
+    expect(box.classList).toContain('more');
+    box.scrollTop = box.scrollHeight;
+    c.updateMovesMore();
+    fixture.detectChanges();
+    expect(box.classList).not.toContain('more');
   });
 });

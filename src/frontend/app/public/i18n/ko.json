@@ -122,7 +122,8 @@
     "subscribedAt": "{{date}} 구독",
     "puzzles": {
       "title": "퍼즐",
-      "subtitle": "Elo {{elo}} | {{solved}} 풀음 ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} 풀음 ({{accuracy}})",
       "solve": "퍼즐 풀기",
       "daily": "오늘의 퍼즐",
       "endless": "무한 모드"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}}개 파일",
       "public": "공개",
       "private": "비공개",
-      "noDescription": "설명 없음",
       "open": "열기",
       "empty": "레퍼토리가 없습니다. 하나를 만들어 시작하세요!",
       "loadFailed": "레퍼토리 로드 실패",
@@ -327,7 +327,6 @@
       "updateFailed": "레퍼토리를 업데이트할 수 없습니다"
     },
     "detail": {
-      "noDescription": "설명 없음",
       "modeLines": "라인",
       "modeTree": "트리"
     },

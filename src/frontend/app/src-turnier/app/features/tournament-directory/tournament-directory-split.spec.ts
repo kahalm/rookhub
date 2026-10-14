@@ -137,7 +137,13 @@ describe('TournamentDirectoryComponent Breitbild-CSS', () => {
     expect(wide).toMatch(/mat-mdc-tab-body-wrapper[^{]*\{ ?overflow-x: clip; ?overflow-y: visible/);
     expect(wide).not.toMatch(/:is\([^)]*mat-mdc-tab-body-wrapper/);
   });
-  it('macht die Karte so hoch, dass sie samt Kopf ins Fenster passt', () => {
-    expect(wide).toContain('height: calc(100vh - 16rem) !important');
+  it('baut die Kartenspalte als Flex-Säule fester Höhe: Karte füllt, Trefferzeile bleibt im Fenster (b1)', () => {
+    // b1-t-karte-trefferzeile-abgeschnitten: vorher Karte fest 100vh - 16rem, die Trefferzeile darunter ragte hinaus.
+    expect(wide).toMatch(/\.split-map[^{]*\{ ?position: sticky; ?top: 1rem; ?display: flex; ?flex-direction: column; ?height: calc\(100vh - 17rem\)/);
+    expect(wide).toMatch(/\.split-map[^{,]*> ?\*[^{]*\{ ?flex: none/);
+    expect(wide).toMatch(/\.map-host[^{]*\{ ?flex: 1 1 auto; ?min-height: 0; ?height: auto !important/);
+    expect(wide).not.toContain('calc(100vh - 16rem)');
+    // Unter 2400 px bleibt die Karte ohne Säule (Template ohne .split-view, CSS ohne split-Regeln).
+    expect(css.slice(0, css.indexOf('@media (min-width: 2400px)'))).not.toContain('split-map');
   });
 });

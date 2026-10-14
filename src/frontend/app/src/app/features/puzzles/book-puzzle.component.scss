@@ -57,17 +57,23 @@
     .board-hint-tip:active { background: color-mix(in srgb, #e0a93a 22%, transparent); }
     .board-hint-tip mat-icon { font-size: 18px; width: 18px; height: 18px; color: #c8881f; }
 
+    /* b1-rk-puzzle-dumme-tipps-knopf: leiser Knopf über --mat-sys-on-surface-variant und durchgezogenen Rahmen in
+       --mat-sys-outline (≥ 3:1), nie über Deckkraft — gedimmt (≈ 45 %) wirkte er gesperrt (hell ≈ 3,5:1, DESIGN 5.12/7). */
     .board-hint-flag {
       display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.7rem; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+      padding: 0.2rem 0.7rem; border: 1px solid var(--mat-sys-outline);
       border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer;
-      font-size: 0.9em; user-select: none; touch-action: manipulation; color: inherit; opacity: 0.75;
+      font-size: 0.9em; user-select: none; touch-action: manipulation; color: var(--mat-sys-on-surface-variant);
     }
-    .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
+    .board-hint-flag:disabled { cursor: progress; }
     .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    @media (max-width: 599.98px) {
+      .board-hint-flag { padding: 0.2rem 0.45rem; }
+      .board-hint-flag-label { display: none; }
+    }
     .board-hint-flag.flagged {
-      border-style: solid; border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
-      background: color-mix(in srgb, var(--rh-error) 12%, transparent); opacity: 1;
+      border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
+      background: color-mix(in srgb, var(--rh-error) 12%, transparent); color: var(--mat-sys-on-surface);
     }
     .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
     .hint-list {
@@ -75,6 +81,12 @@
       font-size: 0.92em; line-height: 1.45;
     }
     .hint-list li { margin: 0.15rem 0; }
+    /* b1-rk-puzzle-tipptext-unter-falz: ab 900 px (zweispaltig) steht der Tipp-Text in der Seitenspalte. */
+    .hint-list--side { display: none; margin: 0; }
+    @media (min-width: 900px) {
+      .hint-list--board { display: none; }
+      .hint-list--side { display: block; }
+    }
 
     /* Kontext-Card (Puzzle-Info + Fortschritt + Navigation) */
     .context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
@@ -87,7 +99,8 @@
     /* Sprachwahl der Kurs-Kommentare (nur sichtbar mit mehr als einer Sprache). */
     .context-card .ctx-lang { flex-shrink: 0; align-self: flex-start; }
     .ctx-offline-lang { margin: 0.2rem 0 0; font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
-    .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+    /* steht in .ctx-text (fluchtet mit dem Titel, b1-rk-loeser-tags-link-versatz) */
+    .context-card .ctx-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 4px; }
     .context-card .ctx-progress { margin-top: 0.6rem; }
     /* Spielweisen-Umschalter (Kurs/Tagespuzzle/Buch) — gleiche Optik wie der Wochenpost-Knopf. */
     .context-card .ctx-mode { margin-top: 0.6rem; }
@@ -305,4 +318,8 @@
 @media (min-width: 2400px) {
   .puzzle-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
   .board-section { width: min(calc(100vh - 200px), calc(100% - 360px - 1.5rem)); }
+  /* Kurs-Kommentar in der breiten Seitenspalte: größere Schrift passend zum Brett, Zeile ≤ ~70 Zeichen
+     (DESIGN 4.6 Regel 4, b1-rk-loeser-kommentar-zeilenlaenge-ultrawide). */
+  .ctx-comment p { font-size: 1rem; line-height: 1.5; }
+  .ctx-comment .ctx-comment-body { max-width: 68ch; }
 }

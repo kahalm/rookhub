@@ -133,4 +133,13 @@ describe('AnalysisMoveTreeComponent', () => {
     expect(c.items).not.toBe(before);
     expect(fixture.nativeElement.querySelectorAll('.row').length).toBe(3);
   });
+
+  // b1-rk-zugbaum-bewertung-aktiv-dunkel: die Bewertung im gewählten Zug war fest weiß — auf der hellblauen Markierung
+  // im dunklen Design ≈ 1,6:1. Sie folgt jetzt der Schrift der Markierung (on-primary), in hell wie dunkel.
+  it('colours the eval of the active move from on-primary, not a fixed white', () => {
+    const css = (((AnalysisMoveTreeComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    expect(css).not.toContain('rgba(255,255,255');
+    expect(css).toMatch(/\.move\.active(\[[^\]]*\])?\.ev(\[[^\]]*\])?\{color:color-mix\(insrgb,var\(--mat-sys-on-primary\)85%,transparent\)/);
+  });
 });

@@ -83,8 +83,12 @@
 /* ===== Digitale Lern-Ansicht ===== */
 .fc-view-active { background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent); }
 .fc-study { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-/* Vollbild-Knopf: schmale Zeile in Kartenbreite, Knopf rechtsbündig über der Karte. */
-.fc-fs-btn { width: min(92vw, 480px); }
+/* UI-Sweep 2026-10-11 (d2-rk-flashcards-gross-schmal): Lernkarte wächst am großen Bildschirm mit der Höhe (bis 720 px),
+   am Laptop bleibt sie 480 px; die Druckvorschau (.fc-page) bleibt A4-breit. */
+$fc-study-size: min(92vw, max(480px, calc(100vh - 320px)), 720px);
+/* Vollbild-Knopf: schmale Zeile genau in Kartenbreite, Knopf rechtsbündig über der Kartenecke
+   (b1-rk-flashcards-vollbild-knopf-verrutscht — fest 480 px endete er bis 240 px vor der Kante der breiteren Karte). */
+.fc-fs-btn { width: $fc-study-size; margin-bottom: -0.5rem; }
 
 /* ===== Vollbild-Lernmodus: nur Karte + Flip + vor/zurück auf dunklem Grund. =====
    Die Größe der Hülle erzwingt der Browser (100 % × 100 %); die Karte wächst auf das, was
@@ -96,7 +100,7 @@
   color: #fff;
   overflow: hidden;
 
-  .fc-study-card { width: min(94vw, calc(100vh - 6.5rem)); }
+  .fc-study-card, .fc-fs-btn { width: min(94vw, calc(100vh - 6.5rem)); }
   .fc-flip-face {
     min-height: min(94vw, calc(100vh - 6.5rem));
     background: #1d1d1d;
@@ -104,9 +108,6 @@
 }
 .fc-study:fullscreen { @include fc-study-fullscreen; }
 .fc-study:-webkit-full-screen { @include fc-study-fullscreen; }
-/* UI-Sweep 2026-10-11 (d2-rk-flashcards-gross-schmal): Lernkarte wächst am großen Bildschirm mit der Höhe (bis 720 px),
-   am Laptop bleibt sie 480 px; die Druckvorschau (.fc-page) bleibt A4-breit. */
-$fc-study-size: min(92vw, max(480px, calc(100vh - 320px)), 720px);
 .fc-study-card {
   width: $fc-study-size;
   cursor: pointer;
@@ -129,22 +130,38 @@ $fc-study-size: min(92vw, max(480px, calc(100vh - 320px)), 720px);
   flex-direction: column;
   box-shadow: 0 2px 10px color-mix(in srgb, currentColor 12%, transparent);
   background: var(--mat-sys-surface, #fff);
-  backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Safari/WebKit (b1-w-flashcard-flip): dort griff backface-visibility an der Rückseite nicht — sie lag
+     gespiegelt über dem Brett. (Präfixe helfen nicht: der Build entfernt -webkit-…, die Zielbrowser kennen die
+     Eigenschaft ungepräfixt.) Die verdeckte Seite wird deshalb zusätzlich unsichtbar; der Wechsel fällt auf
+     die halbe Drehzeit (Karte steht dann hochkant), in Chromium sieht man also nichts anders. */
+  transition: visibility 0s linear 0.22s;
 }
-/* Vorderseite (Brett) bestimmt die Höhe; die Rückseite legt sich exakt darüber. */
-.fc-flip-front { position: relative; }
+/* Vorderseite (Brett) bestimmt die Höhe; die Rückseite legt sich exakt darüber. Die Vorderseite bekommt eine
+   eigene 3D-Ebene (rotateY(0)), sonst ordnet WebKit die Seiten nur nach DOM-Reihenfolge. */
+.fc-flip-front { position: relative; transform: rotateY(0deg); }
 .fc-flip-back {
   position: absolute;
   inset: 0;
   transform: rotateY(180deg);
-  overflow-y: auto;
+  visibility: hidden;
 }
+.fc-flip--flipped .fc-flip-back { visibility: visible; }
+.fc-flip--flipped .fc-flip-front { visibility: hidden; }
+.fc-flip--noanim .fc-flip-face { transition: none; }
 @media (prefers-reduced-motion: reduce) {
-  .fc-flip { transition: none; }
+  .fc-flip, .fc-flip-face { transition: none; }
 }
 .fc-study-board { width: 100%; }
-.fc-study-back { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem; }
+/* Scrollt ein langer Rückseitentext, dann hier drin — nicht die gedrehte Ebene selbst (ein Scroll-Container
+   als 3D-Seite brach in WebKit die Rückseiten-Ausblendung, b1-w-flashcard-flip). */
+.fc-study-back {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  justify-content: center;
+  justify-content: safe center;   /* langer Text: oben nicht abschneiden */
+}
 .fc-study-back .fc-notation { font-size: 1rem; }
 .fc-study-back .fc-closing { font-size: 0.95rem; }
 .fc-study-nav { display: flex; align-items: center; gap: 0.75rem; }

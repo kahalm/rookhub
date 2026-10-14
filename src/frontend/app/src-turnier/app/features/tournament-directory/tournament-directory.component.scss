@@ -15,11 +15,22 @@
     align-items: start;
   }
   .split-view .entry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .split-map { position: sticky; top: 1rem; }
-  /* Karte so hoch wie das Fenster abzüglich Kopf, Suchleiste, Reiter und Trefferzeile — auch ganz oben auf der Seite
-     liegen Karte und Legende damit vollständig im Fenster (alles-voll-2: mit 100vh - 6rem endete sie 150 px darunter). Die Karte setzt ihre Höhe als Inline-Stil
-     (Eingang `height`, Vorgabe min(70vh, 640px)) — daher !important, nur hier in der geteilten Ansicht. */
-  .split-map ::ng-deep .map-host { height: calc(100vh - 16rem) !important; }
+  /* Die Spalte ist eine Flex-Säule fester Höhe (Fenster abzüglich Kopf, Suchleiste und Reiter): Hinweise und die
+     Trefferzeile nehmen ihre Höhe, die Karte füllt den Rest. So liegt die Trefferzeile auch ganz oben auf der Seite
+     immer im Fenster (b1-t-karte-trefferzeile-abgeschnitten: Karte fest 100vh - 16rem, die Zeile darunter halb
+     außerhalb; alles-voll-2: mit 100vh - 6rem endete die Karte 150 px darunter). Die Karte setzt ihre Höhe als
+     Inline-Stil (Eingang `height`, Vorgabe min(70vh, 640px)) — daher !important, nur hier in der geteilten Ansicht. */
+  .split-map {
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 17rem);
+  }
+  .split-map > * { flex: none; }
+  .split-map > app-tournament-map { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .split-map ::ng-deep .map-wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .split-map ::ng-deep .map-host { flex: 1 1 auto; min-height: 0; height: auto !important; }
   /* sticky braucht das Fenster als Scroll-Bezug: die Reiter-Hüllen von mat-tab-group setzen overflow und würden die
      Karte sonst mitscrollen lassen. Nur solange die geteilte Ansicht offen ist. */
   mat-tab-group:has(.split-view) ::ng-deep :is(.mat-mdc-tab-body, .mat-mdc-tab-body-content) {
@@ -55,22 +66,36 @@
 .place-field { min-width: 240px; flex: 1 1 240px; }
 .radius-field { width: 140px; }
 .range-field { min-width: 170px; }
-.players-field { width: 150px; }
+/* „Mind. Teilnehmer“ / „Najmanje prijavljenih“ passen ganz hinein (b1-t-filter-feldbreiten: 150 px zeigten „Mind. Teilneh…“,
+   in WebKit lag der Zahlen-Zaehler zusaetzlich ueber dem Rest). */
+.players-field { width: 14rem; }
 .filter-toggle { white-space: nowrap; }
 /* Auf Feldhoehe (56 px) statt 40 px neben den Auswahlfeldern (UI-Sweep 2026-10-11, r2-t-radius-empty). */
 .filter-bar > .filter-toggle { height: 56px; }
 
 .filter-extra {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.75rem;
   padding: 0.6rem 0.75rem;
   margin-bottom: 0.5rem;
   border-radius: 8px;
   background: var(--mat-sys-surface-container-low);
 }
-.search-field { min-width: 220px; flex: 1 1 220px; }
+/* Zeilen nach Sinn (b1-t-filter-feldbreiten), jede bricht in sich um. Die Suche hat ihre eigene Zeile — neben den
+   Chips wurde sie auf 220 px gedrueckt („Search name, venue, organi…“). */
+.extra-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.search-field { flex: 1 1 18rem; min-width: 0; }
+/* Zeitraum und Umkreis stehen ab 769 px in der Leiste; die Zeile bleibt dort nur fuer die Datumsfelder. */
+@media (min-width: 769px) {
+  .period-row:not(:has(.date-field)) { display: none; }
+}
 .date-field { width: 165px; }
 
 /* Eigenes overflow-x: sonst verbreitert die Chip-Reihe auf schmalen Geraeten das ganze
@@ -228,7 +253,8 @@
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
 
 @media (max-width: 768px) {
-  .page { padding: 0.75rem 0.5rem; }
+  /* Seitenpolster 16 px wie ueberall (DESIGN 3.2, b1-t-seitenpolster-handy-8px; vorher 8 px). */
+  .page { padding: 0.75rem 1rem; }
   .profile-field,
   .place-field,
   .range-field,
@@ -244,7 +270,11 @@
   .filter-bar > .bar-wide { display: none; }
   .filter-toggle { flex: none; }
   .bar-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
-  .filter-extra > .extra-narrow { display: inline-flex; width: calc(50% - 0.375rem); min-width: 0; }
+  /* Nebeneinander nur, wenn beide Werte ganz hineinpassen (b1-t-filter-feldbreiten: hälftig zeigte 390 px „Nächste
+     drei M…“ neben viel Luft bei „Überall“) — sonst je eine volle Zeile. */
+  .period-row > .extra-narrow { display: inline-flex; min-width: 0; }
+  .period-row > .range-field { flex: 1 1 13rem; }
+  .period-row > .radius-field { flex: 1 1 8rem; }
 
   /* Der Erstnutzer-Hinweis behaelt seinen Text, verliert aber den Knopf: „Neues Suchprofil"
      liegt ohnehin im ⋮-Menue daneben, und ein zweiter Stroked-Button neben „Filter" kostete

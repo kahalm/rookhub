@@ -152,7 +152,8 @@ h3 {
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
 
 @media (max-width: 768px) {
-  .page { padding: 0.75rem 0.5rem; }
+  /* Seitenpolster 16 px wie ueberall (DESIGN 3.2, b1-t-seitenpolster-handy-8px; vorher 8 px). */
+  .page { padding: 0.75rem 1rem; }
 
   /* ZWEIZEILIG statt quer scrollen. Die sechs Spalten brauchen 37rem; auf einem Handy scrollte
      die Tabelle deshalb in ihrem Container — ohne Rollbalken und ohne Hinweis, die Zahlen waren

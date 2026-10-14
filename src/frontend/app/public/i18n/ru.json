@@ -122,7 +122,8 @@
     "subscribedAt": "Подписан {{date}}",
     "puzzles": {
       "title": "Задачи",
-      "subtitle": "Elo {{elo}} | решено {{solved}} ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "решено {{solved}} ({{accuracy}})",
       "solve": "Решать задачи",
       "daily": "Задача дня",
       "endless": "Бесконечный"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} файл",
       "public": "Публичный",
       "private": "Приватный",
-      "noDescription": "Нет описания",
       "open": "Открыть",
       "empty": "Репертуаров пока нет. Создайте один, чтобы начать!",
       "loadFailed": "Не удалось загрузить репертуары",
@@ -327,7 +327,6 @@
       "updateFailed": "Не удалось обновить репертуар"
     },
     "detail": {
-      "noDescription": "Нет описания",
       "modeLines": "Линии",
       "modeTree": "Дерево"
     },

@@ -98,9 +98,11 @@ describe('Löser-Layout (UI-Sweep a1)', () => {
 
   it('Statistik-Kennzahlen brechen um statt überzulaufen, Abstand zum Titel (a1-rk-puzzle-statistik-tablet-ueberlauf)', () => {
     const s = css(PuzzleComponent).replace(/\s/g, '');
-    expect(s).toContain('grid-template-columns:repeat(auto-fit,minmax(64px,1fr))');
-    expect(s).toMatch(/\.stats-grid\{[^}]*margin-top:8px/);
-    expect(s).toMatch(/\.stat-label\{[^}]*text-overflow:ellipsis/);
+    // b1-rk-puzzle-kennzahlen-raster: Breite nach Inhalt (flex-wrap) statt fester 64-px-Mindestspalte; die Ellipse
+    // gibt es nur noch im 3-Spalten-Raster einer schmalen Karte.
+    expect(s).not.toContain('minmax(64px,1fr)');
+    expect(s).toMatch(/\.stats-grid\{display:flex;flex-wrap:wrap;[^}]*margin-top:8px/);
+    expect(s).toMatch(/\.stat-label\{[^}]*white-space:nowrap;?\}/);
     expect(s).not.toContain('.stats-grid{grid-template-columns:repeat(2,1fr)');
   });
 });
@@ -125,6 +127,65 @@ describe('Statistik-Karte schmal (a1-rk-puzzle-statistik-tablet-ueberlauf)', () 
       host.remove(); style.remove();
     }
   });
+});
+
+/** b1-rk-puzzle-kennzahlen-raster: die fünf Kennzahlen in Karten typischer Breite (gerendert mit den echten Stilen). */
+describe('Statistik-Karte: Kennzahlen nach Inhaltsbreite (b1-rk-puzzle-kennzahlen-raster)', () => {
+  function measure(cardWidth: number) {
+    const card = document.createElement('div');
+    card.className = 'stats-card';
+    card.style.width = `${cardWidth}px`;
+    card.style.font = '16px Roboto, sans-serif';
+    const style = document.createElement('style');
+    style.textContent = css(PuzzleComponent);
+    // wie mat-card > mat-card-content: der Container ist die Karte, das 16-px-Polster liegt im Inhalt
+    card.innerHTML = `<div style="padding: 0 16px"><div class="stats-grid">${['1630|Elo', '11/14|Gelöst', '79 %|Genauigkeit', '2|Serie', '3|Beste']
+      .map(p => `<div class="stat"><span class="stat-value">${p.split('|')[0]}</span><span class="stat-label">${p.split('|')[1]}</span></div>`)
+      .join('')}</div></div>`;
+    document.head.appendChild(style);
+    document.body.appendChild(card);
+    const stats = Array.from(card.querySelectorAll('.stat')) as HTMLElement[];
+    const rows = new Set(stats.map(st => Math.round(st.getBoundingClientRect().top))).size;
+    const perRow = stats.filter(st => Math.round(st.getBoundingClientRect().top) === Math.round(stats[0].getBoundingClientRect().top)).length;
+    const cut = (Array.from(card.querySelectorAll('.stat-label')) as HTMLElement[]).filter(l => l.scrollWidth > l.clientWidth + 1).length;
+    const right = card.getBoundingClientRect().right;
+    const overflow = stats.some(st => st.getBoundingClientRect().right > right + 0.5);
+    card.remove(); style.remove();
+    return { rows, perRow, cut, overflow };
+  }
+
+  it('1 920 px (Seitenspalte 396 px): eine Zeile, „Genauigkeit“ ungekürzt', () => {
+    expect(measure(396)).toEqual({ rows: 1, perRow: 5, cut: 0, overflow: false });
+  });
+  it('Handy (Karte 358 px): eine Zeile statt „Beste“ allein in Zeile 2', () => {
+    expect(measure(358)).toEqual({ rows: 1, perRow: 5, cut: 0, overflow: false });
+  });
+  it('schmale Karte (300 px): ausgewogen 3 + 2, nichts ragt heraus', () => {
+    const m = measure(300);
+    expect(m.rows).toBe(2);
+    expect(m.perRow).toBe(3);
+    expect(m.overflow).toBeFalse();
+  });
+});
+
+/** b1-rk-puzzle-dumme-tipps-knopf / b1-rk-puzzle-tipptext-unter-falz: alle drei Löser gleich. */
+describe('Hinweiszeile der Löser (UI-Sweep b1)', () => {
+  for (const [name, cmp] of SOLVERS.map(([n, c]) => [n, c] as const)) {
+    it(`${name}: „Tipps melden“ ohne Deckkraft, leise Farbe, durchgezogener Rahmen; am Handy nur Symbol`, () => {
+      const s = css(cmp).replace(/\s/g, '');
+      const flag = s.match(/\.board-hint-flag\{([^}]*)\}/)?.[1] ?? '';
+      expect(flag).toContain('color:var(--mat-sys-on-surface-variant)');
+      expect(flag).toContain('border:1pxsolidvar(--mat-sys-outline)');
+      expect(s).not.toMatch(/\.board-hint-flag[^{]*\{[^}]*opacity/);
+      expect(s).not.toContain('dashed');
+      expect(css(cmp)).toMatch(/@media \(max-width: 599\.98px\) ?\{ ?\.board-hint-flag ?\{[^}]*\} ?\.board-hint-flag-label ?\{ ?display: none;? ?\}/);
+    });
+    it(`${name}: Tipp-Text ab 900 px in der Seitenspalte, darunter unter dem Brett`, () => {
+      const s = css(cmp).replace(/\s/g, '');
+      expect(s).toMatch(/\.hint-list--side\{display:none;/);
+      expect(s).toMatch(/@media\(min-width:900px\)\{\.hint-list--board\{display:none;?\}\.hint-list--side\{display:block;?\}\}/);
+    });
+  }
 });
 
 describe('Puzzle-Aktionsleiste schmal (a1-rk-puzzle-menue-allein-tablet)', () => {
@@ -231,5 +292,12 @@ describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-sc
       spyOnProperty(c, 'commentLines', 'get').and.returnValue([]);
     });
     expect(el.querySelector('.ctx-comment-block')).toBeNull();
+  });
+});
+
+/** b1-rk-puzzle-teilen-eigene-zeile: die Aktionszeile ist der Container „pab“, auf den „An Freund schicken“ reagiert. */
+describe('Puzzle-Aktionsleiste als Container (b1-rk-puzzle-teilen-eigene-zeile)', () => {
+  it('.pab-row ist Container „pab“ (inline-size)', () => {
+    expect(css(PuzzleActionBarComponent)).toMatch(/\.pab-row ?\{ ?container: pab ?\/ ?inline-size/);
   });
 });

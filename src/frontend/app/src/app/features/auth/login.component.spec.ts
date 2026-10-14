@@ -187,11 +187,20 @@ describe('LoginComponent Template (Fehlermeldung im Formular, UX-019)', () => {
     expect(alert!.querySelector('a')!.getAttribute('href')).toBe('/forgot-password');
   });
 
+  it('falsches Passwort: „Passwort vergessen?“ steht nur einmal, nicht noch in der Linkzeile (b1)', async () => {
+    const el = await renderWith({ status: 401, error: { code: 'login_invalid' } });
+    expect(el.querySelectorAll('a[href="/forgot-password"]').length).toBe(1);
+    expect(el.querySelector('mat-card-actions a[href="/forgot-password"]')).toBeNull();
+    expect(el.querySelector('mat-card-actions a[href^="/register"]')).not.toBeNull();
+  });
+
   it('Rate-Limit: Meldung ohne Passwort-Link', async () => {
     const el = await renderWith({ status: 429, error: { code: 'rate_limited', retryAfterSeconds: 30 } });
     const alert = el.querySelector('.form-error[role="alert"]');
     expect(alert).not.toBeNull();
     expect(alert!.querySelector('a')).toBeNull();
+    // Ohne Angebot im Fehlerkasten bleibt der Link in der Linkzeile.
+    expect(el.querySelector('mat-card-actions a[href="/forgot-password"]')).not.toBeNull();
   });
 });
 

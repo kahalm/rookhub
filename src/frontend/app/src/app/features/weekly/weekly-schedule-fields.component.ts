@@ -1,59 +1,25 @@
-import { ChangeDetectionStrategy, Component, Injectable, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DateAdapter, MAT_DATE_FORMATS, MAT_NATIVE_DATE_FORMATS, MatDateFormats, NativeDateAdapter } from '@angular/material/core';
+import { DateAdapter, MAT_DATE_FORMATS, MatDateFormats } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { TranslatePipe } from '@ngx-translate/core';
+import { LOCALE_DATE_FORMATS, LocaleNativeDateAdapter, dateFieldOrder, parseYmd } from '../../shared/date-field/locale-date-adapter';
 
-/** Reihenfolge von Tag/Monat/Jahr in der Locale (de: day, month, year; en: month, day, year; hu: year, month, day). */
-export function dateFieldOrder(locale: string): string[] {
-  return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
-    .formatToParts(new Date(2017, 0, 2))
-    .map(p => p.type)
-    .filter(t => t === 'year' || t === 'month' || t === 'day');
-}
-
-/**
- * NativeDateAdapter, der getippte Daten in der Reihenfolge der App-Sprache liest („16.07.2026" in de) —
- * der eingebaute nimmt `Date.parse` und verstünde nur das US-Format.
- */
-@Injectable()
-export class LocaleNativeDateAdapter extends NativeDateAdapter {
-  override parse(value: unknown, parseFormat?: unknown): Date | null {
-    if (typeof value === 'string') {
-      const nums = value.match(/\d+/g);
-      if (nums && nums.length === 3) {
-        const order = dateFieldOrder(this.locale);
-        const part = (k: string) => Number(nums[order.indexOf(k)]);
-        let year = part('year');
-        if (year < 100) year += 2000;
-        const month = part('month') - 1, day = part('day');
-        const d = new Date(year, month, day);
-        return year >= 1000 && d.getMonth() === month && d.getDate() === day ? d : this.invalid();
-      }
-    }
-    return super.parse(value, parseFormat);
-  }
-}
+// Adapter + Reihenfolge seit b1-rk-edit-datum-us-format geteilt (shared/date-field); hier weiter exportiert.
+export { dateFieldOrder, LocaleNativeDateAdapter };
 
 /** TT.MM.JJJJ bzw. 24 h, wo die Sprache es so schreibt (zweistellig wie im Termin-Text der Liste). */
 export const WEEKLY_DATE_FORMATS: MatDateFormats = {
-  ...MAT_NATIVE_DATE_FORMATS,
+  ...LOCALE_DATE_FORMATS,
   display: {
-    ...MAT_NATIVE_DATE_FORMATS.display,
-    dateInput: { year: 'numeric', month: '2-digit', day: '2-digit' },
+    ...LOCALE_DATE_FORMATS.display,
     timeInput: { hour: '2-digit', minute: '2-digit' },
     timeOptionLabel: { hour: '2-digit', minute: '2-digit' },
   },
 };
-
-/** "YYYY-MM-DD" → lokales Datum (null bei leer/ungültig). */
-function parseYmd(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
-}
 
 /** "HH:mm" → Zeitpunkt (Datum egal, nur Stunde/Minute zählen). */
 function parseHm(s: string): Date | null {

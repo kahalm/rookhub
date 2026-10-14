@@ -21,7 +21,8 @@
     .user-cards { display: none; }
     @media (max-width: 899.98px) {
       .users-table-wrap { display: none; }
-      .user-cards { display: flex; flex-direction: column; gap: 8px; }
+      /* b1-rk-admin-handy-seitenwahl-klebt: Abstand zur Blätterleiste wie zwischen den Karten oben (4.6 Regel 13). */
+      .user-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
     }
     .user-card { border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 8px; padding: 4px 4px 8px 12px; }
     .uc-head { display: flex; align-items: flex-start; gap: 8px; }

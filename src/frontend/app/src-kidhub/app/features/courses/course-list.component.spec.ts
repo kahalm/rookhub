@@ -24,6 +24,29 @@ describe('CourseListComponent', () => {
     expect((f.nativeElement as HTMLElement).textContent).toContain('Matt in einem Zug');
   });
 
+  // b1-k-kursname-sprachwechsel: nach dem Wechsel in der Sprachpille blieben die Kursnamen deutsch.
+  it('Sprachwechsel holt die Kurse in der neuen Sprache — die Liste bleibt dabei stehen', async () => {
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['courses']);
+    api.courses.and.callFake((lang?: string) =>
+      of([{ bookId: 339, title: lang === 'en' ? 'First endgames' : 'Erste Endspiele', description: null, puzzleCount: 287 }]));
+    TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), { provide: KidsApiService, useValue: api }],
+    });
+    const translate = TestBed.inject(TranslateService);
+    await translate.use('de');
+    const f = TestBed.createComponent(CourseListComponent);
+    f.detectChanges();
+    expect(api.courses).toHaveBeenCalledTimes(1);
+    expect((f.nativeElement as HTMLElement).textContent).toContain('Erste Endspiele');
+
+    await translate.use('en');
+    f.detectChanges();
+    expect(api.courses).toHaveBeenCalledTimes(2);
+    expect(api.courses.calls.mostRecent().args[0]).toBe('en');
+    expect((f.nativeElement as HTMLElement).textContent).toContain('First endgames');
+  });
+
   /** Codereview 2026-09-29, F7-014: der Stand behaelt die Ids geloeschter Linien — die Liste zeigte „10 von 8 geschafft". */
   it('zaehlt nie mehr geloeste Linien, als der Kurs hat (verwaiste Ids)', async () => {
     localStorage.removeItem('rh-kids-progress-v1');

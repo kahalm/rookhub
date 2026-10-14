@@ -167,6 +167,8 @@ ch-root > .foot { flex: none; width: 100%; }
 /* Hinweis unter Feld + Knopf, wenn ohne Eingabe getippt wurde (a1-c-disabled-button-contrast). */
 .need { margin: -6px 0 12px; font-size: 15px; }
 .note-form + .need { margin: 6px 0 0; }
+/* Im Formular (Raster mit 14 px Lücke) direkt unter der Feldzeile (b1-c-kind-neu-fehler-unter-falz). */
+.form > .need { margin: -8px 0 0; }
 .code-field input.code-input {
   width: 19ch; max-width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 2px; text-transform: uppercase;
@@ -242,11 +244,16 @@ html.dark-theme .register > .letter { color: var(--linen-muted); }
 .kid-main:hover .kid-name { text-decoration: underline; text-underline-offset: 3px; }
 .kid-name { font-size: 18px; overflow-wrap: anywhere; }
 .kid-name b { font-weight: 700; }
-.kid-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; color: var(--muted); font-size: 15px; }
-/* Trenner „ · " zwischen den Angaben (a1-c-groups-meta-separator, DESIGN 5.13): der Zeitplan ist Freitext, mit nur 12 px
-   Lücke sah man nicht, wo „… neue Mittelschule Schwaz" endet und „2 Kinder" beginnt. Als ::before des folgenden Teils,
-   damit er beim Umbruch nie allein am Zeilenende steht; Chips („im Archiv", Gruppen) brauchen keinen. */
-.kid-meta > :not(.chip):has(+ :not(.chip))::after { content: " ·"; color: var(--muted); } /* Trenner am Zeilenende, nicht am Anfang der umgebrochenen Zeile (Nachprüfung a1). */
+.kid-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 15px; overflow-x: clip; }
+/* Trenner „·" zwischen den Angaben (a1-c-groups-meta-separator, DESIGN 5.13): der Zeitplan ist Freitext, ohne Trenner sah
+   man nicht, wo „… neue Mittelschule Schwaz" endet und „2 Kinder" beginnt. Der Punkt sitzt als ::before des folgenden Teils
+   mitten in der 14-px-Lücke (absolut, nimmt keinen Platz). Bricht die Zeile um, steht die Angabe am Zeilenanfang und ihr
+   Punkt links außerhalb der Metazeile — `overflow-x: clip` schneidet ihn weg, er hängt also weder am Zeilenende (b1-c-meta-
+   trenner-zeilenende, Fehler der ::after-Lösung 0.763.1) noch am Zeilenanfang. Chips („im Archiv", Gruppen) brauchen keinen. */
+.kid-meta > :not(.chip) + :not(.chip) { position: relative; }
+.kid-meta > :not(.chip) + :not(.chip)::before { content: "·"; position: absolute; right: 100%; margin-right: 5px; color: var(--muted); }
+/* Der Clip schnitte den linken Fokusrahmen des Gruppen-Links (Anwesenheit) ab — Rahmen nach innen. */
+.kid-meta > a:focus-visible { outline-offset: -2px; }
 .kid-call { text-align: right; min-width: 0; }
 .kid-call a { font-weight: 700; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; min-height: 44px; }
 .kid-call a:hover { text-decoration: underline; }
@@ -357,6 +364,11 @@ h3.inline { display: inline; }
 @media (min-width: 2400px) {
   ch-root:has(.matrix-scroll) .wrap { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
   ch-root:has(.matrix-scroll) .diary { max-width: 46em; }
+  /* b1-c-ultrawide-matrix-formular-gestreckt: die Matrix nur so breit wie ihre Spalten (nie schmaler als die 828 px unter
+     2400 px) — mit einem Termin standen „Kind", Datum und „da" sonst je ≈ 900 px auseinander. Klappkästen (Formulare)
+     und die Statuszeile bleiben in der Formularbreite (8.5), Hinweise also ≈ 75 Zeichen je Zeile. */
+  ch-root:has(.matrix-scroll) .matrix-scroll { width: fit-content; min-width: min(828px, 100%); max-width: 100%; }
+  ch-root:has(.matrix-scroll) :is(details.sheet, .status-line) { max-width: 828px; }
 }
 .matrix { border-collapse: collapse; width: 100%; font-size: 16px; }
 .matrix th, .matrix td { padding: 8px 8px; border-top: 1px solid var(--line); text-align: center; white-space: nowrap; }

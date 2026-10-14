@@ -106,6 +106,8 @@
     "ebook_file_missing": "Die Datei fehlt auf dem Server."
   },
   "common": {
+    "durationMinSec": "{{m}} min {{s}} s",
+    "durationSec": "{{s}} s",
     "paginator": {
       "itemsPerPage": "Einträge pro Seite:",
       "firstPage": "Erste Seite",
@@ -203,7 +205,7 @@
     },
     "push": {
       "title": "Push-Benachrichtigungen",
-      "hint": "Erhalte eine Browser-/Handy-Benachrichtigung, wenn etwas passiert. Schalte die gewünschten Bereiche ein — standardmäßig aus.",
+      "hint": "Erhalte eine Browser-⁠/Handy-Benachrichtigung, wenn etwas passiert. Schalte die gewünschten Bereiche ein — standardmäßig aus.",
       "unsupported": "Dein Browser oder Gerät unterstützt keine Push-Benachrichtigungen.",
       "notConfigured": "Push-Benachrichtigungen sind auf diesem Server noch nicht verfügbar.",
       "denied": "Benachrichtigungen sind in deinen Browser-Einstellungen blockiert — erlaube sie für diese Seite, um Push zu nutzen.",
@@ -432,7 +434,8 @@
     "subscribedAt": "Abonniert am {{date}}",
     "puzzles": {
       "title": "Puzzles",
-      "subtitle": "Elo {{elo}} | {{solved}} gelöst ({{accuracy}})",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} gelöst ({{accuracy}})",
       "solve": "Puzzles lösen",
       "daily": "Tagespuzzle",
       "endless": "Endlos"
@@ -520,7 +523,7 @@
       "customize": "Anpassen",
       "done": "Fertig",
       "default": "Standard",
-      "hint": "Mit dem Auge eine Kachel ein-/ausblenden; mit den Pfeilen oder per Drag & Drop sortieren.",
+      "hint": "Mit dem Auge eine Kachel ein-⁠/ausblenden; mit den Pfeilen oder per Drag & Drop sortieren.",
       "dragAria": "Kachel zum Sortieren ziehen",
       "moveUp": "Nach oben",
       "moveDown": "Nach unten",
@@ -562,7 +565,7 @@
       "linesThrough": "{{count}} Linien laufen über diesen Zug",
       "lineEnd": "Hier endet eine Linie",
       "playHint": "Zug aufs Brett spielen",
-      "expandHint": "Auf-/zuklappen",
+      "expandHint": "Auf-⁠/zuklappen",
       "expandNode": "Aufklappen",
       "collapseNode": "Zuklappen"
     },
@@ -663,8 +666,9 @@
     },
     "tokens": {
       "title": "API-Tokens",
-      "subtitle": "Persönliche Zugriffs-Tokens für Maschinen-Clients: die chess.com-Extension (Bereich „Extension“) oder der Engine-Provider auf deinem Rechner (Bereich „Engine“).",
-      "empty": "Noch keine Tokens. Lege einen an, wenn du die chess.com-Extension oder deinen Engine-Provider verbinden willst.",
+      "subtitle": "Für die chess.com-Erweiterung oder deinen eigenen Engine-Rechner.",
+      "subtitleHelp": "Jeder Token gilt nur für seinen Bereich: „Extension“ für die Browser-Erweiterung (chess.com, lichess.org, Chessable), „Engine“ für den Engine-Provider auf deinem Rechner.",
+      "empty": "Noch keine Tokens.",
       "create": "Token erstellen",
       "revoke": "Token widerrufen",
       "revokeConfirm": "Token „{{name}}“ widerrufen? Damit kann der Client sich nicht mehr verbinden.",
@@ -704,8 +708,9 @@
     },
     "engine": {
       "title": "Externe Engine",
-      "hint": "Stärkere Engine für das Analysebrett — dein eigener Rechner oder eine gemietete Cloud-Engine. Es gibt zwei Wege, eine anzubinden; alle deine Engines stehen zusammen in einer Liste.",
-      "createToken": "Lichess-Token erstellen (engine:read)",
+      "hint": "Stärkere Engine fürs Analysebrett — dein eigener Rechner oder eine Cloud-Engine.",
+      "setup": "Einrichten",
+      "createToken": "Lichess-Token erstellen",
       "tokenLabel": "Lichess-API-Token",
       "stored": "Gespeicherter Token",
       "removeTokenConfirm": "Gespeicherten Lichess-Token löschen? Die Lichess-Engines verschwinden aus der Liste; um sie wieder zu nutzen, brauchst du einen neuen Token von Lichess.",
@@ -798,7 +803,7 @@
       "backupTitle": "Vorher sichern",
       "backup": "Die Löschung wirkt sofort und lässt sich nicht rückgängig machen. Sichere vorher, was du behalten willst: Kurse, Repertoires und Partien kannst du einzeln als PGN herunterladen – im Kurs, in der Repertoire-Liste (⋮) und in jeder Partie (⋮).",
       "removedTitle": "Was entfernt wird",
-      "removed1": "Deine Identität und persönlichen Daten (Benutzername, E-Mail, Anzeige-/Klarname, FIDE-/ChessResults-ID, Chess.com-/Lichess-Name, Discord-Verknüpfung) sowie der Login-Zugang.",
+      "removed1": "Deine Identität und persönlichen Daten (Benutzername, E-Mail, Anzeige-⁠/Klarname, FIDE-⁠/ChessResults-ID, Chess.com-⁠/Lichess-Name, Discord-Verknüpfung) sowie der Login-Zugang.",
       "removedCourses": "Deine eigenen Kurse (importiert oder selbst angelegt) – auch für alle, mit denen du sie geteilt hast: Freigaben, Gruppenzugriffe und der Lernfortschritt anderer in diesen Kursen gehen mit.",
       "removed2": "Persönliche Inhalte und Verknüpfungen: Repertoires, Turnier-Abos/-Favoriten, Freundschaften und Gruppen-Mitgliedschaften.",
       "removedGames": "Gespeicherte Partien samt Formular-Fotos und Rekonstruktionen, Partie-Analysen, Punktepartie-Läufe, Analyseaufträge, Kalkulationsbäume und gemerkte Stellungen.",
@@ -807,7 +812,7 @@
       "removedConnections": "Verbindungen und Einstellungen: API-Tokens (RepCheck bzw. die Browser-Erweiterung verliert sofort die Verbindung), Chessable-Zugang, Lichess- und eigene Engines, Push-Benachrichtigungen, Nachrichten mit den Admins und Benachrichtigungen.",
       "removedLeague": "LeagueHub: offene Import-Entwürfe der Vereins-Datenbank, auch halb fertige.",
       "keptTitle": "Was anonym erhalten bleibt",
-      "kept": "Aggregierte Lösungs-/Spielstatistiken (z. B. gelöste Puzzles) bleiben in anonymisierter, nicht auf dich rückführbarer Form erhalten.",
+      "kept": "Aggregierte Lösungs-⁠/Spielstatistiken (z. B. gelöste Puzzles) bleiben in anonymisierter, nicht auf dich rückführbarer Form erhalten.",
       "keptLeagueTitle": "Was in LeagueHub bleibt",
       "keptLeague": "Vereinspartien, die du hochgeladen hast, bleiben in der Vereins-Datenbank – sie gehören zur Liga. Gespeichert wird danach nicht mehr, wer sie hochgeladen hat, und du kannst sie nicht mehr selbst löschen. Möchtest du das, lösche sie vorher unter „Vereinspartien“.",
       "leagueGamesLink": "Zu den Vereinspartien",
@@ -857,8 +862,8 @@
       "dataTitle": "Welche Daten wir verarbeiten",
       "dataIntro": "Je nach Nutzung verarbeiten wir:",
       "dataAccount": "Kontodaten: Benutzername, E-Mail-Adresse, Passwort (nur als Hash gespeichert).",
-      "dataProfile": "Profildaten (freiwillig): Anzeige-/Klarname, FIDE-ID, ChessResults-ID, Chess.com-/Lichess-Benutzername, optionale Discord-Verknüpfung.",
-      "dataUsage": "Nutzungsdaten: gelöste Puzzles, Endless-/Kurs-Fortschritt und -⁠Statistiken, Spiel-Elo, Login-Zeitpunkte.",
+      "dataProfile": "Profildaten (freiwillig): Anzeige-⁠/Klarname, FIDE-ID, ChessResults-ID, Chess.com-⁠/Lichess-Benutzername, optionale Discord-Verknüpfung.",
+      "dataUsage": "Nutzungsdaten: gelöste Puzzles, Endless-⁠/Kurs-Fortschritt und -⁠Statistiken, Spiel-Elo, Login-Zeitpunkte.",
       "dataTechnical": "Technische Daten: IP-Adresse, abgerufene Endpunkte mit Zeitstempel und eine pseudonyme Besucher-Kennung (Reichweitenmessung) in Server-Logs.",
       "dataIpCountry": "KidHub (Kinderseite): Ist die Sprache des Browsers keine der Sprachen der Seite, wird aus der IP-Adresse das Land bestimmt, um eine passende zu wählen — lokal auf unserem Server mit der Länderliste von DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Die Adresse wird dafür weder weitergegeben noch gespeichert.",
       "dataScoresheet": "Fotos von Partieformularen, wenn du eine Partie einlesen lässt — mit allem, was darauf steht, etwa den Namen beider Spieler, Turnier, Datum und Unterschriften.",
@@ -868,7 +873,7 @@
       "thirdIntro": "Daten werden nicht verkauft. Je nach Nutzung sind folgende Dienste eingebunden:",
       "thirdDiscord": "Discord: nur bei freiwilliger Konto-Verknüpfung (Discord-ID/-Name) zur Anzeige im RookHub-Discord-Bot.",
       "thirdChessresults": "chess-results.com: serverseitiger Abruf von Turnierdaten, wenn du eine ChessResults-ID hinterlegst oder Turniere abrufst.",
-      "thirdChesssites": "Chess.com / Lichess: Hinterlegst du im Profil einen dortigen Benutzernamen, ruft unser Server die öffentlichen Partie-Schnittstellen dieser Plattformen automatisch ab — im Hintergrund standardmäßig alle 6 Stunden, solange für dich ein Wochenziel „Partien“ aktiv ist, sowie bei manuellem Synchronisieren in den Trainingszielen. Dabei wird dein dortiger Benutzername an die jeweilige Plattform übertragen; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Gespeichert werden nur die Anzahl deiner Rapid-/Klassisch-Partien je Tag sowie der Zeitpunkt der zuletzt abgerufenen Partie — keine Partiezüge. Entfernst du den Benutzernamen im Profil, unterbleibt der Abruf.",
+      "thirdChesssites": "Chess.com / Lichess: Hinterlegst du im Profil einen dortigen Benutzernamen, ruft unser Server die öffentlichen Partie-Schnittstellen dieser Plattformen automatisch ab — im Hintergrund standardmäßig alle 6 Stunden, solange für dich ein Wochenziel „Partien“ aktiv ist, sowie bei manuellem Synchronisieren in den Trainingszielen. Dabei wird dein dortiger Benutzername an die jeweilige Plattform übertragen; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Gespeichert werden nur die Anzahl deiner Rapid-⁠/Klassisch-Partien je Tag sowie der Zeitpunkt der zuletzt abgerufenen Partie — keine Partiezüge. Entfernst du den Benutzernamen im Profil, unterbleibt der Abruf.",
       "thirdLogging": "Elasticsearch/Kibana: selbst gehostetes Logging/Monitoring auf unserer Infrastruktur.",
       "thirdHosting": "Hosting: Betrieb auf eigener Server-Infrastruktur mit TLS-Reverse-Proxy.",
       "thirdAnthropic": "Anthropic PBC (USA): liest Fotos von Partieformularen mit seinem KI-Modell Claude — Einzelheiten unter „KI-Dienste“.",
@@ -1006,7 +1011,6 @@
       "fileCountOne": "{{count}} Datei",
       "public": "Öffentlich",
       "private": "Privat",
-      "noDescription": "Keine Beschreibung",
       "searchPlaceholder": "Repertoires durchsuchen…",
       "noMatch": "Keine Repertoires passen zu „{{query}}“.",
       "open": "Öffnen",
@@ -1042,7 +1046,6 @@
     },
     "detail": {
       "parsing": "Repertoire wird gelesen … {{done}} von {{total}} Linien",
-      "noDescription": "Keine Beschreibung",
       "modeLines": "Linien",
       "modeTree": "Baum",
       "modeHoles": "Lochfinder"
@@ -1073,7 +1076,9 @@
       "empty": "Keine Linien in diesem Repertoire gefunden.",
       "noChapter": "(Ohne Kapitel)",
       "lineN": "Linie {{n}}",
-      "toggleChapter": "Kapitel auf-/zuklappen",
+      "toggleChapter": "Kapitel auf-⁠/zuklappen",
+      "showMore": "Weitere {{count}} Linien anzeigen",
+      "showMoreOne": "Eine weitere Linie anzeigen",
       "color": {
         "title": "Trainingsfarbe",
         "white": "Weiß",
@@ -1167,7 +1172,7 @@
       "asBlack": "Kapitel mit Schwarz",
       "database": "Datenbank",
       "masters": "Meister",
-      "help": "Der Lochfinder geht dein Repertoire durch und fragt in jeder Stellung, in der dein Gegner am Zug ist und du eine Antwort vorbereitet hast, beim Lichess-Explorer nach, was dort gespielt wird.\n\nEin Loch ist ein Gegnerzug, der mindestens so oft gespielt wird wie der Grenzwert und zu einer Stellung führt, die nirgends in deinem Repertoire vorkommt – auch nicht über eine andere Zugfolge.\n\nSortiert wird danach, wie oft du das Loch in echten Partien erreichst. Das Ende einer Linie ist kein Loch.",
+      "help": "Der Lochfinder geht dein Repertoire durch und fragt in jeder Stellung, in der dein Gegner am Zug ist und du eine Antwort vorbereitet hast, beim Lichess-Explorer nach, was dort gespielt wird.\n\nEin Loch ist ein Gegnerzug, der mindestens so oft gespielt wird wie der Grenzwert und zu einer Stellung führt, die nirgends in deinem Repertoire vorkommt – auch nicht über eine andere Zugfolge.\n\nSortiert wird danach, wie oft du das Loch in echten Partien erreichst. Das Ende einer Linie ist kein Loch.\n\nLichess.org erlaubt nur etwa 15 Abfragen pro Minute – beim ersten Mal dauert es bei einem großen Repertoire deshalb eine Weile; schon abgefragte Stellungen merkt sich RookHub, und eine abgebrochene Suche macht beim nächsten Mal dort weiter. Die lokale Datenbank kennt diese Grenze nicht.",
       "ratings": "Elo",
       "speeds": "Tempo",
       "speed": {
@@ -1195,7 +1200,9 @@
       "frequency": "≈ {{value}} deiner Partien",
       "startPosition": "Ausgangsstellung",
       "games": "{{count}} Partien",
-      "intro": "Wähle Datenbank, Elo und Tempo deiner Gegner und starte die Suche. Lichess erlaubt nur etwa 15 Abfragen pro Minute – beim ersten Mal dauert es bei einem großen Repertoire deshalb eine Weile; schon abgefragte Stellungen merkt sich RookHub, und eine abgebrochene Suche macht beim nächsten Mal dort weiter.",
+      "intro": "Wähle Elo und Tempo deiner Gegner und starte die Suche.",
+      "introLocal": "Wähle Elo und Tempo deiner Gegner – die lokale Datenbank antwortet sofort.",
+      "introMasters": "Starte die Suche in den Meisterpartien.",
       "source": "Quelle",
       "sourceOnline": "Lichess.org",
       "sourceLocal": "Lokal",
@@ -1269,7 +1276,8 @@
       "home": "Heim",
       "away": "Gast",
       "result": "Ergebnis",
-      "none": "chess-results führt für diese Runde noch keine Paarungen. Stehen sie dort, holt „Aktualisieren“ sie ab."
+      "none": "chess-results führt für diese Runde noch keine Paarungen.",
+      "noneTournament": "chess-results führt für dieses Turnier noch keine Paarungen."
     },
     "monitor": {
       "stopped": "Beobachtung beendet",
@@ -1437,8 +1445,8 @@
       "t1Quiet": "Kein Schach, kein Schlag — finde den ruhigen Zug mit einer entscheidenden Drohung (das „D“ der Checkliste Schach–Schlagen–Drohung).",
       "t2Piece": "Es zieht {{piece}}.",
       "t3Move": "Spiel {{move}}.",
-      "flag": "Dumme Tipps",
-      "flagged": "Dumme Tipps ✓",
+      "flag": "Tipps melden",
+      "flagged": "Tipps gemeldet ✓",
       "flagTitle": "Diese Tipps als schlecht markieren",
       "flagSaved": "Tipps als schlecht markiert.",
       "flagCleared": "Markierung entfernt.",
@@ -1627,7 +1635,7 @@
     "chapters": "Kapitel",
     "noChapter": "(ohne Kapitel)",
     "infoLines": "+{{count}} Info",
-    "infoLinesTooltip": "Erklär-/Muster-Einleitungslinien (kein Quiz, nur zum Durchklicken)",
+    "infoLinesTooltip": "Erklär-⁠/Muster-Einleitungslinien (kein Quiz, nur zum Durchklicken)",
     "chaptersEmpty": "Keine Kapitel",
     "chaptersLoadFailed": "Kapitel konnten nicht geladen werden",
     "sectionInProgress": "In Arbeit",
@@ -2107,7 +2115,7 @@
       "sessionsPlayed": "{{count}} Läufe gespielt",
       "sessionsPlayedOne": "{{count}} Lauf gespielt",
       "viewHistory": "Verlauf ansehen",
-      "unfinishedRun": "Unbeendeter Lauf: Lv {{level}} | {{solved}} gelöst | {{lives}} Leben | {{max}} max",
+      "unfinishedRun": "Unbeendeter Lauf: Stufe {{level}} · {{solved}} gelöst · {{lives}} Leben · bestes Rating {{max}}",
       "continue": "Fortsetzen",
       "archiveAndNew": "Archivieren & neues Spiel",
       "newGame": "Neues Spiel",
@@ -2194,8 +2202,8 @@
     "hints": {
       "show": "Tipp",
       "next": "Nächster Tipp",
-      "flag": "Dumme Tipps",
-      "flagged": "Dumme Tipps ✓",
+      "flag": "Tipps melden",
+      "flagged": "Tipps gemeldet ✓",
       "flagTitle": "Diese Tipps als schlecht markieren (Admin)",
       "flagSaved": "Tipps als schlecht markiert.",
       "flagCleared": "Markierung entfernt.",
@@ -2641,7 +2649,7 @@
     "removeConfirm": "Dieses Puzzle aus den Favoriten entfernen?",
     "removeError": "Favorit konnte nicht entfernt werden.",
     "sourceStandard": "Standard-Puzzle",
-    "sourceBook": "Kurs-/Buch-Puzzle",
+    "sourceBook": "Kurs-⁠/Buch-Puzzle",
     "love": "Lieben",
     "loved": "Geliebt",
     "loveLast": "Letztes Puzzle",
@@ -3262,7 +3270,10 @@
     "levelOtherOne": "Level {{level}}: 1 Versuch",
     "levelEmptySwitched": "Auf deinem Level {{level}} gibt es noch keine Versuche, darum siehst du alle Level",
     "standardEmpty": "Noch keine Puzzles gelöst – deine Statistik füllt sich mit dem ersten.",
-    "standardEmptyAction": "Puzzles lösen"
+    "standardEmptyAction": "Puzzles lösen",
+    "courseEmptyAction": "Zu den Kursen",
+    "task": "Aufgabe",
+    "courseTask": "Kursaufgabe"
   },
   "trainingGoals": {
     "tabs": {
@@ -3349,7 +3360,7 @@
     "personal": "Dein persönliches Ziel.",
     "resetOverride": "Auf Gruppen-Vorgabe zurücksetzen",
     "noGoalHint": "Noch keine Ziele gesetzt — lege unten deine Tagesziele fest.",
-    "playHint": "Deine Rapid- und Classical-Partien werden automatisch aus deinem verknüpften Lichess-/chess.com-Konto gezählt.",
+    "playHint": "Deine Rapid- und Classical-Partien werden automatisch aus deinem verknüpften Lichess-⁠/chess.com-Konto gezählt.",
     "saved": "Ziele gespeichert.",
     "resetDone": "Auf die Gruppen-Vorgabe zurückgesetzt.",
     "error": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
@@ -3527,7 +3538,7 @@
         "p": [
           "Setze dir ein tägliches Trainingszeit-Ziel (in Minuten) sowie Wochenziele für gespielte Partien (Rapid/Classical) und volle Trainingstage. Trainer können Vorlagen je Gruppe vorgeben; dein persönliches Ziel hat Vorrang.",
           "Der Tracker färbt jeden Tag nach Zielerreichung (keins/teilweise/voll) – der Tagesstatus ergibt sich aus deiner Trainingszeit (Puzzles, Kurse, Chessable und eingetragene Offline-Aktivitäten), das Spielen ist ein Wochenziel.",
-          "Gespielte Rapid-/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit „Spielzeit aktualisieren“ stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
+          "Gespielte Rapid-⁠/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit „Spielzeit aktualisieren“ stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
         ]
       },
       "stats": {
@@ -3675,6 +3686,7 @@
     "replyLabel": "Deine Antwort",
     "sendError": "Nachricht konnte nicht gesendet werden.",
     "emptyUserCanWrite": "Noch keine Nachrichten. Schreib dem Admin-Team unten — du bekommst die Antwort hier.",
+    "emptyDraft": "Schreib zuerst eine Nachricht.",
     "writeLabel": "Deine Nachricht",
     "adminHint": "Du bist Admin – die Nachrichten der Nutzer findest du im Admin-Bereich.",
     "toConversations": "Zu den Konversationen"
@@ -4634,6 +4646,7 @@
     "introMore": "Zum Beispiel die ersten Züge, einzelne Stellungen oder kurze Zugfolgen — die Lücken dazwischen schließt du nach und nach.",
     "newTitle": "Titel",
     "createLabel": "Neue Rekonstruktion – Titel",
+    "createHint": "Gib einen Titel ein, dann kannst du anlegen.",
     "newTitlePlaceholder": "Vereinsmeisterschaft, Runde 3",
     "create": "Anlegen",
     "open": "Öffnen",

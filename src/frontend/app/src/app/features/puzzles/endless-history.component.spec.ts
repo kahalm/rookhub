@@ -1,4 +1,4 @@
-import { EndlessHistoryComponent } from './endless-history.component';
+import { EndlessHistoryComponent, durationText } from './endless-history.component';
 import { registerFormatLocaleData } from '../../core/locale-data';
 
 // Die Elo-Delta-Methoden hängen nicht von HttpClient/Router/Locale ab → direkte Instanziierung reicht.
@@ -73,6 +73,16 @@ describe('EndlessHistoryComponent toRow precomputes display fields', () => {
     expect(row.eloText).toBe('+340');   // 1840 - 1500
     expect(row.eloClass).toBe('elo-pos');
     expect(row.dateText).not.toBe('-');
+    expect(row.dur).toEqual({ key: 'common.durationMinSec', m: 1, s: 30 });
+  });
+});
+
+/** UI-Sweep b1 (b1-rk-endless-verlauf-dauer): Dauer über Übersetzungsschlüssel statt fest „21m 0s“. */
+describe('EndlessHistoryComponent Dauer in der App-Sprache', () => {
+  it('wählt Minuten+Sekunden bzw. nur Sekunden, ohne Wert null', () => {
+    expect(durationText(1260)).toEqual({ key: 'common.durationMinSec', m: 21, s: 0 });
+    expect(durationText(42)).toEqual({ key: 'common.durationSec', m: 0, s: 42 });
+    expect(durationText(0)).toBeNull();
   });
 });
 

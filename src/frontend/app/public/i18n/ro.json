@@ -122,7 +122,8 @@
     "subscribedAt": "Abonat {{date}}",
     "puzzles": {
       "title": "Probleme",
-      "subtitle": "Elo {{elo}} | {{solved}} rezolvate ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} rezolvate ({{accuracy}})",
       "solve": "Rezolvă probleme",
       "endless": "Infinit",
       "daily": "Problema zilei"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} fișier",
       "public": "Public",
       "private": "Privat",
-      "noDescription": "Fără descriere",
       "open": "Deschide",
       "empty": "Niciun repertoriu încă. Creează unul pentru a începe!",
       "loadFailed": "Încărcarea repertoriilor a eșuat",
@@ -327,7 +327,6 @@
       "updateFailed": "Repertoriul nu a putut fi actualizat"
     },
     "detail": {
-      "noDescription": "Fără descriere",
       "modeLines": "Linii",
       "modeTree": "Arbore"
     },

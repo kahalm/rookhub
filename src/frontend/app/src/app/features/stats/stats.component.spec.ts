@@ -294,3 +294,94 @@ describe('StatsComponent a1 (Leerzustand, Level-Hinweis)', () => {
     expect(el.querySelector('.level-hint')!.textContent).not.toContain('stats.levelEmptySwitched');
   });
 });
+
+/** UI-Sweep b1: Kurs-Modus (Leerkarte, Aufgabentitel), Seitenrand, Aktivitäts-Raster im Breitbild. */
+describe('StatsComponent b1', () => {
+  function render() {
+    TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(StatsComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance as StatsComponent & { loading: boolean };
+    c.loading = false;
+    return { fixture, c, el: fixture.nativeElement as HTMLElement };
+  }
+  const css = ((StatsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+
+  it('b1-rk-stats-kurse-leer: Kurs-Modus ohne Versuch — EINE zentrierte Leerkarte mit „Zu den Kursen“, keine „Letzte Puzzles“', () => {
+    const { fixture, c, el } = render();
+    c.mode = 'course';
+    c.courseStats = { totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0 } as never;
+    c.recentRows = [];
+    fixture.detectChanges();
+    const cards = el.querySelectorAll('.stats-empty');
+    expect(cards.length).toBe(1);
+    expect(cards[0].querySelector('a[href="/courses"]')?.textContent?.trim()).toBe('stats.courseEmptyAction');
+    expect(cards[0].textContent).toContain('stats.courseEmpty');
+    expect(el.querySelector('.recent-card')).toBeNull();
+    expect(getComputedStyle(cards[0].querySelector('mat-card-content')!).alignItems).toBe('center');
+  });
+
+  it('b1-rk-stats-kurse-wertung-leer: Kurs-Zeilen nennen die Aufgabe statt „Puzzle –“, Tabelle mit Spalte „Aufgabe“', () => {
+    const history = new Subject<any>();
+    const puzzles = {
+      getCourseStats: () => of({ totalAttempts: 2, solved: 1, accuracy: 50, currentStreak: 0, bestStreak: 1 }),
+      getCourseHistory: () => history,
+      getCourseBreakdown: () => of({ themes: [], ratingBands: [], activity: [] }),
+    };
+    const c = new StatsComponent(puzzles as any, { visualization: 0 } as any);
+    c.mode = 'course';
+    c.load();
+    history.next([
+      { bookPuzzleId: 1, title: 'Exercise 245', solved: true, timeSeconds: 12, attemptedAt: '2026-10-11T00:20:00Z' },
+      { bookPuzzleId: 2, title: '  ', solved: false, timeSeconds: 30, attemptedAt: '2026-10-11T00:19:00Z' },
+    ]);
+    history.complete();
+    expect(c.recentRows.map(r => r.label)).toEqual(['Exercise 245', null]);
+    expect(c.cols).toEqual(['date', 'task', 'result', 'time', 'open']);
+
+    const { fixture, c: v, el } = render();
+    v.mode = 'course';
+    v.courseStats = { totalAttempts: 2, solved: 1, accuracy: 50, currentStreak: 0, bestStreak: 1 } as never;
+    v.cols = c.cols;
+    v.recentRows = c.recentRows;
+    fixture.detectChanges();
+    const items = Array.from(el.querySelectorAll('.recent-list .ri-title')).map(i => i.textContent!);
+    expect(items[0]).toContain('Exercise 245');
+    expect(items[1]).toContain('stats.courseTask');
+    expect(items.join(' ')).not.toContain('stats.puzzleRating');
+    expect(el.querySelector('.recent-table th')?.parentElement?.textContent).toContain('stats.task');
+  });
+
+  it('b1-rk-stats-kurse-wertung-leer: Wertungsspalte nur, wenn ein Kurs-Versuch eine hat', () => {
+    const puzzles = {
+      getCourseStats: () => of({ totalAttempts: 1, solved: 1, accuracy: 100, currentStreak: 1, bestStreak: 1 }),
+      getCourseHistory: () => of([{ bookPuzzleId: 1, title: 'A', bookRating: 7, solved: true, timeSeconds: 5, attemptedAt: '2026-10-11' }]),
+      getCourseBreakdown: () => of({ themes: [], ratingBands: [], activity: [] }),
+    };
+    const c = new StatsComponent(puzzles as any, { visualization: 0 } as any);
+    c.mode = 'course';
+    c.load();
+    expect(c.cols).toEqual(['date', 'task', 'rating', 'result', 'time', 'open']);
+  });
+
+  it('b1-rk-statistik-rand-12: Seitenpolster 16 px wie die übrigen Seiten', () => {
+    const { el } = render();
+    expect(getComputedStyle(el.querySelector('.stats-container')!).paddingLeft).toBe('16px');
+    expect(css).not.toMatch(/\.stats-container[^{]*\{[^}]*padding: 0 12px/);
+  });
+
+  it('b1-rk-stats-heatmap-ultrawide: ab 2400 px 28-px-Zellen (Raster füllt die 1 880-px-Karte), darunter unverändert', () => {
+    const wide = css.slice(css.indexOf('@media (min-width: 2400px)'));
+    expect(wide).toMatch(/\.hm-cell[^{]*\{ ?width: 28px; height: 28px/);
+    expect(wide).toMatch(/\.heatmap[^{]*, ?\.hm-col[^{]*\{ ?gap: 6px/);
+    const { fixture, c, el } = render();
+    c.stats = { totalAttempts: 3, solved: 2, accuracy: 66, currentStreak: 1, bestStreak: 2, puzzleElo: 1510 } as never;
+    c.heatmap = [[{ date: 'd', count: 1, level: 1 }]];
+    fixture.detectChanges();
+    expect(getComputedStyle(el.querySelector('.hm-cell')!).width).toBe('17px');   // Karma 1 400 px
+  });
+});

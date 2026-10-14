@@ -15,7 +15,7 @@ import {
 import { KidsStarsStore } from '../../core/kids-stars.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
-import { KID_BACK, KID_COUNTER, KID_COORDS, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_COUNTER, KID_COORDS, KID_SHORT, KID_SIDE_WIDE, KID_STACKED } from '../../shared/kids-layout';
 
 /** Figurenzeichen fuer Stufenkarte und Kopfzeile (weisse Figuren, wie auf dem Brett). */
 export function pieceGlyph(piece: StarPiece): string {
@@ -211,7 +211,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
     .info { text-align: center; font-size: 1.2rem; }
     .puzzle {
       display: grid; justify-content: center; align-items: start; column-gap: 28px; row-gap: 14px;
-      grid-template-columns: var(--kid-board, 640px) minmax(280px, 400px);
+      grid-template-columns: var(--kid-board, 640px) minmax(280px, var(--kid-side, 400px));
       grid-template-rows: auto 1fr;
       grid-template-areas: "board task" "board side";
     }
@@ -314,7 +314,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       .head h1 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1.25rem; }
       .back, .head .round { flex-shrink: 0; white-space: nowrap; }
     }
-  `],
+  `, KID_SIDE_WIDE],
 })
 export class StarsPlayComponent {
   readonly store = inject(KidsStarsStore);

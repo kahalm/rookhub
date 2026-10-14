@@ -57,6 +57,14 @@ export const KID_BACK = `
  */
 export const KID_COORD_LIGHT_TEXT = '#ffffff';
 export const KID_COORD_DARK_TEXT = '#2f4f6c';
+/**
+ * Hof um die Koordinaten (b1-k-koordinate-auf-auswahlfeld, DESIGN 5.12): auf dem grünen Auswahlfeld (≈ #749c85), dem
+ * letzten Zug und den Zielpunkten hatte die dunkle Schrift nur ≈ 2,8:1, ein Figurenfuß berührte sie zusätzlich.
+ * Ein deckender Hof in der Gegenfarbe hält sie auf jeder Feldfarbe lesbar — dunkle Schrift mit hellem, weiße mit
+ * dunklem Hof (wie RookHub im Thema brown, a1-rk-brett-koordinaten-dunkle-felder). Ersetzt den dünnen globalen Hof.
+ */
+export const KID_COORD_DARK_HALO = '#ffffff';
+export const KID_COORD_LIGHT_HALO = '#1d3a52';
 export const KID_COORDS = `
   .board ::ng-deep .cg-wrap coords {
     font-size: max(11px, calc(var(--kid-board, 640px) * 0.022)); font-weight: 700; line-height: 1; opacity: 1;
@@ -66,11 +74,35 @@ export const KID_COORDS = `
   .board ::ng-deep .board-theme-blue .orientation-white .ranks :nth-child(even),
   .board ::ng-deep .board-theme-blue .orientation-white .files :nth-child(even),
   .board ::ng-deep .board-theme-blue .orientation-black .ranks :nth-child(odd),
-  .board ::ng-deep .board-theme-blue .orientation-black .files :nth-child(odd) { color: ${KID_COORD_DARK_TEXT}; }
+  .board ::ng-deep .board-theme-blue .orientation-black .files :nth-child(odd) {
+    color: ${KID_COORD_DARK_TEXT};
+    text-shadow: 0 0 2px ${KID_COORD_DARK_HALO}, 0 0 3px ${KID_COORD_DARK_HALO}, 0 0 4px rgba(255, 255, 255, .8);
+  }
   .board ::ng-deep .board-theme-blue .orientation-white .ranks :nth-child(odd),
   .board ::ng-deep .board-theme-blue .orientation-white .files :nth-child(odd),
   .board ::ng-deep .board-theme-blue .orientation-black .ranks :nth-child(even),
-  .board ::ng-deep .board-theme-blue .orientation-black .files :nth-child(even) { color: ${KID_COORD_LIGHT_TEXT}; }
+  .board ::ng-deep .board-theme-blue .orientation-black .files :nth-child(even) {
+    color: ${KID_COORD_LIGHT_TEXT};
+    text-shadow: 0 0 2px ${KID_COORD_LIGHT_HALO}, 0 0 3px ${KID_COORD_LIGHT_HALO};
+  }
+`;
+
+/**
+ * Seitenspalte neben dem Brett im Breitbild (b1-k-ultrawide-seitenspalte, DESIGN 4.1/8.3): ab 2400 px wächst das Brett
+ * auf bis zu 1240 px, die Spalte daneben auf 480 px (`--kid-side`, App-Hülle) — Aufgabe, Eule, Knöpfe und Kommentar
+ * wachsen hier mit, sonst wirkte sie mit Laptop-Schrift winzig neben dem Brett. Nur nebeneinander (quer, nicht flach):
+ * hochkant ({@link KID_STACKED}) und Handy quer ({@link KID_SHORT}) bleiben, wie sie sind. Steht in der Komponente NACH
+ * deren Grundregeln (gleiche Spezifität, die spätere gewinnt).
+ */
+export const KID_WIDE_SIDE = '(width >= 2400px) and (height > 500px) and (aspect-ratio > 1/1)';
+export const KID_SIDE_WIDE = `
+  @media ${KID_WIDE_SIDE} {
+    .bubble { font-size: 1.5rem; padding: 18px 20px; }
+    .owl { font-size: 3rem; }
+    .big { font-size: 1.55rem; padding: 18px 22px; }
+    .comment { font-size: 1.25rem; }
+    .task { font-size: 1.8rem; }
+  }
 `;
 
 /**

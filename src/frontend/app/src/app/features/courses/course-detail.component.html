@@ -55,13 +55,20 @@
           </p>
         }
 
-        <div class="progress-row">
-          <mat-progress-bar mode="determinate" [value]="d.progressPercent"></mat-progress-bar>
-          <span class="progress-label">{{ d.solvedCount }}/{{ d.puzzleCount }}</span>
-        </div>
-        <p class="progress-note">
-          {{ (d.isCalculation ? 'courses.detail.progressCalc' : 'courses.detail.progressSolve') | translate }}
-        </p>
+        <!-- Ohne Aufgaben (Studienbuch: nur kommentierte Partien) sagt „0/0" nichts — stattdessen, was der Kurs ist,
+             wie auf der Kurskarte (b1-rk-studienbuch-fortschritt-0-0, DESIGN 2 Nr. 6). -->
+        @if (isEmptyQuiz) {
+          <p class="empty-note">{{ ((d.infoLineCount ?? 0) > 0 ? 'courses.emptyCourse.gamesOnly'
+            : d.canManage ? 'courses.emptyCourse.noLinesOwner' : 'courses.emptyCourse.noLines') | translate }}</p>
+        } @else {
+          <div class="progress-row">
+            <mat-progress-bar mode="determinate" [value]="d.progressPercent"></mat-progress-bar>
+            <span class="progress-label">{{ d.solvedCount }}/{{ d.puzzleCount }}</span>
+          </div>
+          <p class="progress-note">
+            {{ (d.isCalculation ? 'courses.detail.progressCalc' : 'courses.detail.progressSolve') | translate }}
+          </p>
+        }
 
         <dl class="meta">
           <div><dt>{{ 'courses.detail.lines' | translate }}</dt><dd>{{ d.totalLines }}</dd></div>
@@ -113,14 +120,28 @@
         </dl>
 
         <div class="actions">
-          <button mat-flat-button color="primary" [routerLink]="startLink" [disabled]="d.totalLines === 0">
-            <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
-          </button>
+          <!-- Ohne Aufgaben ist „Linien durchsehen" die Hauptsache: dann ist er der gefüllte Knopf und der Start
+               tritt zurück — genau ein Hauptknopf (DESIGN 5.4, b1-rk-studienbuch-fortschritt-0-0). -->
+          @if (isEmptyQuiz) {
+            <button mat-stroked-button class="start-btn" [routerLink]="startLink" [disabled]="d.totalLines === 0">
+              <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
+            </button>
+          } @else {
+            <button mat-flat-button color="primary" class="start-btn" [routerLink]="startLink" [disabled]="d.totalLines === 0">
+              <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
+            </button>
+          }
           @if (!d.isCalculation) {
             <!-- UI-Sweep 2026-10-11 (r2-rp-chapter-mobile): am Handy die Kurzform, damit ⋮ in dieser Zeile bleibt. -->
-            <button mat-stroked-button [routerLink]="['/courses', bookId, 'browse']" [disabled]="d.totalLines === 0">
-              <mat-icon>auto_stories</mat-icon><span class="label-long">{{ 'courses.browseTooltip' | translate }}</span><span class="label-short">{{ 'courses.browse.title' | translate }}</span>
-            </button>
+            @if (isEmptyQuiz) {
+              <button mat-flat-button color="primary" class="browse-btn" [routerLink]="['/courses', bookId, 'browse']" [disabled]="d.totalLines === 0">
+                <mat-icon>auto_stories</mat-icon><span class="label-long">{{ 'courses.browseTooltip' | translate }}</span><span class="label-short">{{ 'courses.browse.title' | translate }}</span>
+              </button>
+            } @else {
+              <button mat-stroked-button class="browse-btn" [routerLink]="['/courses', bookId, 'browse']" [disabled]="d.totalLines === 0">
+                <mat-icon>auto_stories</mat-icon><span class="label-long">{{ 'courses.browseTooltip' | translate }}</span><span class="label-short">{{ 'courses.browse.title' | translate }}</span>
+              </button>
+            }
           }
           @if (d.canManage) {
             <!-- UI-Sweep 2026-10-11 (r2-rp-dup-chapterbtn): „Kapitel hinzufügen" steht nur noch im Kopf der Kapitelliste. -->
@@ -237,10 +258,18 @@
                         }
                       }
                     </span>
-                    <span class="chapter-progress">
-                      <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
-                      <span class="chapter-label">{{ ch.solvedCount }}/{{ d.isCalculation ? ch.lineCount : ch.quizCount }}</span>
-                    </span>
+                    <!-- Ohne Aufgaben im ganzen Kurs kein Balken; ein Kapitel ohne Aufgaben in einem Kurs mit Aufgaben
+                         behält den leeren Platz, damit ▶ ⋮ in einer Spalte bleiben (b1-rk-studienbuch-fortschritt-0-0). -->
+                    @if (!isEmptyQuiz) {
+                      @if (d.isCalculation || ch.quizCount > 0) {
+                        <span class="chapter-progress">
+                          <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
+                          <span class="chapter-label">{{ ch.solvedCount }}/{{ d.isCalculation ? ch.lineCount : ch.quizCount }}</span>
+                        </span>
+                      } @else {
+                        <span class="chapter-progress chapter-progress--none" aria-hidden="true"></span>
+                      }
+                    }
 
                     <span class="chapter-actions">
                       @if (chapterStartLink(ch); as link) {

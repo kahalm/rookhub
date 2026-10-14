@@ -121,6 +121,40 @@ describe('MoveComparisonComponent', () => {
     discardPeriodicTasks();
   }));
 
+  // b1-rk-zuege-vergleichen-zwei-knoepfe: zwei gleiche Knöpfe zum Analysebrett, darunter allein „Fertig.". Jetzt ein
+  // Rücklink (Textknopf) über dem Titel, im Kopf nur „Im Analysebrett öffnen"; die Statuszeile nur solange gerechnet wird.
+  it('heads the page with a back link and one action; the status line only while not done', fakeAsync(() => {
+    const { fixture, http } = make();
+    http.expectOne('/api/move-comparisons/7').flush(comparison({ status: 'candidates', bestUci: null, pending: 2 }));
+    http.expectOne('/api/move-comparisons').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const back = el.querySelector('a.back-link')!;
+    expect(back.textContent).toContain('moveCompare.page.back');
+    expect(back.hasAttribute('mat-button')).toBeTrue();
+    expect(back.compareDocumentPosition(el.querySelector('h1')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const actions = el.querySelectorAll('.header a[mat-stroked-button]');
+    expect(actions.length).toBe(1);
+    expect(actions[0].textContent).toContain('moveCompare.page.openInBoard');
+    expect(el.querySelector('.status')?.textContent).toContain('moveCompare.page.status.candidates');
+
+    tick(3_000);
+    http.expectOne('/api/move-comparisons/7').flush(comparison());
+    http.expectOne('/api/move-comparisons').flush([]);
+    fixture.detectChanges();
+    expect(el.querySelector('.status')).toBeNull();
+    discardPeriodicTasks();
+  }));
+
+  it('keeps the status line when the comparison failed', fakeAsync(() => {
+    const { fixture, http } = make();
+    http.expectOne('/api/move-comparisons/7').flush(comparison({ status: 'failed', error: 'boom' }));
+    http.expectOne('/api/move-comparisons').flush([]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.status.failed')).not.toBeNull();
+    discardPeriodicTasks();
+  }));
+
   it('says so when the comparison is gone', fakeAsync(() => {
     const { fixture, c, http } = make();
     http.expectOne('/api/move-comparisons/7').flush(null, { status: 404, statusText: 'Not Found' });
@@ -130,4 +164,13 @@ describe('MoveComparisonComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('moveCompare.page.notFound');
     discardPeriodicTasks();
   }));
+
+  // b1-rk-analyse-unterseiten-brett-1920: bei 1920 × 1080 blieb das Brett auf 376 px. Karma läuft 1 400 px breit → Regel als Text.
+  it('ab 1200 px wächst das Brett bis 620 px bzw. Fensterhöhe', () => {
+    const css = (((MoveComparisonComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    const at = css.indexOf('@media(min-width:1200px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/^@media\(min-width:1200px\)\{\.body(\[[^\]]*\])?\{grid-template-columns:minmax\(260px,min\(620px,(calc\()?100vh-260px\)?\)\)1fr/);
+  });
 });

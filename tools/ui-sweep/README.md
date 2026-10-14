@@ -190,7 +190,10 @@ Zustände laufen im normalen Lauf mit; `--no-states` lässt sie weg, `--states-o
 Dialoge werden geöffnet, nie bestätigt; Formulare scheitern höchstens absichtlich. Mit `--fast` lädt jeder Zustand
 seine Seite selbst (Umstellen der Breite würde Menüs schließen).
 Sicherheitsnetz: während eines Zustands beantwortet das Werkzeug jede schreibende API-Anfrage (außer `/api/auth/*`)
-selbst mit 200 `{}` — „Aufgeben“, ein Zug angemeldet oder der Endlos-Start erreichen den Server nicht.
+selbst mit 200 und dem gesendeten JSON-Körper (sonst `{}`) — „Aufgeben“, ein Zug angemeldet oder der Endlos-Start
+erreichen den Server nicht. Ausnahmen (`writeDecision` in `states.mjs`): POSTs, die nur lesen (`READ_POSTS`, Puzzle-Vorrat
+für Endlos), gehen durch; Adressen in `once` eines Zustands gehen einmal je Rolle/Sprache zum Server, danach wird die
+Antwort wiedergegeben (Fehlanmeldung — sonst Anmelde-Drossel 429).
 Spielweise: jeder Lauf legt „Einfachmodus“ in `rookhub_solve_modes` — ohne die Wahl verdeckte der Spielweise-Dialog JEDE
 Aufnahme von Puzzle- und Kursseiten (frischer Speicher = erster Besuch). Den Dialog selbst zeigt der Zustand
 `rookhub__puzzles-puzzleId--spielweise` (`fresh: true`).

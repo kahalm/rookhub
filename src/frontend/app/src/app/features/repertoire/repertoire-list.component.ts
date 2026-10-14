@@ -166,9 +166,12 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
             }
           </mat-card-subtitle>
         </mat-card-header>
-        <mat-card-content>
-          <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
-        </mat-card-content>
+        <!-- b1-rk-keine-beschreibung: ohne Beschreibung keine Füllzeile „Keine Beschreibung“. -->
+        @if (rep.description) {
+          <mat-card-content>
+            <p>{{ rep.description }}</p>
+          </mat-card-content>
+        }
         <mat-card-actions class="rep-actions">
           @if (offlineList) {
             <!-- Offline-Fallback: nur das Training funktioniert (aus dem Offline-Cache). -->
@@ -220,9 +223,6 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Kartenraster breiter (DESIGN 4.1). */
     @media (min-width: 2400px) {
       .repertoire-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
-      /* alles-voll-2: mit 300-px-Spalten waren es sechs Spalten, vier Repertoires füllten zwei Drittel mit abgeschnittenen
-         Titeln — breitere Karten (vier Spalten in 1 880 px). */
-      .repertoire-grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
     }
     .header { display: flex; justify-content: space-between; align-items: center; }
     .header { gap: 8px; margin-bottom: 0.75rem; }
@@ -260,6 +260,12 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     .repertoire-section .section-icon { color: var(--mat-sys-primary); }
     .repertoire-section .section-hint { margin: 0 0 0.65rem; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+    /* alles-voll-2: mit 300-px-Spalten waren es sechs Spalten, vier Repertoires füllten zwei Drittel mit abgeschnittenen
+       Titeln — breitere Karten (vier Spalten in 1 880 px). b1-rk-repertoire-karten-ultrawide-300: die Regel muss HINTER
+       der Grundregel stehen (gleiche Spezifität — vorher gewann die 300-px-Regel). */
+    @media (min-width: 2400px) {
+      .repertoire-grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
+    }
     /* UI-Sweep 2026-10-11 (r2-rg-rep-cards): gleich hohe Karten, Aktionszeile unten bündig, Titel einzeilig. */
     .rep-card { height: 100%; }
     .rep-actions { margin-top: auto; }

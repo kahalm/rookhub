@@ -53,7 +53,8 @@ export const PREP_SEARCH_DELAY_MS = 250;
   `,
   styles: [`
     .prep { max-width: 760px; margin: 0 auto; padding: 16px; }
-    .prep h1 { margin: 4px 0 6px; font: 500 26px/1.2 Roboto, "Helvetica Neue", sans-serif; }
+    /* b1-rk-h1-uneinheitlich: Material-Seitentitel wie auf den übrigen Seiten (vorher 26 px/500); Erklärtext mit Luft. */
+    .prep h1 { margin: 4px 0 12px; }
     .prep .lede { margin: 0 0 16px; color: var(--mat-sys-on-surface-variant); max-width: 64ch; }
     .q { width: 100%; }
     .hint { color: var(--mat-sys-on-surface-variant); }

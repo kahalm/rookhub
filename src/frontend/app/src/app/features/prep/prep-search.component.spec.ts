@@ -85,4 +85,13 @@ describe('PrepSearchComponent', () => {
     expect(el().querySelector('.err')).not.toBeNull();
     expect(el().querySelector('.hits')).toBeNull();
   }));
+
+  // b1-rk-h1-uneinheitlich: „Gegner vorbereiten" stand mit 26 px/500 kleiner und leichter als die übrigen Seitentitel.
+  it('setzt keine eigene Titelschrift und lässt dem Erklärtext Luft', () => {
+    const css = ((PrepSearchComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s/g, '');
+    const h1 = /\.prep(\[[^\]]*\])?h1(\[[^\]]*\])?\{([^}]*)\}/.exec(css);
+    expect(h1).withContext('.prep h1').not.toBeNull();
+    expect(h1![3]).not.toMatch(/font/);
+    expect(h1![3]).toContain('margin:4px012px');
+  });
 });

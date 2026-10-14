@@ -96,7 +96,7 @@ describe('FriendStatsComponent Kartenköpfe', () => {
 
 /** UI-Sweep a1: Spaltenbreiten am Handy und Breitbild-Stufe ab 2400 px. */
 describe('FriendStatsComponent a1 (Spalten, Breitbild)', () => {
-  async function render(width: string) {
+  async function render(width: string, username = 'bob') {
     const { TestBed } = await import('@angular/core/testing');
     const { provideRouter, ActivatedRoute, convertToParamMap } = await import('@angular/router');
     const { provideTranslateService } = await import('@ngx-translate/core');
@@ -120,7 +120,7 @@ describe('FriendStatsComponent a1 (Spalten, Breitbild)', () => {
     host.style.width = width;
     fixture.detectChanges();
     const c = fixture.componentInstance;
-    c.friend = { userId: 7, username: 'bob', displayName: null, stats: {} as PuzzleStatsDto, themes: [] } as never;
+    c.friend = { userId: 7, username, displayName: null, stats: {} as PuzzleStatsDto, themes: [] } as never;
     c.themeRows = [{ theme: 'discoveredAttack', mine: null, theirs: { acc: 67, attempts: 3 }, winner: 'tie' }] as never;
     fixture.detectChanges();
     return { host, FriendStatsComponent };
@@ -147,5 +147,22 @@ describe('FriendStatsComponent a1 (Spalten, Breitbild)', () => {
     // Unter 2400 px (Karma 1400 px) bleiben die Karten untereinander.
     const [a, b] = Array.from(host.querySelectorAll('.fs-cards > mat-card')).map(c => c.getBoundingClientRect());
     expect(b.top).toBeGreaterThanOrEqual(a.bottom);
+  });
+  it('b1-rk-freundesvergleich-kopf-naht: Spaltenkopf einzeilig mit Ellipse + Tooltip, Trennlinie je Zeile', async () => {
+    const { host, FriendStatsComponent } = await render('480px', 'claude-dev-user-mit-langem-namen');
+    const heads = Array.from(host.querySelectorAll('.compare-card thead th')) as HTMLElement[];
+    const friendHead = host.querySelector('.compare-card th.friend-col') as HTMLElement;
+    expect(friendHead).not.toBeNull();
+    const st = getComputedStyle(friendHead);
+    expect(st.whiteSpace).toBe('nowrap');
+    expect(st.textOverflow).toBe('ellipsis');
+    const tops = new Set(heads.slice(1).map(h => Math.round(h.getBoundingClientRect().height)));
+    expect(tops.size).withContext('„Du“ und Freundesname gleich hoch').toBe(1);
+    const css = (((FriendStatsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.compare-table tr ?\{ ?border-bottom: 1px solid var\(--mat-sys-outline-variant\)/);
+    expect(css).not.toMatch(/\.compare-table th, \.compare-table td ?\{[^}]*border-bottom/);
+    const td = host.querySelector('.themes-card tbody td') as HTMLElement | null;
+    expect(getComputedStyle(td!).borderBottomWidth).toBe('0px');
   });
 });

@@ -22,6 +22,7 @@ import { distinctTags, filterByTag } from './tags.util';
 import { distinctClassifiers, filterByClassifiers, hasUnclassified, NO_CLASSIFIER } from './classifier.util';
 import { classifierToParam } from './mistakes-collection.util';
 import { AnalyzeGameService } from './analyze-game.service';
+import { gameSourceIcon, gameSourceLabel } from './game-source';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -243,8 +244,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
                       <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
                     </a>
                   }
-                  <button mat-menu-item (click)="remove(g)">
-                    <mat-icon color="warn">delete</mat-icon><span>{{ 'common.delete' | translate }}</span>
+                  <!-- b1-rk-games-menue-loeschen-rot: rot über .delete-item (DESIGN 5.5) — color="warn" wirkt im M3-Thema nicht. -->
+                  <button mat-menu-item class="delete-item" (click)="remove(g)">
+                    <mat-icon>delete</mat-icon><span>{{ 'common.delete' | translate }}</span>
                   </button>
                 </mat-menu>
               </div>
@@ -385,6 +387,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
     }
     @media (min-width: 2400px) {
       .games-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+      /* b1-rk-breitstufe-zeilen-auseinander: in 1 880 px nahm die Spielerspalte den ganzen Rest (~1 000 px Lücke bis zum
+         Ergebnis) — die Zahlenspalten wachsen jetzt mit (Mindestbreiten wie darunter), die Zeile bleibt verfolgbar. */
+      .row { grid-template-columns: 78px minmax(0, 1.4fr) minmax(72px, 0.5fr) minmax(84px, 0.5fr) minmax(48px, 0.5fr) minmax(104px, 0.5fr) 88px; }
+      .row > .date, .head-row > span:nth-child(6) { text-align: center; }
     }
   `]
 })
@@ -540,11 +546,11 @@ export class GamesListComponent implements OnInit {
   }
 
   sourceIcon(source: string): string {
-    return source === 'lichess' ? 'public' : source === 'scoresheet' ? 'photo_camera' : source === 'pgn' ? 'description' : 'sports_esports';
+    return gameSourceIcon(source);
   }
 
   sourceLabel(source: string): string {
-    return source === 'scoresheet' || source === 'pgn' ? this.translate.instant('games.source.' + source) : source;
+    return gameSourceLabel(source, this.translate);
   }
 
   /** „PGN hochladen": Datei oder eingefügt; danach die Liste neu. Genau EINE neue Partie → gleich öffnen. */

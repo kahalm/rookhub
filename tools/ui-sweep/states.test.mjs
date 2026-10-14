@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROUTES, routeId } from './routes.mjs';
-import { STATES, withStates, squareCenter } from './states.mjs';
+import { STATES, withStates, squareCenter, writeDecision, stubBody } from './states.mjs';
 
 test('jeder Zustand hängt an einer Katalog-Route, Ids sind eindeutig', () => {
   const derived = withStates(ROUTES, routeId);
@@ -48,4 +48,24 @@ test('Feldmitte: Weiß unten und Schwarz unten', () => {
   assert.deepEqual(squareCenter(box, 'a1', true), { x: 850, y: 50 });
   assert.deepEqual(squareCenter(box, 'e2', true), { x: 450, y: 150 });
   assert.throws(() => squareCenter(box, 'i9'), /kein Feld/);
+});
+
+test('Schreibschutz in Zuständen: Lese-POSTs und Anmeldung gehen durch, Fehlanmeldung nur einmal, Rest gestellt', () => {
+  const state = { steps: [{ wait: 1 }] };
+  assert.equal(writeDecision({}, 'POST', '/api/endless/sessions'), 'pass', 'ohne Zustand nie eingreifen');
+  assert.equal(writeDecision(state, 'GET', '/api/menu'), 'pass');
+  assert.equal(writeDecision(state, 'POST', '/api/puzzles/random-batch'), 'pass');
+  assert.equal(writeDecision(state, 'POST', '/api/kids/endless/batch'), 'pass');
+  assert.equal(writeDecision(state, 'POST', '/api/auth/refresh'), 'pass');
+  assert.equal(writeDecision(state, 'POST', '/api/endless/sessions'), 'stub');
+  assert.equal(writeDecision(state, 'PUT', '/api/kids/progress'), 'stub');
+  const login = withStates(ROUTES, routeId).find(d => routeId(d) === 'rookhub__login--falsches-kennwort');
+  assert.equal(writeDecision(login, 'POST', '/api/auth/login'), 'once');
+});
+
+test('gestellte Antwort gibt den gesendeten JSON-Körper zurück (KidHub-Stand), sonst {}', () => {
+  assert.equal(stubBody('{"levels":[],"courses":[]}'), '{"levels":[],"courses":[]}');
+  assert.equal(stubBody(null), '{}');
+  assert.equal(stubBody('kein json'), '{}');
+  assert.equal(stubBody('42'), '{}');
 });

@@ -93,4 +93,11 @@ describe('LeaderboardsComponent', () => {
     const css = (((LeaderboardsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
     expect(css).toMatch(/@media \(min-width: ?600px\) ?\{ ?\.lb-grid ?\{ ?grid-template-columns: ?repeat\(2/);
   });
+  /** UI-Sweep b1 (b1-rk-bestenlisten-namen-laptop): am Laptop (1 366 px) breiter, Einheit in vier schmalen Spalten aus. */
+  it('b1-rk-bestenlisten-namen-laptop: Seite ab 1 280 px bis 1 400 px breit, Einheit 1 100–1 399 px ausgeblendet', () => {
+    const css = (((LeaderboardsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/@media \(min-width: ?1280px\) ?\{ ?\.lb-page ?\{ ?max-width: min\(1400px, 96vw\)/);
+    expect(css).not.toMatch(/@media \(min-width: ?1400px\) ?\{ ?\.lb-page/);
+    expect(css).toMatch(/@media \(min-width: ?1100px\) and \(max-width: ?1399\.98px\) ?\{ ?\.lb-count small ?\{ ?display: none/);
+  });
 });

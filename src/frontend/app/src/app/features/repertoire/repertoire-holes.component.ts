@@ -166,7 +166,9 @@ export interface HoleBoardView {
           }
         </div>
       } @else if (!running()) {
-        <p class="intro">{{ 'repertoire.holes.intro' | translate }}</p>
+        <!-- b1-rk-holes-intro-lokal: ein Satz passend zur Auswahl (lokal kein Lichess-Limit, Meister ohne Elo/Tempo);
+             das Abfrage-Limit von lichess.org steht hinter dem ⓘ. -->
+        <p class="intro">{{ introKey() | translate }}</p>
       }
     </div>
   `,
@@ -218,6 +220,12 @@ export class RepertoireHolesComponent implements OnInit, OnChanges, OnDestroy {
   readonly settings = signal<ExplorerSettings>(readExplorerSettings());
   /** Angebotene Quellen; null = noch nicht bekannt (dann gibt es keinen Umschalter). */
   readonly sources = signal<ExplorerSources | null>(null);
+  /** Erklärsatz vor der ersten Suche — nennt nur, was es bei der gewählten Quelle/Datenbank wirklich gibt. */
+  readonly introKey = computed(() => {
+    const s = this.settings();
+    if (s.database === 'masters') return 'repertoire.holes.introMasters';
+    return s.source === 'local' ? 'repertoire.holes.introLocal' : 'repertoire.holes.intro';
+  });
 
   /** Wählbare Elo-Stufen/Bedenkzeiten — lokal nur, wofür es dort Partien gibt. */
   readonly ratings = computed(() => {

@@ -64,7 +64,22 @@ describe('RepertoireTrainerComponent Brettgröße (a1)', () => {
 
   // a1-rk-trainer-brett-hoehe
   it('Laptop: Brett höchstens Fensterhöhe − 200 px (keine Mini-Scrollleiste)', () => {
-    expect(css).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex:11480px;max-width:min\(820px,(calc\()?100vh-200px\)?\)/);
+    expect(css).toMatch(/app-puzzle-board(\[[^\]]*\])?\{flex:101480px;max-width:min\(820px,(calc\()?100vh-200px\)?\)/);
+  });
+
+  // b1-rk-trainer-brett-1920
+  it('Brett wächst vor der Seitenspalte (bei 1 920 × 1 080 bis zum 820-px-Deckel), Gruppe mittig, Umbruchbasis unverändert', () => {
+    expect(css).toMatch(/\.side(\[[^\]]*\])?\{flex:11340px;min-width:300px;max-width:520px/);
+    const play = /\.play(\[[^\]]*\])?\{([^}]*)\}/.exec(css)!;
+    expect(play[2]).toContain('justify-content:center');
+    expect(play[2]).toContain('flex-wrap:wrap');
+  });
+
+  // b1-rk-trainer-brett-handy-schmal
+  it('Handy: Brett volle Inhaltsbreite (der Höhenabzug − 540 px gilt nur 600–900 px)', () => {
+    const h = block('@media(max-width:599.98px){app-puzzle-board');
+    expect(h).toMatch(/app-puzzle-board(\[[^\]]*\])?\{max-width:100%;?\}/);
+    expect(css.indexOf('@media(max-width:599.98px){app-puzzle-board')).toBeGreaterThan(css.indexOf('@media(max-width:899.98px)'));
   });
 
   it('einspaltig: Brett volle Zeile bis Fensterhöhe − 540 px (Nachprüfung a1: Kommentar + Einprägen-Knopf über der Falz), Infospalte ohne 520-px-Deckel', () => {

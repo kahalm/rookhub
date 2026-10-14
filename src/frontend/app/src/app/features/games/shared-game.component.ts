@@ -49,6 +49,7 @@ import { GameRecapComponent } from './game-recap.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SHARED_GAME_STYLES } from './shared-game.styles';
+import { gameSourceLabel } from './game-source';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 /** Ab so viel Bewegung (px) bzw. Dauer (ms) ist eine Berührung des Bretts kein Tipp mehr, sondern Ziehen/Halten. */
@@ -486,6 +487,11 @@ export class SharedGameComponent implements OnInit, DoCheck {
   analyzeTooltip(): string {
     if (this.analysisRunning()) return 'games.review.running';
     return this.uploadStatus()?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyzeHint';
+  }
+
+  /** Quelle im Partiekopf — dieselbe Abbildung wie die Partieliste (b1-rk-partie-quelle-pgn: vorher stand „pgn“ roh da). */
+  sourceLabel(): string {
+    return gameSourceLabel(this.game?.source, this.translate);
   }
 
   constructor(

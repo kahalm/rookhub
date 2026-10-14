@@ -7,7 +7,7 @@ import { DrawShape } from 'chessground/draw';
 import { PuzzleBoardComponent } from '@rh/features/puzzles/puzzle-board.component';
 import { KidsMove, KidsSolver, KidsTask } from '../core/kids-solver';
 import { isAdvanceKey } from '../core/kids-keys';
-import { KID_COORDS, KID_STACKED } from './kids-layout';
+import { KID_COORDS, KID_SIDE_WIDE, KID_STACKED } from './kids-layout';
 
 /** Was die Eule gerade sagt. */
 export type KidsPuzzleStatus = 'watch' | 'yourTurn' | 'good' | 'wrong' | 'alternative' | 'solved';
@@ -109,7 +109,7 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
        70vh, und unter Kopfzeile, Punkten und Aufgabe lief die unterste Reihe aus dem Bild. */
     .puzzle {
       display: grid; justify-content: center; align-items: start; column-gap: 28px; row-gap: 14px;
-      grid-template-columns: var(--kid-board, 640px) minmax(280px, 400px);
+      grid-template-columns: var(--kid-board, 640px) minmax(280px, var(--kid-side, 400px));
       grid-template-rows: auto 1fr;
       grid-template-areas: "board task" "board side";
     }
@@ -168,7 +168,7 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
       .board { width: 100%; min-width: 0; }
       .bubble { font-size: 1.1rem; }
     }
-  `],
+  `, KID_SIDE_WIDE],
 })
 export class KidsPuzzleComponent {
   readonly task = input.required<KidsTask>();

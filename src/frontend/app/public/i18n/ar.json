@@ -122,7 +122,8 @@
     "subscribedAt": "اشترك في {{date}}",
     "puzzles": {
       "title": "الألغاز",
-      "subtitle": "Elo {{elo}} | {{solved}} محلول ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} محلول ({{accuracy}})",
       "solve": "حل الألغاز",
       "daily": "لغز اليوم",
       "endless": "لا نهاية"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} ملف",
       "public": "عام",
       "private": "خاص",
-      "noDescription": "لا يوجد وصف",
       "open": "فتح",
       "empty": "لا مخزون بعد. أنشئ واحداً للبدء!",
       "loadFailed": "فشل تحميل المخزون",
@@ -327,7 +327,6 @@
       "updateFailed": "تعذّر تحديث الريبرتوار"
     },
     "detail": {
-      "noDescription": "لا يوجد وصف",
       "modeLines": "الخطوط",
       "modeTree": "الشجرة"
     },

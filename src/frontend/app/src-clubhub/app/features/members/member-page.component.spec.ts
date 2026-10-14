@@ -142,19 +142,35 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(el().querySelector('h1')!.textContent).toBe('Emil');                          // kein hängendes Leerzeichen, kein „undefined"
   });
 
-  it('Anlegen: ohne Vornamen oder mit unlesbarem Geburtsdatum geht nichts an den Server', async () => {
+  // b1-c-kind-neu-fehler-unter-falz: der Hinweis steht unter dem Feld (nicht in der Statuszeile hinter der Leiste),
+  // das Feld bekommt den Fokus und ist als ungültig markiert; beim Tippen geht der Hinweis.
+  it('Anlegen: ohne Vornamen oder mit unlesbarem Geburtsdatum geht nichts an den Server — Hinweis am Feld, Fokus aufs Feld', async () => {
     await create(null);
     type('input[name=lastName]', 'Huber');
     el().querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
-    expect(el().querySelector('[role=alert]')!.textContent).toContain('Der Vorname fehlt noch.');
+    const first = el().querySelector<HTMLInputElement>('input[name=firstName]')!;
+    expect(el().querySelector('#firstName-need')!.textContent).toBe('Der Vorname fehlt noch.');
+    expect(el().querySelector('#firstName-need')!.classList).toContain('need');
+    expect(document.activeElement).toBe(first);
+    expect(first.getAttribute('aria-invalid')).toBe('true');
+    expect(first.getAttribute('aria-describedby')).toBe('firstName-need');
+    expect(el().querySelector('[role=alert]')!.textContent).withContext('Statuszeile nur für Serverfehler').toBe('');
+    // Der Hinweis steht direkt unter der Feldzeile, vor dem Geburtsdatum.
+    const need = el().querySelector('#firstName-need')!.getBoundingClientRect();
+    expect(need.top).toBeGreaterThanOrEqual(first.getBoundingClientRect().bottom);
+    expect(need.bottom).toBeLessThanOrEqual(el().querySelector('input[name=birth]')!.getBoundingClientRect().top);
 
     type('input[name=firstName]', 'Daniel');
+    expect(el().querySelector('#firstName-need')).toBeNull();
     type('input[name=lastName]', 'Huber');
     type('input[name=birth]', 'März 2015');
     el().querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
-    expect(el().querySelector('[role=alert]')!.textContent).toContain('12.3.2015');
+    expect(el().querySelector('#birth-need')!.textContent).toContain('12.3.2015');
+    expect(document.activeElement).toBe(el().querySelector('input[name=birth]'));
+    type('input[name=birth]', '2015');
+    expect(el().querySelector('#birth-need')).toBeNull();
     expect(api.createMember).not.toHaveBeenCalled();
   });
 
@@ -219,7 +235,7 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     el().querySelector<HTMLButtonElement>('.save-next')!.click();
     await settle();
     expect(api.createMember).not.toHaveBeenCalled();
-    expect(el().querySelector('[role=alert]')!.textContent).toContain('Der Vorname fehlt noch.');
+    expect(el().querySelector('#firstName-need')!.textContent).toContain('Der Vorname fehlt noch.');
 
     TestBed.resetTestingModule();
     await create('7');
@@ -237,7 +253,7 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     type('input[name=fideId]', '16 55 000');
     el().querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
-    expect(el().querySelector('[role=alert]')!.textContent).toContain('Die FIDE-Nummer besteht nur aus Ziffern.');
+    expect(el().querySelector('#fideId-need')!.textContent).toContain('Die FIDE-Nummer besteht nur aus Ziffern.');
     expect(api.createMember).not.toHaveBeenCalled();
 
     type('input[name=fideId]', ' 1655000 ');
@@ -422,6 +438,15 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(att.textContent!.replace(/\s+/g, ' ').trim()).toBe('✓ Fr 25.09. · Anfänger — Gabel');
     expect(el().textContent).toContain('kann die Gabel');
     expect(api.progress).not.toHaveBeenCalled();                                         // nicht verknüpft → kein Abruf
+  });
+
+  // b1-c-gerade-anfuehrung-email-umbruch: „…“ typografisch, „E‑Mail" bricht nie am Bindestrich (U+2011).
+  it('Ansehen ohne Kontakt: Leertext mit „Bearbeiten“ und geschütztem E‑Mail-Bindestrich, nirgends ein gerades Schlusszeichen', async () => {
+    api.member.and.resolveTo(MEMBER({ contacts: [] }));
+    await create('7');
+    const text = el().textContent!;
+    expect(text).toContain('Über „Bearbeiten“ kommen Telefonnummern und E\u2011Mail-Adressen dazu.');
+    expect(text).not.toMatch(/„[^“"]*"/);
   });
 
   it('Ändern: das Formular kommt mit dem Bestand, ein Kontakt lässt sich entfernen', async () => {

@@ -243,3 +243,15 @@
   font-size: 0.85rem;
   ::ng-deep .mat-button-toggle-label-content { padding: 0 9px; line-height: 32px; }
 }
+
+/* b1-rk-recon-breitstufe: Breitbild-Stufe (DESIGN 4.1) — Seite in --page-max-width-wide, Brett-Editor bis 900 px breit
+   und höchstens bis Fensterhöhe (Platz für Zugfeld + Knöpfe darunter); Teileliste nimmt den Rest. Unter 2400 px
+   unverändert. */
+@media (min-width: 2400px) {
+  .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .columns { grid-template-columns: minmax(420px, 1fr) minmax(600px, 900px); }
+  .editor app-chess-board,
+  .editor app-position-setup,
+  .arrow-hint,
+  .ply-nav { max-width: min(100%, calc(100vh - 360px)); }
+}

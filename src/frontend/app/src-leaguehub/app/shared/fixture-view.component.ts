@@ -172,12 +172,12 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                       ersten beiden (Top 2) oder unter den dreien (Top 3). Klein darunter, wie oft es nach den angesagten Prozenten hätte
                       treffen sollen.</p>
                     <div class="src-scroll"><table class="src-tbl stats-tbl">
-                      <thead><tr><th scope="col"></th><th scope="col" class="num">Prognosen</th><th scope="col" class="num">Platz 1</th>
+                      <thead><tr><th scope="col"></th><th scope="col" class="num hide-s">Prognosen</th><th scope="col" class="num">Platz 1</th>
                         <th scope="col" class="num">Top 2</th><th scope="col" class="num">Top 3</th></tr></thead>
                       <tbody>
                         <tr class="src-group"><th scope="rowgroup" colspan="5">Je Runde</th></tr>
                         @for (r of st.rounds; track r.round) {
-                          <tr><td>Runde {{ r.round }}</td><td class="num">{{ r.fixtures }}</td>
+                          <tr><td>Runde {{ r.round }}</td><td class="num hide-s">{{ r.fixtures }}</td>
                             <td class="num">{{ share(r.top1, r.of) }}<span class="exp">{{ exp(r.e1, r.of) }}</span></td>
                             <td class="num">{{ share(r.top2, r.of) }}<span class="exp">{{ exp(r.e2, r.of) }}</span></td>
                             <td class="num">{{ share(r.top3, r.of) }}<span class="exp">{{ exp(r.e3, r.of) }}</span></td></tr>
@@ -185,13 +185,13 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                         <tr class="src-group"><th scope="rowgroup" colspan="5">Je Liga</th></tr>
                         @for (l of st.leagues; track l.tnr) {
                           <tr [class.mine]="l.name === leagueName()">
-                            <td>{{ l.name }}<span class="src-sub">{{ roundsText(l.rounds) }}</span></td><td class="num">{{ l.fixtures }}</td>
+                            <td>{{ l.name }}<span class="src-sub">{{ roundsText(l.rounds) }}</span></td><td class="num hide-s">{{ l.fixtures }}</td>
                             <td class="num">{{ share(l.top1, l.of) }}<span class="exp">{{ exp(l.e1, l.of) }}</span></td>
                             <td class="num">{{ share(l.top2, l.of) }}<span class="exp">{{ exp(l.e2, l.of) }}</span></td>
                             <td class="num">{{ share(l.top3, l.of) }}<span class="exp">{{ exp(l.e3, l.of) }}</span></td>
                           </tr>
                         }
-                        <tr class="src-group total"><th scope="row">Gesamt</th><td class="num">{{ st.total.fixtures }}</td>
+                        <tr class="src-group total"><th scope="row">Gesamt</th><td class="num hide-s">{{ st.total.fixtures }}</td>
                           <td class="num">{{ share(st.total.top1, st.total.of) }}<span class="exp">{{ exp(st.total.e1, st.total.of) }}</span></td>
                             <td class="num">{{ share(st.total.top2, st.total.of) }}<span class="exp">{{ exp(st.total.e2, st.total.of) }}</span></td>
                             <td class="num">{{ share(st.total.top3, st.total.of) }}<span class="exp">{{ exp(st.total.e3, st.total.of) }}</span></td></tr>
@@ -271,7 +271,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                         <span class="name">
                           @if (c.fide || c.key) { <button type="button" class="pl" (click)="openCard((c.fide || c.key)!, b.opp_color, b.board)"><span class="pl-t">{{ c.n }}</span></button> }
                           @else { <span class="pl-t">{{ c.n }}</span> }
-                          @if (c.g) { <span class="g muted" [attr.title]="c.g + ' Partien im Bestand'">({{ c.g }})</span> }
+                          @if (c.g) { <span class="g muted" [attr.title]="thousands(c.g) + ' Partien im Bestand'">({{ thousands(c.g) }})</span> }
                           @if (b.actual?.n === c.n) { <span class="hit">gespielt</span> }
                         </span>
                         <span class="elo">{{ c.elo ?? '–' }}</span>
@@ -351,6 +351,8 @@ export class FixtureViewComponent {
 
   readonly tn = tn;
   readonly pct = pct;
+  /** b1-l-partienzahl-format: „(3.115)“ hinter dem Namen wie „3.115 Partien“ am Handy. */
+  readonly thousands = thousands;
 
   /** „2302 · 259 Partien" — Elo und Partien im Bestand, am Handy unter dem Namen (UI-Sweep 2026-10-10, l-names-mobile). */
   candMeta(c: Candidate): string {

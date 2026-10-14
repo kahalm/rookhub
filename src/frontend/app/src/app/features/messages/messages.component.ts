@@ -65,10 +65,15 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
         <div class="reply">
           <mat-form-field appearance="outline" class="reply-field">
             <mat-label>{{ (messages.length === 0 ? 'messages.writeLabel' : 'messages.replyLabel') | translate }}</mat-label>
-            <textarea matInput [(ngModel)]="draft" rows="3" maxlength="4000"
+            <textarea matInput [(ngModel)]="draft" (ngModelChange)="emptyHint = false" rows="3" maxlength="4000"
                       (keydown.control.enter)="send()" [disabled]="sending"></textarea>
+            <!-- b1-rk-messages-senden-gesperrt: „Senden“ ist nur während des Sendens gesperrt; ohne Text sagt der
+                 Hinweis hier, was fehlt, statt eines grauen Knopfs ohne Grund (DESIGN 5.4). -->
+            @if (emptyHint) {
+              <mat-hint class="empty-draft" role="status">{{ 'messages.emptyDraft' | translate }}</mat-hint>
+            }
           </mat-form-field>
-          <button mat-flat-button color="primary" (click)="send()" [disabled]="sending || !draft.trim()">
+          <button mat-flat-button color="primary" (click)="send()" [disabled]="sending">
             <mat-icon>send</mat-icon> {{ 'common.send' | translate }}
           </button>
         </div>
@@ -101,6 +106,8 @@ export class MessagesComponent implements OnInit {
   loadError = false;
   sending = false;
   draft = '';
+  /** Senden ohne Text: Hinweis unter dem Feld (b1-rk-messages-senden-gesperrt) — verschwindet beim Tippen. */
+  emptyHint = false;
 
   constructor(
     private messageService: MessageService,
@@ -148,7 +155,9 @@ export class MessagesComponent implements OnInit {
 
   send(): void {
     const body = this.draft.trim();
-    if (!body || this.sending) return;
+    if (this.sending) return;
+    if (!body) { this.emptyHint = true; return; }
+    this.emptyHint = false;
     this.sending = true;
     this.messageService.send(body).subscribe({
       next: m => { this.messages = [...this.messages, m]; this.draft = ''; this.sending = false; },

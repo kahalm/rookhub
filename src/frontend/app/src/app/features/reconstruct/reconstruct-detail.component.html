@@ -70,10 +70,8 @@
           <mat-label>{{ 'reconstruct.event' | translate }}</mat-label>
           <input matInput [(ngModel)]="head.event" maxlength="200">
         </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'reconstruct.playedOn' | translate }}</mat-label>
-          <input matInput type="date" [(ngModel)]="head.playedOn">
-        </mat-form-field>
+        <!-- b1-rk-edit-datum-us-format: Datum in der App-Sprache statt im Browserformat (DESIGN 5.13). -->
+        <app-iso-date-field subscriptSizing="fixed" [label]="'reconstruct.playedOn' | translate" [(value)]="head.playedOn" />
         <mat-form-field appearance="outline">
           <mat-label>{{ 'reconstruct.result' | translate }}</mat-label>
           <input matInput [(ngModel)]="head.result" placeholder="1-0" maxlength="12">

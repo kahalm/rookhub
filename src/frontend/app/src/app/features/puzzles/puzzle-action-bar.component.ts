@@ -91,7 +91,10 @@ import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.c
     </div>
   `,
   styles: [`
+    /* b1-rk-puzzle-teilen-eigene-zeile: die Zeile ist Container „pab“ — wird sie schmal (Seitenspalte 396 px, Handy),
+       zeigt „An Freund schicken“ (challenge-friends) nur noch sein Symbol, damit Teilen + ⋮ in der Zeile bleiben. */
     .pab-row {
+      container: pab / inline-size;
       display: flex;
       align-items: center;
       flex-wrap: wrap;

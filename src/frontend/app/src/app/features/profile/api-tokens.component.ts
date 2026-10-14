@@ -13,6 +13,7 @@ import { EMPTY, catchError, filter, switchMap } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { apiErrorText } from '../../core/api-error';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 interface ApiToken {
   id: number;
@@ -153,12 +154,13 @@ export class ShowTokenDialogComponent implements OnDestroy {
 @Component({
   selector: 'app-api-tokens',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, HelpHintComponent],
   // Gleiches Muster wie die übrigen Abschnitte der Profilseite (Discord, Engine, Design): kleine farbige
   // Überschrift, grauer Erklärsatz, keine eigene Karte, Knopf bündig mit dem Text.
   template: `
     <div class="tokens-section">
-      <h4>{{ 'profile.tokens.title' | translate }}</h4>
+      <!-- UI-Sweep b1 (b1-rk-profil-tokens-engine-textwand): ein Satz sichtbar, die Bereiche hinter dem (?). -->
+      <h4>{{ 'profile.tokens.title' | translate }} <app-help-hint [text]="'profile.tokens.subtitleHelp' | translate" /></h4>
       <p class="tokens-hint">{{ 'profile.tokens.subtitle' | translate }}</p>
         @if (loading()) {
           <p>{{ 'common.loading' | translate }}</p>

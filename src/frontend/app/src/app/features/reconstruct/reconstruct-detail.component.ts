@@ -23,6 +23,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
 
 /**
  * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
@@ -55,7 +56,7 @@ export function withSideToMove(fen: string, black: boolean): string {
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule, MatMenuModule,
-    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe],
+    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe, IsoDateFieldComponent],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',
 })

@@ -42,6 +42,11 @@ interface Layout {
   dot: Box | null;
   /** Trifft ein Tipp 4 px ueber bzw. unter dem Rueckweg-Knopf noch den Knopf? (Tippflaeche groesser als die Pille) */
   backReach: { above: boolean; below: boolean };
+  /** Seitenspalte neben dem Brett (Eule, Knöpfe) und die Schriftgröße der Eulen-Blase (b1-k-ultrawide-seitenspalte). */
+  side: Box | null;
+  bubbleFont: number;
+  /** Höhe des ganzen Dokuments — größer als das Fenster heißt: senkrechte Rollleiste. */
+  docHeight: number;
 }
 
 /**
@@ -75,6 +80,9 @@ function layoutAt(page: Page, w: number, h: number): Layout {
       headItems: Array.from(head.children).map(el => ({ name: el.className || el.tagName.toLowerCase(), box: rect(el) })),
       dot: dot ? rect(dot) : null,
       backReach: { above: hits(b.top - 4), below: hits(b.bottom + 4) },
+      side: doc.querySelector('.side') ? box('.side') : null,
+      bubbleFont: doc.querySelector('.bubble') ? parseFloat(frame.contentWindow!.getComputedStyle(doc.querySelector('.bubble')!).fontSize) : 0,
+      docHeight: doc.documentElement.scrollHeight,
     };
   } finally {
     frame.remove();
@@ -316,6 +324,12 @@ describe('KidHub: Aufgabenseite je Fenstergroesse', () => {
       expectHeadAligned(l, '3440×1440');
       const wide = layoutAt(page, 1920, 1080);
       expect(wide.board.width).withContext('1920×1080 wie bisher').toBeCloseTo(820, 0);
+      // b1-k-ultrawide-seitenspalte: Spalte wächst mit (480 statt 400 px, größere Schrift), Fußzeile über der Falz.
+      expect(l.side!.width).withContext('Seitenspalte ab 2400 px').toBeCloseTo(480, 0);
+      expect(l.bubbleFont).withContext('Eulen-Blase größer als am Laptop').toBeGreaterThan(wide.bubbleFont);
+      expect(l.docHeight).withContext('3440×1440 ohne senkrechte Rollleiste').toBeLessThanOrEqual(1440);
+      expect(wide.side!.width).withContext('1920×1080: Spalte wie bisher').toBeCloseTo(400, 0);
+      expect(wide.bubbleFont).withContext('1920×1080: Schrift wie bisher').toBeCloseTo(20, 0);
     });
   }
 

@@ -12,6 +12,11 @@ export const SHARED_GAME_STYLES = `
     /* a1-rk-vereinspartie-fehler-sackgasse: Weg zurück als Knopfreihe (DESIGN 5.11 Sperrkarte); Ladefehler mit „Erneut versuchen". */
     .gate-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
     .load-card { padding: 8px 24px; }
+    /* b1-rk-vereinspartie-sperrkarte-ultrawide: Sperr-/Fehlerkarte bleibt bei der Seitenbreite (DESIGN 4.1/5.11) — die
+       breite Hülle (bis 2 560 px) ist nur für Brett + Zugliste + Auswertung gedacht. */
+    .shared-page > .empty-state, .shared-page > .load-card {
+      max-width: min(var(--page-max-width, 1240px), 96vw); margin-inline: auto; box-sizing: border-box;
+    }
     /* Die Karte umschließt ihren Inhalt und steht mittig. Das Brett wächst mit dem Fenster: so hoch, dass
        Kopfzeile und Steuerleiste noch Platz haben, und so breit, dass Zugliste (und am PC die Auswertung) daneben
        passen — nie unter 360 px (gemeldet 2026-09-23: 400 px auf 2250 px Breite) und nie über 760 px. */
@@ -53,8 +58,11 @@ export const SHARED_GAME_STYLES = `
     .narrow-only { display: none; }
     /* UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund leise unter dem gesperrten Knopf. Seit a1-rk-shared-kopf-grund
        in einer eigenen Hülle mit dem Knopf (höchstens 280 px breit): das ⋮ bleibt in der Knopfzeile, die Kopfspalte schmal. */
-    .analyze-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 280px; }
-    .analyze-no-engine { margin: 0; text-align: right; font-size: 12px;
+    /* b1-rk-partie-grund-unter-knopf: die Hülle ist so breit wie der Knopf (mindestens 220 px), nicht wie der Satz —
+       der Grund nimmt keine eigene Breite (width 0 + min-width 100 %) und bricht ausgewogen (keine Waise „later.“);
+       so steht das ⋮ direkt neben dem Knopf statt ~120 px abgesetzt. */
+    .analyze-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 220px; max-width: 280px; }
+    .analyze-no-engine { margin: 0; text-align: right; font-size: 12px; width: 0; min-width: 100%; text-wrap: balance;
       color: color-mix(in srgb, currentColor 60%, transparent); }
     /* a1-rk-partie-kopf-tablet: zwischen Handy und PC stehen die Knöpfe in einer eigenen Zeile unter dem Titel — als
        dritte Rasterspalte fraßen sie fast die ganze Breite, der Titel brach Wort für Wort. */
@@ -147,6 +155,13 @@ export const SHARED_GAME_STYLES = `
     .moves-section {
       width: var(--moves-width); height: var(--board-size); flex-shrink: 0; box-sizing: border-box;
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 10px; overflow: auto;
+      /* b1-rk-partie-zugliste-schatten: Weiterscroll-Schatten am unteren Rand, nur solange noch Züge folgen (DESIGN 5.3,
+         skriptlos wie die Repertoire-Linienliste). Die Abdeckung (local) wandert mit dem Inhaltsende und hat die
+         Kartenfarbe des .viewer; der Schatten (scroll) bleibt am Kastenrand. */
+      background:
+        linear-gradient(to bottom, transparent, var(--mat-sys-surface-container-low) 70%) center bottom / 100% 32px no-repeat local,
+        radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, currentColor 30%, transparent), transparent)
+          center bottom / 100% 14px no-repeat scroll;
     }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }

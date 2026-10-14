@@ -134,6 +134,9 @@ describe('ApiTokensComponent', () => {
     expect(el.querySelector('mat-card')).toBeNull();
     expect(el.querySelector('.tokens-section h4')?.textContent).toContain('profile.tokens.title');
     expect(el.querySelector('.tokens-hint')?.textContent).toContain('profile.tokens.subtitle');
+    // b1-rk-profil-tokens-engine-textwand: die Bereiche-Erklärung steht hinter dem (?) an der Überschrift.
+    expect(el.querySelector('.tokens-section h4 app-help-hint button')?.getAttribute('aria-label'))
+      .toBe('profile.tokens.subtitleHelp');
     expect(el.querySelector('.tokens-section > button.tokens-create')).not.toBeNull();
   });
 

@@ -168,17 +168,29 @@
     .board-hint-tip mat-icon { font-size: 18px; width: 18px; height: 18px; color: #c8881f; }
     .hint-list { margin: 0.5rem 0 0; padding-left: 1.3rem; text-align: left; max-width: 32rem; }
     .hint-list li { margin: 0.15rem 0; }
+    /* b1-rk-puzzle-tipptext-unter-falz: ab 900 px (zweispaltig) steht der Tipp-Text in der Seitenspalte. */
+    .hint-list--side { display: none; margin: 0; }
+    @media (min-width: 900px) {
+      .hint-list--board { display: none; }
+      .hint-list--side { display: block; }
+    }
+    /* b1-rk-puzzle-dumme-tipps-knopf: leiser Knopf über --mat-sys-on-surface-variant und durchgezogenen Rahmen in
+       --mat-sys-outline (≥ 3:1), nie über Deckkraft — gedimmt (≈ 45 %) wirkte er gesperrt (hell ≈ 3,5:1, DESIGN 5.12/7). */
     .board-hint-flag {
       display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.7rem; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+      padding: 0.2rem 0.7rem; border: 1px solid var(--mat-sys-outline);
       border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer;
-      font-size: 0.9em; user-select: none; touch-action: manipulation; color: inherit; opacity: 0.75;
+      font-size: 0.9em; user-select: none; touch-action: manipulation; color: var(--mat-sys-on-surface-variant);
     }
-    .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
+    .board-hint-flag:disabled { cursor: progress; }
     .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    @media (max-width: 599.98px) {
+      .board-hint-flag { padding: 0.2rem 0.45rem; }
+      .board-hint-flag-label { display: none; }
+    }
     .board-hint-flag.flagged {
-      border-style: solid; border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
-      background: color-mix(in srgb, var(--rh-error) 12%, transparent); opacity: 1;
+      border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
+      background: color-mix(in srgb, var(--rh-error) 12%, transparent); color: var(--mat-sys-on-surface);
     }
     .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
 
@@ -237,10 +249,6 @@
     .heart.empty { color: color-mix(in srgb, currentColor 20%, transparent); }
     .config-lives { align-items: center; flex-wrap: wrap; }
     .config-lives-label { margin-left: 0.5rem; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .phase-indicator {
-      text-align: center; font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent);
-      margin-top: 0.25rem; font-style: italic;
-    }
     .depth-control {
       display: flex; align-items: center; justify-content: center; gap: 0.4rem;
       margin-top: 0.5rem; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent);

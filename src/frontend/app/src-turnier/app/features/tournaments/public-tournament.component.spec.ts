@@ -1,3 +1,5 @@
+import { By } from '@angular/platform-browser';
+import { TournamentTablesComponent } from './tournament-tables.component';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -69,6 +71,17 @@ describe('PublicTournamentComponent', () => {
     expect(c.displayedPlayers).toBe(c.displayedPlayers);
     expect(c.displayedTeams).toBe(c.displayedTeams);
     expect(c.displayedPairings).toBe(c.displayedPairings);
+  });
+
+  /** b1-t-paarungen-leer-ohne-weg: hier gibt es kein „Aktualisieren" — leere Paarungen verweisen auf die volle Ansicht. */
+  it('gibt den Tabellen statt „Aktualisieren" den Link zur vollen Ansicht', async () => {
+    const { fixture, http } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    fixture.detectChanges();
+    const tables = fixture.debugElement.query(By.directive(TournamentTablesComponent)).componentInstance as TournamentTablesComponent;
+    expect(tables.canRefresh).toBeFalse();
+    expect(tables.fullViewLink).toEqual(['/tournaments', id]);
   });
 
   it('hat neben dem Titel ein ⋮-Menue mit Teilen und chess-results (t-head-buttons, am Handy statt der Symbolkreise)', async () => {

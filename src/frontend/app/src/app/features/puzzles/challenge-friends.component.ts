@@ -9,6 +9,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChallengeService, PuzzleChallengeSource } from '../../core/challenge.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { Friend } from '../../core/models';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Wiederverwendbares „An Freund(e) schicken"-Menü für alle Puzzle-Modi (Standard/Endless = `standard`,
@@ -19,11 +20,14 @@ import { Friend } from '../../core/models';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-challenge-friends',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatCheckboxModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatCheckboxModule, TranslatePipe, IconLabelDirective],
   template: `
-    <button mat-stroked-button class="challenge-btn" [matMenuTriggerFor]="friendMenu" (menuOpened)="onMenuOpened()">
+    <!-- b1-rk-puzzle-teilen-eigene-zeile: in einer schmalen Aktionsleiste (Container „pab“ < 420 px) nur das Symbol;
+         der Name bleibt als aria-label + Tooltip. -->
+    <button mat-stroked-button class="challenge-btn" [matMenuTriggerFor]="friendMenu" (menuOpened)="onMenuOpened()"
+            [appIconLabel]="'puzzles.actions.challengeFriend' | translate">
       <mat-icon>send</mat-icon>
-      {{ 'puzzles.actions.challengeFriend' | translate }}
+      <span class="challenge-label">{{ 'puzzles.actions.challengeFriend' | translate }}</span>
     </button>
     <mat-menu #friendMenu="matMenu" class="challenge-menu">
       @if (friends.length === 0) {
@@ -53,6 +57,11 @@ import { Friend } from '../../core/models';
     </mat-menu>
   `,
   styles: [`
+    @container pab (max-width: 419.98px) {
+      .challenge-btn { min-width: 0; padding: 0 12px; }
+      .challenge-btn mat-icon { margin: 0; }
+      .challenge-label { display: none; }
+    }
     .challenge-menu-row { padding: 4px 16px; }
     .challenge-menu-all { border-bottom: 1px solid rgba(0,0,0,.12); margin-bottom: 4px; padding-bottom: 8px; }
     .challenge-menu-send { padding: 8px 16px; }

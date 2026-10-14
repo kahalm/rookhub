@@ -106,6 +106,8 @@
     "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
   },
   "common": {
+    "durationMinSec": "{{m}} min {{s}} s",
+    "durationSec": "{{s}} s",
     "paginator": {
       "itemsPerPage": "Stavki po stranici:",
       "firstPage": "Prva stranica",
@@ -432,7 +434,8 @@
     "subscribedAt": "Pretplaćeno {{date}}",
     "puzzles": {
       "title": "Zagonetke",
-      "subtitle": "Elo {{elo}} | {{solved}} riješeno ({{accuracy}})",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} riješeno ({{accuracy}})",
       "solve": "Rješavaj zagonetke",
       "daily": "Dnevna zagonetka",
       "endless": "Beskonačno"
@@ -663,8 +666,9 @@
     },
     "tokens": {
       "title": "API tokeni",
-      "subtitle": "Osobni tokeni pristupa za strojne klijente: chess.com proširenje (opseg „Extension“) ili provider motora na tvom računalu (opseg „Engine“).",
-      "empty": "Još nema tokena. Izradi jedan kako bi povezao chess.com proširenje ili svoj provider motora.",
+      "subtitle": "Za chess.com proširenje ili tvoje vlastito računalo s motorom.",
+      "subtitleHelp": "Svaki token vrijedi samo za svoj opseg: „Extension“ za proširenje preglednika (chess.com, lichess.org, Chessable), „Engine“ za provider motora na tvom računalu.",
+      "empty": "Još nema tokena.",
       "create": "Stvori token",
       "revoke": "Opozovi token",
       "revokeConfirm": "Opozvati token \"{{name}}\"? Klijent se više neće moći povezati.",
@@ -704,8 +708,9 @@
     },
     "engine": {
       "title": "Vanjski motor",
-      "hint": "Jači motor za ploču za analizu — tvoje vlastito računalo ili unajmljeni motor u oblaku. Postoje dva načina povezivanja; svi tvoji motori prikazuju se zajedno na jednom popisu.",
-      "createToken": "Izradi Lichess token (engine:read)",
+      "hint": "Jači motor za ploču za analizu — tvoje vlastito računalo ili motor u oblaku.",
+      "setup": "Postavi",
+      "createToken": "Izradi Lichess token",
       "tokenLabel": "Lichess API token",
       "stored": "Spremljeni token",
       "removeTokenConfirm": "Izbrisati spremljeni Lichess token? Lichess motori nestaju s popisa; za ponovno korištenje trebaš novi token s Lichessa.",
@@ -1006,7 +1011,6 @@
       "fileCountOne": "{{count}} datoteka",
       "public": "Javno",
       "private": "Privatno",
-      "noDescription": "Nema opisa",
       "searchPlaceholder": "Pretraži repertoare…",
       "noMatch": "Nijedan repertoar ne odgovara „{{query}}“.",
       "open": "Otvori",
@@ -1042,7 +1046,6 @@
     },
     "detail": {
       "parsing": "Repertoar se učitava … {{done}} od {{total}} linija",
-      "noDescription": "Nema opisa",
       "modeLines": "Linije",
       "modeTree": "Stablo",
       "modeHoles": "Traženje rupa"
@@ -1074,6 +1077,8 @@
       "noChapter": "(Bez poglavlja)",
       "lineN": "Linija {{n}}",
       "toggleChapter": "Otvori / zatvori poglavlje",
+      "showMore": "Prikaži još {{count}} linija",
+      "showMoreOne": "Prikaži još jednu liniju",
       "color": {
         "title": "Boja treniranja",
         "white": "Bijeli",
@@ -1167,7 +1172,7 @@
       "asBlack": "Poglavlja s crnima",
       "database": "Baza",
       "masters": "Majstori",
-      "help": "Traženje rupa prolazi kroz tvoj repertoar i u svakoj poziciji u kojoj je protivnik na potezu, a ti imaš pripremljen odgovor, pita Lichess explorer što se tamo igra.\n\nRupa je protivnikov potez koji se igra barem onoliko često koliko iznosi granica i vodi u poziciju koje nigdje nema u tvom repertoaru – ni preko drugog redoslijeda poteza.\n\nRupe su poredane po tome koliko ih često dosegneš u stvarnim partijama. Kraj varijante nije rupa.",
+      "help": "Traženje rupa prolazi kroz tvoj repertoar i u svakoj poziciji u kojoj je protivnik na potezu, a ti imaš pripremljen odgovor, pita Lichess explorer što se tamo igra.\n\nRupa je protivnikov potez koji se igra barem onoliko često koliko iznosi granica i vodi u poziciju koje nigdje nema u tvom repertoaru – ni preko drugog redoslijeda poteza.\n\nRupe su poredane po tome koliko ih često dosegneš u stvarnim partijama. Kraj varijante nije rupa.\n\nLichess.org dopušta samo oko 15 upita u minuti, pa prvi put kod velikog repertoara potraje; pozicije koje su već provjerene RookHub pamti, a prekinuto traženje sljedeći put nastavlja tamo gdje je stalo. Lokalna baza nema tu granicu.",
       "ratings": "Rejting",
       "speeds": "Tempo",
       "speed": {
@@ -1195,7 +1200,9 @@
       "frequency": "≈ {{value}} tvojih partija",
       "startPosition": "Početna pozicija",
       "games": "Partija: {{count}}",
-      "intro": "Odaberi bazu, rejting i tempo svojih protivnika i pokreni traženje. Lichess dopušta samo oko 15 upita u minuti, pa prvi put kod velikog repertoara potraje; pozicije koje su već provjerene RookHub pamti, a prekinuto traženje sljedeći put nastavlja tamo gdje je stalo.",
+      "intro": "Odaberi rejting i tempo svojih protivnika i pokreni traženje.",
+      "introLocal": "Odaberi rejting i tempo svojih protivnika – lokalna baza odgovara odmah.",
+      "introMasters": "Pokreni traženje u majstorskim partijama.",
       "source": "Izvor",
       "sourceOnline": "Lichess.org",
       "sourceLocal": "Lokalno",
@@ -1269,7 +1276,8 @@
       "home": "Domaćin",
       "away": "Gost",
       "result": "Rezultat",
-      "none": "chess-results još nema parove za ovo kolo. Kad budu objavljeni, „Osvježi“ će ih preuzeti."
+      "none": "chess-results još nema parove za ovo kolo.",
+      "noneTournament": "chess-results još nema parove za ovaj turnir."
     },
     "monitor": {
       "stopped": "Praćenje zaustavljeno",
@@ -1437,8 +1445,8 @@
       "t1Quiet": "Nema šaha ni uzimanja — pronađi tihi potez s odlučujućom prijetnjom („P“ s liste šah–uzimanje–prijetnja).",
       "t2Piece": "Na potezu je {{piece}}.",
       "t3Move": "Igraj {{move}}.",
-      "flag": "Loši savjeti",
-      "flagged": "Loši savjeti ✓",
+      "flag": "Prijavi savjete",
+      "flagged": "Savjeti prijavljeni ✓",
       "flagTitle": "Označi ove savjete kao loše",
       "flagSaved": "Savjeti označeni kao loši.",
       "flagCleared": "Oznaka uklonjena.",
@@ -2107,7 +2115,7 @@
       "sessionsPlayed": "Odigranih nizova: {{count}}",
       "sessionsPlayedOne": "Odigranih nizova: {{count}}",
       "viewHistory": "Prikaži povijest",
-      "unfinishedRun": "Nedovršena igra: Lv {{level}} | {{solved}} riješeno | {{lives}} života | {{max}} max",
+      "unfinishedRun": "Nedovršena igra: razina {{level}} · {{solved}} riješeno · {{lives}} života · najbolji rejting {{max}}",
       "continue": "Nastavi",
       "archiveAndNew": "Arhiviraj i nova igra",
       "newGame": "Nova igra",
@@ -2194,8 +2202,8 @@
     "hints": {
       "show": "Savjet",
       "next": "Sljedeći savjet",
-      "flag": "Loši savjeti",
-      "flagged": "Loši savjeti ✓",
+      "flag": "Prijavi savjete",
+      "flagged": "Savjeti prijavljeni ✓",
       "flagTitle": "Označi ove savjete kao loše (admin)",
       "flagSaved": "Savjeti označeni kao loši.",
       "flagCleared": "Oznaka uklonjena.",
@@ -3262,7 +3270,10 @@
     "levelOtherOne": "Razina {{level}}: 1 pokušaj",
     "levelEmptySwitched": "Na tvojoj razini {{level}} još nema pokušaja, zato su prikazane sve razine",
     "standardEmpty": "Još nisi riješio nijednu zagonetku – statistika se puni od prve.",
-    "standardEmptyAction": "Rješavaj zagonetke"
+    "standardEmptyAction": "Rješavaj zagonetke",
+    "courseEmptyAction": "Na tečajeve",
+    "task": "Zadatak",
+    "courseTask": "Zadatak iz tečaja"
   },
   "trainingGoals": {
     "tabs": {
@@ -3701,6 +3712,7 @@
     "replyLabel": "Tvoj odgovor",
     "sendError": "Poruku nije moguće poslati.",
     "emptyUserCanWrite": "Još nema poruka. Napiši administratorskom timu ispod — odgovor ćeš dobiti ovdje.",
+    "emptyDraft": "Najprije napiši poruku.",
     "writeLabel": "Tvoja poruka",
     "adminHint": "Ti si administrator – poruke korisnika nalaze se u administratorskom području.",
     "toConversations": "Na razgovore"
@@ -4634,6 +4646,7 @@
     "introMore": "Na primjer prve poteze, pojedine pozicije ili kratke nizove poteza — praznine između zatvaraš korak po korak.",
     "newTitle": "Naslov",
     "createLabel": "Nova rekonstrukcija – naslov",
+    "createHint": "Upiši naslov, a zatim je možeš stvoriti.",
     "newTitlePlaceholder": "Klupsko prvenstvo, 3. kolo",
     "create": "Stvori",
     "open": "Otvori",

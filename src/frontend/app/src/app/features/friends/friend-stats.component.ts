@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -85,7 +86,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friend-stats',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe, PctPipe],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe, PctPipe],
   template: `
     <div class="fs-container">
       <a mat-button routerLink="/friends" class="back-link">
@@ -110,7 +111,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
               <tr>
                 <th></th>
                 <th class="you-col">{{ 'friends.stats.you' | translate }}</th>
-                <th>{{ friend.displayName || friend.username }}</th>
+                <th class="friend-col" [matTooltip]="friend.displayName || friend.username">{{ friend.displayName || friend.username }}</th>
               </tr>
             </thead>
             <tbody>
@@ -134,7 +135,7 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
                 <tr>
                   <th>{{ 'friends.stats.theme' | translate }}</th>
                   <th class="you-col">{{ 'friends.stats.you' | translate }}</th>
-                  <th>{{ friend.displayName || friend.username }}</th>
+                  <th class="friend-col" [matTooltip]="friend.displayName || friend.username">{{ friend.displayName || friend.username }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,13 +174,19 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     mat-card { margin-bottom: 1rem; padding: 1rem; }
     .card-title { margin: 0 0 8px; padding: 0 0.5rem; font-size: 1rem; font-weight: 600; }
     .compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    .compare-table th, .compare-table td { overflow-wrap: anywhere; }
+    .compare-table td { overflow-wrap: anywhere; }
+    /* b1-rk-freundesvergleich-kopf-naht: Spaltenköpfe einzeilig mit Ellipse (voller Name im Tooltip, DESIGN 5.3) —
+       „claude-dev-user“ brach sonst in der 6-rem-Spalte zweizeilig um, der „Du“-Kopf rutschte tiefer. */
+    .compare-table th { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* UI-Sweep 2026-10-11 (r2-rp-themes-en): Themen-Namen nur an Wortgrenzen bzw. mit Silbentrennung umbrechen. */
     /* a1-rk-freundesvergleich-spalte: mit der breiteren ersten Spalte keine harte Trennung mehr („Abzugsan-griff“);
        nur ein einzelnes überlanges Wort darf noch umbrechen. */
     .compare-table td.theme-cell { overflow-wrap: break-word; hyphens: manual; }
     .compare-table col.num { width: 6rem; }
-    .compare-table th, .compare-table td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+    /* b1-rk-freundesvergleich-kopf-naht: Trennlinie je Zeile in einer Farbe — je Zelle aus currentColor hatte sie in der
+       70-%-Namensspalte einen anderen Ton als in den Wertespalten, an der Spaltengrenze entstand eine Naht (DESIGN 3.1). */
+    .compare-table tr { border-bottom: 1px solid var(--mat-sys-outline-variant); }
+    .compare-table th, .compare-table td { padding: 0.6rem 0.5rem; text-align: right; }
     .compare-table th { font-size: 0.8rem; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .compare-table th:first-child, .compare-table td.metric { text-align: left; color: color-mix(in srgb, currentColor 70%, transparent); }
     .you-col { color: var(--mat-sys-primary) !important; }

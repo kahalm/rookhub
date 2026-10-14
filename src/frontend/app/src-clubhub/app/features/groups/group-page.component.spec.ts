@@ -230,6 +230,49 @@ describe('ClubHub-Gruppen', () => {
       expect(Array.from(el.querySelectorAll('[role=alert]')).map(a => a.textContent).join('|')).toContain('Ein Konto mit diesem Benutzernamen gibt es nicht.');
     });
 
+    // b1-c-gesperrt-ohne-grund: „Dazunehmen"/„Zugriff geben" waren ohne Auswahl gesperrt, ohne zu sagen, was fehlt.
+    it('Dazunehmen / Zugriff geben ohne Eingabe: Knopf frei, Fokus aufs Feld, Hinweis darunter, beim Wählen/Tippen weg', async () => {
+      api.members.and.resolveTo([{ id: 30, firstName: 'Dora', lastName: 'Neu', archived: false, isTrainer: false, linked: false, groups: [], contacts: [] }]);
+      const fixture = await open(GROUP({ canManage: true }));
+      fixture.componentInstance.onKidsToggle(true);
+      await settle(fixture);
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelectorAll<HTMLDetailsElement>('details').forEach(d => d.open = true);           // zugeklappt nimmt nichts den Fokus
+      const add = Array.from(el.querySelectorAll<HTMLButtonElement>('.manage-kids button.btn')).find(b => b.textContent!.includes('Dazunehmen'))!;
+      expect(add.disabled).toBeFalse();
+      add.click();
+      await settle(fixture);
+      expect(api.addGroupMember).not.toHaveBeenCalled();
+      expect(el.querySelector('#kid-missing')!.textContent).toBe('Erst ein Kind auswählen.');
+      expect(el.querySelector('#kid-missing')!.classList).toContain('need');
+      expect(document.activeElement).toBe(el.querySelector('.add-kid'));
+      expect(el.querySelector('.add-kid')!.getAttribute('aria-describedby')).toBe('kid-missing');
+      const select = el.querySelector<HTMLSelectElement>('.add-kid')!;
+      select.value = '30';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(el.querySelector('#kid-missing')).toBeNull();
+
+      const give = Array.from(el.querySelectorAll<HTMLButtonElement>('.manage-group button.btn')).find(b => b.textContent!.includes('Zugriff geben'))!;
+      expect(give.disabled).toBeFalse();
+      give.click();
+      await settle(fixture);
+      expect(api.addTrainer).not.toHaveBeenCalled();
+      expect(el.querySelector('#trainer-missing')!.textContent).toBe('Erst den Benutzernamen eintippen.');
+      expect(document.activeElement).toBe(el.querySelector('.trainer-name'));
+      const input = el.querySelector<HTMLInputElement>('.trainer-name')!;
+      input.value = 'tom';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(el.querySelector('#trainer-missing')).toBeNull();
+    });
+
+    // b1-c-gerade-anfuehrung-email-umbruch: deutsche Anführungszeichen „…“, nie mit geradem Schlusszeichen.
+    it('sichtbare Texte ohne gerades Schlusszeichen nach „', async () => {
+      const fixture = await open(GROUP({ canManage: true, sessions: [], members: [GROUP().members[0]] }));
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toMatch(/„[^“"]*"/);
+    });
+
     it('Gruppe löschen fragt nach und führt zur Liste', async () => {
       api.deleteGroup.and.resolveTo();
       const fixture = await open(GROUP({ canManage: true }));

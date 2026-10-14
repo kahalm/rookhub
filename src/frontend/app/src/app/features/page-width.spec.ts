@@ -17,6 +17,8 @@ import { GuessBoardComponent } from './guess/guess-board.component';
 import { PrepPlayerComponent } from './prep/prep-player.component';
 import { EndlessHistoryComponent } from './puzzles/endless-history.component';
 import { WorksheetDetailComponent } from './worksheets/worksheet-detail.component';
+import { ReconstructListComponent } from './reconstruct/reconstruct-list.component';
+import { ReconstructDetailComponent } from './reconstruct/reconstruct-detail.component';
 
 /**
  * Codereview W5 F3-017: „EINE Seitenbreite für alle Inhaltsseiten" (styles.scss, --page-max-width) — in Kursen,
@@ -89,6 +91,9 @@ const WIDE_PAGES: [string, Type<unknown>, string][] = [
   // a1-rk-endless-verlauf-ultrawide (Tabellenseite) / a1-rk-ws-detail-bretter-klein (Aufgabenblatt bearbeiten).
   ['Endlos-Verlauf', EndlessHistoryComponent, 'history-container'],
   ['Aufgabenblatt bearbeiten', WorksheetDetailComponent, 'wd-page'],
+  // b1-rk-recon-breitstufe: Rekonstruktion — Kartenraster (Liste) und Brett-Editor (Bearbeiten).
+  ['Rekonstruktionen', ReconstructListComponent, 'page'],
+  ['Rekonstruktion bearbeiten', ReconstructDetailComponent, 'page'],
 ];
 /** Kompiliertes CSS ohne Leerraum und ohne %NS%-Platzhalter. */
 function compactCss(cmp: Type<unknown>): string {

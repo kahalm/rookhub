@@ -23,7 +23,9 @@ import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
 export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 export interface HeatCell { date: string; count: number; level: number; }   // level -1 = Zukunft (leer)
 /** Normalisierte Zeile der „letzte Puzzles"-Tabelle (Standard + Kurs vereinheitlicht). */
-export interface RecentRow { rating: number; solved: boolean; time: number; attemptedAt: string; eloChange: number | null; link: (string | number)[]; }
+export interface RecentRow { rating: number; solved: boolean; time: number; attemptedAt: string; eloChange: number | null; link: (string | number)[];
+  /** Kurs-Versuch: Titel der Aufgabe (z. B. „Exercise 245“), sonst null (b1-rk-stats-kurse-wertung-leer). */
+  label?: string | null; }
 
 /**
  * Baut aus Punkten einen geglätteten SVG-Pfad (Catmull-Rom → kubische Béziers, läuft durch
@@ -213,22 +215,24 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           <mat-card class="stat"><div class="val">{{ current?.bestStreak ?? 0 }}</div><div class="lbl">{{ 'stats.bestStreak' | translate }}</div></mat-card>
         </div>
 
-        @if (mode === 'course' && (current?.totalAttempts ?? 0) === 0) {
-          <mat-card><mat-card-content><p class="muted">{{ 'stats.courseEmpty' | translate }}</p></mat-card-content></mat-card>
-        }
-
         <!-- UI-Sweep a1 (a1-rk-statistik-leer): ohne einen einzigen Versuch statt drei Leerkarten (Verlauf, Level-Elo
-             mit Startwerten, Letzte Puzzles) EINE Leerkarte mit Weg weiter (DESIGN 5.10). -->
-        @if (standardEmpty) {
+             mit Startwerten, Letzte Puzzles) EINE Leerkarte mit Weg weiter (DESIGN 5.10). b1 (b1-rk-stats-kurse-leer): im
+             Kurs-Modus genauso — vorher eine kopflose Karte plus „Letzte Puzzles – Noch keine Daten.“, ohne Weg weiter. -->
+        @if (empty) {
           <mat-card class="stats-empty">
             <mat-card-content>
-              <p class="se-text">{{ 'stats.standardEmpty' | translate }}</p>
-              <a mat-flat-button color="primary" routerLink="/puzzles">{{ 'stats.standardEmptyAction' | translate }}</a>
+              @if (mode === 'course') {
+                <p class="se-text">{{ 'stats.courseEmpty' | translate }}</p>
+                <a mat-flat-button color="primary" routerLink="/courses">{{ 'stats.courseEmptyAction' | translate }}</a>
+              } @else {
+                <p class="se-text">{{ 'stats.standardEmpty' | translate }}</p>
+                <a mat-flat-button color="primary" routerLink="/puzzles">{{ 'stats.standardEmptyAction' | translate }}</a>
+              }
             </mat-card-content>
           </mat-card>
         }
 
-        @if (mode === 'standard' && !standardEmpty) {
+        @if (mode === 'standard' && !empty) {
         <mat-card class="chart-card">
           <mat-card-header>
             <mat-card-title>{{ 'stats.eloProgress' | translate }}</mat-card-title>
@@ -371,7 +375,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
           </mat-card>
         }
 
-        @if (!standardEmpty) {
+        @if (!empty) {
         <mat-card class="recent-card">
           <mat-card-header><mat-card-title>{{ 'stats.recentPuzzles' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
@@ -383,6 +387,11 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                 <ng-container matColumnDef="date">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.date' | translate }}</th>
                   <td mat-cell *matCellDef="let a">{{ a.attemptedAt | date:'short' }}</td>
+                </ng-container>
+                <!-- b1-rk-stats-kurse-wertung-leer: Kurs-Versuche haben meist keine Wertung — die Aufgabe heißt nach ihrem Titel. -->
+                <ng-container matColumnDef="task">
+                  <th mat-header-cell *matHeaderCellDef>{{ 'stats.task' | translate }}</th>
+                  <td mat-cell *matCellDef="let a" class="task-cell" [title]="a.label || ('stats.courseTask' | translate)">{{ a.label || ('stats.courseTask' | translate) }}</td>
                 </ng-container>
                 <ng-container matColumnDef="rating">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.rating' | translate }}</th>
@@ -419,7 +428,10 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <a class="recent-item" [routerLink]="a.link">
                     <span class="ri-main">
                       <!-- UI-Sweep z2 (z2-rk-stats-letzte-liste): Zahl beschriftet, Pfeil zeigt die antippbare Zeile. -->
-                      <span>{{ a.attemptedAt | date:'short' }} · {{ 'stats.puzzleRating' | translate: { rating: a.rating || '–' } }}</span>
+                      <!-- b1-rk-stats-kurse-wertung-leer: Kurs-Zeilen nennen die Aufgabe statt „Puzzle –“. -->
+                      <span class="ri-title">{{ a.attemptedAt | date:'short' }} · {{ mode === 'course'
+                        ? (a.label || (a.rating ? ('stats.puzzleRating' | translate: { rating: a.rating }) : ('stats.courseTask' | translate)))
+                        : ('stats.puzzleRating' | translate: { rating: a.rating || '–' }) }}</span>
                       <span class="ri-sub">{{ a.time }} s</span>
                     </span>
                     <span class="ri-res" [class.res-ok]="a.solved" [class.res-fail]="!a.solved">
@@ -440,12 +452,15 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   styles: [`
     /* UI-Sweep z3 (z3-rk-stats-seitenbreite): Seitenbreite wie /courses (DESIGN 4.1) statt 1000 px bzw. 1400 px ab 1280 px —
        am Laptop lief der Inhalt sonst bis auf 12 px an den Rand, und die Breite sprang beim Seitenwechsel. */
-    .stats-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
+    /* b1-rk-statistik-rand-12: Seitenpolster 16 px wie die übrigen Seiten (DESIGN 3) — vorher 12 px, die Kante sprang. */
+    .stats-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 16px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
     /* UI-Sweep z1 (z1-rk-stats-kacheln): Abstand der Kacheln nur über gap — sonst kamen die 16 px von mat-card dazu. */
     .cards mat-card { margin: 0; }
-    .stats-empty mat-card-content { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-    .stats-empty .se-text { margin: 0; color: color-mix(in srgb, currentColor 70%, transparent); }
+    /* b1-rk-stats-kurse-leer: Leerkarte zentriert, ein Satz, eine Aktion (DESIGN 5.10) — in beiden Modi. */
+    .stats-empty mat-card-content { display: flex; flex-direction: column; align-items: center; gap: 12px;
+      text-align: center; padding: 2rem 1rem; }
+    .stats-empty .se-text { margin: 0; color: var(--mat-sys-on-surface-variant); }
     @media (max-width: 599.98px) {
       .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
       .stat .val { font-size: 1.35rem; }
@@ -478,7 +493,9 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .recent-list { display: none; }
     .recent-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px;
       min-height: 44px; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); color: inherit; text-decoration: none; }
-    .ri-main { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+    .ri-main { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; min-width: 0; }
+    .ri-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-cell { max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ri-sub { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .ri-res { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
     .ri-res mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -539,6 +556,12 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     @media (min-width: 1280px) {
       .heatmap, .hm-col { gap: 4px; }
       .hm-cell { width: 17px; height: 17px; }
+    }
+    /* b1-rk-stats-heatmap-ultrawide: in der 1 880-px-Breitbildseite füllte das 17-px-Raster nur ~60 % der Karte —
+       ab 2400 px 28-px-Zellen (53 Wochen × 34 px ≈ 1 800 px). */
+    @media (min-width: 2400px) {
+      .heatmap, .hm-col { gap: 6px; }
+      .hm-cell { width: 28px; height: 28px; }
     }
     mat-card { margin-bottom: 16px; }
     .mode-toggle { margin-bottom: 16px; }
@@ -613,9 +636,10 @@ export class StatsComponent implements OnInit {
    * Das Elo bleibt draussen: es gibt es nur im Standard-Modus, und genau dafuer steht die
    * eigene Kachel hinter `mode === 'standard'`.
    */
-  /** a1-rk-statistik-leer: Standard-Modus ganz ohne Versuch — eine Leerkarte mit Weg zu den Puzzles. */
-  get standardEmpty(): boolean {
-    return this.mode === 'standard' && (this.current?.totalAttempts ?? 0) === 0 && this.recentRows.length === 0;
+  /** a1-rk-statistik-leer / b1-rk-stats-kurse-leer: gewählter Modus ganz ohne Versuch — eine Leerkarte mit Weg weiter
+   *  (Standard → Puzzles, Kurse → Kursliste). */
+  get empty(): boolean {
+    return (this.current?.totalAttempts ?? 0) === 0 && this.recentRows.length === 0;
   }
 
   get current(): AttemptStatsDto | null {
@@ -630,7 +654,7 @@ export class StatsComponent implements OnInit {
     this.loading = true;
     this.loadError = false;
     this.cols = this.mode === 'course'
-      ? ['date', 'rating', 'result', 'time', 'open']   // Kurs-Modus: kein Δ-Elo
+      ? ['date', 'task', 'result', 'time', 'open']   // Kurs-Modus: kein Δ-Elo, Aufgabe statt Wertung
       : ['date', 'rating', 'result', 'elo', 'time', 'open'];
     if (this.mode === 'course') this.loadCourse();
     else this.loadStandard();
@@ -681,7 +705,12 @@ export class StatsComponent implements OnInit {
         this.recentRows = history.map(a => ({
           rating: a.bookRating ?? 0, solved: a.solved, time: a.timeSeconds,
           attemptedAt: a.attemptedAt, eloChange: null, link: ['/puzzles/book', a.bookPuzzleId],
+          label: a.title?.trim() || null,
         }));
+        // b1-rk-stats-kurse-wertung-leer: Wertungsspalte nur, wenn wenigstens ein Versuch eine hat (DESIGN 5.3).
+        this.cols = this.recentRows.some(r => r.rating > 0)
+          ? ['date', 'task', 'rating', 'result', 'time', 'open']
+          : ['date', 'task', 'result', 'time', 'open'];
         this.applyBreakdown(breakdown);
         this.loading = false;
       },

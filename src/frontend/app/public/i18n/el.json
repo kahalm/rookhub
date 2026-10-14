@@ -122,7 +122,8 @@
     "subscribedAt": "Εγγραφή {{date}}",
     "puzzles": {
       "title": "Ασκήσεις",
-      "subtitle": "Elo {{elo}} | {{solved}} λυμένες ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} λυμένες ({{accuracy}})",
       "solve": "Λύσε ασκήσεις",
       "daily": "Ημερήσια άσκηση",
       "endless": "Ατελείωτο"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} αρχείο",
       "public": "Δημόσιο",
       "private": "Ιδιωτικό",
-      "noDescription": "Χωρίς περιγραφή",
       "open": "Άνοιγμα",
       "empty": "Δεν υπάρχουν ρεπερτόρια ακόμα. Δημιουργήστε ένα για να ξεκινήσετε!",
       "loadFailed": "Αποτυχία φόρτωσης ρεπερτορίων",
@@ -327,7 +327,6 @@
       "updateFailed": "Το ρεπερτόριο δεν ήταν δυνατό να ενημερωθεί"
     },
     "detail": {
-      "noDescription": "Χωρίς περιγραφή",
       "modeLines": "Γραμμές",
       "modeTree": "Δέντρο"
     },

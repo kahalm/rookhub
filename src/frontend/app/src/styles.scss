@@ -166,8 +166,12 @@ html:root .tomove-dot.black { background: #000; border: 2px solid color-mix(in s
    stehen wie bei chessground auf der unteren Reihe und bleiben. Vorher: Thema „blue" 2/4/6/8 hell auf hell
    (1,0:1, unsichtbar), 1/3/5/7 dunkel auf dunkel (1,9:1). Spec: features/puzzles/board-coords.spec.ts. */
 /* brown (chessground.brown.css) und die Brett-Texturen, die dessen Farben erben */
+/* b1-rk-brett-koordinaten-helle-felder: auf hellen Feldern (#f0d9b5) war rgba(72, 72, 72, .8) nur 3,9:1 und blasser als
+   die Nachbarn — jetzt dieselbe dunkle Schrift wie auf den dunklen Feldern (≈ 12:1), Ränge UND Linienbuchstaben. */
 .orientation-white .ranks :nth-child(even),
-.orientation-black .ranks :nth-child(odd) { color: rgba(72, 72, 72, 0.8); }
+.orientation-black .ranks :nth-child(odd),
+.orientation-white .files :nth-child(even),
+.orientation-black .files :nth-child(odd) { color: rgba(40, 30, 20, 0.9); }
 /* UI-Sweep a1 (a1-rk-brett-koordinaten-dunkle-felder): das dunkle brown-Feld (#c0ae91) ist zu hell für helle Schrift
    (Weiß 80 % ≈ 1,5:1, auch mit dunklem Hof kaum lesbar). Dort jetzt dunkle Schrift mit hellem Hof (≈ 6:1) — Ränge
    UND Linienbuchstaben auf dunklen Feldern (7/5/3/1 bzw. a/c/e/g bei Weiß unten). Die anderen Themen setzen Farbe

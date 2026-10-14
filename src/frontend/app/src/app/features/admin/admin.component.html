@@ -117,8 +117,8 @@
                             <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
                             <span>{{ 'admin.users.toggleAdmin' | translate }}</span>
                           </button>
-                          <button mat-menu-item (click)="deleteUser(u)">
-                            <mat-icon color="warn">delete</mat-icon>
+                          <button mat-menu-item class="delete-item" (click)="deleteUser(u)">
+                            <mat-icon>delete</mat-icon>
                             <span>{{ 'admin.users.deleteUser' | translate }}</span>
                           </button>
                         </mat-menu>

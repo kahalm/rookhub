@@ -122,7 +122,8 @@
     "subscribedAt": "Abonné le {{date}}",
     "puzzles": {
       "title": "Puzzles",
-      "subtitle": "Elo {{elo}} | {{solved}} résolus ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} résolus ({{accuracy}})",
       "solve": "Résoudre des puzzles",
       "daily": "Puzzle du jour",
       "endless": "Infini"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} fichier",
       "public": "Public",
       "private": "Privé",
-      "noDescription": "Pas de description",
       "open": "Ouvrir",
       "empty": "Aucun répertoire pour l'instant. Créez-en un pour commencer !",
       "loadFailed": "Impossible de charger les répertoires",
@@ -327,7 +327,6 @@
       "updateFailed": "Le répertoire n'a pas pu être mis à jour"
     },
     "detail": {
-      "noDescription": "Pas de description",
       "modeLines": "Lignes",
       "modeTree": "Arbre"
     },

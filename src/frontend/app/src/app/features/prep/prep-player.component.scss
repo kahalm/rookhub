@@ -9,6 +9,10 @@
 @media (min-width: 2400px) {
   .prep { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
   .prep ::ng-deep .card.inline .sides { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  /* b1-rk-breitstufe-zeilen-auseinander: „Letzte Partien" — Datum und Gegner so schmal wie ihr Inhalt, die Zugfolge
+     nimmt den Rest und beginnt direkt neben dem Gegner (vorher > 1 000 px Lücke, Datum mit großem Rand links). */
+  .prep ::ng-deep .card.inline table.recent td:nth-child(1),
+  .prep ::ng-deep .card.inline table.recent td:nth-child(2) { width: 1%; white-space: nowrap; }
 }
 .prep h1 { margin: 4px 0 6px; font: 500 26px/1.2 Roboto, "Helvetica Neue", sans-serif; }
 .prep .lede { margin: 0 0 16px; color: var(--mat-sys-on-surface-variant); max-width: 64ch; }

@@ -36,7 +36,7 @@
           </span>
           <span class="meta">
             @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
-            <span>{{ game.source === 'scoresheet' ? ('games.source.scoresheet' | translate) : game.source }}</span>
+            <span class="source">{{ sourceLabel() }}</span>
             @if (club) {
               @if (game.year) { <span class="date">{{ game.year }}</span> }
             } @else {

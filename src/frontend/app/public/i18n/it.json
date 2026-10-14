@@ -122,7 +122,8 @@
     "subscribedAt": "Iscritto il {{date}}",
     "puzzles": {
       "title": "Puzzle",
-      "subtitle": "Elo {{elo}} | {{solved}} risolti ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} risolti ({{accuracy}})",
       "solve": "Risolvi puzzle",
       "daily": "Puzzle del giorno",
       "endless": "Infinito"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} file",
       "public": "Pubblico",
       "private": "Privato",
-      "noDescription": "Nessuna descrizione",
       "open": "Apri",
       "empty": "Nessun repertorio ancora. Creane uno per iniziare!",
       "loadFailed": "Impossibile caricare i repertori",
@@ -327,7 +327,6 @@
       "updateFailed": "Il repertorio non ha potuto essere aggiornato"
     },
     "detail": {
-      "noDescription": "Nessuna descrizione",
       "modeLines": "Linee",
       "modeTree": "Albero"
     },

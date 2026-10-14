@@ -1,5 +1,5 @@
 import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
-import { findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
+import { commonStartFen, findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
 import { applyUserMove, legalDests } from '../../shared/pgn-viewer/board-moves.util';
 
 describe('position-filter.util', () => {
@@ -55,6 +55,20 @@ describe('position-filter.util', () => {
     expect(formatSansWithNumbers([])).toBe('');
     expect(formatSansWithNumbers(['e4'])).toBe('1. e4');
     expect(formatSansWithNumbers(['e4', 'e5', 'Nf3'])).toBe('1. e4 e5 2. Nf3');
+  });
+
+  // b1-rk-repertoire-filterbrett-fen-start
+  it('formatSansWithNumbers ab einer FEN: deren Zugnummer, Schwarz am Zug mit „…“', () => {
+    expect(formatSansWithNumbers(['Kd6', 'Kd8', 'Ke6'], '3k4/8/3K4/3P4/8/8/8/8 w - - 0 1')).toBe('1. Kd6 Kd8 2. Ke6');
+    expect(formatSansWithNumbers(['Kd8', 'Ke6', 'Ke8'], '4k3/8/3K4/3P4/8/8/8/8 b - - 0 40')).toBe('40… Kd8 41. Ke6 Ke8');
+    expect(formatSansWithNumbers(['e4'], 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')).toBe('1. e4');
+  });
+
+  it('commonStartFen: gemeinsame Startstellung, sonst null; ohne Linien der Rückfall', () => {
+    const a = '4k3/8/3K4/3P4/8/8/8/8 w - - 0 1';
+    expect(commonStartFen([a, '4k3/8/3K4/3P4/8/8/8/8 w - - 5 30'], 'START')).toBe(a);
+    expect(commonStartFen([a, '4k3/8/3K4/8/3P4/8/8/8 w - - 0 1'], 'START')).toBeNull();
+    expect(commonStartFen([], 'START')).toBe('START');
   });
 });
 

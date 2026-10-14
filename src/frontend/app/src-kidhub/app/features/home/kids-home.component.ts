@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '@rh/core/auth.service';
@@ -203,8 +203,17 @@ export class KidsHomeComponent {
     return list.length === 1 ? ['/courses', list[0].bookId] : ['/courses'];
   });
 
+  /** Sprache, in der die Kurse zuletzt geholt wurden — bei einem Wechsel in der Sprachpille neu holen. */
+  private coursesLang: string | undefined;
+
   constructor() {
     this.load();
+    // b1-k-kursname-sprachwechsel: der Kursname kommt vom Server in der angefragten Sprache — nach einem Wechsel auf
+    // English stand sonst weiter „Erste Endspiele" in der Kachel.
+    effect(() => {
+      const lang = this.translate.currentLang() ?? undefined;
+      untracked(() => { if (lang !== this.coursesLang) this.loadCourses(); });
+    });
   }
 
   /** Gelöste Linien eines Kurses, höchstens so viele, wie er hat (dieselbe Regel wie die Kursliste, F7-014). */
@@ -225,7 +234,14 @@ export class KidsHomeComponent {
       next: levels => this.levels.set(levels),
       error: () => this.failed.set(true),
     });
-    // Ohne Kurse bleibt die Kachel einfach weg — kein Fehlertext fuer etwas, das es nicht gibt.
-    this.api.courses(this.translate.currentLang() ?? undefined).subscribe({ next: courses => this.courses.set(courses), error: () => {} });
+    this.loadCourses();
+  }
+
+  /** Kurse in der aktuellen Sprache holen. Ohne Kurse bleibt die Kachel einfach weg — kein Fehlertext fuer etwas, das
+   *  es nicht gibt. */
+  private loadCourses(): void {
+    const lang = this.translate.currentLang() ?? undefined;
+    this.coursesLang = lang;
+    this.api.courses(lang).subscribe({ next: courses => { if (lang === this.coursesLang) this.courses.set(courses); }, error: () => {} });
   }
 }

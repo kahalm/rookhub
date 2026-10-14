@@ -363,13 +363,21 @@ interface ChapterGroup {
       .board-wrap, .move-strip, .comment-card { max-width: min(60vw, calc(100vh - 300px)); }
     }
 
-    @media (max-width: 768px) {
+    /* Einspaltig bis 899.98 px (DESIGN 4.2/5.12, b1-rk-browse-tablet-eng): am Tablet stand sonst eine 300-px-Liste mit
+       gekappten Titeln neben einem 456-px-Brett. Das Brett steht mittig bis Fensterhöhe; die Liste läuft in voller
+       Breite mit der Seite — kein 260-px-Kasten im Kasten (DESIGN 5.3, b1-rk-browse-liste-kasten-einspaltig), die
+       Kapitelköpfe kleben beim Scrollen oben und halten die lange Liste einordenbar (4.6 Nr. 11/12). */
+    @media (max-width: 899.98px) {
       .browse-body { flex-direction: column; }
-      .line-list { flex: none; width: 100%; max-height: 260px; }
-      .board-wrap { max-width: 100%; }
-      /* UI-Sweep 2026-10-11 (d2-rk-browse-handy-liste-vor-brett): am Handy ist das Brett die Hauptsache — es steht
-         vor der Linienliste, der Titel bleibt einzeilig mit „…". */
-      .board-pane { order: -1; }
+      .line-list { flex: none; width: 100%; max-height: none; overflow: visible; }
+      .chapter-head { position: sticky; top: 0; z-index: 1; background: var(--mat-sys-surface); }
+      .board-wrap { max-width: min(100%, max(320px, calc(100vh - 300px))); }
+      /* UI-Sweep 2026-10-11 (d2-rk-browse-handy-liste-vor-brett): einspaltig ist das Brett die Hauptsache — es steht
+         vor der Linienliste. */
+      .board-pane { order: -1; align-self: stretch; }
+    }
+    @media (max-width: 768px) {
+      /* Der Titel bleibt einzeilig mit „…". */
       .head-text h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     }
     .fc-menu-btn { display: none; }

@@ -115,7 +115,7 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep a1', () => {
   });
 
   // a1-l-vereinspartien-tablet-eroeffnung: am Tablet behielt die Eröffnung nur ≈ 55 px („1.d4 Sf…")
-  it('Vereinspartien am Tablet: Eröffnung bleibt lesbar breit, Namen kürzen mit „…", nichts läuft quer', async () => {
+  it('Vereinspartien am Tablet: Eröffnung bleibt lesbar breit, nichts läuft quer', async () => {
     const row = (i: number) => `<tr class="game"><td class="num">2026</td>
       <td class="side"><button type="button" class="pl" id="w${i}">Baumgartner-Hollenstein, Armin Mag.</button><span class="small" id="e${i}"> 1904</span></td>
       <td class="side"><span class="anon">Schwaz</span></td><td class="num">1–0</td>
@@ -124,8 +124,8 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep a1', () => {
     const doc = await render(820, `<main class="wrap mid"><div class="roster-scroll club-scroll" id="s"><table class="rtable club-table">
       <tbody>${row(1)}${row(2)}</tbody></table></div></main>`);
     expect(box(doc, 'o1').width).toBeGreaterThan(110);
-    expect(style(doc, 'w1').textOverflow).toBe('ellipsis');
-    // Nachprüfung a1: die Elo kürzte mit („Name … .“) — sie bleibt ganz sichtbar neben dem gekürzten Namen.
+    // Nachprüfung a1: die Elo kürzte mit („Name … .“) — sie bleibt ganz sichtbar (seit b1-l-vereinspartien-tablet-namen
+    // kürzt auch der Name nicht mehr, s. ui-sweep-b1.spec.ts).
     expect(style(doc, 'e1').textOverflow).not.toBe('ellipsis');
     const td = (el(doc, 'e1').parentElement as HTMLElement).getBoundingClientRect();
     expect(box(doc, 'e1').right).toBeLessThanOrEqual(td.right + 0.5);

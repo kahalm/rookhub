@@ -36,8 +36,8 @@ export function isCardIndexUrl(url: string): boolean {
           @if (user(); as u) {
             <span class="who">{{ u.username }}</span>
             <button type="button" class="btn" (click)="logout()">Abmelden</button>
-          } @else if (!onLogin()) {
-            <!-- UI-Sweep 2026-10-10 (x-login-headbtn): auf /login selbst kein zweiter „Anmelden“-Knopf -->
+          } @else if (!onAuthMask()) {
+            <!-- UI-Sweep 2026-10-10 (x-login-headbtn) + b1-c-passwort-masken-kopf-anmelden: auf den Anmeldemasken kein zweiter „Anmelden“-Knopf -->
             <a class="btn" routerLink="/login" [queryParams]="{ returnUrl: '/' }">Anmelden</a>
           }
         </nav>
@@ -95,8 +95,10 @@ export class ClubHubAppComponent implements OnInit {
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
   readonly onCardIndex = computed(() => isCardIndexUrl(this.url()));
-  /** Auf der Anmeldemaske selbst gibt es oben keinen „Anmelden“-Knopf (UI-Sweep 2026-10-10, x-login-headbtn). */
-  readonly onLogin = computed(() => this.url().split(/[?#]/)[0] === '/login');
+  /** Auf den Anmeldemasken (Anmelden, Registrieren, Passwort vergessen/zurücksetzen) gibt es oben keinen „Anmelden“-Knopf —
+   *  die Karte bietet den Weg selbst an (UI-Sweep 2026-10-10 x-login-headbtn; wie die Turnierseite seit
+   *  a1-t-reset-kopf-anmelden: b1-c-passwort-masken-kopf-anmelden). */
+  readonly onAuthMask = computed(() => ['/login', '/register', '/forgot-password', '/reset-password'].includes(this.url().split(/[?#]/)[0]));
 
   constructor() {
     // Die Fusszeile zeigt Impressum und Datenschutz immer — die Anmeldemaske laesst ihre eigene Zeile dann weg

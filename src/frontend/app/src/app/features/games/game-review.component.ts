@@ -296,7 +296,8 @@ const MATE_GAP_PAWNS = 100;
     .alt-nodes { font-size: 0.75rem; color: #ff9800; font-variant-numeric: tabular-nums; white-space: nowrap; order: 3; margin-left: auto; }
     .toggle { opacity: 0.45; --mat-icon-button-state-layer-size: 30px; width: 30px; height: 30px; padding: 3px; }
     .toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .toggle.on { opacity: 1; color: #81b64c; }
+    /* b1-rk-auswertung-hell-kontrast: Zustandsfarbe aus dem Token (hell #1b5e20, dunkel #81c784) — fest #81b64c stand hell bei ≈ 2,2:1. */
+    .toggle.on { opacity: 1; color: var(--rh-success); }
     .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem; }
     .lines li { display: flex; gap: 8px; align-items: baseline; min-width: 0; padding: 2px 4px; border-radius: 4px; }
     .lines li.played { background: color-mix(in srgb, currentColor 8%, transparent); }
@@ -356,7 +357,9 @@ const MATE_GAP_PAWNS = 100;
     .summary .count-jump { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0 3px; margin: 0;
       border-radius: 4px; text-decoration: underline dotted; text-underline-offset: 2px; }
     .summary .count-jump:hover, .summary .count-jump:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); }
-    .summary .count.zero { color: color-mix(in srgb, currentColor 35%, transparent); }
+    /* b1-rk-auswertung-hell-kontrast: Nullen leiser als die Zahlen, aber lesbar (55 % statt 35 %, DESIGN 3.1) — der
+       Unterschied bleibt über die fehlende Unterstreichung der anklickbaren Zähler. */
+    .summary .count.zero { color: color-mix(in srgb, currentColor 55%, transparent); }
     .sym {
       display: inline-block; min-width: 18px; padding: 0 2px; border-radius: 9px; box-sizing: border-box;
       color: #fff; font-weight: 700; font-size: 0.7rem; line-height: 18px; cursor: default;

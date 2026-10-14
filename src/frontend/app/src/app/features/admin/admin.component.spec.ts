@@ -810,4 +810,10 @@ describe('AdminComponent – Kartenliste der Konten', () => {
     expect(css).not.toContain('599.98px');
     expect(css).toMatch(/\.users-table td\.mat-column-actions[^{]*\{ ?white-space: ?nowrap/);
   });
+
+  it('Kartenliste klebt nicht an der Blätterleiste (b1-rk-admin-handy-seitenwahl-klebt)', () => {
+    const css = (((AdminComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/@media \(max-width: ?899\.98px\) ?\{[^@]*\.user-cards ?\{[^}]*margin-bottom: ?12px/);
+  });
 });

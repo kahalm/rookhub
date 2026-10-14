@@ -46,6 +46,28 @@ describe('KidsHomeComponent', () => {
     expect(el.querySelector('kid-error')).toBeNull();
   }));
 
+  // b1-k-kursname-sprachwechsel: der Kurs wurde nur einmal im Konstruktor geholt — nach English blieb „Erste Endspiele".
+  it('Sprachwechsel holt die Kurse in der neuen Sprache (Kachel zeigt den englischen Namen)', fakeAsync(() => {
+    const translate = TestBed.inject(TranslateService);
+    translate.use('de');
+    tick();
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses' && r.params.get('lang') === 'de')
+      .flush([{ bookId: 339, title: 'Erste Endspiele', description: null, puzzleCount: 287 }]);
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 10 }]);
+    f.detectChanges();
+    expect(f.componentInstance.courses()[0].title).toBe('Erste Endspiele');
+
+    translate.use('en');
+    tick();
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses' && r.params.get('lang') === 'en')
+      .flush([{ bookId: 339, title: 'First endgames', description: null, puzzleCount: 287 }]);
+    f.detectChanges();
+    expect(f.componentInstance.courses()[0].title).toBe('First endgames');
+  }));
+
   it('ein zweites 429 zeigt das Fehlerbild (nur EIN Nachholversuch)', fakeAsync(() => {
     const f = TestBed.createComponent(KidsHomeComponent);
     f.detectChanges();

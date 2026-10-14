@@ -24,19 +24,28 @@
        die Material-Größe (vorher griff die Regel auch dort und machte sie übergroß). */
     .msg > mat-icon { font-size: 40px; height: 40px; width: 40px; }
     .msg-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-    .play { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+    /* b1-rk-trainer-brett-1920: Brett + Seitenspalte als Gruppe mittig (am Laptop stand rechts ein leerer Rand). */
+    .play { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
     /* Brett darf jetzt bis knapp Viewport-Höhe (minus Navbar + Toolbar) hochwachsen (Chessable-artig)
      * und außerdem breit werden — begrenzt zusätzlich über min(80vh, 96vw − Seitenleiste). Der
      * innere chess-board hat aspect-ratio 1/1, daher wird Höhe automatisch = Breite. */
     /* a1-rk-trainer-brett-hoehe: Abzug 200 px statt 180 px — am Laptop (1 366 × 768) passt die Seite samt Fußzeile
      * ohne Mini-Scroll. */
-    app-puzzle-board { flex: 1 1 480px; max-width: min(820px, calc(100vh - 200px)); }
+    /* b1-rk-trainer-brett-1920: das Brett wächst zuerst (flex-grow 10 statt 1) bis zu seinem Höhendeckel, erst der
+     * Rest geht an die Seitenspalte — bei 1 920 × 1 080 vorher 696 px (gleiche Teilung), jetzt 820 px. Die
+     * Umbruchgrenze bleibt (Basis 480 + 340 px). */
+    app-puzzle-board { flex: 10 1 480px; max-width: min(820px, calc(100vh - 200px)); }
     .side { flex: 1 1 340px; min-width: 300px; max-width: 520px; }
     /* a1-rk-trainer-brett-hoehe: einspaltig (Tablet hochkant) das Brett so hoch, dass Aufgabe und Einprägen-Knopf
      * darunter noch über der Falz stehen; die Infospalte nimmt die volle Breite statt 520 px links. */
     @media (max-width: 899.98px) {
       app-puzzle-board { flex-basis: 100%; max-width: min(100%, calc(100vh - 540px)); margin: 0 auto; }
       .side { max-width: none; }
+    }
+    /* b1-rk-trainer-brett-handy-schmal: der Höhenabzug oben gilt nur fürs Tablet hochkant — am Handy
+     * (390 × 844 → 304 px) war das Brett schmaler als die Seite; hier volle Inhaltsbreite. */
+    @media (max-width: 599.98px) {
+      app-puzzle-board { max-width: 100%; }
     }
     /* a1-rk-trainer-ultrawide-brett: Breitbild-Stufe (DESIGN 4.1) — Seite im breiten Token, Brett bis zur
      * Fensterhöhe (≤ 1 100 px), Seitenspalte daneben ≤ 640 px, beides mittig. */

@@ -122,7 +122,8 @@
     "subscribedAt": "{{date}} にサブスクライブ",
     "puzzles": {
       "title": "パズル",
-      "subtitle": "Elo {{elo}} | {{solved}} 問正解 ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} 問正解 ({{accuracy}})",
       "solve": "パズルを解く",
       "daily": "今日のパズル",
       "endless": "エンドレス"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} ファイル",
       "public": "公開",
       "private": "非公開",
-      "noDescription": "説明なし",
       "open": "開く",
       "empty": "レパートリーがまだありません。作成して始めましょう！",
       "loadFailed": "レパートリーの読み込みに失敗しました",
@@ -327,7 +327,6 @@
       "updateFailed": "レパートリーを更新できませんでした"
     },
     "detail": {
-      "noDescription": "説明なし",
       "modeLines": "ライン",
       "modeTree": "ツリー"
     },

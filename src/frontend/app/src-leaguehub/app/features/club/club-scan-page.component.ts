@@ -116,7 +116,7 @@ function readAutoMine(): boolean {
               <p class="muted" role="status">Das Formular wartet aufs Einlesen … <b class="scan-clock">{{ clock() }}</b>
                 <span class="scan-why">der Leser schaut alle 5 Minuten nach neuen Formularen.</span></p>
               @if (longWait()) {
-                <p class="muted small scan-long">Länger als üblich — der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert.</p>
+                <p class="muted small scan-long">Länger als üblich – der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert.</p>
               }
             } @else {
               <p class="muted" role="status">Das Formular wird gelesen … <b class="scan-clock">{{ clock() }}</b>

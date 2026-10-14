@@ -122,7 +122,8 @@
     "subscribedAt": "Geabonneerd op {{date}}",
     "puzzles": {
       "title": "Puzzels",
-      "subtitle": "Elo {{elo}} | {{solved}} opgelost ({{accuracy}}%)",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} opgelost ({{accuracy}})",
       "solve": "Puzzels oplossen",
       "daily": "Dagelijkse puzzel",
       "endless": "Eindeloos"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} bestand",
       "public": "Openbaar",
       "private": "Privé",
-      "noDescription": "Geen beschrijving",
       "open": "Openen",
       "empty": "Nog geen repertoires. Maak er een aan om te beginnen!",
       "loadFailed": "Repertoires laden mislukt",
@@ -327,7 +327,6 @@
       "updateFailed": "Repertoire kon niet worden bijgewerkt"
     },
     "detail": {
-      "noDescription": "Geen beschrijving",
       "modeLines": "Lijnen",
       "modeTree": "Boom"
     },

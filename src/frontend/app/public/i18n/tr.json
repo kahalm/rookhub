@@ -122,7 +122,8 @@
     "subscribedAt": "{{date}} tarihinde abone olundu",
     "puzzles": {
       "title": "Problemler",
-      "subtitle": "Elo {{elo}} | {{solved}} çözüldü (%{{accuracy}})",
+      "elo": "Elo {{elo}}",
+      "solved": "{{solved}} çözüldü ({{accuracy}})",
       "solve": "Problem Çöz",
       "daily": "Günlük problem",
       "endless": "Sonsuz"
@@ -317,7 +318,6 @@
       "fileCountOne": "{{count}} dosya",
       "public": "Herkese açık",
       "private": "Gizli",
-      "noDescription": "Açıklama yok",
       "open": "Aç",
       "empty": "Henüz repertuar yok. Başlamak için bir tane oluşturun!",
       "loadFailed": "Repertuarlar yüklenemedi",
@@ -327,7 +327,6 @@
       "updateFailed": "Repertuar güncellenemedi"
     },
     "detail": {
-      "noDescription": "Açıklama yok",
       "modeLines": "Satırlar",
       "modeTree": "Ağaç"
     },

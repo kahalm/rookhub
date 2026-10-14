@@ -386,4 +386,49 @@ describe('FlashcardsComponent Lernkarten-Breite', () => {
     const css = ((FlashcardsComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
     expect(css).toMatch(/\.fc-study-card[^{]*\{ ?width: min\(92vw, max\(480px, (calc\()?100vh - 320px\)?\), 720px\)/);
   });
+
+  // b1-rk-flashcards-vollbild-knopf-verrutscht: die Knopfzeile ist so breit wie die Karte, das Symbol sitzt an ihrer Ecke.
+  it('Vollbild-Knopfzeile hat die Kartenbreite, nicht fest 480 px', () => {
+    const css = ((FlashcardsComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.fc-fs-btn[^{]*\{ ?width: min\(92vw, max\(480px, (calc\()?100vh - 320px\)?\), 720px\)/);
+    expect(css).not.toContain('min(92vw, 480px)');
+  });
+});
+
+/** b1-w-flashcard-flip: in Safari/WebKit lag die gespiegelte Rückseite über dem Brett. */
+describe('FlashcardsComponent 3D-Flip (WebKit)', () => {
+  const css = () => ((FlashcardsComponent as any).ɵcmp.styles as string[]).join('\n')
+    .replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+
+  it('CSS: eigene Ebene der Vorderseite, verdeckte Seite unsichtbar, Scrollen innen', () => {
+    const c = css();
+    expect(c).toMatch(/\.fc-flip \{[^}]*transform-style: preserve-3d/);
+    expect(c).toMatch(/\.fc-flip-face \{[^}]*backface-visibility: hidden[^}]*transition: visibility 0s linear 0\.22s/);
+    expect(c).toMatch(/\.fc-flip-front \{[^}]*transform: rotateY\(0deg\)/);
+    const back = c.match(/\.fc-flip-back \{[^}]*\}/)![0];
+    expect(back).toContain('visibility: hidden');
+    expect(back).not.toContain('overflow');
+    expect(c).toMatch(/\.fc-flip--flipped \.fc-flip-back \{ ?visibility: visible/);
+    expect(c).toMatch(/\.fc-flip--flipped \.fc-flip-front \{ ?visibility: hidden/);
+    expect(c).toMatch(/\.fc-study-back \{[^}]*overflow-y: auto/);
+  });
+
+  it('gerendert: ungedreht ist nur die Vorderseite sichtbar, gedreht nur die Rückseite', async () => {
+    const fixture = make([puzzle(1)], {});
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    try {
+      const vis = (sel: string) => getComputedStyle(el.querySelector(sel)!).visibility;
+      expect(vis('.fc-flip-front')).toBe('visible');
+      expect(vis('.fc-flip-back')).toBe('hidden');
+      fixture.componentInstance.flip();
+      fixture.detectChanges();
+      // Wechsel nach halber Drehzeit (0,22 s)
+      await new Promise(r => setTimeout(r, 400));
+      expect(vis('.fc-flip-front')).toBe('hidden');
+      expect(vis('.fc-flip-back')).toBe('visible');
+    } finally {
+      el.remove();
+    }
+  });
 });

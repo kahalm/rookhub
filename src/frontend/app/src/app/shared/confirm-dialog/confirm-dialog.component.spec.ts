@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { of, Subject } from 'rxjs';
-import { CONFIRM_LABELS, ConfirmData, ConfirmDialogComponent, ConfirmService } from './confirm-dialog.component';
+import { CONFIRM_LABELS, ConfirmData, ConfirmDialogComponent, ConfirmService, isDeleteConfirmKey } from './confirm-dialog.component';
 
 /**
  * Die EINE Rückfrage aller Oberflächen (Codereview W5 F8-005). LeagueHub und ClubHub stellen keine
@@ -35,6 +35,28 @@ describe('ConfirmService', () => {
     expect(data.message).toBe('Dieses Foto löschen?');
     expect(data.confirmLabel).toBeUndefined();
     expect(data.cancelLabel).toBeUndefined();
+  });
+
+  // b1-rk-games-loeschen-ok: der rote Knopf sagt bei Lösch-Rückfragen „Löschen“, nicht „OK“ (DESIGN 5.6).
+  it('Lösch-Rückfrage (….delete…Confirm): Bestätigen heißt „Löschen“; eigene Beschriftung geht vor', () => {
+    const { service, open } = setup();
+    TestBed.inject(TranslateService).setTranslation('en', { common: { delete: 'Delete' } });
+    TestBed.inject(TranslateService).use('en');
+    service.ask('games.deleteConfirm').subscribe();
+    expect((open.calls.mostRecent().args[1]!.data as ConfirmData).confirmLabel).toBe('Delete');
+    service.ask('courses.detail.deleteLineConfirm', undefined, { confirm: 'Remove' }).subscribe();
+    expect((open.calls.mostRecent().args[1]!.data as ConfirmData).confirmLabel).toBe('Remove');
+    service.ask('courses.resetConfirm').subscribe();
+    expect((open.calls.mostRecent().args[1]!.data as ConfirmData).confirmLabel).toBeUndefined();
+  });
+
+  it('isDeleteConfirmKey erkennt nur Schlüssel von Lösch-Rückfragen', () => {
+    for (const k of ['games.deleteConfirm', 'courses.detail.deleteLineConfirm', 'admin.books.deleteConfirmOne', 'reconstruct.deletePartConfirm']) {
+      expect(isDeleteConfirmKey(k)).withContext(k).toBeTrue();
+    }
+    for (const k of ['courses.resetConfirm', 'admin.users.confirmDemote', 'games.undeleteConfirm', 'Diese Notiz löschen?', 'deleteConfirm fehlt?']) {
+      expect(isDeleteConfirmKey(k)).withContext(k).toBeFalse();
+    }
   });
 
   it('aus einem modalen <dialog> heraus: Rückfrage hängt im Dialog (klickbar), Esc schließt den Dialog nicht, danach zurück (0.659.1)', () => {

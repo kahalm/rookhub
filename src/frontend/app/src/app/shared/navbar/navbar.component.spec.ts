@@ -264,6 +264,35 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     trigger.click();
     fixture.detectChanges();
   });
+
+  // b1-rk-nav-konto-untermenue-handy: am Handy schob die CDK das Konto-Untermenü an x = 0, es schnitt das Hauptmenü an.
+  // Die Untermenüs tragen eine eigene Klasse (Panel, Pane per :has); unter 600 px liegen sie 8 px vom rechten Rand über dem
+  // Hauptmenü. Karma läuft 1 400 px breit → Lage als CSS-Text, Klassen am geöffneten Menü.
+  it('eingeloggt: ☰ → Konto öffnet ein Untermenü mit eigener Klasse; unter 600 px rechts über dem Hauptmenü', () => {
+    const fixture = render({ loggedIn: true, keys: ['dashboard'] });
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const account = Array.from(document.querySelectorAll('.cdk-overlay-container button'))
+      .find(b => b.textContent?.includes('nav.account')) as HTMLButtonElement;
+    account.click();
+    fixture.detectChanges();
+    const panel = document.querySelector('.cdk-overlay-container .nav-submenu.mat-mdc-menu-panel');
+    expect(panel).not.toBeNull();
+    expect(panel!.parentElement!.classList).toContain('cdk-overlay-pane');
+    // Genau dieses Untermenü trifft die Regel, das Hauptmenü bleibt unberührt.
+    expect(document.querySelectorAll('.cdk-overlay-pane:has(> .nav-submenu)').length).toBe(1);
+    expect(document.querySelectorAll('.cdk-overlay-pane:not(:has(> .nav-submenu)) .mat-mdc-menu-panel').length).toBe(1);
+    trigger.click();
+    fixture.detectChanges();
+
+    const css = ((NavbarComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s/g, '');
+    const at = css.indexOf('@media(max-width:599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const block = css.slice(at, css.indexOf('}}', at) + 2);
+    expect(block).toContain('.cdk-overlay-pane:has(>.nav-submenu){left:auto!important;right:8px!important');
+    expect(block).toContain('.nav-submenu.mat-mdc-menu-panel{min-width:232px');
+  });
 });
 
 describe('NavbarComponent App-Vollbild', () => {
@@ -377,6 +406,16 @@ describe('NavbarComponent Anmelden/Registrieren behalten das Ziel (UX-020)', () 
     expect(narrow.length).toBe(2);
     expect(narrow[0].getAttribute('href')).toBe('/register?returnUrl=%2Fpuzzles');
     expect(narrow[1].textContent).toContain('nav.fullscreen');
+  });
+
+  // b1-rk-navbar-gast-menue-mitte: das ☰ stand zwischen „Anmelden“ und „Registrieren“. Jetzt: Anmelden · Registrieren · ☰.
+  it('Gast: „Registrieren“ steht direkt hinter „Anmelden“, das ☰ ganz am Ende', async () => {
+    const { el } = await renderAt('/puzzles');
+    const login = el.querySelector('mat-toolbar a[routerLink="/login"]')!;
+    const register = el.querySelector('mat-toolbar a[routerLink="/register"]')!;
+    const menu = el.querySelector('mat-toolbar button[aria-label="nav.menu"]')!;
+    expect(login.nextElementSibling).toBe(register);
+    expect(register.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('auf einer offenen Seite: zurück zu genau dieser Seite', async () => {
