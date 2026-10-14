@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.775.4", date: "2026-10-14", changes: [
+    { en: "E-books: the library now lists the newest books first by default (title order is still available under „Sort by“).",
+      de: "E-Books: Die Bibliothek zeigt jetzt standardmäßig die neuesten Bücher zuerst (nach Titel sortieren geht weiterhin über „Sortieren“)." },
+    { en: "E-books: oversized scanned PDFs (e.g. „'64' Chess Review“ with 300 MB for 68 pages) did not open in the reader. They now get a light reading copy automatically – from the DJVU if there is one, otherwise re-rendered at 150 dpi – and the reader shows that copy; the original stays downloadable.",
+      de: "E-Books: Übergroße Scan-PDFs (z. B. „'64' Chess Review“ mit 300 MB für 68 Seiten) ließen sich im Leser nicht öffnen. Sie bekommen jetzt automatisch eine leichte Lesefassung – aus der DJVU, falls vorhanden, sonst neu gerendert in 150 dpi – und der Leser zeigt diese; das Original bleibt zum Herunterladen." },
+  ] },
   { version: "0.775.3", date: "2026-10-14", changes: [
     { en: "E-books: covers no longer show an empty white page – many old books and scans start with blank sheets, so the cover is now the first page with content (out of the first eight). Existing covers are re-rendered.",
       de: "E-Books: Titelbilder zeigen keine leere weiße Seite mehr – viele alte Bücher und Scans beginnen mit leeren Blättern, das Titelbild ist jetzt die erste Seite mit Inhalt (aus den ersten acht). Vorhandene Titelbilder werden neu erzeugt." },

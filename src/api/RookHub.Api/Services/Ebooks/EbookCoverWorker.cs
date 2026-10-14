@@ -41,6 +41,9 @@ public class EbookCoverWorker : PeriodicWorker
             var result = await renderer.RenderAsync(ebook, ct);
             ebook.CoverState = result.Success ? EbookCoverState.Done : EbookCoverState.Failed;
             if (result.PageCount is > 0) ebook.PageCount = result.PageCount;
+            // Erst jetzt ist die Seitenzahl bekannt: übergroße Scan-PDFs bekommen eine Lesefassung (0.775.4).
+            if (ebook.ConversionState == EbookConversionState.NotNeeded && EbookFormats.NeedsReadingPdf(ebook.Files, ebook.PageCount))
+                ebook.ConversionState = EbookConversionState.Pending;
             if (!result.Success)
                 Logger.LogInformation("E-Book {EbookId}: kein Titelbild ({Error})", ebook.Id, result.Error);
             await db.SaveChangesAsync(ct);

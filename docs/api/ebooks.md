@@ -121,6 +121,13 @@ Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne Kön
   (liegt immer unter der beschreibbaren Wurzel, wird mit dem Buch gelöscht; `EbookStorage.ResolveFile` wählt die Wurzel).
   Stand am Buch `ConversionState` (NotNeeded/Pending/Done/Failed); Upload/Import/Migration setzen Pending. Gemessen: 227
   Seiten in 13 s, ~6× die DJVU-Größe (Bibliothek: 66 Bücher nur als DJVU). Danach Titelbild + Diagramme neu vorgemerkt.
+- **Lesefassung übergroßer Scans** (0.775.4): ein PDF mit mehr als 1,5 MB je Seite (`EbookFormats.IsHeavyPdf`, z. B. tiff2pdf
+  mit 600-dpi-Farb-JPEGs, ~30 MP je Seite — pdf.js scheitert daran) bekommt eine abgeleitete Lesefassung: aus der beiliegenden
+  DJVU (`ddjvu`), sonst neu gerendert (`pdftoppm` 150 dpi JPEG q80, `ImagePdfWriter` bettet die JPEGs unverändert ein).
+  `EbookFormats.Primary` nimmt bei gleichem Format die abgeleitete Datei — der Leser zeigt die Lesefassung, der Download bietet
+  beide. Ausgelöst vom Titelbild-Worker (erst dann ist die Seitenzahl bekannt); Migration `EbookHeavyPdfReadingCopy` reiht
+  die vorhandenen ein (Dev 14.10.: 21 Bücher, u. a. „'64' Chess Review“ 296 MB → 16 MB in 43 s).
+- **Übersicht** sortiert ab 0.775.4 standardmäßig „Neueste zuerst“ (Aufnahmedatum).
 - **Trenner** zwischen Buch und Brett (`.rd-split`, `role=separator`): ziehen (Pointer-Capture), ←/→ um 24 px, Doppelklick =
   Standardbreite; 260 px bis 70 % des Fensters, je Gerät in `localStorage` `rh.ebooks.panelWidth`. Unter 900 px ausgeblendet.
 

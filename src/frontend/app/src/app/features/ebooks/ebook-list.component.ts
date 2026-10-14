@@ -63,7 +63,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   search = '';
   tag: string | null = null;
-  sort: EbookSort = 'title';
+  /** Vorgabe „Neueste zuerst“ (0.775.4, Nutzerwunsch) — frisch hochgeladene/eingelesene Bücher stehen oben. */
+  sort: EbookSort = 'newest';
   mine = false;
   withDiagrams = false;
   page = 1;
@@ -112,7 +113,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     const q = this.route?.snapshot.queryParamMap;
     let st: Partial<EbookListState> | null = null;
     if (q && q.keys.length > 0) {
-      st = { search: q.get('q') ?? '', tag: q.get('tag'), sort: (q.get('sort') as EbookSort) ?? 'title',
+      st = { search: q.get('q') ?? '', tag: q.get('tag'), sort: (q.get('sort') as EbookSort) ?? 'newest',
         mine: q.get('mine') === '1', withDiagrams: q.get('diagrams') === '1', page: Number(q.get('page')) || 1 };
     } else {
       const store = sessionStore();
@@ -121,7 +122,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     if (!st) return;
     this.search = st.search ?? '';
     this.tag = st.tag ?? null;
-    this.sort = this.sorts.includes(st.sort as EbookSort) ? st.sort as EbookSort : 'title';
+    this.sort = this.sorts.includes(st.sort as EbookSort) ? st.sort as EbookSort : 'newest';
     this.mine = !!st.mine;
     this.withDiagrams = !!st.withDiagrams;
     this.page = Math.max(1, Math.floor(st.page ?? 1));
@@ -133,7 +134,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     const store = sessionStore();
     if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
     const queryParams: Record<string, string | null> = {
-      q: st.search || null, tag: st.tag, sort: st.sort !== 'title' ? st.sort : null,
+      q: st.search || null, tag: st.tag, sort: st.sort !== 'newest' ? st.sort : null,
       mine: st.mine ? '1' : null, diagrams: st.withDiagrams ? '1' : null, page: st.page > 1 ? String(st.page) : null,
     };
     void this.router?.navigate([], { relativeTo: this.route ?? undefined, queryParams, replaceUrl: true });

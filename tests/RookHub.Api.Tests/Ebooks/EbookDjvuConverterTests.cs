@@ -36,6 +36,70 @@ public class EbookDjvuConverterTests : IDisposable
     }
 
     [Fact]
+    public void HeavyPdf_NeedsAReadingPdf_AndThePrimaryFileIsTheDerivedOne()
+    {
+        var heavy = new EbookFile { Format = "pdf", SizeBytes = 300_000_000 };
+        Assert.True(EbookFormats.IsHeavyPdf(heavy, 68));                           // 4,4 MB je Seite
+        Assert.False(EbookFormats.IsHeavyPdf(heavy, 400));                         // 0,75 MB je Seite
+        Assert.False(EbookFormats.IsHeavyPdf(heavy, null));                        // Seitenzahl noch unbekannt
+        Assert.True(EbookFormats.NeedsReadingPdf([heavy], 68));
+        var derived = new EbookFile { Format = "pdf", Derived = true, SizeBytes = 10_000_000 };
+        Assert.False(EbookFormats.NeedsReadingPdf([heavy, derived], 68));
+        Assert.Same(derived, EbookFormats.Primary([heavy, derived]));
+        Assert.Same(derived, EbookFormats.Primary([derived, heavy]));
+        Assert.Same(derived, EbookFormats.ReadingPdf([heavy, derived]));
+    }
+
+    [Fact]
+    public void ImagePdfWriter_WritesAReadablePdfFromJpegs()
+    {
+        static byte[] Jpeg(int w, int h)
+        {
+            using var bmp = new SkiaSharp.SKBitmap(w, h);
+            bmp.Erase(SkiaSharp.SKColors.DarkGray);
+            using var data = bmp.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 80);
+            return data.ToArray();
+        }
+        var path = Path.Combine(_kit.Root, "img.pdf");
+        using (var w = new ImagePdfWriter(File.Create(path)))
+        {
+            w.AddJpegPage(Jpeg(300, 450), 150);
+            w.AddJpegPage(Jpeg(450, 300), 150);
+            w.Finish();
+        }
+        using var doc = UglyToad.PdfPig.PdfDocument.Open(path);
+        Assert.Equal(2, doc.NumberOfPages);
+        Assert.Equal(144, doc.GetPage(1).Width, 1);    // 300 px bei 150 dpi = 2 Zoll = 144 pt
+        Assert.Equal(216, doc.GetPage(1).Height, 1);
+        Assert.Single(doc.GetPage(2).GetImages());
+    }
+
+    [Fact]
+    public async Task HeavyPdf_GetsARasterizedReadingPdf_WhenToolsExist()
+    {
+        if (!Tool("pdftoppm")) return;   // CI ohne poppler
+        var dir = Path.Combine(_kit.LibraryRoot, "Autor");
+        Directory.CreateDirectory(dir);
+        await File.WriteAllBytesAsync(Path.Combine(dir, "Scan.pdf"), EbookTestKit.TinyPdf());
+        var admin = await _kit.UserAsync("admin", admin: true);
+        var book = new Ebook { Title = "Scan", OwnerUserId = admin.Id, Source = EbookSource.Library, ConversionState = EbookConversionState.Pending,
+            CoverState = EbookCoverState.Done, DiagramState = EbookDiagramState.Unsupported, PageCount = 1 };
+        // Größe aus der Datenbank entscheidet: so tun, als hätte die eine Seite 5 MB.
+        book.Files.Add(new EbookFile { Format = "pdf", RelativePath = "Autor/Scan.pdf", FileName = "Scan.pdf", SizeBytes = 5_000_000 });
+        _kit.Db.Ebooks.Add(book);
+        await _kit.Db.SaveChangesAsync();
+
+        Assert.True(await Converter().RunStepAsync(CancellationToken.None));
+
+        var reloaded = await _kit.Db.Ebooks.Include(b => b.Files).SingleAsync();
+        Assert.Equal(EbookConversionState.Done, reloaded.ConversionState);
+        var derived = reloaded.Files.Single(f => f.Derived);
+        Assert.Same(derived, EbookFormats.Primary(reloaded.Files));
+        using var doc = UglyToad.PdfPig.PdfDocument.Open(_kit.Storage.ResolveFile(reloaded, derived));
+        Assert.Equal(1, doc.NumberOfPages);
+    }
+
+    [Fact]
     public void DerivedFiles_LiveUnderTheWritableRoot_EvenForLibraryBooks()
     {
         var book = new Ebook { Source = EbookSource.Library };

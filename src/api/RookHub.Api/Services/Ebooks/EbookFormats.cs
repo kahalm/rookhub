@@ -17,6 +17,22 @@ public static class EbookFormats
     public static bool NeedsPdfConversion(IEnumerable<Models.EbookFile> files) =>
         files.Any(f => f.Format == "djvu") && !files.Any(f => f.Format == "pdf");
 
+    /// <summary>Ab so vielen Bytes je Seite gilt ein PDF als übergroßer Scan (0.775.4): 600-dpi-Farb-JPEGs mit ~30 Megapixeln
+    /// je Seite, an denen der Browser-Leser (pdf.js) scheitert. Solche Bücher bekommen eine Lesefassung (150 dpi).</summary>
+    public const long HeavyPdfBytesPerPage = 1_500_000;
+
+    /// <summary>Ist diese (Original-)PDF ein übergroßer Scan?</summary>
+    public static bool IsHeavyPdf(Models.EbookFile f, int? pageCount) =>
+        f.Format == "pdf" && !f.Derived && pageCount is > 0 && f.SizeBytes / pageCount.Value > HeavyPdfBytesPerPage;
+
+    /// <summary>Braucht das Buch eine (Lese-)Fassung als PDF: nur DJVU, oder ein übergroßes PDF ohne Lesefassung.</summary>
+    public static bool NeedsReadingPdf(IEnumerable<Models.EbookFile> files, int? pageCount) =>
+        NeedsPdfConversion(files) || (files.Any(f => IsHeavyPdf(f, pageCount)) && !files.Any(f => f.Format == "pdf" && f.Derived));
+
+    /// <summary>Das PDF zum Lesen/Verarbeiten: die abgeleitete Lesefassung, wenn es eine gibt, sonst das Original.</summary>
+    public static Models.EbookFile? ReadingPdf(IEnumerable<Models.EbookFile> files) =>
+        files.Where(f => f.Format == "pdf").OrderByDescending(f => f.Derived).FirstOrDefault();
+
     public const int MaxTags = 20;
     public const int MaxTagLength = 40;
 
@@ -56,7 +72,8 @@ public static class EbookFormats
         {
             var rank = Array.IndexOf(Preference, f.Format);
             if (rank < 0) rank = int.MaxValue - 1;
-            if (rank < bestRank) { best = f; bestRank = rank; }
+            // Gleiches Format: die Lesefassung (Derived) vor dem Original — sie ist bei übergroßen Scans die lesbare.
+            if (rank < bestRank || (rank == bestRank && f.Derived && best is { Derived: false })) { best = f; bestRank = rank; }
         }
         return best;
     }

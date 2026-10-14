@@ -59,7 +59,7 @@ describe('EbookListComponent', () => {
     const c = make([book()]);
     expect(c.loading).toBeFalse();
     expect(c.items.length).toBe(1);
-    expect(calls[0]).toEqual(jasmine.objectContaining({ page: 1, sort: 'title', mine: false, tag: null, search: undefined }));
+    expect(calls[0]).toEqual(jasmine.objectContaining({ page: 1, sort: 'newest', mine: false, tag: null, search: undefined }));
   });
 
   it('ein Schlagwort filtert, der zweite Tipp hebt es auf — und springt auf Seite 1', () => {
