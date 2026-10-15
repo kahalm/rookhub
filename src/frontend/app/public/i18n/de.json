@@ -5285,6 +5285,8 @@
       },
       "calcHint": "Spiel Varianten auf dem Brett – sie werden als Linien notiert (auf diesem Gerät gemerkt). Eine Linie im Analysebrett prüfen oder die Engine zuschalten.",
       "calcSaveFailed": "Varianten ließen sich auf diesem Gerät nicht speichern.",
+      "afterSolve": "Nach dem Lösen",
+      "autoNext": "Automatisch zum nächsten Diagramm",
       "solveStyle": "Art des Lösens",
       "solveEasy": "Einfach",
       "solveTraining": "Training",

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.787.1", date: "2026-10-15", changes: [
+    { en: "E-books: new checkbox „Go to the next diagram automatically“ in the board’s ⚙ menu when solving – after a solved diagram the reader moves on by itself (remembered on this device).", de: "E-Books: Neues Häkchen „Automatisch zum nächsten Diagramm“ im ⚙-Menü des Bretts beim Lösen – nach einem gelösten Diagramm geht der Leser von selbst weiter (auf diesem Gerät gemerkt)." },
+  ] },
   { version: "0.787.0", date: "2026-10-15", changes: [
     { en: "E-books: collections – several books (e.g. all issues of a magazine) appear in the library as one folder; a click shows the single issues. Managers bundle books via selection → „Add to collection…“, and can rename or dissolve a collection. The library now shows 60 books per page.", de: "E-Books: Sammlungen – mehrere Bücher (z. B. alle Hefte einer Zeitschrift) erscheinen in der Bibliothek als ein Ordner, ein Klick zeigt die einzelnen Hefte. Verwalter fassen Bücher über die Auswahl → „Zu Sammlung …“ zusammen und können eine Sammlung umbenennen oder auflösen. Die Bibliothek zeigt jetzt 60 Bücher je Seite." },
   ] },

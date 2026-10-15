@@ -5285,6 +5285,8 @@
       },
       "calcHint": "Play variations on the board – they are noted as lines (kept on this device). Check a line in the analysis board or switch on the engine.",
       "calcSaveFailed": "Variations could not be saved on this device.",
+      "afterSolve": "After solving",
+      "autoNext": "Go to the next diagram automatically",
       "solveStyle": "Way of solving",
       "solveEasy": "Easy",
       "solveTraining": "Training",

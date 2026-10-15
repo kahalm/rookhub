@@ -129,7 +129,7 @@
                 <p class="rd-sol-note rd-sol-note--warn"><mat-icon>warning_amber</mat-icon>{{ note | translate }}</p>
               }
               <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)"
-                               [reportable]="loggedIn" (report)="toggleReport(d)" />
+                               [reportable]="loggedIn" (report)="toggleReport(d)" (solvedNext)="autoNextDiagram()" />
             } @else {
               <div class="empty-state rd-panel-empty">
                 <mat-icon>touch_app</mat-icon>

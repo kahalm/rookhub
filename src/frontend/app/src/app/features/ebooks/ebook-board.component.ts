@@ -66,6 +66,8 @@ export class EbookBoardComponent implements OnChanges {
   @Input() reportable = false;
   /** Melden/Zurücknehmen angeklickt — der Leser schickt es ab (Zustand kommt über `diagram.reportedByMe`). */
   @Output() report = new EventEmitter<void>();
+  /** Gelöst und „Automatisch weiter“ an: der Leser springt zum nächsten Diagramm. */
+  @Output() solvedNext = new EventEmitter<void>();
 
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
@@ -92,6 +94,10 @@ export class EbookBoardComponent implements OnChanges {
   readonly solveStyles: EbookSolveStyle[] = ['easy', 'training'];
   readonly solveStyle = signal<EbookSolveStyle>(EbookBoardComponent.loadSolveStyle());
   static readonly SOLVE_STYLE_KEY = 'rh.ebooks.solveStyle';
+  static readonly AUTO_NEXT_KEY = 'rh.ebooks.autoNext';
+  /** Nach dem Lösen automatisch zum nächsten Diagramm (0.787.1), auf dem Gerät gemerkt; Standard aus. */
+  readonly autoNext = signal(readRaw(localStore(), EbookBoardComponent.AUTO_NEXT_KEY) === '1');
+  static readonly AUTO_NEXT_DELAY_MS = 1200;
   readonly solveSource = signal<EbookSolveSource>('stored');
   readonly solveState = signal<'idle' | 'running' | 'solved' | 'failed'>('idle');
   /** Stockfish-Lösung (UCI), sobald gerechnet; `null` = noch nicht / läuft. */
@@ -296,6 +302,23 @@ export class EbookBoardComponent implements OnChanges {
     return raw === 'easy' || raw === 'training' ? raw : 'training';
   }
 
+  toggleAutoNext(): void {
+    const on = !this.autoNext();
+    this.autoNext.set(on);
+    writeRaw(localStore(), EbookBoardComponent.AUTO_NEXT_KEY, on ? '1' : '0');   // nur Bequemlichkeit
+  }
+
+  /** Gelöst; mit „Automatisch weiter“ nach kurzer Pause zum nächsten Diagramm (der Haken bleibt kurz sichtbar). */
+  private markSolved(): void {
+    this.solveState.set('solved');
+    if (!this.autoNext()) return;
+    const id = this.diagram.id;
+    this.clearTimer();
+    this.timer = setTimeout(() => {
+      if (this.diagram.id === id && this.solveState() === 'solved') this.solvedNext.emit();
+    }, EbookBoardComponent.AUTO_NEXT_DELAY_MS);
+  }
+
   setSolveStyle(s: EbookSolveStyle): void {
     this.solveStyle.set(s);
     writeRaw(localStore(), EbookBoardComponent.SOLVE_STYLE_KEY, s);   // nur Bequemlichkeit — scheitert still
@@ -428,7 +451,7 @@ export class EbookBoardComponent implements OnChanges {
   /** Nach einem richtigen Zug: Antwort nachziehen (aus der Linie, nach einer Abweichung von Stockfish), am Ende „gelöst“. */
   private advance(): void {
     const line = this.solutionLine;
-    if (this.played().length >= line.length) { this.solveState.set('solved'); return; }
+    if (this.played().length >= line.length) { this.markSolved(); return; }
     const id = this.diagram.id;
     this.timer = setTimeout(async () => {
       let u: string | null = line[this.played().length];
@@ -436,7 +459,7 @@ export class EbookBoardComponent implements OnChanges {
         try { u = (await this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH)).move || null; } catch { u = null; }
       }
       if (this.diagram.id !== id || this.mode() !== 'solve') return;
-      if (!u || !this.pushUci(u) || this.played().length >= line.length) this.solveState.set('solved');
+      if (!u || !this.pushUci(u) || this.played().length >= line.length) this.markSolved();
       this.cdr.markForCheck();
     }, 450);
   }

@@ -40,6 +40,11 @@
       <mat-icon>{{ solveSource() === 'engine' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
       <span>{{ 'ebooks.board.sourceStockfish' | translate }}</span>
     </button>
+    <div class="eb-menu-label">{{ 'ebooks.board.afterSolve' | translate }}</div>
+    <button mat-menu-item role="menuitemcheckbox" [attr.aria-checked]="autoNext()" (click)="$event.stopPropagation(); toggleAutoNext()">
+      <mat-icon>{{ autoNext() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+      <span>{{ 'ebooks.board.autoNext' | translate }}</span>
+    </button>
   } @else {
     <div class="eb-menu-label">{{ 'ebooks.board.maiaStrength' | translate }}</div>
     @for (e of maiaEloOptions; track e) {

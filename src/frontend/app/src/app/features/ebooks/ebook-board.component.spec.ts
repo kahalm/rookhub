@@ -64,6 +64,27 @@ describe('EbookBoardComponent', () => {
     expect(EbookBoardComponent.loadSolveStyle()).toBe('training');
   });
 
+  it('„Automatisch weiter“: Standard aus; an → nach dem Lösen kurz warten, dann solvedNext; gemerkt auf dem Gerät', fakeAsync(() => {
+    try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
+    const c = make().componentInstance;
+    const next = jasmine.createSpy('next');
+    c.solvedNext.subscribe(next);
+    expect(c.autoNext()).toBeFalse();
+    (c as unknown as { markSolved(): void }).markSolved();
+    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS + 50);
+    expect(next).not.toHaveBeenCalled();
+
+    c.toggleAutoNext();
+    expect(localStorage.getItem(EbookBoardComponent.AUTO_NEXT_KEY)).toBe('1');
+    (c as unknown as { markSolved(): void }).markSolved();
+    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS - 100);
+    expect(next).not.toHaveBeenCalled();             // der Haken bleibt kurz sichtbar
+    tick(200);
+    expect(next).toHaveBeenCalledTimes(1);
+    c.toggleAutoNext();
+    try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
+  }));
+
   it('kompakte Brett-Leiste: fünf Modi als Symbolknöpfe (Name im aria-label, gewählter mit aria-pressed), ⚙ nur bei Lösen/Maia', () => {
     const fixture = make();
     const el: HTMLElement = fixture.nativeElement;

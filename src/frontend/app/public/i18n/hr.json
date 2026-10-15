@@ -5285,6 +5285,8 @@
       },
       "calcHint": "Igraj varijante na ploči – bilježe se kao linije (spremljene na ovom uređaju). Provjeri liniju na ploči za analizu ili uključi engine.",
       "calcSaveFailed": "Varijante se nisu mogle spremiti na ovom uređaju.",
+      "afterSolve": "Nakon rješavanja",
+      "autoNext": "Automatski na sljedeći dijagram",
       "solveStyle": "Način rješavanja",
       "solveEasy": "Jednostavno",
       "solveTraining": "Trening",

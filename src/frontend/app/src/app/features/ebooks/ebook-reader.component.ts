@@ -301,6 +301,14 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     this.showAt(idx);
   }
 
+  /** „Automatisch weiter“ nach dem Lösen: zum nächsten Diagramm, am letzten bleibt es stehen. */
+  autoNextDiagram(): void {
+    const list = this.diagrams();
+    const cur = this.picked();
+    if (!cur || list.findIndex(d => d.id === cur.id) >= list.length - 1) return;
+    this.step(1);
+  }
+
   /** ⏮ / ⏭ — erstes bzw. letztes Diagramm des Buchs. */
   jumpDiagram(to: 'first' | 'last'): void {
     const n = this.diagrams().length;

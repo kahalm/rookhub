@@ -5285,6 +5285,8 @@
       },
       "calcHint": "Játssz változatokat a táblán – vonalakként jegyzi fel (ezen az eszközön tárolva). Ellenőrizz egy vonalat az elemzőtáblán, vagy kapcsold be a motort.",
       "calcSaveFailed": "A változatokat nem sikerült ezen az eszközön menteni.",
+      "afterSolve": "Megoldás után",
+      "autoNext": "Automatikusan a következő diagramra",
       "solveStyle": "Megoldás módja",
       "solveEasy": "Egyszerű",
       "solveTraining": "Edzés",
