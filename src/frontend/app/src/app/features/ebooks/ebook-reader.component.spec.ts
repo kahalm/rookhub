@@ -1,3 +1,4 @@
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -503,7 +504,13 @@ describe('EbookReaderComponent', () => {
     fixture.detectChanges();
     el.querySelector<HTMLButtonElement>('.rd-more')!.click();
     fixture.detectChanges(); await fixture.whenStable();
-    const text = document.querySelector('.cdk-overlay-container')!.textContent!;
+    // Der EIGENE Overlay-Container dieses Testmoduls — document.querySelector fand in der CI (Testreihenfolge)
+    // einen leeren Container eines anderen Tests (0.786.2 rot, wie früher im SharedGame-Spec).
+    const container = TestBed.inject(OverlayContainer).getContainerElement();
+    for (let i = 0; i < 20 && !container.textContent!.includes('ebooks.downloadFormat'); i++) {
+      await new Promise(r => setTimeout(r, 10)); fixture.detectChanges();
+    }
+    const text = container.textContent!;
     expect(text).toContain('ebooks.downloadFormat');
     expect(text).toContain('ebooks.reader.createCourse');
     fixture.destroy();

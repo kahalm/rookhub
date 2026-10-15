@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.786.3", date: "2026-10-15", changes: [
+    { en: "Internal: a reader test no longer fails depending on test order (it checked another test's menu).",
+      de: "Intern: ein Leser-Test scheitert nicht mehr je nach Testreihenfolge (er prüfte das Menü eines anderen Tests)." },
+  ] },
   { version: "0.786.2", date: "2026-10-15", changes: [
     { en: "E-book reader: the large board leaves room for its status line below, which no longer touches the bottom edge of the window.",
       de: "E-Book-Leser: das große Brett lässt unten Platz für seine Statuszeile, die nicht mehr am Fensterrand klebt." },
