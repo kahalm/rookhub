@@ -12,6 +12,8 @@ export function notificationText(translate: TranslateService, n: AppNotification
   let key = 'notifications.type.' + n.type;
   if (n.type === 'challenge_resolved' || n.type === 'revenge_performed')
     key += data['solved'] === 'true' ? '_solved' : '_failed';
+  // E-Book-Upload ohne Anmeldung: der Server schickt einen leeren Namen.
+  if (n.type === 'ebook_uploaded' && !data['username']) key += '_anonymous';
   let text = translate.instant(key, data);
   if (n.type === 'chessable_import_completed' && data['fetchTime']) {
     text += ' · ' + translate.instant('notifications.chessableDuration', data);
@@ -64,6 +66,7 @@ export function notificationCategory(type: string): NotificationCategory {
       return 'tournaments';
     case 'new_user_registered':
     case 'league_batch_uploaded':
+    case 'ebook_uploaded':
       return 'admin';
     default:
       return 'other';
@@ -89,6 +92,7 @@ export function notificationIcon(n: AppNotification): string {
     case 'tournament_cancelled': return 'event_busy';
     case 'new_user_registered': return 'group_add';
     case 'league_batch_uploaded': return 'photo_library';
+    case 'ebook_uploaded': return 'upload_file';
     case 'chessable_token_added': return 'vpn_key';
     case 'chessable_new_course': return 'library_add';
     case 'course_shared': return 'group_add';

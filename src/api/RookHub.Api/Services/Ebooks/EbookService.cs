@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs.Ebooks;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.Ebooks;
 
@@ -28,14 +29,16 @@ public class EbookService
     private readonly EbookStorage _storage;
     private readonly ILogger<EbookService> _logger;
     private readonly EbookOptions _options;
+    private readonly NotificationService? _notifications;
 
     public EbookService(AppDbContext db, EbookStorage storage, ILogger<EbookService> logger,
-        Microsoft.Extensions.Options.IOptions<EbookOptions>? options = null)
+        Microsoft.Extensions.Options.IOptions<EbookOptions>? options = null, NotificationService? notifications = null)
     {
         _db = db;
         _storage = storage;
         _logger = logger;
         _options = options?.Value ?? new EbookOptions();
+        _notifications = notifications;
     }
 
     /// <summary>Kontingent eines Besuchers ohne Anmeldung (0.778.0); 0 = anonymes Hochladen aus.</summary>
@@ -299,12 +302,36 @@ public class EbookService
             }
             _logger.LogInformation("E-Book {EbookId} hochgeladen: {Format}, {Bytes} Bytes von {Caller}", ebook.Id, format, saved.SizeBytes,
                 caller.UserId is int u ? $"Nutzer {u}" : "anonym");
+            if (!manageAll) await NotifyAdminsOfUploadAsync(ebook, caller, ct);
             return await GetAsync(caller, manageAll, ebook.Id, ct);
         }
         catch
         {
             _storage.DeleteUpload(new EbookFile { RelativePath = saved.RelativePath }, EbookSource.Upload);
             throw;
+        }
+    }
+
+    /// <summary>Upload von jemandem ohne E-Book-Verwaltung (Nutzer oder anonym) → Glocke aller Admins mit Link aufs Buch
+    /// (0.788.0, Wunsch 15.10.2026: die Bibliothek ist offen, Admins sollen jeden fremden Upload sehen). Best-effort — ein
+    /// Fehler hier kippt den schon gespeicherten Upload nicht.</summary>
+    private async Task NotifyAdminsOfUploadAsync(Ebook ebook, EbookCaller caller, CancellationToken ct)
+    {
+        if (_notifications == null) return;
+        try
+        {
+            var admins = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.MessagesAdmin, ct);
+            if (caller.UserId is int self) admins.Remove(self);
+            var username = caller.UserId is int uid
+                ? await _db.AppUsers.Where(u => u.Id == uid).Select(u => u.Username).FirstOrDefaultAsync(ct)
+                : null;
+            await _notifications.CreateManyAsync(admins, NotificationType.EbookUploaded,
+                new Dictionary<string, string> { ["title"] = ebook.Title, ["username"] = username ?? string.Empty },
+                $"/ebooks/{ebook.Id}");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "E-Book {EbookId}: Admin-Benachrichtigung zum Upload fehlgeschlagen", ebook.Id);
         }
     }
 

@@ -2640,6 +2640,8 @@
       "scoresheet_read": "Játszmalap beolvasva: {{white}} – {{black}}, {{moves}} féllépés, {{uncertain}} bizonytalan",
       "scoresheet_failed": "A játszmalapot nem sikerült beolvasni: {{reason}}",
       "league_batch_uploaded": "Egy LeagueHub megosztási linken {{count}} lapkép lett feltöltve",
+      "ebook_uploaded": "{{username}} feltöltötte a(z) „{{title}}” e-könyvet",
+      "ebook_uploaded_anonymous": "A(z) „{{title}}” e-könyvet bejelentkezés nélkül töltötték fel",
       "ebook_ready": "„{{title}}” feldolgozva — {{diagrams}} diagram felismerve."
     },
     "markAllRead": "Mind megjelölése olvasottként",

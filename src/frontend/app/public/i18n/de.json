@@ -182,6 +182,8 @@
       "scoresheet_read": "Partieformular gelesen: {{white}} – {{black}}, {{moves}} Halbzüge, {{uncertain}} unsicher",
       "scoresheet_failed": "Partieformular konnte nicht gelesen werden: {{reason}}",
       "league_batch_uploaded": "Über einen LeagueHub-Teilen-Link wurden {{count}} Formular-Bilder abgelegt",
+      "ebook_uploaded": "{{username}} hat das E-Book „{{title}}“ hochgeladen",
+      "ebook_uploaded_anonymous": "Ohne Anmeldung wurde das E-Book „{{title}}“ hochgeladen",
       "ebook_ready": "„{{title}}“ ist fertig verarbeitet — {{diagrams}} Diagramme erkannt."
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",

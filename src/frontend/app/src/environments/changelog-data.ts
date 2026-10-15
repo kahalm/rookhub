@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.788.0", date: "2026-10-15", changes: [
+    { en: "E-books: when someone without e-book management rights (or without an account) uploads a book, every admin gets a notification in the bell with the title, the uploader and a link to the book.",
+      de: "E-Books: Lädt jemand ohne E-Book-Verwaltung (oder ohne Anmeldung) ein Buch hoch, bekommt jeder Admin eine Meldung in der Glocke – mit Titel, Name des Hochladenden und Link aufs Buch." },
+  ] },
   { version: "0.787.1", date: "2026-10-15", changes: [
     { en: "E-books: new checkbox „Go to the next diagram automatically“ in the board’s ⚙ menu when solving – after a solved diagram the reader moves on by itself (remembered on this device).", de: "E-Books: Neues Häkchen „Automatisch zum nächsten Diagramm“ im ⚙-Menü des Bretts beim Lösen – nach einem gelösten Diagramm geht der Leser von selbst weiter (auf diesem Gerät gemerkt)." },
   ] },

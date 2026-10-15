@@ -90,7 +90,7 @@ public class PushNotificationService
         "admin_message_received" or "user_message_received" => "messages",
         "tournament_new_round" or "tournament_nearby_new" or "tournament_changed"
             or "tournament_cancelled" => "tournaments",
-        "new_user_registered" => "admin",
+        "new_user_registered" or "ebook_uploaded" => "admin",
         _ => "other",
     };
 

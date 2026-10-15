@@ -216,6 +216,7 @@ public class PushNotificationServiceTests : IDisposable
         Assert.Equal("messages", PushNotificationService.CategoryOf("admin_message_received"));
         Assert.Equal("tournaments", PushNotificationService.CategoryOf("tournament_new_round"));
         Assert.Equal("admin", PushNotificationService.CategoryOf("new_user_registered"));
+        Assert.Equal("admin", PushNotificationService.CategoryOf("ebook_uploaded"));
         Assert.Equal("other", PushNotificationService.CategoryOf("something_else"));
     }
 }

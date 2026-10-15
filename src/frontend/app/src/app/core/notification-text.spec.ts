@@ -32,6 +32,13 @@ describe('notificationText', () => {
       .toBe('notifications.type.revenge_performed_failed');
   });
 
+  it('ebook_uploaded: an empty username (upload without an account) picks the _anonymous text', () => {
+    expect(notificationText(t, notif('ebook_uploaded', { title: 'Buch', username: 'leser' })))
+      .toBe('notifications.type.ebook_uploaded');
+    expect(notificationText(t, notif('ebook_uploaded', { title: 'Buch', username: '' })))
+      .toBe('notifications.type.ebook_uploaded_anonymous');
+  });
+
   it('adds the chessable duration suffix only when fetchTime is present', () => {
     expect(notificationText(t, notif('chessable_import_completed', { fetchTime: '12' })))
       .toBe('notifications.type.chessable_import_completed · notifications.chessableDuration');
@@ -90,6 +97,7 @@ describe('notificationCategory', () => {
   it('maps tournament rounds to tournaments and new-user registration to admin', () => {
     expect(notificationCategory('tournament_new_round')).toBe('tournaments');
     expect(notificationCategory('new_user_registered')).toBe('admin');
+    expect(notificationCategory('ebook_uploaded')).toBe('admin');
   });
 
   it('falls back to "other" for unknown types', () => {

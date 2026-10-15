@@ -68,6 +68,9 @@ public static class NotificationType
     /// <summary>LeagueHub-Stapel-Upload über einen Teilen-Link ohne Konto abgeschlossen (0.651.0) → Glocke aller Admins
     /// (messages.admin), Link „/admin?tab=uploads". Daten: count (Bilder). Mit Konto kommt stattdessen eine Admin-Nachricht.</summary>
     public const string LeagueBatchUploaded = "league_batch_uploaded";
+    /// <summary>Jemand OHNE E-Book-Verwaltung (Nutzer oder anonym) hat ein E-Book hochgeladen (0.788.0, Wunsch 15.10.2026)
+    /// → Glocke aller Admins (messages.admin), Link „/ebooks/{id}". Daten: title, username (leer = ohne Anmeldung).</summary>
+    public const string EbookUploaded = "ebook_uploaded";
     /// <summary>Ein User hat (erstmals) einen Chessable-Bearer hinterlegt (→ Glocke aller Admins,
     /// Link „/admin"). Daten: username.</summary>
     public const string ChessableTokenAdded = "chessable_token_added";

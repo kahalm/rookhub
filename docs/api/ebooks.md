@@ -173,6 +173,12 @@ mit Diagrammen und eingeschalteter Prüfung) → DTO `processing` (Karte „Wird
 Schritt `NotifyIfReadyAsync`: bei Uploads (nicht bei Bibliotheksimporten) genau EINE Glocken-Meldung `ebook_ready`
 (`title`, `diagrams`, Link `/ebooks/{id}`), Merker `Ebook.ReadyNotifiedAt`. Push-Kategorie „other“.
 
+**Admins hören von fremden Uploads** (0.788.0, Wunsch 15.10.2026): lädt jemand OHNE E-Book-Verwaltung (Nutzer ohne
+`ebooks.manage` oder ohne Anmeldung) ein Buch hoch, bekommen alle messages.admin-Konten die Glocken-Meldung `ebook_uploaded`
+(`title`, `username` — leer = ohne Anmeldung → Text `ebook_uploaded_anonymous`; Link `/ebooks/{id}`; Push-Kategorie
+„admin“). Der Hochladende selbst bekommt keine. Best-effort in `EbookService.NotifyAdminsOfUploadAsync`: scheitert die
+Meldung, bleibt der Upload trotzdem gespeichert (Warnung im Log).
+
 ## EPUB-Diagramme aus Bildern (0.775.0)
 
 In EPUBs sind Diagramme BILDER (Bibliothek 14.10.: ~3 100 Brettbilder in 27 EPUBs). Der `EbookDiagramWorker` nimmt bei Büchern

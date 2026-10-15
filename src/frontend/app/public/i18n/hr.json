@@ -182,6 +182,8 @@
       "scoresheet_read": "Zapisnik učitan: {{white}} – {{black}}, {{moves}} polupoteza, nesigurno: {{uncertain}}",
       "scoresheet_failed": "Zapisnik nije bilo moguće učitati: {{reason}}",
       "league_batch_uploaded": "Putem LeagueHub poveznice za dijeljenje preneseno je {{count}} slika obrazaca",
+      "ebook_uploaded": "{{username}} je prenio e-knjigu »{{title}}«",
+      "ebook_uploaded_anonymous": "E-knjiga »{{title}}« prenesena je bez računa",
       "ebook_ready": "»{{title}}« je obrađeno — prepoznato dijagrama: {{diagrams}}."
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
