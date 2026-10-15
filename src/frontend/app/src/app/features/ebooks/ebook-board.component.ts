@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnChanges, Output, SimpleChanges,
-  computed, effect, inject, signal,
+  computed, effect, inject, signal, untracked,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -154,10 +154,12 @@ export class EbookBoardComponent implements OnChanges {
 
   constructor() {
     // Engine rechnet jede neue Brettstellung (neuer Index = neue Stellung, keine eigene Nebenvariante).
+    // `sync` liest und schreibt Signale der Sitzung (baseIndex …) — OHNE untracked hinge der Effekt an ihnen, jeder
+    // Schreibzugriff löste ihn neu aus, mit neuem Index: Endlosschleife, die Seite stand (0.801.0, „Engine an“).
     effect(() => {
       const s = this.engine();
       const fen = this.boardFen();
-      if (s && fen) s.sync(++this.engineIndex, fen);
+      if (s && fen) untracked(() => s.sync(++this.engineIndex, fen));
     });
     inject(DestroyRef).onDestroy(() => { this.clearTimer(); this.engine()?.destroy(); });
   }

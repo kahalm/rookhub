@@ -8,6 +8,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.801.0", date: "2026-10-15", changes: [
+    { en: "E-books: switching on the engine on the reader board no longer freezes the page.",
+      de: "E-Books: „Engine an“ am Brett des Lesers lässt die Seite nicht mehr hängen." },
+    { en: "E-books: the Stockfish check of the diagram solutions now works as a stack – the book queued last is checked first, so a freshly recognised book no longer waits behind thousands of diagrams of old collections.",
+      de: "E-Books: Die Stockfish-Prüfung der Diagramm-Lösungen arbeitet jetzt als Stapel – das zuletzt eingereihte Buch kommt zuerst, ein frisch erkanntes Buch wartet nicht mehr hinter Tausenden Diagrammen alter Sammlungen." },
+  ] },
   { version: "0.800.1", date: "2026-10-15", changes: [
     { en: "E-books: in EPUBs you can turn pages by swiping left/right on phones and tablets again (in „Page“ view only the ‹ › buttons worked).", de: "E-Books: In EPUBs blätterst du am Handy und Tablet wieder durch Wischen nach links/rechts (in der Ansicht „Seite“ gingen nur die Knöpfe ‹ ›)." },
   ]},

@@ -5,6 +5,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { signal } from '@angular/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
+import { LiveEngineSession } from '../games/live-engine-session';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { EbookBoardComponent } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
@@ -302,6 +303,20 @@ describe('EbookBoardComponent', () => {
     tick(500);
     expect(c.played().length).toBe(2);
   }));
+
+  it('Engine an: die Stellung geht EINMAL an die Engine — kein Effekt-Kreislauf über die Signale der Sitzung (0.801.0)', () => {
+    // Echtes sync liest und schreibt baseIndex; der Ersatz tut dasselbe, rechnet aber nicht (kein Worker im Test).
+    const sync = spyOn(LiveEngineSession.prototype, 'sync').and.callFake(function (this: LiveEngineSession, i: number) {
+      if (i !== this.baseIndex()) this.baseIndex.set(i);
+    });
+    spyOn(LiveEngineSession.prototype, 'destroy');
+    const f = make();
+    f.componentInstance.toggleEngine();
+    f.detectChanges();
+    f.detectChanges();
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(sync.calls.mostRecent().args[1]).toBe(D.fen);
+  });
 
   it('ohne gespeicherte Lösung steht die Quelle auf Stockfish', () => {
     const c = make({ ...D, solutionUci: null, solutionSan: null }).componentInstance;

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Ebooks;
 using Xunit;
@@ -125,5 +126,27 @@ public class EbookSolutionCheckerTests
         Assert.Equal(["h5f7", "e8e7", "f7e7"], r.Pv);
         Assert.Equal(-9998, UciEngineSession.Parse(["info score mate -2 pv a1a2", "bestmove a1a2"])!.Score);
         Assert.Null(UciEngineSession.Parse(["bestmove (none)"]));
+    }
+
+    [Fact]
+    public async Task NextInQueue_IsAStack_LastQueuedFirst_OldBooksByCreation()
+    {
+        using var kit = new EbookTestKit();
+        var t0 = new DateTime(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc);
+        Ebook Book(string title, DateTime created, DateTime? queued, EbookDiagramState state = EbookDiagramState.Pending) => new()
+        {
+            Title = title, Source = EbookSource.Library, CreatedAt = created, UpdatedAt = created, DiagramState = EbookDiagramState.Done,
+            DiagramCount = 10, SolutionCheckState = state, SolutionCheckQueuedAt = queued,
+        };
+        kit.Db.Ebooks.AddRange(
+            Book("Sammlung alt", t0.AddDays(-5), null),                    // Altbestand ohne Einreih-Zeit → zählt das Anlegen
+            Book("gestern eingereiht", t0.AddDays(-9), t0.AddDays(-1)),
+            Book("gerade eingereiht", t0.AddDays(-30), t0),                  // altes Buch, eben neu erkannt → ganz oben
+            Book("schon geprüft", t0.AddDays(-1), t0.AddHours(1), EbookDiagramState.Done));
+        await kit.Db.SaveChangesAsync();
+
+        var order = await EbookSolutionCheckWorker.NextInQueue(kit.Db.Ebooks).Select(b => b.Title).ToListAsync();
+
+        Assert.Equal(["gerade eingereiht", "gestern eingereiht", "Sammlung alt"], order);
     }
 }

@@ -2273,6 +2273,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime?>("ReadyNotifiedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("SolutionCheckQueuedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("SolutionCheckState")
                         .HasColumnType("int");
 

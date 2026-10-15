@@ -90,6 +90,7 @@ public class EbookDiagramWorker : PeriodicWorker
                 ebook.DiagramCount = result.Diagrams.Count;
                 ebook.DiagramState = result.FontFound ? EbookDiagramState.Done : EbookDiagramState.Unsupported;
                 ebook.SolutionCheckState = EbookDiagramState.Pending;   // neue Diagramme → Stockfish prüft neu
+                ebook.SolutionCheckQueuedAt = DateTime.UtcNow;
                 if (result.Pages > 0 && ebook.PageCount == null) ebook.PageCount = result.Pages;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }

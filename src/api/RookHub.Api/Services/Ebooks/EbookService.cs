@@ -636,6 +636,7 @@ public class EbookService
         d.SideKnown = true;
         ebook.DiagramsCurated = true;
         ebook.SolutionCheckState = EbookDiagramState.Pending;
+        ebook.SolutionCheckQueuedAt = DateTime.UtcNow;
         ebook.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         var all = await GetDiagramsAsync(caller, manageAll, id, ct);

@@ -97,6 +97,11 @@ public class Ebook
     /// <summary>Stand der Stockfish-Prüfung der Diagramm-Lösungen (0.772.0); läuft nach der Erkennung.</summary>
     public EbookDiagramState SolutionCheckState { get; set; } = EbookDiagramState.Pending;
 
+    /// <summary>Wann das Buch (zuletzt) in die Stockfish-Prüfung eingereiht wurde (0.801.0). Die Prüfung arbeitet als STAPEL —
+    /// zuletzt eingereiht zuerst (Wunsch 15.10.2026: ein Buch, das man gerade liest, soll nicht hinter Tausenden Diagrammen
+    /// alter Bücher warten). <c>null</c> = vor 0.801.0 oder per SQL eingereiht → zählt <see cref="CreatedAt"/>.</summary>
+    public DateTime? SolutionCheckQueuedAt { get; set; }
+
     /// <summary>Umwandlung DJVU → PDF (0.770.0): Bücher, die NUR als DJVU vorliegen, bekommen eine lesbare PDF-Fassung
     /// (<see cref="EbookFile.Derived"/>), die der Browser-Leser zeigen kann.</summary>
     public EbookConversionState ConversionState { get; set; } = EbookConversionState.NotNeeded;

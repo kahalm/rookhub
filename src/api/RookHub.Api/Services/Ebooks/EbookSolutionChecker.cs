@@ -129,12 +129,19 @@ public class EbookSolutionCheckWorker : PeriodicWorker
     protected override void LogDisabled() => Logger.LogInformation("E-Book-Lösungsprüfung: per Ebooks:EngineCheck abgeschaltet");
     protected override void LogFailure(Exception ex) => Logger.LogError(ex, "E-Book-Lösungsprüfung: Durchlauf fehlgeschlagen");
 
+    /// <summary>
+    /// Die Warteschlange der Prüfung als STAPEL (0.801.0, Wunsch 15.10.2026): zuletzt eingereiht zuerst. Vorher lief sie
+    /// nach Id — ein frisch erkanntes Buch wartete hinter Zehntausenden Diagrammen alter Sammlungen. Ohne Einreih-Zeit
+    /// (Altbestand, per SQL eingereiht) zählt das Anlegen des Buchs.
+    /// </summary>
+    public static IQueryable<Ebook> NextInQueue(IQueryable<Ebook> ebooks) => ebooks
+        .Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount > 0 && b.SolutionCheckState == EbookDiagramState.Pending)
+        .OrderByDescending(b => b.SolutionCheckQueuedAt ?? b.CreatedAt).ThenByDescending(b => b.Id);
+
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
         var db = services.GetRequiredService<AppDbContext>();
-        var ebook = await db.Ebooks
-            .Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount > 0 && b.SolutionCheckState == EbookDiagramState.Pending)
-            .OrderBy(b => b.Id).FirstOrDefaultAsync(ct);
+        var ebook = await NextInQueue(db.Ebooks).FirstOrDefaultAsync(ct);
         if (ebook == null) return;
         var path = StockfishPath.Resolve(_options.StockfishPath);
         var engine = await UciEngineSession.StartAsync(path, Logger, ct);
