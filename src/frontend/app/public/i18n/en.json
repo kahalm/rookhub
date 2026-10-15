@@ -5344,7 +5344,9 @@
       "active": "Active filters",
       "allTags": "All tags ({{n}})",
       "fewerTags": "Fewer tags",
-      "reset": "Reset filters"
+      "reset": "Reset filters",
+      "author": "Author: {{name}}",
+      "byAuthor": "All books by {{name}}"
     },
     "empty": "No e-books yet – upload the first one.",
     "emptyFiltered": "Nothing matches this filter.",

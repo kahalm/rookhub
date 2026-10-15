@@ -68,6 +68,15 @@
         </div>
       </div>
 
+      <!-- Autor-Filter (0.796.0): immer sichtbar, ein Tipp nimmt ihn zurück. -->
+      @if (author) {
+        <div class="eb-author-filter">
+          <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setAuthor(null)">
+            <mat-icon>person_search</mat-icon>{{ 'ebooks.filter.author' | translate: { name: author } }}<mat-icon>close</mat-icon>
+          </button>
+        </div>
+      }
+
       <!-- Handy, zugeklappt: aktive Filter als Chips (ein Tipp nimmt sie zurück). -->
       @if (!filtersOpen() && (mine || withDiagrams || tag)) {
         <div class="eb-active" role="group" [attr.aria-label]="'ebooks.filter.active' | translate">
@@ -194,7 +203,14 @@
             <mat-card-content class="eb-body">
               <a class="eb-title" [routerLink]="['/ebooks', book.id]" [title]="book.title">{{ book.title }}</a>
               <div class="eb-meta">
-                @if (book.author) { <span class="eb-author">{{ book.author }}</span> }
+                @if (book.author) {
+                  <span class="eb-author">
+                    @for (n of authorNames(book.author); track n; let last = $last) {
+                      <button type="button" class="eb-author-link" [matTooltip]="'ebooks.filter.byAuthor' | translate: { name: n }"
+                              (click)="setAuthor(n)">{{ n }}</button>@if (!last) {<span>, </span>}
+                    }
+                  </span>
+                }
                 @if (book.year) { <span class="eb-sep">·</span><span>{{ book.year }}</span> }
               </div>
               <div class="eb-badges">

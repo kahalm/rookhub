@@ -117,9 +117,16 @@ export interface EbookList {
 
 export type EbookSort = 'title' | 'newest' | 'recent';
 
+/** Einzelne Namen aus dem Autorenfeld („Lev Alburt, Sam Palatnik“ → zwei Namen) — für die Autor-Links (0.796.0). */
+export function ebookAuthorNames(author: string | null | undefined): string[] {
+  return (author ?? '').split(/\s*(?:,|;|&|\band\b|\bund\b)\s*/).map(n => n.trim()).filter(n => n.length > 1);
+}
+
 export interface EbookQuery {
   search?: string;
   tag?: string | null;
+  /** Nur Bücher dieses Autors (Klick auf den Namen). */
+  author?: string | null;
   mine?: boolean;
   /** Nur Bücher mit erkannten Diagrammen. */
   withDiagrams?: boolean;
@@ -195,6 +202,7 @@ export class EbookService {
     let params = new HttpParams();
     if (q.search) params = params.set('search', q.search);
     if (q.tag) params = params.set('tag', q.tag);
+    if (q.author) params = params.set('author', q.author);
     if (q.mine) params = params.set('mine', 'true');
     if (q.withDiagrams) params = params.set('withDiagrams', 'true');
     if (q.collection) params = params.set('collection', String(q.collection));

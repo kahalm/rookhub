@@ -22,6 +22,11 @@
 .eb-filter-more { display: contents; }
 .eb-chip.eb-filter-toggle { display: none; } /* vor .eb-chip gleich stark → sonst gewinnt dessen inline-flex */
 .eb-active { display: none; }
+.eb-author-filter { display: flex; margin-bottom: 12px; }
+/* Autorennamen unter dem Titel: wie Text, unterstrichen erst beim Darüberfahren (0.796.0). */
+.eb-author-link { all: unset; cursor: pointer; border-radius: 2px; }
+.eb-author-link:hover { text-decoration: underline; }
+.eb-author-link:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
 
 .eb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .eb-chip {

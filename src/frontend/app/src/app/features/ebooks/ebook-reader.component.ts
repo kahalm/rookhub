@@ -15,7 +15,7 @@ import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Ebook, EbookDiagram, EbookFile, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
+import { Ebook, EbookDiagram, EbookFile, EbookService, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
 import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
@@ -93,6 +93,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   private auth = inject(AuthService);
   /** Melden („Diagramm falsch“) gibt es nur mit Konto (0.778.0: der Leser geht auch ohne Anmeldung). */
   get loggedIn(): boolean { return this.auth.isLoggedIn; }
+  readonly authorNames = ebookAuthorNames;
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
   private progress$ = new Subject<number>();

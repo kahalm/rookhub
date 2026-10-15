@@ -98,6 +98,8 @@ public class EbookQuery
 {
     public string? Search { get; set; }
     public string? Tag { get; set; }
+    /// <summary>Nur Bücher dieses Autors (Teil des Autorenfelds, 0.796.0) — Klick auf den Namen unter einem Buch.</summary>
+    public string? Author { get; set; }
     /// <summary>Nur eigene Uploads.</summary>
     public bool Mine { get; set; }
     /// <summary>Nur Bücher mit erkannten Diagrammen (Brett neben dem Buch).</summary>

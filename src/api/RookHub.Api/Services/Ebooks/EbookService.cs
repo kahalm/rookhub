@@ -75,6 +75,11 @@ public class EbookService
             var term = q.Search.Trim().ToLowerInvariant();
             query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term) || b.Tags.ToLower().Contains(term));
         }
+        if (!string.IsNullOrWhiteSpace(q.Author))
+        {
+            var name = q.Author.Trim().ToLowerInvariant();
+            query = query.Where(b => b.Author.ToLower().Contains(name));
+        }
         if (!string.IsNullOrWhiteSpace(q.Tag))
         {
             // CSV-Spalte: „,Tag," im ",Tags," — ohne Teilwort-Treffer (Endspiel ≠ Endspielstudien).
@@ -83,9 +88,9 @@ public class EbookService
         }
 
         // Sammlungen (0.787.0): geöffnet → nur ihre Bücher; sonst steht je Sammlung EIN Buch (das älteste passende) als
-        // Ordner da — außer bei einer Suche, die soll das einzelne Heft finden.
+        // Ordner da — außer bei einer Suche oder einem Autor, die sollen das einzelne Heft finden.
         var filtered = query;
-        var collapse = q.Collection == null && string.IsNullOrWhiteSpace(q.Search);
+        var collapse = q.Collection == null && string.IsNullOrWhiteSpace(q.Search) && string.IsNullOrWhiteSpace(q.Author);
         if (q.Collection != null) query = query.Where(b => b.CollectionId == q.Collection);
         else if (collapse)
             query = query.Where(b => b.CollectionId == null || b.Id == filtered.Where(x => x.CollectionId == b.CollectionId).Min(x => x.Id));

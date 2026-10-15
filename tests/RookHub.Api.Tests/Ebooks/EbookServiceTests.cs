@@ -208,6 +208,12 @@ public class EbookServiceTests : IDisposable
         var tag = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Tag = "Endspiel" });
         Assert.Equal(["Endgame Course"], tag.Items.Select(i => i.Title));   // kein Teilwort-Treffer auf „Endspielstudien"
 
+        // Autor-Filter (0.796.0): Teil des Autorenfelds, ohne Groß-/Kleinschreibung.
+        foreach (var b in _kit.Db.Ebooks) b.Author = b.Title == "Endgame Course" ? "Mark Dvoretsky, Artur Yusupov" : b.Title == "Amateur's Mind" ? "Jeremy Silman" : "";
+        await _kit.Db.SaveChangesAsync();
+        var byAuthor = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Author = "artur yusupov" });
+        Assert.Equal(["Endgame Course"], byAuthor.Items.Select(i => i.Title));
+
         var page2 = await _kit.Service.ListAsync(reader.Id, false, new EbookQuery { Sort = "title", Page = 2, PageSize = 2 });
         Assert.Equal(["Endspielstudien"], page2.Items.Select(i => i.Title));
         Assert.Equal(2, page2.Page);

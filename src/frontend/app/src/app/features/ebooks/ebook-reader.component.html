@@ -24,7 +24,14 @@
       </a>
       <div class="rd-title" [matTooltip]="ebook.title">
         <span class="rd-title-text">{{ ebook.title }}</span>
-        @if (ebook.author) { <span class="rd-author">{{ ebook.author }}</span> }
+        @if (ebook.author) {
+          <span class="rd-author">
+            @for (n of authorNames(ebook.author); track n; let last = $last) {
+              <a class="rd-author-link" [routerLink]="['/ebooks']" [queryParams]="{ author: n }"
+                 [matTooltip]="'ebooks.filter.byAuthor' | translate: { name: n }">{{ n }}</a>@if (!last) {<span>, </span>}
+            }
+          </span>
+        }
       </div>
       @if (readable && isEpub) {
         <div class="rd-pages">

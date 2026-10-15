@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.796.0", date: "2026-10-15", changes: [
+    { en: "E-books: the author names below a book (and at the top of the reader) are now links – one click shows all books by that author; the „Author“ chip above the list removes the filter again.", de: "E-Books: Die Autorennamen unter einem Buch (und oben im Leser) sind jetzt Links – ein Klick zeigt alle Bücher dieses Autors; der Chip „Autor“ über der Liste nimmt den Filter wieder weg." },
+  ] },
   { version: "0.795.0", date: "2026-10-15", changes: [
     { en: "E-books: if a book is available as EPUB and as a scanned PDF, the diagrams now come from the clean images in the EPUB – before, such books lost most of their diagrams (e.g. „The Complete Chess Swindler“: 44 instead of about 900). Books with both formats are recognised again after the update.", de: "E-Books: Liegt ein Buch als EPUB und als eingescanntes PDF vor, kommen die Diagramme jetzt aus den sauberen Bildern im EPUB – vorher verloren solche Bücher die meisten Diagramme (z. B. „The Complete Chess Swindler“: 44 statt rund 900). Bücher mit beiden Formaten werden nach dem Update neu erkannt." },
   ] },

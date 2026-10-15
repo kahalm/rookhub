@@ -5344,7 +5344,9 @@
       "active": "Aktív szűrők",
       "allTags": "Összes címke ({{n}})",
       "fewerTags": "Kevesebb címke",
-      "reset": "Szűrők törlése"
+      "reset": "Szűrők törlése",
+      "author": "Szerző: {{name}}",
+      "byAuthor": "{{name}} összes könyve"
     },
     "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
     "emptyFiltered": "Ehhez a szűrőhöz semmi sem illik.",

@@ -41,6 +41,8 @@
 }
 .rd-title-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 500; }
 .rd-author { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: .8rem; opacity: .7; }
+.rd-author-link { color: inherit; text-decoration: none; }
+.rd-author-link:hover { text-decoration: underline; }
 
 .rd-pages { display: flex; align-items: center; gap: 4px; flex: none; font-variant-numeric: tabular-nums; }
 .rd-page-input {

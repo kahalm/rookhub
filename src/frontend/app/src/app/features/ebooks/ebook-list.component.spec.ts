@@ -1,3 +1,4 @@
+import { ebookAuthorNames } from './ebook.service';
 import { ChangeDetectorRef, Signal, Type, signal } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -368,5 +369,11 @@ describe('EbookListComponent', () => {
       expect(inner.scrollWidth).withContext(lang).toBeLessThanOrEqual(inner.clientWidth);
       fixture.destroy();
     }
+  });
+
+  it('filters by an author clicked below a book (0.796.0)', () => {
+    expect(ebookAuthorNames('Lev Alburt, Sam Palatnik')).toEqual(['Lev Alburt', 'Sam Palatnik']);
+    expect(ebookAuthorNames('Reinfeld & Chernev')).toEqual(['Reinfeld', 'Chernev']);
+    expect(ebookAuthorNames('')).toEqual([]);
   });
 });

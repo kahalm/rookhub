@@ -26,7 +26,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { mediaSignal } from '../../shared/layout/wide-media';
-import { Ebook, EbookGroupOption, EbookList, EbookTagFacet, EbookService, EbookSort, READABLE_FORMATS, formatBytes } from './ebook.service';
+import { Ebook, EbookGroupOption, EbookList, EbookTagFacet, EbookService, EbookSort, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
 import { EbookCollectionDialogComponent, EbookCollectionDialogData } from './ebook-collection-dialog.component';
@@ -40,7 +40,7 @@ export const EBOOK_TAGS_COLLAPSED = 8;
 /** Sitzungs-Schlüssel der Listen-Ansicht (Suche, Filter, Seite) — „zurück" aus dem Leser landet wieder dort. */
 export const EBOOK_LIST_STATE_KEY = 'rh.ebooks.listState';
 
-export interface EbookListState { search: string; tag: string | null; sort: EbookSort; mine: boolean; withDiagrams: boolean; page: number; collection?: number | null; }
+export interface EbookListState { search: string; tag: string | null; author?: string | null; sort: EbookSort; mine: boolean; withDiagrams: boolean; page: number; collection?: number | null; }
 
 /**
  * Übersicht der E-Book-Bibliothek (`/ebooks`): Suche, Schlagwort-Filter, Sortierung, Seiten; je Buch eine Karte mit
@@ -67,6 +67,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   search = '';
   tag: string | null = null;
+  /** Autor-Filter (0.796.0): Klick auf einen Namen unter einem Buch zeigt alle Bücher dieses Autors. */
+  author: string | null = null;
   /** Vorgabe „Neueste zuerst“ (0.775.4, Nutzerwunsch) — frisch hochgeladene/eingelesene Bücher stehen oben. */
   sort: EbookSort = 'newest';
   mine = false;
@@ -123,7 +125,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     const q = this.route?.snapshot.queryParamMap;
     let st: Partial<EbookListState> | null = null;
     if (q && q.keys.length > 0) {
-      st = { search: q.get('q') ?? '', tag: q.get('tag'), sort: (q.get('sort') as EbookSort) ?? 'newest',
+      st = { search: q.get('q') ?? '', tag: q.get('tag'), author: q.get('author'), sort: (q.get('sort') as EbookSort) ?? 'newest',
         mine: q.get('mine') === '1', withDiagrams: q.get('diagrams') === '1', page: Number(q.get('page')) || 1,
         collection: Number(q.get('collection')) || null };
     } else {
@@ -133,6 +135,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     if (!st) return;
     this.search = st.search ?? '';
     this.tag = st.tag ?? null;
+    this.author = st.author ?? null;
     this.sort = this.sorts.includes(st.sort as EbookSort) ? st.sort as EbookSort : 'newest';
     this.mine = !!st.mine;
     this.withDiagrams = !!st.withDiagrams;
@@ -142,11 +145,11 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   /** Aktuelle Ansicht in Sitzung + Adresse (replaceUrl: kein neuer Verlaufseintrag je Tastendruck). */
   private saveState(): void {
-    const st: EbookListState = { search: this.search.trim(), tag: this.tag, sort: this.sort, mine: this.mine, withDiagrams: this.withDiagrams, page: this.page, collection: this.collection };
+    const st: EbookListState = { search: this.search.trim(), tag: this.tag, author: this.author, sort: this.sort, mine: this.mine, withDiagrams: this.withDiagrams, page: this.page, collection: this.collection };
     const store = sessionStore();
     if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
     const queryParams: Record<string, string | null> = {
-      q: st.search || null, tag: st.tag, sort: st.sort !== 'newest' ? st.sort : null,
+      q: st.search || null, tag: st.tag, author: st.author || null, sort: st.sort !== 'newest' ? st.sort : null,
       mine: st.mine ? '1' : null, diagrams: st.withDiagrams ? '1' : null, page: st.page > 1 ? String(st.page) : null,
       collection: st.collection ? String(st.collection) : null,
     };
@@ -157,7 +160,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.saveState();
     this.loading = this.list == null;
     this.error = false;
-    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, mine: this.mine, withDiagrams: this.withDiagrams, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
+    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, withDiagrams: this.withDiagrams, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
       .subscribe({
         next: list => {
           this.list = list;
@@ -172,7 +175,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   get items(): Ebook[] { return this.list?.items ?? []; }
-  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.mine || this.withDiagrams); }
+  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.author || this.mine || this.withDiagrams); }
 
   /** Schlagwörter, die die Leiste gerade zeigt: aufgeklappt alle, sonst die häufigsten plus das aktive. */
   get visibleTags(): EbookTagFacet[] {
@@ -190,6 +193,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   resetFilters(): void {
     const hadSearch = this.search.trim().length > 0;
     this.tag = null;
+    this.author = null;
     this.mine = false;
     this.withDiagrams = false;
     this.page = 1;
@@ -200,6 +204,16 @@ export class EbookListComponent implements OnInit, OnDestroy {
   onSearch(value: string): void {
     this.search = value;
     this.search$.next(value.trim());
+  }
+
+  readonly authorNames = ebookAuthorNames;
+
+  /** Klick auf einen Autor: nur seine Bücher; derselbe Name noch einmal (oder ✕ am Chip) hebt den Filter auf. */
+  setAuthor(name: string | null): void {
+    this.author = name && this.author !== name ? name : null;
+    this.page = 1;
+    this.load();
+    if (this.author) globalThis.scrollTo?.({ top: 0, behavior: 'smooth' });
   }
 
   setTag(tag: string | null): void {
